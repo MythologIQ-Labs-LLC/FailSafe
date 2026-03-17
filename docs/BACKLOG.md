@@ -398,11 +398,11 @@ Minor / UX:
 - [x] [B188] Fix brainstorm right panel missing — TabGroup does not proxy renderRightPanel/bindToolbar from active sub-view; pill switching doesn't update right panel (v4.9.9 - Complete)
 - [x] [B189] Fix Install Skills path — bundledPath points to nonexistent `skills/` instead of `dist/extension/skills/`; same bug in WorkspaceMigration.ts (v4.9.9 - Complete)
 
-### ConsoleServer Decomposition (Future)
+### v4.10.0 ConsoleServer Decomposition (plan-consoleserver-decomposition.md)
 
-- [ ] [B164] Extract route handlers from ConsoleServer.ts into dedicated route modules (Express router pattern)
-- [ ] [B165] Extract WebSocket event handlers from ConsoleServer.ts into event handler module
-- [ ] [B166] Extract checkpoint/compliance logic from ConsoleServer.ts into checkpoint service module
+- [ ] [B164] Phase 1: Extract WebSocketManager + TransparencyLogger + RiskRegisterManager from ConsoleServer.ts (-135L) | v4.10.0
+- [ ] [B165] Phase 2: Extract EventSubscriptionManager — 12 EventBus listeners into portable governance event wiring (-175L) | v4.10.0
+- [ ] [B166] Phase 3: Extract QoreRuntimeService + FeatureStatusRoute + SkillsApiRoute + HookRoute (-220L) | v4.10.0
 
 ### Runtime Architecture (Future)
 
