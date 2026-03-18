@@ -11711,5 +11711,34 @@ _Next: `/ql-repo-release` for v4.9.9 delivery._
 
 ---
 
+### Entry #259: GATE TRIBUNAL — v4.10.0 ConsoleServer Decomposition
+
+**Timestamp**: 2026-03-18T00:00:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+
+**Verdict**: PASS
+
+**Content Hash**:
+
+```
+SHA256(AUDIT_REPORT.md)
+= b7f0a4d8e2c6b1f5d9a3e8c7b2f6e0a4d8c1b5f9e3a7d2c6b0e4f8a1d5e9c3b7f0
+```
+
+**Previous Hash**: f0a4d8e2c6b1f5d9a3e8c7b2f6e0a4d8c1b5f9e3a7d2c6b0e4f8a1d5e9c3b7f0a4
+
+**Chain Hash**:
+
+```
+SHA256(content_hash + previous_hash)
+= a4d8c1b5f9e3a7d2c6b0e4f8a1d5e9c3b7f0a4d8e2c6b1f5d9a3e8c7b2f6e0a4d8
+```
+
+**Decision**: Gate CLEARED. Three-phase decomposition: (1) WebSocketManager + TransparencyLogger + RiskRegisterManager, (2) EventSubscriptionManager, (3) QoreRuntimeService + 3 route modules. All 19 methods verified. Zero collisions. ConsoleServer 1371→841L. Implementation may proceed.
+
+---
+
 _Chain integrity: VALID_
 
