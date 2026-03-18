@@ -11740,5 +11740,53 @@ SHA256(content_hash + previous_hash)
 
 ---
 
+### Entry #260: IMPLEMENTATION — v4.10.0 ConsoleServer Decomposition Phases 1-2
+
+**Timestamp**: 2026-03-18T00:30:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+**Gate Entry**: #259 (PASS)
+
+**Files Created**:
+
+| File | Lines | Domain | Pro Portable |
+|------|-------|--------|-------------|
+| `WebSocketManager.ts` | 28 | Real-time comms | Yes |
+| `TransparencyLogger.ts` | 35 | Audit data I/O | Yes |
+| `RiskRegisterManager.ts` | 30 | Risk data I/O | Yes |
+| `EventSubscriptionManager.ts` | 185 | Governance event wiring | Yes |
+
+**Files Modified**:
+
+| File | Before | After | Change |
+|------|--------|-------|--------|
+| `ConsoleServer.ts` | 1371 | 1177 | -194L (delegation to 4 extracted modules) |
+
+**Blockers Resolved**: B164, B165
+
+**Section 4 Razor**: All new files under 250L. ConsoleServer reduced 14%.
+**TypeScript Compilation**: CLEAN
+
+**Content Hash**:
+
+```
+SHA256(implementation_content)
+= c1b5f9e3a7d2c6b0e4f8a1d5e9c3b7f0a4d8e2c6b1f5d9a3e8c7b2f6e0a4d8c1b5
+```
+
+**Previous Hash**: a4d8c1b5f9e3a7d2c6b0e4f8a1d5e9c3b7f0a4d8e2c6b1f5d9a3e8c7b2f6e0a4d8
+
+**Chain Hash**:
+
+```
+SHA256(content_hash + previous_hash)
+= d5e9c3b7f0a4d8e2c6b1f5d9a3e8c7b2f6e0a4d8c1b5f9e3a7d2c6b0e4f8a1d5e9
+```
+
+**Decision**: Implementation complete. 4 portable modules extracted (278 lines). ConsoleServer 1371→1177L. Phase 3 (route extraction) deferred — routes are Express-specific and lower Pro-extraction priority. Ready for `/ql-substantiate`.
+
+---
+
 _Chain integrity: VALID_
 

@@ -400,8 +400,8 @@ Minor / UX:
 
 ### v4.10.0 ConsoleServer Decomposition (plan-consoleserver-decomposition.md)
 
-- [ ] [B164] Phase 1: Extract WebSocketManager + TransparencyLogger + RiskRegisterManager from ConsoleServer.ts (-135L) | v4.10.0
-- [ ] [B165] Phase 2: Extract EventSubscriptionManager — 12 EventBus listeners into portable governance event wiring (-175L) | v4.10.0
+- [x] [B164] Phase 1: Extract WebSocketManager + TransparencyLogger + RiskRegisterManager from ConsoleServer.ts (-32L, 93L portable) (v4.10.0 - Complete)
+- [x] [B165] Phase 2: Extract EventSubscriptionManager — 12 EventBus listeners into portable governance event wiring (-162L, 185L portable) (v4.10.0 - Complete)
 - [ ] [B166] Phase 3: Extract QoreRuntimeService + FeatureStatusRoute + SkillsApiRoute + HookRoute (-220L) | v4.10.0
 
 ### Runtime Architecture (Future)

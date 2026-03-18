@@ -10,12 +10,14 @@ import * as crypto from "crypto";
 import * as net from "net";
 import express, { Request, Response } from "express";
 import { Server as HttpServer } from "http";
-import { WebSocketServer, WebSocket } from "ws";
+import { WebSocketManager } from "./services/WebSocketManager";
+import { TransparencyLogger } from "./services/TransparencyLogger";
+import { RiskRegisterManager } from "./services/RiskRegisterManager";
+import { EventSubscriptionManager } from "./services/EventSubscriptionManager";
 import { PlanManager } from "../qorelogic/planning/PlanManager";
 import { QoreLogicManager } from "../qorelogic/QoreLogicManager";
 import { SentinelDaemon } from "../sentinel/SentinelDaemon";
 import { EventBus } from "../shared/EventBus";
-import { SentinelVerdict } from "../shared/types";
 import { syncHookSentinel, isHookEnabled } from "../shared/hookSentinel";
 import { IFeatureGate, FeatureFlag } from "../core/interfaces/IFeatureGate";
 import { FEATURE_TIER_MAP } from "../core/FeatureGateService";
@@ -150,7 +152,7 @@ type UnattributedFileChange = {
 export class ConsoleServer {
   private app: express.Application;
   private server: HttpServer | null = null;
-  private wss: WebSocketServer | null = null;
+  private wsManager = new WebSocketManager();
   private planManager: PlanManager;
   private qorelogicManager: QoreLogicManager;
   private sentinelDaemon: SentinelDaemon;
@@ -185,6 +187,8 @@ export class ConsoleServer {
   private agentTimelineService: AgentTimelineService | null = null;
   private agentHealthIndicator: AgentHealthIndicator | null = null;
   private agentRunRecorder: AgentRunRecorder | null = null;
+  private transparencyLogger: TransparencyLogger;
+  private riskRegisterManager: RiskRegisterManager;
   private ledgerWatcher: fs.FSWatcher | null = null;
   private ledgerDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private unattributedFileChanges: UnattributedFileChange[] = [];
@@ -235,6 +239,8 @@ export class ConsoleServer {
     this.marketplaceInstaller = new MarketplaceInstaller(this.eventBus);
     this.securityScanner = new SecurityScanner(this.eventBus);
     this.adapterService = new AdapterService(this.eventBus);
+    this.transparencyLogger = new TransparencyLogger(this.workspaceRoot);
+    this.riskRegisterManager = new RiskRegisterManager(this.workspaceRoot);
     this.setupRoutes();
     this.subscribeToEvents();
   }
@@ -565,8 +571,7 @@ export class ConsoleServer {
 
   private setupWebSocket(): void {
     if (!this.server) return;
-    this.wss = new WebSocketServer({ server: this.server });
-    this.wss.on("connection", (ws) => {
+    this.wsManager.setup(this.server, (ws) => {
       this.buildHubSnapshot().then((hub) => {
         ws.send(JSON.stringify({ type: "init", payload: hub }));
       });
@@ -574,11 +579,7 @@ export class ConsoleServer {
   }
 
   private broadcast(data: Record<string, unknown>): void {
-    if (!this.wss) return;
-    const message = JSON.stringify(data);
-    this.wss.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) client.send(message);
-    });
+    this.wsManager.broadcast(data);
   }
 
   private watchMetaLedger(): void {
@@ -687,179 +688,17 @@ export class ConsoleServer {
   // ------------------------------------------------------------------
 
   private subscribeToEvents(): void {
-    this.eventBus.on("genesis.streamEvent" as never, (event: unknown) => {
-      const streamPayload = this.extractEventPayload(event);
-      this.maybeRecordSubstantiateCompletion(streamPayload);
-      this.broadcast({ type: "event", payload: event });
-      this.recordCheckpoint({
-        checkpointType: "event.stream", actor: "engine",
-        phase: this.inferPhaseKeyFromPlan(this.planManager.getActivePlan()),
-        status: "validated", policyVerdict: "PASS", evidenceRefs: [], payload: streamPayload,
-      });
+    const manager = new EventSubscriptionManager({
+      eventBus: this.eventBus,
+      recordCheckpoint: (r) => this.recordCheckpoint(r),
+      broadcast: (d) => this.broadcast(d),
+      logTransparencyEvent: (e) => this.logTransparencyEvent(e),
+      inferPhaseKey: () => this.inferPhaseKeyFromPlan(this.planManager.getActivePlan()),
+      recordObservedFileMutation: (p) => this.recordObservedFileMutation(p),
+      getPlan: (id) => this.planManager.getPlan(id),
+      sealedSubstantiateCompletions: this.sealedSubstantiateCompletions,
     });
-    this.eventBus.on("sentinel.verdict" as never, (event: { payload: unknown }) => {
-      const verdict = event.payload as SentinelVerdict;
-      this.recordVerdictCheckpoint(verdict);
-      this.maybeRecordAuditPassCheckpoint(verdict);
-      this.broadcast({ type: "verdict", payload: event.payload });
-      this.broadcast({ type: "hub.refresh" });
-      // S1: Access event.payload, not event root
-      const p = (event.payload ?? {}) as Record<string, unknown>;
-      this.logTransparencyEvent({
-        type: "sentinel.verdict",
-        decision: p.decision,
-        riskGrade: p.riskGrade,
-        filePath: p.filePath,
-        timestamp: new Date().toISOString(),
-      });
-      this.broadcast({ type: "transparency", payload: {
-        type: "sentinel.verdict", decision: p.decision, riskGrade: p.riskGrade,
-      } });
-    });
-    this.eventBus.on(
-      "sentinel.activityObserved" as never,
-      (event: { payload: unknown }) => {
-        this.recordObservedFileMutation(event.payload);
-      },
-    );
-    // Subscribe to transparency events and log to file + broadcast
-    this.eventBus.on("transparency.prompt" as never, (event: unknown) => {
-      this.logTransparencyEvent(event as Record<string, unknown>);
-      this.broadcast({ type: "transparency", payload: event });
-    });
-    this.subscribeToQorelogicEvents();
-  }
-
-  private subscribeToQorelogicEvents(): void {
-    const currentPhase = () => this.inferPhaseKeyFromPlan(this.planManager.getActivePlan());
-    this.eventBus.on("qorelogic.l3Queued" as never, (event: unknown) => {
-      this.recordCheckpoint({
-        checkpointType: "override.requested", actor: "qorelogic",
-        phase: currentPhase(), status: "proposed", policyVerdict: "ESCALATE",
-        evidenceRefs: [], payload: event,
-      });
-      this.broadcast({ type: "hub.refresh" });
-      // S2: Explicit field allowlisting for L3 transparency events
-      const p = ((event as Record<string, unknown>)?.payload ?? event ?? {}) as Record<string, unknown>;
-      this.logTransparencyEvent({
-        type: "governance.l3Queued",
-        filePath: p.filePath, riskGrade: p.riskGrade, id: p.id,
-        timestamp: new Date().toISOString(),
-      });
-      this.broadcast({ type: "transparency", payload: {
-        type: "governance.l3Queued", riskGrade: p.riskGrade, id: p.id,
-      } });
-    });
-    this.eventBus.on("qorelogic.l3Decided" as never, (event: unknown) => {
-      this.recordCheckpoint({
-        checkpointType: "override.approved", actor: "qorelogic",
-        phase: currentPhase(), status: "sealed", policyVerdict: "PASS",
-        evidenceRefs: [], payload: event,
-      });
-      this.broadcast({ type: "hub.refresh" });
-      // S2: Explicit field allowlisting for L3 transparency events
-      const p = ((event as Record<string, unknown>)?.payload ?? event ?? {}) as Record<string, unknown>;
-      this.logTransparencyEvent({
-        type: "governance.l3Decided",
-        decision: p.decision, riskGrade: p.riskGrade, id: p.id,
-        timestamp: new Date().toISOString(),
-      });
-      this.broadcast({ type: "transparency", payload: {
-        type: "governance.l3Decided", decision: p.decision, id: p.id,
-      } });
-    });
-    this.eventBus.on("qorelogic.trustUpdate" as never, () =>
-      this.broadcast({ type: "hub.refresh" }),
-    );
-    // Broadcast run lifecycle events to Command Center Replay tab
-    this.eventBus.on("agentRun.started" as never, (event: unknown) => {
-      this.broadcast({ type: "agentRun", payload: { action: "started", ...(event as Record<string, unknown>) } });
-    });
-    this.eventBus.on("agentRun.completed" as never, (event: unknown) => {
-      this.broadcast({ type: "agentRun", payload: { action: "completed", ...(event as Record<string, unknown>) } });
-    });
-    this.eventBus.on("agentRun.stepRecorded" as never, (event: unknown) => {
-      this.broadcast({ type: "agentRun", payload: { action: "step", ...(event as Record<string, unknown>) } });
-    });
-  }
-
-  private recordVerdictCheckpoint(verdict: SentinelVerdict): void {
-    this.recordCheckpoint({
-      checkpointType: "policy.checked",
-      actor: verdict.agentDid || "sentinel",
-      phase: this.inferPhaseKeyFromPlan(this.planManager.getActivePlan()),
-      status: "validated",
-      policyVerdict: String(verdict.decision || "UNKNOWN"),
-      evidenceRefs: [],
-      payload: {
-        decision: verdict.decision,
-        riskGrade: verdict.riskGrade,
-        summary: verdict.summary,
-      },
-    });
-  }
-
-  private extractEventPayload(event: unknown): unknown {
-    if (!event || typeof event !== "object") return event;
-    return (event as { payload?: unknown }).payload ?? event;
-  }
-
-  private maybeRecordAuditPassCheckpoint(verdict: SentinelVerdict): void {
-    if (String(verdict.decision || "").toUpperCase() !== "PASS") return;
-    this.recordCheckpoint({
-      checkpointType: "attempt.committed",
-      actor: verdict.agentDid || "sentinel",
-      phase: "audit",
-      status: "sealed",
-      policyVerdict: "PASS",
-      evidenceRefs: [],
-      payload: {
-        trigger: "audit.pass",
-        riskGrade: verdict.riskGrade,
-        summary: verdict.summary,
-      },
-    });
-  }
-
-  private maybeRecordSubstantiateCompletion(streamPayload: unknown): void {
-    if (!streamPayload || typeof streamPayload !== "object") return;
-    const payload = streamPayload as {
-      planEvent?: {
-        type?: string;
-        planId?: string;
-        payload?: { phaseId?: string };
-      };
-    };
-    const planEvent = payload.planEvent;
-    if (!planEvent || String(planEvent.type || "") !== "phase.completed") return;
-    const planId = String(planEvent.planId || "");
-    const phaseId = String(planEvent.payload?.phaseId || "");
-    if (!planId || !phaseId) return;
-    const dedupeKey = `${planId}:${phaseId}`;
-    if (this.sealedSubstantiateCompletions.has(dedupeKey)) return;
-    const plan = this.planManager.getPlan(planId);
-    const phase = plan?.phases.find((item) => item.id === phaseId);
-    const phaseTitle = String(phase?.title || "").toLowerCase();
-    const isSubstantiate =
-      phaseTitle.includes("substantiat") ||
-      phaseTitle.includes("release") ||
-      phaseTitle.includes("ship");
-    if (!isSubstantiate) return;
-    this.sealedSubstantiateCompletions.add(dedupeKey);
-    this.recordCheckpoint({
-      checkpointType: "phase.exited",
-      actor: "plan-manager",
-      phase: "substantiate",
-      status: "sealed",
-      policyVerdict: "PASS",
-      evidenceRefs: [],
-      payload: {
-        trigger: "phase.completed",
-        planId,
-        phaseId,
-        phaseTitle: phase?.title || "Substantiate",
-      },
-    });
+    manager.subscribe();
   }
 
   // ------------------------------------------------------------------
@@ -1068,7 +907,7 @@ export class ConsoleServer {
     markDisconnected(this.actualPort);
     this.ledgerWatcher?.close();
     this.ledgerWatcher = null;
-    this.wss?.close();
+    this.wsManager.close();
     this.server?.close();
   }
 
@@ -1248,52 +1087,19 @@ export class ConsoleServer {
   // ------------------------------------------------------------------
 
   private getTransparencyEvents(limit: number): Array<Record<string, unknown>> {
-    const logPath = path.join(
-      this.workspaceRoot, ".failsafe", "logs", "transparency.jsonl",
-    );
-    const events: Array<Record<string, unknown>> = [];
-    try {
-      if (fs.existsSync(logPath)) {
-        const lines = fs.readFileSync(logPath, "utf-8").trim().split("\n").filter(Boolean);
-        for (const line of lines.slice(-limit)) {
-          try { events.push(JSON.parse(line)); } catch { /* skip malformed */ }
-        }
-      }
-    } catch { /* return empty */ }
-    return events;
+    return this.transparencyLogger.getEvents(limit);
   }
 
   private logTransparencyEvent(event: Record<string, unknown>): void {
-    const logPath = path.join(
-      this.workspaceRoot, ".failsafe", "logs", "transparency.jsonl",
-    );
-    try {
-      const dir = path.dirname(logPath);
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      fs.appendFileSync(logPath, JSON.stringify(event) + "\n", "utf-8");
-    } catch { /* ignore write errors */ }
+    this.transparencyLogger.log(event);
   }
 
   private getRiskRegister(): Array<Record<string, unknown>> {
-    const risksPath = path.join(
-      this.workspaceRoot, ".failsafe", "risks", "risks.json",
-    );
-    try {
-      if (fs.existsSync(risksPath)) {
-        const data = JSON.parse(fs.readFileSync(risksPath, "utf-8"));
-        return Array.isArray(data.risks) ? data.risks : [];
-      }
-    } catch { /* return empty */ }
-    return [];
+    return this.riskRegisterManager.getRisks();
   }
 
   private writeRiskRegister(risks: Array<Record<string, unknown>>): void {
-    const risksPath = path.join(
-      this.workspaceRoot, ".failsafe", "risks", "risks.json",
-    );
-    const dir = path.dirname(risksPath);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(risksPath, JSON.stringify({ risks }, null, 2), "utf-8");
+    this.riskRegisterManager.writeRisks(risks);
   }
 
   // ------------------------------------------------------------------
