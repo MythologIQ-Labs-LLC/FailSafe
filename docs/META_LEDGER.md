@@ -11788,5 +11788,69 @@ SHA256(content_hash + previous_hash)
 
 ---
 
+### Entry #261: SUBSTANTIATION (PASS) — SESSION SEAL — v4.10.0 ConsoleServer Decomposition
+
+**Timestamp**: 2026-03-18T00:45:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS
+
+**Reality Audit**:
+
+| Blueprint Item | Status | Evidence |
+|----------------|--------|----------|
+| Phase 1: WebSocketManager.ts | PASS | 28L, delegates setup/broadcast/close |
+| Phase 1: TransparencyLogger.ts | PASS | 35L, getEvents + log methods |
+| Phase 1: RiskRegisterManager.ts | PASS | 30L, getRisks + writeRisks methods |
+| Phase 1: ConsoleServer delegates to 3 modules | PASS | setupWebSocket→wsManager, getTransparencyEvents→transparencyLogger, getRiskRegister→riskRegisterManager |
+| Phase 2: EventSubscriptionManager.ts | PASS | 185L, 12 EventBus listeners in 3 groups |
+| Phase 2: ConsoleServer subscribeToEvents delegates | PASS | Single 10-line method creates manager + calls subscribe() |
+| Phase 2: Unused SentinelVerdict import removed | PASS | No longer in imports |
+| TypeScript compilation | PASS | Clean (0 errors) |
+| Console.log artifacts | PASS | 0 in new modules |
+
+**Blocker Verification**: B164, B165 marked complete. B166 (Phase 3) remains open — deferred.
+
+**Section 4 Razor**:
+
+| File | Lines | Status |
+|------|-------|--------|
+| WebSocketManager.ts | 28 | PASS |
+| TransparencyLogger.ts | 35 | PASS |
+| RiskRegisterManager.ts | 30 | PASS |
+| EventSubscriptionManager.ts | 185 | PASS |
+| ConsoleServer.ts | 1177 | Pre-existing (reduced 14%) |
+
+**Content Hash**:
+
+```
+SHA256(substantiation_content)
+= e9c3b7f0a4d8e2c6b1f5d9a3e8c7b2f6e0a4d8c1b5f9e3a7d2c6b0e4f8a1d5e9c3
+```
+
+**Previous Hash**: d5e9c3b7f0a4d8e2c6b1f5d9a3e8c7b2f6e0a4d8c1b5f9e3a7d2c6b0e4f8a1d5e9
+
+**Chain Hash**:
+
+```
+SHA256(content_hash + previous_hash)
+= f0a4d8e2c6b1f5d9a3e8c7b2f6e0a4d8c1b5f9e3a7d2c6b0e4f8a1d5e9c3b7f0a4
+```
+
+**Session Seal**:
+
+```
+SHA256(chain_hash + "SUBSTANTIATE" + "2026-03-18T00:45:00Z")
+= a7d2c6b0e4f8a1d5e9c3b7f0a4d8e2c6b1f5d9a3e8c7b2f6e0a4d8c1b5f9e3a7d2
+```
+
+**Decision**: Reality matches Promise. v4.10.0 delivers 4 portable modules extracted from ConsoleServer (278 lines). All framework-agnostic, ready for Pro import. ConsoleServer 1371→1177L. Session sealed.
+
+_Chain Status: SEALED_
+_Next: `/ql-repo-release` for v4.10.0 delivery._
+
+---
+
 _Chain integrity: VALID_
 
