@@ -1,9 +1,9 @@
 {
   "name": "mythologiq-failsafe",
-  "displayName": "FailSafe (feat. QoreLogic)",
-  "description": "Complete AI governance for modern development. Genesis visualization + QoreLogic framework + Sentinel monitoring.",
+  "displayName": "FailSafe (feat. QorLogic)",
+  "description": "Open-source VS Code/Cursor governance and skills surface for AI coding agents. Pairs with FailSafe Pro for desktop enforcement.",
   "icon": "media/icon.png",
-  "version": "4.9.9",
+  "version": "5.0.0",
   "publisher": "MythologIQ",
   "license": "MIT",
   "repository": {
@@ -41,6 +41,9 @@
     "onChatParticipant:failsafe.chat",
     "onView:failsafe.sidebarView",
     "onCommand:failsafe.openSidebar",
+    "onCommand:failsafe.openFailSafeProDownload",
+    "onCommand:failsafe.bootstrap",
+    "onCommand:failsafe.organize",
     "onCommand:failsafe.openPlannerHub",
     "onCommand:failsafe.openRoadmap",
     "onCommand:failsafe.openPlannerHubEditor",
@@ -99,6 +102,18 @@
       {
         "command": "failsafe.openSidebar",
         "title": "FailSafe: Open Sidebar"
+      },
+      {
+        "command": "failsafe.openFailSafeProDownload",
+        "title": "FailSafe: About FailSafe Pro"
+      },
+      {
+        "command": "failsafe.bootstrap",
+        "title": "FailSafe: Bootstrap Workspace (install qor-logic + scaffold)"
+      },
+      {
+        "command": "failsafe.organize",
+        "title": "FailSafe: Organize Workspace (structure check)"
       },
       {
         "command": "failsafe.openPlannerHub",
@@ -240,6 +255,11 @@
     "configuration": {
       "title": "FailSafe",
       "properties": {
+        "failsafe.qorlogic.pythonPath": {
+          "type": "string",
+          "default": "",
+          "description": "Override the Python interpreter used to install qor-logic. Leave empty to auto-detect (VS Code Python extension, then python3/python/py -3 probe)."
+        },
         "failsafe.genesis.livingGraph": {
           "type": "boolean",
           "default": true,

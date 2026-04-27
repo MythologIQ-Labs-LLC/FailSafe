@@ -11,7 +11,7 @@ _Local-first safety for AI coding assistants._
 [![GitHub Stars](https://img.shields.io/github/stars/MythologIQ/FailSafe?style=social)](https://github.com/MythologIQ/FailSafe/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-stable-green)](https://github.com/MythologIQ/FailSafe)
-[![Socket Badge](https://badge.socket.dev/openvsx/package/mythologiq.mythologiq-failsafe/4.9.9?platform=universal)](https://badge.socket.dev/openvsx/package/mythologiq.mythologiq-failsafe/4.9.9?platform=universal)
+[![Socket Badge](https://badge.socket.dev/openvsx/package/mythologiq.mythologiq-failsafe/5.0.0?platform=universal)](https://badge.socket.dev/openvsx/package/mythologiq.mythologiq-failsafe/5.0.0?platform=universal)
 [![Node](https://img.shields.io/badge/node-18+-green.svg)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)](https://www.typescriptlang.org)
 [![VS Code Extension](https://img.shields.io/badge/VS%20Code-Extension-007ACC?logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=MythologIQ.mythologiq-failsafe)
@@ -19,9 +19,20 @@ _Local-first safety for AI coding assistants._
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Commands-8B5CF6)](https://github.com/MythologIQ/FailSafe/releases)
 [![Documentation](https://img.shields.io/badge/docs-FAILSAFE_SPECIFICATION-blue)](docs/FAILSAFE_SPECIFICATION.md)
 
-**Current Release**: v4.9.9
+**Current Release**: v5.0.0
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
+
+## FailSafe and FailSafe Pro
+
+FailSafe is the open-source VS Code and Cursor extension for local AI coding governance — audits, skills, checkpoints, and editor-visible safety workflows. Skills are sourced from the [`qor-logic`](https://pypi.org/project/qor-logic/) PyPI package.
+
+FailSafe Pro is the downloadable desktop and daemon product for OS-level enforcement, file-locking, team workflows, remote connections, and commercial distribution.
+
+Use FailSafe when you want local editor guardrails. Use FailSafe Pro when you need stronger enforcement and managed runtime operations.
+
+Download FailSafe Pro: <https://mythologiq.studio/failsafe-pro/download>
+
 
 [Quick Start](#quick-example) | [Documentation](docs/FAILSAFE_SPECIFICATION.md) | [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=MythologIQ.mythologiq-failsafe) | [Open VSX](https://open-vsx.org/extension/MythologIQ/mythologiq-failsafe) | [Roadmap](docs/ROADMAP.md)
 

@@ -41,6 +41,12 @@ import { AudioVaultService } from "./services/AudioVaultService";
 import type { IConfigProvider } from "../core/interfaces/IConfigProvider";
 import { LLMClient } from "../sentinel/utils/LLMClient";
 import { setupBrainstormRoutes } from "./routes/BrainstormRoute";
+import { MetaLedgerReader, type LedgerSummary } from "./services/MetaLedgerReader";
+import { PlanFileReader, type ParsedPlan } from "./services/PlanFileReader";
+import { SystemStateReader, type SystemStateSnapshot } from "./services/SystemStateReader";
+import { BacklogReader, type PlanBlockerProjection } from "./services/BacklogReader";
+import { AuditReportReader, type AuditSnapshot } from "./services/AuditReportReader";
+import { ChangelogReader, type ReleaseEntry } from "./services/ChangelogReader";
 import { setupCheckpointRoutes } from "./routes/CheckpointRoute";
 import { setupActionsRoutes } from "./routes/ActionsRoute";
 import { setupTransparencyRiskRoutes } from "./routes/TransparencyRiskRoute";
@@ -149,6 +155,106 @@ type UnattributedFileChange = {
   decision?: string;
 };
 
+/**
+ * v5: a workspace counts as "skills installed" only if at least one qor-*
+ * skill directory has the synthesized SOURCE.yml that the QorLogicSkillIngestor
+ * writes after `qorlogic install`. File-existence alone is not enough — v4
+ * scaffolds left bare SKILL.md files that should not satisfy v5 readiness.
+ */
+/**
+ * Convert a META_LEDGER summary into the {id,name,status} phase shape the
+ * Operations UI expects. One synthetic phase per plan iteration:
+ *   - SUBSTANTIATION present for that iteration → status "complete"
+ *   - GATE TRIBUNAL only (no seal yet) → status "in-progress"
+ * The UI's `roadmap?.phases?.filter(p => p.status === 'complete').length`
+ * then yields `sessionsCompleted`, and the planned count = plansStarted.
+ */
+const MAX_PHASE_RENDER = 10;
+
+function buildPhasesFromLedger(
+  summary: LedgerSummary,
+): Array<{ id: string; name: string; status: string; source: "meta-ledger" }> {
+  const phases: Array<{ id: string; name: string; status: string; source: "meta-ledger" }> = [];
+  // Show in-flight first (more actionable), then sealed; total capped at MAX_PHASE_RENDER.
+  const inFlightToShow = Math.min(summary.sessionsInFlight, MAX_PHASE_RENDER);
+  const completedRemaining = MAX_PHASE_RENDER - inFlightToShow;
+  const completedToShow = Math.min(summary.sessionsCompleted, Math.max(0, completedRemaining));
+  for (let i = 0; i < inFlightToShow; i += 1) {
+    phases.push({
+      id: `ledger-in-flight-${i + 1}`,
+      name: `Session in flight ${i + 1}`,
+      status: "in-progress",
+      source: "meta-ledger",
+    });
+  }
+  for (let i = 0; i < completedToShow; i += 1) {
+    phases.push({
+      id: `ledger-completed-${i + 1}`,
+      name: `Session ${i + 1} (sealed)`,
+      status: "complete",
+      source: "meta-ledger",
+    });
+  }
+  const total = summary.sessionsInFlight + summary.sessionsCompleted;
+  const truncated = total - phases.length;
+  if (truncated > 0) {
+    phases.push({
+      id: "ledger-summary",
+      name: `(${truncated} more — total ${summary.sessionsCompleted} sealed / ${summary.sessionsInFlight} in flight)`,
+      status: "summary",
+      source: "meta-ledger",
+    });
+  }
+  return phases;
+}
+
+/**
+ * If PlanManager has no active plan, fall back to the most-recent file-based
+ * plan from `.failsafe/governance/plans/`. Either way, ensure `plan.blockers`
+ * is populated from BACKLOG when the structured field is empty.
+ */
+function mergePlanBlockers(
+  activePlan: unknown,
+  artifacts: { activePlanFromFile: ParsedPlan | null; planBlockers: PlanBlockerProjection[] },
+): unknown {
+  if (activePlan && typeof activePlan === "object") {
+    const existing = activePlan as Record<string, unknown>;
+    const currentBlockers = Array.isArray(existing.blockers) ? existing.blockers : [];
+    if (currentBlockers.length > 0) return activePlan;
+    return { ...existing, blockers: artifacts.planBlockers };
+  }
+  if (!artifacts.activePlanFromFile) return null;
+  const plan = artifacts.activePlanFromFile;
+  return {
+    id: plan.planId,
+    intentId: "",
+    title: plan.title,
+    phases: plan.phases,
+    blockers: artifacts.planBlockers,
+    risks: [],
+    milestones: [],
+    currentPhaseId: plan.phases[0]?.id ?? "",
+    source: "plan-file",
+    filePath: plan.filePath,
+    openQuestions: plan.openQuestions,
+  };
+}
+
+function hasQorLogicProvenance(workspaceRoot: string): boolean {
+  const skillsRoot = path.join(workspaceRoot, ".claude", "skills");
+  if (!fs.existsSync(skillsRoot)) return false;
+  let entries: fs.Dirent[];
+  try { entries = fs.readdirSync(skillsRoot, { withFileTypes: true }); }
+  catch { return false; }
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    if (!entry.name.startsWith("qor-")) continue;
+    const sourceYml = path.join(skillsRoot, entry.name, "SOURCE.yml");
+    if (fs.existsSync(sourceYml)) return true;
+  }
+  return false;
+}
+
 export class ConsoleServer {
   private app: express.Application;
   private server: HttpServer | null = null;
@@ -179,7 +285,7 @@ export class ConsoleServer {
   private ideTracker:
     | import("./services/IdeActivityTracker").IdeActivityTracker
     | null = null;
-  private scaffoldCallback: (() => Promise<{ scaffolded: number; skipped: number }>) | null = null;
+  private scaffoldCallback: (() => Promise<{ scaffolded: number; skipped: number; error?: string }>) | null = null;
   private marketplaceCatalog: MarketplaceCatalog;
   private marketplaceInstaller: MarketplaceInstaller;
   private securityScanner: SecurityScanner;
@@ -277,7 +383,21 @@ export class ConsoleServer {
       const sprints = this.planManager.getAllSprints();
       const currentSprint = this.planManager.getCurrentSprint();
       const activePlan = this.planManager.getActivePlan();
-      res.json({ sprints, currentSprint, activePlan });
+      // Backfill from META_LEDGER.md when PlanManager has no event-sourced state.
+      // This is the workspace-truth path: 261+ historical entries become real
+      // phase counts in the UI rather than 0/0 theater.
+      const ledgerSummary = new MetaLedgerReader(this.workspaceRoot).summarize();
+      const phasesFromLedger = ledgerSummary.totalEntries > 0
+        ? buildPhasesFromLedger(ledgerSummary)
+        : [];
+      const phases = (activePlan?.phases?.length ?? 0) > 0
+        ? activePlan!.phases
+        : phasesFromLedger;
+      res.json({
+        sprints, currentSprint, activePlan,
+        phases,
+        ledgerSummary,
+      });
     });
 
     this.app.get("/api/hub", async (_req: Request, res: Response) => {
@@ -621,7 +741,7 @@ export class ConsoleServer {
     this.ideTracker = tracker;
   }
 
-  setScaffoldCallback(cb: () => Promise<{ scaffolded: number; skipped: number }>): void {
+  setScaffoldCallback(cb: () => Promise<{ scaffolded: number; skipped: number; error?: string }>): void {
     this.scaffoldCallback = cb;
   }
 
@@ -831,13 +951,17 @@ export class ConsoleServer {
       sentinelStatus as unknown as { running?: boolean; filesWatched?: number; queueDepth?: number; [k: string]: unknown },
       l3Queue, trust, qoreRuntime,
     );
+    const artifacts = this.assembleWorkspaceArtifactSnapshot();
+    const verdicts = this.coalesceVerdicts(artifacts);
+    const completions = this.coalesceCompletions(artifacts);
+    const activePlanWithBlockers = mergePlanBlockers(activePlan, artifacts);
     return {
       version: EXTENSION_VERSION,
       sprints: this.planManager.getAllSprints(),
       currentSprint: this.planManager.getCurrentSprint(),
-      activePlan,
+      activePlan: activePlanWithBlockers,
       sentinelStatus,
-      recentVerdicts: this.getRecentVerdicts(10),
+      recentVerdicts: verdicts,
       l3Queue,
       trustSummary: trust,
       nodeStatus: nodeStatusArr,
@@ -846,18 +970,21 @@ export class ConsoleServer {
       qoreRuntime,
       runState,
       riskSummary: buildRiskSummary((limit) => this.getRecentVerdicts(limit)),
-      recentCompletions: buildRecentCompletions((limit) => this.getRecentCheckpoints(limit)),
+      recentCompletions: completions,
+      transparencyEvents: this.transparencyLogger.getEvents(20),
       unattributedFileActivity: buildUnattributedFileActivity(this.unattributedFileChanges),
       metricIntegrity: buildMetricIntegrity(governancePhase, checkpointSummary, sentinelStatus, runState, hubDeps),
       bootstrapState: {
-        skillsInstalled: fs.existsSync(
-          path.join(this.getWorkspaceRoot(), ".claude", "skills", "ql-bootstrap", "SKILL.md"),
-        ),
+        skillsInstalled: hasQorLogicProvenance(this.getWorkspaceRoot()),
         governanceInitialized: fs.existsSync(
           path.join(this.getWorkspaceRoot(), "docs", "CONCEPT.md"),
         ),
         workspaceName: path.basename(this.getWorkspaceRoot()),
+        systemState: artifacts.systemState,
       },
+      ledgerSummary: artifacts.ledgerSummary,
+      latestAudit: artifacts.latestAudit,
+      recentReleases: artifacts.recentReleases,
       workspaceName: path.basename(this.getWorkspaceRoot()),
       workspacePath: this.getWorkspaceRoot(),
       serverPort: this.actualPort,
@@ -868,6 +995,67 @@ export class ConsoleServer {
       agentHealth: this.agentHealthIndicator?.buildMetrics() || null,
       generatedAt: new Date().toISOString(),
     };
+  }
+
+  /**
+   * Phase 1/2/3 helper (audit obs #3): keep workspace-artifact reads out of
+   * `buildHubSnapshot` to bound that function's growth. Each reader is a pure
+   * function over a markdown file — failures degrade to nulls/empty arrays.
+   */
+  private assembleWorkspaceArtifactSnapshot(): {
+    ledgerSummary: ReturnType<MetaLedgerReader["summarize"]>;
+    ledgerVerdicts: ReturnType<MetaLedgerReader["recentVerdicts"]>;
+    ledgerCompletions: ReturnType<MetaLedgerReader["recentCompletions"]>;
+    activePlanFromFile: ParsedPlan | null;
+    planBlockers: PlanBlockerProjection[];
+    systemState: SystemStateSnapshot;
+    latestAudit: AuditSnapshot | null;
+    recentReleases: ReleaseEntry[];
+  } {
+    const ws = this.getWorkspaceRoot();
+    const ledger = new MetaLedgerReader(ws);
+    return {
+      ledgerSummary: ledger.summarize(),
+      ledgerVerdicts: ledger.recentVerdicts(10),
+      ledgerCompletions: ledger.recentCompletions(12),
+      activePlanFromFile: new PlanFileReader(ws).pickLatestPlan(),
+      planBlockers: new BacklogReader(ws).parseOpenBlockers(),
+      systemState: new SystemStateReader(ws).read(),
+      latestAudit: new AuditReportReader(ws).read(),
+      recentReleases: new ChangelogReader(ws).recentReleases(5),
+    };
+  }
+
+  /**
+   * Verdict source priority: live (sqlite-backed) records first, then
+   * META_LEDGER backfill when nothing has been recorded this session.
+   */
+  private coalesceVerdicts(
+    artifacts: ReturnType<ConsoleServer["assembleWorkspaceArtifactSnapshot"]>,
+  ): Array<Record<string, unknown>> {
+    const live = this.getRecentVerdicts(10);
+    if (live.length > 0) return live;
+    return artifacts.ledgerVerdicts.map((v) => ({
+      id: v.id,
+      number: v.number,
+      kind: v.kind,
+      title: v.title,
+      source: "meta-ledger",
+    }));
+  }
+
+  private coalesceCompletions(
+    artifacts: ReturnType<ConsoleServer["assembleWorkspaceArtifactSnapshot"]>,
+  ): unknown {
+    const live = buildRecentCompletions((limit) => this.getRecentCheckpoints(limit));
+    if (Array.isArray(live) && live.length > 0) return live;
+    return artifacts.ledgerCompletions.map((c) => ({
+      id: c.id,
+      number: c.number,
+      kind: c.kind,
+      title: c.title,
+      source: "meta-ledger",
+    }));
   }
 
   // ------------------------------------------------------------------

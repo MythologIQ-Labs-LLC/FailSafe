@@ -36,7 +36,7 @@ export function renderRoadmapCard(
         return `<div class="card">
             <div class="card-title">Active Plan</div>
             <div style="color: var(--vscode-descriptionForeground); font-style: italic; margin-bottom: 12px;">
-                No active plan. Use <code>/ql-plan</code> to create one.
+                No active plan. Use <code>/qor-plan</code> to create one.
             </div>
             <button class="action-btn secondary" onclick="showPlanningHub()">Open Planning Hub</button>
         </div>`;

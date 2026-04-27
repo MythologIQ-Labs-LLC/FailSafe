@@ -58,7 +58,7 @@ export class AgentConfigInjector {
   private buildGovernanceBlock(systemName: string, format: string): string {
     const rules = [
       `All writes are subject to EnforcementEngine (FailSafe Extension).`,
-      `Use /ql-status to check current governance state.`,
+      `Use /qor-status to check current governance state.`,
     ].join('\n');
 
     if (format === 'mdc') {

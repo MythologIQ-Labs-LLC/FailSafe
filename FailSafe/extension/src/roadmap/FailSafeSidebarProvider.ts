@@ -48,7 +48,9 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
         if (initCmds.includes("failsafe.bootstrap")) {
           await vscode.commands.executeCommand("failsafe.bootstrap");
         } else {
-          vscode.window.showInformationMessage("Bootstrap is not enabled in current configuration.");
+          vscode.window.showWarningMessage(
+            "Bootstrap command is not yet registered. The extension may still be activating — try again in a moment.",
+          );
         }
         break;
       }
@@ -57,7 +59,9 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
         if (cmds.includes("failsafe.organize")) {
           await vscode.commands.executeCommand("failsafe.organize");
         } else {
-          vscode.window.showInformationMessage("Organize is not enabled in current configuration.");
+          vscode.window.showWarningMessage(
+            "Organize command is not yet registered. The extension may still be activating — try again in a moment.",
+          );
         }
         break;
       }

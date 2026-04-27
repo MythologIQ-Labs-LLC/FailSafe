@@ -23,7 +23,7 @@ export interface ApiRouteDeps {
   getTransparencyEvents: (limit: number) => any[];
   getRiskRegister: () => any[];
   writeRiskRegister: (risks: any[]) => void;
-  scaffoldSkills?: () => Promise<{ scaffolded: number; skipped: number }>;
+  scaffoldSkills?: () => Promise<{ scaffolded: number; skipped: number; error?: string }>;
   // Agent API route delegates (Phase 2: B142/B143/B144)
   getTimelineEntries: (filter?: any) => any[];
   getHealthMetrics: () => any | null;

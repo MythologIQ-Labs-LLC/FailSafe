@@ -6,13 +6,10 @@
  */
 
 import * as vscode from "vscode";
-import * as fs from "fs";
-import * as path from "path";
 import { Logger } from "../shared/Logger";
 import { ConsoleServer } from "../roadmap";
 import { FailSafeSidebarProvider } from "../roadmap/FailSafeSidebarProvider";
 import { RiskManager } from "../qorelogic/risk";
-import { collectMarkdownFiles } from "../roadmap/services/SkillFileUtils";
 import type { EventBus } from "../shared/EventBus";
 import type { PlanManager } from "../qorelogic/planning/PlanManager";
 import type { QoreLogicManager } from "../qorelogic/QoreLogicManager";
@@ -20,6 +17,11 @@ import type { SentinelDaemon } from "../sentinel/SentinelDaemon";
 import type { SystemRegistry } from "../qorelogic/SystemRegistry";
 import type { ConfigManager } from "../shared/ConfigManager";
 import { IdeActivityTracker } from "../roadmap/services/IdeActivityTracker";
+import { PythonInterpreterResolver, defaultRun } from "../qorlogic/PythonInterpreterResolver";
+import { QorLogicPackageInstaller, defaultInstallerRun } from "../qorlogic/QorLogicPackageInstaller";
+import { QorLogicSkillIngestor } from "../qorlogic/QorLogicSkillIngestor";
+import { createInstallSkillsHandler } from "./installSkillsHandler";
+import { runWorkspaceBootstrap, type BootstrapReport } from "./bootstrapWorkspace";
 
 export interface ServerDeps {
   planManager: PlanManager;
@@ -64,39 +66,70 @@ export async function bootstrapServers(
   await consoleServer.start();
   context.subscriptions.push({ dispose: () => consoleServer?.stop() });
 
-  // Register scaffold callback for "Install Skills" button
-  consoleServer.setScaffoldCallback(async () => {
-    const bundledPath = path.join(context.extensionPath, "dist", "extension", "skills");
-    const targetDir = path.join(deps.workspaceRoot, ".claude", "skills");
-    let scaffolded = 0;
-    let skipped = 0;
+  // QorLogic skill installer (v5): replaces v4 bundled-skills copy path.
+  const outputChannel = vscode.window.createOutputChannel("FailSafe (QorLogic)");
+  context.subscriptions.push(outputChannel);
+  const interpreterResolver = new PythonInterpreterResolver(
+    vscode.workspace.getConfiguration(),
+    vscode,
+    defaultRun,
+  );
+  const packageInstaller = new QorLogicPackageInstaller(
+    interpreterResolver,
+    outputChannel,
+    defaultInstallerRun,
+  );
+  const skillIngestor = new QorLogicSkillIngestor(
+    packageInstaller,
+    interpreterResolver,
+    deps.workspaceRoot,
+    defaultInstallerRun,
+    async () => undefined,
+    outputChannel,
+  );
+  consoleServer.setScaffoldCallback(createInstallSkillsHandler(skillIngestor));
 
-    try {
-      await fs.promises.access(bundledPath);
-      await fs.promises.mkdir(targetDir, { recursive: true });
-
-      const bundledFiles = await collectMarkdownFiles(bundledPath);
-      for (const sourcePath of bundledFiles) {
-        const skillName = path.basename(path.dirname(sourcePath));
-        if (skillName === "skills" || skillName === ".") continue;
-
-        const targetSkillDir = path.join(targetDir, skillName);
-        const targetPath = path.join(targetSkillDir, "SKILL.md");
-
-        try {
-          await fs.promises.access(targetPath);
-          skipped++;
-        } catch {
-          await fs.promises.mkdir(targetSkillDir, { recursive: true });
-          await fs.promises.copyFile(sourcePath, targetPath);
-          scaffolded++;
-        }
+  // Invalidate the resolver's cache when the user changes the Python override.
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration("failsafe.qorlogic.pythonPath")) {
+        interpreterResolver.invalidate();
       }
-    } catch (err) {
-      console.warn("[FailSafe] No bundled skills found at", bundledPath, (err as Error).message);
-    }
+    }),
+  );
 
-    return { scaffolded, skipped };
+  // Register `failsafe.bootstrap` and `failsafe.organize` commands. Bootstrap
+  // is the always-available workspace-readiness gate (idempotent: skips
+  // already-present infrastructure). Without these registrations the sidebar
+  // "Initialize" button falls through to a misleading "not enabled" message.
+  const bootstrapDeps = {
+    context, workspaceRoot: deps.workspaceRoot,
+    installer: packageInstaller, ingestor: skillIngestor, output: outputChannel,
+  } as const;
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("failsafe.bootstrap", async () => {
+      const report = await runWorkspaceBootstrap(bootstrapDeps, "interactive");
+      reportBootstrapToUser(report, outputChannel);
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("failsafe.organize", async () => {
+      // Organize is a focused subset: workspace structure only, no pip install.
+      const report = await runWorkspaceBootstrap(bootstrapDeps, "silent");
+      reportBootstrapToUser(report, outputChannel);
+    }),
+  );
+
+  // Run silent bootstrap on activation so missing infrastructure is created
+  // immediately. Heavy steps (pip install) are deferred until the user
+  // explicitly invokes `failsafe.bootstrap` from the sidebar or command palette.
+  void runWorkspaceBootstrap(bootstrapDeps, "silent").then((report) => {
+    outputChannel.appendLine(`[bootstrap-on-activation] ${report.summary}`);
+    for (const step of report.steps) {
+      outputChannel.appendLine(`  - ${step.name}: ${step.status}${step.detail ? ` (${step.detail})` : ""}`);
+    }
   });
 
   // Get actual port for workspace isolation
@@ -111,4 +144,21 @@ export async function bootstrapServers(
   );
 
   return { consoleServer, riskManager, actualPort };
+}
+
+function reportBootstrapToUser(
+  report: BootstrapReport,
+  output: vscode.OutputChannel,
+): void {
+  output.appendLine(`[bootstrap] ${report.summary}`);
+  for (const step of report.steps) {
+    output.appendLine(`  - ${step.name}: ${step.status}${step.detail ? ` (${step.detail})` : ""}`);
+  }
+  if (!report.ok) {
+    void vscode.window.showErrorMessage(report.summary, "Show Output").then((choice) => {
+      if (choice === "Show Output") output.show(true);
+    });
+    return;
+  }
+  void vscode.window.showInformationMessage(report.summary);
 }

@@ -70,7 +70,7 @@ describe('IntentStore (Phase 1 - Schema Migration)', () => {
       metadata: {
         author: 'test',
         tags: [],
-        agentIdentity: { agentDid: 'agent:123', workflow: 'ql-plan' },
+        agentIdentity: { agentDid: 'agent:123', workflow: 'qor-plan' },
       },
     };
     fs.writeFileSync(activeFile, JSON.stringify(v2Intent), 'utf-8');
@@ -80,6 +80,6 @@ describe('IntentStore (Phase 1 - Schema Migration)', () => {
     assert.equal(intent.schemaVersion, 2);
     assert.equal(intent.planId, 'plan-v4.2.0');
     assert.equal(intent.metadata.agentIdentity!.agentDid, 'agent:123');
-    assert.equal(intent.metadata.agentIdentity!.workflow, 'ql-plan');
+    assert.equal(intent.metadata.agentIdentity!.workflow, 'qor-plan');
   });
 });

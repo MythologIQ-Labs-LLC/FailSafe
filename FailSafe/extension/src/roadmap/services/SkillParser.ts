@@ -64,7 +64,8 @@ export function parseCommandFile(
   try { content = fs.readFileSync(filePath, "utf8"); } catch { return null; }
   const baseName = path.basename(filePath, ".md");
   const dirName = path.basename(path.dirname(filePath));
-  const category = baseName.startsWith("ql-") ? "governance" : dirName;
+  const isGovernance = baseName.startsWith("qor-") || baseName.startsWith("ql-");
+  const category = isGovernance ? "governance" : dirName;
   const skillMatch = content.match(/<skill>[\s\S]*?<\/skill>/);
   const triggerMatch = skillMatch ? skillMatch[0].match(/<trigger>([^<]+)<\/trigger>/) : null;
   const displayName = triggerMatch

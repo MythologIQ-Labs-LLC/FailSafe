@@ -32,6 +32,11 @@ scripts/
 !docs/COMPONENT_HELP.md
 !docs/PROCESS_GUIDE.md
 
+# v5: bundled skills are no longer shipped with the extension. Skills are
+# installed at runtime from the qor-logic PyPI package via the
+# QorLogicSkillIngestor flow.
+dist/extension/skills/**
+
 # Bundle runtime dependencies aggressively; keep only native sqlite support
 node_modules/**
 !node_modules/better-sqlite3/package.json

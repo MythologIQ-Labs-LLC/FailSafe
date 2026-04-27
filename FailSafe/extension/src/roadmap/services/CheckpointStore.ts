@@ -46,7 +46,10 @@ export function getRecentCheckpoints(
         `SELECT ${CKPT_COLUMNS} FROM failsafe_checkpoints ORDER BY id DESC LIMIT ?`,
       ).all(limit) as Record<string, unknown>[];
       return rows.map(mapCheckpointRow);
-    } catch { /* fall through */ }
+    } catch (err) {
+      console.warn("[CheckpointStore] getRecentCheckpoints query failed:", err);
+      /* fall through to memory */
+    }
   }
   return memory.slice(0, limit);
 }
@@ -62,7 +65,10 @@ export function getRecentVerdicts(
          ORDER BY id DESC LIMIT ?`,
       ).all(limit) as Array<{ payload_json: string; timestamp: string }>;
       return rows.map(row => ({ ...JSON.parse(row.payload_json), timestamp: row.timestamp }));
-    } catch { /* fall through to memory */ }
+    } catch (err) {
+      console.warn("[CheckpointStore] getRecentVerdicts query failed:", err);
+      /* fall through to memory */
+    }
   }
   return memory
     .filter(r => r.checkpointType === "policy.checked")

@@ -37,14 +37,14 @@ export function updateBootstrapBanner(data) {
   let html = '<div style="font-size:0.85rem;font-weight:600;color:var(--accent-gold)">Get Started</div>';
   if (!bs.skillsInstalled) {
     html += '<div style="display:flex;align-items:center;gap:8px">' +
-      '<span style="color:var(--text-muted);font-size:0.78rem">Governance skills not installed.</span>' +
+      '<span style="color:var(--text-muted);font-size:0.78rem">QorLogic skills not installed.</span>' +
       '<button onclick="fetch(\'/api/actions/scaffold-skills\',{method:\'POST\'}).then(()=>location.reload())"' +
-      ' class="cc-btn cc-btn--primary" style="font-size:0.75rem;padding:4px 10px">Install Skills</button></div>';
+      ' class="cc-btn cc-btn--primary" style="font-size:0.75rem;padding:4px 10px">Install QorLogic Skills</button></div>';
   }
   if (!bs.governanceInitialized) {
     html += '<div style="display:flex;align-items:center;gap:8px">' +
-      '<span style="color:var(--text-muted);font-size:0.78rem">Run <code style="padding:1px 5px;background:var(--bg-dark);border-radius:3px">/ql-bootstrap</code> in Claude Code to initialize.</span>' +
-      '<button onclick="navigator.clipboard.writeText(\'/ql-bootstrap\')"' +
+      '<span style="color:var(--text-muted);font-size:0.78rem">Run <code style="padding:1px 5px;background:var(--bg-dark);border-radius:3px">/qor-bootstrap</code> in Claude Code to initialize.</span>' +
+      '<button onclick="navigator.clipboard.writeText(\'/qor-bootstrap\')"' +
       ' class="cc-btn" style="font-size:0.75rem;padding:4px 10px">Copy</button></div>';
   }
   banner.innerHTML = html;

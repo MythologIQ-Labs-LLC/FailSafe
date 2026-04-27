@@ -62,8 +62,12 @@ export class OperationsRenderer {
     const total = checks.length;
     const passed = checks.filter(c => c.policyVerdict !== 'VIOLATION').length;
     const rate = total ? Math.round((passed / total) * 100) : 0;
-    const planned = this.roadmap?.phases?.length || 0;
-    const completed = this.roadmap?.phases?.filter(p => p.status === 'complete').length || 0;
+    // Prefer ledger summary (workspace truth from META_LEDGER) when available;
+    // fall back to PlanManager phase records.
+    const summary = this.roadmap?.ledgerSummary;
+    const planned = summary?.plansStarted ?? (this.roadmap?.phases?.length || 0);
+    const completed = summary?.sessionsCompleted
+      ?? (this.roadmap?.phases?.filter(p => p.status === 'complete').length || 0);
     const deviation = planned ? Math.round((completed / planned) * 100) : 0;
 
     return `

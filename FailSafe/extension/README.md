@@ -4,9 +4,29 @@ Prevent runaway AI edits, hallucinated dependencies, and destructive refactors b
 
 FailSafe runs locally inside VS Code and Cursor. It monitors what AI agents do, applies deterministic policy checks at the editor boundary, and gives you full visibility into every decision — before code ships.
 
-**Current Release**: v4.9.9 (2026-03-17)
+**Current Release**: v5.0.0 (2026-04-25)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v5.0.0
+
+Major release: skills now ingested from the [`qor-logic`](https://pypi.org/project/qor-logic/) PyPI package, replacing the v4 bundled-installer flow. Public reveal of the FailSafe / FailSafe Pro product split.
+
+### Added
+
+- **QorLogic skill ingestion** — `Install QorLogic Skills` button in the Command Center installs the `qor-logic` Python package and runs `qorlogic install --host claude --scope repo` (and codex). Skills land at `.claude/skills/` and `.codex/skills/` with synthesized provenance.
+- **Python interpreter auto-detection** — Resolves Python in priority order: `failsafe.qorlogic.pythonPath` setting → VS Code Python extension (`ms-python.python`) → probe `python3` → `python` → `py -3`.
+- **FailSafe Pro discovery** — New `FailSafe: About FailSafe Pro` command and a Settings panel card link to <https://mythologiq.studio/failsafe-pro/download>.
+- See `docs/v5/QORLOGIC_SKILL_INGESTION.md` and `docs/v5/PRO_INTEGRATION.md`.
+
+### Changed
+
+- The v4 bundled `dist/extension/skills/` is no longer shipped in the VSIX. Existing user skills under `.claude/skills/` are not touched on upgrade.
+- "Install Skills" UI label renamed to "Install QorLogic Skills".
+
+### About FailSafe Pro
+
+This extension remains the open FailSafe editor experience. FailSafe Pro adds the desktop runtime, stronger enforcement, and Pro distribution workflows. Open the Command Center Settings tab and choose "About FailSafe Pro", or visit <https://mythologiq.studio/failsafe-pro/download>.
 
 ## What's New in v4.9.9
 

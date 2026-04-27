@@ -39,7 +39,7 @@ export interface DecisionRequest {
   artifactHash?: string;
   payload?: Record<string, unknown>;
   nonce?: string;
-  workflow?: 'ql-plan' | 'auto-create' | 'manual';
+  workflow?: 'qor-plan' | 'auto-create' | 'manual';
 }
 
 export interface DecisionResponse {

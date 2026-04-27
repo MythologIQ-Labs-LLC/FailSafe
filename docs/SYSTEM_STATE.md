@@ -1,7 +1,226 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-03-17
-**Version:** v4.9.7 Diagnostic Fixes SUBSTANTIATED
+**Last Updated:** 2026-04-27
+**Version:** v5.0.0 De-Theater Pass SUBSTANTIATED (pending merge + tag from main)
+
+---
+
+## v5.0.0 — De-Theater Pass (META_LEDGER backfill + hidden artifacts → UI)
+
+### Ledger Trail
+
+| Entry | Phase | Verdict |
+|-------|-------|---------|
+| (next) | PLAN | `.failsafe/governance/plans/plan-v5-de-theater-pass.md` |
+| (next) | GATE | PASS (L2 — 6 non-blocking observations, all reconciled in implement) |
+| (next) | IMPLEMENT | 4 new readers, 2 new UI render modules, 4 new test files; 38 new tests |
+| (next) | SUBSTANTIATE | Reality matches Promise; 747 tests passing |
+
+Ledger entries are not yet appended pending: (a) merge of `plan/v5-extension-update` → `main` and (b) execution of `calculate-session-seal.py` (META_LEDGER is Merkle-chained — direct edits would break chain integrity).
+
+### New Files
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `FailSafe/extension/src/roadmap/services/PlanFileReader.ts` | 126 | Parses `.failsafe/governance/plans/*.md`; picks latest by mtime |
+| `FailSafe/extension/src/roadmap/services/AuditReportReader.ts` | 84 | Parses `.failsafe/governance/AUDIT_REPORT.md` for verdict + observation count |
+| `FailSafe/extension/src/roadmap/services/SystemStateReader.ts` | 64 | Parses `docs/SYSTEM_STATE.md` for version + lastUpdated; chain status fallback to META_LEDGER |
+| `FailSafe/extension/src/roadmap/services/ChangelogReader.ts` | 87 | Parses `CHANGELOG.md` Keep-a-Changelog format; returns N most-recent releases |
+| `FailSafe/extension/src/roadmap/ui/modules/latest-audit.js` | 48 | Overview card: latest audit verdict + target + observation count |
+| `FailSafe/extension/src/roadmap/ui/modules/recent-releases.js` | 51 | Overview card: 5 most-recent releases with date + preview |
+| `FailSafe/extension/src/test/roadmap/plan-file-reader.test.ts` | 108 | 8 tests |
+| `FailSafe/extension/src/test/roadmap/audit-report-reader.test.ts` | 88 | 6 tests |
+| `FailSafe/extension/src/test/roadmap/system-state-reader.test.ts` | 72 | 6 tests |
+| `FailSafe/extension/src/test/roadmap/changelog-reader.test.ts` | 85 | 7 tests |
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `FailSafe/extension/src/roadmap/services/MetaLedgerReader.ts` | `latestEntry` max-by-number (was last-by-position); `plansStarted` dedupes by entry number; new `recentVerdicts(limit)` and `recentCompletions(limit)` exports |
+| `FailSafe/extension/src/roadmap/services/BacklogReader.ts` | New `parseOpenBlockers()` projection mapping S*/D* items to `Plan.blockers` shape (`{id, phaseId, title, reason, severity: "hard"\|"soft", createdAt}`) |
+| `FailSafe/extension/src/roadmap/services/CheckpointStore.ts` | Silent catches replaced with `console.warn` (observability per audit Obs #4); behavior unchanged |
+| `FailSafe/extension/src/roadmap/ConsoleServer.ts` | New `assembleWorkspaceArtifactSnapshot()` helper (audit Obs #3); `coalesceVerdicts`/`coalesceCompletions` for META_LEDGER fallback; `mergePlanBlockers` for activePlan/blockers seed; hub fields: `transparencyEvents`, `latestAudit`, `recentReleases`, `bootstrapState.systemState`; `buildPhasesFromLedger` capped at `MAX_PHASE_RENDER=10` with summary row |
+| `FailSafe/extension/src/test/roadmap/meta-ledger-reader.test.ts` | Tests updated for new behavior + 6 new tests for verdicts/completions/dedup/max-by-number |
+| `FailSafe/extension/src/test/roadmap/backlog-reader.test.ts` | 4 new tests for `parseOpenBlockersFromText` projection |
+| `FailSafe/extension/src/roadmap/ui/modules/overview.js` | Imports `latest-audit` + `recent-releases`; appends 2-column grid below 4-card row |
+
+### Features Delivered
+
+1. **Hub data fields populate from workspace truth** (was: theater)
+   - `recentVerdicts` — falls back to META_LEDGER GATE TRIBUNAL entries when sqlite-backed verdicts empty
+   - `recentCompletions` — same pattern with SUBSTANTIATION/SESSION SEAL/DELIVER
+   - `transparencyEvents` — new field; surfaces last 20 events from `transparency.jsonl`
+   - `bootstrapState.systemState` — new field; version + lastUpdated + chainStatus
+   - `latestAudit` — new field; current `.failsafe/governance/AUDIT_REPORT.md` verdict
+   - `recentReleases` — new field; 5 most-recent CHANGELOG entries
+   - `activePlan` fallback — when PlanManager has no event-sourced plan, derives from latest `.failsafe/governance/plans/*.md`
+   - `plan.blockers` — seeded from BACKLOG `## Blockers` open items when structured field empty
+2. **Operations Phases stat capped** — `buildPhasesFromLedger` returns at most 10 cards plus a summary row (was: would render 120 cards on real workspace)
+3. **Observability on silent failures** — `CheckpointStore.getRecentVerdicts`/`getRecentCheckpoints` catches now `console.warn` instead of swallowing
+4. **New Overview widgets** — Latest Audit and Recent Releases cards in a 2-column grid below the existing 4-card row
+
+### Audit Observations Reconciliation
+
+| # | Observation | Resolution |
+|---|-------------|------------|
+| 1 | HTML escape mandate (A03) | `esc()` applied to every interpolation in `latest-audit.js` and `recent-releases.js` |
+| 2 | "Show details" toast unspecified | Dropped from spec — audit card shows verdict + target + observation count text only |
+| 3 | `buildHubSnapshot` bloat | New `assembleWorkspaceArtifactSnapshot()` helper extracts all artifact reads; main function net zero growth |
+| 4 | `Plan.blockers` shape (Open Q #5) | Verified via `qorelogic/planning/types.ts:81`; `parseOpenBlockersFromText` produces matching shape with severity mapping `critical\|high → hard`, `medium\|low → soft` |
+| 5 | B4/B5 widget placement | Defaulted to Overview cards (2-column grid) per plan; user to confirm visually |
+| 6 | `recentReleases` cap | Default 5; tested |
+
+All 6 observations reconciled or accepted as defaulted.
+
+### Section 4 Razor Status (new files only)
+
+| File | Lines | Status |
+|------|-------|--------|
+| `PlanFileReader.ts` | 126 | PASS |
+| `AuditReportReader.ts` | 84 | PASS |
+| `SystemStateReader.ts` | 64 | PASS |
+| `ChangelogReader.ts` | 87 | PASS |
+| `latest-audit.js` | 48 | PASS |
+| `recent-releases.js` | 51 | PASS |
+
+All new functions ≤ 40 lines. All new files ≤ 250 lines. `buildHubSnapshot` net zero growth thanks to `assembleWorkspaceArtifactSnapshot` helper extraction.
+
+### Live Verification on Real Workspace
+
+| Reader | Result |
+|--------|--------|
+| `PlanFileReader.pickLatestPlan()` | `plan-v5-de-theater-pass`, 3 phases, 5 open questions |
+| `SystemStateReader.read()` | version `v5.0.0 ... SUBSTANTIATED`, lastUpdated `2026-04-26`, chainStatus `ACTIVE` |
+| `BacklogReader.parseOpenBlockers()` | 0 (no open blockers in current BACKLOG) |
+| `AuditReportReader.read()` | PASS, target = "v5 De-Theater Pass...", 6 observations |
+| `ChangelogReader.recentReleases(5)` | 5.0.0 → 4.9.5 with dates + previews |
+| `MetaLedgerReader.recentVerdicts(10)` | 10 most-recent GATE TRIBUNAL entries |
+| `MetaLedgerReader.recentCompletions(12)` | 12 most-recent SUBSTANTIATION/SESSION SEAL/DELIVER |
+
+### Test Suite
+
+- 747 passing (up from 709, +38 new)
+- 0 failures
+- 1 pending (pre-existing)
+- All 6 new test suites confirmed running:
+  - `MetaLedgerReader: recentVerdictsFromEntries`, `recentCompletionsFromEntries`
+  - `PlanFileReader: parsePlanFromText`, `pickLatestPlan`
+  - `SystemStateReader: parseSystemStateFromText`, `read`
+  - `BacklogReader: parseOpenBlockersFromText (Plan.blockers projection)`
+  - `AuditReportReader: parseAuditFromText`, `read`
+  - `ChangelogReader: parseReleasesFromText`, `recentReleases`
+
+---
+
+## v5.0.0 — Extension Update (qor-logic ingestion + FailSafe Pro reveal)
+
+### Ledger Trail
+
+| Entry | Phase | Verdict |
+|-------|-------|---------|
+| (next) | PLAN | `.failsafe/governance/plans/plan-v5-extension-update.md` |
+| (next) | GATE | PASS (L2 — 11 non-blocking observations) |
+| (next) | IMPLEMENT | 9 new files, 14 modified, 4 dirs renamed (.claude/skills/), 56 new tests |
+| (next) | SUBSTANTIATE | Reality matches Promise (3 Playwright tests deferred, documented) |
+
+Ledger entries are not yet appended pending: (a) merge of `plan/v5-extension-update` → `main` and (b) execution of `calculate-session-seal.py` (META_LEDGER is Merkle-chained — direct edits would break chain integrity).
+
+### New Files
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `FailSafe/extension/src/qorlogic/PythonInterpreterResolver.ts` | 180 | Resolves Python interpreter (setting → ms-python → probe) |
+| `FailSafe/extension/src/qorlogic/QorLogicPackageInstaller.ts` | 147 | `pip install qor-logic` with bounded timeout |
+| `FailSafe/extension/src/qorlogic/QorLogicSkillIngestor.ts` | 170 | `qorlogic install --host claude/codex --scope repo` + provenance synthesis |
+| `FailSafe/extension/src/extension/installSkillsHandler.ts` | 29 | Wires the ingestor into the existing Install Skills callback |
+| `FailSafe/extension/src/shared/constants.ts` | 4 | `FAILSAFE_PRO_DOWNLOAD_URL` canonical constant |
+| `FailSafe/extension/src/test/qorlogic/PythonInterpreterResolver.test.ts` | 262 | 13 tests |
+| `FailSafe/extension/src/test/qorlogic/QorLogicPackageInstaller.test.ts` | 216 | 14 tests |
+| `FailSafe/extension/src/test/qorlogic/QorLogicSkillIngestor.test.ts` | 310 | 13 tests |
+| `FailSafe/extension/src/test/extension/installSkillsHandler.test.ts` | 63 | 3 tests |
+| `FailSafe/extension/src/test/shared/constants.test.ts` | 14 | 2 tests (URL drift guard) |
+| `FailSafe/extension/src/test/docs/v5-coherence.test.ts` | 93 | 11 tests (README/CHANGELOG/version coherence) |
+| `FailSafe/extension/docs/v5/PRO_INTEGRATION.md` | 38 | Product boundary, CodeGenome contract |
+| `FailSafe/extension/docs/v5/QORLOGIC_SKILL_INGESTION.md` | 81 | Flow, host enum, failure modes |
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `FailSafe/extension/package.json` | version `4.9.9` → `5.0.0`; description revised; `failsafe.openFailSafeProDownload` command + activation event; `failsafe.qorlogic.pythonPath` setting |
+| `FailSafe/extension/src/extension/bootstrapServers.ts` | v4 bundled-skill copy callback **deleted**; QorLogic flow wired in its place; output channel + config-change listener added |
+| `FailSafe/extension/src/extension/commands.ts` | Registers `failsafe.openFailSafeProDownload` |
+| `FailSafe/extension/src/roadmap/ConsoleServer.ts` | `scaffoldCallback` return type widened to include optional `error`; updated `.claude/skills/qor-bootstrap` path |
+| `FailSafe/extension/src/roadmap/routes/types.ts` | `scaffoldSkills` signature widened |
+| `FailSafe/extension/src/roadmap/services/SkillParser.ts` | Recognizes both `qor-*` and `ql-*` prefixes as governance for transition |
+| `FailSafe/extension/src/roadmap/services/GovernancePhaseTracker.ts` | `/ql-*` → `/qor-*` next-step strings |
+| `FailSafe/extension/src/roadmap/ui/modules/settings.js` | FailSafe Pro card added |
+| `FailSafe/extension/src/roadmap/ui/modules/tickers.js` | "Install Skills" → "Install QorLogic Skills"; `/ql-bootstrap` → `/qor-bootstrap` |
+| `FailSafe/extension/src/qorelogic/AgentConfigInjector.ts` | `/ql-status` → `/qor-status` |
+| `FailSafe/extension/src/genesis/panels/templates/DashboardRoadmapCard.ts` | `/ql-plan` → `/qor-plan` |
+| `FailSafe/extension/src/genesis/panels/templates/PlanningHubTemplate.ts` | `/ql-plan` → `/qor-plan` |
+| `FailSafe/extension/src/governance/types/IntentTypes.ts` | Workflow enum `'ql-plan'` → `'qor-plan'` |
+| `FailSafe/extension/src/governance/GovernanceAdapter.ts` | Workflow enum `'ql-plan'` → `'qor-plan'` |
+| `FailSafe/extension/src/test/governance/IntentStore.test.ts` | Test data updated to `'qor-plan'` |
+| `FailSafe/extension/src/test/checkpoint/CheckpointManager.test.ts` | Test data updated to `qor-implement` |
+| `FailSafe/extension/src/test/roadmap/skill-discovery.test.ts` | Tests dual-prefix governance recognition |
+| `FailSafe/extension/.vscodeignore` | `dist/extension/skills/**` excluded from VSIX |
+| `FailSafe/extension/README.md` | v5.0.0 release notes + FailSafe Pro section + qor-logic mentions |
+| `README.md` | "Current Release: v5.0.0", Socket badge updated, FailSafe / FailSafe Pro section added |
+| `CHANGELOG.md` | Full v5.0.0 entry |
+
+### Renames (.claude/skills/)
+
+20 directories renamed `ql-*` → `qor-*`:
+audit, bootstrap, compliance, debug, document, governor-persona, help, implement, judge-persona, organize, plan, refactor, repo-audit, repo-release, repo-scaffold, research, specialist-persona, status, substantiate, validate.
+
+`.claude/` is gitignored; only the 4 dirs that had previously been forced-tracked appear in `git status` as renames. The other 16 are filesystem-only.
+
+### Features Delivered
+
+1. **QorLogic Skill Ingestion (v5.0.0 core)**: Click "Install QorLogic Skills" → resolves Python → `pip install qor-logic` → `qorlogic install --host claude/codex --scope repo` → synthesized provenance per skill → discovery rescan. Replaces v4 bundled installer.
+2. **Python Interpreter Auto-Detection**: `failsafe.qorlogic.pythonPath` setting → `ms-python.python` extension → probe `python3`/`python`/`py -3` (≥3.11). Cached per session, invalidated on settings change.
+3. **FailSafe Pro Discovery**: Command palette `FailSafe: About FailSafe Pro` and Settings panel card link to canonical URL `https://mythologiq.studio/failsafe-pro/download`. Single-source-of-truth constant in `src/shared/constants.ts` with drift-guard test.
+4. **ql-* → qor-* Naming Migration**: 20 skill directories + 12 source-file references migrated. Backward-compat shim in `SkillParser.ts` recognizes both prefixes during transition.
+
+### Section 4 Razor Status (new files only)
+
+| File | Lines | Status |
+|------|-------|--------|
+| `PythonInterpreterResolver.ts` | 180 | PASS |
+| `QorLogicPackageInstaller.ts` | 147 | PASS |
+| `QorLogicSkillIngestor.ts` | 170 | PASS |
+| `installSkillsHandler.ts` | 29 | PASS |
+| `constants.ts` | 4 | PASS |
+
+All new functions ≤ 40 lines. All new files ≤ 250 lines.
+
+`ConsoleServer.ts` (1177 L) and `commands.ts` (653 L) remain over the 250 L limit — this is a pre-existing condition unchanged by v5 work, tracked separately.
+
+### Audit Observations Reconciliation
+
+| # | Topic | Status |
+|---|-------|--------|
+| 1 | CI commands use Jest syntax in plan | DOCS-ONLY (actual CI uses vscode-test/Mocha — no breaking impact) |
+| 2 | Date-window test guard | RESOLVED (no flaky date assertions used) |
+| 3 | Version-equality regex | RESOLVED (`/^5\.\d+\.\d+$/`) |
+| 4 | Description guard regex | RESOLVED (`/AI governance/i`) |
+| 5 | qor-logic version pinning | DEFERRED (first-party trust; documented in v5 docs) |
+| 6 | v4 → v5 orphan-skill auto-migration | DEFERRED (CHANGELOG notes manual cleanup) |
+| 7 | `setScaffoldCallback` testability | RESOLVED (extracted to `installSkillsHandler.ts`) |
+| 8 | README backlinks to v5 docs | RESOLVED |
+| 9 | ql-* → qor-* rename | RESOLVED (folded in per Decision B1) |
+| 10 | SYSTEM_STATE update | RESOLVED (this entry) |
+| 11 | `.vscodeignore` exclusion | RESOLVED |
+
+7 fully resolved, 2 docs-only/trust-based, 2 deferred with rationale.
+
+### Reality vs Promise Deltas
+
+- **MISSING (deferred)**: 3 Playwright tests (`popout-ui.spec.ts`, `settings-pro-link.spec.ts`, `qorlogic-status-card.spec.ts`) — explicitly scoped out during implementation; webview/UI tests deferred to follow-up. Unit-level coverage of the rendered constant + command + handler is in place.
+- **MISSING (replaced)**: `SkillDiscovery.rescan(ws)` public API — implemented as injected callback into the ingestor (currently a no-op since discovery is already stateless and recomputed per call). Plan documented this as a future surface; current implementation is functionally equivalent for v5.0.0.
+- **UNPLANNED (additive)**: `src/roadmap/services/SkillParser.ts` dual-prefix recognition — added during ql-* rename to support v4 → v5 transition without breaking governance categorization for users with both `ql-*` and `qor-*` skills on disk.
 
 ---
 

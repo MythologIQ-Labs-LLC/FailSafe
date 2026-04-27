@@ -82,7 +82,7 @@ function renderViewTabs(mode: string): string {
 
 function renderVisualizationSection(m: PlanningHubViewModel): string {
   if (!m.plan) {
-    return `<section class="viz-section"><div class="no-plan"><h2>No Active Plan</h2><p>Create a plan using <code>/ql-plan</code></p></div></section>`;
+    return `<section class="viz-section"><div class="no-plan"><h2>No Active Plan</h2><p>Create a plan using <code>/qor-plan</code></p></div></section>`;
   }
   const pct = m.planProgress
     ? Math.round((m.planProgress.completed / m.planProgress.total) * 100)

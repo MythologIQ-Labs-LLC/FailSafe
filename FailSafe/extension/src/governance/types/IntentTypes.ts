@@ -35,7 +35,7 @@ export const IntentEvidenceSchema = z.object({
 
 export const AgentIdentitySchema = z.object({
   agentDid: z.string(),
-  workflow: z.enum(['ql-plan', 'auto-create', 'manual']),
+  workflow: z.enum(['qor-plan', 'auto-create', 'manual']),
   createdVia: z.string().optional(),
 });
 
@@ -179,7 +179,7 @@ export interface IntentEvidence {
  */
 export interface AgentIdentity {
   agentDid: string;
-  workflow: 'ql-plan' | 'auto-create' | 'manual';
+  workflow: 'qor-plan' | 'auto-create' | 'manual';
   createdVia?: string;
 }
 
