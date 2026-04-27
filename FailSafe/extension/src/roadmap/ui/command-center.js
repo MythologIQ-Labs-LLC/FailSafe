@@ -75,6 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderers.agents.onEvent?.(evt);
     renderers.governance.onEvent?.(evt);
     renderers.workspace.onEvent?.(evt);
+    renderers.settings.onEvent?.(evt);
   });
 
   client.on('verdict', (v) => {

@@ -36,6 +36,13 @@ Major release. Public reveal of the FailSafe / FailSafe Pro product split. The v
 - Skill IDs migrated from `ql-*` to `qor-*` (extension source references and project-local skill directories). `SkillParser` recognizes both prefixes during the v4 → v5 transition.
 - Operations Phases stat now reflects META_LEDGER reality (was 0/0 theater); render capped at 10 cards plus a summary row.
 - `CheckpointStore` silent catches replaced with `console.warn` (observability only; behavior unchanged).
+- "About FailSafe Pro" command + Settings card link now open the product/learn page <https://mythologiq.studio/products/failsafe-pro>; the download URL is reachable from that page rather than directly from the extension UI (#46).
+
+### Fixed
+
+- `failsafe.openFailSafeProAbout` opens the FailSafe Pro learn page (was: opened the download URL despite being labeled "About") (#46).
+- Operations Phases stat normalized: `completed > planned` no longer renders as `4 / 0`; `planned` is floored to `completed` so each completion implies at least one plan (#47).
+- Install QorLogic Skills button: progressive step display, button disables while running, hub refresh on completion, Get Started banner re-evaluates without page reload (#48).
 
 ### Removed
 

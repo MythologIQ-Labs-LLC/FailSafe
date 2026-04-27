@@ -702,6 +702,16 @@ export class ConsoleServer {
     this.wsManager.broadcast(data);
   }
 
+  /**
+   * Public broadcast for callers wired during bootstrap (e.g. install
+   * progress events from `createInstallSkillsHandler`). Use sparingly —
+   * prefer wiring through the existing scaffoldCallback / setScaffoldCallback
+   * flow when a one-off return value is sufficient.
+   */
+  broadcastEvent(data: Record<string, unknown>): void {
+    this.broadcast(data);
+  }
+
   private watchMetaLedger(): void {
     const ledgerPath = path.join(this.getWorkspaceRoot(), "docs", "META_LEDGER.md");
     if (!fs.existsSync(ledgerPath)) return;

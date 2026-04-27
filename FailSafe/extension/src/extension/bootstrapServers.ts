@@ -87,7 +87,15 @@ export async function bootstrapServers(
     async () => undefined,
     outputChannel,
   );
-  consoleServer.setScaffoldCallback(createInstallSkillsHandler(skillIngestor));
+  consoleServer.setScaffoldCallback(createInstallSkillsHandler(skillIngestor, {
+    onProgress: (step) => consoleServer.broadcastEvent({ type: "skills.install.progress", step }),
+    onComplete: (report) => {
+      consoleServer.broadcastEvent({ type: "skills.install.complete", report });
+      // Plan A Phase 3 / issue #48: refresh the hub so the Get Started banner
+      // re-evaluates against the new SOURCE.yml provenance state.
+      consoleServer.broadcastEvent({ type: "hub.refresh", reason: "skills-installed" });
+    },
+  }));
 
   // Invalidate the resolver's cache when the user changes the Python override.
   context.subscriptions.push(

@@ -22,7 +22,8 @@ function repoRoot(): string {
   return path.resolve(extensionRoot(), '..', '..');
 }
 
-const PRO_URL = 'https://mythologiq.studio/products/failsafe-download';
+const PRO_ABOUT_URL = 'https://mythologiq.studio/products/failsafe-pro';
+const PRO_DOWNLOAD_URL = 'https://mythologiq.studio/products/failsafe-download';
 
 suite('v5 documentation coherence', () => {
   test('extension package.json version matches /^5\\.\\d+\\.\\d+$/', () => {
@@ -37,11 +38,11 @@ suite('v5 documentation coherence', () => {
       `description should not contain "AI governance"; got: ${pkg.description}`);
   });
 
-  test('extension package.json registers failsafe.openFailSafeProDownload command', () => {
+  test('extension package.json registers failsafe.openFailSafeProAbout command', () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(extensionRoot(), 'package.json'), 'utf8'));
     const commands: Array<{ command: string; title: string }> = pkg.contributes.commands;
-    const found = commands.find((c) => c.command === 'failsafe.openFailSafeProDownload');
-    assert.ok(found, 'failsafe.openFailSafeProDownload command should be registered');
+    const found = commands.find((c) => c.command === 'failsafe.openFailSafeProAbout');
+    assert.ok(found, 'failsafe.openFailSafeProAbout command should be registered');
     assert.match(found!.title, /About FailSafe Pro/);
   });
 
@@ -52,11 +53,10 @@ suite('v5 documentation coherence', () => {
     assert.equal(props['failsafe.qorlogic.pythonPath'].type, 'string');
   });
 
-  test('root README links to canonical Pro URL exactly once', () => {
+  test('root README links to the Pro about URL at least once', () => {
     const readme = fs.readFileSync(path.join(repoRoot(), 'README.md'), 'utf8');
-    const matches = readme.match(/https:\/\/mythologiq\.studio\/products\/failsafe-download/g) || [];
-    assert.ok(matches.length >= 1, 'root README should link to Pro download URL');
-    assert.equal(matches.length, 1, `root README should link Pro URL exactly once (found ${matches.length})`);
+    const matches = readme.match(/https:\/\/mythologiq\.studio\/products\/failsafe-pro\b/g) || [];
+    assert.ok(matches.length >= 1, 'root README should link to Pro about URL');
   });
 
   test('root README has FailSafe / FailSafe Pro section', () => {
@@ -78,11 +78,12 @@ suite('v5 documentation coherence', () => {
     assert.match(v5Section, /Install QorLogic Skills/);
   });
 
-  test('shared/constants.ts FAILSAFE_PRO_DOWNLOAD_URL matches docs URL', () => {
+  test('shared/constants.ts contains both ABOUT and DOWNLOAD URL constants', () => {
     const constants = fs.readFileSync(
       path.join(extensionRoot(), 'src', 'shared', 'constants.ts'), 'utf8',
     );
-    assert.ok(constants.includes(PRO_URL), `constants.ts should contain ${PRO_URL}`);
+    assert.ok(constants.includes(PRO_ABOUT_URL), `constants.ts should contain ${PRO_ABOUT_URL}`);
+    assert.ok(constants.includes(PRO_DOWNLOAD_URL), `constants.ts should contain ${PRO_DOWNLOAD_URL}`);
   });
 
   test('v5 docs exist at expected paths', () => {

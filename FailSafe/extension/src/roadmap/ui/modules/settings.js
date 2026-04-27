@@ -1,6 +1,7 @@
 // FailSafe Command Center — Settings Renderer
 // Theme selector, current config display.
 import { renderVoiceSettings, bindVoiceSettings } from './voice-settings.js';
+import { renderInstallSkillsCard, bindInstallSkillsCard } from './install-skills-card.js';
 
 const THEMES = [
   { id: 'pegasus', name: 'Pegasus', label: 'Light', swatch: '#3b82f6' },
@@ -16,6 +17,7 @@ export class SettingsRenderer {
     this.container = document.getElementById(containerId);
     this.store = deps.store || null;
     this._lastHub = {};
+    this._installState = { running: false, steps: [], lastReport: null };
   }
 
   render(hubData) {
@@ -47,88 +49,59 @@ export class SettingsRenderer {
       </div>
       ${renderVoiceSettings(this.store)}
       <div class="cc-card" id="cc-hook-toggle-slot" style="margin-top:16px"></div>
-      <div class="cc-card" id="cc-qorlogic" style="margin-top:16px">
-        <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;
-          letter-spacing:0.08em;margin-bottom:8px">QorLogic Skills</div>
-        <p style="font-size:0.85rem;color:var(--text-muted);margin:0 0 12px">
-          Install or refresh governance skills from the
-          <code style="padding:1px 4px;background:var(--bg-dark);border-radius:3px">qor-logic</code>
-          PyPI package. Idempotent — safe to run multiple times.
-        </p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="cc-btn cc-btn--primary" data-action="install-qorlogic-skills"
-            style="font-size:0.8rem;padding:6px 14px">Install / Refresh QorLogic Skills</button>
-          <button class="cc-btn" data-action="bootstrap-workspace"
-            style="font-size:0.8rem;padding:6px 14px">Bootstrap Workspace</button>
-        </div>
-        <div id="cc-qorlogic-status" style="margin-top:10px;font-size:0.78rem;color:var(--text-muted)"></div>
-      </div>
+      ${renderInstallSkillsCard(this._installState)}
       <div class="cc-card" id="cc-failsafe-pro" style="margin-top:16px">
         <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;
           letter-spacing:0.08em;margin-bottom:8px">FailSafe Pro</div>
         <p style="font-size:0.85rem;color:var(--text-muted);margin:0 0 12px">
-          Desktop daemon with OS-level enforcement, file locking, team workflows,
-          and remote connections. FailSafe Pro pairs with this open extension.
+          Desktop native application for SDLC visibility and governance:
+          OS-level enforcement, file locking, team workflows, and remote
+          connections beyond the editor boundary.
         </p>
-        <a href="https://mythologiq.studio/products/failsafe-download" target="_blank" rel="noopener"
+        <a href="https://mythologiq.studio/products/failsafe-pro" target="_blank" rel="noopener"
           class="cc-btn cc-btn--primary"
-          data-action="open-failsafe-pro"
+          data-action="open-failsafe-pro-about"
           style="display:inline-block;font-size:0.8rem;padding:6px 14px;text-decoration:none">
           About FailSafe Pro
         </a>
       </div>`;
     this._bindQorLogicActions();
+    this._bindFailSafeProActions();
     this.bindChips();
     bindVoiceSettings(this.container, this.store);
     this._renderHookToggle();
   }
 
-  _bindQorLogicActions() {
-    const installBtn = this.container?.querySelector('[data-action="install-qorlogic-skills"]');
-    const bootstrapBtn = this.container?.querySelector('[data-action="bootstrap-workspace"]');
-    const status = this.container?.querySelector('#cc-qorlogic-status');
-    const setStatus = (msg, color) => {
-      if (status) {
-        status.textContent = msg;
-        status.style.color = color || 'var(--text-muted)';
-      }
-    };
-    installBtn?.addEventListener('click', async () => {
-      setStatus('Installing QorLogic skills... (running pip install qor-logic + qorlogic install)');
-      installBtn.disabled = true;
+  _bindFailSafeProActions() {
+    const aboutLink = this.container?.querySelector('[data-action="open-failsafe-pro-about"]');
+    if (!aboutLink) return;
+    aboutLink.addEventListener('click', (e) => {
+      // In webview contexts the anchor + target=_blank handles navigation; the
+      // command-uri path provides VS Code-native external open as a backup.
+      // Either way the destination is the About URL, never the download URL.
       try {
-        const res = await fetch('/api/actions/scaffold-skills', { method: 'POST' });
-        const body = await res.json();
-        if (!res.ok || body.ok === false) {
-          setStatus(`Install failed: ${body.error || res.statusText}`, 'var(--accent-red, #ef4444)');
-          return;
-        }
-        const installed = body.scaffolded || 0;
-        setStatus(
-          body.error
-            ? `Installed ${installed} skill(s); some hosts failed: ${body.error}`
-            : `Installed ${installed} skill(s).`,
-          body.error ? 'var(--accent-gold)' : 'var(--accent-teal, #2dd4bf)',
-        );
-      } catch (err) {
-        setStatus(`Network error: ${err}`, 'var(--accent-red, #ef4444)');
-      } finally {
-        installBtn.disabled = false;
+        e.preventDefault();
+        window.location.href = 'command:failsafe.openFailSafeProAbout';
+      } catch {
+        window.open('https://mythologiq.studio/products/failsafe-pro', '_blank', 'noopener');
       }
     });
-    bootstrapBtn?.addEventListener('click', async () => {
-      // Bootstrap is a VS Code command (not an HTTP endpoint).
-      // From the webview we can postMessage to the host to invoke it,
-      // OR open a deep link. Browser-served Command Center exposes it
-      // via the same scaffold endpoint plus governance-dirs check.
-      // Simplest reliable cross-host path: invoke via vscode: deep link.
-      setStatus('Triggering Bootstrap... (run "FailSafe: Bootstrap Workspace" from the Command Palette if this does not respond)');
-      try {
-        window.location.href = 'command:failsafe.bootstrap';
-        setTimeout(() => setStatus('Bootstrap requested.'), 2000);
-      } catch {
-        setStatus('Run "FailSafe: Bootstrap Workspace" from the Command Palette.', 'var(--accent-gold)');
-      }
+  }
+
+  _bindQorLogicActions() {
+    if (!this.container) return;
+    bindInstallSkillsCard(this.container, {
+      onStart: () => {
+        this._installState = { running: true, steps: [], lastReport: null };
+      },
+      onFinishFetch: () => {
+        // The progress + complete events arrive via WebSocket onEvent below;
+        // they are the authoritative source. The fetch-resolve here just
+        // marks the request flight done.
+      },
+      onError: () => {
+        this._installState = { ...this._installState, running: false };
+      },
     });
   }
 
@@ -190,6 +163,26 @@ export class SettingsRenderer {
     });
   }
 
-  onEvent() {}
+  onEvent(event) {
+    if (!event || typeof event !== 'object') return;
+    if (event.type === 'skills.install.progress' && event.step) {
+      this._installState = {
+        running: true,
+        steps: [...(this._installState?.steps ?? []), event.step],
+        lastReport: this._installState?.lastReport ?? null,
+      };
+      this.render(this._lastHub);
+      return;
+    }
+    if (event.type === 'skills.install.complete' && event.report) {
+      this._installState = {
+        running: false,
+        steps: event.report.steps ?? this._installState?.steps ?? [],
+        lastReport: event.report,
+      };
+      this.render(this._lastHub);
+      return;
+    }
+  }
   destroy() { if (this.container) this.container.innerHTML = ''; }
 }

@@ -10,7 +10,7 @@ import { WorkspaceMigration } from "../qorelogic/WorkspaceMigration";
 import { RiskManager, RiskSeverity, RiskCategory } from "../qorelogic/risk";
 import { ProjectOverviewPanel } from "../genesis/panels/ProjectOverviewPanel";
 import { EventBus } from "../shared/EventBus";
-import { FAILSAFE_PRO_DOWNLOAD_URL } from "../shared/constants";
+import { FAILSAFE_PRO_ABOUT_URL } from "../shared/constants";
 import * as http from "http";
 
 // Workspace isolation: dynamic port and workspace root
@@ -150,10 +150,12 @@ export function registerCommands(
     }),
   );
 
-  // v5: discover FailSafe Pro from inside the extension.
+  // v5: "About FailSafe Pro" opens the learn-more product page. The download
+  // URL is reachable from that page; the extension does NOT link to it directly
+  // because "About" should not mean "download right now".
   context.subscriptions.push(
-    vscode.commands.registerCommand("failsafe.openFailSafeProDownload", async () => {
-      await vscode.env.openExternal(vscode.Uri.parse(FAILSAFE_PRO_DOWNLOAD_URL));
+    vscode.commands.registerCommand("failsafe.openFailSafeProAbout", async () => {
+      await vscode.env.openExternal(vscode.Uri.parse(FAILSAFE_PRO_ABOUT_URL));
     }),
   );
 

@@ -27,6 +27,12 @@ Major release. Public reveal of the FailSafe / FailSafe Pro product split. The v
 - Extension `description` revised off the legacy "AI governance platform" framing.
 - Skill IDs migrated from `ql-*` to `qor-*` across source and project-local skill directories.
 - Operations Phases stat now reflects META_LEDGER reality (was 0/0); render capped at 10 cards plus a summary row.
+- "About FailSafe Pro" command + Settings card open the product/learn page <https://mythologiq.studio/products/failsafe-pro> (was: opened the download URL despite being labeled "About") (#46).
+
+### Fixed
+
+- Operations Phases stat: `completed > planned` no longer renders as `4 / 0`; `planned` floored to `completed` so each completion implies at least one plan (#47).
+- Install QorLogic Skills: progressive step display, button disables while running, hub refresh on completion (#48).
 
 ### Removed
 

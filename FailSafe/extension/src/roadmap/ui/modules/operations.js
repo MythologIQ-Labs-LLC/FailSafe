@@ -1,6 +1,8 @@
 // FailSafe Command Center — Operations Tab Renderer
 // Mission strip, Plan vs Actual metrics, sprint grid, action buttons.
 
+import { normalizePhaseProgress } from './phase-progress.js';
+
 export class OperationsRenderer {
   constructor(containerId, deps = {}) {
     this.container = document.getElementById(containerId);
@@ -62,13 +64,18 @@ export class OperationsRenderer {
     const total = checks.length;
     const passed = checks.filter(c => c.policyVerdict !== 'VIOLATION').length;
     const rate = total ? Math.round((passed / total) * 100) : 0;
-    // Prefer ledger summary (workspace truth from META_LEDGER) when available;
-    // fall back to PlanManager phase records.
-    const summary = this.roadmap?.ledgerSummary;
-    const planned = summary?.plansStarted ?? (this.roadmap?.phases?.length || 0);
-    const completed = summary?.sessionsCompleted
-      ?? (this.roadmap?.phases?.filter(p => p.status === 'complete').length || 0);
-    const deviation = planned ? Math.round((completed / planned) * 100) : 0;
+    // Centralized normalization (Plan A Phase 2 / issue #47): never render
+    // mathematically impossible progress — completed always implies at least
+    // one planned phase even if the ledger lacks gate-tribunal entries.
+    const summary = this.roadmap?.ledgerSummary
+      ?? (this.roadmap?.phases ? {
+        plansStarted: this.roadmap.phases.length,
+        sessionsCompleted: this.roadmap.phases.filter(p => p.status === 'complete').length,
+      } : null);
+    const phases = normalizePhaseProgress(summary);
+    const planned = phases.planned;
+    const completed = phases.completed;
+    const deviation = phases.adherence;
 
     return `
       <div class="cc-grid-4" style="margin-bottom:16px">

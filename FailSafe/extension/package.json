@@ -41,7 +41,7 @@
     "onChatParticipant:failsafe.chat",
     "onView:failsafe.sidebarView",
     "onCommand:failsafe.openSidebar",
-    "onCommand:failsafe.openFailSafeProDownload",
+    "onCommand:failsafe.openFailSafeProAbout",
     "onCommand:failsafe.bootstrap",
     "onCommand:failsafe.organize",
     "onCommand:failsafe.openPlannerHub",
@@ -104,7 +104,7 @@
         "title": "FailSafe: Open Sidebar"
       },
       {
-        "command": "failsafe.openFailSafeProDownload",
+        "command": "failsafe.openFailSafeProAbout",
         "title": "FailSafe: About FailSafe Pro"
       },
       {
