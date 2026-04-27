@@ -169,9 +169,9 @@ type UnattributedFileChange = {
  * The UI's `roadmap?.phases?.filter(p => p.status === 'complete').length`
  * then yields `sessionsCompleted`, and the planned count = plansStarted.
  */
-const MAX_PHASE_RENDER = 10;
+export const MAX_PHASE_RENDER = 10;
 
-function buildPhasesFromLedger(
+export function buildPhasesFromLedger(
   summary: LedgerSummary,
 ): Array<{ id: string; name: string; status: string; source: "meta-ledger" }> {
   const phases: Array<{ id: string; name: string; status: string; source: "meta-ledger" }> = [];
@@ -971,7 +971,7 @@ export class ConsoleServer {
       runState,
       riskSummary: buildRiskSummary((limit) => this.getRecentVerdicts(limit)),
       recentCompletions: completions,
-      transparencyEvents: this.transparencyLogger.getEvents(20),
+      transparencyEvents: this.transparencyLogger.getEvents(20).reverse(),
       unattributedFileActivity: buildUnattributedFileActivity(this.unattributedFileChanges),
       metricIntegrity: buildMetricIntegrity(governancePhase, checkpointSummary, sentinelStatus, runState, hubDeps),
       bootstrapState: {
