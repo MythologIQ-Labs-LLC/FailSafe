@@ -5,7 +5,7 @@ suite('shared/constants: FAILSAFE_PRO_DOWNLOAD_URL', () => {
   test('is the exact canonical Pro download URL', () => {
     // Drift guard. If the website route changes, fix it via a redirect upstream
     // and update this constant in lockstep — never scatter URLs across the codebase.
-    assert.equal(FAILSAFE_PRO_DOWNLOAD_URL, 'https://mythologiq.studio/failsafe-pro/download');
+    assert.equal(FAILSAFE_PRO_DOWNLOAD_URL, 'https://mythologiq.studio/products/failsafe-download');
   });
 
   test('uses https scheme', () => {

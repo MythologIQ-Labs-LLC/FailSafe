@@ -18,7 +18,7 @@ Major release: skills ingested from the [`qor-logic`](https://pypi.org/project/q
 - **Python interpreter auto-detection** — Resolves Python in priority order: `failsafe.qorlogic.pythonPath` setting → VS Code Python extension (`ms-python.python`) → probe `python3` → `python` → `py -3`.
 - **`failsafe.bootstrap` and `failsafe.organize` commands** — Idempotent workspace-readiness gate; runs in silent mode on every activation, full bootstrap (incl. `pip install qor-logic`) on user trigger.
 - **Always-visible Settings card** — "Install / Refresh QorLogic Skills" + "Bootstrap Workspace" buttons; no longer gated on a brittle "is something on disk" heuristic.
-- **FailSafe Pro discovery** — New `FailSafe: About FailSafe Pro` command and a Settings panel card link to <https://mythologiq.studio/failsafe-pro/download>.
+- **FailSafe Pro discovery** — New `FailSafe: About FailSafe Pro` command and a Settings panel card link to <https://mythologiq.studio/products/failsafe-download>.
 - **Workspace-truth UI** — Operations Phases stat reflects META_LEDGER history (was 0/0); Risks tab shows BACKLOG open items when no `risks.json` exists; Overview gains Latest Audit + Recent Releases cards parsed from `.failsafe/governance/AUDIT_REPORT.md` + `CHANGELOG.md`.
 - See `docs/v5/QORLOGIC_SKILL_INGESTION.md` and `docs/v5/PRO_INTEGRATION.md`.
 
@@ -34,7 +34,7 @@ Major release: skills ingested from the [`qor-logic`](https://pypi.org/project/q
 FailSafe Pro is the desktop native application for SDLC visibility and governance — OS-level enforcement, file locking, team workflows, and remote connections beyond the editor boundary. The open extension remains the editor surface; pair it with Pro for full SDLC operations.
 
 Learn more: <https://mythologiq.studio/products/failsafe-pro>
-Download: <https://mythologiq.studio/failsafe-pro/download>
+Download: <https://mythologiq.studio/products/failsafe-download>
 
 Or open the Command Center Settings tab and choose "About FailSafe Pro".
 

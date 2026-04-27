@@ -14,7 +14,7 @@ Major release. Public reveal of the FailSafe / FailSafe Pro product split. The v
 - `qor-logic` package installer with auto-detected Python interpreter (setting → ms-python → probe).
 - `QorLogicSkillIngestor` runs `qorlogic install --host claude --scope repo` and `--host codex` by default; supports `kilo-code` and `gemini` opt-in.
 - Synthesized `SOURCE.yml` provenance for ingested skills (qor-logic does not ship per-skill provenance).
-- `failsafe.openFailSafeProDownload` command and Settings panel "FailSafe Pro" card linking to <https://mythologiq.studio/failsafe-pro/download>.
+- `failsafe.openFailSafeProDownload` command and Settings panel "FailSafe Pro" card linking to <https://mythologiq.studio/products/failsafe-download>.
 - `failsafe.bootstrap` and `failsafe.organize` commands (previously unregistered, fell through to misleading "not enabled in current configuration" message). Idempotent silent bootstrap on every activation.
 - Always-visible "Install / Refresh QorLogic Skills" + "Bootstrap Workspace" buttons in Settings card.
 - New setting `failsafe.qorlogic.pythonPath` for explicit Python override.

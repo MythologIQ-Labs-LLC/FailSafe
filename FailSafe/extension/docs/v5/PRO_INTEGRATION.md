@@ -12,7 +12,7 @@
 - Full SDLC trace from intent → plan → audit → implement → seal, surfaced outside the editor
 - BSL-1.1 licensed
 - Product site: <https://mythologiq.studio/products/failsafe-pro>
-- Download: <https://mythologiq.studio/failsafe-pro/download>
+- Download: <https://mythologiq.studio/products/failsafe-download>
 - Pairs with this extension; not a replacement
 
 Use the extension when you want local editor guardrails. Add Pro when you need full SDLC visibility, OS-level enforcement, and managed runtime operations.

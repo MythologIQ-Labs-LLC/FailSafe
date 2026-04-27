@@ -70,7 +70,7 @@ export class SettingsRenderer {
           Desktop daemon with OS-level enforcement, file locking, team workflows,
           and remote connections. FailSafe Pro pairs with this open extension.
         </p>
-        <a href="https://mythologiq.studio/failsafe-pro/download" target="_blank" rel="noopener"
+        <a href="https://mythologiq.studio/products/failsafe-download" target="_blank" rel="noopener"
           class="cc-btn cc-btn--primary"
           data-action="open-failsafe-pro"
           style="display:inline-block;font-size:0.8rem;padding:6px 14px;text-decoration:none">

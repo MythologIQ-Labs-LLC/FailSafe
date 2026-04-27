@@ -32,7 +32,7 @@ FailSafe Pro is the desktop native application for SDLC visibility and governanc
 Use FailSafe when you want local editor guardrails. Use FailSafe Pro when you need full SDLC visibility and managed runtime operations.
 
 Learn more: <https://mythologiq.studio/products/failsafe-pro>
-Download: <https://mythologiq.studio/failsafe-pro/download>
+Download: <https://mythologiq.studio/products/failsafe-download>
 
 
 [Quick Start](#quick-example) | [Documentation](docs/FAILSAFE_SPECIFICATION.md) | [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=MythologIQ.mythologiq-failsafe) | [Open VSX](https://open-vsx.org/extension/MythologIQ/mythologiq-failsafe) | [Roadmap](docs/ROADMAP.md)
