@@ -63,10 +63,12 @@ export async function bootstrapServers(
   );
   consoleServer.setIdeTracker(ideTracker);
   consoleServer.setSystemRegistry(deps.systemRegistry);
-  await consoleServer.start();
-  context.subscriptions.push({ dispose: () => consoleServer?.stop() });
 
   // QorLogic skill installer (v5): replaces v4 bundled-skills copy path.
+  // Construct + register the scaffold callback BEFORE consoleServer.start() so
+  // the route deps capture the wired callback rather than null. Earlier wiring
+  // had this after start(), which left `/api/actions/scaffold-skills` returning
+  // 501 "Scaffold not available" forever. (Plan A Phase 3 fix follow-up.)
   const outputChannel = vscode.window.createOutputChannel("FailSafe (QorLogic)");
   context.subscriptions.push(outputChannel);
   const interpreterResolver = new PythonInterpreterResolver(
@@ -96,6 +98,9 @@ export async function bootstrapServers(
       consoleServer.broadcastEvent({ type: "hub.refresh", reason: "skills-installed" });
     },
   }));
+
+  await consoleServer.start();
+  context.subscriptions.push({ dispose: () => consoleServer?.stop() });
 
   // Invalidate the resolver's cache when the user changes the Python override.
   context.subscriptions.push(

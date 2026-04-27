@@ -171,7 +171,7 @@ export class SettingsRenderer {
         steps: [...(this._installState?.steps ?? []), event.step],
         lastReport: this._installState?.lastReport ?? null,
       };
-      this.render(this._lastHub);
+      this._refreshInstallCard();
       return;
     }
     if (event.type === 'skills.install.complete' && event.report) {
@@ -180,9 +180,27 @@ export class SettingsRenderer {
         steps: event.report.steps ?? this._installState?.steps ?? [],
         lastReport: event.report,
       };
-      this.render(this._lastHub);
+      this._refreshInstallCard();
       return;
     }
+  }
+
+  /**
+   * Targeted update of the QorLogic install card only, NOT the entire
+   * Settings panel. The previous full this.render(...) call on every progress
+   * event tore down + rebuilt theme chips, voice settings, hook toggle, and
+   * Pro card every time — which the user perceived as the tab "flashing to
+   * another screen".
+   */
+  _refreshInstallCard() {
+    const slot = this.container?.querySelector('#cc-qorlogic');
+    if (!slot) return;
+    const tmp = document.createElement('div');
+    tmp.innerHTML = renderInstallSkillsCard(this._installState).trim();
+    const next = tmp.firstElementChild;
+    if (!next) return;
+    slot.replaceWith(next);
+    this._bindQorLogicActions();
   }
   destroy() { if (this.container) this.container.innerHTML = ''; }
 }
