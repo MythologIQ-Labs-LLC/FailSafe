@@ -27,11 +27,12 @@ _Local-first safety for AI coding assistants._
 
 FailSafe is the open-source VS Code and Cursor extension for local AI coding governance — audits, skills, checkpoints, and editor-visible safety workflows. Skills are sourced from the [`qor-logic`](https://pypi.org/project/qor-logic/) PyPI package.
 
-FailSafe Pro is the downloadable desktop and daemon product for OS-level enforcement, file-locking, team workflows, remote connections, and commercial distribution.
+FailSafe Pro is the desktop native application for SDLC visibility and governance — OS-level enforcement, file locking, team workflows, and remote connections beyond the editor boundary.
 
-Use FailSafe when you want local editor guardrails. Use FailSafe Pro when you need stronger enforcement and managed runtime operations.
+Use FailSafe when you want local editor guardrails. Use FailSafe Pro when you need full SDLC visibility and managed runtime operations.
 
-Download FailSafe Pro: <https://mythologiq.studio/failsafe-pro/download>
+Learn more: <https://mythologiq.studio/products/failsafe-pro>
+Download: <https://mythologiq.studio/failsafe-pro/download>
 
 
 [Quick Start](#quick-example) | [Documentation](docs/FAILSAFE_SPECIFICATION.md) | [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=MythologIQ.mythologiq-failsafe) | [Open VSX](https://open-vsx.org/extension/MythologIQ/mythologiq-failsafe) | [Roadmap](docs/ROADMAP.md)

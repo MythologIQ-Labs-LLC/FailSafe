@@ -7,15 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [5.0.0] - 2026-04-25
 
-Major release. Public reveal of the FailSafe / FailSafe Pro product split. The v4 bundled-skills installer is replaced by ingestion from the [`qor-logic`](https://pypi.org/project/qor-logic/) PyPI package. Skills now begin with `qor-` (was `ql-`).
+Major release. Public reveal of the FailSafe / FailSafe Pro product split. The v4 bundled-skills installer is replaced by ingestion from the [`qor-logic`](https://pypi.org/project/qor-logic/) PyPI package. Skills now begin with `qor-` (was `ql-`). The Command Center reads workspace truth — META_LEDGER, BACKLOG, plan files, audit reports, and CHANGELOG — instead of showing empty placeholder state.
 
 ### Added
 
 - `qor-logic` package installer with auto-detected Python interpreter (setting → ms-python → probe).
 - `QorLogicSkillIngestor` runs `qorlogic install --host claude --scope repo` and `--host codex` by default; supports `kilo-code` and `gemini` opt-in.
-- Synthesized `SOURCE.yml` provenance for ingested skills (qor-logic does not ship per-skill provenance).
-- `failsafe.openFailSafeProDownload` command and Settings panel "FailSafe Pro" card linking to <https://mythologiq.studio/failsafe-pro/download>.
-- New setting `failsafe.qorlogic.pythonPath` for explicit Python override.
+- Synthesized `SOURCE.yml` provenance for ingested skills.
+- `failsafe.openFailSafeProDownload`, `failsafe.bootstrap`, and `failsafe.organize` commands.
+- Always-visible "Install / Refresh QorLogic Skills" + "Bootstrap Workspace" buttons in the Command Center Settings tab.
+- Setting `failsafe.qorlogic.pythonPath` for explicit Python override.
+- Workspace-truth UI: META_LEDGER backfills Operations Phases / Recent Verdicts / Recent Completions; BACKLOG populates Risks tab; new Latest Audit + Recent Releases cards on Overview.
 - New docs: `FailSafe/extension/docs/v5/QORLOGIC_SKILL_INGESTION.md`, `FailSafe/extension/docs/v5/PRO_INTEGRATION.md`.
 
 ### Changed
@@ -23,7 +25,8 @@ Major release. Public reveal of the FailSafe / FailSafe Pro product split. The v
 - "Install Skills" button label → "Install QorLogic Skills".
 - The bundled `dist/extension/skills/` is no longer included in the VSIX.
 - Extension `description` revised off the legacy "AI governance platform" framing.
-- Skill IDs migrated from `ql-*` to `qor-*` (extension source references and project-local skill directories).
+- Skill IDs migrated from `ql-*` to `qor-*` across source and project-local skill directories.
+- Operations Phases stat now reflects META_LEDGER reality (was 0/0); render capped at 10 cards plus a summary row.
 
 ### Removed
 

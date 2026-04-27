@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [5.0.0] - 2026-04-25
 
-Major release. Public reveal of the FailSafe / FailSafe Pro product split. The v4 bundled-skills installer is replaced by ingestion from the [`qor-logic`](https://pypi.org/project/qor-logic/) PyPI package. Skills now begin with `qor-` (was `ql-`).
+Major release. Public reveal of the FailSafe / FailSafe Pro product split. The v4 bundled-skills installer is replaced by ingestion from the [`qor-logic`](https://pypi.org/project/qor-logic/) PyPI package. Skills now begin with `qor-` (was `ql-`). The Command Center reads workspace truth — META_LEDGER, BACKLOG, plan files, audit reports, and CHANGELOG — instead of showing empty placeholder state.
 
 ### Added
 
@@ -18,7 +18,14 @@ Major release. Public reveal of the FailSafe / FailSafe Pro product split. The v
 - `failsafe.bootstrap` and `failsafe.organize` commands (previously unregistered, fell through to misleading "not enabled in current configuration" message). Idempotent silent bootstrap on every activation.
 - Always-visible "Install / Refresh QorLogic Skills" + "Bootstrap Workspace" buttons in Settings card.
 - New setting `failsafe.qorlogic.pythonPath` for explicit Python override.
-- Workspace-truth UI population: META_LEDGER backfill for verdicts/completions, BacklogReader → Risks tab, PlanFileReader → activePlan fallback, SystemStateReader → bootstrapState, AuditReportReader → Latest Audit card, ChangelogReader → Recent Releases card.
+- Workspace-truth UI population:
+  - `MetaLedgerReader` → Operations Phases stat (was 0/0); Recent Verdicts and Recent Completions strips backfilled from `docs/META_LEDGER.md`.
+  - `BacklogReader` → Risks tab populated from `docs/BACKLOG.md` open items when `.failsafe/risks/risks.json` is absent.
+  - `PlanFileReader` → `hub.activePlan` falls back to the most-recent `.failsafe/governance/plans/*.md` when PlanManager has none.
+  - `SystemStateReader` → `bootstrapState.systemState` exposes version + chain status from `docs/SYSTEM_STATE.md`.
+  - `AuditReportReader` → new Latest Audit card on Overview, parsed from `.failsafe/governance/AUDIT_REPORT.md`.
+  - `ChangelogReader` → new Recent Releases card on Overview, parsed from `CHANGELOG.md`.
+  - Transparency events surfaced in hub (newest-first) from `.failsafe/logs/transparency.jsonl`.
 - New docs: `docs/v5/QORLOGIC_SKILL_INGESTION.md`, `docs/v5/PRO_INTEGRATION.md`.
 
 ### Changed
@@ -27,7 +34,8 @@ Major release. Public reveal of the FailSafe / FailSafe Pro product split. The v
 - The bundled `dist/extension/skills/` is no longer included in the VSIX.
 - Extension `description` revised off the legacy "AI governance platform" framing.
 - Skill IDs migrated from `ql-*` to `qor-*` (extension source references and project-local skill directories). `SkillParser` recognizes both prefixes during the v4 → v5 transition.
-- Operations Phases stat now reflects META_LEDGER reality (was 0/0 theater); render capped at 10 with summary row.
+- Operations Phases stat now reflects META_LEDGER reality (was 0/0 theater); render capped at 10 cards plus a summary row.
+- `CheckpointStore` silent catches replaced with `console.warn` (observability only; behavior unchanged).
 
 ### Removed
 

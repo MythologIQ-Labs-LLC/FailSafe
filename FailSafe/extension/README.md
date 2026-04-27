@@ -10,23 +10,33 @@ FailSafe runs locally inside VS Code and Cursor. It monitors what AI agents do, 
 
 ## What's New in v5.0.0
 
-Major release: skills now ingested from the [`qor-logic`](https://pypi.org/project/qor-logic/) PyPI package, replacing the v4 bundled-installer flow. Public reveal of the FailSafe / FailSafe Pro product split.
+Major release: skills ingested from the [`qor-logic`](https://pypi.org/project/qor-logic/) PyPI package, public reveal of the FailSafe / FailSafe Pro product split, and the Command Center now reads workspace truth (META_LEDGER, BACKLOG, plans, audit, changelog) instead of empty placeholder state.
 
 ### Added
 
-- **QorLogic skill ingestion** — `Install QorLogic Skills` button in the Command Center installs the `qor-logic` Python package and runs `qorlogic install --host claude --scope repo` (and codex). Skills land at `.claude/skills/` and `.codex/skills/` with synthesized provenance.
+- **QorLogic skill ingestion** — `Install QorLogic Skills` button installs the `qor-logic` Python package and runs `qorlogic install --host claude --scope repo` (and codex). Skills land at `.claude/skills/` and `.codex/skills/` with synthesized provenance.
 - **Python interpreter auto-detection** — Resolves Python in priority order: `failsafe.qorlogic.pythonPath` setting → VS Code Python extension (`ms-python.python`) → probe `python3` → `python` → `py -3`.
+- **`failsafe.bootstrap` and `failsafe.organize` commands** — Idempotent workspace-readiness gate; runs in silent mode on every activation, full bootstrap (incl. `pip install qor-logic`) on user trigger.
+- **Always-visible Settings card** — "Install / Refresh QorLogic Skills" + "Bootstrap Workspace" buttons; no longer gated on a brittle "is something on disk" heuristic.
 - **FailSafe Pro discovery** — New `FailSafe: About FailSafe Pro` command and a Settings panel card link to <https://mythologiq.studio/failsafe-pro/download>.
+- **Workspace-truth UI** — Operations Phases stat reflects META_LEDGER history (was 0/0); Risks tab shows BACKLOG open items when no `risks.json` exists; Overview gains Latest Audit + Recent Releases cards parsed from `.failsafe/governance/AUDIT_REPORT.md` + `CHANGELOG.md`.
 - See `docs/v5/QORLOGIC_SKILL_INGESTION.md` and `docs/v5/PRO_INTEGRATION.md`.
 
 ### Changed
 
 - The v4 bundled `dist/extension/skills/` is no longer shipped in the VSIX. Existing user skills under `.claude/skills/` are not touched on upgrade.
 - "Install Skills" UI label renamed to "Install QorLogic Skills".
+- Skill IDs migrated from `ql-*` to `qor-*` across source and project-local skill directories. `SkillParser` recognizes both prefixes during the v4→v5 transition.
+- Operations Phases render capped at 10 cards plus a summary row (was: would render 120 cards on a populated workspace).
 
 ### About FailSafe Pro
 
-This extension remains the open FailSafe editor experience. FailSafe Pro adds the desktop runtime, stronger enforcement, and Pro distribution workflows. Open the Command Center Settings tab and choose "About FailSafe Pro", or visit <https://mythologiq.studio/failsafe-pro/download>.
+FailSafe Pro is the desktop native application for SDLC visibility and governance — OS-level enforcement, file locking, team workflows, and remote connections beyond the editor boundary. The open extension remains the editor surface; pair it with Pro for full SDLC operations.
+
+Learn more: <https://mythologiq.studio/products/failsafe-pro>
+Download: <https://mythologiq.studio/failsafe-pro/download>
+
+Or open the Command Center Settings tab and choose "About FailSafe Pro".
 
 ## What's New in v4.9.9
 
