@@ -5,6 +5,38 @@ All notable changes to the MythologIQ FailSafe extension will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.0] - 2026-04-25
+
+Major release. Public reveal of the FailSafe / FailSafe Pro product split. The v4 bundled-skills installer is replaced by ingestion from the [`qor-logic`](https://pypi.org/project/qor-logic/) PyPI package. Skills now begin with `qor-` (was `ql-`).
+
+### Added
+
+- `qor-logic` package installer with auto-detected Python interpreter (setting → ms-python → probe).
+- `QorLogicSkillIngestor` runs `qorlogic install --host claude --scope repo` and `--host codex` by default; supports `kilo-code` and `gemini` opt-in.
+- Synthesized `SOURCE.yml` provenance for ingested skills (qor-logic does not ship per-skill provenance).
+- `failsafe.openFailSafeProDownload` command and Settings panel "FailSafe Pro" card linking to <https://mythologiq.studio/failsafe-pro/download>.
+- `failsafe.bootstrap` and `failsafe.organize` commands (previously unregistered, fell through to misleading "not enabled in current configuration" message). Idempotent silent bootstrap on every activation.
+- Always-visible "Install / Refresh QorLogic Skills" + "Bootstrap Workspace" buttons in Settings card.
+- New setting `failsafe.qorlogic.pythonPath` for explicit Python override.
+- Workspace-truth UI population: META_LEDGER backfill for verdicts/completions, BacklogReader → Risks tab, PlanFileReader → activePlan fallback, SystemStateReader → bootstrapState, AuditReportReader → Latest Audit card, ChangelogReader → Recent Releases card.
+- New docs: `docs/v5/QORLOGIC_SKILL_INGESTION.md`, `docs/v5/PRO_INTEGRATION.md`.
+
+### Changed
+
+- "Install Skills" button label → "Install QorLogic Skills".
+- The bundled `dist/extension/skills/` is no longer included in the VSIX.
+- Extension `description` revised off the legacy "AI governance platform" framing.
+- Skill IDs migrated from `ql-*` to `qor-*` (extension source references and project-local skill directories). `SkillParser` recognizes both prefixes during the v4 → v5 transition.
+- Operations Phases stat now reflects META_LEDGER reality (was 0/0 theater); render capped at 10 with summary row.
+
+### Removed
+
+- v4 bundled-skill copy path (`bootstrapServers.ts` direct `dist/extension/skills` → `.claude/skills` copy). Existing user skills already on disk are not touched.
+
+### Security
+
+- All subprocess invocations use list-form `spawn(cmd, args)`; no shell strings. pip install bounded by 120 s timeout, qorlogic install per host by 180 s timeout.
+
 ## [4.9.9] - 2026-03-17
 
 ### Fixed
