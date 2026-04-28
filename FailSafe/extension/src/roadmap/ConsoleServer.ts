@@ -47,6 +47,7 @@ import { SystemStateReader, type SystemStateSnapshot } from "./services/SystemSt
 import { BacklogReader, type PlanBlockerProjection } from "./services/BacklogReader";
 import { AuditReportReader, type AuditSnapshot } from "./services/AuditReportReader";
 import { ChangelogReader, type ReleaseEntry } from "./services/ChangelogReader";
+import { getQorLogicInstallStatus, type QorLogicInstallStatus } from "../qorlogic/qorLogicInstallRecord";
 import { setupCheckpointRoutes } from "./routes/CheckpointRoute";
 import { setupActionsRoutes } from "./routes/ActionsRoute";
 import { setupTransparencyRiskRoutes } from "./routes/TransparencyRiskRoute";
@@ -240,20 +241,11 @@ function mergePlanBlockers(
   };
 }
 
-function hasQorLogicProvenance(workspaceRoot: string): boolean {
-  const skillsRoot = path.join(workspaceRoot, ".claude", "skills");
-  if (!fs.existsSync(skillsRoot)) return false;
-  let entries: fs.Dirent[];
-  try { entries = fs.readdirSync(skillsRoot, { withFileTypes: true }); }
-  catch { return false; }
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    if (!entry.name.startsWith("qor-")) continue;
-    const sourceYml = path.join(skillsRoot, entry.name, "SOURCE.yml");
-    if (fs.existsSync(sourceYml)) return true;
-  }
-  return false;
-}
+// QorLogic install detection uses the canonical install record file
+// `<base>/.qorlogic-installed.json` written by qor-logic itself. See
+// `src/qorlogic/qorLogicInstallRecord.ts`. Do not infer from directory
+// listings or per-skill provenance — qor-logic only ships SOURCE.yml for
+// some skills, and synthesizing it everywhere pollutes user content.
 
 export class ConsoleServer {
   private app: express.Application;
@@ -985,12 +977,13 @@ export class ConsoleServer {
       unattributedFileActivity: buildUnattributedFileActivity(this.unattributedFileChanges),
       metricIntegrity: buildMetricIntegrity(governancePhase, checkpointSummary, sentinelStatus, runState, hubDeps),
       bootstrapState: {
-        skillsInstalled: hasQorLogicProvenance(this.getWorkspaceRoot()),
+        skillsInstalled: artifacts.qorLogicInstall.anyInstalled,
         governanceInitialized: fs.existsSync(
           path.join(this.getWorkspaceRoot(), "docs", "CONCEPT.md"),
         ),
         workspaceName: path.basename(this.getWorkspaceRoot()),
         systemState: artifacts.systemState,
+        qorLogicInstall: artifacts.qorLogicInstall,
       },
       ledgerSummary: artifacts.ledgerSummary,
       latestAudit: artifacts.latestAudit,
@@ -1021,6 +1014,7 @@ export class ConsoleServer {
     systemState: SystemStateSnapshot;
     latestAudit: AuditSnapshot | null;
     recentReleases: ReleaseEntry[];
+    qorLogicInstall: QorLogicInstallStatus;
   } {
     const ws = this.getWorkspaceRoot();
     const ledger = new MetaLedgerReader(ws);
@@ -1033,6 +1027,7 @@ export class ConsoleServer {
       systemState: new SystemStateReader(ws).read(),
       latestAudit: new AuditReportReader(ws).read(),
       recentReleases: new ChangelogReader(ws).recentReleases(5),
+      qorLogicInstall: getQorLogicInstallStatus(ws),
     };
   }
 

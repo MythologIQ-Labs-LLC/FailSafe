@@ -1,5 +1,3 @@
-import * as fs from 'fs';
-import * as path from 'path';
 import type { PythonInterpreterResolver, ResolvedInterpreter } from './PythonInterpreterResolver';
 import type {
   IQorLogicPackageInstaller,
@@ -7,8 +5,10 @@ import type {
   InstallerRunResult,
   OutputChannelLike,
 } from './QorLogicPackageInstaller';
+import { type QorLogicHost } from './hostLayouts';
+import { getHostInstallStatus, type HostInstallStatus } from './qorLogicInstallRecord';
 
-export type QorLogicHost = 'claude' | 'codex' | 'gemini' | 'kilo-code';
+export type { QorLogicHost } from './hostLayouts';
 export type QorLogicScope = 'repo' | 'global';
 
 export interface QorLogicIngestOptions {
@@ -24,28 +24,19 @@ export interface QorLogicIngestFailure {
 export interface QorLogicIngestResult {
   ok: boolean;
   installedHosts: QorLogicHost[];
+  /** Total file count across hosts, sourced from each host's install record. */
   skillCount: number;
   failures: QorLogicIngestFailure[];
+  /**
+   * Per-host install status, read from `<base>/.qorlogic-installed.json` after
+   * the CLI completes successfully. The record is the canonical source of truth
+   * for "what did qor-logic write?" — do NOT infer from directory listings or
+   * synthesize per-skill provenance.
+   */
+  hostStatuses: HostInstallStatus[];
 }
 
-const HOST_SUBDIR: Record<QorLogicHost, { dot: string; sub: string }> = {
-  claude: { dot: '.claude', sub: 'skills' },
-  codex: { dot: '.codex', sub: 'skills' },
-  'kilo-code': { dot: '.kilo-code', sub: 'skills' },
-  gemini: { dot: '.gemini', sub: 'commands' },
-};
-
 const INSTALL_TIMEOUT_MS = 180_000;
-
-const SYNTHESIZED_SOURCE_YML = [
-  'source_type: qorlogic-package',
-  'source_name: qor-logic',
-  'source_url: https://pypi.org/project/qor-logic/',
-  'installed_by: failsafe-v5',
-  'admission_state: admitted',
-  'trust_tier: curated',
-  '',
-].join('\n');
 
 export class QorLogicSkillIngestor {
   constructor(
@@ -84,6 +75,7 @@ export class QorLogicSkillIngestor {
       installedHosts: [],
       skillCount: 0,
       failures: hosts.map((host) => ({ host, error })),
+      hostStatuses: [],
     };
   }
 
@@ -93,6 +85,7 @@ export class QorLogicSkillIngestor {
   ): Promise<QorLogicIngestResult> {
     const installedHosts: QorLogicHost[] = [];
     const failures: QorLogicIngestFailure[] = [];
+    const hostStatuses: HostInstallStatus[] = [];
     let skillCount = 0;
     for (const host of options.hosts) {
       const result = await this.installSingleHost(py, host, options.scope);
@@ -101,13 +94,18 @@ export class QorLogicSkillIngestor {
         continue;
       }
       installedHosts.push(host);
-      skillCount += this.synthesizeProvenance(host);
+      // The CLI returned 0; read its install record (canonical truth).
+      // No directory walks, no synthesized provenance.
+      const status = getHostInstallStatus(this.workspaceRoot, host);
+      hostStatuses.push(status);
+      skillCount += status.fileCount;
     }
     return {
       ok: failures.length === 0 && installedHosts.length > 0,
       installedHosts,
       skillCount,
       failures,
+      hostStatuses,
     };
   }
 
@@ -130,29 +128,6 @@ export class QorLogicSkillIngestor {
       env: { QORLOGIC_PROJECT_DIR: this.workspaceRoot },
     });
     return mapHostResult(result, this.output);
-  }
-
-  private synthesizeProvenance(host: QorLogicHost): number {
-    const skillsRoot = this.hostSkillsRoot(host);
-    if (!fs.existsSync(skillsRoot)) return 0;
-    let count = 0;
-    for (const entry of fs.readdirSync(skillsRoot, { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue;
-      const skillDir = path.join(skillsRoot, entry.name);
-      const sourcePath = path.join(skillDir, 'SOURCE.yml');
-      if (fs.existsSync(sourcePath)) {
-        count += 1;
-        continue;
-      }
-      fs.writeFileSync(sourcePath, SYNTHESIZED_SOURCE_YML, 'utf8');
-      count += 1;
-    }
-    return count;
-  }
-
-  private hostSkillsRoot(host: QorLogicHost): string {
-    const layout = HOST_SUBDIR[host];
-    return path.join(this.workspaceRoot, layout.dot, layout.sub);
   }
 }
 

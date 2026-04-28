@@ -166,16 +166,58 @@ suite('QorLogicSkillIngestor: command dispatch', function () {
   });
 });
 
-suite('QorLogicSkillIngestor: provenance synthesis', function () {
+suite('QorLogicSkillIngestor: install record (canonical truth)', function () {
   this.timeout(10000);
   setup(() => { tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ingestor-')); });
   teardown(() => { try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { /* */ } });
 
-  test('writes synthesized SOURCE.yml when missing in installed skill dir', async () => {
+  /**
+   * Simulate `qorlogic install` writing the install record file. The CLI
+   * creates `<base>/.qorlogic-installed.json` containing `{ files: [...] }`.
+   * Our ingestor invokes the CLI via subprocess (mocked here); after a
+   * successful return, it reads the record to determine what landed where.
+   */
+  function fakeInstallRecord(host: string, base: string, files: string[]): void {
+    const baseDir = path.join(withTmpDir(), `.${host}`);
+    fs.mkdirSync(baseDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(baseDir, '.qorlogic-installed.json'),
+      JSON.stringify({ files: files.map((p) => ({ path: path.join(baseDir, p), sha256: 'fake' })) }),
+      'utf-8',
+    );
+  }
+
+  test('reports skillCount + destinations from the install record after successful CLI run', async () => {
+    const installer = new FakeInstaller();
+    const resolver = fixedResolver();
+    fakeInstallRecord('claude', '.claude', ['skills/qor-audit/SKILL.md', 'skills/log-decision.md', 'agents/agent-architect.md']);
+    const { run } = makeRun(() => ok());
+    const ingestor = new QorLogicSkillIngestor(
+      installer, resolver, withTmpDir(), run, async () => undefined, sinkChannel,
+    );
+
+    const result = await ingestor.ingest({ hosts: ['claude'], scope: 'repo' });
+
+    assert.equal(result.ok, true);
+    assert.equal(result.skillCount, 3);
+    assert.deepEqual(result.installedHosts, ['claude']);
+    assert.equal(result.hostStatuses.length, 1);
+    assert.equal(result.hostStatuses[0].host, 'claude');
+    assert.equal(result.hostStatuses[0].fileCount, 3);
+    // Destinations include both skills/ and agents/ parent directories.
+    const dests = result.hostStatuses[0].destinations.join(' ');
+    assert.match(dests, /skills/);
+    assert.match(dests, /agents/);
+  });
+
+  test('does NOT write SOURCE.yml anywhere after install (no provenance pollution)', async () => {
     const installer = new FakeInstaller();
     const resolver = fixedResolver();
     const ws = withTmpDir();
-    ensureSkillDir('claude', 'qor-plan', ws);
+    // Pre-existing user skill dir under .claude/skills/ (not from qor-logic).
+    fs.mkdirSync(path.join(ws, '.claude', 'skills', 'user-custom-skill'), { recursive: true });
+    fs.writeFileSync(path.join(ws, '.claude', 'skills', 'user-custom-skill', 'SKILL.md'), '# user-owned');
+    fakeInstallRecord('claude', '.claude', ['skills/qor-audit/SKILL.md']);
     const { run } = makeRun(() => ok());
     const ingestor = new QorLogicSkillIngestor(
       installer, resolver, ws, run, async () => undefined, sinkChannel,
@@ -183,46 +225,28 @@ suite('QorLogicSkillIngestor: provenance synthesis', function () {
 
     await ingestor.ingest({ hosts: ['claude'], scope: 'repo' });
 
-    const sourcePath = path.join(ws, '.claude', 'skills', 'qor-plan', 'SOURCE.yml');
-    assert.ok(fs.existsSync(sourcePath), 'SOURCE.yml should be created');
-    const content = fs.readFileSync(sourcePath, 'utf8');
-    assert.match(content, /source_name: qor-logic/);
-    assert.match(content, /installed_by: failsafe-v5/);
-    assert.match(content, /admission_state: admitted/);
-    assert.match(content, /trust_tier: curated/);
+    // Critical: must not pollute user-owned dirs with synthesized SOURCE.yml.
+    assert.equal(
+      fs.existsSync(path.join(ws, '.claude', 'skills', 'user-custom-skill', 'SOURCE.yml')),
+      false,
+      'must not write SOURCE.yml into user-owned skill directories',
+    );
   });
 
-  test('does not overwrite existing SOURCE.yml', async () => {
+  test('returns hostStatuses[].installed=false when install record is absent', async () => {
     const installer = new FakeInstaller();
     const resolver = fixedResolver();
-    const ws = withTmpDir();
-    const skillDir = ensureSkillDir('claude', 'qor-audit', ws);
-    const existing = 'source_name: user-edited\ncustom: value\n';
-    fs.writeFileSync(path.join(skillDir, 'SOURCE.yml'), existing);
+    // No fakeInstallRecord call → CLI succeeds (exit 0) but no record on disk.
     const { run } = makeRun(() => ok());
     const ingestor = new QorLogicSkillIngestor(
-      installer, resolver, ws, run, async () => undefined, sinkChannel,
+      installer, resolver, withTmpDir(), run, async () => undefined, sinkChannel,
     );
 
-    await ingestor.ingest({ hosts: ['claude'], scope: 'repo' });
+    const result = await ingestor.ingest({ hosts: ['claude'], scope: 'repo' });
 
-    const after = fs.readFileSync(path.join(skillDir, 'SOURCE.yml'), 'utf8');
-    assert.equal(after, existing);
-  });
-
-  test('walks codex subdir under .codex/skills', async () => {
-    const installer = new FakeInstaller();
-    const resolver = fixedResolver();
-    const ws = withTmpDir();
-    ensureSkillDir('codex', 'qor-implement', ws);
-    const { run } = makeRun(() => ok());
-    const ingestor = new QorLogicSkillIngestor(
-      installer, resolver, ws, run, async () => undefined, sinkChannel,
-    );
-
-    await ingestor.ingest({ hosts: ['codex'], scope: 'repo' });
-
-    assert.ok(fs.existsSync(path.join(ws, '.codex', 'skills', 'qor-implement', 'SOURCE.yml')));
+    assert.equal(result.hostStatuses[0].installed, false);
+    assert.equal(result.hostStatuses[0].fileCount, 0);
+    assert.deepEqual(result.hostStatuses[0].destinations, []);
   });
 });
 

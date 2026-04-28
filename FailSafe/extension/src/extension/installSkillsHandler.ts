@@ -79,20 +79,37 @@ export function createInstallSkillsHandler(
 }
 
 function buildReport(
-  ingest: { ok: boolean; installedHosts: QorLogicHost[]; skillCount: number; failures: Array<{ host: string; error: string }> },
+  ingest: {
+    ok: boolean;
+    installedHosts: QorLogicHost[];
+    skillCount: number;
+    failures: Array<{ host: string; error: string }>;
+    hostStatuses?: Array<{ destinations: string[] }>;
+  },
   steps: InstallStep[],
 ): InstallReport {
   const errorString = collectError(ingest.failures);
+  // Destinations come from each host's `.qorlogic-installed.json` install
+  // record — what qor-logic actually wrote to disk. Earlier code
+  // constructed `.${host}/skills/` strings, which (a) was wrong for gemini
+  // and (b) ignored the `agents/` install destinations.
+  const destinations = ingest.hostStatuses
+    ? dedupe(ingest.hostStatuses.flatMap((s) => s.destinations))
+    : [];
   return {
     ok: ingest.ok,
     steps,
     totalInstalled: ingest.skillCount,
-    destinations: ingest.installedHosts.map((h) => `.${h}/skills/`),
+    destinations,
     failures: [...ingest.failures],
     scaffolded: ingest.skillCount,
     skipped: 0,
     error: errorString,
   };
+}
+
+function dedupe(items: string[]): string[] {
+  return [...new Set(items)].sort();
 }
 
 function collectError(

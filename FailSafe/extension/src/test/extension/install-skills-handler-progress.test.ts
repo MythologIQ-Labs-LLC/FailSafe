@@ -13,7 +13,7 @@ import type {
 class FakeIngestor {
   public lastOptions: QorLogicIngestOptions | null = null;
   public stub: QorLogicIngestResult = {
-    ok: true, installedHosts: ['claude', 'codex'], skillCount: 17, failures: [],
+    ok: true, installedHosts: ['claude', 'codex'], skillCount: 17, failures: [], hostStatuses: [],
   };
   async ingest(options: QorLogicIngestOptions): Promise<QorLogicIngestResult> {
     this.lastOptions = options;
@@ -42,7 +42,7 @@ suite('createInstallSkillsHandler: progress + report', () => {
 
   test('returns a structured report on success', async () => {
     const fake = new FakeIngestor();
-    fake.stub = { ok: true, installedHosts: ['claude', 'codex'], skillCount: 34, failures: [] };
+    fake.stub = { ok: true, installedHosts: ['claude', 'codex'], skillCount: 34, failures: [], hostStatuses: [] };
     const handler = createInstallSkillsHandler(asIngestor(fake));
 
     const report = await handler();
@@ -59,6 +59,7 @@ suite('createInstallSkillsHandler: progress + report', () => {
     fake.stub = {
       ok: false, installedHosts: ['codex'], skillCount: 17,
       failures: [{ host: 'claude', error: 'pip-failed' }],
+      hostStatuses: [],
     };
     const handler = createInstallSkillsHandler(asIngestor(fake));
 
@@ -87,7 +88,7 @@ suite('createInstallSkillsHandler: progress + report', () => {
 
   test('preserves the legacy-shape return for back-compat with the Console scaffold callback', async () => {
     const fake = new FakeIngestor();
-    fake.stub = { ok: true, installedHosts: ['claude'], skillCount: 5, failures: [] };
+    fake.stub = { ok: true, installedHosts: ['claude'], skillCount: 5, failures: [], hostStatuses: [] };
     const handler = createInstallSkillsHandler(asIngestor(fake));
 
     const result = await handler() as InstallReport;

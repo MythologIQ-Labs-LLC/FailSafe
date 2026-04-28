@@ -9,7 +9,7 @@ import type {
 class FakeIngestor {
   public lastOptions: QorLogicIngestOptions | null = null;
   public stub: QorLogicIngestResult = {
-    ok: true, installedHosts: ['claude', 'codex'], skillCount: 0, failures: [],
+    ok: true, installedHosts: ['claude', 'codex'], skillCount: 0, failures: [], hostStatuses: [],
   };
   async ingest(options: QorLogicIngestOptions): Promise<QorLogicIngestResult> {
     this.lastOptions = options;
@@ -33,7 +33,7 @@ suite('createInstallSkillsHandler', () => {
 
   test('returns scaffolded equal to skillCount when ingest succeeds', async () => {
     const fake = new FakeIngestor();
-    fake.stub = { ok: true, installedHosts: ['claude', 'codex'], skillCount: 17, failures: [] };
+    fake.stub = { ok: true, installedHosts: ['claude', 'codex'], skillCount: 17, failures: [], hostStatuses: [] };
     const handler = createInstallSkillsHandler(asIngestor(fake));
 
     const result = await handler();
@@ -51,6 +51,7 @@ suite('createInstallSkillsHandler', () => {
         { host: 'claude', error: 'pip-failed' },
         { host: 'gemini', error: 'timeout' },
       ],
+      hostStatuses: [],
     };
     const handler = createInstallSkillsHandler(asIngestor(fake));
 
