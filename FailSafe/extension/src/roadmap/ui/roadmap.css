@@ -1134,3 +1134,30 @@ body {
   transition: width 0.4s ease, background 0.3s ease;
 }
 
+
+/* Monitor SHIELD Visibility (B191) — plan title + staleness indicator */
+.plan-title-line {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 4px 0;
+  text-transform: none;
+  letter-spacing: 0;
+  font-style: italic;
+}
+.staleness-banner {
+  background: var(--accent-gold, #f59e0b);
+  color: #000;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  margin: 4px 0;
+}
+.staleness-banner.hidden {
+  display: none;
+}
+.phase-track.stale {
+  opacity: 0.55;
+  filter: grayscale(0.4);
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}

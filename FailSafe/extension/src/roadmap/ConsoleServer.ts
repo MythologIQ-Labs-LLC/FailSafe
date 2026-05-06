@@ -40,12 +40,12 @@ import type { IConfigProvider } from "../core/interfaces/IConfigProvider";
 import { LLMClient } from "../sentinel/utils/LLMClient";
 import { setupBrainstormRoutes } from "./routes/BrainstormRoute";
 import { MetaLedgerReader, type LedgerSummary } from "./services/MetaLedgerReader";
-import { PlanFileReader, type ParsedPlan } from "./services/PlanFileReader";
-import { SystemStateReader, type SystemStateSnapshot } from "./services/SystemStateReader";
-import { BacklogReader, type PlanBlockerProjection } from "./services/BacklogReader";
-import { AuditReportReader, type AuditSnapshot } from "./services/AuditReportReader";
-import { ChangelogReader, type ReleaseEntry } from "./services/ChangelogReader";
-import { getQorLogicInstallStatus, type QorLogicInstallStatus } from "../qorlogic/qorLogicInstallRecord";
+import { type ParsedPlan } from "./services/PlanFileReader";
+import { type PlanBlockerProjection } from "./services/BacklogReader";
+import {
+  WorkspaceArtifactBuilder,
+  type WorkspaceArtifactSnapshot,
+} from "./services/WorkspaceArtifactBuilder";
 import { setupCheckpointRoutes } from "./routes/CheckpointRoute";
 import { setupActionsRoutes } from "./routes/ActionsRoute";
 import { setupTransparencyRiskRoutes } from "./routes/TransparencyRiskRoute";
@@ -821,34 +821,12 @@ export class ConsoleServer {
   }
 
   /**
-   * Phase 1/2/3 helper (audit obs #3): keep workspace-artifact reads out of
-   * `buildHubSnapshot` to bound that function's growth. Each reader is a pure
-   * function over a markdown file — failures degrade to nulls/empty arrays.
+   * Delegates to `WorkspaceArtifactBuilder` (extracted per audit Entry #278
+   * Amendment 1). Returns workspace-truth artifacts plus derived SHIELD-phase
+   * progression for the Monitor.
    */
-  private assembleWorkspaceArtifactSnapshot(): {
-    ledgerSummary: ReturnType<MetaLedgerReader["summarize"]>;
-    ledgerVerdicts: ReturnType<MetaLedgerReader["recentVerdicts"]>;
-    ledgerCompletions: ReturnType<MetaLedgerReader["recentCompletions"]>;
-    activePlanFromFile: ParsedPlan | null;
-    planBlockers: PlanBlockerProjection[];
-    systemState: SystemStateSnapshot;
-    latestAudit: AuditSnapshot | null;
-    recentReleases: ReleaseEntry[];
-    qorLogicInstall: QorLogicInstallStatus;
-  } {
-    const ws = this.getWorkspaceRoot();
-    const ledger = new MetaLedgerReader(ws);
-    return {
-      ledgerSummary: ledger.summarize(),
-      ledgerVerdicts: ledger.recentVerdicts(10),
-      ledgerCompletions: ledger.recentCompletions(12),
-      activePlanFromFile: new PlanFileReader(ws).pickLatestPlan(),
-      planBlockers: new BacklogReader(ws).parseOpenBlockers(),
-      systemState: new SystemStateReader(ws).read(),
-      latestAudit: new AuditReportReader(ws).read(),
-      recentReleases: new ChangelogReader(ws).recentReleases(5),
-      qorLogicInstall: getQorLogicInstallStatus(ws),
-    };
+  private assembleWorkspaceArtifactSnapshot(): WorkspaceArtifactSnapshot {
+    return new WorkspaceArtifactBuilder(this.getWorkspaceRoot()).build();
   }
 
   /**

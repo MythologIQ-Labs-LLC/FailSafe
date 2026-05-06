@@ -1,4 +1,6 @@
 import { SentinelMonitor } from './modules/sentinel-monitor.js';
+import { getPhaseInfo, getFeatureSummary, renderPhase } from './modules/monitor-render.js';
+import { MonitorStaleness } from './modules/monitor-staleness.js';
 
 class WebPanelClient {
   constructor() {
@@ -16,6 +18,8 @@ class WebPanelClient {
     this.elements = {
       phaseTitle: document.getElementById('phase-title'),
       phaseTrack: document.getElementById('phase-track'),
+      planTitle: document.getElementById('monitor-plan-title'),
+      stalenessBanner: document.getElementById('monitor-staleness-banner'),
       recentLine: document.getElementById('recent-line'),
       nextStep: document.getElementById('next-step'),
       sentinelLabel: document.getElementById('sentinel-label'),
@@ -44,6 +48,7 @@ class WebPanelClient {
     };
 
     this.sentinelMonitor = new SentinelMonitor(this.elements);
+    this.staleness = new MonitorStaleness(this.elements);
     this.connect();
     this.fetchHub();
   }
@@ -59,6 +64,7 @@ class WebPanelClient {
         this.reconnectTimer = null;
       }
       this.setStatus('Connected');
+      this.staleness?.notifyConnected();
     };
 
     this.ws.onmessage = (event) => {
@@ -68,6 +74,7 @@ class WebPanelClient {
 
     this.ws.onclose = () => {
       this.setStatus('Disconnected - retrying...');
+      this.staleness?.notifyDisconnected();
       this.scheduleReconnect();
     };
 
@@ -115,8 +122,11 @@ class WebPanelClient {
     const risks = (plan.risks || []);
     const milestones = (plan.milestones || []);
 
-    const phaseInfo = this.getPhaseInfo(plan);
-    const summary = this.getFeatureSummary(phases, milestones, blockers, risks);
+    const phaseInfo = getPhaseInfo(this.hub);
+    const summary = getFeatureSummary(
+      phases, milestones, blockers, risks,
+      this.hub.governancePhase, this.hub.recentCompletions,
+    );
     const nextStep = this.getNextStep(
       blockers,
       this.hub.l3Queue || [],
@@ -124,8 +134,11 @@ class WebPanelClient {
       this.hub.qoreRuntime || {},
     );
 
-    this.renderPhase(phaseInfo);
+    renderPhase(phaseInfo, this.elements);
     this.renderFeatureSummary(summary);
+    if (this.elements.planTitle) {
+      this.elements.planTitle.textContent = plan.title ? `Tracking: ${plan.title}` : '—';
+    }
     if (this.elements.nextStep) {
       this.elements.nextStep.textContent = nextStep;
     }
@@ -135,97 +148,6 @@ class WebPanelClient {
     this.renderQoreRuntime(this.hub.qoreRuntime || {});
     this.renderGovernanceAlerts(this.hub.governancePhase?.activeAlerts || []);
     this.renderRepoCompliance(this.hub.repoCompliance || {});
-  }
-
-  getPhaseInfo(plan) {
-    // Prefer S.H.I.E.L.D. governance phase from META_LEDGER
-    const gov = this.hub?.governancePhase;
-    if (gov?.current && gov.current !== 'IDLE') {
-      const PHASE_INDEX = { PLAN: 0, GATE: 1, IMPLEMENT: 2, SUBSTANTIATE: 4, SEALED: 4 };
-      return { title: gov.current, index: PHASE_INDEX[gov.current] ?? 0 };
-    }
-
-    const runState = this.hub?.runState;
-
-    // If IDE is actively debugging or building, that takes precedence
-    if (runState && runState.currentPhase && runState.currentPhase !== 'Plan') {
-      const title = runState.currentPhase;
-      const normalized = title.toLowerCase();
-      let index = 0;  // Default to Plan index
-
-      if (normalized.startsWith('debug')) index = 3;
-      else if (normalized.startsWith('build') || normalized.includes('implement')) index = 2;
-      else if (normalized.includes('audit') || normalized.includes('review')) index = 1;
-      else if (normalized.includes('substantiat') || normalized.includes('release')) index = 4;
-
-      return { title, index };
-    }
-
-    // If governance data exists and is IDLE, session is sealed — show Plan
-    if (gov?.recentCompletions?.length > 0) {
-      return { title: 'Plan', index: 0 };
-    }
-
-    // Fall back to plan phase data (non-governed workspaces only)
-    const phases = Array.isArray(plan?.phases) ? plan.phases : [];
-    const active = phases.find((phase) => phase.id === plan?.currentPhaseId)
-      || phases.find((phase) => phase.status === 'active')
-      || phases[0]
-      || null;
-
-    const title = String(active?.title || 'Plan');
-    const normalized = title.toLowerCase();
-    let index = 0;
-
-    if (normalized.includes('substantiat') || normalized.includes('release')) index = 4;
-    else if (normalized.includes('debug') || normalized.includes('fix')) index = 3;
-    else if (normalized.includes('implement') || normalized.includes('build')) index = 2;
-    else if (normalized.includes('audit') || normalized.includes('review')) index = 1;
-
-    return { title, index };
-  }
-
-  getFeatureSummary(phases, milestones, blockers, risks) {
-    // Prefer governance completions from ledger
-    const gov = this.hub?.governancePhase;
-    if (gov?.recentCompletions?.length > 0) {
-      const recentlyCompletedFeatures = gov.recentCompletions
-        .slice(0, 3)
-        .map((c) => c.plan ? `${c.phase}: ${c.plan}` : `${c.phase}: Entry #${c.entry}`);
-      return {
-        line: recentlyCompletedFeatures.join('\n'),
-        critical: blockers.filter((blocker) => blocker.severity === 'hard').length
-          + risks.filter((risk) => risk.level === 'danger').length
-          + (gov.activeAlerts?.filter((a) => a.type === 'VETO' || a.type === 'BLOCK').length || 0),
-        backlog: phases.filter((phase) => phase.status === 'pending').length,
-        wishlist: milestones.filter((milestone) => !milestone.completedAt && !milestone.targetDate).length,
-      };
-    }
-
-    const completedMilestones = milestones
-      .filter((milestone) => !!milestone.completedAt)
-      .sort((a, b) => new Date(String(b.completedAt)).getTime() - new Date(String(a.completedAt)).getTime());
-    const completedPhases = phases.filter((phase) => phase.status === 'completed');
-    let recentlyCompletedFeatures = completedMilestones.length > 0
-      ? completedMilestones.slice(0, 3).map((milestone) => milestone.title)
-      : completedPhases.slice(-3).reverse().map((phase) => phase.title);
-
-    if (recentlyCompletedFeatures.length === 0) {
-      const completions = this.hub?.recentCompletions || [];
-      recentlyCompletedFeatures = completions
-        .slice(0, 3)
-        .map((c) => `${c.type}: ${c.phase}`);
-    }
-
-    return {
-      line: recentlyCompletedFeatures.length > 0
-        ? recentlyCompletedFeatures.join('\n')
-        : 'None yet',
-      critical: blockers.filter((blocker) => blocker.severity === 'hard').length
-        + risks.filter((risk) => risk.level === 'danger').length,
-      backlog: phases.filter((phase) => phase.status === 'pending').length,
-      wishlist: milestones.filter((milestone) => !milestone.completedAt && !milestone.targetDate).length,
-    };
   }
 
   getNextStep(blockers, queue, sentinelStatus, qoreRuntime) {
@@ -248,27 +170,6 @@ class WebPanelClient {
       return 'Resume Sentinel monitoring.';
     }
     return 'Continue the active build phase.';
-  }
-
-  renderPhase(phaseInfo) {
-    if (this.elements.phaseTitle) {
-      this.elements.phaseTitle.textContent = phaseInfo.title.toUpperCase();
-    }
-    if (!this.elements.phaseTrack) return;
-
-    const labels = ['Plan', 'Audit', 'Implement', 'Substantiate'];
-    const rowOne = labels.map((label, idx) => {
-      const mappedIndex = idx >= 3 ? 4 : idx;
-      const status = mappedIndex < phaseInfo.index ? 'done' : mappedIndex === phaseInfo.index ? 'active' : 'pending';
-      return `<div class="step ${status}">${this.escapeHtml(label)}</div>`;
-    }).join('');
-
-    const debugStatus = phaseInfo.index === 3 ? 'debugging' : phaseInfo.index > 3 ? 'active' : 'pending';
-    const debugLabel = phaseInfo.index === 3 ? 'Debugging...' : phaseInfo.index > 3 ? 'Debugged' : 'Debug';
-    this.elements.phaseTrack.innerHTML = `
-      <div class="phase-row">${rowOne}</div>
-      <div class="phase-row debug-row"><div class="step ${debugStatus}">${debugLabel}</div></div>
-    `;
   }
 
   renderFeatureSummary(summary) {

@@ -12698,3 +12698,258 @@ _Next: operator-explicit lifecycle actions per the deferred-approval list above;
 
 ---
 
+### Entry #277: GATE TRIBUNAL (VETO) — plan-monitor-shield-visibility.md
+
+**Date**: 2026-05-06
+**Phase**: GATE
+**Persona**: The QorLogic Judge
+**Plan**: `.failsafe/governance/plans/plan-monitor-shield-visibility.md`
+**Risk Grade**: L2
+**Findings categories**: `razor-overage`
+
+**Verdict**: VETO
+
+**Pass-by-pass**: Prompt Injection PASS, Security L3 PASS, OWASP Top 10 PASS, Ghost UI PASS, **Section 4 Razor VETO**, Test Functionality PASS, Dependency Audit PASS, Macro-Level Architecture PASS, Infrastructure Alignment PASS, Orphan Detection PASS, Documentation Drift PASS.
+
+**Finding (Section 4 Razor)**: Plan proposes NET INCREASE of +10L to two files already over the 250L cap (`ConsoleServer.ts` 1165→1175; `roadmap.js` 486→496). Plan's File-Size Budget table acknowledges the pre-existing violation explicitly (SG-AtCapAdditionBlindness countermeasure honored), but acknowledgment is not waiver. Razor pass is binary on file-size cap.
+
+**Distinguishing precedent**: Audit Entry #272 PASSED with ConsoleServer.ts modifications because Phase 2 NET REDUCED the file (1381→1165, −216L). Razor accepts "still over cap but reducing" — does NOT accept "still over cap and increasing."
+
+**Required remediation** (two surgical amendments; both extractable, neither requires finishing the broader B198 razor refactor):
+- Amendment 1: extract `assembleWorkspaceArtifactSnapshot()` from `ConsoleServer.ts:828` into new `WorkspaceArtifactBuilder.ts`. ConsoleServer.ts net effect: ~−15L instead of +10L.
+- Amendment 2: extract `renderPhase()`, `getPhaseInfo()`, `getFeatureSummary()` from `roadmap.js` into new `monitor-render.js`. roadmap.js net effect: ~−130L instead of +10L.
+
+**Non-blocking observations** (informational, would not have VETOed independently):
+1. Open Question 1 vs API Contracts table coherence — either pre-resolve or mark Phase 1 as a spike with explicit decision-recording success criterion.
+2. Phase 3 staleness banner hardcoded English — flag for future i18n consideration.
+3. Phase 2 test file rename to `WorkspaceArtifactBuilder.test.ts` after Amendment 1.
+
+**Process Pattern observation**: First audit in the post-#276-seal sub-chain. No repeated-VETO pattern detected in the last 2 sealed phases. This VETO is a single-iteration narrow finding; expected to converge in 1 amendment cycle.
+
+**Audit Report**: `.agent/staging/AUDIT_REPORT.md`
+
+**Operator notice — degraded wiring**: `.qor/` runtime uninitialized; gate-artifact persistence and python helpers all no-op. No `audit.json` artifact emitted; equivalent narrative artifact at `.agent/staging/AUDIT_REPORT.md`.
+
+**Content Hash**: `pending-runtime-tooling`
+**Previous Hash**: `pending-runtime-tooling` (Entry #276)
+
+**Decision**: VETO — single razor-overage finding with two narrow amendments. Governor amends plan and re-runs `/qor-audit`. Expected outcome on amended plan: PASS.
+
+_Chain Status: SUB-CHAIN OPENED at Entry #277 (extends from #276 seal); first GATE TRIBUNAL of the new sub-chain._
+_Next: Governor applies Amendment 1 + Amendment 2 to plan-monitor-shield-visibility.md, re-runs /qor-audit._
+
+---
+
+### Entry #278: GATE TRIBUNAL (PASS) — plan-monitor-shield-visibility.md (amended)
+
+**Date**: 2026-05-06
+**Phase**: GATE
+**Persona**: The QorLogic Judge
+**Plan**: `.failsafe/governance/plans/plan-monitor-shield-visibility.md`
+**Risk Grade**: L1
+**Findings categories**: (none)
+
+**Verdict**: PASS
+
+**Lineage**: amended after Entry #277 VETO (single razor-overage finding). Amendments 1 + 2 + three non-blocking observations applied. Single-iteration convergence.
+
+**Pass-by-pass**: Prompt Injection PASS, Security L3 PASS, OWASP Top 10 PASS, Ghost UI PASS, **Section 4 Razor PASS** (was VETO; restructured to NET REDUCE), Test Functionality PASS, Dependency Audit PASS, Macro-Level Architecture PASS, Infrastructure Alignment PASS, Orphan Detection PASS, Documentation Drift PASS.
+
+**Amendment 1 verification (Phase 2)**: extracts `assembleWorkspaceArtifactSnapshot` (~30L) from `ConsoleServer.ts:828` into new `WorkspaceArtifactBuilder.ts` (~70L). ConsoleServer.ts net effect: −17L (1165 → ~1148). Honors Razor's "still over cap but reducing" pattern (#272 precedent).
+
+**Amendment 2 verification (Phase 3)**: extracts `getPhaseInfo()`, `getFeatureSummary()`, `renderPhase()` (~130L) from `roadmap.js:140-272` into new `monitor-render.js` (~140L). roadmap.js net effect: −120L (486 → ~366). Material reduction.
+
+**Three non-blocking observations folded in**:
+1. Open Question 1 RESOLVED in plan: deriver operates on SHIELD axis (4 logical phases), not plan-file project phases. Moved from Open Questions to Pre-resolved Decisions section.
+2. Phase 3 staleness banner hardcoded English flagged for future i18n consideration.
+3. Phase 2 test file renamed `WorkspaceArtifactBuilder.test.ts` (was `hub-plan-phase-derivation.test.ts`).
+
+**Test Functionality**: 21 planned tests (Phase 1: 9, Phase 2: 4, Phase 3: 8). All functional — invoke unit + assert on output. SG-035 (presence-only test pattern) countermeasure honored.
+
+**Macro-Architecture verification**: clean services/ → ConsoleServer → ui/ layering; new modules in correct directories; no cycles; single source of truth (GovernancePhaseTracker, ShieldPhase enum) preserved.
+
+**Infrastructure Alignment**: all cited symbols verified in current source (`MetaLedgerReader.parseEntries()`, `parseMetaLedger`, `getCurrentPhase`, `ConsoleServer.ts:828`, `roadmap.js:140-272`). All new symbols declared NEW in Affected Files.
+
+**Non-blocking implementation note**: Phase 2 code example calls `ledger.ledgerPath()`. If currently `private` on `MetaLedgerReader`, implementation can either expose it or use `parseEntries()` directly. Not an audit-level blocker.
+
+**Process Pattern observation**: iteration 2 of audit on this plan; #277 VETO → #278 PASS in single amendment cycle. Clean convergence; no repeated-VETO pattern; cycle_count_escalator does not trigger.
+
+**Audit Report**: `.agent/staging/AUDIT_REPORT.md`
+
+**Operator notice — degraded wiring**: `.qor/` runtime uninitialized; gate-artifact persistence and python helpers all no-op. No `audit.json` artifact emitted; equivalent narrative artifact at `.agent/staging/AUDIT_REPORT.md`.
+
+**Content Hash**: `pending-runtime-tooling`
+**Previous Hash**: `pending-runtime-tooling` (Entry #277)
+
+**Decision**: PASS — plan is implementation-ready. Single VETO at #277 + single amendment cycle = clean convergence. Required next action: `/qor-implement` per `qor/gates/chain.md`.
+
+_Chain Status: SUB-CHAIN CONTINUING (Entry #278 extends sub-chain from #277, opened post-#276 seal); first PASS audit of the new sub-chain._
+_Next: `/qor-implement` for Phase 1 + Phase 2 + Phase 3._
+
+---
+
+### Entry #279: IMPLEMENTATION — plan-monitor-shield-visibility.md
+
+**Date**: 2026-05-06
+**Phase**: IMPLEMENT
+**Persona**: The QorLogic Specialist
+**Plan**: `.failsafe/governance/plans/plan-monitor-shield-visibility.md`
+**Risk Grade**: L1
+**Audit prior**: Entry #278 PASS
+
+**Lineage**: implements the v5.0.0 surface fix for B191 root mechanism (Monitor SHIELD lifecycle visibility); B192/B193 (in-memory service refresh, SentinelDaemon governance-file watcher) tracked separately.
+
+## Files
+
+### New (4 source + 4 tests)
+
+- `FailSafe/extension/src/roadmap/services/PlanPhaseStatusDeriver.ts` (89L) — pure helper `derivePlanPhaseStatuses(shieldPhase, verdict): ShieldPhaseStatus[4]` + `phaseToCompletionFloor`.
+- `FailSafe/extension/src/roadmap/services/WorkspaceArtifactBuilder.ts` (92L) — extracted `assembleWorkspaceArtifactSnapshot` from ConsoleServer.ts; threads ledger through deriver; produces `WorkspaceArtifactSnapshot` with `derivedShieldPhases`, `shieldPhase`, `latestVerdict`.
+- `FailSafe/extension/src/roadmap/ui/modules/monitor-render.js` (116L) — extracted `getPhaseInfo`, `getFeatureSummary`, `renderPhase` from roadmap.js; pure functions over hub + element handles.
+- `FailSafe/extension/src/roadmap/ui/modules/monitor-staleness.js` (47L) — `MonitorStaleness` class toggles `.stale` CSS class on phase-track + shows banner on WS disconnect.
+- `FailSafe/extension/src/test/roadmap/PlanPhaseStatusDeriver.test.ts` (13 tests passing).
+- `FailSafe/extension/src/test/roadmap/WorkspaceArtifactBuilder.test.ts` (4 tests passing).
+- `FailSafe/extension/src/test/roadmap/monitor-render.test.ts` (13 tests passing).
+- `FailSafe/extension/src/test/roadmap/monitor-staleness.test.ts` (4 tests passing).
+
+### Modified
+
+- `FailSafe/extension/src/roadmap/ConsoleServer.ts`: 1165L → 1143L (**−22L**, target was −17L). Replaced inline `assembleWorkspaceArtifactSnapshot` (~30L) with delegation; updated imports. Plan target met and exceeded.
+- `FailSafe/extension/src/roadmap/ui/roadmap.js`: 486L → 387L (**−99L**, target was −120L). Removed `getPhaseInfo`, `getFeatureSummary`, `renderPhase` (delegated to `monitor-render.js`). Added imports + plan title rendering + staleness wiring on `ws.onopen`/`ws.onclose`. Note: target shortfall (~21L) is because the extracted methods were slightly smaller than estimated.
+- `FailSafe/extension/src/roadmap/ui/index.html`: +2 elements (`#monitor-plan-title`, `#monitor-staleness-banner`) above phase-track.
+- `FailSafe/extension/src/roadmap/ui/roadmap.css`: +28L (plan-title-line, staleness-banner, .stale class on phase-track).
+
+## File-Size Razor verification
+
+| File | Pre | Post | Cap | Direction |
+|---|---|---|---|---|
+| PlanPhaseStatusDeriver.ts | 0 | 89 | 250 | NEW under cap ✓ |
+| WorkspaceArtifactBuilder.ts | 0 | 92 | 250 | NEW under cap ✓ |
+| monitor-render.js | 0 | 116 | 250 | NEW under cap ✓ |
+| monitor-staleness.js | 0 | 47 | 250 | NEW under cap ✓ |
+| ConsoleServer.ts | 1165 | 1143 | 250 | **−22L (REDUCING)** — pre-existing violation, moving toward cap ✓ |
+| roadmap.js | 486 | 387 | 250 | **−99L (REDUCING)** — pre-existing violation, materially reducing ✓ |
+
+Both pre-existing over-cap files net REDUCED. Razor's "still over cap but reducing" pattern (#272 precedent) honored.
+
+## Test Functionality verification (TDD-Light)
+
+34 tests written before implementation. Each invokes the unit under test and asserts on output / observable side-effect. SG-035 (presence-only test pattern) countermeasure honored across all tests. Acceptance question ("if the unit's behavior were silently broken but the artifact still existed, would this test fail?") satisfied for each.
+
+## Test count progression
+
+- Pre-implementation: 924 passing / 1 pending / 0 failing
+- Post-Phase 1 (PlanPhaseStatusDeriver): 937 passing
+- Post-Phase 2 (WorkspaceArtifactBuilder): 941 passing
+- Post-Phase 3 (monitor-render + monitor-staleness): **958 passing** / 1 pending / 0 failing
+
+Net: +34 tests (plan target was +21; exceeded).
+
+## TypeScript compile
+
+Clean (`npm run compile` exits 0).
+
+## B191 status update
+
+Marked PARTIALLY ADDRESSED in BACKLOG.md. This work closes the **root mechanism** (Phase track now reflects SHIELD lifecycle via `governancePhase.current` already wired in v5.0.0; new `derivedShieldPhases` projection added; plan title surfaced; WS-disconnect staleness indicator). The remaining B192 (in-memory service refresh for non-Claude-driven flows — PlanManager, SentinelDaemon, L3ApprovalService, CheckpointStore) and B193 (SentinelDaemon governance-file watcher) are tracked separately and remain open.
+
+## Operator notice — degraded wiring
+
+`.qor/` runtime uninitialized; gate-artifact persistence and python helpers all no-op. No `implement.json` artifact emitted; equivalent narrative artifact is this ledger entry.
+
+**Content Hash**: `pending-runtime-tooling`
+**Previous Hash**: `pending-runtime-tooling` (Entry #278)
+
+**Decision**: IMPLEMENTATION COMPLETE — Reality matches Promise across all 3 phases. 4 new source files, 4 new test files, 4 modified files. Both pre-existing over-cap files reduced. Test count increased by 34 with 0 failures. Ready for `/qor-substantiate`.
+
+_Chain Status: SUB-CHAIN CONTINUING (Entry #279 extends sub-chain from #277/#278)._
+_Next: `/qor-substantiate` per `qor/gates/chain.md`._
+
+---
+
+### Entry #280: SESSION SEAL — plan-monitor-shield-visibility.md
+
+**Date**: 2026-05-06
+**Phase**: SUBSTANTIATE
+**Persona**: The QorLogic Judge (substantiation mode)
+**Plan**: `.failsafe/governance/plans/plan-monitor-shield-visibility.md`
+**change_class**: feature (rolls into v5.0.0; per operator policy 2026-05-06, no v4.10.x publishable version)
+**Target version**: v5.0.0 release sub-chain
+
+**Verdict**: **PASS**
+
+**Lineage**: closes the sub-chain opened at Entry #277 (VETO) → #278 (PASS post-amendments) → #279 (IMPLEMENTATION) → #280 (this seal). Single audit-amendment cycle; clean convergence.
+
+## Reality Audit
+
+| Class | Promised | Reality | Status |
+|---|---|---|---|
+| New source modules | 4 (PlanPhaseStatusDeriver, WorkspaceArtifactBuilder, monitor-render, monitor-staleness) | All 4 exist | ✓ EXISTS |
+| New test files | 4 (one per module) | All 4 exist; 34 new tests | ✓ EXISTS |
+| Modified files | 4 (ConsoleServer.ts, roadmap.js, index.html, roadmap.css) | All 4 modified per plan | ✓ EXISTS |
+| Unplanned files | 0 | — | — |
+| Missing files | 0 | — | — |
+
+**No MISSING. No UNPLANNED.** Reality = Promise.
+
+## Functional Verification
+
+- TypeScript compile: clean (`tsc -p ./` exit 0)
+- Mocha suite: **958 passing / 1 pending / 0 failing** (up from 924 pre-implementation)
+- Test discipline: all 34 new tests invoke unit + assert on output (no presence-only); SG-035 countermeasure honored
+- Console.log scan: 0 in new files
+
+## Section 4 Razor (final)
+
+| File | Pre | Post | Cap | Status |
+|---|---|---|---|---|
+| PlanPhaseStatusDeriver.ts (NEW) | 0 | 89 | 250 | ✓ |
+| WorkspaceArtifactBuilder.ts (NEW) | 0 | 92 | 250 | ✓ |
+| monitor-render.js (NEW) | 0 | 116 | 250 | ✓ |
+| monitor-staleness.js (NEW) | 0 | 47 | 250 | ✓ |
+| ConsoleServer.ts | 1165 | 1143 | 250 | **−22L (REDUCING)** — pre-existing violation continuing to move toward cap |
+| roadmap.js | 486 | 387 | 250 | **−99L (REDUCING)** — pre-existing violation materially reduced |
+
+Both pre-existing over-cap files NET REDUCED. Razor's "still over cap but reducing" pattern (#272 precedent) honored throughout.
+
+## What now works (v5.0.0)
+
+When operator runs SHIELD lifecycle skills via Claude:
+1. `docs/META_LEDGER.md` updates → `ConsoleServer.watchMetaLedger` fs.watch fires → 1500ms debounce → broadcast `hub.refresh`
+2. `WorkspaceArtifactBuilder.build()` re-reads ledger via existing `parseMetaLedger`, calls `getCurrentPhase` to derive `ShieldPhase`, threads through `derivePlanPhaseStatuses` to produce `ShieldPhaseStatus[4]`
+3. Snapshot includes `derivedShieldPhases`, `shieldPhase`, `latestVerdict` (new fields)
+4. Hub propagates to Monitor → `getPhaseInfo(hub)` → existing path consumes `governancePhase.current`
+5. `renderPhase()` paints Phase track with progression: Plan → Audit → Implement → Substantiate → Sealed
+6. Plan title surfaces: "Tracking: <plan title>" line above phase track
+7. WS disconnect → `MonitorStaleness.notifyDisconnected()` dims phase track + shows banner
+
+## Cumulative chain
+
+- Sub-chain: #277 (VETO) → #278 (PASS) → #279 (IMPLEMENT) → #280 (SEAL, this entry)
+- Parent sub-chain: opened post-#276 unified seal of v5.0.0 surface
+- Backlog impact: B191 marked PARTIALLY ADDRESSED in BACKLOG.md (root mechanism closed; B192/B193 in-memory service refresh remain as separate plans)
+
+## Lifecycle deviations from default substantiate protocol (operator policy 2026-05-06)
+
+- Step 7.5 (version bump) SKIPPED — `v4.10.x` does not exist; ships rolled into v5.0.0
+- Step 7.6 (CHANGELOG stamp) SKIPPED — no v4.10.x section; v5.0.0 entry already published
+- Step 9.5.5 (annotated seal-tag) SKIPPED — v5.0.0 release sub-chain owns tag creation
+
+## Operator notice — degraded wiring
+
+`.qor/` runtime uninitialized; gate-artifact persistence and python helpers all no-op throughout. No `substantiate.json` artifact written; equivalent narrative artifact is this ledger entry. Per `qor/references/doctrine-governance-enforcement.md` precedent (Entries #261+), seal proceeds in degraded mode with content_hash `pending-runtime-tooling`.
+
+## Deferred per-action operator approvals (no-ship-without-approval doctrine)
+
+1. **Stage artifacts** — `git add -f` for the 4 new source files + 4 new test files + 4 modified files + gitignored `docs/` and `.failsafe/`
+2. **Commit** with seal-format message (no version in subject; e.g., `seal: monitor SHIELD visibility — Reality matches Promise (Entry #280)`)
+3. **Push** the branch (no tag; v5.0.0 release sub-chain owns tagging)
+4. **PR / merge** path — recommended: extend the existing PR #64 on `plan/v5-extension-update` referencing Entries #277-#280; final merge to `main` deferred to v5.0.0 release sealing
+
+**Content Hash**: `pending-runtime-tooling`
+**Previous Hash**: `pending-runtime-tooling` (Entry #279)
+
+**Decision**: SESSION SEAL — Reality matches Promise. The Monitor SHIELD visibility fix (B191 root mechanism) is implemented, tested, and verified. Both pre-existing over-cap files reduced. 34 new functional tests added. Single VETO + single amendment cycle = clean convergence. The qor-deep-audit findings that opened this work-stream (B191 + B192 + B193 + B194 + B195 + B196 + B197 + B198) are now: B191 root mechanism closed; B192-B198 tracked separately as future plans.
+
+_Chain Status: SUB-CHAIN SEALED at Entry #280; v5.0.0 surface continues._
+_Next: operator-explicit lifecycle actions per the deferred-approval list above._
