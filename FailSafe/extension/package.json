@@ -412,7 +412,8 @@
     "release:bump": "node ./scripts/release-gate.cjs --bump",
     "release:tag": "node ./scripts/release-gate.cjs --tag",
     "package": "vsce package",
-    "publish": "vsce publish"
+    "publish": "vsce publish",
+    "vendor:piper": "node ./scripts/vendor-piper.cjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.1",
@@ -434,6 +435,7 @@
     "esbuild": "^0.27.3",
     "eslint": "^8.50.0",
     "jsdom": "^27.0.1",
+    "piper-tts-web": "1.1.2",
     "typescript": "^5.2.0"
   },
   "dependencies": {
