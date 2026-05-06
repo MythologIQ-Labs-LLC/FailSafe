@@ -13,6 +13,6 @@ export function showStatusGated(severity, text, color, showStatusFn, store) {
   const key = SEVERITY_KEYS[severity];
   if (!key) return;
   const value = store?.get?.(key);
-  const enabled = value !== 'false';
+  const enabled = String(value) !== 'false';
   if (enabled) showStatusFn?.(text, color);
 }

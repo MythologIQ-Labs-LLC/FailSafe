@@ -1,9 +1,11 @@
 // FailSafe Command Center — Ticker and bootstrap banner utilities
+import { escapeHtml } from './brainstorm-templates.js';
+
 export function updateTickers(data) {
   const proto = document.getElementById('ticker-protocol');
   const sent = document.getElementById('ticker-sentinel');
   const lat = document.getElementById('ticker-latency');
-  if (proto) proto.innerHTML = `PROTOCOL <span>${data.sentinelStatus?.mode || 'Unknown'}</span>`;
+  if (proto) proto.innerHTML = `PROTOCOL <span>${escapeHtml(data.sentinelStatus?.mode || 'Unknown')}</span>`;
   if (sent) {
     const live = data.sentinelStatus?.running;
     const c = live ? 'var(--accent-green)' : 'var(--accent-red)';

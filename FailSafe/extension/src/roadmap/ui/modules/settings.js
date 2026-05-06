@@ -2,6 +2,11 @@
 // Theme selector, current config display.
 import { renderVoiceSettings, bindVoiceSettings } from './voice-settings.js';
 import { renderInstallSkillsCard, bindInstallSkillsCard } from './install-skills-card.js';
+import {
+  renderNotificationsCard, renderBrainstormCard,
+  bindNotificationsCard, bindBrainstormCard,
+} from './settings-extras.js';
+import { escapeHtml } from './brainstorm-templates.js';
 
 const THEMES = [
   { id: 'pegasus', name: 'Pegasus', label: 'Light', swatch: '#3b82f6' },
@@ -40,14 +45,16 @@ export class SettingsRenderer {
           letter-spacing:0.08em;margin-bottom:8px">Configuration</div>
         <div style="font-size:0.85rem">
           <div style="padding:4px 0;border-bottom:1px solid var(--border-rim)">
-            Theme: <strong>${current}</strong></div>
+            Theme: <strong>${escapeHtml(current)}</strong></div>
           <div style="padding:4px 0;border-bottom:1px solid var(--border-rim)">
-            Version: <strong>${version}</strong></div>
+            Version: <strong>${escapeHtml(version)}</strong></div>
           <div style="padding:4px 0">
-            Server: <strong>${window.location.origin}</strong></div>
+            Server: <strong>${escapeHtml(window.location.origin)}</strong></div>
         </div>
       </div>
       ${renderVoiceSettings(this.store)}
+      ${renderNotificationsCard(this.store)}
+      ${renderBrainstormCard(this.store)}
       <div class="cc-card" id="cc-hook-toggle-slot" style="margin-top:16px"></div>
       ${renderInstallSkillsCard(this._installState)}
       <div class="cc-card" id="cc-failsafe-pro" style="margin-top:16px">
@@ -69,6 +76,8 @@ export class SettingsRenderer {
     this._bindFailSafeProActions();
     this.bindChips();
     bindVoiceSettings(this.container, this.store);
+    bindNotificationsCard(this.container, this.store);
+    bindBrainstormCard(this.container, this.store);
     this._renderHookToggle();
   }
 

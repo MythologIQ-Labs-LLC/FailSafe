@@ -29,6 +29,23 @@ Major release: skills ingested from the [`qor-logic`](https://pypi.org/project/q
 - Skill IDs migrated from `ql-*` to `qor-*` across source and project-local skill directories. `SkillParser` recognizes both prefixes during the v4→v5 transition.
 - Operations Phases render capped at 10 cards plus a summary row (was: would render 120 cards on a populated workspace).
 
+### Round 2 — Install UX (2026-05-05)
+
+- Install transparency report: every QorLogic install action emits a structured per-phase invocation list (python-probe, pip-install, qorlogic-install per host, provenance, refresh). Failed steps stay visible with command + stderr until the next run.
+- Host/scope QuickPick prompts before installing; selections persist to workspace state.
+- New command palette entry "FailSafe: Install QorLogic Skills (defaults)" — bypasses the QuickPick for automation.
+- "Show Output" button focuses the FailSafe (QorLogic) output channel.
+
+### Round 3 — Voice & Brainstorm UX (2026-05-06)
+
+- **Multilingual voice** — Whisper model picker (tiny / base / small) and 12-language BCP-47 selector. Default model switched to multilingual; English-only fallback removed.
+- **Voice status badge** — surfaces unified voice state (listening / processing / speaking / errors) in the Brainstorm right panel.
+- **TTS error transparency** — Piper vendor presence failures now surface to the badge instead of silent failure.
+- **Brainstorm history limit** — configurable via Settings → Brainstorm (was hardcoded to 10).
+- **Notifications severity gating** — independent toggles for info-tier and error-tier toasts in Settings → Notifications.
+- **Security hardening** — XSS escape discipline applied across all settings/overview innerHTML interpolation; Whisper model and Piper voice allowlists close supply-chain pivot risks.
+- **Internal architecture** — ConsoleServer decomposition (`QoreRuntimeService` + 4 route extractions). No user-visible API change.
+
 ### About FailSafe Pro
 
 FailSafe Pro is the desktop native application for SDLC visibility and governance — OS-level enforcement, file locking, team workflows, and remote connections beyond the editor boundary. The open extension remains the editor surface; pair it with Pro for full SDLC operations.

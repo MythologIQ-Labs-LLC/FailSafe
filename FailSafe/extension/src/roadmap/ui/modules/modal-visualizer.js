@@ -30,7 +30,7 @@ export function drawModalVisualizer(canvas, analyser, isActive) {
   const draw = () => {
     if (!isActive()) return;
     requestAnimationFrame(draw);
-    analyser.getByteTimeDomainData(buf);
+    try { analyser.getByteTimeDomainData(buf); } catch { return; }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.lineWidth = 2;
     ctx.strokeStyle = '#10b981';

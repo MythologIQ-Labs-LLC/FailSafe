@@ -1,8 +1,12 @@
 // FailSafe Command Center — Speech-to-Text Engine
-import { loadPipeline, checkMicAvailable } from './whisper-loader.js';
+import { checkMicAvailable } from './whisper-loader.js';
 import { SilenceTimer } from './silence-timer.js';
 import { WakeWordListener } from './wake-word-listener.js';
 import { LiveTranscriber } from './live-transcriber.js';
+import { WhisperPipeline } from './whisper-pipeline.js';
+import { DEFAULT_STT_LANGUAGE, ALLOWED_WHISPER_MODELS } from './voice-catalog.js';
+
+const DEFAULT_MODEL_ID = 'Xenova/whisper-tiny';
 
 export class SttEngine {
   constructor(store) {
@@ -12,14 +16,15 @@ export class SttEngine {
     this.onAnalyserCreated = null; this.onAudioCaptured = null;
     this.state = 'idle';
     this._recorder = null;
-    this._whisperPipeline = null;
-    this._whisperReady = false;
+    this._pipeline = new WhisperPipeline();
     this._chunks = [];
     this._stream = null;
     this.modelReady = false;
     this.loadingStatus = 'idle';
     this.micDeviceId = null;
     this.language = null;
+    const stored = store?.get?.('whisper-model');
+    this.modelId = ALLOWED_WHISPER_MODELS.has(stored) ? stored : DEFAULT_MODEL_ID;
 
     this._silence = new SilenceTimer(5000);
     this._wake = new WakeWordListener(store);
@@ -36,32 +41,21 @@ export class SttEngine {
   }
 
   async _loadWhisperModel() {
-    this.loadingStatus = 'loading';
-    this.onModelProgress?.('loading');
-    try {
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('timeout')), 30000)
-      );
-      this._whisperPipeline = await Promise.race([
-        loadPipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en', {
-          progress_callback: (p) => {
-            if (p.status === 'initiate') this.loadingStatus = 'downloading';
-            if (p.status === 'progress') {
-              this.loadingStatus = 'downloading';
-              this.onModelProgress?.('downloading', Math.round(p.progress));
-            }
-          },
-        }),
-        timeoutPromise,
-      ]);
-      this._whisperReady = true;
-      this.modelReady = true;
-      this.onModelProgress?.('ready');
-    } catch (err) {
-      this._whisperReady = false;
-      this._whisperPipeline = null;
-      this.onModelProgress?.(`error:${err?.message || 'model_load_failed'}`);
-    }
+    await this._pipeline.load(this.modelId, (status, value) => {
+      this.loadingStatus = this._pipeline.status();
+      this.onModelProgress?.(status, value);
+    });
+    this.modelReady = this._pipeline.isReady();
+  }
+
+  teardownPipeline() {
+    this._pipeline.teardown();
+    this.modelReady = false;
+    this.loadingStatus = 'idle';
+  }
+
+  setModelId(id) {
+    if (ALLOWED_WHISPER_MODELS.has(id)) this.modelId = id;
   }
 
   _loadSettings() {
@@ -69,7 +63,7 @@ export class SttEngine {
     if (timeout) this._silence.setTimeout(Number(timeout));
     const mic = this.store?.get('audio-input-device');
     if (mic) this.micDeviceId = mic;
-    this.language = this.store?.get('stt-language') || navigator.language || 'en-US';
+    this.language = this.store?.get('stt-language') || navigator.language || DEFAULT_STT_LANGUAGE;
   }
 
   async startListening() {
@@ -133,7 +127,7 @@ export class SttEngine {
   }
 
   async _startWhisper() {
-    if (!this._whisperReady) {
+    if (!this._pipeline.isReady()) {
       this.onModelProgress?.('error', 'Voice model not loaded — check network connection');
       this._setState('idle');
       return;
@@ -212,7 +206,8 @@ export class SttEngine {
     const ctx = new (globalThis.AudioContext || globalThis.webkitAudioContext)({ sampleRate: 16000 });
     try {
       const decoded = await ctx.decodeAudioData(arrayBuf);
-      const result = await this._whisperPipeline(decoded.getChannelData(0));
+      const pipelineFn = this._pipeline.pipeline();
+      const result = await pipelineFn(decoded.getChannelData(0), { language: this.language });
       this.onTranscript?.(result.text, true);
     } catch {
       this.onTranscript?.('[transcription failed]', true);

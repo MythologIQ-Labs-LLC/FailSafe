@@ -52,15 +52,15 @@ export class RisksRenderer {
       return;
     }
     listEl.innerHTML = this.risks.map(r => `
-      <div class="cc-card" style="margin-bottom:6px;padding:12px 16px" data-rid="${r.id}">
+      <div class="cc-card" style="margin-bottom:6px;padding:12px 16px" data-rid="${this.esc(r.id)}">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div style="display:flex;align-items:center;gap:8px">
-            <span class="cc-badge cc-badge--${r.severity}">${r.severity}</span>
+            <span class="cc-badge cc-badge--${this.esc(r.severity)}">${this.esc(r.severity)}</span>
             <strong>${this.esc(r.title)}</strong>
           </div>
           <div style="display:flex;gap:6px">
-            <button class="cc-btn cc-risk-edit" data-id="${r.id}" style="padding:4px 10px;font-size:0.75rem">Edit</button>
-            <button class="cc-btn cc-btn--danger cc-risk-del" data-id="${r.id}" style="padding:4px 10px;font-size:0.75rem">Del</button>
+            <button class="cc-btn cc-risk-edit" data-id="${this.esc(r.id)}" style="padding:4px 10px;font-size:0.75rem">Edit</button>
+            <button class="cc-btn cc-btn--danger cc-risk-del" data-id="${this.esc(r.id)}" style="padding:4px 10px;font-size:0.75rem">Del</button>
           </div>
         </div>
         <div style="color:var(--text-muted);font-size:0.8rem;margin-top:4px">

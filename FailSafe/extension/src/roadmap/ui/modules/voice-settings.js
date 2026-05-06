@@ -1,6 +1,9 @@
 // FailSafe Command Center — Voice Settings Renderer
 // Organized: Audio Hardware, Speech Input, Speech Output, Controls.
 
+import { renderMultilingualRows, bindMultilingualRows } from './voice-settings-multilingual.js';
+import { escapeHtml } from './brainstorm-templates.js';
+
 const SL = `font-size:0.65rem;color:var(--accent-cyan);text-transform:uppercase;letter-spacing:0.06em;padding:6px 0 2px;margin-top:4px`;
 const ROW = `display:flex;align-items:center;gap:8px;padding:4px 0`;
 const SEL = `flex:1;padding:4px 8px;border-radius:6px;background:var(--bg-mid);border:1px solid var(--border-rim);color:var(--text-main);font-size:0.85rem`;
@@ -27,13 +30,13 @@ function renderAudioHardware(store) {
     <div style="${SL}">Audio Hardware</div>
     <div style="${ROW};${DIV}">
       <span style="min-width:120px">Microphone:</span>
-      <select class="cc-settings-mic-device" data-saved="${savedMic}" style="${SEL}">
+      <select class="cc-settings-mic-device" data-saved="${escapeHtml(savedMic)}" style="${SEL}">
         <option value="">System Default</option>
       </select>
     </div>
     <div style="${ROW};${DIV}">
       <span style="min-width:120px">Speaker:</span>
-      <select class="cc-settings-spk-device" data-saved="${savedSpk}" style="${SEL}">
+      <select class="cc-settings-spk-device" data-saved="${escapeHtml(savedSpk)}" style="${SEL}">
         <option value="">System Default</option>
       </select>
     </div>`;
@@ -52,13 +55,14 @@ function renderSpeechInput(store) {
       <span style="color:var(--text-main)">Whisper (local)</span>
       <span class="cc-settings-whisper-model-status" style="font-size:0.75rem;color:var(--text-muted)"></span>
     </div>
+    ${renderMultilingualRows(store)}
     <div style="${ROW};${DIV}">
       <span style="min-width:120px">Wake Word:</span>
       <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
         <input type="checkbox" class="cc-settings-wake-toggle"${wakeEnabled ? ' checked' : ''} />
         <span style="font-size:0.75rem">${wakeEnabled ? 'On' : 'Off'}</span>
       </label>
-      <input type="text" class="cc-settings-wake-phrase" value="${wakePhrase}"
+      <input type="text" class="cc-settings-wake-phrase" value="${escapeHtml(wakePhrase)}"
         placeholder="Hey FailSafe" maxlength="60"
         style="${SEL}" />
     </div>
@@ -84,11 +88,11 @@ function renderSpeechOutput(store) {
     { id: 'en_GB-cori-medium', label: 'Cori (GB) — Medium' },
   ];
   const piperOpts = voices.map(v =>
-    `<option value="${v.id}"${v.id === currentVoice ? ' selected' : ''}>${v.label}</option>`
+    `<option value="${escapeHtml(v.id)}"${v.id === currentVoice ? ' selected' : ''}>${escapeHtml(v.label)}</option>`
   ).join('');
   const webVoices = getWebSpeechVoices();
   const webOpts = webVoices.map(v =>
-    `<option value="web:${v.name}"${'web:' + v.name === currentVoice ? ' selected' : ''}>${v.name} (Browser)</option>`
+    `<option value="web:${escapeHtml(v.name)}"${'web:' + v.name === currentVoice ? ' selected' : ''}>${escapeHtml(v.name)} (Browser)</option>`
   ).join('');
   const separator = webOpts ? '<option disabled>── Browser Voices ──</option>' : '';
   return `
@@ -120,13 +124,14 @@ function renderControls(store) {
     </div>`;
 }
 
-export async function bindVoiceSettings(container, store) {
+export async function bindVoiceSettings(container, store, controller) {
   await bindAudioDevices(container, store);
   checkWhisperModel(container.querySelector('.cc-settings-whisper-model-status'));
   bindTtsVoice(container, store);
   bindPttRecorder(container, store);
   bindWakeWord(container, store);
   bindSilenceSlider(container, store);
+  bindMultilingualRows(container, store, controller);
 }
 
 async function bindAudioDevices(container, store) {
