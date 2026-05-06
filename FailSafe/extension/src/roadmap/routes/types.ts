@@ -1,4 +1,6 @@
 import type { QorLogicInstallReport } from '../../extension/installSkillsReport';
+import type { QoreRuntimeService } from '../services/QoreRuntimeService';
+import type { IFeatureGate } from '../../core/interfaces/IFeatureGate';
 
 /**
  * Dependency injection interface for API route modules extracted
@@ -8,6 +10,18 @@ import type { QorLogicInstallReport } from '../../extension/installSkillsReport'
 export interface ApiRouteDeps {
   rejectIfRemote: (req: any, res: any) => boolean;
   broadcast: (data: Record<string, unknown>) => void;
+  // Phase 2 (B166) deps for QoreRoute / FeatureStatusRoute / SkillsApiRoute / HookRoute
+  qoreRuntimeService: QoreRuntimeService;
+  buildHubSnapshot: () => Promise<Record<string, unknown>>;
+  featureGate?: IFeatureGate;
+  workspaceRoot: string;
+  /**
+   * `__dirname` of the ConsoleServer module — needed by skill discovery
+   * to walk up to ancestor `.claude/skills/`, `.codex/skills/`, etc.
+   * Passed in rather than re-derived so route tests can supply a
+   * deterministic path.
+   */
+  workspaceDirname: string;
   brainstormService: any;
   audioVaultService: any;
   getRecentCheckpoints: (limit: number) => any[];

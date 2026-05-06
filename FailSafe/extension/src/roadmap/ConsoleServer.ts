@@ -18,9 +18,7 @@ import { PlanManager } from "../qorelogic/planning/PlanManager";
 import { QoreLogicManager } from "../qorelogic/QoreLogicManager";
 import { SentinelDaemon } from "../sentinel/SentinelDaemon";
 import { EventBus } from "../shared/EventBus";
-import { syncHookSentinel, isHookEnabled } from "../shared/hookSentinel";
 import { IFeatureGate, FeatureFlag } from "../core/interfaces/IFeatureGate";
-import { FEATURE_TIER_MAP } from "../core/FeatureGateService";
 import { GitResetService } from "../governance/revert/GitResetService";
 import {
   FailSafeRevertService,
@@ -52,14 +50,13 @@ import { setupCheckpointRoutes } from "./routes/CheckpointRoute";
 import { setupActionsRoutes } from "./routes/ActionsRoute";
 import { setupTransparencyRiskRoutes } from "./routes/TransparencyRiskRoute";
 import type { ApiRouteDeps } from "./routes/types";
+import { registerQoreRoute } from "./routes/QoreRoute";
+import { registerFeatureStatusRoute } from "./routes/FeatureStatusRoute";
+import { registerSkillsApiRoute } from "./routes/SkillsApiRoute";
+import { registerHookRoute } from "./routes/HookRoute";
+import { QoreRuntimeService, type QoreRuntimeOptions } from "./services/QoreRuntimeService";
 import { type InstalledSkill } from "./services/SkillParser";
-import {
-  autoIngest, manualIngest,
-} from "./services/SkillRegistry";
-import {
-  discoverAllSkills, buildSkillRoots, buildWorkspaceDiscoveryRoots,
-} from "./services/SkillDiscovery";
-import { rankSkillForPhase, type SkillRelevance } from "./services/SkillRanker";
+import { discoverAllSkills } from "./services/SkillDiscovery";
 import {
   type CheckpointRecord, type CheckpointDb, type CheckpointStatus,
   getRecentCheckpoints as ckptGetRecent,
@@ -117,28 +114,11 @@ const EXTENSION_VERSION: string = (() => {
   } catch { return 'unknown'; }
 })();
 
-type QoreRuntimeOptions = {
-  enabled: boolean;
-  baseUrl: string;
-  apiKey?: string;
-  timeoutMs: number;
-};
-
 type ConsoleServerOptions = {
   qoreRuntime?: Partial<QoreRuntimeOptions>;
   workspaceRoot?: string;
   featureGate?: IFeatureGate;
   configProvider?: IConfigProvider;
-};
-
-type QoreRuntimeSnapshot = {
-  enabled: boolean;
-  connected: boolean;
-  baseUrl: string;
-  policyVersion?: string;
-  latencyMs?: number;
-  lastCheckedAt: string;
-  error?: string;
 };
 
 type MetricIntegrityRow = {
@@ -259,6 +239,7 @@ export class ConsoleServer {
   private checkpointDb: CheckpointDb = null;
   private checkpointMemory: CheckpointRecord[] = [];
   private qoreRuntime: QoreRuntimeOptions;
+  private qoreRuntimeService: QoreRuntimeService;
   private workspaceRoot: string;
   private featureGate: IFeatureGate | undefined;
   private sealedSubstantiateCompletions = new Set<string>();
@@ -322,6 +303,7 @@ export class ConsoleServer {
     this.eventBus = eventBus;
     this.app = express();
     this.qoreRuntime = this.resolveQoreRuntimeOptions(options.qoreRuntime);
+    this.qoreRuntimeService = new QoreRuntimeService(this.qoreRuntime);
     this.workspaceRoot = options.workspaceRoot || process.cwd();
     this.featureGate = options.featureGate;
     this.configProvider = options.configProvider;
@@ -352,7 +334,12 @@ export class ConsoleServer {
     this.app.use(express.json({ limit: "12mb" }));
     this.app.use(express.static(this.uiDir, { index: false, dotfiles: "allow" }));
     this.registerCoreRoutes();
+    registerQoreRoute(this.app, this.buildApiRouteDeps());
+    registerSkillsApiRoute(this.app, this.buildApiRouteDeps());
     this.registerApiRoutes();
+    registerFeatureStatusRoute(this.app, this.buildApiRouteDeps());
+    this.registerVerdictAndTrustRoutes();
+    registerHookRoute(this.app, this.buildApiRouteDeps());
     this.setupConsoleRoutes();
     this.registerSpaFallback();
   }
@@ -406,86 +393,17 @@ export class ConsoleServer {
       });
     });
 
-    this.registerQoreRoutes();
-    this.registerSkillRoutes();
   }
 
-  private registerQoreRoutes(): void {
-    this.app.get("/api/qore/runtime", async (req: Request, res: Response) => {
-      if (this.rejectIfRemote(req, res)) return;
-      res.json(await this.fetchQoreRuntimeSnapshot());
-    });
-    this.app.get("/api/qore/health", async (req: Request, res: Response) => {
-      if (this.rejectIfRemote(req, res)) return;
-      this.handleQoreProxy(req, res, "/health");
-    });
-    this.app.post("/api/qore/evaluate", async (req: Request, res: Response) => {
-      if (this.rejectIfRemote(req, res)) return;
-      this.handleQoreProxy(req, res, "/evaluate", "POST");
-    });
-    this.app.get("/api/sprint/:id", (req: Request, res: Response) => {
-      const sprint = this.planManager.getSprint(req.params.id as string);
-      res.json({ sprint, plan: sprint ? this.planManager.getPlan(sprint.planId) : null });
-    });
-    this.app.get("/api/plans", (_req: Request, res: Response) => {
-      res.json({ plans: this.planManager.getAllPlans() });
-    });
-  }
-
-  private async handleQoreProxy(
-    req: Request, res: Response, endpoint: string, method?: "POST",
-  ): Promise<void> {
-    if (!this.qoreRuntime.enabled) {
-      res.status(503).json({ error: "Qore runtime integration is disabled" });
-      return;
-    }
-    const opts = method === "POST" ? { method: "POST" as const, body: req.body || {} } : undefined;
-    const response = await this.fetchQoreJson(endpoint, opts);
-    const body = response.ok ? response.body : { error: response.error, detail: response.detail };
-    res.status(response.ok ? 200 : 502).json(body);
-  }
-
-  private registerSkillRoutes(): void {
-    this.app.get("/api/skills", (_req: Request, res: Response) => {
-      res.json({ skills: this.getInstalledSkills() });
-    });
-
-    this.app.post("/api/skills/ingest/auto", (_req: Request, res: Response) => {
-      try {
-        res.json(this.autoIngestWorkspaceSkills());
-      } catch (error) {
-        res.status(500).json({ ok: false, error: String(error) });
-      }
-    });
-
-    this.app.post("/api/skills/ingest/manual", (req: Request, res: Response) => {
-      try {
-        const mode =
-          String(req.body?.mode || "file").toLowerCase() === "folder"
-            ? "folder" as const
-            : "file" as const;
-        const items = Array.isArray(req.body?.items) ? req.body.items : [];
-        res.json(this.manualIngestSkillPayload(items, mode));
-      } catch (error) {
-        res.status(400).json({ ok: false, error: String(error) });
-      }
-    });
-
-    this.app.get("/api/skills/relevance", (req: Request, res: Response) => {
-      const phase = String(req.query.phase || "").trim().toLowerCase();
-      if (!phase) {
-        res.status(400).json({ error: "phase is required" });
-        return;
-      }
-      res.json(this.buildSkillRelevance(phase));
-    });
-  }
-
-  /** Delegated API routes + remaining inline API routes */
-  private registerApiRoutes(): void {
-    const apiDeps: ApiRouteDeps = {
+  private buildApiRouteDeps(): ApiRouteDeps {
+    return {
       rejectIfRemote: (req, res) => this.rejectIfRemote(req, res),
       broadcast: (data) => this.broadcast(data),
+      qoreRuntimeService: this.qoreRuntimeService,
+      buildHubSnapshot: () => this.buildHubSnapshot(),
+      featureGate: this.featureGate,
+      workspaceRoot: this.workspaceRoot,
+      workspaceDirname: __dirname,
       brainstormService: this.brainstormService,
       audioVaultService: this.audioVaultService,
       getRecentCheckpoints: (limit) => this.getRecentCheckpoints(limit),
@@ -520,7 +438,11 @@ export class ConsoleServer {
       loadRun: (runId) => this.agentRunRecorder?.loadRun(runId) || null,
       getRunSteps: (runId) => this.agentRunRecorder?.getRunSteps(runId) || [],
     };
+  }
 
+  /** Delegated API routes (transparency/agent/brainstorm/checkpoint/actions/marketplace/adapter) */
+  private registerApiRoutes(): void {
+    const apiDeps = this.buildApiRouteDeps();
     setupTransparencyRiskRoutes(this.app, apiDeps);
     setupAgentApiRoutes(this.app, apiDeps);
     const adapterUrl = this.adapterService?.getConfig()?.adapterBaseUrl;
@@ -528,8 +450,6 @@ export class ConsoleServer {
     setupBrainstormRoutes(this.app, apiDeps);
     setupCheckpointRoutes(this.app, apiDeps);
     setupActionsRoutes(this.app, apiDeps);
-
-    // Marketplace routes for agent marketplace
     setupMarketplaceRoutes(this.app, {
       rejectIfRemote: (req, res) => this.rejectIfRemote(req, res),
       broadcast: (data) => this.broadcast(data),
@@ -538,39 +458,11 @@ export class ConsoleServer {
       securityScanner: this.securityScanner,
       ledgerManager: this.qorelogicManager.getLedgerManager(),
     });
-
-    // Adapter routes for agent-failsafe Python adapter
     setupAdapterRoutes(this.app, {
       rejectIfRemote: (req, res) => this.rejectIfRemote(req, res),
       broadcast: (data) => this.broadcast(data),
       adapterService: this.adapterService,
     });
-
-    this.registerFeatureAndStatusRoutes();
-    this.registerHookRoutes();
-  }
-
-  private registerFeatureAndStatusRoutes(): void {
-    this.app.get("/api/v1/features", (_req: Request, res: Response) => {
-      if (!this.featureGate) { res.json({ tier: "free", features: {} }); return; }
-      const tier = this.featureGate.getTier();
-      const features: Record<string, { requiredTier: string; enabled: boolean }> = {};
-      for (const flag of Object.keys(FEATURE_TIER_MAP) as FeatureFlag[]) {
-        features[flag] = { requiredTier: FEATURE_TIER_MAP[flag], enabled: this.featureGate.isEnabled(flag) };
-      }
-      res.json({ tier, features });
-    });
-    this.app.get("/api/v1/status", async (_req: Request, res: Response) => {
-      const hub = await this.buildHubSnapshot();
-      const s = hub.sentinelStatus as Record<string, unknown> | undefined;
-      res.json({
-        sentinel: { running: s?.running ?? false, mode: s?.mode ?? "unknown", eventsProcessed: s?.eventsProcessed ?? 0 },
-        governance: { mode: s?.mode ?? "observe" },
-        chain: { valid: hub.chainValid ?? false },
-        version: hub.version ?? "unknown",
-      });
-    });
-    this.registerVerdictAndTrustRoutes();
   }
 
   private registerVerdictAndTrustRoutes(): void {
@@ -584,24 +476,6 @@ export class ConsoleServer {
       const total = cps.length || 1;
       const passed = cps.filter((c: any) => c.policyVerdict !== "VIOLATION").length;
       res.json({ overall: Math.round((passed / total) * 100), checkpointCount: total, passCount: passed });
-    });
-  }
-
-  /** B107: Workspace hook toggle routes */
-  private registerHookRoutes(): void {
-    this.app.get("/api/hooks/status", (req: Request, res: Response) => {
-      if (this.rejectIfRemote(req, res)) return;
-      res.json({ enabled: isHookEnabled(this.workspaceRoot) });
-    });
-
-    this.app.post("/api/hooks/toggle", (req: Request, res: Response) => {
-      if (this.rejectIfRemote(req, res)) return;
-      if (typeof req.body?.enabled !== "boolean") {
-        res.status(400).json({ error: "enabled must be a boolean" });
-        return;
-      }
-      syncHookSentinel(this.workspaceRoot, req.body.enabled);
-      res.json({ enabled: req.body.enabled });
     });
   }
 
@@ -835,73 +709,8 @@ export class ConsoleServer {
   }
 
   // ------------------------------------------------------------------
-  //  Qore Runtime
+  //  Qore Runtime helpers extracted to QoreRuntimeService (B166 Phase 2)
   // ------------------------------------------------------------------
-
-  private async fetchQoreRuntimeSnapshot(): Promise<QoreRuntimeSnapshot> {
-    const checkedAt = new Date().toISOString();
-    if (!this.qoreRuntime.enabled) {
-      return {
-        enabled: false, connected: false,
-        baseUrl: this.qoreRuntime.baseUrl, lastCheckedAt: checkedAt,
-        error: "disabled",
-      };
-    }
-    const startedAt = Date.now();
-    const health = await this.fetchQoreJson("/health");
-    if (!health.ok) {
-      return {
-        enabled: true, connected: false,
-        baseUrl: this.qoreRuntime.baseUrl,
-        latencyMs: Date.now() - startedAt, lastCheckedAt: checkedAt,
-        error: health.error || "runtime_unreachable",
-      };
-    }
-    const policy = await this.fetchQoreJson("/policy/version");
-    return {
-      enabled: true, connected: true,
-      baseUrl: this.qoreRuntime.baseUrl,
-      policyVersion: policy.ok
-        ? String((policy.body as { policyVersion?: string }).policyVersion || "")
-        : undefined,
-      latencyMs: Date.now() - startedAt, lastCheckedAt: checkedAt,
-    };
-  }
-
-  private async fetchQoreJson(
-    endpoint: string,
-    options?: { method?: "GET" | "POST"; body?: unknown },
-  ): Promise<
-    { ok: true; body: unknown } | { ok: false; error: string; detail?: string }
-  > {
-    if (!this.qoreRuntime.enabled) return { ok: false, error: "disabled" };
-    const controller = new AbortController();
-    const timer = setTimeout(
-      () => controller.abort(), this.qoreRuntime.timeoutMs,
-    );
-    const headers: Record<string, string> = { "content-type": "application/json" };
-    if (this.qoreRuntime.apiKey) {
-      headers["x-qore-api-key"] = this.qoreRuntime.apiKey;
-    }
-    try {
-      const response = await fetch(`${this.qoreRuntime.baseUrl}${endpoint}`, {
-        method: options?.method || "GET",
-        headers,
-        body: options?.body ? JSON.stringify(options.body) : undefined,
-        signal: controller.signal,
-      });
-      clearTimeout(timer);
-      if (!response.ok) {
-        const detail = await response.text();
-        return { ok: false, error: `upstream_${response.status}`, detail };
-      }
-      return { ok: true, body: await response.json() };
-    } catch (error) {
-      clearTimeout(timer);
-      const detail = error instanceof Error ? error.message : String(error);
-      return { ok: false, error: "request_failed", detail };
-    }
-  }
 
   private recordObservedFileMutation(payload: unknown): void {
     if (!payload || typeof payload !== "object") return;
@@ -949,7 +758,7 @@ export class ConsoleServer {
     const l3Queue = this.qorelogicManager.getL3Queue();
     const agents = await this.qorelogicManager.getTrustEngine().getAllAgents();
     const trust = buildTrustSummary(agents);
-    const qoreRuntime = await this.fetchQoreRuntimeSnapshot();
+    const qoreRuntime = await this.qoreRuntimeService.fetchSnapshot();
     const checkpointSummary = this.getCheckpointSummary();
     const governancePhase = buildGovernancePhase(this.getWorkspaceRoot());
     const hubDeps = { chainValidAt: this.chainValidAt, unattributedFileChanges: this.unattributedFileChanges };
@@ -1141,38 +950,13 @@ export class ConsoleServer {
   }
 
   // ------------------------------------------------------------------
-  //  Skills (delegated to extracted modules)
+  //  Skills — `/api/skills*` and ingest helpers extracted to
+  //  routes/SkillsApiRoute.ts (B166 Phase 2). Console-side RouteDeps
+  //  still needs a discovery thunk; delegate directly to SkillDiscovery.
   // ------------------------------------------------------------------
 
   private getInstalledSkills(): InstalledSkill[] {
     return discoverAllSkills(this.getWorkspaceRoot(), __dirname);
-  }
-
-  private autoIngestWorkspaceSkills(): Record<string, unknown> {
-    const ws = this.getWorkspaceRoot();
-    return autoIngest(
-      ws, buildWorkspaceDiscoveryRoots(ws),
-      () => this.getInstalledSkills(), buildSkillRoots(ws, __dirname),
-    );
-  }
-
-  private manualIngestSkillPayload(
-    items: unknown[], mode: "file" | "folder",
-  ): Record<string, unknown> {
-    return manualIngest(items, mode, this.getWorkspaceRoot(), () => this.getInstalledSkills());
-  }
-
-  private buildSkillRelevance(phase: string): Record<string, unknown> {
-    const catalog = this.getInstalledSkills();
-    const ranked: SkillRelevance[] = catalog
-      .map((skill) => rankSkillForPhase(skill, phase))
-      .sort((a, b) => b.score - a.score || a.label.localeCompare(b.label));
-    let allRelevant = ranked.filter((item) => item.score > 1);
-    if (allRelevant.length === 0) allRelevant = ranked.slice();
-    const recommended = allRelevant.slice(0, Math.min(4, allRelevant.length));
-    const relevantKeys = new Set(allRelevant.map((item) => item.key));
-    const otherAvailable = ranked.filter((item) => !relevantKeys.has(item.key));
-    return { phase, recommended, allRelevant, otherAvailable };
   }
 
   // ------------------------------------------------------------------
