@@ -36,6 +36,26 @@ export interface QorLogicIngestResult {
   hostStatuses: HostInstallStatus[];
 }
 
+export interface HostInstallSuccess {
+  ok: true;
+  host: QorLogicHost;
+  scope: QorLogicScope;
+  destination: string;
+  installedCount: number;
+  command: string;
+}
+
+export interface HostInstallError {
+  ok: false;
+  host: QorLogicHost;
+  scope: QorLogicScope;
+  error: string;
+  stderrTail?: string;
+  command: string;
+}
+
+export type HostInstallResult = HostInstallSuccess | HostInstallError;
+
 const INSTALL_TIMEOUT_MS = 180_000;
 
 export class QorLogicSkillIngestor {
@@ -60,6 +80,90 @@ export class QorLogicSkillIngestor {
     const aggregate = await this.runHosts(py, options);
     await this.rescan(this.workspaceRoot);
     return aggregate;
+  }
+
+  /**
+   * Resolve Python interpreter. Used by Round 2 install-UX orchestrator
+   * to emit a `python-probe` invocation distinct from the rest of the chain.
+   */
+  async probePython(): Promise<{ ok: true; interpreter: string; command: string } | { ok: false; error: string }> {
+    const py = await this.resolver.resolve();
+    if (!py.ok) return { ok: false, error: 'no-python-found' };
+    return { ok: true, interpreter: py.command, command: `${py.command} ${py.args.join(' ')}` };
+  }
+
+  /**
+   * Install or upgrade the qor-logic package. Used by Round 2 install-UX
+   * orchestrator to emit a `pip-install` invocation. Caller must ensure
+   * `probePython()` succeeded first.
+   */
+  async ensurePackageInstalled(): Promise<{ ok: true; command: string } | { ok: false; error: string; stderrTail?: string }> {
+    if (await this.installer.isInstalled()) {
+      return { ok: true, command: 'qor-logic already installed' };
+    }
+    const result = await this.installer.install();
+    if (result.ok) return { ok: true, command: 'python -m pip install --upgrade qor-logic' };
+    return {
+      ok: false,
+      error: result.error ?? 'install-failed',
+      stderrTail: undefined,
+    };
+  }
+
+  /**
+   * Workspace root accessor — used by orchestrator's `runProvenanceStep`.
+   */
+  getWorkspaceRoot(): string {
+    return this.workspaceRoot;
+  }
+
+  /**
+   * Trigger workspace rescan (broadcast hub.refresh). Used by orchestrator's
+   * `runRefreshStep`.
+   */
+  async rescanWorkspace(): Promise<void> {
+    await this.rescan(this.workspaceRoot);
+  }
+
+  /**
+   * Single-host install. Used by Round 2 install-UX orchestrator
+   * (`createInstallSkillsHandler` in extension/installSkillsHandler.ts) to emit
+   * per-step telemetry. Caller is responsible for python-resolve and pip-install
+   * sequencing; this method assumes both have already succeeded.
+   */
+  async installHost(host: QorLogicHost, scope: QorLogicScope): Promise<HostInstallResult> {
+    const py = await this.resolver.resolve();
+    if (!py.ok) {
+      return { ok: false, host, scope, error: 'no-python-found', command: '' };
+    }
+    const args = [
+      ...py.args,
+      '-m', 'qor.cli', 'install',
+      '--host', host,
+      '--scope', scope,
+    ];
+    const command = `${py.command} ${args.join(' ')}`;
+    this.output.appendLine(`[qor-logic] ${command}`);
+    const result = await this.run(py.command, args, {
+      timeoutMs: INSTALL_TIMEOUT_MS,
+      cwd: this.workspaceRoot,
+      env: { QORLOGIC_PROJECT_DIR: this.workspaceRoot },
+    });
+    const mapped = mapHostResult(result, this.output);
+    if (!mapped.ok) {
+      return {
+        ok: false, host, scope, command,
+        error: mapped.error,
+        stderrTail: result.stderr ? result.stderr.slice(-512) : undefined,
+      };
+    }
+    const status = getHostInstallStatus(this.workspaceRoot, host);
+    const destination = status.destinations[0] ?? '';
+    return {
+      ok: true, host, scope, command,
+      destination,
+      installedCount: status.fileCount,
+    };
   }
 
   private async ensureInstalled(): Promise<{ ok: true } | { ok: false; error: string }> {

@@ -17,8 +17,9 @@ function esc(value) {
 
 export function renderInstallSkillsCard(state) {
   const running = state?.running === true;
-  const steps = Array.isArray(state?.steps) ? state.steps : [];
+  const invocations = Array.isArray(state?.invocations) ? state.invocations : [];
   const report = state?.lastReport ?? null;
+  const showOutputBtn = report || invocations.length > 0;
   return `
     <div class="cc-card" id="cc-qorlogic" style="margin-top:16px">
       <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;
@@ -35,26 +36,61 @@ export function renderInstallSkillsCard(state) {
         <button class="cc-btn" data-action="bootstrap-workspace"
           ${running ? 'disabled' : ''}
           style="font-size:0.8rem;padding:6px 14px">Bootstrap Workspace</button>
+        ${showOutputBtn ? `<button class="cc-btn" data-action="show-output"
+          style="font-size:0.8rem;padding:6px 14px">Show Output</button>` : ''}
       </div>
       <div id="cc-qorlogic-status" style="margin-top:10px;font-size:0.78rem;color:var(--text-muted)">
-        ${renderSteps(steps)}
+        ${renderInvocations(invocations)}
         ${report && !running ? renderReportSummary(report) : ''}
       </div>
     </div>`;
 }
 
-function renderSteps(steps) {
-  if (steps.length === 0) return '';
-  return `<div style="display:flex;flex-direction:column;gap:2px">${steps.map((s) => `
-    <div>${stepIcon(s)} ${esc(s.label)}${s.command ? ` — <code>${esc(s.command)}</code>` : ''}${s.path ? ` → <code>${esc(s.path)}</code>` : ''}${s.error ? ` <span style="color:var(--accent-red,#ef4444)">${esc(s.error)}</span>` : ''}</div>
-  `).join('')}</div>`;
+function renderInvocations(invocations) {
+  if (invocations.length === 0) return '';
+  return `<div style="display:flex;flex-direction:column;gap:2px">${invocations.map(renderInvocationLine).join('')}</div>`;
 }
 
-function stepIcon(step) {
-  if (step.status === 'success') return '✓';
-  if (step.status === 'error') return '✗';
-  if (step.status === 'running') return '⏳';
+function renderInvocationLine(inv) {
+  const icon = invocationIcon(inv);
+  const label = invocationLabel(inv);
+  const detail = invocationDetail(inv);
+  const errorSpan = inv.error
+    ? ` <span style="color:var(--accent-red,#ef4444)">${esc(inv.error)}</span>`
+    : '';
+  return `<div>${icon} ${esc(label)}${detail}${errorSpan}</div>`;
+}
+
+function invocationIcon(inv) {
+  if (inv.status === 'success') return '✓';
+  if (inv.status === 'error') return '✗';
+  if (inv.status === 'running') return '⏳';
   return '·';
+}
+
+function invocationLabel(inv) {
+  switch (inv.phase) {
+    case 'python-probe': return inv.interpreter ? `Resolved Python: ${inv.interpreter}` : 'Resolving Python interpreter';
+    case 'pip-install': return inv.command ? inv.command : 'Installing qor-logic package';
+    case 'qorlogic-install': return `qorlogic install --host ${inv.host}${inv.scope ? ` --scope ${inv.scope}` : ''}`;
+    case 'provenance': {
+      const s = inv.summary;
+      if (!s) return 'Verifying install records';
+      return `Provenance verified: ${s.hostsVerified} host record${s.hostsVerified === 1 ? '' : 's'}, ${s.totalFiles} file${s.totalFiles === 1 ? '' : 's'}`;
+    }
+    case 'refresh': return 'Refreshing hub';
+    default: return inv.phase;
+  }
+}
+
+function invocationDetail(inv) {
+  if (inv.phase === 'qorlogic-install' && inv.installedCount && inv.destination) {
+    return ` — ${inv.installedCount} skills → <code>${esc(inv.destination)}</code>`;
+  }
+  if (inv.phase === 'pip-install' && inv.version) {
+    return ` — <code>${esc(inv.version)}</code> installed`;
+  }
+  return '';
 }
 
 function renderReportSummary(report) {
@@ -101,6 +137,16 @@ export function bindInstallSkillsCard(container, options = {}) {
       setTimeout(() => setStatus('Bootstrap requested.'), 2000);
     } catch {
       setStatus('Run "FailSafe: Bootstrap Workspace" from the Command Palette.', 'var(--accent-gold)');
+    }
+  });
+  // Round 2 / Issue #49: Show Output button posts to the new
+  // POST /api/actions/show-output route which calls outputChannel.show(true).
+  const showOutputBtn = container.querySelector('[data-action="show-output"]');
+  showOutputBtn?.addEventListener('click', async () => {
+    try {
+      await fetch('/api/actions/show-output', { method: 'POST' });
+    } catch {
+      // Best-effort; the OutputChannel reveal is a UX nicety, not a critical path.
     }
   });
 }

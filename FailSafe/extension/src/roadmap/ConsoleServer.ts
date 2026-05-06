@@ -277,7 +277,8 @@ export class ConsoleServer {
   private ideTracker:
     | import("./services/IdeActivityTracker").IdeActivityTracker
     | null = null;
-  private scaffoldCallback: (() => Promise<{ scaffolded: number; skipped: number; error?: string }>) | null = null;
+  private scaffoldCallback: (() => Promise<import("../extension/installSkillsReport").QorLogicInstallReport | null>) | null = null;
+  private outputChannel: { show(preserveFocus?: boolean): void } | null = null;
   private marketplaceCatalog: MarketplaceCatalog;
   private marketplaceInstaller: MarketplaceInstaller;
   private securityScanner: SecurityScanner;
@@ -506,6 +507,7 @@ export class ConsoleServer {
       getRiskRegister: () => this.getRiskRegister(),
       writeRiskRegister: (risks) => this.writeRiskRegister(risks),
       scaffoldSkills: this.scaffoldCallback ?? undefined,
+      showOutput: this.outputChannel ? () => this.outputChannel?.show(true) : undefined,
       // Agent API delegates (B142/B143/B144)
       getTimelineEntries: (filter) => this.agentTimelineService?.getEntries(filter) || [],
       getHealthMetrics: () => this.agentHealthIndicator?.buildMetrics() || null,
@@ -743,8 +745,17 @@ export class ConsoleServer {
     this.ideTracker = tracker;
   }
 
-  setScaffoldCallback(cb: () => Promise<{ scaffolded: number; skipped: number; error?: string }>): void {
+  setScaffoldCallback(cb: () => Promise<import("../extension/installSkillsReport").QorLogicInstallReport | null>): void {
     this.scaffoldCallback = cb;
+  }
+
+  /**
+   * Wire the FailSafe (QorLogic) OutputChannel reference so the Settings card
+   * "Show Output" button (POST /api/actions/show-output) can focus it.
+   * Round 2 / Issue #49.
+   */
+  setOutputChannel(channel: { show(preserveFocus?: boolean): void }): void {
+    this.outputChannel = channel;
   }
 
   setAgentTimelineService(service: AgentTimelineService): void {

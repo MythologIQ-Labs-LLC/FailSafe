@@ -63,7 +63,8 @@
     "onCommand:failsafe.undoLastAttempt",
     "onCommand:failsafe.onboardAgent",
     "onCommand:failsafe.installCommitHook",
-    "onCommand:failsafe.removeCommitHook"
+    "onCommand:failsafe.removeCommitHook",
+    "onCommand:failsafe.installQorLogicSkillsDefaults"
   ],
   "main": "./dist/extension/main.js",
   "contributes": {
@@ -110,6 +111,10 @@
       {
         "command": "failsafe.bootstrap",
         "title": "FailSafe: Bootstrap Workspace (install qor-logic + scaffold)"
+      },
+      {
+        "command": "failsafe.installQorLogicSkillsDefaults",
+        "title": "FailSafe: Install QorLogic Skills (defaults)"
       },
       {
         "command": "failsafe.organize",

@@ -1,7 +1,62 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-04-27
-**Version:** v5.0.0 De-Theater Pass SUBSTANTIATED (pending merge + tag from main)
+**Last Updated:** 2026-05-05
+**Version:** v5.0.0 Round 2 (Install UX) SUBSTANTIATED (pending merge + tag from main)
+
+---
+
+## v5.0.0 — Round 2 (Install UX: Transparency + Choice)
+
+### Ledger Trail
+
+| Entry | Phase | Verdict |
+|-------|-------|---------|
+| #262 | GATE | VETO (`infrastructure-mismatch` + `macro-architecture` + `specification-drift`) — `plan-v5-round2-install-ux.md` |
+| #263 | GATE | VETO (`razor-overage`) — `plan-v5-round2-install-ux-v2.md` |
+| #264 | GATE | PASS — `plan-v5-round2-install-ux-v3.md` (3 iterations to convergence) |
+| #265 | IMPLEMENT | 19 files staged: 4 new + 14 modified + 1 deleted |
+| #266 | SUBSTANTIATE | Reality matches Promise; tsc + lint clean |
+
+### New Files
+
+| File | Purpose |
+|------|---------|
+| `FailSafe/extension/src/extension/installSkillsReport.ts` | `QorLogicInstallReport`/`QorLogicInstallInvocation` types; `runInstallStep`, `aggregateReport` |
+| `FailSafe/extension/src/extension/installSkillsOptions.ts` | `resolveInstallSkillsOptions(context)` — host + scope QuickPicks, workspaceState persistence |
+| `FailSafe/extension/src/test/extension/install-skills-report.test.ts` | 9 tests — runInstallStep + aggregateReport |
+| `FailSafe/extension/src/test/extension/install-skills-options.test.ts` | 7 tests — QuickPick flow + cancel + persistence + prior-state pre-check |
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `FailSafe/extension/src/extension/installSkillsHandler.ts` | Full rewrite: 5 per-phase helpers (`runProbeStep`, `runPipStep`, `runHostInstallStep`, `runProvenanceStep`, `runRefreshStep`) + `finalize` aggregator + ~22-line orchestrator closure. Old `InstallReport`/`InstallStep`/`InstallStepId` deleted. New 4-arg signature `(context, ingestor, callbacks?, mode='prompt')`. |
+| `FailSafe/extension/src/qorlogic/QorLogicSkillIngestor.ts` | Added `probePython`, `ensurePackageInstalled`, `installHost(host, scope)`, `getWorkspaceRoot`, `rescanWorkspace`, `HostInstallResult` type union. Existing `ingest()` retained unchanged. |
+| `FailSafe/extension/src/extension/bootstrapServers.ts` | Callsite migrated to 4-arg `createInstallSkillsHandler`. New `consoleServer.setOutputChannel(outputChannel)` call. New `failsafe.installQorLogicSkillsDefaults` command registered (defaults-mode). |
+| `FailSafe/extension/src/roadmap/ConsoleServer.ts` | `scaffoldCallback` field + `setScaffoldCallback` parameter type updated to `() => Promise<QorLogicInstallReport \| null>`. New `outputChannel` field + `setOutputChannel` setter. `showOutput` dep wired into route deps. |
+| `FailSafe/extension/src/roadmap/routes/types.ts` | `scaffoldSkills` type narrowed to `QorLogicInstallReport \| null`. New optional `showOutput: () => void`. |
+| `FailSafe/extension/src/roadmap/routes/ActionsRoute.ts` | `/api/actions/scaffold-skills` handler updated to handle `null` (cancel) + new shape. New `POST /api/actions/show-output` route. |
+| `FailSafe/extension/src/roadmap/ui/modules/install-skills-card.js` | `step` → `invocation` field rename. Per-phase rendering (`renderInvocations`, `invocationLabel`, `invocationDetail`). New "Show Output" button posting to `/api/actions/show-output`. |
+| `FailSafe/extension/src/roadmap/ui/modules/settings.js` | `event.step` → `event.invocation`; `event.report.steps` → `event.report.invocations`. |
+| `FailSafe/extension/src/test/extension/installSkillsHandler.test.ts` | Full rewrite: 6 tests covering full success, probe failure, pip failure, host failure isolation, onProgress emission, DEFAULT_OPTIONS shape. New `FakeIngestor` mocks the per-phase API surface. |
+| `FailSafe/extension/package.json` | New activation event `onCommand:failsafe.installQorLogicSkillsDefaults`. New command contribution. |
+| `CHANGELOG.md` (root + extension) | Round 2 sub-section under v5.0.0: Added (transparency report, QuickPick, defaults command, Show Output) + Changed (ABI break, payload field rename, signature change, ingestor surface). |
+
+### Deleted Files
+
+| File | Reason |
+|------|--------|
+| `FailSafe/extension/src/test/extension/install-skills-handler-progress.test.ts` | Asserted back-compat fields (`scaffolded`, `skipped`) that the new ABI drops. Coverage subsumed by the rewritten `installSkillsHandler.test.ts`. |
+
+### Validation
+
+- `tsc -p ./` — 0 errors
+- `npm run lint` — 0 errors (56 pre-existing warnings, none in Round 2 files)
+- `npm test` — not run in seal pass (recommended before merge)
+
+---
+
+
 
 ---
 

@@ -165,10 +165,13 @@ export class SettingsRenderer {
 
   onEvent(event) {
     if (!event || typeof event !== 'object') return;
-    if (event.type === 'skills.install.progress' && event.step) {
+    // Round 2 / Issue #49: payload field renamed `step` → `invocation` and
+    // report shape changed from `steps[]` to `invocations[]`. Backwards
+    // compatibility shim removed; round 2 owns the breaking ABI change.
+    if (event.type === 'skills.install.progress' && event.invocation) {
       this._installState = {
         running: true,
-        steps: [...(this._installState?.steps ?? []), event.step],
+        invocations: [...(this._installState?.invocations ?? []), event.invocation],
         lastReport: this._installState?.lastReport ?? null,
       };
       this._refreshInstallCard();
@@ -177,7 +180,7 @@ export class SettingsRenderer {
     if (event.type === 'skills.install.complete' && event.report) {
       this._installState = {
         running: false,
-        steps: event.report.steps ?? this._installState?.steps ?? [],
+        invocations: event.report.invocations ?? this._installState?.invocations ?? [],
         lastReport: event.report,
       };
       this._refreshInstallCard();

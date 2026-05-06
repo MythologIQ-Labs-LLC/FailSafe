@@ -85,11 +85,26 @@ export function setupActionsRoutes(
       return;
     }
     try {
-      const result = await deps.scaffoldSkills();
-      res.json({ ok: true, ...result });
+      const report = await deps.scaffoldSkills();
+      if (report === null) {
+        res.json({ ok: true, cancelled: true });
+        return;
+      }
+      res.json({ ok: report.ok, report });
     } catch (e) {
-      res.status(500).json({ error: String(e) });
+      res.status(500).json({ ok: false, error: String(e) });
     }
+  });
+
+  // Focus the FailSafe (QorLogic) OutputChannel from the Settings card
+  // "Show Output" button. Round 2 / Issue #49.
+  app.post("/api/actions/show-output", (_req: Request, res: Response) => {
+    if (!deps.showOutput) {
+      res.status(501).json({ error: "Output channel not available" });
+      return;
+    }
+    deps.showOutput();
+    res.status(204).end();
   });
 
   // Process all pending L3 approvals in batch

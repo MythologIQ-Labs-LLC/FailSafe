@@ -1854,3 +1854,77 @@ When writing extraction plans that reference specific methods by name, always ve
 
 Amend plan Phase 2 extraction list with correct method names: `renderSentinel()`, `showMetricExplanation()`, `getMetricExplanations()`. Update line references accordingly.
 
+---
+
+## VETO — 2026-05-05: v5.0.0 Round 2 Install UX (plan vs current code drift)
+
+**Plan**: `.failsafe/governance/plans/plan-v5-round2-install-ux.md`
+**Audit**: `.agent/staging/AUDIT_REPORT.md` (Entry #262)
+**Categories**: `infrastructure-mismatch`, `macro-architecture`, `specification-drift`
+
+### What Failed
+
+Plan introduces a parallel install-report type system (`QorLogicInstallReport` with `invocations`) that diverges from the existing `InstallReport` shape used at `installSkillsHandler.ts:22-34`, and changes `createInstallSkillsHandler`'s arity by adding `context: vscode.ExtensionContext` and `mode: InstallMode` parameters — without enumerating the cascading edits required at the existing `bootstrapServers.ts:92` call-site, the `ConsoleServer.setScaffoldCallback` type contract at `ConsoleServer.ts:746` (which expects `Promise<{scaffolded, skipped, error?}>` — fields the new report shape drops), the `InstallStepId` enum migration (`'resolve-python'` vs plan's `'python-probe'`; host-encoded id vs separate field), and a webview→ConsoleServer "Show Output" message route whose message-type identifier and `OutputChannel`-access wiring are unspecified.
+
+### Why It Failed
+
+The plan was authored 2026-04-27 against a snapshot of `installSkillsHandler.ts` and `ConsoleServer.ts`, but did not perform pre-write source verification of the back-compat surfaces it touches. Specifically:
+
+1. The `InstallReport` back-compat fields exist precisely *because* `setScaffoldCallback` is load-bearing — the comment "Back-compat fields for the Console scaffold callback shape" at line 30 announces the constraint, but the plan did not cite or honor it.
+2. The plan asserts a Phase-1 step-emission ordering only in test bodies, never in the implementation prose. An implementer following the plan literally cannot derive emit ordering without reading test fixtures, which inverts the normal direction (impl declares behavior, tests verify it).
+3. The plan's "Plan A Phase 3 wiring" reference is partially stale: Plan A wired `onComplete` to receive `InstallReport`, and the plan implicitly retypes that call without enumerating consumer-side migration in `settings.js` or broadcast-event listeners.
+
+### Pattern to Avoid
+
+**SG-PlanTypeMigrationUnderspecification**: When a plan introduces a new type or alters a function signature that ripples through cross-module contracts, the plan body must (a) declare the migration strategy for each existing consumer of the old type/signature explicitly in the Affected Surfaces list, (b) cite the source-line evidence of any back-compat field or invariant being preserved or replaced, and (c) anchor sequencing or ordering claims in the implementation prose, not only in test fixtures. Tests that assert ordering against a body that never declares it are presence-of-spec inversions and should be flagged at the Plan-text level before /qor-audit issues PASS.
+
+This pattern compounds with **SG-InfrastructureMismatch**: plans that name infrastructure (`outputChannel`, `setScaffoldCallback`, `Plan A Phase 3 wiring`) without grep-verifying current ownership and wiring direction will silently presume access that does not exist at the implementer's hand.
+
+### Remediation Required
+
+Amend `plan-v5-round2-install-ux.md` per the five-item list in `.agent/staging/AUDIT_REPORT.md` §"Required Remediation":
+1. Resolve report-type duality (rename or coexist + bridge).
+2. Enumerate all `createInstallSkillsHandler` call-site migrations.
+3. Declare `InstallStepId` enum migration explicitly.
+4. Specify "Show Output" message contract and `OutputChannel` wiring.
+5. Anchor Phase-1 step-emission ordering in implementation prose.
+
+Re-run `/qor-audit` after amendments. No retry-with-waiver path.
+
+---
+
+## VETO — 2026-05-05: v5.0.0 Round 2 Install UX v2 (Razor overage on orchestrator closure)
+
+**Plan**: `.failsafe/governance/plans/plan-v5-round2-install-ux-v2.md`
+**Audit**: `.agent/staging/AUDIT_REPORT.md` (Entry #263)
+**Categories**: `razor-overage`
+
+### What Failed
+
+Phase 1's "Handler restructure" section declares `createInstallSkillsHandler`'s returned async closure at ~55 lines, orchestrating the full 5-phase + N-host install sequence in one body. The Section 4 Razor function-line limit is 40.
+
+### Why It Failed
+
+The plan author (this skill, in dialogue with the operator) baked five distinct phase orchestrations (probe, pip, per-host loop, provenance, refresh) into a single closure during the first draft. This was a Razor-style omission, not a design defect — the design is sound, but the function-shape commitment overshoots. Notably: the audit verified every other amendment from Entry #262 cleanly. Single isolated finding.
+
+### Pattern to Avoid
+
+**SG-OrchestratorMonolith**: When a plan declares a multi-step orchestration as a single function body, count the steps explicitly during plan authoring. If the step count × per-step-line-budget (typically 8-15 lines/step including error branches) exceeds 40 lines, split into named per-step helpers BEFORE plan finalization. The split is mechanical (one helper per phase) and yields tests that anchor to specific helper outputs rather than orchestrator-end-state assertions only.
+
+This pattern compounds with **SG-DialogueDraftBlindness**: in collaborative-dialogue plan authoring, the Razor estimate is often pencilled in as "~N lines" without per-step accounting. A self-check pass — "for each named step in this orchestrator, what is its line budget?" — should be a final gate before writing the plan file.
+
+### Remediation Required
+
+Amend Phase 1 §"Handler restructure" to declare:
+
+```ts
+async function runProbeStep(resolver: PythonInterpreterResolver): Promise<QorLogicInstallInvocation>;
+async function runPipStep(installer: QorLogicPackageInstaller): Promise<QorLogicInstallInvocation>;
+async function runHostInstallStep(ingestor: QorLogicSkillIngestor, host: QorLogicHost, scope: 'repo' | 'global'): Promise<QorLogicInstallInvocation>;
+async function runProvenanceStep(workspaceRoot: string): Promise<QorLogicInstallInvocation>;
+async function runRefreshStep(): Promise<QorLogicInstallInvocation>;
+```
+
+The `createInstallSkillsHandler` closure becomes a ~25-line sequencer calling each helper with short-circuit checks on probe/pip errors. Re-run `/qor-audit` after amendment.
+
+

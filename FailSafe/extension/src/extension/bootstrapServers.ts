@@ -71,6 +71,7 @@ export async function bootstrapServers(
   // 501 "Scaffold not available" forever. (Plan A Phase 3 fix follow-up.)
   const outputChannel = vscode.window.createOutputChannel("FailSafe (QorLogic)");
   context.subscriptions.push(outputChannel);
+  consoleServer.setOutputChannel(outputChannel);
   const interpreterResolver = new PythonInterpreterResolver(
     vscode.workspace.getConfiguration(),
     vscode,
@@ -89,15 +90,15 @@ export async function bootstrapServers(
     async () => undefined,
     outputChannel,
   );
-  consoleServer.setScaffoldCallback(createInstallSkillsHandler(skillIngestor, {
-    onProgress: (step) => consoleServer.broadcastEvent({ type: "skills.install.progress", step }),
+  consoleServer.setScaffoldCallback(createInstallSkillsHandler(context, skillIngestor, {
+    onProgress: (invocation) => consoleServer.broadcastEvent({ type: "skills.install.progress", invocation }),
     onComplete: (report) => {
       consoleServer.broadcastEvent({ type: "skills.install.complete", report });
       // Plan A Phase 3 / issue #48: refresh the hub so the Get Started banner
-      // re-evaluates against the new SOURCE.yml provenance state.
+      // re-evaluates against the new install record state.
       consoleServer.broadcastEvent({ type: "hub.refresh", reason: "skills-installed" });
     },
-  }));
+  }, 'prompt'));
 
   await consoleServer.start();
   context.subscriptions.push({ dispose: () => consoleServer?.stop() });
@@ -132,6 +133,31 @@ export async function bootstrapServers(
       // Organize is a focused subset: workspace structure only, no pip install.
       const report = await runWorkspaceBootstrap(bootstrapDeps, "silent");
       reportBootstrapToUser(report, outputChannel);
+    }),
+  );
+
+  // Round 2 / Issue #50: defaults-mode install command — bypasses the
+  // prompt QuickPick and installs against {claude, codex} at repo scope.
+  // Used for automation, scripts, and the command palette quick path.
+  context.subscriptions.push(
+    vscode.commands.registerCommand("failsafe.installQorLogicSkillsDefaults", async () => {
+      const handler = createInstallSkillsHandler(context, skillIngestor, {
+        onProgress: (invocation) => consoleServer.broadcastEvent({ type: "skills.install.progress", invocation }),
+        onComplete: (report) => {
+          consoleServer.broadcastEvent({ type: "skills.install.complete", report });
+          consoleServer.broadcastEvent({ type: "hub.refresh", reason: "skills-installed" });
+        },
+      }, 'defaults');
+      const report = await handler();
+      if (report === null) {
+        outputChannel.appendLine('[install-skills-defaults] cancelled');
+        return;
+      }
+      const summary = report.ok
+        ? `Installed ${report.totalInstalled} skills across ${report.destinations.length} destination(s)`
+        : `Install completed with ${report.failures.length} failure(s)`;
+      outputChannel.appendLine(`[install-skills-defaults] ${summary}`);
+      if (!report.ok) outputChannel.show(true);
     }),
   );
 
