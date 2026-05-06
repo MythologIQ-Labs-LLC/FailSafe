@@ -1,7 +1,7 @@
 # File Movement Index
 
 **Generated**: 2026-03-09T22:00:00Z
-**Operation**: /ql-organize (Session 2)
+**Operation**: /qor-organize (Session 2)
 **Total Files Moved**: 21
 
 ---

@@ -81,13 +81,13 @@ if (srcTabs !== distTabs) {
 
 ---
 
-## Workstream B: Debug Unification — Two-Phase /ql-debug
+## Workstream B: Debug Unification — Two-Phase /qor-debug
 
 ### Phase B1: Merge Agent Capabilities
 
 **Affected Files**
 
-- `.claude/agents/ql-fixer.md` — add 3 new checks to Layer 1 and Layer 2
+- `.claude/agents/qor-fixer.md` — add 3 new checks to Layer 1 and Layer 2
 
 **Changes**
 
@@ -104,11 +104,11 @@ Add to Layer 2 (Hamming/Shannon) bullet list after "Input validation audit":
 - **Silent fallback detection**: Check if catch-all handlers (SPA fallbacks, bare catch blocks) mask routing or data failures
 ```
 
-### Phase B2: Update /ql-debug Skill for Two-Phase Dispatch
+### Phase B2: Update /qor-debug Skill for Two-Phase Dispatch
 
 **Affected Files**
 
-- `.claude/skills/ql-debug/SKILL.md` — replace single-agent dispatch with two-phase protocol
+- `.claude/skills/qor-debug/SKILL.md` — replace single-agent dispatch with two-phase protocol
 
 **Changes**
 
@@ -116,7 +116,7 @@ Replace the `<skill>` XML block with:
 
 ```xml
 <skill>
-  <trigger>/ql-debug</trigger>
+  <trigger>/qor-debug</trigger>
   <phase>IMPLEMENT / SUBSTANTIATE / GATE</phase>
   <persona>Fixer</persona>
   <dispatch>
@@ -133,7 +133,7 @@ Replace Step 2 content with two-phase protocol describing Phase 1 (root-cause on
 
 **Affected Files**
 
-- `.claude/skills/ql-debug/SKILL.md` — merge two `---` blocks into one
+- `.claude/skills/qor-debug/SKILL.md` — merge two `---` blocks into one
 
 **Changes**
 
@@ -311,7 +311,7 @@ setTimeout(() => { ... }, 1500);
 | A4 | Add missing backlog entries | Applied | — |
 | A5 | Bundle guard | Pending | B173 |
 | B1 | Merge agent capabilities | Pending | B174 |
-| B2 | Update /ql-debug skill | Pending | B174 |
+| B2 | Update /qor-debug skill | Pending | B174 |
 | B3 | Fix duplicate frontmatter | Pending | B174 |
 | C1 | Extract SreTemplate section builders | Pending | D28-D29 |
 | D1 | Cache last known governance state | Pending | B175 |

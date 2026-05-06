@@ -44,7 +44,7 @@ body:
         - Genesis (Dashboard, Panels)
         - QoreLogic (Ledger, Policies)
         - Sentinel (Pattern Detection)
-        - Skills (/ql-* commands)
+        - Skills (/qor-* commands)
         - UI/UX
         - Other
     validations:

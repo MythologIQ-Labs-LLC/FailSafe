@@ -130,12 +130,12 @@ Cross-agent skill consolidation — all SHIELD skills migrated from legacy `.cla
 
 ### Changed
 
-- **Skills migrated to SKILL.md format** — 17 SHIELD skills + 3 personas now use directory-based `.claude/skills/ql-*/SKILL.md` with YAML frontmatter, matching modern Claude Code SDK conventions.
-- **Agents separated** — 7 agent definitions moved to `.claude/agents/ql-*.md` with subagent frontmatter. Claude Code loads these natively without extension scaffolding.
+- **Skills migrated to SKILL.md format** — 17 SHIELD skills + 3 personas now use directory-based `.claude/skills/qor-*/SKILL.md` with YAML frontmatter, matching modern Claude Code SDK conventions.
+- **Agents separated** — 7 agent definitions moved to `.claude/agents/qor-*.md` with subagent frontmatter. Claude Code loads these natively without extension scaffolding.
 - **ModelAdapter output dirs fixed** — Claude (`.claude/skills/`), Codex (`.agents/skills/`), Gemini (`.gemini/skills/`), Copilot (`.github/skills/`), Cursor (`.cursor/rules/`) all corrected.
 - **getOutputPath simplified** — Directory-based output (`{name}/SKILL.md`) is now the default; only Cursor uses flat files.
 - **VSIX bundling de-complected** — Agents removed from bundle patterns, eliminating scaffold collision. Directory-based skill bundling added.
-- **Antigravity restructured** — Genesis/Qorelogic directories replaced with `skills/ql-*/SKILL.md` + `agents/` layout.
+- **Antigravity restructured** — Genesis/Qorelogic directories replaced with `skills/qor-*/SKILL.md` + `agents/` layout.
 - **Stale duplicates removed** — `FailSafe/Claude/` (20 files) deleted; 12 quarantined skills cleaned up.
 - **Cross-agent instruction file** — `AGENTS.md` created at repo root for Codex/Copilot/Cursor/Windsurf compatibility.
 
@@ -192,7 +192,7 @@ Governance state integrity remediation — trust data that was transient or fabr
 
 - Hook toggle UI in Console Settings panel with enable/disable controls.
 - Release gate now validates backlog duplicates, version summaries, and help doc markers.
-- Governance doc storage consolidated to `.failsafe/governance/` with `/ql-organize` Phase 6 compliance checking.
+- Governance doc storage consolidated to `.failsafe/governance/` with `/qor-organize` Phase 6 compliance checking.
 
 ### Voice-Brainstorm Status
 
@@ -508,7 +508,7 @@ By using this software, you acknowledge that it is experimental and agree to use
 
 ## License
 
-MIT - See `LICENSE`.
+Apache License 2.0 - See `LICENSE`.
 
 ## Links
 

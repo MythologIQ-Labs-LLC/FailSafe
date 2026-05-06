@@ -5,7 +5,7 @@
   "icon": "media/icon.png",
   "version": "5.0.0",
   "publisher": "MythologIQ",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/MythologIQ/failsafe"

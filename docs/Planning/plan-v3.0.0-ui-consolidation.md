@@ -191,12 +191,12 @@ export class CheckpointReconciler {
 **3.2 Integrate with GovernanceRouter**
 
 ```typescript
-// Before any /ql-* command execution
+// Before any /qor-* command execution
 async beforeCommand(): Promise<void> {
   await this.checkpointReconciler.reconcile();
 }
 
-// After any /ql-* command completion
+// After any /qor-* command completion
 afterCommand(): void {
   this.checkpointReconciler.createCheckpoint();
 }

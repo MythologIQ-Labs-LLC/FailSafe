@@ -73,12 +73,12 @@ This project uses the QoreLogic SHIELD physical lifecycle for AI-assisted develo
 
 | Phase | Acronym       | Command            | Description                                             |
 | ----- | ------------- | ------------------ | ------------------------------------------------------- |
-| S     | SECURE INTENT | `/ql-bootstrap`    | Seed project DNA, document the Why                      |
-| H     | HYPOTHESIZE   | `/ql-plan`         | Create blueprints with risk grades and Section 4 limits |
-| I     | INTERROGATE   | `/ql-audit`        | Adversarial tribunal checks for drift; PASS or VETO     |
-| E     | EXECUTE       | `/ql-implement`    | Build under strict code complexity constraints          |
-| L     | LOCK PROOF    | `/ql-substantiate` | Verify Reality matches Promise with Merkle hash seal    |
-| D     | DELIVER       | `/ql-release`      | Deploy, inspect packaged artifacts before publish, and monitor for operational drift |
+| S     | SECURE INTENT | `/qor-bootstrap`    | Seed project DNA, document the Why                      |
+| H     | HYPOTHESIZE   | `/qor-plan`         | Create blueprints with risk grades and Section 4 limits |
+| I     | INTERROGATE   | `/qor-audit`        | Adversarial tribunal checks for drift; PASS or VETO     |
+| E     | EXECUTE       | `/qor-implement`    | Build under strict code complexity constraints          |
+| L     | LOCK PROOF    | `/qor-substantiate` | Verify Reality matches Promise with Merkle hash seal    |
+| D     | DELIVER       | `/qor-release`      | Deploy, inspect packaged artifacts before publish, and monitor for operational drift |
 
 All changes to security-critical components (L3) require mandatory audit.
 

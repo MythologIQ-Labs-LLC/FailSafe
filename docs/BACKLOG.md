@@ -75,9 +75,9 @@
 
 **Phase 1: Core Skills** ✅
 
-- [x] [B12] /ql-repo-audit skill - Gap analysis + GitHub API score ✅ | v2.0.0
-- [x] [B13] /ql-repo-scaffold skill - Generate missing community files ✅ | v2.0.0
-- [x] [B14] /ql-repo-release skill - Versioning + CHANGELOG + tags ✅ | v2.0.0
+- [x] [B12] /qor-repo-audit skill - Gap analysis + GitHub API score ✅ | v2.0.0
+- [x] [B13] /qor-repo-scaffold skill - Generate missing community files ✅ | v2.0.0
+- [x] [B14] /qor-repo-release skill - Versioning + CHANGELOG + tags ✅ | v2.0.0
 
 **Phase 2: Ambient Integration (Existing Skills)** ✅
 
@@ -205,7 +205,7 @@
 **Intent Provenance & Enforcement**
 
 - [x] [B66] Intent provenance chain: require `planId` reference on Intent creation; reject Intents without approved plan in enforce mode | v4.2.0
-- [x] [B67] Workflow-status gating: Intent can only reach PASS status after `/ql-audit` signs off; block implementation on PULSE-only Intents in enforce mode | v4.2.0
+- [x] [B67] Workflow-status gating: Intent can only reach PASS status after `/qor-audit` signs off; block implementation on PULSE-only Intents in enforce mode | v4.2.0
 - [x] [B68] Agent identity binding on Intents: record which agent created the Intent and through which workflow (ql-plan vs auto-create vs manual) | v4.2.0
 - [x] [B69] Break-glass protocol: finalize package.json command declarations, tests, and CHANGELOG for `failsafe.breakGlass` / `failsafe.revokeBreakGlass` | v4.2.0
 - [x] [B70] Verdict replay harness: `replayVerdict(ledgerEntryId)` — reconstruct inputs from ledger entry and re-execute deterministic decision path | v4.2.0
@@ -371,7 +371,7 @@ Minor / UX:
 - [x] [B171] Fix CSS selectors for consolidated tabs — #brainstorm targets nonexistent DOM after 5-tab consolidation (v4.9.7 - Complete)
 - [x] [B172] Fix workspace overflow logic — Skills sub-view scroll lockout from tab-level overflow:hidden (v4.9.7 - Complete)
 - [x] [B173] Bundle guard — post-copy verification that dist/ tab count matches src/ (v4.9.7 - Complete)
-- [x] [B174] Unify /ql-debug two-phase dispatch — merge ultimate-debugger strengths into ql-fixer, update skill protocol (v4.9.7 - Complete)
+- [x] [B174] Unify /qor-debug two-phase dispatch — merge ultimate-debugger strengths into ql-fixer, update skill protocol (v4.9.7 - Complete)
 - [x] [B175] Phase tracker cache — serve last known governance state on META_LEDGER read failure instead of IDLE (v4.9.7 - Complete)
 - [x] [B176] Tail-read optimization — read last 4KB of META_LEDGER instead of full 434KB on every hub snapshot (v4.9.7 - Complete)
 - [x] [B177] File watcher debounce — increase META_LEDGER watcher from 500ms to 1500ms to avoid read-during-write race (v4.9.7 - Complete)
@@ -452,7 +452,7 @@ Minor / UX:
 | **v4.3.1**   | **Security Hardening**         | ✅ SEALED      | SQL injection protection, XSS prevention, README logo correction (B133-B136)                                          |
 | **v4.4.0**   | **Mindmap Evolution**          | ✅ SEALED      | Mindmap surface upgrade, UI asset expansion, console integration depth                                                |
 | **v4.4.1**   | **Screenshot Refresh**         | ✅ SEALED      | UI screenshots, socket hardening, activation event tightening                                                         |
-| **v4.5.0**   | **Skill Discovery**            | ✅ RELEASED    | Skill discovery tags, tag filter, governance skill cohesion, /ql-document skill, CI/CD hardening                      |
+| **v4.5.0**   | **Skill Discovery**            | ✅ RELEASED    | Skill discovery tags, tag filter, governance skill cohesion, /qor-document skill, CI/CD hardening                      |
 | **v4.5.1**   | **Hotfix**                     | ✅ RELEASED    | Fix activation crash when ledger DB unavailable, fix validate.ps1 parameter mismatch                                 |
 | **v4.6.0**   | **Section 4 Razor**            | ✅ RELEASED    | Section 4 decomposition, voice brainstorm fixes, hook toggle UI, release gate enhancements                            |
 | **v4.6.1**   | **Hotfix**                     | ✅ RELEASED    | Missing sidebar SVG icon, release pipeline branch policy for tag CI, icon validation gate                             |
@@ -475,4 +475,4 @@ Minor / UX:
 
 ---
 
-_Updated by /ql-\* commands automatically_
+_Updated by /qor-\* commands automatically_

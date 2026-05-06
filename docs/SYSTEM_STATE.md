@@ -209,12 +209,12 @@ Ledger entries are not yet appended pending: (a) merge of `plan/v5-extension-upd
 | `FailSafe/extension/src/roadmap/ConsoleServer.ts` | `scaffoldCallback` return type widened to include optional `error`; updated `.claude/skills/qor-bootstrap` path |
 | `FailSafe/extension/src/roadmap/routes/types.ts` | `scaffoldSkills` signature widened |
 | `FailSafe/extension/src/roadmap/services/SkillParser.ts` | Recognizes both `qor-*` and `ql-*` prefixes as governance for transition |
-| `FailSafe/extension/src/roadmap/services/GovernancePhaseTracker.ts` | `/ql-*` → `/qor-*` next-step strings |
+| `FailSafe/extension/src/roadmap/services/GovernancePhaseTracker.ts` | `/qor-*` → `/qor-*` next-step strings |
 | `FailSafe/extension/src/roadmap/ui/modules/settings.js` | FailSafe Pro card added |
-| `FailSafe/extension/src/roadmap/ui/modules/tickers.js` | "Install Skills" → "Install QorLogic Skills"; `/ql-bootstrap` → `/qor-bootstrap` |
-| `FailSafe/extension/src/qorelogic/AgentConfigInjector.ts` | `/ql-status` → `/qor-status` |
-| `FailSafe/extension/src/genesis/panels/templates/DashboardRoadmapCard.ts` | `/ql-plan` → `/qor-plan` |
-| `FailSafe/extension/src/genesis/panels/templates/PlanningHubTemplate.ts` | `/ql-plan` → `/qor-plan` |
+| `FailSafe/extension/src/roadmap/ui/modules/tickers.js` | "Install Skills" → "Install QorLogic Skills"; `/qor-bootstrap` → `/qor-bootstrap` |
+| `FailSafe/extension/src/qorelogic/AgentConfigInjector.ts` | `/qor-status` → `/qor-status` |
+| `FailSafe/extension/src/genesis/panels/templates/DashboardRoadmapCard.ts` | `/qor-plan` → `/qor-plan` |
+| `FailSafe/extension/src/genesis/panels/templates/PlanningHubTemplate.ts` | `/qor-plan` → `/qor-plan` |
 | `FailSafe/extension/src/governance/types/IntentTypes.ts` | Workflow enum `'ql-plan'` → `'qor-plan'` |
 | `FailSafe/extension/src/governance/GovernanceAdapter.ts` | Workflow enum `'ql-plan'` → `'qor-plan'` |
 | `FailSafe/extension/src/test/governance/IntentStore.test.ts` | Test data updated to `'qor-plan'` |
@@ -1056,15 +1056,15 @@ None in new/modified files.
 
 | Planned (Blueprint) | Actual | Status |
 |---------------------|--------|--------|
-| `.claude/skills/ql-*/SKILL.md` (17 skills) | 17 skill dirs with SKILL.md | OK EXISTS |
-| `.claude/skills/ql-*-persona/SKILL.md` (3) | 3 persona dirs | OK EXISTS |
-| `.claude/agents/ql-*.md` (7 agents) | 7 agent files + ultimate-debugger | OK EXISTS |
+| `.claude/skills/qor-*/SKILL.md` (17 skills) | 17 skill dirs with SKILL.md | OK EXISTS |
+| `.claude/skills/qor-*-persona/SKILL.md` (3) | 3 persona dirs | OK EXISTS |
+| `.claude/agents/qor-*.md` (7 agents) | 7 agent files + ultimate-debugger | OK EXISTS |
 | Reference files in skill dirs (6) | 6 reference files | OK EXISTS |
 | Scripts in ql-validate/scripts/ (3) | 3 scripts | OK EXISTS |
 | CLAUDE.md updated paths | .claude/agents/ + .claude/skills/ | OK EXISTS |
 | `.claude/commands/` deleted | Does not exist | OK DELETED |
 | `FailSafe/Claude/` deleted (V5) | Does not exist | OK DELETED |
-| Antigravity → skills/ql-*/SKILL.md | 15 skill dirs + agents/ | OK EXISTS |
+| Antigravity → skills/qor-*/SKILL.md | 15 skill dirs + agents/ | OK EXISTS |
 | Genesis/ + Qorelogic/ removed | Do not exist | OK DELETED |
 | ModelAdapterConfigs output dirs | All 5 correct | OK EXISTS |
 | getOutputPath directory-based | cursor flat, rest SKILL.md | OK EXISTS |
@@ -1308,7 +1308,7 @@ ConsoleServer.ts grandfathered at 1124L (reduced from 3265L, 65% cut).
 
 ---
 
-## /ql-document Skill — Implementation State
+## /qor-document Skill — Implementation State
 
 ### Ledger Trail
 
@@ -1318,20 +1318,20 @@ ConsoleServer.ts grandfathered at 1124L (reduced from 3265L, 65% cut).
 | #174 | IMPLEMENT | Phases 1-2 |
 | #175 | SUBSTANTIATE | Session sealed |
 
-### Phase 1: Create /ql-document Skill
+### Phase 1: Create /qor-document Skill
 
 | File | Change | Status |
 |------|--------|--------|
-| `.claude/commands/ql-document.md` | NEW: Dual-mode documentation authoring skill (RELEASE_METADATA + GENERAL) | DONE |
-| `.claude/commands/references/ql-skill-routing.md` | Added `/ql-document` to Support Skills table | DONE |
-| `.claude/commands/ql-help.md` | Added `/ql-document` to Quick Reference table | DONE |
+| `.claude/commands/qor-document.md` | NEW: Dual-mode documentation authoring skill (RELEASE_METADATA + GENERAL) | DONE |
+| `.claude/commands/references/qor-skill-routing.md` | Added `/qor-document` to Support Skills table | DONE |
+| `.claude/commands/qor-help.md` | Added `/qor-document` to Quick Reference table | DONE |
 
-### Phase 2: Integrate with /ql-repo-release
+### Phase 2: Integrate with /qor-repo-release
 
 | File | Change | Status |
 |------|--------|--------|
-| `.claude/commands/ql-repo-release.md` | Step 5 replaced: manual metadata prompt → `/ql-document` RELEASE_METADATA invocation | DONE |
-| `.claude/commands/ql-repo-release.md` | Constraints updated: `NEVER auto-generate` → `ALWAYS use /ql-document` + `NEVER write without review` | DONE |
+| `.claude/commands/qor-repo-release.md` | Step 5 replaced: manual metadata prompt → `/qor-document` RELEASE_METADATA invocation | DONE |
+| `.claude/commands/qor-repo-release.md` | Constraints updated: `NEVER auto-generate` → `ALWAYS use /qor-document` + `NEVER write without review` | DONE |
 
 ---
 
@@ -1350,24 +1350,24 @@ ConsoleServer.ts grandfathered at 1124L (reduced from 3265L, 65% cut).
 
 | File | Change | Status |
 |------|--------|--------|
-| `.claude/commands/ql-status.md` | Added SECURE INTENT state + `/ql-research` routing + `## Next Step` | DONE |
-| `.claude/commands/ql-compliance.md` | Added `## Next Step` section | DONE |
-| `.claude/commands/ql-validate.md` | Added `## Next Step` section | DONE |
-| `.claude/commands/ql-organize.md` | Added `## Next Step` section | DONE |
+| `.claude/commands/qor-status.md` | Added SECURE INTENT state + `/qor-research` routing + `## Next Step` | DONE |
+| `.claude/commands/qor-compliance.md` | Added `## Next Step` section | DONE |
+| `.claude/commands/qor-validate.md` | Added `## Next Step` section | DONE |
+| `.claude/commands/qor-organize.md` | Added `## Next Step` section | DONE |
 
 ### Phase 2: Proactive Suggestion Contract
 
 | File | Change | Status |
 |------|--------|--------|
-| `.claude/commands/references/ql-skill-routing.md` | NEW: Canonical SHIELD routing table + proactive signals | DONE |
-| `.claude/commands/ql-help.md` | Rewritten with routing table ref + workflow chains | DONE |
+| `.claude/commands/references/qor-skill-routing.md` | NEW: Canonical SHIELD routing table + proactive signals | DONE |
+| `.claude/commands/qor-help.md` | Rewritten with routing table ref + workflow chains | DONE |
 
 ### Phase 3: Skill Integrity Contract
 
 | File | Change | Status |
 |------|--------|--------|
-| `.claude/commands/ql-substantiate.md` | Added Step 4.5: Skill File Integrity Check | DONE |
-| `.claude/commands/ql-repo-release.md` | Added uncommitted skill file warning to pre-flight | DONE |
+| `.claude/commands/qor-substantiate.md` | Added Step 4.5: Skill File Integrity Check | DONE |
+| `.claude/commands/qor-repo-release.md` | Added uncommitted skill file warning to pre-flight | DONE |
 
 ### Phase 4: Research Brief Archive
 
@@ -1375,7 +1375,7 @@ ConsoleServer.ts grandfathered at 1124L (reduced from 3265L, 65% cut).
 |------|--------|--------|
 | `docs/research/INDEX.md` | NEW: Flat-file archive index | DONE |
 | `docs/research/skill-lifecycle.md` | Archived current research brief | DONE |
-| `.claude/commands/ql-research.md` | Added prior-research check + archive step | DONE |
+| `.claude/commands/qor-research.md` | Added prior-research check + archive step | DONE |
 
 ---
 
@@ -1405,11 +1405,11 @@ ConsoleServer.ts grandfathered at 1124L (reduced from 3265L, 65% cut).
 | `scripts/validate.ps1` | Fixed path: `tools/reliability/` -> `tools/` | Line 246 |
 | `.github/workflows/vsix-proprietary-guardrails.yml` | Replaced deprecated PROD-Extension refs | Scans main extension VSIX for prohibited content |
 
-### Phase 3: /ql-repo-release Skill
+### Phase 3: /qor-repo-release Skill
 
 | File | Purpose |
 |------|---------|
-| `.claude/commands/ql-repo-release.md` | 10-step delivery orchestration with 2 confirmation gates |
+| `.claude/commands/qor-repo-release.md` | 10-step delivery orchestration with 2 confirmation gates |
 
 ### Section 4 Compliance
 
@@ -2425,7 +2425,7 @@ _Reality = Promise: Command Center Polish + LLM Health Monitoring substantiated.
 | 17 skill/agent/reference files: `.agent/staging/` → `.failsafe/governance/` | DONE |
 | 3 support files updated (calculate-session-seal.py, security-path-alert.json, session-seal.json) | DONE |
 | Circular dep fix: SkillRegistry ↔ SkillDiscovery re-exports removed | DONE |
-| `/ql-organize` Phase 6: Governance Document Location Audit added | DONE |
+| `/qor-organize` Phase 6: Governance Document Location Audit added | DONE |
 
 ### Socket.dev Compliance Fixes (Entry #182)
 

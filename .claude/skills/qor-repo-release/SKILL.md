@@ -8,13 +8,13 @@ allowed-tools: Read, Glob, Grep, Edit, Write, Bash
 
 ---
 name: ql-repo-release
-description: /ql-repo-release - Delivery Gate Orchestration
+description: /qor-repo-release - Delivery Gate Orchestration
 ---
 
-# /ql-repo-release - Delivery Gate Orchestration
+# /qor-repo-release - Delivery Gate Orchestration
 
 <skill>
-  <trigger>/ql-repo-release</trigger>
+  <trigger>/qor-repo-release</trigger>
   <phase>DELIVER</phase>
   <persona>Governor</persona>
   <output>Version bump, metadata sync, git tag, release pipeline trigger</output>
@@ -22,7 +22,7 @@ description: /ql-repo-release - Delivery Gate Orchestration
 
 ## Purpose
 
-Orchestrate the full local release workflow after `/ql-substantiate` seals a session. Transitions substantiated deliverables to production-ready releases with confirmation gates at every irreversible step.
+Orchestrate the full local release workflow after `/qor-substantiate` seals a session. Transitions substantiated deliverables to production-ready releases with confirmation gates at every irreversible step.
 
 ## Execution Protocol
 
@@ -71,7 +71,7 @@ Confirm the latest ledger entry is a SUBSTANTIATE seal. If not:
 
 ```
 ABORT
-Report: "No seal found. Run /ql-substantiate before releasing."
+Report: "No seal found. Run /qor-substantiate before releasing."
 ```
 
 ### Step 2: Run Pre-Flight
@@ -87,7 +87,7 @@ Additionally, verify:
 #### Skill files uncommitted check
 
 ```bash
-git diff --name-only -- .claude/commands/ql-*.md
+git diff --name-only -- .claude/commands/qor-*.md
 ```
 
 If any skill files are modified but not committed, warn:
@@ -134,7 +134,7 @@ Report: `vX.Y.Z -> vA.B.C (<level> bump)`
 
 ### Step 5: Author Release Metadata
 
-Invoke `/ql-document` in RELEASE_METADATA mode with the target version:
+Invoke `/qor-document` in RELEASE_METADATA mode with the target version:
 
 1. Read recent META_LEDGER entries (from last DELIVER or SUBSTANTIATE to current)
 2. Read SYSTEM_STATE.md for implementation summary
@@ -261,7 +261,7 @@ Two irreversible actions require explicit user confirmation:
 - **NEVER** commit `[RELEASE] vX.Y.Z` without confirmed preflight PASS (the commit-msg hook enforces this at the git layer)
 - **NEVER** release from a feature branch — must be on `main`
 - **NEVER** tag without pulling latest `main` first
-- **ALWAYS** use `/ql-document` for release metadata authoring
+- **ALWAYS** use `/qor-document` for release metadata authoring
 - **ALWAYS** run pre-flight twice (before and after metadata authoring)
 - **ALWAYS** use `[RELEASE] vX.Y.Z` commit message format
 - **ALWAYS** record the delivery in META_LEDGER

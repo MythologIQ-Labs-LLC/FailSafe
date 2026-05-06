@@ -1,14 +1,14 @@
 # FailSafe Governance
 
 ## SHIELD Lifecycle
-- Run `/ql-status` to check current governance state
+- Run `/qor-status` to check current governance state
 - Follow S→H→I→E→L→D: Bootstrap → Plan → Audit → Implement → Substantiate → Release
-- Never implement without a PASS verdict from /ql-audit
-- Never release without a session seal from /ql-substantiate
+- Never implement without a PASS verdict from /qor-audit
+- Never release without a session seal from /qor-substantiate
 
 ## Skills
-All governance skills are in `.claude/skills/ql-*/SKILL.md`.
-Agent definitions are in `.claude/agents/ql-*.md`.
+All governance skills are in `.claude/skills/qor-*/SKILL.md`.
+Agent definitions are in `.claude/agents/qor-*.md`.
 
 ## Rules
 - All writes are subject to EnforcementEngine (FailSafe Extension)

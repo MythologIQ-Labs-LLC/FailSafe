@@ -11,10 +11,10 @@ name: ql-substantiate
 description: S.H.I.E.L.D. Substantiation and Session Seal that verifies implementation against blueprint and cryptographically seals the session. Use when: (1) Implementation is complete, (2) Ready to verify Reality matches Promise, (3) Need to seal session with Merkle hash, or (4) Preparing to hand off completed work.
 ---
 
-# /ql-substantiate - Session Seal
+# /qor-substantiate - Session Seal
 
 <skill>
-  <trigger>/ql-substantiate</trigger>
+  <trigger>/qor-substantiate</trigger>
   <phase>SUBSTANTIATE</phase>
   <persona>Judge</persona>
   <output>Updated META_LEDGER.md with final seal, SYSTEM_STATE.md snapshot</output>
@@ -42,13 +42,13 @@ Read: .failsafe/governance/AUDIT_REPORT.md
 **INTERDICTION**: If no PASS verdict exists:
 ```
 ABORT
-Report: "Cannot substantiate without PASS verdict. Run /ql-audit first."
+Report: "Cannot substantiate without PASS verdict. Run /qor-audit first."
 ```
 
 **INTERDICTION**: If no implementation exists:
 ```
 ABORT
-Report: "No implementation found. Run /ql-implement first."
+Report: "No implementation found. Run /qor-implement first."
 ```
 
 ### Step 2.5: Version Validation (MANDATORY)
@@ -94,7 +94,7 @@ Read: All files in src/
 Compare: Against docs/ARCHITECTURE_PLAN.md file tree
 ```
 
-Template: `.claude/commands/references/ql-substantiate-templates.md`.
+Template: `.claude/commands/references/qor-substantiate-templates.md`.
 
 **Findings**:
 - **MISSING**: Planned but not created -> FAIL
@@ -131,7 +131,7 @@ Glob: tests/**/*.test.{ts,tsx,js}
 Read: Test files
 ```
 
-Template: `.claude/commands/references/ql-substantiate-templates.md`.
+Template: `.claude/commands/references/qor-substantiate-templates.md`.
 
 #### Visual Silence Verification (if frontend)
 ```
@@ -140,18 +140,18 @@ Grep: "background:" in src/**/*.{css,tsx}
 ```
 
 Check for violations:
-Template: `.claude/commands/references/ql-substantiate-templates.md`.
+Template: `.claude/commands/references/qor-substantiate-templates.md`.
 
 #### Console.log Artifacts
 ```
 Grep: "console.log" in src/**/*
 ```
 
-Template: `.claude/commands/references/ql-substantiate-templates.md`.
+Template: `.claude/commands/references/qor-substantiate-templates.md`.
 
 ### Step 4.5: Skill File Integrity Check
 
-If any skill files (`.claude/commands/ql-*.md`) were modified during this session:
+If any skill files (`.claude/commands/qor-*.md`) were modified during this session:
 
 1. List modified skill files from git diff
 2. For each modified skill:
@@ -180,7 +180,7 @@ Report: "Skill [name] missing required section: [section]. Fix before sealing."
 
 ### Step 5: Section 4 Razor Final Check
 
-Template: `.claude/commands/references/ql-substantiate-templates.md`.
+Template: `.claude/commands/references/qor-substantiate-templates.md`.
 
 ### Step 6: Sync System State
 
@@ -194,7 +194,7 @@ Glob: docs/**/*
 
 Create/Update `docs/SYSTEM_STATE.md`:
 
-Template: `.claude/commands/references/ql-substantiate-templates.md`.
+Template: `.claude/commands/references/qor-substantiate-templates.md`.
 
 ### Step 7: Final Merkle Seal
 
@@ -204,7 +204,7 @@ Reference implementation: `.claude/commands/scripts/calculate-session-seal.py`.
 
 Update `docs/META_LEDGER.md`:
 
-Template: `.claude/commands/references/ql-substantiate-templates.md`.
+Template: `.claude/commands/references/qor-substantiate-templates.md`.
 
 ### Step 8: Cleanup Staging
 
@@ -214,7 +214,7 @@ Preserve only the final AUDIT_REPORT.md (or archive it).
 
 ### Step 9: Final Report
 
-Template: `.claude/commands/references/ql-substantiate-templates.md`.
+Template: `.claude/commands/references/qor-substantiate-templates.md`.
 
 ### Step 9.5: Final Commit & Push
 
@@ -295,7 +295,7 @@ REPORT: "Session sealed. [Action taken: merged/PR created/branch only]"
 
 ### If Reality != Promise:
 
-Template: `.claude/commands/references/ql-substantiate-templates.md`.
+Template: `.claude/commands/references/qor-substantiate-templates.md`.
 
 ## Constraints
 

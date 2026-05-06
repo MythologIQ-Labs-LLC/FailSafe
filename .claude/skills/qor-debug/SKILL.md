@@ -8,10 +8,10 @@ user-invocable: true
 allowed-tools: Read, Glob, Grep, Edit, Write, Bash
 ---
 
-# /ql-debug - Diagnostic Fixer
+# /qor-debug - Diagnostic Fixer
 
 <skill>
-  <trigger>/ql-debug</trigger>
+  <trigger>/qor-debug</trigger>
   <phase>IMPLEMENT / SUBSTANTIATE / GATE</phase>
   <persona>Fixer</persona>
   <dispatch>
@@ -76,9 +76,9 @@ The Fixer produces a final diagnosis with:
 **Handoff rules:**
 
 - Straightforward fix: Fixer proposes exact code changes
-- Architectural changes needed: hand off to `/ql-plan` for Governor review
-- Implementation ready: hand off to `/ql-implement` for the Specialist
-- Test validation needed: hand off to `/ql-substantiate` for the Judge
+- Architectural changes needed: hand off to `/qor-plan` for Governor review
+- Implementation ready: hand off to `/qor-implement` for the Specialist
+- Test validation needed: hand off to `/qor-substantiate` for the Judge
 
 ## Constraints
 

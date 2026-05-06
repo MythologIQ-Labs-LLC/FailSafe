@@ -71,11 +71,11 @@ npm run compile
 
 This project uses QoreLogic governance:
 
-1. `/ql-status` - Check project state
-2. `/ql-plan` - Create implementation plans
-3. `/ql-audit` - Gate verification
-4. `/ql-implement` - Build with Section 4 Razor
-5. `/ql-substantiate` - Seal and merge
+1. `/qor-status` - Check project state
+2. `/qor-plan` - Create implementation plans
+3. `/qor-audit` - Gate verification
+4. `/qor-implement` - Build with Section 4 Razor
+5. `/qor-substantiate` - Seal and merge
 
 ## Questions?
 
@@ -83,4 +83,4 @@ Open a discussion or reach out to maintainers.
 
 ---
 
-_Licensed under MIT - see [LICENSE](LICENSE) for details._
+_Licensed under Apache License 2.0 - see [LICENSE](LICENSE) for details._

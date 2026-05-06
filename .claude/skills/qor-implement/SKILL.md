@@ -8,13 +8,13 @@ allowed-tools: Read, Glob, Grep, Edit, Write, Bash
 
 ---
 name: ql-implement
-description: Specialist Implementation Pass that translates gated blueprint into reality using Section 4 Simplicity Razor and TDD-Light methodology. Use when: (1) Implementing after PASS verdict from /ql-audit, (2) Building features from approved architecture plans, or (3) Creating code under KISS constraints.
+description: Specialist Implementation Pass that translates gated blueprint into reality using Section 4 Simplicity Razor and TDD-Light methodology. Use when: (1) Implementing after PASS verdict from /qor-audit, (2) Building features from approved architecture plans, or (3) Creating code under KISS constraints.
 ---
 
-# /ql-implement - Implementation Pass
+# /qor-implement - Implementation Pass
 
 <skill>
-  <trigger>/ql-implement</trigger>
+  <trigger>/qor-implement</trigger>
   <phase>IMPLEMENT</phase>
   <persona>Specialist</persona>
   <output>Source code in src/, tests in tests/</output>
@@ -42,14 +42,14 @@ Read: .failsafe/governance/AUDIT_REPORT.md
 
 ```
 ABORT
-Report: "Gate locked. Tribunal audit required. Run /ql-audit first."
+Report: "Gate locked. Tribunal audit required. Run /qor-audit first."
 ```
 
 **INTERDICTION**: If AUDIT_REPORT.md does not exist:
 
 ```
 ABORT
-Report: "No audit record found. Run /ql-audit to unlock implementation."
+Report: "No audit record found. Run /qor-audit to unlock implementation."
 ```
 
 ### Step 3: Blueprint Alignment
@@ -86,7 +86,7 @@ Verify import chain or update blueprint."
 ### Step 5: TDD-Light
 
 **Before writing any core logic**, create a minimal failing test.
-Template: `.claude/commands/references/ql-implement-patterns.md`.
+Template: `.claude/commands/references/qor-implement-patterns.md`.
 
 **Constraint**: Define exactly ONE success condition that proves Reality matches Promise.
 
@@ -105,22 +105,22 @@ Template: `.claude/commands/references/ql-implement-patterns.md`.
 ### Step 6: Precision Build
 
 Apply the Section 4 Razor to EVERY function and file.
-Checklist: `.claude/commands/references/ql-implement-patterns.md`.
+Checklist: `.claude/commands/references/qor-implement-patterns.md`.
 
 #### Code Patterns
 
 Reference code patterns:
-`.claude/commands/references/ql-implement-patterns.md`.
+`.claude/commands/references/qor-implement-patterns.md`.
 
 ### Step 7: Visual Silence (Frontend)
 
 For UI examples, see:
-`.claude/commands/references/ql-implement-patterns.md`.
+`.claude/commands/references/qor-implement-patterns.md`.
 
 ### Step 8: Post-Build Cleanup
 
 Final pass checklist:
-`.claude/commands/references/ql-implement-patterns.md`.
+`.claude/commands/references/qor-implement-patterns.md`.
 
 ### Step 9: Complexity Self-Check
 
@@ -145,7 +145,7 @@ Apply: Automatic splitting/flattening
 ### Step 10: Handoff
 
 Template:
-`.claude/commands/references/ql-implement-patterns.md`.
+`.claude/commands/references/qor-implement-patterns.md`.
 
 ### Step 10.5: Mark Blockers Complete
 

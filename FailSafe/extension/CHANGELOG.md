@@ -235,13 +235,13 @@ Cross-agent skill consolidation. All SHIELD governance skills migrated to modern
 
 ### Changed
 
-- **Skills migrated to SKILL.md format** — 17 SHIELD skills + 3 personas now use `.claude/skills/ql-*/SKILL.md` with YAML frontmatter.
-- **Agents separated** — 7 agent definitions moved to `.claude/agents/ql-*.md`. Claude Code loads these natively.
+- **Skills migrated to SKILL.md format** — 17 SHIELD skills + 3 personas now use `.claude/skills/qor-*/SKILL.md` with YAML frontmatter.
+- **Agents separated** — 7 agent definitions moved to `.claude/agents/qor-*.md`. Claude Code loads these natively.
 - **ModelAdapter output dirs corrected** — Claude (`.claude/skills/`), Codex (`.agents/skills/`), Gemini (`.gemini/skills/`), Copilot (`.github/skills/`), Cursor (`.cursor/rules/`).
 - **getOutputPath simplified** — Directory-based `{name}/SKILL.md` is default; only Cursor uses flat files.
-- **VSIX bundling de-complected** — Agents removed from bundle patterns. Directory-based skill bundling added for `skills/ql-*/SKILL.md`.
+- **VSIX bundling de-complected** — Agents removed from bundle patterns. Directory-based skill bundling added for `skills/qor-*/SKILL.md`.
 - **Scaffolding updated** — WorkspaceMigration targets `.claude/skills/` with parent directory name extraction.
-- **Antigravity restructured** — Genesis/Qorelogic → `skills/ql-*/SKILL.md` + `agents/`.
+- **Antigravity restructured** — Genesis/Qorelogic → `skills/qor-*/SKILL.md` + `agents/`.
 - **Stale duplicates removed** — `FailSafe/Claude/` (20 files) deleted; 12 quarantined skills cleaned up.
 - **`AGENTS.md` created** — Cross-agent root instruction file for Codex/Copilot/Cursor/Windsurf compatibility.
 
@@ -314,7 +314,7 @@ Incremental hotfix addressing Monitor and Command Center data parity issues disc
 
 ### Changed
 
-- **Governance doc storage** - All generated governance artifacts now stored in `.failsafe/governance/` (gitignored) instead of `.agent/staging/`. `/ql-organize` Phase 6 added for location compliance.
+- **Governance doc storage** - All generated governance artifacts now stored in `.failsafe/governance/` (gitignored) instead of `.agent/staging/`. `/qor-organize` Phase 6 added for location compliance.
 - **Circular dependency fix** - SkillRegistry ↔ SkillDiscovery re-export cycle eliminated via direct imports.
 
 ### Documentation
@@ -335,7 +335,7 @@ Incremental hotfix addressing Monitor and Command Center data parity issues disc
 - **Skill Discovery Tags** - Skills now carry normalized tags and source credit metadata. Console skill-scan extracts tags from frontmatter, filenames, and categories.
 - **Tag-Based Skill Filter** - Skills panel replaces category chips with a type-ahead tag filter with autocomplete suggestions and clear control.
 - **Governance Skill Cohesion** - All 19 QoreLogic skills now carry explicit next-step routing. Canonical skill routing table and proactive suggestion signals established.
-- **/ql-document Skill** - New documentation authoring skill with RELEASE_METADATA mode for automated release notes and GENERAL mode for standalone technical writing. Integrated into `/ql-repo-release` Step 5.
+- **/qor-document Skill** - New documentation authoring skill with RELEASE_METADATA mode for automated release notes and GENERAL mode for standalone technical writing. Integrated into `/qor-repo-release` Step 5.
 
 ### Changed
 
@@ -421,7 +421,7 @@ Incremental hotfix addressing Monitor and Command Center data parity issues disc
 ### Documentation
 
 - Added the Build "42" release note to the v4.2.1 release notes.
-- Added packaged-artifact inspection to the public release process and `/ql-repo-release`.
+- Added packaged-artifact inspection to the public release process and `/qor-repo-release`.
 
 ## [4.2.0] - 2026-02-27
 
@@ -562,7 +562,7 @@ Incremental hotfix addressing Monitor and Command Center data parity issues disc
 
 ### Added
 
-- New `/ql-repo-release` workflow for automated release discipline.
+- New `/qor-repo-release` workflow for automated release discipline.
 - `SentinelViewProvider` registration for consistent sidebar monitoring.
 - Bootstrap modules (`bootstrapCore`, `bootstrapGovernance`, etc.) for clean extension lifecycle.
 

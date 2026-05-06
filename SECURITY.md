@@ -58,7 +58,7 @@ FailSafe implements multiple security layers:
 - **CryptoService**: Cryptographic operations
 - **Merkle Ledger**: Tamper-evident audit trail
 
-All security-critical components require L3 risk grade and mandatory `/ql-audit` before changes.
+All security-critical components require L3 risk grade and mandatory `/qor-audit` before changes.
 
 ---
 _Thank you for helping keep FailSafe secure._

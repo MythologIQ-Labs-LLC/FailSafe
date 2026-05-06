@@ -133,22 +133,22 @@ case 'toggleGuide':
 ## Failure Entry #4
 
 **Date**: 2026-02-05T06:30:00Z
-**Verdict ID**: Entry #14 - GATE TRIBUNAL - /ql-status Backlog Enhancement
+**Verdict ID**: Entry #14 - GATE TRIBUNAL - /qor-status Backlog Enhancement
 **Failure Mode**: GHOST_PATH / ARCHITECTURAL_INCOHERENCE
 
 ### What Failed
 
-Blueprint for `/ql-status` Backlog & Blocker Display Enhancement (plan-ql-status-enhancement.md)
+Blueprint for `/qor-status` Backlog & Blocker Display Enhancement (plan-ql-status-enhancement.md)
 
 ### Why It Failed
 
 The Command Integration table (lines 118-127) claims 5 commands will update `BACKLOG.md`:
 
-- `/ql-plan` - Adds new items to Backlog
-- `/ql-audit` - Adds Security/Dev Blockers
-- `/ql-implement` - Marks completed items
-- `/ql-substantiate` - Verifies blockers cleared
-- `/ql-refactor` - May add Dev Blockers
+- `/qor-plan` - Adds new items to Backlog
+- `/qor-audit` - Adds Security/Dev Blockers
+- `/qor-implement` - Marks completed items
+- `/qor-substantiate` - Verifies blockers cleared
+- `/qor-refactor` - May add Dev Blockers
 
 However, the File Tree (lines 182-195) only specifies 3 modifications:
 
@@ -184,7 +184,7 @@ The rule: **Integration Table entries == File Tree modifications**
 
 **Option B (Narrow Scope)**: Reduce Command Integration to Phase A only:
 
-- Remove `/ql-implement`, `/ql-substantiate`, `/ql-refactor`, `/ql-plan` from table
+- Remove `/qor-implement`, `/qor-substantiate`, `/qor-refactor`, `/qor-plan` from table
 - Add note: "Additional command integrations deferred to Phase B"
 
 ---
@@ -1681,7 +1681,7 @@ plan-skill-consolidation-v2.md — Remediation of Entry #212 VETO. Fixed all 3 o
 
 ### Why It Failed
 
-1. **AGENT_SCAFFOLD_COLLISION**: The plan bundles agents (`agents/ql-*.md`) and skills (`skills/ql-*/SKILL.md`) into the same VSIX directory (`dist/extension/skills/`). The scaffolding code uses `path.basename(path.dirname(sourcePath))` to extract skill names. For agent files under `agents/`, ALL files produce `skillName="agents"` — a collision. Only 1 of 7 agent definitions is scaffolded; 6 are silently dropped. The surviving agent is placed at `.claude/skills/agents/SKILL.md` (a skill path) instead of `.claude/agents/ql-governor.md` (the correct agent path). Root cause: agents and skills are complected into a single bundling/scaffolding pipeline that assumes directory-based SKILL.md format for all entries.
+1. **AGENT_SCAFFOLD_COLLISION**: The plan bundles agents (`agents/qor-*.md`) and skills (`skills/qor-*/SKILL.md`) into the same VSIX directory (`dist/extension/skills/`). The scaffolding code uses `path.basename(path.dirname(sourcePath))` to extract skill names. For agent files under `agents/`, ALL files produce `skillName="agents"` — a collision. Only 1 of 7 agent definitions is scaffolded; 6 are silently dropped. The surviving agent is placed at `.claude/skills/agents/SKILL.md` (a skill path) instead of `.claude/agents/qor-governor.md` (the correct agent path). Root cause: agents and skills are complected into a single bundling/scaffolding pipeline that assumes directory-based SKILL.md format for all entries.
 
 2. **COVERAGE_GAP**: `FailSafe/Claude/` contains 20 duplicate files in identical Genesis/Qorelogic structure (parallel to `FailSafe/Antigravity/` but for Claude Code). The plan restructures Antigravity (Phase 2) and migrates `.claude/commands/` (Phase 1) but never mentions `FailSafe/Claude/` in any phase, affected files list, or open question. This leaves a 5th copy of the SHIELD skills untouched in a plan whose stated goal is "source ALL cumulative knowledge, de-duplicate."
 
@@ -1712,7 +1712,7 @@ plan-skill-consolidation-v1.md — Cross-Agent Skill Consolidation (3-phase plan
 
 1. **CLAUDE.md stale reference**: The plan deletes `.claude/commands/` and `.claude/commands/agents/` in Phase 1 but never updates `CLAUDE.md` (the root instruction file Claude Code reads on every session). Line 2 says "Follow the rules in .claude/commands/agents/ and .claude/commands/" — both paths would be deleted, misdirecting Claude Code to non-existent locations.
 
-2. **Phase ordering dependency**: Phase 2 updates `bundle.cjs` patterns to reference `skills/ql-*/SKILL.md` in Antigravity, but the Antigravity directory restructure from flat files to SKILL.md directories doesn't happen until Phase 3. Phase 2 would break bundling.
+2. **Phase ordering dependency**: Phase 2 updates `bundle.cjs` patterns to reference `skills/qor-*/SKILL.md` in Antigravity, but the Antigravity directory restructure from flat files to SKILL.md directories doesn't happen until Phase 3. Phase 2 would break bundling.
 
 3. **Scaffolding naming collision**: Phase 3 proposes `path.basename(sourcePath, ".md")` to derive skill names from bundled SKILL.md files. But `path.basename("ql-audit/SKILL.md", ".md")` returns `"SKILL"` for every file — all 17 skills would scaffold to `.claude/skills/SKILL/SKILL.md`, colliding into one file.
 

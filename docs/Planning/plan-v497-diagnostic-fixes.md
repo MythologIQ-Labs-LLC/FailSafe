@@ -16,7 +16,7 @@
 
 ## Open Questions
 
-None — root causes identified via `/ql-debug` four-layer analysis.
+None — root causes identified via `/qor-debug` four-layer analysis.
 
 ---
 

@@ -204,8 +204,8 @@ Major release. Public reveal of the FailSafe / FailSafe Pro product split. The v
 ### Changed
 
 - Cross-agent skill consolidation: 200+ files across 7 locations → canonical `.claude/skills/` + `.claude/agents/` + automated transpilation.
-- Skills migrated from flat `.claude/commands/ql-*.md` to directory-based `.claude/skills/ql-*/SKILL.md` with YAML frontmatter.
-- Agent definitions separated to `.claude/agents/ql-*.md` with subagent frontmatter.
+- Skills migrated from flat `.claude/commands/qor-*.md` to directory-based `.claude/skills/qor-*/SKILL.md` with YAML frontmatter.
+- Agent definitions separated to `.claude/agents/qor-*.md` with subagent frontmatter.
 - ModelAdapter output directories corrected for Claude, Codex, Gemini, Copilot, and Cursor.
 - VSIX bundling de-complected: agents removed from skill pipeline, directory-based patterns added.
 - Antigravity restructured from Genesis/Qorelogic to skills/agents layout.
@@ -282,7 +282,7 @@ Incremental hotfix for Monitor & Command Center parity. Further refinements fort
 - Skill Discovery now carries tags and source credit; Skills panel uses type-ahead tag filter with autocomplete.
 - Brainstorm, STT, and ideation modules refined for cleaner runtime behavior.
 - CI VSIX guardrails workflow consolidated to single-source build with proprietary content scan.
-- Governance skill lifecycle cohesion: 19 skills with next-step routing, canonical routing table, /ql-document authoring skill.
+- Governance skill lifecycle cohesion: 19 skills with next-step routing, canonical routing table, /qor-document authoring skill.
 
 ---
 
@@ -477,7 +477,7 @@ Incremental hotfix for Monitor & Command Center parity. Further refinements fort
 
 ### Added
 
-- **Release Discipline Enforcement** - New `/ql-repo-release` workflow artifact.
+- **Release Discipline Enforcement** - New `/qor-repo-release` workflow artifact.
 - **Sentinel Sidebar Monitoring** - Complete `SentinelViewProvider` and `SentinelTemplate`.
 - **Structural Decomposition** - Decomposed `main.ts` into specialized bootstrap modules forSection 4 Simplicity.
 
@@ -516,15 +516,15 @@ Incremental hotfix for Monitor & Command Center parity. Further refinements fort
 ### Added
 
 - **Gold Standard Repository Skills**
-  - `/ql-repo-audit` - Gap analysis against Gold Standard checklist
-  - `/ql-repo-scaffold` - Generate missing community files (CODE_OF_CONDUCT, CONTRIBUTING, SECURITY, GOVERNANCE)
-  - `/ql-repo-release` - Release discipline enforcement
+  - `/qor-repo-audit` - Gap analysis against Gold Standard checklist
+  - `/qor-repo-scaffold` - Generate missing community files (CODE_OF_CONDUCT, CONTRIBUTING, SECURITY, GOVERNANCE)
+  - `/qor-repo-release` - Release discipline enforcement
 - **Ambient Integration** - Repository governance hooks in existing commands
-  - `/ql-bootstrap` Step 2.5: Repository readiness check
-  - `/ql-plan` Step 4.5: Plan branch creation
-  - `/ql-audit` Pass 7 + Step 5.5: Repo governance audit
-  - `/ql-implement` Step 12.5: Implementation staging
-  - `/ql-substantiate` Step 9.5: Final staging & merge
+  - `/qor-bootstrap` Step 2.5: Repository readiness check
+  - `/qor-plan` Step 4.5: Plan branch creation
+  - `/qor-audit` Pass 7 + Step 5.5: Repo governance audit
+  - `/qor-implement` Step 12.5: Implementation staging
+  - `/qor-substantiate` Step 9.5: Final staging & merge
 - **GitHub API Integration** - `github-api-helpers.md` reference for gh CLI patterns
 - **Template Library** - 9 templates in `docs/conceptual-theory/templates/repo-gold-standard/`
 - **Self-Application** - FailSafe now has Gold Standard community files at root
@@ -561,13 +561,13 @@ Incremental hotfix for Monitor & Command Center parity. Further refinements fort
 
 - **BACKLOG.md Integration** - Unified source of truth for blockers, backlog, and wishlist
 - **7 Command Integrations**:
-  - `/ql-status` - Step 2.5 backlog check, Outstanding Items output
-  - `/ql-bootstrap` - Step 6.5 BACKLOG.md creation
-  - `/ql-audit` - Step 5.5 blocker registration on VETO
-  - `/ql-implement` - Step 10.5 mark blockers complete
-  - `/ql-substantiate` - Step 3.5 blocker verification
-  - `/ql-plan` - Step 3.5 register backlog items
-  - `/ql-refactor` - Step 5.5 register tech debt
+  - `/qor-status` - Step 2.5 backlog check, Outstanding Items output
+  - `/qor-bootstrap` - Step 6.5 BACKLOG.md creation
+  - `/qor-audit` - Step 5.5 blocker registration on VETO
+  - `/qor-implement` - Step 10.5 mark blockers complete
+  - `/qor-substantiate` - Step 3.5 blocker verification
+  - `/qor-plan` - Step 3.5 register backlog items
+  - `/qor-refactor` - Step 5.5 register tech debt
 
 ---
 

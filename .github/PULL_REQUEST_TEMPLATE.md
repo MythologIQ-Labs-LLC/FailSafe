@@ -24,8 +24,8 @@
 
 ## QoreLogic Compliance
 
-- [ ] `/ql-plan` created (if new feature)
-- [ ] `/ql-audit` PASS verdict (if L2/L3)
+- [ ] `/qor-plan` created (if new feature)
+- [ ] `/qor-audit` PASS verdict (if L2/L3)
 - [ ] Section 4 Razor applied (<=40 lines/function, <=250 lines/file)
 - [ ] No console.log statements in production code
 

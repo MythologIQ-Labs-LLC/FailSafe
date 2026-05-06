@@ -159,7 +159,7 @@ function Validate-ReliabilityHardening {
   $claudeSkillsRoot = Join-Path $repoRoot ".claude/skills"
   if (Test-Path $claudeSkillsRoot) {
     $qlImplementWorkflows = @(
-      ".claude/skills/ql-implement/SKILL.md"
+      ".claude/skills/qor-implement/SKILL.md"
     )
 
     foreach ($workflow in $qlImplementWorkflows) {
@@ -180,7 +180,7 @@ function Validate-ReliabilityHardening {
     }
 
     $qlSubstantiateWorkflows = @(
-      ".claude/skills/ql-substantiate/SKILL.md"
+      ".claude/skills/qor-substantiate/SKILL.md"
     )
 
     foreach ($workflow in $qlSubstantiateWorkflows) {
