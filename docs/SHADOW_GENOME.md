@@ -1927,4 +1927,262 @@ async function runRefreshStep(): Promise<QorLogicInstallInvocation>;
 
 The `createInstallSkillsHandler` closure becomes a ~25-line sequencer calling each helper with short-circuit checks on probe/pip errors. Re-run `/qor-audit` after amendment.
 
+---
+
+## VETO — 2026-05-06: v4.10.1 Pre-v5 Cleanup v1 (5 specification-drift / dependency placeholder findings)
+
+**Plan**: `.failsafe/governance/plans/plan-v4.10.1-pre-v5-cleanup.md`
+**Audit**: `.failsafe/governance/AUDIT_REPORT.md` (Entry #267)
+**Categories**: `specification-drift` (×4), `dependency-unjustified` (×1)
+
+### What Failed
+
+Five plan-text gaps:
+
+1. Voice-controller's new "unified status emit" referenced by name but its API (method, multiplicity, state-precedence rule, signal-translation map) never specified. A single-slot variant would replicate the same B129 bug being fixed elsewhere in the same plan.
+2. Voice-catalog source-of-truth declared simultaneously OPEN (in Open Questions Q1) and RESOLVED (in B127 step 7 hardcoded 12-language map).
+3. `'en-US'` final fallback removal in stt-engine.js with no replacement contract; `live-transcriber.js` told to "trust caller for non-null" but caller (stt-engine) lost its non-null guarantor.
+4. Whisper model-swap semantics flagged as Open Q2 ("confirmed acceptable in dialogue") but absent from B127 implementation steps. Settings-driven control, no specified side effect.
+5. `piper-tts-web` declared as `"^<latest>"` — `<latest>` is a placeholder, not a published version.
+
+### Why It Failed
+
+This plan was authored after a long collaborative dialogue (Q1 through Q14) covering substantial design surface (voice substrate, brainstorm UX, decomposition, three new Settings sections, severity-tiered toasts, configurable history, language auto-match, model picker, voice-catalog mapping, vendor strategy, etc.). The dialogue was exhaustive on user-facing decisions and architectural shape — but several **cross-module contracts** (controller→badge state subscription, store→engine swap reactivity, fallback chain ownership) were resolved verbally in the dialogue and never re-rendered into the plan's implementation steps.
+
+The Open Questions block was used as a parking lot for "decided in dialogue but flagged for visibility" — but the plan also wrote authoritative-sounding implementation steps for the same items, producing the contradiction in Findings 2 and 4.
+
+### Pattern to Avoid
+
+**SG-DialogueResidueUnrendered**: When a long collaborative-dialogue plan-authoring session resolves cross-module contracts verbally, those resolutions must be re-rendered as concrete implementation steps in the plan — not parked in Open Questions, not implied by other steps, not assumed-from-context. The plan file is the contract; the dialogue is its draft, not its addendum.
+
+A self-check pass before writing the plan file:
+
+1. List every cross-module API the plan introduces (e.g., `controller.addStateListener`, `controller.setLanguage`, `service.fetchSnapshot`).
+2. For each: where is its signature declared in the plan? If "implied by step X" or "covered in dialogue", upgrade to an explicit step with method name, parameter types, return type, multiplicity (single-slot vs. multi-subscriber), and lifecycle (when called, when invalidated).
+3. List every Open Question. For each: does any implementation step contradict its "open" status? If yes, resolve the contradiction in one direction.
+4. For every dependency added, every cited version is concrete (no `<latest>`, no `<version>`, no placeholder tokens).
+
+This pattern compounds with **SG-OrchestratorMonolith** (Entry #263): both stem from collaborative-dialogue authoring where the plan-file render lags the conversation's resolution depth. The mitigation is a structural plan-render pass after the dialogue, walking the Affected Files list against the dialogue transcript to surface unrendered contracts.
+
+### Remediation Required
+
+Amend `plan-v4.10.1-pre-v5-cleanup.md` per the 5 specific items in `.failsafe/governance/AUDIT_REPORT.md` §"Required Next Action":
+
+1. Add explicit `voice-controller` state-emission API: method name, multi-subscriber `addStateListener(fn)` mirroring B129's analyser cache-and-replay pattern, precedence rule (most-recent-active-wins), and the signal-translation table mapping engine outputs (`'downloading'`, `'loading'`, `'ready'`, `'speaking'`, `'idle'`, `'error'`, auto-stop, wake-word) to badge states (`idle | stt-loading | stt-listening | tts-speaking | error:<reason>`).
+2. Remove Q1 from Open Questions; the bundled-static-map decision in B127 step 7 stands.
+3. Specify the non-null language guarantee — recommend keeping a single `'en-US'` (or a `DEFAULT_STT_LANGUAGE` constant) fallback in stt-engine.js as the contract source.
+4. Add explicit Whisper-model-swap step under B127: store-subscription / settings-route handler triggers pipeline teardown; in-flight audio dropped; force-reload on next mic press; corresponding test in `stt-engine-multilingual.test.ts`.
+5. Replace `^<latest>` with a concrete pinned version (operator runs `npm view piper-tts-web` outside skill); document re-vendor policy.
+
+Re-run `/qor-audit` after amendments. Expected outcome: PASS.
+
+---
+
+## VETO — 2026-05-06: v4.10.1 Pre-v5 Cleanup v3 (B132 truncation feature data-flow gaps)
+
+**Plan**: `.failsafe/governance/plans/plan-v4.10.1-pre-v5-cleanup-v3.md`
+**Audit**: `.failsafe/governance/AUDIT_REPORT.md` (Entry #269)
+**Categories**: `specification-drift` (×2), `infrastructure-mismatch` (×1)
+
+### What Failed
+
+The v3 plan correctly addressed all 4 v2 findings (extraction modules for at-cap files, swapWhisperModel API enumeration). But three plan-text gaps in the B132 server-side-truncation-transparency feature surfaced:
+
+1. **Route-side pre-truncation** at `BrainstormRoute.ts:91-93` and `TransparencyRiskRoute.ts:36,39` truncates the label BEFORE invoking the service. Plan declares `BrainstormService.addNode` returns `{truncated, originalLength}` but the service can never see over-length input from the HTTP path, so the warning surface silently never fires.
+
+2. **Truncation marker render path** says "in onEvent/node-update path" but `onEvent` processes WebSocket events whose payload (`{nodes, edges}`) carries no `warnings`. Warnings only flow via HTTP response. Data flow from server detection to client marker render not traced.
+
+3. **`showStatusGated` parameter mismatch** — function defined with 5 params (`severity, text, color, showStatusFn, store`); called with 4 args in `brainstorm-export.js` (omits `store`). Severity gating silently bypasses at this call site.
+
+### Why It Failed
+
+The v1→v2→v3 SG-DialogueResidueUnrendered countermeasure pass caught earlier-iteration glue gaps (controller↔badge state API in v1, file-size budgets and swapWhisperModel in v2). But the v3 pass focused on the gaps the v2 audit flagged — extractions, model swap, file budgets — and didn't extend the same scrutiny to the B132 truncation feature glue, which had been carried forward from v1 unchanged.
+
+The B132 feature's data flow involves three coupling surfaces:
+- Route ↔ Service (truncation responsibility)
+- HTTP response ↔ WebSocket broadcast (warning propagation)
+- Caller ↔ notifications module (parameter threading for severity gating)
+
+None of these were verified end-to-end against existing code shape during plan-render. The plan's data-flow claims read as plausible-sounding sentences ("service returns truncated flag", "client reads warnings in onEvent path") but each contradicts the actual route+service+websocket+module shapes.
+
+### Pattern to Avoid
+
+**SG-DataFlowTracingGap**: When a plan introduces a new data flow (e.g., server detects condition → broadcasts/responds → client reacts), the plan-render must trace EACH step end-to-end against existing code:
+
+1. Where is the data first observed? (Specific file, specific line, specific function.)
+2. What is the existing shape of the surface that carries it forward? (HTTP response body schema, WebSocket payload shape, function parameter list.)
+3. Does the existing surface support the data being added, or does it require schema/shape changes?
+4. Where is the data ultimately consumed? (Specific render path, specific DOM mutation, specific UI surface.)
+5. For every intermediate hop: does the plan specify either "no change" (with verification that no change is required) or an explicit shape amendment?
+
+The plan-render checklist (mechanical):
+
+```
+For each new data field (e.g., "warnings"):
+  Origin: <file>:<line>      // where value is computed
+  Carrier 1: <surface>       // existing shape; is amendment needed?
+  Carrier 2: <surface>       // ditto
+  Sink: <file>:<line>        // where value is consumed
+  ∀ Carriers: existing shape supports field? Y/N
+    if N → plan must include explicit shape amendment step
+```
+
+This pattern compounds with **SG-DialogueResidueUnrendered** (#267) and **SG-AtCapAdditionBlindness** (#268): all three are post-dialogue plan-render gaps where the dialogue's design depth outruns the plan-render's structural accounting. Each iteration's countermeasure pass extended the structural-accounting scope:
+
+- v1→v2: catch missing API contracts (signature, multiplicity)
+- v2→v3: catch missing file-size budgets (`wc -l` table)
+- v3→v4: catch missing data-flow tracings (this pattern)
+
+The cumulative discipline is: render-time structural verification covers every cross-module artifact (API surface, file size, data flow) AGAINST the existing codebase shape, not just internal consistency.
+
+### Remediation Required
+
+Amend to v4:
+
+1. **Finding 1 fix**: Add steps to remove route-side pre-truncation in `BrainstormRoute.ts:91-93` and `TransparencyRiskRoute.ts:36, 39`; service owns truncation; service returns `{node, truncated, originalLength}`; route translates to `warnings` array. Update test description to assert on round-trip.
+
+2. **Finding 2 fix**: Pick a single data-flow path. Recommend amending WebSocket broadcast payload to include per-node `truncated` flag; `onEvent` reads it; sets `data-truncated`. Update §B132 step 4 + Phase 1 affected files (BrainstormRoute.ts must explicitly amend broadcast payload, not just response shape) + test description.
+
+3. **Finding 3 fix**: Update `exportBrainstormJSON(showStatusFn, store)` signature; call site passes `store`. Verify all `showStatusGated` calls in the plan have consistent arity.
+
+4. **Add a Data-Flow Tracing table** to v4 plan top-matter (per SG-DataFlowTracingGap countermeasure):
+
+| Field | Origin | Carrier 1 | Carrier 2 | Sink | Shape OK? |
+|---|---|---|---|---|---|
+| `warnings` | service.addNode | HTTP response `{node, warnings}` | (terminal) | brainstorm.js toast | YES (after amend) |
+| `truncated` (per-node) | service.addNode | HTTP response | WebSocket `brainstorm.update` payload | brainstorm-graph.js onEvent | YES (after amend) |
+
+Re-run `/qor-audit` after amendments. Expected outcome: PASS.
+
+---
+
+## VETO — 2026-05-06: v4.10.1 Pre-v5 Cleanup v2 (Razor overage on three at-cap files)
+
+**Plan**: `.failsafe/governance/plans/plan-v4.10.1-pre-v5-cleanup-v2.md`
+**Audit**: `.failsafe/governance/AUDIT_REPORT.md` (Entry #268)
+**Categories**: `razor-overage` (×3), `specification-drift` (×1)
+
+### What Failed
+
+The v2 plan correctly addressed all 5 v1 findings (state-emission API, voice-catalog Q1, en-US fallback, model-swap behavior, `^<latest>` placeholder). But the plan added substantive functionality to three files already at or near the 250-line razor cap WITHOUT specifying any extraction or trimming:
+
+- `stt-engine.js` (248L) + ~22L additions → estimated 270L
+- `prep-bay.js` (248L) + ~5-8L additions → estimated 253-256L
+- `brainstorm-graph.js` (231L) + ~25L additions → estimated 256L
+
+Plus a residue from the v1 Finding 4 fix: `controller.swapWhisperModel` is the actual mechanism for model-swap (since `StateStore` has no `subscribe` method per `state.js`), but the v2 §step 9 code block presents `store.subscribe?.` as primary and names `swapWhisperModel` only in a parenthetical fallback. The method isn't enumerated in §step 8's public API list.
+
+### Why It Failed
+
+**Razor-overage**: The Governor's v2 dialogue focused on resolving the v1 findings about API surface, fallback contracts, and version pinning — all real and important. The dialogue did not include a file-size accounting pass against the razor caps. Three of the files involved happened to be sitting AT or near the cap pre-existing-condition. The v1 audit (Entry #267) noted this risk in passing for ConsoleServer.ts (acknowledging the pre-existing 5.5× overage as out-of-scope) but did not call out the at-cap files in the Brainstorm UX surface — those quietly absorbed the additions and broke the cap.
+
+**SwapWhisperModel API gap**: The v1 Finding 4 fix added `store.subscribe?.` as the primary mechanism with a fallback sentence. This is graceful-fallback coding, but it conflates "what the plan presents as primary" with "what the codebase actually supports". The fallback IS the mechanism on this codebase; presenting it as a fallback creates the perception that subscribe is the contract when subscribe doesn't exist.
+
+### Pattern to Avoid
+
+**SG-AtCapAdditionBlindness**: When a plan declares additions to a file already within 10 lines of the razor cap, the plan must either (a) include an explicit extraction step that pulls existing code out to a sibling helper module, restoring headroom for the additions; or (b) include an explicit trimming step naming the lines or methods being removed; or (c) explicitly waive the cap with rationale (rarely valid). The plan-render step must include a file-size budget table:
+
+| File | Current LoC | Cap | Plan adds | Net | Status |
+|---|---|---|---|---|---|
+| (file) | (current) | 250 | (delta) | (current+delta) | OK / VETO-target |
+
+This table is mechanical to produce (`wc -l` per affected file + a per-step LoC estimate) and would have caught all three v2 razor findings before the plan was finalized.
+
+This pattern compounds with **SG-DialogueResidueUnrendered** (Entry #267) and **SG-OrchestratorMonolith** (Entry #263): all three are post-dialogue plan-render gaps where the dialogue's design depth outruns the plan-render's structural accounting. The mitigation is a structural "render-time razor budget" pass — not just listing affected files, but tabulating their size budgets.
+
+**SG-DeadCodePrimaryPath**: When a plan presents a code mechanism as primary that isn't supported by the existing codebase (e.g., `store.subscribe?.` when StateStore has no subscribe), even with a graceful-fallback sentence, the plan reads as if the primary mechanism is the contract. The plan-render must verify that every cited API ON the existing codebase is reachable; missing APIs either need to be added explicitly as a new affected file, or removed from the code block in favor of the actual mechanism. Optional chaining is for runtime defense, not specification clarity.
+
+### Remediation Required
+
+Amend to v3:
+
+1. **Add explicit extraction steps** for the three at-cap files:
+   - `whisper-pipeline.js` (new) — extract `loadPipeline`-related logic + retry from `stt-engine.js`
+   - `modal-visualizer.js` (new) — extract `_wireModalVisualizer` + `_drawModalVisualizer` from `prep-bay.js`
+   - `brainstorm-export.js` (new) — extract `exportJSON` + filename builder from `brainstorm-graph.js`
+
+2. **Add file-size budget table** to v3 plan top-matter showing post-plan size for each modified file.
+
+3. **Add `controller.swapWhisperModel(newModelId)`** to §step 8 public API enumeration with full method signature, behavior contract (calls `stt.teardownPipeline()`, emits state `'idle'`, idempotent), and Settings-UI binding sequence (`voice-settings.js` change handler calls `store.set` THEN `controller.swapWhisperModel`). Drop the dead-code `store.subscribe?.` block from §step 9.
+
+4. **Add matching test files** for each extracted helper.
+
+Re-run `/qor-audit` after amendments. Expected outcome: PASS.
+
+---
+
+## VETO — 2026-05-06: v4.10.1 Pre-v5 Cleanup v4 (Canvas DOM accessor doesn't exist for truncation marker)
+
+_**Status**: `addressed_pending` 2026-05-06 — covered by `.failsafe/governance/REMEDIATE_PROPOSAL.md`. Full `addressed: true` flip pending operator-driven `/qor-audit reviews-remediate:.failsafe/governance/REMEDIATE_PROPOSAL.md` PASS or operator-explicit application of the proposal's Part 3 (plan split + four verification sections installed in /qor-plan)._
+
+
+**Plan**: `.failsafe/governance/plans/plan-v4.10.1-pre-v5-cleanup-v4.md`
+**Audit**: `.failsafe/governance/AUDIT_REPORT.md` (Entry #270)
+**Categories**: `infrastructure-mismatch` (×1)
+
+### What Failed
+
+The v4 plan correctly fixed all 3 v3 findings (route pre-truncation removed, data-flow path specified, parameter threading corrected). The Data-Flow Tracing table was added per SG-DataFlowTracingGap, tracing 5 fields end-to-end across origin/carrier/sink. But one finding remained: the chosen client-side sink mechanism (`canvas.getNodeElement(id).setAttribute('data-truncated', 'true')`) is incompatible with the actual rendering technology.
+
+`BrainstormCanvas` (line 26 of `brainstorm-canvas.js`) wraps `3d-force-graph`, which renders nodes as Three.js meshes (3D mode) or HTML5 Canvas drawings (2D mode) — they are **not DOM elements per node**. There is no `getNodeElement(id)` method, none can meaningfully be added (the underlying nodes don't exist as DOM), and the CSS rule `[data-truncated="true"]::after { content: ' (truncated)'; }` matches no element. The plan's whole client-side render path was mechanically incapable of producing visible output.
+
+The test `brainstorm-truncation-warning.test.ts` mocked `getNodeElement`, giving false confidence — the test would PASS while the production behavior silently failed.
+
+### Why It Failed
+
+The Data-Flow Tracing table from v3→v4 verified that each new field (e.g., `truncated`) had a defined origin, a verified carrier surface (HTTP response shape, WebSocket broadcast payload), and a named sink. But **the discipline did not extend to verifying that the sink's API supports the consumption pattern**. The Tracing table named the sink as `mergeNodes propagates to canvas node DOM via data-truncated attribute` — which is structurally a valid sentence but not actually executable on this codebase's rendering library.
+
+The four-deep recurrence pattern across iterations:
+
+| Iteration | Caught | Missed |
+|---|---|---|
+| v1 | (initial) | Cross-module API contracts (state emitter, swap method) |
+| v2 | API contracts | File-size budgets at-cap |
+| v3 | File budgets | Data-flow tracing through carriers |
+| v4 | Data-flow tracing | Sink-mechanism API verification |
+
+Each iteration's countermeasure caught the previous gap class, but exposed a new one. The progression is from "is the surface specified?" → "is the surface sized correctly?" → "does the surface carry the data?" → "does the consuming surface support the consumption pattern?"
+
+### Pattern to Avoid
+
+**SG-SinkMechanismVerificationGap**: When a plan's Data-Flow Tracing table names a sink, the sink mechanism must be verified against the consuming module's actual API — not just that the field arrives at the consumer. The verification asks: "does the consumer have an API that accepts this consumption pattern, and what's its signature?"
+
+Refinement to the SG-DataFlowTracingGap table: add a column.
+
+| Field | Origin | Carrier 1 | Carrier 2 | Sink | **Sink mechanism verified?** | Shape OK? |
+|---|---|---|---|---|---|---|
+| (field) | (file:line) | (surface) | ... | (file:line) | **Y/N — name the consumer API; cite line if existing** | Y/N |
+
+When **Sink mechanism verified = N**, the plan must add an explicit step naming either (a) the existing API used or (b) the new API added. No hand-wave hedge ("if absent, a tiny new method on the canvas wrapper") — verification is a binary grep check.
+
+This pattern compounds with **SG-DataFlowTracingGap** (#269), **SG-AtCapAdditionBlindness** (#268), and **SG-DialogueResidueUnrendered** (#267): all four are post-dialogue plan-render gaps where structural verification has been progressively extended. The cumulative discipline is now:
+
+1. Every cross-module API contract specified end-to-end (signatures, multiplicity, lifecycle) — caught by v2 pass
+2. Every modified file's size accounted in budget table — caught by v3 pass
+3. Every new data field traced origin→carrier→sink — caught by v4 pass
+4. Every sink's API verified to support the consumption pattern — caught here, applied in v5+
+
+### Remediation Required
+
+Amend to v5:
+
+1. **Replace §B132 step 4's `mergeNodes` data-truncated loop** with an amendment to `brainstorm-canvas.js:65`'s `.nodeLabel(...)` accessor:
+   ```js
+   .nodeLabel(node => {
+     const label = escapeHtml(node.label);
+     return node.truncated ? `${label} (truncated)` : label;
+   })
+   ```
+   The library reads the accessor on every render frame and presents the result in its native tooltip overlay on hover. No DOM mutation needed; `truncated` flag arrives via `setNodes` (existing path) and is consumed by the accessor.
+
+2. **Drop §B132 step 6** (CSS rule for `[data-truncated="true"]::after`) — inoperable on this rendering stack.
+
+3. **Update `brainstorm-truncation-warning.test.ts`** Client onEvent assertion: replace `canvas.getNodeElement → setAttribute` mock chain with a direct test of the `nodeLabel` accessor. Given a node `{label: 'foo', truncated: true}`, the accessor returns `'foo (truncated)'`; with `truncated: false` or absent, returns `'foo'` (escaped).
+
+4. **Add `brainstorm-canvas.js`** to Phase 1 Affected Files (MODIFIED) — one-line accessor change.
+
+5. **Optionally**: add a "Sink mechanism verified" column to v5's Data-Flow Tracing table per the new SG-SinkMechanismVerificationGap countermeasure. Each row's cell either cites an existing API (`brainstorm-canvas.js:65 .nodeLabel()`) with a Y, or names a new API with a corresponding affected-file entry.
+
+Re-run `/qor-audit` after amendments. Expected outcome: PASS.
+
 
