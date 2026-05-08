@@ -33,7 +33,8 @@ const ITEM: MarketplaceItem = {
 } as MarketplaceItem;
 
 function withTempHome(action: (home: string) => Promise<void> | void): Promise<void> {
-  return new Promise(async (resolve, reject) => {
+  return new Promise<void>((resolve, reject) => {
+    (async () => {
     const home = fs.mkdtempSync(path.join(os.tmpdir(), 'mph-i-'));
     const prevHome = process.env.HOME;
     const prevUser = process.env.USERPROFILE;
@@ -48,6 +49,7 @@ function withTempHome(action: (home: string) => Promise<void> | void): Promise<v
       if (prevUser === undefined) delete process.env.USERPROFILE; else process.env.USERPROFILE = prevUser;
       fs.rmSync(home, { recursive: true, force: true });
     }
+    })();
   });
 }
 

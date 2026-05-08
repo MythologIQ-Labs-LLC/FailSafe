@@ -75,7 +75,7 @@ suite('v5 documentation coherence', () => {
     assert.match(changelog, /##\s+\[5\.0\.0\]/);
     // Find the v5.0.0 section explicitly — it may not be the first if newer
     // versions (e.g., 5.1.0) have been stamped above it.
-    const v5Match = changelog.match(/##\s+\[5\.0\.0\][\s\S]*?(?=^##\s+\[|\Z)/m);
+    const v5Match = changelog.match(/##\s+\[5\.0\.0\][\s\S]*?(?=^##\s+\[|$)/m);
     assert.ok(v5Match, 'expected to find ## [5.0.0] section');
     const v5Section = v5Match[0];
     assert.match(v5Section, /qor-logic/i);
