@@ -93,6 +93,31 @@ Use existing code as foundation for plan. Identify:
 - Test structure
 - Integration points
 
+### Step 2.5: Verify Cited Infrastructure (MANDATORY)
+
+Before writing the plan file, verify every path, symbol, dependency, script, and convention the plan will cite. Each item gets a verification token derived from a concrete command's actual output.
+
+**Why this exists** — `SG-PlanInfrastructureVerificationGap` (META_LEDGER Entry #287, four prior recurrences: #262, #270, #285, #286) for existence-class; `SG-PlanFitnessVerificationGap` (Entry #290, three recurrences: #270, #288, #289) for sink-mechanism class. Plans authored against a mental model of the repo, not the actual repo, ship infrastructure-mismatch findings to `/qor-audit` and consume cycles. The verification tokens force grep/git-log/ls evidence into the plan body so the audit gate can grep-check it mechanically.
+
+**Token vocabulary** (one of four per row; some rows carry two tokens — file-level + intra-file):
+
+| Token | When | Verification command shape | Pass condition |
+|---|---|---|---|
+| `NEW-VERIFIED` | Path/symbol/dep is being introduced | `git log -- <path>` OR `grep <symbol> <related-files>` OR `ls <path>` | command returns empty / no-match / no-such-file |
+| `MODIFIED-VERIFIED` | Path/symbol exists today and plan changes it | `git log -- <path>` OR `grep <symbol> <file>` | command returns non-empty / matches / file exists |
+| `EXISTING-VERIFIED` | Plan reuses without modifying (existing dep, script, convention) | same as MODIFIED, but plan body declares "REUSE" | command returns non-empty; documents intentional reuse |
+| `FITNESS-VERIFIED` | Plan cites a **route, function, method, or symbol that lives inside a file** (additional row beyond the file-level row) | `grep '<exact-cited-shape>' <file>` returns non-empty | grep matches |
+
+**FITNESS-VERIFIED is required** when the plan cites:
+- An HTTP route path (e.g., `/api/skills`, `/api/transparency`)
+- A function or method name to be called by tests (e.g., `controller.connect()`, `service.fetchSnapshot()`)
+- A class field or property accessed by tests (e.g., `consoleServer.wsManager`)
+- A symbol/identifier on which downstream tests rely
+
+File-level token alone confirms the file is present. FITNESS-VERIFIED additionally confirms the cited shape exists *inside* the file with the asserted name. Without FITNESS, plans can pass existence-class lint while citing invented or typo'd routes (the failure shape that produced Entry #289).
+
+**Discipline**: every Affected Files row carries at least one file-level token. Rows that cite an intra-file shape additionally carry a FITNESS row. No untokened rows; no token without a cited command. The auditor at `/qor-audit` Step 3 (Infrastructure Alignment Pass) re-runs the cited commands; mismatches trip a binding `infrastructure-mismatch` VETO.
+
 ### Step 3: Create Plan File
 
 Create plan markdown file with specific requirements:
@@ -115,8 +140,11 @@ Create plan markdown file with specific requirements:
 
 ### Affected Files
 
-- [file path 1] - [concise change summary]
-- [file path 2] - [concise change summary]
+| Path | Op | Verification command + result | Token |
+|---|---|---|---|
+| `path/to/file.ts` | NEW | `git log -- path/to/file.ts` returns empty | NEW-VERIFIED |
+| `path/to/existing.ts` | MODIFIED | `git log -- path/to/existing.ts` shows commit `abc123` | MODIFIED-VERIFIED |
+| `package.json` devDep `foo@^1.2.3` | EXISTING-USE | `grep '"foo"' package.json` shows `"foo": "^1.2.3"` | EXISTING-VERIFIED |
 
 ### Changes
 
@@ -124,7 +152,9 @@ Create plan markdown file with specific requirements:
 
 ### Unit Tests
 
-- [test file path] - [what it tests, why important]
+| Test path | Op | Verification command + result | Token |
+|---|---|---|---|
+| `src/test/foo.test.ts` | NEW | `ls src/test/foo.test.ts` returns no such file | NEW-VERIFIED |
 ```
 
 #### Plan Requirements
@@ -133,7 +163,8 @@ Create plan markdown file with specific requirements:
 - **Incremental phases** - 2-3 logical phases that stack on each other
 - **Well-typed interfaces** - Self-documenting, self-consistent with surrounding code
 - **Unit test descriptions** - Grouped with relevant phases
-- **Affected files summary** - At top of each phase
+- **Affected files summary** - At top of each phase, in the verification-token table format
+- **Every Affected Files row carries a verification token** - per Step 2.5
 
 ### Step 3.5: Register Backlog Items
 
@@ -207,6 +238,11 @@ Before finalizing, ensure:
 - [ ] Open questions are clearly flagged
 - [ ] No backwards compatibility concerns
 - [ ] No concluding errata sections
+- [ ] Every Affected Files row carries a file-level verification token (`NEW-VERIFIED` / `MODIFIED-VERIFIED` / `EXISTING-VERIFIED`) per Step 2.5
+- [ ] Every row that cites a route/function/method/symbol *inside* a file additionally carries a `FITNESS-VERIFIED` row backed by `grep '<exact-cited-shape>' <file>` returning non-empty
+- [ ] Every cited verification command is concrete and re-runnable (`git log --` / `grep` / `ls`) — auditor will re-run them
+- [ ] No token without a cited command; no row without a token
+- [ ] Sweep every `/api/...` mention, every cited function name, every cited method or property — confirm each has a FITNESS-VERIFIED row
 
 ## Success Criteria
 
@@ -222,9 +258,13 @@ A reader unfamiliar with code should be able to:
 - **NEVER** worry about backwards compatibility (prefer streamlined, clean codebase)
 - **NEVER** add concluding errata (future considerations belong in next plan)
 - **NEVER** include exploration steps (do research before writing plan)
+- **NEVER** declare a path/symbol/dep NEW without running the verification command and confirming absence
+- **NEVER** declare a path/symbol/dep MODIFIED without running the verification command and confirming presence
+- **NEVER** cite an API path, route, function name, method name, class field, or symbol without an accompanying `FITNESS-VERIFIED` row showing the grep returns non-empty against the implementation file (Entry #290 R2-bis)
 - **ALWAYS** flag open questions at TOP of plan
 - **ALWAYS** group unit tests with relevant phases
 - **ALWAYS** prioritize SIMPLE over EASY
+- **ALWAYS** include a verification token on every Affected Files row (Step 2.5)
 
 ## Integration with QoreLogic
 

@@ -1858,6 +1858,8 @@ Amend plan Phase 2 extraction list with correct method names: `renderSentinel()`
 
 ## VETO — 2026-05-05: v5.0.0 Round 2 Install UX (plan vs current code drift)
 
+_**Status**: `addressed_pending` 2026-05-07 — covered by `.failsafe/governance/REMEDIATE_PROPOSAL_plan-infrastructure-verification.md` R1 (verification-token discipline in `/qor-plan`). Full `addressed: true` flip pending operator-driven `/qor-audit reviews-remediate:.failsafe/governance/REMEDIATE_PROPOSAL_plan-infrastructure-verification.md` PASS._
+
 **Plan**: `.failsafe/governance/plans/plan-v5-round2-install-ux.md`
 **Audit**: `.agent/staging/AUDIT_REPORT.md` (Entry #262)
 **Categories**: `infrastructure-mismatch`, `macro-architecture`, `specification-drift`
@@ -2209,4 +2211,318 @@ Re-run `/qor-audit` after amendments. Expected outcome: PASS.
 
 **Memory**: `feedback_feature_index_every_cycle.md`.
 
+
+
+
+---
+
+## SG-InfrastructureMismatch (recurring) — plan-monitor-coherence-and-browser-verification (2026-05-07)
+
+_**Status**: `addressed_pending` 2026-05-07 — covered by `.failsafe/governance/REMEDIATE_PROPOSAL_plan-infrastructure-verification.md` R1+R2+R3+R4 (verification-token discipline + node-runnable lint port + doctrine update + plan amendment). Full `addressed: true` flip pending operator-driven `/qor-audit reviews-remediate:.failsafe/governance/REMEDIATE_PROPOSAL_plan-infrastructure-verification.md` PASS._
+
+**Category**: SG-InfrastructureMismatch (Phase 37 V10-class)
+**Severity**: 3 (cycle-count threshold breached — 4th recurrence in 72h)
+**Cycle position**: fourth recurrence in active sub-chain (Entry #262 install-UX, Entry #270 sink-mechanism sub-class, Entry #285 release-tool divergence, Entry #286 this).
+
+**Surface**: `plan-monitor-coherence-and-browser-verification.md` Phase 2 declared NEW: `playwright.config.ts`, `@playwright/test` devDependency, `playwright/` directory, `test:browser`/`test:browser:ui` scripts. All five surfaces already existed in the repo:
+- `FailSafe/extension/playwright.config.ts` — committed in `8a9f5eb` (v2.0.1 reorg); current `testDir: 'src/test/ui'`.
+- `@playwright/test ^1.49.1` — present in `package.json`.
+- `src/test/ui/*.spec.ts` — established convention; 5 specs already present (`compact-ui`, `popout-ui`, `user-stories`, `monitor-shield-progression`, `monitor-staleness`).
+- `test:ui` / `test:e2e` scripts — already invoke Playwright.
+
+**Mechanism**: Plan author wrote Phase 2 without running `git log -- playwright.config.ts`, `grep -E "playwright" FailSafe/extension/package.json`, or `ls FailSafe/extension/src/test/ui/`. The same discipline gap as Entry #285 finding 3 (no `git tag --list "v5*"` before bumping to v5.1.0).
+
+**Why this matters**: implementing the plan as-written would create a parallel/divergent Playwright surface (two configs, two dependency declarations, two directory conventions). This is exactly the `release-tooling-divergence` pattern Entry #285 flagged at finding 3. Repeating the structural failure in the remediation cycle is the worst-case shape.
+
+**Countermeasure**: `/qor-plan` skill must include a pre-write "verify cited infrastructure" step. Mandatory grep/ls/git-log against the actual repo for every NEW declaration before the plan artifact lands. Pre-audit lint at `/qor-audit` Step 0.6 (`plan_grep_lint`) would catch this in active runtime — currently no-op in degraded `.qor/` mode.
+
+**Three-strikes rule**: if the amended plan re-vetoes on `infrastructure-mismatch`, the legal next action is `/qor-remediate`, not another `/qor-plan` iteration. The pattern is upstream of any individual plan; remediation must address the discipline, not the artifact.
+
+**Filed upstream**: tracked via Qor-logic#41 (per-feature TDD discipline) — propose extending to "per-claim infrastructure verification."
+
+
+---
+
+## SG-PlanInfrastructureVerificationGap — gate-loop classification (2026-05-07)
+
+_**Status**: `addressed_pending` 2026-05-07 — covered by `.failsafe/governance/REMEDIATE_PROPOSAL_plan-infrastructure-verification.md` R1 (root-cause discipline install). Full `addressed: true` flip pending operator-driven `/qor-audit reviews-remediate:...` PASS._
+
+**Category**: process pattern (`gate-loop` per `/qor-remediate` Step 2 classification)
+**Severity**: 4 (escalated — fourth same-class VETO in active sub-chain)
+**Detected**: 2026-05-07, post-Entry-#286 audit, during `/qor-remediate` Step 2 pattern matching
+
+### What Failed
+
+Four consecutive plans in the active B199 sub-chain failed at `/qor-audit` Step 3 Infrastructure Alignment Pass on the same root mechanism — declared NEW infrastructure that already existed, OR cited MODIFIED infrastructure without verifying current state. The four ledger entries:
+
+| Entry | Plan | Mismatch instance |
+|---|---|---|
+| #262 | plan-v5-round2-install-ux.md | `outputChannel` / `setScaffoldCallback` / `Plan A Phase 3 wiring` named without grep-verifying ownership |
+| #270 | plan-v4.10.1-pre-v5-cleanup-v4.md | `canvas.getNodeElement(id)` cited as sink; rendering library has no DOM-per-node API |
+| #285 | v5.1.0 release-readiness | `git tag --list "v5*"` empty; bumped to v5.1.0 over inconsistent v5.0.0 baseline |
+| #286 | plan-monitor-coherence-and-browser-verification.md | `playwright.config.ts`, `@playwright/test`, `playwright/` dir, `test:browser` declared NEW; all already exist |
+
+### Why It Failed
+
+Each of the four prior remediation cycles installed a structural verification discipline (API contracts, file-size budgets, data-flow tracing, sink-mechanism API) — but none addressed the earliest, simplest verification step: **before declaring X NEW, confirm X does not already exist**. Plan authors wrote against a mental model of the repo, not against the actual repo. Three of four entries occurred in degraded `.qor/` runtime mode where pre-audit lint (`plan_grep_lint.py`) ran no-op.
+
+### Pattern to Avoid
+
+**SG-PlanInfrastructureVerificationGap**: Plan authoring without per-row verification tokens (`NEW-VERIFIED` / `MODIFIED-VERIFIED` / `EXISTING-VERIFIED`) on the Affected Files table. Every NEW declaration MUST cite the absence-verification command (`git log --` returns empty, `grep` no-match, `ls` no-such-file). Every MODIFIED declaration MUST cite the presence-verification command. Auditor mechanically grep-checks the verification commands at `/qor-audit` Step 3.
+
+### Three-strikes routing record
+
+This is the official three-strikes routing trigger for `infrastructure-mismatch`. Per `qor/references/doctrine-governance-enforcement.md` §10.4, the next plan in queue does NOT receive another `/qor-plan` iteration on this discipline — `/qor-remediate` runs first, lands R1+R2+R3, THEN the next plan iterates with the discipline installed.
+
+### Remediation
+
+See `.failsafe/governance/REMEDIATE_PROPOSAL_plan-infrastructure-verification.md`:
+- R1 — `/qor-plan` skill text adds verification-token discipline
+- R2 — `plan-grep-lint.cjs` node-runnable variant (closes degraded-mode gap)
+- R3 — doctrine update with cumulative discipline list
+- R4 — amend Entry #286's failed plan after R1 lands
+
+### Filed upstream
+
+Tracked via Qor-logic#42 (proposed) — "Plan authoring requires per-row infrastructure verification tokens; pre-audit lint runs in node for non-python deployments."
+
+
+---
+
+## SG-SinkMechanismVerificationGap (recurring, 2nd instance) — plan-monitor-coherence-and-browser-verification v2 (2026-05-07)
+
+_**Status**: `addressed_pending` 2026-05-08 — covered by `.failsafe/governance/REMEDIATE_PROPOSAL_plan-fitness-verification.md` R2-bis (FITNESS-VERIFIED token class + lint enforcement). Full `addressed: true` flip pending operator-driven `/qor-audit reviews-remediate:.failsafe/governance/REMEDIATE_PROPOSAL_plan-fitness-verification.md` PASS._
+
+**Category**: SG-SinkMechanismVerificationGap (Entry #270 lineage)
+**Severity**: 2 (second occurrence of this sub-class)
+**Detected**: 2026-05-07, Entry #288 audit (re-audit of v2-amended plan)
+
+### What Failed
+
+Plan v2 resolved Open Q2 by citing `FailSafe/extension/src/test/ui/helpers/serveCompactUI.ts` as the fixture for "Phase 2 specs to boot ConsoleServer in-process." The helper's docstring says it "mimics the FailSafe ConsoleServer **just enough for the compact Monitor UI to render**." Route handlers: `/api/hub` returns `currentHub` JSON; `/api/*` (catch-all) returns `{}`; static files served from `roadmap/ui` directory.
+
+The cited fixture cannot deliver the data 4-5 of the 7 Phase 2 specs assert against:
+- FX-BROWSER-VERIFY-SKILLS asserts catalog tag-filter coherence — no catalog from `/api/*` → `{}`
+- FX-BROWSER-VERIFY-MARKETPLACE asserts trust-tier badges across visible cards — no items
+- FX-BROWSER-VERIFY-GOVERNANCE asserts alerts coherent with verdict data — no verdicts
+- FX-BROWSER-VERIFY-TIMELINE asserts category/severity filters with rendered entries — no entries
+- FX-BROWSER-VERIFY-OVERVIEW + -SETTINGS partially unreachable (data tickers / configuration values)
+
+### Why It Failed
+
+R1's verification-token discipline (Entry #287) catches existence-class infrastructure-mismatch — "does the file exist?" The token `MODIFIED-VERIFIED` for `serveCompactUI.ts` correctly confirmed the file is present. It does NOT verify that the file's API supports the consumption pattern the plan asserts.
+
+This is the gap Entry #270 (SG-SinkMechanismVerificationGap) catalogued: "the consumer's API supports the consumption pattern" is item 5 of the cumulative verification discipline. R3 (Entry #287) documented item 5 in `.failsafe/governance/doctrine-shadow-genome-countermeasures.md` but R2's `plan-grep-lint.cjs` only enforces item 1 (presence/absence). Items 2-5 are documented but not mechanically gated.
+
+### Pattern to Avoid (refinement)
+
+**SG-SinkMechanismVerificationGap-mechanism-of-recurrence**: A plan author who cites a fixture/sink/helper by path and confirms its existence (NEW-VERIFIED / MODIFIED-VERIFIED) can still err on whether the fixture's API supports the assertions the plan declares. The verification needs to extend to a grep showing the consumption pattern is supported by the fixture's own API.
+
+### Countermeasure (proposed for follow-on remediation)
+
+Extend `FailSafe/extension/scripts/plan-grep-lint.cjs` with a fourth token class: `FITNESS-VERIFIED`. Required when a plan cites a fixture/helper as the carrier for a consumption pattern. The verification command must cite a grep against the fixture's source showing the API supports the pattern. Example:
+
+```
+| Fixture | Reused | grep 'router.get.*marketplace' helpers/serveCommandCenterUI.ts shows route handler exists | FITNESS-VERIFIED |
+```
+
+If the next audit cycle hits a third sink-mechanism finding, this remediation lands as Entry #287's R2-bis.
+
+### Three-strikes routing record
+
+This is the **2nd instance of sink-mechanism class** (Entry #270 was first; current is second). Five total infrastructure-mismatch findings (existence-class chain ended at Entry #286 thanks to R1+R2). Cycle-count escalation on the sub-class triggers at instance 3.
+
+### Remediation path
+
+Plan v2 → v3 amendment options (operator's choice; per `.agent/staging/AUDIT_REPORT.md` §"Required Next Action"):
+- A. Extend `serveCompactUI.ts` with route additions + declare MODIFIED in Phase 2 Affected Files
+- B. New `helpers/serveCommandCenterUI.ts` per-spec route layering (declare NEW)
+- C. Scope Phase 2 specs to Monitor-only (drop 4 unsupported specs)
+- D. Boot real `ConsoleServer` via new fixture helper (declare NEW)
+
+Re-run `/qor-audit` after amendment. Expected outcome: PASS, given the R1+R2 discipline already addressed existence-class concerns.
+
+
+---
+
+## SG-SinkMechanismVerificationGap (3rd recurrence) — plan-monitor-coherence v3 (2026-05-07)
+
+_**Status**: `addressed_pending` 2026-05-08 — covered by `.failsafe/governance/REMEDIATE_PROPOSAL_plan-fitness-verification.md` R2-bis + R1-bis + R3-bis + R4-bis. Full `addressed: true` flip pending operator-driven `/qor-audit reviews-remediate:.failsafe/governance/REMEDIATE_PROPOSAL_plan-fitness-verification.md` PASS._
+
+**Category**: SG-SinkMechanismVerificationGap (Entry #270 lineage; 3rd instance)
+**Severity**: 4 (escalated from 3 — three-strikes recurrence)
+**Detected**: 2026-05-07, Entry #289 audit (re-audit of v3 amendment)
+
+### What Failed
+
+Plan v3 amended (Option D) to introduce new helper `serveConsoleServerUI.ts` that boots real `ConsoleServer`. Helper-level claim VERIFIED (pattern exists at `consoleServer.test.ts:16-29`; `WebSocketManager.setup` is callable on harness HTTP server). HOWEVER, plan v3's Phase 2 Feature Inventory Touches table cited route paths inside ConsoleServer that do not match actual route shapes:
+
+- `/api/skills/catalog` (FX-BROWSER-VERIFY-SKILLS) — invented; actual `SkillsApiRoute.ts` exposes `/api/skills` + `/api/skills/relevance`
+- `/api/transparency/events` (FX-BROWSER-VERIFY-TIMELINE) — typo'd suffix; actual `TransparencyRiskRoute.ts:13` is `/api/transparency`
+- `EventBus.emit` verdict-injection chain (FX-BROWSER-VERIFY-GOVERNANCE) — wiring chain to UI alerts panel never traced; actual `/api/v1/verdicts` route exists at `ConsoleServer.ts:469`
+
+### Why It Failed (recurrence root)
+
+R1's verification-token discipline (Entry #287) catches existence-class infrastructure-mismatch — "does the cited file exist?" The token `MODIFIED-VERIFIED` for `ConsoleServer.ts` correctly confirmed the file is present. It does NOT verify that route paths INSIDE the file match what the plan cites.
+
+Plan author wrote route names from memory rather than from grep against actual route modules. This is the same root mechanism Entry #270 catalogued — the consumer's API supports the consumption pattern is unverified.
+
+### Three-strikes routing record
+
+Per `qor/references/doctrine-governance-enforcement.md` §10.4 cycle-count escalation:
+- Sink-mechanism sub-class instances: #270 (canvas DOM), #288 (serveCompactUI mimic), #289 (this — route citations).
+- Three-strikes on sub-class triggers `/qor-remediate` as legal next action, NOT another `/qor-plan` iteration.
+
+**Existence-class chain** (Entries #262/#285/#286) closed via R1+R2; #289's lint PASS 29/29 confirms that sub-class is mechanically gated.
+
+### Remediation Required (proposed R2-bis)
+
+Extend `FailSafe/extension/scripts/plan-grep-lint.cjs` with a `FITNESS-VERIFIED` token class for cited APIs / routes / symbols. Verification command shape: `grep <symbol-or-route> <implementation-file>` returns non-empty (with stricter shape matching where feasible).
+
+Example token usage:
+
+```markdown
+| /api/skills/catalog (cited route) | route | grep '"/api/skills/catalog"' FailSafe/extension/src/roadmap/routes/SkillsApiRoute.ts returns non-empty | FITNESS-VERIFIED |
+```
+
+Under R2-bis, plan v3 would have failed lint at write-time — the grep returns empty for the invented route. Saves the audit cycle.
+
+### Filed upstream
+
+Qor-logic#43 (proposed) — "plan-grep-lint must verify cited API/route/symbol shape against implementation, not just file existence."
+
+
+---
+
+## SG-PlanFitnessVerificationGap — gate-loop on sink-mechanism sub-class (2026-05-08)
+
+_**Status**: `addressed_pending` 2026-05-08 — covered by `.failsafe/governance/REMEDIATE_PROPOSAL_plan-fitness-verification.md` R2-bis (root-cause discipline install: FITNESS-VERIFIED token class)._
+
+**Category**: process pattern (`gate-loop` per `/qor-remediate` Step 2 classification)
+**Severity**: 4 (escalated — three-strikes on sink-mechanism sub-class within 48h)
+**Detected**: 2026-05-08, post-Entry-#289 audit, during `/qor-remediate` Step 2 pattern matching
+
+### What Failed
+
+Three consecutive plans in the active sub-chain failed `/qor-audit` Step 3 Infrastructure Alignment Pass on the same root mechanism — sink-mechanism class. Cited APIs, routes, or symbols *inside* otherwise-existing files did not match the actual implementation shape:
+
+| Entry | Plan | Sink-mechanism instance |
+|---|---|---|
+| #270 | plan-v4.10.1-pre-v5-cleanup-v4 | `canvas.getNodeElement(id).setAttribute(...)` cited as sink; rendering library has no DOM-per-node API. Test mocked the accessor, false-confidence |
+| #288 | plan-monitor-coherence v2 | `serveCompactUI.ts` claimed to "boot ConsoleServer in-process"; helper actually mimics ConsoleServer for Monitor surface only |
+| #289 | plan-monitor-coherence v3 | `/api/skills/catalog` (invented), `/api/transparency/events` (typo of real `/api/transparency`), EventBus.emit verdict-injection chain (untraced to UI) |
+
+### Why It Failed
+
+R1's verification-token discipline (Entry #287) catches existence-class infrastructure-mismatch — "does the cited file exist?" The token `MODIFIED-VERIFIED` for the containing file is correct in all three cases. R1+R2 do NOT verify that the API/route/symbol exists *inside* the file with the shape the plan asserts.
+
+This is item 5 of the cumulative discipline list catalogued in `.failsafe/governance/doctrine-shadow-genome-countermeasures.md`. Documented in R3 (Entry #287) but never mechanically gated until R2-bis lands.
+
+### Pattern to Avoid (refinement of SG-SinkMechanismVerificationGap)
+
+**SG-PlanFitnessVerificationGap-mechanism**: Plans that cite a route, function, method, or symbol that lives *inside* a file must carry a `FITNESS-VERIFIED` token (in addition to the file-level token) backed by a `grep '<exact-cited-shape>' <file>` command demonstrating the API exists with the cited shape. File presence is necessary but not sufficient.
+
+### Three-strikes routing record
+
+This is the **3rd consecutive sink-mechanism finding** in the active sub-chain, triggering `/qor-remediate` per `qor/references/doctrine-governance-enforcement.md` §10.4. Per the cumulative-discipline closure pattern from Entry #287, this remediation produces R2-bis: extend `plan-grep-lint.cjs` with a 4th token class.
+
+### Remediation
+
+See `.failsafe/governance/REMEDIATE_PROPOSAL_plan-fitness-verification.md`:
+- R2-bis — `plan-grep-lint.cjs` `FITNESS-VERIFIED` token class
+- R1-bis — `/qor-plan` Step 2.5 + Constraints + Step 5 checklist update
+- R3-bis — doctrine update (closure status note)
+- R4-bis — amend plan v3 → v4 with corrected route citations + FITNESS tokens
+
+### Filed upstream
+
+Tracked via Qor-logic#43 (proposed) — "plan-grep-lint must verify cited API/route/symbol shape against implementation, not just file existence."
+
+
+---
+
+## SG-SinkMechanism-prose-vs-code (1st instance) — plan-monitor-coherence v4 (2026-05-08)
+
+**Category**: SG-SinkMechanismVerificationGap sub-sub-class (Entry #270 lineage; new sub-sub-class identified at #291 audit)
+**Severity**: 2 (first occurrence of this sub-sub-class)
+**Detected**: 2026-05-08, Entry #291 audit (re-audit of v4 amendment)
+
+### What Failed
+
+Plan v4's helper design narrative claimed `new ConsoleServer(..., { workspaceRoot, checkpointMemory: <ref> })` — passing a mutable `checkpointMemory` reference through the constructor's options object so the helper's `setVerdicts` controller method could push verdicts that ConsoleServer's `/api/v1/verdicts` route would later return.
+
+Direct read of ConsoleServer at `ConsoleServer.ts:293-299` shows the constructor accepts `(planManager, qorelogicManager, sentinelDaemon, eventBus, options)` where `options: ConsoleServerOptions = {}` consumes only `qoreRuntime/workspaceRoot/featureGate/configProvider`. `checkpointMemory` (line 240) is a private instance field initialized to `[]` and managed internally by `initializeCheckpointStore()`. There is no path for an external reference to be injected at construction.
+
+### Why It Failed
+
+R2-bis's `FITNESS-VERIFIED` token enforces that cited routes/symbols exist in the implementation file. It catches: invented routes (like `/api/skills/catalog` from #289), typo'd routes (like `/api/transparency/events`). It does NOT catch: prose claims about constructor signatures, options-type fields, or function arities that bypass the FITNESS table entirely.
+
+In #291 F1, the plan author wrote a constructor signature in narrative prose ("Construct `new ConsoleServer(... { ... checkpointMemory: <ref> })`") without an associated FITNESS row. The lint had nothing to grep against because no FITNESS-VERIFIED row claimed `{ checkpointMemory: ... }` exists in `ConsoleServerOptions`.
+
+### Pattern to Avoid (refinement)
+
+**SG-SinkMechanism-prose-vs-code**: Plans that claim a constructor signature, options-object field, function arity, or method shape in prose narrative (without an associated FITNESS-VERIFIED row) bypass the verification-token lint. Plan authors must either (a) add FITNESS rows for prose claims about API shape, or (b) treat narrative prose as un-trusted for sink-mechanism claims and only trust the FITNESS table.
+
+### Future remediation candidate (deferred until pattern recurrence)
+
+**R2-bis-prose** — extend `plan-grep-lint.cjs` (or add a sibling `plan-prose-lint.cjs`) to scan plan body for patterns like `new Foo(...)` / `function bar(...)` / `{ field: ... }` / `app.get("/path")` and warn when no FITNESS row backs the claim. Requires markdown-semantic parsing; lower priority than R1+R2+R2-bis. Defer until sub-sub-class recurrence.
+
+### Filed upstream
+
+Tracked via Qor-logic#44 (proposed) — "plan-prose-lint: scan narrative for un-FITNESS-backed API shape claims."
+
+---
+
+## SG-SinkMechanism-cited-but-not-importable (1st instance) — plan-monitor-coherence v4 (2026-05-08)
+
+**Category**: SG-SinkMechanismVerificationGap sub-sub-class (Entry #270 lineage; new sub-sub-class identified at #291 audit)
+**Severity**: 2 (first occurrence)
+**Detected**: 2026-05-08, Entry #291 audit
+
+### What Failed
+
+Plan v4's Phase 1 `roadmap-connection.test.ts` cited 6 cases testing `connect()`, `setConnectionState()`, `paintPendingSentinel()` on the `WebPanelClient` class in `roadmap.js`. The plan added FITNESS-VERIFIED rows for each method (lint passed — methods exist in the file).
+
+Direct read of `roadmap.js` shows `class WebPanelClient` is declared at module scope but **has no export statement** — no `module.exports`, no `export class`, no `export default`. The class is unreachable from outside the module. The 6 test cases cannot import or instantiate it.
+
+### Why It Failed
+
+R2-bis's `FITNESS-VERIFIED` confirms cited symbols exist in the file. It does NOT verify that the file exports the symbol for test access. The methods are present (grep finds them) but are encapsulated in a non-exported class.
+
+The plan v4 hedged Phase 1 with `MODIFIED (conditional)` token + "ONLY IF current shape blocks unit coverage" — implicitly admitting an extraction may be needed but deferring the commitment. The audit caught that the current shape DOES block unit coverage; the hedge is a specification gap.
+
+### Pattern to Avoid (refinement)
+
+**SG-SinkMechanism-cited-but-not-importable**: When a plan's tests cite a symbol (class/function/method) that lives inside a file, FITNESS-VERIFIED confirms the symbol's name exists. The plan must additionally specify how the test accesses the symbol — via an export, via global injection, via dynamic require, etc. A hedge ("export it ONLY IF current shape blocks coverage") is a specification gap when current shape obviously does block coverage.
+
+### Future remediation candidate (deferred until pattern recurrence)
+
+**R2-bis-imports** — extend `FITNESS-VERIFIED` lint to also check, when the row's `Op` indicates a test will import the symbol, that the file has an `export` (or `module.exports`) for the cited symbol. Heuristic match; lower priority. Defer until pattern recurrence.
+
+### Filed upstream
+
+Tracked via Qor-logic#45 (proposed) — "plan-grep-lint: verify cited-for-test symbols are exported by their file."
+
+
+---
+
+## coherence-via-association — FailSafe v5.1.0 incident (2026-05-08)
+
+**Pattern**: a feature is verified through composition — its tests ride on tests of components it associates with — but the feature's own behavior surface is never directly exercised. The composite test passes, the feature's surface goes uncovered. When the feature's surface drifts, the composite test continues to pass and the drift ships.
+
+**Definition**: cross-component association without direct invocation. A test of component A asserts properties that depend on B's behavior; B's contribution is never asserted in isolation; A's test passes regardless of B's actual behavior because A's compositional output happens to satisfy the assertion under any B-state the test exercises.
+
+**FailSafe incident**:
+
+The Monitor surface (`roadmap.js` inline-WS client, `paintPendingSentinel`, `setConnectionState`) was historically "verified by association" through ConnectionClient (FX171) tests at `connection.test.ts`. Those tests cover the dedicated `ConnectionClient` module under `roadmap/ui/modules/connection.js`. They do NOT cover the Monitor's INLINE WebSocket lifecycle in `roadmap.js`. When the operator observed the Monitor showing "Connecting..." simultaneously with a green sentinel orb, the contradiction was real but no existing test caught it — `connection.test.ts` exercises a different module; the Monitor's inline path was tested only through composition with downstream renderers, which themselves had no contradiction-detection assertion.
+
+The bug surfaced during Phase 2 Round 2 Playwright verification: `sentinel-monitor.js:19` defaults `state = 'monitoring'` unconditionally regardless of `status.running`. Cold-load with no hub data → orb gets class `sentinel-orb monitoring` (green) while the label correctly reads "Idle". This is the same incident the operator originally reported.
+
+**Countermeasure** (now in code):
+
+The new `roadmap-connection.test.ts` (Phase 1 of plan-monitor-coherence-and-browser-verification.md v5) directly imports `WebPanelClient` from `roadmap.js` and exercises connect/setConnectionState/paintPendingSentinel lifecycle in isolation. Cross-component coherence tests (settings-coherence, build-phase-coherence, marketplace-coherence) load actual HTML via JSDOM and assert no-contradiction states via force-paint detectors. Phase 2 Playwright specs exercise the live Monitor surface via the real ConsoleServer-boot fixture.
+
+**Doctrinal addition**: a feature is "coherence-via-association verified" only when (a) its surface is directly invoked by at least one test, (b) its surface contributes a unique observable to at least one composite test (not merely participates), or (c) it is operator-declared `n/a` with explicit justification. Compositional verification through downstream consumers is informational, not gating.
+
+**Filed upstream**: tracked locally; mirrors the SG-PromiseRealityScope pattern (Entry #285).
 

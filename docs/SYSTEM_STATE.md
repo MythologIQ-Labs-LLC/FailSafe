@@ -1,7 +1,89 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-05-05
-**Version:** v5.0.0 Round 2 (Install UX) SUBSTANTIATED (pending merge + tag from main)
+**Last Updated:** 2026-05-08
+**Version:** v5.1.0 publish-path hardening — SUBSTANTIATED (no version bump — publish-path seal; PUBLISH_BLOCK condition 5 satisfied; conditions 1-4 operator-attested post-seal)
+
+---
+
+## v5.1.0 — Publish-path hardening (Monitor coherence + browser verification)
+
+### Ledger Trail
+
+| Entry | Phase | Verdict |
+|-------|-------|---------|
+| #285 | GATE | VETO (`coverage-gap` + `ghost-ui` + `infrastructure-mismatch` + `specification-drift`) — v5.1.0 release-readiness |
+| #286 | GATE | VETO (`infrastructure-mismatch` + `dependency-unjustified`) — plan v1 (Playwright config + dependency mismatches) |
+| #287 | REMEDIATE | R1+R2+R3+R4 — verification-token discipline (`*-VERIFIED`) + node-runnable lint + doctrine update |
+| #288 | GATE | VETO (`infrastructure-mismatch` sink-mechanism) — plan v2 (`serveCompactUI.ts` mimics, doesn't boot ConsoleServer) |
+| #289 | GATE | VETO (`infrastructure-mismatch` sink-mechanism, 3rd recurrence) — plan v3 (invented `/api/skills/catalog`, typo'd `/api/transparency/events`, untraced verdict wiring); three-strikes routing triggered |
+| #290 | REMEDIATE | R2-bis — `FITNESS-VERIFIED` token class + `/qor-plan` Step 2.5 update + doctrine sub-class closure |
+| #291 | GATE | VETO (`infrastructure-mismatch` prose-vs-code + `test-failure`) — plan v4 (`checkpointMemory` constructor option claim mismatch + `WebPanelClient` not exported) |
+| #292 | GATE | **PASS** — plan v5 (F1a private-cast + F2a export keyword); 45/45 verification tokens validate; first PASS in chain since #284 |
+| #293 | IMPLEMENT | 19 NEW + 5 MODIFIED + 1 doctrinal append; parallel team (2 specialists + observer + devil's advocate); 2 real bugs surfaced + fixed during testing |
+| #294 | SUBSTANTIATE | Reality matches Promise; 2095/1pending/1pre-existing-failure mocha + 38/0/1skipped Playwright + 28/28 standalone |
+
+### New Files
+
+| File | Phase | Purpose |
+|---|---|---|
+| `FailSafe/extension/src/test/roadmap/settings-coherence.test.ts` | 1 | governance-mode ↔ writes-blocked banner coherence (4 cases) |
+| `FailSafe/extension/src/test/roadmap/build-phase-coherence.test.ts` | 1 | phase-title ↔ phase-track ↔ next-step coherence (4 cases) |
+| `FailSafe/extension/src/test/roadmap/marketplace-coherence.test.ts` | 1 | item.status ↔ trust-tier badge ↔ install-button coherence (4 cases) |
+| `FailSafe/extension/src/test/roadmap/roadmap-connection.test.ts` | 1 | inline WS lifecycle directly tested via `WebPanelClient` import (6 cases) |
+| `docs/test-patterns.md` | 1 | canonical home: cross-component coherence, coherence test, ConsoleServer boot fixture |
+| `FailSafe/extension/src/test/ui/helpers/serveConsoleServerUI.ts` | 2 | F1a real-ConsoleServer boot via private-cast `checkpointMemory` injection + WS attached via `WebSocketManager.setup` |
+| `FailSafe/extension/src/test/ui/helpers/consoleServerFixtures.ts` | 2 | `buildVerdictRecord` + `buildTimelineEvent` factory helpers |
+| `FailSafe/extension/src/test/scripts/serveConsoleServerUI.test.ts` | 2 | helper unit tests (7 cases) |
+| `FailSafe/extension/scripts/check-publish-block.cjs` | 2 | governance state machine validating PUBLISH_BLOCK lifting conditions 1-4 |
+| `FailSafe/extension/src/test/scripts/checkPublishBlock.test.cjs` | 2 | 5 cases (4 plan-required + skip-when-inactive bonus) |
+| `.failsafe/governance/BROWSER_VERIFICATION.md` | 2 | per-page evidence template |
+| `.failsafe/governance/screenshots/.gitkeep` | 2 | dir keepalive |
+| `FailSafe/extension/src/test/ui/monitor.spec.ts` | 2R2 | Monitor cold-load + WS-open + forced-WS-drop coherence |
+| `FailSafe/extension/src/test/ui/command-center-overview.spec.ts` | 2R2 | Overview tab status dot ↔ data tickers |
+| `FailSafe/extension/src/test/ui/command-center-skills.spec.ts` | 2R2 | /api/skills + /api/skills/relevance contracts |
+| `FailSafe/extension/src/test/ui/command-center-marketplace.spec.ts` | 2R2 | /api/marketplace/catalog response shape + 404 wiring |
+| `FailSafe/extension/src/test/ui/command-center-governance.spec.ts` | 2R2 | setVerdicts ↔ alerts panel via /api/v1/verdicts (live wiring) |
+| `FailSafe/extension/src/test/ui/command-center-timeline.spec.ts` | 2R2 | /api/transparency events + 50-cap |
+| `FailSafe/extension/src/test/ui/command-center-settings.spec.ts` | 2R2 | Theme card chips ↔ store coherence; FailSafe Pro About button |
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `FailSafe/extension/src/roadmap/ui/roadmap.js` | F2a: prepend `export ` to `class WebPanelClient` (line 5); guard auto-instantiation with `typeof document !== 'undefined'` (post-test bugfix) |
+| `FailSafe/extension/playwright.config.ts` | timeout: 30000 → 45000 |
+| `FailSafe/extension/package.json` | added `verify:publish-block` script |
+| `.failsafe/governance/PUBLISH_BLOCK.md` | appended `## Lifting protocol` section (5 conditions) |
+| `tools/release-commit-msg.sh` | extended `[RELEASE]` branch to invoke `verify:publish-block` |
+| `docs/SHADOW_GENOME.md` | appended `coherence-via-association` doctrinal entry |
+| `FailSafe/extension/src/test/ui/helpers/serveConsoleServerUI.ts` | (post-test bugfix) `applyPrivateCast` extended to stub `securityScanner.checkAvailability` |
+
+### Test surface
+
+- node:test (cjs scripts): **28/28 pass**
+- TypeScript: **clean**
+- vscode-test mocha: **2095 passing, 1 pending, 1 failing** (pre-existing v5-coherence drift, unrelated)
+- Playwright: **38 passed, 0 failed, 1 skipped**
+- plan-grep-lint: **OK 45/45 verification tokens**
+
+### Findings flagged for future plans
+
+1. **Real UI bug**: `sentinel-monitor.js:19` defaults `state = 'monitoring'` regardless of `status.running`. Original operator-observed contradiction. Single-line follow-up.
+2. **Helper fixture-injection gaps**: `marketplaceCatalog` / `ledgerEntries` interface fields unwired; `setHub` doesn't update `/api/hub` response.
+3. **`/api/transparency` response shape**: returns `{events: [...]}` not raw array. Recommend `RESPONSE-VERIFIED` token class.
+4. **Pre-existing CHANGELOG/v5-coherence drift**: 1 mocha test asserts CHANGELOG `[5.0.0]` mentions `qor-logic`; current CHANGELOG omits.
+
+### PUBLISH_BLOCK status
+
+`Active: yes`. Conditions:
+
+1. FEATURE_INDEX 0 unverified — achieved 2026-05-07
+2. BROWSER_VERIFICATION.md flipped + Playwright clean within 24h — **operator-attested post-seal**
+3. Screenshots + operator notes — **operator-attested post-seal**
+4. Operator signed sign-off — **operator-attested post-seal**
+5. Substantiate seal PASSED — **THIS SEAL satisfies condition 5**
+
+This seal does NOT lift PUBLISH_BLOCK on its own. Operator must complete conditions 2-4 + `npm run verify:publish-block` clean before any release-class push.
 
 ---
 

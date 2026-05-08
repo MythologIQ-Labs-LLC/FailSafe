@@ -413,6 +413,7 @@
     "release:preflight": "node ./scripts/release-gate.cjs --preflight",
     "release:bump": "node ./scripts/release-gate.cjs --bump",
     "release:tag": "node ./scripts/release-gate.cjs --tag",
+    "verify:publish-block": "node ./scripts/check-publish-block.cjs",
     "package": "vsce package",
     "publish": "vsce publish",
     "vendor:piper": "node ./scripts/vendor-piper.cjs"

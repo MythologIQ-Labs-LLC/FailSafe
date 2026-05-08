@@ -30,7 +30,22 @@ if [[ "$MSG" == \[RELEASE\]* ]]; then
   fi
 
   echo ""
-  echo "[commit-msg] Preflight PASSED — [RELEASE] commit allowed."
+  echo "[commit-msg] Preflight PASSED — verifying publish-block lifting state..."
+  echo ""
+
+  # Phase 2 governance state machine (plan-monitor-coherence-and-browser-
+  # verification.md). Cheaper preflight runs first; this hard-gate runs second.
+  if ! ( cd FailSafe/extension && npm run --silent verify:publish-block ); then
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "BLOCKED: PUBLISH_BLOCK lifting conditions not met."
+    echo "See .failsafe/governance/PUBLISH_BLOCK.md '## Lifting protocol'"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    exit 1
+  fi
+
+  echo ""
+  echo "[commit-msg] Publish-block check PASSED — [RELEASE] commit allowed."
 fi
 
 exit 0

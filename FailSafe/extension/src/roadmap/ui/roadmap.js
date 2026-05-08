@@ -2,7 +2,7 @@ import { SentinelMonitor } from './modules/sentinel-monitor.js';
 import { getPhaseInfo, getFeatureSummary, renderPhase } from './modules/monitor-render.js';
 import { MonitorStaleness } from './modules/monitor-staleness.js';
 
-class WebPanelClient {
+export class WebPanelClient {
   constructor() {
     this.ws = null;
     this.hub = {
@@ -410,10 +410,15 @@ class WebPanelClient {
   // Transparency and risk data now served via Command Center modules only.
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  const client = new WebPanelClient();
+// Guarded so this file remains importable from Node-side mocha tests
+// (e.g. roadmap-connection.test.ts) which run without a real DOM. In a
+// browser, `document` is always defined and the auto-instantiation runs
+// exactly as before.
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    const client = new WebPanelClient();
 
-  // Set up metric click handlers for explanations
-  client.setupMetricClickHandlers();
-
-});
+    // Set up metric click handlers for explanations
+    client.setupMetricClickHandlers();
+  });
+}

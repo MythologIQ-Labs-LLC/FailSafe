@@ -46,3 +46,17 @@ Operator clears this block by:
 This block does NOT mean "fix all 5 audit findings before clearing." Findings 2, 3, 4, 5 from Entry #285 are independent concerns. **Coverage is the binding gate.** The other findings still need resolution paths (per `REMEDIATE_PROPOSAL_v5.1.0.md`) but they don't gate publish in the way coverage does.
 
 If the operator decides at any point that a specific feature is intentionally untested, that's a per-row `n/a` justification in FEATURE_INDEX with a `notes` field explaining why — not a block-clear.
+
+## Lifting protocol
+
+PUBLISH_BLOCK can flip Active=no only when ALL of:
+
+1. FEATURE_INDEX shows 0 unverified entries (achieved 2026-05-07; 433 verified / 43 n/a / 0 unverified).
+2. BROWSER_VERIFICATION.md exists with `Active: yes` flipped to `Active: no` AND every Playwright-covered page has a passing spec run within 24h of seal.
+3. Every screenshot-covered page in BROWSER_VERIFICATION.md has an operator note + screenshot with date stamp.
+4. Operator has signed the sign-off line.
+5. Substantiate seal of plan-monitor-coherence-and-browser-verification.md PASSED with no VETO.
+
+`scripts/check-publish-block.cjs` validates conditions 1-4 mechanically. Condition 5 is read from the META_LEDGER seal entry.
+
+Until all five conditions met, the pre-push hook blocks any [RELEASE] commit.
