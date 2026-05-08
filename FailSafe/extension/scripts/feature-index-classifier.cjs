@@ -34,6 +34,28 @@ const heuristics = require('./feature-index-classifier-heuristics.cjs');
 const TEST_REL_BASE = path.join('FailSafe', 'extension', 'src', 'test');
 const KIND_ORDER = ['functional', 'ambiguous', 'presence-only', 'no-test-blocks', 'unrunnable'];
 
+// E2: cited-path-form variants the resolver normalizes before joining with
+// TEST_REL_BASE. Longest prefix listed first so longer wins on overlap.
+const TEST_PATH_PREFIXES = [
+  'FailSafe/extension/src/test/',
+  'src/test/',
+];
+
+// E2 manual override authority. Frozen lookup table keyed by entryId. Phase 3
+// of plan-feature-index-baseline-audit.md (Entry #302) reviewed each ambiguous
+// entry under SG-035 and recorded a final_status. Five entries resolved to
+// presence-only despite the cited test resolving — they remain `unverified`
+// regardless of any future classifier verdict. Operator must explicitly retest
+// under E3+ to promote any of these back. applyManualOverrides() is the LAST
+// step in the per-entry pipeline so it cannot be circumvented.
+const MANUAL_OVERRIDES = Object.freeze({
+  FX128: { status: 'unverified', reason: 'Phase 3: AgentCoverageRoute test exercises renderer, not GET /console/agents route wiring' },
+  FX145: { status: 'unverified', reason: 'Phase 3: monitor-shield-progression spec covers UI shell, not FailSafeSidebarProvider registration' },
+  FX173: { status: 'unverified', reason: 'Phase 3: popout-ui spec covers HTML shell, not failsafe.openPlannerHub command wiring' },
+  FX174: { status: 'unverified', reason: 'Phase 3: compact-ui spec covers HTML shell, not failsafe.openPlannerHubEditor command wiring' },
+  FX359: { status: 'unverified', reason: 'Phase 3: skill-frontmatter-validation tests name+description, not provenance metadata fields' },
+});
+
 function usage(msg) {
   if (msg) process.stderr.write(`feature-index-classifier: ${msg}\n`);
   process.stderr.write(
@@ -92,12 +114,39 @@ function parseFeatureIndexRows(text) {
   return rows;
 }
 
-// Resolves a cited test path (relative to FailSafe/extension/src/test/) to
-// an absolute path. Returns null when the file is absent.
+// Resolves a cited test path to an absolute path. Returns null when the file
+// is absent. Accepts three path-form variants:
+//   1. bare:           extension/foo.test.ts
+//   2. src/test/:      src/test/extension/foo.test.ts
+//   3. full repo:      FailSafe/extension/src/test/extension/foo.test.ts
+// Strips the longest matching prefix before joining with TEST_REL_BASE so
+// FEATURE_INDEX rows using any of the three forms classify consistently.
 function resolveTestPath(repoRoot, citedPath) {
-  if (!citedPath) return null;
-  const full = path.join(repoRoot, TEST_REL_BASE, citedPath);
+  if (!citedPath || typeof citedPath !== 'string') return null;
+  let normalized = citedPath.trim();
+  for (const prefix of TEST_PATH_PREFIXES) {
+    if (normalized.startsWith(prefix)) {
+      normalized = normalized.slice(prefix.length);
+      break;
+    }
+  }
+  const full = path.join(repoRoot, TEST_REL_BASE, normalized);
   return fs.existsSync(full) ? full : null;
+}
+
+// E2: applies the MANUAL_OVERRIDES table as the last step in the per-entry
+// pipeline. If the entry's id appears in the table, the classifier verdict is
+// overridden and `manualOverride: true` + reason are attached. Entries not in
+// the table pass through unchanged.
+function applyManualOverrides(entry) {
+  const override = MANUAL_OVERRIDES[entry.entryId];
+  if (!override) return entry;
+  return {
+    ...entry,
+    suggestedStatus: override.status,
+    manualOverride: true,
+    manualOverrideReason: override.reason,
+  };
 }
 
 // Heuristic classifier for a single test file body. See heuristic priority
@@ -157,7 +206,7 @@ function classifyEntry(row, repoRoot) {
 function runAudit(featureIndexPath, repoRoot) {
   const text = fs.readFileSync(featureIndexPath, 'utf-8');
   const rows = parseFeatureIndexRows(text);
-  const classified = rows.map(r => classifyEntry(r, repoRoot));
+  const classified = rows.map(r => applyManualOverrides(classifyEntry(r, repoRoot)));
   const summary = buildSummary(classified);
   return { summary, rows: classified };
 }
@@ -215,6 +264,8 @@ module.exports = {
   resolveTestPath,
   classifyTestFile,
   classifyEntry,
+  applyManualOverrides,
   runAudit,
   writeReport,
+  MANUAL_OVERRIDES,
 };

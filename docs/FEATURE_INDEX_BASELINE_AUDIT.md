@@ -104,3 +104,60 @@ Per Entry #300 audit's devil's-advocate review, the classifier has known limits:
 - **Phase 4 (orchestrator, mechanical)**: complete. `docs/FEATURE_INDEX.md` now carries the 384/49/43 truth-state.
 - **Phase 5 (orchestrator, mechanical)**: complete. All 43 `n/a` rows have per-row Notes-column justification.
 - **Remediation plan family (E2/E3/...)**: scope each `unverified` bucket by surface (extension routes, governance services, command handlers, console pages, etc.); each becomes its own focused `/qor-plan` cycle that authors functional tests.
+
+## E2 Reconciliation Diff (2026-05-08)
+
+Plan: `plan-e2-classifier-path-fix-and-reconciliation.md` v2 (PASS at audit; gitignored workspace-only label v5.1.3-baseline). Path-fix hardens `resolveTestPath` to accept three path-form variants (bare, `src/test/`-prefixed, `FailSafe/extension/src/test/`-prefixed). Manual-override authority codified as `MANUAL_OVERRIDES` constant + `applyManualOverrides` helper invoked as last step in per-entry pipeline.
+
+### Outcome — zero entry-level verdict changes
+
+The path-fix DOES resolve previously-unresolvable cited paths (3 entries promoted at the per-test kind layer from `unrunnable` to `ambiguous`). However, no entry's `suggestedStatus` changed because the resolved tests are all Playwright specs that fall through the heuristic-4 regex blind spot (per devil's-advocate note 1 in this audit). Both `unrunnable` and `ambiguous` map to `unverified` under the at-least-one-functional rule.
+
+### Promotion table (entries reclassified `unverified` → `verified`)
+
+**Empty.** Zero entries promoted. The path-fix premise (entries with prefixed paths were misclassified `unrunnable` → `unverified` and could be promoted by fixing the resolver) was partially correct: entries DID misclassify as `unrunnable`, but the underlying tests are Playwright specs whose functionality the heuristic does not detect. They reclassify `unrunnable` → `ambiguous`, but `ambiguous` still produces `suggestedStatus: unverified` for these single-test rows.
+
+### Per-test kind diff (unrunnable → ambiguous; resolver-layer evidence)
+
+| Entry | Cited test | Pre-fix kind | Post-fix kind | Suggested status | Reason for kind change |
+|---|---|---|---|---|---|
+| FX149 | src/test/ui/monitor-shield-progression.spec.ts | unrunnable | ambiguous | unverified (unchanged) | Path-fix strips `src/test/` prefix; resolver finds the file; heuristic returns `ambiguous` (Playwright spec uses `expect(locator).toHaveClass()`, not detected by heuristic-4) |
+| FX150 | src/test/ui/compact-ui.spec.ts | unrunnable | ambiguous | unverified (unchanged) | same |
+| FX155 | src/test/ui/compact-ui.spec.ts | unrunnable | ambiguous | unverified (unchanged) | same |
+
+### Preserved table (manual overrides — Entry #302 Phase 3 review remains authoritative)
+
+| Entry | Cited test | Classifier verdict | Manual override? | Final status | Reason |
+|---|---|---|---|---|---|
+| FX128 | roadmap/AgentCoverageRoute.test.ts | ambiguous | yes | unverified | Phase 3: AgentCoverageRoute test exercises renderer, not GET /console/agents route wiring |
+| FX145 | ui/monitor-shield-progression.spec.ts | ambiguous | yes | unverified | Phase 3: monitor-shield-progression spec covers UI shell, not FailSafeSidebarProvider registration |
+| FX173 | ui/popout-ui.spec.ts | ambiguous | yes | unverified | Phase 3: popout-ui spec covers HTML shell, not failsafe.openPlannerHub command wiring |
+| FX174 | ui/compact-ui.spec.ts | ambiguous | yes | unverified | Phase 3: compact-ui spec covers HTML shell, not failsafe.openPlannerHubEditor command wiring |
+| FX359 | roadmap/skill-frontmatter-validation.test.ts | ambiguous | yes | unverified | Phase 3: skill-frontmatter-validation tests name+description, not provenance metadata fields |
+
+### Summary
+
+| | Pre-E2 | Post-E2 | Delta |
+|---|---|---|---|
+| Verified | 384 | 384 | 0 |
+| Unverified | 49 | 49 | 0 |
+| N/A | 43 | 43 | 0 |
+| Per-test `unrunnable` | 85 | 82 | -3 |
+| Per-test `ambiguous` | 9 | 12 | +3 |
+| Per-test `functional` | 403 | 403 | 0 |
+
+### What E2 actually delivered
+
+1. **Resolver correctness**: 3 entries no longer false-classify as `unrunnable` due to path-form variance.
+2. **Manual-override codification**: 5 Phase-3-reviewed presence-only entries now hard-coded in `MANUAL_OVERRIDES`; future classifier re-runs cannot accidentally promote them.
+3. **Doctrinal entry**: `SG-ClassifierPathBug` recorded in `docs/SHADOW_GENOME.md` for future measurement-tool work.
+4. **Honest baseline for E3+**: the unverified bucket truth is unchanged at 49 entries. The bottleneck is now confirmed to be Playwright-heuristic blindness, NOT path resolution. E3+ scope can proceed against the same 49-entry list with that constraint understood.
+
+### Implication for remediation plan family
+
+Subsequent E3/E4/... plans inherit the same 49-entry unverified bucket. The path-fix did not narrow the bucket; it sharpened the diagnosis. Future work splits between:
+
+- **Authoring functional tests** (the bulk of unverified entries — 44 em-dash + ~40 cited-but-unverified)
+- **Heuristic upgrade** (Playwright `expect(locator).toHaveClass()` and bare `expect(x).toBe(y)` chains — would convert 3+ ambiguous entries to functional/presence-only with concrete verdicts)
+
+Both paths are valid; operator selection per E3 plan dialogue.

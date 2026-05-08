@@ -2615,3 +2615,22 @@ Tracked locally; would feed into Qor-logic upstream PR alongside R2-bis-prose / 
 
 **Filed upstream**: relates to the SG-CoherenceViaAssociation pattern (Entry #294 SHADOW_GENOME closure entry) — the marathon's "verified by composition" rationale is the same shape as the cross-component composition pattern, applied to coverage rather than rendering.
 
+
+
+---
+
+## SG-ClassifierPathBug — feature-index-classifier path-form variance (closed by E2, 2026-05-08)
+
+**Pattern**: a measurement tool's path resolver assumes one canonical form for cited paths; the data source uses multiple forms inconsistently. Entries with non-canonical paths classify `unrunnable` (file-not-found), driving `suggestedStatus: unverified` and silent measurement drift.
+
+**FailSafe incident (E baseline audit, 2026-05-08)**: `feature-index-classifier.cjs` v1 resolved cited paths via `path.join(repoRoot, 'FailSafe', 'extension', 'src', 'test', citedPath)`. FEATURE_INDEX rows used three path-form variants: (a) bare relative paths (`extension/foo.test.ts`), (b) `src/test/`-prefixed paths (`src/test/ui/monitor-shield-progression.spec.ts`), (c) full-repo paths. Forms (b) and (c) caused double-prefixing → file-not-found → `unrunnable` classification. FX149, FX150, FX155 were the affected entries (3 of 476 rows; small footprint but symptomatic of measurement-tool drift).
+
+**Detection**: operator post-substantiate review of v5.1.2-baseline (Entry #303) noticed entries citing `src/test/`-prefixed paths sitting `unverified` despite the cited test files being present and functional. Confirmed via `ls FailSafe/extension/src/test/src/test/...` (no such file) vs `ls FailSafe/extension/src/test/ui/...` (file exists) — the resolver was double-prefixing the `src/test/` segment.
+
+**Closure (E2, 2026-05-08)**: classifier hardened with `TEST_PATH_PREFIXES` array + prefix-stripping normalization in `resolveTestPath`. Three path-form variants now accepted. Reconciliation diff applied to `docs/FEATURE_INDEX_BASELINE_AUDIT.md`. Per-test kind distribution shifted by 3 (unrunnable → ambiguous); zero entry-level verdict changes because the resolved tests are Playwright specs the heuristic-4 regex does not detect as functional. Manual overrides per Entry #302 (FX128, FX145, FX173, FX174, FX359) preserved authoritatively via new `MANUAL_OVERRIDES` constant + `applyManualOverrides` helper invoked as the LAST step in the per-entry pipeline.
+
+**Counter-pattern (right way)**: any measurement tool that consumes operator-authored data must accept the actual data shape, not impose an idealized canonical shape. When introducing such a tool: (a) sample real input data first; (b) build a normalize-then-process pipeline so input variance is absorbed at the boundary; (c) add unit tests for each known input variant; (d) verify pipeline-output diff between known-good input and real input — divergence signals classifier drift, not data error.
+
+**Secondary lesson — premise-vs-outcome divergence**: E2's stated outcome ("entries promote `unverified` → `verified` after path-fix") did not materialize because the bottleneck was downstream (Playwright heuristic blindness), not the resolver. Plans that hypothesize a downstream impact from a fix should declare a falsifiable acceptance criterion (e.g., "post-fix run promotes ≥1 entry") and accept honest reconciliation when reality differs. The E2 reconciliation diff section in `FEATURE_INDEX_BASELINE_AUDIT.md` exemplifies the disclosure pattern: report what changed (resolver correctness) AND what did not (entry verdicts), with mechanism for both.
+
+**Filed upstream**: relates to SG-PresenceOnlyByNameMatch — the marathon agent's "verified by name-match" was its own form of measurement-tool drift. Both patterns share the root: trusting a tool's classification without validating the tool against real input.

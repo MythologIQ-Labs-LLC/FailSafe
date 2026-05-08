@@ -5,10 +5,10 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 **Generated**: 2026-05-06
 **Sources**: `.failsafe/governance/FEATURE_INVENTORY_DOCS.md` (312 entries), `.failsafe/governance/FEATURE_INVENTORY_CODE.md` (374 entries), `FailSafe/extension/src/test/**` (135 files).
 
-**Coverage summary** (updated 2026-05-08 — FEATURE_INDEX baseline audit Phase 4):
+**Coverage summary** (updated 2026-05-08 — FEATURE_INDEX baseline audit Phase 4; classifier path-fix applied per E2 reconciliation; no entry verdicts changed):
 - Total unified entries: **476**
 - **Verified: 384 (80.7%)** — entries whose cited test holds under SG-035 after the baseline-audit classifier plus Phase 3 manual review.
-- **Unverified: 49 (10.3%)** — entries that have no cited test, or whose cited test verifies a neighboring artifact rather than the row's claimed behavior. See `docs/FEATURE_INDEX_BASELINE_AUDIT.md`.
+- **Unverified: 49 (10.3%)** — entries that have no cited test, or whose cited test verifies a neighboring artifact rather than the row's claimed behavior. See `docs/FEATURE_INDEX_BASELINE_AUDIT.md` § "E2 Reconciliation Diff".
 - **N/A (operator-justified): 43 (9.0%)** — entries that cannot be unit-tested in mocha/vscode-test:
   - Browser-side components requiring WebGPU/MediaStream (FX202/FX203/FX224/FX225/FX226 voice modal + Whisper + WebLLM)
   - Doc-only claims with no code module enumerated (FX404 DiffGuard panel; FX433 Roadmap/Kanban view modes; FX427 Cortex Stream; FX428 The Dojo sidebar)

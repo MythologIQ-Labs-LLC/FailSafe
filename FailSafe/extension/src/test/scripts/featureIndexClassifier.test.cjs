@@ -272,3 +272,57 @@ describe('runAudit', () => {
     assert.equal(audit.rows.length, 476);
   });
 });
+
+describe('resolveTestPath path-form variants (E2)', () => {
+  const SAMPLE = 'extension/commands-dispatch.test.ts';
+
+  it('bare path resolves under FailSafe/extension/src/test/', () => {
+    const r = classifier.resolveTestPath(REPO_ROOT, SAMPLE);
+    assert.ok(r, `expected non-null, got ${r}`);
+    assert.ok(r.endsWith(path.normalize(SAMPLE)), `expected suffix ${SAMPLE}, got ${r}`);
+  });
+
+  it('src/test/-prefixed path resolves (prefix stripped)', () => {
+    const r = classifier.resolveTestPath(REPO_ROOT, `src/test/${SAMPLE}`);
+    assert.ok(r, `expected non-null, got ${r}`);
+    assert.ok(r.endsWith(path.normalize(SAMPLE)), `expected suffix ${SAMPLE}, got ${r}`);
+  });
+
+  it('full-repo prefix resolves (prefix stripped)', () => {
+    const r = classifier.resolveTestPath(REPO_ROOT, `FailSafe/extension/src/test/${SAMPLE}`);
+    assert.ok(r, `expected non-null, got ${r}`);
+    assert.ok(r.endsWith(path.normalize(SAMPLE)), `expected suffix ${SAMPLE}, got ${r}`);
+  });
+});
+
+describe('applyManualOverrides (E2)', () => {
+  it('FX128 entry flips to unverified with manualOverride flag', () => {
+    const entry = {
+      entryId: 'FX128',
+      currentStatus: 'verified',
+      suggestedStatus: 'verified',
+      classifications: [{ testPath: 'roadmap/AgentCoverageRoute.test.ts', kind: 'functional', reasoning: 'invokes' }],
+      notes: '',
+    };
+    const r = classifier.applyManualOverrides(entry);
+    assert.equal(r.suggestedStatus, 'unverified');
+    assert.equal(r.manualOverride, true);
+    assert.match(r.manualOverrideReason, /Phase 3/);
+    assert.equal(r.entryId, 'FX128');
+  });
+
+  it('non-overridden entry passes through unchanged', () => {
+    const entry = {
+      entryId: 'FX001',
+      currentStatus: 'verified',
+      suggestedStatus: 'verified',
+      classifications: [{ testPath: 'extension/commands-dispatch.test.ts', kind: 'functional', reasoning: 'invokes' }],
+      notes: '',
+    };
+    const r = classifier.applyManualOverrides(entry);
+    assert.equal(r.suggestedStatus, 'verified');
+    assert.equal(r.manualOverride, undefined);
+    assert.equal(r.manualOverrideReason, undefined);
+    assert.equal(r.entryId, 'FX001');
+  });
+});

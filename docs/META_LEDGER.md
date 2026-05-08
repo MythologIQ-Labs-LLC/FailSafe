@@ -14502,3 +14502,208 @@ Test count delta from Entry #298 (v5.1.1 seal): 28 standalone scripts + 14 new =
 _Chain Status: SUB-CHAIN SEALED at Entry #303. Baseline-audit cycle complete; remediation plan family next._
 _Next: Operator decision on staging/commit. Then `/qor-plan` for E2 (first remediation plan; likely bucket: VS Code commands without dispatch tests — ~10-15 of 44 em-dash entries) per the queue established at the v5.1.0 seal handoff._
 
+---
+
+### Entry #304: GATE TRIBUNAL (VETO) — plan-e2-classifier-path-fix-and-reconciliation v1
+
+**Date**: 2026-05-08
+**Type**: Gate Tribunal (`/qor-audit`)
+**Persona**: The QorLogic Judge (solo audit; codex-plugin not declared)
+**Plan**: `plan-e2-classifier-path-fix-and-reconciliation.md` v1 (root, gitignored workspace-only)
+**Verdict**: **VETO** — Plan-internal coherence (specification-drift, terms-without-home-mods, second instance in v5.1.0 chain)
+
+## Veto ground
+
+Plan top-matter declared three `terms_introduced`. Two had homes fulfilled by phase work; one — `manual override` (declared home: `docs/test-patterns.md`) — had no phase modifying that file. The actual definition (`MANUAL_OVERRIDES` constant + JS comment) lived inside `feature-index-classifier.cjs` per Phase 1, not at the declared home. R2-bis discipline preserved across other passes; only the single home commitment was unfulfilled.
+
+## Audit summary
+
+| Pass | Verdict |
+|---|---|
+| Pre-audit lint (R2 + R2-bis) | PASS — 18/18 tokens |
+| Plan-internal coherence | **VETO** — 1/3 terms_introduced home unfulfilled |
+| All other passes | PASS |
+
+**Findings categories**: `[specification-drift]`
+**Risk Grade**: L2
+
+## Recurrence
+
+Second instance of `terms-without-home-mods` sub-sub-class in the v5.1.0 chain (first at Entry #299; resolved single-cycle via v2 amendment). Two-strikes count holds at 2; not promoted to three-strikes-routing.
+
+**Required next action**: Governor amend plan v1 → v2; either (Option A, recommended) re-home the term to `feature-index-classifier.cjs` where the constant lives, or (Option B) add a phase modifying `docs/test-patterns.md`.
+
+**Audit report**: `.agent/staging/AUDIT_REPORT.md` (v1 VETO; superseded by Entry #305).
+
+**Content Hash**: `pending-runtime-tooling`
+**Previous Hash**: `pending-runtime-tooling` (Entry #303)
+**Session ID**: workspace-only / `default`
+
+---
+
+### Entry #305: GATE TRIBUNAL (PASS) — plan-e2-classifier-path-fix-and-reconciliation v2
+
+**Date**: 2026-05-08
+**Type**: Gate Tribunal (`/qor-audit`) — re-audit post-v1 VETO amendment
+**Persona**: The QorLogic Judge
+**Plan**: `plan-e2-classifier-path-fix-and-reconciliation.md` v2
+**Verdict**: **PASS**
+
+## Audit summary
+
+v2 amendment applied Option A: re-homed `manual override` from `docs/test-patterns.md` to `FailSafe/extension/scripts/feature-index-classifier.cjs` (where the `MANUAL_OVERRIDES` constant + JS comment block defined in Phase 1 naturally serves as definition site). Single-line top-matter edit; no Affected Files row changes; lint unchanged at 18/18.
+
+| Pass | Verdict |
+|---|---|
+| Pre-audit lint (R2 + R2-bis) | PASS — 18/18 tokens |
+| Plan-internal coherence | **PASS** — 3/3 terms_introduced home commitments fulfilled |
+| Section 4 Razor | PASS (advisory — classifier 220→~250L at limit; factor-out fallback noted) |
+| Test Functionality | PASS (5 new cases all invoke unit + assert on output) |
+| All other passes | PASS |
+
+**Findings**: none.
+**Risk Grade**: L2.
+
+**Audit report**: `.agent/staging/AUDIT_REPORT.md` (v2 PASS).
+
+**Content Hash**: `pending-runtime-tooling`
+**Previous Hash**: `pending-runtime-tooling` (Entry #304)
+**Session ID**: workspace-only / `default`
+
+**Next phase**: `/qor-implement`.
+
+---
+
+### Entry #306: IMPLEMENTATION — plan-e2-classifier-path-fix-and-reconciliation v2
+
+**Date**: 2026-05-08
+**Type**: Implementation Pass (`/qor-implement`)
+**Persona**: The QorLogic Specialist (sequential mode; agent-teams not declared)
+**Plan**: `plan-e2-classifier-path-fix-and-reconciliation.md` v2 (PASS at Entry #305)
+
+## Files modified (5 — all MODIFIED-VERIFIED per plan)
+
+| File | Pre-impl LOC | Post-impl LOC | Delta |
+|---|---|---|---|
+| `FailSafe/extension/scripts/feature-index-classifier.cjs` | 220 | 271 | +51 (TEST_PATH_PREFIXES const, hardened resolveTestPath, MANUAL_OVERRIDES const, applyManualOverrides helper, runAudit pipeline integration, exports) |
+| `FailSafe/extension/src/test/scripts/featureIndexClassifier.test.cjs` | 274 | 328 | +54 (5 new cases across 2 new describe blocks) |
+| `docs/FEATURE_INDEX.md` | unchanged content | header narrative updated | 1 line edited (E2 application annotation; counts unchanged 384/49/43) |
+| `docs/FEATURE_INDEX_BASELINE_AUDIT.md` | 107 | ~170 | +~63 (E2 Reconciliation Diff section: empty promotion table + 3-row per-test kind diff + 5-row preserved-overrides table + summary + delivered-vs-not-delivered narrative) |
+| `docs/SHADOW_GENOME.md` | end-of-file | +1 doctrinal entry | SG-ClassifierPathBug appended (path-form variance pattern + closure mechanism + counter-pattern + secondary lesson on premise-vs-outcome divergence) |
+
+## TDD-Light record
+
+Tests written RED first: 4/19 failed before implementation (cases 16, 17, 18, 19 — case 15 bare-path passed under existing resolver). After implementation: 19/19 GREEN. Evidence: `node --test FailSafe/extension/src/test/scripts/featureIndexClassifier.test.cjs` shows tests=19 pass=19 fail=0.
+
+## Phase-by-phase delivery
+
+- **Phase 1**: classifier hardened — `TEST_PATH_PREFIXES` strips longest-prefix-first; `MANUAL_OVERRIDES` frozen lookup table for FX128/145/173/174/359 with Phase-3 reasoning; `applyManualOverrides` invoked as last step of `runAudit` per-row pipeline (cannot be circumvented). Module exports extended with `applyManualOverrides` + `MANUAL_OVERRIDES`.
+- **Phase 2**: pre-fix snapshot captured at `dist/feature-index-classification-pre-fix.json` (gitignored); classifier re-run produced post-fix output at `dist/feature-index-classification.json` with same `bySuggestedStatus: {verified:380, unverified:53, n/a:43}` as snapshot — zero verdict deltas.
+- **Phase 3**: FEATURE_INDEX header annotation added; counts unchanged because reconciliation diff produced zero promotions.
+- **Phase 4**: BASELINE_AUDIT.md gained `## E2 Reconciliation Diff (2026-05-08)` section with: empty promotion table, 3-row per-test-kind diff (FX149/FX150/FX155 all unrunnable→ambiguous), 5-row preserved-overrides table, summary table showing zero entry-level deltas + per-test-kind shifts (-3 unrunnable, +3 ambiguous), and explicit "what E2 actually delivered" narrative.
+- **Phase 5**: SHADOW_GENOME.md gained `## SG-ClassifierPathBug` doctrinal entry under SG-PresenceOnlyByNameMatch lineage; captures path-form variance pattern + closure + counter-pattern + premise-vs-outcome divergence as secondary lesson.
+
+## Honest reconciliation finding
+
+E2's stated outcome ("entries promote `unverified` → `verified` after path-fix") **did not materialize**. The path-fix DOES work at the resolver layer (3 entries no longer false-classify as `unrunnable`); however, the resolved tests are Playwright specs the heuristic-4 regex does not detect as functional. They reclassify `unrunnable` → `ambiguous`, and `ambiguous` still maps to `unverified` for these single-test rows. Coverage counts stay 384/49/43 unchanged.
+
+This finding is documented in the BASELINE_AUDIT reconciliation diff section AND in the SG-ClassifierPathBug entry's "secondary lesson — premise-vs-outcome divergence" subsection. The publish-block bottleneck is now confirmed to be Playwright-heuristic blindness, not path resolution.
+
+## Test surface
+
+- node:test (cjs scripts): **47/47 pass** (42 prior at Entry #303 + 5 new from this cycle = 47)
+- TypeScript: **clean** (`npx --no-install tsc --noEmit` from FailSafe/extension; no errors)
+- Razor: classifier 271L (over 250L advisory, under 280L target with factor-out fallback declared); test file 328L (precedent from #303 274L); max function 38L; nesting ≤2; no nested ternaries
+- vscode-test mocha + Playwright: not re-run this cycle (no source-side touchpoints)
+
+## Steps skipped per protocol
+
+- **Step 5.5** (Intent Lock Capture): DEGRADED-NOOP — `.qor/` runtime uninitialized
+- **Step 12.5 auto-staging**: skipped per session feedback discipline (selective staging convention; operator approval per-action)
+
+**Content Hash**: `pending-runtime-tooling`
+**Previous Hash**: `pending-runtime-tooling` (Entry #305)
+**Session ID**: workspace-only / `default`
+
+---
+
+### Entry #307: SESSION SEAL — plan-e2-classifier-path-fix-and-reconciliation v2
+
+**Date**: 2026-05-08
+**Type**: Substantiation Seal (`/qor-substantiate`)
+**Persona**: The QorLogic Judge (substantiation mode)
+**Plan**: `plan-e2-classifier-path-fix-and-reconciliation.md` v2 (PASS at Entry #305)
+**Implementation reference**: Entry #306
+**Verdict**: **PASS — Reality matches Promise**
+**Risk Grade**: L2
+
+## Substantiation summary
+
+Plan-target: v5.1.3-baseline (workspace-only label per plan boundary; no `package.json` bump). Same workspace-slug discipline as v5.1.1 hotfix and v5.1.2-baseline seals. The substantive deliverable is **measurement-tool trust restoration** before remediation plan family E3+: classifier resolver hardening + manual-override authority codification + reconciliation diff disclosure + doctrinal capture of the path-form-variance pattern.
+
+E2 honest outcome: the resolver is now correct, but coverage counts are unchanged (384/49/43) because the bottleneck is Playwright-heuristic blindness, not path resolution. E3+ inherits a sharper diagnosis on the same 49-entry unverified bucket.
+
+Steps 7.5/7.6/9.5.5 (version bump + CHANGELOG stamp + annotated tag) **SKIPPED** per workspace-only baseline discipline (same as #298 and #303).
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| AUDIT_REPORT.md PASS verdict (Entry #305) | ✓ |
+| Reality = Blueprint (Step 3) | 5 MODIFIED present (classifier 271L, tests 328L, FEATURE_INDEX header, BASELINE_AUDIT +reconciliation, SHADOW_GENOME +doctrine entry); plan v2 5-phase scope fully delivered |
+| BACKLOG security-blocker review (Step 3.5) | No security blockers gating; backlog unchanged |
+| Test functionality acceptance (Step 4) | All 5 new cases (15-17 path-variant invoke `resolveTestPath`; 18-19 manual-override invoke `applyManualOverrides`) assert on observable return values; SG-035 acceptance question "yes" for all 5; presence-only seal gate not triggered |
+| Skill file integrity (Step 4.5) | No skill files modified in this sub-chain |
+| Reliability sweep (Step 4.6) | DEGRADED-NOOP — `.qor/` runtime uninitialized |
+| Secret scanning (Step 4.6.5) | DEGRADED-NOOP — manual review of 5 MODIFIED files shows no secrets; only doctrinal text and code constants |
+| Procedural fidelity (Step 4.6.6) | DEGRADED-NOOP |
+| Doc integrity (Step 4.7) | DEGRADED-NOOP — would have validated terms_introduced; v2 amendment ensured all 3 fulfilled |
+| Section 4 Razor (Step 5) | classifier 271L (over 250 advisory, under 280 target with factor-out fallback declared); test file 328L (precedent from Entry #303 274L); max function 38L; nesting ≤2; no nested ternaries — PASS with advisory |
+| SYSTEM_STATE.md sync (Step 6) | Skipped — workspace-only baseline; SYSTEM_STATE remains at v5.1.2-baseline state. To be updated when remediation chain produces a publishable seal |
+| Doc currency (Step 6.5) | change_class=feature → README/CHANGELOG required by Phase 33 release-doc rule WAIVED for workspace-only baseline (no marketplace publish triggered); Phase 49 badge currency exempt |
+| Version validation (Step 2.5) | Target v5.1.3-baseline (workspace label) — no comparison vs git tag; current tag v4.9.9 unchanged |
+
+## Test surface (final)
+
+- node:test (cjs scripts): **47/47 pass**
+- TypeScript: **clean**
+- vscode-test mocha + Playwright: unchanged from #303 seal (no source-side touchpoints in this cycle)
+- plan-grep-lint: clean against v2 plan (18/18 tokens)
+
+## Findings (carried forward)
+
+1. **Playwright heuristic blind spot is the actual publish-block bottleneck** (HIGH — gates remediation strategy): per E2 reconciliation diff finding, the path-fix did not promote any entry. E3 plan dialogue should choose between (a) authoring functional tests for unverified entries vs (b) upgrading the classifier heuristic to detect Playwright `expect(locator).toHaveClass()` and bare `expect(x).toBe(y)` chains. Both paths reduce the unverified bucket; (b) is one-time and would convert ≥3 entries (FX149/150/155) plus potentially more as the heuristic improves.
+2. **Premise-vs-outcome discipline pattern** (NEW — captured in SG-ClassifierPathBug §"secondary lesson"): plans that hypothesize a downstream impact from a fix should declare a falsifiable acceptance criterion (e.g., "post-fix run promotes ≥1 entry") and accept honest reconciliation when reality differs. The E2 reconciliation diff exemplifies the disclosure pattern.
+3. **49 unverified entries** (carried from Entry #303): unchanged. Remediation plan family E3+ scope is unchanged but diagnosis is sharper.
+4. **Pre-existing flaky test** (carried): `TtsEngine vendor presence routing` — recommend test-stability hotfix.
+5. **Three unpushed seal commits** (after this cycle): v5.1.1 hotfix (`b1a1e02`) + v5.1.2-baseline (`b51a9b8`) + v5.1.3-baseline (this entry's commit, pending). Operator deferred decision on push.
+
+## Skipped per protocol decisions
+
+- **Steps 7.5 / 7.6 / 9.5.5** (version bump + CHANGELOG stamp + annotated tag): SKIPPED per workspace-only baseline discipline.
+- **Steps 4.6 / 4.6.5 / 4.6.6 / 4.7 / 6.5 Phase 49 / 7.4 / 7.7 / 7.8 / 8.5 / Z**: DEGRADED-NOOP (`.qor/` runtime uninitialized).
+- **Step 6** (SYSTEM_STATE update): deferred to next publishable seal (workspace-only baseline does not bump SYSTEM_STATE).
+
+## Operator notice — degraded wiring
+
+`.qor/` runtime uninitialized. Gate-artifact persistence + AI provenance manifest + intent-lock + secret scanner + procedural fidelity + doc integrity strict-mode + dist recompile + post-seal verification + gate-chain completeness all no-op. This ledger entry is the canonical record.
+
+**Content Hash**: `pending-runtime-tooling`
+**Previous Hash**: `pending-runtime-tooling` (Entry #306)
+**Merkle Seal**: `pending-runtime-tooling` (degraded-mode placeholder)
+**Session ID**: workspace-only / `default`
+
+**PASS conditions confirmed**:
+- AUDIT_REPORT.md shows PASS verdict (Entry #305): ✓
+- Version state: target v5.1.3-baseline (workspace-only); no bump per plan
+- Reality matches Promise: 5 MODIFIED present; all 5 phase deliverables present
+- No security blockers gating
+- Test functionality discipline applied (all 5 new cases invoke unit + assert)
+- Razor: PASS with advisory
+- Honest reconciliation: zero verdict promotions DOCUMENTED, not hidden
+
+**Decision**: SEAL — Reality matches Promise. The classifier path-fix sub-chain is sealed at v5.1.3-baseline. PUBLISH_BLOCK Condition 1 truth state is unchanged (49 unverified); E3+ remediation plan family inherits a corrected resolver + codified manual-override authority + sharpened diagnosis (Playwright heuristic is the real bottleneck).
+
+_Chain Status: SUB-CHAIN SEALED at Entry #307. Classifier path-fix cycle complete._
+_Next: Operator decision on staging/commit/push for E2 + prior 2 unpushed seals (`b1a1e02`, `b51a9b8`). Then `/qor-plan` for E3 (heuristic upgrade or first surface-bucket functional-test plan; recommend the heuristic upgrade for one-time impact)._
+
