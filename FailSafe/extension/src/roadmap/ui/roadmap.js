@@ -14,6 +14,8 @@ class WebPanelClient {
     };
     this.reconnectTimer = null;
     this.reconnectAttempts = 0;
+    this.connectionState = 'connecting';
+    this.firstHubLoaded = false;
 
     this.elements = {
       phaseTitle: document.getElementById('phase-title'),
@@ -54,7 +56,7 @@ class WebPanelClient {
   }
 
   connect() {
-    this.setStatus('Connecting...');
+    this.setConnectionState('connecting');
     this.ws = new WebSocket(`ws://${window.location.host}`);
 
     this.ws.onopen = () => {
@@ -63,7 +65,7 @@ class WebPanelClient {
         clearTimeout(this.reconnectTimer);
         this.reconnectTimer = null;
       }
-      this.setStatus('Connected');
+      this.setConnectionState('connected');
       this.staleness?.notifyConnected();
     };
 
@@ -73,14 +75,43 @@ class WebPanelClient {
     };
 
     this.ws.onclose = () => {
-      this.setStatus('Disconnected - retrying...');
+      this.setConnectionState('disconnected');
       this.staleness?.notifyDisconnected();
       this.scheduleReconnect();
     };
 
     this.ws.onerror = () => {
-      this.setStatus('Connection error');
+      this.setConnectionState('error');
     };
+  }
+
+  setConnectionState(state) {
+    this.connectionState = state;
+    const labels = {
+      connecting: 'Connecting...',
+      connected: 'Connected',
+      disconnected: 'Disconnected - retrying...',
+      error: 'Connection error',
+    };
+    this.setStatus(labels[state] || state);
+    // Coordinate sentinel display with connection state. When the WS is
+    // not yet established (connecting/error/disconnected) AND no hub data
+    // has arrived, show neutral sentinel — never green by default.
+    if (state !== 'connected' && !this.firstHubLoaded) {
+      this.paintPendingSentinel();
+    }
+  }
+
+  paintPendingSentinel() {
+    if (this.elements.sentinelOrb) {
+      this.elements.sentinelOrb.className = 'sentinel-orb pending';
+    }
+    if (this.elements.sentinelLabel) {
+      this.elements.sentinelLabel.textContent = '—';
+    }
+    if (this.elements.queueValue) {
+      this.elements.queueValue.textContent = '—';
+    }
   }
 
   scheduleReconnect() {
@@ -109,6 +140,7 @@ class WebPanelClient {
       const res = await fetch('/api/hub');
       if (!res.ok) throw new Error(`Hub request failed (${res.status})`);
       this.hub = await res.json();
+      this.firstHubLoaded = true;
       this.render();
     } catch {
       this.setStatus('Unable to load hub data');

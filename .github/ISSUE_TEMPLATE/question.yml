@@ -1,0 +1,59 @@
+name: Question / Support
+description: Ask a question about FailSafe usage or configuration
+title: "[Question]: "
+labels: ["question"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a question about FailSafe? We're happy to help!
+        For general discussions, consider using [GitHub Discussions](https://github.com/MythologIQ/FailSafe/discussions) instead.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: What would you like to know?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Related Area
+      description: Which area does your question relate to?
+      options:
+        - Installation / Setup
+        - Governance Modes
+        - Sentinel / Audits
+        - Skills (qor-* commands)
+        - Command Center
+        - Monitor
+        - Configuration
+        - Trust Engine
+        - QoreLogic
+        - SHIELD Workflow
+        - FailSafe Pro
+        - MCP / CLI
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Any relevant context (what you've tried, documentation you've read, etc.)
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      options:
+        - label: I have read the [documentation](https://github.com/MythologIQ/FailSafe/wiki)
+          required: false
+        - label: I have searched existing issues and discussions
+          required: true

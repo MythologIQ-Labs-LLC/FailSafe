@@ -16,10 +16,16 @@ suite("monitor-render — getPhaseInfo", () => {
     assert.equal(r.index, 2);
   });
 
-  test("SEALED governancePhase → index 4", () => {
+  test("SEALED governancePhase → index 5 (all four done)", () => {
     const r = getPhaseInfo({ governancePhase: { current: 'SEALED' } });
     assert.equal(r.title, 'SEALED');
-    assert.equal(r.index, 4);
+    assert.equal(r.index, 5);
+  });
+
+  test("IDLE with empty plan → index -1 (all four pending)", () => {
+    const r = getPhaseInfo({ governancePhase: { current: 'IDLE' }, activePlan: { phases: [] } });
+    assert.equal(r.title, 'IDLE');
+    assert.equal(r.index, -1);
   });
 
   test("IDLE + Debug runState → fallback to runState", () => {

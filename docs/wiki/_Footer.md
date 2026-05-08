@@ -1,0 +1,1 @@
+[FailSafe](https://github.com/MythologIQ-Labs-LLC/FailSafe) | [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=MythologIQ.mythologiq-failsafe) | [Open VSX](https://open-vsx.org/extension/MythologIQ/mythologiq-failsafe) | [FailSafe Pro](https://mythologiq.studio/products/failsafe-pro)

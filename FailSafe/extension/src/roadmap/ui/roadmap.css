@@ -385,6 +385,10 @@ body {
 }
 
 
+.sentinel-orb.pending {
+  background: radial-gradient(circle at 35% 30%, #cbd5e1, #64748b 58%, #334155);
+  opacity: 0.55;
+}
 .sentinel-orb.monitoring {
   background: radial-gradient(circle at 35% 30%, #a4f8a2, #35ca2d 58%, #1a6f19);
   animation: pulse-green 3s ease-in-out infinite;

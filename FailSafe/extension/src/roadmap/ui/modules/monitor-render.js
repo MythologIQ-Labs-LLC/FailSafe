@@ -3,7 +3,7 @@
 // Pure functions over hub data + element handles. The Monitor's compact UI
 // shell (`roadmap.js`) wires these into its render() pipeline.
 
-const PHASE_INDEX_MAP = { PLAN: 0, GATE: 1, IMPLEMENT: 2, SUBSTANTIATE: 4, SEALED: 4 };
+const PHASE_INDEX_MAP = { PLAN: 0, GATE: 1, IMPLEMENT: 2, SUBSTANTIATE: 4, SEALED: 5 };
 const PHASE_LABELS = ['Plan', 'Audit', 'Implement', 'Substantiate'];
 
 function escapeHtml(value) {
@@ -32,6 +32,10 @@ export function getPhaseInfo(hub) {
     || phases.find((phase) => phase.status === 'active')
     || phases[0]
     || null;
+
+  if (!active && gov?.current === 'IDLE') {
+    return { title: 'IDLE', index: -1 };
+  }
 
   const title = String(active?.title || 'Plan');
   return { title, index: indexFromTitle(title) };

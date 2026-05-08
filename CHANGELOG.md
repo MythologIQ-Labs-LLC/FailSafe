@@ -5,6 +5,31 @@ All notable changes to FailSafe will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.1.0] - 2026-05-06
+
+Minor release. Comprehensive E2E coverage methodology + release-class CI gate (B199 Phase 1) + Monitor B191 functional proof. Surfaced and fixed three latent Monitor bugs that unit tests could not catch — most notably a missing `type="module"` on the Monitor's bootstrap script that meant the compact UI never actually rendered in production.
+
+### Added
+
+- Comprehensive E2E coverage methodology — Playwright test harness (`serveCompactUI` + `ledgerFixtures` helpers) and two new specs: `monitor-shield-progression.spec.ts` (8 cases covering all 6 SHIELD phases + plan title + WS-broadcast re-render) and `monitor-staleness.spec.ts` (1 connected → disconnected → reconnected lifecycle case).
+- Release-class CI coverage gate — `scripts/check-e2e-coverage.cjs` invoked from the pre-push hook when the active plan's `change_class` is `feature` or `breaking`. Blocks pushes whose staged surface files (UI, ConsoleServer routes, commands) lack a corresponding `*.spec.ts`, unless a `[no-e2e: <reason>]` token appears in a commit message in the push range. Hotfix is exempt.
+- New npm scripts: `test:e2e` (runs Playwright) and `test:e2e:coverage` (runs the gate against currently-staged files).
+
+### Fixed
+
+- Monitor never bootstrapped in production (root cause behind B191's user-visible "Monitor doesn't see my work"). The compact UI's `<script src="roadmap.js">` was missing `type="module"` despite using ES module imports — the script silently failed to execute. No prior unit test exercised UI JS execution, so this was invisible.
+- SEAL phase rendered "Substantiate active" instead of "all four done". `PHASE_INDEX_MAP['SEALED']` was 4 (same as SUBSTANTIATE) in `monitor-render.js`. Bumped to 5 so SEAL correctly renders all four steps `done`.
+- IDLE phase rendered "Plan active" instead of "all pending". Added an IDLE early-return branch in `getPhaseInfo` that fires only when no other phase signal exists; preserves existing IDLE+runState and IDLE+recentCompletions fallthrough semantics.
+
+### Test discipline
+
+- Mocha suite: 958 → 959 passing (+1 net from new `IDLE with empty plan → index -1` assertion); 1 pending; 0 failing.
+- Playwright suite: 7 → 16 passing (+9 net); 1 pre-existing skip; 0 failing.
+
+### Known divergence
+
+- Open VSX still shows v4.9.9; v5.0.0 published to VS Code Marketplace but Open VSX replication did not fire and no git tag was created for v5.0.0. v5.1.0 release will need to either leapfrog Open VSX from 4.9.9 → 5.1.0 directly, or backfill-publish v5.0.0 to Open VSX first.
+
 ## [5.0.0] - 2026-04-25
 
 Major release. Public reveal of the FailSafe / FailSafe Pro product split. The v4 bundled-skills installer is replaced by ingestion from the [`qor-logic`](https://pypi.org/project/qor-logic/) PyPI package. Skills now begin with `qor-` (was `ql-`). The Command Center reads workspace truth — META_LEDGER, BACKLOG, plan files, audit reports, and CHANGELOG — instead of showing empty placeholder state.

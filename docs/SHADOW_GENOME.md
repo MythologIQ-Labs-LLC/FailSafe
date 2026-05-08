@@ -2186,3 +2186,27 @@ Amend to v5:
 Re-run `/qor-audit` after amendments. Expected outcome: PASS.
 
 
+---
+
+## SG-ReleaseScopeMismatch-A — release banner over a narrow plan-internal seal
+
+**Detected**: 2026-05-06, Entry #285 audit
+**Pattern**: a Phase-N plan PASSes its plan-internal audit honestly (scoped to a narrow surface), implements and seals cleanly, then the workspace state ships under a publishable release banner (e.g., v5.1.0) that implies wider coverage than the plan ever scoped.
+
+**Symptom in this session**:
+- Phase 1 of plan-comprehensive-e2e-coverage.md scoped Monitor SHIELD progression + the E2E coverage CI gate.
+- Phase 1 sealed cleanly at Entry #284. Reality matched the Phase 1 Promise.
+- The version bump 5.0.0 → 5.1.0 happened post-seal; CHANGELOG, README, and extension marketplace listing implied a coherent v5.1.0 "minor release" covering the whole product.
+- `docs/FEATURE_INDEX.md` (also generated post-seal) revealed 264 of 476 product-surface features (55.5%) were unverified.
+- The release banner over Phase 1's narrow seal restated the same false-confidence pattern that motivated B199 in the first place.
+
+**Countermeasure**: a release-class seal SHALL read `docs/FEATURE_INDEX.md` as gating input. Specifically:
+- `/qor-substantiate` reads the FEATURE_INDEX coverage counts; if `verified` count regressed since the prior seal without explicit Governor justification, ABORT seal.
+- A release-class seal (publishable v-bump, change_class∈{feature,breaking}) ALSO requires that no feature classified `verified` has dropped to `unverified` since the last seal, AND that the FEATURE_INDEX header counts match the body (specification-drift guard).
+- The first time this fires, expect significant friction: large unverified surfaces will block release until either the FEATURE_INDEX is honestly downgraded (per-feature `n/a` justifications) or coverage is added.
+
+**Filed upstream**: Qor-logic#40 — "SHIELD lifecycle should require a Feature Inventory artifact cross-referenced against test surface."
+
+**Memory**: `feedback_feature_index_every_cycle.md`.
+
+

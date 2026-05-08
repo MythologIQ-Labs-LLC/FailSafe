@@ -54,6 +54,19 @@ function Invoke-Step {
   }
 }
 
+function Get-ActiveChangeClass {
+  $plansDir = Join-Path $RepoRoot ".failsafe/governance/plans"
+  if (-not (Test-Path $plansDir)) { return $null }
+  $plans = Get-ChildItem -Path $plansDir -Filter "plan-*.md" -File | Sort-Object LastWriteTime -Descending
+  foreach ($plan in $plans) {
+    $body = Get-Content -Raw -Path $plan.FullName
+    $m = [regex]::Match($body, '\*\*change_class\*\*\s*:\s*([a-z]+)', 'IgnoreCase')
+    if (-not $m.Success) { $m = [regex]::Match($body, '^change_class\s*:\s*([a-z]+)', 'IgnoreCase,Multiline') }
+    if ($m.Success) { return $m.Groups[1].Value.ToLowerInvariant() }
+  }
+  return $null
+}
+
 Write-Host "[INFO] Running local pre-push CI/CD gate..." -ForegroundColor Cyan
 
 if (-not $SkipBranchPolicy) {
@@ -95,6 +108,20 @@ if (-not $SkipTests) {
       Pop-Location
     }
   }
+}
+
+$ChangeClass = Get-ActiveChangeClass
+if ($ChangeClass -in @("feature", "breaking")) {
+  Invoke-Step "E2E coverage gate (change_class=$ChangeClass)" {
+    Push-Location $ExtensionRoot
+    try {
+      & node ./scripts/check-e2e-coverage.cjs
+    } finally {
+      Pop-Location
+    }
+  }
+} else {
+  Write-Host "[INFO] E2E coverage gate skipped (change_class=$ChangeClass)" -ForegroundColor DarkGray
 }
 
 if (-not $SkipVsixPackaging) {

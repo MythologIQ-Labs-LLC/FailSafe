@@ -158,6 +158,44 @@ suite('registerQoreRoute', () => {
     assert.deepEqual(res.body.plan, plan);
   });
 
+  test('FX102 GET /api/plans returns {plans: [...]} from planManager.getAllPlans', async () => {
+    const plans: FakePlan[] = [
+      { id: 'p1', title: 'First plan' },
+      { id: 'p2', title: 'Second plan' },
+    ];
+    const planManager: any = {
+      getSprint: () => null,
+      getPlan: () => null,
+      getAllPlans: () => plans,
+    };
+    const service = new QoreRuntimeService(makeRuntimeOptions(), makeFetchStub(() => ({})));
+    const app = makeApp();
+    registerQoreRoute(app, makeDeps({ qoreRuntimeService: service, planManager }));
+    harness = new RouteHarness(app);
+    await harness.start();
+    const res = await harness.request({ path: '/api/plans' });
+    assert.equal(res.status, 200);
+    assert.equal(res.body.plans.length, 2);
+    assert.equal(res.body.plans[0].id, 'p1');
+    assert.equal(res.body.plans[1].title, 'Second plan');
+  });
+
+  test('FX102 GET /api/plans returns empty list when no plans exist', async () => {
+    const planManager: any = {
+      getSprint: () => null,
+      getPlan: () => null,
+      getAllPlans: () => [],
+    };
+    const service = new QoreRuntimeService(makeRuntimeOptions(), makeFetchStub(() => ({})));
+    const app = makeApp();
+    registerQoreRoute(app, makeDeps({ qoreRuntimeService: service, planManager }));
+    harness = new RouteHarness(app);
+    await harness.start();
+    const res = await harness.request({ path: '/api/plans' });
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body.plans, []);
+  });
+
   test('GET /api/qore/runtime rejects via deps.rejectIfRemote with 403', async () => {
     const service = new QoreRuntimeService(makeRuntimeOptions(), makeFetchStub(() => ({})));
     const app = makeApp();

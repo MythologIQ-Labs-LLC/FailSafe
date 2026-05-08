@@ -12953,3 +12953,390 @@ When operator runs SHIELD lifecycle skills via Claude:
 
 _Chain Status: SUB-CHAIN SEALED at Entry #280; v5.0.0 surface continues._
 _Next: operator-explicit lifecycle actions per the deferred-approval list above._
+
+---
+
+### Entry #281: GATE TRIBUNAL (VETO) — plan-comprehensive-e2e-coverage.md
+
+**Date**: 2026-05-06
+**Phase**: GATE
+**Persona**: The QorLogic Judge
+**Plan**: `.failsafe/governance/plans/plan-comprehensive-e2e-coverage.md`
+**Risk Grade**: L2
+**Findings categories**: `infrastructure-mismatch`
+
+**Verdict**: VETO
+
+**Pass-by-pass**: Prompt Injection PASS, Security L3 PASS, OWASP Top 10 PASS, Ghost UI PASS, Section 4 Razor PASS, Test Functionality PASS, Dependency Audit PASS, Macro-Level Architecture PASS, **Infrastructure Alignment VETO**, Orphan Detection PASS, Documentation Drift PASS.
+
+**Finding (Infrastructure Alignment)**: Plan Phase 1 Affected Files cites `FailSafe/extension/.githooks/pre-push (or its containing script)` as MODIFIED. Repo verification: `git config core.hooksPath=.githooks` and the actual pre-push hook is at `.githooks/pre-push` (repo root, NOT under `FailSafe/extension/`). The cited path does not exist; the plan does not explicitly declare it NEW; the "(or its containing script)" hedge does not satisfy Phase 37 Infrastructure Alignment doctrine which requires "exists in current tree OR explicitly declared NEW in Affected Files".
+
+**Required remediation**: amend Phase 1 Affected Files to cite `.githooks/pre-push` (verified actual path); drop the hedge; verify the `+10` line estimate against the actual hook's existing structure.
+
+**Non-blocking observations** (informational):
+1. Unit tests for `check-e2e-coverage.cjs` parsing logic not specified in Phase 1; flag for implement-pass smoke testing.
+2. `[no-e2e: <reason>]` regex/parser unspecified; resolve at implement.
+3. Phase 2-8 surface inventory enumerated by category, not test-case-count; acceptable since each phase gets its own /qor-plan.
+
+**Process Pattern observation**: First audit on this plan. No repeated-VETO pattern. Single-finding VETO with narrow amendment; expected convergence in 1 iteration.
+
+**Audit Report**: `.agent/staging/AUDIT_REPORT.md`
+
+**Operator notice — degraded wiring**: `.qor/` runtime uninitialized; gate-artifact persistence and python helpers all no-op. No `audit.json` emitted; equivalent narrative artifact at `.agent/staging/AUDIT_REPORT.md`.
+
+**Content Hash**: `pending-runtime-tooling`
+**Previous Hash**: `pending-runtime-tooling` (Entry #280)
+
+**Decision**: VETO — single infrastructure-mismatch finding; one-line amendment expected to resolve. Governor verifies the actual hook path, amends, re-runs `/qor-audit`. Expected outcome: PASS.
+
+_Chain Status: SUB-CHAIN OPENED at Entry #281 (extends from #280 seal); first GATE TRIBUNAL of the new sub-chain (B199 E2E coverage)._
+_Next: Governor amends plan-comprehensive-e2e-coverage.md Phase 1 Affected Files with verified `.githooks/pre-push` path; re-runs /qor-audit._
+
+---
+
+### Entry #282: GATE TRIBUNAL (PASS) — plan-comprehensive-e2e-coverage.md (amended)
+
+**Date**: 2026-05-06
+**Phase**: GATE
+**Persona**: The QorLogic Judge
+**Plan**: `.failsafe/governance/plans/plan-comprehensive-e2e-coverage.md`
+**Risk Grade**: L1
+**Findings categories**: (none)
+
+**Verdict**: PASS
+
+**Lineage**: amended after Entry #281 VETO (single infrastructure-mismatch finding on pre-push hook path). Single amendment cycle; clean convergence.
+
+**Pass-by-pass**: Prompt Injection PASS, Security L3 PASS, OWASP Top 10 PASS, Ghost UI PASS, Section 4 Razor PASS, Test Functionality PASS, Dependency Audit PASS, Macro-Level Architecture PASS, **Infrastructure Alignment PASS** (was VETO; amendment corrects hook path), Orphan Detection PASS, Documentation Drift PASS.
+
+**Amendment verification**: Replaced `FailSafe/extension/.githooks/pre-push (or its containing script)` with `tools/reliability/prepush-validate.ps1` (121L, the actual validator that `.githooks/pre-push` delegates to). Verified via `git config core.hooksPath=.githooks` + `head .githooks/pre-push` + filesystem check. Hedge dropped. File-size budget updated: 121 → ~135 (+14L for one new `Invoke-Step` block + change_class detection helper).
+
+**Razor (post-amendment)**: all 5 new files under 250L cap; `tools/reliability/prepush-validate.ps1` 121→135L (well under 250).
+
+**Test Functionality**: 10 E2E spec test cases in Phase 1 — all functional (Playwright-driven, `page.locator()` assertions on real DOM). SG-035 countermeasure honored.
+
+**Infrastructure Alignment full re-verification**: every cited path verified to exist OR explicitly declared NEW. 11/11 paths verified.
+
+**Non-blocking observations (carried unchanged)**: (1) `check-e2e-coverage.cjs` parsing-logic smoke tests not in plan; flag for implement. (2) `[no-e2e: <reason>]` regex unspecified; resolve at implement. (3) Phase 2-8 enumerated by category; each gets own /qor-plan.
+
+**Process Pattern observation**: iteration 2 of audit; VETO at #281 → PASS at this entry. Single-finding VETO with single amendment cycle. Clean convergence.
+
+**Audit Report**: `.agent/staging/AUDIT_REPORT.md`
+
+**Operator notice — degraded wiring**: `.qor/` runtime uninitialized; gate-artifact persistence and python helpers all no-op. No `audit.json` artifact emitted; equivalent narrative artifact at `.agent/staging/AUDIT_REPORT.md`.
+
+**Content Hash**: `pending-runtime-tooling`
+**Previous Hash**: `pending-runtime-tooling` (Entry #281)
+
+**Decision**: PASS — plan is implementation-ready. Required next action: `/qor-implement` per `qor/gates/chain.md`.
+
+_Chain Status: SUB-CHAIN CONTINUING (Entry #282 extends from #281 VETO; first PASS audit of the B199 E2E coverage sub-chain)._
+_Next: `/qor-implement` for Phase 1 — foundation + Monitor B191 proof._
+
+---
+
+### Entry #283: IMPLEMENTATION — plan-comprehensive-e2e-coverage.md (Phase 1)
+
+**Date**: 2026-05-06
+**Phase**: IMPLEMENT
+**Persona**: The QorLogic Specialist
+**Plan**: `.failsafe/governance/plans/plan-comprehensive-e2e-coverage.md`
+**Risk Grade**: L1
+**Audit prior**: Entry #282 PASS (amended)
+
+**Lineage**: implements Phase 1 of B199 — establishes the Playwright + integration E2E methodology, the CI gate (Option C release-class enforcement), and uses Monitor B191 as the proof surface.
+
+## Files
+
+### New (5, all under 250L cap)
+
+- `FailSafe/extension/src/test/ui/helpers/ledgerFixtures.ts` (110L) — `buildLedgerContent(entries: ShieldEntry[])`, `hubForPhase(phase, planTitle)`. Deterministic hub-snapshot + chain-shaped META_LEDGER.md content for tests.
+- `FailSafe/extension/src/test/ui/helpers/serveCompactUI.ts` (133L) — HTTP+WS test harness. `serveCompactUI({hub, ledgerEntries})` returns controller `{url, setHub, broadcast, closeAllSockets, acceptingConnections, close}`. Manual `server.on('upgrade')` handler so `acceptingConnections(false)` actually rejects upgrades (no client-side `onopen` race).
+- `FailSafe/extension/src/test/ui/monitor-shield-progression.spec.ts` (86L) — 8 Playwright cases: 6-phase matrix (IDLE/PLAN/GATE/IMPLEMENT/SUBSTANTIATE/SEALED), plan-title rendering, hub.refresh broadcast → re-render. Sink: real `page.locator('#phase-track .phase-row:not(.debug-row) .step')` reads.
+- `FailSafe/extension/src/test/ui/monitor-staleness.spec.ts` (39L) — connected → WS-close → reconnected lifecycle; verifies `.stale` class + banner text. Sink: real DOM class reads.
+- `FailSafe/extension/scripts/check-e2e-coverage.cjs` (121L) — CI gate. Parses `change_class` from latest plan in `.failsafe/governance/plans/`, reads `git diff --cached`, requires `*.spec.ts` companion for surface files unless commit message in push range carries `[no-e2e: <reason>]`. Skips when `change_class` ∉ {feature, breaking}.
+
+### Modified
+
+- `tools/reliability/prepush-validate.ps1`: 121L → 148L (+27L; plan budget was +14L). Added `Get-ActiveChangeClass` helper (PowerShell regex extraction matching the cjs script's parser) and a conditional `Invoke-Step "E2E coverage gate"`. Net +27L because the helper needed two regex variants (frontmatter + `**change_class**:` markdown) for parser parity. Still under 250L cap.
+- `FailSafe/extension/package.json`: +2 scripts — `test:e2e` (alias of `playwright test`) and `test:e2e:coverage` (invokes `node ./scripts/check-e2e-coverage.cjs`).
+- `FailSafe/extension/playwright.config.ts`: unchanged — existing `testDir: 'src/test/ui'` already covers new specs.
+
+### Modified — outside plan's explicit MODIFIED list (scope-expansion declared)
+
+These two were NOT in the plan's "Affected Files" but were necessary to make the plan's stated SHIELD-progression promises actually render. Phase 1 was sold as a "proof of methodology by exposing real gaps"; the new E2E suite caught both immediately on first run.
+
+- `FailSafe/extension/src/roadmap/ui/index.html`: 109L (line 107). Added `type="module"` to `<script src="roadmap.js">`. Without this, `roadmap.js`'s ES module imports throw a SyntaxError and the Monitor never bootstraps. This is the latent root of B191's user-visible "Monitor doesn't render" — never caught because no E2E exercised JS execution. Surfaced by the new spec on first run.
+- `FailSafe/extension/src/roadmap/ui/modules/monitor-render.js`: 117L → 119L (+2L). Two minimal changes to align with plan promises: (a) `PHASE_INDEX_MAP['SEALED']: 4 → 5` so SEAL maps "all four done" instead of "Substantiate active"; (b) added 3-line `IDLE` early-return `{ title: 'IDLE', index: -1 }` so all four steps render `pending` when governance is idle (per plan spec for IDLE).
+
+## File-Size Razor verification
+
+| File | Pre | Post | Cap | Status |
+|---|---|---|---|---|
+| ledgerFixtures.ts (NEW) | 0 | 110 | 250 | ✓ |
+| serveCompactUI.ts (NEW) | 0 | 133 | 250 | ✓ |
+| monitor-shield-progression.spec.ts (NEW) | 0 | 86 | 250 | ✓ |
+| monitor-staleness.spec.ts (NEW) | 0 | 39 | 250 | ✓ |
+| check-e2e-coverage.cjs (NEW) | 0 | 121 | 250 | ✓ |
+| prepush-validate.ps1 | 121 | 148 | 250 | ✓ (+27, plan target +14, no over-cap risk) |
+| index.html | 109 | 109 | 250 | ✓ (1 attribute added in-line) |
+| monitor-render.js | 117 | 119 | 250 | ✓ |
+
+## Test Functionality verification (TDD-Light)
+
+10 new E2E test cases; each terminates at a real DOM read via `page.locator(...)`. No "did the function get called" mocks. Acceptance question ("if the unit's behavior were silently broken but the artifact still existed, would this test fail?") satisfied for each. SG-035 countermeasure honored.
+
+## Test execution
+
+```
+npm run compile  → 0 errors
+npx playwright test  → 16 passed, 1 skipped (pre-existing), 0 failing
+```
+
+Pre-implementation: 7 Playwright tests (4 in user-stories + 1 compact-ui + 1 popout-ui + 1 skipped). Post-implementation: 16 tests + 1 skipped. Net +9 (7 progression cases + 1 plan title + 1 staleness lifecycle).
+
+## Plan-Reality coherence
+
+- **Stated promise**: Phase track must render correctly across all 6 SHIELD phases. **Reality (post-implementation)**: ✓ all 6 cases pass; renderer alignment fixes (`SEALED:5`, `IDLE:-1`) made this honest.
+- **Stated promise**: Phase track must show `Tracking: <plan-title>`. **Reality**: ✓.
+- **Stated promise**: Mid-test ledger update + WS broadcast must re-render. **Reality**: ✓ via `setHub` + `broadcast({type:'hub.refresh'})`.
+- **Stated promise**: WS-disconnect must add `.stale` class + show banner; reconnect must clear. **Reality**: ✓ — required `noServer:true` + manual upgrade handler in test harness to make rejection deterministic.
+- **Stated promise**: CI gate enforces only on `feature`/`breaking` `change_class`. **Reality**: ✓ — verified manually (`FAILSAFE_CHANGE_CLASS=feature` runs gate; `=hotfix` skips).
+
+## Bugs surfaced by the new methodology (per Phase 1's stated purpose)
+
+1. **Monitor never bootstrapped in production**: `<script src="roadmap.js">` lacked `type="module"` despite `roadmap.js` using ES module imports. This bug was latent because no prior test exercised UI JS execution. Fixed.
+2. **SEAL never rendered all-four-done**: `PHASE_INDEX_MAP['SEALED']` was identical to `SUBSTANTIATE` (both `4`). Fixed by raising SEALED to `5`.
+3. **IDLE rendered Plan as active**: `getPhaseInfo` had no early-return for IDLE; fell through to `activePlan` fallback which produced `{title: 'Plan', index: 0}`. Fixed.
+
+These are exactly the class of regression that "unit tests passed, feature broken" — the user's stated motivation for adopting Option C release-class E2E enforcement.
+
+## B191 status update
+
+Per memory rule `feedback_e2e_before_claim_closed.md`: B191 **remains OPEN until /qor-substantiate** runs the full chain validation and confirms zero regressions. Phase 1 produces the verification surface; substantiate makes the close/no-close call.
+
+## Operator notice — degraded wiring
+
+`.qor/` runtime uninitialized; `qor.reliability.intent_lock` capture (Step 5.5) and `gate_chain.write_gate_artifact` (Step Z) are no-op. No `implement.json` artifact emitted; equivalent narrative artifact is this ledger entry.
+
+**Content Hash**: `pending-runtime-tooling`
+**Previous Hash**: `pending-runtime-tooling` (Entry #282)
+
+**Decision**: IMPLEMENTATION COMPLETE — Reality matches Promise across all Phase 1 deliverables. 5 new files, 3 plan-listed MODIFIED files, 2 scope-expanded MODIFIED files (declared honestly above; both ≤+2L net change, no cap risk). 9 net new E2E tests; full Playwright suite green. Methodology proof established and 3 latent UI bugs surfaced (1 critical: Monitor never bootstrapped in prod). Ready for `/qor-substantiate`.
+
+_Chain Status: SUB-CHAIN CONTINUING (Entry #283 extends from #282 PASS audit)._
+_Next: `/qor-substantiate` per `qor/gates/chain.md`._
+
+---
+
+### Entry #284: SESSION SEAL — plan-comprehensive-e2e-coverage.md (Phase 1)
+
+**Date**: 2026-05-06
+**Phase**: SUBSTANTIATE
+**Persona**: The QorLogic Judge (substantiation mode)
+**Plan**: `.failsafe/governance/plans/plan-comprehensive-e2e-coverage.md`
+**change_class**: feature (rolls into v5.0.x line; Phase 1 of B199 multi-cycle work)
+**Target version**: v5.0.x sub-chain (no per-Phase tag; aggregate ships at v5.0.0)
+
+**Verdict**: **PASS**
+
+**Lineage**: closes the Phase 1 sub-chain #281 (VETO) → #282 (PASS post-amendment) → #283 (IMPLEMENT) → #284 (this seal). Single audit-amendment cycle; clean convergence.
+
+## Reality Audit
+
+| Class | Promised | Reality | Status |
+|---|---|---|---|
+| New helpers | 2 (`ledgerFixtures.ts`, `serveCompactUI.ts`) | Both exist (110L + 133L) | ✓ EXISTS |
+| New specs | 2 (`monitor-shield-progression.spec.ts`, `monitor-staleness.spec.ts`) | Both exist (86L + 39L); 9 cases | ✓ EXISTS |
+| New CI gate | 1 (`check-e2e-coverage.cjs`) | Exists (121L) | ✓ EXISTS |
+| Modified per plan | 3 (prepush-validate.ps1, playwright.config.ts, package.json) | prepush-validate.ps1 +27L, package.json +2 scripts; playwright.config.ts unchanged (existing testDir already covers new specs — declared in #283) | ✓ EXISTS |
+| Scope-expanded MODIFIED (declared in #283) | 2 (index.html, monitor-render.js) | index.html +1 attr; monitor-render.js refined IDLE branch + SEALED:5 | ✓ EXISTS |
+| Substantiate-time additional MODIFIED | 1 (`monitor-render.test.ts`) | +1 new IDLE test case; SEALED assertion corrected from index 4 to index 5 (presence-only test was validating the buggy state) | ✓ DECLARED |
+| Unplanned files | 0 | — | — |
+| Missing files | 0 | — | — |
+
+**No MISSING. No UNPLANNED orphans.** All scope expansions declared honestly in implement entry + this seal.
+
+## Functional Verification (per-feature; "tested and confirmed functional", not "present")
+
+### A. Test Infrastructure
+
+- ✓ `serveCompactUI` HTTP+WS harness — exercised by all 9 new Playwright cases
+- ✓ `/api/hub` returns seeded fixture — phase tests would fail with wrong fixture
+- ✓ WebSocket broadcast reaches client — verified by `hub.refresh broadcast re-renders phase track` test (PLAN→IMPLEMENT class flip)
+- ✓ `acceptingConnections(false)` rejects WS upgrade with HTTP 503 — verified by staleness lifecycle (no `onopen` race)
+- ✓ `buildLedgerContent` writes valid chain-shaped META_LEDGER.md — file-write verified during fixture seed
+
+### B. Monitor SHIELD progression (B191 root mechanism)
+
+- ✓ IDLE → all four `pending`
+- ✓ PLAN → step 0 `active`
+- ✓ GATE → step 0 `done`, step 1 `active`
+- ✓ IMPLEMENT → steps 0-1 `done`, step 2 `active`
+- ✓ SUBSTANTIATE → steps 0-2 `done`, step 3 `active`
+- ✓ SEALED → all four `done`
+- ✓ Plan title shows `Tracking: <plan-title>`
+- ✓ WS broadcast triggers re-render
+
+### C. Monitor staleness indicator
+
+- ✓ Connected: no `.stale` class, banner hidden
+- ✓ WS disconnect: `.stale` added, banner shows `Disconnected — data may be stale`
+- ✓ Reconnect: `.stale` removed, banner hidden
+
+### D. CI coverage gate (`check-e2e-coverage.cjs`)
+
+- ✓ Skips when `change_class=hotfix`
+- ✓ Passes when `feature` + UI surfaces + spec staged
+- ✓ Passes when `breaking` + UI surfaces + spec staged
+- ✓ BLOCKS when surface staged without spec (exit 1, identifies missing files)
+- ✓ Reads `change_class` from latest plan in `.failsafe/governance/plans/`
+- ✓ Override token `[no-e2e: <reason>]` accepted in commit-msg range
+- ✓ Empty override token (`[no-e2e: ]`) rejected
+
+### E. Pre-push validator wiring
+
+- ✓ `Get-ActiveChangeClass` regex matches both frontmatter and `**change_class**:` markdown forms
+- ✓ Invokes E2E gate when feature/breaking; skips when hotfix/null
+
+### F. Latent bugs surfaced + fixed
+
+- ✓ `<script src="roadmap.js">` lacked `type="module"` (CRITICAL: Monitor never bootstrapped in production) — fixed
+- ✓ `PHASE_INDEX_MAP['SEALED']` was 4 (same as SUBSTANTIATE) — fixed to 5
+- ✓ `getPhaseInfo` had no IDLE-with-empty-state branch — added (preserves existing IDLE+runState/recentCompletions fallthrough; verified by 5 mocha tests)
+
+### G. Regression containment
+
+- ✓ Mocha: 958 → **959 passing** (+1 from new IDLE empty-plan test); 1 pending; 0 failing
+- ✓ Playwright: 7 → **16 passing** (+9 net); 1 pre-existing skip; 0 failing
+- ✓ Lint: 0 errors, 56 warnings (all pre-existing or trivial)
+- ✓ TypeScript compile: 0 errors
+
+## Section 4 Razor (final)
+
+| File | Pre | Post | Cap | Status |
+|---|---|---|---|---|
+| ledgerFixtures.ts (NEW) | 0 | 110 | 250 | ✓ |
+| serveCompactUI.ts (NEW) | 0 | 133 | 250 | ✓ |
+| monitor-shield-progression.spec.ts (NEW) | 0 | 86 | 250 | ✓ |
+| monitor-staleness.spec.ts (NEW) | 0 | 39 | 250 | ✓ |
+| check-e2e-coverage.cjs (NEW) | 0 | 121 | 250 | ✓ |
+| prepush-validate.ps1 | 121 | 148 | 250 | ✓ |
+| index.html | 109 | 109 | 250 | ✓ |
+| monitor-render.js | 117 | 119 | 250 | ✓ |
+| monitor-render.test.ts (substantiate-time edit) | ~80 | ~86 | 250 | ✓ |
+
+## What now works (B199 Phase 1 + B191 root)
+
+When operator stages a `change_class: feature` or `breaking` push containing UI surface changes:
+
+1. `tools/reliability/prepush-validate.ps1` reads change_class from latest plan in `.failsafe/governance/plans/`
+2. If feature/breaking, invokes `node ./scripts/check-e2e-coverage.cjs`
+3. Gate inspects `git diff --cached`, classifies surface files (UI/routes/commands), requires `*.spec.ts` companion or `[no-e2e: <reason>]` token in pushed commit messages
+4. BLOCKS push when surface lacks spec; PASS otherwise
+
+When the Monitor compact UI loads via `?ui=compact`:
+
+1. `index.html` `<script type="module">` correctly bootstraps `roadmap.js` ES module imports (was silently failing pre-fix)
+2. `roadmap.js` connects WS, fetches `/api/hub`
+3. `getPhaseInfo(hub)` derives `{title, index}` honoring all SHIELD phases including `IDLE: -1` and `SEALED: 5`
+4. `renderPhase` paints phase track with correct done/active/pending pattern
+5. WS disconnect → `MonitorStaleness.notifyDisconnected()` dims track + shows banner
+
+## Cumulative chain
+
+- This Phase 1 sub-chain: #281 (VETO) → #282 (PASS) → #283 (IMPLEMENT) → #284 (SEAL, this entry)
+- Parent: B199 multi-cycle effort spanning v5.0.x line
+- Backlog impact: B199 Phase 1 marked complete in BACKLOG.md; B199 itself stays OPEN pending Phases 2–8. B191 root mechanism re-confirmed via E2E (was UNIT-only verified at #279/#280; now actually exercised end-to-end).
+
+## Lifecycle deviations from default substantiate protocol (per memory `feedback_no_v4_10_x_version.md`)
+
+- Step 7.4 (SSDF tag emission) — SKIPPED: degraded `.qor/` runtime; ssdf_tagger no-op
+- Step 7.5 (version bump) — SKIPPED: this Phase 1 rolls into v5.0.x; no version bump
+- Step 7.6 (CHANGELOG stamp) — SKIPPED: no version delta to stamp
+- Step 9.5.5 (annotated seal-tag) — SKIPPED: aggregate v5.0.0 release sub-chain owns tag creation
+
+Steps 4.6 (reliability sweep), 4.6.5 (secret scanner), 4.6.6 (procedural fidelity), 4.7 (doc-integrity), 6.5 (doc currency), 7.7 (post-seal verification), 7.8 (gate-chain completeness), 8.5 (dist recompile) all DEGRADED-NO-OP under `.qor/` runtime gap; equivalent narrative coverage in this entry. Per Entries #261+ precedent.
+
+## Operator notice — degraded wiring
+
+`.qor/` runtime uninitialized; gate-artifact persistence and python helpers all no-op throughout. No `substantiate.json` artifact written; equivalent narrative artifact is this ledger entry. Content hash `pending-runtime-tooling` per established convention.
+
+## Deferred per-action operator approvals (no-ship-without-approval doctrine)
+
+Per memory rule `feedback_no_ship_without_approval.md`, the following each require explicit operator approval:
+
+1. **Commit** the staged 12 files with seal-format message (e.g., `seal: B199 Phase 1 — E2E coverage methodology + Monitor B191 functional proof (Entry #284)`)
+2. **Push** branch `plan/v5-extension-update` to origin
+3. **PR / merge** — recommended: extend existing PR #64 referencing Entries #281-#284; final merge to `main` deferred to v5.0.0 release sub-chain
+4. **Tag** — none for Phase 1; v5.0.0 release seal will create the tag
+
+**Content Hash**: `pending-runtime-tooling`
+**Previous Hash**: `pending-runtime-tooling` (Entry #283)
+
+**Decision**: SESSION SEAL — Reality matches Promise. B199 Phase 1 (E2E methodology + Monitor B191 functional proof) is implemented, tested at every layer, and verified. The methodology immediately surfaced 3 latent UI bugs (1 critical: Monitor never actually rendered in production). 9 new E2E cases, +1 new mocha case, all green. Both regression suites and the new gate's full state-space (PASS/BLOCK/SKIP/override) functionally exercised. Phases 2–8 of B199 remain open; B192-B198 unrelated to this seal. Single VETO + single amendment cycle = clean convergence.
+
+_Chain Status: SUB-CHAIN SEALED at Entry #284; B199 multi-cycle effort continues at Phase 2._
+_Next: operator-explicit lifecycle actions per the deferred-approval list above._
+
+---
+
+### Entry #285: GATE TRIBUNAL (VETO) — v5.1.0 release candidate
+
+**Date**: 2026-05-06
+**Phase**: GATE
+**Persona**: The QorLogic Judge (adversarial mode, solo)
+**Audit subject**: Staged change set (18 files) representing v5.1.0 release candidate — Phase 1 of plan-comprehensive-e2e-coverage.md PLUS version bump 5.0.0→5.1.0 PLUS post-seal `docs/FEATURE_INDEX.md` baseline.
+**Risk Grade**: L2
+
+**Verdict**: **VETO**
+
+**Findings categories**: `coverage-gap`, `ghost-ui` (Promise without Reality variant), `infrastructure-mismatch`, `specification-drift`
+
+**Lineage**: this is NOT a re-audit of the Phase 1 plan. The Phase 1 plan-internal verdict at Entry #282 (PASS) and seal at Entry #284 stand and are not retracted. This audit examines the release-readiness question for shipping v5.1.0 publicly given the post-seal FEATURE_INDEX.md baseline. Sub-chain branches from #284.
+
+## Pass-by-pass
+
+| Pass | Result |
+|---|---|
+| Prompt Injection | PASS |
+| Security L3 | PASS |
+| OWASP Top 10 | VETO (A04 Insecure Design — untested install endpoints) |
+| Ghost UI | VETO (Promise without Reality, 18 features) |
+| Section 4 Razor | PASS |
+| Test Functionality | PASS for the 9 new specs; specification-drift in FEATURE_INDEX header |
+| Dependency Audit | PASS |
+| Macro-Level Architecture | VETO (B192/B193 stale-cache anti-pattern open) |
+| Infrastructure Alignment | VETO (no v5.0.0 git tag; Open VSX divergent) |
+| Orphan Detection | PASS |
+| Documentation Drift | VETO (drift documented in finding 2) |
+
+## Findings (summary)
+
+1. **coverage-gap** — `docs/FEATURE_INDEX.md` reports 264 of 476 features unverified (55.5%). High-impact untested surfaces include marketplace install endpoints (FX091–FX097, OWASP A04 risk), Risk register CRUD (FX111–FX114), 25+ VS Code command handlers, 11 of 13 Console HTML pages, full Shadow Genome surface. **Required next action**: Governor amends release plan to scope coverage remediation OR downgrades v5.1.0 from public release to preview build.
+2. **ghost-ui** — 18 features in docs without code (Promise without Reality), per FEATURE_INDEX § "Documented but not in code". Includes B196 (FailSafe Pro daemon detection: marketing claim, no implementation). **Required next action**: Governor amends user-facing docs OR opens BACKLOG items committing to ship the missing features OR sections divergence as "Known limitations."
+3. **infrastructure-mismatch** — no `v5.0.0` git tag exists locally or on origin despite v5.0.0 being live on VS Code Marketplace; Open VSX still serves 4.9.9; CHANGELOG dates v5.0.0 as released 2026-04-25. Release tooling is preparing v5.1.0 over an inconsistent v5.0.0 baseline. **Required next action**: Governor selects backfill v5.0.0 OR skip-publish path; updates `release-gate.cjs` to assert prior-version tag presence before future bumps.
+4. **specification-drift** — `docs/FEATURE_INDEX.md` header says "Total unified entries: 402" but body has 476 rows. 74-entry gap between header and body. **Required next action**: Governor amends header counts to Total: 476 / Verified: 191 / Unverified: 264 / N/A: 21.
+5. **coverage-gap (sub)** — B192/B193 stale-cache anti-pattern across PlanManager / L3ApprovalService / CheckpointStore / SentinelDaemon governance-file watcher remains open; Phase 1 fixed Monitor's downstream rendering but not the upstream cache-refresh gap. **Required next action**: `/qor-debug` for root-cause; new `/qor-plan` to scope B192/B193 for v5.1.0 inclusion or explicit deferral to v5.2.0.
+
+## Process Pattern observation
+
+This is the second instance in the B199 multi-cycle effort of the "Reality-matches-Promise scope was a subset" pattern:
+- First: operator's mid-session prompt revealed Phase 1 seal's framing was narrow.
+- Second (this audit): the v5.1.0 release banner over Phase 1's narrow seal.
+
+The pattern is codified in `feedback_feature_index_every_cycle.md` (saved this session) and filed upstream as Qor-logic#40. Future SHIELD-lifecycle work must read FEATURE_INDEX.md as gating input, not informational output.
+
+## Operator notice — degraded wiring
+
+`.qor/` runtime uninitialized; gate-artifact persistence and python helpers no-op. No `audit.json` emitted; equivalent narrative is this entry plus `.agent/staging/AUDIT_REPORT.md`.
+
+**Content Hash**: `pending-runtime-tooling`
+**Previous Hash**: `pending-runtime-tooling` (Entry #284)
+
+**Decision**: VETO — five findings across four enum-mapped categories. Governor must amend per finding-specific paths and re-run `/qor-audit`. The Phase 1 plan-internal seal stands and is not retracted; this audit is on the wider release-readiness question.
+
+_Chain Status: SUB-CHAIN BRANCHING from Entry #284 (new audit cycle for v5.1.0 release-readiness; Phase 1 sub-chain remains sealed)._
+_Next: Governor amendments per findings; re-run `/qor-audit`._
+
+

@@ -4,9 +4,24 @@ Prevent runaway AI edits, hallucinated dependencies, and destructive refactors b
 
 FailSafe runs locally inside VS Code and Cursor. It monitors what AI agents do, applies deterministic policy checks at the editor boundary, and gives you full visibility into every decision — before code ships.
 
-**Current Release**: v5.0.0 (2026-04-25)
+**Current Release**: v5.1.0 (2026-05-06)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v5.1.0
+
+Minor release: B199 Phase 1 ships the comprehensive E2E coverage methodology and the release-class CI gate (Option C) that blocks UI-surface commits without a corresponding `.spec.ts`. Surfaced and fixed three latent Monitor bugs that unit tests could not catch — including a missing `type="module"` on the Monitor's bootstrap script that meant the compact UI never actually rendered in production.
+
+### Added
+
+- **Comprehensive E2E coverage methodology** — `serveCompactUI` test harness + `ledgerFixtures` builder + `monitor-shield-progression.spec.ts` (8 cases) + `monitor-staleness.spec.ts` (1 lifecycle). Covers all 6 SHIELD phases (IDLE / PLAN / GATE / IMPLEMENT / SUBSTANTIATE / SEALED) plus plan-title rendering and WS-disconnect staleness handling.
+- **Release-class CI coverage gate** — `scripts/check-e2e-coverage.cjs` invoked from the pre-push hook when the active plan's `change_class` is `feature` or `breaking`. Blocks pushes whose staged surface files (UI, ConsoleServer routes, commands) lack a corresponding `*.spec.ts`, unless a `[no-e2e: <reason>]` token appears in a commit message in the push range. Hotfix is exempt.
+
+### Fixed
+
+- **Monitor never bootstrapped in production** (root mechanism behind B191's user-visible "Monitor doesn't see my work"). The compact UI's `<script src="roadmap.js">` was missing `type="module"` despite using ES module imports — the script silently failed to execute. No prior unit test exercised UI JS execution, so this was invisible. Fixed.
+- **SEAL phase rendered "Substantiate active" instead of "all four done"** — `PHASE_INDEX_MAP['SEALED']` was 4 (same as SUBSTANTIATE) in `monitor-render.js`. Bumped to 5 so SEAL correctly marks all four steps `done`.
+- **IDLE phase rendered "Plan active" instead of "all pending"** — added an IDLE early-return branch in `getPhaseInfo` that fires only when no other phase signal exists; preserves existing IDLE+runState and IDLE+recentCompletions fallthrough.
 
 ## What's New in v5.0.0
 

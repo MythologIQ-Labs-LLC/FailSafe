@@ -2,7 +2,13 @@ blank_issues_enabled: false
 contact_links:
   - name: Documentation
     url: https://github.com/MythologIQ/FailSafe/wiki
-    about: Check our documentation before opening an issue.
+    about: Check our Wiki documentation before opening an issue.
   - name: Discussions
     url: https://github.com/MythologIQ/FailSafe/discussions
-    about: Ask questions and discuss ideas.
+    about: Ask questions, share ideas, and discuss FailSafe with the community.
+  - name: Security Policy
+    url: https://github.com/MythologIQ/FailSafe/blob/main/SECURITY.md
+    about: Report security vulnerabilities privately via security@mythologiq.dev for critical issues.
+  - name: FailSafe Pro
+    url: https://mythologiq.studio/products/failsafe-pro
+    about: Learn about FailSafe Pro for desktop enforcement and enterprise governance.

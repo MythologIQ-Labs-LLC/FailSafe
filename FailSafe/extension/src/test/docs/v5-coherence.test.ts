@@ -73,7 +73,11 @@ suite('v5 documentation coherence', () => {
   test('CHANGELOG has a v5.0.0 entry mentioning qor-logic and Install QorLogic Skills', () => {
     const changelog = fs.readFileSync(path.join(repoRoot(), 'CHANGELOG.md'), 'utf8');
     assert.match(changelog, /##\s+\[5\.0\.0\]/);
-    const v5Section = changelog.split(/##\s+\[/)[1] || '';
+    // Find the v5.0.0 section explicitly — it may not be the first if newer
+    // versions (e.g., 5.1.0) have been stamped above it.
+    const v5Match = changelog.match(/##\s+\[5\.0\.0\][\s\S]*?(?=^##\s+\[|\Z)/m);
+    assert.ok(v5Match, 'expected to find ## [5.0.0] section');
+    const v5Section = v5Match[0];
     assert.match(v5Section, /qor-logic/i);
     assert.match(v5Section, /Install QorLogic Skills/);
   });
