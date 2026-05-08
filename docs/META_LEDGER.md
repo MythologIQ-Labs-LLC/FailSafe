@@ -13978,3 +13978,172 @@ Both fixes preserve the F1a + F2a contracts. The 6 deferred `roadmap-connection.
 _Chain Status: SUB-CHAIN SEALED at Entry #294. v5.1.0 publish-path hardening complete._
 _Next: Operator decision on staging/commit/push/PR. PUBLISH_BLOCK conditions 1-4 require operator action. Future hotfix recommended for `sentinel-monitor.js:19`._
 
+
+### Entry #295: GATE TRIBUNAL (VETO) — plan-hotfix-sentinel-monitor-default-state v1
+
+**Date**: 2026-05-08
+**Type**: Gate Tribunal — adversarial audit of v1 hotfix plan
+**Auditor**: The QorLogic Judge (solo audit; codex-plugin not declared)
+**Target**: `plan-hotfix-sentinel-monitor-default-state.md` v1 (root)
+**Verdict**: VETO
+**Risk Grade**: L1
+**Findings categories**: `specification-drift`
+**Lineage**: First plan after v5.1.0 publish-path seal at Entry #294. Closes the original operator-observed contradiction (`sentinel-monitor.js:19` default state).
+
+## Pre-audit lint result
+
+```
+$ node FailSafe/extension/scripts/plan-grep-lint.cjs --plan plan-hotfix-sentinel-monitor-default-state.md
+plan-grep-lint: OK — 11 verification tokens checked, all match repo state.
+```
+
+R1+R2+R2-bis discipline holds: 6 file-level + 5 FITNESS-VERIFIED tokens against actual repo state.
+
+## Findings
+
+1. **F1 — specification-drift in test framework citation**. Phase 1 § "Unit Tests (write red FIRST)" says: ``mocha (`describe`/`it` matching `monitor-state-coherence.test.ts` style)``. The cited reference (`monitor-state-coherence.test.ts:48`) uses `suite()`, not `describe()`. Sibling tests in `src/test/roadmap/` (`connection.test.ts:63`, `roadmap-connection.test.ts:79`) also use `suite()`. The plan internally contradicts itself.
+
+## Required next action
+
+Plan-text amendment: replace `describe`/`it` with `suite`/`test` in the Unit Tests section. One-word fix. Re-run `/qor-audit`.
+
+## Pattern observation
+
+Same sub-sub-class as Entry #291 F1 (prose-vs-code) — surface differs (test UI shorthand vs constructor signature). First isolated instance; not yet a recurrence trend. R2-bis-prose remediation candidate (extend lint to gate prose framework/convention claims) remains deferred per Entry #291 advisory; no recurrence threshold yet.
+
+## Operator notice — degraded wiring
+
+`.qor/` runtime uninitialized; gate-artifact persistence + AI provenance manifest no-op. Pre-audit lint (R2 + R2-bis) ran successfully. Pure plan-text VETO; no infrastructure-mismatch or sink-mechanism class.
+
+**Content Hash**: `pending-runtime-tooling`
+**Previous Hash**: `pending-runtime-tooling` (Entry #294)
+
+**Decision**: VETO — single specification-drift finding; one-word plan-text amendment fixes it. Not a structural concern.
+
+_Chain Status: SUB-CHAIN BRANCHING from Entry #294 (v5.1.0 publish-path seal). Hotfix sub-chain initiated._
+_Next: Governor amends plan v1 → v2 (replace describe/it with suite/test); re-run `/qor-audit`._
+
+
+### Entry #296: GATE TRIBUNAL (PASS) — plan-hotfix-sentinel-monitor-default-state v2
+
+**Date**: 2026-05-08 (re-audit post-Entry-#295 v2 amendment)
+**Type**: Gate Tribunal — adversarial audit of v2 hotfix plan
+**Auditor**: The QorLogic Judge (solo audit; codex-plugin not declared)
+**Target**: `plan-hotfix-sentinel-monitor-default-state.md` v2 (root)
+**Verdict**: **PASS**
+**Risk Grade**: L1
+**Findings**: none
+**Lineage**: Re-audit post-Entry-#295 (single specification-drift VETO on test framework convention citation). v2 amendment replaced `describe`/`it` with `suite`/`test`. One-word fix; PASS on second cycle.
+
+## Pre-audit lint result
+
+```
+$ node FailSafe/extension/scripts/plan-grep-lint.cjs --plan plan-hotfix-sentinel-monitor-default-state.md
+plan-grep-lint: OK — 11 verification tokens checked, all match repo state.
+```
+
+Unchanged from v1 — amendment was prose-only.
+
+## All passes clean
+
+| Pass | Verdict |
+|---|---|
+| Pre-audit lint / Prompt Injection / Security L3 / OWASP / Ghost UI / Razor / Test Functionality / Dependency / Macro / Infrastructure Alignment / Orphan / Plan-internal coherence / Doc Drift | PASS |
+
+## Plan-internal coherence — re-confirmed
+
+v2 amendment aligns plan body with three sibling tests (`monitor-state-coherence.test.ts:48`, `connection.test.ts:63`, `roadmap-connection.test.ts:79` — all use `suite()`). Remaining `describe` mentions are confined to Amendment history (correctly describes the prior contradiction) and a quoted "before" snippet from `monitor.spec.ts` (Playwright `test.describe`, distinct from mocha unit-test UI).
+
+## Required next action
+
+Per `qor/gates/chain.md`, on PASS: next phase is `/qor-implement`. ~1 hour estimated.
+
+## Operator notice — degraded wiring
+
+`.qor/` runtime uninitialized; gate-artifact persistence + AI provenance manifest no-op. Pre-audit lint (R2 + R2-bis) ran. Pure plan-text amendment cycle.
+
+**Content Hash**: `pending-runtime-tooling`
+**Previous Hash**: `pending-runtime-tooling` (Entry #295)
+
+**Decision**: PASS. v2 plan is implementation-ready; closes the original operator-observed contradiction.
+
+_Chain Status: SUB-CHAIN CONTINUING from Entry #295. Hotfix sub-chain audit complete; implementation phase next._
+_Next: `/qor-implement` per `qor/gates/chain.md`._
+
+
+### Entry #297: IMPLEMENTATION — plan-hotfix-sentinel-monitor-default-state v2
+
+**Date**: 2026-05-08
+**Type**: Specialist Implementation Pass (`/qor-implement`)
+**Persona**: The QorLogic Specialist (parallel team — 1 implementer + objective observer + devil's advocate)
+**Plan**: `plan-hotfix-sentinel-monitor-default-state.md` v2 (root)
+**Audit reference**: Entry #296 PASS (2026-05-08)
+**Scope**: Single-line code fix (`sentinel-monitor.js:19`) + 5 unit cases + 1 spec tightening + 1 SHADOW_GENOME `Resolution` annotation
+
+## Execution mode
+
+Per operator request, decomposed into 3 parallel agents:
+- **Specialist** (typescript-pro): all 4 file changes + TDD-Light red→green progression verification
+- **Objective observer** (code-reviewer): 10 pre-implementation review items + 6 invariants + 4 drift hotspots
+- **Devil's advocate** (architect-reviewer): 8 hidden risks (severity-ranked) + 4 audit-blind-spots + 4 mid-implementation checkpoints
+
+## Files created (1 NEW)
+
+- `FailSafe/extension/src/test/roadmap/sentinel-monitor.test.ts` (114L) — 5 mocha `suite/test` cases per amended plan v2 convention. Each case constructs an `elements` mock, instantiates `new SentinelMonitor(elements)`, calls `renderSentinel(status, verdicts)`, asserts on observable state.
+
+## Files modified (3)
+
+- `FailSafe/extension/src/roadmap/ui/modules/sentinel-monitor.js:19` — single-line: `let state = 'monitoring';` → `let state = status.running ? 'monitoring' : 'pending';` (mirrors line 20's existing `status.running ? 'Monitoring' : 'Idle'` label parallel logic). File stays at 185L (≤250).
+- `FailSafe/extension/src/test/ui/monitor.spec.ts` — cold-load case tightened: drop the `// NOTE: bug` comment block (Entry #294 hedge), add `expect(orb).toHaveClass(/sentinel-orb pending/)` + `not.toHaveClass(/monitoring/)` assertions. File: ~83L (was 80L).
+- `docs/SHADOW_GENOME.md` — appended `**Resolution**: addressed 2026-05-08` line at line 2529 on the `coherence-via-association` entry, citing the line-19 fix + the new unit test path. The doctrinal pattern (verified-by-association) remains intact; only addressed-state metadata is added.
+
+## Section 4 Razor Compliance
+
+| File | LoC (≤250) | Largest fn (≤40) | Nesting (≤3) | Nested ternaries |
+|---|---|---|---|---|
+| `sentinel-monitor.test.ts` (NEW) | 114 | `buildElementsMock` 18L | 2 | 0 |
+| `sentinel-monitor.js` (MODIFIED) | 185 | `renderSentinel` 26L | 2 | 0 (single ternary at line 19, not nested) |
+| `monitor.spec.ts` (MODIFIED) | ~83 | cold-load test 19L | 2 | 0 |
+
+All compliant.
+
+## Test pass/fail (red→green progression)
+
+Pre-fix RED phase (with `let state = 'monitoring'`):
+- Case 1 (idle daemon, no verdict): **FAIL** — observed `'sentinel-orb monitoring'`, expected `'sentinel-orb pending'`
+- Cases 2-5: PASS (don't depend on the bug)
+- Result: 4 passed, 1 failed
+
+Post-fix GREEN phase (with `let state = status.running ? 'monitoring' : 'pending'`):
+- All 5 cases: **PASS**
+- Result: 5 passed, 0 failed
+
+## Verifications run
+
+- TypeScript compile: **clean** (whole-project `tsc -p ./ --noEmit`)
+- plan-grep-lint: 10 of 11 tokens validate; **1 expected post-impl regression** on the FITNESS token at plan line 48 (which attested the buggy pre-fix state `let state = 'monitoring'` for audit-time gating). The lint runs at `/qor-audit` Step 0.6 only — not in `/qor-substantiate` verification path. Non-blocking. Artifact-of-discipline: plan FITNESS tokens that attest pre-fix state become stale after the fix lands. Substantiate verifies via Reality=Blueprint, not plan-token integrity.
+
+## Findings flagged (carried from devil's advocate review)
+
+1. **`monitor.spec.ts` cold-load case proves `paintPendingSentinel`, not the fix**: existing spec blocks `/api/hub` so `firstHubLoaded` stays false and `renderSentinel` never runs in that test path. The tightened assertion succeeds via `paintPendingSentinel` (which was always correct). The fix coverage is in `sentinel-monitor.test.ts` (cases 1-2) directly, NOT in the spec tightening. The spec tightening is symbolic alignment + dropping the `NOTE: bug` hedge; it doesn't add coverage. Acceptable but worth noting.
+
+2. **`status.running` undefined / null edge case**: post-fix line 19 is `status.running ? 'monitoring' : 'pending'`. Falsy includes `undefined`, `null`. If a hub broadcast ships malformed (`status` without `running`), the orb goes grey-pending. Test cases 1-5 do not cover the undefined case; line 16 already assumes `status` is non-null (`Number(status.queueDepth || 0)`), so the fix doesn't introduce new null-safety risk. Documented for future hardening if surfaces.
+
+3. **Existing 5 Playwright specs** (`compact-ui`, `popout-ui`, `user-stories`, `monitor-shield-progression`, `monitor-staleness`): grep against `'sentinel-orb monitoring'` — **none hard-code the old default**. No collateral spec breakage.
+
+## ESM-from-CJS test runtime
+
+Same constraint as `roadmap-connection.test.ts`: `sentinel-monitor.test.ts` imports `SentinelMonitor` from `'../../../src/roadmap/ui/modules/sentinel-monitor.js'` (ESM `.js` source). Standalone Node fails with `SyntaxError: Cannot use import statement outside a module`. Test runs cleanly under vscode-test (Electron's bundled Node + module loader). Established convention; not a regression.
+
+## Operator notice — degraded wiring
+
+`.qor/` runtime uninitialized; gate-artifact persistence + AI provenance manifest no-op. This ledger entry is the canonical record.
+
+**Content Hash**: `pending-runtime-tooling`
+**Previous Hash**: `pending-runtime-tooling` (Entry #296)
+
+**Decision**: IMPLEMENT COMPLETE. 1 NEW + 3 MODIFIED. Reality matches Promise per `/qor-implement` Step 12.5. Single-line fix closes the original operator-observed contradiction (`sentinel-monitor.js:19` default state). The doctrinal `coherence-via-association` pattern remains; the specific FailSafe v5.1.0 incident is annotated as resolved.
+
+_Chain Status: SUB-CHAIN CONTINUING from Entry #296. Hotfix sub-chain implementation complete._
+_Next: `/qor-substantiate` to seal._
+

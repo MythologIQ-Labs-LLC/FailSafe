@@ -2526,3 +2526,36 @@ The new `roadmap-connection.test.ts` (Phase 1 of plan-monitor-coherence-and-brow
 
 **Filed upstream**: tracked locally; mirrors the SG-PromiseRealityScope pattern (Entry #285).
 
+**Resolution**: addressed 2026-05-08 by `sentinel-monitor.js:19` single-line fix (Entries #295/#296 audit chain; Entry #297 implement) — `let state = status.running ? 'monitoring' : 'pending'` mirrors the existing label logic at line 20. The new unit test at `src/test/roadmap/sentinel-monitor.test.ts` (cases 1-2) directly exercises the contradiction class. The doctrinal pattern (verified-by-association) remains as a permanent reference; the specific FailSafe v5.1.0 incident is closed.
+
+
+---
+
+## SG-PlanFrameworkConventionDrift (1st instance) — plan-hotfix-sentinel-monitor v1 (2026-05-08)
+
+**Category**: specification-drift sub-class (related to Entry #291 prose-vs-code)
+**Severity**: 1 (one-word plan-text amendment)
+**Detected**: 2026-05-08, Entry #295 audit
+
+### What Failed
+
+Plan body said ``mocha (`describe`/`it` matching `monitor-state-coherence.test.ts` style)``. The cited reference at `monitor-state-coherence.test.ts:48` uses `suite()` (mocha TDD UI), not `describe()`. Two sibling tests in same directory (`connection.test.ts:63`, `roadmap-connection.test.ts:79`) also use `suite()`. Plan internally contradicted itself.
+
+### Why It Failed
+
+Plan author (the same persona running this audit) wrote test-framework call shorthand from memory rather than from the cited reference. The R1+R2+R2-bis lint discipline catches cited symbols/routes/files but does not yet gate prose framework/convention claims that lack accompanying FITNESS rows.
+
+This is the same prose-vs-code sub-sub-class flagged at Entry #291 F1 (constructor signature claim mismatch), distinct in that it concerns test framework UI rather than API contract. Two instances now (constructor surface + framework UI surface) but on different surfaces. Not yet a 3-strikes recurrence on a single sub-sub-class.
+
+### Pattern to Avoid
+
+When the plan body cites a framework call (`describe/it`, `suite/test`, `expect()`, etc.) AND a convention reference, ensure both agree. Cross-check the convention reference's first invocation line before writing the plan body. Alternatively, drop the framework-call shorthand and let the convention reference speak for itself.
+
+### Future remediation candidate (deferred)
+
+R2-bis-prose (per Entry #291 advisory) — extend `plan-grep-lint.cjs` to scan prose narrative for un-FITNESS-backed framework/convention claims. Defer until 3-strikes recurrence accumulates across this and similar sub-sub-classes.
+
+### Resolution path
+
+Plan-text amendment: one word (`describe` → `suite`, `it` → `test`). Re-run `/qor-audit`.
+

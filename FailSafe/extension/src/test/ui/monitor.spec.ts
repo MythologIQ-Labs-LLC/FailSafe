@@ -31,14 +31,16 @@ test.describe('FX-BROWSER-VERIFY-MONITOR — status ↔ sentinel coherence', () 
     await page.goto(`${controller.url}/index.html?ui=compact`);
     const status = page.locator('#status-line');
     const sentinelLabel = page.locator('#sentinel-label');
+    const orb = page.locator('#sentinel-orb');
     // Status line is visible and reads either "Connecting..." or "Connected"
     // depending on how fast the WS handshake races the assertion.
     await expect(status).toBeVisible();
     // The sentinel LABEL must be the "no data yet" sentinel ("—") on cold
-    // load when no hub fetch has resolved. (NOTE: the orb class is currently
-    // unconditionally `monitoring` due to a default-state bug in
-    // `sentinel-monitor.js:19`. Documented as a coherence finding from this
-    // suite for follow-up; the label is the truthful indicator.)
+    // load when no hub fetch has resolved. The orb class must reflect the
+    // pending state — `sentinel-monitor.js:19` now derives state from
+    // `status.running`, so an idle daemon paints `pending`, not `monitoring`.
+    await expect(orb).toHaveClass(/sentinel-orb pending/);
+    await expect(orb).not.toHaveClass(/monitoring/);
     await expect.poll(async () => sentinelLabel.textContent(), { timeout: 5000 }).toMatch(/—|Idle/);
   });
 

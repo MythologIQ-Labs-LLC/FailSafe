@@ -16,7 +16,7 @@ export class SentinelMonitor {
     const queueDepth = Number(status.queueDepth || 0);
     const verdict = String(status.lastVerdict?.decision || 'PASS');
 
-    let state = 'monitoring';
+    let state = status.running ? 'monitoring' : 'pending';
     let label = status.running ? 'Monitoring' : 'Idle';
     if (verdict === 'WARN') { state = 'warnings'; label = 'Warnings'; }
     else if (['BLOCK', 'ESCALATE', 'QUARANTINE'].includes(verdict)) { state = 'errors'; label = 'Errors'; }

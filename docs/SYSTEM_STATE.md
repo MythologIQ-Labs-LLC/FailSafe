@@ -1,7 +1,52 @@
 # SYSTEM STATE
 
 **Last Updated:** 2026-05-08
-**Version:** v5.1.0 publish-path hardening — SUBSTANTIATED (no version bump — publish-path seal; PUBLISH_BLOCK condition 5 satisfied; conditions 1-4 operator-attested post-seal)
+**Version:** v5.1.1 hotfix (sentinel-monitor default state) — SUBSTANTIATED (no version bump — bump deferred until PUBLISH_BLOCK conditions 1-4 met; closes original operator-observed contradiction)
+
+---
+
+## v5.1.1 — Hotfix: sentinel-monitor default state (closes original v5.1.0 operator-observed contradiction)
+
+### Ledger Trail
+
+| Entry | Phase | Verdict |
+|-------|-------|---------|
+| #295 | GATE | VETO (`specification-drift`) — plan v1 (`describe`/`it` framework citation contradicted cited `monitor-state-coherence.test.ts` reference, which uses `suite`/`test`) |
+| #296 | GATE | **PASS** — plan v2 (one-word amendment: `describe`/`it` → `suite`/`test`); 11/11 verification tokens validate |
+| #297 | IMPLEMENT | 1 NEW + 3 MODIFIED; parallel team (1 specialist + observer + devil's advocate); TDD-Light red→green verified for case 1 (idle daemon → `pending` orb class) |
+| #298 | SUBSTANTIATE | Reality matches Promise; 2100/1pending/1pre-existing-flaky-failure mocha + 38/0/1skipped Playwright; the original FailSafe v5.1.0 incident (Connecting + green orb) is annotated as resolved in SHADOW_GENOME |
+
+### New Files
+
+| File | Purpose |
+|---|---|
+| `FailSafe/extension/src/test/roadmap/sentinel-monitor.test.ts` | 5 mocha `suite/test` cases against `SentinelMonitor.renderSentinel`; case 1 (idle daemon, no verdict) directly exercises the contradiction class — would FAIL pre-fix, PASSes post-fix |
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `FailSafe/extension/src/roadmap/ui/modules/sentinel-monitor.js:19` | `let state = 'monitoring';` → `let state = status.running ? 'monitoring' : 'pending';` (mirrors line 20's existing `status.running ? 'Monitoring' : 'Idle'` parallel logic) |
+| `FailSafe/extension/src/test/ui/monitor.spec.ts` | Cold-load case tightened: drop `// NOTE: bug` v5.1.0-seal comment block; add `expect(orb).toHaveClass(/sentinel-orb pending/)` + `not.toHaveClass(/monitoring/)`. Note: the spec blocks `/api/hub`, so this assertion proves `paintPendingSentinel` (always correct) — the fix's primary functional gate is `sentinel-monitor.test.ts` cases 1-2 |
+| `docs/SHADOW_GENOME.md` | Appended `**Resolution**: addressed 2026-05-08` line on the v5.1.0-seal `coherence-via-association` entry, citing line-19 fix + new unit test path. Doctrinal pattern remains; specific incident closed |
+
+### Test surface
+
+- node:test (cjs scripts): **28/28 pass** (unchanged)
+- TypeScript: **clean**
+- vscode-test mocha: **2100 passing, 1 pending, 1 failing** (pre-existing `TtsEngine vendor presence routing` 2000ms async timeout — unrelated to hotfix surface; was passing in prior runs; intermittent flakiness)
+- Playwright: **38 passed, 0 failed, 1 skipped** (unchanged)
+- plan-grep-lint: **10/11** — 1 expected post-impl regression on the FITNESS token at plan line 48 (attested pre-fix `let state = 'monitoring'` for audit-time gating). Lint runs at `/qor-audit` Step 0.6 only; not in `/qor-substantiate` verification path. Non-blocking artifact-of-discipline
+
+### Findings flagged (carried forward)
+
+1. **Pre-existing flaky test**: `TtsEngine vendor presence routing — does NOT emit error when HEAD reports javascript content-type` failed in this run with Mocha 2000ms async timeout. Unrelated to hotfix surface (sentinel changes don't interact with TTS HEAD routing). Recommend a hotfix or test-stability follow-up plan.
+2. **Spec coverage architecture**: `monitor.spec.ts` cold-load tightening is symbolic — `/api/hub` is blocked in that test, so `renderSentinel` never runs there. The fix's coverage path lives in `sentinel-monitor.test.ts` cases 1-2 (direct invocation). Acceptable: unit test is the primary gate; spec is symbolic alignment.
+3. **`status.running` undefined edge**: post-fix line 19 uses falsy fallthrough → grey orb on malformed hub. Existing line-16 `Number(status.queueDepth || 0)` already assumes `status` non-null; fix inherits assumption. Document for future hardening if surfaces.
+
+### PUBLISH_BLOCK status (unchanged from v5.1.0 seal)
+
+`Active: yes`. Conditions 1-4 still operator-attested post-seal. This hotfix lands in repo + commits but does NOT trigger any `package.json` bump or marketplace publish — the bump waits for E (R8 baseline FEATURE_INDEX audit) to clear conditions 1-4. The `npm run verify:publish-block` script blocks any release-class push until conditions met.
 
 ---
 
