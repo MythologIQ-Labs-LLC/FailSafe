@@ -5,6 +5,24 @@ All notable changes to the MythologIQ FailSafe extension will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.1.0] - 2026-05-06
+
+Minor release. Comprehensive E2E coverage methodology + release-class CI gate (B199 Phase 1) + Monitor B191 functional proof. GitHub community files, issue templates, and comprehensive Wiki.
+
+### Added
+
+- Comprehensive E2E coverage methodology with Playwright test harness.
+- Release-class CI coverage gate for `feature` and `breaking` change classes.
+- GitHub community files: FUNDING.yml, enhanced issue templates (bug, feature, security, docs, question), PR template.
+- Comprehensive GitHub Wiki with 23 pages covering architecture, governance, configuration, and troubleshooting.
+- Wiki initialization workflow (`wiki-init.yml`) for automated wiki population.
+
+### Fixed
+
+- Monitor never bootstrapped in production (missing `type="module"` on bootstrap script).
+- SEAL phase rendered "Substantiate active" instead of "all four done".
+- IDLE phase rendered "Plan active" instead of "all pending".
+
 ## [5.0.0] - 2026-04-25
 
 Major release. Public reveal of the FailSafe / FailSafe Pro product split. The v4 bundled-skills installer is replaced by ingestion from the [`qor-logic`](https://pypi.org/project/qor-logic/) PyPI package. Skills now begin with `qor-` (was `ql-`). The Command Center reads workspace truth — META_LEDGER, BACKLOG, plan files, audit reports, and CHANGELOG — instead of showing empty placeholder state.
