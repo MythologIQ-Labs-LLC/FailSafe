@@ -5,10 +5,10 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 **Generated**: 2026-05-06
 **Sources**: `.failsafe/governance/FEATURE_INVENTORY_DOCS.md` (312 entries), `.failsafe/governance/FEATURE_INVENTORY_CODE.md` (374 entries), `FailSafe/extension/src/test/**` (135 files).
 
-**Coverage summary** (updated 2026-05-08 — FEATURE_INDEX baseline audit Phase 4; classifier path-fix applied per E2 reconciliation; no entry verdicts changed):
+**Coverage summary** (updated 2026-05-08 — E3 heuristic upgrade applied; +3 promotions from Playwright matcher whitelist):
 - Total unified entries: **476**
-- **Verified: 384 (80.7%)** — entries whose cited test holds under SG-035 after the baseline-audit classifier plus Phase 3 manual review.
-- **Unverified: 49 (10.3%)** — entries that have no cited test, or whose cited test verifies a neighboring artifact rather than the row's claimed behavior. See `docs/FEATURE_INDEX_BASELINE_AUDIT.md` § "E2 Reconciliation Diff".
+- **Verified: 387 (81.3%)** — entries whose cited test holds under SG-035 after the baseline-audit classifier plus Phase 3 manual review plus E3 heuristic upgrade.
+- **Unverified: 46 (9.7%)** — entries that have no cited test, or whose cited test verifies a neighboring artifact rather than the row's claimed behavior. See `docs/FEATURE_INDEX_BASELINE_AUDIT.md` § "E3 Heuristic Upgrade Diff".
 - **N/A (operator-justified): 43 (9.0%)** — entries that cannot be unit-tested in mocha/vscode-test:
   - Browser-side components requiring WebGPU/MediaStream (FX202/FX203/FX224/FX225/FX226 voice modal + Whisper + WebLLM)
   - Doc-only claims with no code module enumerated (FX404 DiffGuard panel; FX433 Roadmap/Kanban view modes; FX427 Cortex Stream; FX428 The Dojo sidebar)
@@ -17,7 +17,7 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
   - FX026 failsafe.showAgentHealth (no command handler in source)
 
 **Mocha cases**: 2066 passing / 1 pending (was 958 at session start — +1108 cases this session via 80+ new test files).
-**Test surface**: baseline audit confirms 384 entries as functionally verified. The 49 unverified entries remain under the publish block until follow-on remediation plans add functional tests or operator-justified `n/a` classifications.
+**Test surface**: baseline audit + E3 heuristic upgrade confirms 387 entries as functionally verified. The 46 unverified entries remain under the publish block until follow-on remediation plans add functional tests or operator-justified `n/a` classifications.
 
 **Publish constraint**: Per memory rule `feedback_no_publish_until_full_coverage.md` and `.failsafe/governance/PUBLISH_BLOCK.md` (Active: yes, set 2026-05-06): no FailSafe build publishes to any marketplace until every entry shows `verified` (with confirmed-functional test) or operator-justified `n/a`.
 
@@ -217,13 +217,13 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | FX146 | Activity-bar container | F061 | — | — | n/a | Manifest declarative |
 | FX147 | Phase status at-a-glance | F062 | C137, C138 | roadmap/monitor-render.test.ts | verified | |
 | FX148 | Phase track row (Plan/Audit/Implement/Substantiate) | F063 | C338 | ui/monitor-shield-progression.spec.ts | verified | |
-| FX149 | Plan title line | F064 | C338 | src/test/ui/monitor-shield-progression.spec.ts | unverified | "plan title shows Tracking: <plan title>" Playwright spec asserts `#monitor-plan-title` has expected text under populated planTitle fixture |
-| FX150 | Sentinel orb + queue value | F065 | C137 | src/test/ui/compact-ui.spec.ts | unverified | Playwright spec asserts `#sentinel-label` and `#queue-value` are visible in rendered compact UI |
+| FX149 | Plan title line | F064 | C338 | src/test/ui/monitor-shield-progression.spec.ts | verified | "plan title shows Tracking: <plan title>" Playwright spec asserts `#monitor-plan-title` has expected text under populated planTitle fixture (E3 reclassification 2026-05-08: heuristic upgrade — Playwright matcher whitelist) |
+| FX150 | Sentinel orb + queue value | F065 | C137 | src/test/ui/compact-ui.spec.ts | verified | Playwright spec asserts `#sentinel-label` and `#queue-value` are visible in rendered compact UI (E3 reclassification 2026-05-08: heuristic upgrade — Playwright matcher whitelist) |
 | FX151 | Workspace Health grid | F066 | C137 | roadmap/monitor-render.test.ts | verified | |
 | FX152 | Governance alerts (VETO/BLOCK/WARNING) | F067 | C154 | governance/GovernanceStatusBar.test.ts, governance/AxiomEnforcers.test.ts, sentinel/VerdictEngine.test.ts | unverified | VETO surface tested via FX299 GovernanceStatusBar (PULSE/PASS/VETO/SEALED color mapping, 4 cases) + Axiom enforcers BLOCK verdict (FX291-FX293 8 cases) + VerdictEngine BLOCK/ESCALATE/WARN decisions (FX346 19 cases). |
 | FX153 | Qore runtime card | F068 | C137 | extension/qore-runtime-service.test.ts | verified | |
 | FX154 | Disconnected staleness banner | F069 | C139 | roadmap/monitor-staleness.test.ts, ui/monitor-staleness.spec.ts | unverified | |
-| FX155 | Recently Completed + Next Step lines | F070 | C137, C138 | src/test/ui/compact-ui.spec.ts | unverified | Playwright spec asserts `#recent-line` is visible (next-step line lives in same status block, rendered by same render() pass) |
+| FX155 | Recently Completed + Next Step lines | F070 | C137, C138 | src/test/ui/compact-ui.spec.ts | verified | Playwright spec asserts `#recent-line` is visible (next-step line lives in same status block, rendered by same render() pass) (E3 reclassification 2026-05-08: heuristic upgrade — Playwright matcher whitelist) |
 | FX156 | Sidebar toolbar | F071 | C361 | roadmap/SidebarToggle.test.ts | verified | |
 | FX157 | SRE toggle in Monitor | F072 | C361 | roadmap/SidebarToggle.test.ts | verified | |
 | FX158 | Compliance grade indicator (A-F) | F073 | C347 | roadmap/RepoGovernanceService.test.ts | verified | |

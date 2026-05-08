@@ -14707,3 +14707,178 @@ Steps 7.5/7.6/9.5.5 (version bump + CHANGELOG stamp + annotated tag) **SKIPPED**
 _Chain Status: SUB-CHAIN SEALED at Entry #307. Classifier path-fix cycle complete._
 _Next: Operator decision on staging/commit/push for E2 + prior 2 unpushed seals (`b1a1e02`, `b51a9b8`). Then `/qor-plan` for E3 (heuristic upgrade or first surface-bucket functional-test plan; recommend the heuristic upgrade for one-time impact)._
 
+---
+
+### Entry #308: GATE TRIBUNAL (PASS) — plan-e3-classifier-heuristic-upgrade v1
+
+**Date**: 2026-05-08
+**Type**: Gate Tribunal (`/qor-audit`)
+**Persona**: The QorLogic Judge (solo audit; codex-plugin not declared)
+**Plan**: `plan-e3-classifier-heuristic-upgrade.md` v1 (root, gitignored workspace-only)
+**Verdict**: **PASS**
+
+## Audit summary
+
+E3 v1 is the first plan in the v5.1.0 sub-chain to PASS at first audit. All 3 `terms_introduced` home commitments declared code-domain-naturally (Playwright matcher whitelist + presence-style match + weak-functional pattern, all homed in `feature-index-classifier-heuristics.cjs` where Phase 1 modifies). Specification-drift recurrence avoided (would have been 3rd instance had it reproduced; remains at 2/3 toward three-strikes routing).
+
+| Pass | Verdict |
+|---|---|
+| Pre-audit lint (R2 + R2-bis) | PASS — 17/17 tokens |
+| Plan-internal coherence | PASS — 3/3 terms_introduced home commitments fulfilled |
+| Section 4 Razor | PASS — heuristics file 128→~163L (well under 250) |
+| Test Functionality | PASS — 10 new cases all invoke `classifyTestFile` + assert on `result.kind` |
+| Infrastructure Alignment | PASS — all FITNESS-VERIFIED parent symbols verified |
+| All other passes | PASS |
+
+**Findings**: none.
+**Risk Grade**: L2.
+
+## Notable strengths
+
+- **Falsifiable acceptance criterion** declared at `boundaries.exclusions`: post-E3 classifier MUST produce ≥3 entry-level `suggestedStatus` deltas (promotions OR demotions, either direction); zero deltas = substantiate ABORT. Promotes the SG-ClassifierPathBug "secondary lesson" (premise-vs-outcome divergence) from post-hoc disclosure to substantiate gate.
+- **Demotion welcomed as honest signal** — bare-expect tightening expected to demote some currently-`verified` entries; demotion proves heuristic strictness caught false-positives.
+- **Manual override pipeline preserved** — E2's `applyManualOverrides` last-step pipeline guard untouched; FX128/145/173/174/359 cannot be promoted by heuristic improvements.
+
+**Audit report**: `.agent/staging/AUDIT_REPORT.md`.
+
+**Content Hash**: `pending-runtime-tooling`
+**Previous Hash**: `pending-runtime-tooling` (Entry #307)
+**Session ID**: workspace-only / `default`
+
+**Next phase**: `/qor-implement`.
+
+---
+
+### Entry #309: IMPLEMENTATION — plan-e3-classifier-heuristic-upgrade v1
+
+**Date**: 2026-05-08
+**Type**: Implementation Pass (`/qor-implement`)
+**Persona**: The QorLogic Specialist (sequential mode; agent-teams not declared)
+**Plan**: `plan-e3-classifier-heuristic-upgrade.md` v1 (PASS at Entry #308)
+
+## Files modified (5)
+
+| File | Pre-impl LOC | Post-impl LOC | Delta |
+|---|---|---|---|
+| `FailSafe/extension/scripts/feature-index-classifier-heuristics.cjs` | 128 | 214 | +86 (13 Playwright matchers; PRESENCE_MATCH_PATTERNS array; WEAK_FUNCTIONAL_RE constant; hasOnlyPresenceMatch helper; hasOnlyWeakFunctional helper; rewired hasOnlyPresenceAssertions to incorporate presence-match discriminator; rewired hasFunctionalAssertions to apply strictness via stripFunctionalAssertionLines + hasOnlyWeakFunctional gate; side fix: extended JS keyword exclusion list with `async`, `await`, `function`, `new`, `class`, `void`, `delete`, `yield`, `instanceof`) |
+| `FailSafe/extension/src/test/scripts/featureIndexClassifier.test.cjs` | 328 | 451 | +123 (10 new cases across 3 new describe blocks) |
+| `docs/FEATURE_INDEX.md` | header counts 384/49/43 | header counts 387/46/43 | 3 entries reclassified verified (FX149/150/155); narrative updated |
+| `docs/FEATURE_INDEX_BASELINE_AUDIT.md` | E2 reconciliation appended at #307 | +E3 Reconciliation Diff section | promotion + demotion + kind-shift + preserved-overrides + classifier-vs-FEATURE_INDEX-residual tables; "what E3 actually delivered" narrative; E4+ implication |
+| `docs/SHADOW_GENOME.md` | end-of-file at #307 | +1 doctrinal entry | SG-HeuristicBlindSpot appended under SG-ClassifierPathBug lineage; 5-paragraph entry covering pattern + closure + counter-pattern + residual-gap + lineage |
+
+## TDD-Light record
+
+Cycle: tests RED → core impl → 27/29 → side-fix RED #1 (matcher-call lines counted as invocations) → stripFunctionalAssertionLines helper added → 28/29 → side-fix RED #2 (`async` keyword leaked through invocation exclusion) → JS-keyword exclusion list extended → 29/29 GREEN. Evidence: `node --test FailSafe/extension/src/test/scripts/featureIndexClassifier.test.cjs` shows tests=29 pass=29 fail=0.
+
+## Phase-by-phase delivery
+
+- **Phase 1**: heuristics module extended — 13 Playwright matcher patterns appended to FUNCTIONAL_ASSERTION_PATTERNS; PRESENCE_MATCH_PATTERNS array discriminates `assert.match(fileContent, ...)` from `assert.match(returnValue, ...)`; hasOnlyWeakFunctional helper gates files with only-`.toBe(` patterns. Two side fixes surfaced during TDD cycle: (1) matcher calls themselves were counting as out-of-framework invocations — closed via stripFunctionalAssertionLines; (2) `async` keyword in arrow-function declarations was matching the user-symbol invocation regex — closed via JS keyword exclusion list extension. 10 new unit cases (cases 20-29).
+- **Phase 2**: pre-fix snapshot at `dist/feature-index-classification-pre-e3.json`; classifier re-run produced `bySuggestedStatus: {verified:384, unverified:49, n/a:43}`; diff vs pre-fix `{verified:380, unverified:53, n/a:43}` shows 4 promotions + 7 per-test kind shifts. **Falsifiable acceptance criterion (≥3 entry-level deltas) VERIFIED at 4 promotions** + **0 demotions** (bare-expect tightening adds future-proofing rather than corrections).
+- **Phase 3**: FX149/150/155 reclassified `unverified` → `verified` in FEATURE_INDEX.md (3 entries); FX148 was already `verified` (operator Phase 3 manual review); header counts updated 384→387 verified, 49→46 unverified.
+- **Phase 4**: BASELINE_AUDIT.md gained `## E3 Heuristic Upgrade Diff (2026-05-08)` section with: 4-row promotion table + empty demotion table (honest disclosure) + 7-row per-test kind-shift table + 5-row preserved-overrides table + 3-row classifier-vs-FEATURE_INDEX residual gap (FX165/243/274 — operator-promoted at Phase 3 but classifier still says ambiguous; surface for E4 closure) + summary + E4+ implications.
+- **Phase 5**: SHADOW_GENOME.md gained `## SG-HeuristicBlindSpot` doctrinal entry under SG-ClassifierPathBug lineage; covers pattern + FailSafe incident detail + detection mechanism + closure + counter-pattern + residual-gap + lineage. Falsifiable acceptance discipline emphasized in counter-pattern paragraph.
+
+## Honest reconciliation
+
+E3's stated outcome (≥3 entry-level verdict deltas, either direction) **VERIFIED** at 4 promotions + 7 per-test kind shifts. PUBLISH_BLOCK Condition 1 truth state moves from 49 → 46 unverified entries. Classifier-vs-FEATURE_INDEX gap narrows from 4 (FX148/165/243/274) to 3 (FX165/243/274). The remaining 3 are surfaced as E4 candidates (heuristic addition or override-promotion mechanism).
+
+## Test surface
+
+- node:test (cjs scripts): **57/57 pass** (47 prior at Entry #307 + 10 new from this cycle = 57)
+- TypeScript: **clean** (`npx --no-install tsc --noEmit` from FailSafe/extension; no errors)
+- Razor: heuristics 214L (under 250 ✓); test file 451L (precedent from #303/#307 over 250); max function ~10L; nesting ≤2; no nested ternaries
+- vscode-test mocha + Playwright: not re-run this cycle (no source-side touchpoints)
+- plan-grep-lint: 17/17 tokens validate against post-impl repo state
+
+## Steps skipped per protocol
+
+- **Step 5.5** (Intent Lock Capture): DEGRADED-NOOP — `.qor/` runtime uninitialized
+- **Step 12.5 auto-staging**: skipped per session feedback discipline (selective staging convention; operator approval per-action)
+
+**Content Hash**: `pending-runtime-tooling`
+**Previous Hash**: `pending-runtime-tooling` (Entry #308)
+**Session ID**: workspace-only / `default`
+
+---
+
+### Entry #310: SESSION SEAL — plan-e3-classifier-heuristic-upgrade v1
+
+**Date**: 2026-05-08
+**Type**: Substantiation Seal (`/qor-substantiate`)
+**Persona**: The QorLogic Judge (substantiation mode)
+**Plan**: `plan-e3-classifier-heuristic-upgrade.md` v1 (PASS at Entry #308)
+**Implementation reference**: Entry #309
+**Verdict**: **PASS — Reality matches Promise**
+**Risk Grade**: L2
+
+## Substantiation summary
+
+Plan-target: v5.1.4-baseline (workspace-only label per plan boundary; no `package.json` bump). Same workspace-slug discipline as #298, #303, #307. The substantive deliverable is **measurement-tool deepening** — closing the 3 heuristic gaps documented in BASELINE_AUDIT lines 95-99 (Playwright matchers, assert.match discriminator, bare-expect tightening) — plus codifying SG-HeuristicBlindSpot doctrine.
+
+E3 measurable outcome: PUBLISH_BLOCK Condition 1 unverified count moves 49 → 46 (3 promotions: FX149, FX150, FX155). Manual override pipeline preserved (FX128/145/173/174/359 stay unverified despite 3 of them now classifier-functional at the per-test kind layer). Falsifiable acceptance criterion VERIFIED at 4 entry-level promotions + 7 kind-shifts. Honest demotion-zero report.
+
+Steps 7.5/7.6/9.5.5 (version bump + CHANGELOG stamp + annotated tag) **SKIPPED** per workspace-only baseline discipline.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| AUDIT_REPORT.md PASS verdict (Entry #308) | ✓ |
+| Reality = Blueprint (Step 3) | 5 MODIFIED present (heuristics 214L, classifier unchanged 271L, tests 451L, FEATURE_INDEX header+3 entries, BASELINE_AUDIT +E3 reconciliation, SHADOW_GENOME +SG-HeuristicBlindSpot); plan v1 5-phase scope fully delivered |
+| BACKLOG security-blocker review (Step 3.5) | No security blockers gating; backlog unchanged |
+| Test functionality acceptance (Step 4) | All 10 new cases (20-24 Playwright invoke `classifyTestFile`; 25-27 assert.match discriminator; 28-29 bare-expect tightening) assert on observable `result.kind`; SG-035 acceptance question "yes" for all 10; presence-only seal gate not triggered |
+| Skill file integrity (Step 4.5) | No skill files modified in this sub-chain |
+| Reliability sweep (Step 4.6) | DEGRADED-NOOP — `.qor/` runtime uninitialized |
+| Secret scanning (Step 4.6.5) | DEGRADED-NOOP — manual review of 5 MODIFIED files shows no secrets; only patterns + doctrine text |
+| Procedural fidelity (Step 4.6.6) | DEGRADED-NOOP |
+| Doc integrity (Step 4.7) | DEGRADED-NOOP — would have validated terms_introduced; v1 declared 3 terms with code-domain homes (Playwright matcher whitelist, presence-style match, weak-functional pattern — all in heuristics.cjs); Phase 1 fulfilled all 3 |
+| Section 4 Razor (Step 5) | heuristics 214L (well under 250); classifier 271L (unchanged from #307; over 250 advisory; under 280 target); test file 451L (precedent from #303/#307 over 250); max function ~10L; nesting ≤2; no nested ternaries — PASS |
+| SYSTEM_STATE.md sync (Step 6) | Skipped — workspace-only baseline; SYSTEM_STATE remains at v5.1.2-baseline state. To be updated when remediation chain produces a publishable seal |
+| Doc currency (Step 6.5) | change_class=feature → README/CHANGELOG required by Phase 33 release-doc rule WAIVED for workspace-only baseline (no marketplace publish triggered); Phase 49 badge currency exempt |
+| Falsifiable acceptance (E3 substantiate gate) | **VERIFIED** — 4 promotions + 0 demotions + 7 kind-shifts; ≥3 deltas requirement met |
+| Version validation (Step 2.5) | Target v5.1.4-baseline (workspace label) — no comparison vs git tag; current tag v4.9.9 unchanged |
+
+## Test surface (final)
+
+- node:test (cjs scripts): **57/57 pass**
+- TypeScript: **clean**
+- vscode-test mocha + Playwright: unchanged from #307 seal (no source-side touchpoints)
+- plan-grep-lint: clean against E3 plan v1 (17/17 tokens)
+
+## Findings (carried forward)
+
+1. **3-entry classifier-vs-FEATURE_INDEX residual gap** (NEW — surfaced at E3 reconciliation): FX165, FX243, FX274 — operator-promoted at Phase 3 (Entry #302) but post-E3 classifier still says ambiguous. Their tests use project-internal XSS-escaping assertion shapes the heuristic doesn't recognize. **E4 closure paths**: (a) extend heuristic with project-internal patterns; (b) extend `MANUAL_OVERRIDES` to support `status: 'verified'` promotions (currently only locks to `unverified`).
+2. **46 unverified entries** (down from 49; carried from Entry #307): bucket sharpened by E3. The bulk (44) remain em-dash entries with no test cited; remediation requires authoring functional tests by surface bucket.
+3. **Pre-existing flaky test** (carried): `TtsEngine vendor presence routing` — recommend test-stability hotfix.
+4. **Four unpushed seal commits** (after this cycle): v5.1.1 (`b1a1e02`) + v5.1.2-baseline (`b51a9b8`) + v5.1.3-baseline (`9b58d7e`) + v5.1.4-baseline (this entry's commit, pending). Operator deferred decision on push.
+5. **E3 side fixes surfaced and closed in same cycle** (NEW): `async` keyword leak in invocation exclusion list (now extended); matcher-call lines were self-registering as out-of-framework invocations (now stripped via stripFunctionalAssertionLines). Both pre-existed E3; neither was visible until Playwright tests started landing in the classifier output.
+
+## Skipped per protocol decisions
+
+- **Steps 7.5 / 7.6 / 9.5.5** (version bump + CHANGELOG stamp + annotated tag): SKIPPED per workspace-only baseline discipline.
+- **Steps 4.6 / 4.6.5 / 4.6.6 / 4.7 / 6.5 Phase 49 / 7.4 / 7.7 / 7.8 / 8.5 / Z**: DEGRADED-NOOP (`.qor/` runtime uninitialized).
+- **Step 6** (SYSTEM_STATE update): deferred to next publishable seal.
+
+## Operator notice — degraded wiring
+
+`.qor/` runtime uninitialized. Gate-artifact persistence + AI provenance manifest + intent-lock + secret scanner + procedural fidelity + doc integrity strict-mode + dist recompile + post-seal verification + gate-chain completeness all no-op. This ledger entry is the canonical record.
+
+**Content Hash**: `pending-runtime-tooling`
+**Previous Hash**: `pending-runtime-tooling` (Entry #309)
+**Merkle Seal**: `pending-runtime-tooling` (degraded-mode placeholder)
+**Session ID**: workspace-only / `default`
+
+**PASS conditions confirmed**:
+- AUDIT_REPORT.md shows PASS verdict (Entry #308): ✓
+- Version state: target v5.1.4-baseline (workspace-only); no bump per plan
+- Reality matches Promise: 5 MODIFIED present; all 5 phase deliverables present
+- No security blockers gating
+- Test functionality discipline applied (all 10 new cases invoke unit + assert)
+- Razor: PASS (heuristics 214/250)
+- **Falsifiable acceptance criterion VERIFIED** (substantiate gate satisfied at 4 promotions ≥ 3 required)
+
+**Decision**: SEAL — Reality matches Promise. The classifier heuristic-upgrade sub-chain is sealed at v5.1.4-baseline. PUBLISH_BLOCK Condition 1 truth state moves 49 → 46 unverified entries; remediation plan family E4+ inherits a sharpened heuristic + 3-entry classifier-vs-FEATURE_INDEX residual gap as concrete next-target.
+
+_Chain Status: SUB-CHAIN SEALED at Entry #310. Classifier heuristic-upgrade cycle complete._
+_Next: Operator decision on staging/commit/push for E3 + prior 3 unpushed seals (`b1a1e02`, `b51a9b8`, `9b58d7e`). Then `/qor-plan` for E4 (close 3-entry classifier-vs-FEATURE_INDEX gap; recommend override-promotion extension as smaller delta + future-proof; OR begin first surface-bucket functional-test plan against the 44 em-dash entries)._
+

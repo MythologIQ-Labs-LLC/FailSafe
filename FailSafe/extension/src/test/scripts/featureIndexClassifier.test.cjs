@@ -295,6 +295,129 @@ describe('resolveTestPath path-form variants (E2)', () => {
   });
 });
 
+describe('Playwright matchers (E3)', () => {
+  it('toHaveClass matcher with locator invocation → functional', () => {
+    const text = [
+      'test("active row", async ({page}) => {',
+      '  const row = page.locator("#row");',
+      '  await expect(row).toHaveClass(/active/);',
+      '});',
+    ].join('\n');
+    const result = classifier.classifyTestFile(text, 'someSymbol');
+    assert.equal(result.kind, 'functional');
+  });
+
+  it('toBeVisible after locator chain → functional', () => {
+    const text = [
+      'test("visible", async ({page}) => {',
+      '  const el = page.locator("#sentinel");',
+      '  await expect(el).toBeVisible();',
+      '});',
+    ].join('\n');
+    const result = classifier.classifyTestFile(text, 'someSymbol');
+    assert.equal(result.kind, 'functional');
+  });
+
+  it('toContainText matcher → functional', () => {
+    const text = [
+      'test("text", async ({page}) => {',
+      '  const el = page.locator("#title");',
+      '  await expect(el).toContainText("Hello");',
+      '});',
+    ].join('\n');
+    const result = classifier.classifyTestFile(text, 'someSymbol');
+    assert.equal(result.kind, 'functional');
+  });
+
+  it('toHaveCount matcher → functional', () => {
+    const text = [
+      'test("count", async ({page}) => {',
+      '  const items = page.locator(".item");',
+      '  await expect(items).toHaveCount(3);',
+      '});',
+    ].join('\n');
+    const result = classifier.classifyTestFile(text, 'someSymbol');
+    assert.equal(result.kind, 'functional');
+  });
+
+  it('Playwright matcher present but no separate invocation → ambiguous', () => {
+    const text = [
+      'test("naked", async () => {',
+      '  await expect(naked).toBeVisible();',
+      '});',
+    ].join('\n');
+    const result = classifier.classifyTestFile(text, 'naked');
+    assert.equal(result.kind, 'ambiguous');
+  });
+});
+
+describe('assert.match discriminator (E3)', () => {
+  it('assert.match against fs.readFileSync content → presence-only', () => {
+    const text = [
+      'describe("file shape", () => {',
+      '  it("has marker", () => {',
+      '    assert.match(fs.readFileSync(p, "utf-8"), /marker/);',
+      '  });',
+      '});',
+    ].join('\n');
+    const result = classifier.classifyTestFile(text, 'someSymbol');
+    assert.equal(result.kind, 'presence-only');
+  });
+
+  it('assert.match against *Content variable → presence-only', () => {
+    const text = [
+      'describe("skill shape", () => {',
+      '  it("frontmatter", () => {',
+      '    assert.match(skillContent, /^name:/);',
+      '  });',
+      '});',
+    ].join('\n');
+    const result = classifier.classifyTestFile(text, 'someSymbol');
+    assert.equal(result.kind, 'presence-only');
+  });
+
+  it('assert.match against return value → functional', () => {
+    const text = [
+      'describe("parser", () => {',
+      '  it("frontmatter name", () => {',
+      '    const r = parseFrontmatter(text);',
+      '    assert.match(r.name, /^[a-z]/);',
+      '  });',
+      '});',
+    ].join('\n');
+    const result = classifier.classifyTestFile(text, 'parseFrontmatter');
+    assert.equal(result.kind, 'functional');
+  });
+});
+
+describe('bare-expect tightening (E3)', () => {
+  it('only .toBe with no symbol invocation outside framework → ambiguous', () => {
+    const text = [
+      'describe("shape", () => {',
+      '  it("has key", () => {',
+      '    const obj = { x: 1 };',
+      '    expect(obj.x).toBe(1);',
+      '  });',
+      '});',
+    ].join('\n');
+    const result = classifier.classifyTestFile(text, 'someSymbol');
+    assert.equal(result.kind, 'ambiguous');
+  });
+
+  it('.toBe with symbol invocation outside framework → functional', () => {
+    const text = [
+      'describe("compute", () => {',
+      '  it("returns 5", () => {',
+      '    const r = compute();',
+      '    expect(r).toBe(5);',
+      '  });',
+      '});',
+    ].join('\n');
+    const result = classifier.classifyTestFile(text, 'compute');
+    assert.equal(result.kind, 'functional');
+  });
+});
+
 describe('applyManualOverrides (E2)', () => {
   it('FX128 entry flips to unverified with manualOverride flag', () => {
     const entry = {

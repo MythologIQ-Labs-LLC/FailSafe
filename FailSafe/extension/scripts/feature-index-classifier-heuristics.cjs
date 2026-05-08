@@ -16,6 +16,16 @@ const PRESENCE_ASSERTION_PATTERNS = [
   /\.toContain\s*\(/,
 ];
 
+// E3: presence-style match patterns. assert.match against file content or
+// rendered text variables is shape-checking, not behavioral verification.
+// When ALL assert.match calls in a file match these patterns, the file is
+// treated as presence-style for overall classification.
+const PRESENCE_MATCH_PATTERNS = [
+  /assert\.match\s*\(\s*fs\.readFileSync/,
+  /assert\.match\s*\(\s*\w*Content\b/,
+  /assert\.match\s*\(\s*\w*Text\b/,
+];
+
 const FUNCTIONAL_ASSERTION_PATTERNS = [
   /assert\.equal\s*\(/,
   /assert\.deepEqual\s*\(/,
@@ -34,7 +44,30 @@ const FUNCTIONAL_ASSERTION_PATTERNS = [
   /\.toHaveBeenCalledTimes\s*\(/,
   /\.toThrow\s*\(/,
   /\.toReturn\s*\(/,
+  // E3: Playwright matcher whitelist. expect(locator).<matcher>() patterns
+  // that signify functional assertions on rendered DOM state.
+  /\.toHaveClass\s*\(/,
+  /\.toBeVisible\s*\(/,
+  /\.toBeHidden\s*\(/,
+  /\.toContainText\s*\(/,
+  /\.toHaveText\s*\(/,
+  /\.toHaveAttribute\s*\(/,
+  /\.toHaveValue\s*\(/,
+  /\.toHaveCount\s*\(/,
+  /\.toBeChecked\s*\(/,
+  /\.toBeEnabled\s*\(/,
+  /\.toBeDisabled\s*\(/,
+  /\.toBeEditable\s*\(/,
+  /\.toBeFocused\s*\(/,
 ];
+
+// E3: weak-functional patterns are functional matchers whose semantics are
+// shape-checking when divorced from invocation context. When the file's ONLY
+// functional matchers are weak (.toBe alone) AND no symbol invocation occurs
+// outside the test-framework allowlist, treat as ambiguous rather than
+// functional. Strong matchers (.toEqual, .toHaveBeenCalled*, .toThrow,
+// assert.equal, etc.) signify intent stronger than weak shape-checking.
+const WEAK_FUNCTIONAL_RE = /\.toBe\s*\(/;
 
 // Returns true when the test body contains at least one block keyword call.
 function hasTestBlocks(text) {
@@ -64,7 +97,7 @@ function buildSymbolInvocationRe(symbol) {
     // intentionally exclude common test-framework calls so that a file that
     // ONLY contains describe/it/expect/assert/fs.existsSync isn't classified
     // as functional via test-runtime invocations.
-    return /\b(?!(?:if|for|while|switch|return|typeof|describe|it|test|suite|before|after|beforeEach|afterEach|expect|assert|require|console|fs|path|os|process|JSON|Math|Array|Object|String|Number|Boolean|Promise|Set|Map)\b)([A-Za-z_$][\w$]*)\s*\(/;
+    return /\b(?!(?:if|for|while|switch|return|typeof|async|await|function|new|class|void|delete|yield|instanceof|describe|it|test|suite|before|after|beforeEach|afterEach|expect|assert|require|console|fs|path|os|process|JSON|Math|Array|Object|String|Number|Boolean|Promise|Set|Map)\b)([A-Za-z_$][\w$]*)\s*\(/;
   }
   const escaped = symbol.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return new RegExp(`(?:\\b|\\.)${escaped}\\s*\\(|\\bnew\\s+${escaped}\\s*\\(`);
@@ -80,15 +113,54 @@ function stripPresenceLines(text) {
     .join('\n');
 }
 
+// E3: strips lines containing functional matcher calls (.toBe(, .toBeVisible(,
+// assert.equal(, etc.) so that the matcher's own method-call shape doesn't
+// register as an out-of-framework invocation. The matcher is part of the test
+// framework's vocabulary; only invocations OUTSIDE the matcher line count.
+function stripFunctionalAssertionLines(text) {
+  return text
+    .split(/\r?\n/)
+    .filter(line => !FUNCTIONAL_ASSERTION_PATTERNS.some(re => re.test(line)))
+    .join('\n');
+}
+
+// E3: returns true when every assert.match call in the file matches a
+// PRESENCE_MATCH pattern (file-content or shape-text). If there are no
+// assert.match calls, returns false (no determination). Used to discriminate
+// behavioral assert.match (return value) from presence-style (file content).
+function hasOnlyPresenceMatch(text) {
+  const allMatch = text.match(/assert\.match\s*\([^\n]+/g) || [];
+  if (allMatch.length === 0) return false;
+  return allMatch.every(line => PRESENCE_MATCH_PATTERNS.some(re => re.test(line)));
+}
+
+// E3: returns true when the file's only functional pattern is the weak
+// .toBe matcher AND no other functional matcher is present. Used to detect
+// shape-tests masquerading as functional verification.
+function hasOnlyWeakFunctional(text) {
+  if (!WEAK_FUNCTIONAL_RE.test(text)) return false;
+  const strongHit = FUNCTIONAL_ASSERTION_PATTERNS.some(re => {
+    if (re.source === WEAK_FUNCTIONAL_RE.source) return false;
+    return re.test(text);
+  });
+  return !strongHit;
+}
+
 // Returns {matches, reasoning} — true when the file's only real assertions
 // are presence-style, with no symbol invocation pattern hit OUTSIDE the
 // presence-assertion lines themselves.
 function hasOnlyPresenceAssertions(text, codeRef) {
   const presenceHit = PRESENCE_ASSERTION_PATTERNS.some(re => re.test(text));
-  if (!presenceHit) return { matches: false, reasoning: 'no presence assertions detected' };
+  const presenceMatchHit = hasOnlyPresenceMatch(text);
+  if (!presenceHit && !presenceMatchHit) {
+    return { matches: false, reasoning: 'no presence assertions detected' };
+  }
 
-  const functionalHit = FUNCTIONAL_ASSERTION_PATTERNS.some(re => re.test(text));
-  if (functionalHit) {
+  const otherFunctionalHit = FUNCTIONAL_ASSERTION_PATTERNS.some(re => {
+    if (re.source === /assert\.match\s*\(/.source && presenceMatchHit) return false;
+    return re.test(text);
+  });
+  if (otherFunctionalHit) {
     return { matches: false, reasoning: 'functional assertion patterns also present' };
   }
 
@@ -100,29 +172,43 @@ function hasOnlyPresenceAssertions(text, codeRef) {
     return { matches: false, reasoning: 'symbol invocation present outside presence assertions' };
   }
 
+  const reasonPrefix = presenceMatchHit
+    ? 'only file-content/presence-style assert.match'
+    : 'only presence-style assertions';
   const symbolLabel = symbol ? `symbol "${symbol}"` : 'any user symbol';
   return {
     matches: true,
-    reasoning: `only presence-style assertions; no invocation of ${symbolLabel}`,
+    reasoning: `${reasonPrefix}; no invocation of ${symbolLabel}`,
   };
 }
 
 // Returns true when the file invokes a function/method AND asserts against
 // return value or observable side-effect via a functional-style matcher.
+// E3: invocation detection runs against text with matcher-call lines stripped
+// so that .toBe(, .toBeVisible(, etc. don't register as out-of-framework
+// calls. When the only functional matcher is weak (.toBe) and no real
+// invocation is present, return false (downgrades to ambiguous downstream).
 function hasFunctionalAssertions(text) {
   const functionalAssertion = FUNCTIONAL_ASSERTION_PATTERNS.some(re => re.test(text));
   if (!functionalAssertion) return false;
+  const stripped = stripFunctionalAssertionLines(text);
   const invocationRe = buildSymbolInvocationRe(null);
-  return invocationRe.test(text);
+  const hasInvocation = invocationRe.test(stripped);
+  if (!hasInvocation && hasOnlyWeakFunctional(text)) return false;
+  return hasInvocation;
 }
 
 module.exports = {
   hasTestBlocks,
   hasOnlyPresenceAssertions,
   hasFunctionalAssertions,
+  hasOnlyPresenceMatch,
+  hasOnlyWeakFunctional,
   deriveSymbol,
   buildSymbolInvocationRe,
   PRESENCE_ASSERTION_PATTERNS,
+  PRESENCE_MATCH_PATTERNS,
   FUNCTIONAL_ASSERTION_PATTERNS,
+  WEAK_FUNCTIONAL_RE,
   TEST_BLOCK_RE,
 };

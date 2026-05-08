@@ -161,3 +161,88 @@ Subsequent E3/E4/... plans inherit the same 49-entry unverified bucket. The path
 - **Heuristic upgrade** (Playwright `expect(locator).toHaveClass()` and bare `expect(x).toBe(y)` chains — would convert 3+ ambiguous entries to functional/presence-only with concrete verdicts)
 
 Both paths are valid; operator selection per E3 plan dialogue.
+
+## E3 Heuristic Upgrade Diff (2026-05-08)
+
+Plan: `plan-e3-classifier-heuristic-upgrade.md` v1 (PASS at Entry #308; gitignored workspace-only label v5.1.4-baseline). Three heuristic gaps closed: Playwright matcher whitelist (13 patterns) + assert.match text-vs-return discriminator + bare-expect tightening. Side fix: JS keyword exclusion list extended (`async`, `await`, `function`, `new`, `class`, `void`, `delete`, `yield`, `instanceof`) so arrow-function modifiers don't register as out-of-framework invocations.
+
+### Falsifiable acceptance — VERIFIED
+
+Plan declared "≥3 entry-level verdict deltas (either direction)" as substantiate gate. Post-E3 classifier produced **4 promotions, 0 demotions**: criterion satisfied at 4 deltas.
+
+### Promotion table (entries reclassified `unverified` → `verified`)
+
+| Entry | Cited test | Heuristic that promoted | Manual override? | Final status |
+|---|---|---|---|---|
+| FX148 | ui/monitor-shield-progression.spec.ts | Playwright matcher whitelist (`.toHaveClass`/`.toBeVisible`/etc.) | no | verified (was already operator-promoted at Phase 3; classifier now agrees) |
+| FX149 | src/test/ui/monitor-shield-progression.spec.ts | Playwright matcher whitelist | no | verified (NEW) |
+| FX150 | src/test/ui/compact-ui.spec.ts | Playwright matcher whitelist | no | verified (NEW) |
+| FX155 | src/test/ui/compact-ui.spec.ts | Playwright matcher whitelist | no | verified (NEW) |
+
+### Demotion table (entries reclassified `verified` → `unverified`)
+
+**Empty.** Bare-expect tightening did not catch any false-positive `verified` entries in the current FEATURE_INDEX. The currently-verified set was already conservative enough that no entries relied solely on `\.toBe\(` without invocation. Honest signal: the existing heuristic was strict enough on this axis; E3 strictness adds future-proofing rather than current corrections.
+
+### Per-test kind shifts (broader signal — 7 entries shifted ambiguous → functional)
+
+| Entry | Pre-E3 kind | Post-E3 kind | Manual override? | suggestedStatus impact |
+|---|---|---|---|---|
+| FX145 | ambiguous | functional | yes | unverified (override preserved) |
+| FX148 | ambiguous | functional | no | verified (promoted) |
+| FX149 | ambiguous | functional | no | verified (promoted) |
+| FX150 | ambiguous | functional | no | verified (promoted) |
+| FX155 | ambiguous | functional | no | verified (promoted) |
+| FX173 | ambiguous | functional | yes | unverified (override preserved) |
+| FX174 | ambiguous | functional | yes | unverified (override preserved) |
+
+### Preserved table (manual overrides — Entry #302 still authoritative)
+
+| Entry | Pre-E3 classifier kind | Post-E3 classifier kind | Manual override? | Final status |
+|---|---|---|---|---|
+| FX128 | ambiguous | ambiguous | yes | unverified (override) |
+| FX145 | ambiguous | functional | yes | unverified (override; classifier verdict ignored per Entry #302 review) |
+| FX173 | ambiguous | functional | yes | unverified (override; classifier verdict ignored per Entry #302 review) |
+| FX174 | ambiguous | functional | yes | unverified (override; classifier verdict ignored per Entry #302 review) |
+| FX359 | ambiguous | ambiguous | yes | unverified (override) |
+
+### Classifier-vs-FEATURE_INDEX residual gap (3 entries)
+
+The classifier still suggests `unverified` for 3 entries that FEATURE_INDEX has marked `verified` per Phase 3 manual review:
+
+| Entry | Cited test | Classifier post-E3 verdict | FEATURE_INDEX status | Reason for gap |
+|---|---|---|---|---|
+| FX165 | roadmap/tickers-xss.test.ts | ambiguous → unverified | verified | Phase 3 manual review (Entry #302): test directly invokes `updateTickers()` with hostile fixture and asserts escaped DOM; heuristic doesn't recognize the assertion shape. Pattern candidate for E4 heuristic addition. |
+| FX243 | roadmap/voice-settings-multilingual-xss.test.ts | ambiguous → unverified | verified | Phase 3 manual review: test invokes `renderMultilingualRows()` and asserts escaped output; heuristic doesn't recognize the assertion shape. |
+| FX274 | roadmap/AgentCoverageRoute.test.ts | ambiguous → unverified | verified | Phase 3 manual review: test invokes `AgentCoverageRoute.render()` with landscape fixture; heuristic doesn't recognize the assertion shape. |
+
+These gaps are NOT closed by E3. They feed E4 candidate (further heuristic patterns to recognize project-internal XSS-escaping assertion shapes) or could be codified as `MANUAL_OVERRIDES` entries with `status: 'verified'` (would require extending the override mechanism to support promotion in addition to demotion). Operator decision per E4 plan dialogue.
+
+### Summary
+
+| | Pre-E3 | Post-E3 | Delta |
+|---|---|---|---|
+| Verified | 384 | 387 | +3 |
+| Unverified | 49 | 46 | -3 |
+| N/A | 43 | 43 | 0 |
+| Per-test `functional` | 403 | 410 | +7 |
+| Per-test `ambiguous` | 9 | 5 | -4 |
+| Per-test `unrunnable` | 82 | 82 | 0 |
+| classifier-vs-FEATURE_INDEX gap | 4 | 3 | -1 |
+
+### What E3 actually delivered
+
+- **Heuristic correctness**: 4 entry-level promotions (FX148/149/150/155); 7 per-test kind shifts (ambiguous → functional). Falsifiable acceptance criterion satisfied.
+- **Manual override pipeline preserved**: 3 of 7 kind-shifts (FX145/173/174) belong to manual-override entries; classifier-promoted but `applyManualOverrides` correctly locks them at `unverified`. The override pipeline does its job.
+- **Side fix surfaced**: arrow-function modifier `async` was leaking through the invocation exclusion list as a "user symbol" call. Fixed alongside E3's matcher additions.
+- **Honest demotion-zero**: bare-expect tightening did not demote any currently-`verified` entry — adds future-proofing, not corrections. Reported as such per SG-ClassifierPathBug "secondary lesson".
+- **Residual gap documented**: 3 manually-promoted entries (FX165/243/274) still classifier-disagree post-E3; surface for E4 heuristic candidate or override-promotion extension.
+
+### Implication for remediation plan family E4+
+
+Subsequent E4/E5/... plans inherit the **46-entry unverified bucket** (down from 49). Plus the 3-entry classifier-vs-FEATURE_INDEX residual gap above. Future work splits between:
+
+- **Authoring functional tests for the 44 em-dash entries** (no test cited; classifier has nothing to evaluate)
+- **E4 heuristic candidate**: add patterns to recognize XSS-escaping assertion shapes (would convert FX165/243/274 from classifier-disagree to classifier-agree)
+- **Override-promotion extension**: extend `MANUAL_OVERRIDES` to support `status: 'verified'` for entries operator manually validated but classifier doesn't recognize (would close the 3-entry gap mechanically)
+
+E4 plan dialogue selects.
