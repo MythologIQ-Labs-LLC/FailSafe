@@ -1,7 +1,79 @@
 # SYSTEM STATE
 
 **Last Updated:** 2026-05-08
-**Version:** v5.1.1 hotfix (sentinel-monitor default state) — SUBSTANTIATED (no version bump — bump deferred until PUBLISH_BLOCK conditions 1-4 met; closes original operator-observed contradiction)
+**Version:** v5.1.2-baseline — SUBSTANTIATED (workspace-only label; no `package.json` bump — feature-index baseline audit; PUBLISH_BLOCK Condition 1 truth: 49 unverified entries, NOT zero)
+
+---
+
+## v5.1.2-baseline — FEATURE_INDEX baseline audit (SG-PresenceOnlyByNameMatch closure)
+
+### Ledger Trail
+
+| Entry | Phase | Verdict |
+|-------|-------|---------|
+| #299 | GATE | VETO (`specification-drift` — terms-without-home-mods) — plan v1 (3 terms_introduced declared homes; only 1 had Phase modification) |
+| #300 | GATE | **PASS** — plan v2 (Option A — added Phase 1.5 test-patterns.md modification + Phase 4.5 SHADOW_GENOME.md modification); 19/19 tokens validate; first PASS in baseline-audit chain |
+| #301 | IMPLEMENT (partial) | Phases 1, 1.5, 2, 4.5 — parallel team (typescript-pro + technical-writer + observer + devil's advocate); classifier 220L + heuristics 128L + tests 274L; 14/14 pass; classifier first-run on FEATURE_INDEX produces 380 functional / 53 reclassify / 9 ambiguous distribution |
+| #302 | IMPLEMENT (completion) | Phases 3, 4, 5 — operator manual review of 9 ambiguous entries (4 functional + 5 presence-only); applied 49 reclassifications to FEATURE_INDEX.md; 0 missing n/a justifications |
+| #303 | SUBSTANTIATE | Reality matches Promise; PUBLISH_BLOCK Condition 1 truth surfaced (49 unverified, not zero); discipline-stack closure record updated |
+
+### New Files
+
+| File | Phase | Purpose |
+|---|---|---|
+| `FailSafe/extension/scripts/feature-index-classifier.cjs` (220L) | 1 | CLI driver: parseFeatureIndexRows, resolveTestPath, classifyEntry, runAudit, writeReport |
+| `FailSafe/extension/scripts/feature-index-classifier-heuristics.cjs` (128L) | 1 | Razor-split: classifyTestFile + 5 heuristic detectors + stripPresenceLines |
+| `FailSafe/extension/src/test/scripts/featureIndexClassifier.test.cjs` (274L) | 1 | 14 cases: 5 parser, 6 classifyTestFile, 2 classifyEntry, 1 smoke against actual FEATURE_INDEX |
+| `docs/FEATURE_INDEX_BASELINE_AUDIT.md` | 2 + 3 | Triage report with classifier output + Phase 3 manual review record + Phase 4-5 application notes |
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/test-patterns.md` (99→121L) | Phase 1.5: appended `## feature-index baseline audit` section defining the term + 5-heuristic methodology + cross-references |
+| `docs/SHADOW_GENOME.md` (2600→2616L) | Phase 4.5: appended `## SG-PresenceOnlyByNameMatch` doctrinal entry under coherence-via-association lineage |
+| `docs/FEATURE_INDEX.md` | Phase 4: 49 entries reclassified `verified` → `unverified` (44 em-dash auto-downgrades + 5 manual presence-only: FX128, FX145, FX173, FX174, FX359); header counts updated to truth (Verified: 384, Unverified: 49, N/A: 43); v5.1.0-marathon "100% coverage" claim replaced with truth-correct baseline-audit reference |
+
+### Test surface
+
+- node:test (cjs scripts): **42/42 pass** (28 prior + 14 new featureIndexClassifier)
+- TypeScript: **clean**
+- vscode-test mocha: unchanged from v5.1.1 seal (2100 passing, 1 pending, 1 pre-existing flaky)
+- Playwright: unchanged (38 passed, 0 failed, 1 skipped)
+- plan-grep-lint: post-impl regression on 3 FITNESS tokens (pre-fix `Verified: 433`, `Unverified: 0`, `dist/` NEW-VERIFIED) — expected artifact-of-discipline; lint runs at audit-time only
+
+### PUBLISH_BLOCK status (CRITICAL — Condition 1 truth surfaced)
+
+| Condition | Pre-baseline-audit claim | Post-baseline-audit truth |
+|---|---|---|
+| 1. FEATURE_INDEX shows 0 unverified | "Achieved 2026-05-07; 433 verified / 43 n/a / 0 unverified" | **49 unverified** (44 em-dash + 5 manual presence-only); requires remediation plan family |
+| 2. BROWSER_VERIFICATION.md flipped + Playwright clean | operator-attested post-seal | unchanged |
+| 3. Screenshots + operator notes | operator-attested post-seal | unchanged |
+| 4. Operator signed sign-off | operator-attested post-seal | unchanged |
+| 5. Substantiate seal of plan-monitor-coherence-and-browser-verification.md | satisfied at #294 | unchanged (separate seal track) |
+
+**Net**: PUBLISH_BLOCK Condition 1 is now **structurally false**. The 91% verified claim was mostly correct (380/433 = 88% hold under SG-035), but the 12% drift is the SG-PresenceOnlyByNameMatch pattern. **Remediation plan family E2/E3/... required to author functional tests for the 49 unverified entries before publish unblocks.**
+
+### Findings flagged for remediation plan family
+
+The 49 unverified entries by surface bucket (preliminary; needs E2 plan to canonicalize):
+- **44 em-dash entries** (no test cited): VS Code commands without dispatch tests, doc-only feature claims, configuration properties — likely splits into 3-4 surface buckets
+- **5 manual presence-only**: FX128/FX274 (AgentCoverageRoute — route wiring vs renderer separation); FX145 (sidebar provider registration); FX173/FX174 (popout/compact UI shell vs command wiring); FX359 (frontmatter validation vs provenance metadata)
+
+Each bucket becomes its own focused `/qor-plan` cycle that authors functional tests against the cited surface.
+
+### Discipline-stack closure record (post-baseline-audit)
+
+| Sub-class | Status |
+|---|---|
+| Existence-class (R1+R2) | CLOSED — 0 recurrences since #286 |
+| Sink-mechanism cited-shape (R2-bis) | CLOSED — 0 recurrences since #289 |
+| Sink-mechanism prose-vs-code | 1 instance #291; addressed |
+| Sink-mechanism cited-but-not-importable | 1 instance #291; addressed |
+| Specification-drift framework UI | 1 instance #295; addressed |
+| Specification-drift terms-without-home-mods | 1 instance #299; addressed |
+
+No three-strikes routing in any sub-sub-class. Future remediation candidates (R2-bis-doc-integrity / R2-bis-prose / R2-bis-imports) remain pre-positioned; deferred until recurrence threshold reached.
 
 ---
 

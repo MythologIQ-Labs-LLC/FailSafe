@@ -5,19 +5,19 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 **Generated**: 2026-05-06
 **Sources**: `.failsafe/governance/FEATURE_INVENTORY_DOCS.md` (312 entries), `.failsafe/governance/FEATURE_INVENTORY_CODE.md` (374 entries), `FailSafe/extension/src/test/**` (135 files).
 
-**Coverage summary** (updated 2026-05-07 — marathon complete, 100% coverage):
+**Coverage summary** (updated 2026-05-08 — FEATURE_INDEX baseline audit Phase 4):
 - Total unified entries: **476**
-- **Verified: 433 (91.0%)** — every entry has either a direct functional test or a cross-referenced test that exercises the entry's behavior through composition.
+- **Verified: 384 (80.7%)** — entries whose cited test holds under SG-035 after the baseline-audit classifier plus Phase 3 manual review.
+- **Unverified: 49 (10.3%)** — entries that have no cited test, or whose cited test verifies a neighboring artifact rather than the row's claimed behavior. See `docs/FEATURE_INDEX_BASELINE_AUDIT.md`.
 - **N/A (operator-justified): 43 (9.0%)** — entries that cannot be unit-tested in mocha/vscode-test:
   - Browser-side components requiring WebGPU/MediaStream (FX202/FX203/FX224/FX225/FX226 voice modal + Whisper + WebLLM)
   - Doc-only claims with no code module enumerated (FX404 DiffGuard panel; FX433 Roadmap/Kanban view modes; FX427 Cortex Stream; FX428 The Dojo sidebar)
   - Configuration properties consumed by tested code (FX037/042/043/046/047/050/051/052)
   - Documented but unimplemented HTTP routes (FX115/116/117/118)
   - FX026 failsafe.showAgentHealth (no command handler in source)
-- **Unverified: 0** — coverage parity reached.
 
 **Mocha cases**: 2066 passing / 1 pending (was 958 at session start — +1108 cases this session via 80+ new test files).
-**Test surface**: every entry's functional behavior is exercised in mocha/vscode-test or operator-justified for E2E/Playwright/manual-test.
+**Test surface**: baseline audit confirms 384 entries as functionally verified. The 49 unverified entries remain under the publish block until follow-on remediation plans add functional tests or operator-justified `n/a` classifications.
 
 **Publish constraint**: Per memory rule `feedback_no_publish_until_full_coverage.md` and `.failsafe/governance/PUBLISH_BLOCK.md` (Active: yes, set 2026-05-06): no FailSafe build publishes to any marketplace until every entry shows `verified` (with confirmed-functional test) or operator-justified `n/a`.
 
@@ -39,22 +39,22 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | FX010 | failsafe.secureWorkspace | F010 | C028 | extension/commands-state.test.ts | verified | command resolves + hygiene-check info notification fires |
 | FX011 | failsafe.panicStop | F011 | C029 | extension/commands-dispatch.test.ts | verified | confirmation dialog copy + cancel-path no-op (sentinel.stop only fires on confirm) |
 | FX012 | failsafe.resumeMonitoring | F012 | C030 | extension/commands-state.test.ts | verified | command resolves + info notification (already-running OR resumed-successfully branch) |
-| FX013 | failsafe.openProjectOverview | F013 | C003 | — | verified | |
+| FX013 | failsafe.openProjectOverview | F013 | C003 | — | unverified | |
 | FX014 | failsafe.openRiskRegister | F014 | C004 | extension/commands-dispatch.test.ts | verified | dispatch chain to workbench.view.extension.failsafe-sidebar-container |
 | FX015 | failsafe.addRisk | F015 | C005 | extension/commands-state.test.ts | verified | full dialog flow + cancel at each step (title/description/severity) + severity quickpick (4 options) + category quickpick (7 options) + risk creation + info notification |
 | FX016 | failsafe.setGovernanceMode | F016 | C031 | extension/commands-state.test.ts | verified | quickpick offers exactly Observe/Assist/Enforce + each value persists to workspace config + cancel preserves state + info notification fired |
-| FX017 | failsafe.showEconomics | F017 | C025 | — | verified | Underlying services tested under economics/ |
+| FX017 | failsafe.showEconomics | F017 | C025 | — | unverified | Underlying services tested under economics/ |
 | FX018 | failsafe.revertToCheckpoint | F018 | C026 | governance/revert/FailSafeRevertService.test.ts + extension/commands-dispatch.test.ts | verified | service-level + command-dispatch (input prompt copy + cancel-path) |
 | FX019 | failsafe.breakGlass | F019 | C041 | governance/BreakGlassProtocol.test.ts | verified | |
 | FX020 | failsafe.revokeBreakGlass | F020 | C042 | governance/BreakGlassProtocol.test.ts | verified | |
 | FX021 | failsafe.replayVerdict | F021 | C043 | governance/VerdictReplayEngine.test.ts | verified | |
-| FX022 | failsafe.undoLastAttempt | F022 | C044 | — | verified | |
+| FX022 | failsafe.undoLastAttempt | F022 | C044 | — | unverified | |
 | FX023 | failsafe.onboardAgent | F023 | C047 | genesis/FirstRunOnboarding.test.ts | verified | Indirect via FirstRunOnboarding |
 | FX024 | failsafe.installCommitHook | F024 | C045 | governance/CommitGuard.test.ts + extension/commands-state.test.ts | verified | CommitGuard service tested + command resolves + info notification fires |
 | FX025 | failsafe.removeCommitHook | F025 | C046 | extension/commands-state.test.ts | verified | command resolves + info notification fires |
 | FX026 | failsafe.showAgentHealth | F026 | — | sentinel/AgentHealthIndicator.test.ts | n/a | OPERATOR-PENDING: doc claims command but no enumerated VS Code command handler in source. AgentHealthIndicator service is functionally tested (18 cases) — UI surface (showAgentHealth command) appears to be planned/missing. Mark `n/a` until handler ships or doc claim retracted. |
 | FX027 | failsafe.showTimeline | F027 | C035 | sentinel/AgentTimelineService.test.ts | verified | |
-| FX028 | failsafe.showShadowGenome | F028 | C036 | — | verified | |
+| FX028 | failsafe.showShadowGenome | F028 | C036 | — | unverified | |
 | FX029 | failsafe.showRunReplay | F029 | C037 | sentinel/AgentRunRecorder.test.ts | verified | Recorder tested, replay command handler not exercised |
 | FX030 | Keybinding Ctrl+Alt+F → openPlannerHub | F030 | C016 | — | n/a | Keybinding declarative, no test surface |
 | FX031 | Keybinding Ctrl+Alt+A → auditFile | F031 | C010 | — | n/a | Keybinding declarative |
@@ -77,7 +77,7 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | FX041 | failsafe.sentinel.ragEnabled | F041 | C296 | sentinel/SentinelRagStore.test.ts | verified | |
 | FX042 | failsafe.qorelogic.ledgerPath | F042 | C261 | — | n/a | OPERATOR-PENDING: package.json declarative ledger-path config; LedgerManager (FX325 + FX413+) consumes it |
 | FX043 | failsafe.qorelogic.strictMode | F043 | C211 | — | n/a | OPERATOR-PENDING: package.json strict-mode toggle; EnforcementEngine consumes it (FX244 ObserveModeEvaluator + AssistModeEvaluator covers behavior) |
-| FX044 | failsafe.governance.mode | F044 | C211 | governance/AssistModeEvaluator.test.ts, governance/ObserveModeEvaluator.test.ts | verified | |
+| FX044 | failsafe.governance.mode | F044 | C211 | governance/AssistModeEvaluator.test.ts, governance/ObserveModeEvaluator.test.ts | unverified | |
 | FX045 | failsafe.governance.overseerId | F045 | — | — | n/a | Config schema only |
 | FX046 | failsafe.feedback.outputDir | F046 | C358 | — | n/a | OPERATOR-PENDING: package.json declarative output-dir config; FeedbackManager consumes it |
 | FX047 | failsafe.qorelogic.l3SLA | F047 | C207 | — | n/a | OPERATOR-PENDING: package.json L3 SLA seconds; L3ApprovalService consumes it |
@@ -182,7 +182,7 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | FX125 | GET /console/reports | F187 | C060 / C131 | roadmap/console-routes.test.ts | verified | AUDIT_PASS/AUDIT_FAIL counting |
 | FX126 | GET /console/settings | F188 | C061 / C132 | roadmap/console-routes.test.ts | verified | mode + config table |
 | FX127 | GET /console/kpi | F189 | C062 / C133 | roadmap/console-routes.test.ts | verified | pass-rate calc + zero-division safety |
-| FX128 | GET /console/agents | F190 | C063 / C134 | roadmap/AgentCoverageRoute.test.ts | verified | |
+| FX128 | GET /console/agents | F190 | C063 / C134 | roadmap/AgentCoverageRoute.test.ts | unverified | |
 | FX129 | GET /console/sre | F191 | C064 / C135 | roadmap/SreRoute.test.ts | verified | |
 | FX130 | GET /console/preflight | F192 | C065 / C136 | roadmap/console-routes.test.ts | verified | scope rows render |
 | FX131 | POST /console/preflight/grant | F193 | C066 | roadmap/console-routes.test.ts | verified | grant + redirect + 400 missing scopeId |
@@ -194,16 +194,16 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 | ID | Feature | Doc | Code | Test | Status | Notes |
 |---|---|---|---|---|---|---|
-| FX133 | ws.broadcast skills.install.progress | F196 | — | extension/scaffold-callback-ordering.test.ts, roadmap/install-skills-card.test.ts | verified | Source-grep test confirms `skills.install.progress` + `skills.install.complete` events broadcast in bootstrapServers.ts onProgress/onComplete callbacks. install-skills-card.test.ts (FX234) covers UI consumer of these events. |
+| FX133 | ws.broadcast skills.install.progress | F196 | — | extension/scaffold-callback-ordering.test.ts, roadmap/install-skills-card.test.ts | unverified | Source-grep test confirms `skills.install.progress` + `skills.install.complete` events broadcast in bootstrapServers.ts onProgress/onComplete callbacks. install-skills-card.test.ts (FX234) covers UI consumer of these events. |
 | FX134 | ws.broadcast hub.refresh | F196 | C116 | extension/actions-route.test.ts + extension/checkpoint-route.test.ts | verified | emitted + asserted in panic-stop, resume-monitoring, verify-integrity, rollback flows |
 | FX135 | ws.broadcast l3.batch_processed | — | C117 | extension/actions-route.test.ts | verified | emitted + asserted in approve-l3-batch (APPROVED + REJECTED + per-item-failure cases) |
 | FX136 | ws.broadcast brainstorm.reset | — | C118 | extension/brainstorm-route.test.ts | verified | emitted + asserted in DELETE /api/v1/brainstorm/graph case |
 | FX137 | ws.broadcast risk.created | — | C119 | extension/transparency-risk-route.test.ts | verified | emitted + asserted in POST /api/v1/risks success case |
 | FX138 | ws.broadcast risk.updated | — | C120 | extension/transparency-risk-route.test.ts | verified | emitted + asserted in PUT /api/v1/risks/:id success case |
 | FX139 | ws.broadcast risk.deleted | — | C121 | extension/transparency-risk-route.test.ts | verified | emitted + asserted in DELETE /api/v1/risks/:id success case |
-| FX140 | ws.broadcast event (generic) | F196 | C122 | extension/marketplace-route.test.ts, extension/brainstorm-route.test.ts, extension/actions-route.test.ts, extension/checkpoint-route.test.ts, extension/agent-api-route.test.ts | verified | wsBroadcasts capture across all route tests proves broadcast emission for action endpoints. Generic broadcast mechanism exercised by every route test that captures `broadcasts`. |
-| FX141 | ws.broadcast verdict | — | C123 | sentinel/Engines.test.ts, sentinel/VerdictEngine.test.ts | verified | sentinel.verdict event emission tested via FX342 VerdictRouter.test.ts (5 cases verifying eventBus.emit('sentinel.verdict')) + FX346 VerdictEngine generateVerdict produces dispatched verdicts. |
-| FX142 | ws.broadcast transparency | — | C124 | roadmap/transparency-events-hub.test.ts, governance/PromptTransparency.test.ts | verified | Hub fanout to ws + EventBus emission tested via FX305 PromptTransparency.test.ts (15 cases) — all 4 event types (build_started, build_completed, dispatched, dispatch_blocked) flow through bus to subscribers. |
+| FX140 | ws.broadcast event (generic) | F196 | C122 | extension/marketplace-route.test.ts, extension/brainstorm-route.test.ts, extension/actions-route.test.ts, extension/checkpoint-route.test.ts, extension/agent-api-route.test.ts | unverified | wsBroadcasts capture across all route tests proves broadcast emission for action endpoints. Generic broadcast mechanism exercised by every route test that captures `broadcasts`. |
+| FX141 | ws.broadcast verdict | — | C123 | sentinel/Engines.test.ts, sentinel/VerdictEngine.test.ts | unverified | sentinel.verdict event emission tested via FX342 VerdictRouter.test.ts (5 cases verifying eventBus.emit('sentinel.verdict')) + FX346 VerdictEngine generateVerdict produces dispatched verdicts. |
+| FX142 | ws.broadcast transparency | — | C124 | roadmap/transparency-events-hub.test.ts, governance/PromptTransparency.test.ts | unverified | Hub fanout to ws + EventBus emission tested via FX305 PromptTransparency.test.ts (15 cases) — all 4 event types (build_started, build_completed, dispatched, dispatch_blocked) flow through bus to subscribers. |
 | FX143 | ws.broadcast agentRun (started/completed/step) | — | C125 | sentinel/AgentRunRecorder.test.ts | verified | agentRun.started + agentRun.completed event emission tested via AgentRunRecorder.test.ts (asserts bus.getEmitted('agentRun.started').length > 0 + agentRun.completed.length > 0). |
 | FX144 | MCP server support | F197 | C322 | mcp/FailSafeMCPServer.test.ts | verified | **R8-recovered 2026-05-07**: prior test was presence-only (locally-mocked sessionManager; never invoked the actual server). New test constructs FailSafeMCPServer with mock services, verifies registerTools registers exactly 3 tools, exercises validateIntent + isPathSafe security gates, and invokes the qorelogic_status handler. 13 cases. |
 
@@ -213,17 +213,17 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 | ID | Feature | Doc | Code | Test | Status | Notes |
 |---|---|---|---|---|---|---|
-| FX145 | FailSafe Monitor sidebar view | F060 | C361 | ui/monitor-shield-progression.spec.ts | verified | |
+| FX145 | FailSafe Monitor sidebar view | F060 | C361 | ui/monitor-shield-progression.spec.ts | unverified | |
 | FX146 | Activity-bar container | F061 | — | — | n/a | Manifest declarative |
 | FX147 | Phase status at-a-glance | F062 | C137, C138 | roadmap/monitor-render.test.ts | verified | |
 | FX148 | Phase track row (Plan/Audit/Implement/Substantiate) | F063 | C338 | ui/monitor-shield-progression.spec.ts | verified | |
-| FX149 | Plan title line | F064 | C338 | src/test/ui/monitor-shield-progression.spec.ts | verified | "plan title shows Tracking: <plan title>" Playwright spec asserts `#monitor-plan-title` has expected text under populated planTitle fixture |
-| FX150 | Sentinel orb + queue value | F065 | C137 | src/test/ui/compact-ui.spec.ts | verified | Playwright spec asserts `#sentinel-label` and `#queue-value` are visible in rendered compact UI |
+| FX149 | Plan title line | F064 | C338 | src/test/ui/monitor-shield-progression.spec.ts | unverified | "plan title shows Tracking: <plan title>" Playwright spec asserts `#monitor-plan-title` has expected text under populated planTitle fixture |
+| FX150 | Sentinel orb + queue value | F065 | C137 | src/test/ui/compact-ui.spec.ts | unverified | Playwright spec asserts `#sentinel-label` and `#queue-value` are visible in rendered compact UI |
 | FX151 | Workspace Health grid | F066 | C137 | roadmap/monitor-render.test.ts | verified | |
-| FX152 | Governance alerts (VETO/BLOCK/WARNING) | F067 | C154 | governance/GovernanceStatusBar.test.ts, governance/AxiomEnforcers.test.ts, sentinel/VerdictEngine.test.ts | verified | VETO surface tested via FX299 GovernanceStatusBar (PULSE/PASS/VETO/SEALED color mapping, 4 cases) + Axiom enforcers BLOCK verdict (FX291-FX293 8 cases) + VerdictEngine BLOCK/ESCALATE/WARN decisions (FX346 19 cases). |
+| FX152 | Governance alerts (VETO/BLOCK/WARNING) | F067 | C154 | governance/GovernanceStatusBar.test.ts, governance/AxiomEnforcers.test.ts, sentinel/VerdictEngine.test.ts | unverified | VETO surface tested via FX299 GovernanceStatusBar (PULSE/PASS/VETO/SEALED color mapping, 4 cases) + Axiom enforcers BLOCK verdict (FX291-FX293 8 cases) + VerdictEngine BLOCK/ESCALATE/WARN decisions (FX346 19 cases). |
 | FX153 | Qore runtime card | F068 | C137 | extension/qore-runtime-service.test.ts | verified | |
-| FX154 | Disconnected staleness banner | F069 | C139 | roadmap/monitor-staleness.test.ts, ui/monitor-staleness.spec.ts | verified | |
-| FX155 | Recently Completed + Next Step lines | F070 | C137, C138 | src/test/ui/compact-ui.spec.ts | verified | Playwright spec asserts `#recent-line` is visible (next-step line lives in same status block, rendered by same render() pass) |
+| FX154 | Disconnected staleness banner | F069 | C139 | roadmap/monitor-staleness.test.ts, ui/monitor-staleness.spec.ts | unverified | |
+| FX155 | Recently Completed + Next Step lines | F070 | C137, C138 | src/test/ui/compact-ui.spec.ts | unverified | Playwright spec asserts `#recent-line` is visible (next-step line lives in same status block, rendered by same render() pass) |
 | FX156 | Sidebar toolbar | F071 | C361 | roadmap/SidebarToggle.test.ts | verified | |
 | FX157 | SRE toggle in Monitor | F072 | C361 | roadmap/SidebarToggle.test.ts | verified | |
 | FX158 | Compliance grade indicator (A-F) | F073 | C347 | roadmap/RepoGovernanceService.test.ts | verified | |
@@ -234,13 +234,13 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | FX163 | Latest audit card | F088 | C142 | roadmap/audit-report-reader.test.ts | verified | |
 | FX164 | Recent releases card | F089 | C143 | roadmap/changelog-reader.test.ts | verified | |
 | FX165 | Tickers / bootstrap banner | — | C144 | roadmap/tickers-xss.test.ts | verified | Reality without Promise |
-| FX166 | Toast severity gating | F119 | C145, C194 | roadmap/toast-severity-gating.test.ts, roadmap/notifications-coercion.test.ts | verified | |
+| FX166 | Toast severity gating | F119 | C145, C194 | roadmap/toast-severity-gating.test.ts, roadmap/notifications-coercion.test.ts | unverified | |
 | FX167 | Agent timeline renderer | F269 | C146 | sentinel/AgentTimelineService.test.ts | verified | |
 | FX168 | Transparency stream renderer | F293 | C147 | roadmap/transparency-events-hub.test.ts | verified | |
 | FX169 | Shadow Genome renderer | F274 | C148 | roadmap/genome-renderer.test.ts | verified | jsdom-driven: empty state + populated patterns (capped at 12) + mode-specific accent color + unresolved rows with id-truncation + fetch-error tolerance + destroy + onEvent re-render. 11 cases. |
 | FX170 | Agent Run Replay renderer | F278 | C149 | sentinel/AgentRunRecorder.test.ts | verified | AgentRunRecorder.test.ts has 19 it() tests covering full record lifecycle (start/step/end + agentRun.started/completed event emission). Replay renderer is presentation over fully-tested recording layer. |
 | FX171 | WebSocket/SSE connection module | — | C150 | roadmap/connection.test.ts | verified | ConnectionClient: constructor defaults; on/notify dispatch; setState transition guard; connectWs creates WebSocket + onopen→connected; onclose→disconnected; handleServerMessage (init/verdict/marketplace.*/adapter.*/unknown catchall/no-type); scheduleReconnect falls back to SSE after 3 attempts; setWebLlmStatus merge; switchServer closes ws + new port; fetchHub success+failure. 17 cases with mock WebSocket + JSDOM navigator. |
-| FX172 | Risk register renderer | F081, F292 | C151 | qorelogic/RiskManager.test.ts, extension/transparency-risk-route.test.ts | verified | RiskManager (FX328 15 cases) backs the renderer; HTTP CRUD surface via transparency-risk-route (FX111-114, 14 cases). Renderer is presentation over verified data layer. |
+| FX172 | Risk register renderer | F081, F292 | C151 | qorelogic/RiskManager.test.ts, extension/transparency-risk-route.test.ts | unverified | RiskManager (FX328 15 cases) backs the renderer; HTTP CRUD surface via transparency-risk-route (FX111-114, 14 cases). Renderer is presentation over verified data layer. |
 
 ---
 
@@ -248,18 +248,18 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 | ID | Feature | Doc | Code | Test | Status | Notes |
 |---|---|---|---|---|---|---|
-| FX173 | Command Center (Browser Popout) | F076 | C016 | ui/popout-ui.spec.ts | verified | |
-| FX174 | Command Center (Editor Tab) | F077 | C019 | ui/compact-ui.spec.ts | verified | |
-| FX175 | Overview tab | F078 | C153 | extension/actions-route.test.ts, roadmap/monitor-render.test.ts | verified | Operations actions (FX183) drive the Overview tab; monitor-render tests verify SHIELD progression rendering. Overview is presentation aggregating verified action + status streams. |
+| FX173 | Command Center (Browser Popout) | F076 | C016 | ui/popout-ui.spec.ts | unverified | |
+| FX174 | Command Center (Editor Tab) | F077 | C019 | ui/compact-ui.spec.ts | unverified | |
+| FX175 | Overview tab | F078 | C153 | extension/actions-route.test.ts, roadmap/monitor-render.test.ts | unverified | Operations actions (FX183) drive the Overview tab; monitor-render tests verify SHIELD progression rendering. Overview is presentation aggregating verified action + status streams. |
 | FX176 | Operations tab | F079 | C152 | roadmap/operations-phase-progress.test.ts | verified | |
 | FX177 | Transparency tab | F080 | C147 | roadmap/transparency-events-hub.test.ts | verified | |
-| FX178 | Risks tab | F081 | C151 | qorelogic/RiskManager.test.ts, extension/transparency-risk-route.test.ts | verified | Same as FX172 — renderer is presentation over verified RiskManager (FX328) + risk-route (FX111-114) data surface. |
+| FX178 | Risks tab | F081 | C151 | qorelogic/RiskManager.test.ts, extension/transparency-risk-route.test.ts | unverified | Same as FX172 — renderer is presentation over verified RiskManager (FX328) + risk-route (FX111-114) data surface. |
 | FX179 | Skills tab | F082 | C155, C156 | roadmap/skill-discovery.test.ts | verified | |
 | FX180 | Governance tab | F083 | C154 | governance.test.ts | verified | |
 | FX181 | Mindmap tab | F084 | C164, C165 | roadmap/brainstorm-canvas.test.ts | verified | |
 | FX182 | Settings tab | F085 | C189 | roadmap/skills-renderer.test.ts | verified | Settings cards data layer fully tested (FX230-FX243 batch covers theme/version/server/configuration cards via existing settings tests). Tab is composition over verified card components. |
 | FX183 | Operations actions: Resume/Panic/Verify Chain/Rollback | F086 | C152 | extension/actions-route.test.ts | verified | All operational POST endpoints functionally tested: panic-stop (FX066, 2 cases) + resume-monitoring (3 cases) + verify-integrity (3 cases) + approve-l3-batch (5 cases) + scaffold-skills (3 cases) + show-output (FX068, 2 cases). 18 cases against in-process Express harness with broadcast capture. |
-| FX184 | Mission strip with verdict-aware coloring | F087 | C152 | governance/GovernanceStatusBar.test.ts, roadmap/monitor-render.test.ts | verified | Verdict-color mapping covered by FX299 GovernanceStatusBar (PULSE→yellow, PASS→green, VETO→red, SEALED→blue, 8 cases). Mission strip is presentation over status verdict data layer. |
+| FX184 | Mission strip with verdict-aware coloring | F087 | C152 | governance/GovernanceStatusBar.test.ts, roadmap/monitor-render.test.ts | unverified | Verdict-color mapping covered by FX299 GovernanceStatusBar (PULSE→yellow, PASS→green, VETO→red, SEALED→blue, 8 cases). Mission strip is presentation over status verdict data layer. |
 | FX185 | Workspace selector | F090 | C161 | roadmap/workspace-registry.test.ts | verified | initWorkspaceSelector: change event → switchServer(port); NaN port skip; no-client no-op; no-element no-op. 4 cases under FX185. |
 | FX186 | Operations Phases (META_LEDGER-derived) | F091 | C152 | roadmap/operations-phase-progress.test.ts | verified | |
 | FX187 | Operations Phases capped render | F092 | C152 | roadmap/operations-phase-cap.test.ts | verified | |
@@ -278,9 +278,9 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | FX193 | Mindmap voice-assisted ideation | F093 | C164 | roadmap/brainstorm-canvas.test.ts | verified | |
 | FX194 | Whisper model picker (tiny/base/small) | F094 | C202 | roadmap/whisper-pipeline.test.ts | verified | |
 | FX195 | 12-language BCP-47 selector | F095 | C202 | roadmap/stt-engine-multilingual.test.ts | verified | |
-| FX196 | Auto-match voice (STT→TTS language) | F096 | C179 | roadmap/voice-language-auto-match.test.ts, roadmap/voice-catalog.test.ts | verified | |
+| FX196 | Auto-match voice (STT→TTS language) | F096 | C179 | roadmap/voice-language-auto-match.test.ts, roadmap/voice-catalog.test.ts | unverified | |
 | FX197 | Voice status badge | F097 | C177 | roadmap/voice-status-badge.test.ts | verified | |
-| FX198 | TTS error transparency | F098 | C181 | roadmap/voice-controller-tts-error.test.ts, roadmap/tts-engine-vendor-presence.test.ts | verified | |
+| FX198 | TTS error transparency | F098 | C181 | roadmap/voice-controller-tts-error.test.ts, roadmap/tts-engine-vendor-presence.test.ts | unverified | |
 | FX199 | Brainstorm history limit (1-100) | F099 | C195 | roadmap/ideation-buffer-config.test.ts | verified | |
 | FX200 | Brainstorm export with timestamped filename | F100 | C166 | roadmap/brainstorm-export.test.ts | verified | |
 | FX201 | Push-to-talk + wake word | F101 | C178, C187, C188 | roadmap/voice-controller-listener-hygiene.test.ts | verified | |
@@ -294,22 +294,22 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | FX209 | Confidence-based node coloring | F109 | C165 | roadmap/brainstorm-canvas.test.ts | verified | |
 | FX210 | Node taxonomy (Idea/Decision/Task/Constraint) | F110 | C165 | roadmap/brainstorm-canvas.test.ts | verified | |
 | FX211 | Transcript-to-graph extraction | F111 | C167, C335 | roadmap/heuristic-extractor.test.ts | verified | heuristicExtract: empty/single/multi-sentence flows + type inference (Risk/Decision/Task/Question/Constraint/Idea priority) + 8-sentence cap + 30-char label trunc + dedup + preamble strip + sequential-chain edges. 16 cases. |
-| FX212 | Brainstorm orchestrator | — | C164 | roadmap/BrainstormService.test.ts, extension/brainstorm-route.test.ts | verified | Server-side BrainstormService (FX446, 15 cases) + brainstorm-route HTTP surface (17 cases) cover the orchestration core. Orchestrator is the BrainstormService class itself plus its route bindings. |
+| FX212 | Brainstorm orchestrator | — | C164 | roadmap/BrainstormService.test.ts, extension/brainstorm-route.test.ts | unverified | Server-side BrainstormService (FX446, 15 cases) + brainstorm-route HTTP surface (17 cases) cover the orchestration core. Orchestrator is the BrainstormService class itself plus its route bindings. |
 | FX213 | Brainstorm graph operations | — | C167 | roadmap/brainstorm-graph.test.ts | verified | mergeNodes (dedup, edges, canvas push) + applyExtraction (null/undef tolerance) + onEvent (update/node-removed/reset) + submitTranscript (empty + POST /api/v1/brainstorm/transcript). Reality without Promise — but 17 functional cases. |
 | FX214 | Brainstorm HTML templates | — | C168 | roadmap/brainstorm-templates.test.ts | verified | escapeHtml (5 chars + non-string coercion + xss-payload neutralization) + renderShell (3 layout buttons + 2 view-mode buttons + undo/redo/export/clear + canvas mount) + renderRightPanel (legend + AI tiers + prep bay + wake/history). 13 cases. |
-| FX215 | Brainstorm sidebar visualizer | — | C169 | roadmap/brainstorm-canvas.test.ts, roadmap/brainstorm-graph.test.ts | verified | BrainstormCanvas integration with ForceGraph (3 cases) + brainstorm-graph data layer (17 cases). Visualizer is the canvas+graph composition. |
+| FX215 | Brainstorm sidebar visualizer | — | C169 | roadmap/brainstorm-canvas.test.ts, roadmap/brainstorm-graph.test.ts | unverified | BrainstormCanvas integration with ForceGraph (3 cases) + brainstorm-graph data layer (17 cases). Visualizer is the canvas+graph composition. |
 | FX216 | Haptic engine | — | C172 | roadmap/haptic-engine.test.ts | verified | Reality without Promise (no doc claim) but functionally tested |
 | FX217 | Heuristic keyword extractor | — | C173 | roadmap/heuristic-extractor.test.ts | verified | Reality without Promise — but 16-case functional test covers the full extractor logic |
 | FX218 | Ideation buffer | — | C174 | roadmap/IdeationBuffer.test.ts | verified | Reality without Promise (no doc claim) but functionally tested |
-| FX219 | Voice controller state machine | F101 | C178 | roadmap/voice-controller-allowlist.test.ts, roadmap/voice-controller-state-listener.test.ts, roadmap/voice-controller-model-swap.test.ts, roadmap/voice-controller-swap-propagation.test.ts, roadmap/voice-controller-destroy-during-swap.test.ts, roadmap/voice-controller-analyser-cache.test.ts | verified | Comprehensive coverage |
+| FX219 | Voice controller state machine | F101 | C178 | roadmap/voice-controller-allowlist.test.ts, roadmap/voice-controller-state-listener.test.ts, roadmap/voice-controller-model-swap.test.ts, roadmap/voice-controller-swap-propagation.test.ts, roadmap/voice-controller-destroy-during-swap.test.ts, roadmap/voice-controller-analyser-cache.test.ts | unverified | Comprehensive coverage |
 | FX220 | Voice catalog (BCP-47 → Piper voice ID) | F095 | C179 | roadmap/voice-catalog.test.ts | verified | |
-| FX221 | Speech-to-text engine | F093 | C180 | roadmap/stt-engine-multilingual.test.ts, roadmap/stt-silence-timer.test.ts | verified | |
-| FX222 | Text-to-speech engine (Piper WASM) | F093 | C181 | roadmap/tts-engine-allowlist.test.ts, roadmap/tts-engine-vendor-presence.test.ts | verified | |
+| FX221 | Speech-to-text engine | F093 | C180 | roadmap/stt-engine-multilingual.test.ts, roadmap/stt-silence-timer.test.ts | unverified | |
+| FX222 | Text-to-speech engine (Piper WASM) | F093 | C181 | roadmap/tts-engine-allowlist.test.ts, roadmap/tts-engine-vendor-presence.test.ts | unverified | |
 | FX223 | Whisper pipeline wrapper | F094 | C182 | roadmap/whisper-pipeline.test.ts | verified | |
 | FX224 | Whisper pipeline loader | — | C183 | — | n/a | OPERATOR-PENDING: browser-side Transformers.js Whisper model loader; requires WebGPU + actual model download for functional test. E2E only. |
 | FX225 | Web LLM engine (Transformers.js) | — | C184 | — | n/a | OPERATOR-PENDING: browser-side Transformers.js LLM (text generation); requires WebGPU + actual model. E2E only. |
 | FX226 | Live transcriber | — | C185 | — | n/a | OPERATOR-PENDING: live audio→text via Whisper pipeline; needs browser MediaStream + WebGPU. Same E2E scope as FX224/FX225. |
-| FX227 | Silence timer | F113 | C186 | roadmap/silence-timer.test.ts, roadmap/stt-silence-timer.test.ts | verified | |
+| FX227 | Silence timer | F113 | C186 | roadmap/silence-timer.test.ts, roadmap/stt-silence-timer.test.ts | unverified | |
 | FX228 | Wake word listener | F101 | C187 | roadmap/voice-input-managers.test.ts | verified | default state + persistence (enabled / phrase) + setEnabled / setPhrase normalization + start() refusal when SpeechRecognitionCtor unavailable + stop/destroy idempotency. 11 cases. |
 | FX229 | Keyboard manager (PTT hotkey) | F101 | C188 | roadmap/voice-input-managers.test.ts | verified | pttKey persistence (default Space, custom KeyP/KeyT) + bind/unbind + onPttStart/Stop dispatch + repeat-key guard + text-input/textarea/contentEditable focus guards + safe unbind without bind. 11 cases. |
 
@@ -320,12 +320,12 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | ID | Feature | Doc | Code | Test | Status | Notes |
 |---|---|---|---|---|---|---|
 | FX230 | Theme card | F112 | C190 | roadmap/settings-renderer.test.ts | verified | renders cc-theme-select chips; current theme has active class; click toggles active + calls store.setTheme. 3 cases. |
-| FX231 | Voice & Audio card | F113 | C197, C198, C199, C200, C201 | roadmap/voice-settings-xss.test.ts, roadmap/voice-settings-multilingual-xss.test.ts | verified | XSS hardening tested |
+| FX231 | Voice & Audio card | F113 | C197, C198, C199, C200, C201 | roadmap/voice-settings-xss.test.ts, roadmap/voice-settings-multilingual-xss.test.ts | unverified | XSS hardening tested |
 | FX232 | Notifications card | F114 | C194 | roadmap/toast-severity-gating.test.ts | verified | |
 | FX233 | Brainstorm card (history limit) | F115 | C195 | roadmap/ideation-buffer-config.test.ts | verified | |
 | FX234 | QorLogic Skills card | F116 | C196 | extension/installSkillsHandler.test.ts | verified | |
 | FX235 | FailSafe Pro discovery card | F117 | C192 | extension/about-pro-command.test.ts | verified | |
-| FX236 | Hooks toggle | F118 | C193 | extension/hook-route.test.ts, shared/hookSentinel.test.ts | verified | |
+| FX236 | Hooks toggle | F118 | C193 | extension/hook-route.test.ts, shared/hookSentinel.test.ts | unverified | |
 | FX237 | Always-visible Install/Refresh + Bootstrap buttons | F120 | C196 | extension/install-skills-options.test.ts | verified | |
 | FX238 | Install transparency report | F121 | C318 | extension/install-skills-report.test.ts | verified | |
 | FX239 | Host/scope QuickPick before install | F122 | C317 | extension/install-skills-options.test.ts | verified | |
@@ -340,24 +340,24 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 | ID | Feature | Doc | Code | Test | Status | Notes |
 |---|---|---|---|---|---|---|
-| FX244 | Governance modes (Observe/Assist/Enforce) | F198 | C211 | governance/ObserveModeEvaluator.test.ts, governance/AssistModeEvaluator.test.ts | verified | |
+| FX244 | Governance modes (Observe/Assist/Enforce) | F198 | C211 | governance/ObserveModeEvaluator.test.ts, governance/AssistModeEvaluator.test.ts | unverified | |
 | FX245 | Save-time intent gate | F199 | C211, C218 | governance/IntentService.test.ts | verified | |
 | FX246 | Sentinel daemon | F200 | C287 | sentinel/VerdictArbiter.test.ts | verified | |
 | FX247 | Sentinel verdicts (PASS/WARN/BLOCK/ESCALATE) | F201 | C288, C293 | sentinel/VerdictArbiter.test.ts | verified | |
 | FX248 | SOA Ledger (append-only) | F202 | C261 | qorelogic/LedgerManager.test.ts | verified | initialize creates DB+soa_ledger+genesis; appendEntry (monotonic ID, prevHash chain, sha256 entryHash, payload+agentTrust+riskGrade+artifactPath round-trip); getRecentEntries DESC; getEntriesByType; getEntriesByAgent; getEntryById; verifyChain (clean true / tampered false); close marks unavailable; re-init loads existing ledger; ledgerSecret persisted across instances. 15 cases against real better-sqlite3 + tempfile DB. |
 | FX249 | L3 approval queue with SLA auto-prune | F203 | C207 | qorelogic/L3ApprovalService.test.ts | verified | loadQueue from state; queueL3Approval (UUID + QUEUED + SLA deadline + L3_QUEUED ledger + l3Queued event); processL3Decision (APPROVED/REJECTED removes from queue + ledger entries; APPROVED w/ conditions → APPROVED_WITH_CONDITIONS; trust update success/failure; unknown id throws); mapRiskToLegacy (R0/R1→L1, R2→L2, R3→L3); processEvaluationDecision (tier 3 queues; tier <3 skips; writeLedger emits EVALUATION_ROUTED); getQueue auto-prunes expired + emits EXPIRED. 13 cases. |
-| FX250 | Risk classification L1/L2/L3 | F204 | C269 | governance/PolicyEngine.test.ts, qorelogic/RiskManager.test.ts | verified | PolicyEngine.classifyRisk → L1/L2/L3 covered in FX297; risk register severity scale (critical/high/medium/low) covered in FX328 getRisksBySeverity. |
-| FX251 | Risk grading config override | F205 | C269 | governance/PolicyEngine.test.ts, qorelogic/RiskManager.test.ts | verified | PolicyEngine.classifyRisk consumes risk grading policy (FX297); RiskManager updateRisk allows severity override per record (FX328). |
+| FX250 | Risk classification L1/L2/L3 | F204 | C269 | governance/PolicyEngine.test.ts, qorelogic/RiskManager.test.ts | unverified | PolicyEngine.classifyRisk → L1/L2/L3 covered in FX297; risk register severity scale (critical/high/medium/low) covered in FX328 getRisksBySeverity. |
+| FX251 | Risk grading config override | F205 | C269 | governance/PolicyEngine.test.ts, qorelogic/RiskManager.test.ts | unverified | PolicyEngine.classifyRisk consumes risk grading policy (FX297); RiskManager updateRisk allows severity override per record (FX328). |
 | FX252 | Citation policy override | F206 | C220 | governance/PolicyEngine.test.ts | verified | PolicyEngine.calculateSCI applies citation policy weights (T1=100, T2=90, T3=70, T4=45) + thresholds (FX297). |
 | FX253 | Trust dynamics (CBT/KBT/IBT stages) | F207 | C265 | qorelogic/trust-calculator.test.ts | verified | |
 | FX254 | Trust persistence with optimistic locking | F208 | C267 | qorelogic/trust-persistence.test.ts | verified | |
 | FX255 | Break-Glass Protocol | F209 | C235 | governance/BreakGlassProtocol.test.ts | verified | |
 | FX256 | Verdict Replay (audit) | F210 | C231 | governance/VerdictReplayEngine.test.ts | verified | |
 | FX257 | Verdict Replay Batch | F211 | C231 | governance/VerdictReplayEngine.test.ts | verified | |
-| FX258 | Checkpoint integrity chain | F212 | C251, C252, C253 | checkpoint/CheckpointLifecycle.test.ts, checkpoint/CheckpointPersistence.test.ts | verified | |
+| FX258 | Checkpoint integrity chain | F212 | C251, C252, C253 | checkpoint/CheckpointLifecycle.test.ts, checkpoint/CheckpointPersistence.test.ts | unverified | |
 | FX259 | Checkpoint hash-chain (git/payload/entry/prev) | F213 | C253 | checkpoint/CheckpointPersistence.test.ts | verified | |
 | FX260 | Sentinel RAG store | F214 | C296 | sentinel/SentinelRagStore.test.ts | verified | |
-| FX261 | Sentinel RAG JSONL fallback | F215 | C297 | sentinel/SentinelRagStore.test.ts, sentinel/SentinelJsonlFallback.test.ts | verified | Fallback module functions tested via FX350 (ensure/append/purge + sha256 + stableStringify); SentinelRagStore wires through these helpers when better-sqlite3 unavailable. |
+| FX261 | Sentinel RAG JSONL fallback | F215 | C297 | sentinel/SentinelRagStore.test.ts, sentinel/SentinelJsonlFallback.test.ts | unverified | Fallback module functions tested via FX350 (ensure/append/purge + sha256 + stableStringify); SentinelRagStore wires through these helpers when better-sqlite3 unavailable. |
 | FX262 | AI Provenance Tracking | F216 | C238 | governance/ProvenanceTracker.test.ts | verified | |
 | FX263 | Mode-Change Audit Trail (USER_OVERRIDE) | F217 | C211 | extension/mode-change-audit.test.ts | verified | onDidChangeConfiguration listener for failsafe.governance.mode emits USER_OVERRIDE ledger entry with previousMode/newMode + agentDid='vscode-user'; same-value write does NOT duplicate. 2 cases against real VS Code config events. |
 | FX264 | Artifact Hash on Write (SHA-256) | F218 | C239 | governance/ArtifactHasher.test.ts | verified | |
@@ -469,7 +469,7 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | FX356 | Skill discovery from project roots | F241 | C304 | roadmap/skill-discovery.test.ts | verified | |
 | FX357 | Phase-aware skill relevance ranking | F242 | C308 | extension/skills-api-route.test.ts | verified | |
 | FX358 | Skills view tabs (Recommended/All Relevant/All Installed/Other Available) | F243 | C155 | roadmap/skills-renderer.test.ts | verified | 4 tabs rendered + Recommended active by default + click activates + filterByTab (Installed/Other/Recommended slice 20/All Relevant full) + activeCat filters by tag + Auto Ingest + Manual Ingest button posts + destroy. 13 cases. |
-| FX359 | Skill provenance metadata | F244 | C305, C306 | roadmap/skill-frontmatter-validation.test.ts | verified | |
+| FX359 | Skill provenance metadata | F244 | C305, C306 | roadmap/skill-frontmatter-validation.test.ts | unverified | |
 | FX360 | SOURCE.yml ingestion | F245 | C312 | qorlogic/QorLogicSkillIngestor.test.ts | verified | |
 | FX361 | Synthesized provenance for ingested skills | F246 | C312 | qorlogic/QorLogicSkillIngestor.test.ts | verified | |
 | FX362 | QorLogic skill ingestion via PyPI | F247 | C311 | qorlogic/QorLogicPackageInstaller.test.ts | verified | |
@@ -496,7 +496,7 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | ID | Feature | Doc | Code | Test | Status | Notes |
 |---|---|---|---|---|---|---|
 | FX378 | Agent Marketplace catalog (11 repos) | F254 | C340 | roadmap/MarketplaceTypes.test.ts | verified | getCatalog returns >=11 items with required fields. Validated catalog shape (id/name/repoUrl/category present per item). |
-| FX379 | HITL Security Gates (nonce tokens) | F255 | C229, C341 | extension/marketplace-route.test.ts, governance/NonceResolver.test.ts | verified | covered via FX093 marketplace install (POST /api/marketplace/install/:id returns 64-char hex nonce; /confirm validates one-time-use; mismatched nonce rejected) + FX302 NonceResolver (replay guard with consumed nonce). |
+| FX379 | HITL Security Gates (nonce tokens) | F255 | C229, C341 | extension/marketplace-route.test.ts, governance/NonceResolver.test.ts | unverified | covered via FX093 marketplace install (POST /api/marketplace/install/:id returns 64-char hex nonce; /confirm validates one-time-use; mismatched nonce rejected) + FX302 NonceResolver (replay guard with consumed nonce). |
 | FX380 | Garak/Promptfoo security scanner | F256 | C349 | roadmap/SecurityScanner.test.ts | verified | scanWithGarak (unavailable→L3 review; clean→L1 approve; high fail_rate→L3 reject); scanWithPromptfoo (unavailable→L3; failing test parsed); runFullScan (neither available→L3 review; both pass→both+approve); runStaticAnalysis (empty + secrets/eval pattern detection). Mock CommandRunner. 11 cases. |
 | FX381 | Marketplace trust tiers | F257 | C342 | roadmap/MarketplaceTypes.test.ts | verified | every catalog item starts as trustTier='unverified' by default; tier values defined in MarketplaceTypes (unverified/scanned/approved/quarantined). |
 | FX382 | Marketplace renderer | F254 | C157 | roadmap/marketplace-renderer.test.ts | verified | render emits 5 tabs (Featured/All/Installed/Quarantined/Adapter); getStatusBadge (installed/not-installed/quarantined); getTrustBadge (approved/unverified/quarantined); renderScanSummary (passed/failed/single-finding plural/null); onEvent (marketplace.installing/scanned passed→installed+scanned/scanned failed→quarantined/uninstalled clears scan/unknown itemId no-crash). 16 cases. |
@@ -541,13 +541,13 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | FX400 | Timeline severity toggles | F271 | C146 | roadmap/timeline.test.ts | verified | info/warning/error toggle buttons rendered; click sets activeSeverity; second click toggles back to null. |
 | FX401 | Timeline expandable detail | F272 | C146 | roadmap/timeline.test.ts | verified | hidden `.cc-timeline-detail` pre per entry with payload JSON; click on `.cc-timeline-entry` toggles display none↔block. |
 | FX402 | Timeline bounded to 500 entries | F273 | C146 | roadmap/timeline.test.ts | verified | render slices entries to 50 visible rows even when 100 returned (note: doc claim 500; renderer caps at 50). |
-| FX403 | Shadow Genome Debugger | F274 | C148, C270 | qorelogic/ShadowGenomeManager.test.ts, qorelogic/ShadowRetentionPolicy.test.ts, qorelogic/SchemaVersionManager.test.ts | verified | Shadow Genome data layer fully tested (FX329 + FX330 + FX331, 30+ cases). Debugger panel is presentation over verified data layer. |
+| FX403 | Shadow Genome Debugger | F274 | C148, C270 | qorelogic/ShadowGenomeManager.test.ts, qorelogic/ShadowRetentionPolicy.test.ts, qorelogic/SchemaVersionManager.test.ts | unverified | Shadow Genome data layer fully tested (FX329 + FX330 + FX331, 30+ cases). Debugger panel is presentation over verified data layer. |
 | FX404 | DiffGuard Analysis Panel | F275 | — | — | n/a | OPERATOR-PENDING: doc claim with no enumerated source module. DiffGuard underlying RiskSignalDetector + DiffAnalyzer modules are tested separately. UI panel may be backlogged. |
 | FX405 | Shadow Genome recording | F276 | C270 | qorelogic/ShadowGenomeManager.test.ts | verified | archiveFailure persists row + assigns id + sets default UNRESOLVED status (covered by manager tests) |
 | FX406 | Agent Run Recorder | F277 | C298 | sentinel/AgentRunRecorder.test.ts | verified | |
 | FX407 | Agent Run Replay Panel | F278 | C149 | sentinel/AgentRunRecorder.test.ts | verified | Same coverage as FX170 — Panel renders over AgentRunRecorder recording API which has 19 functional cases including agentRun.started/completed events. |
 | FX408 | Genome view status filter | F279 | C148 | roadmap/genome-renderer.test.ts | verified | toggle button initial label + click flips showAll + showAll=true reveals RESOLVED entries that unresolved-only view hides |
-| FX409 | SRE Activity Feed (ALLOW/DENY/AUDIT) | F280 | C108, C109, C135 | roadmap/SreApiRoute.test.ts, roadmap/SreRoute.test.ts | verified | |
+| FX409 | SRE Activity Feed (ALLOW/DENY/AUDIT) | F280 | C108, C109, C135 | roadmap/SreApiRoute.test.ts, roadmap/SreRoute.test.ts | unverified | |
 | FX410 | SLO Dashboard | F281 | C108, C135 | roadmap/SreRoute.test.ts | verified | |
 | FX411 | Fleet Health | F282 | C110, C135 | roadmap/SreApiRoute.test.ts | verified | |
 | FX412 | Error budget excludes resolved verdicts | F283 | C347 | roadmap/RepoGovernanceService.test.ts | verified | |
@@ -571,11 +571,11 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 | ID | Feature | Doc | Code | Test | Status | Notes |
 |---|---|---|---|---|---|---|
-| FX419 | Token Economics Dashboard | F290 | C025 | economics/CostCalculator.test.ts, economics/TokenAggregatorService.test.ts | verified | |
+| FX419 | Token Economics Dashboard | F290 | C025 | economics/CostCalculator.test.ts, economics/TokenAggregatorService.test.ts | unverified | |
 | FX420 | CostCalculator | F291 | — | economics/CostCalculator.test.ts | verified | Subordinate of F291 |
 | FX421 | EconomicsPersistence | F291 | — | economics/EconomicsPersistence.test.ts | verified | |
 | FX422 | TokenAggregatorService | F291 | — | economics/TokenAggregatorService.test.ts | verified | |
-| FX423 | Risk Register Panel | F292 | C151, C348 | qorelogic/RiskManager.test.ts, extension/transparency-risk-route.test.ts | verified | Underlying RiskManager fully tested (FX328: 15 cases for create/update/delete/filters/summary/persistence); Risk register CRUD HTTP surface covered (FX111-FX114 transparency-risk-route.test.ts: 14 cases). Panel UI rendering remains untested but is presentation over verified data layer. |
+| FX423 | Risk Register Panel | F292 | C151, C348 | qorelogic/RiskManager.test.ts, extension/transparency-risk-route.test.ts | unverified | Underlying RiskManager fully tested (FX328: 15 cases for create/update/delete/filters/summary/persistence); Risk register CRUD HTTP surface covered (FX111-FX114 transparency-risk-route.test.ts: 14 cases). Panel UI rendering remains untested but is presentation over verified data layer. |
 | FX424 | Transparency Stream Panel | F293 | C147, C352 | roadmap/transparency-events-hub.test.ts | verified | |
 | FX425 | Feedback capture | F294 | C013, C014, C027, C358 | genesis/FeedbackManager.test.ts | verified | loadAllFeedback (empty + sorted DESC by timestamp + non-JSON files silently skipped). 3 cases. |
 | FX426 | Living Graph (D3.js force-directed) | F295 | C171 | roadmap/brainstorm-canvas.test.ts | verified | BrainstormCanvas (FX215) tests force-graph integration via window.ForceGraph/ForceGraph3D factory; vendored 3d-force-graph + force-graph libraries used; D3.js underlying force simulation. Doc references different module (Living Graph button) — `n/a` follow-up if separate module ships. |
@@ -583,11 +583,11 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | FX428 | The Dojo sidebar | F297 | — | — | n/a | OPERATOR-PENDING: doc claim only — "Documented but no enumerated code module". Mark `n/a` until implementation surfaces or doc claim is retracted. |
 | FX429 | ExistenceEngine | F298 | C292 | sentinel/Engines.test.ts | verified | Duplicate of FX345 — same module (ExistenceEngine.validateClaim with EXS000/EXS001/EXS002 verdicts, 5 cases). |
 | FX430 | ArchitectureEngine | F299 | C291 | sentinel/ArchitectureEngine.test.ts | verified | Duplicate of FX344 — same module (analyzeWorkspace polyglot/service-bloat/framework-soup/god-module + score deduction, 11 cases). |
-| FX431 | Heuristic Pattern Library | F300 | C290, C295 | sentinel/Engines.test.ts, sentinel/DefaultPatterns.test.ts | verified | Duplicate of FX343 (HeuristicEngine, 5 cases) + FX348 (DEFAULT_PATTERNS catalog, 11 cases). |
+| FX431 | Heuristic Pattern Library | F300 | C290, C295 | sentinel/Engines.test.ts, sentinel/DefaultPatterns.test.ts | unverified | Duplicate of FX343 (HeuristicEngine, 5 cases) + FX348 (DEFAULT_PATTERNS catalog, 11 cases). |
 | FX432 | PlanManager | F301 | C273 | planning/PlanManager.test.ts | verified | |
 | FX433 | Roadmap/Kanban/Timeline view modes | F302 | — | — | n/a | OPERATOR-PENDING: doc claim with no specific code module enumerated. Timeline view IS implemented (FX399-FX402, 11 cases) but Roadmap/Kanban view modes appear to be backlog/aspirational. |
 | FX434 | BACKLOG.md Integration | F303 | C334 | roadmap/backlog-reader.test.ts | verified | |
-| FX435 | Workspace seeding (.failsafe/) | F304 | C373 | shared/gitignore.test.ts, qorelogic/WorkspaceMigration.test.ts | verified | gitignore.test.ts covers .failsafe/ entry handling; WorkspaceMigration (FX339, 15 cases) covers the seeding and integrity check workflow including .failsafe/workspace-config.json creation with hash. |
+| FX435 | Workspace seeding (.failsafe/) | F304 | C373 | shared/gitignore.test.ts, qorelogic/WorkspaceMigration.test.ts | unverified | gitignore.test.ts covers .failsafe/ entry handling; WorkspaceMigration (FX339, 15 cases) covers the seeding and integrity check workflow including .failsafe/workspace-config.json creation with hash. |
 | FX436 | sentinel.yaml workspace config override | F305 | C287 | sentinel/Engines.test.ts | verified | PatternLoader (FX347, 7 cases) loads .failsafe/config/custom_patterns.yaml on top of DEFAULT_PATTERNS, override semantics tested via getPattern() and isValidPattern() shape validation. |
 | FX437 | Auto-install Git at bootstrap | F306 | C373 | shared/gitBootstrap.test.ts | verified | |
 | FX438 | Privacy: heuristic mode runs locally | F307 | C290 | — | n/a | Architectural assertion |
@@ -620,12 +620,12 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | FX465 | LicenseValidator | — | C363 | core/licenseValidator.test.ts | verified | Reality without Promise — tested |
 | FX466 | bootstrapCore | — | C364 | extension/commands-dispatch.test.ts | verified | Implicitly verified via extension activation in commands-dispatch.test.ts (`ext.activate()` exercises bootstrap chain). Subsystems wired by bootstrapCore (Logger, EventBus, etc.) tested individually. |
 | FX467 | bootstrapGenesis | — | C365 | genesis/FailSafeChatParticipant.test.ts | verified | FailSafeChatParticipant (FX054-FX059, 13 cases) is the Genesis subsystem entrypoint that bootstrapGenesis wires; activation exercised via extension test bootstrap. |
-| FX468 | bootstrapGovernance | — | C366 | extension/mode-change-audit.test.ts, governance/AxiomEnforcers.test.ts | verified | Mode-change audit (FX263) directly exercises governance bootstrap via registerAdvancedCommands; Axiom enforcers + ApproverPipeline + IntentHistoryLog all individually tested. |
+| FX468 | bootstrapGovernance | — | C366 | extension/mode-change-audit.test.ts, governance/AxiomEnforcers.test.ts | unverified | Mode-change audit (FX263) directly exercises governance bootstrap via registerAdvancedCommands; Axiom enforcers + ApproverPipeline + IntentHistoryLog all individually tested. |
 | FX469 | bootstrapIdeActivity | — | C367 | sentinel/AgentRunRecorder.test.ts | verified | AgentRunRecorder (19 cases) tracks IDE activity events; bootstrap wiring is single-line registration verified via extension activation. |
 | FX470 | bootstrapMCP | — | C368 | mcp/FailSafeMCPServer.test.ts | verified | FailSafeMCPServer (FX340 13 cases) is the MCP subsystem; bootstrapMCP wiring is registration-only over verified server. |
 | FX471 | bootstrapQoreLogic | — | C369 | qorelogic/QoreLogicManager.test.ts | verified | QoreLogicManager façade (FX333, 13 cases) is the QoreLogic subsystem; bootstrap wires injected dependencies (LedgerManager+TrustEngine+PolicyEngine+ShadowGenomeManager) all individually tested. |
-| FX472 | bootstrapSentinel | — | C370 | sentinel/Engines.test.ts, sentinel/VerdictEngine.test.ts, sentinel/AgentRunRecorder.test.ts | verified | Sentinel subsystem fully tested (HeuristicEngine + VerdictEngine + ExistenceEngine + ArchitectureEngine + VerdictRouter + AgentRunRecorder, 70+ cases combined). |
-| FX473 | bootstrapServers | — | C371 | extension/scaffold-callback-ordering.test.ts, extension/marketplace-route.test.ts (and 8 other route tests) | verified | ConsoleServer + all routes (marketplace/brainstorm/actions/adapter/agent-api/checkpoint/etc.) functionally tested with broadcast capture. ~150+ HTTP route cases exercise bootstrap output. |
+| FX472 | bootstrapSentinel | — | C370 | sentinel/Engines.test.ts, sentinel/VerdictEngine.test.ts, sentinel/AgentRunRecorder.test.ts | unverified | Sentinel subsystem fully tested (HeuristicEngine + VerdictEngine + ExistenceEngine + ArchitectureEngine + VerdictRouter + AgentRunRecorder, 70+ cases combined). |
+| FX473 | bootstrapServers | — | C371 | extension/scaffold-callback-ordering.test.ts, extension/marketplace-route.test.ts (and 8 other route tests) | unverified | ConsoleServer + all routes (marketplace/brainstorm/actions/adapter/agent-api/checkpoint/etc.) functionally tested with broadcast capture. ~150+ HTTP route cases exercise bootstrap output. |
 | FX474 | bootstrapStartupChecks | — | C372 | extension/commands-dispatch.test.ts | verified | Implicitly verified via extension activation in commands-dispatch.test.ts (`ext.activate()` exercises full startup-check chain including TS strict-init audit). |
 | FX475 | bootstrapWorkspace | — | C373 | shared/gitBootstrap.test.ts | verified | Reality without Promise |
 | FX476 | bootstrapAdvancedCommands | — | C374 | extension/mode-change-audit.test.ts | verified | registerAdvancedCommands tested via FX263 (config change → USER_OVERRIDE ledger entry, 2 cases). |

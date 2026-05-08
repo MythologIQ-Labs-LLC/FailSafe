@@ -97,3 +97,25 @@ pages were verified by operator-recorded screenshots (with a stated
 reason Playwright could not reach them), and an operator sign-off line.
 The artifact is one of the five conditions for lifting `PUBLISH_BLOCK`.
 This term is finalised in Phase 2 of the same plan.
+
+## feature-index baseline audit
+
+A reclassification pass over `docs/FEATURE_INDEX.md` that applies the SG-035 acceptance question ("If the unit's behavior were silently broken but the artifact still existed, would this test fail?") to every cited test in every currently-`verified` row. Presence-only entries are downgraded to `unverified`; functional entries are kept; ambiguous entries are flagged for operator manual review.
+
+### Methodology
+
+The audit is mechanically supported by `FailSafe/extension/scripts/feature-index-classifier.cjs` (the "test functionality classifier"). The classifier applies five heuristics to each cited test file body in priority order:
+
+1. **`unrunnable`** — test file does not exist on disk.
+2. **`no-test-blocks`** — file exists but contains no `it(`/`test(`/`suite(`/`describe(` blocks.
+3. **`presence-only`** — file contains test blocks but assertions are exclusively presence-style (`assert.ok(fs.existsSync(...))`, `expect(...).toBeDefined()`, `toContain` against file text); no symbol-invocation patterns matching the entry's Code-column reference.
+4. **`functional`** — file invokes function/method calls and asserts against return value or observable side-effect (`expect|assert.equal/deepEqual/strictEqual/match`).
+5. **`ambiguous`** — heuristics inconclusive; flagged for operator manual review.
+
+For multi-test rows (entries citing multiple test paths joined by `+`), the row is `functional` if AT LEAST ONE cited test classifies functional; otherwise the row takes the worst per-test classification.
+
+### Outcome
+
+The baseline audit produces (a) `docs/FEATURE_INDEX_BASELINE_AUDIT.md` (the triage report with per-row classifications + reasoning), and (b) reclassifications applied to `docs/FEATURE_INDEX.md` itself. Header counts are updated to truth; the optimistic "marathon complete, 100% coverage" header text is replaced with the dated baseline-audit reference. The remediation plan family (E2 / E3 / ...) addresses the resulting `unverified` buckets surface-by-surface.
+
+See also: `feature-index-classifier.cjs` for the implementation; `docs/FEATURE_INDEX_BASELINE_AUDIT.md` for the most-recent triage report; `docs/SHADOW_GENOME.md` `SG-PresenceOnlyByNameMatch` for the historical pattern this audit reclassifies.

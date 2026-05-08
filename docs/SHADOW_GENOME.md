@@ -2559,3 +2559,59 @@ R2-bis-prose (per Entry #291 advisory) — extend `plan-grep-lint.cjs` to scan p
 
 Plan-text amendment: one word (`describe` → `suite`, `it` → `test`). Re-run `/qor-audit`.
 
+
+---
+
+## SG-PlanTermsWithoutHomeMods (1st instance) — plan-feature-index-baseline-audit v1 (2026-05-08)
+
+**Category**: specification-drift sub-sub-class (related to Entry #295 framework UI shorthand and #291 prose-vs-code)
+**Severity**: 2
+**Detected**: 2026-05-08, Entry #299 audit
+
+### What Failed
+
+Plan v1 declares `terms_introduced` with three entries:
+- `feature-index baseline audit` → home: docs/test-patterns.md
+- `test functionality classifier` → home: FailSafe/extension/scripts/feature-index-classifier.cjs (NEW; home naturally fulfilled by file creation)
+- `presence-only-by-name-match` → home: docs/SHADOW_GENOME.md
+
+The plan's Existing Infrastructure section marks `docs/test-patterns.md` and `docs/SHADOW_GENOME.md` as `MODIFIED-VERIFIED` (commits `d45d9ea` / `b1a1e02`), but the verification commands attest only to FILE PRESENCE — not to any modification scope this plan introduces. Phase 1 affected files lists only the 2 NEW classifier files; no Phase contains a modification step that adds the term definitions to either home file.
+
+### Why It Failed
+
+Plan author (the Governor persona) wrote `terms_introduced` as forward-declarations for downstream readers — the methodology and pattern naming have genuine canonical value — then forgot to schedule the doc-modification phases that would actually canonicalize them. The R1+R2+R2-bis lint discipline catches symbol/route citations against repo state (file presence + cited-shape FITNESS) but does NOT yet verify that `terms_introduced` `home:` commitments are fulfilled by some phase modification.
+
+Per `qor/references/doctrine-documentation-integrity.md`, doc_tier `standard` requires every term in `terms_introduced` with `home:` path to be either ALREADY defined at that home or DEFINED in a phase modification of that home. The plan satisfied neither condition for 2 of 3 terms.
+
+### Pattern to Avoid
+
+**SG-PlanTermsWithoutHomeMods**: when authoring `terms_introduced` blocks, every entry with `home:` path must be either:
+(a) Already defined at the home file (verify via `grep '<term>' <home-file>` returning non-empty), OR
+(b) Backed by a Phase Affected Files row that modifies the home file AND the Changes section that describes the term definition added.
+
+### Future remediation candidate (deferred until recurrence)
+
+**R2-bis-doc-integrity** — extend `plan-grep-lint.cjs` to verify `terms_introduced` home commitments. New post-parse step: for each declared term, either (1) grep the home file for the term-name and PASS if matches, (2) verify some Affected Files row in any Phase has the home path with op MODIFIED, OR (3) FAIL with `terms-without-home-mods` finding.
+
+Mechanical extension of FITNESS-class checking to documentation commitments. Lower priority than FITNESS itself (documentation drift has lower runtime impact than route/API drift). Defer until pattern recurrence threshold reached (3 instances per Phase 37 §10.4).
+
+### Filed upstream
+
+Tracked locally; would feed into Qor-logic upstream PR alongside R2-bis-prose / R2-bis-imports as the next-class extensions.
+
+---
+
+## SG-PresenceOnlyByNameMatch — FailSafe v5.1.0 marathon (historical) — closed by E baseline audit (2026-05-08)
+
+**Pattern**: a coverage-marathon agent assigns `verified` status to FEATURE_INDEX entries by name-matching the entry's symbol against test-file paths or test-block names — without reading the test bodies to confirm functional invocation + assertion. The resulting "100% verified" claim is structurally indistinguishable from the audit-time view but masks a population of presence-only tests that satisfy the assertion ("a test exists that mentions this symbol") while not actually exercising the unit's behavior.
+
+**FailSafe incident (v5.1.0 marathon, 2026-05-07)**: the consolidator agent assigned `verified` to all 433 of 476 FEATURE_INDEX entries in a single session by walking test-file paths and matching against entry Codes. The header read "marathon complete, 100% coverage" — but the original `REMEDIATE_PROPOSAL_v5.1.0.md` R8 proposal (authored 2026-05-06) had explicitly flagged that the agent was assigning by name-match, not by reading test bodies, and that "some are likely presence-only and would downgrade." The marathon's optimistic header was therefore known-fragile at write-time.
+
+**Detection mechanism**: SG-035's acceptance question, applied per-entry at audit time. For each `verified` entry, read the cited test file body. If the body's only assertions about the entry's behavior are presence-style (file existence, substring presence, attribute existence) and the entry's symbol is never invoked, the entry is presence-only-by-name-match.
+
+**Closure (E baseline audit, 2026-05-08)**: the baseline audit (this plan) reclassifies presence-only entries to `unverified`; the remediation plan family (E2 / E3 / ...) addresses the resulting unverified buckets by surface. The pattern remains a permanent reference for future marathon-style coverage drives, which should integrate the classifier as a pre-merge check.
+
+**Counter-pattern (right way)**: any coverage marathon must apply SG-035 acceptance question per-entry at write-time, not after the fact. Marathons that defer functional verification produce the presence-only-by-name-match drift.
+
+**Filed upstream**: relates to the SG-CoherenceViaAssociation pattern (Entry #294 SHADOW_GENOME closure entry) — the marathon's "verified by composition" rationale is the same shape as the cross-component composition pattern, applied to coverage rather than rendering.
+
