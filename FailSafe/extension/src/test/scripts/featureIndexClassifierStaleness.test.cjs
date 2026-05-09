@@ -78,14 +78,16 @@ describe('runAudit bypassOverrides (E7)', () => {
 });
 
 describe('detectStaleness against current FEATURE_INDEX (E7 baseline)', () => {
-  it('produces summary with all 8 current overrides checked + invalid_count=0', () => {
+  it('produces summary covering all current overrides with invalid_count=0', () => {
     if (!fs.existsSync(FEATURE_INDEX_PATH)) {
       assert.fail(`FEATURE_INDEX.md not found at ${FEATURE_INDEX_PATH}`);
     }
     const result = staleness.detectStaleness(FEATURE_INDEX_PATH, REPO_ROOT);
     assert.ok(result.summary, 'summary should be present');
-    assert.equal(result.summary.total_overrides_checked, 8,
-      `expected 8 overrides, got ${result.summary.total_overrides_checked}`);
+    // total grows as B sweep adds promotion overrides; lower bound is the
+    // E2+E4 codified count (8) — any regression below 8 surfaces.
+    assert.ok(result.summary.total_overrides_checked >= 8,
+      `expected >=8 overrides (E2+E4 baseline), got ${result.summary.total_overrides_checked}`);
     assert.equal(result.summary.invalid_count, 0,
       `expected 0 invalid (regression guard); got ${result.summary.invalid_count}: ${JSON.stringify(result.findings.filter(f => f.kind === 'invalid'))}`);
     assert.ok(Array.isArray(result.findings), 'findings should be an array');
