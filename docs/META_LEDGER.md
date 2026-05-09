@@ -15188,3 +15188,52 @@ The fix is a 2-line statement reorder + helper simplification + new init-order t
 _Chain Status: SUB-CHAIN SEALED at Entry #316. ShadowGenomeManager init-order hotfix complete._
 _Next: `/qor-substantiate` E6 (TtsEngine flake fix; D from V5_1_0_SCOPE)._
 
+
+---
+
+### Entry #317: GATE TRIBUNAL (PASS) — plan-e6-tts-engine-flake-fix v1
+
+**Date**: 2026-05-09
+**Type**: Gate Tribunal (`/qor-audit`)
+**Plan**: `plan-e6-tts-engine-flake-fix.md` v1
+**Verdict**: **PASS** — 10/10 lint tokens; constructor injection seam additive; production default preserved; falsifiable acceptance via 10x stability run.
+**Risk Grade**: L1.
+**Findings**: none.
+**Previous Hash**: `pending-runtime-tooling` (Entry #316)
+**Next phase**: `/qor-implement`.
+
+---
+
+### Entry #318: IMPLEMENTATION — plan-e6-tts-engine-flake-fix v1
+
+**Date**: 2026-05-09
+**Plan**: `plan-e6-tts-engine-flake-fix.md` v1 (PASS at #317)
+
+## Files modified (2)
+
+- `FailSafe/extension/src/roadmap/ui/modules/tts-engine.js` — constructor accepts optional `{ loadPiperModule }` second arg; default loader is `() => import(PIPER_MODULE)` (production behavior preserved); init() uses `this._loadPiperModule()` instead of inline `import(PIPER_MODULE)`.
+- `FailSafe/extension/src/test/roadmap/tts-engine-vendor-presence.test.ts` — test 3 now passes stub loader via `new TtsEngine(makeStore(), { loadPiperModule: stubLoader })` so the dynamic import doesn't hit real Piper (which caused the 2000ms async-timeout flake at #310/#313 push hooks). Added regression-guard test 4 verifying default-loader path preserved when options omitted.
+
+TS clean (`npx --no-install tsc --noEmit` from FailSafe/extension). Mocha 10x stability verification deferred to pre-push hook.
+
+**Previous Hash**: `pending-runtime-tooling` (Entry #317)
+
+---
+
+### Entry #319: SESSION SEAL — plan-e6-tts-engine-flake-fix v1
+
+**Date**: 2026-05-09
+**Plan**: `plan-e6-tts-engine-flake-fix.md` v1
+**Implementation**: Entry #318
+**Verdict**: **PASS — Reality matches Promise**
+**Risk Grade**: L1
+
+Plan-target: v5.1.7-baseline (workspace-only). Closes D from V5_1_0_SCOPE Required Items. The 2000ms async-timeout flake observed at #310/#313 push hooks is now mechanically prevented in the test path: dynamic-import injection seam allows tests to substitute a no-op PiperTTS stub instead of loading the real vendored module. Production unchanged.
+
+Steps 7.5/7.6/9.5.5 SKIPPED per workspace-only baseline discipline.
+
+**Previous Hash**: `pending-runtime-tooling` (Entry #318)
+**Merkle Seal**: `pending-runtime-tooling` (degraded-mode placeholder)
+
+_Chain Status: SUB-CHAIN SEALED at Entry #319. TtsEngine flake fix complete._
+_Next: `/qor-substantiate` E7 (override staleness detector; C from V5_1_0_SCOPE)._

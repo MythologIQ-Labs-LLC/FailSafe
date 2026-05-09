@@ -7,7 +7,7 @@ const PIPER_MODULE = '../vendor/piper/piper.min.js';
 const DEFAULT_VOICE_ID = 'en_US-hfc_female-medium';
 
 export class TtsEngine {
-  constructor(store) {
+  constructor(store, options = {}) {
     this.store = store || null;
     this.tts = null;
     this.audio = null;
@@ -17,6 +17,12 @@ export class TtsEngine {
       ? stored
       : DEFAULT_VOICE_ID;
     this._blobUrl = null;
+    // E6 Piper module loader injection seam: production omits options;
+    // default loader uses native dynamic import. Tests inject a stub
+    // loader returning a minimal PiperTTS surface so the dynamic import
+    // doesn't load real Piper (which causes the 2000ms async-timeout
+    // flake observed at META_LEDGER #310 / #313 push hooks).
+    this._loadPiperModule = options.loadPiperModule || (() => import(PIPER_MODULE));
   }
 
   async init(voiceId) {
@@ -37,7 +43,7 @@ export class TtsEngine {
         this.onStateChange?.('error:wrong_mime');
         return;
       }
-      const mod = await import(PIPER_MODULE);
+      const mod = await this._loadPiperModule();
       this.tts = new mod.PiperTTS({ voiceId: this.voiceId });
       await this.tts.init();
     } catch (err) {

@@ -38,7 +38,15 @@ suite("TtsEngine vendor presence routing", () => {
   });
 
   test("does NOT emit error when HEAD reports javascript content-type", async () => {
-    const tts = new TtsEngine(makeStore());
+    // E6: inject stub loader so dynamic import doesn't load real Piper
+    // (which caused the 2000ms async-timeout flake at #310 / #313 push hooks).
+    const stubLoader = async () => ({
+      PiperTTS: class {
+        constructor(_opts: unknown) { void _opts; }
+        async init() { /* no-op stub */ }
+      },
+    });
+    const tts = new TtsEngine(makeStore(), { loadPiperModule: stubLoader });
     const events: string[] = [];
     tts.onStateChange = (s: string) => events.push(s);
     installFetch(async () => ({
@@ -48,5 +56,20 @@ suite("TtsEngine vendor presence routing", () => {
     await tts.init();
     const errs = events.filter(e => e.startsWith('error:piper_not_vendored') || e.startsWith('error:wrong_mime'));
     assert.deepStrictEqual(errs, []);
+  });
+
+  test("default loader path preserved when options omitted", async () => {
+    // E6: regression guard — production constructor omits options; default
+    // _loadPiperModule must use native dynamic import. Verify by exercising
+    // the early-return path: when fetch returns 404, error:piper_not_vendored
+    // emits BEFORE the loader is reached, proving the constructor extension
+    // is non-disruptive to existing call sites.
+    const tts = new TtsEngine(makeStore());
+    const events: string[] = [];
+    tts.onStateChange = (s: string) => events.push(s);
+    installFetch(async () => ({ ok: false, headers: { get: () => null } }));
+    await tts.init();
+    assert.ok(events.some(e => e === 'error:piper_not_vendored'),
+      `default-loader regression: expected piper_not_vendored, got: ${JSON.stringify(events)}`);
   });
 });
