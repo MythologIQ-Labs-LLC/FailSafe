@@ -2655,3 +2655,25 @@ Tracked locally; would feed into Qor-logic upstream PR alongside R2-bis-prose / 
 **Closure (E4, 2026-05-09)**: operator chose option (b) — `MANUAL_OVERRIDES` extended to support bidirectional override (promotion in addition to demotion). FX165/FX243/FX274 codified as `status: 'verified'` overrides; classifier `bySuggestedStatus` now matches FEATURE_INDEX truth at 387/46/43. The override mechanism is now general-purpose: any future classifier-disagreement entry surfaced by operator manual review can be codified without heuristic addition. Heuristic patterns for project-internal XSS-escaping shapes deferred — if those shapes prove common across the codebase, E5+ can add them; the override mechanism does not pre-empt that work.
 
 **Filed upstream**: extends SG-ClassifierPathBug — both patterns share the root: a measurement tool's correctness is bounded by its coverage of real input shapes. Path-form variance (E2) was input-shape variance; matcher coverage gap (E3) is invocation-shape variance. If a third sibling pattern surfaces (e.g., custom matcher coverage gap or out-of-framework keyword exclusion gap), an SG-MeasurementToolDrift umbrella may consolidate the lineage.
+
+
+---
+
+## SG-OverrideStalenessDetection — operator-authority overrides outliving justification (closed by E7, 2026-05-09)
+
+**Pattern**: codified operator-authority overrides accumulate in a frozen lookup table; without staleness detection, they outlive their justification when (a) the underlying classifier improves to recognize what previously required override, or (b) the cited test artifact is renamed/deleted/refactored. The override silently masks correct classifier behavior or stale test references.
+
+**FailSafe surface (the seed instance)**: `MANUAL_OVERRIDES` table in `FailSafe/extension/scripts/feature-index-classifier.cjs` — 5 demotion overrides (E2, sealed at #307) + 3 promotion overrides (E4, sealed at #313) = 8 entries. Devil's advocate flagged staleness blindness as HIGH severity at #312; carried forward to v5.1.0 scope as Required Item C; filed upstream as Qor [#41](https://github.com/Knapp-Kevin/Qor/issues/41).
+
+**Detection mechanism (E7, 2026-05-09)**: `feature-index-classifier-staleness.cjs` runs the classifier twice — once with overrides applied (production mode) and once with `bypassOverrides: true` flag added to `runAudit` — then per-override-entry diffs the `suggestedStatus`. Three finding classes:
+- **redundant**: classifier verdict (without override) AGREES with override; the override is no longer needed because heuristic caught up.
+- **invalid**: cited test path (extracted from override.reason via regex) no longer resolves on disk.
+- **no_path**: override.reason contains no detectable test-file substring; detector cannot validate.
+
+Output: `dist/override-staleness.findings.json` (gitignored runtime artifact). Advisory only — does NOT auto-modify `MANUAL_OVERRIDES`; operator decides per-entry whether to delete, retain (documentation value), or update.
+
+**Closure (E7)**: detector implementation + 7 unit cases + integration with existing classifier + doc-link refresh of MANUAL_OVERRIDES reasons (added `roadmap/` and `ui/` directory prefixes so test-path regex extracts complete relative paths). Initial baseline run reports: 8 total overrides; 0 invalid (regression guard PASSED); 2 redundant (FX128, FX359 — classifier-only verdict already produces `unverified` without the override). The 2 redundant findings are operator-decision surface for E5+; can be retained as historical documentation of the Phase-3 manual review or removed if the audit-trail is preserved elsewhere.
+
+**Counter-pattern (right way)**: when a classifier improves to recognize an override-targeted pattern, RETIRE the override; do NOT keep both as redundant truth sources. Co-evolving the override table with classifier capability prevents truth-source drift. Substantiate-time integration of the staleness check (deferred to E5+) would make this discipline mechanical rather than operator-vigilance-dependent.
+
+**Filed upstream**: closes Qor [#41](https://github.com/Knapp-Kevin/Qor/issues/41); lineage continues from SG-HeuristicBlindSpot (#310 closure). The two patterns share the root: measurement-tool correctness drift over time. Path-form variance (E2 / SG-ClassifierPathBug), heuristic blind spots (E3 / SG-HeuristicBlindSpot), and override staleness (E7 / this entry) are all manifestations of the same broader concern — measurement tools require maintenance as the codebase evolves.

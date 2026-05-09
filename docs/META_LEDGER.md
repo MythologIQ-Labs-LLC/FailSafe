@@ -15237,3 +15237,60 @@ Steps 7.5/7.6/9.5.5 SKIPPED per workspace-only baseline discipline.
 
 _Chain Status: SUB-CHAIN SEALED at Entry #319. TtsEngine flake fix complete._
 _Next: `/qor-substantiate` E7 (override staleness detector; C from V5_1_0_SCOPE)._
+
+---
+
+### Entry #320: GATE TRIBUNAL (PASS) — plan-e7-override-staleness-detector v1
+
+**Date**: 2026-05-09
+**Plan**: `plan-e7-override-staleness-detector.md` v1
+**Verdict**: **PASS** — 12/12 lint tokens; bypass mode is opt-in flag with default-preserved behavior; new staleness module composes existing primitives; falsifiable acceptance is exact-match (8 overrides checked, 0 invalid).
+**Risk Grade**: L2 (introduces new measurement-tool surface).
+**Findings**: none.
+**Previous Hash**: `pending-runtime-tooling` (Entry #319)
+**Next phase**: `/qor-implement`.
+
+---
+
+### Entry #321: IMPLEMENTATION — plan-e7-override-staleness-detector v1
+
+**Date**: 2026-05-09
+**Plan**: `plan-e7-override-staleness-detector.md` v1 (PASS at #320)
+
+## Files modified / created
+
+- `FailSafe/extension/scripts/feature-index-classifier.cjs` (MODIFIED): `runAudit` accepts optional `{ bypassOverrides: boolean }`; when true, per-row pipeline skips `applyManualOverrides`. Default behavior unchanged. Reason text in 8 MANUAL_OVERRIDES entries updated to include directory prefixes (`roadmap/`, `ui/`) so the regex extractor produces full relative paths.
+- `FailSafe/extension/scripts/feature-index-classifier-staleness.cjs` (NEW, ~125L): override-staleness detector. Runs `runAudit` twice (with/without overrides) + per-entry diffs `suggestedStatus`. Three finding classes — redundant / invalid / no_path. Output: `dist/override-staleness.findings.json`.
+- `FailSafe/extension/src/test/scripts/featureIndexClassifierStaleness.test.cjs` (NEW, ~95L): 7 unit cases (extractTestPath × 4, runAudit bypass × 2, detectStaleness baseline × 1). All GREEN.
+- `docs/SHADOW_GENOME.md` (MODIFIED): SG-OverrideStalenessDetection doctrinal entry appended; documents pattern + detection mechanism + closure + counter-pattern + lineage continuation from SG-HeuristicBlindSpot.
+- `.failsafe/governance/V5_1_0_SCOPE.md` (MODIFIED): C row marked SEALED with E7 closure annotation.
+
+## Test surface
+
+- node:test (cjs scripts): **39/39 pass** (32 prior + 7 new staleness tests)
+- TypeScript: clean
+- Baseline staleness run: 8 total overrides / 0 invalid / 2 redundant (FX128, FX359 — classifier-only verdict already produces `unverified`; overrides are documentation-only). Operator review pending; advisory only.
+
+**Previous Hash**: `pending-runtime-tooling` (Entry #320)
+
+---
+
+### Entry #322: SESSION SEAL — plan-e7-override-staleness-detector v1
+
+**Date**: 2026-05-09
+**Plan**: `plan-e7-override-staleness-detector.md` v1
+**Implementation**: Entry #321
+**Verdict**: **PASS — Reality matches Promise**
+**Risk Grade**: L2
+
+Plan-target: v5.1.8-baseline (workspace-only). Closes C from V5_1_0_SCOPE Required Items. Override staleness mechanism now operative; advisory output protects E2 (5 demotion overrides) + E4 (3 promotion overrides) from outliving justification.
+
+Falsifiable acceptance VERIFIED: total=8, invalid=0, redundant=2 surfaced as advisory.
+
+Steps 7.5/7.6/9.5.5 SKIPPED per workspace-only baseline discipline.
+
+**Previous Hash**: `pending-runtime-tooling` (Entry #321)
+**Merkle Seal**: `pending-runtime-tooling` (degraded-mode placeholder)
+
+_Chain Status: SUB-CHAIN SEALED at Entry #322. Override staleness detector cycle complete. v5.1.0 scope items A, C, D SEALED. Remaining: B (Playwright coverage) + B191/192/193/194/197/198._
+_Next: `/qor-plan` for B (B199 Phase 2+ — surface-bucket functional-test plan family). Operator directive: "complete all phases for Item B in 5.1.0 autonomously and pause there"._

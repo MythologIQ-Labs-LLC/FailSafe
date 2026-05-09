@@ -54,14 +54,14 @@ const TEST_PATH_PREFIXES = [
 // is present. Operator must explicitly retest under E5+ to revise any
 // override.
 const MANUAL_OVERRIDES = Object.freeze({
-  FX128: { status: 'unverified', reason: 'Phase 3: AgentCoverageRoute test exercises renderer, not GET /console/agents route wiring' },
-  FX145: { status: 'unverified', reason: 'Phase 3: monitor-shield-progression spec covers UI shell, not FailSafeSidebarProvider registration' },
-  FX173: { status: 'unverified', reason: 'Phase 3: popout-ui spec covers HTML shell, not failsafe.openPlannerHub command wiring' },
-  FX174: { status: 'unverified', reason: 'Phase 3: compact-ui spec covers HTML shell, not failsafe.openPlannerHubEditor command wiring' },
-  FX359: { status: 'unverified', reason: 'Phase 3: skill-frontmatter-validation tests name+description, not provenance metadata fields' },
-  FX165: { status: 'verified', reason: 'Phase 3 (Entry #302): tickers-xss.test.ts directly invokes updateTickers() with hostile sentinelStatus.mode and asserts escaped DOM. Classifier heuristic does not recognize the assertion shape; override codifies operator review.' },
-  FX243: { status: 'verified', reason: 'Phase 3 (Entry #302): voice-settings-multilingual-xss.test.ts directly invokes renderMultilingualRows() and asserts escaped output. Classifier heuristic does not recognize the assertion shape; override codifies operator review.' },
-  FX274: { status: 'verified', reason: 'Phase 3 (Entry #302): AgentCoverageRoute.test.ts directly invokes AgentCoverageRoute.render() with landscape fixtures and asserts dashboard sections. Classifier heuristic does not recognize the assertion shape; override codifies operator review.' },
+  FX128: { status: 'unverified', reason: 'Phase 3: roadmap/AgentCoverageRoute.test.ts exercises renderer, not GET /console/agents route wiring' },
+  FX145: { status: 'unverified', reason: 'Phase 3: ui/monitor-shield-progression.spec.ts covers UI shell, not FailSafeSidebarProvider registration' },
+  FX173: { status: 'unverified', reason: 'Phase 3: ui/popout-ui.spec.ts covers HTML shell, not failsafe.openPlannerHub command wiring' },
+  FX174: { status: 'unverified', reason: 'Phase 3: ui/compact-ui.spec.ts covers HTML shell, not failsafe.openPlannerHubEditor command wiring' },
+  FX359: { status: 'unverified', reason: 'Phase 3: roadmap/skill-frontmatter-validation.test.ts tests name+description, not provenance metadata fields' },
+  FX165: { status: 'verified', reason: 'Phase 3 (Entry #302): roadmap/tickers-xss.test.ts directly invokes updateTickers() with hostile sentinelStatus.mode and asserts escaped DOM. Classifier heuristic does not recognize the assertion shape; override codifies operator review.' },
+  FX243: { status: 'verified', reason: 'Phase 3 (Entry #302): roadmap/voice-settings-multilingual-xss.test.ts directly invokes renderMultilingualRows() and asserts escaped output. Classifier heuristic does not recognize the assertion shape; override codifies operator review.' },
+  FX274: { status: 'verified', reason: 'Phase 3 (Entry #302): roadmap/AgentCoverageRoute.test.ts directly invokes AgentCoverageRoute.render() with landscape fixtures and asserts dashboard sections. Classifier heuristic does not recognize the assertion shape; override codifies operator review.' },
 });
 
 function usage(msg) {
@@ -211,10 +211,16 @@ function classifyEntry(row, repoRoot) {
 
 // Top-level driver: reads FEATURE_INDEX.md, classifies every row, returns the
 // audit object. Pure (no writes) — caller invokes writeReport.
-function runAudit(featureIndexPath, repoRoot) {
+function runAudit(featureIndexPath, repoRoot, options = {}) {
   const text = fs.readFileSync(featureIndexPath, 'utf-8');
   const rows = parseFeatureIndexRows(text);
-  const classified = rows.map(r => applyManualOverrides(classifyEntry(r, repoRoot)));
+  // E7 bypass mode: when options.bypassOverrides is true, skip
+  // applyManualOverrides so the staleness detector can compare classifier
+  // verdicts with-vs-without the operator-authority override layer.
+  const classified = rows.map(r => {
+    const entry = classifyEntry(r, repoRoot);
+    return options.bypassOverrides ? entry : applyManualOverrides(entry);
+  });
   const summary = buildSummary(classified);
   return { summary, rows: classified };
 }
