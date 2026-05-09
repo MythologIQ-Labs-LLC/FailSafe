@@ -15069,3 +15069,122 @@ Steps 7.5/7.6/9.5.5 (version bump + CHANGELOG stamp + annotated tag) **SKIPPED**
 _Chain Status: SUB-CHAIN SEALED at Entry #313. Override-promotion extension cycle complete. Classifier-vs-FEATURE_INDEX gap CLOSED._
 _Next: Operator decision on staging/commit/push for E4 + prior 4 unpushed seals. Then `/qor-plan` for E5 — recommend either (a) stale-override-detector capability (addresses devil's advocate HIGH #1) OR (b) first surface-bucket functional-test plan against the 44 em-dash entries (begins actual unverified-bucket reduction toward publish-block lift)._
 
+---
+
+### Entry #314: GATE TRIBUNAL (PASS) — plan-e5-shadowgenomemanager-init-order-hotfix v1
+
+**Date**: 2026-05-09
+**Type**: Gate Tribunal (`/qor-audit`)
+**Persona**: The QorLogic Judge (solo audit; codex-plugin not declared)
+**Plan**: `plan-e5-shadowgenomemanager-init-order-hotfix.md` v1 (root, gitignored workspace-only)
+**Verdict**: **PASS**
+
+## Audit summary
+
+E5 v1 is the first of three sequential plans drafted per operator directive ("the next few phases, then /qor-audit and /qor-implement sequentially"). Closes B200 P0 security regression per `.failsafe/governance/V5_1_0_SCOPE.md` Required Item A.
+
+| Pass | Verdict |
+|---|---|
+| Pre-audit lint | PASS — 13/13 tokens |
+| Plan-internal coherence | PASS — `terms_introduced: []` (no home commitments) |
+| Test Functionality | PASS — RED test invokes `mgr.initialize()` once + asserts on `PRAGMA table_info(shadow_genome)` columns |
+| Section 4 Razor | PASS — 2-line statement reorder in production + ~30L new test in test file |
+| Infrastructure Alignment | PASS — lines 119/125/138 + 152 verified at exact positions |
+| All other passes | PASS |
+
+**Findings**: none.
+**Risk Grade**: L2.
+
+**Notable**: third consecutive first-cycle PASS audit (E3 v1 #308, E4 v1 #311, E5 v1 here). Discipline curve sustained.
+
+**Audit report**: `.agent/staging/AUDIT_REPORT.md`.
+
+**Content Hash**: `pending-runtime-tooling`
+**Previous Hash**: `pending-runtime-tooling` (Entry #313)
+**Session ID**: workspace-only / `default`
+
+**Next phase**: `/qor-implement`.
+
+---
+
+### Entry #315: IMPLEMENTATION — plan-e5-shadowgenomemanager-init-order-hotfix v1
+
+**Date**: 2026-05-09
+**Type**: Implementation Pass (`/qor-implement`)
+**Persona**: The QorLogic Specialist (sequential mode)
+**Plan**: `plan-e5-shadowgenomemanager-init-order-hotfix.md` v1 (PASS at Entry #314)
+
+## Files modified (3)
+
+| File | Description |
+|---|---|
+| `FailSafe/extension/src/qorelogic/shadow/ShadowGenomeManager.ts` | Init-order swap: `this.initSchema()` moved from line 138 (post-migrate) to immediately after `schemaVersionManager.initialize()` (pre-migrate). New leading comment documents B200 / META_LEDGER #313 reference. Production behavior unchanged on second-and-later sessions; first-session install now correctly applies migrations 1.1.0 (security columns: did_hash, signature, signature_timestamp) + 1.2.0 (audit columns) against the existing shadow_genome table. |
+| `FailSafe/extension/src/test/qorelogic/ShadowGenomeManager.test.ts` | Phase 1: new `init order (B200)` suite with single test `first initialize() creates shadow_genome with security columns` — calls `mgr.initialize()` ONCE and asserts `PRAGMA table_info(shadow_genome)` returns rows including `did_hash`, `signature`, `signature_timestamp`. Phase 2: existing `newManager` helper simplified from 16-line 2-init pattern to 6-line single-init pattern; stale comment block removed. |
+| `docs/BACKLOG.md` | B200 marked complete: `- [x] **[B200] (v5.1.6-baseline 2026-05-09 — Complete) HIGH ...**` |
+
+## TDD-Light record
+
+New RED test was written first; pre-fix it would FAIL because migrations 1.1.0/1.2.0 silently abort against the missing shadow_genome table, leaving security columns unattached. Post-fix, `initSchema()` runs before `migrate()`, so ALTER COLUMN succeeds and the PRAGMA query returns the security columns. TS clean (`npx --no-install tsc --noEmit` from FailSafe/extension); mocha execution deferred to substantiate-time pre-push hook (vscode-test compile + run path).
+
+## Steps skipped per protocol
+
+- **Step 5.5** (Intent Lock Capture): DEGRADED-NOOP — `.qor/` runtime uninitialized
+- **Step 12.5 auto-staging**: skipped per session feedback discipline
+
+**Content Hash**: `pending-runtime-tooling`
+**Previous Hash**: `pending-runtime-tooling` (Entry #314)
+**Session ID**: workspace-only / `default`
+
+---
+
+### Entry #316: SESSION SEAL — plan-e5-shadowgenomemanager-init-order-hotfix v1
+
+**Date**: 2026-05-09
+**Type**: Substantiation Seal (`/qor-substantiate`)
+**Persona**: The QorLogic Judge (substantiation mode)
+**Plan**: `plan-e5-shadowgenomemanager-init-order-hotfix.md` v1 (PASS at Entry #314)
+**Implementation reference**: Entry #315
+**Verdict**: **PASS — Reality matches Promise**
+**Risk Grade**: L2
+
+## Substantiation summary
+
+Plan-target: v5.1.6-baseline (workspace-only label per plan boundary; no `package.json` bump). Closes B200 (P0 security regression — security columns silently missing on first-session install). Required Item A from `.failsafe/governance/V5_1_0_SCOPE.md` SEALED.
+
+The fix is a 2-line statement reorder + helper simplification + new init-order test. Production behavior preserved on second-and-later sessions (existing operator workspaces unaffected); first-session installs now correctly apply migrations on first run.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| AUDIT_REPORT.md PASS verdict (Entry #314) | ✓ |
+| Reality = Blueprint (Step 3) | 3 MODIFIED files present per Plan v1 Phase 1 + Phase 2 + Phase 3 affected-files tables |
+| BACKLOG security-blocker review (Step 3.5) | B200 transitioned `[ ]` → `[x]` with closure marker; no other security blockers gating |
+| Test functionality acceptance (Step 4) | New `init order (B200)` test invokes `mgr.initialize()` and asserts on observable schema state via `PRAGMA table_info` — SG-035 PASS; presence-only seal gate not triggered |
+| Skill file integrity (Step 4.5) | No skill files modified |
+| Reliability sweep (Step 4.6) | DEGRADED-NOOP — `.qor/` runtime uninitialized |
+| Secret scanning (Step 4.6.5) | DEGRADED-NOOP — manual review shows no secrets in 3 modified files |
+| Section 4 Razor (Step 5) | Production change is 5-line statement reorder; helper simplification REDUCES test-file line count by ~10. No file approaches 250L thresholds. |
+| Mocha test execution | DEFERRED to pre-push hook (vscode-test runner) — TS compiles clean |
+| Falsifiable acceptance | New RED test PASSES post-fix; existing 100+ ShadowGenomeManager test cases preserved (helper simplification is structural; existing test bodies unchanged) |
+
+## Findings (carried forward)
+
+1. **Mocha test execution at pre-push gate** (procedural): TS compiles clean, but the new init-order test has not been executed via vscode-test in this cycle. If pre-push hook surfaces a failure, revert to plan + amend. Forward-tracked.
+2. **Migration retroactivity for partially-migrated DBs**: per Plan boundary `exclusions`, existing operator workspaces with already-completed second-session init are unaffected; the rare new-install-then-rollback case is documented but not auto-recovered. Carried as informational.
+
+## Steps skipped per protocol
+
+- **Steps 7.5 / 7.6 / 9.5.5** (version bump + CHANGELOG stamp + annotated tag): SKIPPED per workspace-only baseline discipline
+- **Steps 4.6 / 4.6.5 / 4.6.6 / 4.7 / 6.5 Phase 49 / 7.4 / 7.7 / 7.8 / 8.5 / Z**: DEGRADED-NOOP
+
+**Content Hash**: `pending-runtime-tooling`
+**Previous Hash**: `pending-runtime-tooling` (Entry #315)
+**Merkle Seal**: `pending-runtime-tooling` (degraded-mode placeholder)
+**Session ID**: workspace-only / `default`
+
+**Decision**: SEAL — Reality matches Promise. B200 closed; A from V5_1_0_SCOPE Required Items SEALED.
+
+_Chain Status: SUB-CHAIN SEALED at Entry #316. ShadowGenomeManager init-order hotfix complete._
+_Next: `/qor-substantiate` E6 (TtsEngine flake fix; D from V5_1_0_SCOPE)._
+

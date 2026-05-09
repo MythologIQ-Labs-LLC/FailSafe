@@ -45,16 +45,6 @@ function buildVerdict(overrides: Partial<SentinelVerdict> = {}): SentinelVerdict
 async function newManager(tmp: string, registry: ShadowGenomeManager[]): Promise<ShadowGenomeManager> {
   const cfg = makeConfigProvider(tmp);
   const ledger: LedgerManager = {} as LedgerManager;
-  // Production init has an ordering quirk: schema migrations (002 adds
-  // did_hash/signature columns) run before the base table is created, so on
-  // first init the ALTER fails silently and columns remain missing. The
-  // columns appear on the SECOND init when the base table already exists.
-  // We replay that two-init sequence here so tests see the same schema state
-  // production sees after at least one prior workspace session.
-  const mgr1 = new ShadowGenomeManager(cfg, ledger);
-  (mgr1 as unknown as { enableSecurityHardening: boolean }).enableSecurityHardening = false;
-  await mgr1.initialize();
-  mgr1.close();
   const mgr = new ShadowGenomeManager(cfg, ledger);
   (mgr as unknown as { enableSecurityHardening: boolean }).enableSecurityHardening = false;
   await mgr.initialize();
@@ -192,5 +182,38 @@ suite('ShadowGenomeManager (FX329, FX405)', () => {
     const mgr = await newManager(tmp, activeManagers);
     const patterns = await mgr.analyzeFailurePatterns();
     assert.deepEqual(patterns, []);
+  });
+});
+
+suite('init order (B200)', () => {
+  let tmp: string;
+  let activeManagers: ShadowGenomeManager[];
+
+  setup(() => {
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sgm-init-'));
+    activeManagers = [];
+  });
+
+  teardown(() => {
+    for (const m of activeManagers) {
+      try { m.close(); } catch { /* ignore */ }
+    }
+    fs.rmSync(tmp, { recursive: true, force: true });
+  });
+
+  test('first initialize() creates shadow_genome with security columns', async () => {
+    const cfg = makeConfigProvider(tmp);
+    const ledger: LedgerManager = {} as LedgerManager;
+    const mgr = new ShadowGenomeManager(cfg, ledger);
+    activeManagers.push(mgr);
+    (mgr as unknown as { enableSecurityHardening: boolean }).enableSecurityHardening = false;
+    await mgr.initialize();
+    const db = (mgr as unknown as { db?: import('better-sqlite3').Database }).db;
+    assert.ok(db, 'db should be initialized');
+    const cols = db!.prepare('PRAGMA table_info(shadow_genome)').all() as Array<{ name: string }>;
+    const names = new Set(cols.map(c => c.name));
+    assert.ok(names.has('did_hash'), `did_hash column missing on first init; cols: ${[...names].join(',')}`);
+    assert.ok(names.has('signature'), `signature column missing on first init; cols: ${[...names].join(',')}`);
+    assert.ok(names.has('signature_timestamp'), `signature_timestamp column missing on first init; cols: ${[...names].join(',')}`);
   });
 });
