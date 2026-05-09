@@ -14882,3 +14882,190 @@ Steps 7.5/7.6/9.5.5 (version bump + CHANGELOG stamp + annotated tag) **SKIPPED**
 _Chain Status: SUB-CHAIN SEALED at Entry #310. Classifier heuristic-upgrade cycle complete._
 _Next: Operator decision on staging/commit/push for E3 + prior 3 unpushed seals (`b1a1e02`, `b51a9b8`, `9b58d7e`). Then `/qor-plan` for E4 (close 3-entry classifier-vs-FEATURE_INDEX gap; recommend override-promotion extension as smaller delta + future-proof; OR begin first surface-bucket functional-test plan against the 44 em-dash entries)._
 
+---
+
+### Entry #311: GATE TRIBUNAL (PASS) — plan-e4-override-promotion-extension v1
+
+**Date**: 2026-05-09
+**Type**: Gate Tribunal (`/qor-audit`)
+**Persona**: The QorLogic Judge (solo audit; codex-plugin not declared)
+**Plan**: `plan-e4-override-promotion-extension.md` v1 (root, gitignored workspace-only)
+**Verdict**: **PASS**
+
+## Audit summary
+
+E4 v1 is the **second consecutive first-cycle PASS** in the v5.1.0 sub-chain (E3 v1 at #308, E4 v1 here). Discipline curve converged: code-domain term-homing + falsifiable-acceptance both now applied as plan-time invariants by the Governor. E4 declares the **strictest acceptance criterion in the sub-chain to date** — exact-match (`bySuggestedStatus.verified === 387` AND `bySuggestedStatus.unverified === 46` AND per-entry override flags for 8 entries) — promoting Phase-3-manual-review authority from narrative to mechanical-substantiate-gate.
+
+| Pass | Verdict |
+|---|---|
+| Pre-audit lint (R2 + R2-bis) | PASS — 16/16 tokens |
+| Plan-internal coherence | PASS — 1/1 terms_introduced home commitment fulfilled |
+| Section 4 Razor | PASS — classifier 271→~279L (under 280L target with factor-out fallback declared at #305) |
+| Test Functionality | PASS — 3 new cases all invoke `applyManualOverrides` + assert on return; case 32 is regression-guard for E2 demotion semantics |
+| Infrastructure Alignment | PASS — all 6 FITNESS-VERIFIED parent symbols verified |
+| All other passes | PASS |
+
+**Findings**: none.
+**Risk Grade**: L1 (lowest in v5.1.0 sub-chain — pure data extension; no logic flow changes; no signature changes).
+
+## Notable strengths
+
+- **Exact-match falsifiable acceptance** (5 sub-criteria; ANY deviation aborts substantiate) — strictest acceptance in the sub-chain. The goal is mechanical alignment between classifier and FEATURE_INDEX, not measurement movement.
+- **Regression-guard test case** (case 32) verifies E2 demotion semantics survive E4 table extension. Mechanical lock against silent capability erosion.
+- **Zero code-path change** — `applyManualOverrides` signature and body unchanged; existing helper's design generalizes naturally to bidirectional overrides.
+
+**Audit report**: `.agent/staging/AUDIT_REPORT.md`.
+
+**Content Hash**: `pending-runtime-tooling`
+**Previous Hash**: `pending-runtime-tooling` (Entry #310)
+**Session ID**: workspace-only / `default`
+
+**Next phase**: `/qor-implement`.
+
+---
+
+### Entry #312: IMPLEMENTATION — plan-e4-override-promotion-extension v1
+
+**Date**: 2026-05-09
+**Type**: Implementation Pass (`/qor-implement`)
+**Persona**: The QorLogic Specialist (parallel agent-team mode — typescript-pro for code, technical-writer for docs, code-reviewer as observer, architect-reviewer as devil's advocate; all 4 executed concurrently)
+**Plan**: `plan-e4-override-promotion-extension.md` v1 (PASS at Entry #311)
+
+## Files modified (5)
+
+| File | Pre-impl LOC | Post-impl LOC | Delta |
+|---|---|---|---|
+| `FailSafe/extension/scripts/feature-index-classifier.cjs` | 271 | 279 | +8 (3 promote entries appended to MANUAL_OVERRIDES; comment block updated to document bidirectional support; applyManualOverrides body unchanged) |
+| `FailSafe/extension/src/test/scripts/featureIndexClassifier.test.cjs` | 451 | 498 | +47 (3 new cases under new `applyManualOverrides bidirectional (E4)` describe block; case 30 FX165 promotion; case 31 FX243 idempotent; case 32 FX128 demotion regression-guard) |
+| `docs/FEATURE_INDEX.md` | header dated 2026-05-08 | header dated 2026-05-09 | line 8 narrative replaced ("E3 heuristic upgrade applied" → "E4 override-promotion applied; classifier output now matches FEATURE_INDEX truth"); counts unchanged 387/46/43 |
+| `docs/FEATURE_INDEX_BASELINE_AUDIT.md` | E3 reconciliation appended at #310 | +E4 Override-Promotion Reconciliation section | promotion + demotion-preservation + summary tables; "what E4 actually delivered" narrative; E5+ implication |
+| `docs/SHADOW_GENOME.md` | end-of-file at #310 | +E4 closure annotation inline-edited into SG-HeuristicBlindSpot residual-gap paragraph | closure documents bidirectional MANUAL_OVERRIDES choice + 387/46/43 alignment |
+
+## Parallel agent-team execution record
+
+Agent team launched concurrently per operator directive ("agent team of experts with an objective observer and a devil's advocate executing in parallel"):
+
+- **typescript-pro** (Phase 1 + 2 implementation): 32/32 GREEN; RED→GREEN cycle confirmed for cases 30/31; case 32 PASS pre-impl as regression guard. Phase 2 exact-match acceptance VERIFIED.
+- **technical-writer** (Phases 3-5 docs): all 3 phases complete; no entry rows touched in FEATURE_INDEX; closure annotation inserted between residual-gap paragraph and Filed-upstream paragraph in SHADOW_GENOME.
+- **code-reviewer** (objective observer): VERDICT PASS with 2 LOW concerns (entry-specific test tokens; CI inline command full-criteria check). Both deferred as test-tightening backlog.
+- **architect-reviewer** (devil's advocate): 5 concerns flagged (2 HIGH, 3 MEDIUM, 1 bonus on naming). All flagged as future-mitigation or framing critiques; none VETO-class. Carried forward as Entry #313 finding 1.
+
+## TDD-Light record
+
+Tests written RED first: cases 30 + 31 failed before MANUAL_OVERRIDES extension; case 32 (regression-guard for E2 demotion) passed pre-impl as expected. Post-impl: 32/32 GREEN. Evidence: `node --test FailSafe/extension/src/test/scripts/featureIndexClassifier.test.cjs` shows tests=32 pass=32 fail=0.
+
+## Phase-by-phase delivery
+
+- **Phase 1**: MANUAL_OVERRIDES table extended with FX165/243/274 promote entries; comment block rewritten to document bidirectional support per plan; applyManualOverrides body+signature unchanged. 3 new unit cases added.
+- **Phase 2**: pre-fix snapshot at `dist/feature-index-classification-pre-e4.json` (gitignored); classifier re-run produced `bySuggestedStatus: {verified:387, unverified:46, n/a:43}`. Per-entry inspection: FX165/243/274 each `manualOverride: true + suggestedStatus: 'verified'`; FX128/145/173/174/359 each `manualOverride: true + suggestedStatus: 'unverified'`. **All 5 sub-criteria of exact-match acceptance VERIFIED.**
+- **Phase 3**: BASELINE_AUDIT.md gained `## E4 Override-Promotion Reconciliation (2026-05-09)` section — promotion table (3 entries) + demotion-preservation table (5 entries) + summary delta + delivered-vs-not-delivered narrative + E5+ implication.
+- **Phase 4**: SHADOW_GENOME.md SG-HeuristicBlindSpot residual-gap paragraph annotated with `**Closure (E4, 2026-05-09)**:` paragraph documenting bidirectional MANUAL_OVERRIDES choice and 387/46/43 alignment.
+- **Phase 5**: FEATURE_INDEX.md line 8 header narrative updated; counts unchanged.
+
+## Honest reconciliation
+
+Exact-match acceptance criterion (5 sub-criteria; ANY deviation = ABORT) **VERIFIED**. Classifier-vs-FEATURE_INDEX gap: 3 entries → **0 entries**. PUBLISH_BLOCK Condition 1 truth state mechanically locked at 387/46/43. The 387 count IS a composite (384 heuristic-functional + 3 operator-promotion-overridden); reconciliation diff in BASELINE_AUDIT.md makes this composition explicit per devil's advocate concern #2.
+
+## Test surface
+
+- node:test (cjs scripts): **60/60 pass** (57 prior at Entry #310 + 3 new from this cycle)
+- TypeScript: **clean** (`npx --no-install tsc --noEmit` from FailSafe/extension)
+- Razor: classifier 279L (under 280L target ✓); test file 498L (precedent from #303/#307/#310 over 250); max function ~10L; nesting ≤2; no nested ternaries
+- vscode-test mocha + Playwright: not re-run this cycle (no source-side touchpoints)
+
+## Steps skipped per protocol
+
+- **Step 5.5** (Intent Lock Capture): DEGRADED-NOOP — `.qor/` runtime uninitialized
+- **Step 12.5 auto-staging**: skipped per session feedback discipline
+
+**Content Hash**: `pending-runtime-tooling`
+**Previous Hash**: `pending-runtime-tooling` (Entry #311)
+**Session ID**: workspace-only / `default`
+
+---
+
+### Entry #313: SESSION SEAL — plan-e4-override-promotion-extension v1
+
+**Date**: 2026-05-09
+**Type**: Substantiation Seal (`/qor-substantiate`)
+**Persona**: The QorLogic Judge (substantiation mode)
+**Plan**: `plan-e4-override-promotion-extension.md` v1 (PASS at Entry #311)
+**Implementation reference**: Entry #312
+**Verdict**: **PASS — Reality matches Promise**
+**Risk Grade**: L1
+
+## Substantiation summary
+
+Plan-target: v5.1.5-baseline (workspace-only label per plan boundary; no `package.json` bump). Same workspace-slug discipline as #298, #303, #307, #310. The substantive deliverable is **classifier-vs-FEATURE_INDEX gap closure** via bidirectional override mechanism.
+
+E4 measurable outcome: classifier `bySuggestedStatus` mechanically aligned with FEATURE_INDEX truth at 387/46/43; 3-entry residual gap from #310 → 0 entries. Manual override pipeline now general-purpose (supports both demotion AND promotion). Falsifiable acceptance criterion (5 sub-criteria exact-match) VERIFIED.
+
+Steps 7.5/7.6/9.5.5 (version bump + CHANGELOG stamp + annotated tag) **SKIPPED** per workspace-only baseline discipline.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| AUDIT_REPORT.md PASS verdict (Entry #311) | ✓ |
+| Reality = Blueprint (Step 3) | 5 MODIFIED present (classifier 279L, tests 498L, FEATURE_INDEX header line 8, BASELINE_AUDIT +E4 reconciliation, SHADOW_GENOME +E4 closure annotation); plan v1 5-phase scope fully delivered |
+| BACKLOG security-blocker review (Step 3.5) | No security blockers gating; backlog unchanged |
+| Test functionality acceptance (Step 4) | All 3 new cases (30 promotion / 31 idempotency / 32 demotion-regression-guard) invoke `applyManualOverrides` and assert on observable return shape; SG-035 acceptance question "yes" for all 3; presence-only seal gate not triggered |
+| Skill file integrity (Step 4.5) | No skill files modified in this sub-chain |
+| Reliability sweep (Step 4.6) | DEGRADED-NOOP — `.qor/` runtime uninitialized |
+| Secret scanning (Step 4.6.5) | DEGRADED-NOOP — manual review of 5 MODIFIED files shows no secrets |
+| Procedural fidelity (Step 4.6.6) | DEGRADED-NOOP |
+| Doc integrity (Step 4.7) | DEGRADED-NOOP — would have validated `terms_introduced`; v1 declared 1 term ("override promotion") with code-domain home in classifier.cjs; Phase 1 fulfilled |
+| Section 4 Razor (Step 5) | classifier 279L (under 280L target ✓); test file 498L (precedent over 250); max function ~10L; nesting ≤2; no nested ternaries — PASS |
+| SYSTEM_STATE.md sync (Step 6) | Skipped — workspace-only baseline; SYSTEM_STATE remains at v5.1.2-baseline state |
+| Doc currency (Step 6.5) | change_class=feature → README/CHANGELOG required by Phase 33 release-doc rule WAIVED for workspace-only baseline; Phase 49 badge currency exempt |
+| Falsifiable acceptance (E4 substantiate gate) | **VERIFIED** — all 5 sub-criteria pass: bySuggestedStatus 387/46/43; 3 promotion overrides + 5 demotion overrides each correctly flagged |
+| Version validation (Step 2.5) | Target v5.1.5-baseline (workspace label) — no comparison vs git tag; current tag v4.9.9 unchanged |
+
+## Test surface (final)
+
+- node:test (cjs scripts): **60/60 pass**
+- TypeScript: **clean**
+- vscode-test mocha + Playwright: unchanged from #310 seal
+- plan-grep-lint: clean against E4 plan v1 (16/16 tokens)
+
+## Findings (carried forward — devil's advocate critique surfaced 5 concerns at agent-team review)
+
+1. **Stale-override blindness** (HIGH per devil's advocate): no TTL/revisit-date/test-state-validation on override entries. Once codified, overrides outlive their justification; if E5+ adds heuristic patterns that would naturally classify the overridden entries, the classifier verdict is silently masked. **Mitigation candidate**: per-override `revisitAfter` field OR substantiate-time check that cited test file still exists and still imports cited symbol. **Carried** as E5+ capability.
+2. **Coverage signal composition** (HIGH per devil's advocate): 387/46/43 mixes operator authority (3 promotion overrides) with classifier verdict (384 heuristic + 5 preserved demotions). PUBLISH_BLOCK lifting policy should report composite breakdown, not flat count. **Partially addressed**: BASELINE_AUDIT.md E4 reconciliation diff makes the 3+5 composition explicit. **Doc surface improvement** carried for E5+.
+3. **Asymmetric regression coverage** (MEDIUM): 1 of 5 demotions has explicit regression guard (case 32 / FX128). FX145/173/174/359 demotions are unprotected against accidental table-key collision or refactor. **Carried** as test-tightening backlog.
+4. **No mixed-state test for future refactor** (MEDIUM): case 30 IS mixed-state (FX165 classifier-ambiguous + override-verified), partially addressing the concern. Hypothetical future refactor of `applyManualOverrides` to consult `entry.testCells` or `entry.flags` would benefit from explicit mixed-state test. **Carried** as test-tightening backlog.
+5. **Exact-match gate over-strictness** (MEDIUM): conflates "E4 worked" with "nothing else moved"; an unrelated entry shift would abort with E4-attribution misdiagnosis. **Carried** as substantiate-template improvement for E5+: targeted-entry diff on the 8 override entries + separate "unrelated drift" report.
+6. **Code-reviewer LOW concerns**: entry-specific reason-text tokens in unit tests (vs `/Phase 3/` regex); inline CI command full-5-criteria check (vs single-criterion). **Carried** as test-tightening backlog.
+7. **46 unverified entries** (carried from Entry #310): bucket sharpened; 0 classifier-disagreement entries remain (closed by E4); 44 em-dash + 2 cited-but-presence-only feed E5+ surface-bucket plans.
+8. **Pre-existing flaky test** (carried): `TtsEngine vendor presence routing` — surfaced again on first push attempt at Entry #310 push (transient; second attempt passed). Recommend test-stability hotfix.
+9. **Five unpushed seal commits** (after this cycle, before push): v5.1.1, v5.1.2-baseline, v5.1.3-baseline, v5.1.4-baseline + v5.1.5-baseline (this entry's commit, pending). v5.1.4-baseline push at #310 succeeded on retry; subsequent seal commits queued for next push opportunity.
+
+## Skipped per protocol decisions
+
+- **Steps 7.5 / 7.6 / 9.5.5** (version bump + CHANGELOG stamp + annotated tag): SKIPPED per workspace-only baseline discipline.
+- **Steps 4.6 / 4.6.5 / 4.6.6 / 4.7 / 6.5 Phase 49 / 7.4 / 7.7 / 7.8 / 8.5 / Z**: DEGRADED-NOOP (`.qor/` runtime uninitialized).
+- **Step 6** (SYSTEM_STATE update): deferred to next publishable seal.
+
+## Operator notice — degraded wiring
+
+`.qor/` runtime uninitialized. Gate-artifact persistence + AI provenance manifest + intent-lock + secret scanner + procedural fidelity + doc integrity strict-mode + dist recompile + post-seal verification + gate-chain completeness all no-op. This ledger entry is the canonical record.
+
+**Content Hash**: `pending-runtime-tooling`
+**Previous Hash**: `pending-runtime-tooling` (Entry #312)
+**Merkle Seal**: `pending-runtime-tooling` (degraded-mode placeholder)
+**Session ID**: workspace-only / `default`
+
+**PASS conditions confirmed**:
+- AUDIT_REPORT.md shows PASS verdict (Entry #311): ✓
+- Version state: target v5.1.5-baseline (workspace-only); no bump per plan
+- Reality matches Promise: 5 MODIFIED present; all 5 phase deliverables present
+- No security blockers gating
+- Test functionality discipline applied (all 3 new cases invoke unit + assert)
+- Razor: PASS (classifier 279/280)
+- **Exact-match falsifiable acceptance VERIFIED** (5 sub-criteria all pass)
+
+**Decision**: SEAL — Reality matches Promise. The classifier-vs-FEATURE_INDEX gap closure sub-chain is sealed at v5.1.5-baseline. PUBLISH_BLOCK Condition 1 truth state mechanically locked at 387/46/43; remediation plan family E5+ inherits a clean baseline (0 classifier-disagreement entries) plus 5 carried-forward findings (stale-override detector, composition reporting, asymmetric regression coverage, mixed-state test, gate-strictness diagnostics).
+
+_Chain Status: SUB-CHAIN SEALED at Entry #313. Override-promotion extension cycle complete. Classifier-vs-FEATURE_INDEX gap CLOSED._
+_Next: Operator decision on staging/commit/push for E4 + prior 4 unpushed seals. Then `/qor-plan` for E5 — recommend either (a) stale-override-detector capability (addresses devil's advocate HIGH #1) OR (b) first surface-bucket functional-test plan against the 44 em-dash entries (begins actual unverified-bucket reduction toward publish-block lift)._
+

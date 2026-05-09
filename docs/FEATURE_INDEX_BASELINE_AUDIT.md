@@ -246,3 +246,54 @@ Subsequent E4/E5/... plans inherit the **46-entry unverified bucket** (down from
 - **Override-promotion extension**: extend `MANUAL_OVERRIDES` to support `status: 'verified'` for entries operator manually validated but classifier doesn't recognize (would close the 3-entry gap mechanically)
 
 E4 plan dialogue selects.
+
+## E4 Override-Promotion Reconciliation (2026-05-09)
+
+Plan: `plan-e4-override-promotion-extension.md` v1 (PASS at audit; gitignored workspace-only label v5.1.5-baseline). Closes the 3-entry classifier-vs-FEATURE_INDEX residual gap surfaced at Entry #310 by extending `MANUAL_OVERRIDES` to support bidirectional overrides (promotion in addition to demotion).
+
+### Falsifiable acceptance — VERIFIED
+
+Plan declared exact-match acceptance: post-E4 classifier `bySuggestedStatus` must equal `{verified: 387, unverified: 46, n/a: 43}` AND FX165/243/274 must show `manualOverride: true` with `suggestedStatus: 'verified'` AND FX128/145/173/174/359 demotion semantics preserved. All 5 sub-criteria VERIFIED at substantiate.
+
+### Promotion table (3 entries; classifier-vs-FEATURE_INDEX gap CLOSED)
+
+| Entry | Cited test | Pre-E4 classifier verdict | Post-E4 manualOverride | Reason for promotion |
+|---|---|---|---|---|
+| FX165 | roadmap/tickers-xss.test.ts | ambiguous → unverified | true (status: verified) | Phase 3 review (Entry #302): test directly invokes `updateTickers()` with hostile fixture and asserts escaped DOM |
+| FX243 | roadmap/voice-settings-multilingual-xss.test.ts | ambiguous → unverified | true (status: verified) | Phase 3 review (Entry #302): test directly invokes `renderMultilingualRows()` and asserts escaped output |
+| FX274 | roadmap/AgentCoverageRoute.test.ts | ambiguous → unverified | true (status: verified) | Phase 3 review (Entry #302): test directly invokes `AgentCoverageRoute.render()` with landscape fixtures and asserts dashboard sections |
+
+### Demotion table (5 entries; E2 semantics preserved verbatim)
+
+| Entry | Pre-E4 manualOverride status | Post-E4 manualOverride status |
+|---|---|---|
+| FX128 | true (status: unverified) | true (status: unverified) — preserved |
+| FX145 | true (status: unverified) | true (status: unverified) — preserved |
+| FX173 | true (status: unverified) | true (status: unverified) — preserved |
+| FX174 | true (status: unverified) | true (status: unverified) — preserved |
+| FX359 | true (status: unverified) | true (status: unverified) — preserved |
+
+### Summary
+
+| | Pre-E4 | Post-E4 | Delta |
+|---|---|---|---|
+| Verified | 384 (classifier) / 387 (FEATURE_INDEX) | 387 / 387 | classifier catches up to FEATURE_INDEX |
+| Unverified | 49 (classifier) / 46 (FEATURE_INDEX) | 46 / 46 | classifier catches up |
+| N/A | 43 / 43 | 43 / 43 | unchanged |
+| classifier-vs-FEATURE_INDEX gap | 3 entries | **0 entries** | gap closed |
+
+### What E4 actually delivered
+
+- **Mechanical alignment**: classifier output now matches FEATURE_INDEX truth at 387/46/43. Reality and tool agree.
+- **Override mechanism generalized**: `MANUAL_OVERRIDES` now supports both demotion and promotion. Future operator-validated-but-classifier-blind entries can be codified without further plan work.
+- **Operator authority preserved**: Phase 3 manual review (Entry #302) is now codified in code, not just narrative. Re-runs cannot accidentally regress these promotions any more than they could regress the demotions.
+- **No heuristic complexity added**: closing via override is the smaller, more honest delta. The 3 entries' tests use project-internal XSS-escaping shapes; if those shapes ARE common across the codebase, E5+ can add patterns; this plan does not pre-empt that decision.
+
+### Implication for remediation plan family E5+
+
+The 46-entry unverified bucket is now mechanically locked at the classifier layer. Subsequent E5+ plans operate against a clean baseline:
+- 44 em-dash entries (no test cited; classifier returns `unrunnable`) — primary remediation work
+- 2 cited-but-presence-only entries (heuristic-correct) — operator decides whether to author functional tests OR codify as `n/a` if the cited tests genuinely cover the surface
+- 0 classifier-disagreement entries (closed by E4)
+
+E5 plan dialogue selects the first surface bucket to remediate.

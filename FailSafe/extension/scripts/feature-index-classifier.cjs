@@ -41,19 +41,27 @@ const TEST_PATH_PREFIXES = [
   'src/test/',
 ];
 
-// E2 manual override authority. Frozen lookup table keyed by entryId. Phase 3
-// of plan-feature-index-baseline-audit.md (Entry #302) reviewed each ambiguous
-// entry under SG-035 and recorded a final_status. Five entries resolved to
-// presence-only despite the cited test resolving — they remain `unverified`
-// regardless of any future classifier verdict. Operator must explicitly retest
-// under E3+ to promote any of these back. applyManualOverrides() is the LAST
-// step in the per-entry pipeline so it cannot be circumvented.
+// E2 + E4 manual override authority. Frozen lookup table keyed by entryId.
+// Phase 3 of plan-feature-index-baseline-audit.md (Entry #302) reviewed each
+// ambiguous entry under SG-035 and recorded a final_status. The table holds
+// BOTH demotion overrides (E2: 5 entries with status:'unverified', overriding
+// classifier-functional verdict on presence-only specs) AND promotion
+// overrides (E4: 3 entries with status:'verified', overriding
+// classifier-ambiguous verdict on functionally-correct tests using project-
+// internal assertion shapes the heuristic does not recognize). The override is
+// always operator-authoritative: applyManualOverrides() is the LAST step in
+// the per-entry pipeline so classifier verdicts are advisory once an override
+// is present. Operator must explicitly retest under E5+ to revise any
+// override.
 const MANUAL_OVERRIDES = Object.freeze({
   FX128: { status: 'unverified', reason: 'Phase 3: AgentCoverageRoute test exercises renderer, not GET /console/agents route wiring' },
   FX145: { status: 'unverified', reason: 'Phase 3: monitor-shield-progression spec covers UI shell, not FailSafeSidebarProvider registration' },
   FX173: { status: 'unverified', reason: 'Phase 3: popout-ui spec covers HTML shell, not failsafe.openPlannerHub command wiring' },
   FX174: { status: 'unverified', reason: 'Phase 3: compact-ui spec covers HTML shell, not failsafe.openPlannerHubEditor command wiring' },
   FX359: { status: 'unverified', reason: 'Phase 3: skill-frontmatter-validation tests name+description, not provenance metadata fields' },
+  FX165: { status: 'verified', reason: 'Phase 3 (Entry #302): tickers-xss.test.ts directly invokes updateTickers() with hostile sentinelStatus.mode and asserts escaped DOM. Classifier heuristic does not recognize the assertion shape; override codifies operator review.' },
+  FX243: { status: 'verified', reason: 'Phase 3 (Entry #302): voice-settings-multilingual-xss.test.ts directly invokes renderMultilingualRows() and asserts escaped output. Classifier heuristic does not recognize the assertion shape; override codifies operator review.' },
+  FX274: { status: 'verified', reason: 'Phase 3 (Entry #302): AgentCoverageRoute.test.ts directly invokes AgentCoverageRoute.render() with landscape fixtures and asserts dashboard sections. Classifier heuristic does not recognize the assertion shape; override codifies operator review.' },
 });
 
 function usage(msg) {

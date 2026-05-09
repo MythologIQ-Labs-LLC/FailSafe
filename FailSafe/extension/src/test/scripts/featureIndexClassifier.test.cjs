@@ -449,3 +449,50 @@ describe('applyManualOverrides (E2)', () => {
     assert.equal(r.entryId, 'FX001');
   });
 });
+
+describe('applyManualOverrides bidirectional (E4)', () => {
+  it('FX165 promotion flips classifier-unverified to verified with manualOverride flag', () => {
+    const entry = {
+      entryId: 'FX165',
+      currentStatus: 'verified',
+      suggestedStatus: 'unverified',
+      classifications: [{ testPath: 'roadmap/tickers-xss.test.ts', kind: 'ambiguous', reasoning: 'has test blocks but heuristics inconclusive' }],
+      notes: '',
+    };
+    const r = classifier.applyManualOverrides(entry);
+    assert.equal(r.suggestedStatus, 'verified');
+    assert.equal(r.manualOverride, true);
+    assert.match(r.manualOverrideReason, /Phase 3/);
+    assert.equal(r.entryId, 'FX165');
+  });
+
+  it('FX243 promotion idempotent when classifier already verified — flag still applies', () => {
+    const entry = {
+      entryId: 'FX243',
+      currentStatus: 'verified',
+      suggestedStatus: 'verified',
+      classifications: [{ testPath: 'roadmap/voice-settings-multilingual-xss.test.ts', kind: 'functional', reasoning: 'invokes' }],
+      notes: '',
+    };
+    const r = classifier.applyManualOverrides(entry);
+    assert.equal(r.suggestedStatus, 'verified');
+    assert.equal(r.manualOverride, true);
+    assert.match(r.manualOverrideReason, /Phase 3/);
+    assert.equal(r.entryId, 'FX243');
+  });
+
+  it('FX128 demotion preserved (regression guard against E4 promotion regression)', () => {
+    const entry = {
+      entryId: 'FX128',
+      currentStatus: 'unverified',
+      suggestedStatus: 'verified',
+      classifications: [{ testPath: 'roadmap/AgentCoverageRoute.test.ts', kind: 'functional', reasoning: 'invokes' }],
+      notes: '',
+    };
+    const r = classifier.applyManualOverrides(entry);
+    assert.equal(r.suggestedStatus, 'unverified');
+    assert.equal(r.manualOverride, true);
+    assert.match(r.manualOverrideReason, /Phase 3/);
+    assert.equal(r.entryId, 'FX128');
+  });
+});

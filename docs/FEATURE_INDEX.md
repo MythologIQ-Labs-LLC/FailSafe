@@ -5,7 +5,7 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 **Generated**: 2026-05-06
 **Sources**: `.failsafe/governance/FEATURE_INVENTORY_DOCS.md` (312 entries), `.failsafe/governance/FEATURE_INVENTORY_CODE.md` (374 entries), `FailSafe/extension/src/test/**` (135 files).
 
-**Coverage summary** (updated 2026-05-08 — E3 heuristic upgrade applied; +3 promotions from Playwright matcher whitelist):
+**Coverage summary** (updated 2026-05-09 — E4 override-promotion applied; classifier output now matches FEATURE_INDEX truth):
 - Total unified entries: **476**
 - **Verified: 387 (81.3%)** — entries whose cited test holds under SG-035 after the baseline-audit classifier plus Phase 3 manual review plus E3 heuristic upgrade.
 - **Unverified: 46 (9.7%)** — entries that have no cited test, or whose cited test verifies a neighboring artifact rather than the row's claimed behavior. See `docs/FEATURE_INDEX_BASELINE_AUDIT.md` § "E3 Heuristic Upgrade Diff".
