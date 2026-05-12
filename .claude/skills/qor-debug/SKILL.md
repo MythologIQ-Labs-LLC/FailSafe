@@ -1,13 +1,22 @@
 ---
-name: ql-debug
+name: qor-debug
 description: >
   Two-phase diagnostic system combining rapid root-cause identification with
   residual sweep verification. Prevents cascading AI debugging damage by
   enforcing four mandatory analysis layers before any code change.
+metadata:
+  category: development
+  author: MythologIQ
+  source:
+    repository: https://github.com/MythologIQ/Qor-logic
+    path: qor/skills/sdlc/qor-debug
 user-invocable: true
 allowed-tools: Read, Glob, Grep, Edit, Write, Bash
+phase: debug
+tone_aware: false
+gate_reads: ""
+gate_writes: ""
 ---
-
 # /qor-debug - Diagnostic Fixer
 
 <skill>
@@ -15,8 +24,8 @@ allowed-tools: Read, Glob, Grep, Edit, Write, Bash
   <phase>IMPLEMENT / SUBSTANTIATE / GATE</phase>
   <persona>Fixer</persona>
   <dispatch>
-    <phase1>ql-fixer — Rapid root-cause (4-layer analysis on reported symptoms)</phase1>
-    <phase2>ql-fixer — Residual sweep (4-layer analysis on fixed state)</phase2>
+    <phase1>qor-fixer — Rapid root-cause (4-layer analysis on reported symptoms)</phase1>
+    <phase2>qor-fixer — Residual sweep (4-layer analysis on fixed state)</phase2>
   </dispatch>
   <output>Two-phase diagnosis: root-cause fix + residual sweep report</output>
 </skill>
@@ -36,6 +45,10 @@ Bring surgical precision to debugging. AI coding agents typically pull a thread 
 
 ## Execution Protocol
 
+### Step 0: Chain position (Phase 8 wiring)
+
+This skill is **cross-cutting** — invokable from implement, substantiate, or validate phases when regression / hallucination / degradation is detected. No prior-phase gate artifact is required.
+
 ### Step 1: Describe the Problem
 
 Provide the Fixer with:
@@ -48,15 +61,15 @@ If invoking proactively (no specific failure), state which files or logic paths 
 
 ### Step 2: Two-Phase Agent Dispatch
 
-**Phase 1 — Rapid Root-Cause (ql-fixer)**
+**Phase 1 — Rapid Root-Cause (qor-fixer)**
 
-Launch the `ql-fixer` agent (use `subagent_type: "ql-fixer"`) with the problem description. The fixer runs all four layers (Dijkstra, Hamming/Shannon, Turing/Hopper, Zeller) focused on the REPORTED symptoms. It identifies root causes and proposes fixes.
+Launch the `general` agent (use `subagent_type: "general"`) with the problem description. The fixer runs all four layers (Dijkstra, Hamming/Shannon, Turing/Hopper, Zeller) focused on the REPORTED symptoms. It identifies root causes and proposes fixes.
 
 Apply the proposed fixes.
 
-**Phase 2 — Residual Sweep (ql-fixer, resumed)**
+**Phase 2 — Residual Sweep (qor-fixer, resumed)**
 
-After Phase 1 fixes are applied, launch the `ql-fixer` agent again to:
+After Phase 1 fixes are applied, launch the `qor-fixer` agent again to:
 - Verify the fixes are complete and correct
 - Sweep for residual issues introduced or exposed by the fixes
 - Check for similar patterns elsewhere in the codebase
@@ -84,12 +97,19 @@ The Fixer produces a final diagnosis with:
 
 - **NEVER** apply a fix without completing at least Layers 1-3
 - **NEVER** propose a fix that only addresses the symptom
+- **NEVER** apply a fix without a corresponding test that proves it (write test first)
+- **NEVER** push a fix to CI without running CI-equivalent commands locally (lint, test with same flags)
+- **NEVER** push individual fix commits — batch all fixes into one commit
+- **NEVER** force-push to shared branches without GR-2 coordination protocol
+- **NEVER** leave secrets in code — rotate immediately, rewrite history, then gitignore (GR-1)
 - **ALWAYS** distinguish symptom from root cause
 - **ALWAYS** check for similar patterns elsewhere in the codebase
 - **ALWAYS** document findings with line numbers and evidence
-- **ALWAYS** use `subagent_type: "ql-fixer"` (not `ultimate-debugger`)
+- **ALWAYS** use `subagent_type: "general"` (not `ultimate-debugger`). See `qor/references/doctrine-context-discipline.md` §4 (Subagent invocation rule) for the general doctrine — `general` is the default; persona-typed subagents require evidence that the persona prompt measurably alters tool selection or output shape.
+- **ALWAYS** write a failing test before applying any fix
+- **ALWAYS** run local CI mirror (lint + test with CI flags) before pushing fixes
 
-## Integration with QoreLogic
+## Integration with Qor-logic
 
 This skill implements:
 
@@ -98,3 +118,14 @@ This skill implements:
 - **Four-Layer Methodology**: Dijkstra, Hamming/Shannon, Turing/Hopper, Zeller
 - **Evidence-Based Fixes**: Every conclusion backed by code evidence
 - **Cross-Agent Handoff**: Routes results to appropriate next agent/skill
+
+## Success Criteria
+
+Debug succeeds when:
+
+- [ ] Root cause identified with evidence (not just symptom)
+- [ ] Cause-effect chain documented with line numbers
+- [ ] Phase 1 fix applied and verified
+- [ ] Phase 2 residual sweep completed
+- [ ] No regressions introduced by fix
+- [ ] Handoff to appropriate next skill provided

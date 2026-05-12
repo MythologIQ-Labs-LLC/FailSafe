@@ -1,5 +1,77 @@
 # QoreLogic Shadow Genome
 
+---
+
+## Failure Entry #327
+
+**Date**: 2026-05-11
+**Verdict ID**: Entry #327 Gate Tribunal
+**Failure Mode**: PROMPT_INJECTION_CANARY
+
+### What Failed
+
+Re-audit of `docs/plan-qor-phase56-audit-canary-remediation.md` after the plan was revised to put audit corpus cleanup first.
+
+### Why It Failed
+
+The revised plan file passed plan lint, grep lint, and standalone canary scan, but the mandatory `/qor-audit` input set still contains raw hidden-html opener tokens in `docs/ARCHITECTURE_PLAN.md` and `docs/META_LEDGER.md`. The gate cannot approve a plan while required governance input files still trigger the scanner.
+
+### Pattern to Avoid
+
+Do not expect a plan to pass `/qor-audit` when the current audit corpus contains scanner-blocking governance text. The governance corpus must be cleaned before the tribunal can safely evaluate dependent work.
+
+### Remediation Attempted
+
+Plan was revised, but no text cleanup implementation has occurred. Gate remains locked pending Governor amendment of the offending governance markdown.
+
+---
+
+## Failure Entry #326
+
+**Date**: 2026-05-11
+**Verdict ID**: Entry #326 Gate Tribunal
+**Failure Mode**: PROMPT_INJECTION_CANARY
+
+### What Failed
+
+Audit of `docs/plan-qor-phase56-audit-canary-remediation.md`.
+
+### Why It Failed
+
+The plan file itself passed plan lint, grep lint, and the canary scan, but the mandatory `/qor-audit` input set still contains raw hidden-html script-tag opener canaries in `docs/ARCHITECTURE_PLAN.md` and `docs/META_LEDGER.md`. The previous tribunal ledger entry also preserved the raw token, increasing the same failure surface.
+
+### Pattern to Avoid
+
+Do not record canary-triggering literals verbatim in any governance markdown that the strict audit scanner reads. When documenting the token, escape it as prose or HTML entity text.
+
+### Remediation Attempted
+
+No implementation remediation attempted in this tribunal. Gate remains locked pending Governor text amendment and re-audit.
+
+---
+
+## Failure Entry #325
+
+**Date**: 2026-05-11
+**Verdict ID**: Entry #325 Gate Tribunal
+**Failure Mode**: HALLUCINATION / INFRASTRUCTURE_MISMATCH
+
+### What Failed
+
+Audit of the B194 governance-mode escalation plan and B199 Phase 2 Command Center coverage plan.
+
+### Why It Failed
+
+The mandatory prompt-injection canary pass found hidden-html `&lt;script` canaries in `docs/ARCHITECTURE_PLAN.md` and `docs/META_LEDGER.md`. The same canary tooling refused the selected target plan paths because `.failsafe/governance/plans/*.md` is outside the current governance allowlist.
+
+### Pattern to Avoid
+
+Do not place audit-target plan artifacts in a path the audit canary allowlist cannot scan. Do not carry raw HTML canary tokens in operator-authored governance markdown when the current `/qor-audit` path treats those tokens as binding prompt-injection failures.
+
+### Remediation Attempted
+
+No remediation attempted in this tribunal. Gate locked pending Governor correction and re-audit.
+
 > **Purpose**: Archive of failure modes and rejected patterns. Each entry is a learning opportunity to prevent repetition.
 
 ---
@@ -938,7 +1010,7 @@ All four violations represent "implied handlers" — the same failure mode as Sh
 
 1. **HTML structure changes**: Show the exact DOM elements with classes/IDs that will be updated
 2. **Client-side function definitions**: Define all functions referenced in message handlers (not just reference them)
-3. **CSP-compliant script blocks**: Show `<script nonce="${nonce}">` blocks with complete message listener code
+3. **CSP-compliant script blocks**: Show `&lt;script nonce="${nonce}">` blocks with complete message listener code
 4. **Architecture transition path**: Explain how to refactor from pure server-render to hybrid (initial render + message updates)
 
 Never propose message handlers without showing:
@@ -952,7 +1024,7 @@ Never propose message handlers without showing:
 Phase 2 must be revised to include:
 
 1. **TransparencyPanel HTML Template Specification**:
-   - Show exact `<script nonce="${nonce}">` block location in `getHtmlContent()`
+   - Show exact `&lt;script nonce="${nonce}">` block location in `getHtmlContent()`
    - Define complete `renderEvents(events)` client-side function
    - Specify how to extract logic from server-side method
 
@@ -966,7 +1038,7 @@ Phase 2 must be revised to include:
    - Define complete `updateDashboard(snapshot)` with all field mappings
 
 4. **EconomicsPanel Message Handler**:
-   - Add `<script nonce="${nonce}">` block in template
+   - Add `&lt;script nonce="${nonce}">` block in template
    - Show CSP-compliant event handling integration
 
 ---
@@ -1141,7 +1213,7 @@ Extract REST methods to `modules/rest-api.js` (~50 lines). ConnectionClient impo
 
 ### What Failed
 
-Voice Brainstorm plan specified `import { PiperTTS } from 'piper-tts-web'` and `@xenova/transformers` for Whisper — bare npm module specifiers in frontend code. The existing UI architecture serves plain ES modules via `express.static()` with `<script type="module">`. No bundler, no import maps.
+Voice Brainstorm plan specified `import { PiperTTS } from 'piper-tts-web'` and `@xenova/transformers` for Whisper — bare npm module specifiers in frontend code. The existing UI architecture serves plain ES modules via `express.static()` with `&lt;script type="module">`. No bundler, no import maps.
 
 ### Why It Failed
 
@@ -1149,7 +1221,7 @@ The plan designed the voice engine abstraction (STT/TTS) without verifying how t
 
 ### Pattern to Avoid
 
-**Verify the module loading architecture before planning npm dependency usage in frontend code.** When a UI serves plain ES modules without a bundler, external dependencies must either be: (a) vendored as local files with relative imports, (b) loaded via `<script>` tags from CDN, (c) served via an import map in the HTML, or (d) require introducing a build step. Always check how existing imports resolve before adding new external dependencies.
+**Verify the module loading architecture before planning npm dependency usage in frontend code.** When a UI serves plain ES modules without a bundler, external dependencies must either be: (a) vendored as local files with relative imports, (b) loaded via `&lt;script>` tags from CDN, (c) served via an import map in the HTML, or (d) require introducing a build step. Always check how existing imports resolve before adding new external dependencies.
 
 ### Remediation Required
 
@@ -2677,3 +2749,4 @@ Output: `dist/override-staleness.findings.json` (gitignored runtime artifact). A
 **Counter-pattern (right way)**: when a classifier improves to recognize an override-targeted pattern, RETIRE the override; do NOT keep both as redundant truth sources. Co-evolving the override table with classifier capability prevents truth-source drift. Substantiate-time integration of the staleness check (deferred to E5+) would make this discipline mechanical rather than operator-vigilance-dependent.
 
 **Filed upstream**: closes Qor [#41](https://github.com/Knapp-Kevin/Qor/issues/41); lineage continues from SG-HeuristicBlindSpot (#310 closure). The two patterns share the root: measurement-tool correctness drift over time. Path-form variance (E2 / SG-ClassifierPathBug), heuristic blind spots (E3 / SG-HeuristicBlindSpot), and override staleness (E7 / this entry) are all manifestations of the same broader concern — measurement tools require maintenance as the codebase evolves.
+ 

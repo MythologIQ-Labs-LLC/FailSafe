@@ -1,21 +1,28 @@
 ---
-name: ql-implement
-description: >
-  Implementation Pass
-user-invocable: true
-allowed-tools: Read, Glob, Grep, Edit, Write, Bash
+name: qor-implement
+description: >-
+  Specialist Implementation Pass that translates gated blueprint into reality using Section 4 Simplicity Razor and TDD-Light methodology. Use when: (1) Implementing after PASS verdict from /qor-audit, (2) Building features from approved architecture plans, or (3) Creating code under KISS constraints.
+metadata:
+  category: development
+  author: MythologIQ
+  source:
+    repository: https://github.com/MythologIQ/Qor-logic
+    path: qor/skills/sdlc/qor-implement
+phase: implement
+tone_aware: false
+autonomy: interactive
+gate_reads: audit
+gate_writes: implement
+permitted_tools: [Read, Grep, Glob, Bash, Edit, Write]
+permitted_subagents: []
+model_compatibility: [claude-opus-4-7]
+min_model_capability: opus
 ---
-
----
-name: ql-implement
-description: Specialist Implementation Pass that translates gated blueprint into reality using Section 4 Simplicity Razor and TDD-Light methodology. Use when: (1) Implementing after PASS verdict from /qor-audit, (2) Building features from approved architecture plans, or (3) Creating code under KISS constraints.
----
-
 # /qor-implement - Implementation Pass
 
 <skill>
   <trigger>/qor-implement</trigger>
-  <phase>IMPLEMENT</phase>
+  <phase>implement</phase>
   <persona>Specialist</persona>
   <output>Source code in src/, tests in tests/</output>
 </skill>
@@ -26,31 +33,83 @@ Translate the gated blueprint into maintainable reality using strict Section 4 S
 
 ## Execution Protocol
 
+### Step 0: Gate Check (advisory — Phase 8 wiring)
+
+Verify prior-phase artifact exists and is well-formed before proceeding.
+
+```python
+from qor.scripts import gate_chain, session
+
+sid = session.get_or_create()
+result = gate_chain.check_prior_artifact("implement", session_id=sid)
+if not result.found:
+    # Prompt user to override; on confirm:
+    gate_chain.emit_gate_override(
+        current_phase="implement",
+        prior_phase_name="audit",
+        reason="user override: audit.json not found",
+        session_id=sid,
+    )
+elif not result.valid:
+    gate_chain.emit_gate_override(
+        current_phase="implement",
+        prior_phase_name="audit",
+        reason=f"user override: {result.errors}",
+        session_id=sid,
+    )
+```
+
+Override is permitted (advisory gate) but logged as severity-1 `gate_override` event in the Process Shadow Genome.
+
+**Phase 54 wiring**: when `gate_chain.emit_gate_override` raises `OverrideFrictionRequired`, prompt the operator for a written justification (>=50 chars) and re-call `emit_gate_override` with `justification=<text>`. Per `qor/references/doctrine-ai-rmf.md` §MANAGE-1.1 + `qor/references/doctrine-eu-ai-act.md` Art. 14.
+
 ### Step 1: Identity Activation
 
-You are now operating as **The QoreLogic Specialist**.
+You are now operating as **The Qor-logic Specialist**.
 
 Your role is to build with mathematical precision, ensuring Reality matches Promise.
 
-### Step 2: Gate Verification
+### Step 1.a — Capability check (agent-teams parallel mode, Phase 8 wiring)
 
+```python
+import qor_platform as qplat
+import shadow_process
+
+if qplat.is_available("agent-teams"):
+    # Fan out specialist tracks (frontend/backend/infra) in parallel via TeamCreate;
+    # synthesize results in this skill.
+    mode = "teams"
+else:
+    state = qplat.current() or {}
+    if state.get("detected", {}).get("host") == "claude-code":
+        # claude-code host but agent-teams not declared -> log capability_shortfall
+        shadow_process.append_event({
+            "ts": shadow_process.now_iso(), "skill": "qor-implement", "session_id": sid,
+            "event_type": "capability_shortfall", "severity": 2,
+            "details": {"capability": "agent-teams"},
+            "addressed": False, "issue_url": None, "addressed_ts": None,
+            "addressed_reason": None, "source_entry_id": None,
+        })
+    mode = "sequential"
 ```
-Read: .failsafe/governance/AUDIT_REPORT.md
+
+Contract for `teams` mode (reserved for future harness wiring): `TeamCreate(<spec>) -> [{track, deliverable}, ...]`. Skill synthesizes the track outputs into a single artifact.
+
+### Step 2: Gate Verification
+ 
+```
+Read: .agent/staging/AUDIT_REPORT.md
 ```
 
 **INTERDICTION**: If verdict is NOT "PASS":
 
-```
-ABORT
-Report: "Gate locked. Tribunal audit required. Run /qor-audit first."
-```
+<!-- qor:fail-fast-only reason="audit verdict is /qor-audit's output, not scaffold; cannot auto-heal" -->
+Abort with "Gate locked. Tribunal audit required. Run /qor-audit first."
 
 **INTERDICTION**: If AUDIT_REPORT.md does not exist:
 
-```
-ABORT
-Report: "No audit record found. Run /qor-audit to unlock implementation."
-```
+<!-- qor:fail-fast-only reason="AUDIT_REPORT.md is /qor-audit's output, not scaffold; cannot auto-heal" -->
+Abort with "No audit record found. Run /qor-audit to unlock implementation."
 
 ### Step 3: Blueprint Alignment
 
@@ -86,41 +145,48 @@ Verify import chain or update blueprint."
 ### Step 5: TDD-Light
 
 **Before writing any core logic**, create a minimal failing test.
-Template: `.claude/commands/references/qor-implement-patterns.md`.
+Template: `references/qor-implement-patterns.md`.
 
 **Constraint**: Define exactly ONE success condition that proves Reality matches Promise.
 
-### Step 5.6: Intent Lock Interdiction (B51)
+**Test functionality, not presence**: the failing test MUST invoke the unit under test (function call, CLI subprocess, helper render, parser pass) and assert against its output. Tests that only check artifact existence (`assert path.exists()`, `assert <substring> in <file_text>`, `assert hasattr(...)`) do not satisfy TDD-Light. Acceptance question: "If the unit's behavior were silently broken but the artifact still existed, would this test fail?" If no, the test is presence-only and must be rewritten before implementation begins. Per `qor/references/doctrine-test-functionality.md`.
 
-> Deferred — `INTENT_LOCK.json` not yet implemented. This step is a no-op until `tools/reliability/` scripts are created.
+### Step 5.5: Intent Lock Capture (Phase 17 wiring)
 
-### Step 5.7: Skill Admission Interdiction (B49)
+Capture a fingerprint of the implementer's intent (plan + PASS audit + HEAD commit) before writing any implementation code. Interdicts drift during implementation.
 
-> Deferred — `admit-skill.ps1` not yet implemented. This step is a no-op until `tools/reliability/` scripts are created.
+```bash
+PLAN_PATH=$(python -c "from qor.scripts.governance_helpers import current_phase_plan_path; print(current_phase_plan_path())")
+# Resolve session_id via the canonical helper (reads .qor/session/current AND
+# validates against SESSION_ID_PATTERN per Phase 23 LOW-2 / Phase 50 doctrine)
+SESSION_ID=$(python -c "from qor.scripts.session import current; print(current() or 'default')")
+python -m qor.reliability.intent_lock capture \
+  --session "$SESSION_ID" \
+  --plan "$PLAN_PATH" \
+  --audit .agent/staging/AUDIT_REPORT.md
+```
 
-### Step 5.8: Gate-to-Skill Matrix Interdiction (B50)
-
-> Deferred — `gate-skill-matrix.json` not yet implemented. This step is a no-op until `tools/reliability/` scripts are created.
+On non-zero exit, ABORT implementation and report the intent-lock reason (audit not PASS, missing plan, etc.). Lock is re-verified in `/qor-substantiate` Step 4.6.
 
 ### Step 6: Precision Build
 
 Apply the Section 4 Razor to EVERY function and file.
-Checklist: `.claude/commands/references/qor-implement-patterns.md`.
+Checklist: `references/qor-implement-patterns.md`.
 
 #### Code Patterns
 
 Reference code patterns:
-`.claude/commands/references/qor-implement-patterns.md`.
+`references/qor-implement-patterns.md`.
 
 ### Step 7: Visual Silence (Frontend)
 
 For UI examples, see:
-`.claude/commands/references/qor-implement-patterns.md`.
+`references/qor-implement-patterns.md`.
 
 ### Step 8: Post-Build Cleanup
 
 Final pass checklist:
-`.claude/commands/references/qor-implement-patterns.md`.
+`references/qor-implement-patterns.md`.
 
 ### Step 9: Complexity Self-Check
 
@@ -132,6 +198,7 @@ For each file modified/created:
   - Count nesting levels
   - Check for nested ternaries
   - Verify naming conventions
+  - For every newly-added test in this file, confirm the test body invokes the unit under test (function/method/CLI) and the assertion compares against the call's return value or observable side-effect. Bare `assert <substring> in <file_text>` for the unit's behavior is a presence-only test; flag and rewrite as a functionality test before declaring completion. Per `qor/references/doctrine-test-functionality.md`.
 ```
 
 If ANY violation found:
@@ -145,7 +212,7 @@ Apply: Automatic splitting/flattening
 ### Step 10: Handoff
 
 Template:
-`.claude/commands/references/qor-implement-patterns.md`.
+`references/qor-implement-patterns.md`.
 
 ### Step 10.5: Mark Blockers Complete
 
@@ -156,55 +223,13 @@ Read: docs/BACKLOG.md
 Edit: docs/BACKLOG.md
 ```
 
-For each addressed blocker:
-- Change: `- [ ] [ID]` -> `- [x] [ID]`
-- Append: ` (v[version] - Complete)`
-
-Example:
-```markdown
-- [x] [D4] V1: Ghost UI - toggleGuide handler missing (v1.2.0 - Complete)
-```
+For each addressed blocker, change `- [ ] [ID]` to `- [x] [ID] (v[version] - Complete)`.
 
 ### Step 11: Update Ledger
 
-Edit: docs/META_LEDGER.md
+Edit `docs/META_LEDGER.md` — add IMPLEMENTATION entry with files modified, content hash, chain hash.
 
-Add entry:
-
-```markdown
----
-
-### Entry #[N]: IMPLEMENTATION
-
-**Timestamp**: [ISO 8601]
-**Phase**: IMPLEMENT
-**Author**: Specialist
-**Risk Grade**: [from blueprint]
-
-**Files Modified**:
-
-- [list of files]
-
-**Content Hash**:
-```
-
-SHA256(modified files content)
-= [hash]
-
-```
-
-**Previous Hash**: [from entry N-1]
-
-**Chain Hash**:
-```
-
-SHA256(content_hash + previous_hash)
-= [calculated]
-
-```
-
-**Decision**: Implementation complete. Section 4 Razor applied.
-```
+Template: `references/qor-implement-patterns.md`.
 
 ### Step 12.5: Implementation Staging
 
@@ -237,6 +262,36 @@ IF CHANGELOG.md not updated AND changes are user-facing:
 
 REPORT: "Implementation verified. X files staged. Ready for commit."
 
+### Step Z: Write Gate Artifact (Phase 11D wiring)
+
+Persist the structured gate artifact at `.qor/gates/<session_id>/implement.json` so downstream phases can read it via `gate_chain.check_prior_artifact`.
+
+```python
+from qor.scripts import gate_chain, shadow_process, ai_provenance
+
+# Build payload conforming to qor/gates/schema/implement.schema.json
+payload = {
+    "ts": shadow_process.now_iso(),
+    # ... phase-specific required fields (see schema)
+}
+manifest = ai_provenance.build_manifest(
+    "implement", human_oversight=ai_provenance.HumanOversight.ABSENT
+)
+gate_chain.write_gate_artifact(
+    phase="implement", payload=payload, session_id=sid, ai_provenance=manifest,
+)
+```
+
+Schema lives at `qor/gates/schema/implement.schema.json`; the helper validates before write. Per Phase 54: every gate-writing skill calls `ai_provenance.build_manifest` and passes the result through `ai_provenance=manifest`; closes EU AI Act Art. 13/50 transparency surface.
+
+## Delegation
+
+Per `qor/gates/delegation-table.md`:
+
+- **Implementation complete** → `/qor-substantiate` (next phase).
+- **Mid-implement Razor bloat detected** (a function or file is growing past Section 4 limits during implementation) → pause and `/qor-refactor`. Do NOT inline a refactor process; refactor owns the file-internal logic shape.
+- **Regression / hallucination / degradation detected** during implement → `/qor-debug` for root-cause analysis; do NOT keep iterating on the same code without diagnosing why prior iterations regressed.
+
 ## Constraints
 
 - **NEVER** implement without PASS verdict
@@ -266,7 +321,7 @@ Implementation succeeds when:
 - [ ] META_LEDGER.md updated with implementation hash
 - [ ] Handoff to Judge for substantiation
 
-## Integration with QoreLogic
+## Integration with Qor-logic
 
 This skill implements:
 
@@ -278,4 +333,4 @@ This skill implements:
 
 ---
 
-**Remember**: Reality must match Promise. If you find yourself exceeding Section 4 limits, stop and refactor. Split functions, flatten nesting, remove complexity. Never compromise on simplicity for speed.
+**Remember**: Reality must match Promise. Never compromise simplicity for speed.

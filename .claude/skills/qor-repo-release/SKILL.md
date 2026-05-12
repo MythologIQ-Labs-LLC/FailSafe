@@ -1,21 +1,24 @@
 ---
-name: ql-repo-release
-description: >
-  Delivery Gate Orchestration
-user-invocable: true
-allowed-tools: Read, Glob, Grep, Edit, Write, Bash
+name: qor-repo-release
+description: >-
+  Delivery Gate Orchestration - orchestrates release workflow after /qor-substantiate seals a session. Version bump, metadata sync, git tag, release pipeline trigger.
+metadata:
+  category: development
+  author: MythologIQ
+  source:
+    repository: https://github.com/MythologIQ/Qor-logic
+    path: qor/skills/meta/qor-repo-release
+phase: deliver
+tone_aware: false
+autonomy: interactive
+gate_reads: validate
+gate_writes: deliver
 ---
-
----
-name: ql-repo-release
-description: /qor-repo-release - Delivery Gate Orchestration
----
-
 # /qor-repo-release - Delivery Gate Orchestration
 
 <skill>
   <trigger>/qor-repo-release</trigger>
-  <phase>DELIVER</phase>
+  <phase>deliver</phase>
   <persona>Governor</persona>
   <output>Version bump, metadata sync, git tag, release pipeline trigger</output>
 </skill>
@@ -75,46 +78,18 @@ Report: "No seal found. Run /qor-substantiate before releasing."
 ```
 
 ### Step 2: Run Pre-Flight
-
-Execute `release-gate.cjs --preflight` from `FailSafe/extension/`:
-
+ 
+Execute `release-gate.cjs --preflight` from `./`:
+ 
 ```bash
-node scripts/release-gate.cjs --preflight
+node ./release-gate.cjs --preflight
 ```
-
-Additionally, verify:
-
-#### Skill files uncommitted check
-
-```bash
-git diff --name-only -- .claude/commands/qor-*.md
-```
-
-If any skill files are modified but not committed, warn:
-
-> Skill files modified but uncommitted: [list]. Include in release commit or stash before proceeding.
-
-#### Help doc version markers
-
-Read `FailSafe/extension/docs/COMPONENT_HELP.md` and `FailSafe/extension/docs/PROCESS_GUIDE.md`. Verify version markers match the target release version. If stale, flag for update in Step 5.
-
-#### Backlog coherence
-
-```
-Read: docs/BACKLOG.md
-```
-
-Verify:
-
-1. **No duplicate B-item numbers** — scan all `[B###]` references for collisions
-2. **Version summary table is current** — the latest released version appears in the table with correct status
-3. **No backlog items reference a version older than the current release as PLANNED/IN PROGRESS** — flag stale version targets
-
-Report any issues. If any pre-flight check fails, report which checks need attention and STOP.
+ 
+Additionally verify: uncommitted skill files (`git diff --name-only -- .claude/commands/qor-*.md`), help doc version markers (COMPONENT_HELP.md, PROCESS_GUIDE.md), and backlog coherence (no duplicate B-items, version table current). STOP if any check fails.
 
 ### Step 3: Confirm Version Bump
 
-Read current version from `FailSafe/extension/package.json`.
+Read current version from `./package.json`.
 
 Ask the user:
 
@@ -139,8 +114,8 @@ Invoke `/qor-document` in RELEASE_METADATA mode with the target version:
 1. Read recent META_LEDGER entries (from last DELIVER or SUBSTANTIATE to current)
 2. Read SYSTEM_STATE.md for implementation summary
 3. Author the 3 required files:
-   - `FailSafe/extension/CHANGELOG.md` — `## [A.B.C] - YYYY-MM-DD`
-   - `FailSafe/extension/README.md` — Current Release + What's New
+   - `./CHANGELOG.md` — `## [A.B.C] - YYYY-MM-DD`
+   - `./README.md` — Current Release + What's New
    - Root `CHANGELOG.md` — `## [A.B.C]`
 4. Present authored content to user for review before writing
 
@@ -148,6 +123,7 @@ Invoke `/qor-document` in RELEASE_METADATA mode with the target version:
 
 ### Step 6: Documentation Gate (HARD STOP)
 
+<!-- qor:fail-fast-only reason="release gate; version markers require operator authoring, not scaffold" -->
 **INTERDICTION**: Documentation versioning MUST be verified complete before any commit or tag. This gate cannot be bypassed.
 
 Execute `release-gate.cjs --preflight`:
@@ -156,26 +132,8 @@ Execute `release-gate.cjs --preflight`:
 node scripts/release-gate.cjs --preflight
 ```
 
-**INTERDICTION**: If ANY check shows [FAIL]:
-
-```
-ABORT
-Report: "Documentation versioning incomplete. The following markers must be resolved:
-  [list each [FAIL] check with its message]
-
-Required files for vA.B.C:
-  - FailSafe/extension/CHANGELOG.md  →  ## [A.B.C]
-  - CHANGELOG.md (root)              →  ## [A.B.C]
-  - FailSafe/extension/README.md     →  Current Release: vA.B.C
-  - README.md (root)                 →  Current Release: vA.B.C + Socket badge
-  - FailSafe/extension/docs/COMPONENT_HELP.md  →  vA.B.C
-  - FailSafe/extension/docs/PROCESS_GUIDE.md   →  vA.B.C
-  - docs/BACKLOG.md version summary  →  vA.B.C row
-
-Return to Step 5 and complete all missing documentation before proceeding."
-```
-
-Only when all checks show [PASS] may you proceed to Step 7.
+<!-- qor:fail-fast-only reason="version-marker FAILs require operator correction per-file; no scaffold recovery" -->
+**INTERDICTION**: If ANY check shows [FAIL], ABORT. List failing checks and return to Step 5. All version markers (CHANGELOG, README, COMPONENT_HELP, PROCESS_GUIDE, BACKLOG) must show vA.B.C before proceeding.
 
 ### Step 7: Stage and Commit
 
@@ -190,11 +148,11 @@ Ask: "Stage and commit these changes as `[RELEASE] vA.B.C`? (y/n)"
 If confirmed:
 
 ```bash
-git add -f FailSafe/extension/package.json FailSafe/extension/CHANGELOG.md FailSafe/extension/README.md FailSafe/extension/docs/COMPONENT_HELP.md FailSafe/extension/docs/PROCESS_GUIDE.md CHANGELOG.md README.md docs/BACKLOG.md
+git add -f ./package.json ./CHANGELOG.md ./README.md ./docs/COMPONENT_HELP.md ./docs/PROCESS_GUIDE.md CHANGELOG.md README.md docs/BACKLOG.md
 git commit -m "[RELEASE] vA.B.C"
 ```
 
-Note: `-f` is required because `FailSafe/extension/docs/` is in `.gitignore` but tracked.
+Note: `-f` is required because `./docs/` is in `.gitignore` but tracked.
 
 ### Step 8: Create Tag
 
@@ -244,12 +202,34 @@ Add META_LEDGER entry:
 
 Calculate and record content hash and chain hash per standard Merkle chain protocol.
 
-## Confirmation Gates
+### Step Z: Write Gate Artifact (Phase 11D wiring)
 
-Two irreversible actions require explicit user confirmation:
+Persist the structured gate artifact at `.qor/gates/<session_id>/deliver.json` so downstream phases can read it via `gate_chain.check_prior_artifact`.
 
-1. **Before commit** — Shows diff summary
-2. **Before push** — Shows tag + remote target
+```python
+from pathlib import Path
+from qor.scripts import gate_chain, shadow_process, ai_provenance, sbom_emit
+
+# Phase 55: emit CycloneDX v1.5 SBOM as sidecar before writing the deliver gate.
+sbom_path = sbom_emit.write(Path.cwd(), Path("dist/sbom.cdx.json"))
+
+# Build payload conforming to qor/gates/schema/deliver.schema.json
+payload = {
+    "ts": shadow_process.now_iso(),
+    "version": new_version,                  # e.g. "0.40.0"
+    "tag": f"v{new_version}",
+    "sbom_path": str(sbom_path),             # sidecar path; doctrine-eu-ai-act.md Art. 50
+    # ... additional release metadata as needed
+}
+manifest = ai_provenance.build_manifest(
+    "implement", human_oversight=ai_provenance.HumanOversight.ABSENT
+)
+gate_chain.write_gate_artifact(
+    phase="deliver", payload=payload, session_id=sid, ai_provenance=manifest,
+)
+```
+
+Schema lives at `qor/gates/schema/deliver.schema.json` (Phase 55 NEW; closes pre-existing surface gap where `phase="deliver"` writes had no schema validation). Per Phase 54: repo-release calls `ai_provenance.build_manifest` to embed AI provenance. Per Phase 55: SBOM emitted as sidecar at `dist/sbom.cdx.json` (CycloneDX v1.5); gate payload carries the path reference for downstream operator discovery.
 
 ## Constraints
 
@@ -268,4 +248,27 @@ Two irreversible actions require explicit user confirmation:
 - **ALWAYS** update version markers in `docs/COMPONENT_HELP.md` and `docs/PROCESS_GUIDE.md`
 - **ALWAYS** update `README.md` (root) Current Release marker and Socket badge version
 - **ALWAYS** update `docs/BACKLOG.md` version summary table: mark previous version RELEASED, add new version row
-- **ALWAYS** use `git add -f` for gitignored-but-tracked paths (e.g., `FailSafe/extension/docs/`)
+- **ALWAYS** use `git add -f` for gitignored-but-tracked paths (e.g., `./docs/`)
+
+## Success Criteria
+
+Release succeeds when:
+
+- [ ] Branch is release/* or hotfix/* (not feature branch)
+- [ ] SUBSTANTIATE seal exists in META_LEDGER
+- [ ] Pre-flight checks pass (both before and after metadata)
+- [ ] Version bump applied
+- [ ] /qor-document authored and user-approved release metadata
+- [ ] User confirmed commit and push
+- [ ] Tag created and pushed
+- [ ] META_LEDGER updated with DELIVER entry
+
+## Integration with S.H.I.E.L.D.
+
+This skill implements:
+
+- **Delivery Gate**: Final phase of S.H.I.E.L.D. lifecycle
+- **Confirmation Gates**: User approval at every irreversible step (commit, push)
+- **Documentation Gate**: Hard stop if version markers incomplete
+- **Hash Chain Continuation**: Records delivery in META_LEDGER with Merkle linkage
+
