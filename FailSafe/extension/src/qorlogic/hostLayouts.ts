@@ -46,7 +46,7 @@ function skillsAgents(base: string): HostInstallLayout {
 export const HOST_INSTALL_LAYOUTS: Record<QorLogicHost, HostInstallLayout> = {
   claude: skillsAgents(".claude"),
   codex: skillsAgents(".codex"),
-  "kilo-code": skillsAgents(".kilo-code"),
+  "kilo-code": skillsAgents(".kilo"),
   gemini: {
     base: ".gemini",
     recordPath: joinBase(".gemini", RECORD_FILE),

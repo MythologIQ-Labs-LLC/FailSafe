@@ -1,7 +1,58 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-05-08
-**Version:** v5.1.2-baseline — SUBSTANTIATED (workspace-only label; no `package.json` bump — feature-index baseline audit; PUBLISH_BLOCK Condition 1 truth: 49 unverified entries, NOT zero)
+**Last Updated:** 2026-05-12
+**Version:** v5.1.10-baseline — SUBSTANTIATED (workspace-only label; no `package.json` bump — Phase 59 agent-detection overhaul + Organize command; `vscode-test` suite NOT re-run this seal — host binary lock; static + smoke verification stands in)
+
+---
+
+## v5.1.10-baseline — Phase 59: Agent Detection Overhaul + Organize Command
+
+### Ledger Trail
+
+| Entry | Phase | Verdict |
+|-------|-------|---------|
+| #331 | GATE | VETO (`specification-drift` — affected-files/changes contradiction; undefined signal weights) — plan v1 |
+| #332 | GATE | VETO (`razor-overage` core type file; `infrastructure-mismatch` invalid canary `--scan`) — plan v2 |
+| #333 | GATE | VETO (`macro-architecture` missing type bridge; `specification-drift` overlay graceful-failure) — plan v3 |
+| #334 | GATE | **PASS** — plan v4 (`DetectionTypes.ts` boundary explicit; core type file untouched; overlay non-throwing; canary `--repo-root` interface) |
+| #335 | IMPLEMENT | Phase 1 + Phase 2 — parallel team (typescript-pro Phase 2 + observer + devil's advocate); 12/12 detection + 11/11 organize smoke checks; tsc clean; review findings remediated |
+| #336 | SUBSTANTIATE | Reality matches Promise; `vscode-test` deferred (host lock); glossary doc-integrity advisory open |
+
+### New Files
+
+| File | Lines | Purpose |
+|---|---|---|
+| `FailSafe/extension/src/qorelogic/types/DetectionTypes.ts` | 70 | Detection-only type surface: `AgentSystemManifest`, `AgentDetectionRules`, `DetectionSignal`, `DetectionOutcome`, `DetectionPhase`, `SIGNAL_WEIGHTS`, `DETECTION_THRESHOLD`, `toSystemManifest()` |
+| `FailSafe/extension/src/qorelogic/AgentDetectionEnvironment.ts` | 42 | Injectable `DetectionEnvironment` + `VsCodeDetectionEnvironment` (testability seam; unplanned-but-justified) |
+| `FailSafe/extension/src/qorelogic/AgentOverlayLoader.ts` | 97 | `loadAgentOverlay()` (zod, non-throwing, rejects `..`/absolute paths) + `mergeAgentOverlay()` |
+| `FailSafe/extension/src/extension/organizeWorkspace.ts` | 202 | `detectArchetype` / `buildProposals` / `executeProposals` / `runOrganize`; `OrganizeProposal`/`OrganizeReport`; `PROTECTED_PATHS` |
+| `FailSafe/extension/src/extension/organizeProposals.ts` | 90 | `conventionProposals` / `privacyProposals` (Razor split from organizeWorkspace; permitted) |
+| `FailSafe/extension/src/test/qorelogic/AgentOverlayLoader.test.ts` | 158 | parse / merge / path-traversal-reject cases |
+| `FailSafe/extension/src/test/extension/organizeWorkspace.test.ts` | 99 | archetype / debris / governance dir / protected paths / privacy / execute+report |
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `FailSafe/extension/src/qorelogic/AgentDefinitions.ts` (96L) | Rewritten as `AgentSystemManifest[]`: 7 built-ins incl. `kilo-code`; codex no longer detects via `AGENTS.md`; copilot gets `extensionIds`; every agent carries a high-confidence signal + `terminalPatterns` |
+| `FailSafe/extension/src/qorelogic/SystemRegistry.ts` (243L) | `detectWithConfidence()` weighted detection; `detect()` delegates; overlay merged into built-ins; `toSystemManifest()` at plugin boundary; detection-environment injection; `detectTerminalAgents()` derives from `terminalPatterns`; extension-keyword signals capped at one match |
+| `FailSafe/extension/src/qorlogic/hostLayouts.ts` | kilo-code base path `.kilo-code` → `.kilo` (host id `"kilo-code"` unchanged) |
+| `FailSafe/extension/src/extension/bootstrapServers.ts` | `failsafe.organize` command rewired off `runWorkspaceBootstrap` to dynamic-import + `runOrganize(deps.workspaceRoot, outputChannel)` |
+| `FailSafe/extension/src/test/qorelogic/AgentDefinitions.test.ts` (79L) | 7-count + marker-validation + AGENTS.md negative cases |
+| `FailSafe/extension/src/test/qorelogic/SystemRegistry.test.ts` (278L) | Rewritten: weighted detection, overlay override/append/malformed, AGENTS.md cases, two-keyword-cap, core-type-not-extended guard |
+
+### Test surface
+
+- TypeScript: **clean** (`tsc -p ./`, 0 errors)
+- Standalone vscode-stubbed smoke: **12/12** detection+overlay, **11/11** organize
+- Canary scan: OK (3 files, 0 hits)
+- ⚠️ `vscode-test` extension-host suite NOT run — `npm test` pretest `rebuild:vscode` fails `EPERM` on locked `better_sqlite3.node`; `vscode-test` reports "Code is currently being updated". Re-run required before any publish.
+
+### Open follow-ups
+
+- **Out-of-plan-scope**: `src/roadmap/services/ModelAdapterConfigs.ts` writes Kilo workflow files to `.kilocode/workflows/` — a different convention from the now-`.kilo` install/detection base. Reconcile (or document the intentional split) in a future cycle.
+- **Doc-integrity advisory** (from Entry #334 audit): standard-tier glossary path `qor/references/glossary.md` is absent. Would hard-block `/qor-substantiate`'s doc-integrity gate if the qor-logic runtime were initialized. Resolve before release-class work.
+- **Section 4 note**: `SystemRegistry.test.ts` is 278L (> 250 source cap) — consistent with existing repo test-file norms (e.g. prior 274L/309L test files), test files exempt in practice; flagged for transparency.
 
 ---
 

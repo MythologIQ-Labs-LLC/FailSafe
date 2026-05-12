@@ -130,9 +130,8 @@ export async function bootstrapServers(
 
   context.subscriptions.push(
     vscode.commands.registerCommand("failsafe.organize", async () => {
-      // Organize is a focused subset: workspace structure only, no pip install.
-      const report = await runWorkspaceBootstrap(bootstrapDeps, "silent");
-      reportBootstrapToUser(report, outputChannel);
+      const { runOrganize } = await import("./organizeWorkspace");
+      await runOrganize(deps.workspaceRoot, outputChannel);
     }),
   );
 
