@@ -1,7 +1,64 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-05-12
-**Version:** v5.1.10-baseline — SUBSTANTIATED (workspace-only label; no `package.json` bump — Phase 59 agent-detection overhaul + Organize command; `vscode-test` suite NOT re-run this seal — host binary lock; static + smoke verification stands in)
+**Last Updated:** 2026-05-13
+**Version:** v5.1.10-baseline plus Phase 60 refactor-planning gate response plus Phase 61 ledger repair (workspace-only label; no `package.json` bump)
+
+---
+
+---
+
+## 2026-05-13 - Phase 61 Entry #331 Ledger Repair
+
+Plan: `docs/plan-qor-phase61-ledger-repair.md` (PASS audit). Bounded semantic repair of `docs/META_LEDGER.md` Entries #331-#336.
+
+### Gate State
+
+| Artifact | State |
+|---|---|
+| Ledger | REPAIRED. `qor-logic verify-ledger` from repo root: all of #331-#336 OK; #336 now verifier-readable (Skipped count 346 → 345) |
+| Local continuity | `node FailSafe/extension/scripts/meta-ledger-repair.cjs --range 331:336 --check-continuity` exits 0 |
+| Phase 60 | UNBLOCKED for audit re-run — operator gate |
+
+### Repair Lane
+
+- Tool: `FailSafe/extension/scripts/meta-ledger-repair.cjs` — stdlib-only, fail-closed on input drift, dry-run by default, requires `--range 331:336 --apply` to write.
+- Harness: `FailSafe/extension/src/test/scripts/metaLedgerRepair.test.cjs` — 7 invoking tests covering repair plan, drift guard, renderer, apply round-trip, and continuity (accept repaired / reject broken at #331).
+- Content hashes preserved verbatim for all six entries. The legacy `SHA256(content + previous)` cascade was used per the debug-report-recommended Option B.
+- Entry #336's seal field is now rendered as `**Chain Hash (Session Seal)**` so the installed Qor verifier matches it.
+- Entries #331-#334 reordered into numeric order (file previously held 331, 334, 333, 332, 335, 336).
+
+### Limitation
+
+Entry #331's recorded content hash remains a historical placeholder. The original Entry #331 audit-report artifact is not present in tracked repository evidence, so the real `SHA256(plan + audit report)` could not be reconstructed. This repair restores chain continuity over the recorded content hashes; it does not establish provenance for that content hash. A future evidentiary repair (Option C in the debug report) would require the original audit artifact.
+
+---
+
+## 2026-05-13 - Phase 60 Refactor Gate Response
+
+`docs/plan-qor-phase60-v5-1-0-remaining-scope.md` has been amended after the Phase 60 audit VETO. The plan now starts with a Refactor Enablement Gate before any remaining v5.1.0 feature work.
+
+### Gate State
+
+| Artifact | State |
+|---|---|
+| Phase 60 audit | VETO: `razor-overage`, `infrastructure-mismatch` |
+| Phase 60 plan | Amended with Phase 0 refactor-first path |
+| Ledger | Still blocked at Entry #331; no ledger append performed |
+| Runtime implementation | Blocked until ledger repair/quarantine and re-audit PASS |
+
+### Refactor Targets
+
+| Existing over-cap file | Required route |
+|---|---|
+| `PlanManager.ts` | Split persistence and state derivation into `PlanPersistenceStore.ts`, `RoadmapPersistenceStore.ts`, and `PlanStateDeriver.ts`; facade target <=250 lines |
+| `SentinelDaemon.ts` | Split watch policy and queue mechanics into `SentinelWatchPolicy.ts` and `SentinelEventQueue.ts`; facade target <=250 lines |
+| `ConsoleServer.ts` | Split hub snapshot, route registration, and lifecycle concerns into `HubSnapshotService.ts`, `ConsoleRouteRegistrar.ts`, and `ConsoleLifecycleService.ts`; composition root target <=250 lines |
+
+### Notes
+
+- Missing Phase 60 tests are now declared `NEW` in the plan instead of implied as existing files.
+- The B195 voice-asset size remediation remains deferred to v5.2.0 as a prompt/download-on-enable feature.
+- No runtime code changes were made by this refactor-planning pass.
 
 ---
 

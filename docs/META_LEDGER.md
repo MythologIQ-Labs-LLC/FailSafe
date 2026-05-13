@@ -15609,63 +15609,9 @@ SHA256(plan + audit report) = `a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a
 **Previous Hash**: `f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9` (Entry #330 session seal)
 
 **Chain Hash**:
-SHA256(content_hash + previous_hash) = `b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3`
+SHA256(content_hash + previous_hash) = `74217c8c014489dfcbe25a2ef041fd660b92729fbe31e9ff354e7d161cbe514e`
 
 **Decision**: VETO on specification-drift grounds. Two findings: (1) Affected Files / Changes contradiction, (2) undefined signal weights. Both Plan-text. Governor amends plan, re-runs `/qor-audit`.
-
-_Gate Status: LOCKED_
-
----
-
-### Entry #334: GATE TRIBUNAL (PASS) - Phase 59 Agent Detection + Organize
-
-**Timestamp**: 2026-05-12T13:32:00-04:00
-**Phase**: GATE
-**Author**: Judge
-**Risk Grade**: L2
-**Verdict**: PASS
-
-**Targets**:
-- `docs/plan-qor-phase59-agent-detection-organize.md`
-
-**Content Hash**:
-SHA256(AUDIT_REPORT.md) = `7e6b09758417beae6a5167105f3e8e5bf20528adac69445a148d4dfad07294cc`
-
-**Previous Hash**: `9aa1caba56ac574d9914753a56cf1df7df944e88ddcf41ce8bfae1b4b5a911f4` (Entry #333 chain hash)
-
-**Chain Hash**:
-SHA256(content_hash + previous_hash) = `ef31d2d414225e6e482f2c66c7324145110f2079ff30f41c9344078a58be3d4e`
-
-**Decision**: PASS. Phase 59 plan now clears prompt-injection, security, OWASP, ghost UI, Section 4, test functionality, dependency, orphan, macro-architecture, and infrastructure alignment passes. Prior VETO findings are resolved: the type boundary is explicit, the over-cap core type file remains unchanged, overlay parsing is non-throwing, and the canary CI command uses the supported wrapper interface.
-
-_Gate Status: OPEN. Next phase: `/qor-implement`._
-
----
-
-### Entry #333: GATE TRIBUNAL (VETO) - Phase 59 Agent Detection + Organize Type Bridge
-
-**Timestamp**: 2026-05-12T13:19:16-04:00
-**Phase**: GATE
-**Author**: Judge
-**Risk Grade**: L2
-**Verdict**: VETO
-
-**Targets**:
-- `docs/plan-qor-phase59-agent-detection-organize.md`
-
-**Findings**:
-- F1: Plan moves detection types to `DetectionTypes.ts` but does not define the adapter or augmented manifest type needed to connect extended detection fields to the current `SystemManifest` contract. [macro-architecture]
-- F2: Overlay loader snippet uses direct `JSON.parse` and schema `parse` while planned tests require invalid JSON and malformed overlays to be ignored gracefully. [specification-drift]
-
-**Content Hash**:
-SHA256(AUDIT_REPORT.md) = `00d8b3bc5f090774e5a853385a610b6e72607f599ca273705ad77911ea9b19ef`
-
-**Previous Hash**: `62d542f424f44f40b88d096ed333dbba5982c1fead7fc5f4c494f2cb2d1e2f4e` (Entry #332 chain hash)
-
-**Chain Hash**:
-SHA256(content_hash + previous_hash) = `9aa1caba56ac574d9914753a56cf1df7df944e88ddcf41ce8bfae1b4b5a911f4`
-
-**Decision**: VETO. Prior Section 4 and invalid canary-command defects are cleared, but the revised plan still fails macro-architecture and specification-drift gates. Required next actions: `/qor-organize` for the manifest/type boundary and Governor plan amendment for overlay graceful-failure behavior.
 
 _Gate Status: LOCKED_
 
@@ -15689,14 +15635,68 @@ _Gate Status: LOCKED_
 **Content Hash**:
 SHA256(AUDIT_REPORT.md) = `f2d7eb641458cae6ec5b9d08461923efc78478e1f935cd591aa4deb3f96537bc`
 
-**Previous Hash**: `b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3` (Entry #331 chain hash)
+**Previous Hash**: `74217c8c014489dfcbe25a2ef041fd660b92729fbe31e9ff354e7d161cbe514e` (Entry #331 chain hash)
 
 **Chain Hash**:
-SHA256(content_hash + previous_hash) = `62d542f424f44f40b88d096ed333dbba5982c1fead7fc5f4c494f2cb2d1e2f4e`
+SHA256(content_hash + previous_hash) = `9c381a9171ca78db5e9092d5b7afcf2989aa24743fd73d32a01e4e963dc47406`
 
 **Decision**: VETO. The revised plan fixed the prior weight-definition drift, and canary/pre-audit lints pass, but it still fails Section 4 and Infrastructure Alignment. Required next actions: `/qor-refactor` for the over-cap type surface, and Governor plan amendment for the invalid canary CI command.
 
 _Gate Status: LOCKED_
+
+---
+
+### Entry #333: GATE TRIBUNAL (VETO) - Phase 59 Agent Detection + Organize Type Bridge
+
+**Timestamp**: 2026-05-12T13:19:16-04:00
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: VETO
+
+**Targets**:
+- `docs/plan-qor-phase59-agent-detection-organize.md`
+
+**Findings**:
+- F1: Plan moves detection types to `DetectionTypes.ts` but does not define the adapter or augmented manifest type needed to connect extended detection fields to the current `SystemManifest` contract. [macro-architecture]
+- F2: Overlay loader snippet uses direct `JSON.parse` and schema `parse` while planned tests require invalid JSON and malformed overlays to be ignored gracefully. [specification-drift]
+
+**Content Hash**:
+SHA256(AUDIT_REPORT.md) = `00d8b3bc5f090774e5a853385a610b6e72607f599ca273705ad77911ea9b19ef`
+
+**Previous Hash**: `9c381a9171ca78db5e9092d5b7afcf2989aa24743fd73d32a01e4e963dc47406` (Entry #332 chain hash)
+
+**Chain Hash**:
+SHA256(content_hash + previous_hash) = `65d6b9cf48a6374679114d22eb5f0cb09ab7fb3d09d95c31c5a7d0f6735d5b27`
+
+**Decision**: VETO. Prior Section 4 and invalid canary-command defects are cleared, but the revised plan still fails macro-architecture and specification-drift gates. Required next actions: `/qor-organize` for the manifest/type boundary and Governor plan amendment for overlay graceful-failure behavior.
+
+_Gate Status: LOCKED_
+
+---
+
+### Entry #334: GATE TRIBUNAL (PASS) - Phase 59 Agent Detection + Organize
+
+**Timestamp**: 2026-05-12T13:32:00-04:00
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS
+
+**Targets**:
+- `docs/plan-qor-phase59-agent-detection-organize.md`
+
+**Content Hash**:
+SHA256(AUDIT_REPORT.md) = `7e6b09758417beae6a5167105f3e8e5bf20528adac69445a148d4dfad07294cc`
+
+**Previous Hash**: `65d6b9cf48a6374679114d22eb5f0cb09ab7fb3d09d95c31c5a7d0f6735d5b27` (Entry #333 chain hash)
+
+**Chain Hash**:
+SHA256(content_hash + previous_hash) = `d3017af520746668ea2ddc609c46a7566fd8460f46636ad8f570d2117c32a53c`
+
+**Decision**: PASS. Phase 59 plan now clears prompt-injection, security, OWASP, ghost UI, Section 4, test functionality, dependency, orphan, macro-architecture, and infrastructure alignment passes. Prior VETO findings are resolved: the type boundary is explicit, the over-cap core type file remains unchanged, overlay parsing is non-throwing, and the canary CI command uses the supported wrapper interface.
+
+_Gate Status: OPEN. Next phase: `/qor-implement`._
 
 ---
 
@@ -15749,12 +15749,12 @@ _Gate Status: LOCKED_
 SHA256(DetectionTypes.ts + AgentDetectionEnvironment.ts + AgentOverlayLoader.ts + AgentDefinitions.ts + SystemRegistry.ts + organizeWorkspace.ts + organizeProposals.ts + hostLayouts.ts + bootstrapServers.ts + the four test files)
 = `aecc3ed8558da0b45f5dd60d60f328b45711877d6f6490de935588df57520a5b`
 
-**Previous Hash**: `ef31d2d414225e6e482f2c66c7324145110f2079ff30f41c9344078a58be3d4e` (Entry #334 chain hash)
+**Previous Hash**: `d3017af520746668ea2ddc609c46a7566fd8460f46636ad8f570d2117c32a53c` (Entry #334 chain hash)
 
 **Chain Hash**:
 
 SHA256(content_hash + previous_hash)
-= `800894ea8d6daa1e8d2afc5a0dfc1913f83974318ca84f03f197034c26520490`
+= `370e10d084316503ab12d84c634dc452713676920ffff5fdce5cf59fca692bb5`
 
 **Decision**: Implementation complete. Phase 1 + Phase 2 delivered; Phase 3 deferred to post-release UI execution. Ready for `/qor-substantiate` (which must also re-run the `vscode-test` suite once the host binary lock clears).
 
@@ -15842,12 +15842,12 @@ No BACKLOG items map to this plan (B80/B81 agent-detection items already closed 
 SHA256(docs/META_LEDGER.md, pre-seal-entry state)
 = `20f4bb5a15c866a3067076a377b67a9f2694372ed453c7f0563e8ec3fc62650a`
 
-**Previous Hash**: `800894ea8d6daa1e8d2afc5a0dfc1913f83974318ca84f03f197034c26520490` (Entry #335 chain hash)
+**Previous Hash**: `370e10d084316503ab12d84c634dc452713676920ffff5fdce5cf59fca692bb5` (Entry #335 chain hash)
 
-**Session Seal**:
+**Chain Hash (Session Seal)**:
 
 SHA256(content_hash + previous_hash)
-= `ca2f6ef1f5b66c8245e955ab4eafc98d66d6f8315c934232c9ddc2d0764691af`
+= `2553826d0cb4b6c217732d95469be47f38a2c1a43595bc198aec5b90c5d9315d`
 
 **Decision**: Session sealed. Phase 59 Agent Detection Overhaul + Organize Command substantiated — Reality matches Promise. Detection markers de-noised (codex/AGENTS.md false positive removed, copilot exact-id, kilo-code added), weighted multi-phase detection with `.failsafe/agents.json` overlay, Organize command rewired to a real archetype/debris/convention/privacy proposal flow. One out-of-plan-scope follow-up (`ModelAdapterConfigs.ts` `.kilocode/` convention) and one carried doc-integrity advisory (glossary) logged. `vscode-test` re-run is a hard precondition for any publish.
 
@@ -15855,6 +15855,169 @@ _Gate Status: OPEN. Next: operator commit + push/merge decision (see /qor-substa
 
 ---
 
+### Entry #337: IMPLEMENTATION — Phase 61 Ledger Repair Attestation
+
+**Timestamp**: 2026-05-13T19:30:00Z
+**Phase**: IMPLEMENT (semantic ledger repair)
+**Author**: Specialist
+**Risk Grade**: L2
+**Plan**: `docs/plan-qor-phase61-ledger-repair.md` (PASS — `.agent/staging/AUDIT_REPORT.md`)
+
+**Summary**:
+
+Bounded semantic repair of Entries #331-#336 under the era-local legacy `SHA256(content + previous)` cascade. The recorded content hashes for all six entries are preserved verbatim. Entry #336's seal is rendered as `**Chain Hash (Session Seal)**` so the installed Qor verifier matches it. Entries #331-#334, which were previously written in file-order 331/334/333/332, are now in numeric order 331/332/333/334.
+
+**Files Created**:
+
+- `FailSafe/extension/scripts/meta-ledger-repair.cjs` — stdlib-only repair tool. Fails closed on any input drift. Default mode is dry-run; writes require `--range 331:336 --apply`. Exposes pure helpers `parseEntries`, `validateCurrentHashes`, `computeRepairPlan`, `renderRepaired`, `applyRepair`, `checkContinuity`.
+- `FailSafe/extension/src/test/scripts/metaLedgerRepair.test.cjs` — 7-test node:test harness. Each test invokes the helper under test and asserts on its return value: cascade computation, drift guard, renderer field rename, apply round-trip (#332.prev == #331.chain), apply round-trip (#336 content-hash preserved + verifier-readable), continuity accepts repaired, continuity rejects broken fixture at #331.
+
+**Files Modified**:
+
+- `docs/META_LEDGER.md` — Entries #331-#336 repaired per the replacement table in the plan; Entry #336 seal field relabeled.
+- `docs/SYSTEM_STATE.md` — added Phase 61 ledger-repair section recording gate state, repair lane, and the unreconstructable-content-hash limitation.
+- `docs/PROCESS_SHADOW_GENOME.md` — degradation event `ad4e145bdc0bd6f2a7cbc6e0b80342c762145e6a19909900757f0760e36ab9f7` flipped from `addressed_pending: true` to `addressed_pending: false` with `addressed_reason: repaired_via_phase61_ledger_repair`.
+- `docs/SHADOW_GENOME.md` — `SG-RemediationEventTaxonomyDrift` Status updated to `closed (2026-05-13)` with attestation pointer.
+
+**Replacement Table** (legacy cascade, anchored on the original Entry #331 previous hash):
+
+| Entry | Previous Hash | Chain / Seal |
+| --- | --- | --- |
+| #331 | `f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9` | `74217c8c014489dfcbe25a2ef041fd660b92729fbe31e9ff354e7d161cbe514e` |
+| #332 | `74217c8c014489dfcbe25a2ef041fd660b92729fbe31e9ff354e7d161cbe514e` | `9c381a9171ca78db5e9092d5b7afcf2989aa24743fd73d32a01e4e963dc47406` |
+| #333 | `9c381a9171ca78db5e9092d5b7afcf2989aa24743fd73d32a01e4e963dc47406` | `65d6b9cf48a6374679114d22eb5f0cb09ab7fb3d09d95c31c5a7d0f6735d5b27` |
+| #334 | `65d6b9cf48a6374679114d22eb5f0cb09ab7fb3d09d95c31c5a7d0f6735d5b27` | `d3017af520746668ea2ddc609c46a7566fd8460f46636ad8f570d2117c32a53c` |
+| #335 | `d3017af520746668ea2ddc609c46a7566fd8460f46636ad8f570d2117c32a53c` | `370e10d084316503ab12d84c634dc452713676920ffff5fdce5cf59fca692bb5` |
+| #336 | `370e10d084316503ab12d84c634dc452713676920ffff5fdce5cf59fca692bb5` | `2553826d0cb4b6c217732d95469be47f38a2c1a43595bc198aec5b90c5d9315d` |
+
+**Verification**:
+
+- `node --test src/test/scripts/metaLedgerRepair.test.cjs` (from `FailSafe/extension`) — 7/7 PASS.
+- `qor-logic verify-ledger` (from repo root, `qor-logic 0.46.0`) — exit 0; lines `OK Entry #331..#336: chain hash verified` for all six entries; skipped-entry count reduced from 346 to 345 (Entry #336 is now verifier-readable).
+- `node FailSafe/extension/scripts/meta-ledger-repair.cjs --repo-root . --range 331:336 --check-continuity` — exit 0; `continuity: OK`.
+
+**Limitation**:
+
+Entry #331's content hash remains an unreconstructable historical placeholder. The original Entry #331 audit-report artifact is not present in tracked repository evidence, so the real `SHA256(plan + audit report)` could not be computed. This attestation restores chain continuity over the recorded content hashes; it does not establish provenance for Entry #331's content hash. A future evidentiary repair (Option C in `.agent/staging/DEBUG_REPORT_ENTRY_331.md`) would require the original audit artifact.
+
+**Section 4 Razor** (new files):
+
+| File | Lines | Limit | Status |
+| --- | --- | --- | --- |
+| `meta-ledger-repair.cjs` | 237 | 250 | PASS |
+| `metaLedgerRepair.test.cjs` | 150 | 250 | PASS |
+
+All functions ≤ 40 lines; nesting ≤ 3; no nested ternaries; no `console.log` artifacts.
+
+**Content Hash**:
+
+SHA256(`docs/META_LEDGER.md`, pre-attestation state)
+= `7181e4d6dbfc508933dba6ff5dc7768ceaf4be22577b934631dfd4f05db57040`
+
+**Previous Hash**: `2553826d0cb4b6c217732d95469be47f38a2c1a43595bc198aec5b90c5d9315d` (Entry #336 repaired chain/seal)
+
+**Chain Hash**:
+
+SHA256(content_hash + previous_hash)
+= `0a4cd8e289a2a23b3f7547f44c22da27074262a296d7d093ec19fbb02cc07f16`
+
+**Decision**: Ledger repair attestation recorded. Entries #331-#336 verify under the installed Qor verifier and under the local continuity check. The semantic chain break opened at Entry #331 is closed. `SG-RemediationEventTaxonomyDrift` and the corresponding degradation event are marked addressed. Phase 60 is no longer blocked by the Entry #331 chain break.
+
+_Gate Status: OPEN. Next: `/qor-substantiate` for this repair, then operator decision on resuming Phase 60._
+
+---
+
+### Entry #338: SESSION SEAL — Phase 61 Entry #331-#336 Ledger Repair
+
+**Timestamp**: 2026-05-13T20:15:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L2
+**Type**: FINAL_SEAL
+**Plan**: `docs/plan-qor-phase61-ledger-repair.md` (PASS — `.agent/staging/AUDIT_REPORT.md`; implementation attested at Entry #337)
+
+**SSDF Practices**: PS.2.1, RV.2.1
+
+**Session Summary**:
+
+- Files Created (this session): 2 — `FailSafe/extension/scripts/meta-ledger-repair.cjs` (237L), `FailSafe/extension/src/test/scripts/metaLedgerRepair.test.cjs` (150L), plus `qor/references/glossary.md` (NEW) added at substantiate time to clear the Phase 4.7 doc-integrity gate flagged as advisory in the audit.
+- Files Modified: `docs/META_LEDGER.md` (#331-#336 semantic repair + Entry #337 attestation), `docs/SYSTEM_STATE.md` (Phase 61 section + repair-lane documentation), `docs/SHADOW_GENOME.md` (SG-RemediationEventTaxonomyDrift closed), `docs/PROCESS_SHADOW_GENOME.md` (degradation event `ad4e145bdc0bd6f2a7cbc6e0b80342c762145e6a19909900757f0760e36ab9f7` flipped to `addressed_pending: false`).
+- Tests Added: 7 invoking tests in `metaLedgerRepair.test.cjs`; 0 presence-only.
+
+**Reality Audit**:
+
+| Promise (plan affected files) | Reality | Verdict |
+| --- | --- | --- |
+| Phase 1: `meta-ledger-repair.cjs` (new) | 237L; stdlib-only; fail-closed drift guard; dry-run default; `--check-continuity` flag | MATCH |
+| Phase 1: `metaLedgerRepair.test.cjs` (new) | 150L; 7 invoking tests | MATCH |
+| Phase 2: extend tests for round-trip | tests 4 + 5 (apply-path #332/#336 invariants) | MATCH |
+| Phase 2: `docs/META_LEDGER.md` reorder + replace + relabel | Entries #331-#334 reordered numeric; #331-#336 chain/prev updated under legacy cascade; #336 seal field rendered as `**Chain Hash (Session Seal)**`; content hashes preserved | MATCH |
+| Phase 2: `docs/SYSTEM_STATE.md` repair lane | Phase 61 section added with gate state, repair lane, limitation | MATCH |
+| Phase 3: extend tests for final repaired-fixture verification | test 6 (`checkContinuity` accepts repaired) | MATCH |
+| Phase 3: `docs/PROCESS_SHADOW_GENOME.md` degradation event closure | Event `ad4e145bdc0bd...` flipped to `addressed_pending: false`, `addressed_reason: repaired_via_phase61_ledger_repair` | MATCH |
+| Phase 3: `docs/SHADOW_GENOME.md` SG note closure | `SG-RemediationEventTaxonomyDrift` Status: closed (2026-05-13) with attestation pointer | MATCH |
+| Phase 3: `docs/SYSTEM_STATE.md` chain status note | Chain status note in Phase 61 section | MATCH |
+| Phase 3: `LedgerRepairAttestation` in `META_LEDGER.md` | Entry #337 appended; chains from Entry #336 repaired seal `2553826d...` | MATCH |
+| (extra) `qor/references/glossary.md` | NEW (this seal); minimal entries for `SemanticLedgerContinuity` + `LedgerRepairAttestation` | UNPLANNED — substantiate-time fix to clear doc-integrity gate flagged advisory in the audit |
+
+**Verification Result**: Reality = Promise (1 unplanned addition documented).
+
+**Section 4 Razor** (new code files):
+
+| File | Lines | Limit | Status |
+| --- | --- | --- | --- |
+| `meta-ledger-repair.cjs` | 237 | 250 | PASS |
+| `metaLedgerRepair.test.cjs` | 150 | 250 | PASS |
+
+All functions ≤ 40 lines; nesting ≤ 3; no nested ternaries.
+
+**Test Functionality Gate**: PASS. Every test in `metaLedgerRepair.test.cjs` invokes the unit under test (`parseEntries`, `computeRepairPlan`, `applyRepair`, `checkContinuity`) and asserts against the call's return value or observable side-effect on the rendered text. No presence-only tests. Acceptance question ("would this test fail if behavior were silently broken but artifact still existed?") returns yes for every test.
+
+**Console.log Artifacts**: 0 in new code.
+
+**Functional Verification**:
+
+- `qor-logic verify-ledger` (qor-logic 0.46.0, from repo root): exit 0; `OK Entry #331..#337: chain hash verified`; skipped count 346 → 345 (Entry #336 became verifier-readable).
+- `node --test src/test/scripts/metaLedgerRepair.test.cjs`: 7/7 pass.
+- `node FailSafe/extension/scripts/meta-ledger-repair.cjs --range 331:336 --check-continuity`: exit 0, `continuity: OK`.
+- `node FailSafe/extension/scripts/check-governance-canaries.cjs --repo-root .`: 0 canary hits over 3 files.
+- `python -m qor.reliability.skill_admission qor-substantiate`: ADMITTED.
+- `python -m qor.reliability.gate_skill_matrix`: 30 skills / 115 handoffs / 0 broken.
+- `python -m qor.scripts.secret_scanner --staged`: 0 findings.
+- Doc-integrity (`run_all_checks_from_plan`, strict=True): PASS after glossary stub added.
+
+**Blocker Status**:
+
+| Category | Open | Cleared |
+| --- | --- | --- |
+| Security | 0 | 0 |
+| Development | B191-B199 (HIGH/CRITICAL, all pre-existing & unrelated to this lane) | 0 |
+
+This ledger-repair lane does not interact with any open backlog item; B191-B199 remain on their own remediation cycles.
+
+**Degraded-Mode Bypasses**:
+
+- Step 4.6 (`intent_lock verify`): NO LOCK. Intent lock was not captured at `/qor-implement` Step 5.5 in this session, so substantiate-time verify reports no prior fingerprint. Functionally equivalent to the Entry #336 "Phase 8 wiring degraded mode" note. Mitigation: the Step 7.7 `seal_entry_check` and the explicit content-hash-of-pre-seal-state below give the same drift-detection coverage post-hoc for this single seal.
+- Step 4.6.6 (`procedural_fidelity`): WARN-only; reported no implement gate artifact (`.qor/gates/2026-05-13T1240-8de8c1/implement.json`). Manual procedural-fidelity check performed: every plan-listed file was touched; one unplanned file (`qor/references/glossary.md`) was added and is documented above.
+- Step 7.5 / 7.6 / 9.5.5 (version bump, CHANGELOG stamp, seal tag): SKIPPED. Plan declares `change_class: hotfix` with explicit `non_goals: does not change package versioning` and `exclusions: no release tag, no marketplace publish`. Matches the prior Entry #336 governance-only seal pattern; latest tag remains `v4.9.9`; `FailSafe/extension/package.json` unchanged at 5.1.0.
+- Step 8.5 (`dist_compile`): not applicable to FailSafe workspace (no SDK skill compile target maps to this repo).
+
+**Substantiate-Time Patches** (out of plan scope but in scope of unblocking seal):
+
+- `qor/references/glossary.md` authored with the two plan-declared terms in the YAML-fenced format expected by `qor.scripts.doc_integrity.parse_glossary`. This is the minimum to clear Step 4.7's hard interdiction; the glossary is workspace-debt that future phases should expand. Documented above as the sole unplanned addition.
+
+**Decision**: Session sealed. Phase 61 Entry #331-#336 ledger repair substantiated — Reality matches Promise. `qor-logic verify-ledger` is clean, local continuity is clean, the historical chain break at Entry #331 is closed, and the schema-valid degradation event `ad4e145bdc0bd...` is fully addressed. Entry #331's recorded content hash remains an unreconstructable historical placeholder (Option-C evidentiary repair deferred pending recovery of the original audit artifact). Phase 60 is no longer blocked by the Entry #331 chain break.
+
+**Content Hash**: `21e9af8628bc8284f53a44a57b3c89a245d3f9e7a91050d15f303e80273945be` — SHA256(`docs/META_LEDGER.md`, pre-seal-entry state)
+
+**Previous Hash**: `0a4cd8e289a2a23b3f7547f44c22da27074262a296d7d093ec19fbb02cc07f16` (Entry #337 chain hash)
+
+**Chain Hash (Session Seal)**: `8210923de0da68dd4527d3bba3f0feec1958aa9e692d7a36c8430fb1478b356e` — SHA256(content_hash + "|" + previous_hash)
+
+_Gate Status: OPEN. Next: operator commit + push/merge decision (Step 9.6 menu)._
+
+---
+
 _Chain integrity: VALID_
 _Session Status: SEALED_
-_Session: 2026-05-12-phase59-agent-detection_
+_Session: 2026-05-13-phase61-ledger-repair_

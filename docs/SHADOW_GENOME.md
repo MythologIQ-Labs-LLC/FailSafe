@@ -2,6 +2,54 @@
 
 ---
 
+## Failure Entry #333
+
+**Date**: 2026-05-12
+**Verdict ID**: Entry #333 Gate Tribunal
+**Failure Mode**: MACRO_ARCHITECTURE / SPECIFICATION_DRIFT
+
+### What Failed
+
+Re-audit of `docs/plan-qor-phase59-agent-detection-organize.md` after the Section 4 and canary-command amendments.
+
+### Why It Failed
+
+The plan moved detection-only types into `DetectionTypes.ts`, but did not specify the type bridge that lets extended detection fields work with the existing `SystemManifest` contract. The overlay loader text also contradicts the planned graceful-failure tests by using direct JSON/schema parse calls.
+
+### Pattern to Avoid
+
+When avoiding edits to an over-cap core type file, define the adapter or augmented local type explicitly. When tests promise graceful failure, implementation text must name the catch/safe-parse path rather than showing throwing parse calls.
+
+### Remediation Attempted
+
+No remediation attempted in this tribunal. Gate locked pending `/qor-organize` for the type boundary and Governor amendment of the overlay loader behavior.
+
+---
+
+## Failure Entry #332
+
+**Date**: 2026-05-12
+**Verdict ID**: Entry #332 Gate Tribunal
+**Failure Mode**: COMPLEXITY_VIOLATION / INFRASTRUCTURE_MISMATCH
+
+### What Failed
+
+Re-audit of `docs/plan-qor-phase59-agent-detection-organize.md`.
+
+### Why It Failed
+
+The plan modifies `FailSafe/extension/src/qorelogic/types/QoreLogicSystem.ts`, which is already 529 lines against the Section 4 250-line file cap. It also lists a canary CI command using `--scan docs/`, but the current `check-governance-canaries.cjs` wrapper rejects that argument.
+
+### Pattern to Avoid
+
+Do not route new type surface into already over-cap files without first splitting the domain. Do not list CI commands that are not supported by the current repo scripts unless the plan explicitly includes the script-interface change.
+
+### Remediation Attempted
+
+No remediation attempted in this tribunal. Gate locked pending `/qor-refactor` for the type surface and Governor amendment of the invalid CI command.
+
+---
+
 ## Failure Entry #327
 
 **Date**: 2026-05-11
@@ -2750,3 +2798,47 @@ Output: `dist/override-staleness.findings.json` (gitignored runtime artifact). A
 
 **Filed upstream**: closes Qor [#41](https://github.com/Knapp-Kevin/Qor/issues/41); lineage continues from SG-HeuristicBlindSpot (#310 closure). The two patterns share the root: measurement-tool correctness drift over time. Path-form variance (E2 / SG-ClassifierPathBug), heuristic blind spots (E3 / SG-HeuristicBlindSpot), and override staleness (E7 / this entry) are all manifestations of the same broader concern — measurement tools require maintenance as the codebase evolves.
  
+
+---
+
+## SG-RemediationEventTaxonomyDrift - remediation review VETO (2026-05-13)
+
+**Pattern**: a remediation proposal records a real process failure under a new event type before the Qor infrastructure recognizes that type. The remediation can describe the right problem while still failing the gate contract because the event is outside `shadow_event.schema.json` and the classifier cannot route it.
+
+**FailSafe incident**: `/qor-validate` found a ledger integrity break at Entry #331, with downstream Phase 59 entries chained from a placeholder-style recorded hash and a skipped `Session Seal` entry. The failure was reported upstream as Qor-logic issue #54 and was first captured locally with an out-of-schema process event. The follow-up `/qor-audit` of `.qor/gates/2026-05-13T1240-8de8c1/remediate.json` VETOed because that event used `event_type: "ledger_integrity_break"` outside the closed enum and `source_entry_id: "331"` where the schema expects `null` or a 64-hex event id. `/qor-remediate` recoded the event as schema-valid `degradation` event `ad4e145bdc0bd6f2a7cbc6e0b80342c762145e6a19909900757f0760e36ab9f7`, retaining ledger entry numbers in `details.entries`.
+
+**Detection**: JSON-schema validation of `docs/PROCESS_SHADOW_GENOME.md` against the installed `qor/gates/schema/shadow_event.schema.json`, plus the remediation classifier returning no classification for the new event type.
+
+**Counter-pattern**: process-event taxonomy changes must be part of the remediation lane itself. Either encode the event using an existing enum value with precise details, or explicitly plan the schema, classifier, and doctrine changes that introduce the new event type. Ledger entry numbers are evidence fields, not `source_entry_id` values.
+
+**Status**: closed (2026-05-13). The schema-valid degradation event `ad4e145bdc0bd6f2a7cbc6e0b80342c762145e6a19909900757f0760e36ab9f7` was carried through `/qor-plan` and `/qor-audit` to a PASS verdict on `docs/plan-qor-phase61-ledger-repair.md`. `/qor-implement` of that plan repaired Entry #331-#336 under the legacy `SHA256(content + previous)` cascade, preserved all six recorded content hashes, rendered Entry #336 as a verifier-readable `**Chain Hash (Session Seal)**`, and brought `qor-logic verify-ledger` to a clean exit. The repair attestation is recorded in `docs/META_LEDGER.md`. Entry #331's content hash remains an unreconstructable historical placeholder pending recovery of the original audit artifact.
+
+
+---
+
+## SG-FactorOutMathUnverified - Phase 62 plan audit VETO (2026-05-13)
+
+**Pattern**: a refactor plan describes an extraction (move symbol(s) from file A to file B) and claims a post-extraction file size that meets the Section 4 cap, but neither the plan nor the Governor verifies the arithmetic against actual current source. The extraction may be the right shape architecturally while still landing the file over the cap by a small margin. A second, related failure surface: the same plan moves exported symbols without addressing the downstream `require(...)` consumers that destructure those exports, silently breaking the public API of the source file.
+
+**FailSafe incident**: `docs/plan-qor-phase62-item-b-sweep-followups.md` Phase 1 declares *"file size must drop to ≤ 250 lines"* for `feature-index-classifier.cjs` after extracting `MANUAL_OVERRIDES` (37L including comments) + `applyManualOverrides` (16L) into a new sibling. Verified factor-out math: 306 - 53 + 1 import + (-2 from shorter `module.exports`) = 252. Two lines over cap. Same plan does not address the existing `module.exports` exposing both symbols, nor the destructure at `feature-index-classifier-staleness.cjs:29` that reads `MANUAL_OVERRIDES` directly from `classifier.cjs`. Either the API re-export pattern or downstream-import-update path must be picked explicitly.
+
+**Detection**: Step 3 Section 4 Razor Pass with arithmetic-verified line counts against current source; Step 3 Infrastructure Alignment Pass with grep-verified downstream consumer enumeration.
+
+**Counter-pattern**: a factor-out plan that names a post-extraction size MUST verify the size against current source via `wc -l` plus a measured estimate of the extracted block (including comments and `module.exports` adjustments) before the plan is submitted to audit. The plan MUST enumerate, in Affected Files, every downstream consumer of moved exports, and either commit to re-exporting from the source file (preserve API) or update the downstream imports (and list the downstream files as modified). Silent public-API changes are infrastructure-mismatch regardless of intent.
+
+**Status**: open. Governor amends `plan-qor-phase62-item-b-sweep-followups.md` to (a) extend extraction scope so the file lands under 250L with margin (e.g., also extract `parseFeatureIndexRows`), and (b) declare the public-API decision explicitly. Re-audit then proceeds.
+
+
+---
+
+## SG-OvercapPlanWithoutRefactorLane - Phase 60 plan audit VETO (2026-05-13)
+
+**Pattern**: a plan targets legacy files that are already over the Section 4 file-size cap and describes direct edits without routing the work through a refactor/split lane. The implementation may be small, but the governance promise is still false because the write path touches files outside the allowed shape.
+
+**FailSafe incident**: `/qor-auto-dev-1` attempted to advance `docs/plan-qor-phase60-v5-1-0-remaining-scope.md` for the remaining v5.1.0 publish scope. `/qor-audit` VETOed before implementation because the plan proposes edits to `PlanManager.ts` (438 lines), `SentinelDaemon.ts` (358 lines), and `ConsoleServer.ts` (1063 lines) without an approved refactor/split route. The same audit also found missing test artifacts cited by the plan without declaring them `NEW`, and confirmed the existing `docs/META_LEDGER.md` Entry #331 chain break still prevents a clean ledger append.
+
+**Detection**: line-count check against every implementation file named in the plan, path-existence check for cited test files, and `qor-logic verify-ledger`.
+
+**Counter-pattern**: when remaining-scope work must touch over-cap files, first route through `/qor-refactor` or amend the plan so the substantive work lands in new bounded modules with only minimal, audited integration bridges. Every new test file must be listed as `NEW` in Affected Files before the infrastructure-alignment pass.
+
+**Status**: amended by `/qor-refactor` planning pass. Phase 60 now includes a Refactor Enablement Gate with split modules and explicit `NEW` test declarations. Implementation remains blocked until a follow-up audit returns PASS and the ledger-chain blocker is repaired or formally quarantined.
