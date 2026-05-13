@@ -5,7 +5,7 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 **Generated**: 2026-05-06
 **Sources**: `.failsafe/governance/FEATURE_INVENTORY_DOCS.md` (312 entries), `.failsafe/governance/FEATURE_INVENTORY_CODE.md` (374 entries), `FailSafe/extension/src/test/**` (135 files).
 
-**Coverage summary** (updated 2026-05-09 — Item B Phase 1 sweep applied; 4 em-dash command entries cited to existing commands-state.test.ts + 20 cross-reference promotion overrides per documented Notes-column evidence):
+**Coverage summary** (updated 2026-05-13 — Phase 62 cleanup: FX128 + FX359 removed from MANUAL_OVERRIDES as redundant overrides per E7 staleness detector; classifier-redetermined status remains `unverified` for both, no row state change. Override count 28 → 26; redundant_count 2 → 0. Previous update 2026-05-09 — Item B Phase 1 sweep applied; 4 em-dash command entries cited to existing commands-state.test.ts + 20 cross-reference promotion overrides per documented Notes-column evidence):
 - Total unified entries: **476**
 - **Verified: 411 (86.3%)** — entries whose cited test holds under SG-035 after baseline-audit + Phase 3 manual review + E3 heuristic upgrade + B Phase 1 sweep.
 - **Unverified: 22 (4.6%)** — remediation targets for B Phase 2+. Down from 46 at E4 seal (52% reduction this cycle).

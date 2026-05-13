@@ -496,3 +496,25 @@ describe('applyManualOverrides bidirectional (E4)', () => {
     assert.equal(r.entryId, 'FX173');
   });
 });
+
+describe('runAudit summary counts match FEATURE_INDEX header (Phase 60 §1)', () => {
+  const path = require('path');
+  const fs = require('fs');
+  const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..', '..');
+  const FEATURE_INDEX_PATH = path.join(REPO_ROOT, 'docs', 'FEATURE_INDEX.md');
+
+  it('invokes runAudit and asserts byCurrentStatus matches the FEATURE_INDEX header counts', () => {
+    if (!fs.existsSync(FEATURE_INDEX_PATH)) {
+      assert.fail(`FEATURE_INDEX.md not found at ${FEATURE_INDEX_PATH}`);
+    }
+    const audit = classifier.runAudit(FEATURE_INDEX_PATH, REPO_ROOT);
+    assert.equal(audit.summary.total, 476,
+      `expected 476 total rows per header; got ${audit.summary.total}`);
+    assert.equal(audit.summary.byCurrentStatus.verified, 411,
+      `expected 411 verified per header; got ${audit.summary.byCurrentStatus.verified}`);
+    assert.equal(audit.summary.byCurrentStatus.unverified, 22,
+      `expected 22 unverified per header; got ${audit.summary.byCurrentStatus.unverified}`);
+    assert.equal(audit.summary.byCurrentStatus['n/a'], 43,
+      `expected 43 n/a per header; got ${audit.summary.byCurrentStatus['n/a']}`);
+  });
+});

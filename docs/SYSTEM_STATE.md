@@ -1,7 +1,36 @@
 # SYSTEM STATE
 
 **Last Updated:** 2026-05-13
-**Version:** v5.1.10-baseline plus Phase 60 refactor-planning gate response plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups (workspace-only label; no `package.json` bump)
+**Version:** v5.1.10-baseline plus Phase 60 §0 refactor enablement plus §1 scope sync plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups (workspace-only label; no `package.json` bump)
+
+---
+
+## 2026-05-13 - Phase 60 §1 Scope Sync and Coverage Ledger
+
+Plan: `docs/plan-qor-phase60-v5-1-0-remaining-scope.md` (PASS audit Entry #344; §0 sealed at #345). Sub-phase §1 of 6.
+
+### Deliverables
+
+- **V5_1_0_SCOPE.md refresh** (the canonical scope doc): A/C/D and Item B Phase 1 sweep moved from "in scope — pending" Required table to "in scope — already sealed". Item B Phase 2+ remains pending. Lift sequence rewritten to reflect Phase 60 §0 seal at #345 and §1-§5 sequencing. Added "Remaining unverified bucket — grouped by surface (post-Phase-62)" table mapping the 22 unverified FX entries to which sub-phase/plan delivers their coverage.
+- **FEATURE_INDEX.md header narrative refresh**: acknowledged Phase 62 cleanup (FX128 + FX359 removed from MANUAL_OVERRIDES; classifier-redetermined status remains `unverified`; override count 28 → 26; redundant_count 2 → 0). Row counts unchanged at 411 / 22 / 43.
+- **featureIndexClassifierStaleness.test.cjs**: added 2 new it() blocks asserting `total_overrides_checked === 26` and `redundant_count === 0` (Phase 60 §1 post-Phase-62 baseline assertions).
+- **featureIndexClassifier.test.cjs**: added 1 new it() block asserting `runAudit` summary `byCurrentStatus.verified/unverified/n/a` matches the FEATURE_INDEX header counts (411/22/43).
+
+### Carried-forward state
+
+- Pre-existing test failure (`detectStaleness ... invalid_count === 0`) NOT addressed by §1; it depends on test-path resolver behavior for FX141/FX142, which is operator-review or B199 Phase 2+ scope.
+- PUBLISH_BLOCK still `Active: yes`. Condition 1 (0 unverified) requires §4 + B199 Ph 2+ to ship.
+
+### Phase 60 sub-phase status after §1
+
+| Sub-Phase | State | Ledger |
+| --- | --- | --- |
+| §0 Refactor Enablement | SEALED (partial) | #345 |
+| §1 Scope Sync + Coverage Ledger | **THIS COMMIT** | #346 |
+| §2 Workspace Truth Refresh + Governance Watch Surface | Deferred | future |
+| §3 Governance Mode Escalation + Install Version Floor | Deferred | future |
+| §4 UI Subscription Hygiene + Remaining FEATURE_INDEX Closure | Deferred | future |
+| §5 Publish-Block Verification | Deferred | future |
 
 ---
 

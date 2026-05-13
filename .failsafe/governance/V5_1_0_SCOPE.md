@@ -18,17 +18,27 @@ This document is the canonical reference for what ships in v5.1.0. E5+ plan dial
 | v5.1.3-baseline | `plan-e2-classifier-path-fix-and-reconciliation` v2 | #307 | Classifier resolver hardening; SG-ClassifierPathBug closure |
 | v5.1.4-baseline | `plan-e3-classifier-heuristic-upgrade` v1 | #310 | Heuristic upgrade (Playwright matchers + assert.match discriminator + bare-expect tightening); SG-HeuristicBlindSpot |
 | v5.1.5-baseline | `plan-e4-override-promotion-extension` v1 | #313 | Bidirectional MANUAL_OVERRIDES; classifier-vs-FEATURE_INDEX gap closed |
+| v5.1.6-baseline | `plan-e5-shadowgenomemanager-init-order-hotfix` v1 | #316 | Item A (B200) — ShadowGenomeManager init-order P0 security fix |
+| v5.1.7-baseline | `plan-e6-tts-engine-flake-fix` v1 | #319 | Item D — TtsEngine vendor presence routing flake fix |
+| v5.1.8-baseline | `plan-e7-override-staleness-detector` v1 | #322 | Item C (Qor #41) — Stale-override detector |
+| v5.1.9-baseline | Item B Phase 1 sweep (autonomous) | #324 | 24 FEATURE_INDEX entries promoted/cited; unverified 46 → 22 |
+| v5.1.10-baseline | `plan-qor-phase56-audit-canary-remediation` | #325-#330 | Audit-canary remediation; unblocked B194 + B199 Ph 2 plan auditability |
+| v5.1.10 + Phase 59 | `plan-qor-phase59-agent-detection-organize` | #335-#336 | Agent detection overhaul + organize command |
+| v5.1.10 + Phase 61 | `plan-qor-phase61-ledger-repair` | #337-#338 | Entry #331-#336 ledger semantic repair |
+| v5.1.10 + Phase 62 | `plan-qor-phase62-item-b-sweep-followups` | #339-#342 | Classifier factor-out + FX128/FX359 redundancy cleanup |
+| v5.1.10 + Phase 60 §0 | `plan-qor-phase60-v5-1-0-remaining-scope` (Phase 0 only) | #343-#345 | Refactor Enablement Gate: PlanManager / SentinelDaemon / ConsoleServer splits |
 
 ## In scope — pending
 
 ### Required (operator-confirmed)
 
-| ID | Source | Description | Estimated effort |
+| ID | Source | Description | Status |
 |---|---|---|---|
-| **A** | B200 | `ShadowGenomeManager` init-order P0 security regression — `migrate()` runs before `initSchema()`; security columns silently missing on first session | ~2-3h |
-| **B** | B199 Phase 2+ | Comprehensive Playwright + integration test coverage to drive 46 → 0 unverified entries | Multi-cycle (2-3 weeks engineering) |
-| **C** | Qor [#41](https://github.com/Knapp-Kevin/Qor/issues/41) | Stale-override detector for `MANUAL_OVERRIDES` (TTL or test-state validator); protects E2 + E4 codifications from outliving justification | ~3-4h | **SEALED at E7 (2026-05-09)** — `feature-index-classifier-staleness.cjs` produces redundant/invalid/no_path findings; baseline run reports 0 invalid, 2 redundant (FX128, FX359 — operator review pending) |
-| **D** | (carried) | TtsEngine vendor presence routing flake — test-stability hotfix; surfaced at #310 + #313 push hooks | ~1-2h |
+| **A** | B200 | `ShadowGenomeManager` init-order P0 security regression | **SEALED at E5 (2026-05-09)** — v5.1.6-baseline / META_LEDGER #316 |
+| **B Phase 1** | B199 Phase 1 + Phase 1 sweep | Test methodology + CI gate + Monitor B191 proof; FEATURE_INDEX 46 → 22 unverified | **SEALED** — #283-#284 (methodology) + #324 (Phase 1 sweep) |
+| **B Phase 2+** | B199 Phase 2-8 | Comprehensive Playwright + integration test coverage to drive 22 → 0 unverified entries | Multi-cycle (~2-3 weeks engineering); previously VETOed at #325 on audit-canary; now unblocked |
+| **C** | Qor [#41](https://github.com/Knapp-Kevin/Qor/issues/41) | Stale-override detector for `MANUAL_OVERRIDES` | **SEALED at E7 (2026-05-09)** — v5.1.8-baseline / META_LEDGER #322 |
+| **D** | (carried) | TtsEngine vendor presence routing flake | **SEALED at E6 (2026-05-09)** — v5.1.7-baseline / META_LEDGER #319 |
 
 ### HIGH-severity backlog (operator-confirmed in v5.1.0)
 
@@ -52,7 +62,7 @@ This document is the canonical reference for what ships in v5.1.0. E5+ plan dial
 
 | ID | Reason for deferral | Target |
 |---|---|---|
-| **B195** | VSIX size 47.6MB approaches 50MB marketplace cap; operator-deferred 2026-05-09 ("pull back on B195") | v5.1.1 OR v5.2.0 |
+| **B195** | VSIX size 47.6MB approaches 50MB marketplace cap due to bundled voice assets; operator-deferred from v5.1.0. Preferred v5.2.0 direction: restore prompt/download flow when users enable voice features instead of bundling Piper/Whisper models in the extension. | v5.2.0 |
 | **B196** | FailSafe Pro daemon detection not implemented; gated on Pro launch per BACKLOG | v5.x post-Pro launch |
 | **B100-B106** | FailSafe Plus release-runner items (Linux parity, workflow shell discipline, SemVer rerun safety, etc.) | FailSafe Plus / FailSafe-Pro repo |
 | **B132** | Node-label silent truncation (minor UX) | v5.1.1 |
@@ -61,21 +71,33 @@ This document is the canonical reference for what ships in v5.1.0. E5+ plan dial
 | **B190** | Governance Decision Contract Schema Import | v5.0.0+ — not gating publish |
 | Qor [#39, #40, #42] | Qor-Logic framework upstream concerns (plan-grep-lint extensions, substantiate diagnostics) | Qor framework cycles; orthogonal to FailSafe ship |
 
+## Remaining unverified bucket — grouped by surface (post-Phase-62)
+
+PUBLISH_BLOCK Condition 1 (0 unverified) remains binding. Current bucket of 22 unverified entries (down from 46 at E4 seal) by surface:
+
+| Surface | Entries | Drives |
+|---|---|---|
+| governance mode / observe-enforce UX | FX044, FX244 | Phase 60 §3 (B194) |
+| console / monitor / command center UI | FX128, FX145, FX154, FX173, FX174, FX409, FX419 | Phase 60 §2 (B192) + §4 (B198) + B199 Ph 2-3 |
+| voice + audio verification | FX196, FX198, FX219, FX221, FX222, FX227, FX231 | B199 Ph 4 (voice substrate live coverage) |
+| hooks / checkpoint / sentinel / skill provenance / workspace seeding | FX166, FX236, FX258, FX261, FX359, FX435 | Phase 60 §4 + B199 Ph 5-6 |
+
+Note: FX128 + FX359 reclassified after Phase 62 removed their MANUAL_OVERRIDES entries; classifier-determined status is still `unverified` (override removal preserved verdict).
+
 ## Lift sequence (publish-readiness path)
 
-The PUBLISH_BLOCK gate clears when FEATURE_INDEX shows 0 unverified. The current 46-entry unverified bucket consists of:
-- 44 em-dash entries (no test cited; B199 Phase 2+ authors the missing tests)
-- 2 cited-but-presence-only entries (operator-justified `n/a` candidates OR functional test authoring per surface)
+The PUBLISH_BLOCK gate clears when FEATURE_INDEX shows 0 unverified. **3 of 4 Required items are sealed** (A/C/D). Item B Phase 1 is sealed; Phase 2-8 still required.
 
-In-scope items that DON'T directly reduce the unverified count (A, B192, B193, B194, B197, B198, C, D) ship alongside B/B199 Phase 2+ but do not gate the count. They gate publish through correctness, security, and operational discipline rather than coverage arithmetic.
+**Suggested order of remaining operations**:
 
-**Suggested order of operations** (subject to operator preference per E5+ plan dialogue):
-
-1. **A (B200)** — P0 security hotfix; small; clears one CRITICAL/HIGH item before deeper work
-2. **D (TtsEngine flake)** — small; removes pre-push friction so subsequent push cycles don't lose ~5 min each
-3. **C (Qor #41)** — protects existing override codifications before E5+ plans add more entries
-4. **B (B199 Phase 2+)** — multi-cycle bulk; runs concurrent or sequential to:
-5. **B192, B193, B194, B197, B198** — each as own focused plan; integrates with E5+ surface buckets where natural
+1. **Phase 60 §0 Refactor Enablement** — **SEALED at META_LEDGER #345** (this commit). Unblocks §1-§5.
+2. **Phase 60 §1 Scope Sync** — In progress (this cycle). Refreshes scope doc + FEATURE_INDEX header + classifier-test assertions.
+3. **Phase 60 §2** — Workspace Truth Refresh + Governance Watch Surface (B192 + B193). Now unblocked by §0.
+4. **Phase 60 §3** — Governance Mode Escalation (B194) + Install Version Floor (B197).
+5. **Phase 60 §4** — UI Subscription Hygiene (B198) + Remaining FEATURE_INDEX closure. Drives 22 → 0 unverified.
+6. **Phase 60 §5** — Publish-Block Verification + release-class coverage gate regression test.
+7. **B199 Phase 2-8** — Comprehensive Playwright/vscode-test coverage authoring (multi-cycle).
+8. **Release-class `/qor-substantiate`** — first non-workspace-only seal of v5.1.x sub-chain; runs Steps 7.5/7.6/9.5.5 (CHANGELOG stamp, README badge currency, annotated seal tag) but does NOT bump `package.json` (stays at 5.1.0).
 
 ## v5.1.0 release-readiness checklist (gates publish)
 

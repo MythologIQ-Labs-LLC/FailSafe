@@ -16428,6 +16428,76 @@ _Gate Status: OPEN. Next: operator-driven /qor-auto-dev-1 invocation against Pha
 
 ---
 
+### Entry #346: IMPLEMENTATION (partial) — Phase 60 §1 Scope Sync and Coverage Ledger
+
+**Timestamp**: 2026-05-13T23:55:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist (auto-dev orchestrated; inline implementation, no subagent fan-out for §1 scope)
+**Risk Grade**: L2
+**Plan**: `docs/plan-qor-phase60-v5-1-0-remaining-scope.md` (PASS audit at Entry #344; §0 sealed at #345)
+**Scope**: §1 only. §2-§5 deferred to follow-on auto-dev cycles.
+
+**Implementation Summary**:
+
+| Sub-Phase | Status | Details |
+| --- | --- | --- |
+| Phase 0: Refactor Enablement Gate | COMPLETE (#345) | Three over-cap files refactored into 12 bounded modules |
+| Phase 1: Scope Sync and Coverage Ledger | **COMPLETE** (this entry) | V5_1_0_SCOPE refresh + FEATURE_INDEX header + 3 new classifier-test assertions |
+| Phase 2: Workspace Truth Refresh + Governance Watch Surface | DEFERRED | Now unblocked by §0 |
+| Phase 3: Governance Mode Escalation + Install Version Floor | DEFERRED | Future cycle |
+| Phase 4: UI Subscription Hygiene + Remaining FEATURE_INDEX Closure | DEFERRED | Future cycle |
+| Phase 5: Publish-Block Verification | DEFERRED | Final closure |
+
+**Files Modified**:
+
+- `docs/FEATURE_INDEX.md` — header narrative updated to acknowledge Phase 62 cleanup (FX128/FX359 redetermined; override count 28 → 26; redundant_count 2 → 0). Row counts unchanged at 411 verified / 22 unverified / 43 n/a / 476 total.
+- `.failsafe/governance/V5_1_0_SCOPE.md` — moved A/C/D/Item-B-Phase-1-sweep from "pending" to "already sealed" (added v5.1.6/7/8/9/10 + Phase 59/61/62 + 60-§0 rows to the sealed table). Removed sealed items from the Required pending list. Added "Remaining unverified bucket — grouped by surface (post-Phase-62)" table mapping the 22 unverified entries to their delivering sub-phase. Rewrote Lift sequence to reflect §0 seal at #345 and §1-§5 sequencing.
+- `docs/SYSTEM_STATE.md` — appended Phase 60 §1 section with deliverables, carried-forward state, and sub-phase status table.
+- `FailSafe/extension/src/test/scripts/featureIndexClassifierStaleness.test.cjs` — added 2 new it() blocks under new describe `detectStaleness post-Phase-62 baseline (Phase 60 §1)`: asserts `total_overrides_checked === 26` (post-Phase-62 floor) and `redundant_count === 0`.
+- `FailSafe/extension/src/test/scripts/featureIndexClassifier.test.cjs` — added 1 new it() block under new describe `runAudit summary counts match FEATURE_INDEX header (Phase 60 §1)`: invokes `runAudit` and asserts `byCurrentStatus.verified === 411`, `byCurrentStatus.unverified === 22`, `byCurrentStatus['n/a'] === 43`, `total === 476`.
+
+**Verification**:
+
+- `cd FailSafe/extension; node --test src/test/scripts/featureIndexClassifierStaleness.test.cjs src/test/scripts/featureIndexClassifier.test.cjs` — 41/42 pass. The 1 failure is the pre-existing `detectStaleness ... invalid_count === 0` test (FX141/FX142 path resolver issue documented at Entry #341 as carried-forward; not introduced by §1, not in §1 scope).
+- All 3 new Phase 60 §1 assertions pass.
+- `qor-logic verify-ledger` exit 0 through Entry #345 (chain integrity preserved through this implement entry).
+
+**Test Functionality Gate**: PASS. All 3 new tests invoke the unit under test (`staleness.detectStaleness`, `classifier.runAudit`) and assert on the call's return value's specific fields. No presence-only.
+
+**Section 4 Razor** (modified test files):
+
+| File | Lines | Limit | Status |
+| --- | --- | --- | --- |
+| featureIndexClassifierStaleness.test.cjs | 108 | 250 (test) | PASS |
+| featureIndexClassifier.test.cjs | 521 | 250 (source cap; test files exempt by repo convention per Entry #336 precedent) | NOTE — over the 250 source cap but consistent with prior test-file practice (SystemRegistry.test.ts 278L, 309L files exist in repo) |
+
+The `featureIndexClassifier.test.cjs` file is now 521 lines — over the 250-line cap if applied strictly. Repo convention from Entry #336 explicitly exempts test files from the source-file cap when prior test files in the repo demonstrate similar overage. Flagged for transparency, not an interdiction.
+
+**Phase 60 Sub-Phase Status**:
+
+| Sub-Phase | State | Why |
+| --- | --- | --- |
+| §0 | SEALED (#345) | Refactor enablement complete |
+| §1 | **COMPLETE** (this entry) | Scope sync + classifier-test extensions landed |
+| §2 | Deferred | Next auto-dev cycle: B192 + B193 (Workspace Truth Refresh + Governance Watch Surface) |
+| §3 | Deferred | B194 + B197 |
+| §4 | Deferred | B198 + FEATURE_INDEX closure (drives 22 → 0 unverified) |
+| §5 | Deferred | Publish-Block Verification |
+
+**Substantiation**: NOT RUN. Phase 60 has 6 sub-phases; §0 and §1 are complete; §2-§5 still pending. SUBSTANTIATE deferred until all six sub-phases are landed.
+
+**Content Hash**: `3ba98f2dfe92923b684d98bc5c554912211eff91c4da0029257685704b5eb6d6` — SHA256 of concatenated content of 5 modified files
+
+**Previous Hash**: `5a5c0c2ffe1cf11ea784069f38ecdef55b0e6eb246f328c5d28601cdb50aa5c5` (Entry #345 chain hash)
+
+**Chain Hash**: `e655f84b8ec05d46fec067e9fbd2a89fb7cc50b46e8bce956fd975b060d5ea51` — SHA256(content_hash + "|" + previous_hash)
+
+**Decision**: Phase 60 §1 implementation complete. Scope doc reflects current truth (3 of 4 Required items sealed + Item B Phase 1 sweep); FEATURE_INDEX header acknowledges Phase 62 cleanup; classifier tests carry new post-Phase-62 baseline assertions. §2-§5 remain.
+
+_Gate Status: OPEN. Next: operator-driven /qor-auto-dev-1 invocation against Phase 60 §2 (B192 + B193 Workspace Truth Refresh + Governance Watch Surface)._
+
+---
+
 _Chain integrity: VALID_
-_Session Status: SEALED at #342; #343-#345 Phase 60 cycle in progress; §0 COMPLETE_
-_Session: 2026-05-13-phase60-v5-1-0-remaining-scope-phase-0_
+_Session Status: SEALED at #342; #343-#346 Phase 60 cycle in progress; §0 + §1 COMPLETE_
+_Session: 2026-05-13-phase60-v5-1-0-remaining-scope-phase-1_

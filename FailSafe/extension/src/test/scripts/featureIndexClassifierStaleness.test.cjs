@@ -93,3 +93,17 @@ describe('detectStaleness against current FEATURE_INDEX (E7 baseline)', () => {
     assert.ok(Array.isArray(result.findings), 'findings should be an array');
   });
 });
+
+describe('detectStaleness post-Phase-62 baseline (Phase 60 §1)', () => {
+  it('invokes detector and asserts total_overrides_checked === 26 after FX128 + FX359 removal', () => {
+    const result = staleness.detectStaleness(FEATURE_INDEX_PATH, REPO_ROOT);
+    assert.equal(result.summary.total_overrides_checked, 26,
+      `expected 26 overrides after Phase 62 cleanup; got ${result.summary.total_overrides_checked}`);
+  });
+
+  it('invokes detector and asserts redundant_count === 0 after Phase 62 cleanup', () => {
+    const result = staleness.detectStaleness(FEATURE_INDEX_PATH, REPO_ROOT);
+    assert.equal(result.summary.redundant_count, 0,
+      `expected 0 redundant after Phase 62 cleanup; got ${result.summary.redundant_count}: ${JSON.stringify(result.findings.filter(f => f.kind === 'redundant'))}`);
+  });
+});
