@@ -4,15 +4,17 @@
 
 export function drawSidebarVisualizer(analyser, isVoiceActive) {
   const cvs = document.querySelector('.audio-visualizer-canvas');
-  if (!cvs) return;
+  if (!cvs) return { destroy() {} };
   const ctx = cvs.getContext('2d');
   const buf = new Uint8Array(analyser.frequencyBinCount);
   const rect = cvs.getBoundingClientRect();
   cvs.width = rect.width || 200;
   cvs.height = rect.height || 24;
+  const handle = { rafId: 0, cancelled: false };
   const draw = () => {
-    if (!isVoiceActive()) { ctx.clearRect(0, 0, cvs.width, cvs.height); return; }
-    requestAnimationFrame(draw);
+    if (handle.cancelled) return;
+    if (!isVoiceActive()) { ctx.clearRect(0, 0, cvs.width, cvs.height); handle.rafId = 0; return; }
+    handle.rafId = requestAnimationFrame(draw);
     analyser.getByteTimeDomainData(buf);
     ctx.clearRect(0, 0, cvs.width, cvs.height);
     ctx.lineWidth = 2; ctx.strokeStyle = '#10b981'; ctx.beginPath();
@@ -26,4 +28,10 @@ export function drawSidebarVisualizer(analyser, isVoiceActive) {
     ctx.stroke();
   };
   draw();
+  return {
+    destroy() {
+      handle.cancelled = true;
+      if (handle.rafId) { cancelAnimationFrame(handle.rafId); handle.rafId = 0; }
+    }
+  };
 }

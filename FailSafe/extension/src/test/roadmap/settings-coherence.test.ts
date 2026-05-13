@@ -201,3 +201,57 @@ suite('Settings Track C — governance mode + qor version surface', () => {
     assert.match(html, /Installed:\s*<strong>not installed<\/strong>/);
   });
 });
+
+// ---------- B198 additions: subscription hygiene (idempotent bind) ----------
+
+suite('Settings B198 — duplicate-render listener hygiene', () => {
+  test('chip click fires store.setTheme EXACTLY ONCE after two renders', async () => {
+    const dom = new JSDOM('<!DOCTYPE html><html><body><div id="set-root"></div></body></html>', { url: 'http://localhost:9999' });
+    const prevWin = (global as any).window;
+    const prevDoc = (global as any).document;
+    (global as any).window = dom.window;
+    (global as any).document = dom.window.document;
+    try {
+      let setThemeCalls = 0;
+      const store = {
+        ...trackCStore(),
+        setTheme: () => { setThemeCalls++; },
+      };
+      // @ts-expect-error untyped JS module
+      const mod = await import('../../roadmap/ui/modules/settings.js');
+      const r = new mod.SettingsRenderer('set-root', { store });
+      const hub = { governanceModeState: { mode: 'observe', defaulted: false } };
+      r.render(hub);
+      r.render(hub);
+      const chip = dom.window.document.querySelector('.cc-theme-select') as any;
+      assert.ok(chip, 'theme chip must exist after render');
+      // Sentinel must be present after first bind, preventing duplicate wiring.
+      assert.equal(chip.getAttribute('data-cc-bound'), '1', 'chip must carry bind sentinel');
+      chip.click();
+      assert.equal(setThemeCalls, 1,
+        `store.setTheme must be invoked exactly once per click after re-render (got ${setThemeCalls})`);
+    } finally {
+      (global as any).window = prevWin;
+      (global as any).document = prevDoc;
+    }
+  });
+
+  test('destroy() is idempotent — second call does not throw', async () => {
+    const dom = new JSDOM('<!DOCTYPE html><html><body><div id="set-root"></div></body></html>', { url: 'http://localhost:9999' });
+    const prevWin = (global as any).window;
+    const prevDoc = (global as any).document;
+    (global as any).window = dom.window;
+    (global as any).document = dom.window.document;
+    try {
+      // @ts-expect-error untyped JS module
+      const mod = await import('../../roadmap/ui/modules/settings.js');
+      const r = new mod.SettingsRenderer('set-root', { store: trackCStore() });
+      r.render({ governanceModeState: { mode: 'observe', defaulted: true } });
+      r.destroy();
+      assert.doesNotThrow(() => r.destroy(), 'second destroy must not throw');
+    } finally {
+      (global as any).window = prevWin;
+      (global as any).document = prevDoc;
+    }
+  });
+});

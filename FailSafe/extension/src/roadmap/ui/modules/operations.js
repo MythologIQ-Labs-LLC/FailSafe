@@ -12,13 +12,17 @@ export class OperationsRenderer {
 
   async render(hubData) {
     if (!this.container) return;
-    this.hubData = hubData;
+    // B198: each render consumes the freshest hub argument rather than a
+    // cached payload baked in at construction. Roadmap is fetched lazily once
+    // (it is static across a session) but hub-derived state — including
+    // ledgerSummary overrides — is re-read on every call.
+    this.hubData = hubData || {};
     if (!this.roadmap && this.client) {
       this.roadmap = await this.client.fetchRoadmap();
     }
-    const run = hubData.runState || {};
-    const checks = Object.values(hubData.recentCheckpoints || {});
-    const sentinel = hubData.sentinelStatus || {};
+    const run = this.hubData.runState || {};
+    const checks = Object.values(this.hubData.recentCheckpoints || {});
+    const sentinel = this.hubData.sentinelStatus || {};
 
     this.container.innerHTML = `
       ${this.renderMissionStrip(run, sentinel)}
@@ -67,7 +71,11 @@ export class OperationsRenderer {
     // Centralized normalization (Plan A Phase 2 / issue #47): never render
     // mathematically impossible progress — completed always implies at least
     // one planned phase even if the ledger lacks gate-tribunal entries.
-    const summary = this.roadmap?.ledgerSummary
+    // B198: hub-supplied ledgerSummary takes precedence on every render so
+    // re-renders with updated hub data reflect the latest counts even when
+    // the cached roadmap is still in memory.
+    const summary = this.hubData?.ledgerSummary
+      ?? this.roadmap?.ledgerSummary
       ?? (this.roadmap?.phases ? {
         plansStarted: this.roadmap.phases.length,
         sessionsCompleted: this.roadmap.phases.filter(p => p.status === 'complete').length,
@@ -187,5 +195,17 @@ export class OperationsRenderer {
     `;
   }
 
-  destroy() { if (this.container) this.container.innerHTML = ''; }
+  /**
+   * B198: idempotent teardown. Clears the container DOM (which detaches all
+   * listeners bound via bindActions), drops cached hub + roadmap references
+   * so any re-bind on a subsequent re-init starts from a clean slate, and is
+   * safe to call multiple times — second invocation is a no-op.
+   */
+  destroy() {
+    if (this._destroyed) return;
+    if (this.container) this.container.innerHTML = '';
+    this.hubData = null;
+    this.roadmap = null;
+    this._destroyed = true;
+  }
 }

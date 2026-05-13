@@ -63,6 +63,7 @@ export class BrainstormRenderer {
     };
     this.webLlm.init().then(() => this.llmStatus.render(this.client)).catch(() => this.llmStatus.render(this.client));
     this._heartbeatInterval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       this.webLlm.recheckNative().then(() => this.llmStatus.render(this.client));
     }, 30000);
     this._wireSettingsBridges();
@@ -117,7 +118,8 @@ export class BrainstormRenderer {
   }
 
   _initVisualizer(analyser) {
-    drawSidebarVisualizer(analyser, () => this.voice.voiceActive);
+    this._visualizerHandle?.destroy?.();
+    this._visualizerHandle = drawSidebarVisualizer(analyser, () => this.voice.voiceActive);
   }
 
   initCanvas() {
@@ -233,7 +235,8 @@ export class BrainstormRenderer {
   onEvent(evt) { this.graph.onEvent(evt); }
 
   destroy() {
-    if (this._heartbeatInterval) clearInterval(this._heartbeatInterval);
+    if (this._heartbeatInterval) { clearInterval(this._heartbeatInterval); this._heartbeatInterval = null; }
+    this._visualizerHandle?.destroy?.(); this._visualizerHandle = null;
     for (const [name, fn] of Object.entries(this._settingsBridges || {})) window.removeEventListener(name, fn);
     if (this._wakeHandler) window.removeEventListener('failsafe:wake-word-changed', this._wakeHandler);
     if (this._undoKeyHandler) document.removeEventListener('keydown', this._undoKeyHandler);

@@ -2,11 +2,18 @@
 // Theme selector, current config display.
 import { renderVoiceSettings, bindVoiceSettings } from './voice-settings.js';
 import { renderInstallSkillsCard, bindInstallSkillsCard } from './install-skills-card.js';
-import {
-  renderNotificationsCard, renderBrainstormCard,
-  bindNotificationsCard, bindBrainstormCard,
-} from './settings-extras.js';
+import { renderNotificationsCard, renderBrainstormCard, bindNotificationsCard, bindBrainstormCard } from './settings-extras.js';
 import { escapeHtml } from './brainstorm-templates.js';
+
+// Sentinel attr name used across all bind paths to make listener wiring
+// idempotent: a node carrying data-cc-bound="1" already has its listener
+// attached and must NOT receive a second addEventListener of the same kind.
+const BOUND_ATTR = 'data-cc-bound';
+function bindOnce(node, evt, handler) {
+  if (!node || node.getAttribute?.(BOUND_ATTR) === '1') return;
+  node.addEventListener(evt, handler);
+  node.setAttribute?.(BOUND_ATTR, '1');
+}
 
 const THEMES = [
   { id: 'pegasus', name: 'Pegasus', label: 'Light', swatch: '#3b82f6' },
@@ -67,7 +74,7 @@ export class SettingsRenderer {
     const card = this.container?.querySelector('#cc-governance-mode');
     if (!card) return;
     card.querySelectorAll('[data-governance-mode]').forEach((btn) => {
-      btn.addEventListener('click', () => {
+      bindOnce(btn, 'click', () => {
         const mode = btn.getAttribute('data-governance-mode');
         if (!mode) return;
         // Host command opens a QuickPick; arg is advisory pre-selection only.
@@ -78,34 +85,22 @@ export class SettingsRenderer {
 
   _bindFailSafeProActions() {
     const aboutLink = this.container?.querySelector('[data-action="open-failsafe-pro-about"]');
-    if (!aboutLink) return;
-    aboutLink.addEventListener('click', (e) => {
-      // In webview contexts the anchor + target=_blank handles navigation; the
-      // command-uri path provides VS Code-native external open as a backup.
-      // Either way the destination is the About URL, never the download URL.
-      try {
-        e.preventDefault();
-        window.location.href = 'command:failsafe.openFailSafeProAbout';
-      } catch {
-        window.open('https://mythologiq.studio/products/failsafe-pro', '_blank', 'noopener');
-      }
+    // Webview anchor + target=_blank handles navigation; command-uri provides
+    // VS Code-native external open as backup. Destination is About, never download.
+    bindOnce(aboutLink, 'click', (e) => {
+      try { e.preventDefault(); window.location.href = 'command:failsafe.openFailSafeProAbout'; }
+      catch { window.open('https://mythologiq.studio/products/failsafe-pro', '_blank', 'noopener'); }
     });
   }
 
   _bindQorLogicActions() {
     if (!this.container) return;
+    // onFinishFetch is a no-op: WebSocket onEvent below is authoritative
+    // for skills.install.progress + skills.install.complete events.
     bindInstallSkillsCard(this.container, {
-      onStart: () => {
-        this._installState = { running: true, steps: [], lastReport: null };
-      },
-      onFinishFetch: () => {
-        // The progress + complete events arrive via WebSocket onEvent below;
-        // they are the authoritative source. The fetch-resolve here just
-        // marks the request flight done.
-      },
-      onError: () => {
-        this._installState = { ...this._installState, running: false };
-      },
+      onStart: () => { this._installState = { running: true, steps: [], lastReport: null }; },
+      onFinishFetch: () => {},
+      onError: () => { this._installState = { ...this._installState, running: false }; },
     });
   }
 
@@ -121,7 +116,7 @@ export class SettingsRenderer {
           <input type="checkbox" class="cc-hook-toggle" ${enabled ? 'checked' : ''} />
           <span style="font-size:0.85rem">FailSafe governance hooks</span>
         </label>`;
-      slot.querySelector('.cc-hook-toggle')?.addEventListener('change', (e) => this._toggleHook(e.target));
+      bindOnce(slot.querySelector('.cc-hook-toggle'), 'change', (e) => this._toggleHook(e.target));
     } catch {
       slot.remove();
     }
@@ -150,7 +145,7 @@ export class SettingsRenderer {
 
   bindChips() {
     this.container.querySelectorAll('.cc-theme-select').forEach(chip => {
-      chip.addEventListener('click', () => {
+      bindOnce(chip, 'click', () => {
         if (!this.store) return;
         this.store.setTheme(chip.dataset.theme);
         this.container.querySelectorAll('.cc-theme-select').forEach(c => c.classList.remove('active'));
@@ -201,7 +196,12 @@ export class SettingsRenderer {
     slot.replaceWith(next);
     this._bindQorLogicActions();
   }
-  destroy() { if (this.container) this.container.innerHTML = ''; }
+  destroy() {
+    if (this._destroyed) return;
+    if (this.container) this.container.innerHTML = '';
+    this._lastHub = {}; this._installState = { running: false, steps: [], lastReport: null };
+    this._destroyed = true;
+  }
 }
 
 const MODE_OPTIONS = [{ id: 'observe', label: 'Observe' }, { id: 'assist', label: 'Assist' }, { id: 'enforce', label: 'Enforce' }];

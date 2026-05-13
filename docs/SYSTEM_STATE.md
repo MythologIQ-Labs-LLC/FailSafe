@@ -1,7 +1,70 @@
 # SYSTEM STATE
 
 **Last Updated:** 2026-05-13
-**Version:** v5.1.10-baseline plus Phase 60 §0 refactor enablement plus §1 scope sync plus §2 workspace truth refresh plus §3 governance mode escalation + install version floor plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups (workspace-only label; no `package.json` bump)
+**Version:** v5.1.10-baseline plus Phase 60 §0-§4-partial plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups (workspace-only label; no `package.json` bump)
+
+---
+
+## 2026-05-13 - Phase 60 §4 UI Subscription Hygiene (partial; FEATURE_INDEX-closure deferred)
+
+Plan: `docs/plan-qor-phase60-v5-1-0-remaining-scope.md` (PASS audit #344; §0-§3 sealed #345-#348). Sub-phase §4 of 6. Addresses **B198 (UI subscription hygiene)** in full; **Remaining FEATURE_INDEX closure deferred to §4 continuation / B199 Phase 2-8** per the plan's own multi-week framing.
+
+### Deliverables (this cycle)
+
+**Track A — Settings + Operations hygiene** (refactoring-specialist subagent):
+- `settings.js` (250L; at cap; compressed in place): NEW `bindOnce(node, evt, handler)` helper enforces per-element sentinel via `data-cc-bound="1"`. All 5 internal binders route through it (governance mode, FailSafe Pro, chips, hook toggle, install card). External binder modules unchanged (already idempotent under the innerHTML-rewrite pattern). Pre-existing operator edits + §3 governance/version-warning cards preserved.
+- `operations.js` (211L; was 191L): NEW idempotent `destroy()` (guarded by `_destroyed` flag); clears `container.innerHTML`, nulls cached `hubData`/`roadmap`. `render()` hub-fresh-first chain: `this.hubData?.ledgerSummary ?? this.roadmap?.ledgerSummary` — hub-supplied summary overrides cached roadmap on re-render.
+- `settings-coherence.test.ts` (257L; was 203L): added duplicate-render listener hygiene assertions.
+- `operations-phase-progress.test.ts` (112L; was 58L): added fresh-hub-data assertion (render v1 + render v2 → DOM reflects v2 not v1).
+
+**Track B — Brainstorm hygiene** (refactoring-specialist subagent):
+- `brainstorm.js` (247L; was 244L; +3): NEW `document.hidden` check inside heartbeat callback — when tab hidden, skip `recheckNative()`; next visible-tab tick resumes normally. Heartbeat-interval handle nulled in `destroy()` after clearing.
+- `brainstorm-visualizer.js` (37L; was 29L; +8): `drawSidebarVisualizer()` now returns `{ destroy(): void }`; `destroy()` sets `cancelled=true` AND calls `cancelAnimationFrame(rafId)` on in-flight handle.
+- `BrainstormRenderer.destroy()` extended: invokes the visualizer handle's `destroy()`, nulls reference, plus existing teardown of settings-bridges/wake/undo-key/keyboard/voice/webllm/graph/container.
+- `brainstorm-listener-hygiene.test.ts` (220L; NEW): 6 invoking assertions covering rAF handle equality, hidden-tab gating cessation (recheckCalls stays 0 while hidden; ticks to 1 when visible), `clearInterval` handle-match, settings-bridge `removeEventListener` identity (not name-only), idempotent destroy safety.
+
+### Deferred from §4 (explicitly documented per plan's multi-week framing)
+
+The plan §4 names broader test-authoring work which represents B199 Phase 2-8 scope (2-3 weeks engineering per BACKLOG B199):
+
+| Plan §4 deliverable | Status | Notes |
+| --- | --- | --- |
+| `toast-severity-gating.test.ts` | ALREADY COVERED | Pre-existing file with comprehensive severity gating via `showStatusGated` in `notifications.js`; not in this cycle scope |
+| `console-routes.test.ts` GET `/console/agents` case | Deferred | Authoring + route validation; B199 Phase 3 surface |
+| `SreRoute.test.ts` Activity Feed ALLOW/DENY/AUDIT rows | Deferred | Authoring; B199 Phase 4 surface |
+| `economics-dashboard.test.ts` NEW token dashboard | Deferred | Authoring; B199 Phase 5 surface |
+| `WorkspaceMigration.test.ts` FX435 observable output | Deferred | Authoring; B199 Phase 6 surface |
+| Drive 22 → 0 unverified entries (per-row test authoring) | Deferred to B199 Phase 2-8 | Multi-cycle bulk work; PUBLISH_BLOCK Condition 1 lifts when complete |
+
+PUBLISH_BLOCK Condition 1 (0 unverified) remains binding; §5 Publish-Block Verification cannot run until the unverified bucket is closed.
+
+### Functional verification
+
+- `npx tsc --noEmit -p ./`: exit 0 (clean across all §4 changes).
+- Runtime tests deferred: pre-existing jsdom 26 / cssstyle / @csstools/css-calc ESM-CJS interop regression + `phase-progress.js` ESM/CJS interop block bare-mocha invocation. Tests compile to JS cleanly with sound assertions; will run under vscode-test harness when the workspace infra regression is addressed.
+- 7 modified/new files in scope; all Section 4 Razor compliant.
+- `qor-logic verify-ledger`: Entries #331-#348 all OK (chain integrity preserved through this implement).
+
+### Section 4 Razor
+
+| File | Lines | Limit | Status |
+| --- | --- | --- | --- |
+| settings.js | 250 | 250 | PASS (at cap; further work in §4 continuation needs more compression) |
+| operations.js | 211 | 250 | PASS |
+| brainstorm.js | 247 | 250 | PASS |
+| brainstorm-visualizer.js | 37 | 250 | PASS |
+
+### Phase 60 sub-phase status
+
+| Sub-Phase | State | Ledger |
+| --- | --- | --- |
+| §0 Refactor Enablement | SEALED | #345 |
+| §1 Scope Sync + Coverage Ledger | SEALED | #346 |
+| §2 Workspace Truth Refresh + Governance Watch | SEALED | #347 |
+| §3 Governance Mode Escalation + Install Version Floor | SEALED | #348 |
+| §4 UI Subscription Hygiene (B198) | **THIS COMMIT** | #349 |
+| §4 continuation — Remaining FEATURE_INDEX Closure | Deferred (B199 Phase 2-8 multi-cycle) | future |
+| §5 Publish-Block Verification | Deferred (gated on §4-continuation 0-unverified) | future |
 
 ---
 
