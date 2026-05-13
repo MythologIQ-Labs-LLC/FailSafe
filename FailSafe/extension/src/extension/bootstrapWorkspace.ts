@@ -4,18 +4,8 @@ import * as path from "path";
 import { WorkspaceMigration } from "../qorelogic/WorkspaceMigration";
 import type { IQorLogicPackageInstaller } from "../qorlogic/QorLogicPackageInstaller";
 import type { QorLogicSkillIngestor } from "../qorlogic/QorLogicSkillIngestor";
-
-export interface BootstrapStep {
-  name: string;
-  status: "ok" | "skipped" | "performed" | "failed" | "deferred";
-  detail?: string;
-}
-
-export interface BootstrapReport {
-  ok: boolean;
-  steps: BootstrapStep[];
-  summary: string;
-}
+import { assembleReport, type BootstrapStep, type BootstrapReport } from "./bootstrapAssembleReport";
+export { assembleReport, type BootstrapStep, type BootstrapReport };
 
 export interface BootstrapDeps {
   context: vscode.ExtensionContext;
@@ -162,19 +152,3 @@ function skillsAlreadyIngested(workspaceRoot: string): boolean {
   return false;
 }
 
-function assembleReport(steps: BootstrapStep[]): BootstrapReport {
-  const failed = steps.filter((s) => s.status === "failed");
-  const performed = steps.filter((s) => s.status === "performed");
-  const deferred = steps.filter((s) => s.status === "deferred");
-  let summary: string;
-  if (failed.length > 0) {
-    summary = `Bootstrap completed with ${failed.length} failure(s): ${failed.map((s) => s.name).join(", ")}`;
-  } else if (performed.length === 0 && deferred.length === 0) {
-    summary = "Bootstrap: workspace ready (all infrastructure already present)";
-  } else if (performed.length > 0) {
-    summary = `Bootstrap performed: ${performed.map((s) => s.name).join(", ")}`;
-  } else {
-    summary = `Bootstrap: ${deferred.length} step(s) deferred`;
-  }
-  return { ok: failed.length === 0, steps, summary };
-}

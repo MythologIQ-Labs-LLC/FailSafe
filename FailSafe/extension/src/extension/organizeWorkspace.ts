@@ -188,9 +188,32 @@ async function pickProposals(proposals: OrganizeProposal[]): Promise<OrganizePro
   return picked.map((q) => q.proposal);
 }
 
+export interface NextStep {
+  label: string;
+  command?: string;
+}
+
+export interface OrganizeCallbacks {
+  onToast?: (message: string) => void;
+  onHubRefresh?: (reason: string) => void;
+  onNextStep?: (suggestion: NextStep) => void;
+}
+
+export function computeNextStep(report: OrganizeReport): NextStep | null {
+  if (report.executed.length === 0) return null;
+  if (report.executed.some((l) => l.includes("governance/plans"))) {
+    return { label: "Now run Initialize to bootstrap qor-logic + skills", command: "failsafe.bootstrap" };
+  }
+  if (report.executed.some((l) => l.startsWith("Add"))) {
+    return { label: "Review the .gitignore patches and commit when ready" };
+  }
+  return { label: `Organize applied ${report.executed.length} change(s)` };
+}
+
 export async function runOrganize(
   workspaceRoot: string,
   output: vscode.OutputChannel,
+  callbacks: OrganizeCallbacks = {},
 ): Promise<OrganizeReport> {
   const archetype = detectArchetype(workspaceRoot);
   const proposals = buildProposals(workspaceRoot);
@@ -198,5 +221,14 @@ export async function runOrganize(
   const { executed, skipped } = await executeProposals(selected);
   const report: OrganizeReport = { archetype, proposals, executed, skipped };
   summarize(output, report);
+  if (executed.length > 0) {
+    const toast = skipped.length === 0
+      ? `Organize: applied ${executed.length} change(s)`
+      : `Organize: applied ${executed.length}, ${skipped.length} skipped`;
+    callbacks.onToast?.(toast);
+    callbacks.onHubRefresh?.("workspace-organized");
+  }
+  const next = computeNextStep(report);
+  if (next) callbacks.onNextStep?.(next);
   return report;
 }

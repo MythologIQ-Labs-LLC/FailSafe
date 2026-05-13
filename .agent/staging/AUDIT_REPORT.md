@@ -1,18 +1,17 @@
-# AUDIT REPORT — plan-qor-v5-1-0-publish-block-lift (re-audit)
+# AUDIT REPORT — plan-qor-organize-ux-hotfix (re-audit)
 
 **Date**: 2026-05-14
-**Auditor**: The Qor-logic Judge (solo mode — Codex adversarial plugin not declared in this host)
-**Plan**: `docs/plan-qor-v5-1-0-publish-block-lift.md`
-**Mirror**: `.failsafe/governance/plans/plan-qor-v5-1-0-publish-block-lift.md`
-**Risk Grade**: L2
-**Mode**: degraded — `.qor/` runtime uninitialized; reliability gates NOOP
-**Audit cycle**: re-audit (V1 from prior audit Entry #355 was Governor-amended)
+**Auditor**: The Qor-logic Judge (solo mode — Codex adversarial plugin not declared)
+**Plan**: `docs/plan-qor-organize-ux-hotfix.md` (amended; mirror at `.failsafe/governance/plans/`)
+**Risk Grade**: L1 (UX hotfix)
+**Mode**: degraded — `.qor/` uninitialized; reliability gates NOOP
+**Audit cycle**: re-audit (V1 from Entry #361 was Governor-amended per Path C)
 
 ---
 
 ## Verdict: **PASS**
 
-V1 (`infrastructure-mismatch`) from prior audit (Entry #355) resolved by Governor amendment. All other passes unchanged from the prior audit. No new findings introduced by the amendment. Implementation gate UNLOCKED.
+V1 (`specification-drift` — Phase 2 sidebar helper deployment mechanism unspecified) resolved by Governor adopting Path C: helpers relocated host-side to a new pure TypeScript module `FailSafe/extension/src/roadmap/sidebarInitializeLogic.ts` with vscode-test mocha unit tests at `src/test/roadmap/sidebarInitializeLogic.test.ts`. The dual-deployment ambiguity is structurally eliminated — there is no `.js` file in webview-or-host limbo; the unit-under-test is the actual deployed code path. All other passes unchanged from the prior audit. Implementation gate UNLOCKED.
 
 ---
 
@@ -23,38 +22,54 @@ V1 (`infrastructure-mismatch`) from prior audit (Entry #355) resolved by Governo
 | Prompt Injection (Phase 53) | PASS | No canaries in amended plan. |
 | Security L3 | PASS | Unchanged. |
 | OWASP Top 10 (A03/A04/A05/A08) | PASS | Unchanged. |
-| Ghost UI | PASS — N/A | Unchanged. |
-| Section 4 Razor | PASS | Unchanged; amendment is documentation-only (Phase 4 + Open Question Q3). No new code surface. |
-| Test Functionality (SG-035) | PASS | Test plan unchanged; 10/10 cases invoke unit + assert on output. |
-| Dependency Audit | PASS | Zero new deps; amendment did not introduce any. |
-| Macro-Level Architecture | PASS | Unchanged. |
-| **Infrastructure Alignment (Phase 37)** | **PASS** | Phase 4 now cites `.github/workflows/release.yml` (verified on disk) with the two job names `publish-vscode` and `publish-openvsx` (verified via `grep -E "vsce\|ovsx\|publish" .github/workflows/release.yml`). Open Question Q3 narrative now matches single-workflow reality. |
-| Orphan Detection | PASS | Unchanged. |
-| Documentation Drift (Phase 28 advisory) | clean | `doc_tier: system` declared; 4 `terms_introduced` with resolving `home:` paths; `boundaries` intact. |
+| Ghost UI | PASS | All wiring backed by real handlers (host TS switch, `vscode.commands.executeCommand`, webview `postMessage` round-trip). |
+| Section 4 Razor | PASS | `decideSidebarClick` ~12 lines, nesting ≤2, single ternary. Host `case "sidebar.click"` handler ~15 lines, nesting ≤3 (outer message switch + inner decision switch — same depth, TypeScript exhaustiveness over the discriminated union enforces growth in compile-time). Webview JS ~25 lines, no nested ternaries. New file `sidebarInitializeLogic.ts` ~25 lines total — far under the 250-line cap. |
+| Test Functionality (SG-035) | PASS | See detailed table below. All 14 cases (6 sidebar + 4 assembleReport + 4 organize) invoke the unit and assert on returned/observable output. The Phase 2 "tests-the-actual-deployed-code-path" caveat from the first audit is removed — Path C unifies test target + production. |
+| Dependency Audit | PASS | Zero new npm dependencies. |
+| Macro-Level Architecture | PASS | `sidebarInitializeLogic.ts` has a single responsibility (decision function), zero external imports (no `vscode`, no Node stdlib), depended on only by `FailSafeSidebarProvider.ts` and its test. Cleaner separation than the prior Path B/A alternatives would have produced. |
+| **Infrastructure Alignment (Phase 37)** | **PASS** | All cited paths verified: `bootstrapWorkspace.ts`, `organizeWorkspace.ts`, `bootstrapServers.ts`, `FailSafeSidebarProvider.ts`, `ConsoleServer.ts` exist; `HubSnapshotService.test.ts` (cited as test-convention reference) exists. New files (`sidebarInitializeLogic.ts`, `sidebarInitializeLogic.test.ts`) correctly declared NEW in Affected Files. The dual-deployment claim from V1 is gone — no contradiction between "lives in a file" and "inlined into template literal." |
+| Orphan Detection | PASS | `sidebarInitializeLogic.ts` will be imported by `FailSafeSidebarProvider.ts` (the host case "sidebar.click" calls `decideSidebarClick`). Connected to build path via the import chain. `sidebarInitializeLogic.test.ts` runs under `npm test` (existing test surface). No orphans. |
+| Documentation Drift (Phase 28 advisory) | clean | Unchanged from first audit. |
 
 ---
 
-## Amendment Verification
+## V1 Amendment Verification
 
-| Required change | Applied | Verification |
+| Audit demand (Entry #361 V1) | Plan-amended state | Verified |
 |---|---|---|
-| Phase 4 "Marketplace dispatch" line to cite `.github/workflows/release.yml` + `publish-vscode` + `publish-openvsx` job names | ✓ | `grep -n "release.yml" docs/plan-qor-v5-1-0-publish-block-lift.md` → matches lines 38 + 174 |
-| Open Question Q3 to drop "dual-file" framing | ✓ | Line 38 now narrates "single workflow, two jobs" |
-| Mirror sync to `.failsafe/governance/plans/` | ✓ | `cp` confirmed; `diff` would show no delta |
-| Zero residual references to `marketplace-publish.yml` or `ovsx-publish.yml` | ✓ | `grep -n "marketplace-publish\|ovsx-publish\.yml" docs/plan-qor-v5-1-0-publish-block-lift.md` → empty |
+| Drop `src/roadmap/ui-helpers/sidebar-initialize.js` from Affected Files | `grep -n "ui-helpers" docs/plan-qor-organize-ux-hotfix.md` returns empty | ✓ |
+| Drop `sidebarInitializeReplyContract.test.cjs` (old test name) | `grep` returns empty | ✓ |
+| Add new host-side TS module `sidebarInitializeLogic.ts` | Plan Phase 2 declares NEW; module body provided inline | ✓ |
+| Add `.test.ts` running under vscode-test mocha | Plan declares `src/test/roadmap/sidebarInitializeLogic.test.ts`; test mechanics paragraph cites `HubSnapshotService.test.ts` as the convention | ✓ |
+| Commit to Path C in `## Changes` | Plan Phase 2 opens with "Approach (V1 Path C from audit Entry #361 V1 remediation)" | ✓ |
+| Mirror synced | `.failsafe/governance/plans/plan-qor-organize-ux-hotfix.md` updated via `cp` | ✓ |
+| CI Commands reflect new test runner | Plan `## CI Commands` separates `node --test` (Phase 1+3 .cjs) from `npm test -- --grep sidebarInitializeLogic` (Phase 2 .ts) | ✓ |
+| Open Question 1 resolved | Q1 marked "Settled" with the chosen message namespace `failsafe.button.update` and explicit reuse rationale | ✓ |
 
 ---
 
-## Test Functionality Audit (SG-035) — unchanged
+## Detailed Test Functionality Audit (SG-035)
 
-All 10 test descriptions from the prior audit remain functional (invoke unit + assert on output). The amendment did not touch any test description.
+### Phase 2 (new — replaces prior 5 cases with 6 host-side cases):
 
-| Test file (plan source) | Functional acceptance |
-|---|---|
-| `playwrightSpecInventory.test.cjs` (3 cases) | PASS |
-| `browserVerificationSchema.test.cjs` (2 cases — valid fixture + 5 malformed variants) | PASS |
-| `publishBlockLiftCommit.test.cjs` (3 cases — all-met / idempotent / throw) | PASS |
-| `releaseRunbookIntegrity.test.cjs` (2 cases — structure parse + trip-on-broken-script) | PASS |
+| Test description | Invokes unit? | Asserts on output? | Verdict |
+|---|---|---|---|
+| `decideSidebarClick("Organize", new Set(["failsafe.organize"]))` → `{ kind: "run-organize" }` | yes | yes | PASS |
+| `decideSidebarClick("Organize", new Set([]))` → still `{ kind: "run-organize" }` (label-only decision) | yes | yes | PASS |
+| `decideSidebarClick("Initialize", new Set(["failsafe.bootstrap"]))` → `{ kind: "run-bootstrap", postUpdate: {...persistState:true} }` | yes | yes | PASS |
+| `decideSidebarClick("Initialize", new Set([]))` → `{ kind: "bootstrap-not-ready" }` | yes | yes | PASS |
+| `decideSidebarClick("Initialize", new Set(["unrelated.command"]))` → `{ kind: "bootstrap-not-ready" }` | yes | yes | PASS |
+| Idempotence: two invocations with same inputs return deep-equal output; input Set not mutated | yes | yes (both on return value and on input invariant) | PASS |
+
+### Phase 1 (unchanged — 4 cases):
+
+All four `bootstrapWorkspaceAssembleReport.test.cjs` cases unchanged from prior audit; all PASS.
+
+### Phase 3 (unchanged — 4 cases):
+
+All four `organizeWorkspaceCallbacks.test.cjs` cases unchanged from prior audit; all PASS.
+
+**Total: 14/14 test cases pass SG-035 acceptance** — every test invokes the unit under test and asserts on returned values, observable mutations, callback invocations, or thrown errors.
 
 ---
 
@@ -62,25 +77,29 @@ All 10 test descriptions from the prior audit remain functional (invoke unit + a
 
 <!-- qor:veto-pattern-advisory -->
 
-Single-iteration audit loop: VETO at Entry #355 → PASS at Entry #356 via Governor amendment. **No repeated-VETO pattern detected.** Cycle-count escalator NOOP (`.qor/` degraded); manual scan of preceding two sealed phases confirms healthy loop.
+Single-iteration audit loop: VETO at Entry #361 → PASS at Entry #362 via Governor amendment. The prior audit loop (Entries #355→#356) had the same shape — also single-iteration. **No repeated-VETO pattern detected.** Cycle-count escalator NOOP (`.qor/` degraded); manual scan of preceding audit history confirms healthy loop.
 
 ---
 
 ## Documentation Drift (Phase 28 advisory)
 
-Same as first audit: `doc_tier: system` declared; 4 `terms_introduced` with `home:` paths that resolve; `boundaries` populated. **No drift detected.**
+Same as first audit: `doc_tier: standard` declared (no `terms_introduced` for hotfix scope); `boundaries` populated; `precondition` cross-references Entries #359 + #360. **No drift detected.**
+
+---
+
+## Architectural Note (informational, not a finding)
+
+Path C's discriminated-union return type (`SidebarClickDecision`) is the right shape. TypeScript exhaustiveness checking will flag any new variant added to the union if the host's outer switch fails to handle it — a structural protection against future regression of the same defect class. The plan should consider adding the `exhaustiveness check` discipline (e.g., `const _exhaustive: never = decision;`) to lock the invariant. **This is a suggestion for the implement phase, not a Findings entry.** The audit does not block on it.
 
 ---
 
 ## Files Audited
 
-- `docs/plan-qor-v5-1-0-publish-block-lift.md` (amended; primary)
-- `.failsafe/governance/plans/plan-qor-v5-1-0-publish-block-lift.md` (mirror; identical content)
-- `docs/META_LEDGER.md` (entries #354-#355 reviewed for chain context)
-- Disk infrastructure citations (re-checked: `.github/workflows/release.yml` ✓; previously-cited dual filenames no longer referenced in plan)
+- `docs/plan-qor-organize-ux-hotfix.md` (amended; primary)
+- `.failsafe/governance/plans/plan-qor-organize-ux-hotfix.md` (mirror; identical content)
+- `docs/META_LEDGER.md` (Entries #354-#361 reviewed for chain context + audit-loop history)
+- Disk infrastructure citations re-verified (6 source paths ✓; cited test-convention reference ✓; previously-cited orphan-risk file `ui-helpers/sidebar-initialize.js` no longer referenced in plan body).
 
 ## Next Skill
 
-`/qor-implement` — implementation gate UNLOCKED. Per `qor/gates/chain.md`, PASS verdict authorizes `/qor-implement` to proceed.
-
-Plan-text VETO closed in a single amendment cycle as predicted by the first audit's V1 remediation note.
+`/qor-implement` — implementation gate UNLOCKED. Per `qor/gates/chain.md`, PASS verdict authorizes `/qor-implement` to proceed. Plan-text VETO closed in single amendment cycle as predicted by the first audit's V1 remediation note.

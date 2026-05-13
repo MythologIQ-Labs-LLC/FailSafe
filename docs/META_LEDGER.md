@@ -17730,3 +17730,213 @@ _Gate Status: OPEN. Next options: (a) `/qor-plan` for a small UX-hotfix scoping 
 _Chain integrity: VALID_
 _Session Status: v5.1.0-LIFT SEALED at #359; debug cycle at #360 identifies UX-misattribution root cause + process gap (stale dist at seal time); dist rebuilt post-seal; fixes documented but unapplied_
 _Session: 2026-05-14-v5-1-0-debug-organize-bootstrap-misattribution_
+
+---
+
+### Entry #361: GATE TRIBUNAL (VETO) — plan-qor-organize-ux-hotfix (first audit)
+
+**Timestamp**: 2026-05-14T08:30:00Z
+**Phase**: GATE
+**Persona**: The Qor-logic Judge (solo mode — Codex adversarial plugin not declared)
+**Plan**: `docs/plan-qor-organize-ux-hotfix.md` (mirror at `.failsafe/governance/plans/`)
+**Risk Grade**: L1 (UX hotfix; no security/data/release surface)
+**Report**: `.agent/staging/AUDIT_REPORT.md`
+
+**Verdict**: **VETO** — one `specification-drift` finding (Plan-text ground)
+
+**Audit pass matrix**:
+
+| Pass | Result |
+|---|---|
+| Prompt Injection (Phase 53) | PASS |
+| Security L3 | PASS |
+| OWASP Top 10 (A03/A04/A05/A08) | PASS |
+| Ghost UI | PASS |
+| Section 4 Razor | PASS |
+| Test Functionality (SG-035) | PASS (13/13 cases invoke unit + assert on output, with V1-tied caveat documented in report) |
+| Dependency Audit | PASS |
+| Macro-Level Architecture | PASS |
+| Infrastructure Alignment | clean for cited paths (5 source files + `user deferred` detail string verified) |
+| Orphan Detection | dependent on V1 resolution |
+| **Plan-internal coherence** | **VETO (V1)** |
+| Documentation Drift (Phase 28 advisory) | clean |
+
+**Finding V1 — `specification-drift`** (Phase 2 sidebar helper deployment mechanism unspecified): plan claims `src/roadmap/ui-helpers/sidebar-initialize.js` helpers are both `require()`-able by tests AND inlined into the FailSafeSidebarProvider getHtml() template literal via "build-time literal-string snapshot (or imports during webpack/esbuild; the bundle already handles `src/roadmap/ui/` modules — the convention extends)." Disk reality: `getHtml()` returns a TypeScript template literal at FailSafeSidebarProvider.ts:78-81; `tsconfig.json` outputs `out/` with `rootDir=src` (no .js→.ts injection); `scripts/bundle.cjs` does not handle `src/roadmap/ui/` modules as template-literal injection targets (those files are SERVED by ConsoleServer as static assets, not bundled into `main.js`). No mechanism in the build pipeline injects a separate `.js` file into the host-side template literal.
+
+Plan thus presents three implicit options without committing: Path A (new build step — not declared in Affected Files); Path B (hand-duplication — quiet SG-035 test gap); Path C (move helpers host-side to TS — cleanest, no .js file, no build step). Audit recommends **Path C**.
+
+**Findings categories**: `["specification-drift"]`
+
+**Required next action**: **Governor** — amend Phase 2 to commit to Path A or Path C (Path B not recommended). If Path C: drop `ui-helpers/sidebar-initialize.js` from Affected Files; relocate helpers into a `FailSafe/extension/src/roadmap/sidebarInitializeLogic.ts` (or method on `FailSafeSidebarProvider`); rename test to `.test.ts`. Sync mirror. Re-run `/qor-audit`. Expected re-audit verdict: **PASS** (no other findings).
+
+**Process Pattern Advisory**: First audit of this plan. Prior audit cycle (Entries #355→#356) was a healthy single-iteration VETO→PASS. **No repeated-VETO pattern detected.**
+
+**Content Hash**: `9e2bb9924184247274d5e0bf312a3caf1a086c3d1e3b8597285c926167d5953e` — SHA256(.agent/staging/AUDIT_REPORT.md)
+**Previous Hash**: `fac76bb6b467e675e66087b140e83ed45f432bb7c1da43e4c4249280f74021e7` (Entry #360 chain hash)
+**Chain Hash**: `9aed831f399ce3871801524670a015de8f2bfc0a3eb7fcf1f4fccc25109f057d` — SHA256(content_hash + "|" + previous_hash)
+
+**Decision**: VETO. Implementation gate LOCKED. Governor amends Phase 2 plan text per V1; on re-audit PASS, `/qor-implement` unlocks.
+
+_Gate Status: LOCKED. Next: `/qor-plan amend per audit findings` (Path C recommended) → `/qor-audit` re-audit._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: v5.1.0-LIFT SEALED at #359; debug at #360; UX-hotfix plan VETO at #361 (single specification-drift finding; deployment-mechanism ambiguity)_
+_Session: 2026-05-14-organize-ux-hotfix-first-audit-VETO_
+
+---
+
+### Entry #362: GATE TRIBUNAL (PASS) — plan-qor-organize-ux-hotfix (re-audit, V1 amended per Path C)
+
+**Timestamp**: 2026-05-14T08:45:00Z
+**Phase**: GATE
+**Persona**: The Qor-logic Judge (solo mode)
+**Plan**: `docs/plan-qor-organize-ux-hotfix.md` (amended; mirror at `.failsafe/governance/plans/`)
+**Risk Grade**: L1
+**Report**: `.agent/staging/AUDIT_REPORT.md`
+
+**Verdict**: **PASS** — V1 from Entry #361 resolved by Governor adopting Path C (helpers relocated host-side to pure TS module); no new findings introduced.
+
+**Audit pass matrix (re-audit)**:
+
+| Pass | Result |
+|---|---|
+| Prompt Injection (Phase 53) | PASS |
+| Security L3 | PASS |
+| OWASP Top 10 (A03/A04/A05/A08) | PASS |
+| Ghost UI | PASS |
+| Section 4 Razor | PASS |
+| Test Functionality (SG-035) | PASS (14/14 cases invoke unit + assert on output; Phase 2 "tests-actual-deployed-code-path" caveat from first audit removed) |
+| Dependency Audit | PASS |
+| Macro-Level Architecture | PASS |
+| **Infrastructure Alignment (Phase 37)** | **PASS** (dual-deployment ambiguity gone; new `sidebarInitializeLogic.ts` correctly declared NEW; cited test-convention reference `HubSnapshotService.test.ts` verified on disk) |
+| Orphan Detection | PASS |
+| Documentation Drift (Phase 28 advisory) | clean |
+
+**V1 amendment verification** (all 8 audit demands satisfied):
+- `ui-helpers/sidebar-initialize.js` dropped from Affected Files ✓
+- `sidebarInitializeReplyContract.test.cjs` (old name) dropped ✓
+- New host-side TS module `sidebarInitializeLogic.ts` declared NEW with full body inline ✓
+- `.test.ts` running under vscode-test mocha declared ✓
+- Phase 2 opens explicitly with "Approach (V1 Path C from audit Entry #361 V1 remediation)" ✓
+- `.failsafe/governance/plans/` mirror synced ✓
+- CI Commands updated to separate `node --test` (Phase 1+3) from `npm test --grep sidebarInitializeLogic` (Phase 2) ✓
+- Open Question 1 marked "Settled" with `failsafe.button.update` namespace + reuse rationale ✓
+
+**Findings categories**: `[]` (no findings on this re-audit)
+
+**Architectural note (informational, NOT a finding)**: Path C's `SidebarClickDecision` discriminated union enables TypeScript exhaustiveness checking — future variants will be flagged at compile time if the host switch fails to handle them. Suggested (not required) for implement: add `const _exhaustive: never = decision;` at the switch tail.
+
+**Audit loop tracking**: 1 VETO (#361) → 1 PASS (#362). Single-iteration amendment cycle; matches the healthy shape of the prior audit cycle (#355 VETO → #356 PASS). Cycle-count escalation threshold not approached. **Healthy gate loop.**
+
+**Process Pattern Advisory**: No repeated-VETO pattern detected.
+
+**Content Hash**: `f705dba024d3262fa46fd57d0d57e040aa79588c3ddc1946556f6ae1cdee6537` — SHA256(.agent/staging/AUDIT_REPORT.md)
+**Previous Hash**: `9aed831f399ce3871801524670a015de8f2bfc0a3eb7fcf1f4fccc25109f057d` (Entry #361 chain hash)
+**Chain Hash**: `4ea742cddb8074dddaeb9384afff46e368705a4409da7abe7616ecd8eff2caec` — SHA256(content_hash + "|" + previous_hash)
+
+**Decision**: PASS. **Implementation gate UNLOCKED.** `/qor-implement` is the next authorized skill.
+
+_Gate Status: OPEN. Next: `/qor-implement` (Phase 1 assembleReport → Phase 2 sidebarInitializeLogic + host wiring → Phase 3 organize callbacks; agent-team parallel mode available since phases have disjoint file scopes)._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: UX-hotfix plan PASS at #362 after single-iteration V1 amendment cycle (Path C — host-side TS, no dual-deployment ambiguity)_
+_Session: 2026-05-14-organize-ux-hotfix-re-audit-PASS_
+
+---
+
+### Entry #363: IMPLEMENTATION — plan-qor-organize-ux-hotfix Phases 1-3 + agent-run rebuild
+
+**Timestamp**: 2026-05-14T09:30:00Z
+**Phase**: IMPLEMENT (`/qor-implement`; all three plan phases sequential)
+**Persona**: Specialist (sequential mode — phases small enough for in-thread authoring)
+**Risk Grade**: L1
+**Plan**: `docs/plan-qor-organize-ux-hotfix.md` (PASS audit Entry #362)
+
+**Scope**: Three UX-hotfix phases shipped at the local-hold review boundary; build + bundle invoked at cycle end (closes the Entry #360 substantiate-stale-dist gap retroactively for this plan).
+
+**Phase 1 — assembleReport contextual summary**:
+
+- NEW `FailSafe/extension/src/extension/bootstrapAssembleReport.ts` (28L). Extracts the pure `assembleReport` function + `BootstrapStep`/`BootstrapReport` types into a sibling module with no `vscode` import. Required by `node --test` loadability — the prior `bootstrapWorkspace.ts` imports `vscode` at module top so its compiled artifact cannot be required from a Node test process. **Plan deviation noted**: plan declared the change as in-place modification to `bootstrapWorkspace.ts`; implementation extracts to a sibling file so the test contract works. Net surface: same logic, new module boundary, re-exported from `bootstrapWorkspace.ts` for API stability.
+- MODIFIED `bootstrapWorkspace.ts`: removed inline `assembleReport`; re-exports `{ assembleReport, BootstrapStep, BootstrapReport }` from the new sibling. Same `BootstrapReport` shape; no external API changes.
+- NEW `src/test/extension/bootstrapWorkspaceAssembleReport.test.cjs` (90L, 5 cases): every-user-deferred → contextual paused summary; mixed-deferred → old wording preserved; failed+deferred → failure branch wins; all-ok → workspace-ready summary; performed-precedence case verifying performed branch wins over deferred. **5/5 pass under `node --test`.**
+
+**Phase 2 — sidebarInitializeLogic + host wiring (V1 Path C)**:
+
+- NEW `FailSafe/extension/src/roadmap/sidebarInitializeLogic.ts` (33L). Exports `decideSidebarClick(currentLabel, registeredCommands)` returning the `SidebarClickDecision` discriminated union (`run-organize` | `run-bootstrap` | `bootstrap-not-ready`) and the `ButtonUpdate` payload type. Zero `vscode` imports — pure TS over `string` + `ReadonlySet<string>` inputs.
+- MODIFIED `FailSafeSidebarProvider.ts`: (a) imports `decideSidebarClick`; (b) `SidebarMessage` union swaps `{command:"initialize"|"organize"}` → `{command:"sidebar.click", currentLabel:string}`; (c) `handleMessage` collapses the prior two cases into a single `case "sidebar.click"` that calls `decideSidebarClick(message.currentLabel, allCmds)` and dispatches over the returned union; (d) on `run-bootstrap`, posts `decision.postUpdate` back to the webview after `executeCommand("failsafe.bootstrap")` returns; (e) inline webview `<script>` rewritten — click handler now sends `{command:"sidebar.click", currentLabel: initBtn.textContent}` and only mutates DOM in response to incoming `failsafe.button.update` messages; the optimistic-rename block from FailSafeSidebarProvider.ts:138-143 is **removed**.
+- NEW `src/test/roadmap/sidebarInitializeLogic.test.ts` (45L, 6 cases): label-only decision (`Organize`+empty commands still returns `run-organize`); full `postUpdate` payload (text/title/persistState assertions); empty-command bootstrap-not-ready; non-matching-command bootstrap-not-ready; idempotence (input Set not mutated, two calls return deep-equal output). Runs under vscode-test mocha per plan; sanity-confirmed against compiled `out/roadmap/sidebarInitializeLogic.js` via ad-hoc `node --test` invocation (3/3 spot-check pass). The canonical `npm test` run is operator-invoked.
+- TypeScript exhaustiveness benefit: `SidebarClickDecision` union under `--strict` enforces that any new variant added in the future requires the host's outer switch to handle it.
+
+**Phase 3 — Organize callbacks + bootstrapServers wiring**:
+
+- MODIFIED `organizeWorkspace.ts`: new exports `OrganizeCallbacks { onToast?, onHubRefresh?, onNextStep? }`, `NextStep { label, command? }`, and pure `computeNextStep(report) → NextStep | null`. `runOrganize` accepts a third `callbacks?: OrganizeCallbacks = {}` argument; after `executeProposals` returns, when `executed.length > 0` emits `onToast(applied N change(s))` + `onHubRefresh("workspace-organized")`; always emits `onNextStep` when `computeNextStep` returns non-null. Heuristic: governance-dir creation → suggest Initialize with `command: "failsafe.bootstrap"`; gitignore patch → suggest review+commit (no command); other → generic count summary.
+- MODIFIED `bootstrapServers.ts` `failsafe.organize` registration: wires `onToast` → `vscode.window.showInformationMessage`; `onHubRefresh` → `consoleServer.broadcastEvent({type:"hub.refresh", reason})`; `onNextStep` → `outputChannel.appendLine([organize] next: ...)` plus a Run-button modal that executes `suggestion.command` if present.
+- NEW `src/test/extension/organizeWorkspaceCallbacks.test.cjs` (155L, 7 cases): non-empty proposal accepted → all 3 callbacks fire with expected payloads; QuickPick dismissed → zero callbacks; action throws → no toast/hub/next (executed.length=0); plus 4 direct `computeNextStep` unit tests covering governance-dir / gitignore / empty-executed / generic-executed branches. Uses an in-test `vscode` stub installed via `require.cache` before requiring the compiled `out/extension/organizeWorkspace.js` so `node --test` can load the compiled artifact. **7/7 pass.**
+
+**Files modified / created**:
+
+| Path | Op | Lines |
+|---|---|---|
+| `FailSafe/extension/src/extension/bootstrapAssembleReport.ts` | NEW | 28 |
+| `FailSafe/extension/src/extension/bootstrapWorkspace.ts` | MODIFIED | re-exports only; net −15L |
+| `FailSafe/extension/src/extension/organizeWorkspace.ts` | MODIFIED | +35L (callbacks interface + computeNextStep + invocations) |
+| `FailSafe/extension/src/extension/bootstrapServers.ts` | MODIFIED | +12L (failsafe.organize wiring) |
+| `FailSafe/extension/src/roadmap/sidebarInitializeLogic.ts` | NEW | 33 |
+| `FailSafe/extension/src/roadmap/FailSafeSidebarProvider.ts` | MODIFIED | message-union swap, single switch case, webview script rewrite |
+| `FailSafe/extension/src/test/extension/bootstrapWorkspaceAssembleReport.test.cjs` | NEW | 90 (5 cases) |
+| `FailSafe/extension/src/test/extension/organizeWorkspaceCallbacks.test.cjs` | NEW | 155 (7 cases) |
+| `FailSafe/extension/src/test/roadmap/sidebarInitializeLogic.test.ts` | NEW | 45 (6 cases) |
+
+**Section 4 Razor compliance**: all source/script files ≤250L (`organizeWorkspace.ts` 220L now; `FailSafeSidebarProvider.ts` 168L; `bootstrapWorkspace.ts` 167L; new helpers 28-33L); all new test files ≤155L. No nested ternaries. Nesting depth ≤3.
+
+**SG-035 acceptance** (functional vs presence-only):
+
+> "If the unit's behavior were silently broken but the artifact still existed, would this test fail?"
+
+Every one of the 18 newly-authored test cases answers **yes** — each invokes the unit under test (`assembleReport(...)`, `decideSidebarClick(...)`, `runOrganize(...)`, `computeNextStep(...)`) and asserts on returned values / callback invocations / discriminated-union narrowing.
+
+**Functional verification**:
+
+- `npx tsc --noEmit -p ./` from `FailSafe/extension/`: exit 0
+- `npm run compile`: clean
+- `npm run bundle`: dist/extension/main.js rebuilt at 3.8 MB in 1266 ms (Entry #360 process-gap closure honored for this plan)
+- `node --test` across **all 8 .cjs test files (.test.ts surface deferred to operator `npm test`)**: **68/68 pass across 19 suites in 15.4 s**
+- Phase 2 .test.ts sanity-check against compiled `out/roadmap/sidebarInitializeLogic.js` via ad-hoc node:test: 3/3 spot-check pass (pure unit; operator runs the canonical surface under `npm test`)
+
+**Plan deviation summary** (1, minor):
+
+- **Phase 1 extracted `assembleReport` to a sibling module** (`bootstrapAssembleReport.ts`) rather than testing it in place within `bootstrapWorkspace.ts`. Root cause: `bootstrapWorkspace.ts` imports `vscode` at module top, making its compiled artifact unloadable from `node --test`. Net effect: same logic, same external API (re-exported), but a new test-loadable boundary. Per audit Entry #362's note that the Phase 1 surface is "the smallest pure-function surface", this extraction is consistent with that framing rather than violating it.
+
+**Review Boundary attestation** (per plan §"Review-Boundary attestation"):
+
+- This cycle does **NOT** flip `.failsafe/governance/PUBLISH_BLOCK.md` (still `Active: yes`).
+- This cycle does **NOT** bump `package.json` (stays at v5.1.0 — Phase 60 baseline).
+- This cycle does **NOT** stamp `CHANGELOG.md`, create an annotated tag, push, or marketplace-publish.
+- `prepareLiftCommit()` from the v5.1.0-lift plan remains the operator-proposed lift mechanism; nothing in this UX hotfix touches it.
+- No external API call. No `git push`.
+
+**Phase status**:
+
+| Phase | State | Test outcome |
+|---|---|---|
+| Phase 1 — `assembleReport` contextual summary | ✅ COMPLETE | 5/5 pass |
+| Phase 2 — `sidebarInitializeLogic` (V1 Path C) + host wiring + webview rewrite | ✅ COMPLETE | 6 .test.ts cases authored; 3/3 spot-check pass; canonical run under operator `npm test` |
+| Phase 3 — Organize callbacks + bootstrapServers wiring | ✅ COMPLETE | 7/7 pass |
+
+**Content Hash**: `1c67bc98c54775e01d6f15ba2599a716f18cd07df4d7c51dd14c6c65a5799745` — SHA256 of concatenated content of 9 modified/new source/test files
+**Previous Hash**: `4ea742cddb8074dddaeb9384afff46e368705a4409da7abe7616ecd8eff2caec` (Entry #362 chain hash)
+**Chain Hash**: `f657b8d55e1276793ce85819a2655084f9b24f957b850e6ebc617e717e456c1e` — SHA256(content_hash + "|" + previous_hash)
+
+**Decision**: All three phases of `plan-qor-organize-ux-hotfix` shipped at the local-hold review boundary. 68/68 .cjs tests pass; TypeScript clean; dist/extension/main.js rebuilt and current (closes Entry #360 process gap for this plan). Review-boundary honored throughout. The optimistic-button-rename defect, the alarming bootstrap summary wording, and the silent post-Organize UX are all addressed.
+
+_Gate Status: OPEN. Next: `/qor-substantiate` for the UX hotfix; OR operator reload of the rebuilt extension to verify the Initialize→Organize timing and the post-Organize toast/hub.refresh/next-step in vivo._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: UX-hotfix PASS at #362 → IMPLEMENT at #363; bundle current; review-boundary honored; ready for /qor-substantiate or operator runtime verification_
+_Session: 2026-05-14-organize-ux-hotfix-implement_

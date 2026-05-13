@@ -20,7 +20,7 @@ import { IdeActivityTracker } from "../roadmap/services/IdeActivityTracker";
 import { PythonInterpreterResolver, defaultRun } from "../qorlogic/PythonInterpreterResolver";
 import { QorLogicPackageInstaller, defaultInstallerRun } from "../qorlogic/QorLogicPackageInstaller";
 import { QorLogicSkillIngestor } from "../qorlogic/QorLogicSkillIngestor";
-import { createInstallSkillsHandler } from "./installSkillsHandler";
+import { createInstallSkillsHandler, createScaffoldWithWebOptions } from "./installSkillsHandler";
 import { runWorkspaceBootstrap, type BootstrapReport } from "./bootstrapWorkspace";
 
 export interface ServerDeps {
@@ -100,6 +100,14 @@ export async function bootstrapServers(
     },
   }, 'prompt'));
 
+  consoleServer.setScaffoldWebCallback(createScaffoldWithWebOptions(skillIngestor, {
+    onProgress: (invocation) => consoleServer.broadcastEvent({ type: "skills.install.progress", invocation }),
+    onComplete: (report) => {
+      consoleServer.broadcastEvent({ type: "skills.install.complete", report });
+      consoleServer.broadcastEvent({ type: "hub.refresh", reason: "skills-installed" });
+    },
+  }));
+
   await consoleServer.start();
   context.subscriptions.push({ dispose: () => consoleServer?.stop() });
 
@@ -131,7 +139,18 @@ export async function bootstrapServers(
   context.subscriptions.push(
     vscode.commands.registerCommand("failsafe.organize", async () => {
       const { runOrganize } = await import("./organizeWorkspace");
-      await runOrganize(deps.workspaceRoot, outputChannel);
+      await runOrganize(deps.workspaceRoot, outputChannel, {
+        onToast: (message) => { void vscode.window.showInformationMessage(message); },
+        onHubRefresh: (reason) => consoleServer.broadcastEvent({ type: "hub.refresh", reason }),
+        onNextStep: (suggestion) => {
+          outputChannel.appendLine(`[organize] next: ${suggestion.label}`);
+          if (suggestion.command) {
+            void vscode.window.showInformationMessage(suggestion.label, "Run").then((choice) => {
+              if (choice === "Run") void vscode.commands.executeCommand(suggestion.command!);
+            });
+          }
+        },
+      });
     }),
   );
 
