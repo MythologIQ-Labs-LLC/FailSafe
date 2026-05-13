@@ -17657,3 +17657,76 @@ _Next: operator runbook steps 5 + 7 + 8 → re-run validator → operator-author
 _Chain integrity: VALID_
 _Session Status: v5.1.0-LIFT PLAN SEALED at #359. Implementation surface complete (4/4 phases). Conditions 1/2a/5 satisfied; 2b/3/4/11/12-13 are operator-only by design._
 _Session: 2026-05-14-v5-1-0-publish-block-lift-substantiation-seal_
+
+---
+
+### Entry #360: DEBUG — Organize button apparent bootstrap-message misattribution + post-seal dist rebuild
+
+**Timestamp**: 2026-05-14T08:00:00Z
+**Phase**: DEBUG (`/qor-debug`)
+**Persona**: The Qor-logic Specialist (debug mode)
+**Risk Grade**: L1 (UX misattribution; no data integrity / security impact)
+**Trigger**: Operator report after Entry #359 substantiation seal — *"did you run the build? because the Organize button still produces Bootstrap: 1 step(s) deferred."*
+**Report**: `.agent/staging/DEBUG_REPORT_ORGANIZE_BOOTSTRAP_MISATTRIBUTION.md`
+
+**Operator-surfaced gap acknowledged**: agent did NOT run `npm run compile && npm run bundle` during the v5.1.0-lift `/qor-substantiate` cycle. Substantiate Step 8.5 (`dist_recompile`) was DEGRADED-NOOP because `.qor/` runtime is uninitialized; the Step 8.5 narrative framed dist-compile around `qor-logic` Python tooling and did not cover the extension's webpack/esbuild build. Seal at Entry #359 therefore landed with a stale `dist/extension/main.js` (dated 2026-05-12 09:56; source files modified 2026-05-13 16:03 + uncommitted operator WIP from later).
+
+**Immediate remediation**: agent ran `cd FailSafe/extension && npm run compile && npm run bundle` post-seal. tsc clean (no output); esbuild produced 3.8 MB bundle in 978 ms; `dist/extension/main.js` now reflects current source.
+
+**Defect root cause** (Five-Whys per DEBUG_REPORT):
+
+The "Bootstrap: 1 step(s) deferred" popup the operator saw after clicking the button labeled "Organize" is the **asynchronous completion of an earlier `failsafe.bootstrap` invocation** (i.e., a previous Initialize click), surfacing AFTER the button was optimistically renamed to "Organize" by FailSafeSidebarProvider.ts:138-143:
+
+```js
+initBtn?.addEventListener('click', () => {
+  const isOrganize = initBtn.textContent === 'Organize';
+  vscode.postMessage({ command: isOrganize ? 'organize' : 'initialize' });
+  if (!isOrganize) {                          // ← rename happens NOW (sync)
+    initBtn.textContent = 'Organize';
+    initBtn.title = 'Organize Workspace Structure';
+    vscode.setState({ ...vscode.getState(), initDone: true });
+  }
+});
+```
+
+The webview JS does not await a completion message from the host; the host does not post one back. `runWorkspaceBootstrap` runs asynchronously (interactive mode → prompts pip install → user clicks "Later" → step deferred), and by the time `reportBootstrapToUser` calls `showInformationMessage(report.summary)`, the button label has already changed.
+
+**Call-graph evidence**: `grep -rnE "runWorkspaceBootstrap|reportBootstrap"` shows exactly **two call sites**, both in `bootstrapServers.ts`:
+- Line 134 (popup path): `failsafe.bootstrap` command handler. Reaches `vscode.window.showInformationMessage(report.summary)` at `reportBootstrapToUser:209`.
+- Line 174 (outputChannel-only path): activation-time silent bootstrap. Does NOT show a popup.
+
+`grep` over `organizeWorkspace.ts` + `organizeProposals.ts` returns **zero `bootstrap` references**. `runOrganize` does NOT invoke `runWorkspaceBootstrap`.
+
+**Therefore**: the popup cannot have originated from the `failsafe.organize` command. It originated from a `failsafe.bootstrap` command that ran asynchronously and surfaced after the optimistic button-rename. This is a UX-misattribution defect, not a wiring defect.
+
+**Proposed fixes** (documented in DEBUG_REPORT; NOT applied in this debug cycle — operator authorization or new plan cycle required per `feedback_no_ship_without_approval.md`):
+
+- **Fix A (recommended)**: post a `{ type: 'initialize.complete' }` message from FailSafeSidebarProvider's `onDidReceiveMessage` `case "initialize"` after `executeCommand` returns; webview listens for this message and only then renames the button. Removes the optimistic rename.
+- **Fix B (defensive)**: in `bootstrapWorkspace.ts::assembleReport`, when the only deferred step is user-choice ("Later" on pip install prompt), use a contextual summary `"Bootstrap paused (run Initialize again when ready to install qor-logic)"` instead of the alarming `"Bootstrap: 1 step(s) deferred"`.
+- **Fix C (process)**: add `npm run build:package` to `/qor-substantiate` Step 8.5 (or as a new step) when extension surface is in `files_touched`; would have caught the stale-dist condition. Requires a doctrine-level plan.
+
+**Files referenced (NOT modified in this debug cycle)**:
+
+- `FailSafe/extension/src/roadmap/FailSafeSidebarProvider.ts` (lines 30-69 onDidReceiveMessage; lines 121-145 webview script; lines 135-144 click handler with optimistic rename)
+- `FailSafe/extension/src/extension/bootstrapServers.ts` (lines 132-144 command registrations; line 174 silent activation bootstrap; lines 195-210 reportBootstrapToUser)
+- `FailSafe/extension/src/extension/bootstrapWorkspace.ts` (lines 165-180 assembleReport)
+- `FailSafe/extension/src/extension/organizeWorkspace.ts` (no bootstrap reference; confirms wiring)
+- `FailSafe/extension/dist/extension/main.js` (REBUILT — was 2026-05-12, now current)
+
+**Test surface unchanged**: 56/56 node:test still pass; tsc clean (the compile that just ran produced the dist update); Playwright suite unchanged.
+
+**Process gap acknowledged for next plan cycle**: `/qor-substantiate` Step 8.5 framing must include the extension's webpack/esbuild build as a separate concern from `qor-logic` Python `dist_compile`. Open question for operator: should this be addressed via a small amendment to the v5.1.0-lift plan (Phase 5 — process-fix), or rolled into a future SHIELD doctrine plan?
+
+**Content Hash**: `f277689d9a0cdc8d783f2d8ca6027e3ad739193e9bb9cac7bee219521114205d` — SHA256(.agent/staging/DEBUG_REPORT_ORGANIZE_BOOTSTRAP_MISATTRIBUTION.md)
+**Previous Hash**: `80d1e9385d3c7ae3cc50d8f95c16fd869bdb7c4383ebfe3e1286e51a7223a991` (Entry #359 chain hash)
+**Chain Hash**: `fac76bb6b467e675e66087b140e83ed45f432bb7c1da43e4c4249280f74021e7` — SHA256(content_hash + "|" + previous_hash)
+
+**Decision**: ROOT-CAUSE IDENTIFIED. Defect is UX-misattribution (optimistic webview-button rename + delayed async bootstrap popup), not a wiring fault. Deployed extension is functionally correct: `failsafe.organize` does NOT invoke bootstrap. Process gap (substantiate cycle sealed with stale dist) acknowledged and immediately remediated by post-seal rebuild. Fixes A + B remain unapplied pending operator authorization or new plan cycle.
+
+_Gate Status: OPEN. Next options: (a) `/qor-plan` for a small UX-hotfix scoping Fixes A + B (and optionally Fix C process change); (b) operator accepts WAI behavior with a documentation note; (c) operator authorizes inline application of Fixes A + B as a single-cycle implement-without-new-plan amendment._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: v5.1.0-LIFT SEALED at #359; debug cycle at #360 identifies UX-misattribution root cause + process gap (stale dist at seal time); dist rebuilt post-seal; fixes documented but unapplied_
+_Session: 2026-05-14-v5-1-0-debug-organize-bootstrap-misattribution_
