@@ -32,6 +32,51 @@ referenced_by:
 ```
 
 ```yaml
+term: WorkspaceTruthRefresh
+definition: |
+  The pattern of refreshing in-memory governance service state from on-disk workspace artifacts before
+  serving a hub snapshot or queue view. Phase 60 introduces explicit `refreshFromWorkspace()` methods on
+  PlanManager, L3ApprovalService, and the PlanPersistenceStore/RoadmapPersistenceStore siblings so that
+  Claude-driven file writes to plans.yaml, roadmap YAML, the L3 state store, META_LEDGER.md, AUDIT_REPORT.md,
+  and plan-*.md become observable to Monitor and route models on the next hub rebuild rather than waiting
+  for an extension restart. Refresh methods are explicit and side-effect-bounded: reload cached values,
+  no watcher start, no file writes.
+home: docs/FEATURE_INDEX.md
+introduced_in_plan: plan-qor-phase60-v5-1-0-remaining-scope
+referenced_by:
+  - docs/META_LEDGER.md
+```
+
+```yaml
+term: GovernanceWatchSurface
+definition: |
+  The set of file paths and extensions that SentinelDaemon watches for governance-state changes via the
+  SentinelWatchPolicy sibling. Before Phase 60, Sentinel watched only code-extension files (`.ts`, `.js`,
+  `.tsx`, `.py`, `.go`, etc.) and explicitly excluded `**/.failsafe/**`, leaving META_LEDGER, AUDIT_REPORT,
+  plans.yaml, the risk register, and the intent store invisible to the verdict pipeline. Phase 60 extends
+  the surface to include `.md`, `.yaml`, `.json` extensions plus selected `.failsafe/**` paths through
+  named `WATCHED_EXTENSIONS` set and `WATCHED_GOVERNANCE_PATHS` predicate.
+home: docs/FEATURE_INDEX.md
+introduced_in_plan: plan-qor-phase60-v5-1-0-remaining-scope
+referenced_by:
+  - docs/META_LEDGER.md
+```
+
+```yaml
+term: InstallVersionFloor
+definition: |
+  The minimum acceptable `qor-logic` Python package version asserted by QorLogicPackageInstaller after
+  `pip install qor-logic`. Phase 60 introduces an explicit minimum version constant kept adjacent to host
+  layout compatibility text in qorelogic/hostLayouts.ts; the installer parses `pip show qor-logic` output
+  and reports below-floor installations to Settings as a warning card. Closes the gap where extension code
+  could silently run against a stale qor-logic with a different install_map.
+home: docs/FEATURE_INDEX.md
+introduced_in_plan: plan-qor-phase60-v5-1-0-remaining-scope
+referenced_by:
+  - docs/META_LEDGER.md
+```
+
+```yaml
 term: ManualOverrideAuthority
 definition: |
   The operator-authoritative MANUAL_OVERRIDES table consumed as the last step of the per-entry FEATURE_INDEX

@@ -16257,6 +16257,177 @@ _Gate Status: OPEN. Next: operator commit + push/merge decision (see /qor-substa
 
 ---
 
+### Entry #343: GATE TRIBUNAL (VETO) — Phase 60 v5.1.0 Remaining Publish Scope (re-audit attempt)
+
+**Timestamp**: 2026-05-13T22:45:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: VETO
+
+**Target**: `docs/plan-qor-phase60-v5-1-0-remaining-scope.md` (amended). Supersedes Entry #325 (VETO on prior plan revision before audit-canary remediation; canary blocker cleared at Entry #330; ledger blocker cleared at Entry #338).
+
+**Findings** (all `infrastructure-mismatch` / `specification-drift`; all plan-text):
+
+- V1 (`infrastructure-mismatch`): §1 declares `feature-index-classifier-staleness.test.cjs` + `feature-index-classifier.test.cjs` as NEW, but camelCase equivalents already exist and are consumed by downstream tests.
+- V2 (`specification-drift`): §1 "remaining unverified bucket" lists FX128 + FX359; Phase 62 (Entries #341 + #342) removed both from MANUAL_OVERRIDES.
+- V3 (`specification-drift`): Top-matter precondition references Entry #331 ledger repair as future; Phase 61 sealed it at Entry #338.
+
+**Content Hash**: `fba6ffc245c7e5ba1a2dda63d8f11f199c586910683002612d29269175682c7d` — SHA256(`.agent/staging/AUDIT_REPORT.md`)
+
+**Previous Hash**: `6c8141ba3d9f91b8446822266025f0aa1e2f864ac7a66ba69700a39ddb36e23b` (Entry #342 chain hash)
+
+**Chain Hash**: `a35870f07443d949cb99525bb0fcde7707d78ce8cac7ff05b7a9673f54ebe79c` — SHA256(content_hash + "|" + previous_hash)
+
+**Decision**: VETO. Three plan-text staleness findings, all correctable by surgical Governor amendment. No code-logic defect; no security ground; no refactor blocker. Auto-dev orchestrator will perform the amendment + re-audit cycle within the protocol's plan-audit attempt cap.
+
+_Gate Status: LOCKED. Next: amend plan, re-run `/qor-audit`._
+
+---
+
+### Entry #344: GATE TRIBUNAL (PASS) — Phase 60 v5.1.0 Remaining Publish Scope (amended; second re-audit)
+
+**Timestamp**: 2026-05-13T23:00:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS
+
+**Target**: `docs/plan-qor-phase60-v5-1-0-remaining-scope.md` (amended). Supersedes Entry #343 VETO findings on prior revision.
+
+**Resolution of Entry #343 findings**:
+
+- V1 (`infrastructure-mismatch`): cleared. §1 Affected Files now references `featureIndexClassifierStaleness.test.cjs` and `featureIndexClassifier.test.cjs` (camelCase matching disk) with `modify` annotation; plan describes assertion extensions, not file creation.
+- V2 (`specification-drift`): cleared. §1 explicitly acknowledges Phase 62's removal of FX128 + FX359 from MANUAL_OVERRIDES; bucket lists treat both as conditional re-classifications.
+- V3 (`specification-drift`): cleared. Precondition now references sealed Entry #338 in past tense.
+
+**Passes**: Prompt Injection PASS, Security L3 PASS, OWASP Top 10 PASS, Ghost UI PASS, Section 4 Razor PASS, Test Functionality PASS, Dependency Audit PASS, Macro-Level Architecture PASS, Infrastructure Alignment PASS (all 20 cited paths verified), Orphan Detection PASS.
+
+**Documentation Drift** (non-VETO advisory): three plan-declared terms (`WorkspaceTruthRefresh`, `GovernanceWatchSurface`, `InstallVersionFloor`) lack glossary entries. Implement phase will add them.
+
+**Content Hash**: `70b22591066addb7a39a49dfa5e2b04a4524e6f836eb8b047cb19fe75750a81a` — SHA256(`.agent/staging/AUDIT_REPORT.md`)
+
+**Previous Hash**: `a35870f07443d949cb99525bb0fcde7707d78ce8cac7ff05b7a9673f54ebe79c` (Entry #343 chain hash)
+
+**Chain Hash**: `26eae5ec67af9113ea0b2fbdf53a2d4aaf2acc7aa9025494c199d2cc02bd7283` — SHA256(content_hash + "|" + previous_hash)
+
+**Decision**: PASS. Three plan-text findings resolved by Governor amendment in the same auto-dev session. Phase 60 implementation-ready for §0 Refactor Enablement Gate.
+
+_Gate Status: OPEN. Next: `/qor-implement` on Phase 60._
+
+---
+
+### Entry #345: IMPLEMENTATION (partial) — Phase 60 §0 Refactor Enablement Gate
+
+**Timestamp**: 2026-05-13T23:30:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist (auto-dev orchestrated; three parallel refactoring-specialist subagents)
+**Risk Grade**: L2
+**Plan**: `docs/plan-qor-phase60-v5-1-0-remaining-scope.md` (PASS audit at Entry #344)
+**Scope**: §0 only. §1-§5 deferred to follow-on /qor-auto-dev-1 cycles.
+
+**Implementation Summary**:
+
+| Sub-Phase | Status | Details |
+| --- | --- | --- |
+| Phase 0: Refactor Enablement Gate | COMPLETE | Three over-cap files refactored into 11 bounded modules; behavior-preserving; public APIs intact; ~94 regression tests pass; 44 new tests pass |
+| Phase 1: Scope Sync and Coverage Ledger | DEFERRED | Future /qor-auto-dev-1 cycle |
+| Phase 2: Workspace Truth Refresh + Governance Watch Surface | DEFERRED | Future cycle (depends on §0; now unblocked) |
+| Phase 3: Governance Mode Escalation + Install Version Floor | DEFERRED | Future cycle |
+| Phase 4: UI Subscription Hygiene + Remaining FEATURE_INDEX Closure | DEFERRED | Future cycle |
+| Phase 5: Publish-Block Verification | DEFERRED | Future cycle |
+
+**§0 PlanManager track** (refactoring-specialist subagent #1):
+
+- `FailSafe/extension/src/qorelogic/planning/PlanManager.ts` — 490L → 212L. Facade only: constructor wiring, public plan/sprint/risk/milestone/blocker API, single private `emit()` helper, `applySprintEvent()` reducer.
+- `FailSafe/extension/src/qorelogic/planning/PlanPersistenceStore.ts` — NEW, 55L. Owns `.failsafe/plans.yaml`. Public: `refresh()`, `getEvents(planId)`, `getAllPlanIds()`, `appendEvent()`.
+- `FailSafe/extension/src/qorelogic/planning/RoadmapPersistenceStore.ts` — NEW, 61L. Owns `.qorelogic/roadmap.yaml`. Public: `refresh()`, `getRoadmap()`, `ensureRoadmap()`, `save()`.
+- `FailSafe/extension/src/qorelogic/planning/PlanStateDeriver.ts` — NEW, 176L. Pure functions `applyEvent`, `deriveState`, `calculateSprintMetrics`. One `apply*` helper per event type, each ≤13 lines.
+- Verification: tsc clean (refactor surface); `PlanManager.test.ts` 35/35 pass; no public-API changes; no behavior changes.
+
+**§0 SentinelDaemon track** (refactoring-specialist subagent #2):
+
+- `FailSafe/extension/src/sentinel/SentinelDaemon.ts` — 415L → 249L. Lifecycle + verdict processing only; instantiates SentinelWatchPolicy + SentinelEventQueue as private fields.
+- `FailSafe/extension/src/sentinel/SentinelWatchPolicy.ts` — NEW, 133L. Watched extensions + governance path predicates + ignore policy.
+- `FailSafe/extension/src/sentinel/SentinelEventQueue.ts` — NEW, 82L. Event construction + priority sorting + 100-event cap.
+- `FailSafe/extension/src/test/sentinel/SentinelWatchPolicy.test.ts` — NEW, 169L, 32/32 pass. Invokes policy directly across `.ts`/`.js`/`.md`/`.json`/`.yaml`, deletion bypass, `.failsafe/**` suppression (both slash variants), priority tier overlap precedence.
+- `FailSafe/extension/src/test/sentinel/SentinelEventQueue.test.ts` — NEW, 168L, 12/12 pass. Priority sort determinism, in-tier stability, mixed-priority interleaving, 100-event cap with overflow eviction.
+- Verification: tsc clean; 44/44 new tests pass; public API + watcher events + EventBus emissions + ignore-pattern list + priority heuristics bit-identical to pre-refactor.
+
+**§0 ConsoleServer track** (refactoring-specialist subagent #3):
+
+- `FailSafe/extension/src/roadmap/ConsoleServer.ts` — 1149L → 246L. Composition root + external public methods only.
+- `FailSafe/extension/src/roadmap/services/HubSnapshotService.ts` — NEW, 250L. Hub snapshot assembly + pre-snapshot workspace refresh hooks.
+- `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts` — NEW, 250L. Route registration + `ApiRouteDeps` construction.
+- `FailSafe/extension/src/roadmap/services/ConsoleLifecycleService.ts` — NEW, 109L. Start/stop/server registry lifecycle + port discovery.
+- `FailSafe/extension/src/roadmap/services/ConsoleServerSupport.ts` — NEW, 126L. Pure helpers (`buildPhasesFromLedger`, `mergePlanBlockers`, `createBrainstormService`, `resolveQoreRuntimeOptions`, `resolveUiDir`, `CHECKPOINT_TYPE_REGISTRY`). **Unplanned-but-justified**: the plan named 4 services; this 5th utility module was necessary to bring ConsoleServer.ts under 250L without breaking the public surface. Documented in subagent report.
+- `FailSafe/extension/src/test/roadmap/HubSnapshotService.test.ts` — NEW, 178L, 12/12 pass.
+- `FailSafe/extension/src/test/roadmap/ConsoleRouteRegistrar.test.ts` — NEW, 197L, 8/8 pass.
+- Verification: tsc clean; 12+8 new tests pass; 19+7+5+4+7+13+19 = 74 regression tests pass across console-routes, operations-phase-cap, transparency-events-hub, consoleServer, serveConsoleServerUI, checkpoint-route, actions-route.
+- One observable structural change documented: checkpoint store (`checkpointMemory`, `checkpointDb`) moved out of ConsoleServer's instance fields into HubSnapshotService. To preserve a legacy test fixture (`src/test/ui/helpers/serveConsoleServerUI.ts`) that performs `(server as unknown as ...).checkpointMemory = ...` reach-ins, ConsoleServer exposes getter/setter pair on `checkpointMemory`/`checkpointDb` that rewires the shared `CheckpointStoreRef` consumed by the hub. Fixture continues to work without modification.
+- Working-tree V5.1.0 edits in ConsoleServer.ts (v5 install detection, mergePlanBlockers BACKLOG-blocker backfill, setupAgentApiRoutes + setupSreApiRoutes + adapter URL plumbing, agent timeline/health/recorder setters, configurationProfile.loadDefaults, featureGate + configProvider options, outputChannel + scaffoldCallback + scaffoldWebCallback plumbing, marketplace + adapter + securityScanner construction) preserved through the split.
+
+**Files Modified** (this implementation cycle): see the three tracks above. Plus `qor/references/glossary.md` (added 3 new term entries for `WorkspaceTruthRefresh`, `GovernanceWatchSurface`, `InstallVersionFloor` per audit doc-integrity advisory at Entry #344; `referenced_by: [docs/META_LEDGER.md]` added to `ManualOverrideAuthority` to satisfy strict orphan check now that the introducing plan is no longer current).
+
+**Section 4 Razor**:
+
+| File | Lines | Limit | Status |
+| --- | --- | --- | --- |
+| PlanManager.ts | 212 | 250 | PASS |
+| PlanPersistenceStore.ts | 55 | 250 | PASS |
+| RoadmapPersistenceStore.ts | 61 | 250 | PASS |
+| PlanStateDeriver.ts | 176 | 250 | PASS |
+| SentinelDaemon.ts | 249 | 250 | PASS |
+| SentinelWatchPolicy.ts | 133 | 250 | PASS |
+| SentinelEventQueue.ts | 82 | 250 | PASS |
+| ConsoleServer.ts | 246 | 250 | PASS |
+| HubSnapshotService.ts | 250 | 250 | PASS |
+| ConsoleRouteRegistrar.ts | 250 | 250 | PASS |
+| ConsoleLifecycleService.ts | 109 | 250 | PASS |
+| ConsoleServerSupport.ts | 126 | 250 | PASS |
+
+All functions ≤ 40 lines; nesting ≤ 3; no nested ternaries.
+
+**Functional Verification**:
+
+- `npx tsc --noEmit -p ./` from `FailSafe/extension/` — exit 0 (clean; pre-existing HubSnapshotService TS errors that existed at HEAD before the refactor were resolved as a side-effect of the proper restructure).
+- New tests: 44 (Sentinel) + 12 + 8 (Console) = 64 new functional tests, all pass.
+- Regression: PlanManager.test.ts 35/35; console-routes.test.ts 19/19; operations-phase-cap.test.ts 7/7; transparency-events-hub.test.ts 5/5; consoleServer.test.ts 4/4; serveConsoleServerUI.test.ts 7/7; checkpoint-route.test.ts 13/13; actions-route.test.ts 19/19. Total 109 regression tests pass.
+- `qor-logic verify-ledger` exit 0 through Entry #344 (pre-existing chain; not affected by this implement).
+
+**Carried-forward issues** (pre-existing at HEAD; not introduced by Phase 0):
+
+- `console.log` in `ConsoleLifecycleService.ts` lines 40, 94 — preserved verbatim from original ConsoleServer.ts (server-start log + port-conflict log). Section 4 Razor forbids `console.log` but removal would be behavior change beyond refactor scope.
+- better-sqlite3 native module mismatch (NODE_MODULE_VERSION 140 vs 115) breaks `CheckpointStore.test.js` DB-backed cases on current Node binary; memory-mode tests still pass.
+- `build-phase-coherence.test.js` CJS/ESM mismatch in transitive `@csstools/css-calc`.
+- `securityHardening.test.js` requires `vscode` at top level; runs only under vscode-test, not bare mocha.
+- Legacy test fixture `src/test/ui/helpers/serveConsoleServerUI.ts` reach-in anti-pattern preserved via getter/setter compat; should be promoted to a public testing affordance in a follow-up.
+
+**Phase 60 Sub-Phase Status**:
+
+| Sub-Phase | State | Why deferred |
+| --- | --- | --- |
+| §0 | **COMPLETE** | This entry |
+| §1 | Deferred | Awaiting follow-on cycle; scope-sync + 2 classifier-test extensions are now writable since §0 unblocked |
+| §2 | Deferred | Now unblocked by §0; refreshFromWorkspace methods can be added to the facades |
+| §3 | Deferred | Independent of §0; can run in any future cycle |
+| §4 | Deferred | Now unblocked by §0; UI subscription hygiene + remaining FEATURE_INDEX closure |
+| §5 | Deferred | Final closure; runs after §1-§4 |
+
+**Substantiation**: NOT RUN. Phase 60 is a single plan with 6 sub-phases; substantiating with only §0 complete would violate Reality = Promise. SUBSTANTIATE deferred until all six sub-phases are landed. Per auto-dev skill Step 6: "If substantiation fails, do not revert automatically. Preserve the branch and provide a partial-change map." Branch state preserved; partial-change map is this entry.
+
+**Content Hash**: `e13f71c433f42c1c8cb1ff32d87e68ef808a09a1529151a90f5d411de0c64e83` — SHA256 of concatenated content of 17 modified/new files
+
+**Previous Hash**: `26eae5ec67af9113ea0b2fbdf53a2d4aaf2acc7aa9025494c199d2cc02bd7283` (Entry #344 chain hash)
+
+**Chain Hash**: `5a5c0c2ffe1cf11ea784069f38ecdef55b0e6eb246f328c5d28601cdb50aa5c5` — SHA256(content_hash + "|" + previous_hash)
+
+**Decision**: Phase 60 §0 partial implementation complete. Three over-cap files (PlanManager, SentinelDaemon, ConsoleServer) refactored into 12 bounded modules totaling 1949 lines (vs original 2054), behavior-preserving with all public APIs intact, with 64 new functional tests and 109 regression tests passing. §1-§5 deferred to follow-on cycles. No substantiate seal because plan is multi-phase and only §0 is done.
+
+_Gate Status: OPEN. Next: operator-driven /qor-auto-dev-1 invocation against Phase 60 §1 (or any other deferred sub-phase). Substantiate runs after all six sub-phases are landed._
+
+---
+
 _Chain integrity: VALID_
-_Session Status: SEALED_
-_Session: 2026-05-13-phase62-item-b-sweep-followups_
+_Session Status: SEALED at #342; #343-#345 Phase 60 cycle in progress; §0 COMPLETE_
+_Session: 2026-05-13-phase60-v5-1-0-remaining-scope-phase-0_
