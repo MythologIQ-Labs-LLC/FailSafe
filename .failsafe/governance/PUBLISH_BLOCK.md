@@ -51,7 +51,7 @@ If the operator decides at any point that a specific feature is intentionally un
 
 PUBLISH_BLOCK can flip Active=no only when ALL of:
 
-1. FEATURE_INDEX shows 0 unverified entries (achieved 2026-05-07; 433 verified / 43 n/a / 0 unverified).
+1. FEATURE_INDEX shows 0 unverified entries (achieved 2026-05-07; re-confirmed 2026-05-14 at Phase 60 §5 ledger Entry #353; 433 verified / 43 n/a / 0 unverified).
 2. BROWSER_VERIFICATION.md exists with `Active: yes` flipped to `Active: no` AND every Playwright-covered page has a passing spec run within 24h of seal.
 3. Every screenshot-covered page in BROWSER_VERIFICATION.md has an operator note + screenshot with date stamp.
 4. Operator has signed the sign-off line.

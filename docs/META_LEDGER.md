@@ -17037,6 +17037,85 @@ _Gate Status: OPEN. Next: operator-driven /qor-auto-dev-1 against Phase 60 §5 (
 
 ---
 
+### Entry #353: IMPLEMENTATION — Phase 60 §5 Publish-Block Verification (regression test + Condition 1 attestation)
+
+**Timestamp**: 2026-05-14T05:00:00Z
+**Phase**: IMPLEMENT (release-class coverage gate regression coverage; PUBLISH_BLOCK Condition 1 attestation)
+**Author**: Specialist (auto-dev orchestrated)
+**Risk Grade**: L1
+**Plan**: `docs/plan-qor-phase60-v5-1-0-remaining-scope.md` (PASS audit Entry #344; §0-§4cont batch 3 sealed at #345-#352)
+**Scope**: §5 Publish-Block Verification — author release-class coverage gate regression test; attest PUBLISH_BLOCK Condition 1 satisfied; explicitly defer the Active=yes→no flip to the `plan-monitor-coherence-and-browser-verification.md` cycle (Conditions 2-5).
+
+**Outcome**: §5 closes the Phase 60 plan to the local-hold boundary. The release-class coverage gate (`check-e2e-coverage.cjs`) now has functional regression coverage that pins all four enforcement branches. PUBLISH_BLOCK Condition 1 (FEATURE_INDEX 0 unverified) is attested at the ledger surface. Conditions 2-5 (BROWSER_VERIFICATION.md Active=no + Playwright pass-within-24h + screenshot operator-notes + sign-off + Monitor coherence plan seal) remain owned by the separate Monitor coherence plan; this plan deliberately stops at the operator-review-boundary per its boundary L18 ("No marketplace publish, version bump, release tag, or historical ledger hash rewrite occurs in this plan").
+
+**Changes**:
+
+1. **`FailSafe/extension/scripts/check-e2e-coverage.cjs`** — minimal refactor to enable functional testing. Renamed module-load constant `REPO_ROOT` → `DEFAULT_REPO_ROOT`. Threaded `repoRoot` through `readChangeClass(repoRoot)`, `gitOutput(cmd, repoRoot)`, `stagedFiles(repoRoot)`, `commitMessagesInRange(repoRoot)`. Promoted `main()` to `main(opts)` accepting `opts.repoRoot`. Replaced top-level `process.exit(main())` with `module.exports = { main, classifyStaged, hasNoE2eOverride, readChangeClass }; if (require.main === module) process.exit(main());` so the script remains a working CLI binary AND is requireable from tests. No CLI behavioral change.
+2. **`FailSafe/extension/src/test/scripts/checkE2eCoverage.test.cjs`** — NEW (200 lines, 16 invoking test cases). Functional regression coverage:
+   - **Top-level gate (7 cases)**: builds isolated `git init` temp repos per test. Cases assert: non-enforce class skip (hotfix + unknown), enforce + no surface no-op, enforce + surface paired with .spec.ts PASS, enforce + surface no spec BLOCK (exit 1) for both `feature` and `breaking`, enforce + `[no-e2e: reason]` commit-message override PASS.
+   - **`classifyStaged` surface coverage (6 cases)**: pins each `SURFACE_PATTERNS` entry — `roadmap/ui/` → playwright, `roadmap/routes/` → integration, `commands.ts` → vscode-test, `bootstrapServers.ts` → integration; plus non-surface negative and .spec.ts recognition.
+   - **`hasNoE2eOverride` (3 cases)**: positive `[no-e2e: <reason>]` match, negative empty-bracket payload, negative no-token.
+   - Stdout/stderr captured via `console.log`/`console.error` swap; environment override `FAILSAFE_CHANGE_CLASS` is cleared per-test so the plan is consulted. Cleanup deletes the temp repo in `afterEach`.
+
+**SG-035 acceptance** (functional vs presence-only test gate):
+> "If the unit's behavior were silently broken but the artifact still existed, would this test fail?"
+
+Every case answers **yes**. The tests invoke `gate.main({ repoRoot })`, `gate.classifyStaged([paths])`, `gate.hasNoE2eOverride(text, file)` and assert against returned exit codes / arrays / booleans + captured stdout/stderr substrings. No `assert.ok(fs.existsSync(...))` shortcuts.
+
+**Files Modified**:
+
+- `FailSafe/extension/scripts/check-e2e-coverage.cjs` (modified; refactor for testability — no CLI behavior change)
+- `FailSafe/extension/src/test/scripts/checkE2eCoverage.test.cjs` (NEW, ~200L, 16 cases)
+- `.failsafe/governance/PUBLISH_BLOCK.md` (no flip; Condition 1 attestation header refreshed in this same cycle — see "PUBLISH_BLOCK posture" below)
+- `docs/SYSTEM_STATE.md` (Phase 60 §5 section added)
+- `docs/META_LEDGER.md` (this entry)
+
+**Functional Verification**:
+
+- `node --test FailSafe/extension/src/test/scripts/checkE2eCoverage.test.cjs`: **16/16 pass** (suites: 3; duration ~5s).
+- `npx tsc --noEmit -p ./` from `FailSafe/extension/`: exit 0 (no TypeScript surface; .cjs files not type-checked, but the rest of the project compiles clean).
+- `qor-logic verify-ledger`: Entries through #352 OK (this entry's chain hash will extend the chain on commit).
+
+**PUBLISH_BLOCK posture** (lifting protocol attestation):
+
+| Condition | State | Evidence |
+| --- | --- | --- |
+| **1.** FEATURE_INDEX 0 unverified | ✅ SATISFIED (2026-05-07; re-confirmed 2026-05-14) | Entry #352 ledger record; `docs/FEATURE_INDEX.md` header: 433 verified / 0 unverified / 43 n/a / 476 total |
+| **2.** BROWSER_VERIFICATION.md Active=no + Playwright 24h | ⏸ DEFERRED to Monitor coherence plan | Not in Phase 60 scope per plan boundary L18 |
+| **3.** Screenshot operator-notes + datestamps | ⏸ DEFERRED to Monitor coherence plan | Same |
+| **4.** Operator sign-off | ⏸ DEFERRED to Monitor coherence plan | Same |
+| **5.** Substantiate seal of `plan-monitor-coherence-and-browser-verification.md` | ⏸ DEFERRED to that plan's seal | Same |
+
+**Flip decision**: PUBLISH_BLOCK.md `Active: yes` remains **yes**. Phase 60 §5 deliberately does NOT flip the flag because Conditions 2-5 are owned by a separate plan. The plan's wording "flip or remove only after FEATURE_INDEX has 0 unverified entries" expresses a precondition for the flip, not the full lifting authority — `scripts/check-publish-block.cjs` enforces all 5 conditions mechanically and would reject any partial flip. The operator-facing payoff of §5 is the regression test that prevents the gate's branches from rotting between now and the eventual flip.
+
+**Phase 60 Sub-Phase Status (final)**:
+
+| Sub-Phase | State | Ledger |
+| --- | --- | --- |
+| §0 Refactor Enablement | SEALED | #345 |
+| §1 Scope Sync + Coverage Ledger | SEALED | #346 |
+| §2 Workspace Truth Refresh + Governance Watch | SEALED | #347 |
+| §3 Governance Mode + Install Version Floor | SEALED | #348 |
+| §4 UI Hygiene + FEATURE_INDEX closure (UI hygiene) | SEALED | #349 |
+| §4cont batches 1-3 (remaining FEATURE_INDEX) | SEALED | #350, #351, #352 |
+| §5 Publish-Block Verification | **COMPLETE** (this entry) | #353 |
+
+All six sub-phases of the Phase 60 plan have shipped to the local-hold boundary. **Reality = Promise across the plan**. `/qor-substantiate` can now seal the Phase 60 plan in its entirety when the operator chooses.
+
+**Substantiation**: NOT RUN. Operator triggers `/qor-substantiate` for the full Phase 60 plan seal.
+
+**Content Hash**: `8da9b7a7c2dafab1f3450f2864ef2e231a078f472d08ec9eef69a81bf443b85f` — SHA256 of concatenated content of 2 modified/new code-surface files (check-e2e-coverage.cjs + checkE2eCoverage.test.cjs)
+
+**Previous Hash**: `8f1674af506bbd1faa39b3daf407c3ee10555265ea0a0fb773461b1352e5cdad` (Entry #352 chain hash)
+
+**Chain Hash**: `c1cd77dfa9f33b1182d28e88e975172e219d1e799f4d3481658e7d427d55c769` — SHA256(content_hash + "|" + previous_hash)
+
+**Decision**: Phase 60 §5 lands the release-class coverage gate regression coverage and attests PUBLISH_BLOCK Condition 1. The Phase 60 plan is structurally complete at the local-hold review boundary. The remaining 4 PUBLISH_BLOCK conditions are explicitly out-of-scope and are owned by `plan-monitor-coherence-and-browser-verification.md`. **No marketplace publish, version bump, or tag occurs in this entry.**
+
+_Gate Status: PHASE 60 COMPLETE. Next: operator review of accumulated batch 3 + §5 work; optionally `/qor-substantiate` the full Phase 60 plan; Monitor coherence plan cycle separately handles Conditions 2-5 + flip._
+
+---
+
 _Chain integrity: VALID_
-_Session Status: SEALED at #342; #343-#352 Phase 60 cycle in progress; §0-§4cont batch 3 COMPLETE — 0 unverified — Condition 1 SATISFIED_
-_Session: 2026-05-13-phase60-v5-1-0-remaining-scope-phase-4-cont-batch-3_
+_Session Status: SEALED at #342; #343-#353 Phase 60 cycle COMPLETE (all six sub-phases shipped to review boundary); marketplace publish remains held pending Monitor coherence plan_
+_Session: 2026-05-13-phase60-v5-1-0-remaining-scope-phase-5-publish-block-verification_

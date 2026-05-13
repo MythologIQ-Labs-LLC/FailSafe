@@ -13,7 +13,7 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
+const DEFAULT_REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 
 const SURFACE_PATTERNS = [
   { match: /^FailSafe\/extension\/src\/roadmap\/ui\//, kind: 'playwright' },
@@ -24,9 +24,9 @@ const SURFACE_PATTERNS = [
 
 const ENFORCE_CLASSES = new Set(['feature', 'breaking']);
 
-function readChangeClass() {
+function readChangeClass(repoRoot) {
   if (process.env.FAILSAFE_CHANGE_CLASS) return process.env.FAILSAFE_CHANGE_CLASS.trim();
-  const plansDir = path.join(REPO_ROOT, '.failsafe', 'governance', 'plans');
+  const plansDir = path.join(repoRoot, '.failsafe', 'governance', 'plans');
   if (!fs.existsSync(plansDir)) return null;
   const candidates = fs.readdirSync(plansDir)
     .filter((name) => name.startsWith('plan-') && name.endsWith('.md'))
@@ -41,25 +41,25 @@ function readChangeClass() {
   return null;
 }
 
-function gitOutput(cmd) {
+function gitOutput(cmd, repoRoot) {
   try {
-    return execSync(cmd, { cwd: REPO_ROOT, encoding: 'utf8' });
+    return execSync(cmd, { cwd: repoRoot, encoding: 'utf8' });
   } catch {
     return '';
   }
 }
 
-function stagedFiles() {
-  const out = gitOutput('git diff --cached --name-only --diff-filter=ACMR');
+function stagedFiles(repoRoot) {
+  const out = gitOutput('git diff --cached --name-only --diff-filter=ACMR', repoRoot);
   return out.split('\n').map((l) => l.trim()).filter(Boolean);
 }
 
-function commitMessagesInRange() {
-  const range = gitOutput('git rev-parse --abbrev-ref --symbolic-full-name @{u}').trim();
+function commitMessagesInRange(repoRoot) {
+  const range = gitOutput('git rev-parse --abbrev-ref --symbolic-full-name @{u}', repoRoot).trim();
   const cmd = range
     ? 'git log @{u}..HEAD --pretty=%B'
     : 'git log -n 20 --pretty=%B';
-  return gitOutput(cmd);
+  return gitOutput(cmd, repoRoot);
 }
 
 function classifyStaged(files) {
@@ -85,13 +85,14 @@ function hasNoE2eOverride(messages, file) {
   return false;
 }
 
-function main() {
-  const changeClass = readChangeClass();
+function main(opts) {
+  const repoRoot = (opts && opts.repoRoot) || DEFAULT_REPO_ROOT;
+  const changeClass = readChangeClass(repoRoot);
   if (!changeClass || !ENFORCE_CLASSES.has(changeClass)) {
     console.log(`[e2e-gate] skipped (change_class=${changeClass || 'unknown'})`);
     return 0;
   }
-  const files = stagedFiles();
+  const files = stagedFiles(repoRoot);
   if (files.length === 0) {
     console.log('[e2e-gate] no staged files');
     return 0;
@@ -101,7 +102,7 @@ function main() {
     console.log('[e2e-gate] no surface files staged');
     return 0;
   }
-  const messages = commitMessagesInRange();
+  const messages = commitMessagesInRange(repoRoot);
   const missing = [];
   for (const { file, kind } of requires) {
     if (specChanges.length > 0) continue;
@@ -118,4 +119,6 @@ function main() {
   return 0;
 }
 
-process.exit(main());
+module.exports = { main, classifyStaged, hasNoE2eOverride, readChangeClass };
+
+if (require.main === module) process.exit(main());

@@ -1,7 +1,59 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-05-13
-**Version:** v5.1.10-baseline plus Phase 60 §0-§4cont batch 3 (UI hygiene + 22-of-22 FEATURE_INDEX closures; PUBLISH_BLOCK Condition 1 SATISFIED) plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups (workspace-only label; no `package.json` bump)
+**Last Updated:** 2026-05-14
+**Version:** v5.1.10-baseline plus Phase 60 §0-§5 (Phase 60 plan structurally COMPLETE — all six sub-phases shipped to review boundary; PUBLISH_BLOCK Condition 1 SATISFIED; Conditions 2-5 deferred to Monitor coherence plan) plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups (workspace-only label; no `package.json` bump)
+
+---
+
+## 2026-05-14 - Phase 60 §5: Publish-Block Verification — release-class coverage gate regression coverage + Condition 1 attestation
+
+Plan: `docs/plan-qor-phase60-v5-1-0-remaining-scope.md` (PASS audit #344). Sub-phase §5 — closes the Phase 60 plan to the local-hold boundary. **Phase 60 is now structurally complete.**
+
+### Deliverables
+
+- **Release-class coverage gate regression test** — `FailSafe/extension/src/test/scripts/checkE2eCoverage.test.cjs` (NEW, ~200L, 16 invoking cases across 3 suites). Pins all four enforcement branches of `check-e2e-coverage.cjs`:
+  - non-enforce `change_class` (hotfix / unknown) → exit 0 skip;
+  - enforce + no surface staged → exit 0 no-op;
+  - enforce + surface paired with `.spec.ts` → exit 0 PASS;
+  - enforce + surface no spec → **exit 1 BLOCK** (asserted for both `feature` and `breaking`);
+  - enforce + `[no-e2e: <reason>]` commit-message override → exit 0 PASS.
+  Plus `classifyStaged` pin for each `SURFACE_PATTERNS` row (`roadmap/ui/` → playwright, `roadmap/routes/` → integration, `commands.ts` → vscode-test, `bootstrapServers.ts` → integration) and `hasNoE2eOverride` (positive / empty-bracket negative / no-token negative).
+- **Minimal testability refactor** of `FailSafe/extension/scripts/check-e2e-coverage.cjs`: threaded `repoRoot` through `readChangeClass` / `gitOutput` / `stagedFiles` / `commitMessagesInRange`; promoted `main()` → `main(opts)`; replaced unconditional `process.exit(main())` with `module.exports = { main, classifyStaged, hasNoE2eOverride, readChangeClass }; if (require.main === module) process.exit(main());`. CLI behavior unchanged.
+
+### PUBLISH_BLOCK lifting protocol attestation
+
+| Condition | State | Evidence |
+| --- | --- | --- |
+| **1.** FEATURE_INDEX 0 unverified | ✅ SATISFIED | `docs/FEATURE_INDEX.md` header: 433 verified / 0 unverified / 43 n/a / 476 total; Entry #352 ledger record |
+| **2.** BROWSER_VERIFICATION.md Active=no + Playwright pass-within-24h | ⏸ DEFERRED to `plan-monitor-coherence-and-browser-verification.md` |
+| **3.** Screenshot operator-notes + datestamps | ⏸ DEFERRED |
+| **4.** Operator sign-off | ⏸ DEFERRED |
+| **5.** Monitor coherence plan seal | ⏸ DEFERRED |
+
+**`Active: yes` in PUBLISH_BLOCK.md remains `yes`.** Phase 60 §5 deliberately does not flip the flag because Conditions 2-5 are owned by a separate plan. The Phase 60 plan's text "flip or remove only after FEATURE_INDEX has 0 unverified entries" expresses a precondition for the flip, not the full lifting authority — `scripts/check-publish-block.cjs` enforces all 5 conditions mechanically.
+
+### Verification
+
+- `node --test FailSafe/extension/src/test/scripts/checkE2eCoverage.test.cjs` → **16/16 pass** (3 suites; ~5s).
+- `npx tsc --noEmit -p ./` from `FailSafe/extension/` → exit 0.
+
+### Phase 60 plan completion status
+
+| Sub-Phase | State | Ledger |
+| --- | --- | --- |
+| §0 Refactor Enablement | SEALED | #345 |
+| §1 Scope Sync + Coverage Ledger | SEALED | #346 |
+| §2 Workspace Truth Refresh + Governance Watch | SEALED | #347 |
+| §3 Governance Mode + Install Version Floor | SEALED | #348 |
+| §4 UI Hygiene + FEATURE_INDEX closure (UI hygiene) | SEALED | #349 |
+| §4cont batches 1-3 (remaining FEATURE_INDEX) | SEALED | #350, #351, #352 |
+| §5 Publish-Block Verification | **COMPLETE** | #353 |
+
+**All six sub-phases of the Phase 60 plan have shipped to the local-hold boundary. Reality = Promise across the plan.** `/qor-substantiate` can seal the Phase 60 plan in its entirety when the operator chooses.
+
+### Next
+
+- Operator: review accumulated Phase 60 §4cont batch 3 commit + §5 work; optionally invoke `/qor-substantiate` for the full Phase 60 plan seal; no marketplace publish until the Monitor coherence plan's Conditions 2-5 ship.
 
 ---
 
