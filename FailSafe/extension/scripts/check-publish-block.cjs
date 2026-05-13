@@ -1,13 +1,17 @@
 #!/usr/bin/env node
 // check-publish-block.cjs
 //
-// Phase 2 governance state machine for plan-monitor-coherence-and-browser-
-// verification.md. Mechanically validates conditions 1-4 of the
-// PUBLISH_BLOCK Lifting Protocol; condition 5 (substantiate seal) is read
-// from META_LEDGER and is out of scope here (checked by qor-substantiate).
+// PUBLISH_BLOCK Lifting Protocol validator. Mechanically validates conditions
+// 1-4 of `.failsafe/governance/PUBLISH_BLOCK.md`. Condition 5 (substantiate
+// seal) is the operator's /qor-substantiate cycle and lives in META_LEDGER.
+//
+// Post-v5.1.0-lift integration (Phase 1 + Phase 2 of plan-qor-v5-1-0-publish-
+// block-lift): structural validation delegates to
+// `scripts/lib/browser-verification-schema.cjs`; Playwright spec inventory
+// drift detection delegates to `scripts/lib/playwright-spec-inventory.cjs`.
 //
 // Exit codes:
-//   0 — all 4 conditions met (block lift permitted from this script's view).
+//   0 — all conditions met (block lift permitted from this script's view).
 //   1 — at least one condition failed; first failure printed as `Reason N: ...`.
 //   2 — usage / IO error.
 
@@ -15,6 +19,9 @@
 
 const fs = require('fs');
 const path = require('path');
+
+const schema = require('./lib/browser-verification-schema.cjs');
+const inventory = require('./lib/playwright-spec-inventory.cjs');
 
 const REPO_ROOT_DEFAULT = path.resolve(__dirname, '..', '..', '..');
 
@@ -37,7 +44,6 @@ function isPublishBlockActive(paths) {
   return /\*\*Active\*\*\s*:\s*yes/i.test(text);
 }
 
-// Returns { reason: number, message: string } on failure, or null on success.
 function checkFeatureIndex(paths) {
   const text = readMaybe(paths.featureIndex);
   if (!text) {
@@ -53,78 +59,50 @@ function checkFeatureIndex(paths) {
   return null;
 }
 
-function checkBrowserVerification(paths) {
-  const text = readMaybe(paths.browserVerification);
-  if (!text) {
-    return { reason: 2, message: `BROWSER_VERIFICATION.md missing at ${paths.browserVerification}` };
-  }
-  if (!/\*\*Active\*\*\s*:\s*no/i.test(text)) {
-    return {
-      reason: 2,
-      message: `BROWSER_VERIFICATION.md does not show 'Active: no' (must flip after operator sign-off).`,
-    };
-  }
-  const section = text.split(/^##\s+/m).find((s) => /^Playwright-covered/i.test(s));
-  if (!section) {
-    return { reason: 2, message: `BROWSER_VERIFICATION.md missing 'Playwright-covered pages' section.` };
-  }
-  if (!/result:\s*pass/i.test(section)) {
-    return { reason: 2, message: `BROWSER_VERIFICATION.md Playwright section has no 'result: pass' entries.` };
-  }
-  return null;
+// Conditions 2/3/4 delegate to the schema validator. The first emitted error
+// becomes the failure reason; the rest are returned for diagnostic-only use.
+function checkBrowserVerificationSchema(paths, repoRoot) {
+  const result = schema.validate(repoRoot);
+  if (result.valid) return null;
+  const first = result.errors[0];
+  return {
+    reason: first.condition,
+    message: first.message,
+    additionalErrors: result.errors.slice(1),
+  };
 }
 
-function checkScreenshots(paths) {
-  const text = readMaybe(paths.browserVerification);
-  if (!text) return null; // condition 2 already failed
-  const section = text.split(/^##\s+/m).find((s) => /^Screenshot-covered/i.test(s));
-  if (!section) {
-    return { reason: 3, message: `BROWSER_VERIFICATION.md missing 'Screenshot-covered pages' section.` };
-  }
-  const refs = section.match(/Screenshot:\s*([^\s)]+)/gi) || [];
-  if (refs.length === 0) {
-    return { reason: 3, message: `BROWSER_VERIFICATION.md screenshot section has no 'Screenshot:' references.` };
-  }
-  if (!/Operator note:/i.test(section)) {
-    return { reason: 3, message: `BROWSER_VERIFICATION.md screenshot section missing 'Operator note:' lines.` };
-  }
-  if (!fs.existsSync(paths.screenshotsDir)) {
-    return { reason: 3, message: `Screenshot directory missing at ${paths.screenshotsDir}.` };
-  }
-  return null;
-}
-
-function checkSignature(paths) {
-  const text = readMaybe(paths.browserVerification);
-  if (!text) return null; // condition 2 already failed
-  const m = text.match(/Signature:\s*(.+)$/im);
-  if (!m) {
-    return { reason: 4, message: `BROWSER_VERIFICATION.md missing 'Signature:' line.` };
-  }
-  const sig = m[1].trim();
-  if (!sig || /^_+$/.test(sig)) {
-    return { reason: 4, message: `BROWSER_VERIFICATION.md operator signature line is blank/placeholder.` };
-  }
-  return null;
+// Condition 2 structural inventory: every Playwright row cited in
+// BROWSER_VERIFICATION.md must correspond to a real spec under
+// `src/test/ui/`. Catches rename/move drift between attestation and disk.
+function checkPlaywrightSpecInventory(repoRoot) {
+  const required = inventory.loadRequiredSpecs(repoRoot);
+  if (required.size === 0) return null; // schema validator already flagged
+  const disk = inventory.loadDiskSpecs(repoRoot);
+  const delta = inventory.compareInventory(required, disk);
+  if (delta.missing.length === 0) return null;
+  return {
+    reason: 2,
+    message: `BROWSER_VERIFICATION.md cites ${delta.missing.length} spec(s) not on disk: ${delta.missing.join(', ')}`,
+  };
 }
 
 // Programmatic entry point — safe to call from tests. Returns
 // { ok: boolean, reason?: number, message?: string, skipped?: boolean }.
 function evaluate(repoRoot) {
-  const paths = buildPaths(repoRoot || REPO_ROOT_DEFAULT);
+  const root = repoRoot || REPO_ROOT_DEFAULT;
+  const paths = buildPaths(root);
   if (!isPublishBlockActive(paths)) {
     return { ok: true, skipped: true };
   }
-  const checks = [
-    checkFeatureIndex,
-    checkBrowserVerification,
-    checkScreenshots,
-    checkSignature,
-  ];
-  for (const fn of checks) {
-    const result = fn(paths);
-    if (result) return { ok: false, ...result };
-  }
+  // Order matters: condition 1 (cheapest) → condition 2 schema → condition 2
+  // inventory drift → conditions 3/4 surface from schema if still failing.
+  const featureIndexFail = checkFeatureIndex(paths);
+  if (featureIndexFail) return { ok: false, ...featureIndexFail };
+  const schemaFail = checkBrowserVerificationSchema(paths, root);
+  if (schemaFail) return { ok: false, reason: schemaFail.reason, message: schemaFail.message };
+  const inventoryFail = checkPlaywrightSpecInventory(root);
+  if (inventoryFail) return { ok: false, ...inventoryFail };
   return { ok: true };
 }
 
@@ -157,8 +135,7 @@ module.exports = {
   evaluate,
   isPublishBlockActive,
   checkFeatureIndex,
-  checkBrowserVerification,
-  checkScreenshots,
-  checkSignature,
+  checkBrowserVerificationSchema,
+  checkPlaywrightSpecInventory,
   buildPaths,
 };

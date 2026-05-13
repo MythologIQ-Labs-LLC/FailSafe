@@ -17238,3 +17238,222 @@ _Next: `/qor-plan` for the remaining identified blockers (PUBLISH_BLOCK Conditio
 _Chain integrity: VALID_
 _Session Status: PHASE 60 PLAN SEALED at #354. All six sub-phases sealed. PUBLISH_BLOCK Condition 1 attested; Conditions 2-5 deferred to next plan cycle._
 _Session: 2026-05-14-phase60-v5-1-0-remaining-scope-full-plan-substantiation_
+
+---
+
+### Entry #355: GATE TRIBUNAL (VETO) — plan-qor-v5-1-0-publish-block-lift (first audit)
+
+**Timestamp**: 2026-05-14T06:00:00Z
+**Phase**: GATE
+**Persona**: The Qor-logic Judge (solo mode — Codex adversarial plugin not declared in this host)
+**Plan**: `docs/plan-qor-v5-1-0-publish-block-lift.md` (mirror at `.failsafe/governance/plans/plan-qor-v5-1-0-publish-block-lift.md`)
+**Risk Grade**: L2
+**Report**: `.agent/staging/AUDIT_REPORT.md`
+
+**Verdict**: **VETO** — one finding (Plan-text ground; single inline amendment closes it)
+
+**Audit pass matrix**:
+
+| Pass | Result |
+|---|---|
+| Prompt Injection (Phase 53) | PASS |
+| Security L3 | PASS |
+| OWASP Top 10 (A03/A04/A05/A08) | PASS |
+| Ghost UI | PASS — N/A |
+| Section 4 Razor | PASS |
+| Test Functionality (SG-035) | PASS (all 10 cases invoke unit + assert on output) |
+| Dependency Audit | PASS (zero new deps) |
+| Macro-Level Architecture | PASS |
+| **Infrastructure Alignment (Phase 37)** | **VETO** |
+| Orphan Detection | PASS |
+| Documentation Drift (Phase 28 advisory) | clean |
+
+**Finding V1 — `infrastructure-mismatch`**: Plan Phase 4 cites `.github/workflows/marketplace-publish.yml` and `.github/workflows/ovsx-publish.yml` as the GitHub Actions workflow dispatch targets. Disk reality: neither file exists. The actual marketplace-publish path is single-workflow `.github/workflows/release.yml` with two jobs (`publish-vscode` running `npx @vscode/vsce publish` and `publish-openvsx` running `npx ovsx publish`). The plan does NOT declare the cited filenames as NEW in Affected Files. Per Infrastructure Alignment Pass rule: "Every cited filesystem path… exists in current tree OR is explicitly declared NEW in Affected Files." Neither condition holds — VETO. The same filename drift appears propagated into PUBLISH_BLOCK.md's `## What this blocks` section, so the runbook will codify load-bearing wrong names if left as-is.
+
+**Findings categories**: `["infrastructure-mismatch"]`
+
+**Required next action**: **Governor** — amend Phase 4 "Affected Files" — "Marketplace dispatch" line to cite `.github/workflows/release.yml::publish-vscode` + `release.yml::publish-openvsx` instead of the non-existent dual-file names; sync the `docs/` and `.failsafe/governance/plans/` mirrors. Re-run `/qor-audit`. Expected re-audit verdict: **PASS** (no other findings).
+
+**Adversarial mode**: solo (Codex plugin not declared; capability shortfall logged conceptually — `.qor/` runtime degraded so no event persisted).
+
+**Process Pattern Advisory**: First audit of this plan; no repeated-VETO pattern detected in the prior 2 sealed phases (Phase 60 PASS at #344 → SEAL at #354).
+
+**Content Hash**: `5c0a601e9302af81d18ab28dcd07361384788ec76885ddd723b566e44f63535f` — SHA256(.agent/staging/AUDIT_REPORT.md)
+**Previous Hash**: `e4530f986e2cf3f87153b387de0793569faffbfe5332f16d8d4a06df9cca6875` (Entry #354 chain hash)
+**Chain Hash**: `23ec54fcd750012d6c221979625575ed30ab8d011745878475980fc83a0835fd` — SHA256(content_hash + "|" + previous_hash)
+
+**Decision**: VETO. Implementation gate locked. Governor must amend plan text per V1 remediation Option A (or B if scope expansion is intended). On re-audit PASS, `/qor-implement` unlocks.
+
+_Gate Status: LOCKED. Next: `/qor-plan amend per audit findings` → `/qor-audit` (re-audit)._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: PHASE 60 SEALED at #354; plan-qor-v5-1-0-publish-block-lift first audit VETO at #355 (single plan-text finding)_
+_Session: 2026-05-14-v5-1-0-publish-block-lift-first-audit_
+
+---
+
+### Entry #356: GATE TRIBUNAL (PASS) — plan-qor-v5-1-0-publish-block-lift (re-audit, amended)
+
+**Timestamp**: 2026-05-14T06:30:00Z
+**Phase**: GATE
+**Persona**: The Qor-logic Judge (solo mode)
+**Plan**: `docs/plan-qor-v5-1-0-publish-block-lift.md` (amended; mirror at `.failsafe/governance/plans/`)
+**Risk Grade**: L2
+**Report**: `.agent/staging/AUDIT_REPORT.md`
+
+**Verdict**: **PASS** — V1 from Entry #355 resolved by Governor amendment; no new findings introduced.
+
+**Audit pass matrix (re-audit)**:
+
+| Pass | Result |
+|---|---|
+| Prompt Injection (Phase 53) | PASS |
+| Security L3 | PASS |
+| OWASP Top 10 (A03/A04/A05/A08) | PASS |
+| Ghost UI | PASS — N/A |
+| Section 4 Razor | PASS |
+| Test Functionality (SG-035) | PASS (all 10 cases invoke unit + assert on output) |
+| Dependency Audit | PASS |
+| Macro-Level Architecture | PASS |
+| **Infrastructure Alignment (Phase 37)** | **PASS** (citations resolved to `.github/workflows/release.yml::publish-vscode` + `publish-openvsx`) |
+| Orphan Detection | PASS |
+| Documentation Drift (Phase 28 advisory) | clean |
+
+**Amendment verification**:
+
+| Required change | Applied | Verification |
+|---|---|---|
+| Phase 4 "Marketplace dispatch" cites `.github/workflows/release.yml` + job names | ✓ | grep matches lines 38 + 174 in amended plan |
+| Open Question Q3 drops dual-file framing | ✓ | Line 38 narrates "single workflow, two jobs" |
+| Mirror at `.failsafe/governance/plans/` synced | ✓ | `cp` confirmed |
+| Zero residual `marketplace-publish.yml` / `ovsx-publish.yml` references | ✓ | grep returns empty |
+
+**Findings categories**: `[]` (no findings on this re-audit)
+
+**Audit loop tracking**: 1 VETO (#355) → 1 PASS (#356). Single-iteration amendment cycle; cycle-count escalation threshold (3 consecutive same-signature VETOs) not approached. **Healthy gate loop.**
+
+**Process Pattern Advisory**: No repeated-VETO pattern detected; the single VETO from #355 closed in one amendment as predicted by V1's remediation note.
+
+**Content Hash**: `75a6280aae5768105e7273d90556fce441f3062878c8dd1ba76e2bc5d71ffe89` — SHA256(.agent/staging/AUDIT_REPORT.md)
+**Previous Hash**: `23ec54fcd750012d6c221979625575ed30ab8d011745878475980fc83a0835fd` (Entry #355 chain hash)
+**Chain Hash**: `6a9dc4d24d7fac72d45569991cd5f83f2a19e8bc2f5200e39b2089981c9d3c23` — SHA256(content_hash + "|" + previous_hash)
+
+**Decision**: PASS. **Implementation gate UNLOCKED.** `/qor-implement` is the next authorized skill.
+
+_Gate Status: OPEN. Next: `/qor-implement` (Phase 1 → Phase 2 → Phase 3 → Phase 4 per the four-phase plan; parallel agent-team mode if subagents available)._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: PHASE 60 SEALED at #354; v5.1.0-publish-block-lift audit PASS at #356 (re-audit; V1 amendment closed in single iteration)_
+_Session: 2026-05-14-v5-1-0-publish-block-lift-re-audit-PASS_
+
+---
+
+### Entry #357: IMPLEMENTATION — plan-qor-v5-1-0-publish-block-lift Phases 1-4 (all four phases shipped sequentially)
+
+**Timestamp**: 2026-05-14T07:00:00Z
+**Phase**: IMPLEMENT (all four plan phases in one cycle)
+**Persona**: Specialist (sequential mode — agent-teams not invoked; phases small enough for in-thread authoring)
+**Risk Grade**: L2
+**Plan**: `docs/plan-qor-v5-1-0-publish-block-lift.md` (PASS audit Entry #356)
+**Audit reference**: `.agent/staging/AUDIT_REPORT.md` (PASS)
+
+**Scope**: Four-phase implementation of the v5.1.0 PUBLISH_BLOCK lift surface. All TDD-Light per plan; each helper accompanied by its functional regression test before extending `check-publish-block.cjs`. Total surface: 3 new helpers under `scripts/lib/`, 4 new test files under `src/test/scripts/`, 1 new operator runbook under `docs/`, 1 refactored CLI gate (`check-publish-block.cjs`).
+
+**Phase 1 — Playwright spec inventory + check-publish-block extension**:
+
+- NEW `FailSafe/extension/scripts/lib/playwright-spec-inventory.cjs` (92L). Exports `loadRequiredSpecs(repoRoot)` (parses BROWSER_VERIFICATION.md `## Playwright-covered pages` section, strips `FailSafe/extension/` prefix for anchor alignment), `loadDiskSpecs(repoRoot)` (globs `FailSafe/extension/src/test/ui/*.spec.ts`), `compareInventory(required, disk)` → `{ missing, extra }`.
+- NEW `FailSafe/extension/src/test/scripts/playwrightSpecInventory.test.cjs` (176L, 12 cases across 4 suites): isolated tests of each helper + end-to-end aligned-vs-renamed temp-repo fixtures.
+- MODIFIED `check-publish-block.cjs`: new `checkPlaywrightSpecInventory(repoRoot)` function returns Condition 2 failure when `compareInventory(required, disk).missing.length > 0`; integrated into `evaluate()` chain after schema validation.
+
+**Phase 2 — BROWSER_VERIFICATION schema validator + operator runbook**:
+
+- NEW `FailSafe/extension/scripts/lib/browser-verification-schema.cjs` (131L). Exports `validate(repoRoot) → { valid: boolean, errors: [{ condition, message }] }`. Centralizes structural rules: Active flag must be `no`; Playwright section must exist with rows shaped as `- [x|space] Surface (\`<path>.spec.ts\`) — last run: <ts>, result: <pass|fail>`; result must be `pass` and timestamp non-placeholder; Screenshot section must exist with `Screenshot:` + `Operator note:` per `###` block; Signature line must be non-blank. Each error tagged to PUBLISH_BLOCK lifting-protocol condition (2/3/4).
+- NEW `FailSafe/extension/src/test/scripts/browserVerificationSchema.test.cjs` (173L, 9 cases across 5 suites): happy path + Condition 2 failures (missing file / Active=yes / placeholder timestamp / result=fail) + Condition 3 failures (missing Screenshot:, placeholder Operator note) + Condition 4 (blank signature) + composite (multiple errors aggregate).
+- NEW `docs/release-runbook-v5-1-0.md` (231L). Linear 13-step operator runbook: re-confirm Condition 1 → capture build SHA → run Playwright suite (`npm run test:ui`) → fill timestamps + results → take 4 screenshots for FX202/FX224/FX225/FX226 → run `verify:publish-block` → sign → flip Active flag → re-run validator → `/qor-substantiate` → flip `PUBLISH_BLOCK.md` Active → `npm version 5.1.0 --no-git-tag-version` → CHANGELOG stamp → `[RELEASE]` commit → `git tag -a v5.1.0` → push → marketplace dispatch via `.github/workflows/release.yml::publish-vscode` + `publish-openvsx` jobs.
+- MODIFIED `check-publish-block.cjs`: replaced inline Condition 2/3/4 checks (`checkBrowserVerification` + `checkScreenshots` + `checkSignature`) with a single delegation to `browser-verification-schema.validate(repoRoot)`. First emitted schema error becomes the failure reason; remaining errors available as `additionalErrors` for diagnostics. Existing `checkPublishBlock.test.cjs` fixtures updated to include backtick-quoted spec paths (schema is stricter than the prior inline check) + stub `monitor.spec.ts` on disk in temp repos (Phase 1 inventory check requires every cited spec to exist).
+
+**Phase 3 — Publish-block lift commit helper**:
+
+- NEW `FailSafe/extension/scripts/lib/publish-block-lift-commit.cjs` (91L). Exports `prepareLiftCommit(repoRoot)` (does NOT modify the filesystem; returns structured edit-plan + META_LEDGER entry draft) + `LiftSchemaError` class (`.condition` set to failing condition number). Three branches: (a) PUBLISH_BLOCK Active=no already → returns `null` (idempotent); (b) BROWSER_VERIFICATION schema fails → throws `LiftSchemaError` with first failing condition; (c) all conditions met → returns `{ filesToEdit: { '<path>': { from: '**Active**: yes', to: '<Active=no block + Lifted-on + Lift-reference lines>' } }, ledgerEntryDraft: '<entry markdown>' }`. Per the no-ship rule, the helper proposes; the operator (or `/qor-implement`) applies the edit + git stage.
+- NEW `FailSafe/extension/src/test/scripts/publishBlockLiftCommit.test.cjs` (175L, 7 cases): all-conditions-met → expected edit shape + ledger draft; already-inactive → null; missing BROWSER_VERIFICATION → throw condition 2; BROWSER_VERIFICATION Active=yes → throw condition 2; blank signature → throw condition 4; PUBLISH_BLOCK.md missing → throw condition 0; PUBLISH_BLOCK.md without `**Active**:` flag → throw condition 0.
+
+**Phase 4 — Release runbook integrity test**:
+
+- NEW `FailSafe/extension/src/test/scripts/releaseRunbookIntegrity.test.cjs` (146L, 7 cases across 2 suites). Pins the runbook against repo state: file exists at canonical location; exactly 13 numbered steps in monotonic order; every `npm run <script>` reference resolves to a real entry in `FailSafe/extension/package.json`; every `node ./scripts/...` reference resolves to a real file on disk; release-class section cites `.github/workflows/release.yml` (NOT the deprecated `marketplace-publish.yml` / `ovsx-publish.yml` filenames); both publish job names (`publish-vscode`, `publish-openvsx`) named. Functional trip-test: sabotage temp `package.json` with empty scripts → assert the integrity check flags the missing scripts.
+
+**Helper exports table**:
+
+| Helper | Public surface |
+|---|---|
+| `playwright-spec-inventory.cjs` | `loadRequiredSpecs(repoRoot)`, `loadDiskSpecs(repoRoot)`, `compareInventory(required, disk)`, `BROWSER_VERIFICATION_PATH`, `UI_SPEC_DIR` |
+| `browser-verification-schema.cjs` | `validate(repoRoot) → { valid, errors }`, `FILE_REL` |
+| `publish-block-lift-commit.cjs` | `prepareLiftCommit(repoRoot) → structured-edit \| null` (throws `LiftSchemaError`), `LiftSchemaError`, `PUBLISH_BLOCK_REL` |
+| `check-publish-block.cjs` (CLI + module) | `evaluate(repoRoot) → { ok, reason?, message?, skipped? }`, `isPublishBlockActive(paths)`, `checkFeatureIndex(paths)`, `checkBrowserVerificationSchema(paths, repoRoot)`, `checkPlaywrightSpecInventory(repoRoot)`, `buildPaths(repoRoot)` |
+
+**SG-035 acceptance** (functional vs presence-only test gate):
+> "If the unit's behavior were silently broken but the artifact still existed, would this test fail?"
+
+Every one of the 35 newly-authored test cases answers **yes** (the test invokes the unit and asserts on returned values / observable mutations / thrown errors). Highlights:
+- `playwrightSpecInventory.test.cjs` rename case invokes `compareInventory()` and asserts `.missing === [renamed-spec]`.
+- `browserVerificationSchema.test.cjs` happy-path invokes `validate()` and asserts `errors === []`; placeholder-timestamp case invokes the same path and asserts `errors[].condition === 2`.
+- `publishBlockLiftCommit.test.cjs` invokes `prepareLiftCommit()` and asserts on returned edit structure / `null` / thrown `LiftSchemaError.condition`.
+- `releaseRunbookIntegrity.test.cjs` trip-test sabotages a temp `package.json` and asserts the integrity check flags it (`missing.length > 0`).
+
+**Files modified / created**:
+
+| Path | Op | Lines |
+|---|---|---|
+| `FailSafe/extension/scripts/lib/playwright-spec-inventory.cjs` | NEW | 92 |
+| `FailSafe/extension/scripts/lib/browser-verification-schema.cjs` | NEW | 131 |
+| `FailSafe/extension/scripts/lib/publish-block-lift-commit.cjs` | NEW | 91 |
+| `FailSafe/extension/scripts/check-publish-block.cjs` | MODIFIED | 141 (was 165; net −24 via schema delegation) |
+| `FailSafe/extension/src/test/scripts/playwrightSpecInventory.test.cjs` | NEW | 176 |
+| `FailSafe/extension/src/test/scripts/browserVerificationSchema.test.cjs` | NEW | 173 |
+| `FailSafe/extension/src/test/scripts/publishBlockLiftCommit.test.cjs` | NEW | 175 |
+| `FailSafe/extension/src/test/scripts/releaseRunbookIntegrity.test.cjs` | NEW | 146 |
+| `FailSafe/extension/src/test/scripts/checkPublishBlock.test.cjs` | MODIFIED | (fixture refresh for schema-tighter Playwright rows + stub spec on disk) |
+| `docs/release-runbook-v5-1-0.md` | NEW | 231 |
+
+**Section 4 Razor compliance**: all new source/script files ≤250L (max 141); all new test files ≤250L (max 176); runbook is documentation (not code-Razor-bound) but well-organized at 231L. No nested ternaries; nesting depth ≤3 throughout.
+
+**Functional verification**:
+
+- `node --test` across all 6 new + integration test files: **56/56 pass** (16 suites total — `playwrightSpecInventory.test.cjs` 12 cases / `browserVerificationSchema.test.cjs` 9 / `publishBlockLiftCommit.test.cjs` 7 / `checkPublishBlock.test.cjs` 5 (refreshed fixtures) / `releaseRunbookIntegrity.test.cjs` 7 / `checkE2eCoverage.test.cjs` 16 (Phase 60 §5 regression continues to pass)).
+- `npx tsc --noEmit -p ./` from `FailSafe/extension/`: exit 0.
+- `npm run --silent verify:publish-block` CLI smoke: exits 1 with `Reason 1: FEATURE_INDEX.md contains N 'unverified' marker(s)` — expected behavior with current PUBLISH_BLOCK Active=yes + the pre-existing `\bunverified\b` regex over-matching narrative text in FEATURE_INDEX header (not introduced by this plan; tracked separately as a `checkFeatureIndex` precision improvement candidate for a future plan).
+
+**Phase deviation from plan text (minor)**: plan Phase 2 described the check-publish-block change as "replace inline Condition 2/3/4 parsing with a delegation". Implementation went one step further by also tightening the fixtures used by `checkPublishBlock.test.cjs` (added backtick spec paths + stub disk specs) because the schema validator's row-shape regex is stricter than the prior inline check (it requires the cited `\`<path>.spec.ts\`` token). Net effect: tests now exercise the production BROWSER_VERIFICATION.md row format. The plan's "Preserves the `checkPublishBlock.test.cjs` cases" wording is honored at the case-count + semantic-coverage level; fixture details are corrected to production reality.
+
+**Review Boundary attestation** (per plan §"Review-Boundary attestation"):
+
+- This `/qor-implement` cycle does **NOT** edit `.failsafe/governance/PUBLISH_BLOCK.md` (Active=yes remains yes). Phase 3's `prepareLiftCommit()` helper is the **proposal mechanism**; the actual flip happens at runbook step 11 by the operator after `/qor-substantiate` seals this plan.
+- This cycle does **NOT** bump `package.json`, stamp `CHANGELOG.md`, create an annotated tag, push, or trigger marketplace publish. Those are documented in `docs/release-runbook-v5-1-0.md` steps 12-13 as operator-only post-seal actions.
+- No marketplace surface mutation. No `git push`. No remote API call.
+
+**Phase status**:
+
+| Phase | State | Files |
+|---|---|---|
+| Phase 1 | ✅ COMPLETE | playwright-spec-inventory.cjs + test |
+| Phase 2 | ✅ COMPLETE | browser-verification-schema.cjs + test + release-runbook-v5-1-0.md + check-publish-block delegation |
+| Phase 3 | ✅ COMPLETE | publish-block-lift-commit.cjs + test |
+| Phase 4 | ✅ COMPLETE | releaseRunbookIntegrity.test.cjs |
+| Integration | ✅ COMPLETE | check-publish-block.cjs refactor consolidates Phase 1 + 2 |
+
+**Content Hash**: `ca3d2b423354cd02160d8bfb589f60a45210b10834424daca73158b83d6889fb` — SHA256 of concatenated content of 10 modified/new files
+**Previous Hash**: `6a9dc4d24d7fac72d45569991cd5f83f2a19e8bc2f5200e39b2089981c9d3c23` (Entry #356 chain hash)
+**Chain Hash**: `2328ec655d96effe89d2a05863caf048bf66490349392ebdefee3e6a086eb25d` — SHA256(content_hash + "|" + previous_hash)
+
+**Decision**: All four phases of `plan-qor-v5-1-0-publish-block-lift` shipped at the local-hold review boundary. 56/56 tests pass; TypeScript clean; review-boundary honored throughout (no Active flag flips, no version bump, no tag, no push). The implement-side of the v5.1.0 publish-block lift is **structurally complete**; the remaining surface is operator attestation (runbook steps 3-9) followed by `/qor-substantiate` + the lift commit (runbook steps 10-11) + release-class emission (runbook steps 12-13).
+
+_Gate Status: OPEN. Next: `/qor-substantiate` for plan-qor-v5-1-0-publish-block-lift OR operator runbook execution for attestation evidence collection. Marketplace publish remains held pending substantiate seal + operator-applied lift commit._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: Phase 60 SEALED at #354; v5.1.0-lift plan PASS at #356 → IMPLEMENT at #357 (all four phases shipped to review boundary); 56/56 new+integration tests pass; PUBLISH_BLOCK.md Active=yes unchanged (operator gate)_
+_Session: 2026-05-14-v5-1-0-publish-block-lift-implement_

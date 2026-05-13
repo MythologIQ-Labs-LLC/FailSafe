@@ -51,6 +51,10 @@ function writeBrowserVerificationSigned(repoRoot, signature = 'Operator Initials
   const dir = path.join(repoRoot, '.failsafe', 'governance');
   fs.mkdirSync(dir, { recursive: true });
   fs.mkdirSync(path.join(dir, 'screenshots'), { recursive: true });
+  // Phase 1 inventory check requires every cited spec to exist on disk.
+  const specPath = path.join(repoRoot, 'FailSafe', 'extension', 'src', 'test', 'ui', 'monitor.spec.ts');
+  fs.mkdirSync(path.dirname(specPath), { recursive: true });
+  fs.writeFileSync(specPath, '// stub\n', 'utf8');
   const body = [
     '# FailSafe v5.1.0 — Browser Verification Evidence',
     '',
@@ -61,7 +65,7 @@ function writeBrowserVerificationSigned(repoRoot, signature = 'Operator Initials
     '',
     '## Playwright-covered pages',
     '',
-    '- [x] Monitor — last run: 2026-05-08T00:00:00Z, result: pass',
+    '- [x] Monitor (`src/test/ui/monitor.spec.ts`) — last run: 2026-05-08T00:00:00Z, result: pass',
     '',
     '## Screenshot-covered pages',
     '',
