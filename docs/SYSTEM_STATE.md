@@ -1,7 +1,55 @@
 # SYSTEM STATE
 
 **Last Updated:** 2026-05-13
-**Version:** v5.1.10-baseline plus Phase 60 §0-§4cont (UI hygiene + 4 FEATURE_INDEX closures) plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups (workspace-only label; no `package.json` bump)
+**Version:** v5.1.10-baseline plus Phase 60 §0-§4cont batch 2 (UI hygiene + 4 test-authored closures + 5 promotion-pass closures) plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups (workspace-only label; no `package.json` bump)
+
+---
+
+## 2026-05-13 - Phase 60 §4cont batch 2: 5 FEATURE_INDEX promotions (FX166 / FX219 / FX231 / FX244 / FX261)
+
+Plan: `docs/plan-qor-phase60-v5-1-0-remaining-scope.md` (PASS audit #344; §0-§4cont batch 1 sealed at #345-#350). Sub-phase §4 continuation batch 2 — promotion-pass audit (read-only verification, not test authoring).
+
+### Deliverables
+
+Single code-reviewer subagent performed SG-035 functional-acceptance audit on 7 candidate FX rows. **5 of 7 promote**; 2 keep-unverified with documented gaps.
+
+| FX | Verdict | Rationale |
+| --- | --- | --- |
+| **FX166** Toast severity gating | PROMOTE | `showStatusGated()` invocation + observable-side-effect assertion (`calls.length === 0`); coercion test pipeline-functional. |
+| **FX219** Voice controller state machine | PROMOTE | All 6 cited tests instantiate real VoiceController, drive state listeners, validate lifecycle/swap/reentry/destroy/analyser cache. Comprehensive coverage confirmed. |
+| **FX231** Voice & Audio card | PROMOTE | Both XSS tests invoke `renderVoiceSettings()` / `renderMultilingualRows()` with hostile payloads + assert both rendering and escape ran. |
+| **FX244** Governance modes (Observe/Assist/Enforce) | PROMOTE (citation amendment) | All three evaluator tests are functional; `EnforceModeEvaluator.test.ts` existed but was uncited. Row's `Cited Test` column amended to include it. |
+| **FX261** Sentinel RAG JSONL fallback | PROMOTE | `appendJsonlRecord` + `purgeJsonlAfterTimestamp` invoked with observable-side-effect assertions; SentinelRagStore integration confirms wire-through. |
+| FX044 `failsafe.governance.mode` | KEEP-UNVERIFIED | Cited evaluator tests cover unit logic but not the `workspace.getConfiguration('failsafe').get('governance.mode')` → ConfigManager → EvaluationRouter consumption pipeline the row claims. Multi-file pipeline test deferred to B199. |
+| FX359 Skill provenance metadata | KEEP-UNVERIFIED | Cited test silently skips when `Antigravity/skills/` absent and only checks two fields (name + description); full provenance schema (version/author/license/hash/malformed-rejection) not gated. Small follow-on test could close this. |
+
+### FEATURE_INDEX coverage delta
+
+- verified: 415 → **420** (+5; 87.2% → 88.2%)
+- unverified: 18 → **13** (−5; 3.8% → 2.7%)
+- n/a: 43 (unchanged)
+- total: 476 (unchanged)
+
+### Remaining 13 unverified bucket (post-batch 2)
+
+- governance mode / observe-enforce UX: FX044 (cited gap: pipeline-vs-unit; deferred to B199)
+- console / monitor / command center UI: FX145, FX154, FX173, FX174 (Playwright spec-pinned; B199 Phase 3 surface)
+- voice and audio verification: FX196, FX198, FX221, FX222, FX227 (FX219 + FX231 promoted)
+- hooks / checkpoint / sentinel / skill provenance / workspace seeding: FX166-promoted; FX236, FX258, FX359 (FX166 + FX261 promoted; FX435 promoted at batch 1)
+
+### Phase 60 sub-phase status
+
+| Sub-Phase | State | Ledger |
+| --- | --- | --- |
+| §0 Refactor Enablement | SEALED | #345 |
+| §1 Scope Sync + Coverage Ledger | SEALED | #346 |
+| §2 Workspace Truth Refresh + Governance Watch | SEALED | #347 |
+| §3 Governance Mode Escalation + Install Version Floor | SEALED | #348 |
+| §4 UI Subscription Hygiene B198 | SEALED | #349 |
+| §4cont batch 1 — 4 test-authored closures | SEALED | #350 |
+| §4cont batch 2 — 5 promotion-pass closures | **THIS COMMIT** | #351 |
+| §4cont — remaining 13 unverified entries | Deferred (B199 Phase 2-8 + operator review) | future |
+| §5 Publish-Block Verification | Deferred (gated on 0-unverified) | future |
 
 ---
 

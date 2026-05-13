@@ -5,10 +5,10 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 **Generated**: 2026-05-06
 **Sources**: `.failsafe/governance/FEATURE_INVENTORY_DOCS.md` (312 entries), `.failsafe/governance/FEATURE_INVENTORY_CODE.md` (374 entries), `FailSafe/extension/src/test/**` (135 files).
 
-**Coverage summary** (updated 2026-05-13 — Phase 60 §4 continuation: 4 unverified rows promoted to verified after Phase 60 §4cont test authoring closes their coverage gaps — FX128 (GET /console/agents), FX409 (SRE Activity Feed ALLOW/DENY/AUDIT), FX419 (Token Economics Dashboard), FX435 (Workspace seeding .failsafe/). Previous update 2026-05-13 — Phase 62 cleanup: FX128 + FX359 removed from MANUAL_OVERRIDES as redundant overrides per E7 staleness detector; classifier-redetermined status remained `unverified` for both. Override count 28 → 26; redundant_count 2 → 0. Earlier 2026-05-09 — Item B Phase 1 sweep applied; 4 em-dash command entries cited to existing commands-state.test.ts + 20 cross-reference promotion overrides per documented Notes-column evidence):
+**Coverage summary** (updated 2026-05-13 — Phase 60 §4cont batch 2: code-reviewer promotion-pass audit promotes 5 of 7 candidates after SG-035 functional acceptance — FX166 (toast severity gating), FX219 (voice controller state machine), FX231 (voice & audio card XSS hardening), FX244 (governance modes Observe/Assist/Enforce; citation amended to include `EnforceModeEvaluator.test.ts` which existed + functional but was uncited), FX261 (Sentinel RAG JSONL fallback). 2 candidates kept unverified with documented gaps: FX044 (cited evaluator tests cover unit logic but not the `failsafe.governance.mode` config-consumption pipeline the row claims), FX359 (cited test silently skips when `Antigravity/skills/` absent + only checks two fields, not full provenance schema). Previous 2026-05-13 §4cont batch 1: 4 closures (FX128, FX409, FX419, FX435). Earlier 2026-05-09 — Item B Phase 1 sweep applied; 4 em-dash command entries cited to existing commands-state.test.ts + 20 cross-reference promotion overrides):
 - Total unified entries: **476**
-- **Verified: 415 (87.2%)** — entries whose cited test holds under SG-035 after baseline-audit + Phase 3 manual review + E3 heuristic upgrade + B Phase 1 sweep + Phase 60 §4cont.
-- **Unverified: 18 (3.8%)** — remediation targets for ongoing B199 Phase 2+ scope. Down from 22 at Phase 62 seal (Phase 60 §4cont closed 4 entries this cycle).
+- **Verified: 420 (88.2%)** — entries whose cited test holds under SG-035 after baseline-audit + Phase 3 manual review + E3 heuristic upgrade + B Phase 1 sweep + Phase 60 §4cont batches 1 + 2.
+- **Unverified: 13 (2.7%)** — remediation targets for ongoing B199 Phase 2+ scope. Down from 18 after batch 2 promotions; down from 22 at Phase 62 seal.
 - **N/A (operator-justified): 43 (9.0%)** — entries that cannot be unit-tested in mocha/vscode-test:
   - Browser-side components requiring WebGPU/MediaStream (FX202/FX203/FX224/FX225/FX226 voice modal + Whisper + WebLLM)
   - Doc-only claims with no code module enumerated (FX404 DiffGuard panel; FX433 Roadmap/Kanban view modes; FX427 Cortex Stream; FX428 The Dojo sidebar)
@@ -234,7 +234,7 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | FX163 | Latest audit card | F088 | C142 | roadmap/audit-report-reader.test.ts | verified | |
 | FX164 | Recent releases card | F089 | C143 | roadmap/changelog-reader.test.ts | verified | |
 | FX165 | Tickers / bootstrap banner | — | C144 | roadmap/tickers-xss.test.ts | verified | Reality without Promise |
-| FX166 | Toast severity gating | F119 | C145, C194 | roadmap/toast-severity-gating.test.ts, roadmap/notifications-coercion.test.ts | unverified | |
+| FX166 | Toast severity gating | F119 | C145, C194 | roadmap/toast-severity-gating.test.ts, roadmap/notifications-coercion.test.ts | verified | Phase 60 §4cont batch 2: both cited tests are FUNCTIONAL. `toast-severity-gating.test.ts` invokes `showStatusGated()` with falsy store values and asserts `calls.length === 0`; `notifications-coercion.test.ts` exercises the severity coercion pipeline. |
 | FX167 | Agent timeline renderer | F269 | C146 | sentinel/AgentTimelineService.test.ts | verified | |
 | FX168 | Transparency stream renderer | F293 | C147 | roadmap/transparency-events-hub.test.ts | verified | |
 | FX169 | Shadow Genome renderer | F274 | C148 | roadmap/genome-renderer.test.ts | verified | jsdom-driven: empty state + populated patterns (capped at 12) + mode-specific accent color + unresolved rows with id-truncation + fetch-error tolerance + destroy + onEvent re-render. 11 cases. |
@@ -301,7 +301,7 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | FX216 | Haptic engine | — | C172 | roadmap/haptic-engine.test.ts | verified | Reality without Promise (no doc claim) but functionally tested |
 | FX217 | Heuristic keyword extractor | — | C173 | roadmap/heuristic-extractor.test.ts | verified | Reality without Promise — but 16-case functional test covers the full extractor logic |
 | FX218 | Ideation buffer | — | C174 | roadmap/IdeationBuffer.test.ts | verified | Reality without Promise (no doc claim) but functionally tested |
-| FX219 | Voice controller state machine | F101 | C178 | roadmap/voice-controller-allowlist.test.ts, roadmap/voice-controller-state-listener.test.ts, roadmap/voice-controller-model-swap.test.ts, roadmap/voice-controller-swap-propagation.test.ts, roadmap/voice-controller-destroy-during-swap.test.ts, roadmap/voice-controller-analyser-cache.test.ts | unverified | Comprehensive coverage |
+| FX219 | Voice controller state machine | F101 | C178 | roadmap/voice-controller-allowlist.test.ts, roadmap/voice-controller-state-listener.test.ts, roadmap/voice-controller-model-swap.test.ts, roadmap/voice-controller-swap-propagation.test.ts, roadmap/voice-controller-destroy-during-swap.test.ts, roadmap/voice-controller-analyser-cache.test.ts | verified | Phase 60 §4cont batch 2: all 6 cited tests are FUNCTIONAL. Tests instantiate real VoiceController, drive state listeners (`stt.onStateChange('listening')`), validate idle/listening/processing/speaking transitions + model swap + reentry guard + destroy clearing `_swapping` + analyser cache. |
 | FX220 | Voice catalog (BCP-47 → Piper voice ID) | F095 | C179 | roadmap/voice-catalog.test.ts | verified | |
 | FX221 | Speech-to-text engine | F093 | C180 | roadmap/stt-engine-multilingual.test.ts, roadmap/stt-silence-timer.test.ts | unverified | |
 | FX222 | Text-to-speech engine (Piper WASM) | F093 | C181 | roadmap/tts-engine-allowlist.test.ts, roadmap/tts-engine-vendor-presence.test.ts | unverified | |
@@ -320,7 +320,7 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | ID | Feature | Doc | Code | Test | Status | Notes |
 |---|---|---|---|---|---|---|
 | FX230 | Theme card | F112 | C190 | roadmap/settings-renderer.test.ts | verified | renders cc-theme-select chips; current theme has active class; click toggles active + calls store.setTheme. 3 cases. |
-| FX231 | Voice & Audio card | F113 | C197, C198, C199, C200, C201 | roadmap/voice-settings-xss.test.ts, roadmap/voice-settings-multilingual-xss.test.ts | unverified | XSS hardening tested |
+| FX231 | Voice & Audio card | F113 | C197, C198, C199, C200, C201 | roadmap/voice-settings-xss.test.ts, roadmap/voice-settings-multilingual-xss.test.ts | verified | Phase 60 §4cont batch 2: both cited tests are FUNCTIONAL. `voice-settings-xss.test.ts` invokes `renderVoiceSettings()` with hostile payloads + asserts both rendering occurred (`html.includes('Xenova/whisper-tiny')`) and escape ran (`html.includes('&quot;')`, `!html.includes(BREAKOUT_SIGNATURE)`); `voice-settings-multilingual-xss.test.ts` same pattern for the multilingual row renderer. |
 | FX232 | Notifications card | F114 | C194 | roadmap/toast-severity-gating.test.ts | verified | |
 | FX233 | Brainstorm card (history limit) | F115 | C195 | roadmap/ideation-buffer-config.test.ts | verified | |
 | FX234 | QorLogic Skills card | F116 | C196 | extension/installSkillsHandler.test.ts | verified | |
@@ -340,7 +340,7 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 | ID | Feature | Doc | Code | Test | Status | Notes |
 |---|---|---|---|---|---|---|
-| FX244 | Governance modes (Observe/Assist/Enforce) | F198 | C211 | governance/ObserveModeEvaluator.test.ts, governance/AssistModeEvaluator.test.ts | unverified | |
+| FX244 | Governance modes (Observe/Assist/Enforce) | F198 | C211 | governance/ObserveModeEvaluator.test.ts, governance/AssistModeEvaluator.test.ts, governance/EnforceModeEvaluator.test.ts (Phase 60 §4cont citation amendment) | verified | Phase 60 §4cont batch 2: all three evaluator tests are FUNCTIONAL. `ObserveModeEvaluator.test.ts` and `AssistModeEvaluator.test.ts` were already cited; `EnforceModeEvaluator.test.ts` was uncited despite being present + functional — citation amended to close the row. Together the three cover the full Observe/Assist/Enforce decision-behavior contract. |
 | FX245 | Save-time intent gate | F199 | C211, C218 | governance/IntentService.test.ts | verified | |
 | FX246 | Sentinel daemon | F200 | C287 | sentinel/VerdictArbiter.test.ts | verified | |
 | FX247 | Sentinel verdicts (PASS/WARN/BLOCK/ESCALATE) | F201 | C288, C293 | sentinel/VerdictArbiter.test.ts | verified | |
@@ -357,7 +357,7 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | FX258 | Checkpoint integrity chain | F212 | C251, C252, C253 | checkpoint/CheckpointLifecycle.test.ts, checkpoint/CheckpointPersistence.test.ts | unverified | |
 | FX259 | Checkpoint hash-chain (git/payload/entry/prev) | F213 | C253 | checkpoint/CheckpointPersistence.test.ts | verified | |
 | FX260 | Sentinel RAG store | F214 | C296 | sentinel/SentinelRagStore.test.ts | verified | |
-| FX261 | Sentinel RAG JSONL fallback | F215 | C297 | sentinel/SentinelRagStore.test.ts, sentinel/SentinelJsonlFallback.test.ts | unverified | Fallback module functions tested via FX350 (ensure/append/purge + sha256 + stableStringify); SentinelRagStore wires through these helpers when better-sqlite3 unavailable. |
+| FX261 | Sentinel RAG JSONL fallback | F215 | C297 | sentinel/SentinelRagStore.test.ts, sentinel/SentinelJsonlFallback.test.ts | verified | Phase 60 §4cont batch 2: both cited tests are FUNCTIONAL. `SentinelJsonlFallback.test.ts` invokes `appendJsonlRecord(file, record)` + `purgeJsonlAfterTimestamp(file, timestamp)` and asserts on observable side-effects (`assert.equal(purged, 2)`); `SentinelRagStore.test.ts` integrates these helpers and asserts JSONL persistence when sqlite path is absent. Fallback module functions tested via FX350 (ensure/append/purge + sha256 + stableStringify). |
 | FX262 | AI Provenance Tracking | F216 | C238 | governance/ProvenanceTracker.test.ts | verified | |
 | FX263 | Mode-Change Audit Trail (USER_OVERRIDE) | F217 | C211 | extension/mode-change-audit.test.ts | verified | onDidChangeConfiguration listener for failsafe.governance.mode emits USER_OVERRIDE ledger entry with previousMode/newMode + agentDid='vscode-user'; same-value write does NOT duplicate. 2 cases against real VS Code config events. |
 | FX264 | Artifact Hash on Write (SHA-256) | F218 | C239 | governance/ArtifactHasher.test.ts | verified | |

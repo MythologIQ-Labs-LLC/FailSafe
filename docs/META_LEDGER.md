@@ -16870,6 +16870,83 @@ _Gate Status: OPEN. Next: operator-driven /qor-auto-dev-1 cycles continuing §4 
 
 ---
 
+### Entry #351: IMPLEMENTATION (partial) — Phase 60 §4cont batch 2: 5 FEATURE_INDEX promotions via SG-035 audit
+
+**Timestamp**: 2026-05-14T03:30:00Z
+**Phase**: IMPLEMENT (promotion-pass, no test authoring)
+**Author**: Specialist (auto-dev orchestrated; 1 code-reviewer subagent performed read-only SG-035 functional-acceptance audit)
+**Risk Grade**: L1 (no code changes; only FEATURE_INDEX row metadata updates + 1 citation amendment)
+**Plan**: `docs/plan-qor-phase60-v5-1-0-remaining-scope.md` (PASS audit Entry #344; §0-§4cont batch 1 sealed at #345-#350)
+**Scope**: §4 continuation batch 2 — promotion-pass audit on 7 candidates from the 18 unverified bucket. **5 of 7 promote**; 2 keep-unverified with documented gaps.
+
+**Audit Methodology**:
+
+Code-reviewer subagent applied SG-035 acceptance question per cited test: *"If the unit's behavior were silently broken but the test artifact still existed, would this test fail?"* Yes ⇒ FUNCTIONAL; No ⇒ PRESENCE-ONLY. A row promotes only when at least one cited test is FUNCTIONAL AND the test actually exercises the feature the row claims.
+
+**Promotion verdicts**:
+
+| FX | Verdict | Cited Tests Evaluated | Evidence |
+| --- | --- | --- | --- |
+| **FX166** | PROMOTE | toast-severity-gating + notifications-coercion | `showStatusGated('info', 't', 'c', fn, makeStore({...'false'})); assert.strictEqual(calls.length, 0)` — invocation + observable-side-effect assertion. |
+| **FX219** | PROMOTE | 6 voice-controller test files | All instantiate real VoiceController, drive state listeners (`stt.onStateChange('listening')`), validate idle/listening/processing/speaking transitions + model swap + reentry guard + destroy clearing `_swapping` + analyser cache. |
+| **FX231** | PROMOTE | voice-settings-xss + voice-settings-multilingual-xss | `renderVoiceSettings(makeStore({...HOSTILE...}))` invoked with hostile payloads; asserts both rendering occurred AND escape ran. |
+| **FX244** | PROMOTE (citation amendment) | Observe + Assist + Enforce evaluator tests | `EnforceModeEvaluator.test.ts` existed and was functional but uncited in the row. Row's `Cited Test` column amended to include it; full Observe/Assist/Enforce coverage now cited. |
+| **FX261** | PROMOTE | SentinelJsonlFallback + SentinelRagStore | `appendJsonlRecord` + `purgeJsonlAfterTimestamp` invoked with `assert.equal(purged, 2)` observable-side-effect; SentinelRagStore integration confirms wire-through when sqlite path absent. |
+| FX044 | KEEP-UNVERIFIED | AssistModeEvaluator + ObserveModeEvaluator | Cited tests cover evaluator UNIT logic but not the config-consumption PIPELINE (`workspace.getConfiguration('failsafe').get('governance.mode')` → ConfigManager → EvaluationRouter dispatch) the row claims. Multi-file pipeline test deferred to B199 Phase 2-8. |
+| FX359 | KEEP-UNVERIFIED | skill-frontmatter-validation | Test silently skips (`this.skip()`) when `Antigravity/skills/` absent; only checks `name` + `description` non-emptiness on disk files; does not test rejection of malformed/missing frontmatter or full provenance schema (version/author/license/hash). Small follow-on test could close this; deferred. |
+
+**FEATURE_INDEX coverage delta**:
+
+- verified: 415 → **420** (+5; 87.2% → 88.2%)
+- unverified: 18 → **13** (−5; 3.8% → 2.7%)
+- n/a: 43 (unchanged)
+- total: 476 (unchanged)
+
+**Files Modified**:
+
+- `docs/FEATURE_INDEX.md` — 5 row promotions (FX166, FX219, FX231, FX244, FX261); FX244 citation amended to include `EnforceModeEvaluator.test.ts`; header narrative refreshed.
+
+**Verification**:
+
+- No production source touched; no test files touched.
+- No new test authoring required for the 5 promotions — relies on pre-existing test coverage verified functional by SG-035 audit.
+- `qor-logic verify-ledger`: Entries #331-#350 all OK.
+
+**Remaining 13 unverified bucket (post-batch 2)**:
+
+- governance mode / observe-enforce UX: FX044
+- console / monitor / command center UI: FX145, FX154, FX173, FX174 (Playwright spec-pinned)
+- voice / audio: FX196, FX198, FX221, FX222, FX227
+- hooks / checkpoint / sentinel / skill provenance / workspace seeding: FX236, FX258, FX359
+
+**Phase 60 Sub-Phase Status**:
+
+| Sub-Phase | State | Ledger |
+| --- | --- | --- |
+| §0 Refactor Enablement | SEALED | #345 |
+| §1 Scope Sync + Coverage Ledger | SEALED | #346 |
+| §2 Workspace Truth Refresh + Governance Watch | SEALED | #347 |
+| §3 Governance Mode Escalation + Install Version Floor | SEALED | #348 |
+| §4 UI Subscription Hygiene B198 | SEALED | #349 |
+| §4cont batch 1 — 4 test-authored closures | SEALED | #350 |
+| §4cont batch 2 — 5 promotion-pass closures | **COMPLETE** (this entry) | #351 |
+| §4cont — remaining 13 unverified | Deferred (B199 Phase 2-8 + operator review) | future |
+| §5 Publish-Block Verification | Deferred (gated on 0-unverified) | future |
+
+**Substantiation**: NOT RUN. Phase 60 still has 13 unverified entries + §5 pending.
+
+**Content Hash**: `b133470a4b5944ab42cfad4d2cd4868ac005e3cb79fdb460dd5250df6c221517` — SHA256 of `docs/FEATURE_INDEX.md` (only modified file in this entry)
+
+**Previous Hash**: `91d9caa3282c294ab3ee0632734a1aa178ebb51273a9c30325bd6d1d0105fe36` (Entry #350 chain hash)
+
+**Chain Hash**: `9397a31fe47f8c2126315ac566ca8e2fc6d7a4a1655d568529f462841e9305f8` — SHA256(content_hash + "|" + previous_hash)
+
+**Decision**: Phase 60 §4cont batch 2 promotes 5 FEATURE_INDEX rows after disciplined SG-035 audit. No new test files; only metadata updates + 1 citation amendment. Cumulative §4cont batches 1+2 closed 9 of the original 22 unverified entries (4 via test authoring at #350, 5 via promotion-pass audit at #351). Remaining 13 require either further B199 Phase 2-8 test authoring (most) or small follow-on tests (FX359 schema coverage; FX044 pipeline coverage).
+
+_Gate Status: OPEN. Next: operator decision — continue §4cont (test authoring for remaining 13, or another promotion-pass on additional candidates), or pivot to substantive review of the 11 staged commits so far._
+
+---
+
 _Chain integrity: VALID_
-_Session Status: SEALED at #342; #343-#350 Phase 60 cycle in progress; §0-§4-cont-partial COMPLETE_
-_Session: 2026-05-13-phase60-v5-1-0-remaining-scope-phase-4-cont_
+_Session Status: SEALED at #342; #343-#351 Phase 60 cycle in progress; §0-§4cont batch 2 COMPLETE_
+_Session: 2026-05-13-phase60-v5-1-0-remaining-scope-phase-4-cont-batch-2_
