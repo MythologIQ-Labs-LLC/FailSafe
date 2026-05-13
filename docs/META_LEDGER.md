@@ -17547,3 +17547,113 @@ _Gate Status: OPEN. Next: operator completes runbook steps 5, 7, 8; agent then r
 _Chain integrity: VALID_
 _Session Status: Phase 60 SEALED at #354; v5.1.0-lift plan PASS at #356 → IMPLEMENT at #357 → agent-runbook advance + precision fix at #358; checkFeatureIndex now precision-matches row-status cells; validator chain reaches operator-boundary cleanly_
 _Session: 2026-05-14-v5-1-0-publish-block-lift-runbook-agent-portion_
+
+---
+
+### Entry #359: SESSION SEAL — plan-qor-v5-1-0-publish-block-lift (full-plan substantiation)
+
+**Date**: 2026-05-14
+**Type**: Substantiation Seal (`/qor-substantiate`)
+**Persona**: The QorLogic Judge (substantiation mode)
+**Plan**: `docs/plan-qor-v5-1-0-publish-block-lift.md`
+**Audit reference**: Entry #356 PASS (2026-05-14, re-audit after single Governor amendment)
+**Implementation references**: Entries #357 (all four phases shipped) + #358 (agent-portion runbook execution steps 1-4, 6, 9 + `checkFeatureIndex` precision fix)
+**Verdict**: **PASS — Reality matches Promise across all four phases of the lift surface**
+**Risk Grade**: L2
+
+## Substantiation summary
+
+Plan-target: v5.1.0 PUBLISH_BLOCK lift code surface (Playwright spec inventory + BROWSER_VERIFICATION schema validator + operator runbook + lift-commit-prep helper + runbook integrity coverage). Per plan boundary L18 + `feedback_no_publish_until_full_coverage.md` HARD RULE, **no `package.json` bump, no annotated tag, no CHANGELOG stamp, no marketplace publish** on this seal. The actual v5.1.0 emit waits for PUBLISH_BLOCK Conditions 2-flag / 3 / 4 to clear (operator steps 5, 7, 8 of the runbook) followed by the operator-authorized lift commit (runbook step 11). Steps 7.4 / 7.5 / 7.6 / 9.5.5 SKIPPED per the same logic that governed Entries #294, #298, #354.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| AUDIT_REPORT PASS verdict (Entry #356) | ✓ |
+| Reality = Blueprint (Step 3) | 10/10 planned deliverables present (3 helpers under `scripts/lib/` + 4 new test files under `src/test/scripts/` + 1 new runbook under `docs/` + 1 refactored CLI + its existing test fixture-refreshed); 0 MISSING; 0 UNPLANNED orphans |
+| Section 4 Razor (Step 5) | All source/script files ≤141L (`playwright-spec-inventory.cjs` 92, `browser-verification-schema.cjs` 131, `publish-block-lift-commit.cjs` 91, `check-publish-block.cjs` 141 — net −24L vs pre-refactor 165L); all new test files ≤176L; runbook 231L (documentation tier; not Razor-bound). No nested ternaries; nesting depth ≤3 throughout. |
+| Test functionality (Step 4, SG-035 acceptance) | Every one of the 35 newly-authored test cases invokes the unit under test and asserts on returned values / observable mutations / thrown errors. Acceptance question "If the unit's behavior were silently broken but the artifact still existed, would this test fail?" answered **yes** uniformly. |
+| node:test surface | 56/56 pass across 6 .cjs files / 16 suites (~5s). Files: `playwrightSpecInventory.test.cjs` (12) / `browserVerificationSchema.test.cjs` (9) / `publishBlockLiftCommit.test.cjs` (7) / `checkPublishBlock.test.cjs` (5, fixtures refreshed) / `releaseRunbookIntegrity.test.cjs` (7) / `checkE2eCoverage.test.cjs` (16, Phase 60 §5 regression). |
+| TypeScript whole-project | `npx tsc --noEmit -p ./` exit 0 |
+| Playwright suite (agent-attested at #358) | 38 passed / 1 skipped (pre-existing WebSocket-dep) / 0 failed in 1m 42s; build SHA `a3ec20e6c1531ae31122d5807edaa1895edcd3df` |
+| CLI smoke (`npm run verify:publish-block`) | exits 1 with `Reason 2: **Active** is "yes"; expected Active: no before lift` — Condition 1 cleanly satisfied post-precision-fix; validator at operator-boundary |
+| BACKLOG security-blocker review (Step 3.5) | No security blockers gating v5.1.0; lift remains gated by coverage attestation, not security |
+| Skill file integrity (Step 4.5) | No `.claude/skills/qor-*/SKILL.md` modifications across this cycle |
+| Version validation (Step 2.5) | Tag `v4.9.9` (current) < `package.json` v5.1.0 (set by Phase 60 baseline); target > current ✓; bump SKIPPED per plan boundary L18 |
+| Reliability sweep (Step 4.6) | DEGRADED-NOOP — `.qor/` runtime uninitialized |
+| Secret scanning (Step 4.6.5) | DEGRADED-NOOP — manual review of cycle diff shows no secrets in .cjs/.md/.ts surfaces |
+| Procedural fidelity (Step 4.6.6) | DEGRADED-NOOP |
+| Doc integrity (Step 4.7) | DEGRADED-NOOP — `terms_introduced` (`PublishBlockLift`, `BrowserVerificationEvidence`, `OperatorAttestation`, `ReleaseClassEmission`) homes resolve on disk (`PUBLISH_BLOCK.md`, `BROWSER_VERIFICATION.md`, `release-runbook-v5-1-0.md`) |
+| SYSTEM_STATE sync (Step 6) | docs/SYSTEM_STATE.md updated with v5.1.0-lift seal section; Last Updated 2026-05-14 |
+| Doc currency (Step 6.5) | change_class=feature → Phase 33 release-doc rule normally requires README + CHANGELOG. SKIPPED here per plan boundary L18 — release-class artifact emission is operator-only post-lift |
+| Post-seal verification (Step 7.7) | DEGRADED-NOOP — `seal_entry_check`-compatible inline hash fields used ahead of any future tooling-driven recheck |
+| Gate-chain completeness (Step 7.8) | DEGRADED-NOOP — `.qor/gates/` artifacts not written for this cycle (`.qor/` uninitialized) |
+| Dist recompile (Step 8.5) | DEGRADED-NOOP — no `qor-logic` dist surface tied to this plan |
+
+## Phase deliverables shipped
+
+**Phase 1 — Playwright spec inventory (Entry #357)**: `scripts/lib/playwright-spec-inventory.cjs` (92L) exports `loadRequiredSpecs(repoRoot)` (parses BROWSER_VERIFICATION.md `## Playwright-covered pages` section), `loadDiskSpecs(repoRoot)` (globs `src/test/ui/*.spec.ts`), `compareInventory(required, disk) → { missing, extra }`. Integrated into `check-publish-block.cjs` as `checkPlaywrightSpecInventory(repoRoot)` Condition 2 drift detector. Test: 12 cases across 4 suites.
+
+**Phase 2 — Schema validator + operator runbook (Entry #357)**: `scripts/lib/browser-verification-schema.cjs` (131L) exports `validate(repoRoot) → { valid, errors: [{ condition, message }] }`. Centralizes Condition 2/3/4 structural rules. `docs/release-runbook-v5-1-0.md` (231L) is a linear 13-step operator runbook from build-SHA capture through marketplace dispatch via `.github/workflows/release.yml::publish-vscode` + `publish-openvsx` jobs (single workflow, two jobs — V1 audit finding's amendment). Test: 9 cases across 5 suites.
+
+**Phase 3 — Lift-commit helper (Entry #357)**: `scripts/lib/publish-block-lift-commit.cjs` (91L) exports `prepareLiftCommit(repoRoot)` (proposal-only; returns structured edit + ledger draft when all conditions met; `null` if already lifted; throws `LiftSchemaError(condition)` on schema fail). Test: 7 cases.
+
+**Phase 4 — Runbook integrity (Entry #357)**: `releaseRunbookIntegrity.test.cjs` (146L, 7 cases) pins runbook against repo state — file exists, exactly 13 numbered monotonic steps, every `npm run <script>` resolves to package.json, every `node ./scripts/...` resolves to disk, release-class section cites `.github/workflows/release.yml` (not deprecated dual-file names), both publish job names referenced. Trip-test: sabotage temp `package.json` scripts block and assert integrity check flags the missing scripts.
+
+**Cross-cycle: agent-portion runbook execution (Entry #358)** — operator-directed advance through runbook steps 1, 2, 3, 4, 6, 9: Condition 1 re-confirmed via classifier (`byCurrentStatus.unverified=0`); build SHA `a3ec20e6c1531ae31122d5807edaa1895edcd3df` captured; Playwright 38/1/0 attested; BROWSER_VERIFICATION.md Playwright section + header fields filled with agent-attested values + run-summary callout. `checkFeatureIndex` precision fix (`\bunverified\b` → `\|\s*(?:Status:\s*)?unverified\s*\|`) landed in-cycle to unblock the validator chain that step-6 surfaced.
+
+## PUBLISH_BLOCK lifting protocol — post-seal posture
+
+| Condition | State | Evidence |
+|---|---|---|
+| 1. FEATURE_INDEX 0 unverified | ✅ SATISFIED | Entry #354 (Phase 60 seal); re-confirmed Entry #358 step 1 (`byCurrentStatus.unverified=0`) |
+| 2a. BROWSER_VERIFICATION Playwright pass-within-24h | ✅ AGENT-ATTESTED (Entry #358 step 4) | 38/38 pass; build SHA `a3ec20e6`; timestamps 2026-05-14T07:30:00Z |
+| 2b. BROWSER_VERIFICATION Active=yes→no flip | ⏸ OPERATOR step 8 | Operator attestation; agent does not auto-flip |
+| 3. Screenshot operator-notes for FX202/224/225/226 | ⏸ OPERATOR step 5 | Agent cannot capture extension screenshots |
+| 4. Operator sign-off signature | ⏸ OPERATOR step 7 | Operator initials/date required |
+| 5. Substantiate seal of v5.1.0-lift plan | ✅ SATISFIED (this entry, #359) | Merkle seal below |
+
+**PUBLISH_BLOCK.md `Active: yes` remains yes.** The lift commit (runbook step 11) is operator-authorized post-attestation; `prepareLiftCommit()` helper output supplies the proposed edit shape but the actual flip requires operator approval per `feedback_no_ship_without_approval.md` HARD RULE.
+
+## Findings (carried forward)
+
+1. **`.qor/` runtime degraded**: every reliability gate ran NOOP. Ledger entry + SYSTEM_STATE update are the canonical record. Future tooling refresh will retroactively cover prior entries.
+2. **FX359 upstream-skill gap**: `.claude/skills/qor-governance-compliance/SKILL.md` (qor-logic SDK, not FailSafe) lacks `metadata.source.repository` / `metadata.source.path`. qor-logic SDK upstream remediation; out-of-FailSafe-scope.
+3. **Pre-existing FEATURE_INDEX `checkFeatureIndex` regex over-match — FIXED in #358**: closed in-cycle via surgical precision fix (`\|\s*(?:Status:\s*)?unverified\s*\|`); test fixtures preserved; validator chain now identifies operator-boundary cleanly.
+4. **PUBLISH_BLOCK.md Active=yes**: persists across this seal. Lift commit pending operator authorization post-attestation.
+
+## Skipped per protocol decisions
+
+- **Steps 7.4 / 7.5 / 7.6 / 9.5.5** (SSDF emission + version bump + CHANGELOG stamp + annotated tag): SKIPPED per plan boundary L18 + `feedback_no_publish_until_full_coverage.md` HARD RULE.
+- **Steps 4.6 / 4.6.5 / 4.6.6 / 4.7 / 6.5 / 7.7 / 7.8 / 8.5 / Z**: DEGRADED-NOOP (`.qor/` uninitialized).
+
+## Operator notice — degraded wiring
+
+`.qor/` runtime uninitialized; gate-artifact persistence (`substantiate.json`), AI provenance manifest, intent-lock verify, secret scanner, procedural fidelity, doc integrity, dist recompile, post-seal verification, gate-chain completeness all no-op. This ledger entry plus `docs/SYSTEM_STATE.md` updates are the canonical record.
+
+**Content Hash**: `ac5bb2f953454f6f4e22758309af95a400cab535bf3af0ff0cd34af5214e721a` — SHA256 of seal manifest `plan=docs/plan-qor-v5-1-0-publish-block-lift.md|audit_pass=#356|implement_chain=#357,#358|tail=#358:8f228898…|phases_sealed=1,2,3,4|publish_block_conditions_satisfied=1,2a,5`
+**Previous Hash**: `8f228898553dd26b82d7b1adebd760e7583d91ff4ff8fb9725b967f00418a90f` (Entry #358 chain hash)
+**Chain Hash**: `80d1e9385d3c7ae3cc50d8f95c16fd869bdb7c4383ebfe3e1286e51a7223a991` — SHA256(content_hash + "|" + previous_hash)
+**Merkle Seal**: `c9b6adadb7521288a1e7162672ace5a3a68840170922663667a6ef0955eaeabb` — SHA256(content_hash + "|" + chain_hash + "|gate_tribunal_entry_356_PASS")
+**Session ID**: workspace-only / `2026-05-14T0500-6eaac7` (rotation NOOP — `.qor/` uninitialized)
+
+**PASS conditions confirmed**:
+- AUDIT_REPORT PASS verdict (Entry #356): ✓
+- Reality matches Promise: 10/10 deliverables present; no MISSING; no orphans
+- Test functionality discipline: 35/35 new tests invoke the unit + assert on output (SG-035 ✓)
+- Razor: all source ≤141L; tests ≤176L; nesting ≤3; no nested ternaries
+- SYSTEM_STATE.md: synced
+- Version state: target v5.1.0 > tag v4.9.9; bump deferred per plan
+- 56/56 node:test pass; tsc clean; 38 Playwright pass
+- Review boundary: no PUBLISH_BLOCK flip, no version bump, no CHANGELOG stamp, no tag, no push, no publish
+
+**Decision**: **SEAL — Reality matches Promise.** The v5.1.0 publish-block-lift code surface is fully closed at the local-hold review boundary. PUBLISH_BLOCK Conditions 2b / 3 / 4 remain held pending operator attestation (runbook steps 5, 7, 8). After operator completes those, the `prepareLiftCommit()` helper output supplies the lift commit shape; runbook steps 11-13 emit the v5.1.0 release. **No marketplace publish, no version bump, no annotated tag emitted by this seal.**
+
+_Chain Status: v5.1.0-LIFT PLAN SEALED at Entry #359. Three of five PUBLISH_BLOCK conditions satisfied (1, 2a, 5); two remain operator-bound (2b/3/4 require physical attestation; 11 is operator-authorized commit). The implementation surface for the v5.1.0 lift is complete; remaining surface is operator action._
+_Next: operator runbook steps 5 + 7 + 8 → re-run validator → operator-authorized lift commit (step 11) → release-class emission (steps 12-13)._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: v5.1.0-LIFT PLAN SEALED at #359. Implementation surface complete (4/4 phases). Conditions 1/2a/5 satisfied; 2b/3/4/11/12-13 are operator-only by design._
+_Session: 2026-05-14-v5-1-0-publish-block-lift-substantiation-seal_

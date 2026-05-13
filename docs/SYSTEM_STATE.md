@@ -1,7 +1,53 @@
 # SYSTEM STATE
 
 **Last Updated:** 2026-05-14
-**Version:** v5.1.10-baseline plus Phase 60 v5.1.0 Remaining Publish Scope **SEALED** (full-plan substantiation Entry #354; all six sub-phases sealed at the local-hold review boundary; PUBLISH_BLOCK Condition 1 SATISFIED; Conditions 2-5 deferred to Monitor coherence plan) plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups (workspace-only label; no `package.json` bump)
+**Version:** v5.1.10-baseline plus Phase 60 SEALED at #354 plus v5.1.0 publish-block-lift plan **SEALED at #359** (4-phase code surface complete; checkFeatureIndex precision fix landed; agent-portion runbook attestation through step 6; PUBLISH_BLOCK Condition 1 SATISFIED + Condition 2 Playwright half attested; Conditions 2-flag/3/4 remain operator-only; no `package.json` bump until full lift) plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups
+
+---
+
+## 2026-05-14 - v5.1.0 Publish-Block Lift Plan — SUBSTANTIATION SEAL (Entry #359)
+
+Plan: `docs/plan-qor-v5-1-0-publish-block-lift.md` (PASS audit Entry #356; implement Entries #357 + #358). **Seal verdict: PASS — Reality matches Promise across all four phases of the lift surface.**
+
+### Substantiation outcome
+
+All four plan phases (1. Playwright spec inventory / 2. BROWSER_VERIFICATION schema + operator runbook / 3. PUBLISH_BLOCK lift commit helper / 4. release runbook integrity test) are sealed locally at META_LEDGER Entries #357 (implement) + #358 (agent-portion runbook + checkFeatureIndex precision fix). Full-plan seal is Entry #359 with Merkle seal hash recorded inline.
+
+Reality audit: 10/10 planned deliverables present on disk (3 helpers under `scripts/lib/`, 4 new test files under `src/test/scripts/`, 1 new operator runbook under `docs/`, 1 refactored CLI gate + its existing test). Section 4 Razor: all source/script files ≤141L; all new test files ≤176L; runbook 231L (documentation). SG-035 functional-acceptance answered "yes" for every one of the 35 newly-authored test cases per Entry #357's table.
+
+### Test surface
+
+- **node:test**: 56/56 pass across 6 .cjs test files (16 suites, ~5s).
+- **TypeScript**: `npx tsc --noEmit -p ./` exit 0.
+- **Playwright** (agent-attested at Entry #358): 38 passed / 1 skipped / 0 failed in 1m 42s.
+- **CLI smoke** (`npm run verify:publish-block`): exits 1 with `Reason 2: **Active** is "yes"; expected Active: no before lift` — Condition 1 cleanly satisfied; precision-fix landed; validator chain now correctly identifies the operator-boundary.
+
+### PUBLISH_BLOCK lifting protocol — post-seal posture
+
+| Condition | State at seal | Owner of next action |
+|---|---|---|
+| 1. FEATURE_INDEX 0 unverified | ✅ SATISFIED (sealed at #354; re-confirmed at #358 step 1) | — |
+| 2a. BROWSER_VERIFICATION Playwright pass-within-24h | ✅ AGENT-ATTESTED at #358 step 4 (38/38 pass, build SHA `a3ec20e6c1531ae31122d5807edaa1895edcd3df`) | — |
+| 2b. BROWSER_VERIFICATION Active=yes→no flip | ⏸ OPERATOR | operator step 8 |
+| 3. Screenshot operator-notes for FX202/224/225/226 | ⏸ OPERATOR | operator step 5 |
+| 4. Operator sign-off signature | ⏸ OPERATOR | operator step 7 |
+| 5. Substantiate seal of v5.1.0-lift plan | ✅ SATISFIED (this entry, #359) | — |
+
+`PUBLISH_BLOCK.md` `Active: yes` **remains yes**. The lift commit (runbook step 11; applies the helper-proposed edit) is operator-authorized post-attestation per `feedback_no_ship_without_approval.md` HARD RULE.
+
+### Skipped per protocol decisions
+
+- **Steps 7.4 / 7.5 / 7.6 / 9.5.5** (SSDF emission + version bump + CHANGELOG stamp + annotated tag): SKIPPED. Plan boundary L18 + `feedback_no_publish_until_full_coverage.md` HARD RULE forbid version emission until PUBLISH_BLOCK fully lifts.
+- **Steps 4.6 / 4.6.5 / 4.6.6 / 4.7 / 6.5 / 7.7 / 7.8 / 8.5 / Z**: DEGRADED-NOOP (`.qor/` runtime uninitialized).
+
+### Carried-forward findings (unchanged from Entry #357)
+
+1. `.qor/` runtime uninitialized → every reliability gate ran NOOP. Ledger entry + this SYSTEM_STATE update are the canonical record.
+2. FX359 surfaced `.claude/skills/qor-governance-compliance/SKILL.md` missing required `metadata.source.repository` / `metadata.source.path`. qor-logic SDK upstream remediation; out-of-FailSafe-scope.
+
+### Next
+
+Operator runbook steps 5 (screenshots), 7 (signature), 8 (flip BROWSER_VERIFICATION Active), 11 (apply PUBLISH_BLOCK lift commit via `prepareLiftCommit()` helper output), 12-13 (release-class emission). Marketplace publish remains held until the operator-authorized lift commit lands.
 
 ---
 
