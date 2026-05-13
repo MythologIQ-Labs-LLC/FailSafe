@@ -37,6 +37,7 @@ function makeFakes(): {
     getActivePlan: () => { stamp('plan.getActivePlan'); return { id: 'p-1', phases: [], blockers: [] }; },
     getCurrentSprint: () => ({ id: 's-1' }),
     getAllSprints: () => [],
+    refreshFromWorkspace: () => { stamp('plan.refreshFromWorkspace'); },
   };
   const sentinelDaemon: any = {
     getStatus: () => { stamp('sentinel.getStatus'); return { running: true, eventsProcessed: 0 }; },
@@ -50,6 +51,7 @@ function makeFakes(): {
     getL3Queue: () => { stamp('qore.getL3Queue'); return []; },
     getTrustEngine: () => trustEngine,
     getLedgerManager: () => ledgerManager,
+    refreshL3Queue: () => { stamp('qore.refreshL3Queue'); },
   };
   const qoreRuntimeService: any = {
     fetchSnapshot: async () => { stamp('qore.fetchSnapshot'); return { enabled: false, connected: false, baseUrl: '', lastCheckedAt: '' }; },
@@ -77,6 +79,13 @@ suite('HubSnapshotService (Phase 60 §0)', () => {
     const snap = await hub.buildHubSnapshot();
     assert.equal(typeof snap, 'object');
     assert.ok(calls.length > 0, 'no fake interactions recorded');
+    const names = calls.map(c => c.name);
+    const refreshPlan = names.indexOf('plan.refreshFromWorkspace');
+    const refreshL3 = names.indexOf('qore.refreshL3Queue');
+    const readPlan = names.indexOf('plan.getActivePlan');
+    const readL3 = names.indexOf('qore.getL3Queue');
+    assert.ok(refreshPlan >= 0 && refreshPlan < readPlan, `plan.refreshFromWorkspace must precede plan.getActivePlan; got refresh@${refreshPlan} read@${readPlan}`);
+    assert.ok(refreshL3 >= 0 && refreshL3 < readL3, `qore.refreshL3Queue must precede qore.getL3Queue; got refresh@${refreshL3} read@${readL3}`);
     const idx = (n: string) => calls.findIndex((c) => c.name === n);
     // Sentinel + trust + qoreRuntime are pre-snapshot reads; they must
     // happen before risk-register / transparency tail reads that supply

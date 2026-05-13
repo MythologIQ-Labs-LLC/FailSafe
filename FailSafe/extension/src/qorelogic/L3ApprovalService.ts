@@ -1,16 +1,10 @@
 /**
  * L3ApprovalService - Manages the L3 approval queue and decision processing.
- *
- * Extracted from QoreLogicManager to isolate L3 queue concerns:
- * - Queue management (add, persist, retrieve)
- * - Decision processing (approve/reject)
- * - Evaluation routing integration
- * - Risk grade mapping
+ * Concerns: queue management, decision processing, evaluation routing, risk mapping.
  */
 
 import * as crypto from 'crypto';
-import { IStateStore } from '../core/interfaces';
-import { IConfigProvider } from '../core/interfaces';
+import { IStateStore, IConfigProvider } from '../core/interfaces';
 import { EventBus } from '../shared/EventBus';
 import { Logger } from '../shared/Logger';
 import { L3ApprovalRequest, RiskGrade } from '../shared/types';
@@ -33,16 +27,21 @@ export class L3ApprovalService {
         this.logger = new Logger('L3ApprovalService');
     }
 
-    /**
-     * Load persisted L3 queue from state store.
-     */
+    /** Load persisted L3 queue from state store. */
     loadQueue(): void {
         this.l3Queue = this.stateStore.get<L3ApprovalRequest[]>('l3Queue', []);
     }
 
     /**
-     * Remove expired items from the L3 queue based on SLA deadline.
+     * Re-read the state store and replace the in-memory queue cache.
+     * Side-effect-bounded: no watchers, no events, no persisted writes.
+     * Called by hub snapshot consumers prior to rebuild (B192 remediation).
      */
+    refreshFromWorkspace(): void {
+        this.loadQueue();
+    }
+
+    /** Remove expired items from the L3 queue based on SLA deadline. */
     private lastPruneAt = 0;
 
     private pruneExpired(): L3ApprovalRequest[] {
@@ -64,9 +63,7 @@ export class L3ApprovalService {
         return expired;
     }
 
-    /**
-     * Get a copy of the current L3 approval queue (auto-prunes expired).
-     */
+    /** Get a copy of the current L3 approval queue (auto-prunes expired). */
     getQueue(): L3ApprovalRequest[] {
         const expired = this.pruneExpired();
         if (expired.length > 0) {
@@ -80,9 +77,7 @@ export class L3ApprovalService {
         return [...this.l3Queue];
     }
 
-    /**
-     * Add an item to the L3 approval queue.
-     */
+    /** Add an item to the L3 approval queue. */
     async queueL3Approval(
         request: Omit<L3ApprovalRequest, 'id' | 'state' | 'queuedAt' | 'slaDeadline'>
     ): Promise<string> {
@@ -203,9 +198,7 @@ export class L3ApprovalService {
         }
     }
 
-    /**
-     * Persist the L3 queue to workspace state.
-     */
+    /** Persist the L3 queue to workspace state. */
     private async persistL3Queue(): Promise<void> {
         await this.stateStore.update('l3Queue', this.l3Queue);
     }

@@ -1,5 +1,6 @@
 // Phase 60 Section 4 Razor — functional tests for SentinelWatchPolicy.
-// Asserts watch/ignore classification, governance-path predicate, and
+// Phase 60 §2 Track C — governance file visibility (B193).
+// Asserts watch/ignore classification, governance whitelist, and
 // priority assignment for the extracted helper.
 
 import { strict as assert } from 'assert';
@@ -7,120 +8,152 @@ import { SentinelWatchPolicy } from '../../sentinel/SentinelWatchPolicy';
 
 suite('SentinelWatchPolicy (Phase 60)', () => {
     let policy: SentinelWatchPolicy;
+    setup(() => { policy = new SentinelWatchPolicy(); });
 
-    setup(() => {
-        policy = new SentinelWatchPolicy();
-    });
-
-    test('shouldWatch — .ts file on change is watched', () => {
+    test('shouldWatch — code extensions watched on change/create', () => {
         assert.equal(policy.shouldWatch('src/app.ts', 'FILE_MODIFIED'), true);
-    });
-
-    test('shouldWatch — .js file on create is watched', () => {
         assert.equal(policy.shouldWatch('src/bundle.js', 'FILE_CREATED'), true);
     });
 
-    test('shouldWatch — .md file on change is NOT watched (non-code)', () => {
-        assert.equal(policy.shouldWatch('docs/README.md', 'FILE_MODIFIED'), false);
+    test('shouldWatch — .md is watched (governance doc format)', () => {
+        assert.equal(policy.shouldWatch('docs/README.md', 'FILE_MODIFIED'), true);
     });
 
-    test('shouldWatch — .md file on DELETE is still watched (deletion bypass)', () => {
+    test('shouldWatch — .md delete bypass still works', () => {
         assert.equal(policy.shouldWatch('docs/README.md', 'FILE_DELETED'), true);
     });
 
-    test('shouldWatch — .json file on change is NOT watched (non-code)', () => {
-        assert.equal(policy.shouldWatch('package.json', 'FILE_MODIFIED'), false);
+    test('shouldWatch — .json/.yaml/.yml watched as governance doc formats', () => {
+        assert.equal(policy.shouldWatch('package.json', 'FILE_MODIFIED'), true);
+        assert.equal(policy.shouldWatch('.github/workflows/ci.yaml', 'FILE_MODIFIED'), true);
+        assert.equal(policy.shouldWatch('config/app.yml', 'FILE_MODIFIED'), true);
     });
 
-    test('shouldWatch — .json file on DELETE is watched (deletion bypass)', () => {
-        assert.equal(policy.shouldWatch('package.json', 'FILE_DELETED'), true);
-    });
-
-    test('shouldWatch — .yaml file on change is NOT watched (non-code)', () => {
-        assert.equal(policy.shouldWatch('.github/workflows/ci.yaml', 'FILE_MODIFIED'), false);
-    });
-
-    test('shouldWatch — .yaml file on DELETE is watched (deletion bypass)', () => {
-        assert.equal(policy.shouldWatch('.github/workflows/ci.yaml', 'FILE_DELETED'), true);
-    });
-
-    test('shouldWatch — governance .failsafe/** path is suppressed even for .ts', () => {
+    test('shouldWatch — non-whitelisted .failsafe/** .ts is suppressed', () => {
         assert.equal(
             policy.shouldWatch('.failsafe/governance/plan.ts', 'FILE_MODIFIED'),
             false
         );
     });
 
-    test('shouldWatch — governance .failsafe/** path is suppressed even on delete', () => {
+    test('shouldWatch — deletions always pass even on non-whitelisted .failsafe paths', () => {
         assert.equal(
             policy.shouldWatch('.failsafe/governance/plan.ts', 'FILE_DELETED'),
-            false
+            true
         );
     });
 
-    test('shouldWatch — governance workspace-config.json is suppressed', () => {
+    test('shouldWatch — whitelisted workspace-config.json IS watched (relative + nested)', () => {
+        assert.equal(
+            policy.shouldWatch('.failsafe/workspace-config.json', 'FILE_MODIFIED'),
+            true
+        );
         assert.equal(
             policy.shouldWatch('project/.failsafe/workspace-config.json', 'FILE_MODIFIED'),
-            false
+            true
         );
     });
 
-    test('shouldWatch — Windows-style backslash governance path is suppressed', () => {
+    test('shouldWatch — whitelisted V5_1_0_SCOPE.md IS watched', () => {
+        assert.equal(
+            policy.shouldWatch('.failsafe/governance/V5_1_0_SCOPE.md', 'FILE_MODIFIED'),
+            true
+        );
+    });
+
+    test('shouldWatch — whitelisted AUDIT_REPORT.md IS watched', () => {
+        assert.equal(
+            policy.shouldWatch('.failsafe/governance/AUDIT_REPORT.md', 'FILE_MODIFIED'),
+            true
+        );
+    });
+
+    test('shouldWatch — whitelisted META_LEDGER.md IS watched', () => {
+        assert.equal(
+            policy.shouldWatch('.failsafe/governance/META_LEDGER.md', 'FILE_MODIFIED'),
+            true
+        );
+    });
+
+    test('shouldWatch — plans/ subdir is watched via whitelist prefix', () => {
+        assert.equal(
+            policy.shouldWatch('.failsafe/governance/plans/plan-x.md', 'FILE_MODIFIED'),
+            true
+        );
+    });
+
+    test('shouldWatch — plans.yaml is watched via whitelist', () => {
+        assert.equal(
+            policy.shouldWatch('.failsafe/governance/plans.yaml', 'FILE_MODIFIED'),
+            true
+        );
+    });
+
+    test('shouldWatch — transient .failsafe/runtime|cache paths are NOT watched', () => {
+        assert.equal(policy.shouldWatch('.failsafe/runtime/scratch.md', 'FILE_MODIFIED'), false);
+        assert.equal(policy.shouldWatch('.failsafe/cache/x.json', 'FILE_MODIFIED'), false);
+    });
+
+    test('shouldWatch — Windows backslash paths normalized correctly', () => {
         assert.equal(
             policy.shouldWatch('C:\\repo\\.failsafe\\plans\\x.ts', 'FILE_MODIFIED'),
             false
         );
+        assert.equal(
+            policy.shouldWatch('C:\\repo\\.failsafe\\workspace-config.json', 'FILE_MODIFIED'),
+            true
+        );
     });
 
-    test('isGovernancePath — true for .failsafe/foo', () => {
+    test('shouldWatch — unknown extension .xyz is NOT watched', () => {
+        assert.equal(policy.shouldWatch('weird/file.xyz', 'FILE_MODIFIED'), false);
+    });
+
+    test('shouldWatch — node_modules .md returns true (chokidar filters upstream)', () => {
+        // chokidar ignore patterns filter node_modules at the watcher
+        // boundary; the policy itself does not repeat that filter.
+        assert.equal(policy.shouldWatch('node_modules/foo/bar.md', 'FILE_MODIFIED'), true);
+    });
+
+    test('isGovernancePath — recognises .failsafe/** and rejects look-alikes', () => {
         assert.equal(policy.isGovernancePath('proj/.failsafe/x.json'), true);
-    });
-
-    test('isGovernancePath — true for root-relative .failsafe/foo', () => {
         assert.equal(policy.isGovernancePath('.failsafe/governance/plan.md'), true);
-    });
-
-    test('isGovernancePath — false for sibling path that happens to share prefix', () => {
         assert.equal(policy.isGovernancePath('src/failsafe/module.ts'), false);
-    });
-
-    test('isGovernancePath — false for empty string', () => {
         assert.equal(policy.isGovernancePath(''), false);
     });
 
-    test('determinePriority — auth file is critical', () => {
+    test('isWatchedGovernancePath — true for whitelisted, false otherwise', () => {
+        assert.equal(policy.isWatchedGovernancePath('.failsafe/workspace-config.json'), true);
+        assert.equal(policy.isWatchedGovernancePath('.failsafe/runtime/scratch.json'), false);
+        assert.equal(policy.isWatchedGovernancePath('src/app.ts'), false);
+    });
+
+    test('determinePriority — security-sensitive paths are critical', () => {
         assert.equal(policy.determinePriority('src/auth/login.ts'), 'critical');
-    });
-
-    test('determinePriority — password helper is critical', () => {
         assert.equal(policy.determinePriority('src/utils/password-hash.ts'), 'critical');
-    });
-
-    test('determinePriority — crypto module is critical', () => {
         assert.equal(policy.determinePriority('lib/crypto/aes.ts'), 'critical');
-    });
-
-    test('determinePriority — secret store is critical', () => {
         assert.equal(policy.determinePriority('infra/secret-loader.ts'), 'critical');
     });
 
-    test('determinePriority — api route is high', () => {
+    test('determinePriority — api/service/controller are high', () => {
         assert.equal(policy.determinePriority('src/api/users.ts'), 'high');
-    });
-
-    test('determinePriority — service file is high', () => {
         assert.equal(policy.determinePriority('src/service/payments.ts'), 'high');
-    });
-
-    test('determinePriority — controller is high', () => {
         assert.equal(policy.determinePriority('src/controller/account.ts'), 'high');
     });
 
-    test('determinePriority — test file is low', () => {
-        assert.equal(policy.determinePriority('src/test/account.test.ts'), 'low');
+    test('determinePriority — governance plans and workspace-config are high', () => {
+        assert.equal(
+            policy.determinePriority('.failsafe/governance/plans/plan-x.md'),
+            'high'
+        );
+        assert.equal(
+            policy.determinePriority('proj/.failsafe/workspace-config.json'),
+            'high'
+        );
     });
 
-    test('determinePriority — spec file is low', () => {
+    test('determinePriority — test/spec files are low', () => {
+        assert.equal(policy.determinePriority('src/test/account.test.ts'), 'low');
         assert.equal(policy.determinePriority('src/feature.spec.ts'), 'low');
     });
 
@@ -128,19 +161,16 @@ suite('SentinelWatchPolicy (Phase 60)', () => {
         assert.equal(policy.determinePriority('src/utils/format.ts'), 'normal');
     });
 
-    test('determinePriority — auth+test path stays critical (security wins)', () => {
+    test('determinePriority — security wins over test surface', () => {
         assert.equal(policy.determinePriority('src/auth/login.test.ts'), 'critical');
     });
 
-    test('getCodeExtensions — includes the canonical TS/JS family', () => {
+    test('getCodeExtensions — canonical TS/JS family + defensive copy', () => {
         const exts = policy.getCodeExtensions();
         assert.ok(exts.includes('.ts'));
         assert.ok(exts.includes('.js'));
         assert.ok(exts.includes('.tsx'));
         assert.ok(exts.includes('.jsx'));
-    });
-
-    test('getCodeExtensions — returns a fresh array (defensive copy)', () => {
         const a = policy.getCodeExtensions();
         const b = policy.getCodeExtensions();
         assert.notEqual(a, b);
@@ -148,20 +178,28 @@ suite('SentinelWatchPolicy (Phase 60)', () => {
         assert.equal(policy.getCodeExtensions().includes('.bogus'), false);
     });
 
-    test('getIgnorePatterns — includes .failsafe governance dir', () => {
-        const patterns = policy.getIgnorePatterns();
-        assert.ok(patterns.includes('**/.failsafe/**'));
+    test('getWatchedExtensions — governance doc formats + code extensions', () => {
+        const exts = policy.getWatchedExtensions();
+        assert.ok(exts.includes('.md'));
+        assert.ok(exts.includes('.yaml'));
+        assert.ok(exts.includes('.json'));
+        assert.ok(exts.includes('.ts'));
+        assert.ok(exts.includes('.py'));
     });
 
-    test('getIgnorePatterns — includes node_modules and build outputs', () => {
+    test('getIgnorePatterns — transient .failsafe subtrees ignored, root NOT blanketed', () => {
+        const patterns = policy.getIgnorePatterns();
+        assert.ok(patterns.includes('**/.failsafe/runtime/**'));
+        assert.ok(patterns.includes('**/.failsafe/cache/**'));
+        assert.equal(patterns.includes('**/.failsafe/**'), false);
+    });
+
+    test('getIgnorePatterns — node_modules and build outputs + defensive copy', () => {
         const patterns = policy.getIgnorePatterns();
         assert.ok(patterns.includes('**/node_modules/**'));
         assert.ok(patterns.includes('**/dist/**'));
         assert.ok(patterns.includes('**/build/**'));
         assert.ok(patterns.includes('**/out/**'));
-    });
-
-    test('getIgnorePatterns — returns a fresh array (defensive copy)', () => {
         const a = policy.getIgnorePatterns();
         const b = policy.getIgnorePatterns();
         assert.notEqual(a, b);

@@ -92,6 +92,11 @@ export class QoreLogicManager {
         return this.l3ApprovalService.getQueue();
     }
 
+    /** Phase 60 §2 (B192): refresh L3 queue cache from persisted state before hub snapshot reads. */
+    refreshL3Queue(): void {
+        this.l3ApprovalService.refreshFromWorkspace();
+    }
+
     /**
      * Add an item to the L3 approval queue
      */

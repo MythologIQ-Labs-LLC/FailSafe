@@ -107,6 +107,21 @@ export class PlanManager {
     return Array.from(this.plans.values());
   }
 
+  /**
+   * Reload plans + roadmap from disk so externally-mutated YAML files
+   * (.failsafe/plans.yaml, .qorelogic/roadmap.yaml) become observable on the
+   * next hub rebuild. B192 remediation: bounded side effects only — reloads
+   * cached values, no watchers, no writes, no emitted events.
+   */
+  refreshFromWorkspace(): void {
+    this.planStore.refresh();
+    this.roadmapStore.refresh();
+    this.plans = new Map();
+    for (const planId of this.planStore.getAllPlanIds()) {
+      this.deriveState(planId);
+    }
+  }
+
   getAllSprints(): Sprint[] {
     return this.roadmapStore.getRoadmap()?.sprints || [];
   }

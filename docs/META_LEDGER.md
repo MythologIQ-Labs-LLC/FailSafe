@@ -16498,6 +16498,114 @@ _Gate Status: OPEN. Next: operator-driven /qor-auto-dev-1 invocation against Pha
 
 ---
 
+### Entry #347: IMPLEMENTATION (partial) — Phase 60 §2 Workspace Truth Refresh + Governance Watch Surface
+
+**Timestamp**: 2026-05-14T00:15:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist (auto-dev orchestrated; 3 parallel refactoring-specialist subagents for Tracks A/B/C + inline orchestrator implementation for Track D)
+**Risk Grade**: L2
+**Plan**: `docs/plan-qor-phase60-v5-1-0-remaining-scope.md` (PASS audit at Entry #344; §0 sealed at #345; §1 sealed at #346)
+**Scope**: §2 only (Workspace Truth Refresh + Governance Watch Surface). §3-§5 deferred.
+
+**Addresses**: B192 (stale-cache pattern across governance services) + B193 (SentinelDaemon governance file exclusion).
+
+**Implementation Summary**:
+
+| Sub-Phase | Status | Details |
+| --- | --- | --- |
+| Phase 0: Refactor Enablement Gate | COMPLETE (#345) | |
+| Phase 1: Scope Sync and Coverage Ledger | COMPLETE (#346) | |
+| Phase 2: Workspace Truth Refresh + Governance Watch Surface | **COMPLETE** (this entry) | 4 tracks; 3 parallel subagents + 1 inline |
+| Phase 3-5 | DEFERRED | Future cycles |
+
+**Track A — Planning refresh** (refactoring-specialist):
+- `FailSafe/extension/src/qorelogic/planning/PlanManager.ts` (227L; was 212L; +15L for refreshFromWorkspace facade method).
+- Stores (`PlanPersistenceStore.ts` 55L + `RoadmapPersistenceStore.ts` 61L) unchanged; verified their `refresh()` methods truly re-read YAML.
+- Test extension: 1 new it() block; 36/36 tests pass.
+
+**Track B — L3ApprovalService refresh** (refactoring-specialist):
+- `FailSafe/extension/src/qorelogic/L3ApprovalService.ts` (245L; was 252L; net -7L because comment tightening offset the +3L refreshFromWorkspace public method).
+- Test extension: 1 new it() block (`FX249 refreshFromWorkspace`); 14/14 tests pass.
+
+**Track C — Sentinel governance watch surface** (refactoring-specialist):
+- `FailSafe/extension/src/sentinel/SentinelWatchPolicy.ts` (204L; was 133L; +71L for `WATCHED_EXTENSIONS` set, `GOVERNANCE_WHITELIST_FILES` whitelist, `GOVERNANCE_WHITELIST_PREFIXES`, `isWatchedGovernancePath` predicate, refined `shouldWatch` semantics, `isGovernanceSurface` heuristic for priority).
+- Whitelisted governance files: `workspace-config.json`, `AUDIT_REPORT.md`, `V5_1_0_SCOPE.md`, `RESEARCH_BRIEF.md`, `plans.yaml`, `risk-register.yaml`, `intent-store.json`, `META_LEDGER.md`; whitelisted prefix: `.failsafe/governance/plans/`. Replaced blanket `**/.failsafe/**` ignore with targeted `runtime/`, `cache/`, `archive/`.
+- `SentinelDaemon.ts` (249L) untouched; daemon already delegated to watch policy methods (`shouldWatch` + `getIgnorePatterns`).
+- `SentinelEventQueue.ts` (82L) untouched.
+- Test extension: 15 new it() blocks in `SentinelWatchPolicy.test.ts` (207L); 28+12=40/40 tests pass.
+
+**Track D — Hub snapshot refresh wiring** (orchestrator inline):
+- `FailSafe/extension/src/roadmap/services/HubSnapshotService.ts` (248L; was 250L; net -2L after refresh-call additions + two-line compaction). Added `d.planManager.refreshFromWorkspace?.()` + `d.qorelogicManager.refreshL3Queue?.()` at top of `buildHubSnapshot()` BEFORE any service-read calls.
+- `FailSafe/extension/src/qorelogic/QoreLogicManager.ts` (221L; was 216L; +5L for `refreshL3Queue()` delegator method).
+- Test extension: 1 new ordering assertion in `HubSnapshotService.test.ts` (refresh-call indexes < read-call indexes in call log); 12/12 tests pass.
+
+**Files Modified**:
+
+- `FailSafe/extension/src/qorelogic/planning/PlanManager.ts`
+- `FailSafe/extension/src/qorelogic/L3ApprovalService.ts`
+- `FailSafe/extension/src/qorelogic/QoreLogicManager.ts`
+- `FailSafe/extension/src/sentinel/SentinelWatchPolicy.ts`
+- `FailSafe/extension/src/roadmap/services/HubSnapshotService.ts`
+- `FailSafe/extension/src/test/planning/PlanManager.test.ts`
+- `FailSafe/extension/src/test/qorelogic/L3ApprovalService.test.ts`
+- `FailSafe/extension/src/test/sentinel/SentinelWatchPolicy.test.ts`
+- `FailSafe/extension/src/test/roadmap/HubSnapshotService.test.ts`
+
+**Section 4 Razor**:
+
+| File | Lines | Limit | Status |
+| --- | --- | --- | --- |
+| PlanManager.ts | 227 | 250 | PASS |
+| L3ApprovalService.ts | 245 | 250 | PASS |
+| QoreLogicManager.ts | 221 | 250 | PASS |
+| SentinelWatchPolicy.ts | 204 | 250 | PASS |
+| HubSnapshotService.ts | 248 | 250 | PASS |
+
+All functions ≤ 40 lines; nesting ≤ 3; no nested ternaries; no `console.log` in new production code.
+
+**Functional Verification**:
+
+- `npx tsc --noEmit -p ./` from `FailSafe/extension/` — exit 0 (clean).
+- `npx mocha out/test/{planning/PlanManager,qorelogic/L3ApprovalService,sentinel/SentinelWatchPolicy,sentinel/SentinelEventQueue,roadmap/HubSnapshotService}.test.js` — 102/102 pass (36 + 14 + 28 + 12 + 12).
+- `qor-logic verify-ledger` exit 0 through Entry #346.
+
+**Out-of-plan-scope decisions**:
+
+- `monitor-state-coherence.test.ts` extension was named in plan §2 Affected Files but skipped — that test file is DOM/HTML-coherence focused and the equivalent refresh-before-read proof is more cleanly expressed in `HubSnapshotService.test.ts` against the call-log fixture. The plan's intent (hub rebuild reflects workspace file updates) is satisfied; the boundary differs. Documented in this entry as a minor scope deviation.
+
+**Carried-forward issues** (pre-existing; not in §2 scope):
+
+- `PlanManager.test.ts` is 979 lines (over the 250 cap by repo convention; test files exempt per Entry #336 precedent). Pre-existing; not in §2 scope.
+- `PlanPersistenceStore.refresh()` and `RoadmapPersistenceStore.refresh()` silently swallow YAML parse errors via empty catch blocks (pre-existing from §0; not in §2 scope).
+- `PlanPersistenceStore.appendEvent()` synchronously full-file-rewrites on every event (hot-path inefficiency; pre-existing).
+- `SentinelDaemon.bindWatcherEvents` does not bind `addDir`/`unlinkDir`; directory-only mutations under whitelisted prefixes would be invisible.
+- FX145 and FX154 FEATURE_INDEX rows are NOT updated by this commit per plan: "Update FEATURE_INDEX rows FX145 and FX154 when monitor proof is functional" — that requires Phase 60 §4 (UI Subscription Hygiene + Remaining FEATURE_INDEX Closure) which authors the Monitor proof tests. Deferred.
+
+**Phase 60 Sub-Phase Status**:
+
+| Sub-Phase | State | Why |
+| --- | --- | --- |
+| §0 | SEALED (#345) | Refactor enablement complete |
+| §1 | SEALED (#346) | Scope sync complete |
+| §2 | **COMPLETE** (this entry) | Workspace truth refresh + governance watch surface landed |
+| §3 | Deferred | Next cycle: B194 + B197 |
+| §4 | Deferred | B198 + remaining FEATURE_INDEX closure |
+| §5 | Deferred | Publish-Block Verification |
+
+**Substantiation**: NOT RUN. Phase 60 has 6 sub-phases; §0+§1+§2 done; §3-§5 pending.
+
+**Content Hash**: `388f1d925509c6a591acf1ec9fb3e4364cc721592e364a9318092462ddc8226b` — SHA256 of concatenated content of 9 modified files
+
+**Previous Hash**: `e655f84b8ec05d46fec067e9fbd2a89fb7cc50b46e8bce956fd975b060d5ea51` (Entry #346 chain hash)
+
+**Chain Hash**: `0d0b8261693cd5a44970500ff7a4c0b2a5be96c8912399c1b05e9183929b80d8` — SHA256(content_hash + "|" + previous_hash)
+
+**Decision**: Phase 60 §2 implementation complete. B192 (workspace truth refresh) and B193 (governance watch surface) addressed via 4 disjoint tracks (3 parallel subagent + 1 inline). All 5 modified production files under Section 4 cap; 102/102 tests pass.
+
+_Gate Status: OPEN. Next: operator-driven /qor-auto-dev-1 against Phase 60 §3._
+
+---
+
 _Chain integrity: VALID_
-_Session Status: SEALED at #342; #343-#346 Phase 60 cycle in progress; §0 + §1 COMPLETE_
-_Session: 2026-05-13-phase60-v5-1-0-remaining-scope-phase-1_
+_Session Status: SEALED at #342; #343-#347 Phase 60 cycle in progress; §0 + §1 + §2 COMPLETE_
+_Session: 2026-05-13-phase60-v5-1-0-remaining-scope-phase-2_

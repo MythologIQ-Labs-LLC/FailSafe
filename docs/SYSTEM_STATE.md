@@ -1,7 +1,57 @@
 # SYSTEM STATE
 
 **Last Updated:** 2026-05-13
-**Version:** v5.1.10-baseline plus Phase 60 §0 refactor enablement plus §1 scope sync plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups (workspace-only label; no `package.json` bump)
+**Version:** v5.1.10-baseline plus Phase 60 §0 refactor enablement plus §1 scope sync plus §2 workspace truth refresh plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups (workspace-only label; no `package.json` bump)
+
+---
+
+## 2026-05-13 - Phase 60 §2 Workspace Truth Refresh and Governance Watch Surface
+
+Plan: `docs/plan-qor-phase60-v5-1-0-remaining-scope.md` (PASS audit #344; §0 sealed #345; §1 sealed #346). Sub-phase §2 of 6. Addresses B192 (workspace truth refresh) and B193 (governance watch surface).
+
+### Deliverables (4 parallel tracks)
+
+**Track A — Planning refresh** (refactoring-specialist subagent):
+- `PlanManager.refreshFromWorkspace()` (NEW facade method, 8 lines): calls `planStore.refresh()` + `roadmapStore.refresh()`, clears in-memory `plans` Map, re-derives state from refreshed events. Side-effect-bounded; no watchers, no writes, no event emissions.
+- Verified existing store `refresh()` methods (shipped in §0) actually re-read YAML from disk.
+- `PlanManager.test.ts`: new test `persistence > should observe externally-written plans on refreshFromWorkspace()` — writes external YAML, calls refresh, asserts new plan visible via `getAllPlans()`.
+
+**Track B — L3ApprovalService refresh** (refactoring-specialist subagent):
+- `L3ApprovalService.refreshFromWorkspace()` (NEW public method, 3 lines): re-reads state store and replaces in-memory `l3Queue` cache.
+- File compressed 252L → 245L (tightened comments to stay under 250 cap).
+- `L3ApprovalService.test.ts`: new test `FX249 refreshFromWorkspace — re-reads externally mutated state store (B192)` — external state-store mutation, refresh, asserts `getQueue()` returns post-mutation length.
+
+**Track C — Sentinel governance watch surface** (refactoring-specialist subagent):
+- `SentinelWatchPolicy.ts`: 133L → 204L. Introduced `WATCHED_EXTENSIONS` (added `.md`, `.yaml`, `.yml`, `.json`) and `GOVERNANCE_WHITELIST_FILES`/`GOVERNANCE_WHITELIST_PREFIXES` predicates. Replaced blanket `**/.failsafe/**` ignore with targeted `runtime/`, `cache/`, `archive/` ignores.
+- Whitelisted: `workspace-config.json`, `AUDIT_REPORT.md`, `V5_1_0_SCOPE.md`, `RESEARCH_BRIEF.md`, `plans.yaml`, `risk-register.yaml`, `intent-store.json`, `META_LEDGER.md`, plus `.failsafe/governance/plans/` prefix.
+- `SentinelWatchPolicy.test.ts`: 169L → 207L; added 15 new it() blocks covering `.md`/`.yaml`/`.yml`/`.json` watch, governance-file whitelist hits, non-whitelisted `.failsafe/runtime/` drops, Windows backslash path normalization, ignore-pattern precedence.
+- `SentinelDaemon.ts` + `SentinelEventQueue.ts` untouched: daemon already delegated to watch policy; queue's existing priority pipeline handles governance events without new tier.
+
+**Track D — Hub snapshot refresh wiring** (orchestrator inline):
+- `HubSnapshotService.ts`: added `d.planManager.refreshFromWorkspace?.()` + `d.qorelogicManager.refreshL3Queue?.()` at top of `buildHubSnapshot()` BEFORE any service reads. Compressed two later lines to stay at 248L (under 250 cap).
+- `QoreLogicManager.ts`: added `refreshL3Queue()` delegator method that calls `l3ApprovalService.refreshFromWorkspace()`.
+- `HubSnapshotService.test.ts`: extended existing `buildHubSnapshot — refresh hooks run BEFORE payload reads` test with refresh-before-read ordering assertions (asserts `plan.refreshFromWorkspace` index < `plan.getActivePlan` index in call log; same for L3).
+
+### Verification
+
+- `npx tsc --noEmit -p ./`: exit 0 (clean)
+- 102/102 tests pass across PlanManager / L3ApprovalService / SentinelWatchPolicy / SentinelEventQueue / HubSnapshotService
+- Section 4 Razor: all 5 modified production files ≤ 250L (HubSnapshotService 248L; L3ApprovalService 245L; SentinelWatchPolicy 204L; PlanManager 227L; QoreLogicManager 221L)
+
+### Out-of-plan-scope decisions
+
+- `monitor-state-coherence.test.ts` extension was named in plan §2 but skipped: that test file is DOM/HTML-coherence focused, and the equivalent refresh-before-read proof is more cleanly expressed in `HubSnapshotService.test.ts` against the call-log fixture. The plan's intent (hub rebuild reflects workspace file updates) is satisfied; the file boundary differs from the plan.
+
+### Phase 60 sub-phase status
+
+| Sub-Phase | State | Ledger |
+| --- | --- | --- |
+| §0 Refactor Enablement | SEALED (partial) | #345 |
+| §1 Scope Sync + Coverage Ledger | SEALED (partial) | #346 |
+| §2 Workspace Truth Refresh + Governance Watch Surface | **THIS COMMIT** | #347 |
+| §3 Governance Mode Escalation + Install Version Floor | Deferred | future |
+| §4 UI Subscription Hygiene + Remaining FEATURE_INDEX Closure | Deferred | future |
+| §5 Publish-Block Verification | Deferred | future |
 
 ---
 

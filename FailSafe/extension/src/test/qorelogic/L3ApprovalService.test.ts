@@ -172,6 +172,30 @@ suite('L3ApprovalService (FX249)', () => {
     assert.ok(routed);
   });
 
+  test('FX249 refreshFromWorkspace — re-reads externally mutated state store (B192)', () => {
+    const future = new Date(Date.now() + 3600 * 1000).toISOString();
+    const s = makeStubs({
+      queue: [{ id: 'r1', filePath: 'a.ts', slaDeadline: future }],
+    });
+    const svc = new L3ApprovalService(s.stateStore, s.config, s.ledger, s.trust, s.bus);
+    svc.loadQueue();
+    assert.equal(svc.getQueue().length, 1, 'pre-mutation cache should hold 1 item');
+
+    // External mutation: replace persisted state-store contents directly,
+    // bypassing the service (simulating an out-of-process writer).
+    s.state.l3Queue = [
+      { id: 'r1', filePath: 'a.ts', slaDeadline: future },
+      { id: 'r2', filePath: 'b.ts', slaDeadline: future },
+    ];
+
+    // Without refresh, stale in-memory cache would still report 1.
+    svc.refreshFromWorkspace();
+
+    const refreshed = svc.getQueue();
+    assert.equal(refreshed.length, 2, 'refreshFromWorkspace must reload cache from store');
+    assert.equal(refreshed[1].id, 'r2');
+  });
+
   test('FX249 getQueue — auto-prunes expired items + emits l3Decided EXPIRED', async () => {
     const s = makeStubs({ l3SLA: 0 }); // immediate expiration
     const decisions: any[] = [];

@@ -841,6 +841,69 @@ describe('PlanManager', function () {
       assert.ok(fs.existsSync(yamlPath), 'YAML file should exist');
     });
 
+    it('should observe externally-written plans on refreshFromWorkspace()', () => {
+      // Arrange - create a plan via PlanManager API
+      const phases: PlanPhase[] = [{
+        id: 'phase-1',
+        title: 'Original Phase',
+        description: '',
+        status: 'pending',
+        progress: 0,
+        estimatedScope: 10,
+        dependencies: [],
+        artifacts: []
+      }];
+      const original = planManager.createPlan('intent-original', 'Original Plan', phases);
+
+      // Sanity: in-memory state contains the original plan
+      const before = planManager.getAllPlans();
+      assert.strictEqual(before.length, 1, 'Should start with one plan');
+      assert.ok(before.find(p => p.id === original.id), 'Original plan should be present');
+
+      // Externally mutate plans.yaml: synthesize a second plan's event log
+      // alongside the existing one. We write YAML directly, bypassing PlanManager.
+      const yaml = require('js-yaml') as { load: (s: string) => unknown; dump: (o: unknown) => string };
+      const yamlPath = path.join(tempDir, '.failsafe', 'plans.yaml');
+      const raw = fs.readFileSync(yamlPath, 'utf8');
+      const data = yaml.load(raw) as { events: Record<string, unknown[]> };
+      const externalPlanId = 'external-plan-id-xyz';
+      data.events[externalPlanId] = [{
+        id: 'evt-external-1',
+        planId: externalPlanId,
+        type: 'plan.created',
+        timestamp: new Date().toISOString(),
+        payload: {
+          intentId: 'intent-external',
+          title: 'External Plan',
+          phases: [{
+            id: 'ext-phase-1',
+            title: 'External Phase',
+            description: '',
+            status: 'pending',
+            progress: 0,
+            estimatedScope: 5,
+            dependencies: [],
+            artifacts: []
+          }]
+        }
+      }];
+      fs.writeFileSync(yamlPath, yaml.dump(data), 'utf8');
+
+      // Pre-condition: without refresh, the new plan is still invisible
+      const stale = planManager.getAllPlans();
+      assert.strictEqual(stale.length, 1, 'Plan list should remain stale before refresh');
+
+      // Act - invoke the unit under test
+      planManager.refreshFromWorkspace();
+
+      // Assert - new plan now observable via getAllPlans()
+      const after = planManager.getAllPlans();
+      assert.strictEqual(after.length, 2, 'Should observe both original and externally-written plans');
+      const externalPlan = after.find(p => p.id === externalPlanId);
+      assert.ok(externalPlan, 'Externally-written plan should be observable');
+      assert.strictEqual(externalPlan!.title, 'External Plan');
+    });
+
     it('should reload plans from disk', () => {
       // Arrange
       const phases: PlanPhase[] = [{

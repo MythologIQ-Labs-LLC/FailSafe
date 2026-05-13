@@ -129,6 +129,8 @@ export class HubSnapshotService {
 
   async buildHubSnapshot(): Promise<Record<string, unknown>> {
     const d = this.deps;
+    d.planManager.refreshFromWorkspace?.();
+    d.qorelogicManager.refreshL3Queue?.();
     const activePlan = d.planManager.getActivePlan();
     const sentinelStatus: Record<string, unknown> = { ...d.sentinelDaemon.getStatus() };
     this.backfillSentinelEvents(sentinelStatus);
@@ -139,13 +141,9 @@ export class HubSnapshotService {
     const governancePhase = buildGovernancePhase(d.workspaceRoot);
     const artifacts = new WorkspaceArtifactBuilder(d.workspaceRoot).build();
     const phaseTitle = inferActivePhaseTitle(activePlan as unknown as Record<string, unknown>, (l) => this.getRecentCheckpoints(l));
-    const ide = d.getIdeTracker();
-    const runState = ide ? ide.getRunState(phaseTitle) : { currentPhase: "Plan", activeTasks: [], activeDebugSessions: [] };
-    const nodeStatusArr = buildNodeStatus(
-      sentinelStatus as { running?: boolean; filesWatched?: number; queueDepth?: number; [k: string]: unknown },
-      l3Queue, trust, qoreRuntime);
-    return this.assembleHubPayload({ activePlan, sentinelStatus, l3Queue, trust, qoreRuntime,
-      checkpointSummary, governancePhase, artifacts, runState, nodeStatusArr });
+    const runState = d.getIdeTracker()?.getRunState(phaseTitle) ?? { currentPhase: "Plan", activeTasks: [], activeDebugSessions: [] };
+    const nodeStatusArr = buildNodeStatus(sentinelStatus as { running?: boolean; filesWatched?: number; queueDepth?: number; [k: string]: unknown }, l3Queue, trust, qoreRuntime);
+    return this.assembleHubPayload({ activePlan, sentinelStatus, l3Queue, trust, qoreRuntime, checkpointSummary, governancePhase, artifacts, runState, nodeStatusArr });
   }
 
   private assembleHubPayload(a: {
