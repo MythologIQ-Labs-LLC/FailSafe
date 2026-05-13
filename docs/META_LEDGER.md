@@ -16776,6 +16776,100 @@ _Gate Status: OPEN. Next: operator-driven /qor-auto-dev-1 against Phase 60 §4 c
 
 ---
 
+### Entry #350: IMPLEMENTATION (partial) — Phase 60 §4 continuation: 4 FEATURE_INDEX closures (FX128, FX409, FX419, FX435)
+
+**Timestamp**: 2026-05-14T03:00:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist (auto-dev orchestrated; 4 parallel test-automator subagents — one per deferred test file from #349)
+**Risk Grade**: L2
+**Plan**: `docs/plan-qor-phase60-v5-1-0-remaining-scope.md` (PASS audit Entry #344; §0-§4-UI-hygiene sealed at #345-#349)
+**Scope**: §4 continuation — authors the 4 plan-named test files deferred from #349. Drives FEATURE_INDEX unverified count 22 → 18 (−4).
+
+**Track 1 — console-routes.test.ts /console/agents** (test-automator subagent):
+- File: 289L → 344L (extended)
+- New: 1 describe block `FX128 AgentCoverageRoute — GET /console/agents renders the agent coverage model` with fake systemRegistry containing 2 systems (claude-code detected+governed, codex-cli un-detected+un-governed), 2 terminals, agentTeams enabled. Assertions cover registered-systems table rows + asymmetric detect/governance projection + terminals table + agent-teams block (Settings path + Enabled).
+- Compile-only runtime (file uses VS Code `suite/test` globals consumed by @vscode/test-electron; bare mocha cannot drive — matches the 16 sibling tests in the same file per Entry #336/#348 precedent).
+- **Closes FX128** (was unverified).
+
+**Track 2 — SreRoute.test.ts Activity Feed** (test-automator subagent):
+- File: 111L → 195L (extended)
+- New: 9 describe-pattern cases under `Activity Feed renders ALLOW / DENY / AUDIT rows`. Fake fixture: 3 events (`ALLOW`/`DENY`/`AUDIT`) with deterministic agentId + reason fields. Assertions cover action-text + badge-class binding (`sre-badge on`/`off`/`warn`), agentId + reason rendering, ordering preservation, badge-class regex tie-back (load-bearing for "would-silently-break-fail"), and empty-feed negative case.
+- **22/22 pass** under bare mocha (file uses describe/it).
+- **Closes FX409** (was unverified).
+
+**Track 3 — economics-dashboard.test.ts NEW** (test-automator subagent):
+- File: NEW, 208L
+- Targets: `FailSafe/extension/src/genesis/panels/templates/EconomicsTemplate.ts` (`renderEconomicsTemplate(model)` pure HTML-string renderer consumed by EconomicsPanel from `TokenAggregatorService.getSnapshot()`)
+- 8 it() blocks: hero cost row (`$4.27`, 2-decimal formatting on `$0.00`), hero tokens-saved row (`12.5K`), per-aggregate bar entries (3 rows from fake dailyAggregates), tooltip values for `tokensSaved`, donut row (`75%` from `contextSyncRatio: 0.75`), empty-aggregate edge case (zero bars), 30-entry cap (35 in → 30 out, oldest dropped, newest preserved).
+- **8/8 pass** under bare mocha (~29ms).
+- **Closes FX419** (was unverified).
+
+**Track 4 — WorkspaceMigration.test.ts FX435 suite** (test-automator subagent):
+- File: 243L (extended)
+- Targets: `WorkspaceMigration.repairConfig(rootPath)` — `.failsafe/` directory creation + `workspace-config.json` materialization with sha256 hash + ISO timestamp + `.gitignore` augmentation.
+- 3 it() blocks under `WorkspaceMigration FX435 — .failsafe/ seeding observable output`:
+  - `repairConfig seeds .failsafe/workspace-config.json with hash + detectedAt` — invokes `repairConfig(tmpDir)` against fresh temp-dir fixture; asserts directory exists, JSON parsed with `workspaceType: 'failsafe-development'`, `organizationExclusions` includes `.failsafe/` and `.claude/`, `configHash` matches /^[0-9a-f]{64}$/, `detectedAt` matches ISO regex; cross-validates `validateConfigIntegrity(cfg) === true` proving hash is genuine not placeholder.
+  - `repairConfig adds .failsafe/ entry to workspace .gitignore` — asserts `.gitignore` exists post-call and contains `.failsafe/` line via boundary-aware regex.
+  - `repairConfig is idempotent — second seed leaves aligned config intact` — invokes twice; asserts second-run `configHash` and `detectedAt` unchanged.
+- Compile-only runtime (vscode module dependency); production code path verified via direct read.
+- **Closes FX435** (was unverified).
+
+**FEATURE_INDEX coverage delta**:
+
+- verified: 411 → **415** (+4; 86.3% → 87.2%)
+- unverified: 22 → **18** (−4; 4.6% → 3.8%)
+- n/a: 43 (unchanged)
+- total: 476 (unchanged)
+
+**Remaining unverified bucket (18; post-§4cont)**:
+
+- governance mode / observe-enforce UX: FX044, FX244
+- console / monitor / command center UI: FX145, FX154, FX173, FX174 (FX128 + FX409 + FX419 promoted to verified)
+- voice and audio verification: FX196, FX198, FX219, FX221, FX222, FX227, FX231
+- hooks / checkpoint / sentinel / skill provenance / workspace seeding: FX166, FX236, FX258, FX261, FX359 (FX435 promoted to verified)
+
+**Files Modified**:
+
+- `FailSafe/extension/src/test/roadmap/console-routes.test.ts`
+- `FailSafe/extension/src/test/roadmap/SreRoute.test.ts`
+- `FailSafe/extension/src/test/economics/economics-dashboard.test.ts` (NEW)
+- `FailSafe/extension/src/test/qorelogic/WorkspaceMigration.test.ts`
+- `docs/FEATURE_INDEX.md` (4 row promotions + header narrative refresh)
+
+**Functional Verification**:
+
+- `npx tsc --noEmit -p ./`: exit 0 (clean across all 4 test additions).
+- Bare mocha runtime: Tracks 2 (22/22) + 3 (8/8) pass = **30/30 pass**.
+- Tracks 1 + 4: compile-only (vscode-test harness required per Entry #336/#348/#349); production code path verified by subagents via direct source read.
+- `qor-logic verify-ledger`: Entries #331-#349 all OK.
+
+**Phase 60 Sub-Phase Status**:
+
+| Sub-Phase | State | Ledger |
+| --- | --- | --- |
+| §0 Refactor Enablement | SEALED | #345 |
+| §1 Scope Sync + Coverage Ledger | SEALED | #346 |
+| §2 Workspace Truth Refresh + Governance Watch | SEALED | #347 |
+| §3 Governance Mode Escalation + Install Version Floor | SEALED | #348 |
+| §4 UI Subscription Hygiene B198 | SEALED | #349 |
+| §4 continuation — 4 of N FEATURE_INDEX closures | **COMPLETE** (this entry) | #350 |
+| §4 continuation — remaining 18 unverified entries | Deferred to operator review + B199 Phase 2-8 | future |
+| §5 Publish-Block Verification | Deferred (gated on 0-unverified) | future |
+
+**Substantiation**: NOT RUN. Phase 60 still has §4-continuation drive-to-zero + §5 pending.
+
+**Content Hash**: `ef5e7353445616f1336eaa9d49b434378d6032804bf9ed9620f2de731e342228` — SHA256 of concatenated content of 5 modified/new files
+
+**Previous Hash**: `665b4e9820ffce001bb613e561cdae196fe458fd6de6727c8184393431e9685c` (Entry #349 chain hash)
+
+**Chain Hash**: `91d9caa3282c294ab3ee0632734a1aa178ebb51273a9c30325bd6d1d0105fe36` — SHA256(content_hash + "|" + previous_hash)
+
+**Decision**: Phase 60 §4 continuation closes 4 of the 22 unverified FEATURE_INDEX entries by authoring the 4 plan-named test files deferred from #349. 30/30 tests pass under bare mocha for the two runnable tracks; compile-only verification for the two vscode-test-harness tracks per established precedent. The remaining 18 unverified entries require operator review + B199 Phase 2-8 per-row test authoring.
+
+_Gate Status: OPEN. Next: operator-driven /qor-auto-dev-1 cycles continuing §4 continuation against subsets of the remaining 18 unverified, OR pivot to operator-review pass on the per-entry-review queue._
+
+---
+
 _Chain integrity: VALID_
-_Session Status: SEALED at #342; #343-#349 Phase 60 cycle in progress; §0-§4-partial COMPLETE_
-_Session: 2026-05-13-phase60-v5-1-0-remaining-scope-phase-4-b198_
+_Session Status: SEALED at #342; #343-#350 Phase 60 cycle in progress; §0-§4-cont-partial COMPLETE_
+_Session: 2026-05-13-phase60-v5-1-0-remaining-scope-phase-4-cont_

@@ -1,7 +1,56 @@
 # SYSTEM STATE
 
 **Last Updated:** 2026-05-13
-**Version:** v5.1.10-baseline plus Phase 60 §0-§4-partial plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups (workspace-only label; no `package.json` bump)
+**Version:** v5.1.10-baseline plus Phase 60 §0-§4cont (UI hygiene + 4 FEATURE_INDEX closures) plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups (workspace-only label; no `package.json` bump)
+
+---
+
+## 2026-05-13 - Phase 60 §4 continuation: 4 FEATURE_INDEX closures (FX128, FX409, FX419, FX435)
+
+Plan: `docs/plan-qor-phase60-v5-1-0-remaining-scope.md` (PASS audit #344; §0-§4-UI-hygiene sealed at #345-#349). Sub-phase §4 continuation — test authoring for the 4 plan-named test files deferred from #349.
+
+### Deliverables (4 parallel test-automator subagents)
+
+| Track | File | Mode | New cases | FX closed |
+| --- | --- | --- | --- | --- |
+| 1 | `src/test/roadmap/console-routes.test.ts` (289L → 344L) | extend | 1 block (`FX128 AgentCoverageRoute — GET /console/agents`) | **FX128** |
+| 2 | `src/test/roadmap/SreRoute.test.ts` (111L → 195L) | extend | 9 cases under `Activity Feed renders ALLOW / DENY / AUDIT rows` | **FX409** |
+| 3 | `src/test/economics/economics-dashboard.test.ts` (NEW; 208L) | new | 8 cases covering hero rows + bar entries + donut + empty + cap | **FX419** |
+| 4 | `src/test/qorelogic/WorkspaceMigration.test.ts` (extended; 243L) | extend | 3 cases under `FX435 — .failsafe/ seeding observable output` incl. idempotency | **FX435** |
+
+### FEATURE_INDEX coverage delta
+
+- verified: 411 → **415** (+4; 86.3% → 87.2%)
+- unverified: 22 → **18** (-4; 4.6% → 3.8%)
+- n/a: 43 (unchanged)
+- total: 476 (unchanged)
+
+### Remaining unverified bucket (18; post-§4cont)
+
+- governance mode / observe-enforce UX: FX044, FX244
+- console / monitor / command center UI: FX145, FX154, FX173, FX174 (FX128 + FX409 + FX419 now verified)
+- voice and audio verification: FX196, FX198, FX219, FX221, FX222, FX227, FX231
+- hooks / checkpoint / sentinel / skill provenance / workspace seeding: FX166, FX236, FX258, FX261, FX359 (FX435 now verified)
+
+### Test execution
+
+- Track 2 + Track 3: **17/17 pass** under bare mocha (SreRoute 22/22; economics-dashboard 8/8)
+- Track 1 + Track 4: compile-only (uses vscode-test `suite/test` globals or vscode module dependency); runtime via vscode-test harness per Entry #336/#348/#349 precedent
+- `npx tsc --noEmit -p ./`: exit 0 (clean)
+- `qor-logic verify-ledger`: Entries #331-#349 all OK
+
+### Phase 60 sub-phase status
+
+| Sub-Phase | State | Ledger |
+| --- | --- | --- |
+| §0 Refactor Enablement | SEALED | #345 |
+| §1 Scope Sync + Coverage Ledger | SEALED | #346 |
+| §2 Workspace Truth Refresh + Governance Watch | SEALED | #347 |
+| §3 Governance Mode Escalation + Install Version Floor | SEALED | #348 |
+| §4 UI Subscription Hygiene B198 | SEALED | #349 |
+| §4 continuation — 4 of N FEATURE_INDEX closures (Phase 60 §4cont) | **THIS COMMIT** | #350 |
+| §4 continuation — remaining 18 unverified entries | Deferred (operator review + B199 Phase 2-8) | future |
+| §5 Publish-Block Verification | Deferred (gated on 0-unverified) | future |
 
 ---
 

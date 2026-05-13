@@ -156,3 +156,88 @@ suite('WorkspaceMigration (FX339)', () => {
     }
   });
 });
+
+// FX435 — .failsafe/ seeding produces observable migration output.
+// FEATURE_INDEX claim: "Workspace seeding (.failsafe/)" must create the
+// .failsafe/ tree, write workspace-config.json with sha256 configHash + ISO
+// detectedAt, and add a .failsafe/ entry to .gitignore.
+// Exercises private repairConfig() (the entrypoint reached from checkAndRepair)
+// end-to-end against a temp-dir fixture; asserts on fs side-effects, not state.
+// Acceptance: the temp dir starts empty, so a silent no-op cannot pre-create
+// the config file or .gitignore line — both assertions would fail.
+suite('WorkspaceMigration FX435 — .failsafe/ seeding observable output', () => {
+  let dir: string;
+  let vscodeMod: any;
+  let origWarning: any;
+  let origInfo: any;
+
+  setup(() => {
+    dir = tmpRoot();
+    vscodeMod = require('vscode');
+    origWarning = vscodeMod.window.showWarningMessage;
+    origInfo = vscodeMod.window.showInformationMessage;
+    // Stub prompt: pretend operator chose the alignment action (first option).
+    vscodeMod.window.showWarningMessage = async (_m: string, ...a: string[]) => a[0];
+    vscodeMod.window.showInformationMessage = async () => undefined;
+  });
+
+  teardown(() => {
+    if (vscodeMod) {
+      vscodeMod.window.showWarningMessage = origWarning;
+      vscodeMod.window.showInformationMessage = origInfo;
+    }
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  test('FX435 repairConfig seeds .failsafe/workspace-config.json with hash + detectedAt', async () => {
+    const configFile = path.join(dir, '.failsafe', 'workspace-config.json');
+    assert.equal(fs.existsSync(configFile), false, 'precondition: config absent');
+
+    const repair = (WorkspaceMigration as any).repairConfig.bind(WorkspaceMigration);
+    await repair(dir);
+
+    assert.ok(fs.existsSync(path.join(dir, '.failsafe')), '.failsafe/ must exist');
+    assert.ok(fs.existsSync(configFile), 'workspace-config.json must be written');
+    const cfg = JSON.parse(fs.readFileSync(configFile, 'utf-8'));
+
+    // Fields produced specifically by writeAlignedConfig — prove end-to-end run.
+    assert.equal(cfg.workspaceType, 'failsafe-development');
+    assert.ok(Array.isArray(cfg.organizationExclusions));
+    assert.ok(cfg.organizationExclusions.includes('.failsafe/'));
+    assert.ok(cfg.organizationExclusions.includes('.claude/'));
+    assert.match(cfg.configHash, /^[0-9a-f]{64}$/, 'configHash must be sha256 hex');
+    assert.match(cfg.detectedAt, /^\d{4}-\d{2}-\d{2}T/, 'detectedAt must be ISO');
+
+    // Cross-check: persisted hash validates against payload (not a placeholder).
+    const validate = (WorkspaceMigration as any).validateConfigIntegrity.bind(WorkspaceMigration);
+    assert.equal(validate(cfg), true, 'persisted configHash must validate');
+  });
+
+  test('FX435 repairConfig adds .failsafe/ entry to workspace .gitignore', async () => {
+    const gitignore = path.join(dir, '.gitignore');
+    assert.equal(fs.existsSync(gitignore), false, 'precondition: .gitignore absent');
+
+    const repair = (WorkspaceMigration as any).repairConfig.bind(WorkspaceMigration);
+    await repair(dir);
+
+    assert.ok(fs.existsSync(gitignore), '.gitignore must be created');
+    const contents = fs.readFileSync(gitignore, 'utf-8');
+    assert.match(contents, /(^|\r?\n)\.failsafe\/\s*(\r?\n|$)/,
+      '.gitignore must contain a .failsafe/ exclusion line');
+  });
+
+  test('FX435 repairConfig is idempotent — second seed leaves aligned config intact', async () => {
+    const repair = (WorkspaceMigration as any).repairConfig.bind(WorkspaceMigration);
+    const configFile = path.join(dir, '.failsafe', 'workspace-config.json');
+
+    await repair(dir);
+    const first = JSON.parse(fs.readFileSync(configFile, 'utf-8'));
+
+    // Second seed: aligned config must NOT be rewritten (no prompt path taken).
+    await repair(dir);
+    const second = JSON.parse(fs.readFileSync(configFile, 'utf-8'));
+
+    assert.equal(second.configHash, first.configHash, 'hash unchanged on re-seed');
+    assert.equal(second.detectedAt, first.detectedAt, 'detectedAt unchanged on re-seed');
+  });
+});

@@ -94,6 +94,90 @@ describe('SreTemplate', () => {
     });
   });
 
+  describe('Activity Feed renders ALLOW / DENY / AUDIT rows', () => {
+    // FX409 — SRE Activity Feed (ALLOW/DENY/AUDIT)
+    const threeEventSnapshot = (): AgtSreSnapshot => mockSnapshot({
+      auditEvents: [
+        { id: 'e1', timestamp: '2026-05-13T10:00:00Z', type: 'policy.decision',
+          agentId: 'agent-alpha', action: 'ALLOW', reason: 'within policy' },
+        { id: 'e2', timestamp: '2026-05-13T10:01:00Z', type: 'policy.decision',
+          agentId: 'agent-bravo', action: 'DENY', reason: 'blocked by deny-rule' },
+        { id: 'e3', timestamp: '2026-05-13T10:02:00Z', type: 'audit.log',
+          agentId: 'agent-charlie', action: 'AUDIT', reason: 'observation only' },
+      ],
+    });
+
+    it('renders an Activity Feed header when events are present', () => {
+      const html = buildSreHtml({ connected: true, snapshot: threeEventSnapshot() });
+      assert.ok(html.includes('Activity Feed'), 'Activity Feed header missing');
+    });
+
+    it('renders ALLOW action text and on-class badge', () => {
+      const html = buildSreHtml({ connected: true, snapshot: threeEventSnapshot() });
+      assert.ok(html.includes('>ALLOW<'), 'ALLOW action text missing from any badge');
+      assert.ok(html.includes('sre-badge on'), 'ALLOW row missing on-class badge');
+    });
+
+    it('renders DENY action text and off-class badge', () => {
+      const html = buildSreHtml({ connected: true, snapshot: threeEventSnapshot() });
+      assert.ok(html.includes('>DENY<'), 'DENY action text missing from any badge');
+      assert.ok(html.includes('sre-badge off'), 'DENY row missing off-class badge');
+    });
+
+    it('renders AUDIT action text and warn-class badge', () => {
+      const html = buildSreHtml({ connected: true, snapshot: threeEventSnapshot() });
+      assert.ok(html.includes('>AUDIT<'), 'AUDIT action text missing from any badge');
+      assert.ok(html.includes('sre-badge warn'), 'AUDIT row missing warn-class badge');
+    });
+
+    it('renders all three agentIds inline with their rows', () => {
+      const html = buildSreHtml({ connected: true, snapshot: threeEventSnapshot() });
+      assert.ok(html.includes('agent-alpha'), 'ALLOW row agentId missing');
+      assert.ok(html.includes('agent-bravo'), 'DENY row agentId missing');
+      assert.ok(html.includes('agent-charlie'), 'AUDIT row agentId missing');
+    });
+
+    it('preserves ALLOW/DENY/AUDIT ordering (each subsequent action after the previous)', () => {
+      const html = buildSreHtml({ connected: true, snapshot: threeEventSnapshot() });
+      const allowIdx = html.indexOf('>ALLOW<');
+      const denyIdx = html.indexOf('>DENY<');
+      const auditIdx = html.indexOf('>AUDIT<');
+      assert.ok(allowIdx > -1 && denyIdx > -1 && auditIdx > -1, 'one of ALLOW/DENY/AUDIT missing');
+      assert.ok(allowIdx < denyIdx, 'ALLOW must render before DENY');
+      assert.ok(denyIdx < auditIdx, 'DENY must render before AUDIT');
+    });
+
+    it('binds each action to its correct badge class (DENY not rendered as on, ALLOW not as off)', () => {
+      const html = buildSreHtml({ connected: true, snapshot: threeEventSnapshot() });
+      // Isolate the Activity Feed subsection (other sections also use sre-badge classes)
+      const feedStart = html.indexOf('Activity Feed');
+      assert.ok(feedStart > -1, 'Activity Feed section not found');
+      const feedHtml = html.slice(feedStart);
+      // In the audit feed, each action label appears as a badge with the matching class
+      const allowMatch = /<span class="sre-badge on">([^<]+)<\/span>/.exec(feedHtml);
+      const denyMatch = /<span class="sre-badge off">([^<]+)<\/span>/.exec(feedHtml);
+      const warnMatch = /<span class="sre-badge warn">([^<]+)<\/span>/.exec(feedHtml);
+      assert.ok(allowMatch, 'no sre-badge on found in audit feed');
+      assert.ok(denyMatch, 'no sre-badge off found in audit feed');
+      assert.ok(warnMatch, 'no sre-badge warn found in audit feed');
+      assert.strictEqual(allowMatch![1], 'ALLOW', 'on-class badge does not contain ALLOW');
+      assert.strictEqual(denyMatch![1], 'DENY', 'off-class badge does not contain DENY');
+      assert.strictEqual(warnMatch![1], 'AUDIT', 'warn-class badge does not contain AUDIT');
+    });
+
+    it('renders reason text alongside each event row', () => {
+      const html = buildSreHtml({ connected: true, snapshot: threeEventSnapshot() });
+      assert.ok(html.includes('within policy'), 'ALLOW reason missing');
+      assert.ok(html.includes('blocked by deny-rule'), 'DENY reason missing');
+      assert.ok(html.includes('observation only'), 'AUDIT reason missing');
+    });
+
+    it('omits Activity Feed section entirely when auditEvents is empty', () => {
+      const html = buildSreHtml({ connected: true, snapshot: mockSnapshot({ auditEvents: [] }) });
+      assert.ok(!html.includes('Activity Feed'), 'Activity Feed header should not render with no events');
+    });
+  });
+
   describe('fetchAgtSnapshot', () => {
     it('returns connected: false when fetch throws', async () => {
       // Override global fetch to simulate network failure

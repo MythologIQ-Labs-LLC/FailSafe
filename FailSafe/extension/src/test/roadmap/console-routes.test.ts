@@ -9,7 +9,7 @@ import { strict as assert } from 'assert';
 import {
   HomeRoute, RunDetailRoute, WorkflowsRoute, SkillsRoute,
   GenomeRoute, ReportsRoute, SettingsRoute, GovernanceKPIRoute,
-  PreflightRoute,
+  PreflightRoute, AgentCoverageRoute,
 } from '../../roadmap/routes';
 
 interface MockRes {
@@ -285,5 +285,60 @@ suite('Console HTML routes (FX120-FX132)', () => {
     } as any);
     assert.equal(res.statusCode, 400);
     assert.match(res.sent, /Missing scopeId/);
+  });
+
+  test('FX128 AgentCoverageRoute — GET /console/agents renders the agent coverage model', async () => {
+    // Build a deterministic two-agent landscape (per acceptance criterion: ≥2 agents).
+    // The route asks the registry for detectAll(), then per system calls
+    // getManifest() / detect() / hasGovernance(). Both rendered tables must reflect
+    // the fixture, plus the agentTeams block must reflect the enabled flag/path.
+    const claudeSystem = { getManifest: () => ({ name: 'claude-code' }) };
+    const codexSystem = { getManifest: () => ({ name: 'codex-cli' }) };
+
+    const fakeLandscape = {
+      registeredSystems: [claudeSystem, codexSystem],
+      activeTerminals: [
+        { name: 'pwsh-1', agentType: 'claude-code', terminalIndex: 0 },
+        { name: 'pwsh-2', agentType: 'codex-cli', terminalIndex: 1 },
+      ],
+      agentTeams: { enabled: true, settingsPath: '/ws/.claude/teams.json' },
+    };
+
+    const detectionBySystem = new Map<unknown, boolean>([
+      [claudeSystem, true],
+      [codexSystem, false],
+    ]);
+    const governanceBySystem = new Map<unknown, boolean>([
+      [claudeSystem, true],
+      [codexSystem, false],
+    ]);
+
+    const fakeRegistry = {
+      detectAll: async () => fakeLandscape,
+      detect: async (sys: unknown) => ({ detected: detectionBySystem.get(sys) ?? false }),
+      hasGovernance: (sys: unknown) => governanceBySystem.get(sys) ?? false,
+    };
+
+    const res = makeRes();
+    await AgentCoverageRoute.render(makeReq(), res as any, { systemRegistry: fakeRegistry as any });
+
+    assert.equal(res.statusCode, 200);
+    // Section headers (proves shell rendered through the model, not a static stub)
+    assert.match(res.sent, /<h1>Agent Coverage<\/h1>/);
+    assert.match(res.sent, /<h2>Registered Systems<\/h2>/);
+    assert.match(res.sent, /<h2>Active Terminals<\/h2>/);
+    assert.match(res.sent, /<h2>Agent Teams<\/h2>/);
+
+    // Per-agent rows from registeredSystems with detect() + hasGovernance() outputs
+    assert.match(res.sent, /<tr><td>claude-code<\/td><td>Yes<\/td><td>Yes<\/td><\/tr>/);
+    assert.match(res.sent, /<tr><td>codex-cli<\/td><td>No<\/td><td>No<\/td><\/tr>/);
+
+    // Terminal rows from activeTerminals (name + agentType + terminalIndex tuple)
+    assert.match(res.sent, /<tr><td>pwsh-1<\/td><td>claude-code<\/td><td>0<\/td><\/tr>/);
+    assert.match(res.sent, /<tr><td>pwsh-2<\/td><td>codex-cli<\/td><td>1<\/td><\/tr>/);
+
+    // agentTeams status block reflects enabled=true + the settingsPath value
+    assert.match(res.sent, /Status: Enabled/);
+    assert.match(res.sent, /Settings: \/ws\/\.claude\/teams\.json/);
   });
 });

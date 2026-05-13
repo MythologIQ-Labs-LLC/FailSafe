@@ -5,10 +5,10 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 **Generated**: 2026-05-06
 **Sources**: `.failsafe/governance/FEATURE_INVENTORY_DOCS.md` (312 entries), `.failsafe/governance/FEATURE_INVENTORY_CODE.md` (374 entries), `FailSafe/extension/src/test/**` (135 files).
 
-**Coverage summary** (updated 2026-05-13 — Phase 62 cleanup: FX128 + FX359 removed from MANUAL_OVERRIDES as redundant overrides per E7 staleness detector; classifier-redetermined status remains `unverified` for both, no row state change. Override count 28 → 26; redundant_count 2 → 0. Previous update 2026-05-09 — Item B Phase 1 sweep applied; 4 em-dash command entries cited to existing commands-state.test.ts + 20 cross-reference promotion overrides per documented Notes-column evidence):
+**Coverage summary** (updated 2026-05-13 — Phase 60 §4 continuation: 4 unverified rows promoted to verified after Phase 60 §4cont test authoring closes their coverage gaps — FX128 (GET /console/agents), FX409 (SRE Activity Feed ALLOW/DENY/AUDIT), FX419 (Token Economics Dashboard), FX435 (Workspace seeding .failsafe/). Previous update 2026-05-13 — Phase 62 cleanup: FX128 + FX359 removed from MANUAL_OVERRIDES as redundant overrides per E7 staleness detector; classifier-redetermined status remained `unverified` for both. Override count 28 → 26; redundant_count 2 → 0. Earlier 2026-05-09 — Item B Phase 1 sweep applied; 4 em-dash command entries cited to existing commands-state.test.ts + 20 cross-reference promotion overrides per documented Notes-column evidence):
 - Total unified entries: **476**
-- **Verified: 411 (86.3%)** — entries whose cited test holds under SG-035 after baseline-audit + Phase 3 manual review + E3 heuristic upgrade + B Phase 1 sweep.
-- **Unverified: 22 (4.6%)** — remediation targets for B Phase 2+. Down from 46 at E4 seal (52% reduction this cycle).
+- **Verified: 415 (87.2%)** — entries whose cited test holds under SG-035 after baseline-audit + Phase 3 manual review + E3 heuristic upgrade + B Phase 1 sweep + Phase 60 §4cont.
+- **Unverified: 18 (3.8%)** — remediation targets for ongoing B199 Phase 2+ scope. Down from 22 at Phase 62 seal (Phase 60 §4cont closed 4 entries this cycle).
 - **N/A (operator-justified): 43 (9.0%)** — entries that cannot be unit-tested in mocha/vscode-test:
   - Browser-side components requiring WebGPU/MediaStream (FX202/FX203/FX224/FX225/FX226 voice modal + Whisper + WebLLM)
   - Doc-only claims with no code module enumerated (FX404 DiffGuard panel; FX433 Roadmap/Kanban view modes; FX427 Cortex Stream; FX428 The Dojo sidebar)
@@ -182,7 +182,7 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | FX125 | GET /console/reports | F187 | C060 / C131 | roadmap/console-routes.test.ts | verified | AUDIT_PASS/AUDIT_FAIL counting |
 | FX126 | GET /console/settings | F188 | C061 / C132 | roadmap/console-routes.test.ts | verified | mode + config table |
 | FX127 | GET /console/kpi | F189 | C062 / C133 | roadmap/console-routes.test.ts | verified | pass-rate calc + zero-division safety |
-| FX128 | GET /console/agents | F190 | C063 / C134 | roadmap/AgentCoverageRoute.test.ts | unverified | |
+| FX128 | GET /console/agents | F190 | C063 / C134 | roadmap/AgentCoverageRoute.test.ts + roadmap/console-routes.test.ts (Phase 60 §4cont; FX128 block) | verified | Phase 60 §4 continuation: console-routes.test.ts added the GET `/console/agents` block invoking AgentCoverageRoute.render with fake systemRegistry + asserting on registered-systems / terminals / agent-teams rows. |
 | FX129 | GET /console/sre | F191 | C064 / C135 | roadmap/SreRoute.test.ts | verified | |
 | FX130 | GET /console/preflight | F192 | C065 / C136 | roadmap/console-routes.test.ts | verified | scope rows render |
 | FX131 | POST /console/preflight/grant | F193 | C066 | roadmap/console-routes.test.ts | verified | grant + redirect + 400 missing scopeId |
@@ -547,7 +547,7 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | FX406 | Agent Run Recorder | F277 | C298 | sentinel/AgentRunRecorder.test.ts | verified | |
 | FX407 | Agent Run Replay Panel | F278 | C149 | sentinel/AgentRunRecorder.test.ts | verified | Same coverage as FX170 — Panel renders over AgentRunRecorder recording API which has 19 functional cases including agentRun.started/completed events. |
 | FX408 | Genome view status filter | F279 | C148 | roadmap/genome-renderer.test.ts | verified | toggle button initial label + click flips showAll + showAll=true reveals RESOLVED entries that unresolved-only view hides |
-| FX409 | SRE Activity Feed (ALLOW/DENY/AUDIT) | F280 | C108, C109, C135 | roadmap/SreApiRoute.test.ts, roadmap/SreRoute.test.ts | unverified | |
+| FX409 | SRE Activity Feed (ALLOW/DENY/AUDIT) | F280 | C108, C109, C135 | roadmap/SreApiRoute.test.ts, roadmap/SreRoute.test.ts (Phase 60 §4cont; 9 Activity Feed cases) | verified | Phase 60 §4 continuation: SreRoute.test.ts added 9 it() blocks covering ALLOW/DENY/AUDIT action+badge-class binding, reason rendering, ordering preservation, and empty-feed negative case. |
 | FX410 | SLO Dashboard | F281 | C108, C135 | roadmap/SreRoute.test.ts | verified | |
 | FX411 | Fleet Health | F282 | C110, C135 | roadmap/SreApiRoute.test.ts | verified | |
 | FX412 | Error budget excludes resolved verdicts | F283 | C347 | roadmap/RepoGovernanceService.test.ts | verified | |
@@ -571,7 +571,7 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 | ID | Feature | Doc | Code | Test | Status | Notes |
 |---|---|---|---|---|---|---|
-| FX419 | Token Economics Dashboard | F290 | C025 | economics/CostCalculator.test.ts, economics/TokenAggregatorService.test.ts | unverified | |
+| FX419 | Token Economics Dashboard | F290 | C025 | economics/CostCalculator.test.ts, economics/TokenAggregatorService.test.ts, economics/economics-dashboard.test.ts (Phase 60 §4cont; NEW) | verified | Phase 60 §4 continuation: NEW economics-dashboard.test.ts (208L, 8 cases) invokes renderEconomicsTemplate with fake EconomicsSnapshot fixtures + asserts on hero rows (cost + tokens), aggregate bar entries, donut row, empty-aggregate edge case, and 30-entry cap. 8/8 pass under bare mocha. |
 | FX420 | CostCalculator | F291 | — | economics/CostCalculator.test.ts | verified | Subordinate of F291 |
 | FX421 | EconomicsPersistence | F291 | — | economics/EconomicsPersistence.test.ts | verified | |
 | FX422 | TokenAggregatorService | F291 | — | economics/TokenAggregatorService.test.ts | verified | |
@@ -587,7 +587,7 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | FX432 | PlanManager | F301 | C273 | planning/PlanManager.test.ts | verified | |
 | FX433 | Roadmap/Kanban/Timeline view modes | F302 | — | — | n/a | OPERATOR-PENDING: doc claim with no specific code module enumerated. Timeline view IS implemented (FX399-FX402, 11 cases) but Roadmap/Kanban view modes appear to be backlog/aspirational. |
 | FX434 | BACKLOG.md Integration | F303 | C334 | roadmap/backlog-reader.test.ts | verified | |
-| FX435 | Workspace seeding (.failsafe/) | F304 | C373 | shared/gitignore.test.ts, qorelogic/WorkspaceMigration.test.ts | unverified | gitignore.test.ts covers .failsafe/ entry handling; WorkspaceMigration (FX339, 15 cases) covers the seeding and integrity check workflow including .failsafe/workspace-config.json creation with hash. |
+| FX435 | Workspace seeding (.failsafe/) | F304 | C373 | shared/gitignore.test.ts, qorelogic/WorkspaceMigration.test.ts (Phase 60 §4cont; FX435 suite with 3 cases incl. idempotency) | verified | Phase 60 §4 continuation: WorkspaceMigration.test.ts added the FX435 suite invoking `repairConfig(dir)` against fresh temp-dir fixtures + asserts on .failsafe/ creation, workspace-config.json hash+detectedAt content cross-validated via validateConfigIntegrity, .gitignore augmentation, and idempotency. gitignore.test.ts continues to cover .failsafe/ entry handling. |
 | FX436 | sentinel.yaml workspace config override | F305 | C287 | sentinel/Engines.test.ts | verified | PatternLoader (FX347, 7 cases) loads .failsafe/config/custom_patterns.yaml on top of DEFAULT_PATTERNS, override semantics tested via getPattern() and isValidPattern() shape validation. |
 | FX437 | Auto-install Git at bootstrap | F306 | C373 | shared/gitBootstrap.test.ts | verified | |
 | FX438 | Privacy: heuristic mode runs locally | F307 | C290 | — | n/a | Architectural assertion |
