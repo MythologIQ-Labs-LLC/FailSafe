@@ -13,8 +13,13 @@
 }
 
 * { box-sizing: border-box; }
-body {
+html, body {
+  height: 100%;
   margin: 0;
+  /* Compact-sidebar fit: prevent outer scrolling; inner sections shrink to fit. */
+  overflow: hidden;
+}
+body {
   font-family: "Segoe UI Variable Text", "Aptos", "Trebuchet MS", sans-serif;
   color: var(--text);
   background:
@@ -24,11 +29,13 @@ body {
 }
 
 .shell {
-  min-height: 100svh;
+  height: 100svh;
+  max-height: 100svh;
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   justify-content: center;
   padding: 10px 10px 14px;
+  overflow: hidden;
 }
 
 .stack {
@@ -37,6 +44,22 @@ body {
   display: flex;
   flex-direction: column;
   gap: 11px;
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+/* Cards shrink proportionally to fit the viewport; inner content clips
+   rather than producing an outer page scroll. Hotfix per operator
+   request 2026-05-14: "scale the monitor to the vertical axis so
+   there's no scrolling". */
+.stack > .card,
+.stack > .brand,
+.stack > .legal {
+  flex-shrink: 1;
+  min-height: 0;
+}
+.stack > .card {
+  overflow: hidden;
 }
 
 

@@ -18040,3 +18040,68 @@ _Next: operator reload + in-vivo verification; OR continue runbook steps 5/7/8; 
 _Chain integrity: VALID_
 _Session Status: organize-ux-hotfix SEALED at #364; 3-phase UX surface complete; 68/68 .cjs pass; bundle current; review boundary honored; PUBLISH_BLOCK unchanged_
 _Session: 2026-05-14-organize-ux-hotfix-substantiation-seal_
+
+---
+
+### Entry #365: IMPLEMENTATION — Monitor compact-sidebar vertical-fit CSS (operator-authorized inline amendment)
+
+**Timestamp**: 2026-05-14T10:00:00Z
+**Phase**: IMPLEMENT (operator-authorized inline amendment — "minor adjustment, can you scale the monitor to the vertical axis so there's no scrolling")
+**Persona**: Specialist
+**Risk Grade**: L1 (pure CSS; no behavior change; no test surface added)
+**change_class**: hotfix
+**Operator-clarifying inputs**: surface = compact sidebar (`index.html?ui=compact`); overflow policy = shrink/compress sections to fit (per AskUserQuestion responses prior to authoring).
+
+**Scope**: surgical CSS edit to `FailSafe/extension/src/roadmap/ui/roadmap.css` so the Monitor compact sidebar fits the viewport vertical axis without producing an outer page scroll. No HTML structural change; no JS change; no new test file.
+
+**Decision deferral note**: this amendment is NOT covered by a PASS-audited plan; it follows the just-sealed Entry #364 organize-ux-hotfix as a follow-up adjustment. Per `feedback_no_ship_without_approval.md`, operator authorization scope ("minor adjustment") permits the inline CSS edit. The change is observable visually by operator on extension reload; a full plan/audit cycle is recommended only if the operator wants regression-coverage via Playwright spec (deferred to next cycle).
+
+**Changes** (`FailSafe/extension/src/roadmap/ui/roadmap.css` lines 15-49):
+
+1. Add `html, body { height: 100%; margin: 0; overflow: hidden; }` — locks viewport; prevents browser default scrolling.
+2. `body { font-family: ...; color: ...; background: ...; }` — extracted body-specific styling from the prior combined block (margin moved up).
+3. `.shell { height: 100svh; max-height: 100svh; align-items: stretch; overflow: hidden; }` — was `min-height: 100svh; align-items: flex-start;`. Fixes the shell to the small-viewport height (`svh`) and clips overflow.
+4. `.stack { flex: 1 1 0; min-height: 0; }` — added to the existing flex column so it fills available space and can shrink below content size.
+5. NEW selector group `.stack > .card, .stack > .brand, .stack > .legal { flex-shrink: 1; min-height: 0; } .stack > .card { overflow: hidden; }` — cards shrink proportionally and clip inner content rather than producing an outer scrollbar.
+
+Comment in CSS body explicitly cites the operator request and the date.
+
+**Files modified**:
+
+| Path | Op | Lines changed |
+|---|---|---|
+| `FailSafe/extension/src/roadmap/ui/roadmap.css` | MODIFIED | ~14 lines (3 added in `html, body`; 2 changed in `.shell`; 2 added in `.stack`; 7 NEW selectors at end of block) |
+
+**Section 4 Razor compliance**: roadmap.css is a UI stylesheet; not subject to function/file Razor caps. The edit is local to lines 15-49 within a ~600-line stylesheet.
+
+**Functional verification**:
+
+- `cd FailSafe/extension && npm run bundle` succeeded in 312 ms; `dist/extension/ui/roadmap.css` content-confirmed to include the edit (`grep "Compact-sidebar fit"` returns the new comment).
+- No JS/TS surface touched → tsc unchanged from Entry #363/#364 (still exit 0).
+- No `.cjs` or `.test.ts` test surface added; the existing Playwright `monitor.spec.ts` and `monitor-shield-progression.spec.ts` provide structural regression coverage (they assert on DOM presence/class state, not on viewport-fit). If the operator wants explicit no-scroll regression coverage, follow-up plan candidate: add `monitor-viewport-fit.spec.ts` asserting `document.body.scrollHeight === document.body.clientHeight` after compact-mode boot.
+
+**Operator verification path**:
+
+1. Reload the FailSafe extension (`Developer: Reload Window`).
+2. Open the FailSafe sidebar; the Monitor compact view should render with all sections (Active Build Step / Sentinel Status / Workspace Health / footer) visible without an outer scrollbar.
+3. At very small viewport heights, cards may clip inner content (per the chosen shrink/compress strategy). This is expected.
+
+**Held-for-followup recommendations** (NOT applied):
+
+- **Playwright regression spec** for viewport-fit invariant — defer to next cycle.
+- **Health-grid layout adjustment** if the 5-item grid becomes cramped at very small heights — defer (no operator report yet).
+- **Same treatment for Command Center popout** — per operator's "Compact sidebar" selection, popout is out of scope this cycle.
+
+**Content Hash**: `abed9bb3f1453bbd244455e6f6644da716454ca9c2b6de57747554a0562a0021` — SHA256(FailSafe/extension/src/roadmap/ui/roadmap.css after edit)
+**Previous Hash**: `d1a8b9ed5696f84a3d891a2c2a8021a6526bbd195b977127335f032c44f74ea9` (Entry #364 chain hash)
+**Chain Hash**: `5a4e1766e5421652b4bb22c48d1e6b76befd1d033137a0f374656315f2dad13e` — SHA256(content_hash + "|" + previous_hash)
+
+**Decision**: Inline CSS amendment landed under operator authorization. `dist/extension/ui/roadmap.css` propagated via `npm run bundle`. Operator may reload the extension to verify. **No PUBLISH_BLOCK flip, no version bump, no annotated tag, no push, no marketplace publish** — review boundary honored.
+
+_Gate Status: OPEN. Next: operator runtime verification; OR follow-up plan cycle to add Playwright no-scroll-fit regression spec; OR continue the v5.1.0 publish runbook (steps 5/7/8)._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: organize-ux-hotfix SEALED at #364 → operator-authorized inline CSS amendment at #365 (Monitor compact-sidebar vertical fit); bundle current_
+_Session: 2026-05-14-monitor-viewport-fit-inline-amendment_
