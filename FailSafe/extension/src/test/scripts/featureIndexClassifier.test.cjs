@@ -419,19 +419,19 @@ describe('bare-expect tightening (E3)', () => {
 });
 
 describe('applyManualOverrides (E2)', () => {
-  it('FX128 entry flips to unverified with manualOverride flag', () => {
+  it('FX145 entry flips to unverified with manualOverride flag', () => {
     const entry = {
-      entryId: 'FX128',
+      entryId: 'FX145',
       currentStatus: 'verified',
       suggestedStatus: 'verified',
-      classifications: [{ testPath: 'roadmap/AgentCoverageRoute.test.ts', kind: 'functional', reasoning: 'invokes' }],
+      classifications: [{ testPath: 'ui/monitor-shield-progression.spec.ts', kind: 'functional', reasoning: 'invokes' }],
       notes: '',
     };
     const r = classifier.applyManualOverrides(entry);
     assert.equal(r.suggestedStatus, 'unverified');
     assert.equal(r.manualOverride, true);
     assert.match(r.manualOverrideReason, /Phase 3/);
-    assert.equal(r.entryId, 'FX128');
+    assert.equal(r.entryId, 'FX145');
   });
 
   it('non-overridden entry passes through unchanged', () => {
@@ -481,18 +481,18 @@ describe('applyManualOverrides bidirectional (E4)', () => {
     assert.equal(r.entryId, 'FX243');
   });
 
-  it('FX128 demotion preserved (regression guard against E4 promotion regression)', () => {
+  it('FX173 demotion preserved (regression guard against E4 promotion regression)', () => {
     const entry = {
-      entryId: 'FX128',
+      entryId: 'FX173',
       currentStatus: 'unverified',
       suggestedStatus: 'verified',
-      classifications: [{ testPath: 'roadmap/AgentCoverageRoute.test.ts', kind: 'functional', reasoning: 'invokes' }],
+      classifications: [{ testPath: 'ui/popout-ui.spec.ts', kind: 'functional', reasoning: 'invokes' }],
       notes: '',
     };
     const r = classifier.applyManualOverrides(entry);
     assert.equal(r.suggestedStatus, 'unverified');
     assert.equal(r.manualOverride, true);
     assert.match(r.manualOverrideReason, /Phase 3/);
-    assert.equal(r.entryId, 'FX128');
+    assert.equal(r.entryId, 'FX173');
   });
 });

@@ -57,22 +57,22 @@ describe('extractTestPath (E7)', () => {
 });
 
 describe('runAudit bypassOverrides (E7)', () => {
-  it('bypass=true skips applyManualOverrides; FX128 row has no manualOverride flag', () => {
+  it('bypass=true skips applyManualOverrides; FX145 row has no manualOverride flag', () => {
     if (!fs.existsSync(FEATURE_INDEX_PATH)) {
       assert.fail(`FEATURE_INDEX.md not found at ${FEATURE_INDEX_PATH}`);
     }
     const audit = classifier.runAudit(FEATURE_INDEX_PATH, REPO_ROOT, { bypassOverrides: true });
-    const fx128 = audit.rows.find(r => r.entryId === 'FX128');
-    assert.ok(fx128, 'FX128 row should exist in classification');
-    assert.equal(fx128.manualOverride, undefined,
+    const fx145 = audit.rows.find(r => r.entryId === 'FX145');
+    assert.ok(fx145, 'FX145 row should exist in classification');
+    assert.equal(fx145.manualOverride, undefined,
       'bypass mode should NOT attach manualOverride flag');
   });
 
-  it('default (no options) preserves manualOverride flag on FX128', () => {
+  it('default (no options) preserves manualOverride flag on FX145', () => {
     const audit = classifier.runAudit(FEATURE_INDEX_PATH, REPO_ROOT);
-    const fx128 = audit.rows.find(r => r.entryId === 'FX128');
-    assert.ok(fx128, 'FX128 row should exist in classification');
-    assert.equal(fx128.manualOverride, true,
+    const fx145 = audit.rows.find(r => r.entryId === 'FX145');
+    assert.ok(fx145, 'FX145 row should exist in classification');
+    assert.equal(fx145.manualOverride, true,
       'default mode preserves manualOverride flag');
   });
 });

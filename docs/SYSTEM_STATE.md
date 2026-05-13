@@ -1,9 +1,31 @@
 # SYSTEM STATE
 
 **Last Updated:** 2026-05-13
-**Version:** v5.1.10-baseline plus Phase 60 refactor-planning gate response plus Phase 61 ledger repair (workspace-only label; no `package.json` bump)
+**Version:** v5.1.10-baseline plus Phase 60 refactor-planning gate response plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups (workspace-only label; no `package.json` bump)
 
 ---
+
+## 2026-05-13 - Phase 62 Item B Sweep Follow-Ups
+
+Plan: `docs/plan-qor-phase62-item-b-sweep-followups.md` (PASS audit Entry #340; implementation Entry #341). Closes the carried-forward Item B Phase 1 sweep findings from Entry #324.
+
+### Deliverables
+
+- **Classifier factor-out**: `FailSafe/extension/scripts/feature-index-classifier.cjs` reduced from 306L to **216L** (Section 4 cap 250; 34-line margin) via extraction of MANUAL_OVERRIDES + applyManualOverrides into `feature-index-classifier-overrides.cjs` (72L NEW) and parseFeatureIndexRows into `feature-index-classifier-parser.cjs` (43L NEW). Public API preserved via re-export from classifier.cjs's existing `module.exports` block — downstream consumers (staleness sibling, staleness test) require no edits.
+- **Redundancy cleanup**: FX128 and FX359 removed from MANUAL_OVERRIDES (28 → 26 entries). Staleness detector reports `redundant: 0` (was 2). Two existing test cases hardcoded to FX128 swapped to FX145/FX173 to preserve demotion-test coverage (out-of-plan-scope mechanical follow-on; documented in Entry #341).
+- **Doc-integrity**: `qor/references/glossary.md` extended with `ManualOverrideAuthority` term; Phase 61 terms (SemanticLedgerContinuity, LedgerRepairAttestation) given `referenced_by: [docs/META_LEDGER.md]` to satisfy strict `check_orphans` once their introducing plan is no longer current.
+
+### Carried-forward state
+
+- FEATURE_INDEX still at 411 verified / 22 unverified / 43 n/a / 476 total (Phase 62 did not change row statuses).
+- PUBLISH_BLOCK still `Active: yes`; Condition 1 (0 unverified) not yet met.
+- One pre-existing test failure in `featureIndexClassifierStaleness.test.cjs` (`detectStaleness ... invalid_count=0`) deferred to operator review queue or B199 Phase 2+ — two MANUAL_OVERRIDES reasons (FX141, FX142) cite test-name substrings the resolver cannot locate without a directory prefix. Not introduced by this implementation; verified at HEAD.
+
+### Open
+
+- Phase 60 still pending audit re-run (refactor-enablement gate + amended plan).
+- Operator-driven review of the 17 unverified entries + 20 promotion overrides remains parallel manual work.
+- B199 Phase 2+ comprehensive Playwright/vscode-test authoring remains future-cycle.
 
 ---
 
