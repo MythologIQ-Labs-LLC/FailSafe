@@ -34,51 +34,46 @@ export class SettingsRenderer {
 
     this.container.innerHTML = `
       <div class="cc-card" style="margin-bottom:16px">
-        <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;
-          letter-spacing:0.08em;margin-bottom:12px">Theme</div>
-        <div class="cc-theme-chips" style="display:flex;gap:10px;flex-wrap:wrap">
-          ${THEMES.map(t => this.renderChip(t, current)).join('')}
-        </div>
+        <div style="${LBL};margin-bottom:12px">Theme</div>
+        <div class="cc-theme-chips" style="display:flex;gap:10px;flex-wrap:wrap">${THEMES.map(t => this.renderChip(t, current)).join('')}</div>
       </div>
       <div class="cc-card">
-        <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;
-          letter-spacing:0.08em;margin-bottom:8px">Configuration</div>
+        <div style="${LBL};margin-bottom:8px">Configuration</div>
         <div style="font-size:0.85rem">
-          <div style="padding:4px 0;border-bottom:1px solid var(--border-rim)">
-            Theme: <strong>${escapeHtml(current)}</strong></div>
-          <div style="padding:4px 0;border-bottom:1px solid var(--border-rim)">
-            Version: <strong>${escapeHtml(version)}</strong></div>
-          <div style="padding:4px 0">
-            Server: <strong>${escapeHtml(window.location.origin)}</strong></div>
+          <div style="padding:4px 0;border-bottom:1px solid var(--border-rim)">Theme: <strong>${escapeHtml(current)}</strong></div>
+          <div style="padding:4px 0;border-bottom:1px solid var(--border-rim)">Version: <strong>${escapeHtml(version)}</strong></div>
+          <div style="padding:4px 0">Server: <strong>${escapeHtml(window.location.origin)}</strong></div>
         </div>
       </div>
       ${renderVoiceSettings(this.store)}
       ${renderNotificationsCard(this.store)}
       ${renderBrainstormCard(this.store)}
       <div class="cc-card" id="cc-hook-toggle-slot" style="margin-top:16px"></div>
-      ${renderInstallSkillsCard(this._installState)}
-      <div class="cc-card" id="cc-failsafe-pro" style="margin-top:16px">
-        <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;
-          letter-spacing:0.08em;margin-bottom:8px">FailSafe Pro</div>
-        <p style="font-size:0.85rem;color:var(--text-muted);margin:0 0 12px">
-          Desktop native application for SDLC visibility and governance:
-          OS-level enforcement, file locking, team workflows, and remote
-          connections beyond the editor boundary.
-        </p>
-        <a href="https://mythologiq.studio/products/failsafe-pro" target="_blank" rel="noopener"
-          class="cc-btn cc-btn--primary"
-          data-action="open-failsafe-pro-about"
-          style="display:inline-block;font-size:0.8rem;padding:6px 14px;text-decoration:none">
-          About FailSafe Pro
-        </a>
-      </div>`;
+      ${renderInstallSkillsCard(this._installState, hub)}
+      ${renderGovernanceModeCard(hub)}
+      ${renderQorVersionWarning(hub)}
+      ${renderFailSafeProCard()}`;
     this._bindQorLogicActions();
     this._bindFailSafeProActions();
+    this._bindGovernanceModeActions();
     this.bindChips();
     bindVoiceSettings(this.container, this.store);
     bindNotificationsCard(this.container, this.store);
     bindBrainstormCard(this.container, this.store);
     this._renderHookToggle();
+  }
+
+  _bindGovernanceModeActions() {
+    const card = this.container?.querySelector('#cc-governance-mode');
+    if (!card) return;
+    card.querySelectorAll('[data-governance-mode]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const mode = btn.getAttribute('data-governance-mode');
+        if (!mode) return;
+        // Host command opens a QuickPick; arg is advisory pre-selection only.
+        try { window.location.href = `command:failsafe.setGovernanceMode?${encodeURIComponent(JSON.stringify([mode]))}`; } catch { /* host-managed */ }
+      });
+    });
   }
 
   _bindFailSafeProActions() {
@@ -121,16 +116,12 @@ export class SettingsRenderer {
       const res = await fetch('/api/hooks/status');
       if (!res.ok) { slot.remove(); return; }
       const { enabled } = await res.json();
-      slot.innerHTML = `
-        <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;
-          letter-spacing:0.08em;margin-bottom:8px">Claude Code Hooks</div>
+      slot.innerHTML = `<div style="${LBL};margin-bottom:8px">Claude Code Hooks</div>
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
           <input type="checkbox" class="cc-hook-toggle" ${enabled ? 'checked' : ''} />
           <span style="font-size:0.85rem">FailSafe governance hooks</span>
         </label>`;
-      slot.querySelector('.cc-hook-toggle')?.addEventListener('change', (e) => {
-        this._toggleHook(e.target);
-      });
+      slot.querySelector('.cc-hook-toggle')?.addEventListener('change', (e) => this._toggleHook(e.target));
     } catch {
       slot.remove();
     }
@@ -151,13 +142,9 @@ export class SettingsRenderer {
 
   renderChip(theme, current) {
     const active = theme.id === current ? ' active' : '';
-    return `
-      <button class="cc-chip cc-theme-select${active}" data-theme="${theme.id}"
-        style="display:flex;align-items:center;gap:6px;padding:6px 14px">
-        <span style="width:12px;height:12px;border-radius:50%;background:${theme.swatch};
-          border:2px solid var(--border-rim)"></span>
-        <span>${theme.name}</span>
-        <span style="font-size:0.65rem;color:var(--text-muted)">${theme.label}</span>
+    return `<button class="cc-chip cc-theme-select${active}" data-theme="${theme.id}" style="display:flex;align-items:center;gap:6px;padding:6px 14px">
+        <span style="width:12px;height:12px;border-radius:50%;background:${theme.swatch};border:2px solid var(--border-rim)"></span>
+        <span>${theme.name}</span><span style="font-size:0.65rem;color:var(--text-muted)">${theme.label}</span>
       </button>`;
   }
 
@@ -208,11 +195,56 @@ export class SettingsRenderer {
     const slot = this.container?.querySelector('#cc-qorlogic');
     if (!slot) return;
     const tmp = document.createElement('div');
-    tmp.innerHTML = renderInstallSkillsCard(this._installState).trim();
+    tmp.innerHTML = renderInstallSkillsCard(this._installState, this._lastHub).trim();
     const next = tmp.firstElementChild;
     if (!next) return;
     slot.replaceWith(next);
     this._bindQorLogicActions();
   }
   destroy() { if (this.container) this.container.innerHTML = ''; }
+}
+
+const MODE_OPTIONS = [{ id: 'observe', label: 'Observe' }, { id: 'assist', label: 'Assist' }, { id: 'enforce', label: 'Enforce' }];
+const LBL = 'font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em';
+
+function renderFailSafeProCard() {
+  return `<div class="cc-card" id="cc-failsafe-pro" style="margin-top:16px">
+      <div style="${LBL};margin-bottom:8px">FailSafe Pro</div>
+      <p style="font-size:0.85rem;color:var(--text-muted);margin:0 0 12px">Desktop native application for SDLC visibility and governance: OS-level enforcement, file locking, team workflows, and remote connections beyond the editor boundary.</p>
+      <a href="https://mythologiq.studio/products/failsafe-pro" target="_blank" rel="noopener" class="cc-btn cc-btn--primary" data-action="open-failsafe-pro-about" style="display:inline-block;font-size:0.8rem;padding:6px 14px;text-decoration:none">About FailSafe Pro</a>
+    </div>`;
+}
+
+function renderGovernanceModeCard(hub) {
+  const state = hub?.governanceModeState || { mode: 'observe', defaulted: true };
+  const current = String(state.mode || 'observe');
+  const defaulted = state.defaulted === true;
+  const hint = defaulted ? `<p style="font-size:0.8rem;color:var(--text-muted);margin:0 0 10px">You're in Observe mode by default. Switch to Assist when ready to enable governance suggestions, or Enforce for hard gating.</p>` : '';
+  const buttons = MODE_OPTIONS.map((m) => {
+    const active = m.id === current;
+    const cls = active ? 'cc-btn cc-btn--primary' : 'cc-btn';
+    const aria = active ? 'aria-pressed="true"' : '';
+    return `<button class="${cls}" data-governance-mode="${escapeHtml(m.id)}" style="font-size:0.8rem;padding:6px 14px" ${aria}>${escapeHtml(m.label)}</button>`;
+  }).join('');
+  const tag = defaulted ? ' <span style="color:var(--text-muted)">(default)</span>' : '';
+  const label = escapeHtml(current.charAt(0).toUpperCase() + current.slice(1));
+  return `<div class="cc-card" id="cc-governance-mode" style="margin-top:16px">
+      <div style="${LBL};margin-bottom:8px">Governance Mode</div>
+      <div style="font-size:0.9rem;margin-bottom:10px">Mode: <strong data-governance-current>${label}</strong>${tag}</div>
+      ${hint}
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${buttons}</div>
+    </div>`;
+}
+
+function renderQorVersionWarning(hub) {
+  const status = hub?.qorLogic?.versionStatus;
+  if (!status || status.meetsFloor !== false) return '';
+  const installed = status.installed ? escapeHtml(String(status.installed)) : 'not installed';
+  const minimum = escapeHtml(String(status.minimum || ''));
+  return `<div class="cc-card" id="cc-qor-version-warning" data-state="below-floor" style="margin-top:16px;border-left:3px solid var(--accent-gold,#f5a524)">
+      <div style="${LBL};color:var(--accent-gold,#f5a524);margin-bottom:6px">qor-logic Version Warning</div>
+      <div style="font-size:0.9rem;margin-bottom:6px">qor-logic Python package version below minimum</div>
+      <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:8px">Installed: <strong>${installed}</strong> &mdash; minimum required: <strong>${minimum}</strong></div>
+      <div style="font-size:0.8rem;color:var(--text-muted)">Reinstall via Settings &rarr; Install qor-logic.</div>
+    </div>`;
 }

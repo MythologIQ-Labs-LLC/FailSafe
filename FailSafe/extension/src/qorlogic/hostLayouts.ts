@@ -2,6 +2,10 @@
 // `qor.hosts.HostTarget` exactly so install + discovery + status detection
 // share one source of truth.
 //
+// MIN_QOR_LOGIC_VERSION must stay aligned with the qor-logic version this
+// install_map mirrors. The installer pins this floor on pip install and
+// surfaces violations via `verifyInstalledVersion()`.
+//
 // claude / codex / kilo-code: { skills/: base/skills, agents/: base/agents }
 // gemini:                     { commands/: base/commands }
 //
@@ -56,3 +60,11 @@ export const HOST_INSTALL_LAYOUTS: Record<QorLogicHost, HostInstallLayout> = {
 };
 
 export const QOR_LOGIC_HOSTS: QorLogicHost[] = ["claude", "codex", "kilo-code", "gemini"];
+
+/**
+ * Minimum qor-logic version this extension is compatible with. Must match the
+ * version cited in the header comment above (i.e. the version whose
+ * `HostTarget.install_map` `HOST_INSTALL_LAYOUTS` mirrors). Pinned on install
+ * and asserted via `QorLogicPackageInstaller.verifyInstalledVersion()`.
+ */
+export const MIN_QOR_LOGIC_VERSION = "0.31.1";

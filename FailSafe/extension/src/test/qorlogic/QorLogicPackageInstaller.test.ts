@@ -10,6 +10,9 @@ import {
   type InstallerRunResult,
   type OutputChannelLike,
 } from '../../qorlogic/QorLogicPackageInstaller';
+import { MIN_QOR_LOGIC_VERSION } from '../../qorlogic/hostLayouts';
+
+const PINNED_SPEC = `qor-logic>=${MIN_QOR_LOGIC_VERSION}`;
 
 function fixedResolver(command: string, args: string[] = []): PythonInterpreterResolver {
   const config = { get: () => undefined };
@@ -100,7 +103,7 @@ suite('QorLogicPackageInstaller: install', () => {
     assert.equal(result.ok, true);
     assert.equal(calls.length, 1);
     assert.equal(calls[0].cmd, '/opt/py/python');
-    assert.deepEqual(calls[0].args, ['-m', 'pip', 'install', 'qor-logic']);
+    assert.deepEqual(calls[0].args, ['-m', 'pip', 'install', '--upgrade', PINNED_SPEC]);
     // Verify args are list-form (no shell concatenation): no single arg contains a space joining flags.
     for (const arg of calls[0].args) {
       assert.equal(arg.includes(' '), false, `arg "${arg}" must not contain spaces (list-form check)`);
@@ -115,7 +118,7 @@ suite('QorLogicPackageInstaller: install', () => {
     await installer.install();
 
     assert.equal(calls[0].cmd, 'py');
-    assert.deepEqual(calls[0].args, ['-3', '-m', 'pip', 'install', 'qor-logic']);
+    assert.deepEqual(calls[0].args, ['-3', '-m', 'pip', 'install', '--upgrade', PINNED_SPEC]);
   });
 
   test('returns ok:false error:timeout when run times out', async () => {
@@ -185,7 +188,22 @@ suite('QorLogicPackageInstaller: install', () => {
 
     await installer.install();
 
-    assert.ok(lines.some((l) => l.includes('/usr/bin/python3.12 -m pip install qor-logic')));
+    assert.ok(lines.some((l) => l.includes(`/usr/bin/python3.12 -m pip install --upgrade ${PINNED_SPEC}`)));
+  });
+
+  test('pins minimum version (>=MIN_QOR_LOGIC_VERSION) and uses --upgrade in argv', async () => {
+    const resolver = fixedResolver('python');
+    const { run, calls } = makeInstallerRun(() => ok());
+    const installer = new QorLogicPackageInstaller(resolver, sinkChannel, run);
+
+    await installer.install();
+
+    assert.equal(calls.length, 1);
+    assert.ok(
+      calls[0].args.includes(PINNED_SPEC),
+      `captured argv must contain ${PINNED_SPEC}; got ${JSON.stringify(calls[0].args)}`,
+    );
+    assert.ok(calls[0].args.includes('--upgrade'), 'captured argv must include --upgrade');
   });
 });
 
@@ -212,5 +230,69 @@ suite('QorLogicPackageInstaller: version', () => {
     const installer = new QorLogicPackageInstaller(resolver, sinkChannel, run);
 
     assert.equal(await installer.version(), null);
+  });
+});
+
+suite('QorLogicPackageInstaller: verifyInstalledVersion', () => {
+  test('returns meetsFloor:true when installed version is above floor', async () => {
+    const resolver = fixedResolver('python');
+    const { run } = makeInstallerRun(() => ok('Name: qor-logic\nVersion: 0.46.0\nLocation: ...\n'));
+    const installer = new QorLogicPackageInstaller(resolver, sinkChannel, run);
+
+    const status = await installer.verifyInstalledVersion();
+
+    assert.deepEqual(status, { installed: '0.46.0', minimum: MIN_QOR_LOGIC_VERSION, meetsFloor: true });
+  });
+
+  test('returns meetsFloor:false when installed version is below floor', async () => {
+    const resolver = fixedResolver('python');
+    const { run } = makeInstallerRun(() => ok('Name: qor-logic\nVersion: 0.20.0\nLocation: ...\n'));
+    const installer = new QorLogicPackageInstaller(resolver, sinkChannel, run);
+
+    const status = await installer.verifyInstalledVersion();
+
+    assert.deepEqual(status, { installed: '0.20.0', minimum: MIN_QOR_LOGIC_VERSION, meetsFloor: false });
+  });
+
+  test('returns installed:null meetsFloor:false when pip show exits non-zero', async () => {
+    const resolver = fixedResolver('python');
+    const { run } = makeInstallerRun(() => fail(1, 'WARNING: Package(s) not found: qor-logic'));
+    const installer = new QorLogicPackageInstaller(resolver, sinkChannel, run);
+
+    const status = await installer.verifyInstalledVersion();
+
+    assert.deepEqual(status, { installed: null, minimum: MIN_QOR_LOGIC_VERSION, meetsFloor: false });
+  });
+
+  test('returns installed:null meetsFloor:false when run throws', async () => {
+    const resolver = fixedResolver('python');
+    const run: InstallerRun = async () => { throw new Error('spawn boom'); };
+    const installer = new QorLogicPackageInstaller(resolver, sinkChannel, run);
+
+    const status = await installer.verifyInstalledVersion();
+
+    assert.deepEqual(status, { installed: null, minimum: MIN_QOR_LOGIC_VERSION, meetsFloor: false });
+  });
+
+  test('returns installed:null meetsFloor:false when no Python is resolved', async () => {
+    const resolver = noPythonResolver();
+    const { run, calls } = makeInstallerRun(() => ok());
+    const installer = new QorLogicPackageInstaller(resolver, sinkChannel, run);
+
+    const status = await installer.verifyInstalledVersion();
+
+    assert.deepEqual(status, { installed: null, minimum: MIN_QOR_LOGIC_VERSION, meetsFloor: false });
+    assert.equal(calls.length, 0);
+  });
+
+  test('runs pip show via list-form argv (no shell)', async () => {
+    const resolver = fixedResolver('python');
+    const { run, calls } = makeInstallerRun(() => ok('Name: qor-logic\nVersion: 0.31.1\n'));
+    const installer = new QorLogicPackageInstaller(resolver, sinkChannel, run);
+
+    await installer.verifyInstalledVersion();
+
+    assert.equal(calls.length, 1);
+    assert.deepEqual(calls[0].args, ['-m', 'pip', 'show', 'qor-logic']);
   });
 });

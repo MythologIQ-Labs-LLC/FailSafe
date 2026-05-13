@@ -33,7 +33,17 @@ export interface IntentProvider {
 }
 
 export type GovernanceMode = "observe" | "assist" | "enforce";
+export interface GovernanceModeState {
+  mode: GovernanceMode;
+  defaulted: boolean;
+}
 export type CommandExecutor = (command: string, ...args: unknown[]) => void;
+
+const VALID_MODES: ReadonlySet<GovernanceMode> = new Set([
+  "observe",
+  "assist",
+  "enforce",
+]);
 
 export class EnforcementEngine {
   private intentProvider: IntentProvider;
@@ -72,11 +82,19 @@ export class EnforcementEngine {
   }
 
   getGovernanceMode(): GovernanceMode {
+    return this.getGovernanceModeState().mode;
+  }
+
+  getGovernanceModeState(): GovernanceModeState {
     const config = this.configProvider.getConfig();
     const raw = (config as unknown as Record<string, unknown>)["governance"] as
       | Record<string, unknown>
       | undefined;
-    return (raw?.mode as GovernanceMode) ?? "observe";
+    const candidate = raw?.["mode"];
+    if (typeof candidate === "string" && VALID_MODES.has(candidate as GovernanceMode)) {
+      return { mode: candidate as GovernanceMode, defaulted: false };
+    }
+    return { mode: "observe", defaulted: true };
   }
 
   isPathInScope(targetPath: string, scopePaths: string[]): boolean {

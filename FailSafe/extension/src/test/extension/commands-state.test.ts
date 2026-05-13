@@ -130,6 +130,16 @@ suite('Command state mutations (setGovernanceMode, createIntent)', () => {
     assert.equal(newMode, 'observe');
   });
 
+  test('B194 failsafe.setGovernanceMode — picking "assist" persists config AND shows info mentioning assist', async () => {
+    capture.quickQueue.push({ label: '$(lightbulb) Assist', value: 'assist' });
+    await vscode.commands.executeCommand('failsafe.setGovernanceMode');
+    const newMode = vscode.workspace.getConfiguration('failsafe').get<string>('governance.mode');
+    assert.equal(newMode, 'assist',
+      'workspace config setter must persist mode=assist');
+    assert.ok(capture.infos.some((m) => /assist/i.test(m)),
+      `Expected info notification mentioning 'assist' (case-insensitive); got ${JSON.stringify(capture.infos)}`);
+  });
+
   test('FX016 failsafe.setGovernanceMode — cancel does NOT persist or notify', async () => {
     // Set baseline to a known value (different from default 'observe')
     await vscode.workspace.getConfiguration('failsafe').update(

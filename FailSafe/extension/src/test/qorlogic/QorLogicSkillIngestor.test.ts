@@ -13,7 +13,9 @@ import {
   type InstallerRunResult,
   type OutputChannelLike,
   type QorLogicInstallResult,
+  type QorLogicVersionStatus,
 } from '../../qorlogic/QorLogicPackageInstaller';
+import { MIN_QOR_LOGIC_VERSION } from '../../qorlogic/hostLayouts';
 import {
   QorLogicSkillIngestor,
   type QorLogicHost,
@@ -29,6 +31,9 @@ class FakeInstaller implements IQorLogicPackageInstaller {
     return this.installResult;
   }
   async version(): Promise<string | null> { return '0.31.1'; }
+  async verifyInstalledVersion(): Promise<QorLogicVersionStatus> {
+    return { installed: '0.31.1', minimum: MIN_QOR_LOGIC_VERSION, meetsFloor: true };
+  }
 }
 
 function fixedResolver(command = 'python', args: string[] = []): PythonInterpreterResolver {

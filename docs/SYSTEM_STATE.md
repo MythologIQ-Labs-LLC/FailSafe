@@ -1,7 +1,65 @@
 # SYSTEM STATE
 
 **Last Updated:** 2026-05-13
-**Version:** v5.1.10-baseline plus Phase 60 §0 refactor enablement plus §1 scope sync plus §2 workspace truth refresh plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups (workspace-only label; no `package.json` bump)
+**Version:** v5.1.10-baseline plus Phase 60 §0 refactor enablement plus §1 scope sync plus §2 workspace truth refresh plus §3 governance mode escalation + install version floor plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups (workspace-only label; no `package.json` bump)
+
+---
+
+## 2026-05-13 - Phase 60 §3 Governance Mode Escalation + Install Version Floor
+
+Plan: `docs/plan-qor-phase60-v5-1-0-remaining-scope.md` (PASS audit #344; §0-§2 sealed at #345-#347). Sub-phase §3 of 6. Addresses B194 (governance mode escalation) + B197 (install version floor).
+
+### Deliverables (3 tracks)
+
+**Track A — B194 governance mode escalation backend** (refactoring-specialist subagent):
+- `EnforcementEngine.getGovernanceModeState(): { mode, defaulted }` (NEW; backward-compat `getGovernanceMode()` preserved).
+- `GovernanceStatusBar.updateMode(state)` (NEW renderer surfacing `Mode: Observe (default)` / `Assist` / `Enforce`).
+- `failsafe.setGovernanceMode` command verified to remain the single mutation path (already had correct shape; no edits needed).
+- 5 new tests across `GovernanceStatusBar.test.ts` and `commands-state.test.ts`.
+
+**Track B — B197 install version floor backend** (refactoring-specialist subagent):
+- `MIN_QOR_LOGIC_VERSION = '0.31.1'` exported from `hostLayouts.ts`.
+- `QorLogicPackageInstaller.install()` argv pinned: `['-m','pip','install','--upgrade','qor-logic>=0.31.1']` (A03 list-form; no shell strings).
+- `QorLogicPackageInstaller.verifyInstalledVersion(): Promise<{ installed, minimum, meetsFloor }>` (NEW; stdlib semver compare; handles below-floor + not-installed + pip-show-failed cases).
+- 7 new tests across `QorLogicPackageInstaller.test.ts` (21/21 pass via bare mocha).
+
+**Track C — Settings UI wiring** (refactoring-specialist subagent):
+- `SettingsRoute.ts` renders mode + `(default)` indicator via `getGovernanceModeState()` (33L; was 21L).
+- `settings.js` (218L → 250L at cap): NEW Governance Mode card with Observe/Assist/Enforce buttons + defaulted hint; NEW qor-logic Version Warning card visible only when `meetsFloor: false`. Pre-existing operator edits (renderInstallSkillsCard hub parameter) preserved.
+- 7 new tests in `settings-coherence.test.ts`.
+
+### Carried-forward gap
+
+**HubSnapshotService payload NOT extended** with `governanceModeState` + `qorLogic.versionStatus` fields. The file is at 248L (Section 4 cap 250); adding the deps + assembly lines would breach the cap. Track C subagent surfaced this as a documented blocker. Mitigation: `settings.js` reads `hub.governanceModeState` and `hub.qorLogic?.versionStatus` defensively with optional chaining; UI degrades gracefully when fields are absent. The hub-payload extension should land in a future cycle that pairs the addition with another compression pass on HubSnapshotService.
+
+### Functional verification (partial)
+
+- `npx tsc --noEmit -p ./`: exit 0 (clean across all §3 changes).
+- Track B: 21/21 + 13/13 tests pass via bare mocha (installer + ingestor fixture).
+- Track A: tests type-check and compile; runtime requires vscode-test harness (pre-existing limitation per Entry #336).
+- Track C: tests type-check and compile; runtime blocked by pre-existing jsdom 26 / cssstyle / @csstools/css-calc ESM-CJS interop issue (workspace infrastructure regression unrelated to §3).
+
+### Section 4 Razor
+
+| File | Lines | Limit | Status |
+| --- | --- | --- | --- |
+| EnforcementEngine.ts | 140 | 250 | PASS |
+| GovernanceStatusBar.ts | 64 | 250 | PASS |
+| QorLogicPackageInstaller.ts | 197 | 250 | PASS |
+| hostLayouts.ts | 70 | 250 | PASS |
+| SettingsRoute.ts | 33 | 250 | PASS |
+| settings.js | 250 | 250 | PASS (at cap; consider follow-on compression in §4 UI work) |
+
+### Phase 60 sub-phase status
+
+| Sub-Phase | State | Ledger |
+| --- | --- | --- |
+| §0 Refactor Enablement | SEALED | #345 |
+| §1 Scope Sync + Coverage Ledger | SEALED | #346 |
+| §2 Workspace Truth Refresh + Governance Watch Surface | SEALED | #347 |
+| §3 Governance Mode Escalation + Install Version Floor | **THIS COMMIT** | #348 |
+| §4 UI Subscription Hygiene + Remaining FEATURE_INDEX Closure | Deferred | future |
+| §5 Publish-Block Verification | Deferred | future |
 
 ---
 

@@ -114,3 +114,90 @@ suite('Settings cross-component coherence (FX-MONITOR-COHERENCE)', () => {
       'reason should call out enforce-mode mismatch');
   });
 });
+
+// ---------- Track C additions (Phase 60 §3) ----------
+// Governance mode escalation card + qor-logic version warning surfacing.
+
+interface HubLike { governanceModeState?: { mode: string; defaulted: boolean }; qorLogic?: { versionStatus: { installed: string | null; minimum: string; meetsFloor: boolean } }; version?: string }
+
+function trackCStore(): any {
+  return {
+    getTheme: () => 'mythiq', setTheme: () => {},
+    get: () => undefined, set: () => {},
+    getVoiceSettings: () => ({}), setVoiceSettings: () => {},
+    getNotificationSettings: () => ({}), setNotificationSettings: () => {},
+    getBrainstormSettings: () => ({}), setBrainstormSettings: () => {},
+  };
+}
+
+async function paintTrackCSettings(hub: HubLike): Promise<string> {
+  const dom = new JSDOM('<!DOCTYPE html><html><body><div id="set-root"></div></body></html>', { url: 'http://localhost:9999' });
+  const prevWin = (global as any).window;
+  const prevDoc = (global as any).document;
+  (global as any).window = dom.window;
+  (global as any).document = dom.window.document;
+  try {
+    // @ts-expect-error untyped JS module
+    const mod = await import('../../roadmap/ui/modules/settings.js');
+    const r = new mod.SettingsRenderer('set-root', { store: trackCStore() });
+    r.render(hub);
+    return dom.window.document.getElementById('set-root')!.innerHTML;
+  } finally {
+    (global as any).window = prevWin;
+    (global as any).document = prevDoc;
+  }
+}
+
+suite('Settings Track C — governance mode + qor version surface', () => {
+  test('governance mode label rendered when defaulted:false', async () => {
+    const html = await paintTrackCSettings({ governanceModeState: { mode: 'observe', defaulted: false } });
+    assert.match(html, /Governance Mode/);
+    assert.match(html, /Mode:\s*<strong[^>]*>Observe<\/strong>/);
+    assert.ok(!/\(default\)/.test(html), '(default) tag must not appear when defaulted:false');
+  });
+
+  test('(default) indicator shown when defaulted:true', async () => {
+    const html = await paintTrackCSettings({ governanceModeState: { mode: 'observe', defaulted: true } });
+    assert.match(html, /Mode:\s*<strong[^>]*>Observe<\/strong>\s*<span[^>]*>\(default\)<\/span>/);
+    assert.match(html, /You're in Observe mode by default/);
+  });
+
+  test('escalation buttons dispatch failsafe.setGovernanceMode for all three modes', async () => {
+    const html = await paintTrackCSettings({ governanceModeState: { mode: 'assist', defaulted: false } });
+    assert.match(html, /data-governance-mode="observe"/);
+    assert.match(html, /data-governance-mode="assist"/);
+    assert.match(html, /data-governance-mode="enforce"/);
+  });
+
+  test('qor-logic version warning shown when meetsFloor:false', async () => {
+    const html = await paintTrackCSettings({
+      governanceModeState: { mode: 'observe', defaulted: true },
+      qorLogic: { versionStatus: { installed: '0.1.2', minimum: '0.2.0', meetsFloor: false } },
+    });
+    assert.match(html, /cc-qor-version-warning/);
+    assert.match(html, /qor-logic Python package version below minimum/);
+    assert.match(html, /Installed:\s*<strong>0\.1\.2<\/strong>/);
+    assert.match(html, /minimum required:\s*<strong>0\.2\.0<\/strong>/);
+  });
+
+  test('qor-logic version warning hidden when meetsFloor:true', async () => {
+    const html = await paintTrackCSettings({
+      governanceModeState: { mode: 'observe', defaulted: true },
+      qorLogic: { versionStatus: { installed: '0.3.0', minimum: '0.2.0', meetsFloor: true } },
+    });
+    assert.ok(!/cc-qor-version-warning/.test(html), 'warning card must be absent when meetsFloor:true');
+  });
+
+  test('qor-logic version warning hidden when versionStatus undefined', async () => {
+    const html = await paintTrackCSettings({ governanceModeState: { mode: 'observe', defaulted: true } });
+    assert.ok(!/cc-qor-version-warning/.test(html), 'warning card must be absent when versionStatus is undefined');
+  });
+
+  test('not-installed surfaced when installed:null', async () => {
+    const html = await paintTrackCSettings({
+      governanceModeState: { mode: 'observe', defaulted: true },
+      qorLogic: { versionStatus: { installed: null, minimum: '0.2.0', meetsFloor: false } },
+    });
+    assert.match(html, /Installed:\s*<strong>not installed<\/strong>/);
+  });
+});

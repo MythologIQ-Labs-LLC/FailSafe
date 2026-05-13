@@ -81,4 +81,42 @@ suite('GovernanceStatusBar (FX299)', () => {
     assert.equal(item.command, 'failsafe.showMenu');
     sb.dispose();
   });
+
+  // B194 — governance mode escalation surface
+  test('B194 updateMode — explicit observe does NOT include "(default)"', () => {
+    const sb = new GovernanceStatusBar();
+    sb.updateMode({ mode: 'observe', defaulted: false });
+    const modeItem = (sb as any).modeItem as vscode.StatusBarItem;
+    assert.match(String(modeItem.text), /Observe/);
+    assert.ok(!/\(default\)/.test(String(modeItem.text)),
+      `Expected no "(default)" tag for explicit observe; got ${modeItem.text}`);
+    sb.dispose();
+  });
+
+  test('B194 updateMode — defaulted observe DOES include "(default)"', () => {
+    const sb = new GovernanceStatusBar();
+    sb.updateMode({ mode: 'observe', defaulted: true });
+    const modeItem = (sb as any).modeItem as vscode.StatusBarItem;
+    assert.match(String(modeItem.text), /Observe/);
+    assert.match(String(modeItem.text), /\(default\)/);
+    sb.dispose();
+  });
+
+  test('B194 updateMode — assist mode label contains "Assist"', () => {
+    const sb = new GovernanceStatusBar();
+    sb.updateMode({ mode: 'assist', defaulted: false });
+    const modeItem = (sb as any).modeItem as vscode.StatusBarItem;
+    assert.match(String(modeItem.text), /Assist/);
+    assert.ok(!/\(default\)/.test(String(modeItem.text)));
+    sb.dispose();
+  });
+
+  test('B194 updateMode — enforce mode label contains "Enforce"', () => {
+    const sb = new GovernanceStatusBar();
+    sb.updateMode({ mode: 'enforce', defaulted: false });
+    const modeItem = (sb as any).modeItem as vscode.StatusBarItem;
+    assert.match(String(modeItem.text), /Enforce/);
+    assert.ok(!/\(default\)/.test(String(modeItem.text)));
+    sb.dispose();
+  });
 });

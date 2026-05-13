@@ -1,5 +1,6 @@
 import { spawn } from 'child_process';
 import type { PythonInterpreterResolver, ResolvedInterpreter } from './PythonInterpreterResolver';
+import { MIN_QOR_LOGIC_VERSION } from './hostLayouts';
 
 export interface InstallerRunResult {
   stdout: string;
@@ -40,10 +41,17 @@ export interface QorLogicInstallResult {
   error?: InstallError;
 }
 
+export interface QorLogicVersionStatus {
+  installed: string | null;
+  minimum: string;
+  meetsFloor: boolean;
+}
+
 export interface IQorLogicPackageInstaller {
   isInstalled(): Promise<boolean>;
   install(): Promise<QorLogicInstallResult>;
   version(): Promise<string | null>;
+  verifyInstalledVersion(): Promise<QorLogicVersionStatus>;
 }
 
 const DEFAULT_TIMEOUT_MS = 120_000;
@@ -71,7 +79,8 @@ export class QorLogicPackageInstaller implements IQorLogicPackageInstaller {
     if (!py.ok) {
       return { ok: false, command: '', error: 'no-python-found' };
     }
-    const args = [...py.args, '-m', 'pip', 'install', PACKAGE];
+    const spec = `${PACKAGE}>=${MIN_QOR_LOGIC_VERSION}`;
+    const args = [...py.args, '-m', 'pip', 'install', '--upgrade', spec];
     const cmdString = formatCommand(py.command, args);
     this.output.appendLine(`[qor-logic] ${cmdString}`);
     const result = await this.run(py.command, args, { timeoutMs: this.timeoutMs });
@@ -87,10 +96,51 @@ export class QorLogicPackageInstaller implements IQorLogicPackageInstaller {
     return match ? match[1] : null;
   }
 
+  async verifyInstalledVersion(): Promise<QorLogicVersionStatus> {
+    const minimum = MIN_QOR_LOGIC_VERSION;
+    const py = await this.resolver.resolve();
+    if (!py.ok) return { installed: null, minimum, meetsFloor: false };
+    const result = await this.runSafely(() => this.runPipShow(py));
+    if (!result || result.code !== 0) return { installed: null, minimum, meetsFloor: false };
+    const installed = parseVersionLine(result.stdout);
+    if (!installed) return { installed: null, minimum, meetsFloor: false };
+    return { installed, minimum, meetsFloor: compareVersions(installed, minimum) >= 0 };
+  }
+
+  private async runSafely(fn: () => Promise<InstallerRunResult>): Promise<InstallerRunResult | null> {
+    try { return await fn(); } catch { return null; }
+  }
+
   private runPipShow(py: ResolvedInterpreter): Promise<InstallerRunResult> {
     const args = [...py.args, '-m', 'pip', 'show', PACKAGE];
     return this.run(py.command, args, { timeoutMs: PIP_SHOW_TIMEOUT_MS });
   }
+}
+
+function parseVersionLine(stdout: string): string | null {
+  const match = /^Version:\s*([^\s]+)/im.exec(stdout);
+  return match ? match[1] : null;
+}
+
+function normalizeVersion(version: string): number[] {
+  const numericPart = version.split('-')[0];
+  return numericPart.split('.').map((p) => {
+    const n = parseInt(p, 10);
+    return Number.isFinite(n) ? n : 0;
+  });
+}
+
+export function compareVersions(a: string, b: string): number {
+  const left = normalizeVersion(a);
+  const right = normalizeVersion(b);
+  const len = Math.max(left.length, right.length);
+  for (let i = 0; i < len; i += 1) {
+    const li = left[i] ?? 0;
+    const ri = right[i] ?? 0;
+    if (li > ri) return 1;
+    if (li < ri) return -1;
+  }
+  return 0;
 }
 
 function formatCommand(cmd: string, args: ReadonlyArray<string>): string {
