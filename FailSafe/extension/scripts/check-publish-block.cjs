@@ -49,11 +49,16 @@ function checkFeatureIndex(paths) {
   if (!text) {
     return { reason: 1, message: `FEATURE_INDEX.md not found at ${paths.featureIndex}` };
   }
-  const matches = text.match(/\bunverified\b/gi) || [];
+  // Match only pipe-delimited row-status cells, not narrative occurrences:
+  //   `| Status: unverified |`  (test-fixture form)
+  //   `| unverified |`           (production row-status column form)
+  // Narrative text like "drove unverified to ZERO" or `trustTier='unverified'`
+  // contains the bare word but lacks the pipe-cell shape and is correctly ignored.
+  const matches = text.match(/\|\s*(?:Status:\s*)?unverified\s*\|/gi) || [];
   if (matches.length > 0) {
     return {
       reason: 1,
-      message: `FEATURE_INDEX.md contains ${matches.length} 'unverified' marker(s); must be 0.`,
+      message: `FEATURE_INDEX.md contains ${matches.length} 'unverified' row-status cell(s); must be 0.`,
     };
   }
   return null;
