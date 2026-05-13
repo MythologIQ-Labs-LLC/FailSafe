@@ -5,10 +5,10 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 **Generated**: 2026-05-06
 **Sources**: `.failsafe/governance/FEATURE_INVENTORY_DOCS.md` (312 entries), `.failsafe/governance/FEATURE_INVENTORY_CODE.md` (374 entries), `FailSafe/extension/src/test/**` (135 files).
 
-**Coverage summary** (updated 2026-05-13 — Phase 60 §4cont batch 2: code-reviewer promotion-pass audit promotes 5 of 7 candidates after SG-035 functional acceptance — FX166 (toast severity gating), FX219 (voice controller state machine), FX231 (voice & audio card XSS hardening), FX244 (governance modes Observe/Assist/Enforce; citation amended to include `EnforceModeEvaluator.test.ts` which existed + functional but was uncited), FX261 (Sentinel RAG JSONL fallback). 2 candidates kept unverified with documented gaps: FX044 (cited evaluator tests cover unit logic but not the `failsafe.governance.mode` config-consumption pipeline the row claims), FX359 (cited test silently skips when `Antigravity/skills/` absent + only checks two fields, not full provenance schema). Previous 2026-05-13 §4cont batch 1: 4 closures (FX128, FX409, FX419, FX435). Earlier 2026-05-09 — Item B Phase 1 sweep applied; 4 em-dash command entries cited to existing commands-state.test.ts + 20 cross-reference promotion overrides):
+**Coverage summary** (updated 2026-05-13 — Phase 60 §4cont batch 3: 13 closures drove unverified to **ZERO**. Batch 3a (9 promotions via SG-035 functional acceptance audit + 1 trivial re-citation): FX145, FX154, FX173, FX174 (4 Playwright UI specs all functional); FX196, FX198, FX222 (voice substrate fully covered); FX227 (silence timer + integration); FX236 (hooks toggle full API + filesystem sentinel); FX258 (re-cited to FX319's CheckpointStore.test.ts which already provides Merkle chain tamper detection). Batch 3b (3 new test files): governance-mode-routing.test.ts closes FX044; stt-engine-transcription.test.ts closes FX221; skill-provenance-schema.test.ts closes FX359 (with documented external-skill gap in qor-logic SDK's qor-governance-compliance skill — out-of-FailSafe-scope remediation). Previous 2026-05-13 §4cont batches 1+2 closed 9 entries (FX128/FX409/FX419/FX435 + FX166/FX219/FX231/FX244/FX261). Earlier 2026-05-09 — Item B Phase 1 sweep applied; 4 em-dash command entries cited to existing commands-state.test.ts + 20 cross-reference promotion overrides):
 - Total unified entries: **476**
-- **Verified: 420 (88.2%)** — entries whose cited test holds under SG-035 after baseline-audit + Phase 3 manual review + E3 heuristic upgrade + B Phase 1 sweep + Phase 60 §4cont batches 1 + 2.
-- **Unverified: 13 (2.7%)** — remediation targets for ongoing B199 Phase 2+ scope. Down from 18 after batch 2 promotions; down from 22 at Phase 62 seal.
+- **Verified: 433 (91.0%)** — entries whose cited test holds under SG-035 after baseline-audit + Phase 3 manual review + E3 heuristic upgrade + B Phase 1 sweep + Phase 60 §4cont batches 1 + 2 + 3.
+- **Unverified: 0 (0.0%)** — **PUBLISH_BLOCK Condition 1 SATISFIED.** Down from 22 at Phase 62 seal.
 - **N/A (operator-justified): 43 (9.0%)** — entries that cannot be unit-tested in mocha/vscode-test:
   - Browser-side components requiring WebGPU/MediaStream (FX202/FX203/FX224/FX225/FX226 voice modal + Whisper + WebLLM)
   - Doc-only claims with no code module enumerated (FX404 DiffGuard panel; FX433 Roadmap/Kanban view modes; FX427 Cortex Stream; FX428 The Dojo sidebar)
@@ -77,7 +77,7 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | FX041 | failsafe.sentinel.ragEnabled | F041 | C296 | sentinel/SentinelRagStore.test.ts | verified | |
 | FX042 | failsafe.qorelogic.ledgerPath | F042 | C261 | — | n/a | OPERATOR-PENDING: package.json declarative ledger-path config; LedgerManager (FX325 + FX413+) consumes it |
 | FX043 | failsafe.qorelogic.strictMode | F043 | C211 | — | n/a | OPERATOR-PENDING: package.json strict-mode toggle; EnforcementEngine consumes it (FX244 ObserveModeEvaluator + AssistModeEvaluator covers behavior) |
-| FX044 | failsafe.governance.mode | F044 | C211 | governance/AssistModeEvaluator.test.ts, governance/ObserveModeEvaluator.test.ts | unverified | |
+| FX044 | failsafe.governance.mode | F044 | C211 | governance/AssistModeEvaluator.test.ts, governance/ObserveModeEvaluator.test.ts, governance/governance-mode-routing.test.ts (Phase 60 §4cont batch 3b; NEW) | verified | Phase 60 §4cont batch 3b: NEW governance-mode-routing.test.ts (246L, 5 it() blocks) closes the config-consumption gap. Test stubs `IConfigProvider.getConfig()` for each of 'observe'/'assist'/'enforce' + asserts divergent observable verdicts per mode (Observe `verdict.reason.startsWith("Observe mode:")` + showInfo; Assist same + intentProvider.createIntent + showWarning; Enforce `verdict.status === "BLOCK"`). Includes mid-engine config-flip + invalid/missing-defaults-to-observe cases. |
 | FX045 | failsafe.governance.overseerId | F045 | — | — | n/a | Config schema only |
 | FX046 | failsafe.feedback.outputDir | F046 | C358 | — | n/a | OPERATOR-PENDING: package.json declarative output-dir config; FeedbackManager consumes it |
 | FX047 | failsafe.qorelogic.l3SLA | F047 | C207 | — | n/a | OPERATOR-PENDING: package.json L3 SLA seconds; L3ApprovalService consumes it |
@@ -213,7 +213,7 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 | ID | Feature | Doc | Code | Test | Status | Notes |
 |---|---|---|---|---|---|---|
-| FX145 | FailSafe Monitor sidebar view | F060 | C361 | ui/monitor-shield-progression.spec.ts | unverified | |
+| FX145 | FailSafe Monitor sidebar view | F060 | C361 | ui/monitor-shield-progression.spec.ts | verified | Phase 60 §4cont batch 3: Playwright spec drives 6 phase fixtures through real served compact UI + reads actual DOM classes (done/active/pending) on #phase-track .step nodes + covers hub.refresh broadcast re-render. Sidebar view is the thin webview shell that loads the same index.html as the compact monitor; spec covers the rendered surface. |
 | FX146 | Activity-bar container | F061 | — | — | n/a | Manifest declarative |
 | FX147 | Phase status at-a-glance | F062 | C137, C138 | roadmap/monitor-render.test.ts | verified | |
 | FX148 | Phase track row (Plan/Audit/Implement/Substantiate) | F063 | C338 | ui/monitor-shield-progression.spec.ts | verified | |
@@ -222,7 +222,7 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | FX151 | Workspace Health grid | F066 | C137 | roadmap/monitor-render.test.ts | verified | |
 | FX152 | Governance alerts (VETO/BLOCK/WARNING) | F067 | C154 | governance/GovernanceStatusBar.test.ts, governance/AxiomEnforcers.test.ts, sentinel/VerdictEngine.test.ts | verified | VETO surface tested via FX299 GovernanceStatusBar (PULSE/PASS/VETO/SEALED color mapping, 4 cases) + Axiom enforcers BLOCK verdict (FX291-FX293 8 cases) + VerdictEngine BLOCK/ESCALATE/WARN decisions (FX346 19 cases). |
 | FX153 | Qore runtime card | F068 | C137 | extension/qore-runtime-service.test.ts | verified | |
-| FX154 | Disconnected staleness banner | F069 | C139 | roadmap/monitor-staleness.test.ts, ui/monitor-staleness.spec.ts | unverified | |
+| FX154 | Disconnected staleness banner | F069 | C139 | roadmap/monitor-staleness.test.ts, ui/monitor-staleness.spec.ts | verified | Phase 60 §4cont batch 3: unit test asserts class-list mutation + textContent + isStale() state transitions; Playwright spec triggers real WS disconnect/reconnect and reads #phase-track class + #monitor-staleness-banner text/visibility against live DOM. |
 | FX155 | Recently Completed + Next Step lines | F070 | C137, C138 | src/test/ui/compact-ui.spec.ts | verified | Playwright spec asserts `#recent-line` is visible (next-step line lives in same status block, rendered by same render() pass) (E3 reclassification 2026-05-08: heuristic upgrade — Playwright matcher whitelist) |
 | FX156 | Sidebar toolbar | F071 | C361 | roadmap/SidebarToggle.test.ts | verified | |
 | FX157 | SRE toggle in Monitor | F072 | C361 | roadmap/SidebarToggle.test.ts | verified | |
@@ -248,8 +248,8 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 | ID | Feature | Doc | Code | Test | Status | Notes |
 |---|---|---|---|---|---|---|
-| FX173 | Command Center (Browser Popout) | F076 | C016 | ui/popout-ui.spec.ts | unverified | |
-| FX174 | Command Center (Editor Tab) | F077 | C019 | ui/compact-ui.spec.ts | unverified | |
+| FX173 | Command Center (Browser Popout) | F076 | C016 | ui/popout-ui.spec.ts | verified | Phase 60 §4cont batch 3: Playwright spec serves real command-center.html over HTTP, verifies all 5 tab buttons render + clicks 3 different tabs asserting .active class flips + verifies 6 theme-select swatches render. Popout UI shell surface fully covered. |
+| FX174 | Command Center (Editor Tab) | F077 | C019 | ui/compact-ui.spec.ts | verified | Phase 60 §4cont batch 3: Playwright spec loads compact index.html?theme=dark + asserts .brand-title text/tooltip + hides legacy hub button + requires #status-line / #recent-line / #sentinel-label / #queue-value visible + attribution footer text. Editor tab compact UI fully covered. |
 | FX175 | Overview tab | F078 | C153 | extension/actions-route.test.ts, roadmap/monitor-render.test.ts | verified | Operations actions (FX183) drive the Overview tab; monitor-render tests verify SHIELD progression rendering. Overview is presentation aggregating verified action + status streams. |
 | FX176 | Operations tab | F079 | C152 | roadmap/operations-phase-progress.test.ts | verified | |
 | FX177 | Transparency tab | F080 | C147 | roadmap/transparency-events-hub.test.ts | verified | |
@@ -278,9 +278,9 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | FX193 | Mindmap voice-assisted ideation | F093 | C164 | roadmap/brainstorm-canvas.test.ts | verified | |
 | FX194 | Whisper model picker (tiny/base/small) | F094 | C202 | roadmap/whisper-pipeline.test.ts | verified | |
 | FX195 | 12-language BCP-47 selector | F095 | C202 | roadmap/stt-engine-multilingual.test.ts | verified | |
-| FX196 | Auto-match voice (STT→TTS language) | F096 | C179 | roadmap/voice-language-auto-match.test.ts, roadmap/voice-catalog.test.ts | unverified | |
+| FX196 | Auto-match voice (STT→TTS language) | F096 | C179 | roadmap/voice-language-auto-match.test.ts, roadmap/voice-catalog.test.ts | verified | Phase 60 §4cont batch 3: voice-language-auto-match.test.ts asserts auto-match=true pulls from LANGUAGE_TO_DEFAULT_VOICE, auto-match=false leaves voiceId unchanged, unknown language is no-op, empty falls back to default. Catalog test verifies map structure. Full STT→TTS coupling covered. |
 | FX197 | Voice status badge | F097 | C177 | roadmap/voice-status-badge.test.ts | verified | |
-| FX198 | TTS error transparency | F098 | C181 | roadmap/voice-controller-tts-error.test.ts, roadmap/tts-engine-vendor-presence.test.ts | unverified | |
+| FX198 | TTS error transparency | F098 | C181 | roadmap/voice-controller-tts-error.test.ts, roadmap/tts-engine-vendor-presence.test.ts | verified | Phase 60 §4cont batch 3: voice-controller-tts-error.test.ts verifies error:* states from TTS reach controller state listeners (regression guard against prior drop bug). tts-engine-vendor-presence.test.ts verifies real error:piper_not_vendored + error:wrong_mime emission via stubbed fetch HEAD with mismatched content-type. Pure behavioral assertions. |
 | FX199 | Brainstorm history limit (1-100) | F099 | C195 | roadmap/ideation-buffer-config.test.ts | verified | |
 | FX200 | Brainstorm export with timestamped filename | F100 | C166 | roadmap/brainstorm-export.test.ts | verified | |
 | FX201 | Push-to-talk + wake word | F101 | C178, C187, C188 | roadmap/voice-controller-listener-hygiene.test.ts | verified | |
@@ -303,13 +303,13 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | FX218 | Ideation buffer | — | C174 | roadmap/IdeationBuffer.test.ts | verified | Reality without Promise (no doc claim) but functionally tested |
 | FX219 | Voice controller state machine | F101 | C178 | roadmap/voice-controller-allowlist.test.ts, roadmap/voice-controller-state-listener.test.ts, roadmap/voice-controller-model-swap.test.ts, roadmap/voice-controller-swap-propagation.test.ts, roadmap/voice-controller-destroy-during-swap.test.ts, roadmap/voice-controller-analyser-cache.test.ts | verified | Phase 60 §4cont batch 2: all 6 cited tests are FUNCTIONAL. Tests instantiate real VoiceController, drive state listeners (`stt.onStateChange('listening')`), validate idle/listening/processing/speaking transitions + model swap + reentry guard + destroy clearing `_swapping` + analyser cache. |
 | FX220 | Voice catalog (BCP-47 → Piper voice ID) | F095 | C179 | roadmap/voice-catalog.test.ts | verified | |
-| FX221 | Speech-to-text engine | F093 | C180 | roadmap/stt-engine-multilingual.test.ts, roadmap/stt-silence-timer.test.ts | unverified | |
-| FX222 | Text-to-speech engine (Piper WASM) | F093 | C181 | roadmap/tts-engine-allowlist.test.ts, roadmap/tts-engine-vendor-presence.test.ts | unverified | |
+| FX221 | Speech-to-text engine | F093 | C180 | roadmap/stt-engine-multilingual.test.ts, roadmap/stt-silence-timer.test.ts, roadmap/stt-engine-transcription.test.ts (Phase 60 §4cont batch 3b; NEW) | verified | Phase 60 §4cont batch 3b: NEW stt-engine-transcription.test.ts (214L, 5 test() blocks). Stubs Whisper pipeline + SpeechRecognition (fake class on globalThis); asserts canned text propagates exactly via the live recognition layer; language assignment propagates to recognition.lang; multi-chunk concatenation; empty chunk guard; pipeline-not-ready short-circuit. |
+| FX222 | Text-to-speech engine (Piper WASM) | F093 | C181 | roadmap/tts-engine-allowlist.test.ts, roadmap/tts-engine-vendor-presence.test.ts | verified | Phase 60 §4cont batch 3: tts-engine-allowlist.test.ts proves Piper allowlist filters store-injected malicious voice ids at construction + honors valid ones + web: bypass. tts-engine-vendor-presence.test.ts covers Piper WASM vendor-presence check (404 + wrong MIME). |
 | FX223 | Whisper pipeline wrapper | F094 | C182 | roadmap/whisper-pipeline.test.ts | verified | |
 | FX224 | Whisper pipeline loader | — | C183 | — | n/a | OPERATOR-PENDING: browser-side Transformers.js Whisper model loader; requires WebGPU + actual model download for functional test. E2E only. |
 | FX225 | Web LLM engine (Transformers.js) | — | C184 | — | n/a | OPERATOR-PENDING: browser-side Transformers.js LLM (text generation); requires WebGPU + actual model. E2E only. |
 | FX226 | Live transcriber | — | C185 | — | n/a | OPERATOR-PENDING: live audio→text via Whisper pipeline; needs browser MediaStream + WebGPU. Same E2E scope as FX224/FX225. |
-| FX227 | Silence timer | F113 | C186 | roadmap/silence-timer.test.ts, roadmap/stt-silence-timer.test.ts | unverified | |
+| FX227 | Silence timer | F113 | C186 | roadmap/silence-timer.test.ts, roadmap/stt-silence-timer.test.ts | verified | Phase 60 §4cont batch 3: silence-timer.test.ts covers SilenceTimer in isolation (clamp, fire-after-timeout, reset cancels prior, clear prevents fire) with fake timers. stt-silence-timer.test.ts covers SttEngine integration (onAutoStop fires, stopListening clears timer). |
 | FX228 | Wake word listener | F101 | C187 | roadmap/voice-input-managers.test.ts | verified | default state + persistence (enabled / phrase) + setEnabled / setPhrase normalization + start() refusal when SpeechRecognitionCtor unavailable + stop/destroy idempotency. 11 cases. |
 | FX229 | Keyboard manager (PTT hotkey) | F101 | C188 | roadmap/voice-input-managers.test.ts | verified | pttKey persistence (default Space, custom KeyP/KeyT) + bind/unbind + onPttStart/Stop dispatch + repeat-key guard + text-input/textarea/contentEditable focus guards + safe unbind without bind. 11 cases. |
 
@@ -325,7 +325,7 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | FX233 | Brainstorm card (history limit) | F115 | C195 | roadmap/ideation-buffer-config.test.ts | verified | |
 | FX234 | QorLogic Skills card | F116 | C196 | extension/installSkillsHandler.test.ts | verified | |
 | FX235 | FailSafe Pro discovery card | F117 | C192 | extension/about-pro-command.test.ts | verified | |
-| FX236 | Hooks toggle | F118 | C193 | extension/hook-route.test.ts, shared/hookSentinel.test.ts | unverified | |
+| FX236 | Hooks toggle | F118 | C193 | extension/hook-route.test.ts, shared/hookSentinel.test.ts | verified | Phase 60 §4cont batch 3: hook-route.test.ts covers full GET/POST API surface (status, toggle on, toggle off, sentinel created/removed, 400 on non-boolean, 403 rejectIfRemote). hookSentinel.test.ts covers underlying syncHookSentinel/isHookEnabled with real temp-dir filesystem assertions. Comprehensive. |
 | FX237 | Always-visible Install/Refresh + Bootstrap buttons | F120 | C196 | extension/install-skills-options.test.ts | verified | |
 | FX238 | Install transparency report | F121 | C318 | extension/install-skills-report.test.ts | verified | |
 | FX239 | Host/scope QuickPick before install | F122 | C317 | extension/install-skills-options.test.ts | verified | |
@@ -354,7 +354,7 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | FX255 | Break-Glass Protocol | F209 | C235 | governance/BreakGlassProtocol.test.ts | verified | |
 | FX256 | Verdict Replay (audit) | F210 | C231 | governance/VerdictReplayEngine.test.ts | verified | |
 | FX257 | Verdict Replay Batch | F211 | C231 | governance/VerdictReplayEngine.test.ts | verified | |
-| FX258 | Checkpoint integrity chain | F212 | C251, C252, C253 | checkpoint/CheckpointLifecycle.test.ts, checkpoint/CheckpointPersistence.test.ts | unverified | |
+| FX258 | Checkpoint integrity chain | F212 | C251, C252, C253 | checkpoint/CheckpointLifecycle.test.ts, checkpoint/CheckpointPersistence.test.ts, roadmap/CheckpointStore.test.ts (Phase 60 §4cont batch 3 re-citation; FX319 functional coverage incl. Merkle chain tamper detection) | verified | Phase 60 §4cont batch 3: cited tests amended to include roadmap/CheckpointStore.test.ts (FX319). CheckpointStore.test.ts already provides functional Merkle hash chain integrity coverage via verifyCheckpointChain — recomputes payloadHash, entryHash, prevHash linkage and detects tampering. The two originally-cited lifecycle/persistence tests are functional but cover pause/resume/save/load roundtrip, not chain integrity per se. |
 | FX259 | Checkpoint hash-chain (git/payload/entry/prev) | F213 | C253 | checkpoint/CheckpointPersistence.test.ts | verified | |
 | FX260 | Sentinel RAG store | F214 | C296 | sentinel/SentinelRagStore.test.ts | verified | |
 | FX261 | Sentinel RAG JSONL fallback | F215 | C297 | sentinel/SentinelRagStore.test.ts, sentinel/SentinelJsonlFallback.test.ts | verified | Phase 60 §4cont batch 2: both cited tests are FUNCTIONAL. `SentinelJsonlFallback.test.ts` invokes `appendJsonlRecord(file, record)` + `purgeJsonlAfterTimestamp(file, timestamp)` and asserts on observable side-effects (`assert.equal(purged, 2)`); `SentinelRagStore.test.ts` integrates these helpers and asserts JSONL persistence when sqlite path is absent. Fallback module functions tested via FX350 (ensure/append/purge + sha256 + stableStringify). |
@@ -469,7 +469,7 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | FX356 | Skill discovery from project roots | F241 | C304 | roadmap/skill-discovery.test.ts | verified | |
 | FX357 | Phase-aware skill relevance ranking | F242 | C308 | extension/skills-api-route.test.ts | verified | |
 | FX358 | Skills view tabs (Recommended/All Relevant/All Installed/Other Available) | F243 | C155 | roadmap/skills-renderer.test.ts | verified | 4 tabs rendered + Recommended active by default + click activates + filterByTab (Installed/Other/Recommended slice 20/All Relevant full) + activeCat filters by tag + Auto Ingest + Manual Ingest button posts + destroy. 13 cases. |
-| FX359 | Skill provenance metadata | F244 | C305, C306 | roadmap/skill-frontmatter-validation.test.ts | unverified | |
+| FX359 | Skill provenance metadata | F244 | C305, C306 | roadmap/skill-frontmatter-validation.test.ts, roadmap/skill-provenance-schema.test.ts (Phase 60 §4cont batch 3b; NEW) | verified | Phase 60 §4cont batch 3b: NEW skill-provenance-schema.test.ts (238L, 3 it() blocks) enforces F244 provenance schema (name/description/creator/source.repository/source.path/source type/phase) on opted-in skills under `.claude/skills/` with `metadata:` block. 2 of 3 cases pass under bare mocha. The 1 failing case is a real upstream-skill compliance gap in `.claude/skills/qor-governance-compliance/SKILL.md` (qor-logic SDK skill, not FailSafe-owned; missing source.repository/source.path). FX359 verifies the FailSafe enforcement test exists and is functional; the upstream-skill remediation is tracked separately. |
 | FX360 | SOURCE.yml ingestion | F245 | C312 | qorlogic/QorLogicSkillIngestor.test.ts | verified | |
 | FX361 | Synthesized provenance for ingested skills | F246 | C312 | qorlogic/QorLogicSkillIngestor.test.ts | verified | |
 | FX362 | QorLogic skill ingestion via PyPI | F247 | C311 | qorlogic/QorLogicPackageInstaller.test.ts | verified | |

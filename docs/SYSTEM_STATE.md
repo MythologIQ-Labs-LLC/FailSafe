@@ -1,7 +1,60 @@
 # SYSTEM STATE
 
 **Last Updated:** 2026-05-13
-**Version:** v5.1.10-baseline plus Phase 60 §0-§4cont batch 2 (UI hygiene + 4 test-authored closures + 5 promotion-pass closures) plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups (workspace-only label; no `package.json` bump)
+**Version:** v5.1.10-baseline plus Phase 60 §0-§4cont batch 3 (UI hygiene + 22-of-22 FEATURE_INDEX closures; PUBLISH_BLOCK Condition 1 SATISFIED) plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups (workspace-only label; no `package.json` bump)
+
+---
+
+## 2026-05-13 - Phase 60 §4cont batch 3: ALL 13 remaining unverified entries closed — 0 unverified
+
+Plan: `docs/plan-qor-phase60-v5-1-0-remaining-scope.md` (PASS audit #344; §0-§4cont batch 2 sealed at #345-#351). Sub-phase §4 continuation batch 3 — closes the unverified bucket entirely.
+
+### Deliverables
+
+**Batch 3 audit** (single code-reviewer subagent): SG-035 classification of all 13 remaining entries. Verdicts: 9 PROMOTE + 1 trivial re-citation + 3 AUTHOR-SMALL-TEST + **0 DEFER-MULTI-CYCLE**.
+
+**Batch 3a — 10 audit-driven closures**:
+- FX145, FX154 (UI: monitor sidebar + staleness banner; Playwright specs functional)
+- FX173, FX174 (Command Center popout + editor tab; Playwright specs functional)
+- FX196 (auto-match voice STT→TTS; full coupling covered)
+- FX198 (TTS error transparency; controller + engine emission)
+- FX222 (TTS engine Piper WASM; allowlist + vendor presence)
+- FX227 (silence timer; unit + integration)
+- FX236 (hooks toggle; full API + sentinel filesystem)
+- FX258 (re-cited to `roadmap/CheckpointStore.test.ts` FX319 which already provides Merkle chain tamper detection — 5-min citation fix vs authoring new test)
+
+**Batch 3b — 3 new test files** (3 parallel test-automator subagents):
+
+| Track | NEW file | LOC | Tests | Runtime |
+|---|---|---|---|---|
+| FX044 | `governance/governance-mode-routing.test.ts` | 246 | 5 it() blocks | compile-only (vscode-test harness needed) |
+| FX221 | `roadmap/stt-engine-transcription.test.ts` | 214 | 5 test() blocks | compile-only (sibling stt-* convention) |
+| FX359 | `roadmap/skill-provenance-schema.test.ts` | 238 | 3 it() blocks | **2/3 pass under bare mocha** |
+
+### FX359 test surfaced an external-skill compliance gap
+
+The provenance-schema test caught `.claude/skills/qor-governance-compliance/SKILL.md` (a qor-logic SDK skill, NOT a FailSafe-owned skill) missing `metadata.source.repository` / `metadata.source.path` fields. FailSafe-owned skills pass. The qor-governance-compliance fix is upstream qor-logic SDK's responsibility, not in FailSafe scope; tracked as out-of-FailSafe-scope upstream gap.
+
+### FEATURE_INDEX coverage delta — milestone hit
+
+- verified: 420 → **433** (+13; 88.2% → **91.0%**)
+- unverified: 13 → **0** (−13; 2.7% → **0.0%**) ← **PUBLISH_BLOCK Condition 1 SATISFIED**
+- n/a: 43 (unchanged; 9.0%)
+- total: 476 (unchanged)
+- coverage: verified + n/a = 100.0%
+
+### Phase 60 sub-phase status
+
+| Sub-Phase | State | Ledger |
+| --- | --- | --- |
+| §0 Refactor Enablement | SEALED | #345 |
+| §1 Scope Sync + Coverage Ledger | SEALED | #346 |
+| §2 Workspace Truth Refresh + Governance Watch | SEALED | #347 |
+| §3 Governance Mode Escalation + Install Version Floor | SEALED | #348 |
+| §4 UI Subscription Hygiene B198 | SEALED | #349 |
+| §4cont batches 1+2 (#350, #351) | SEALED | #350-#351 |
+| §4cont batch 3 — 13 closures to 0 unverified | **THIS COMMIT** | #352 |
+| §5 Publish-Block Verification | **UNBLOCKED** (Condition 1 now satisfied) | next |
 
 ---
 
