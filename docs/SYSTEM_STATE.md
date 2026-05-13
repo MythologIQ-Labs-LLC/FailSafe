@@ -1,7 +1,56 @@
 # SYSTEM STATE
 
 **Last Updated:** 2026-05-14
-**Version:** v5.1.10-baseline plus Phase 60 SEALED at #354 plus v5.1.0 publish-block-lift plan **SEALED at #359** (4-phase code surface complete; checkFeatureIndex precision fix landed; agent-portion runbook attestation through step 6; PUBLISH_BLOCK Condition 1 SATISFIED + Condition 2 Playwright half attested; Conditions 2-flag/3/4 remain operator-only; no `package.json` bump until full lift) plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups
+**Version:** v5.1.10-baseline plus Phase 60 SEALED at #354 plus v5.1.0 publish-block-lift SEALED at #359 plus **organize-ux-hotfix SEALED at #364** (3-phase UX surface — contextual bootstrap summary + host-side sidebar decision (V1 Path C) + organize callbacks; 68/68 .cjs tests pass; PUBLISH_BLOCK Conditions 2b/3/4 remain operator-only; no `package.json` bump — hotfix-class) plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups
+
+---
+
+## 2026-05-14 - organize-ux-hotfix — SUBSTANTIATION SEAL (Entry #364)
+
+Plan: `docs/plan-qor-organize-ux-hotfix.md` (PASS audit Entry #362 after single-iteration V1 amendment cycle; implement at Entry #363). **Seal verdict: PASS — Reality matches Promise across all three UX-defect phases.**
+
+### Substantiation outcome
+
+All three hotfix phases sealed locally at Entry #363 (implement) + Entry #364 (this seal). Reality audit: 9/9 planned deliverables present on disk. Section 4 Razor: all source ≤234L (`organizeWorkspace.ts` 234; `bootstrapServers.ts` 221; `FailSafeSidebarProvider.ts` 190; `bootstrapWorkspace.ts` 154; new helpers 35-36L); all test files ≤172L. SG-035 functional-acceptance answered "yes" for every one of the 18 newly-authored test cases per Entry #363's attestation.
+
+### Defects closed
+
+- **Defect-1** — sidebar button optimistically renames before bootstrap completes. **Resolved via V1 Path C**: host-side `decideSidebarClick` function returns a `SidebarClickDecision` discriminated union; webview sends `{command:"sidebar.click", currentLabel}` and only mutates DOM in response to host-posted `failsafe.button.update` reply. Optimistic-rename block at FailSafeSidebarProvider.ts:138-143 removed.
+- **Defect-2** — alarming "Bootstrap: N step(s) deferred" summary. **Resolved**: `assembleReport` detects the all-user-deferred case (every deferred step has `detail: "user deferred"`) and emits "Bootstrap paused — run Initialize again when ready to install qor-logic".
+- **Defect-3** — silent post-Organize UX. **Resolved**: `runOrganize` accepts `OrganizeCallbacks{onToast, onHubRefresh, onNextStep}`. `bootstrapServers.ts` wires them to `vscode.window.showInformationMessage`, `consoleServer.broadcastEvent({type:"hub.refresh", reason})`, and a Run-button modal for next-step commands. Heuristic: governance-dir creation → suggest Initialize; gitignore patch → review+commit; other → generic summary.
+
+### Test surface (final)
+
+- **node:test (.cjs)**: 68/68 pass across 19 suites in 25.5s. New surfaces: `bootstrapWorkspaceAssembleReport.test.cjs` (5 cases), `organizeWorkspaceCallbacks.test.cjs` (7 cases).
+- **vscode-test mocha (.test.ts)**: Phase 2's `sidebarInitializeLogic.test.ts` (6 cases) deferred to operator `npm test`. Spot-check via compiled `out/roadmap/sidebarInitializeLogic.js` + ad-hoc `node --test`: 3/3 pass (pure-unit confirmation).
+- **TypeScript whole-project**: `npx tsc --noEmit -p ./` exit 0.
+- **esbuild bundle**: `dist/extension/main.js` rebuilt at 3.8 MB in 1266 ms during implement (Entry #363) — closes Entry #360 stale-dist process gap for this plan.
+
+### Skipped per protocol decisions
+
+- **Steps 7.4 / 7.5 / 7.6 / 9.5.5** (SSDF + version bump + CHANGELOG stamp + annotated tag): SKIPPED. `change_class: hotfix` per plan top-matter. Tag stays at v4.9.9; `package.json` stays at v5.1.0 (Phase 60 baseline). Phase 33 release-doc rule + Phase 49 README badge currency both EXEMPT for hotfix per `_RELEASE_CLASSES` semantics.
+- **Steps 4.6 / 4.6.5 / 4.6.6 / 4.7 / 7.7 / 7.8 / 8.5 / Z**: DEGRADED-NOOP (`.qor/` runtime uninitialized).
+
+### PUBLISH_BLOCK lifting protocol — unchanged from v5.1.0-lift seal
+
+| Condition | State |
+|---|---|
+| 1. FEATURE_INDEX 0 unverified | ✅ SATISFIED (sealed at #354) |
+| 2a. Playwright pass-within-24h | ✅ AGENT-ATTESTED (Entry #358) |
+| 2b. BROWSER_VERIFICATION Active flip | ⏸ operator step 8 |
+| 3. Screenshot operator-notes | ⏸ operator step 5 |
+| 4. Operator sign-off | ⏸ operator step 7 |
+| 5. v5.1.0-lift plan seal | ✅ SATISFIED (Entry #359) |
+
+`PUBLISH_BLOCK.md Active: yes` remains yes. The UX hotfix lands behind the same operator-attestation gate as the v5.1.0-lift seal.
+
+### Plan deviation (1, minor, documented)
+
+Phase 1 extracted `assembleReport` to a new sibling module `bootstrapAssembleReport.ts` (pure, no `vscode` import) rather than testing it in place. Root cause: `bootstrapWorkspace.ts` imports `vscode` at module top; its compiled artifact cannot load in `node --test`. Net effect: same logic, same external API (re-exported from `bootstrapWorkspace.ts`), new test-loadable boundary.
+
+### Next
+
+Operator may now: (a) reload the extension and verify the Initialize→Organize timing + post-Organize toast/hub.refresh/next-step in vivo; (b) run `npm test` to confirm the Phase 2 vscode-test mocha surface; (c) continue the v5.1.0 publish runbook (steps 5/7/8 — screenshots, sign-off, Active flip) when ready.
 
 ---
 

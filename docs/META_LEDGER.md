@@ -17940,3 +17940,103 @@ _Gate Status: OPEN. Next: `/qor-substantiate` for the UX hotfix; OR operator rel
 _Chain integrity: VALID_
 _Session Status: UX-hotfix PASS at #362 → IMPLEMENT at #363; bundle current; review-boundary honored; ready for /qor-substantiate or operator runtime verification_
 _Session: 2026-05-14-organize-ux-hotfix-implement_
+
+---
+
+### Entry #364: SESSION SEAL — plan-qor-organize-ux-hotfix (full-plan substantiation)
+
+**Date**: 2026-05-14
+**Type**: Substantiation Seal (`/qor-substantiate`)
+**Persona**: The QorLogic Judge (substantiation mode)
+**Plan**: `docs/plan-qor-organize-ux-hotfix.md`
+**Audit reference**: Entry #362 PASS (re-audit after single Governor amendment cycle per Path C)
+**Implementation reference**: Entry #363 (all three phases shipped)
+**Verdict**: **PASS — Reality matches Promise across all three UX-defect phases**
+**Risk Grade**: L1
+**change_class**: hotfix
+
+## Substantiation summary
+
+Per `change_class: hotfix` per plan top-matter, Steps 7.4 / 7.5 / 7.6 / 9.5.5 (SSDF + version bump + CHANGELOG stamp + annotated tag) SKIPPED. Tag stays at v4.9.9; `package.json` remains at v5.1.0 (Phase 60 baseline). Phase 33 release-doc rule and Phase 49 README badge currency both EXEMPT for hotfix per the `_RELEASE_CLASSES` semantics.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| AUDIT_REPORT PASS verdict (Entry #362) | ✓ |
+| Reality = Blueprint (Step 3) | 9/9 planned deliverables present (`bootstrapAssembleReport.ts` 36L, `bootstrapWorkspace.ts` 154L, `organizeWorkspace.ts` 234L, `bootstrapServers.ts` 221L, `sidebarInitializeLogic.ts` 35L, `FailSafeSidebarProvider.ts` 190L, 3 test files 47-172L); 0 MISSING; 1 UNPLANNED file (`bootstrapAssembleReport.ts`) documented in #363 as Phase 1 plan-deviation for node:test loadability — accepted |
+| Section 4 Razor (Step 5) | All source ≤234L (highest: organizeWorkspace.ts); all new test files ≤172L; nesting ≤3; no nested ternaries |
+| Test functionality (Step 4, SG-035) | All 18 newly-authored test cases invoke unit + assert on output (per Entry #363 attestation table) |
+| node:test surface | 68/68 pass across 19 suites in 25.5s |
+| TypeScript whole-project | `npx tsc --noEmit -p ./` exit 0 |
+| esbuild bundle currency | `dist/extension/main.js` 3.8 MB, rebuilt during Entry #363 implement (closes Entry #360 stale-dist gap for this plan) |
+| BACKLOG security-blocker review (Step 3.5) | No security blockers gating; hotfix scope is pure UX |
+| Skill file integrity (Step 4.5) | No `.claude/skills/qor-*/SKILL.md` modifications |
+| Version validation (Step 2.5) | Tag `v4.9.9` (current) < `package.json` v5.1.0; target > current ✓; bump SKIPPED per hotfix class |
+| Reliability sweep (Step 4.6) | DEGRADED-NOOP — `.qor/` runtime uninitialized |
+| Secret scanning (Step 4.6.5) | DEGRADED-NOOP — manual review of cycle diff shows no secrets |
+| Procedural fidelity (Step 4.6.6) | DEGRADED-NOOP |
+| Doc integrity (Step 4.7) | DEGRADED-NOOP — `terms_introduced` not declared (hotfix scope; standard tier) |
+| SYSTEM_STATE sync (Step 6) | `docs/SYSTEM_STATE.md` updated with UX-hotfix seal section + Last Updated 2026-05-14 |
+| Doc currency (Step 6.5) + Phase 49 README badge currency | EXEMPT per `change_class: hotfix` |
+| Post-seal verification (Step 7.7) | DEGRADED-NOOP |
+| Gate-chain completeness (Step 7.8) | DEGRADED-NOOP |
+| Dist recompile (Step 8.5) | Completed at Entry #363 via `npm run compile && npm run bundle`; explicit deviation from `qor.scripts.dist_compile` (which is .qor-runtime; degraded) — extension build path used instead |
+
+## Phase deliverables shipped (Entry #363 detail)
+
+**Phase 1 — assembleReport contextual summary**: pure `assembleReport` extracted to `bootstrapAssembleReport.ts` (28L) + contextual user-deferred summary; `bootstrapWorkspaceAssembleReport.test.cjs` 5/5 pass.
+
+**Phase 2 — sidebarInitializeLogic + host wiring (V1 Path C)**: new `sidebarInitializeLogic.ts` (33L) exports `decideSidebarClick` returning `SidebarClickDecision` discriminated union. `FailSafeSidebarProvider.ts` `SidebarMessage` swaps `initialize|organize` → `sidebar.click`; `handleMessage` collapses prior two cases into a single switch over the decision union; optimistic-rename block removed from webview script. `sidebarInitializeLogic.test.ts` 6 cases under vscode-test mocha (3/3 spot-check pass via compiled out/).
+
+**Phase 3 — Organize callbacks + bootstrapServers wiring**: `runOrganize` accepts `OrganizeCallbacks`; `bootstrapServers.ts` wires `onToast` → `vscode.window.showInformationMessage`, `onHubRefresh` → `consoleServer.broadcastEvent`, `onNextStep` → Run-button modal. `organizeWorkspaceCallbacks.test.cjs` 7/7 pass.
+
+## PUBLISH_BLOCK lifting protocol — unchanged from Entry #359
+
+| Condition | State |
+|---|---|
+| 1. FEATURE_INDEX 0 unverified | ✅ SATISFIED (sealed at #354) |
+| 2a. Playwright pass-within-24h | ✅ AGENT-ATTESTED (Entry #358) |
+| 2b. BROWSER_VERIFICATION Active flip | ⏸ operator step 8 |
+| 3. Screenshot operator-notes | ⏸ operator step 5 |
+| 4. Operator sign-off | ⏸ operator step 7 |
+| 5. v5.1.0-lift plan seal | ✅ SATISFIED (Entry #359) |
+
+`PUBLISH_BLOCK.md Active: yes` remains yes. The UX hotfix lands behind the same operator-attestation gate as the v5.1.0-lift seal.
+
+## Findings (carried forward)
+
+1. **`.qor/` runtime degraded**: every reliability gate ran NOOP. Ledger entry + SYSTEM_STATE update are the canonical record.
+2. **Phase 1 plan deviation accepted**: `bootstrapAssembleReport.ts` extracted as new sibling module to enable `node --test` loadability (`bootstrapWorkspace.ts` imports `vscode` at module top). Same logic, same external API.
+3. **Phase 2 .test.ts under vscode-test mocha**: canonical run deferred to operator `npm test`; spot-check via compiled out/ + ad-hoc `node --test` against the pure-TS compiled artifact returned 3/3 pass.
+4. **PUBLISH_BLOCK.md `Active: yes`**: persists across this seal. Hotfix does not affect the lifting protocol; v5.1.0 marketplace publish remains operator-attestation-gated.
+
+## Operator notice — degraded wiring
+
+`.qor/` runtime uninitialized; gate-artifact persistence, AI provenance manifest, intent-lock verify, secret scanner, procedural fidelity, doc integrity, dist recompile (qor-logic variant), post-seal verification, gate-chain completeness all no-op. This ledger entry plus `docs/SYSTEM_STATE.md` updates plus the extension build artifacts (`dist/extension/main.js` 3.8 MB) are the canonical record.
+
+**Content Hash**: `13dc640592956bdfe24c5c93d0151a2f07342886d70e430aa712e98c8bec625c` — SHA256 of seal manifest `plan=docs/plan-qor-organize-ux-hotfix.md|audit_pass=#362|implement_chain=#363|tail=#363:f657b8d5…|phases_sealed=1,2,3|defects_closed=optimistic-rename,alarming-summary,silent-organize|change_class=hotfix|publish_block_unchanged=true`
+**Previous Hash**: `f657b8d55e1276793ce85819a2655084f9b24f957b850e6ebc617e717e456c1e` (Entry #363 chain hash)
+**Chain Hash**: `d1a8b9ed5696f84a3d891a2c2a8021a6526bbd195b977127335f032c44f74ea9` — SHA256(content_hash + "|" + previous_hash)
+**Merkle Seal**: `08696d42b7d1b2826a671f7b50d35c035e22c6707c2e403e23c00536ac63c07e` — SHA256(content_hash + "|" + chain_hash + "|gate_tribunal_entry_362_PASS")
+**Session ID**: workspace-only / `2026-05-14T0500-6eaac7` (rotation NOOP)
+
+**PASS conditions confirmed**:
+- AUDIT_REPORT PASS verdict (Entry #362): ✓
+- Reality matches Promise: 9/9 planned deliverables present; 1 UNPLANNED (documented + accepted)
+- Test functionality discipline: 18/18 new tests SG-035-passing
+- Razor: all source ≤234L; all tests ≤172L; nesting ≤3
+- Version state: target hotfix; tag v4.9.9 < package.json v5.1.0; bump SKIPPED per class
+- 68/68 .cjs tests pass; tsc clean; bundle 3.8 MB current
+- Review boundary: no PUBLISH_BLOCK flip, no version bump, no tag, no push, no publish
+
+**Decision**: **SEAL — Reality matches Promise.** Three UX defects closed: Defect-1 (optimistic-button-rename misattribution via V1 Path C host-side decision); Defect-2 (alarming "Bootstrap: N step(s) deferred" wording for user-deferred case); Defect-3 (silent post-Organize UX → toast + hub.refresh + Run-button next-step). `dist/extension/main.js` is current. Operator may reload the extension to verify in vivo. **No marketplace publish, no version bump, no annotated tag emitted by this seal** — hotfix-class lands behind the v5.1.0 PUBLISH_BLOCK until operator-attestation conditions clear.
+
+_Chain Status: UX-HOTFIX PLAN SEALED at Entry #364. Operator may runtime-verify and continue the v5.1.0 publish runbook when ready. Marketplace publish remains held._
+_Next: operator reload + in-vivo verification; OR continue runbook steps 5/7/8; OR additional plan cycles (e.g., the Monitor vertical-scaling adjustment surfaced mid-substantiate — held for next cycle, not rolled into this seal)._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: organize-ux-hotfix SEALED at #364; 3-phase UX surface complete; 68/68 .cjs pass; bundle current; review boundary honored; PUBLISH_BLOCK unchanged_
+_Session: 2026-05-14-organize-ux-hotfix-substantiation-seal_
