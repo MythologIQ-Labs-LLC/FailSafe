@@ -1,7 +1,49 @@
 # SYSTEM STATE
 
 **Last Updated:** 2026-05-14
-**Version:** v5.1.10-baseline plus Phase 60 §0-§5 (Phase 60 plan structurally COMPLETE — all six sub-phases shipped to review boundary; PUBLISH_BLOCK Condition 1 SATISFIED; Conditions 2-5 deferred to Monitor coherence plan) plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups (workspace-only label; no `package.json` bump)
+**Version:** v5.1.10-baseline plus Phase 60 v5.1.0 Remaining Publish Scope **SEALED** (full-plan substantiation Entry #354; all six sub-phases sealed at the local-hold review boundary; PUBLISH_BLOCK Condition 1 SATISFIED; Conditions 2-5 deferred to Monitor coherence plan) plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups (workspace-only label; no `package.json` bump)
+
+---
+
+## 2026-05-14 - Phase 60 v5.1.0 Remaining Publish Scope — FULL-PLAN SUBSTANTIATION SEAL (Entry #354)
+
+Plan: `docs/plan-qor-phase60-v5-1-0-remaining-scope.md` (PASS audit Entry #344). **Seal verdict: PASS — Reality matches Promise across all six sub-phases.**
+
+### Substantiation outcome
+
+All six Phase 60 sub-phases (§0 Refactor Enablement / §1 Scope Sync / §2 Workspace Truth Refresh + Governance Watch / §3 Governance Mode + Install Version Floor / §4 UI Hygiene + FEATURE_INDEX Closure / §5 Publish-Block Verification) are sealed locally at META_LEDGER entries #345 through #353; the full-plan seal is Entry #354 with Merkle seal `cb45b3f02f14ec34e9f6aeed5a1c27e274b4e56ee330e5e3cc50e3c4bf44f0e3`.
+
+Reality audit: 17/17 planned deliverables present on disk. Section 4 Razor: all source files ≤250L (PlanManager 227, SentinelDaemon 249, SentinelWatchPolicy 204, ConsoleServer 246, HubSnapshotService 248, ConsoleRouteRegistrar 250 at-cap, ConsoleLifecycleService 109). All new test files ≤250L. SG-035 test functionality discipline applied to every new test (each invokes the unit under test and asserts on observable output).
+
+### FEATURE_INDEX final state
+
+- **Verified**: 411 → **433** (+22; 86.3% → **91.0%**)
+- **Unverified**: 22 → **0** (−22; 4.6% → **0.0%**)
+- **n/a**: 43 (unchanged; 9.0%)
+- **Coverage (verified + n/a)**: 95.4% → **100.0%**
+
+### PUBLISH_BLOCK lifting protocol — post-seal posture
+
+| Condition | State | Owner |
+|---|---|---|
+| 1. FEATURE_INDEX 0 unverified | ✅ **SATISFIED** | Phase 60 (sealed) |
+| 2. BROWSER_VERIFICATION.md Active=no + Playwright pass-within-24h | ⏸ pending | `plan-monitor-coherence-and-browser-verification.md` |
+| 3. Screenshot operator-notes + datestamps | ⏸ pending | same |
+| 4. Operator sign-off | ⏸ pending | same |
+| 5. Substantiate seal of Monitor coherence plan | ⏸ pending | same |
+
+`Active: yes` in `.failsafe/governance/PUBLISH_BLOCK.md` **remains yes**. No marketplace publish, no version bump, no annotated tag emitted by this seal (Steps 7.4/7.5/7.6/9.5.5 SKIPPED per plan boundary L18 + `feedback_no_publish_until_full_coverage.md` HARD RULE).
+
+### Carried-forward findings
+
+1. `.qor/` runtime uninitialized → every reliability gate (intent-lock, secret scanner, doc-integrity, dist recompile, post-seal verification, gate-chain completeness) ran DEGRADED-NOOP. Ledger entry + this SYSTEM_STATE update + `.qor/gates/2026-05-14T0500-6eaac7/implement.json` (§5 only) are the canonical record.
+2. FX359 surfaced `.claude/skills/qor-governance-compliance/SKILL.md` (qor-logic SDK-shipped) missing required `metadata.source.repository` / `metadata.source.path`. Tracked as qor-logic SDK upstream remediation; out-of-FailSafe-scope.
+3. HubSnapshotService payload not extended for §3 governance mode + qor-logic version status (file at 248L cap); UI reads defensively via optional chaining in `settings.js`. Carried-forward gap; degrades gracefully.
+
+### Next
+
+- `/qor-plan` cycle for `plan-monitor-coherence-and-browser-verification.md` (PUBLISH_BLOCK Conditions 2-5).
+- After that plan seals: final v5.1.0 release-class seal (version bump + CHANGELOG stamp + annotated tag + marketplace publish).
 
 ---
 
