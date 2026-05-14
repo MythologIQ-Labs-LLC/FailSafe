@@ -1,6 +1,7 @@
 import { SentinelMonitor } from './modules/sentinel-monitor.js';
 import { getPhaseInfo, getFeatureSummary, renderPhase } from './modules/monitor-render.js';
 import { MonitorStaleness } from './modules/monitor-staleness.js';
+import { installMonitorViewportFit, fitMonitorToViewport } from './modules/monitor-viewport-fit.js';
 
 export class WebPanelClient {
   constructor() {
@@ -420,5 +421,17 @@ if (typeof document !== 'undefined') {
 
     // Set up metric click handlers for explanations
     client.setupMetricClickHandlers();
+
+    // Compact-sidebar vertical fit: scale .stack so all contents fit
+    // the viewport without an outer scroll. Re-fits on resize + hub
+    // refreshes (queue size etc. change card heights).
+    installMonitorViewportFit();
   });
+}
+
+// Trigger a viewport re-fit whenever WebPanelClient receives a hub payload
+// — exposed for external callers (e.g., other UI modules that mutate
+// .stack content imperatively).
+if (typeof window !== 'undefined') {
+  /** @type {any} */ (window).__failsafeRefitMonitor = fitMonitorToViewport;
 }

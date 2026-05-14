@@ -48,17 +48,19 @@ body {
   min-height: 0;
 }
 
-/* Cards shrink proportionally to fit the viewport; inner content clips
-   rather than producing an outer page scroll. Hotfix per operator
-   request 2026-05-14: "scale the monitor to the vertical axis so
-   there's no scrolling". */
+/* Compact-sidebar vertical fit: outer scroll is locked by html/body
+   above; .stack itself is `zoom`-scaled by monitor-viewport-fit.js so
+   ALL inner contents shrink proportionally. Operator request
+   2026-05-14: "all of the contents of the monitor need to scale as
+   well to match". Cards no longer clip — scaling produces fit. */
 .stack > .card,
 .stack > .brand,
 .stack > .legal {
-  flex-shrink: 1;
-  min-height: 0;
+  flex-shrink: 0;
 }
-.stack > .card {
+/* zoom rounding can produce a 1px overflow on .stack's container; clip
+   the shell so that's never visible as a scroll seam. */
+.shell {
   overflow: hidden;
 }
 
