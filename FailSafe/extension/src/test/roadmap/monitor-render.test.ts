@@ -99,6 +99,40 @@ suite("monitor-render — getFeatureSummary", () => {
     const r = getFeatureSummary([], [], [], [], null, []);
     assert.equal(r.line, 'None yet');
   });
+
+  test("malformed recentCompletions ({type:undefined, phase:undefined}) → fallback to 'None yet'; no 'undefined' substring leak", () => {
+    const r = getFeatureSummary(
+      [], [], [], [], null,
+      [{ type: undefined, phase: undefined } as any],
+    );
+    assert.equal(r.line.includes('undefined'), false, `leaked: ${r.line}`);
+    assert.equal(r.line, 'None yet');
+  });
+
+  test("partial recentCompletion ({type:undefined, phase:'IMPLEMENT'}) → phase only, no 'undefined' leak", () => {
+    const r = getFeatureSummary(
+      [], [], [], [], null,
+      [{ type: undefined, phase: 'IMPLEMENT' } as any],
+    );
+    assert.equal(r.line.includes('undefined'), false, `leaked: ${r.line}`);
+    assert.equal(r.line, 'IMPLEMENT');
+  });
+
+  test("governance recentCompletions with all-undefined entry → 'None recorded' (filtered to empty); no leak", () => {
+    const r = getFeatureSummary([], [], [], [], {
+      recentCompletions: [{ phase: undefined, plan: undefined, entry: undefined } as any],
+    }, []);
+    assert.equal(r.line.includes('undefined'), false, `leaked: ${r.line}`);
+    assert.equal(r.line, 'None recorded');
+  });
+
+  test("governance partial entry ({phase: 'AUDIT'} only) → renders phase only, no Entry #undefined", () => {
+    const r = getFeatureSummary([], [], [], [], {
+      recentCompletions: [{ phase: 'AUDIT' } as any],
+    }, []);
+    assert.equal(r.line.includes('undefined'), false, `leaked: ${r.line}`);
+    assert.equal(r.line, 'AUDIT');
+  });
 });
 
 suite("monitor-render — renderPhase", () => {

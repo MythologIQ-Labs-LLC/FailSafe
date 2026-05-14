@@ -221,14 +221,36 @@ export async function runOrganize(
   const { executed, skipped } = await executeProposals(selected);
   const report: OrganizeReport = { archetype, proposals, executed, skipped };
   summarize(output, report);
+  emitOutcomeToast(report, selected.length, callbacks);
+  const next = computeNextStep(report);
+  if (next) callbacks.onNextStep?.(next);
+  return report;
+}
+
+// Every Organize invocation surfaces an operator-visible toast so the button
+// never feels silent. Five outcome classes mapped 1:1 with toast wording.
+function emitOutcomeToast(
+  report: OrganizeReport,
+  selectedCount: number,
+  callbacks: OrganizeCallbacks,
+): void {
+  const { proposals, executed, skipped } = report;
+  if (proposals.length === 0) {
+    callbacks.onToast?.("Organize: workspace already tidy — no changes needed");
+    return;
+  }
+  if (selectedCount === 0) {
+    callbacks.onToast?.("Organize: no changes selected");
+    return;
+  }
   if (executed.length > 0) {
     const toast = skipped.length === 0
       ? `Organize: applied ${executed.length} change(s)`
       : `Organize: applied ${executed.length}, ${skipped.length} skipped`;
     callbacks.onToast?.(toast);
     callbacks.onHubRefresh?.("workspace-organized");
+    return;
   }
-  const next = computeNextStep(report);
-  if (next) callbacks.onNextStep?.(next);
-  return report;
+  // executed === 0 but selectedCount > 0 means every selected action threw.
+  callbacks.onToast?.(`Organize: ${skipped.length} change(s) failed to apply — see Output`);
 }

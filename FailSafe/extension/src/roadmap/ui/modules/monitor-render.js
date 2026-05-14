@@ -60,15 +60,32 @@ export function getFeatureSummary(phases, milestones, blockers, risks, governanc
 
 function summaryFromGovernance(gov, phases, milestones, blockers, risks) {
   const recently = gov.recentCompletions
-    .slice(0, 3)
-    .map((c) => c.plan ? `${c.phase}: ${c.plan}` : `${c.phase}: Entry #${c.entry}`);
+    .map((c) => formatGovernanceCompletion(c))
+    .filter(Boolean)
+    .slice(0, 3);
   return {
-    line: recently.join('\n'),
+    line: recently.length > 0 ? recently.join('\n') : 'None recorded',
     critical: countCritical(blockers, risks)
       + (gov.activeAlerts?.filter((a) => a.type === 'VETO' || a.type === 'BLOCK').length || 0),
     backlog: phases.filter((phase) => phase.status === 'pending').length,
     wishlist: milestones.filter((m) => !m.completedAt && !m.targetDate).length,
   };
+}
+
+// Render a governance-recentCompletion entry without emitting "undefined: ..."
+// strings. Returns null when neither phase nor plan/entry is meaningful so the
+// caller can filter the entry out entirely.
+function formatGovernanceCompletion(c) {
+  if (!c) return null;
+  const phase = c.phase ? String(c.phase) : '';
+  const plan = c.plan ? String(c.plan) : '';
+  const entry = (c.entry !== undefined && c.entry !== null) ? String(c.entry) : '';
+  if (phase && plan) return `${phase}: ${plan}`;
+  if (phase && entry) return `${phase}: Entry #${entry}`;
+  if (plan) return plan;
+  if (phase) return phase;
+  if (entry) return `Entry #${entry}`;
+  return null;
 }
 
 function summaryFromPlanData(phases, milestones, blockers, risks, recentCompletions) {
@@ -81,7 +98,10 @@ function summaryFromPlanData(phases, milestones, blockers, risks, recentCompleti
     : completedPhases.slice(-3).reverse().map((phase) => phase.title);
 
   if (recently.length === 0) {
-    recently = (recentCompletions || []).slice(0, 3).map((c) => `${c.type}: ${c.phase}`);
+    recently = (recentCompletions || [])
+      .map((c) => formatPlanDataCompletion(c))
+      .filter(Boolean)
+      .slice(0, 3);
   }
 
   return {
@@ -90,6 +110,18 @@ function summaryFromPlanData(phases, milestones, blockers, risks, recentCompleti
     backlog: phases.filter((phase) => phase.status === 'pending').length,
     wishlist: milestones.filter((m) => !m.completedAt && !m.targetDate).length,
   };
+}
+
+// Render a plan-data recentCompletion entry without emitting "undefined:
+// undefined". Returns null when neither type nor phase is meaningful.
+function formatPlanDataCompletion(c) {
+  if (!c) return null;
+  const type = c.type ? String(c.type) : '';
+  const phase = c.phase ? String(c.phase) : '';
+  if (type && phase) return `${type}: ${phase}`;
+  if (phase) return phase;
+  if (type) return type;
+  return null;
 }
 
 function countCritical(blockers, risks) {

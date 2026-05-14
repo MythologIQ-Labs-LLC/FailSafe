@@ -95,7 +95,7 @@ describe('runOrganize callbacks', () => {
     assert.equal(calls.next[0].command, 'failsafe.bootstrap');
   });
 
-  it('user dismisses QuickPick (returns undefined) → zero callbacks fired', async () => {
+  it('user dismisses QuickPick (proposals exist, none selected) → "no changes selected" toast, no hub refresh', async () => {
     stubPickResult = undefined;
     const calls = { toast: [], hub: [], next: [] };
     await runOrganize(tmp, makeMockChannel(), {
@@ -103,12 +103,39 @@ describe('runOrganize callbacks', () => {
       onHubRefresh: (r) => calls.hub.push(r),
       onNextStep: (n) => calls.next.push(n),
     });
-    assert.equal(calls.toast.length, 0);
+    // governanceDirProposals fires on an empty tmp → proposals.length > 0.
+    // User dismissed → selected.length === 0 → "no changes selected" toast.
+    assert.equal(calls.toast.length, 1);
+    assert.match(calls.toast[0], /no changes selected/);
     assert.equal(calls.hub.length, 0);
     assert.equal(calls.next.length, 0);
   });
 
-  it('action throws → onToast reflects applied 0 skipped 1; onHubRefresh NOT called', async () => {
+  it('proposals empty (workspace already tidy) → "workspace already tidy" toast, no hub refresh', async () => {
+    // Satisfy every buildProposals contributor so the array is empty:
+    //  - governanceDirProposals: .failsafe/governance/plans must exist
+    //  - conventionProposals: .editorconfig must exist (no root .md files to trigger docs/)
+    //  - privacyProposals: .gitignore must contain `.failsafe/` pattern
+    //  - debrisProposals: empty tmp has no root debris
+    const localFs = require('fs');
+    const localPath = require('path');
+    localFs.mkdirSync(localPath.join(tmp, '.failsafe', 'governance', 'plans'), { recursive: true });
+    localFs.writeFileSync(localPath.join(tmp, '.editorconfig'), 'root = true\n');
+    localFs.writeFileSync(localPath.join(tmp, '.gitignore'), '.failsafe/\n');
+    stubPickResult = undefined;
+    const calls = { toast: [], hub: [], next: [] };
+    await runOrganize(tmp, makeMockChannel(), {
+      onToast: (m) => calls.toast.push(m),
+      onHubRefresh: (r) => calls.hub.push(r),
+      onNextStep: (n) => calls.next.push(n),
+    });
+    assert.equal(calls.toast.length, 1, `unexpected toasts: ${calls.toast.join(' | ')}`);
+    assert.match(calls.toast[0], /workspace already tidy/);
+    assert.equal(calls.hub.length, 0);
+    assert.equal(calls.next.length, 0);
+  });
+
+  it('action throws → onToast reflects failure; onHubRefresh NOT called', async () => {
     stubPickResult = [{
       label: 'Boom',
       proposal: {
@@ -125,8 +152,8 @@ describe('runOrganize callbacks', () => {
       onHubRefresh: (r) => calls.hub.push(r),
       onNextStep: (n) => calls.next.push(n),
     });
-    // executed.length === 0 → no toast or hub broadcast
-    assert.equal(calls.toast.length, 0);
+    assert.equal(calls.toast.length, 1);
+    assert.match(calls.toast[0], /failed to apply/);
     assert.equal(calls.hub.length, 0);
     assert.equal(calls.next.length, 0);
   });
