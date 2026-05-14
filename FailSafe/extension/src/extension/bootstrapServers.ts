@@ -111,6 +111,22 @@ export async function bootstrapServers(
   await consoleServer.start();
   context.subscriptions.push({ dispose: () => consoleServer?.stop() });
 
+  // Phase 3 V3 Path A: register qorlogic routes after server start.
+  const { registerQorlogicRoutes } = await import("../roadmap/routes/QorlogicRoute");
+  const { enumerateSkillsForHost } = await import("../qorlogic/skillEnumeration");
+  const { previewInstall } = await import("../qorlogic/installDryRun");
+  const runCli = async (_ing: unknown, extra: ReadonlyArray<string>) => {
+    const py = await interpreterResolver.resolve();
+    if (!py.ok) return { stdout: "", stderr: "no-python-found", code: -1 };
+    const r = await defaultInstallerRun(py.command, [...py.args, "-m", "qor.cli", ...extra], { timeoutMs: 180_000, cwd: deps.workspaceRoot, env: { QORLOGIC_PROJECT_DIR: deps.workspaceRoot } });
+    return { stdout: r.stdout, stderr: r.stderr, code: r.code };
+  };
+  const skillEnumDeps = { runQorlogicCommand: runCli, warn: (m: string) => outputChannel.appendLine(`[skill-enum] ${m}`) };
+  registerQorlogicRoutes(consoleServer.getExpressApp(), {
+    enumerateSkillsForHost: (host, scope) => enumerateSkillsForHost(skillIngestor, host, scope, skillEnumDeps),
+    previewInstall: (host, scope, filter) => previewInstall(skillIngestor, host, scope, filter),
+  });
+
   // Invalidate the resolver's cache when the user changes the Python override.
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {

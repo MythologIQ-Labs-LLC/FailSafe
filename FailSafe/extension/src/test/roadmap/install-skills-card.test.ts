@@ -164,7 +164,7 @@ suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
     assert.match(html, /&lt;script&gt;/);
   });
 
-  test('FX234/FX237 bindInstallSkillsCard — Install button POSTs /api/actions/scaffold-skills', async () => {
+  test('FX234/FX237 bindInstallSkillsCard — Install button opens modal; confirm POSTs /api/actions/scaffold-skills', async () => {
     const f = installFetch(() => ({ ok: true, body: { ok: true, totalInstalled: 17 } }));
     try {
       const html = renderInstallSkillsCard({ running: false, invocations: [], lastReport: null });
@@ -178,7 +178,9 @@ suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
       });
       const installBtn = root.querySelector('[data-action="install-qorlogic-skills"]') as HTMLElement;
       installBtn.click();
-      // wait microtasks
+      const confirmBtn = root.querySelector('.cc-modal-confirm') as HTMLElement;
+      assert.ok(confirmBtn, 'modal confirm button must exist');
+      confirmBtn.click();
       await new Promise((r) => setTimeout(r, 50));
       assert.equal(started, 1);
       assert.equal(f.calls[0].url, '/api/actions/scaffold-skills');
@@ -187,7 +189,11 @@ suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
     } finally { f.restore(); }
   });
 
-  test('FX234 bindInstallSkillsCard — Install on error response shows red status', async () => {
+  test('FX234 bindInstallSkillsCard — Install on error response renders cc-modal-error with message', async () => {
+    // Post-V2 split: error state lives in install-skills-modal.js as
+    // .cc-modal-error block (state.terminal === 'error', state.err.error).
+    // The pre-split assertion against .cc-modal-progress-msg is no longer
+    // valid — that selector doesn't exist in the new modal markup.
     const f = installFetch(() => ({ ok: false, body: { ok: false, error: 'pip exit 1' } }));
     try {
       const html = renderInstallSkillsCard({ running: false, invocations: [], lastReport: null });
@@ -196,13 +202,19 @@ suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
       bindInstallSkillsCard(root, {});
       const installBtn = root.querySelector('[data-action="install-qorlogic-skills"]') as HTMLElement;
       installBtn.click();
+      const confirmBtn = root.querySelector('.cc-modal-confirm') as HTMLElement;
+      confirmBtn.click();
       await new Promise((r) => setTimeout(r, 50));
-      const status = root.querySelector('#cc-qorlogic-status');
-      assert.match(status?.innerHTML || '', /pip exit 1/);
+      const errorBlock = root.querySelector('.cc-modal-error');
+      assert.ok(errorBlock, '.cc-modal-error should be rendered on error response');
+      assert.match(errorBlock?.innerHTML || '', /pip exit 1/);
     } finally { f.restore(); }
   });
 
-  test('FX234 bindInstallSkillsCard — fetch throw fires onError + shows network error', async () => {
+  test('FX234 bindInstallSkillsCard — fetch throw fires onError + surfaces error block in modal', async () => {
+    // Post-V2 split: network errors flow through the same error reducer +
+    // .cc-modal-error block. Generic "Network error" copy no longer used;
+    // the error string is the thrown Error.message.
     const original = (globalThis as { fetch?: unknown }).fetch;
     (globalThis as { fetch: unknown }).fetch = async () => { throw new Error('offline'); };
     try {
@@ -213,10 +225,13 @@ suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
       bindInstallSkillsCard(root, { onError: (e: Error) => { errorCaught = e; } });
       const installBtn = root.querySelector('[data-action="install-qorlogic-skills"]') as HTMLElement;
       installBtn.click();
+      const confirmBtn = root.querySelector('.cc-modal-confirm') as HTMLElement;
+      confirmBtn.click();
       await new Promise((r) => setTimeout(r, 50));
       assert.ok(errorCaught);
-      const status = root.querySelector('#cc-qorlogic-status');
-      assert.match(status?.innerHTML || '', /Network error/);
+      const errorBlock = root.querySelector('.cc-modal-error');
+      assert.ok(errorBlock, '.cc-modal-error should be rendered on fetch throw');
+      assert.match(errorBlock?.innerHTML || '', /offline/);
     } finally { (globalThis as { fetch?: unknown }).fetch = original; }
   });
 

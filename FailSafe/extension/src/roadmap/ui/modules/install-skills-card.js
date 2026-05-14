@@ -1,12 +1,8 @@
-// FailSafe Command Center — QorLogic Install Skills Card
-// Renders the Settings card that triggers `pip install qor-logic` +
-// `qorlogic install` flow. Subscribes to broadcast progress events
-// (`skills.install.progress`, `skills.install.complete`, `hub.refresh`)
-// so the UI reflects live install state without polling.
-//
-// Plan A Phase 3 / issue #48: button disables during run; final report
-// shown inline (interpreter, exact pip command, per-host destinations,
-// counts); failed step + error stays visible until next run.
+// FailSafe Command Center — QorLogic Install Skills Card.
+// Detected-hosts grid (like detected agents) + modal launcher.
+// Modal lifecycle moved to install-skills-modal.js per Phase 1 V2 Path A split.
+
+import { renderInstallModal, bindModalEvents, showInstallModal } from './install-skills-modal.js';
 
 function esc(value) {
   if (value === null || value === undefined) return '';
@@ -15,24 +11,38 @@ function esc(value) {
   return d.innerHTML;
 }
 
-export function renderInstallSkillsCard(state) {
+const HOST_META = {
+  claude:    { label: 'Claude',     icon: 'C' },
+  codex:     { label: 'Codex',      icon: 'X' },
+  'kilo-code': { label: 'Kilo',     icon: 'K' },
+  gemini:    { label: 'Gemini',     icon: 'G' },
+};
+
+export function renderInstallSkillsCard(state, hubData) {
   const running = state?.running === true;
   const invocations = Array.isArray(state?.invocations) ? state.invocations : [];
   const report = state?.lastReport ?? null;
   const showOutputBtn = report || invocations.length > 0;
+  const hosts = hubData?.bootstrapState?.qorLogicInstall?.hosts || [];
+  const anyInstalled = hubData?.bootstrapState?.qorLogicInstall?.anyInstalled || false;
+
   return `
     <div class="cc-card" id="cc-qorlogic" style="margin-top:16px">
-      <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;
-        letter-spacing:0.08em;margin-bottom:8px">QorLogic Skills</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;
+          letter-spacing:0.08em">QorLogic Skills</div>
+        ${anyInstalled ? '<span class="cc-badge" style="background:var(--accent-green);color:#fff">Active</span>' : ''}
+      </div>
       <p style="font-size:0.85rem;color:var(--text-muted);margin:0 0 12px">
         Install or refresh governance skills from the
         <code style="padding:1px 4px;background:var(--bg-dark);border-radius:3px">qor-logic</code>
-        PyPI package. Idempotent — safe to run multiple times.
+        PyPI package into detected agent hosts. Idempotent — safe to run multiple times.
       </p>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${renderHostGrid(hosts, running)}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
         <button class="cc-btn cc-btn--primary" data-action="install-qorlogic-skills"
           ${running ? 'disabled' : ''}
-          style="font-size:0.8rem;padding:6px 14px">${running ? 'Installing…' : 'Install / Refresh QorLogic Skills'}</button>
+          style="font-size:0.8rem;padding:6px 14px">${running ? 'Installing...' : 'Install / Refresh Skills'}</button>
         <button class="cc-btn" data-action="bootstrap-workspace"
           ${running ? 'disabled' : ''}
           style="font-size:0.8rem;padding:6px 14px">Bootstrap Workspace</button>
@@ -43,7 +53,40 @@ export function renderInstallSkillsCard(state) {
         ${renderInvocations(invocations)}
         ${report && !running ? renderReportSummary(report) : ''}
       </div>
+    </div>
+    ${renderInstallModal(hosts, running)}`;
+}
+
+function renderHostGrid(hosts, running) {
+  if (!hosts.length) {
+    return `<div style="font-size:0.8rem;color:var(--text-muted);padding:8px 0">
+      No agent hosts detected yet. Skills will be installed once hosts are available.
     </div>`;
+  }
+  const rows = hosts.map(h => {
+    const meta = HOST_META[h.host] || { label: h.host, icon: '?' };
+    const dotColor = h.installed ? 'var(--accent-green)' : 'var(--text-muted)';
+    const statusText = h.installed ? `${h.fileCount} file${h.fileCount === 1 ? '' : 's'}` : 'Not installed';
+    const mtime = h.recordMtime ? new Date(h.recordMtime).toLocaleDateString() : '';
+    return `
+      <div style="display:flex;align-items:center;justify-content:space-between;
+        padding:8px 10px;background:rgba(0,0,0,0.2);border-radius:6px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:8px;height:8px;border-radius:50%;background:${dotColor}"></div>
+          <div style="width:24px;height:24px;border-radius:4px;background:rgba(255,255,255,0.08);
+            display:flex;align-items:center;justify-content:center;font-size:0.7rem;
+            font-weight:700;color:var(--text-main)">${meta.icon}</div>
+          <div>
+            <div style="font-size:0.85rem;color:var(--text-main)">${esc(meta.label)}</div>
+            <div style="font-size:0.7rem;color:var(--text-muted)">${statusText}</div>
+          </div>
+        </div>
+        <div style="font-size:0.7rem;color:${h.installed ? 'var(--accent-green)' : 'var(--text-muted)'}">
+          ${mtime ? `Updated ${mtime}` : ''}
+        </div>
+      </div>`;
+  }).join('');
+  return `<div style="display:grid;gap:6px">${rows}</div>`;
 }
 
 function renderInvocations(invocations) {
@@ -107,29 +150,16 @@ export function bindInstallSkillsCard(container, options = {}) {
   const bootstrapBtn = container.querySelector('[data-action="bootstrap-workspace"]');
   const setStatus = (msg, color) => {
     const status = container.querySelector('#cc-qorlogic-status');
-    if (status) {
-      status.innerHTML = '';
-      const div = document.createElement('div');
-      div.textContent = msg;
-      div.style.color = color || 'var(--text-muted)';
-      status.appendChild(div);
-    }
+    if (!status) return;
+    status.innerHTML = '';
+    const div = document.createElement('div');
+    div.textContent = msg;
+    div.style.color = color || 'var(--text-muted)';
+    status.appendChild(div);
   };
-  installBtn?.addEventListener('click', async () => {
-    options.onStart?.();
-    setStatus('Starting QorLogic install…');
-    try {
-      const res = await fetch('/api/actions/scaffold-skills', { method: 'POST' });
-      const body = await res.json();
-      if (!res.ok || body.ok === false) {
-        setStatus(`Install failed: ${body.error || res.statusText}`, 'var(--accent-red,#ef4444)');
-      }
-      options.onFinishFetch?.(body);
-    } catch (err) {
-      setStatus(`Network error: ${err}`, 'var(--accent-red,#ef4444)');
-      options.onError?.(err);
-    }
-  });
+
+  installBtn?.addEventListener('click', () => { showInstallModal(container); });
+
   bootstrapBtn?.addEventListener('click', () => {
     setStatus('Triggering Bootstrap… (run "FailSafe: Bootstrap Workspace" from the Command Palette if this does not respond)');
     try {
@@ -139,14 +169,11 @@ export function bindInstallSkillsCard(container, options = {}) {
       setStatus('Run "FailSafe: Bootstrap Workspace" from the Command Palette.', 'var(--accent-gold)');
     }
   });
-  // Round 2 / Issue #49: Show Output button posts to the new
-  // POST /api/actions/show-output route which calls outputChannel.show(true).
+
   const showOutputBtn = container.querySelector('[data-action="show-output"]');
   showOutputBtn?.addEventListener('click', async () => {
-    try {
-      await fetch('/api/actions/show-output', { method: 'POST' });
-    } catch {
-      // Best-effort; the OutputChannel reveal is a UX nicety, not a critical path.
-    }
+    try { await fetch('/api/actions/show-output', { method: 'POST' }); } catch {}
   });
+
+  bindModalEvents(container, options, setStatus);
 }

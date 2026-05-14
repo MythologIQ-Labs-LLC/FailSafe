@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-05-14 — LiveProgressInvariant doctrine landed (Phase 5, plan-qor-install-skills-ux-expansion)
+
+New workspace-local doctrine governing UI progress elements:
+
+- **Doctrine**: `qor/references/doctrine-ghost-ui-live-progress.md` (forward-only;
+  effective from META_LEDGER Entry #369 PASS audit).
+- **Lint helper**: `FailSafe/extension/scripts/lib/ghost-ui-live-progress-lint.cjs`
+  exports `analyzeProgressElements(htmlSource)` returning one entry per detected
+  progress context with `livenessRule: 'OK' | 'STATIC' | 'FAKE_JUMP'`. CLI
+  invocation supports `--html <path>`; exits 1 on FAKE_JUMP.
+- **Tests**: `FailSafe/extension/src/test/scripts/ghostUiLiveProgressLint.test.cjs`
+  (node:test, 4/4 pass — FAKE_JUMP / OK / STATIC / MALFORMED fixtures).
+- **Upstream traceability**: Qor-logic#58 holds the canonical
+  `.claude/skills/qor-audit/SKILL.md` amendment; the workspace doctrine is
+  superseded once that SDK-level rule ships.
+- **New term**: `LiveProgressInvariant` — homed at the new doctrine file.
+
+---
+
 ## 2026-05-14 - organize-ux-hotfix — SUBSTANTIATION SEAL (Entry #364)
 
 Plan: `docs/plan-qor-organize-ux-hotfix.md` (PASS audit Entry #362 after single-iteration V1 amendment cycle; implement at Entry #363). **Seal verdict: PASS — Reality matches Promise across all three UX-defect phases.**

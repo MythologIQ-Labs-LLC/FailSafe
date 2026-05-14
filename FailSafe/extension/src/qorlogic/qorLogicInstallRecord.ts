@@ -2,9 +2,11 @@ import * as fs from "fs";
 import * as path from "path";
 import {
   HOST_INSTALL_LAYOUTS,
-  QOR_LOGIC_HOSTS,
+  getQorLogicHosts,
+  type HostInstallLayout,
   type QorLogicHost,
 } from "./hostLayouts";
+import { loadHostRegistry } from "./hostRegistry";
 
 // `qorlogic install --host <H>` writes `<base>/.qorlogic-installed.json`
 // containing `{ "files": [{ "path": "...", "sha256": "..." }] }`.
@@ -21,7 +23,10 @@ export interface QorLogicInstallRecord {
 }
 
 export interface HostInstallStatus {
-  host: QorLogicHost;
+  // Widened from QorLogicHost to string to accommodate operator-defined hosts
+  // registered via .failsafe/governance/host-registry.json. Canonical 4-host
+  // callers keep their narrower type via inline assertions.
+  host: string;
   installed: boolean;
   recordPath: string;
   fileCount: number;
@@ -36,8 +41,16 @@ export interface QorLogicInstallStatus {
   destinations: string[];
 }
 
-export function readInstallRecord(workspaceRoot: string, host: QorLogicHost): QorLogicInstallRecord | null {
-  const layout = HOST_INSTALL_LAYOUTS[host];
+function resolveLayout(workspaceRoot: string, host: string): HostInstallLayout | null {
+  const builtIn = HOST_INSTALL_LAYOUTS[host as QorLogicHost];
+  if (builtIn) return builtIn;
+  const registry = loadHostRegistry(workspaceRoot);
+  return registry.layouts[host] || null;
+}
+
+export function readInstallRecord(workspaceRoot: string, host: string): QorLogicInstallRecord | null {
+  const layout = resolveLayout(workspaceRoot, host);
+  if (!layout) return null;
   const fullPath = path.join(workspaceRoot, layout.recordPath);
   if (!fs.existsSync(fullPath)) return null;
   try {
@@ -49,13 +62,16 @@ export function readInstallRecord(workspaceRoot: string, host: QorLogicHost): Qo
   }
 }
 
-export function getHostInstallStatus(workspaceRoot: string, host: QorLogicHost): HostInstallStatus {
-  const layout = HOST_INSTALL_LAYOUTS[host];
+function emptyStatus(host: string, recordPath: string): HostInstallStatus {
+  return { host, installed: false, recordPath, fileCount: 0, destinations: [], recordMtime: null };
+}
+
+export function getHostInstallStatus(workspaceRoot: string, host: string): HostInstallStatus {
+  const layout = resolveLayout(workspaceRoot, host);
+  if (!layout) return emptyStatus(host, "");
   const recordPath = path.join(workspaceRoot, layout.recordPath);
   const record = readInstallRecord(workspaceRoot, host);
-  if (!record) {
-    return { host, installed: false, recordPath, fileCount: 0, destinations: [], recordMtime: null };
-  }
+  if (!record) return emptyStatus(host, recordPath);
   return {
     host,
     installed: true,
@@ -67,7 +83,7 @@ export function getHostInstallStatus(workspaceRoot: string, host: QorLogicHost):
 }
 
 export function getQorLogicInstallStatus(workspaceRoot: string): QorLogicInstallStatus {
-  const hosts = QOR_LOGIC_HOSTS.map((h) => getHostInstallStatus(workspaceRoot, h));
+  const hosts = getQorLogicHosts(workspaceRoot).map((h) => getHostInstallStatus(workspaceRoot, h));
   const installed = hosts.filter((h) => h.installed);
   return {
     anyInstalled: installed.length > 0,

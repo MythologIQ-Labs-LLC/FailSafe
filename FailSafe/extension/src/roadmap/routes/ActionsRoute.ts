@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import type { QorLogicHost } from "../../qorlogic/hostLayouts";
 import type { ApiRouteDeps } from "./types";
 
 /**
@@ -79,17 +80,17 @@ export function setupActionsRoutes(
   );
 
   // Scaffold governance skills into workspace
-  app.post("/api/actions/scaffold-skills", async (_req: Request, res: Response) => {
-    if (!deps.scaffoldSkills) {
+  app.post("/api/actions/scaffold-skills", async (req: Request, res: Response) => {
+    if (!deps.scaffoldSkills && !deps.scaffoldWithWebOptions) {
       res.status(501).json({ error: "Scaffold not available" });
       return;
     }
     try {
-      const report = await deps.scaffoldSkills();
-      if (report === null) {
-        res.json({ ok: true, cancelled: true });
-        return;
-      }
+      const bodyHosts = Array.isArray(req.body?.hosts) ? req.body.hosts : [];
+      const bodyScope = req.body?.scope === "global" ? "global" as const : "repo" as const;
+      const skillFilter = isSkillFilterMap(req.body?.skillFilter) ? req.body.skillFilter : undefined;
+      const report = await runScaffold(deps, bodyHosts as QorLogicHost[], bodyScope, skillFilter, res);
+      if (!report) return;
       res.json({ ok: report.ok, report });
     } catch (e) {
       res.status(500).json({ ok: false, error: String(e) });
@@ -137,6 +138,33 @@ export function setupActionsRoutes(
 /* ------------------------------------------------------------------ */
 /*  Internal helpers                                                   */
 /* ------------------------------------------------------------------ */
+
+function isSkillFilterMap(raw: unknown): raw is Record<string, string[]> {
+  if (!raw || typeof raw !== "object") return false;
+  for (const v of Object.values(raw as Record<string, unknown>)) {
+    if (!Array.isArray(v) || v.some((s) => typeof s !== "string")) return false;
+  }
+  return true;
+}
+
+async function runScaffold(
+  deps: ApiRouteDeps,
+  hosts: QorLogicHost[],
+  scope: "repo" | "global",
+  skillFilter: Record<string, string[]> | undefined,
+  res: Response,
+): Promise<import("../../extension/installSkillsReport").QorLogicInstallReport | null> {
+  if (hosts.length > 0 && deps.scaffoldWithWebOptions) {
+    return deps.scaffoldWithWebOptions(hosts, scope, skillFilter);
+  }
+  if (deps.scaffoldSkills) {
+    const report = await deps.scaffoldSkills();
+    if (report === null) { res.json({ ok: true, cancelled: true }); return null; }
+    return report;
+  }
+  res.status(501).json({ error: "Scaffold not available" });
+  return null;
+}
 
 async function processL3Queue(
   queue: any[],

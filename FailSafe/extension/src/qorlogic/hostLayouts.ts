@@ -68,3 +68,20 @@ export const QOR_LOGIC_HOSTS: QorLogicHost[] = ["claude", "codex", "kilo-code", 
  * and asserted via `QorLogicPackageInstaller.verifyInstalledVersion()`.
  */
 export const MIN_QOR_LOGIC_VERSION = "0.31.1";
+
+// --- Dynamic host registry accessor (Phase 2 expansion) -------------------
+// `getQorLogicHosts(workspaceRoot)` returns the merged host list (built-in +
+// operator overlay from `.failsafe/governance/host-registry.json`). Existing
+// consumers using `QOR_LOGIC_HOSTS` keep working; new callers that need to
+// honor operator-defined hosts (e.g., `windsurf`) should use this accessor.
+
+// Note: import is placed at the bottom intentionally — `hostRegistry.ts`
+// imports from this module, and we want to avoid a circular eager-binding
+// hazard at module-init time. Both bindings are values used only at call
+// time, so TS handles the cycle without runtime issue.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+import { loadHostRegistry } from "./hostRegistry";
+
+export function getQorLogicHosts(workspaceRoot: string): string[] {
+  return loadHostRegistry(workspaceRoot).hosts;
+}

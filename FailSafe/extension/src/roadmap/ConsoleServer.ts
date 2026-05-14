@@ -150,6 +150,8 @@ export class ConsoleServer {
     this.scaffoldWebCallback = cb;
   }
   setOutputChannel(channel: { show(preserveFocus?: boolean): void }): void { this.outputChannel = channel; }
+  /** Expose Express app for post-start route registration (Phase 3 V3 Path A). */
+  getExpressApp(): express.Application { return this.app; }
   setAgentTimelineService(s: AgentTimelineService): void { this.agentTimelineService = s; }
   setAgentHealthIndicator(i: AgentHealthIndicator): void { this.agentHealthIndicator = i; }
   setAgentRunRecorder(r: AgentRunRecorder): void { this.agentRunRecorder = r; }

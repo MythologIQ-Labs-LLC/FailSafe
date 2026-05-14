@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://mythologiq.studio/schemas/failsafe/host-registry-v1.json",
+  "title": "FailSafe Host Registry Overlay",
+  "description": "Operator-configurable registry of qor-logic install hosts. Merges with the built-in HOST_INSTALL_LAYOUTS in FailSafe/extension/src/qorlogic/hostLayouts.ts.",
+  "type": "object",
+  "properties": {
+    "$schema": { "type": "string" },
+    "hosts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["base", "recordPath", "installMap", "discoveryRoots"],
+        "properties": {
+          "base": {
+            "type": "string",
+            "pattern": "^\\.[A-Za-z0-9_-]+$",
+            "description": "Dot-prefixed directory name under workspace root (e.g. '.windsurf')."
+          },
+          "recordPath": {
+            "type": "string",
+            "description": "Relative path to the canonical install record file (typically '<base>/.qorlogic-installed.json')."
+          },
+          "installMap": {
+            "type": "object",
+            "additionalProperties": { "type": "string" },
+            "description": "Map of manifest-source-prefix to workspace-relative destination directory."
+          },
+          "discoveryRoots": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Directories scanned by Skill Discovery for this host."
+          }
+        }
+      }
+    }
+  }
+}

@@ -10,7 +10,7 @@ import {
 } from './installSkillsReport';
 import { resolveInstallSkillsOptions, type InstallSkillsOptions } from './installSkillsOptions';
 
-export type InstallMode = 'prompt' | 'defaults';
+export type InstallMode = 'prompt' | 'defaults' | 'web';
 
 export const DEFAULT_HOSTS: QorLogicHost[] = ['claude', 'codex'];
 export const DEFAULT_OPTIONS: InstallSkillsOptions = { hosts: DEFAULT_HOSTS, scope: 'repo' };
@@ -58,10 +58,11 @@ export async function runHostInstallStep(
   host: QorLogicHost,
   scope: QorLogicScope,
   onProgress?: (i: QorLogicInstallInvocation) => void,
+  skillFilter?: ReadonlyArray<string>,
 ): Promise<QorLogicInstallInvocation> {
   emit({ phase: 'qorlogic-install', status: 'running', startedAt: new Date().toISOString(), host, scope }, onProgress);
   const inv = await runInstallStep({ phase: 'qorlogic-install', host, scope }, async () => {
-    const result = await ingestor.installHost(host, scope);
+    const result = await ingestor.installHost(host, scope, skillFilter);
     if (!result.ok) {
       const err = new Error(result.error) as Error & { stderrTail?: string };
       err.stderrTail = result.stderrTail;
@@ -137,4 +138,39 @@ export function createInstallSkillsHandler(
     invs.push(await runRefreshStep(ingestor, callbacks.onProgress));
     return finalize(invs, callbacks);
   };
+}
+
+export function createScaffoldWithWebOptions(
+  ingestor: QorLogicSkillIngestor,
+  callbacks: InstallCallbacks = {},
+): (hosts: QorLogicHost[], scope: QorLogicScope, skillFilter?: Record<string, string[]>) => Promise<QorLogicInstallReport> {
+  return async (hosts, scope, skillFilter) => {
+    const invs: QorLogicInstallInvocation[] = [];
+    const probe = await runProbeStep(ingestor, callbacks.onProgress);
+    invs.push(probe);
+    if (probe.status === 'error') return finalize(invs, callbacks);
+    const pip = await runPipStep(ingestor, callbacks.onProgress);
+    invs.push(pip);
+    if (pip.status === 'error') return finalize(invs, callbacks);
+    for (const host of hosts) {
+      const filter = skillFilter ? skillFilter[host] : undefined;
+      invs.push(await runHostInstallStep(ingestor, host, scope, callbacks.onProgress, filter));
+    }
+    invs.push(await runProvenanceStep(ingestor.getWorkspaceRoot(), callbacks.onProgress));
+    invs.push(await runRefreshStep(ingestor, callbacks.onProgress));
+    return finalize(invs, callbacks);
+  };
+}
+
+/**
+ * Phase 3: skill-filter-aware variant returned alongside the web-options factory.
+ * Callers that need per-host skill selection use this signature, which threads
+ * `--include` flags into each `runHostInstallStep`. Hosts absent from `skillFilter`
+ * (or with empty arrays) install every skill (existing behavior preserved).
+ */
+export function createScaffoldWithSkillFilter(
+  ingestor: QorLogicSkillIngestor,
+  callbacks: InstallCallbacks = {},
+): (hosts: QorLogicHost[], scope: QorLogicScope, skillFilter?: Record<string, string[]>) => Promise<QorLogicInstallReport> {
+  return createScaffoldWithWebOptions(ingestor, callbacks);
 }

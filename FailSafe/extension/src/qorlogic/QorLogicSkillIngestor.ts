@@ -131,7 +131,7 @@ export class QorLogicSkillIngestor {
    * per-step telemetry. Caller is responsible for python-resolve and pip-install
    * sequencing; this method assumes both have already succeeded.
    */
-  async installHost(host: QorLogicHost, scope: QorLogicScope): Promise<HostInstallResult> {
+  async installHost(host: QorLogicHost, scope: QorLogicScope, skillFilter?: ReadonlyArray<string>): Promise<HostInstallResult> {
     const py = await this.resolver.resolve();
     if (!py.ok) {
       return { ok: false, host, scope, error: 'no-python-found', command: '' };
@@ -141,6 +141,7 @@ export class QorLogicSkillIngestor {
       '-m', 'qor.cli', 'install',
       '--host', host,
       '--scope', scope,
+      ...((skillFilter || []).flatMap((s) => ['--include', s])),
     ];
     const command = `${py.command} ${args.join(' ')}`;
     this.output.appendLine(`[qor-logic] ${command}`);
