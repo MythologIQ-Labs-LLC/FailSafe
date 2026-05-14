@@ -1,7 +1,7 @@
 # SYSTEM STATE
 
 **Last Updated:** 2026-05-14
-**Version:** v5.1.10-baseline plus Phase 60 SEALED at #354 plus v5.1.0 publish-block-lift SEALED at #359 plus **organize-ux-hotfix SEALED at #364** (3-phase UX surface — contextual bootstrap summary + host-side sidebar decision (V1 Path C) + organize callbacks; 68/68 .cjs tests pass; PUBLISH_BLOCK Conditions 2b/3/4 remain operator-only; no `package.json` bump — hotfix-class) plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups
+**Version:** v5.1.10-baseline plus Phase 60 SEALED at #354 plus v5.1.0 publish-block-lift SEALED at #359 plus organize-ux-hotfix SEALED at #364 plus **install-skills-ux-expansion SEALED at #371** (5-phase install surface: modal live progress + retry / operator host registry / per-host skill picker / dry-run preview / workspace LiveProgressInvariant doctrine + lint helper; upstream Qor-logic#58 filed; 73/73 .cjs tests pass; 3 blocking devil's-advocate findings F1+F2+F3 closed inline; 12 non-blocking F4-F15 carried forward; PUBLISH_BLOCK conditions unchanged; no `package.json` bump — change_class=feature, deferred until full lift) plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups
 
 ---
 
