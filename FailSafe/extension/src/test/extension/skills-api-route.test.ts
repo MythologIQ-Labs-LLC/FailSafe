@@ -44,7 +44,11 @@ function makeDeps(workspaceRoot: string, dirname: string): ApiRouteDeps {
   } as ApiRouteDeps;
 }
 
-suite('registerSkillsApiRoute', () => {
+suite('registerSkillsApiRoute', function () {
+  // Tests use temp-dir + bundled SkillIngestor + Express harness — can exceed
+  // mocha's 2s default on Windows/CI under filesystem load.
+  this.timeout(15000);
+
   let harness: RouteHarness;
   let tmpRoot: string;
 

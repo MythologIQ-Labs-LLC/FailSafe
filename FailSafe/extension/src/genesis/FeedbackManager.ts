@@ -53,18 +53,18 @@ export class FeedbackManager {
         this.context = context;
         // Feedback directory in workspace root under .failsafe/feedback
         const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        this.feedbackDir = workspaceRoot 
+        this.feedbackDir = workspaceRoot
             ? path.join(workspaceRoot, '.failsafe', 'feedback')
             : path.join(context.globalStorageUri.fsPath, 'feedback');
-        
-        // Ensure feedback directory exists
-        this.ensureFeedbackDirectory();
-        
-        // Lazy load logger to avoid circular dependency
+
+        // Logger must be initialized before ensureFeedbackDirectory(), which
+        // calls this.logger.info on the cold-start mkdirSync path.
         this.logger = {
             info: (msg: string, data?: unknown) => console.log(`[FeedbackManager] ${msg}`, data || ''),
             error: (msg: string, error?: unknown) => console.error(`[FeedbackManager] ${msg}`, error || '')
         };
+
+        this.ensureFeedbackDirectory();
     }
 
     /**
