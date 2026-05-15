@@ -4,7 +4,7 @@ import { Logger } from '../shared/Logger';
 import { CortexIntent, LivingGraphData, SentinelVerdict } from '../shared/types';
 import { SentinelDaemon } from '../sentinel/SentinelDaemon';
 import { ArchitectureEngine } from '../sentinel/engines/ArchitectureEngine';
-import { QoreLogicManager } from '../qorelogic/QoreLogicManager';
+import { QorLogicManager } from '../qorelogic/QorLogicManager';
 import { PlanManager } from '../qorelogic/planning/PlanManager';
 import { IntentScout } from './cortex/IntentScout';
 import { AnalyticsDashboardPanel } from './panels/AnalyticsDashboardPanel';
@@ -28,7 +28,7 @@ export class GenesisManager {
   private readonly context: vscode.ExtensionContext;
   private readonly sentinel: SentinelDaemon;
   private readonly architectureEngine: ArchitectureEngine;
-  private readonly qorelogic: QoreLogicManager;
+  private readonly qorelogic: QorLogicManager;
   private readonly eventBus: EventBus;
   private readonly logger: Logger;
   private readonly intentScout: IntentScout;
@@ -52,7 +52,7 @@ export class GenesisManager {
     context: vscode.ExtensionContext,
     sentinel: SentinelDaemon,
     architectureEngine: ArchitectureEngine,
-    qorelogic: QoreLogicManager,
+    qorelogic: QorLogicManager,
     eventBus: EventBus
   ) {
     this.context = context;

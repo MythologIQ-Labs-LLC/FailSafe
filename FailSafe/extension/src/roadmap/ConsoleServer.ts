@@ -1,106 +1,50 @@
-/**
- * ConsoleServer - Express HTTP + WebSocket server for Cumulative Roadmap
- *
- * Serves the external browser-based roadmap visualization on port 9376.
- * Provides real-time updates via WebSocket for live activity streaming.
- */
+/** ConsoleServer — composition root for the Express HTTP + WebSocket server
+ *  backing the browser-based Cumulative Roadmap on port 9376. Phase 60 §0
+ *  split: services/{HubSnapshotService,ConsoleRouteRegistrar,
+ *  ConsoleLifecycleService,ConsoleServerSupport}.ts hold all behavior. */
 import * as path from "path";
 import * as fs from "fs";
-import * as crypto from "crypto";
-import * as net from "net";
 import express, { Request, Response } from "express";
-import { Server as HttpServer } from "http";
-import { WebSocketServer, WebSocket } from "ws";
+import { WebSocketManager } from "./services/WebSocketManager";
+import { TransparencyLogger } from "./services/TransparencyLogger";
+import { RiskRegisterManager } from "./services/RiskRegisterManager";
+import { EventSubscriptionManager } from "./services/EventSubscriptionManager";
 import { PlanManager } from "../qorelogic/planning/PlanManager";
-import { QoreLogicManager } from "../qorelogic/QoreLogicManager";
+import { QorLogicManager } from "../qorelogic/QorLogicManager";
 import { SentinelDaemon } from "../sentinel/SentinelDaemon";
 import { EventBus } from "../shared/EventBus";
-import { SentinelVerdict } from "../shared/types";
-import { syncHookSentinel, isHookEnabled } from "../shared/hookSentinel";
-import { IFeatureGate, FeatureFlag } from "../core/interfaces/IFeatureGate";
-import { FEATURE_TIER_MAP } from "../core/FeatureGateService";
+import { IFeatureGate } from "../core/interfaces/IFeatureGate";
 import { GitResetService } from "../governance/revert/GitResetService";
-import {
-  FailSafeRevertService,
-  RevertDeps,
-} from "../governance/revert/FailSafeRevertService";
-import { CheckpointRef, RevertRequest } from "../governance/revert/types";
-import {
-  HomeRoute, RunDetailRoute, WorkflowsRoute, SkillsRoute,
-  GenomeRoute, ReportsRoute, SettingsRoute, PreflightRoute,
-  GovernanceKPIRoute, AgentCoverageRoute, SreRoute,
-} from "./routes";
-import { ConfigurationProfile } from "../genesis/ConfigurationProfile";
-import type { RouteDeps } from "./routes";
 import type { PermissionScopeManager } from "../governance/PermissionScopeManager";
 import type { EnforcementEngine } from "../governance/EnforcementEngine";
 import { BrainstormService } from "./services/BrainstormService";
 import { AudioVaultService } from "./services/AudioVaultService";
 import type { IConfigProvider } from "../core/interfaces/IConfigProvider";
-import { LLMClient } from "../sentinel/utils/LLMClient";
-import { setupBrainstormRoutes } from "./routes/BrainstormRoute";
-import { setupCheckpointRoutes } from "./routes/CheckpointRoute";
-import { setupActionsRoutes } from "./routes/ActionsRoute";
-import { setupTransparencyRiskRoutes } from "./routes/TransparencyRiskRoute";
-import type { ApiRouteDeps } from "./routes/types";
+import { QorRuntimeService, type QorRuntimeOptions } from "./services/QorRuntimeService";
 import { type InstalledSkill } from "./services/SkillParser";
-import {
-  autoIngest, manualIngest,
-} from "./services/SkillRegistry";
-import {
-  discoverAllSkills, buildSkillRoots, buildWorkspaceDiscoveryRoots,
-} from "./services/SkillDiscovery";
-import { rankSkillForPhase, type SkillRelevance } from "./services/SkillRanker";
-import {
-  type CheckpointRecord, type CheckpointDb, type CheckpointStatus,
-  getRecentCheckpoints as ckptGetRecent,
-  getRecentVerdicts as ckptGetRecentVerdicts,
-  verifyCheckpointChain as ckptVerifyChain,
-  getCheckpointSummary as ckptGetSummary,
-  buildCheckpointRecord as ckptBuildRecord,
-  persistCheckpoint as ckptPersist,
-  inferPhaseKeyFromPlan,
-  CHECKPOINT_INIT_SQL,
-} from "./services/CheckpointStore";
-import {
-  registerServer,
-  markDisconnected,
-  readRegistry,
-} from "./services/ServerRegistry";
-import {
-  type GovernanceState,
-} from "./services/GovernancePhaseTracker";
-import {
-  type ComplianceReport,
-} from "./services/RepoGovernanceService";
-import {
-  buildGovernancePhase,
-  buildMetricIntegrity,
-  buildUnattributedFileActivity,
-  buildRepoCompliance,
-  buildTrustSummary,
-  buildNodeStatus,
-  inferActivePhaseTitle,
-  buildRiskSummary,
-  buildRecentCompletions,
-} from "./ConsoleServerHub";
+import { discoverAllSkills } from "./services/SkillDiscovery";
 import { MarketplaceCatalog } from "./services/MarketplaceCatalog";
 import { MarketplaceInstaller } from "./services/MarketplaceInstaller";
 import { SecurityScanner } from "./services/SecurityScanner";
-import { setupMarketplaceRoutes } from "./routes/MarketplaceRoute";
 import { AdapterService } from "./services/AdapterService";
-import { setupAdapterRoutes } from "./routes/AdapterRoute";
-import { setupAgentApiRoutes } from "./routes/AgentApiRoute";
-import { setupSreApiRoutes } from "./routes/SreApiRoute";
-import { fetchAgtSnapshot } from "./routes/templates/SreTemplate";
 import type { AgentHealthIndicator } from "../sentinel/AgentHealthIndicator";
 import type { AgentTimelineService } from "../sentinel/AgentTimelineService";
 import type { AgentRunRecorder } from "../sentinel/AgentRunRecorder";
+import { HubSnapshotService, type RecordCheckpointInput, type CheckpointStoreRef } from "./services/HubSnapshotService";
+import { ConsoleRouteRegistrar, type ConsoleRouteHost } from "./services/ConsoleRouteRegistrar";
+import { ConsoleLifecycleService } from "./services/ConsoleLifecycleService";
+import {
+  buildPhasesFromLedger as buildPhasesFromLedgerImpl,
+  mergePlanBlockers, createBrainstormService,
+  resolveQorRuntimeOptions, resolveUiDir,
+  CHECKPOINT_TYPE_REGISTRY,
+  MAX_PHASE_RENDER as MAX_PHASE_RENDER_IMPL,
+} from "./services/ConsoleServerSupport";
+import type { WorkspaceArtifactSnapshot } from "./services/WorkspaceArtifactBuilder";
 
 const PORT = 9376;
 const HOST = "127.0.0.1";
 
-// Read version from package.json once at module load
 const EXTENSION_VERSION: string = (() => {
   try {
     const pkgPath = path.resolve(__dirname, '..', '..', 'package.json');
@@ -108,434 +52,125 @@ const EXTENSION_VERSION: string = (() => {
   } catch { return 'unknown'; }
 })();
 
-type QoreRuntimeOptions = {
-  enabled: boolean;
-  baseUrl: string;
-  apiKey?: string;
-  timeoutMs: number;
-};
-
 type ConsoleServerOptions = {
-  qoreRuntime?: Partial<QoreRuntimeOptions>;
+  qorRuntime?: Partial<QorRuntimeOptions>;
   workspaceRoot?: string;
   featureGate?: IFeatureGate;
   configProvider?: IConfigProvider;
 };
 
-type QoreRuntimeSnapshot = {
-  enabled: boolean;
-  connected: boolean;
-  baseUrl: string;
-  policyVersion?: string;
-  latencyMs?: number;
-  lastCheckedAt: string;
-  error?: string;
-};
-
-type MetricIntegrityRow = {
-  id: string;
-  label: string;
-  status: string;
-  basis: string;
-};
-
-type UnattributedFileChange = {
-  eventId: string;
-  timestamp: string;
-  type: string;
-  artifactPath?: string;
-  decision?: string;
-};
+// Re-export public test surface from support module for backward compat.
+export const MAX_PHASE_RENDER = MAX_PHASE_RENDER_IMPL;
+export const buildPhasesFromLedger = buildPhasesFromLedgerImpl;
 
 export class ConsoleServer {
-  private app: express.Application;
-  private server: HttpServer | null = null;
-  private wss: WebSocketServer | null = null;
-  private planManager: PlanManager;
-  private qorelogicManager: QoreLogicManager;
-  private sentinelDaemon: SentinelDaemon;
-  private eventBus: EventBus;
+  private app: express.Application = express();
+  private wsManager = new WebSocketManager();
   private uiDir: string;
-  private checkpointDb: CheckpointDb = null;
-  private checkpointMemory: CheckpointRecord[] = [];
-  private qoreRuntime: QoreRuntimeOptions;
+  private qorRuntimeService: QorRuntimeService;
   private workspaceRoot: string;
   private featureGate: IFeatureGate | undefined;
   private sealedSubstantiateCompletions = new Set<string>();
-  private revertService: FailSafeRevertService | null = null;
-  private gitResetService: GitResetService;
-  private chainValidAt: string | null = null;
-  private cachedChainValid: boolean = true;
+  private gitResetService = new GitResetService();
   private brainstormService: BrainstormService;
   private audioVaultService: AudioVaultService;
-  private configProvider: IConfigProvider | undefined;
   private enforcementEngine: EnforcementEngine | null = null;
   private permissionManager: PermissionScopeManager | null = null;
-  private systemRegistry:
-    | import("../qorelogic/SystemRegistry").SystemRegistry
-    | null = null;
-  private ideTracker:
-    | import("./services/IdeActivityTracker").IdeActivityTracker
-    | null = null;
-  private scaffoldCallback: (() => Promise<{ scaffolded: number; skipped: number }>) | null = null;
-  private marketplaceCatalog: MarketplaceCatalog;
+  private systemRegistry: import("../qorelogic/SystemRegistry").SystemRegistry | null = null;
+  private ideTracker: import("./services/IdeActivityTracker").IdeActivityTracker | null = null;
+  private scaffoldCallback: (() => Promise<import("../extension/installSkillsReport").QorLogicInstallReport | null>) | null = null;
+  private scaffoldWebCallback: ((hosts: import("../qorlogic/hostLayouts").QorLogicHost[], scope: import("../qorlogic/QorLogicSkillIngestor").QorLogicScope) => Promise<import("../extension/installSkillsReport").QorLogicInstallReport>) | null = null;
+  private outputChannel: { show(preserveFocus?: boolean): void } | null = null;
+  private marketplaceCatalog = new MarketplaceCatalog();
   private marketplaceInstaller: MarketplaceInstaller;
   private securityScanner: SecurityScanner;
   private adapterService: AdapterService;
   private agentTimelineService: AgentTimelineService | null = null;
   private agentHealthIndicator: AgentHealthIndicator | null = null;
   private agentRunRecorder: AgentRunRecorder | null = null;
-  private ledgerWatcher: fs.FSWatcher | null = null;
-  private ledgerDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-  private unattributedFileChanges: UnattributedFileChange[] = [];
-  private checkpointTypeRegistry = new Set<string>([
-    "snapshot.created",
-    "phase.entered",
-    "phase.exited",
-    "skill.recommended",
-    "skill.invoked",
-    "policy.checked",
-    "override.requested",
-    "override.approved",
-    "attempt.committed",
-    "attempt.rolled_back",
-    "export.generated",
-    "monitoring.resumed",
-    "monitoring.stopped",
-    "event.stream",
-    "governance.revert",
-  ]);
+  private transparencyLogger: TransparencyLogger;
+  private riskRegisterManager: RiskRegisterManager;
+  private hub: HubSnapshotService;
+  private lifecycle: ConsoleLifecycleService;
+  private registrar: ConsoleRouteRegistrar;
+  /** Shared so legacy fixtures that reassign priv.checkpointMemory/Db keep working. */
+  private storeRef: CheckpointStoreRef = { db: null, memory: [] };
+  get checkpointMemory(): import("./services/CheckpointStore").CheckpointRecord[] { return this.storeRef.memory; }
+  set checkpointMemory(v: import("./services/CheckpointStore").CheckpointRecord[]) { this.storeRef.memory = v; }
+  get checkpointDb(): import("./services/CheckpointStore").CheckpointDb { return this.storeRef.db; }
+  set checkpointDb(v: import("./services/CheckpointStore").CheckpointDb) { this.storeRef.db = v; }
 
   constructor(
-    planManager: PlanManager,
-    qorelogicManager: QoreLogicManager,
-    sentinelDaemon: SentinelDaemon,
-    eventBus: EventBus,
+    private planManager: PlanManager,
+    private qorelogicManager: QorLogicManager,
+    private sentinelDaemon: SentinelDaemon,
+    private eventBus: EventBus,
     options: ConsoleServerOptions = {},
   ) {
-    this.planManager = planManager;
-    this.qorelogicManager = qorelogicManager;
-    this.sentinelDaemon = sentinelDaemon;
-    this.eventBus = eventBus;
-    this.app = express();
-    this.qoreRuntime = this.resolveQoreRuntimeOptions(options.qoreRuntime);
+    this.qorRuntimeService = new QorRuntimeService(resolveQorRuntimeOptions(options.qorRuntime));
     this.workspaceRoot = options.workspaceRoot || process.cwd();
     this.featureGate = options.featureGate;
-    this.configProvider = options.configProvider;
-    this.uiDir = this.resolveUiDir();
-    this.initializeCheckpointStore();
-    this.gitResetService = new GitResetService();
-    this.initializeRevertService();
+    this.uiDir = resolveUiDir(__dirname);
     this.audioVaultService = new AudioVaultService(this.workspaceRoot);
-    this.audioVaultService
-      .init()
-      .catch((err) => console.error("AudioVaultService init error:", err));
-    this.brainstormService = this.createBrainstormService();
-    this.marketplaceCatalog = new MarketplaceCatalog();
-    this.marketplaceInstaller = new MarketplaceInstaller(this.eventBus);
-    this.securityScanner = new SecurityScanner(this.eventBus);
-    this.adapterService = new AdapterService(this.eventBus);
-    this.setupRoutes();
+    this.audioVaultService.init().catch((err) => console.error("AudioVaultService init error:", err));
+    this.brainstormService = createBrainstormService(options.configProvider);
+    this.marketplaceInstaller = new MarketplaceInstaller(eventBus);
+    this.securityScanner = new SecurityScanner(eventBus);
+    this.adapterService = new AdapterService(eventBus);
+    this.transparencyLogger = new TransparencyLogger(this.workspaceRoot);
+    this.riskRegisterManager = new RiskRegisterManager(this.workspaceRoot);
+    this.hub = this.buildHubService();
+    this.lifecycle = new ConsoleLifecycleService({
+      app: this.app, port: PORT, host: HOST, workspaceRoot: this.workspaceRoot,
+      wsManager: this.wsManager, hub: this.hub, planManager: this.planManager,
+      broadcast: (d) => this.broadcast(d),
+    });
+    this.registrar = new ConsoleRouteRegistrar(this.buildRouteHost());
     this.subscribeToEvents();
   }
 
-  // ------------------------------------------------------------------
-  //  Route setup
-  // ------------------------------------------------------------------
-
-  private setupRoutes(): void {
-    this.app.use(express.json({ limit: "12mb" }));
-    this.app.use(express.static(this.uiDir, { index: false, dotfiles: "allow" }));
-    this.registerCoreRoutes();
-    this.registerApiRoutes();
-    this.setupConsoleRoutes();
-    this.registerSpaFallback();
+  // ── public API (unchanged surface) ─────────────────────────────────
+  async start(): Promise<void> {
+    // Routes registered here (not constructor) so bootstrap can wire
+    // scaffold callbacks via setScaffoldCallback/setScaffoldWebCallback
+    // before deps are captured. See scaffold-callback-ordering.test.ts.
+    this.registrar.setupAllRoutes();
+    await this.lifecycle.start();
   }
+  /** Register the SPA fallback. Bootstrap calls this AFTER all late
+   *  registrations (e.g., QorlogicRoute) so they win over the catch-all. */
+  finalizeRoutes(): void { this.registrar.finalizeFallback(); }
+  stop(): void { this.lifecycle.stop(); }
+  getPort(): number { return this.lifecycle.getPort(); }
+  broadcastEvent(data: Record<string, unknown>): void { this.broadcast(data); }
+  /** @internal — preserved for legacy test reach-ins; routes use HubSnapshotService directly. */
+  getTransparencyEvents(limit: number): Array<Record<string, unknown>> { return this.hub.getTransparencyEvents(limit); }
+  /** @internal — preserved for legacy test reach-ins; routes use HubSnapshotService directly. */
+  getRiskRegister(): Array<Record<string, unknown>> { return this.hub.getRiskRegister(); }
 
-  /** Root, health, roadmap, hub, qore, sprint, plans, skills routes */
-  private registerCoreRoutes(): void {
-    this.app.get("/", (req: Request, res: Response) => {
-      const file = this.getUiEntryFile(req);
-      const target = path.join(this.uiDir, file);
-      const sendOpts = { dotfiles: "allow" as const };
-      if (fs.existsSync(target)) { res.sendFile(target, sendOpts); return; }
-      res.sendFile(path.join(this.uiDir, "command-center.html"), sendOpts);
-    });
-
-    this.app.get("/health", (_req: Request, res: Response) => {
-      const ready = fs.existsSync(path.join(this.uiDir, "index.html"));
-      res.status(ready ? 200 : 503).json({ ready, uiDir: this.uiDir });
-    });
-
-    this.app.get("/api/roadmap", (_req: Request, res: Response) => {
-      const sprints = this.planManager.getAllSprints();
-      const currentSprint = this.planManager.getCurrentSprint();
-      const activePlan = this.planManager.getActivePlan();
-      res.json({ sprints, currentSprint, activePlan });
-    });
-
-    this.app.get("/api/hub", async (_req: Request, res: Response) => {
-      res.json(await this.buildHubSnapshot());
-    });
-
-    // Workspace isolation: return server registry for workspace selector
-    this.app.get("/api/v1/workspaces", (_req: Request, res: Response) => {
-      const workspaces = readRegistry();
-      res.json({
-        workspaces,
-        current: this.getWorkspaceRoot(),
-      });
-    });
-
-    this.registerQoreRoutes();
-    this.registerSkillRoutes();
+  setConsoleDeps(enforcement: EnforcementEngine, perm: PermissionScopeManager): void {
+    this.enforcementEngine = enforcement; this.permissionManager = perm;
   }
-
-  private registerQoreRoutes(): void {
-    this.app.get("/api/qore/runtime", async (req: Request, res: Response) => {
-      if (this.rejectIfRemote(req, res)) return;
-      res.json(await this.fetchQoreRuntimeSnapshot());
-    });
-    this.app.get("/api/qore/health", async (req: Request, res: Response) => {
-      if (this.rejectIfRemote(req, res)) return;
-      this.handleQoreProxy(req, res, "/health");
-    });
-    this.app.post("/api/qore/evaluate", async (req: Request, res: Response) => {
-      if (this.rejectIfRemote(req, res)) return;
-      this.handleQoreProxy(req, res, "/evaluate", "POST");
-    });
-    this.app.get("/api/sprint/:id", (req: Request, res: Response) => {
-      const sprint = this.planManager.getSprint(req.params.id as string);
-      res.json({ sprint, plan: sprint ? this.planManager.getPlan(sprint.planId) : null });
-    });
-    this.app.get("/api/plans", (_req: Request, res: Response) => {
-      res.json({ plans: this.planManager.getAllPlans() });
-    });
+  setSystemRegistry(reg: import("../qorelogic/SystemRegistry").SystemRegistry): void { this.systemRegistry = reg; }
+  setIdeTracker(t: import("./services/IdeActivityTracker").IdeActivityTracker): void { this.ideTracker = t; }
+  setScaffoldCallback(cb: () => Promise<import("../extension/installSkillsReport").QorLogicInstallReport | null>): void { this.scaffoldCallback = cb; }
+  setScaffoldWebCallback(cb: (hosts: import("../qorlogic/hostLayouts").QorLogicHost[], scope: import("../qorlogic/QorLogicSkillIngestor").QorLogicScope) => Promise<import("../extension/installSkillsReport").QorLogicInstallReport>): void {
+    this.scaffoldWebCallback = cb;
   }
+  setOutputChannel(channel: { show(preserveFocus?: boolean): void }): void { this.outputChannel = channel; }
+  /** Expose Express app for post-start route registration (Phase 3 V3 Path A). */
+  getExpressApp(): express.Application { return this.app; }
+  setAgentTimelineService(s: AgentTimelineService): void { this.agentTimelineService = s; }
+  setAgentHealthIndicator(i: AgentHealthIndicator): void { this.agentHealthIndicator = i; }
+  setAgentRunRecorder(r: AgentRunRecorder): void { this.agentRunRecorder = r; }
+  setAutoDerivationHook(fn: HubSnapshotService["autoDerivationHook"]): void { this.hub.autoDerivationHook = fn; }
 
-  private async handleQoreProxy(
-    req: Request, res: Response, endpoint: string, method?: "POST",
-  ): Promise<void> {
-    if (!this.qoreRuntime.enabled) {
-      res.status(503).json({ error: "Qore runtime integration is disabled" });
-      return;
-    }
-    const opts = method === "POST" ? { method: "POST" as const, body: req.body || {} } : undefined;
-    const response = await this.fetchQoreJson(endpoint, opts);
-    const body = response.ok ? response.body : { error: response.error, detail: response.detail };
-    res.status(response.ok ? 200 : 502).json(body);
-  }
-
-  private registerSkillRoutes(): void {
-    this.app.get("/api/skills", (_req: Request, res: Response) => {
-      res.json({ skills: this.getInstalledSkills() });
-    });
-
-    this.app.post("/api/skills/ingest/auto", (_req: Request, res: Response) => {
-      try {
-        res.json(this.autoIngestWorkspaceSkills());
-      } catch (error) {
-        res.status(500).json({ ok: false, error: String(error) });
-      }
-    });
-
-    this.app.post("/api/skills/ingest/manual", (req: Request, res: Response) => {
-      try {
-        const mode =
-          String(req.body?.mode || "file").toLowerCase() === "folder"
-            ? "folder" as const
-            : "file" as const;
-        const items = Array.isArray(req.body?.items) ? req.body.items : [];
-        res.json(this.manualIngestSkillPayload(items, mode));
-      } catch (error) {
-        res.status(400).json({ ok: false, error: String(error) });
-      }
-    });
-
-    this.app.get("/api/skills/relevance", (req: Request, res: Response) => {
-      const phase = String(req.query.phase || "").trim().toLowerCase();
-      if (!phase) {
-        res.status(400).json({ error: "phase is required" });
-        return;
-      }
-      res.json(this.buildSkillRelevance(phase));
-    });
-  }
-
-  /** Delegated API routes + remaining inline API routes */
-  private registerApiRoutes(): void {
-    const apiDeps: ApiRouteDeps = {
-      rejectIfRemote: (req, res) => this.rejectIfRemote(req, res),
-      broadcast: (data) => this.broadcast(data),
-      brainstormService: this.brainstormService,
-      audioVaultService: this.audioVaultService,
-      getRecentCheckpoints: (limit) => this.getRecentCheckpoints(limit),
-      getCheckpointById: (id) => this.getCheckpointById(id),
-      verifyCheckpointChain: () => this.verifyCheckpointChain(),
-      revertService: this.revertService,
-      sentinelDaemon: this.sentinelDaemon,
-      planManager: this.planManager,
-      qorelogicManager: this.qorelogicManager,
-      recordCheckpoint: (input) => this.recordCheckpoint(input),
-      inferPhaseKeyFromPlan: (plan) => this.inferPhaseKeyFromPlan(plan),
-      chainValidAt: this.chainValidAt,
-      cachedChainValid: this.cachedChainValid,
-      setCachedChainValid: (v, at) => {
-        this.cachedChainValid = v;
-        this.chainValidAt = at;
-      },
-      getTransparencyEvents: (limit) => this.getTransparencyEvents(limit),
-      getRiskRegister: () => this.getRiskRegister(),
-      writeRiskRegister: (risks) => this.writeRiskRegister(risks),
-      scaffoldSkills: this.scaffoldCallback ?? undefined,
-      // Agent API delegates (B142/B143/B144)
-      getTimelineEntries: (filter) => this.agentTimelineService?.getEntries(filter) || [],
-      getHealthMetrics: () => this.agentHealthIndicator?.buildMetrics() || null,
-      getGenomePatterns: () => this.qorelogicManager.getShadowGenomeManager().analyzeFailurePatterns(),
-      getGenomeAllPatterns: () => this.qorelogicManager.getShadowGenomeManager().analyzeAllPatterns(), // B183
-      getGenomeUnresolved: (limit) => this.qorelogicManager.getShadowGenomeManager().getUnresolvedEntries(limit),
-      getActiveRuns: () => this.agentRunRecorder?.getActiveRuns() || [],
-      getCompletedRuns: () => this.agentRunRecorder?.getCompletedRuns() || [],
-      getRun: (runId) => this.agentRunRecorder?.getRun(runId),
-      loadRun: (runId) => this.agentRunRecorder?.loadRun(runId) || null,
-      getRunSteps: (runId) => this.agentRunRecorder?.getRunSteps(runId) || [],
-    };
-
-    setupTransparencyRiskRoutes(this.app, apiDeps);
-    setupAgentApiRoutes(this.app, apiDeps);
-    const adapterUrl = this.adapterService?.getConfig()?.adapterBaseUrl;
-    setupSreApiRoutes(this.app, { rejectIfRemote: (req, res) => this.rejectIfRemote(req, res) }, adapterUrl);
-    setupBrainstormRoutes(this.app, apiDeps);
-    setupCheckpointRoutes(this.app, apiDeps);
-    setupActionsRoutes(this.app, apiDeps);
-
-    // Marketplace routes for agent marketplace
-    setupMarketplaceRoutes(this.app, {
-      rejectIfRemote: (req, res) => this.rejectIfRemote(req, res),
-      broadcast: (data) => this.broadcast(data),
-      marketplaceCatalog: this.marketplaceCatalog,
-      marketplaceInstaller: this.marketplaceInstaller,
-      securityScanner: this.securityScanner,
-      ledgerManager: this.qorelogicManager.getLedgerManager(),
-    });
-
-    // Adapter routes for agent-failsafe Python adapter
-    setupAdapterRoutes(this.app, {
-      rejectIfRemote: (req, res) => this.rejectIfRemote(req, res),
-      broadcast: (data) => this.broadcast(data),
-      adapterService: this.adapterService,
-    });
-
-    this.registerFeatureAndStatusRoutes();
-    this.registerHookRoutes();
-  }
-
-  private registerFeatureAndStatusRoutes(): void {
-    this.app.get("/api/v1/features", (_req: Request, res: Response) => {
-      if (!this.featureGate) { res.json({ tier: "free", features: {} }); return; }
-      const tier = this.featureGate.getTier();
-      const features: Record<string, { requiredTier: string; enabled: boolean }> = {};
-      for (const flag of Object.keys(FEATURE_TIER_MAP) as FeatureFlag[]) {
-        features[flag] = { requiredTier: FEATURE_TIER_MAP[flag], enabled: this.featureGate.isEnabled(flag) };
-      }
-      res.json({ tier, features });
-    });
-    this.app.get("/api/v1/status", async (_req: Request, res: Response) => {
-      const hub = await this.buildHubSnapshot();
-      const s = hub.sentinelStatus as Record<string, unknown> | undefined;
-      res.json({
-        sentinel: { running: s?.running ?? false, mode: s?.mode ?? "unknown", eventsProcessed: s?.eventsProcessed ?? 0 },
-        governance: { mode: s?.mode ?? "observe" },
-        chain: { valid: hub.chainValid ?? false },
-        version: hub.version ?? "unknown",
-      });
-    });
-    this.registerVerdictAndTrustRoutes();
-  }
-
-  private registerVerdictAndTrustRoutes(): void {
-    this.app.get("/api/v1/verdicts", (_req: Request, res: Response) => {
-      const limit = Math.min(Number(_req.query.limit) || 20, 100);
-      res.json(this.getRecentVerdicts(limit));
-    });
-    this.app.get("/api/v1/trust", async (_req: Request, res: Response) => {
-      const hub = await this.buildHubSnapshot();
-      const cps = Object.values((hub.checkpoints as Record<string, unknown>) || {});
-      const total = cps.length || 1;
-      const passed = cps.filter((c: any) => c.policyVerdict !== "VIOLATION").length;
-      res.json({ overall: Math.round((passed / total) * 100), checkpointCount: total, passCount: passed });
-    });
-  }
-
-  /** B107: Workspace hook toggle routes */
-  private registerHookRoutes(): void {
-    this.app.get("/api/hooks/status", (req: Request, res: Response) => {
-      if (this.rejectIfRemote(req, res)) return;
-      res.json({ enabled: isHookEnabled(this.workspaceRoot) });
-    });
-
-    this.app.post("/api/hooks/toggle", (req: Request, res: Response) => {
-      if (this.rejectIfRemote(req, res)) return;
-      if (typeof req.body?.enabled !== "boolean") {
-        res.status(400).json({ error: "enabled must be a boolean" });
-        return;
-      }
-      syncHookSentinel(this.workspaceRoot, req.body.enabled);
-      res.json({ enabled: req.body.enabled });
-    });
-  }
-
-  /** SPA fallback for deep links or unknown non-API routes */
-  private registerSpaFallback(): void {
-    this.app.use((req: Request, res: Response) => {
-      if (req.path.startsWith("/api/") || req.path === "/health") {
-        res.status(404).json({ error: "Not found" });
-        return;
-      }
-      const staticExts = [
-        ".js", ".mjs", ".css", ".wasm", ".onnx",
-        ".png", ".jpg", ".svg", ".data", ".json", ".bin",
-      ];
-      if (staticExts.some((ext) => req.path.toLowerCase().endsWith(ext))) {
-        res.status(404).type("text/plain").send("Not found");
-        return;
-      }
-      const file = this.getUiEntryFile(req);
-      const target = path.join(this.uiDir, file);
-      const sendOpts = { dotfiles: "allow" as const };
-      if (fs.existsSync(target)) { res.sendFile(target, sendOpts); return; }
-      res.sendFile(path.join(this.uiDir, "command-center.html"), sendOpts);
-    });
-  }
-
-  // ------------------------------------------------------------------
-  //  UI helpers
-  // ------------------------------------------------------------------
-
-  private getUiEntryFile(req: Request): "command-center.html" | "index.html" {
-    const uiMode = String(req.query.ui || "").toLowerCase();
-    const compactParam = String(req.query.compact || "").toLowerCase();
-    if (uiMode === "compact") return "index.html";
-    if (uiMode === "console" || uiMode === "extended" || uiMode === "popout") {
-      return "command-center.html";
-    }
-    if (compactParam === "1" || compactParam === "true" || compactParam === "yes") {
-      return "index.html";
-    }
-    return "command-center.html";
-  }
-
-  // ------------------------------------------------------------------
-  //  Auth middleware
-  // ------------------------------------------------------------------
+  // ── internals ──────────────────────────────────────────────────────
+  private broadcast(data: Record<string, unknown>): void { this.wsManager.broadcast(data); }
 
   private isLocalRequest(req: Request): boolean {
-    const normalized = String(req.socket?.remoteAddress || req.ip || "").trim();
-    return (
-      normalized === "127.0.0.1" ||
-      normalized === "::1" ||
-      normalized === "::ffff:127.0.0.1"
-    );
+    const n = String(req.socket?.remoteAddress || req.ip || "").trim();
+    return n === "127.0.0.1" || n === "::1" || n === "::ffff:127.0.0.1";
   }
 
   private rejectIfRemote(req: Request, res: Response): boolean {
@@ -544,828 +179,79 @@ export class ConsoleServer {
     return true;
   }
 
-  private rejectIfProRequired(
-    feature: FeatureFlag,
-    _req: Request,
-    res: Response,
-  ): boolean {
-    if (!this.featureGate || this.featureGate.isEnabled(feature)) return false;
-    res.status(402).json({
-      error: `Feature '${feature}' is not enabled in current configuration`,
-      upgrade: true,
-      currentTier: this.featureGate.getTier(),
-      requiredTier: "pro",
-    });
-    return true;
+  private getUiEntryFile(req: Request): "command-center.html" | "index.html" {
+    const ui = String(req.query.ui || "").toLowerCase();
+    const compact = String(req.query.compact || "").toLowerCase();
+    if (ui === "compact") return "index.html";
+    if (ui === "console" || ui === "extended" || ui === "popout") return "command-center.html";
+    if (compact === "1" || compact === "true" || compact === "yes") return "index.html";
+    return "command-center.html";
   }
-
-  // ------------------------------------------------------------------
-  //  WebSocket
-  // ------------------------------------------------------------------
-
-  private setupWebSocket(): void {
-    if (!this.server) return;
-    this.wss = new WebSocketServer({ server: this.server });
-    this.wss.on("connection", (ws) => {
-      this.buildHubSnapshot().then((hub) => {
-        ws.send(JSON.stringify({ type: "init", payload: hub }));
-      });
-    });
-  }
-
-  private broadcast(data: Record<string, unknown>): void {
-    if (!this.wss) return;
-    const message = JSON.stringify(data);
-    this.wss.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) client.send(message);
-    });
-  }
-
-  private watchMetaLedger(): void {
-    const ledgerPath = path.join(this.getWorkspaceRoot(), "docs", "META_LEDGER.md");
-    if (!fs.existsSync(ledgerPath)) return;
-    try {
-      this.ledgerWatcher = fs.watch(ledgerPath, () => {
-        if (this.ledgerDebounceTimer) clearTimeout(this.ledgerDebounceTimer);
-        this.ledgerDebounceTimer = setTimeout(() => {
-          this.broadcast({ type: "hub.refresh" });
-        }, 1500);
-      });
-    } catch {
-      // File watcher not supported or ledger inaccessible — degrade silently
-    }
-  }
-
-  // ------------------------------------------------------------------
-  //  Console UI routes (HTML server-rendered)
-  // ------------------------------------------------------------------
-
-  setConsoleDeps(
-    enforcement: EnforcementEngine,
-    perm: PermissionScopeManager,
-  ): void {
-    this.enforcementEngine = enforcement;
-    this.permissionManager = perm;
-  }
-
-  setSystemRegistry(
-    registry: import("../qorelogic/SystemRegistry").SystemRegistry,
-  ): void {
-    this.systemRegistry = registry;
-  }
-
-  setIdeTracker(
-    tracker: import("./services/IdeActivityTracker").IdeActivityTracker,
-  ): void {
-    this.ideTracker = tracker;
-  }
-
-  setScaffoldCallback(cb: () => Promise<{ scaffolded: number; skipped: number }>): void {
-    this.scaffoldCallback = cb;
-  }
-
-  setAgentTimelineService(service: AgentTimelineService): void {
-    this.agentTimelineService = service;
-  }
-
-  setAgentHealthIndicator(indicator: AgentHealthIndicator): void {
-    this.agentHealthIndicator = indicator;
-  }
-
-  setAgentRunRecorder(recorder: AgentRunRecorder): void {
-    this.agentRunRecorder = recorder;
-  }
-
-  private buildRouteDeps(): RouteDeps {
-    const configProfile = new ConfigurationProfile();
-    configProfile.loadDefaults({ workspaceRoot: this.workspaceRoot });
-    return {
-      planManager: this.planManager,
-      ledgerManager: this.qorelogicManager.getLedgerManager(),
-      shadowGenomeManager: this.qorelogicManager.getShadowGenomeManager(),
-      enforcementEngine: this.enforcementEngine!,
-      configProfile,
-      getInstalledSkills: () => this.getInstalledSkills(),
-      systemRegistry: this.systemRegistry ?? undefined,
-    };
-  }
-
-  private setupConsoleRoutes(): void {
-    const deps = () => this.buildRouteDeps();
-    this.app.get("/console/home", async (req, res) => HomeRoute.render(req, res, deps()));
-    this.app.get("/console/run/:runId", (req, res) => RunDetailRoute.render(req, res, deps()));
-    this.app.get("/console/workflows", (req, res) => WorkflowsRoute.render(req, res, deps()));
-    this.app.get("/console/skills", (req, res) => SkillsRoute.render(req, res, deps()));
-    this.app.get("/console/genome", async (req, res) => GenomeRoute.render(req, res, deps()));
-    this.app.get("/console/reports", async (req, res) => ReportsRoute.render(req, res, deps()));
-    this.app.get("/console/settings", (req, res) => SettingsRoute.render(req, res, deps()));
-    this.app.get("/console/kpi", async (req, res) =>
-      GovernanceKPIRoute.render(req, res, { ledgerManager: deps().ledgerManager }),
-    );
-    this.registerConsoleExtras();
-  }
-
-  private registerConsoleExtras(): void {
-    this.app.get("/console/agents", async (req, res) => {
-      if (!this.systemRegistry) { res.status(503).send("SystemRegistry not available"); return; }
-      AgentCoverageRoute.render(req, res, { systemRegistry: this.systemRegistry });
-    });
-    this.app.get("/console/sre", async (req: Request, res: Response) => {
-      await SreRoute.render(req, res, {
-        getSnapshot: () => fetchAgtSnapshot(this.adapterService?.getConfig()?.adapterBaseUrl || "http://127.0.0.1:9377"),
-      });
-    });
-    if (!this.permissionManager) return;
-    const pm = this.permissionManager;
-    this.app.get("/console/preflight", (req, res) => PreflightRoute.render(req, res, { permissionManager: pm }));
-    this.app.post("/console/preflight/grant", (req, res) => PreflightRoute.handleGrant(req, res, { permissionManager: pm }));
-    this.app.post("/console/preflight/deny", (req, res) => PreflightRoute.handleDeny(req, res, { permissionManager: pm }));
-  }
-
-  // ------------------------------------------------------------------
-  //  Event subscriptions
-  // ------------------------------------------------------------------
-
-  private subscribeToEvents(): void {
-    this.eventBus.on("genesis.streamEvent" as never, (event: unknown) => {
-      const streamPayload = this.extractEventPayload(event);
-      this.maybeRecordSubstantiateCompletion(streamPayload);
-      this.broadcast({ type: "event", payload: event });
-      this.recordCheckpoint({
-        checkpointType: "event.stream", actor: "engine",
-        phase: this.inferPhaseKeyFromPlan(this.planManager.getActivePlan()),
-        status: "validated", policyVerdict: "PASS", evidenceRefs: [], payload: streamPayload,
-      });
-    });
-    this.eventBus.on("sentinel.verdict" as never, (event: { payload: unknown }) => {
-      const verdict = event.payload as SentinelVerdict;
-      this.recordVerdictCheckpoint(verdict);
-      this.maybeRecordAuditPassCheckpoint(verdict);
-      this.broadcast({ type: "verdict", payload: event.payload });
-      this.broadcast({ type: "hub.refresh" });
-      // S1: Access event.payload, not event root
-      const p = (event.payload ?? {}) as Record<string, unknown>;
-      this.logTransparencyEvent({
-        type: "sentinel.verdict",
-        decision: p.decision,
-        riskGrade: p.riskGrade,
-        filePath: p.filePath,
-        timestamp: new Date().toISOString(),
-      });
-      this.broadcast({ type: "transparency", payload: {
-        type: "sentinel.verdict", decision: p.decision, riskGrade: p.riskGrade,
-      } });
-    });
-    this.eventBus.on(
-      "sentinel.activityObserved" as never,
-      (event: { payload: unknown }) => {
-        this.recordObservedFileMutation(event.payload);
-      },
-    );
-    // Subscribe to transparency events and log to file + broadcast
-    this.eventBus.on("transparency.prompt" as never, (event: unknown) => {
-      this.logTransparencyEvent(event as Record<string, unknown>);
-      this.broadcast({ type: "transparency", payload: event });
-    });
-    this.subscribeToQorelogicEvents();
-  }
-
-  private subscribeToQorelogicEvents(): void {
-    const currentPhase = () => this.inferPhaseKeyFromPlan(this.planManager.getActivePlan());
-    this.eventBus.on("qorelogic.l3Queued" as never, (event: unknown) => {
-      this.recordCheckpoint({
-        checkpointType: "override.requested", actor: "qorelogic",
-        phase: currentPhase(), status: "proposed", policyVerdict: "ESCALATE",
-        evidenceRefs: [], payload: event,
-      });
-      this.broadcast({ type: "hub.refresh" });
-      // S2: Explicit field allowlisting for L3 transparency events
-      const p = ((event as Record<string, unknown>)?.payload ?? event ?? {}) as Record<string, unknown>;
-      this.logTransparencyEvent({
-        type: "governance.l3Queued",
-        filePath: p.filePath, riskGrade: p.riskGrade, id: p.id,
-        timestamp: new Date().toISOString(),
-      });
-      this.broadcast({ type: "transparency", payload: {
-        type: "governance.l3Queued", riskGrade: p.riskGrade, id: p.id,
-      } });
-    });
-    this.eventBus.on("qorelogic.l3Decided" as never, (event: unknown) => {
-      this.recordCheckpoint({
-        checkpointType: "override.approved", actor: "qorelogic",
-        phase: currentPhase(), status: "sealed", policyVerdict: "PASS",
-        evidenceRefs: [], payload: event,
-      });
-      this.broadcast({ type: "hub.refresh" });
-      // S2: Explicit field allowlisting for L3 transparency events
-      const p = ((event as Record<string, unknown>)?.payload ?? event ?? {}) as Record<string, unknown>;
-      this.logTransparencyEvent({
-        type: "governance.l3Decided",
-        decision: p.decision, riskGrade: p.riskGrade, id: p.id,
-        timestamp: new Date().toISOString(),
-      });
-      this.broadcast({ type: "transparency", payload: {
-        type: "governance.l3Decided", decision: p.decision, id: p.id,
-      } });
-    });
-    this.eventBus.on("qorelogic.trustUpdate" as never, () =>
-      this.broadcast({ type: "hub.refresh" }),
-    );
-    // Broadcast run lifecycle events to Command Center Replay tab
-    this.eventBus.on("agentRun.started" as never, (event: unknown) => {
-      this.broadcast({ type: "agentRun", payload: { action: "started", ...(event as Record<string, unknown>) } });
-    });
-    this.eventBus.on("agentRun.completed" as never, (event: unknown) => {
-      this.broadcast({ type: "agentRun", payload: { action: "completed", ...(event as Record<string, unknown>) } });
-    });
-    this.eventBus.on("agentRun.stepRecorded" as never, (event: unknown) => {
-      this.broadcast({ type: "agentRun", payload: { action: "step", ...(event as Record<string, unknown>) } });
-    });
-  }
-
-  private recordVerdictCheckpoint(verdict: SentinelVerdict): void {
-    this.recordCheckpoint({
-      checkpointType: "policy.checked",
-      actor: verdict.agentDid || "sentinel",
-      phase: this.inferPhaseKeyFromPlan(this.planManager.getActivePlan()),
-      status: "validated",
-      policyVerdict: String(verdict.decision || "UNKNOWN"),
-      evidenceRefs: [],
-      payload: {
-        decision: verdict.decision,
-        riskGrade: verdict.riskGrade,
-        summary: verdict.summary,
-      },
-    });
-  }
-
-  private extractEventPayload(event: unknown): unknown {
-    if (!event || typeof event !== "object") return event;
-    return (event as { payload?: unknown }).payload ?? event;
-  }
-
-  private maybeRecordAuditPassCheckpoint(verdict: SentinelVerdict): void {
-    if (String(verdict.decision || "").toUpperCase() !== "PASS") return;
-    this.recordCheckpoint({
-      checkpointType: "attempt.committed",
-      actor: verdict.agentDid || "sentinel",
-      phase: "audit",
-      status: "sealed",
-      policyVerdict: "PASS",
-      evidenceRefs: [],
-      payload: {
-        trigger: "audit.pass",
-        riskGrade: verdict.riskGrade,
-        summary: verdict.summary,
-      },
-    });
-  }
-
-  private maybeRecordSubstantiateCompletion(streamPayload: unknown): void {
-    if (!streamPayload || typeof streamPayload !== "object") return;
-    const payload = streamPayload as {
-      planEvent?: {
-        type?: string;
-        planId?: string;
-        payload?: { phaseId?: string };
-      };
-    };
-    const planEvent = payload.planEvent;
-    if (!planEvent || String(planEvent.type || "") !== "phase.completed") return;
-    const planId = String(planEvent.planId || "");
-    const phaseId = String(planEvent.payload?.phaseId || "");
-    if (!planId || !phaseId) return;
-    const dedupeKey = `${planId}:${phaseId}`;
-    if (this.sealedSubstantiateCompletions.has(dedupeKey)) return;
-    const plan = this.planManager.getPlan(planId);
-    const phase = plan?.phases.find((item) => item.id === phaseId);
-    const phaseTitle = String(phase?.title || "").toLowerCase();
-    const isSubstantiate =
-      phaseTitle.includes("substantiat") ||
-      phaseTitle.includes("release") ||
-      phaseTitle.includes("ship");
-    if (!isSubstantiate) return;
-    this.sealedSubstantiateCompletions.add(dedupeKey);
-    this.recordCheckpoint({
-      checkpointType: "phase.exited",
-      actor: "plan-manager",
-      phase: "substantiate",
-      status: "sealed",
-      policyVerdict: "PASS",
-      evidenceRefs: [],
-      payload: {
-        trigger: "phase.completed",
-        planId,
-        phaseId,
-        phaseTitle: phase?.title || "Substantiate",
-      },
-    });
-  }
-
-  // ------------------------------------------------------------------
-  //  Qore Runtime
-  // ------------------------------------------------------------------
-
-  private async fetchQoreRuntimeSnapshot(): Promise<QoreRuntimeSnapshot> {
-    const checkedAt = new Date().toISOString();
-    if (!this.qoreRuntime.enabled) {
-      return {
-        enabled: false, connected: false,
-        baseUrl: this.qoreRuntime.baseUrl, lastCheckedAt: checkedAt,
-        error: "disabled",
-      };
-    }
-    const startedAt = Date.now();
-    const health = await this.fetchQoreJson("/health");
-    if (!health.ok) {
-      return {
-        enabled: true, connected: false,
-        baseUrl: this.qoreRuntime.baseUrl,
-        latencyMs: Date.now() - startedAt, lastCheckedAt: checkedAt,
-        error: health.error || "runtime_unreachable",
-      };
-    }
-    const policy = await this.fetchQoreJson("/policy/version");
-    return {
-      enabled: true, connected: true,
-      baseUrl: this.qoreRuntime.baseUrl,
-      policyVersion: policy.ok
-        ? String((policy.body as { policyVersion?: string }).policyVersion || "")
-        : undefined,
-      latencyMs: Date.now() - startedAt, lastCheckedAt: checkedAt,
-    };
-  }
-
-  private async fetchQoreJson(
-    endpoint: string,
-    options?: { method?: "GET" | "POST"; body?: unknown },
-  ): Promise<
-    { ok: true; body: unknown } | { ok: false; error: string; detail?: string }
-  > {
-    if (!this.qoreRuntime.enabled) return { ok: false, error: "disabled" };
-    const controller = new AbortController();
-    const timer = setTimeout(
-      () => controller.abort(), this.qoreRuntime.timeoutMs,
-    );
-    const headers: Record<string, string> = { "content-type": "application/json" };
-    if (this.qoreRuntime.apiKey) {
-      headers["x-qore-api-key"] = this.qoreRuntime.apiKey;
-    }
-    try {
-      const response = await fetch(`${this.qoreRuntime.baseUrl}${endpoint}`, {
-        method: options?.method || "GET",
-        headers,
-        body: options?.body ? JSON.stringify(options.body) : undefined,
-        signal: controller.signal,
-      });
-      clearTimeout(timer);
-      if (!response.ok) {
-        const detail = await response.text();
-        return { ok: false, error: `upstream_${response.status}`, detail };
-      }
-      return { ok: true, body: await response.json() };
-    } catch (error) {
-      clearTimeout(timer);
-      const detail = error instanceof Error ? error.message : String(error);
-      return { ok: false, error: "request_failed", detail };
-    }
-  }
-
-  private recordObservedFileMutation(payload: unknown): void {
-    if (!payload || typeof payload !== "object") return;
-    const activity = payload as {
-      eventId?: string;
-      timestamp?: string;
-      source?: string;
-      type?: string;
-      artifactPath?: string;
-      decision?: string;
-      agentDid?: string;
-    };
-    const fileEventTypes = new Set(["FILE_CREATED", "FILE_MODIFIED", "FILE_DELETED"]);
-    if (activity.source !== "file_watcher") return;
-    if (!fileEventTypes.has(String(activity.type || ""))) return;
-
-    this.unattributedFileChanges.push({
-      eventId: String(activity.eventId || crypto.randomUUID()),
-      timestamp: String(activity.timestamp || new Date().toISOString()),
-      type: String(activity.type || "FILE_MODIFIED"),
-      artifactPath: activity.artifactPath,
-      decision: activity.decision,
-    });
-    this.unattributedFileChanges = this.unattributedFileChanges.slice(-10);
-    this.broadcast({ type: "hub.refresh" });
-  }
-
-  // ------------------------------------------------------------------
-  //  Hub snapshot
-  // ------------------------------------------------------------------
-
-  private async buildHubSnapshot(): Promise<Record<string, unknown>> {
-    const activePlan = this.planManager.getActivePlan();
-    const sentinelStatusRaw = this.sentinelDaemon.getStatus();
-    const sentinelStatus = { ...sentinelStatusRaw };
-    if (this.checkpointDb && sentinelStatus.eventsProcessed === 0) {
-      try {
-        const row = this.checkpointDb.prepare(
-          `SELECT COUNT(*) as cnt FROM failsafe_checkpoints
-           WHERE checkpoint_type LIKE 'policy.%'`,
-        ).get() as { cnt: number } | undefined;
-        if (row?.cnt) (sentinelStatus as Record<string, unknown>).eventsProcessed = row.cnt;
-      } catch { /* non-fatal */ }
-    }
-    const l3Queue = this.qorelogicManager.getL3Queue();
-    const agents = await this.qorelogicManager.getTrustEngine().getAllAgents();
-    const trust = buildTrustSummary(agents);
-    const qoreRuntime = await this.fetchQoreRuntimeSnapshot();
-    const checkpointSummary = this.getCheckpointSummary();
-    const governancePhase = buildGovernancePhase(this.getWorkspaceRoot());
-    const hubDeps = { chainValidAt: this.chainValidAt, unattributedFileChanges: this.unattributedFileChanges };
-    const activePhaseTitle = inferActivePhaseTitle(
-      activePlan as unknown as Record<string, unknown>,
-      (limit) => this.getRecentCheckpoints(limit),
-    );
-    const runState = this.ideTracker
-      ? this.ideTracker.getRunState(activePhaseTitle)
-      : { currentPhase: "Plan", activeTasks: [], activeDebugSessions: [] };
-    const nodeStatusArr = buildNodeStatus(
-      sentinelStatus as unknown as { running?: boolean; filesWatched?: number; queueDepth?: number; [k: string]: unknown },
-      l3Queue, trust, qoreRuntime,
-    );
-    return {
-      version: EXTENSION_VERSION,
-      sprints: this.planManager.getAllSprints(),
-      currentSprint: this.planManager.getCurrentSprint(),
-      activePlan,
-      sentinelStatus,
-      recentVerdicts: this.getRecentVerdicts(10),
-      l3Queue,
-      trustSummary: trust,
-      nodeStatus: nodeStatusArr,
-      checkpointSummary,
-      recentCheckpoints: this.getRecentCheckpoints(12),
-      qoreRuntime,
-      runState,
-      riskSummary: buildRiskSummary((limit) => this.getRecentVerdicts(limit)),
-      recentCompletions: buildRecentCompletions((limit) => this.getRecentCheckpoints(limit)),
-      unattributedFileActivity: buildUnattributedFileActivity(this.unattributedFileChanges),
-      metricIntegrity: buildMetricIntegrity(governancePhase, checkpointSummary, sentinelStatus, runState, hubDeps),
-      bootstrapState: {
-        skillsInstalled: fs.existsSync(
-          path.join(this.getWorkspaceRoot(), ".claude", "skills", "ql-bootstrap", "SKILL.md"),
-        ),
-        governanceInitialized: fs.existsSync(
-          path.join(this.getWorkspaceRoot(), "docs", "CONCEPT.md"),
-        ),
-        workspaceName: path.basename(this.getWorkspaceRoot()),
-      },
-      workspaceName: path.basename(this.getWorkspaceRoot()),
-      workspacePath: this.getWorkspaceRoot(),
-      serverPort: this.actualPort,
-      governancePhase,
-      repoCompliance: buildRepoCompliance(this.getWorkspaceRoot()),
-      chainValid: this.cachedChainValid ?? null,
-      risks: this.getRiskRegister(),
-      agentHealth: this.agentHealthIndicator?.buildMetrics() || null,
-      generatedAt: new Date().toISOString(),
-    };
-  }
-
-  // ------------------------------------------------------------------
-  //  Server lifecycle
-  // ------------------------------------------------------------------
-
-  private actualPort: number = PORT;
-
-  async start(): Promise<void> {
-    this.actualPort = await this.findAvailablePort(PORT);
-    this.server = this.app.listen(this.actualPort, HOST, () => {
-      console.log(`Roadmap server: http://localhost:${this.actualPort}`);
-    });
-    this.setupWebSocket();
-    this.watchMetaLedger();
-    // Register in multi-workspace server registry
-    registerServer({
-      port: this.actualPort,
-      workspaceName: path.basename(this.getWorkspaceRoot()),
-      workspacePath: this.getWorkspaceRoot(),
-      pid: process.pid,
-      startedAt: new Date().toISOString(),
-    });
-    this.recordCheckpoint({
-      checkpointType: "snapshot.created",
-      actor: "system",
-      phase: this.inferPhaseKeyFromPlan(this.planManager.getActivePlan()),
-      status: "validated",
-      policyVerdict: "PASS",
-      evidenceRefs: [],
-      payload: { source: "roadmap-server.start" },
-    });
-  }
-
-  stop(): void {
-    // Mark as disconnected (not unregister) so workspace remains visible
-    markDisconnected(this.actualPort);
-    this.ledgerWatcher?.close();
-    this.ledgerWatcher = null;
-    this.wss?.close();
-    this.server?.close();
-  }
-
-  getPort(): number {
-    return this.actualPort;
-  }
-
-  private async findAvailablePort(preferred: number): Promise<number> {
-    if (await this.isPortAvailable(preferred)) return preferred;
-    for (let offset = 1; offset <= 10; offset++) {
-      const candidate = preferred + offset;
-      if (await this.isPortAvailable(candidate)) {
-        console.log(`Port ${preferred} in use, using ${candidate}`);
-        return candidate;
-      }
-    }
-    return preferred;
-  }
-
-  private isPortAvailable(port: number): Promise<boolean> {
-    return new Promise((resolve) => {
-      const server = net.createServer();
-      server.once("error", () => resolve(false));
-      server.once("listening", () => server.close(() => resolve(true)));
-      server.listen(port, HOST);
-    });
-  }
-
-  // ------------------------------------------------------------------
-  //  Skills (delegated to extracted modules)
-  // ------------------------------------------------------------------
 
   private getInstalledSkills(): InstalledSkill[] {
-    return discoverAllSkills(this.getWorkspaceRoot(), __dirname);
+    return discoverAllSkills(this.workspaceRoot, __dirname);
   }
 
-  private autoIngestWorkspaceSkills(): Record<string, unknown> {
-    const ws = this.getWorkspaceRoot();
-    return autoIngest(
-      ws, buildWorkspaceDiscoveryRoots(ws),
-      () => this.getInstalledSkills(), buildSkillRoots(ws, __dirname),
-    );
-  }
-
-  private manualIngestSkillPayload(
-    items: unknown[], mode: "file" | "folder",
-  ): Record<string, unknown> {
-    return manualIngest(items, mode, this.getWorkspaceRoot(), () => this.getInstalledSkills());
-  }
-
-  private buildSkillRelevance(phase: string): Record<string, unknown> {
-    const catalog = this.getInstalledSkills();
-    const ranked: SkillRelevance[] = catalog
-      .map((skill) => rankSkillForPhase(skill, phase))
-      .sort((a, b) => b.score - a.score || a.label.localeCompare(b.label));
-    let allRelevant = ranked.filter((item) => item.score > 1);
-    if (allRelevant.length === 0) allRelevant = ranked.slice();
-    const recommended = allRelevant.slice(0, Math.min(4, allRelevant.length));
-    const relevantKeys = new Set(allRelevant.map((item) => item.key));
-    const otherAvailable = ranked.filter((item) => !relevantKeys.has(item.key));
-    return { phase, recommended, allRelevant, otherAvailable };
-  }
-
-  // ------------------------------------------------------------------
-  //  Checkpoint management (delegated to CheckpointStore)
-  // ------------------------------------------------------------------
-
-  private initializeCheckpointStore(): void {
-    try {
-      const ledgerDb = this.qorelogicManager
-        .getLedgerManager()
-        .getDatabase() as unknown as {
-        exec: (sql: string) => void;
-      } & CheckpointDb;
-      ledgerDb.exec(CHECKPOINT_INIT_SQL);
-      this.checkpointDb = ledgerDb;
-      this.cachedChainValid = this.verifyCheckpointChain();
-      this.chainValidAt = new Date().toISOString();
-    } catch (error) {
-      this.checkpointDb = null;
-      this.cachedChainValid = false;
-      this.chainValidAt = null;
-    }
-  }
-
-  private initializeRevertService(): void {
-    const deps: RevertDeps = {
-      getCheckpoint: (id: string) => this.getCheckpointById(id),
-      gitService: this.gitResetService,
-      purgeRagAfter: () => 0,
-      recordRevertCheckpoint: (request: RevertRequest) => {
-        this.recordCheckpoint({
-          checkpointType: "governance.revert",
-          actor: request.actor, phase: "revert", status: "sealed",
-          policyVerdict: "PASS", evidenceRefs: [],
-          payload: {
-            targetCheckpointId: request.targetCheckpoint.checkpointId,
-            targetGitHash: request.targetCheckpoint.gitHash,
-            reason: request.reason,
-          },
-        });
-        return crypto.randomUUID();
-      },
-      workspaceRoot: this.workspaceRoot,
-    };
-    this.revertService = new FailSafeRevertService(deps);
-  }
-
-  private getCheckpointById(id: string): CheckpointRef | null {
-    if (this.checkpointDb) {
-      try {
-        const row = this.checkpointDb.prepare(
-          "SELECT checkpoint_id, git_hash, timestamp, phase, status FROM failsafe_checkpoints WHERE checkpoint_id = ?",
-        ).get(id) as
-          | { checkpoint_id: string; git_hash: string; timestamp: string; phase: string; status: string }
-          | undefined;
-        if (row) {
-          return {
-            checkpointId: row.checkpoint_id, gitHash: row.git_hash,
-            timestamp: row.timestamp, phase: row.phase, status: row.status,
-          };
-        }
-      } catch { /* fall through */ }
-    }
-    const mem = this.checkpointMemory.find((r) => r.checkpointId === id);
-    if (!mem) return null;
-    return {
-      checkpointId: mem.checkpointId, gitHash: mem.gitHash,
-      timestamp: mem.timestamp, phase: mem.phase, status: mem.status,
-    };
-  }
-
-  private inferPhaseKeyFromPlan(plan: unknown): string {
-    return inferPhaseKeyFromPlan(plan);
-  }
-
-  private recordCheckpoint(input: {
-    checkpointType: string; actor: string; phase: string;
-    status: CheckpointStatus; policyVerdict: string;
-    evidenceRefs: string[]; payload: unknown;
-  }): void {
-    if (!this.checkpointTypeRegistry.has(input.checkpointType)) return;
-    if (input.evidenceRefs.length === 0) {
-      const since = new Date(Date.now() - 60_000).toISOString();
-      input.evidenceRefs = this.sentinelDaemon.getRecentObservationIds(since, 10);
-    }
-    const runId = this.planManager.getActivePlan()?.id ||
-      this.planManager.getCurrentSprint()?.id || "global";
-    const record = ckptBuildRecord(
-      input, new Date().toISOString(), runId,
-      this.checkpointDb, this.checkpointMemory,
-    );
-    ckptPersist(record, this.checkpointDb, this.checkpointMemory);
-  }
-
-  private getRecentCheckpoints(limit: number): CheckpointRecord[] {
-    return ckptGetRecent(this.checkpointDb, this.checkpointMemory, limit);
-  }
-
-  private getRecentVerdicts(limit = 50): Array<Record<string, unknown>> {
-    return ckptGetRecentVerdicts(this.checkpointDb, this.checkpointMemory, limit);
-  }
-
-  private verifyCheckpointChain(): boolean {
-    return ckptVerifyChain(this.checkpointDb, this.checkpointMemory);
-  }
-
-  private getCheckpointSummary(): Record<string, unknown> {
-    return ckptGetSummary(
-      this.checkpointDb, this.checkpointMemory,
-      this.cachedChainValid, this.chainValidAt,
-    );
-  }
-
-  // ------------------------------------------------------------------
-  //  Transparency & Risk helpers (used by buildHubSnapshot + routes)
-  // ------------------------------------------------------------------
-
-  private getTransparencyEvents(limit: number): Array<Record<string, unknown>> {
-    const logPath = path.join(
-      this.workspaceRoot, ".failsafe", "logs", "transparency.jsonl",
-    );
-    const events: Array<Record<string, unknown>> = [];
-    try {
-      if (fs.existsSync(logPath)) {
-        const lines = fs.readFileSync(logPath, "utf-8").trim().split("\n").filter(Boolean);
-        for (const line of lines.slice(-limit)) {
-          try { events.push(JSON.parse(line)); } catch { /* skip malformed */ }
-        }
-      }
-    } catch { /* return empty */ }
-    return events;
-  }
-
-  private logTransparencyEvent(event: Record<string, unknown>): void {
-    const logPath = path.join(
-      this.workspaceRoot, ".failsafe", "logs", "transparency.jsonl",
-    );
-    try {
-      const dir = path.dirname(logPath);
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      fs.appendFileSync(logPath, JSON.stringify(event) + "\n", "utf-8");
-    } catch { /* ignore write errors */ }
-  }
-
-  private getRiskRegister(): Array<Record<string, unknown>> {
-    const risksPath = path.join(
-      this.workspaceRoot, ".failsafe", "risks", "risks.json",
-    );
-    try {
-      if (fs.existsSync(risksPath)) {
-        const data = JSON.parse(fs.readFileSync(risksPath, "utf-8"));
-        return Array.isArray(data.risks) ? data.risks : [];
-      }
-    } catch { /* return empty */ }
-    return [];
-  }
-
-  private writeRiskRegister(risks: Array<Record<string, unknown>>): void {
-    const risksPath = path.join(
-      this.workspaceRoot, ".failsafe", "risks", "risks.json",
-    );
-    const dir = path.dirname(risksPath);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(risksPath, JSON.stringify({ risks }, null, 2), "utf-8");
-  }
-
-  // ------------------------------------------------------------------
-  //  Initialization helpers
-  // ------------------------------------------------------------------
-
-  private getWorkspaceRoot(): string {
-    return this.workspaceRoot;
-  }
-
-  private resolveUiDir(): string {
-    const candidates = [
-      path.join(__dirname, "ui"),
-      path.resolve(__dirname, "../../src/roadmap/ui"),
-      path.resolve(__dirname, "../../../src/roadmap/ui"),
-    ];
-    for (const candidate of candidates) {
-      if (fs.existsSync(path.join(candidate, "index.html"))) return candidate;
-    }
-    return path.join(__dirname, "ui");
-  }
-
-  private resolveQoreRuntimeOptions(
-    options?: Partial<QoreRuntimeOptions>,
-  ): QoreRuntimeOptions {
-    const baseUrl = String(options?.baseUrl || "http://127.0.0.1:7777")
-      .trim().replace(/\/+$/, "");
-    return {
-      enabled: Boolean(options?.enabled),
-      baseUrl,
-      apiKey: options?.apiKey ? String(options.apiKey) : undefined,
-      timeoutMs: Math.max(500, Math.min(30000, Number(options?.timeoutMs || 4000))),
-    };
-  }
-
-  private createBrainstormService(): BrainstormService {
-    return new BrainstormService(async (prompt, payload) => {
-      const fullPrompt = `${prompt}\n\nTranscript:\n${payload}`;
-      const clean = (raw: string): string => {
-        let c = raw.trim()
-          .replace(/^```(?:json)?\s*/i, "")
-          .replace(/\s*```$/i, "");
-        const first = c.indexOf("{");
-        const last = c.lastIndexOf("}");
-        if (first >= 0 && last > first) c = c.slice(first, last + 1);
-        return c;
-      };
-      if (this.configProvider) {
-        const llm = new LLMClient(this.configProvider);
-        if (await llm.checkAvailability()) {
-          try {
-            const result = await llm.callEndpoint(fullPrompt, 60000);
-            return clean(result.response);
-          } catch (err) {
-            console.warn("[Brainstorm] Ollama callEndpoint failed:", err);
-          }
-        }
-      }
-      try {
-        const vscode = await import("vscode");
-        const models = await vscode.lm.selectChatModels();
-        if (models.length > 0) {
-          const messages = [vscode.LanguageModelChatMessage.User(fullPrompt)];
-          const chatResponse = await models[0].sendRequest(messages);
-          let text = "";
-          for await (const chunk of chatResponse.text) text += chunk;
-          return clean(text);
-        }
-      } catch { /* VS Code LM API not available */ }
-      throw new Error(
-        "No LLM available — start Ollama or enable a VS Code language model",
-      );
+  private buildHubService(): HubSnapshotService {
+    return new HubSnapshotService({
+      workspaceRoot: this.workspaceRoot, extensionVersion: EXTENSION_VERSION,
+      planManager: this.planManager, qorelogicManager: this.qorelogicManager,
+      sentinelDaemon: this.sentinelDaemon, qorRuntimeService: this.qorRuntimeService,
+      gitResetService: this.gitResetService,
+      transparencyLogger: this.transparencyLogger,
+      riskRegisterManager: this.riskRegisterManager,
+      mergePlanBlockers: (plan, a) => mergePlanBlockers(plan, a as WorkspaceArtifactSnapshot),
+      getActualPort: () => this.lifecycle?.getPort() ?? PORT,
+      getIdeTracker: () => this.ideTracker,
+      getAgentHealthIndicator: () => this.agentHealthIndicator,
+      checkpointTypeRegistry: CHECKPOINT_TYPE_REGISTRY,
+      storeRef: this.storeRef,
     });
   }
+
+  private buildRouteHost(): ConsoleRouteHost {
+    return {
+      app: this.app, uiDir: this.uiDir, workspaceRoot: this.workspaceRoot,
+      workspaceDirname: __dirname, hub: this.hub,
+      rejectIfRemote: (req, res) => this.rejectIfRemote(req, res),
+      broadcast: (d) => this.broadcast(d),
+      getUiEntryFile: (req) => this.getUiEntryFile(req),
+      getInstalledSkills: () => this.getInstalledSkills() as any,
+      getEnforcementEngine: () => this.enforcementEngine,
+      getPermissionManager: () => this.permissionManager as any,
+      getSystemRegistry: () => this.systemRegistry,
+      getScaffoldCallback: () => this.scaffoldCallback as any,
+      getScaffoldWebCallback: () => this.scaffoldWebCallback as any,
+      getOutputChannel: () => this.outputChannel,
+      getAgentTimelineService: () => this.agentTimelineService as any,
+      getAgentHealthIndicator: () => this.agentHealthIndicator as any,
+      getAgentRunRecorder: () => this.agentRunRecorder as any,
+      qorRuntimeService: this.qorRuntimeService,
+      brainstormService: this.brainstormService,
+      audioVaultService: this.audioVaultService,
+      marketplaceCatalog: this.marketplaceCatalog,
+      marketplaceInstaller: this.marketplaceInstaller,
+      securityScanner: this.securityScanner,
+      adapterService: this.adapterService,
+      sentinelDaemon: this.sentinelDaemon,
+      planManager: this.planManager,
+      qorelogicManager: this.qorelogicManager,
+      featureGate: this.featureGate,
+    };
+  }
+
+  private subscribeToEvents(): void {
+    const manager = new EventSubscriptionManager({
+      eventBus: this.eventBus,
+      recordCheckpoint: (r: RecordCheckpointInput) => this.hub.recordCheckpoint(r),
+      broadcast: (d) => this.broadcast(d),
+      logTransparencyEvent: (e) => this.hub.logTransparencyEvent(e),
+      inferPhaseKey: () => this.hub.inferPhaseKeyFromPlan(this.planManager.getActivePlan()),
+      recordObservedFileMutation: (p) => this.hub.recordObservedFileMutation(p, (d) => this.broadcast(d)),
+      getPlan: (id) => this.planManager.getPlan(id),
+      sealedSubstantiateCompletions: this.sealedSubstantiateCompletions,
+    });
+    manager.subscribe();
+  }
+
 }

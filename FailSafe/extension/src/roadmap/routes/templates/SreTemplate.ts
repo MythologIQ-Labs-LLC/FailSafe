@@ -47,7 +47,18 @@ body{font-family:"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
 .sre-setup code{background:rgba(95,150,255,0.12);padding:3px 8px;border-radius:4px;
   font-size:11px;color:#7ba3f0;word-break:break-all;}
 .sre-setup strong{color:#f0b840;}
+.sre-footer{margin-top:4px;padding-top:8px;border-top:1px solid rgba(95,150,255,0.15);
+  font-size:10px;color:#6b82b0;text-align:center;line-height:1.5;}
+.sre-footer a{color:#7ba3f0;text-decoration:none;}
+.sre-footer a:hover{text-decoration:underline;}
+.sre-footer .sep{margin:0 6px;color:#3a4f7a;}
 `;
+
+const SRE_FOOTER_HTML = `<div class="sre-footer">
+  Supports the <a href="https://github.com/microsoft/agent-governance-toolkit" target="_blank" rel="noopener">Microsoft Agent Governance Toolkit</a>
+  <span class="sep">&middot;</span>
+  <a href="https://www.qortara.com" target="_blank" rel="noopener">qortara.com</a>
+</div>`;
 
 function buildSreDisconnectedHtml(): string {
   return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
@@ -57,11 +68,15 @@ function buildSreDisconnectedHtml(): string {
   <div class="sre-header">SRE Tracker</div>
   <div class="sre-card sre-setup">
     <p><strong>AGT Adapter not connected</strong></p>
+    <p style="font-size:11px">This panel surfaces telemetry from the
+      <a href="https://github.com/microsoft/agent-governance-toolkit" target="_blank" rel="noopener" style="color:#7ba3f0">Microsoft Agent Governance Toolkit</a>
+      via the FailSafe adapter.</p>
     <p>Start the adapter to enable governance telemetry:</p>
     <p><code>pip install "agent-failsafe[server]"</code></p>
     <p><code>python -m agent_failsafe.rest_server</code></p>
     <p style="margin-top:8px;font-size:11px;color:#6b82b0">Then reload this panel.</p>
   </div>
+  ${SRE_FOOTER_HTML}
 </div></body></html>`;
 }
 
@@ -209,6 +224,7 @@ function buildSreConnectedHtml(s: AgtSreSnapshot): string {
   ${buildAsiHtml(s.asiCoverage)}
   ${s.auditEvents?.length ? buildAuditFeedHtml(s.auditEvents) : ""}
   ${s.fleet?.length ? buildFleetHtml(s.fleet) : ""}
+  ${SRE_FOOTER_HTML}
 </div></body></html>`;
 }
 

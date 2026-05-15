@@ -1,24 +1,24 @@
 import { EventBus } from '../shared/EventBus';
 import { Logger } from '../shared/Logger';
 import { SentinelVerdict, SentinelEvent } from '../shared/types';
-import { QoreLogicManager } from '../qorelogic/QoreLogicManager';
+import { QorLogicManager } from '../qorelogic/QorLogicManager';
 
 /**
  * VerdictRouter
  * 
  * Responsible for routing the final Sentinel verdict to the appropriate destinations:
  * - Event Bus (for UI/Logging)
- * - QoreLogic (for Escalation/L3)
+ * - QorLogic (for Escalation/L3)
  * - Future: Blocking file operations, etc.
  */
 export class VerdictRouter {
     private logger: Logger;
     private eventBus: EventBus;
-    private qorelogic: QoreLogicManager;
+    private qorelogic: QorLogicManager;
 
     constructor(
         eventBus: EventBus,
-        qorelogic: QoreLogicManager
+        qorelogic: QorLogicManager
     ) {
         this.eventBus = eventBus;
         this.qorelogic = qorelogic;
@@ -34,7 +34,7 @@ export class VerdictRouter {
         // 1. Emit verdict event (Internal System)
         this.eventBus.emit('sentinel.verdict', verdict);
 
-        // 2. Handle Escalations (QoreLogic)
+        // 2. Handle Escalations (QorLogic)
         if (verdict.decision === 'ESCALATE') {
             this.logger.info('Escalating verdict to L3', { filePath: verdict.artifactPath });
 

@@ -1,3 +1,8 @@
+import type { QorLogicInstallReport } from '../../extension/installSkillsReport';
+import type { QorRuntimeService } from '../services/QorRuntimeService';
+import type { IFeatureGate } from '../../core/interfaces/IFeatureGate';
+import type { QorLogicHost } from '../../qorlogic/hostLayouts';
+
 /**
  * Dependency injection interface for API route modules extracted
  * from ConsoleServer. Each route module receives this bag of
@@ -6,6 +11,18 @@
 export interface ApiRouteDeps {
   rejectIfRemote: (req: any, res: any) => boolean;
   broadcast: (data: Record<string, unknown>) => void;
+  // Phase 2 (B166) deps for QorRoute / FeatureStatusRoute / SkillsApiRoute / HookRoute
+  qorRuntimeService: QorRuntimeService;
+  buildHubSnapshot: () => Promise<Record<string, unknown>>;
+  featureGate?: IFeatureGate;
+  workspaceRoot: string;
+  /**
+   * `__dirname` of the ConsoleServer module — needed by skill discovery
+   * to walk up to ancestor `.claude/skills/`, `.codex/skills/`, etc.
+   * Passed in rather than re-derived so route tests can supply a
+   * deterministic path.
+   */
+  workspaceDirname: string;
   brainstormService: any;
   audioVaultService: any;
   getRecentCheckpoints: (limit: number) => any[];
@@ -23,7 +40,13 @@ export interface ApiRouteDeps {
   getTransparencyEvents: (limit: number) => any[];
   getRiskRegister: () => any[];
   writeRiskRegister: (risks: any[]) => void;
-  scaffoldSkills?: () => Promise<{ scaffolded: number; skipped: number }>;
+  scaffoldSkills?: () => Promise<QorLogicInstallReport | null>;
+  scaffoldWithWebOptions?: (
+    hosts: QorLogicHost[],
+    scope: "repo" | "global",
+    skillFilter: Record<string, string[]> | undefined,
+  ) => Promise<QorLogicInstallReport>;
+  showOutput?: () => void;
   // Agent API route delegates (Phase 2: B142/B143/B144)
   getTimelineEntries: (filter?: any) => any[];
   getHealthMetrics: () => any | null;

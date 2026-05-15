@@ -194,7 +194,7 @@ function bundlePattern(sourceDir, targetDir, pattern, stats) {
     } catch { stats.errors++; }
     return;
   }
-  // Handle patterns like "skills/ql-*/SKILL.md" (3 parts: parentDir/dirGlob/fileName)
+  // Handle patterns like "skills/qor-*/SKILL.md" (3 parts: parentDir/dirGlob/fileName)
   if (parts.length === 3 && parts[1].includes("*")) {
     const parentDir = path.join(sourceDir, parts[0]);
     const dirGlob = parts[1];

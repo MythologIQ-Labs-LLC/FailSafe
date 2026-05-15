@@ -4,9 +4,80 @@ Prevent runaway AI edits, hallucinated dependencies, and destructive refactors b
 
 FailSafe runs locally inside VS Code and Cursor. It monitors what AI agents do, applies deterministic policy checks at the editor boundary, and gives you full visibility into every decision — before code ships.
 
-**Current Release**: v4.9.9 (2026-03-17)
+**Current Release**: v5.1.0 (2026-05-06)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New (Unreleased)
+
+- **Model-sourced Risk Register**. Coding agents now write risks directly into the Risk Register via the MCP tool `failsafe.create_risk`, the `@failsafe /risk` chat subcommand, or auto-derivation from SHIELD lifecycle signals (GATE VETOs, DEBUG entries, Shadow-Genome failure events). The manual `failsafe.addRisk` wizard is removed; legacy entries auto-migrate to a `manual` source label.
+- **Install Skills UX expansion**: live-progress modal with retry, operator-editable host registry, per-host skill picker, dry-run preview, and a new workspace `LiveProgressInvariant` doctrine + lint helper.
+- **OpenVSX v5.0.0 catch-up**: VS Code Marketplace and OpenVSX are now aligned at v5.0.0 via a dedicated manual workflow (`.github/workflows/openvsx-catchup.yml`).
+- **SRE panel** now attributes its data source: links to the [Microsoft Agent Governance Toolkit](https://github.com/microsoft/agent-governance-toolkit) (the upstream the panel surfaces) and [Qortara](https://www.qortara.com).
+- **Brand sweep**: every `QoreLogic` / `Qore` legacy spelling removed across source. User-facing strings hyphenated to "Qor-Logic"; PascalCase identifiers remain `QorLogic`. Skills show simple attribution: `qor-logic` for skills sourced from the Qor-Logic Python package; `FailSafe` for skills authored here.
+- **Release pipeline safety gate**: both publish jobs now sit behind a `production` GitHub environment, requiring a reviewer approval between build and publish.
+
+## What's New in v5.1.0
+
+Minor release: B199 Phase 1 ships the comprehensive E2E coverage methodology and the release-class CI gate (Option C) that blocks UI-surface commits without a corresponding `.spec.ts`. Surfaced and fixed three latent Monitor bugs that unit tests could not catch — including a missing `type="module"` on the Monitor's bootstrap script that meant the compact UI never actually rendered in production.
+
+### Added
+
+- **Comprehensive E2E coverage methodology** — `serveCompactUI` test harness + `ledgerFixtures` builder + `monitor-shield-progression.spec.ts` (8 cases) + `monitor-staleness.spec.ts` (1 lifecycle). Covers all 6 SHIELD phases (IDLE / PLAN / GATE / IMPLEMENT / SUBSTANTIATE / SEALED) plus plan-title rendering and WS-disconnect staleness handling.
+- **Release-class CI coverage gate** — `scripts/check-e2e-coverage.cjs` invoked from the pre-push hook when the active plan's `change_class` is `feature` or `breaking`. Blocks pushes whose staged surface files (UI, ConsoleServer routes, commands) lack a corresponding `*.spec.ts`, unless a `[no-e2e: <reason>]` token appears in a commit message in the push range. Hotfix is exempt.
+
+### Fixed
+
+- **Monitor never bootstrapped in production** (root mechanism behind B191's user-visible "Monitor doesn't see my work"). The compact UI's `<script src="roadmap.js">` was missing `type="module"` despite using ES module imports — the script silently failed to execute. No prior unit test exercised UI JS execution, so this was invisible. Fixed.
+- **SEAL phase rendered "Substantiate active" instead of "all four done"** — `PHASE_INDEX_MAP['SEALED']` was 4 (same as SUBSTANTIATE) in `monitor-render.js`. Bumped to 5 so SEAL correctly marks all four steps `done`.
+- **IDLE phase rendered "Plan active" instead of "all pending"** — added an IDLE early-return branch in `getPhaseInfo` that fires only when no other phase signal exists; preserves existing IDLE+runState and IDLE+recentCompletions fallthrough.
+
+## What's New in v5.0.0
+
+Major release: skills ingested from the [`qor-logic`](https://pypi.org/project/qor-logic/) PyPI package, public reveal of the FailSafe / FailSafe Pro product split, and the Command Center now reads workspace truth (META_LEDGER, BACKLOG, plans, audit, changelog) instead of empty placeholder state.
+
+### Added
+
+- **QorLogic skill ingestion** — `Install QorLogic Skills` button installs the `qor-logic` Python package and runs `qorlogic install --host claude --scope repo` (and codex). Skills land at `.claude/skills/` and `.codex/skills/` with synthesized provenance.
+- **Python interpreter auto-detection** — Resolves Python in priority order: `failsafe.qorlogic.pythonPath` setting → VS Code Python extension (`ms-python.python`) → probe `python3` → `python` → `py -3`.
+- **`failsafe.bootstrap` and `failsafe.organize` commands** — Idempotent workspace-readiness gate; runs in silent mode on every activation, full bootstrap (incl. `pip install qor-logic`) on user trigger.
+- **Always-visible Settings card** — "Install / Refresh QorLogic Skills" + "Bootstrap Workspace" buttons; no longer gated on a brittle "is something on disk" heuristic.
+- **FailSafe Pro discovery** — New `FailSafe: About FailSafe Pro` command and a Settings panel card link to <https://mythologiq.studio/products/failsafe-download>.
+- **Workspace-truth UI** — Operations Phases stat reflects META_LEDGER history (was 0/0); Risks tab shows BACKLOG open items when no `risks.json` exists; Overview gains Latest Audit + Recent Releases cards parsed from `.failsafe/governance/AUDIT_REPORT.md` + `CHANGELOG.md`.
+- See `docs/v5/QORLOGIC_SKILL_INGESTION.md` and `docs/v5/PRO_INTEGRATION.md`.
+
+### Changed
+
+- The v4 bundled `dist/extension/skills/` is no longer shipped in the VSIX. Existing user skills under `.claude/skills/` are not touched on upgrade.
+- "Install Skills" UI label renamed to "Install QorLogic Skills".
+- Skill IDs migrated from `ql-*` to `qor-*` across source and project-local skill directories. `SkillParser` recognizes both prefixes during the v4→v5 transition.
+- Operations Phases render capped at 10 cards plus a summary row (was: would render 120 cards on a populated workspace).
+
+### Round 2 — Install UX (2026-05-05)
+
+- Install transparency report: every QorLogic install action emits a structured per-phase invocation list (python-probe, pip-install, qorlogic-install per host, provenance, refresh). Failed steps stay visible with command + stderr until the next run.
+- Host/scope QuickPick prompts before installing; selections persist to workspace state.
+- New command palette entry "FailSafe: Install QorLogic Skills (defaults)" — bypasses the QuickPick for automation.
+- "Show Output" button focuses the FailSafe (QorLogic) output channel.
+
+### Round 3 — Voice & Brainstorm UX (2026-05-06)
+
+- **Multilingual voice** — Whisper model picker (tiny / base / small) and 12-language BCP-47 selector. Default model switched to multilingual; English-only fallback removed.
+- **Voice status badge** — surfaces unified voice state (listening / processing / speaking / errors) in the Brainstorm right panel.
+- **TTS error transparency** — Piper vendor presence failures now surface to the badge instead of silent failure.
+- **Brainstorm history limit** — configurable via Settings → Brainstorm (was hardcoded to 10).
+- **Notifications severity gating** — independent toggles for info-tier and error-tier toasts in Settings → Notifications.
+- **Security hardening** — XSS escape discipline applied across all settings/overview innerHTML interpolation; Whisper model and Piper voice allowlists close supply-chain pivot risks.
+- **Internal architecture** — ConsoleServer decomposition (`QoreRuntimeService` + 4 route extractions). No user-visible API change.
+
+### About FailSafe Pro
+
+FailSafe Pro is the desktop native application for SDLC visibility and governance — OS-level enforcement, file locking, team workflows, and remote connections beyond the editor boundary. The open extension remains the editor surface; pair it with Pro for full SDLC operations.
+
+Learn more: <https://mythologiq.studio/products/failsafe-pro>
+Download: <https://mythologiq.studio/products/failsafe-download>
+
+Or open the Command Center Settings tab and choose "About FailSafe Pro".
 
 ## What's New in v4.9.9
 
@@ -83,12 +154,12 @@ Cross-agent skill consolidation — all SHIELD skills migrated from legacy `.cla
 
 ### Changed
 
-- **Skills migrated to SKILL.md format** — 17 SHIELD skills + 3 personas now use directory-based `.claude/skills/ql-*/SKILL.md` with YAML frontmatter, matching modern Claude Code SDK conventions.
-- **Agents separated** — 7 agent definitions moved to `.claude/agents/ql-*.md` with subagent frontmatter. Claude Code loads these natively without extension scaffolding.
+- **Skills migrated to SKILL.md format** — 17 SHIELD skills + 3 personas now use directory-based `.claude/skills/qor-*/SKILL.md` with YAML frontmatter, matching modern Claude Code SDK conventions.
+- **Agents separated** — 7 agent definitions moved to `.claude/agents/qor-*.md` with subagent frontmatter. Claude Code loads these natively without extension scaffolding.
 - **ModelAdapter output dirs fixed** — Claude (`.claude/skills/`), Codex (`.agents/skills/`), Gemini (`.gemini/skills/`), Copilot (`.github/skills/`), Cursor (`.cursor/rules/`) all corrected.
 - **getOutputPath simplified** — Directory-based output (`{name}/SKILL.md`) is now the default; only Cursor uses flat files.
 - **VSIX bundling de-complected** — Agents removed from bundle patterns, eliminating scaffold collision. Directory-based skill bundling added.
-- **Antigravity restructured** — Genesis/Qorelogic directories replaced with `skills/ql-*/SKILL.md` + `agents/` layout.
+- **Antigravity restructured** — Genesis/Qorelogic directories replaced with `skills/qor-*/SKILL.md` + `agents/` layout.
 - **Stale duplicates removed** — `FailSafe/Claude/` (20 files) deleted; 12 quarantined skills cleaned up.
 - **Cross-agent instruction file** — `AGENTS.md` created at repo root for Codex/Copilot/Cursor/Windsurf compatibility.
 
@@ -145,7 +216,7 @@ Governance state integrity remediation — trust data that was transient or fabr
 
 - Hook toggle UI in Console Settings panel with enable/disable controls.
 - Release gate now validates backlog duplicates, version summaries, and help doc markers.
-- Governance doc storage consolidated to `.failsafe/governance/` with `/ql-organize` Phase 6 compliance checking.
+- Governance doc storage consolidated to `.failsafe/governance/` with `/qor-organize` Phase 6 compliance checking.
 
 ### Voice-Brainstorm Status
 
@@ -199,13 +270,13 @@ The Monitor provides real-time visibility into system health, governance posture
 - SOA ledger with local audit history and checkpoint summaries
 - MCP server support for external tools that need audit and ledger hooks
 
-## QoreLogic: The Governance Layer
+## QorLogic: The Governance Layer
 
-QoreLogic is the deterministic governance engine that enforces safety policies at the editor boundary. It operates on a fundamental principle: **governance decisions are made by code, not by asking an LLM to follow rules.**
+QorLogic is the deterministic governance engine that enforces safety policies at the editor boundary. It operates on a fundamental principle: **governance decisions are made by code, not by asking an LLM to follow rules.**
 
 ### Prompt Guidelines vs. Deterministic Governance
 
-| Aspect             | Prompt-Based Safety                     | QoreLogic Deterministic Governance   |
+| Aspect             | Prompt-Based Safety                     | QorLogic Deterministic Governance   |
 | ------------------ | --------------------------------------- | ------------------------------------ |
 | **Decision Maker** | LLM interprets rules                    | TypeScript code executes rules       |
 | **Consistency**    | Varies with context, temperature, model | Identical output for identical input |
@@ -213,7 +284,7 @@ QoreLogic is the deterministic governance engine that enforces safety policies a
 | **Bypass Risk**    | LLM can ignore or reinterpret           | Code cannot be persuaded             |
 | **Speed**          | Network latency + inference             | Sub-millisecond local execution      |
 
-### How QoreLogic Works
+### How QorLogic Works
 
 1. **Risk Classification** — Files are classified as L1 (low), L2 (medium), or L3 (high) risk based on:
    - File path triggers (e.g., `auth/`, `payment/`, `credential` → L3)
@@ -243,7 +314,7 @@ When an LLM is asked to enforce safety rules, it can:
 - Produce inconsistent decisions across similar inputs
 - Be influenced by prompt engineering attacks
 
-QoreLogic avoids these risks by executing deterministic TypeScript code at the governance boundary. The policy engine uses simple string matching and path analysis—no LLM inference required for governance decisions.
+QorLogic avoids these risks by executing deterministic TypeScript code at the governance boundary. The policy engine uses simple string matching and path analysis—no LLM inference required for governance decisions.
 
 **Example**: A file containing `api_key` will always trigger L3 classification. No prompt can persuade the code to ignore this trigger.
 
@@ -310,7 +381,7 @@ FailSafe evaluates save operations against the active Intent and can block write
 - Monitor and Command Center roles are defined in the Solution summary above; this model maps those roles to FailSafe architecture.
 - Narrative alignment:
   - `Genesis` -> Build
-  - `QoreLogic` -> Govern
+  - `QorLogic` -> Govern
   - `Sentinel` -> Watch
   - `Command Center` -> Build + Govern
   - `Monitor` -> Watch
@@ -331,7 +402,7 @@ FailSafe evaluates save operations against the active Intent and can block write
 
 - Generate, view, and export feedback snapshots
 
-### 10. QoreLogic Propagation
+### 10. QorLogic Propagation
 
 Supported via internal sync flows when enabled by workspace governance configuration.
 
@@ -461,7 +532,7 @@ By using this software, you acknowledge that it is experimental and agree to use
 
 ## License
 
-MIT - See `LICENSE`.
+Apache License 2.0 - See `LICENSE`.
 
 ## Links
 

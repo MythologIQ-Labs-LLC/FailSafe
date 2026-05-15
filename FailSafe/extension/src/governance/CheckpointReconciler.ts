@@ -1,7 +1,7 @@
 /**
  * CheckpointReconciler - Automatic Checkpoint Governance
  *
- * Silently handles gaps between /ql-* commands where the user may have:
+ * Silently handles gaps between /qor-* commands where the user may have:
  * - Used third-party skills or agents
  * - Made manual short prompts
  * - Modified files outside governance

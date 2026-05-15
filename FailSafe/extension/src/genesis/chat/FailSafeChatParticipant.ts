@@ -8,17 +8,21 @@
 import * as vscode from 'vscode';
 import { IntentService } from '../../governance/IntentService';
 import { SentinelDaemon } from '../../sentinel/SentinelDaemon';
-import { QoreLogicManager } from '../../qorelogic/QoreLogicManager';
+import { QorLogicManager } from '../../qorelogic/QorLogicManager';
+import { RiskManager } from '../../qorelogic/risk/RiskManager';
+import { RiskChatHandler } from './handlers/RiskChatHandler';
 
 const PARTICIPANT_ID = 'failsafe.chat';
 
 export class FailSafeChatParticipant {
   private participant: vscode.ChatParticipant;
+  private riskHandler = new RiskChatHandler();
 
   constructor(
     private intentService: IntentService,
     private sentinel: SentinelDaemon,
-    private qorelogic: QoreLogicManager,
+    private qorelogic: QorLogicManager,
+    private riskManager?: RiskManager,
   ) {
     this.participant = vscode.chat.createChatParticipant(
       PARTICIPANT_ID,
@@ -52,6 +56,12 @@ export class FailSafeChatParticipant {
           return await this.handleStatus(stream);
         case 'seal':
           return await this.handleSeal(stream);
+        case 'risk':
+          if (!this.riskManager) {
+            stream.markdown('**Risk manager not available** — workspace not initialized.');
+            return { metadata: { command: 'risk' } };
+          }
+          return await this.riskHandler.handle(request, stream, this.riskManager);
         default:
           return await this.handleDefault(request, stream);
       }

@@ -1,5 +1,8 @@
 // FailSafe Unified Command Center — Overview Tab Module
 
+import { renderLatestAudit } from './latest-audit.js';
+import { renderRecentReleases } from './recent-releases.js';
+
 function esc(value) {
   const d = document.createElement('div');
   d.textContent = String(value ?? '');
@@ -84,6 +87,11 @@ export class OverviewRenderer {
           </div>
         </div>
 
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+        <div id="cc-latest-audit-slot">${renderLatestAudit(hubData.latestAudit)}</div>
+        <div id="cc-recent-releases-slot">${renderRecentReleases(hubData.recentReleases)}</div>
       </div>
     `;
 

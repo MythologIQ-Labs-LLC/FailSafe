@@ -1,5 +1,5 @@
 /**
- * FailSafe (feat. QoreLogic)
+ * FailSafe (feat. QorLogic)
  *
  * Main extension entry point.
  * Decomposed into bootstrap modules for Section 4 Simplicity.
@@ -13,7 +13,7 @@ import { FailSafeMCPServer } from "../mcp/FailSafeServer";
 import { FailSafeChatParticipant } from "../genesis/chat/FailSafeChatParticipant";
 import { WorkspaceMigration } from "../qorelogic/WorkspaceMigration";
 import { GenesisManager } from "../genesis/GenesisManager";
-import { QoreLogicManager } from "../qorelogic/QoreLogicManager";
+import { QorLogicManager } from "../qorelogic/QorLogicManager";
 import { SentinelDaemon } from "../sentinel/SentinelDaemon";
 import { EventBus } from "../shared/EventBus";
 import { GovernanceStatusBar } from "../governance/GovernanceStatusBar";
@@ -27,7 +27,7 @@ import type { ICheckpointMetrics } from "../core/interfaces";
 // Bootstrap Modules
 import { bootstrapCore } from "./bootstrapCore";
 import { bootstrapGovernance } from "./bootstrapGovernance";
-import { bootstrapQoreLogic } from "./bootstrapQoreLogic";
+import { bootstrapQorLogic } from "./bootstrapQorLogic";
 import { bootstrapSentinel } from "./bootstrapSentinel";
 import { bootstrapGenesis } from "./bootstrapGenesis";
 import { bootstrapMCP } from "./bootstrapMCP";
@@ -39,7 +39,7 @@ import { createVscodeFeatureGate } from "../core/adapters/vscode";
 import { bootstrapStartupChecks } from "./bootstrapStartupChecks";
 
 let genesisManager: GenesisManager;
-let qorelogicManager: QoreLogicManager;
+let qorelogicManager: QorLogicManager;
 let sentinelDaemon: SentinelDaemon;
 let eventBus: EventBus;
 let logger: Logger;
@@ -76,22 +76,22 @@ export async function activate(
     const gov = await bootstrapGovernance(context, core, logger);
     governanceStatusBar = gov.governanceStatusBar;
 
-    // 3. QoreLogic
-    const qore = await bootstrapQoreLogic(context, core, gov, logger);
-    qorelogicManager = qore.qorelogicManager;
-    ledgerManager = qore.ledgerManager;
-    shadowGenomeManager = qore.shadowGenomeManager;
+    // 3. QorLogic
+    const qor = await bootstrapQorLogic(context, core, gov, logger);
+    qorelogicManager = qor.qorelogicManager;
+    ledgerManager = qor.ledgerManager;
+    shadowGenomeManager = qor.shadowGenomeManager;
 
-    // 3.4 Late-bind ledger to governance services created before QoreLogic
-    gov.releasePipelineGate.setLedgerManager(qore.ledgerManager);
-    gov.complianceExporter.setLedgerManager(qore.ledgerManager);
-    gov.complianceExporter.setShadowGenomeManager(qore.shadowGenomeManager);
-    gov.provenanceTracker.setLedgerManager(qore.ledgerManager);
+    // 3.4 Late-bind ledger to governance services created before QorLogic
+    gov.releasePipelineGate.setLedgerManager(qor.ledgerManager);
+    gov.complianceExporter.setLedgerManager(qor.ledgerManager);
+    gov.complianceExporter.setShadowGenomeManager(qor.shadowGenomeManager);
+    gov.provenanceTracker.setLedgerManager(qor.ledgerManager);
 
     // Wire RBAC persistence (deferred — ledgerManager not available at governance bootstrap)
-    if (qore.ledgerManager.isAvailable()) {
+    if (qor.ledgerManager.isAvailable()) {
       gov.rbacManager.setDatabase(
-        qore.ledgerManager.getDatabase() as unknown as import('../shared/types/database').CheckpointDb,
+        qor.ledgerManager.getDatabase() as unknown as import('../shared/types/database').CheckpointDb,
       );
     }
 
@@ -99,10 +99,10 @@ export async function activate(
     registerAdvancedCommands(
       context,
       {
-        ledgerManager: qore.ledgerManager,
-        policyEngine: qore.policyEngine,
-        breakGlass: qore.breakGlass,
-        systemRegistry: qore.systemRegistry,
+        ledgerManager: qor.ledgerManager,
+        policyEngine: qor.policyEngine,
+        breakGlass: qor.breakGlass,
+        systemRegistry: qor.systemRegistry,
         commitGuard: gov.commitGuard,
         configManager: core.configManager,
         workspaceRoot: core.workspaceRoot,
@@ -112,45 +112,32 @@ export async function activate(
     );
 
     // 4. Sentinel
-    const sentinel = await bootstrapSentinel(context, core, qore, logger);
+    const sentinel = await bootstrapSentinel(context, core, qor, logger);
     sentinelDaemon = sentinel.sentinelDaemon;
 
-    // 4.5. Checkpoint (bridges qore + sentinel substrates)
+    // 4.5. Checkpoint (bridges qor + sentinel substrates)
     const checkpointMetrics: ICheckpointMetrics = {
-      getLedgerEntryCount: () => qore.ledgerManager.getEntryCount(),
+      getLedgerEntryCount: () => qor.ledgerManager.getEntryCount(),
       getSentinelEventsProcessed: () =>
         sentinel.sentinelDaemon.getStatus().eventsProcessed,
     };
     const _checkpointManager = new CheckpointManager(
       core.configManager,
-      qore.ledgerManager,
+      qor.ledgerManager,
       checkpointMetrics,
     );
-
-    // 5. MCP Server
-    mcpServer = await bootstrapMCP(context, sentinel, qore, gov, logger);
 
     // 6. Genesis
     genesisManager = await bootstrapGenesis(
       context,
       core,
-      qore,
+      qor,
       sentinel,
       logger,
     );
 
-    // 7. Feedback & Chat
+    // 7. Feedback
     feedbackManager = new FeedbackManager(context);
-    try {
-      const chatParticipant = new FailSafeChatParticipant(
-        gov.intentService,
-        sentinelDaemon,
-        qorelogicManager,
-      );
-      context.subscriptions.push({ dispose: () => chatParticipant.dispose() });
-    } catch (e) {
-      logger.error("Failed to register chat participant", e);
-    }
 
     // 8. Servers (Roadmap + Webview providers) - single server on port 9376
     const servers = await bootstrapServers(
@@ -161,12 +148,32 @@ export async function activate(
         sentinelDaemon,
         eventBus,
         workspaceRoot: core.workspaceRoot,
-        systemRegistry: qore.systemRegistry,
+        systemRegistry: qor.systemRegistry,
         configManager: core.configManager,
       },
       logger,
     );
     consoleServer = servers.consoleServer;
+
+    // 8.1. MCP Server (deferred from step 5 to step 8.1 so RiskManager
+    //      constructed by bootstrapServers can be wired into the
+    //      failsafe.create_risk tool. Per plan-qor-model-sourced-risks Phase 2.
+    //      mcpServer is otherwise unused by Genesis/chat/server steps.)
+    mcpServer = await bootstrapMCP(context, sentinel, qor, gov, logger, servers.riskManager);
+
+    // 8.2. Chat participant (deferred so RiskManager is available for the
+    //      /risk subcommand. Per plan-qor-model-sourced-risks Phase 4.)
+    try {
+      const chatParticipant = new FailSafeChatParticipant(
+        gov.intentService,
+        sentinelDaemon,
+        qorelogicManager,
+        servers.riskManager,
+      );
+      context.subscriptions.push({ dispose: () => chatParticipant.dispose() });
+    } catch (e) {
+      logger.error("Failed to register chat participant", e);
+    }
 
     // Wire dynamic port for workspace isolation
     setServerPort(servers.actualPort, core.workspaceRoot);
@@ -175,7 +182,7 @@ export async function activate(
     const agentHealthIndicator = new AgentHealthIndicator(
       eventBus,
       servers.riskManager,
-      qore.trustEngine,
+      qor.trustEngine,
       sentinelDaemon,
     );
     context.subscriptions.push(agentHealthIndicator);
@@ -205,7 +212,7 @@ export async function activate(
     );
 
     // 10. Startup Checks (extracted to bootstrapStartupChecks.ts — B97)
-    bootstrapStartupChecks(context, core, qore);
+    bootstrapStartupChecks(context, core, qor);
 
     eventBus.emit("failsafe.ready", {
       timestamp: new Date().toISOString(),

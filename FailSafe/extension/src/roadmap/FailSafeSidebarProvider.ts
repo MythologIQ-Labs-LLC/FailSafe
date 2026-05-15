@@ -1,11 +1,11 @@
 import * as vscode from "vscode";
+import { decideSidebarClick } from "./sidebarInitializeLogic";
 
 type SidebarMessage =
   | { command: "openPopout" }
   | { command: "openEditor" }
   | { command: "reload" }
-  | { command: "initialize" }
-  | { command: "organize" };
+  | { command: "sidebar.click"; currentLabel: string };
 
 export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "failsafe.sidebarView";
@@ -43,21 +43,28 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
       case "reload":
         this.refresh();
         break;
-      case "initialize": {
-        const initCmds = await vscode.commands.getCommands(true);
-        if (initCmds.includes("failsafe.bootstrap")) {
-          await vscode.commands.executeCommand("failsafe.bootstrap");
-        } else {
-          vscode.window.showInformationMessage("Bootstrap is not enabled in current configuration.");
-        }
-        break;
-      }
-      case "organize": {
-        const cmds = await vscode.commands.getCommands(true);
-        if (cmds.includes("failsafe.organize")) {
-          await vscode.commands.executeCommand("failsafe.organize");
-        } else {
-          vscode.window.showInformationMessage("Organize is not enabled in current configuration.");
+      case "sidebar.click": {
+        const allCmds = new Set(await vscode.commands.getCommands(true));
+        const decision = decideSidebarClick(message.currentLabel, allCmds);
+        switch (decision.kind) {
+          case "run-organize":
+            if (allCmds.has("failsafe.organize")) {
+              await vscode.commands.executeCommand("failsafe.organize");
+            } else {
+              vscode.window.showWarningMessage(
+                "Organize command is not yet registered. The extension may still be activating — try again in a moment.",
+              );
+            }
+            break;
+          case "run-bootstrap":
+            await vscode.commands.executeCommand("failsafe.bootstrap");
+            this.view?.webview.postMessage(decision.postUpdate);
+            break;
+          case "bootstrap-not-ready":
+            vscode.window.showWarningMessage(
+              "Bootstrap command is not yet registered. The extension may still be activating — try again in a moment.",
+            );
+            break;
         }
         break;
       }
@@ -117,8 +124,8 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
   <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
     const initBtn = document.getElementById('init-workspace');
-    
-    // Restore state
+
+    // Restore label state; the host owns the decision logic.
     const state = vscode.getState() || { initDone: false };
     if (state.initDone && initBtn) {
         initBtn.textContent = 'Organize';
@@ -127,21 +134,24 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
 
     document.getElementById('open-popout')?.addEventListener('click', () => vscode.postMessage({ command: 'openPopout' }));
     document.getElementById('reload')?.addEventListener('click', () => vscode.postMessage({ command: 'reload' }));
-    
+
     initBtn?.addEventListener('click', () => {
-        const isOrganize = initBtn.textContent === 'Organize';
-        vscode.postMessage({ command: isOrganize ? 'organize' : 'initialize' });
-        // Optimistically update UI
-        if (!isOrganize) {
-            initBtn.textContent = 'Organize';
-            initBtn.title = 'Organize Workspace Structure';
-            vscode.setState({ ...vscode.getState(), initDone: true });
-        }
+        // Send only the current label; host decides what happens next and
+        // posts back a button.update message when DOM should mutate.
+        vscode.postMessage({ command: 'sidebar.click', currentLabel: initBtn.textContent });
     });
 
     window.addEventListener('message', (event) => {
       const data = event && event.data ? event.data : null;
       if (!data || typeof data !== 'object') return;
+      if (data.type === 'failsafe.button.update' && initBtn) {
+        initBtn.textContent = data.text;
+        initBtn.title = data.title;
+        if (data.persistState) {
+            vscode.setState({ ...vscode.getState(), initDone: true });
+        }
+        return;
+      }
       if (data.type === 'failsafe.openPopout') {
         vscode.postMessage({ command: 'openPopout' });
       }

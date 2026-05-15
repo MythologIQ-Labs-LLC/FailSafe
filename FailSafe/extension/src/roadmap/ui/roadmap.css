@@ -13,8 +13,13 @@
 }
 
 * { box-sizing: border-box; }
-body {
+html, body {
+  height: 100%;
   margin: 0;
+  /* Compact-sidebar fit: prevent outer scrolling; inner sections shrink to fit. */
+  overflow: hidden;
+}
+body {
   font-family: "Segoe UI Variable Text", "Aptos", "Trebuchet MS", sans-serif;
   color: var(--text);
   background:
@@ -24,11 +29,13 @@ body {
 }
 
 .shell {
-  min-height: 100svh;
+  height: 100svh;
+  max-height: 100svh;
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   justify-content: center;
   padding: 10px 10px 14px;
+  overflow: hidden;
 }
 
 .stack {
@@ -37,6 +44,24 @@ body {
   display: flex;
   flex-direction: column;
   gap: 11px;
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+/* Compact-sidebar vertical fit: outer scroll is locked by html/body
+   above; .stack itself is `zoom`-scaled by monitor-viewport-fit.js so
+   ALL inner contents shrink proportionally. Operator request
+   2026-05-14: "all of the contents of the monitor need to scale as
+   well to match". Cards no longer clip — scaling produces fit. */
+.stack > .card,
+.stack > .brand,
+.stack > .legal {
+  flex-shrink: 0;
+}
+/* zoom rounding can produce a 1px overflow on .stack's container; clip
+   the shell so that's never visible as a scroll seam. */
+.shell {
+  overflow: hidden;
 }
 
 
@@ -385,6 +410,10 @@ body {
 }
 
 
+.sentinel-orb.pending {
+  background: radial-gradient(circle at 35% 30%, #cbd5e1, #64748b 58%, #334155);
+  opacity: 0.55;
+}
 .sentinel-orb.monitoring {
   background: radial-gradient(circle at 35% 30%, #a4f8a2, #35ca2d 58%, #1a6f19);
   animation: pulse-green 3s ease-in-out infinite;
@@ -1134,3 +1163,30 @@ body {
   transition: width 0.4s ease, background 0.3s ease;
 }
 
+
+/* Monitor SHIELD Visibility (B191) — plan title + staleness indicator */
+.plan-title-line {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 4px 0;
+  text-transform: none;
+  letter-spacing: 0;
+  font-style: italic;
+}
+.staleness-banner {
+  background: var(--accent-gold, #f59e0b);
+  color: #000;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  margin: 4px 0;
+}
+.staleness-banner.hidden {
+  display: none;
+}
+.phase-track.stale {
+  opacity: 0.55;
+  filter: grayscale(0.4);
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}

@@ -1,42 +1,54 @@
 // FailSafe Command Center — Text-to-Speech Engine
 // Piper TTS via vendored WASM for neural-quality voice synthesis.
 
+import { isAllowedPiperVoice, isWebSpeechVoice } from './voice-catalog.js';
+
 const PIPER_MODULE = '../vendor/piper/piper.min.js';
+const DEFAULT_VOICE_ID = 'en_US-hfc_female-medium';
 
 export class TtsEngine {
-  constructor(store) {
+  constructor(store, options = {}) {
     this.store = store || null;
     this.tts = null;
     this.audio = null;
     this.onStateChange = null;
-    this.voiceId = 'en_US-hfc_female-medium';
+    const stored = store?.get?.('tts-voice');
+    this.voiceId = (isAllowedPiperVoice(stored) || isWebSpeechVoice(stored))
+      ? stored
+      : DEFAULT_VOICE_ID;
     this._blobUrl = null;
+    // E6 Piper module loader injection seam: production omits options;
+    // default loader uses native dynamic import. Tests inject a stub
+    // loader returning a minimal PiperTTS surface so the dynamic import
+    // doesn't load real Piper (which causes the 2000ms async-timeout
+    // flake observed at META_LEDGER #310 / #313 push hooks).
+    this._loadPiperModule = options.loadPiperModule || (() => import(PIPER_MODULE));
   }
 
   async init(voiceId) {
-    if (voiceId) this.voiceId = voiceId;
-    else if (this.store) {
+    if (voiceId && (isAllowedPiperVoice(voiceId) || isWebSpeechVoice(voiceId))) {
+      this.voiceId = voiceId;
+    } else if (this.store) {
       const saved = this.store.get('tts-voice');
-      if (saved) this.voiceId = saved;
+      if (isAllowedPiperVoice(saved) || isWebSpeechVoice(saved)) this.voiceId = saved;
     }
     try {
-      // Check if file is actually on server to avoid 404 HTML/MIME errors
       const check = await fetch(PIPER_MODULE, { method: 'HEAD' });
       if (!check.ok) {
-        console.info('Piper TTS: not vendored yet — speech synthesis disabled');
+        this.onStateChange?.('error:piper_not_vendored');
         return;
       }
       const ct = (check.headers.get('content-type') || '').toLowerCase();
       if (!ct.includes('javascript') && !ct.includes('application/octet-stream')) {
-        console.info('Piper TTS: vendor file has wrong MIME type — speech synthesis disabled');
+        this.onStateChange?.('error:wrong_mime');
         return;
       }
-      const mod = await import(PIPER_MODULE);
+      const mod = await this._loadPiperModule();
       this.tts = new mod.PiperTTS({ voiceId: this.voiceId });
       await this.tts.init();
     } catch (err) {
-      console.warn('Failed to initialize Piper TTS:', err);
       this.tts = null;
+      this.onStateChange?.(`error:init_failed:${err?.message || 'unknown'}`);
     }
   }
 

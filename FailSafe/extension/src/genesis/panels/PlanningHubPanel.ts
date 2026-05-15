@@ -13,7 +13,7 @@
 import * as vscode from "vscode";
 import { EventBus } from "../../shared/EventBus";
 import { SentinelDaemon } from "../../sentinel/SentinelDaemon";
-import { QoreLogicManager } from "../../qorelogic/QoreLogicManager";
+import { QorLogicManager } from "../../qorelogic/QorLogicManager";
 import { PlanManager } from "../../qorelogic/planning/PlanManager";
 import { getNonce } from "../../shared/utils/htmlSanitizer";
 import {
@@ -31,7 +31,7 @@ export class PlanningHubPanel {
   public static currentPanel: PlanningHubPanel | undefined;
   private readonly panel: vscode.WebviewPanel;
   private sentinel: SentinelDaemon;
-  private qorelogic: QoreLogicManager;
+  private qorelogic: QorLogicManager;
   private planManager: PlanManager;
   private eventBus: EventBus;
   private currentMode: ViewMode = "roadmap";
@@ -41,7 +41,7 @@ export class PlanningHubPanel {
   public static createOrShow(
     extensionUri: vscode.Uri,
     sentinel: SentinelDaemon,
-    qorelogic: QoreLogicManager,
+    qorelogic: QorLogicManager,
     planManager: PlanManager,
     eventBus: EventBus,
   ): PlanningHubPanel {
@@ -77,7 +77,7 @@ export class PlanningHubPanel {
   private constructor(
     panel: vscode.WebviewPanel,
     sentinel: SentinelDaemon,
-    qorelogic: QoreLogicManager,
+    qorelogic: QorLogicManager,
     planManager: PlanManager,
     eventBus: EventBus,
   ) {

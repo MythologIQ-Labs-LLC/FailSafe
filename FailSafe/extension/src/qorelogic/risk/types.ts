@@ -6,7 +6,7 @@
 
 export type RiskSeverity = 'critical' | 'high' | 'medium' | 'low';
 export type RiskStatus = 'open' | 'mitigating' | 'resolved' | 'accepted';
-export type RiskCategory = 
+export type RiskCategory =
   | 'security'
   | 'performance'
   | 'technical-debt'
@@ -14,6 +14,24 @@ export type RiskCategory =
   | 'governance'
   | 'compliance'
   | 'operational';
+
+/**
+ * Provenance label for a risk record.
+ * - 'mcp'           — agent-supplied via MCP tool failsafe.create_risk
+ * - 'audit-veto'    — auto-derived from a GATE TRIBUNAL VETO ledger entry
+ * - 'debug'         — auto-derived from a DEBUG ledger entry
+ * - 'shadow-genome' — auto-derived from a genome.failureArchived EventBus emit
+ * - 'manual'        — permanent label for risks that pre-date model-sourced
+ *                     introduction; only the migration backfill writes 'manual'.
+ */
+export type RiskSource = 'mcp' | 'audit-veto' | 'debug' | 'shadow-genome' | 'manual';
+
+/** Structured, typed-slot lineage. Populated ONLY by auto-derivers. Powers de-dup. */
+export interface RiskDerivedFrom {
+  ledgerEntry?: number;
+  planSlug?: string;
+  shadowGenomeEventId?: string;
+}
 
 export interface Risk {
   id: string;
@@ -28,8 +46,15 @@ export interface Risk {
   createdAt: string;
   updatedAt: string;
   resolvedAt?: string;
+  /** Operator/agent-supplied freeform references (paths, URLs). Never powers de-dup. */
   relatedArtifacts?: string[];
   checkpointId?: string;
+  /** Required since v5.1.0. Migration backfills missing values to 'manual'. */
+  source: RiskSource;
+  /** Set only when source === 'mcp' (e.g., 'claude-code', 'copilot'). */
+  sourceAgent?: string;
+  /** Structured lineage; powers de-dup. Populated only by auto-derivers. */
+  derivedFrom?: RiskDerivedFrom;
 }
 
 export interface RiskRegister {

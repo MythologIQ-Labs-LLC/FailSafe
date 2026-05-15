@@ -2,11 +2,12 @@ name: Documentation
 description: Report documentation issues or suggest improvements
 title: "[Docs]: "
 labels: ["documentation"]
+assignees: []
 body:
   - type: markdown
     attributes:
       value: |
-        Help us improve FailSafe documentation!
+        Help us improve FailSafe documentation! This includes the Wiki, README, specification docs, and inline help.
 
   - type: dropdown
     id: type
@@ -18,17 +19,38 @@ body:
         - Incorrect information
         - Unclear explanation
         - Typo or grammar
-        - Outdated content
+        - Outdated content (version mismatch)
+        - Wiki improvement
+        - Inline help improvement
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: location
+    attributes:
+      label: Documentation Location
+      description: Where is the documentation?
+      options:
+        - GitHub Wiki
+        - README.md
+        - docs/FAILSAFE_SPECIFICATION.md
+        - docs/ROADMAP.md
+        - CONTRIBUTING.md
+        - SECURITY.md
+        - Command Center (inline help)
+        - Extension marketplace listing
+        - Code comments / JSDoc
         - Other
     validations:
       required: true
 
   - type: input
-    id: location
+    id: specific-location
     attributes:
-      label: Location
-      description: Where is the documentation issue?
-      placeholder: "e.g., README.md, /docs/ARCHITECTURE_PLAN.md#section"
+      label: Specific Page / File / Section
+      description: Where specifically? Include a link or file path.
+      placeholder: "e.g., Wiki → Architecture Overview, or docs/FAILSAFE_SPECIFICATION.md#section-3"
     validations:
       required: true
 

@@ -36,7 +36,7 @@ export interface TriageSignals {
 export interface RoutingDecision {
   tier: EvaluationTier;
   triage: TriageSignals;
-  invokeQoreLogic: boolean;
+  invokeQorLogic: boolean;
   writeLedger: boolean;
   enforceSentinel: boolean;
   requiredActions: string[];
@@ -270,7 +270,7 @@ export class EvaluationRouter {
     return {
       tier,
       triage,
-      invokeQoreLogic: tier >= 2,
+      invokeQorLogic: tier >= 2,
       writeLedger: this.shouldWriteLedger(tier),
       enforceSentinel: true,
       requiredActions: [],

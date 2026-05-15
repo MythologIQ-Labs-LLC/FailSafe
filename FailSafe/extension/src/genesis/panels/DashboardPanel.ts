@@ -12,7 +12,7 @@
 import * as vscode from "vscode";
 import { EventBus } from "../../shared/EventBus";
 import { SentinelDaemon } from "../../sentinel/SentinelDaemon";
-import { QoreLogicManager } from "../../qorelogic/QoreLogicManager";
+import { QorLogicManager } from "../../qorelogic/QorLogicManager";
 import { PlanManager } from "../../qorelogic/planning/PlanManager";
 import { getNonce } from "../../shared/utils/htmlSanitizer";
 import { renderDashboardTemplate } from "./templates/DashboardTemplate";
@@ -40,7 +40,7 @@ export class DashboardPanel {
   public static currentPanel: DashboardPanel | undefined;
   private readonly panel: vscode.WebviewPanel;
   private sentinel: SentinelDaemon;
-  private qorelogic: QoreLogicManager;
+  private qorelogic: QorLogicManager;
   private eventBus: EventBus;
   private planManager?: PlanManager;
   private disposables: vscode.Disposable[] = [];
@@ -49,7 +49,7 @@ export class DashboardPanel {
   private constructor(
     panel: vscode.WebviewPanel,
     sentinel: SentinelDaemon,
-    qorelogic: QoreLogicManager,
+    qorelogic: QorLogicManager,
     eventBus: EventBus,
   ) {
     this.panel = panel;
@@ -117,7 +117,7 @@ export class DashboardPanel {
   public static createOrShow(
     extensionUri: vscode.Uri,
     sentinel: SentinelDaemon,
-    qorelogic: QoreLogicManager,
+    qorelogic: QorLogicManager,
     eventBus: EventBus,
   ): DashboardPanel {
     const column = vscode.window.activeTextEditor

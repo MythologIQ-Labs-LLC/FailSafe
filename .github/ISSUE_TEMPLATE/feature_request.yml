@@ -2,18 +2,19 @@ name: Feature Request
 description: Suggest a new feature or enhancement for FailSafe
 title: "[Feature]: "
 labels: ["enhancement"]
+assignees: []
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for suggesting a feature for FailSafe!
+        Thanks for suggesting a feature for FailSafe! Please describe the problem and your proposed solution.
 
   - type: textarea
     id: problem
     attributes:
       label: Problem Statement
-      description: What problem does this feature solve?
-      placeholder: I'm frustrated when...
+      description: What problem does this feature solve? What's the use case?
+      placeholder: "I'm frustrated when..."
     validations:
       required: true
 
@@ -21,8 +22,8 @@ body:
     id: solution
     attributes:
       label: Proposed Solution
-      description: Describe the solution you'd like.
-      placeholder: I would like FailSafe to...
+      description: Describe the solution you'd like to see.
+      placeholder: "I would like FailSafe to..."
     validations:
       required: true
 
@@ -40,12 +41,19 @@ body:
       label: Component
       description: Which FailSafe component does this relate to?
       options:
-        - Governance (TrustEngine, EnforcementEngine)
-        - Genesis (Dashboard, Panels)
-        - QoreLogic (Ledger, Policies)
-        - Sentinel (Pattern Detection)
-        - Skills (/ql-* commands)
-        - UI/UX
+        - Monitor (sidebar)
+        - Command Center (hub)
+        - Sentinel (file watching / audits)
+        - QoreLogic (governance / policies)
+        - Skills (qor-* commands)
+        - Trust Engine
+        - Ledger / Checkpoints
+        - MCP Server
+        - SRE Dashboard
+        - Brainstorm / Voice
+        - Installation / Bootstrap
+        - API / CLI
+        - Cross-Agent Support
         - Other
     validations:
       required: true
@@ -57,10 +65,33 @@ body:
       description: How important is this feature to you?
       options:
         - Nice to have
-        - Important
-        - Critical
+        - Important for my workflow
+        - Critical - blocking adoption
     validations:
       required: true
+
+  - type: dropdown
+    id: governance-impact
+    attributes:
+      label: Governance Impact
+      description: Does this feature affect governance behavior?
+      options:
+        - No governance impact
+        - Adds new governance capability
+        - Changes existing governance behavior
+        - Requires new risk grade or policy
+        - Unsure
+    validations:
+      required: false
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples / References
+      description: |
+        Links to similar features in other tools, mockups, or relevant documentation.
+    validations:
+      required: false
 
   - type: checkboxes
     id: contribution
@@ -69,3 +100,5 @@ body:
       options:
         - label: I would be willing to help implement this feature
           required: false
+        - label: I have searched existing issues and discussions for similar requests
+          required: true

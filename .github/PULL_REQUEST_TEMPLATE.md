@@ -9,6 +9,8 @@
 - [ ] Breaking change (fix or feature that would cause existing functionality to change)
 - [ ] Documentation update
 - [ ] Refactoring (no functional changes)
+- [ ] Performance improvement
+- [ ] Test coverage improvement
 
 ## Related Issues
 
@@ -19,14 +21,12 @@
 <!-- List the changes made in this PR -->
 
 -
--
--
 
 ## QoreLogic Compliance
 
-- [ ] `/ql-plan` created (if new feature)
-- [ ] `/ql-audit` PASS verdict (if L2/L3)
-- [ ] Section 4 Razor applied (<=40 lines/function, <=250 lines/file)
+- [ ] `/qor-plan` created (if new feature)
+- [ ] `/qor-audit` PASS verdict (if L2/L3)
+- [ ] Section 4 Razor applied (<=40 lines/function, <=250 lines/file, nesting <=3)
 - [ ] No console.log statements in production code
 
 ## Branch and Merge Policy
@@ -37,9 +37,26 @@
 
 ## Reliability Gates
 
-- [ ] Intent gate validated (`validate-intent-gate.ps1`) when run artifacts are in scope
-- [ ] Reliability run validated (`validate-reliability-run.ps1`) when implementation touches reliability workflow
-- [ ] Skill admission and gate-skill matrix checks passed when imported skills are used
+<!-- Confirm the SHIELD reliability sweep gates apply when this PR touches plan/audit/implement/substantiate surfaces. -->
+
+- [ ] Intent lock verified (qor-implement Step 5.5 / qor-substantiate Step 4.6 `intent_lock verify`)
+- [ ] Skill admission gate green (qor-substantiate Step 4.6 `skill_admission`)
+- [ ] Gate-to-skill matrix gate green (qor-substantiate Step 4.6 `gate_skill_matrix`)
+- [ ] N/A — this PR does not touch SHIELD lifecycle surfaces
+
+## Risk Assessment
+
+- [ ] Risk grade assessed: **L1** / **L2** / **L3**
+- [ ] No new security-sensitive patterns introduced
+- [ ] No hardcoded secrets or credentials
+
+## Testing
+
+- [ ] Unit tests pass (`npm test`)
+- [ ] E2E tests pass (`npm run test:e2e`) if UI/API changes
+- [ ] Lint passes (`npm run lint`)
+- [ ] Compile succeeds (`npm run compile`)
+- [ ] Manual testing completed
 
 ## Evidence Checklist
 
@@ -47,20 +64,11 @@
 - [ ] Validation commands and outcomes documented
 - [ ] Backlog, ledger, and system-state updates are consistent
 
-## Testing
-
-<!-- Describe how you tested these changes -->
-
-- [ ] Unit tests pass
-- [ ] Integration tests pass
-- [ ] Manual testing completed
-
 ## Checklist
 
 - [ ] My code follows the project's style guidelines
 - [ ] I have performed a self-review of my code
-- [ ] I have commented my code where necessary
-- [ ] I have updated the documentation
+- [ ] I have updated the documentation where necessary
 - [ ] My changes generate no new warnings
 - [ ] I have added tests that prove my fix/feature works
 - [ ] New and existing tests pass locally

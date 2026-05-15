@@ -82,7 +82,7 @@ function renderViewTabs(mode: string): string {
 
 function renderVisualizationSection(m: PlanningHubViewModel): string {
   if (!m.plan) {
-    return `<section class="viz-section"><div class="no-plan"><h2>No Active Plan</h2><p>Create a plan using <code>/ql-plan</code></p></div></section>`;
+    return `<section class="viz-section"><div class="no-plan"><h2>No Active Plan</h2><p>Create a plan using <code>/qor-plan</code></p></div></section>`;
   }
   const pct = m.planProgress
     ? Math.round((m.planProgress.completed / m.planProgress.total) * 100)
@@ -176,7 +176,7 @@ function renderSentinelCard(m: PlanningHubViewModel): string {
 function renderTrustCard(m: PlanningHubViewModel): string {
   const t = m.trustSummary;
   const pct = (t.avgTrust * 100).toFixed(0);
-  return `<div class="card"><div class="card-title">QoreLogic Trust</div>
+  return `<div class="card"><div class="card-title">QorLogic Trust</div>
     <div class="metric"><span>Agents</span><span>${t.totalAgents}</span></div>
     <div class="metric"><span ${tooltipAttrs(HELP_TEXT.avgTrust)}>Avg Trust</span><span>${pct}%</span></div>
     <div class="trust-bar"><div class="trust-fill" style="width:${pct}%"></div></div>

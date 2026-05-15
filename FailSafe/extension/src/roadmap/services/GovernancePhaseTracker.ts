@@ -105,29 +105,29 @@ export function getNextSteps(phase: ShieldPhase, lastEntry?: LedgerEntry): strin
 
   switch (phase) {
     case "IDLE":
-      steps.push("Run /ql-plan to start a new implementation cycle");
+      steps.push("Run /qor-plan to start a new implementation cycle");
       break;
     case "PLAN":
-      steps.push("Run /ql-audit to submit plan for Gate Tribunal review");
+      steps.push("Run /qor-audit to submit plan for Gate Tribunal review");
       break;
     case "GATE":
       if (lastEntry?.verdict?.includes("VETO")) {
-        steps.push("Address VETO findings and re-submit with /ql-audit");
+        steps.push("Address VETO findings and re-submit with /qor-audit");
       } else if (lastEntry?.verdict?.includes("PASS")) {
-        steps.push("Run /ql-implement to begin implementation");
+        steps.push("Run /qor-implement to begin implementation");
       } else {
         steps.push("Awaiting Gate Tribunal verdict");
       }
       break;
     case "IMPLEMENT":
-      steps.push("Run /ql-substantiate to seal the session");
+      steps.push("Run /qor-substantiate to seal the session");
       steps.push("Verify tests pass before sealing");
       break;
     case "SUBSTANTIATE":
-      steps.push("Complete /ql-substantiate to verify Reality matches Promise");
+      steps.push("Complete /qor-substantiate to verify Reality matches Promise");
       break;
     case "SEALED":
-      steps.push("Session sealed - run /ql-repo-release or start the next plan");
+      steps.push("Session sealed - run /qor-repo-release or start the next plan");
       break;
   }
 

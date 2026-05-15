@@ -2,14 +2,14 @@ import { describe, it } from 'mocha';
 import { strict as assert } from 'assert';
 import * as vscode from 'vscode';
 import { GovernanceCeremony } from '../../governance/GovernanceCeremony';
-import { QoreLogicSystem } from '../../qorelogic/types/QoreLogicSystem';
+import { QorLogicSystem } from '../../qorelogic/types/QorLogicSystem';
 
 type WindowPatchTarget = {
   showQuickPick: typeof vscode.window.showQuickPick;
   showInformationMessage: typeof vscode.window.showInformationMessage;
 };
 
-function makeSystem(id: string, name: string): QoreLogicSystem {
+function makeSystem(id: string, name: string): QorLogicSystem {
   return {
     getManifest: () => ({
       id,
@@ -22,40 +22,40 @@ function makeSystem(id: string, name: string): QoreLogicSystem {
 }
 
 interface MockRegistry {
-  getSystems(): Promise<QoreLogicSystem[]>;
-  detect(system: QoreLogicSystem): Promise<{ detected: boolean }>;
-  hasGovernance(system: QoreLogicSystem): boolean;
+  getSystems(): Promise<QorLogicSystem[]>;
+  detect(system: QorLogicSystem): Promise<{ detected: boolean }>;
+  hasGovernance(system: QorLogicSystem): boolean;
 }
 
 function createMockRegistry(
-  systems: QoreLogicSystem[],
+  systems: QorLogicSystem[],
   detectedIds: string[],
   governedIds: string[],
 ): MockRegistry {
   return {
     async getSystems() { return systems; },
-    async detect(system: QoreLogicSystem) {
+    async detect(system: QorLogicSystem) {
       return { detected: detectedIds.includes(system.getManifest().id) };
     },
-    hasGovernance(system: QoreLogicSystem) {
+    hasGovernance(system: QorLogicSystem) {
       return governedIds.includes(system.getManifest().id);
     },
   };
 }
 
 interface MockInjector {
-  inject(system: QoreLogicSystem): Promise<void>;
-  remove(system: QoreLogicSystem): Promise<void>;
-  injectCalls(): QoreLogicSystem[];
-  removeCalls(): QoreLogicSystem[];
+  inject(system: QorLogicSystem): Promise<void>;
+  remove(system: QorLogicSystem): Promise<void>;
+  injectCalls(): QorLogicSystem[];
+  removeCalls(): QorLogicSystem[];
 }
 
 function createMockInjector(): MockInjector {
-  const injectLog: QoreLogicSystem[] = [];
-  const removeLog: QoreLogicSystem[] = [];
+  const injectLog: QorLogicSystem[] = [];
+  const removeLog: QorLogicSystem[] = [];
   return {
-    async inject(system: QoreLogicSystem) { injectLog.push(system); },
-    async remove(system: QoreLogicSystem) { removeLog.push(system); },
+    async inject(system: QorLogicSystem) { injectLog.push(system); },
+    async remove(system: QorLogicSystem) { removeLog.push(system); },
     injectCalls: () => injectLog,
     removeCalls: () => removeLog,
   };
@@ -150,7 +150,7 @@ describe('GovernanceCeremony', () => {
       const windowTarget = vscode.window as unknown as WindowPatchTarget;
       const originalQP = windowTarget.showQuickPick;
       const originalInfo = windowTarget.showInformationMessage;
-      windowTarget.showQuickPick = (async (items: readonly { label: string; system: QoreLogicSystem }[]) => [...items]) as unknown as typeof vscode.window.showQuickPick;
+      windowTarget.showQuickPick = (async (items: readonly { label: string; system: QorLogicSystem }[]) => [...items]) as unknown as typeof vscode.window.showQuickPick;
       windowTarget.showInformationMessage = (async () => undefined) as typeof vscode.window.showInformationMessage;
 
       try {
@@ -194,7 +194,7 @@ describe('GovernanceCeremony', () => {
       const windowTarget = vscode.window as unknown as WindowPatchTarget;
       const originalQP = windowTarget.showQuickPick;
       const originalInfo = windowTarget.showInformationMessage;
-      windowTarget.showQuickPick = (async (items: readonly { label: string; system: QoreLogicSystem }[]) => [...items]) as unknown as typeof vscode.window.showQuickPick;
+      windowTarget.showQuickPick = (async (items: readonly { label: string; system: QorLogicSystem }[]) => [...items]) as unknown as typeof vscode.window.showQuickPick;
       windowTarget.showInformationMessage = (async () => undefined) as typeof vscode.window.showInformationMessage;
 
       try {

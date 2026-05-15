@@ -32,9 +32,9 @@ Deliver a complete v3.2.5 plan for FailSafe Console UI overhaul using the consol
 - `docs/specs/failsafe-console-spec/SPEC_SECURITY_PERMISSIONS_AND_SKILL_REGISTRY.md`
 - `docs/specs/failsafe-console-spec/SPEC_ACCEPTANCE_CRITERIA_AND_TEST_PLAN.md`
 - `docs/AUTONOMOUS_RELIABILITY_MANIFEST.md`
-- `.agent/workflows/ql-plan.md`
-- `.agent/workflows/ql-implement.md`
-- `.agent/workflows/ql-substantiate.md`
+- `.agent/workflows/qor-plan.md`
+- `.agent/workflows/qor-implement.md`
+- `.agent/workflows/qor-substantiate.md`
 - `validate.ps1`
 - `docs/BACKLOG.md`
 - `docs/SYSTEM_STATE.md`
@@ -62,9 +62,9 @@ Plan fails if any of the following are true:
 ### Affected Files
 
 - `validate.ps1` - add GitHub governance checks (branch naming, PR flow markers, release discipline checks).
-- `.agent/workflows/ql-plan.md` - enforce plan-branch creation and branch naming validation.
-- `.agent/workflows/ql-implement.md` - require non-`main` implementation branch unless explicit override.
-- `.agent/workflows/ql-substantiate.md` - default to PR path for protected branches and record merge mode in ledger.
+- `.agent/workflows/qor-plan.md` - enforce plan-branch creation and branch naming validation.
+- `.agent/workflows/qor-implement.md` - require non-`main` implementation branch unless explicit override.
+- `.agent/workflows/qor-substantiate.md` - default to PR path for protected branches and record merge mode in ledger.
 - `docs/GOVERNANCE.md` - codify branch strategy and required checks.
 - `docs/CONTRIBUTING.md` - contributor-facing branch/PR/signed-commit standards.
 - `.github/workflows/*` (new or updated) - CI gates for lint/compile/validate and branch policy assertions.

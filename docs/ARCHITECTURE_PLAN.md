@@ -314,9 +314,9 @@ Add corresponding tab panels:
 Add script imports:
 
 ```html
-<script type="module" src="/modules/timeline.js"></script>
-<script type="module" src="/modules/genome.js"></script>
-<script type="module" src="/modules/replay.js"></script>
+&lt;script type="module" src="/modules/timeline.js">&lt;/script&gt;
+&lt;script type="module" src="/modules/genome.js">&lt;/script&gt;
+&lt;script type="module" src="/modules/replay.js">&lt;/script&gt;
 ```
 
 **2k. Register renderers in `command-center.js`**

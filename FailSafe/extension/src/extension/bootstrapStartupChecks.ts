@@ -12,14 +12,14 @@ import type { SystemRegistry } from "../qorelogic/SystemRegistry";
 export function bootstrapStartupChecks(
   context: vscode.ExtensionContext,
   core: { workspaceRoot: string },
-  qore: { systemRegistry: SystemRegistry },
+  qor: { systemRegistry: SystemRegistry },
 ): void {
   // Framework sync detection (delayed to avoid blocking activation)
   setTimeout(async () => {
     const { FrameworkSync } = await import("../qorelogic/FrameworkSync");
     const frameworkSync = new FrameworkSync(
       core.workspaceRoot,
-      qore.systemRegistry,
+      qor.systemRegistry,
     );
     const systems = await frameworkSync.detectSystems();
     const ungoverned = systems.filter(

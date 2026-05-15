@@ -1,12 +1,15 @@
 // FailSafe Command Center — Ideation Buffer State
 // Pure data layer to manage the staging workspace for the 3D Mindmap
 
-const MAX_HISTORY = 10;
+const DEFAULT_MAX_HISTORY = 10;
 
 export class IdeationBuffer {
-  constructor() {
+  constructor(maxHistory = DEFAULT_MAX_HISTORY) {
     this.currentText = '';
     this.history = []; // Array of { id, text, timestamp }
+    this.maxHistory = Number.isFinite(maxHistory) && maxHistory > 0
+      ? maxHistory
+      : DEFAULT_MAX_HISTORY;
   }
 
   appendTranscript(textDelta) {
@@ -30,7 +33,7 @@ export class IdeationBuffer {
 
     this.history.unshift(thought);
     let dropped = null;
-    if (this.history.length > MAX_HISTORY) {
+    if (this.history.length > this.maxHistory) {
       dropped = this.history.pop();
     }
 

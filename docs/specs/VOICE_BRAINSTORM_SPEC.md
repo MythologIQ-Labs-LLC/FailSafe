@@ -132,7 +132,7 @@ The design will incorporate the following floating HTML/CSS interface wrappers o
 
 Voice-captured audio is a highly sensitive telemetry stream. The system must enforce strict privacy controls and storage mechanisms:
 
-- **Private Storage Directory**: Raw `.webm` (or `.wav`) voice captures must be saved strictly to a `PRIVATE(FailSafe)` local folder inside the workspace. This directory is defined as `.failsafe/audio/` and is automatically injected into `.gitignore` during the `/ql-bootstrap` workflow. **No audio files will ever be committed to the repo.**
+- **Private Storage Directory**: Raw `.webm` (or `.wav`) voice captures must be saved strictly to a `PRIVATE(FailSafe)` local folder inside the workspace. This directory is defined as `.failsafe/audio/` and is automatically injected into `.gitignore` during the `/qor-bootstrap` workflow. **No audio files will ever be committed to the repo.**
 - **Cryptographic Filenames & Deduplication**: To prevent duplicates and expose a deterministic reference, audio files are saved using a hashed GUID (e.g., `SHA256(audioData + timestamp)`).
 - **Embedded Metadata**: Alongside the raw audio, a parallel `.json` file or SQLite entry will store the metadata payload:
   ```json

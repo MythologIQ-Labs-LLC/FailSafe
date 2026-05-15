@@ -1,5 +1,5 @@
 /**
- * QoreLogic Planning Events
+ * QorLogic Planning Events
  *
  * Event-sourced plan state management. Events are append-only, replayable,
  * and auditable. The current Plan state is derived by replaying all events.

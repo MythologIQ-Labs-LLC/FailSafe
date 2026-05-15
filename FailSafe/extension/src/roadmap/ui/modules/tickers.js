@@ -1,16 +1,19 @@
 // FailSafe Command Center — Ticker and bootstrap banner utilities
+import { escapeHtml } from './brainstorm-templates.js';
+import { showInstallModal } from './install-skills-modal.js';
+
 export function updateTickers(data) {
   const proto = document.getElementById('ticker-protocol');
   const sent = document.getElementById('ticker-sentinel');
   const lat = document.getElementById('ticker-latency');
-  if (proto) proto.innerHTML = `PROTOCOL <span>${data.sentinelStatus?.mode || 'Unknown'}</span>`;
+  if (proto) proto.innerHTML = `PROTOCOL <span>${escapeHtml(data.sentinelStatus?.mode || 'Unknown')}</span>`;
   if (sent) {
     const live = data.sentinelStatus?.running;
     const c = live ? 'var(--accent-green)' : 'var(--accent-red)';
     sent.innerHTML = `SENTINEL <span style="color:${c}">${live ? 'Active' : 'Halted'}</span>`;
   }
   if (lat) {
-    const latVal = data.qoreRuntime?.latencyMs;
+    const latVal = data.qorRuntime?.latencyMs;
     const latLabel = latVal != null ? `${Math.round(latVal)}ms` : 'N/A';
     const latColor = latVal != null ? '' : 'color:var(--text-muted)';
     lat.innerHTML = `API <span style="font-family:var(--font-mono);${latColor}">${latLabel}</span>`;
@@ -37,15 +40,25 @@ export function updateBootstrapBanner(data) {
   let html = '<div style="font-size:0.85rem;font-weight:600;color:var(--accent-gold)">Get Started</div>';
   if (!bs.skillsInstalled) {
     html += '<div style="display:flex;align-items:center;gap:8px">' +
-      '<span style="color:var(--text-muted);font-size:0.78rem">Governance skills not installed.</span>' +
-      '<button onclick="fetch(\'/api/actions/scaffold-skills\',{method:\'POST\'}).then(()=>location.reload())"' +
-      ' class="cc-btn cc-btn--primary" style="font-size:0.75rem;padding:4px 10px">Install Skills</button></div>';
+      '<span style="color:var(--text-muted);font-size:0.78rem">Qor-Logic skills not installed.</span>' +
+      '<button data-action="banner-install-skills"' +
+      ' class="cc-btn cc-btn--primary" style="font-size:0.75rem;padding:4px 10px">Install Qor-Logic Skills</button></div>';
   }
   if (!bs.governanceInitialized) {
     html += '<div style="display:flex;align-items:center;gap:8px">' +
-      '<span style="color:var(--text-muted);font-size:0.78rem">Run <code style="padding:1px 5px;background:var(--bg-dark);border-radius:3px">/ql-bootstrap</code> in Claude Code to initialize.</span>' +
-      '<button onclick="navigator.clipboard.writeText(\'/ql-bootstrap\')"' +
+      '<span style="color:var(--text-muted);font-size:0.78rem">Run <code style="padding:1px 5px;background:var(--bg-dark);border-radius:3px">/qor-bootstrap</code> in Claude Code to initialize.</span>' +
+      '<button onclick="navigator.clipboard.writeText(\'/qor-bootstrap\')"' +
       ' class="cc-btn" style="font-size:0.75rem;padding:4px 10px">Copy</button></div>';
   }
   banner.innerHTML = html;
+
+  const installBtn = banner.querySelector('[data-action="banner-install-skills"]');
+  installBtn?.addEventListener('click', () => {
+    // Open the same modal the Settings card uses, so the user gets the host
+    // picker + scope radios + preview button in-browser. Server-side QuickPick
+    // would open silently in the extension host, which is invisible to the
+    // browser tab and gave the appearance of "nothing happens".
+    const host = document.getElementById('install-skills-card') || banner;
+    showInstallModal(host);
+  });
 }

@@ -35,7 +35,7 @@ export const IntentEvidenceSchema = z.object({
 
 export const AgentIdentitySchema = z.object({
   agentDid: z.string(),
-  workflow: z.enum(['ql-plan', 'auto-create', 'manual']),
+  workflow: z.enum(['qor-plan', 'auto-create', 'manual']),
   createdVia: z.string().optional(),
 });
 
@@ -101,7 +101,7 @@ export type IntentType =
   | "docs"; // Documentation updates
 
 /**
- * QoreLogic Risk Grade assignment.
+ * QorLogic Risk Grade assignment.
  */
 export type RiskGrade = "L1" | "L2" | "L3";
 
@@ -132,7 +132,7 @@ export interface IntentScope {
   modules: string[];
 
   /**
-   * Risk grade assigned by QoreLogic analysis.
+   * Risk grade assigned by QorLogic analysis.
    */
   riskGrade: RiskGrade;
 
@@ -179,7 +179,7 @@ export interface IntentEvidence {
  */
 export interface AgentIdentity {
   agentDid: string;
-  workflow: 'ql-plan' | 'auto-create' | 'manual';
+  workflow: 'qor-plan' | 'auto-create' | 'manual';
   createdVia?: string;
 }
 

@@ -18,11 +18,27 @@ export class RisksRenderer {
       <div style="display:flex;justify-content:space-between;align-items:center;margin:12px 0">
         <h3 style="margin:0;font-size:0.85rem;color:var(--text-muted);text-transform:uppercase;
           letter-spacing:0.08em">Risk Register</h3>
-        <button class="cc-btn cc-btn--primary cc-risk-add">+ Add Risk</button>
+        <span style="font-size:0.7rem;color:var(--text-muted)">Sourced by the coding model</span>
       </div>
       <div class="cc-risk-list"></div>`;
     this.renderList();
-    this.container.querySelector('.cc-risk-add')?.addEventListener('click', () => this.openModal());
+  }
+
+  /** Render the [source · context] pill for a risk row. Per plan Phase 5. */
+  renderSourcePill(r) {
+    const source = r.source || 'manual';
+    const df = r.derivedFrom || {};
+    let context = '';
+    if (source === 'mcp') context = r.sourceAgent ? ` · ${this.esc(r.sourceAgent)}` : '';
+    else if (source === 'audit-veto' && df.ledgerEntry !== undefined) context = ` · Entry #${df.ledgerEntry}`;
+    else if (source === 'audit-veto' && df.planSlug) context = ` · ${this.esc(df.planSlug)}`;
+    else if (source === 'shadow-genome' && df.shadowGenomeEventId) {
+      const short = String(df.shadowGenomeEventId).slice(0, 8);
+      context = ` · ${this.esc(short)}`;
+    }
+    return `<span class="cc-source-pill" data-source="${this.esc(source)}"
+      style="font-size:0.65rem;padding:1px 6px;border-radius:3px;background:rgba(255,255,255,0.06);
+        color:var(--text-muted);font-family:var(--font-mono,monospace)">${this.esc(source)}${context}</span>`;
   }
 
   renderSummary() {
@@ -52,15 +68,16 @@ export class RisksRenderer {
       return;
     }
     listEl.innerHTML = this.risks.map(r => `
-      <div class="cc-card" style="margin-bottom:6px;padding:12px 16px" data-rid="${r.id}">
+      <div class="cc-card" style="margin-bottom:6px;padding:12px 16px" data-rid="${this.esc(r.id)}">
         <div style="display:flex;justify-content:space-between;align-items:center">
-          <div style="display:flex;align-items:center;gap:8px">
-            <span class="cc-badge cc-badge--${r.severity}">${r.severity}</span>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span class="cc-badge cc-badge--${this.esc(r.severity)}">${this.esc(r.severity)}</span>
             <strong>${this.esc(r.title)}</strong>
+            ${this.renderSourcePill(r)}
           </div>
           <div style="display:flex;gap:6px">
-            <button class="cc-btn cc-risk-edit" data-id="${r.id}" style="padding:4px 10px;font-size:0.75rem">Edit</button>
-            <button class="cc-btn cc-btn--danger cc-risk-del" data-id="${r.id}" style="padding:4px 10px;font-size:0.75rem">Del</button>
+            <button class="cc-btn cc-risk-edit" data-id="${this.esc(r.id)}" style="padding:4px 10px;font-size:0.75rem">Edit</button>
+            <button class="cc-btn cc-btn--danger cc-risk-del" data-id="${this.esc(r.id)}" style="padding:4px 10px;font-size:0.75rem">Del</button>
           </div>
         </div>
         <div style="color:var(--text-muted);font-size:0.8rem;margin-top:4px">

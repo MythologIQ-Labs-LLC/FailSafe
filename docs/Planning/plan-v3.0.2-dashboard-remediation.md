@@ -36,7 +36,7 @@ export type DashboardViewModel = {
 function renderRoadmapCard(model: DashboardViewModel): string {
   if (!model.plan) {
     return `<div class="card"><div class="card-title">Active Plan</div>
-      <div class="muted">No active plan. Use <code>/ql-plan</code> to create one.</div>
+      <div class="muted">No active plan. Use <code>/qor-plan</code> to create one.</div>
       <button class="action-btn secondary" onclick="showPlanningHub()">Open Planning Hub</button>
     </div>`;
   }

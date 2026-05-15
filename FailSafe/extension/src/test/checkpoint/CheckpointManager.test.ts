@@ -41,7 +41,7 @@ checkpoint:
   version: 1
   created: "2026-02-06T13:00:00Z"
   sealed: true
-  skill_session: ql-implement
+  skill_session: qor-implement
 
 snapshot:
   git_head: abc123

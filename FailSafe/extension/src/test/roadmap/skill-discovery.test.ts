@@ -68,18 +68,24 @@ suite('Skill Discovery: collectCommandMarkdownFiles equivalent logic', function 
 });
 
 suite('parseCommandFile category derivation', () => {
-  test('assigns governance category to ql-* prefixed files', () => {
-    const baseName = 'ql-plan';
-    const isGovernance = baseName.startsWith('ql-');
+  test('assigns governance category to qor-* prefixed files (v5 naming)', () => {
+    const baseName = 'qor-plan';
+    const isGovernance = baseName.startsWith('qor-') || baseName.startsWith('ql-');
     assert.strictEqual(isGovernance, true);
     const category = isGovernance ? 'governance' : 'other';
     assert.strictEqual(category, 'governance');
   });
 
-  test('derives category from directory name for non-ql files', () => {
+  test('still recognizes legacy ql-* prefixed files for the v4→v5 transition', () => {
+    const baseName = 'ql-plan';
+    const isGovernance = baseName.startsWith('qor-') || baseName.startsWith('ql-');
+    assert.strictEqual(isGovernance, true);
+  });
+
+  test('derives category from directory name for non-governance files', () => {
     const baseName = 'backend-developer';
     const dirName = 'agents';
-    const isGovernance = baseName.startsWith('ql-');
+    const isGovernance = baseName.startsWith('qor-') || baseName.startsWith('ql-');
     assert.strictEqual(isGovernance, false);
     const category = isGovernance ? 'governance' : dirName;
     assert.strictEqual(category, 'agents');

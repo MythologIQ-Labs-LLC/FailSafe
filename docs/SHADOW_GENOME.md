@@ -1,5 +1,125 @@
 # QoreLogic Shadow Genome
 
+---
+
+## Failure Entry #333
+
+**Date**: 2026-05-12
+**Verdict ID**: Entry #333 Gate Tribunal
+**Failure Mode**: MACRO_ARCHITECTURE / SPECIFICATION_DRIFT
+
+### What Failed
+
+Re-audit of `docs/plan-qor-phase59-agent-detection-organize.md` after the Section 4 and canary-command amendments.
+
+### Why It Failed
+
+The plan moved detection-only types into `DetectionTypes.ts`, but did not specify the type bridge that lets extended detection fields work with the existing `SystemManifest` contract. The overlay loader text also contradicts the planned graceful-failure tests by using direct JSON/schema parse calls.
+
+### Pattern to Avoid
+
+When avoiding edits to an over-cap core type file, define the adapter or augmented local type explicitly. When tests promise graceful failure, implementation text must name the catch/safe-parse path rather than showing throwing parse calls.
+
+### Remediation Attempted
+
+No remediation attempted in this tribunal. Gate locked pending `/qor-organize` for the type boundary and Governor amendment of the overlay loader behavior.
+
+---
+
+## Failure Entry #332
+
+**Date**: 2026-05-12
+**Verdict ID**: Entry #332 Gate Tribunal
+**Failure Mode**: COMPLEXITY_VIOLATION / INFRASTRUCTURE_MISMATCH
+
+### What Failed
+
+Re-audit of `docs/plan-qor-phase59-agent-detection-organize.md`.
+
+### Why It Failed
+
+The plan modifies `FailSafe/extension/src/qorelogic/types/QoreLogicSystem.ts`, which is already 529 lines against the Section 4 250-line file cap. It also lists a canary CI command using `--scan docs/`, but the current `check-governance-canaries.cjs` wrapper rejects that argument.
+
+### Pattern to Avoid
+
+Do not route new type surface into already over-cap files without first splitting the domain. Do not list CI commands that are not supported by the current repo scripts unless the plan explicitly includes the script-interface change.
+
+### Remediation Attempted
+
+No remediation attempted in this tribunal. Gate locked pending `/qor-refactor` for the type surface and Governor amendment of the invalid CI command.
+
+---
+
+## Failure Entry #327
+
+**Date**: 2026-05-11
+**Verdict ID**: Entry #327 Gate Tribunal
+**Failure Mode**: PROMPT_INJECTION_CANARY
+
+### What Failed
+
+Re-audit of `docs/plan-qor-phase56-audit-canary-remediation.md` after the plan was revised to put audit corpus cleanup first.
+
+### Why It Failed
+
+The revised plan file passed plan lint, grep lint, and standalone canary scan, but the mandatory `/qor-audit` input set still contains raw hidden-html opener tokens in `docs/ARCHITECTURE_PLAN.md` and `docs/META_LEDGER.md`. The gate cannot approve a plan while required governance input files still trigger the scanner.
+
+### Pattern to Avoid
+
+Do not expect a plan to pass `/qor-audit` when the current audit corpus contains scanner-blocking governance text. The governance corpus must be cleaned before the tribunal can safely evaluate dependent work.
+
+### Remediation Attempted
+
+Plan was revised, but no text cleanup implementation has occurred. Gate remains locked pending Governor amendment of the offending governance markdown.
+
+---
+
+## Failure Entry #326
+
+**Date**: 2026-05-11
+**Verdict ID**: Entry #326 Gate Tribunal
+**Failure Mode**: PROMPT_INJECTION_CANARY
+
+### What Failed
+
+Audit of `docs/plan-qor-phase56-audit-canary-remediation.md`.
+
+### Why It Failed
+
+The plan file itself passed plan lint, grep lint, and the canary scan, but the mandatory `/qor-audit` input set still contains raw hidden-html script-tag opener canaries in `docs/ARCHITECTURE_PLAN.md` and `docs/META_LEDGER.md`. The previous tribunal ledger entry also preserved the raw token, increasing the same failure surface.
+
+### Pattern to Avoid
+
+Do not record canary-triggering literals verbatim in any governance markdown that the strict audit scanner reads. When documenting the token, escape it as prose or HTML entity text.
+
+### Remediation Attempted
+
+No implementation remediation attempted in this tribunal. Gate remains locked pending Governor text amendment and re-audit.
+
+---
+
+## Failure Entry #325
+
+**Date**: 2026-05-11
+**Verdict ID**: Entry #325 Gate Tribunal
+**Failure Mode**: HALLUCINATION / INFRASTRUCTURE_MISMATCH
+
+### What Failed
+
+Audit of the B194 governance-mode escalation plan and B199 Phase 2 Command Center coverage plan.
+
+### Why It Failed
+
+The mandatory prompt-injection canary pass found hidden-html `&lt;script` canaries in `docs/ARCHITECTURE_PLAN.md` and `docs/META_LEDGER.md`. The same canary tooling refused the selected target plan paths because `.failsafe/governance/plans/*.md` is outside the current governance allowlist.
+
+### Pattern to Avoid
+
+Do not place audit-target plan artifacts in a path the audit canary allowlist cannot scan. Do not carry raw HTML canary tokens in operator-authored governance markdown when the current `/qor-audit` path treats those tokens as binding prompt-injection failures.
+
+### Remediation Attempted
+
+No remediation attempted in this tribunal. Gate locked pending Governor correction and re-audit.
+
 > **Purpose**: Archive of failure modes and rejected patterns. Each entry is a learning opportunity to prevent repetition.
 
 ---
@@ -133,22 +253,22 @@ case 'toggleGuide':
 ## Failure Entry #4
 
 **Date**: 2026-02-05T06:30:00Z
-**Verdict ID**: Entry #14 - GATE TRIBUNAL - /ql-status Backlog Enhancement
+**Verdict ID**: Entry #14 - GATE TRIBUNAL - /qor-status Backlog Enhancement
 **Failure Mode**: GHOST_PATH / ARCHITECTURAL_INCOHERENCE
 
 ### What Failed
 
-Blueprint for `/ql-status` Backlog & Blocker Display Enhancement (plan-ql-status-enhancement.md)
+Blueprint for `/qor-status` Backlog & Blocker Display Enhancement (plan-ql-status-enhancement.md)
 
 ### Why It Failed
 
 The Command Integration table (lines 118-127) claims 5 commands will update `BACKLOG.md`:
 
-- `/ql-plan` - Adds new items to Backlog
-- `/ql-audit` - Adds Security/Dev Blockers
-- `/ql-implement` - Marks completed items
-- `/ql-substantiate` - Verifies blockers cleared
-- `/ql-refactor` - May add Dev Blockers
+- `/qor-plan` - Adds new items to Backlog
+- `/qor-audit` - Adds Security/Dev Blockers
+- `/qor-implement` - Marks completed items
+- `/qor-substantiate` - Verifies blockers cleared
+- `/qor-refactor` - May add Dev Blockers
 
 However, the File Tree (lines 182-195) only specifies 3 modifications:
 
@@ -184,7 +304,7 @@ The rule: **Integration Table entries == File Tree modifications**
 
 **Option B (Narrow Scope)**: Reduce Command Integration to Phase A only:
 
-- Remove `/ql-implement`, `/ql-substantiate`, `/ql-refactor`, `/ql-plan` from table
+- Remove `/qor-implement`, `/qor-substantiate`, `/qor-refactor`, `/qor-plan` from table
 - Add note: "Additional command integrations deferred to Phase B"
 
 ---
@@ -938,7 +1058,7 @@ All four violations represent "implied handlers" — the same failure mode as Sh
 
 1. **HTML structure changes**: Show the exact DOM elements with classes/IDs that will be updated
 2. **Client-side function definitions**: Define all functions referenced in message handlers (not just reference them)
-3. **CSP-compliant script blocks**: Show `<script nonce="${nonce}">` blocks with complete message listener code
+3. **CSP-compliant script blocks**: Show `&lt;script nonce="${nonce}">` blocks with complete message listener code
 4. **Architecture transition path**: Explain how to refactor from pure server-render to hybrid (initial render + message updates)
 
 Never propose message handlers without showing:
@@ -952,7 +1072,7 @@ Never propose message handlers without showing:
 Phase 2 must be revised to include:
 
 1. **TransparencyPanel HTML Template Specification**:
-   - Show exact `<script nonce="${nonce}">` block location in `getHtmlContent()`
+   - Show exact `&lt;script nonce="${nonce}">` block location in `getHtmlContent()`
    - Define complete `renderEvents(events)` client-side function
    - Specify how to extract logic from server-side method
 
@@ -966,7 +1086,7 @@ Phase 2 must be revised to include:
    - Define complete `updateDashboard(snapshot)` with all field mappings
 
 4. **EconomicsPanel Message Handler**:
-   - Add `<script nonce="${nonce}">` block in template
+   - Add `&lt;script nonce="${nonce}">` block in template
    - Show CSP-compliant event handling integration
 
 ---
@@ -1141,7 +1261,7 @@ Extract REST methods to `modules/rest-api.js` (~50 lines). ConnectionClient impo
 
 ### What Failed
 
-Voice Brainstorm plan specified `import { PiperTTS } from 'piper-tts-web'` and `@xenova/transformers` for Whisper — bare npm module specifiers in frontend code. The existing UI architecture serves plain ES modules via `express.static()` with `<script type="module">`. No bundler, no import maps.
+Voice Brainstorm plan specified `import { PiperTTS } from 'piper-tts-web'` and `@xenova/transformers` for Whisper — bare npm module specifiers in frontend code. The existing UI architecture serves plain ES modules via `express.static()` with `&lt;script type="module">`. No bundler, no import maps.
 
 ### Why It Failed
 
@@ -1149,7 +1269,7 @@ The plan designed the voice engine abstraction (STT/TTS) without verifying how t
 
 ### Pattern to Avoid
 
-**Verify the module loading architecture before planning npm dependency usage in frontend code.** When a UI serves plain ES modules without a bundler, external dependencies must either be: (a) vendored as local files with relative imports, (b) loaded via `<script>` tags from CDN, (c) served via an import map in the HTML, or (d) require introducing a build step. Always check how existing imports resolve before adding new external dependencies.
+**Verify the module loading architecture before planning npm dependency usage in frontend code.** When a UI serves plain ES modules without a bundler, external dependencies must either be: (a) vendored as local files with relative imports, (b) loaded via `&lt;script>` tags from CDN, (c) served via an import map in the HTML, or (d) require introducing a build step. Always check how existing imports resolve before adding new external dependencies.
 
 ### Remediation Required
 
@@ -1681,7 +1801,7 @@ plan-skill-consolidation-v2.md — Remediation of Entry #212 VETO. Fixed all 3 o
 
 ### Why It Failed
 
-1. **AGENT_SCAFFOLD_COLLISION**: The plan bundles agents (`agents/ql-*.md`) and skills (`skills/ql-*/SKILL.md`) into the same VSIX directory (`dist/extension/skills/`). The scaffolding code uses `path.basename(path.dirname(sourcePath))` to extract skill names. For agent files under `agents/`, ALL files produce `skillName="agents"` — a collision. Only 1 of 7 agent definitions is scaffolded; 6 are silently dropped. The surviving agent is placed at `.claude/skills/agents/SKILL.md` (a skill path) instead of `.claude/agents/ql-governor.md` (the correct agent path). Root cause: agents and skills are complected into a single bundling/scaffolding pipeline that assumes directory-based SKILL.md format for all entries.
+1. **AGENT_SCAFFOLD_COLLISION**: The plan bundles agents (`agents/qor-*.md`) and skills (`skills/qor-*/SKILL.md`) into the same VSIX directory (`dist/extension/skills/`). The scaffolding code uses `path.basename(path.dirname(sourcePath))` to extract skill names. For agent files under `agents/`, ALL files produce `skillName="agents"` — a collision. Only 1 of 7 agent definitions is scaffolded; 6 are silently dropped. The surviving agent is placed at `.claude/skills/agents/SKILL.md` (a skill path) instead of `.claude/agents/qor-governor.md` (the correct agent path). Root cause: agents and skills are complected into a single bundling/scaffolding pipeline that assumes directory-based SKILL.md format for all entries.
 
 2. **COVERAGE_GAP**: `FailSafe/Claude/` contains 20 duplicate files in identical Genesis/Qorelogic structure (parallel to `FailSafe/Antigravity/` but for Claude Code). The plan restructures Antigravity (Phase 2) and migrates `.claude/commands/` (Phase 1) but never mentions `FailSafe/Claude/` in any phase, affected files list, or open question. This leaves a 5th copy of the SHIELD skills untouched in a plan whose stated goal is "source ALL cumulative knowledge, de-duplicate."
 
@@ -1712,7 +1832,7 @@ plan-skill-consolidation-v1.md — Cross-Agent Skill Consolidation (3-phase plan
 
 1. **CLAUDE.md stale reference**: The plan deletes `.claude/commands/` and `.claude/commands/agents/` in Phase 1 but never updates `CLAUDE.md` (the root instruction file Claude Code reads on every session). Line 2 says "Follow the rules in .claude/commands/agents/ and .claude/commands/" — both paths would be deleted, misdirecting Claude Code to non-existent locations.
 
-2. **Phase ordering dependency**: Phase 2 updates `bundle.cjs` patterns to reference `skills/ql-*/SKILL.md` in Antigravity, but the Antigravity directory restructure from flat files to SKILL.md directories doesn't happen until Phase 3. Phase 2 would break bundling.
+2. **Phase ordering dependency**: Phase 2 updates `bundle.cjs` patterns to reference `skills/qor-*/SKILL.md` in Antigravity, but the Antigravity directory restructure from flat files to SKILL.md directories doesn't happen until Phase 3. Phase 2 would break bundling.
 
 3. **Scaffolding naming collision**: Phase 3 proposes `path.basename(sourcePath, ".md")` to derive skill names from bundled SKILL.md files. But `path.basename("ql-audit/SKILL.md", ".md")` returns `"SKILL"` for every file — all 17 skills would scaffold to `.claude/skills/SKILL/SKILL.md`, colliding into one file.
 
@@ -1854,3 +1974,871 @@ When writing extraction plans that reference specific methods by name, always ve
 
 Amend plan Phase 2 extraction list with correct method names: `renderSentinel()`, `showMetricExplanation()`, `getMetricExplanations()`. Update line references accordingly.
 
+---
+
+## VETO — 2026-05-05: v5.0.0 Round 2 Install UX (plan vs current code drift)
+
+_**Status**: `addressed_pending` 2026-05-07 — covered by `.failsafe/governance/REMEDIATE_PROPOSAL_plan-infrastructure-verification.md` R1 (verification-token discipline in `/qor-plan`). Full `addressed: true` flip pending operator-driven `/qor-audit reviews-remediate:.failsafe/governance/REMEDIATE_PROPOSAL_plan-infrastructure-verification.md` PASS._
+
+**Plan**: `.failsafe/governance/plans/plan-v5-round2-install-ux.md`
+**Audit**: `.agent/staging/AUDIT_REPORT.md` (Entry #262)
+**Categories**: `infrastructure-mismatch`, `macro-architecture`, `specification-drift`
+
+### What Failed
+
+Plan introduces a parallel install-report type system (`QorLogicInstallReport` with `invocations`) that diverges from the existing `InstallReport` shape used at `installSkillsHandler.ts:22-34`, and changes `createInstallSkillsHandler`'s arity by adding `context: vscode.ExtensionContext` and `mode: InstallMode` parameters — without enumerating the cascading edits required at the existing `bootstrapServers.ts:92` call-site, the `ConsoleServer.setScaffoldCallback` type contract at `ConsoleServer.ts:746` (which expects `Promise<{scaffolded, skipped, error?}>` — fields the new report shape drops), the `InstallStepId` enum migration (`'resolve-python'` vs plan's `'python-probe'`; host-encoded id vs separate field), and a webview→ConsoleServer "Show Output" message route whose message-type identifier and `OutputChannel`-access wiring are unspecified.
+
+### Why It Failed
+
+The plan was authored 2026-04-27 against a snapshot of `installSkillsHandler.ts` and `ConsoleServer.ts`, but did not perform pre-write source verification of the back-compat surfaces it touches. Specifically:
+
+1. The `InstallReport` back-compat fields exist precisely *because* `setScaffoldCallback` is load-bearing — the comment "Back-compat fields for the Console scaffold callback shape" at line 30 announces the constraint, but the plan did not cite or honor it.
+2. The plan asserts a Phase-1 step-emission ordering only in test bodies, never in the implementation prose. An implementer following the plan literally cannot derive emit ordering without reading test fixtures, which inverts the normal direction (impl declares behavior, tests verify it).
+3. The plan's "Plan A Phase 3 wiring" reference is partially stale: Plan A wired `onComplete` to receive `InstallReport`, and the plan implicitly retypes that call without enumerating consumer-side migration in `settings.js` or broadcast-event listeners.
+
+### Pattern to Avoid
+
+**SG-PlanTypeMigrationUnderspecification**: When a plan introduces a new type or alters a function signature that ripples through cross-module contracts, the plan body must (a) declare the migration strategy for each existing consumer of the old type/signature explicitly in the Affected Surfaces list, (b) cite the source-line evidence of any back-compat field or invariant being preserved or replaced, and (c) anchor sequencing or ordering claims in the implementation prose, not only in test fixtures. Tests that assert ordering against a body that never declares it are presence-of-spec inversions and should be flagged at the Plan-text level before /qor-audit issues PASS.
+
+This pattern compounds with **SG-InfrastructureMismatch**: plans that name infrastructure (`outputChannel`, `setScaffoldCallback`, `Plan A Phase 3 wiring`) without grep-verifying current ownership and wiring direction will silently presume access that does not exist at the implementer's hand.
+
+### Remediation Required
+
+Amend `plan-v5-round2-install-ux.md` per the five-item list in `.agent/staging/AUDIT_REPORT.md` §"Required Remediation":
+1. Resolve report-type duality (rename or coexist + bridge).
+2. Enumerate all `createInstallSkillsHandler` call-site migrations.
+3. Declare `InstallStepId` enum migration explicitly.
+4. Specify "Show Output" message contract and `OutputChannel` wiring.
+5. Anchor Phase-1 step-emission ordering in implementation prose.
+
+Re-run `/qor-audit` after amendments. No retry-with-waiver path.
+
+---
+
+## VETO — 2026-05-05: v5.0.0 Round 2 Install UX v2 (Razor overage on orchestrator closure)
+
+**Plan**: `.failsafe/governance/plans/plan-v5-round2-install-ux-v2.md`
+**Audit**: `.agent/staging/AUDIT_REPORT.md` (Entry #263)
+**Categories**: `razor-overage`
+
+### What Failed
+
+Phase 1's "Handler restructure" section declares `createInstallSkillsHandler`'s returned async closure at ~55 lines, orchestrating the full 5-phase + N-host install sequence in one body. The Section 4 Razor function-line limit is 40.
+
+### Why It Failed
+
+The plan author (this skill, in dialogue with the operator) baked five distinct phase orchestrations (probe, pip, per-host loop, provenance, refresh) into a single closure during the first draft. This was a Razor-style omission, not a design defect — the design is sound, but the function-shape commitment overshoots. Notably: the audit verified every other amendment from Entry #262 cleanly. Single isolated finding.
+
+### Pattern to Avoid
+
+**SG-OrchestratorMonolith**: When a plan declares a multi-step orchestration as a single function body, count the steps explicitly during plan authoring. If the step count × per-step-line-budget (typically 8-15 lines/step including error branches) exceeds 40 lines, split into named per-step helpers BEFORE plan finalization. The split is mechanical (one helper per phase) and yields tests that anchor to specific helper outputs rather than orchestrator-end-state assertions only.
+
+This pattern compounds with **SG-DialogueDraftBlindness**: in collaborative-dialogue plan authoring, the Razor estimate is often pencilled in as "~N lines" without per-step accounting. A self-check pass — "for each named step in this orchestrator, what is its line budget?" — should be a final gate before writing the plan file.
+
+### Remediation Required
+
+Amend Phase 1 §"Handler restructure" to declare:
+
+```ts
+async function runProbeStep(resolver: PythonInterpreterResolver): Promise<QorLogicInstallInvocation>;
+async function runPipStep(installer: QorLogicPackageInstaller): Promise<QorLogicInstallInvocation>;
+async function runHostInstallStep(ingestor: QorLogicSkillIngestor, host: QorLogicHost, scope: 'repo' | 'global'): Promise<QorLogicInstallInvocation>;
+async function runProvenanceStep(workspaceRoot: string): Promise<QorLogicInstallInvocation>;
+async function runRefreshStep(): Promise<QorLogicInstallInvocation>;
+```
+
+The `createInstallSkillsHandler` closure becomes a ~25-line sequencer calling each helper with short-circuit checks on probe/pip errors. Re-run `/qor-audit` after amendment.
+
+---
+
+## VETO — 2026-05-06: v4.10.1 Pre-v5 Cleanup v1 (5 specification-drift / dependency placeholder findings)
+
+**Plan**: `.failsafe/governance/plans/plan-v4.10.1-pre-v5-cleanup.md`
+**Audit**: `.failsafe/governance/AUDIT_REPORT.md` (Entry #267)
+**Categories**: `specification-drift` (×4), `dependency-unjustified` (×1)
+
+### What Failed
+
+Five plan-text gaps:
+
+1. Voice-controller's new "unified status emit" referenced by name but its API (method, multiplicity, state-precedence rule, signal-translation map) never specified. A single-slot variant would replicate the same B129 bug being fixed elsewhere in the same plan.
+2. Voice-catalog source-of-truth declared simultaneously OPEN (in Open Questions Q1) and RESOLVED (in B127 step 7 hardcoded 12-language map).
+3. `'en-US'` final fallback removal in stt-engine.js with no replacement contract; `live-transcriber.js` told to "trust caller for non-null" but caller (stt-engine) lost its non-null guarantor.
+4. Whisper model-swap semantics flagged as Open Q2 ("confirmed acceptable in dialogue") but absent from B127 implementation steps. Settings-driven control, no specified side effect.
+5. `piper-tts-web` declared as `"^<latest>"` — `<latest>` is a placeholder, not a published version.
+
+### Why It Failed
+
+This plan was authored after a long collaborative dialogue (Q1 through Q14) covering substantial design surface (voice substrate, brainstorm UX, decomposition, three new Settings sections, severity-tiered toasts, configurable history, language auto-match, model picker, voice-catalog mapping, vendor strategy, etc.). The dialogue was exhaustive on user-facing decisions and architectural shape — but several **cross-module contracts** (controller→badge state subscription, store→engine swap reactivity, fallback chain ownership) were resolved verbally in the dialogue and never re-rendered into the plan's implementation steps.
+
+The Open Questions block was used as a parking lot for "decided in dialogue but flagged for visibility" — but the plan also wrote authoritative-sounding implementation steps for the same items, producing the contradiction in Findings 2 and 4.
+
+### Pattern to Avoid
+
+**SG-DialogueResidueUnrendered**: When a long collaborative-dialogue plan-authoring session resolves cross-module contracts verbally, those resolutions must be re-rendered as concrete implementation steps in the plan — not parked in Open Questions, not implied by other steps, not assumed-from-context. The plan file is the contract; the dialogue is its draft, not its addendum.
+
+A self-check pass before writing the plan file:
+
+1. List every cross-module API the plan introduces (e.g., `controller.addStateListener`, `controller.setLanguage`, `service.fetchSnapshot`).
+2. For each: where is its signature declared in the plan? If "implied by step X" or "covered in dialogue", upgrade to an explicit step with method name, parameter types, return type, multiplicity (single-slot vs. multi-subscriber), and lifecycle (when called, when invalidated).
+3. List every Open Question. For each: does any implementation step contradict its "open" status? If yes, resolve the contradiction in one direction.
+4. For every dependency added, every cited version is concrete (no `<latest>`, no `<version>`, no placeholder tokens).
+
+This pattern compounds with **SG-OrchestratorMonolith** (Entry #263): both stem from collaborative-dialogue authoring where the plan-file render lags the conversation's resolution depth. The mitigation is a structural plan-render pass after the dialogue, walking the Affected Files list against the dialogue transcript to surface unrendered contracts.
+
+### Remediation Required
+
+Amend `plan-v4.10.1-pre-v5-cleanup.md` per the 5 specific items in `.failsafe/governance/AUDIT_REPORT.md` §"Required Next Action":
+
+1. Add explicit `voice-controller` state-emission API: method name, multi-subscriber `addStateListener(fn)` mirroring B129's analyser cache-and-replay pattern, precedence rule (most-recent-active-wins), and the signal-translation table mapping engine outputs (`'downloading'`, `'loading'`, `'ready'`, `'speaking'`, `'idle'`, `'error'`, auto-stop, wake-word) to badge states (`idle | stt-loading | stt-listening | tts-speaking | error:<reason>`).
+2. Remove Q1 from Open Questions; the bundled-static-map decision in B127 step 7 stands.
+3. Specify the non-null language guarantee — recommend keeping a single `'en-US'` (or a `DEFAULT_STT_LANGUAGE` constant) fallback in stt-engine.js as the contract source.
+4. Add explicit Whisper-model-swap step under B127: store-subscription / settings-route handler triggers pipeline teardown; in-flight audio dropped; force-reload on next mic press; corresponding test in `stt-engine-multilingual.test.ts`.
+5. Replace `^<latest>` with a concrete pinned version (operator runs `npm view piper-tts-web` outside skill); document re-vendor policy.
+
+Re-run `/qor-audit` after amendments. Expected outcome: PASS.
+
+---
+
+## VETO — 2026-05-06: v4.10.1 Pre-v5 Cleanup v3 (B132 truncation feature data-flow gaps)
+
+**Plan**: `.failsafe/governance/plans/plan-v4.10.1-pre-v5-cleanup-v3.md`
+**Audit**: `.failsafe/governance/AUDIT_REPORT.md` (Entry #269)
+**Categories**: `specification-drift` (×2), `infrastructure-mismatch` (×1)
+
+### What Failed
+
+The v3 plan correctly addressed all 4 v2 findings (extraction modules for at-cap files, swapWhisperModel API enumeration). But three plan-text gaps in the B132 server-side-truncation-transparency feature surfaced:
+
+1. **Route-side pre-truncation** at `BrainstormRoute.ts:91-93` and `TransparencyRiskRoute.ts:36,39` truncates the label BEFORE invoking the service. Plan declares `BrainstormService.addNode` returns `{truncated, originalLength}` but the service can never see over-length input from the HTTP path, so the warning surface silently never fires.
+
+2. **Truncation marker render path** says "in onEvent/node-update path" but `onEvent` processes WebSocket events whose payload (`{nodes, edges}`) carries no `warnings`. Warnings only flow via HTTP response. Data flow from server detection to client marker render not traced.
+
+3. **`showStatusGated` parameter mismatch** — function defined with 5 params (`severity, text, color, showStatusFn, store`); called with 4 args in `brainstorm-export.js` (omits `store`). Severity gating silently bypasses at this call site.
+
+### Why It Failed
+
+The v1→v2→v3 SG-DialogueResidueUnrendered countermeasure pass caught earlier-iteration glue gaps (controller↔badge state API in v1, file-size budgets and swapWhisperModel in v2). But the v3 pass focused on the gaps the v2 audit flagged — extractions, model swap, file budgets — and didn't extend the same scrutiny to the B132 truncation feature glue, which had been carried forward from v1 unchanged.
+
+The B132 feature's data flow involves three coupling surfaces:
+- Route ↔ Service (truncation responsibility)
+- HTTP response ↔ WebSocket broadcast (warning propagation)
+- Caller ↔ notifications module (parameter threading for severity gating)
+
+None of these were verified end-to-end against existing code shape during plan-render. The plan's data-flow claims read as plausible-sounding sentences ("service returns truncated flag", "client reads warnings in onEvent path") but each contradicts the actual route+service+websocket+module shapes.
+
+### Pattern to Avoid
+
+**SG-DataFlowTracingGap**: When a plan introduces a new data flow (e.g., server detects condition → broadcasts/responds → client reacts), the plan-render must trace EACH step end-to-end against existing code:
+
+1. Where is the data first observed? (Specific file, specific line, specific function.)
+2. What is the existing shape of the surface that carries it forward? (HTTP response body schema, WebSocket payload shape, function parameter list.)
+3. Does the existing surface support the data being added, or does it require schema/shape changes?
+4. Where is the data ultimately consumed? (Specific render path, specific DOM mutation, specific UI surface.)
+5. For every intermediate hop: does the plan specify either "no change" (with verification that no change is required) or an explicit shape amendment?
+
+The plan-render checklist (mechanical):
+
+```
+For each new data field (e.g., "warnings"):
+  Origin: <file>:<line>      // where value is computed
+  Carrier 1: <surface>       // existing shape; is amendment needed?
+  Carrier 2: <surface>       // ditto
+  Sink: <file>:<line>        // where value is consumed
+  ∀ Carriers: existing shape supports field? Y/N
+    if N → plan must include explicit shape amendment step
+```
+
+This pattern compounds with **SG-DialogueResidueUnrendered** (#267) and **SG-AtCapAdditionBlindness** (#268): all three are post-dialogue plan-render gaps where the dialogue's design depth outruns the plan-render's structural accounting. Each iteration's countermeasure pass extended the structural-accounting scope:
+
+- v1→v2: catch missing API contracts (signature, multiplicity)
+- v2→v3: catch missing file-size budgets (`wc -l` table)
+- v3→v4: catch missing data-flow tracings (this pattern)
+
+The cumulative discipline is: render-time structural verification covers every cross-module artifact (API surface, file size, data flow) AGAINST the existing codebase shape, not just internal consistency.
+
+### Remediation Required
+
+Amend to v4:
+
+1. **Finding 1 fix**: Add steps to remove route-side pre-truncation in `BrainstormRoute.ts:91-93` and `TransparencyRiskRoute.ts:36, 39`; service owns truncation; service returns `{node, truncated, originalLength}`; route translates to `warnings` array. Update test description to assert on round-trip.
+
+2. **Finding 2 fix**: Pick a single data-flow path. Recommend amending WebSocket broadcast payload to include per-node `truncated` flag; `onEvent` reads it; sets `data-truncated`. Update §B132 step 4 + Phase 1 affected files (BrainstormRoute.ts must explicitly amend broadcast payload, not just response shape) + test description.
+
+3. **Finding 3 fix**: Update `exportBrainstormJSON(showStatusFn, store)` signature; call site passes `store`. Verify all `showStatusGated` calls in the plan have consistent arity.
+
+4. **Add a Data-Flow Tracing table** to v4 plan top-matter (per SG-DataFlowTracingGap countermeasure):
+
+| Field | Origin | Carrier 1 | Carrier 2 | Sink | Shape OK? |
+|---|---|---|---|---|---|
+| `warnings` | service.addNode | HTTP response `{node, warnings}` | (terminal) | brainstorm.js toast | YES (after amend) |
+| `truncated` (per-node) | service.addNode | HTTP response | WebSocket `brainstorm.update` payload | brainstorm-graph.js onEvent | YES (after amend) |
+
+Re-run `/qor-audit` after amendments. Expected outcome: PASS.
+
+---
+
+## VETO — 2026-05-06: v4.10.1 Pre-v5 Cleanup v2 (Razor overage on three at-cap files)
+
+**Plan**: `.failsafe/governance/plans/plan-v4.10.1-pre-v5-cleanup-v2.md`
+**Audit**: `.failsafe/governance/AUDIT_REPORT.md` (Entry #268)
+**Categories**: `razor-overage` (×3), `specification-drift` (×1)
+
+### What Failed
+
+The v2 plan correctly addressed all 5 v1 findings (state-emission API, voice-catalog Q1, en-US fallback, model-swap behavior, `^<latest>` placeholder). But the plan added substantive functionality to three files already at or near the 250-line razor cap WITHOUT specifying any extraction or trimming:
+
+- `stt-engine.js` (248L) + ~22L additions → estimated 270L
+- `prep-bay.js` (248L) + ~5-8L additions → estimated 253-256L
+- `brainstorm-graph.js` (231L) + ~25L additions → estimated 256L
+
+Plus a residue from the v1 Finding 4 fix: `controller.swapWhisperModel` is the actual mechanism for model-swap (since `StateStore` has no `subscribe` method per `state.js`), but the v2 §step 9 code block presents `store.subscribe?.` as primary and names `swapWhisperModel` only in a parenthetical fallback. The method isn't enumerated in §step 8's public API list.
+
+### Why It Failed
+
+**Razor-overage**: The Governor's v2 dialogue focused on resolving the v1 findings about API surface, fallback contracts, and version pinning — all real and important. The dialogue did not include a file-size accounting pass against the razor caps. Three of the files involved happened to be sitting AT or near the cap pre-existing-condition. The v1 audit (Entry #267) noted this risk in passing for ConsoleServer.ts (acknowledging the pre-existing 5.5× overage as out-of-scope) but did not call out the at-cap files in the Brainstorm UX surface — those quietly absorbed the additions and broke the cap.
+
+**SwapWhisperModel API gap**: The v1 Finding 4 fix added `store.subscribe?.` as the primary mechanism with a fallback sentence. This is graceful-fallback coding, but it conflates "what the plan presents as primary" with "what the codebase actually supports". The fallback IS the mechanism on this codebase; presenting it as a fallback creates the perception that subscribe is the contract when subscribe doesn't exist.
+
+### Pattern to Avoid
+
+**SG-AtCapAdditionBlindness**: When a plan declares additions to a file already within 10 lines of the razor cap, the plan must either (a) include an explicit extraction step that pulls existing code out to a sibling helper module, restoring headroom for the additions; or (b) include an explicit trimming step naming the lines or methods being removed; or (c) explicitly waive the cap with rationale (rarely valid). The plan-render step must include a file-size budget table:
+
+| File | Current LoC | Cap | Plan adds | Net | Status |
+|---|---|---|---|---|---|
+| (file) | (current) | 250 | (delta) | (current+delta) | OK / VETO-target |
+
+This table is mechanical to produce (`wc -l` per affected file + a per-step LoC estimate) and would have caught all three v2 razor findings before the plan was finalized.
+
+This pattern compounds with **SG-DialogueResidueUnrendered** (Entry #267) and **SG-OrchestratorMonolith** (Entry #263): all three are post-dialogue plan-render gaps where the dialogue's design depth outruns the plan-render's structural accounting. The mitigation is a structural "render-time razor budget" pass — not just listing affected files, but tabulating their size budgets.
+
+**SG-DeadCodePrimaryPath**: When a plan presents a code mechanism as primary that isn't supported by the existing codebase (e.g., `store.subscribe?.` when StateStore has no subscribe), even with a graceful-fallback sentence, the plan reads as if the primary mechanism is the contract. The plan-render must verify that every cited API ON the existing codebase is reachable; missing APIs either need to be added explicitly as a new affected file, or removed from the code block in favor of the actual mechanism. Optional chaining is for runtime defense, not specification clarity.
+
+### Remediation Required
+
+Amend to v3:
+
+1. **Add explicit extraction steps** for the three at-cap files:
+   - `whisper-pipeline.js` (new) — extract `loadPipeline`-related logic + retry from `stt-engine.js`
+   - `modal-visualizer.js` (new) — extract `_wireModalVisualizer` + `_drawModalVisualizer` from `prep-bay.js`
+   - `brainstorm-export.js` (new) — extract `exportJSON` + filename builder from `brainstorm-graph.js`
+
+2. **Add file-size budget table** to v3 plan top-matter showing post-plan size for each modified file.
+
+3. **Add `controller.swapWhisperModel(newModelId)`** to §step 8 public API enumeration with full method signature, behavior contract (calls `stt.teardownPipeline()`, emits state `'idle'`, idempotent), and Settings-UI binding sequence (`voice-settings.js` change handler calls `store.set` THEN `controller.swapWhisperModel`). Drop the dead-code `store.subscribe?.` block from §step 9.
+
+4. **Add matching test files** for each extracted helper.
+
+Re-run `/qor-audit` after amendments. Expected outcome: PASS.
+
+---
+
+## VETO — 2026-05-06: v4.10.1 Pre-v5 Cleanup v4 (Canvas DOM accessor doesn't exist for truncation marker)
+
+_**Status**: `addressed_pending` 2026-05-06 — covered by `.failsafe/governance/REMEDIATE_PROPOSAL.md`. Full `addressed: true` flip pending operator-driven `/qor-audit reviews-remediate:.failsafe/governance/REMEDIATE_PROPOSAL.md` PASS or operator-explicit application of the proposal's Part 3 (plan split + four verification sections installed in /qor-plan)._
+
+
+**Plan**: `.failsafe/governance/plans/plan-v4.10.1-pre-v5-cleanup-v4.md`
+**Audit**: `.failsafe/governance/AUDIT_REPORT.md` (Entry #270)
+**Categories**: `infrastructure-mismatch` (×1)
+
+### What Failed
+
+The v4 plan correctly fixed all 3 v3 findings (route pre-truncation removed, data-flow path specified, parameter threading corrected). The Data-Flow Tracing table was added per SG-DataFlowTracingGap, tracing 5 fields end-to-end across origin/carrier/sink. But one finding remained: the chosen client-side sink mechanism (`canvas.getNodeElement(id).setAttribute('data-truncated', 'true')`) is incompatible with the actual rendering technology.
+
+`BrainstormCanvas` (line 26 of `brainstorm-canvas.js`) wraps `3d-force-graph`, which renders nodes as Three.js meshes (3D mode) or HTML5 Canvas drawings (2D mode) — they are **not DOM elements per node**. There is no `getNodeElement(id)` method, none can meaningfully be added (the underlying nodes don't exist as DOM), and the CSS rule `[data-truncated="true"]::after { content: ' (truncated)'; }` matches no element. The plan's whole client-side render path was mechanically incapable of producing visible output.
+
+The test `brainstorm-truncation-warning.test.ts` mocked `getNodeElement`, giving false confidence — the test would PASS while the production behavior silently failed.
+
+### Why It Failed
+
+The Data-Flow Tracing table from v3→v4 verified that each new field (e.g., `truncated`) had a defined origin, a verified carrier surface (HTTP response shape, WebSocket broadcast payload), and a named sink. But **the discipline did not extend to verifying that the sink's API supports the consumption pattern**. The Tracing table named the sink as `mergeNodes propagates to canvas node DOM via data-truncated attribute` — which is structurally a valid sentence but not actually executable on this codebase's rendering library.
+
+The four-deep recurrence pattern across iterations:
+
+| Iteration | Caught | Missed |
+|---|---|---|
+| v1 | (initial) | Cross-module API contracts (state emitter, swap method) |
+| v2 | API contracts | File-size budgets at-cap |
+| v3 | File budgets | Data-flow tracing through carriers |
+| v4 | Data-flow tracing | Sink-mechanism API verification |
+
+Each iteration's countermeasure caught the previous gap class, but exposed a new one. The progression is from "is the surface specified?" → "is the surface sized correctly?" → "does the surface carry the data?" → "does the consuming surface support the consumption pattern?"
+
+### Pattern to Avoid
+
+**SG-SinkMechanismVerificationGap**: When a plan's Data-Flow Tracing table names a sink, the sink mechanism must be verified against the consuming module's actual API — not just that the field arrives at the consumer. The verification asks: "does the consumer have an API that accepts this consumption pattern, and what's its signature?"
+
+Refinement to the SG-DataFlowTracingGap table: add a column.
+
+| Field | Origin | Carrier 1 | Carrier 2 | Sink | **Sink mechanism verified?** | Shape OK? |
+|---|---|---|---|---|---|---|
+| (field) | (file:line) | (surface) | ... | (file:line) | **Y/N — name the consumer API; cite line if existing** | Y/N |
+
+When **Sink mechanism verified = N**, the plan must add an explicit step naming either (a) the existing API used or (b) the new API added. No hand-wave hedge ("if absent, a tiny new method on the canvas wrapper") — verification is a binary grep check.
+
+This pattern compounds with **SG-DataFlowTracingGap** (#269), **SG-AtCapAdditionBlindness** (#268), and **SG-DialogueResidueUnrendered** (#267): all four are post-dialogue plan-render gaps where structural verification has been progressively extended. The cumulative discipline is now:
+
+1. Every cross-module API contract specified end-to-end (signatures, multiplicity, lifecycle) — caught by v2 pass
+2. Every modified file's size accounted in budget table — caught by v3 pass
+3. Every new data field traced origin→carrier→sink — caught by v4 pass
+4. Every sink's API verified to support the consumption pattern — caught here, applied in v5+
+
+### Remediation Required
+
+Amend to v5:
+
+1. **Replace §B132 step 4's `mergeNodes` data-truncated loop** with an amendment to `brainstorm-canvas.js:65`'s `.nodeLabel(...)` accessor:
+   ```js
+   .nodeLabel(node => {
+     const label = escapeHtml(node.label);
+     return node.truncated ? `${label} (truncated)` : label;
+   })
+   ```
+   The library reads the accessor on every render frame and presents the result in its native tooltip overlay on hover. No DOM mutation needed; `truncated` flag arrives via `setNodes` (existing path) and is consumed by the accessor.
+
+2. **Drop §B132 step 6** (CSS rule for `[data-truncated="true"]::after`) — inoperable on this rendering stack.
+
+3. **Update `brainstorm-truncation-warning.test.ts`** Client onEvent assertion: replace `canvas.getNodeElement → setAttribute` mock chain with a direct test of the `nodeLabel` accessor. Given a node `{label: 'foo', truncated: true}`, the accessor returns `'foo (truncated)'`; with `truncated: false` or absent, returns `'foo'` (escaped).
+
+4. **Add `brainstorm-canvas.js`** to Phase 1 Affected Files (MODIFIED) — one-line accessor change.
+
+5. **Optionally**: add a "Sink mechanism verified" column to v5's Data-Flow Tracing table per the new SG-SinkMechanismVerificationGap countermeasure. Each row's cell either cites an existing API (`brainstorm-canvas.js:65 .nodeLabel()`) with a Y, or names a new API with a corresponding affected-file entry.
+
+Re-run `/qor-audit` after amendments. Expected outcome: PASS.
+
+
+---
+
+## SG-ReleaseScopeMismatch-A — release banner over a narrow plan-internal seal
+
+**Detected**: 2026-05-06, Entry #285 audit
+**Pattern**: a Phase-N plan PASSes its plan-internal audit honestly (scoped to a narrow surface), implements and seals cleanly, then the workspace state ships under a publishable release banner (e.g., v5.1.0) that implies wider coverage than the plan ever scoped.
+
+**Symptom in this session**:
+- Phase 1 of plan-comprehensive-e2e-coverage.md scoped Monitor SHIELD progression + the E2E coverage CI gate.
+- Phase 1 sealed cleanly at Entry #284. Reality matched the Phase 1 Promise.
+- The version bump 5.0.0 → 5.1.0 happened post-seal; CHANGELOG, README, and extension marketplace listing implied a coherent v5.1.0 "minor release" covering the whole product.
+- `docs/FEATURE_INDEX.md` (also generated post-seal) revealed 264 of 476 product-surface features (55.5%) were unverified.
+- The release banner over Phase 1's narrow seal restated the same false-confidence pattern that motivated B199 in the first place.
+
+**Countermeasure**: a release-class seal SHALL read `docs/FEATURE_INDEX.md` as gating input. Specifically:
+- `/qor-substantiate` reads the FEATURE_INDEX coverage counts; if `verified` count regressed since the prior seal without explicit Governor justification, ABORT seal.
+- A release-class seal (publishable v-bump, change_class∈{feature,breaking}) ALSO requires that no feature classified `verified` has dropped to `unverified` since the last seal, AND that the FEATURE_INDEX header counts match the body (specification-drift guard).
+- The first time this fires, expect significant friction: large unverified surfaces will block release until either the FEATURE_INDEX is honestly downgraded (per-feature `n/a` justifications) or coverage is added.
+
+**Filed upstream**: Qor-logic#40 — "SHIELD lifecycle should require a Feature Inventory artifact cross-referenced against test surface."
+
+**Memory**: `feedback_feature_index_every_cycle.md`.
+
+
+
+
+---
+
+## SG-InfrastructureMismatch (recurring) — plan-monitor-coherence-and-browser-verification (2026-05-07)
+
+_**Status**: `addressed_pending` 2026-05-07 — covered by `.failsafe/governance/REMEDIATE_PROPOSAL_plan-infrastructure-verification.md` R1+R2+R3+R4 (verification-token discipline + node-runnable lint port + doctrine update + plan amendment). Full `addressed: true` flip pending operator-driven `/qor-audit reviews-remediate:.failsafe/governance/REMEDIATE_PROPOSAL_plan-infrastructure-verification.md` PASS._
+
+**Category**: SG-InfrastructureMismatch (Phase 37 V10-class)
+**Severity**: 3 (cycle-count threshold breached — 4th recurrence in 72h)
+**Cycle position**: fourth recurrence in active sub-chain (Entry #262 install-UX, Entry #270 sink-mechanism sub-class, Entry #285 release-tool divergence, Entry #286 this).
+
+**Surface**: `plan-monitor-coherence-and-browser-verification.md` Phase 2 declared NEW: `playwright.config.ts`, `@playwright/test` devDependency, `playwright/` directory, `test:browser`/`test:browser:ui` scripts. All five surfaces already existed in the repo:
+- `FailSafe/extension/playwright.config.ts` — committed in `8a9f5eb` (v2.0.1 reorg); current `testDir: 'src/test/ui'`.
+- `@playwright/test ^1.49.1` — present in `package.json`.
+- `src/test/ui/*.spec.ts` — established convention; 5 specs already present (`compact-ui`, `popout-ui`, `user-stories`, `monitor-shield-progression`, `monitor-staleness`).
+- `test:ui` / `test:e2e` scripts — already invoke Playwright.
+
+**Mechanism**: Plan author wrote Phase 2 without running `git log -- playwright.config.ts`, `grep -E "playwright" FailSafe/extension/package.json`, or `ls FailSafe/extension/src/test/ui/`. The same discipline gap as Entry #285 finding 3 (no `git tag --list "v5*"` before bumping to v5.1.0).
+
+**Why this matters**: implementing the plan as-written would create a parallel/divergent Playwright surface (two configs, two dependency declarations, two directory conventions). This is exactly the `release-tooling-divergence` pattern Entry #285 flagged at finding 3. Repeating the structural failure in the remediation cycle is the worst-case shape.
+
+**Countermeasure**: `/qor-plan` skill must include a pre-write "verify cited infrastructure" step. Mandatory grep/ls/git-log against the actual repo for every NEW declaration before the plan artifact lands. Pre-audit lint at `/qor-audit` Step 0.6 (`plan_grep_lint`) would catch this in active runtime — currently no-op in degraded `.qor/` mode.
+
+**Three-strikes rule**: if the amended plan re-vetoes on `infrastructure-mismatch`, the legal next action is `/qor-remediate`, not another `/qor-plan` iteration. The pattern is upstream of any individual plan; remediation must address the discipline, not the artifact.
+
+**Filed upstream**: tracked via Qor-logic#41 (per-feature TDD discipline) — propose extending to "per-claim infrastructure verification."
+
+
+---
+
+## SG-PlanInfrastructureVerificationGap — gate-loop classification (2026-05-07)
+
+_**Status**: `addressed_pending` 2026-05-07 — covered by `.failsafe/governance/REMEDIATE_PROPOSAL_plan-infrastructure-verification.md` R1 (root-cause discipline install). Full `addressed: true` flip pending operator-driven `/qor-audit reviews-remediate:...` PASS._
+
+**Category**: process pattern (`gate-loop` per `/qor-remediate` Step 2 classification)
+**Severity**: 4 (escalated — fourth same-class VETO in active sub-chain)
+**Detected**: 2026-05-07, post-Entry-#286 audit, during `/qor-remediate` Step 2 pattern matching
+
+### What Failed
+
+Four consecutive plans in the active B199 sub-chain failed at `/qor-audit` Step 3 Infrastructure Alignment Pass on the same root mechanism — declared NEW infrastructure that already existed, OR cited MODIFIED infrastructure without verifying current state. The four ledger entries:
+
+| Entry | Plan | Mismatch instance |
+|---|---|---|
+| #262 | plan-v5-round2-install-ux.md | `outputChannel` / `setScaffoldCallback` / `Plan A Phase 3 wiring` named without grep-verifying ownership |
+| #270 | plan-v4.10.1-pre-v5-cleanup-v4.md | `canvas.getNodeElement(id)` cited as sink; rendering library has no DOM-per-node API |
+| #285 | v5.1.0 release-readiness | `git tag --list "v5*"` empty; bumped to v5.1.0 over inconsistent v5.0.0 baseline |
+| #286 | plan-monitor-coherence-and-browser-verification.md | `playwright.config.ts`, `@playwright/test`, `playwright/` dir, `test:browser` declared NEW; all already exist |
+
+### Why It Failed
+
+Each of the four prior remediation cycles installed a structural verification discipline (API contracts, file-size budgets, data-flow tracing, sink-mechanism API) — but none addressed the earliest, simplest verification step: **before declaring X NEW, confirm X does not already exist**. Plan authors wrote against a mental model of the repo, not against the actual repo. Three of four entries occurred in degraded `.qor/` runtime mode where pre-audit lint (`plan_grep_lint.py`) ran no-op.
+
+### Pattern to Avoid
+
+**SG-PlanInfrastructureVerificationGap**: Plan authoring without per-row verification tokens (`NEW-VERIFIED` / `MODIFIED-VERIFIED` / `EXISTING-VERIFIED`) on the Affected Files table. Every NEW declaration MUST cite the absence-verification command (`git log --` returns empty, `grep` no-match, `ls` no-such-file). Every MODIFIED declaration MUST cite the presence-verification command. Auditor mechanically grep-checks the verification commands at `/qor-audit` Step 3.
+
+### Three-strikes routing record
+
+This is the official three-strikes routing trigger for `infrastructure-mismatch`. Per `qor/references/doctrine-governance-enforcement.md` §10.4, the next plan in queue does NOT receive another `/qor-plan` iteration on this discipline — `/qor-remediate` runs first, lands R1+R2+R3, THEN the next plan iterates with the discipline installed.
+
+### Remediation
+
+See `.failsafe/governance/REMEDIATE_PROPOSAL_plan-infrastructure-verification.md`:
+- R1 — `/qor-plan` skill text adds verification-token discipline
+- R2 — `plan-grep-lint.cjs` node-runnable variant (closes degraded-mode gap)
+- R3 — doctrine update with cumulative discipline list
+- R4 — amend Entry #286's failed plan after R1 lands
+
+### Filed upstream
+
+Tracked via Qor-logic#42 (proposed) — "Plan authoring requires per-row infrastructure verification tokens; pre-audit lint runs in node for non-python deployments."
+
+
+---
+
+## SG-SinkMechanismVerificationGap (recurring, 2nd instance) — plan-monitor-coherence-and-browser-verification v2 (2026-05-07)
+
+_**Status**: `addressed_pending` 2026-05-08 — covered by `.failsafe/governance/REMEDIATE_PROPOSAL_plan-fitness-verification.md` R2-bis (FITNESS-VERIFIED token class + lint enforcement). Full `addressed: true` flip pending operator-driven `/qor-audit reviews-remediate:.failsafe/governance/REMEDIATE_PROPOSAL_plan-fitness-verification.md` PASS._
+
+**Category**: SG-SinkMechanismVerificationGap (Entry #270 lineage)
+**Severity**: 2 (second occurrence of this sub-class)
+**Detected**: 2026-05-07, Entry #288 audit (re-audit of v2-amended plan)
+
+### What Failed
+
+Plan v2 resolved Open Q2 by citing `FailSafe/extension/src/test/ui/helpers/serveCompactUI.ts` as the fixture for "Phase 2 specs to boot ConsoleServer in-process." The helper's docstring says it "mimics the FailSafe ConsoleServer **just enough for the compact Monitor UI to render**." Route handlers: `/api/hub` returns `currentHub` JSON; `/api/*` (catch-all) returns `{}`; static files served from `roadmap/ui` directory.
+
+The cited fixture cannot deliver the data 4-5 of the 7 Phase 2 specs assert against:
+- FX-BROWSER-VERIFY-SKILLS asserts catalog tag-filter coherence — no catalog from `/api/*` → `{}`
+- FX-BROWSER-VERIFY-MARKETPLACE asserts trust-tier badges across visible cards — no items
+- FX-BROWSER-VERIFY-GOVERNANCE asserts alerts coherent with verdict data — no verdicts
+- FX-BROWSER-VERIFY-TIMELINE asserts category/severity filters with rendered entries — no entries
+- FX-BROWSER-VERIFY-OVERVIEW + -SETTINGS partially unreachable (data tickers / configuration values)
+
+### Why It Failed
+
+R1's verification-token discipline (Entry #287) catches existence-class infrastructure-mismatch — "does the file exist?" The token `MODIFIED-VERIFIED` for `serveCompactUI.ts` correctly confirmed the file is present. It does NOT verify that the file's API supports the consumption pattern the plan asserts.
+
+This is the gap Entry #270 (SG-SinkMechanismVerificationGap) catalogued: "the consumer's API supports the consumption pattern" is item 5 of the cumulative verification discipline. R3 (Entry #287) documented item 5 in `.failsafe/governance/doctrine-shadow-genome-countermeasures.md` but R2's `plan-grep-lint.cjs` only enforces item 1 (presence/absence). Items 2-5 are documented but not mechanically gated.
+
+### Pattern to Avoid (refinement)
+
+**SG-SinkMechanismVerificationGap-mechanism-of-recurrence**: A plan author who cites a fixture/sink/helper by path and confirms its existence (NEW-VERIFIED / MODIFIED-VERIFIED) can still err on whether the fixture's API supports the assertions the plan declares. The verification needs to extend to a grep showing the consumption pattern is supported by the fixture's own API.
+
+### Countermeasure (proposed for follow-on remediation)
+
+Extend `FailSafe/extension/scripts/plan-grep-lint.cjs` with a fourth token class: `FITNESS-VERIFIED`. Required when a plan cites a fixture/helper as the carrier for a consumption pattern. The verification command must cite a grep against the fixture's source showing the API supports the pattern. Example:
+
+```
+| Fixture | Reused | grep 'router.get.*marketplace' helpers/serveCommandCenterUI.ts shows route handler exists | FITNESS-VERIFIED |
+```
+
+If the next audit cycle hits a third sink-mechanism finding, this remediation lands as Entry #287's R2-bis.
+
+### Three-strikes routing record
+
+This is the **2nd instance of sink-mechanism class** (Entry #270 was first; current is second). Five total infrastructure-mismatch findings (existence-class chain ended at Entry #286 thanks to R1+R2). Cycle-count escalation on the sub-class triggers at instance 3.
+
+### Remediation path
+
+Plan v2 → v3 amendment options (operator's choice; per `.agent/staging/AUDIT_REPORT.md` §"Required Next Action"):
+- A. Extend `serveCompactUI.ts` with route additions + declare MODIFIED in Phase 2 Affected Files
+- B. New `helpers/serveCommandCenterUI.ts` per-spec route layering (declare NEW)
+- C. Scope Phase 2 specs to Monitor-only (drop 4 unsupported specs)
+- D. Boot real `ConsoleServer` via new fixture helper (declare NEW)
+
+Re-run `/qor-audit` after amendment. Expected outcome: PASS, given the R1+R2 discipline already addressed existence-class concerns.
+
+
+---
+
+## SG-SinkMechanismVerificationGap (3rd recurrence) — plan-monitor-coherence v3 (2026-05-07)
+
+_**Status**: `addressed_pending` 2026-05-08 — covered by `.failsafe/governance/REMEDIATE_PROPOSAL_plan-fitness-verification.md` R2-bis + R1-bis + R3-bis + R4-bis. Full `addressed: true` flip pending operator-driven `/qor-audit reviews-remediate:.failsafe/governance/REMEDIATE_PROPOSAL_plan-fitness-verification.md` PASS._
+
+**Category**: SG-SinkMechanismVerificationGap (Entry #270 lineage; 3rd instance)
+**Severity**: 4 (escalated from 3 — three-strikes recurrence)
+**Detected**: 2026-05-07, Entry #289 audit (re-audit of v3 amendment)
+
+### What Failed
+
+Plan v3 amended (Option D) to introduce new helper `serveConsoleServerUI.ts` that boots real `ConsoleServer`. Helper-level claim VERIFIED (pattern exists at `consoleServer.test.ts:16-29`; `WebSocketManager.setup` is callable on harness HTTP server). HOWEVER, plan v3's Phase 2 Feature Inventory Touches table cited route paths inside ConsoleServer that do not match actual route shapes:
+
+- `/api/skills/catalog` (FX-BROWSER-VERIFY-SKILLS) — invented; actual `SkillsApiRoute.ts` exposes `/api/skills` + `/api/skills/relevance`
+- `/api/transparency/events` (FX-BROWSER-VERIFY-TIMELINE) — typo'd suffix; actual `TransparencyRiskRoute.ts:13` is `/api/transparency`
+- `EventBus.emit` verdict-injection chain (FX-BROWSER-VERIFY-GOVERNANCE) — wiring chain to UI alerts panel never traced; actual `/api/v1/verdicts` route exists at `ConsoleServer.ts:469`
+
+### Why It Failed (recurrence root)
+
+R1's verification-token discipline (Entry #287) catches existence-class infrastructure-mismatch — "does the cited file exist?" The token `MODIFIED-VERIFIED` for `ConsoleServer.ts` correctly confirmed the file is present. It does NOT verify that route paths INSIDE the file match what the plan cites.
+
+Plan author wrote route names from memory rather than from grep against actual route modules. This is the same root mechanism Entry #270 catalogued — the consumer's API supports the consumption pattern is unverified.
+
+### Three-strikes routing record
+
+Per `qor/references/doctrine-governance-enforcement.md` §10.4 cycle-count escalation:
+- Sink-mechanism sub-class instances: #270 (canvas DOM), #288 (serveCompactUI mimic), #289 (this — route citations).
+- Three-strikes on sub-class triggers `/qor-remediate` as legal next action, NOT another `/qor-plan` iteration.
+
+**Existence-class chain** (Entries #262/#285/#286) closed via R1+R2; #289's lint PASS 29/29 confirms that sub-class is mechanically gated.
+
+### Remediation Required (proposed R2-bis)
+
+Extend `FailSafe/extension/scripts/plan-grep-lint.cjs` with a `FITNESS-VERIFIED` token class for cited APIs / routes / symbols. Verification command shape: `grep <symbol-or-route> <implementation-file>` returns non-empty (with stricter shape matching where feasible).
+
+Example token usage:
+
+```markdown
+| /api/skills/catalog (cited route) | route | grep '"/api/skills/catalog"' FailSafe/extension/src/roadmap/routes/SkillsApiRoute.ts returns non-empty | FITNESS-VERIFIED |
+```
+
+Under R2-bis, plan v3 would have failed lint at write-time — the grep returns empty for the invented route. Saves the audit cycle.
+
+### Filed upstream
+
+Qor-logic#43 (proposed) — "plan-grep-lint must verify cited API/route/symbol shape against implementation, not just file existence."
+
+
+---
+
+## SG-PlanFitnessVerificationGap — gate-loop on sink-mechanism sub-class (2026-05-08)
+
+_**Status**: `addressed_pending` 2026-05-08 — covered by `.failsafe/governance/REMEDIATE_PROPOSAL_plan-fitness-verification.md` R2-bis (root-cause discipline install: FITNESS-VERIFIED token class)._
+
+**Category**: process pattern (`gate-loop` per `/qor-remediate` Step 2 classification)
+**Severity**: 4 (escalated — three-strikes on sink-mechanism sub-class within 48h)
+**Detected**: 2026-05-08, post-Entry-#289 audit, during `/qor-remediate` Step 2 pattern matching
+
+### What Failed
+
+Three consecutive plans in the active sub-chain failed `/qor-audit` Step 3 Infrastructure Alignment Pass on the same root mechanism — sink-mechanism class. Cited APIs, routes, or symbols *inside* otherwise-existing files did not match the actual implementation shape:
+
+| Entry | Plan | Sink-mechanism instance |
+|---|---|---|
+| #270 | plan-v4.10.1-pre-v5-cleanup-v4 | `canvas.getNodeElement(id).setAttribute(...)` cited as sink; rendering library has no DOM-per-node API. Test mocked the accessor, false-confidence |
+| #288 | plan-monitor-coherence v2 | `serveCompactUI.ts` claimed to "boot ConsoleServer in-process"; helper actually mimics ConsoleServer for Monitor surface only |
+| #289 | plan-monitor-coherence v3 | `/api/skills/catalog` (invented), `/api/transparency/events` (typo of real `/api/transparency`), EventBus.emit verdict-injection chain (untraced to UI) |
+
+### Why It Failed
+
+R1's verification-token discipline (Entry #287) catches existence-class infrastructure-mismatch — "does the cited file exist?" The token `MODIFIED-VERIFIED` for the containing file is correct in all three cases. R1+R2 do NOT verify that the API/route/symbol exists *inside* the file with the shape the plan asserts.
+
+This is item 5 of the cumulative discipline list catalogued in `.failsafe/governance/doctrine-shadow-genome-countermeasures.md`. Documented in R3 (Entry #287) but never mechanically gated until R2-bis lands.
+
+### Pattern to Avoid (refinement of SG-SinkMechanismVerificationGap)
+
+**SG-PlanFitnessVerificationGap-mechanism**: Plans that cite a route, function, method, or symbol that lives *inside* a file must carry a `FITNESS-VERIFIED` token (in addition to the file-level token) backed by a `grep '<exact-cited-shape>' <file>` command demonstrating the API exists with the cited shape. File presence is necessary but not sufficient.
+
+### Three-strikes routing record
+
+This is the **3rd consecutive sink-mechanism finding** in the active sub-chain, triggering `/qor-remediate` per `qor/references/doctrine-governance-enforcement.md` §10.4. Per the cumulative-discipline closure pattern from Entry #287, this remediation produces R2-bis: extend `plan-grep-lint.cjs` with a 4th token class.
+
+### Remediation
+
+See `.failsafe/governance/REMEDIATE_PROPOSAL_plan-fitness-verification.md`:
+- R2-bis — `plan-grep-lint.cjs` `FITNESS-VERIFIED` token class
+- R1-bis — `/qor-plan` Step 2.5 + Constraints + Step 5 checklist update
+- R3-bis — doctrine update (closure status note)
+- R4-bis — amend plan v3 → v4 with corrected route citations + FITNESS tokens
+
+### Filed upstream
+
+Tracked via Qor-logic#43 (proposed) — "plan-grep-lint must verify cited API/route/symbol shape against implementation, not just file existence."
+
+
+---
+
+## SG-SinkMechanism-prose-vs-code (1st instance) — plan-monitor-coherence v4 (2026-05-08)
+
+**Category**: SG-SinkMechanismVerificationGap sub-sub-class (Entry #270 lineage; new sub-sub-class identified at #291 audit)
+**Severity**: 2 (first occurrence of this sub-sub-class)
+**Detected**: 2026-05-08, Entry #291 audit (re-audit of v4 amendment)
+
+### What Failed
+
+Plan v4's helper design narrative claimed `new ConsoleServer(..., { workspaceRoot, checkpointMemory: <ref> })` — passing a mutable `checkpointMemory` reference through the constructor's options object so the helper's `setVerdicts` controller method could push verdicts that ConsoleServer's `/api/v1/verdicts` route would later return.
+
+Direct read of ConsoleServer at `ConsoleServer.ts:293-299` shows the constructor accepts `(planManager, qorelogicManager, sentinelDaemon, eventBus, options)` where `options: ConsoleServerOptions = {}` consumes only `qoreRuntime/workspaceRoot/featureGate/configProvider`. `checkpointMemory` (line 240) is a private instance field initialized to `[]` and managed internally by `initializeCheckpointStore()`. There is no path for an external reference to be injected at construction.
+
+### Why It Failed
+
+R2-bis's `FITNESS-VERIFIED` token enforces that cited routes/symbols exist in the implementation file. It catches: invented routes (like `/api/skills/catalog` from #289), typo'd routes (like `/api/transparency/events`). It does NOT catch: prose claims about constructor signatures, options-type fields, or function arities that bypass the FITNESS table entirely.
+
+In #291 F1, the plan author wrote a constructor signature in narrative prose ("Construct `new ConsoleServer(... { ... checkpointMemory: <ref> })`") without an associated FITNESS row. The lint had nothing to grep against because no FITNESS-VERIFIED row claimed `{ checkpointMemory: ... }` exists in `ConsoleServerOptions`.
+
+### Pattern to Avoid (refinement)
+
+**SG-SinkMechanism-prose-vs-code**: Plans that claim a constructor signature, options-object field, function arity, or method shape in prose narrative (without an associated FITNESS-VERIFIED row) bypass the verification-token lint. Plan authors must either (a) add FITNESS rows for prose claims about API shape, or (b) treat narrative prose as un-trusted for sink-mechanism claims and only trust the FITNESS table.
+
+### Future remediation candidate (deferred until pattern recurrence)
+
+**R2-bis-prose** — extend `plan-grep-lint.cjs` (or add a sibling `plan-prose-lint.cjs`) to scan plan body for patterns like `new Foo(...)` / `function bar(...)` / `{ field: ... }` / `app.get("/path")` and warn when no FITNESS row backs the claim. Requires markdown-semantic parsing; lower priority than R1+R2+R2-bis. Defer until sub-sub-class recurrence.
+
+### Filed upstream
+
+Tracked via Qor-logic#44 (proposed) — "plan-prose-lint: scan narrative for un-FITNESS-backed API shape claims."
+
+---
+
+## SG-SinkMechanism-cited-but-not-importable (1st instance) — plan-monitor-coherence v4 (2026-05-08)
+
+**Category**: SG-SinkMechanismVerificationGap sub-sub-class (Entry #270 lineage; new sub-sub-class identified at #291 audit)
+**Severity**: 2 (first occurrence)
+**Detected**: 2026-05-08, Entry #291 audit
+
+### What Failed
+
+Plan v4's Phase 1 `roadmap-connection.test.ts` cited 6 cases testing `connect()`, `setConnectionState()`, `paintPendingSentinel()` on the `WebPanelClient` class in `roadmap.js`. The plan added FITNESS-VERIFIED rows for each method (lint passed — methods exist in the file).
+
+Direct read of `roadmap.js` shows `class WebPanelClient` is declared at module scope but **has no export statement** — no `module.exports`, no `export class`, no `export default`. The class is unreachable from outside the module. The 6 test cases cannot import or instantiate it.
+
+### Why It Failed
+
+R2-bis's `FITNESS-VERIFIED` confirms cited symbols exist in the file. It does NOT verify that the file exports the symbol for test access. The methods are present (grep finds them) but are encapsulated in a non-exported class.
+
+The plan v4 hedged Phase 1 with `MODIFIED (conditional)` token + "ONLY IF current shape blocks unit coverage" — implicitly admitting an extraction may be needed but deferring the commitment. The audit caught that the current shape DOES block unit coverage; the hedge is a specification gap.
+
+### Pattern to Avoid (refinement)
+
+**SG-SinkMechanism-cited-but-not-importable**: When a plan's tests cite a symbol (class/function/method) that lives inside a file, FITNESS-VERIFIED confirms the symbol's name exists. The plan must additionally specify how the test accesses the symbol — via an export, via global injection, via dynamic require, etc. A hedge ("export it ONLY IF current shape blocks coverage") is a specification gap when current shape obviously does block coverage.
+
+### Future remediation candidate (deferred until pattern recurrence)
+
+**R2-bis-imports** — extend `FITNESS-VERIFIED` lint to also check, when the row's `Op` indicates a test will import the symbol, that the file has an `export` (or `module.exports`) for the cited symbol. Heuristic match; lower priority. Defer until pattern recurrence.
+
+### Filed upstream
+
+Tracked via Qor-logic#45 (proposed) — "plan-grep-lint: verify cited-for-test symbols are exported by their file."
+
+
+---
+
+## coherence-via-association — FailSafe v5.1.0 incident (2026-05-08)
+
+**Pattern**: a feature is verified through composition — its tests ride on tests of components it associates with — but the feature's own behavior surface is never directly exercised. The composite test passes, the feature's surface goes uncovered. When the feature's surface drifts, the composite test continues to pass and the drift ships.
+
+**Definition**: cross-component association without direct invocation. A test of component A asserts properties that depend on B's behavior; B's contribution is never asserted in isolation; A's test passes regardless of B's actual behavior because A's compositional output happens to satisfy the assertion under any B-state the test exercises.
+
+**FailSafe incident**:
+
+The Monitor surface (`roadmap.js` inline-WS client, `paintPendingSentinel`, `setConnectionState`) was historically "verified by association" through ConnectionClient (FX171) tests at `connection.test.ts`. Those tests cover the dedicated `ConnectionClient` module under `roadmap/ui/modules/connection.js`. They do NOT cover the Monitor's INLINE WebSocket lifecycle in `roadmap.js`. When the operator observed the Monitor showing "Connecting..." simultaneously with a green sentinel orb, the contradiction was real but no existing test caught it — `connection.test.ts` exercises a different module; the Monitor's inline path was tested only through composition with downstream renderers, which themselves had no contradiction-detection assertion.
+
+The bug surfaced during Phase 2 Round 2 Playwright verification: `sentinel-monitor.js:19` defaults `state = 'monitoring'` unconditionally regardless of `status.running`. Cold-load with no hub data → orb gets class `sentinel-orb monitoring` (green) while the label correctly reads "Idle". This is the same incident the operator originally reported.
+
+**Countermeasure** (now in code):
+
+The new `roadmap-connection.test.ts` (Phase 1 of plan-monitor-coherence-and-browser-verification.md v5) directly imports `WebPanelClient` from `roadmap.js` and exercises connect/setConnectionState/paintPendingSentinel lifecycle in isolation. Cross-component coherence tests (settings-coherence, build-phase-coherence, marketplace-coherence) load actual HTML via JSDOM and assert no-contradiction states via force-paint detectors. Phase 2 Playwright specs exercise the live Monitor surface via the real ConsoleServer-boot fixture.
+
+**Doctrinal addition**: a feature is "coherence-via-association verified" only when (a) its surface is directly invoked by at least one test, (b) its surface contributes a unique observable to at least one composite test (not merely participates), or (c) it is operator-declared `n/a` with explicit justification. Compositional verification through downstream consumers is informational, not gating.
+
+**Filed upstream**: tracked locally; mirrors the SG-PromiseRealityScope pattern (Entry #285).
+
+**Resolution**: addressed 2026-05-08 by `sentinel-monitor.js:19` single-line fix (Entries #295/#296 audit chain; Entry #297 implement) — `let state = status.running ? 'monitoring' : 'pending'` mirrors the existing label logic at line 20. The new unit test at `src/test/roadmap/sentinel-monitor.test.ts` (cases 1-2) directly exercises the contradiction class. The doctrinal pattern (verified-by-association) remains as a permanent reference; the specific FailSafe v5.1.0 incident is closed.
+
+
+---
+
+## SG-PlanFrameworkConventionDrift (1st instance) — plan-hotfix-sentinel-monitor v1 (2026-05-08)
+
+**Category**: specification-drift sub-class (related to Entry #291 prose-vs-code)
+**Severity**: 1 (one-word plan-text amendment)
+**Detected**: 2026-05-08, Entry #295 audit
+
+### What Failed
+
+Plan body said ``mocha (`describe`/`it` matching `monitor-state-coherence.test.ts` style)``. The cited reference at `monitor-state-coherence.test.ts:48` uses `suite()` (mocha TDD UI), not `describe()`. Two sibling tests in same directory (`connection.test.ts:63`, `roadmap-connection.test.ts:79`) also use `suite()`. Plan internally contradicted itself.
+
+### Why It Failed
+
+Plan author (the same persona running this audit) wrote test-framework call shorthand from memory rather than from the cited reference. The R1+R2+R2-bis lint discipline catches cited symbols/routes/files but does not yet gate prose framework/convention claims that lack accompanying FITNESS rows.
+
+This is the same prose-vs-code sub-sub-class flagged at Entry #291 F1 (constructor signature claim mismatch), distinct in that it concerns test framework UI rather than API contract. Two instances now (constructor surface + framework UI surface) but on different surfaces. Not yet a 3-strikes recurrence on a single sub-sub-class.
+
+### Pattern to Avoid
+
+When the plan body cites a framework call (`describe/it`, `suite/test`, `expect()`, etc.) AND a convention reference, ensure both agree. Cross-check the convention reference's first invocation line before writing the plan body. Alternatively, drop the framework-call shorthand and let the convention reference speak for itself.
+
+### Future remediation candidate (deferred)
+
+R2-bis-prose (per Entry #291 advisory) — extend `plan-grep-lint.cjs` to scan prose narrative for un-FITNESS-backed framework/convention claims. Defer until 3-strikes recurrence accumulates across this and similar sub-sub-classes.
+
+### Resolution path
+
+Plan-text amendment: one word (`describe` → `suite`, `it` → `test`). Re-run `/qor-audit`.
+
+
+---
+
+## SG-PlanTermsWithoutHomeMods (1st instance) — plan-feature-index-baseline-audit v1 (2026-05-08)
+
+**Category**: specification-drift sub-sub-class (related to Entry #295 framework UI shorthand and #291 prose-vs-code)
+**Severity**: 2
+**Detected**: 2026-05-08, Entry #299 audit
+
+### What Failed
+
+Plan v1 declares `terms_introduced` with three entries:
+- `feature-index baseline audit` → home: docs/test-patterns.md
+- `test functionality classifier` → home: FailSafe/extension/scripts/feature-index-classifier.cjs (NEW; home naturally fulfilled by file creation)
+- `presence-only-by-name-match` → home: docs/SHADOW_GENOME.md
+
+The plan's Existing Infrastructure section marks `docs/test-patterns.md` and `docs/SHADOW_GENOME.md` as `MODIFIED-VERIFIED` (commits `d45d9ea` / `b1a1e02`), but the verification commands attest only to FILE PRESENCE — not to any modification scope this plan introduces. Phase 1 affected files lists only the 2 NEW classifier files; no Phase contains a modification step that adds the term definitions to either home file.
+
+### Why It Failed
+
+Plan author (the Governor persona) wrote `terms_introduced` as forward-declarations for downstream readers — the methodology and pattern naming have genuine canonical value — then forgot to schedule the doc-modification phases that would actually canonicalize them. The R1+R2+R2-bis lint discipline catches symbol/route citations against repo state (file presence + cited-shape FITNESS) but does NOT yet verify that `terms_introduced` `home:` commitments are fulfilled by some phase modification.
+
+Per `qor/references/doctrine-documentation-integrity.md`, doc_tier `standard` requires every term in `terms_introduced` with `home:` path to be either ALREADY defined at that home or DEFINED in a phase modification of that home. The plan satisfied neither condition for 2 of 3 terms.
+
+### Pattern to Avoid
+
+**SG-PlanTermsWithoutHomeMods**: when authoring `terms_introduced` blocks, every entry with `home:` path must be either:
+(a) Already defined at the home file (verify via `grep '<term>' <home-file>` returning non-empty), OR
+(b) Backed by a Phase Affected Files row that modifies the home file AND the Changes section that describes the term definition added.
+
+### Future remediation candidate (deferred until recurrence)
+
+**R2-bis-doc-integrity** — extend `plan-grep-lint.cjs` to verify `terms_introduced` home commitments. New post-parse step: for each declared term, either (1) grep the home file for the term-name and PASS if matches, (2) verify some Affected Files row in any Phase has the home path with op MODIFIED, OR (3) FAIL with `terms-without-home-mods` finding.
+
+Mechanical extension of FITNESS-class checking to documentation commitments. Lower priority than FITNESS itself (documentation drift has lower runtime impact than route/API drift). Defer until pattern recurrence threshold reached (3 instances per Phase 37 §10.4).
+
+### Filed upstream
+
+Tracked locally; would feed into Qor-logic upstream PR alongside R2-bis-prose / R2-bis-imports as the next-class extensions.
+
+---
+
+## SG-PresenceOnlyByNameMatch — FailSafe v5.1.0 marathon (historical) — closed by E baseline audit (2026-05-08)
+
+**Pattern**: a coverage-marathon agent assigns `verified` status to FEATURE_INDEX entries by name-matching the entry's symbol against test-file paths or test-block names — without reading the test bodies to confirm functional invocation + assertion. The resulting "100% verified" claim is structurally indistinguishable from the audit-time view but masks a population of presence-only tests that satisfy the assertion ("a test exists that mentions this symbol") while not actually exercising the unit's behavior.
+
+**FailSafe incident (v5.1.0 marathon, 2026-05-07)**: the consolidator agent assigned `verified` to all 433 of 476 FEATURE_INDEX entries in a single session by walking test-file paths and matching against entry Codes. The header read "marathon complete, 100% coverage" — but the original `REMEDIATE_PROPOSAL_v5.1.0.md` R8 proposal (authored 2026-05-06) had explicitly flagged that the agent was assigning by name-match, not by reading test bodies, and that "some are likely presence-only and would downgrade." The marathon's optimistic header was therefore known-fragile at write-time.
+
+**Detection mechanism**: SG-035's acceptance question, applied per-entry at audit time. For each `verified` entry, read the cited test file body. If the body's only assertions about the entry's behavior are presence-style (file existence, substring presence, attribute existence) and the entry's symbol is never invoked, the entry is presence-only-by-name-match.
+
+**Closure (E baseline audit, 2026-05-08)**: the baseline audit (this plan) reclassifies presence-only entries to `unverified`; the remediation plan family (E2 / E3 / ...) addresses the resulting unverified buckets by surface. The pattern remains a permanent reference for future marathon-style coverage drives, which should integrate the classifier as a pre-merge check.
+
+**Counter-pattern (right way)**: any coverage marathon must apply SG-035 acceptance question per-entry at write-time, not after the fact. Marathons that defer functional verification produce the presence-only-by-name-match drift.
+
+**Filed upstream**: relates to the SG-CoherenceViaAssociation pattern (Entry #294 SHADOW_GENOME closure entry) — the marathon's "verified by composition" rationale is the same shape as the cross-component composition pattern, applied to coverage rather than rendering.
+
+
+
+---
+
+## SG-ClassifierPathBug — feature-index-classifier path-form variance (closed by E2, 2026-05-08)
+
+**Pattern**: a measurement tool's path resolver assumes one canonical form for cited paths; the data source uses multiple forms inconsistently. Entries with non-canonical paths classify `unrunnable` (file-not-found), driving `suggestedStatus: unverified` and silent measurement drift.
+
+**FailSafe incident (E baseline audit, 2026-05-08)**: `feature-index-classifier.cjs` v1 resolved cited paths via `path.join(repoRoot, 'FailSafe', 'extension', 'src', 'test', citedPath)`. FEATURE_INDEX rows used three path-form variants: (a) bare relative paths (`extension/foo.test.ts`), (b) `src/test/`-prefixed paths (`src/test/ui/monitor-shield-progression.spec.ts`), (c) full-repo paths. Forms (b) and (c) caused double-prefixing → file-not-found → `unrunnable` classification. FX149, FX150, FX155 were the affected entries (3 of 476 rows; small footprint but symptomatic of measurement-tool drift).
+
+**Detection**: operator post-substantiate review of v5.1.2-baseline (Entry #303) noticed entries citing `src/test/`-prefixed paths sitting `unverified` despite the cited test files being present and functional. Confirmed via `ls FailSafe/extension/src/test/src/test/...` (no such file) vs `ls FailSafe/extension/src/test/ui/...` (file exists) — the resolver was double-prefixing the `src/test/` segment.
+
+**Closure (E2, 2026-05-08)**: classifier hardened with `TEST_PATH_PREFIXES` array + prefix-stripping normalization in `resolveTestPath`. Three path-form variants now accepted. Reconciliation diff applied to `docs/FEATURE_INDEX_BASELINE_AUDIT.md`. Per-test kind distribution shifted by 3 (unrunnable → ambiguous); zero entry-level verdict changes because the resolved tests are Playwright specs the heuristic-4 regex does not detect as functional. Manual overrides per Entry #302 (FX128, FX145, FX173, FX174, FX359) preserved authoritatively via new `MANUAL_OVERRIDES` constant + `applyManualOverrides` helper invoked as the LAST step in the per-entry pipeline.
+
+**Counter-pattern (right way)**: any measurement tool that consumes operator-authored data must accept the actual data shape, not impose an idealized canonical shape. When introducing such a tool: (a) sample real input data first; (b) build a normalize-then-process pipeline so input variance is absorbed at the boundary; (c) add unit tests for each known input variant; (d) verify pipeline-output diff between known-good input and real input — divergence signals classifier drift, not data error.
+
+**Secondary lesson — premise-vs-outcome divergence**: E2's stated outcome ("entries promote `unverified` → `verified` after path-fix") did not materialize because the bottleneck was downstream (Playwright heuristic blindness), not the resolver. Plans that hypothesize a downstream impact from a fix should declare a falsifiable acceptance criterion (e.g., "post-fix run promotes ≥1 entry") and accept honest reconciliation when reality differs. The E2 reconciliation diff section in `FEATURE_INDEX_BASELINE_AUDIT.md` exemplifies the disclosure pattern: report what changed (resolver correctness) AND what did not (entry verdicts), with mechanism for both.
+
+**Filed upstream**: relates to SG-PresenceOnlyByNameMatch — the marathon agent's "verified by name-match" was its own form of measurement-tool drift. Both patterns share the root: trusting a tool's classification without validating the tool against real input.
+
+
+---
+
+## SG-HeuristicBlindSpot — feature-index-classifier matcher coverage gaps (closed by E3, 2026-05-08)
+
+**Pattern**: a heuristic measurement tool's pattern set lags the data it measures. As the codebase adopts new test-framework idioms (Playwright matchers, alternative assert styles, custom matchers), the heuristic continues to evaluate against the OLD pattern set. The coverage report drifts away from truth not because the data changed but because the lens didn't.
+
+**FailSafe incident (E2 reconciliation, 2026-05-08)**: E2 surfaced that resolved Playwright specs (FX149/150/155) classified `ambiguous` because `expect(locator).toHaveClass(/regex/)` and similar matchers were not in `FUNCTIONAL_ASSERTION_PATTERNS`. Phase-3 manual review (Entry #302) compensated for the gap on a per-entry basis (FX148/165/243/274 promoted to functional after operator inspection), but the systemic blind spot persisted in the classifier.
+
+**Detection**: the SG-ClassifierPathBug "secondary lesson" (premise-vs-outcome divergence) at E2 substantiate exposed the gap as the root remaining bottleneck for publish-block lifting. Without heuristic upgrade, every E3+ surface-bucket plan would manually compensate for the same gap repeatedly.
+
+**Closure (E3, 2026-05-08)**: heuristic module extended with three pattern improvements: (a) 13-pattern Playwright matcher whitelist added to `FUNCTIONAL_ASSERTION_PATTERNS` (toHaveClass, toBeVisible, toBeHidden, toContainText, toHaveText, toHaveAttribute, toHaveValue, toHaveCount, toBeChecked, toBeEnabled, toBeDisabled, toBeEditable, toBeFocused); (b) `PRESENCE_MATCH_PATTERNS` array discriminates `assert.match(fileContent, ...)` from `assert.match(returnValue, ...)`; (c) `hasOnlyWeakFunctional` helper downgrades files with only-`.toBe(` patterns and no out-of-framework invocation to ambiguous. Falsifiable acceptance criterion (≥3 verdict changes either direction) satisfied at 4 entry-level promotions + 7 per-test kind shifts. Side fix: JS keyword exclusion list extended (`async`, `await`, `function`, `new`, `class`, `void`, `delete`, `yield`, `instanceof`) so arrow-function modifiers don't register as out-of-framework invocations — surfaced when Playwright tests with `async ({page}) => {}` started landing in the test corpus.
+
+**Counter-pattern (right way)**: heuristic-based classifiers should be co-evolved with the codebase they measure. Treat the heuristic pattern set as a maintained artifact, not a fixed ruleset. Each test-framework adoption (or each new convention surfaced by operator review) is a candidate to extend the pattern set. The plan family that surfaces the gap (E baseline audit, E2 path-fix) becomes the seed for the upgrade plan (E3 heuristic) — not three separate per-bucket compensations. **Falsifiable acceptance is the operative discipline**: every heuristic-touching plan must declare what verdict shift will count as success, and accept that demotion is as valid as promotion (heuristic strictness can correct false-positives just as much as relaxation can correct false-negatives).
+
+**Residual gap acknowledged (3 entries, FX165/243/274)**: FEATURE_INDEX shows these as `verified` per Phase 3 manual review, but the post-E3 classifier still classifies them `ambiguous` → `unverified`. Their tests (`tickers-xss.test.ts`, `voice-settings-multilingual-xss.test.ts`, `AgentCoverageRoute.test.ts`) use project-internal XSS-escaping assertion shapes the heuristic doesn't yet recognize. Two viable closure paths: (1) E4 adds the missing patterns to the heuristic; (2) `MANUAL_OVERRIDES` is extended to support `status: 'verified'` promotions (currently only locks to `unverified`). E4 plan dialogue selects between them.
+
+**Closure (E4, 2026-05-09)**: operator chose option (b) — `MANUAL_OVERRIDES` extended to support bidirectional override (promotion in addition to demotion). FX165/FX243/FX274 codified as `status: 'verified'` overrides; classifier `bySuggestedStatus` now matches FEATURE_INDEX truth at 387/46/43. The override mechanism is now general-purpose: any future classifier-disagreement entry surfaced by operator manual review can be codified without heuristic addition. Heuristic patterns for project-internal XSS-escaping shapes deferred — if those shapes prove common across the codebase, E5+ can add them; the override mechanism does not pre-empt that work.
+
+**Filed upstream**: extends SG-ClassifierPathBug — both patterns share the root: a measurement tool's correctness is bounded by its coverage of real input shapes. Path-form variance (E2) was input-shape variance; matcher coverage gap (E3) is invocation-shape variance. If a third sibling pattern surfaces (e.g., custom matcher coverage gap or out-of-framework keyword exclusion gap), an SG-MeasurementToolDrift umbrella may consolidate the lineage.
+
+
+---
+
+## SG-OverrideStalenessDetection — operator-authority overrides outliving justification (closed by E7, 2026-05-09)
+
+**Pattern**: codified operator-authority overrides accumulate in a frozen lookup table; without staleness detection, they outlive their justification when (a) the underlying classifier improves to recognize what previously required override, or (b) the cited test artifact is renamed/deleted/refactored. The override silently masks correct classifier behavior or stale test references.
+
+**FailSafe surface (the seed instance)**: `MANUAL_OVERRIDES` table in `FailSafe/extension/scripts/feature-index-classifier.cjs` — 5 demotion overrides (E2, sealed at #307) + 3 promotion overrides (E4, sealed at #313) = 8 entries. Devil's advocate flagged staleness blindness as HIGH severity at #312; carried forward to v5.1.0 scope as Required Item C; filed upstream as Qor [#41](https://github.com/Knapp-Kevin/Qor/issues/41).
+
+**Detection mechanism (E7, 2026-05-09)**: `feature-index-classifier-staleness.cjs` runs the classifier twice — once with overrides applied (production mode) and once with `bypassOverrides: true` flag added to `runAudit` — then per-override-entry diffs the `suggestedStatus`. Three finding classes:
+- **redundant**: classifier verdict (without override) AGREES with override; the override is no longer needed because heuristic caught up.
+- **invalid**: cited test path (extracted from override.reason via regex) no longer resolves on disk.
+- **no_path**: override.reason contains no detectable test-file substring; detector cannot validate.
+
+Output: `dist/override-staleness.findings.json` (gitignored runtime artifact). Advisory only — does NOT auto-modify `MANUAL_OVERRIDES`; operator decides per-entry whether to delete, retain (documentation value), or update.
+
+**Closure (E7)**: detector implementation + 7 unit cases + integration with existing classifier + doc-link refresh of MANUAL_OVERRIDES reasons (added `roadmap/` and `ui/` directory prefixes so test-path regex extracts complete relative paths). Initial baseline run reports: 8 total overrides; 0 invalid (regression guard PASSED); 2 redundant (FX128, FX359 — classifier-only verdict already produces `unverified` without the override). The 2 redundant findings are operator-decision surface for E5+; can be retained as historical documentation of the Phase-3 manual review or removed if the audit-trail is preserved elsewhere.
+
+**Counter-pattern (right way)**: when a classifier improves to recognize an override-targeted pattern, RETIRE the override; do NOT keep both as redundant truth sources. Co-evolving the override table with classifier capability prevents truth-source drift. Substantiate-time integration of the staleness check (deferred to E5+) would make this discipline mechanical rather than operator-vigilance-dependent.
+
+**Filed upstream**: closes Qor [#41](https://github.com/Knapp-Kevin/Qor/issues/41); lineage continues from SG-HeuristicBlindSpot (#310 closure). The two patterns share the root: measurement-tool correctness drift over time. Path-form variance (E2 / SG-ClassifierPathBug), heuristic blind spots (E3 / SG-HeuristicBlindSpot), and override staleness (E7 / this entry) are all manifestations of the same broader concern — measurement tools require maintenance as the codebase evolves.
+ 
+
+---
+
+## SG-RemediationEventTaxonomyDrift - remediation review VETO (2026-05-13)
+
+**Pattern**: a remediation proposal records a real process failure under a new event type before the Qor infrastructure recognizes that type. The remediation can describe the right problem while still failing the gate contract because the event is outside `shadow_event.schema.json` and the classifier cannot route it.
+
+**FailSafe incident**: `/qor-validate` found a ledger integrity break at Entry #331, with downstream Phase 59 entries chained from a placeholder-style recorded hash and a skipped `Session Seal` entry. The failure was reported upstream as Qor-logic issue #54 and was first captured locally with an out-of-schema process event. The follow-up `/qor-audit` of `.qor/gates/2026-05-13T1240-8de8c1/remediate.json` VETOed because that event used `event_type: "ledger_integrity_break"` outside the closed enum and `source_entry_id: "331"` where the schema expects `null` or a 64-hex event id. `/qor-remediate` recoded the event as schema-valid `degradation` event `ad4e145bdc0bd6f2a7cbc6e0b80342c762145e6a19909900757f0760e36ab9f7`, retaining ledger entry numbers in `details.entries`.
+
+**Detection**: JSON-schema validation of `docs/PROCESS_SHADOW_GENOME.md` against the installed `qor/gates/schema/shadow_event.schema.json`, plus the remediation classifier returning no classification for the new event type.
+
+**Counter-pattern**: process-event taxonomy changes must be part of the remediation lane itself. Either encode the event using an existing enum value with precise details, or explicitly plan the schema, classifier, and doctrine changes that introduce the new event type. Ledger entry numbers are evidence fields, not `source_entry_id` values.
+
+**Status**: closed (2026-05-13). The schema-valid degradation event `ad4e145bdc0bd6f2a7cbc6e0b80342c762145e6a19909900757f0760e36ab9f7` was carried through `/qor-plan` and `/qor-audit` to a PASS verdict on `docs/plan-qor-phase61-ledger-repair.md`. `/qor-implement` of that plan repaired Entry #331-#336 under the legacy `SHA256(content + previous)` cascade, preserved all six recorded content hashes, rendered Entry #336 as a verifier-readable `**Chain Hash (Session Seal)**`, and brought `qor-logic verify-ledger` to a clean exit. The repair attestation is recorded in `docs/META_LEDGER.md`. Entry #331's content hash remains an unreconstructable historical placeholder pending recovery of the original audit artifact.
+
+
+---
+
+## SG-FactorOutMathUnverified - Phase 62 plan audit VETO (2026-05-13)
+
+**Pattern**: a refactor plan describes an extraction (move symbol(s) from file A to file B) and claims a post-extraction file size that meets the Section 4 cap, but neither the plan nor the Governor verifies the arithmetic against actual current source. The extraction may be the right shape architecturally while still landing the file over the cap by a small margin. A second, related failure surface: the same plan moves exported symbols without addressing the downstream `require(...)` consumers that destructure those exports, silently breaking the public API of the source file.
+
+**FailSafe incident**: `docs/plan-qor-phase62-item-b-sweep-followups.md` Phase 1 declares *"file size must drop to ≤ 250 lines"* for `feature-index-classifier.cjs` after extracting `MANUAL_OVERRIDES` (37L including comments) + `applyManualOverrides` (16L) into a new sibling. Verified factor-out math: 306 - 53 + 1 import + (-2 from shorter `module.exports`) = 252. Two lines over cap. Same plan does not address the existing `module.exports` exposing both symbols, nor the destructure at `feature-index-classifier-staleness.cjs:29` that reads `MANUAL_OVERRIDES` directly from `classifier.cjs`. Either the API re-export pattern or downstream-import-update path must be picked explicitly.
+
+**Detection**: Step 3 Section 4 Razor Pass with arithmetic-verified line counts against current source; Step 3 Infrastructure Alignment Pass with grep-verified downstream consumer enumeration.
+
+**Counter-pattern**: a factor-out plan that names a post-extraction size MUST verify the size against current source via `wc -l` plus a measured estimate of the extracted block (including comments and `module.exports` adjustments) before the plan is submitted to audit. The plan MUST enumerate, in Affected Files, every downstream consumer of moved exports, and either commit to re-exporting from the source file (preserve API) or update the downstream imports (and list the downstream files as modified). Silent public-API changes are infrastructure-mismatch regardless of intent.
+
+**Status**: open. Governor amends `plan-qor-phase62-item-b-sweep-followups.md` to (a) extend extraction scope so the file lands under 250L with margin (e.g., also extract `parseFeatureIndexRows`), and (b) declare the public-API decision explicitly. Re-audit then proceeds.
+
+
+---
+
+## SG-OvercapPlanWithoutRefactorLane - Phase 60 plan audit VETO (2026-05-13)
+
+**Pattern**: a plan targets legacy files that are already over the Section 4 file-size cap and describes direct edits without routing the work through a refactor/split lane. The implementation may be small, but the governance promise is still false because the write path touches files outside the allowed shape.
+
+**FailSafe incident**: `/qor-auto-dev-1` attempted to advance `docs/plan-qor-phase60-v5-1-0-remaining-scope.md` for the remaining v5.1.0 publish scope. `/qor-audit` VETOed before implementation because the plan proposes edits to `PlanManager.ts` (438 lines), `SentinelDaemon.ts` (358 lines), and `ConsoleServer.ts` (1063 lines) without an approved refactor/split route. The same audit also found missing test artifacts cited by the plan without declaring them `NEW`, and confirmed the existing `docs/META_LEDGER.md` Entry #331 chain break still prevents a clean ledger append.
+
+**Detection**: line-count check against every implementation file named in the plan, path-existence check for cited test files, and `qor-logic verify-ledger`.
+
+**Counter-pattern**: when remaining-scope work must touch over-cap files, first route through `/qor-refactor` or amend the plan so the substantive work lands in new bounded modules with only minimal, audited integration bridges. Every new test file must be listed as `NEW` in Affected Files before the infrastructure-alignment pass.
+
+**Status**: amended by `/qor-refactor` planning pass. Phase 60 now includes a Refactor Enablement Gate with split modules and explicit `NEW` test declarations. Implementation remains blocked until a follow-up audit returns PASS and the ledger-chain blocker is repaired or formally quarantined.

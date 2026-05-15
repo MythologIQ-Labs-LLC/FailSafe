@@ -386,12 +386,21 @@ body {
   color: var(--text-muted);
 }
 
-.dot.connected {
+.dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
+  background: var(--text-muted);
+  opacity: 0.5;
+}
+.dot.pending {
+  background: var(--text-muted);
+  opacity: 0.5;
+}
+.dot.connected {
   background: var(--accent-green);
   box-shadow: 0 0 8px var(--accent-green);
+  opacity: 1;
 }
 
 /* ═══════════════════════════ Main View Area ═══════════════════════════ */

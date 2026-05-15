@@ -4,12 +4,12 @@ import * as os from 'os';
 import * as fs from 'fs';
 import { AgentConfigInjector } from '../../qorelogic/AgentConfigInjector';
 import { SystemRegistry } from '../../qorelogic/SystemRegistry';
-import { QoreLogicSystem, SystemManifest } from '../../qorelogic/types/QoreLogicSystem';
+import { QorLogicSystem, SystemManifest } from '../../qorelogic/types/QorLogicSystem';
 
 const GOVERNANCE_MARKER_START = '<!-- FailSafe Governance Start -->';
 const GOVERNANCE_MARKER_END = '<!-- FailSafe Governance End -->';
 
-function createMockSystem(id: string, name: string): QoreLogicSystem {
+function createMockSystem(id: string, name: string): QorLogicSystem {
   const manifest: SystemManifest = {
     id,
     name,

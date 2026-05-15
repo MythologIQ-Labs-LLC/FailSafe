@@ -9,11 +9,13 @@
 .agent/
 .claude/
 .failsafe/
-.qorelogic/
+.qor/
 .github/
 .cursor/
 .windsurf/
 .copilot/
+.kilo/
+.codex/
 
 # ============================================
 # CONFIDENTIAL / PROPRIETARY CONTENT

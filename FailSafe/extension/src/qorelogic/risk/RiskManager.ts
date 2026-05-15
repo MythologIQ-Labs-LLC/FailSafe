@@ -9,8 +9,10 @@ import * as path from "path";
 import * as crypto from "crypto";
 import {
   Risk,
+  RiskDerivedFrom,
   RiskRegister,
   RiskSeverity,
+  RiskSource,
   RiskStatus,
   RiskCategory,
   calculateRiskSummary,
@@ -38,7 +40,12 @@ export class RiskManager {
       if (fs.existsSync(this.risksPath)) {
         const content = fs.readFileSync(this.risksPath, "utf8");
         const data = JSON.parse(content) as RiskRegister;
+        const migrated = this.backfillManualSource(data.risks);
         this.logger.info(`Loaded ${data.risks.length} risks from register`);
+        if (migrated) {
+          this.register = data;
+          this.save();
+        }
         return data;
       }
     } catch (error) {
@@ -51,6 +58,38 @@ export class RiskManager {
       risks: [],
       lastUpdated: new Date().toISOString(),
     };
+  }
+
+  /** Backfill source='manual' on any pre-existing risk lacking the field.
+   *  Returns true if at least one risk was migrated. */
+  private backfillManualSource(risks: Risk[]): boolean {
+    let migrated = false;
+    for (const r of risks) {
+      if (!r.source) {
+        (r as Risk).source = 'manual';
+        migrated = true;
+      }
+    }
+    return migrated;
+  }
+
+  /** Compute the de-dup key for a derivedFrom payload.
+   *  Returns null when no slot is set (no de-dup). */
+  private dedupKey(d: RiskDerivedFrom | undefined): string | null {
+    if (!d) return null;
+    if (d.ledgerEntry !== undefined) return `ledger:${d.ledgerEntry}`;
+    if (d.shadowGenomeEventId) return `genome:${d.shadowGenomeEventId}`;
+    if (d.planSlug) return `plan:${d.planSlug}`;
+    return null;
+  }
+
+  /** Look up an existing risk by de-dup key. */
+  private findByDedupKey(key: string): Risk | undefined {
+    for (const r of this.register.risks) {
+      const existing = this.dedupKey(r.derivedFrom);
+      if (existing === key) return r;
+    }
+    return undefined;
   }
 
   private save(): void {
@@ -90,10 +129,34 @@ export class RiskManager {
     severity: RiskSeverity;
     impact: string;
     mitigation: string;
+    source: RiskSource;
+    sourceAgent?: string;
+    derivedFrom?: RiskDerivedFrom;
     owner?: string;
     relatedArtifacts?: string[];
     checkpointId?: string;
   }): Risk {
+    // Runtime guard: required even though the type system already enforces.
+    // Covers JS callers and `as any` callers (per plan F8).
+    if (typeof input?.source !== 'string' || input.source.length === 0) {
+      throw new Error(
+        `RiskManager.createRisk: 'source' is required (got: ${typeof input?.source})`,
+      );
+    }
+
+    // De-dup: an auto-derived risk with a matching derivedFrom key bumps
+    // updatedAt on the existing risk instead of inserting a duplicate.
+    const key = this.dedupKey(input.derivedFrom);
+    if (key) {
+      const existing = this.findByDedupKey(key);
+      if (existing) {
+        existing.updatedAt = new Date().toISOString();
+        this.save();
+        this.logger.info(`Updated existing risk via dedup key ${key}: ${existing.id}`);
+        return existing;
+      }
+    }
+
     const now = new Date().toISOString();
     const risk: Risk = {
       id: crypto.randomUUID(),

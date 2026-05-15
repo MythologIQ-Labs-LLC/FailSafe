@@ -65,7 +65,7 @@ export class CheckpointLifecycle {
         version: CHECKPOINT_VERSION,
         created: timestamp,
         sealed: true,
-        skill_session: "ql-pause",
+        skill_session: "qor-pause",
         paused: true,
         pause_reason: reason,
       },
@@ -144,7 +144,7 @@ export class CheckpointLifecycle {
   }
 
   private async createAndSealResumeCheckpoint(): Promise<void> {
-    const newCheckpoint = await this.createCheckpoint("ql-resume");
+    const newCheckpoint = await this.createCheckpoint("qor-resume");
     newCheckpoint.checkpoint.sealed = true;
     newCheckpoint.checkpoint.paused = false;
     await this.persistence.save(newCheckpoint);

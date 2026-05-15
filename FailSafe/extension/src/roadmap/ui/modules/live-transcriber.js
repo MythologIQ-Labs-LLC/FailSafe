@@ -15,7 +15,7 @@ export class LiveTranscriber {
       this._recognition = new SpeechRecognitionCtor();
       this._recognition.continuous = true;
       this._recognition.interimResults = true;
-      this._recognition.lang = language || 'en-US';
+      this._recognition.lang = language;
 
       this._recognition.addEventListener('result', (e) => {
         let current = '';
@@ -31,12 +31,14 @@ export class LiveTranscriber {
 
       this._recognition.addEventListener('end', () => {
         if (getState?.() === 'listening' && this._recognition) {
-          try { this._recognition.start(); } catch { /* already started */ }
+          try { this._recognition.start(); } catch (err) {
+            if (this.onError) this.onError(err?.message || 'restart_failed');
+          }
         }
       });
 
-      this._recognition.addEventListener('error', () => {
-        // Silently ignore — this is a supplementary feature
+      this._recognition.addEventListener('error', (e) => {
+        if (this.onError) this.onError(e?.error || 'recognition_error');
       });
 
       this._recognition.start();

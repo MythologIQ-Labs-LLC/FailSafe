@@ -9,9 +9,9 @@ _Local-first safety for AI coding assistants._
 **Marketplace Categories**: Machine Learning, Testing, Visualization
 
 [![GitHub Stars](https://img.shields.io/github/stars/MythologIQ/FailSafe?style=social)](https://github.com/MythologIQ/FailSafe/stargazers)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-stable-green)](https://github.com/MythologIQ/FailSafe)
-[![Socket Badge](https://badge.socket.dev/openvsx/package/mythologiq.mythologiq-failsafe/4.9.9?platform=universal)](https://badge.socket.dev/openvsx/package/mythologiq.mythologiq-failsafe/4.9.9?platform=universal)
+[![Socket Badge](https://badge.socket.dev/openvsx/package/mythologiq.mythologiq-failsafe/5.1.0?platform=universal)](https://badge.socket.dev/openvsx/package/mythologiq.mythologiq-failsafe/5.1.0?platform=universal)
 [![Node](https://img.shields.io/badge/node-18+-green.svg)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)](https://www.typescriptlang.org)
 [![VS Code Extension](https://img.shields.io/badge/VS%20Code-Extension-007ACC?logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=MythologIQ.mythologiq-failsafe)
@@ -19,9 +19,31 @@ _Local-first safety for AI coding assistants._
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Commands-8B5CF6)](https://github.com/MythologIQ/FailSafe/releases)
 [![Documentation](https://img.shields.io/badge/docs-FAILSAFE_SPECIFICATION-blue)](docs/FAILSAFE_SPECIFICATION.md)
 
-**Current Release**: v4.9.9
+**Current Release**: v5.1.0 • **Unreleased**: model-sourced Risk Register + Install Skills UX expansion + release-pipeline approval gate
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
+
+## What's coming in the next release
+
+- **Model-sourced Risk Register**: coding agents author risks via the MCP tool `failsafe.create_risk`, the `@failsafe /risk` chat subcommand, or FailSafe auto-derives them from SHIELD lifecycle (GATE VETOs, DEBUG entries, Shadow-Genome failure events). The manual "Add Risk" wizard is removed.
+- **Install Skills UX expansion**: live-progress modal, per-host skill picker, dry-run preview, operator-editable host registry, and a workspace `LiveProgressInvariant` doctrine.
+- **SRE panel**: now attributes the [Microsoft Agent Governance Toolkit](https://github.com/microsoft/agent-governance-toolkit) (data source) and [Qortara](https://www.qortara.com).
+- **Release pipeline safety gate**: both VS Code Marketplace and OpenVSX publish jobs now sit behind a `production` GitHub environment requiring reviewer approval.
+- **OpenVSX alignment**: VS Code Marketplace and OpenVSX are both at v5.0.0.
+
+See [CHANGELOG.md](CHANGELOG.md) for the full unreleased block.
+
+## FailSafe and FailSafe Pro
+
+FailSafe is the open-source VS Code and Cursor extension for local AI coding governance — audits, skills, checkpoints, and editor-visible safety workflows. Skills are sourced from the [`qor-logic`](https://pypi.org/project/qor-logic/) PyPI package.
+
+FailSafe Pro is the desktop native application for SDLC visibility and governance — OS-level enforcement, file locking, team workflows, and remote connections beyond the editor boundary.
+
+Use FailSafe when you want local editor guardrails. Use FailSafe Pro when you need full SDLC visibility and managed runtime operations.
+
+Learn more: <https://mythologiq.studio/products/failsafe-pro>
+Download: <https://mythologiq.studio/products/failsafe-download>
+
 
 [Quick Start](#quick-example) | [Documentation](docs/FAILSAFE_SPECIFICATION.md) | [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=MythologIQ.mythologiq-failsafe) | [Open VSX](https://open-vsx.org/extension/MythologIQ/mythologiq-failsafe) | [Roadmap](docs/ROADMAP.md)
 
@@ -151,7 +173,7 @@ FailSafe uses a **Physical Isolation** model to separate workspace governance fr
 +-- build/                    # Build & validation tooling
 ```
 
-**Note:** A single extension publishes to both VS Code Marketplace and Open VSX via GitHub Actions. Claude Code skills are located at `.claude/skills/ql-*/SKILL.md`.
+**Note:** A single extension publishes to both VS Code Marketplace and Open VSX via GitHub Actions. Claude Code skills are located at `.claude/skills/qor-*/SKILL.md`.
 
 ---
 
@@ -274,7 +296,7 @@ Or: https://open-vsx.org/extension/MythologIQ/mythologiq-failsafe
 The Antigravity extension includes:
 
 - **Gemini/Antigravity workflows** (`.agent/workflows/`)
-- **Claude Code skills** (`.claude/skills/ql-*/SKILL.md`)
+- **Claude Code skills** (`.claude/skills/qor-*/SKILL.md`)
 - **QoreLogic personas** (Governor, Judge, Specialist)
 - **Stability monitoring configuration** and skills
 
@@ -293,7 +315,7 @@ Or: https://marketplace.visualstudio.com/items?itemName=MythologIQ.mythologiq-fa
 The VSCode extension includes:
 
 - **Copilot prompt files** (`.github/prompts/`)
-- **Claude Code skills** (`.claude/skills/ql-*/SKILL.md`)
+- **Claude Code skills** (`.claude/skills/qor-*/SKILL.md`)
 - **Agent personas** (`.github/copilot-instructions/`)
 - **Stability monitoring configuration** and skills
 
@@ -301,12 +323,12 @@ The VSCode extension includes:
 
 Both extensions include Claude Code slash commands that map to the physical **SHIELD** governance lifecycle:
 
-- **S - SECURE INTENT** (`/ql-bootstrap`): Seed project DNA. Document the Why, encode the architecture, initialize the Merkle chain.
-- **H - HYPOTHESIZE** (`/ql-plan`): Create implementation blueprints with risk grades, file contracts, and Section 4 complexity limits.
-- **I - INTERROGATE** (`/ql-audit`): Adversarial tribunal. The Judge audits the plan for security, correctness, and drift. PASS or VETO.
-- **E - EXECUTE** (`/ql-implement`): Build under KISS constraints after a PASS verdict. Functions under 40 lines. Nesting under 3 levels.
-- **L - LOCK PROOF** (`/ql-substantiate`): Verify Reality matches Promise. Cryptographically seal the session with Merkle hash verification.
-- **D - DELIVER** (`/ql-release`): Deploy, inspect packaged artifacts before publish, hand off with traceability, and monitor for operational drift.
+- **S - SECURE INTENT** (`/qor-bootstrap`): Seed project DNA. Document the Why, encode the architecture, initialize the Merkle chain.
+- **H - HYPOTHESIZE** (`/qor-plan`): Create implementation blueprints with risk grades, file contracts, and Section 4 complexity limits.
+- **I - INTERROGATE** (`/qor-audit`): Adversarial tribunal. The Judge audits the plan for security, correctness, and drift. PASS or VETO.
+- **E - EXECUTE** (`/qor-implement`): Build under KISS constraints after a PASS verdict. Functions under 40 lines. Nesting under 3 levels.
+- **L - LOCK PROOF** (`/qor-substantiate`): Verify Reality matches Promise. Cryptographically seal the session with Merkle hash verification.
+- **D - DELIVER** (`/qor-release`): Deploy, inspect packaged artifacts before publish, hand off with traceability, and monitor for operational drift.
 
 ---
 
@@ -369,7 +391,7 @@ FailSafe is provided "as is" without warranties of any kind, express or implied.
 
 6. **Updates and Changes**: FailSafe may receive updates that include new features, bug fixes, or changes to existing functionality. You are responsible for reviewing release notes and understanding how updates may affect your workflow.
 
-7. **Feedback and Contributions**: We welcome feedback, bug reports, and contributions. By contributing, you agree to license your contributions under the project's MIT license.
+7. **Feedback and Contributions**: We welcome feedback, bug reports, and contributions. By contributing, you agree to license your contributions under the project's Apache License 2.0.
 
 **Thank you for being part of our journey.** Your trust and feedback help us improve FailSafe for everyone.
 
@@ -387,7 +409,7 @@ npm install
 
 ## License
 
-MIT - See [LICENSE](LICENSE)
+Apache License 2.0 - See [LICENSE](LICENSE)
 
 ---
 

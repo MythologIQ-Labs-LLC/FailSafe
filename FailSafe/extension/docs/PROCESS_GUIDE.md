@@ -1,6 +1,6 @@
 # FailSafe Process Guide
 
-Audience: operators who need fast, accurate workflows for the shipped `v4.9.9` UI and governance stack.
+Audience: operators who need fast, accurate workflows for the shipped `v5.1.0` UI and governance stack.
 
 ## First Run (Recommended Path)
 
@@ -112,15 +112,18 @@ Removal:
 
 ## Mindmap Workflow (Current Release)
 
-`v4.4.0` supports voice-assisted and manual ideation in Console `Mindmap`:
+`v5.1.0` supports voice-assisted and manual ideation in Console `Mindmap`:
 
-1. Click the mic button and speak your idea.
-2. Let transcript extraction update graph nodes/edges.
-3. Review confidence colors and spoken response.
-4. Add/edit nodes manually when needed.
-5. Export JSON snapshot.
+1. (Optional) Open Console Settings → Voice & Audio. Pick Whisper model size and STT language; enable Auto-match voice if you want the TTS voice to follow the language.
+2. Click the mic button and speak your idea (or use the configured push-to-talk key).
+3. Let transcript extraction update graph nodes/edges.
+4. Review confidence colors and spoken response.
+5. Add/edit nodes manually when needed.
+6. Export JSON snapshot (filename auto-stamps timestamp + timezone offset).
 
-Prerequisite: vendor runtime files for Whisper/Piper must be staged per `src/roadmap/ui/vendor/*/VENDOR.md`.
+Voice substrate state (idle / listening / processing / speaking / error) is visible via the voice status badge in the right panel.
+
+Prerequisite: vendor runtime files for Whisper/Piper must be staged per `src/roadmap/ui/vendor/*/VENDOR.md`. If Piper assets are absent, the badge displays `error:piper_not_vendored` and TTS is gracefully disabled.
 
 ## Agent Debugging Workflow (v4.9.2)
 

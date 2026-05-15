@@ -5,14 +5,14 @@ import { AgentTimelinePanel } from "../genesis/panels/AgentTimelinePanel";
 import { ShadowGenomePanel } from "../genesis/panels/ShadowGenomePanel";
 import { AgentRunReplayPanel } from "../genesis/panels/AgentRunReplayPanel";
 import { CoreSubstrate } from "./bootstrapCore";
-import { QoreLogicSubstrate } from "./bootstrapQoreLogic";
+import { QorLogicSubstrate } from "./bootstrapQorLogic";
 import { SentinelSubstrate } from "./bootstrapSentinel";
 import { Logger } from "../shared/Logger";
 
 export async function bootstrapGenesis(
   context: vscode.ExtensionContext,
   core: CoreSubstrate,
-  qore: QoreLogicSubstrate,
+  qor: QorLogicSubstrate,
   sentinel: SentinelSubstrate,
   logger: Logger,
 ): Promise<GenesisManager> {
@@ -26,7 +26,7 @@ export async function bootstrapGenesis(
       context,
       sentinel.sentinelDaemon,
       sentinel.architectureEngine,
-      qore.qorelogicManager,
+      qor.qorelogicManager,
       core.eventBus,
     );
     genesisManager.setPlanManager(core.planManager);
@@ -53,7 +53,7 @@ export async function bootstrapGenesis(
         ShadowGenomePanel.createOrShow(
           context.extensionUri,
           core.eventBus,
-          qore.shadowGenomeManager,
+          qor.shadowGenomeManager,
         );
       }),
     );

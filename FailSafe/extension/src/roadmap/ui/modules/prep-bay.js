@@ -2,16 +2,28 @@
 // Transcript handling, commit, history, and send-to-map.
 
 import { escapeHtml } from './brainstorm-templates.js';
+import { wireModalVisualizer } from './modal-visualizer.js';
+import { showStatusGated } from './notifications.js';
 
 export class PrepBayController {
-  constructor(graph, webLlm, ideationBuffer, voice, getEl, showStatus) {
+  constructor(graph, webLlm, ideationBuffer, voice, getEl, showStatus, store) {
     this.graph = graph;
     this.webLlm = webLlm;
     this.ideationBuffer = ideationBuffer;
     this.voice = voice;
     this._getEl = getEl;
     this.showStatus = showStatus;
+    this._store = store || null;
     this._modalTextarea = null; // set while modal is open
+  }
+
+  _toast(severity, text, color) {
+    showStatusGated(severity, text, color, this.showStatus, this._store);
+  }
+
+  _maxHistory() {
+    const v = Number(this._store?.get?.('brainstorm-history-max'));
+    return Number.isFinite(v) && v > 0 ? v : 10;
   }
 
   onTranscript(text, isFinal) {
@@ -47,7 +59,7 @@ export class PrepBayController {
     this.ideationBuffer.setText(text);
     const { thought, dropped } = this.ideationBuffer.commit();
     if (!thought) { prepInput?.focus(); return; }
-    if (dropped) this.showStatus('Oldest thought archived to make room', 'var(--text-muted)');
+    if (dropped) this._toast('info', 'Oldest thought removed (history limit reached)', 'var(--text-muted)');
     this.updateHistoryDropdown();
     prepInput.value = '';
     this.submit(thought.text);
@@ -57,40 +69,41 @@ export class PrepBayController {
     const select = this._getEl('.cc-bs-history');
     if (!select) return;
     const history = this.ideationBuffer.getHistory();
+    const maxHistory = this._maxHistory();
     if (history.length === 0) {
-      select.innerHTML = '<option value="">0 thoughts</option>';
+      select.innerHTML = `<option value="">0 / ${maxHistory} thoughts</option>`;
       return;
     }
-    select.innerHTML = `<option value="">${history.length} recent thought${history.length > 1 ? 's' : ''}</option>` +
+    select.innerHTML = `<option value="">${history.length} / ${maxHistory} thoughts</option>` +
       history.map(h => `<option value="${h.id}">${escapeHtml(h.text.substring(0, 30))}...</option>`).join('');
   }
 
   async submit(transcript) {
     if (!transcript?.trim()) return;
-    this.showStatus('Processing transcript...', 'var(--accent-cyan)');
+    this._toast('info', 'Processing transcript...', 'var(--accent-cyan)');
     const extraction = await this.graph.submitTranscript(transcript);
 
     if (extraction && extraction.nodes && extraction.nodes.length) {
       this.graph.applyExtraction(extraction);
       const msg = extraction.verbalResponse || `Extracted ${extraction.nodes.length} node(s)`;
-      this.showStatus(msg, 'var(--accent-green)');
+      this._toast('info', msg, 'var(--accent-green)');
       if (extraction.verbalResponse) {
         this.voice.tts.speak(extraction.verbalResponse).catch((err) => {
-          this.showStatus(`Voice failed: ${err.message || 'unknown error'}`, 'var(--accent-red)');
+          this._toast('error', `Voice failed: ${err.message || 'unknown error'}`, 'var(--accent-red)');
         });
       }
       return;
     }
 
     const reason = extraction?.error || extraction?.message || 'Server unavailable';
-    this.showStatus(`${reason} \u2014 engaging local brain...`, 'var(--accent-cyan)');
+    this._toast('info', `${reason} \u2014 engaging local brain...`, 'var(--accent-cyan)');
     try {
       const local = await this.webLlm.extractGraph(transcript);
       if (local && local.nodes && local.nodes.length) {
         this.graph.applyExtraction(local);
         this._syncNodesToServer(local.nodes);
         const color = local.status === 'heuristic-extracted' ? 'var(--accent-gold)' : 'var(--accent-green)';
-        this.showStatus(local.verbalResponse || 'Extracted via local brain', color);
+        this._toast('info', local.verbalResponse || 'Extracted via local brain', color);
         return;
       }
     } catch (err) {
@@ -98,7 +111,7 @@ export class PrepBayController {
     }
 
     console.error('FailSafe CRITICAL: All extraction tiers failed. This should not happen.');
-    this.showStatus('Extraction error \u2014 try rephrasing or adding nodes manually', 'var(--accent-red)');
+    this._toast('error', 'Extraction error \u2014 try rephrasing or adding nodes manually', 'var(--accent-red)');
   }
 
   _syncNodesToServer(nodes) {
@@ -138,15 +151,17 @@ export class PrepBayController {
     this._modalTextarea = textarea;
     recordBtn.addEventListener('click', () => this.voice.toggle());
 
-    const escHandler = (e) => { if (e.key === 'Escape') close(); };
+    const origOnMic = this.voice.onMicButton;
+    let close;
+    const escHandler = (e) => { if (e.key === 'Escape') close?.(); };
     this._modalEscHandler = escHandler;
     document.addEventListener('keydown', escHandler);
 
-    const close = () => {
-      this._modalVizActive = false;
+    close = () => {
       if (this._restoreAnalyser) { this._restoreAnalyser(); this._restoreAnalyser = null; }
       document.removeEventListener('keydown', escHandler);
       this._modalTextarea = null;
+      this.voice.onMicButton = origOnMic;
       if (prepInput) prepInput.value = textarea.value;
       overlay.remove();
     };
@@ -159,8 +174,9 @@ export class PrepBayController {
       this.commit();
     });
 
-    this._wireModalVoiceState(modal, recordBtn);
-    this._wireModalVisualizer(modal);
+    this._wireModalVoiceState(modal, recordBtn, origOnMic);
+    const teardownViz = wireModalVisualizer(modal, this.voice, () => !!this._modalTextarea);
+    this._restoreAnalyser = teardownViz;
   }
 
   _createModalDom(prepInput) {
@@ -191,11 +207,10 @@ export class PrepBayController {
     return { overlay, modal, textarea, recordBtn };
   }
 
-  _wireModalVoiceState(modal, recordBtn) {
-    const origOnMic = this.voice.onMicButton;
+  _wireModalVoiceState(modal, recordBtn, origOnMic) {
     this.voice.onMicButton = (html, active, disabled, title) => {
       origOnMic?.(html, active, disabled, title);
-      if (!this._modalTextarea) { this.voice.onMicButton = origOnMic; return; }
+      if (!this._modalTextarea) return;
       if (html !== null) recordBtn.innerHTML = html;
       recordBtn.classList.toggle('active', !!active);
       if (disabled !== undefined) recordBtn.disabled = !!disabled;
@@ -203,46 +218,7 @@ export class PrepBayController {
     };
   }
 
-  _wireModalVisualizer(modal) {
-    const vizCanvas = modal.querySelector('.cc-bs-modal-visualizer');
-    if (!vizCanvas) return;
-    const origOnAnalyser = this.voice.onAnalyser;
-    this.voice.onAnalyser = (analyser) => {
-      origOnAnalyser?.(analyser);
-      if (vizCanvas && this._modalTextarea) {
-        this._drawModalVisualizer(vizCanvas, analyser);
-      }
-    };
-    this._restoreAnalyser = () => { this.voice.onAnalyser = origOnAnalyser; };
-  }
-
   destroy() {
     if (this._modalEscHandler) { document.removeEventListener('keydown', this._modalEscHandler); this._modalEscHandler = null; }
-  }
-
-  _drawModalVisualizer(canvas, analyser) {
-    const ctx = canvas.getContext('2d');
-    const buf = new Uint8Array(analyser.frequencyBinCount);
-    canvas.width = canvas.clientWidth || 200;
-    canvas.height = canvas.clientHeight || 24;
-    this._modalVizActive = true;
-    const draw = () => {
-      if (!this._modalVizActive) return;
-      requestAnimationFrame(draw);
-      analyser.getByteTimeDomainData(buf);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = '#10b981';
-      ctx.beginPath();
-      const sw = canvas.width / buf.length;
-      for (let i = 0, x = 0; i < buf.length; i++, x += sw) {
-        const y = (buf[i] / 128.0) * canvas.height / 2;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.lineTo(canvas.width, canvas.height / 2);
-      ctx.stroke();
-    };
-    draw();
   }
 }

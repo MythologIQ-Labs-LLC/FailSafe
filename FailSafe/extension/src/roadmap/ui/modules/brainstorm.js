@@ -12,6 +12,8 @@ import { renderShell, renderRightPanel } from './brainstorm-templates.js';
 import { LlmStatusRenderer } from './llm-status.js';
 import { PrepBayController } from './prep-bay.js';
 import { NodeEditor } from './node-editor.js';
+import { VoiceStatusBadge } from './voice-status-badge.js';
+import { drawSidebarVisualizer } from './brainstorm-visualizer.js';
 
 export class BrainstormRenderer {
   constructor(containerId, deps = {}) {
@@ -23,15 +25,18 @@ export class BrainstormRenderer {
     const tts = new TtsEngine(this.store);
     this.voice = new VoiceController(stt, tts, this.store);
     this.keyboard = new KeyboardManager(this.store);
-    this.graph = new BrainstormGraph();
-    this.ideationBuffer = new IdeationBuffer();
-    this.webLlm = new WebLlmEngine(this.store);
 
     const getEl = (sel) => this._getEl(sel);
     const showStatus = (t, c) => this.showStatus(t, c);
+    this.graph = new BrainstormGraph({ showStatus, store: this.store });
+    const historyMax = Number(this.store?.get?.('brainstorm-history-max'));
+    this.ideationBuffer = new IdeationBuffer(Number.isFinite(historyMax) && historyMax > 0 ? historyMax : 10);
+    this.webLlm = new WebLlmEngine(this.store);
+
     this.llmStatus = new LlmStatusRenderer(this.webLlm, this.store, showStatus);
-    this.prepBay = new PrepBayController(this.graph, this.webLlm, this.ideationBuffer, this.voice, getEl, showStatus);
+    this.prepBay = new PrepBayController(this.graph, this.webLlm, this.ideationBuffer, this.voice, getEl, showStatus, this.store);
     this.nodeEditor = new NodeEditor(this.graph, getEl);
+    this.voiceStatusBadge = null;
   }
 
   render() {
@@ -58,12 +63,19 @@ export class BrainstormRenderer {
     };
     this.webLlm.init().then(() => this.llmStatus.render(this.client)).catch(() => this.llmStatus.render(this.client));
     this._heartbeatInterval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       this.webLlm.recheckNative().then(() => this.llmStatus.render(this.client));
     }, 30000);
-    this._audioDeviceHandler = (e) => {
-      if (e.detail.type === 'input') this.voice.stt.setMicDevice(e.detail.deviceId);
+    this._wireSettingsBridges();
+  }
+
+  _wireSettingsBridges() {
+    this._settingsBridges = {
+      'failsafe:audio-device-changed': (e) => { if (e.detail.type === 'input') this.voice.stt.setMicDevice(e.detail.deviceId); },
+      'failsafe:whisper-model-changed': (e) => this.voice.swapWhisperModel(e.detail.modelId),
+      'failsafe:stt-language-changed': (e) => this.voice.setLanguage(e.detail.language),
     };
-    window.addEventListener('failsafe:audio-device-changed', this._audioDeviceHandler);
+    for (const [name, fn] of Object.entries(this._settingsBridges)) window.addEventListener(name, fn);
   }
 
   renderRightPanel() { return renderRightPanel(); }
@@ -84,7 +96,12 @@ export class BrainstormRenderer {
       if (title) el.title = title;
     };
     this.voice.onStatus = (text, color) => this.showStatus(text, color);
-    this.voice.onAnalyser = (a) => this._initVisualizer(a);
+    this.voice.addAnalyserListener((a) => this._initVisualizer(a));
+    const badgeEl = this._getEl('.cc-bs-voice-status');
+    if (badgeEl) {
+      this.voiceStatusBadge = new VoiceStatusBadge(badgeEl, this.voice);
+      this.voiceStatusBadge.attach();
+    }
     this.voice.wireModelProgress();
     this.voice.stt.onTranscript = (t, f) => this.prepBay.onTranscript(t, f);
     this.voice.stt.onAudioCaptured = (blob) => {
@@ -101,25 +118,8 @@ export class BrainstormRenderer {
   }
 
   _initVisualizer(analyser) {
-    const cvs = document.querySelector('.audio-visualizer-canvas');
-    if (!cvs) return;
-    const ctx = cvs.getContext('2d');
-    const buf = new Uint8Array(analyser.frequencyBinCount);
-    const rect = cvs.getBoundingClientRect();
-    cvs.width = rect.width || 200; cvs.height = rect.height || 24;
-    const draw = () => {
-      if (!this.voice.voiceActive) { ctx.clearRect(0, 0, cvs.width, cvs.height); return; }
-      requestAnimationFrame(draw);
-      analyser.getByteTimeDomainData(buf);
-      ctx.clearRect(0, 0, cvs.width, cvs.height);
-      ctx.lineWidth = 2; ctx.strokeStyle = '#10b981'; ctx.beginPath();
-      const sw = cvs.width / buf.length;
-      for (let i = 0, x = 0; i < buf.length; i++, x += sw) {
-        const y = (buf[i] / 128.0) * cvs.height / 2;
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-      }
-      ctx.lineTo(cvs.width, cvs.height / 2); ctx.stroke();
-    }; draw();
+    this._visualizerHandle?.destroy?.();
+    this._visualizerHandle = drawSidebarVisualizer(analyser, () => this.voice.voiceActive);
   }
 
   initCanvas() {
@@ -235,11 +235,13 @@ export class BrainstormRenderer {
   onEvent(evt) { this.graph.onEvent(evt); }
 
   destroy() {
-    if (this._heartbeatInterval) clearInterval(this._heartbeatInterval);
-    if (this._audioDeviceHandler) window.removeEventListener('failsafe:audio-device-changed', this._audioDeviceHandler);
+    if (this._heartbeatInterval) { clearInterval(this._heartbeatInterval); this._heartbeatInterval = null; }
+    this._visualizerHandle?.destroy?.(); this._visualizerHandle = null;
+    for (const [name, fn] of Object.entries(this._settingsBridges || {})) window.removeEventListener(name, fn);
     if (this._wakeHandler) window.removeEventListener('failsafe:wake-word-changed', this._wakeHandler);
     if (this._undoKeyHandler) document.removeEventListener('keydown', this._undoKeyHandler);
     this._wakeHandler = null; this.keyboard.unbind();
+    this.voiceStatusBadge?.detach(); this.voiceStatusBadge = null;
     this.prepBay.destroy(); this.voice.destroy(); this.webLlm.destroy();
     this.graph.canvas?.destroy(); if (this.container) this.container.innerHTML = '';
   }

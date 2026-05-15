@@ -1,10 +1,12 @@
 // FailSafe Command Center — Brainstorm Graph Operations
 // Node CRUD, transcript submission, graph fetch/export/clear.
 
+import { exportBrainstormJSON } from './brainstorm-export.js';
+
 const STORAGE_KEY = 'failsafe-brainstorm-graph';
 
 export class BrainstormGraph {
-  constructor() {
+  constructor({ showStatus, store } = {}) {
     this.nodes = [];
     this.edges = [];
     this.canvas = null;
@@ -13,6 +15,8 @@ export class BrainstormGraph {
     this._redoStack = [];
     this._maxHistory = 50;
     this._mutating = false;
+    this._showStatus = showStatus || null;
+    this._store = store || null;
   }
 
   setCanvas(canvas) { this.canvas = canvas; }
@@ -196,17 +200,7 @@ export class BrainstormGraph {
   }
 
   async exportJSON() {
-    try {
-      const res = await fetch('/api/v1/brainstorm/graph');
-      const data = await res.json();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `brainstorm-${new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-')}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {}
+    return exportBrainstormJSON(this._showStatus, this._store);
   }
 
   onEvent(evt) {

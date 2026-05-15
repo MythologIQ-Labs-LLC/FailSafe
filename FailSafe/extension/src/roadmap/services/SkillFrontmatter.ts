@@ -118,7 +118,7 @@ export function humanizeSkillName(value: string): string {
 
 const STOP_TAGS = new Set([
   "a", "an", "and", "as", "at", "by", "for", "from", "in", "into",
-  "of", "on", "or", "the", "to", "with", "skill", "skills", "qore",
+  "of", "on", "or", "the", "to", "with", "skill", "skills", "qor",
   "local", "project", "unknown", "unversioned", "admitted", "conditional",
   "quarantined", "general", "cmd", "command", "commands", "source", "type",
 ]);
@@ -146,12 +146,23 @@ export function resolveSourceCredit(ctx: {
   const repo = String(ctx.sourceRepo || "").trim();
   const owner = repo.includes("/") ? repo.split("/")[0] : "";
   const picked = (sn || cr || owner || "Community").replace(/^@+/, "").trim();
-  if (picked.toLowerCase().includes("elevenlabs")) return "ElevenLabs";
-  if (picked.toLowerCase() === "qorelogic") return "QoreLogic";
+  const lower = picked.toLowerCase();
+  const repoLower = repo.toLowerCase();
+  if (lower.includes("elevenlabs")) return "ElevenLabs";
+  // Skills sourced from the Qor-Logic Python package report as "qor-logic".
+  if (repoLower.includes("qor-logic") || repoLower.includes("qorelogic")
+      || lower === "qorelogic" || lower === "qorlogic" || lower === "qor-logic") {
+    return "qor-logic";
+  }
+  // Skills authored by the FailSafe extension itself report as "FailSafe".
+  if (repoLower.includes("failsafe") || lower === "failsafe"
+      || lower === "mythologiq" || lower === "community") {
+    return "FailSafe";
+  }
   return picked;
 }
 
-export function resolveQoreSkillId(
+export function resolveQorSkillId(
   base: string,
   context: { creator: string; sourceRepo: string; desc: string },
 ): string {

@@ -1,6 +1,6 @@
 # FailSafe Component Help
 
-Audience: operators using the packaged VS Code extension (`v4.9.9`).
+Audience: operators using the packaged VS Code extension (`v5.1.0`).
 
 Scope: shipped UI surfaces, governance components, and Voice + Mindmap Status in the current release.
 
@@ -97,20 +97,29 @@ Use this tab when decisions require human review, overrides, or chain verificati
 
 ### Mindmap
 
-Current release behavior is manual ideation:
+Current release behavior:
 
 - add and categorize nodes
-- drag nodes on SVG canvas
+- drag nodes on SVG/3D canvas
 - save session in local state
-- export JSON
+- export JSON (filename includes timestamp + timezone offset)
+- voice-assisted ideation: multilingual Whisper STT (tiny/base/small) + Piper TTS, both local; per-language voice auto-match
+- voice substrate state visible via the voice status badge in the right panel
 
-Voice capture and spoken response are shipped in `v4.4.0` when vendor runtime assets are present.
+Voice capture and spoken response require vendor runtime assets per `src/roadmap/ui/vendor/*/VENDOR.md`. When Piper assets are absent the TTS engine surfaces an `error:piper_not_vendored` state to the badge instead of failing silently.
 
 ### Settings
 
-Applies console-level theme and tab preference persistence.
+Console-level preferences organized into cards:
 
-Use this for UI preference only; governance policy configuration remains code/config based.
+- **Theme** — light/dark/contrast variants with per-theme accent colors.
+- **Voice & Audio** — audio device selection, Whisper model picker, STT language, auto-match voice toggle, Piper voice selection, push-to-talk key, wake word, silence timeout.
+- **Notifications** — independent toggles for info-tier and error-tier toasts.
+- **Brainstorm** — ideation history limit (1-100; default 10).
+- **QorLogic Skills** — install / refresh / show output.
+- **FailSafe Pro** — discovery card linking to <https://mythologiq.studio/products/failsafe-pro>.
+
+Use this for UI preference and substrate configuration; governance policy configuration remains code/config based.
 
 ## Governance Components
 

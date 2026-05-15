@@ -5,6 +5,145 @@ All notable changes to FailSafe will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Model-sourced Risk Register** (`plan-qor-model-sourced-risks`). Risks now come from the coding model itself: agents call the new MCP tool `failsafe.create_risk`, use the `@failsafe /risk` chat subcommand to draft + confirm risks, or let FailSafe auto-derive risks from SHIELD lifecycle signals (GATE VETO ledger entries, DEBUG entries, Shadow-Genome `genome.failureArchived` EventBus emissions). Each risk records its source (`mcp` / `audit-veto` / `debug` / `shadow-genome` / `manual` for legacy migrations) plus structured `derivedFrom` lineage that powers de-duplication.
+- **Install Skills UX expansion** (`plan-qor-install-skills-ux-expansion`, sealed at META_LEDGER entry #371). Modal install flow with live progress + retry, operator-editable host registry, per-host skill picker, dry-run preview, and a new workspace `LiveProgressInvariant` doctrine + lint helper. Upstream `Qor-logic#58` filed for canonical SDK amendment.
+- **OpenVSX v5.0.0 catch-up publish workflow** (`.github/workflows/openvsx-catchup.yml`). Manual `workflow_dispatch` job that publishes a specific historical version to OpenVSX only, used to align OpenVSX with VS Code Marketplace when a prior release was direct-`vsce`-published. v5.0.0 was published to OpenVSX on 2026-05-14 via this workflow.
+- **Microsoft Agent Governance Toolkit + Qortara attribution** on the SRE panel (disconnected setup card + persistent footer link in both states).
+- **Sync Framework asymmetry fix**: `FrameworkSync.propagate(systemId)` now calls `AgentConfigInjector.inject(system)` after the dir-copy step, so picking a single target (e.g. GitHub Copilot) actually writes the governance block to `.github/copilot-instructions.md`. Toasts now report what was written (`framework dir copied, updated <path>`) instead of claiming success on no-ops.
+
+### Changed
+
+- **Skill source attribution**: skills sourced from the Qor-Logic Python package now display as `qor-logic`; FailSafe-authored skills display as `FailSafe`; external skills (ElevenLabs, Three.js, …) keep their actual upstream credit. Implemented in `roadmap/services/SkillFrontmatter.ts:resolveSourceCredit` and `SkillParser.ts` default attribution.
+- **Brand spelling sweep**: eliminated all `QoreLogic` / `Qorelogic` / `QORELOGIC` / standalone `Qore` / `qore` casings across `FailSafe/extension/src/` and `package.json`. User-facing strings hyphenated to "Qor-Logic"; PascalCase identifiers remain `QorLogic`. Files renamed: `bootstrapQoreLogic.ts` → `bootstrapQorLogic.ts`; `QoreLogicManager.ts` → `QorLogicManager.ts`; `QoreRoute.ts` → `QorRoute.ts`; `QoreRuntimeService.ts` → `QorRuntimeService.ts`. The lowercase compound `qorelogic` (config-key namespace + source directory) is held in a deferred-rename bucket pending a settings-migration plan.
+- **Organize-UX hotfix** (sealed #364): contextual-summary helper now reports actual organize action outcomes instead of the misleading "Bootstrap: 1 step(s) deferred" message. Host-side decision V1 Path C wired; organize callbacks now surface success/no-op/failure separately.
+
+### Removed
+
+- **`failsafe.addRisk` command + QuickPick wizard** deleted from `commands.ts`, `RiskRegisterProvider.ts`, and `package.json`. Manual risk entry is replaced by the model-sourced surfaces above. Legacy risks in `risks.json` are auto-migrated to `source: 'manual'` on first load.
+- **Redundant skill prefixes**: 10 `ql-*.md` skills + 10 `ql-*` reference templates + 3 `qore-*` script directories deleted from user-scope `~/.claude/`; 13 `ql-*.md` commands + 7 `ql-*` agents + 4 `ql-*` references deleted from project-scope `.claude/commands/`. Canonical `qor-*` skills remain.
+- **Hearthlink skill leftovers** (6 files) deleted from `.claude/commands/` — they belonged to a separate project.
+
+### Fixed
+
+- **Banner Install Skills button** previously POSTed to `/api/actions/scaffold-skills` with no body and silently triggered a server-side VS Code QuickPick that opened in the extension host (invisible from the browser tab). Now opens the same in-browser modal the Settings card uses, with host pickers, scope radios, and preview button.
+- **`/api/actions/scaffold-skills/preview` 404**: the SPA-fallback middleware in `ConsoleRouteRegistrar.setupAllRoutes` was registered before the qorlogic routes (added after `consoleServer.start()`), so any `/api/*` POST not matched by core routes hit the fallback. Split the SPA fallback into a separate `finalizeFallback()` step that bootstrap calls after `registerQorlogicRoutes(...)`. Preview POST now reaches its handler.
+- **Install Skills 501** "Scaffold not available" from the Settings card: `ConsoleServer.setupAllRoutes()` was being called in the constructor, so `ApiRouteDeps` captured `scaffoldSkills`/`scaffoldWithWebOptions` as `null` before `bootstrapServers.ts` wired them. Moved `setupAllRoutes()` into `start()` so callback wiring happens first.
+- **Brainstorm canvas TypeError**: `.showNavInfo(false)` was called unconditionally on `ForceGraph`'s chain, but the method only exists on `ForceGraph3D`. Guarded inside the 3D branch.
+- **Active build step ↔ Recommended next step inconsistency** on the Monitor: when META_LEDGER is IDLE but an active plan phase is highlighted in the track, the next-step tile no longer says "Run /qor-plan…" — it now derives from the same active phase title the track uses.
+- **Long install summary** ("Installed 160 skill(s) at /path/.claude/agents/, /path/.claude/skills/, …") collapsed into a digestible headline + collapsible per-host detail blocks.
+
+### Security
+
+- **Release pipeline: manual approval gate** added between `build` and the two `publish-*` jobs in `.github/workflows/release.yml`. Both `publish-vscode` and `publish-openvsx` now require an explicit `production` environment review before they fire, preventing accidental same-second dual-publishes if `validate:vsix` misses a regression.
+
+### Test discipline
+
+- 36 new functional tests (FX415–FX420 series) for the model-sourced Risk Register: `RiskManager` migration + dedup, `failsafe.create_risk` MCP tool handler, `RiskAutoDerivation` derivers + mappers, `AuditGateArtifactReader`, `RiskChatHandler` draft/confirm, and Risks UI source-pill rendering.
+
+---
+
+## [5.1.0] - 2026-05-06
+
+Minor release. Comprehensive E2E coverage methodology + release-class CI gate (B199 Phase 1) + Monitor B191 functional proof. Surfaced and fixed three latent Monitor bugs that unit tests could not catch — most notably a missing `type="module"` on the Monitor's bootstrap script that meant the compact UI never actually rendered in production.
+
+### Added
+
+- Comprehensive E2E coverage methodology — Playwright test harness (`serveCompactUI` + `ledgerFixtures` helpers) and two new specs: `monitor-shield-progression.spec.ts` (8 cases covering all 6 SHIELD phases + plan title + WS-broadcast re-render) and `monitor-staleness.spec.ts` (1 connected → disconnected → reconnected lifecycle case).
+- Release-class CI coverage gate — `scripts/check-e2e-coverage.cjs` invoked from the pre-push hook when the active plan's `change_class` is `feature` or `breaking`. Blocks pushes whose staged surface files (UI, ConsoleServer routes, commands) lack a corresponding `*.spec.ts`, unless a `[no-e2e: <reason>]` token appears in a commit message in the push range. Hotfix is exempt.
+- New npm scripts: `test:e2e` (runs Playwright) and `test:e2e:coverage` (runs the gate against currently-staged files).
+
+### Fixed
+
+- Monitor never bootstrapped in production (root cause behind B191's user-visible "Monitor doesn't see my work"). The compact UI's `<script src="roadmap.js">` was missing `type="module"` despite using ES module imports — the script silently failed to execute. No prior unit test exercised UI JS execution, so this was invisible.
+- SEAL phase rendered "Substantiate active" instead of "all four done". `PHASE_INDEX_MAP['SEALED']` was 4 (same as SUBSTANTIATE) in `monitor-render.js`. Bumped to 5 so SEAL correctly renders all four steps `done`.
+- IDLE phase rendered "Plan active" instead of "all pending". Added an IDLE early-return branch in `getPhaseInfo` that fires only when no other phase signal exists; preserves existing IDLE+runState and IDLE+recentCompletions fallthrough semantics.
+
+### Test discipline
+
+- Mocha suite: 958 → 959 passing (+1 net from new `IDLE with empty plan → index -1` assertion); 1 pending; 0 failing.
+- Playwright suite: 7 → 16 passing (+9 net); 1 pre-existing skip; 0 failing.
+
+### Known divergence
+
+- Open VSX still shows v4.9.9; v5.0.0 published to VS Code Marketplace but Open VSX replication did not fire and no git tag was created for v5.0.0. v5.1.0 release will need to either leapfrog Open VSX from 4.9.9 → 5.1.0 directly, or backfill-publish v5.0.0 to Open VSX first.
+
+## [5.0.0] - 2026-04-25
+
+Major release. Public reveal of the FailSafe / FailSafe Pro product split. The v4 bundled-skills installer is replaced by ingestion from the [`qor-logic`](https://pypi.org/project/qor-logic/) PyPI package. Skills now begin with `qor-` (was `ql-`). The Command Center reads workspace truth — META_LEDGER, BACKLOG, plan files, audit reports, and CHANGELOG — instead of showing empty placeholder state.
+
+### Added (Round 3 — Voice & Brainstorm UX, 2026-05-06)
+
+- Multilingual speech-to-text — Whisper model picker (tiny / base / small) and BCP-47 language selector in the Voice settings section. Default model switched from English-only `whisper-tiny.en` to multilingual `whisper-tiny`.
+- Voice status badge — single-element DOM badge in the Brainstorm right panel surfacing the unified state stream (idle / listening / processing / speaking / error:*).
+- Auto-match voice — when enabled, switching STT language auto-selects the matching Piper TTS voice from a 12-language catalog.
+- TTS error transparency — Piper vendor presence failures (`piper_not_vendored`, `wrong_mime`, `init_failed`) now surface to the status badge instead of silent console.info.
+- Brainstorm history limit — configurable (1-100, default 10) via Settings → Brainstorm; replaces the hardcoded 10-entry cap.
+- Brainstorm export — JSON download filename now includes timestamp + timezone offset (`brainstorm-YYYY-MM-DD-HH-MM-SS±OOOO.json`); avoids same-session overwrites.
+- Notifications severity gating — Settings → Notifications card lets operators silence info-tier toasts independently from error-tier toasts.
+
+### Changed (Round 3)
+
+- ConsoleServer decomposition — extracted `QoreRuntimeService` and four route handlers (`QoreRoute`, `FeatureStatusRoute`, `SkillsApiRoute`, `HookRoute`) from `ConsoleServer.ts`. Internal architectural refactor; no user-visible API change.
+- Voice controller — multi-subscriber state and analyser fan-out with cache-and-replay on subscribe; late subscribers (badge, modal visualizer) now see current state on attach.
+
+### Security (Round 3)
+
+- HTML escape discipline applied across all settings and overview surfaces that interpolate store-derived or hub-derived values into innerHTML — closes XSS pathways in Voice settings, audio device data attributes, TTS voice picker, ticker bar (Sentinel mode), risk register cells, governance Sentinel card, and Settings Configuration card.
+- Allowlist hardening — Whisper model id validated against `ALLOWED_WHISPER_MODELS` (3 entries) at construction and on swap; Piper voice id validated against `ALLOWED_PIPER_VOICES` (20 entries). Closes localStorage-XSS supply-chain pivot to arbitrary HuggingFace / Piper voice fetch.
+- Voice substrate hardening — model swap reentry guard, idle/processing analyser cache invalidation, listener fan-out snapshot iteration, modal `onMicButton` wrapper restoration, idempotent destroy.
+
+### Added (Round 2 — Install UX, 2026-05-05)
+
+- Install transparency report (#49): every install action emits a structured `QorLogicInstallReport` with one invocation per phase (`python-probe`, `pip-install`, `qorlogic-install` per host, `provenance`, `refresh`). The Settings card renders the report inline; failed steps stay visible with command + stderr until the next run.
+- Host/scope QuickPick (#50): the Settings card "Install QorLogic Skills" button now prompts for hosts (multi-select) and scope (`repo`|`global`) before installing; selections persist to workspace state and pre-check on re-run.
+- New command palette entry "FailSafe: Install QorLogic Skills (defaults)" (`failsafe.installQorLogicSkillsDefaults`) — bypasses the QuickPick and installs `[claude, codex]` at `repo` scope, intended for automation and the command palette quick path.
+- "Show Output" button on the Settings install card focuses the FailSafe (QorLogic) output channel via the new `POST /api/actions/show-output` route.
+
+### Changed (Round 2)
+
+- **Internal ABI break**: `ConsoleServer.setScaffoldCallback` now expects `() => Promise<QorLogicInstallReport | null>` (was `Promise<{scaffolded, skipped, error?}>`). The single source-of-truth report type lives in `installSkillsReport.ts`.
+- Broadcast event `skills.install.progress` payload field renamed `step` → `invocation`. The new shape carries `phase`, `host`, `scope`, `command`, `interpreter`, `destination`, `installedCount`, `version`, `summary`, `error`, `stderrTail`.
+- `createInstallSkillsHandler` signature: `(context: ExtensionContext, ingestor, callbacks?, mode='prompt')`. Mode `'defaults'` bypasses the QuickPick.
+- `QorLogicSkillIngestor` exposes `probePython`, `ensurePackageInstalled`, `installHost(host, scope)`, `getWorkspaceRoot`, `rescanWorkspace` for orchestrator-driven granular installs.
+
+### Added
+
+- `qor-logic` package installer with auto-detected Python interpreter (setting → ms-python → probe).
+- `QorLogicSkillIngestor` runs `qorlogic install --host claude --scope repo` and `--host codex` by default; supports `kilo-code` and `gemini` opt-in.
+- Synthesized `SOURCE.yml` provenance for ingested skills.
+- `failsafe.openFailSafeProDownload`, `failsafe.bootstrap`, and `failsafe.organize` commands.
+- Always-visible "Install / Refresh QorLogic Skills" + "Bootstrap Workspace" buttons in the Command Center Settings tab.
+- Setting `failsafe.qorlogic.pythonPath` for explicit Python override.
+- Workspace-truth UI: META_LEDGER backfills Operations Phases / Recent Verdicts / Recent Completions; BACKLOG populates Risks tab; new Latest Audit + Recent Releases cards on Overview.
+- New docs: `FailSafe/extension/docs/v5/QORLOGIC_SKILL_INGESTION.md`, `FailSafe/extension/docs/v5/PRO_INTEGRATION.md`.
+
+### Changed
+
+- "Install Skills" button label → "Install QorLogic Skills".
+- The bundled `dist/extension/skills/` is no longer included in the VSIX.
+- Extension `description` revised off the legacy "AI governance platform" framing.
+- Skill IDs migrated from `ql-*` to `qor-*` across source and project-local skill directories.
+- Operations Phases stat now reflects META_LEDGER reality (was 0/0); render capped at 10 cards plus a summary row.
+- **Phase 1 ConsoleServer decomposition (B164/B165)** — extracted 4 portable, framework-agnostic modules: `WebSocketManager` (28L), `TransparencyLogger` (35L), `RiskRegisterManager` (30L), `EventSubscriptionManager` (185L; 12 EventBus listeners covering governance verdicts, sentinel events, transparency, and run lifecycle). ConsoleServer 1371→1177L (-194L). Foundation for the Phase 2 decomposition delivered in Round 3.
+- "About FailSafe Pro" command + Settings card open the product/learn page <https://mythologiq.studio/products/failsafe-pro> (was: opened the download URL despite being labeled "About") (#46).
+
+### Fixed
+
+- Operations Phases stat: `completed > planned` no longer renders as `4 / 0`; `planned` floored to `completed` so each completion implies at least one plan (#47).
+- Install QorLogic Skills: progressive step display, button disables while running, hub refresh on completion (#48).
+
+### Removed
+
+- v4 bundled-skill copy path (`bootstrapServers.ts` direct `dist/extension/skills` → `.claude/skills` copy). Existing user skills already on disk are not touched.
+
+### Security
+
+- All subprocess invocations use list-form `spawn(cmd, args)`; no shell strings. pip install bounded by 120 s timeout, qorlogic install per host by 180 s timeout.
+
 ## [4.9.9] - 2026-03-17
 
 ### Fixed
@@ -131,8 +270,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Cross-agent skill consolidation: 200+ files across 7 locations → canonical `.claude/skills/` + `.claude/agents/` + automated transpilation.
-- Skills migrated from flat `.claude/commands/ql-*.md` to directory-based `.claude/skills/ql-*/SKILL.md` with YAML frontmatter.
-- Agent definitions separated to `.claude/agents/ql-*.md` with subagent frontmatter.
+- Skills migrated from flat `.claude/commands/qor-*.md` to directory-based `.claude/skills/qor-*/SKILL.md` with YAML frontmatter.
+- Agent definitions separated to `.claude/agents/qor-*.md` with subagent frontmatter.
 - ModelAdapter output directories corrected for Claude, Codex, Gemini, Copilot, and Cursor.
 - VSIX bundling de-complected: agents removed from skill pipeline, directory-based patterns added.
 - Antigravity restructured from Genesis/Qorelogic to skills/agents layout.
@@ -209,7 +348,7 @@ Incremental hotfix for Monitor & Command Center parity. Further refinements fort
 - Skill Discovery now carries tags and source credit; Skills panel uses type-ahead tag filter with autocomplete.
 - Brainstorm, STT, and ideation modules refined for cleaner runtime behavior.
 - CI VSIX guardrails workflow consolidated to single-source build with proprietary content scan.
-- Governance skill lifecycle cohesion: 19 skills with next-step routing, canonical routing table, /ql-document authoring skill.
+- Governance skill lifecycle cohesion: 19 skills with next-step routing, canonical routing table, /qor-document authoring skill.
 
 ---
 
@@ -404,7 +543,7 @@ Incremental hotfix for Monitor & Command Center parity. Further refinements fort
 
 ### Added
 
-- **Release Discipline Enforcement** - New `/ql-repo-release` workflow artifact.
+- **Release Discipline Enforcement** - New `/qor-repo-release` workflow artifact.
 - **Sentinel Sidebar Monitoring** - Complete `SentinelViewProvider` and `SentinelTemplate`.
 - **Structural Decomposition** - Decomposed `main.ts` into specialized bootstrap modules forSection 4 Simplicity.
 
@@ -443,15 +582,15 @@ Incremental hotfix for Monitor & Command Center parity. Further refinements fort
 ### Added
 
 - **Gold Standard Repository Skills**
-  - `/ql-repo-audit` - Gap analysis against Gold Standard checklist
-  - `/ql-repo-scaffold` - Generate missing community files (CODE_OF_CONDUCT, CONTRIBUTING, SECURITY, GOVERNANCE)
-  - `/ql-repo-release` - Release discipline enforcement
+  - `/qor-repo-audit` - Gap analysis against Gold Standard checklist
+  - `/qor-repo-scaffold` - Generate missing community files (CODE_OF_CONDUCT, CONTRIBUTING, SECURITY, GOVERNANCE)
+  - `/qor-repo-release` - Release discipline enforcement
 - **Ambient Integration** - Repository governance hooks in existing commands
-  - `/ql-bootstrap` Step 2.5: Repository readiness check
-  - `/ql-plan` Step 4.5: Plan branch creation
-  - `/ql-audit` Pass 7 + Step 5.5: Repo governance audit
-  - `/ql-implement` Step 12.5: Implementation staging
-  - `/ql-substantiate` Step 9.5: Final staging & merge
+  - `/qor-bootstrap` Step 2.5: Repository readiness check
+  - `/qor-plan` Step 4.5: Plan branch creation
+  - `/qor-audit` Pass 7 + Step 5.5: Repo governance audit
+  - `/qor-implement` Step 12.5: Implementation staging
+  - `/qor-substantiate` Step 9.5: Final staging & merge
 - **GitHub API Integration** - `github-api-helpers.md` reference for gh CLI patterns
 - **Template Library** - 9 templates in `docs/conceptual-theory/templates/repo-gold-standard/`
 - **Self-Application** - FailSafe now has Gold Standard community files at root
@@ -488,13 +627,13 @@ Incremental hotfix for Monitor & Command Center parity. Further refinements fort
 
 - **BACKLOG.md Integration** - Unified source of truth for blockers, backlog, and wishlist
 - **7 Command Integrations**:
-  - `/ql-status` - Step 2.5 backlog check, Outstanding Items output
-  - `/ql-bootstrap` - Step 6.5 BACKLOG.md creation
-  - `/ql-audit` - Step 5.5 blocker registration on VETO
-  - `/ql-implement` - Step 10.5 mark blockers complete
-  - `/ql-substantiate` - Step 3.5 blocker verification
-  - `/ql-plan` - Step 3.5 register backlog items
-  - `/ql-refactor` - Step 5.5 register tech debt
+  - `/qor-status` - Step 2.5 backlog check, Outstanding Items output
+  - `/qor-bootstrap` - Step 6.5 BACKLOG.md creation
+  - `/qor-audit` - Step 5.5 blocker registration on VETO
+  - `/qor-implement` - Step 10.5 mark blockers complete
+  - `/qor-substantiate` - Step 3.5 blocker verification
+  - `/qor-plan` - Step 3.5 register backlog items
+  - `/qor-refactor` - Step 5.5 register tech debt
 
 ---
 

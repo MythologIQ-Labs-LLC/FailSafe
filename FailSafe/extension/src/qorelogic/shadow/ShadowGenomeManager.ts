@@ -117,10 +117,18 @@ export class ShadowGenomeManager {
             // Initialize schema versioning system
             this.schemaVersionManager = new SchemaVersionManager(this.db);
             this.schemaVersionManager.initialize();
-            
+
+            // B200 fix: create shadow_genome BEFORE running migrations so
+            // ALTER-COLUMN migrations (1.1.0 security columns, 1.2.0 audit
+            // columns) succeed on first init. Previously initSchema() ran
+            // AFTER migrate(), causing ALTER to fail silently against a
+            // missing table — security columns appeared only on the second
+            // session init. See B200 / META_LEDGER #313 carried-forward.
+            this.initSchema();
+
             // Validate schema version on init
             this.schemaVersionManager.validateOnInit();
-            
+
             // Apply pending migrations
             const migrationResults = this.schemaVersionManager.migrate();
             if (migrationResults.length > 0) {
@@ -133,9 +141,6 @@ export class ShadowGenomeManager {
                     }
                 });
             }
-            
-            // Initialize base schema if needed
-            this.initSchema();
             
             // Log schema status
             const status = this.schemaVersionManager.getStatus();

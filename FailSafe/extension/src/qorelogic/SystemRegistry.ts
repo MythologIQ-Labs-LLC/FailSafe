@@ -6,11 +6,25 @@ import { Logger } from "../shared/Logger";
 import {
   DetectionContext,
   DetectionResult,
-  QoreLogicSystem,
+  QorLogicSystem,
   SystemManifest,
-} from "./types/QoreLogicSystem";
+} from "./types/QorLogicSystem";
+import {
+  AgentDetectionRules,
+  AgentSystemManifest,
+  DetectionOutcome,
+  DetectionSignal,
+  DETECTION_THRESHOLD,
+  SIGNAL_WEIGHTS,
+  toSystemManifest,
+} from "./types/DetectionTypes";
+import {
+  DetectionEnvironment,
+  VsCodeDetectionEnvironment,
+} from "./AgentDetectionEnvironment";
 import { PluginRegistry } from "./PluginRegistry";
 import { BUILT_IN_AGENTS } from "./AgentDefinitions";
+import { loadAgentOverlay, mergeAgentOverlay } from "./AgentOverlayLoader";
 
 export interface AgentTerminalInfo {
   name: string;
@@ -24,7 +38,7 @@ export interface AgentTeamsStatus {
 }
 
 export interface AgentLandscape {
-  registeredSystems: QoreLogicSystem[];
+  registeredSystems: QorLogicSystem[];
   activeTerminals: AgentTerminalInfo[];
   agentTeams: AgentTeamsStatus;
 }
@@ -32,50 +46,70 @@ export interface AgentLandscape {
 export class SystemRegistry {
   private logger: Logger;
   private workspaceRoot: string;
-  private cached: QoreLogicSystem[] | null = null;
+  private cached: QorLogicSystem[] | null = null;
+  private agentManifests: AgentSystemManifest[] | null = null;
   private pluginRegistry: PluginRegistry;
+  private env: DetectionEnvironment;
 
-  constructor(workspaceRoot: string, logger?: Logger) {
+  constructor(
+    workspaceRoot: string,
+    logger?: Logger,
+    env?: DetectionEnvironment,
+  ) {
     this.workspaceRoot = workspaceRoot;
     this.logger = logger ?? new Logger("SystemRegistry");
     this.pluginRegistry = new PluginRegistry();
+    this.env = env ?? new VsCodeDetectionEnvironment();
   }
 
-  async getSystems(): Promise<QoreLogicSystem[]> {
+  async getSystems(): Promise<QorLogicSystem[]> {
     if (this.cached) {
       return this.cached;
     }
-    const manifests = this.loadBuiltInSystems();
-    for (const manifest of manifests) {
+    for (const manifest of this.loadAgentManifests()) {
       this.pluginRegistry.register({
-        plugin: new DefaultSystemPlugin(manifest),
+        plugin: new DefaultSystemPlugin(toSystemManifest(manifest)),
       });
     }
     this.cached = this.pluginRegistry.getSorted();
     return this.cached;
   }
 
-  async findById(id: string): Promise<QoreLogicSystem | undefined> {
+  async findById(id: string): Promise<QorLogicSystem | undefined> {
     const systems = await this.getSystems();
     return systems.find((system) => system.getManifest().id === id);
   }
 
-  async detect(system: QoreLogicSystem): Promise<DetectionResult> {
+  async detect(system: QorLogicSystem): Promise<DetectionResult> {
     if (system.detect) {
       return system.detect(this.buildDetectionContext());
     }
-    const manifest = system.getManifest();
-    const detection = manifest.detection || {};
-    const detected = !!(
-      detection.alwaysInstalled ||
-      this.matchesFolderDetection(detection.folderExists || []) ||
-      this.matchesExtensionKeywords(detection.extensionKeywords || []) ||
-      this.matchesHostAppNames(detection.hostAppNames || [])
-    );
-    return { detected };
+    return { detected: this.detectWithConfidence(system).detected };
   }
 
-  hasGovernance(system: QoreLogicSystem): boolean {
+  /**
+   * Weighted, multi-phase detection (filesystem phase implemented).
+   * Confidence = min(1.0, sum of matched signal weights). A single strong
+   * signal (exact extension id, host app, or agent dot-directory) is enough.
+   */
+  detectWithConfidence(system: QorLogicSystem): DetectionOutcome {
+    const rules = this.agentRulesFor(system.getManifest().id);
+    const matched = this.collectSignals(rules);
+    const confidence = Math.min(
+      1,
+      matched.reduce((sum, signal) => sum + signal.weight, 0),
+    );
+    const detected =
+      rules.alwaysInstalled === true || confidence >= DETECTION_THRESHOLD;
+    return {
+      detected,
+      confidence,
+      signals: matched.map((signal) => `${signal.type}:${signal.value}`),
+      phase: "filesystem",
+    };
+  }
+
+  hasGovernance(system: QorLogicSystem): boolean {
     const manifest = system.getManifest();
     const pathsToCheck = manifest.governancePaths || [];
     return pathsToCheck.some((p) =>
@@ -83,7 +117,7 @@ export class SystemRegistry {
     );
   }
 
-  renderTemplate(template: string, system: QoreLogicSystem): string {
+  renderTemplate(template: string, system: QorLogicSystem): string {
     const manifest = system.getManifest();
     return template
       .replaceAll("{{SYSTEM_NAME}}", manifest.name)
@@ -95,19 +129,13 @@ export class SystemRegistry {
   }
 
   detectTerminalAgents(): AgentTerminalInfo[] {
-    const patterns: Record<string, string> = {
-      claude: 'claude',
-      copilot: 'copilot',
-      cursor: 'cursor',
-      codex: 'codex',
-      windsurf: 'windsurf',
-    };
+    const patterns = this.terminalPatternMap();
     const results: AgentTerminalInfo[] = [];
     const terminals = vscode.window.terminals;
     for (let i = 0; i < terminals.length; i++) {
       const name = terminals[i].name.toLowerCase();
-      for (const [agentType, pattern] of Object.entries(patterns)) {
-        if (name.includes(pattern)) {
+      for (const [agentType, agentPatterns] of patterns) {
+        if (agentPatterns.some((p) => name.includes(p))) {
           results.push({ name: terminals[i].name, terminalIndex: i, agentType });
           break;
         }
@@ -116,16 +144,25 @@ export class SystemRegistry {
     return results;
   }
 
+  private terminalPatternMap(): Array<[string, string[]]> {
+    return this.loadAgentManifests()
+      .map((m): [string, string[]] => [
+        m.id,
+        (m.detection?.terminalPatterns ?? []).map((p) => p.toLowerCase()),
+      ])
+      .filter(([, patterns]) => patterns.length > 0);
+  }
+
   detectAgentTeams(): AgentTeamsStatus {
-    const settingsPath = path.join(os.homedir(), '.claude', 'settings.json');
+    const settingsPath = path.join(os.homedir(), ".claude", "settings.json");
     try {
       if (!fs.existsSync(settingsPath)) {
         return { enabled: false, settingsPath };
       }
-      const raw = fs.readFileSync(settingsPath, 'utf-8');
+      const raw = fs.readFileSync(settingsPath, "utf-8");
       const settings = JSON.parse(raw);
       const env = settings?.env || {};
-      const enabled = env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS === '1';
+      const enabled = env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS === "1";
       return { enabled, settingsPath };
     } catch {
       return { enabled: false, settingsPath };
@@ -139,35 +176,48 @@ export class SystemRegistry {
     return { registeredSystems, activeTerminals, agentTeams };
   }
 
-  private loadBuiltInSystems(): SystemManifest[] {
-    return [...BUILT_IN_AGENTS];
-  }
-
-  private matchesFolderDetection(pathsToCheck: string[]): boolean {
-    return pathsToCheck.some((p) =>
-      fs.existsSync(path.join(this.workspaceRoot, p)),
-    );
-  }
-
-  private matchesExtensionKeywords(keywords: string[]): boolean {
-    if (keywords.length === 0) return false;
-    return vscode.extensions.all.some((ext) => {
-      const name = ext.packageJSON.name?.toLowerCase() || "";
-      const displayName = ext.packageJSON.displayName?.toLowerCase() || "";
-      const description = ext.packageJSON.description?.toLowerCase() || "";
-      return keywords.some(
-        (k) =>
-          name.includes(k) ||
-          displayName.includes(k) ||
-          description.includes(k),
+  private loadAgentManifests(): AgentSystemManifest[] {
+    if (!this.agentManifests) {
+      this.agentManifests = mergeAgentOverlay(
+        [...BUILT_IN_AGENTS],
+        loadAgentOverlay(this.workspaceRoot),
       );
-    });
+    }
+    return this.agentManifests;
   }
 
-  private matchesHostAppNames(names: string[]): boolean {
-    if (names.length === 0) return false;
-    const app = vscode.env.appName.toLowerCase();
-    return names.some((n) => app.includes(n.toLowerCase()));
+  private agentRulesFor(id: string): AgentDetectionRules {
+    const found = this.loadAgentManifests().find((m) => m.id === id);
+    return (found?.detection ?? {}) as AgentDetectionRules;
+  }
+
+  private collectSignals(rules: AgentDetectionRules): DetectionSignal[] {
+    const out: DetectionSignal[] = [];
+    for (const folder of rules.folderExists ?? []) {
+      if (fs.existsSync(path.join(this.workspaceRoot, folder))) {
+        out.push({ type: "folderExists", value: folder, weight: SIGNAL_WEIGHTS.folderExists });
+      }
+    }
+    for (const id of rules.extensionIds ?? []) {
+      if (this.env.hasExtensionId(id)) {
+        out.push({ type: "extensionId", value: id, weight: SIGNAL_WEIGHTS.extensionId });
+      }
+    }
+    // Extension keywords are noisy alternative spellings of one weak signal,
+    // so they contribute at most once (a single agent's two keyword matches
+    // must not sum past the detection threshold on their own).
+    for (const keyword of rules.extensionKeywords ?? []) {
+      if (this.env.matchesExtensionKeyword(keyword)) {
+        out.push({ type: "extensionKeyword", value: keyword, weight: SIGNAL_WEIGHTS.extensionKeyword });
+        break;
+      }
+    }
+    for (const name of rules.hostAppNames ?? []) {
+      if (this.env.matchesHostAppName(name)) {
+        out.push({ type: "hostAppName", value: name, weight: SIGNAL_WEIGHTS.hostAppName });
+      }
+    }
+    return out;
   }
 
   private buildDetectionContext(): DetectionContext {
@@ -180,7 +230,7 @@ export class SystemRegistry {
   }
 }
 
-class DefaultSystemPlugin implements QoreLogicSystem {
+class DefaultSystemPlugin implements QorLogicSystem {
   private manifest: SystemManifest;
 
   constructor(manifest: SystemManifest) {

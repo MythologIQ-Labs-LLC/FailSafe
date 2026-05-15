@@ -1,11 +1,11 @@
 {
   "name": "mythologiq-failsafe",
-  "displayName": "FailSafe (feat. QoreLogic)",
-  "description": "Complete AI governance for modern development. Genesis visualization + QoreLogic framework + Sentinel monitoring.",
+  "displayName": "FailSafe (feat. Qor-Logic)",
+  "description": "Open-source VS Code/Cursor governance and skills surface for AI coding agents. Pairs with FailSafe Pro for desktop enforcement.",
   "icon": "media/icon.png",
-  "version": "4.9.9",
+  "version": "5.1.0",
   "publisher": "MythologIQ",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/MythologIQ/failsafe"
@@ -41,6 +41,9 @@
     "onChatParticipant:failsafe.chat",
     "onView:failsafe.sidebarView",
     "onCommand:failsafe.openSidebar",
+    "onCommand:failsafe.openFailSafeProAbout",
+    "onCommand:failsafe.bootstrap",
+    "onCommand:failsafe.organize",
     "onCommand:failsafe.openPlannerHub",
     "onCommand:failsafe.openRoadmap",
     "onCommand:failsafe.openPlannerHubEditor",
@@ -50,7 +53,6 @@
     "onCommand:failsafe.resumeMonitoring",
     "onCommand:failsafe.openProjectOverview",
     "onCommand:failsafe.openRiskRegister",
-    "onCommand:failsafe.addRisk",
     "onCommand:failsafe.setGovernanceMode",
     "onCommand:failsafe.showEconomics",
     "onCommand:failsafe.revertToCheckpoint",
@@ -60,7 +62,8 @@
     "onCommand:failsafe.undoLastAttempt",
     "onCommand:failsafe.onboardAgent",
     "onCommand:failsafe.installCommitHook",
-    "onCommand:failsafe.removeCommitHook"
+    "onCommand:failsafe.removeCommitHook",
+    "onCommand:failsafe.installQorLogicSkillsDefaults"
   ],
   "main": "./dist/extension/main.js",
   "contributes": {
@@ -101,6 +104,22 @@
         "title": "FailSafe: Open Sidebar"
       },
       {
+        "command": "failsafe.openFailSafeProAbout",
+        "title": "FailSafe: About FailSafe Pro"
+      },
+      {
+        "command": "failsafe.bootstrap",
+        "title": "FailSafe: Bootstrap Workspace (install qor-logic + scaffold)"
+      },
+      {
+        "command": "failsafe.installQorLogicSkillsDefaults",
+        "title": "FailSafe: Install Qor-Logic Skills (defaults)"
+      },
+      {
+        "command": "failsafe.organize",
+        "title": "FailSafe: Organize Workspace (structure check)"
+      },
+      {
         "command": "failsafe.openPlannerHub",
         "title": "FailSafe: Open Command Center (Browser Popout)"
       },
@@ -135,10 +154,6 @@
       {
         "command": "failsafe.openRiskRegister",
         "title": "FailSafe: Open Risk Register"
-      },
-      {
-        "command": "failsafe.addRisk",
-        "title": "FailSafe: Add Risk"
       },
       {
         "command": "failsafe.setGovernanceMode",
@@ -240,6 +255,11 @@
     "configuration": {
       "title": "FailSafe",
       "properties": {
+        "failsafe.qorlogic.pythonPath": {
+          "type": "string",
+          "default": "",
+          "description": "Override the Python interpreter used to install qor-logic. Leave empty to auto-detect (VS Code Python extension, then python3/python/py -3 probe)."
+        },
         "failsafe.genesis.livingGraph": {
           "type": "boolean",
           "default": true,
@@ -333,21 +353,21 @@
         "failsafe.qorelogic.externalRuntime.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable Qore runtime integration in Command Center monitor."
+          "description": "Enable Qor runtime integration in Command Center monitor."
         },
         "failsafe.qorelogic.externalRuntime.baseUrl": {
           "type": "string",
           "default": "http://127.0.0.1:7777",
-          "description": "Base URL for FailSafe-Qore runtime API."
+          "description": "Base URL for FailSafe-Qor runtime API."
         },
         "failsafe.qorelogic.externalRuntime.apiKey": {
           "type": "string",
           "default": "",
-          "description": "Optional API key for Qore runtime. Leave empty to use environment variable fallback."
+          "description": "Optional API key for Qor runtime. Leave empty to use environment variable fallback."
         },
         "failsafe.qorelogic.externalRuntime.apiKeyEnvVar": {
           "type": "string",
-          "default": "QORE_API_KEY",
+          "default": "QOR_API_KEY",
           "description": "Environment variable name used when runtime API key is not set in extension settings."
         },
         "failsafe.qorelogic.externalRuntime.timeoutMs": {
@@ -355,7 +375,7 @@
           "default": 4000,
           "minimum": 500,
           "maximum": 30000,
-          "description": "Timeout in milliseconds for Qore runtime API calls."
+          "description": "Timeout in milliseconds for Qor runtime API calls."
         },
         "failsafe.bootstrap.autoInstallGit": {
           "type": "boolean",
@@ -374,8 +394,10 @@
     "pretest": "npm run compile && npm run patch:better-sqlite3 && npm run rebuild:vscode",
     "patch:better-sqlite3": "node ./scripts/patch-better-sqlite3.cjs",
     "rebuild:vscode": "node ./scripts/rebuild-vscode-electron.cjs",
-    "test": "vscode-test --extensionDevelopmentPath . --extensionTestsPath ./out/test/suite/index",
+    "test": "vscode-test --extensionDevelopmentPath . --extensionTestsPath ./out/test/suite/index .",
     "test:ui": "playwright test",
+    "test:e2e": "playwright test",
+    "test:e2e:coverage": "node ./scripts/check-e2e-coverage.cjs",
     "test:all": "npm run lint && npm test && npm run test:ui",
     "benchmark:novelty": "node ./scripts/novelty_benchmark.js",
     "test:novelty": "node ./scripts/novelty_smoke_test.js",
@@ -386,8 +408,10 @@
     "release:preflight": "node ./scripts/release-gate.cjs --preflight",
     "release:bump": "node ./scripts/release-gate.cjs --bump",
     "release:tag": "node ./scripts/release-gate.cjs --tag",
+    "verify:publish-block": "node ./scripts/check-publish-block.cjs",
     "package": "vsce package",
-    "publish": "vsce publish"
+    "publish": "vsce publish",
+    "vendor:piper": "node ./scripts/vendor-piper.cjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.1",
@@ -409,6 +433,7 @@
     "esbuild": "^0.27.3",
     "eslint": "^8.50.0",
     "jsdom": "^27.0.1",
+    "piper-tts-web": "1.1.2",
     "typescript": "^5.2.0"
   },
   "dependencies": {

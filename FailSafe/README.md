@@ -216,9 +216,9 @@ cd FailSafe/
 
 ```bash
 cd ..  # Back to workspace root
-/ql-bootstrap
-/ql-plan
-/ql-implement
+/qor-bootstrap
+/qor-plan
+/qor-implement
 # Governance operates at workspace level, never enters FailSafe/
 ```
 

@@ -6,7 +6,7 @@ import { GovernanceStatusBar } from "./GovernanceStatusBar";
 import { ProposedAction, BlockVerdict } from "./types/IntentTypes";
 import { EvaluationRouter, CortexEvent } from "./EvaluationRouter";
 import { INotificationService } from "../core/interfaces/INotificationService";
-import { QoreLogicManager } from "../qorelogic/QoreLogicManager";
+import { QorLogicManager } from "../qorelogic/QorLogicManager";
 import { PlanManager } from "../qorelogic/planning/PlanManager";
 import { Plan, PlanPhase } from "../qorelogic/planning/types";
 import { Logger } from "../shared/Logger";
@@ -25,7 +25,7 @@ export class GovernanceRouter {
   private governanceAdapter?: GovernanceAdapter;
   private notifications: INotificationService;
   private executeCommand: CommandExecutor;
-  private qoreLogicManager?: QoreLogicManager;
+  private qorLogicManager?: QorLogicManager;
 
   constructor(
     private intentService: IntentService,
@@ -34,20 +34,20 @@ export class GovernanceRouter {
     private evaluationRouter: EvaluationRouter,
     notifications: INotificationService,
     executeCommand?: CommandExecutor,
-    qoreLogicManager?: QoreLogicManager,
+    qorLogicManager?: QorLogicManager,
   ) {
     this.logger = new Logger("GovernanceRouter");
     this.notifications = notifications;
     this.executeCommand = executeCommand ?? (() => {});
-    this.qoreLogicManager = qoreLogicManager;
+    this.qorLogicManager = qorLogicManager;
   }
 
   setGovernanceAdapter(adapter: GovernanceAdapter): void {
     this.governanceAdapter = adapter;
   }
 
-  setQoreLogicManager(manager: QoreLogicManager): void {
-    this.qoreLogicManager = manager;
+  setQorLogicManager(manager: QorLogicManager): void {
+    this.qorLogicManager = manager;
   }
 
   setPlanManager(manager: PlanManager): void {
@@ -102,10 +102,10 @@ export class GovernanceRouter {
     const decision = await this.evaluationRouter.route(event);
 
     if (
-      (decision.invokeQoreLogic || decision.writeLedger) &&
-      this.qoreLogicManager
+      (decision.invokeQorLogic || decision.writeLedger) &&
+      this.qorLogicManager
     ) {
-      await this.qoreLogicManager.processEvaluationDecision(decision, event);
+      await this.qorLogicManager.processEvaluationDecision(decision, event);
     }
 
     if (!decision.enforceSentinel) {

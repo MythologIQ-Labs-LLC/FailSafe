@@ -71,7 +71,7 @@ export class GovernanceRenderer {
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
           <span style="width:8px;height:8px;border-radius:50%;background:${statusColor}"></span>
           <span style="font-weight:600">${statusText}</span>
-          <span class="cc-badge" style="background:var(--primary);color:#fff">${sentinel.mode || 'observe'}</span>
+          <span class="cc-badge" style="background:var(--primary);color:#fff">${this.esc(sentinel.mode || 'observe')}</span>
         </div>
         <div style="font-size:0.8rem;color:var(--text-muted)">
           Events: ${sentinel.eventsProcessed || 0} ·
