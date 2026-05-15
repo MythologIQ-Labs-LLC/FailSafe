@@ -5,7 +5,9 @@ All notable changes to FailSafe will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [5.1.0] - 2026-05-14
+
+Minor release. Model-sourced Risk Register (coding agents author risks via MCP tool, chat subcommand, or auto-derivation from SHIELD lifecycle), Install Skills UX expansion (live progress + per-host picker + dry-run preview + LiveProgressInvariant doctrine), OpenVSX/VS Code Marketplace alignment at v5.0.0 baseline, brand sweep (eliminated all `Qore` legacy spellings), release pipeline safety gate (production environment approval), full SRE panel attribution (Microsoft AGT + Qortara), 36 new FX415–FX420 functional tests, and a complete brand + skill-source-attribution sweep. Supersedes the unreleased 2026-05-06 draft.
 
 ### Added
 
@@ -46,7 +48,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [5.1.0] - 2026-05-06
+## [5.1.0-pre.2026-05-06] (unreleased draft — superseded by 5.1.0)
+
+The content below was authored on 2026-05-06 as an in-progress draft for v5.1.0 but was never tagged/published. It is preserved here verbatim for historical reference; all of its features are also captured in the `## [5.1.0] - 2026-05-14` release above.
 
 Minor release. Comprehensive E2E coverage methodology + release-class CI gate (B199 Phase 1) + Monitor B191 functional proof. Surfaced and fixed three latent Monitor bugs that unit tests could not catch — most notably a missing `type="module"` on the Monitor's bootstrap script that meant the compact UI never actually rendered in production.
 
