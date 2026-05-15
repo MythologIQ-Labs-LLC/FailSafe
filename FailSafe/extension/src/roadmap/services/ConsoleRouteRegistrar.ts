@@ -125,7 +125,11 @@ export class ConsoleRouteRegistrar {
     const h = this.host;
     const hub = h.hub;
     const sg = () => h.qorelogicManager.getShadowGenomeManager() as any;
-    return {
+    // Lazy getters for scaffold callbacks + output channel: route registration
+    // runs in the ConsoleServer constructor (before bootstrap wires the
+    // callbacks via setScaffoldCallback/setScaffoldWebCallback/setOutputChannel),
+    // so we read the current value at every request rather than capturing once.
+    const deps = {
       rejectIfRemote: (req, res) => h.rejectIfRemote(req, res),
       broadcast: (d) => h.broadcast(d),
       qorRuntimeService: h.qorRuntimeService as any,
@@ -147,9 +151,6 @@ export class ConsoleRouteRegistrar {
       getTransparencyEvents: (l) => hub.getTransparencyEvents(l),
       getRiskRegister: () => hub.getRiskRegister(),
       writeRiskRegister: (r) => hub.writeRiskRegister(r),
-      scaffoldSkills: (h.getScaffoldCallback() as any) ?? undefined,
-      scaffoldWithWebOptions: (h.getScaffoldWebCallback() as any) ?? undefined,
-      showOutput: h.getOutputChannel() ? () => h.getOutputChannel()?.show(true) : undefined,
       getTimelineEntries: (f) => h.getAgentTimelineService()?.getEntries(f) || [],
       getHealthMetrics: () => h.getAgentHealthIndicator()?.buildMetrics() || null,
       getGenomePatterns: () => sg().analyzeFailurePatterns(),
@@ -160,7 +161,26 @@ export class ConsoleRouteRegistrar {
       getRun: (id) => h.getAgentRunRecorder()?.getRun(id),
       loadRun: (id) => h.getAgentRunRecorder()?.loadRun(id) || null,
       getRunSteps: (id) => h.getAgentRunRecorder()?.getRunSteps(id) || [],
-    };
+    } as ApiRouteDeps;
+    // Lazy properties — accessed at request time so post-construction
+    // setScaffoldCallback / setScaffoldWebCallback / setOutputChannel calls
+    // are picked up.
+    Object.defineProperty(deps, "scaffoldSkills", {
+      get: () => (h.getScaffoldCallback() as any) ?? undefined,
+      enumerable: true, configurable: true,
+    });
+    Object.defineProperty(deps, "scaffoldWithWebOptions", {
+      get: () => (h.getScaffoldWebCallback() as any) ?? undefined,
+      enumerable: true, configurable: true,
+    });
+    Object.defineProperty(deps, "showOutput", {
+      get: () => {
+        const oc = h.getOutputChannel();
+        return oc ? () => oc.show(true) : undefined;
+      },
+      enumerable: true, configurable: true,
+    });
+    return deps;
   }
 
   private registerApiRoutes(apiDeps: ApiRouteDeps): void {

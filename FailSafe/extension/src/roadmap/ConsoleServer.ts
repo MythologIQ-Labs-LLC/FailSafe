@@ -126,17 +126,12 @@ export class ConsoleServer {
       broadcast: (d) => this.broadcast(d),
     });
     this.registrar = new ConsoleRouteRegistrar(this.buildRouteHost());
+    this.registrar.setupAllRoutes();
     this.subscribeToEvents();
   }
 
   // ── public API (unchanged surface) ─────────────────────────────────
-  async start(): Promise<void> {
-    // Routes registered here (not constructor) so bootstrap can wire
-    // scaffold callbacks via setScaffoldCallback/setScaffoldWebCallback
-    // before deps are captured. See scaffold-callback-ordering.test.ts.
-    this.registrar.setupAllRoutes();
-    await this.lifecycle.start();
-  }
+  async start(): Promise<void> { await this.lifecycle.start(); }
   /** Register the SPA fallback. Bootstrap calls this AFTER all late
    *  registrations (e.g., QorlogicRoute) so they win over the catch-all. */
   finalizeRoutes(): void { this.registrar.finalizeFallback(); }
