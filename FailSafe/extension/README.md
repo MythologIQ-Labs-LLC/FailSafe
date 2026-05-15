@@ -159,7 +159,7 @@ Cross-agent skill consolidation — all SHIELD skills migrated from legacy `.cla
 - **ModelAdapter output dirs fixed** — Claude (`.claude/skills/`), Codex (`.agents/skills/`), Gemini (`.gemini/skills/`), Copilot (`.github/skills/`), Cursor (`.cursor/rules/`) all corrected.
 - **getOutputPath simplified** — Directory-based output (`{name}/SKILL.md`) is now the default; only Cursor uses flat files.
 - **VSIX bundling de-complected** — Agents removed from bundle patterns, eliminating scaffold collision. Directory-based skill bundling added.
-- **Antigravity restructured** — Genesis/Qorelogic directories replaced with `skills/qor-*/SKILL.md` + `agents/` layout.
+- **Antigravity restructured** — Genesis/Qor-Logic directories replaced with `skills/qor-*/SKILL.md` + `agents/` layout.
 - **Stale duplicates removed** — `FailSafe/Claude/` (20 files) deleted; 12 quarantined skills cleaned up.
 - **Cross-agent instruction file** — `AGENTS.md` created at repo root for Codex/Copilot/Cursor/Windsurf compatibility.
 

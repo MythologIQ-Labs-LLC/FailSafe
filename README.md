@@ -18,19 +18,19 @@ _Local-first safety for AI coding assistants._
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Commands-8B5CF6)](https://github.com/MythologIQ/FailSafe/releases)
 [![Documentation](https://img.shields.io/badge/docs-FAILSAFE_SPECIFICATION-blue)](docs/FAILSAFE_SPECIFICATION.md)
 
-**Current Release**: v5.1.0 • **Unreleased**: model-sourced Risk Register + Install Skills UX expansion + release-pipeline approval gate
+**Current Release**: v5.1.0 (2026-05-14)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
 
-## What's coming in the next release
+## What's new in v5.1.0
 
 - **Model-sourced Risk Register**: coding agents author risks via the MCP tool `failsafe.create_risk`, the `@failsafe /risk` chat subcommand, or FailSafe auto-derives them from SHIELD lifecycle (GATE VETOs, DEBUG entries, Shadow-Genome failure events). The manual "Add Risk" wizard is removed.
 - **Install Skills UX expansion**: live-progress modal, per-host skill picker, dry-run preview, operator-editable host registry, and a workspace `LiveProgressInvariant` doctrine.
 - **SRE panel**: now attributes the [Microsoft Agent Governance Toolkit](https://github.com/microsoft/agent-governance-toolkit) (data source) and [Qortara](https://www.qortara.com).
 - **Release pipeline safety gate**: both VS Code Marketplace and OpenVSX publish jobs now sit behind a `production` GitHub environment requiring reviewer approval.
-- **OpenVSX alignment**: VS Code Marketplace and OpenVSX are both at v5.0.0.
+- **OpenVSX alignment**: VS Code Marketplace and OpenVSX are both at v5.0.0 baseline; v5.1.0 publishes to both.
 
-See [CHANGELOG.md](CHANGELOG.md) for the full unreleased block.
+See [CHANGELOG.md](CHANGELOG.md) for the full v5.1.0 release notes.
 
 ## FailSafe and FailSafe Pro
 
@@ -181,7 +181,7 @@ FailSafe uses a **Physical Isolation** model to separate workspace governance fr
 | System    | Layer       | Description                                |
 | --------- | ----------- | ------------------------------------------ |
 | Genesis   | Experience  | FailSafe Monitor + FailSafe Command Center |
-| QoreLogic | Governance  | Intent gating, policies, ledger, and trust |
+| Qor-Logic | Governance  | Intent gating, policies, ledger, and trust |
 | Sentinel  | Enforcement | File watcher audits and verdicts           |
 
 ### Governance Modes
@@ -198,13 +198,13 @@ Switch modes via the `FailSafe: Set Governance Mode` command or the `failsafe.go
 
 ---
 
-## QoreLogic: The Governance Layer
+## Qor-Logic: The Governance Layer
 
-QoreLogic is the deterministic governance engine that enforces safety policies at the editor boundary. It operates on a fundamental principle: **governance decisions are made by code, not by asking an LLM to follow rules.**
+Qor-Logic is the deterministic governance engine that enforces safety policies at the editor boundary. It operates on a fundamental principle: **governance decisions are made by code, not by asking an LLM to follow rules.**
 
 ### Prompt Guidelines vs. Deterministic Governance
 
-| Aspect             | Prompt-Based Safety                     | QoreLogic Deterministic Governance   |
+| Aspect             | Prompt-Based Safety                     | Qor-Logic Deterministic Governance   |
 | ------------------ | --------------------------------------- | ------------------------------------ |
 | **Decision Maker** | LLM interprets rules                    | TypeScript code executes rules       |
 | **Consistency**    | Varies with context, temperature, model | Identical output for identical input |
@@ -212,7 +212,7 @@ QoreLogic is the deterministic governance engine that enforces safety policies a
 | **Bypass Risk**    | LLM can ignore or reinterpret           | Code cannot be persuaded             |
 | **Speed**          | Network latency + inference             | Sub-millisecond local execution      |
 
-### How QoreLogic Works
+### How Qor-Logic Works
 
 1. **Risk Classification** — Files are classified as L1 (low), L2 (medium), or L3 (high) risk based on:
    - File path triggers (e.g., `auth/`, `payment/`, `credential` → L3)
@@ -242,7 +242,7 @@ When an LLM is asked to enforce safety rules, it can:
 - Produce inconsistent decisions across similar inputs
 - Be influenced by prompt engineering attacks
 
-QoreLogic avoids these risks by executing deterministic TypeScript code at the governance boundary. The policy engine uses simple string matching and path analysis—no LLM inference required for governance decisions.
+Qor-Logic avoids these risks by executing deterministic TypeScript code at the governance boundary. The policy engine uses simple string matching and path analysis—no LLM inference required for governance decisions.
 
 **Example**: A file containing `api_key` will always trigger L3 classification. No prompt can persuade the code to ignore this trigger.
 
@@ -296,7 +296,7 @@ The Antigravity extension includes:
 
 - **Gemini/Antigravity workflows** (`.agent/workflows/`)
 - **Claude Code skills** (`.claude/skills/qor-*/SKILL.md`)
-- **QoreLogic personas** (Governor, Judge, Specialist)
+- **Qor-Logic personas** (Governor, Judge, Specialist)
 - **Stability monitoring configuration** and skills
 
 ---
