@@ -90,11 +90,8 @@ suite("AgentOverlayLoader Test Suite", () => {
 
   test("agent missing required fields is skipped with warning", () => {
     const root = makeWorkspace();
-    const originalWarn = console.warn;
     let warned = 0;
-    console.warn = () => {
-      warned += 1;
-    };
+    const logger = { warn: () => { warned += 1; } };
     try {
       writeOverlay(
         root,
@@ -105,12 +102,11 @@ suite("AgentOverlayLoader Test Suite", () => {
           ],
         }),
       );
-      const result = loadAgentOverlay(root);
+      const result = loadAgentOverlay(root, logger);
       assert.strictEqual(result.length, 1);
       assert.strictEqual(result[0].id, "ok");
       assert.ok(warned >= 1, "should warn on the skipped entry");
     } finally {
-      console.warn = originalWarn;
       cleanup(root);
     }
   });

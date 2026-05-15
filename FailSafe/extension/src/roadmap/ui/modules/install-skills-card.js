@@ -141,7 +141,7 @@ function groupDestinationsByHost(destinations) {
   // Returns Array<{ host: string, paths: string[] }> sorted by host.
   const groups = new Map();
   for (const p of destinations || []) {
-    const m = String(p).match(/[/\\](\.[\w-]+)[/\\]/);
+    const m = String(p).match(/(?:^|[/\\])(\.[\w-]+)(?:[/\\]|$)/);
     const host = m ? m[1].replace(/^\./, '') : 'other';
     if (!groups.has(host)) groups.set(host, []);
     groups.get(host).push(p);

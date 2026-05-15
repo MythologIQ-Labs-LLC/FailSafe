@@ -27,7 +27,11 @@ afterEach(function () {
   }
 });
 
-describe("ensureFailsafeGitignoreEntry", () => {
+describe("ensureFailsafeGitignoreEntry", function () {
+  // Windows mkdtempSync + writeFileSync can briefly exceed 2s under
+  // antivirus or concurrent prepush-hook filesystem load. Allow headroom.
+  this.timeout(10000);
+
   it("creates .gitignore with .failsafe/ when missing", () => {
     const workspace = makeTempWorkspace();
     const changed = ensureFailsafeGitignoreEntry(workspace);

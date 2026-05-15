@@ -1,7 +1,7 @@
 // FailSafe Command Center — Live Transcriber
 // Real-time interim transcription via Web Speech API during Whisper recording.
 
-import { SpeechRecognitionCtor } from './whisper-loader.js';
+import { getSpeechRecognitionCtor } from './whisper-loader.js';
 
 export class LiveTranscriber {
   constructor() {
@@ -10,9 +10,10 @@ export class LiveTranscriber {
   }
 
   start(language, onTranscript, onSilenceReset, getState) {
-    if (!SpeechRecognitionCtor || this._recognition) return;
+    const Ctor = getSpeechRecognitionCtor();
+    if (!Ctor || this._recognition) return;
     try {
-      this._recognition = new SpeechRecognitionCtor();
+      this._recognition = new Ctor();
       this._recognition.continuous = true;
       this._recognition.interimResults = true;
       this._recognition.lang = language;

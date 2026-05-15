@@ -47,7 +47,21 @@ const AgentOverlayEnvelopeSchema = z.object({
   agents: z.array(z.unknown()),
 });
 
-export function loadAgentOverlay(workspaceRoot: string): AgentSystemManifest[] {
+/** Logger surface so tests can capture warnings without mutating console (the
+ *  vscode-test extension host wraps console.warn and the wrapper survives
+ *  test-local `console.warn = stub` reassignment). */
+export interface AgentOverlayLogger {
+  warn(message: string): void;
+}
+
+const DEFAULT_LOGGER: AgentOverlayLogger = {
+  warn: (m) => { console.warn(m); },
+};
+
+export function loadAgentOverlay(
+  workspaceRoot: string,
+  logger: AgentOverlayLogger = DEFAULT_LOGGER,
+): AgentSystemManifest[] {
   const overlayPath = path.join(workspaceRoot, ".failsafe", "agents.json");
   if (!fs.existsSync(overlayPath)) return [];
   try {
@@ -55,20 +69,23 @@ export function loadAgentOverlay(workspaceRoot: string): AgentSystemManifest[] {
       JSON.parse(fs.readFileSync(overlayPath, "utf-8")),
     );
     if (!envelope.success) return [];
-    return parseOverlayAgents(envelope.data.agents);
+    return parseOverlayAgents(envelope.data.agents, logger);
   } catch {
     return [];
   }
 }
 
-function parseOverlayAgents(rawAgents: unknown[]): AgentSystemManifest[] {
+function parseOverlayAgents(
+  rawAgents: unknown[],
+  logger: AgentOverlayLogger,
+): AgentSystemManifest[] {
   const out: AgentSystemManifest[] = [];
   for (const raw of rawAgents) {
     const result = AgentOverlaySchema.safeParse(raw);
     if (result.success) {
       out.push(result.data);
     } else {
-      console.warn(
+      logger.warn(
         `[AgentOverlayLoader] skipping invalid agent overlay entry: ${result.error.message}`,
       );
     }

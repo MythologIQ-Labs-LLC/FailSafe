@@ -1,8 +1,9 @@
 import * as assert from "assert";
 
-// SttEngine depends on browser globals — stub the minimum so the module loads.
-(globalThis as any).SpeechRecognition ??= class {};
-(globalThis as any).webkitSpeechRecognition ??= class {};
+// whisper-loader's getSpeechRecognitionCtor() resolves at call time, so
+// SttEngine + LiveTranscriber load cleanly under Node without browser globals.
+// (Removed the legacy `globalThis.SpeechRecognition ??= class {}` stub — it
+// leaked an addEventListener-less class into adjacent FX228 tests.)
 
 import { SttEngine } from "../../../src/roadmap/ui/modules/stt-engine.js";
 

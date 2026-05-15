@@ -1,7 +1,7 @@
 // FailSafe Command Center — Wake Word Listener
 // Detects wake phrase via Web Speech API to trigger recording.
 
-import { SpeechRecognitionCtor } from './whisper-loader.js';
+import { getSpeechRecognitionCtor } from './whisper-loader.js';
 
 export class WakeWordListener {
   constructor(store) {
@@ -30,12 +30,13 @@ export class WakeWordListener {
   }
 
   start(onTriggered, onError, getState) {
-    if (!SpeechRecognitionCtor) {
+    const Ctor = getSpeechRecognitionCtor();
+    if (!Ctor) {
       onError?.('Voice activation unavailable in this environment');
       return false;
     }
     if (this._recognition) return true;
-    this._recognition = new SpeechRecognitionCtor();
+    this._recognition = new Ctor();
     this._recognition.continuous = true;
     this._recognition.interimResults = true;
     this._onError = onError;
