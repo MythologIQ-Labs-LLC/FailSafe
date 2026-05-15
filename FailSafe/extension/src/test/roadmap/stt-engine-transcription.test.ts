@@ -31,10 +31,10 @@ class FakeRecognition {
   }
 }
 
-(globalThis as any).SpeechRecognition = FakeRecognition;
-(globalThis as any).webkitSpeechRecognition = FakeRecognition;
-
-// JS module import in TS test context.
+// JS module import in TS test context. whisper-loader's getSpeechRecognitionCtor()
+// now resolves at call time, so suiteSetup-time global install is sufficient —
+// no module-level assignment needed (which previously leaked into adjacent
+// suites' Node-env assumptions — broke FX228 WakeWordListener test).
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import { SttEngine } from "../../../src/roadmap/ui/modules/stt-engine.js";
@@ -89,6 +89,18 @@ function installRecorderShim(engine: any) {
 }
 
 suite("SttEngine transcription lifecycle (FX221)", () => {
+  suiteSetup(() => {
+    (globalThis as { SpeechRecognition?: unknown }).SpeechRecognition = FakeRecognition;
+    (globalThis as { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition = FakeRecognition;
+  });
+
+  suiteTeardown(() => {
+    // FX221 + FX228 isolation: clean the FakeRecognition stub so adjacent
+    // suites (WakeWordListener FX228) see the bare Node env they assume.
+    delete (globalThis as { SpeechRecognition?: unknown }).SpeechRecognition;
+    delete (globalThis as { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition;
+  });
+
   setup(() => {
     recognitionInstances.length = 0;
   });

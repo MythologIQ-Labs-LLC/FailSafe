@@ -181,7 +181,9 @@ suite("Security hardening coverage", () => {
       (manifest.contributes?.commands || []).map((c) => c.command || ""),
     );
     assert.strictEqual(commands.has("failsafe.openRiskRegister"), true);
-    assert.strictEqual(commands.has("failsafe.addRisk"), true);
+    // failsafe.addRisk removed in v5.1.0 (plan-qor-model-sourced-risks).
+    // Risks now sourced via MCP tool + chat subcommand + auto-derivation.
+    assert.strictEqual(commands.has("failsafe.addRisk"), false);
 
     const sidebarViews = manifest.contributes?.views?.["failsafe-sidebar-container"] || [];
     const viewIds = new Set(sidebarViews.map((v) => v.id || ""));

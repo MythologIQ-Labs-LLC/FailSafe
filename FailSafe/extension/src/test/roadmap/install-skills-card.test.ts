@@ -131,7 +131,9 @@ suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
       lastReport: { ok: true, totalInstalled: 17, destinations: ['.claude/skills/'], failures: [] },
     });
     assert.match(html, /var\(--accent-teal/);
-    assert.match(html, /Installed 17 skill\(s\) at .claude\/skills\//);
+    // Renderer groups destinations by agent-host segment; '.claude/skills/' → host 'claude'.
+    assert.match(html, /Installed 17 skills across claude\./);
+    assert.match(html, /\.claude\/skills\//);
   });
 
   test('renderInstallSkillsCard — lastReport ok=false renders gold partial-failure message', () => {
@@ -141,7 +143,7 @@ suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
       lastReport: { ok: false, totalInstalled: 5, destinations: [], failures: [{ host: 'codex', error: 'x' }] },
     });
     assert.match(html, /var\(--accent-gold/);
-    assert.match(html, /1 host\(s\) failed/);
+    assert.match(html, /Installed 5 skills; 1 host failed\./);
   });
 
   test('renderInstallSkillsCard — lastReport ignored while running=true', () => {
@@ -167,7 +169,10 @@ suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
   test('FX234/FX237 bindInstallSkillsCard — Install button opens modal; confirm POSTs /api/actions/scaffold-skills', async () => {
     const f = installFetch(() => ({ ok: true, body: { ok: true, totalInstalled: 17 } }));
     try {
-      const html = renderInstallSkillsCard({ running: false, invocations: [], lastReport: null });
+      const html = renderInstallSkillsCard(
+        { running: false, invocations: [], lastReport: null },
+        { bootstrapState: { qorLogicInstall: { hosts: [{ host: 'claude', installed: false }] } } },
+      );
       mountHtml(domR.dom, html);
       const root = domR.dom.window.document.getElementById('root')!;
       let started = 0;
@@ -196,7 +201,10 @@ suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
     // valid — that selector doesn't exist in the new modal markup.
     const f = installFetch(() => ({ ok: false, body: { ok: false, error: 'pip exit 1' } }));
     try {
-      const html = renderInstallSkillsCard({ running: false, invocations: [], lastReport: null });
+      const html = renderInstallSkillsCard(
+        { running: false, invocations: [], lastReport: null },
+        { bootstrapState: { qorLogicInstall: { hosts: [{ host: 'claude', installed: false }] } } },
+      );
       mountHtml(domR.dom, html);
       const root = domR.dom.window.document.getElementById('root')!;
       bindInstallSkillsCard(root, {});
@@ -218,7 +226,10 @@ suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
     const original = (globalThis as { fetch?: unknown }).fetch;
     (globalThis as { fetch: unknown }).fetch = async () => { throw new Error('offline'); };
     try {
-      const html = renderInstallSkillsCard({ running: false, invocations: [], lastReport: null });
+      const html = renderInstallSkillsCard(
+        { running: false, invocations: [], lastReport: null },
+        { bootstrapState: { qorLogicInstall: { hosts: [{ host: 'claude', installed: false }] } } },
+      );
       mountHtml(domR.dom, html);
       const root = domR.dom.window.document.getElementById('root')!;
       let errorCaught: Error | null = null;

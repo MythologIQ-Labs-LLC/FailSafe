@@ -39,5 +39,10 @@ export async function checkMicAvailable() {
   }
 }
 
-export const SpeechRecognitionCtor =
-  globalThis.SpeechRecognition || globalThis.webkitSpeechRecognition || null;
+// Evaluated at call time, not module load time, so tests that assign
+// globalThis.SpeechRecognition after ES-module import hoisting still resolve
+// the fake. (Module-level const captured the value before assignments could
+// land — broke FX221 SttEngine tests.)
+export function getSpeechRecognitionCtor() {
+  return globalThis.SpeechRecognition || globalThis.webkitSpeechRecognition || null;
+}
