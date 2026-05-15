@@ -8,9 +8,7 @@ import * as vscode from "vscode";
 import {
   RiskManager,
   Risk,
-  RiskSeverity,
   RiskStatus,
-  RiskCategory,
 } from "../../qorelogic/risk";
 import { EventBus } from "../../shared/EventBus";
 import {
@@ -70,9 +68,6 @@ export class RiskRegisterProvider implements vscode.WebviewViewProvider {
   private handleMessage(message: RiskMessage): void {
     const p = message.payload as Record<string, unknown>;
     switch (message.command) {
-      case "createRisk":
-        this.showCreateRiskDialog();
-        break;
       case "updateStatus":
         if (p?.id && p?.status) {
           this.riskManager.updateRisk(p.id as string, {
@@ -95,63 +90,9 @@ export class RiskRegisterProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private async showCreateRiskDialog(): Promise<void> {
-    const title = await vscode.window.showInputBox({
-      prompt: "Risk title",
-      placeHolder: "e.g., API rate limiting not implemented",
-    });
-    if (!title) return;
-
-    const severity = await vscode.window.showQuickPick(
-      ["critical", "high", "medium", "low"] as RiskSeverity[],
-      { placeHolder: "Select severity" },
-    );
-    if (!severity) return;
-
-    const category = await vscode.window.showQuickPick(
-      [
-        "security",
-        "performance",
-        "technical-debt",
-        "dependency",
-        "governance",
-        "compliance",
-        "operational",
-      ] as RiskCategory[],
-      { placeHolder: "Select category" },
-    );
-    if (!category) return;
-
-    const description =
-      (await vscode.window.showInputBox({
-        prompt: "Risk description",
-        placeHolder: "Describe the risk...",
-      })) || "";
-
-    const impact =
-      (await vscode.window.showInputBox({
-        prompt: "Impact description",
-        placeHolder: "What happens if this risk materializes?",
-      })) || "";
-
-    const mitigation =
-      (await vscode.window.showInputBox({
-        prompt: "Mitigation plan",
-        placeHolder: "How can this risk be mitigated?",
-      })) || "";
-
-    this.riskManager.createRisk({
-      title,
-      description,
-      category: category as RiskCategory,
-      severity: severity as RiskSeverity,
-      impact,
-      mitigation,
-    });
-
-    this.refresh();
-    vscode.window.showInformationMessage(`Risk created: ${title}`);
-  }
+  // showCreateRiskDialog removed in v5.1.0. Risks are now sourced via the
+  // coding model (MCP tool, chat subcommand, or auto-derivation). See
+  // plan-qor-model-sourced-risks.md.
 
   private async showRiskDetails(id: string): Promise<void> {
     const risk = this.riskManager.getRisk(id);
@@ -316,7 +257,7 @@ export class RiskRegisterProvider implements vscode.WebviewViewProvider {
 <body>
   <div class="header">
     <h2>Risk Register</h2>
-    <button class="add-btn" onclick="vscode.postMessage({command:'createRisk'})">+ Add Risk</button>
+    <span class="model-sourced-note" style="font-size:11px;color:var(--vscode-descriptionForeground)">Sourced by the coding model</span>
   </div>
   
   <div class="summary">
@@ -361,6 +302,7 @@ export class RiskRegisterProvider implements vscode.WebviewViewProvider {
         <div class="risk-badges">
           <span class="badge ${risk.severity}">${risk.severity}</span>
           <span class="badge ${risk.status}">${risk.status}</span>
+          ${this.renderSourceBadge(risk)}
         </div>
       </div>
       <div class="risk-description">${escapeHtml(risk.description || risk.impact)}</div>
@@ -369,6 +311,19 @@ export class RiskRegisterProvider implements vscode.WebviewViewProvider {
         <button onclick="vscode.postMessage({command:'updateStatus',payload:{id:'${escapeJsString(risk.id)}',status:'resolved'}})">Resolve</button>
       </div>
     </div>`;
+  }
+
+  private renderSourceBadge(risk: Risk): string {
+    const source = risk.source || 'manual';
+    const df = risk.derivedFrom;
+    let context = '';
+    if (source === 'mcp' && risk.sourceAgent) context = ` · ${escapeHtml(risk.sourceAgent)}`;
+    else if (source === 'audit-veto' && df?.ledgerEntry !== undefined) context = ` · Entry #${df.ledgerEntry}`;
+    else if (source === 'audit-veto' && df?.planSlug) context = ` · ${escapeHtml(df.planSlug)}`;
+    else if (source === 'shadow-genome' && df?.shadowGenomeEventId) {
+      context = ` · ${escapeHtml(String(df.shadowGenomeEventId).slice(0, 8))}`;
+    }
+    return `<span class="badge source" title="${escapeHtml(JSON.stringify(df ?? {}))}">${escapeHtml(source)}${context}</span>`;
   }
 
   private getRiskDetailHtml(risk: Risk): string {

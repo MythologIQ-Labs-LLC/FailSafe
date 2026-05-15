@@ -1,11 +1,11 @@
 import {
-  QoreLogicPluginRegistry,
+  QorLogicPluginRegistry,
   PluginRegistrationOptions,
-  QoreLogicSystem,
-} from "./types/QoreLogicSystem";
+  QorLogicSystem,
+} from "./types/QorLogicSystem";
 
-export class PluginRegistry implements QoreLogicPluginRegistry {
-  private plugins: Map<string, { plugin: QoreLogicSystem; priority: number }> =
+export class PluginRegistry implements QorLogicPluginRegistry {
+  private plugins: Map<string, { plugin: QorLogicSystem; priority: number }> =
     new Map();
 
   register(options: PluginRegistrationOptions): string {
@@ -19,15 +19,15 @@ export class PluginRegistry implements QoreLogicPluginRegistry {
     this.plugins.delete(id);
   }
 
-  get(id: string): QoreLogicSystem | undefined {
+  get(id: string): QorLogicSystem | undefined {
     return this.plugins.get(id)?.plugin;
   }
 
-  getAll(): QoreLogicSystem[] {
+  getAll(): QorLogicSystem[] {
     return Array.from(this.plugins.values()).map((entry) => entry.plugin);
   }
 
-  getSorted(): QoreLogicSystem[] {
+  getSorted(): QorLogicSystem[] {
     return Array.from(this.plugins.entries())
       .sort((a, b) => a[1].priority - b[1].priority)
       .map(([, entry]) => entry.plugin);

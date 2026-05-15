@@ -11,7 +11,7 @@
 import {
   DetectionRules as CoreDetectionRules,
   SystemManifest,
-} from "./QoreLogicSystem";
+} from "./QorLogicSystem";
 
 export type DetectionPhase = "filesystem" | "runtime" | "user-confirmed";
 

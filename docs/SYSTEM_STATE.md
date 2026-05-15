@@ -1,7 +1,7 @@
 # SYSTEM STATE
 
 **Last Updated:** 2026-05-14
-**Version:** v5.1.10-baseline plus Phase 60 SEALED at #354 plus v5.1.0 publish-block-lift SEALED at #359 plus organize-ux-hotfix SEALED at #364 plus **install-skills-ux-expansion SEALED at #371** (5-phase install surface: modal live progress + retry / operator host registry / per-host skill picker / dry-run preview / workspace LiveProgressInvariant doctrine + lint helper; upstream Qor-logic#58 filed; 73/73 .cjs tests pass; 3 blocking devil's-advocate findings F1+F2+F3 closed inline; 12 non-blocking F4-F15 carried forward; PUBLISH_BLOCK conditions unchanged; no `package.json` bump — change_class=feature, deferred until full lift) plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups
+**Version:** v5.1.10-baseline plus Phase 60 SEALED at #354 plus v5.1.0 publish-block-lift SEALED at #359 plus organize-ux-hotfix SEALED at #364 plus install-skills-ux-expansion SEALED at #371 plus **plan-qor-model-sourced-risks substantiated** (Risk Register now sourced by coding model via MCP tool failsafe.create_risk + @failsafe /risk chat subcommand + SHIELD-lifecycle auto-derivation; failsafe.addRisk command + QuickPick wizard removed; 36 new FX415-FX420 tests; OpenVSX v5.0.0 alignment complete) plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups
 
 ---
 
@@ -3432,3 +3432,39 @@ Pre-existing tech debt (not introduced by this plan):
 
 _Chain Status: IMPLEMENTATION COMPLETE_
 _Next: Remaining phases (Phase 2: Command Center Verification, Phase 3: Monitor S.H.I.E.L.D. Tracking) deferred to next session_
+
+---
+
+## Plan: plan-qor-model-sourced-risks (substantiated 2026-05-14)
+
+Risk Register entries now sourced via the coding model: agents call the `failsafe.create_risk` MCP tool, use the `@failsafe /risk` chat subcommand, or risks are auto-derived from SHIELD lifecycle (GATE VETOs, DEBUG entries, Shadow-Genome `genome.failureArchived` events). The manual `failsafe.addRisk` command + QuickPick wizard is removed.
+
+### Reality vs Blueprint
+
+| Blueprint Item | Status |
+|----------------|--------|
+| `RiskSource` union + `source`/`sourceAgent`/`derivedFrom` on `Risk` | EXISTS |
+| `RiskManager.createRisk` runtime guard + migration backfill + dedup | EXISTS |
+| `failsafe.addRisk` command + wizard removed from commands.ts + RiskRegisterProvider + package.json | REMOVED |
+| `mcp/tools/createRiskTool.ts` registered when RiskManager available | EXISTS |
+| `mcp/FailSafeServer.ts` extended to accept RiskManager | EXISTS |
+| `bootstrapMCP.ts` + `main.ts` thread RiskManager through | EXISTS |
+| `qorelogic/risk/RiskAutoDerivation.ts` (3 derivers + mappers) | EXISTS |
+| `qorelogic/risk/AuditGateArtifactReader.ts` | EXISTS |
+| `qorelogic/risk/wireAutoDerivation.ts` (UNPLANNED — substantiate-cycle razor extraction) | EXISTS |
+| `HubSnapshotService.autoDerivationHook` field + invocation | EXISTS |
+| `ConsoleServer.setAutoDerivationHook` passthrough | EXISTS |
+| `genesis/chat/handlers/RiskChatHandler.ts` (draft + confirm) | EXISTS |
+| `FailSafeChatParticipant` `/risk` router | EXISTS |
+| `failsafe.confirmDraftedRisk` command (chat button confirm) | EXISTS |
+| Source pill rendering in `risks.js` + `RiskRegisterProvider.ts` | EXISTS |
+
+### Tests (FX415–FX420 series)
+
+36 new functional tests across 6 files (4 + 11 + 5 + 5 + 7 + 4). FX015 wizard suite in `commands-state.test.ts` replaced by single deregistration assertion. No presence-only tests introduced.
+
+### Section 4 Razor on touched files
+
+All new files ≤ 250 LOC. All modified files within budget except `ConsoleServer.ts` (257; pre-existing baseline 256, +1 marginal) and pre-existing violators `commands.ts` (net –17), `RiskRegisterProvider.ts` (net –45). New violations from initial implementation were remediated in substantiate cycle via `wireAutoDerivation.ts` extraction.
+
+**Verdict**: Reality = Promise. Plan-qor-model-sourced-risks substantiated.

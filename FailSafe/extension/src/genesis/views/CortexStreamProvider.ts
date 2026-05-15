@@ -3,7 +3,7 @@
  *
  * Displays chronological stream of events from:
  * - Sentinel (verdicts, scans)
- * - QoreLogic (trust updates, ledger entries)
+ * - QorLogic (trust updates, ledger entries)
  * - Genesis (graph updates, wizard events)
  * - User (queries, approvals)
  * - System (startup, config changes)

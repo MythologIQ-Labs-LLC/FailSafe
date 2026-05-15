@@ -6,20 +6,20 @@
 
 import * as vscode from 'vscode';
 import { EventBus } from '../../shared/EventBus';
-import { QoreLogicManager } from '../../qorelogic/QoreLogicManager';
+import { QorLogicManager } from '../../qorelogic/QorLogicManager';
 import { L3ApprovalRequest } from '../../shared/types';
 import { escapeHtml, escapeJsString, getNonce } from '../../shared/utils/htmlSanitizer';
 
 export class L3ApprovalPanel {
     public static currentPanel: L3ApprovalPanel | undefined;
     private readonly panel: vscode.WebviewPanel;
-    private qorelogic: QoreLogicManager;
+    private qorelogic: QorLogicManager;
     private eventBus: EventBus;
     private disposables: vscode.Disposable[] = [];
 
     private constructor(
         panel: vscode.WebviewPanel,
-        qorelogic: QoreLogicManager,
+        qorelogic: QorLogicManager,
         eventBus: EventBus
     ) {
         this.panel = panel;
@@ -54,7 +54,7 @@ export class L3ApprovalPanel {
 
     public static createOrShow(
         extensionUri: vscode.Uri,
-        qorelogic: QoreLogicManager,
+        qorelogic: QorLogicManager,
         eventBus: EventBus
     ): L3ApprovalPanel {
         if (L3ApprovalPanel.currentPanel) {

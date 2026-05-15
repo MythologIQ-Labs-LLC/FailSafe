@@ -10,7 +10,7 @@ import { TransparencyLogger } from "./services/TransparencyLogger";
 import { RiskRegisterManager } from "./services/RiskRegisterManager";
 import { EventSubscriptionManager } from "./services/EventSubscriptionManager";
 import { PlanManager } from "../qorelogic/planning/PlanManager";
-import { QoreLogicManager } from "../qorelogic/QoreLogicManager";
+import { QorLogicManager } from "../qorelogic/QorLogicManager";
 import { SentinelDaemon } from "../sentinel/SentinelDaemon";
 import { EventBus } from "../shared/EventBus";
 import { IFeatureGate } from "../core/interfaces/IFeatureGate";
@@ -20,7 +20,7 @@ import type { EnforcementEngine } from "../governance/EnforcementEngine";
 import { BrainstormService } from "./services/BrainstormService";
 import { AudioVaultService } from "./services/AudioVaultService";
 import type { IConfigProvider } from "../core/interfaces/IConfigProvider";
-import { QoreRuntimeService, type QoreRuntimeOptions } from "./services/QoreRuntimeService";
+import { QorRuntimeService, type QorRuntimeOptions } from "./services/QorRuntimeService";
 import { type InstalledSkill } from "./services/SkillParser";
 import { discoverAllSkills } from "./services/SkillDiscovery";
 import { MarketplaceCatalog } from "./services/MarketplaceCatalog";
@@ -36,7 +36,7 @@ import { ConsoleLifecycleService } from "./services/ConsoleLifecycleService";
 import {
   buildPhasesFromLedger as buildPhasesFromLedgerImpl,
   mergePlanBlockers, createBrainstormService,
-  resolveQoreRuntimeOptions, resolveUiDir,
+  resolveQorRuntimeOptions, resolveUiDir,
   CHECKPOINT_TYPE_REGISTRY,
   MAX_PHASE_RENDER as MAX_PHASE_RENDER_IMPL,
 } from "./services/ConsoleServerSupport";
@@ -53,7 +53,7 @@ const EXTENSION_VERSION: string = (() => {
 })();
 
 type ConsoleServerOptions = {
-  qoreRuntime?: Partial<QoreRuntimeOptions>;
+  qorRuntime?: Partial<QorRuntimeOptions>;
   workspaceRoot?: string;
   featureGate?: IFeatureGate;
   configProvider?: IConfigProvider;
@@ -67,7 +67,7 @@ export class ConsoleServer {
   private app: express.Application = express();
   private wsManager = new WebSocketManager();
   private uiDir: string;
-  private qoreRuntimeService: QoreRuntimeService;
+  private qorRuntimeService: QorRuntimeService;
   private workspaceRoot: string;
   private featureGate: IFeatureGate | undefined;
   private sealedSubstantiateCompletions = new Set<string>();
@@ -102,12 +102,12 @@ export class ConsoleServer {
 
   constructor(
     private planManager: PlanManager,
-    private qorelogicManager: QoreLogicManager,
+    private qorelogicManager: QorLogicManager,
     private sentinelDaemon: SentinelDaemon,
     private eventBus: EventBus,
     options: ConsoleServerOptions = {},
   ) {
-    this.qoreRuntimeService = new QoreRuntimeService(resolveQoreRuntimeOptions(options.qoreRuntime));
+    this.qorRuntimeService = new QorRuntimeService(resolveQorRuntimeOptions(options.qorRuntime));
     this.workspaceRoot = options.workspaceRoot || process.cwd();
     this.featureGate = options.featureGate;
     this.uiDir = resolveUiDir(__dirname);
@@ -126,12 +126,20 @@ export class ConsoleServer {
       broadcast: (d) => this.broadcast(d),
     });
     this.registrar = new ConsoleRouteRegistrar(this.buildRouteHost());
-    this.registrar.setupAllRoutes();
     this.subscribeToEvents();
   }
 
   // ── public API (unchanged surface) ─────────────────────────────────
-  async start(): Promise<void> { await this.lifecycle.start(); }
+  async start(): Promise<void> {
+    // Routes registered here (not constructor) so bootstrap can wire
+    // scaffold callbacks via setScaffoldCallback/setScaffoldWebCallback
+    // before deps are captured. See scaffold-callback-ordering.test.ts.
+    this.registrar.setupAllRoutes();
+    await this.lifecycle.start();
+  }
+  /** Register the SPA fallback. Bootstrap calls this AFTER all late
+   *  registrations (e.g., QorlogicRoute) so they win over the catch-all. */
+  finalizeRoutes(): void { this.registrar.finalizeFallback(); }
   stop(): void { this.lifecycle.stop(); }
   getPort(): number { return this.lifecycle.getPort(); }
   broadcastEvent(data: Record<string, unknown>): void { this.broadcast(data); }
@@ -155,6 +163,7 @@ export class ConsoleServer {
   setAgentTimelineService(s: AgentTimelineService): void { this.agentTimelineService = s; }
   setAgentHealthIndicator(i: AgentHealthIndicator): void { this.agentHealthIndicator = i; }
   setAgentRunRecorder(r: AgentRunRecorder): void { this.agentRunRecorder = r; }
+  setAutoDerivationHook(fn: HubSnapshotService["autoDerivationHook"]): void { this.hub.autoDerivationHook = fn; }
 
   // ── internals ──────────────────────────────────────────────────────
   private broadcast(data: Record<string, unknown>): void { this.wsManager.broadcast(data); }
@@ -187,7 +196,7 @@ export class ConsoleServer {
     return new HubSnapshotService({
       workspaceRoot: this.workspaceRoot, extensionVersion: EXTENSION_VERSION,
       planManager: this.planManager, qorelogicManager: this.qorelogicManager,
-      sentinelDaemon: this.sentinelDaemon, qoreRuntimeService: this.qoreRuntimeService,
+      sentinelDaemon: this.sentinelDaemon, qorRuntimeService: this.qorRuntimeService,
       gitResetService: this.gitResetService,
       transparencyLogger: this.transparencyLogger,
       riskRegisterManager: this.riskRegisterManager,
@@ -217,7 +226,7 @@ export class ConsoleServer {
       getAgentTimelineService: () => this.agentTimelineService as any,
       getAgentHealthIndicator: () => this.agentHealthIndicator as any,
       getAgentRunRecorder: () => this.agentRunRecorder as any,
-      qoreRuntimeService: this.qoreRuntimeService,
+      qorRuntimeService: this.qorRuntimeService,
       brainstormService: this.brainstormService,
       audioVaultService: this.audioVaultService,
       marketplaceCatalog: this.marketplaceCatalog,

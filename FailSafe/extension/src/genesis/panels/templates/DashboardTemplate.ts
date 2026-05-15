@@ -81,7 +81,7 @@ const DASHBOARD_TEMPLATE = `<!DOCTYPE html>
     <div class="header">
         <div>
             <div class="title">FailSafe</div>
-            <div class="subtitle">feat. QoreLogic | Governance Dashboard | UI-05 Dashboard</div>
+            <div class="subtitle">feat. QorLogic | Governance Dashboard | UI-05 Dashboard</div>
         </div>
         <span class="status-badge {{STATUS_BADGE_CLASS}}">{{STATUS_LABEL}}</span>
     </div>
@@ -125,7 +125,7 @@ function renderSentinelCard(model: DashboardViewModel): string {
 function renderTrustCard(model: DashboardViewModel): string {
   const trust = model.trustSummary;
   const trustPercent = (trust.avgTrust * 100).toFixed(0);
-  return `<div class="card"><div class="card-title">QoreLogic Trust</div><div class="metric"><span class="metric-label">Agents</span><span class="metric-value">${trust.totalAgents}</span></div><div class="metric"><span class="metric-label" ${tooltipAttrs(HELP_TEXT.avgTrust)}>Avg trust</span><span class="metric-value">${trustPercent}%</span></div><div class="trust-bar"><div class="trust-fill" style="width: ${trustPercent}%"></div></div><div class="metric"><span class="metric-label" ${tooltipAttrs(HELP_TEXT.quarantined)}>Quarantined</span><span class="metric-value">${trust.quarantined}</span></div><div class="metric"><span class="metric-label" ${tooltipAttrs(HELP_TEXT.trustStages)}>Stages (CBT/KBT/IBT)</span><span class="metric-value">${trust.stageCounts.CBT}/${trust.stageCounts.KBT}/${trust.stageCounts.IBT}</span></div></div>`;
+  return `<div class="card"><div class="card-title">Qor-Logic Trust</div><div class="metric"><span class="metric-label">Agents</span><span class="metric-value">${trust.totalAgents}</span></div><div class="metric"><span class="metric-label" ${tooltipAttrs(HELP_TEXT.avgTrust)}>Avg trust</span><span class="metric-value">${trustPercent}%</span></div><div class="trust-bar"><div class="trust-fill" style="width: ${trustPercent}%"></div></div><div class="metric"><span class="metric-label" ${tooltipAttrs(HELP_TEXT.quarantined)}>Quarantined</span><span class="metric-value">${trust.quarantined}</span></div><div class="metric"><span class="metric-label" ${tooltipAttrs(HELP_TEXT.trustStages)}>Stages (CBT/KBT/IBT)</span><span class="metric-value">${trust.stageCounts.CBT}/${trust.stageCounts.KBT}/${trust.stageCounts.IBT}</span></div></div>`;
 }
 
 function renderL3Card(model: DashboardViewModel): string {

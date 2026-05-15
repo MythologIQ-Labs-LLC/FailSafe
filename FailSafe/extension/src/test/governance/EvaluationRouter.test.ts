@@ -92,13 +92,13 @@ suite('EvaluationRouter (FX294)', () => {
     assert.equal(decision.tier, 3); // R3 from auth in path
     assert.equal(decision.triage.risk, 'R3');
     assert.equal(decision.triage.confidence, 'high');
-    assert.equal(decision.invokeQoreLogic, true); // tier >=2
+    assert.equal(decision.invokeQorLogic, true); // tier >=2
     assert.equal(decision.writeLedger, true); // tier3 enabled by default
     assert.equal(decision.enforceSentinel, true);
     assert.deepEqual(decision.requiredActions, []);
   });
 
-  test('FX294 route — tier <2 sets invokeQoreLogic=false', async () => {
+  test('FX294 route — tier <2 sets invokeQorLogic=false', async () => {
     const r = new EvaluationRouter();
     const decision = await r.route(evt({
       category: 'sentinel',
@@ -106,7 +106,7 @@ suite('EvaluationRouter (FX294)', () => {
     }));
     // R1 + low novelty (sentinel + high conf fast-path) + high conf → tier 1
     assert.equal(decision.tier, 1);
-    assert.equal(decision.invokeQoreLogic, false);
+    assert.equal(decision.invokeQorLogic, false);
     assert.equal(decision.writeLedger, false); // default tier1_enabled=false
   });
 

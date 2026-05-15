@@ -1,6 +1,6 @@
 {
   "name": "mythologiq-failsafe",
-  "displayName": "FailSafe (feat. QorLogic)",
+  "displayName": "FailSafe (feat. Qor-Logic)",
   "description": "Open-source VS Code/Cursor governance and skills surface for AI coding agents. Pairs with FailSafe Pro for desktop enforcement.",
   "icon": "media/icon.png",
   "version": "5.1.0",
@@ -53,7 +53,6 @@
     "onCommand:failsafe.resumeMonitoring",
     "onCommand:failsafe.openProjectOverview",
     "onCommand:failsafe.openRiskRegister",
-    "onCommand:failsafe.addRisk",
     "onCommand:failsafe.setGovernanceMode",
     "onCommand:failsafe.showEconomics",
     "onCommand:failsafe.revertToCheckpoint",
@@ -114,7 +113,7 @@
       },
       {
         "command": "failsafe.installQorLogicSkillsDefaults",
-        "title": "FailSafe: Install QorLogic Skills (defaults)"
+        "title": "FailSafe: Install Qor-Logic Skills (defaults)"
       },
       {
         "command": "failsafe.organize",
@@ -155,10 +154,6 @@
       {
         "command": "failsafe.openRiskRegister",
         "title": "FailSafe: Open Risk Register"
-      },
-      {
-        "command": "failsafe.addRisk",
-        "title": "FailSafe: Add Risk"
       },
       {
         "command": "failsafe.setGovernanceMode",
@@ -358,21 +353,21 @@
         "failsafe.qorelogic.externalRuntime.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable Qore runtime integration in Command Center monitor."
+          "description": "Enable Qor runtime integration in Command Center monitor."
         },
         "failsafe.qorelogic.externalRuntime.baseUrl": {
           "type": "string",
           "default": "http://127.0.0.1:7777",
-          "description": "Base URL for FailSafe-Qore runtime API."
+          "description": "Base URL for FailSafe-Qor runtime API."
         },
         "failsafe.qorelogic.externalRuntime.apiKey": {
           "type": "string",
           "default": "",
-          "description": "Optional API key for Qore runtime. Leave empty to use environment variable fallback."
+          "description": "Optional API key for Qor runtime. Leave empty to use environment variable fallback."
         },
         "failsafe.qorelogic.externalRuntime.apiKeyEnvVar": {
           "type": "string",
-          "default": "QORE_API_KEY",
+          "default": "QOR_API_KEY",
           "description": "Environment variable name used when runtime API key is not set in extension settings."
         },
         "failsafe.qorelogic.externalRuntime.timeoutMs": {
@@ -380,7 +375,7 @@
           "default": 4000,
           "minimum": 500,
           "maximum": 30000,
-          "description": "Timeout in milliseconds for Qore runtime API calls."
+          "description": "Timeout in milliseconds for Qor runtime API calls."
         },
         "failsafe.bootstrap.autoInstallGit": {
           "type": "boolean",

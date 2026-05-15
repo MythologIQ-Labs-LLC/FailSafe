@@ -1,13 +1,13 @@
 import * as vscode from "vscode";
 import { GenesisManager } from "../genesis/GenesisManager";
-import { QoreLogicManager } from "../qorelogic/QoreLogicManager";
+import { QorLogicManager } from "../qorelogic/QorLogicManager";
 import { SentinelDaemon } from "../sentinel/SentinelDaemon";
 import { FeedbackManager } from "../genesis/FeedbackManager";
 import { IntentService } from "../governance/IntentService";
 import { IntentType } from "../governance/types/IntentTypes";
 import { DetectedSystem, FrameworkSync } from "../qorelogic/FrameworkSync";
 import { WorkspaceMigration } from "../qorelogic/WorkspaceMigration";
-import { RiskManager, RiskSeverity, RiskCategory } from "../qorelogic/risk";
+import { RiskManager } from "../qorelogic/risk";
 import { ProjectOverviewPanel } from "../genesis/panels/ProjectOverviewPanel";
 import { EventBus } from "../shared/EventBus";
 import { FAILSAFE_PRO_ABOUT_URL } from "../shared/constants";
@@ -130,7 +130,7 @@ async function openRoadmapCompactEditor(): Promise<void> {
 export function registerCommands(
   context: vscode.ExtensionContext,
   genesis: GenesisManager,
-  qorelogic: QoreLogicManager,
+  qorelogic: QorLogicManager,
   sentinel: SentinelDaemon,
   feedback: FeedbackManager,
   riskManager: RiskManager,
@@ -188,55 +188,29 @@ export function registerCommands(
     }),
   );
 
+  // Note: failsafe.addRisk was removed in v5.1.0. Risks are now sourced via
+  // the coding model — MCP tool failsafe.create_risk, the @failsafe /risk
+  // chat subcommand, or auto-derivation from SHIELD lifecycle events.
+  // See plan-qor-model-sourced-risks.md.
+
+  // Chat-side button confirm for /risk draft. Per plan Phase 4.
   context.subscriptions.push(
-    vscode.commands.registerCommand("failsafe.addRisk", async () => {
-      const title = await vscode.window.showInputBox({
-        prompt: "Risk Title",
-        placeHolder: "Brief description of the risk",
-      });
-      if (!title) return;
-
-      const description = await vscode.window.showInputBox({
-        prompt: "Risk Description",
-        placeHolder: "Detailed description of the risk",
-      });
-      if (!description) return;
-
-      const severityPick = await vscode.window.showQuickPick(
-        ["critical", "high", "medium", "low"],
-        { placeHolder: "Select Risk Severity" },
-      );
-      if (!severityPick) return;
-      const severity = severityPick as RiskSeverity;
-
-      const categoryPick = await vscode.window.showQuickPick(
-        [
-          "security",
-          "performance",
-          "technical-debt",
-          "dependency",
-          "governance",
-          "compliance",
-          "operational",
-        ],
-        { placeHolder: "Select Risk Category" },
-      );
-      if (!categoryPick) return;
-      const category = categoryPick as RiskCategory;
-
-      const risk = riskManager.createRisk({
-        title,
-        description,
-        severity,
-        category,
-        impact: "",
-        mitigation: "",
-      });
-
-      vscode.window.showInformationMessage(
-        `Risk "${risk.title}" created with ID: ${risk.id}`,
-      );
-    }),
+    vscode.commands.registerCommand(
+      "failsafe.confirmDraftedRisk",
+      async (payload: { draft: import("../qorelogic/risk/types").Risk; sourceAgent: string }) => {
+        try {
+          const { confirmRisk } = await import("../genesis/chat/handlers/RiskChatHandler");
+          const risk = confirmRisk(
+            payload.draft as any,
+            payload.sourceAgent || "claude-code-chat",
+            riskManager,
+          );
+          vscode.window.showInformationMessage(`Risk "${risk.title}" created (source: mcp).`);
+        } catch (err) {
+          vscode.window.showErrorMessage(`Failed to create risk: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      },
+    ),
   );
 
   // Legacy UI command shims: keep command ids valid, route to compact hub.
@@ -635,15 +609,24 @@ export function registerGovernanceCommands(
       }));
 
       const choice = await vscode.window.showQuickPick(items, {
-        placeHolder: "Select a system to propagate QoreLogic Governance",
+        placeHolder: "Select a system to propagate Qor-Logic Governance",
       });
 
       if (choice) {
         if (choice.system.isInstalled) {
-          await frameworkSync.propagate(choice.system.id);
-          vscode.window.showInformationMessage(
-            `QoreLogic propagated to ${choice.label}`,
-          );
+          const result = await frameworkSync.propagate(choice.system.id);
+          const parts: string[] = [];
+          if (result.dirCopied) parts.push("framework dir copied");
+          if (result.injectedPath) parts.push(`updated ${result.injectedPath}`);
+          if (result.skipped) {
+            vscode.window.showWarningMessage(
+              `Qor-Logic: no changes made for ${choice.label} (${result.skipReason ?? "no propagation steps available"}).`,
+            );
+          } else {
+            vscode.window.showInformationMessage(
+              `Qor-Logic propagated to ${choice.label}: ${parts.join(", ")}.`,
+            );
+          }
         } else {
           vscode.window.showWarningMessage(
             `${choice.label} is not detected in this workspace.`,

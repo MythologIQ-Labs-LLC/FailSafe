@@ -12,7 +12,7 @@ import { FailSafeSidebarProvider } from "../roadmap/FailSafeSidebarProvider";
 import { RiskManager } from "../qorelogic/risk";
 import type { EventBus } from "../shared/EventBus";
 import type { PlanManager } from "../qorelogic/planning/PlanManager";
-import type { QoreLogicManager } from "../qorelogic/QoreLogicManager";
+import type { QorLogicManager } from "../qorelogic/QorLogicManager";
 import type { SentinelDaemon } from "../sentinel/SentinelDaemon";
 import type { SystemRegistry } from "../qorelogic/SystemRegistry";
 import type { ConfigManager } from "../shared/ConfigManager";
@@ -25,7 +25,7 @@ import { runWorkspaceBootstrap, type BootstrapReport } from "./bootstrapWorkspac
 
 export interface ServerDeps {
   planManager: PlanManager;
-  qorelogicManager: QoreLogicManager;
+  qorelogicManager: QorLogicManager;
   sentinelDaemon: SentinelDaemon;
   eventBus: EventBus;
   workspaceRoot: string;
@@ -69,9 +69,13 @@ export async function bootstrapServers(
   // the route deps capture the wired callback rather than null. Earlier wiring
   // had this after start(), which left `/api/actions/scaffold-skills` returning
   // 501 "Scaffold not available" forever. (Plan A Phase 3 fix follow-up.)
-  const outputChannel = vscode.window.createOutputChannel("FailSafe (QorLogic)");
+  const outputChannel = vscode.window.createOutputChannel("FailSafe (Qor-Logic)");
   context.subscriptions.push(outputChannel);
   consoleServer.setOutputChannel(outputChannel);
+
+  // Risk Auto-Derivation pipeline (plan-qor-model-sourced-risks Phase 3).
+  const { wireRiskAutoDerivation } = await import("../qorelogic/risk/wireAutoDerivation");
+  wireRiskAutoDerivation(consoleServer, deps.eventBus, riskManager, deps.workspaceRoot, outputChannel);
   const interpreterResolver = new PythonInterpreterResolver(
     vscode.workspace.getConfiguration(),
     vscode,
@@ -126,6 +130,9 @@ export async function bootstrapServers(
     enumerateSkillsForHost: (host, scope) => enumerateSkillsForHost(skillIngestor, host, scope, skillEnumDeps),
     previewInstall: (host, scope, filter) => previewInstall(skillIngestor, host, scope, filter),
   });
+  // SPA fallback registered LAST so qorlogic POST routes above are matched
+  // before the catch-all intercepts them.
+  consoleServer.finalizeRoutes();
 
   // Invalidate the resolver's cache when the user changes the Python override.
   context.subscriptions.push(

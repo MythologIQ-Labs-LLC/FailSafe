@@ -11,7 +11,7 @@ export class WebPanelClient {
       sentinelStatus: null,
       l3Queue: [],
       recentVerdicts: [],
-      qoreRuntime: null,
+      qorRuntime: null,
     };
     this.reconnectTimer = null;
     this.reconnectAttempts = 0;
@@ -164,7 +164,7 @@ export class WebPanelClient {
       blockers,
       this.hub.l3Queue || [],
       this.hub.sentinelStatus || {},
-      this.hub.qoreRuntime || {},
+      this.hub.qorRuntime || {},
     );
 
     renderPhase(phaseInfo, this.elements);
@@ -178,20 +178,30 @@ export class WebPanelClient {
 
     this.sentinelMonitor.renderSentinel(this.hub.sentinelStatus || {}, this.hub.recentVerdicts || []);
     this.sentinelMonitor.renderWorkspaceHealth(this.hub, plan, blockers, risks, this.hub.recentVerdicts || []);
-    this.renderQoreRuntime(this.hub.qoreRuntime || {});
+    this.renderQorRuntime(this.hub.qorRuntime || {});
     this.renderGovernanceAlerts(this.hub.governancePhase?.activeAlerts || []);
     this.renderRepoCompliance(this.hub.repoCompliance || {});
   }
 
-  getNextStep(blockers, queue, sentinelStatus, qoreRuntime) {
-    // Prefer governance next steps from ledger
+  getNextStep(blockers, queue, sentinelStatus, qorRuntime) {
+    // Prefer governance next steps from ledger, BUT only when META_LEDGER actually
+    // reflects an in-flight session. When gov.current is IDLE we must defer to the
+    // active plan phase (same source the phase track uses) so the two tiles agree.
     const gov = this.hub?.governancePhase;
+    const govActive = gov?.current && gov.current !== 'IDLE';
+    if (govActive && gov?.nextSteps?.length > 0) {
+      return gov.nextSteps[0];
+    }
+
+    const planDerived = this.deriveNextStepFromPlanPhase();
+    if (planDerived) return planDerived;
+
     if (gov?.nextSteps?.length > 0) {
       return gov.nextSteps[0];
     }
 
-    if (qoreRuntime.enabled && !qoreRuntime.connected) {
-      return `Qore runtime is unreachable at ${qoreRuntime.baseUrl || 'configured endpoint'}. Restore runtime connectivity first.`;
+    if (qorRuntime.enabled && !qorRuntime.connected) {
+      return `Qor runtime is unreachable at ${qorRuntime.baseUrl || 'configured endpoint'}. Restore runtime connectivity first.`;
     }
     if (blockers.length > 0) {
       return `Resolve ${blockers.length} active blocker(s) before continuing.`;
@@ -205,6 +215,29 @@ export class WebPanelClient {
     return 'Continue the active build phase.';
   }
 
+  /** Derive a next-step prompt from the active plan phase the track is showing.
+   *  Returns null if no active phase is available. Mirrors indexFromTitle in
+   *  monitor-render.js so the recommendation stays aligned with the highlighted
+   *  step in the phase track. */
+  deriveNextStepFromPlanPhase() {
+    const hub = this.hub;
+    if (!hub) return null;
+    const runPhase = hub.runState?.currentPhase;
+    const plan = hub.activePlan || { phases: [] };
+    const phases = Array.isArray(plan.phases) ? plan.phases : [];
+    const active = phases.find((p) => p.id === plan.currentPhaseId)
+      || phases.find((p) => p.status === 'active')
+      || null;
+    const title = String(runPhase || active?.title || '').toLowerCase();
+    if (!title) return null;
+    if (title.includes('substantiat') || title.includes('release')) return 'Run /qor-substantiate to seal the session.';
+    if (title.startsWith('debug') || title.includes('fix')) return 'Run /qor-debug to diagnose, then re-audit.';
+    if (title.startsWith('build') || title.includes('implement')) return 'Run /qor-implement to begin implementation.';
+    if (title.includes('audit') || title.includes('review')) return 'Run /qor-audit to submit the plan for Gate Tribunal review.';
+    if (title.includes('plan')) return 'Run /qor-plan to author the implementation plan.';
+    return null;
+  }
+
   renderFeatureSummary(summary) {
     if (this.elements.recentLine) {
       this.elements.recentLine.textContent = summary.line;
@@ -213,8 +246,8 @@ export class WebPanelClient {
 
   // Sentinel and workspace health rendering delegated to SentinelMonitor module
 
-  renderQoreRuntime() {
-    // Qore runtime data now rendered in Command Center overview; Monitor no longer owns it.
+  renderQorRuntime() {
+    // Qor runtime data now rendered in Command Center overview; Monitor no longer owns it.
   }
 
   renderRepoCompliance(compliance) {

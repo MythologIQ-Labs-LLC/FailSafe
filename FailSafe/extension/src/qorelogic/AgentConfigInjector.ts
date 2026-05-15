@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { SystemRegistry } from './SystemRegistry';
-import { QoreLogicSystem } from './types/QoreLogicSystem';
+import { QorLogicSystem } from './types/QorLogicSystem';
 import { Logger } from '../shared/Logger';
 
 const GOVERNANCE_MARKER_START = '<!-- FailSafe Governance Start -->';
@@ -12,7 +12,7 @@ interface InjectionConfig {
   format: 'markdown' | 'mdc';
 }
 
-const AGENT_CONFIG_MAP: Record<string, InjectionConfig> = {
+export const AGENT_CONFIG_MAP: Record<string, InjectionConfig> = {
   claude: { configPath: '.claude/CLAUDE.md', format: 'markdown' },
   copilot: { configPath: '.github/copilot-instructions.md', format: 'markdown' },
   cursor: { configPath: '.cursor/rules/failsafe.mdc', format: 'mdc' },
@@ -36,7 +36,7 @@ export class AgentConfigInjector {
     }
   }
 
-  async inject(system: QoreLogicSystem): Promise<void> {
+  async inject(system: QorLogicSystem): Promise<void> {
     const manifest = system.getManifest();
     const config = AGENT_CONFIG_MAP[manifest.id];
     if (!config) return;
@@ -46,7 +46,7 @@ export class AgentConfigInjector {
     await this.writeGovernanceBlock(fullPath, governanceBlock);
   }
 
-  async remove(system: QoreLogicSystem): Promise<void> {
+  async remove(system: QorLogicSystem): Promise<void> {
     const manifest = system.getManifest();
     const config = AGENT_CONFIG_MAP[manifest.id];
     if (!config) return;

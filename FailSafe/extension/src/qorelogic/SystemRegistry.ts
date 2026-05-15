@@ -6,9 +6,9 @@ import { Logger } from "../shared/Logger";
 import {
   DetectionContext,
   DetectionResult,
-  QoreLogicSystem,
+  QorLogicSystem,
   SystemManifest,
-} from "./types/QoreLogicSystem";
+} from "./types/QorLogicSystem";
 import {
   AgentDetectionRules,
   AgentSystemManifest,
@@ -38,7 +38,7 @@ export interface AgentTeamsStatus {
 }
 
 export interface AgentLandscape {
-  registeredSystems: QoreLogicSystem[];
+  registeredSystems: QorLogicSystem[];
   activeTerminals: AgentTerminalInfo[];
   agentTeams: AgentTeamsStatus;
 }
@@ -46,7 +46,7 @@ export interface AgentLandscape {
 export class SystemRegistry {
   private logger: Logger;
   private workspaceRoot: string;
-  private cached: QoreLogicSystem[] | null = null;
+  private cached: QorLogicSystem[] | null = null;
   private agentManifests: AgentSystemManifest[] | null = null;
   private pluginRegistry: PluginRegistry;
   private env: DetectionEnvironment;
@@ -62,7 +62,7 @@ export class SystemRegistry {
     this.env = env ?? new VsCodeDetectionEnvironment();
   }
 
-  async getSystems(): Promise<QoreLogicSystem[]> {
+  async getSystems(): Promise<QorLogicSystem[]> {
     if (this.cached) {
       return this.cached;
     }
@@ -75,12 +75,12 @@ export class SystemRegistry {
     return this.cached;
   }
 
-  async findById(id: string): Promise<QoreLogicSystem | undefined> {
+  async findById(id: string): Promise<QorLogicSystem | undefined> {
     const systems = await this.getSystems();
     return systems.find((system) => system.getManifest().id === id);
   }
 
-  async detect(system: QoreLogicSystem): Promise<DetectionResult> {
+  async detect(system: QorLogicSystem): Promise<DetectionResult> {
     if (system.detect) {
       return system.detect(this.buildDetectionContext());
     }
@@ -92,7 +92,7 @@ export class SystemRegistry {
    * Confidence = min(1.0, sum of matched signal weights). A single strong
    * signal (exact extension id, host app, or agent dot-directory) is enough.
    */
-  detectWithConfidence(system: QoreLogicSystem): DetectionOutcome {
+  detectWithConfidence(system: QorLogicSystem): DetectionOutcome {
     const rules = this.agentRulesFor(system.getManifest().id);
     const matched = this.collectSignals(rules);
     const confidence = Math.min(
@@ -109,7 +109,7 @@ export class SystemRegistry {
     };
   }
 
-  hasGovernance(system: QoreLogicSystem): boolean {
+  hasGovernance(system: QorLogicSystem): boolean {
     const manifest = system.getManifest();
     const pathsToCheck = manifest.governancePaths || [];
     return pathsToCheck.some((p) =>
@@ -117,7 +117,7 @@ export class SystemRegistry {
     );
   }
 
-  renderTemplate(template: string, system: QoreLogicSystem): string {
+  renderTemplate(template: string, system: QorLogicSystem): string {
     const manifest = system.getManifest();
     return template
       .replaceAll("{{SYSTEM_NAME}}", manifest.name)
@@ -230,7 +230,7 @@ export class SystemRegistry {
   }
 }
 
-class DefaultSystemPlugin implements QoreLogicSystem {
+class DefaultSystemPlugin implements QorLogicSystem {
   private manifest: SystemManifest;
 
   constructor(manifest: SystemManifest) {

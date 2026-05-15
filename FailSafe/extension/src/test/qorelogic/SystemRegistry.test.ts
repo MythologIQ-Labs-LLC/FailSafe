@@ -215,7 +215,7 @@ suite("SystemRegistry Test Suite", () => {
 
   test("core system type file is not extended with detection-only fields", () => {
     const coreTypePath = findRepoFile(
-      "FailSafe/extension/src/qorelogic/types/QoreLogicSystem.ts",
+      "FailSafe/extension/src/qorelogic/types/QorLogicSystem.ts",
     );
     const source = fs.readFileSync(coreTypePath, "utf-8");
     assert.ok(!source.includes("extensionIds"), "core type must not declare extensionIds");

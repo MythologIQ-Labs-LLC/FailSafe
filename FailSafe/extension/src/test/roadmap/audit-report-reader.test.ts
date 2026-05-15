@@ -21,7 +21,7 @@ const SAMPLE = `# AUDIT REPORT
 **Target**: v5 De-Theater Pass
 **Plan**: \`.failsafe/governance/plans/plan-v5-de-theater-pass.md\`
 **Risk Grade**: L2
-**Auditor**: The QoreLogic Judge
+**Auditor**: The QorLogic Judge
 
 ---
 

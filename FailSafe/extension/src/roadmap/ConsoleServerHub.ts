@@ -30,7 +30,7 @@ type UnattributedFileChange = {
   decision?: string;
 };
 
-type QoreRuntimeSnapshot = {
+type QorRuntimeSnapshot = {
   enabled: boolean;
   connected: boolean;
   baseUrl: string;
@@ -176,7 +176,7 @@ export function buildNodeStatus(
   sentinel: { running?: boolean; filesWatched?: number; queueDepth?: number; [k: string]: unknown },
   l3Queue: unknown[],
   trust: Record<string, unknown>,
-  qore: QoreRuntimeSnapshot,
+  qor: QorRuntimeSnapshot,
 ): Array<Record<string, unknown>> {
   return [
     {
@@ -196,13 +196,13 @@ export function buildNodeStatus(
       signal: `${Math.round((trust.avgTrust as number) * 100)}% avg trust`,
     },
     {
-      id: "qore-runtime", label: "Qore Runtime",
-      state: !qore.enabled ? "paused" : qore.connected ? "nominal" : "degraded",
-      signal: !qore.enabled
+      id: "qor-runtime", label: "Qor Runtime",
+      state: !qor.enabled ? "paused" : qor.connected ? "nominal" : "degraded",
+      signal: !qor.enabled
         ? "integration disabled"
-        : qore.connected
-          ? `connected (${qore.policyVersion || "unknown policy"})`
-          : `unreachable (${qore.baseUrl})`,
+        : qor.connected
+          ? `connected (${qor.policyVersion || "unknown policy"})`
+          : `unreachable (${qor.baseUrl})`,
     },
   ];
 }

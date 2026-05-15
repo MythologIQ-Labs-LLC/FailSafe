@@ -1,18 +1,18 @@
 import { strict as assert } from 'assert';
-import { registerQoreRoute } from '../../roadmap/routes/QoreRoute';
+import { registerQorRoute } from '../../roadmap/routes/QorRoute';
 import {
-  QoreRuntimeService,
-  type QoreFetchFn,
-  type QoreRuntimeOptions,
-} from '../../roadmap/services/QoreRuntimeService';
+  QorRuntimeService,
+  type QorFetchFn,
+  type QorRuntimeOptions,
+} from '../../roadmap/services/QorRuntimeService';
 import type { ApiRouteDeps } from '../../roadmap/routes/types';
 import { RouteHarness, makeApp } from './helpers/routeTestHarness';
 
-function makeRuntimeOptions(overrides: Partial<QoreRuntimeOptions> = {}): QoreRuntimeOptions {
-  return { enabled: true, baseUrl: 'http://qore.test', timeoutMs: 1000, ...overrides };
+function makeRuntimeOptions(overrides: Partial<QorRuntimeOptions> = {}): QorRuntimeOptions {
+  return { enabled: true, baseUrl: 'http://qor.test', timeoutMs: 1000, ...overrides };
 }
 
-function makeFetchStub(handler: (url: string) => unknown): QoreFetchFn {
+function makeFetchStub(handler: (url: string) => unknown): QorFetchFn {
   return async (url) => {
     const body = handler(url);
     return {
@@ -31,7 +31,7 @@ function makeDeps(overrides: Partial<ApiRouteDeps>): ApiRouteDeps {
   const base = {
     rejectIfRemote: () => false,
     broadcast: () => undefined,
-    qoreRuntimeService: undefined as unknown as QoreRuntimeService,
+    qorRuntimeService: undefined as unknown as QorRuntimeService,
     buildHubSnapshot: async () => ({}),
     workspaceRoot: '/tmp/ws',
     workspaceDirname: __dirname,
@@ -66,26 +66,26 @@ function makeDeps(overrides: Partial<ApiRouteDeps>): ApiRouteDeps {
   return Object.assign(base, overrides);
 }
 
-suite('registerQoreRoute', () => {
+suite('registerQorRoute', () => {
   let harness: RouteHarness;
 
   teardown(async () => {
     if (harness) await harness.stop();
   });
 
-  test('GET /api/qore/runtime returns 200 with snapshot from QoreRuntimeService', async () => {
+  test('GET /api/qor/runtime returns 200 with snapshot from QorRuntimeService', async () => {
     const fetchStub = makeFetchStub((url) => {
       if (url.endsWith('/health')) return {};
       if (url.endsWith('/policy/version')) return { policyVersion: 'v3' };
       return {};
     });
-    const service = new QoreRuntimeService(makeRuntimeOptions(), fetchStub);
+    const service = new QorRuntimeService(makeRuntimeOptions(), fetchStub);
     const app = makeApp();
-    registerQoreRoute(app, makeDeps({ qoreRuntimeService: service }));
+    registerQorRoute(app, makeDeps({ qorRuntimeService: service }));
     harness = new RouteHarness(app);
     await harness.start();
 
-    const res = await harness.request({ path: '/api/qore/runtime' });
+    const res = await harness.request({ path: '/api/qor/runtime' });
 
     assert.equal(res.status, 200);
     assert.equal(res.body.enabled, true);
@@ -93,25 +93,25 @@ suite('registerQoreRoute', () => {
     assert.equal(res.body.policyVersion, 'v3');
   });
 
-  test('GET /api/qore/health with enabled=false returns 503 + disabled message', async () => {
-    const service = new QoreRuntimeService(
+  test('GET /api/qor/health with enabled=false returns 503 + disabled message', async () => {
+    const service = new QorRuntimeService(
       makeRuntimeOptions({ enabled: false }),
       makeFetchStub(() => ({})),
     );
     const app = makeApp();
-    registerQoreRoute(app, makeDeps({ qoreRuntimeService: service }));
+    registerQorRoute(app, makeDeps({ qorRuntimeService: service }));
     harness = new RouteHarness(app);
     await harness.start();
 
-    const res = await harness.request({ path: '/api/qore/health' });
+    const res = await harness.request({ path: '/api/qor/health' });
 
     assert.equal(res.status, 503);
-    assert.deepEqual(res.body, { error: 'Qore runtime integration is disabled' });
+    assert.deepEqual(res.body, { error: 'Qor runtime integration is disabled' });
   });
 
-  test('POST /api/qore/evaluate forwards body and returns upstream JSON', async () => {
+  test('POST /api/qor/evaluate forwards body and returns upstream JSON', async () => {
     let captured: unknown = null;
-    const fetchStub: QoreFetchFn = async (url, init) => {
+    const fetchStub: QorFetchFn = async (url, init) => {
       captured = init.body ? JSON.parse(init.body) : null;
       return {
         ok: true,
@@ -120,15 +120,15 @@ suite('registerQoreRoute', () => {
         async json() { return { verdict: 'PASS' }; },
       };
     };
-    const service = new QoreRuntimeService(makeRuntimeOptions(), fetchStub);
+    const service = new QorRuntimeService(makeRuntimeOptions(), fetchStub);
     const app = makeApp();
-    registerQoreRoute(app, makeDeps({ qoreRuntimeService: service }));
+    registerQorRoute(app, makeDeps({ qorRuntimeService: service }));
     harness = new RouteHarness(app);
     await harness.start();
 
     const res = await harness.request({
       method: 'POST',
-      path: '/api/qore/evaluate',
+      path: '/api/qor/evaluate',
       body: { intent: 'audit' },
     });
 
@@ -145,9 +145,9 @@ suite('registerQoreRoute', () => {
       getPlan: (id: string) => (id === 'p1' ? plan : null),
       getAllPlans: () => [plan],
     };
-    const service = new QoreRuntimeService(makeRuntimeOptions(), makeFetchStub(() => ({})));
+    const service = new QorRuntimeService(makeRuntimeOptions(), makeFetchStub(() => ({})));
     const app = makeApp();
-    registerQoreRoute(app, makeDeps({ qoreRuntimeService: service, planManager }));
+    registerQorRoute(app, makeDeps({ qorRuntimeService: service, planManager }));
     harness = new RouteHarness(app);
     await harness.start();
 
@@ -168,9 +168,9 @@ suite('registerQoreRoute', () => {
       getPlan: () => null,
       getAllPlans: () => plans,
     };
-    const service = new QoreRuntimeService(makeRuntimeOptions(), makeFetchStub(() => ({})));
+    const service = new QorRuntimeService(makeRuntimeOptions(), makeFetchStub(() => ({})));
     const app = makeApp();
-    registerQoreRoute(app, makeDeps({ qoreRuntimeService: service, planManager }));
+    registerQorRoute(app, makeDeps({ qorRuntimeService: service, planManager }));
     harness = new RouteHarness(app);
     await harness.start();
     const res = await harness.request({ path: '/api/plans' });
@@ -186,9 +186,9 @@ suite('registerQoreRoute', () => {
       getPlan: () => null,
       getAllPlans: () => [],
     };
-    const service = new QoreRuntimeService(makeRuntimeOptions(), makeFetchStub(() => ({})));
+    const service = new QorRuntimeService(makeRuntimeOptions(), makeFetchStub(() => ({})));
     const app = makeApp();
-    registerQoreRoute(app, makeDeps({ qoreRuntimeService: service, planManager }));
+    registerQorRoute(app, makeDeps({ qorRuntimeService: service, planManager }));
     harness = new RouteHarness(app);
     await harness.start();
     const res = await harness.request({ path: '/api/plans' });
@@ -196,21 +196,21 @@ suite('registerQoreRoute', () => {
     assert.deepEqual(res.body.plans, []);
   });
 
-  test('GET /api/qore/runtime rejects via deps.rejectIfRemote with 403', async () => {
-    const service = new QoreRuntimeService(makeRuntimeOptions(), makeFetchStub(() => ({})));
+  test('GET /api/qor/runtime rejects via deps.rejectIfRemote with 403', async () => {
+    const service = new QorRuntimeService(makeRuntimeOptions(), makeFetchStub(() => ({})));
     const app = makeApp();
     const deps = makeDeps({
-      qoreRuntimeService: service,
+      qorRuntimeService: service,
       rejectIfRemote: (_req, res) => {
         res.status(403).json({ error: 'Forbidden: local access only' });
         return true;
       },
     });
-    registerQoreRoute(app, deps);
+    registerQorRoute(app, deps);
     harness = new RouteHarness(app);
     await harness.start();
 
-    const res = await harness.request({ path: '/api/qore/runtime' });
+    const res = await harness.request({ path: '/api/qor/runtime' });
 
     assert.equal(res.status, 403);
     assert.deepEqual(res.body, { error: 'Forbidden: local access only' });

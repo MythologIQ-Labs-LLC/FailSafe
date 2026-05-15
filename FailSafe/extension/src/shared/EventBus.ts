@@ -1,7 +1,7 @@
 /**
  * EventBus - Inter-component communication for FailSafe
  *
- * Enables loose coupling between Genesis, QoreLogic, and Sentinel
+ * Enables loose coupling between Genesis, QorLogic, and Sentinel
  * components through a publish-subscribe pattern.
  */
 

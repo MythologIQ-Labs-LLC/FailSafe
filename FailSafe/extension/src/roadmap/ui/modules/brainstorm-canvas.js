@@ -61,7 +61,6 @@ export class BrainstormCanvas {
 
     this.graph = factory()(this.container)
       .backgroundColor('rgba(0,0,0,0)')
-      .showNavInfo(false)
       .nodeLabel(node => escapeHtml(node.label))
       .nodeColor(node => {
         const base = confidenceColor(node.confidence) || CATEGORY_COLORS[node.type] || '#4f46e5';
@@ -89,6 +88,9 @@ export class BrainstormCanvas {
       });
 
     if (this.viewMode === '3D') {
+      if (typeof this.graph.showNavInfo === 'function') {
+        this.graph.showNavInfo(false);
+      }
       this.graph.nodeResolution(32);
       if (!this._reduceMotion) {
         const distance = 400;

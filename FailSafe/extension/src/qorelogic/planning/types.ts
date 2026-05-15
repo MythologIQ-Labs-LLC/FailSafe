@@ -1,5 +1,5 @@
 /**
- * QoreLogic Planning Types
+ * QorLogic Planning Types
  *
  * Type definitions for roadmap visualization and plan tracking.
  * Supports weighted progress metrics, dependency chains, and risk management.

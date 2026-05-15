@@ -19,9 +19,19 @@ _Local-first safety for AI coding assistants._
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Commands-8B5CF6)](https://github.com/MythologIQ/FailSafe/releases)
 [![Documentation](https://img.shields.io/badge/docs-FAILSAFE_SPECIFICATION-blue)](docs/FAILSAFE_SPECIFICATION.md)
 
-**Current Release**: v5.1.0
+**Current Release**: v5.1.0 • **Unreleased**: model-sourced Risk Register + Install Skills UX expansion + release-pipeline approval gate
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
+
+## What's coming in the next release
+
+- **Model-sourced Risk Register**: coding agents author risks via the MCP tool `failsafe.create_risk`, the `@failsafe /risk` chat subcommand, or FailSafe auto-derives them from SHIELD lifecycle (GATE VETOs, DEBUG entries, Shadow-Genome failure events). The manual "Add Risk" wizard is removed.
+- **Install Skills UX expansion**: live-progress modal, per-host skill picker, dry-run preview, operator-editable host registry, and a workspace `LiveProgressInvariant` doctrine.
+- **SRE panel**: now attributes the [Microsoft Agent Governance Toolkit](https://github.com/microsoft/agent-governance-toolkit) (data source) and [Qortara](https://www.qortara.com).
+- **Release pipeline safety gate**: both VS Code Marketplace and OpenVSX publish jobs now sit behind a `production` GitHub environment requiring reviewer approval.
+- **OpenVSX alignment**: VS Code Marketplace and OpenVSX are both at v5.0.0.
+
+See [CHANGELOG.md](CHANGELOG.md) for the full unreleased block.
 
 ## FailSafe and FailSafe Pro
 

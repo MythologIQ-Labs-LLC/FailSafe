@@ -1,7 +1,7 @@
-// Functional tests for QoreLogicManager (FX333) — façade delegation contract.
+// Functional tests for QorLogicManager (FX333) — façade delegation contract.
 
 import { strict as assert } from 'assert';
-import { QoreLogicManager } from '../../qorelogic/QoreLogicManager';
+import { QorLogicManager } from '../../qorelogic/QorLogicManager';
 import { EventBus } from '../../shared/EventBus';
 
 interface CapturedCalls {
@@ -15,7 +15,7 @@ function makeStubs(opts: {
   decision?: string;
   trustScore?: number;
   shadowArchiveThrows?: boolean;
-} = {}): { mgr: QoreLogicManager; calls: CapturedCalls; stubs: any } {
+} = {}): { mgr: QorLogicManager; calls: CapturedCalls; stubs: any } {
   const calls: CapturedCalls = {
     ledger: [], trustRegister: [], shadowArchive: [], shadowDispose: 0,
   };
@@ -50,11 +50,11 @@ function makeStubs(opts: {
     close: () => { calls.shadowDispose++; },
   };
   const bus = new EventBus();
-  const mgr = new QoreLogicManager(stateStore, config, ledger, trust, policy, shadow, bus);
+  const mgr = new QorLogicManager(stateStore, config, ledger, trust, policy, shadow, bus);
   return { mgr, calls, stubs: { stateStore, config, ledger, trust, policy, shadow, bus } };
 }
 
-suite('QoreLogicManager (FX333)', () => {
+suite('QorLogicManager (FX333)', () => {
   test('FX333 initialize — loads L3 queue without throwing', async () => {
     const { mgr } = makeStubs();
     await assert.doesNotReject(mgr.initialize());

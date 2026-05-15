@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { SystemRegistry } from '../qorelogic/SystemRegistry';
 import { AgentConfigInjector } from '../qorelogic/AgentConfigInjector';
-import { QoreLogicSystem } from '../qorelogic/types/QoreLogicSystem';
+import { QorLogicSystem } from '../qorelogic/types/QorLogicSystem';
 
 export class GovernanceCeremony {
   constructor(
@@ -72,9 +72,9 @@ export class GovernanceCeremony {
     );
   }
 
-  private async getUngoverned(): Promise<QoreLogicSystem[]> {
+  private async getUngoverned(): Promise<QorLogicSystem[]> {
     const systems = await this.registry.getSystems();
-    const results: QoreLogicSystem[] = [];
+    const results: QorLogicSystem[] = [];
     for (const system of systems) {
       const detection = await this.registry.detect(system);
       if (detection.detected && !this.registry.hasGovernance(system)) {

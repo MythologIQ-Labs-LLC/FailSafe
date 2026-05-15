@@ -1,25 +1,28 @@
 import * as vscode from "vscode";
 import { FailSafeMCPServer } from "../mcp/FailSafeServer";
 import { SentinelSubstrate } from "./bootstrapSentinel";
-import { QoreLogicSubstrate } from "./bootstrapQoreLogic";
+import { QorLogicSubstrate } from "./bootstrapQorLogic";
 import { GovernanceSubstrate } from "./bootstrapGovernance";
+import { RiskManager } from "../qorelogic/risk/RiskManager";
 import { Logger } from "../shared/Logger";
 
 export async function bootstrapMCP(
   context: vscode.ExtensionContext,
   sentinel: SentinelSubstrate,
-  qore: QoreLogicSubstrate,
+  qor: QorLogicSubstrate,
   gov: GovernanceSubstrate,
   logger: Logger,
+  riskManager?: RiskManager,
 ): Promise<FailSafeMCPServer | undefined> {
   logger.info("Starting MCP Governance Server...");
   try {
     const mcpServer = new FailSafeMCPServer(
       context,
       sentinel.sentinelDaemon,
-      qore.ledgerManager,
+      qor.ledgerManager,
       gov.intentService,
       gov.sessionManager,
+      riskManager,
     );
     await mcpServer.start();
     return mcpServer;

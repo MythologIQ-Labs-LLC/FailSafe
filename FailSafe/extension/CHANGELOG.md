@@ -352,7 +352,7 @@ Incremental hotfix addressing Monitor and Command Center data parity issues disc
 
 - **Skill Discovery Tags** - Skills now carry normalized tags and source credit metadata. Console skill-scan extracts tags from frontmatter, filenames, and categories.
 - **Tag-Based Skill Filter** - Skills panel replaces category chips with a type-ahead tag filter with autocomplete suggestions and clear control.
-- **Governance Skill Cohesion** - All 19 QoreLogic skills now carry explicit next-step routing. Canonical skill routing table and proactive suggestion signals established.
+- **Governance Skill Cohesion** - All 19 QorLogic skills now carry explicit next-step routing. Canonical skill routing table and proactive suggestion signals established.
 - **/qor-document Skill** - New documentation authoring skill with RELEASE_METADATA mode for automated release notes and GENERAL mode for standalone technical writing. Integrated into `/qor-repo-release` Step 5.
 
 ### Changed
@@ -459,14 +459,14 @@ Incremental hotfix addressing Monitor and Command Center data parity issues disc
 - **AGENTS.md Injection** — Writes repo-root `AGENTS.md` with FailSafe governance rules consumed by Copilot and Codex.
 - **Intent Schema v2** — `schemaVersion` field, `agentIdentity` metadata, and `planId` reference on Intent creation with migration from v1.
 - **Verdict Replay Batch** — `replayBatch()` method for bulk verdict replay with timing-safe hash comparison.
-- **CheckpointManager** — Bridges QoreLogic ledger and Sentinel substrates for checkpoint metrics.
+- **CheckpointManager** — Bridges QorLogic ledger and Sentinel substrates for checkpoint metrics.
 
 ### Changed
 
 - `SystemRegistry` extended to 11 fields with 3 detection methods and 3 exported types.
 - `FrameworkSync` now accepts optional `SystemRegistry` for per-agent config delegation.
 - `RoadmapServer` gains `setSystemRegistry()` deferred setter (following `setConsoleDeps()` pattern).
-- `QoreLogicSubstrate` interface extended with `systemRegistry: SystemRegistry` field.
+- `QorLogicSubstrate` interface extended with `systemRegistry: SystemRegistry` field.
 - `VerdictReplayEngine` upgraded with timing-safe hash comparison and batch replay.
 - Event types expanded with `DISCOVERY_RECORDED` and `DISCOVERY_PROMOTED`.
 
@@ -706,7 +706,7 @@ Incremental hotfix addressing Monitor and Command Center data parity issues disc
 - **Cortex Stream**: NLP command interface for governance queries
 - **Enforcement Engine**: Three Prime Axioms for action validation
 - **Shadow Genome**: Failure pattern archival for continuous learning
-- **QoreLogic Integration**: Multi-agent framework synchronization
+- **QorLogic Integration**: Multi-agent framework synchronization
 
 ### Security
 

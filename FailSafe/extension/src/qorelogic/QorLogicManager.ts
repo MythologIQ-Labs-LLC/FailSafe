@@ -1,5 +1,5 @@
 /**
- * QoreLogicManager - Governance Content & Framework Coordinator
+ * QorLogicManager - Governance Content & Framework Coordinator
  *
  * Manages:
  * - SOA Ledger (audit trail)
@@ -26,7 +26,7 @@ import { ShadowGenomeManager } from './shadow/ShadowGenomeManager';
 import { CortexEvent, RoutingDecision } from '../governance/EvaluationRouter';
 import { L3ApprovalService } from './L3ApprovalService';
 
-export class QoreLogicManager {
+export class QorLogicManager {
     private stateStore: IStateStore;
     private ledgerManager: LedgerManager;
     private trustEngine: TrustEngine;
@@ -52,16 +52,16 @@ export class QoreLogicManager {
         this.policyEngine = policyEngine;
         this.shadowGenomeManager = shadowGenomeManager;
         this.eventBus = eventBus;
-        this.logger = new Logger('QoreLogic');
+        this.logger = new Logger('Qor-Logic');
         this.l3ApprovalService = new L3ApprovalService(
             stateStore, configProvider, ledgerManager, trustEngine, eventBus, overseerId
         );
     }
 
     async initialize(): Promise<void> {
-        this.logger.info('Initializing QoreLogic manager...');
+        this.logger.info('Initializing Qor-Logic manager...');
         this.l3ApprovalService.loadQueue();
-        this.logger.info('QoreLogic manager initialized');
+        this.logger.info('Qor-Logic manager initialized');
     }
 
     /**

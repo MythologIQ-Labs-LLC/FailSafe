@@ -68,7 +68,7 @@ function makeHost(app: any, hub: any): ConsoleRouteHost {
     getAgentTimelineService: () => null,
     getAgentHealthIndicator: () => null,
     getAgentRunRecorder: () => null,
-    qoreRuntimeService: { fetchSnapshot: async () => ({}) },
+    qorRuntimeService: { fetchSnapshot: async () => ({}) },
     brainstormService: { exportSession: async () => ({}), createIdeationBuffer: () => ({}) },
     audioVaultService: { listSessions: async () => [] },
     marketplaceCatalog: {},

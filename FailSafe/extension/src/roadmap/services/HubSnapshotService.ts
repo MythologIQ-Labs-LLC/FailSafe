@@ -18,7 +18,7 @@ import {
   inferPhaseKeyFromPlan as inferPhaseKeyFromPlanFn,
   CHECKPOINT_INIT_SQL,
 } from "./CheckpointStore";
-import { QoreRuntimeService } from "./QoreRuntimeService";
+import { QorRuntimeService } from "./QorRuntimeService";
 import {
   buildGovernancePhase, buildMetricIntegrity, buildUnattributedFileActivity,
   buildRepoCompliance, buildTrustSummary, buildNodeStatus,
@@ -28,7 +28,7 @@ import type { CheckpointRef, RevertRequest } from "../../governance/revert/types
 import { FailSafeRevertService, RevertDeps } from "../../governance/revert/FailSafeRevertService";
 import { GitResetService } from "../../governance/revert/GitResetService";
 import type { PlanManager } from "../../qorelogic/planning/PlanManager";
-import type { QoreLogicManager } from "../../qorelogic/QoreLogicManager";
+import type { QorLogicManager } from "../../qorelogic/QorLogicManager";
 import type { SentinelDaemon } from "../../sentinel/SentinelDaemon";
 import type { AgentHealthIndicator } from "../../sentinel/AgentHealthIndicator";
 import type { IdeActivityTracker } from "./IdeActivityTracker";
@@ -37,8 +37,8 @@ export type UnattributedFileChange = { eventId: string; timestamp: string; type:
 export type RecordCheckpointInput = { checkpointType: string; actor: string; phase: string; status: CheckpointStatus; policyVerdict: string; evidenceRefs: string[]; payload: unknown; };
 export interface HubSnapshotServiceDeps {
   workspaceRoot: string; extensionVersion: string;
-  planManager: PlanManager; qorelogicManager: QoreLogicManager;
-  sentinelDaemon: SentinelDaemon; qoreRuntimeService: QoreRuntimeService;
+  planManager: PlanManager; qorelogicManager: QorLogicManager;
+  sentinelDaemon: SentinelDaemon; qorRuntimeService: QorRuntimeService;
   gitResetService: GitResetService; transparencyLogger: TransparencyLogger;
   riskRegisterManager: RiskRegisterManager;
   mergePlanBlockers: (plan: unknown, a: WorkspaceArtifactSnapshot) => unknown;
@@ -58,6 +58,7 @@ export class HubSnapshotService {
   private cachedChainValid: boolean = true;
   private unattributedFileChanges: UnattributedFileChange[] = [];
   private revertService: FailSafeRevertService | null = null;
+  autoDerivationHook: ((gp: ReturnType<typeof buildGovernancePhase>) => void) | null = null;
   constructor(private readonly deps: HubSnapshotServiceDeps & { storeRef?: CheckpointStoreRef }) {
     this.store = deps.storeRef ?? { db: null, memory: [] };
     this.initializeCheckpointStore();
@@ -136,19 +137,20 @@ export class HubSnapshotService {
     this.backfillSentinelEvents(sentinelStatus);
     const l3Queue = d.qorelogicManager.getL3Queue();
     const trust = buildTrustSummary(await d.qorelogicManager.getTrustEngine().getAllAgents());
-    const qoreRuntime = await d.qoreRuntimeService.fetchSnapshot();
+    const qorRuntime = await d.qorRuntimeService.fetchSnapshot();
     const checkpointSummary = this.getCheckpointSummary();
     const governancePhase = buildGovernancePhase(d.workspaceRoot);
+    this.autoDerivationHook?.(governancePhase); // plan-qor-model-sourced-risks Phase 3
     const artifacts = new WorkspaceArtifactBuilder(d.workspaceRoot).build();
     const phaseTitle = inferActivePhaseTitle(activePlan as unknown as Record<string, unknown>, (l) => this.getRecentCheckpoints(l));
     const runState = d.getIdeTracker()?.getRunState(phaseTitle) ?? { currentPhase: "Plan", activeTasks: [], activeDebugSessions: [] };
-    const nodeStatusArr = buildNodeStatus(sentinelStatus as { running?: boolean; filesWatched?: number; queueDepth?: number; [k: string]: unknown }, l3Queue, trust, qoreRuntime);
-    return this.assembleHubPayload({ activePlan, sentinelStatus, l3Queue, trust, qoreRuntime, checkpointSummary, governancePhase, artifacts, runState, nodeStatusArr });
+    const nodeStatusArr = buildNodeStatus(sentinelStatus as { running?: boolean; filesWatched?: number; queueDepth?: number; [k: string]: unknown }, l3Queue, trust, qorRuntime);
+    return this.assembleHubPayload({ activePlan, sentinelStatus, l3Queue, trust, qorRuntime, checkpointSummary, governancePhase, artifacts, runState, nodeStatusArr });
   }
 
   private assembleHubPayload(a: {
     activePlan: unknown; sentinelStatus: Record<string, unknown>;
-    l3Queue: unknown; trust: unknown; qoreRuntime: unknown;
+    l3Queue: unknown; trust: unknown; qorRuntime: unknown;
     checkpointSummary: Record<string, unknown>;
     governancePhase: ReturnType<typeof buildGovernancePhase>;
     artifacts: WorkspaceArtifactSnapshot;
@@ -166,7 +168,7 @@ export class HubSnapshotService {
       l3Queue: a.l3Queue, trustSummary: a.trust, nodeStatus: a.nodeStatusArr,
       checkpointSummary: a.checkpointSummary,
       recentCheckpoints: this.getRecentCheckpoints(12),
-      qoreRuntime: a.qoreRuntime, runState: a.runState,
+      qorRuntime: a.qorRuntime, runState: a.runState,
       riskSummary: buildRiskSummary((l) => this.getRecentVerdicts(l)),
       recentCompletions: this.coalesceCompletions(a.artifacts),
       transparencyEvents: this.deps.transparencyLogger.getEvents(20).reverse(),

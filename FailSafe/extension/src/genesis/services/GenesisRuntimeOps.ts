@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { ArchitectureEngine } from '../../sentinel/engines/ArchitectureEngine';
-import { QoreLogicManager } from '../../qorelogic/QoreLogicManager';
+import { QorLogicManager } from '../../qorelogic/QorLogicManager';
 import { EventBus } from '../../shared/EventBus';
 import { SentinelDaemon } from '../../sentinel/SentinelDaemon';
 import { LivingGraphData, SentinelVerdict } from '../../shared/types';
@@ -12,7 +12,7 @@ export class GenesisRuntimeOps {
     private readonly eventBus: EventBus,
     private readonly sentinel: SentinelDaemon,
     private readonly architectureEngine: ArchitectureEngine,
-    private readonly qorelogic: QoreLogicManager
+    private readonly qorelogic: QorLogicManager
   ) {}
 
   async createGraphData() {

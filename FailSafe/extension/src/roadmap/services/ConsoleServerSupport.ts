@@ -10,9 +10,9 @@ import type { IConfigProvider } from "../../core/interfaces/IConfigProvider";
 import type { LedgerSummary } from "./MetaLedgerReader";
 import type { ParsedPlan } from "./PlanFileReader";
 import type { PlanBlockerProjection } from "./BacklogReader";
-import type { QoreRuntimeOptions } from "./QoreRuntimeService";
+import type { QorRuntimeOptions } from "./QorRuntimeService";
 
-export function resolveQoreRuntimeOptions(options?: Partial<QoreRuntimeOptions>): QoreRuntimeOptions {
+export function resolveQorRuntimeOptions(options?: Partial<QorRuntimeOptions>): QorRuntimeOptions {
   const baseUrl = String(options?.baseUrl || "http://127.0.0.1:7777").trim().replace(/\/+$/, "");
   return {
     enabled: Boolean(options?.enabled), baseUrl,

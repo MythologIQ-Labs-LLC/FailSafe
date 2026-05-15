@@ -5,6 +5,8 @@ import { SentinelDaemon } from "../sentinel/SentinelDaemon";
 import { LedgerManager } from "../qorelogic/ledger/LedgerManager";
 import { IntentService } from "../governance/IntentService";
 import { SessionManager } from "../governance/SessionManager";
+import { RiskManager } from "../qorelogic/risk/RiskManager";
+import { registerCreateRiskTool } from "./tools/createRiskTool";
 import { Logger } from "../shared/Logger";
 import { z } from "zod";
 import * as path from "path";
@@ -26,6 +28,7 @@ export class FailSafeMCPServer {
     private ledger: LedgerManager,
     private intentService: IntentService,
     private sessionManager?: SessionManager,
+    private riskManager?: RiskManager,
   ) {
     this.logger = new Logger("MCP-Server");
 
@@ -115,6 +118,11 @@ export class FailSafeMCPServer {
         };
       },
     );
+
+    // TOOL: failsafe.create_risk (plan-qor-model-sourced-risks Phase 2)
+    if (this.riskManager) {
+      registerCreateRiskTool(this.toolRegistrar, this.riskManager);
+    }
 
     // TOOL: qorelogic_status
     this.server.tool(

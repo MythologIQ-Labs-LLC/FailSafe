@@ -33,7 +33,7 @@ export class EventSubscriptionManager {
 
   subscribe(): void {
     this.subscribeToSentinelEvents();
-    this.subscribeToQorelogicEvents();
+    this.subscribeToQorLogicEvents();
     this.subscribeToRunLifecycleEvents();
   }
 
@@ -78,7 +78,7 @@ export class EventSubscriptionManager {
     });
   }
 
-  private subscribeToQorelogicEvents(): void {
+  private subscribeToQorLogicEvents(): void {
     const { eventBus, recordCheckpoint, broadcast, logTransparencyEvent, inferPhaseKey } = this.deps;
 
     eventBus.on("qorelogic.l3Queued" as never, (event: unknown) => {

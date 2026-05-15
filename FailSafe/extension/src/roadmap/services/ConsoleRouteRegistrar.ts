@@ -16,7 +16,7 @@ import { setupBrainstormRoutes } from "../routes/BrainstormRoute";
 import { setupCheckpointRoutes } from "../routes/CheckpointRoute";
 import { setupActionsRoutes } from "../routes/ActionsRoute";
 import { setupTransparencyRiskRoutes } from "../routes/TransparencyRiskRoute";
-import { registerQoreRoute } from "../routes/QoreRoute";
+import { registerQorRoute } from "../routes/QorRoute";
 import { registerFeatureStatusRoute } from "../routes/FeatureStatusRoute";
 import { registerSkillsApiRoute } from "../routes/SkillsApiRoute";
 import { registerHookRoute } from "../routes/HookRoute";
@@ -51,7 +51,7 @@ export interface ConsoleRouteHost {
     getRun: (id: string) => unknown; loadRun: (id: string) => unknown;
     getRunSteps: (id: string) => unknown[];
   } | null;
-  qoreRuntimeService: unknown; brainstormService: unknown; audioVaultService: unknown;
+  qorRuntimeService: unknown; brainstormService: unknown; audioVaultService: unknown;
   marketplaceCatalog: unknown; marketplaceInstaller: unknown; securityScanner: unknown;
   adapterService: { getConfig: () => { adapterBaseUrl?: string } | null };
   sentinelDaemon: unknown; planManager: unknown;
@@ -68,13 +68,22 @@ export class ConsoleRouteRegistrar {
     app.use(express.static(this.host.uiDir, { index: false, dotfiles: "allow" }));
     this.registerCoreRoutes();
     const deps = this.buildApiRouteDeps();
-    registerQoreRoute(app, deps);
+    registerQorRoute(app, deps);
     registerSkillsApiRoute(app, deps);
     this.registerApiRoutes(deps);
     registerFeatureStatusRoute(app, deps);
     this.registerVerdictAndTrustRoutes();
     registerHookRoute(app, deps);
     this.setupConsoleRoutes();
+    // SPA fallback is NOT registered here — it's an app.use(...) catch-all that
+    // would intercept any /api/* POST registered later (e.g., QorlogicRoute's
+    // /api/actions/scaffold-skills/preview). Call finalizeFallback() after all
+    // late route registrations complete.
+  }
+
+  /** Register the SPA fallback. Call AFTER all late route registrations
+   *  (e.g., QorlogicRoute in bootstrapServers) so they win over the catch-all. */
+  finalizeFallback(): void {
     this.registerSpaFallback();
   }
 
@@ -119,7 +128,7 @@ export class ConsoleRouteRegistrar {
     return {
       rejectIfRemote: (req, res) => h.rejectIfRemote(req, res),
       broadcast: (d) => h.broadcast(d),
-      qoreRuntimeService: h.qoreRuntimeService as any,
+      qorRuntimeService: h.qorRuntimeService as any,
       buildHubSnapshot: () => hub.buildHubSnapshot(),
       featureGate: h.featureGate as any,
       workspaceRoot: h.workspaceRoot, workspaceDirname: h.workspaceDirname,

@@ -5,6 +5,47 @@ All notable changes to FailSafe will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Model-sourced Risk Register** (`plan-qor-model-sourced-risks`). Risks now come from the coding model itself: agents call the new MCP tool `failsafe.create_risk`, use the `@failsafe /risk` chat subcommand to draft + confirm risks, or let FailSafe auto-derive risks from SHIELD lifecycle signals (GATE VETO ledger entries, DEBUG entries, Shadow-Genome `genome.failureArchived` EventBus emissions). Each risk records its source (`mcp` / `audit-veto` / `debug` / `shadow-genome` / `manual` for legacy migrations) plus structured `derivedFrom` lineage that powers de-duplication.
+- **Install Skills UX expansion** (`plan-qor-install-skills-ux-expansion`, sealed at META_LEDGER entry #371). Modal install flow with live progress + retry, operator-editable host registry, per-host skill picker, dry-run preview, and a new workspace `LiveProgressInvariant` doctrine + lint helper. Upstream `Qor-logic#58` filed for canonical SDK amendment.
+- **OpenVSX v5.0.0 catch-up publish workflow** (`.github/workflows/openvsx-catchup.yml`). Manual `workflow_dispatch` job that publishes a specific historical version to OpenVSX only, used to align OpenVSX with VS Code Marketplace when a prior release was direct-`vsce`-published. v5.0.0 was published to OpenVSX on 2026-05-14 via this workflow.
+- **Microsoft Agent Governance Toolkit + Qortara attribution** on the SRE panel (disconnected setup card + persistent footer link in both states).
+- **Sync Framework asymmetry fix**: `FrameworkSync.propagate(systemId)` now calls `AgentConfigInjector.inject(system)` after the dir-copy step, so picking a single target (e.g. GitHub Copilot) actually writes the governance block to `.github/copilot-instructions.md`. Toasts now report what was written (`framework dir copied, updated <path>`) instead of claiming success on no-ops.
+
+### Changed
+
+- **Skill source attribution**: skills sourced from the Qor-Logic Python package now display as `qor-logic`; FailSafe-authored skills display as `FailSafe`; external skills (ElevenLabs, Three.js, …) keep their actual upstream credit. Implemented in `roadmap/services/SkillFrontmatter.ts:resolveSourceCredit` and `SkillParser.ts` default attribution.
+- **Brand spelling sweep**: eliminated all `QoreLogic` / `Qorelogic` / `QORELOGIC` / standalone `Qore` / `qore` casings across `FailSafe/extension/src/` and `package.json`. User-facing strings hyphenated to "Qor-Logic"; PascalCase identifiers remain `QorLogic`. Files renamed: `bootstrapQoreLogic.ts` → `bootstrapQorLogic.ts`; `QoreLogicManager.ts` → `QorLogicManager.ts`; `QoreRoute.ts` → `QorRoute.ts`; `QoreRuntimeService.ts` → `QorRuntimeService.ts`. The lowercase compound `qorelogic` (config-key namespace + source directory) is held in a deferred-rename bucket pending a settings-migration plan.
+- **Organize-UX hotfix** (sealed #364): contextual-summary helper now reports actual organize action outcomes instead of the misleading "Bootstrap: 1 step(s) deferred" message. Host-side decision V1 Path C wired; organize callbacks now surface success/no-op/failure separately.
+
+### Removed
+
+- **`failsafe.addRisk` command + QuickPick wizard** deleted from `commands.ts`, `RiskRegisterProvider.ts`, and `package.json`. Manual risk entry is replaced by the model-sourced surfaces above. Legacy risks in `risks.json` are auto-migrated to `source: 'manual'` on first load.
+- **Redundant skill prefixes**: 10 `ql-*.md` skills + 10 `ql-*` reference templates + 3 `qore-*` script directories deleted from user-scope `~/.claude/`; 13 `ql-*.md` commands + 7 `ql-*` agents + 4 `ql-*` references deleted from project-scope `.claude/commands/`. Canonical `qor-*` skills remain.
+- **Hearthlink skill leftovers** (6 files) deleted from `.claude/commands/` — they belonged to a separate project.
+
+### Fixed
+
+- **Banner Install Skills button** previously POSTed to `/api/actions/scaffold-skills` with no body and silently triggered a server-side VS Code QuickPick that opened in the extension host (invisible from the browser tab). Now opens the same in-browser modal the Settings card uses, with host pickers, scope radios, and preview button.
+- **`/api/actions/scaffold-skills/preview` 404**: the SPA-fallback middleware in `ConsoleRouteRegistrar.setupAllRoutes` was registered before the qorlogic routes (added after `consoleServer.start()`), so any `/api/*` POST not matched by core routes hit the fallback. Split the SPA fallback into a separate `finalizeFallback()` step that bootstrap calls after `registerQorlogicRoutes(...)`. Preview POST now reaches its handler.
+- **Install Skills 501** "Scaffold not available" from the Settings card: `ConsoleServer.setupAllRoutes()` was being called in the constructor, so `ApiRouteDeps` captured `scaffoldSkills`/`scaffoldWithWebOptions` as `null` before `bootstrapServers.ts` wired them. Moved `setupAllRoutes()` into `start()` so callback wiring happens first.
+- **Brainstorm canvas TypeError**: `.showNavInfo(false)` was called unconditionally on `ForceGraph`'s chain, but the method only exists on `ForceGraph3D`. Guarded inside the 3D branch.
+- **Active build step ↔ Recommended next step inconsistency** on the Monitor: when META_LEDGER is IDLE but an active plan phase is highlighted in the track, the next-step tile no longer says "Run /qor-plan…" — it now derives from the same active phase title the track uses.
+- **Long install summary** ("Installed 160 skill(s) at /path/.claude/agents/, /path/.claude/skills/, …") collapsed into a digestible headline + collapsible per-host detail blocks.
+
+### Security
+
+- **Release pipeline: manual approval gate** added between `build` and the two `publish-*` jobs in `.github/workflows/release.yml`. Both `publish-vscode` and `publish-openvsx` now require an explicit `production` environment review before they fire, preventing accidental same-second dual-publishes if `validate:vsix` misses a regression.
+
+### Test discipline
+
+- 36 new functional tests (FX415–FX420 series) for the model-sourced Risk Register: `RiskManager` migration + dedup, `failsafe.create_risk` MCP tool handler, `RiskAutoDerivation` derivers + mappers, `AuditGateArtifactReader`, `RiskChatHandler` draft/confirm, and Risks UI source-pill rendering.
+
+---
+
 ## [5.1.0] - 2026-05-06
 
 Minor release. Comprehensive E2E coverage methodology + release-class CI gate (B199 Phase 1) + Monitor B191 functional proof. Surfaced and fixed three latent Monitor bugs that unit tests could not catch — most notably a missing `type="module"` on the Monitor's bootstrap script that meant the compact UI never actually rendered in production.

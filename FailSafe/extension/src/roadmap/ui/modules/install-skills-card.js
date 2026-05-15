@@ -136,13 +136,40 @@ function invocationDetail(inv) {
   return '';
 }
 
+function groupDestinationsByHost(destinations) {
+  // Group paths by the agent-host segment (.claude, .codex, .gemini, etc.).
+  // Returns Array<{ host: string, paths: string[] }> sorted by host.
+  const groups = new Map();
+  for (const p of destinations || []) {
+    const m = String(p).match(/[/\\](\.[\w-]+)[/\\]/);
+    const host = m ? m[1].replace(/^\./, '') : 'other';
+    if (!groups.has(host)) groups.set(host, []);
+    groups.get(host).push(p);
+  }
+  return Array.from(groups.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([host, paths]) => ({ host, paths }));
+}
+
 function renderReportSummary(report) {
-  const dests = (report.destinations || []).map(esc).join(', ');
-  const color = report.ok ? 'var(--accent-teal,#2dd4bf)' : 'var(--accent-gold)';
-  const summary = report.ok
-    ? `Installed ${report.totalInstalled} skill(s)${dests ? ` at ${dests}` : ''}.`
-    : `Installed ${report.totalInstalled} skill(s); ${report.failures.length} host(s) failed.`;
-  return `<div style="margin-top:6px;color:${color}">${esc(summary)}</div>`;
+  const ok = report.ok;
+  const color = ok ? 'var(--accent-teal,#2dd4bf)' : 'var(--accent-gold)';
+  const groups = groupDestinationsByHost(report.destinations);
+  const hostNames = groups.map((g) => g.host).join(', ');
+  const headline = ok
+    ? `Installed ${report.totalInstalled} skill${report.totalInstalled === 1 ? '' : 's'}${hostNames ? ` across ${hostNames}` : ''}.`
+    : `Installed ${report.totalInstalled} skill${report.totalInstalled === 1 ? '' : 's'}; ${report.failures.length} host${report.failures.length === 1 ? '' : 's'} failed.`;
+  const groupHtml = groups.map((g) => `
+      <details style="margin:4px 0;border:1px solid var(--border,rgba(255,255,255,0.1));border-radius:4px;padding:4px 8px">
+        <summary style="cursor:pointer;font-size:0.78rem">${esc(g.host)} — ${g.paths.length} path${g.paths.length === 1 ? '' : 's'}</summary>
+        <ul style="margin:4px 0 4px 18px;padding:0;font-family:var(--font-mono,monospace);font-size:0.72rem;color:var(--text-muted)">${
+          g.paths.map((p) => `<li>${esc(p)}</li>`).join('')
+        }</ul>
+      </details>`).join('');
+  const detailsBlock = groups.length > 0
+    ? `<details style="margin-top:4px"><summary style="cursor:pointer;font-size:0.78rem;color:var(--text-muted)">Show install paths (${report.destinations?.length || 0})</summary>${groupHtml}</details>`
+    : '';
+  return `<div style="margin-top:6px;color:${color}">${esc(headline)}</div>${detailsBlock}`;
 }
 
 export function bindInstallSkillsCard(container, options = {}) {

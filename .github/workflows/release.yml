@@ -96,6 +96,10 @@ jobs:
     name: Publish to VS Code Marketplace
     needs: build
     runs-on: ubuntu-latest
+    # Gate: requires a reviewer to approve the `production` environment before
+    # publish fires. Configure required reviewers under
+    # Repository Settings → Environments → production.
+    environment: production
     steps:
       - name: Derive release version from tag
         run: echo "VSIX_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
@@ -110,6 +114,10 @@ jobs:
     name: Publish to Open VSX
     needs: build
     runs-on: ubuntu-latest
+    # Same manual-approval gate as publish-vscode. Both publish jobs sit
+    # behind the `production` environment so a reviewer must approve before
+    # either marketplace receives the new VSIX.
+    environment: production
     steps:
       - name: Derive release version from tag
         run: echo "VSIX_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"

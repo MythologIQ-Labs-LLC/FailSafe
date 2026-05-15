@@ -2,7 +2,7 @@ import { describe, it } from 'mocha';
 import { strict as assert } from 'assert';
 import { AgentCoverageRoute } from '../../roadmap/routes/AgentCoverageRoute';
 import { AgentLandscape } from '../../qorelogic/SystemRegistry';
-import { QoreLogicSystem } from '../../qorelogic/types/QoreLogicSystem';
+import { QorLogicSystem } from '../../qorelogic/types/QorLogicSystem';
 
 function createMockResponse() {
   let sentContent = '';
@@ -46,7 +46,7 @@ describe('AgentCoverageRoute', () => {
               sourceDir: undefined,
               targetDir: null,
             }),
-          } as QoreLogicSystem,
+          } as QorLogicSystem,
         ],
         activeTerminals: [
           { name: 'Claude Code', agentType: 'claude', terminalIndex: 0 },

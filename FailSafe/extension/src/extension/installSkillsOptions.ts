@@ -34,7 +34,7 @@ export async function resolveInstallSkillsOptions(
 
   const hostSelection = await vscode.window.showQuickPick(hostItems, {
     canPickMany: true,
-    title: 'Install QorLogic Skills',
+    title: 'Install Qor-Logic Skills',
     placeHolder: 'Select target hosts',
   });
   if (!hostSelection || hostSelection.length === 0) return undefined;
@@ -46,7 +46,7 @@ export async function resolveInstallSkillsOptions(
 
   const scopeSelection = await vscode.window.showQuickPick(scopeItems, {
     canPickMany: false,
-    title: 'Install QorLogic Skills',
+    title: 'Install Qor-Logic Skills',
     placeHolder: 'Select install scope',
   });
   if (!scopeSelection) return undefined;

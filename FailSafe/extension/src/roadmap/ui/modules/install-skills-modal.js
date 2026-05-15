@@ -49,13 +49,38 @@ function renderErrorBlock(state) {
   return `<div class="cc-modal-error" style="margin-top:8px;padding:8px;background:rgba(239,68,68,0.1);border-radius:4px"><div style="color:var(--accent-red,#ef4444);font-size:0.85rem;margin-bottom:6px">${esc(msg)}</div><div style="display:flex;gap:6px"><button class="cc-btn cc-btn--primary" data-action="retry" style="font-size:0.75rem;padding:4px 10px">Retry</button><button class="cc-btn" data-action="dismiss" style="font-size:0.75rem;padding:4px 10px">Dismiss</button></div></div>`;
 }
 
+function groupModalDestinations(destinations) {
+  const groups = new Map();
+  for (const p of destinations || []) {
+    const m = String(p).match(/[/\\](\.[\w-]+)[/\\]/);
+    const host = m ? m[1].replace(/^\./, '') : 'other';
+    if (!groups.has(host)) groups.set(host, []);
+    groups.get(host).push(p);
+  }
+  return Array.from(groups.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([host, paths]) => ({ host, paths }));
+}
+
 function renderDoneBlock(state) {
-  const dests = (state.destinations || []).map(esc).join(', ');
   const total = state.totalInstalled;
+  const groups = groupModalDestinations(state.destinations);
+  const hostNames = groups.map((g) => g.host).join(', ');
   const summary = total !== undefined
-    ? `Installed ${total} skill${total === 1 ? '' : 's'}${dests ? ` at ${dests}` : ''}.`
+    ? `Installed ${total} skill${total === 1 ? '' : 's'}${hostNames ? ` across ${hostNames}` : ''}.`
     : 'Install complete.';
-  return `<div class="cc-modal-done" style="margin-top:8px"><div style="color:var(--accent-teal,#2dd4bf);font-size:0.85rem;margin-bottom:6px">${esc(summary)}</div><button class="cc-btn cc-btn--primary" data-action="close" style="font-size:0.78rem;padding:4px 12px">Close</button></div>`;
+  const groupHtml = groups.map((g) => `
+      <details style="margin:4px 0;border:1px solid rgba(255,255,255,0.08);border-radius:4px;padding:4px 8px">
+        <summary style="cursor:pointer;font-size:0.78rem">${esc(g.host)} — ${g.paths.length} path${g.paths.length === 1 ? '' : 's'}</summary>
+        <ul style="margin:4px 0 4px 18px;padding:0;font-family:var(--font-mono,monospace);font-size:0.7rem;color:var(--text-muted);max-height:200px;overflow-y:auto">${
+          g.paths.map((p) => `<li>${esc(p)}</li>`).join('')
+        }</ul>
+      </details>`).join('');
+  const pathCount = (state.destinations || []).length;
+  const detailsBlock = pathCount > 0
+    ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:0.78rem;color:var(--text-muted)">Show install paths (${pathCount})</summary>${groupHtml}</details>`
+    : '';
+  return `<div class="cc-modal-done" style="margin-top:8px"><div style="color:var(--accent-teal,#2dd4bf);font-size:0.85rem;margin-bottom:6px">${esc(summary)}</div>${detailsBlock}<button class="cc-btn cc-btn--primary" data-action="close" style="font-size:0.78rem;padding:4px 12px;margin-top:8px">Close</button></div>`;
 }
 
 function renderHostCheckboxes(hosts) {
@@ -72,7 +97,7 @@ function renderScopeRadios() {
 }
 
 export function renderInstallModal(hosts, running) {
-  return `<div class="cc-skill-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center"><div class="cc-card" style="max-width:520px;width:90%;padding:20px;max-height:90vh;overflow-y:auto"><h3 style="margin:0 0 16px 0;font-size:1rem;color:var(--text-main)">Install QorLogic Skills</h3><div style="margin-bottom:16px"><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;letter-spacing:0.06em">Target Hosts</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:2px">${renderHostCheckboxes(hosts)}</div></div><div style="margin-bottom:16px"><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;letter-spacing:0.06em">Scope</div>${renderScopeRadios()}</div>${renderPickerSection(hosts, running)}<div class="cc-modal-progress" style="display:none;margin-bottom:12px"></div><div class="cc-modal-terminal" style="display:none"></div><div class="cc-modal-footer" style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">${renderPreviewButton(running)}<button class="cc-btn cc-modal-cancel">Cancel</button><button class="cc-btn cc-btn--primary cc-modal-confirm" ${running ? 'disabled' : ''}>${running ? 'Installing…' : 'Install'}</button></div></div></div>`;
+  return `<div class="cc-skill-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center"><div class="cc-card" style="max-width:520px;width:90%;padding:20px;max-height:90vh;overflow-y:auto"><h3 style="margin:0 0 16px 0;font-size:1rem;color:var(--text-main)">Install Qor-Logic Skills</h3><div style="margin-bottom:16px"><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;letter-spacing:0.06em">Target Hosts</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:2px">${renderHostCheckboxes(hosts)}</div></div><div style="margin-bottom:16px"><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;letter-spacing:0.06em">Scope</div>${renderScopeRadios()}</div>${renderPickerSection(hosts, running)}<div class="cc-modal-progress" style="display:none;margin-bottom:12px"></div><div class="cc-modal-terminal" style="display:none"></div><div class="cc-modal-footer" style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">${renderPreviewButton(running)}<button class="cc-btn cc-modal-cancel">Cancel</button><button class="cc-btn cc-btn--primary cc-modal-confirm" ${running ? 'disabled' : ''}>${running ? 'Installing…' : 'Install'}</button></div></div></div>`;
 }
 
 function getState(container) {

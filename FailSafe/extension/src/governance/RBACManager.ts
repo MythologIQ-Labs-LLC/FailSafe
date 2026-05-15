@@ -13,7 +13,7 @@ export class RBACManager {
   private assignments = new Map<string, { agentDid: string; role: Role; assignedAt: string }>();
   private db: CheckpointDb = null;
 
-  /** Deferred setter — called from main.ts after bootstrapQoreLogic provides ledgerManager */
+  /** Deferred setter — called from main.ts after bootstrapQorLogic provides ledgerManager */
   setDatabase(db: CheckpointDb): void {
     this.db = db;
     this.loadFromDb();

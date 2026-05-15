@@ -48,20 +48,20 @@ function makeFakes(): {
     getDatabase: () => { throw new Error('no-db'); },
   };
   const qorelogicManager: any = {
-    getL3Queue: () => { stamp('qore.getL3Queue'); return []; },
+    getL3Queue: () => { stamp('qor.getL3Queue'); return []; },
     getTrustEngine: () => trustEngine,
     getLedgerManager: () => ledgerManager,
-    refreshL3Queue: () => { stamp('qore.refreshL3Queue'); },
+    refreshL3Queue: () => { stamp('qor.refreshL3Queue'); },
   };
-  const qoreRuntimeService: any = {
-    fetchSnapshot: async () => { stamp('qore.fetchSnapshot'); return { enabled: false, connected: false, baseUrl: '', lastCheckedAt: '' }; },
+  const qorRuntimeService: any = {
+    fetchSnapshot: async () => { stamp('qor.fetchSnapshot'); return { enabled: false, connected: false, baseUrl: '', lastCheckedAt: '' }; },
   };
   const gitResetService: any = {};
 
   const deps = {
     workspaceRoot: tmp,
     extensionVersion: 'test-9.9.9',
-    planManager, qorelogicManager, sentinelDaemon, qoreRuntimeService,
+    planManager, qorelogicManager, sentinelDaemon, qorRuntimeService,
     gitResetService, transparencyLogger, riskRegisterManager,
     mergePlanBlockers: (plan: unknown) => plan,
     getActualPort: () => 9376,
@@ -81,23 +81,23 @@ suite('HubSnapshotService (Phase 60 §0)', () => {
     assert.ok(calls.length > 0, 'no fake interactions recorded');
     const names = calls.map(c => c.name);
     const refreshPlan = names.indexOf('plan.refreshFromWorkspace');
-    const refreshL3 = names.indexOf('qore.refreshL3Queue');
+    const refreshL3 = names.indexOf('qor.refreshL3Queue');
     const readPlan = names.indexOf('plan.getActivePlan');
-    const readL3 = names.indexOf('qore.getL3Queue');
+    const readL3 = names.indexOf('qor.getL3Queue');
     assert.ok(refreshPlan >= 0 && refreshPlan < readPlan, `plan.refreshFromWorkspace must precede plan.getActivePlan; got refresh@${refreshPlan} read@${readPlan}`);
-    assert.ok(refreshL3 >= 0 && refreshL3 < readL3, `qore.refreshL3Queue must precede qore.getL3Queue; got refresh@${refreshL3} read@${readL3}`);
+    assert.ok(refreshL3 >= 0 && refreshL3 < readL3, `qor.refreshL3Queue must precede qor.getL3Queue; got refresh@${refreshL3} read@${readL3}`);
     const idx = (n: string) => calls.findIndex((c) => c.name === n);
-    // Sentinel + trust + qoreRuntime are pre-snapshot reads; they must
+    // Sentinel + trust + qorRuntime are pre-snapshot reads; they must
     // happen before risk-register / transparency tail reads that supply
     // downstream payload fields.
     const sentinelAt = idx('sentinel.getStatus');
     const trustAt = idx('trust.getAllAgents');
-    const qoreAt = idx('qore.fetchSnapshot');
+    const qorAt = idx('qor.fetchSnapshot');
     const transparencyAt = idx('transparency.getEvents');
-    assert.ok(sentinelAt >= 0 && trustAt >= 0 && qoreAt >= 0, 'pre-snapshot hooks not all invoked');
+    assert.ok(sentinelAt >= 0 && trustAt >= 0 && qorAt >= 0, 'pre-snapshot hooks not all invoked');
     assert.ok(sentinelAt < transparencyAt, 'sentinel must read before transparency tail');
     assert.ok(trustAt < transparencyAt, 'trust must resolve before transparency tail');
-    assert.ok(qoreAt < transparencyAt, 'qoreRuntime fetch must resolve before transparency tail');
+    assert.ok(qorAt < transparencyAt, 'qorRuntime fetch must resolve before transparency tail');
   });
 
   test('buildHubSnapshot — payload exposes injected version + workspacePath', async () => {

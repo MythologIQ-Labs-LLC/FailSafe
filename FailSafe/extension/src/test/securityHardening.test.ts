@@ -22,7 +22,7 @@ suite("Security hardening coverage", () => {
         getCurrentSprint: () => null,
         getActivePlan: () => null,
       };
-      const fakeQorelogicManager = {
+      const fakeQorLogicManager = {
         getLedgerManager: () => null,
       };
       const fakeSentinelDaemon = {
@@ -31,7 +31,7 @@ suite("Security hardening coverage", () => {
 
       const server = new ConsoleServer(
         fakePlanManager as never,
-        fakeQorelogicManager as never,
+        fakeQorLogicManager as never,
         fakeSentinelDaemon as never,
         eventBus,
         { workspaceRoot },

@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import { SystemRegistry } from "../qorelogic/SystemRegistry";
-import { QoreLogicManager } from "../qorelogic/QoreLogicManager";
+import { QorLogicManager } from "../qorelogic/QorLogicManager";
 import { LedgerManager } from "../qorelogic/ledger/LedgerManager";
 import { TrustEngine } from "../qorelogic/trust/TrustEngine";
 import { PolicyEngine } from "../qorelogic/policies/PolicyEngine";
@@ -16,12 +16,12 @@ import { CoreSubstrate } from "./bootstrapCore";
 import { GovernanceSubstrate } from "./bootstrapGovernance";
 import { Logger } from "../shared/Logger";
 
-export interface QoreLogicSubstrate {
+export interface QorLogicSubstrate {
   ledgerManager: LedgerManager;
   trustEngine: TrustEngine;
   policyEngine: PolicyEngine;
   shadowGenomeManager: ShadowGenomeManager;
-  qorelogicManager: QoreLogicManager;
+  qorelogicManager: QorLogicManager;
   governanceAdapter: GovernanceAdapter;
   breakGlass: BreakGlassProtocol;
   agentRevocation: AgentRevocation;
@@ -30,13 +30,13 @@ export interface QoreLogicSubstrate {
   systemRegistry: SystemRegistry;
 }
 
-export async function bootstrapQoreLogic(
+export async function bootstrapQorLogic(
   context: vscode.ExtensionContext,
   core: CoreSubstrate,
   gov: GovernanceSubstrate,
   logger: Logger,
-): Promise<QoreLogicSubstrate> {
-  logger.info("Initializing QoreLogic layer...");
+): Promise<QorLogicSubstrate> {
+  logger.info("Initializing Qor-Logic layer...");
 
   // Create VS Code adapters (composition root wiring)
   // Use shared ConfigManager (implements IConfigProvider) from core substrate
@@ -66,7 +66,7 @@ export async function bootstrapQoreLogic(
   const overseerId = configProvider.getConfig().governance?.overseerId
     ?? 'did:myth:overseer:local';
 
-  const qorelogicManager = new QoreLogicManager(
+  const qorelogicManager = new QorLogicManager(
     workspaceStateStore,
     configProvider,
     ledgerManager,
@@ -78,7 +78,7 @@ export async function bootstrapQoreLogic(
   );
   await qorelogicManager.initialize();
 
-  gov.governanceRouter.setQoreLogicManager(qorelogicManager);
+  gov.governanceRouter.setQorLogicManager(qorelogicManager);
 
   // Create and wire GovernanceAdapter
   const governanceAdapter = new GovernanceAdapter(
@@ -100,7 +100,7 @@ export async function bootstrapQoreLogic(
   });
   context.subscriptions.push({ dispose: () => breakGlass.dispose() });
 
-  // v4.2.0: QoreLogic services
+  // v4.2.0: QorLogic services
   const agentRevocation = new AgentRevocation(trustEngine, ledgerManager);
   const archivePath = path.join(core.workspaceRoot, '.failsafe', 'archive');
   const ledgerRetentionPolicy = new LedgerRetentionPolicy(ledgerManager, archivePath);

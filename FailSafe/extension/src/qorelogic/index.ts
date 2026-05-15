@@ -1,11 +1,11 @@
 /**
- * QoreLogic - Governance Content & Framework
+ * QorLogic - Governance Content & Framework
  *
- * Exports all QoreLogic components
+ * Exports all QorLogic components
  */
 
 // Main manager
-export { QoreLogicManager } from './QoreLogicManager';
+export { QorLogicManager } from './QorLogicManager';
 
 // Ledger
 export { LedgerManager } from './ledger/LedgerManager';

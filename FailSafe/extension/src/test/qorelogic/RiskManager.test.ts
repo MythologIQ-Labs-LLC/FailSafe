@@ -21,6 +21,7 @@ const STD_INPUT = {
   severity: 'high' as const,
   impact: 'big',
   mitigation: 'fix it',
+  source: 'manual' as const,
 };
 
 suite('RiskManager (FX328 + FX250)', () => {
@@ -161,5 +162,58 @@ suite('RiskManager (FX328 + FX250)', () => {
     fs.writeFileSync(path.join(dir, '.failsafe/risks/risks.json'), '{not-json');
     const m = newManager(dir);
     assert.deepEqual(m.getAllRisks(), []);
+  });
+
+  // Plan-qor-model-sourced-risks Phase 1 tests.
+  test('FX415 createRisk — persists source + sourceAgent to disk', () => {
+    const m = newManager(dir);
+    m.createRisk({ ...STD_INPUT, source: 'mcp', sourceAgent: 'claude-code' });
+    const file = path.join(dir, '.failsafe/risks/risks.json');
+    const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+    assert.equal(parsed.risks[0].source, 'mcp');
+    assert.equal(parsed.risks[0].sourceAgent, 'claude-code');
+  });
+
+  test('FX415 loadOrCreate — backfills source=manual on legacy risks.json + saves', () => {
+    // Write a fixture risks.json with one risk lacking `source`.
+    fs.mkdirSync(path.join(dir, '.failsafe/risks'), { recursive: true });
+    const file = path.join(dir, '.failsafe/risks/risks.json');
+    fs.writeFileSync(file, JSON.stringify({
+      projectId: 'test-project',
+      projectName: 'test',
+      risks: [{
+        id: 'legacy-1', title: 't', description: 'd', category: 'security',
+        severity: 'high', status: 'open', impact: '', mitigation: '',
+        createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z',
+      }],
+      lastUpdated: '2024-01-01T00:00:00Z',
+    }));
+    const m = newManager(dir);
+    // In-memory: backfilled.
+    assert.equal(m.getAllRisks()[0].source, 'manual');
+    // On disk: migration persisted.
+    const reparsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+    assert.equal(reparsed.risks[0].source, 'manual');
+  });
+
+  test('FX415 createRisk — runtime guard throws when source is missing (as any escape)', () => {
+    const m = newManager(dir);
+    assert.throws(
+      () => m.createRisk({
+        title: 'x', description: 'y', severity: 'low', category: 'security',
+        impact: '', mitigation: '',
+      } as any),
+      /source/i,
+    );
+  });
+
+  test('FX415 createRisk — re-derivation with same derivedFrom.ledgerEntry deduplicates', () => {
+    const m = newManager(dir);
+    const a = m.createRisk({ ...STD_INPUT, source: 'audit-veto',
+      derivedFrom: { ledgerEntry: 271 } });
+    const b = m.createRisk({ ...STD_INPUT, source: 'audit-veto',
+      derivedFrom: { ledgerEntry: 271 }, title: 'duplicate attempt' });
+    assert.equal(a.id, b.id, 'second call should return the same risk');
+    assert.equal(m.getAllRisks().length, 1, 'no duplicate inserted');
   });
 });

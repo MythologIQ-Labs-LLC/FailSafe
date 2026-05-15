@@ -11,7 +11,7 @@ import { ArchitectureEngine } from "../sentinel/engines/ArchitectureEngine";
 import { AgentTimelineService } from "../sentinel/AgentTimelineService";
 import { AgentRunRecorder } from "../sentinel/AgentRunRecorder";
 import { CoreSubstrate } from "./bootstrapCore";
-import { QoreLogicSubstrate } from "./bootstrapQoreLogic";
+import { QorLogicSubstrate } from "./bootstrapQorLogic";
 import { Logger } from "../shared/Logger";
 
 export interface SentinelSubstrate {
@@ -24,7 +24,7 @@ export interface SentinelSubstrate {
 export async function bootstrapSentinel(
   context: vscode.ExtensionContext,
   core: CoreSubstrate,
-  qore: QoreLogicSubstrate,
+  qor: QorLogicSubstrate,
   logger: Logger,
 ): Promise<SentinelSubstrate> {
   logger.info("Initializing Sentinel daemon...");
@@ -35,14 +35,14 @@ export async function bootstrapSentinel(
     await patternLoader.loadCustomPatterns();
 
     const heuristicEngine = new HeuristicEngine(
-      qore.policyEngine,
+      qor.policyEngine,
       patternLoader,
     );
     const verdictEngine = new VerdictEngine(
-      qore.trustEngine,
-      qore.policyEngine,
-      qore.ledgerManager,
-      qore.shadowGenomeManager,
+      qor.trustEngine,
+      qor.policyEngine,
+      qor.ledgerManager,
+      qor.shadowGenomeManager,
     );
     const existenceEngine = new ExistenceEngine(core.configManager);
 
@@ -55,7 +55,7 @@ export async function bootstrapSentinel(
 
     const verdictRouter = new VerdictRouter(
       core.eventBus,
-      qore.qorelogicManager,
+      qor.qorelogicManager,
     );
 
     // Use shared ConfigManager (implements IConfigProvider) from core substrate

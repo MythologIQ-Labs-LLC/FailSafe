@@ -1,7 +1,7 @@
 /**
- * QoreLogicSystem - Plugin Interface Definition
+ * QorLogicSystem - Plugin Interface Definition
  *
- * This module defines the core interfaces for the QoreLogic plugin system,
+ * This module defines the core interfaces for the QorLogic plugin system,
  * enabling extensible governance framework synchronization across multi-agent
  * environments.
  */
@@ -265,16 +265,16 @@ export interface TemplateRenderResult {
 }
 
 // ============================================================================
-// QORELOGIC SYSTEM INTERFACE
+// QOR_LOGIC SYSTEM INTERFACE
 // ============================================================================
 
 /**
- * QoreLogicSystem - Main plugin interface for governance systems
+ * QorLogicSystem - Main plugin interface for governance systems
  *
  * Implement this interface to create a custom governance system plugin.
  * The plugin system will call these methods during the sync lifecycle.
  */
-export interface QoreLogicSystem {
+export interface QorLogicSystem {
   /**
    * Get the system manifest
    * This is called during plugin registration to load the system configuration.
@@ -341,8 +341,8 @@ export interface QoreLogicSystem {
  * Plugin registration options
  */
 export interface PluginRegistrationOptions {
-  /** The QoreLogicSystem plugin instance */
-  plugin: QoreLogicSystem;
+  /** The QorLogicSystem plugin instance */
+  plugin: QorLogicSystem;
   /** Optional priority for plugin execution order (lower = earlier) */
   priority?: number;
   /** Whether the plugin should be auto-activated */
@@ -350,9 +350,9 @@ export interface PluginRegistrationOptions {
 }
 
 /**
- * Plugin registry for managing QoreLogicSystem plugins
+ * Plugin registry for managing QorLogicSystem plugins
  */
-export interface QoreLogicPluginRegistry {
+export interface QorLogicPluginRegistry {
   /**
    * Register a new plugin
    *
@@ -374,21 +374,21 @@ export interface QoreLogicPluginRegistry {
    * @param id - Plugin registration ID
    * @returns Plugin instance or undefined
    */
-  get(id: string): QoreLogicSystem | undefined;
+  get(id: string): QorLogicSystem | undefined;
 
   /**
    * Get all registered plugins
    *
    * @returns Array of all registered plugins
    */
-  getAll(): QoreLogicSystem[];
+  getAll(): QorLogicSystem[];
 
   /**
    * Get plugins sorted by priority
    *
    * @returns Array of plugins sorted by priority (ascending)
    */
-  getSorted(): QoreLogicSystem[];
+  getSorted(): QorLogicSystem[];
 }
 
 // ============================================================================
@@ -477,7 +477,7 @@ export interface TemplateExtensionPoint {
 /**
  * Combined extension points interface
  */
-export interface QoreLogicExtensionPoints {
+export interface QorLogicExtensionPoints {
   /** Detection extension point */
   detection: DetectionExtensionPoint;
   /** Sync extension point */
@@ -503,7 +503,7 @@ export interface QoreLogicExtensionPoints {
  * Example minimal implementation:
  *
  * ```typescript
- * export class MySystemPlugin implements QoreLogicSystem {
+ * export class MySystemPlugin implements QorLogicSystem {
  *   getManifest(): SystemManifest {
  *     return { ... };
  *   }
@@ -522,7 +522,7 @@ export interface QoreLogicExtensionPoints {
  * }
  * ```
  */
-export interface MinimalQoreLogicSystem extends QoreLogicSystem {
+export interface MinimalQorLogicSystem extends QorLogicSystem {
   detect(context: DetectionContext): DetectionResult | Promise<DetectionResult>;
   preSync(context: SyncContext): PreSyncResult | Promise<PreSyncResult>;
   postSync(context: SyncContext): PostSyncResult | Promise<PostSyncResult>;

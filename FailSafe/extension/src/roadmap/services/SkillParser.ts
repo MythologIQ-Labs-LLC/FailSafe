@@ -7,7 +7,7 @@ import * as path from "path";
 import {
   toSlug, readFrontmatterValue, readFrontmatterList, readSourceMetadata,
   humanizeSkillName, normalizeSkillTags, resolveSourceCredit,
-  resolveQoreSkillId, deriveSkillDomainToken, type SourceMeta,
+  resolveQorSkillId, deriveSkillDomainToken, type SourceMeta,
 } from "./SkillFrontmatter";
 
 export type InstalledSkill = {
@@ -77,12 +77,12 @@ export function parseCommandFile(
   const origin = path.relative(workspaceRoot, path.dirname(filePath)).replace(/\\/g, "/");
   return {
     id, displayName, localName: baseName, key: id, label: displayName, desc,
-    creator: "QoreLogic", sourceRepo: "local", sourcePath: filePath,
+    creator: "FailSafe", sourceRepo: "local", sourcePath: filePath,
     versionPin: "unversioned", trustTier: "admitted",
     sourceType: rootMeta.sourceType, sourcePriority: rootMeta.sourcePriority,
     admissionState: rootMeta.admissionState, requiredPermissions: [],
     category, tags, name: displayName, description: desc,
-    installed: true, origin, sourceCredit: "QoreLogic",
+    installed: true, origin, sourceCredit: "FailSafe",
   };
 }
 
@@ -97,7 +97,7 @@ export function parseSkillFile(
   const desc = (readFrontmatterValue(fm, "description") || "Installed skill").trim();
   const sm = readSourceMetadata(path.dirname(filePath));
   const p = resolvePartials(fm, rootMeta, sm, filePath);
-  const resolvedId = resolveQoreSkillId(p.explicitSkillId || rawName, {
+  const resolvedId = resolveQorSkillId(p.explicitSkillId || rawName, {
     creator: String(p.creator || "").trim(),
     sourceRepo: String(p.sourceRepo || "").trim(), desc,
   });
@@ -169,7 +169,7 @@ function resolvePartials(fm: string, rm: SkillRoot, sm: SourceMeta, fp: string):
     sourceType: sm.sourceType || fv(fm, "sourceType") || fv(fm, "source_type") || rm.sourceType,
     sourcePriority: Number.isFinite(spNum) ? spNum : rm.sourcePriority,
     admissionState: sm.admissionState || fv(fm, "admissionState") || fv(fm, "admission_state") || rm.admissionState,
-    explicitSkillId: fv(fm, "id") || fv(fm, "skill_id") || fv(fm, "qore_id"),
+    explicitSkillId: fv(fm, "id") || fv(fm, "skill_id") || fv(fm, "qor_id"),
     sourceName: sm.sourceName || fv(fm, "source") || fv(fm, "provider") || fv(fm, "publisher"),
   };
 }
@@ -178,6 +178,6 @@ function resolvePartials(fm: string, rm: SkillRoot, sm: SourceMeta, fp: string):
 export {
   toSlug, humanizeSkillName, normalizeSkillTags, readFrontmatterValue,
   readFrontmatterList, readSourceMetadata, resolveSourceCredit,
-  resolveQoreSkillId, deriveSkillSourceToken, deriveSkillDomainToken,
+  resolveQorSkillId, deriveSkillSourceToken, deriveSkillDomainToken,
   deriveSkillActionToken,
 } from "./SkillFrontmatter";

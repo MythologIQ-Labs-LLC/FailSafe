@@ -12,7 +12,7 @@
 import * as vscode from "vscode";
 import { EventBus } from "../../shared/EventBus";
 import { SentinelDaemon } from "../../sentinel/SentinelDaemon";
-import { QoreLogicManager } from "../../qorelogic/QoreLogicManager";
+import { QorLogicManager } from "../../qorelogic/QorLogicManager";
 import { RiskManager } from "../../qorelogic/risk";
 import { PlanManager } from "../../qorelogic/planning/PlanManager";
 import { IntentService } from "../../governance/IntentService";
@@ -50,7 +50,7 @@ export class ProjectOverviewPanel {
   public static currentPanel: ProjectOverviewPanel | undefined;
   private readonly panel: vscode.WebviewPanel;
   private sentinel: SentinelDaemon;
-  private qorelogic: QoreLogicManager;
+  private qorelogic: QorLogicManager;
   private riskManager: RiskManager;
   private intentService: IntentService;
   private planManager?: PlanManager;
@@ -60,7 +60,7 @@ export class ProjectOverviewPanel {
   private constructor(
     panel: vscode.WebviewPanel,
     sentinel: SentinelDaemon,
-    qorelogic: QoreLogicManager,
+    qorelogic: QorLogicManager,
     riskManager: RiskManager,
     intentService: IntentService,
     eventBus: EventBus,
@@ -117,7 +117,7 @@ export class ProjectOverviewPanel {
   public static createOrShow(
     extensionUri: vscode.Uri,
     sentinel: SentinelDaemon,
-    qorelogic: QoreLogicManager,
+    qorelogic: QorLogicManager,
     riskManager: RiskManager,
     intentService: IntentService,
     eventBus: EventBus,

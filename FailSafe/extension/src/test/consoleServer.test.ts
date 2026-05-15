@@ -75,7 +75,7 @@ describe("ConsoleServer workspace-root scoped reads", () => {
         getCurrentSprint: () => null,
         getActivePlan: () => null,
       };
-      const fakeQorelogicManager = {
+      const fakeQorLogicManager = {
         getLedgerManager: () => null,
       };
       const fakeSentinelDaemon = {
@@ -84,7 +84,7 @@ describe("ConsoleServer workspace-root scoped reads", () => {
 
       const server = new ConsoleServer(
         fakePlanManager as never,
-        fakeQorelogicManager as never,
+        fakeQorLogicManager as never,
         fakeSentinelDaemon as never,
         eventBus,
         { workspaceRoot },

@@ -1,22 +1,22 @@
 /**
- * QoreRuntimeService - Encapsulates Qore runtime HTTP integration.
+ * QorRuntimeService - Encapsulates Qor runtime HTTP integration.
  *
  * Extracted from ConsoleServer (B166 Phase 2 / plan-v4.10.1a-no-b132).
  * Owns the `enabled` short-circuit, snapshot fetch, JSON fetch, and
- * proxy helper that backed the `/api/qore/*` endpoints.
+ * proxy helper that backed the `/api/qor/*` endpoints.
  *
  * No behavior change vs. the inline implementation.
  */
 import type { Request, Response } from "express";
 
-export type QoreRuntimeOptions = {
+export type QorRuntimeOptions = {
   enabled: boolean;
   baseUrl: string;
   apiKey?: string;
   timeoutMs: number;
 };
 
-export type QoreRuntimeSnapshot = {
+export type QorRuntimeSnapshot = {
   enabled: boolean;
   connected: boolean;
   baseUrl: string;
@@ -26,14 +26,14 @@ export type QoreRuntimeSnapshot = {
   error?: string;
 };
 
-export type QoreFetchResult =
+export type QorFetchResult =
   | { ok: true; body: unknown }
   | { ok: false; error: string; detail?: string };
 
-type QoreFetchOptions = { method?: "GET" | "POST"; body?: unknown };
+type QorFetchOptions = { method?: "GET" | "POST"; body?: unknown };
 
 /** Allow tests to inject a fake fetch without monkey-patching globals. */
-export type QoreFetchFn = (
+export type QorFetchFn = (
   input: string,
   init: {
     method: string;
@@ -48,16 +48,16 @@ export type QoreFetchFn = (
   json(): Promise<unknown>;
 }>;
 
-export class QoreRuntimeService {
-  private readonly options: QoreRuntimeOptions;
-  private readonly fetchImpl: QoreFetchFn;
+export class QorRuntimeService {
+  private readonly options: QorRuntimeOptions;
+  private readonly fetchImpl: QorFetchFn;
 
-  constructor(qoreRuntime: QoreRuntimeOptions, fetchImpl?: QoreFetchFn) {
-    this.options = qoreRuntime;
-    this.fetchImpl = fetchImpl ?? (fetch as unknown as QoreFetchFn);
+  constructor(qorRuntime: QorRuntimeOptions, fetchImpl?: QorFetchFn) {
+    this.options = qorRuntime;
+    this.fetchImpl = fetchImpl ?? (fetch as unknown as QorFetchFn);
   }
 
-  async fetchSnapshot(): Promise<QoreRuntimeSnapshot> {
+  async fetchSnapshot(): Promise<QorRuntimeSnapshot> {
     const checkedAt = new Date().toISOString();
     if (!this.options.enabled) {
       return {
@@ -89,8 +89,8 @@ export class QoreRuntimeService {
 
   async fetchJson(
     endpoint: string,
-    options?: QoreFetchOptions,
-  ): Promise<QoreFetchResult> {
+    options?: QorFetchOptions,
+  ): Promise<QorFetchResult> {
     if (!this.options.enabled) return { ok: false, error: "disabled" };
     const controller = new AbortController();
     const timer = setTimeout(
@@ -124,7 +124,7 @@ export class QoreRuntimeService {
     method?: "POST",
   ): Promise<void> {
     if (!this.options.enabled) {
-      res.status(503).json({ error: "Qore runtime integration is disabled" });
+      res.status(503).json({ error: "Qor runtime integration is disabled" });
       return;
     }
     const opts = method === "POST"
@@ -140,7 +140,7 @@ export class QoreRuntimeService {
   private buildHeaders(): Record<string, string> {
     const headers: Record<string, string> = { "content-type": "application/json" };
     if (this.options.apiKey) {
-      headers["x-qore-api-key"] = this.options.apiKey;
+      headers["x-qor-api-key"] = this.options.apiKey;
     }
     return headers;
   }

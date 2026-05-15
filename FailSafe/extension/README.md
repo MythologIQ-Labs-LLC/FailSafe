@@ -8,6 +8,15 @@ FailSafe runs locally inside VS Code and Cursor. It monitors what AI agents do, 
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
 
+## What's New (Unreleased)
+
+- **Model-sourced Risk Register**. Coding agents now write risks directly into the Risk Register via the MCP tool `failsafe.create_risk`, the `@failsafe /risk` chat subcommand, or auto-derivation from SHIELD lifecycle signals (GATE VETOs, DEBUG entries, Shadow-Genome failure events). The manual `failsafe.addRisk` wizard is removed; legacy entries auto-migrate to a `manual` source label.
+- **Install Skills UX expansion**: live-progress modal with retry, operator-editable host registry, per-host skill picker, dry-run preview, and a new workspace `LiveProgressInvariant` doctrine + lint helper.
+- **OpenVSX v5.0.0 catch-up**: VS Code Marketplace and OpenVSX are now aligned at v5.0.0 via a dedicated manual workflow (`.github/workflows/openvsx-catchup.yml`).
+- **SRE panel** now attributes its data source: links to the [Microsoft Agent Governance Toolkit](https://github.com/microsoft/agent-governance-toolkit) (the upstream the panel surfaces) and [Qortara](https://www.qortara.com).
+- **Brand sweep**: every `QoreLogic` / `Qore` legacy spelling removed across source. User-facing strings hyphenated to "Qor-Logic"; PascalCase identifiers remain `QorLogic`. Skills show simple attribution: `qor-logic` for skills sourced from the Qor-Logic Python package; `FailSafe` for skills authored here.
+- **Release pipeline safety gate**: both publish jobs now sit behind a `production` GitHub environment, requiring a reviewer approval between build and publish.
+
 ## What's New in v5.1.0
 
 Minor release: B199 Phase 1 ships the comprehensive E2E coverage methodology and the release-class CI gate (Option C) that blocks UI-surface commits without a corresponding `.spec.ts`. Surfaced and fixed three latent Monitor bugs that unit tests could not catch — including a missing `type="module"` on the Monitor's bootstrap script that meant the compact UI never actually rendered in production.
@@ -261,13 +270,13 @@ The Monitor provides real-time visibility into system health, governance posture
 - SOA ledger with local audit history and checkpoint summaries
 - MCP server support for external tools that need audit and ledger hooks
 
-## QoreLogic: The Governance Layer
+## QorLogic: The Governance Layer
 
-QoreLogic is the deterministic governance engine that enforces safety policies at the editor boundary. It operates on a fundamental principle: **governance decisions are made by code, not by asking an LLM to follow rules.**
+QorLogic is the deterministic governance engine that enforces safety policies at the editor boundary. It operates on a fundamental principle: **governance decisions are made by code, not by asking an LLM to follow rules.**
 
 ### Prompt Guidelines vs. Deterministic Governance
 
-| Aspect             | Prompt-Based Safety                     | QoreLogic Deterministic Governance   |
+| Aspect             | Prompt-Based Safety                     | QorLogic Deterministic Governance   |
 | ------------------ | --------------------------------------- | ------------------------------------ |
 | **Decision Maker** | LLM interprets rules                    | TypeScript code executes rules       |
 | **Consistency**    | Varies with context, temperature, model | Identical output for identical input |
@@ -275,7 +284,7 @@ QoreLogic is the deterministic governance engine that enforces safety policies a
 | **Bypass Risk**    | LLM can ignore or reinterpret           | Code cannot be persuaded             |
 | **Speed**          | Network latency + inference             | Sub-millisecond local execution      |
 
-### How QoreLogic Works
+### How QorLogic Works
 
 1. **Risk Classification** — Files are classified as L1 (low), L2 (medium), or L3 (high) risk based on:
    - File path triggers (e.g., `auth/`, `payment/`, `credential` → L3)
@@ -305,7 +314,7 @@ When an LLM is asked to enforce safety rules, it can:
 - Produce inconsistent decisions across similar inputs
 - Be influenced by prompt engineering attacks
 
-QoreLogic avoids these risks by executing deterministic TypeScript code at the governance boundary. The policy engine uses simple string matching and path analysis—no LLM inference required for governance decisions.
+QorLogic avoids these risks by executing deterministic TypeScript code at the governance boundary. The policy engine uses simple string matching and path analysis—no LLM inference required for governance decisions.
 
 **Example**: A file containing `api_key` will always trigger L3 classification. No prompt can persuade the code to ignore this trigger.
 
@@ -372,7 +381,7 @@ FailSafe evaluates save operations against the active Intent and can block write
 - Monitor and Command Center roles are defined in the Solution summary above; this model maps those roles to FailSafe architecture.
 - Narrative alignment:
   - `Genesis` -> Build
-  - `QoreLogic` -> Govern
+  - `QorLogic` -> Govern
   - `Sentinel` -> Watch
   - `Command Center` -> Build + Govern
   - `Monitor` -> Watch
@@ -393,7 +402,7 @@ FailSafe evaluates save operations against the active Intent and can block write
 
 - Generate, view, and export feedback snapshots
 
-### 10. QoreLogic Propagation
+### 10. QorLogic Propagation
 
 Supported via internal sync flows when enabled by workspace governance configuration.
 

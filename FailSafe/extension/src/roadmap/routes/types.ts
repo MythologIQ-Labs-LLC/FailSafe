@@ -1,6 +1,7 @@
 import type { QorLogicInstallReport } from '../../extension/installSkillsReport';
-import type { QoreRuntimeService } from '../services/QoreRuntimeService';
+import type { QorRuntimeService } from '../services/QorRuntimeService';
 import type { IFeatureGate } from '../../core/interfaces/IFeatureGate';
+import type { QorLogicHost } from '../../qorlogic/hostLayouts';
 
 /**
  * Dependency injection interface for API route modules extracted
@@ -10,8 +11,8 @@ import type { IFeatureGate } from '../../core/interfaces/IFeatureGate';
 export interface ApiRouteDeps {
   rejectIfRemote: (req: any, res: any) => boolean;
   broadcast: (data: Record<string, unknown>) => void;
-  // Phase 2 (B166) deps for QoreRoute / FeatureStatusRoute / SkillsApiRoute / HookRoute
-  qoreRuntimeService: QoreRuntimeService;
+  // Phase 2 (B166) deps for QorRoute / FeatureStatusRoute / SkillsApiRoute / HookRoute
+  qorRuntimeService: QorRuntimeService;
   buildHubSnapshot: () => Promise<Record<string, unknown>>;
   featureGate?: IFeatureGate;
   workspaceRoot: string;
@@ -40,6 +41,11 @@ export interface ApiRouteDeps {
   getRiskRegister: () => any[];
   writeRiskRegister: (risks: any[]) => void;
   scaffoldSkills?: () => Promise<QorLogicInstallReport | null>;
+  scaffoldWithWebOptions?: (
+    hosts: QorLogicHost[],
+    scope: "repo" | "global",
+    skillFilter: Record<string, string[]> | undefined,
+  ) => Promise<QorLogicInstallReport>;
   showOutput?: () => void;
   // Agent API route delegates (Phase 2: B142/B143/B144)
   getTimelineEntries: (filter?: any) => any[];

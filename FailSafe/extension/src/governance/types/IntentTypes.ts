@@ -101,7 +101,7 @@ export type IntentType =
   | "docs"; // Documentation updates
 
 /**
- * QoreLogic Risk Grade assignment.
+ * QorLogic Risk Grade assignment.
  */
 export type RiskGrade = "L1" | "L2" | "L3";
 
@@ -132,7 +132,7 @@ export interface IntentScope {
   modules: string[];
 
   /**
-   * Risk grade assigned by QoreLogic analysis.
+   * Risk grade assigned by QorLogic analysis.
    */
   riskGrade: RiskGrade;
 

@@ -5,17 +5,17 @@ import { Logger } from '../shared/Logger';
 import {
     PostSyncResult,
     PreSyncResult,
-    QoreLogicSystem,
+    QorLogicSystem,
     SyncContext,
     TemplateRenderContext,
     TemplateRenderResult,
-} from './types/QoreLogicSystem';
+} from './types/QorLogicSystem';
 import { SystemRegistry } from './SystemRegistry';
 
 /**
  * FrameworkSync - Multi-Agent Identity Distribution
  * 
- * Synchronizes QoreLogic identity definitions (skills, workflows, personas)
+ * Synchronizes QorLogic identity definitions (skills, workflows, personas)
  * from the source 'qorelogic/' directory to platform-specific hidden folders
  * (.agent, .claude, .qorelogic) as well as root-level instructions (CLAUDE.md, GEMINI.md).
  */
@@ -25,6 +25,15 @@ export interface DetectedSystem {
     isInstalled: boolean;
     hasGovernance: boolean;
     description: string;
+}
+
+export interface PropagateResult {
+    systemId: string;
+    systemName: string;
+    dirCopied: boolean;
+    injectedPath: string | null;
+    skipped: boolean;
+    skipReason?: string;
 }
 
 export class FrameworkSync {
@@ -85,14 +94,37 @@ export class FrameworkSync {
     }
 
     /**
-     * Propagate governance to a specific system
+     * Propagate governance to a specific system. Runs both the dir-copy
+     * step (when the system has sourceDir/targetDir) AND the governance-block
+     * injector (writing .github/copilot-instructions.md, .claude/CLAUDE.md, etc.).
+     * Returns a structured result so callers can report what actually happened.
      */
-    async propagate(systemId: string): Promise<void> {
+    async propagate(systemId: string): Promise<PropagateResult> {
         const system = await this.registry.findById(systemId);
         if (!system) {
             throw new Error(`Unknown system ID: ${systemId}`);
         }
-        await this.syncSystem(system);
+        const manifest = system.getManifest();
+        const dirCopied = await this.syncSystem(system);
+
+        const { AgentConfigInjector, AGENT_CONFIG_MAP } = await import('./AgentConfigInjector');
+        const injector = new AgentConfigInjector(this.registry, this.workspaceRoot);
+        const cfg = AGENT_CONFIG_MAP[manifest.id];
+        let injectedPath: string | null = null;
+        if (cfg) {
+            await injector.inject(system);
+            injectedPath = cfg.configPath;
+        }
+
+        const skipped = !dirCopied && !injectedPath;
+        return {
+            systemId: manifest.id,
+            systemName: manifest.name,
+            dirCopied,
+            injectedPath,
+            skipped,
+            skipReason: skipped ? 'no sourceDir/targetDir and no injector config' : undefined,
+        };
     }
 
     private async generateRootInstructions(): Promise<void> {
@@ -118,15 +150,15 @@ export class FrameworkSync {
         }
     }
 
-    private async syncSystem(system: QoreLogicSystem): Promise<void> {
+    private async syncSystem(system: QorLogicSystem): Promise<boolean> {
         const manifest = system.getManifest();
         if (!manifest.targetDir || !manifest.sourceDir) {
             this.logger.info(`Skipping dir-copy for ${manifest.id} (no sourceDir/targetDir)`);
-            return;
+            return false;
         }
         const sourceDir = this.registry.resolvePath(manifest.sourceDir);
         const targetDir = this.registry.resolvePath(manifest.targetDir);
-        if (!fs.existsSync(sourceDir)) return;
+        if (!fs.existsSync(sourceDir)) return false;
 
         const preSync = await this.preSync(system, {
             workspaceRoot: this.workspaceRoot,
@@ -136,7 +168,7 @@ export class FrameworkSync {
         });
         if (!preSync.proceed) {
             this.logger.warn(`PreSync blocked for ${manifest.id}`, preSync.error);
-            return;
+            return false;
         }
 
         this.logger.info(`Syncing ${manifest.name} framework...`);
@@ -161,6 +193,7 @@ export class FrameworkSync {
         if (!postSync.success) {
             this.logger.warn(`PostSync failed for ${manifest.id}`, postSync.error);
         }
+        return true;
     }
 
     private async copyRecursive(src: string, dest: string): Promise<void> {
@@ -182,7 +215,7 @@ export class FrameworkSync {
         }
     }
 
-    private async preSync(system: QoreLogicSystem, context: SyncContext): Promise<PreSyncResult> {
+    private async preSync(system: QorLogicSystem, context: SyncContext): Promise<PreSyncResult> {
         if (!system.preSync) {
             return { proceed: true };
         }
@@ -194,7 +227,7 @@ export class FrameworkSync {
     }
 
     private async postSync(
-        system: QoreLogicSystem,
+        system: QorLogicSystem,
         context: SyncContext,
         preSyncData?: Record<string, unknown>
     ): Promise<PostSyncResult> {
@@ -209,7 +242,7 @@ export class FrameworkSync {
     }
 
     private async renderTemplate(
-        system: QoreLogicSystem,
+        system: QorLogicSystem,
         context: TemplateRenderContext
     ): Promise<string> {
         if (!system.renderTemplate) {

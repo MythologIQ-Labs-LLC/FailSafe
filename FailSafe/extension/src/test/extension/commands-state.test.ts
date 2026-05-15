@@ -181,63 +181,14 @@ suite('Command state mutations (setGovernanceMode, createIntent)', () => {
     assert.match(String(capture.inputs[1].prompt), /Scope/);
   });
 
-  test('FX015 failsafe.addRisk — cancel at title stops the flow', async () => {
-    capture.inputQueue.push(undefined);
-    await vscode.commands.executeCommand('failsafe.addRisk');
-    assert.equal(capture.inputs.length, 1);
-    assert.match(String(capture.inputs[0].prompt), /Risk Title/);
-    assert.equal(capture.quicks.length, 0);
-  });
-
-  test('FX015 failsafe.addRisk — cancel at description stops the flow', async () => {
-    capture.inputQueue.push('Test risk');
-    capture.inputQueue.push(undefined);
-    await vscode.commands.executeCommand('failsafe.addRisk');
-    assert.equal(capture.inputs.length, 2);
-    assert.equal(capture.quicks.length, 0);
-  });
-
-  test('FX015 failsafe.addRisk — severity quickpick offers exactly critical/high/medium/low', async () => {
-    capture.inputQueue.push('Test risk');
-    capture.inputQueue.push('Test description');
-    capture.quickQueue.push(undefined); // user cancels at severity
-    await vscode.commands.executeCommand('failsafe.addRisk');
-    assert.equal(capture.quicks.length, 1);
-    const items = capture.quicks[0] as string[];
-    assert.deepEqual([...items].sort(), ['critical', 'high', 'low', 'medium']);
-  });
-
-  test('FX015 failsafe.addRisk — cancel at severity stops the flow', async () => {
-    capture.inputQueue.push('Test risk');
-    capture.inputQueue.push('Test description');
-    capture.quickQueue.push(undefined);
-    await vscode.commands.executeCommand('failsafe.addRisk');
-    assert.equal(capture.quicks.length, 1);
-    assert.equal(capture.infos.length, 0);
-  });
-
-  test('FX015 failsafe.addRisk — category quickpick offers expected 7 categories', async () => {
-    capture.inputQueue.push('Test risk');
-    capture.inputQueue.push('Test description');
-    capture.quickQueue.push('high');
-    capture.quickQueue.push(undefined); // cancel at category
-    await vscode.commands.executeCommand('failsafe.addRisk');
-    assert.equal(capture.quicks.length, 2);
-    const cats = capture.quicks[1] as string[];
-    assert.deepEqual([...cats].sort(), [
-      'compliance', 'dependency', 'governance', 'operational',
-      'performance', 'security', 'technical-debt',
-    ]);
-  });
-
-  test('FX015 failsafe.addRisk — full flow creates risk + shows info notification', async () => {
-    capture.inputQueue.push('Cache invalidation gap');
-    capture.inputQueue.push('Stale cache anti-pattern in PlanManager');
-    capture.quickQueue.push('high');
-    capture.quickQueue.push('technical-debt');
-    await vscode.commands.executeCommand('failsafe.addRisk');
-    assert.ok(capture.infos.some((m) => /Risk.*created.*ID:/i.test(m)),
-      `Expected info notification with created risk id; got ${JSON.stringify(capture.infos)}`);
+  // Plan-qor-model-sourced-risks Phase 1: failsafe.addRisk was removed in v5.1.0.
+  // Risks are now sourced via the coding model (MCP tool, chat subcommand,
+  // or auto-derivation). The wizard suite that previously lived here is
+  // replaced with a single deregistration assertion.
+  test('FX415 failsafe.addRisk — command is NOT registered after v5.1.0', async () => {
+    const all = await vscode.commands.getCommands(true);
+    assert.equal(all.includes('failsafe.addRisk'), false,
+      'failsafe.addRisk should be removed; risks now come from the model');
   });
 
   test('failsafe.sentinelStatus — shows sentinel status as info notification', async () => {
