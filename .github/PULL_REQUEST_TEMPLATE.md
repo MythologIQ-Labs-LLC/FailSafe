@@ -35,6 +35,15 @@
 - [ ] PR-first flow used (no direct merge/push to protected branches unless explicitly approved)
 - [ ] Required checks are green before merge
 
+## Reliability Gates
+
+<!-- Confirm the SHIELD reliability sweep gates apply when this PR touches plan/audit/implement/substantiate surfaces. -->
+
+- [ ] Intent lock verified (qor-implement Step 5.5 / qor-substantiate Step 4.6 `intent_lock verify`)
+- [ ] Skill admission gate green (qor-substantiate Step 4.6 `skill_admission`)
+- [ ] Gate-to-skill matrix gate green (qor-substantiate Step 4.6 `gate_skill_matrix`)
+- [ ] N/A — this PR does not touch SHIELD lifecycle surfaces
+
 ## Risk Assessment
 
 - [ ] Risk grade assessed: **L1** / **L2** / **L3**

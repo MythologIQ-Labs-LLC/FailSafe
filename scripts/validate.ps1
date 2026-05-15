@@ -158,46 +158,41 @@ function Validate-ReliabilityHardening {
   # These checks run locally but are skipped in CI where .claude/ is not present
   $claudeSkillsRoot = Join-Path $repoRoot ".claude/skills"
   if (Test-Path $claudeSkillsRoot) {
-    $qlImplementWorkflows = @(
+    # Validator patterns updated 2026-05-14 to match upstream qor-logic SDK rewrite:
+    # implement.SKILL.md now uses "Step 5.5: Intent Lock Capture" and a single
+    # "Step 4.6: Reliability Sweep" in substantiate.SKILL.md that runs intent_lock
+    # + skill_admission + gate_skill_matrix as a sequenced ABORT bundle (BACKLOG
+    # IDs B49/B50/B51 still apply, just no longer as separate numbered steps).
+    $qorImplementWorkflows = @(
       ".claude/skills/qor-implement/SKILL.md"
     )
 
-    foreach ($workflow in $qlImplementWorkflows) {
+    foreach ($workflow in $qorImplementWorkflows) {
       Assert-FileContains `
         -RelativePath $workflow `
-        -Pattern "Step 5\.6: Intent Lock Interdiction \(B51\)" `
-        -Rule "ql-implement missing B51 interdiction"
-
-      Assert-FileContains `
-        -RelativePath $workflow `
-        -Pattern "Step 5\.7: Skill Admission Interdiction \(B49\)" `
-        -Rule "ql-implement missing B49 interdiction"
-
-      Assert-FileContains `
-        -RelativePath $workflow `
-        -Pattern "Step 5\.8: Gate-to-Skill Matrix Interdiction \(B50\)" `
-        -Rule "ql-implement missing B50 interdiction"
+        -Pattern "Step 5\.5: Intent Lock Capture" `
+        -Rule "qor-implement missing Intent Lock Capture step"
     }
 
-    $qlSubstantiateWorkflows = @(
+    $qorSubstantiateWorkflows = @(
       ".claude/skills/qor-substantiate/SKILL.md"
     )
 
-    foreach ($workflow in $qlSubstantiateWorkflows) {
+    foreach ($workflow in $qorSubstantiateWorkflows) {
       Assert-FileContains `
         -RelativePath $workflow `
-        -Pattern "validate-reliability-run\.ps1" `
-        -Rule "ql-substantiate missing reliability-run validator gate"
+        -Pattern "intent_lock verify" `
+        -Rule "qor-substantiate missing intent_lock verify gate"
 
       Assert-FileContains `
         -RelativePath $workflow `
-        -Pattern "Step 4\.6: Skill Admission Evidence Check \(B49\)" `
-        -Rule "ql-substantiate missing B49 evidence check"
+        -Pattern "skill_admission" `
+        -Rule "qor-substantiate missing skill_admission gate"
 
       Assert-FileContains `
         -RelativePath $workflow `
-        -Pattern "Step 4\.7: Gate-to-Skill Matrix Evidence Check \(B50\)" `
-        -Rule "ql-substantiate missing B50 evidence check"
+        -Pattern "gate_skill_matrix" `
+        -Rule "qor-substantiate missing gate_skill_matrix gate"
     }
   } else {
     Write-Log "Skipping skill content validation - .claude/ not present (gitignored)" -Level Warning
