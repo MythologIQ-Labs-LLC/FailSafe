@@ -54,7 +54,17 @@ export class QorRuntimeService {
 
   constructor(qorRuntime: QorRuntimeOptions, fetchImpl?: QorFetchFn) {
     this.options = qorRuntime;
-    this.fetchImpl = fetchImpl ?? (fetch as unknown as QorFetchFn);
+    // Resolve fetch lazily via globalThis. Bare `fetch` identifier throws
+    // ReferenceError in VS Code extension hosts that don't expose global
+    // fetch as a lexical (only as globalThis.fetch). Lazy lookup also lets
+    // a polyfill be installed after construction.
+    this.fetchImpl = fetchImpl ?? ((input, init) => {
+      const g = (globalThis as { fetch?: unknown }).fetch;
+      if (typeof g !== "function") {
+        throw new Error("fetch is not available in this runtime");
+      }
+      return (g as QorFetchFn)(input, init);
+    });
   }
 
   async fetchSnapshot(): Promise<QorRuntimeSnapshot> {
