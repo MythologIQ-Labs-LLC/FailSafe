@@ -1,23 +1,6 @@
----
-name: qor-implement
-description: >-
-  Specialist Implementation Pass that translates gated blueprint into reality using Section 4 Simplicity Razor and TDD-Light methodology. Use when: (1) Implementing after PASS verdict from /qor-audit, (2) Building features from approved architecture plans, or (3) Creating code under KISS constraints.
-metadata:
-  category: development
-  author: MythologIQ
-  source:
-    repository: https://github.com/MythologIQ/Qor-logic
-    path: qor/skills/sdlc/qor-implement
-phase: implement
-tone_aware: false
-autonomy: interactive
-gate_reads: audit
-gate_writes: implement
-permitted_tools: [Read, Grep, Glob, Bash, Edit, Write]
-permitted_subagents: []
-model_compatibility: [claude-opus-4-7]
-min_model_capability: opus
----
+description = "Specialist Implementation Pass that translates gated blueprint into reality using Section 4 Simplicity Razor and TDD-Light methodology. Use when: (1) Implementing after PASS verdict from /qor-audit, ("
+phase = "implement"
+prompt = """
 # /qor-implement - Implementation Pass
 
 <skill>
@@ -169,9 +152,9 @@ PLAN_PATH=$(python -c "from qor.scripts.governance_helpers import current_phase_
 # Resolve session_id via the canonical helper (reads .qor/session/current AND
 # validates against SESSION_ID_PATTERN per Phase 23 LOW-2 / Phase 50 doctrine)
 SESSION_ID=$(python -c "from qor.scripts.session import current; print(current() or 'default')")
-python -m qor.reliability.intent_lock capture \
-  --session "$SESSION_ID" \
-  --plan "$PLAN_PATH" \
+python -m qor.reliability.intent_lock capture \\
+  --session "$SESSION_ID" \\
+  --plan "$PLAN_PATH" \\
   --audit .agent/staging/AUDIT_REPORT.md
 ```
 
@@ -351,3 +334,4 @@ This skill implements:
 ---
 
 **Remember**: Reality must match Promise. Never compromise simplicity for speed.
+"""

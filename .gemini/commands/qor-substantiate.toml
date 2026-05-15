@@ -1,23 +1,6 @@
----
-name: qor-substantiate
-description: >-
-  S.H.I.E.L.D. Substantiation and Session Seal that verifies implementation against blueprint and cryptographically seals the session. Use when: (1) Implementation is complete, (2) Ready to verify Reality matches Promise, (3) Need to seal session with Merkle hash, or (4) Preparing to hand off completed work.
-metadata:
-  category: governance
-  author: MythologIQ
-  source:
-    repository: https://github.com/MythologIQ/Qor-logic
-    path: qor/skills/governance/qor-substantiate
-phase: substantiate
-tone_aware: false
-autonomy: interactive
-gate_reads: implement
-gate_writes: substantiate
-permitted_tools: [Read, Grep, Glob, Bash, Edit, Write]
-permitted_subagents: []
-model_compatibility: [claude-opus-4-7]
-min_model_capability: opus
----
+description = "S.H.I.E.L.D. Substantiation and Session Seal that verifies implementation against blueprint and cryptographically seals the session. Use when: (1) Implementation is complete, (2) Ready to verify Reali"
+phase = "substantiate"
+prompt = """
 # /qor-substantiate - Session Seal
 
 <skill>
@@ -266,7 +249,7 @@ ABORT semantics on non-zero exit: operator must remediate detected secrets (remo
 Static-analysis pass over the implement-gate `files_touched` set. WARN-only posture: deviations append severity-2 events to the Process Shadow Genome but do NOT abort substantiate. Catches the doc-surface coverage gap (skill / script / doctrine / schema changes without at least one update to `docs/SYSTEM_STATE.md`, `docs/operations.md`, `docs/architecture.md`, or `docs/lifecycle.md`).
 
 ```bash
-python -m qor.scripts.procedural_fidelity --session "$SESSION_ID" \
+python -m qor.scripts.procedural_fidelity --session "$SESSION_ID" \\
   --out dist/procedural-fidelity.findings.json
 ```
 
@@ -348,9 +331,9 @@ Phase 33 addition: when `plan_artifact.change_class` is `feature` or `breaking`,
 
 ```bash
 if [[ "${CHANGE_CLASS}" == "feature" || "${CHANGE_CLASS}" == "breaking" ]]; then
-  python -m qor.scripts.badge_currency \
-    --repo-root . \
-    --ledger docs/META_LEDGER.md \
+  python -m qor.scripts.badge_currency \\
+    --repo-root . \\
+    --ledger docs/META_LEDGER.md \\
     || { echo "ABORT: README badge currency mismatch — update Tests/Ledger/Skills/Agents/Doctrines counts to match truth before re-running /qor-substantiate"; exit 1; }
 fi
 ```
@@ -386,7 +369,7 @@ Any raised `ValueError` or `RuntimeError` from missing toolkit or invalid hash s
 
 ### Step 7: Final Merkle Seal
 
-**Phase 76 wiring (GH #51)**: each new SESSION SEAL entry body MUST include an `**Entry ID**: \`<12-char-hex>\`` line derived via `entry_id.derive_entry_id(ts, phase, content_hash)`. The Entry ID is content-addressable and survives concurrent federation append because it does not require entry-number-allocation coordination. Forward-only: Entries #1-#207 are unchanged; Phase 76+ entries carry the additional field. See `qor/scripts/entry_id.py` for derivation; set env `QOR_ENTRY_ID_FULL_HASH=1` for 64-char mode at federation scale.
+**Phase 76 wiring (GH #51)**: each new SESSION SEAL entry body MUST include an `**Entry ID**: \\`<12-char-hex>\\`` line derived via `entry_id.derive_entry_id(ts, phase, content_hash)`. The Entry ID is content-addressable and survives concurrent federation append because it does not require entry-number-allocation coordination. Forward-only: Entries #1-#207 are unchanged; Phase 76+ entries carry the additional field. See `qor/scripts/entry_id.py` for derivation; set env `QOR_ENTRY_ID_FULL_HASH=1` for 64-char mode at federation scale.
 
 Calculate session seal:
 
@@ -464,9 +447,9 @@ The `python -c` source is hardcoded — no shell variable is interpolated into t
 Closes the skill-protocol bypass surface. Walks SESSION SEAL entries with phase >= 52 in `docs/META_LEDGER.md`; for each, asserts `.qor/gates/<sid>/{plan,audit,implement,substantiate}.json` all exist. ABORTs seal on any gap. Phase ≤ 51 entries grandfathered.
 
 ```bash
-QOR_SKILL_ACTIVE=substantiate python -m qor.reliability.gate_chain_completeness \
-  --repo-root . \
-  --phase-min 52 \
+QOR_SKILL_ACTIVE=substantiate python -m qor.reliability.gate_chain_completeness \\
+  --repo-root . \\
+  --phase-min 52 \\
   || { echo "ABORT: gate-chain completeness violated; bypass would be invisible to ledger math"; exit 1; }
 ```
 
@@ -597,3 +580,4 @@ This skill implements:
 - **Version Gate**: Prevents sealing with stale or mismatched versions
 - **Reality Audit**: File-by-file comparison against blueprint
 - **Hash Chain Finalization**: Calculates session seal for META_LEDGER
+"""
