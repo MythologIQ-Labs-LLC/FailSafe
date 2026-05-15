@@ -389,7 +389,7 @@
     "vscode:prepublish": "npm run build:package",
     "build:package": "npm run compile && npm run bundle",
     "bundle": "node ./scripts/bundle.cjs",
-    "compile": "tsc -p ./",
+    "compile": "tsc -p ./ && node ./scripts/copy-ui-js.cjs",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run patch:better-sqlite3 && npm run rebuild:vscode",
     "patch:better-sqlite3": "node ./scripts/patch-better-sqlite3.cjs",
