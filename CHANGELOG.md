@@ -5,6 +5,20 @@ All notable changes to FailSafe will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — v5.2.0 (draft)
+
+Bicameral MCP integration (v1). New Integrations tab with install picker (solo/team), connection lifecycle, and a decision feed driven by the four Bicameral v1 tools (`history`, `preflight`, `drift`, `ratify`). Settings card surfaces install state + autoConnect toggle. No version bump in this draft cycle — the work is held at a stage-only review boundary pending Phase 5 Playwright coverage and substantiate. See `docs/INTEGRATIONS.md` for the full surface and `.failsafe/governance/SESSION_STATE_bicameral-mcp-integration.md` for cycle status.
+
+### Added
+
+- **Bicameral MCP — Integrations tab** (`docs/plan-qor-bicameral-mcp-integration.md`). New Command Center tab dedicated to third-party integrations. Bicameral is the only entry in v1; pattern extensible to additional MCP servers.
+- **Install bridge** with solo / team mode picker. Runs `pip install bicameral-mcp` + `bicameral-mcp setup --mode {solo|team}` via list-form spawn against the operator's resolved Python; nothing is bundled in the VSIX. Live per-step progress over WebSocket.
+- **BicameralMcpClient** — thin wrapper around `@modelcontextprotocol/sdk` stdio transport. Connect/disconnect is lazy; `history`/`preflight`/`drift`/`ratify` tools are surfaced through HTTP routes that scope to local-only access (`rejectIfRemote`).
+- **Settings card** — install state + version + `failsafe.integrations.bicameral.autoConnect` toggle + "Re-install / Re-setup…" shortcut. The autoConnect setting drives an opt-in background connect attempt at activation when the workspace is configured.
+- **VS Code settings**: `failsafe.integrations.bicameral.command` (default `"bicameral-mcp"`), `failsafe.integrations.bicameral.pipCommand` (default `"pip"`), `failsafe.integrations.bicameral.autoConnect` (default `false`).
+- **Route module** `src/roadmap/routes/BicameralRoute.ts` (status + install + connect / disconnect / history / drift / ratify + auto-connect toggle); **bootstrap helper** `src/extension/bootstrapBicameral.ts` (lazy client wiring + config-watcher rebuild + auto-connect probe); **UI module** `src/roadmap/ui/modules/bicameral-settings-card.js`.
+- 11 new mocha test files covering client / install detector / install handler / Integrations tab JSDOM render / Bicameral card states (functional under SG-035).
+
 ## [5.1.0] - 2026-05-14
 
 Minor release. Model-sourced Risk Register (coding agents author risks via MCP tool, chat subcommand, or auto-derivation from SHIELD lifecycle), Install Skills UX expansion (live progress + per-host picker + dry-run preview + LiveProgressInvariant doctrine), OpenVSX/VS Code Marketplace alignment at v5.0.0 baseline, brand sweep (eliminated all `Qore` legacy spellings), release pipeline safety gate (production environment approval), full SRE panel attribution (Microsoft AGT + Qortara), 36 new FX415–FX420 functional tests, and a complete brand + skill-source-attribution sweep. Supersedes the unreleased 2026-05-06 draft.
