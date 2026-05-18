@@ -18609,3 +18609,72 @@ _Next: operator runtime verification (reload extension; verify modal live-progre
 _Chain integrity: VALID_
 _Session Status: install-skills-ux-expansion SEALED at #371; 5-phase UX surface complete; 73/73 .cjs pass; bundle current; review boundary honored; upstream Qor-logic#58 filed; PUBLISH_BLOCK unchanged_
 _Session: 2026-05-14-install-skills-ux-expansion-substantiation-seal_
+
+---
+
+### Entry #372: SESSION SEAL — plan-qor-voice-substrate-extraction (full-plan substantiation; 6 phases; B195 resolved)
+
+**Entry ID**: `7a8000ab0c28`
+**Date**: 2026-05-18
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-voice-substrate-extraction.md` (target v5.2.x; no in-cycle version bump per plan header)
+**Audit reference**: `.failsafe/governance/AUDIT_REPORT_voice-substrate-extraction.md` (cycle 1 VETO with F1/F2/F3 → cycle 2 PASS after amendment; Risk Grade L2; workspace-only governance artifact)
+**Implementation reference**: 3 commits on `feat/voice-substrate-extraction` (`cbf84cb` plan, `61c39e7` plan amendment, `960bbfe` Phases 1-6 implementation). Branched off `main`.
+
+## Federation note
+
+A sibling SESSION SEAL claiming Entry #372 exists on the parallel `feat/bicameral-mcp-integration` branch (bicameral MCP cycle, sealed 2026-05-18). Both branches diverged from `main` at Entry #371 and each appended an Entry #372 of equal-precedent Merkle chain depth. Per `qor/references/doctrine-shadow-genome-countermeasures.md` `SG-ConcurrentLedgerRace-A`, when the operator merges both branches into main, ONE of the two #372 entries must be renumbered to #373 (manual reconciliation: pick the lexicographic-earlier merge to retain #372; the other gets #373 + an amended `previous_hash` referencing the kept #372's chain_hash).
+
+## Substantiation summary
+
+Voice substrate extraction lands the v1 surface that resolves B195. Heavy vendor binaries (Piper TTS + Whisper STT, ~86 MB uncompressed) move out of the base VSIX into a separate `failsafe-voice-pack-<version>.tar.gz` distributed as a GitHub Releases asset. Voice substrate code stays. ConsoleServer overlays `globalStorageUri/voice-pack/` at `/vendor` so existing voice modules resolve transparently when installed; absence degrades gracefully through existing engine error paths + new UI affordance. All 6 phases delivered.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| AUDIT_REPORT cycle 2 PASS | ✓ (cycle 1 F1 ghost-ui/live-progress + F2 specification-drift + F3 infrastructure-mismatch all remediated in `61c39e7`) |
+| Reality = Promise | 30+ planned files present; 0 MISSING; 1 deviation (.test.cjs → .test.ts for vscode-test pickup) |
+| Open blockers | None gating; B195 marked `[x]` in BACKLOG |
+| Test functionality (SG-035) | 30 new functional cases (26 mocha + 4 Playwright) — all invoke unit + assert on behavior |
+| Mocha clean state | 2292 passing / 17 failing — baseline-identical to main; zero regressions |
+| Playwright voice-pack.spec.ts | 4 / 4 passing (14.8s clean state) |
+| ESLint | 0 errors; 4 warnings in new files (no-var-requires, matches existing pattern) |
+| TypeScript | clean |
+| Section 4 Razor | All 7 new source files ≤250L (largest: install-handler 219L) |
+| Console.log artifacts | Zero in new files |
+| FEATURE_INDEX FX491–FX497 | All 7 verified |
+| Smoke verification | `npm run package:voice-pack` produces 28 MB tarball + .sha256 + manifest.json |
+
+## Skipped per protocol (degraded-wiring posture)
+
+Same as Entry #371 / federated #372: Python `qor.*` toolkit unavailable. Steps 0, 4.6, 4.6.5, 4.6.6, 4.7, 6.5, 6.8, 7.4, 7.5, 7.6, 7.7, 7.8, 8.5, 9.5.5, 9.6, Z all SKIP. Step 6.8 hash validation REPLACED with inline Node `crypto` validate-as-hex (all 4 hashes pass `^[a-f0-9]{64}$`). Each skip emits one conceptual `gate_skipped_prerequisite_absent` severity-1 event.
+
+## Content Hash
+
+**Content Hash**: `26dc7e327e5338436db3727f090c17fd8d8c3af132b3b513693bbfb501e1078a`
+**Previous Hash**: `eaed7e955642b1dffbb6c5f7eb3a5cd6aace96db29d49a5ada3b5682490f139c` (Entry #371 chain hash)
+**Chain Hash**: `c60284bc7d65a7920bcdb998558ea069d71139ff750053980f2b7bb418ce837d` — SHA256(content_hash + "|" + previous_hash)
+**Merkle Seal**: `50b3c4c09cf643ff15a9a377f0adcbce28b6a5c7b06fd378c474d02c2af08ef0` — SHA256(content_hash + "|" + chain_hash + "|gate_workspace_audit_voice_substrate_PASS")
+**Session ID**: workspace-only / `2026-05-18-voice-substrate-extraction-substantiation-seal`
+
+## Review Boundary attestation
+
+Per `feedback_no_ship_without_approval.md` + plan header §"Review boundary: stage artifacts only": no push, no tag, no PR, no merge, no marketplace publish, no GitHub Release upload. The 3 `feat/voice-substrate-extraction` commits stay local. The `dist/failsafe-voice-pack-5.1.0.tar.gz` smoke-test artifact is local-only, NOT uploaded.
+
+## Decision
+
+**SEAL — Reality matches Promise.** B195 marketplace-cap risk closed via the separate-download companion pattern; base VSIX projected ≤ 30 MB after extraction (`assertVsixUnderCeiling` enforces). Voice substrate code degrades gracefully when pack absent. **No marketplace publish, no version bump, no annotated tag, no GitHub Release emitted** — ships behind v5.1.0 PUBLISH_BLOCK pending v5.2.0 release cycle.
+
+## Operator notice — degraded wiring
+
+`.qor/` runtime uninitialized; same posture as Entries #371 / federated #372. This ledger entry + the three `feat/voice-substrate-extraction` commits + Playwright spec + `docs/INTEGRATIONS.md` are the canonical record.
+
+_Chain Status: VOICE-SUBSTRATE-EXTRACTION PLAN SEALED at Entry #372 (on `feat/voice-substrate-extraction` branch). Operator may push, PR, merge to main, or upload smoke-test tarball to a GitHub Releases pre-release for live testing._
+_Next: operator decision on push/merge/PR/release — none auto-triggered by this seal._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: voice-substrate-extraction SEALED at #372; 6-phase v1 surface complete; 2292 mocha pass + 4 Playwright pass; B195 resolved; PUBLISH_BLOCK unchanged; sibling federated #372 on feat/bicameral-mcp-integration requires merge-time reconciliation per SG-ConcurrentLedgerRace-A_
+_Session: 2026-05-18-voice-substrate-extraction-substantiation-seal_
