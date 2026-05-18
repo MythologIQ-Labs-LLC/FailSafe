@@ -96,6 +96,7 @@ export class ConsoleServer {
   private bicameralCommand = "bicameral-mcp";
   private bicameralAutoConnect = false;
   private bicameralAutoConnectWriter: (value: boolean) => Promise<void> = async () => {};
+  private voicePackPath: string | null = null;
   private transparencyLogger: TransparencyLogger;
   private riskRegisterManager: RiskRegisterManager;
   private hub: HubSnapshotService;
@@ -171,6 +172,8 @@ export class ConsoleServer {
   setBicameralCommand(cmd: string): void { this.bicameralCommand = cmd; }
   setBicameralAutoConnect(value: boolean): void { this.bicameralAutoConnect = value; }
   setBicameralAutoConnectWriter(fn: (value: boolean) => Promise<void>): void { this.bicameralAutoConnectWriter = fn; }
+  setVoicePackPath(p: string | null): void { this.voicePackPath = p; }
+  getVoicePackPath(): string | null { return this.voicePackPath; }
   setAutoDerivationHook(fn: HubSnapshotService["autoDerivationHook"]): void { this.hub.autoDerivationHook = fn; }
 
   // ── internals ──────────────────────────────────────────────────────
@@ -242,6 +245,7 @@ export class ConsoleServer {
       getBicameralCommand: () => this.bicameralCommand,
       getBicameralAutoConnect: () => this.bicameralAutoConnect,
       setBicameralAutoConnect: (v) => this.bicameralAutoConnectWriter(v),
+      getVoicePackPath: () => this.voicePackPath,
       marketplaceCatalog: this.marketplaceCatalog,
       marketplaceInstaller: this.marketplaceInstaller,
       securityScanner: this.securityScanner,

@@ -5,6 +5,7 @@ import { renderInstallSkillsCard, bindInstallSkillsCard } from './install-skills
 import { renderNotificationsCard, renderBrainstormCard, bindNotificationsCard, bindBrainstormCard } from './settings-extras.js';
 import { escapeHtml } from './brainstorm-templates.js';
 import { renderBicameralSettingsCard } from './bicameral-settings-card.js';
+import { renderVoicePackSettingsCard } from './voice-pack-settings-card.js';
 
 // Sentinel attr name used across all bind paths to make listener wiring
 // idempotent: a node carrying data-cc-bound="1" already has its listener
@@ -61,7 +62,8 @@ export class SettingsRenderer {
       ${renderGovernanceModeCard(hub)}
       ${renderQorVersionWarning(hub)}
       ${renderFailSafeProCard()}
-      <div class="cc-card" id="cc-bicameral-settings-slot" style="margin-top:16px"></div>`;
+      <div class="cc-card" id="cc-bicameral-settings-slot" style="margin-top:16px"></div>
+      <div class="cc-card" id="cc-voice-pack-settings-slot" style="margin-top:16px"></div>`;
     this._bindQorLogicActions();
     this._bindFailSafeProActions();
     this._bindGovernanceModeActions();
@@ -71,6 +73,12 @@ export class SettingsRenderer {
     bindBrainstormCard(this.container, this.store);
     this._renderHookToggle();
     void this._renderBicameralSettings();
+    this._renderVoicePackSettings();
+  }
+
+  _renderVoicePackSettings() {
+    const slot = this.container?.querySelector('#cc-voice-pack-settings-slot');
+    return renderVoicePackSettingsCard(slot, { bindOnce });
   }
 
   _bindGovernanceModeActions() {

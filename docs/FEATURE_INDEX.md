@@ -588,6 +588,20 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 ---
 
+## Section: Voice Pack (separate-download companion — B195 resolution)
+
+| ID | Feature | Doc | Code | Test | Status | Notes |
+|---|---|---|---|---|---|---|
+| FX491 | voice-pack-detector — probeVoicePackState (absent / installed / stale / corrupt) | INTEGRATIONS.md "Voice Pack" | src/voice-pack/voice-pack-detector.ts | src/test/voice-pack/voice-pack-detector.test.ts | verified | 5 mocha cases: absent on missing dir; installed with version+manifestPath; stale when version<requiredMinVersion; corrupt on sha256 desync; path-traversal rejection. Pure-fs probe, no spawn, no network. |
+| FX492 | install-handler (Node 20+ fetch + redirect-follow + bounded host allowlist + tar extract + atomic-rename) | INTEGRATIONS.md "Voice Pack" — supply-chain trust + version pinning | src/voice-pack/install-handler.ts | src/test/extension/voice-pack-install.test.ts | verified | 7 mocha cases: fetch invoked with version-resolved URL + redirect:follow; SHA256 mismatch aborts pre-extract; extract failure preserves prior pack; success atomic-renames; uninstall removes voice-pack/ only; resolveVoicePackUrl rejects malformed semver; bounded-redirect allowlist rejects non-GitHub final URLs (F3 remediation). |
+| FX493 | Settings card (Voice Pack — absent / installed / stale / error + Install/Update/Uninstall + Dismiss/Retry + live progress) | INTEGRATIONS.md "Voice Pack" — Install/uninstall | src/roadmap/ui/modules/voice-pack-settings-card.js | src/test/roadmap/voice-pack-settings-card.test.ts | verified | 5 JSDOM cases: absent renders Install button + disabled hint; installed renders version + Uninstall + disk-usage; error state renders Dismiss + Retry with last failed InstallProgressEvent.error (F1 remediation); install-button click POSTs /api/actions/install-voice-pack; slot removed on 404. |
+| FX494 | ConsoleServer /vendor static mount routing (voice-pack overlay) | INTEGRATIONS.md "Voice Pack" — runtime resolution | src/roadmap/services/ConsoleRouteRegistrar.ts, src/roadmap/ConsoleServer.ts | src/test/roadmap/ConsoleRouteRegistrar.test.ts (FX494 cases) | verified | 3 cases: /vendor mount registered when getVoicePackPath returns existing dir; no mount when path null; no mount when path missing. Mount registers BEFORE the default uiDir static so pack files take priority; falls through when pack absent. |
+| FX495 | bootstrapVoicePack wiring + failsafe.{install,uninstall}VoicePack commands + VoicePackRoute + Settings slot | INTEGRATIONS.md "Voice Pack" — Install/uninstall + Routes | src/extension/bootstrapVoicePack.ts, src/extension/bootstrapServers.ts, src/roadmap/routes/VoicePackRoute.ts, src/roadmap/ui/modules/settings.js | src/test/extension/voice-pack-activation.test.ts | verified | 4 mocha cases: wireVoicePack with absent pack sets path null; lazy at activation (no install fired); installed pack sets path to dir; stale/corrupt sets path null. Phase 6 voice-pack.spec.ts Playwright extends with live UI flows. |
+| FX496 | scripts/package-voice-pack.cjs (tarball + manifest.json + .sha256 assembler) | INTEGRATIONS.md "Voice Pack" — Install / What's in the pack | scripts/package-voice-pack.cjs | src/test/scripts/packageVoicePack.test.ts | verified | 4 mocha cases: reads from dist/extension/ui/vendor/{piper,whisper}; manifest.json lists every expected file with sha256; companion .sha256 matches tarball digest; errors clearly when source dir missing. Wired into build:package via npm run package:voice-pack. |
+| FX497 | validate-vsix.cjs 30 MB ceiling assertion (B195 acceptance gate) | INTEGRATIONS.md "Voice Pack" — What stays in the base extension | scripts/validate-vsix.cjs (assertVsixUnderCeiling) | src/test/scripts/validateVsixSize.test.ts | verified | 2 mocha cases: under-ceiling pass; over-ceiling throw with descriptive error. Enforces B195 acceptance criterion (base VSIX ≤ 30 MB after voice-pack extraction). |
+
+---
+
 ## Section: FailSafe Pro discovery / boundary
 
 | ID | Feature | Doc | Code | Test | Status | Notes |

@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — v5.2.0 (draft)
 
-Bicameral MCP integration (v1) + stale-cache remediation (B192). Both held at stage-only review boundary pending v5.2.0 release. See `docs/INTEGRATIONS.md` and `docs/governance-cache-invalidation.md`.
+Bicameral MCP integration (v1) + stale-cache remediation (B192) + voice substrate extraction (B195). All held at stage-only review boundary pending v5.2.0 release. See `docs/INTEGRATIONS.md` and `docs/governance-cache-invalidation.md`.
 
 ### Added
 
@@ -17,12 +17,19 @@ Bicameral MCP integration (v1) + stale-cache remediation (B192). Both held at st
 - **Bicameral Settings card** — install state + version + `failsafe.integrations.bicameral.autoConnect` toggle + "Re-install / Re-setup…" shortcut. The autoConnect setting drives an opt-in background connect attempt at activation when the workspace is configured.
 - **VS Code settings**: `failsafe.integrations.bicameral.command` (default `"bicameral-mcp"`), `failsafe.integrations.bicameral.pipCommand` (default `"pip"`), `failsafe.integrations.bicameral.autoConnect` (default `false`).
 - **Bicameral surface** — `src/roadmap/routes/BicameralRoute.ts` (status + install + connect / disconnect / history / drift / ratify + auto-connect toggle); `src/extension/bootstrapBicameral.ts` (lazy client wiring + config-watcher rebuild + auto-connect probe); `src/roadmap/ui/modules/bicameral-settings-card.js`.
-- 11 new mocha test files covering client / install detector / install handler / Integrations tab JSDOM render / Bicameral card states (functional under SG-035).
+- 11 new mocha test files covering Bicameral client / install detector / install handler / Integrations tab JSDOM render / Bicameral card states (functional under SG-035).
 - **`WorkspaceMutationBus`** (`src/shared/WorkspaceMutationBus.ts`) — targeted-path fs.watch aggregator with per-watcher debounce (200ms default, 1500ms META_LEDGER override). Pure Node stdlib; no new deps.
 - **`LedgerManager.getLedgerPath()`** — public accessor for the SQLite db path; lets HubSnapshotService + TrustEngine resolve the watch target without threading `configProvider` through their constructors.
 - **`HubSnapshotService.refreshChainValidity()`** — invalidates `cachedChainValid` + `chainValidAt` on bus-emitted db mutations; next `getCheckpointSummary()` re-walks the chain via `verifyCheckpointChain()`.
 - **`HubSnapshotService.dispose()`** + **`PlanManager.dispose()`** + **`TrustEngine.dispose()`** — release bus subscriptions on extension deactivate.
 - **18 new functional cases** across 5 test files (FX498/499/501/502/503 — all under SG-035 acceptance discipline).
+- **Voice Pack — separate-download companion** (`docs/plan-qor-voice-substrate-extraction.md`). Resolves B195 marketplace-cap risk per the 2026-05-18 disposition decision (`feedback_voice_separate_download.md`). Base VSIX drops below the 30 MB ceiling; voice features become opt-in.
+- **Install / uninstall paths**: VS Code commands `failsafe.installVoicePack` + `failsafe.uninstallVoicePack`. Settings tab Voice Pack card with 4-state render (`absent` / `installed v<X>` / `stale` / `error`) including explicit **Dismiss** + **Retry** on terminal errors (per F1 audit-cycle-1 remediation; satisfies SG-FakeProgress-A Live-Progress Invariant).
+- **Voice substrate**: `src/voice-pack/{types,voice-pack-detector,install-handler,index}.ts`. Pure Node 20+ stdlib (`fetch` with redirect-follow + bounded GitHub-host allowlist; `crypto`, `stream`, `child_process` for `tar -xzf`). No new npm dependencies.
+- **ConsoleServer static-mount overlay**: `setupAllRoutes()` mounts `globalStorageUri/voice-pack/` at `/vendor` BEFORE the default uiDir static, so pack files take priority when installed. Falls through gracefully when absent (existing `error:piper_not_vendored` engine error path engages — surfacing the Install Voice Pack affordance via `voice-controller.probeVoicePack()`).
+- **VoicePackRoute**: `GET /api/integrations/voice-pack/status` (probe + version + missingFiles + diskUsageBytes), `POST /api/actions/install-voice-pack` (bridge with WS-broadcast per-phase progress), `POST /api/actions/uninstall-voice-pack`.
+- **Voice-pack build pipeline**: `scripts/package-voice-pack.cjs` writes `dist/failsafe-voice-pack-<version>.tar.gz` + `.sha256` + manifest.json with every-file sha256. `.vscodeignore` excludes the heavy vendor paths from VSIX packaging. `scripts/validate-vsix.cjs` adds a 30 MB ceiling assertion (B195 acceptance gate).
+- **18 voice-pack functional tests** across 6 test files (FX491–FX497).
 
 ### Changed
 
