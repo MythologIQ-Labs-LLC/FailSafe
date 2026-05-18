@@ -4,6 +4,7 @@ import { renderVoiceSettings, bindVoiceSettings } from './voice-settings.js';
 import { renderInstallSkillsCard, bindInstallSkillsCard } from './install-skills-card.js';
 import { renderNotificationsCard, renderBrainstormCard, bindNotificationsCard, bindBrainstormCard } from './settings-extras.js';
 import { escapeHtml } from './brainstorm-templates.js';
+import { renderBicameralSettingsCard } from './bicameral-settings-card.js';
 
 // Sentinel attr name used across all bind paths to make listener wiring
 // idempotent: a node carrying data-cc-bound="1" already has its listener
@@ -59,7 +60,8 @@ export class SettingsRenderer {
       ${renderInstallSkillsCard(this._installState, hub)}
       ${renderGovernanceModeCard(hub)}
       ${renderQorVersionWarning(hub)}
-      ${renderFailSafeProCard()}`;
+      ${renderFailSafeProCard()}
+      <div class="cc-card" id="cc-bicameral-settings-slot" style="margin-top:16px"></div>`;
     this._bindQorLogicActions();
     this._bindFailSafeProActions();
     this._bindGovernanceModeActions();
@@ -68,6 +70,7 @@ export class SettingsRenderer {
     bindNotificationsCard(this.container, this.store);
     bindBrainstormCard(this.container, this.store);
     this._renderHookToggle();
+    void this._renderBicameralSettings();
   }
 
   _bindGovernanceModeActions() {
@@ -102,6 +105,11 @@ export class SettingsRenderer {
       onFinishFetch: () => {},
       onError: () => { this._installState = { ...this._installState, running: false }; },
     });
+  }
+
+  _renderBicameralSettings() {
+    const slot = this.container?.querySelector('#cc-bicameral-settings-slot');
+    return renderBicameralSettingsCard(slot, { bindOnce });
   }
 
   async _renderHookToggle() {

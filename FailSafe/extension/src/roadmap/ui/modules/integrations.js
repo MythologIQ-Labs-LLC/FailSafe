@@ -11,6 +11,7 @@ export class IntegrationsRenderer {
     this.client = client;
     this.state = { bicameral: { ...INITIAL_BICAMERAL_STATE } };
     this.handlers = this._buildHandlers();
+    this._detectedOnce = false;
   }
 
   render(_hubData) {
@@ -18,13 +19,24 @@ export class IntegrationsRenderer {
     if (!panel) return;
     panel.innerHTML = this._renderCards();
     bindBicameralCard(panel, this.handlers);
+    if (!this._detectedOnce) {
+      this._detectedOnce = true;
+      void this._refreshStatus();
+    }
   }
 
   onEvent(evt) {
     if (!evt || typeof evt !== 'object') return;
-    // WS broadcast types from ActionsRoute /api/actions/bicameral-install.
+    // WS broadcast types from BicameralRoute (install + connect lifecycle).
     if (evt.type === 'bicameral.install.progress' || evt.type === 'bicameral.install.complete') {
       this.setInstallProgress(evt.invocation);
+      if (evt.type === 'bicameral.install.complete') {
+        void this._refreshStatus();
+      }
+      return;
+    }
+    if (evt.type === 'bicameral.connected' || evt.type === 'bicameral.disconnected') {
+      void this._refreshStatus();
     }
   }
 
@@ -38,10 +50,10 @@ export class IntegrationsRenderer {
 
   _buildHandlers() {
     return {
-      onDetect:  () => this._setState({ requesting: true }),
-      onConnect: () => this._setState({ requesting: true }),
-      onRefresh: () => this._setState({ requesting: true }),
-      onRatify:  (_id, _verdict) => this._setState({ requesting: true }),
+      onDetect:  () => this._refreshStatus(),
+      onConnect: () => this._connect(),
+      onRefresh: () => this._refreshHistory(),
+      onRatify:  (id, verdict) => this._ratify(id, verdict),
       onInstall: (mode) => this._beginInstall(mode),
       // Setup-only path reuses /api/actions/bicameral-install (the install
       // handler skips the pip step when pip-install reports already-installed,
@@ -49,6 +61,83 @@ export class IntegrationsRenderer {
       // and let the upstream skip the no-op pip step.
       onSetup:   (mode) => this._beginInstall(mode),
     };
+  }
+
+  async _refreshStatus() {
+    this._setState({ requesting: true, error: null });
+    try {
+      const res = await fetch('/api/integrations/bicameral/status');
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.ok === false) {
+        this._setState({ requesting: false, error: json?.error || res.statusText || 'status probe failed' });
+        return;
+      }
+      this._setState({
+        requesting: false,
+        installState: json.state || 'unknown',
+        version: json.version,
+        configPath: json.configPath,
+      });
+      // If we're connected, immediately fetch history so the running state has
+      // content. If not connected, leave features as-is so prior data persists.
+      if (json.state === 'running') void this._refreshHistory({ silent: true });
+    } catch (err) {
+      this._setState({ requesting: false, error: String(err) });
+    }
+  }
+
+  async _connect() {
+    this._setState({ requesting: true, error: null });
+    try {
+      const res = await fetch('/api/actions/bicameral-connect', { method: 'POST' });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.ok === false) {
+        this._setState({ requesting: false, error: json?.error || 'connect failed' });
+        return;
+      }
+      this._setState({ requesting: false, installState: 'running' });
+      void this._refreshHistory({ silent: true });
+    } catch (err) {
+      this._setState({ requesting: false, error: String(err) });
+    }
+  }
+
+  async _refreshHistory({ silent = false } = {}) {
+    if (!silent) this._setState({ requesting: true, error: null });
+    try {
+      const res = await fetch('/api/actions/bicameral-history', { method: 'POST' });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.ok === false) {
+        this._setState({ requesting: false, error: json?.error || 'history fetch failed' });
+        return;
+      }
+      this._setState({ requesting: false, features: Array.isArray(json.features) ? json.features : [] });
+    } catch (err) {
+      this._setState({ requesting: false, error: String(err) });
+    }
+  }
+
+  async _ratify(decisionId, verdict) {
+    if (!decisionId) return;
+    this._setState({ requesting: true, error: null });
+    try {
+      const res = await fetch('/api/actions/bicameral-ratify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ decisionId, verdict: verdict || 'ratify' }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.ok === false) {
+        this._setState({ requesting: false, error: json?.error || 'ratify failed' });
+        return;
+      }
+      // Refresh history to surface the new status. _refreshHistory clears
+      // requesting on success.
+      void this._refreshHistory({ silent: true });
+      this._setState({ requesting: false });
+    } catch (err) {
+      this._setState({ requesting: false, error: String(err) });
+    }
   }
 
   async _beginInstall(mode) {
@@ -87,8 +176,7 @@ export class IntegrationsRenderer {
   }
 
   /** Host-side wiring point: called from the extension's install bridge with
-   *  the latest InstallProgressEvent. Defined here for v1 even though the
-   *  bridge is Phase 3 work — keeps the surface declared. */
+   *  the latest InstallProgressEvent. */
   setInstallProgress(progress) {
     this._setState({ installProgress: progress });
   }

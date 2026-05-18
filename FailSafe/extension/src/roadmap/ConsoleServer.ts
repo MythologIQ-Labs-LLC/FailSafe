@@ -88,6 +88,10 @@ export class ConsoleServer {
   private agentTimelineService: AgentTimelineService | null = null;
   private agentHealthIndicator: AgentHealthIndicator | null = null;
   private agentRunRecorder: AgentRunRecorder | null = null;
+  private bicameralClient: import("../integrations/bicameral").BicameralMcpClient | null = null;
+  private bicameralCommand = "bicameral-mcp";
+  private bicameralAutoConnect = false;
+  private bicameralAutoConnectWriter: (value: boolean) => Promise<void> = async () => {};
   private transparencyLogger: TransparencyLogger;
   private riskRegisterManager: RiskRegisterManager;
   private hub: HubSnapshotService;
@@ -158,6 +162,10 @@ export class ConsoleServer {
   setAgentTimelineService(s: AgentTimelineService): void { this.agentTimelineService = s; }
   setAgentHealthIndicator(i: AgentHealthIndicator): void { this.agentHealthIndicator = i; }
   setAgentRunRecorder(r: AgentRunRecorder): void { this.agentRunRecorder = r; }
+  setBicameralClient(c: import("../integrations/bicameral").BicameralMcpClient | null): void { this.bicameralClient = c; }
+  setBicameralCommand(cmd: string): void { this.bicameralCommand = cmd; }
+  setBicameralAutoConnect(value: boolean): void { this.bicameralAutoConnect = value; }
+  setBicameralAutoConnectWriter(fn: (value: boolean) => Promise<void>): void { this.bicameralAutoConnectWriter = fn; }
   setAutoDerivationHook(fn: HubSnapshotService["autoDerivationHook"]): void { this.hub.autoDerivationHook = fn; }
 
   // ── internals ──────────────────────────────────────────────────────
@@ -224,6 +232,10 @@ export class ConsoleServer {
       qorRuntimeService: this.qorRuntimeService,
       brainstormService: this.brainstormService,
       audioVaultService: this.audioVaultService,
+      getBicameralClient: () => this.bicameralClient,
+      getBicameralCommand: () => this.bicameralCommand,
+      getBicameralAutoConnect: () => this.bicameralAutoConnect,
+      setBicameralAutoConnect: (v) => this.bicameralAutoConnectWriter(v),
       marketplaceCatalog: this.marketplaceCatalog,
       marketplaceInstaller: this.marketplaceInstaller,
       securityScanner: this.securityScanner,

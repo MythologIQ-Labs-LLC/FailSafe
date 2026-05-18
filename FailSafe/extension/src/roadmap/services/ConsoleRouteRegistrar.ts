@@ -15,6 +15,7 @@ import { ConfigurationProfile } from "../../genesis/ConfigurationProfile";
 import { setupBrainstormRoutes } from "../routes/BrainstormRoute";
 import { setupCheckpointRoutes } from "../routes/CheckpointRoute";
 import { setupActionsRoutes } from "../routes/ActionsRoute";
+import { setupBicameralRoutes } from "../routes/BicameralRoute";
 import { setupTransparencyRiskRoutes } from "../routes/TransparencyRiskRoute";
 import { registerQorRoute } from "../routes/QorRoute";
 import { registerFeatureStatusRoute } from "../routes/FeatureStatusRoute";
@@ -57,6 +58,10 @@ export interface ConsoleRouteHost {
   sentinelDaemon: unknown; planManager: unknown;
   qorelogicManager: { getLedgerManager: () => unknown; getShadowGenomeManager: () => unknown };
   featureGate: unknown;
+  getBicameralClient: () => import("../../integrations/bicameral").BicameralMcpClient | null;
+  getBicameralCommand: () => string;
+  getBicameralAutoConnect: () => boolean;
+  setBicameralAutoConnect: (value: boolean) => Promise<void>;
 }
 
 export class ConsoleRouteRegistrar {
@@ -192,6 +197,15 @@ export class ConsoleRouteRegistrar {
     setupBrainstormRoutes(app, apiDeps);
     setupCheckpointRoutes(app, apiDeps);
     setupActionsRoutes(app, apiDeps);
+    setupBicameralRoutes(app, {
+      rejectIfRemote: (req, res) => this.host.rejectIfRemote(req, res),
+      broadcast: (d) => this.host.broadcast(d),
+      workspaceRoot: this.host.workspaceRoot,
+      getBicameralCommand: () => this.host.getBicameralCommand(),
+      getBicameralClient: () => this.host.getBicameralClient(),
+      getAutoConnect: () => this.host.getBicameralAutoConnect(),
+      setAutoConnect: (v) => this.host.setBicameralAutoConnect(v),
+    });
     setupMarketplaceRoutes(app, {
       rejectIfRemote: (req, res) => this.host.rejectIfRemote(req, res),
       broadcast: (data) => this.host.broadcast(data),

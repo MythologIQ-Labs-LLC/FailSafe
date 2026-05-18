@@ -1,8 +1,6 @@
 import { Request, Response } from "express";
 import type { QorLogicHost } from "../../qorlogic/hostLayouts";
 import type { ApiRouteDeps } from "./types";
-import { runBicameralInstall } from "../../integrations/bicameral";
-import type { InstallMode, InstallProgressEvent } from "../../integrations/bicameral";
 
 /**
  * Hub action-button routes: resume monitoring, panic stop,
@@ -108,34 +106,6 @@ export function setupActionsRoutes(
     }
     deps.showOutput();
     res.status(204).end();
-  });
-
-  // Bicameral MCP install action — Integrations tab "Install (Solo|Team)".
-  // Browser cannot spawn child_process; this route is the bridge. Final
-  // InstallProgressEvent returns in the response body; per-step progress is
-  // broadcast over WebSocket so the panel can render live.
-  app.post("/api/actions/bicameral-install", async (req: Request, res: Response) => {
-    if (deps.rejectIfRemote(req, res)) return;
-    const rawMode = String(req.body?.mode ?? '');
-    const mode: InstallMode | null = rawMode === 'solo' ? 'solo' : rawMode === 'team' ? 'team' : null;
-    if (!mode) {
-      res.status(400).json({ ok: false, error: 'mode must be "solo" or "team"' });
-      return;
-    }
-    try {
-      const result = await runBicameralInstall({
-        workspaceRoot: deps.workspaceRoot,
-        onProgress: (evt: InstallProgressEvent) => {
-          deps.broadcast({
-            type: evt.done ? 'bicameral.install.complete' : 'bicameral.install.progress',
-            invocation: evt,
-          });
-        },
-      }, mode);
-      res.json({ ok: result.ok === true, report: result });
-    } catch (e) {
-      res.status(500).json({ ok: false, error: String(e) });
-    }
   });
 
   // Process all pending L3 approvals in batch
