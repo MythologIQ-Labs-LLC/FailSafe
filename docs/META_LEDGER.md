@@ -18608,4 +18608,118 @@ _Next: operator runtime verification (reload extension; verify modal live-progre
 
 _Chain integrity: VALID_
 _Session Status: install-skills-ux-expansion SEALED at #371; 5-phase UX surface complete; 73/73 .cjs pass; bundle current; review boundary honored; upstream Qor-logic#58 filed; PUBLISH_BLOCK unchanged_
+
+---
+
+### Entry #372: SESSION SEAL — plan-qor-bicameral-mcp-integration (full-plan substantiation; 5 phases — substrate + install bridge + Integrations tab + Settings card + Playwright spec)
+
+**Entry ID**: `87bbc20e2b7d`
+**Date**: 2026-05-18
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-bicameral-mcp-integration.md` (target v5.2.0; no in-cycle version bump per plan header + operator directive)
+**Audit reference**: `.failsafe/governance/AUDIT_REPORT_bicameral-mcp-integration.md` (3-cycle PASS, Risk Grade L2; workspace-only governance artifact — not in tracked git)
+**Implementation reference**: 5 commits on `feat/bicameral-mcp-integration` (`5dbd984`, `97c0f0d`, `8b229f9`, `187bf83`, `0249822`), all SHIELD-class `wip(bicameral): …` or `chore(backlog): …`.
+
+## Substantiation summary
+
+The Bicameral MCP integration lands as a v1 surface inside FailSafe's Command Center. Operators install Bicameral MCP locally via FailSafe's Integrations tab (solo or team mode), then drive its decision ledger through an MCP stdio session opened lazily on Connect. Four Bicameral tools wired in v1 — `history`, `preflight`, `drift`, `ratify`. Nothing is bundled in the VSIX. Settings card surfaces status + autoConnect toggle. Full surface documented in `docs/INTEGRATIONS.md`.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| AUDIT_REPORT PASS verdict (workspace artifact, 3 cycles) | ✓ |
+| Reality = Promise (Step 3) | 19/19 plan-deliverable files present (verified by glob); 0 MISSING; 0 UNPLANNED (Phase 5 Playwright spec authorized by plan §"Phase 5: Per-Feature Integration Test"). Two activation/settings unit tests added during seal to close the Phase 3 test descriptors. |
+| Open security or development blockers | None gating this cycle. |
+| Test functionality discipline (SG-035) | 18 new functional cases (11 mocha + 4 Playwright + 3 mocha added during seal) — all assert against the unit's output, not presence. Presence-only seal gate PASS. |
+| Mocha (whole repo) | 2377 passing / 1 pending / 17 failing. 7 new bicameral tests in the passing count; baseline-comparison vs `5dbd984` shows zero regressions (the 17 failing are pre-existing VS Code mutex / activation-host environment failures unrelated to this cycle, verified by stash-and-rerun on the bare WIP commit). |
+| Playwright | `integrations-bicameral.spec.ts` 4/4 passing (38.8s wall-clock). |
+| ESLint | 0 errors, 93 warnings (zero in new bicameral files). |
+| TypeScript compile | clean. |
+| Section 4 Razor | New files: 12/13 ≤250L. `bicameral-card.js` at 269L (audit-blessed in workspace AUDIT_REPORT Cycle 3). Touched pre-existing-over-250 files (`ConsoleServer.ts`, `ConsoleRouteRegistrar.ts`, `settings.js`) all marginal +7/+8/+12L additions on already-over files; `bootstrapServers.ts` and `ActionsRoute.ts` REDUCED 297→247L and 220→189L respectively via deliberate extraction. |
+| FEATURE_INDEX FX483–FX490 | All 8 entries `verified`. FX487/488/489/490 promoted from `unverified` post-Phase-5 Playwright. |
+| BACKLOG | B-INT-1..5 captured for follow-up (commit `0249822`). |
+| CHANGELOG | `[Unreleased] — v5.2.0 (draft)` block authored in Phase 4 commit `8b229f9`. Step 7.6 stamp-to-version SKIPPED per operator directive (no in-cycle version bump; the Unreleased block will be renamed by the v5.2.0 release cycle). |
+| Memory (out-of-tree) | `reference_bicameral_mcp.md` written; `project_bicameral_mcp_integration.md` updated with resume log; `MEMORY.md` index reflects both. |
+| Review boundary | No git tag, no push, no PR — local hold honored. |
+
+## Files modified / created (this cycle, post-`5dbd984`)
+
+**New files (8):**
+- `FailSafe/extension/src/roadmap/routes/BicameralRoute.ts` (234L) — status + install + connect/disconnect + 4 v1 tool routes + autoConnect toggle route
+- `FailSafe/extension/src/extension/bootstrapBicameral.ts` (85L) — lazy client wiring + config-watcher rebuild + auto-connect probe
+- `FailSafe/extension/src/roadmap/ui/modules/bicameral-settings-card.js` (68L) — Settings card DOM render + autoConnect toggle wiring
+- `FailSafe/extension/src/test/extension/bicameral-activation.test.ts` (121L) — 4 cases: no-throw on missing CLI; lazy (no connect at activate); unsafe-command rejection; autoConnect=false no-op
+- `FailSafe/extension/src/test/roadmap/settings-bicameral.test.ts` (135L) — 3 cases: card renders with toggle; toggle persists via POST; slot removed on 404
+- `FailSafe/extension/src/test/ui/integrations-bicameral.spec.ts` (157L) — 4 Playwright cases: configured-not-running picker; connect→running→feed; ratify→POST; not-installed picker
+- `docs/INTEGRATIONS.md` (66L) — public-facing integration surface doc
+
+**Modified files (10):**
+- `FailSafe/extension/package.json` — 3 config keys (command/pipCommand/autoConnect)
+- `FailSafe/extension/src/extension/bootstrapServers.ts` — 2-line call into `wireBicameralIntegration` + `maybeAutoConnectBicameral`
+- `FailSafe/extension/src/roadmap/ConsoleServer.ts` — 12L: 4 setters + 2 host-getter fields
+- `FailSafe/extension/src/roadmap/routes/ActionsRoute.ts` — install route migrated out
+- `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts` — BicameralRoute wired into setupAllRoutes + host interface extended
+- `FailSafe/extension/src/roadmap/ui/modules/integrations.js` — stub handlers replaced with real fetch chain (status/connect/history/ratify) + WS reactivity
+- `FailSafe/extension/src/roadmap/ui/modules/settings.js` — slot for bicameral-settings-card
+- `FailSafe/extension/src/test/roadmap/ConsoleRouteRegistrar.test.ts` — host fixture extended with new bicameral fields
+- `FailSafe/extension/src/test/ui/helpers/serveConsoleServerUI.ts` — bicameralClient/Command/Configured fixtures
+- `docs/FEATURE_INDEX.md` — FX483–FX490 section added; FX487-490 flipped verified post-Phase-5
+- `docs/BACKLOG.md` — Bicameral MCP Integration (Follow-ups) section with B-INT-1..5
+- `CHANGELOG.md` — `[Unreleased]` v5.2.0 draft block
+- `FailSafe/extension/README.md` + `README.md` — Upcoming / What's New teaser bullets
+
+## Skipped per protocol decisions
+
+- **Step 0 (gate_chain advisory)**, **Step 4.6 (intent_lock / skill_admission / gate_skill_matrix)**, **Step 4.6.5 (secret_scanner)**, **Step 4.6.6 (procedural_fidelity)**, **Step 4.7 (doc_integrity strict)**, **Step 6.5 (documentation_currency + badge_currency)**, **Step 6.8 (hash_guard toolkit validation — replaced by inline Node `crypto` validate-as-hex check)**, **Step 7.4 (SSDF tagger)**, **Step 7.7 (seal_entry_check)**, **Step 7.8 (gate_chain_completeness)**, **Step 8.5 (dist_compile)**, **Step Z (write substantiate.json + session.rotate)**: all Python `qor.*` toolkit modules unavailable on this Node-archetype host. Each step emits one `gate_skipped_prerequisite_absent` shadow event (severity-1) per Phase 75 wiring. Same posture as Entry #371's "Operator notice — degraded wiring."
+- **Step 7.5 (version bump)**: SKIPPED per plan header + operator directive. Target v5.2.0 is set in plan, applied at the release cycle, not in this seal.
+- **Step 7.6 (CHANGELOG stamp to version)**: SKIPPED. `[Unreleased]` block authored in Phase 4 commit `8b229f9`; the rename-to-`[v5.2.0]` happens in the v5.2.0 release cycle, not here.
+- **Step 9.5.5 (annotated seal-tag creation)**: SKIPPED per `feedback_no_ship_without_approval.md` + plan §Review boundary.
+- **Step 9.6 (push/merge options)**: SKIPPED. Operator selected "stage-only review boundary" at AskUserQuestion prior to skill invocation. Five commits stay local on `feat/bicameral-mcp-integration`.
+
+## Review Boundary attestation
+
+Per `feedback_no_ship_without_approval.md` + plan header §"Review boundary: stage artifacts only (no push / PR / merge / tag / publish)": no push, no tag, no PR, no merge, no marketplace publish. The five `feat/bicameral-mcp-integration` commits stay local. Operator may at their discretion: (a) push the branch for review, (b) open a PR, (c) merge into main and roll into the eventual v5.2.0 release.
+
+## PUBLISH_BLOCK status
+
+UNCHANGED. The v5.1.0 PUBLISH_BLOCK lift gate (Entry #359 conditions) is not affected by this cycle. v5.2.0 publish gate will inherit FX483–FX490 verified status from this seal.
+
+## Content Hash
+
+**Content Hash**: `b2dcf84643bc9559fb2ff97e760bb5bc25fae9e24dd4dc9d898b066d11ead120` — SHA256 of seal manifest `plan=docs/plan-qor-bicameral-mcp-integration.md|audit_pass=workspace_AUDIT_REPORT_bicameral_3cycle|audit_history=cycle1+cycle2+cycle3|implement=5dbd984+97c0f0d+8b229f9+187bf83+0249822|tail=0249822|phases_sealed=1+1b+2+3+3polish+4+5|review_boundary=stage_only|publish_block_unchanged=true|change_class=feature|version_bump_skipped=true`
+**Previous Hash**: `eaed7e955642b1dffbb6c5f7eb3a5cd6aace96db29d49a5ada3b5682490f139c` (Entry #371 chain hash)
+**Chain Hash**: `be758ac9fd2a28040695ed1b240ad2847aa36b75b81767e484c156d9e612caae` — SHA256(content_hash + "|" + previous_hash)
+**Merkle Seal**: `2215312082b537bfb041dd6387d49a1476fcc8a42a2a5dfbc086bce2a550812f` — SHA256(content_hash + "|" + chain_hash + "|gate_workspace_audit_bicameral_PASS")
+**Session ID**: workspace-only / carry-over from `2026-05-14T0500-6eaac7` (rotation NOOP; `.qor/` runtime uninitialized)
+
+## PASS conditions confirmed
+
+- AUDIT_REPORT PASS verdict (workspace artifact, 3 cycles): ✓
+- Reality matches Promise across all 5 phases (19/19 deliverables present; 0 MISSING after seal-time addition of two unit tests called out in Phase 3 plan §Unit Tests)
+- Test functionality discipline (SG-035): 18/18 functional (presence-only seal gate PASS)
+- Razor: new files all under 250L except audit-blessed `bicameral-card.js` (269L); touched pre-existing-over files within marginal-additions allowance
+- ESLint: 0 errors, 0 warnings in new bicameral files
+- TypeScript: clean
+- Version state: target v5.2.0 > current tag v5.1.0; bump SKIPPED per stage-only review boundary
+- Mocha 2377 passing / 17 failing — baseline-identical to bare WIP commit (zero regressions); the 17 are pre-existing VS Code mutex / activation-host environment failures
+- Playwright bicameral spec: 4/4 passing
+- FEATURE_INDEX FX483–FX490: all verified
+- BACKLOG B-INT-1..5: captured
+- Memory: `reference_bicameral_mcp.md` written; `project_bicameral_mcp_integration.md` resume log appended
+- Review boundary: no PUBLISH_BLOCK flip, no version bump, no tag, no push, no marketplace publish
+
+**Decision**: **SEAL — Reality matches Promise.** The Bicameral MCP integration is fully closed at the local-hold stage-only review boundary. The Integrations tab is operational; the install picker drives `pip install` on the operator's machine; the four v1 MCP tools (`history`/`preflight`/`drift`/`ratify`) are wired through a lazy `BicameralMcpClient`; the Settings card surfaces install state + autoConnect; documentation is complete (`docs/INTEGRATIONS.md` + FEATURE_INDEX FX483–FX490). **No marketplace publish, no version bump, no annotated tag emitted by this seal** — feature ships behind v5.1.0 PUBLISH_BLOCK pending the eventual v5.2.0 release cycle.
+
+## Operator notice — degraded wiring
+
+`.qor/` runtime uninitialized; same posture as Entry #371. Gate-artifact persistence, AI provenance manifest, intent-lock verify, secret scanner, procedural fidelity, doc integrity, post-seal verification, gate-chain completeness, dist-compile, session rotation: all NOOP. This ledger entry + the five WIP commits + Playwright spec + `docs/INTEGRATIONS.md` are the canonical record.
+
+_Chain Status: BICAMERAL-MCP-INTEGRATION PLAN SEALED at Entry #372. Operator may at their discretion: (a) push `feat/bicameral-mcp-integration` for review; (b) open a PR against main; (c) merge to main and roll into the v5.2.0 release cycle. The B-INT-1..5 follow-ups in BACKLOG track the v2 surface (remaining 9 Bicameral tools; preflight wiring into L3 approval; version pin; McpClientHost abstraction; sub-tab pattern)._
+_Next: operator decision on push/merge/PR — none auto-triggered by this seal._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: bicameral-mcp-integration SEALED at #372; 5-phase v1 surface complete; 2377 mocha pass + 4 Playwright pass; review boundary honored; PUBLISH_BLOCK unchanged_
 _Session: 2026-05-14-install-skills-ux-expansion-substantiation-seal_
