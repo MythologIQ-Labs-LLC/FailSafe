@@ -36,6 +36,34 @@ export class GovernanceRenderer {
       ${this.renderL3Queue(l3Queue)}
       ${this.renderAuditLog()}`;
     this.bindActions();
+    this.highlightDeepLinkedVerdict();
+  }
+
+  /**
+   * If the URL hash carries `?verdict=<iso-timestamp>` (Sentinel-alert
+   * deep-link from the Monitor sidebar), scroll the matching audit-log row
+   * into view and flash it. Falls back to scrolling to the Sentinel card
+   * when no matching row exists — typical when the alert came from a
+   * `hub.recentVerdicts` checkpoint that hasn't replayed into the live
+   * `verdictLog` event stream yet.
+   */
+  highlightDeepLinkedVerdict() {
+    if (!this.container) return;
+    const hash = (typeof window !== 'undefined' && window.location?.hash) || '';
+    const queryStr = hash.split('?')[1] || '';
+    if (!queryStr) return;
+    const ts = new URLSearchParams(queryStr).get('verdict');
+    if (!ts) return;
+    const row = this.container.querySelector(`[data-verdict-ts="${CSS.escape(ts)}"]`);
+    if (row) {
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      row.classList.add('cc-verdict--highlighted');
+      setTimeout(() => row.classList.remove('cc-verdict--highlighted'), 3000);
+      return;
+    }
+    // Row missing — fall back to scrolling the Sentinel card into view.
+    const sentinelCard = this.container.querySelector('.cc-gov-verify')?.closest('.cc-card');
+    sentinelCard?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   renderSentinelCard(sentinel, chainValid) {
@@ -128,7 +156,10 @@ export class GovernanceRenderer {
     const entries = this.verdictLog.slice(-50).reverse().map(v => {
       const level = this.verdictLevel(v);
       const message = this.formatAuditMessage(v);
-      return `<div class="cc-verdict cc-verdict--${level}" style="margin-bottom:6px;font-size:0.8rem">
+      // Carry the verdict's payload timestamp so the Sentinel-alert deep-link
+      // (#governance?verdict=<iso>) can locate and highlight this row.
+      const ts = this.esc(v.payload?.timestamp || v.timestamp || '');
+      return `<div class="cc-verdict cc-verdict--${level}" data-verdict-ts="${ts}" style="margin-bottom:6px;font-size:0.8rem">
         <span style="color:var(--text-muted);font-size:0.7rem">${v.time || ''}</span>
         <span style="margin-left:8px">${message}</span>
       </div>`;

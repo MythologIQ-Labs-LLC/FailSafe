@@ -564,10 +564,11 @@ body {
 .cc-badge--medium { background: var(--accent-gold); color: #000; box-shadow: 0 0 10px rgba(250, 204, 21, 0.4); }
 .cc-badge--low { background: var(--accent-green); color: #fff; box-shadow: 0 0 10px rgba(52, 211, 153, 0.4); }
 
-.cc-verdict { padding: 8px 12px; border-radius: 8px; border-left: 4px solid var(--accent-green); background: rgba(0,0,0,0.2); }
+.cc-verdict { padding: 8px 12px; border-radius: 8px; border-left: 4px solid var(--accent-green); background: rgba(0,0,0,0.2); transition: outline 0.4s ease, background 0.4s ease; }
 .cc-verdict--pass { border-left-color: var(--accent-green); }
 .cc-verdict--warn { border-left-color: var(--accent-gold); }
 .cc-verdict--violation { border-left-color: var(--accent-red); }
+.cc-verdict--highlighted { outline: 2px solid var(--accent-gold, #f5a524); background: rgba(245, 165, 36, 0.15); }
 
 .cc-chip {
   background: var(--console-bg);
