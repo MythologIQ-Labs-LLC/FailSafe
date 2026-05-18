@@ -10,6 +10,7 @@ FailSafe runs locally inside VS Code and Cursor. It monitors what AI agents do, 
 
 ## What's New (Unreleased)
 
+- **Bicameral MCP integration (v1)**. New **Integrations** tab in the Command Center surfaces [Bicameral MCP](https://github.com/BicameralAI/bicameral-mcp) decision history, drift status, and a one-click ratify/reject affordance. Solo / team install picker drives `pip install bicameral-mcp` + `bicameral-mcp setup` on your machine; nothing is bundled. Settings card adds status display + autoConnect toggle. See `docs/INTEGRATIONS.md` for the full surface and trust-boundary notes.
 - **Model-sourced Risk Register**. Coding agents now write risks directly into the Risk Register via the MCP tool `failsafe.create_risk`, the `@failsafe /risk` chat subcommand, or auto-derivation from SHIELD lifecycle signals (GATE VETOs, DEBUG entries, Shadow-Genome failure events). The manual `failsafe.addRisk` wizard is removed; legacy entries auto-migrate to a `manual` source label.
 - **Install Skills UX expansion**: live-progress modal with retry, operator-editable host registry, per-host skill picker, dry-run preview, and a new workspace `LiveProgressInvariant` doctrine + lint helper.
 - **OpenVSX v5.0.0 catch-up**: VS Code Marketplace and OpenVSX are now aligned at v5.0.0 via a dedicated manual workflow (`.github/workflows/openvsx-catchup.yml`).

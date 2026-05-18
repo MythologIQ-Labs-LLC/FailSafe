@@ -22,6 +22,10 @@ _Local-first safety for AI coding assistants._
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
 
+## Upcoming
+
+- **Bicameral MCP integration** (v1, in active development on `feat/bicameral-mcp-integration`): new Integrations tab surfacing the [Bicameral MCP](https://github.com/BicameralAI/bicameral-mcp) decision ledger and per-file drift status. Solo / team install picker; nothing bundled in the VSIX. See [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md).
+
 ## What's new in v5.1.0
 
 - **Model-sourced Risk Register**: coding agents author risks via the MCP tool `failsafe.create_risk`, the `@failsafe /risk` chat subcommand, or FailSafe auto-derives them from SHIELD lifecycle (GATE VETOs, DEBUG entries, Shadow-Genome failure events). The manual "Add Risk" wizard is removed.

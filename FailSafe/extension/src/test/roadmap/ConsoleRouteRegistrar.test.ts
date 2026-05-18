@@ -85,6 +85,10 @@ function makeHost(app: any, hub: any): ConsoleRouteHost {
       getShadowGenomeManager: () => noopSG,
     },
     featureGate: undefined,
+    getBicameralClient: () => null,
+    getBicameralCommand: () => "bicameral-mcp",
+    getBicameralAutoConnect: () => false,
+    setBicameralAutoConnect: async () => undefined,
   };
 }
 

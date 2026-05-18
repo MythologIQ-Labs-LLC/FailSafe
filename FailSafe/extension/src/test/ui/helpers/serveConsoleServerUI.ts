@@ -24,6 +24,7 @@ import { ConsoleServer } from "../../../roadmap/ConsoleServer";
 import { EventBus } from "../../../shared/EventBus";
 import type { WebSocketManager } from "../../../roadmap/services/WebSocketManager";
 import type { CheckpointDb, CheckpointRecord } from "../../../roadmap/services/CheckpointStore";
+import type { BicameralMcpClient } from "../../../integrations/bicameral";
 import type {
   CatalogItem,
   RiskEntry,
@@ -39,6 +40,14 @@ export interface ConsoleServerFixtures {
   timelineEvents?: TimelineEvent[];
   risks?: RiskEntry[];
   initialHub?: HubFixture;
+  /** Pre-wire a Bicameral MCP client (typically a stub) so /api/actions/bicameral-* routes
+   *  resolve without spawning a real bicameral-mcp process. */
+  bicameralClient?: BicameralMcpClient;
+  /** Override the probe command (defaults to "node" so `<command> --version` succeeds in test env). */
+  bicameralCommand?: string;
+  /** When true, writes `.bicameral/config.yaml` to the workspace so probeInstallState
+   *  reports `configured-not-running` (assuming bicameralCommand is on PATH). */
+  bicameralConfigured?: boolean;
 }
 
 export interface ConsoleServerController {
@@ -73,6 +82,11 @@ function writeWorkspaceFixtures(
     JSON.stringify({ risks: fixtures.risks ?? [] }),
     "utf8",
   );
+  if (fixtures.bicameralConfigured) {
+    const bicameralDir = path.join(workspaceRoot, ".bicameral");
+    fs.mkdirSync(bicameralDir, { recursive: true });
+    fs.writeFileSync(path.join(bicameralDir, "config.yaml"), "mode: solo\n", "utf8");
+  }
 }
 
 function buildFakeManagers(initialHub: HubFixture | null): FakeManagers {
@@ -214,6 +228,11 @@ export async function serveConsoleServerUI(
     { workspaceRoot },
   );
   applyPrivateCast(server, checkpointRef);
+
+  if (fixtures.bicameralClient) {
+    server.setBicameralClient(fixtures.bicameralClient);
+  }
+  server.setBicameralCommand(fixtures.bicameralCommand ?? "node");
 
   const app = (server as unknown as { app: Application }).app;
   const harness = http.createServer(app);

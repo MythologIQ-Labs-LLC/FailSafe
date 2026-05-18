@@ -404,6 +404,16 @@ Minor / UX:
 - [x] [B165] Phase 2: Extract EventSubscriptionManager — 12 EventBus listeners into portable governance event wiring (-162L, 185L portable) (v4.10.0 - Complete)
 - [x] [B166] Phase 3: Extract QoreRuntimeService + FeatureStatusRoute + SkillsApiRoute + HookRoute (v5.0.0 - Complete; ConsoleServer.ts 1381→1165L, -216L)
 
+### Bicameral MCP Integration (Follow-ups)
+
+Follow-up work surfaced by `plan-qor-bicameral-mcp-integration` (v1 ships only 4 of 13 tools; pattern extends naturally to additional MCP servers). See `docs/INTEGRATIONS.md` for the v1 surface and `.failsafe/governance/SESSION_STATE_bicameral-mcp-integration.md` for cycle status.
+
+- [ ] [B-INT-1] Surface remaining Bicameral tools (`ingest`, `search`, `brief`, `judge_gaps`, `resolve_compliance`, `link_commit`, `update`, `reset`, `dashboard`, `validate_symbols`, `get_neighbors`) — extends `BicameralMcpClient` + adds routes + UI affordances. Out of scope for v1 (would require dedicated UI surfaces beyond the current Integrations tab card). | v5.2.x or later
+- [ ] [B-INT-2] Wire `bicameral.preflight` into FailSafe's existing pre-action surface (intent flow + L3 approval pipeline). Preflight reports decision-drift before a code action lands; surfacing this in the L3 approval card would let the operator see "this edit conflicts with decision <X>" inline. | v5.2.x
+- [ ] [B-INT-3] Pin Bicameral version floor in install: `pip install 'bicameral-mcp>=0.14,<0.16'` instead of the current unpinned `pip install bicameral-mcp`. Plan §4 cites the upstream Beta classification on tool schemas. Tracking in `reference_bicameral_mcp.md`. | v5.2.x
+- [ ] [B-INT-4] Generic `McpClientHost` abstraction for the next MCP integration. The current `BicameralMcpClient` is a thin wrapper; a second integration (e.g., another MCP server) should share the connect/disconnect lifecycle, route deps, and Settings card pattern. Promote at the second integration, not the first. | v5.3.x+
+- [ ] [B-INT-5] Sub-tab pattern inside the Integrations tab once a second MCP integration ships. Current card layout assumes one entry; renderer at `src/roadmap/ui/modules/integrations.js` will need a tab switcher. | v5.3.x+
+
 ### Runtime Architecture (Future)
 
 - [ ] [B151] Universal Governance Interceptor: Drop-in interceptor interface for agent framework integration (LangChain, AutoGen, CrewAI, MCP)

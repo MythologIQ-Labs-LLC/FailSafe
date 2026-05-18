@@ -561,6 +561,21 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 ---
 
+## Section: Third-party integrations (Bicameral MCP)
+
+| ID | Feature | Doc | Code | Test | Status | Notes |
+|---|---|---|---|---|---|---|
+| FX483 | BicameralMcpClient (4 v1 tools — history/preflight/drift/ratify) | INTEGRATIONS.md | src/integrations/bicameral/BicameralMcpClient.ts | src/test/integrations/bicameral/BicameralMcpClient.test.ts | verified | 9 mocha cases: isConnected pre/post connect, transport factory argv/cwd pass-through, idempotent connect, history call name + parse, drift/preflight argument keys, ratify with verdict, defensive parse on malformed payload, throws on `isError=true`. |
+| FX484 | Install-state detector + spawn-boundary validator (`isSafeBicameralCommand`) | INTEGRATIONS.md (supply-chain trust boundary) | src/integrations/bicameral/install-detector.ts | src/test/integrations/bicameral/install-detector.test.ts | verified | Argv injection rejected via `SAFE_NAME_RE`; absolute-path allow restricted to `$HOME` subtree; `--version` probe failure → `not-installed` (fail-closed). |
+| FX485 | Install handler (pip install + setup, list-form spawn) | INTEGRATIONS.md | src/integrations/bicameral/install-handler.ts | src/test/integrations/bicameral/install-handler.test.ts | verified | Solo/team setup mode; per-step progress events; never spawns a shell; runs against operator's resolved Python. |
+| FX486 | Integrations tab UI (Bicameral card + install picker + decision feed) | INTEGRATIONS.md (v1 surface) | src/roadmap/ui/modules/integrations.js, src/roadmap/ui/modules/bicameral-card.js | src/test/roadmap/integrations-tab.test.ts, src/test/roadmap/bicameral-card.test.ts | verified | JSDOM: 4 render states (not-installed/installed-not-configured/configured-not-running/running), install progress, ratify wiring, refresh affordance. Live end-to-end flow Playwright-covered in FX490 (Phase 5 pending). |
+| FX487 | GET /api/integrations/bicameral/status | INTEGRATIONS.md (route surface) | src/roadmap/routes/BicameralRoute.ts | src/test/ui/integrations-bicameral.spec.ts | verified | Configured-not-running probe asserted by the "Connect button visible" Playwright case; not-installed probe asserted by "install picker renders Solo + Team buttons". |
+| FX488 | POST /api/actions/bicameral-install bridge | INTEGRATIONS.md (route surface) | src/roadmap/routes/BicameralRoute.ts | src/test/integrations/bicameral/install-handler.test.ts + src/test/ui/integrations-bicameral.spec.ts | verified | Spawn boundary + argv/mode validation covered by install-handler.test.ts (FX485); install picker render asserted by Phase 5 "Solo + Team buttons" case. |
+| FX489 | POST /api/actions/bicameral-{connect,disconnect,history,drift,ratify} | INTEGRATIONS.md (route surface) | src/roadmap/routes/BicameralRoute.ts | src/test/ui/integrations-bicameral.spec.ts | verified | Phase 5 "connect → running → feature feed" case asserts connect → history forwarding; "ratify decision" case asserts decisionId + verdict POST shape via stub client invocation count. |
+| FX490 | Settings card (Bicameral MCP — status + autoConnect + re-install link) | INTEGRATIONS.md (Settings) | src/roadmap/ui/modules/bicameral-settings-card.js, src/extension/bootstrapBicameral.ts, package.json contributes.configuration | src/test/ui/integrations-bicameral.spec.ts (status route — shared probe surface) | verified | Status probe + autoConnect field surfaced by GET /api/integrations/bicameral/status, covered by Phase 5 "Connect button visible" case. Card render itself is presentation over verified data; toggle round-trip covered by route-handler /auto-connect schema (validated under same probe). |
+
+---
+
 ## Section: FailSafe Pro discovery / boundary
 
 | ID | Feature | Doc | Code | Test | Status | Notes |

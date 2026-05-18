@@ -12,6 +12,7 @@ import { SettingsRenderer } from './modules/settings.js';
 import { TimelineRenderer } from './modules/timeline.js';
 import { GenomeRenderer } from './modules/genome.js';
 import { ReplayRenderer } from './modules/replay.js';
+import { IntegrationsRenderer } from './modules/integrations.js';
 import { TabGroup } from './modules/tab-group.js';
 import { updateTickers, updateBootstrapBanner } from './modules/tickers.js';
 import { setWorkspaceRegistryClient, loadWorkspaceRegistry, initWorkspaceSelector } from './modules/workspace-registry.js';
@@ -37,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
       { key: 'skills',     label: 'Skills',     renderer: new SkillsRenderer('workspace', { client }) },
       { key: 'brainstorm', label: 'Mindmap',    renderer: new BrainstormRenderer('workspace', { store, client }) },
     ]),
+    integrations: new IntegrationsRenderer('integrations', { client }),
     settings:   new SettingsRenderer('settings', { store }),
   };
 
@@ -75,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderers.agents.onEvent?.(evt);
     renderers.governance.onEvent?.(evt);
     renderers.workspace.onEvent?.(evt);
+    renderers.integrations.onEvent?.(evt);
     renderers.settings.onEvent?.(evt);
   });
 

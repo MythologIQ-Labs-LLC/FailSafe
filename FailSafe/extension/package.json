@@ -381,6 +381,21 @@
           "type": "boolean",
           "default": true,
           "description": "Automatically attempt to install Git and initialize a repository at workspace bootstrap if missing."
+        },
+        "failsafe.integrations.bicameral.command": {
+          "type": "string",
+          "default": "bicameral-mcp",
+          "description": "Executable used to launch the Bicameral MCP server. Must be on PATH or an absolute path under your home directory."
+        },
+        "failsafe.integrations.bicameral.pipCommand": {
+          "type": "string",
+          "default": "pip",
+          "description": "Pip command used by the Integrations tab installer (e.g., 'pip', 'pip3', or 'python -m pip')."
+        },
+        "failsafe.integrations.bicameral.autoConnect": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically connect to Bicameral MCP at activation when the workspace is configured. Default off — operator clicks Connect."
         }
       }
     }

@@ -22,6 +22,7 @@ import { QorLogicPackageInstaller, defaultInstallerRun } from "../qorlogic/QorLo
 import { QorLogicSkillIngestor } from "../qorlogic/QorLogicSkillIngestor";
 import { createInstallSkillsHandler, createScaffoldWithWebOptions } from "./installSkillsHandler";
 import { runWorkspaceBootstrap, type BootstrapReport } from "./bootstrapWorkspace";
+import { wireBicameralIntegration, maybeAutoConnectBicameral } from "./bootstrapBicameral";
 
 export interface ServerDeps {
   planManager: PlanManager;
@@ -63,6 +64,7 @@ export async function bootstrapServers(
   );
   consoleServer.setIdeTracker(ideTracker);
   consoleServer.setSystemRegistry(deps.systemRegistry);
+  wireBicameralIntegration(context, consoleServer, deps.workspaceRoot);
 
   // QorLogic skill installer (v5): replaces v4 bundled-skills copy path.
   // Construct + register the scaffold callback BEFORE consoleServer.start() so
@@ -114,6 +116,7 @@ export async function bootstrapServers(
 
   await consoleServer.start();
   context.subscriptions.push({ dispose: () => consoleServer?.stop() });
+  maybeAutoConnectBicameral(consoleServer, deps.workspaceRoot, outputChannel);
 
   // Phase 3 V3 Path A: register qorlogic routes after server start.
   const { registerQorlogicRoutes } = await import("../roadmap/routes/QorlogicRoute");
