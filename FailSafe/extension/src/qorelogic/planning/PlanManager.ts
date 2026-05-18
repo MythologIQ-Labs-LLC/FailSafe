@@ -1,7 +1,9 @@
 /** PlanManager facade - orchestrates PlanPersistenceStore, RoadmapPersistenceStore, PlanStateDeriver. */
 import * as crypto from 'crypto';
+import * as path from 'path';
 import { Plan, PlanPhase, Blocker, Milestone, RiskLevel, RiskMarker, Sprint, CumulativeRoadmap } from './types';
 import { EventBus } from '../../shared/EventBus';
+import type { WorkspaceMutationBus, MutationDisposable } from '../../shared/WorkspaceMutationBus';
 import { PlanPersistenceStore } from './PlanPersistenceStore';
 import { RoadmapPersistenceStore } from './RoadmapPersistenceStore';
 import { deriveState, calculateSprintMetrics } from './PlanStateDeriver';
@@ -30,14 +32,37 @@ export class PlanManager {
   private readonly eventBus: EventBus;
   private readonly planStore: PlanPersistenceStore;
   private readonly roadmapStore: RoadmapPersistenceStore;
+  private readonly mutationDisposables: MutationDisposable[] = [];
 
-  constructor(workspaceRoot: string, eventBus: EventBus) {
+  constructor(workspaceRoot: string, eventBus: EventBus, mutationBus?: WorkspaceMutationBus) {
     this.eventBus = eventBus;
     this.planStore = new PlanPersistenceStore(workspaceRoot);
     this.roadmapStore = new RoadmapPersistenceStore(workspaceRoot);
     for (const planId of this.planStore.getAllPlanIds()) {
       this.deriveState(planId);
     }
+    // B192 remediation: subscribe to mutations on the backing-store files so
+    // external writes (e.g., another tool, or a future FailSafe Pro) trigger
+    // refresh without waiting for the next hub-snapshot pull. The existing
+    // HubSnapshotService.buildHubSnapshot pull-call to refreshFromWorkspace
+    // remains as defensive belt-and-suspenders coverage on platforms where
+    // fs.watch is unreliable.
+    if (mutationBus) {
+      const plansPath = path.join(workspaceRoot, '.failsafe', 'plans.yaml');
+      const roadmapPath = path.join(workspaceRoot, '.qorelogic', 'roadmap.yaml');
+      const onMutation = (): void => { this.refreshFromWorkspace(); };
+      this.mutationDisposables.push(mutationBus.registerWatcher(plansPath, onMutation));
+      this.mutationDisposables.push(mutationBus.registerWatcher(roadmapPath, onMutation));
+    }
+  }
+
+  /** Release the mutation-bus subscriptions. Called from extension deactivate
+   *  via the bootstrap subscription chain. */
+  dispose(): void {
+    for (const d of this.mutationDisposables) {
+      try { d.dispose(); } catch { /* already disposed */ }
+    }
+    this.mutationDisposables.length = 0;
   }
 
   createPlan(intentId: string, title: string, phases: PlanPhase[]): Plan {

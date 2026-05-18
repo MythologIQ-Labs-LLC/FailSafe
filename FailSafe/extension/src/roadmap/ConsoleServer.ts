@@ -57,6 +57,10 @@ type ConsoleServerOptions = {
   workspaceRoot?: string;
   featureGate?: IFeatureGate;
   configProvider?: IConfigProvider;
+  /** B192 remediation: shared workspace-mutation bus. Threaded down to
+   *  HubSnapshotService (chain-validity refresh) and ConsoleLifecycleService
+   *  (watchMetaLedger migration). Optional for back-compat with tests. */
+  mutationBus?: import("../shared/WorkspaceMutationBus").WorkspaceMutationBus;
 };
 
 // Re-export public test surface from support module for backward compat.
@@ -119,11 +123,12 @@ export class ConsoleServer {
     this.adapterService = new AdapterService(eventBus);
     this.transparencyLogger = new TransparencyLogger(this.workspaceRoot);
     this.riskRegisterManager = new RiskRegisterManager(this.workspaceRoot);
-    this.hub = this.buildHubService();
+    this.hub = this.buildHubService(options.mutationBus);
     this.lifecycle = new ConsoleLifecycleService({
       app: this.app, port: PORT, host: HOST, workspaceRoot: this.workspaceRoot,
       wsManager: this.wsManager, hub: this.hub, planManager: this.planManager,
       broadcast: (d) => this.broadcast(d),
+      mutationBus: options.mutationBus,
     });
     this.registrar = new ConsoleRouteRegistrar(this.buildRouteHost());
     this.registrar.setupAllRoutes();
@@ -187,7 +192,7 @@ export class ConsoleServer {
     return discoverAllSkills(this.workspaceRoot, __dirname);
   }
 
-  private buildHubService(): HubSnapshotService {
+  private buildHubService(mutationBus?: import("../shared/WorkspaceMutationBus").WorkspaceMutationBus): HubSnapshotService {
     return new HubSnapshotService({
       workspaceRoot: this.workspaceRoot, extensionVersion: EXTENSION_VERSION,
       planManager: this.planManager, qorelogicManager: this.qorelogicManager,
@@ -197,6 +202,7 @@ export class ConsoleServer {
       riskRegisterManager: this.riskRegisterManager,
       mergePlanBlockers: (plan, a) => mergePlanBlockers(plan, a as WorkspaceArtifactSnapshot),
       getActualPort: () => this.lifecycle?.getPort() ?? PORT,
+      mutationBus,
       getIdeTracker: () => this.ideTracker,
       getAgentHealthIndicator: () => this.agentHealthIndicator,
       checkpointTypeRegistry: CHECKPOINT_TYPE_REGISTRY,

@@ -32,6 +32,7 @@ import type { QorLogicManager } from "../../qorelogic/QorLogicManager";
 import type { SentinelDaemon } from "../../sentinel/SentinelDaemon";
 import type { AgentHealthIndicator } from "../../sentinel/AgentHealthIndicator";
 import type { IdeActivityTracker } from "./IdeActivityTracker";
+import type { WorkspaceMutationBus, MutationDisposable } from "../../shared/WorkspaceMutationBus";
 
 export type UnattributedFileChange = { eventId: string; timestamp: string; type: string; artifactPath?: string; decision?: string; };
 export type RecordCheckpointInput = { checkpointType: string; actor: string; phase: string; status: CheckpointStatus; policyVerdict: string; evidenceRefs: string[]; payload: unknown; };
@@ -46,6 +47,12 @@ export interface HubSnapshotServiceDeps {
   getIdeTracker: () => IdeActivityTracker | null;
   getAgentHealthIndicator: () => AgentHealthIndicator | null;
   checkpointTypeRegistry: Set<string>;
+  /** Optional WorkspaceMutationBus (B192 remediation). When provided,
+   *  HubSnapshotService subscribes to the SQLite db path's mutations and
+   *  clears its cached chain validity so the next getCheckpointSummary()
+   *  re-walks the chain via verifyCheckpointChain. Pro-coexistence: external
+   *  db writes trigger refresh. */
+  mutationBus?: WorkspaceMutationBus;
 }
 
 const FILE_EVENT_TYPES = new Set(["FILE_CREATED", "FILE_MODIFIED", "FILE_DELETED"]);
@@ -58,11 +65,50 @@ export class HubSnapshotService {
   private cachedChainValid: boolean = true;
   private unattributedFileChanges: UnattributedFileChange[] = [];
   private revertService: FailSafeRevertService | null = null;
+  private chainValidityDisposable: MutationDisposable | null = null;
   autoDerivationHook: ((gp: ReturnType<typeof buildGovernancePhase>) => void) | null = null;
   constructor(private readonly deps: HubSnapshotServiceDeps & { storeRef?: CheckpointStoreRef }) {
     this.store = deps.storeRef ?? { db: null, memory: [] };
     this.initializeCheckpointStore();
     this.revertService = new FailSafeRevertService(this.buildRevertDeps());
+    this.subscribeToChainValidityMutations();
+  }
+
+  /** B192 remediation: subscribe to the SQLite db file path so external
+   *  mutations (e.g., FailSafe Pro writing to the same db) invalidate the
+   *  cached chain validity. Idempotent: clearing cachedChainValid +
+   *  chainValidAt means the next getCheckpointSummary() call re-walks
+   *  the chain via verifyCheckpointChain. */
+  private subscribeToChainValidityMutations(): void {
+    if (!this.deps.mutationBus) return;
+    try {
+      const ledgerManager = this.deps.qorelogicManager.getLedgerManager();
+      const dbPath = ledgerManager?.getLedgerPath?.();
+      if (!dbPath) return; // ledger not initialized; bus subscription deferred
+      this.chainValidityDisposable = this.deps.mutationBus.registerWatcher(
+        dbPath,
+        () => this.refreshChainValidity(),
+      );
+    } catch {
+      // Ledger manager unavailable; degrade silently. The existing
+      // belt-and-suspenders refresh hooks in buildHubSnapshot still apply.
+    }
+  }
+
+  /** Clear cached chain validity so the next getCheckpointSummary call
+   *  re-runs verifyCheckpointChain over the full chain. */
+  refreshChainValidity(): void {
+    this.chainValidAt = null;
+    this.cachedChainValid = true; // optimistic default until re-walk
+  }
+
+  /** Release the mutation-bus subscription. Called by ConsoleServer.stop or
+   *  extension deactivate. */
+  dispose(): void {
+    if (this.chainValidityDisposable) {
+      try { this.chainValidityDisposable.dispose(); } catch { /* already gone */ }
+      this.chainValidityDisposable = null;
+    }
   }
   private get checkpointDb(): CheckpointDb { return this.store.db; }
   private set checkpointDb(v: CheckpointDb) { this.store.db = v; }

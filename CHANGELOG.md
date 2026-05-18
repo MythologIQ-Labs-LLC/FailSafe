@@ -5,6 +5,27 @@ All notable changes to FailSafe will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — v5.2.0 (draft)
+
+Stale-cache remediation (B192). A new `WorkspaceMutationBus` aggregates `fs.watch` subscriptions for governance services so external file mutations (parallel tools, future FailSafe Pro daemon) trigger refresh without waiting for the next hub-snapshot pull. Subscribed: PlanManager (`.failsafe/plans.yaml` + `.qorelogic/roadmap.yaml`), HubSnapshotService (SQLite db → clears cached chain validity), TrustEngine (SQLite db → external-mutation refresh for Pro coexistence), and the existing `ConsoleLifecycleService.watchMetaLedger` migrated to the shared bus. No version bump in this draft; ships behind v5.1.0 PUBLISH_BLOCK pending v5.2.0 release. See `docs/governance-cache-invalidation.md`.
+
+### Added
+
+- **`WorkspaceMutationBus`** (`src/shared/WorkspaceMutationBus.ts`) — targeted-path fs.watch aggregator with per-watcher debounce (200ms default, 1500ms META_LEDGER override). Pure Node stdlib; no new deps.
+- **`LedgerManager.getLedgerPath()`** — public accessor for the SQLite db path; lets HubSnapshotService + TrustEngine resolve the watch target without threading `configProvider` through their constructors.
+- **`HubSnapshotService.refreshChainValidity()`** — invalidates `cachedChainValid` + `chainValidAt` on bus-emitted db mutations; next `getCheckpointSummary()` re-walks the chain via `verifyCheckpointChain()`.
+- **`HubSnapshotService.dispose()`** + **`PlanManager.dispose()`** + **`TrustEngine.dispose()`** — release bus subscriptions on extension deactivate.
+- **18 new functional cases** across 5 test files (FX498/499/501/502/503 — all under SG-035 acceptance discipline).
+
+### Changed
+
+- **`ConsoleLifecycleService.watchMetaLedger`** routes through `WorkspaceMutationBus` when present (1500ms debounce preserved); falls back to raw `fs.watch` when no bus is provided (test back-compat).
+- **`bootstrapCore`** constructs `WorkspaceMutationBus` alongside `EventBus`; **`bootstrapServers`** + **`bootstrapQorLogic`** thread it to ConsoleServer + TrustEngine. All bus-receiving constructor parameters are optional (existing test fixtures without bus continue to work unchanged).
+
+### Not done — see B-SC-6
+
+L3ApprovalService was originally listed as a B192 stale-cache victim. Audit cycle 1 surfaced that its backing `VscodeStateStore` wraps `vscode.Memento` (in-process VS Code state with no filesystem path to watch). The existing `HubSnapshotService.buildHubSnapshot` pull-call to `qorelogicManager.refreshL3Queue?.()` handles its in-process staleness. An EventBus-driven alternative (publish `qorelogic.l3Queue.mutated` on writes) is deferred to a separate cycle.
+
 ## [5.1.0] - 2026-05-14
 
 Minor release. Model-sourced Risk Register (coding agents author risks via MCP tool, chat subcommand, or auto-derivation from SHIELD lifecycle), Install Skills UX expansion (live progress + per-host picker + dry-run preview + LiveProgressInvariant doctrine), OpenVSX/VS Code Marketplace alignment at v5.0.0 baseline, brand sweep (eliminated all `Qore` legacy spellings), release pipeline safety gate (production environment approval), full SRE panel attribution (Microsoft AGT + Qortara), 36 new FX415–FX420 functional tests, and a complete brand + skill-source-attribution sweep. Supersedes the unreleased 2026-05-06 draft.

@@ -22,6 +22,10 @@ _Local-first safety for AI coding assistants._
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
 
+## Upcoming
+
+- **Stale-cache remediation** (v5.2.x, in active development on `feat/stale-cache-remediation`): `WorkspaceMutationBus` substrate that lets governance services subscribe to filesystem mutations and refresh their in-process caches automatically. Closes B192 stale-cache pattern + the FailSafe-Pro-coexistence concern. See [`docs/governance-cache-invalidation.md`](docs/governance-cache-invalidation.md).
+
 ## What's new in v5.1.0
 
 - **Model-sourced Risk Register**: coding agents author risks via the MCP tool `failsafe.create_risk`, the `@failsafe /risk` chat subcommand, or FailSafe auto-derives them from SHIELD lifecycle (GATE VETOs, DEBUG entries, Shadow-Genome failure events). The manual "Add Risk" wizard is removed.

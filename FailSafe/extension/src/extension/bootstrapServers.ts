@@ -31,6 +31,8 @@ export interface ServerDeps {
   workspaceRoot: string;
   systemRegistry: SystemRegistry;
   configManager: ConfigManager;
+  /** B192 remediation: shared workspace-mutation bus. */
+  mutationBus?: import("../shared/WorkspaceMutationBus").WorkspaceMutationBus;
 }
 
 export interface ServerResult {
@@ -59,7 +61,7 @@ export async function bootstrapServers(
     deps.qorelogicManager,
     deps.sentinelDaemon,
     deps.eventBus,
-    { workspaceRoot: deps.workspaceRoot, configProvider: deps.configManager },
+    { workspaceRoot: deps.workspaceRoot, configProvider: deps.configManager, mutationBus: deps.mutationBus },
   );
   consoleServer.setIdeTracker(ideTracker);
   consoleServer.setSystemRegistry(deps.systemRegistry);

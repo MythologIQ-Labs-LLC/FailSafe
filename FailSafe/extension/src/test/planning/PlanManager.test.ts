@@ -976,4 +976,76 @@ describe('PlanManager', function () {
       assert.strictEqual(activePlan, undefined, 'Should return undefined when no active plans');
     });
   });
+
+  // FX499 — WorkspaceMutationBus subscription (B192 remediation, plan Phase 2)
+  describe('FX499 PlanManager — WorkspaceMutationBus subscription', () => {
+    it('construction without mutationBus dep does not throw (back-compat)', () => {
+      // The default beforeEach already constructs PlanManager without a bus;
+      // assert it succeeded and basic operations still work.
+      assert.ok(planManager, 'planManager constructed without bus');
+      assert.doesNotThrow(() => planManager.getActivePlan());
+    });
+
+    it('construction with bus dep registers watchers on plans.yaml + roadmap.yaml', () => {
+      const registeredPaths: string[] = [];
+      const fakeBus = {
+        registerWatcher: (absPath: string, _onMutation: () => void): { dispose: () => void } => {
+          registeredPaths.push(absPath);
+          return { dispose: () => {} };
+        },
+      };
+
+      const pm = new PlanManager(tempDir, eventBus, fakeBus as unknown as import('../../shared/WorkspaceMutationBus').WorkspaceMutationBus);
+      try {
+        const expectedPlans = path.join(tempDir, '.failsafe', 'plans.yaml');
+        const expectedRoadmap = path.join(tempDir, '.qorelogic', 'roadmap.yaml');
+        assert.ok(registeredPaths.includes(expectedPlans), `registered plans.yaml: ${registeredPaths}`);
+        assert.ok(registeredPaths.includes(expectedRoadmap), `registered roadmap.yaml: ${registeredPaths}`);
+      } finally {
+        pm.dispose();
+      }
+    });
+
+    it('bus-emitted mutation event triggers refreshFromWorkspace', () => {
+      let captured: (() => void) | null = null;
+      const fakeBus = {
+        registerWatcher: (_absPath: string, onMutation: () => void): { dispose: () => void } => {
+          // Capture the first registered handler so the test can fire it.
+          if (!captured) captured = onMutation;
+          return { dispose: () => {} };
+        },
+      };
+
+      const pm = new PlanManager(tempDir, eventBus, fakeBus as unknown as import('../../shared/WorkspaceMutationBus').WorkspaceMutationBus);
+      try {
+        const mutationCallback = captured as (() => void) | null;
+        assert.ok(mutationCallback, 'a mutation handler was registered');
+        let refreshCalled = 0;
+        const original = pm.refreshFromWorkspace.bind(pm);
+        pm.refreshFromWorkspace = () => { refreshCalled += 1; original(); };
+        mutationCallback!();
+        assert.strictEqual(refreshCalled, 1, 'refreshFromWorkspace fired once per mutation event');
+      } finally {
+        pm.dispose();
+      }
+    });
+
+    it('dispose() releases all bus subscriptions', () => {
+      const disposeCounts: number[] = [];
+      const fakeBus = {
+        registerWatcher: (_absPath: string, _onMutation: () => void): { dispose: () => void } => {
+          const idx = disposeCounts.length;
+          disposeCounts.push(0);
+          return { dispose: () => { disposeCounts[idx] += 1; } };
+        },
+      };
+
+      const pm = new PlanManager(tempDir, eventBus, fakeBus as unknown as import('../../shared/WorkspaceMutationBus').WorkspaceMutationBus);
+      pm.dispose();
+      assert.ok(disposeCounts.length >= 2, `at least 2 subscriptions registered (plans + roadmap); got ${disposeCounts.length}`);
+      for (const c of disposeCounts) {
+        assert.strictEqual(c, 1, 'each subscription disposed exactly once');
+      }
+    });
+  });
 });

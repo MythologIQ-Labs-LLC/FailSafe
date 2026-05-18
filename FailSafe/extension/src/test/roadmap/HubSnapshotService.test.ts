@@ -184,4 +184,109 @@ suite('HubSnapshotService (Phase 60 §0)', () => {
     assert.equal(typeof key, 'string');
     assert.ok(key.length > 0);
   });
+
+  // FX501 — WorkspaceMutationBus subscription for chain-validity refresh
+  test('FX501 — construction with mutationBus subscribes to LedgerManager.getLedgerPath()', () => {
+    let registeredPath: string | null = null;
+    const fakeBus = {
+      registerWatcher: (absPath: string, _onMutation: () => void): { dispose: () => void } => {
+        registeredPath = absPath;
+        return { dispose: () => {} };
+      },
+    };
+    const transparencyLogger = { getRecentEvents: () => [], log: () => {} } as any;
+    const riskRegisterManager = { getCurrent: () => [], save: () => {} } as any;
+    const planManager = {
+      getActivePlan: () => null,
+      getAllSprints: () => [],
+      getCurrentSprint: () => null,
+      refreshFromWorkspace: () => {},
+    } as any;
+    const ledgerManager = {
+      getDatabase: () => { throw new Error('no-db'); },
+      getLedgerPath: () => '/tmp/test-ledger-path.db',
+    };
+    const qorelogicManager: any = {
+      getL3Queue: () => [],
+      getTrustEngine: () => ({ getAllAgents: async () => [] }),
+      getLedgerManager: () => ledgerManager,
+      refreshL3Queue: () => {},
+    };
+    const fs = require('fs');
+    // Create the watched path so fs.watch (called inside registerWatcher in
+    // real bus) wouldn't bail; fake bus does not use real fs.watch.
+    if (!fs.existsSync('/tmp')) fs.mkdirSync('/tmp', { recursive: true });
+
+    const deps = {
+      workspaceRoot: '/tmp',
+      extensionVersion: 'test',
+      planManager, qorelogicManager,
+      sentinelDaemon: { getStatus: () => ({ running: false }), getRecentObservationIds: () => [] } as any,
+      qorRuntimeService: { fetchSnapshot: async () => ({}) } as any,
+      gitResetService: {} as any,
+      transparencyLogger, riskRegisterManager,
+      mergePlanBlockers: (p: unknown) => p,
+      getActualPort: () => 9376,
+      getIdeTracker: () => null,
+      getAgentHealthIndicator: () => null,
+      checkpointTypeRegistry: new Set<string>(),
+      mutationBus: fakeBus as unknown as import('../../shared/WorkspaceMutationBus').WorkspaceMutationBus,
+    };
+    const hub = new HubSnapshotService(deps);
+    try {
+      assert.strictEqual(registeredPath, '/tmp/test-ledger-path.db', 'registered the ledger path');
+    } finally {
+      hub.dispose();
+    }
+  });
+
+  test('FX501 — mutation event clears cachedChainValid + chainValidAt', () => {
+    let mutationCallback: (() => void) | null = null;
+    const fakeBus = {
+      registerWatcher: (_absPath: string, onMutation: () => void): { dispose: () => void } => {
+        mutationCallback = onMutation;
+        return { dispose: () => {} };
+      },
+    };
+    const ledgerManager = { getDatabase: () => { throw new Error('no-db'); }, getLedgerPath: () => '/tmp/db.sqlite' };
+    const qorelogicManager: any = {
+      getL3Queue: () => [],
+      getTrustEngine: () => ({ getAllAgents: async () => [] }),
+      getLedgerManager: () => ledgerManager,
+      refreshL3Queue: () => {},
+    };
+    const deps = {
+      workspaceRoot: '/tmp',
+      extensionVersion: 'test',
+      planManager: { getActivePlan: () => null, getAllSprints: () => [], getCurrentSprint: () => null, refreshFromWorkspace: () => {} } as any,
+      qorelogicManager,
+      sentinelDaemon: { getStatus: () => ({ running: false }), getRecentObservationIds: () => [] } as any,
+      qorRuntimeService: { fetchSnapshot: async () => ({}) } as any,
+      gitResetService: {} as any,
+      transparencyLogger: { getRecentEvents: () => [], log: () => {} } as any,
+      riskRegisterManager: { getCurrent: () => [], save: () => {} } as any,
+      mergePlanBlockers: (p: unknown) => p,
+      getActualPort: () => 9376,
+      getIdeTracker: () => null,
+      getAgentHealthIndicator: () => null,
+      checkpointTypeRegistry: new Set<string>(),
+      mutationBus: fakeBus as unknown as import('../../shared/WorkspaceMutationBus').WorkspaceMutationBus,
+    };
+    const hub = new HubSnapshotService(deps);
+    try {
+      hub.setCachedChainValid(true, '2026-05-18T10:00:00Z');
+      assert.strictEqual(hub.getChainValidAt(), '2026-05-18T10:00:00Z', 'pre-mutation chainValidAt populated');
+      assert.ok(mutationCallback, 'a mutation callback was registered');
+      (mutationCallback as () => void)();
+      assert.strictEqual(hub.getChainValidAt(), null, 'mutation cleared chainValidAt');
+    } finally {
+      hub.dispose();
+    }
+  });
+
+  test('FX501 — construction without mutationBus dep does not throw (back-compat)', () => {
+    const { hub } = makeFakes();
+    assert.ok(hub, 'hub constructed without bus');
+    assert.doesNotThrow(() => hub.dispose());
+  });
 });

@@ -150,6 +150,7 @@ export async function activate(
         workspaceRoot: core.workspaceRoot,
         systemRegistry: qor.systemRegistry,
         configManager: core.configManager,
+        mutationBus: core.mutationBus,
       },
       logger,
     );
