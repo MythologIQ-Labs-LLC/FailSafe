@@ -170,8 +170,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (bsRenderer?.llmStatus) { bsRenderer.llmStatus.toggleHelp(); bsRenderer.llmStatus.render(bsRenderer.client); }
   });
 
-  // Restore saved tab (URL hash takes priority)
-  const hashTab = window.location.hash?.replace('#', '');
+  // Restore saved tab (URL hash takes priority). Strip the query suffix so
+  // deep-link parameters like `#governance?verdict=<ts>` still resolve the
+  // correct tab name. Renderers parse the query themselves.
+  const hashRaw = window.location.hash?.replace('#', '') || '';
+  const hashTab = hashRaw.split('?')[0];
   const savedTab = hashTab || store.getActiveTab();
   const savedBtn = [...tabs].find(t => t.dataset.target === savedTab);
   if (savedBtn) savedBtn.click();

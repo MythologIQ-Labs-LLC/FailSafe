@@ -35,8 +35,14 @@ export class SentinelMonitor {
     }
     this.elements.sentinelAlert.classList.remove('hidden');
     this.elements.sentinelAlert.textContent = String(alert.summary || 'Sentinel raised a risk signal.');
-    this.elements.sentinelAlert.title = 'Click to view details in Command Center';
-    this.elements.sentinelAlert.onclick = () => window.open('/command-center.html#governance', '_blank');
+    this.elements.sentinelAlert.title = 'Click to open the triggering verdict in the Governance tab';
+    this.elements.sentinelAlert.onclick = () => {
+      const ts = alert.timestamp ? encodeURIComponent(String(alert.timestamp)) : '';
+      const url = ts
+        ? `/command-center.html#governance?verdict=${ts}`
+        : '/command-center.html#governance';
+      window.open(url, '_blank');
+    };
   }
 
   renderWorkspaceHealth(hub, plan, blockers, risks, verdicts) {
