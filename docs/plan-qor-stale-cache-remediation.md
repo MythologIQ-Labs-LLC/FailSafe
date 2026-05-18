@@ -49,9 +49,8 @@
 |---|---|---|---|
 | FX498 | NEW | src/test/shared/WorkspaceMutationBus.test.ts | `registerWatcher(path, onMutation)` returns Disposable; mutation event fires `onMutation` after debounce window; dispose stops subsequent firings; ENOENT path returns no-op Disposable without throwing |
 | FX499 | MODIFIED | src/test/planning/PlanManager.test.ts (existing) | PlanManager construction with WorkspaceMutationBus dep subscribes to `.failsafe/plans.yaml` + `.qorelogic/roadmap.yaml`; simulated bus event triggers `refreshFromWorkspace()`; assertion: subsequent `getActivePlan()` reflects externally-written plan state |
-| FX500 | MODIFIED | src/test/qorelogic/L3ApprovalService.test.ts (existing) | L3ApprovalService construction with bus dep subscribes to state-store backing file; simulated mutation event triggers `refreshFromWorkspace()`; assertion: subsequent `getQueue()` reflects externally-written queue items |
-| FX501 | NEW | src/test/roadmap/HubSnapshotService.test.ts (extend existing) | HubSnapshotService construction with bus dep subscribes to SQLite db path mutation; mutation event clears `cachedChainValid` + `chainValidAt` AND triggers re-run of `verifyCheckpointChain()`; subsequent `getCheckpointSummary()` returns fresh chain validity |
-| FX502 | MODIFIED | src/test/qorelogic/trust/TrustEngine.test.ts (existing) | TrustEngine construction with bus dep subscribes to SQLite db path; external db mutation event triggers existing `refreshFromDb()`; assertion: `getAllAgents()` reflects externally-written trust records |
+| FX501 | NEW | src/test/roadmap/HubSnapshotService.test.ts (extend existing) | HubSnapshotService construction with bus dep subscribes to the SQLite db path resolved via `qorelogicManager.getLedgerManager().getLedgerPath()` (new accessor — see Phase 3); mutation event clears `cachedChainValid` + `chainValidAt` AND triggers re-run of `verifyCheckpointChain()`; subsequent `getCheckpointSummary()` returns fresh chain validity |
+| FX502 | MODIFIED | src/test/qorelogic/trust/TrustEngine.test.ts (existing) | TrustEngine construction with bus dep + ledgerManager subscribes to SQLite db path via `ledgerManager.getLedgerPath()`; external db mutation event triggers existing `refreshFromDb()`; assertion: `getAllAgents()` reflects externally-written trust records |
 | FX503 | MODIFIED | src/test/roadmap/ConsoleLifecycleService.test.ts (existing or new) | `watchMetaLedger` migrates from raw `fs.watch` to `WorkspaceMutationBus.registerWatcher` with 1500ms debounce preserved; META_LEDGER mutation event still broadcasts `hub.refresh` |
 
 ## CI Commands
@@ -94,7 +93,7 @@ Cases declared above. Each test invokes the bus (`registerWatcher`) AND mutates 
 
 ---
 
-## Phase 2: PlanManager + L3ApprovalService Subscriptions
+## Phase 2: PlanManager Subscription
 
 ### Affected Files
 
@@ -104,19 +103,16 @@ Cases declared above. Each test invokes the bus (`registerWatcher`) AND mutates 
   - PlanManager construction with `WorkspaceMutationBus` dep registers watchers on `.failsafe/plans.yaml` + `.qorelogic/roadmap.yaml`
   - Simulated bus-emitted mutation event triggers `refreshFromWorkspace()`; subsequent `getActivePlan()` reflects externally-written plan state (mutation happens via direct file write, not through PlanManager's own API)
   - PlanManager construction without bus dep (back-compat) doesn't throw; behaves as today
-- `FailSafe/extension/src/test/qorelogic/L3ApprovalService.test.ts` — EXTEND. New cases for FX500:
-  - L3ApprovalService construction with bus dep subscribes to state-store backing file
-  - Simulated mutation event triggers `refreshFromWorkspace()`; subsequent queue read reflects externally-written items
-  - Construction without bus (back-compat) doesn't throw
 
 **Source (MODIFY):**
 
 - `FailSafe/extension/src/qorelogic/planning/PlanManager.ts` — MODIFY. Constructor signature gains optional `mutationBus?: WorkspaceMutationBus` parameter. When provided, constructor calls `mutationBus.registerWatcher(path.join(workspaceRoot, '.failsafe', 'plans.yaml'), () => this.refreshFromWorkspace())` and the same for `roadmap.yaml`. Disposables stored in a `private disposables: Array<{dispose: () => void}>` and torn down in a new `dispose()` method.
-- `FailSafe/extension/src/qorelogic/L3ApprovalService.ts` — MODIFY. Same pattern: optional `mutationBus?: WorkspaceMutationBus` constructor param; subscribes to state-store backing file path on construction; existing `refreshFromWorkspace()` (line 40) is the callback.
 
 ### Changes
 
-Two services gain optional DI on their constructors. The bus is plumbed through bootstrap (see Phase 4). Existing tests that construct these services without the bus continue to work unchanged. Existing `refreshFromWorkspace()` methods are the callback bodies — no behavior change inside those methods, just a new trigger mechanism.
+One service gains optional DI on its constructor. The bus is plumbed through bootstrap (see Phase 4). Existing tests that construct PlanManager without the bus continue to work unchanged. Existing `refreshFromWorkspace()` method is the callback body — no behavior change inside it, just a new trigger mechanism.
+
+**Scope note (audit cycle 1 F1 remediation)**: L3ApprovalService was originally listed alongside PlanManager in this phase, but audit cycle 1 surfaced that VscodeStateStore wraps `vscode.Memento` (in-process VS Code state with NO filesystem backing file). There is no path for fs.watch to subscribe to. The existing `HubSnapshotService.buildHubSnapshot` (line 134) already pull-calls `qorelogicManager.refreshL3Queue?.()` which forwards to `L3ApprovalService.refreshFromWorkspace()` — the in-process pull mechanism is sufficient. L3ApprovalService is dropped from this cycle's scope; in-process EventBus signaling for L3 queue mutations is a separate-cycle concern (B-SC-6 in Out of Scope).
 
 ### Unit Tests
 
@@ -138,8 +134,17 @@ Cases declared above. Tests directly mutate the watched files (`fs.writeFileSync
 
 **Source (MODIFY):**
 
-- `FailSafe/extension/src/roadmap/services/HubSnapshotService.ts` — MODIFY. Constructor accepts an optional `mutationBus?: WorkspaceMutationBus` via the `deps` object. When provided, subscribes to the SQLite db path's mutations with a new private `refreshChainValidity()` callback that sets `this.cachedChainValid = null; this.chainValidAt = null` so the next `getCheckpointSummary()` call re-walks the chain via `verifyCheckpointChain()`. Disposable stored alongside any other lifecycle hooks.
-- No changes to `CheckpointStore.ts` itself (it's pure functions; the cache lives on HubSnapshotService's instance fields).
+- `FailSafe/extension/src/qorelogic/ledger/LedgerManager.ts` — MODIFY. **Add public accessor** (audit cycle 1 F2 remediation):
+
+  ```ts
+  getLedgerPath(): string { return this.ledgerPath; }
+  ```
+
+  Returns the SQLite db file path (private field `ledgerPath` at line 58, resolved from `configProvider.getLedgerPath()` at line 85). Required so HubSnapshotService + TrustEngine can resolve the watch target without a constructor injection of `configProvider`. Single-line addition; no behavior change for existing callers.
+
+- `FailSafe/extension/src/roadmap/services/HubSnapshotService.ts` — MODIFY. Constructor accepts an optional `mutationBus?: WorkspaceMutationBus` via the `deps` object. When provided, resolves the SQLite db path via `this.deps.qorelogicManager.getLedgerManager().getLedgerPath()` (new accessor above), then subscribes to that path's mutations with a new private `refreshChainValidity()` callback that sets `this.cachedChainValid = null; this.chainValidAt = null` so the next `getCheckpointSummary()` call re-walks the chain via `verifyCheckpointChain()`. Disposable stored alongside any other lifecycle hooks.
+
+- No changes to `CheckpointStore.ts` itself (it's pure functions; the cache lives on HubSnapshotService's instance fields `cachedChainValid` + `chainValidAt` at lines 57-58).
 
 ### Changes
 
@@ -168,7 +173,7 @@ Cases declared above. The test directly mutates the SQLite db file (e.g., `fs.wr
 
 **Source (MODIFY):**
 
-- `FailSafe/extension/src/qorelogic/trust/TrustEngine.ts` — MODIFY. Constructor gains optional `mutationBus?: WorkspaceMutationBus` parameter. When provided + after `initialize()` resolves the db path, subscribes the db path mutations to call existing `refreshFromDb()` (line 51). Stored Disposable.
+- `FailSafe/extension/src/qorelogic/trust/TrustEngine.ts` — MODIFY. Constructor gains optional `mutationBus?: WorkspaceMutationBus` parameter. When provided + after `initialize()` resolves the db path via the existing `ledgerManager.getLedgerPath()` (new accessor added in Phase 3 per F2 remediation), subscribes the db path mutations to call existing `refreshFromDb()` (line 51). Stored Disposable.
 - `FailSafe/extension/src/roadmap/services/ConsoleLifecycleService.ts` — MODIFY. `watchMetaLedger()` (lines 76-87) migrates from raw `fs.watch` to `WorkspaceMutationBus.registerWatcher(ledgerPath, () => this.deps.broadcast({type: 'hub.refresh'}), 1500)`. Disposable stored in `this.ledgerWatcherDispose` (replacing the existing `this.ledgerWatcher` FSWatcher). Class-level cleanup tears down the Disposable on extension deactivate.
 - `FailSafe/extension/src/extension/bootstrapCore.ts` — MODIFY. Construct `new WorkspaceMutationBus()` alongside existing `new EventBus()`; add `workspaceMutationBus` to the `CoreSubstrate` return type.
 - `FailSafe/extension/src/extension/bootstrapServers.ts` — MODIFY. Pass `deps.workspaceMutationBus` through to ConsoleServer's deps + HubSnapshotService construction.
@@ -204,17 +209,18 @@ Doc-only phase. Standard Section 5 pattern matching prior cycles (bicameral / vo
 ## Phase Affected Files Summary
 
 **Phase 1** (substrate): 1 NEW source file + 1 NEW test file.
-**Phase 2** (PlanManager + L3ApprovalService subscriptions): 2 MODIFIED source files + 2 EXTENDED test files.
-**Phase 3** (HubSnapshotService refreshChainValidity): 1 MODIFIED source file + 1 EXTENDED test file.
+**Phase 2** (PlanManager subscription — L3ApprovalService dropped per F1): 1 MODIFIED source file + 1 EXTENDED test file.
+**Phase 3** (LedgerManager.getLedgerPath accessor + HubSnapshotService refreshChainValidity): 2 MODIFIED source files + 1 EXTENDED test file.
 **Phase 4** (TrustEngine + watchMetaLedger migration + bootstrap wiring): 2 MODIFIED source files + 3 MODIFIED bootstrap files + 1-2 EXTENDED test files.
 **Phase 5** (docs): 5 modified docs (1 new architecture doc + FEATURE_INDEX + CHANGELOG + 2 READMEs) + 1 NEW memory file.
 
-Total: 1 new source + 8 modified source + 1 new test + 5 modified tests + 1 new doc + 4 modified docs + 1 memory.
+Total: 1 new source + 8 modified source + 1 new test + 4 modified tests + 1 new doc + 4 modified docs + 1 memory.
 
 ## Acceptance Criteria
 
-- All 4 cache-vulnerable services (PlanManager / L3ApprovalService / HubSnapshotService.CheckpointStore cache / TrustEngine) refresh observably when their watched paths are mutated externally.
+- All 3 fs-backed cache-vulnerable services (PlanManager / HubSnapshotService.CheckpointStore cache / TrustEngine) refresh observably when their watched paths are mutated externally.
 - `ConsoleLifecycleService.watchMetaLedger` migrated to the bus; raw `fs.watch` removed from that surface.
+- `LedgerManager.getLedgerPath()` accessor added (F2 remediation).
 - All existing tests continue to pass; new bus-driven tests cover the cache-invalidation behavior.
 - HubSnapshotService's defensive `refreshFromWorkspace?.()` calls remain (belt-and-suspenders).
 - No new npm dependencies (Node stdlib `fs.watch` only).
@@ -227,3 +233,4 @@ Total: 1 new source + 8 modified source + 1 new test + 5 modified tests + 1 new 
 - **B-SC-3** — Cross-process IPC for Pro coexistence (vs the current shared-filesystem-only approach). Lives in Pro repo.
 - **B-SC-4** — SentinelDaemon governance-file extension support (B193 — its own plan cycle).
 - **B-SC-5** — Periodic chain-validity re-check (independent of mutation events). Currently only re-checked on file mutation; would catch silent corruption.
+- **B-SC-6** — L3ApprovalService in-process EventBus subscription for queue mutations (per audit cycle 1 F1). VscodeStateStore is Memento-backed, no filesystem to watch. The existing `HubSnapshotService.buildHubSnapshot` → `qorelogicManager.refreshL3Queue()` pull-call already handles staleness; an EventBus-driven alternative is a separate-cycle architectural choice (could publish `qorelogic.l3Queue.mutated` events on writes). Not blocking; pull mechanism works today.
