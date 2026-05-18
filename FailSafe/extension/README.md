@@ -10,6 +10,7 @@ FailSafe runs locally inside VS Code and Cursor. It monitors what AI agents do, 
 
 ## What's New (Unreleased)
 
+- **Voice substrate extraction (B195 resolution)**. Piper TTS + Whisper STT vendor binaries (~86 MB uncompressed) move out of the base VSIX into a separate `failsafe-voice-pack-<version>.tar.gz` distributed as a GitHub Releases asset. Voice features become opt-in: run `FailSafe: Install Voice Pack` (or click Install in Settings → Voice Pack) when you want TTS playback + Whisper STT. Base extension drops below the 30 MB marketplace ceiling. Voice substrate code remains in the extension and degrades gracefully when the pack isn't installed. See `docs/INTEGRATIONS.md` Voice Pack section.
 - **Model-sourced Risk Register**. Coding agents now write risks directly into the Risk Register via the MCP tool `failsafe.create_risk`, the `@failsafe /risk` chat subcommand, or auto-derivation from SHIELD lifecycle signals (GATE VETOs, DEBUG entries, Shadow-Genome failure events). The manual `failsafe.addRisk` wizard is removed; legacy entries auto-migrate to a `manual` source label.
 - **Install Skills UX expansion**: live-progress modal with retry, operator-editable host registry, per-host skill picker, dry-run preview, and a new workspace `LiveProgressInvariant` doctrine + lint helper.
 - **OpenVSX v5.0.0 catch-up**: VS Code Marketplace and OpenVSX are now aligned at v5.0.0 via a dedicated manual workflow (`.github/workflows/openvsx-catchup.yml`).

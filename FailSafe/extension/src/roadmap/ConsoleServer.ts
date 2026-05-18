@@ -88,6 +88,7 @@ export class ConsoleServer {
   private agentTimelineService: AgentTimelineService | null = null;
   private agentHealthIndicator: AgentHealthIndicator | null = null;
   private agentRunRecorder: AgentRunRecorder | null = null;
+  private voicePackPath: string | null = null;
   private transparencyLogger: TransparencyLogger;
   private riskRegisterManager: RiskRegisterManager;
   private hub: HubSnapshotService;
@@ -158,6 +159,8 @@ export class ConsoleServer {
   setAgentTimelineService(s: AgentTimelineService): void { this.agentTimelineService = s; }
   setAgentHealthIndicator(i: AgentHealthIndicator): void { this.agentHealthIndicator = i; }
   setAgentRunRecorder(r: AgentRunRecorder): void { this.agentRunRecorder = r; }
+  setVoicePackPath(p: string | null): void { this.voicePackPath = p; }
+  getVoicePackPath(): string | null { return this.voicePackPath; }
   setAutoDerivationHook(fn: HubSnapshotService["autoDerivationHook"]): void { this.hub.autoDerivationHook = fn; }
 
   // ── internals ──────────────────────────────────────────────────────
@@ -224,6 +227,7 @@ export class ConsoleServer {
       qorRuntimeService: this.qorRuntimeService,
       brainstormService: this.brainstormService,
       audioVaultService: this.audioVaultService,
+      getVoicePackPath: () => this.voicePackPath,
       marketplaceCatalog: this.marketplaceCatalog,
       marketplaceInstaller: this.marketplaceInstaller,
       securityScanner: this.securityScanner,

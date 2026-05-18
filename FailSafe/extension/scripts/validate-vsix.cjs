@@ -192,7 +192,28 @@ function main() {
   const changelog = archive.read("extension/CHANGELOG.md");
   assertIncludes(changelog, `## [${sourcePkg.version}] - ${latestRelease.date}`, "Packaged changelog release entry");
 
+  // B195 acceptance gate — VSIX size ceiling. Plan: docs/plan-qor-voice-substrate-extraction.md Phase 4.
+  assertVsixUnderCeiling(vsixPath, 30 * 1024 * 1024);
+
   console.log(`[PASS] VSIX validated: ${vsixPath}`);
 }
 
-main();
+/**
+ * Assert the produced VSIX is under the given ceiling. Defaults to 30 MB to
+ * close B195. Pure size check on the produced file; runs after the existing
+ * archive content validations.
+ */
+function assertVsixUnderCeiling(vsixPath, ceilingBytes) {
+  const stat = fs.statSync(vsixPath);
+  if (stat.size > ceilingBytes) {
+    const mb = (stat.size / (1024 * 1024)).toFixed(2);
+    const ceilingMb = (ceilingBytes / (1024 * 1024)).toFixed(0);
+    throw new Error(`VSIX size ${mb} MB exceeds ${ceilingMb} MB ceiling (B195)`);
+  }
+}
+
+module.exports = { assertVsixUnderCeiling };
+
+if (require.main === module) {
+  main();
+}

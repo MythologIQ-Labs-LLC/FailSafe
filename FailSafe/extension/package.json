@@ -63,7 +63,9 @@
     "onCommand:failsafe.onboardAgent",
     "onCommand:failsafe.installCommitHook",
     "onCommand:failsafe.removeCommitHook",
-    "onCommand:failsafe.installQorLogicSkillsDefaults"
+    "onCommand:failsafe.installQorLogicSkillsDefaults",
+    "onCommand:failsafe.installVoicePack",
+    "onCommand:failsafe.uninstallVoicePack"
   ],
   "main": "./dist/extension/main.js",
   "contributes": {
@@ -114,6 +116,14 @@
       {
         "command": "failsafe.installQorLogicSkillsDefaults",
         "title": "FailSafe: Install Qor-Logic Skills (defaults)"
+      },
+      {
+        "command": "failsafe.installVoicePack",
+        "title": "FailSafe: Install Voice Pack"
+      },
+      {
+        "command": "failsafe.uninstallVoicePack",
+        "title": "FailSafe: Uninstall Voice Pack"
       },
       {
         "command": "failsafe.organize",
@@ -387,8 +397,9 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run build:package",
-    "build:package": "npm run compile && npm run bundle",
+    "build:package": "npm run compile && npm run bundle && npm run package:voice-pack",
     "bundle": "node ./scripts/bundle.cjs",
+    "package:voice-pack": "node ./scripts/package-voice-pack.cjs",
     "compile": "tsc -p ./ && node ./scripts/copy-ui-js.cjs",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run build:package && npm run patch:better-sqlite3 && npm run rebuild:vscode",

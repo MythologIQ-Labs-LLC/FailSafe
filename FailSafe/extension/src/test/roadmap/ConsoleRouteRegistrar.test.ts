@@ -8,15 +8,22 @@ import {
 } from '../../roadmap/services/ConsoleRouteRegistrar';
 
 interface FakeRoute { method: string; path: string; }
+interface FakeUse { path: string | null; order: number; }
 
-function makeFakeApp(): { app: any; routes: FakeRoute[]; middlewares: number } {
+function makeFakeApp(): { app: any; routes: FakeRoute[]; uses: FakeUse[]; middlewares: number } {
   const routes: FakeRoute[] = [];
+  const uses: FakeUse[] = [];
   let middlewares = 0;
   const record = (method: string) => (path: string, ..._handlers: unknown[]) => {
     routes.push({ method, path });
   };
   const app: any = {
-    use: (..._args: unknown[]) => { middlewares += 1; },
+    use: (...args: unknown[]) => {
+      middlewares += 1;
+      // First arg can be a mount path (string) or a handler function (no path).
+      const first = args[0];
+      uses.push({ path: typeof first === 'string' ? first : null, order: middlewares });
+    },
     get: record('GET'),
     post: record('POST'),
     put: record('PUT'),
@@ -26,7 +33,7 @@ function makeFakeApp(): { app: any; routes: FakeRoute[]; middlewares: number } {
     options: record('OPTIONS'),
     head: record('HEAD'),
   };
-  return { app, routes, middlewares: 0,
+  return { app, routes, uses, middlewares: 0,
     get countMiddlewares() { return middlewares; },
   } as any;
 }
@@ -85,6 +92,7 @@ function makeHost(app: any, hub: any): ConsoleRouteHost {
       getShadowGenomeManager: () => noopSG,
     },
     featureGate: undefined,
+    getVoicePackPath: () => null,
   };
 }
 
@@ -193,5 +201,41 @@ suite('ConsoleRouteRegistrar (Phase 60 §0)', () => {
     ]) {
       assert.ok(posts.includes(p), `missing POST ${p}`);
     }
+  });
+
+  // FX494 — voice-pack /vendor static mount (Phase 2 of voice-substrate-extraction)
+  test('setupAllRoutes — voice-pack /vendor mount registered when getVoicePackPath returns existing dir', () => {
+    const fs = require('fs');
+    const os = require('os');
+    const path = require('path');
+    const tmpPackDir = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-voice-pack-mount-test-'));
+    try {
+      const { app, uses } = makeFakeApp() as any;
+      const host = makeHost(app, makeFakeHub());
+      (host as any).getVoicePackPath = () => tmpPackDir;
+      new ConsoleRouteRegistrar(host).setupAllRoutes();
+      const vendorMount = uses.find((u: any) => u.path === '/vendor');
+      assert.ok(vendorMount, 'expected /vendor mount when voice-pack path exists');
+    } finally {
+      fs.rmSync(tmpPackDir, { recursive: true, force: true });
+    }
+  });
+
+  test('setupAllRoutes — no /vendor mount when getVoicePackPath returns null', () => {
+    const { app, uses } = makeFakeApp() as any;
+    const host = makeHost(app, makeFakeHub());
+    // Default makeHost: getVoicePackPath: () => null
+    new ConsoleRouteRegistrar(host).setupAllRoutes();
+    const vendorMount = uses.find((u: any) => u.path === '/vendor');
+    assert.strictEqual(vendorMount, undefined, 'no /vendor mount when path is null');
+  });
+
+  test('setupAllRoutes — no /vendor mount when getVoicePackPath returns a non-existent dir', () => {
+    const { app, uses } = makeFakeApp() as any;
+    const host = makeHost(app, makeFakeHub());
+    (host as any).getVoicePackPath = () => '/tmp/__failsafe_voice_pack_does_not_exist__';
+    new ConsoleRouteRegistrar(host).setupAllRoutes();
+    const vendorMount = uses.find((u: any) => u.path === '/vendor');
+    assert.strictEqual(vendorMount, undefined, 'no /vendor mount when path does not exist');
   });
 });

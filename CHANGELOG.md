@@ -5,6 +5,20 @@ All notable changes to FailSafe will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — v5.2.0 (draft)
+
+Voice substrate extraction (B195 resolution). Piper TTS + Whisper STT vendor binaries (~86 MB uncompressed, ~28 MB gzipped) move out of the base VSIX into a companion `failsafe-voice-pack-<version>.tar.gz` distributed as a GitHub Releases asset alongside the matching extension version tag. Voice substrate **code** (engines, controllers, brainstorm voice integration) stays in the extension and degrades gracefully when the pack isn't installed. No version bump in this draft cycle — work is held at a stage-only review boundary pending substantiate. See `docs/INTEGRATIONS.md` Voice Pack section and `.failsafe/governance/AUDIT_REPORT_voice-substrate-extraction.md` cycle 2 PASS for the full surface.
+
+### Added
+
+- **Voice Pack — separate-download companion** (`docs/plan-qor-voice-substrate-extraction.md`). Resolves B195 marketplace-cap risk per the 2026-05-18 disposition decision (`feedback_voice_separate_download.md`). Base VSIX drops below the 30 MB ceiling; voice features become opt-in.
+- **Install / uninstall paths**: VS Code commands `failsafe.installVoicePack` + `failsafe.uninstallVoicePack`. Settings tab Voice Pack card with 4-state render (`absent` / `installed v<X>` / `stale` / `error`) including explicit **Dismiss** + **Retry** on terminal errors (per F1 audit-cycle-1 remediation; satisfies SG-FakeProgress-A Live-Progress Invariant).
+- **Substrate**: `src/voice-pack/{types,voice-pack-detector,install-handler,index}.ts`. Pure Node 20+ stdlib (`fetch` with redirect-follow + bounded GitHub-host allowlist; `crypto`, `stream`, `child_process` for `tar -xzf`). No new npm dependencies.
+- **ConsoleServer static-mount overlay**: `setupAllRoutes()` mounts `globalStorageUri/voice-pack/` at `/vendor` BEFORE the default uiDir static, so pack files take priority when installed. Falls through gracefully when absent (existing `error:piper_not_vendored` engine error path engages — surfacing the Install Voice Pack affordance via `voice-controller.probeVoicePack()`).
+- **VoicePackRoute**: `GET /api/integrations/voice-pack/status` (probe + version + missingFiles + diskUsageBytes), `POST /api/actions/install-voice-pack` (bridge with WS-broadcast per-phase progress), `POST /api/actions/uninstall-voice-pack`.
+- **Build pipeline**: `scripts/package-voice-pack.cjs` writes `dist/failsafe-voice-pack-<version>.tar.gz` + `.sha256` + manifest.json with every-file sha256. `.vscodeignore` excludes the heavy vendor paths from VSIX packaging. `scripts/validate-vsix.cjs` adds a 30 MB ceiling assertion (B195 acceptance gate).
+- **18 new functional tests** across 6 test files (FX491–FX497): voice-pack-detector (5 cases), install-handler (7 cases), settings card (5 cases), activation wiring (4 cases), ConsoleRouteRegistrar mount (3 cases), package-voice-pack (4 cases), validate-vsix-size (2 cases) — all under SG-035 acceptance discipline.
+
 ## [5.1.0] - 2026-05-14
 
 Minor release. Model-sourced Risk Register (coding agents author risks via MCP tool, chat subcommand, or auto-derivation from SHIELD lifecycle), Install Skills UX expansion (live progress + per-host picker + dry-run preview + LiveProgressInvariant doctrine), OpenVSX/VS Code Marketplace alignment at v5.0.0 baseline, brand sweep (eliminated all `Qore` legacy spellings), release pipeline safety gate (production environment approval), full SRE panel attribution (Microsoft AGT + Qortara), 36 new FX415–FX420 functional tests, and a complete brand + skill-source-attribution sweep. Supersedes the unreleased 2026-05-06 draft.

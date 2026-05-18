@@ -22,6 +22,8 @@ import { QorLogicPackageInstaller, defaultInstallerRun } from "../qorlogic/QorLo
 import { QorLogicSkillIngestor } from "../qorlogic/QorLogicSkillIngestor";
 import { createInstallSkillsHandler, createScaffoldWithWebOptions } from "./installSkillsHandler";
 import { runWorkspaceBootstrap, type BootstrapReport } from "./bootstrapWorkspace";
+import { wireVoicePack, reprobeAndSet } from "./bootstrapVoicePack";
+import { setupVoicePackRoutes } from "../roadmap/routes/VoicePackRoute";
 
 export interface ServerDeps {
   planManager: PlanManager;
@@ -63,6 +65,14 @@ export async function bootstrapServers(
   );
   consoleServer.setIdeTracker(ideTracker);
   consoleServer.setSystemRegistry(deps.systemRegistry);
+
+  // Voice Pack wiring — Phase 3 of voice-substrate-extraction.
+  // Probe globalStorageUri/voice-pack/ BEFORE consoleServer.start() so the
+  // /vendor static mount picks up the pack on first route registration. The
+  // probe is fs-only; no spawn, no network. Stale / corrupt / absent all
+  // resolve to null voicePackPath so the existing dist mount falls through.
+  const extensionVersion = readExtensionVersion();
+  await wireVoicePack(context, consoleServer, extensionVersion);
 
   // QorLogic skill installer (v5): replaces v4 bundled-skills copy path.
   // Construct + register the scaffold callback BEFORE consoleServer.start() so
@@ -130,6 +140,62 @@ export async function bootstrapServers(
     enumerateSkillsForHost: (host, scope) => enumerateSkillsForHost(skillIngestor, host, scope, skillEnumDeps),
     previewInstall: (host, scope, filter) => previewInstall(skillIngestor, host, scope, filter),
   });
+  // Voice Pack routes — Phase 3 of voice-substrate-extraction. Same
+  // post-start pattern as qorlogic routes above so the SPA fallback is
+  // registered AFTER these /api/* routes are wired.
+  const reprobeVoicePackOnChange = async () => {
+    const gs = context.globalStorageUri?.fsPath;
+    if (gs) await reprobeAndSet(consoleServer, gs, extensionVersion);
+  };
+  setupVoicePackRoutes(consoleServer.getExpressApp(), {
+    rejectIfRemote: (req, res) => {
+      const remote = req.socket?.remoteAddress ?? "";
+      const local = remote === "127.0.0.1" || remote === "::1" || remote === "::ffff:127.0.0.1";
+      if (!local) { res.status(403).json({ error: "Forbidden: local access only" }); return true; }
+      return false;
+    },
+    broadcast: (data) => consoleServer.broadcastEvent(data),
+    globalStoragePath: context.globalStorageUri?.fsPath || "",
+    extensionVersion,
+    onPackStateChanged: reprobeVoicePackOnChange,
+  });
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("failsafe.installVoicePack", async () => {
+      const gs = context.globalStorageUri?.fsPath;
+      if (!gs) { void vscode.window.showErrorMessage("Voice Pack: globalStorage unavailable."); return; }
+      try {
+        const { installVoicePack } = await import("../voice-pack");
+        outputChannel.appendLine(`[voice-pack] starting install v${extensionVersion}`);
+        const report = await installVoicePack({
+          globalStoragePath: gs,
+          version: extensionVersion,
+          output: outputChannel,
+          onProgress: (evt) => consoleServer.broadcastEvent({
+            type: evt.status === "error" ? "voicePack.install.error" : "voicePack.install.progress",
+            invocation: evt,
+          }),
+        });
+        await reprobeVoicePackOnChange();
+        consoleServer.broadcastEvent({ type: "voicePack.install.complete", report });
+        void vscode.window.showInformationMessage(`Voice Pack installed (v${report.version}).`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        outputChannel.appendLine(`[voice-pack] install failed: ${msg}`);
+        void vscode.window.showErrorMessage(`Voice Pack install failed: ${msg}`);
+      }
+    }),
+    vscode.commands.registerCommand("failsafe.uninstallVoicePack", async () => {
+      const gs = context.globalStorageUri?.fsPath;
+      if (!gs) return;
+      const { uninstallVoicePack } = await import("../voice-pack");
+      uninstallVoicePack(gs);
+      await reprobeVoicePackOnChange();
+      consoleServer.broadcastEvent({ type: "voicePack.uninstalled" });
+      void vscode.window.showInformationMessage("Voice Pack uninstalled.");
+    }),
+  );
+
   // SPA fallback registered LAST so qorlogic POST routes above are matched
   // before the catch-all intercepts them.
   consoleServer.finalizeRoutes();
@@ -224,6 +290,18 @@ export async function bootstrapServers(
   );
 
   return { consoleServer, riskManager, actualPort };
+}
+
+function readExtensionVersion(): string {
+  try {
+    const fs = require("fs") as typeof import("fs");
+    const path = require("path") as typeof import("path");
+    const pkgPath = path.join(__dirname, "..", "..", "package.json");
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8")) as { version?: string };
+    return pkg.version || "unknown";
+  } catch {
+    return "unknown";
+  }
 }
 
 function reportBootstrapToUser(

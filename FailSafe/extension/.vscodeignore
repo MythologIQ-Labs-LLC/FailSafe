@@ -77,3 +77,12 @@ Thumbs.db
 
 # Old icon files
 old-icon.png
+
+# Voice Pack — extracted to a separate companion download (B195 resolution).
+# Plan: docs/plan-qor-voice-substrate-extraction.md Phase 4.
+# Heavy vendor binaries (~86 MB) are operator-installed via
+# `failsafe.installVoicePack`, not shipped in the base VSIX.
+dist/extension/ui/vendor/piper/**
+dist/extension/ui/vendor/whisper/**
+dist/failsafe-voice-pack-*.tar.gz
+dist/failsafe-voice-pack-*.sha256

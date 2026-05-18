@@ -22,6 +22,10 @@ _Local-first safety for AI coding assistants._
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
 
+## Upcoming
+
+- **Voice substrate extraction** (v5.2.x, in active development on `feat/voice-substrate-extraction`): heavy Piper TTS + Whisper STT vendor binaries move out of the base VSIX into a separate companion download. Voice features become opt-in; base extension drops below the 30 MB marketplace ceiling. See [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md) Voice Pack section.
+
 ## What's new in v5.1.0
 
 - **Model-sourced Risk Register**: coding agents author risks via the MCP tool `failsafe.create_risk`, the `@failsafe /risk` chat subcommand, or FailSafe auto-derives them from SHIELD lifecycle (GATE VETOs, DEBUG entries, Shadow-Genome failure events). The manual "Add Risk" wizard is removed.

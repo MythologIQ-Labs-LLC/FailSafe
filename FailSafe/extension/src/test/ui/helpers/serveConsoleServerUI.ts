@@ -39,6 +39,14 @@ export interface ConsoleServerFixtures {
   timelineEvents?: TimelineEvent[];
   risks?: RiskEntry[];
   initialHub?: HubFixture;
+  /** When true, writes a fake voice-pack manifest + files to a temp
+   *  globalStoragePath and sets `consoleServer.setVoicePackPath()` so the
+   *  /vendor static mount registers and the status route reports `installed`.
+   *  When false (or omitted), no pack is written and status reports `absent`. */
+  voicePackInstalled?: boolean;
+  /** Pin the version surfaced by the status route's requiredMinVersion field.
+   *  Defaults to "5.2.0". */
+  voicePackVersion?: string;
 }
 
 export interface ConsoleServerController {
@@ -215,6 +223,15 @@ export async function serveConsoleServerUI(
   );
   applyPrivateCast(server, checkpointRef);
 
+  const voicePackVersion = fixtures.voicePackVersion ?? '5.2.0';
+  const voicePackGlobalStorage = setupVoicePackFixture(workspaceRoot, fixtures, voicePackVersion);
+  if (fixtures.voicePackInstalled) {
+    (server as unknown as { setVoicePackPath: (p: string) => void }).setVoicePackPath(
+      path.join(voicePackGlobalStorage, 'voice-pack'),
+    );
+  }
+  registerVoicePackRouteOnHarness(server, voicePackGlobalStorage, voicePackVersion);
+
   const app = (server as unknown as { app: Application }).app;
   const harness = http.createServer(app);
   const sockets = new Set<WebSocket>();
@@ -222,4 +239,55 @@ export async function serveConsoleServerUI(
 
   const url = await listenAndResolveUrl(harness);
   return buildController(url, harness, sockets, checkpointRef, fakes.hubRef);
+}
+
+function setupVoicePackFixture(
+  workspaceRoot: string,
+  fixtures: ConsoleServerFixtures,
+  version: string,
+): string {
+  // Per-fixture globalStoragePath sibling to workspaceRoot.
+  const globalStoragePath = path.join(workspaceRoot, '.test-globalStorage');
+  fs.mkdirSync(globalStoragePath, { recursive: true });
+  if (fixtures.voicePackInstalled) {
+    const packDir = path.join(globalStoragePath, 'voice-pack');
+    fs.mkdirSync(path.join(packDir, 'piper'), { recursive: true });
+    const piperContent = 'STUB-PIPER-PAYLOAD';
+    fs.writeFileSync(path.join(packDir, 'piper', 'piper.min.js'), piperContent, 'utf8');
+    const { createHash } = require('crypto') as typeof import('crypto');
+    const sha = createHash('sha256').update(piperContent).digest('hex');
+    fs.writeFileSync(path.join(packDir, 'voice-pack.manifest.json'), JSON.stringify({
+      version,
+      builtAt: new Date().toISOString(),
+      expectedFiles: ['piper/piper.min.js'],
+      sha256: { 'piper/piper.min.js': sha },
+    }), 'utf8');
+  }
+  return globalStoragePath;
+}
+
+function registerVoicePackRouteOnHarness(
+  server: ConsoleServer,
+  globalStoragePath: string,
+  version: string,
+): void {
+  const { setupVoicePackRoutes } = require('../../../roadmap/routes/VoicePackRoute') as typeof import('../../../roadmap/routes/VoicePackRoute');
+  const app = (server as unknown as { app: Application }).app;
+  setupVoicePackRoutes(app, {
+    rejectIfRemote: () => false, // tests run on 127.0.0.1; allow
+    broadcast: (data) => {
+      const wsm = (server as unknown as { wsManager: { broadcast: (d: Record<string, unknown>) => void } }).wsManager;
+      wsm.broadcast(data);
+    },
+    globalStoragePath,
+    extensionVersion: version,
+    onPackStateChanged: async () => {
+      // Re-probe + update voicePackPath on the harness server so subsequent
+      // /vendor mount reflects post-install/uninstall state.
+      const fsMod = require('fs') as typeof import('fs');
+      const packDir = path.join(globalStoragePath, 'voice-pack');
+      (server as unknown as { setVoicePackPath: (p: string | null) => void })
+        .setVoicePackPath(fsMod.existsSync(packDir) ? packDir : null);
+    },
+  });
 }
