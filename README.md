@@ -24,7 +24,8 @@ _Local-first safety for AI coding assistants._
 
 ## Upcoming
 
-- **Bicameral MCP integration** (v1, in active development on `feat/bicameral-mcp-integration`): new Integrations tab surfacing the [Bicameral MCP](https://github.com/BicameralAI/bicameral-mcp) decision ledger and per-file drift status. Solo / team install picker; nothing bundled in the VSIX. See [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md).
+- **Bicameral MCP integration** (v1, merged locally): new Integrations tab surfacing the [Bicameral MCP](https://github.com/BicameralAI/bicameral-mcp) decision ledger and per-file drift status. Solo / team install picker; nothing bundled in the VSIX. See [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md).
+- **Stale-cache remediation** (v5.2.x, merged locally): `WorkspaceMutationBus` substrate that lets governance services subscribe to filesystem mutations and refresh their in-process caches automatically. Closes B192 stale-cache pattern + the FailSafe-Pro-coexistence concern. See [`docs/governance-cache-invalidation.md`](docs/governance-cache-invalidation.md).
 
 ## What's new in v5.1.0
 

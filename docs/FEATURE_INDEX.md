@@ -576,6 +576,18 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 ---
 
+## Section: Stale-cache remediation (B192 — WorkspaceMutationBus + subscribers)
+
+| ID | Feature | Doc | Code | Test | Status | Notes |
+|---|---|---|---|---|---|---|
+| FX498 | WorkspaceMutationBus — targeted-path fs.watch aggregator with per-watcher debounce + graceful degrade | docs/governance-cache-invalidation.md | src/shared/WorkspaceMutationBus.ts | src/test/shared/WorkspaceMutationBus.test.ts | verified | 5 mocha cases: registerWatcher returns Disposable; onMutation fires after debounce; rapid mutations coalesce; dispose() stops further calls; ENOENT path returns no-op Disposable without throw. Pure Node stdlib (fs.watch); no chokidar dep. |
+| FX499 | PlanManager subscription to .failsafe/plans.yaml + .qorelogic/roadmap.yaml mutations | docs/governance-cache-invalidation.md "Subscriber catalog" | src/qorelogic/planning/PlanManager.ts | src/test/planning/PlanManager.test.ts (extended) | verified | 4 mocha cases: no-bus back-compat; bus dep registers both backing-store watchers; simulated mutation triggers refreshFromWorkspace; dispose() releases all subscriptions. |
+| FX501 | HubSnapshotService.refreshChainValidity — clears cachedChainValid + chainValidAt on SQLite db mutation; next getCheckpointSummary re-walks via verifyCheckpointChain | docs/governance-cache-invalidation.md | src/roadmap/services/HubSnapshotService.ts | src/test/roadmap/HubSnapshotService.test.ts (extended) | verified | 3 mocha cases: bus dep registers watcher on ledgerManager.getLedgerPath(); mutation event clears chainValidAt; no-bus back-compat construction does not throw. LedgerManager.getLedgerPath() accessor added in same phase as remediation for audit cycle 1 F2. |
+| FX502 | TrustEngine fs-watch subscription for FailSafe-Pro-coexistence (external SQLite db mutations) | docs/governance-cache-invalidation.md "FailSafe-Pro coexistence" | src/qorelogic/trust/TrustEngine.ts | src/test/qorelogic/TrustEngineBusSubscription.test.ts | verified | 3 mocha cases: no-bus back-compat; initialize-with-bus registers ledgerPath watcher; dispose() releases subscription. Complements existing in-process EventBus subscriptions for `qorelogic.trustUpdated`/`agentQuarantined`/`agentReleased`. |
+| FX503 | ConsoleLifecycleService.watchMetaLedger migration from raw fs.watch to WorkspaceMutationBus | docs/governance-cache-invalidation.md "Subscriber catalog" | src/roadmap/services/ConsoleLifecycleService.ts | src/test/roadmap/ConsoleLifecycleServiceBusMigration.test.ts | verified | 3 mocha cases: bus path registers META_LEDGER watcher with 1500ms debounce preserved; mutation event broadcasts hub.refresh; no-bus back-compat falls back to raw fs.watch + cleans up on stop(). |
+
+---
+
 ## Section: FailSafe Pro discovery / boundary
 
 | ID | Feature | Doc | Code | Test | Status | Notes |

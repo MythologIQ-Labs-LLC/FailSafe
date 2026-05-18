@@ -18723,3 +18723,67 @@ _Next: operator decision on push/merge/PR — none auto-triggered by this seal._
 _Chain integrity: VALID_
 _Session Status: bicameral-mcp-integration SEALED at #372; 5-phase v1 surface complete; 2377 mocha pass + 4 Playwright pass; review boundary honored; PUBLISH_BLOCK unchanged_
 _Session: 2026-05-14-install-skills-ux-expansion-substantiation-seal_
+
+---
+
+### Entry #373: SESSION SEAL — plan-qor-stale-cache-remediation (5 phases; B192 resolved)
+
+**Entry ID**: `de9f7f283223`
+**Date**: 2026-05-18
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-stale-cache-remediation.md` (target v5.2.x; no in-cycle version bump)
+**Audit reference**: `.failsafe/governance/AUDIT_REPORT_stale-cache-remediation.md` (cycle 1 VETO F1+F2 → cycle 2 PASS; Risk L2; workspace-only)
+**Implementation reference**: 2 commits on `feat/stale-cache-remediation` (`caf4971` plan, `b48d733` amend; substantiate commit follows)
+
+## Federation note
+
+THIRD sibling SESSION SEAL claiming Entry #372. Predecessor cycles: `feat/voice-substrate-extraction` (B195 voice extraction) + `feat/bicameral-mcp-integration` (Bicameral MCP v1). All three diverged from `main` at Entry #371. Per SG-ConcurrentLedgerRace-A, operator MUST reconcile at merge: ONE retains #372; others get #373 + #374 with amended `previous_hash`.
+
+## Substantiation summary
+
+B192 closed for the 4 fs-backed governance services. New `WorkspaceMutationBus` (75L `fs.watch` aggregator) lets PlanManager / HubSnapshotService / TrustEngine subscribe to targeted paths. `ConsoleLifecycleService.watchMetaLedger` migrated to the shared bus. New `LedgerManager.getLedgerPath()` accessor resolves the SQLite db watch target. New `HubSnapshotService.refreshChainValidity()` invalidates cached chain validity on db mutation. Defensive pull-on-build retained as belt-and-suspenders.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| AUDIT cycle 2 PASS | ✓ (cycle 1 F1 L3ApprovalService-unbacked + F2 LedgerManager-method-hallucinated both remediated) |
+| Reality = Promise | 5/5 phases delivered. 1 new substrate (75L) + 4 service modifications + 5 bootstrap wirings + 5 new test files + 2 extended tests. |
+| Test functionality (SG-035) | 18 new functional cases (FX498 5 + FX499 4 + FX501 3 + FX502 3 + FX503 3). |
+| Mocha | 2280 passing / 17 failing — baseline-identical, zero regressions. |
+| ESLint | 0 errors, 94 warnings (none in new files). |
+| TypeScript | clean. |
+| Section 4 Razor | All new files ≤250L. |
+| FEATURE_INDEX FX498–FX503 | 5 verified (FX500 intentionally absent — L3ApprovalService dropped per cycle-1 F1). |
+
+## Audit cycle 1 pattern observation
+
+Both F findings caught by Phase 72 SG-CitationDrift-A grep-evidence. Third consecutive plan cycle (voice-pack, bicameral, stale-cache) where same-agent self-audit surfaces infrastructure-mismatch in cycle 1. Doctrine update candidate: pre-audit infrastructure-citation verification, OR default architect-reviewer subagent for cycle 1 on plans with substantial infrastructure citations.
+
+## Skipped per protocol (degraded-wiring posture)
+
+Same as Entries #371 / federated voice-pack-#372 / bicameral-#372. Python `qor.*` toolkit unavailable. Steps 0, 4.6, 4.6.5, 4.6.6, 4.7, 6.5, 6.8, 7.4-7.8, 8.5, 9.5.5, 9.6, Z all SKIP. Step 6.8 hash validation replaced with inline Node `crypto` validate-as-hex.
+
+## Content Hash
+
+**Content Hash**: `3776b80b378338d07063e586a527adfb79fd84fcc051c2bb61f8e78fea2ae174`
+**Previous Hash**: `be758ac9fd2a28040695ed1b240ad2847aa36b75b81767e484c156d9e612caae` (Entry #372 chain hash; federation reconciliation — original previous_hash eaed7e955... amended at merge-into-main time)
+**Chain Hash**: `1e7aceab1ca26d1aa03dbb6dd346348f5bff004758cb3a63a9a8a5b274ae5106` — SHA256(content_hash + "|" + previous_hash)
+**Merkle Seal**: `4e428d62ae08b6f1b2ccb0d75f478344b2881fde81d8a484807f8498bf6599d1` — SHA256(content_hash + "|" + chain_hash + "|gate_workspace_audit_stale_cache_PASS")
+**Session ID**: workspace-only / `2026-05-18-stale-cache-remediation-substantiation-seal`
+
+## Review Boundary attestation
+
+Per `feedback_no_ship_without_approval.md` + plan header §"Review boundary: stage artifacts only": no push, no tag, no PR, no merge, no marketplace publish, no GitHub Release upload. The 3 `feat/stale-cache-remediation` commits stay local. /qor-auto-dev-1 orchestrator autonomy honored — cycle 1 F1/F2 resolved via canonical-artifact-controlled remediations without operator interrupt.
+
+## Decision
+
+**SEAL — Reality matches Promise.** B192 stale-cache pattern closed for the 4 fs-backed services. FailSafe-Pro coexistence addressed via shared-filesystem trust posture. L3ApprovalService's in-process variant deferred to B-SC-6.
+
+_Chain Status: STALE-CACHE-REMEDIATION PLAN SEALED at Entry #373 (federation-reconciled at merge into main; was branch-local Entry #372). bicameral retains #372; voice-substrate becomes #374. Per SG-ConcurrentLedgerRace-A._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: stale-cache-remediation SEALED at #373 (federation-reconciled from branch-local #372); 5-phase WorkspaceMutationBus + subscribers complete; 2280 mocha pass; B192 resolved; PUBLISH_BLOCK unchanged_
+_Session: 2026-05-18-stale-cache-remediation-substantiation-seal_

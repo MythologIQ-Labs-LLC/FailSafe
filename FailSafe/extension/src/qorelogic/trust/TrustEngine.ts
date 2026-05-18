@@ -30,10 +30,12 @@ import {
 export class TrustEngine {
     private agents: Map<string, AgentIdentity> = new Map();
     private db: Database.Database | undefined;
+    private mutationDisposable: { dispose: () => void } | null = null;
 
     constructor(
         private readonly ledgerManager: LedgerManager,
         private readonly eventBus?: EventBus,
+        private readonly mutationBus?: import('../../shared/WorkspaceMutationBus').WorkspaceMutationBus,
     ) {
         if (this.eventBus) {
             this.eventBus.on("qorelogic.trustUpdated" as FailSafeEventType, () => this.refreshFromDb());
@@ -46,6 +48,26 @@ export class TrustEngine {
         if (!this.ledgerManager.isAvailable()) return;
         this.db = this.ledgerManager.getDatabase();
         this.refreshFromDb();
+        // B192 remediation: subscribe to external SQLite db mutations
+        // (FailSafe Pro coexistence). In-process EventBus subscriptions above
+        // catch our OWN writes; mutationBus catches external writers.
+        if (this.mutationBus) {
+            const dbPath = this.ledgerManager.getLedgerPath();
+            if (dbPath) {
+                this.mutationDisposable = this.mutationBus.registerWatcher(
+                    dbPath,
+                    () => this.refreshFromDb(),
+                );
+            }
+        }
+    }
+
+    /** Release the mutation-bus subscription. Called by extension deactivate. */
+    dispose(): void {
+        if (this.mutationDisposable) {
+            try { this.mutationDisposable.dispose(); } catch { /* already gone */ }
+            this.mutationDisposable = null;
+        }
     }
 
     refreshFromDb(): void {

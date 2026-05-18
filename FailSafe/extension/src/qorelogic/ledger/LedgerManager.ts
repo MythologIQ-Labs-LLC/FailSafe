@@ -459,6 +459,16 @@ export class LedgerManager {
         return this.db;
     }
 
+    /** Public accessor for the SQLite db file path. Returns the configured
+     *  ledger path (set from `configProvider.getLedgerPath()` at initialize
+     *  time; empty string before initialize). Used by WorkspaceMutationBus
+     *  subscribers (HubSnapshotService chain-validity refresh, TrustEngine
+     *  external-mutation refresh) to resolve the watch target. B192
+     *  remediation (audit cycle 1 F2). */
+    getLedgerPath(): string {
+        return this.ledgerPath;
+    }
+
     isAvailable(): boolean {
         return !this.isDisabled && !!this.db;
     }

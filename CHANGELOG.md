@@ -7,17 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — v5.2.0 (draft)
 
-Bicameral MCP integration (v1). New Integrations tab with install picker (solo/team), connection lifecycle, and a decision feed driven by the four Bicameral v1 tools (`history`, `preflight`, `drift`, `ratify`). Settings card surfaces install state + autoConnect toggle. No version bump in this draft cycle — the work is held at a stage-only review boundary pending Phase 5 Playwright coverage and substantiate. See `docs/INTEGRATIONS.md` for the full surface and `.failsafe/governance/SESSION_STATE_bicameral-mcp-integration.md` for cycle status.
+Bicameral MCP integration (v1) + stale-cache remediation (B192). Both held at stage-only review boundary pending v5.2.0 release. See `docs/INTEGRATIONS.md` and `docs/governance-cache-invalidation.md`.
 
 ### Added
 
 - **Bicameral MCP — Integrations tab** (`docs/plan-qor-bicameral-mcp-integration.md`). New Command Center tab dedicated to third-party integrations. Bicameral is the only entry in v1; pattern extensible to additional MCP servers.
 - **Install bridge** with solo / team mode picker. Runs `pip install bicameral-mcp` + `bicameral-mcp setup --mode {solo|team}` via list-form spawn against the operator's resolved Python; nothing is bundled in the VSIX. Live per-step progress over WebSocket.
 - **BicameralMcpClient** — thin wrapper around `@modelcontextprotocol/sdk` stdio transport. Connect/disconnect is lazy; `history`/`preflight`/`drift`/`ratify` tools are surfaced through HTTP routes that scope to local-only access (`rejectIfRemote`).
-- **Settings card** — install state + version + `failsafe.integrations.bicameral.autoConnect` toggle + "Re-install / Re-setup…" shortcut. The autoConnect setting drives an opt-in background connect attempt at activation when the workspace is configured.
+- **Bicameral Settings card** — install state + version + `failsafe.integrations.bicameral.autoConnect` toggle + "Re-install / Re-setup…" shortcut. The autoConnect setting drives an opt-in background connect attempt at activation when the workspace is configured.
 - **VS Code settings**: `failsafe.integrations.bicameral.command` (default `"bicameral-mcp"`), `failsafe.integrations.bicameral.pipCommand` (default `"pip"`), `failsafe.integrations.bicameral.autoConnect` (default `false`).
-- **Route module** `src/roadmap/routes/BicameralRoute.ts` (status + install + connect / disconnect / history / drift / ratify + auto-connect toggle); **bootstrap helper** `src/extension/bootstrapBicameral.ts` (lazy client wiring + config-watcher rebuild + auto-connect probe); **UI module** `src/roadmap/ui/modules/bicameral-settings-card.js`.
+- **Bicameral surface** — `src/roadmap/routes/BicameralRoute.ts` (status + install + connect / disconnect / history / drift / ratify + auto-connect toggle); `src/extension/bootstrapBicameral.ts` (lazy client wiring + config-watcher rebuild + auto-connect probe); `src/roadmap/ui/modules/bicameral-settings-card.js`.
 - 11 new mocha test files covering client / install detector / install handler / Integrations tab JSDOM render / Bicameral card states (functional under SG-035).
+- **`WorkspaceMutationBus`** (`src/shared/WorkspaceMutationBus.ts`) — targeted-path fs.watch aggregator with per-watcher debounce (200ms default, 1500ms META_LEDGER override). Pure Node stdlib; no new deps.
+- **`LedgerManager.getLedgerPath()`** — public accessor for the SQLite db path; lets HubSnapshotService + TrustEngine resolve the watch target without threading `configProvider` through their constructors.
+- **`HubSnapshotService.refreshChainValidity()`** — invalidates `cachedChainValid` + `chainValidAt` on bus-emitted db mutations; next `getCheckpointSummary()` re-walks the chain via `verifyCheckpointChain()`.
+- **`HubSnapshotService.dispose()`** + **`PlanManager.dispose()`** + **`TrustEngine.dispose()`** — release bus subscriptions on extension deactivate.
+- **18 new functional cases** across 5 test files (FX498/499/501/502/503 — all under SG-035 acceptance discipline).
+
+### Changed
+
+- **`ConsoleLifecycleService.watchMetaLedger`** routes through `WorkspaceMutationBus` when present (1500ms debounce preserved); falls back to raw `fs.watch` when no bus is provided (test back-compat).
+- **`bootstrapCore`** constructs `WorkspaceMutationBus` alongside `EventBus`; **`bootstrapServers`** + **`bootstrapQorLogic`** thread it to ConsoleServer + TrustEngine. All bus-receiving constructor parameters are optional (existing test fixtures without bus continue to work unchanged).
+
+### Not done — see B-SC-6
+
+L3ApprovalService was originally listed as a B192 stale-cache victim. Audit cycle 1 surfaced that its backing `VscodeStateStore` wraps `vscode.Memento` (in-process VS Code state with no filesystem path to watch). The existing `HubSnapshotService.buildHubSnapshot` pull-call to `qorelogicManager.refreshL3Queue?.()` handles its in-process staleness. An EventBus-driven alternative (publish `qorelogic.l3Queue.mutated` on writes) is deferred to a separate cycle.
 
 ## [5.1.0] - 2026-05-14
 
