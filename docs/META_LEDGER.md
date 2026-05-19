@@ -18970,3 +18970,59 @@ _Next: operator decision on push — none auto-triggered by this reconciliation.
 _Chain integrity: VALID_
 _Session Status: enforcement-mode-escalation-ux SEALED at Entry #375 (clean; first merge into main); sentinel-governance-extensions SEALED at Entry #376 (federation-reconciled from branch-local #375). Federated pair both on main per SG-ConcurrentLedgerRace-A; B194 + B193 resolved; B-EM-1/2/3/4 + B-SD-2 captured as follow-ups; PUBLISH_BLOCK unchanged._
 _Session: 2026-05-19-b193-b194-federation-reconciliation-merge_
+
+---
+
+### Entry #377: SESSION SEAL — plan-qor-logic-version-pinning (B197 residual surfacing)
+
+**Entry ID**: `ad18da98db81`
+**Date**: 2026-05-19
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-logic-version-pinning.md`
+**Audit reference**: 1-cycle PASS via independent architect-reviewer (Phase 68 Option B). 3 minor amendments (construction-site citation drift; async boundary lower-blast-radius option; `esc()` vs `escapeHtml` helper name) remediated in-cycle before implementation.
+**Implementation reference**: 1 commit on `feat/qor-logic-version-pinning` branched off `main` at `7353e3f` (B193 federation reconciliation). impl commit `600143d`.
+
+## Substantiation summary
+
+B197 installer-side was already shipped (`QorLogicPackageInstaller.ts:82-86` pins `qor-logic>=0.31.1` with `--upgrade`; `verifyInstalledVersion()` returned `{installed, minimum, meetsFloor}`; 20 tests covered both). This residual cycle closed the operator-visible surfacing gap: `verifyInstalledVersion()` is now resolved once per hub rebuild (in `HubSnapshotService.buildHubSnapshot`, the natural async cache boundary) and threaded through `WorkspaceArtifactBuilder` constructor → `getQorLogicInstallStatus(versionStatus)` → `hub.bootstrapState.qorLogicInstall.{installedVersion,minimumVersion,meetsFloor}`. The Settings card now renders a `cc-qorlogic-floor-warning` block above the host grid when `meetsFloor === false` + `installedVersion` is present; the existing "Install / Refresh Skills" button serves as the upgrade affordance. Forward-reference closure in `bootstrapServers.ts` captures the installer instance (constructed after `ConsoleServer`) for verifier resolution at hub-build time. Out-of-scope: bumping `MIN_QOR_LOGIC_VERSION` to a newer upstream release (B-QL-2 candidate if needed).
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| AUDIT 1-cycle PASS | ✓ (3 minor amendments remediated in-cycle) |
+| Reality = Promise | All scope-declared edits delivered: 5 file edits (record type, builder constructor, hub service, ConsoleServer options, bootstrapServers closure) + 1 UI helper + 6 tests + 3 doc updates. |
+| Test functionality (SG-035) | 6 new FX511 cases — all invoke unit + assert against output. |
+| Mocha clean state | 2416 passing / 18 failing — baseline (17) + 1 pre-existing FX263 unrelated to B197 (verified on main). Zero regressions from this cycle. |
+| ESLint / TypeScript | clean. |
+| Section 4 Razor | All touched files under 250L; install-skills-card.js grew by ~17L for the helper; HubSnapshotService grew by ~10L for verifier-resolution block. |
+| FEATURE_INDEX FX511 | 1 verified. |
+
+## Skipped per protocol (degraded-wiring posture)
+
+Same as Entries #371-#376: Python `qor.*` toolkit unavailable. Inline Node `crypto` validate-as-hex replaces Step 6.8.
+
+## Content Hash
+
+**Content Hash**: `622a8e3ec115a82bae7763ca40b7415260c8b8e672b4b67a6a942f71c878e324`
+**Previous Hash**: `1898988ebac150af7f53206a99ee495f7b1e5fb82dc110bcd0d0941924058db1` (Entry #376 B193 federation-reconciled chain hash)
+**Chain Hash**: `db79f091461409f160fa108260a3374ca56b110e3214d3fc38642ead8d9d0ab1`
+**Merkle Seal**: `fd4b3f0d8fe97318db8ff94624cbd1ed2d608e12ed80d5a923d30d75e06c8c46` — gate_workspace_audit_b197_residual_PASS
+**Session ID**: workspace-only / `2026-05-19-qor-logic-version-pinning-substantiation-seal`
+
+## Review Boundary attestation
+
+No push, tag, PR, marketplace publish triggered by this seal entry. Branch stays local pending operator's authorized push pattern.
+
+## Decision
+
+**SEAL — Reality matches Promise.** B197 closed with full reference to pre-shipped installer + this residual surfacing cycle.
+
+_Chain Status: B197 RESIDUAL SURFACING SEALED at Entry #377. No federation collision this cycle._
+_Next: operator decision on push/merge — none auto-triggered by this seal._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: qor-logic-version-pinning SEALED at Entry #377; B197 residual surfacing complete; 6 FX511 cases pass; 2416 mocha pass / 18 failing (17 baseline + 1 pre-existing FX263); PUBLISH_BLOCK unchanged._
+_Session: 2026-05-19-qor-logic-version-pinning-substantiation-seal_
