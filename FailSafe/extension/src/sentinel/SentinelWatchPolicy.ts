@@ -34,21 +34,25 @@ const WATCHED_EXTENSIONS: ReadonlyArray<string> = [
     ...GOVERNANCE_DOC_EXTENSIONS
 ];
 
-// Operator-meaningful `.failsafe/**` artifacts. Anything outside this
-// list (e.g. `.failsafe/runtime/`, cache files) stays suppressed.
+// Operator-meaningful `.failsafe/**` and `docs/**` artifacts. Anything
+// outside this list (e.g. `.failsafe/runtime/`, cache files) stays
+// suppressed. B193 residual fix-up (2026-05-19): corrected stale
+// aspirational entries to canonical fs paths; broader `.failsafe/governance/`
+// prefix now covers the 70+ on-disk variant files (AUDIT_REPORT_*.md,
+// RESEARCH_BRIEF_*.md, SESSION_STATE_*.md, etc.) that suffix-equality
+// matching previously dropped silently.
 const GOVERNANCE_WHITELIST_FILES: ReadonlyArray<string> = [
     '.failsafe/workspace-config.json',
-    '.failsafe/governance/AUDIT_REPORT.md',
-    '.failsafe/governance/V5_1_0_SCOPE.md',
-    '.failsafe/governance/RESEARCH_BRIEF.md',
-    '.failsafe/governance/plans.yaml',
-    '.failsafe/governance/risk-register.yaml',
-    '.failsafe/governance/intent-store.json',
-    '.failsafe/governance/META_LEDGER.md'
+    '.failsafe/risks/risks.json',
+    '.failsafe/manifest/active_intent.json',
+    'docs/META_LEDGER.md',
+    'docs/BACKLOG.md'
 ];
 
 const GOVERNANCE_WHITELIST_PREFIXES: ReadonlyArray<string> = [
-    '.failsafe/governance/plans/'
+    '.failsafe/governance/',
+    '.failsafe/manifest/intents/',
+    'docs/plan-'
 ];
 
 const IGNORE_PATTERNS: ReadonlyArray<string> = [
@@ -103,11 +107,15 @@ export class SentinelWatchPolicy {
     }
 
     /**
-     * True when a governance path is on the operator-meaningful
-     * whitelist (META_LEDGER, AUDIT_REPORT, plans, intent store, ...).
+     * True when a path is on the operator-meaningful governance
+     * whitelist. After B193 residual fix-up (2026-05-19), the whitelist
+     * spans `.failsafe/` artifacts AND repo-canonical `docs/` governance
+     * surfaces (META_LEDGER.md, BACKLOG.md, plan-*.md). The
+     * `isGovernancePath` gate is preserved for `.failsafe/` paths but
+     * is no longer required for whitelist membership.
      */
     isWatchedGovernancePath(filePath: string): boolean {
-        if (!this.isGovernancePath(filePath)) {
+        if (!filePath) {
             return false;
         }
         const normalized = this.normalize(filePath);
@@ -187,9 +195,21 @@ export class SentinelWatchPolicy {
 
     private isGovernanceSurface(lowerPath: string): boolean {
         const normalized = lowerPath.replace(/\\/g, '/');
-        return normalized.includes('/.failsafe/governance/')
+        if (normalized.includes('/.failsafe/governance/')
             || normalized.startsWith('.failsafe/governance/')
-            || normalized.endsWith('/workspace-config.json');
+            || normalized.endsWith('/workspace-config.json')) {
+            return true;
+        }
+        // B193 residual fix-up: docs/ governance surfaces now priority-boosted
+        // alongside .failsafe/governance/ paths. Mutations to META_LEDGER,
+        // BACKLOG, and plan-*.md are operator-meaningful and should arrive at
+        // the verdict pipeline as 'high' priority, not 'normal'.
+        return normalized === 'docs/meta_ledger.md'
+            || normalized.endsWith('/docs/meta_ledger.md')
+            || normalized === 'docs/backlog.md'
+            || normalized.endsWith('/docs/backlog.md')
+            || normalized.includes('/docs/plan-')
+            || normalized.startsWith('docs/plan-');
     }
 
     private isApiSurface(lowerPath: string): boolean {

@@ -627,6 +627,14 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 ---
 
+## Section: SentinelDaemon governance-file coverage (B193 — Phase 60 §2 Track C + residual fix-up)
+
+| ID | Feature | Doc | Code | Test | Status | Notes |
+|---|---|---|---|---|---|---|
+| FX510 | SentinelWatchPolicy canonical-path whitelist + docs/ priority boost | docs/plan-qor-sentinel-governance-extensions.md | src/sentinel/SentinelWatchPolicy.ts (GOVERNANCE_WHITELIST_FILES, GOVERNANCE_WHITELIST_PREFIXES, isWatchedGovernancePath, isGovernanceSurface) | src/test/sentinel/SentinelWatchPolicy.test.ts (extended; FX510 block) | verified | 10 new mocha cases (SG-035 invoke + assert): canonical risks.json + manifest/active_intent.json + manifest/intents/ glob + docs/META_LEDGER + docs/BACKLOG + docs/plan-* on whitelist; broader .failsafe/governance/ prefix covers variant-suffix files (AUDIT_REPORT_*, SESSION_STATE_*, RESEARCH_BRIEF_*); docs/ governance paths priority-boosted to 'high'. Closes residual gaps after Phase 60 §2 Track C pre-shipped most of B193. |
+
+---
+
 ## Section: Other (Token Economics / Genesis / License / Misc)
 
 | ID | Feature | Doc | Code | Test | Status | Notes |

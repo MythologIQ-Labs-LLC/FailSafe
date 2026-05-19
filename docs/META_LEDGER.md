@@ -18913,6 +18913,60 @@ _Next: operator decision on push/merge/PR — none auto-triggered by this seal._
 
 ---
 
+### Entry #376: SESSION SEAL — plan-qor-sentinel-governance-extensions (B193 residual fix-up; federation-reconciled from branch-local #375)
+
+**Entry ID**: `3a3257519f9b`
+**Date**: 2026-05-19
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-sentinel-governance-extensions.md`
+**Audit reference**: 1-cycle PASS via independent architect-reviewer subagent (SG-007 Option B / Phase 68 default doctrine per B194 success). 2 minor findings (citation-drift + self-application gap) remediated in-cycle before code edits.
+**Implementation reference**: 2 commits on `feat/sentinel-governance-extensions` branched off `main` at `e12a2ed`. Plan commit; impl commit `e26a6c7`.
+
+## Federation note
+
+Federation-reconciled at merge into main per SG-ConcurrentLedgerRace-A. Branch-local Entry #375 collided with B194's #375 (same predecessor — Entry #374 voice-pack `1451c6ba01d0...`). B194 (lexicographically earlier branch name `enforcement` < `sentinel`) retains #375; this entry renumbered to #376 with amended `previous_hash` referencing B194's #375 chain_hash + recomputed chain/merkle.
+
+## Substantiation summary
+
+Closes three residual gaps after Phase 60 §2 Track C pre-shipped the bulk of B193: (a) aspirational whitelist paths corrected to canonical fs locations (`.failsafe/risks/risks.json`, `.failsafe/manifest/active_intent.json`); (b) `docs/` governance paths (META_LEDGER, BACKLOG, plan-*.md) added to whitelist + `isGovernanceSurface` priority-boost so they arrive at the verdict pipeline as `'high'` priority; (c) suffix-equality whitelist match replaced with `.failsafe/governance/` prefix that covers 70+ on-disk variant files (AUDIT_REPORT_*, RESEARCH_BRIEF_*, SESSION_STATE_*). Out-of-scope: WorkspaceMutationBus integration of SentinelDaemon (B-SD-2 candidate).
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| AUDIT 1-cycle PASS | ✓ (architect-reviewer; 2 minor findings remediated) |
+| Reality = Promise | All scope-declared edits delivered: 4 method/array changes in SentinelWatchPolicy.ts + 11 test cases (10 FX510 + 1 amended) + 3 doc updates. |
+| Test functionality (SG-035) | 10 new FX510 cases — all invoke unit + assert against output. |
+| Mocha clean state | 2391 passing / 17 failing — baseline-identical; zero regressions beyond the intentional `.failsafe/governance/*.ts` semantic flip. |
+| ESLint / TypeScript | clean. |
+| Section 4 Razor | SentinelWatchPolicy.ts 204L → ~220L (well under 250 cap). |
+| FEATURE_INDEX FX510 | 1 verified. |
+
+## Skipped per protocol (degraded-wiring posture)
+
+Same as Entries #371-#375: Python `qor.*` toolkit unavailable. Inline Node `crypto` validate-as-hex replaces Step 6.8.
+
+## Content Hash
+
+**Content Hash**: `39ab515da5c6907358b3f3cedb113d254779945b08dba823912ae619715fdfcc`
+**Previous Hash**: `974f9b82692f96d4f98756510398ed60ef6998a08e4a5ee14a879ca263f3b598` (Entry #375 B194 chain hash; federation reconciliation — original previous_hash 1451c6ba01d0... amended at merge-into-main time)
+**Chain Hash**: `1898988ebac150af7f53206a99ee495f7b1e5fb82dc110bcd0d0941924058db1` — SHA256(content_hash + "|" + previous_hash)
+**Merkle Seal**: `9b666a337d5fbc8c5d7833b180c2bfd42e996e5efad117b5ee22c922a8f2c66e` — SHA256(content_hash + "|" + chain_hash + "|gate_workspace_audit_b193_residual_PASS")
+**Session ID**: workspace-only / `2026-05-19-sentinel-governance-extensions-substantiation-seal`
+
+## Review Boundary attestation
+
+No push, tag, PR, merge, marketplace publish, GitHub Release upload triggered by this seal entry beyond the operator-authorized merge into main. The 2 `feat/sentinel-governance-extensions` commits + this seal are now on main locally; not pushed.
+
+## Decision
+
+**SEAL — Reality matches Promise.** B193 closed with full reference to Phase 60 §2 Track C + this residual cycle. Intentional `.failsafe/governance/*.ts` semantic flip (blanket-watched) is the only behavior change beyond the scope-declared whitelist additions.
+
+_Chain Status: B193 RESIDUAL FIX-UP SEALED at Entry #376 (federation-reconciled from branch-local #375). B194 retains #375; both merged to main per SG-ConcurrentLedgerRace-A._
+_Next: operator decision on push — none auto-triggered by this reconciliation._
+
+---
+
 _Chain integrity: VALID_
-_Session Status: enforcement-mode-escalation-ux SEALED at Entry #375; 4-phase v1 surface complete; 2400 mocha pass + 1 Playwright skip-staged; B194 resolved; B-EM-1/2/3/4 captured as follow-ups; PUBLISH_BLOCK unchanged._
-_Session: 2026-05-18-enforcement-mode-escalation-ux-substantiation-seal_
+_Session Status: enforcement-mode-escalation-ux SEALED at Entry #375 (clean; first merge into main); sentinel-governance-extensions SEALED at Entry #376 (federation-reconciled from branch-local #375). Federated pair both on main per SG-ConcurrentLedgerRace-A; B194 + B193 resolved; B-EM-1/2/3/4 + B-SD-2 captured as follow-ups; PUBLISH_BLOCK unchanged._
+_Session: 2026-05-19-b193-b194-federation-reconciliation-merge_

@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — v5.2.0 (draft)
 
-Bicameral MCP integration (v1) + stale-cache remediation (B192) + voice substrate extraction (B195) + enforcement-mode escalation UX (B194). All held at stage-only review boundary pending v5.2.0 release. See `docs/INTEGRATIONS.md`, `docs/governance-cache-invalidation.md`, and `docs/governance-mode-transitions.md`.
+Bicameral MCP integration (v1) + stale-cache remediation (B192) + voice substrate extraction (B195) + enforcement-mode escalation UX (B194) + SentinelDaemon governance-file coverage residual fix-up (B193). All held at stage-only review boundary pending v5.2.0 release. See `docs/INTEGRATIONS.md`, `docs/governance-cache-invalidation.md`, `docs/governance-mode-transitions.md`, and `docs/plan-qor-sentinel-governance-extensions.md`.
 
 ### Added
 
@@ -31,6 +31,7 @@ Bicameral MCP integration (v1) + stale-cache remediation (B192) + voice substrat
 - **Voice-pack build pipeline**: `scripts/package-voice-pack.cjs` writes `dist/failsafe-voice-pack-<version>.tar.gz` + `.sha256` + manifest.json with every-file sha256. `.vscodeignore` excludes the heavy vendor paths from VSIX packaging. `scripts/validate-vsix.cjs` adds a 30 MB ceiling assertion (B195 acceptance gate).
 - **18 voice-pack functional tests** across 6 test files (FX491–FX497).
 - **Enforcement-mode escalation UX** (`docs/plan-qor-enforcement-mode-escalation-ux.md`, B194 resolution). New `governance.modeChanged` typed event + `ModeTransitionHistory` in-memory ring (cap 10) + populated `hub.governanceModeState` + `hub.recentModeTransitions`. Monitor sidebar gains an observe-mode advisory banner ("Switch to assist or enforce when ready →") that links to Settings; Governance tab gains a "Mode Transitions" feed with reverse-chronological rows showing previous/new mode + reason + actor + timestamp. BreakGlass payloads enriched with full transition context (cycle-2 reviewer caught the `system:auto-expire` vs ledger `system:break-glass-timer` mismatch — actor strings now coherent). Closes silent `hub.governanceModeState` non-population bug surfaced in research. 4-cycle audit PASS via independent architect-reviewer (SG-007 Option B). 5 tests (FX504-FX509 — 20 unit cases + 3 Playwright cases). See `docs/governance-mode-transitions.md`.
+- **B193 SentinelDaemon governance-file coverage residual fix-up** (`docs/plan-qor-sentinel-governance-extensions.md`). Phase 60 §2 Track C pre-shipped most of B193 (`.md`/`.yaml`/`.yml`/`.json` watched, `.failsafe/**` blanket exclusion removed). Residual cycle: corrects aspirational whitelist paths to canonical fs locations (`.failsafe/risks/risks.json`, `.failsafe/manifest/active_intent.json` + `manifest/intents/` glob); adds `docs/META_LEDGER.md` + `docs/BACKLOG.md` + `docs/plan-*.md` to whitelist and `isGovernanceSurface` priority-boost (verdict pipeline now sees these as `'high'` priority); broadens `.failsafe/governance/` to a blanket prefix that covers 70+ on-disk variant files (AUDIT_REPORT_*, SESSION_STATE_*, RESEARCH_BRIEF_*) the suffix-equality match dropped silently. 10 new SG-035 functional cases (FX510). 1-cycle architect-reviewer PASS.
 
 ### Changed
 
