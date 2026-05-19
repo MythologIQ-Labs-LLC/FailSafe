@@ -4,11 +4,11 @@ Prevent runaway AI edits, hallucinated dependencies, and destructive refactors b
 
 FailSafe runs locally inside VS Code and Cursor. It monitors what AI agents do, applies deterministic policy checks at the editor boundary, and gives you full visibility into every decision — before code ships.
 
-**Current Release**: v5.1.0 (2026-05-06)
+**Current Release**: v5.1.5 (2026-05-19)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
 
-## What's New (Unreleased)
+## What's New in v5.1.5
 
 - **Bicameral MCP integration (v1)**. New **Integrations** tab in the Command Center surfaces [Bicameral MCP](https://github.com/BicameralAI/bicameral-mcp) decision history, drift status, and a one-click ratify/reject affordance. Solo / team install picker drives `pip install bicameral-mcp` + `bicameral-mcp setup` on your machine; nothing is bundled. Settings card adds status display + autoConnect toggle. See `docs/INTEGRATIONS.md` for the full surface and trust-boundary notes.
 - **Stale-cache remediation** (B192). New `WorkspaceMutationBus` aggregates fs.watch subscriptions for governance services so external file mutations (parallel tools, future FailSafe Pro daemon) trigger refresh without waiting for the next hub-snapshot pull. Closes the FailSafe-Pro-coexistence concern in B192. See `docs/governance-cache-invalidation.md`.

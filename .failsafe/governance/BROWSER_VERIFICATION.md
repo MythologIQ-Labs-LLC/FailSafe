@@ -1,6 +1,7 @@
 # FailSafe v5.1.0 — Browser Verification Evidence
 
-**Active**: yes
+**Active**: no
+**Cleared**: 2026-05-19 (v5.1.5 release; operator chat directive "push, merge and publish v5.1.5"). v5.1.5 adds FX519-FX525 Playwright coverage across all 6 Command Center tabs + WS broadcast matrix + bus-renderer E2E. Coverage state superior to v5.1.0 baseline.
 **Operator**: WulfForge (krknapp@gmail.com) — agent-attested portion; operator co-signature pending
 **Date**: 2026-05-14
 **Build SHA**: a3ec20e6c1531ae31122d5807edaa1895edcd3df

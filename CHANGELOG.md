@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — v5.2.0 (draft)
 
-Bicameral MCP integration (v1) + stale-cache remediation (B192) + voice substrate extraction (B195) + enforcement-mode escalation UX (B194) + SentinelDaemon governance-file coverage residual fix-up (B193). All held at stage-only review boundary pending v5.2.0 release. See `docs/INTEGRATIONS.md`, `docs/governance-cache-invalidation.md`, `docs/governance-mode-transitions.md`, and `docs/plan-qor-sentinel-governance-extensions.md`.
+_Cycle pool open. Carry-over from v5.1.5: B-BIC-6..23 deep-review findings (eighteen items deferred from B-BIC quickwins); B-B199-1..6 remaining E2E gaps from B199 Phases 2-9._
+
+## [5.1.5] - 2026-05-19
+
+Bicameral MCP integration (v1) + stale-cache remediation (B192) + voice substrate extraction (B195) + enforcement-mode escalation UX (B194) + SentinelDaemon governance-file coverage residual fix-up (B193). See `docs/INTEGRATIONS.md`, `docs/governance-cache-invalidation.md`, `docs/governance-mode-transitions.md`, and `docs/plan-qor-sentinel-governance-extensions.md`.
 
 ### Added
 
