@@ -59,6 +59,11 @@ export interface HubSnapshotServiceDeps {
    *  `hub.governanceModeState` stays absent (legacy behavior, settings card
    *  falls back to "(default)"). */
   getGovernanceMode?: () => import("../../governance/types").GovernanceModeState;
+  /** B197: optional verifier returning the qor-logic install version-floor
+   *  status. When provided, HubSnapshotService resolves it once per hub
+   *  rebuild and threads the result through WorkspaceArtifactBuilder so the
+   *  Settings card can surface a floor-violation warning. */
+  getQorLogicVerifier?: () => Promise<import("../../qorlogic/qorLogicInstallRecord").QorLogicVersionStatus>;
 }
 
 const FILE_EVENT_TYPES = new Set(["FILE_CREATED", "FILE_MODIFIED", "FILE_DELETED"]);
@@ -193,7 +198,16 @@ export class HubSnapshotService {
     const checkpointSummary = this.getCheckpointSummary();
     const governancePhase = buildGovernancePhase(d.workspaceRoot);
     this.autoDerivationHook?.(governancePhase); // plan-qor-model-sourced-risks Phase 3
-    const artifacts = new WorkspaceArtifactBuilder(d.workspaceRoot).build();
+    // B197: resolve qor-logic version-floor status once per hub rebuild (the
+    // verifier spawns `pip show`; running it per-UI-render would be costly).
+    // Failures degrade silently so a missing `pip` or transient subprocess
+    // error doesn't crash hub-build — the UI just omits the warning.
+    let qorLogicVersionStatus: import("../../qorlogic/qorLogicInstallRecord").QorLogicVersionStatus | undefined;
+    if (this.deps.getQorLogicVerifier) {
+      try { qorLogicVersionStatus = await this.deps.getQorLogicVerifier(); }
+      catch { qorLogicVersionStatus = undefined; }
+    }
+    const artifacts = new WorkspaceArtifactBuilder(d.workspaceRoot, qorLogicVersionStatus).build();
     const phaseTitle = inferActivePhaseTitle(activePlan as unknown as Record<string, unknown>, (l) => this.getRecentCheckpoints(l));
     const runState = d.getIdeTracker()?.getRunState(phaseTitle) ?? { currentPhase: "Plan", activeTasks: [], activeDebugSessions: [] };
     const nodeStatusArr = buildNodeStatus(sentinelStatus as { running?: boolean; filesWatched?: number; queueDepth?: number; [k: string]: unknown }, l3Queue, trust, qorRuntime);

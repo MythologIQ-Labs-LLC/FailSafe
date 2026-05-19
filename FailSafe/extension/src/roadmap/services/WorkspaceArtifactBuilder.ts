@@ -33,6 +33,7 @@ import {
 import {
   getQorLogicInstallStatus,
   type QorLogicInstallStatus,
+  type QorLogicVersionStatus,
 } from "../../qorlogic/qorLogicInstallRecord";
 
 export interface WorkspaceArtifactSnapshot {
@@ -51,7 +52,16 @@ export interface WorkspaceArtifactSnapshot {
 }
 
 export class WorkspaceArtifactBuilder {
-  constructor(private readonly workspaceRoot: string) {}
+  /**
+   * @param qorLogicVersionStatus B197 surfacing: resolved `verifyInstalledVersion()`
+   *   result, threaded in by HubSnapshotService (which already runs in async context).
+   *   When omitted, qorLogicInstall ships without version-floor fields and the UI
+   *   gracefully omits the warning (legacy/test back-compat).
+   */
+  constructor(
+    private readonly workspaceRoot: string,
+    private readonly qorLogicVersionStatus?: QorLogicVersionStatus,
+  ) {}
 
   build(): WorkspaceArtifactSnapshot {
     const ledger = new MetaLedgerReader(this.workspaceRoot);
@@ -66,7 +76,7 @@ export class WorkspaceArtifactBuilder {
       systemState: new SystemStateReader(this.workspaceRoot).read(),
       latestAudit: new AuditReportReader(this.workspaceRoot).read(),
       recentReleases: new ChangelogReader(this.workspaceRoot).recentReleases(5),
-      qorLogicInstall: getQorLogicInstallStatus(this.workspaceRoot),
+      qorLogicInstall: getQorLogicInstallStatus(this.workspaceRoot, this.qorLogicVersionStatus),
       shieldPhase,
       latestVerdict,
       derivedShieldPhases,

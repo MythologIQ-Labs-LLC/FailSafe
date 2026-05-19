@@ -627,6 +627,14 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 ---
 
+## Section: qor-logic version-floor surfacing (B197 — installer pre-shipped + residual surfacing fix-up)
+
+| ID | Feature | Doc | Code | Test | Status | Notes |
+|---|---|---|---|---|---|---|
+| FX511 | qor-logic version-floor status surfaces through hub payload + Settings card warning | docs/plan-qor-logic-version-pinning.md | src/qorlogic/qorLogicInstallRecord.ts (versionStatus arg), src/roadmap/services/WorkspaceArtifactBuilder.ts (constructor param), src/roadmap/services/HubSnapshotService.ts (verifier resolution), src/roadmap/ConsoleServer.ts (option pass-through), src/extension/bootstrapServers.ts (forward-reference closure), src/roadmap/ui/modules/install-skills-card.js (renderVersionFloorWarning) | src/test/qorlogic/qor-logic-install-record.test.ts (3 cases) + src/test/roadmap/install-skills-card.test.ts (3 cases) | verified | 6 SG-035 functional cases. Installer-side pinning + verifyInstalledVersion existed pre-cycle; this entry wires verifier into hub payload + adds Settings card warning when meetsFloor=false. Closes B197. |
+
+---
+
 ## Section: SentinelDaemon governance-file coverage (B193 — Phase 60 §2 Track C + residual fix-up)
 
 | ID | Feature | Doc | Code | Test | Status | Notes |

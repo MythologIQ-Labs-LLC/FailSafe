@@ -125,4 +125,33 @@ suite('qorLogicInstallRecord: getQorLogicInstallStatus', function () {
     const names = status.hosts.map((h) => h.host).sort();
     assert.deepEqual(names, ['claude', 'codex', 'gemini', 'kilo-code']);
   });
+
+  // FX511 — B197 surfacing: version-floor status passes through to hub payload.
+  test('FX511 — no versionStatus arg leaves installedVersion/meetsFloor undefined (legacy back-compat)', () => {
+    const status = getQorLogicInstallStatus(tmpRoot);
+    assert.equal(status.installedVersion, undefined);
+    assert.equal(status.minimumVersion, undefined);
+    assert.equal(status.meetsFloor, undefined);
+  });
+
+  test('FX511 — versionStatus with meetsFloor=false populates floor fields', () => {
+    const status = getQorLogicInstallStatus(tmpRoot, {
+      installed: '0.30.0',
+      minimum: '0.31.1',
+      meetsFloor: false,
+    });
+    assert.equal(status.installedVersion, '0.30.0');
+    assert.equal(status.minimumVersion, '0.31.1');
+    assert.equal(status.meetsFloor, false);
+  });
+
+  test('FX511 — versionStatus with meetsFloor=true populates floor fields', () => {
+    const status = getQorLogicInstallStatus(tmpRoot, {
+      installed: '0.31.5',
+      minimum: '0.31.1',
+      meetsFloor: true,
+    });
+    assert.equal(status.installedVersion, '0.31.5');
+    assert.equal(status.meetsFloor, true);
+  });
 });

@@ -34,11 +34,22 @@ export interface HostInstallStatus {
   recordMtime: string | null;
 }
 
+/** B197 surfacing: version-floor check resolved once per hub rebuild. */
+export interface QorLogicVersionStatus {
+  installed: string | null;
+  minimum: string;
+  meetsFloor: boolean;
+}
+
 export interface QorLogicInstallStatus {
   anyInstalled: boolean;
   hosts: HostInstallStatus[];
   totalFiles: number;
   destinations: string[];
+  /** B197 surfacing: present when verifier was wired into the hub build. */
+  installedVersion?: string | null;
+  minimumVersion?: string;
+  meetsFloor?: boolean;
 }
 
 function resolveLayout(workspaceRoot: string, host: string): HostInstallLayout | null {
@@ -82,15 +93,24 @@ export function getHostInstallStatus(workspaceRoot: string, host: string): HostI
   };
 }
 
-export function getQorLogicInstallStatus(workspaceRoot: string): QorLogicInstallStatus {
+export function getQorLogicInstallStatus(
+  workspaceRoot: string,
+  versionStatus?: QorLogicVersionStatus,
+): QorLogicInstallStatus {
   const hosts = getQorLogicHosts(workspaceRoot).map((h) => getHostInstallStatus(workspaceRoot, h));
   const installed = hosts.filter((h) => h.installed);
-  return {
+  const status: QorLogicInstallStatus = {
     anyInstalled: installed.length > 0,
     hosts,
     totalFiles: installed.reduce((sum, h) => sum + h.fileCount, 0),
     destinations: dedupe(installed.flatMap((h) => h.destinations)),
   };
+  if (versionStatus) {
+    status.installedVersion = versionStatus.installed;
+    status.minimumVersion = versionStatus.minimum;
+    status.meetsFloor = versionStatus.meetsFloor;
+  }
+  return status;
 }
 
 function deriveDestinations(record: QorLogicInstallRecord): string[] {

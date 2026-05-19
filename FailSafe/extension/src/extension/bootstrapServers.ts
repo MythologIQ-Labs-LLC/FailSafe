@@ -62,6 +62,11 @@ export async function bootstrapServers(
   // IDE Activity Tracker (receives task/debug events via EventBus)
   const ideTracker = new IdeActivityTracker(deps.eventBus);
 
+  // B197: forward-reference holder so HubSnapshotService's verifier closure
+  // can reach the installer that's constructed below (after ConsoleServer).
+  // The verifier is only invoked at hub-build time (post-activation), so the
+  // late assignment is safe.
+  let qorLogicPackageInstallerRef: QorLogicPackageInstaller | null = null;
   // Single unified server on port 9376
   const consoleServer = new ConsoleServer(
     deps.planManager,
@@ -74,6 +79,12 @@ export async function bootstrapServers(
       mutationBus: deps.mutationBus,
       modeTransitionHistory: deps.modeTransitionHistory,
       getGovernanceMode: deps.getGovernanceMode,
+      getQorLogicVerifier: async () => {
+        if (!qorLogicPackageInstallerRef) {
+          return { installed: null, minimum: '0.0.0', meetsFloor: false };
+        }
+        return qorLogicPackageInstallerRef.verifyInstalledVersion();
+      },
     },
   );
   consoleServer.setIdeTracker(ideTracker);
@@ -110,6 +121,9 @@ export async function bootstrapServers(
     outputChannel,
     defaultInstallerRun,
   );
+  // B197: assign forward-reference so HubSnapshotService.getQorLogicVerifier
+  // closure (above) can reach the installer at hub-build time.
+  qorLogicPackageInstallerRef = packageInstaller;
   const skillIngestor = new QorLogicSkillIngestor(
     packageInstaller,
     interpreterResolver,

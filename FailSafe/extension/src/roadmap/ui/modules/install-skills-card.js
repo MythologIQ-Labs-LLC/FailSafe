@@ -11,6 +11,26 @@ function esc(value) {
   return d.innerHTML;
 }
 
+/**
+ * B197 surfacing: render a version-floor warning block when the resolved
+ * `verifyInstalledVersion()` returned meetsFloor=false. Returns an empty
+ * string when the verifier wasn't wired, the floor isn't violated, or no
+ * `installedVersion` could be probed (e.g., pip absent on first run).
+ */
+function renderVersionFloorWarning(hubData) {
+  const status = hubData?.bootstrapState?.qorLogicInstall;
+  if (!status || status.meetsFloor !== false || !status.installedVersion) {
+    return '';
+  }
+  return `
+    <div class="cc-qorlogic-floor-warning"
+      style="margin:8px 0;padding:8px 10px;background:rgba(245,158,11,0.12);border-left:3px solid var(--accent-gold);border-radius:4px;font-size:0.82rem;color:var(--text-main)">
+      ⚠ qor-logic v${esc(status.installedVersion)} is below the required minimum v${esc(status.minimumVersion || '?')}.
+      Re-run install (button below) to upgrade to the floor or newer.
+    </div>
+  `;
+}
+
 const HOST_META = {
   claude:    { label: 'Claude',     icon: 'C' },
   codex:     { label: 'Codex',      icon: 'X' },
@@ -25,6 +45,10 @@ export function renderInstallSkillsCard(state, hubData) {
   const showOutputBtn = report || invocations.length > 0;
   const hosts = hubData?.bootstrapState?.qorLogicInstall?.hosts || [];
   const anyInstalled = hubData?.bootstrapState?.qorLogicInstall?.anyInstalled || false;
+  // B197 surfacing: when the resolved verifier reports below-floor install,
+  // surface a warning above the host grid. The same "Install / Refresh
+  // Skills" button below triggers an upgrade via the existing pip path.
+  const versionFloorWarning = renderVersionFloorWarning(hubData);
 
   return `
     <div class="cc-card" id="cc-qorlogic" style="margin-top:16px">
@@ -33,6 +57,7 @@ export function renderInstallSkillsCard(state, hubData) {
           letter-spacing:0.08em">QorLogic Skills</div>
         ${anyInstalled ? '<span class="cc-badge" style="background:var(--accent-green);color:#fff">Active</span>' : ''}
       </div>
+      ${versionFloorWarning}
       <p style="font-size:0.85rem;color:var(--text-muted);margin:0 0 12px">
         Install or refresh governance skills from the
         <code style="padding:1px 4px;background:var(--bg-dark);border-radius:3px">qor-logic</code>

@@ -246,6 +246,39 @@ suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
     } finally { (globalThis as { fetch?: unknown }).fetch = original; }
   });
 
+  test('FX511 — version-floor warning renders when meetsFloor=false + installedVersion present', () => {
+    const html = renderInstallSkillsCard(
+      { running: false, invocations: [], lastReport: null },
+      { bootstrapState: { qorLogicInstall: {
+        hosts: [], anyInstalled: false,
+        installedVersion: '0.30.0', minimumVersion: '0.31.1', meetsFloor: false,
+      } } },
+    );
+    assert.match(html, /cc-qorlogic-floor-warning/);
+    assert.match(html, /qor-logic v0\.30\.0/);
+    assert.match(html, /minimum v0\.31\.1/);
+    assert.match(html, /Re-run install/);
+  });
+
+  test('FX511 — version-floor warning ABSENT when meetsFloor=true', () => {
+    const html = renderInstallSkillsCard(
+      { running: false, invocations: [], lastReport: null },
+      { bootstrapState: { qorLogicInstall: {
+        hosts: [], anyInstalled: false,
+        installedVersion: '0.31.5', minimumVersion: '0.31.1', meetsFloor: true,
+      } } },
+    );
+    assert.equal(html.includes('cc-qorlogic-floor-warning'), false);
+  });
+
+  test('FX511 — version-floor warning ABSENT when verifier never ran (no installedVersion)', () => {
+    const html = renderInstallSkillsCard(
+      { running: false, invocations: [], lastReport: null },
+      { bootstrapState: { qorLogicInstall: { hosts: [], anyInstalled: false } } },
+    );
+    assert.equal(html.includes('cc-qorlogic-floor-warning'), false);
+  });
+
   test('FX240 bindInstallSkillsCard — Show Output button POSTs /api/actions/show-output', async () => {
     const f = installFetch(() => ({ ok: true, body: {} }));
     try {
