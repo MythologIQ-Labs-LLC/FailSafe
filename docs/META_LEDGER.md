@@ -19114,3 +19114,60 @@ _Next: operator decision on push/merge._
 _Chain integrity: VALID_
 _Session Status: b199-phase4-agents SEALED at Entry #379; 3 active FX520 cases pass. Linear chain off Phase 3 #378._
 _Session: 2026-05-19-b199-phase4-agents-substantiation-seal_
+
+---
+
+### Entry #380: SESSION SEAL — B199 Phases 5-9 consolidated (Workspace + Governance + Overview tabs + WS broadcasts + bus-renderer E2E)
+
+**Entry ID**: `5b752ef3f3b6`
+**Date**: 2026-05-19
+**Phase**: substantiate
+**Plan**: ad-hoc consolidated (Phase 5-9 each followed Phase 3-4 lightweight-cycle pattern; no separate plan docs).
+**Implementation reference**: 7 commits on linear chain `feat/b199-phase4-agents-e2e` → `feat/b199-phase5-workspace-e2e` → `feat/b199-phase6-risks-e2e` → `feat/b199-phase7-overview-e2e` → `feat/b199-phase8-ws-broadcasts-e2e` → `feat/b199-phase9-bus-renderer-e2e`. Each branch = 1 spec + seal.
+
+## Substantiation summary
+
+5 phases in one session, each closing a distinct B199 gap:
+
+- **Phase 5** Workspace tab structural (FX521 — 3 cases)
+- **Phase 6** Governance tab structural (FX522 — 3 cases; Audit/Risks/Compliance sub-pills)
+- **Phase 7** Overview tab structural (FX523 — 3 cases). **All 6 top-level tabs now have structural coverage.**
+- **Phase 8** WebSocket broadcast matrix (FX524 — 16 cases). Closes deep-audit HIGH "only 1 of ~12 broadcasts covered".
+- **Phase 9** Real disk META_LEDGER → /api/hub → Monitor E2E (FX525 — 2 cases). Closes deep-audit CRITICAL "B191 bus→renderer fixture-only".
+
+Deep audit also surfaced 6 remaining gaps (B-B199-1..6) tracked in BACKLOG for follow-on cycles: Brainstorm behavioral, Agents Replay/Genome behavioral, voice substrate live, cross-host install, CI gate hardening, stub-only false-confidence specs.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| Phase 5 FX521 | 3/3 Playwright pass |
+| Phase 6 FX522 | 3/3 Playwright pass |
+| Phase 7 FX523 | 3/3 Playwright pass |
+| Phase 8 FX524 | 16/16 Playwright pass |
+| Phase 9 FX525 | 2/2 Playwright pass |
+| Total new this consolidation | 27 active Playwright cases |
+| Deep-audit CRITICAL findings closed | 1 (FX525 bus-renderer) |
+| Deep-audit HIGH findings closed | 1 (FX524 WS matrix) |
+| Deep-audit HIGH findings tracked as B-B199-* | 2 (Brainstorm + Agents-Replay) |
+
+## Content Hash
+
+**Content Hash**: `e10ea5e7ffb4483234588d677a09178dd613e55bf93b8fa647476f371aae801d`
+**Previous Hash**: `63a4078baa7ce617af4b7ebbeba1cc6f37233f40dda824ffddc0f1fba7209576` (Entry #379 Phase 4)
+**Chain Hash**: `54846e364d7e8281892caa0b5ee79747eb0b4bc883fabf2cc5974804059a6dcb`
+**Merkle Seal**: `2adc1b20ae4d2ba9a06c87d6036ceec5e8bc7480e7bfb2bbc4c70e4f2d0ef51f` — gate_workspace_audit_b199_phases_5_9_PASS
+**Session ID**: workspace-only / `2026-05-19-b199-phases-5-9-substantiation-seal`
+
+## Decision
+
+**SEAL — Reality matches Promise.** B199 Phases 5-9 closed. 6 remaining gaps captured as B-B199-1..6.
+
+_Chain Status: B199 PHASES 5-9 SEALED at Entry #380 (linear successor to Phase 4 #379)._
+_Next: operator decision on push/merge — B199 substantially closed for top-level coverage; deeper behavioral phases tracked as B-B199-* for future cycles._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: b199-phases-5-9 SEALED at Entry #380; 27 active Playwright cases pass; deep-audit CRITICAL + 1 HIGH closed; 6 follow-on gaps captured. All 6 top-level Command Center tabs have structural coverage._
+_Session: 2026-05-19-b199-phases-5-9-substantiation-seal_
