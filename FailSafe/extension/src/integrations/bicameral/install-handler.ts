@@ -23,6 +23,7 @@ const STDOUT_TAIL_BYTES = 2048;
  */
 export function sanitizeStdoutTail(raw: string, maxLen = STDOUT_TAIL_BYTES): string {
   const stripped = String(raw ?? '')
+    // eslint-disable-next-line no-control-regex
     .replace(/\x1b\[[0-9;]*[mGKHF]/g, '')              // CSI sequences (SGR/cursor)
     // eslint-disable-next-line no-control-regex
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ''); // C0 controls (preserves \t \n \r)
