@@ -21,11 +21,17 @@ function esc(value) {
   return String(value).replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]);
 }
 
+// Status color tokens — sourced from command-center.css theme variables.
+// Per FailSafe UI standard (voice-pack-settings-card.js exemplar):
+// reference declared theme tokens only, no fabricated tokens, no hex fallbacks
+// that diverge from the canonical token value. `--accent-cyan` substitutes
+// for the previously fabricated `--accent-teal`; an `open-question` status
+// inherits `--primary` (no purple in the theme).
 const STATUS_COLOR = {
-  'in-sync':         'var(--accent-green,#2dd4bf)',
-  'drifted':         'var(--accent-gold,#f5a524)',
-  'open-question':   'var(--accent-purple,#a855f7)',
-  'unratified':      'var(--text-muted,#9b9482)',
+  'in-sync':       'var(--accent-green)',
+  'drifted':       'var(--accent-gold)',
+  'open-question': 'var(--primary)',
+  'unratified':    'var(--text-muted)',
 };
 
 function statusBadge(status) {
@@ -53,7 +59,7 @@ function renderInstallStep(step) {
     : step.status === 'error' ? '✗'
     : '⏳';
   const errorSpan = step.error
-    ? ` <span style="color:var(--accent-red,#ef4444)">${esc(step.error)}</span>`
+    ? ` <span style="color:var(--accent-red)">${esc(step.error)}</span>`
     : '';
   return `<li style="font-size:0.78rem;color:var(--text-muted)">${icon} ${esc(step.phase)}${errorSpan}</li>`;
 }
@@ -83,7 +89,7 @@ function renderNotInstalled(state) {
     `;
   }
   const installError = state.installProgress?.done && !state.installProgress?.ok
-    ? `<div class="cc-bicameral-install-error" style="margin-bottom:8px;padding:6px 8px;background:rgba(239,68,68,0.1);border-radius:4px;color:var(--accent-red,#ef4444);font-size:0.78rem">Install failed: ${esc(state.installProgress.error || 'unknown error')}</div>`
+    ? `<div class="cc-bicameral-install-error" style="margin-bottom:8px;padding:6px 8px;background:rgba(239,68,68,0.1);border-radius:4px;color:var(--accent-red);font-size:0.78rem">Install failed: ${esc(state.installProgress.error || 'unknown error')}</div>`
     : '';
   return `
     <div class="cc-bicameral-empty" style="padding:16px 0;font-size:0.85rem;line-height:1.6">
@@ -100,7 +106,7 @@ function renderNotInstalled(state) {
         <button class="cc-btn" data-action="bicameral-install" data-mode="team"
           style="font-size:0.85rem;padding:8px 14px">Install (Team)</button>
       </div>
-      <a href="https://github.com/BicameralAI/bicameral-mcp" target="_blank" rel="noopener" style="font-size:0.8rem;color:var(--accent-teal,#2dd4bf)">Bicameral MCP documentation →</a>
+      <a href="https://github.com/BicameralAI/bicameral-mcp" target="_blank" rel="noopener" style="font-size:0.8rem;color:var(--accent-cyan)">Bicameral MCP documentation →</a>
     </div>
   `;
 }
@@ -150,7 +156,7 @@ function renderDecisionRow(decision, driftByFile) {
   const effectiveStatus = driftEntry ? driftEntry.status : decision.status;
   return `
     <div class="cc-bicameral-decision" data-decision-id="${esc(decision.id)}"
-      style="padding:8px 10px;border:1px solid var(--border,rgba(255,255,255,0.08));border-radius:4px;display:flex;justify-content:space-between;align-items:center;gap:12px">
+      style="padding:8px 10px;border:1px solid var(--border-rim);border-radius:4px;display:flex;justify-content:space-between;align-items:center;gap:12px">
       <div style="flex:1;min-width:0">
         <div style="font-size:0.85rem;color:var(--text-main);margin-bottom:2px">${esc(decision.title)}</div>
         ${bindingText}
@@ -206,7 +212,7 @@ function renderRunning(state) {
 function renderErrorBlock(state) {
   if (!state.error) return '';
   return `
-    <div class="cc-bicameral-error" style="margin-top:8px;padding:8px;background:rgba(239,68,68,0.1);border-radius:4px;color:var(--accent-red,#ef4444);font-size:0.78rem">
+    <div class="cc-bicameral-error" style="margin-top:8px;padding:8px;background:rgba(239,68,68,0.1);border-radius:4px;color:var(--accent-red);font-size:0.78rem">
       ${esc(state.error)}
     </div>
   `;
@@ -223,9 +229,10 @@ export function renderBicameralCard(state) {
     default:
       body = `<div style="padding:16px 0;font-size:0.85rem;color:var(--text-muted)">Detecting Bicameral MCP…</div>`;
   }
+  // Inline style overrides removed — .cc-card owns glass-morphism, radius,
+  // padding, backdrop-blur, and box-shadow per command-center.css standard.
   return `
-    <div class="cc-card cc-bicameral-card" id="cc-bicameral"
-      style="background:var(--card-bg,rgba(255,255,255,0.02));border:1px solid var(--border,rgba(255,255,255,0.08));border-radius:6px;padding:16px">
+    <div class="cc-card cc-bicameral-card" id="cc-bicameral">
       ${renderHeader(s)}
       ${body}
       ${renderErrorBlock(s)}
