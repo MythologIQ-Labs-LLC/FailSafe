@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — v5.2.0 (draft)
 
-Bicameral MCP integration (v1) + stale-cache remediation (B192) + voice substrate extraction (B195). All held at stage-only review boundary pending v5.2.0 release. See `docs/INTEGRATIONS.md` and `docs/governance-cache-invalidation.md`.
+Bicameral MCP integration (v1) + stale-cache remediation (B192) + voice substrate extraction (B195) + enforcement-mode escalation UX (B194). All held at stage-only review boundary pending v5.2.0 release. See `docs/INTEGRATIONS.md`, `docs/governance-cache-invalidation.md`, and `docs/governance-mode-transitions.md`.
 
 ### Added
 
@@ -30,6 +30,7 @@ Bicameral MCP integration (v1) + stale-cache remediation (B192) + voice substrat
 - **VoicePackRoute**: `GET /api/integrations/voice-pack/status` (probe + version + missingFiles + diskUsageBytes), `POST /api/actions/install-voice-pack` (bridge with WS-broadcast per-phase progress), `POST /api/actions/uninstall-voice-pack`.
 - **Voice-pack build pipeline**: `scripts/package-voice-pack.cjs` writes `dist/failsafe-voice-pack-<version>.tar.gz` + `.sha256` + manifest.json with every-file sha256. `.vscodeignore` excludes the heavy vendor paths from VSIX packaging. `scripts/validate-vsix.cjs` adds a 30 MB ceiling assertion (B195 acceptance gate).
 - **18 voice-pack functional tests** across 6 test files (FX491–FX497).
+- **Enforcement-mode escalation UX** (`docs/plan-qor-enforcement-mode-escalation-ux.md`, B194 resolution). New `governance.modeChanged` typed event + `ModeTransitionHistory` in-memory ring (cap 10) + populated `hub.governanceModeState` + `hub.recentModeTransitions`. Monitor sidebar gains an observe-mode advisory banner ("Switch to assist or enforce when ready →") that links to Settings; Governance tab gains a "Mode Transitions" feed with reverse-chronological rows showing previous/new mode + reason + actor + timestamp. BreakGlass payloads enriched with full transition context (cycle-2 reviewer caught the `system:auto-expire` vs ledger `system:break-glass-timer` mismatch — actor strings now coherent). Closes silent `hub.governanceModeState` non-population bug surfaced in research. 4-cycle audit PASS via independent architect-reviewer (SG-007 Option B). 5 tests (FX504-FX509 — 20 unit cases + 3 Playwright cases). See `docs/governance-mode-transitions.md`.
 
 ### Changed
 

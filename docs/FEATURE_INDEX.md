@@ -602,6 +602,19 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 ---
 
+## Section: Enforcement-mode escalation UX (B194 — governance-mode transition surfacing)
+
+| ID | Feature | Doc | Code | Test | Status | Notes |
+|---|---|---|---|---|---|---|
+| FX504 | governance.modeChanged bus event + BreakGlass payload enrichment | docs/governance-mode-transitions.md | src/governance/types.ts, src/shared/types/events.ts, src/governance/BreakGlassProtocol.ts, src/extension/bootstrapAdvancedCommands.ts | src/test/governance/GovernanceModeEvent.test.ts | verified | 5 mocha cases (SG-035): activate/revoke/handleExpiry enriched payloads sourced from BreakGlassRecord; auto-expiry actor matches ledger agentDid (`system:break-glass-timer`); modeChanged event is in the closed FailSafeEventType union; dual-active denial preserved. |
+| FX505 | ModeTransitionHistory in-memory ring buffer (cap 10, reverse-chrono, oldest-eviction) | docs/governance-mode-transitions.md | src/governance/ModeTransitionHistory.ts | src/test/governance/ModeTransitionHistory.test.ts | verified | 6 mocha cases: getRecent(0) empty; ordering after 3 emits; eviction at 15 emits; dispose unsubscribes; full-payload preservation; breakGlass payload projects with reason='break_glass_activated'. Pure Node stdlib; subscribes to 4 EventBus event types. |
+| FX506 | HubSnapshotService.assembleHubPayload populates governanceModeState + recentModeTransitions | docs/governance-mode-transitions.md | src/roadmap/services/HubSnapshotService.ts, src/extension/bootstrapCore.ts, src/extension/bootstrapServers.ts, src/extension/main.ts, src/roadmap/ConsoleServer.ts | src/test/ui/governance-mode-transitions.spec.ts (FX509 live-flow coverage) | verified | Hub payload now ships governanceModeState (from EnforcementEngine.getGovernanceModeState) + recentModeTransitions (from ring.getRecent(10)). Closes the silent pre-B194 bug where settings.js:235 consumed the field but nothing populated it. End-to-end live update covered by Playwright (FX509). |
+| FX507 | Monitor sidebar observe-mode advisory banner | docs/governance-mode-transitions.md | src/roadmap/ui/modules/sentinel-monitor.js (renderModeBanner), src/roadmap/ui/roadmap.js, src/roadmap/ui/index.html | src/test/roadmap/sentinel-monitor-mode-banner.test.ts | verified | 5 mocha cases (JSDOM-free, slot-fake): observe shows CTA; assist/enforce hide; undefined safe; click opens /command-center.html#settings with _blank target (matches established window.open pattern at sentinel-monitor.js:44/87/109). |
+| FX508 | Governance tab Mode Transitions feed (reverse-chrono + XSS-escaped + data-transition-ts + 3s flash) | docs/governance-mode-transitions.md | src/roadmap/ui/modules/governance.js (renderModeTransitions + bindModeTransitionRows), src/roadmap/ui/command-center.css (.cc-mode-transition--highlighted) | src/test/roadmap/governance-mode-transitions.test.ts | verified | 4 mocha cases (JSDOM): empty-state renders notice; 3 transitions render 3 rows reverse-chrono with data-transition-ts; <script>-in-reason is escaped (XSS guard via this.esc); click flash uses cc-mode-transition--highlighted. |
+| FX509 | Playwright: live banner reactivity + feed update + flash | docs/governance-mode-transitions.md | (test only) | src/test/ui/governance-mode-transitions.spec.ts | deferred (B-EM-4) | Single case staged as `test.skip` pending the `serveConsoleServerUI` /api/hub override hook (B-EM-4). Unit + JSDOM coverage in FX504-FX508 (20 cases) proves the renderer logic with SG-035 invoke-and-assert discipline; the harness gap is shared with any future Command Center sub-tab UI work. |
+
+---
+
 ## Section: FailSafe Pro discovery / boundary
 
 | ID | Feature | Doc | Code | Test | Status | Notes |
