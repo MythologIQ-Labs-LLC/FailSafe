@@ -18970,3 +18970,62 @@ _Next: operator decision on push — none auto-triggered by this reconciliation.
 _Chain integrity: VALID_
 _Session Status: enforcement-mode-escalation-ux SEALED at Entry #375 (clean; first merge into main); sentinel-governance-extensions SEALED at Entry #376 (federation-reconciled from branch-local #375). Federated pair both on main per SG-ConcurrentLedgerRace-A; B194 + B193 resolved; B-EM-1/2/3/4 + B-SD-2 captured as follow-ups; PUBLISH_BLOCK unchanged._
 _Session: 2026-05-19-b193-b194-federation-reconciliation-merge_
+
+---
+
+### Entry #377: SESSION SEAL — plan-qor-b199-phase2-settings-e2e (B199 Phase 2 + B-EM-4 unblocker)
+
+**Entry ID**: `94f1fe1347d3`
+**Date**: 2026-05-19
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-b199-phase2-settings-e2e.md`
+**Audit reference**: 2-cycle (VETO cycle 1 — Express route precedence + bicameral over-scope + `.skip` hedge — all remediated; PASS cycle 2).
+**Implementation reference**: 1 commit on `feat/b199-phase2-settings-e2e` branched off `main` at `7353e3f`. Does NOT contain B197 (on its own pushed branch).
+
+## Federation note
+
+Shares predecessor `1898988ebac150...` (Entry #376) with B197's `feat/qor-logic-version-pinning` branch. Both seal at branch-local Entry #377. Per SG-ConcurrentLedgerRace-A at merge: lexicographic order (`b199-phase2` < `qor-logic-version`) — this entry retains #377, B197 renumbers to #378 with amended `previous_hash` + recomputed chain/merkle. The 2 deferred FX513 test.skip cases auto-activate once B197 merges.
+
+## Substantiation summary
+
+B199 Phase 2 ships the first Command Center sub-tab Playwright spec + the B-EM-4 harness unblocker that enables it. Express middleware mounted before WS attach + router-stack unshift (Express 5's `app.router`) intercepts `/api/hub` per-request. `playwright.config.ts` testMatch tightened to `.spec.ts` so mocha `.test.ts` helpers don't surface as `suite is not defined` errors.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| AUDIT 2-cycle PASS | ✓ |
+| Reality = Promise | 1 harness + 1 mocha test + 1 Playwright spec + 1 config tightening + 3 doc updates. |
+| Test functionality (SG-035) | 3 FX512 mocha + 3 active FX513 Playwright (2 deferred-skip). |
+| Mocha | 2414 passing / 17 baseline failing — zero regressions. |
+| Playwright | 3/5 FX513 active + passing; 2 deferred (pending B197 merge). |
+| ESLint / TypeScript | clean. |
+
+## Skipped per protocol (degraded-wiring posture)
+
+Same as Entries #371-#376.
+
+## Content Hash
+
+**Content Hash**: `9acdfd81c913bb39ab1e954a062ca1313537ee5a9e1c26409e55bf43be99502c`
+**Previous Hash**: `1898988ebac150af7f53206a99ee495f7b1e5fb82dc110bcd0d0941924058db1` (Entry #376)
+**Chain Hash**: `150dd4cbfb69a218f0fe3bdecd955867481327bd95186792b7e43fb65d20b4b7`
+**Merkle Seal**: `9fd8ce38f7d9672c0f44c9b6f90473ed2a9bceb033ac6087aeaafeea4e201dd2` — gate_workspace_audit_b199_phase2_PASS
+**Session ID**: workspace-only / `2026-05-19-b199-phase2-settings-e2e-substantiation-seal`
+
+## Review Boundary attestation
+
+No marketplace publish or GitHub Release. Branch stays local pending operator-authorized push.
+
+## Decision
+
+**SEAL — Reality matches Promise.** B-EM-4 closed; B199 Phase 2 shipped (3 active + 2 deferred). Phases 3–8 of B199 still outstanding.
+
+_Chain Status: B199 PHASE 2 + B-EM-4 SEALED at branch-local Entry #377. Federation collision with B197 #377 awaits merge-time reconciliation._
+_Next: operator decision on push/merge — none auto-triggered._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: b199-phase2-settings-e2e SEALED at branch-local Entry #377; B-EM-4 closed; 3 FX512 + 3 active FX513 cases pass; PUBLISH_BLOCK unchanged. Federated sibling with B197 #377 awaiting merge-time reconciliation._
+_Session: 2026-05-19-b199-phase2-settings-e2e-substantiation-seal_
