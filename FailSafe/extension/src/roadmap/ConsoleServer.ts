@@ -173,6 +173,9 @@ export class ConsoleServer {
   setAgentHealthIndicator(i: AgentHealthIndicator): void { this.agentHealthIndicator = i; }
   setAgentRunRecorder(r: AgentRunRecorder): void { this.agentRunRecorder = r; }
   setBicameralClient(c: import("../integrations/bicameral").BicameralMcpClient | null): void { this.bicameralClient = c; }
+  /** B-BIC-2: typed accessor so bootstrapBicameral can disconnect the prior
+   *  client on rewire and push an extension-deactivate disposer. */
+  getBicameralClient(): import("../integrations/bicameral").BicameralMcpClient | null { return this.bicameralClient; }
   setBicameralCommand(cmd: string): void { this.bicameralCommand = cmd; }
   setBicameralAutoConnect(value: boolean): void { this.bicameralAutoConnect = value; }
   setBicameralAutoConnectWriter(fn: (value: boolean) => Promise<void>): void { this.bicameralAutoConnectWriter = fn; }

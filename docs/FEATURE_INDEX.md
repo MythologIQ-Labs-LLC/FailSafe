@@ -627,6 +627,18 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 ---
 
+## Section: Bicameral integration quick wins (B-BIC-1..5, 2026-05-19)
+
+| ID | Feature | Doc | Code | Test | Status | Notes |
+|---|---|---|---|---|---|---|
+| FX514 | BicameralRoute ratify → USER_OVERRIDE ledger append | docs/plan-qor-bicameral-quickwins.md | src/roadmap/routes/BicameralRoute.ts (ledgerManager dep + ratify handler), src/roadmap/services/ConsoleRouteRegistrar.ts (threading) | src/test/roadmap/BicameralRoute.test.ts (NEW) | verified | 5 SG-035 cases: success appends USER_OVERRIDE with full payload; no-ledger-dep no throw; ledger failure non-blocking; missing rationale defaults to empty; isAvailable=false skips append. |
+| FX515 | bootstrapBicameral disposer + rewire cleanup | docs/plan-qor-bicameral-quickwins.md | src/extension/bootstrapBicameral.ts (typed surface + dispose + prior.disconnect), src/roadmap/ConsoleServer.ts (getBicameralClient accessor) | src/test/extension/bicameral-activation.test.ts (extended) | verified | 2 SG-035 cases: context.subscriptions disposer triggers client.disconnect(); wireFromConfig disconnects prior client on rewire. |
+| FX516 | BicameralMcpClient transport.onclose crash recovery | docs/plan-qor-bicameral-quickwins.md | src/integrations/bicameral/BicameralMcpClient.ts (connect onclose handler) | src/test/integrations/bicameral/BicameralMcpClient.test.ts (extended) | verified | 2 SG-035 cases: onclose flips isConnected to false; subsequent history() throws clean "not connected". |
+| FX517 | BicameralMcpClient capability cache via listTools | docs/plan-qor-bicameral-quickwins.md | src/integrations/bicameral/BicameralMcpClient.ts (fetchCapabilities + getCapabilities) | src/test/integrations/bicameral/BicameralMcpClient.test.ts (extended) | verified | 3 SG-035 cases: capabilities populated from listTools; throw → empty set no crash; disconnect resets to empty. |
+| FX518 | install-handler sanitizeStdoutTail ANSI + C0 stripper | docs/plan-qor-bicameral-quickwins.md | src/integrations/bicameral/install-handler.ts (sanitizeStdoutTail + stdout/stderr application) | src/test/integrations/bicameral/install-handler.test.ts (extended) | verified | 3 SG-035 cases: ANSI CSI stripped; C0 controls stripped (preserves \t\n\r); 2048-char cap. |
+
+---
+
 ## Section: SentinelDaemon governance-file coverage (B193 — Phase 60 §2 Track C + residual fix-up)
 
 | ID | Feature | Doc | Code | Test | Status | Notes |

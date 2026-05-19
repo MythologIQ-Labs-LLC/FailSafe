@@ -208,4 +208,116 @@ suite('integrations/bicameral BicameralMcpClient', () => {
     await assert.doesNotReject(client.disconnect());
     assert.equal(client.isConnected(), false);
   });
+
+  // ────────────────────────────────────────────────────────────────────
+  // FX516 — B-BIC-3: transport close listener flips isConnected to false.
+  // Test isolation directive: each case constructs a fresh BicameralMcpClient
+  // (no shared module-level instance) because capabilities are per-instance.
+  // ────────────────────────────────────────────────────────────────────
+
+  function makeFakeClientWithTools(
+    responses: Record<string, unknown>,
+    calls: CallRecord[],
+    tools: string[] | { throw: true },
+  ) {
+    return {
+      async connect(_t: unknown): Promise<void> { /* noop */ },
+      async close(): Promise<void> { /* noop */ },
+      async listTools(): Promise<unknown> {
+        if ('throw' in (tools as object)) throw new Error('listTools exploded');
+        return { tools: (tools as string[]).map((name) => ({ name })) };
+      },
+      async callTool(req: { name: string; arguments: Record<string, unknown> }): Promise<unknown> {
+        calls.push({ name: req.name, args: req.arguments });
+        const payload = responses[req.name];
+        return {
+          content: [{ type: 'text', text: typeof payload === 'string' ? payload : JSON.stringify(payload) }],
+          isError: false,
+        };
+      },
+    };
+  }
+
+  test('FX516 transport.onclose flips isConnected to false', async () => {
+    const calls: CallRecord[] = [];
+    const transport: { onclose?: () => void } = {};
+    const client = new BicameralMcpClient({
+      command: 'bicameral-mcp',
+      cwd: '/tmp',
+      transportFactory: () => transport as never,
+      clientFactory: () => makeFakeClientWithTools({}, calls, []) as never,
+    });
+    await client.connect();
+    assert.equal(client.isConnected(), true);
+    assert.equal(typeof transport.onclose, 'function');
+    transport.onclose!();
+    assert.equal(client.isConnected(), false);
+  });
+
+  test('FX516 after transport.onclose fires, history() throws "not connected"', async () => {
+    const calls: CallRecord[] = [];
+    const transport: { onclose?: () => void } = {};
+    const client = new BicameralMcpClient({
+      command: 'bicameral-mcp',
+      cwd: '/tmp',
+      transportFactory: () => transport as never,
+      clientFactory: () => makeFakeClientWithTools({}, calls, []) as never,
+    });
+    await client.connect();
+    transport.onclose!();
+    await assert.rejects(client.history(), /not connected/);
+  });
+
+  // ────────────────────────────────────────────────────────────────────
+  // FX517 — B-BIC-4: capability negotiation via listTools().
+  // ────────────────────────────────────────────────────────────────────
+
+  test('FX517 after connect, getCapabilities returns listTools() names', async () => {
+    const calls: CallRecord[] = [];
+    const client = new BicameralMcpClient({
+      command: 'bicameral-mcp',
+      cwd: '/tmp',
+      transportFactory: () => ({} as never),
+      clientFactory: () => makeFakeClientWithTools({}, calls, [
+        'bicameral.history', 'bicameral.preflight', 'bicameral.drift', 'bicameral.ratify',
+      ]) as never,
+    });
+    await client.connect();
+    const caps = client.getCapabilities();
+    assert.equal(caps.has('bicameral.history'), true);
+    assert.equal(caps.has('bicameral.ratify'), true);
+    assert.equal(caps.has('bicameral.preflight'), true);
+    assert.equal(caps.has('bicameral.drift'), true);
+    assert.equal(caps.has('bicameral.ingest'), false);
+  });
+
+  test('FX517 listTools() throw → getCapabilities returns empty set (no crash)', async () => {
+    const calls: CallRecord[] = [];
+    const client = new BicameralMcpClient({
+      command: 'bicameral-mcp',
+      cwd: '/tmp',
+      transportFactory: () => ({} as never),
+      clientFactory: () => makeFakeClientWithTools({}, calls, { throw: true }) as never,
+    });
+    await client.connect();
+    const caps = client.getCapabilities();
+    assert.equal(caps.size, 0);
+    assert.equal(client.isConnected(), true);  // connect itself didn't fail
+  });
+
+  test('FX517 disconnect resets capabilities to empty set', async () => {
+    const calls: CallRecord[] = [];
+    const client = new BicameralMcpClient({
+      command: 'bicameral-mcp',
+      cwd: '/tmp',
+      transportFactory: () => ({} as never),
+      clientFactory: () => makeFakeClientWithTools({}, calls, [
+        'bicameral.history',
+      ]) as never,
+    });
+    await client.connect();
+    assert.equal(client.getCapabilities().size, 1);
+    await client.disconnect();
+    assert.equal(client.getCapabilities().size, 0);
+  });
 });

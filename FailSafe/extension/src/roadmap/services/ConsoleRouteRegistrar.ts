@@ -222,6 +222,8 @@ export class ConsoleRouteRegistrar {
       getBicameralClient: () => this.host.getBicameralClient(),
       getAutoConnect: () => this.host.getBicameralAutoConnect(),
       setAutoConnect: (v) => this.host.setBicameralAutoConnect(v),
+      // B-BIC-1: pass ledger handle so ratify appends USER_OVERRIDE entry.
+      ledgerManager: this.host.qorelogicManager.getLedgerManager() as any,
     });
     setupMarketplaceRoutes(app, {
       rejectIfRemote: (req, res) => this.host.rejectIfRemote(req, res),

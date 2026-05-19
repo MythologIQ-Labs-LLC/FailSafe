@@ -10,6 +10,25 @@ import { InstallMode, InstallProgressEvent, InstallStep, BicameralInstallState }
 
 const STDOUT_TAIL_BYTES = 2048;
 
+/**
+ * B-BIC-5: Sanitize raw stdout/stderr captured from the bicameral CLI before
+ * it surfaces to the operator (Settings card + WebSocket broadcast). Strips
+ * ANSI CSI sequences (SGR colors + cursor moves) plus C0 control characters
+ * other than `\t`, `\n`, `\r`. Caps length to `maxLen` (preserves the trailing
+ * bytes — recent output is the operator-relevant signal).
+ *
+ * Defensive against any future bicameral CLI release that emits color or
+ * progress-bar escape codes which would otherwise render as garbage in the
+ * operator's Settings card and pass through unbounded to subscribers.
+ */
+export function sanitizeStdoutTail(raw: string, maxLen = STDOUT_TAIL_BYTES): string {
+  const stripped = String(raw ?? '')
+    .replace(/\x1b\[[0-9;]*[mGKHF]/g, '')              // CSI sequences (SGR/cursor)
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ''); // C0 controls (preserves \t \n \r)
+  return stripped.length > maxLen ? stripped.slice(-maxLen) : stripped;
+}
+
 export interface InstallHandlerOptions {
   workspaceRoot: string;
   pythonCommand?: string;       // default 'pip'
@@ -113,12 +132,13 @@ async function runStep(
     let tail = '';
     child.stdout?.on('data', (chunk) => {
       tail = (tail + String(chunk)).slice(-STDOUT_TAIL_BYTES);
-      step.stdoutTail = tail;
+      // B-BIC-5: sanitize ANSI + C0 controls before surfacing to UI/WebSocket.
+      step.stdoutTail = sanitizeStdoutTail(tail);
       emit(opts, mode, steps, false);
     });
     child.stderr?.on('data', (chunk) => {
       tail = (tail + String(chunk)).slice(-STDOUT_TAIL_BYTES);
-      step.stdoutTail = tail;
+      step.stdoutTail = sanitizeStdoutTail(tail);
     });
     child.on('error', (err) => {
       step.status = 'error';
