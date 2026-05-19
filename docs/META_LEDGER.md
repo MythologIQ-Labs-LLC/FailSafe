@@ -18970,3 +18970,53 @@ _Next: operator decision on push — none auto-triggered by this reconciliation.
 _Chain integrity: VALID_
 _Session Status: enforcement-mode-escalation-ux SEALED at Entry #375 (clean; first merge into main); sentinel-governance-extensions SEALED at Entry #376 (federation-reconciled from branch-local #375). Federated pair both on main per SG-ConcurrentLedgerRace-A; B194 + B193 resolved; B-EM-1/2/3/4 + B-SD-2 captured as follow-ups; PUBLISH_BLOCK unchanged._
 _Session: 2026-05-19-b193-b194-federation-reconciliation-merge_
+
+---
+
+### Entry #377: SESSION SEAL — plan-qor-bicameral-quickwins (B-BIC-1..5 Bicameral integration quick wins)
+
+**Entry ID**: `39c891324acf`
+**Date**: 2026-05-19
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-bicameral-quickwins.md`
+**Audit reference**: 1-cycle PASS-WITH-FIXES via independent architect-reviewer (Phase 68 Option B). 3 mechanical amendments remediated in-cycle.
+**Implementation reference**: 2 commits on `feat/bicameral-enhancements-quickwins` branched off `main` at `7353e3f`.
+
+## Federation note
+
+Shares predecessor Entry #376 with `feat/qor-logic-version-pinning` (B197 #377) and `feat/b199-phase2-settings-e2e` (B199 P2 #377). Three-way federation collision at #377; at merge: lexicographic-earliest retains #377 (`b199-phase2` < `bicameral-enhancements` < `qor-logic-version`), others renumber.
+
+## Substantiation summary
+
+Top 5 of 23 deep-review findings: META_LEDGER on ratify (B-BIC-1); disposer + rewire cleanup (B-BIC-2); transport.onclose crash recovery (B-BIC-3); listTools capability cache (B-BIC-4); install stdout sanitizer (B-BIC-5). Remaining 18 captured as B-BIC-6..23.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| AUDIT 1-cycle PASS-WITH-FIXES | ✓ |
+| Reality = Promise | 6 source files + 4 test files + 3 doc updates. |
+| Test functionality (SG-035) | 15 new FX514-FX518 cases — all invoke unit + assert. |
+| Mocha | 2426 passing / 17 baseline failing — zero regressions. |
+| ESLint / TypeScript | clean. |
+
+## Content Hash
+
+**Content Hash**: `60279cc0c83f7956229e2e3a4a5592b142ee3aa6982e61f41368c82dfc845666`
+**Previous Hash**: `1898988ebac150af7f53206a99ee495f7b1e5fb82dc110bcd0d0941924058db1` (Entry #376)
+**Chain Hash**: `2d971301a4db15eec20e9a1244f387534fdff1c1ec255239ed05997ea19d31c2`
+**Merkle Seal**: `ad724e1dfe1095a386e9698bb5b5ceb2076d617170c6452c46e2d944a73f5dc9` — gate_workspace_audit_bicameral_quickwins_PASS
+**Session ID**: workspace-only / `2026-05-19-bicameral-quickwins-substantiation-seal`
+
+## Decision
+
+**SEAL — Reality matches Promise.** B-BIC-1..5 closed.
+
+_Chain Status: BICAMERAL QUICKWINS SEALED at branch-local Entry #377. Three-way federation collision with B197 #377 and B199 Phase 2 #377 awaits merge-time reconciliation._
+_Next: operator decision on push/merge._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: bicameral-quickwins SEALED at branch-local Entry #377; B-BIC-1..5 closed; 15 FX514-FX518 cases pass; 2426 mocha pass / 17 baseline failing._
+_Session: 2026-05-19-bicameral-quickwins-substantiation-seal_
