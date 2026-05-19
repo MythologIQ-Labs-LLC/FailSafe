@@ -627,11 +627,16 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 ---
 
-## Section: B199 Phase 4 — Agents tab Playwright (2026-05-19)
+## Section: B199 Phases 4-9 — Command Center tab + WS broadcast + bus-renderer E2E (2026-05-19)
 
 | ID | Feature | Doc | Code | Test | Status | Notes |
 |---|---|---|---|---|---|---|
-| FX520 | Playwright Agents tab structural coverage | docs/plan-qor-b199-phase4-agents-e2e.md | (test only — Agents tab + sub-pill switching code shipped in prior cycles) | src/test/ui/agents-tab.spec.ts | verified | 3 active Playwright cases: 4 sub-pills (Operations/Timeline/Genome/Replay) render; Operations active by default; Replay click activates pill + content area. Deep per-sub-view behavioral coverage deferred to future phases. |
+| FX520 | Playwright Agents tab structural coverage | docs/plan-qor-b199-phase4-agents-e2e.md | (test only) | src/test/ui/agents-tab.spec.ts | verified | 3 cases: 4 sub-pills (Operations/Timeline/Genome/Replay) render; Operations active by default; Replay click activates pill + content area. |
+| FX521 | Playwright Workspace tab structural coverage | docs/plan-qor-b199-phase5+ (consolidated) | (test only) | src/test/ui/workspace-tab.spec.ts | verified | 3 cases: 2 sub-pills (Skills/Mindmap); Skills active by default; Mindmap click activates pill + content area. |
+| FX522 | Playwright Governance tab structural coverage | docs/plan-qor-b199-phase5+ (consolidated) | (test only) | src/test/ui/governance-tab.spec.ts | verified | 3 cases: 3 sub-pills (Audit/Risks/Compliance); Audit active by default + subview renders; Risks click activates pill + content area. |
+| FX523 | Playwright Overview tab structural coverage | docs/plan-qor-b199-phase5+ (consolidated) | (test only) | src/test/ui/overview-tab.spec.ts | verified | 3 cases: Overview active by default; tab-switch round-trip returns to Overview; renders without runtime errors on minimal hub. |
+| FX524 | WebSocket broadcast matrix — 16 broadcast types | docs/plan-qor-b199-phase5+ (consolidated) | (test only) | src/test/ui/ws-broadcasts.spec.ts | verified | 16 cases (one per observed broadcast type): page survives delivery without runtime error. Closes deep-audit HIGH "only 1 of ~12 broadcasts covered" finding. |
+| FX525 | Real disk META_LEDGER → /api/hub → Monitor E2E | docs/plan-qor-b199-phase5+ (consolidated) | (test only) | src/test/ui/bus-renderer-flow.spec.ts | verified | 2 cases: fs.appendFileSync to docs/META_LEDGER.md → /api/hub reflects new ledgerSummary; hub.refresh broadcast → Monitor consumes refresh without crashing. Closes deep-audit CRITICAL "B191 bus→renderer fixture-only" finding. |
 
 ---
 
