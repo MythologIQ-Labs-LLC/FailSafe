@@ -196,4 +196,25 @@ suite('integrations/bicameral install-handler', () => {
       assert.equal(call.opts.shell, false);
     }
   });
+
+  // FX518 — B-BIC-5 sanitizer
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { sanitizeStdoutTail } = require('../../../integrations/bicameral/install-handler');
+
+  test('FX518 sanitizeStdoutTail strips ANSI CSI sequences (SGR colors)', () => {
+    const out = sanitizeStdoutTail('\x1b[31mred\x1b[0m text');
+    assert.equal(out, 'red text');
+  });
+
+  test('FX518 sanitizeStdoutTail strips C0 controls but preserves tab/newline/CR', () => {
+    const out = sanitizeStdoutTail('a\x00b\x07c\td\ne\rf');
+    assert.equal(out, 'abc\td\ne\rf');
+  });
+
+  test('FX518 sanitizeStdoutTail caps length to last 2048 chars by default', () => {
+    const input = 'x'.repeat(3000);
+    const out = sanitizeStdoutTail(input);
+    assert.equal(out.length, 2048);
+    assert.equal(out, 'x'.repeat(2048));
+  });
 });

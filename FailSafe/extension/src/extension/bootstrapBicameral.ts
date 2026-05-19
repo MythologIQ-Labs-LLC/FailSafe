@@ -19,6 +19,11 @@ interface ConsoleServerSurface {
   setBicameralClient(c: BicameralMcpClient | null): void;
   setBicameralAutoConnectWriter(fn: (value: boolean) => Promise<void>): void;
   broadcastEvent(data: Record<string, unknown>): void;
+  /** B-BIC-2: typed accessor for the lazily-wired MCP client. Used by the
+   *  rewire-cleanup path (disconnect prior client before assigning a new one)
+   *  and by the context.subscriptions disposer (terminate stdio child on
+   *  extension deactivate). */
+  getBicameralClient(): BicameralMcpClient | null;
 }
 
 export function wireBicameralIntegration(
@@ -30,13 +35,18 @@ export function wireBicameralIntegration(
     const cfg = vscode.workspace.getConfiguration("failsafe.integrations.bicameral");
     const command = cfg.get<string>("command", "bicameral-mcp") || "bicameral-mcp";
     consoleServer.setBicameralAutoConnect(cfg.get<boolean>("autoConnect", false));
+    // B-BIC-2: disconnect the prior client (if any) before replacing it so
+    // the previous stdio subprocess doesn't get orphaned by config rewire.
+    const prior = consoleServer.getBicameralClient();
     if (!isSafeBicameralCommand(command)) {
       consoleServer.setBicameralCommand("bicameral-mcp");
       consoleServer.setBicameralClient(null);
+      void prior?.disconnect().catch(() => undefined);
       return;
     }
     consoleServer.setBicameralCommand(command);
     consoleServer.setBicameralClient(new BicameralMcpClient({ command, cwd: workspaceRoot }));
+    void prior?.disconnect().catch(() => undefined);
   };
 
   wireFromConfig();
@@ -55,6 +65,15 @@ export function wireBicameralIntegration(
       }
     }),
   );
+  // B-BIC-2: extension-deactivate disposer — terminates the stdio subprocess
+  // so it doesn't outlive its parent. .catch() swallows any disconnect error
+  // (extension teardown must not throw).
+  context.subscriptions.push({
+    dispose: () => {
+      const client = consoleServer.getBicameralClient();
+      void client?.disconnect().catch(() => undefined);
+    },
+  });
 }
 
 /**

@@ -633,6 +633,36 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 |---|---|---|---|---|---|---|
 | FX512 | serveConsoleServerUI /api/hub override middleware (B-EM-4 closure) | docs/plan-qor-b199-phase2-settings-e2e.md | src/test/ui/helpers/serveConsoleServerUI.ts (Express middleware + Express 5 router-stack unshift), playwright.config.ts (testMatch tightening) | src/test/ui/helpers/serveConsoleServerUI-hub-override.test.ts | verified | 3 SG-035 cases: initialHub injection returns override payload; no-initialHub falls through to real handler; controller.setHub() reflected on next fetch (per-request hubRef read). Unblocks Phase 2+ Command Center sub-tab Playwright coverage. |
 | FX513 | Playwright Settings tab coverage (Voice Pack absent + Governance Mode observe/assist + qor-logic floor warning visible/hidden) | docs/plan-qor-b199-phase2-settings-e2e.md | (test only — Settings card render code shipped in prior B194/B195/B197 cycles) | src/test/ui/settings-cards.spec.ts | partial | 3 active Playwright cases (Voice Pack absent + Governance Mode '(default)' on observe + '(default)' hidden on assist) all passing. 2 cases test.skip-staged pending B197 merge to main (qor-logic floor warning visible/hidden). |
+## Section: B199 Phases 4-9 — Command Center tab + WS broadcast + bus-renderer E2E (2026-05-19)
+
+| ID | Feature | Doc | Code | Test | Status | Notes |
+|---|---|---|---|---|---|---|
+| FX520 | Playwright Agents tab structural coverage | docs/plan-qor-b199-phase4-agents-e2e.md | (test only) | src/test/ui/agents-tab.spec.ts | verified | 3 cases: 4 sub-pills (Operations/Timeline/Genome/Replay) render; Operations active by default; Replay click activates pill + content area. |
+| FX521 | Playwright Workspace tab structural coverage | docs/plan-qor-b199-phase5+ (consolidated) | (test only) | src/test/ui/workspace-tab.spec.ts | verified | 3 cases: 2 sub-pills (Skills/Mindmap); Skills active by default; Mindmap click activates pill + content area. |
+| FX522 | Playwright Governance tab structural coverage | docs/plan-qor-b199-phase5+ (consolidated) | (test only) | src/test/ui/governance-tab.spec.ts | verified | 3 cases: 3 sub-pills (Audit/Risks/Compliance); Audit active by default + subview renders; Risks click activates pill + content area. |
+| FX523 | Playwright Overview tab structural coverage | docs/plan-qor-b199-phase5+ (consolidated) | (test only) | src/test/ui/overview-tab.spec.ts | verified | 3 cases: Overview active by default; tab-switch round-trip returns to Overview; renders without runtime errors on minimal hub. |
+| FX524 | WebSocket broadcast matrix — 16 broadcast types | docs/plan-qor-b199-phase5+ (consolidated) | (test only) | src/test/ui/ws-broadcasts.spec.ts | verified | 16 cases (one per observed broadcast type): page survives delivery without runtime error. Closes deep-audit HIGH "only 1 of ~12 broadcasts covered" finding. |
+| FX525 | Real disk META_LEDGER → /api/hub → Monitor E2E | docs/plan-qor-b199-phase5+ (consolidated) | (test only) | src/test/ui/bus-renderer-flow.spec.ts | verified | 2 cases: fs.appendFileSync to docs/META_LEDGER.md → /api/hub reflects new ledgerSummary; hub.refresh broadcast → Monitor consumes refresh without crashing. Closes deep-audit CRITICAL "B191 bus→renderer fixture-only" finding. |
+
+---
+
+## Section: B199 Phase 3 — Integrations tab Playwright (2026-05-19)
+
+| ID | Feature | Doc | Code | Test | Status | Notes |
+|---|---|---|---|---|---|---|
+| FX519 | Playwright Integrations tab — Voice Pack installed state (deferred from Phase 2 pending B-EM-4) + capability-dim placeholder | docs/plan-qor-b199-phase3-integrations-e2e.md | (test only — substrate inherited from B-BIC + B-EM-4 replicated inline) | src/test/ui/integrations-tab.spec.ts | partial | 1 active Playwright case (Voice Pack installed renders Uninstall + version) + 1 test.skip-staged for capability dimming (B-BIC-13). Bicameral ratify E2E intentionally not duplicated (FX490 covers). |
+
+---
+
+## Section: Bicameral integration quick wins (B-BIC-1..5, 2026-05-19)
+
+| ID | Feature | Doc | Code | Test | Status | Notes |
+|---|---|---|---|---|---|---|
+| FX514 | BicameralRoute ratify → USER_OVERRIDE ledger append | docs/plan-qor-bicameral-quickwins.md | src/roadmap/routes/BicameralRoute.ts (ledgerManager dep + ratify handler), src/roadmap/services/ConsoleRouteRegistrar.ts (threading) | src/test/roadmap/BicameralRoute.test.ts (NEW) | verified | 5 SG-035 cases: success appends USER_OVERRIDE with full payload; no-ledger-dep no throw; ledger failure non-blocking; missing rationale defaults to empty; isAvailable=false skips append. |
+| FX515 | bootstrapBicameral disposer + rewire cleanup | docs/plan-qor-bicameral-quickwins.md | src/extension/bootstrapBicameral.ts (typed surface + dispose + prior.disconnect), src/roadmap/ConsoleServer.ts (getBicameralClient accessor) | src/test/extension/bicameral-activation.test.ts (extended) | verified | 2 SG-035 cases: context.subscriptions disposer triggers client.disconnect(); wireFromConfig disconnects prior client on rewire. |
+| FX516 | BicameralMcpClient transport.onclose crash recovery | docs/plan-qor-bicameral-quickwins.md | src/integrations/bicameral/BicameralMcpClient.ts (connect onclose handler) | src/test/integrations/bicameral/BicameralMcpClient.test.ts (extended) | verified | 2 SG-035 cases: onclose flips isConnected to false; subsequent history() throws clean "not connected". |
+| FX517 | BicameralMcpClient capability cache via listTools | docs/plan-qor-bicameral-quickwins.md | src/integrations/bicameral/BicameralMcpClient.ts (fetchCapabilities + getCapabilities) | src/test/integrations/bicameral/BicameralMcpClient.test.ts (extended) | verified | 3 SG-035 cases: capabilities populated from listTools; throw → empty set no crash; disconnect resets to empty. |
+| FX518 | install-handler sanitizeStdoutTail ANSI + C0 stripper | docs/plan-qor-bicameral-quickwins.md | src/integrations/bicameral/install-handler.ts (sanitizeStdoutTail + stdout/stderr application) | src/test/integrations/bicameral/install-handler.test.ts (extended) | verified | 3 SG-035 cases: ANSI CSI stripped; C0 controls stripped (preserves \t\n\r); 2048-char cap. |
 
 ---
 

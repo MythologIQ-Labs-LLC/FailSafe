@@ -259,10 +259,8 @@ export async function serveConsoleServerUI(
   // the real /api/hub handler via setupAllRoutes — Express is first-match-wins
   // so a normal `app.use` mounted here would run AFTER the real handler.
   // Workaround: register the middleware then unshift its router-stack layer to
-  // position 0 so it runs FIRST on every request. The middleware short-circuits
-  // for GET /api/hub when hubRef.current is set; otherwise calls next() and the
-  // real handler runs. Per-request read = controller.setHub() updates are
-  // reflected on the next fetch.
+  // position 0 so it runs FIRST on every request. Per-request read of
+  // hubRef.current means controller.setHub() updates surface on next fetch.
   app.use((req, res, next) => {
     if (req.method === 'GET' && (req.originalUrl === '/api/hub' || req.path === '/api/hub') && fakes.hubRef.current) {
       res.json(fakes.hubRef.current);
@@ -270,13 +268,7 @@ export async function serveConsoleServerUI(
     }
     next();
   });
-  // Express stores middleware/routes in app._router.stack in registration order.
-  // ConsoleServer's constructor already registered /api/hub via setupAllRoutes,
-  // so our middleware (appended last by app.use) wouldn't run first by default.
-  // Unshift our layer to position 0 so it intercepts before the real handler.
-  // Express 5: app.router (was app._router in v4). Stack manipulation works the
-  // same way: routes/middlewares stored in registration order; unshifting our
-  // middleware to position 0 makes it match before the real /api/hub handler.
+  // Express 5: app.router (was app._router in v4). Fall back to both.
   const router =
     (app as unknown as { router?: { stack: any[] } }).router
     ?? (app as unknown as { _router?: { stack: any[] } })._router;

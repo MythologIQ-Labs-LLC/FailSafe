@@ -30,6 +30,9 @@ interface BicameralMcpClientOptions {
 export class BicameralMcpClient {
   private client: Client | null = null;
   private transport: StdioClientTransport | null = null;
+  /** B-BIC-4: capability set populated from client.listTools() on connect.
+   *  null when never-connected; empty set when listTools failed; populated otherwise. */
+  private capabilities: Set<string> | null = null;
   private readonly opts: BicameralMcpClientOptions;
 
   constructor(opts: BicameralMcpClientOptions) {
@@ -38,6 +41,11 @@ export class BicameralMcpClient {
 
   isConnected(): boolean {
     return this.client !== null;
+  }
+
+  /** B-BIC-4: defensive copy of the capability set (tool names from listTools). */
+  getCapabilities(): Set<string> {
+    return new Set(this.capabilities ?? []);
   }
 
   async connect(): Promise<void> {
@@ -55,6 +63,33 @@ export class BicameralMcpClient {
     await client.connect(transport);
     this.transport = transport;
     this.client = client;
+    // B-BIC-3: detect subprocess crash / pipe close — flip isConnected so the
+    // operator sees the failure on the next callTool instead of an opaque error.
+    transport.onclose = () => {
+      this.client = null;
+      this.transport = null;
+      this.capabilities = null;
+    };
+    // B-BIC-4: capability negotiation. Cache once on connect so future UI dim
+    // logic (B-BIC-13) can query without re-fetching every render.
+    await this.fetchCapabilities(client);
+  }
+
+  private async fetchCapabilities(client: Client): Promise<void> {
+    try {
+      const result = await client.listTools();
+      const list = (result as { tools?: unknown }).tools;
+      if (Array.isArray(list)) {
+        const names = list
+          .map((t) => (t && typeof t === 'object' ? (t as { name?: unknown }).name : null))
+          .filter((n): n is string => typeof n === 'string' && n.length > 0);
+        this.capabilities = new Set(names);
+        return;
+      }
+      this.capabilities = new Set();
+    } catch {
+      this.capabilities = new Set();
+    }
   }
 
   async disconnect(): Promise<void> {
@@ -62,6 +97,7 @@ export class BicameralMcpClient {
     try { await this.client.close(); } catch { /* noop */ }
     this.client = null;
     this.transport = null;
+    this.capabilities = null;
   }
 
   async history(): Promise<BicameralFeatureBrief[]> {

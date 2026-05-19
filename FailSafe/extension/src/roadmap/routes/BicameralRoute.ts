@@ -35,6 +35,20 @@ export interface BicameralRouteDeps {
    * configuration.update(); tests can stub. May reject; route surfaces error.
    */
   setAutoConnect: (value: boolean) => Promise<void>;
+  /**
+   * B-BIC-1: optional ledger handle. When provided, the ratify handler appends
+   * a USER_OVERRIDE entry so the operator's intentional acceptance is Merkle-
+   * anchored. Non-blocking — ledger write failures don't break the ratify
+   * response.
+   */
+  ledgerManager?: {
+    isAvailable(): boolean;
+    appendEntry(entry: {
+      eventType: string;
+      agentDid: string;
+      payload: Record<string, unknown>;
+    }): Promise<unknown>;
+  };
 }
 
 export function setupBicameralRoutes(
@@ -202,6 +216,28 @@ export function setupBicameralRoutes(
     }
     try {
       await client.ratify(decisionId, verdict);
+      // B-BIC-1: anchor the operator's ratify decision into META_LEDGER as a
+      // USER_OVERRIDE entry. Ratify is the canonical "operator intentionally
+      // accepted X" event. Non-blocking — a ledger write failure must not
+      // break the ratify response (the bicameral side has already accepted).
+      if (deps.ledgerManager?.isAvailable()) {
+        const rationale =
+          typeof req.body?.rationale === "string" ? req.body.rationale : "";
+        try {
+          await deps.ledgerManager.appendEntry({
+            eventType: "USER_OVERRIDE",
+            agentDid: "vscode-user",
+            payload: {
+              action: "bicameral.ratify",
+              decisionId,
+              verdict,
+              rationale,
+            },
+          });
+        } catch {
+          /* ledger write failure is non-blocking by design (B-BIC-1) */
+        }
+      }
       res.json({ ok: true });
     } catch (e) {
       res.status(500).json({ ok: false, error: String(e) });
