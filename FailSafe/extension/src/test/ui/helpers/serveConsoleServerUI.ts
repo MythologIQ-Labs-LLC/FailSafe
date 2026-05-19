@@ -255,6 +255,25 @@ export async function serveConsoleServerUI(
   registerVoicePackRouteOnHarness(server, voicePackGlobalStorage, voicePackVersion);
 
   const app = (server as unknown as { app: Application }).app;
+  // B-EM-4 (replicated from feat/b199-phase2-settings-e2e): /api/hub override.
+  // Express 5 is first-match-wins; ConsoleServer's setupAllRoutes already
+  // registered the real handler. Unshift our middleware to position 0 so it
+  // intercepts per-request. When `hubRef.current` is null (no initialHub /
+  // setHub), falls through to the real handler (back-compat).
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && (req.originalUrl === '/api/hub' || req.path === '/api/hub') && fakes.hubRef.current) {
+      res.json(fakes.hubRef.current);
+      return;
+    }
+    next();
+  });
+  const router =
+    (app as unknown as { router?: { stack: any[] } }).router
+    ?? (app as unknown as { _router?: { stack: any[] } })._router;
+  if (router && Array.isArray(router.stack) && router.stack.length > 0) {
+    const ourLayer = router.stack.pop();
+    if (ourLayer) router.stack.unshift(ourLayer);
+  }
   const harness = http.createServer(app);
   const sockets = new Set<WebSocket>();
   attachWebSocket(server, harness, sockets, fakes.hubRef);

@@ -627,6 +627,14 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 ---
 
+## Section: B199 Phase 3 — Integrations tab Playwright (2026-05-19)
+
+| ID | Feature | Doc | Code | Test | Status | Notes |
+|---|---|---|---|---|---|---|
+| FX519 | Playwright Integrations tab — Voice Pack installed state (deferred from Phase 2 pending B-EM-4) + capability-dim placeholder | docs/plan-qor-b199-phase3-integrations-e2e.md | (test only — substrate inherited from B-BIC + B-EM-4 replicated inline) | src/test/ui/integrations-tab.spec.ts | partial | 1 active Playwright case (Voice Pack installed renders Uninstall + version) + 1 test.skip-staged for capability dimming (B-BIC-13). Bicameral ratify E2E intentionally not duplicated (FX490 covers). |
+
+---
+
 ## Section: Bicameral integration quick wins (B-BIC-1..5, 2026-05-19)
 
 | ID | Feature | Doc | Code | Test | Status | Notes |
