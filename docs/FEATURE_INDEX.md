@@ -627,6 +627,15 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 ---
 
+## Section: B199 Phase 2 — Settings tab E2E + B-EM-4 harness unblocker
+
+| ID | Feature | Doc | Code | Test | Status | Notes |
+|---|---|---|---|---|---|---|
+| FX512 | serveConsoleServerUI /api/hub override middleware (B-EM-4 closure) | docs/plan-qor-b199-phase2-settings-e2e.md | src/test/ui/helpers/serveConsoleServerUI.ts (Express middleware + Express 5 router-stack unshift), playwright.config.ts (testMatch tightening) | src/test/ui/helpers/serveConsoleServerUI-hub-override.test.ts | verified | 3 SG-035 cases: initialHub injection returns override payload; no-initialHub falls through to real handler; controller.setHub() reflected on next fetch (per-request hubRef read). Unblocks Phase 2+ Command Center sub-tab Playwright coverage. |
+| FX513 | Playwright Settings tab coverage (Voice Pack absent + Governance Mode observe/assist + qor-logic floor warning visible/hidden) | docs/plan-qor-b199-phase2-settings-e2e.md | (test only — Settings card render code shipped in prior B194/B195/B197 cycles) | src/test/ui/settings-cards.spec.ts | partial | 3 active Playwright cases (Voice Pack absent + Governance Mode '(default)' on observe + '(default)' hidden on assist) all passing. 2 cases test.skip-staged pending B197 merge to main (qor-logic floor warning visible/hidden). |
+
+---
+
 ## Section: SentinelDaemon governance-file coverage (B193 — Phase 60 §2 Track C + residual fix-up)
 
 | ID | Feature | Doc | Code | Test | Status | Notes |

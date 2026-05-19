@@ -255,6 +255,35 @@ export async function serveConsoleServerUI(
   registerVoicePackRouteOnHarness(server, voicePackGlobalStorage, voicePackVersion);
 
   const app = (server as unknown as { app: Application }).app;
+  // B-EM-4: /api/hub override. ConsoleServer's constructor already registered
+  // the real /api/hub handler via setupAllRoutes — Express is first-match-wins
+  // so a normal `app.use` mounted here would run AFTER the real handler.
+  // Workaround: register the middleware then unshift its router-stack layer to
+  // position 0 so it runs FIRST on every request. The middleware short-circuits
+  // for GET /api/hub when hubRef.current is set; otherwise calls next() and the
+  // real handler runs. Per-request read = controller.setHub() updates are
+  // reflected on the next fetch.
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && (req.originalUrl === '/api/hub' || req.path === '/api/hub') && fakes.hubRef.current) {
+      res.json(fakes.hubRef.current);
+      return;
+    }
+    next();
+  });
+  // Express stores middleware/routes in app._router.stack in registration order.
+  // ConsoleServer's constructor already registered /api/hub via setupAllRoutes,
+  // so our middleware (appended last by app.use) wouldn't run first by default.
+  // Unshift our layer to position 0 so it intercepts before the real handler.
+  // Express 5: app.router (was app._router in v4). Stack manipulation works the
+  // same way: routes/middlewares stored in registration order; unshifting our
+  // middleware to position 0 makes it match before the real /api/hub handler.
+  const router =
+    (app as unknown as { router?: { stack: any[] } }).router
+    ?? (app as unknown as { _router?: { stack: any[] } })._router;
+  if (router && Array.isArray(router.stack) && router.stack.length > 0) {
+    const ourLayer = router.stack.pop();
+    if (ourLayer) router.stack.unshift(ourLayer);
+  }
   const harness = http.createServer(app);
   const sockets = new Set<WebSocket>();
   attachWebSocket(server, harness, sockets, fakes.hubRef);
