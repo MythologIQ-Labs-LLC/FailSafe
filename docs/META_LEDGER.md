@@ -19070,3 +19070,47 @@ _Next: operator decision on push/merge._
 _Chain integrity: VALID_
 _Session Status: b199-phase3-integrations SEALED at Entry #378; 1 active FX519 + 1 deferred-skip; 2426 mocha pass / 17 baseline failing. Linear chain off bicameral-quickwins #377; no federation collision._
 _Session: 2026-05-19-b199-phase3-integrations-substantiation-seal_
+
+---
+
+### Entry #379: SESSION SEAL — plan-qor-b199-phase4-agents-e2e (B199 Phase 4)
+
+**Entry ID**: `e3b88e98092e`
+**Date**: 2026-05-19
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-b199-phase4-agents-e2e.md`
+**Audit reference**: lightweight cycle (small Playwright scope; plan-text review).
+**Implementation reference**: 1 commit on `feat/b199-phase4-agents-e2e` branched off `feat/b199-phase3-integrations-e2e` (Entry #378). Linear successor chain.
+
+## Substantiation summary
+
+Agents tab structural Playwright coverage — establishes that the top-level Agents tab loads + 4 sub-pills (Operations/Timeline/Genome/Replay) render + active-pill switching works. Deep per-sub-view behavioral coverage deferred to future phases per one-surface-per-phase discipline.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| Reality = Promise | 1 spec file + 3 doc updates. |
+| Test functionality (SG-035) | 3 active FX520 Playwright cases invoke UI + assert structure. |
+| Playwright | 3/3 FX520 active + passing. |
+
+## Content Hash
+
+**Content Hash**: `4cc292e46591e554386cfe3eceda30b38303d9dcab0194f1991224162b0d4d38`
+**Previous Hash**: `6efb12b4a125afb4baeeef56543fd7007c0d299bcc0a7365c6fdee5bfda312f6` (Entry #378 Phase 3)
+**Chain Hash**: `63a4078baa7ce617af4b7ebbeba1cc6f37233f40dda824ffddc0f1fba7209576`
+**Merkle Seal**: `28b71faca36649ceb9dc83e0f73372d6ab25e9d94460d33762dac5d504ea5478` — gate_workspace_audit_b199_phase4_PASS
+**Session ID**: workspace-only / `2026-05-19-b199-phase4-agents-substantiation-seal`
+
+## Decision
+
+**SEAL — Reality matches Promise.** B199 Phase 4 closed; Phases 5-8 outstanding.
+
+_Chain Status: B199 PHASE 4 SEALED at Entry #379 (linear successor to Phase 3 #378)._
+_Next: operator decision on push/merge._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: b199-phase4-agents SEALED at Entry #379; 3 active FX520 cases pass. Linear chain off Phase 3 #378._
+_Session: 2026-05-19-b199-phase4-agents-substantiation-seal_
