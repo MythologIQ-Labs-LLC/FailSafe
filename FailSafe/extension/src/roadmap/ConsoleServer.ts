@@ -65,6 +65,8 @@ type ConsoleServerOptions = {
   modeTransitionHistory?: import("../governance/ModeTransitionHistory").ModeTransitionHistory;
   /** B194: callback returning current governance mode state for hub.governanceModeState. */
   getGovernanceMode?: () => import("../governance/types").GovernanceModeState;
+  /** B197: optional verifier returning the qor-logic install version-floor status. */
+  getQorLogicVerifier?: () => Promise<import("../qorlogic/qorLogicInstallRecord").QorLogicVersionStatus>;
 };
 
 // Re-export public test surface from support module for backward compat.
@@ -132,7 +134,7 @@ export class ConsoleServer {
     this.adapterService = new AdapterService(eventBus);
     this.transparencyLogger = new TransparencyLogger(this.workspaceRoot);
     this.riskRegisterManager = new RiskRegisterManager(this.workspaceRoot);
-    this.hub = this.buildHubService(options.mutationBus, options.modeTransitionHistory, options.getGovernanceMode);
+    this.hub = this.buildHubService(options.mutationBus, options.modeTransitionHistory, options.getGovernanceMode, options.getQorLogicVerifier);
     this.lifecycle = new ConsoleLifecycleService({
       app: this.app, port: PORT, host: HOST, workspaceRoot: this.workspaceRoot,
       wsManager: this.wsManager, hub: this.hub, planManager: this.planManager,
@@ -214,6 +216,7 @@ export class ConsoleServer {
     mutationBus?: import("../shared/WorkspaceMutationBus").WorkspaceMutationBus,
     modeTransitionHistory?: import("../governance/ModeTransitionHistory").ModeTransitionHistory,
     getGovernanceMode?: () => import("../governance/types").GovernanceModeState,
+    getQorLogicVerifier?: () => Promise<import("../qorlogic/qorLogicInstallRecord").QorLogicVersionStatus>,
   ): HubSnapshotService {
     return new HubSnapshotService({
       workspaceRoot: this.workspaceRoot, extensionVersion: EXTENSION_VERSION,
@@ -227,6 +230,7 @@ export class ConsoleServer {
       mutationBus,
       modeTransitionHistory,
       getGovernanceMode,
+      getQorLogicVerifier,
       getIdeTracker: () => this.ideTracker,
       getAgentHealthIndicator: () => this.agentHealthIndicator,
       checkpointTypeRegistry: CHECKPOINT_TYPE_REGISTRY,
