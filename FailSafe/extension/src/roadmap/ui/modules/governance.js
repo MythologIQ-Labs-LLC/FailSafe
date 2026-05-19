@@ -26,17 +26,52 @@ export class GovernanceRenderer {
     const integrity = hubData.metricIntegrity || [];
     const unattributed = hubData.unattributedFileActivity || { count: 0, recent: [] };
 
+    const modeTransitions = Array.isArray(hubData.recentModeTransitions) ? hubData.recentModeTransitions : [];
     this.container.innerHTML = `
       <div class="cc-grid-2" style="margin-bottom:16px">
         ${this.renderSentinelCard(sentinel, chainValid)}
         ${this.renderPoliciesCard(policies)}
       </div>
+      ${this.renderModeTransitions(modeTransitions)}
       ${renderIntegrityCard(integrity)}
       ${renderUnattributedCard(unattributed)}
       ${this.renderL3Queue(l3Queue)}
       ${this.renderAuditLog()}`;
     this.bindActions();
+    this.bindModeTransitionRows();
     this.highlightDeepLinkedVerdict();
+  }
+
+  /**
+   * B194: Mode-transition feed renders `recentModeTransitions` from the
+   * hub payload. Each row carries `data-transition-ts` for deep-linking;
+   * click handler reuses the verdict-highlight pattern with the
+   * `.cc-mode-transition--highlighted` class.
+   */
+  renderModeTransitions(transitions) {
+    if (!Array.isArray(transitions) || transitions.length === 0) {
+      return `<div class="cc-card" style="margin-bottom:16px"><div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">Mode Transitions</div><div style="font-size:0.85rem;color:var(--text-muted)">No transitions recorded this session.</div></div>`;
+    }
+    const rows = transitions.map((t) => {
+      const ts = this.esc(String(t.timestamp || ''));
+      const prev = this.esc(String(t.previousMode || ''));
+      const next = this.esc(String(t.newMode || ''));
+      const reason = this.esc(String(t.reason || ''));
+      const actor = this.esc(String(t.actor || 'unknown'));
+      return `<div class="cc-mode-transition" data-transition-ts="${ts}" style="padding:6px 8px;border-bottom:1px solid var(--border-rim);font-size:0.85rem;cursor:pointer"><span style="color:var(--text-muted)">${ts}</span> · <strong>${prev}</strong> → <strong>${next}</strong> · reason: <em>${reason}</em>, by ${actor}</div>`;
+    }).join('');
+    return `<div class="cc-card" style="margin-bottom:16px"><div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">Mode Transitions</div>${rows}</div>`;
+  }
+
+  bindModeTransitionRows() {
+    if (!this.container) return;
+    const rows = this.container.querySelectorAll('.cc-mode-transition');
+    rows.forEach((row) => {
+      row.onclick = () => {
+        row.classList.add('cc-mode-transition--highlighted');
+        setTimeout(() => row.classList.remove('cc-mode-transition--highlighted'), 3000);
+      };
+    });
   }
 
   /**

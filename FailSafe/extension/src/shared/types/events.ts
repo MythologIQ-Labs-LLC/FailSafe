@@ -29,6 +29,7 @@ export type FailSafeEventType =
   | "governance.breakGlassActivated"
   | "governance.breakGlassRevoked"
   | "governance.breakGlassExpired"
+  | "governance.modeChanged"
   | "prompt.dispatch"
   | "prompt.response"
   | "governance.revertInitiated"

@@ -36,6 +36,10 @@ export interface ServerDeps {
   configManager: ConfigManager;
   /** B192 remediation: shared workspace-mutation bus. */
   mutationBus?: import("../shared/WorkspaceMutationBus").WorkspaceMutationBus;
+  /** B194: governance mode-transition history ring buffer. */
+  modeTransitionHistory?: import("../governance/ModeTransitionHistory").ModeTransitionHistory;
+  /** B194: callback returning current governance mode state. */
+  getGovernanceMode?: () => import("../governance/types").GovernanceModeState;
 }
 
 export interface ServerResult {
@@ -64,7 +68,13 @@ export async function bootstrapServers(
     deps.qorelogicManager,
     deps.sentinelDaemon,
     deps.eventBus,
-    { workspaceRoot: deps.workspaceRoot, configProvider: deps.configManager, mutationBus: deps.mutationBus },
+    {
+      workspaceRoot: deps.workspaceRoot,
+      configProvider: deps.configManager,
+      mutationBus: deps.mutationBus,
+      modeTransitionHistory: deps.modeTransitionHistory,
+      getGovernanceMode: deps.getGovernanceMode,
+    },
   );
   consoleServer.setIdeTracker(ideTracker);
   consoleServer.setSystemRegistry(deps.systemRegistry);

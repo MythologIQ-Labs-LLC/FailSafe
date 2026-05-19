@@ -107,6 +107,7 @@ export async function activate(
         configManager: core.configManager,
         workspaceRoot: core.workspaceRoot,
         showRevert: (checkpointId) => genesisManager.showRevert(checkpointId),
+        eventBus: core.eventBus,
       },
       logger,
     );
@@ -151,6 +152,8 @@ export async function activate(
         systemRegistry: qor.systemRegistry,
         configManager: core.configManager,
         mutationBus: core.mutationBus,
+        modeTransitionHistory: core.modeTransitionHistory,
+        getGovernanceMode: () => gov.enforcementEngine.getGovernanceModeState(),
       },
       logger,
     );

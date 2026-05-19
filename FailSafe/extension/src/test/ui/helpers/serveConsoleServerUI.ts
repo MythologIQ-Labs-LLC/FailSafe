@@ -152,11 +152,12 @@ function attachWebSocket(
   server: ConsoleServer,
   harness: http.Server,
   sockets: Set<WebSocket>,
+  hubRef?: { current: HubFixture | null },
 ): void {
   const wsm = (server as unknown as { wsManager: WebSocketManager }).wsManager;
   wsm.setup(harness, (ws) => {
     sockets.add(ws);
-    const initPayload = { type: "init", payload: {} };
+    const initPayload = { type: "init", payload: hubRef?.current ?? {} };
     try {
       ws.send(JSON.stringify(initPayload));
     } catch {
@@ -200,7 +201,9 @@ function buildController(
     url,
     setHub(hub) {
       hubRef.current = hub;
-      broadcastRaw(JSON.stringify({ type: "hub.refresh" }));
+      // Send `init` with the new payload so the client re-renders directly
+      // (avoids dependency on the server's real HubSnapshotService output).
+      broadcastRaw(JSON.stringify({ type: "init", payload: hub }));
     },
     setVerdicts(verdicts) {
       checkpointRef.length = 0;
@@ -254,7 +257,7 @@ export async function serveConsoleServerUI(
   const app = (server as unknown as { app: Application }).app;
   const harness = http.createServer(app);
   const sockets = new Set<WebSocket>();
-  attachWebSocket(server, harness, sockets);
+  attachWebSocket(server, harness, sockets, fakes.hubRef);
 
   const url = await listenAndResolveUrl(harness);
   return buildController(url, harness, sockets, checkpointRef, fakes.hubRef);
