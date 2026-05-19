@@ -8,7 +8,8 @@ import { Logger } from "../shared/Logger";
 import { EventBus } from "../shared/EventBus";
 import { LedgerManager } from "../qorelogic/ledger/LedgerManager";
 
-export type GovernanceMode = "observe" | "assist" | "enforce";
+export type { GovernanceMode } from "./types";
+import type { GovernanceMode } from "./types";
 
 export interface BreakGlassRequest {
   reason: string;
@@ -61,9 +62,14 @@ export class BreakGlassProtocol {
     const record = this.buildActivationRecord(request, currentMode);
     await this.recordActivation(record);
 
-    this.eventBus.emit("governance.breakGlassActivated" as never, {
+    this.eventBus.emit("governance.breakGlassActivated", {
       overrideId: record.id,
+      previousMode: record.previousMode,
+      newMode: record.overrideMode,
+      reason: record.reason,
+      requestedBy: record.requestedBy,
       expiresAt: record.expiresAt,
+      timestamp: record.activatedAt,
     });
 
     if (this.onModeChange) await this.onModeChange(record.overrideMode);
@@ -93,8 +99,13 @@ export class BreakGlassProtocol {
     }
 
     await this.recordRevocation(record);
-    this.eventBus.emit("governance.breakGlassRevoked" as never, {
+    this.eventBus.emit("governance.breakGlassRevoked", {
       overrideId: record.id,
+      previousMode: record.overrideMode,
+      newMode: record.previousMode,
+      reason: "revoked",
+      requestedBy: record.revokedBy ?? revokedBy,
+      timestamp: record.revokedAt,
     });
     if (this.onModeChange) await this.onModeChange(record.previousMode);
 
@@ -204,8 +215,13 @@ export class BreakGlassProtocol {
       },
     });
 
-    this.eventBus.emit("governance.breakGlassExpired" as never, {
+    this.eventBus.emit("governance.breakGlassExpired", {
       overrideId: record.id,
+      previousMode: record.overrideMode,
+      newMode: record.previousMode,
+      reason: "expired",
+      requestedBy: "system:break-glass-timer",
+      timestamp: new Date().toISOString(),
     });
     if (this.onModeChange) await this.onModeChange(record.previousMode);
     this.logger.warn("Break-glass EXPIRED", { id: record.id });

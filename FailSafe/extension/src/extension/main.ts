@@ -107,6 +107,7 @@ export async function activate(
         configManager: core.configManager,
         workspaceRoot: core.workspaceRoot,
         showRevert: (checkpointId) => genesisManager.showRevert(checkpointId),
+        eventBus: core.eventBus,
       },
       logger,
     );

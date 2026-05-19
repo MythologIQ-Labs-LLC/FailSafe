@@ -32,11 +32,8 @@ export interface IntentProvider {
   }): Promise<Intent>;
 }
 
-export type GovernanceMode = "observe" | "assist" | "enforce";
-export interface GovernanceModeState {
-  mode: GovernanceMode;
-  defaulted: boolean;
-}
+export type { GovernanceMode, GovernanceModeState } from "./types";
+import type { GovernanceMode, GovernanceModeState } from "./types";
 export type CommandExecutor = (command: string, ...args: unknown[]) => void;
 
 const VALID_MODES: ReadonlySet<GovernanceMode> = new Set([

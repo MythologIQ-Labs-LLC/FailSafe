@@ -12,6 +12,8 @@ import type { BreakGlassProtocol } from "../governance/BreakGlassProtocol";
 import type { SystemRegistry } from "../qorelogic/SystemRegistry";
 import type { CommitGuard } from "../governance/CommitGuard";
 import type { ConfigManager } from "../shared/ConfigManager";
+import type { EventBus } from "../shared/EventBus";
+import type { GovernanceMode } from "../governance/types";
 
 export interface AdvancedCommandsDeps {
   ledgerManager: LedgerManager;
@@ -22,6 +24,8 @@ export interface AdvancedCommandsDeps {
   configManager: ConfigManager;
   workspaceRoot: string;
   showRevert: (checkpointId: string) => void;
+  /** B194 wiring: emit `governance.modeChanged` alongside ledger write. */
+  eventBus?: EventBus;
 }
 
 export function registerAdvancedCommands(
@@ -43,6 +47,7 @@ export function registerAdvancedCommands(
         if (newMode !== lastKnownMode) {
           const previousMode = lastKnownMode;
           lastKnownMode = newMode;
+          const timestamp = new Date().toISOString();
           deps.ledgerManager
             .appendEntry({
               eventType: "USER_OVERRIDE",
@@ -50,6 +55,17 @@ export function registerAdvancedCommands(
               payload: { action: "governance_mode_changed", previousMode, newMode },
             })
             .catch((err) => logger.error("Failed to record mode change", err));
+          // B194: emit transition on the bus for ModeTransitionHistory + UI surfaces.
+          if (deps.eventBus) {
+            deps.eventBus.emit("governance.modeChanged", {
+              previousMode: previousMode as GovernanceMode,
+              newMode: newMode as GovernanceMode,
+              reason: "config_edit",
+              actor: "vscode-user",
+              timestamp,
+              ledgerEntryRef: null,
+            });
+          }
         }
       }
     }),
