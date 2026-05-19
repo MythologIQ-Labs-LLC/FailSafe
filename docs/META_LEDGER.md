@@ -18850,3 +18850,69 @@ _Next: operator decision on push/merge/PR/release — none auto-triggered by thi
 _Chain integrity: VALID_
 _Session Status: voice-substrate-extraction SEALED at Entry #374 (federation-reconciled from branch-local #372); 6-phase v1 surface complete; 2292 mocha pass + 4 Playwright pass; B195 resolved; PUBLISH_BLOCK unchanged. Federated trio bicameral #372 + stale-cache #373 + voice-substrate #374 all merged to main per SG-ConcurrentLedgerRace-A._
 _Session: 2026-05-18-voice-substrate-extraction-substantiation-seal_
+
+---
+
+### Entry #375: SESSION SEAL — plan-qor-enforcement-mode-escalation-ux (4 phases; B194 resolved)
+
+**Entry ID**: `e154647d5107`
+**Date**: 2026-05-18
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-enforcement-mode-escalation-ux.md` (target v5.2.x; no in-cycle version bump)
+**Audit reference**: 4-cycle PASS via independent architect-reviewer subagent (Phase 68 Option B / SG-007 self-audit-blindness countermeasure). Findings F1 (events-union miss) + F2 (banner URL) + F3 (BreakGlass payload mapping) + F4 (line-range drift) in cycle 1; F5 (actor-string mismatch) + F6 (`_self` vs `_blank`) in cycle 2; F7 (test descriptor / mapping internal contradiction) in cycle 3; PASS cycle 4.
+**Implementation reference**: 4 commits on `feat/enforcement-mode-escalation-ux` branched off `main` at `e12a2ed` (sentinel-alert-deeplink merge). Plan commit `bfaca7b`; Phase 1 impl; Phase 2 impl; Phase 3+4 impl.
+
+## Substantiation summary
+
+B194 closed via the governance-mode transition surfacing pattern. New `governance.modeChanged` typed event added to the closed `FailSafeEventType` union; BreakGlass emit payloads enriched with full transition context (previousMode/newMode/reason/requestedBy/timestamp). New `ModeTransitionHistory` in-memory ring (cap 10) subscribes to all four bus event types. `HubSnapshotService.assembleHubPayload` now populates `governanceModeState` (closes silent pre-B194 bug where `settings.js:235` consumed an unpopulated field) + `recentModeTransitions`. Monitor sidebar gains an observe-mode advisory banner (`window.open('/command-center.html#settings', '_blank')`, matching established sentinel-monitor.js pattern). Command Center Governance tab's Compliance sub-tab gains a "Mode Transitions" feed with reverse-chronological rows, XSS-escaped reason/actor, and 3s flash on click (reuses `.cc-verdict--highlighted`-style pattern). Out-of-scope items deferred as B-EM-1/2/3/4 follow-ups.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| AUDIT 4-cycle PASS | ✓ (cycle 1: 4 findings; cycle 2: 2 findings; cycle 3: 1 finding; cycle 4: PASS) |
+| Reality = Promise | All 4 phases delivered. New: 1 substrate (types.ts) + 1 ring (ModeTransitionHistory) + 1 event-type union member + 3 enriched BreakGlass emits + 1 hub-payload population + 1 Monitor banner + 1 Governance feed + 1 architecture doc. Modified: 12 files. |
+| Test functionality (SG-035) | 20 new functional cases (FX504 5 + FX505 6 + FX507 5 + FX508 4) — all invoke unit + assert against output. FX509 staged as `.skip` pending B-EM-4 harness override. |
+| Mocha clean state | 2400 passing / 17 failing — baseline-identical to main; zero regressions. (17 failing are pre-existing `command 'failsafe.*' not found` from vscode-test environment; unrelated to B194.) |
+| ESLint | 0 errors in new files. |
+| TypeScript | clean. |
+| Section 4 Razor | All new files ≤250L (types.ts ~31L, ModeTransitionHistory.ts ~95L, test files ≤140L, doc ≤95L). |
+| Console.log artifacts | None in new files. |
+| FEATURE_INDEX FX504–FX509 | 5 verified + 1 deferred (FX509 → B-EM-4). |
+
+## Audit cycle pattern observation
+
+Phase 68 Option B (independent architect-reviewer subagent) for cycle 1 successfully broke the SG-007 self-audit-blindness pattern that recurred in cycles 1 of voice-pack / bicameral / stale-cache. The architect-reviewer caught F1 (EventBus typed-union miss) — exactly the infrastructure-mismatch class that prior cycle-1 audits routinely missed. Doctrine candidate: default architect-reviewer subagent for all cycle-1 audits on plans with substantial infrastructure citations.
+
+## Skipped per protocol (degraded-wiring posture)
+
+Same as Entries #371-#374: Python `qor.*` toolkit unavailable. Steps 0, 4.6, 4.6.5, 4.6.6, 4.7, 6.5, 6.8, 7.4-7.8, 8.5, 9.5.5, 9.6, Z all SKIP. Step 6.8 hash validation REPLACED with inline Node `crypto` validate-as-hex (all 4 hashes pass `^[a-f0-9]{64}$`). Each skip emits one conceptual `gate_skipped_prerequisite_absent` severity-1 event.
+
+## Content Hash
+
+**Content Hash**: `9fee583a8e5a7050dd1fa62ca32bfd2facbf738bd0ee3f1f9c0e1b41dff8c14a`
+**Previous Hash**: `1451c6ba01d0b443864060aed0b20b9886ff90ed7bd4aad7a9cac8a51a51fcbc` (Entry #374 voice-pack federation-reconciled chain hash)
+**Chain Hash**: `974f9b82692f96d4f98756510398ed60ef6998a08e4a5ee14a879ca263f3b598` — SHA256(content_hash + "|" + previous_hash)
+**Merkle Seal**: `e3c69086ad919076da60517d7ec50c93c3e44ef4f7e3e8ac130cece64c7bf759` — SHA256(content_hash + "|" + chain_hash + "|gate_workspace_audit_enforcement_mode_PASS")
+**Session ID**: workspace-only / `2026-05-18-enforcement-mode-escalation-ux-substantiation-seal`
+
+## Review Boundary attestation
+
+Per `feedback_no_ship_without_approval.md` + plan header §"Review boundary: stage artifacts only": no push, no tag, no PR, no merge, no marketplace publish, no GitHub Release upload. The 4 `feat/enforcement-mode-escalation-ux` commits stay local. /qor-auto-dev-1 orchestrator autonomy honored — 4-cycle audit + 4-phase implementation completed without operator interrupt past the up-front intake (target selection) and the Step 7 mid-cycle implementation authorization. The single `AskUserQuestion` at the audit-PASS handoff was a discretionary phase-boundary check, not a routine prompt.
+
+## Decision
+
+**SEAL — Reality matches Promise.** B194 closed with the transition-surfacing pattern. The original B194 line proposed (a) first-run prompt, (b) status bar indicator, (c) Settings card escalation. Of those: (b) was already shipped via GovernanceStatusBar.updateMode; (c) was already rendered via renderGovernanceModeCard at settings.js:234 (but consumed a never-populated field — silent bug now closed); (a) deferred to B-EM-3 as the full guided wizard. Plus the operator's expanded scope (transition surfacing in Monitor + Command Center with reason/actor/timestamp/verdict context) delivered in full.
+
+## Operator notice — degraded wiring
+
+`.qor/` runtime uninitialized; same posture as Entries #371-#374. This ledger entry + the 4 `feat/enforcement-mode-escalation-ux` commits + the audit-locked plan at `docs/plan-qor-enforcement-mode-escalation-ux.md` are the canonical record.
+
+_Chain Status: ENFORCEMENT-MODE-ESCALATION-UX PLAN SEALED at Entry #375. Branched off `main` post-federation-reconciliation; no federation issue this cycle._
+_Next: operator decision on push/merge/PR — none auto-triggered by this seal._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: enforcement-mode-escalation-ux SEALED at Entry #375; 4-phase v1 surface complete; 2400 mocha pass + 1 Playwright skip-staged; B194 resolved; B-EM-1/2/3/4 captured as follow-ups; PUBLISH_BLOCK unchanged._
+_Session: 2026-05-18-enforcement-mode-escalation-ux-substantiation-seal_
