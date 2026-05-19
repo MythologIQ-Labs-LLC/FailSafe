@@ -627,6 +627,14 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 ---
 
+## Section: B199 Phase 4 — Agents tab Playwright (2026-05-19)
+
+| ID | Feature | Doc | Code | Test | Status | Notes |
+|---|---|---|---|---|---|---|
+| FX520 | Playwright Agents tab structural coverage | docs/plan-qor-b199-phase4-agents-e2e.md | (test only — Agents tab + sub-pill switching code shipped in prior cycles) | src/test/ui/agents-tab.spec.ts | verified | 3 active Playwright cases: 4 sub-pills (Operations/Timeline/Genome/Replay) render; Operations active by default; Replay click activates pill + content area. Deep per-sub-view behavioral coverage deferred to future phases. |
+
+---
+
 ## Section: B199 Phase 3 — Integrations tab Playwright (2026-05-19)
 
 | ID | Feature | Doc | Code | Test | Status | Notes |
