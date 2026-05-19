@@ -61,6 +61,10 @@ type ConsoleServerOptions = {
    *  HubSnapshotService (chain-validity refresh) and ConsoleLifecycleService
    *  (watchMetaLedger migration). Optional for back-compat with tests. */
   mutationBus?: import("../shared/WorkspaceMutationBus").WorkspaceMutationBus;
+  /** B194: ring buffer of recent governance-mode transitions. */
+  modeTransitionHistory?: import("../governance/ModeTransitionHistory").ModeTransitionHistory;
+  /** B194: callback returning current governance mode state for hub.governanceModeState. */
+  getGovernanceMode?: () => import("../governance/types").GovernanceModeState;
 };
 
 // Re-export public test surface from support module for backward compat.
@@ -128,7 +132,7 @@ export class ConsoleServer {
     this.adapterService = new AdapterService(eventBus);
     this.transparencyLogger = new TransparencyLogger(this.workspaceRoot);
     this.riskRegisterManager = new RiskRegisterManager(this.workspaceRoot);
-    this.hub = this.buildHubService(options.mutationBus);
+    this.hub = this.buildHubService(options.mutationBus, options.modeTransitionHistory, options.getGovernanceMode);
     this.lifecycle = new ConsoleLifecycleService({
       app: this.app, port: PORT, host: HOST, workspaceRoot: this.workspaceRoot,
       wsManager: this.wsManager, hub: this.hub, planManager: this.planManager,
@@ -203,7 +207,11 @@ export class ConsoleServer {
     return discoverAllSkills(this.workspaceRoot, __dirname);
   }
 
-  private buildHubService(mutationBus?: import("../shared/WorkspaceMutationBus").WorkspaceMutationBus): HubSnapshotService {
+  private buildHubService(
+    mutationBus?: import("../shared/WorkspaceMutationBus").WorkspaceMutationBus,
+    modeTransitionHistory?: import("../governance/ModeTransitionHistory").ModeTransitionHistory,
+    getGovernanceMode?: () => import("../governance/types").GovernanceModeState,
+  ): HubSnapshotService {
     return new HubSnapshotService({
       workspaceRoot: this.workspaceRoot, extensionVersion: EXTENSION_VERSION,
       planManager: this.planManager, qorelogicManager: this.qorelogicManager,
@@ -214,6 +222,8 @@ export class ConsoleServer {
       mergePlanBlockers: (plan, a) => mergePlanBlockers(plan, a as WorkspaceArtifactSnapshot),
       getActualPort: () => this.lifecycle?.getPort() ?? PORT,
       mutationBus,
+      modeTransitionHistory,
+      getGovernanceMode,
       getIdeTracker: () => this.ideTracker,
       getAgentHealthIndicator: () => this.agentHealthIndicator,
       checkpointTypeRegistry: CHECKPOINT_TYPE_REGISTRY,

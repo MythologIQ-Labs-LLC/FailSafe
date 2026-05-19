@@ -152,6 +152,8 @@ export async function activate(
         systemRegistry: qor.systemRegistry,
         configManager: core.configManager,
         mutationBus: core.mutationBus,
+        modeTransitionHistory: core.modeTransitionHistory,
+        getGovernanceMode: () => gov.enforcementEngine.getGovernanceModeState(),
       },
       logger,
     );

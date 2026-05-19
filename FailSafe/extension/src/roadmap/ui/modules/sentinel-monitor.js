@@ -45,6 +45,31 @@ export class SentinelMonitor {
     };
   }
 
+  /**
+   * B194: advisory banner shown only when governance mode === 'observe'.
+   * Empty / hidden in assist/enforce. Click opens Settings tab in a new
+   * window (matches established `_blank` pattern in this module).
+   */
+  renderModeBanner(governanceModeState) {
+    const slot = this.elements.modeBanner;
+    if (!slot) return;
+    const mode = governanceModeState && typeof governanceModeState === 'object'
+      ? String(governanceModeState.mode || '')
+      : '';
+    if (mode !== 'observe') {
+      slot.classList.add('hidden');
+      slot.textContent = '';
+      slot.onclick = null;
+      return;
+    }
+    slot.classList.remove('hidden');
+    slot.textContent = 'Observe mode (read-only). Switch to assist or enforce when ready →';
+    slot.title = 'Click to open Settings → Governance Mode';
+    slot.onclick = () => {
+      window.open('/command-center.html#settings', '_blank');
+    };
+  }
+
   renderWorkspaceHealth(hub, plan, blockers, risks, verdicts) {
     const phases = Array.isArray(plan?.phases) ? plan.phases : [];
     const hardBlockers = blockers.filter(b => b.severity === 'hard').length;

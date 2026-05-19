@@ -53,6 +53,12 @@ export interface HubSnapshotServiceDeps {
    *  re-walks the chain via verifyCheckpointChain. Pro-coexistence: external
    *  db writes trigger refresh. */
   mutationBus?: WorkspaceMutationBus;
+  /** B194: ring buffer of recent governance-mode transitions. */
+  modeTransitionHistory?: import("../../governance/ModeTransitionHistory").ModeTransitionHistory;
+  /** B194: callback returning current governance mode state. Without this,
+   *  `hub.governanceModeState` stays absent (legacy behavior, settings card
+   *  falls back to "(default)"). */
+  getGovernanceMode?: () => import("../../governance/types").GovernanceModeState;
 }
 
 const FILE_EVENT_TYPES = new Set(["FILE_CREATED", "FILE_MODIFIED", "FILE_DELETED"]);
@@ -238,6 +244,10 @@ export class HubSnapshotService {
       chainValid: this.cachedChainValid ?? null,
       risks: this.getRiskRegister(),
       agentHealth: this.deps.getAgentHealthIndicator()?.buildMetrics() || null,
+      // B194: governance mode state + recent transition feed. Both optional;
+      // when deps absent, fields stay undefined (legacy behavior).
+      governanceModeState: this.deps.getGovernanceMode?.(),
+      recentModeTransitions: this.deps.modeTransitionHistory?.getRecent(10) ?? [],
       generatedAt: new Date().toISOString(),
     };
   }

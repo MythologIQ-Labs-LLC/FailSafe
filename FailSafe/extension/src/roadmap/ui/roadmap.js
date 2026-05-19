@@ -29,6 +29,7 @@ export class WebPanelClient {
       sentinelOrb: document.getElementById('sentinel-orb'),
       queueValue: document.getElementById('queue-value'),
       sentinelAlert: document.getElementById('sentinel-alert'),
+      modeBanner: document.getElementById('mode-banner'),
       healthBlockers: document.getElementById('health-blockers'),
       blockersGraphic: document.getElementById('blockers-graphic'),
       blockerBar: document.getElementById('blocker-bar'),
@@ -177,6 +178,7 @@ export class WebPanelClient {
     }
 
     this.sentinelMonitor.renderSentinel(this.hub.sentinelStatus || {}, this.hub.recentVerdicts || []);
+    this.sentinelMonitor.renderModeBanner(this.hub.governanceModeState);
     this.sentinelMonitor.renderWorkspaceHealth(this.hub, plan, blockers, risks, this.hub.recentVerdicts || []);
     this.renderQorRuntime(this.hub.qorRuntime || {});
     this.renderGovernanceAlerts(this.hub.governancePhase?.activeAlerts || []);
