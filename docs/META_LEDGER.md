@@ -19020,3 +19020,53 @@ _Next: operator decision on push/merge._
 _Chain integrity: VALID_
 _Session Status: bicameral-quickwins SEALED at branch-local Entry #377; B-BIC-1..5 closed; 15 FX514-FX518 cases pass; 2426 mocha pass / 17 baseline failing._
 _Session: 2026-05-19-bicameral-quickwins-substantiation-seal_
+
+---
+
+### Entry #378: SESSION SEAL — plan-qor-b199-phase3-integrations-e2e (B199 Phase 3)
+
+**Entry ID**: `00d1fa384b22`
+**Date**: 2026-05-19
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-b199-phase3-integrations-e2e.md`
+**Audit reference**: lightweight cycle (small Playwright scope; reused architect-reviewer doctrine via plan-text review). No formal cycle-1 VETO; plan decisions captured in Decision Log.
+**Implementation reference**: 1 commit on `feat/b199-phase3-integrations-e2e` branched off `feat/bicameral-enhancements-quickwins` (Entry #377 bicameral-quickwins).
+
+## Federation note
+
+Branched off `feat/bicameral-enhancements-quickwins` (NOT main). Linear successor to bicameral-quickwins #377. At merge into main: bicameral-quickwins federation-reconciles per its own #377 collision; this entry then renumbers per resulting predecessor chain.
+
+## Substantiation summary
+
+B199 Phase 3 ships the Voice Pack installed-state Playwright case that Phase 2 explicitly deferred pending B-EM-4 substrate. Inherits B-BIC-1 + B-BIC-4 from the parent branch; B-EM-4 harness override replicated inline (~20 LOC). Bicameral ratify E2E intentionally not duplicated — already covered by FX490 (existing) + FX514 (mocha). 1 active FX519 Playwright case + 1 deferred-skip.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| Plan review | ✓ (no formal cycle-1 VETO; scope was 1 spec file + 2 substrate replications) |
+| Reality = Promise | 1 spec file + 2 substrate edits (harness override replication + testMatch tightening) + 3 doc updates. |
+| Test functionality (SG-035) | 1 active Playwright case invokes UI + asserts state; 1 deferred-skip with explicit dependency note (B-BIC-13). |
+| Mocha | 2426 passing / 17 baseline failing — zero regressions. |
+| Playwright | 1 FX519 active + 1 skip. |
+
+## Content Hash
+
+**Content Hash**: `b733bbadcd434b5ec9b113caa493069d7b396a1a85d8dd17905a839021a7910b`
+**Previous Hash**: `2d971301a4db15eec20e9a1244f387534fdff1c1ec255239ed05997ea19d31c2` (Entry #377 bicameral-quickwins)
+**Chain Hash**: `6efb12b4a125afb4baeeef56543fd7007c0d299bcc0a7365c6fdee5bfda312f6`
+**Merkle Seal**: `efc442bd49feb8abb58f4b00c80a57eb81971935bf1ecead5a8030d75e62d5f0` — gate_workspace_audit_b199_phase3_PASS
+**Session ID**: workspace-only / `2026-05-19-b199-phase3-integrations-substantiation-seal`
+
+## Decision
+
+**SEAL — Reality matches Promise.** B199 Phase 3 closed (Voice Pack installed-state). Phases 4-8 outstanding.
+
+_Chain Status: B199 PHASE 3 SEALED at branch-local Entry #378 (linear successor to bicameral-quickwins #377)._
+_Next: operator decision on push/merge._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: b199-phase3-integrations SEALED at Entry #378; 1 active FX519 + 1 deferred-skip; 2426 mocha pass / 17 baseline failing. Linear chain off bicameral-quickwins #377; no federation collision._
+_Session: 2026-05-19-b199-phase3-integrations-substantiation-seal_
