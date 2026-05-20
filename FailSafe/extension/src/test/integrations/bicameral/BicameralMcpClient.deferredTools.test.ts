@@ -9,7 +9,7 @@ interface CallRecord {
   arguments: Record<string, unknown>;
 }
 
-function makeFakeClient(response: unknown): { fake: { callTool: (req: { name: string; arguments: Record<string, unknown> }) => Promise<unknown>; connect: () => Promise<void>; close: () => Promise<void>; listTools: () => Promise<{ tools: never[] }> }; calls: CallRecord[] } {
+function makeFakeClient(response: unknown): { fake: { callTool: (req: { name: string; arguments: Record<string, unknown> }) => Promise<unknown>; connect: () => Promise<void>; close: () => Promise<void>; listTools: () => Promise<{ tools: never[] }>; getServerVersion: () => { name: string; version: string } }; calls: CallRecord[] } {
   const calls: CallRecord[] = [];
   const fake = {
     callTool: async (req: { name: string; arguments: Record<string, unknown> }) => {
@@ -19,6 +19,8 @@ function makeFakeClient(response: unknown): { fake: { callTool: (req: { name: st
     connect: async () => undefined,
     close: async () => undefined,
     listTools: async () => ({ tools: [] }),
+    // B-BIC-22: pass the protocol-floor assertion.
+    getServerVersion: () => ({ name: 'echo-bicameral', version: '0.14.0' }),
   };
   return { fake, calls };
 }

@@ -3,7 +3,7 @@
   "displayName": "FailSafe (feat. Qor-Logic)",
   "description": "Open-source VS Code/Cursor governance and skills surface for AI coding agents. Pairs with FailSafe Pro for desktop enforcement.",
   "icon": "media/icon.png",
-  "version": "5.1.5",
+  "version": "5.1.6",
   "publisher": "MythologIQ",
   "license": "Apache-2.0",
   "repository": {
@@ -416,6 +416,11 @@
           "type": "string",
           "default": "BicameralAI/bicameral-mcp",
           "description": "Owner/repo slug for the upstream Bicameral repository. Validated against a strict owner/repo pattern; URL injection blocked."
+        },
+        "failsafe.integrations.bicameral.idleDisconnectMs": {
+          "type": "number",
+          "default": 900000,
+          "description": "Idle disconnect TTL for the Bicameral MCP subprocess in milliseconds. After this many ms of no tool calls, the stdio subprocess is gracefully disconnected; the next tool call lazily reconnects. Default 900000 (15min). Set to 0 to disable idle disconnect (subprocess stays resident until extension deactivate)."
         }
       }
     }

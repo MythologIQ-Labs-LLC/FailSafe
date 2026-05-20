@@ -12,13 +12,21 @@ interface CallRecord {
 function makeFakeClient(
   responses: Record<string, unknown>,
   calls: CallRecord[],
-  opts: { failClose?: boolean; isError?: Set<string> } = {},
+  opts: { failClose?: boolean; isError?: Set<string>; missingVersion?: boolean } = {},
 ) {
   const isErrSet = opts.isError ?? new Set<string>();
   return {
     async connect(_transport: unknown): Promise<void> { /* noop */ },
     async close(): Promise<void> {
       if (opts.failClose) throw new Error('close exploded');
+    },
+    // B-BIC-22: protocol-floor assertion; default returns floor version
+    // so existing tests pass through unchanged.
+    getServerVersion(): { name: string; version: string } | undefined {
+      return opts.missingVersion ? undefined : { name: 'echo-bicameral', version: '0.14.0' };
+    },
+    async listTools(): Promise<unknown> {
+      return { tools: [] };
     },
     async callTool(req: { name: string; arguments: Record<string, unknown> }): Promise<unknown> {
       calls.push({ name: req.name, args: req.arguments });
@@ -223,6 +231,10 @@ suite('integrations/bicameral BicameralMcpClient', () => {
     return {
       async connect(_t: unknown): Promise<void> { /* noop */ },
       async close(): Promise<void> { /* noop */ },
+      // B-BIC-22: protocol-floor assertion.
+      getServerVersion(): { name: string; version: string } {
+        return { name: 'echo-bicameral', version: '0.14.0' };
+      },
       async listTools(): Promise<unknown> {
         if ('throw' in (tools as object)) throw new Error('listTools exploded');
         return { tools: (tools as string[]).map((name) => ({ name })) };

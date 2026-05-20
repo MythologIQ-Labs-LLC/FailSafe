@@ -6,6 +6,7 @@
 // Plan: docs/plan-qor-bicameral-cluster-high.md Phase 4 (FX534).
 
 import type { UpstreamSnapshot } from './types';
+import { compareSemver } from './semver';
 
 export interface UpstreamRowOpts {
   snapshot: UpstreamSnapshot | null;
@@ -56,13 +57,3 @@ export function renderUpstreamRow(opts: UpstreamRowOpts): UpstreamRowRender {
   return { upstream, warning };
 }
 
-/** Lightweight semver compare: returns -1, 0, +1. Pre-release tags ignored. */
-function compareSemver(a: string, b: string): number {
-  const pa = a.replace(/^v/, '').split('-')[0].split('.').map((n) => parseInt(n, 10) || 0);
-  const pb = b.replace(/^v/, '').split('-')[0].split('.').map((n) => parseInt(n, 10) || 0);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const diff = (pa[i] ?? 0) - (pb[i] ?? 0);
-    if (diff !== 0) return diff > 0 ? 1 : -1;
-  }
-  return 0;
-}

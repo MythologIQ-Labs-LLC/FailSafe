@@ -19,6 +19,19 @@ export interface ToolCallResult {
   isError?: boolean;
 }
 
+/** B-BIC-23: runtime guard narrowing unknown MCP results to ToolCallResult.
+ *  Accepts results carrying either `content[]` OR `structuredContent`; the
+ *  optional `isError` must be boolean if present. Rejects strings, numbers,
+ *  null, undefined, and objects missing both response fields. */
+export function isToolCallResult(v: unknown): v is ToolCallResult {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return false;
+  const o = v as Record<string, unknown>;
+  const hasContent = Array.isArray(o.content);
+  const hasStructured = o.structuredContent !== undefined;
+  const isErrorOk = o.isError === undefined || typeof o.isError === 'boolean';
+  return (hasContent || hasStructured) && isErrorOk;
+}
+
 export function parseJsonContent(result: ToolCallResult): unknown {
   if (result.structuredContent !== undefined) return result.structuredContent;
   const first = result.content?.[0];
