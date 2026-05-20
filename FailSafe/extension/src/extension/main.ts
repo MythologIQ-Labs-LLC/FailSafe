@@ -100,6 +100,19 @@ export async function activate(
     gov.complianceExporter.setShadowGenomeManager(qor.shadowGenomeManager);
     gov.provenanceTracker.setLedgerManager(qor.ledgerManager);
 
+    // B-EM-2: hydrate the mode-transition ring from the persistent ledger so
+    // the Governance tab transition feed survives extension reload. Non-fatal
+    // on ledger query failure (logger.warn + continue with empty ring).
+    if (qor.ledgerManager.isAvailable()) {
+      try {
+        await core.modeTransitionHistory.hydrateFromLedger(qor.ledgerManager);
+      } catch (err) {
+        logger.warn("ModeTransitionHistory.hydrateFromLedger failed", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
     // Wire RBAC persistence (deferred — ledgerManager not available at governance bootstrap)
     if (qor.ledgerManager.isAvailable()) {
       gov.rbacManager.setDatabase(

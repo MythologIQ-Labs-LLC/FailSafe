@@ -207,4 +207,12 @@ async function registerCeremonyCommands(
   const { FirstRunOnboarding } = await import("../genesis/FirstRunOnboarding");
   const onboarding = new FirstRunOnboarding(deps.configManager, ceremony);
   await onboarding.checkAndRun();
+
+  // First-Run Mode Picker (B-EM-3): independent gate (failsafe.onboarded.mode);
+  // surfaces three-option modal explaining observe/assist/enforce. Fires once
+  // per operator across all workspaces. Dismissal still marks onboarded so
+  // the picker does not re-prompt.
+  const { FirstRunModePicker } = await import("../governance/FirstRunModePicker");
+  const modePicker = new FirstRunModePicker(deps.configManager);
+  await modePicker.checkAndRun();
 }
