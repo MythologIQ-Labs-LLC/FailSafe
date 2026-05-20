@@ -19380,3 +19380,74 @@ _Next: operator next-up selection from remaining 36 open items._
 _Chain integrity: VALID_
 _Session Status: B-BIC-8/9/11/21/22/23 SEALED at Entry #382; 54 mocha cases pass; PUBLISH_BLOCK unchanged. New branch feat/bicameral-safety-concurrency awaits push/PR._
 _Session: 2026-05-20-bicameral-safety-concurrency-substantiation-seal_
+
+---
+
+### Entry #383: SESSION SEAL — plan-qor-b190-governance-contracts (B190; unlocks B151)
+
+**Entry ID**: `23eed5eace72`
+**Date**: 2026-05-20
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-b190-governance-contracts.md`
+**Audit reference**: 1-cycle PASS-with-one-advisory via independent `architect-reviewer` (Phase 68 Option B). Advisory A-1: include B-BIC-16 `kind`+`meta` on approval.json so DriftToL3Mediator fixtures validate. Addressed inline.
+**Implementation reference**: 1 commit on `feat/b190-governance-contracts` branched off `main` post-v5.1.6.
+
+## Substantiation summary
+
+Closes B190 (governance contract schema import). Unlocks B151 (universal governance interceptor) which in turn unlocks B152 (runtime extraction) → B153 (OTel/Prometheus export). Single highest-value dependency unlock in remaining backlog.
+
+Three concrete deliverables:
+
+1. **8 JSON Schema files** at `src/contracts/*.json` using JSON Schema 2020-12 dialect, canonical `$id: https://failsafe.mythologiq.studio/contracts/<name>.json`, `additionalProperties: false` at root for strict outbound surface:
+   - `evaluation_request.json` — action submitted to governance engine
+   - `ledger_entry.json` — Merkle-chained META_LEDGER record
+   - `intent.json` — operator/agent declared intent envelope
+   - `failure_mode.json` — Shadow Genome failure pattern
+   - `approval.json` — L3 approval (includes B-BIC-16 kind+meta)
+   - `checkpoint.json` — Sovereign Checkpoint Protocol snapshot
+   - `receipt.json` — governance decision receipt
+   - `governance_config.json` — operator-controlled settings
+2. **Hand-written TypeScript mirror** at `src/contracts/types.ts` (8 interfaces + helper unions reusing existing shared/types where possible) + `index.ts` re-export + `CONTRACT_VERSIONS` map.
+3. **Build pipeline + tests**: copy-ui-js.cjs extended to mirror .json files under /contracts/ to out/. AJV 8.17.1 added to devDependencies (was transitive via @modelcontextprotocol/sdk; making it explicit aligns SemVer ranges with no risk of duplicate resolution).
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| Compile (`tsc -p ./` + `copy-ui-js.cjs` mirror) | clean, 77 .js + 8 .json mirrored |
+| Mocha (2 spec files, isolated) | **19/19 passing in 768ms** |
+| FX545 well-formedness (10 cases) | each schema parses + 2020-12 dialect + $id host + type=object + additionalProperties=false + AJV compile |
+| FX546 fixtures (9 cases) | LedgerEntry/Approval-with-kind+meta/FailureMode/Checkpoint/Intent/EvaluationRequest/Receipt/GovernanceConfig validate; malformed-missing-required rejected |
+| Section 4 Razor | All new files under 250L (largest: types.ts at 144L) |
+| SG-035 test functionality | All 19 cases invoke unit + assert against output (compile result, validation boolean, error array) |
+| Citation discipline (SG-CitationDrift-A) | Audit verified LedgerEntry/L3ApprovalRequest/ShadowGenomeEntry/GenesisConcept/CheckpointRecord all exist in repo; schemas faithfully mirror their TS counterparts. |
+| Boundary preservation | Zero existing code imports from `src/contracts/`; one-way dep INTO `shared/types/` confirmed via grep at audit time. |
+
+## Skipped per protocol (degraded-wiring posture)
+
+- Full `npm test:all` still blocked locally by stuck VS Code installer mutex. Contract tests verified directly via mocha.
+
+## Content Hash
+
+**Content Hash**: `23eed5eace72b1a11a4eea610d4beafad7cf8ba3df181d950b8971fc26064237`
+**Previous Hash**: `1d7a1d98cfe908940cfc310e21d5dc7f5ad8341d413fffca05612ee3465a0854` (Entry #382)
+**Chain Hash**: `9a46873819fb1b12b58830fc551bc8381deaa6411517668876fe454c3975f6fc`
+**Merkle Seal**: `22ebd4d383e3f6892866a096dec18c0dfbd802ef68fe7a62b6618cba9f9503af` — gate_workspace_audit_b190_governance_contracts_PASS
+**Session ID**: `2026-05-20-b190-governance-contracts-substantiation-seal`
+
+## Review Boundary attestation
+
+No marketplace publish. Branch `feat/b190-governance-contracts` awaits push/PR.
+
+## Decision
+
+**SEAL — Reality matches Promise.** B190 closed. B151 → B152 → B153 architecture chain now unblocked. BACKLOG: 36 open → 35 open.
+
+_Chain Status: B190 SEALED at Entry #383._
+_Next: operator next-up selection. B151 is the natural follow-up given the unlock chain._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: B190 SEALED at Entry #383; 19 mocha cases pass; PUBLISH_BLOCK unchanged. New branch feat/b190-governance-contracts awaits push/PR._
+_Session: 2026-05-20-b190-governance-contracts-substantiation-seal_
