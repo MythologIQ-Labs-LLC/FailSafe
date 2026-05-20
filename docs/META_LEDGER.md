@@ -19161,3 +19161,76 @@ _Next: operator priority list cluster #4 (B-EM-2 + B-EM-3 enforcement-mode polis
 _Chain integrity: VALID_
 _Session Status: B-B199-2 SEALED at Entry #379 (current-surface scope); 14 Playwright cases pass on first run; PUBLISH_BLOCK unchanged. feat/bicameral-cluster-high branch now carries both #378 + #379 work._
 _Session: 2026-05-20-b199-2-replay-genome-e2e-substantiation-seal_
+
+---
+
+### Entry #380: SESSION SEAL — plan-qor-em-2-em-3-enforcement-mode-polish (B-EM-2 + B-EM-3)
+
+**Entry ID**: `4d69236af94a`
+**Date**: 2026-05-20
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-em-2-em-3-enforcement-mode-polish.md`
+**Audit reference**: 1-cycle PASS-with-2-LOW-findings via independent `architect-reviewer` subagent (Phase 68 Option B). F1: hydration ↔ live-event race when constructor wires subscriptions BEFORE async hydrate runs. F2: bootstrapCore-vs-main call-site contradiction in plan text. Both remediated inline before implement.
+**Implementation reference**: 1 commit on `feat/bicameral-cluster-high` (continues from Entries #378 + #379 on the same branch).
+
+## Federation note
+
+Continues from Entry #379. Same feature branch carries B-BIC-16/19/20/INT-3 (#378), B-B199-2 (#379), and B-EM-2/B-EM-3 (this entry). PR #77 will absorb all three clusters at merge time.
+
+## Substantiation summary
+
+Closes B-EM-2 (cross-session persistence for mode-transition history) + B-EM-3 (first-run governance-mode onboarding wizard) — both deferred from B194 V1.
+
+**B-EM-2 — ledger hydration**:
+- `ModeTransitionHistory.hydrateFromLedger(ledger)` queries the most recent 10 USER_OVERRIDE entries via `ledger.getEntriesByType('USER_OVERRIDE', 10)`.
+- Filters by payload action (`governance_mode_changed`, `break_glass_activated`, `break_glass_revoked`, `break_glass_expired`); skips non-matching (e.g. bicameral.ratify per B-BIC-1).
+- Projects each into `ModeTransitionRecord` with appropriate `reason` field per action.
+- Race protection: `private hydrating = false` default (back-compat); flips true at start of hydrate, false at end. Live events fired DURING the async query queue into `pendingDuringHydration` and drain after — preserves DESC order invariant.
+- main.ts calls hydrate after both bootstrapCore + bootstrapQorLogic complete; non-fatal on failure (logger.warn).
+
+**B-EM-3 — first-run mode picker**:
+- New `FirstRunModePicker` class mirrors `FirstRunOnboarding` pattern but with independent gate (`failsafe.onboarded.mode`).
+- Three-option QuickPick with descriptive entries: Observe (`Watch what AI agents do; no blocking`), Assist (`Warn before risky actions`), Enforce (`Block risky actions; require approval`).
+- Selection persists to `failsafe.governance.mode` at `ConfigurationTarget.Global`. Dismissal still marks onboarded — no re-prompting (final).
+- Wired in `bootstrapAdvancedCommands` alongside existing FirstRunOnboarding.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| Compile (`tsc -p ./`) | clean, no warnings |
+| FX537 ModeTransitionHistory.hydrate.test.ts (11 cases) | **11/11 passing in 81ms** via direct mocha |
+| FX538 FirstRunModePicker.test.ts (6 cases) | compile-verified; runs in vscode-test electron suite (blocked locally by stuck VS Code installer mutex — CodeSetup-stable PIDs 374176, 146120 still running ~6 hours; CI exercises) |
+| Section 4 Razor | ModeTransitionHistory.ts: 199L (was 94L; <250 target). FirstRunModePicker.ts: 64L. Both under razor. |
+| SG-035 test functionality | All 17 cases invoke unit + assert against outputs (ring contents, config writes, gate flag). Verified at cycle-1 audit. |
+| Citation discipline (SG-CitationDrift-A) | `LedgerManager.getEntriesByType` signature, `ModeTransitionRecord` type, governance.modeChanged + break-glass payload shapes, `failsafe.governance.mode` package.json enum, ConfigManager signatures all verified at cycle-1 audit. |
+| Back-compat preservation | Default `hydrating = false` means existing ModeTransitionHistory tests (live-event recording without hydration) continue to pass unchanged. |
+
+## Skipped per protocol (degraded-wiring posture)
+
+- Full `npm test:all` (vscode-test electron) blocked locally by stuck VS Code installer mutex (same condition as Entries #378 + #379). FX538 (which imports `vscode`) runs in CI; FX537 verified directly here.
+
+## Content Hash
+
+**Content Hash**: `4d69236af94a7cfcf4ceb2884b6d4c06bfe0626f098830e71e93e3399445b694`
+**Previous Hash**: `7d6ff5e3b6e57b72f9d72d902ca59ee8d071edda93eb257f23bc6ef275e47b23` (Entry #379)
+**Chain Hash**: `01462a347a61faae4ab7dc35f059585e831a5b0ff3e4673c13400bb42da7058c`
+**Merkle Seal**: `6eaee0f6fd31941c9834c3cb16fcfc6f646d21ea44c68ee4d5512727d423f695` — gate_workspace_audit_em_2_em_3_enforcement_polish_PASS
+**Session ID**: `2026-05-20-em-2-em-3-enforcement-mode-polish-substantiation-seal`
+
+## Review Boundary attestation
+
+No marketplace publish or GitHub Release. Implementation lives on the same `feat/bicameral-cluster-high` branch as Entries #378 + #379. PR #77 will absorb all three clusters at merge time.
+
+## Decision
+
+**SEAL — Reality matches Promise.** B-EM-2 + B-EM-3 closed. Mode-transition feed survives extension reload (hydration from ledger); first-run wizard captures operator's deliberate governance-mode choice. BACKLOG state: 45 open → 43 open.
+
+_Chain Status: B-EM-2 + B-EM-3 SEALED at Entry #380. Operator session-priority cluster #4 of 4 complete._
+_Next: operator decision on PR #77 review/merge; remaining 43 open backlog items grouped for future cycles._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: B-EM-2 + B-EM-3 SEALED at Entry #380; 11 FX537 cases pass directly; FX538 runs in CI; PUBLISH_BLOCK unchanged. feat/bicameral-cluster-high carries #378 + #379 + #380._
+_Session: 2026-05-20-em-2-em-3-enforcement-mode-polish-substantiation-seal_
