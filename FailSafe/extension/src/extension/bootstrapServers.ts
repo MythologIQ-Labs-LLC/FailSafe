@@ -89,7 +89,13 @@ export async function bootstrapServers(
   );
   consoleServer.setIdeTracker(ideTracker);
   consoleServer.setSystemRegistry(deps.systemRegistry);
-  wireBicameralIntegration(context, consoleServer, deps.workspaceRoot);
+  wireBicameralIntegration(context, consoleServer, deps.workspaceRoot, {
+    l3Service: {
+      queueL3Approval: (req) => deps.qorelogicManager.queueL3Approval(req),
+    },
+    eventBus: deps.eventBus,
+    logger: _logger,
+  });
 
   // Voice Pack wiring — Phase 3 of voice-substrate-extraction.
   // Probe globalStorageUri/voice-pack/ BEFORE consoleServer.start() so the

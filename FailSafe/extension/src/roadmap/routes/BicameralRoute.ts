@@ -49,6 +49,13 @@ export interface BicameralRouteDeps {
       payload: Record<string, unknown>;
     }): Promise<unknown>;
   };
+  /**
+   * B-BIC-16: optional drift-to-L3 mediator. When provided, the drift handler
+   * forwards results so newly-drifted decisions auto-enqueue L3 entries.
+   */
+  driftToL3Mediator?: {
+    onDriftResult(drifted: import("../../integrations/bicameral/types").BicameralDriftStatus[]): Promise<void>;
+  };
 }
 
 export function setupBicameralRoutes(
@@ -187,6 +194,12 @@ export function setupBicameralRoutes(
     try {
       const drift = await client.drift(filePath);
       res.json({ ok: true, drift });
+      // B-BIC-16: forward to drift-to-L3 mediator AFTER responding so a slow
+      // L3 queue write doesn't delay the route response. Non-blocking;
+      // mediator's own enqueue is wrapped in a try/catch with logger.warn.
+      if (deps.driftToL3Mediator) {
+        void deps.driftToL3Mediator.onDriftResult(drift).catch(() => undefined);
+      }
     } catch (e) {
       res.status(500).json({ ok: false, error: String(e) });
     }

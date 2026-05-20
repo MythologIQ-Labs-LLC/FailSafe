@@ -59,6 +59,8 @@ export interface ConsoleRouteHost {
   qorelogicManager: { getLedgerManager: () => unknown; getShadowGenomeManager: () => unknown };
   featureGate: unknown;
   getBicameralClient: () => import("../../integrations/bicameral").BicameralMcpClient | null;
+  /** B-BIC-16: drift-to-L3 mediator accessor; null when bootstrap didn't wire one. */
+  getDriftToL3Mediator: () => import("../../integrations/bicameral/DriftToL3Mediator").DriftToL3Mediator | null;
   getBicameralCommand: () => string;
   getBicameralAutoConnect: () => boolean;
   setBicameralAutoConnect: (value: boolean) => Promise<void>;
@@ -224,6 +226,9 @@ export class ConsoleRouteRegistrar {
       setAutoConnect: (v) => this.host.setBicameralAutoConnect(v),
       // B-BIC-1: pass ledger handle so ratify appends USER_OVERRIDE entry.
       ledgerManager: this.host.qorelogicManager.getLedgerManager() as any,
+      // B-BIC-16: pass mediator handle so drift route forwards results
+      // for auto-enqueue to L3.
+      driftToL3Mediator: this.host.getDriftToL3Mediator() ?? undefined,
     });
     setupMarketplaceRoutes(app, {
       rejectIfRemote: (req, res) => this.host.rejectIfRemote(req, res),

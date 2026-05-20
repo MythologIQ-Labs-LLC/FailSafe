@@ -31,4 +31,11 @@ export interface L3ApprovalRequest {
   decision?: string;
   conditions?: string[];
   slaDeadline: string;
+  /** B-BIC-16: optional discriminator for integration-sourced entries.
+   *  Allows the DriftToL3Mediator to identify its own entries on the
+   *  l3Decided event without affecting other L3 consumers. */
+  kind?: string;
+  /** B-BIC-16: opaque per-kind metadata. For bicameral-drift-resolution
+   *  entries this carries {decisionId: string}. */
+  meta?: Record<string, unknown>;
 }
