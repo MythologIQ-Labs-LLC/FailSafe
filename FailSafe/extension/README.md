@@ -4,21 +4,30 @@ Prevent runaway AI edits, hallucinated dependencies, and destructive refactors b
 
 FailSafe runs locally inside VS Code and Cursor. It monitors what AI agents do, applies deterministic policy checks at the editor boundary, and gives you full visibility into every decision — before code ships.
 
+---
+
+## 🚀 Introducing FailSafe Pro — Now Available
+
+**FailSafe Pro is the desktop-native, higher-tier application for full-stack AI governance.** Where this open extension guards your editor, **FailSafe Pro guards your entire SDLC** — OS-level enforcement, file locking, team workflows, remote orchestration, and managed runtime operations that go beyond the editor boundary.
+
+[**→ Learn more**](https://mythologiq.studio/products/failsafe-pro) · [**Download FailSafe Pro**](https://mythologiq.studio/products/failsafe-download)
+
+---
+
 **Current Release**: v5.1.5 (2026-05-19)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
 
 ## What's New in v5.1.5
 
-- **Bicameral MCP integration (v1)**. New **Integrations** tab in the Command Center surfaces [Bicameral MCP](https://github.com/BicameralAI/bicameral-mcp) decision history, drift status, and a one-click ratify/reject affordance. Solo / team install picker drives `pip install bicameral-mcp` + `bicameral-mcp setup` on your machine; nothing is bundled. Settings card adds status display + autoConnect toggle. See `docs/INTEGRATIONS.md` for the full surface and trust-boundary notes.
-- **Stale-cache remediation** (B192). New `WorkspaceMutationBus` aggregates fs.watch subscriptions for governance services so external file mutations (parallel tools, future FailSafe Pro daemon) trigger refresh without waiting for the next hub-snapshot pull. Closes the FailSafe-Pro-coexistence concern in B192. See `docs/governance-cache-invalidation.md`.
-- **Voice substrate extraction (B195 resolution)**. Piper TTS + Whisper STT vendor binaries (~86 MB uncompressed) move out of the base VSIX into a separate `failsafe-voice-pack-<version>.tar.gz` distributed as a GitHub Releases asset. Voice features become opt-in: run `FailSafe: Install Voice Pack` (or click Install in Settings → Voice Pack) when you want TTS playback + Whisper STT. Base extension drops below the 30 MB marketplace ceiling. Voice substrate code remains in the extension and degrades gracefully when the pack isn't installed. See `docs/INTEGRATIONS.md` Voice Pack section.
-- **Model-sourced Risk Register**. Coding agents now write risks directly into the Risk Register via the MCP tool `failsafe.create_risk`, the `@failsafe /risk` chat subcommand, or auto-derivation from SHIELD lifecycle signals (GATE VETOs, DEBUG entries, Shadow-Genome failure events). The manual `failsafe.addRisk` wizard is removed; legacy entries auto-migrate to a `manual` source label.
-- **Install Skills UX expansion**: live-progress modal with retry, operator-editable host registry, per-host skill picker, dry-run preview, and a new workspace `LiveProgressInvariant` doctrine + lint helper.
-- **OpenVSX v5.0.0 catch-up**: VS Code Marketplace and OpenVSX are now aligned at v5.0.0 via a dedicated manual workflow (`.github/workflows/openvsx-catchup.yml`).
-- **SRE panel** now attributes its data source: links to the [Microsoft Agent Governance Toolkit](https://github.com/microsoft/agent-governance-toolkit) (the upstream the panel surfaces) and [Qortara](https://www.qortara.com).
-- **Brand sweep**: every `QoreLogic` / `Qore` legacy spelling removed across source. User-facing strings hyphenated to "Qor-Logic"; PascalCase identifiers remain `QorLogic`. Skills show simple attribution: `qor-logic` for skills sourced from the Qor-Logic Python package; `FailSafe` for skills authored here.
-- **Release pipeline safety gate**: both publish jobs now sit behind a `production` GitHub environment, requiring a reviewer approval between build and publish.
+- **Bicameral MCP — Integrations tab**: full v1 surface (install bridge, settings card, history/preflight/drift/ratify) plus 5 quick-win hardening fixes (B-BIC-1..5): ratify → META_LEDGER USER_OVERRIDE; extension-deactivate disposer; transport.onclose crash recovery; capability cache; install stdout/stderr ANSI sanitizer. Solo / team install picker drives `pip install bicameral-mcp` + `bicameral-mcp setup`; nothing bundled in the VSIX. See `docs/INTEGRATIONS.md`.
+- **B199 Command Center E2E coverage**: structural Playwright specs for all 6 top-level tabs (Settings, Overview, Skills, Agents, Workspace, Governance) + 16-broadcast WebSocket matrix + real-disk META_LEDGER → /api/hub → Monitor renderer end-to-end (FX511–FX525).
+- **B197 qor-logic version-floor surfacing**: hub payload carries `installedVersion` + `meetsFloor`; Settings card surfaces a floor warning when below `MIN_QOR_LOGIC_VERSION`.
+- **B194 enforcement-mode escalation UX**: observe-mode advisory banner + Governance tab "Mode Transitions" feed with reverse-chronological history.
+- **B193 SentinelDaemon governance-file coverage**: governance markdown/yaml/json watched; canonical fs paths; `.failsafe/governance/` blanket-prefix match.
+- **B192 stale-cache remediation**: `WorkspaceMutationBus` substrate routes filesystem mutations to PlanManager + HubSnapshotService + TrustEngine + ConsoleLifecycleService subscribers. Closes the FailSafe-Pro-coexistence concern. See `docs/governance-cache-invalidation.md`.
+- **B195 voice substrate extraction**: heavy Piper TTS + Whisper STT vendor binaries (~86 MB uncompressed) moved out of the base VSIX into a separate `failsafe-voice-pack-<version>.tar.gz` companion download. Voice features become opt-in: run `FailSafe: Install Voice Pack`. Base extension drops below the 30 MB marketplace ceiling. See `docs/INTEGRATIONS.md` Voice Pack section.
+- **Test isolation hardening**: `vscode-test` now pins a unique `--user-data-dir` per invocation to eliminate dual extension-host races against ambient editor processes — pre-push gate becomes fully deterministic.
 
 ## What's New in v5.1.0
 

@@ -18,15 +18,23 @@ _Local-first safety for AI coding assistants._
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Commands-8B5CF6)](https://github.com/MythologIQ/FailSafe/releases)
 [![Documentation](https://img.shields.io/badge/docs-FAILSAFE_SPECIFICATION-blue)](docs/FAILSAFE_SPECIFICATION.md)
 
+</div>
+
+---
+
+## 🚀 Introducing FailSafe Pro — Now Available
+
+**FailSafe Pro is the desktop-native, higher-tier application for full-stack AI governance.** Where this open extension guards your editor, **FailSafe Pro guards your entire SDLC** — OS-level enforcement, file locking, team workflows, remote orchestration, and managed runtime operations that go beyond the editor boundary.
+
+[**→ Learn more about FailSafe Pro**](https://mythologiq.studio/products/failsafe-pro) · [**Download FailSafe Pro**](https://mythologiq.studio/products/failsafe-download)
+
+---
+
+<div align="center">
+
 **Current Release**: v5.1.5 (2026-05-19)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
-
-## Upcoming
-
-- **Bicameral MCP integration** (v1, merged locally): new Integrations tab surfacing the [Bicameral MCP](https://github.com/BicameralAI/bicameral-mcp) decision ledger and per-file drift status. Solo / team install picker; nothing bundled in the VSIX. See [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md).
-- **Stale-cache remediation** (v5.2.x, merged locally): `WorkspaceMutationBus` substrate that lets governance services subscribe to filesystem mutations and refresh their in-process caches automatically. Closes B192 stale-cache pattern + the FailSafe-Pro-coexistence concern. See [`docs/governance-cache-invalidation.md`](docs/governance-cache-invalidation.md).
-- **Voice substrate extraction** (v5.2.x, merged locally): heavy Piper TTS + Whisper STT vendor binaries move out of the base VSIX into a separate companion download. Voice features become opt-in; base extension drops below the 30 MB marketplace ceiling. See [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md) Voice Pack section.
 
 ## What's new in v5.1.5
 
