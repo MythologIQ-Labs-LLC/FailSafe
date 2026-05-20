@@ -19095,3 +19095,69 @@ _Next: operator decision on PR #77 review/merge — no auto-merge._
 _Chain integrity: VALID_
 _Session Status: bicameral-cluster-high SEALED at Entry #378; B-BIC-16/19/20 + B-INT-3 closed; 56 new tests pass; PUBLISH_BLOCK unchanged. PR #77 awaits operator review._
 _Session: 2026-05-20-bicameral-cluster-high-substantiation-seal_
+
+---
+
+### Entry #379: SESSION SEAL — plan-qor-b199-2-replay-genome-e2e (B-B199-2 current-surface)
+
+**Entry ID**: `bd44a5da95bd`
+**Date**: 2026-05-20
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-b199-2-replay-genome-e2e.md`
+**Audit reference**: 2-cycle via independent `architect-reviewer` subagent (Phase 68 Option B). Cycle 1 VETO with 3 findings (page.route glob missing `**` prefix; WS-trigger BLOCKER — no `window.failsafe*` global exists for `page.evaluate()` onEvent dispatch; Open Questions=None false). Cycle 2 PASS — all 3 remediated.
+**Implementation reference**: 1 commit on `feat/bicameral-cluster-high` (extends the v5.2.0-baseline branch). 14 Playwright cases pass in 1.5min on first run, no flakes.
+
+## Federation note
+
+Continues from Entry #378 (bicameral-cluster-high seal). v5.1.5 release-cycle entries remain deferred per Entry #378 federation note. This entry chains directly from #378.
+
+## Substantiation summary
+
+Closes B-B199-2 for the CURRENT shipped UI. The original B-B199-2 backlog claim ("replay timeline scrubbing, snapshot diff rendering, time-travel state restoration") referenced FUTURE features (B146-B149 marquee project) not present in current code. Pre-plan reality-check dialogue confirmed scope = ship-what's-there; future-feature E2E reopens when those land.
+
+Two-phase implementation:
+
+1. **Phase 0 — test-only renderer registry**. Single-line addition at the end of `command-center.js init()`: `if (typeof globalThis !== 'undefined') globalThis.__failsafeRenderers = renderers;`. Required by FX535.8 + FX536.6 WS-event synthesis (Playwright's `page.evaluate()` accesses the global to call `renderers.agents.onEvent(...)` which TabGroup propagates to sub-renderers per `tab-group.js:58`). Benign in production: namespaced under `__failsafe*`, no secrets exposed.
+2. **Phase 1 — FX535 replay-tab.spec.ts (8 cases)**. Empty state, list-view counts, slice cap 20, click-to-detail navigation (validates UUID-pattern route), step kind badge + diff stats, governance card (action + risk + confidence), back-button return, agentRun WS event triggers re-fetch.
+3. **Phase 2 — FX536 genome-tab.spec.ts (6 cases)**. Empty pattern + unresolved state, pattern-card render with failure-mode labels, show-all toggle (filtered → all), slice cap 12, unresolved entries table with status indicators, failureArchived WS event triggers re-fetch.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| Compile (`tsc -p ./`) | clean, no warnings |
+| Playwright run (14 new cases, isolated invocation) | **14 passing / 0 failing** in 1.5min |
+| First-run pass rate | 14/14, no flakes, no retries — clean signal that the fixtures + assertions are deterministic |
+| Section 4 Razor | replay-tab.spec.ts: 255L; genome-tab.spec.ts: 158L. command-center.js prod change: +6L (well within razor headroom for the existing file). |
+| SG-035 test functionality | Every FX535/FX536 case invokes a real interaction (navigate, click, page.evaluate) and asserts against rendered DOM state or fetch counter. Verified at cycle-2 audit. |
+| Citation discipline (SG-CitationDrift-A) | `replay.js` selectors (`.cc-replay-run`, `.cc-replay-back`, `'No agent runs recorded'`, `'Active Runs (N)'`/`'Recent Runs (N)'`, `+N`/`-N`) and `genome.js` selectors (`.cc-genome-toggle`, mode-color map, slice limits 12 + 20) verified against source by cycle-2 audit. |
+| WS-trigger mechanism (cycle-1 F2 BLOCKER) | Resolved by Phase 0 production hook + tab-group.js:58 propagation verification (every sub-renderer's `onEvent?.(evt)` called). |
+
+## Skipped per protocol (degraded-wiring posture)
+
+- Full `npm test:all` (vscode-test electron launch) still blocked locally by stuck VS Code installer mutex (CodeSetup-stable PIDs 374176, 146120 — running 5+ hours; same condition as Entry #378). Direct `npx playwright test` invocation on the 2 new specs covers the new surface; CI exercises the full suite on PR.
+
+## Content Hash
+
+**Content Hash**: `bd44a5da95bdf6f9161df13eb8ae24976e42c38926a9b96cc04b3be4d723cd11`
+**Previous Hash**: `f64fc51cd364827d9418f221b2b3b861ac8974d2fd27f53b55d9f2d4f626bcab` (Entry #378)
+**Chain Hash**: `7d6ff5e3b6e57b72f9d72d902ca59ee8d071edda93eb257f23bc6ef275e47b23`
+**Merkle Seal**: `0fcc495c20b0a6a358cb7f13411bdc1cfc92e4dbc61b1429dab46f315279513a` — gate_workspace_audit_b199_2_replay_genome_e2e_PASS
+**Session ID**: `2026-05-20-b199-2-replay-genome-e2e-substantiation-seal`
+
+## Review Boundary attestation
+
+No marketplace publish or GitHub Release. Implementation lives on `feat/bicameral-cluster-high` alongside Entry #378's work. Single combined PR (#77) will absorb both clusters when operator reviews/merges.
+
+## Decision
+
+**SEAL — Reality matches Promise.** B-B199-2 closed for current-surface scope. Future-feature E2E (B146-B149 marquee) tracked for re-opening when those features ship. BACKLOG state: 46 open → 45 open.
+
+_Chain Status: B-B199-2 SEALED at Entry #379. Cluster #3 of operator's session priority list complete._
+_Next: operator priority list cluster #4 (B-EM-2 + B-EM-3 enforcement-mode polish) or PR #77 review/merge._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: B-B199-2 SEALED at Entry #379 (current-surface scope); 14 Playwright cases pass on first run; PUBLISH_BLOCK unchanged. feat/bicameral-cluster-high branch now carries both #378 + #379 work._
+_Session: 2026-05-20-b199-2-replay-genome-e2e-substantiation-seal_
