@@ -45,6 +45,17 @@ export class ConsoleLifecycleService {
     this.server = this.deps.app.listen(this.actualPort, this.deps.host, () => {
       console.log(`Roadmap server: http://localhost:${this.actualPort}`);
     });
+    // Race-handler: findAvailablePort + listen is not atomic. A sibling
+    // process (parallel vscode-test extension host) can grab the same port
+    // between the probe and the actual listen. Surface as a structured
+    // error rather than an uncaught process-fatal exception.
+    this.server.on("error", (err: NodeJS.ErrnoException) => {
+      if (err.code === "EADDRINUSE") {
+        console.warn(`Roadmap server port ${this.actualPort} in use; sibling extension host already bound. Skipping.`);
+        return;
+      }
+      console.error("Roadmap server error:", err);
+    });
     this.setupWebSocket();
     this.watchMetaLedger();
     registerServer({

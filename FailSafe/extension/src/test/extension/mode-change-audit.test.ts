@@ -37,12 +37,26 @@ function makeContext(): vscode.ExtensionContext {
 
 suite('Mode-Change Audit Trail (FX263)', () => {
   let originalMode: string | undefined;
+  let originalRegisterCommand: typeof vscode.commands.registerCommand;
 
   suiteSetup(async () => {
     originalMode = vscode.workspace.getConfiguration('failsafe').get<string>('governance.mode');
+    // Isolation: stub vscode.commands.registerCommand for this suite. The
+    // tests exercise registerAdvancedCommands purely for its
+    // onDidChangeConfiguration audit-trail wiring, not for command
+    // registration. The real extension's activate path registers the same
+    // commands in the live workbench, so calling the unstubbed
+    // registerCommand here triggers "command 'failsafe.breakGlass' already
+    // exists" races. The stub returns a disposable no-op.
+    originalRegisterCommand = vscode.commands.registerCommand;
+    (vscode.commands as { registerCommand: unknown }).registerCommand = (
+      _command: string,
+      _callback: (...args: unknown[]) => unknown,
+    ): vscode.Disposable => ({ dispose: () => undefined });
   });
 
   suiteTeardown(async () => {
+    (vscode.commands as { registerCommand: unknown }).registerCommand = originalRegisterCommand;
     if (originalMode !== undefined) {
       await vscode.workspace.getConfiguration('failsafe')
         .update('governance.mode', originalMode, vscode.ConfigurationTarget.Global);
