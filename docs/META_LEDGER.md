@@ -19029,3 +19029,69 @@ _Next: operator decision on push/merge — none auto-triggered._
 _Chain integrity: VALID_
 _Session Status: b199-phase2-settings-e2e SEALED at branch-local Entry #377; B-EM-4 closed; 3 FX512 + 3 active FX513 cases pass; PUBLISH_BLOCK unchanged. Federated sibling with B197 #377 awaiting merge-time reconciliation._
 _Session: 2026-05-19-b199-phase2-settings-e2e-substantiation-seal_
+
+---
+
+### Entry #378: SESSION SEAL — plan-qor-bicameral-cluster-high (B-BIC-16 + B-BIC-19 + B-BIC-20 + B-INT-3)
+
+**Entry ID**: `5a087f89acea`
+**Date**: 2026-05-20
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-bicameral-cluster-high.md`
+**Audit reference**: 2-cycle via independent `architect-reviewer` subagent (Phase 68 Option B). Cycle 1 VETO with 6 findings (citation drift on L3 event payload; SSRF allowlist enforcement; deferred-tool count contradiction; DEFERRED/EXPIRED verdict miscoding; FX528 SG-035 violation; Open Questions=None false). Cycle 2 PASS — all 6 remediated; advisory A1 (test count 56 not 55) reconciled at substantiate.
+**Implementation reference**: 5 commits on `feat/bicameral-cluster-high` branched off `main` at `3f0ee6a` (post-v5.1.5). PR #77.
+
+## Federation note
+
+This is the first post-v5.1.5-publish session. The v5.1.5 release-cycle seal entries (bicameral quickwins, B199 P3–P9 consolidated, B197 version-floor, v5.1.5 publish event) were deferred at the time of marketplace publish per `.failsafe/governance/SESSION_STATE_v5.1.5-publish.md` — they live as drafted bodies in branch-local history but were not federation-reconciled into the main META_LEDGER chain. Entry #378 chains directly from #377 (the last formally-sealed entry); a future ledger-reconciliation cycle will back-fill the v5.1.5 entries between them.
+
+## Substantiation summary
+
+Closes 4 backlog items via a single SHIELD-governed cycle. Four phases, dependency-ordered:
+
+1. **Phase 1 (B-BIC-19) — Type-surface refactor**. Promote private `call()` to public `callRaw(name, args)` on `BicameralMcpClient`. Add 11 typed wrapper methods (ingest, search, brief, judgeGaps, resolveCompliance, linkCommit, update, reset, dashboard, validateSymbols, getNeighbors) each backed by a per-tool runtime guard. Extract parsers + guards to sibling `parsers.ts` to keep `BicameralMcpClient.ts` under the 250-line razor (226L vs 135L parsers). FX526 (3 cases) + FX527 (22 cases).
+2. **Phase 2 (B-BIC-20) — Live-subprocess MCP integration test**. Vendored TypeScript echo-mcp-server using `@modelcontextprotocol/sdk/server/stdio` declaring all 15 tool names + canned JSON satisfying Phase 1's runtime guards + side-channel file recording received call arguments. Self-contained (no parent-directory imports). FX528 (5 cases) spawns the server via `process.execPath`.
+3. **Phase 3 (B-BIC-16) — DriftToL3Mediator + auto-ratify**. New `DriftToL3Mediator` class subscribes to `qorelogic.l3Decided` and bridges drift events into the L3 queue. Drift-status-edge enqueue (de-dup by `bicameral:{decisionId}`). On L3 decide: APPROVED/APPROVED_WITH_CONDITIONS → `client.ratify('ratify')`; REJECTED → `'reject'`; DEFERRED/EXPIRED no-op. `L3ApprovalRequest` extended with optional `kind?` + `meta?` fields (backward-compatible). FX529 + FX530 (11 cases).
+4. **Phase 4 (B-INT-3 + upstream awareness)**. Version-floor pin via `BICAMERAL_PIP_SPEC = 'bicameral-mcp>=0.14,<0.16'` in install-handler. New `UpstreamMonitor` service polls GitHub release + open-issues (default 24h; regex-allowlisted owner/repo slug; fail-closed before httpFetch). `GET /api/integrations/bicameral/upstream` route (local-only via rejectIfRemote). `renderUpstreamRow` helper for Settings card (snapshot row + floor/ceiling warning). 2 new VS Code settings: `upstreamPollMs`, `upstreamRepoUrl`. FX532 (6) + FX533 (4) + FX534 (6) = 16 cases.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| Compile (`tsc -p ./`) | clean, no warnings |
+| Mocha new tests (direct invocation, 6 spec files) | **56 passing / 0 failing** in 237ms |
+| Section 4 Razor | BicameralMcpClient.ts: 226L (<250); parsers.ts: 135L; UpstreamMonitor.ts: 109L; DriftToL3Mediator.ts: 115L; upstream-row.ts: 70L. All under razor. |
+| SG-035 test functionality | every FX5xx case invokes the unit under test and asserts against output. Verified at audit cycle 2 against FX528 specifically. |
+| Citation discipline (SG-CitationDrift-A) | EventBus payload shape verified at `L3ApprovalService.ts:72-74,142` + `EventBus.ts:66-74`; mediator destructures `event.payload.request` + `event.payload.decision` correctly. |
+| Security: SSRF | UpstreamMonitor regex allowlist `^[\w.-]+\/[\w.-]+$` enforced inside `poll()` BEFORE any httpFetch; fail-closed verified by FX532 case 5. |
+| Plan-vs-code drift | One discrepancy: plan said verdict literal `'accept'`; existing code uses `'ratify'`. Implementation uses existing `'ratify'`; note recorded in commit body. No other drift. |
+
+## Skipped per protocol (degraded-wiring posture)
+
+- Full `npm test:all` (vscode-test electron launch) blocked locally by stuck VS Code installer mutex (CodeSetup-stable PIDs 374176, 146120 running 3+ hours). Direct mocha invocation on the 6 new spec files is functionally equivalent for the new surface (none import vscode module). CI runs the full vscode-test suite on PR #77.
+- Test-count arithmetic in plan line 327 said `2476 + 42 + 13 = 2531`; actual new cases = 56 (`2476 + 56 = 2532`). Plan corrected at substantiate (this entry).
+
+## Content Hash
+
+**Content Hash**: `5a087f89acea35da0daabb7ee76e4155bf3eb5dfbd71d56166574adc9594861f`
+**Previous Hash**: `150dd4cbfb69a218f0fe3bdecd955867481327bd95186792b7e43fb65d20b4b7` (Entry #377)
+**Chain Hash**: `f64fc51cd364827d9418f221b2b3b861ac8974d2fd27f53b55d9f2d4f626bcab`
+**Merkle Seal**: `cdc967f456bd9001c5840ccca02a4bf741b4022b6fd3c5c4683140244bf5b1ac` — gate_workspace_audit_bicameral_cluster_high_PASS
+**Session ID**: `2026-05-20-bicameral-cluster-high-substantiation-seal`
+
+## Review Boundary attestation
+
+No marketplace publish or GitHub Release. PR #77 opened for operator review/merge; CI will exercise full vscode-test electron suite. v5.2.0 release will absorb this cluster once merge lands.
+
+## Decision
+
+**SEAL — Reality matches Promise.** B-BIC-16, B-BIC-19, B-BIC-20, B-INT-3 closed. UpstreamMonitor extends the integration with read-only awareness of Bicameral release activity (operator directive). BACKLOG state: 50 open → 46 open.
+
+_Chain Status: bicameral-cluster-high SEALED at Entry #378. v5.1.5 release-cycle entries remain deferred for separate reconciliation cycle._
+_Next: operator decision on PR #77 review/merge — no auto-merge._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: bicameral-cluster-high SEALED at Entry #378; B-BIC-16/19/20 + B-INT-3 closed; 56 new tests pass; PUBLISH_BLOCK unchanged. PR #77 awaits operator review._
+_Session: 2026-05-20-bicameral-cluster-high-substantiation-seal_
