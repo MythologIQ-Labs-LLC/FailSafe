@@ -87,6 +87,16 @@ document.addEventListener('DOMContentLoaded', () => {
     renderers.governance.onEvent?.(wrapped);
   });
 
+  // B-B199-2 Phase 0: test-only renderer registry. Exposes the renderers
+  // map for Playwright specs that need to synthesize WebSocket events
+  // (FX535.8 + FX536.6 dispatch into `agents` TabGroup which propagates
+  // to ReplayRenderer/GenomeRenderer sub-renderers per tab-group.js:58).
+  // Benign in production: `__failsafe*` namespace + no secrets/tokens
+  // exposed; renderers carry only DOM controllers.
+  if (typeof globalThis !== 'undefined') {
+    globalThis.__failsafeRenderers = renderers;
+  }
+
   // Tab navigation with persistence
   const tabs = document.querySelectorAll('.tab-btn');
   const panels = document.querySelectorAll('.tab-panel');
