@@ -178,6 +178,16 @@ export class ConsoleServer {
   /** B-BIC-2: typed accessor so bootstrapBicameral can disconnect the prior
    *  client on rewire and push an extension-deactivate disposer. */
   getBicameralClient(): import("../integrations/bicameral").BicameralMcpClient | null { return this.bicameralClient; }
+  /** B-BIC-16: drift-to-L3 mediator slot. Set by bootstrapBicameral when
+   *  l3Service + eventBus + logger deps are available. Null in test fixtures
+   *  that don't wire the mediator. */
+  private driftToL3Mediator: import("../integrations/bicameral/DriftToL3Mediator").DriftToL3Mediator | null = null;
+  setDriftToL3Mediator(m: import("../integrations/bicameral/DriftToL3Mediator").DriftToL3Mediator | null): void { this.driftToL3Mediator = m; }
+  getDriftToL3Mediator(): import("../integrations/bicameral/DriftToL3Mediator").DriftToL3Mediator | null { return this.driftToL3Mediator; }
+  /** Phase 4: upstream monitor slot. Null in test fixtures. */
+  private upstreamMonitor: import("../integrations/bicameral/UpstreamMonitor").UpstreamMonitor | null = null;
+  setUpstreamMonitor(m: import("../integrations/bicameral/UpstreamMonitor").UpstreamMonitor | null): void { this.upstreamMonitor = m; }
+  getUpstreamMonitor(): import("../integrations/bicameral/UpstreamMonitor").UpstreamMonitor | null { return this.upstreamMonitor; }
   setBicameralCommand(cmd: string): void { this.bicameralCommand = cmd; }
   setBicameralAutoConnect(value: boolean): void { this.bicameralAutoConnect = value; }
   setBicameralAutoConnectWriter(fn: (value: boolean) => Promise<void>): void { this.bicameralAutoConnectWriter = fn; }
@@ -259,6 +269,8 @@ export class ConsoleServer {
       brainstormService: this.brainstormService,
       audioVaultService: this.audioVaultService,
       getBicameralClient: () => this.bicameralClient,
+      getDriftToL3Mediator: () => this.driftToL3Mediator,
+      getUpstreamMonitor: () => this.upstreamMonitor,
       getBicameralCommand: () => this.bicameralCommand,
       getBicameralAutoConnect: () => this.bicameralAutoConnect,
       setBicameralAutoConnect: (v) => this.bicameralAutoConnectWriter(v),

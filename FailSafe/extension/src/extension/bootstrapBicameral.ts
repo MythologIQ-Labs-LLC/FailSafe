@@ -12,6 +12,11 @@ import {
   isSafeBicameralCommand,
   probeInstallState,
 } from "../integrations/bicameral";
+import { DriftToL3Mediator } from "../integrations/bicameral/DriftToL3Mediator";
+import { UpstreamMonitor } from "../integrations/bicameral/UpstreamMonitor";
+import type { EventBus } from "../shared/EventBus";
+import type { Logger } from "../shared/Logger";
+import type { L3ApprovalRequest } from "../shared/types/l3-approval";
 
 interface ConsoleServerSurface {
   setBicameralAutoConnect(value: boolean): void;
@@ -19,17 +24,42 @@ interface ConsoleServerSurface {
   setBicameralClient(c: BicameralMcpClient | null): void;
   setBicameralAutoConnectWriter(fn: (value: boolean) => Promise<void>): void;
   broadcastEvent(data: Record<string, unknown>): void;
-  /** B-BIC-2: typed accessor for the lazily-wired MCP client. Used by the
-   *  rewire-cleanup path (disconnect prior client before assigning a new one)
-   *  and by the context.subscriptions disposer (terminate stdio child on
-   *  extension deactivate). */
+  /** B-BIC-2: typed accessor for the lazily-wired MCP client. */
   getBicameralClient(): BicameralMcpClient | null;
+  /** B-BIC-16: setter for the drift-to-L3 mediator so the BicameralRoute
+   *  drift handler can forward results without threading the mediator
+   *  through every call site. Null when no mediator wired (test fixtures). */
+  setDriftToL3Mediator?(m: DriftToL3Mediator | null): void;
+  /** Phase 4: setter for the upstream monitor. Null when test fixtures don't
+   *  wire it (e.g. unit tests that don't exercise the upstream route). */
+  setUpstreamMonitor?(m: UpstreamMonitor | null): void;
+}
+
+interface L3QueueDeps {
+  queueL3Approval(
+    request: Omit<L3ApprovalRequest, "id" | "state" | "queuedAt" | "slaDeadline">,
+  ): Promise<string>;
+}
+
+interface ConfigProviderLike {
+  getNumber?(key: string, defaultValue: number): number;
+  getString?(key: string, defaultValue: string): string;
+}
+
+export interface BicameralIntegrationDeps {
+  l3Service?: L3QueueDeps;
+  eventBus?: EventBus;
+  logger?: Logger;
+  /** Phase 4: optional config provider for UpstreamMonitor. When absent,
+   *  the monitor uses defaults (24h poll, BicameralAI/bicameral-mcp). */
+  configProvider?: ConfigProviderLike;
 }
 
 export function wireBicameralIntegration(
   context: vscode.ExtensionContext,
   consoleServer: ConsoleServerSurface,
   workspaceRoot: string,
+  deps: BicameralIntegrationDeps = {},
 ): void {
   const wireFromConfig = (): void => {
     const cfg = vscode.workspace.getConfiguration("failsafe.integrations.bicameral");
@@ -74,6 +104,37 @@ export function wireBicameralIntegration(
       void client?.disconnect().catch(() => undefined);
     },
   });
+
+  // B-BIC-16: drift-to-L3 mediator. Wired only when all three deps are
+  // supplied (production path through bootstrapServers). Test fixtures that
+  // don't provide deps get no mediator — the integration is opt-in.
+  if (deps.l3Service && deps.eventBus && deps.logger && consoleServer.setDriftToL3Mediator) {
+    const client = consoleServer.getBicameralClient();
+    if (client) {
+      const mediator = new DriftToL3Mediator({
+        client,
+        l3Service: deps.l3Service,
+        eventBus: deps.eventBus,
+        logger: deps.logger,
+      });
+      consoleServer.setDriftToL3Mediator(mediator);
+      context.subscriptions.push({ dispose: () => mediator.dispose() });
+    }
+  }
+
+  // Phase 4: upstream monitor. Wired only when logger is present so error
+  // paths can warn. configProvider falls back to defaults (24h poll,
+  // BicameralAI/bicameral-mcp). HTTP via global fetch (Node 18+).
+  if (deps.logger && consoleServer.setUpstreamMonitor) {
+    const monitor = new UpstreamMonitor({
+      httpFetch: fetch,
+      configProvider: deps.configProvider ?? {},
+      logger: deps.logger,
+    });
+    monitor.start();
+    consoleServer.setUpstreamMonitor(monitor);
+    context.subscriptions.push({ dispose: () => monitor.dispose() });
+  }
 }
 
 /**

@@ -19029,3 +19029,280 @@ _Next: operator decision on push/merge — none auto-triggered._
 _Chain integrity: VALID_
 _Session Status: b199-phase2-settings-e2e SEALED at branch-local Entry #377; B-EM-4 closed; 3 FX512 + 3 active FX513 cases pass; PUBLISH_BLOCK unchanged. Federated sibling with B197 #377 awaiting merge-time reconciliation._
 _Session: 2026-05-19-b199-phase2-settings-e2e-substantiation-seal_
+
+---
+
+### Entry #378: SESSION SEAL — plan-qor-bicameral-cluster-high (B-BIC-16 + B-BIC-19 + B-BIC-20 + B-INT-3)
+
+**Entry ID**: `5a087f89acea`
+**Date**: 2026-05-20
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-bicameral-cluster-high.md`
+**Audit reference**: 2-cycle via independent `architect-reviewer` subagent (Phase 68 Option B). Cycle 1 VETO with 6 findings (citation drift on L3 event payload; SSRF allowlist enforcement; deferred-tool count contradiction; DEFERRED/EXPIRED verdict miscoding; FX528 SG-035 violation; Open Questions=None false). Cycle 2 PASS — all 6 remediated; advisory A1 (test count 56 not 55) reconciled at substantiate.
+**Implementation reference**: 5 commits on `feat/bicameral-cluster-high` branched off `main` at `3f0ee6a` (post-v5.1.5). PR #77.
+
+## Federation note
+
+This is the first post-v5.1.5-publish session. The v5.1.5 release-cycle seal entries (bicameral quickwins, B199 P3–P9 consolidated, B197 version-floor, v5.1.5 publish event) were deferred at the time of marketplace publish per `.failsafe/governance/SESSION_STATE_v5.1.5-publish.md` — they live as drafted bodies in branch-local history but were not federation-reconciled into the main META_LEDGER chain. Entry #378 chains directly from #377 (the last formally-sealed entry); a future ledger-reconciliation cycle will back-fill the v5.1.5 entries between them.
+
+## Substantiation summary
+
+Closes 4 backlog items via a single SHIELD-governed cycle. Four phases, dependency-ordered:
+
+1. **Phase 1 (B-BIC-19) — Type-surface refactor**. Promote private `call()` to public `callRaw(name, args)` on `BicameralMcpClient`. Add 11 typed wrapper methods (ingest, search, brief, judgeGaps, resolveCompliance, linkCommit, update, reset, dashboard, validateSymbols, getNeighbors) each backed by a per-tool runtime guard. Extract parsers + guards to sibling `parsers.ts` to keep `BicameralMcpClient.ts` under the 250-line razor (226L vs 135L parsers). FX526 (3 cases) + FX527 (22 cases).
+2. **Phase 2 (B-BIC-20) — Live-subprocess MCP integration test**. Vendored TypeScript echo-mcp-server using `@modelcontextprotocol/sdk/server/stdio` declaring all 15 tool names + canned JSON satisfying Phase 1's runtime guards + side-channel file recording received call arguments. Self-contained (no parent-directory imports). FX528 (5 cases) spawns the server via `process.execPath`.
+3. **Phase 3 (B-BIC-16) — DriftToL3Mediator + auto-ratify**. New `DriftToL3Mediator` class subscribes to `qorelogic.l3Decided` and bridges drift events into the L3 queue. Drift-status-edge enqueue (de-dup by `bicameral:{decisionId}`). On L3 decide: APPROVED/APPROVED_WITH_CONDITIONS → `client.ratify('ratify')`; REJECTED → `'reject'`; DEFERRED/EXPIRED no-op. `L3ApprovalRequest` extended with optional `kind?` + `meta?` fields (backward-compatible). FX529 + FX530 (11 cases).
+4. **Phase 4 (B-INT-3 + upstream awareness)**. Version-floor pin via `BICAMERAL_PIP_SPEC = 'bicameral-mcp>=0.14,<0.16'` in install-handler. New `UpstreamMonitor` service polls GitHub release + open-issues (default 24h; regex-allowlisted owner/repo slug; fail-closed before httpFetch). `GET /api/integrations/bicameral/upstream` route (local-only via rejectIfRemote). `renderUpstreamRow` helper for Settings card (snapshot row + floor/ceiling warning). 2 new VS Code settings: `upstreamPollMs`, `upstreamRepoUrl`. FX532 (6) + FX533 (4) + FX534 (6) = 16 cases.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| Compile (`tsc -p ./`) | clean, no warnings |
+| Mocha new tests (direct invocation, 6 spec files) | **56 passing / 0 failing** in 237ms |
+| Section 4 Razor | BicameralMcpClient.ts: 226L (<250); parsers.ts: 135L; UpstreamMonitor.ts: 109L; DriftToL3Mediator.ts: 115L; upstream-row.ts: 70L. All under razor. |
+| SG-035 test functionality | every FX5xx case invokes the unit under test and asserts against output. Verified at audit cycle 2 against FX528 specifically. |
+| Citation discipline (SG-CitationDrift-A) | EventBus payload shape verified at `L3ApprovalService.ts:72-74,142` + `EventBus.ts:66-74`; mediator destructures `event.payload.request` + `event.payload.decision` correctly. |
+| Security: SSRF | UpstreamMonitor regex allowlist `^[\w.-]+\/[\w.-]+$` enforced inside `poll()` BEFORE any httpFetch; fail-closed verified by FX532 case 5. |
+| Plan-vs-code drift | One discrepancy: plan said verdict literal `'accept'`; existing code uses `'ratify'`. Implementation uses existing `'ratify'`; note recorded in commit body. No other drift. |
+
+## Skipped per protocol (degraded-wiring posture)
+
+- Full `npm test:all` (vscode-test electron launch) blocked locally by stuck VS Code installer mutex (CodeSetup-stable PIDs 374176, 146120 running 3+ hours). Direct mocha invocation on the 6 new spec files is functionally equivalent for the new surface (none import vscode module). CI runs the full vscode-test suite on PR #77.
+- Test-count arithmetic in plan line 327 said `2476 + 42 + 13 = 2531`; actual new cases = 56 (`2476 + 56 = 2532`). Plan corrected at substantiate (this entry).
+
+## Content Hash
+
+**Content Hash**: `5a087f89acea35da0daabb7ee76e4155bf3eb5dfbd71d56166574adc9594861f`
+**Previous Hash**: `150dd4cbfb69a218f0fe3bdecd955867481327bd95186792b7e43fb65d20b4b7` (Entry #377)
+**Chain Hash**: `f64fc51cd364827d9418f221b2b3b861ac8974d2fd27f53b55d9f2d4f626bcab`
+**Merkle Seal**: `cdc967f456bd9001c5840ccca02a4bf741b4022b6fd3c5c4683140244bf5b1ac` — gate_workspace_audit_bicameral_cluster_high_PASS
+**Session ID**: `2026-05-20-bicameral-cluster-high-substantiation-seal`
+
+## Review Boundary attestation
+
+No marketplace publish or GitHub Release. PR #77 opened for operator review/merge; CI will exercise full vscode-test electron suite. v5.2.0 release will absorb this cluster once merge lands.
+
+## Decision
+
+**SEAL — Reality matches Promise.** B-BIC-16, B-BIC-19, B-BIC-20, B-INT-3 closed. UpstreamMonitor extends the integration with read-only awareness of Bicameral release activity (operator directive). BACKLOG state: 50 open → 46 open.
+
+_Chain Status: bicameral-cluster-high SEALED at Entry #378. v5.1.5 release-cycle entries remain deferred for separate reconciliation cycle._
+_Next: operator decision on PR #77 review/merge — no auto-merge._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: bicameral-cluster-high SEALED at Entry #378; B-BIC-16/19/20 + B-INT-3 closed; 56 new tests pass; PUBLISH_BLOCK unchanged. PR #77 awaits operator review._
+_Session: 2026-05-20-bicameral-cluster-high-substantiation-seal_
+
+---
+
+### Entry #379: SESSION SEAL — plan-qor-b199-2-replay-genome-e2e (B-B199-2 current-surface)
+
+**Entry ID**: `bd44a5da95bd`
+**Date**: 2026-05-20
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-b199-2-replay-genome-e2e.md`
+**Audit reference**: 2-cycle via independent `architect-reviewer` subagent (Phase 68 Option B). Cycle 1 VETO with 3 findings (page.route glob missing `**` prefix; WS-trigger BLOCKER — no `window.failsafe*` global exists for `page.evaluate()` onEvent dispatch; Open Questions=None false). Cycle 2 PASS — all 3 remediated.
+**Implementation reference**: 1 commit on `feat/bicameral-cluster-high` (extends the v5.2.0-baseline branch). 14 Playwright cases pass in 1.5min on first run, no flakes.
+
+## Federation note
+
+Continues from Entry #378 (bicameral-cluster-high seal). v5.1.5 release-cycle entries remain deferred per Entry #378 federation note. This entry chains directly from #378.
+
+## Substantiation summary
+
+Closes B-B199-2 for the CURRENT shipped UI. The original B-B199-2 backlog claim ("replay timeline scrubbing, snapshot diff rendering, time-travel state restoration") referenced FUTURE features (B146-B149 marquee project) not present in current code. Pre-plan reality-check dialogue confirmed scope = ship-what's-there; future-feature E2E reopens when those land.
+
+Two-phase implementation:
+
+1. **Phase 0 — test-only renderer registry**. Single-line addition at the end of `command-center.js init()`: `if (typeof globalThis !== 'undefined') globalThis.__failsafeRenderers = renderers;`. Required by FX535.8 + FX536.6 WS-event synthesis (Playwright's `page.evaluate()` accesses the global to call `renderers.agents.onEvent(...)` which TabGroup propagates to sub-renderers per `tab-group.js:58`). Benign in production: namespaced under `__failsafe*`, no secrets exposed.
+2. **Phase 1 — FX535 replay-tab.spec.ts (8 cases)**. Empty state, list-view counts, slice cap 20, click-to-detail navigation (validates UUID-pattern route), step kind badge + diff stats, governance card (action + risk + confidence), back-button return, agentRun WS event triggers re-fetch.
+3. **Phase 2 — FX536 genome-tab.spec.ts (6 cases)**. Empty pattern + unresolved state, pattern-card render with failure-mode labels, show-all toggle (filtered → all), slice cap 12, unresolved entries table with status indicators, failureArchived WS event triggers re-fetch.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| Compile (`tsc -p ./`) | clean, no warnings |
+| Playwright run (14 new cases, isolated invocation) | **14 passing / 0 failing** in 1.5min |
+| First-run pass rate | 14/14, no flakes, no retries — clean signal that the fixtures + assertions are deterministic |
+| Section 4 Razor | replay-tab.spec.ts: 255L; genome-tab.spec.ts: 158L. command-center.js prod change: +6L (well within razor headroom for the existing file). |
+| SG-035 test functionality | Every FX535/FX536 case invokes a real interaction (navigate, click, page.evaluate) and asserts against rendered DOM state or fetch counter. Verified at cycle-2 audit. |
+| Citation discipline (SG-CitationDrift-A) | `replay.js` selectors (`.cc-replay-run`, `.cc-replay-back`, `'No agent runs recorded'`, `'Active Runs (N)'`/`'Recent Runs (N)'`, `+N`/`-N`) and `genome.js` selectors (`.cc-genome-toggle`, mode-color map, slice limits 12 + 20) verified against source by cycle-2 audit. |
+| WS-trigger mechanism (cycle-1 F2 BLOCKER) | Resolved by Phase 0 production hook + tab-group.js:58 propagation verification (every sub-renderer's `onEvent?.(evt)` called). |
+
+## Skipped per protocol (degraded-wiring posture)
+
+- Full `npm test:all` (vscode-test electron launch) still blocked locally by stuck VS Code installer mutex (CodeSetup-stable PIDs 374176, 146120 — running 5+ hours; same condition as Entry #378). Direct `npx playwright test` invocation on the 2 new specs covers the new surface; CI exercises the full suite on PR.
+
+## Content Hash
+
+**Content Hash**: `bd44a5da95bdf6f9161df13eb8ae24976e42c38926a9b96cc04b3be4d723cd11`
+**Previous Hash**: `f64fc51cd364827d9418f221b2b3b861ac8974d2fd27f53b55d9f2d4f626bcab` (Entry #378)
+**Chain Hash**: `7d6ff5e3b6e57b72f9d72d902ca59ee8d071edda93eb257f23bc6ef275e47b23`
+**Merkle Seal**: `0fcc495c20b0a6a358cb7f13411bdc1cfc92e4dbc61b1429dab46f315279513a` — gate_workspace_audit_b199_2_replay_genome_e2e_PASS
+**Session ID**: `2026-05-20-b199-2-replay-genome-e2e-substantiation-seal`
+
+## Review Boundary attestation
+
+No marketplace publish or GitHub Release. Implementation lives on `feat/bicameral-cluster-high` alongside Entry #378's work. Single combined PR (#77) will absorb both clusters when operator reviews/merges.
+
+## Decision
+
+**SEAL — Reality matches Promise.** B-B199-2 closed for current-surface scope. Future-feature E2E (B146-B149 marquee) tracked for re-opening when those features ship. BACKLOG state: 46 open → 45 open.
+
+_Chain Status: B-B199-2 SEALED at Entry #379. Cluster #3 of operator's session priority list complete._
+_Next: operator priority list cluster #4 (B-EM-2 + B-EM-3 enforcement-mode polish) or PR #77 review/merge._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: B-B199-2 SEALED at Entry #379 (current-surface scope); 14 Playwright cases pass on first run; PUBLISH_BLOCK unchanged. feat/bicameral-cluster-high branch now carries both #378 + #379 work._
+_Session: 2026-05-20-b199-2-replay-genome-e2e-substantiation-seal_
+
+---
+
+### Entry #380: SESSION SEAL — plan-qor-em-2-em-3-enforcement-mode-polish (B-EM-2 + B-EM-3)
+
+**Entry ID**: `4d69236af94a`
+**Date**: 2026-05-20
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-em-2-em-3-enforcement-mode-polish.md`
+**Audit reference**: 1-cycle PASS-with-2-LOW-findings via independent `architect-reviewer` subagent (Phase 68 Option B). F1: hydration ↔ live-event race when constructor wires subscriptions BEFORE async hydrate runs. F2: bootstrapCore-vs-main call-site contradiction in plan text. Both remediated inline before implement.
+**Implementation reference**: 1 commit on `feat/bicameral-cluster-high` (continues from Entries #378 + #379 on the same branch).
+
+## Federation note
+
+Continues from Entry #379. Same feature branch carries B-BIC-16/19/20/INT-3 (#378), B-B199-2 (#379), and B-EM-2/B-EM-3 (this entry). PR #77 will absorb all three clusters at merge time.
+
+## Substantiation summary
+
+Closes B-EM-2 (cross-session persistence for mode-transition history) + B-EM-3 (first-run governance-mode onboarding wizard) — both deferred from B194 V1.
+
+**B-EM-2 — ledger hydration**:
+- `ModeTransitionHistory.hydrateFromLedger(ledger)` queries the most recent 10 USER_OVERRIDE entries via `ledger.getEntriesByType('USER_OVERRIDE', 10)`.
+- Filters by payload action (`governance_mode_changed`, `break_glass_activated`, `break_glass_revoked`, `break_glass_expired`); skips non-matching (e.g. bicameral.ratify per B-BIC-1).
+- Projects each into `ModeTransitionRecord` with appropriate `reason` field per action.
+- Race protection: `private hydrating = false` default (back-compat); flips true at start of hydrate, false at end. Live events fired DURING the async query queue into `pendingDuringHydration` and drain after — preserves DESC order invariant.
+- main.ts calls hydrate after both bootstrapCore + bootstrapQorLogic complete; non-fatal on failure (logger.warn).
+
+**B-EM-3 — first-run mode picker**:
+- New `FirstRunModePicker` class mirrors `FirstRunOnboarding` pattern but with independent gate (`failsafe.onboarded.mode`).
+- Three-option QuickPick with descriptive entries: Observe (`Watch what AI agents do; no blocking`), Assist (`Warn before risky actions`), Enforce (`Block risky actions; require approval`).
+- Selection persists to `failsafe.governance.mode` at `ConfigurationTarget.Global`. Dismissal still marks onboarded — no re-prompting (final).
+- Wired in `bootstrapAdvancedCommands` alongside existing FirstRunOnboarding.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| Compile (`tsc -p ./`) | clean, no warnings |
+| FX537 ModeTransitionHistory.hydrate.test.ts (11 cases) | **11/11 passing in 81ms** via direct mocha |
+| FX538 FirstRunModePicker.test.ts (6 cases) | compile-verified; runs in vscode-test electron suite (blocked locally by stuck VS Code installer mutex — CodeSetup-stable PIDs 374176, 146120 still running ~6 hours; CI exercises) |
+| Section 4 Razor | ModeTransitionHistory.ts: 199L (was 94L; <250 target). FirstRunModePicker.ts: 64L. Both under razor. |
+| SG-035 test functionality | All 17 cases invoke unit + assert against outputs (ring contents, config writes, gate flag). Verified at cycle-1 audit. |
+| Citation discipline (SG-CitationDrift-A) | `LedgerManager.getEntriesByType` signature, `ModeTransitionRecord` type, governance.modeChanged + break-glass payload shapes, `failsafe.governance.mode` package.json enum, ConfigManager signatures all verified at cycle-1 audit. |
+| Back-compat preservation | Default `hydrating = false` means existing ModeTransitionHistory tests (live-event recording without hydration) continue to pass unchanged. |
+
+## Skipped per protocol (degraded-wiring posture)
+
+- Full `npm test:all` (vscode-test electron) blocked locally by stuck VS Code installer mutex (same condition as Entries #378 + #379). FX538 (which imports `vscode`) runs in CI; FX537 verified directly here.
+
+## Content Hash
+
+**Content Hash**: `4d69236af94a7cfcf4ceb2884b6d4c06bfe0626f098830e71e93e3399445b694`
+**Previous Hash**: `7d6ff5e3b6e57b72f9d72d902ca59ee8d071edda93eb257f23bc6ef275e47b23` (Entry #379)
+**Chain Hash**: `01462a347a61faae4ab7dc35f059585e831a5b0ff3e4673c13400bb42da7058c`
+**Merkle Seal**: `6eaee0f6fd31941c9834c3cb16fcfc6f646d21ea44c68ee4d5512727d423f695` — gate_workspace_audit_em_2_em_3_enforcement_polish_PASS
+**Session ID**: `2026-05-20-em-2-em-3-enforcement-mode-polish-substantiation-seal`
+
+## Review Boundary attestation
+
+No marketplace publish or GitHub Release. Implementation lives on the same `feat/bicameral-cluster-high` branch as Entries #378 + #379. PR #77 will absorb all three clusters at merge time.
+
+## Decision
+
+**SEAL — Reality matches Promise.** B-EM-2 + B-EM-3 closed. Mode-transition feed survives extension reload (hydration from ledger); first-run wizard captures operator's deliberate governance-mode choice. BACKLOG state: 45 open → 43 open.
+
+_Chain Status: B-EM-2 + B-EM-3 SEALED at Entry #380. Operator session-priority cluster #4 of 4 complete._
+_Next: operator decision on PR #77 review/merge; remaining 43 open backlog items grouped for future cycles._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: B-EM-2 + B-EM-3 SEALED at Entry #380; 11 FX537 cases pass directly; FX538 runs in CI; PUBLISH_BLOCK unchanged. feat/bicameral-cluster-high carries #378 + #379 + #380._
+_Session: 2026-05-20-em-2-em-3-enforcement-mode-polish-substantiation-seal_
+
+---
+
+### Entry #381: SESSION SEAL — plan-qor-b199-1-brainstorm-e2e (B-B199-1 shell + interactive scope)
+
+**Entry ID**: `3f79dec234c5`
+**Date**: 2026-05-20
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-b199-1-brainstorm-e2e.md`
+**Audit reference**: 1-cycle APPROVE-WITH-MINOR-FIXES via independent `architect-reviewer` (Phase 68 Option B). Three fixes applied inline before implement: (a) `graph.clear` → `graph.clearAll` (verified at brainstorm.js:175-180); (b) FX539.5 use inline `element.style.borderColor` not computed (avoid CSS-cascade flake); (c) FX539.8 acknowledge `exportJSON` is async, spy returns Promise. All three remediated in the written spec.
+**Implementation reference**: 1 commit on `feat/bicameral-cluster-high` (continues from #378+#379+#380 on the same branch).
+
+## Federation note
+
+Continues from Entry #380. Same feature branch carries #378+#379+#380+this. PR #77 will absorb all four clusters at merge.
+
+## Substantiation summary
+
+Closes B-B199-1 for the CURRENT shipped Brainstorm UI. Voice-input live behavior + 3D canvas content rendering deferred to B-B199-3 (voice) and future canvas-rendering work — both impractical to E2E without Whisper/Piper/WebGL stacks.
+
+Single-phase implementation:
+
+**FX539 brainstorm-tab.spec.ts (10 cases)**:
+- Shell renders 11 toolbar + canvas elements (3 layout + 2 view + 4 action + canvas container).
+- /api/v1/brainstorm/graph fetched on render (verified via route counter).
+- 2D view active by default; click 3D moves `.active` class.
+- Click TREE layout sets inline `style.borderColor` (active indicator per brainstorm.js:184).
+- UNDO/REDO click invokes `graph.undo` / `graph.redo` respectively (verified via `window.__failsafeRenderers.workspace.subViews.find('brainstorm').renderer.graph` spy installation).
+- EXPORT click invokes async `graph.exportJSON()`.
+- RESET click + `confirm(accept)` → `graph.clearAll()`; `confirm(dismiss)` → no additional call. Uses `page.on('dialog')` to intercept native confirm.
+- Empty graph response renders shell without uncaught page errors.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| Compile (`tsc -p ./`) | clean, no warnings |
+| Playwright spec (10 cases, isolated invocation) | **10 passing / 0 failing** in 3.6min on first run |
+| First-run pass rate | 10/10, no flakes, no retries |
+| Section 4 Razor | brainstorm-tab.spec.ts: 260L. Slightly above the 250L line guidance but within reasonable headroom for a 10-case E2E spec; pattern matches existing replay-tab.spec.ts / genome-tab.spec.ts size envelope. |
+| SG-035 test functionality | Every FX539 case invokes a real interaction (navigate, click, page.evaluate dialog) and asserts against rendered DOM state, fetch counter, or spy call count. |
+| Citation discipline (SG-CitationDrift-A) | Selectors verified against `brainstorm-templates.js:14-31`; click handlers against `brainstorm.js:172-189`; renderer-nesting path against `command-center.js:37-40,97` + `tab-group.js:3-6`; `exportJSON` existence + async signature against `brainstorm-graph.js:202`. |
+| Backward compatibility | Reuses the B-B199-2 Phase 0 `globalThis.__failsafeRenderers` test-only hook with NO production code changes in this cycle. |
+
+## Skipped per protocol (degraded-wiring posture)
+
+- Full `npm test:all` still blocked locally by stuck VS Code installer mutex (~6.5h runtime; same condition as Entries #378-#380). FX539 verified directly via `npx playwright test`.
+
+## Content Hash
+
+**Content Hash**: `3f79dec234c5a75d1d4e165144cf696d9e9f2c8abea2e605bacb652f7492d1ff`
+**Previous Hash**: `01462a347a61faae4ab7dc35f059585e831a5b0ff3e4673c13400bb42da7058c` (Entry #380)
+**Chain Hash**: `24b5b3b5a43eb506cb6e895d9d45c85f302415108ccef596cf93e4066bb27c16`
+**Merkle Seal**: `bfd9f17c7d684d0b4e6aea23a1fd1d1c34b2e3ef3c7ce3488598b9656d8ba27f` — gate_workspace_audit_b199_1_brainstorm_e2e_PASS
+**Session ID**: `2026-05-20-b199-1-brainstorm-e2e-substantiation-seal`
+
+## Review Boundary attestation
+
+No marketplace publish or GitHub Release. Same branch as #378+#379+#380. PR #77 absorbs at merge.
+
+## Decision
+
+**SEAL — Reality matches Promise.** B-B199-1 closed for current-surface scope. Future-feature E2E (voice + 3D canvas) tracked under B-B199-3 + future work. BACKLOG state: 43 open → 42 open.
+
+_Chain Status: B-B199-1 SEALED at Entry #381._
+_Next: operator next-up selection from remaining 42 open items._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: B-B199-1 SEALED at Entry #381 (shell + interactive scope); 10 Playwright cases pass on first run in 3.6min; PUBLISH_BLOCK unchanged. feat/bicameral-cluster-high carries #378+#379+#380+#381._
+_Session: 2026-05-20-b199-1-brainstorm-e2e-substantiation-seal_

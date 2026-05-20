@@ -10,6 +10,14 @@ import { InstallMode, InstallProgressEvent, InstallStep, BicameralInstallState }
 
 const STDOUT_TAIL_BYTES = 2048;
 
+/** B-INT-3: pinned upstream version range. Tool schemas are Beta-classified
+ *  per the upstream README; a hard ceiling protects against silent breakage
+ *  when the schema changes outside our tested surface. Bump as we validate
+ *  newer releases. */
+export const MIN_BICAMERAL_VERSION = '0.14.0';
+export const MAX_BICAMERAL_VERSION = '0.16.0'; // exclusive
+export const BICAMERAL_PIP_SPEC = 'bicameral-mcp>=0.14,<0.16';
+
 /**
  * B-BIC-5: Sanitize raw stdout/stderr captured from the bicameral CLI before
  * it surfaces to the operator (Settings card + WebSocket broadcast). Strips
@@ -61,11 +69,14 @@ export async function runBicameralInstall(
   const steps: InstallStep[] = [];
   emit(opts, mode, steps, false);
 
+  // B-INT-3: pin version floor + ceiling. Upstream Bicameral tool schemas are
+  // Beta-classified; a hard ceiling avoids silent breakage when the schema
+  // changes outside our supported range.
   const pipResult = await runStep(opts, mode, steps, {
     phase: 'pip-install',
-    command: `${pip} install bicameral-mcp`,
+    command: `${pip} install '${BICAMERAL_PIP_SPEC}'`,
     bin: pip,
-    args: ['install', 'bicameral-mcp'],
+    args: ['install', BICAMERAL_PIP_SPEC],
   });
   if (!pipResult.ok) return finish(opts, mode, steps, pipResult.error || 'pip install failed');
 

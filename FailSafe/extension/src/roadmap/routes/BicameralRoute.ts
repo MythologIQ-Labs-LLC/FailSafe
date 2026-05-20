@@ -49,6 +49,21 @@ export interface BicameralRouteDeps {
       payload: Record<string, unknown>;
     }): Promise<unknown>;
   };
+  /**
+   * B-BIC-16: optional drift-to-L3 mediator. When provided, the drift handler
+   * forwards results so newly-drifted decisions auto-enqueue L3 entries.
+   */
+  driftToL3Mediator?: {
+    onDriftResult(drifted: import("../../integrations/bicameral/types").BicameralDriftStatus[]): Promise<void>;
+  };
+  /**
+   * Phase 4: optional upstream monitor. When provided, the
+   * /api/integrations/bicameral/upstream route returns the latest snapshot
+   * (release version + open-issue count) or 503 if no poll has completed.
+   */
+  upstreamMonitor?: {
+    getSnapshot(): import("../../integrations/bicameral/types").UpstreamSnapshot | null;
+  };
 }
 
 export function setupBicameralRoutes(
@@ -187,6 +202,12 @@ export function setupBicameralRoutes(
     try {
       const drift = await client.drift(filePath);
       res.json({ ok: true, drift });
+      // B-BIC-16: forward to drift-to-L3 mediator AFTER responding so a slow
+      // L3 queue write doesn't delay the route response. Non-blocking;
+      // mediator's own enqueue is wrapped in a try/catch with logger.warn.
+      if (deps.driftToL3Mediator) {
+        void deps.driftToL3Mediator.onDriftResult(drift).catch(() => undefined);
+      }
     } catch (e) {
       res.status(500).json({ ok: false, error: String(e) });
     }
@@ -256,6 +277,24 @@ export function setupBicameralRoutes(
     } catch (e) {
       res.status(500).json({ ok: false, error: String(e) });
     }
+  });
+
+  // GET /api/integrations/bicameral/upstream — Phase 4 / B-INT-3 extension.
+  // Returns the latest UpstreamSnapshot (release version + open-issue count)
+  // or 503 when no poll has completed yet. Local-only via rejectIfRemote.
+  app.get("/api/integrations/bicameral/upstream", async (req: Request, res: Response) => {
+    if (deps.rejectIfRemote(req, res)) return;
+    const monitor = deps.upstreamMonitor;
+    if (!monitor) {
+      res.status(503).json({ ok: false, error: "UpstreamMonitor not wired" });
+      return;
+    }
+    const snapshot = monitor.getSnapshot();
+    if (!snapshot) {
+      res.status(503).json({ ok: false, error: "Upstream snapshot not yet available" });
+      return;
+    }
+    res.json({ ok: true, snapshot });
   });
 }
 
