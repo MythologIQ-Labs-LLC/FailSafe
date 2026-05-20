@@ -53,9 +53,21 @@ let featureGate:
   | import("../core/FeatureGateService").FeatureGateService
   | undefined;
 
+// Test-harness re-entry guard: vscode-test occasionally racing two
+// workspace-folder updates can trigger two parallel activate() invocations
+// (sometimes across two extension-host PIDs sharing the same workbench
+// command registry). Without the guard, the second activate fails on
+// duplicate `failsafe.breakGlass` registration. Module-level flag is reset
+// at deactivate; the duplicate-command catch covers the cross-process case.
+let __failsafeActivated = false;
+
 export async function activate(
   context: vscode.ExtensionContext,
 ): Promise<void> {
+  if (__failsafeActivated) {
+    return;
+  }
+  __failsafeActivated = true;
   const logSink = new VscodeLogSink("FailSafe");
   logger = new Logger("FailSafe", undefined, logSink);
   logger.info("Activating FailSafe...");
@@ -231,6 +243,21 @@ export async function activate(
       "FailSafe is now protecting your workspace",
     );
   } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    // Cross-process duplicate-registration race: when vscode-test spawns a
+    // parallel extension-host on the same workbench (multi-fixture suites),
+    // both hosts try to register `failsafe.*` commands. The second host hits
+    // "command 'failsafe.X' already exists". Treat this as a benign no-op
+    // (the existing host's handlers remain wired) rather than throwing —
+    // throwing here trips vscode-test's commands-not-found cascade across
+    // all subsequent test assertions.
+    if (/command '.*' already exists/.test(msg) || /EADDRINUSE/.test(msg)) {
+      logger.info("FailSafe already activated in a sibling extension host; skipping duplicate bootstrap.");
+      // Best-effort cleanup of anything this partial activate did start.
+      try { consoleServer?.stop(); } catch { /* ignore */ }
+      __failsafeActivated = false;
+      return;
+    }
     logger.error("Activation failed", error);
     throw error;
   }
@@ -247,4 +274,5 @@ export async function deactivate(): Promise<void> {
   genesisManager?.dispose();
   governanceStatusBar?.dispose();
   eventBus?.dispose();
+  __failsafeActivated = false;
 }

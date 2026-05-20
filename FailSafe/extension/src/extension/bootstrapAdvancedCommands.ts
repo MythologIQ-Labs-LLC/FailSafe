@@ -151,8 +151,15 @@ export function registerAdvancedCommands(
     }),
   );
 
-  // Multi-Agent Ceremony (B85)
-  registerCeremonyCommands(context, deps);
+  // Multi-Agent Ceremony (B85) — fire-and-forget; swallow its own errors so a
+  // ceremony-init failure (e.g. FirstRunOnboarding configManager wiring) does
+  // not surface as an UnhandledPromiseRejection that masks the real activate
+  // outcome.
+  registerCeremonyCommands(context, deps).catch((err) => {
+    logger.warn("registerCeremonyCommands failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  });
 
   // Undo Last Attempt (B60)
   context.subscriptions.push(
