@@ -7,7 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — v5.2.0 (draft)
 
-_Cycle pool open. Carry-over from v5.1.5: B-BIC-6..23 deep-review findings (eighteen items deferred from B-BIC quickwins); B-B199-1..6 remaining E2E gaps from B199 Phases 2-9._
+_Cycle pool open. Carry-over from v5.1.6: B-BIC-6/7/10/12/13/14/15/17/18 remaining deep-review findings; B-B199-1, B-B199-3..6 remaining E2E gaps from B199 Phases 2-9._
+
+## [5.1.6] - 2026-05-20
+
+Bicameral HIGH cluster (B-BIC-16/19/20) + safety + concurrency batch (B-BIC-8/9/11/21/22/23) + upstream awareness (B-INT-3) + B-B199-2 Replay + Genome behavioral E2E + B-EM-2/B-EM-3 enforcement-mode polish. SHIELD-sealed via PR #77 (Entries #378/#379/#380) and PR #78 (Entry #382). See `docs/plan-qor-bicameral-cluster-high.md`, `docs/plan-qor-bicameral-safety-concurrency.md`, `docs/plan-qor-b199-2-replay-genome-e2e.md`, `docs/plan-qor-em-2-em-3-enforcement-mode-polish.md`.
+
+### Added
+
+- **BicameralMcpClient type-surface refactor** (B-BIC-19). `callRaw(name, args)` promoted to public surface; 11 typed wrapper methods (`ingest`, `search`, `brief`, `judgeGaps`, `resolveCompliance`, `linkCommit`, `update`, `reset`, `dashboard`, `validateSymbols`, `getNeighbors`) each backed by a per-tool runtime guard. Parsers + guards extracted to `src/integrations/bicameral/parsers.ts` to keep `BicameralMcpClient.ts` under the 250-line razor. 25 new mocha cases (FX526 + FX527).
+- **Vendored echo-mcp-server live-subprocess test** (B-BIC-20). Self-contained TypeScript MCP server using `@modelcontextprotocol/sdk/server/stdio`, declaring all 15 bicameral tool names with canned JSON satisfying Phase 1's runtime guards + side-channel file recording received arguments. Spawned via `process.execPath`. 5 cases (FX528) close the prior gap where Bicameral tests stubbed the transport rather than exercising it.
+- **DriftToL3Mediator** (B-BIC-16). New mediator class subscribes to bicameral drift events + `qorelogic.l3Decided`. Drift status-edge enqueues L3 with `kind: 'bicameral.drift'` + `meta.decisionId` (de-dup by `bicameral:{decisionId}`). On L3 decide: APPROVED + APPROVED_WITH_CONDITIONS → `client.ratify('ratify')`; REJECTED → `'reject'`; DEFERRED/EXPIRED/UNDER_REVIEW/QUEUED no-op. `L3ApprovalRequest` extended with optional `kind?` + `meta?` fields (backward-compatible). 11 cases (FX529 + FX530).
+- **UpstreamMonitor service** (B-INT-3). Polls GitHub `/releases/latest` + `/search/issues?q=repo:{slug}+is:open` every 24h (configurable via `failsafe.integrations.bicameral.upstreamPollMs`). Regex-allowlisted owner/repo slug (`^[\w.-]+/[\w.-]+$`) checked **before any** `httpFetch` call (fail-closed). Default repo `BicameralAI/bicameral-mcp` configurable via `failsafe.integrations.bicameral.upstreamRepoUrl`. 6 cases (FX532).
+- **`GET /api/integrations/bicameral/upstream`** route (B-INT-3). Local-only access via `rejectIfRemote`. Returns last snapshot or 503 if monitor not wired / no poll completed. 4 cases (FX533).
+- **`renderUpstreamRow`** Settings card helper (B-INT-3). Snapshot row (latest release tag + open-issue count) + version warning when installed bicameral-mcp is below floor (>=0.14) or at/above ceiling (<0.16). 6 cases (FX534).
+- **pip version-floor pin** (B-INT-3). `BICAMERAL_PIP_SPEC = 'bicameral-mcp>=0.14,<0.16'` constant in install-handler; install bridge surfaces the spec in the spawned `pip install` command.
+- **Replay sub-view behavioral E2E** (B-B199-2 Phase 1). 8 Playwright cases (FX535) exercise the Agents-tab Replay sub-view: empty state, list view active/completed counts, slice cap 20, click-card → detail navigation, step kind badge + diff stats, governance card (action + risk + confidence), back-button return, `agentRun` WS event triggers re-fetch.
+- **Genome sub-view behavioral E2E** (B-B199-2 Phase 2). 6 Playwright cases (FX536) exercise the Agents-tab Genome sub-view: empty pattern + unresolved state, pattern-card render with failure-mode labels + counts, show-all toggle (filtered → all), slice cap 12, unresolved entries table with status indicators, `failureArchived` WS event triggers re-fetch.
+- **Test-only renderer registry** (B-B199-2 Phase 0). Single-line addition at end of `command-center.js init()`: `if (typeof globalThis !== 'undefined') globalThis.__failsafeRenderers = renderers;`. Required by FX535.8 + FX536.6 WS-event synthesis. Benign in production: namespaced under `__failsafe*`, no secrets exposed.
+- **`ModeTransitionHistory.hydrateFromLedger`** (B-EM-2). Replays `governance.modeChanged` events from META_LEDGER on activation so the in-memory ring buffer survives extension restart. 11 SG-035 cases (FX537): empty-ledger no-op, ordering preserved, cap 10 honored, non-governance / malformed entries ignored, idempotent on re-hydrate.
+- **`FirstRunModePicker`** (B-EM-3). VS Code quickpick offering Observe/Assist/Enforce on initial install. Selection persists to workspace config; cancel-path no-op; suppressed when already configured. 6 cases (FX538) under vscode-test electron suite.
+- **`BicameralMcpClient.connect()` concurrency cache** (B-BIC-8). In-flight connect promise cached and returned to concurrent callers; eliminates the race where parallel `connect()` invocations could spawn duplicate transports.
+- **Idle disconnect TTL** (B-BIC-9). Client disconnects after a configurable idle period (default 15 minutes) of zero in-flight requests; new `failsafe.integrations.bicameral.idleDisconnectMs` setting. `idle-scheduler.ts` helper extracted with timer + inflight-counter.
+- **Structured `isError` payload surfacing** (B-BIC-11). Bicameral tool errors now surface the structured detail in the thrown message rather than the bare `isError=true` flag, making MCP-side errors actionable.
+- **MCP protocol/version floor assertion** (B-BIC-22). `protocol-floor.ts` helper asserts the MCP protocol version at connect-time and refuses to attach to servers below the floor (fail-closed).
+- **Runtime type guard on `callTool()` return** (B-BIC-23). All BicameralMcpClient call paths run the parsed payload through a runtime guard before returning, preventing malformed shapes from leaking into downstream consumers.
+- **Concurrent connect/disconnect race tests** (B-BIC-21). New test cases exercise interleaved `connect()` / `disconnect()` invocations to verify the in-flight cache + idle-disconnect interactions remain deterministic under contention.
+- **`semver.ts` shared helper**. `compareSemver` extracted from `upstream-row.ts` into a sibling module so the new `protocol-floor.ts` can share the same lightweight semver compare (returns -1/0/+1; strips `v` prefix; ignores pre-release tags). Restores Section 4 razor compliance for `upstream-row.ts`.
+
+### Changed
+
+- **Audit cycle 1 → 2 remediation** (cluster-high plan). Six findings closed before implementation: (F1) `qorelogic.l3Decided` payload-shape citation drift, (F2) UpstreamMonitor SSRF allowlist enforcement before fetch, (F3) deferred-tool count contradiction reconciled (11 wrappers, not 12), (F4) DEFERRED/EXPIRED verdict no-op mapping clarified, (F5) FX528 SG-035 violation (stub → live subprocess), (F6) false-empty "Open Questions: None" replaced with explicit list.
+- **Safety + concurrency audit cycle 1 → 2 remediation**. APPROVE-WITH-MANDATORY-EDITS verdict closed via 3 must-fix + 2 should-fix items addressed inline. `BicameralMcpClient.ts` stands at 284L (over the 250-line razor by 34L); explicit exception documented in the audit since the 11 deferred-tool wrappers **are** the public API surface and extracting them would violate the type-surface contract.
+
+### Security
+
+- **UpstreamMonitor SSRF allowlist** — `REPO_SLUG_RE = /^[\w.-]+\/[\w.-]+$/` enforced inside `poll()` **before** any `httpFetch`. Fail-closed branch sets error snapshot + warn log. Verified by FX532 cases 2 + 3 (invalid slug rejected pre-fetch; shell metacharacters in URL blocked).
+- **MCP protocol-floor fail-closed** — Bicameral integration now refuses to attach to MCP servers below the supported protocol version (`protocol-floor.ts`); a non-conforming server reports a clean error instead of leaving the client in a half-initialised state.
 
 ## [5.1.5] - 2026-05-19
 

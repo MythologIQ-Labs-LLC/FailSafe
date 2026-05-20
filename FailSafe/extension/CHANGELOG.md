@@ -5,6 +5,25 @@ All notable changes to the MythologIQ FailSafe extension will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.1.6] - 2026-05-20
+
+Bicameral HIGH cluster (B-BIC-16/19/20) + safety + concurrency batch (B-BIC-8/9/11/21/22/23) + upstream awareness (B-INT-3) + B-B199-2 Replay + Genome behavioral E2E + B-EM-2/B-EM-3 enforcement-mode polish. SHIELD-sealed via PR #77 (Entries #378/#379/#380) and PR #78 (Entry #382). See root [CHANGELOG.md](../../CHANGELOG.md) for full bullet list.
+
+### Added
+
+- BicameralMcpClient type-surface refactor: `callRaw` public surface + 11 typed deferred-tool wrappers (`ingest`, `search`, `brief`, `judgeGaps`, `resolveCompliance`, `linkCommit`, `update`, `reset`, `dashboard`, `validateSymbols`, `getNeighbors`) with per-tool runtime guards in `parsers.ts`. FX526 + FX527.
+- Vendored live-subprocess `echo-mcp-server` integration test exercises real `@modelcontextprotocol/sdk` transport handshake (B-BIC-20). FX528.
+- `DriftToL3Mediator`: bicameral drift status-edges enqueue L3; L3 decisions ratify upstream (APPROVED/APPROVED_WITH_CONDITIONS → `ratify`; REJECTED → `reject`; DEFERRED/EXPIRED no-op). FX529 + FX530.
+- `UpstreamMonitor` + `GET /api/integrations/bicameral/upstream` route + Settings card `renderUpstreamRow` helper. Regex-allowlisted owner/repo slug; fail-closed before any fetch. pip floor pin `bicameral-mcp>=0.14,<0.16`. FX532-FX534.
+- Replay + Genome Agents sub-view behavioral E2E (Playwright). 14 cases total. FX535 + FX536.
+- `ModeTransitionHistory.hydrateFromLedger` + `FirstRunModePicker` enforcement-mode polish. FX537 + FX538.
+- `BicameralMcpClient.connect()` concurrency cache + idle disconnect TTL (15min default) + structured `isError` payload surfacing + MCP protocol-floor assertion + runtime type guard on `callTool()` return. `semver.ts` / `idle-scheduler.ts` / `protocol-floor.ts` helpers extracted. B-BIC-8/9/11/22/23 + B-BIC-21 concurrent connect/disconnect race tests.
+
+### Security
+
+- UpstreamMonitor SSRF allowlist enforced **before** any `httpFetch` (fail-closed).
+- MCP protocol-floor fail-closed: refuses to attach to MCP servers below the supported protocol version.
+
 ## [5.1.5] - 2026-05-19
 
 Bicameral MCP integration v1 + B199 Phases 2-9 Command Center E2E coverage + B197 qor-logic version-floor surfacing + B194 enforcement-mode escalation UX + B193 SentinelDaemon governance-file coverage residual + B192 stale-cache remediation (WorkspaceMutationBus) + B195 voice substrate extraction. See root [CHANGELOG.md](../../CHANGELOG.md) for full bullet list.
