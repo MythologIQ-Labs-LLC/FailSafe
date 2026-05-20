@@ -24,6 +24,7 @@ import { ConsoleServer } from "../../../roadmap/ConsoleServer";
 import { EventBus } from "../../../shared/EventBus";
 import type { WebSocketManager } from "../../../roadmap/services/WebSocketManager";
 import type { CheckpointDb, CheckpointRecord } from "../../../roadmap/services/CheckpointStore";
+import type { BicameralMcpClient } from "../../../integrations/bicameral";
 import type {
   CatalogItem,
   RiskEntry,
@@ -39,6 +40,22 @@ export interface ConsoleServerFixtures {
   timelineEvents?: TimelineEvent[];
   risks?: RiskEntry[];
   initialHub?: HubFixture;
+  /** Pre-wire a Bicameral MCP client (typically a stub) so /api/actions/bicameral-* routes
+   *  resolve without spawning a real bicameral-mcp process. */
+  bicameralClient?: BicameralMcpClient;
+  /** Override the probe command (defaults to "node" so `<command> --version` succeeds in test env). */
+  bicameralCommand?: string;
+  /** When true, writes `.bicameral/config.yaml` to the workspace so probeInstallState
+   *  reports `configured-not-running` (assuming bicameralCommand is on PATH). */
+  bicameralConfigured?: boolean;
+  /** When true, writes a fake voice-pack manifest + files to a temp
+   *  globalStoragePath and sets `consoleServer.setVoicePackPath()` so the
+   *  /vendor static mount registers and the status route reports `installed`.
+   *  When false (or omitted), no pack is written and status reports `absent`. */
+  voicePackInstalled?: boolean;
+  /** Pin the version surfaced by the status route's requiredMinVersion field.
+   *  Defaults to "5.2.0". */
+  voicePackVersion?: string;
 }
 
 export interface ConsoleServerController {
@@ -73,6 +90,11 @@ function writeWorkspaceFixtures(
     JSON.stringify({ risks: fixtures.risks ?? [] }),
     "utf8",
   );
+  if (fixtures.bicameralConfigured) {
+    const bicameralDir = path.join(workspaceRoot, ".bicameral");
+    fs.mkdirSync(bicameralDir, { recursive: true });
+    fs.writeFileSync(path.join(bicameralDir, "config.yaml"), "mode: solo\n", "utf8");
+  }
 }
 
 function buildFakeManagers(initialHub: HubFixture | null): FakeManagers {
@@ -130,11 +152,12 @@ function attachWebSocket(
   server: ConsoleServer,
   harness: http.Server,
   sockets: Set<WebSocket>,
+  hubRef?: { current: HubFixture | null },
 ): void {
   const wsm = (server as unknown as { wsManager: WebSocketManager }).wsManager;
   wsm.setup(harness, (ws) => {
     sockets.add(ws);
-    const initPayload = { type: "init", payload: {} };
+    const initPayload = { type: "init", payload: hubRef?.current ?? {} };
     try {
       ws.send(JSON.stringify(initPayload));
     } catch {
@@ -178,7 +201,9 @@ function buildController(
     url,
     setHub(hub) {
       hubRef.current = hub;
-      broadcastRaw(JSON.stringify({ type: "hub.refresh" }));
+      // Send `init` with the new payload so the client re-renders directly
+      // (avoids dependency on the server's real HubSnapshotService output).
+      broadcastRaw(JSON.stringify({ type: "init", payload: hub }));
     },
     setVerdicts(verdicts) {
       checkpointRef.length = 0;
@@ -215,11 +240,97 @@ export async function serveConsoleServerUI(
   );
   applyPrivateCast(server, checkpointRef);
 
+  if (fixtures.bicameralClient) {
+    server.setBicameralClient(fixtures.bicameralClient);
+  }
+  server.setBicameralCommand(fixtures.bicameralCommand ?? "node");
+
+  const voicePackVersion = fixtures.voicePackVersion ?? '5.2.0';
+  const voicePackGlobalStorage = setupVoicePackFixture(workspaceRoot, fixtures, voicePackVersion);
+  if (fixtures.voicePackInstalled) {
+    (server as unknown as { setVoicePackPath: (p: string) => void }).setVoicePackPath(
+      path.join(voicePackGlobalStorage, 'voice-pack'),
+    );
+  }
+  registerVoicePackRouteOnHarness(server, voicePackGlobalStorage, voicePackVersion);
+
   const app = (server as unknown as { app: Application }).app;
+  // B-EM-4: /api/hub override. ConsoleServer's constructor already registered
+  // the real /api/hub handler via setupAllRoutes — Express is first-match-wins
+  // so a normal `app.use` mounted here would run AFTER the real handler.
+  // Workaround: register the middleware then unshift its router-stack layer to
+  // position 0 so it runs FIRST on every request. Per-request read of
+  // hubRef.current means controller.setHub() updates surface on next fetch.
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && (req.originalUrl === '/api/hub' || req.path === '/api/hub') && fakes.hubRef.current) {
+      res.json(fakes.hubRef.current);
+      return;
+    }
+    next();
+  });
+  // Express 5: app.router (was app._router in v4). Fall back to both.
+  const router =
+    (app as unknown as { router?: { stack: any[] } }).router
+    ?? (app as unknown as { _router?: { stack: any[] } })._router;
+  if (router && Array.isArray(router.stack) && router.stack.length > 0) {
+    const ourLayer = router.stack.pop();
+    if (ourLayer) router.stack.unshift(ourLayer);
+  }
   const harness = http.createServer(app);
   const sockets = new Set<WebSocket>();
-  attachWebSocket(server, harness, sockets);
+  attachWebSocket(server, harness, sockets, fakes.hubRef);
 
   const url = await listenAndResolveUrl(harness);
   return buildController(url, harness, sockets, checkpointRef, fakes.hubRef);
+}
+
+function setupVoicePackFixture(
+  workspaceRoot: string,
+  fixtures: ConsoleServerFixtures,
+  version: string,
+): string {
+  // Per-fixture globalStoragePath sibling to workspaceRoot.
+  const globalStoragePath = path.join(workspaceRoot, '.test-globalStorage');
+  fs.mkdirSync(globalStoragePath, { recursive: true });
+  if (fixtures.voicePackInstalled) {
+    const packDir = path.join(globalStoragePath, 'voice-pack');
+    fs.mkdirSync(path.join(packDir, 'piper'), { recursive: true });
+    const piperContent = 'STUB-PIPER-PAYLOAD';
+    fs.writeFileSync(path.join(packDir, 'piper', 'piper.min.js'), piperContent, 'utf8');
+    const { createHash } = require('crypto') as typeof import('crypto');
+    const sha = createHash('sha256').update(piperContent).digest('hex');
+    fs.writeFileSync(path.join(packDir, 'voice-pack.manifest.json'), JSON.stringify({
+      version,
+      builtAt: new Date().toISOString(),
+      expectedFiles: ['piper/piper.min.js'],
+      sha256: { 'piper/piper.min.js': sha },
+    }), 'utf8');
+  }
+  return globalStoragePath;
+}
+
+function registerVoicePackRouteOnHarness(
+  server: ConsoleServer,
+  globalStoragePath: string,
+  version: string,
+): void {
+  const { setupVoicePackRoutes } = require('../../../roadmap/routes/VoicePackRoute') as typeof import('../../../roadmap/routes/VoicePackRoute');
+  const app = (server as unknown as { app: Application }).app;
+  setupVoicePackRoutes(app, {
+    rejectIfRemote: () => false, // tests run on 127.0.0.1; allow
+    broadcast: (data) => {
+      const wsm = (server as unknown as { wsManager: { broadcast: (d: Record<string, unknown>) => void } }).wsManager;
+      wsm.broadcast(data);
+    },
+    globalStoragePath,
+    extensionVersion: version,
+    onPackStateChanged: async () => {
+      // Re-probe + update voicePackPath on the harness server so subsequent
+      // /vendor mount reflects post-install/uninstall state.
+      const fsMod = require('fs') as typeof import('fs');
+      const packDir = path.join(globalStoragePath, 'voice-pack');
+      (server as unknown as { setVoicePackPath: (p: string | null) => void })
+        .setVoicePackPath(fsMod.existsSync(packDir) ? packDir : null);
+    },
+  });
 }

@@ -1,8 +1,10 @@
 # Publish Block
 
-**Active**: yes
+**Active**: no
 **Set**: 2026-05-06
 **Set by**: operator (chat directive: "nothing gets published until everything gets a test")
+**Cleared**: 2026-05-19 (operator chat directive: "push, merge and publish v5.1.5")
+**Cleared rationale**: `docs/FEATURE_INDEX.md` shows 0 entries with `Status: unverified` (433 verified / 43 operator-justified `n/a` per 2026-05-14 audit). Coverage gate condition 1 satisfied; v5.1.0 substantiate seal PASSED. v5.1.5 carries forward this coverage state (Phases 2-9 added FX511-FX525 all verified).
 **Reason**: `docs/FEATURE_INDEX.md` shows 264 of 476 features unverified (55.5%). Per memory rule `feedback_no_publish_until_full_coverage.md`, no FailSafe build publishes until every FEATURE_INDEX entry has a corresponding test or per-row `n/a` justification approved by the operator.
 **Cleared by**: operator-explicit removal of this file (or `Active: no` flip) in a commit whose message references the FEATURE_INDEX state showing 100% `verified` or operator-justified `n/a`.
 

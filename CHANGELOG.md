@@ -5,6 +5,52 @@ All notable changes to FailSafe will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — v5.2.0 (draft)
+
+_Cycle pool open. Carry-over from v5.1.5: B-BIC-6..23 deep-review findings (eighteen items deferred from B-BIC quickwins); B-B199-1..6 remaining E2E gaps from B199 Phases 2-9._
+
+## [5.1.5] - 2026-05-19
+
+Bicameral MCP integration (v1) + stale-cache remediation (B192) + voice substrate extraction (B195) + enforcement-mode escalation UX (B194) + SentinelDaemon governance-file coverage residual fix-up (B193). See `docs/INTEGRATIONS.md`, `docs/governance-cache-invalidation.md`, `docs/governance-mode-transitions.md`, and `docs/plan-qor-sentinel-governance-extensions.md`.
+
+### Added
+
+- **Bicameral MCP — Integrations tab** (`docs/plan-qor-bicameral-mcp-integration.md`). New Command Center tab dedicated to third-party integrations. Bicameral is the only entry in v1; pattern extensible to additional MCP servers.
+- **Install bridge** with solo / team mode picker. Runs `pip install bicameral-mcp` + `bicameral-mcp setup --mode {solo|team}` via list-form spawn against the operator's resolved Python; nothing is bundled in the VSIX. Live per-step progress over WebSocket.
+- **BicameralMcpClient** — thin wrapper around `@modelcontextprotocol/sdk` stdio transport. Connect/disconnect is lazy; `history`/`preflight`/`drift`/`ratify` tools are surfaced through HTTP routes that scope to local-only access (`rejectIfRemote`).
+- **Bicameral Settings card** — install state + version + `failsafe.integrations.bicameral.autoConnect` toggle + "Re-install / Re-setup…" shortcut. The autoConnect setting drives an opt-in background connect attempt at activation when the workspace is configured.
+- **VS Code settings**: `failsafe.integrations.bicameral.command` (default `"bicameral-mcp"`), `failsafe.integrations.bicameral.pipCommand` (default `"pip"`), `failsafe.integrations.bicameral.autoConnect` (default `false`).
+- **Bicameral surface** — `src/roadmap/routes/BicameralRoute.ts` (status + install + connect / disconnect / history / drift / ratify + auto-connect toggle); `src/extension/bootstrapBicameral.ts` (lazy client wiring + config-watcher rebuild + auto-connect probe); `src/roadmap/ui/modules/bicameral-settings-card.js`.
+- 11 new mocha test files covering Bicameral client / install detector / install handler / Integrations tab JSDOM render / Bicameral card states (functional under SG-035).
+- **`WorkspaceMutationBus`** (`src/shared/WorkspaceMutationBus.ts`) — targeted-path fs.watch aggregator with per-watcher debounce (200ms default, 1500ms META_LEDGER override). Pure Node stdlib; no new deps.
+- **`LedgerManager.getLedgerPath()`** — public accessor for the SQLite db path; lets HubSnapshotService + TrustEngine resolve the watch target without threading `configProvider` through their constructors.
+- **`HubSnapshotService.refreshChainValidity()`** — invalidates `cachedChainValid` + `chainValidAt` on bus-emitted db mutations; next `getCheckpointSummary()` re-walks the chain via `verifyCheckpointChain()`.
+- **`HubSnapshotService.dispose()`** + **`PlanManager.dispose()`** + **`TrustEngine.dispose()`** — release bus subscriptions on extension deactivate.
+- **18 new functional cases** across 5 test files (FX498/499/501/502/503 — all under SG-035 acceptance discipline).
+- **Voice Pack — separate-download companion** (`docs/plan-qor-voice-substrate-extraction.md`). Resolves B195 marketplace-cap risk per the 2026-05-18 disposition decision (`feedback_voice_separate_download.md`). Base VSIX drops below the 30 MB ceiling; voice features become opt-in.
+- **Install / uninstall paths**: VS Code commands `failsafe.installVoicePack` + `failsafe.uninstallVoicePack`. Settings tab Voice Pack card with 4-state render (`absent` / `installed v<X>` / `stale` / `error`) including explicit **Dismiss** + **Retry** on terminal errors (per F1 audit-cycle-1 remediation; satisfies SG-FakeProgress-A Live-Progress Invariant).
+- **Voice substrate**: `src/voice-pack/{types,voice-pack-detector,install-handler,index}.ts`. Pure Node 20+ stdlib (`fetch` with redirect-follow + bounded GitHub-host allowlist; `crypto`, `stream`, `child_process` for `tar -xzf`). No new npm dependencies.
+- **ConsoleServer static-mount overlay**: `setupAllRoutes()` mounts `globalStorageUri/voice-pack/` at `/vendor` BEFORE the default uiDir static, so pack files take priority when installed. Falls through gracefully when absent (existing `error:piper_not_vendored` engine error path engages — surfacing the Install Voice Pack affordance via `voice-controller.probeVoicePack()`).
+- **VoicePackRoute**: `GET /api/integrations/voice-pack/status` (probe + version + missingFiles + diskUsageBytes), `POST /api/actions/install-voice-pack` (bridge with WS-broadcast per-phase progress), `POST /api/actions/uninstall-voice-pack`.
+- **Voice-pack build pipeline**: `scripts/package-voice-pack.cjs` writes `dist/failsafe-voice-pack-<version>.tar.gz` + `.sha256` + manifest.json with every-file sha256. `.vscodeignore` excludes the heavy vendor paths from VSIX packaging. `scripts/validate-vsix.cjs` adds a 30 MB ceiling assertion (B195 acceptance gate).
+- **18 voice-pack functional tests** across 6 test files (FX491–FX497).
+- **Enforcement-mode escalation UX** (`docs/plan-qor-enforcement-mode-escalation-ux.md`, B194 resolution). New `governance.modeChanged` typed event + `ModeTransitionHistory` in-memory ring (cap 10) + populated `hub.governanceModeState` + `hub.recentModeTransitions`. Monitor sidebar gains an observe-mode advisory banner ("Switch to assist or enforce when ready →") that links to Settings; Governance tab gains a "Mode Transitions" feed with reverse-chronological rows showing previous/new mode + reason + actor + timestamp. BreakGlass payloads enriched with full transition context (cycle-2 reviewer caught the `system:auto-expire` vs ledger `system:break-glass-timer` mismatch — actor strings now coherent). Closes silent `hub.governanceModeState` non-population bug surfaced in research. 4-cycle audit PASS via independent architect-reviewer (SG-007 Option B). 5 tests (FX504-FX509 — 20 unit cases + 3 Playwright cases). See `docs/governance-mode-transitions.md`.
+- **B199 Phase 2 — Settings tab E2E + B-EM-4 harness unblocker** (`docs/plan-qor-b199-phase2-settings-e2e.md`). 3 active FX512/FX513 Playwright cases + 2 deferred-skip pending B197 merge.
+- **B199 Phases 3-9 — full Command Center tab coverage + WS broadcast matrix + bus-renderer E2E**. Phase 3 (Voice Pack installed state, FX519). Phase 4 (Agents tab structural, FX520). Phase 5 (Workspace tab, FX521). Phase 6 (Governance tab, FX522). Phase 7 (Overview tab, FX523). **All 6 top-level Command Center tabs now have structural Playwright coverage.** Phase 8 (WS broadcast matrix — 16 broadcast types, FX524 — closes deep-audit HIGH). Phase 9 (real disk META_LEDGER → /api/hub → Monitor compact-UI E2E, FX525 — closes deep-audit CRITICAL "B191 bus→renderer fixture-only"). Remaining B199 gaps (B-B199-1..6) captured in BACKLOG for follow-on cycles.
+- **Bicameral integration quick wins (B-BIC-1..5)** (`docs/plan-qor-bicameral-quickwins.md`). Five high-leverage fixes: (1) ratify → META_LEDGER USER_OVERRIDE; (2) extension-deactivate disposer + rewire cleanup; (3) transport.onclose crash recovery; (4) BicameralMcpClient.getCapabilities() listTools cache; (5) install stdout/stderr ANSI + C0 sanitizer. 15 new FX514-FX518 cases.
+- **B197 qor-logic version-floor surfacing**: hub payload now carries `installedVersion` + `meetsFloor`; Settings card surfaces a `cc-qorlogic-floor-warning` block when below `MIN_QOR_LOGIC_VERSION`. FX511 (6 cases).
+- **Bicameral UI design-token cleanup** (`bicameral-card.js`): 6 fabricated/wrong theme tokens corrected; inline `.cc-card` / `.cc-btn` overrides removed so the canonical CSS classes own glass-morphism + radius + padding.
+- **B193 SentinelDaemon governance-file coverage residual fix-up** (`docs/plan-qor-sentinel-governance-extensions.md`). Phase 60 §2 Track C pre-shipped most of B193 (`.md`/`.yaml`/`.yml`/`.json` watched, `.failsafe/**` blanket exclusion removed). Residual cycle: corrects aspirational whitelist paths to canonical fs locations (`.failsafe/risks/risks.json`, `.failsafe/manifest/active_intent.json` + `manifest/intents/` glob); adds `docs/META_LEDGER.md` + `docs/BACKLOG.md` + `docs/plan-*.md` to whitelist and `isGovernanceSurface` priority-boost (verdict pipeline now sees these as `'high'` priority); broadens `.failsafe/governance/` to a blanket prefix that covers 70+ on-disk variant files (AUDIT_REPORT_*, SESSION_STATE_*, RESEARCH_BRIEF_*) the suffix-equality match dropped silently. 10 new SG-035 functional cases (FX510). 1-cycle architect-reviewer PASS.
+
+### Changed
+
+- **`ConsoleLifecycleService.watchMetaLedger`** routes through `WorkspaceMutationBus` when present (1500ms debounce preserved); falls back to raw `fs.watch` when no bus is provided (test back-compat).
+- **`bootstrapCore`** constructs `WorkspaceMutationBus` alongside `EventBus`; **`bootstrapServers`** + **`bootstrapQorLogic`** thread it to ConsoleServer + TrustEngine. All bus-receiving constructor parameters are optional (existing test fixtures without bus continue to work unchanged).
+
+### Not done — see B-SC-6
+
+L3ApprovalService was originally listed as a B192 stale-cache victim. Audit cycle 1 surfaced that its backing `VscodeStateStore` wraps `vscode.Memento` (in-process VS Code state with no filesystem path to watch). The existing `HubSnapshotService.buildHubSnapshot` pull-call to `qorelogicManager.refreshL3Queue?.()` handles its in-process staleness. An EventBus-driven alternative (publish `qorelogic.l3Queue.mutated` on writes) is deferred to a separate cycle.
+
 ## [5.1.0] - 2026-05-14
 
 Minor release. Model-sourced Risk Register (coding agents author risks via MCP tool, chat subcommand, or auto-derivation from SHIELD lifecycle), Install Skills UX expansion (live progress + per-host picker + dry-run preview + LiveProgressInvariant doctrine), OpenVSX/VS Code Marketplace alignment at v5.0.0 baseline, brand sweep (eliminated all `Qore` legacy spellings), release pipeline safety gate (production environment approval), full SRE panel attribution (Microsoft AGT + Qortara), 36 new FX415–FX420 functional tests, and a complete brand + skill-source-attribution sweep. Supersedes the unreleased 2026-05-06 draft.

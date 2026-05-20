@@ -29,10 +29,28 @@ suite('SentinelWatchPolicy (Phase 60)', () => {
         assert.equal(policy.shouldWatch('config/app.yml', 'FILE_MODIFIED'), true);
     });
 
-    test('shouldWatch — non-whitelisted .failsafe/** .ts is suppressed', () => {
+    test('shouldWatch — non-whitelisted .failsafe/** .ts is suppressed (outside governance prefix)', () => {
+        // After B193 residual fix-up: `.failsafe/governance/` IS now a
+        // blanket-watched prefix. Non-governance `.failsafe/` subtrees
+        // (e.g. `.failsafe/manifest/draft/`) without a matching whitelist
+        // entry still get suppressed.
+        assert.equal(
+            policy.shouldWatch('.failsafe/scratch/plan.ts', 'FILE_MODIFIED'),
+            false
+        );
+    });
+
+    test('shouldWatch — .failsafe/governance/* paths now blanket-watched (B193 residual)', () => {
+        // Direct on-disk reality: 70+ AUDIT_REPORT_*.md, RESEARCH_BRIEF_*.md,
+        // SESSION_STATE_*.md variant files exist under .failsafe/governance/.
+        // The broader prefix admits all of them with watched extensions.
         assert.equal(
             policy.shouldWatch('.failsafe/governance/plan.ts', 'FILE_MODIFIED'),
-            false
+            true
+        );
+        assert.equal(
+            policy.shouldWatch('.failsafe/governance/AUDIT_REPORT_voice-substrate-extraction.md', 'FILE_MODIFIED'),
+            true
         );
     });
 
@@ -203,5 +221,62 @@ suite('SentinelWatchPolicy (Phase 60)', () => {
         const a = policy.getIgnorePatterns();
         const b = policy.getIgnorePatterns();
         assert.notEqual(a, b);
+    });
+
+    // ---------------------------------------------------------------
+    // FX510: B193 residual fix-up — corrected canonical paths +
+    // .failsafe/governance/ prefix coverage + docs/ priority boost.
+    // ---------------------------------------------------------------
+
+    test('FX510 isWatchedGovernancePath — docs/META_LEDGER.md (canonical repo path)', () => {
+        assert.equal(policy.isWatchedGovernancePath('docs/META_LEDGER.md'), true);
+    });
+
+    test('FX510 isWatchedGovernancePath — docs/BACKLOG.md (canonical repo path)', () => {
+        assert.equal(policy.isWatchedGovernancePath('docs/BACKLOG.md'), true);
+    });
+
+    test('FX510 isWatchedGovernancePath — docs/plan-*.md covered by prefix glob', () => {
+        assert.equal(policy.isWatchedGovernancePath('docs/plan-qor-foo.md'), true);
+        assert.equal(policy.isWatchedGovernancePath('docs/plan-qor-sentinel-governance-extensions.md'), true);
+    });
+
+    test('FX510 isWatchedGovernancePath — .failsafe/risks/risks.json (canonical RiskRegisterManager path)', () => {
+        assert.equal(policy.isWatchedGovernancePath('.failsafe/risks/risks.json'), true);
+    });
+
+    test('FX510 isWatchedGovernancePath — .failsafe/manifest/active_intent.json (canonical IntentStore path)', () => {
+        assert.equal(policy.isWatchedGovernancePath('.failsafe/manifest/active_intent.json'), true);
+    });
+
+    test('FX510 isWatchedGovernancePath — .failsafe/manifest/intents/ per-intent files covered by prefix', () => {
+        assert.equal(policy.isWatchedGovernancePath('.failsafe/manifest/intents/intent-abc.json'), true);
+    });
+
+    test('FX510 isWatchedGovernancePath — .failsafe/governance/AUDIT_REPORT_<variant>.md (broader prefix)', () => {
+        assert.equal(
+            policy.isWatchedGovernancePath('.failsafe/governance/AUDIT_REPORT_voice-substrate-extraction.md'),
+            true
+        );
+        assert.equal(
+            policy.isWatchedGovernancePath('.failsafe/governance/SESSION_STATE_bicameral-mcp-integration.md'),
+            true
+        );
+        assert.equal(
+            policy.isWatchedGovernancePath('.failsafe/governance/RESEARCH_BRIEF_skill-consolidation.md'),
+            true
+        );
+    });
+
+    test('FX510 determinePriority — docs/META_LEDGER.md priority-boosted to high', () => {
+        assert.equal(policy.determinePriority('docs/META_LEDGER.md'), 'high');
+    });
+
+    test('FX510 determinePriority — docs/BACKLOG.md priority-boosted to high', () => {
+        assert.equal(policy.determinePriority('docs/BACKLOG.md'), 'high');
+    });
+
+    test('FX510 determinePriority — docs/plan-*.md priority-boosted to high', () => {
+        assert.equal(policy.determinePriority('docs/plan-qor-foo.md'), 'high');
     });
 });

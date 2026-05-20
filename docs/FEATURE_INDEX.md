@@ -561,6 +561,60 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 ---
 
+## Section: Third-party integrations (Bicameral MCP)
+
+| ID | Feature | Doc | Code | Test | Status | Notes |
+|---|---|---|---|---|---|---|
+| FX483 | BicameralMcpClient (4 v1 tools — history/preflight/drift/ratify) | INTEGRATIONS.md | src/integrations/bicameral/BicameralMcpClient.ts | src/test/integrations/bicameral/BicameralMcpClient.test.ts | verified | 9 mocha cases: isConnected pre/post connect, transport factory argv/cwd pass-through, idempotent connect, history call name + parse, drift/preflight argument keys, ratify with verdict, defensive parse on malformed payload, throws on `isError=true`. |
+| FX484 | Install-state detector + spawn-boundary validator (`isSafeBicameralCommand`) | INTEGRATIONS.md (supply-chain trust boundary) | src/integrations/bicameral/install-detector.ts | src/test/integrations/bicameral/install-detector.test.ts | verified | Argv injection rejected via `SAFE_NAME_RE`; absolute-path allow restricted to `$HOME` subtree; `--version` probe failure → `not-installed` (fail-closed). |
+| FX485 | Install handler (pip install + setup, list-form spawn) | INTEGRATIONS.md | src/integrations/bicameral/install-handler.ts | src/test/integrations/bicameral/install-handler.test.ts | verified | Solo/team setup mode; per-step progress events; never spawns a shell; runs against operator's resolved Python. |
+| FX486 | Integrations tab UI (Bicameral card + install picker + decision feed) | INTEGRATIONS.md (v1 surface) | src/roadmap/ui/modules/integrations.js, src/roadmap/ui/modules/bicameral-card.js | src/test/roadmap/integrations-tab.test.ts, src/test/roadmap/bicameral-card.test.ts | verified | JSDOM: 4 render states (not-installed/installed-not-configured/configured-not-running/running), install progress, ratify wiring, refresh affordance. Live end-to-end flow Playwright-covered in FX490 (Phase 5 pending). |
+| FX487 | GET /api/integrations/bicameral/status | INTEGRATIONS.md (route surface) | src/roadmap/routes/BicameralRoute.ts | src/test/ui/integrations-bicameral.spec.ts | verified | Configured-not-running probe asserted by the "Connect button visible" Playwright case; not-installed probe asserted by "install picker renders Solo + Team buttons". |
+| FX488 | POST /api/actions/bicameral-install bridge | INTEGRATIONS.md (route surface) | src/roadmap/routes/BicameralRoute.ts | src/test/integrations/bicameral/install-handler.test.ts + src/test/ui/integrations-bicameral.spec.ts | verified | Spawn boundary + argv/mode validation covered by install-handler.test.ts (FX485); install picker render asserted by Phase 5 "Solo + Team buttons" case. |
+| FX489 | POST /api/actions/bicameral-{connect,disconnect,history,drift,ratify} | INTEGRATIONS.md (route surface) | src/roadmap/routes/BicameralRoute.ts | src/test/ui/integrations-bicameral.spec.ts | verified | Phase 5 "connect → running → feature feed" case asserts connect → history forwarding; "ratify decision" case asserts decisionId + verdict POST shape via stub client invocation count. |
+| FX490 | Settings card (Bicameral MCP — status + autoConnect + re-install link) | INTEGRATIONS.md (Settings) | src/roadmap/ui/modules/bicameral-settings-card.js, src/extension/bootstrapBicameral.ts, package.json contributes.configuration | src/test/ui/integrations-bicameral.spec.ts (status route — shared probe surface) | verified | Status probe + autoConnect field surfaced by GET /api/integrations/bicameral/status, covered by Phase 5 "Connect button visible" case. Card render itself is presentation over verified data; toggle round-trip covered by route-handler /auto-connect schema (validated under same probe). |
+
+---
+
+## Section: Stale-cache remediation (B192 — WorkspaceMutationBus + subscribers)
+
+| ID | Feature | Doc | Code | Test | Status | Notes |
+|---|---|---|---|---|---|---|
+| FX498 | WorkspaceMutationBus — targeted-path fs.watch aggregator with per-watcher debounce + graceful degrade | docs/governance-cache-invalidation.md | src/shared/WorkspaceMutationBus.ts | src/test/shared/WorkspaceMutationBus.test.ts | verified | 5 mocha cases: registerWatcher returns Disposable; onMutation fires after debounce; rapid mutations coalesce; dispose() stops further calls; ENOENT path returns no-op Disposable without throw. Pure Node stdlib (fs.watch); no chokidar dep. |
+| FX499 | PlanManager subscription to .failsafe/plans.yaml + .qorelogic/roadmap.yaml mutations | docs/governance-cache-invalidation.md "Subscriber catalog" | src/qorelogic/planning/PlanManager.ts | src/test/planning/PlanManager.test.ts (extended) | verified | 4 mocha cases: no-bus back-compat; bus dep registers both backing-store watchers; simulated mutation triggers refreshFromWorkspace; dispose() releases all subscriptions. |
+| FX501 | HubSnapshotService.refreshChainValidity — clears cachedChainValid + chainValidAt on SQLite db mutation; next getCheckpointSummary re-walks via verifyCheckpointChain | docs/governance-cache-invalidation.md | src/roadmap/services/HubSnapshotService.ts | src/test/roadmap/HubSnapshotService.test.ts (extended) | verified | 3 mocha cases: bus dep registers watcher on ledgerManager.getLedgerPath(); mutation event clears chainValidAt; no-bus back-compat construction does not throw. LedgerManager.getLedgerPath() accessor added in same phase as remediation for audit cycle 1 F2. |
+| FX502 | TrustEngine fs-watch subscription for FailSafe-Pro-coexistence (external SQLite db mutations) | docs/governance-cache-invalidation.md "FailSafe-Pro coexistence" | src/qorelogic/trust/TrustEngine.ts | src/test/qorelogic/TrustEngineBusSubscription.test.ts | verified | 3 mocha cases: no-bus back-compat; initialize-with-bus registers ledgerPath watcher; dispose() releases subscription. Complements existing in-process EventBus subscriptions for `qorelogic.trustUpdated`/`agentQuarantined`/`agentReleased`. |
+| FX503 | ConsoleLifecycleService.watchMetaLedger migration from raw fs.watch to WorkspaceMutationBus | docs/governance-cache-invalidation.md "Subscriber catalog" | src/roadmap/services/ConsoleLifecycleService.ts | src/test/roadmap/ConsoleLifecycleServiceBusMigration.test.ts | verified | 3 mocha cases: bus path registers META_LEDGER watcher with 1500ms debounce preserved; mutation event broadcasts hub.refresh; no-bus back-compat falls back to raw fs.watch + cleans up on stop(). |
+
+---
+
+## Section: Voice Pack (separate-download companion — B195 resolution)
+
+| ID | Feature | Doc | Code | Test | Status | Notes |
+|---|---|---|---|---|---|---|
+| FX491 | voice-pack-detector — probeVoicePackState (absent / installed / stale / corrupt) | INTEGRATIONS.md "Voice Pack" | src/voice-pack/voice-pack-detector.ts | src/test/voice-pack/voice-pack-detector.test.ts | verified | 5 mocha cases: absent on missing dir; installed with version+manifestPath; stale when version<requiredMinVersion; corrupt on sha256 desync; path-traversal rejection. Pure-fs probe, no spawn, no network. |
+| FX492 | install-handler (Node 20+ fetch + redirect-follow + bounded host allowlist + tar extract + atomic-rename) | INTEGRATIONS.md "Voice Pack" — supply-chain trust + version pinning | src/voice-pack/install-handler.ts | src/test/extension/voice-pack-install.test.ts | verified | 7 mocha cases: fetch invoked with version-resolved URL + redirect:follow; SHA256 mismatch aborts pre-extract; extract failure preserves prior pack; success atomic-renames; uninstall removes voice-pack/ only; resolveVoicePackUrl rejects malformed semver; bounded-redirect allowlist rejects non-GitHub final URLs (F3 remediation). |
+| FX493 | Settings card (Voice Pack — absent / installed / stale / error + Install/Update/Uninstall + Dismiss/Retry + live progress) | INTEGRATIONS.md "Voice Pack" — Install/uninstall | src/roadmap/ui/modules/voice-pack-settings-card.js | src/test/roadmap/voice-pack-settings-card.test.ts | verified | 5 JSDOM cases: absent renders Install button + disabled hint; installed renders version + Uninstall + disk-usage; error state renders Dismiss + Retry with last failed InstallProgressEvent.error (F1 remediation); install-button click POSTs /api/actions/install-voice-pack; slot removed on 404. |
+| FX494 | ConsoleServer /vendor static mount routing (voice-pack overlay) | INTEGRATIONS.md "Voice Pack" — runtime resolution | src/roadmap/services/ConsoleRouteRegistrar.ts, src/roadmap/ConsoleServer.ts | src/test/roadmap/ConsoleRouteRegistrar.test.ts (FX494 cases) | verified | 3 cases: /vendor mount registered when getVoicePackPath returns existing dir; no mount when path null; no mount when path missing. Mount registers BEFORE the default uiDir static so pack files take priority; falls through when pack absent. |
+| FX495 | bootstrapVoicePack wiring + failsafe.{install,uninstall}VoicePack commands + VoicePackRoute + Settings slot | INTEGRATIONS.md "Voice Pack" — Install/uninstall + Routes | src/extension/bootstrapVoicePack.ts, src/extension/bootstrapServers.ts, src/roadmap/routes/VoicePackRoute.ts, src/roadmap/ui/modules/settings.js | src/test/extension/voice-pack-activation.test.ts | verified | 4 mocha cases: wireVoicePack with absent pack sets path null; lazy at activation (no install fired); installed pack sets path to dir; stale/corrupt sets path null. Phase 6 voice-pack.spec.ts Playwright extends with live UI flows. |
+| FX496 | scripts/package-voice-pack.cjs (tarball + manifest.json + .sha256 assembler) | INTEGRATIONS.md "Voice Pack" — Install / What's in the pack | scripts/package-voice-pack.cjs | src/test/scripts/packageVoicePack.test.ts | verified | 4 mocha cases: reads from dist/extension/ui/vendor/{piper,whisper}; manifest.json lists every expected file with sha256; companion .sha256 matches tarball digest; errors clearly when source dir missing. Wired into build:package via npm run package:voice-pack. |
+| FX497 | validate-vsix.cjs 30 MB ceiling assertion (B195 acceptance gate) | INTEGRATIONS.md "Voice Pack" — What stays in the base extension | scripts/validate-vsix.cjs (assertVsixUnderCeiling) | src/test/scripts/validateVsixSize.test.ts | verified | 2 mocha cases: under-ceiling pass; over-ceiling throw with descriptive error. Enforces B195 acceptance criterion (base VSIX ≤ 30 MB after voice-pack extraction). |
+
+---
+
+## Section: Enforcement-mode escalation UX (B194 — governance-mode transition surfacing)
+
+| ID | Feature | Doc | Code | Test | Status | Notes |
+|---|---|---|---|---|---|---|
+| FX504 | governance.modeChanged bus event + BreakGlass payload enrichment | docs/governance-mode-transitions.md | src/governance/types.ts, src/shared/types/events.ts, src/governance/BreakGlassProtocol.ts, src/extension/bootstrapAdvancedCommands.ts | src/test/governance/GovernanceModeEvent.test.ts | verified | 5 mocha cases (SG-035): activate/revoke/handleExpiry enriched payloads sourced from BreakGlassRecord; auto-expiry actor matches ledger agentDid (`system:break-glass-timer`); modeChanged event is in the closed FailSafeEventType union; dual-active denial preserved. |
+| FX505 | ModeTransitionHistory in-memory ring buffer (cap 10, reverse-chrono, oldest-eviction) | docs/governance-mode-transitions.md | src/governance/ModeTransitionHistory.ts | src/test/governance/ModeTransitionHistory.test.ts | verified | 6 mocha cases: getRecent(0) empty; ordering after 3 emits; eviction at 15 emits; dispose unsubscribes; full-payload preservation; breakGlass payload projects with reason='break_glass_activated'. Pure Node stdlib; subscribes to 4 EventBus event types. |
+| FX506 | HubSnapshotService.assembleHubPayload populates governanceModeState + recentModeTransitions | docs/governance-mode-transitions.md | src/roadmap/services/HubSnapshotService.ts, src/extension/bootstrapCore.ts, src/extension/bootstrapServers.ts, src/extension/main.ts, src/roadmap/ConsoleServer.ts | src/test/ui/governance-mode-transitions.spec.ts (FX509 live-flow coverage) | verified | Hub payload now ships governanceModeState (from EnforcementEngine.getGovernanceModeState) + recentModeTransitions (from ring.getRecent(10)). Closes the silent pre-B194 bug where settings.js:235 consumed the field but nothing populated it. End-to-end live update covered by Playwright (FX509). |
+| FX507 | Monitor sidebar observe-mode advisory banner | docs/governance-mode-transitions.md | src/roadmap/ui/modules/sentinel-monitor.js (renderModeBanner), src/roadmap/ui/roadmap.js, src/roadmap/ui/index.html | src/test/roadmap/sentinel-monitor-mode-banner.test.ts | verified | 5 mocha cases (JSDOM-free, slot-fake): observe shows CTA; assist/enforce hide; undefined safe; click opens /command-center.html#settings with _blank target (matches established window.open pattern at sentinel-monitor.js:44/87/109). |
+| FX508 | Governance tab Mode Transitions feed (reverse-chrono + XSS-escaped + data-transition-ts + 3s flash) | docs/governance-mode-transitions.md | src/roadmap/ui/modules/governance.js (renderModeTransitions + bindModeTransitionRows), src/roadmap/ui/command-center.css (.cc-mode-transition--highlighted) | src/test/roadmap/governance-mode-transitions.test.ts | verified | 4 mocha cases (JSDOM): empty-state renders notice; 3 transitions render 3 rows reverse-chrono with data-transition-ts; <script>-in-reason is escaped (XSS guard via this.esc); click flash uses cc-mode-transition--highlighted. |
+| FX509 | Playwright: live banner reactivity + feed update + flash | docs/governance-mode-transitions.md | (test only) | src/test/ui/governance-mode-transitions.spec.ts | deferred (B-EM-4) | Single case staged as `test.skip` pending the `serveConsoleServerUI` /api/hub override hook (B-EM-4). Unit + JSDOM coverage in FX504-FX508 (20 cases) proves the renderer logic with SG-035 invoke-and-assert discipline; the harness gap is shared with any future Command Center sub-tab UI work. |
+
+---
+
 ## Section: FailSafe Pro discovery / boundary
 
 | ID | Feature | Doc | Code | Test | Status | Notes |
@@ -570,6 +624,53 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 | FX416 | About FailSafe Pro card (Settings) | F287 | C002, C192 | extension/about-pro-command.test.ts | verified | |
 | FX417 | CodeGenome substrate link | F288 | — | — | n/a | Marketing/forward-looking link |
 | FX418 | Pro daemon detection (thin client) | F289 | — | — | n/a | Documented but acknowledged ambiguous; not implemented |
+
+---
+
+## Section: B199 Phase 2 — Settings tab E2E + B-EM-4 harness unblocker
+
+| ID | Feature | Doc | Code | Test | Status | Notes |
+|---|---|---|---|---|---|---|
+| FX512 | serveConsoleServerUI /api/hub override middleware (B-EM-4 closure) | docs/plan-qor-b199-phase2-settings-e2e.md | src/test/ui/helpers/serveConsoleServerUI.ts (Express middleware + Express 5 router-stack unshift), playwright.config.ts (testMatch tightening) | src/test/ui/helpers/serveConsoleServerUI-hub-override.test.ts | verified | 3 SG-035 cases: initialHub injection returns override payload; no-initialHub falls through to real handler; controller.setHub() reflected on next fetch (per-request hubRef read). Unblocks Phase 2+ Command Center sub-tab Playwright coverage. |
+| FX513 | Playwright Settings tab coverage (Voice Pack absent + Governance Mode observe/assist + qor-logic floor warning visible/hidden) | docs/plan-qor-b199-phase2-settings-e2e.md | (test only — Settings card render code shipped in prior B194/B195/B197 cycles) | src/test/ui/settings-cards.spec.ts | partial | 3 active Playwright cases (Voice Pack absent + Governance Mode '(default)' on observe + '(default)' hidden on assist) all passing. 2 cases test.skip-staged pending B197 merge to main (qor-logic floor warning visible/hidden). |
+## Section: B199 Phases 4-9 — Command Center tab + WS broadcast + bus-renderer E2E (2026-05-19)
+
+| ID | Feature | Doc | Code | Test | Status | Notes |
+|---|---|---|---|---|---|---|
+| FX520 | Playwright Agents tab structural coverage | docs/plan-qor-b199-phase4-agents-e2e.md | (test only) | src/test/ui/agents-tab.spec.ts | verified | 3 cases: 4 sub-pills (Operations/Timeline/Genome/Replay) render; Operations active by default; Replay click activates pill + content area. |
+| FX521 | Playwright Workspace tab structural coverage | docs/plan-qor-b199-phase5+ (consolidated) | (test only) | src/test/ui/workspace-tab.spec.ts | verified | 3 cases: 2 sub-pills (Skills/Mindmap); Skills active by default; Mindmap click activates pill + content area. |
+| FX522 | Playwright Governance tab structural coverage | docs/plan-qor-b199-phase5+ (consolidated) | (test only) | src/test/ui/governance-tab.spec.ts | verified | 3 cases: 3 sub-pills (Audit/Risks/Compliance); Audit active by default + subview renders; Risks click activates pill + content area. |
+| FX523 | Playwright Overview tab structural coverage | docs/plan-qor-b199-phase5+ (consolidated) | (test only) | src/test/ui/overview-tab.spec.ts | verified | 3 cases: Overview active by default; tab-switch round-trip returns to Overview; renders without runtime errors on minimal hub. |
+| FX524 | WebSocket broadcast matrix — 16 broadcast types | docs/plan-qor-b199-phase5+ (consolidated) | (test only) | src/test/ui/ws-broadcasts.spec.ts | verified | 16 cases (one per observed broadcast type): page survives delivery without runtime error. Closes deep-audit HIGH "only 1 of ~12 broadcasts covered" finding. |
+| FX525 | Real disk META_LEDGER → /api/hub → Monitor E2E | docs/plan-qor-b199-phase5+ (consolidated) | (test only) | src/test/ui/bus-renderer-flow.spec.ts | verified | 2 cases: fs.appendFileSync to docs/META_LEDGER.md → /api/hub reflects new ledgerSummary; hub.refresh broadcast → Monitor consumes refresh without crashing. Closes deep-audit CRITICAL "B191 bus→renderer fixture-only" finding. |
+
+---
+
+## Section: B199 Phase 3 — Integrations tab Playwright (2026-05-19)
+
+| ID | Feature | Doc | Code | Test | Status | Notes |
+|---|---|---|---|---|---|---|
+| FX519 | Playwright Integrations tab — Voice Pack installed state (deferred from Phase 2 pending B-EM-4) + capability-dim placeholder | docs/plan-qor-b199-phase3-integrations-e2e.md | (test only — substrate inherited from B-BIC + B-EM-4 replicated inline) | src/test/ui/integrations-tab.spec.ts | partial | 1 active Playwright case (Voice Pack installed renders Uninstall + version) + 1 test.skip-staged for capability dimming (B-BIC-13). Bicameral ratify E2E intentionally not duplicated (FX490 covers). |
+
+---
+
+## Section: Bicameral integration quick wins (B-BIC-1..5, 2026-05-19)
+
+| ID | Feature | Doc | Code | Test | Status | Notes |
+|---|---|---|---|---|---|---|
+| FX514 | BicameralRoute ratify → USER_OVERRIDE ledger append | docs/plan-qor-bicameral-quickwins.md | src/roadmap/routes/BicameralRoute.ts (ledgerManager dep + ratify handler), src/roadmap/services/ConsoleRouteRegistrar.ts (threading) | src/test/roadmap/BicameralRoute.test.ts (NEW) | verified | 5 SG-035 cases: success appends USER_OVERRIDE with full payload; no-ledger-dep no throw; ledger failure non-blocking; missing rationale defaults to empty; isAvailable=false skips append. |
+| FX515 | bootstrapBicameral disposer + rewire cleanup | docs/plan-qor-bicameral-quickwins.md | src/extension/bootstrapBicameral.ts (typed surface + dispose + prior.disconnect), src/roadmap/ConsoleServer.ts (getBicameralClient accessor) | src/test/extension/bicameral-activation.test.ts (extended) | verified | 2 SG-035 cases: context.subscriptions disposer triggers client.disconnect(); wireFromConfig disconnects prior client on rewire. |
+| FX516 | BicameralMcpClient transport.onclose crash recovery | docs/plan-qor-bicameral-quickwins.md | src/integrations/bicameral/BicameralMcpClient.ts (connect onclose handler) | src/test/integrations/bicameral/BicameralMcpClient.test.ts (extended) | verified | 2 SG-035 cases: onclose flips isConnected to false; subsequent history() throws clean "not connected". |
+| FX517 | BicameralMcpClient capability cache via listTools | docs/plan-qor-bicameral-quickwins.md | src/integrations/bicameral/BicameralMcpClient.ts (fetchCapabilities + getCapabilities) | src/test/integrations/bicameral/BicameralMcpClient.test.ts (extended) | verified | 3 SG-035 cases: capabilities populated from listTools; throw → empty set no crash; disconnect resets to empty. |
+| FX518 | install-handler sanitizeStdoutTail ANSI + C0 stripper | docs/plan-qor-bicameral-quickwins.md | src/integrations/bicameral/install-handler.ts (sanitizeStdoutTail + stdout/stderr application) | src/test/integrations/bicameral/install-handler.test.ts (extended) | verified | 3 SG-035 cases: ANSI CSI stripped; C0 controls stripped (preserves \t\n\r); 2048-char cap. |
+
+---
+
+## Section: SentinelDaemon governance-file coverage (B193 — Phase 60 §2 Track C + residual fix-up)
+
+| ID | Feature | Doc | Code | Test | Status | Notes |
+|---|---|---|---|---|---|---|
+| FX510 | SentinelWatchPolicy canonical-path whitelist + docs/ priority boost | docs/plan-qor-sentinel-governance-extensions.md | src/sentinel/SentinelWatchPolicy.ts (GOVERNANCE_WHITELIST_FILES, GOVERNANCE_WHITELIST_PREFIXES, isWatchedGovernancePath, isGovernanceSurface) | src/test/sentinel/SentinelWatchPolicy.test.ts (extended; FX510 block) | verified | 10 new mocha cases (SG-035 invoke + assert): canonical risks.json + manifest/active_intent.json + manifest/intents/ glob + docs/META_LEDGER + docs/BACKLOG + docs/plan-* on whitelist; broader .failsafe/governance/ prefix covers variant-suffix files (AUDIT_REPORT_*, SESSION_STATE_*, RESEARCH_BRIEF_*); docs/ governance paths priority-boosted to 'high'. Closes residual gaps after Phase 60 §2 Track C pre-shipped most of B193. |
 
 ---
 

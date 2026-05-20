@@ -15,6 +15,7 @@ import { ConfigurationProfile } from "../../genesis/ConfigurationProfile";
 import { setupBrainstormRoutes } from "../routes/BrainstormRoute";
 import { setupCheckpointRoutes } from "../routes/CheckpointRoute";
 import { setupActionsRoutes } from "../routes/ActionsRoute";
+import { setupBicameralRoutes } from "../routes/BicameralRoute";
 import { setupTransparencyRiskRoutes } from "../routes/TransparencyRiskRoute";
 import { registerQorRoute } from "../routes/QorRoute";
 import { registerFeatureStatusRoute } from "../routes/FeatureStatusRoute";
@@ -57,6 +58,15 @@ export interface ConsoleRouteHost {
   sentinelDaemon: unknown; planManager: unknown;
   qorelogicManager: { getLedgerManager: () => unknown; getShadowGenomeManager: () => unknown };
   featureGate: unknown;
+  getBicameralClient: () => import("../../integrations/bicameral").BicameralMcpClient | null;
+  getBicameralCommand: () => string;
+  getBicameralAutoConnect: () => boolean;
+  setBicameralAutoConnect: (value: boolean) => Promise<void>;
+  /** Returns absolute path to the operator-installed voice-pack directory,
+   *  or null when no pack is installed. When non-null and the directory
+   *  exists, setupAllRoutes mounts it at /vendor (takes priority over the
+   *  default uiDir-served vendor assets). Phase 2 of voice-substrate-extraction. */
+  getVoicePackPath: () => string | null;
 }
 
 export class ConsoleRouteRegistrar {
@@ -65,6 +75,18 @@ export class ConsoleRouteRegistrar {
   setupAllRoutes(): void {
     const app = this.host.app;
     app.use(express.json({ limit: "12mb" }));
+    // Voice-pack /vendor mount (Phase 2 of voice-substrate-extraction).
+    // When the operator has installed the voice pack to globalStoragePath/voice-pack/,
+    // serve its contents at /vendor BEFORE the default uiDir static mount so the
+    // pack's piper.min.js / transformers.min.js / wasm files take priority over
+    // anything still in dist/extension/ui/vendor/. When the pack is absent, the
+    // default uiDir mount falls through (which post-extraction holds only the
+    // small assets like 3d-force-graph; piper/whisper paths simply 404 and the
+    // voice engines emit error:piper_not_vendored — graceful degradation).
+    const voicePackPath = this.host.getVoicePackPath();
+    if (voicePackPath && fs.existsSync(voicePackPath)) {
+      app.use("/vendor", express.static(voicePackPath, { dotfiles: "allow" }));
+    }
     app.use(express.static(this.host.uiDir, { index: false, dotfiles: "allow" }));
     this.registerCoreRoutes();
     const deps = this.buildApiRouteDeps();
@@ -192,6 +214,17 @@ export class ConsoleRouteRegistrar {
     setupBrainstormRoutes(app, apiDeps);
     setupCheckpointRoutes(app, apiDeps);
     setupActionsRoutes(app, apiDeps);
+    setupBicameralRoutes(app, {
+      rejectIfRemote: (req, res) => this.host.rejectIfRemote(req, res),
+      broadcast: (d) => this.host.broadcast(d),
+      workspaceRoot: this.host.workspaceRoot,
+      getBicameralCommand: () => this.host.getBicameralCommand(),
+      getBicameralClient: () => this.host.getBicameralClient(),
+      getAutoConnect: () => this.host.getBicameralAutoConnect(),
+      setAutoConnect: (v) => this.host.setBicameralAutoConnect(v),
+      // B-BIC-1: pass ledger handle so ratify appends USER_OVERRIDE entry.
+      ledgerManager: this.host.qorelogicManager.getLedgerManager() as any,
+    });
     setupMarketplaceRoutes(app, {
       rejectIfRemote: (req, res) => this.host.rejectIfRemote(req, res),
       broadcast: (data) => this.host.broadcast(data),

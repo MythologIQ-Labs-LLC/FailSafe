@@ -50,7 +50,7 @@ export async function bootstrapQorLogic(
   const ledgerManager = new LedgerManager(secretStore, configProvider);
   await ledgerManager.initialize();
 
-  const trustEngine = new TrustEngine(ledgerManager, core.eventBus);
+  const trustEngine = new TrustEngine(ledgerManager, core.eventBus, core.mutationBus);
   await trustEngine.initialize();
 
   const policyEngine = new PolicyEngine(configProvider);

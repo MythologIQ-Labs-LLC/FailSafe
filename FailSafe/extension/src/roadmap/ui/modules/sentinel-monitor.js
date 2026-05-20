@@ -35,8 +35,39 @@ export class SentinelMonitor {
     }
     this.elements.sentinelAlert.classList.remove('hidden');
     this.elements.sentinelAlert.textContent = String(alert.summary || 'Sentinel raised a risk signal.');
-    this.elements.sentinelAlert.title = 'Click to view details in Command Center';
-    this.elements.sentinelAlert.onclick = () => window.open('/command-center.html#governance', '_blank');
+    this.elements.sentinelAlert.title = 'Click to open the triggering verdict in the Governance tab';
+    this.elements.sentinelAlert.onclick = () => {
+      const ts = alert.timestamp ? encodeURIComponent(String(alert.timestamp)) : '';
+      const url = ts
+        ? `/command-center.html#governance?verdict=${ts}`
+        : '/command-center.html#governance';
+      window.open(url, '_blank');
+    };
+  }
+
+  /**
+   * B194: advisory banner shown only when governance mode === 'observe'.
+   * Empty / hidden in assist/enforce. Click opens Settings tab in a new
+   * window (matches established `_blank` pattern in this module).
+   */
+  renderModeBanner(governanceModeState) {
+    const slot = this.elements.modeBanner;
+    if (!slot) return;
+    const mode = governanceModeState && typeof governanceModeState === 'object'
+      ? String(governanceModeState.mode || '')
+      : '';
+    if (mode !== 'observe') {
+      slot.classList.add('hidden');
+      slot.textContent = '';
+      slot.onclick = null;
+      return;
+    }
+    slot.classList.remove('hidden');
+    slot.textContent = 'Observe mode (read-only). Switch to assist or enforce when ready →';
+    slot.title = 'Click to open Settings → Governance Mode';
+    slot.onclick = () => {
+      window.open('/command-center.html#settings', '_blank');
+    };
   }
 
   renderWorkspaceHealth(hub, plan, blockers, risks, verdicts) {

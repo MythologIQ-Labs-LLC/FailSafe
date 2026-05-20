@@ -32,6 +32,7 @@ import type { QorLogicManager } from "../../qorelogic/QorLogicManager";
 import type { SentinelDaemon } from "../../sentinel/SentinelDaemon";
 import type { AgentHealthIndicator } from "../../sentinel/AgentHealthIndicator";
 import type { IdeActivityTracker } from "./IdeActivityTracker";
+import type { WorkspaceMutationBus, MutationDisposable } from "../../shared/WorkspaceMutationBus";
 
 export type UnattributedFileChange = { eventId: string; timestamp: string; type: string; artifactPath?: string; decision?: string; };
 export type RecordCheckpointInput = { checkpointType: string; actor: string; phase: string; status: CheckpointStatus; policyVerdict: string; evidenceRefs: string[]; payload: unknown; };
@@ -46,6 +47,23 @@ export interface HubSnapshotServiceDeps {
   getIdeTracker: () => IdeActivityTracker | null;
   getAgentHealthIndicator: () => AgentHealthIndicator | null;
   checkpointTypeRegistry: Set<string>;
+  /** Optional WorkspaceMutationBus (B192 remediation). When provided,
+   *  HubSnapshotService subscribes to the SQLite db path's mutations and
+   *  clears its cached chain validity so the next getCheckpointSummary()
+   *  re-walks the chain via verifyCheckpointChain. Pro-coexistence: external
+   *  db writes trigger refresh. */
+  mutationBus?: WorkspaceMutationBus;
+  /** B194: ring buffer of recent governance-mode transitions. */
+  modeTransitionHistory?: import("../../governance/ModeTransitionHistory").ModeTransitionHistory;
+  /** B194: callback returning current governance mode state. Without this,
+   *  `hub.governanceModeState` stays absent (legacy behavior, settings card
+   *  falls back to "(default)"). */
+  getGovernanceMode?: () => import("../../governance/types").GovernanceModeState;
+  /** B197: optional verifier returning the qor-logic install version-floor
+   *  status. When provided, HubSnapshotService resolves it once per hub
+   *  rebuild and threads the result through WorkspaceArtifactBuilder so the
+   *  Settings card can surface a floor-violation warning. */
+  getQorLogicVerifier?: () => Promise<import("../../qorlogic/qorLogicInstallRecord").QorLogicVersionStatus>;
 }
 
 const FILE_EVENT_TYPES = new Set(["FILE_CREATED", "FILE_MODIFIED", "FILE_DELETED"]);
@@ -58,11 +76,50 @@ export class HubSnapshotService {
   private cachedChainValid: boolean = true;
   private unattributedFileChanges: UnattributedFileChange[] = [];
   private revertService: FailSafeRevertService | null = null;
+  private chainValidityDisposable: MutationDisposable | null = null;
   autoDerivationHook: ((gp: ReturnType<typeof buildGovernancePhase>) => void) | null = null;
   constructor(private readonly deps: HubSnapshotServiceDeps & { storeRef?: CheckpointStoreRef }) {
     this.store = deps.storeRef ?? { db: null, memory: [] };
     this.initializeCheckpointStore();
     this.revertService = new FailSafeRevertService(this.buildRevertDeps());
+    this.subscribeToChainValidityMutations();
+  }
+
+  /** B192 remediation: subscribe to the SQLite db file path so external
+   *  mutations (e.g., FailSafe Pro writing to the same db) invalidate the
+   *  cached chain validity. Idempotent: clearing cachedChainValid +
+   *  chainValidAt means the next getCheckpointSummary() call re-walks
+   *  the chain via verifyCheckpointChain. */
+  private subscribeToChainValidityMutations(): void {
+    if (!this.deps.mutationBus) return;
+    try {
+      const ledgerManager = this.deps.qorelogicManager.getLedgerManager();
+      const dbPath = ledgerManager?.getLedgerPath?.();
+      if (!dbPath) return; // ledger not initialized; bus subscription deferred
+      this.chainValidityDisposable = this.deps.mutationBus.registerWatcher(
+        dbPath,
+        () => this.refreshChainValidity(),
+      );
+    } catch {
+      // Ledger manager unavailable; degrade silently. The existing
+      // belt-and-suspenders refresh hooks in buildHubSnapshot still apply.
+    }
+  }
+
+  /** Clear cached chain validity so the next getCheckpointSummary call
+   *  re-runs verifyCheckpointChain over the full chain. */
+  refreshChainValidity(): void {
+    this.chainValidAt = null;
+    this.cachedChainValid = true; // optimistic default until re-walk
+  }
+
+  /** Release the mutation-bus subscription. Called by ConsoleServer.stop or
+   *  extension deactivate. */
+  dispose(): void {
+    if (this.chainValidityDisposable) {
+      try { this.chainValidityDisposable.dispose(); } catch { /* already gone */ }
+      this.chainValidityDisposable = null;
+    }
   }
   private get checkpointDb(): CheckpointDb { return this.store.db; }
   private set checkpointDb(v: CheckpointDb) { this.store.db = v; }
@@ -141,7 +198,16 @@ export class HubSnapshotService {
     const checkpointSummary = this.getCheckpointSummary();
     const governancePhase = buildGovernancePhase(d.workspaceRoot);
     this.autoDerivationHook?.(governancePhase); // plan-qor-model-sourced-risks Phase 3
-    const artifacts = new WorkspaceArtifactBuilder(d.workspaceRoot).build();
+    // B197: resolve qor-logic version-floor status once per hub rebuild (the
+    // verifier spawns `pip show`; running it per-UI-render would be costly).
+    // Failures degrade silently so a missing `pip` or transient subprocess
+    // error doesn't crash hub-build — the UI just omits the warning.
+    let qorLogicVersionStatus: import("../../qorlogic/qorLogicInstallRecord").QorLogicVersionStatus | undefined;
+    if (this.deps.getQorLogicVerifier) {
+      try { qorLogicVersionStatus = await this.deps.getQorLogicVerifier(); }
+      catch { qorLogicVersionStatus = undefined; }
+    }
+    const artifacts = new WorkspaceArtifactBuilder(d.workspaceRoot, qorLogicVersionStatus).build();
     const phaseTitle = inferActivePhaseTitle(activePlan as unknown as Record<string, unknown>, (l) => this.getRecentCheckpoints(l));
     const runState = d.getIdeTracker()?.getRunState(phaseTitle) ?? { currentPhase: "Plan", activeTasks: [], activeDebugSessions: [] };
     const nodeStatusArr = buildNodeStatus(sentinelStatus as { running?: boolean; filesWatched?: number; queueDepth?: number; [k: string]: unknown }, l3Queue, trust, qorRuntime);
@@ -192,6 +258,10 @@ export class HubSnapshotService {
       chainValid: this.cachedChainValid ?? null,
       risks: this.getRiskRegister(),
       agentHealth: this.deps.getAgentHealthIndicator()?.buildMetrics() || null,
+      // B194: governance mode state + recent transition feed. Both optional;
+      // when deps absent, fields stay undefined (legacy behavior).
+      governanceModeState: this.deps.getGovernanceMode?.(),
+      recentModeTransitions: this.deps.modeTransitionHistory?.getRecent(10) ?? [],
       generatedAt: new Date().toISOString(),
     };
   }

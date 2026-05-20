@@ -30,6 +30,26 @@ export class VoiceController {
 
   // -- Public API --------------------------------------------------------------
 
+  /** Probe the operator-installed voice pack. Returns `installed` when the
+   *  pack is ready; any other state means voice features are disabled and
+   *  the UI should surface an Install Voice Pack affordance. Existing
+   *  engine error path (`error:piper_not_vendored`) remains the runtime
+   *  safety net; this method is the UI-side gate. Phase 3 of
+   *  voice-substrate-extraction. */
+  async probeVoicePack() {
+    try {
+      const res = await fetch('/api/integrations/voice-pack/status');
+      if (!res.ok) return 'absent';
+      const status = await res.json();
+      if (status && status.state !== 'installed') {
+        this._emitState?.('voicePackAbsent');
+      }
+      return (status && status.state) || 'absent';
+    } catch {
+      return 'absent';
+    }
+  }
+
   addStateListener(fn) {
     if (typeof fn !== 'function') return () => {};
     this._stateListeners.add(fn);

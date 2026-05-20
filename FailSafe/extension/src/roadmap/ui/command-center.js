@@ -12,6 +12,7 @@ import { SettingsRenderer } from './modules/settings.js';
 import { TimelineRenderer } from './modules/timeline.js';
 import { GenomeRenderer } from './modules/genome.js';
 import { ReplayRenderer } from './modules/replay.js';
+import { IntegrationsRenderer } from './modules/integrations.js';
 import { TabGroup } from './modules/tab-group.js';
 import { updateTickers, updateBootstrapBanner } from './modules/tickers.js';
 import { setWorkspaceRegistryClient, loadWorkspaceRegistry, initWorkspaceSelector } from './modules/workspace-registry.js';
@@ -37,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
       { key: 'skills',     label: 'Skills',     renderer: new SkillsRenderer('workspace', { client }) },
       { key: 'brainstorm', label: 'Mindmap',    renderer: new BrainstormRenderer('workspace', { store, client }) },
     ]),
+    integrations: new IntegrationsRenderer('integrations', { client }),
     settings:   new SettingsRenderer('settings', { store }),
   };
 
@@ -75,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderers.agents.onEvent?.(evt);
     renderers.governance.onEvent?.(evt);
     renderers.workspace.onEvent?.(evt);
+    renderers.integrations.onEvent?.(evt);
     renderers.settings.onEvent?.(evt);
   });
 
@@ -170,8 +173,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (bsRenderer?.llmStatus) { bsRenderer.llmStatus.toggleHelp(); bsRenderer.llmStatus.render(bsRenderer.client); }
   });
 
-  // Restore saved tab (URL hash takes priority)
-  const hashTab = window.location.hash?.replace('#', '');
+  // Restore saved tab (URL hash takes priority). Strip the query suffix so
+  // deep-link parameters like `#governance?verdict=<ts>` still resolve the
+  // correct tab name. Renderers parse the query themselves.
+  const hashRaw = window.location.hash?.replace('#', '') || '';
+  const hashTab = hashRaw.split('?')[0];
   const savedTab = hashTab || store.getActiveTab();
   const savedBtn = [...tabs].find(t => t.dataset.target === savedTab);
   if (savedBtn) savedBtn.click();

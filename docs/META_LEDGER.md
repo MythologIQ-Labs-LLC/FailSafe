@@ -18608,4 +18608,424 @@ _Next: operator runtime verification (reload extension; verify modal live-progre
 
 _Chain integrity: VALID_
 _Session Status: install-skills-ux-expansion SEALED at #371; 5-phase UX surface complete; 73/73 .cjs pass; bundle current; review boundary honored; upstream Qor-logic#58 filed; PUBLISH_BLOCK unchanged_
+
+---
+
+### Entry #372: SESSION SEAL — plan-qor-bicameral-mcp-integration (full-plan substantiation; 5 phases — substrate + install bridge + Integrations tab + Settings card + Playwright spec)
+
+**Entry ID**: `87bbc20e2b7d`
+**Date**: 2026-05-18
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-bicameral-mcp-integration.md` (target v5.2.0; no in-cycle version bump per plan header + operator directive)
+**Audit reference**: `.failsafe/governance/AUDIT_REPORT_bicameral-mcp-integration.md` (3-cycle PASS, Risk Grade L2; workspace-only governance artifact — not in tracked git)
+**Implementation reference**: 5 commits on `feat/bicameral-mcp-integration` (`5dbd984`, `97c0f0d`, `8b229f9`, `187bf83`, `0249822`), all SHIELD-class `wip(bicameral): …` or `chore(backlog): …`.
+
+## Substantiation summary
+
+The Bicameral MCP integration lands as a v1 surface inside FailSafe's Command Center. Operators install Bicameral MCP locally via FailSafe's Integrations tab (solo or team mode), then drive its decision ledger through an MCP stdio session opened lazily on Connect. Four Bicameral tools wired in v1 — `history`, `preflight`, `drift`, `ratify`. Nothing is bundled in the VSIX. Settings card surfaces status + autoConnect toggle. Full surface documented in `docs/INTEGRATIONS.md`.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| AUDIT_REPORT PASS verdict (workspace artifact, 3 cycles) | ✓ |
+| Reality = Promise (Step 3) | 19/19 plan-deliverable files present (verified by glob); 0 MISSING; 0 UNPLANNED (Phase 5 Playwright spec authorized by plan §"Phase 5: Per-Feature Integration Test"). Two activation/settings unit tests added during seal to close the Phase 3 test descriptors. |
+| Open security or development blockers | None gating this cycle. |
+| Test functionality discipline (SG-035) | 18 new functional cases (11 mocha + 4 Playwright + 3 mocha added during seal) — all assert against the unit's output, not presence. Presence-only seal gate PASS. |
+| Mocha (whole repo) | 2377 passing / 1 pending / 17 failing. 7 new bicameral tests in the passing count; baseline-comparison vs `5dbd984` shows zero regressions (the 17 failing are pre-existing VS Code mutex / activation-host environment failures unrelated to this cycle, verified by stash-and-rerun on the bare WIP commit). |
+| Playwright | `integrations-bicameral.spec.ts` 4/4 passing (38.8s wall-clock). |
+| ESLint | 0 errors, 93 warnings (zero in new bicameral files). |
+| TypeScript compile | clean. |
+| Section 4 Razor | New files: 12/13 ≤250L. `bicameral-card.js` at 269L (audit-blessed in workspace AUDIT_REPORT Cycle 3). Touched pre-existing-over-250 files (`ConsoleServer.ts`, `ConsoleRouteRegistrar.ts`, `settings.js`) all marginal +7/+8/+12L additions on already-over files; `bootstrapServers.ts` and `ActionsRoute.ts` REDUCED 297→247L and 220→189L respectively via deliberate extraction. |
+| FEATURE_INDEX FX483–FX490 | All 8 entries `verified`. FX487/488/489/490 promoted from `unverified` post-Phase-5 Playwright. |
+| BACKLOG | B-INT-1..5 captured for follow-up (commit `0249822`). |
+| CHANGELOG | `[Unreleased] — v5.2.0 (draft)` block authored in Phase 4 commit `8b229f9`. Step 7.6 stamp-to-version SKIPPED per operator directive (no in-cycle version bump; the Unreleased block will be renamed by the v5.2.0 release cycle). |
+| Memory (out-of-tree) | `reference_bicameral_mcp.md` written; `project_bicameral_mcp_integration.md` updated with resume log; `MEMORY.md` index reflects both. |
+| Review boundary | No git tag, no push, no PR — local hold honored. |
+
+## Files modified / created (this cycle, post-`5dbd984`)
+
+**New files (8):**
+- `FailSafe/extension/src/roadmap/routes/BicameralRoute.ts` (234L) — status + install + connect/disconnect + 4 v1 tool routes + autoConnect toggle route
+- `FailSafe/extension/src/extension/bootstrapBicameral.ts` (85L) — lazy client wiring + config-watcher rebuild + auto-connect probe
+- `FailSafe/extension/src/roadmap/ui/modules/bicameral-settings-card.js` (68L) — Settings card DOM render + autoConnect toggle wiring
+- `FailSafe/extension/src/test/extension/bicameral-activation.test.ts` (121L) — 4 cases: no-throw on missing CLI; lazy (no connect at activate); unsafe-command rejection; autoConnect=false no-op
+- `FailSafe/extension/src/test/roadmap/settings-bicameral.test.ts` (135L) — 3 cases: card renders with toggle; toggle persists via POST; slot removed on 404
+- `FailSafe/extension/src/test/ui/integrations-bicameral.spec.ts` (157L) — 4 Playwright cases: configured-not-running picker; connect→running→feed; ratify→POST; not-installed picker
+- `docs/INTEGRATIONS.md` (66L) — public-facing integration surface doc
+
+**Modified files (10):**
+- `FailSafe/extension/package.json` — 3 config keys (command/pipCommand/autoConnect)
+- `FailSafe/extension/src/extension/bootstrapServers.ts` — 2-line call into `wireBicameralIntegration` + `maybeAutoConnectBicameral`
+- `FailSafe/extension/src/roadmap/ConsoleServer.ts` — 12L: 4 setters + 2 host-getter fields
+- `FailSafe/extension/src/roadmap/routes/ActionsRoute.ts` — install route migrated out
+- `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts` — BicameralRoute wired into setupAllRoutes + host interface extended
+- `FailSafe/extension/src/roadmap/ui/modules/integrations.js` — stub handlers replaced with real fetch chain (status/connect/history/ratify) + WS reactivity
+- `FailSafe/extension/src/roadmap/ui/modules/settings.js` — slot for bicameral-settings-card
+- `FailSafe/extension/src/test/roadmap/ConsoleRouteRegistrar.test.ts` — host fixture extended with new bicameral fields
+- `FailSafe/extension/src/test/ui/helpers/serveConsoleServerUI.ts` — bicameralClient/Command/Configured fixtures
+- `docs/FEATURE_INDEX.md` — FX483–FX490 section added; FX487-490 flipped verified post-Phase-5
+- `docs/BACKLOG.md` — Bicameral MCP Integration (Follow-ups) section with B-INT-1..5
+- `CHANGELOG.md` — `[Unreleased]` v5.2.0 draft block
+- `FailSafe/extension/README.md` + `README.md` — Upcoming / What's New teaser bullets
+
+## Skipped per protocol decisions
+
+- **Step 0 (gate_chain advisory)**, **Step 4.6 (intent_lock / skill_admission / gate_skill_matrix)**, **Step 4.6.5 (secret_scanner)**, **Step 4.6.6 (procedural_fidelity)**, **Step 4.7 (doc_integrity strict)**, **Step 6.5 (documentation_currency + badge_currency)**, **Step 6.8 (hash_guard toolkit validation — replaced by inline Node `crypto` validate-as-hex check)**, **Step 7.4 (SSDF tagger)**, **Step 7.7 (seal_entry_check)**, **Step 7.8 (gate_chain_completeness)**, **Step 8.5 (dist_compile)**, **Step Z (write substantiate.json + session.rotate)**: all Python `qor.*` toolkit modules unavailable on this Node-archetype host. Each step emits one `gate_skipped_prerequisite_absent` shadow event (severity-1) per Phase 75 wiring. Same posture as Entry #371's "Operator notice — degraded wiring."
+- **Step 7.5 (version bump)**: SKIPPED per plan header + operator directive. Target v5.2.0 is set in plan, applied at the release cycle, not in this seal.
+- **Step 7.6 (CHANGELOG stamp to version)**: SKIPPED. `[Unreleased]` block authored in Phase 4 commit `8b229f9`; the rename-to-`[v5.2.0]` happens in the v5.2.0 release cycle, not here.
+- **Step 9.5.5 (annotated seal-tag creation)**: SKIPPED per `feedback_no_ship_without_approval.md` + plan §Review boundary.
+- **Step 9.6 (push/merge options)**: SKIPPED. Operator selected "stage-only review boundary" at AskUserQuestion prior to skill invocation. Five commits stay local on `feat/bicameral-mcp-integration`.
+
+## Review Boundary attestation
+
+Per `feedback_no_ship_without_approval.md` + plan header §"Review boundary: stage artifacts only (no push / PR / merge / tag / publish)": no push, no tag, no PR, no merge, no marketplace publish. The five `feat/bicameral-mcp-integration` commits stay local. Operator may at their discretion: (a) push the branch for review, (b) open a PR, (c) merge into main and roll into the eventual v5.2.0 release.
+
+## PUBLISH_BLOCK status
+
+UNCHANGED. The v5.1.0 PUBLISH_BLOCK lift gate (Entry #359 conditions) is not affected by this cycle. v5.2.0 publish gate will inherit FX483–FX490 verified status from this seal.
+
+## Content Hash
+
+**Content Hash**: `b2dcf84643bc9559fb2ff97e760bb5bc25fae9e24dd4dc9d898b066d11ead120` — SHA256 of seal manifest `plan=docs/plan-qor-bicameral-mcp-integration.md|audit_pass=workspace_AUDIT_REPORT_bicameral_3cycle|audit_history=cycle1+cycle2+cycle3|implement=5dbd984+97c0f0d+8b229f9+187bf83+0249822|tail=0249822|phases_sealed=1+1b+2+3+3polish+4+5|review_boundary=stage_only|publish_block_unchanged=true|change_class=feature|version_bump_skipped=true`
+**Previous Hash**: `eaed7e955642b1dffbb6c5f7eb3a5cd6aace96db29d49a5ada3b5682490f139c` (Entry #371 chain hash)
+**Chain Hash**: `be758ac9fd2a28040695ed1b240ad2847aa36b75b81767e484c156d9e612caae` — SHA256(content_hash + "|" + previous_hash)
+**Merkle Seal**: `2215312082b537bfb041dd6387d49a1476fcc8a42a2a5dfbc086bce2a550812f` — SHA256(content_hash + "|" + chain_hash + "|gate_workspace_audit_bicameral_PASS")
+**Session ID**: workspace-only / carry-over from `2026-05-14T0500-6eaac7` (rotation NOOP; `.qor/` runtime uninitialized)
+
+## PASS conditions confirmed
+
+- AUDIT_REPORT PASS verdict (workspace artifact, 3 cycles): ✓
+- Reality matches Promise across all 5 phases (19/19 deliverables present; 0 MISSING after seal-time addition of two unit tests called out in Phase 3 plan §Unit Tests)
+- Test functionality discipline (SG-035): 18/18 functional (presence-only seal gate PASS)
+- Razor: new files all under 250L except audit-blessed `bicameral-card.js` (269L); touched pre-existing-over files within marginal-additions allowance
+- ESLint: 0 errors, 0 warnings in new bicameral files
+- TypeScript: clean
+- Version state: target v5.2.0 > current tag v5.1.0; bump SKIPPED per stage-only review boundary
+- Mocha 2377 passing / 17 failing — baseline-identical to bare WIP commit (zero regressions); the 17 are pre-existing VS Code mutex / activation-host environment failures
+- Playwright bicameral spec: 4/4 passing
+- FEATURE_INDEX FX483–FX490: all verified
+- BACKLOG B-INT-1..5: captured
+- Memory: `reference_bicameral_mcp.md` written; `project_bicameral_mcp_integration.md` resume log appended
+- Review boundary: no PUBLISH_BLOCK flip, no version bump, no tag, no push, no marketplace publish
+
+**Decision**: **SEAL — Reality matches Promise.** The Bicameral MCP integration is fully closed at the local-hold stage-only review boundary. The Integrations tab is operational; the install picker drives `pip install` on the operator's machine; the four v1 MCP tools (`history`/`preflight`/`drift`/`ratify`) are wired through a lazy `BicameralMcpClient`; the Settings card surfaces install state + autoConnect; documentation is complete (`docs/INTEGRATIONS.md` + FEATURE_INDEX FX483–FX490). **No marketplace publish, no version bump, no annotated tag emitted by this seal** — feature ships behind v5.1.0 PUBLISH_BLOCK pending the eventual v5.2.0 release cycle.
+
+## Operator notice — degraded wiring
+
+`.qor/` runtime uninitialized; same posture as Entry #371. Gate-artifact persistence, AI provenance manifest, intent-lock verify, secret scanner, procedural fidelity, doc integrity, post-seal verification, gate-chain completeness, dist-compile, session rotation: all NOOP. This ledger entry + the five WIP commits + Playwright spec + `docs/INTEGRATIONS.md` are the canonical record.
+
+_Chain Status: BICAMERAL-MCP-INTEGRATION PLAN SEALED at Entry #372. Operator may at their discretion: (a) push `feat/bicameral-mcp-integration` for review; (b) open a PR against main; (c) merge to main and roll into the v5.2.0 release cycle. The B-INT-1..5 follow-ups in BACKLOG track the v2 surface (remaining 9 Bicameral tools; preflight wiring into L3 approval; version pin; McpClientHost abstraction; sub-tab pattern)._
+_Next: operator decision on push/merge/PR — none auto-triggered by this seal._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: bicameral-mcp-integration SEALED at #372; 5-phase v1 surface complete; 2377 mocha pass + 4 Playwright pass; review boundary honored; PUBLISH_BLOCK unchanged_
 _Session: 2026-05-14-install-skills-ux-expansion-substantiation-seal_
+
+---
+
+### Entry #373: SESSION SEAL — plan-qor-stale-cache-remediation (5 phases; B192 resolved)
+
+**Entry ID**: `de9f7f283223`
+**Date**: 2026-05-18
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-stale-cache-remediation.md` (target v5.2.x; no in-cycle version bump)
+**Audit reference**: `.failsafe/governance/AUDIT_REPORT_stale-cache-remediation.md` (cycle 1 VETO F1+F2 → cycle 2 PASS; Risk L2; workspace-only)
+**Implementation reference**: 2 commits on `feat/stale-cache-remediation` (`caf4971` plan, `b48d733` amend; substantiate commit follows)
+
+## Federation note
+
+THIRD sibling SESSION SEAL claiming Entry #372 on branch-local chain. Predecessor cycles: `feat/voice-substrate-extraction` (B195 voice extraction) + `feat/bicameral-mcp-integration` (Bicameral MCP v1). All three diverged from `main` at Entry #371. Per SG-ConcurrentLedgerRace-A reconciled at merge into main: bicameral retains #372, this entry renumbered to #373, voice-substrate renumbered to #374; previous_hash chain amended at each step.
+
+## Substantiation summary
+
+B192 closed for the 4 fs-backed governance services. New `WorkspaceMutationBus` (75L `fs.watch` aggregator) lets PlanManager / HubSnapshotService / TrustEngine subscribe to targeted paths. `ConsoleLifecycleService.watchMetaLedger` migrated to the shared bus. New `LedgerManager.getLedgerPath()` accessor resolves the SQLite db watch target. New `HubSnapshotService.refreshChainValidity()` invalidates cached chain validity on db mutation. Defensive pull-on-build retained as belt-and-suspenders.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| AUDIT cycle 2 PASS | ✓ (cycle 1 F1 L3ApprovalService-unbacked + F2 LedgerManager-method-hallucinated both remediated) |
+| Reality = Promise | 5/5 phases delivered. 1 new substrate (75L) + 4 service modifications + 5 bootstrap wirings + 5 new test files + 2 extended tests. |
+| Test functionality (SG-035) | 18 new functional cases (FX498 5 + FX499 4 + FX501 3 + FX502 3 + FX503 3). |
+| Mocha | 2280 passing / 17 failing — baseline-identical, zero regressions. |
+| ESLint | 0 errors, 94 warnings (none in new files). |
+| TypeScript | clean. |
+| Section 4 Razor | All new files ≤250L. |
+| FEATURE_INDEX FX498–FX503 | 5 verified (FX500 intentionally absent — L3ApprovalService dropped per cycle-1 F1). |
+
+## Audit cycle 1 pattern observation
+
+Both F findings caught by Phase 72 SG-CitationDrift-A grep-evidence. Third consecutive plan cycle (voice-pack, bicameral, stale-cache) where same-agent self-audit surfaces infrastructure-mismatch in cycle 1. Doctrine update candidate: pre-audit infrastructure-citation verification, OR default architect-reviewer subagent for cycle 1 on plans with substantial infrastructure citations.
+
+## Skipped per protocol (degraded-wiring posture)
+
+Same as Entries #371 / federated voice-pack-#374 / bicameral-#372. Python `qor.*` toolkit unavailable. Steps 0, 4.6, 4.6.5, 4.6.6, 4.7, 6.5, 6.8, 7.4-7.8, 8.5, 9.5.5, 9.6, Z all SKIP. Step 6.8 hash validation replaced with inline Node `crypto` validate-as-hex.
+
+## Content Hash
+
+**Content Hash**: `3776b80b378338d07063e586a527adfb79fd84fcc051c2bb61f8e78fea2ae174`
+**Previous Hash**: `be758ac9fd2a28040695ed1b240ad2847aa36b75b81767e484c156d9e612caae` (Entry #372 chain hash; federation reconciliation — original previous_hash eaed7e955... amended at merge-into-main time)
+**Chain Hash**: `1e7aceab1ca26d1aa03dbb6dd346348f5bff004758cb3a63a9a8a5b274ae5106` — SHA256(content_hash + "|" + previous_hash)
+**Merkle Seal**: `4e428d62ae08b6f1b2ccb0d75f478344b2881fde81d8a484807f8498bf6599d1` — SHA256(content_hash + "|" + chain_hash + "|gate_workspace_audit_stale_cache_PASS")
+**Session ID**: workspace-only / `2026-05-18-stale-cache-remediation-substantiation-seal`
+
+## Review Boundary attestation
+
+Per `feedback_no_ship_without_approval.md` + plan header §"Review boundary: stage artifacts only": no push, no tag, no PR, no merge, no marketplace publish, no GitHub Release upload. The 3 `feat/stale-cache-remediation` commits stay local. /qor-auto-dev-1 orchestrator autonomy honored — cycle 1 F1/F2 resolved via canonical-artifact-controlled remediations without operator interrupt.
+
+## Decision
+
+**SEAL — Reality matches Promise.** B192 stale-cache pattern closed for the 4 fs-backed services. FailSafe-Pro coexistence addressed via shared-filesystem trust posture. L3ApprovalService's in-process variant deferred to B-SC-6.
+
+_Chain Status: STALE-CACHE-REMEDIATION PLAN SEALED at Entry #373 (federation-reconciled at merge into main; was branch-local Entry #372). bicameral retains #372; voice-substrate becomes #374. Per SG-ConcurrentLedgerRace-A._
+
+---
+
+### Entry #374: SESSION SEAL — plan-qor-voice-substrate-extraction (full-plan substantiation; 6 phases; B195 resolved)
+
+**Entry ID**: `7a8000ab0c28`
+**Date**: 2026-05-18
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-voice-substrate-extraction.md` (target v5.2.x; no in-cycle version bump per plan header)
+**Audit reference**: `.failsafe/governance/AUDIT_REPORT_voice-substrate-extraction.md` (cycle 1 VETO with F1/F2/F3 → cycle 2 PASS after amendment; Risk Grade L2; workspace-only governance artifact)
+**Implementation reference**: 3 commits on `feat/voice-substrate-extraction` (`cbf84cb` plan, `61c39e7` plan amendment, `960bbfe` Phases 1-6 implementation). Branched off `main`.
+
+## Federation note
+
+THIRD sibling SESSION SEAL claiming branch-local Entry #372. Predecessor cycles: `feat/bicameral-mcp-integration` (Bicameral MCP v1) + `feat/stale-cache-remediation` (B192). All three diverged from `main` at Entry #371. Per SG-ConcurrentLedgerRace-A reconciled at merge into main: bicameral retained #372, stale-cache renumbered to #373, this entry renumbered to #374; previous_hash chain amended at each step.
+
+## Substantiation summary
+
+Voice substrate extraction lands the v1 surface that resolves B195. Heavy vendor binaries (Piper TTS + Whisper STT, ~86 MB uncompressed) move out of the base VSIX into a separate `failsafe-voice-pack-<version>.tar.gz` distributed as a GitHub Releases asset. Voice substrate code stays. ConsoleServer overlays `globalStorageUri/voice-pack/` at `/vendor` so existing voice modules resolve transparently when installed; absence degrades gracefully through existing engine error paths + new UI affordance. All 6 phases delivered.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| AUDIT_REPORT cycle 2 PASS | ✓ (cycle 1 F1 ghost-ui/live-progress + F2 specification-drift + F3 infrastructure-mismatch all remediated in `61c39e7`) |
+| Reality = Promise | 30+ planned files present; 0 MISSING; 1 deviation (.test.cjs → .test.ts for vscode-test pickup) |
+| Open blockers | None gating; B195 marked `[x]` in BACKLOG |
+| Test functionality (SG-035) | 30 new functional cases (26 mocha + 4 Playwright) — all invoke unit + assert on behavior |
+| Mocha clean state | 2292 passing / 17 failing — baseline-identical to main; zero regressions |
+| Playwright voice-pack.spec.ts | 4 / 4 passing (14.8s clean state) |
+| ESLint | 0 errors; 4 warnings in new files (no-var-requires, matches existing pattern) |
+| TypeScript | clean |
+| Section 4 Razor | All 7 new source files ≤250L (largest: install-handler 219L) |
+| Console.log artifacts | Zero in new files |
+| FEATURE_INDEX FX491–FX497 | All 7 verified |
+| Smoke verification | `npm run package:voice-pack` produces 28 MB tarball + .sha256 + manifest.json |
+
+## Skipped per protocol (degraded-wiring posture)
+
+Same as Entry #371 / federated #372 / #373: Python `qor.*` toolkit unavailable. Steps 0, 4.6, 4.6.5, 4.6.6, 4.7, 6.5, 6.8, 7.4, 7.5, 7.6, 7.7, 7.8, 8.5, 9.5.5, 9.6, Z all SKIP. Step 6.8 hash validation REPLACED with inline Node `crypto` validate-as-hex (all 4 hashes pass `^[a-f0-9]{64}$`). Each skip emits one conceptual `gate_skipped_prerequisite_absent` severity-1 event.
+
+## Content Hash
+
+**Content Hash**: `26dc7e327e5338436db3727f090c17fd8d8c3af132b3b513693bbfb501e1078a`
+**Previous Hash**: `1e7aceab1ca26d1aa03dbb6dd346348f5bff004758cb3a63a9a8a5b274ae5106` (Entry #373 chain hash; federation reconciliation — original previous_hash eaed7e955... amended at merge-into-main time)
+**Chain Hash**: `1451c6ba01d0b443864060aed0b20b9886ff90ed7bd4aad7a9cac8a51a51fcbc` — SHA256(content_hash + "|" + previous_hash)
+**Merkle Seal**: `87312b34e92560d4f8e0c576b2334146bfc10028d311bcc58f16b3bc7b49ba3d` — SHA256(content_hash + "|" + chain_hash + "|gate_workspace_audit_voice_substrate_PASS")
+**Session ID**: workspace-only / `2026-05-18-voice-substrate-extraction-substantiation-seal`
+
+## Review Boundary attestation
+
+Per `feedback_no_ship_without_approval.md` + plan header §"Review boundary: stage artifacts only": no push, no tag, no PR, no merge, no marketplace publish, no GitHub Release upload. The 3 `feat/voice-substrate-extraction` commits stay local. The `dist/failsafe-voice-pack-5.1.0.tar.gz` smoke-test artifact is local-only, NOT uploaded.
+
+## Decision
+
+**SEAL — Reality matches Promise.** B195 marketplace-cap risk closed via the separate-download companion pattern; base VSIX projected ≤ 30 MB after extraction (`assertVsixUnderCeiling` enforces). Voice substrate code degrades gracefully when pack absent. **No marketplace publish, no version bump, no annotated tag, no GitHub Release emitted** — ships behind v5.1.0 PUBLISH_BLOCK pending v5.2.0 release cycle.
+
+## Operator notice — degraded wiring
+
+`.qor/` runtime uninitialized; same posture as Entries #371 / federated #372 / #373. This ledger entry + the three `feat/voice-substrate-extraction` commits + Playwright spec + `docs/INTEGRATIONS.md` are the canonical record.
+
+_Chain Status: VOICE-SUBSTRATE-EXTRACTION PLAN SEALED at Entry #374 (federation-reconciled at merge into main; was branch-local Entry #372). bicameral retains #372, stale-cache becomes #373. Per SG-ConcurrentLedgerRace-A._
+_Next: operator decision on push/merge/PR/release — none auto-triggered by this seal._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: voice-substrate-extraction SEALED at Entry #374 (federation-reconciled from branch-local #372); 6-phase v1 surface complete; 2292 mocha pass + 4 Playwright pass; B195 resolved; PUBLISH_BLOCK unchanged. Federated trio bicameral #372 + stale-cache #373 + voice-substrate #374 all merged to main per SG-ConcurrentLedgerRace-A._
+_Session: 2026-05-18-voice-substrate-extraction-substantiation-seal_
+
+---
+
+### Entry #375: SESSION SEAL — plan-qor-enforcement-mode-escalation-ux (4 phases; B194 resolved)
+
+**Entry ID**: `e154647d5107`
+**Date**: 2026-05-18
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-enforcement-mode-escalation-ux.md` (target v5.2.x; no in-cycle version bump)
+**Audit reference**: 4-cycle PASS via independent architect-reviewer subagent (Phase 68 Option B / SG-007 self-audit-blindness countermeasure). Findings F1 (events-union miss) + F2 (banner URL) + F3 (BreakGlass payload mapping) + F4 (line-range drift) in cycle 1; F5 (actor-string mismatch) + F6 (`_self` vs `_blank`) in cycle 2; F7 (test descriptor / mapping internal contradiction) in cycle 3; PASS cycle 4.
+**Implementation reference**: 4 commits on `feat/enforcement-mode-escalation-ux` branched off `main` at `e12a2ed` (sentinel-alert-deeplink merge). Plan commit `bfaca7b`; Phase 1 impl; Phase 2 impl; Phase 3+4 impl.
+
+## Substantiation summary
+
+B194 closed via the governance-mode transition surfacing pattern. New `governance.modeChanged` typed event added to the closed `FailSafeEventType` union; BreakGlass emit payloads enriched with full transition context (previousMode/newMode/reason/requestedBy/timestamp). New `ModeTransitionHistory` in-memory ring (cap 10) subscribes to all four bus event types. `HubSnapshotService.assembleHubPayload` now populates `governanceModeState` (closes silent pre-B194 bug where `settings.js:235` consumed an unpopulated field) + `recentModeTransitions`. Monitor sidebar gains an observe-mode advisory banner (`window.open('/command-center.html#settings', '_blank')`, matching established sentinel-monitor.js pattern). Command Center Governance tab's Compliance sub-tab gains a "Mode Transitions" feed with reverse-chronological rows, XSS-escaped reason/actor, and 3s flash on click (reuses `.cc-verdict--highlighted`-style pattern). Out-of-scope items deferred as B-EM-1/2/3/4 follow-ups.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| AUDIT 4-cycle PASS | ✓ (cycle 1: 4 findings; cycle 2: 2 findings; cycle 3: 1 finding; cycle 4: PASS) |
+| Reality = Promise | All 4 phases delivered. New: 1 substrate (types.ts) + 1 ring (ModeTransitionHistory) + 1 event-type union member + 3 enriched BreakGlass emits + 1 hub-payload population + 1 Monitor banner + 1 Governance feed + 1 architecture doc. Modified: 12 files. |
+| Test functionality (SG-035) | 20 new functional cases (FX504 5 + FX505 6 + FX507 5 + FX508 4) — all invoke unit + assert against output. FX509 staged as `.skip` pending B-EM-4 harness override. |
+| Mocha clean state | 2400 passing / 17 failing — baseline-identical to main; zero regressions. (17 failing are pre-existing `command 'failsafe.*' not found` from vscode-test environment; unrelated to B194.) |
+| ESLint | 0 errors in new files. |
+| TypeScript | clean. |
+| Section 4 Razor | All new files ≤250L (types.ts ~31L, ModeTransitionHistory.ts ~95L, test files ≤140L, doc ≤95L). |
+| Console.log artifacts | None in new files. |
+| FEATURE_INDEX FX504–FX509 | 5 verified + 1 deferred (FX509 → B-EM-4). |
+
+## Audit cycle pattern observation
+
+Phase 68 Option B (independent architect-reviewer subagent) for cycle 1 successfully broke the SG-007 self-audit-blindness pattern that recurred in cycles 1 of voice-pack / bicameral / stale-cache. The architect-reviewer caught F1 (EventBus typed-union miss) — exactly the infrastructure-mismatch class that prior cycle-1 audits routinely missed. Doctrine candidate: default architect-reviewer subagent for all cycle-1 audits on plans with substantial infrastructure citations.
+
+## Skipped per protocol (degraded-wiring posture)
+
+Same as Entries #371-#374: Python `qor.*` toolkit unavailable. Steps 0, 4.6, 4.6.5, 4.6.6, 4.7, 6.5, 6.8, 7.4-7.8, 8.5, 9.5.5, 9.6, Z all SKIP. Step 6.8 hash validation REPLACED with inline Node `crypto` validate-as-hex (all 4 hashes pass `^[a-f0-9]{64}$`). Each skip emits one conceptual `gate_skipped_prerequisite_absent` severity-1 event.
+
+## Content Hash
+
+**Content Hash**: `9fee583a8e5a7050dd1fa62ca32bfd2facbf738bd0ee3f1f9c0e1b41dff8c14a`
+**Previous Hash**: `1451c6ba01d0b443864060aed0b20b9886ff90ed7bd4aad7a9cac8a51a51fcbc` (Entry #374 voice-pack federation-reconciled chain hash)
+**Chain Hash**: `974f9b82692f96d4f98756510398ed60ef6998a08e4a5ee14a879ca263f3b598` — SHA256(content_hash + "|" + previous_hash)
+**Merkle Seal**: `e3c69086ad919076da60517d7ec50c93c3e44ef4f7e3e8ac130cece64c7bf759` — SHA256(content_hash + "|" + chain_hash + "|gate_workspace_audit_enforcement_mode_PASS")
+**Session ID**: workspace-only / `2026-05-18-enforcement-mode-escalation-ux-substantiation-seal`
+
+## Review Boundary attestation
+
+Per `feedback_no_ship_without_approval.md` + plan header §"Review boundary: stage artifacts only": no push, no tag, no PR, no merge, no marketplace publish, no GitHub Release upload. The 4 `feat/enforcement-mode-escalation-ux` commits stay local. /qor-auto-dev-1 orchestrator autonomy honored — 4-cycle audit + 4-phase implementation completed without operator interrupt past the up-front intake (target selection) and the Step 7 mid-cycle implementation authorization. The single `AskUserQuestion` at the audit-PASS handoff was a discretionary phase-boundary check, not a routine prompt.
+
+## Decision
+
+**SEAL — Reality matches Promise.** B194 closed with the transition-surfacing pattern. The original B194 line proposed (a) first-run prompt, (b) status bar indicator, (c) Settings card escalation. Of those: (b) was already shipped via GovernanceStatusBar.updateMode; (c) was already rendered via renderGovernanceModeCard at settings.js:234 (but consumed a never-populated field — silent bug now closed); (a) deferred to B-EM-3 as the full guided wizard. Plus the operator's expanded scope (transition surfacing in Monitor + Command Center with reason/actor/timestamp/verdict context) delivered in full.
+
+## Operator notice — degraded wiring
+
+`.qor/` runtime uninitialized; same posture as Entries #371-#374. This ledger entry + the 4 `feat/enforcement-mode-escalation-ux` commits + the audit-locked plan at `docs/plan-qor-enforcement-mode-escalation-ux.md` are the canonical record.
+
+_Chain Status: ENFORCEMENT-MODE-ESCALATION-UX PLAN SEALED at Entry #375. Branched off `main` post-federation-reconciliation; no federation issue this cycle._
+_Next: operator decision on push/merge/PR — none auto-triggered by this seal._
+
+---
+
+### Entry #376: SESSION SEAL — plan-qor-sentinel-governance-extensions (B193 residual fix-up; federation-reconciled from branch-local #375)
+
+**Entry ID**: `3a3257519f9b`
+**Date**: 2026-05-19
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-sentinel-governance-extensions.md`
+**Audit reference**: 1-cycle PASS via independent architect-reviewer subagent (SG-007 Option B / Phase 68 default doctrine per B194 success). 2 minor findings (citation-drift + self-application gap) remediated in-cycle before code edits.
+**Implementation reference**: 2 commits on `feat/sentinel-governance-extensions` branched off `main` at `e12a2ed`. Plan commit; impl commit `e26a6c7`.
+
+## Federation note
+
+Federation-reconciled at merge into main per SG-ConcurrentLedgerRace-A. Branch-local Entry #375 collided with B194's #375 (same predecessor — Entry #374 voice-pack `1451c6ba01d0...`). B194 (lexicographically earlier branch name `enforcement` < `sentinel`) retains #375; this entry renumbered to #376 with amended `previous_hash` referencing B194's #375 chain_hash + recomputed chain/merkle.
+
+## Substantiation summary
+
+Closes three residual gaps after Phase 60 §2 Track C pre-shipped the bulk of B193: (a) aspirational whitelist paths corrected to canonical fs locations (`.failsafe/risks/risks.json`, `.failsafe/manifest/active_intent.json`); (b) `docs/` governance paths (META_LEDGER, BACKLOG, plan-*.md) added to whitelist + `isGovernanceSurface` priority-boost so they arrive at the verdict pipeline as `'high'` priority; (c) suffix-equality whitelist match replaced with `.failsafe/governance/` prefix that covers 70+ on-disk variant files (AUDIT_REPORT_*, RESEARCH_BRIEF_*, SESSION_STATE_*). Out-of-scope: WorkspaceMutationBus integration of SentinelDaemon (B-SD-2 candidate).
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| AUDIT 1-cycle PASS | ✓ (architect-reviewer; 2 minor findings remediated) |
+| Reality = Promise | All scope-declared edits delivered: 4 method/array changes in SentinelWatchPolicy.ts + 11 test cases (10 FX510 + 1 amended) + 3 doc updates. |
+| Test functionality (SG-035) | 10 new FX510 cases — all invoke unit + assert against output. |
+| Mocha clean state | 2391 passing / 17 failing — baseline-identical; zero regressions beyond the intentional `.failsafe/governance/*.ts` semantic flip. |
+| ESLint / TypeScript | clean. |
+| Section 4 Razor | SentinelWatchPolicy.ts 204L → ~220L (well under 250 cap). |
+| FEATURE_INDEX FX510 | 1 verified. |
+
+## Skipped per protocol (degraded-wiring posture)
+
+Same as Entries #371-#375: Python `qor.*` toolkit unavailable. Inline Node `crypto` validate-as-hex replaces Step 6.8.
+
+## Content Hash
+
+**Content Hash**: `39ab515da5c6907358b3f3cedb113d254779945b08dba823912ae619715fdfcc`
+**Previous Hash**: `974f9b82692f96d4f98756510398ed60ef6998a08e4a5ee14a879ca263f3b598` (Entry #375 B194 chain hash; federation reconciliation — original previous_hash 1451c6ba01d0... amended at merge-into-main time)
+**Chain Hash**: `1898988ebac150af7f53206a99ee495f7b1e5fb82dc110bcd0d0941924058db1` — SHA256(content_hash + "|" + previous_hash)
+**Merkle Seal**: `9b666a337d5fbc8c5d7833b180c2bfd42e996e5efad117b5ee22c922a8f2c66e` — SHA256(content_hash + "|" + chain_hash + "|gate_workspace_audit_b193_residual_PASS")
+**Session ID**: workspace-only / `2026-05-19-sentinel-governance-extensions-substantiation-seal`
+
+## Review Boundary attestation
+
+No push, tag, PR, merge, marketplace publish, GitHub Release upload triggered by this seal entry beyond the operator-authorized merge into main. The 2 `feat/sentinel-governance-extensions` commits + this seal are now on main locally; not pushed.
+
+## Decision
+
+**SEAL — Reality matches Promise.** B193 closed with full reference to Phase 60 §2 Track C + this residual cycle. Intentional `.failsafe/governance/*.ts` semantic flip (blanket-watched) is the only behavior change beyond the scope-declared whitelist additions.
+
+_Chain Status: B193 RESIDUAL FIX-UP SEALED at Entry #376 (federation-reconciled from branch-local #375). B194 retains #375; both merged to main per SG-ConcurrentLedgerRace-A._
+_Next: operator decision on push — none auto-triggered by this reconciliation._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: enforcement-mode-escalation-ux SEALED at Entry #375 (clean; first merge into main); sentinel-governance-extensions SEALED at Entry #376 (federation-reconciled from branch-local #375). Federated pair both on main per SG-ConcurrentLedgerRace-A; B194 + B193 resolved; B-EM-1/2/3/4 + B-SD-2 captured as follow-ups; PUBLISH_BLOCK unchanged._
+_Session: 2026-05-19-b193-b194-federation-reconciliation-merge_
+
+---
+
+### Entry #377: SESSION SEAL — plan-qor-b199-phase2-settings-e2e (B199 Phase 2 + B-EM-4 unblocker)
+
+**Entry ID**: `94f1fe1347d3`
+**Date**: 2026-05-19
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-b199-phase2-settings-e2e.md`
+**Audit reference**: 2-cycle (VETO cycle 1 — Express route precedence + bicameral over-scope + `.skip` hedge — all remediated; PASS cycle 2).
+**Implementation reference**: 1 commit on `feat/b199-phase2-settings-e2e` branched off `main` at `7353e3f`. Does NOT contain B197 (on its own pushed branch).
+
+## Federation note
+
+Shares predecessor `1898988ebac150...` (Entry #376) with B197's `feat/qor-logic-version-pinning` branch. Both seal at branch-local Entry #377. Per SG-ConcurrentLedgerRace-A at merge: lexicographic order (`b199-phase2` < `qor-logic-version`) — this entry retains #377, B197 renumbers to #378 with amended `previous_hash` + recomputed chain/merkle. The 2 deferred FX513 test.skip cases auto-activate once B197 merges.
+
+## Substantiation summary
+
+B199 Phase 2 ships the first Command Center sub-tab Playwright spec + the B-EM-4 harness unblocker that enables it. Express middleware mounted before WS attach + router-stack unshift (Express 5's `app.router`) intercepts `/api/hub` per-request. `playwright.config.ts` testMatch tightened to `.spec.ts` so mocha `.test.ts` helpers don't surface as `suite is not defined` errors.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| AUDIT 2-cycle PASS | ✓ |
+| Reality = Promise | 1 harness + 1 mocha test + 1 Playwright spec + 1 config tightening + 3 doc updates. |
+| Test functionality (SG-035) | 3 FX512 mocha + 3 active FX513 Playwright (2 deferred-skip). |
+| Mocha | 2414 passing / 17 baseline failing — zero regressions. |
+| Playwright | 3/5 FX513 active + passing; 2 deferred (pending B197 merge). |
+| ESLint / TypeScript | clean. |
+
+## Skipped per protocol (degraded-wiring posture)
+
+Same as Entries #371-#376.
+
+## Content Hash
+
+**Content Hash**: `9acdfd81c913bb39ab1e954a062ca1313537ee5a9e1c26409e55bf43be99502c`
+**Previous Hash**: `1898988ebac150af7f53206a99ee495f7b1e5fb82dc110bcd0d0941924058db1` (Entry #376)
+**Chain Hash**: `150dd4cbfb69a218f0fe3bdecd955867481327bd95186792b7e43fb65d20b4b7`
+**Merkle Seal**: `9fd8ce38f7d9672c0f44c9b6f90473ed2a9bceb033ac6087aeaafeea4e201dd2` — gate_workspace_audit_b199_phase2_PASS
+**Session ID**: workspace-only / `2026-05-19-b199-phase2-settings-e2e-substantiation-seal`
+
+## Review Boundary attestation
+
+No marketplace publish or GitHub Release. Branch stays local pending operator-authorized push.
+
+## Decision
+
+**SEAL — Reality matches Promise.** B-EM-4 closed; B199 Phase 2 shipped (3 active + 2 deferred). Phases 3–8 of B199 still outstanding.
+
+_Chain Status: B199 PHASE 2 + B-EM-4 SEALED at branch-local Entry #377. Federation collision with B197 #377 awaits merge-time reconciliation._
+_Next: operator decision on push/merge — none auto-triggered._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: b199-phase2-settings-e2e SEALED at branch-local Entry #377; B-EM-4 closed; 3 FX512 + 3 active FX513 cases pass; PUBLISH_BLOCK unchanged. Federated sibling with B197 #377 awaiting merge-time reconciliation._
+_Session: 2026-05-19-b199-phase2-settings-e2e-substantiation-seal_

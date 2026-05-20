@@ -2,7 +2,9 @@ import * as vscode from "vscode";
 import { EventBus } from "../shared/EventBus";
 import { ConfigManager } from "../shared/ConfigManager";
 import { Logger } from "../shared/Logger";
+import { WorkspaceMutationBus } from "../shared/WorkspaceMutationBus";
 import { PlanManager } from "../qorelogic/planning/PlanManager";
+import { ModeTransitionHistory } from "../governance/ModeTransitionHistory";
 import { ensureGitRepositoryReady } from "../shared/gitBootstrap";
 import type { ILogSink } from "../core/interfaces";
 
@@ -11,6 +13,9 @@ export interface CoreSubstrate {
   configManager: ConfigManager;
   workspaceRoot: string;
   planManager: PlanManager;
+  mutationBus: WorkspaceMutationBus;
+  /** B194: in-memory ring buffer of recent governance-mode transitions. */
+  modeTransitionHistory: ModeTransitionHistory;
   logSink: ILogSink;
 }
 
@@ -49,13 +54,24 @@ export async function bootstrapCore(
     logger.info("Initialized workspace git repository via bootstrap.");
   }
 
-  const planManager = new PlanManager(workspaceRoot, eventBus);
+  // B192 remediation: workspace-mutation bus. Constructed alongside EventBus
+  // and threaded through to cache-vulnerable services (PlanManager,
+  // HubSnapshotService chain-validity, TrustEngine external-mutation, and
+  // ConsoleLifecycleService watchMetaLedger).
+  const mutationBus = new WorkspaceMutationBus();
+  const planManager = new PlanManager(workspaceRoot, eventBus, mutationBus);
+
+  // B194: ring buffer subscribes to governance.modeChanged + breakGlass* events.
+  const modeTransitionHistory = new ModeTransitionHistory(eventBus);
+  context.subscriptions.push({ dispose: () => modeTransitionHistory.dispose() });
 
   return {
     eventBus,
     configManager,
     workspaceRoot,
     planManager,
+    mutationBus,
+    modeTransitionHistory,
     logSink,
   };
 }

@@ -9,6 +9,7 @@ import { WebSocketManager } from "./WebSocketManager";
 import { registerServer, markDisconnected } from "./ServerRegistry";
 import type { HubSnapshotService } from "./HubSnapshotService";
 import type { PlanManager } from "../../qorelogic/planning/PlanManager";
+import type { WorkspaceMutationBus, MutationDisposable } from "../../shared/WorkspaceMutationBus";
 
 export interface ConsoleLifecycleDeps {
   app: express.Application;
@@ -19,6 +20,10 @@ export interface ConsoleLifecycleDeps {
   hub: HubSnapshotService;
   planManager: PlanManager;
   broadcast: (d: Record<string, unknown>) => void;
+  /** Optional WorkspaceMutationBus (B192 remediation). When provided,
+   *  watchMetaLedger routes through the shared bus; otherwise falls back
+   *  to direct fs.watch (back-compat). */
+  mutationBus?: WorkspaceMutationBus;
 }
 
 export class ConsoleLifecycleService {
@@ -26,6 +31,7 @@ export class ConsoleLifecycleService {
   private actualPort: number;
   private ledgerWatcher: fs.FSWatcher | null = null;
   private ledgerDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private ledgerWatcherDisposable: MutationDisposable | null = null;
 
   constructor(private readonly deps: ConsoleLifecycleDeps) {
     this.actualPort = deps.port;
@@ -60,6 +66,10 @@ export class ConsoleLifecycleService {
     markDisconnected(this.actualPort);
     this.ledgerWatcher?.close();
     this.ledgerWatcher = null;
+    if (this.ledgerWatcherDisposable) {
+      try { this.ledgerWatcherDisposable.dispose(); } catch { /* already gone */ }
+      this.ledgerWatcherDisposable = null;
+    }
     this.deps.wsManager.close();
     this.server?.close();
   }
@@ -76,6 +86,18 @@ export class ConsoleLifecycleService {
   private watchMetaLedger(): void {
     const ledgerPath = path.join(this.deps.workspaceRoot, "docs", "META_LEDGER.md");
     if (!fs.existsSync(ledgerPath)) return;
+    // B192 remediation: prefer the shared WorkspaceMutationBus when wired.
+    // Bus internally applies its own debounce; we pass 1500ms to preserve
+    // the historical behavior of this specific watcher.
+    if (this.deps.mutationBus) {
+      this.ledgerWatcherDisposable = this.deps.mutationBus.registerWatcher(
+        ledgerPath,
+        () => this.deps.broadcast({ type: "hub.refresh" }),
+        1500,
+      );
+      return;
+    }
+    // Fall-back path (back-compat for callers that don't provide a bus).
     try {
       this.ledgerWatcher = fs.watch(ledgerPath, () => {
         if (this.ledgerDebounceTimer) clearTimeout(this.ledgerDebounceTimer);

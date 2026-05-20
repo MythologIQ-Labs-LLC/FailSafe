@@ -5,6 +5,28 @@ All notable changes to the MythologIQ FailSafe extension will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.1.5] - 2026-05-19
+
+Bicameral MCP integration v1 + B199 Phases 2-9 Command Center E2E coverage + B197 qor-logic version-floor surfacing + B194 enforcement-mode escalation UX + B193 SentinelDaemon governance-file coverage residual + B192 stale-cache remediation (WorkspaceMutationBus) + B195 voice substrate extraction. See root [CHANGELOG.md](../../CHANGELOG.md) for full bullet list.
+
+### Added
+
+- Bicameral MCP — Integrations tab (full v1 surface) + 5 hardening quick wins (B-BIC-1..5): ratify → META_LEDGER USER_OVERRIDE, disposer, transport.onclose crash recovery, listTools capability cache, install stdout/stderr ANSI sanitizer.
+- B199 Command Center E2E coverage across all 6 top-level tabs (Settings, Overview, Skills, Agents, Workspace, Governance) + WS broadcast matrix (16 types) + real-disk → /api/hub → Monitor renderer end-to-end. FX511-FX525.
+- B197 qor-logic version-floor surfacing: hub payload carries `installedVersion` + `meetsFloor`; Settings card surfaces floor warning. FX511.
+- B194 enforcement-mode escalation UX: observe-mode advisory banner + Mode Transitions feed.
+- B193 SentinelDaemon governance-file coverage: governance markdown/yaml/json watched; canonical fs paths; blanket-prefix matching.
+- B192 WorkspaceMutationBus substrate: fs.watch aggregator routes mutations to PlanManager + HubSnapshotService + TrustEngine + ConsoleLifecycleService.
+- B195 voice substrate extracted to separate companion download; base VSIX drops below 30 MB ceiling.
+
+### Changed
+
+- ConsoleLifecycleService.watchMetaLedger routes through WorkspaceMutationBus when present.
+- BicameralRouteDeps gained optional ledgerManager dep; ratify appends USER_OVERRIDE entry.
+- BicameralMcpClient gained capabilities cache + transport.onclose recovery + getCapabilities accessor.
+- install-handler now sanitizes stdout/stderr ANSI + C0 control codes before WS broadcast.
+- bootstrapBicameral wires extension-deactivate disposer + rewire cleanup.
+
 ## [5.1.0] - 2026-05-06
 
 Minor release. Comprehensive E2E coverage methodology + release-class CI gate (B199 Phase 1) + Monitor B191 functional proof. GitHub community files, issue templates, and comprehensive Wiki.

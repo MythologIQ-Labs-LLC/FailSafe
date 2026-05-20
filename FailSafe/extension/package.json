@@ -3,7 +3,7 @@
   "displayName": "FailSafe (feat. Qor-Logic)",
   "description": "Open-source VS Code/Cursor governance and skills surface for AI coding agents. Pairs with FailSafe Pro for desktop enforcement.",
   "icon": "media/icon.png",
-  "version": "5.1.0",
+  "version": "5.1.5",
   "publisher": "MythologIQ",
   "license": "Apache-2.0",
   "repository": {
@@ -63,7 +63,9 @@
     "onCommand:failsafe.onboardAgent",
     "onCommand:failsafe.installCommitHook",
     "onCommand:failsafe.removeCommitHook",
-    "onCommand:failsafe.installQorLogicSkillsDefaults"
+    "onCommand:failsafe.installQorLogicSkillsDefaults",
+    "onCommand:failsafe.installVoicePack",
+    "onCommand:failsafe.uninstallVoicePack"
   ],
   "main": "./dist/extension/main.js",
   "contributes": {
@@ -114,6 +116,14 @@
       {
         "command": "failsafe.installQorLogicSkillsDefaults",
         "title": "FailSafe: Install Qor-Logic Skills (defaults)"
+      },
+      {
+        "command": "failsafe.installVoicePack",
+        "title": "FailSafe: Install Voice Pack"
+      },
+      {
+        "command": "failsafe.uninstallVoicePack",
+        "title": "FailSafe: Uninstall Voice Pack"
       },
       {
         "command": "failsafe.organize",
@@ -381,14 +391,30 @@
           "type": "boolean",
           "default": true,
           "description": "Automatically attempt to install Git and initialize a repository at workspace bootstrap if missing."
+        },
+        "failsafe.integrations.bicameral.command": {
+          "type": "string",
+          "default": "bicameral-mcp",
+          "description": "Executable used to launch the Bicameral MCP server. Must be on PATH or an absolute path under your home directory."
+        },
+        "failsafe.integrations.bicameral.pipCommand": {
+          "type": "string",
+          "default": "pip",
+          "description": "Pip command used by the Integrations tab installer (e.g., 'pip', 'pip3', or 'python -m pip')."
+        },
+        "failsafe.integrations.bicameral.autoConnect": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically connect to Bicameral MCP at activation when the workspace is configured. Default off — operator clicks Connect."
         }
       }
     }
   },
   "scripts": {
     "vscode:prepublish": "npm run build:package",
-    "build:package": "npm run compile && npm run bundle",
+    "build:package": "npm run compile && npm run bundle && npm run package:voice-pack",
     "bundle": "node ./scripts/bundle.cjs",
+    "package:voice-pack": "node ./scripts/package-voice-pack.cjs",
     "compile": "tsc -p ./ && node ./scripts/copy-ui-js.cjs",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run build:package && npm run patch:better-sqlite3 && npm run rebuild:vscode",

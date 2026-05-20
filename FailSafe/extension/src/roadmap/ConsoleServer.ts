@@ -57,6 +57,16 @@ type ConsoleServerOptions = {
   workspaceRoot?: string;
   featureGate?: IFeatureGate;
   configProvider?: IConfigProvider;
+  /** B192 remediation: shared workspace-mutation bus. Threaded down to
+   *  HubSnapshotService (chain-validity refresh) and ConsoleLifecycleService
+   *  (watchMetaLedger migration). Optional for back-compat with tests. */
+  mutationBus?: import("../shared/WorkspaceMutationBus").WorkspaceMutationBus;
+  /** B194: ring buffer of recent governance-mode transitions. */
+  modeTransitionHistory?: import("../governance/ModeTransitionHistory").ModeTransitionHistory;
+  /** B194: callback returning current governance mode state for hub.governanceModeState. */
+  getGovernanceMode?: () => import("../governance/types").GovernanceModeState;
+  /** B197: optional verifier returning the qor-logic install version-floor status. */
+  getQorLogicVerifier?: () => Promise<import("../qorlogic/qorLogicInstallRecord").QorLogicVersionStatus>;
 };
 
 // Re-export public test surface from support module for backward compat.
@@ -88,6 +98,11 @@ export class ConsoleServer {
   private agentTimelineService: AgentTimelineService | null = null;
   private agentHealthIndicator: AgentHealthIndicator | null = null;
   private agentRunRecorder: AgentRunRecorder | null = null;
+  private bicameralClient: import("../integrations/bicameral").BicameralMcpClient | null = null;
+  private bicameralCommand = "bicameral-mcp";
+  private bicameralAutoConnect = false;
+  private bicameralAutoConnectWriter: (value: boolean) => Promise<void> = async () => {};
+  private voicePackPath: string | null = null;
   private transparencyLogger: TransparencyLogger;
   private riskRegisterManager: RiskRegisterManager;
   private hub: HubSnapshotService;
@@ -119,11 +134,12 @@ export class ConsoleServer {
     this.adapterService = new AdapterService(eventBus);
     this.transparencyLogger = new TransparencyLogger(this.workspaceRoot);
     this.riskRegisterManager = new RiskRegisterManager(this.workspaceRoot);
-    this.hub = this.buildHubService();
+    this.hub = this.buildHubService(options.mutationBus, options.modeTransitionHistory, options.getGovernanceMode, options.getQorLogicVerifier);
     this.lifecycle = new ConsoleLifecycleService({
       app: this.app, port: PORT, host: HOST, workspaceRoot: this.workspaceRoot,
       wsManager: this.wsManager, hub: this.hub, planManager: this.planManager,
       broadcast: (d) => this.broadcast(d),
+      mutationBus: options.mutationBus,
     });
     this.registrar = new ConsoleRouteRegistrar(this.buildRouteHost());
     this.registrar.setupAllRoutes();
@@ -158,6 +174,15 @@ export class ConsoleServer {
   setAgentTimelineService(s: AgentTimelineService): void { this.agentTimelineService = s; }
   setAgentHealthIndicator(i: AgentHealthIndicator): void { this.agentHealthIndicator = i; }
   setAgentRunRecorder(r: AgentRunRecorder): void { this.agentRunRecorder = r; }
+  setBicameralClient(c: import("../integrations/bicameral").BicameralMcpClient | null): void { this.bicameralClient = c; }
+  /** B-BIC-2: typed accessor so bootstrapBicameral can disconnect the prior
+   *  client on rewire and push an extension-deactivate disposer. */
+  getBicameralClient(): import("../integrations/bicameral").BicameralMcpClient | null { return this.bicameralClient; }
+  setBicameralCommand(cmd: string): void { this.bicameralCommand = cmd; }
+  setBicameralAutoConnect(value: boolean): void { this.bicameralAutoConnect = value; }
+  setBicameralAutoConnectWriter(fn: (value: boolean) => Promise<void>): void { this.bicameralAutoConnectWriter = fn; }
+  setVoicePackPath(p: string | null): void { this.voicePackPath = p; }
+  getVoicePackPath(): string | null { return this.voicePackPath; }
   setAutoDerivationHook(fn: HubSnapshotService["autoDerivationHook"]): void { this.hub.autoDerivationHook = fn; }
 
   // ── internals ──────────────────────────────────────────────────────
@@ -187,7 +212,12 @@ export class ConsoleServer {
     return discoverAllSkills(this.workspaceRoot, __dirname);
   }
 
-  private buildHubService(): HubSnapshotService {
+  private buildHubService(
+    mutationBus?: import("../shared/WorkspaceMutationBus").WorkspaceMutationBus,
+    modeTransitionHistory?: import("../governance/ModeTransitionHistory").ModeTransitionHistory,
+    getGovernanceMode?: () => import("../governance/types").GovernanceModeState,
+    getQorLogicVerifier?: () => Promise<import("../qorlogic/qorLogicInstallRecord").QorLogicVersionStatus>,
+  ): HubSnapshotService {
     return new HubSnapshotService({
       workspaceRoot: this.workspaceRoot, extensionVersion: EXTENSION_VERSION,
       planManager: this.planManager, qorelogicManager: this.qorelogicManager,
@@ -197,6 +227,10 @@ export class ConsoleServer {
       riskRegisterManager: this.riskRegisterManager,
       mergePlanBlockers: (plan, a) => mergePlanBlockers(plan, a as WorkspaceArtifactSnapshot),
       getActualPort: () => this.lifecycle?.getPort() ?? PORT,
+      mutationBus,
+      modeTransitionHistory,
+      getGovernanceMode,
+      getQorLogicVerifier,
       getIdeTracker: () => this.ideTracker,
       getAgentHealthIndicator: () => this.agentHealthIndicator,
       checkpointTypeRegistry: CHECKPOINT_TYPE_REGISTRY,
@@ -224,6 +258,11 @@ export class ConsoleServer {
       qorRuntimeService: this.qorRuntimeService,
       brainstormService: this.brainstormService,
       audioVaultService: this.audioVaultService,
+      getBicameralClient: () => this.bicameralClient,
+      getBicameralCommand: () => this.bicameralCommand,
+      getBicameralAutoConnect: () => this.bicameralAutoConnect,
+      setBicameralAutoConnect: (v) => this.bicameralAutoConnectWriter(v),
+      getVoicePackPath: () => this.voicePackPath,
       marketplaceCatalog: this.marketplaceCatalog,
       marketplaceInstaller: this.marketplaceInstaller,
       securityScanner: this.securityScanner,
