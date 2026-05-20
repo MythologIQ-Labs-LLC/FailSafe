@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://failsafe.mythologiq.studio/contracts/receipt.json",
+  "title": "Receipt",
+  "description": "A governance decision receipt issued by the FailSafe engine in response to an EvaluationRequest. Includes verdict, evidence, signing chain, and links to the ledger entry that anchored the decision.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["receiptId", "evaluationRequestId", "verdict", "issuedAt", "issuedBy"],
+  "properties": {
+    "receiptId": { "type": "string", "description": "Unique receipt id (UUIDv4 or content hash)." },
+    "evaluationRequestId": { "type": "string", "description": "Reference back to the EvaluationRequest that triggered this receipt." },
+    "verdict": {
+      "type": "string",
+      "enum": ["ALLOW", "BLOCK", "ESCALATE", "MODIFY", "QUARANTINE"]
+    },
+    "verdictRationale": { "type": "string" },
+    "riskGrade": { "type": "string", "enum": ["L1", "L2", "L3"] },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "ref"],
+        "properties": {
+          "kind": { "type": "string", "description": "Evidence type (e.g. 'ledger_entry', 'checkpoint', 'shadow_genome_pattern', 'preflight_drift')." },
+          "ref": { "type": "string", "description": "Reference id within the named source." },
+          "summary": { "type": "string" }
+        }
+      }
+    },
+    "conditions": { "type": "array", "items": { "type": "string" }, "description": "Conditions attached to APPROVE_WITH_CONDITIONS or MODIFY verdicts." },
+    "ledgerEntryRef": { "type": "number", "description": "Optional ledger entry id that recorded the decision." },
+    "signature": { "type": "string", "description": "Cryptographic signature over the receipt body." },
+    "issuedAt": { "type": "string", "format": "date-time" },
+    "issuedBy": { "type": "string", "description": "DID of the FailSafe instance issuing the receipt." }
+  }
+}

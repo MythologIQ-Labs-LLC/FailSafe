@@ -17,7 +17,12 @@ function walk(dir) {
     if (entry.isDirectory()) {
       if (entry.name === "node_modules" || entry.name === "vendor") continue;
       out.push(...walk(full));
-    } else if (entry.isFile() && entry.name.endsWith(".js")) {
+    } else if (entry.isFile() && (
+      entry.name.endsWith(".js")
+      // B190: also mirror governance contract JSON Schema files so tests +
+      // future runtime loaders can read them from out/contracts/*.json.
+      || (entry.name.endsWith(".json") && full.replace(/\\/g, "/").includes("/contracts/"))
+    )) {
       out.push(full);
     }
   }

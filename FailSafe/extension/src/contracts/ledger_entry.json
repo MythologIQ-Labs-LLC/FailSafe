@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://failsafe.mythologiq.studio/contracts/ledger_entry.json",
+  "title": "LedgerEntry",
+  "description": "A single Merkle-chained entry in the FailSafe SOA Ledger (META_LEDGER). Records governance events with cryptographic chain integrity.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "timestamp", "eventType", "agentDid", "agentTrustAtAction", "gdprTrigger", "payload", "entryHash", "prevHash", "signature"],
+  "properties": {
+    "id": { "type": "number", "description": "Monotonic ledger entry number." },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "eventType": {
+      "type": "string",
+      "enum": [
+        "PROPOSAL", "EVALUATION_ROUTED", "AUDIT_PASS", "AUDIT_FAIL",
+        "L3_QUEUED", "L3_APPROVED", "L3_REJECTED",
+        "TRUST_UPDATE", "PENALTY_APPLIED", "QUARANTINE_START", "QUARANTINE_END",
+        "DIVERGENCE_DECLARED", "DIVERGENCE_RESOLVED", "SYSTEM_EVENT",
+        "EXTERNAL_DRIFT", "USER_OVERRIDE", "CHECKPOINT_CREATED", "CHECKPOINT_RECONCILED",
+        "GOVERNANCE_PAUSED", "GOVERNANCE_RESUMED", "RELEASE_PUBLISHED",
+        "DISCOVERY_RECORDED", "DISCOVERY_PROMOTED",
+        "COMMIT_CHECKED", "PROVENANCE_RECORDED",
+        "MARKETPLACE_INSTALL", "MARKETPLACE_UNINSTALL"
+      ]
+    },
+    "agentDid": { "type": "string", "description": "DID (Decentralized Identifier) of the agent that initiated the event." },
+    "agentTrustAtAction": { "type": "number", "minimum": 0, "maximum": 1, "description": "Agent's trust score at the moment of action." },
+    "modelVersion": { "type": "string" },
+    "artifactPath": { "type": "string" },
+    "artifactHash": { "type": "string" },
+    "riskGrade": { "type": "string", "enum": ["L1", "L2", "L3"] },
+    "verificationMethod": { "type": "string" },
+    "verificationResult": { "type": "string" },
+    "sentinelConfidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "overseerDid": { "type": "string" },
+    "overseerDecision": { "type": "string" },
+    "gdprTrigger": { "type": "boolean" },
+    "payload": { "type": "object", "additionalProperties": true },
+    "entryHash": { "type": "string", "pattern": "^[a-f0-9]{64}$", "description": "SHA-256 of the entry body." },
+    "prevHash": { "type": "string", "description": "Chain link: SHA-256 of the previous entry's chain hash." },
+    "signature": { "type": "string", "description": "Cryptographic signature over entryHash." }
+  }
+}

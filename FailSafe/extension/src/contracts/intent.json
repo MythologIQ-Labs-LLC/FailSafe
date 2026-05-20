@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://failsafe.mythologiq.studio/contracts/intent.json",
+  "title": "Intent",
+  "description": "An operator-declared or agent-declared intent envelope. Scopes a sequence of actions to a stated goal so the governance engine can correlate downstream evaluations.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "declarer", "scope", "status", "createdAt"],
+  "properties": {
+    "id": { "type": "string", "description": "Unique intent ID." },
+    "declarer": { "type": "string", "description": "DID of the operator or agent declaring the intent." },
+    "scope": { "type": "string", "description": "Free-form description of the intent (1-2 sentences)." },
+    "files": { "type": "array", "items": { "type": "string" }, "description": "Workspace files explicitly in scope." },
+    "status": {
+      "type": "string",
+      "enum": ["DRAFT", "CONCEIVED", "PULSE", "PASS", "VETO", "SEALED", "EXPIRED"]
+    },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "expiresAt": { "type": "string", "format": "date-time" },
+    "linkedLedgerEntries": { "type": "array", "items": { "type": "number" } }
+  }
+}
