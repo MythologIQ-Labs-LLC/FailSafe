@@ -22,12 +22,6 @@ _Local-first safety for AI coding assistants._
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
 
-## Upcoming
-
-- **Bicameral MCP integration** (v1, merged locally): new Integrations tab surfacing the [Bicameral MCP](https://github.com/BicameralAI/bicameral-mcp) decision ledger and per-file drift status. Solo / team install picker; nothing bundled in the VSIX. See [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md).
-- **Stale-cache remediation** (v5.2.x, merged locally): `WorkspaceMutationBus` substrate that lets governance services subscribe to filesystem mutations and refresh their in-process caches automatically. Closes B192 stale-cache pattern + the FailSafe-Pro-coexistence concern. See [`docs/governance-cache-invalidation.md`](docs/governance-cache-invalidation.md).
-- **Voice substrate extraction** (v5.2.x, merged locally): heavy Piper TTS + Whisper STT vendor binaries move out of the base VSIX into a separate companion download. Voice features become opt-in; base extension drops below the 30 MB marketplace ceiling. See [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md) Voice Pack section.
-
 ## What's new in v5.1.5
 
 - **Bicameral MCP — Integrations tab**: full v1 surface (install bridge, settings card, history/preflight/drift/ratify) plus 5 quick-win hardening fixes (B-BIC-1..5): ratify → META_LEDGER USER_OVERRIDE; extension-deactivate disposer; transport.onclose crash recovery; capability cache; install stdout/stderr ANSI sanitizer.
