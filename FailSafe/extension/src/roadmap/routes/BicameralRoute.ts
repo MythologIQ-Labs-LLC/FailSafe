@@ -56,6 +56,14 @@ export interface BicameralRouteDeps {
   driftToL3Mediator?: {
     onDriftResult(drifted: import("../../integrations/bicameral/types").BicameralDriftStatus[]): Promise<void>;
   };
+  /**
+   * Phase 4: optional upstream monitor. When provided, the
+   * /api/integrations/bicameral/upstream route returns the latest snapshot
+   * (release version + open-issue count) or 503 if no poll has completed.
+   */
+  upstreamMonitor?: {
+    getSnapshot(): import("../../integrations/bicameral/types").UpstreamSnapshot | null;
+  };
 }
 
 export function setupBicameralRoutes(
@@ -269,6 +277,24 @@ export function setupBicameralRoutes(
     } catch (e) {
       res.status(500).json({ ok: false, error: String(e) });
     }
+  });
+
+  // GET /api/integrations/bicameral/upstream — Phase 4 / B-INT-3 extension.
+  // Returns the latest UpstreamSnapshot (release version + open-issue count)
+  // or 503 when no poll has completed yet. Local-only via rejectIfRemote.
+  app.get("/api/integrations/bicameral/upstream", async (req: Request, res: Response) => {
+    if (deps.rejectIfRemote(req, res)) return;
+    const monitor = deps.upstreamMonitor;
+    if (!monitor) {
+      res.status(503).json({ ok: false, error: "UpstreamMonitor not wired" });
+      return;
+    }
+    const snapshot = monitor.getSnapshot();
+    if (!snapshot) {
+      res.status(503).json({ ok: false, error: "Upstream snapshot not yet available" });
+      return;
+    }
+    res.json({ ok: true, snapshot });
   });
 }
 

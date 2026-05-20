@@ -406,6 +406,16 @@
           "type": "boolean",
           "default": false,
           "description": "Automatically connect to Bicameral MCP at activation when the workspace is configured. Default off — operator clicks Connect."
+        },
+        "failsafe.integrations.bicameral.upstreamPollMs": {
+          "type": "number",
+          "default": 86400000,
+          "description": "Polling interval (ms) for the Bicameral upstream release + open-issue snapshot. Default 24h. GitHub unauthenticated rate limit is 60 req/hour; default uses 2 req/day."
+        },
+        "failsafe.integrations.bicameral.upstreamRepoUrl": {
+          "type": "string",
+          "default": "BicameralAI/bicameral-mcp",
+          "description": "Owner/repo slug for the upstream Bicameral repository. Validated against a strict owner/repo pattern; URL injection blocked."
         }
       }
     }

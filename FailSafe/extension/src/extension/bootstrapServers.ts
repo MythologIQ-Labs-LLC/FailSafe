@@ -95,6 +95,25 @@ export async function bootstrapServers(
     },
     eventBus: deps.eventBus,
     logger: _logger,
+    // Phase 4 config adapter: read VS Code settings on demand. Keeps the
+    // monitor decoupled from the VS Code API surface for unit testability.
+    configProvider: {
+      getNumber: (key, defaultValue) => {
+        // VS Code settings use dot-paths; key already includes the section.
+        const lastDot = key.lastIndexOf('.');
+        const section = lastDot > 0 ? key.slice(0, lastDot) : '';
+        const leaf = lastDot > 0 ? key.slice(lastDot + 1) : key;
+        const v = vscode.workspace.getConfiguration(section).get<number>(leaf);
+        return typeof v === 'number' ? v : defaultValue;
+      },
+      getString: (key, defaultValue) => {
+        const lastDot = key.lastIndexOf('.');
+        const section = lastDot > 0 ? key.slice(0, lastDot) : '';
+        const leaf = lastDot > 0 ? key.slice(lastDot + 1) : key;
+        const v = vscode.workspace.getConfiguration(section).get<string>(leaf);
+        return typeof v === 'string' && v.length > 0 ? v : defaultValue;
+      },
+    },
   });
 
   // Voice Pack wiring — Phase 3 of voice-substrate-extraction.

@@ -13,6 +13,7 @@ import {
   probeInstallState,
 } from "../integrations/bicameral";
 import { DriftToL3Mediator } from "../integrations/bicameral/DriftToL3Mediator";
+import { UpstreamMonitor } from "../integrations/bicameral/UpstreamMonitor";
 import type { EventBus } from "../shared/EventBus";
 import type { Logger } from "../shared/Logger";
 import type { L3ApprovalRequest } from "../shared/types/l3-approval";
@@ -29,6 +30,9 @@ interface ConsoleServerSurface {
    *  drift handler can forward results without threading the mediator
    *  through every call site. Null when no mediator wired (test fixtures). */
   setDriftToL3Mediator?(m: DriftToL3Mediator | null): void;
+  /** Phase 4: setter for the upstream monitor. Null when test fixtures don't
+   *  wire it (e.g. unit tests that don't exercise the upstream route). */
+  setUpstreamMonitor?(m: UpstreamMonitor | null): void;
 }
 
 interface L3QueueDeps {
@@ -37,10 +41,18 @@ interface L3QueueDeps {
   ): Promise<string>;
 }
 
+interface ConfigProviderLike {
+  getNumber?(key: string, defaultValue: number): number;
+  getString?(key: string, defaultValue: string): string;
+}
+
 export interface BicameralIntegrationDeps {
   l3Service?: L3QueueDeps;
   eventBus?: EventBus;
   logger?: Logger;
+  /** Phase 4: optional config provider for UpstreamMonitor. When absent,
+   *  the monitor uses defaults (24h poll, BicameralAI/bicameral-mcp). */
+  configProvider?: ConfigProviderLike;
 }
 
 export function wireBicameralIntegration(
@@ -108,6 +120,20 @@ export function wireBicameralIntegration(
       consoleServer.setDriftToL3Mediator(mediator);
       context.subscriptions.push({ dispose: () => mediator.dispose() });
     }
+  }
+
+  // Phase 4: upstream monitor. Wired only when logger is present so error
+  // paths can warn. configProvider falls back to defaults (24h poll,
+  // BicameralAI/bicameral-mcp). HTTP via global fetch (Node 18+).
+  if (deps.logger && consoleServer.setUpstreamMonitor) {
+    const monitor = new UpstreamMonitor({
+      httpFetch: fetch,
+      configProvider: deps.configProvider ?? {},
+      logger: deps.logger,
+    });
+    monitor.start();
+    consoleServer.setUpstreamMonitor(monitor);
+    context.subscriptions.push({ dispose: () => monitor.dispose() });
   }
 }
 

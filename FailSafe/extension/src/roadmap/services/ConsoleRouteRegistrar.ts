@@ -61,6 +61,8 @@ export interface ConsoleRouteHost {
   getBicameralClient: () => import("../../integrations/bicameral").BicameralMcpClient | null;
   /** B-BIC-16: drift-to-L3 mediator accessor; null when bootstrap didn't wire one. */
   getDriftToL3Mediator: () => import("../../integrations/bicameral/DriftToL3Mediator").DriftToL3Mediator | null;
+  /** Phase 4: upstream monitor accessor; null when bootstrap didn't wire one. */
+  getUpstreamMonitor: () => import("../../integrations/bicameral/UpstreamMonitor").UpstreamMonitor | null;
   getBicameralCommand: () => string;
   getBicameralAutoConnect: () => boolean;
   setBicameralAutoConnect: (value: boolean) => Promise<void>;
@@ -229,6 +231,8 @@ export class ConsoleRouteRegistrar {
       // B-BIC-16: pass mediator handle so drift route forwards results
       // for auto-enqueue to L3.
       driftToL3Mediator: this.host.getDriftToL3Mediator() ?? undefined,
+      // Phase 4: pass upstream monitor handle for /upstream route.
+      upstreamMonitor: this.host.getUpstreamMonitor() ?? undefined,
     });
     setupMarketplaceRoutes(app, {
       rejectIfRemote: (req, res) => this.host.rejectIfRemote(req, res),
