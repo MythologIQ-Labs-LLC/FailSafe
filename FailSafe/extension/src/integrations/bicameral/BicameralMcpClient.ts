@@ -1,21 +1,46 @@
-// BicameralMcpClient — thin MCP client wrapper for the 4 v1 tools.
-// Plan: docs/plan-qor-bicameral-mcp-integration.md Phase 1.
+// BicameralMcpClient — MCP client wrapper for v1 tools + deferred surfaces.
+// Plan: docs/plan-qor-bicameral-cluster-high.md Phase 1 (B-BIC-19).
+//
+// Section 4 razor: parsers + runtime guards live in parsers.ts so this file
+// stays under 250L while exposing all 15 bicameral tools (4 v1 + 11 deferred).
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import {
-  BicameralDecision,
   BicameralDriftStatus,
   BicameralFeatureBrief,
   BicameralPreflightResult,
   BicameralRatifyVerdict,
+  BicameralIngestResult,
+  BicameralSearchResult,
+  BicameralBriefResult,
+  BicameralJudgeGapsResult,
+  BicameralResolveComplianceResult,
+  BicameralLinkCommitResult,
+  BicameralUpdateResult,
+  BicameralResetResult,
+  BicameralDashboardResult,
+  BicameralValidateSymbolsResult,
+  BicameralGetNeighborsResult,
 } from './types';
-
-interface ToolCallResult {
-  content?: Array<{ type?: string; text?: string }>;
-  structuredContent?: unknown;
-  isError?: boolean;
-}
+import {
+  ToolCallResult,
+  parseJsonContent,
+  parseFeatureBriefs,
+  parsePreflightResult,
+  parseDriftStatuses,
+  isIngestResult,
+  isSearchResult,
+  isBriefResult,
+  isJudgeGapsResult,
+  isResolveComplianceResult,
+  isLinkCommitResult,
+  isUpdateResult,
+  isResetResult,
+  isDashboardResult,
+  isValidateSymbolsResult,
+  isGetNeighborsResult,
+} from './parsers';
 
 interface BicameralMcpClientOptions {
   command: string;
@@ -30,8 +55,7 @@ interface BicameralMcpClientOptions {
 export class BicameralMcpClient {
   private client: Client | null = null;
   private transport: StdioClientTransport | null = null;
-  /** B-BIC-4: capability set populated from client.listTools() on connect.
-   *  null when never-connected; empty set when listTools failed; populated otherwise. */
+  /** B-BIC-4: capability set populated from client.listTools() on connect. */
   private capabilities: Set<string> | null = null;
   private readonly opts: BicameralMcpClientOptions;
 
@@ -43,7 +67,7 @@ export class BicameralMcpClient {
     return this.client !== null;
   }
 
-  /** B-BIC-4: defensive copy of the capability set (tool names from listTools). */
+  /** B-BIC-4: defensive copy of the capability set. */
   getCapabilities(): Set<string> {
     return new Set(this.capabilities ?? []);
   }
@@ -63,15 +87,11 @@ export class BicameralMcpClient {
     await client.connect(transport);
     this.transport = transport;
     this.client = client;
-    // B-BIC-3: detect subprocess crash / pipe close — flip isConnected so the
-    // operator sees the failure on the next callTool instead of an opaque error.
     transport.onclose = () => {
       this.client = null;
       this.transport = null;
       this.capabilities = null;
     };
-    // B-BIC-4: capability negotiation. Cache once on connect so future UI dim
-    // logic (B-BIC-13) can query without re-fetching every render.
     await this.fetchCapabilities(client);
   }
 
@@ -100,26 +120,9 @@ export class BicameralMcpClient {
     this.capabilities = null;
   }
 
-  async history(): Promise<BicameralFeatureBrief[]> {
-    const result = await this.call('bicameral.history', {});
-    return parseFeatureBriefs(result);
-  }
-
-  async preflight(filePath: string): Promise<BicameralPreflightResult> {
-    const result = await this.call('bicameral.preflight', { file: filePath });
-    return parsePreflightResult(result);
-  }
-
-  async drift(filePath: string): Promise<BicameralDriftStatus[]> {
-    const result = await this.call('bicameral.drift', { file_path: filePath });
-    return parseDriftStatuses(result);
-  }
-
-  async ratify(decisionId: string, verdict: BicameralRatifyVerdict): Promise<void> {
-    await this.call('bicameral.ratify', { decision_id: decisionId, verdict });
-  }
-
-  private async call(name: string, args: Record<string, unknown>): Promise<ToolCallResult> {
+  /** B-BIC-19: generic, public callRaw for deferred-tool surfaces.
+   *  Underpins all typed wrappers; throws on isError or when disconnected. */
+  async callRaw(name: string, args: Record<string, unknown>): Promise<ToolCallResult> {
     if (!this.client) throw new Error('BicameralMcpClient not connected');
     const result = await this.client.callTool({ name, arguments: args }) as ToolCallResult;
     if (result.isError) {
@@ -127,51 +130,97 @@ export class BicameralMcpClient {
     }
     return result;
   }
-}
 
-// ── Parsers ─────────────────────────────────────────────────────────────
-// MCP results come back as either structuredContent (when server emits JSON)
-// or content[].text (when server emits text blocks). Bicameral tools generally
-// return JSON via content[0].text — we parse defensively.
+  // ── v1 tools ──────────────────────────────────────────────────────────
 
-function parseJsonContent(result: ToolCallResult): unknown {
-  if (result.structuredContent !== undefined) return result.structuredContent;
-  const first = result.content?.[0];
-  if (!first || typeof first.text !== 'string') return null;
-  try { return JSON.parse(first.text); } catch { return null; }
-}
+  async history(): Promise<BicameralFeatureBrief[]> {
+    return parseFeatureBriefs(await this.callRaw('bicameral.history', {}));
+  }
 
-function parseFeatureBriefs(result: ToolCallResult): BicameralFeatureBrief[] {
-  const raw = parseJsonContent(result);
-  if (!raw || typeof raw !== 'object') return [];
-  const features = (raw as { features?: unknown }).features;
-  if (!Array.isArray(features)) return [];
-  return features.filter((f): f is BicameralFeatureBrief => {
-    return !!f && typeof f === 'object' && typeof (f as BicameralFeatureBrief).feature === 'string'
-      && Array.isArray((f as BicameralFeatureBrief).decisions);
-  });
-}
+  async preflight(filePath: string): Promise<BicameralPreflightResult> {
+    return parsePreflightResult(await this.callRaw('bicameral.preflight', { file: filePath }));
+  }
 
-function parsePreflightResult(result: ToolCallResult): BicameralPreflightResult {
-  const raw = parseJsonContent(result);
-  const obj = (raw && typeof raw === 'object') ? raw as Record<string, unknown> : {};
-  return {
-    priorDecisions: asDecisionArray(obj.prior_decisions),
-    drifted: asDriftArray(obj.drifted),
-    openQuestions: asDecisionArray(obj.open_questions),
-  };
-}
+  async drift(filePath: string): Promise<BicameralDriftStatus[]> {
+    return parseDriftStatuses(await this.callRaw('bicameral.drift', { file_path: filePath }));
+  }
 
-function parseDriftStatuses(result: ToolCallResult): BicameralDriftStatus[] {
-  const raw = parseJsonContent(result);
-  if (!raw || typeof raw !== 'object') return [];
-  return asDriftArray((raw as { drift?: unknown }).drift);
-}
+  async ratify(decisionId: string, verdict: BicameralRatifyVerdict): Promise<void> {
+    await this.callRaw('bicameral.ratify', { decision_id: decisionId, verdict });
+  }
 
-function asDecisionArray(v: unknown): BicameralDecision[] {
-  return Array.isArray(v) ? v.filter((d) => !!d && typeof d === 'object') as BicameralDecision[] : [];
-}
+  // ── Deferred tools (B-BIC-19 type-surface) ────────────────────────────
+  // Each wrapper: callRaw → parseJsonContent → per-tool runtime guard → narrow.
 
-function asDriftArray(v: unknown): BicameralDriftStatus[] {
-  return Array.isArray(v) ? v.filter((d) => !!d && typeof d === 'object') as BicameralDriftStatus[] : [];
+  async ingest(opts: { repoPath: string }): Promise<BicameralIngestResult> {
+    const raw = parseJsonContent(await this.callRaw('bicameral.ingest', { repo_path: opts.repoPath }));
+    if (!isIngestResult(raw)) throw new Error('bicameral.ingest returned unexpected shape');
+    return raw;
+  }
+
+  async search(opts: { query: string }): Promise<BicameralSearchResult> {
+    const raw = parseJsonContent(await this.callRaw('bicameral.search', { query: opts.query }));
+    if (!isSearchResult(raw)) throw new Error('bicameral.search returned unexpected shape');
+    return raw;
+  }
+
+  async brief(opts: { feature: string }): Promise<BicameralBriefResult> {
+    const raw = parseJsonContent(await this.callRaw('bicameral.brief', { feature: opts.feature }));
+    if (!isBriefResult(raw)) throw new Error('bicameral.brief returned unexpected shape');
+    return raw;
+  }
+
+  async judgeGaps(opts: { feature: string }): Promise<BicameralJudgeGapsResult> {
+    const raw = parseJsonContent(await this.callRaw('bicameral.judgeGaps', { feature: opts.feature }));
+    if (!isJudgeGapsResult(raw)) throw new Error('bicameral.judgeGaps returned unexpected shape');
+    return raw;
+  }
+
+  async resolveCompliance(opts: { decisionId: string; resolution: string }): Promise<BicameralResolveComplianceResult> {
+    const raw = parseJsonContent(await this.callRaw('bicameral.resolveCompliance', {
+      decision_id: opts.decisionId, resolution: opts.resolution,
+    }));
+    if (!isResolveComplianceResult(raw)) throw new Error('bicameral.resolveCompliance returned unexpected shape');
+    return raw;
+  }
+
+  async linkCommit(opts: { commitSha: string; decisionId: string }): Promise<BicameralLinkCommitResult> {
+    const raw = parseJsonContent(await this.callRaw('bicameral.linkCommit', {
+      commit_sha: opts.commitSha, decision_id: opts.decisionId,
+    }));
+    if (!isLinkCommitResult(raw)) throw new Error('bicameral.linkCommit returned unexpected shape');
+    return raw;
+  }
+
+  async update(opts: { decisionId: string; payload: Record<string, unknown> }): Promise<BicameralUpdateResult> {
+    const raw = parseJsonContent(await this.callRaw('bicameral.update', {
+      decision_id: opts.decisionId, payload: opts.payload,
+    }));
+    if (!isUpdateResult(raw)) throw new Error('bicameral.update returned unexpected shape');
+    return raw;
+  }
+
+  async reset(opts: { scope?: string } = {}): Promise<BicameralResetResult> {
+    const raw = parseJsonContent(await this.callRaw('bicameral.reset', opts.scope ? { scope: opts.scope } : {}));
+    if (!isResetResult(raw)) throw new Error('bicameral.reset returned unexpected shape');
+    return raw;
+  }
+
+  async dashboard(): Promise<BicameralDashboardResult> {
+    const raw = parseJsonContent(await this.callRaw('bicameral.dashboard', {}));
+    if (!isDashboardResult(raw)) throw new Error('bicameral.dashboard returned unexpected shape');
+    return raw;
+  }
+
+  async validateSymbols(opts: { symbols: string[] }): Promise<BicameralValidateSymbolsResult> {
+    const raw = parseJsonContent(await this.callRaw('bicameral.validateSymbols', { symbols: opts.symbols }));
+    if (!isValidateSymbolsResult(raw)) throw new Error('bicameral.validateSymbols returned unexpected shape');
+    return raw;
+  }
+
+  async getNeighbors(opts: { decisionId: string }): Promise<BicameralGetNeighborsResult> {
+    const raw = parseJsonContent(await this.callRaw('bicameral.getNeighbors', { decision_id: opts.decisionId }));
+    if (!isGetNeighborsResult(raw)) throw new Error('bicameral.getNeighbors returned unexpected shape');
+    return raw;
+  }
 }

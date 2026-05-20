@@ -76,3 +76,73 @@ export interface InstallProgressEvent {
   ok?: boolean;
   error?: string;
 }
+
+// ── Deferred-tool response types (B-BIC-19) ─────────────────────────────
+// Minimal shapes inferred from upstream Bicameral v0.14 schemas. Each carries
+// at least one named field so runtime guards in parsers.ts can narrow from
+// `unknown`. Opaque fields use `unknown` deliberately; per-tool wrappers do
+// not over-claim structure that the upstream schema does not guarantee.
+
+export interface BicameralIngestResult {
+  ingested: number;
+  errors?: unknown[];
+}
+
+export interface BicameralSearchResult {
+  results: Array<{ id?: string; title?: string; score?: number }>;
+}
+
+export interface BicameralBriefResult {
+  brief: string;
+  feature?: string;
+}
+
+export interface BicameralJudgeGapsResult {
+  gaps: Array<{ id?: string; description?: string }>;
+}
+
+export interface BicameralResolveComplianceResult {
+  resolved: boolean;
+  message?: string;
+}
+
+export interface BicameralLinkCommitResult {
+  linked: boolean;
+  commit?: string;
+  decisionId?: string;
+}
+
+export interface BicameralUpdateResult {
+  updated: boolean;
+  decisionId?: string;
+}
+
+export interface BicameralResetResult {
+  reset: boolean;
+}
+
+export interface BicameralDashboardResult {
+  features?: number;
+  decisions?: number;
+  driftCount?: number;
+  unratified?: number;
+}
+
+export interface BicameralValidateSymbolsResult {
+  invalid: Array<{ symbol?: string; reason?: string }>;
+}
+
+export interface BicameralGetNeighborsResult {
+  neighbors: Array<{ id?: string; relation?: string }>;
+}
+
+// ── Upstream awareness (Phase 4 / B-INT-3) ──────────────────────────────
+
+export interface UpstreamSnapshot {
+  latestVersion: string | null;
+  latestReleasedAt: string | null;
+  openIssueCount: number | null;
+  openPrCount: number | null;
+  fetchedAt: string;
+  error?: string;
+}
