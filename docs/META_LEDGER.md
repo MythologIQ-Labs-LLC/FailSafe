@@ -19234,3 +19234,75 @@ _Next: operator decision on PR #77 review/merge; remaining 43 open backlog items
 _Chain integrity: VALID_
 _Session Status: B-EM-2 + B-EM-3 SEALED at Entry #380; 11 FX537 cases pass directly; FX538 runs in CI; PUBLISH_BLOCK unchanged. feat/bicameral-cluster-high carries #378 + #379 + #380._
 _Session: 2026-05-20-em-2-em-3-enforcement-mode-polish-substantiation-seal_
+
+---
+
+### Entry #381: SESSION SEAL — plan-qor-b199-1-brainstorm-e2e (B-B199-1 shell + interactive scope)
+
+**Entry ID**: `3f79dec234c5`
+**Date**: 2026-05-20
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-b199-1-brainstorm-e2e.md`
+**Audit reference**: 1-cycle APPROVE-WITH-MINOR-FIXES via independent `architect-reviewer` (Phase 68 Option B). Three fixes applied inline before implement: (a) `graph.clear` → `graph.clearAll` (verified at brainstorm.js:175-180); (b) FX539.5 use inline `element.style.borderColor` not computed (avoid CSS-cascade flake); (c) FX539.8 acknowledge `exportJSON` is async, spy returns Promise. All three remediated in the written spec.
+**Implementation reference**: 1 commit on `feat/bicameral-cluster-high` (continues from #378+#379+#380 on the same branch).
+
+## Federation note
+
+Continues from Entry #380. Same feature branch carries #378+#379+#380+this. PR #77 will absorb all four clusters at merge.
+
+## Substantiation summary
+
+Closes B-B199-1 for the CURRENT shipped Brainstorm UI. Voice-input live behavior + 3D canvas content rendering deferred to B-B199-3 (voice) and future canvas-rendering work — both impractical to E2E without Whisper/Piper/WebGL stacks.
+
+Single-phase implementation:
+
+**FX539 brainstorm-tab.spec.ts (10 cases)**:
+- Shell renders 11 toolbar + canvas elements (3 layout + 2 view + 4 action + canvas container).
+- /api/v1/brainstorm/graph fetched on render (verified via route counter).
+- 2D view active by default; click 3D moves `.active` class.
+- Click TREE layout sets inline `style.borderColor` (active indicator per brainstorm.js:184).
+- UNDO/REDO click invokes `graph.undo` / `graph.redo` respectively (verified via `window.__failsafeRenderers.workspace.subViews.find('brainstorm').renderer.graph` spy installation).
+- EXPORT click invokes async `graph.exportJSON()`.
+- RESET click + `confirm(accept)` → `graph.clearAll()`; `confirm(dismiss)` → no additional call. Uses `page.on('dialog')` to intercept native confirm.
+- Empty graph response renders shell without uncaught page errors.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| Compile (`tsc -p ./`) | clean, no warnings |
+| Playwright spec (10 cases, isolated invocation) | **10 passing / 0 failing** in 3.6min on first run |
+| First-run pass rate | 10/10, no flakes, no retries |
+| Section 4 Razor | brainstorm-tab.spec.ts: 260L. Slightly above the 250L line guidance but within reasonable headroom for a 10-case E2E spec; pattern matches existing replay-tab.spec.ts / genome-tab.spec.ts size envelope. |
+| SG-035 test functionality | Every FX539 case invokes a real interaction (navigate, click, page.evaluate dialog) and asserts against rendered DOM state, fetch counter, or spy call count. |
+| Citation discipline (SG-CitationDrift-A) | Selectors verified against `brainstorm-templates.js:14-31`; click handlers against `brainstorm.js:172-189`; renderer-nesting path against `command-center.js:37-40,97` + `tab-group.js:3-6`; `exportJSON` existence + async signature against `brainstorm-graph.js:202`. |
+| Backward compatibility | Reuses the B-B199-2 Phase 0 `globalThis.__failsafeRenderers` test-only hook with NO production code changes in this cycle. |
+
+## Skipped per protocol (degraded-wiring posture)
+
+- Full `npm test:all` still blocked locally by stuck VS Code installer mutex (~6.5h runtime; same condition as Entries #378-#380). FX539 verified directly via `npx playwright test`.
+
+## Content Hash
+
+**Content Hash**: `3f79dec234c5a75d1d4e165144cf696d9e9f2c8abea2e605bacb652f7492d1ff`
+**Previous Hash**: `01462a347a61faae4ab7dc35f059585e831a5b0ff3e4673c13400bb42da7058c` (Entry #380)
+**Chain Hash**: `24b5b3b5a43eb506cb6e895d9d45c85f302415108ccef596cf93e4066bb27c16`
+**Merkle Seal**: `bfd9f17c7d684d0b4e6aea23a1fd1d1c34b2e3ef3c7ce3488598b9656d8ba27f` — gate_workspace_audit_b199_1_brainstorm_e2e_PASS
+**Session ID**: `2026-05-20-b199-1-brainstorm-e2e-substantiation-seal`
+
+## Review Boundary attestation
+
+No marketplace publish or GitHub Release. Same branch as #378+#379+#380. PR #77 absorbs at merge.
+
+## Decision
+
+**SEAL — Reality matches Promise.** B-B199-1 closed for current-surface scope. Future-feature E2E (voice + 3D canvas) tracked under B-B199-3 + future work. BACKLOG state: 43 open → 42 open.
+
+_Chain Status: B-B199-1 SEALED at Entry #381._
+_Next: operator next-up selection from remaining 42 open items._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: B-B199-1 SEALED at Entry #381 (shell + interactive scope); 10 Playwright cases pass on first run in 3.6min; PUBLISH_BLOCK unchanged. feat/bicameral-cluster-high carries #378+#379+#380+#381._
+_Session: 2026-05-20-b199-1-brainstorm-e2e-substantiation-seal_
