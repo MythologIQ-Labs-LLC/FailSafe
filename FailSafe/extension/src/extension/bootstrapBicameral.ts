@@ -13,6 +13,7 @@ import {
   probeInstallState,
 } from "../integrations/bicameral";
 import { DriftToL3Mediator } from "../integrations/bicameral/DriftToL3Mediator";
+import { PreflightToL3Mediator } from "../integrations/bicameral/PreflightToL3Mediator";
 import { UpstreamMonitor } from "../integrations/bicameral/UpstreamMonitor";
 import { EngineBackedInterceptor, McpInterceptor } from "../governance/interceptor";
 import type { EnforcementEngineLike } from "../governance/interceptor/EngineBackedInterceptor";
@@ -49,6 +50,17 @@ interface L3QueueDeps {
   ): Promise<string>;
 }
 
+/** B-INT-2: L3 surface needed to wire the preflight mediator — attach
+ *  evidence + register the mediator. Optional dep; absent → no preflight. */
+interface L3PreflightWiringDeps {
+  attachPreflightEvidence(
+    approvalId: string,
+    preflightMeta: Record<string, unknown>,
+    flag: string,
+  ): Promise<void>;
+  setPreflightMediator(mediator: PreflightToL3Mediator | null): void;
+}
+
 interface ConfigProviderLike {
   getNumber?(key: string, defaultValue: number): number;
   getString?(key: string, defaultValue: string): string;
@@ -56,6 +68,9 @@ interface ConfigProviderLike {
 
 export interface BicameralIntegrationDeps {
   l3Service?: L3QueueDeps;
+  /** B-INT-2: L3 service surface for the preflight mediator. When supplied,
+   *  tier-3 actions are preflight-checked against bicameral decisions. */
+  l3PreflightService?: L3PreflightWiringDeps;
   eventBus?: EventBus;
   logger?: Logger;
   /** B151: enforcement engine backing the universal governance interceptor.
@@ -153,6 +168,23 @@ export function wireBicameralIntegration(
       consoleServer.setDriftToL3Mediator(mediator);
       context.subscriptions.push({ dispose: () => mediator.dispose() });
     }
+  }
+
+  // B-INT-2: preflight-to-L3 mediator. Wired only when the L3 preflight
+  // surface + logger are supplied. The client is read lazily via
+  // getBicameralClient so a config-driven rewire is picked up. The mediator
+  // is registered on the L3 service via setPreflightMediator.
+  if (deps.l3PreflightService && deps.logger) {
+    const l3Preflight = deps.l3PreflightService;
+    const mediator = new PreflightToL3Mediator({
+      client: () => consoleServer.getBicameralClient(),
+      l3Service: l3Preflight,
+      logger: deps.logger,
+    });
+    l3Preflight.setPreflightMediator(mediator);
+    context.subscriptions.push({
+      dispose: () => l3Preflight.setPreflightMediator(null),
+    });
   }
 
   // Phase 4: upstream monitor. Wired only when logger is present so error

@@ -97,6 +97,13 @@ export async function bootstrapServers(
     l3Service: {
       queueL3Approval: (req) => deps.qorelogicManager.queueL3Approval(req),
     },
+    // B-INT-2: L3 surface for the preflight mediator. attachPreflightEvidence
+    // + setPreflightMediator delegate to L3ApprovalService via QorLogicManager.
+    l3PreflightService: {
+      attachPreflightEvidence: (id, meta, flag) =>
+        deps.qorelogicManager.attachPreflightEvidence(id, meta, flag),
+      setPreflightMediator: (m) => deps.qorelogicManager.setPreflightMediator(m),
+    },
     eventBus: deps.eventBus,
     logger: _logger,
     // B151: back the universal governance interceptor with the enforcement

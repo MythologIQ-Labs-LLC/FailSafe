@@ -30,11 +30,17 @@ When the operator clicks **Connect**, FailSafe opens an MCP stdio session and ca
 | Tool | Used for | Return shape (parsed) |
 |---|---|---|
 | `bicameral.history` | List feature-scoped decisions to render in the Integrations tab | `BicameralFeatureBrief[]` |
-| `bicameral.preflight` | (Reserved — Phase 2 wiring lands in a follow-up cycle) | `BicameralPreflightResult` |
+| `bicameral.preflight` | Decision-drift check run when a tier-3 action is queued for L3 approval (B-INT-2) | `BicameralPreflightResult` |
 | `bicameral.drift` | Per-file drift status when a file path is supplied | `BicameralDriftStatus[]` |
 | `bicameral.ratify` | Operator confirms or rejects a single decision | void (boolean status implicit in HTTP 200) |
 
 The remaining nine tools (`ingest`, `search`, `brief`, `judge_gaps`, `resolve_compliance`, `link_commit`, `update`, `reset`, `dashboard`, `validate_symbols`, `get_neighbors`) are tracked as follow-ups in `docs/BACKLOG.md` (**B-INT-1**).
+
+### Preflight on the L3 approval card (B-INT-2)
+
+When the governance pipeline routes a tier-3 (high-risk) action to the L3 approval queue, FailSafe runs `bicameral.preflight` against the target file. If the file conflicts with one or more prior bicameral decisions, the drift evidence is attached to the pending L3 entry (`meta.preflight`) and surfaces inline on the approval card as a "Conflicts with decision: …" line, so the operator sees the conflict *before* approving the action.
+
+Preflight runs asynchronously, after the L3 entry is already queued — the approval card appears immediately and the conflict line is added on the next hub rebuild once preflight returns. When the Bicameral MCP client is absent or disconnected, the check is a silent no-op: the L3 entry stands without a conflict line.
 
 ### Settings
 

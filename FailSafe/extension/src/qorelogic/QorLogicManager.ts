@@ -24,7 +24,7 @@ import { TrustEngine } from './trust/TrustEngine';
 import { PolicyEngine } from './policies/PolicyEngine';
 import { ShadowGenomeManager } from './shadow/ShadowGenomeManager';
 import { CortexEvent, RoutingDecision } from '../governance/EvaluationRouter';
-import { L3ApprovalService } from './L3ApprovalService';
+import { L3ApprovalService, PreflightMediatorLike } from './L3ApprovalService';
 
 export class QorLogicManager {
     private stateStore: IStateStore;
@@ -104,6 +104,25 @@ export class QorLogicManager {
         request: Omit<L3ApprovalRequest, 'id' | 'state' | 'queuedAt' | 'slaDeadline'>
     ): Promise<string> {
         return this.l3ApprovalService.queueL3Approval(request);
+    }
+
+    /**
+     * B-INT-2: attach bicameral preflight evidence onto a queued L3 entry.
+     * Delegates to L3ApprovalService.
+     */
+    async attachPreflightEvidence(
+        approvalId: string,
+        preflightMeta: Record<string, unknown>,
+        flag: string
+    ): Promise<void> {
+        return this.l3ApprovalService.attachPreflightEvidence(approvalId, preflightMeta, flag);
+    }
+
+    /**
+     * B-INT-2: register the bicameral preflight mediator on the L3 service.
+     */
+    setPreflightMediator(mediator: PreflightMediatorLike | null): void {
+        this.l3ApprovalService.setPreflightMediator(mediator);
     }
 
     /**
