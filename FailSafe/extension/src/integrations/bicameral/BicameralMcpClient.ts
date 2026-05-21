@@ -52,6 +52,10 @@ interface BicameralMcpClientOptions {
   command: string;
   args?: string[];
   cwd: string;
+  /** Extra environment variables for the spawned MCP server process. Merged
+   *  into the SDK's default-inherited env. Needed e.g. to set
+   *  ELECTRON_RUN_AS_NODE when `command` is an Electron binary. */
+  env?: Record<string, string>;
   /** B-BIC-9: idle disconnect TTL in ms. 0 disables. Default 900_000 (15min). */
   idleDisconnectMs?: number;
   /** Test seam: override the underlying MCP client (mocks). */
@@ -105,6 +109,9 @@ export class BicameralMcpClient {
           command: this.opts.command,
           args: this.opts.args ?? [],
           cwd: this.opts.cwd,
+          // StdioClientTransport restricts inherited env to an allowlist; any
+          // extra vars (e.g. ELECTRON_RUN_AS_NODE) must be passed explicitly.
+          ...(this.opts.env ? { env: this.opts.env } : {}),
         });
     const client = this.opts.clientFactory
       ? this.opts.clientFactory()

@@ -7,11 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — v5.1.7 (draft)
 
-B190 governance contract schemas + B151 universal governance interceptor (the B190 → B151 → B152 → B153 architecture chain) + B191 Monitor SHIELD-visibility verification + B-INT-2 bicameral.preflight → L3 + B198 subscribe-without-mutate UI remediation + B-BIC validator/UX/governance batches (6/7, 12/13/14/15, 17/18) + B-B199-3/4/5/6 test-coverage gaps. FX547–FX583. SHIELD-sealed via META_LEDGER Entry #383 (B190) and Entry #384 (consolidated v5.1.7 cycle). See `docs/plan-qor-b190-governance-contracts.md`, `docs/plan-qor-b151-governance-interceptor.md`, `docs/plan-qor-b-int-2-preflight-l3.md`, `docs/plan-qor-b198-subscribe-without-mutate.md`, `docs/plan-qor-batch1-bbic-decision-row-ux.md`, `docs/plan-qor-batch2-bbic-validator-hardening.md`, `docs/plan-qor-batch3-b199-coverage-gaps.md`, `docs/plan-qor-batch4-bbic-governance-integration.md`. v5.2.0 remains gated on the Educational component — not this release.
+B151 universal governance interceptor (the B190 → B151 → B152 → B153 architecture chain; B190 itself shipped in 5.1.6) + B191 Monitor SHIELD-visibility verification + B-INT-2 bicameral.preflight → L3 + B198 subscribe-without-mutate UI remediation + B-BIC validator/UX/governance batches (6/7, 12/13/14/15, 17/18) + B-B199-3/4/5/6 test-coverage gaps. FX547–FX583. SHIELD-sealed via META_LEDGER Entry #384 (consolidated v5.1.7 cycle). See `docs/plan-qor-b151-governance-interceptor.md`, `docs/plan-qor-b-int-2-preflight-l3.md`, `docs/plan-qor-b198-subscribe-without-mutate.md`, `docs/plan-qor-batch1-bbic-decision-row-ux.md`, `docs/plan-qor-batch2-bbic-validator-hardening.md`, `docs/plan-qor-batch3-b199-coverage-gaps.md`, `docs/plan-qor-batch4-bbic-governance-integration.md`. v5.2.0 remains gated on the Educational component — not this release.
 
 ### Added
 
-- **Governance contract schemas** (B190). 8 JSON Schema 2020-12 files at `src/contracts/*.json` (`evaluation_request`, `ledger_entry`, `intent`, `failure_mode`, `approval`, `checkpoint`, `receipt`, `governance_config`) with canonical `$id` host and root `additionalProperties: false`, a hand-written TypeScript mirror at `src/contracts/types.ts` + `CONTRACT_VERSIONS` map, and a build-pipeline extension that mirrors the `.json` files to `out/contracts/`. AJV 8.17.1 promoted to an explicit devDependency. 19 cases (FX545 + FX546).
 - **`IGovernanceInterceptor` contract seam** (B151). Single `evaluate(req): Promise<ReceiptContract>` interface at `src/governance/interceptor/` — the universal pre-action governance entry point. Receipts validate against `receipt.json`; evidence is always `{kind, ref}` objects, never bare strings; ids are derived deterministically via `contractMappers`. 5 cases (FX547).
 - **`EngineBackedInterceptor`** (B151). Delegates to the existing `EnforcementEngine` and maps `Verdict` → `ReceiptContract` (ALLOW/BLOCK/ESCALATE → schema-valid receipts; an engine throw → a QUARANTINE receipt, no rethrow). No new enforcement surface. 5 cases (FX548).
 - **`McpInterceptor` adapter** (B151). Wraps an MCP `{name, arguments}` envelope into an `EvaluationRequestContract`; malformed input yields a QUARANTINE receipt without invoking the backing interceptor. Minimal local client interface — no bicameral import. 5 cases (FX549).
@@ -42,7 +41,7 @@ B190 governance contract schemas + B151 universal governance interceptor (the B1
 
 ## [5.1.6] - 2026-05-20
 
-Bicameral HIGH cluster (B-BIC-16/19/20) + safety + concurrency batch (B-BIC-8/9/11/21/22/23) + upstream awareness (B-INT-3) + B-B199-2 Replay + Genome behavioral E2E + B-EM-2/B-EM-3 enforcement-mode polish. SHIELD-sealed via PR #77 (Entries #378/#379/#380) and PR #78 (Entry #382). See `docs/plan-qor-bicameral-cluster-high.md`, `docs/plan-qor-bicameral-safety-concurrency.md`, `docs/plan-qor-b199-2-replay-genome-e2e.md`, `docs/plan-qor-em-2-em-3-enforcement-mode-polish.md`.
+Bicameral HIGH cluster (B-BIC-16/19/20) + safety + concurrency batch (B-BIC-8/9/11/21/22/23) + upstream awareness (B-INT-3) + B-B199-2 Replay + Genome behavioral E2E + B-EM-2/B-EM-3 enforcement-mode polish + governance contract schemas (B190). SHIELD-sealed via PR #77 (Entries #378/#379/#380), PR #78 (Entry #382), and PR #79 (Entry #383). See `docs/plan-qor-bicameral-cluster-high.md`, `docs/plan-qor-bicameral-safety-concurrency.md`, `docs/plan-qor-b199-2-replay-genome-e2e.md`, `docs/plan-qor-em-2-em-3-enforcement-mode-polish.md`.
 
 ### Added
 
@@ -65,11 +64,16 @@ Bicameral HIGH cluster (B-BIC-16/19/20) + safety + concurrency batch (B-BIC-8/9/
 - **Runtime type guard on `callTool()` return** (B-BIC-23). All BicameralMcpClient call paths run the parsed payload through a runtime guard before returning, preventing malformed shapes from leaking into downstream consumers.
 - **Concurrent connect/disconnect race tests** (B-BIC-21). New test cases exercise interleaved `connect()` / `disconnect()` invocations to verify the in-flight cache + idle-disconnect interactions remain deterministic under contention.
 - **`semver.ts` shared helper**. `compareSemver` extracted from `upstream-row.ts` into a sibling module so the new `protocol-floor.ts` can share the same lightweight semver compare (returns -1/0/+1; strips `v` prefix; ignores pre-release tags). Restores Section 4 razor compliance for `upstream-row.ts`.
+- **Governance contract schemas** (B190). 8 JSON Schema 2020-12 contract definitions (`evaluation_request`, `ledger_entry`, `intent`, `failure_mode`, `approval`, `checkpoint`, `receipt`, `governance_config`) under `src/contracts/`, a typed `types.ts` surface with the `CONTRACT_VERSIONS` map, and fixture-match + well-formedness tests.
 
 ### Changed
 
 - **Audit cycle 1 → 2 remediation** (cluster-high plan). Six findings closed before implementation: (F1) `qorelogic.l3Decided` payload-shape citation drift, (F2) UpstreamMonitor SSRF allowlist enforcement before fetch, (F3) deferred-tool count contradiction reconciled (11 wrappers, not 12), (F4) DEFERRED/EXPIRED verdict no-op mapping clarified, (F5) FX528 SG-035 violation (stub → live subprocess), (F6) false-empty "Open Questions: None" replaced with explicit list.
 - **Safety + concurrency audit cycle 1 → 2 remediation**. APPROVE-WITH-MANDATORY-EDITS verdict closed via 3 must-fix + 2 should-fix items addressed inline. `BicameralMcpClient.ts` stands at 284L (over the 250-line razor by 34L); explicit exception documented in the audit since the 11 deferred-tool wrappers **are** the public API surface and extracting them would violate the type-surface contract.
+
+### Fixed
+
+- **Extension activation no longer crashes on hosts without a global `fetch`**. The B-INT-3 `UpstreamMonitor` was wired at activation time with the bare global `fetch`; on Node runtimes that do not expose `fetch`, this threw `ReferenceError` and aborted activation, leaving no `failsafe.*` commands registered. The HTTP transport is now feature-detected — falling back to a minimal `node:https` GET shim (`http-fetch-shim.ts`) — and the monitor wiring is isolated in a fail-safe `try/catch` so a non-critical background poller can never abort activation.
 
 ### Security
 

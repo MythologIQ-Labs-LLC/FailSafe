@@ -10,6 +10,7 @@ import { DriftToL3Mediator } from "../integrations/bicameral/DriftToL3Mediator";
 import { DriftToRiskMediator } from "../integrations/bicameral/DriftToRiskMediator";
 import { PreflightToL3Mediator } from "../integrations/bicameral/PreflightToL3Mediator";
 import { UpstreamMonitor } from "../integrations/bicameral/UpstreamMonitor";
+import { httpFetchShim } from "../integrations/bicameral/http-fetch-shim";
 import { SentinelWatchPolicy } from "../sentinel/SentinelWatchPolicy";
 import type { EventBus } from "../shared/EventBus";
 import type { FailSafeEvent } from "../shared/types";
@@ -114,20 +115,36 @@ export function wireMediators(
 }
 
 /** Phase 4: construct + register the bicameral UpstreamMonitor. Wired only
- *  when logger is present; configProvider falls back to 24h-poll defaults. */
+ *  when logger is present; configProvider falls back to 24h-poll defaults.
+ *
+ *  RC1 (v5.1.6 hotfix 678c871): the monitor is a non-critical 24h background
+ *  poller — it must NEVER abort extension activation. The construction is
+ *  wrapped in try/catch, and the HTTP transport is feature-detected: the
+ *  extension-host Node runtime does not reliably expose a global `fetch`, so
+ *  we fall back to a tiny node:https GET shim. */
 export function wireUpstreamMonitor(
   context: vscode.ExtensionContext,
   consoleServer: ConsoleServerSurface,
   deps: BicameralIntegrationDeps,
 ): void {
-  if (deps.logger && consoleServer.setUpstreamMonitor) {
+  if (!deps.logger || !consoleServer.setUpstreamMonitor) return;
+  const logger = deps.logger;
+  try {
+    // RC1: feature-detect the global `fetch`. Falls back to the node:https
+    // shim on hosts (e.g. some vscode-test electron runtimes) that lack it.
+    const httpFetch: typeof fetch =
+      typeof fetch === "function" ? fetch : httpFetchShim;
     const monitor = new UpstreamMonitor({
-      httpFetch: fetch,
+      httpFetch,
       configProvider: deps.configProvider ?? {},
-      logger: deps.logger,
+      logger,
     });
     monitor.start();
-    consoleServer.setUpstreamMonitor(monitor);
+    consoleServer.setUpstreamMonitor?.(monitor);
     context.subscriptions.push({ dispose: () => monitor.dispose() });
+  } catch (err) {
+    logger.warn("UpstreamMonitor wiring skipped (non-critical)", {
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 }
