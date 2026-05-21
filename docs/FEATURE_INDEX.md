@@ -685,6 +685,18 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 ---
 
+## Section: Universal Governance Interceptor (B151 — contract-typed enforcement seam)
+
+| ID | Feature | Doc | Code | Test | Status | Notes |
+|---|---|---|---|---|---|---|
+| FX547 | IGovernanceInterceptor contract surface (single `evaluate(req): Promise<ReceiptContract>` seam) | docs/plan-qor-b151-governance-interceptor.md (Phase 1) | src/governance/interceptor/IGovernanceInterceptor.ts, src/governance/interceptor/index.ts | src/test/governance/interceptor/IGovernanceInterceptor.contract.test.ts | verified | 5 mocha cases: a StubInterceptor implements + is constructible; evaluate(validReq) resolves a ReceiptContract that validates against receipt.json; evaluationRequestId equals deriveEvaluationRequestId(req); evidence is {kind,ref} objects (never bare strings); issuedAt parses as RFC3339. |
+| FX548 | EngineBackedInterceptor (delegates to EnforcementEngine, maps Verdict→ReceiptContract) | docs/plan-qor-b151-governance-interceptor.md (Phase 2) | src/governance/interceptor/EngineBackedInterceptor.ts | src/test/governance/interceptor/EngineBackedInterceptor.test.ts | verified | 5 mocha cases: ALLOW/BLOCK/ESCALATE verdicts map to schema-valid receipts with correct evidence; an engine throw → QUARANTINE receipt with the error name in evidence, no rethrow; every receipt validates against receipt.json. RD-1 — no new enforcement surface. |
+| FX549 | McpInterceptor adapter (wraps MCP `{name,arguments}` envelope → EvaluationRequestContract) | docs/plan-qor-b151-governance-interceptor.md (Phase 2) | src/governance/interceptor/adapters/McpInterceptor.ts | src/test/governance/interceptor/McpInterceptor.test.ts | verified | 5 mocha cases: intercept returns the backing interceptor's receipt; the built EvaluationRequestContract validates against evaluation_request.json; malformed input → QUARANTINE receipt with the backing interceptor NOT invoked; QUARANTINE receipt carries an eval-prefixed id; AJV validator served from cache across 100 calls. Boundary rule 2 — minimal local client interface, no bicameral import. |
+| FX550 | contractMappers (deterministic id derivation, ProposedAction↔EvaluationRequest round-trip, Verdict→Receipt projection) | docs/plan-qor-b151-governance-interceptor.md (Phase 1) | src/governance/interceptor/contractMappers.ts | src/test/governance/interceptor/contractMappers.test.ts | verified | 6 mocha cases: deriveEvaluationRequestId deterministic + timestamp-sensitive; verdictToReceipt produces correct evidence objects per ALLOW/BLOCK/ESCALATE variant; every receipt validates against receipt.json; ProposedAction↔EvaluationRequestContract round-trips on all defined fields. |
+| FX551 | BicameralRoute migration through McpInterceptor (behavioural-parity) | docs/plan-qor-b151-governance-interceptor.md (Phase 3) | src/roadmap/routes/BicameralRoute.ts (3 tool routes governed), src/roadmap/ConsoleServer.ts, src/roadmap/services/ConsoleRouteRegistrar.ts, src/extension/bootstrapBicameral.ts | src/test/roadmap/routes/BicameralRoute.parity.test.ts + src/test/roadmap/routes/__fixtures__/bicameral-route-pre-migration.json | verified | 6 mocha cases: history/drift/ratify success bodies match the pre-migration snapshot (post timestamp normalisation); error envelopes match; HTTP status preserved on both paths; suite fails loud if the baseline fixture is missing. |
+
+---
+
 ## Section: SentinelDaemon governance-file coverage (B193 — Phase 60 §2 Track C + residual fix-up)
 
 | ID | Feature | Doc | Code | Test | Status | Notes |

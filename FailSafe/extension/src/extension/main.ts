@@ -179,6 +179,8 @@ export async function activate(
         mutationBus: core.mutationBus,
         modeTransitionHistory: core.modeTransitionHistory,
         getGovernanceMode: () => gov.enforcementEngine.getGovernanceModeState(),
+        // B151: back the universal governance interceptor for bicameral routes.
+        enforcementEngine: gov.enforcementEngine,
       },
       logger,
     );

@@ -4,6 +4,12 @@
 // Install is the only spawn-boundary route (delegates argv validation to
 // install-handler). Tool routes call BicameralMcpClient when it has been
 // wired by bootstrapServers; otherwise return 503 not-wired.
+//
+// B151: the 3 tool routes (history/drift/ratify) are governed through the
+// universal McpInterceptor when one is wired. The interceptor yields a B190
+// ReceiptContract; a non-ALLOW verdict short-circuits the route via the
+// receipt→HTTP table below. When no interceptor is wired (legacy fixtures)
+// the routes behave exactly as before migration.
 
 import { Request, Response } from "express";
 import {
@@ -16,6 +22,8 @@ import type {
   BicameralRatifyVerdict,
   BicameralMcpClient,
 } from "../../integrations/bicameral";
+import type { McpInterceptor, McpEnvelope } from "../../governance/interceptor";
+import type { ReceiptContract } from "../../contracts";
 
 export interface BicameralRouteDeps {
   rejectIfRemote: (req: Request, res: Response) => boolean;
@@ -64,6 +72,49 @@ export interface BicameralRouteDeps {
   upstreamMonitor?: {
     getSnapshot(): import("../../integrations/bicameral/types").UpstreamSnapshot | null;
   };
+  /**
+   * B151: optional universal governance interceptor. When provided, the 3 tool
+   * routes (history/drift/ratify) govern their tool call through it before
+   * touching the bicameral client. A non-ALLOW receipt short-circuits via the
+   * receipt→HTTP table. Null/absent → routes behave exactly as pre-migration.
+   */
+  getMcpInterceptor?: () => McpInterceptor | null;
+}
+
+/**
+ * B151: receipt→HTTP mapping for non-ALLOW verdicts. ALLOW is absent — it
+ * means "proceed", handled by the caller. Each entry maps a blocking verdict
+ * to the HTTP status + error envelope returned in its place.
+ */
+const RECEIPT_HTTP_TABLE: Record<string, { status: number }> = {
+  BLOCK: { status: 403 },
+  ESCALATE: { status: 409 },
+  MODIFY: { status: 409 },
+  QUARANTINE: { status: 500 },
+};
+
+/**
+ * B151: govern a bicameral tool call through the optional McpInterceptor.
+ * Returns `null` when the route may proceed (no interceptor wired, or an ALLOW
+ * verdict). Returns `true` when the request has been answered by a non-ALLOW
+ * receipt (the caller must stop). Pure HTTP side effect on the `res`.
+ */
+async function governToolCall(
+  deps: BicameralRouteDeps,
+  envelope: McpEnvelope,
+  res: Response,
+): Promise<boolean> {
+  const interceptor = deps.getMcpInterceptor?.() ?? null;
+  if (!interceptor) return false;
+  const receipt: ReceiptContract = await interceptor.intercept(envelope);
+  if (receipt.verdict === "ALLOW") return false;
+  const mapped = RECEIPT_HTTP_TABLE[receipt.verdict] ?? { status: 500 };
+  res.status(mapped.status).json({
+    ok: false,
+    error: receipt.verdictRationale ?? `governance verdict: ${receipt.verdict}`,
+    verdict: receipt.verdict,
+  });
+  return true;
 }
 
 export function setupBicameralRoutes(
@@ -175,6 +226,10 @@ export function setupBicameralRoutes(
       return;
     }
     try {
+      // B151: govern the tool call through the universal interceptor.
+      if (await governToolCall(deps, { name: "bicameral.history", arguments: {} }, res)) {
+        return;
+      }
       const features = await client.history();
       res.json({ ok: true, features });
     } catch (e) {
@@ -200,6 +255,14 @@ export function setupBicameralRoutes(
       return;
     }
     try {
+      // B151: govern the tool call through the universal interceptor.
+      if (await governToolCall(
+        deps,
+        { name: "bicameral.drift", arguments: { file_path: filePath } },
+        res,
+      )) {
+        return;
+      }
       const drift = await client.drift(filePath);
       res.json({ ok: true, drift });
       // B-BIC-16: forward to drift-to-L3 mediator AFTER responding so a slow
@@ -236,6 +299,14 @@ export function setupBicameralRoutes(
       return;
     }
     try {
+      // B151: govern the tool call through the universal interceptor.
+      if (await governToolCall(
+        deps,
+        { name: "bicameral.ratify", arguments: { decision_id: decisionId, verdict } },
+        res,
+      )) {
+        return;
+      }
       await client.ratify(decisionId, verdict);
       // B-BIC-1: anchor the operator's ratify decision into META_LEDGER as a
       // USER_OVERRIDE entry. Ratify is the canonical "operator intentionally

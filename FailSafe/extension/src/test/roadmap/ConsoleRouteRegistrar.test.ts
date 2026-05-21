@@ -93,6 +93,7 @@ function makeHost(app: any, hub: any): ConsoleRouteHost {
     },
     featureGate: undefined,
     getBicameralClient: () => null,
+    getMcpInterceptor: () => null,
     getDriftToL3Mediator: () => null,
     getUpstreamMonitor: () => null,
     getBicameralCommand: () => "bicameral-mcp",

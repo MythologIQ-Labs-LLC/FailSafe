@@ -14,9 +14,14 @@ import {
 } from "../integrations/bicameral";
 import { DriftToL3Mediator } from "../integrations/bicameral/DriftToL3Mediator";
 import { UpstreamMonitor } from "../integrations/bicameral/UpstreamMonitor";
+import { EngineBackedInterceptor, McpInterceptor } from "../governance/interceptor";
+import type { EnforcementEngineLike } from "../governance/interceptor/EngineBackedInterceptor";
 import type { EventBus } from "../shared/EventBus";
 import type { Logger } from "../shared/Logger";
 import type { L3ApprovalRequest } from "../shared/types/l3-approval";
+
+/** B151: DID stamped onto receipts issued by this extension's interceptor. */
+const INTERCEPTOR_ISSUED_BY = "did:failsafe:instance:extension";
 
 interface ConsoleServerSurface {
   setBicameralAutoConnect(value: boolean): void;
@@ -26,6 +31,9 @@ interface ConsoleServerSurface {
   broadcastEvent(data: Record<string, unknown>): void;
   /** B-BIC-2: typed accessor for the lazily-wired MCP client. */
   getBicameralClient(): BicameralMcpClient | null;
+  /** B151: register the universal governance interceptor that the bicameral
+   *  tool routes govern through. Null when no enforcement engine is wired. */
+  setMcpInterceptor?(i: McpInterceptor | null): void;
   /** B-BIC-16: setter for the drift-to-L3 mediator so the BicameralRoute
    *  drift handler can forward results without threading the mediator
    *  through every call site. Null when no mediator wired (test fixtures). */
@@ -50,6 +58,10 @@ export interface BicameralIntegrationDeps {
   l3Service?: L3QueueDeps;
   eventBus?: EventBus;
   logger?: Logger;
+  /** B151: enforcement engine backing the universal governance interceptor.
+   *  When provided, the bicameral tool routes govern through an McpInterceptor
+   *  wrapping an EngineBackedInterceptor. Absent → routes behave un-governed. */
+  enforcementEngine?: EnforcementEngineLike;
   /** Phase 4: optional config provider for UpstreamMonitor. When absent,
    *  the monitor uses defaults (24h poll, BicameralAI/bicameral-mcp). */
   configProvider?: ConfigProviderLike;
@@ -61,6 +73,19 @@ export function wireBicameralIntegration(
   workspaceRoot: string,
   deps: BicameralIntegrationDeps = {},
 ): void {
+  // B151: register the universal governance interceptor wrapping the freshly
+  // wired client. Skipped when no enforcement engine is available or the
+  // ConsoleServer surface doesn't expose the setter (older test fixtures).
+  const wireInterceptor = (client: BicameralMcpClient | null): void => {
+    if (!consoleServer.setMcpInterceptor) return;
+    if (!client || !deps.enforcementEngine) {
+      consoleServer.setMcpInterceptor(null);
+      return;
+    }
+    const backing = new EngineBackedInterceptor(deps.enforcementEngine, INTERCEPTOR_ISSUED_BY);
+    consoleServer.setMcpInterceptor(new McpInterceptor(client, backing));
+  };
+
   const wireFromConfig = (): void => {
     const cfg = vscode.workspace.getConfiguration("failsafe.integrations.bicameral");
     const command = cfg.get<string>("command", "bicameral-mcp") || "bicameral-mcp";
@@ -71,16 +96,19 @@ export function wireBicameralIntegration(
     if (!isSafeBicameralCommand(command)) {
       consoleServer.setBicameralCommand("bicameral-mcp");
       consoleServer.setBicameralClient(null);
+      wireInterceptor(null);
       void prior?.disconnect().catch(() => undefined);
       return;
     }
     consoleServer.setBicameralCommand(command);
-    consoleServer.setBicameralClient(new BicameralMcpClient({
+    const client = new BicameralMcpClient({
       command,
       cwd: workspaceRoot,
       // B-BIC-9: idle disconnect TTL (default 15min, 0 disables).
       idleDisconnectMs: cfg.get<number>("idleDisconnectMs", 900_000),
-    }));
+    });
+    consoleServer.setBicameralClient(client);
+    wireInterceptor(client);
     void prior?.disconnect().catch(() => undefined);
   };
 

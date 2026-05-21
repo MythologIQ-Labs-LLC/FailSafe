@@ -59,6 +59,8 @@ export interface ConsoleRouteHost {
   qorelogicManager: { getLedgerManager: () => unknown; getShadowGenomeManager: () => unknown };
   featureGate: unknown;
   getBicameralClient: () => import("../../integrations/bicameral").BicameralMcpClient | null;
+  /** B151: universal governance interceptor accessor; null when bootstrap didn't wire one. */
+  getMcpInterceptor: () => import("../../governance/interceptor").McpInterceptor | null;
   /** B-BIC-16: drift-to-L3 mediator accessor; null when bootstrap didn't wire one. */
   getDriftToL3Mediator: () => import("../../integrations/bicameral/DriftToL3Mediator").DriftToL3Mediator | null;
   /** Phase 4: upstream monitor accessor; null when bootstrap didn't wire one. */
@@ -224,6 +226,8 @@ export class ConsoleRouteRegistrar {
       workspaceRoot: this.host.workspaceRoot,
       getBicameralCommand: () => this.host.getBicameralCommand(),
       getBicameralClient: () => this.host.getBicameralClient(),
+      // B151: route the 3 tool endpoints through the universal interceptor.
+      getMcpInterceptor: () => this.host.getMcpInterceptor(),
       getAutoConnect: () => this.host.getBicameralAutoConnect(),
       setAutoConnect: (v) => this.host.setBicameralAutoConnect(v),
       // B-BIC-1: pass ledger handle so ratify appends USER_OVERRIDE entry.

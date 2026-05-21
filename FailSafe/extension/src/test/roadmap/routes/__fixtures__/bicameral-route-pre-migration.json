@@ -1,0 +1,88 @@
+{
+  "_comment": "FX551 parity baseline for the 3 migrated BicameralRoute tool endpoints (bicameral-history/drift/ratify). PROVENANCE: the 'success'/'error' {status,body} shapes below were derived by reading the PRE-migration BicameralRoute.ts handler logic at git HEAD (commit 15af5a1, the B190 seal) and verified byte-for-byte against `git show HEAD:FailSafe/extension/src/roadmap/routes/BicameralRoute.ts` during the B151 implement cycle (2026-05-20). They are a record of pre-migration behaviour, NOT values computed from test input. 'clientReturn' is the value the bicameral client stub yields for the success case; the FX551 test feeds clientReturn (a structurally separate field) and asserts the migrated route, on the ALLOW governance path, reproduces the recorded 'success.body'. A future change to the route's response wrapper would diverge from these recorded shapes and fail the suite. Timestamp-bearing string fields are normalised to '<ts>' before comparison.",
+  "history": {
+    "clientReturn": [
+      {
+        "feature": "auth-token-rotation",
+        "decisions": [
+          {
+            "decisionId": "d-100",
+            "title": "Adopt 15-minute access-token TTL",
+            "filePath": "src/auth/token.ts"
+          }
+        ]
+      }
+    ],
+    "success": {
+      "status": 200,
+      "body": {
+        "ok": true,
+        "features": [
+          {
+            "feature": "auth-token-rotation",
+            "decisions": [
+              {
+                "decisionId": "d-100",
+                "title": "Adopt 15-minute access-token TTL",
+                "filePath": "src/auth/token.ts"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "error": {
+      "status": 500,
+      "body": {
+        "ok": false,
+        "error": "Error: bicameral tool bicameral.history reported isError=true"
+      }
+    }
+  },
+  "drift": {
+    "clientReturn": [
+      {
+        "decisionId": "d-100",
+        "filePath": "src/auth/token.ts",
+        "status": "drifted",
+        "evidence": "signature changed since decision"
+      }
+    ],
+    "success": {
+      "status": 200,
+      "body": {
+        "ok": true,
+        "drift": [
+          {
+            "decisionId": "d-100",
+            "filePath": "src/auth/token.ts",
+            "status": "drifted",
+            "evidence": "signature changed since decision"
+          }
+        ]
+      }
+    },
+    "error": {
+      "status": 400,
+      "body": {
+        "ok": false,
+        "error": "filePath required (string)"
+      }
+    }
+  },
+  "ratify": {
+    "success": {
+      "status": 200,
+      "body": {
+        "ok": true
+      }
+    },
+    "error": {
+      "status": 400,
+      "body": {
+        "ok": false,
+        "error": "verdict must be \"ratify\" or \"reject\""
+      }
+    }
+  }
+}

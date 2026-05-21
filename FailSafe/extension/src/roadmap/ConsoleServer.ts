@@ -99,6 +99,8 @@ export class ConsoleServer {
   private agentHealthIndicator: AgentHealthIndicator | null = null;
   private agentRunRecorder: AgentRunRecorder | null = null;
   private bicameralClient: import("../integrations/bicameral").BicameralMcpClient | null = null;
+  /** B151: universal governance interceptor wired by bootstrapBicameral. */
+  private mcpInterceptor: import("../governance/interceptor").McpInterceptor | null = null;
   private bicameralCommand = "bicameral-mcp";
   private bicameralAutoConnect = false;
   private bicameralAutoConnectWriter: (value: boolean) => Promise<void> = async () => {};
@@ -178,6 +180,10 @@ export class ConsoleServer {
   /** B-BIC-2: typed accessor so bootstrapBicameral can disconnect the prior
    *  client on rewire and push an extension-deactivate disposer. */
   getBicameralClient(): import("../integrations/bicameral").BicameralMcpClient | null { return this.bicameralClient; }
+  /** B151: register the universal governance interceptor. The 3 bicameral tool
+   *  routes govern their tool calls through it. Null in test fixtures. */
+  setMcpInterceptor(i: import("../governance/interceptor").McpInterceptor | null): void { this.mcpInterceptor = i; }
+  getMcpInterceptor(): import("../governance/interceptor").McpInterceptor | null { return this.mcpInterceptor; }
   /** B-BIC-16: drift-to-L3 mediator slot. Set by bootstrapBicameral when
    *  l3Service + eventBus + logger deps are available. Null in test fixtures
    *  that don't wire the mediator. */
@@ -269,6 +275,7 @@ export class ConsoleServer {
       brainstormService: this.brainstormService,
       audioVaultService: this.audioVaultService,
       getBicameralClient: () => this.bicameralClient,
+      getMcpInterceptor: () => this.mcpInterceptor,
       getDriftToL3Mediator: () => this.driftToL3Mediator,
       getUpstreamMonitor: () => this.upstreamMonitor,
       getBicameralCommand: () => this.bicameralCommand,

@@ -40,6 +40,10 @@ export interface ServerDeps {
   modeTransitionHistory?: import("../governance/ModeTransitionHistory").ModeTransitionHistory;
   /** B194: callback returning current governance mode state. */
   getGovernanceMode?: () => import("../governance/types").GovernanceModeState;
+  /** B151: enforcement engine backing the universal governance interceptor;
+   *  threaded into wireBicameralIntegration so the bicameral tool routes are
+   *  governed. Absent in test contexts that don't exercise governed routes. */
+  enforcementEngine?: import("../governance/EnforcementEngine").EnforcementEngine;
 }
 
 export interface ServerResult {
@@ -95,6 +99,9 @@ export async function bootstrapServers(
     },
     eventBus: deps.eventBus,
     logger: _logger,
+    // B151: back the universal governance interceptor with the enforcement
+    // engine so the 3 bicameral tool routes are governed.
+    enforcementEngine: deps.enforcementEngine,
     // Phase 4 config adapter: read VS Code settings on demand. Keeps the
     // monitor decoupled from the VS Code API surface for unit testability.
     configProvider: {
