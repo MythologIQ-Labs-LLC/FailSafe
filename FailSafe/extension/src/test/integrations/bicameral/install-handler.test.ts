@@ -4,7 +4,7 @@
 
 import { strict as assert } from 'assert';
 import { EventEmitter } from 'events';
-import { runBicameralInstall } from '../../../integrations/bicameral/install-handler';
+import { runBicameralInstall, BICAMERAL_PIP_SPEC } from '../../../integrations/bicameral/install-handler';
 import { InstallProgressEvent, BicameralInstallState } from '../../../integrations/bicameral/types';
 
 interface SpawnCall { bin: string; args: string[]; opts: Record<string, unknown>; }
@@ -52,7 +52,10 @@ suite('integrations/bicameral install-handler', () => {
     }, 'solo');
     assert.equal(spawnFake.calls.length, 2);
     assert.equal(spawnFake.calls[0].bin, 'pip');
-    assert.deepEqual(spawnFake.calls[0].args, ['install', 'bicameral-mcp']);
+    // RC2 / B-INT-3: pip install is pinned to the version-bounded spec, not the
+    // bare package name. Assert against the exported constant so the test
+    // tracks the product's pin and cannot drift again.
+    assert.deepEqual(spawnFake.calls[0].args, ['install', BICAMERAL_PIP_SPEC]);
     assert.equal(spawnFake.calls[0].opts.shell, false);
     assert.equal(spawnFake.calls[1].bin, 'bicameral-mcp');
     assert.deepEqual(spawnFake.calls[1].args, ['setup', '--mode', 'solo']);

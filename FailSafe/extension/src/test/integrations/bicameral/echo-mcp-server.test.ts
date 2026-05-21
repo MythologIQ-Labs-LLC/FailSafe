@@ -27,10 +27,21 @@ suite('BicameralMcpClient against vendored echo-mcp-server (FX528)', function ()
       command: process.execPath,
       args: [ECHO_SERVER_JS],
       cwd: sideChannelDir,
+      // FX528/RC3: under vscode-test, process.execPath is the Electron
+      // binary. Spawned without ELECTRON_RUN_AS_NODE it boots the Electron
+      // GUI runtime instead of running echo-mcp-server.js as a Node script,
+      // so the MCP stdio handshake never completes ("Connection closed").
+      // ELECTRON_RUN_AS_NODE=1 makes the Electron binary behave as plain Node.
+      // StdioClientTransport strips inherited env to an allowlist, so PATH +
+      // ECHO_MCP_SIDE_CHANNEL must also be passed through explicitly.
+      env: {
+        ELECTRON_RUN_AS_NODE: '1',
+        ECHO_MCP_SIDE_CHANNEL: path.join(sideChannelDir, 'echo-mcp-server.last-call.json'),
+        ...(process.env.PATH ? { PATH: process.env.PATH } : {}),
+        ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}),
+      },
       // No factory overrides: real Client + StdioClientTransport.
     });
-    // Inject side-channel path via env on the spawned process. StdioClientTransport
-    // does not expose env passthrough; the test relies on cwd-relative default.
   });
 
   teardown(async () => {
