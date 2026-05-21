@@ -14,6 +14,7 @@ import {
 } from "../integrations/bicameral";
 import { DriftToL3Mediator } from "../integrations/bicameral/DriftToL3Mediator";
 import { UpstreamMonitor } from "../integrations/bicameral/UpstreamMonitor";
+import { httpFetchShim } from "../integrations/bicameral/http-fetch-shim";
 import type { EventBus } from "../shared/EventBus";
 import type { Logger } from "../shared/Logger";
 import type { L3ApprovalRequest } from "../shared/types/l3-approval";
@@ -129,16 +130,48 @@ export function wireBicameralIntegration(
 
   // Phase 4: upstream monitor. Wired only when logger is present so error
   // paths can warn. configProvider falls back to defaults (24h poll,
-  // BicameralAI/bicameral-mcp). HTTP via global fetch (Node 18+).
+  // BicameralAI/bicameral-mcp).
+  //
+  // RC1: never let this non-critical 24h background poller abort extension
+  // activation. The whole construction is wrapped in try/catch, and the
+  // HTTP transport is feature-detected — the extension-host Node runtime
+  // does not reliably expose a global `fetch`, so we fall back to a tiny
+  // node:https GET shim that satisfies the subset of the Response API the
+  // UpstreamMonitor consumes.
   if (deps.logger && consoleServer.setUpstreamMonitor) {
+    wireUpstreamMonitor(context, consoleServer, deps.configProvider, deps.logger);
+  }
+}
+
+/**
+ * Construct + start the UpstreamMonitor. Isolated + fail-safe: any error here
+ * (bad config, transport init failure, future regression) is caught and
+ * logged — it must NEVER bubble up and abort extension activation, because
+ * the monitor is a non-critical background poller.
+ */
+function wireUpstreamMonitor(
+  context: vscode.ExtensionContext,
+  consoleServer: ConsoleServerSurface,
+  configProvider: ConfigProviderLike | undefined,
+  logger: Logger,
+): void {
+  try {
+    // RC1: feature-detect the global `fetch`. Falls back to the node:https
+    // shim on hosts (e.g. some vscode-test electron runtimes) that lack it.
+    const httpFetch: typeof fetch =
+      typeof fetch === "function" ? fetch : httpFetchShim;
     const monitor = new UpstreamMonitor({
-      httpFetch: fetch,
-      configProvider: deps.configProvider ?? {},
-      logger: deps.logger,
+      httpFetch,
+      configProvider: configProvider ?? {},
+      logger,
     });
     monitor.start();
-    consoleServer.setUpstreamMonitor(monitor);
+    consoleServer.setUpstreamMonitor?.(monitor);
     context.subscriptions.push({ dispose: () => monitor.dispose() });
+  } catch (err) {
+    logger.warn("UpstreamMonitor wiring skipped (non-critical)", {
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 }
 

@@ -11,7 +11,7 @@ _Cycle pool open. Carry-over from v5.1.6: B-BIC-6/7/10/12/13/14/15/17/18 remaini
 
 ## [5.1.6] - 2026-05-20
 
-Bicameral HIGH cluster (B-BIC-16/19/20) + safety + concurrency batch (B-BIC-8/9/11/21/22/23) + upstream awareness (B-INT-3) + B-B199-2 Replay + Genome behavioral E2E + B-EM-2/B-EM-3 enforcement-mode polish. SHIELD-sealed via PR #77 (Entries #378/#379/#380) and PR #78 (Entry #382). See `docs/plan-qor-bicameral-cluster-high.md`, `docs/plan-qor-bicameral-safety-concurrency.md`, `docs/plan-qor-b199-2-replay-genome-e2e.md`, `docs/plan-qor-em-2-em-3-enforcement-mode-polish.md`.
+Bicameral HIGH cluster (B-BIC-16/19/20) + safety + concurrency batch (B-BIC-8/9/11/21/22/23) + upstream awareness (B-INT-3) + B-B199-2 Replay + Genome behavioral E2E + B-EM-2/B-EM-3 enforcement-mode polish + governance contract schemas (B190). SHIELD-sealed via PR #77 (Entries #378/#379/#380), PR #78 (Entry #382), and PR #79 (Entry #383). See `docs/plan-qor-bicameral-cluster-high.md`, `docs/plan-qor-bicameral-safety-concurrency.md`, `docs/plan-qor-b199-2-replay-genome-e2e.md`, `docs/plan-qor-em-2-em-3-enforcement-mode-polish.md`.
 
 ### Added
 
@@ -34,11 +34,16 @@ Bicameral HIGH cluster (B-BIC-16/19/20) + safety + concurrency batch (B-BIC-8/9/
 - **Runtime type guard on `callTool()` return** (B-BIC-23). All BicameralMcpClient call paths run the parsed payload through a runtime guard before returning, preventing malformed shapes from leaking into downstream consumers.
 - **Concurrent connect/disconnect race tests** (B-BIC-21). New test cases exercise interleaved `connect()` / `disconnect()` invocations to verify the in-flight cache + idle-disconnect interactions remain deterministic under contention.
 - **`semver.ts` shared helper**. `compareSemver` extracted from `upstream-row.ts` into a sibling module so the new `protocol-floor.ts` can share the same lightweight semver compare (returns -1/0/+1; strips `v` prefix; ignores pre-release tags). Restores Section 4 razor compliance for `upstream-row.ts`.
+- **Governance contract schemas** (B190). 8 JSON Schema 2020-12 contract definitions (`evaluation_request`, `ledger_entry`, `intent`, `failure_mode`, `approval`, `checkpoint`, `receipt`, `governance_config`) under `src/contracts/`, a typed `types.ts` surface with the `CONTRACT_VERSIONS` map, and fixture-match + well-formedness tests.
 
 ### Changed
 
 - **Audit cycle 1 → 2 remediation** (cluster-high plan). Six findings closed before implementation: (F1) `qorelogic.l3Decided` payload-shape citation drift, (F2) UpstreamMonitor SSRF allowlist enforcement before fetch, (F3) deferred-tool count contradiction reconciled (11 wrappers, not 12), (F4) DEFERRED/EXPIRED verdict no-op mapping clarified, (F5) FX528 SG-035 violation (stub → live subprocess), (F6) false-empty "Open Questions: None" replaced with explicit list.
 - **Safety + concurrency audit cycle 1 → 2 remediation**. APPROVE-WITH-MANDATORY-EDITS verdict closed via 3 must-fix + 2 should-fix items addressed inline. `BicameralMcpClient.ts` stands at 284L (over the 250-line razor by 34L); explicit exception documented in the audit since the 11 deferred-tool wrappers **are** the public API surface and extracting them would violate the type-surface contract.
+
+### Fixed
+
+- **Extension activation no longer crashes on hosts without a global `fetch`**. The B-INT-3 `UpstreamMonitor` was wired at activation time with the bare global `fetch`; on Node runtimes that do not expose `fetch`, this threw `ReferenceError` and aborted activation, leaving no `failsafe.*` commands registered. The HTTP transport is now feature-detected — falling back to a minimal `node:https` GET shim (`http-fetch-shim.ts`) — and the monitor wiring is isolated in a fail-safe `try/catch` so a non-critical background poller can never abort activation.
 
 ### Security
 

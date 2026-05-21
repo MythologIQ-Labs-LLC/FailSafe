@@ -56,8 +56,12 @@ const CANNED: Record<string, unknown> = {
   'bicameral.getNeighbors': { neighbors: [] },
 };
 
+// FX528/RC3: version must sit within the supported upstream range
+// (>=0.14, <0.16). B-BIC-22's assertBicameralProtocolFloor tears down the
+// connection — surfacing as "Connection closed" to the client — when the
+// reported version is below MIN_BICAMERAL_VERSION. '0.0.0' fails the floor.
 const server = new Server(
-  { name: 'echo-bicameral', version: '0.0.0' },
+  { name: 'echo-bicameral', version: '0.15.0' },
   { capabilities: { tools: {} } },
 );
 

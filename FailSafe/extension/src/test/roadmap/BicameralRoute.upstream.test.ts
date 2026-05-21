@@ -20,6 +20,25 @@ function makeDeps(overrides: Partial<BicameralRouteDeps> = {}): BicameralRouteDe
   };
 }
 
+/** RC1: node:http GET helper — the test must not depend on a global `fetch`,
+ *  which the vscode-test electron extension-host runtime does not reliably
+ *  expose. Mirrors the fetchJson pattern in src/test/ui/bus-renderer-flow.spec.ts. */
+async function httpGet(url: string): Promise<{ status: number; json(): Promise<unknown> }> {
+  return new Promise((resolve, reject) => {
+    http.get(url, (res) => {
+      const chunks: Buffer[] = [];
+      res.on('data', (c) => chunks.push(c));
+      res.on('end', () => {
+        const body = Buffer.concat(chunks).toString('utf-8');
+        resolve({
+          status: res.statusCode ?? 0,
+          json: async () => JSON.parse(body),
+        });
+      });
+    }).on('error', reject);
+  });
+}
+
 async function startServer(deps: BicameralRouteDeps): Promise<{ url: string; close: () => Promise<void> }> {
   const app = express();
   app.use(express.json());
@@ -45,7 +64,7 @@ suite('BicameralRoute upstream (FX533)', () => {
     const deps = makeDeps({ upstreamMonitor: { getSnapshot: () => snapshot } });
     const server = await startServer(deps);
     try {
-      const resp = await fetch(`${server.url}/api/integrations/bicameral/upstream`);
+      const resp = await httpGet(`${server.url}/api/integrations/bicameral/upstream`);
       assert.equal(resp.status, 200);
       const body = await resp.json() as { ok: boolean; snapshot: UpstreamSnapshot };
       assert.equal(body.ok, true);
@@ -60,7 +79,7 @@ suite('BicameralRoute upstream (FX533)', () => {
     const deps = makeDeps({ upstreamMonitor: { getSnapshot: () => null } });
     const server = await startServer(deps);
     try {
-      const resp = await fetch(`${server.url}/api/integrations/bicameral/upstream`);
+      const resp = await httpGet(`${server.url}/api/integrations/bicameral/upstream`);
       assert.equal(resp.status, 503);
       const body = await resp.json() as { ok: boolean; error: string };
       assert.equal(body.ok, false);
@@ -74,7 +93,7 @@ suite('BicameralRoute upstream (FX533)', () => {
     const deps = makeDeps(); // upstreamMonitor omitted
     const server = await startServer(deps);
     try {
-      const resp = await fetch(`${server.url}/api/integrations/bicameral/upstream`);
+      const resp = await httpGet(`${server.url}/api/integrations/bicameral/upstream`);
       assert.equal(resp.status, 503);
       const body = await resp.json() as { ok: boolean; error: string };
       assert.match(body.error, /not wired/);
@@ -96,7 +115,7 @@ suite('BicameralRoute upstream (FX533)', () => {
     });
     const server = await startServer(deps);
     try {
-      const resp = await fetch(`${server.url}/api/integrations/bicameral/upstream`);
+      const resp = await httpGet(`${server.url}/api/integrations/bicameral/upstream`);
       assert.equal(resp.status, 403);
       assert.equal(monitorCalled, false, 'rejectIfRemote must short-circuit before monitor read');
     } finally {
