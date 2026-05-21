@@ -5,9 +5,40 @@ All notable changes to FailSafe will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — v5.2.0 (draft)
+## [Unreleased] — v5.1.7 (draft)
 
-_Cycle pool open. Carry-over from v5.1.6: B-BIC-6/7/10/12/13/14/15/17/18 remaining deep-review findings; B-B199-1, B-B199-3..6 remaining E2E gaps from B199 Phases 2-9._
+B190 governance contract schemas + B151 universal governance interceptor (the B190 → B151 → B152 → B153 architecture chain) + B191 Monitor SHIELD-visibility verification + B-INT-2 bicameral.preflight → L3 + B198 subscribe-without-mutate UI remediation + B-BIC validator/UX/governance batches (6/7, 12/13/14/15, 17/18) + B-B199-3/4/5/6 test-coverage gaps. FX547–FX583. SHIELD-sealed via META_LEDGER Entry #383 (B190) and Entry #384 (consolidated v5.1.7 cycle). See `docs/plan-qor-b190-governance-contracts.md`, `docs/plan-qor-b151-governance-interceptor.md`, `docs/plan-qor-b-int-2-preflight-l3.md`, `docs/plan-qor-b198-subscribe-without-mutate.md`, `docs/plan-qor-batch1-bbic-decision-row-ux.md`, `docs/plan-qor-batch2-bbic-validator-hardening.md`, `docs/plan-qor-batch3-b199-coverage-gaps.md`, `docs/plan-qor-batch4-bbic-governance-integration.md`. v5.2.0 remains gated on the Educational component — not this release.
+
+### Added
+
+- **Governance contract schemas** (B190). 8 JSON Schema 2020-12 files at `src/contracts/*.json` (`evaluation_request`, `ledger_entry`, `intent`, `failure_mode`, `approval`, `checkpoint`, `receipt`, `governance_config`) with canonical `$id` host and root `additionalProperties: false`, a hand-written TypeScript mirror at `src/contracts/types.ts` + `CONTRACT_VERSIONS` map, and a build-pipeline extension that mirrors the `.json` files to `out/contracts/`. AJV 8.17.1 promoted to an explicit devDependency. 19 cases (FX545 + FX546).
+- **`IGovernanceInterceptor` contract seam** (B151). Single `evaluate(req): Promise<ReceiptContract>` interface at `src/governance/interceptor/` — the universal pre-action governance entry point. Receipts validate against `receipt.json`; evidence is always `{kind, ref}` objects, never bare strings; ids are derived deterministically via `contractMappers`. 5 cases (FX547).
+- **`EngineBackedInterceptor`** (B151). Delegates to the existing `EnforcementEngine` and maps `Verdict` → `ReceiptContract` (ALLOW/BLOCK/ESCALATE → schema-valid receipts; an engine throw → a QUARANTINE receipt, no rethrow). No new enforcement surface. 5 cases (FX548).
+- **`McpInterceptor` adapter** (B151). Wraps an MCP `{name, arguments}` envelope into an `EvaluationRequestContract`; malformed input yields a QUARANTINE receipt without invoking the backing interceptor. Minimal local client interface — no bicameral import. 5 cases (FX549).
+- **`contractMappers`** (B151). Deterministic id derivation, `ProposedAction` ↔ `EvaluationRequest` round-trip, and `Verdict` → `Receipt` projection. 6 cases (FX550).
+- **`PreflightToL3Mediator`** (B-INT-2). Subscribes the bicameral `preflight` tool to the L3 approval pipeline: a drifted decision attaches preflight evidence to the queued L3 entry. Graceful degradation (null/disconnected client → no attach; a thrown preflight is swallowed). Minimal local `L3PreflightDeps` interface. 6 cases (FX553).
+- **`L3ApprovalService.attachPreflightEvidence` + tier-3 preflight wiring** (B-INT-2). In-place `meta.preflight` merge with flag dedup on the live L3 queue; `processEvaluationDecision` fires preflight non-blocking after a tier-3 entry is queued. 7 cases (FX554 + FX555).
+- **L3 preflight-conflict UI** (B-INT-2). `renderL3PreflightConflicts` in the governance panel and `formatPreflightConflicts` on `L3ApprovalPanel` surface drifted-decision conflict lines; all decision titles HTML-escaped. 7 cases (FX556 + FX557).
+- **Shared accessible modal helper** (B198). `modal-helper.openModal` — one helper with `role="dialog"`, `aria-modal`, focus trap, Escape-to-close, and focus restoration; three modal sites in `risks.js` + `roadmap.js` delegate to it. 6 cases (FX559).
+- **Bicameral decision-row UX batch** (B-BIC-12/13/14/15). Open-binding route + decision-row "Open" affordance (`POST /api/actions/bicameral-open-binding`); capability-gated `/bicameral-ingest` empty-state hint driven by a new `/status` `capabilities` field; composite Sync action firing status + history + drift on one press; binding `<code>` overflow clamp. 14 cases (FX561–FX564).
+- **Bicameral install-detector validator hardening** (B-BIC-6/7). `isSafeBicameralCommandResolved` adds symlink-containment re-check via `realpath` with a fail-closed catch branch; `isSafeBicameralCommand` gains an `extraRoots` allowlist parameter; `defaultExtraRoots()` apply-by-default Windows chocolatey/scoop roots. 15 cases (FX565–FX569).
+- **Bicameral verdict event → Sentinel + Risk Register** (B-BIC-17/18). `BicameralRoute` drift/ratify handlers emit `bicameral.verdict` events (eventBus-absent-safe); `SentinelWatchPolicy.classifyBicameralVerdict` maps `drifted` → high/notify; `RiskRegisterManager.upsertRisk`/`closeRisk` give keyed idempotent risk lifecycle; `DriftToRiskMediator` mirrors verdicts into the Risks Register (drift upserts a `bicameral:{decisionId}` risk, ratify closes it). 16 cases (FX580–FX583).
+- **Cross-host install-record coverage** (B-B199-4). A layout-correct `writeRecordForHost` helper sourcing paths from `HOST_INSTALL_LAYOUTS` closes the gap where `kilo-code` (`.kilo` base) and `gemini` (`.gemini/commands`) install-record round-trips were untested, including a regression-guard that a record at the wrong `.kilo-code` path is not picked up. 4 cases (FX575).
+
+### Changed
+
+- **`BicameralRoute` is now interceptor-governed** (B151). The `history` / `drift` / `ratify` tool routes route through `McpInterceptor`; a behavioural-parity spec (FX551) pins success bodies, error envelopes, and HTTP status against a pre-migration snapshot fixture so the migration is provably zero-behaviour-change. `src/integrations/bicameral/` remains zero-diff.
+- **`SkillsRenderer` cache invalidation + `TabGroup` sub-view lifecycle** (B198). `SkillsRenderer` now invalidates its cache on `skills.*` / `voicePack.*` events (subscribe-without-mutate — no spurious re-fetch on unrelated `hub.refresh`); `TabGroup.switchTo` destroys the outgoing sub-view renderer; re-render-safe `destroy()` added to `skills.js` + `risks.js`. 9 cases (FX558 + FX560).
+- **E2E coverage-gate hardening** (B-B199-5). `check-e2e-coverage.cjs` rewritten: `[no-e2e]` overrides are now per-file scoped (`[no-e2e: <path-fragment> — <reason>]`); the legacy unscoped form no longer grants a blanket pass; a blanket override is opt-in and explicit via `[no-e2e: * — <reason>]`; a new `mode:'release'` checks a merge-commit range instead of the staged index and fails closed when the range is unresolvable; every excused/bypassed file emits a greppable `[e2e-gate] AUDIT:` line. 12 cases (FX570–FX574).
+- **B191 Monitor parity assertion strengthened**. The FX525 `bus-renderer-flow.spec.ts` disk → `/api/hub` → Monitor compact-UI parity case was strengthened; research confirmed B191's SHIELD-activity visibility is already resolved by B192/B193/B199, so B191 closed as verify-and-close (L1).
+
+### Security
+
+- **Symlink-containment re-check on bicameral command resolution** (B-BIC-6). `isSafeBicameralCommandResolved` resolves symlinks via `realpath` and rejects any command whose real path escapes the home directory (or a supplied `extraRoot`) — closing a bypass where an in-home symlink pointed outside home. Fail-closed: a non-existent path (`ENOENT`) is rejected.
+
+### Documentation
+
+- **`docs/TEST_COVERAGE_TRADEOFFS.md`** (B-B199-3/6). New document recording accepted residual test-coverage risk: voice substrate live behaviour (real Whisper/Piper E2E impractical without the ~86 MB separate-download vendor binaries) and stub-only specs. `integrations-bicameral.spec.ts` + `voice-pack.spec.ts` carry STUB-ONLY header banners pointing at the trade-off doc; the real install/connect paths stay unit-covered.
 
 ## [5.1.6] - 2026-05-20
 
