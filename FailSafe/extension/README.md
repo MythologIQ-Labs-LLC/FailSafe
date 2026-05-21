@@ -14,9 +14,18 @@ FailSafe runs locally inside VS Code and Cursor. It monitors what AI agents do, 
 
 ---
 
-**Current Release**: v5.1.5 (2026-05-19)
+**Current Release**: v5.1.6 (2026-05-20)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v5.1.6
+
+- **Bicameral MCP — HIGH cluster**: 11 typed wrappers for the deferred bicameral tools (ingest, search, brief, judgeGaps, resolveCompliance, linkCommit, update, reset, dashboard, validateSymbols, getNeighbors) + `callRaw` public surface + per-tool runtime guards (B-BIC-19).
+- **Live-subprocess integration test**: vendored TypeScript echo-mcp-server spawned via `process.execPath` exercises the real `@modelcontextprotocol/sdk` transport handshake — closes the prior gap where Bicameral tests stubbed the transport (B-BIC-20).
+- **DriftToL3Mediator**: bicameral drift status-edges enqueue L3 approvals; L3 decisions ratify upstream (APPROVED + APPROVED_WITH_CONDITIONS → `ratify`, REJECTED → `reject`, DEFERRED/EXPIRED no-op). De-dup by `bicameral:{decisionId}` (B-BIC-16).
+- **Upstream awareness**: pip floor pin `bicameral-mcp>=0.14,<0.16` + `UpstreamMonitor` service (default 24h poll; regex-allowlisted owner/repo slug; fail-closed before any `httpFetch`) + `GET /api/integrations/bicameral/upstream` local-only route + Settings card `renderUpstreamRow` helper with floor/ceiling warnings. 2 new settings: `failsafe.integrations.bicameral.upstreamPollMs` + `.upstreamRepoUrl` (B-INT-3).
+- **B-B199-2 Replay + Genome behavioral E2E**: 14 new Playwright cases cover the Agents-tab Replay (8 cases: empty state, list view, slice cap 20, click-to-detail nav, step badges, governance card, back navigation, WS-event refresh) and Genome (6 cases: empty pattern, pattern cards, show-all toggle, slice cap 12, unresolved table, WS-event refresh) sub-views.
+- **B-EM-2/B-EM-3 enforcement-mode polish**: `ModeTransitionHistory.hydrateFromLedger` replays governance.modeChanged events from META_LEDGER on activation (11 cases); `FirstRunModePicker` quickpick offers Observe/Assist/Enforce on initial install with persistence + cancel-path safety (6 cases).
 
 ## What's New in v5.1.5
 

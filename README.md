@@ -32,9 +32,20 @@ _Local-first safety for AI coding assistants._
 
 <div align="center">
 
-**Current Release**: v5.1.5 (2026-05-19)
+**Current Release**: v5.1.6 (2026-05-20)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
+
+## What's new in v5.1.6
+
+- **Bicameral MCP — HIGH cluster**: 11 typed wrappers for the deferred bicameral tools (ingest, search, brief, judgeGaps, resolveCompliance, linkCommit, update, reset, dashboard, validateSymbols, getNeighbors) + `callRaw` public surface + per-tool runtime guards (B-BIC-19).
+- **Live-subprocess integration test**: vendored TypeScript echo-mcp-server spawned via `process.execPath` exercises the real `@modelcontextprotocol/sdk` transport handshake (B-BIC-20).
+- **DriftToL3Mediator**: bicameral drift status-edges enqueue L3 approvals; L3 decisions ratify upstream (APPROVED → `ratify`, REJECTED → `reject`, DEFERRED/EXPIRED no-op) (B-BIC-16).
+- **Upstream awareness**: pip floor pin `bicameral-mcp>=0.14,<0.16` + `UpstreamMonitor` service (24h poll, SSRF-allowlisted owner/repo slug, fail-closed before any fetch) + `GET /api/integrations/bicameral/upstream` local-only route + Settings card upstream row (B-INT-3).
+- **B-B199-2 Replay + Genome behavioral E2E**: 14 new Playwright cases cover the Agents-tab Replay and Genome sub-views (empty state, list/detail nav, WS-event refresh, slice caps).
+- **B-EM-2/B-EM-3 enforcement-mode polish**: `ModeTransitionHistory.hydrateFromLedger` replays governance.modeChanged on activation; `FirstRunModePicker` quickpick on initial install.
+
+See [CHANGELOG.md](CHANGELOG.md) for the full v5.1.6 release notes.
 
 ## What's new in v5.1.5
 

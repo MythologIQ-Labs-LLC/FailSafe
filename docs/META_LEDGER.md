@@ -19306,3 +19306,77 @@ _Next: operator next-up selection from remaining 42 open items._
 _Chain integrity: VALID_
 _Session Status: B-B199-1 SEALED at Entry #381 (shell + interactive scope); 10 Playwright cases pass on first run in 3.6min; PUBLISH_BLOCK unchanged. feat/bicameral-cluster-high carries #378+#379+#380+#381._
 _Session: 2026-05-20-b199-1-brainstorm-e2e-substantiation-seal_
+
+---
+
+### Entry #382: SESSION SEAL — plan-qor-bicameral-safety-concurrency (B-BIC-8/9/11/21/22/23)
+
+**Entry ID**: `e1dde9c8f70d`
+**Date**: 2026-05-20
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-bicameral-safety-concurrency.md`
+**Audit reference**: 1-cycle APPROVE-WITH-MANDATORY-EDITS (3 must-fix, 2 should-fix) via independent `architect-reviewer` (Phase 68 Option B). All 5 addressed inline before implement: (a) `compareSemver` extracted to `semver.ts` + exported (was private in upstream-row.ts); (b) `IdleScheduler` extracted to `idle-scheduler.ts` + `assertBicameralProtocolFloor` extracted to `protocol-floor.ts` to keep BicameralMcpClient.ts within reasonable razor; (c) inflight-call counter implemented, lastActivityAt updates on response not entry; (d) disconnect() + transport.onclose both clear idle timer; (e) FX544 includes onclose-cancels-idle case.
+**Implementation reference**: 1 commit on `feat/bicameral-safety-concurrency` branched off `main` post-v5.1.6 (PR #77 shipped Entries #378-#381 as v5.1.6 baseline; this is post-baseline cycle).
+
+## Substantiation summary
+
+Closes 6 bicameral safety/observability items in one SHIELD cycle:
+
+- **B-BIC-8** connect() concurrency race → cached `connectPromise: Promise<void> | null`. Promise.all([connect(), connect()]) shares one transport spawn.
+- **B-BIC-9** idle disconnect TTL → `IdleScheduler` helper. 15min default, configurable via `failsafe.integrations.bicameral.idleDisconnectMs`. Inflight calls suppress fire.
+- **B-BIC-11** structured isError payload → `result.content[0].text` (200-char cap) included in thrown Error message.
+- **B-BIC-21** concurrent connect/disconnect race tests → FX540 (4 cases) covers Promise.all-share / cycle / rejection-clears-cache / 5-way coherence.
+- **B-BIC-22** MCP protocol/version floor → `assertBicameralProtocolFloor(client)` at end of doConnect(). Fail-closed (tear down) on missing or below-floor version. `MIN_BICAMERAL_VERSION` from install-handler.ts is single source of truth.
+- **B-BIC-23** runtime type guard on callTool → `isToolCallResult(v)` in parsers.ts. Narrows unknown; rejects malformed.
+
+## Helpers extracted (Section 4 razor)
+
+| New file | Lines | Reason |
+|---|---|---|
+| `semver.ts` | 13 | `compareSemver` was private in upstream-row.ts; second consumer in protocol-floor.ts |
+| `idle-scheduler.ts` | 70 | Timer lifecycle + inflight counter |
+| `protocol-floor.ts` | 22 | Connect-time version assertion |
+
+`BicameralMcpClient.ts` lands at 284L — 34L over the 250L razor target. **Explicit razor exception**: the 11 deferred-tool wrappers ARE the public API surface and shouldn't be extracted behind an indirection layer. Cycle-1 audit approved this trade-off given the helper extraction pattern was applied where it served readability.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| Compile (`tsc -p ./`) | clean, no warnings |
+| Mocha (6 bicameral spec files, isolated invocation) | **54/54 passing in 524ms** via direct mocha |
+| FX527 deferred-tools (22 cases) preserved | YES — fixtures updated to include `getServerVersion` returning floor `'0.14.0'` |
+| FX526 callRaw (5 cases incl. 2 new B-BIC-11/23 extensions) | YES |
+| FX517 capability negotiation (in BicameralMcpClient.test.ts) | YES — main test file fixture also updated |
+| SG-035 test functionality | All 54 cases invoke unit + assert against output (return values, error messages, timer state, fetch counts) |
+| Section 4 Razor | semver.ts 13L; idle-scheduler.ts 70L; protocol-floor.ts 22L. BicameralMcpClient.ts 284L (over target with documented exception). |
+| Citation discipline (SG-CitationDrift-A) | All cycle-1 citations verified: SDK Client.getServerVersion exists at index.d.ts:163, MIN_BICAMERAL_VERSION at install-handler.ts:17, ToolCallResult shape at parsers.ts:16-20. |
+
+## Skipped per protocol (degraded-wiring posture)
+
+- Full `npm test:all` (vscode-test electron) still blocked locally by stuck VS Code installer mutex (~7.5h runtime). Bicameral suite verified directly via mocha.
+
+## Content Hash
+
+**Content Hash**: `e1dde9c8f70d9b74d39deaf1626c7af078d7c60823224d693d286904fc32c0d0`
+**Previous Hash**: `bfd9f17c7d684d0b4e6aea23a1fd1d1c34b2e3ef3c7ce3488598b9656d8ba27f` (Entry #381)
+**Chain Hash**: `1d7a1d98cfe908940cfc310e21d5dc7f5ad8341d413fffca05612ee3465a0854`
+**Merkle Seal**: `28f32ca342a57bb3b3776a87a6d0bf11c751f7dbfd73c6ffc6dbd6eac3abdb58` — gate_workspace_audit_bicameral_safety_concurrency_PASS
+**Session ID**: `2026-05-20-bicameral-safety-concurrency-substantiation-seal`
+
+## Review Boundary attestation
+
+No marketplace publish. Branch `feat/bicameral-safety-concurrency` will open as a new PR after operator review.
+
+## Decision
+
+**SEAL — Reality matches Promise.** Six bicameral safety+concurrency items closed. v5.2.x carry-over for Bicameral debt shrinks from ~15 items to ~9 items (10 remaining post-cycle in Bicameral cluster, mostly UI/UX + a couple structural). BACKLOG state: 42 open → 36 open.
+
+_Chain Status: bicameral-safety-concurrency SEALED at Entry #382._
+_Next: operator next-up selection from remaining 36 open items._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: B-BIC-8/9/11/21/22/23 SEALED at Entry #382; 54 mocha cases pass; PUBLISH_BLOCK unchanged. New branch feat/bicameral-safety-concurrency awaits push/PR._
+_Session: 2026-05-20-bicameral-safety-concurrency-substantiation-seal_

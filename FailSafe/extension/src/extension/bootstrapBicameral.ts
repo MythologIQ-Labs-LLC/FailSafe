@@ -75,7 +75,12 @@ export function wireBicameralIntegration(
       return;
     }
     consoleServer.setBicameralCommand(command);
-    consoleServer.setBicameralClient(new BicameralMcpClient({ command, cwd: workspaceRoot }));
+    consoleServer.setBicameralClient(new BicameralMcpClient({
+      command,
+      cwd: workspaceRoot,
+      // B-BIC-9: idle disconnect TTL (default 15min, 0 disables).
+      idleDisconnectMs: cfg.get<number>("idleDisconnectMs", 900_000),
+    }));
     void prior?.disconnect().catch(() => undefined);
   };
 

@@ -7,6 +7,7 @@ interface FakeClient {
   connect: (transport: unknown) => Promise<void>;
   close: () => Promise<void>;
   listTools: () => Promise<{ tools: Array<{ name: string }> }>;
+  getServerVersion: () => { name: string; version: string } | undefined;
 }
 
 function makeClient(overrides: Partial<FakeClient> = {}): FakeClient {
@@ -15,6 +16,9 @@ function makeClient(overrides: Partial<FakeClient> = {}): FakeClient {
     connect: async () => undefined,
     close: async () => undefined,
     listTools: async () => ({ tools: [] }),
+    // B-BIC-22: protocol-floor assertion needs getServerVersion. Default fixture
+    // returns the minimum floor so existing tests pass through the assertion.
+    getServerVersion: () => ({ name: 'echo-bicameral', version: '0.14.0' }),
     ...overrides,
   };
 }
@@ -62,6 +66,41 @@ suite('BicameralMcpClient.callRaw (FX526 — Phase 1 type-surface foundation)', 
     await assert.rejects(
       () => client.callRaw('bicameral.history', {}),
       /BicameralMcpClient not connected/,
+    );
+  });
+
+  test('B-BIC-11: structured isError payload surfaces detail text in thrown Error', async () => {
+    const fake = makeClient({
+      callTool: async () => ({
+        isError: true,
+        content: [{ type: 'text', text: 'tool-specific failure: invalid decision-id "missing-d1"' }],
+      }),
+    });
+    const client = new BicameralMcpClient({
+      command: 'noop', cwd: '/tmp', idleDisconnectMs: 0,
+      clientFactory: () => fake as never,
+      transportFactory: () => ({ onclose: undefined } as never),
+    });
+    await client.connect();
+    await assert.rejects(
+      () => client.callRaw('bicameral.ratify', { decision_id: 'missing-d1' }),
+      /reported isError=true: tool-specific failure: invalid decision-id "missing-d1"/,
+    );
+  });
+
+  test('B-BIC-23: callRaw rejects malformed (non-ToolCallResult) responses via runtime guard', async () => {
+    const fake = makeClient({
+      callTool: async () => 'not-an-object' as unknown as never,
+    });
+    const client = new BicameralMcpClient({
+      command: 'noop', cwd: '/tmp', idleDisconnectMs: 0,
+      clientFactory: () => fake as never,
+      transportFactory: () => ({ onclose: undefined } as never),
+    });
+    await client.connect();
+    await assert.rejects(
+      () => client.callRaw('bicameral.history', {}),
+      /failed runtime type guard/,
     );
   });
 });
