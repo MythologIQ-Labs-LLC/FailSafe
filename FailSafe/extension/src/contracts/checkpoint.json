@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://failsafe.mythologiq.studio/contracts/checkpoint.json",
+  "title": "Checkpoint",
+  "description": "Sovereign Checkpoint Protocol record: a snapshot of workspace governance state at a point in time. Used for drift detection, reconciliation, and time-travel rollback.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "checkpointType", "actor", "phase", "status", "policyVerdict", "evidenceRefs", "payload", "timestamp"],
+  "properties": {
+    "id": { "type": "string" },
+    "checkpointType": {
+      "type": "string",
+      "enum": ["snapshot.created", "snapshot.reconciled", "drift.detected", "user.override", "release.published"]
+    },
+    "actor": { "type": "string", "description": "DID or system identifier creating the checkpoint." },
+    "phase": { "type": "string", "description": "Lifecycle phase key (e.g. 'plan', 'audit', 'implement', 'substantiate')." },
+    "status": { "type": "string", "enum": ["pending", "validated", "rejected", "expired"] },
+    "policyVerdict": { "type": "string", "enum": ["PASS", "FAIL", "VETO", "PASS_WITH_CONDITIONS"] },
+    "evidenceRefs": { "type": "array", "items": { "type": "string" }, "description": "References to supporting artifacts (file paths, ledger entry ids, audit reports)." },
+    "payload": { "type": "object", "additionalProperties": true },
+    "timestamp": { "type": "string", "format": "date-time" }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://failsafe.mythologiq.studio/contracts/governance_config.json",
+  "title": "GovernanceConfig",
+  "description": "Operator-controlled governance settings. Snapshot-able + serializable for cross-instance synchronization (e.g. team-mode rollout, B-INT-2 preflight wiring).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["mode"],
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": ["observe", "assist", "enforce"],
+      "description": "Top-level governance posture per B194 enforcement-mode ladder."
+    },
+    "l3SLAseconds": { "type": "number", "minimum": 0, "description": "Time budget for L3 approval before auto-defer/expire." },
+    "trustThresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "l2": { "type": "number", "minimum": 0, "maximum": 1, "description": "Minimum trust score to skip L2 review." },
+        "l3": { "type": "number", "minimum": 0, "maximum": 1, "description": "Minimum trust score to skip L3 review." }
+      }
+    },
+    "breakGlassEnabled": { "type": "boolean", "default": true },
+    "policyTags": { "type": "array", "items": { "type": "string" }, "description": "Active policy tag set (e.g. 'EU-AI-Act', 'NIST-RMF', 'SOC2')." },
+    "lastUpdatedAt": { "type": "string", "format": "date-time" },
+    "lastUpdatedBy": { "type": "string", "description": "DID of the operator who last changed this config." }
+  }
+}

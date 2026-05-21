@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://failsafe.mythologiq.studio/contracts/failure_mode.json",
+  "title": "FailureMode",
+  "description": "Shadow Genome failure pattern record. Captures the input vector, decision rationale, environment, and remediation state of a single failure observation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "createdAt", "agentDid", "inputVector", "failureMode", "remediationStatus"],
+  "properties": {
+    "schemaVersion": { "type": "string", "description": "Internal Shadow Genome schema version (e.g. '1.2.0')." },
+    "id": { "type": "number" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "ledgerRef": { "type": "number", "description": "Optional reference to the LedgerEntry that triggered this failure." },
+    "agentDid": { "type": "string" },
+    "inputVector": { "type": "string" },
+    "decisionRationale": { "type": "string" },
+    "environmentContext": { "type": "string" },
+    "failureMode": {
+      "type": "string",
+      "enum": ["HALLUCINATION", "INJECTION_VULNERABILITY", "LOGIC_ERROR", "SPEC_VIOLATION", "HIGH_COMPLEXITY", "SECRET_EXPOSURE", "PII_LEAK", "DEPENDENCY_CONFLICT", "TRUST_VIOLATION", "OTHER"]
+    },
+    "causalVector": { "type": "string" },
+    "negativeConstraint": { "type": "string" },
+    "remediationStatus": {
+      "type": "string",
+      "enum": ["UNRESOLVED", "IN_PROGRESS", "RESOLVED", "WONT_FIX", "SUPERSEDED"]
+    },
+    "remediationNotes": { "type": "string" },
+    "resolvedAt": { "type": "string", "format": "date-time" },
+    "resolvedBy": { "type": "string" }
+  }
+}

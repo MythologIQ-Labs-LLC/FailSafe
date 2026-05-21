@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://failsafe.mythologiq.studio/contracts/evaluation_request.json",
+  "title": "EvaluationRequest",
+  "description": "A request submitted to the FailSafe governance engine for evaluation. Mirrors the input surface of the planned B151 universal interceptor.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["agentDid", "action", "timestamp"],
+  "properties": {
+    "agentDid": { "type": "string", "description": "DID of the requesting agent." },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": { "type": "string", "description": "Action category (e.g. 'file_edit', 'command_run', 'tool_call', 'llm_request')." },
+        "target": { "type": "string", "description": "Affected resource (file path, command, tool name)." },
+        "payload": { "type": "object", "additionalProperties": true, "description": "Action-specific arguments." }
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "intentId": { "type": "string", "description": "Optional reference to a declared Intent." },
+        "riskGrade": { "type": "string", "enum": ["L1", "L2", "L3"] },
+        "modelVersion": { "type": "string" }
+      }
+    },
+    "timestamp": { "type": "string", "format": "date-time" }
+  }
+}

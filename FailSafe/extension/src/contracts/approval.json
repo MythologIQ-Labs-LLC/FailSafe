@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://failsafe.mythologiq.studio/contracts/approval.json",
+  "title": "Approval",
+  "description": "Human-in-the-loop L3 approval request and resolution record. Used for governance decisions requiring overseer review.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "state", "filePath", "riskGrade", "agentDid", "agentTrust", "sentinelSummary", "flags", "queuedAt", "slaDeadline"],
+  "properties": {
+    "id": { "type": "string", "description": "Unique approval ID (UUIDv4)." },
+    "state": {
+      "type": "string",
+      "enum": ["QUEUED", "UNDER_REVIEW", "APPROVED", "APPROVED_WITH_CONDITIONS", "REJECTED", "DEFERRED", "EXPIRED"]
+    },
+    "filePath": { "type": "string", "description": "Workspace-relative or absolute path under review." },
+    "riskGrade": { "type": "string", "enum": ["L1", "L2", "L3"] },
+    "agentDid": { "type": "string" },
+    "agentTrust": { "type": "number", "minimum": 0, "maximum": 1 },
+    "sentinelSummary": { "type": "string" },
+    "flags": { "type": "array", "items": { "type": "string" } },
+    "queuedAt": { "type": "string", "format": "date-time" },
+    "reviewStartedAt": { "type": "string", "format": "date-time" },
+    "decidedAt": { "type": "string", "format": "date-time" },
+    "overseerDid": { "type": "string" },
+    "decision": { "type": "string", "description": "Free-form overseer rationale." },
+    "conditions": { "type": "array", "items": { "type": "string" } },
+    "slaDeadline": { "type": "string", "format": "date-time" },
+    "kind": {
+      "type": "string",
+      "description": "B-BIC-16: optional discriminator for integration-sourced entries (e.g. 'bicameral-drift-resolution')."
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "B-BIC-16: opaque per-kind metadata. For bicameral-drift-resolution carries {decisionId: string}."
+    }
+  }
+}
