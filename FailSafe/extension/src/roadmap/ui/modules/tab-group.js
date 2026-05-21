@@ -40,6 +40,14 @@ export class TabGroup {
   }
 
   switchTo(key, hubData) {
+    // B198 Phase 3 (RD-3): tear down the OUTGOING sub-view's renderer before
+    // rendering the incoming one so its listeners / modal nodes do not leak
+    // across navigation. Optional-chained — sub-views without destroy() are
+    // unaffected; switching to the same key is a no-op teardown-wise.
+    if (key !== this.activeKey) {
+      const outgoing = this.subViews.find(s => s.key === this.activeKey);
+      outgoing?.renderer.destroy?.();
+    }
     this.activeKey = key;
     this.container.querySelector('.cc-subview-bar')?.querySelectorAll('.cc-pill').forEach(p => {
       p.classList.toggle('active', p.dataset.key === key);

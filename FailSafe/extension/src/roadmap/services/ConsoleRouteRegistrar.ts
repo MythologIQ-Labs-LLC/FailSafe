@@ -59,6 +59,11 @@ export interface ConsoleRouteHost {
   qorelogicManager: { getLedgerManager: () => unknown; getShadowGenomeManager: () => unknown };
   featureGate: unknown;
   getBicameralClient: () => import("../../integrations/bicameral").BicameralMcpClient | null;
+  /** B151: universal governance interceptor accessor; null when bootstrap didn't wire one. */
+  getMcpInterceptor: () => import("../../governance/interceptor").McpInterceptor | null;
+  /** B-BIC-12: editor-open dep accessor; null when bootstrap didn't wire one.
+   *  Optional on the host so older route-host fixtures stay valid. */
+  getBicameralOpenFileInEditor?: () => ((filePath: string, startLine?: number) => Promise<void>) | null;
   /** B-BIC-16: drift-to-L3 mediator accessor; null when bootstrap didn't wire one. */
   getDriftToL3Mediator: () => import("../../integrations/bicameral/DriftToL3Mediator").DriftToL3Mediator | null;
   /** Phase 4: upstream monitor accessor; null when bootstrap didn't wire one. */
@@ -66,6 +71,9 @@ export interface ConsoleRouteHost {
   getBicameralCommand: () => string;
   getBicameralAutoConnect: () => boolean;
   setBicameralAutoConnect: (value: boolean) => Promise<void>;
+  /** B-BIC-17/18 (Batch 4): shared event bus. Threaded into the bicameral
+   *  route deps so the drift/ratify handlers can emit `bicameral.verdict`. */
+  eventBus: import("../../shared/EventBus").EventBus;
   /** Returns absolute path to the operator-installed voice-pack directory,
    *  or null when no pack is installed. When non-null and the directory
    *  exists, setupAllRoutes mounts it at /vendor (takes priority over the
@@ -224,6 +232,18 @@ export class ConsoleRouteRegistrar {
       workspaceRoot: this.host.workspaceRoot,
       getBicameralCommand: () => this.host.getBicameralCommand(),
       getBicameralClient: () => this.host.getBicameralClient(),
+      // B151: route the 3 tool endpoints through the universal interceptor.
+      getMcpInterceptor: () => this.host.getMcpInterceptor(),
+      // B-BIC-12: editor-open dep for the bicameral-open-binding route. Routes
+      // register before bootstrapBicameral wires the dep, so forward through a
+      // closure that resolves the host getter at request time (the same lazy
+      // pattern getMcpInterceptor uses). bootstrapBicameral wires the real
+      // vscode.open dep during activation, before any request is served.
+      openFileInEditor: (filePath, startLine) => {
+        const fn = this.host.getBicameralOpenFileInEditor?.();
+        if (!fn) return Promise.reject(new Error("openFileInEditor not wired"));
+        return fn(filePath, startLine);
+      },
       getAutoConnect: () => this.host.getBicameralAutoConnect(),
       setAutoConnect: (v) => this.host.setBicameralAutoConnect(v),
       // B-BIC-1: pass ledger handle so ratify appends USER_OVERRIDE entry.
@@ -233,6 +253,9 @@ export class ConsoleRouteRegistrar {
       driftToL3Mediator: this.host.getDriftToL3Mediator() ?? undefined,
       // Phase 4: pass upstream monitor handle for /upstream route.
       upstreamMonitor: this.host.getUpstreamMonitor() ?? undefined,
+      // B-BIC-17/18 (Batch 4): pass the shared event bus so the drift/ratify
+      // handlers emit `bicameral.verdict` events.
+      eventBus: this.host.eventBus,
     });
     setupMarketplaceRoutes(app, {
       rejectIfRemote: (req, res) => this.host.rejectIfRemote(req, res),

@@ -50,17 +50,74 @@ export class IntegrationsRenderer {
 
   _buildHandlers() {
     return {
-      onDetect:  () => this._refreshStatus(),
+      // B-BIC-14: when running, the header button performs a composite Sync
+      // (status + history + drift); otherwise it's a plain status probe.
+      onDetect:  () => this._sync(),
       onConnect: () => this._connect(),
       onRefresh: () => this._refreshHistory(),
       onRatify:  (id, verdict) => this._ratify(id, verdict),
       onInstall: (mode) => this._beginInstall(mode),
+      onOpenBinding: (filePath, startLine) => this._openBinding(filePath, startLine),
       // Setup-only path reuses /api/actions/bicameral-install (the install
       // handler skips the pip step when pip-install reports already-installed,
       // a behavior pip provides natively). For v1 we POST the same endpoint
       // and let the upstream skip the no-op pip step.
       onSetup:   (mode) => this._beginInstall(mode),
     };
+  }
+
+  /**
+   * B-BIC-14: composite Sync. Always probes status; when the integration is
+   * running it additionally refreshes history and the drift status of every
+   * binding file path already present in card state.
+   */
+  async _sync() {
+    await this._refreshStatus();
+    if (this.state.bicameral.installState !== 'running') return;
+    await this._refreshHistory({ silent: true });
+    await this._refreshDrift();
+  }
+
+  /** B-BIC-14: refresh drift for each binding file path already in card state. */
+  async _refreshDrift() {
+    const paths = this._collectBindingPaths();
+    for (const filePath of paths) {
+      try {
+        await fetch('/api/actions/bicameral-drift', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filePath }),
+        });
+      } catch {
+        /* drift refresh is best-effort; status/history already surfaced */
+      }
+    }
+  }
+
+  /** Unique binding file paths drawn from the features already in card state. */
+  _collectBindingPaths() {
+    const paths = new Set();
+    for (const feature of this.state.bicameral.features || []) {
+      for (const decision of feature.decisions || []) {
+        const binding = (decision.bindings || [])[0];
+        if (binding && binding.filePath) paths.add(binding.filePath);
+      }
+    }
+    return [...paths];
+  }
+
+  /** B-BIC-12: open a decision's bound source file in the editor. */
+  async _openBinding(filePath, startLine) {
+    if (!filePath) return;
+    try {
+      await fetch('/api/actions/bicameral-open-binding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filePath, startLine }),
+      });
+    } catch (err) {
+      this._setState({ error: String(err) });
+    }
   }
 
   async _refreshStatus() {
@@ -77,6 +134,9 @@ export class IntegrationsRenderer {
         installState: json.state || 'unknown',
         version: json.version,
         configPath: json.configPath,
+        // B-BIC-13: thread tool capabilities so the empty-state can gate the
+        // /bicameral-ingest hint on the `ingest` capability.
+        capabilities: Array.isArray(json.capabilities) ? json.capabilities : [],
       });
       // If we're connected, immediately fetch history so the running state has
       // content. If not connected, leave features as-is so prior data persists.

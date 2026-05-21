@@ -58,22 +58,38 @@ test("FX525 disk META_LEDGER → /api/hub reflects ledger entry count on rebuild
 });
 
 test("FX525 disk META_LEDGER + hub.refresh broadcast → Monitor compact UI re-renders new state", async ({ page }) => {
+  // Register the pageerror listener BEFORE navigation so it actually captures
+  // errors raised during goto / refresh / re-render.
+  const errors: string[] = [];
+  page.on("pageerror", (err) => errors.push(err.message));
+
   const ledgerPath = path.join(tmpWorkspace, "docs", "META_LEDGER.md");
   fs.writeFileSync(ledgerPath, "# META_LEDGER\n\n", "utf-8");
   controller = await serveConsoleServerUI({ workspaceRoot: tmpWorkspace });
   await page.goto(`${controller.url}/index.html`);
   // Allow initial render.
   await page.waitForTimeout(500);
-  // Write a SHIELD entry to disk + tell page to re-fetch.
+
+  // Baseline: empty ledger → the Monitor phase title sits on its idle/plan
+  // default, not on the substantiate phase the appended entry will carry.
+  const phaseTitle = page.locator("#phase-title");
+  const before = (await phaseTitle.textContent())?.trim();
+  expect(before).not.toBe("SUBSTANTIATE");
+
+  // Write a SHIELD SEAL entry to disk + tell the page to re-fetch.
   fs.appendFileSync(ledgerPath, sealEntryFixture(), "utf-8");
   controller.broadcast({ type: "hub.refresh" });
   // Allow re-fetch + re-render.
   await page.waitForTimeout(800);
-  // The Monitor's hub payload now contains the new ledger entry; visible side
-  // effect: at minimum, the page didn't crash on the refresh + re-render.
-  const errors: string[] = [];
-  page.on("pageerror", (err) => errors.push(err.message));
-  await expect(page.locator("body")).toBeVisible();
+
+  // B191 core claim: the Monitor compact UI reflects the ON-DISK META_LEDGER
+  // mutation. The appended entry carries **Phase**: substantiate, which
+  // GovernancePhaseTracker.getCurrentPhase surfaces as "SUBSTANTIATE" — so the
+  // rendered phase title must move off its empty-ledger baseline to match.
+  await expect(phaseTitle).toHaveText("SUBSTANTIATE");
+  // The phase track renders Plan/Audit/Implement done, Substantiate active.
+  await expect(page.locator("#phase-track .step.done")).toHaveCount(3);
+  // No render errors across the refresh (listener registered before goto).
   expect(errors).toEqual([]);
 });
 

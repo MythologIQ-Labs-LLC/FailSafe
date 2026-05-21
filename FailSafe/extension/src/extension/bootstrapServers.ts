@@ -40,6 +40,10 @@ export interface ServerDeps {
   modeTransitionHistory?: import("../governance/ModeTransitionHistory").ModeTransitionHistory;
   /** B194: callback returning current governance mode state. */
   getGovernanceMode?: () => import("../governance/types").GovernanceModeState;
+  /** B151: enforcement engine backing the universal governance interceptor;
+   *  threaded into wireBicameralIntegration so the bicameral tool routes are
+   *  governed. Absent in test contexts that don't exercise governed routes. */
+  enforcementEngine?: import("../governance/EnforcementEngine").EnforcementEngine;
 }
 
 export interface ServerResult {
@@ -93,8 +97,21 @@ export async function bootstrapServers(
     l3Service: {
       queueL3Approval: (req) => deps.qorelogicManager.queueL3Approval(req),
     },
+    // B-INT-2: L3 surface for the preflight mediator. attachPreflightEvidence
+    // + setPreflightMediator delegate to L3ApprovalService via QorLogicManager.
+    l3PreflightService: {
+      attachPreflightEvidence: (id, meta, flag) =>
+        deps.qorelogicManager.attachPreflightEvidence(id, meta, flag),
+      setPreflightMediator: (m) => deps.qorelogicManager.setPreflightMediator(m),
+    },
     eventBus: deps.eventBus,
     logger: _logger,
+    // B151: back the universal governance interceptor with the enforcement
+    // engine so the 3 bicameral tool routes are governed.
+    enforcementEngine: deps.enforcementEngine,
+    // B-BIC-18 (Batch 4): hand the RiskRegisterManager to the DriftToRiskMediator
+    // so bicameral drift verdicts mirror into the Risks Register.
+    riskRegister: consoleServer.getRiskRegisterManager(),
     // Phase 4 config adapter: read VS Code settings on demand. Keeps the
     // monitor decoupled from the VS Code API surface for unit testability.
     configProvider: {

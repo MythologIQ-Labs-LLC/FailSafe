@@ -9,17 +9,35 @@
 import * as vscode from "vscode";
 import {
   BicameralMcpClient,
-  isSafeBicameralCommand,
+  isSafeBicameralCommandResolved,
   probeInstallState,
 } from "../integrations/bicameral";
-import { DriftToL3Mediator } from "../integrations/bicameral/DriftToL3Mediator";
-import { UpstreamMonitor } from "../integrations/bicameral/UpstreamMonitor";
-import { httpFetchShim } from "../integrations/bicameral/http-fetch-shim";
+import type { DriftToL3Mediator } from "../integrations/bicameral/DriftToL3Mediator";
+import type { RiskRegisterDeps } from "../integrations/bicameral/DriftToRiskMediator";
+import type { PreflightToL3Mediator } from "../integrations/bicameral/PreflightToL3Mediator";
+import type { UpstreamMonitor } from "../integrations/bicameral/UpstreamMonitor";
+import { EngineBackedInterceptor, McpInterceptor } from "../governance/interceptor";
+import type { EnforcementEngineLike } from "../governance/interceptor/EngineBackedInterceptor";
 import type { EventBus } from "../shared/EventBus";
 import type { Logger } from "../shared/Logger";
 import type { L3ApprovalRequest } from "../shared/types/l3-approval";
+import { wireMediators, wireUpstreamMonitor } from "./bootstrapBicameralWiring";
 
-interface ConsoleServerSurface {
+/** B151: DID stamped onto receipts issued by this extension's interceptor. */
+const INTERCEPTOR_ISSUED_BY = "did:failsafe:instance:extension";
+
+/**
+ * B-BIC-7: read the operator-configured extra anchored absolute roots accepted
+ * for the bicameral command path. Non-array / non-string entries are dropped.
+ */
+function readBicameralExtraRoots(
+  cfg: vscode.WorkspaceConfiguration,
+): string[] {
+  const raw = cfg.get<string[]>("extraCommandRoots", []);
+  return Array.isArray(raw) ? raw.filter((r) => typeof r === "string") : [];
+}
+
+export interface ConsoleServerSurface {
   setBicameralAutoConnect(value: boolean): void;
   setBicameralCommand(cmd: string): void;
   setBicameralClient(c: BicameralMcpClient | null): void;
@@ -27,6 +45,15 @@ interface ConsoleServerSurface {
   broadcastEvent(data: Record<string, unknown>): void;
   /** B-BIC-2: typed accessor for the lazily-wired MCP client. */
   getBicameralClient(): BicameralMcpClient | null;
+  /** B151: register the universal governance interceptor that the bicameral
+   *  tool routes govern through. Null when no enforcement engine is wired. */
+  setMcpInterceptor?(i: McpInterceptor | null): void;
+  /** B-BIC-12: register the editor-open dep so the bicameral-open-binding
+   *  route can open a decision's bound source file. Optional on the surface so
+   *  older test fixtures that don't expose it are tolerated. */
+  setBicameralOpenFileInEditor?(
+    fn: ((filePath: string, startLine?: number) => Promise<void>) | null,
+  ): void;
   /** B-BIC-16: setter for the drift-to-L3 mediator so the BicameralRoute
    *  drift handler can forward results without threading the mediator
    *  through every call site. Null when no mediator wired (test fixtures). */
@@ -42,6 +69,17 @@ interface L3QueueDeps {
   ): Promise<string>;
 }
 
+/** B-INT-2: L3 surface needed to wire the preflight mediator — attach
+ *  evidence + register the mediator. Optional dep; absent → no preflight. */
+interface L3PreflightWiringDeps {
+  attachPreflightEvidence(
+    approvalId: string,
+    preflightMeta: Record<string, unknown>,
+    flag: string,
+  ): Promise<void>;
+  setPreflightMediator(mediator: PreflightToL3Mediator | null): void;
+}
+
 interface ConfigProviderLike {
   getNumber?(key: string, defaultValue: number): number;
   getString?(key: string, defaultValue: string): string;
@@ -49,11 +87,23 @@ interface ConfigProviderLike {
 
 export interface BicameralIntegrationDeps {
   l3Service?: L3QueueDeps;
+  /** B-INT-2: L3 service surface for the preflight mediator. When supplied,
+   *  tier-3 actions are preflight-checked against bicameral decisions. */
+  l3PreflightService?: L3PreflightWiringDeps;
   eventBus?: EventBus;
   logger?: Logger;
+  /** B151: enforcement engine backing the universal governance interceptor.
+   *  When provided, the bicameral tool routes govern through an McpInterceptor
+   *  wrapping an EngineBackedInterceptor. Absent → routes behave un-governed. */
+  enforcementEngine?: EnforcementEngineLike;
   /** Phase 4: optional config provider for UpstreamMonitor. When absent,
    *  the monitor uses defaults (24h poll, BicameralAI/bicameral-mcp). */
   configProvider?: ConfigProviderLike;
+  /** B-BIC-18 (Batch 4): Risks Register surface for the DriftToRiskMediator.
+   *  When supplied alongside eventBus, bicameral drift verdicts are mirrored
+   *  into the Risks Register and ratify verdicts close them. Absent → no
+   *  risk mirror (opt-in, same as the other mediators). */
+  riskRegister?: RiskRegisterDeps;
 }
 
 export function wireBicameralIntegration(
@@ -62,30 +112,84 @@ export function wireBicameralIntegration(
   workspaceRoot: string,
   deps: BicameralIntegrationDeps = {},
 ): void {
-  const wireFromConfig = (): void => {
-    const cfg = vscode.workspace.getConfiguration("failsafe.integrations.bicameral");
-    const command = cfg.get<string>("command", "bicameral-mcp") || "bicameral-mcp";
-    consoleServer.setBicameralAutoConnect(cfg.get<boolean>("autoConnect", false));
-    // B-BIC-2: disconnect the prior client (if any) before replacing it so
-    // the previous stdio subprocess doesn't get orphaned by config rewire.
-    const prior = consoleServer.getBicameralClient();
-    if (!isSafeBicameralCommand(command)) {
-      consoleServer.setBicameralCommand("bicameral-mcp");
-      consoleServer.setBicameralClient(null);
-      void prior?.disconnect().catch(() => undefined);
-      return;
-    }
-    consoleServer.setBicameralCommand(command);
-    consoleServer.setBicameralClient(new BicameralMcpClient({
-      command,
-      cwd: workspaceRoot,
-      // B-BIC-9: idle disconnect TTL (default 15min, 0 disables).
-      idleDisconnectMs: cfg.get<number>("idleDisconnectMs", 900_000),
-    }));
-    void prior?.disconnect().catch(() => undefined);
-  };
+  wireBicameralClient(context, consoleServer, workspaceRoot, deps);
+  wireMediators(context, consoleServer, deps);
+  wireUpstreamMonitor(context, consoleServer, deps);
+}
 
-  wireFromConfig();
+/** B151: register the universal governance interceptor wrapping the freshly
+ *  wired client. Skipped when no enforcement engine is available or the
+ *  ConsoleServer surface doesn't expose the setter (older test fixtures). */
+function wireInterceptor(
+  consoleServer: ConsoleServerSurface,
+  deps: BicameralIntegrationDeps,
+  client: BicameralMcpClient | null,
+): void {
+  if (!consoleServer.setMcpInterceptor) return;
+  if (!client || !deps.enforcementEngine) {
+    consoleServer.setMcpInterceptor(null);
+    return;
+  }
+  const backing = new EngineBackedInterceptor(deps.enforcementEngine, INTERCEPTOR_ISSUED_BY);
+  consoleServer.setMcpInterceptor(new McpInterceptor(client, backing));
+}
+
+/** B-BIC-6/7/9: validate the configured command through the symlink-resolving
+ *  validator, then (re)construct the BicameralMcpClient + interceptor. The
+ *  prior client is disconnected so its stdio subprocess is not orphaned. */
+async function wireFromConfig(
+  consoleServer: ConsoleServerSurface,
+  workspaceRoot: string,
+  deps: BicameralIntegrationDeps,
+): Promise<void> {
+  const cfg = vscode.workspace.getConfiguration("failsafe.integrations.bicameral");
+  const command = cfg.get<string>("command", "bicameral-mcp") || "bicameral-mcp";
+  consoleServer.setBicameralAutoConnect(cfg.get<boolean>("autoConnect", false));
+  const prior = consoleServer.getBicameralClient();
+  const safe = await isSafeBicameralCommandResolved(command, {
+    extraRoots: readBicameralExtraRoots(cfg),
+  });
+  if (!safe) {
+    consoleServer.setBicameralCommand("bicameral-mcp");
+    consoleServer.setBicameralClient(null);
+    wireInterceptor(consoleServer, deps, null);
+    void prior?.disconnect().catch(() => undefined);
+    return;
+  }
+  consoleServer.setBicameralCommand(command);
+  const client = new BicameralMcpClient({
+    command,
+    cwd: workspaceRoot,
+    idleDisconnectMs: cfg.get<number>("idleDisconnectMs", 900_000),
+  });
+  consoleServer.setBicameralClient(client);
+  wireInterceptor(consoleServer, deps, client);
+  void prior?.disconnect().catch(() => undefined);
+}
+
+/** B-BIC-12: open a decision's bound source file in the editor via
+ *  vscode.Uri.file (no shell); scrolls to startLine via the open selection. */
+async function openBicameralBinding(filePath: string, startLine?: number): Promise<void> {
+  const line = Math.max(0, (startLine ?? 1) - 1);
+  const position = new vscode.Position(line, 0);
+  await vscode.commands.executeCommand(
+    "vscode.open",
+    vscode.Uri.file(filePath),
+    { selection: new vscode.Range(position, position) },
+  );
+}
+
+/** Wire the lazy BicameralMcpClient + autoConnect setting into ConsoleServer,
+ *  the editor-open dep, the config-change rewire watcher and the deactivate
+ *  disposer. Extracted from wireBicameralIntegration for the razor limit. */
+function wireBicameralClient(
+  context: vscode.ExtensionContext,
+  consoleServer: ConsoleServerSurface,
+  workspaceRoot: string,
+  deps: BicameralIntegrationDeps,
+): void {
+  void wireFromConfig(consoleServer, workspaceRoot, deps);
+  consoleServer.setBicameralOpenFileInEditor?.(openBicameralBinding);
   consoleServer.setBicameralAutoConnectWriter(async (value) => {
     await vscode.workspace
       .getConfiguration("failsafe.integrations.bicameral")
@@ -96,83 +200,19 @@ export function wireBicameralIntegration(
       if (
         e.affectsConfiguration("failsafe.integrations.bicameral.command")
         || e.affectsConfiguration("failsafe.integrations.bicameral.autoConnect")
+        || e.affectsConfiguration("failsafe.integrations.bicameral.extraCommandRoots")
       ) {
-        wireFromConfig();
+        void wireFromConfig(consoleServer, workspaceRoot, deps);
       }
     }),
   );
-  // B-BIC-2: extension-deactivate disposer — terminates the stdio subprocess
-  // so it doesn't outlive its parent. .catch() swallows any disconnect error
-  // (extension teardown must not throw).
+  // B-BIC-2: deactivate disposer — terminates the stdio subprocess so it does
+  // not outlive its parent. .catch() swallows any disconnect error.
   context.subscriptions.push({
     dispose: () => {
-      const client = consoleServer.getBicameralClient();
-      void client?.disconnect().catch(() => undefined);
+      void consoleServer.getBicameralClient()?.disconnect().catch(() => undefined);
     },
   });
-
-  // B-BIC-16: drift-to-L3 mediator. Wired only when all three deps are
-  // supplied (production path through bootstrapServers). Test fixtures that
-  // don't provide deps get no mediator — the integration is opt-in.
-  if (deps.l3Service && deps.eventBus && deps.logger && consoleServer.setDriftToL3Mediator) {
-    const client = consoleServer.getBicameralClient();
-    if (client) {
-      const mediator = new DriftToL3Mediator({
-        client,
-        l3Service: deps.l3Service,
-        eventBus: deps.eventBus,
-        logger: deps.logger,
-      });
-      consoleServer.setDriftToL3Mediator(mediator);
-      context.subscriptions.push({ dispose: () => mediator.dispose() });
-    }
-  }
-
-  // Phase 4: upstream monitor. Wired only when logger is present so error
-  // paths can warn. configProvider falls back to defaults (24h poll,
-  // BicameralAI/bicameral-mcp).
-  //
-  // RC1: never let this non-critical 24h background poller abort extension
-  // activation. The whole construction is wrapped in try/catch, and the
-  // HTTP transport is feature-detected — the extension-host Node runtime
-  // does not reliably expose a global `fetch`, so we fall back to a tiny
-  // node:https GET shim that satisfies the subset of the Response API the
-  // UpstreamMonitor consumes.
-  if (deps.logger && consoleServer.setUpstreamMonitor) {
-    wireUpstreamMonitor(context, consoleServer, deps.configProvider, deps.logger);
-  }
-}
-
-/**
- * Construct + start the UpstreamMonitor. Isolated + fail-safe: any error here
- * (bad config, transport init failure, future regression) is caught and
- * logged — it must NEVER bubble up and abort extension activation, because
- * the monitor is a non-critical background poller.
- */
-function wireUpstreamMonitor(
-  context: vscode.ExtensionContext,
-  consoleServer: ConsoleServerSurface,
-  configProvider: ConfigProviderLike | undefined,
-  logger: Logger,
-): void {
-  try {
-    // RC1: feature-detect the global `fetch`. Falls back to the node:https
-    // shim on hosts (e.g. some vscode-test electron runtimes) that lack it.
-    const httpFetch: typeof fetch =
-      typeof fetch === "function" ? fetch : httpFetchShim;
-    const monitor = new UpstreamMonitor({
-      httpFetch,
-      configProvider: configProvider ?? {},
-      logger,
-    });
-    monitor.start();
-    consoleServer.setUpstreamMonitor?.(monitor);
-    context.subscriptions.push({ dispose: () => monitor.dispose() });
-  } catch (err) {
-    logger.warn("UpstreamMonitor wiring skipped (non-critical)", {
-      error: err instanceof Error ? err.message : String(err),
-    });
-  }
 }
 
 /**
@@ -189,8 +229,14 @@ export function maybeAutoConnectBicameral(
     const cfg = vscode.workspace.getConfiguration("failsafe.integrations.bicameral");
     if (!cfg.get<boolean>("autoConnect", false)) return;
     const command = cfg.get<string>("command", "bicameral-mcp") || "bicameral-mcp";
+    // B-BIC-7 (audit Finding A): thread extraCommandRoots through the probe so
+    // auto-connect honours custom roots, not just the auto-applied defaults.
     try {
-      const probe = await probeInstallState({ command, workspaceRoot });
+      const probe = await probeInstallState({
+        command,
+        workspaceRoot,
+        extraRoots: readBicameralExtraRoots(cfg),
+      });
       if (probe.state !== "configured-not-running") return;
       const client = new BicameralMcpClient({ command, cwd: workspaceRoot });
       await client.connect();

@@ -10,6 +10,30 @@ import { QorLogicManager } from '../../qorelogic/QorLogicManager';
 import { L3ApprovalRequest } from '../../shared/types';
 import { escapeHtml, escapeJsString, getNonce } from '../../shared/utils/htmlSanitizer';
 
+/**
+ * B-INT-2: render bicameral-preflight conflict lines for an L3 entry's
+ * `meta`. Module-level export (not a private method) so it is unit-testable
+ * as a free function. Returns escaped conflict-line HTML, or '' when there
+ * is no `meta.preflight.driftedDecisions` evidence. Decision titles are
+ * escaped via escapeHtml (XSS guard).
+ */
+export function formatPreflightConflicts(
+    meta: Record<string, unknown> | undefined
+): string {
+    const preflight = meta?.preflight as { driftedDecisions?: unknown } | undefined;
+    const drifted = preflight?.driftedDecisions;
+    if (!Array.isArray(drifted) || drifted.length === 0) {
+        return '';
+    }
+    const lines = drifted.map((d) => {
+        const title = (d && typeof d === 'object' && 'title' in d)
+            ? String((d as { title: unknown }).title)
+            : 'unknown decision';
+        return `<div class="preflight-conflict">Conflicts with decision: ${escapeHtml(title)}</div>`;
+    }).join('');
+    return `<div class="item-preflight">${lines}</div>`;
+}
+
 export class L3ApprovalPanel {
     public static currentPanel: L3ApprovalPanel | undefined;
     private readonly panel: vscode.WebviewPanel;
@@ -156,6 +180,12 @@ export class L3ApprovalPanel {
             gap: 4px;
             margin-bottom: 12px;
         }
+        .item-preflight { margin-bottom: 12px; }
+        .preflight-conflict {
+            font-size: 11px;
+            color: #f85149;
+            padding: 2px 0;
+        }
         .flag {
             padding: 2px 6px;
             background: var(--vscode-badge-background);
@@ -203,6 +233,7 @@ export class L3ApprovalPanel {
                 Queued: ${escapeHtml(new Date(item.queuedAt).toLocaleString())}
             </div>
             <div class="item-summary">${escapeHtml(item.sentinelSummary)}</div>
+            ${formatPreflightConflicts(item.meta)}
             ${item.flags.length > 0 ? `
                 <div class="item-flags">
                     ${item.flags.map(f => `<span class="flag">${escapeHtml(f)}</span>`).join('')}

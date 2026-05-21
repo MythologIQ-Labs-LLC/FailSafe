@@ -5,7 +5,7 @@
 // argv cannot be poisoned by upstream string input.
 
 import * as child_process from 'child_process';
-import { isSafeBicameralCommand, probeInstallState } from './install-detector';
+import { isSafeBicameralCommandResolved, probeInstallState } from './install-detector';
 import { InstallMode, InstallProgressEvent, InstallStep, BicameralInstallState } from './types';
 
 const STDOUT_TAIL_BYTES = 2048;
@@ -62,7 +62,13 @@ export async function runBicameralInstall(
   }
   const pip = opts.pythonCommand ?? 'pip';
   const bicameral = opts.bicameralCommand ?? 'bicameral-mcp';
-  if (!isSafeBicameralCommand(pip) || !isSafeBicameralCommand(bicameral)) {
+  // B-BIC-6: resolve symlinks before spawn — a path inside an allowed root that
+  // resolves outside it is rejected here, before `runStep` reaches `spawn`.
+  const [pipSafe, bicameralSafe] = await Promise.all([
+    isSafeBicameralCommandResolved(pip),
+    isSafeBicameralCommandResolved(bicameral),
+  ]);
+  if (!pipSafe || !bicameralSafe) {
     return finish(opts, mode, [], 'Install rejected: unsafe pip or bicameral command name');
   }
 

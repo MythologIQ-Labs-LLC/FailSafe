@@ -4,6 +4,12 @@
 // Install is the only spawn-boundary route (delegates argv validation to
 // install-handler). Tool routes call BicameralMcpClient when it has been
 // wired by bootstrapServers; otherwise return 503 not-wired.
+//
+// B151: the 3 tool routes (history/drift/ratify) are governed through the
+// universal McpInterceptor when one is wired. The interceptor yields a B190
+// ReceiptContract; a non-ALLOW verdict short-circuits the route via the
+// receipt→HTTP table below. When no interceptor is wired (legacy fixtures)
+// the routes behave exactly as before migration.
 
 import { Request, Response } from "express";
 import {
@@ -16,6 +22,12 @@ import type {
   BicameralRatifyVerdict,
   BicameralMcpClient,
 } from "../../integrations/bicameral";
+import type { McpInterceptor, McpEnvelope } from "../../governance/interceptor";
+import type { ReceiptContract } from "../../contracts";
+import type {
+  BicameralDriftStatus,
+} from "../../integrations/bicameral/types";
+import type { BicameralVerdictEventPayload } from "../../shared/types/events";
 
 export interface BicameralRouteDeps {
   rejectIfRemote: (req: Request, res: Response) => boolean;
@@ -64,6 +76,105 @@ export interface BicameralRouteDeps {
   upstreamMonitor?: {
     getSnapshot(): import("../../integrations/bicameral/types").UpstreamSnapshot | null;
   };
+  /**
+   * B151: optional universal governance interceptor. When provided, the 3 tool
+   * routes (history/drift/ratify) govern their tool call through it before
+   * touching the bicameral client. A non-ALLOW receipt short-circuits via the
+   * receipt→HTTP table. Null/absent → routes behave exactly as pre-migration.
+   */
+  getMcpInterceptor?: () => McpInterceptor | null;
+  /**
+   * B-BIC-12: optional editor-open dep. When provided, the
+   * /api/actions/bicameral-open-binding route opens a decision's bound source
+   * file in the editor. Wired in bootstrapBicameral.ts to vscode.open so
+   * BicameralRoute.ts never imports vscode. Absent → that route 503s.
+   */
+  openFileInEditor?: (filePath: string, startLine?: number) => Promise<void>;
+  /**
+   * B-BIC-17/18 (Batch 4): optional event-bus handle. When provided, the
+   * drift handler emits one `bicameral.verdict` event per drifted/in-sync
+   * decision (skipping `unknown`) and the ratify handler emits a
+   * `verdict:'ratified'` event. Emits are non-blocking and absent-eventBus-
+   * safe — when omitted both handlers behave exactly as before.
+   */
+  eventBus?: {
+    emit(type: "bicameral.verdict", payload: BicameralVerdictEventPayload): void;
+  };
+}
+
+/**
+ * B-BIC-17/18: map a `BicameralDriftStatus` onto the `bicameral.verdict`
+ * event verdict enum (RD-1). `unknown` returns null — the drift handler
+ * skips those rows so only actionable verdicts reach the event bus.
+ */
+function mapDriftToVerdict(
+  status: BicameralDriftStatus["status"],
+): BicameralVerdictEventPayload["verdict"] | null {
+  if (status === "drifted") return "drifted";
+  if (status === "in-sync") return "in-sync";
+  return null;
+}
+
+/**
+ * B-BIC-17/18: emit one `bicameral.verdict` per drifted/in-sync decision in
+ * a drift result. Absent-eventBus-safe and exception-isolated — a faulty
+ * subscriber must never break the drift route response.
+ */
+function emitDriftVerdicts(
+  deps: BicameralRouteDeps,
+  drift: BicameralDriftStatus[],
+): void {
+  const bus = deps.eventBus;
+  if (!bus || !Array.isArray(drift)) return;
+  for (const row of drift) {
+    const verdict = mapDriftToVerdict(row.status);
+    if (!verdict) continue;
+    try {
+      bus.emit("bicameral.verdict", {
+        decisionId: row.decisionId,
+        verdict,
+        evidence: row.evidence,
+      });
+    } catch {
+      /* a faulty subscriber must not break the drift route (Batch 4) */
+    }
+  }
+}
+
+/**
+ * B151: receipt→HTTP mapping for non-ALLOW verdicts. ALLOW is absent — it
+ * means "proceed", handled by the caller. Each entry maps a blocking verdict
+ * to the HTTP status + error envelope returned in its place.
+ */
+const RECEIPT_HTTP_TABLE: Record<string, { status: number }> = {
+  BLOCK: { status: 403 },
+  ESCALATE: { status: 409 },
+  MODIFY: { status: 409 },
+  QUARANTINE: { status: 500 },
+};
+
+/**
+ * B151: govern a bicameral tool call through the optional McpInterceptor.
+ * Returns `null` when the route may proceed (no interceptor wired, or an ALLOW
+ * verdict). Returns `true` when the request has been answered by a non-ALLOW
+ * receipt (the caller must stop). Pure HTTP side effect on the `res`.
+ */
+async function governToolCall(
+  deps: BicameralRouteDeps,
+  envelope: McpEnvelope,
+  res: Response,
+): Promise<boolean> {
+  const interceptor = deps.getMcpInterceptor?.() ?? null;
+  if (!interceptor) return false;
+  const receipt: ReceiptContract = await interceptor.intercept(envelope);
+  if (receipt.verdict === "ALLOW") return false;
+  const mapped = RECEIPT_HTTP_TABLE[receipt.verdict] ?? { status: 500 };
+  res.status(mapped.status).json({
+    ok: false,
+    error: receipt.verdictRationale ?? `governance verdict: ${receipt.verdict}`,
+    verdict: receipt.verdict,
+  });
+  return true;
 }
 
 export function setupBicameralRoutes(
@@ -85,12 +196,19 @@ export function setupBicameralRoutes(
       // If the MCP client is currently connected, the effective state is
       // 'running' regardless of the underlying config probe.
       const state = connected ? "running" : probe.state;
+      // B-BIC-13: surface the client's tool capability set so the Integrations
+      // empty-state can gate the /bicameral-ingest hint. Empty array when no
+      // client is wired, the client predates getCapabilities (partial stubs),
+      // or capabilities haven't been populated.
+      const capabilities =
+        typeof client?.getCapabilities === "function" ? [...client.getCapabilities()] : [];
       res.json({
         ok: true,
         state,
         version: probe.version,
         configPath: probe.configPath,
         connected,
+        capabilities,
         autoConnect: deps.getAutoConnect(),
       });
     } catch (e) {
@@ -175,6 +293,10 @@ export function setupBicameralRoutes(
       return;
     }
     try {
+      // B151: govern the tool call through the universal interceptor.
+      if (await governToolCall(deps, { name: "bicameral.history", arguments: {} }, res)) {
+        return;
+      }
       const features = await client.history();
       res.json({ ok: true, features });
     } catch (e) {
@@ -200,6 +322,14 @@ export function setupBicameralRoutes(
       return;
     }
     try {
+      // B151: govern the tool call through the universal interceptor.
+      if (await governToolCall(
+        deps,
+        { name: "bicameral.drift", arguments: { file_path: filePath } },
+        res,
+      )) {
+        return;
+      }
       const drift = await client.drift(filePath);
       res.json({ ok: true, drift });
       // B-BIC-16: forward to drift-to-L3 mediator AFTER responding so a slow
@@ -208,6 +338,10 @@ export function setupBicameralRoutes(
       if (deps.driftToL3Mediator) {
         void deps.driftToL3Mediator.onDriftResult(drift).catch(() => undefined);
       }
+      // B-BIC-17/18 (Batch 4): emit one bicameral.verdict event per drifted/
+      // in-sync decision so Sentinel classification + the Risks Register
+      // mirror pick them up. Additive, non-blocking, absent-eventBus-safe.
+      emitDriftVerdicts(deps, drift);
     } catch (e) {
       res.status(500).json({ ok: false, error: String(e) });
     }
@@ -236,6 +370,14 @@ export function setupBicameralRoutes(
       return;
     }
     try {
+      // B151: govern the tool call through the universal interceptor.
+      if (await governToolCall(
+        deps,
+        { name: "bicameral.ratify", arguments: { decision_id: decisionId, verdict } },
+        res,
+      )) {
+        return;
+      }
       await client.ratify(decisionId, verdict);
       // B-BIC-1: anchor the operator's ratify decision into META_LEDGER as a
       // USER_OVERRIDE entry. Ratify is the canonical "operator intentionally
@@ -259,6 +401,43 @@ export function setupBicameralRoutes(
           /* ledger write failure is non-blocking by design (B-BIC-1) */
         }
       }
+      // B-BIC-17/18 (Batch 4): emit a bicameral.verdict event so a ratified
+      // decision closes its mirrored Risks Register entry. Additive, non-
+      // blocking, absent-eventBus-safe.
+      if (deps.eventBus) {
+        try {
+          deps.eventBus.emit("bicameral.verdict", {
+            decisionId,
+            verdict: "ratified",
+          });
+        } catch {
+          /* a faulty subscriber must not break the ratify route (Batch 4) */
+        }
+      }
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ ok: false, error: String(e) });
+    }
+  });
+
+  // POST /api/actions/bicameral-open-binding — open a decision's bound source
+  // file in the editor. B-BIC-12: additive route, not interceptor-governed (it
+  // opens an editor file, not an MCP tool call). The injected openFileInEditor
+  // dep resolves the path via vscode.Uri.file (no shell); 503 when unwired.
+  app.post("/api/actions/bicameral-open-binding", async (req: Request, res: Response) => {
+    if (deps.rejectIfRemote(req, res)) return;
+    if (!deps.openFileInEditor) {
+      res.status(503).json({ ok: false, error: "openFileInEditor not wired" });
+      return;
+    }
+    const filePath = typeof req.body?.filePath === "string" ? req.body.filePath : "";
+    if (!filePath) {
+      res.status(400).json({ ok: false, error: "filePath required (non-empty string)" });
+      return;
+    }
+    const startLine = typeof req.body?.startLine === "number" ? req.body.startLine : undefined;
+    try {
+      await deps.openFileInEditor(filePath, startLine);
       res.json({ ok: true });
     } catch (e) {
       res.status(500).json({ ok: false, error: String(e) });

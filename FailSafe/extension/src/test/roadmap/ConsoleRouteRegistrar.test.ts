@@ -6,6 +6,7 @@ import { strict as assert } from 'assert';
 import {
   ConsoleRouteRegistrar, type ConsoleRouteHost,
 } from '../../roadmap/services/ConsoleRouteRegistrar';
+import { EventBus } from '../../shared/EventBus';
 
 interface FakeRoute { method: string; path: string; }
 interface FakeUse { path: string | null; order: number; }
@@ -93,11 +94,13 @@ function makeHost(app: any, hub: any): ConsoleRouteHost {
     },
     featureGate: undefined,
     getBicameralClient: () => null,
+    getMcpInterceptor: () => null,
     getDriftToL3Mediator: () => null,
     getUpstreamMonitor: () => null,
     getBicameralCommand: () => "bicameral-mcp",
     getBicameralAutoConnect: () => false,
     setBicameralAutoConnect: async () => undefined,
+    eventBus: new EventBus(),
     getVoicePackPath: () => null,
   };
 }

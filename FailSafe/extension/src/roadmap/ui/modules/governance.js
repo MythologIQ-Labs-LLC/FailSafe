@@ -166,13 +166,15 @@ export class GovernanceRenderer {
       </div>`;
     }
     const rows = queue.map(item => `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;
-        border-bottom:1px solid var(--border-rim);font-size:0.82rem">
-        <div>
-          <span class="cc-badge cc-badge--${(item.riskGrade || 'medium').toLowerCase()}">${item.riskGrade || '?'}</span>
-          <span style="margin-left:6px">${this.esc(item.filePath || item.id)}</span>
+      <div style="padding:6px 0;border-bottom:1px solid var(--border-rim);font-size:0.82rem">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <span class="cc-badge cc-badge--${(item.riskGrade || 'medium').toLowerCase()}">${item.riskGrade || '?'}</span>
+            <span style="margin-left:6px">${this.esc(item.filePath || item.id)}</span>
+          </div>
+          <span style="color:var(--text-muted);font-size:0.7rem">${item.queuedAt || ''}</span>
         </div>
-        <span style="color:var(--text-muted);font-size:0.7rem">${item.queuedAt || ''}</span>
+        ${this.renderL3PreflightConflicts(item)}
       </div>`).join('');
 
     return `
@@ -185,6 +187,21 @@ export class GovernanceRenderer {
         </div>
         ${rows}
       </div>`;
+  }
+
+  /**
+   * B-INT-2: render a bicameral-preflight conflict line per drifted decision
+   * attached to an L3 entry's `meta.preflight`. Empty string when absent.
+   * Decision titles are escaped via `esc` (XSS guard).
+   */
+  renderL3PreflightConflicts(item) {
+    const drifted = item && item.meta && item.meta.preflight
+      && item.meta.preflight.driftedDecisions;
+    if (!Array.isArray(drifted) || drifted.length === 0) return '';
+    return drifted.map((d) => {
+      const title = this.esc(String((d && d.title) || 'unknown decision'));
+      return `<div class="l3-preflight-conflict" style="margin-top:4px;font-size:0.75rem;color:var(--accent-red)">Conflicts with decision: ${title}</div>`;
+    }).join('');
   }
 
   renderAuditLog() {

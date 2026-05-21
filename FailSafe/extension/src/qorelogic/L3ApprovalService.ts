@@ -12,9 +12,19 @@ import { LedgerManager } from './ledger/LedgerManager';
 import { TrustEngine } from './trust/TrustEngine';
 import { CortexEvent, RoutingDecision } from '../governance/EvaluationRouter';
 
+/** B-INT-2: minimal preflight-mediator surface injected into the service.
+ *  Declared locally (not a hard import of PreflightToL3Mediator) so the
+ *  qorelogic layer has no dependency on the bicameral integration layer. */
+export interface PreflightMediatorLike {
+    onTier3Queued(approvalId: string, targetPath: string): Promise<void>;
+}
+
 export class L3ApprovalService {
     private readonly logger: Logger;
     private l3Queue: L3ApprovalRequest[] = [];
+    /** B-INT-2: optional bicameral preflight mediator. Absent → tier-3
+     *  queueing is unchanged; set by bootstrapBicameral when wired. */
+    private preflightMediator: PreflightMediatorLike | null = null;
 
     constructor(
         private readonly stateStore: IStateStore,
@@ -144,6 +154,40 @@ export class L3ApprovalService {
     }
 
     /**
+     * B-INT-2: register the bicameral preflight mediator. Optional — when
+     * unset, tier-3 queueing proceeds without a preflight check.
+     */
+    setPreflightMediator(mediator: PreflightMediatorLike | null): void {
+        this.preflightMediator = mediator;
+    }
+
+    /**
+     * B-INT-2: attach bicameral preflight evidence onto a queued L3 entry.
+     * Mutates the live in-memory `l3Queue` entry in place (mirrors the
+     * `decideL3` findIndex→mutate→persist pattern) then persists. MUST NOT
+     * call loadQueue()/refreshFromWorkspace() — those reassign `l3Queue`
+     * from the store and would clobber concurrent in-memory mutations.
+     * No-op (no throw, no persist) when the id is not found. Idempotent.
+     */
+    async attachPreflightEvidence(
+        approvalId: string,
+        preflightMeta: Record<string, unknown>,
+        flag: string,
+    ): Promise<void> {
+        const index = this.l3Queue.findIndex(r => r.id === approvalId);
+        if (index === -1) return;
+
+        const entry = this.l3Queue[index];
+        entry.meta = { ...entry.meta, preflight: preflightMeta };
+        if (!entry.flags.includes(flag)) {
+            entry.flags = [...entry.flags, flag];
+        }
+
+        await this.persistL3Queue();
+        this.logger.info('L3 preflight evidence attached', { approvalId });
+    }
+
+    /**
      * Process an evaluation routing decision.
      */
     async processEvaluationDecision(
@@ -163,18 +207,27 @@ export class L3ApprovalService {
         }
 
         if (decision.tier === 3) {
+            const targetPath = event.payload?.targetPath as string;
             try {
-                await this.queueL3Approval({
+                const queuedId = await this.queueL3Approval({
                     agentDid: (event.payload?.intentId as string) || 'system',
                     agentTrust: decision.triage.confidence === 'high' ? 0.9 : 0.7,
-                    filePath: event.payload?.targetPath as string,
+                    filePath: targetPath,
                     riskGrade: mappedRisk,
                     sentinelSummary: `Tier 3 evaluation: ${decision.triage.risk} risk, ${decision.triage.novelty} novelty`,
                     flags: decision.requiredActions
                 });
+                // B-INT-2: fire preflight non-blocking (RD-1) — the L3 entry
+                // is already queued and visible; the conflict line appears on
+                // the next hub rebuild once preflight returns.
+                if (this.preflightMediator && targetPath) {
+                    void this.preflightMediator
+                        .onTier3Queued(queuedId, targetPath)
+                        .catch(() => undefined);
+                }
             } catch (error) {
                 this.logger.error('Failed to queue L3 approval from evaluation', {
-                    filePath: event.payload?.targetPath,
+                    filePath: targetPath,
                     error: error instanceof Error ? error.message : String(error)
                 });
             }

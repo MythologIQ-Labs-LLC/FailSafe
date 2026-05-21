@@ -148,6 +148,25 @@ export class SentinelWatchPolicy {
     }
 
     /**
+     * B-BIC-17 (Batch 4): classify a bicameral verdict for Sentinel.
+     *
+     * Pure sibling of the file-path classifiers — RD-2: classification-only.
+     * A `'drifted'` verdict is operator-actionable, so it surfaces as a
+     * high-priority notifying event; `'ratified'` and `'in-sync'` are benign
+     * (`normal`, no notify). Any unrecognised verdict falls back to the safe
+     * benign default. This method does NOT make a verdict a `SentinelEvent`
+     * nor route it to `VerdictArbiter`.
+     */
+    classifyBicameralVerdict(
+        verdict: string,
+    ): { priority: 'high' | 'normal'; notify: boolean } {
+        if (verdict === 'drifted') {
+            return { priority: 'high', notify: true };
+        }
+        return { priority: 'normal', notify: false };
+    }
+
+    /**
      * Pick priority from path heuristics.
      */
     determinePriority(filePath: string): SentinelEvent['priority'] {

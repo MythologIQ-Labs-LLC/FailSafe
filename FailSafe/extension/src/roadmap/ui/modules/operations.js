@@ -12,6 +12,10 @@ export class OperationsRenderer {
 
   async render(hubData) {
     if (!this.container) return;
+    // B198 (RD-4): a re-render re-arms the renderer so a subsequent destroy()
+    // is not a no-op — destroy→render→destroy must tear down the second
+    // render's listeners, not skip teardown on the stale _destroyed flag.
+    this._destroyed = false;
     // B198: each render consumes the freshest hub argument rather than a
     // cached payload baked in at construction. Roadmap is fetched lazily once
     // (it is static across a session) but hub-derived state — including

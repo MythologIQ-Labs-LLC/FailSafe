@@ -19451,3 +19451,68 @@ _Next: operator next-up selection. B151 is the natural follow-up given the unloc
 _Chain integrity: VALID_
 _Session Status: B190 SEALED at Entry #383; 19 mocha cases pass; PUBLISH_BLOCK unchanged. New branch feat/b190-governance-contracts awaits push/PR._
 _Session: 2026-05-20-b190-governance-contracts-substantiation-seal_
+
+### Entry #384: SESSION SEAL — v5.1.7 consolidated cycle (B151 + B191 + B-INT-2 + B198 + B-BIC-6/7/12-15/17-18 + B-B199-3/4/5/6)
+
+**Entry ID**: `500151eae76a`
+**Date**: 2026-05-21
+**Phase**: substantiate
+**Plans**: `docs/plan-qor-b151-governance-interceptor.md`, `docs/plan-qor-b-int-2-preflight-l3.md`, `docs/plan-qor-b198-subscribe-without-mutate.md`, `docs/plan-qor-batch1-bbic-decision-row-ux.md`, `docs/plan-qor-batch2-bbic-validator-hardening.md`, `docs/plan-qor-batch3-b199-coverage-gaps.md`, `docs/plan-qor-batch4-bbic-governance-integration.md`
+**Audit reference**: Per-plan audits. B151, B-INT-2, and B198 each cleared a VETO -> re-plan -> PASS cycle via an independent reviewer; the B-BIC batches and the B-B199 coverage batch carried per-plan PASS verdicts. Carry-over recorded in `.failsafe/governance/SESSION_STATE_b151-governance-interceptor.md` and `SESSION_STATE_b191-bint2-b198-batch.md`.
+**Implementation reference**: 10 commits on `feat/b151-governance-interceptor` ahead of `main` -- `840fdc8` (B151) through `f044f14` (B-BIC-17/18). B190 (Entry #383) is the rebased ancestor that opened this branch lineage and is not re-sealed here.
+
+## Substantiation summary
+
+Consolidated seal for the v5.1.7 staging cycle. One entry covers seven plans completed and committed since Entry #383 (B190).
+
+- **B151 -- universal governance interceptor.** `IGovernanceInterceptor` single-`evaluate` seam at `src/governance/interceptor/`; `EngineBackedInterceptor` (Verdict -> ReceiptContract); `McpInterceptor` adapter; `contractMappers`. `BicameralRoute` history/drift/ratify migrated through `McpInterceptor` with a behavioural-parity fixture proving zero behaviour change. Unlocks B152 -> B153.
+- **B191 -- Monitor SHIELD-activity visibility.** Verify-and-close (L1): research confirmed B192/B193/B199 already resolved the visibility gap; the FX525 disk -> `/api/hub` -> Monitor parity assertion was strengthened.
+- **B-INT-2 -- bicameral.preflight -> L3.** `PreflightToL3Mediator` + `L3ApprovalService.attachPreflightEvidence` + tier-3 non-blocking preflight wiring + L3 preflight-conflict UI.
+- **B198 -- subscribe-without-mutate UI remediation.** Shared accessible `modal-helper`; `SkillsRenderer` event-driven cache invalidation; `TabGroup` sub-view lifecycle cleanup with re-render-safe `destroy()`.
+- **B-BIC-12/13/14/15 -- bicameral decision-row UX.** Open-binding route + affordance; capability-gated ingest hint; composite Sync; binding overflow clamp.
+- **B-BIC-6/7 -- install-detector validator hardening.** `isSafeBicameralCommandResolved` symlink-containment re-check (fail-closed); `extraRoots` allowlist; Windows chocolatey/scoop default roots.
+- **B-BIC-17/18 -- bicameral governance integration.** `bicameral.verdict` event; `SentinelWatchPolicy.classifyBicameralVerdict`; `RiskRegisterManager` keyed lifecycle; `DriftToRiskMediator`.
+- **B-B199-3/4/5/6 -- test-coverage gaps.** E2E coverage-gate hardening (`check-e2e-coverage.cjs` per-file-scoped overrides + release-range mode + audit trail); cross-host install-record coverage; voice-substrate and stub-only specs resolved as documented trade-offs in `docs/TEST_COVERAGE_TRADEOFFS.md`.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| Branch typecheck (`tsc --noEmit -p ./` at HEAD `f044f14`) | clean, exit 0 -- verified directly this session |
+| Per-cycle mocha (degraded posture) | FX547-FX552 30/30; FX553-FX560, FX561-FX569, FX570-FX575, FX580-FX583 green per per-plan session-state attestation (not independently re-run this session) |
+| FEATURE_INDEX | FX547-FX583 present; all rows `verified` |
+| Section 4 Razor | razor-compliant per per-plan audits (extractions applied where the 250-line ceiling was hit) |
+| Merkle chain adjacency | Previous Hash = Entry #383 Chain Hash; Chain Hash = SHA256(content + previous) -- arithmetic verified against `meta-ledger-repair.cjs` |
+
+## Skipped per protocol (degraded-wiring posture)
+
+- Full `vscode-test` electron suite remains blocked by the stuck `vscode-updating` mutex (B190 Entry #383 precedent). jsdom 27 transitive `ERR_REQUIRE_ESM` required the `npx mocha` ESM-bridge harness for UI specs. Per-cycle cases were independently code-reviewed as genuine and are structured to run under `vscode-test` once the mutex clears.
+- The Python `qor.scripts.*` / `qor.reliability.*` seal toolkit is not vendored in this repo. Seal-helper steps (4.6 reliability sweep, 4.6.5 secret scanner, 4.7 doc-integrity, 6.5 badge currency, 7.4 SSDF tagger, 7.7/7.8 post-seal checks, 8.5 dist recompile) recorded SKIP -- prerequisite absent. No `gate_skipped_prerequisite_absent` shadow channel exists in this repo to emit to.
+- No version bump, no git tag -- both are `/qor-repo-release` actions; this seal is the stage-only Review Boundary.
+
+## Content Hash
+
+**Content Hash**: `500151eae76a47b61b590b8433b602defd6d32cc7d73030b2232a0d9d4f1409c`
+**Previous Hash**: `9a46873819fb1b12b58830fc551bc8381deaa6411517668876fe454c3975f6fc` (Entry #383)
+**Chain Hash**: `4fb75c57b6da883d0b2a8dbcfca60afa60b7b60352b949b74b2f1d4268eb73b7`
+**Merkle Seal**: `2cf86debfec2f82aa95c37af252bc2dfe89c1e0293e009ff0f5a0c759917ae43` -- gate_workspace_audit_v5_1_7_consolidated_cycle_PASS
+**Session ID**: `2026-05-21-v5-1-7-consolidated-cycle-substantiation-seal`
+
+_Hash provenance_: Content Hash = `SHA256` of the `git rev-list main..HEAD` output (10 commit SHAs, `840fdc8`..`f044f14`), reproducible via `git rev-list main..HEAD | sha256sum`. Chain Hash = `SHA256(content_hash + previous_hash)` and Merkle Seal = `SHA256(chain_hash + gate_label)` per the canonical `meta-ledger-repair.cjs legacyHash` arithmetic. Previous Hash = Entry #383 Chain Hash (adjacency preserved).
+
+## Review Boundary attestation
+
+No marketplace publish -- `PUBLISH_BLOCK` unchanged; v5.1.7 is pre-v5.2.0 / v5.2.0-baseline work. No push, no PR, no tag this session. CHANGELOG `[Unreleased] -- v5.1.7 (draft)` authored with full Added/Changed/Security/Documentation detail sections. `package.json` remains `5.1.6` -- version bump deferred to `/qor-repo-release`.
+
+## Decision
+
+**SEAL -- Reality matches Promise.** B151, B191, B-INT-2, B198, B-BIC-6/7/12/13/14/15/17/18, and B-B199-3/4/5/6 closed. The B190 -> B151 -> B152 -> B153 architecture chain advances: B151 sealed; B152 (runtime extraction) is next.
+
+_Chain Status: v5.1.7 consolidated cycle SEALED at Entry #384._
+_Next: operator review of the staged seal commit; then `/qor-repo-release` when v5.1.7 is cut, or B152 as the next cycle._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: v5.1.7 cycle SEALED at Entry #384; branch feat/b151-governance-interceptor 10 commits ahead of main; tsc clean; PUBLISH_BLOCK unchanged; awaits operator commit + push/PR._
+_Session: 2026-05-21-v5-1-7-consolidated-cycle-substantiation-seal_

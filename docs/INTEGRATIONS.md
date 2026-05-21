@@ -30,11 +30,21 @@ When the operator clicks **Connect**, FailSafe opens an MCP stdio session and ca
 | Tool | Used for | Return shape (parsed) |
 |---|---|---|
 | `bicameral.history` | List feature-scoped decisions to render in the Integrations tab | `BicameralFeatureBrief[]` |
-| `bicameral.preflight` | (Reserved — Phase 2 wiring lands in a follow-up cycle) | `BicameralPreflightResult` |
+| `bicameral.preflight` | Decision-drift check run when a tier-3 action is queued for L3 approval (B-INT-2) | `BicameralPreflightResult` |
 | `bicameral.drift` | Per-file drift status when a file path is supplied | `BicameralDriftStatus[]` |
 | `bicameral.ratify` | Operator confirms or rejects a single decision | void (boolean status implicit in HTTP 200) |
 
 The remaining nine tools (`ingest`, `search`, `brief`, `judge_gaps`, `resolve_compliance`, `link_commit`, `update`, `reset`, `dashboard`, `validate_symbols`, `get_neighbors`) are tracked as follow-ups in `docs/BACKLOG.md` (**B-INT-1**).
+
+### Preflight on the L3 approval card (B-INT-2)
+
+When the governance pipeline routes a tier-3 (high-risk) action to the L3 approval queue, FailSafe runs `bicameral.preflight` against the target file. If the file conflicts with one or more prior bicameral decisions, the drift evidence is attached to the pending L3 entry (`meta.preflight`) and surfaces inline on the approval card as a "Conflicts with decision: …" line, so the operator sees the conflict *before* approving the action.
+
+Preflight runs asynchronously, after the L3 entry is already queued — the approval card appears immediately and the conflict line is added on the next hub rebuild once preflight returns. When the Bicameral MCP client is absent or disconnected, the check is a silent no-op: the L3 entry stands without a conflict line.
+
+### Drift in Sentinel + the Risks Register (B-BIC-17/18)
+
+Each `bicameral.drift` and `bicameral.ratify` call also emits a `bicameral.verdict` event on the FailSafe event bus. Two governance surfaces consume it. **Sentinel** classifies the verdict (B-BIC-17): a `drifted` verdict is high-priority and notifying, while `ratified` and `in-sync` are benign — a notifying verdict is surfaced over the existing WebSocket broadcast channel (classification only; it is not turned into a Sentinel arbitration event). The **Risks Register** mirrors drift (B-BIC-18): a `drifted` verdict upserts a risk entry keyed `bicameral:{decisionId}` so it appears in the Risks tab; ratifying that decision closes the entry. The mirror is idempotent and exception-isolated — a register write failure never breaks the drift/ratify route response.
 
 ### Settings
 
@@ -143,6 +153,22 @@ No new operator-visible settings in v1. The pack version is derived from the ext
 - Auto-update beyond manual reinstall.
 - Per-platform pack variants (current Piper + Whisper assets are platform-neutral WASM/JS).
 - Voice-pack mirror hosting / offline install.
+
+### Test coverage
+
+The Voice Pack **supply-chain trust boundary** is unit-covered:
+`resolveVoicePackUrl()` version validation + canonical GitHub Releases asset
+URL construction, the `ALLOWED_REDIRECT_HOSTS` redirect-target allowlist, and
+the `installVoicePack()` SHA-256 mismatch abort are all exercised in
+`src/test/extension/voice-pack-install.test.ts`. The Settings-card UI flow is
+covered by the Playwright spec `src/test/ui/voice-pack.spec.ts`, which stubs the
+GitHub Release download via `page.route()`.
+
+Real Whisper transcription / Piper audio playback and a live tarball download
+are a **deliberate, documented coverage trade-off** — the vendor binaries ship
+as a separate companion download and are absent from CI by design. See
+[`docs/TEST_COVERAGE_TRADEOFFS.md`](TEST_COVERAGE_TRADEOFFS.md) (B-B199-3 /
+B-B199-6) for the full rationale and accepted residual risk.
 
 ### License credit
 
