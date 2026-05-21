@@ -150,6 +150,22 @@ No new operator-visible settings in v1. The pack version is derived from the ext
 - Per-platform pack variants (current Piper + Whisper assets are platform-neutral WASM/JS).
 - Voice-pack mirror hosting / offline install.
 
+### Test coverage
+
+The Voice Pack **supply-chain trust boundary** is unit-covered:
+`resolveVoicePackUrl()` version validation + canonical GitHub Releases asset
+URL construction, the `ALLOWED_REDIRECT_HOSTS` redirect-target allowlist, and
+the `installVoicePack()` SHA-256 mismatch abort are all exercised in
+`src/test/extension/voice-pack-install.test.ts`. The Settings-card UI flow is
+covered by the Playwright spec `src/test/ui/voice-pack.spec.ts`, which stubs the
+GitHub Release download via `page.route()`.
+
+Real Whisper transcription / Piper audio playback and a live tarball download
+are a **deliberate, documented coverage trade-off** — the vendor binaries ship
+as a separate companion download and are absent from CI by design. See
+[`docs/TEST_COVERAGE_TRADEOFFS.md`](TEST_COVERAGE_TRADEOFFS.md) (B-B199-3 /
+B-B199-6) for the full rationale and accepted residual risk.
+
 ### License credit
 
 `piper-tts-web` is the work of its upstream maintainers. `@xenova/transformers` is the work of HuggingFace and the Transformers.js maintainers. ONNX Runtime is the work of the Microsoft ONNX Runtime project. All three are distributed under their own licenses (consult upstream READMEs). FailSafe's voice substrate code (engines, controllers, UI cards, install handler, route module) is part of the FailSafe extension and ships under the FailSafe license; no upstream source is vendored or redistributed in the base VSIX. The companion voice pack mirrors the existing license terms of each upstream.

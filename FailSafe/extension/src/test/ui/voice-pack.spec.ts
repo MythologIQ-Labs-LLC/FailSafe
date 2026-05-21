@@ -3,6 +3,17 @@
 // Stubs the actual install/uninstall POSTs via page.route() so no real
 // GitHub Releases download happens; the harness's VoicePackRoute is wired
 // against a temp globalStoragePath that voicePackInstalled fixture controls.
+//
+// ===========================================================================
+// STUB-ONLY — see docs/TEST_COVERAGE_TRADEOFFS.md (B-B199-3 / B-B199-6).
+// This spec exercises the Voice Pack Settings-card UI wiring against
+// page.route() stubs. It does NOT download the real voice-pack tarball and
+// would NOT pass against a real install. The supply-chain trust boundary
+// (URL resolution + redirect allowlist + SHA-256 verify) is unit-covered in
+// voice-pack-install.test.ts; live Whisper/Piper behavior is a deliberate,
+// documented coverage trade-off (binaries ship as a separate companion
+// download).
+// ===========================================================================
 
 import { test, expect } from '@playwright/test';
 
