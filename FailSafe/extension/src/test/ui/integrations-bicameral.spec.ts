@@ -9,6 +9,15 @@
 // The install picker (not-installed state) is covered as a separate test that
 // does NOT trigger the install action; the real install path is covered by
 // the existing install-handler unit tests under src/test/integrations/bicameral.
+//
+// ===========================================================================
+// STUB-ONLY — see docs/TEST_COVERAGE_TRADEOFFS.md (B-B199-6).
+// This spec exercises the Bicameral Integrations-tab UI wiring against a
+// pre-wired stub BicameralMcpClient. It does NOT spawn a real bicameral-mcp
+// server and would NOT pass against a real install. The real install/connect
+// path is covered by the unit tests under src/test/integrations/bicameral.
+// Stub-vs-real boundary is a deliberate, documented coverage trade-off.
+// ===========================================================================
 
 import { test, expect } from '@playwright/test';
 
