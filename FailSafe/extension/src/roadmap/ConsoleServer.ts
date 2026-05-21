@@ -101,6 +101,8 @@ export class ConsoleServer {
   private bicameralClient: import("../integrations/bicameral").BicameralMcpClient | null = null;
   /** B151: universal governance interceptor wired by bootstrapBicameral. */
   private mcpInterceptor: import("../governance/interceptor").McpInterceptor | null = null;
+  /** B-BIC-12: editor-open dep wired by bootstrapBicameral (vscode.open). */
+  private bicameralOpenFileInEditor: ((filePath: string, startLine?: number) => Promise<void>) | null = null;
   private bicameralCommand = "bicameral-mcp";
   private bicameralAutoConnect = false;
   private bicameralAutoConnectWriter: (value: boolean) => Promise<void> = async () => {};
@@ -184,6 +186,11 @@ export class ConsoleServer {
    *  routes govern their tool calls through it. Null in test fixtures. */
   setMcpInterceptor(i: import("../governance/interceptor").McpInterceptor | null): void { this.mcpInterceptor = i; }
   getMcpInterceptor(): import("../governance/interceptor").McpInterceptor | null { return this.mcpInterceptor; }
+  /** B-BIC-12: register the editor-open dep so the bicameral-open-binding route
+   *  can open a decision's bound source file. Wired by bootstrapBicameral to
+   *  vscode.open; null in test fixtures (route 503s). */
+  setBicameralOpenFileInEditor(fn: ((filePath: string, startLine?: number) => Promise<void>) | null): void { this.bicameralOpenFileInEditor = fn; }
+  getBicameralOpenFileInEditor(): ((filePath: string, startLine?: number) => Promise<void>) | null { return this.bicameralOpenFileInEditor; }
   /** B-BIC-16: drift-to-L3 mediator slot. Set by bootstrapBicameral when
    *  l3Service + eventBus + logger deps are available. Null in test fixtures
    *  that don't wire the mediator. */
@@ -276,6 +283,7 @@ export class ConsoleServer {
       audioVaultService: this.audioVaultService,
       getBicameralClient: () => this.bicameralClient,
       getMcpInterceptor: () => this.mcpInterceptor,
+      getBicameralOpenFileInEditor: () => this.bicameralOpenFileInEditor,
       getDriftToL3Mediator: () => this.driftToL3Mediator,
       getUpstreamMonitor: () => this.upstreamMonitor,
       getBicameralCommand: () => this.bicameralCommand,

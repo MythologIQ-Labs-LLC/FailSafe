@@ -79,6 +79,13 @@ export interface BicameralRouteDeps {
    * receipt→HTTP table. Null/absent → routes behave exactly as pre-migration.
    */
   getMcpInterceptor?: () => McpInterceptor | null;
+  /**
+   * B-BIC-12: optional editor-open dep. When provided, the
+   * /api/actions/bicameral-open-binding route opens a decision's bound source
+   * file in the editor. Wired in bootstrapBicameral.ts to vscode.open so
+   * BicameralRoute.ts never imports vscode. Absent → that route 503s.
+   */
+  openFileInEditor?: (filePath: string, startLine?: number) => Promise<void>;
 }
 
 /**
@@ -136,12 +143,19 @@ export function setupBicameralRoutes(
       // If the MCP client is currently connected, the effective state is
       // 'running' regardless of the underlying config probe.
       const state = connected ? "running" : probe.state;
+      // B-BIC-13: surface the client's tool capability set so the Integrations
+      // empty-state can gate the /bicameral-ingest hint. Empty array when no
+      // client is wired, the client predates getCapabilities (partial stubs),
+      // or capabilities haven't been populated.
+      const capabilities =
+        typeof client?.getCapabilities === "function" ? [...client.getCapabilities()] : [];
       res.json({
         ok: true,
         state,
         version: probe.version,
         configPath: probe.configPath,
         connected,
+        capabilities,
         autoConnect: deps.getAutoConnect(),
       });
     } catch (e) {
@@ -330,6 +344,30 @@ export function setupBicameralRoutes(
           /* ledger write failure is non-blocking by design (B-BIC-1) */
         }
       }
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ ok: false, error: String(e) });
+    }
+  });
+
+  // POST /api/actions/bicameral-open-binding — open a decision's bound source
+  // file in the editor. B-BIC-12: additive route, not interceptor-governed (it
+  // opens an editor file, not an MCP tool call). The injected openFileInEditor
+  // dep resolves the path via vscode.Uri.file (no shell); 503 when unwired.
+  app.post("/api/actions/bicameral-open-binding", async (req: Request, res: Response) => {
+    if (deps.rejectIfRemote(req, res)) return;
+    if (!deps.openFileInEditor) {
+      res.status(503).json({ ok: false, error: "openFileInEditor not wired" });
+      return;
+    }
+    const filePath = typeof req.body?.filePath === "string" ? req.body.filePath : "";
+    if (!filePath) {
+      res.status(400).json({ ok: false, error: "filePath required (non-empty string)" });
+      return;
+    }
+    const startLine = typeof req.body?.startLine === "number" ? req.body.startLine : undefined;
+    try {
+      await deps.openFileInEditor(filePath, startLine);
       res.json({ ok: true });
     } catch (e) {
       res.status(500).json({ ok: false, error: String(e) });

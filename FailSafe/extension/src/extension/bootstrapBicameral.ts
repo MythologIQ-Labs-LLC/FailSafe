@@ -35,6 +35,12 @@ interface ConsoleServerSurface {
   /** B151: register the universal governance interceptor that the bicameral
    *  tool routes govern through. Null when no enforcement engine is wired. */
   setMcpInterceptor?(i: McpInterceptor | null): void;
+  /** B-BIC-12: register the editor-open dep so the bicameral-open-binding
+   *  route can open a decision's bound source file. Optional on the surface so
+   *  older test fixtures that don't expose it are tolerated. */
+  setBicameralOpenFileInEditor?(
+    fn: ((filePath: string, startLine?: number) => Promise<void>) | null,
+  ): void;
   /** B-BIC-16: setter for the drift-to-L3 mediator so the BicameralRoute
    *  drift handler can forward results without threading the mediator
    *  through every call site. Null when no mediator wired (test fixtures). */
@@ -128,6 +134,18 @@ export function wireBicameralIntegration(
   };
 
   wireFromConfig();
+  // B-BIC-12: wire the editor-open dep so the bicameral-open-binding route can
+  // open a decision's bound source file. Resolves the path via vscode.Uri.file
+  // (no shell) and scrolls to startLine via the open command's selection.
+  consoleServer.setBicameralOpenFileInEditor?.(async (filePath, startLine) => {
+    const line = Math.max(0, (startLine ?? 1) - 1);
+    const position = new vscode.Position(line, 0);
+    await vscode.commands.executeCommand(
+      "vscode.open",
+      vscode.Uri.file(filePath),
+      { selection: new vscode.Range(position, position) },
+    );
+  });
   consoleServer.setBicameralAutoConnectWriter(async (value) => {
     await vscode.workspace
       .getConfiguration("failsafe.integrations.bicameral")

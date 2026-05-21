@@ -8,6 +8,8 @@ export const INITIAL_BICAMERAL_STATE = {
   version: undefined,
   features: [],   // [{ feature: string, decisions: Decision[] }]
   driftByFile: {},
+  /** B-BIC-13: tool capabilities reported by the connected MCP client. */
+  capabilities: [],
   error: null,
   requesting: false,
   /** Active install progress (when user triggered install from card). */
@@ -43,13 +45,16 @@ function renderHeader(state) {
   const versionTag = state.version
     ? `<span style="font-size:0.7rem;color:var(--text-muted)">v${esc(state.version)}</span>`
     : '';
+  // B-BIC-14: when connected (running), the header button performs a composite
+  // status+history+drift refresh — relabel it "Sync" to reflect that.
+  const detectLabel = state.installState === 'running' ? 'Sync' : 'Detect again';
   return `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <div style="display:flex;align-items:center;gap:10px">
         <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em">Bicameral MCP</div>
         ${versionTag}
       </div>
-      <button class="cc-btn" data-action="bicameral-detect" style="font-size:0.75rem;padding:4px 10px">Detect again</button>
+      <button class="cc-btn" data-action="bicameral-detect" style="font-size:0.75rem;padding:4px 10px">${detectLabel}</button>
     </div>
   `;
 }
@@ -147,22 +152,36 @@ function renderConfiguredNotRunning(state) {
   `;
 }
 
+// B-BIC-15: clamp the binding `<code>` to its container so a long file path
+// ellipsizes instead of pushing the Ratify control past the card's edge.
+const BINDING_OVERFLOW = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block';
+
 function renderDecisionRow(decision, driftByFile) {
   const binding = (decision.bindings || [])[0];
   const bindingText = binding
-    ? `<code style="font-size:0.72rem;color:var(--text-muted)">${esc(binding.filePath)}${binding.symbol ? ':' + esc(binding.symbol) : ''}</code>`
+    ? `<code style="font-size:0.72rem;color:var(--text-muted);${BINDING_OVERFLOW}">${esc(binding.filePath)}${binding.symbol ? ':' + esc(binding.symbol) : ''}</code>`
     : '';
   const driftEntry = binding ? (driftByFile[binding.filePath] || []).find((d) => d.decisionId === decision.id) : null;
   const effectiveStatus = driftEntry ? driftEntry.status : decision.status;
+  // B-BIC-12: an "Open" affordance opens the bound source file in the editor.
+  const openBtn = binding
+    ? `<button class="cc-btn" data-action="bicameral-open-binding"
+        data-file-path="${esc(binding.filePath)}" data-start-line="${esc(binding.startLine ?? 1)}"
+        style="font-size:0.7rem;padding:3px 8px">Open</button>`
+    : '';
+  // B-BIC-15: `min-width:0` on the row lets it shrink below its content width
+  // so the inner `flex:1;min-width:0` div — and therefore the binding `<code>`
+  // — clamps and ellipsizes instead of the row widening past the card.
   return `
     <div class="cc-bicameral-decision" data-decision-id="${esc(decision.id)}"
-      style="padding:8px 10px;border:1px solid var(--border-rim);border-radius:4px;display:flex;justify-content:space-between;align-items:center;gap:12px">
+      style="padding:8px 10px;border:1px solid var(--border-rim);border-radius:4px;display:flex;justify-content:space-between;align-items:center;gap:12px;min-width:0">
       <div style="flex:1;min-width:0">
         <div style="font-size:0.85rem;color:var(--text-main);margin-bottom:2px">${esc(decision.title)}</div>
         ${bindingText}
       </div>
       <div style="display:flex;align-items:center;gap:8px">
         ${statusBadge(effectiveStatus)}
+        ${openBtn}
         <button class="cc-btn" data-action="bicameral-ratify" data-decision-id="${esc(decision.id)}" data-verdict="ratify"
           style="font-size:0.7rem;padding:3px 8px">Ratify</button>
       </div>
@@ -191,9 +210,16 @@ function renderFeatureSection(brief, driftByFile) {
 function renderRunning(state) {
   const refreshDisabled = state.requesting ? 'disabled' : '';
   if (state.features.length === 0) {
+    // B-BIC-13: only suggest /bicameral-ingest when the connected client
+    // actually reports the `ingest` capability. Otherwise show capability-
+    // neutral copy so the empty-state never advertises an absent tool.
+    const canIngest = Array.isArray(state.capabilities) && state.capabilities.includes('ingest');
+    const emptyCopy = canIngest
+      ? `Connected. No decisions yet — paste a transcript or PRD to <code style="background:var(--bg-dark);padding:1px 5px;border-radius:3px">/bicameral-ingest</code>.`
+      : `Connected. No decisions yet — record decisions in Bicameral to populate this feed.`;
     return `
       <div style="padding:16px 0;font-size:0.85rem;color:var(--text-muted)">
-        Connected. No decisions yet — paste a transcript or PRD to <code style="background:var(--bg-dark);padding:1px 5px;border-radius:3px">/bicameral-ingest</code>.
+        ${emptyCopy}
       </div>
       <button class="cc-btn" data-action="bicameral-refresh" ${refreshDisabled}
         style="font-size:0.75rem;padding:4px 10px;margin-top:8px">${state.requesting ? 'Refreshing…' : 'Refresh'}</button>
@@ -259,6 +285,16 @@ export function bindBicameralCard(container, options = {}) {
       const id = target.getAttribute('data-decision-id') || '';
       const verdict = target.getAttribute('data-verdict') || 'ratify';
       options.onRatify?.(id, verdict);
+    });
+  });
+  // B-BIC-12: open a decision's bound source file in the editor.
+  card.querySelectorAll('[data-action="bicameral-open-binding"]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      const target = e.currentTarget;
+      const filePath = target.getAttribute('data-file-path') || '';
+      const rawLine = target.getAttribute('data-start-line');
+      const startLine = rawLine ? Number(rawLine) : undefined;
+      options.onOpenBinding?.(filePath, startLine);
     });
   });
   card.querySelectorAll('[data-action="bicameral-install"]').forEach((btn) => {
