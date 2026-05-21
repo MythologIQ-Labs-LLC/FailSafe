@@ -22,6 +22,9 @@ export class SkillsRenderer {
 
   async render(hubData) {
     if (!this.container) return;
+    // B198 Phase 1: retain the last hub so a cache-invalidating event can
+    // re-render from the freshest payload without a new fetch API.
+    this._lastHub = hubData;
     this.currentPhase = hubData.runState?.currentPhase || '';
 
     // Render view toggle first
@@ -301,6 +304,15 @@ export class SkillsRenderer {
         this.marketplaceRenderer.onEvent(data);
       }
     }
+    // B198 Phase 1 (OQ-A): a skills.* / voicePack.* event means the installed
+    // set changed — drop the cached list so the next renderSkillsView re-fetches
+    // (its !this.skills.length guard becomes true), then re-render from the
+    // last hub. Unrelated events leave the cache intact.
+    const type = data?.type || '';
+    if (type.startsWith('skills.') || type.startsWith('voicePack.')) {
+      this.skills = [];
+      if (this._lastHub) this.render(this._lastHub);
+    }
   }
 
   renderRightPanel() {
@@ -327,11 +339,19 @@ export class SkillsRenderer {
     `;
   }
 
+  /**
+   * B198 Phase 3: re-render-safe teardown (RD-4). Tears down the marketplace
+   * sub-renderer, clears the container DOM (detaching listeners bound during
+   * render), and drops the cached skills list + last-hub reference. A later
+   * render() re-initializes cleanly — re-fetching skills and re-binding events.
+   */
   destroy() {
     if (this.marketplaceRenderer) {
       this.marketplaceRenderer.destroy();
       this.marketplaceRenderer = null;
     }
     if (this.container) this.container.innerHTML = '';
+    this.skills = [];
+    this._lastHub = null;
   }
 }

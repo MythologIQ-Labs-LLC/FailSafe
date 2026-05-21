@@ -1,6 +1,8 @@
 // FailSafe Command Center — Risk Register Renderer
 // Summary cards, risk list, CRUD modal, real-time updates.
 
+import { openModal } from './modal-helper.js';
+
 const SEVERITIES = ['critical', 'high', 'medium', 'low'];
 
 export class RisksRenderer {
@@ -8,6 +10,7 @@ export class RisksRenderer {
     this.container = document.getElementById(containerId);
     this.client = deps.client || null;
     this.risks = [];
+    this._modal = null;
   }
 
   render(hubData) {
@@ -104,43 +107,46 @@ export class RisksRenderer {
   }
 
   openModal(existing = null) {
-    const overlay = document.createElement('div');
-    overlay.className = 'cc-modal-overlay';
     const title = existing ? 'Edit Risk' : 'Add Risk';
-    overlay.innerHTML = `
-      <div class="cc-modal">
-        <h3 style="margin:0 0 12px">${title}</h3>
-        <label style="display:block;margin-bottom:8px;font-size:0.8rem;color:var(--text-muted)">Title
-          <input class="cc-input" name="title" value="${this.esc(existing?.title || '')}"
-            style="width:100%;padding:8px;margin-top:4px;background:var(--bg-dark);color:var(--text-main);
-              border:1px solid var(--border-rim);border-radius:6px" /></label>
-        <label style="display:block;margin-bottom:8px;font-size:0.8rem;color:var(--text-muted)">Severity
-          <select name="severity" style="width:100%;padding:8px;margin-top:4px;background:var(--bg-dark);
-            color:var(--text-main);border:1px solid var(--border-rim);border-radius:6px">
-            ${SEVERITIES.map(s => `<option value="${s}"${existing?.severity === s ? ' selected' : ''}>${s}</option>`).join('')}
-          </select></label>
-        <label style="display:block;margin-bottom:8px;font-size:0.8rem;color:var(--text-muted)">Description
-          <textarea name="description" rows="3" style="width:100%;padding:8px;margin-top:4px;
-            background:var(--bg-dark);color:var(--text-main);border:1px solid var(--border-rim);
-            border-radius:6px;resize:vertical">${this.esc(existing?.description || '')}</textarea></label>
-        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-          <button class="cc-btn cc-modal-cancel">Cancel</button>
-          <button class="cc-btn cc-btn--primary cc-modal-save">Save</button>
-        </div>
+    const bodyHtml = `
+      <h3 style="margin:0 0 12px">${this.esc(title)}</h3>
+      <label style="display:block;margin-bottom:8px;font-size:0.8rem;color:var(--text-muted)">Title
+        <input class="cc-input" name="title" value="${this.esc(existing?.title || '')}"
+          style="width:100%;padding:8px;margin-top:4px;background:var(--bg-dark);color:var(--text-main);
+            border:1px solid var(--border-rim);border-radius:6px" /></label>
+      <label style="display:block;margin-bottom:8px;font-size:0.8rem;color:var(--text-muted)">Severity
+        <select name="severity" style="width:100%;padding:8px;margin-top:4px;background:var(--bg-dark);
+          color:var(--text-main);border:1px solid var(--border-rim);border-radius:6px">
+          ${SEVERITIES.map(s => `<option value="${s}"${existing?.severity === s ? ' selected' : ''}>${s}</option>`).join('')}
+        </select></label>
+      <label style="display:block;margin-bottom:8px;font-size:0.8rem;color:var(--text-muted)">Description
+        <textarea name="description" rows="3" style="width:100%;padding:8px;margin-top:4px;
+          background:var(--bg-dark);color:var(--text-main);border:1px solid var(--border-rim);
+          border-radius:6px;resize:vertical">${this.esc(existing?.description || '')}</textarea></label>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+        <button class="cc-btn cc-modal-cancel">Cancel</button>
+        <button class="cc-btn cc-btn--primary cc-modal-save">Save</button>
       </div>`;
-    document.body.appendChild(overlay);
-    overlay.querySelector('.cc-modal-cancel').addEventListener('click', () => overlay.remove());
-    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-    overlay.querySelector('.cc-modal-save').addEventListener('click', async () => {
-      if (!this.client) return;
+    // B198 Phase 2: delegate overlay construction + close to the shared
+    // accessible modal helper (role=dialog, focus trap, Escape-close).
+    const handle = openModal({
+      title,
+      bodyHtml,
+      onClose: () => { this._modal = null; },
+    });
+    this._modal = handle;
+    const root = document.querySelector('.cc-modal-overlay');
+    root?.querySelector('.cc-modal-cancel')?.addEventListener('click', () => handle.close());
+    root?.querySelector('.cc-modal-save')?.addEventListener('click', async () => {
+      if (!this.client) { handle.close(); return; }
       const data = {
-        title: overlay.querySelector('[name=title]').value,
-        severity: overlay.querySelector('[name=severity]').value,
-        description: overlay.querySelector('[name=description]').value,
+        title: root.querySelector('[name=title]').value,
+        severity: root.querySelector('[name=severity]').value,
+        description: root.querySelector('[name=description]').value,
       };
       if (existing) { await this.client.updateRisk(existing.id, data); }
       else { await this.client.createRisk(data); }
-      overlay.remove();
+      handle.close();
     });
   }
 
@@ -159,5 +165,17 @@ export class RisksRenderer {
   }
 
   esc(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
-  destroy() { if (this.container) this.container.innerHTML = ''; }
+
+  /**
+   * B198 Phase 3: re-render-safe teardown (RD-4). Closes any open risk modal
+   * (removing its overlay from document.body), clears the container DOM
+   * (detaching listeners bound in renderList/bindListActions), and drops the
+   * risks cache. A later render() re-populates risks from hubData and re-binds
+   * cleanly. Idempotent — a second call is a no-op.
+   */
+  destroy() {
+    if (this._modal) { this._modal.close(); this._modal = null; }
+    if (this.container) this.container.innerHTML = '';
+    this.risks = [];
+  }
 }

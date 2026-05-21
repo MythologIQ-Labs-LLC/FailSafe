@@ -2,6 +2,7 @@ import { SentinelMonitor } from './modules/sentinel-monitor.js';
 import { getPhaseInfo, getFeatureSummary, renderPhase } from './modules/monitor-render.js';
 import { MonitorStaleness } from './modules/monitor-staleness.js';
 import { installMonitorViewportFit, fitMonitorToViewport } from './modules/monitor-viewport-fit.js';
+import { openModal } from './modules/modal-helper.js';
 
 export class WebPanelClient {
   constructor() {
@@ -331,39 +332,25 @@ export class WebPanelClient {
   }
 
   showAlertDetails(alert) {
-    // Create modal overlay
-    const existing = document.getElementById('alert-modal');
-    if (existing) existing.remove();
-
-    const modal = document.createElement('div');
-    modal.id = 'alert-modal';
-    modal.className = 'alert-modal-overlay';
-    modal.innerHTML = `
-      <div class="alert-modal">
-        <div class="alert-modal-header">
-          <span class="alert-modal-type ${alert.type?.toLowerCase()}">${this.escapeHtml(alert.type)}</span>
-          <button class="alert-modal-close">&times;</button>
-        </div>
-        <div class="alert-modal-body">
-          <p class="alert-modal-message">${this.escapeHtml(alert.message)}</p>
-          ${alert.entry ? `<p class="alert-modal-entry">Ledger Entry: #${alert.entry}</p>` : ''}
-          ${alert.details ? `<pre class="alert-modal-details">${this.escapeHtml(alert.details)}</pre>` : ''}
-        </div>
-        <div class="alert-modal-footer">
-          <button class="alert-modal-dismiss">Dismiss</button>
-        </div>
+    // B198 Phase 2: delegate to the shared accessible modal helper
+    // (role=dialog, focus trap, Escape-close, focus save/restore).
+    const bodyHtml = `
+      <div class="alert-modal-header">
+        <span class="alert-modal-type ${this.escapeHtml(alert.type).toLowerCase()}">${this.escapeHtml(alert.type)}</span>
+        <button class="alert-modal-close">&times;</button>
       </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    // Close handlers
-    const closeModal = () => modal.remove();
-    modal.querySelector('.alert-modal-close').addEventListener('click', closeModal);
-    modal.querySelector('.alert-modal-dismiss').addEventListener('click', closeModal);
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeModal();
-    });
+      <div class="alert-modal-body">
+        <p class="alert-modal-message">${this.escapeHtml(alert.message)}</p>
+        ${alert.entry ? `<p class="alert-modal-entry">Ledger Entry: #${this.escapeHtml(alert.entry)}</p>` : ''}
+        ${alert.details ? `<pre class="alert-modal-details">${this.escapeHtml(alert.details)}</pre>` : ''}
+      </div>
+      <div class="alert-modal-footer">
+        <button class="alert-modal-dismiss">Dismiss</button>
+      </div>`;
+    const handle = openModal({ title: `Alert: ${alert.type || ''}`, bodyHtml });
+    const root = document.querySelector('.cc-modal-overlay');
+    root?.querySelector('.alert-modal-close')?.addEventListener('click', () => handle.close());
+    root?.querySelector('.alert-modal-dismiss')?.addEventListener('click', () => handle.close());
   }
 
   // buildPolicyTrend and metricColor moved to SentinelMonitor module
@@ -389,47 +376,34 @@ export class WebPanelClient {
     const metric = explanations[metricKey];
     if (!metric) return;
 
-    const existing = document.getElementById('metric-modal');
-    if (existing) existing.remove();
-
-    const modal = document.createElement('div');
-    modal.id = 'metric-modal';
-    modal.className = 'metric-modal-overlay';
-    modal.innerHTML = `
-      <div class="metric-modal">
-        <div class="metric-modal-header">
-          <span class="metric-modal-title">${this.escapeHtml(metric.title)}</span>
-          <button class="metric-modal-close">&times;</button>
+    // B198 Phase 2: delegate to the shared accessible modal helper.
+    const bodyHtml = `
+      <div class="metric-modal-header">
+        <span class="metric-modal-title">${this.escapeHtml(metric.title)}</span>
+        <button class="metric-modal-close">&times;</button>
+      </div>
+      <div class="metric-modal-body">
+        <p class="metric-description">${this.escapeHtml(metric.description)}</p>
+        <div class="metric-formula">
+          <div class="metric-formula-title">How It's Calculated</div>
+          <div class="metric-formula-content">${this.escapeHtml(metric.formula)}</div>
         </div>
-        <div class="metric-modal-body">
-          <p class="metric-description">${this.escapeHtml(metric.description)}</p>
-          <div class="metric-formula">
-            <div class="metric-formula-title">How It's Calculated</div>
-            <div class="metric-formula-content">${this.escapeHtml(metric.formula)}</div>
-          </div>
-          <div class="metric-thresholds">
-            ${metric.thresholds.map(t => `
-              <div class="metric-threshold">
-                <span class="metric-threshold-dot ${t.level}"></span>
-                <span class="metric-threshold-label">${this.escapeHtml(t.text)}</span>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-        <div class="metric-modal-footer">
-          <button class="metric-modal-dismiss">Got it</button>
+        <div class="metric-thresholds">
+          ${metric.thresholds.map(t => `
+            <div class="metric-threshold">
+              <span class="metric-threshold-dot ${this.escapeHtml(t.level)}"></span>
+              <span class="metric-threshold-label">${this.escapeHtml(t.text)}</span>
+            </div>
+          `).join('')}
         </div>
       </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    const closeModal = () => modal.remove();
-    modal.querySelector('.metric-modal-close').addEventListener('click', closeModal);
-    modal.querySelector('.metric-modal-dismiss').addEventListener('click', closeModal);
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeModal();
-    });
+      <div class="metric-modal-footer">
+        <button class="metric-modal-dismiss">Got it</button>
+      </div>`;
+    const handle = openModal({ title: String(metric.title || 'Metric'), bodyHtml });
+    const root = document.querySelector('.cc-modal-overlay');
+    root?.querySelector('.metric-modal-close')?.addEventListener('click', () => handle.close());
+    root?.querySelector('.metric-modal-dismiss')?.addEventListener('click', () => handle.close());
   }
 
   setupMetricClickHandlers() {
