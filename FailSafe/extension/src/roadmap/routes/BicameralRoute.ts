@@ -24,6 +24,10 @@ import type {
 } from "../../integrations/bicameral";
 import type { McpInterceptor, McpEnvelope } from "../../governance/interceptor";
 import type { ReceiptContract } from "../../contracts";
+import type {
+  BicameralDriftStatus,
+} from "../../integrations/bicameral/types";
+import type { BicameralVerdictEventPayload } from "../../shared/types/events";
 
 export interface BicameralRouteDeps {
   rejectIfRemote: (req: Request, res: Response) => boolean;
@@ -86,6 +90,55 @@ export interface BicameralRouteDeps {
    * BicameralRoute.ts never imports vscode. Absent → that route 503s.
    */
   openFileInEditor?: (filePath: string, startLine?: number) => Promise<void>;
+  /**
+   * B-BIC-17/18 (Batch 4): optional event-bus handle. When provided, the
+   * drift handler emits one `bicameral.verdict` event per drifted/in-sync
+   * decision (skipping `unknown`) and the ratify handler emits a
+   * `verdict:'ratified'` event. Emits are non-blocking and absent-eventBus-
+   * safe — when omitted both handlers behave exactly as before.
+   */
+  eventBus?: {
+    emit(type: "bicameral.verdict", payload: BicameralVerdictEventPayload): void;
+  };
+}
+
+/**
+ * B-BIC-17/18: map a `BicameralDriftStatus` onto the `bicameral.verdict`
+ * event verdict enum (RD-1). `unknown` returns null — the drift handler
+ * skips those rows so only actionable verdicts reach the event bus.
+ */
+function mapDriftToVerdict(
+  status: BicameralDriftStatus["status"],
+): BicameralVerdictEventPayload["verdict"] | null {
+  if (status === "drifted") return "drifted";
+  if (status === "in-sync") return "in-sync";
+  return null;
+}
+
+/**
+ * B-BIC-17/18: emit one `bicameral.verdict` per drifted/in-sync decision in
+ * a drift result. Absent-eventBus-safe and exception-isolated — a faulty
+ * subscriber must never break the drift route response.
+ */
+function emitDriftVerdicts(
+  deps: BicameralRouteDeps,
+  drift: BicameralDriftStatus[],
+): void {
+  const bus = deps.eventBus;
+  if (!bus || !Array.isArray(drift)) return;
+  for (const row of drift) {
+    const verdict = mapDriftToVerdict(row.status);
+    if (!verdict) continue;
+    try {
+      bus.emit("bicameral.verdict", {
+        decisionId: row.decisionId,
+        verdict,
+        evidence: row.evidence,
+      });
+    } catch {
+      /* a faulty subscriber must not break the drift route (Batch 4) */
+    }
+  }
 }
 
 /**
@@ -285,6 +338,10 @@ export function setupBicameralRoutes(
       if (deps.driftToL3Mediator) {
         void deps.driftToL3Mediator.onDriftResult(drift).catch(() => undefined);
       }
+      // B-BIC-17/18 (Batch 4): emit one bicameral.verdict event per drifted/
+      // in-sync decision so Sentinel classification + the Risks Register
+      // mirror pick them up. Additive, non-blocking, absent-eventBus-safe.
+      emitDriftVerdicts(deps, drift);
     } catch (e) {
       res.status(500).json({ ok: false, error: String(e) });
     }
@@ -342,6 +399,19 @@ export function setupBicameralRoutes(
           });
         } catch {
           /* ledger write failure is non-blocking by design (B-BIC-1) */
+        }
+      }
+      // B-BIC-17/18 (Batch 4): emit a bicameral.verdict event so a ratified
+      // decision closes its mirrored Risks Register entry. Additive, non-
+      // blocking, absent-eventBus-safe.
+      if (deps.eventBus) {
+        try {
+          deps.eventBus.emit("bicameral.verdict", {
+            decisionId,
+            verdict: "ratified",
+          });
+        } catch {
+          /* a faulty subscriber must not break the ratify route (Batch 4) */
         }
       }
       res.json({ ok: true });

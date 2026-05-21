@@ -32,6 +32,36 @@ export class RiskRegisterManager {
     fs.writeFileSync(this.risksPath, JSON.stringify({ risks }, null, 2), "utf-8");
   }
 
+  /**
+   * B-BIC-18 (Batch 4): keyed idempotent create. Finds an existing risk by
+   * the `id` key and replaces it in place; otherwise appends. Built on the
+   * existing getRisks/writeRisks — no storage-format change to risks.json.
+   */
+  upsertRisk(risk: Record<string, unknown>): void {
+    const risks = this.getRisks();
+    const id = risk.id;
+    const index = risks.findIndex((r) => r.id === id);
+    if (index >= 0) {
+      risks[index] = risk;
+    } else {
+      risks.push(risk);
+    }
+    this.writeRisks(risks);
+  }
+
+  /**
+   * B-BIC-18 (Batch 4): close a risk by its `id` key — sets `status:'closed'`
+   * and persists. A no-op (no throw, register unchanged) when the id is
+   * absent.
+   */
+  closeRisk(id: string): void {
+    const risks = this.getRisks();
+    const index = risks.findIndex((r) => r.id === id);
+    if (index < 0) return;
+    risks[index] = { ...risks[index], status: "closed" };
+    this.writeRisks(risks);
+  }
+
   private readStoredRisks(): Array<Record<string, unknown>> {
     try {
       if (fs.existsSync(this.risksPath)) {

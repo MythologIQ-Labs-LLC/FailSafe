@@ -162,6 +162,9 @@ export class ConsoleServer {
   getTransparencyEvents(limit: number): Array<Record<string, unknown>> { return this.hub.getTransparencyEvents(limit); }
   /** @internal — preserved for legacy test reach-ins; routes use HubSnapshotService directly. */
   getRiskRegister(): Array<Record<string, unknown>> { return this.hub.getRiskRegister(); }
+  /** B-BIC-18 (Batch 4): expose the RiskRegisterManager so bootstrapServers
+   *  can hand it to the DriftToRiskMediator (Risks Register mirror). */
+  getRiskRegisterManager(): RiskRegisterManager { return this.riskRegisterManager; }
 
   setConsoleDeps(enforcement: EnforcementEngine, perm: PermissionScopeManager): void {
     this.enforcementEngine = enforcement; this.permissionManager = perm;
@@ -289,6 +292,9 @@ export class ConsoleServer {
       getBicameralCommand: () => this.bicameralCommand,
       getBicameralAutoConnect: () => this.bicameralAutoConnect,
       setBicameralAutoConnect: (v) => this.bicameralAutoConnectWriter(v),
+      // B-BIC-17/18 (Batch 4): expose the shared event bus so the bicameral
+      // route deps can emit `bicameral.verdict` events.
+      eventBus: this.eventBus,
       getVoicePackPath: () => this.voicePackPath,
       marketplaceCatalog: this.marketplaceCatalog,
       marketplaceInstaller: this.marketplaceInstaller,

@@ -71,6 +71,9 @@ export interface ConsoleRouteHost {
   getBicameralCommand: () => string;
   getBicameralAutoConnect: () => boolean;
   setBicameralAutoConnect: (value: boolean) => Promise<void>;
+  /** B-BIC-17/18 (Batch 4): shared event bus. Threaded into the bicameral
+   *  route deps so the drift/ratify handlers can emit `bicameral.verdict`. */
+  eventBus: import("../../shared/EventBus").EventBus;
   /** Returns absolute path to the operator-installed voice-pack directory,
    *  or null when no pack is installed. When non-null and the directory
    *  exists, setupAllRoutes mounts it at /vendor (takes priority over the
@@ -250,6 +253,9 @@ export class ConsoleRouteRegistrar {
       driftToL3Mediator: this.host.getDriftToL3Mediator() ?? undefined,
       // Phase 4: pass upstream monitor handle for /upstream route.
       upstreamMonitor: this.host.getUpstreamMonitor() ?? undefined,
+      // B-BIC-17/18 (Batch 4): pass the shared event bus so the drift/ratify
+      // handlers emit `bicameral.verdict` events.
+      eventBus: this.host.eventBus,
     });
     setupMarketplaceRoutes(app, {
       rejectIfRemote: (req, res) => this.host.rejectIfRemote(req, res),

@@ -42,6 +42,10 @@ When the governance pipeline routes a tier-3 (high-risk) action to the L3 approv
 
 Preflight runs asynchronously, after the L3 entry is already queued — the approval card appears immediately and the conflict line is added on the next hub rebuild once preflight returns. When the Bicameral MCP client is absent or disconnected, the check is a silent no-op: the L3 entry stands without a conflict line.
 
+### Drift in Sentinel + the Risks Register (B-BIC-17/18)
+
+Each `bicameral.drift` and `bicameral.ratify` call also emits a `bicameral.verdict` event on the FailSafe event bus. Two governance surfaces consume it. **Sentinel** classifies the verdict (B-BIC-17): a `drifted` verdict is high-priority and notifying, while `ratified` and `in-sync` are benign — a notifying verdict is surfaced over the existing WebSocket broadcast channel (classification only; it is not turned into a Sentinel arbitration event). The **Risks Register** mirrors drift (B-BIC-18): a `drifted` verdict upserts a risk entry keyed `bicameral:{decisionId}` so it appears in the Risks tab; ratifying that decision closes the entry. The mirror is idempotent and exception-isolated — a register write failure never breaks the drift/ratify route response.
+
 ### Settings
 
 Three VS Code settings control the integration:

@@ -57,7 +57,11 @@ export type {
 } from "./genesis";
 
 // Event Bus
-export type { FailSafeEventType, FailSafeEvent } from "./events";
+export type {
+  FailSafeEventType,
+  FailSafeEvent,
+  BicameralVerdictEventPayload,
+} from "./events";
 
 // Governance Decision Contract
 export type {

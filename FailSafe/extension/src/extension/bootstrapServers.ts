@@ -109,6 +109,9 @@ export async function bootstrapServers(
     // B151: back the universal governance interceptor with the enforcement
     // engine so the 3 bicameral tool routes are governed.
     enforcementEngine: deps.enforcementEngine,
+    // B-BIC-18 (Batch 4): hand the RiskRegisterManager to the DriftToRiskMediator
+    // so bicameral drift verdicts mirror into the Risks Register.
+    riskRegister: consoleServer.getRiskRegisterManager(),
     // Phase 4 config adapter: read VS Code settings on demand. Keeps the
     // monitor decoupled from the VS Code API surface for unit testability.
     configProvider: {

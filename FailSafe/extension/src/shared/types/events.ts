@@ -48,10 +48,28 @@ export type FailSafeEventType =
   | "agentRun.stepRecorded"
   | "agentRun.completed"
   | "agentRun.replaying"
-  | "transparency.prompt";
+  | "transparency.prompt"
+  | "bicameral.verdict";
 
 export interface FailSafeEvent<T = unknown> {
   type: FailSafeEventType;
   timestamp: string;
   payload: T;
+}
+
+/**
+ * Batch 4 (B-BIC-17/18) — payload for the `bicameral.verdict` event.
+ *
+ * RD-1: the event defines its OWN `verdict` enum — it does NOT reuse
+ * `BicameralDriftStatus.status` (`'in-sync'|'drifted'|'unknown'`, no
+ * `ratified`) nor `BicameralRatifyVerdict` (`'ratify'|'reject'`). The
+ * bicameral-drift route handler maps each `BicameralDriftStatus` onto this
+ * enum (`drifted`→`'drifted'`, `in-sync`→`'in-sync'`, `unknown`→skip); the
+ * bicameral-ratify route handler always emits `verdict:'ratified'`.
+ */
+export interface BicameralVerdictEventPayload {
+  decisionId: string;
+  verdict: "drifted" | "in-sync" | "ratified";
+  decisionTitle?: string;
+  evidence?: string;
 }
