@@ -1,6 +1,13 @@
 // Bicameral MCP integration barrel.
 export { BicameralMcpClient } from './BicameralMcpClient';
-export { probeInstallState, isSafeBicameralCommand } from './install-detector';
+export {
+  DEFAULT_WINDOWS_EXTRA_ROOTS,
+  defaultExtraRoots,
+  isSafeBicameralCommand,
+  isSafeBicameralCommandResolved,
+  probeInstallState,
+} from './install-detector';
+export type { SafeCommandOptions } from './install-detector';
 export { runBicameralInstall } from './install-handler';
 export type {
   BicameralInstallState,

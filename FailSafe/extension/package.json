@@ -395,7 +395,15 @@
         "failsafe.integrations.bicameral.command": {
           "type": "string",
           "default": "bicameral-mcp",
-          "description": "Executable used to launch the Bicameral MCP server. Must be on PATH or an absolute path under your home directory."
+          "description": "Executable used to launch the Bicameral MCP server. Must be on PATH or an absolute path under your home directory (or a configured extra command root)."
+        },
+        "failsafe.integrations.bicameral.extraCommandRoots": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Additional anchored absolute directory roots accepted for the Bicameral command path, alongside your home directory. Windows chocolatey/scoop roots under %ProgramData% are already accepted automatically; use this only for non-default install locations. Relative entries are ignored."
         },
         "failsafe.integrations.bicameral.pipCommand": {
           "type": "string",

@@ -9,7 +9,7 @@
 import * as vscode from "vscode";
 import {
   BicameralMcpClient,
-  isSafeBicameralCommand,
+  isSafeBicameralCommandResolved,
   probeInstallState,
 } from "../integrations/bicameral";
 import { DriftToL3Mediator } from "../integrations/bicameral/DriftToL3Mediator";
@@ -23,6 +23,17 @@ import type { L3ApprovalRequest } from "../shared/types/l3-approval";
 
 /** B151: DID stamped onto receipts issued by this extension's interceptor. */
 const INTERCEPTOR_ISSUED_BY = "did:failsafe:instance:extension";
+
+/**
+ * B-BIC-7: read the operator-configured extra anchored absolute roots accepted
+ * for the bicameral command path. Non-array / non-string entries are dropped.
+ */
+function readBicameralExtraRoots(
+  cfg: vscode.WorkspaceConfiguration,
+): string[] {
+  const raw = cfg.get<string[]>("extraCommandRoots", []);
+  return Array.isArray(raw) ? raw.filter((r) => typeof r === "string") : [];
+}
 
 interface ConsoleServerSurface {
   setBicameralAutoConnect(value: boolean): void;
@@ -107,14 +118,21 @@ export function wireBicameralIntegration(
     consoleServer.setMcpInterceptor(new McpInterceptor(client, backing));
   };
 
-  const wireFromConfig = (): void => {
+  // B-BIC-6: async — the command is validated through the symlink-resolving
+  // validator before a BicameralMcpClient (which spawns a stdio subprocess) is
+  // constructed. B-BIC-7: extraCommandRoots widens the allowlist for non-
+  // default install locations (Windows chocolatey/scoop roots apply without it).
+  // Callers fire-and-forget via `void` — same pattern as `prior?.disconnect()`.
+  const wireFromConfig = async (): Promise<void> => {
     const cfg = vscode.workspace.getConfiguration("failsafe.integrations.bicameral");
     const command = cfg.get<string>("command", "bicameral-mcp") || "bicameral-mcp";
     consoleServer.setBicameralAutoConnect(cfg.get<boolean>("autoConnect", false));
     // B-BIC-2: disconnect the prior client (if any) before replacing it so
     // the previous stdio subprocess doesn't get orphaned by config rewire.
     const prior = consoleServer.getBicameralClient();
-    if (!isSafeBicameralCommand(command)) {
+    const extraRoots = readBicameralExtraRoots(cfg);
+    const safe = await isSafeBicameralCommandResolved(command, { extraRoots });
+    if (!safe) {
       consoleServer.setBicameralCommand("bicameral-mcp");
       consoleServer.setBicameralClient(null);
       wireInterceptor(null);
@@ -133,7 +151,7 @@ export function wireBicameralIntegration(
     void prior?.disconnect().catch(() => undefined);
   };
 
-  wireFromConfig();
+  void wireFromConfig();
   // B-BIC-12: wire the editor-open dep so the bicameral-open-binding route can
   // open a decision's bound source file. Resolves the path via vscode.Uri.file
   // (no shell) and scrolls to startLine via the open command's selection.
@@ -156,8 +174,9 @@ export function wireBicameralIntegration(
       if (
         e.affectsConfiguration("failsafe.integrations.bicameral.command")
         || e.affectsConfiguration("failsafe.integrations.bicameral.autoConnect")
+        || e.affectsConfiguration("failsafe.integrations.bicameral.extraCommandRoots")
       ) {
-        wireFromConfig();
+        void wireFromConfig();
       }
     }),
   );
@@ -234,8 +253,14 @@ export function maybeAutoConnectBicameral(
     const cfg = vscode.workspace.getConfiguration("failsafe.integrations.bicameral");
     if (!cfg.get<boolean>("autoConnect", false)) return;
     const command = cfg.get<string>("command", "bicameral-mcp") || "bicameral-mcp";
+    // B-BIC-7 (audit Finding A): thread extraCommandRoots through the probe so
+    // auto-connect honours custom roots, not just the auto-applied defaults.
     try {
-      const probe = await probeInstallState({ command, workspaceRoot });
+      const probe = await probeInstallState({
+        command,
+        workspaceRoot,
+        extraRoots: readBicameralExtraRoots(cfg),
+      });
       if (probe.state !== "configured-not-running") return;
       const client = new BicameralMcpClient({ command, cwd: workspaceRoot });
       await client.connect();
