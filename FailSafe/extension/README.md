@@ -14,9 +14,19 @@ FailSafe runs locally inside VS Code and Cursor. It monitors what AI agents do, 
 
 ---
 
-**Current Release**: v5.1.7 (2026-05-21)
+**Current Release**: v5.1.8 (2026-05-22)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v5.1.8
+
+- **Bicameral Advanced-tools surface** (B-INT-1): the 11 remaining Bicameral MCP tools are reachable via `POST /api/actions/bicameral-<tool>` routes (`bicameralToolRoutes.ts` factory — state-changing tools governed through the B151 `McpInterceptor`, query tools direct) plus a styled, collapsible **"Advanced tools"** card section — query/mutation grouping, per-row loading state, labelled success/error results.
+- **Sentinel-evaluator vs Governance-mode UI disambiguation** (B-EM-1): `sentinelModeValue()` corrects the invalid `'observe'` fallback; five UI sites relabelled (`integrity.js` `Governance Mode:` → `Sentinel Mode:`, etc.).
+- **Brainstorm node-label truncation feedback** (B132): `BrainstormRoute.ts` returns additive `labelTruncated` fields; the UI surfaces a dismissible `.bs-truncation-notice`.
+- **B199 test-coverage epic closed**: the CRITICAL Playwright + integration-coverage epic verified complete; FX539 retro-indexed.
+- **Activation-test regression fix**: three `bicameral-activation.test.ts` cases made async-aware (B-BIC-6's async validator); full `vscode-test` suite restored to green.
+
+See root [CHANGELOG.md](../../CHANGELOG.md) for the full v5.1.8 release notes.
 
 ## What's New in v5.1.7
 

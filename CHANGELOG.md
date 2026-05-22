@@ -5,7 +5,7 @@ All notable changes to FailSafe will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — v5.1.8 (draft)
+## [5.1.8] - 2026-05-22
 
 B-INT-1 surfaces the 11 remaining Bicameral MCP tools (routes + a styled, grouped Advanced-tools card section) + B-EM-1 Sentinel-evaluator/Governance-mode UI disambiguation + B132 brainstorm node-label truncation feedback + the B199 CRITICAL test-coverage epic closeout + a v5.1.7 activation-test regression fix surfaced by restoring the full `vscode-test` suite (2739 passing, 0 failing). FX584–FX590. SHIELD-sealed via META_LEDGER Entry #385 (consolidated v5.1.8 cycle). See `docs/plan-qor-v5-1-8-cycle.md`. v5.2.0 remains gated on the Educational component — not this release.
 
