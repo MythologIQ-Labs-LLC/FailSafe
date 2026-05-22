@@ -5,6 +5,10 @@ All notable changes to the MythologIQ FailSafe extension will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.1.7] - 2026-05-21
+
+B151 universal governance interceptor + B-INT-2 bicameral.preflight → L3 + B198 subscribe-without-mutate UI remediation + B-BIC validator/UX/governance batches (6/7, 12/13/14/15, 17/18) + B191 Monitor SHIELD-visibility verification + B-B199-3/4/5/6 test-coverage gaps. Includes a follow-up fix for a latent bicameral-activation async-test regression (B-BIC-6's async validator). SHIELD-sealed via META_LEDGER Entry #384. See root [CHANGELOG.md](../../CHANGELOG.md) for the full bullet list.
+
 ## [5.1.6] - 2026-05-20
 
 Bicameral HIGH cluster (B-BIC-16/19/20) + safety + concurrency batch (B-BIC-8/9/11/21/22/23) + upstream awareness (B-INT-3) + B-B199-2 Replay + Genome behavioral E2E + B-EM-2/B-EM-3 enforcement-mode polish. SHIELD-sealed via PR #77 (Entries #378/#379/#380) and PR #78 (Entry #382). See root [CHANGELOG.md](../../CHANGELOG.md) for full bullet list.
