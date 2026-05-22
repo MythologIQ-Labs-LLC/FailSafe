@@ -1,6 +1,8 @@
 import { strict as assert } from "assert";
-// @ts-expect-error JS module import in TS test context
-import { getPhaseInfo, getFeatureSummary, renderPhase } from "../../../src/roadmap/ui/modules/monitor-render.js";
+// @ts-expect-error JS module import in TS test context — resolved from the
+// compiled out/ tree so monitor-render.js's `./education-lesson.js` import
+// chain (which reaches out/education/lessons.js) resolves at runtime.
+import { getPhaseInfo, getFeatureSummary, renderPhase } from "../../roadmap/ui/modules/monitor-render.js";
 
 function makeEls(): any {
   return {

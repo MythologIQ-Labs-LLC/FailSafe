@@ -114,19 +114,10 @@ This document catalogs all UI components in the FailSafe extension, their curren
 
 ## Sidebar Views
 
-### 1. DojoViewProvider (`genesis/views/DojoViewProvider.ts`)
+### 1. DojoViewProvider — REMOVED
 
-**Status**: ACTIVE
-**Template**: `genesis/views/templates/DojoTemplate.ts`
-**View ID**: `failsafe.dojo`
-
-**Features**:
-| Feature | Description | Status |
-|---------|-------------|--------|
-| Quick Start Guide | Collapsible tutorial | ✅ |
-| Metric Cards | Key system stats | ✅ |
-| Navigation Links | Dashboard, Graph, Ledger | ✅ |
-| Roadmap Link | Opens Planning Hub | ✅ |
+**Status**: REMOVED — manifest reconciled 2026-05-22 (Educational Component, Phase 0).
+`genesis/views/DojoViewProvider.ts` and `genesis/views/templates/DojoTemplate.ts` are not present in current source, and the `failsafe.dojo` view id is registered nowhere in `src/`. This entry was stale documentation drift. The "Quick Start Guide / collapsible tutorial" intent it described is superseded by the v5.2.0 Educational Component — inline contextual micro-lessons at governance moments (see `docs/EDUCATION.md`).
 
 ---
 

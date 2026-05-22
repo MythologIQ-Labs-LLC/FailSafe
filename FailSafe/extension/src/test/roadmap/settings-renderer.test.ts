@@ -2,8 +2,10 @@
 
 import { strict as assert } from 'assert';
 import { JSDOM } from 'jsdom';
-// @ts-expect-error untyped JS module
-import { SettingsRenderer } from '../../../src/roadmap/ui/modules/settings.js';
+// @ts-expect-error untyped JS module — resolved from the compiled out/ tree so
+// settings.js's transitive `education-lesson.js → education/lessons.js` import
+// chain resolves at runtime (no .js sibling exists under src/).
+import { SettingsRenderer } from '../../roadmap/ui/modules/settings.js';
 
 interface MockStore {
   theme: string;

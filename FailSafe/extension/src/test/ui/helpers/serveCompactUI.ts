@@ -28,6 +28,24 @@ export interface ServeController {
 }
 
 const UI_ROOT = path.resolve(__dirname, '..', '..', '..', 'roadmap', 'ui');
+// Educational Component (v5.2.0): the micro-lesson affordance imports the
+// lesson registry from `../../../education/lessons.js`, resolved at the
+// /education URL. The browser needs an ESM module — the tsc `out/education`
+// output is CommonJS, so the real ConsoleServer mounts the esbuild-emitted
+// `out/education-browser` instead (ConsoleRouteRegistrar). This helper mirrors
+// that, probing candidates so it works whether run from the src/ tree
+// (Playwright) or the out/ tree.
+const EDUCATION_ROOT = (() => {
+  const candidates = [
+    path.resolve(__dirname, '..', '..', '..', '..', 'out', 'education-browser'),
+    path.resolve(__dirname, '..', '..', '..', '..', '..', 'out', 'education-browser'),
+    path.resolve(__dirname, '..', '..', '..', 'education-browser'),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(path.join(c, 'lessons.js'))) return c;
+  }
+  return candidates[0];
+})();
 
 function contentType(filePath: string): string {
   if (filePath.endsWith('.html')) return 'text/html; charset=utf-8';
@@ -48,6 +66,18 @@ function writeWorkspace(dir: string, entries: ShieldEntry[] | undefined): void {
 
 function serveStatic(req: http.IncomingMessage, res: http.ServerResponse): boolean {
   const requestPath = decodeURIComponent((req.url || '/').split('?')[0]);
+  // /education/* resolves to the education tree (sibling of roadmap/), matching
+  // the real ConsoleServer's /education mount.
+  if (requestPath.startsWith('/education/')) {
+    const eduRel = requestPath.replace(/^\/education\/+/, '');
+    const eduPath = path.join(EDUCATION_ROOT, eduRel);
+    if (eduPath.startsWith(EDUCATION_ROOT) && fs.existsSync(eduPath) && !fs.statSync(eduPath).isDirectory()) {
+      res.setHeader('Content-Type', contentType(eduPath));
+      res.end(fs.readFileSync(eduPath));
+      return true;
+    }
+    return false;
+  }
   const relative = requestPath === '/' ? 'index.html' : requestPath.replace(/^\/+/, '');
   const filePath = path.join(UI_ROOT, relative);
   if (!filePath.startsWith(UI_ROOT) || !fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {

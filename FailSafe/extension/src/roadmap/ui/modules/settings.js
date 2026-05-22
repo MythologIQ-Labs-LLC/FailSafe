@@ -6,6 +6,8 @@ import { renderNotificationsCard, renderBrainstormCard, bindNotificationsCard, b
 import { escapeHtml } from './brainstorm-templates.js';
 import { renderBicameralSettingsCard } from './bicameral-settings-card.js';
 import { renderVoicePackSettingsCard } from './voice-pack-settings-card.js';
+import { renderGovernanceModeCard, bindGovernanceModeCard } from './governance-mode-card.js';
+import { renderGlossary } from './education-glossary.js';
 
 // Sentinel attr name used across all bind paths to make listener wiring
 // idempotent: a node carrying data-cc-bound="1" already has its listener
@@ -60,13 +62,14 @@ export class SettingsRenderer {
       <div class="cc-card" id="cc-hook-toggle-slot" style="margin-top:16px"></div>
       ${renderInstallSkillsCard(this._installState, hub)}
       ${renderGovernanceModeCard(hub)}
+      ${renderGlossary(hub.education)}
       ${renderQorVersionWarning(hub)}
       ${renderFailSafeProCard()}
       <div class="cc-card" id="cc-bicameral-settings-slot" style="margin-top:16px"></div>
       <div class="cc-card" id="cc-voice-pack-settings-slot" style="margin-top:16px"></div>`;
     this._bindQorLogicActions();
     this._bindFailSafeProActions();
-    this._bindGovernanceModeActions();
+    bindGovernanceModeCard(this.container);
     this.bindChips();
     bindVoiceSettings(this.container, this.store);
     bindNotificationsCard(this.container, this.store);
@@ -79,19 +82,6 @@ export class SettingsRenderer {
   _renderVoicePackSettings() {
     const slot = this.container?.querySelector('#cc-voice-pack-settings-slot');
     return renderVoicePackSettingsCard(slot, { bindOnce });
-  }
-
-  _bindGovernanceModeActions() {
-    const card = this.container?.querySelector('#cc-governance-mode');
-    if (!card) return;
-    card.querySelectorAll('[data-governance-mode]').forEach((btn) => {
-      bindOnce(btn, 'click', () => {
-        const mode = btn.getAttribute('data-governance-mode');
-        if (!mode) return;
-        // Host command opens a QuickPick; arg is advisory pre-selection only.
-        try { window.location.href = `command:failsafe.setGovernanceMode?${encodeURIComponent(JSON.stringify([mode]))}`; } catch { /* host-managed */ }
-      });
-    });
   }
 
   _bindFailSafeProActions() {
@@ -220,7 +210,6 @@ export class SettingsRenderer {
   }
 }
 
-const MODE_OPTIONS = [{ id: 'observe', label: 'Observe' }, { id: 'assist', label: 'Assist' }, { id: 'enforce', label: 'Enforce' }];
 const LBL = 'font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em';
 
 function renderFailSafeProCard() {
@@ -228,27 +217,6 @@ function renderFailSafeProCard() {
       <div style="${LBL};margin-bottom:8px">FailSafe Pro</div>
       <p style="font-size:0.85rem;color:var(--text-muted);margin:0 0 12px">Desktop native application for SDLC visibility and governance: OS-level enforcement, file locking, team workflows, and remote connections beyond the editor boundary.</p>
       <a href="https://mythologiq.studio/products/failsafe-pro" target="_blank" rel="noopener" class="cc-btn cc-btn--primary" data-action="open-failsafe-pro-about" style="display:inline-block;font-size:0.8rem;padding:6px 14px;text-decoration:none">About FailSafe Pro</a>
-    </div>`;
-}
-
-function renderGovernanceModeCard(hub) {
-  const state = hub?.governanceModeState || { mode: 'observe', defaulted: true };
-  const current = String(state.mode || 'observe');
-  const defaulted = state.defaulted === true;
-  const hint = defaulted ? `<p style="font-size:0.8rem;color:var(--text-muted);margin:0 0 10px">You're in Observe mode by default. Switch to Assist when ready to enable governance suggestions, or Enforce for hard gating.</p>` : '';
-  const buttons = MODE_OPTIONS.map((m) => {
-    const active = m.id === current;
-    const cls = active ? 'cc-btn cc-btn--primary' : 'cc-btn';
-    const aria = active ? 'aria-pressed="true"' : '';
-    return `<button class="${cls}" data-governance-mode="${escapeHtml(m.id)}" style="font-size:0.8rem;padding:6px 14px" ${aria}>${escapeHtml(m.label)}</button>`;
-  }).join('');
-  const tag = defaulted ? ' <span style="color:var(--text-muted)">(default)</span>' : '';
-  const label = escapeHtml(current.charAt(0).toUpperCase() + current.slice(1));
-  return `<div class="cc-card" id="cc-governance-mode" style="margin-top:16px">
-      <div style="${LBL};margin-bottom:8px">Governance Mode</div>
-      <div style="font-size:0.9rem;margin-bottom:10px">Mode: <strong data-governance-current>${label}</strong>${tag}</div>
-      ${hint}
-      <div style="display:flex;gap:8px;flex-wrap:wrap">${buttons}</div>
     </div>`;
 }
 

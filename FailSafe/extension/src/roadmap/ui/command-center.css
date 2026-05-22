@@ -1190,3 +1190,210 @@ select option {
   opacity: 0.5;
   pointer-events: none;
 }
+
+/* ---------------------------------------------------------------------------
+ * Education micro-lesson affordance (Educational Component — Phase 3).
+ * Opt-in, dismissible "What does this mean?" expander rendered inline at a
+ * governance moment. Collapsed by default; matches the .cc-* glass language.
+ * ------------------------------------------------------------------------- */
+.cc-edu-lesson {
+  margin: 8px 0 4px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-main);
+  overflow: hidden;
+}
+
+.cc-edu-lesson-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  list-style: none;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.cc-edu-lesson-summary::-webkit-details-marker {
+  display: none;
+}
+
+.cc-edu-lesson-summary:hover {
+  color: var(--text-main);
+}
+
+.cc-edu-lesson[open] .cc-edu-lesson-summary {
+  border-bottom: 1px solid var(--border-rim);
+  color: var(--text-main);
+}
+
+.cc-edu-lesson-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+
+.cc-edu-lesson-label {
+  font-weight: 600;
+}
+
+.cc-edu-lesson-body {
+  padding: 8px 10px 10px;
+}
+
+.cc-edu-lesson-text {
+  margin: 0 0 8px;
+  line-height: 1.5;
+  color: var(--text-main);
+}
+
+.cc-edu-lesson-dismiss {
+  background: transparent;
+  color: var(--accent-cyan);
+  border: 1px solid var(--glass-border);
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.cc-edu-lesson-dismiss:hover {
+  border-color: var(--accent-cyan);
+  color: var(--text-main);
+}
+
+.cc-edu-lesson-dismiss:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* -------------------------------------------------------------------------
+ * FailSafe Glossary section (Educational Component — Phase 6c).
+ * A collapsed-by-default "FailSafe Glossary" section in the Settings tab.
+ * Each agentic-vocabulary term is itself a collapsed expander. Reuses the
+ * .cc-edu-* glass language; lives below the Education-bearing settings card.
+ * The <details> sits inside a .cc-card wrapper so its summary is never flush
+ * with a neighbouring card's pointer hit box.
+ * ------------------------------------------------------------------------- */
+.cc-edu-glossary-card {
+  margin-top: 16px;
+}
+
+.cc-edu-glossary {
+  overflow: hidden;
+}
+
+.cc-edu-glossary-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.cc-edu-glossary-summary::-webkit-details-marker {
+  display: none;
+}
+
+.cc-edu-glossary[open] .cc-edu-glossary-summary {
+  border-bottom: 1px solid var(--border-rim);
+}
+
+.cc-edu-glossary-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+
+.cc-edu-glossary-count {
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.cc-edu-glossary-body {
+  padding: 10px 0 2px;
+}
+
+.cc-edu-glossary-intro {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.cc-edu-glossary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cc-edu-glossary-term {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-main);
+  overflow: hidden;
+}
+
+.cc-edu-glossary-term-summary {
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  color: var(--text-main);
+}
+
+.cc-edu-glossary-term-summary::-webkit-details-marker {
+  display: none;
+}
+
+.cc-edu-glossary-term-summary:hover {
+  color: var(--accent-cyan);
+}
+
+.cc-edu-glossary-term[open] .cc-edu-glossary-term-summary {
+  border-bottom: 1px solid var(--border-rim);
+}
+
+.cc-edu-glossary-term-label {
+  font-weight: 600;
+}
+
+.cc-edu-glossary-term-body {
+  padding: 8px 10px 10px;
+}
+
+.cc-edu-glossary-term-text {
+  margin: 0;
+  line-height: 1.5;
+  color: var(--text-main);
+}

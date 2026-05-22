@@ -270,6 +270,21 @@
           "default": "",
           "description": "Override the Python interpreter used to install qor-logic. Leave empty to auto-detect (VS Code Python extension, then python3/python/py -3 probe)."
         },
+        "failsafe.education.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show opt-in, dismissible plain-language micro-lessons that explain FailSafe governance vocabulary at the moment it appears."
+        },
+        "failsafe.education.proficiency": {
+          "type": "string",
+          "enum": [
+            "beginner",
+            "intermediate",
+            "advanced"
+          ],
+          "default": "beginner",
+          "description": "How detailed the FailSafe education micro-lessons are. Beginner explains what and why; intermediate covers trade-offs; advanced is a terse reminder."
+        },
         "failsafe.genesis.livingGraph": {
           "type": "boolean",
           "default": true,

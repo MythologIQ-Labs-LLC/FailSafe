@@ -5,6 +5,29 @@ All notable changes to FailSafe will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — v5.2.0 (draft)
+
+The **Educational Component** — the v5.2.0 release-gating feature. Inline, opt-in, dismissible plain-language micro-lessons that translate FailSafe governance vocabulary at the governance moment, for non-traditional builders (PM/CX operators) and developers new to governed workflows. Not training software — no quizzes, no scoring, no blocking; the SHIELD lifecycle is the curriculum spine. FX591–FX602. SHIELD-sealed via META_LEDGER Entry #388. See `docs/plan-qor-educational-component.md`, `docs/EDUCATION.md`, and `docs/compliance-education-component.md`.
+
+### Added
+
+- **Lesson registry** (`src/education/lessons.ts`). A typed `Lesson` model + `LESSONS` registry keyed by `anchor`, with `getLesson(anchor, level)` and a documented level-fallback. v1 content: governance modes (Observe/Assist/Enforce) and the Plan/Audit/Substantiate SHIELD phases, each authored at beginner/intermediate/advanced levels.
+- **FailSafe agentic-vocabulary glossary**. A 12-term glossary — MCP server, governance interceptor, risk tiers L1–L3 / L3 approval, Sentinel, decision drift, the ledger (META_LEDGER / Merkle chain), Shadow Genome, bicameral, receipt/verdict/evaluation, Enforcement Engine, the SHIELD lifecycle, and agentic coding — each at three proficiency levels. Surfaced as a collapsed-by-default **"FailSafe Glossary"** section in the Settings tab (`roadmap/ui/modules/education-glossary.js`). Lessons gained an additive `kind: 'moment' | 'glossary'` discriminator; content split into sibling modules to hold the 250-line razor, and the browser-ESM build switched to a bundled emit so the split stays self-contained in the VSIX.
+- **Education settings**. Two operator-controlled VS Code settings — `failsafe.education.proficiency` (`beginner`/`intermediate`/`advanced`, default `beginner`) and `failsafe.education.enabled` (default `true`). Proficiency is operator-set only — never inferred (no telemetry).
+- **Micro-lesson affordance** (`roadmap/ui/modules/education-lesson.js`). A reusable, collapsed-by-default, dismissible "What does this mean?" expander; renders nothing when education is disabled or no lesson exists; dismiss state persists per anchor; lesson bodies HTML-escaped. Styled in `command-center.css`.
+- **Wired governance moments**. The governance-mode card (extracted to a new `governance-mode-card.js` leaf — which also brings `settings.js` back under the 250-line razor), the Monitor SHIELD phase tracker, and the native first-run mode picker + onboarding flow now carry contextual micro-lessons. Education config is threaded to the webview via the hub snapshot.
+- **Lesson-anchor coherence check**. A test that fails when a lesson references a surface no longer in source — the drift guard from the ideation failure-remediation plan.
+
+### Changed
+
+- **`docs/UI_MANIFEST.md`** reconciled — the stale `DojoViewProvider` / `failsafe.dojo` entry (files absent, view unregistered) marked REMOVED.
+
+### Compliance
+
+- **`docs/compliance-education-component.md`** — the Educational Component v1 is determined **outside** EU AI Act Annex III high-risk education/training classification (static contextual help; no assessment, scoring, access determination, or learning-outcome evaluation), while supporting the Article 4 AI-literacy goal. A binding escalation trigger re-opens ideation if any future change crosses that boundary.
+
+_v5.2.0 is not yet released — `package.json` remains 5.1.8 until `/qor-repo-release`._
+
 ## [5.1.8] - 2026-05-22
 
 B-INT-1 surfaces the 11 remaining Bicameral MCP tools (routes + a styled, grouped Advanced-tools card section) + B-EM-1 Sentinel-evaluator/Governance-mode UI disambiguation + B132 brainstorm node-label truncation feedback + the B199 CRITICAL test-coverage epic closeout + a v5.1.7 activation-test regression fix surfaced by restoring the full `vscode-test` suite (2739 passing, 0 failing). FX584–FX590. SHIELD-sealed via META_LEDGER Entry #385 (consolidated v5.1.8 cycle). See `docs/plan-qor-v5-1-8-cycle.md`. v5.2.0 remains gated on the Educational component — not this release.

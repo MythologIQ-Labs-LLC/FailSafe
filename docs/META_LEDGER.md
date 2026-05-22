@@ -19585,3 +19585,136 @@ _Next: operator review of the staged change set; commit + push/PR per operator a
 _Chain integrity: VALID_
 _Session Status: v5.1.8 cycle SEALED at Entry #385; branch feat/v5-1-8-cycle; 30 files staged, uncommitted; full vscode-test suite 2739 passing / 1 pending / 0 failing; tsc + lint clean; PUBLISH_BLOCK unchanged._
 _Session: 2026-05-21-v5-1-8-consolidated-cycle-substantiation-seal_
+
+### Entry #386: DELIVER — v5.1.7 (Governance Interceptor)
+
+**Entry ID**: `d80b7248eedd`
+**Date**: 2026-05-21
+**Phase**: deliver
+**Author**: Governor
+**Version**: 5.1.7
+**Tag**: `v5.1.7`
+**Release commit**: `9b00f2d` (PR #85 merge to main)
+
+## Delivery summary
+
+v5.1.7 released to the VS Code Marketplace + Open VSX. Consolidated governance-interceptor cycle (B151 + B191 + B-INT-2 + B198 + B-BIC-6/7/12-15/17-18 + B-B199-3/4/5/6), sealed at Entry #384. Release prep: PR #84 (bicameral-activation async-test fix restoring the full vscode-test suite to green) then PR #85 (`[RELEASE] v5.1.7` — package.json 5.1.6 to 5.1.7, CHANGELOG stamp, version markers, annotated tag). Release Pipeline: all 4 jobs success (SemVer gate, Build & Test, Publish to VS Code Marketplace, Publish to Open VSX). This DELIVER entry was deferred at release time (`/qor-repo-release` Step 10) and is recorded here, reconciled during the Educational Component substantiate.
+
+## Content Hash
+
+**Content Hash**: `d80b7248eeddae7c3daab012440216f66e0503616326f7c9c8bc1997adbf6467`
+**Previous Hash**: `e5903171f812599ad91885b9b35c80a78c7ca54c19adfd7e9944b8652f54f9c1` (Entry #385)
+**Chain Hash**: `0fef4515463b505980019288674ec706c145416995c8d23c4d149b2b530a6aec`
+**Merkle Seal**: `c48df4823f0e28dec78635cfcdfc426e5d1c7b591e5dcc7257da4053c434fe2b` — gate_release_v5_1_7_DELIVER
+**Session ID**: `2026-05-22-ledger-reconciliation-deliver-v5-1-7`
+
+_Hash provenance_: Content Hash = `SHA256("v5.1.7 <release-commit-sha>")`. Chain Hash = `SHA256(content + previous)`; Merkle Seal = `SHA256(chain + gate_label)`.
+
+## Decision
+
+**DELIVERED.** v5.1.7 is live on the VS Code Marketplace and Open VSX.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-05-22-ledger-reconciliation-deliver-v5-1-7_
+
+### Entry #387: DELIVER — v5.1.8 (Bicameral Tool Surface)
+
+**Entry ID**: `0657192f5330`
+**Date**: 2026-05-22
+**Phase**: deliver
+**Author**: Governor
+**Version**: 5.1.8
+**Tag**: `v5.1.8`
+**Release commit**: `4604258` (PR #87 merge to main)
+
+## Delivery summary
+
+v5.1.8 released to the VS Code Marketplace + Open VSX. Consolidated cycle (B-INT-1 Bicameral Advanced-tools surface + B-EM-1 Sentinel/Governance mode UI disambiguation + B132 brainstorm truncation feedback + B199 epic closeout + UI finishing pass), sealed at Entry #385. Release prep: PR #86 (cycle merge, rebased onto post-v5.1.7 main) then PR #87 (`[RELEASE] v5.1.8` — package.json 5.1.7 to 5.1.8, CHANGELOG stamp, version markers, annotated tag). Release Pipeline: all 4 jobs success; the `production` environment deployment gate was approved. This DELIVER entry was deferred at release time and is recorded here, reconciled during the Educational Component substantiate.
+
+## Content Hash
+
+**Content Hash**: `0657192f5330120a04d57b98845c6046229cdc1bf6a7dfb22b09d6abb9b17d5b`
+**Previous Hash**: `0fef4515463b505980019288674ec706c145416995c8d23c4d149b2b530a6aec` (Entry #386)
+**Chain Hash**: `cad2b585ae9c240c779c60955571a1d4b957bda10a9dfbc115cd4f23c7eefc8f`
+**Merkle Seal**: `1095300a687013adae930efe0397100ac69c86fff3d82272d011930babe42367` — gate_release_v5_1_8_DELIVER
+**Session ID**: `2026-05-22-ledger-reconciliation-deliver-v5-1-8`
+
+_Hash provenance_: Content Hash = `SHA256("v5.1.8 <release-commit-sha>")`. Chain Hash = `SHA256(content + previous)`; Merkle Seal = `SHA256(chain + gate_label)`.
+
+## Decision
+
+**DELIVERED.** v5.1.8 is live on the VS Code Marketplace and Open VSX.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-05-22-ledger-reconciliation-deliver-v5-1-8_
+
+### Entry #388: SESSION SEAL — Educational Component v1 (v5.2.0 release-gating feature)
+
+**Entry ID**: `cf3effdb9027`
+**Date**: 2026-05-22
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-educational-component.md` (v3 — post-VETO + operator-directed Phase 6 expansion)
+**Ideation**: `.qor/gates/2026-05-22T0000-educational/ideation.json`
+**Audit reference**: `/qor-auto-dev-1`-orchestrated, independent qor-judge. Cycle 1 VETO (6 findings — ghost path: a lesson wired to `governance.js`, which carries no governance-mode card; the card is in `settings.js:234`; razor understated; B-EM-1 misattributed; compliance mis-sequenced; thin Playwright) → re-plan v2 → cycle 2 PASS. Cycle 3 PASS on the operator-directed Phase 6 (agentic-vocabulary glossary) scope expansion.
+**Implementation reference**: Uncommitted on `feat/educational-component` (cut from `main` @ `4604258`). 42-file staged change set.
+
+## Substantiation summary
+
+Seals the Educational Component v1 — the v5.2.0 release-gating feature. Inline, opt-in, dismissible plain-language micro-lessons + a FailSafe agentic-vocabulary glossary, translating FailSafe vocabulary at the governance moment; SHIELD lifecycle as the curriculum spine. Not training software — no quizzes, no scoring, no blocking.
+
+- **Phase 0** — `docs/UI_MANIFEST.md` reconciled (stale `DojoViewProvider`/`failsafe.dojo` entry marked REMOVED); compliance determination originated (`docs/compliance-education-component.md`); surface anchors source-verified.
+- **Phase 1** — `src/education/lessons.ts` typed `Lesson` model + `LESSONS` registry + `getLesson`; v1 content for governance-mode + Plan/Audit/Substantiate at three proficiency levels. FX591.
+- **Phase 2** — `failsafe.education.proficiency` + `failsafe.education.enabled` settings; `readEducationConfig()`. FX592.
+- **Phase 3** — `education-lesson.js` collapsed-by-default dismissible affordance + `command-center.css` styling. FX593.
+- **Phase 4** — governance-mode card extracted to a new `governance-mode-card.js` leaf (razor remediation: `settings.js` 266 → 232); SHIELD phase-tracker lessons in `monitor-render.js`; native picker/onboarding detail; education config threaded to the webview via the hub snapshot. FX594–FX597.
+- **Phase 5** — lesson-anchor coherence check (drift guard); compliance note expanded. FX598.
+- **Phase 6 (operator-directed expansion)** — FailSafe agentic-vocabulary glossary: 12 terms (MCP server, governance interceptor, L1–L3 risk tiers / L3 approval, Sentinel, decision drift, the ledger / Merkle chain, Shadow Genome, bicameral, receipts/verdicts, Enforcement Engine, SHIELD overview, agentic coding) at three levels; additive `kind: 'moment' | 'glossary'` discriminator; a "FailSafe Glossary" Settings section (`education-glossary.js`); content split into sibling modules with the browser-ESM build switched to a bundled emit; coherence check extended to validate the `'glossary'` class. FX599–FX602.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| Full `vscode-test` suite | **2801 passing / 1 pending / 0 failing** — verified directly (clean rebuild) |
+| Integrated typecheck (`tsc --noEmit -p ./`) | clean, exit 0 — verified directly |
+| Lint | clean |
+| Playwright (FX596 + FX597 + FX601) | 8/8 passing — verified directly |
+| Section 4 Razor | all new/modified `.ts`/`.js` files < 250 (`settings.js` 234, `lessons.ts` 228, glossary content split across two < 150-line siblings); CSS razor-exempt |
+| Audit gate | cycle-2 PASS (Phases 0–5) + cycle-3 PASS (Phase 6), independent qor-judge |
+| Scope control | Phase 4–5: 5 out-of-scope files an implementation agent had opportunistically modified were caught + reverted. Phase 6: change set verified scope-clean |
+| VSIX packaging | `bundle.cjs` emits the browser-ESM lesson registry into `dist/education-browser/` (bundled, so the Phase-6 content split stays self-contained) |
+| Merkle chain | Previous Hash = Entry #387 Chain Hash; Chain Hash = SHA256(content + previous) |
+
+## Compliance
+
+v1 — including the glossary — determined **outside** EU AI Act Annex III high-risk education/training classification: static contextual help; no assessment, scoring, access determination, or learning-outcome evaluation; proficiency operator-set, never inferred. Aligned with the Article 4 AI-literacy goal. Binding escalation trigger recorded in `docs/compliance-education-component.md` and the ideation artifact. Risk grade L2.
+
+## Content Hash
+
+**Content Hash**: `cf3effdb90279d2be31e1410f161035c5e8e61beed19e1551f8706b73d4270ba`
+**Previous Hash**: `cad2b585ae9c240c779c60955571a1d4b957bda10a9dfbc115cd4f23c7eefc8f` (Entry #387)
+**Chain Hash**: `882abd9e0c01e898469efa9c45de741c414de2bb2db36ee7cdc84d1ea4f836a9`
+**Merkle Seal**: `81f364a348483974471a28afc162f421dc03378e8223fe0e06b173a99f1d810c` — gate_workspace_audit_educational_component_v1_PASS
+**Session ID**: `2026-05-22-educational-component-v1-substantiation-seal`
+
+_Hash provenance_: Content Hash = `SHA256` of the staged diff (`git diff --cached` over the 42-file change set, `docs/META_LEDGER.md` excluded to avoid self-reference). Stage-only Review Boundary — work not yet committed. Chain Hash = `SHA256(content + previous)`; Merkle Seal = `SHA256(chain + gate_label)`.
+
+## Review Boundary attestation
+
+No marketplace publish. No commit, no push, no PR, no merge, no tag this session — the `/qor-auto-dev-1` Review Boundary holds; all 42 files staged for operator review. `package.json` remains `5.1.8`; v5.2.0 is not released until `/qor-repo-release`.
+
+## Decision
+
+**SEAL — Reality matches Promise.** The Educational Component v1 is implemented, verified, and compliance-bounded — governance-moment micro-lessons plus the agentic-vocabulary glossary that brings v1 in line with its spark. v5.2.0's release-gating feature exists. Entries #386 + #387 reconcile the previously-deferred v5.1.7 + v5.1.8 DELIVER records.
+
+_Chain Status: Educational Component v1 SEALED at Entry #388._
+_Next: operator review of the staged change set; commit + push/PR per operator approval; then `/qor-repo-release` to cut v5.2.0._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: Educational Component v1 SEALED at Entry #388; branch feat/educational-component; 42 files staged, uncommitted; full vscode-test suite 2801 passing; tsc + lint clean; Playwright 8/8._
+_Session: 2026-05-22-educational-component-v1-substantiation-seal_

@@ -1,5 +1,6 @@
 import { SentinelMonitor } from './modules/sentinel-monitor.js';
 import { getPhaseInfo, getFeatureSummary, renderPhase } from './modules/monitor-render.js';
+import { bindLessonDismiss } from './modules/education-lesson.js';
 import { MonitorStaleness } from './modules/monitor-staleness.js';
 import { installMonitorViewportFit, fitMonitorToViewport } from './modules/monitor-viewport-fit.js';
 import { openModal } from './modules/modal-helper.js';
@@ -169,7 +170,10 @@ export class WebPanelClient {
       this.hub.qorRuntime || {},
     );
 
-    renderPhase(phaseInfo, this.elements);
+    renderPhase(phaseInfo, this.elements, this.hub.education);
+    // Wire the phase-track micro-lesson's dismiss control (renderPhase is a
+    // pure renderer; binding happens here after the innerHTML is in the DOM).
+    if (this.elements.phaseTrack) bindLessonDismiss(this.elements.phaseTrack);
     this.renderFeatureSummary(summary);
     if (this.elements.planTitle) {
       this.elements.planTitle.textContent = plan.title ? `Tracking: ${plan.title}` : '—';

@@ -64,6 +64,11 @@ export interface HubSnapshotServiceDeps {
    *  rebuild and threads the result through WorkspaceArtifactBuilder so the
    *  Settings card can surface a floor-violation warning. */
   getQorLogicVerifier?: () => Promise<import("../../qorlogic/qorLogicInstallRecord").QorLogicVersionStatus>;
+  /** Educational Component (v5.2.0): callback returning the normalized
+   *  {enabled, proficiency} education settings. Threaded into `hub.education`
+   *  so the webview micro-lesson affordance can read it. Without this dep the
+   *  field stays absent and renderLesson() degrades to the empty string. */
+  getEducationConfig?: () => import("../../education/educationConfig").EducationConfig;
 }
 
 const FILE_EVENT_TYPES = new Set(["FILE_CREATED", "FILE_MODIFIED", "FILE_DELETED"]);
@@ -262,6 +267,12 @@ export class HubSnapshotService {
       // when deps absent, fields stay undefined (legacy behavior).
       governanceModeState: this.deps.getGovernanceMode?.(),
       recentModeTransitions: this.deps.modeTransitionHistory?.getRecent(10) ?? [],
+      // Educational Component (v5.2.0): the {enabled, proficiency} pair the
+      // webview micro-lesson affordance consumes. Threaded through the SAME
+      // dep-callback pattern as getGovernanceMode — when the dep is absent
+      // (test contexts) the field stays undefined and renderLesson() degrades
+      // to the empty string.
+      education: this.deps.getEducationConfig?.(),
       generatedAt: new Date().toISOString(),
     };
   }

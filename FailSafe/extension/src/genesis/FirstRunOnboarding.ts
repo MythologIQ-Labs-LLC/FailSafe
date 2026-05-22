@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { ConfigManager } from '../shared/ConfigManager';
+import { getLesson } from '../education/lessons';
 
 interface GovernanceCeremonyLike {
   showQuickPick(): Promise<void>;
@@ -21,10 +22,24 @@ export class FirstRunOnboarding {
     );
 
     if (action === 'Set Up Agent Governance') {
+      await this.showGovernanceVocabularyStep();
       await this.ceremony.showQuickPick();
     }
 
     await this.markOnboarded();
+  }
+
+  /**
+   * Educational Component (v5.2.0): an optional governance-vocabulary step.
+   * Surfaces the `governance-mode` micro-lesson from the registry as a native
+   * notification before the mode quickpick, so a governance-new operator gets
+   * the plain-language framing first. Native surface — no webview expander.
+   * Dismissible: the operator can skip it without affecting onboarding flow.
+   */
+  private async showGovernanceVocabularyStep(): Promise<void> {
+    const lesson = getLesson('governance-mode', 'beginner');
+    if (!lesson) return;
+    await vscode.window.showInformationMessage(lesson, 'Got it');
   }
 
   private isFirstRun(): boolean {
