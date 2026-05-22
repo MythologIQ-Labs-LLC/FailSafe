@@ -2,6 +2,7 @@
 // Sentinel status, verify button, policies, L3 queue, audit log.
 
 import { renderIntegrityCard, renderUnattributedCard, derivePolicies } from './integrity.js';
+import { sentinelModeValue } from './sentinel-mode.js';
 
 export class GovernanceRenderer {
   constructor(containerId, deps = {}) {
@@ -134,7 +135,7 @@ export class GovernanceRenderer {
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
           <span style="width:8px;height:8px;border-radius:50%;background:${statusColor}"></span>
           <span style="font-weight:600">${statusText}</span>
-          <span class="cc-badge" style="background:var(--primary);color:#fff">${this.esc(sentinel.mode || 'observe')}</span>
+          <span class="cc-badge" style="background:var(--primary);color:#fff">Sentinel: ${this.esc(sentinelModeValue(sentinel.mode))}</span>
         </div>
         <div style="font-size:0.8rem;color:var(--text-muted)">
           Events: ${sentinel.eventsProcessed || 0} ·

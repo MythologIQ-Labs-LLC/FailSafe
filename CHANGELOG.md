@@ -5,6 +5,27 @@ All notable changes to FailSafe will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — v5.1.8 (draft)
+
+B-INT-1 surfaces the 11 remaining Bicameral MCP tools (routes + a styled, grouped Advanced-tools card section) + B-EM-1 Sentinel-evaluator/Governance-mode UI disambiguation + B132 brainstorm node-label truncation feedback + the B199 CRITICAL test-coverage epic closeout + a v5.1.7 activation-test regression fix surfaced by restoring the full `vscode-test` suite (2739 passing, 0 failing). FX584–FX590. SHIELD-sealed via META_LEDGER Entry #385 (consolidated v5.1.8 cycle). See `docs/plan-qor-v5-1-8-cycle.md`. v5.2.0 remains gated on the Educational component — not this release.
+
+### Added
+
+- **Bicameral Advanced-tools surface** (B-INT-1). The 11 remaining Bicameral MCP tools (`ingest`, `search`, `brief`, `judgeGaps`, `resolveCompliance`, `linkCommit`, `update`, `reset`, `dashboard`, `validateSymbols`, `getNeighbors`) are now reachable. Each gets a `POST /api/actions/bicameral-<tool>` route — registered via a new `bicameralToolRoute` factory in `src/roadmap/routes/bicameralToolRoutes.ts`, `rejectIfRemote`-scoped, `409` when disconnected, `400` on a malformed body. State-changing tools (`ingest`, `update`, `reset`, `resolveCompliance`, `linkCommit`) route through the B151 `McpInterceptor` governance seam; pure-query tools call the client directly. A collapsed-by-default **"Advanced tools"** section in the bicameral card (`src/roadmap/ui/modules/bicameral-advanced-tools.js`) exposes all 11 as labelled invoke rows with per-tool inputs and capability-gating (a tool absent from `/status` `capabilities` renders disabled). The client surface was already complete (B-BIC-19); this cycle adds the route + UI surface. The section is fully styled in `command-center.css` (no inline styles), splits the tools into a **Query tools** group and a visually-distinct **Mutation tools** group, shows a per-row loading state during invocation, and renders results in a labelled success/error container. 14 cases (FX586–FX589 incl. a Playwright invoke-flow case).
+
+### Changed
+
+- **Sentinel-evaluator vs Governance-mode UI disambiguation** (B-EM-1). Five UI sites rendered `sentinel.mode` (`SentinelMode` = `heuristic`/`llm-assisted`/`hybrid`) with a `|| 'observe'` fallback — `'observe'` is a `GovernanceMode`, an invalid value for the field — and some labelled the value as if it were the governance mode. New `sentinelModeValue()` leaf supplies the corrected `'heuristic'` default; `integrity.js` relabels `Governance Mode:` → `Sentinel Mode:`, `governance.js`/`operations.js` prefix the value with `Sentinel`, `tickers.js` relabels `PROTOCOL` → `SENTINEL`. 8 cases (FX584).
+- **Brainstorm node-label truncation feedback** (B132). Brainstorm node labels were silently shortened to 200 chars server-side with no client signal. `BrainstormRoute.ts` (`POST`/`PATCH /node`) now returns additive `labelTruncated` + `labelOriginalLength` fields when the cap is hit (`NODE_LABEL_MAX` + `withTruncationInfo` extracted to `brainstorm-label-truncation.ts`); the brainstorm UI surfaces a dismissible `.bs-truncation-notice` on add and edit, styled as an inline info banner in `command-center.css`. 6 cases (FX585) + a Playwright case (FX590).
+
+### Fixed
+
+- **Bicameral activation tests — latent v5.1.7 regression.** B-BIC-6 (v5.1.7) made the spawn-command validator async (`isSafeBicameralCommandResolved` with `realpath`), so `wireFromConfig` now calls `setBicameralCommand`/`setBicameralClient` after an `await`. Three `bicameral-activation.test.ts` cases asserted those calls synchronously and silently broke — masked because v5.1.7's `vscode-updating`-mutex degraded posture never ran the full `vscode-test` suite. v5.1.8 restored the full suite (2739 passing / 1 pending / 0 failing); the three cases are now async-aware. Production wiring was already correct — test-only fix.
+
+### Closed
+
+- **B199 — comprehensive Playwright + integration test-coverage epic** (CRITICAL) is closed. Phases 1–9 and sub-items B-B199-1..6 are all verified complete; every cited FX row was confirmed present in `FEATURE_INDEX.md` with its spec on disk. FX539 (B-B199-1 brainstorm E2E) was retroactively indexed during the closeout. FX513/FX519 carry `test.skip`-staged cases pending B197 — accepted residual. Two pre-existing razor-debt items surfaced during B-INT-1 were filed as B-INT-6/B-INT-7.
+
 ## [5.1.7] - 2026-05-21
 
 B151 universal governance interceptor (the B190 → B151 → B152 → B153 architecture chain; B190 itself shipped in 5.1.6) + B191 Monitor SHIELD-visibility verification + B-INT-2 bicameral.preflight → L3 + B198 subscribe-without-mutate UI remediation + B-BIC validator/UX/governance batches (6/7, 12/13/14/15, 17/18) + B-B199-3/4/5/6 test-coverage gaps. FX547–FX583. SHIELD-sealed via META_LEDGER Entry #384 (consolidated v5.1.7 cycle). See `docs/plan-qor-b151-governance-interceptor.md`, `docs/plan-qor-b-int-2-preflight-l3.md`, `docs/plan-qor-b198-subscribe-without-mutate.md`, `docs/plan-qor-batch1-bbic-decision-row-ux.md`, `docs/plan-qor-batch2-bbic-validator-hardening.md`, `docs/plan-qor-batch3-b199-coverage-gaps.md`, `docs/plan-qor-batch4-bbic-governance-integration.md`. v5.2.0 remains gated on the Educational component — not this release.

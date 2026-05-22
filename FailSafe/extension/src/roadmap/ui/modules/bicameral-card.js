@@ -2,6 +2,7 @@
 // Renders one of four install states + an optional decision feed.
 // Pure HTML + JSDOM-friendly. CSS tokens are FailSafe's; we do not clone
 // Bicameral's palette.
+import { mountAdvancedTools } from './bicameral-advanced-tools.js'; // B-INT-1
 
 export const INITIAL_BICAMERAL_STATE = {
   installState: 'unknown',
@@ -309,4 +310,5 @@ export function bindBicameralCard(container, options = {}) {
       options.onSetup?.(mode);
     });
   });
+  mountAdvancedTools(card.querySelector('[data-action="bicameral-refresh"]') ? card : null, options.advancedState || {}); // B-INT-1
 }

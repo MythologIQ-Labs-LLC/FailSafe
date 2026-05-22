@@ -1,5 +1,7 @@
 // FailSafe Command Center — Metric Integrity & Unattributed Activity Cards
 
+import { sentinelModeValue } from './sentinel-mode.js';
+
 function esc(str) {
   const d = document.createElement('div');
   d.textContent = str;
@@ -63,8 +65,11 @@ export function derivePolicies(hubData) {
   const sentinel = hubData.sentinelStatus || {};
   const gov = hubData.governancePhase || {};
 
-  const mode = sentinel.mode || 'observe';
-  derived.push({ name: `Governance Mode: ${mode.charAt(0).toUpperCase() + mode.slice(1)}`, id: 'governance-mode' });
+  // B-EM-1: this row reflects the Sentinel-evaluator mode (sentinel.mode),
+  // not the governance mode — the prior "Governance Mode:" label was a name
+  // collision. Fallback corrected to a valid SentinelMode via sentinelModeValue.
+  const mode = sentinelModeValue(sentinel.mode);
+  derived.push({ name: `Sentinel Mode: ${mode.charAt(0).toUpperCase() + mode.slice(1)}`, id: 'sentinel-mode' });
 
   if (gov.current && gov.current !== 'IDLE') {
     derived.push({ name: `S.H.I.E.L.D. Phase: ${gov.current}`, id: 'shield-phase' });

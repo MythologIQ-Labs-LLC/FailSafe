@@ -2,6 +2,7 @@
 // Node CRUD, transcript submission, graph fetch/export/clear.
 
 import { exportBrainstormJSON } from './brainstorm-export.js';
+import { showTruncationNotice } from './brainstorm-truncation-notice.js';
 
 const STORAGE_KEY = 'failsafe-brainstorm-graph';
 
@@ -87,19 +88,23 @@ export class BrainstormGraph {
         body: JSON.stringify({ label, type }),
       });
       const node = await res.json();
+      if (node.labelTruncated) showTruncationNotice();
       if (node.id) this.mergeNodes([node], []);
     } catch { /* network error — WS will sync */ }
   }
 
   async saveNode(id, label, type) {
     try {
-      await fetch(`/api/v1/brainstorm/node/${encodeURIComponent(id)}`, {
+      const res = await fetch(`/api/v1/brainstorm/node/${encodeURIComponent(id)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ label, type }),
       });
+      const updated = await res.json();
+      if (updated && updated.labelTruncated) showTruncationNotice();
+      const stored = (updated && typeof updated.label === 'string') ? updated.label : label;
       const node = this.nodes.find(n => n.id === id);
-      if (node) { node.label = label; node.type = type; }
+      if (node) { node.label = stored; node.type = type; }
       this.canvas?.setNodes(this.nodes);
       this._saveLocal();
     } catch { /* network error */ }
