@@ -5,7 +5,7 @@ All notable changes to FailSafe will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — v5.1.7 (draft)
+## [5.1.7] - 2026-05-21
 
 B151 universal governance interceptor (the B190 → B151 → B152 → B153 architecture chain; B190 itself shipped in 5.1.6) + B191 Monitor SHIELD-visibility verification + B-INT-2 bicameral.preflight → L3 + B198 subscribe-without-mutate UI remediation + B-BIC validator/UX/governance batches (6/7, 12/13/14/15, 17/18) + B-B199-3/4/5/6 test-coverage gaps. FX547–FX583. SHIELD-sealed via META_LEDGER Entry #384 (consolidated v5.1.7 cycle). See `docs/plan-qor-b151-governance-interceptor.md`, `docs/plan-qor-b-int-2-preflight-l3.md`, `docs/plan-qor-b198-subscribe-without-mutate.md`, `docs/plan-qor-batch1-bbic-decision-row-ux.md`, `docs/plan-qor-batch2-bbic-validator-hardening.md`, `docs/plan-qor-batch3-b199-coverage-gaps.md`, `docs/plan-qor-batch4-bbic-governance-integration.md`. v5.2.0 remains gated on the Educational component — not this release.
 

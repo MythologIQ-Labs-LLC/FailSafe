@@ -14,9 +14,19 @@ FailSafe runs locally inside VS Code and Cursor. It monitors what AI agents do, 
 
 ---
 
-**Current Release**: v5.1.6 (2026-05-20)
+**Current Release**: v5.1.7 (2026-05-21)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v5.1.7
+
+- **Universal governance interceptor** (B151): an `IGovernanceInterceptor` single-`evaluate` seam — `EngineBackedInterceptor` maps engine verdicts to schema-valid receipts, `McpInterceptor` adapts MCP `{name,arguments}` envelopes; `BicameralRoute` history/drift/ratify migrated through it with a behavioural-parity fixture. Opens the B190 → B151 → B152 → B153 architecture chain.
+- **Bicameral preflight → L3** (B-INT-2): `PreflightToL3Mediator` attaches drifted-decision evidence to queued tier-3 L3 approvals; a preflight-conflict line surfaces on the approval card.
+- **Subscribe-without-mutate UI remediation** (B198): shared accessible `modal-helper`, event-driven `SkillsRenderer` cache invalidation, and `TabGroup` sub-view lifecycle cleanup.
+- **Bicameral hardening**: `isSafeBicameralCommandResolved` symlink-containment + `extraRoots` allowlist (B-BIC-6/7); decision-row UX — open-binding route, capability-gated ingest hint, composite Sync, overflow clamp (B-BIC-12/13/14/15); `bicameral.verdict` events feed `SentinelWatchPolicy` + the Risks Register via `DriftToRiskMediator` (B-BIC-17/18).
+- **Test-coverage hardening** (B-B199-3/4/5/6): per-file-scoped E2E coverage-gate overrides, cross-host install-record coverage, documented voice/stub trade-offs.
+
+See root [CHANGELOG.md](../../CHANGELOG.md) for the full v5.1.7 release notes.
 
 ## What's New in v5.1.6
 

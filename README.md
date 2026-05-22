@@ -32,9 +32,19 @@ _Local-first safety for AI coding assistants._
 
 <div align="center">
 
-**Current Release**: v5.1.6 (2026-05-20)
+**Current Release**: v5.1.7 (2026-05-21)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
+
+## What's new in v5.1.7
+
+- **Universal governance interceptor** (B151): an `IGovernanceInterceptor` single-`evaluate` seam — `EngineBackedInterceptor` maps engine verdicts to receipts, `McpInterceptor` adapts MCP envelopes; `BicameralRoute` is migrated through it with behavioural-parity proof. Opens the B190 → B151 → B152 → B153 architecture chain.
+- **Bicameral preflight → L3** (B-INT-2): drifted-decision evidence attaches to queued tier-3 L3 approvals; a preflight-conflict line surfaces on the approval card before you approve.
+- **Subscribe-without-mutate UI remediation** (B198): a shared accessible modal helper, event-driven Skills-cache invalidation, and TabGroup sub-view lifecycle cleanup.
+- **Bicameral hardening**: install-detector symlink-containment + extra-roots allowlist (B-BIC-6/7); decision-row UX — open-binding, capability hint, composite sync, overflow clamp (B-BIC-12/13/14/15); drift verdict events feed Sentinel + the Risks Register (B-BIC-17/18).
+- **Test-coverage hardening** (B-B199-3/4/5/6): per-file-scoped E2E coverage-gate overrides, cross-host install-record coverage, and documented voice/stub trade-offs.
+
+See [CHANGELOG.md](CHANGELOG.md) for the full v5.1.7 release notes.
 
 ## What's new in v5.1.6
 
