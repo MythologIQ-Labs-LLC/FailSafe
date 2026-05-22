@@ -62,12 +62,15 @@ function patchOnDidChangeConfig(): () => void {
 
 suite('bootstrapBicameral — wireBicameralIntegration', () => {
 
-  test('extension wires without throwing when bicameral-mcp is not installed (default command)', () => {
+  test('extension wires without throwing when bicameral-mcp is not installed (default command)', async () => {
     const restoreConfig = patchConfig({});
     const restoreWatch = patchOnDidChangeConfig();
     try {
       const { server, calls } = fakeServer();
       assert.doesNotThrow(() => wireBicameralIntegration(fakeContext(), server, '/tmp/ws'));
+      // wireFromConfig validates the command via the async symlink-resolving
+      // validator (B-BIC-6) — let that fire-and-forget microtask settle.
+      await new Promise((r) => setTimeout(r, 25));
       // Default command set + a client constructed (lazy — no connect).
       assert.strictEqual(calls.setCommand[0], 'bicameral-mcp');
       assert.strictEqual(calls.setClient.length, 1);
@@ -80,12 +83,14 @@ suite('bootstrapBicameral — wireBicameralIntegration', () => {
     }
   });
 
-  test('wireBicameralIntegration is lazy — does NOT call client.connect at activation', () => {
+  test('wireBicameralIntegration is lazy — does NOT call client.connect at activation', async () => {
     const restoreConfig = patchConfig({});
     const restoreWatch = patchOnDidChangeConfig();
     try {
       const { server, calls } = fakeServer();
       wireBicameralIntegration(fakeContext(), server, '/tmp/ws');
+      // Async command validation (B-BIC-6) — settle before reading setClient.
+      await new Promise((r) => setTimeout(r, 25));
       const client = calls.setClient[0]! as { isConnected: () => boolean };
       assert.strictEqual(client.isConnected(), false, 'must not auto-connect at activate time');
     } finally {
@@ -94,12 +99,14 @@ suite('bootstrapBicameral — wireBicameralIntegration', () => {
     }
   });
 
-  test('unsafe command (path traversal) sets client to null without throwing', () => {
+  test('unsafe command (path traversal) sets client to null without throwing', async () => {
     const restoreConfig = patchConfig({ command: '../../../etc/passwd' });
     const restoreWatch = patchOnDidChangeConfig();
     try {
       const { server, calls } = fakeServer();
       assert.doesNotThrow(() => wireBicameralIntegration(fakeContext(), server, '/tmp/ws'));
+      // Async command validation (B-BIC-6) — settle before asserting.
+      await new Promise((r) => setTimeout(r, 25));
       // Spawn-boundary validator rejects → command falls back to default, client = null.
       assert.strictEqual(calls.setCommand[0], 'bicameral-mcp');
       assert.strictEqual(calls.setClient[0], null);
