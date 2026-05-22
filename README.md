@@ -32,9 +32,19 @@ _Local-first safety for AI coding assistants._
 
 <div align="center">
 
-**Current Release**: v5.1.7 (2026-05-21)
+**Current Release**: v5.1.8 (2026-05-22)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
+
+## What's new in v5.1.8
+
+- **Bicameral Advanced-tools surface** (B-INT-1): the 11 remaining Bicameral MCP tools (`ingest`, `search`, `brief`, `judgeGaps`, `resolveCompliance`, `linkCommit`, `update`, `reset`, `dashboard`, `validateSymbols`, `getNeighbors`) are now reachable — `POST /api/actions/bicameral-<tool>` routes plus a styled, collapsible **"Advanced tools"** card section with query/mutation tool grouping, per-row loading state, and labelled success/error results.
+- **Sentinel-evaluator vs Governance-mode UI disambiguation** (B-EM-1): five UI sites that rendered the Sentinel evaluator mode are relabelled to avoid confusion with the governance mode; the invalid `'observe'` fallback is corrected.
+- **Brainstorm node-label truncation feedback** (B132): a dismissible inline notice when a node label is shortened to the 200-character cap — no more silent truncation.
+- **B199 test-coverage epic closed**: the CRITICAL Playwright + integration-coverage epic is verified complete and closed.
+- **Activation-test regression fix**: a latent v5.1.7 async-timing test regression is fixed; the full `vscode-test` suite is restored to green.
+
+See [CHANGELOG.md](CHANGELOG.md) for the full v5.1.8 release notes.
 
 ## What's new in v5.1.7
 

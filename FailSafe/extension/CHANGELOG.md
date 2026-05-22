@@ -5,6 +5,10 @@ All notable changes to the MythologIQ FailSafe extension will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.1.8] - 2026-05-22
+
+B-INT-1 Bicameral Advanced-tools surface (11 tool routes + a styled, grouped Advanced-tools card section) + B-EM-1 Sentinel-evaluator vs Governance-mode UI disambiguation + B132 brainstorm node-label truncation feedback + the B199 CRITICAL test-coverage epic closeout. Includes a latent v5.1.7 activation-test regression fix surfaced by restoring the full `vscode-test` suite. FX584–FX590. SHIELD-sealed via META_LEDGER Entry #385. See root [CHANGELOG.md](../../CHANGELOG.md) for the full bullet list.
+
 ## [5.1.7] - 2026-05-21
 
 B151 universal governance interceptor + B-INT-2 bicameral.preflight → L3 + B198 subscribe-without-mutate UI remediation + B-BIC validator/UX/governance batches (6/7, 12/13/14/15, 17/18) + B191 Monitor SHIELD-visibility verification + B-B199-3/4/5/6 test-coverage gaps. Includes a follow-up fix for a latent bicameral-activation async-test regression (B-BIC-6's async validator). SHIELD-sealed via META_LEDGER Entry #384. See root [CHANGELOG.md](../../CHANGELOG.md) for the full bullet list.
