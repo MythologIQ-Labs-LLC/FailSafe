@@ -28,6 +28,7 @@ import type {
   BicameralDriftStatus,
 } from "../../integrations/bicameral/types";
 import type { BicameralVerdictEventPayload } from "../../shared/types/events";
+import { registerBicameralToolRoutes } from "./bicameralToolRoutes";
 
 export interface BicameralRouteDeps {
   rejectIfRemote: (req: Request, res: Response) => boolean;
@@ -159,7 +160,7 @@ const RECEIPT_HTTP_TABLE: Record<string, { status: number }> = {
  * verdict). Returns `true` when the request has been answered by a non-ALLOW
  * receipt (the caller must stop). Pure HTTP side effect on the `res`.
  */
-async function governToolCall(
+export async function governToolCall(
   deps: BicameralRouteDeps,
   envelope: McpEnvelope,
   res: Response,
@@ -475,6 +476,7 @@ export function setupBicameralRoutes(
     }
     res.json({ ok: true, snapshot });
   });
+  registerBicameralToolRoutes(app, deps); // B-INT-1: 11 advanced tool routes
 }
 
 function parseInstallMode(raw: unknown): InstallMode | null {

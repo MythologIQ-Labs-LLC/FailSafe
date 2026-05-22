@@ -34,7 +34,27 @@ When the operator clicks **Connect**, FailSafe opens an MCP stdio session and ca
 | `bicameral.drift` | Per-file drift status when a file path is supplied | `BicameralDriftStatus[]` |
 | `bicameral.ratify` | Operator confirms or rejects a single decision | void (boolean status implicit in HTTP 200) |
 
-The remaining nine tools (`ingest`, `search`, `brief`, `judge_gaps`, `resolve_compliance`, `link_commit`, `update`, `reset`, `dashboard`, `validate_symbols`, `get_neighbors`) are tracked as follow-ups in `docs/BACKLOG.md` (**B-INT-1**).
+The remaining 11 tools are surfaced via the **Advanced tools** section — see below.
+
+### Advanced tools — the remaining 11 (B-INT-1)
+
+The bicameral card carries a collapsed-by-default **"Advanced tools"** `<details>` section exposing the 11 tools beyond the v1 four. Each is a labelled invoke row with the minimal input it needs; a tool absent from the connected server's `capabilities` array (from `/api/integrations/bicameral/status`) renders disabled.
+
+| Tool | Input | Governed |
+|---|---|---|
+| `ingest` | repo path | ✅ via `McpInterceptor` |
+| `update` | decision id + payload | ✅ via `McpInterceptor` |
+| `reset` | optional scope | ✅ via `McpInterceptor` |
+| `resolveCompliance` | decision id + resolution | ✅ via `McpInterceptor` |
+| `linkCommit` | commit SHA + decision id | ✅ via `McpInterceptor` |
+| `search` | query | query — direct |
+| `brief` | feature | query — direct |
+| `judgeGaps` | feature | query — direct |
+| `dashboard` | none | query — direct |
+| `validateSymbols` | symbols | query — direct |
+| `getNeighbors` | decision id | query — direct |
+
+Each tool has a `POST /api/actions/bicameral-<tool>` route (`rejectIfRemote`-scoped, `409` when disconnected, `400` on a malformed body), registered via the `bicameralToolRoute` factory in `src/roadmap/routes/bicameralToolRoutes.ts`. State-changing tools route through the B151 governance interceptor seam; pure-query tools call the client directly.
 
 ### Preflight on the L3 approval card (B-INT-2)
 

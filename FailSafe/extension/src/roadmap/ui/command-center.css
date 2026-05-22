@@ -864,6 +864,249 @@ select option {
   pointer-events: none;
 }
 
+/* ═══════════════════════════ Bicameral Advanced Tools (B-INT-1) ═══════════════════════════ */
+
+.cc-bicameral-advanced {
+  margin-top: 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.cc-bicameral-advanced-summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 10px 14px;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  transition: color 0.2s ease;
+}
+.cc-bicameral-advanced-summary::-webkit-details-marker { display: none; }
+.cc-bicameral-advanced-summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 8px;
+  color: var(--accent-cyan);
+  transition: transform 0.2s ease;
+}
+.cc-bicameral-advanced[open] > .cc-bicameral-advanced-summary::before { transform: rotate(90deg); }
+.cc-bicameral-advanced-summary:hover { color: var(--text-main); }
+
+.cc-bicameral-advanced-body {
+  padding: 6px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cc-bicameral-tool-group {
+  border: 1px solid var(--border-rim);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.2);
+}
+.cc-bicameral-tool-group--mutation {
+  border-color: rgba(250, 204, 21, 0.4);
+  background: rgba(250, 204, 21, 0.06);
+}
+
+.cc-bicameral-tool-group-title {
+  font-family: var(--font-display);
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--accent-cyan);
+  margin-bottom: 8px;
+}
+.cc-bicameral-tool-group--mutation .cc-bicameral-tool-group-title { color: var(--accent-gold); }
+.cc-bicameral-tool-group--mutation .cc-bicameral-tool-group-title::after {
+  content: 'changes state';
+  margin-left: 8px;
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--accent-gold);
+  opacity: 0.75;
+  text-transform: none;
+}
+
+.cc-bicameral-tool-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cc-bicameral-tool-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  min-width: 0;
+  transition: background 0.15s ease;
+}
+.cc-bicameral-tool-row:hover { background: rgba(255, 255, 255, 0.04); }
+.cc-bicameral-tool-row--mutation { border-left: 2px solid var(--accent-gold); }
+.cc-bicameral-tool-row--mutation:hover { background: rgba(250, 204, 21, 0.08); }
+
+.cc-bicameral-tool-label {
+  width: 150px;
+  flex-shrink: 0;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  color: var(--text-main);
+}
+
+.cc-bicameral-tool-fields {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.cc-bicameral-tool-input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  background: var(--bg-dark);
+  border: 1px solid var(--border-rim);
+  border-radius: 4px;
+  color: var(--text-main);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.cc-bicameral-tool-input::placeholder { color: var(--text-muted); opacity: 0.5; }
+.cc-bicameral-tool-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 8px var(--primary-glow);
+}
+
+.cc-bicameral-tool-run {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  padding: 4px 12px;
+}
+.cc-bicameral-tool-row--mutation .cc-bicameral-tool-run:not(:disabled) {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+.cc-bicameral-tool-row--mutation .cc-bicameral-tool-run:not(:disabled):hover {
+  background: rgba(250, 204, 21, 0.12);
+  box-shadow: 0 0 12px rgba(250, 204, 21, 0.3);
+}
+.cc-bicameral-tool-run.is-loading {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.cc-bicameral-tool-result {
+  border: 1px solid var(--border-rim);
+  border-left: 3px solid var(--accent-green);
+  border-radius: 6px;
+  background: var(--bg-dark);
+  overflow: hidden;
+}
+.cc-bicameral-tool-result.is-empty { display: none; }
+.cc-bicameral-tool-result.is-error { border-left-color: var(--accent-red); }
+
+.cc-bicameral-tool-result-head {
+  padding: 6px 10px;
+  font-family: var(--font-display);
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent-green);
+  border-bottom: 1px solid var(--border-rim);
+  background: rgba(52, 211, 153, 0.08);
+}
+.cc-bicameral-tool-result.is-error .cc-bicameral-tool-result-head {
+  color: var(--accent-red);
+  background: rgba(248, 113, 113, 0.08);
+}
+
+.cc-bicameral-tool-result-body {
+  margin: 0;
+  padding: 8px 10px;
+  font-family: var(--font-mono, 'SF Mono', Consolas, monospace);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 180px;
+  overflow: auto;
+}
+.cc-bicameral-tool-result.is-error .cc-bicameral-tool-result-body { color: var(--accent-red); }
+
+/* ═══════════════════════════ Brainstorm Truncation Notice (B132) ═══════════════════════════ */
+
+.bs-truncation-notice {
+  position: absolute;
+  top: clamp(70px, 9vw, 92px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 90%;
+  padding: 7px 10px 7px 14px;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  color: var(--text-main);
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(250, 204, 21, 0.4);
+  border-left: 3px solid var(--accent-gold);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  animation: fadeIn 0.25s ease;
+}
+
+.bs-truncation-notice::before {
+  content: '⚠';
+  color: var(--accent-gold);
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.bs-truncation-notice-dismiss {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 0.95rem;
+  line-height: 1;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.bs-truncation-notice-dismiss:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.1);
+}
+.bs-truncation-notice-dismiss:focus-visible {
+  outline: 1px solid var(--accent-gold);
+  outline-offset: 1px;
+}
+
 /* ═══════════════════════════ Animations ═══════════════════════════ */
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }

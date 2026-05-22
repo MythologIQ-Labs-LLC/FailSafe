@@ -19516,3 +19516,72 @@ _Next: operator review of the staged seal commit; then `/qor-repo-release` when 
 _Chain integrity: VALID_
 _Session Status: v5.1.7 cycle SEALED at Entry #384; branch feat/b151-governance-interceptor 10 commits ahead of main; tsc clean; PUBLISH_BLOCK unchanged; awaits operator commit + push/PR._
 _Session: 2026-05-21-v5-1-7-consolidated-cycle-substantiation-seal_
+
+### Entry #385: SESSION SEAL — v5.1.8 consolidated cycle (B-EM-1 + B132 + B199 closeout + B-INT-1 + UI finishing pass)
+
+**Entry ID**: `941d9100efc6`
+**Date**: 2026-05-21
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-v5-1-8-cycle.md` (v2 + Phase 5 finishing pass)
+**Audit reference**: `/qor-auto-dev-1`-orchestrated. Audit cycle 1 VETO (6 findings) -> re-plan v2 -> audit cycle 2 PASS via an independent qor-judge. Phase 5 (operator-directed UI finishing pass) added post-implementation.
+**Implementation reference**: Uncommitted on `feat/v5-1-8-cycle` (cut from `main` @ `35fc2f1`). 30-file staged change set; four-specialist implementation (three impl + one UI-finishing). META_LEDGER not committed -- stage-only Review Boundary.
+
+## Substantiation summary
+
+Consolidated seal for the v5.1.8 staging cycle -- four backlog items plus an operator-directed UI finishing pass, orchestrated via `/qor-auto-dev-1`.
+
+- **B-EM-1** -- Sentinel-evaluator vs Governance-mode UI disambiguation. `sentinelModeValue()` leaf + five UI sites relabelled per-site. FX584.
+- **B132** -- Brainstorm node-label truncation feedback. Additive `labelTruncated`/`labelOriginalLength` route fields + a dismissible, styled `.bs-truncation-notice`. FX585 + FX590.
+- **B199** -- CRITICAL test-coverage epic closeout. Phases 1-9 + B-B199-1..6 verified; FX539 retro-indexed; B199 parent closed. B-INT-6/B-INT-7 razor-debt items filed.
+- **B-INT-1** -- 11 remaining Bicameral MCP tools. 11 `POST /api/actions/bicameral-<tool>` routes via the `bicameralToolRoutes.ts` factory + an "Advanced tools" card section. FX586-FX589.
+- **Phase 5 (finishing pass)** -- both new UI surfaces moved off ad-hoc inline styles into `command-center.css` classes; the Advanced-tools section deepened (query/mutation grouping, per-row loading state, labelled success/error result container); the full `vscode-test` electron suite restored.
+
+## Regression caught + fixed
+
+Restoring the full `vscode-test` suite surfaced a latent **v5.1.7 regression**: B-BIC-6 (v5.1.7) made the spawn-command validator async (`isSafeBicameralCommandResolved`), so `wireFromConfig` now calls `setBicameralCommand`/`setBicameralClient` after an `await`. Three `bicameral-activation.test.ts` cases asserted those synchronously and had silently broken -- invisible because v5.1.7's `vscode-updating`-mutex degraded posture never ran the full suite. The three cases were made async-aware (test-only fix; production wiring was already correct). The v5.1.7 cycle (Entry #384) is immutably sealed; this is recorded as residual caught + closed downstream.
+
+## Verification record
+
+| Check | Result |
+|---|---|
+| Full `vscode-test` electron suite | **2739 passing / 1 pending / 0 failing** -- run twice (3 failing -> regression fix -> 0 failing); verified directly |
+| Integrated typecheck (`tsc --noEmit -p ./`) | clean, exit 0 -- verified directly |
+| Lint (`npm run lint`) | exit 0, 0 errors (pre-existing warnings only) -- verified directly |
+| Playwright FX589 + FX590 | 2 passed -- verified directly, re-run after the UI finishing pass |
+| FEATURE_INDEX FX584-FX590 + FX539 | present; all `verified` -- now full-suite-backed, not harness-only |
+| Section 4 Razor | all new JS/TS files < 250 (`bicameral-advanced-tools.js` 209, `bicameralToolRoutes.ts` 204, `brainstorm-truncation-notice.js` 41, `brainstorm-label-truncation.ts` 26, `sentinel-mode.js` 20); `BrainstormRoute.ts` 236; `command-center.css` exempt; over-razor files touched <= 2 lines |
+| Audit gate | cycle-2 PASS, independent qor-judge |
+| Merkle chain | Previous Hash = Entry #384 Chain Hash; Chain Hash = SHA256(content + previous) |
+
+## Skipped per protocol
+
+- Python `qor.scripts.*` seal toolkit not vendored -- seal-helper steps recorded SKIP (prerequisite absent), as in Entry #384.
+- No version bump, no git tag -- both are `/qor-repo-release` actions.
+- The v5.1.8 degraded-test posture is RETIRED: the `vscode-updating` mutex was found not stuck; the full electron suite ran clean.
+
+## Content Hash
+
+**Content Hash**: `941d9100efc602735867229751c03eb011f1cb98c4b50a7d06ab1d8ce491a036`
+**Previous Hash**: `4fb75c57b6da883d0b2a8dbcfca60afa60b7b60352b949b74b2f1d4268eb73b7` (Entry #384)
+**Chain Hash**: `e5903171f812599ad91885b9b35c80a78c7ca54c19adfd7e9944b8652f54f9c1`
+**Merkle Seal**: `5bfa4e5a2f8cf8205085f524d7651b6f320d7bdd1af24e6fa1d35e062fe85d4d` -- gate_workspace_audit_v5_1_8_consolidated_cycle_PASS
+**Session ID**: `2026-05-21-v5-1-8-consolidated-cycle-substantiation-seal`
+
+_Hash provenance_: Content Hash = `SHA256` of the staged diff (`git diff --cached` over the 30-file v5.1.8 change set, `docs/META_LEDGER.md` excluded to avoid self-reference). Stage-only Review Boundary -- work not yet committed. Chain Hash = `SHA256(content_hash + previous_hash)`; Merkle Seal = `SHA256(chain_hash + gate_label)`.
+
+## Review Boundary attestation
+
+No marketplace publish -- `PUBLISH_BLOCK` unchanged. No commit, no push, no PR, no merge, no tag this session -- the `/qor-auto-dev-1` Review Boundary holds; all 30 files staged for operator review. `package.json` remains `5.1.6`. CHANGELOG carries `[Unreleased] -- v5.1.8 (draft)` above the still-unreleased v5.1.7 draft block.
+
+## Decision
+
+**SEAL -- Reality matches Promise.** B-EM-1, B132, B199 (epic closeout), B-INT-1, and the Phase 5 UI finishing pass closed. A latent v5.1.7 activation-test regression was caught by restoring the full `vscode-test` suite and fixed. New backlog items B-INT-6/B-INT-7 filed.
+
+_Chain Status: v5.1.8 consolidated cycle SEALED at Entry #385._
+_Next: operator review of the staged change set; commit + push/PR per operator approval._
+
+---
+
+_Chain integrity: VALID_
+_Session Status: v5.1.8 cycle SEALED at Entry #385; branch feat/v5-1-8-cycle; 30 files staged, uncommitted; full vscode-test suite 2739 passing / 1 pending / 0 failing; tsc + lint clean; PUBLISH_BLOCK unchanged._
+_Session: 2026-05-21-v5-1-8-consolidated-cycle-substantiation-seal_

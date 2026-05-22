@@ -1,5 +1,6 @@
 import express, { Request, Response } from "express";
 import type { ApiRouteDeps } from "./types";
+import { NODE_LABEL_MAX, withTruncationInfo } from "./brainstorm-label-truncation";
 
 /**
  * Voice-brainstorm routes: transcript processing, audio vault,
@@ -88,9 +89,8 @@ export function setupBrainstormRoutes(
   // API: Brainstorm - add manual node
   app.post("/api/v1/brainstorm/node", (req: Request, res: Response) => {
     if (deps.rejectIfRemote(req, res)) return;
-    const label = String(req.body.label || "")
-      .slice(0, 200)
-      .trim();
+    const rawLabel = String(req.body.label || "");
+    const label = rawLabel.slice(0, NODE_LABEL_MAX).trim();
     if (!label) {
       res.status(400).json({ error: "Label required" });
       return;
@@ -104,7 +104,7 @@ export function setupBrainstormRoutes(
       type: "brainstorm.update",
       payload: { nodes: [node], edges: [] },
     });
-    res.json(node);
+    res.json(withTruncationInfo(node, rawLabel));
   });
 
   // API: Brainstorm - update a node
@@ -112,9 +112,8 @@ export function setupBrainstormRoutes(
     "/api/v1/brainstorm/node/:id",
     (req: Request, res: Response) => {
       if (deps.rejectIfRemote(req, res)) return;
-      const label = String(req.body.label || "")
-        .slice(0, 200)
-        .trim();
+      const rawLabel = String(req.body.label || "");
+      const label = rawLabel.slice(0, NODE_LABEL_MAX).trim();
       const type = String(req.body.type || "Feature").slice(0, 50);
       if (!label) {
         res.status(400).json({ error: "Label required" });
@@ -133,7 +132,7 @@ export function setupBrainstormRoutes(
         type: "brainstorm.update",
         payload: { nodes: [node], edges: [] },
       });
-      res.json(node);
+      res.json(withTruncationInfo(node, rawLabel));
     },
   );
 

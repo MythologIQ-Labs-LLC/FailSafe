@@ -101,16 +101,18 @@ suite('integrity module (FX162 + helpers)', () => {
     assert.deepEqual(out, [{ name: 'Y', id: 'y' }]);
   });
 
-  test('derivePolicies — empty hub data derives from defaults: governance mode + idle', () => {
+  test('derivePolicies — empty hub data derives from defaults: sentinel mode + idle', () => {
+    // B-EM-1: the derived row reflects sentinel.mode; the corrected fallback is
+    // 'heuristic' (a valid SentinelMode) — never the GovernanceMode 'observe'.
     const out = derivePolicies({});
     assert.equal(out.length, 1);
-    assert.match(out[0].name, /Governance Mode: Observe/);
-    assert.equal(out[0].id, 'governance-mode');
+    assert.match(out[0].name, /Sentinel Mode: Heuristic/);
+    assert.equal(out[0].id, 'sentinel-mode');
   });
 
   test('derivePolicies — sentinel mode is capitalized in derived label', () => {
-    const out = derivePolicies({ sentinelStatus: { mode: 'enforce' } });
-    assert.match(out[0].name, /Governance Mode: Enforce/);
+    const out = derivePolicies({ sentinelStatus: { mode: 'hybrid' } });
+    assert.match(out[0].name, /Sentinel Mode: Hybrid/);
   });
 
   test('derivePolicies — non-IDLE governance phase adds SHIELD phase entry', () => {

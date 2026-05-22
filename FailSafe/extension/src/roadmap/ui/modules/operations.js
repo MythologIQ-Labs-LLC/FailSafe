@@ -2,6 +2,7 @@
 // Mission strip, Plan vs Actual metrics, sprint grid, action buttons.
 
 import { normalizePhaseProgress } from './phase-progress.js';
+import { sentinelModeValue } from './sentinel-mode.js';
 
 export class OperationsRenderer {
   constructor(containerId, deps = {}) {
@@ -39,7 +40,9 @@ export class OperationsRenderer {
 
   renderMissionStrip(run, sentinel) {
     const phase = run.currentPhase || 'Plan';
-    const mode = sentinel.mode || 'observe';
+    // B-EM-1: prefix the token so the operator reads it as the Sentinel
+    // evaluator mode, not the governance mode of the surrounding strip.
+    const mode = `Sentinel ${sentinelModeValue(sentinel.mode)}`;
     const lastVerdict = sentinel.lastVerdict;
 
     let running = 'Active';
@@ -189,7 +192,7 @@ export class OperationsRenderer {
             <div style="font-size: 14px; font-weight: bold; color: var(--text-main); font-family: var(--font-mono);">${queueLen} items</div>
           </div>
           <div style="font-size: 11px; color: var(--text-muted); line-height: 1.5;">
-            Sentinel is operating in <strong>${sentinelStatus?.mode || 'observe'}</strong> mode. System integrity is checked against the last verified block.
+            Sentinel is operating in <strong>${sentinelModeValue(sentinelStatus?.mode)}</strong> mode. System integrity is checked against the last verified block.
           </div>
           <button class="cc-btn cc-btn--primary" style="font-size: 11px; padding: 6px;" onclick="window._failsafe_client.postAction('/api/actions/approve-l3-batch').then(() => window.location.reload())">
             Approve All

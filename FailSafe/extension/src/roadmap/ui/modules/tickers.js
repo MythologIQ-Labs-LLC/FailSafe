@@ -6,7 +6,11 @@ export function updateTickers(data) {
   const proto = document.getElementById('ticker-protocol');
   const sent = document.getElementById('ticker-sentinel');
   const lat = document.getElementById('ticker-latency');
-  if (proto) proto.innerHTML = `PROTOCOL <span>${escapeHtml(data.sentinelStatus?.mode || 'Unknown')}</span>`;
+  // B-EM-1: the value is sentinel.mode — label SENTINEL, not the ambiguous
+  // PROTOCOL. The 'Unknown' fallback is kept intentionally: a live ticker
+  // legitimately shows "Unknown" before the first hub payload arrives, so it
+  // is NOT routed through sentinelModeValue (which would mask the no-data state).
+  if (proto) proto.innerHTML = `SENTINEL <span>${escapeHtml(data.sentinelStatus?.mode || 'Unknown')}</span>`;
   if (sent) {
     const live = data.sentinelStatus?.running;
     const c = live ? 'var(--accent-green)' : 'var(--accent-red)';
