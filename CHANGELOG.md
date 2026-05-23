@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **FX601 glossary Playwright assertion** updated — the "absent when disabled" test now expects `#cc-learn-essay-list` to be absent (parallel to the glossary), since both primary and secondary content are gated by the same `education.enabled` discipline.
 - **`docs/EDUCATION.md`, `docs/VIBE_CODER_PLAYBOOK.md`, `docs/UI_MANIFEST.md`, `docs/FEATURE_INDEX.md`** rewritten or updated for the v2 reality.
 - **The proficiency setting's `description`** in `package.json` reframed: "Where the FailSafe Learn content meets you — a starting-point selector, not a skill score. The operator picks; FailSafe never infers."
+- **Server registry writes** now use a unique temporary file per write instead of the shared `servers.json.tmp` path. This removes a parallel Command Center test/server race where concurrent registry cleanup could delete another writer's temp file before the atomic rename.
 
 ### Removed (rejected v1 + v3 Educational Component)
 

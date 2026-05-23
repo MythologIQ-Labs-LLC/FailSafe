@@ -111,6 +111,29 @@ describe("ServerRegistry", () => {
       assert.strictEqual(registry.length, 1);
       assert.strictEqual(registry[0].port, 9377);
     });
+
+    it("does not depend on a shared servers.json.tmp path during writes", () => {
+      const sharedTmp = registryPath + ".tmp";
+      fs.mkdirSync(path.dirname(sharedTmp), { recursive: true });
+      fs.writeFileSync(sharedTmp, "stale", "utf-8");
+
+      registerServer({
+        port: 9378,
+        workspaceName: "Project3",
+        workspacePath: "/test/path3",
+        pid: process.pid,
+        startedAt: new Date().toISOString(),
+      });
+
+      const registry = readRegistry();
+      assert.strictEqual(registry.length, 1);
+      assert.strictEqual(registry[0].port, 9378);
+      assert.strictEqual(
+        fs.readFileSync(sharedTmp, "utf-8"),
+        "stale",
+        "shared tmp file should be ignored, not used as the write target",
+      );
+    });
   });
 
   describe("unregisterServer", () => {

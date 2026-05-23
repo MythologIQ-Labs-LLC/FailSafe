@@ -19954,7 +19954,7 @@ All 13 prior assertions (5 FX598 + 5 FX602 + 1 UI_MANIFEST + 2 FX612) preserved 
 
 ## PR description correction (companion to this entry)
 
-PR #89 against `main` contains **two commits** (`b4a02a3` v1 baseline + `9c40860` v2 rebuild = 62 files vs `main`), not 34. The "34-file" framing in the seal's handoff text and the PR body covered only the v2 rebuild commit's staged set; reviewers reading the GitHub diff see the larger surface that includes the v1 baseline carry-forward. PR #89's description updated separately to clarify the two-commit shape; this ledger entry records the correction in the chain.
+PR #89 against `main` contains the v1 baseline plus the v2 rebuild and follow-up remediation commits, not just the 34-file v2 rebuild staged set. The "34-file" framing in the seal's handoff text and the PR body covered only the v2 rebuild commit's staged set; reviewers reading the GitHub diff see the larger surface that includes the v1 baseline carry-forward and post-review corrections. PR #89's description updated separately to clarify the stacked shape; this ledger entry records the correction in the chain without relying on volatile commit/file counts.
 
 ## Content Hash
 
