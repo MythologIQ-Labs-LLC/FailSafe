@@ -103,11 +103,23 @@ function writeManifest(stagingDir, version, collected) {
 
 function runTarCreate(stagingDir, tarballPath) {
   const entries = fs.readdirSync(stagingDir);
-  // --force-local: tells GNU tar / Cygwin tar to treat Windows-style paths
-  // with drive letters (e.g., G:\...) as local filenames rather than as
-  // `host:path` SSH remotes. Windows 10+ built-in tar.exe accepts the flag.
-  const args = ['--force-local', '-czf', tarballPath, '-C', stagingDir, ...entries];
-  const result = spawnSync('tar', args, { shell: false, encoding: 'utf8' });
+  // Portability: BSD tar (macOS default) and bsdtar do NOT accept
+  // `--force-local`, which previously broke `npm test` on those hosts. The
+  // flag was needed because a Windows drive-letter path like
+  // `G:\MythologIQ\…\foo.tar.gz` is otherwise interpreted as a `host:path`
+  // SSH remote. The portable fix is to never pass a `:`-bearing path to
+  // tar at all: cwd into the tarball's directory and pass just the
+  // basename for `-czf`. `-C stagingDir` is unaffected (tar resolves it
+  // relative to its own cwd, and on every platform a directory path with
+  // no `:` is unambiguous).
+  const tarballDir = path.dirname(tarballPath);
+  const tarballName = path.basename(tarballPath);
+  const args = ['-czf', tarballName, '-C', stagingDir, ...entries];
+  const result = spawnSync('tar', args, {
+    shell: false,
+    encoding: 'utf8',
+    cwd: tarballDir,
+  });
   if (result.status !== 0) {
     throw new Error(`tar -czf failed (exit ${result.status}): ${result.stderr.trim()}`);
   }
