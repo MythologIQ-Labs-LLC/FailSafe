@@ -19909,3 +19909,71 @@ _Next: operator review of the 30-file Part B change set; commit + push/PR per op
 _Chain integrity: VALID_
 _Session Status: FailSafe Learn v2 (Software Development Craft) SEALED at Entry #390 (amended in place across 3 post-Codex-review remediation cuts); branch feat/educational-component; staged + uncommitted; vscode-test **2866 passing** / 1 pending / 0 failing; tsc + lint clean (0 errors / 114 warnings); Playwright FX611+FX601 4/4. All 10 Codex review findings (4 cut-1 + 3 cut-2 + 3 cut-3) remediated in place. Supersedes the rejected #389 wholesale._
 _Session: 2026-05-22-failsafe-learn-swe-craft-rebuild-seal_
+
+---
+
+### Entry #391: SUBSTANTIATION CORRECTION — Section 4 razor for `lesson-anchor-coherence.test.ts`
+
+**Entry ID**: `edc3fb6c5c76`
+**Date**: 2026-05-23
+**Phase**: substantiate (correction)
+**Plan**: corrective amendment to META_LEDGER #390 seal; no new plan authored
+**Supersedes**: NOTHING — this entry follows #390 in the chain and corrects a Section 4 razor violation that #390 implicitly attested as "every new file ≤ 250" but actually missed.
+
+## Correction summary
+
+The #390 seal claimed "Section 4 Razor: every new file ≤ 250 lines" but the test suite `FailSafe/extension/src/test/education/lesson-anchor-coherence.test.ts` was 523 lines at PR submission time. The file was a v1-grandfathered carry-forward (status `M` in `git status`, not `A`), but this PR materially extended it (FX598 essay-list mount class + FX602 glossary-class validation + FX612 SWE-vocab dominance check, all added during the FailSafe Learn v2 cycle). A file the seal touches and grows past the razor cannot honestly claim the razor.
+
+Post-PR-submission Codex review caught this. The discrepancy is documentary (the file works; tests pass) but the seal's razor attestation was wrong. Per the META_LEDGER chain-integrity rule, entry #390 stays intact (cannot be edited without breaking the Merkle chain); this entry #391 records the correction.
+
+## Fix
+
+Split `lesson-anchor-coherence.test.ts` into three sibling files, all within the Section 4 razor:
+
+| File | Lines | Role |
+|---|---|---|
+| `lesson-anchor-coherence-helpers.ts` | 234 | Shared model + source-scan helpers (no `.test.ts` suffix; mocha does not load it) |
+| `lesson-anchor-coherence.test.ts` | 153 | FX598 governance-moment coherence + FX602 glossary-class validation + essay-list mount class extension + UI_MANIFEST presence check |
+| `lesson-anchor-vocab.test.ts` | 66 | FX612 SWE-craft vocabulary dominance check (split out of the coherence file because the vocab logic is independent of the source-scan model) |
+
+All 13 prior assertions (5 FX598 + 5 FX602 + 1 UI_MANIFEST + 2 FX612) preserved verbatim, just split across files. No semantic change.
+
+## Doc reconciliation
+
+- `docs/SYSTEM_STATE.md` razor claim updated to enumerate all three Cut-5 files with line counts; new wording clarifies that this was a v1-grandfathered file the Learn v2 cycle materially extended (not a freshly-authored file).
+- `docs/FEATURE_INDEX.md` FX598 / FX602 / FX612 rows updated: FX598 now cites the helpers sibling; FX602 cites the shared helpers; FX612 cites the new `lesson-anchor-vocab.test.ts` path.
+
+## Verification
+
+| Check | Result |
+|---|---|
+| `tsc -p ./` | clean (post-split) |
+| `eslint src --ext ts` | 0 errors / 114 warnings (unchanged) |
+| `vscode-test` | **2866 passing / 1 pending / 0 failing** (same total — assertions split, not added/removed; the 13 coherence + vocab tests all pass) |
+| Section 4 Razor | every new/modified Learn-v2 file now ≤ 250 lines, including the previously-violating `lesson-anchor-coherence.test.ts` (now 153) |
+
+## PR description correction (companion to this entry)
+
+PR #89 against `main` contains **two commits** (`b4a02a3` v1 baseline + `9c40860` v2 rebuild = 62 files vs `main`), not 34. The "34-file" framing in the seal's handoff text and the PR body covered only the v2 rebuild commit's staged set; reviewers reading the GitHub diff see the larger surface that includes the v1 baseline carry-forward. PR #89's description updated separately to clarify the two-commit shape; this ledger entry records the correction in the chain.
+
+## Content Hash
+
+**Content Hash**: `edc3fb6c5c76526f099df379a95cb69627cdcfcf80c0ffe3a389cb2e525d68aa`
+**Previous Hash**: `7330bf708b80565c42c51cf98537a2394e9e12064b0cce71710135562fd621da` (Entry #390 Chain Hash)
+**Chain Hash**: `58da82b11860765c44ab9f00146dd21fc3343b89e90f0fc2043dcc3fe0e17520`
+**Merkle Seal**: `64847d1f751f0923506abe0d8ec1912751015b4a7da3f688e3279e1a58119371` — gate_seal_failsafe_learn_swe_craft_v2_RAZOR_CORRECTION
+**Session ID**: `2026-05-23-failsafe-learn-swe-craft-razor-correction`
+
+_Hash provenance_: Content Hash = `SHA256` of the staged correction diff (`git diff --cached` excluding `docs/META_LEDGER.md`). Chain Hash = `SHA256(content + previous)` linking forward from #390. Merkle Seal = `SHA256(chain + gate_label)`.
+
+## Decision
+
+**CORRECTION SEALED.** The Section 4 razor now holds for every new/modified Learn-v2 file. Entry #390's substantive seal (Reality matches Promise for the FailSafe Learn v2 component) is unchanged; only the razor attestation it carried needed structural correction, which this entry records and remediates.
+
+_Chain Status: Cut-5 razor correction SEALED at Entry #391; chain advances from #390 → #391._
+_Next: commit + push to `feat/educational-component`; PR #89 auto-updates; PR description amended to acknowledge the two-commit / 62-file surface._
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-05-23-failsafe-learn-swe-craft-razor-correction_
