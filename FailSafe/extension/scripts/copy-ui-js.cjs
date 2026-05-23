@@ -44,24 +44,23 @@ for (const src of walk(SRC)) {
 }
 console.log(`copy-ui-js: mirrored ${copied} .js file(s) src/ → out/`);
 
-// Educational Component (v5.2.0): emit a BROWSER-ESM build of the lesson
-// registry. `out/education/lessons.js` is tsc's CommonJS output — required by
-// the extension's CJS code (FirstRunModePicker, educationConfig) and consumed
-// fine by jsdom tests via Node's CJS<->ESM interop. The webview affordance
-// (`roadmap/ui/modules/education-lesson.js`), however, runs in a real browser
-// with NO CJS interop, so it needs an actual `export`-bearing ESM module.
-// esbuild emits that into out/education-browser/, which ConsoleRouteRegistrar
-// (and the serveCompactUI test helper) mount at the /education URL.
+// Educational Component (v5.2.0): emit BROWSER-ESM builds of the education
+// modules. `out/education/*.js` is tsc's CommonJS output — required by the
+// extension's CJS code (FirstRunModePicker, educationConfig) and consumed
+// fine by jsdom tests via Node's CJS<->ESM interop. The webview affordances
+// (`roadmap/ui/modules/education-lesson.js`, `guided-dev-cycle.js`), however,
+// run in a real browser with NO CJS interop, so they need actual
+// `export`-bearing ESM modules. esbuild emits those into out/education-browser/,
+// which ConsoleRouteRegistrar (and the serveCompactUI test helper) mount at
+// the /education URL. bundle:true inlines sibling imports (e.g. lessons.ts →
+// glossary-content*.ts) so each emitted module is self-contained.
 try {
   const esbuild = require("esbuild");
-  const browserEntry = path.join(SRC, "education", "lessons.ts");
-  if (fs.existsSync(browserEntry)) {
-    const browserOut = path.join(OUT, "education-browser", "lessons.js");
+  for (const eduName of ["lessons", "lessonTriggers"]) {
+    const browserEntry = path.join(SRC, "education", `${eduName}.ts`);
+    if (!fs.existsSync(browserEntry)) continue;
+    const browserOut = path.join(OUT, "education-browser", `${eduName}.js`);
     fs.mkdirSync(path.dirname(browserOut), { recursive: true });
-    // Phase 6 (RD-1 split): lessons.ts now imports sibling content modules
-    // (glossary-content*.ts). bundle:true inlines those imports so the emitted
-    // browser ESM module is self-contained — bundle:false would leave bare
-    // `import` specifiers the browser cannot resolve.
     esbuild.buildSync({
       entryPoints: [browserEntry],
       outfile: browserOut,
@@ -69,8 +68,8 @@ try {
       bundle: true,
       platform: "browser",
     });
-    console.log("copy-ui-js: emitted browser-ESM education/lessons.js → out/education-browser/");
+    console.log(`copy-ui-js: emitted browser-ESM education/${eduName}.js → out/education-browser/`);
   }
 } catch (e) {
-  console.error(`copy-ui-js: browser-ESM lessons build skipped: ${e && e.message}`);
+  console.error(`copy-ui-js: browser-ESM education build skipped: ${e && e.message}`);
 }

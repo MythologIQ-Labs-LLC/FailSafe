@@ -90,6 +90,51 @@ suite("Education lessons registry (FX591)", () => {
     assert.equal(getLesson("no-such-anchor", "beginner"), undefined);
   });
 
+  // --- v2 SWE-craft essay assertions (plan v4 Phase 1) ---
+
+  const SWE_ESSAY_ANCHORS = [
+    "learn.essay.slow-down-to-speed-up",
+    "learn.essay.scope-before-prompt",
+    "learn.essay.acceptance-criteria",
+    "learn.essay.choose-agent-option",
+    "learn.essay.verify-output",
+  ];
+
+  test("FX591 v2: the 5 SWE-craft essay anchors are present with all 3 tier bodies", () => {
+    for (const anchor of SWE_ESSAY_ANCHORS) {
+      const lesson = LESSONS[anchor];
+      assert.ok(lesson, `SWE-craft essay anchor missing from registry: ${anchor}`);
+      const levels: ProficiencyLevel[] = ["beginner", "intermediate", "advanced"];
+      for (const level of levels) {
+        const body = lesson.body[level];
+        assert.ok(
+          typeof body === "string" && body.trim().length > 0,
+          `${anchor} missing tier body: ${level}`,
+        );
+      }
+    }
+  });
+
+  test("FX591 v2: getLesson resolves each SWE-craft essay at each tier", () => {
+    for (const anchor of SWE_ESSAY_ANCHORS) {
+      assert.ok(getLesson(anchor, "beginner")!.length > 0, `${anchor} beginner body`);
+      assert.ok(getLesson(anchor, "intermediate")!.length > 0, `${anchor} intermediate body`);
+      assert.ok(getLesson(anchor, "advanced")!.length > 0, `${anchor} advanced body`);
+    }
+  });
+
+  test("FX591 v2: v1 governance-moment anchors carry forward (Settings + Monitor depend on them)", () => {
+    // Plan v4 §Anchor table marks governance-mode-card.js + monitor-render.js
+    // SHIELD wiring as "carries unchanged" — they consume these anchors.
+    const V1_CARRY_FORWARD = ["governance-mode", "shield.plan", "shield.audit", "shield.substantiate"];
+    for (const anchor of V1_CARRY_FORWARD) {
+      assert.ok(
+        LESSONS[anchor],
+        `v1 carry-forward anchor missing from registry: ${anchor}`,
+      );
+    }
+  });
+
   test("FX591 getLesson falls back when the requested level is absent", () => {
     // Synthetic lesson with only an intermediate body — exercises the
     // documented fallback chain without depending on registry gaps.

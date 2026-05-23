@@ -14,12 +14,27 @@
 // content files `glossary-content.ts` (6) + `glossary-content-2.ts` (6) so
 // every module stays under the Section-4 razor. Those files import only the
 // `Lesson` TYPE from here (a type-only edge — no runtime cycle).
+//
+// FailSafe Learn v2 (v5.2.0 SWE-craft pivot): the 5 SWE-craft essay literals
+// live in sibling content files `lessons-content-swe-essays.ts` (3) +
+// `lessons-content-swe-essays-2.ts` (2) following the same split pattern.
+// They mount on the Learn-tab essay list via the `learn.essay.*` anchor
+// prefix filter in `roadmap/ui/modules/learn-essay-list.js`. The 4
+// governance-moment literals below (governance-mode + shield.plan/audit/
+// substantiate) are v1 carry-forward — they still mount the Settings
+// governance-mode card + Monitor SHIELD phase-tracker micro-lessons and are
+// NOT primary Learn-tab content.
 
 import { GLOSSARY_LESSONS_A } from "./glossary-content";
 import { GLOSSARY_LESSONS_B } from "./glossary-content-2";
+import { SWE_ESSAY_LESSONS_A } from "./lessons-content-swe-essays";
+import { SWE_ESSAY_LESSONS_B } from "./lessons-content-swe-essays-2";
 
 /** The full Phase 6 agentic-vocabulary glossary, both content parts joined. */
 const GLOSSARY_LESSONS: Lesson[] = [...GLOSSARY_LESSONS_A, ...GLOSSARY_LESSONS_B];
+
+/** FailSafe Learn v2 SWE-craft essays — Learn-tab primary content. */
+const SWE_ESSAY_LESSONS: Lesson[] = [...SWE_ESSAY_LESSONS_A, ...SWE_ESSAY_LESSONS_B];
 
 /** Proficiency levels a lesson body can be authored for. */
 export type ProficiencyLevel = "beginner" | "intermediate" | "advanced";
@@ -159,13 +174,19 @@ const LESSON_LIST: Lesson[] = [
 ];
 
 /**
- * The lesson registry, keyed by stable `anchor`. Holds both the four
- * `'moment'` lessons (above) and the Phase 6 `'glossary'` lessons (folded in
- * from `glossary-content.ts`). Anchors are unique across BOTH classes —
- * governance-moment keys never collide with `glossary.*` keys.
+ * The lesson registry, keyed by stable `anchor`. Three composed groups:
+ * (1) the v1 governance-moment lessons (LESSON_LIST above) — mount on the
+ *     Settings governance-mode card + Monitor SHIELD phase-tracker
+ *     (v1 carry-forward; NOT primary Learn-tab content).
+ * (2) the v2 SWE-craft essays (SWE_ESSAY_LESSONS) — primary Learn-tab
+ *     content; anchor prefix `learn.essay.`.
+ * (3) the Phase 6 glossary lessons (GLOSSARY_LESSONS) — Learn-tab secondary
+ *     reference; anchor prefix `glossary.`.
+ * Anchors are unique across all three groups.
  */
 export const LESSONS: Record<string, Lesson> = [
   ...LESSON_LIST,
+  ...SWE_ESSAY_LESSONS,
   ...GLOSSARY_LESSONS,
 ].reduce(
   (acc, lesson) => {

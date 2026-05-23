@@ -1397,3 +1397,122 @@ select option {
   line-height: 1.5;
   color: var(--text-main);
 }
+
+/* --- FailSafe Learn v2: essay-list (Learn tab — SWE-craft) ----------- */
+
+.cc-learn-essay-list {
+  margin-bottom: 16px;
+}
+
+.cc-learn-essay-list-head {
+  margin-bottom: 12px;
+}
+
+.cc-learn-essay-list-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 4px;
+  color: var(--text-main);
+}
+
+.cc-learn-essay-list-intro {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.cc-learn-essay-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-left: 3px solid var(--border-rim);
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+
+.cc-learn-essay-card--relevant {
+  border-left-color: var(--accent-gold, #f5a524);
+}
+
+.cc-learn-essay-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.cc-learn-essay-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-main);
+  flex: 1 1 auto;
+}
+
+.cc-learn-essay-relevant-now {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: 10px;
+  background: var(--accent-gold, #f5a524);
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+.cc-learn-essay-body {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--text-main);
+}
+
+.cc-learn-essay-template {
+  margin: 8px 0;
+  background: var(--border-rim);
+  border-radius: 4px;
+  padding: 8px 10px;
+}
+
+.cc-learn-essay-template summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.cc-learn-essay-template summary:hover {
+  color: var(--text-main);
+}
+
+.cc-learn-essay-template pre {
+  margin: 8px 0 0;
+  padding: 8px;
+  background: var(--glass-bg);
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+  color: var(--text-main);
+  white-space: pre-wrap;
+}
+
+.cc-learn-option-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+  font-size: 0.78rem;
+}
+
+.cc-learn-option-table th,
+.cc-learn-option-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-rim);
+  text-align: left;
+  color: var(--text-main);
+}
+
+.cc-learn-option-table th {
+  color: var(--text-muted);
+  font-weight: 600;
+}

@@ -282,8 +282,13 @@
             "intermediate",
             "advanced"
           ],
+          "enumDescriptions": [
+            "New to code — assume near-zero engineering knowledge; explain terms directly.",
+            "AI builder — can produce code with an agent; needs judgment around scope, verification, maintainability.",
+            "Product/PM background — connects software judgment to product judgment: scope, risk, acceptance criteria, tradeoffs, release confidence."
+          ],
           "default": "beginner",
-          "description": "How detailed the FailSafe education micro-lessons are. Beginner explains what and why; intermediate covers trade-offs; advanced is a terse reminder."
+          "description": "Where the FailSafe Learn content meets you — a starting-point selector, not a skill score. The operator picks; FailSafe never infers."
         },
         "failsafe.genesis.livingGraph": {
           "type": "boolean",

@@ -1,8 +1,9 @@
-// FX601 — Educational Component Phase 6c e2e proof.
-// Command Center → Settings → the "FailSafe Glossary" section. This spec
-// drives the real Command Center UI, expands the glossary section, opens a
-// term, and asserts its explanation is shown. Sink: real page.locator() reads
-// against rendered DOM.
+// FX601 — Educational Component glossary e2e proof (v2 rebuild: Learn-tab essay set).
+// Command Center → Learn tab → the "FailSafe Glossary" section. In FailSafe
+// Learn v2 the glossary is the SECONDARY reference below the primary
+// SWE-craft essay list. This spec drives the real UI, expands the glossary,
+// opens a term, and asserts its explanation is shown. Sink: real
+// page.locator() reads against rendered DOM.
 
 import { test, expect } from '@playwright/test';
 
@@ -16,7 +17,7 @@ function hubWithEducation(enabled: boolean): HubFixture {
   return hub;
 }
 
-test.describe('FX601 — Command Center FailSafe Glossary section', () => {
+test.describe('FX601 — Command Center FailSafe Glossary section (Learn tab)', () => {
   let controller: ConsoleServerController;
 
   test.afterEach(async () => {
@@ -29,11 +30,11 @@ test.describe('FX601 — Command Center FailSafe Glossary section', () => {
   test('the FailSafe Glossary section expands and a term opens to its explanation', async ({ page }) => {
     controller = await serveConsoleServerUI({ initialHub: hubWithEducation(true) });
     await page.goto(`${controller.url}/command-center.html`);
-    await page.locator('.tab-btn[data-target="settings"]').click();
-    await expect(page.locator('#settings')).toHaveClass(/active/);
+    await page.locator('.tab-btn[data-target="learn"]').click();
+    await expect(page.locator('#learn')).toHaveClass(/active/);
 
-    // The glossary section renders, collapsed by default.
-    const glossary = page.locator('details#cc-edu-glossary');
+    // The glossary section renders inside the Learn tab, collapsed by default.
+    const glossary = page.locator('#learn details#cc-edu-glossary');
     await expect(glossary).toBeVisible({ timeout: 5000 });
     await expect(glossary).not.toHaveAttribute('open', /.*/);
 
@@ -62,11 +63,12 @@ test.describe('FX601 — Command Center FailSafe Glossary section', () => {
   test('the FailSafe Glossary section is absent when education is disabled', async ({ page }) => {
     controller = await serveConsoleServerUI({ initialHub: hubWithEducation(false) });
     await page.goto(`${controller.url}/command-center.html`);
-    await page.locator('.tab-btn[data-target="settings"]').click();
-    await expect(page.locator('#settings')).toHaveClass(/active/);
+    await page.locator('.tab-btn[data-target="learn"]').click();
+    await expect(page.locator('#learn')).toHaveClass(/active/);
 
-    // Settings still renders; only the glossary is gated.
-    await expect(page.locator('#cc-governance-mode')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('details#cc-edu-glossary')).toHaveCount(0);
+    // In v2 the essay list is also gated by `education.enabled` (single discipline);
+    // both primary and secondary content are absent when disabled.
+    await expect(page.locator('#cc-learn-essay-list')).toHaveCount(0);
+    await expect(page.locator('#learn details#cc-edu-glossary')).toHaveCount(0);
   });
 });

@@ -1,7 +1,47 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-05-14
+**Last Updated:** 2026-05-22
 **Version:** v5.1.10-baseline plus Phase 60 SEALED at #354 plus v5.1.0 publish-block-lift SEALED at #359 plus organize-ux-hotfix SEALED at #364 plus install-skills-ux-expansion SEALED at #371 plus **plan-qor-model-sourced-risks substantiated** (Risk Register now sourced by coding model via MCP tool failsafe.create_risk + @failsafe /risk chat subcommand + SHIELD-lifecycle auto-derivation; failsafe.addRisk command + QuickPick wizard removed; 36 new FX415-FX420 tests; OpenVSX v5.0.0 alignment complete) plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups
+
+---
+
+## 2026-05-22 — FailSafe Learn — Software Development Craft (REBUILD) — SUBSTANTIATION SEAL (Entry #390)
+
+Plan: `docs/plan-qor-failsafe-learn-swe-craft.md` (v4, audited PASS cycle-2 via Phase 68 Option B independent reviewer). **Seal verdict: PASS — Reality matches Promise.** Supersedes the rejected Entry #389 (v1 + v3 Educational Component + Guided Dev Cycle stage-only seal) wholesale.
+
+The v5.2.0 release-gating Learn-tab surface, rebuilt from the operator's reframe: *"The intent is not to teach them FailSafe, it's to teach software development."*
+
+- **Five SWE-craft essays** on the Learn tab — *Slow down to speed up* · *Scope before prompt* · *Acceptance criteria before code* · *Choosing between agent suggestions* · *Verify before you believe* — each at three tier framings ("New to code" / "AI builder" / "Product/PM background"). Two carry operator-binding templates (acceptance-criteria; 6-question option-evaluation). Content drafted against `.failsafe/governance/CONTENT_MATRIX_failsafe-learn-swe-craft.md`; literals split into sibling content modules per the existing `glossary-content-*.ts` pattern. FX591 v2 / FX609.
+- **Contextual surfacing trigger engine** (`src/education/lessonTriggers.ts`) — pure-function evaluator mapping hub state (`activePlan`, `recentCheckpoints`, `unattributedFileActivity`, `governancePhase`) onto five nudge anchors. Per-anchor cap (1/session) + per-session global cap (2) enforced **cumulatively across renders** via webview `sessionStorage` counters (`fs-learn-nudge-count:<anchor>` written by `learn.js` after each surface) — the same anchors do not re-fire on every hub update. "Mark as read" (`fs-learn-nudge-dismissed:<anchor>`, also `sessionStorage`) suppresses the relevant-now badge only; the essay always remains in the curriculum directory. `scope-before-prompt` requires file activity to fire (no passive empty-state badge). `choose-agent-option` high-blast-radius detection covers JS/TS lockfiles + tsconfig + bundler configs, Python/Rust/Go ecosystems, VSIX manifests, and `.github/workflows/`. Session-duration timing client-side only (GDPR binding). FX608.
+- **Learn-tab essay-list renderer** (`learn-essay-list.js`) — primary content; fired-trigger anchors sort first with a "Relevant for what you are doing now" badge. `LearnRenderer` recomposes: essay list (primary) + FailSafe glossary (secondary). FX610 / FX606 modified.
+- **Tier labels** (`failsafe.education.proficiency.enumDescriptions`) — operator-binding starting-point selectors, not skill scores. Enum values unchanged. FX613.
+- **Compliance enforcement** — extended FX598 coherence check with essay-list mount class; new FX612 SWE-craft vocabulary dominance check (≥ 3× FailSafe-governance vocabulary count in `learn.essay.*` bodies; hostile fixture caught).
+- **Scrap (rejected v1 + v3)** — `devCycleTrack.ts`, `guided-dev-cycle.js`, the FX603/604/605/607 tests, `docs/GUIDED_DEV_CYCLE.md` all deleted. `bundle.cjs` / `copy-ui-js.cjs` browser-ESM emit reverted from `devCycleTrack` to `lessonTriggers`. The 4 v1 governance-moment lesson literals (`governance-mode`, `shield.plan/audit/substantiate`) carry forward — they power the v1 Settings governance-mode card + Monitor SHIELD phase tracker, NOT the Learn tab.
+
+Verification: `tsc` clean; lint 0 errors (114 warnings, +1 vs v3 baseline); `vscode-test` **2866 passing / 1 pending / 0 failing** (post-review remediation added 28 new assertions across 3 cuts: table-driven HIGH_BLAST_RADIUS fixtures, cumulative-cap tests, passive-state scope test, curriculum-always-renders test, cap-persistence integration test, Mark-as-read semantic, disabled-Learn cap-budget preservation, and hidden-tab cap-budget preservation); Playwright FX611 (new) + FX601 (modified) **4/4**. Section 4 Razor: every new file ≤ 250 (`lessonTriggers.ts` 250 at-cap; `lessonTriggers.test.ts` 176 + sibling `lessonTriggers-caps.test.ts` 90 — applyCaps suite split post-Cut-2; `learn.js` 173; `learn-essay-list.js` 187; `learn-tab.test.ts` 61 + sibling `learn-tab-triggers.test.ts` 175 + shared helper `learn-tab-helpers.ts` 49 — trigger-integration suite split post-Cut-3; `learn-essay-list.test.ts` 142). Audit: cycle-1 VETO (2 findings: enumDescriptions infrastructure-mismatch + FX613 lacked automated test) → both remediated → cycle-2 PASS (12/12) via independent architect-reviewer subagent. Compliance: fresh determination — stays outside EU AI Act Annex III; more strongly aligned with Article 4; GDPR client-side-only session timing binding; 2 binding escalation triggers (scoring/inference → re-ideate; curriculum-in-extension → escalate to Pro). `package.json` remains `5.1.8`; v5.2.0 ships at `/qor-repo-release`.
+
+Implementation-time deviations (autonomous, logged): (1) plan v4 Phase 1 said "REPLACE" the 4 governance-moment literals but the §Anchor table marked them KEEP — three evidence signals (plan §Anchor, research-brief Finding 4a, functional dependency) agreed; autonomous fix: ADD the 5 SWE essays alongside the 4 v1 carry-forwards. (2) Plan v4 Phase 4 didn't specify the essay-list mount class in the coherence test — added parallel to the existing glossary class extension.
+
+Post-substantiation review remediation (Codex, 4 findings, all fixed before final seal): (a) HIGH — `applyCaps` enforced caps per-render only; counts now persist to `sessionStorage` and the global-cap budget subtracts already-shown counts so the cap survives across renders. (b) HIGH — the essay-list renderer previously filtered dismissed anchors out of the directory, which let "Mark as read" permanently hide primary curriculum content; the filter is removed, the curriculum always shows all 5 essays, and dismissal now suppresses only the relevant-now badge via a sessionStorage flag. (c) MEDIUM — `scope-before-prompt` now requires `unattributedFileActivity.length > 0` to fire; a passive empty Learn view never produces a stray badge. (d) MEDIUM — `HIGH_BLAST_RADIUS_PATTERNS` expanded from a single regex to a 15-pattern array covering yarn/pnpm/bun lockfiles, Python (`requirements*.txt`, `Pipfile[.lock]`, `pyproject.toml`, `poetry.lock`), Rust (`Cargo.{toml,lock}`), Go (`go.{mod,sum}`), VSIX manifests / packaged `.vsix`, and `.github/workflows/`. Table-driven tests cover every pattern.
+
+Operator content review pending — Phase 0 essay copy was drafted from the binding addendum framing; final wording is operator-owned at the content-review gate.
+
+---
+
+## 2026-05-22 — Educational Component (v1 + Guided Dev Cycle) — SUBSTANTIATION SEAL (Entry #389) — SUPERSEDED
+
+> **Superseded** by Entry #390 above. Rejected by the operator: "Nothing in this Learn is truly helpful. The intent is not to teach them FailSafe, it's to teach software development." Kept here for historical archaeology; the v1 + v3 build never committed past `b4a02a3` (the v1 checkpoint commit).
+
+Plan: `docs/plan-qor-educational-component.md` (v3 — issue #65 fold-in). **Seal verdict: PASS — Reality matches Promise.** Supersedes the v1 stage-only seal Entry #388.
+
+The v5.2.0 release-gating Educational Component, sealed as one combined feature:
+
+- **Part A (v1, committed `b4a02a3`)** — inline, opt-in, dismissible micro-lessons translating governance vocabulary at the governance moment; the FailSafe agentic-vocabulary glossary. FX591–FX602.
+- **Part B (Guided Dev Cycle, issue #65)** — a new **Learn** tab in the Command Center hosts an interactive, state-aware walkthrough of the six SHIELD steps (`src/education/devCycleTrack.ts`, `roadmap/ui/modules/guided-dev-cycle.js`, `roadmap/ui/modules/learn.js`); per-step status derived from the existing hub snapshot (no new scanner); the FailSafe Glossary relocated from Settings onto the Learn tab. The bundled SHIELD track ships as a plain data value — configurable external tracks are deferred to FailSafe Pro. FX603–FX607.
+
+Verification: `tsc` clean; lint 0 errors; `vscode-test` 2821 passing / 1 pending / 0 failing; Playwright FX607 + FX601 4/4. Section 4 Razor: every new file < 250. Audit: independent qor-judge PASS (`.failsafe/governance/AUDIT_REPORT.md`). Compliance: artifact-state display + recommendation only — outside EU AI Act Annex III, determination unchanged. `package.json` remains `5.1.8`; v5.2.0 ships at `/qor-repo-release`.
+
+Carried finding (pre-existing, not a v3 regression): `popout-ui.spec.ts` + 4 `user-stories.spec.ts` Playwright cases fail because their flat-static test servers cannot resolve the cross-directory `education/lessons.js` import the v1 Educational Component introduced — verified identical at the v1 checkpoint `b4a02a3`. Recommended follow-up: route those test servers through the real ConsoleServer (as `serveConsoleServerUI` does) or emit a flat `education/` mirror for them.
 
 ---
 

@@ -7,7 +7,6 @@ import { escapeHtml } from './brainstorm-templates.js';
 import { renderBicameralSettingsCard } from './bicameral-settings-card.js';
 import { renderVoicePackSettingsCard } from './voice-pack-settings-card.js';
 import { renderGovernanceModeCard, bindGovernanceModeCard } from './governance-mode-card.js';
-import { renderGlossary } from './education-glossary.js';
 
 // Sentinel attr name used across all bind paths to make listener wiring
 // idempotent: a node carrying data-cc-bound="1" already has its listener
@@ -62,7 +61,6 @@ export class SettingsRenderer {
       <div class="cc-card" id="cc-hook-toggle-slot" style="margin-top:16px"></div>
       ${renderInstallSkillsCard(this._installState, hub)}
       ${renderGovernanceModeCard(hub)}
-      ${renderGlossary(hub.education)}
       ${renderQorVersionWarning(hub)}
       ${renderFailSafeProCard()}
       <div class="cc-card" id="cc-bicameral-settings-slot" style="margin-top:16px"></div>

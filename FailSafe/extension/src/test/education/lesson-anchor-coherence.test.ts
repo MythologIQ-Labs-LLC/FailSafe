@@ -28,13 +28,14 @@ import { LESSONS, glossaryLessons, lessonKind } from "../../education/lessons";
 
 // --- coherence model -------------------------------------------------------
 
-type MountClass = "webview" | "native" | "glossary" | "unmounted";
+type MountClass = "webview" | "native" | "glossary" | "essay-list" | "unmounted";
 
 interface AnchorMount {
   anchor: string;
   webview: string[]; // files with a webview renderLesson('<anchor>') mount
   native: string[]; // files with a native getLesson('<anchor>') mount
   glossary: string[]; // files mounting the anchor on the Glossary surface
+  essayList: string[]; // files mounting `learn.essay.*` anchors on the essay-list surface
 }
 
 interface CoherenceResult {
@@ -43,6 +44,7 @@ interface CoherenceResult {
   webviewFiles: string[];
   nativeFiles: string[];
   glossaryFiles: string[];
+  essayListFiles: string[];
 }
 
 /**
@@ -58,12 +60,19 @@ function classifyAnchor(
   anchor: string,
   mount: AnchorMount | undefined,
   expectGlossary = false,
+  expectEssayList = false,
 ): CoherenceResult {
   const webviewFiles = mount?.webview ?? [];
   const nativeFiles = mount?.native ?? [];
   const glossaryFiles = mount?.glossary ?? [];
+  const essayListFiles = mount?.essayList ?? [];
   let mountClass: MountClass;
-  if (expectGlossary) {
+  if (expectEssayList) {
+    // FailSafe Learn v2: `learn.essay.*` anchors mount on the essay-list
+    // surface (roadmap/ui/modules/learn-essay-list.js). They are positively
+    // validated against THAT surface only — must not borrow another class.
+    mountClass = essayListFiles.length > 0 ? "essay-list" : "unmounted";
+  } else if (expectGlossary) {
     // A2: a glossary lesson is positively validated against the glossary
     // surface ONLY — it must not borrow a webview/native classification.
     mountClass = glossaryFiles.length > 0 ? "glossary" : "unmounted";
@@ -75,7 +84,7 @@ function classifyAnchor(
   } else {
     mountClass = "unmounted";
   }
-  return { anchor, mountClass, webviewFiles, nativeFiles, glossaryFiles };
+  return { anchor, mountClass, webviewFiles, nativeFiles, glossaryFiles, essayListFiles };
 }
 
 /**
@@ -91,9 +100,15 @@ function runCoherenceCheck(
   registryAnchors: string[],
   inventory: Map<string, AnchorMount>,
   glossaryAnchorSet: Set<string> = new Set(),
+  essayAnchorSet: Set<string> = new Set(),
 ): { results: CoherenceResult[]; violations: CoherenceResult[] } {
   const results = registryAnchors.map((a) =>
-    classifyAnchor(a, inventory.get(a), glossaryAnchorSet.has(a)),
+    classifyAnchor(
+      a,
+      inventory.get(a),
+      glossaryAnchorSet.has(a),
+      essayAnchorSet.has(a),
+    ),
   );
   const violations = results.filter((r) => r.mountClass === "unmounted");
   return { results, violations };
@@ -170,18 +185,39 @@ function findGlossarySurfaceFiles(): string[] {
 }
 
 /**
+ * FailSafe Learn v2: the essay-list surface is the webview module that
+ * filters LESSONS to anchors with the `learn.essay.` prefix. By convention
+ * that file is `learn-essay-list.js`. Any module under WEBVIEW_DIRS whose
+ * content references `learn.essay.` is treated as mounting EVERY
+ * `learn.essay.*` anchor — the filter consumes the whole set.
+ */
+function findEssayListSurfaceFiles(): string[] {
+  const out: string[] = [];
+  for (const dir of WEBVIEW_DIRS) {
+    for (const file of listFiles(dir, ".js")) {
+      const content = fs.readFileSync(file, "utf8");
+      if (/learn\.essay\./.test(content)) out.push(path.basename(file));
+    }
+  }
+  return out;
+}
+
+/**
  * Build the real source-anchor inventory by scanning the shipped surfaces.
  *
  * `glossaryAnchors` (A2): the anchors of every `'glossary'`-kind lesson. Each
  * is mounted on the Glossary surface IFF a webview module consumes the
  * `glossaryLessons()` selector — a positive, source-verified mount.
  */
-function buildSourceInventory(glossaryAnchors: string[] = []): Map<string, AnchorMount> {
+function buildSourceInventory(
+  glossaryAnchors: string[] = [],
+  essayAnchors: string[] = [],
+): Map<string, AnchorMount> {
   const inventory = new Map<string, AnchorMount>();
   const ensure = (anchor: string): AnchorMount => {
     let entry = inventory.get(anchor);
     if (!entry) {
-      entry = { anchor, webview: [], native: [], glossary: [] };
+      entry = { anchor, webview: [], native: [], glossary: [], essayList: [] };
       inventory.set(anchor, entry);
     }
     return entry;
@@ -208,13 +244,20 @@ function buildSourceInventory(glossaryAnchors: string[] = []): Map<string, Ancho
     }
   }
 
-  // A2: Glossary-surface mounts. If a module consumes glossaryLessons(), it
-  // mounts every glossary-kind anchor. If NO module consumes it, the glossary
-  // anchors stay glossary:[] and the check flags them as unmounted (dead).
+  // A2: Glossary-surface mounts.
   const glossarySurfaces = findGlossarySurfaceFiles();
   for (const anchor of glossaryAnchors) {
     for (const surface of glossarySurfaces) {
       ensure(anchor).glossary.push(surface);
+    }
+  }
+
+  // FailSafe Learn v2: essay-list surface mounts. If a module references
+  // `learn.essay.`, every `learn.essay.*` anchor is mounted on it.
+  const essayListSurfaces = findEssayListSurfaceFiles();
+  for (const anchor of essayAnchors) {
+    for (const surface of essayListSurfaces) {
+      ensure(anchor).essayList.push(surface);
     }
   }
 
@@ -229,13 +272,17 @@ suite("Lesson-anchor coherence (FX598)", () => {
   // glossary-surface validation branch, not the governance-moment branches.
   const glossaryAnchors = glossaryLessons().map((l) => l.anchor);
   const glossaryAnchorSet = new Set<string>(glossaryAnchors);
+  // FailSafe Learn v2: `learn.essay.*` anchors mount on the essay-list surface.
+  const essayAnchors = registryAnchors.filter((a) => a.startsWith("learn.essay."));
+  const essayAnchorSet = new Set<string>(essayAnchors);
 
   test("FX598 shipped registry — every lesson anchor is mounted somewhere", () => {
-    const inventory = buildSourceInventory(glossaryAnchors);
+    const inventory = buildSourceInventory(glossaryAnchors, essayAnchors);
     const { violations } = runCoherenceCheck(
       registryAnchors,
       inventory,
       glossaryAnchorSet,
+      essayAnchorSet,
     );
     assert.equal(
       violations.length,
@@ -247,8 +294,8 @@ suite("Lesson-anchor coherence (FX598)", () => {
   });
 
   test("FX598 shipped registry — webview anchors resolve to webview mounts", () => {
-    const inventory = buildSourceInventory(glossaryAnchors);
-    const { results } = runCoherenceCheck(registryAnchors, inventory, glossaryAnchorSet);
+    const inventory = buildSourceInventory(glossaryAnchors, essayAnchors);
+    const { results } = runCoherenceCheck(registryAnchors, inventory, glossaryAnchorSet, essayAnchorSet);
     // The three SHIELD anchors are webview-mounted in monitor-render.js.
     for (const anchor of ["shield.plan", "shield.audit", "shield.substantiate"]) {
       const r = results.find((x) => x.anchor === anchor);
@@ -262,7 +309,7 @@ suite("Lesson-anchor coherence (FX598)", () => {
   });
 
   test("FX598 A3 — governance-mode is mounted in BOTH webview and native classes", () => {
-    const inventory = buildSourceInventory(glossaryAnchors);
+    const inventory = buildSourceInventory(glossaryAnchors, essayAnchors);
     const mount = inventory.get("governance-mode");
     assert.ok(mount, "governance-mode anchor must be mounted");
     assert.ok(
@@ -280,7 +327,7 @@ suite("Lesson-anchor coherence (FX598)", () => {
     // it has a getLesson() mount but no renderLesson() webview anchor. Per A3
     // this is a distinct valid class — the check must NOT flag it.
     const inventory = new Map<string, AnchorMount>([
-      ["native-only-fixture", { anchor: "native-only-fixture", webview: [], native: ["FirstRunModePicker.ts"], glossary: [] }],
+      ["native-only-fixture", { anchor: "native-only-fixture", webview: [], native: ["FirstRunModePicker.ts"], glossary: [], essayList: [] }],
     ]);
     const { violations, results } = runCoherenceCheck(["native-only-fixture"], inventory);
     assert.equal(violations.length, 0, "native-only mount must not be a violation");
@@ -290,9 +337,9 @@ suite("Lesson-anchor coherence (FX598)", () => {
   test("FX598 fixture — a lesson anchor pointing at a removed surface is CAUGHT", () => {
     // Fixture: a registry that includes an anchor with NO mount anywhere
     // (the surface it was wired to was removed). The check must trip.
-    const inventory = buildSourceInventory(glossaryAnchors);
+    const inventory = buildSourceInventory(glossaryAnchors, essayAnchors);
     const withGhost = [...registryAnchors, "ghost-removed-surface"];
-    const { violations } = runCoherenceCheck(withGhost, inventory, glossaryAnchorSet);
+    const { violations } = runCoherenceCheck(withGhost, inventory, glossaryAnchorSet, essayAnchorSet);
     assert.equal(violations.length, 1, "exactly one violation expected");
     assert.equal(
       violations[0].anchor,
@@ -308,7 +355,7 @@ suite("Lesson-anchor coherence (FX598)", () => {
     // Positive assertion (A2): each glossary anchor must classify as the
     // distinct 'glossary' mount class — not webview, not native, not unmounted.
     assert.ok(glossaryAnchors.length > 0, "registry must carry glossary lessons");
-    const inventory = buildSourceInventory(glossaryAnchors);
+    const inventory = buildSourceInventory(glossaryAnchors, essayAnchors);
     const { results } = runCoherenceCheck(glossaryAnchors, inventory, glossaryAnchorSet);
     for (const r of results) {
       assert.equal(
@@ -367,6 +414,7 @@ suite("Lesson-anchor coherence (FX598)", () => {
           webview: ["some-card.js"], // a stray governance-moment-style mount
           native: [],
           glossary: [], // but NO glossary-surface mount
+          essayList: [],
         },
       ],
     ]);
@@ -386,7 +434,7 @@ suite("Lesson-anchor coherence (FX598)", () => {
   test("FX602 governance-moment anchors are NOT mis-flagged as glossary", () => {
     // A2 no-false-positive: the four 'moment' anchors must keep their
     // webview/native classification — they are not in the glossary set.
-    const inventory = buildSourceInventory(glossaryAnchors);
+    const inventory = buildSourceInventory(glossaryAnchors, essayAnchors);
     const momentAnchors = ["governance-mode", "shield.plan", "shield.audit", "shield.substantiate"];
     const { results } = runCoherenceCheck(momentAnchors, inventory, glossaryAnchorSet);
     for (const r of results) {
@@ -409,6 +457,67 @@ suite("Lesson-anchor coherence (FX598)", () => {
       manifest,
       /Educational Component/,
       "UI_MANIFEST.md must reference the Educational Component (Phase 0 reconciliation)",
+    );
+  });
+});
+
+// --- FX612: SWE-craft vocabulary dominance in Learn primary content -------
+//
+// Plan v4 Phase 4 ideation failure-remediation class 1 ("content drifts back
+// to FailSafe-vocab-only"). Enforce a SWE-craft-vs-FailSafe-vocab ratio
+// across all `learn.essay.*` lesson bodies. SWE words must dominate.
+
+const SWE_VOCAB: readonly string[] = [
+  "scope", "acceptance", "criteria", "verify", "dependency", "diff", "test",
+  "debug", "reversible", "prompt", "agent", "refactor", "commit",
+  "branch", "patch", "function", "checkpoint", "summarize",
+  "review", "regression", "rewrite", "error", "code", "files",
+];
+const FAILSAFE_VOCAB: readonly string[] = [
+  "SHIELD", "governance", "ledger", "sentinel", "qor-", "audit gate",
+  "META_LEDGER", "Shadow Genome", "bicameral", "enforcement engine",
+];
+const DOMINANCE_RATIO = 3;
+
+function essayLessonBodies(): string {
+  return Object.values(LESSONS)
+    .filter((l) => l.anchor.startsWith("learn.essay."))
+    .map((l) => Object.values(l.body).filter((v): v is string => typeof v === "string").join(" "))
+    .join(" ");
+}
+
+function countOccurrences(text: string, vocab: readonly string[]): number {
+  const lower = text.toLowerCase();
+  let n = 0;
+  for (const word of vocab) {
+    const re = new RegExp("\\b" + word.toLowerCase().replace(/[-]/g, "\\-") + "\\b", "g");
+    const matches = lower.match(re);
+    if (matches) n += matches.length;
+  }
+  return n;
+}
+
+suite("Learn primary content — SWE-craft vocabulary dominance (FX612)", () => {
+  test("FX612 SWE vocabulary count >= FailSafe vocabulary count × dominance ratio", () => {
+    const text = essayLessonBodies();
+    assert.ok(text.length > 0, "expected non-empty essay lesson bodies (Phase 1 must ship)");
+    const sweCount = countOccurrences(text, SWE_VOCAB);
+    const failsafeCount = countOccurrences(text, FAILSAFE_VOCAB);
+    assert.ok(
+      sweCount >= failsafeCount * DOMINANCE_RATIO,
+      `SWE vocab (${sweCount}) must dominate FailSafe vocab (${failsafeCount}) by >= ${DOMINANCE_RATIO}x`,
+    );
+  });
+
+  test("FX612 fixture — text dominated by FailSafe vocabulary is CAUGHT", () => {
+    const hostile =
+      "SHIELD governance ledger sentinel qor-plan audit gate META_LEDGER " +
+      "Shadow Genome bicameral enforcement engine SHIELD governance.";
+    const sweCount = countOccurrences(hostile, SWE_VOCAB);
+    const failsafeCount = countOccurrences(hostile, FAILSAFE_VOCAB);
+    assert.ok(
+      !(sweCount >= failsafeCount * DOMINANCE_RATIO),
+      `hostile fixture should NOT pass dominance check (swe=${sweCount}, failsafe=${failsafeCount})`,
     );
   });
 });

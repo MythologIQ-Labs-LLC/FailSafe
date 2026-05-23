@@ -137,19 +137,20 @@ async function main() {
     path.join(distDir, "extension", "ui"),
   );
 
-  // Educational Component (v5.2.0): emit the browser-ESM lesson registry into
-  // dist so the /education mount resolves in the packaged VSIX. The webview
-  // affordance (education-lesson.js) needs a real `export`-bearing ESM module;
-  // tsc emits CommonJS. ConsoleRouteRegistrar.resolveEducationDir() finds this
-  // at `<uiDir>/../../education-browser` → dist/education-browser.
-  const eduEntry = path.join(root, "src", "education", "lessons.ts");
-  if (fs.existsSync(eduEntry)) {
-    const eduOut = path.join(distDir, "education-browser", "lessons.js");
+  // Educational Component (v5.2.0): emit the browser-ESM education modules
+  // into dist so the /education mount resolves in the packaged VSIX. The
+  // webview affordances (education-lesson.js, guided-dev-cycle.js) need real
+  // `export`-bearing ESM modules; tsc emits CommonJS.
+  // ConsoleRouteRegistrar.resolveEducationDir() finds these at
+  // `<uiDir>/../../education-browser` → dist/education-browser.
+  // bundle:true inlines sibling imports (e.g. lessons.ts → glossary-content*)
+  // so each emitted module is self-contained — bundle:false would leave bare
+  // `import` specifiers the packaged VSIX webview cannot resolve.
+  for (const eduName of ["lessons", "lessonTriggers"]) {
+    const eduEntry = path.join(root, "src", "education", `${eduName}.ts`);
+    if (!fs.existsSync(eduEntry)) continue;
+    const eduOut = path.join(distDir, "education-browser", `${eduName}.js`);
     fs.mkdirSync(path.dirname(eduOut), { recursive: true });
-    // Phase 6 (RD-1 split): lessons.ts now imports sibling content modules
-    // (glossary-content*.ts). bundle:true inlines those imports so the emitted
-    // browser ESM module is self-contained — bundle:false would leave bare
-    // `import` specifiers the packaged VSIX webview cannot resolve.
     esbuild.buildSync({
       entryPoints: [eduEntry],
       outfile: eduOut,
@@ -157,7 +158,7 @@ async function main() {
       bundle: true,
       platform: "browser",
     });
-    console.log("bundle: emitted browser-ESM education/lessons.js → dist/education-browser/");
+    console.log(`bundle: emitted browser-ESM education/${eduName}.js → dist/education-browser/`);
   }
 
   // Post-bundle integrity check: verify UI files were copied correctly
