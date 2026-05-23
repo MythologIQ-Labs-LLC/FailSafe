@@ -270,6 +270,26 @@
           "default": "",
           "description": "Override the Python interpreter used to install qor-logic. Leave empty to auto-detect (VS Code Python extension, then python3/python/py -3 probe)."
         },
+        "failsafe.education.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show opt-in, dismissible plain-language micro-lessons that explain FailSafe governance vocabulary at the moment it appears."
+        },
+        "failsafe.education.proficiency": {
+          "type": "string",
+          "enum": [
+            "beginner",
+            "intermediate",
+            "advanced"
+          ],
+          "enumDescriptions": [
+            "New to code — assume near-zero engineering knowledge; explain terms directly.",
+            "AI builder — can produce code with an agent; needs judgment around scope, verification, maintainability.",
+            "Product/PM background — connects software judgment to product judgment: scope, risk, acceptance criteria, tradeoffs, release confidence."
+          ],
+          "default": "beginner",
+          "description": "Where the FailSafe Learn content meets you — a starting-point selector, not a skill score. The operator picks; FailSafe never infers."
+        },
         "failsafe.genesis.livingGraph": {
           "type": "boolean",
           "default": true,

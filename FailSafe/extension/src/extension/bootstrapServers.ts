@@ -25,6 +25,7 @@ import { runWorkspaceBootstrap, type BootstrapReport } from "./bootstrapWorkspac
 import { wireBicameralIntegration, maybeAutoConnectBicameral } from "./bootstrapBicameral";
 import { wireVoicePack, reprobeAndSet } from "./bootstrapVoicePack";
 import { setupVoicePackRoutes } from "../roadmap/routes/VoicePackRoute";
+import { readEducationConfig } from "../education/educationConfig";
 
 export interface ServerDeps {
   planManager: PlanManager;
@@ -89,6 +90,10 @@ export async function bootstrapServers(
         }
         return qorLogicPackageInstallerRef.verifyInstalledVersion();
       },
+      // Educational Component (v5.2.0): resolve the {enabled, proficiency}
+      // education settings per hub rebuild so the webview micro-lesson
+      // affordance picks up Settings changes without a reload.
+      getEducationConfig: () => readEducationConfig(),
     },
   );
   consoleServer.setIdeTracker(ideTracker);

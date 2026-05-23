@@ -53,9 +53,18 @@ function readRegistryFile(): RegistryFile {
 function writeRegistryFile(data: RegistryFile): void {
   ensureRegistryDir();
   const registryPath = getRegistryPath();
-  const tmpPath = registryPath + ".tmp";
-  fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), "utf-8");
-  fs.renameSync(tmpPath, registryPath); // Atomic write
+  const tmpPath = `${registryPath}.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`;
+  try {
+    fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), "utf-8");
+    fs.renameSync(tmpPath, registryPath); // Atomic replace
+  } catch (err) {
+    try {
+      fs.rmSync(tmpPath, { force: true });
+    } catch {
+      // Best-effort cleanup; preserve the original write/rename failure.
+    }
+    throw err;
+  }
 }
 
 function isProcessAlive(pid: number): boolean {

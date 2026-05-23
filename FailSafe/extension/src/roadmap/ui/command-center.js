@@ -9,6 +9,7 @@ import { SkillsRenderer } from './modules/skills.js';
 import { GovernanceRenderer } from './modules/governance.js';
 import { BrainstormRenderer } from './modules/brainstorm.js';
 import { SettingsRenderer } from './modules/settings.js';
+import { LearnRenderer } from './modules/learn.js';
 import { TimelineRenderer } from './modules/timeline.js';
 import { GenomeRenderer } from './modules/genome.js';
 import { ReplayRenderer } from './modules/replay.js';
@@ -23,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const renderers = {
     overview:   new OverviewRenderer('overview', {}),
+    learn:      new LearnRenderer('learn'),
     agents:     new TabGroup('agents', [
       { key: 'operations', label: 'Operations', renderer: new OperationsRenderer('agents', { client }) },
       { key: 'timeline',   label: 'Timeline',   renderer: new TimelineRenderer('agents') },

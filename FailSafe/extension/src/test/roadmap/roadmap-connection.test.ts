@@ -13,10 +13,12 @@
 
 import { strict as assert } from 'assert';
 import { JSDOM } from 'jsdom';
-// @ts-expect-error untyped JS module
-// Path matches the compiled-output convention used by connection.test.ts:
-// from out/test/roadmap/, three up reaches extension/, then into src/.
-import { WebPanelClient } from '../../../src/roadmap/ui/roadmap.js';
+// @ts-expect-error untyped JS module — resolved from the compiled out/ tree.
+// roadmap.js → monitor-render.js → education-lesson.js → education/lessons.js:
+// that last hop crosses out of ui/ into education/, which has no .js sibling
+// under src/, so the import chain MUST resolve from out/ (where tsc emits
+// education/lessons.js).
+import { WebPanelClient } from '../../roadmap/ui/roadmap.js';
 
 class MockWebSocket {
   static instances: MockWebSocket[] = [];

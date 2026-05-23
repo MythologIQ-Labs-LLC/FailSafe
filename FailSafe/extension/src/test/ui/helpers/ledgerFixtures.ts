@@ -94,6 +94,11 @@ export interface HubFixture {
   repoCompliance?: Record<string, unknown>;
   recentCompletions?: unknown[];
   runState?: { currentPhase?: string };
+  governanceModeState?: { mode: string; defaulted: boolean };
+  /** Educational Component (v5.2.0): the {enabled, proficiency} pair the
+   *  webview micro-lesson affordance reads. Mirrors the real hub.education
+   *  field threaded by HubSnapshotService. */
+  education?: { enabled?: boolean; proficiency?: string };
 }
 
 export function hubForPhase(phase: ShieldPhase, planTitle = 'Test Plan: Monitor SHIELD Visibility'): HubFixture {

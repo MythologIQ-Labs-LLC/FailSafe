@@ -5,6 +5,7 @@
 
 import * as vscode from "vscode";
 import type { ConfigManager } from "../shared/ConfigManager";
+import { getLesson } from "../education/lessons";
 
 type GovernanceMode = "observe" | "assist" | "enforce";
 
@@ -20,20 +21,29 @@ export class FirstRunModePicker {
   async checkAndRun(): Promise<void> {
     if (this.isOnboarded()) return;
 
+    // Educational Component (v5.2.0): the quickpick item `detail` is drawn
+    // from the lesson registry — a native (no webview expander) surfacing of
+    // the `governance-mode` micro-lesson. `getLesson` falls back gracefully,
+    // so an absent/empty lesson simply yields no detail line.
+    const modeLesson = getLesson("governance-mode", "beginner");
+
     const picks: ModePick[] = [
       {
         label: "$(eye) Observe",
         description: "Watch what AI agents do; no blocking",
+        detail: modeLesson,
         mode: "observe",
       },
       {
         label: "$(warning) Assist",
         description: "Warn before risky actions",
+        detail: modeLesson,
         mode: "assist",
       },
       {
         label: "$(shield) Enforce",
         description: "Block risky actions; require approval",
+        detail: modeLesson,
         mode: "enforce",
       },
     ];

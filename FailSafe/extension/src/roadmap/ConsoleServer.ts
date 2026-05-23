@@ -67,6 +67,9 @@ type ConsoleServerOptions = {
   getGovernanceMode?: () => import("../governance/types").GovernanceModeState;
   /** B197: optional verifier returning the qor-logic install version-floor status. */
   getQorLogicVerifier?: () => Promise<import("../qorlogic/qorLogicInstallRecord").QorLogicVersionStatus>;
+  /** Educational Component (v5.2.0): callback returning the {enabled,
+   *  proficiency} education settings for hub.education. */
+  getEducationConfig?: () => import("../education/educationConfig").EducationConfig;
 };
 
 // Re-export public test surface from support module for backward compat.
@@ -138,7 +141,7 @@ export class ConsoleServer {
     this.adapterService = new AdapterService(eventBus);
     this.transparencyLogger = new TransparencyLogger(this.workspaceRoot);
     this.riskRegisterManager = new RiskRegisterManager(this.workspaceRoot);
-    this.hub = this.buildHubService(options.mutationBus, options.modeTransitionHistory, options.getGovernanceMode, options.getQorLogicVerifier);
+    this.hub = this.buildHubService(options.mutationBus, options.modeTransitionHistory, options.getGovernanceMode, options.getQorLogicVerifier, options.getEducationConfig);
     this.lifecycle = new ConsoleLifecycleService({
       app: this.app, port: PORT, host: HOST, workspaceRoot: this.workspaceRoot,
       wsManager: this.wsManager, hub: this.hub, planManager: this.planManager,
@@ -243,6 +246,7 @@ export class ConsoleServer {
     modeTransitionHistory?: import("../governance/ModeTransitionHistory").ModeTransitionHistory,
     getGovernanceMode?: () => import("../governance/types").GovernanceModeState,
     getQorLogicVerifier?: () => Promise<import("../qorlogic/qorLogicInstallRecord").QorLogicVersionStatus>,
+    getEducationConfig?: () => import("../education/educationConfig").EducationConfig,
   ): HubSnapshotService {
     return new HubSnapshotService({
       workspaceRoot: this.workspaceRoot, extensionVersion: EXTENSION_VERSION,
@@ -257,6 +261,7 @@ export class ConsoleServer {
       modeTransitionHistory,
       getGovernanceMode,
       getQorLogicVerifier,
+      getEducationConfig,
       getIdeTracker: () => this.ideTracker,
       getAgentHealthIndicator: () => this.agentHealthIndicator,
       checkpointTypeRegistry: CHECKPOINT_TYPE_REGISTRY,

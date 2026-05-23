@@ -137,6 +137,30 @@ async function main() {
     path.join(distDir, "extension", "ui"),
   );
 
+  // Educational Component (v5.2.0): emit the browser-ESM education modules
+  // into dist so the /education mount resolves in the packaged VSIX. The
+  // webview affordances (education-lesson.js, guided-dev-cycle.js) need real
+  // `export`-bearing ESM modules; tsc emits CommonJS.
+  // ConsoleRouteRegistrar.resolveEducationDir() finds these at
+  // `<uiDir>/../../education-browser` → dist/education-browser.
+  // bundle:true inlines sibling imports (e.g. lessons.ts → glossary-content*)
+  // so each emitted module is self-contained — bundle:false would leave bare
+  // `import` specifiers the packaged VSIX webview cannot resolve.
+  for (const eduName of ["lessons", "lessonTriggers"]) {
+    const eduEntry = path.join(root, "src", "education", `${eduName}.ts`);
+    if (!fs.existsSync(eduEntry)) continue;
+    const eduOut = path.join(distDir, "education-browser", `${eduName}.js`);
+    fs.mkdirSync(path.dirname(eduOut), { recursive: true });
+    esbuild.buildSync({
+      entryPoints: [eduEntry],
+      outfile: eduOut,
+      format: "esm",
+      bundle: true,
+      platform: "browser",
+    });
+    console.log(`bundle: emitted browser-ESM education/${eduName}.js → dist/education-browser/`);
+  }
+
   // Post-bundle integrity check: verify UI files were copied correctly
   const srcHtml = fs.readFileSync(path.join(root, "src", "roadmap", "ui", "command-center.html"), "utf8");
   const distHtml = fs.readFileSync(path.join(distDir, "extension", "ui", "command-center.html"), "utf8");

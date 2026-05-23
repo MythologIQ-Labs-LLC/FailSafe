@@ -32,6 +32,28 @@ import { MetaLedgerReader } from "./MetaLedgerReader";
 import type { HubSnapshotService } from "./HubSnapshotService";
 import type { LedgerSummary } from "./MetaLedgerReader";
 
+/**
+ * Resolve the directory holding the BROWSER-ESM education lesson registry
+ * (`out/education-browser/lessons.js`, emitted by copy-ui-js.cjs via esbuild),
+ * to mount at /education. The tsc-emitted `out/education/lessons.js` is
+ * CommonJS — fine for Node consumers but unusable by the browser ESM import
+ * in `education-lesson.js`; the esbuild `education-browser` output carries the
+ * real `export` bindings. `uiDir` may resolve to an `out/` or a `src/` tree
+ * (the latter under Playwright), so we probe candidates.
+ */
+function resolveEducationDir(uiDir: string): string | null {
+  const candidates = [
+    path.resolve(uiDir, "..", "..", "education-browser"),
+    // uiDir resolved to a src/ tree (test/dev) — hop to the compiled out/.
+    path.resolve(uiDir, "..", "..", "..", "out", "education-browser"),
+    path.resolve(uiDir, "..", "..", "..", "..", "out", "education-browser"),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(path.join(c, "lessons.js"))) return c;
+  }
+  return null;
+}
+
 export interface ConsoleRouteHost {
   app: express.Application; uiDir: string; workspaceRoot: string; workspaceDirname: string;
   hub: HubSnapshotService;
@@ -100,6 +122,19 @@ export class ConsoleRouteRegistrar {
       app.use("/vendor", express.static(voicePackPath, { dotfiles: "allow" }));
     }
     app.use(express.static(this.host.uiDir, { index: false, dotfiles: "allow" }));
+    // Educational Component (v5.2.0): the webview micro-lesson affordance
+    // (`roadmap/ui/modules/education-lesson.js`) imports the lesson registry
+    // via `../../../education/lessons.js`, which resolves OUTSIDE the uiDir
+    // (`education/` is a sibling of `roadmap/`). Mount that directory at
+    // /education so the browser ESM import chain resolves. The educationConfig
+    // reader is NOT browser-served (it imports `vscode`) — only the leaf
+    // lessons registry is reachable here. The registry is a tsc-emitted .js
+    // (no raw .js sibling under src/), so candidate resolution must find the
+    // COMPILED `out/education` even when uiDir resolved to a src/ tree.
+    const educationDir = resolveEducationDir(this.host.uiDir);
+    if (educationDir) {
+      app.use("/education", express.static(educationDir, { dotfiles: "allow" }));
+    }
     this.registerCoreRoutes();
     const deps = this.buildApiRouteDeps();
     registerQorRoute(app, deps);

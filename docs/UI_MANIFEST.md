@@ -114,19 +114,10 @@ This document catalogs all UI components in the FailSafe extension, their curren
 
 ## Sidebar Views
 
-### 1. DojoViewProvider (`genesis/views/DojoViewProvider.ts`)
+### 1. DojoViewProvider — REMOVED
 
-**Status**: ACTIVE
-**Template**: `genesis/views/templates/DojoTemplate.ts`
-**View ID**: `failsafe.dojo`
-
-**Features**:
-| Feature | Description | Status |
-|---------|-------------|--------|
-| Quick Start Guide | Collapsible tutorial | ✅ |
-| Metric Cards | Key system stats | ✅ |
-| Navigation Links | Dashboard, Graph, Ledger | ✅ |
-| Roadmap Link | Opens Planning Hub | ✅ |
+**Status**: REMOVED — manifest reconciled 2026-05-22 (Educational Component, Phase 0).
+`genesis/views/DojoViewProvider.ts` and `genesis/views/templates/DojoTemplate.ts` are not present in current source, and the `failsafe.dojo` view id is registered nowhere in `src/`. This entry was stale documentation drift. The "Quick Start Guide / collapsible tutorial" intent it described is superseded by the v5.2.0 Educational Component — inline contextual micro-lessons at governance moments (see `docs/EDUCATION.md`).
 
 ---
 
@@ -259,6 +250,26 @@ This document catalogs all UI components in the FailSafe extension, their curren
 | B38 | Enhance Tooltip Visibility | PENDING | Phase 2 |
 | B39 | Wire PlanManager to DashboardPanel | PENDING | Phase 3 |
 | B40 | Fix Quick Actions Not Working | PENDING | Phase 4 |
+
+---
+
+## Command Center Tabs
+
+The browser-served Command Center (`roadmap/ui/command-center.html`) presents tabbed surfaces. Educational Component tabs:
+
+### Learn (`data-target="learn"`)
+
+**Status**: ACTIVE — v5.2.0 FailSafe Learn (Software Development Craft) rebuild. Supersedes the rejected v1 + v3 Educational Component (sealed META_LEDGER #388 / #389).
+**Renderer**: `roadmap/ui/modules/learn.js` (`LearnRenderer`), registered in the `command-center.js` renderers map.
+
+**Features**:
+| Feature | Description | Source | Status |
+|---------|-------------|--------|--------|
+| SWE-craft essay list | Five short essays on the software-development craft (Slow down to speed up · Scope before prompt · Acceptance criteria before code · Choosing between agent suggestions · Verify before you believe). Each at three tier framings ("New to code" / "AI builder" / "Product/PM background"). The contextually-relevant essay sorts first with a "Relevant for what you are doing now" badge. | `roadmap/ui/modules/learn-essay-list.js` | ✅ Primary |
+| Contextual trigger engine | Pure-function evaluator maps hub state (active plan, file activity, checkpoints, session duration) onto five nudge anchors; per-anchor + per-session caps; client-side-only session timing | `src/education/lessonTriggers.ts` | ✅ |
+| FailSafe Glossary | 12-term agentic-vocabulary glossary, collapsed-by-default; secondary reference below the essay list | `roadmap/ui/modules/education-glossary.js` | ✅ Secondary |
+
+See `docs/EDUCATION.md`, `docs/VIBE_CODER_PLAYBOOK.md`, and `docs/compliance-education-component.md`.
 
 ---
 

@@ -5,6 +5,45 @@ All notable changes to FailSafe will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — v5.2.0 (draft)
+
+**FailSafe Learn — Software Development Craft** is the v5.2.0 release-gating feature. The Learn tab on the Command Center teaches the software-development craft to AI-assisted builders, PMs gaining developer literacy, and true beginners — through five short essays surfaced contextually as they work, plus the FailSafe Glossary as a secondary reference. Mantra: *Slow down to speed up.* Not training software — no quizzes, no scoring, no grading, no learner inference. FX591 / FX598 / FX601 / FX606 modified; FX608–FX613 added. See `docs/plan-qor-failsafe-learn-swe-craft.md`, `docs/EDUCATION.md`, `docs/VIBE_CODER_PLAYBOOK.md`, and `docs/compliance-education-component.md`.
+
+### Added
+
+- **Five SWE-craft essays** on the Learn tab — *Slow down to speed up* · *Scope before prompt* · *Acceptance criteria before code* · *Choosing between agent suggestions* · *Verify before you believe* — each at three tier framings ("New to code" / "AI builder" / "Product/PM background"). Two essays carry operator-binding templates (the acceptance-criteria template; the 6-question option-evaluation table). Content authored against the Phase 0 content matrix at `.failsafe/governance/CONTENT_MATRIX_failsafe-learn-swe-craft.md`; literals split into sibling content modules (`src/education/lessons-content-swe-essays.ts` + `-2.ts`) following the existing `glossary-content-*.ts` pattern. FX591 (v2).
+- **Learn-tab essay-list renderer** (`src/roadmap/ui/modules/learn-essay-list.js`) — filters the registry to `learn.essay.*` anchors and renders all 5 cards as an always-on curriculum directory (title, current-tier body, embedded templates where applicable). Cards with fired contextual triggers sort first with a "Relevant for what you are doing now" badge; only those cards carry a **Mark as read** control (`data-learn-essay-ack`) that suppresses *only* the badge for the rest of the session (sessionStorage flag `fs-learn-nudge-dismissed:<anchor>` — the essay itself remains in the directory). FX609.
+- **Contextual surfacing trigger engine** (`src/education/lessonTriggers.ts`) — a pure-function evaluator that maps hub state (`activePlan`, `recentCheckpoints`, `unattributedFileActivity`, `governancePhase`) onto five nudge anchors (one per essay). Includes a per-anchor frequency cap (1/session) and a per-session global cap (2 total) — both enforced **cumulatively across renders** via webview `sessionStorage` counters (`fs-learn-nudge-count:<anchor>`), so the same nudges do not re-fire on every hub update. Dismissals via the "Mark as read" control suppress only the *relevant-now badge* (sessionStorage flag `fs-learn-nudge-dismissed:<anchor>`); the underlying essay always remains in the curriculum directory. `scope-before-prompt` requires actual file activity to fire — opening Learn on a passive empty state never produces a relevant-now badge. The `choose-agent-option` high-blast-radius detector covers JS/TS lockfiles (npm/yarn/pnpm/bun), tsconfigs, common bundler configs, Python (`requirements*.txt`, `Pipfile[.lock]`, `pyproject.toml`, `poetry.lock`), Rust (`Cargo.{toml,lock}`), Go (`go.{mod,sum}`), VSIX manifests / packaged `.vsix`, and any `.github/workflows/` path. Session-duration timing is **client-side only** (webview `sessionStorage`; binding GDPR constraint — never transmitted server-side). FX608.
+- **Tier framing** (`failsafe.education.proficiency.enumDescriptions`) — three operator-binding labels: *New to code* / *AI builder* / *Product/PM background*. The enum values are unchanged; only the descriptions reframe them as starting-point selectors, not skill scores. FX613.
+- **SWE-craft vocabulary dominance check** (FX612) — extends the lesson-anchor coherence test with an automated assertion that the aggregated `learn.essay.*` body text contains SWE-craft vocabulary at ≥ 3× the FailSafe-governance vocabulary count. Binding enforcement of ideation failure-remediation class 1 ("content drifts back to FailSafe-vocab-only"); a hostile FailSafe-vocab-only fixture is caught.
+- **Essay-list mount class** in the lesson-anchor coherence check (FX598 extension). `learn.essay.*` anchors are positively validated against the essay-list surface (`learn-essay-list.js`); a dead essay anchor is caught.
+
+### Changed
+
+- **The Learn tab is now SWE-craft-centric.** The five SWE-craft essays are the primary content; the FailSafe Glossary remains as a secondary reference below them. `LearnRenderer` (`learn.js`) recomposes around `renderEssayList` + the trigger engine. FX606 modified.
+- **FX601 glossary Playwright assertion** updated — the "absent when disabled" test now expects `#cc-learn-essay-list` to be absent (parallel to the glossary), since both primary and secondary content are gated by the same `education.enabled` discipline.
+- **`docs/EDUCATION.md`, `docs/VIBE_CODER_PLAYBOOK.md`, `docs/UI_MANIFEST.md`, `docs/FEATURE_INDEX.md`** rewritten or updated for the v2 reality.
+- **The proficiency setting's `description`** in `package.json` reframed: "Where the FailSafe Learn content meets you — a starting-point selector, not a skill score. The operator picks; FailSafe never infers."
+- **Server registry writes** now use a unique temporary file per write instead of the shared `servers.json.tmp` path. This removes a parallel Command Center test/server race where concurrent registry cleanup could delete another writer's temp file before the atomic rename.
+
+### Removed (rejected v1 + v3 Educational Component)
+
+The v1 Educational Component (sealed META_LEDGER #388) and v3 Guided Dev Cycle (sealed #389) were **rejected by the operator on 2026-05-22**: they taught FailSafe vocabulary, not software development. Removed in this rebuild:
+
+- `src/education/devCycleTrack.ts` (the SHIELD-lifecycle track data model).
+- `src/roadmap/ui/modules/guided-dev-cycle.js` (the Guided Dev Cycle panel renderer).
+- `src/test/education/devCycleTrack.test.ts`, `src/test/education/guided-dev-cycle.test.ts`, `src/test/ui/command-center-guided-dev-cycle.spec.ts` (the FX603/604/605/607 tests).
+- `docs/GUIDED_DEV_CYCLE.md` (documented the rejected concept).
+- The bundle.cjs / copy-ui-js.cjs `devCycleTrack` browser-ESM emit was replaced with the `lessonTriggers` emit.
+- FX598's v3 track-command extension reverted.
+- The 4 v1 governance-moment lesson literals (`governance-mode`, `shield.plan`, `shield.audit`, `shield.substantiate`) carry forward in the registry — they power the v1 Settings governance-mode card + Monitor SHIELD phase tracker (both kept unchanged); they are NOT the Learn tab's content.
+
+### Compliance
+
+- **`docs/compliance-education-component.md`** — fresh determination for FailSafe Learn v2. Stays **outside** EU AI Act Annex III high-risk education/training classification (no assessment, no scoring, no learning-outcome evaluation, no level inference — operator self-selects tier). More strongly aligned with Article 4 AI-literacy than v1 was. Binding GDPR design contract: session-duration timing client-side only. Two binding escalation triggers: any introduction of scoring/grading/inference → re-ideate; any expansion to a full curriculum within the open extension → escalate to FailSafe Pro / separate-extension scope decision.
+
+_v5.2.0 is not yet released — `package.json` remains 5.1.8 until `/qor-repo-release`._
+
 ## [5.1.8] - 2026-05-22
 
 B-INT-1 surfaces the 11 remaining Bicameral MCP tools (routes + a styled, grouped Advanced-tools card section) + B-EM-1 Sentinel-evaluator/Governance-mode UI disambiguation + B132 brainstorm node-label truncation feedback + the B199 CRITICAL test-coverage epic closeout + a v5.1.7 activation-test regression fix surfaced by restoring the full `vscode-test` suite (2739 passing, 0 failing). FX584–FX590. SHIELD-sealed via META_LEDGER Entry #385 (consolidated v5.1.8 cycle). See `docs/plan-qor-v5-1-8-cycle.md`. v5.2.0 remains gated on the Educational component — not this release.
