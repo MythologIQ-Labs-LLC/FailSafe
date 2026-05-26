@@ -14,7 +14,7 @@ FailSafe runs locally inside VS Code and Cursor. It monitors what AI agents do, 
 
 ---
 
-**Current Release**: v5.2.0 (2026-05-26)
+**Current Release**: v5.2.1 (2026-05-26)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
 

@@ -32,7 +32,7 @@ _Local-first safety for AI coding assistants._
 
 <div align="center">
 
-**Current Release**: v5.2.0 (2026-05-26)
+**Current Release**: v5.2.1 (2026-05-26)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
 

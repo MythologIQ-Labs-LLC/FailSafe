@@ -3,7 +3,7 @@
   "displayName": "FailSafe (feat. Qor-Logic)",
   "description": "Open-source VS Code/Cursor governance and skills surface for AI coding agents. Pairs with FailSafe Pro for desktop enforcement.",
   "icon": "media/icon.png",
-  "version": "5.2.0",
+  "version": "5.2.1",
   "publisher": "MythologIQ",
   "license": "Apache-2.0",
   "repository": {

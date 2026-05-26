@@ -5,6 +5,17 @@ All notable changes to the MythologIQ FailSafe extension will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.2.1] - 2026-05-26
+
+Hotfix release. v5.2.0 was tagged in main but its Release Pipeline failed at Build & Test (5 unit-test failures); the marketplace publish jobs were skipped. v5.2.1 is the first v5.2.x build that users will actually receive. **No feature changes from v5.2.0** — the same FailSafe Learn (Read sub-view with sectioned essays + jump-strip + Copy template button; Glossary sub-view with tag-filter UI + 48 SWE terms + Bicameral co-existence), Ollama probe fix, and global a11y baseline ship verbatim. See the [5.2.0] entry below for the full feature list.
+
+### Fixed
+
+- **Three CI test failures from the v5.2.0 cycle** — the SHIELD lesson expander was removed from the Monitor in v5.2.0 (operator-rejected on visual grounds), but three governance-moment lesson literals (`shield.plan`, `shield.audit`, `shield.substantiate`) were left in the registry. They became dead content the lesson-anchor coherence check (FX598) + governance-moment classifier (FX602) correctly flagged. v5.2.1 drops the orphaned literals from `LESSON_LIST` in `src/education/lessons.ts` and adds a dead-entry guard so they cannot be silently re-introduced without a consuming mount. The surviving `governance-mode` lesson (Settings card + FirstRunModePicker) carries forward unchanged.
+- **Glossary tag-filter test re-render race** (FX615) — the test held a stale button reference across the post-click DOM rebuild; updated to re-query the button after the click event triggers the rebuild.
+
+_v5.2.1 released 2026-05-26 — `package.json` bumped to 5.2.1; META_LEDGER seal entry #395._
+
 ## [5.2.0] - 2026-05-26
 
 v5.2.0 delivers on the learning promise: a Learn tab that teaches the software-development craft to non-traditional builders (vibe coders, PMs gaining developer literacy, true beginners). Two-sub-tab `TabGroup` `[Read][Glossary]`. Read sub-view ships sectioned essays with per-essay accent rail (existing CC tokens), inline-SVG icons, read-time chip, pull-quote callout, sticky horizontal jump-strip (FX619), and a Copy button on the acceptance-criteria template. Glossary sub-view (renamed from Reference) ships a tag-filter UI + A-Z/Z-A sort over 48 SWE-craft terms + 12 FailSafe terms + 1 Bicameral integration-partner entry — `glossary.bicameral` two-chambers entry preserved alongside new `glossary.bicameral-integration` (FX618). Global a11y baseline added to `command-center.css`: `prefers-reduced-motion`, global `:focus-visible`, `.visually-hidden` SR-label utility, prose `max-width: min(68ch, 100%)`, light-theme contrast fallback (closes WCAG 2.3.3 + 2.4.7 AA + 1.4.4 AA + 1.4.3 AA). Fixed: Mindmap "Ollama (Server)" false-positive "Connected" — the panel hardcoded a Connected status with no probe; now probes `http://localhost:11434/api/tags` with 30s TTL and reflects reality (FX192 extended from 1 to 4 cases). FX614/615/616/617/618/619/620 new+modified. SHIELD-sealed via META_LEDGER #392 (substantive) + #393 (gate-closure extension closing FX617 partial → verified and FX620 Playwright multimode e2e). See root [CHANGELOG.md](../../CHANGELOG.md) for the full bullet list, `docs/EDUCATION.md` for content authoring, and `docs/LEARN_TAB.md` for component documentation.
