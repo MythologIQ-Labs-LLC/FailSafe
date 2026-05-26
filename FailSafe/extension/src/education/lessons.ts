@@ -65,69 +65,16 @@ const LESSON_LIST: Lesson[] = [
         "block-until-approved. Raise the mode as trust drops.",
     },
   },
-  {
-    id: "lesson-shield-plan",
-    anchor: "shield.plan",
-    term: "Plan (SHIELD)",
-    levels: ["beginner", "intermediate", "advanced"],
-    body: {
-      beginner:
-        "Plan is the first SHIELD phase. Before any code is written, you " +
-        "write down what you intend to change and why. It turns a vague " +
-        "idea into a checkable list, so everyone — including the AI — knows " +
-        "what 'done' looks like.",
-      intermediate:
-        "Planning up front costs a little time but prevents scope drift " +
-        "later. A clear plan gives the audit phase something concrete to " +
-        "check against; a thin plan makes every later phase harder to " +
-        "verify. Invest enough detail to make the work auditable.",
-      advanced:
-        "Plan = stated intent + scope, written before code. The audit " +
-        "baseline. Thin plan = weak audit.",
-    },
-  },
-  {
-    id: "lesson-shield-audit",
-    anchor: "shield.audit",
-    term: "Audit (SHIELD)",
-    levels: ["beginner", "intermediate", "advanced"],
-    body: {
-      beginner:
-        "Audit is the SHIELD phase that reviews the plan before work " +
-        "begins. It asks 'is this plan safe, complete, and sensible?' and " +
-        "can send the plan back for changes. It catches problems while " +
-        "they are still cheap to fix.",
-      intermediate:
-        "Audit is a gate, not a rubber stamp. A strict audit costs a " +
-        "revision cycle now but avoids reworking shipped code later. A " +
-        "lenient audit moves faster but lets risk through. The right " +
-        "strictness depends on how much the change can break.",
-      advanced:
-        "Audit = pre-work review gate against the plan. Can VETO. Strict " +
-        "now, cheap; lenient now, expensive later.",
-    },
-  },
-  {
-    id: "lesson-shield-substantiate",
-    anchor: "shield.substantiate",
-    term: "Substantiate (SHIELD)",
-    levels: ["beginner", "intermediate", "advanced"],
-    body: {
-      beginner:
-        "Substantiate is the SHIELD phase where you prove the work is " +
-        "actually done. Instead of trusting a claim, you collect evidence " +
-        "— passing tests, checks, results — that shows the change works " +
-        "as promised.",
-      intermediate:
-        "Substantiation closes the gap between 'I think it works' and 'it " +
-        "is shown to work'. Gathering evidence takes effort, but a claim " +
-        "without proof is just a claim. The depth of evidence should match " +
-        "the risk of the change.",
-      advanced:
-        "Substantiate = evidence that the claim holds (tests, checks). No " +
-        "proof = not done. Depth scales with risk.",
-    },
-  },
+  // The three v1 SHIELD-phase lesson literals (`shield.plan`, `shield.audit`,
+  // `shield.substantiate`) were removed in v5.2.1 — the v5.2.0 cycle stripped
+  // the Monitor SHIELD lesson expander (operator: "What does this mean? looks
+  // awful"), orphaning the entries. The Settings governance-mode card still
+  // surfaces `governance-mode` above; the SHIELD anchors had no remaining
+  // consumer, so the dead entries were dropped to keep the lesson-anchor
+  // coherence check honest. To re-introduce SHIELD micro-lessons in a future
+  // surface, re-add the literals here AND add a renderLesson() call (or
+  // PHASE_LESSON_ANCHORS table) in the consuming module so the coherence test
+  // can see the mount.
 ];
 
 /**

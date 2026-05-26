@@ -49,9 +49,12 @@ suite("Learn-tab Glossary sorting and filters (FX615)", () => {
     const env = freshEnv();
     try {
       const { container } = env.mount(beginnerHub);
-      const fsFilter = container.querySelector('[data-learn-glossary-filter="fs"]') as HTMLButtonElement;
-      fsFilter.click();
-      assert.equal(fsFilter.getAttribute("aria-pressed"), "true");
+      // Click triggers re-render which replaces the button node — must re-query
+      // after click to read the new aria-pressed state.
+      const fsFilterBefore = container.querySelector('[data-learn-glossary-filter="fs"]') as HTMLButtonElement;
+      fsFilterBefore.click();
+      const fsFilterAfter = container.querySelector('[data-learn-glossary-filter="fs"]');
+      assert.equal(fsFilterAfter!.getAttribute("aria-pressed"), "true");
       const tags = [...container.querySelectorAll(".cc-learn-glossary-tag")]
         .map((n) => (n.textContent || "").trim());
       assert.ok(tags.length > 0, "filtered rows render");

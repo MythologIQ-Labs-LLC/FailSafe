@@ -156,14 +156,25 @@ suite("Education lessons registry (FX591)", () => {
     }
   });
 
-  test("FX591 v2: v1 governance-moment anchors carry forward (Settings + Monitor depend on them)", () => {
-    // Plan v4 §Anchor table marks governance-mode-card.js + monitor-render.js
-    // SHIELD wiring as "carries unchanged" — they consume these anchors.
-    const V1_CARRY_FORWARD = ["governance-mode", "shield.plan", "shield.audit", "shield.substantiate"];
+  test("FX591 v5.2.1: governance-mode anchor carries forward (Settings card depends on it)", () => {
+    // v5.2.0 stripped the Monitor SHIELD lesson expander; the three SHIELD
+    // governance-moment anchors (`shield.plan`, `shield.audit`,
+    // `shield.substantiate`) were dropped from the registry in v5.2.1 because
+    // they had no remaining consumer. `governance-mode` carries forward via
+    // governance-mode-card.js.
+    const V1_CARRY_FORWARD = ["governance-mode"];
     for (const anchor of V1_CARRY_FORWARD) {
       assert.ok(
         LESSONS[anchor],
         `v1 carry-forward anchor missing from registry: ${anchor}`,
+      );
+    }
+    // SHIELD anchors should NOT be in the registry anymore (dead-entry guard).
+    for (const dropped of ["shield.plan", "shield.audit", "shield.substantiate"]) {
+      assert.equal(
+        LESSONS[dropped],
+        undefined,
+        `dropped SHIELD anchor reappeared in registry: ${dropped}`,
       );
     }
   });
