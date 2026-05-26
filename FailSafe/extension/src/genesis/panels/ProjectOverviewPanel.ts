@@ -407,7 +407,7 @@ export class ProjectOverviewPanel {
   </div>
 
   <div class="quick-actions">
-    <button class="action-btn primary" onclick="vscode.postMessage({command:'openCommandCenter'})">Open Command Center</button>
+    <button class="action-btn primary" onclick="vscode.postMessage({command:'openCommandCenter'})">Open Console</button>
     <button class="action-btn secondary" onclick="vscode.postMessage({command:'createIntent'})">Create Intent</button>
   </div>
   <script nonce="${nonce}">

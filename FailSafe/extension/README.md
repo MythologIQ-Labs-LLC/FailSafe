@@ -18,6 +18,18 @@ FailSafe runs locally inside VS Code and Cursor. It monitors what AI agents do, 
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
 
+## What's New in v5.2.0
+
+The v5.2.0 release delivers on the learning promise: a Learn tab that teaches the software-development craft to non-traditional builders, with a redesigned visual surface and accessibility baseline.
+
+- **Learn tab is now a two-sub-tab `TabGroup`**: `[Read][Glossary]`. Read is default active.
+- **Read sub-view**: sectioned essays with per-essay accent rail, inline-SVG icon, read-time chip, pull-quote callout, H4 sub-sections. Sticky horizontal jump-strip (FX619) for at-a-glance navigation + relevant-now dots. Acceptance-criteria template gains a **Copy** button.
+- **Glossary sub-view** (renamed from Reference): search input + tag-filter buttons + A-Z/Z-A sort. ~60 unified terms (48 SWE-craft + 12 FailSafe + 1 Bicameral integration partner).
+- **Global a11y baseline** in `command-center.css`: `prefers-reduced-motion` honored, global `:focus-visible` on interactive surfaces, `.visually-hidden` SR-label utility, prose `max-width: min(68ch, 100%)`. Closes WCAG 2.3.3 + 2.4.7 + 1.4.4.
+- **Fixed: Mindmap "Ollama (Server)" false-positive "Connected"** — the panel previously hardcoded a Connected status with no probe. Now actually probes `http://localhost:11434/api/tags` with 30s TTL and reflects reality (`Connected ✓` / `Not Running` / `Checking…` / `Unavailable`).
+
+See [CHANGELOG.md](../../CHANGELOG.md) for the full v5.2.0 release notes and `docs/EDUCATION.md` / `docs/LEARN_TAB.md` for component documentation.
+
 ## What's New in v5.1.8
 
 - **Bicameral Advanced-tools surface** (B-INT-1): the 11 remaining Bicameral MCP tools are reachable via `POST /api/actions/bicameral-<tool>` routes (`bicameralToolRoutes.ts` factory — state-changing tools governed through the B151 `McpInterceptor`, query tools direct) plus a styled, collapsible **"Advanced tools"** card section — query/mutation grouping, per-row loading state, labelled success/error results.

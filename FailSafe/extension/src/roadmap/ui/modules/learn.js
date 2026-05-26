@@ -1,24 +1,35 @@
-// FailSafe Command Center — Learn tab renderer (FailSafe Learn v2).
+// FailSafe Command Center — Learn tab host (Phase 2A of plan-learn-tab-
+// multimode-redesign). The Learn tab is now a TabGroup of sub-views:
+//   read       — sectioned SWE-craft essays (Phase 1) + trigger-engine
+//                contextual surfacing (FX610). Default active sub-view.
+//   reference  — unified searchable glossary (SWE + FailSafe), Phase 2A.
+//   practice   — guided prompt builder, added in Phase 3.
 //
-// RD-3: tab-host renderer. The Learn tab is the primary surface for the
-// FailSafe Learn — Software Development Craft component. It composes:
-//   (1) the SWE-craft essay list (primary content; always-renders curriculum
-//       directory) — sorted with contextual-trigger-relevant essays first;
-//   (2) the FailSafe Glossary (secondary reference) — relocated here from
-//       the v1 Settings tab.
+// Compliance bindings preserved from commit 9c40860:
+//  - All sessionStorage state is webview-session-scoped; never transmitted.
+//  - No scoring / grading / completion-% / level inference (EU AI Act Annex
+//    III(3) exclusion). Read-time chip, in-essay sections, and prompt-builder
+//    affordances are structural, not evaluative.
 //
-// Contextual surfacing uses the pure trigger engine in
-// `src/education/lessonTriggers.ts`: evaluator → applyCaps. Inputs come from
-// the hub payload (`activePlan`, `recentCheckpoints`, `unattributedFileActivity`)
-// plus webview-only sessionStorage state (session start + per-anchor nudge
-// counts + per-anchor "Mark as read" dismissals). All three are
-// **session-scoped (sessionStorage)**, NOT persistent — the cap budgets
-// reset on webview reload, which is the intended "per session" semantic.
-// Session-duration timing is **client-side only** — never transmitted
-// server-side (GDPR binding contract).
+// Trigger-engine integration (FX610) MOVES into the Read sub-view's render
+// path. Reference / Practice sub-view renders DO NOT consume the per-session
+// nudge budget — that gate is sub-view-scoped now.
+//
+// Mount semantics:
+//  - LearnRenderer.render() first checks `education.enabled`; if false, the
+//    tab is rendered empty (no TabGroup, no pills) and the cap budget is
+//    untouched.
+//  - When enabled, the first render mounts the TabGroup (pill bar + content
+//    container); subsequent renders propagate the hub update to the active
+//    sub-view via `tabGroup.renderActive(hubData)`.
+//  - The outer-container `.active` class (signalled by the tab-host fan-out
+//    in `command-center.js`) is forwarded to sub-views via the synthesized
+//    `hubData._learnTabActive` flag so the Read sub-view's trigger-engine
+//    gate matches the v1 semantic (no invisible budget consumption).
 
+import { TabGroup } from './tab-group.js';
 import { renderEssayList, bindEssayAck } from './learn-essay-list.js';
-import { renderGlossary } from './education-glossary.js';
+import { LearnGlossary } from './learn-glossary.js';
 import {
   evaluateTriggers,
   applyCaps,
@@ -32,7 +43,7 @@ const NUDGE_DISMISSED_PREFIX = 'fs-learn-nudge-dismissed:';
 function getSessionStore() {
   try {
     if (typeof sessionStorage !== 'undefined' && sessionStorage) return sessionStorage;
-  } catch (_e) { /* sessionStorage access can throw in sandboxed contexts */ }
+  } catch (_e) { /* sandboxed contexts */ }
   return null;
 }
 
@@ -46,23 +57,19 @@ function readOrInitSessionStart() {
       store.setItem(SESSION_START_KEY, started);
     }
     return started;
-  } catch (_e) {
-    return null;
-  }
+  } catch (_e) { return null; }
 }
 
 function readNudgeCounts() {
   const out = {};
   const store = getSessionStore();
   if (!store) return out;
-  for (const anchor of NUDGE_ANCHORS) {
+  for (const a of NUDGE_ANCHORS) {
     try {
-      const raw = store.getItem(NUDGE_COUNT_PREFIX + anchor);
+      const raw = store.getItem(NUDGE_COUNT_PREFIX + a);
       const n = raw == null ? 0 : parseInt(raw, 10);
-      out[anchor] = Number.isFinite(n) && n >= 0 ? n : 0;
-    } catch (_e) {
-      out[anchor] = 0;
-    }
+      out[a] = Number.isFinite(n) && n >= 0 ? n : 0;
+    } catch (_e) { out[a] = 0; }
   }
   return out;
 }
@@ -71,12 +78,9 @@ function readDismissedFlags() {
   const out = {};
   const store = getSessionStore();
   if (!store) return out;
-  for (const anchor of NUDGE_ANCHORS) {
-    try {
-      out[anchor] = store.getItem(NUDGE_DISMISSED_PREFIX + anchor) === '1';
-    } catch (_e) {
-      out[anchor] = false;
-    }
+  for (const a of NUDGE_ANCHORS) {
+    try { out[a] = store.getItem(NUDGE_DISMISSED_PREFIX + a) === '1'; }
+    catch (_e) { out[a] = false; }
   }
   return out;
 }
@@ -92,6 +96,11 @@ function incrementNudgeCount(anchor) {
   } catch (_e) { /* ignore */ }
 }
 
+function educationEnabled(hubData) {
+  const education = (hubData && hubData.education) || {};
+  return education.enabled !== false;
+}
+
 function buildTriggerInput(hub) {
   const recent = (hub && hub.recentCheckpoints) || [];
   const first = recent.length > 0 ? recent[0] : null;
@@ -105,9 +114,14 @@ function buildTriggerInput(hub) {
   };
 }
 
-export class LearnRenderer {
-  constructor(containerId) {
-    this.container = document.getElementById(containerId);
+/**
+ * Read sub-view — sectioned essays + trigger-engine integration. Receives
+ * its container assignment via TabGroup.renderActive (sets
+ * `this.container = contentEl` before calling render).
+ */
+class LearnReadSubView {
+  constructor() {
+    this.container = null;
     this._lastHub = {};
   }
 
@@ -116,58 +130,96 @@ export class LearnRenderer {
     if (hubData && Object.keys(hubData).length) this._lastHub = hubData;
     const hub = this._lastHub;
     const education = hub.education || {};
-
-    // When education is disabled, render the (empty) gated surface and return
-    // BEFORE evaluating triggers / consuming the per-session cap budget. The
-    // user is not seeing any cards, so an invisible cap consumption would
-    // burn the 1-per-anchor / 2-per-session budget silently and starve the
-    // first legitimate badge after re-enabling.
-    if (!education.enabled) {
-      this.container.innerHTML = `
-        ${renderEssayList({ enabled: false })}
-        ${renderGlossary(education)}`;
+    if (!educationEnabled(hub)) {
+      this.container.innerHTML = renderEssayList({ enabled: false });
       return;
     }
-
-    // Only consume the nudge budget when the Learn tab is the *visible* tab.
-    // The host fan-out (`command-center.js`) routes every hub tick to every
-    // renderer; if we incremented counts here while the Learn panel is hidden,
-    // a matching nudge could be counted (and then suppressed by the cap)
-    // before the user has ever seen it. The tab-click handler re-invokes
-    // `render` after adding `.active` to the panel, so the first visible
-    // render after activation is where the relevant-now badge + count
-    // increment legitimately land.
-    const isActive = this.container.classList.contains('active');
     const proficiency = education.proficiency || 'beginner';
-
-    if (!isActive) {
-      // Pre-render the curriculum directory (so opening the tab is instant)
-      // with NO trigger results and NO count increments.
-      this.container.innerHTML = `
-        ${renderEssayList({ enabled: true, proficiency, triggerResults: [] })}
-        ${renderGlossary(education)}`;
+    // Outer-tab activeness is forwarded by the host (LearnRenderer) via
+    // `_learnTabActive` so we don't consume the cap budget while the Learn
+    // panel is hidden.
+    const isLearnActive = !!(hub && hub._learnTabActive);
+    if (!isLearnActive) {
+      this.container.innerHTML = renderEssayList({ enabled: true, proficiency, triggerResults: [] });
       bindEssayAck(this.container);
       return;
     }
-
     const triggerInput = buildTriggerInput(hub);
     const triggerResults = applyCaps(evaluateTriggers(triggerInput), triggerInput);
-
-    this.container.innerHTML = `
-      ${renderEssayList({ enabled: true, proficiency, triggerResults })}
-      ${renderGlossary(education)}`;
-
+    this.container.innerHTML = renderEssayList({ enabled: true, proficiency, triggerResults });
     bindEssayAck(this.container);
-
-    // Persist that these anchors surfaced this session so the per-session
-    // cap actually limits re-fires across subsequent hub updates. (Without
-    // this the cap collapses to "max-per-render" and the same nudges
-    // re-appear every hub cycle.)
     for (const r of triggerResults) incrementNudgeCount(r.anchor);
   }
 
   destroy() {
     if (this.container) this.container.innerHTML = '';
     this._lastHub = {};
+  }
+}
+
+export class LearnRenderer {
+  constructor(containerId) {
+    this.container = document.getElementById(containerId);
+    this._readSub = new LearnReadSubView();
+    this._glossarySub = new LearnGlossary();
+    this._tabGroup = new TabGroup(containerId, [
+      { key: 'read', label: 'Read', renderer: this._readSub },
+      { key: 'glossary', label: 'Glossary', renderer: this._glossarySub },
+    ]);
+    this._mounted = false;
+    this._lastHub = null;
+    this._navListener = (e) => this._handleNav(e);
+  }
+
+  render(hubData) {
+    if (!this.container) return;
+    const education = (hubData && hubData.education) || {};
+    if (!educationEnabled(hubData)) {
+      // Gated: clear and unmount. Re-mounting on next enabled render is fine.
+      if (this._mounted) {
+        try { this.container.removeEventListener('learn:nav', this._navListener); }
+        catch (_e) { /* ignore */ }
+      }
+      this.container.innerHTML = '';
+      this._mounted = false;
+      this._lastHub = null;
+      return;
+    }
+    // Forward outer-tab active flag so the Read sub-view's trigger gate runs
+    // only when the Learn panel itself is visible (matches v1 semantic).
+    const isActive = this.container.classList.contains('active');
+    const augmented = Object.assign({}, hubData || {}, { _learnTabActive: isActive });
+    this._lastHub = augmented;
+    if (!this._mounted) {
+      this._tabGroup.render(augmented);
+      this.container.addEventListener('learn:nav', this._navListener);
+      this._mounted = true;
+    } else {
+      this._tabGroup.renderActive(augmented);
+    }
+  }
+
+  destroy() {
+    if (this._mounted && this.container) {
+      try { this.container.removeEventListener('learn:nav', this._navListener); }
+      catch (_e) { /* ignore */ }
+    }
+    this._tabGroup.destroy();
+    this._mounted = false;
+    this._lastHub = null;
+  }
+
+  // Cross-link routing: the `learn:nav` CustomEvent bubbles to this container
+  // from sub-view internals (e.g., Read essay → Reference or Glossary anchor).
+  // Listener is preserved as forward-compat infrastructure for the follow-up
+  // Practice plan ("zoom-in evaluator"); v1 has no `tab: 'practice'` consumer
+  // so practice-target events silently no-op.
+  _handleNav(evt) {
+    const detail = (evt && evt.detail) || {};
+    const target = detail.tab;
+    if (target !== 'read' && target !== 'glossary') return;
+    if (target !== this._tabGroup.activeKey) {
+      this._tabGroup.switchTo(target, this._lastHub);
+    }
   }
 }

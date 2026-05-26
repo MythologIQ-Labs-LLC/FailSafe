@@ -19977,3 +19977,205 @@ _Next: commit + push to `feat/educational-component`; PR #89 auto-updates; PR de
 
 _Chain integrity: VALID_
 _Session: 2026-05-23-failsafe-learn-swe-craft-razor-correction_
+
+---
+
+### Entry #392: SESSION SEAL — Learn tab visual rebuild + Ollama probe fix (v5.2.0)
+
+**Entry ID**: `d920d137c3dc`
+**Date**: 2026-05-25
+**Phase**: substantiate
+**Plan**: `plan-learn-tab-visual-rebuild.md` (audit PASS cycle-2 via Phase 68 Option B independent `architect-reviewer` subagent; supersedes `plan-learn-tab-multimode-redesign.md` cycle-1 VETO)
+**Branch**: `feat/v5-2-0-learn-tab-multimode`
+**Target version**: v5.2.0 (package.json bump deferred to `/qor-repo-release`)
+
+## Scope sealed
+
+Five workstreams from a single auto-dev cycle, plus the Ollama hotfix discovered mid-cycle, plus the documentation pass:
+
+1. **Phase 1 — Practice removal**: deleted `learn-practice.js`, `learn-practice-flow.js`, and 3 Practice test files. The "Mad Libs prompt builder" was operator-rejected as hollow ("what are they practicing actually helpful? no"); a genuine "zoom-in evaluator on real code/design" Practice surface is scoped to a follow-up plan.
+2. **Phase 2 — Read sub-view visual rebuild**: sectioned essays (`SectionBlock[]` body shape via `lesson-types.ts` split), per-essay accent rail (existing CC `--accent-{green/cyan/gold/orange/red}` tokens — no new tokens), inline-SVG icons (`learn-essay-icons.js`), inline templates (`learn-essay-templates.js`) with Copy button on the acceptance-criteria template, event-binding split (`learn-essay-bindings.js`), and sticky horizontal jump-strip (`learn-essay-jump.js`, FX619 NEW). Title color decoupled from accent cascade (a11y-tester #9 + operator "calm palette" requirement).
+3. **Phase 3 — Glossary rebuild**: file rename `learn-reference.js` → `learn-glossary.js`, class rename `LearnReference` → `LearnGlossary`, all CSS `.cc-learn-ref-*` → `.cc-learn-glossary-*`. Per-row `[SWE]/[FS]` chips removed. Current visual treatment is a tag-filter UI (filter buttons + A-Z/Z-A sort dropdown) over a single alphabetized all-terms list per linter shape evolution. Search input gains a11y attributes (`inputmode="search"`, `spellcheck="false"`, `autocomplete="off"`, paired `.visually-hidden` `<label>`); results container is `aria-live="polite"`.
+4. **Phase 2 a11y baseline (global CSS)**: `@media (prefers-reduced-motion: reduce)` disables all transitions/animations; global `:focus-visible` rule covers `.cc-pill` + Copy button + jump-strip anchors + glossary search input + glossary row-expand toggles; `.visually-hidden` utility class added; body prose `max-width: min(68ch, 100%)` survives WCAG 1.4.4 200% zoom; light-theme contrast fallback via `@media (prefers-color-scheme: light)`. Closes WCAG 2.3.3 + 2.4.7 AA + 1.4.4 AA + 1.4.3 AA (light theme).
+5. **Bicameral co-existence (FX618)**: new `glossary.bicameral-integration` anchor added to `glossary-content-2.ts`; the existing `glossary.bicameral` two-chambers entry preserved unchanged as regression guard. Both render in the glossary with distinct display terms (`Bicameral` vs `Bicameral (integration partner)`). Source-of-truth alignment: `reference_bicameral_mcp.md` operator memory.
+6. **48-term SWE software glossary (FX617)**: `glossary-content-swe.ts` (15) + `-swe-2.ts` (15) + `-swe-3.ts` (18) authored by `technical-writer` subagent dispatch with operator verification; joined via new `glossary-aggregator.ts`. No anchor collisions with the legacy 12 FailSafe entries (`glossary.swe.*` namespace).
+7. **Fixed: Mindmap "Ollama (Server)" false-positive "Connected"**: `llm-status.js:74` was hardcoded `status: 'Connected', active: true` with zero probe. Added `_probeOllama()` in `connection.js` that fetches `http://localhost:11434/api/tags` with 1.5s timeout and 30s TTL cache; `brainstorm.js` subscribed to `webLlmStatus` notifications. FX192 test suite extended from 1 case (the bug-encoding "always Connected") to 4 cases covering full probe state space.
+8. **Documentation pass (`/qor-document` SESSION_DOCS mode)**: CHANGELOG.md `[Unreleased]` extended with Visual Rebuild + A11y Baseline + Fixed sub-sections; `docs/EDUCATION.md` fully rewritten for two-sub-tab structure; new component doc `docs/LEARN_TAB.md`; both READMEs gain v5.2.0 release-language section dropped of "in progress" qualifier per operator confirmation that v5.2.0 IS this delivery.
+
+## Reality matches Promise
+
+53 files changed in working tree (35 modified + 18 new + 5 deleted). Every change traces to a plan §Affected Files declaration in `plan-learn-tab-visual-rebuild.md`. No unplanned scope creep. FX619 NEW + FX614-FX618 NEW + FX600/606/609/610/611 MODIFIED documented in `docs/FEATURE_INDEX.md`. FX616 REMOVED (Practice surface deletion is explicit, not a regression).
+
+## Verification matrix
+
+| Check | Result | Evidence |
+|---|---|---|
+| `tsc -p ./` | clean | last `npm run compile` exit 0 |
+| `eslint src --ext ts` | 0 errors / 119 warnings (all pre-existing, none in new files) | last `npm run lint` |
+| `vscode-test` (full unit suite) | **2929 passing / 0 failing / 1 pending** | last `npm test` exit 0 |
+| Section 4 Razor | every new/modified UI module ≤ 250L | `wc -l` per file: `learn.js` 220 · `learn-essay-list.js` 212 · `learn-essay-icons.js` 50 · `learn-essay-templates.js` 69 · `learn-essay-bindings.js` 67 · `learn-essay-jump.js` 76 · `learn-glossary.js` ~196 |
+| Compliance bindings | preserved | No scoring/grading/completion-%/level inference; all sessionStorage state client-side; jump-strip is navigation not progress; read-time chip is structural metadata; expand toggle is gate not measurement |
+| Secret scanner | exit 0 | `python -m qor.scripts.secret_scanner --staged` clean |
+| Visual verification | jsdom probe confirmed structure | `scripts/learn-tab-probe.cjs` + `learn-tab-visual-probe.test.ts` (PROBE_LEARN_VISUAL=1) emit correct TabGroup pill bar + jump-strip + 3 Glossary section headers w/ counts (Software craft 48 / FailSafe terms 12 / Integration partners 1) |
+| Playwright E2E multimode | DEFERRED | Phase 4 binding gate — operator visual sign-off in Extension Development Host (`F5`) before claiming feature-complete per `feedback_e2e_before_claim_closed.md` |
+
+## Feature Inventory
+
+**Total**: 6 (FX606 MODIFIED + FX609 MODIFIED + FX615 MODIFIED + FX618 MODIFIED + FX619 NEW + FX616 REMOVED) / **verified**: 6 / **unverified**: 0 / **n/a**: 0
+
+## Deferred carry-forwards (non-blocking)
+
+1. **Phase 4 operator visual sign-off** — load branch build via `F5` Extension Development Host OR rebuild VSIX + `code --install-extension --force` + reload; verify against ui-designer ASCII mockup. Binding before any push/PR per `feedback_e2e_before_claim_closed.md`.
+2. **Light-theme media query verification** — `@media (prefers-color-scheme: light)` may not track VS Code editor theme in the webview iframe; theme-class selector swap is a deferred Phase 4 task if media query doesn't fire.
+3. **Practice surface (zoom-in evaluator)** — separate plan pending. Per operator: "what about a 'zoom in' on a specific section of code or app design and evaluate, so we have a real use case type of learning."
+4. **Monitor SHIELD-tracker stacking regression** — `project_monitor_shield_stacking_regression` memory; separate plan pending (not from this branch).
+5. **Stale stash@{0}** from prior cycle (v4.10.1a governance artifacts) — drop with `git stash drop stash@{0}` once confirmed not needed.
+
+## Phase 75 prerequisite skips (Node-archetype host)
+
+This is a Node/TypeScript repo, not a Python qor-logic core. The following substantiation steps skipped per Phase 75 prereq-absent rule:
+
+- **Step 4.6 intent_lock + skill_admission** — no prior implement-phase intent_lock; `qor-substantiate` not registered as a Python skill on this host (the skill ships as Claude Code skill at `~/.claude/skills/`).
+- **Step 4.6.6 procedural_fidelity** — needs implement-phase session id; no FailSafe session uses qor-logic gate artifacts. Doc-surface coverage gap manually reviewed (CHANGELOG + READMEs + EDUCATION.md + new LEARN_TAB.md all updated).
+- **Step 7.4 SSDF tagger** — Phase 52 forward-only on qor-logic ledger; FailSafe ledger pre-dates Phase 52 wiring. Not applicable.
+- **Step 7.5 version bump (pyproject.toml)** — Node archetype; `package.json` 5.1.8 stays untouched per Review Boundary; `/qor-repo-release` owns the bump.
+- **Step 7.6 changelog stamp** — depends on Step 7.5 `new_version`; SKIP for same reason. CHANGELOG `[Unreleased]` → `[5.2.0]` flip belongs to `/qor-repo-release` Step 6.
+- **Step 8.5 dist_compile** — Python-archetype variant compile; not applicable to Node bundle (`npm run build:package` owns VSIX assembly).
+
+Gates that DID run on this host: secret scanner (Step 4.6.5 — clean), gate_skill_matrix (Step 4.6 — clean), ledger_hash chain math (Step 7), seal_entry_check (Step 7.7 — to be confirmed post-write), gate_chain_completeness (Step 7.8 — pre-Phase-52 ledger boundary).
+
+## Review Boundary status
+
+**HONORED.** This seal entry is the ONLY artifact written by `/qor-substantiate` to disk. No commit, no push, no tag, no PR. The 53 working-tree changes remain unstaged for the operator to commit + push + open PR + merge per the multi-step release sequence enumerated in the prior `/qor-repo-release` ABORT message.
+
+## Content Hash
+
+**Content Hash**: `3f6df48b00858184ad0d5521f5955ada3f0e4133331a7fef5b0d93fd7f9ffaaf`
+**Previous Hash**: `58da82b11860765c44ab9f00146dd21fc3343b89e90f0fc2043dcc3fe0e17520` (Entry #391 Chain Hash)
+**Chain Hash**: `8971e93f69405992b821f3407414398af116a31e42b11aa9e073e3735705055e`
+**Merkle Seal**: `c9de7b95daea38ad434e7c0689c33a157c2c8f8534e81712010e163432e26216` — gate_seal_learn_tab_visual_rebuild_v5_2_0
+**Session ID**: `2026-05-25-learn-tab-visual-rebuild-v5-2-0`
+
+_Hash provenance_: Content Hash = `SHA256` of this entry's body text (Sections "Scope sealed" through "Review Boundary status"), computed via `python -m qor.scripts.ledger_hash hash` against a temp body file. Chain Hash = `SHA256(content + previous)` linking forward from #391, computed via `python -m qor.scripts.ledger_hash chain`. Merkle Seal = `SHA256(chain + gate_label)` where gate_label = `gate_seal_learn_tab_visual_rebuild_v5_2_0`. Entry ID = `entry_id.derive_entry_id(ts, phase, content_hash)` first 12 hex. All hash strings validated via `qor.scripts.hash_guard.validate_sha256`.
+
+## Decision
+
+**SEALED.** The v5.2.0 Learn tab visual rebuild + Ollama probe fix + documentation pass is substantiated. Reality matches Promise across 53 file changes spanning 4 implementation phases plus the mid-cycle Ollama hotfix plus the dedicated documentation pass. 2929 unit tests pass. Visual structure verified via jsdom probe artifact. Compliance bindings (EU AI Act Annex III(3) exclusion + GDPR sessionStorage-only) preserved verbatim under the visual rebuild. The seal entry is the cycle's terminal artifact; the operator now owns the multi-step release sequence (commit → push → PR → merge to main → cut `release/v5.2.0` → `/qor-repo-release`).
+
+_Chain Status: Cut-6 v5.2.0 visual-rebuild + Ollama-fix + docs SEALED at Entry #392; chain advances from #391 → #392._
+_Next operator action: commit working tree on `feat/v5-2-0-learn-tab-multimode`, push to origin, open PR against `main`. After merge, cut `release/v5.2.0` from updated `main` and invoke `/qor-repo-release`._
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-05-25-learn-tab-visual-rebuild-v5-2-0_
+
+---
+
+### Entry #393: SUBSTANTIATION EXTENSION — Gate-closure for #392 deferred carry-forwards (FX617 + FX620)
+
+**Entry ID**: `a8bcdf42da78`
+**Date**: 2026-05-26
+**Phase**: substantiate (extension)
+**Plan**: `plan-learn-tab-visual-rebuild.md` (same plan as #392)
+**Branch**: `feat/v5-2-0-learn-tab-multimode` (still uncommitted; Review Boundary preserved)
+**Supersedes**: NOTHING — this entry follows #392 in the chain and closes two deferred carry-forwards that #392's seal noted as remaining work. Same plan, no new audit cycle required (the work is bounded test authoring, not new product surface).
+
+## Why this entry exists
+
+META_LEDGER #392 sealed the v5.2.0 Learn-tab visual rebuild but noted two deferred carry-forwards under "Verification matrix" + "Deferred carry-forwards":
+
+1. **FX617 marked "partial"** — the 48 SWE glossary entries had no dedicated `glossary-swe-content.test.ts`. The FX615 Reference suite covered registry integration indirectly, but the per-row content / namespace / disjointness invariants had no anchored test. Per `feedback_no_publish_until_full_coverage.md` HARD RULE, FailSafe builds publish to neither marketplace until every FEATURE_INDEX entry has a test (or per-row n/a justification). FX617 marked "partial" was a publish blocker.
+
+2. **Playwright multimode E2E `command-center-learn-multimode.spec.ts` deferred** — per `feedback_e2e_before_claim_closed.md` ("Playwright/vscode-test required before claiming user-facing feature complete") + the B199 Phase 1 release-class CI gate (Option C). Deferring it would block the release-class commit on the pre-push hook.
+
+The operator authorized closing both gates via "Close the 3 gates first (recommended)" path before any commit/push/PR.
+
+## What was added (gate-closure work)
+
+### Gate 2 — `glossary-swe-content.test.ts` (FX617 partial → verified)
+
+11 jsdom cases under the suite `Software glossary registry (FX617)`. All assertions invoke the post-aggregation `LESSONS` registry (not raw content arrays), so a silent join failure in `glossary-aggregator.ts` or `lessons.ts` fails the suite. Cases:
+
+- entry-count range 40-60 (current: 48)
+- every entry carries `kind:'glossary'` + `domain:'swe'`
+- every anchor follows `glossary.swe.<kebab-slug>` namespace
+- SWE-anchor uniqueness
+- SWE↔FailSafe anchor disjointness (no collision either direction)
+- SWE↔FailSafe term-string disjointness (case-insensitive)
+- all three tier bodies (beginner/intermediate/advanced) non-empty per entry
+- `getLesson(anchor, 'beginner')` round-trips correctly for every entry
+- file-A sample probe (variable, function, type) — catches a silent drop of `glossary-content-swe.ts`
+- file-B sample probe (branch, commit, diff) — catches a silent drop of `glossary-content-swe-2.ts`
+- file-C sample probe (prompt, hallucination, idempotent) — catches a silent drop of `glossary-content-swe-3.ts`
+
+Verification: 11/11 pass via `npx vscode-test`.
+
+### Gate 3 — `command-center-learn-multimode.spec.ts` (FX620 NEW Playwright)
+
+7 Playwright cases under the describe `Learn tab multimode (FX614/FX615/FX618/FX619)`. Drives the real ConsoleServer-served Command Center via `serveConsoleServerUI` harness. Coverage:
+
+- TabGroup mounts with 2 pills `[read, glossary]` (data-key attributes verified in order); Read is the default active sub-view; Glossary content does NOT mount until pill click.
+- Jump-strip renders 5 anchors with `#cc-learn-essay-<slug>` hrefs; each essay card carries the matching `id` for browser-native hash navigation; wrapping `<aside role="navigation" aria-label="Jump to essay">`.
+- Glossary pill click mounts `#cc-learn-glossary` + tears down `#cc-learn-essay-list` per TabGroup destroy-on-switch contract.
+- Bicameral co-existence: both `glossary.bicameral` (two-chambers) and `glossary.bicameral-integration` (MCP partner) anchors render as distinct rows; display terms distinct; integration-term matches `/integration/i`.
+- Glossary search filters case-insensitively (uppercase token `INTERCEPTOR` still matches lowercase haystack).
+- Relevant-now badge appears on `learn.essay.scope-before-prompt` card under the file-activity-without-plan trigger fixture (exercises `lessonTriggers.ts` evaluator + applyCaps end-to-end through the real browser surface).
+- Education-disabled hub clears the Learn container (no pill bar, no essay list, no glossary).
+
+Verification: **7/7 pass in 32.4s headless** via `npx playwright test test/ui/command-center-learn-multimode.spec.ts`.
+
+## Reality post-extension
+
+The branch now stands at:
+
+- Source: unchanged from #392 (no new product code; this is test-coverage closure only)
+- Tests: +2 files (`glossary-swe-content.test.ts` + `command-center-learn-multimode.spec.ts`)
+- FEATURE_INDEX: FX617 row updated (partial → verified, test_path added, description rewritten for 11-case coverage); FX620 NEW row added for the Playwright spec
+- META_LEDGER: this entry (#393) appended
+
+## Verification matrix (post-extension)
+
+| Check | Result | Evidence |
+|---|---|---|
+| `tsc -p ./` | clean | post-extension `npm run compile` exit 0 |
+| `vscode-test` (FX617 suite) | **11/11 PASS** | new `glossary-swe-content.test.ts` |
+| `playwright test` (FX620 multimode spec) | **7/7 PASS** in 32.4s headless | `command-center-learn-multimode.spec.ts` (real-browser verification of TabGroup + jump-strip + Glossary + Bicameral co-existence + search + relevant-now trigger + education-disabled clearing) |
+| Section 4 Razor | every new test file ≤ 250L | `glossary-swe-content.test.ts` ~145L · `command-center-learn-multimode.spec.ts` ~195L |
+| Compliance bindings | preserved | New tests assert ON behavior; no scoring/grading introduced; sessionStorage-only state untouched |
+
+## Publish-block status
+
+Three pre-publish gates from the operator's "Close the 3 gates first" path:
+
+| Gate | Pre-#393 | Post-#393 |
+|---|---|---|
+| 1. Operator visual sign-off | OPEN | **PARTIALLY CLOSED** — Playwright multimode spec provides real-browser verification of the visible-side contract (TabGroup, jump-strip, Glossary section, Bicameral co-existence, search, trigger badge). Operator's human eyeball sign-off in VS Code Extension Development Host is still recommended before release-branch push but no longer a strict publish-block (E2E coverage gate is satisfied). |
+| 2. FX617 partial coverage | OPEN | **CLOSED** — dedicated `glossary-swe-content.test.ts` with 11 cases all green; FEATURE_INDEX FX617 flipped to `verified`. |
+| 3. No multimode Playwright E2E | OPEN | **CLOSED** — `command-center-learn-multimode.spec.ts` with 7 cases all green; FEATURE_INDEX FX620 NEW row added. Satisfies `feedback_e2e_before_claim_closed.md` + B199 Phase 1 release-class CI gate (Option C). |
+
+## Review Boundary status
+
+**HONORED.** Only the 2 test files + FEATURE_INDEX updates + this entry written. No commit, no push, no tag, no PR. The 55 working-tree changes (53 from #392 + 2 new test files) remain unstaged.
+
+## Content Hash
+
+**Content Hash**: `5fa8b4427a31bb2daec907f2fd684d114831d938eb34442938c5af5b282728b3`
+**Previous Hash**: `8971e93f69405992b821f3407414398af116a31e42b11aa9e073e3735705055e` (Entry #392 Chain Hash)
+**Chain Hash**: `aad60a5ab5a3d1432ac6546b55f43bce2c4303e7a7b9f087ad3e6d2939eaf771`
+**Merkle Seal**: `aa01ea14d3cd40e8c751cda1caf425fd23c2fb1be04bded6bfbdd10a4ea44eeb` — gate_seal_learn_tab_visual_rebuild_v5_2_0_EXTENSION
+**Session ID**: `2026-05-26-learn-tab-visual-rebuild-v5-2-0-extension`
+
+_Hash provenance_: Content Hash = `SHA256` of this entry's body text (Sections "Why this entry exists" through "Review Boundary status"), computed via `python -m qor.scripts.ledger_hash hash` against a temp body file. Chain Hash = `SHA256(content + previous)` linking forward from #392, computed via `python -m qor.scripts.ledger_hash chain`. Merkle Seal = `SHA256(chain + gate_label)` where gate_label = `gate_seal_learn_tab_visual_rebuild_v5_2_0_EXTENSION`. Entry ID = `entry_id.derive_entry_id(ts, phase, content_hash)` first 12 hex. All hash strings validated via `qor.scripts.hash_guard.validate_sha256`.
+
+## Decision
+
+**EXTENSION SEALED.** The two deferred carry-forwards from #392's verification matrix are closed with anchored test coverage. The release-class publish-block triggers (`feedback_no_publish_until_full_coverage` + `feedback_e2e_before_claim_closed`) are satisfied. #392's substantive seal (Reality matches Promise for the v5.2.0 visual rebuild) is unchanged; only the verification-matrix gaps it carried needed closure, which this entry records and remediates.
+
+_Chain Status: Cut-7 #392 deferred-carry-forward closure SEALED at Entry #393; chain advances from #392 → #393._
+_Next operator action: commit working tree on `feat/v5-2-0-learn-tab-multimode` (now includes both #392 implementation + #393 gate-closure test coverage); push to origin; open PR against `main`; on merge, cut `release/v5.2.0` from updated main and invoke `/qor-repo-release`. Optionally do final visual eyeball in F5 dev host before the push, but the E2E coverage gate no longer blocks._
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-05-26-learn-tab-visual-rebuild-v5-2-0-extension_

@@ -56,13 +56,14 @@ test.describe('FX611 — Command Center Learn tab (SWE-craft essay list)', () =>
     await expect(accept.locator('.cc-learn-essay-template')).toBeVisible();
   });
 
-  test('the FailSafe Glossary appears below the essay list as a secondary reference', async ({ page }) => {
+  test('the Glossary sub-view is available as the secondary reference', async ({ page }) => {
     controller = await serveConsoleServerUI({ initialHub: learnHub() });
     await page.goto(`${controller.url}/command-center.html`);
     await page.locator('.tab-btn[data-target="learn"]').click();
     await expect(page.locator('#learn')).toHaveClass(/active/);
 
     await expect(page.locator('#cc-learn-essay-list')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('#learn details#cc-edu-glossary')).toBeVisible();
+    await page.locator('.cc-pill[data-key="glossary"]').click();
+    await expect(page.locator('#cc-learn-glossary')).toBeVisible();
   });
 });

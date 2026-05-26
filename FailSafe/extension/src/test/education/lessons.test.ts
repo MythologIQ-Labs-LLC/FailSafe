@@ -6,11 +6,23 @@ import {
   LESSONS,
   PROFICIENCY_LEVELS,
   getLesson,
+  getLessonBody,
+  isSectionBlockBody,
   type Lesson,
   type ProficiencyLevel,
 } from "../../education/lessons";
 
 const VALID_LEVELS = new Set<string>(PROFICIENCY_LEVELS);
+
+// Phase 1 of plan-learn-tab-multimode-redesign extended `Lesson.body[level]`
+// to `string | SectionBlock[]`. This helper accepts both shapes for the
+// "non-empty body" assertion: strings must be non-empty after trim; sectioned
+// bodies must pass the `isSectionBlockBody` guard (which requires at least
+// one well-formed section with paragraphs).
+function isNonEmptyBody(body: unknown): boolean {
+  if (typeof body === "string") return body.trim().length > 0;
+  return isSectionBlockBody(body as any);
+}
 
 suite("Education lessons registry (FX591)", () => {
   const lessons: Lesson[] = Object.values(LESSONS);
@@ -37,12 +49,14 @@ suite("Education lessons registry (FX591)", () => {
   });
 
   test("FX591 every lesson has a non-empty body for each declared level", () => {
+    // Phase 1 multimode redesign: body may be `string` (legacy) or
+    // `SectionBlock[]` (sectioned essay). Both shapes satisfy non-empty.
     for (const lesson of lessons) {
       assert.ok(lesson.levels.length > 0, `lesson ${lesson.id} has no levels`);
       for (const level of lesson.levels) {
         const body = lesson.body[level];
         assert.ok(
-          typeof body === "string" && body.trim().length > 0,
+          isNonEmptyBody(body),
           `lesson ${lesson.id} missing body for level ${level}`,
         );
       }
@@ -73,15 +87,33 @@ suite("Education lessons registry (FX591)", () => {
     }
   });
 
-  test("FX591 getLesson returns the level-appropriate body", () => {
+  test("FX591 getLesson returns the level-appropriate body (string-flattened)", () => {
+    // Phase 1 multimode: `getLesson` flattens sectioned bodies to a single
+    // paragraph-joined string so existing consumers keep a `string | undefined`
+    // contract. For sectioned bodies, equality is against the flattened form;
+    // for string bodies, equality is against the literal. `getLessonBody`
+    // returns the raw shape for sectioned-aware callers.
     for (const lesson of lessons) {
       for (const level of lesson.levels) {
         const resolved = getLesson(lesson.anchor, level);
-        assert.equal(
-          resolved,
-          lesson.body[level],
-          `getLesson(${lesson.anchor}, ${level}) mismatch`,
-        );
+        const raw = lesson.body[level];
+        if (typeof raw === "string") {
+          assert.equal(resolved, raw, `getLesson(${lesson.anchor}, ${level}) mismatch`);
+        } else if (isSectionBlockBody(raw)) {
+          // Resolved must be a non-empty string containing every paragraph.
+          assert.equal(typeof resolved, "string", `getLesson(${lesson.anchor}, ${level}) must flatten to string`);
+          for (const section of raw) {
+            for (const p of section.paragraphs) {
+              assert.ok(
+                resolved!.includes(p),
+                `flattened body must include paragraph from section "${section.heading}"`,
+              );
+            }
+          }
+          // `getLessonBody` returns the raw sectioned shape.
+          const rawBody = getLessonBody(lesson.anchor, level);
+          assert.equal(isSectionBlockBody(rawBody), true, `getLessonBody(${lesson.anchor}, ${level}) must return SectionBlock[]`);
+        }
       }
     }
   });
@@ -101,6 +133,7 @@ suite("Education lessons registry (FX591)", () => {
   ];
 
   test("FX591 v2: the 5 SWE-craft essay anchors are present with all 3 tier bodies", () => {
+    // Phase 1 multimode: bodies are SectionBlock[] (sectioned essay shape).
     for (const anchor of SWE_ESSAY_ANCHORS) {
       const lesson = LESSONS[anchor];
       assert.ok(lesson, `SWE-craft essay anchor missing from registry: ${anchor}`);
@@ -108,7 +141,7 @@ suite("Education lessons registry (FX591)", () => {
       for (const level of levels) {
         const body = lesson.body[level];
         assert.ok(
-          typeof body === "string" && body.trim().length > 0,
+          isNonEmptyBody(body),
           `${anchor} missing tier body: ${level}`,
         );
       }

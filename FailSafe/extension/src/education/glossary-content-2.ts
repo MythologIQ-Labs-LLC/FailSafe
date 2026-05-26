@@ -52,6 +52,37 @@ export const GLOSSARY_LESSONS_B: Lesson[] = [
     },
   },
   {
+    // Phase 2A of plan-learn-tab-multimode-redesign: distinct from the
+    // `glossary.bicameral` entry above (which is the two-chambers governance
+    // pattern internal to FailSafe). This entry names Bicameral the
+    // integration partner — the upstream company and MCP server FailSafe
+    // integrates with (4 of 13 tools wired in v1). Both meanings co-exist
+    // by intent — they are different concepts that happen to share a word.
+    // Source of truth: `reference_bicameral_mcp.md` in operator memory.
+    id: "glossary-bicameral-integration",
+    anchor: "glossary.bicameral-integration",
+    kind: "glossary",
+    term: "Bicameral (integration partner)",
+    levels: ["beginner", "intermediate", "advanced"],
+    body: {
+      beginner:
+        "Bicameral is an outside company. FailSafe ships an integration " +
+        "with their MCP server: when you install the Bicameral MCP server " +
+        "alongside FailSafe, FailSafe can ask it for things like decision " +
+        "history and drift status. It is a partner product, not a part of " +
+        "FailSafe itself.",
+      intermediate:
+        "The Bicameral MCP server exposes a tool surface that FailSafe " +
+        "consumes through the Integrations tab. Four of its thirteen tools " +
+        "are wired in v1 (history, preflight, drift, ratify); the rest are " +
+        "tracked for follow-up. Install is operator-driven (`pip install " +
+        "bicameral-mcp`); FailSafe does not bundle it.",
+      advanced:
+        "Bicameral = upstream MCP server, 4-of-13 tools wired in v1. " +
+        "Operator-installed, not vendored.",
+    },
+  },
+  {
     id: "glossary-receipt-verdict-evaluation",
     anchor: "glossary.receipt-verdict",
     kind: "glossary",

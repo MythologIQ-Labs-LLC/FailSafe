@@ -8,8 +8,8 @@
 // Chromium). It affects layout (unlike `transform: scale`), so the scaled
 // stack actually fits the viewport instead of overlapping siblings.
 
-const MIN_SCALE = 0.5;
-const VIEWPORT_PADDING = 24;
+const MIN_SCALE = 0.34;
+const VIEWPORT_PADDING = 18;
 
 let rafHandle = 0;
 
@@ -21,13 +21,21 @@ export function fitMonitorToViewport() {
 function measureAndApply() {
   rafHandle = 0;
   const stack = document.querySelector('.stack');
+  const shell = document.querySelector('.shell');
   if (!(stack instanceof HTMLElement)) return;
+  if (!(shell instanceof HTMLElement)) return;
   // Reset to natural size before measuring so we don't observe a previously
   // zoomed scrollHeight (which would oscillate toward 0).
   stack.style.zoom = '1';
-  const naturalHeight = stack.scrollHeight;
+  const stackRect = stack.getBoundingClientRect();
+  const childBottom = Array.from(stack.children).reduce((max, child) => {
+    if (!(child instanceof HTMLElement)) return max;
+    return Math.max(max, child.getBoundingClientRect().bottom);
+  }, stackRect.bottom);
+  const naturalHeight = Math.max(stack.scrollHeight, childBottom - stackRect.top);
   if (naturalHeight <= 0) return;
-  const viewportHeight = window.innerHeight - VIEWPORT_PADDING;
+  const shellHeight = shell.getBoundingClientRect().height;
+  const viewportHeight = Math.max(0, shellHeight - VIEWPORT_PADDING);
   const rawScale = viewportHeight / naturalHeight;
   const scale = Math.max(MIN_SCALE, Math.min(1, rawScale));
   // Single-decimal precision avoids subpixel re-renders that can re-fire
@@ -43,6 +51,9 @@ export function installMonitorViewportFit() {
   } else {
     run();
   }
+  window.addEventListener('load', run, { once: true });
+  document.fonts?.ready?.then(run).catch(() => {});
+  setTimeout(run, 100);
   window.addEventListener('resize', run);
   // Re-fit when WebSocket updates change card content (queue grows, etc.).
   // Listener attaches to `hub.refresh` DOM event broadcast by roadmap.js.

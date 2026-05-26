@@ -7,6 +7,7 @@ import { getPhaseInfo, getFeatureSummary, renderPhase } from "../../roadmap/ui/m
 function makeEls(): any {
   return {
     phaseTitle: { textContent: '' },
+    debugStatus: { textContent: '', className: '' },
     phaseTrack: { innerHTML: '' },
   };
 }
@@ -156,10 +157,12 @@ suite("monitor-render — renderPhase", () => {
     assert.match(els.phaseTrack.innerHTML, /class="step active">Implement/);
   });
 
-  test("Debug index 3 → Debugging row active", () => {
+  test("Debug index 3 updates compact Debug status", () => {
     const els = makeEls();
     renderPhase({ title: 'Debug', index: 3 }, els);
-    assert.match(els.phaseTrack.innerHTML, /class="step debugging">Debugging\.\.\./);
+    assert.equal(els.debugStatus.textContent, 'Debugging');
+    assert.match(els.debugStatus.className, /debugging/);
+    assert.doesNotMatch(els.phaseTrack.innerHTML, /Debugging/);
   });
 
   test("missing phaseTrack element → no throw", () => {

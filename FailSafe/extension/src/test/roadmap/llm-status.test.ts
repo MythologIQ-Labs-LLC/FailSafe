@@ -87,12 +87,36 @@ suite('LlmStatusRenderer (FX192)', () => {
     assert.match(info.status, /Chrome\/Edge Only/);
   });
 
-  test('FX192 _getRowInfo server — always Connected', () => {
+  test('FX192 _getRowInfo server — Connected when probe succeeded', () => {
     const r = new LlmStatusRenderer(makeWebLlm(), makeStore(), () => undefined);
-    const info = getRowInfo(r, 'server', {});
+    const info = getRowInfo(r, 'server', { ollamaAvailable: true, ollamaUnavailableReason: null });
     assert.match(info.label, /Ollama/);
     assert.equal(info.active, true);
     assert.match(info.status, /Connected/);
+  });
+
+  test('FX192 _getRowInfo server — Not Running when probe failed (common case, Ollama not installed)', () => {
+    const r = new LlmStatusRenderer(makeWebLlm(), makeStore(), () => undefined);
+    const info = getRowInfo(r, 'server', { ollamaAvailable: false, ollamaUnavailableReason: 'not-running' });
+    assert.match(info.label, /Ollama/);
+    assert.equal(info.active, false, 'must NOT show as active when probe failed');
+    assert.match(info.status, /Not Running/);
+  });
+
+  test('FX192 _getRowInfo server — Checking… while initial probe in flight', () => {
+    const r = new LlmStatusRenderer(makeWebLlm(), makeStore(), () => undefined);
+    const info = getRowInfo(r, 'server', { ollamaAvailable: false, ollamaUnavailableReason: 'not-probed' });
+    assert.match(info.label, /Ollama/);
+    assert.equal(info.active, false);
+    assert.match(info.status, /Checking/);
+  });
+
+  test('FX192 _getRowInfo server — Unavailable for any other probe-error reason', () => {
+    const r = new LlmStatusRenderer(makeWebLlm(), makeStore(), () => undefined);
+    const info = getRowInfo(r, 'server', { ollamaAvailable: false, ollamaUnavailableReason: 'probe-error' });
+    assert.match(info.label, /Ollama/);
+    assert.equal(info.active, false);
+    assert.match(info.status, /Unavailable/);
   });
 
   test('FX192 _getRowInfo wasm — Standby when ready', () => {

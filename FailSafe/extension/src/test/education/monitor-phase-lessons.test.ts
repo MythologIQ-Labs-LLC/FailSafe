@@ -1,9 +1,8 @@
 // FX595 — Educational Component Phase 4b/4c: SHIELD phase-tracker lesson
 // expanders + FirstRunModePicker lesson-derived detail.
 //
-// Part A (jsdom): renderPhase() folds the Plan/Audit/Substantiate micro-lesson
-// expanders into the phaseTrack innerHTML when education is enabled; the
-// phaseTitle branch is left untouched (A2).
+// Part A (jsdom): renderPhase() keeps the compact phase track free of inline
+// education expanders and moves Debug state into the header status.
 // Part B: FirstRunModePicker QuickPick items carry lesson-derived `detail`
 // drawn from the registry — a native surface (no webview expander).
 //
@@ -22,6 +21,7 @@ import { renderPhase } from "../../roadmap/ui/modules/monitor-render.js";
 
 interface PhaseEls {
   phaseTitle: { textContent: string };
+  debugStatus: { textContent: string; className: string };
   phaseTrack: { innerHTML: string };
 }
 
@@ -56,31 +56,35 @@ function setupDom(): { restore: () => void } {
 }
 
 function makeEls(): PhaseEls {
-  return { phaseTitle: { textContent: "" }, phaseTrack: { innerHTML: "" } };
+  return {
+    phaseTitle: { textContent: "" },
+    debugStatus: { textContent: "", className: "" },
+    phaseTrack: { innerHTML: "" },
+  };
 }
 
-suite("Monitor SHIELD phase-tracker lessons (FX595 Part A)", () => {
+suite("Monitor SHIELD compact phase track (FX595 Part A)", () => {
   let restore: () => void;
   setup(() => { restore = setupDom().restore; });
   teardown(() => restore());
 
-  test("FX595 Plan phase active → phaseTrack carries shield.plan expander", () => {
+  test("FX595 Plan phase active omits the old shield.plan expander", () => {
     const els = makeEls();
     renderPhase({ title: "Plan", index: 0 }, els, { enabled: true, proficiency: "beginner" });
-    assert.match(els.phaseTrack.innerHTML, /cc-edu-lesson/, "lesson expander folded into phaseTrack");
-    assert.match(els.phaseTrack.innerHTML, /first SHIELD phase/, "shield.plan body present");
+    assert.ok(!/cc-edu-lesson/.test(els.phaseTrack.innerHTML), "lesson expander removed from phaseTrack");
+    assert.match(els.phaseTrack.innerHTML, /phase-row/, "phase track still rendered");
   });
 
-  test("FX595 Audit phase active → phaseTrack carries shield.audit expander", () => {
+  test("FX595 Audit phase active omits inline education copy", () => {
     const els = makeEls();
     renderPhase({ title: "Audit", index: 1 }, els, { enabled: true, proficiency: "beginner" });
-    assert.match(els.phaseTrack.innerHTML, /reviews the plan/, "shield.audit body present");
+    assert.ok(!/reviews the plan/.test(els.phaseTrack.innerHTML), "no audit lesson body present");
   });
 
-  test("FX595 Substantiate phase active → shield.substantiate expander", () => {
+  test("FX595 Substantiate phase active omits inline education copy", () => {
     const els = makeEls();
     renderPhase({ title: "Substantiate", index: 4 }, els, { enabled: true, proficiency: "beginner" });
-    assert.match(els.phaseTrack.innerHTML, /prove the work/, "shield.substantiate body present");
+    assert.ok(!/prove the work/.test(els.phaseTrack.innerHTML), "no substantiate lesson body present");
   });
 
   test("FX595 education disabled → no lesson expander in phaseTrack", () => {
@@ -107,6 +111,17 @@ suite("Monitor SHIELD phase-tracker lessons (FX595 Part A)", () => {
     const els = makeEls();
     renderPhase({ title: "Implement", index: 2 }, els, { enabled: true, proficiency: "beginner" });
     assert.ok(!/cc-edu-lesson/.test(els.phaseTrack.innerHTML), "Implement has no v1 micro-lesson");
+  });
+
+  test("FX595 Debug status is rendered as the compact header state", () => {
+    const els = makeEls();
+    renderPhase({ title: "Debug", index: 3 }, els, { enabled: true, proficiency: "beginner" });
+    assert.equal(els.debugStatus.textContent, "Debugging");
+    assert.match(els.debugStatus.className, /debugging/);
+
+    renderPhase({ title: "Substantiate", index: 4 }, els, { enabled: true, proficiency: "beginner" });
+    assert.equal(els.debugStatus.textContent, "Debugged");
+    assert.match(els.debugStatus.className, /resolved/);
   });
 });
 

@@ -109,7 +109,7 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
 <body>
   <div class="shell">
     <div class="toolbar">
-      <button class="btn" id="open-popout" type="button">Command Center</button>
+      <button class="btn" id="open-popout" type="button">Console</button>
       <button class="btn secondary" id="reload" type="button">Reload</button>
       <button class="btn init" id="init-workspace" type="button" title="Initialize Workspace">Initialize</button>
     </div>

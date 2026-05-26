@@ -1,83 +1,40 @@
-// FailSafe Educational Component — Phase 1: lesson data model + v1 content.
+// FailSafe Educational Component — lesson registry + accessors.
 //
-// RD-1: this is a leaf data module — no DOM, no runtime-code imports beyond
-// the sibling glossary-content modules (see RD-1 split below). It defines the
-// `Lesson` shape, the `LESSONS` registry keyed by stable `anchor`, and a
-// `getLesson` accessor with a documented level-fallback policy.
+// RD-1: this is a leaf registry module — no DOM, no runtime-code imports
+// beyond the sibling content modules (glossary-content*, lessons-content-swe-
+// essays*). Type definitions live in `./lesson-types` (Section 4 razor split,
+// Phase 1 of plan-learn-tab-multimode-redesign) and are re-exported below for
+// existing-caller compatibility.
 //
-// Lessons are opt-in, dismissible, plain-language micro-explanations of
-// FailSafe governance vocabulary. They are NOT training content — no
-// quizzes, no scoring, no blocking. Wording here is draft-quality and is
-// owned by the operator at the Phase 1 confirmation gate.
+// Lessons are opt-in, dismissible, plain-language micro-explanations. They are
+// NOT training content — no quizzes, no scoring, no blocking. Wording in
+// sibling content files is draft-quality and is owned by the operator at the
+// content-review gate.
 //
-// RD-1 split: Phase 6's 12 glossary lesson literals live in the sibling
-// content files `glossary-content.ts` (6) + `glossary-content-2.ts` (6) so
-// every module stays under the Section-4 razor. Those files import only the
-// `Lesson` TYPE from here (a type-only edge — no runtime cycle).
-//
-// FailSafe Learn v2 (v5.2.0 SWE-craft pivot): the 5 SWE-craft essay literals
-// live in sibling content files `lessons-content-swe-essays.ts` (3) +
-// `lessons-content-swe-essays-2.ts` (2) following the same split pattern.
-// They mount on the Learn-tab essay list via the `learn.essay.*` anchor
-// prefix filter in `roadmap/ui/modules/learn-essay-list.js`. The 4
-// governance-moment literals below (governance-mode + shield.plan/audit/
-// substantiate) are v1 carry-forward — they still mount the Settings
-// governance-mode card + Monitor SHIELD phase-tracker micro-lessons and are
-// NOT primary Learn-tab content.
+// Registry composition:
+//   (1) the v1 governance-moment lessons (LESSON_LIST below) — mount on the
+//       Settings governance-mode card + Monitor SHIELD phase-tracker
+//       (v1 carry-forward; NOT primary Learn-tab content).
+//   (2) the v2 SWE-craft essays (SWE_ESSAY_LESSONS) — primary Learn-tab Read
+//       sub-view content; anchor prefix `learn.essay.`.
+//   (3) the Phase 6 + Phase 2A glossary lessons (GLOSSARY_LESSONS) — Learn-tab
+//       Reference sub-view; anchor prefix `glossary.`. Phase 2A adds the
+//       SWE-domain glossary; the legacy 12 FailSafe entries are tagged
+//       `domain: 'failsafe'` at registry-join time (no per-entry edit churn).
 
-import { GLOSSARY_LESSONS_A } from "./glossary-content";
-import { GLOSSARY_LESSONS_B } from "./glossary-content-2";
+import type { Lesson, LessonKind, ProficiencyLevel, GlossaryDomain, SectionBlock } from "./lesson-types";
+import { PROFICIENCY_LEVELS, isSectionBlockBody } from "./lesson-types";
+import { GLOSSARY_LESSONS } from "./glossary-aggregator";
 import { SWE_ESSAY_LESSONS_A } from "./lessons-content-swe-essays";
 import { SWE_ESSAY_LESSONS_B } from "./lessons-content-swe-essays-2";
 
-/** The full Phase 6 agentic-vocabulary glossary, both content parts joined. */
-const GLOSSARY_LESSONS: Lesson[] = [...GLOSSARY_LESSONS_A, ...GLOSSARY_LESSONS_B];
+// Re-export types for existing callers (`glossary-content*.ts`,
+// `lessons-content-swe-essays*.ts`, `educationConfig.ts`) — type-only edge.
+export type { Lesson, LessonKind, ProficiencyLevel, GlossaryDomain, SectionBlock };
+export { PROFICIENCY_LEVELS, isSectionBlockBody };
 
 /** FailSafe Learn v2 SWE-craft essays — Learn-tab primary content. */
 const SWE_ESSAY_LESSONS: Lesson[] = [...SWE_ESSAY_LESSONS_A, ...SWE_ESSAY_LESSONS_B];
-
-/** Proficiency levels a lesson body can be authored for. */
-export type ProficiencyLevel = "beginner" | "intermediate" | "advanced";
-
-/** The set of valid proficiency levels — exported for validation/tests. */
-export const PROFICIENCY_LEVELS: readonly ProficiencyLevel[] = [
-  "beginner",
-  "intermediate",
-  "advanced",
-];
-
-/**
- * The two lesson classes:
- * - `'moment'`   a micro-lesson mounted at a governance moment (the v1 four).
- * - `'glossary'` a Phase 6 agentic-vocabulary entry that mounts on the single
- *                Settings "FailSafe Glossary" surface, not at a moment.
- */
-export type LessonKind = "moment" | "glossary";
-
-/**
- * A single micro-lesson.
- * - `id`     stable unique identifier (kebab-case).
- * - `anchor` stable key the lesson is mounted against. For `'moment'` lessons
- *            this is a governance-moment key (e.g. `governance-mode`,
- *            `shield.plan`); for `'glossary'` lessons it is a plain
- *            `glossary.<term>` key. Unique across LESSONS.
- * - `term`   the short human-readable label of the vocabulary being taught.
- * - `levels` the subset of proficiency levels this lesson authored a body for.
- * - `body`   per-level plain-language explanation. A level present in
- *            `levels` MUST have a corresponding non-empty `body` entry.
- * - `kind`   OPTIONAL discriminator (audit A1). Omitting it means `'moment'`
- *            — the default is applied at READ TIME (`kind ?? 'moment'`) in the
- *            selectors below, NOT written onto the literals. The four v1
- *            lesson literals omit `kind` and are unaffected.
- */
-export interface Lesson {
-  id: string;
-  anchor: string;
-  term: string;
-  levels: ProficiencyLevel[];
-  body: Partial<Record<ProficiencyLevel, string>>;
-  kind?: LessonKind;
-}
 
 /**
  * v1 lesson content. Beginner = "what & why", intermediate = trade-offs,
@@ -174,20 +131,26 @@ const LESSON_LIST: Lesson[] = [
 ];
 
 /**
- * The lesson registry, keyed by stable `anchor`. Three composed groups:
- * (1) the v1 governance-moment lessons (LESSON_LIST above) — mount on the
- *     Settings governance-mode card + Monitor SHIELD phase-tracker
- *     (v1 carry-forward; NOT primary Learn-tab content).
- * (2) the v2 SWE-craft essays (SWE_ESSAY_LESSONS) — primary Learn-tab
- *     content; anchor prefix `learn.essay.`.
- * (3) the Phase 6 glossary lessons (GLOSSARY_LESSONS) — Learn-tab secondary
- *     reference; anchor prefix `glossary.`.
- * Anchors are unique across all three groups.
+ * Apply read-time defaults for glossary lessons that omit `domain`. Phase 2A
+ * back-compat: the legacy 12 FailSafe-glossary entries do NOT declare
+ * `domain: 'failsafe'`; this stamp is applied at registry-join so the SWE
+ * filter in the Reference sub-view works uniformly.
+ */
+function withGlossaryDomainDefault(lesson: Lesson): Lesson {
+  if (lesson.kind === "glossary" && !lesson.domain) {
+    return { ...lesson, domain: "failsafe" };
+  }
+  return lesson;
+}
+
+/**
+ * The lesson registry, keyed by stable `anchor`. Anchors are unique across
+ * all groups.
  */
 export const LESSONS: Record<string, Lesson> = [
   ...LESSON_LIST,
   ...SWE_ESSAY_LESSONS,
-  ...GLOSSARY_LESSONS,
+  ...GLOSSARY_LESSONS.map(withGlossaryDomainDefault),
 ].reduce(
   (acc, lesson) => {
     acc[lesson.anchor] = lesson;
@@ -206,44 +169,71 @@ export function lessonKind(lesson: Lesson): LessonKind {
 }
 
 /**
- * The `'glossary'`-kind lessons — the Phase 6 agentic-vocabulary entries that
- * mount on the single Settings "FailSafe Glossary" surface. Uses the read-
- * time `kind ?? 'moment'` default, so a literal that omits `kind` is treated
- * as a `'moment'` lesson and is correctly excluded here.
+ * The `'glossary'`-kind lessons — the Phase 6 + Phase 2A vocabulary entries
+ * that mount on the Learn-tab Reference sub-view. Uses the read-time `kind ??
+ * 'moment'` default, so a literal that omits `kind` is treated as `'moment'`
+ * and is correctly excluded here.
  */
 export function glossaryLessons(): Lesson[] {
   return Object.values(LESSONS).filter((l) => lessonKind(l) === "glossary");
 }
 
 /**
- * Resolve a lesson body for an `anchor` at a given proficiency `level`.
+ * Resolve a lesson body for an `anchor` at a given proficiency `level` as a
+ * single string. Sectioned bodies (`SectionBlock[]`) are flattened to a
+ * paragraph-joined string so existing callers (governance + onboarding
+ * surfaces, monitor lesson surfaces, lesson-fallback tests) keep a uniform
+ * `string | undefined` contract.
  *
- * Fallback policy (documented):
+ * Sectioned-aware callers (the Learn-tab essay renderer) bypass this by
+ * inspecting `lesson.body[level]` directly via `isSectionBlockBody`.
+ *
+ * Fallback policy:
  *  1. If no lesson exists for `anchor` → return `undefined`.
  *  2. If the lesson has a body for the requested `level` → return it.
- *  3. Otherwise fall back along the chain advanced→intermediate→beginner
- *     and beginner→intermediate→advanced, preferring the simpler level
- *     first, then the next-available authored body.
- *  4. If the lesson somehow has no authored body at all → return `undefined`.
- *
- * The fallback guarantees that as long as a lesson authored ANY level, an
- * operator at any proficiency still sees an explanation.
+ *  3. Otherwise fall back preferring simpler levels first.
+ *  4. If the lesson has no authored body at all → return `undefined`.
  */
-export function getLesson(
+export function getLesson(anchor: string, level: ProficiencyLevel): string | undefined {
+  const body = resolveBodyValue(anchor, level);
+  return body === undefined ? undefined : flattenToString(body);
+}
+
+/**
+ * Sectioned-aware accessor — returns the raw body value (`string` or
+ * `SectionBlock[]`), or `undefined`. Used by the Learn-tab essay renderer
+ * to dispatch on body shape.
+ */
+export function getLessonBody(
   anchor: string,
   level: ProficiencyLevel,
-): string | undefined {
+): string | SectionBlock[] | undefined {
+  return resolveBodyValue(anchor, level);
+}
+
+function resolveBodyValue(
+  anchor: string,
+  level: ProficiencyLevel,
+): string | SectionBlock[] | undefined {
   const lesson = LESSONS[anchor];
   if (!lesson) return undefined;
-
   const direct = lesson.body[level];
-  if (direct && direct.trim().length > 0) return direct;
-
-  // Preference order: requested level first, then simplest-available.
+  if (hasBody(direct)) return direct;
   const order: ProficiencyLevel[] = [level, "beginner", "intermediate", "advanced"];
   for (const candidate of order) {
     const body = lesson.body[candidate];
-    if (body && body.trim().length > 0) return body;
+    if (hasBody(body)) return body;
   }
   return undefined;
+}
+
+function hasBody(body: string | SectionBlock[] | undefined): boolean {
+  if (typeof body === "string") return body.trim().length > 0;
+  if (isSectionBlockBody(body)) return true;
+  return false;
+}
+
+function flattenToString(body: string | SectionBlock[]): string {
+  if (typeof body === "string") return body;
+  return body.map((s) => s.paragraphs.join(" ")).join(" ");
 }

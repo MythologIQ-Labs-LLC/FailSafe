@@ -1,6 +1,5 @@
 import { SentinelMonitor } from './modules/sentinel-monitor.js';
 import { getPhaseInfo, getFeatureSummary, renderPhase } from './modules/monitor-render.js';
-import { bindLessonDismiss } from './modules/education-lesson.js';
 import { MonitorStaleness } from './modules/monitor-staleness.js';
 import { installMonitorViewportFit, fitMonitorToViewport } from './modules/monitor-viewport-fit.js';
 import { openModal } from './modules/modal-helper.js';
@@ -22,6 +21,7 @@ export class WebPanelClient {
 
     this.elements = {
       phaseTitle: document.getElementById('phase-title'),
+      debugStatus: document.getElementById('debug-status'),
       phaseTrack: document.getElementById('phase-track'),
       planTitle: document.getElementById('monitor-plan-title'),
       stalenessBanner: document.getElementById('monitor-staleness-banner'),
@@ -159,6 +159,7 @@ export class WebPanelClient {
     const milestones = (plan.milestones || []);
 
     const phaseInfo = getPhaseInfo(this.hub);
+    this.currentPhaseInfo = phaseInfo;
     const summary = getFeatureSummary(
       phases, milestones, blockers, risks,
       this.hub.governancePhase, this.hub.recentCompletions,
@@ -170,10 +171,7 @@ export class WebPanelClient {
       this.hub.qorRuntime || {},
     );
 
-    renderPhase(phaseInfo, this.elements, this.hub.education);
-    // Wire the phase-track micro-lesson's dismiss control (renderPhase is a
-    // pure renderer; binding happens here after the innerHTML is in the DOM).
-    if (this.elements.phaseTrack) bindLessonDismiss(this.elements.phaseTrack);
+    renderPhase(phaseInfo, this.elements);
     this.renderFeatureSummary(summary);
     if (this.elements.planTitle) {
       this.elements.planTitle.textContent = plan.title ? `Tracking: ${plan.title}` : '—';
@@ -188,6 +186,7 @@ export class WebPanelClient {
     this.renderQorRuntime(this.hub.qorRuntime || {});
     this.renderGovernanceAlerts(this.hub.governancePhase?.activeAlerts || []);
     this.renderRepoCompliance(this.hub.repoCompliance || {});
+    fitMonitorToViewport();
   }
 
   getNextStep(blockers, queue, sentinelStatus, qorRuntime) {
@@ -254,7 +253,7 @@ export class WebPanelClient {
   // Sentinel and workspace health rendering delegated to SentinelMonitor module
 
   renderQorRuntime() {
-    // Qor runtime data now rendered in Command Center overview; Monitor no longer owns it.
+    // Qor runtime data now rendered in Console overview; Monitor no longer owns it.
   }
 
   renderRepoCompliance(compliance) {
@@ -421,7 +420,30 @@ export class WebPanelClient {
     });
   }
 
-  // Transparency and risk data now served via Command Center modules only.
+  setupInfoClickHandlers() {
+    document.querySelectorAll('[data-info-target]').forEach((button) => {
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const target = button.getAttribute('data-info-target') || 'overview';
+        window.open(this.commandCenterUrlFor(target), '_blank');
+      });
+    });
+  }
+
+  commandCenterUrlFor(target) {
+    if (target === 'recent') return '/command-center.html#agents';
+    if (target === 'debug') return '/command-center.html#agents';
+    if (target !== 'next') return '/command-center.html#overview';
+
+    const index = this.currentPhaseInfo?.index ?? -1;
+    if (index === 0) return '/command-center.html#workspace';
+    if (index === 1 || index >= 4) return '/command-center.html#governance';
+    if (index === 2 || index === 3) return '/command-center.html#agents';
+    return '/command-center.html#overview';
+  }
+
+  // Transparency and risk data now served via Console modules only.
 }
 
 // Guarded so this file remains importable from Node-side mocha tests
@@ -434,6 +456,7 @@ if (typeof document !== 'undefined') {
 
     // Set up metric click handlers for explanations
     client.setupMetricClickHandlers();
+    client.setupInfoClickHandlers();
 
     // Compact-sidebar vertical fit: scale .stack so all contents fit
     // the viewport without an outer scroll. Re-fits on resize + hub

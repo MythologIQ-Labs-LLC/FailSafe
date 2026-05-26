@@ -34,7 +34,7 @@ body {
   display: flex;
   align-items: stretch;
   justify-content: center;
-  padding: 10px 10px 14px;
+  padding: 7px 8px 8px;
   overflow: hidden;
 }
 
@@ -43,7 +43,7 @@ body {
   max-width: 360px;
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  gap: 8px;
   flex: 1 1 0;
   min-height: 0;
 }
@@ -70,7 +70,7 @@ body {
   position: relative;
   border: 1px solid var(--line);
   border-radius: 12px;
-  padding: 12px 12px;
+  padding: 10px 11px;
   background: linear-gradient(180deg, color-mix(in srgb, var(--card) 85%, #1a325a), color-mix(in srgb, var(--card-soft) 92%, #122744));
   display: flex;
   align-items: center;
@@ -154,16 +154,36 @@ body {
   border: 1px solid var(--line);
   border-radius: 12px;
   background: linear-gradient(180deg, var(--card), var(--card-soft));
-  padding: 12px 11px;
+  padding: 10px 10px;
   line-height: 1.35;
+}
+
+#phase-card {
+  border-color: color-mix(in srgb, var(--primary) 42%, var(--line));
+  background:
+    linear-gradient(90deg, rgba(61, 125, 255, 0.18), transparent 24%),
+    linear-gradient(180deg, var(--card), var(--card-soft));
+  box-shadow: inset 3px 0 0 rgba(61, 125, 255, 0.72);
 }
 
 .card-head {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 7px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .eyebrow {
@@ -186,7 +206,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 7px;
-  margin: 8px 0 14px;
+  margin: 6px 0 10px;
 }
 
 .phase-row {
@@ -198,7 +218,7 @@ body {
 /* Chevron Steps */
 .step {
   text-align: center;
-  padding: 7px 12px 7px 20px; /* Extra left padding for arrow tail */
+  padding: 7px 10px 7px 18px; /* Extra left padding for arrow tail */
   font-size: 0.66rem;
   font-weight: 700;
   background: #8090a6;
@@ -237,46 +257,44 @@ body {
   z-index: 0;
 }
 
-/* Debug Button Styling */
-.phase-row.debug-row {
-  grid-template-columns: 1fr;
-  max-width: 100%;
-  margin: 10px 0 0;
-}
-
-.phase-row.debug-row .step {
-  clip-path: none; /* Reset chevron shape */
-  border-radius: 8px; /* Rounded rectangle */
-  margin-right: 0;
-  padding: 10px 12px;
-  font-size: 0.78rem;
-  letter-spacing: 0.5px;
+.debug-status {
+  flex: 0 0 auto;
+  min-width: 82px;
+  border: 1px solid #3e587f;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: rgba(12, 24, 42, 0.92);
+  color: #9fb1cd;
+  font-size: 0.64rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.25px;
   text-transform: uppercase;
-  background: #1a273b;
-  color: #586e8a;
-  border: 1px solid #2e4770;
-  transition: all 0.3s ease;
-  width: 60%;
-  max-width: 190px;
-  min-width: 120px;
-  margin: 0 auto;
-  text-align: center;
+  cursor: pointer;
 }
 
-.phase-row.debug-row .step.active {
-  background: #143525; /* Dark green bg when complete/active? User asked for green backlit when complete, red pulse when debugging */
-  color: #4ade80;
-  border-color: #22c55e;
-  box-shadow: 0 0 15px rgba(34, 197, 94, 0.25), inset 0 0 12px rgba(34, 197, 94, 0.1);
-  animation: none; /* Default to "complete" state if just active in general */
+.debug-status.pending {
+  border-color: #425b82;
+  color: #a9bddb;
 }
 
-/* Special class for when debugging is actually in progress (pulsing red) */
-.phase-row.debug-row .step.debugging {
-  background: #351414;
-  color: #f87171;
+.debug-status.debugging {
   border-color: #ef4444;
+  background: rgba(62, 18, 26, 0.94);
+  color: #fecaca;
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.25), 0 0 16px rgba(239, 68, 68, 0.28);
   animation: pulse-debug-red 2s infinite;
+}
+
+.debug-status.resolved {
+  border-color: #22c55e;
+  background: rgba(14, 53, 37, 0.92);
+  color: #bbf7d0;
+  box-shadow: 0 0 14px rgba(34, 197, 94, 0.18);
+}
+
+.debug-status:hover {
+  filter: brightness(1.12);
 }
 
 @keyframes pulse-debug-red {
@@ -333,22 +351,46 @@ body {
 
 .flow-blocks {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .flow-block {
   border: 1px solid #3b577f;
   border-radius: 10px;
   background: rgba(10, 26, 48, 0.42);
-  padding: 8px 9px;
+  padding: 7px 8px;
+}
+
+.flow-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.more-info-btn {
+  flex: 0 0 auto;
+  border: 1px solid rgba(85, 123, 177, 0.82);
+  border-radius: 999px;
+  background: rgba(18, 42, 76, 0.92);
+  color: #c5d9fb;
+  cursor: pointer;
+  font-size: 0.58rem;
+  font-weight: 800;
+  line-height: 1;
+  padding: 4px 7px;
+}
+
+.more-info-btn:hover {
+  filter: brightness(1.12);
 }
 
 .flow-copy {
-  margin-top: 4px;
+  margin-top: 3px;
   font-size: 0.68rem;
   color: var(--muted);
   line-height: 1.38;
-  min-height: calc(0.68rem * 1.38 * 3);
+  min-height: calc(0.68rem * 1.38 * 2);
   white-space: pre-line;
   overflow-wrap: anywhere;
 }
@@ -377,9 +419,9 @@ body {
   position: relative;
 }
 .sentinel-orb {
-  flex: 0 0 48px;
-  width: 48px;
-  height: 48px;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
   border-radius: 999px;
   border: 2px solid #5d6f8a;
   margin-left: 8px;
@@ -466,7 +508,7 @@ body {
   border-radius: 10px;
   padding: 7px;
   background: rgba(8, 20, 38, 0.25);
-  min-height: 94px;
+  min-height: 82px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -596,7 +638,6 @@ body {
 @media (max-width: 380px) {
   .feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .phase-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .phase-row.debug-row { max-width: 100%; margin: 0; }
   .sentinel-body { grid-template-columns: 82px 1fr 74px; }
   .sentinel-orb { width: 42px; height: 42px; margin-left: 8px; }
   .health-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }

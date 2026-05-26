@@ -23,7 +23,8 @@
       <section class="card" id="phase-card">
         <header class="card-head">
           <span class="eyebrow">Active Build Step</span>
-          <span id="phase-title" class="phase-title">PLAN</span>
+          <span id="phase-title" class="phase-title sr-only">PLAN</span>
+          <button id="debug-status" class="debug-status" type="button" data-info-target="debug" title="Open debugging context in Console">Debug</button>
         </header>
 
         <div id="monitor-plan-title" class="plan-title-line">—</div>
@@ -32,11 +33,17 @@
 
         <div class="flow-blocks">
           <div class="flow-block">
-            <div class="eyebrow">Recently Completed</div>
+            <div class="flow-head">
+              <div class="eyebrow">Recently Completed</div>
+              <button class="more-info-btn" type="button" data-info-target="recent">More info</button>
+            </div>
             <div id="recent-line" class="flow-copy">None yet</div>
           </div>
           <div class="flow-block">
-            <div class="eyebrow">Recommended Next Step</div>
+            <div class="flow-head">
+              <div class="eyebrow">Recommended Next Step</div>
+              <button class="more-info-btn" type="button" data-info-target="next">More info</button>
+            </div>
             <div id="next-step" class="flow-copy flow-copy-action">Continue the active build phase.</div>
           </div>
         </div>
