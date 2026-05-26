@@ -5,7 +5,7 @@ All notable changes to FailSafe will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — v5.2.0 (draft)
+## [5.2.0] - 2026-05-26
 
 **FailSafe Learn — Software Development Craft** is the v5.2.0 release-gating feature. The Learn tab on the Command Center teaches the software-development craft to AI-assisted builders, PMs gaining developer literacy, and true beginners — through five short essays surfaced contextually as they work, plus the FailSafe Glossary as a secondary reference. Mantra: *Slow down to speed up.* Not training software — no quizzes, no scoring, no grading, no learner inference. FX591 / FX598 / FX601 / FX606 modified; FX608–FX613 added. See `docs/plan-qor-failsafe-learn-swe-craft.md`, `docs/EDUCATION.md`, `docs/VIBE_CODER_PLAYBOOK.md`, and `docs/compliance-education-component.md`.
 
@@ -67,7 +67,7 @@ Added once near the top of `command-center.css`, applies extension-wide (not jus
 
 - **`docs/compliance-education-component.md`** — fresh determination for FailSafe Learn v2. Stays **outside** EU AI Act Annex III high-risk education/training classification (no assessment, no scoring, no learning-outcome evaluation, no level inference — operator self-selects tier). More strongly aligned with Article 4 AI-literacy than v1 was. Binding GDPR design contract: session-duration timing client-side only. Two binding escalation triggers: any introduction of scoring/grading/inference → re-ideate; any expansion to a full curriculum within the open extension → escalate to FailSafe Pro / separate-extension scope decision.
 
-_v5.2.0 is not yet released — `package.json` remains 5.1.8 until `/qor-repo-release`._
+_v5.2.0 released 2026-05-26 — `package.json` bumped to 5.2.0; META_LEDGER seal entries #392 (substantive) + #393 (gate-closure extension)._
 
 ## [5.1.8] - 2026-05-22
 
