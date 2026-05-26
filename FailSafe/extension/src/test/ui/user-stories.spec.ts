@@ -106,6 +106,7 @@ async function withUiServer(
   options?: { hub?: HubPayload; skills?: unknown[]; relevance?: Record<string, unknown>; onAction?: (path: string) => void },
 ): Promise<void> {
   const root = path.resolve(__dirname, '../../roadmap/ui');
+  const educationRoot = path.resolve(__dirname, '../../../out/education-browser');
   const hubPayload = options?.hub || baseHub();
   const skills = options?.skills || defaultSkills();
   const relevance = options?.relevance || {};
@@ -176,6 +177,19 @@ async function withUiServer(
     }
 
     const requestPath = decodeURIComponent(url.pathname);
+    if (requestPath.startsWith('/education/')) {
+      const eduRelative = requestPath.replace(/^\/education\/+/, '');
+      const eduPath = path.join(educationRoot, eduRelative);
+      if (eduPath.startsWith(educationRoot) && fs.existsSync(eduPath) && !fs.statSync(eduPath).isDirectory()) {
+        res.setHeader('Content-Type', contentType(eduPath));
+        res.end(fs.readFileSync(eduPath));
+        return;
+      }
+      res.statusCode = 404;
+      res.end('not found');
+      return;
+    }
+
     const relative = requestPath === '/'
       ? 'command-center.html'
       : (requestPath === '/legacy-index.html' ? 'command-center.html' : requestPath.replace(/^\/+/, ''));
@@ -211,7 +225,7 @@ async function withUiServer(
   }
 }
 
-test('US: Command Center branding and consolidated tabs', async ({ page }) => {
+test('US: Console branding and consolidated tabs', async ({ page }) => {
   await withUiServer(async (baseUrl) => {
     await page.goto(`${baseUrl}/command-center.html`);
     await expect(page).toHaveTitle(/FAILSAFE Console/);
@@ -311,7 +325,7 @@ test('US: Monitor compact layout keeps workspace tiles in grid at sidebar width'
   }
 
   try {
-    await page.setViewportSize({ width: 320, height: 900 });
+    await page.setViewportSize({ width: 320, height: 832 });
     await page.goto(`http://127.0.0.1:${address.port}/index.html?theme=dark`);
     const tiles = page.locator('.health-grid .health-item');
     // 5 tiles: trust, gates, intents, checkpoints, compliance
@@ -326,6 +340,16 @@ test('US: Monitor compact layout keeps workspace tiles in grid at sidebar width'
     const rowKeys = Array.from(new Set(boxes.map((box) => Math.round(box.y / 10) * 10)));
     // 5 tiles at 2-column layout = 3 rows (2+2+1)
     expect(rowKeys.length).toBe(3);
+
+    await expect.poll(async () => page.evaluate(() => {
+      const shell = document.querySelector('.shell')?.getBoundingClientRect();
+      const footer = document.querySelector('.legal')?.getBoundingClientRect();
+      const lastTile = document.querySelector('.health-grid .health-item:last-child')?.getBoundingClientRect();
+      return {
+        footerVisible: !!shell && !!footer && footer.bottom <= shell.bottom - 1,
+        lastTileVisible: !!shell && !!lastTile && lastTile.bottom <= shell.bottom - 1,
+      };
+    })).toEqual({ footerVisible: true, lastTileVisible: true });
   } finally {
     if (typeof (server as { closeAllConnections?: () => void }).closeAllConnections === 'function') {
       (server as { closeAllConnections: () => void }).closeAllConnections();

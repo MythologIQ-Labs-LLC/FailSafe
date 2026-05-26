@@ -162,6 +162,45 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* ---------------------------------------------------------------------------
+ * A11y baseline (plan-learn-tab-visual-rebuild Phase 2 §A1, §A2)
+ * — applies to the entire Command Center, not just the Learn surface.
+ * Per accessibility-tester audit 2026-05-24: existing CC had ZERO
+ * prefers-reduced-motion coverage (21 transitions in this file) and only
+ * one :focus-visible rule (L1105 truncation dismiss). WCAG 2.3.3 + 2.4.7 AA.
+ * --------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.cc-pill:focus-visible,
+.cc-learn-essay-template-copy:focus-visible,
+.cc-learn-essay-jump-anchor:focus-visible,
+.cc-learn-glossary-search:focus-visible,
+.cc-learn-glossary-row-expand:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* WCAG 3.3.2 label utility — visible-to-SR-only label for the glossary search
+ * input + any future input where the placeholder is the visible affordance. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -1426,46 +1465,178 @@ select option {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   border-left: 3px solid var(--border-rim);
-  border-radius: 6px;
-  padding: 12px 14px;
-  margin-bottom: 10px;
+  border-radius: 8px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
 }
 
 .cc-learn-essay-card--relevant {
   border-left-color: var(--accent-gold, #f5a524);
 }
 
+/* Per-essay muted accent rail (Phase 1 palette — 40–60% saturation, calm).
+   Color cascade: the rail picks up the icon stroke via `currentColor` on the
+   inline SVG, so each essay reads as visually distinct without sensory
+   overload. Accents do NOT override the relevant-now gold rail. */
+/* Phase 2 visual rebuild: per-essay accent rail using existing CC tokens
+ * (no custom hex). currentColor flows to icon stroke + pull-quote border +
+ * badge border. Title is explicitly decoupled below (a11y-tester #9). */
+.cc-learn-essay-card--accent-green  { border-left-color: var(--accent-green);  color: var(--accent-green); }
+.cc-learn-essay-card--accent-cyan   { border-left-color: var(--accent-cyan);   color: var(--accent-cyan); }
+.cc-learn-essay-card--accent-gold   { border-left-color: var(--accent-gold);   color: var(--accent-gold); }
+.cc-learn-essay-card--accent-orange { border-left-color: var(--accent-orange); color: var(--accent-orange); }
+.cc-learn-essay-card--accent-red    { border-left-color: var(--accent-red);    color: var(--accent-red); }
+.cc-learn-essay-card--relevant      { border-left-color: var(--accent-gold, #f5a524); }
+
+/* Phase 2 header: 3-region flex (icon+title left, badge+readtime right). */
 .cc-learn-essay-card-head {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-bottom: 8px;
 }
+.cc-learn-essay-card-head-lead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.cc-learn-essay-card-head-trail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+.cc-learn-essay-relevant-now-region {
+  display: inline-flex;
+  align-items: center;
+}
 
+/* A4: title decouple — explicitly NEUTRAL color, not the accent cascade.
+ * A8: text-wrap balance to prevent orphans. */
 .cc-learn-essay-title {
   margin: 0;
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--text-main);
+  text-wrap: balance;
   flex: 1 1 auto;
+  min-width: 0;
 }
 
+/* Phase 2 relevant-now badge restyle: accent-tinted rather than solid gold.
+ * Dark theme (default + most themes): rgba background passes WCAG 4.5:1 AA
+ * across all 5 accents (computed by a11y-tester: cyan 8.4:1, gold 11:1,
+ * green 9.5:1, orange 5.4:1, red 6.1:1 in dark theme).
+ * A6: light theme uses a neutral background because accent-on-white text
+ * fails AA for gold (1.7:1) and green (2.5:1). */
 .cc-learn-essay-relevant-now {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 3px 8px;
-  border-radius: 10px;
-  background: var(--accent-gold, #f5a524);
-  color: #1a1a1a;
+  letter-spacing: 0.06em;
+  padding: 4px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06); /* neutral fallback when currentColor cascade lacks rgba */
+  border: 1px solid currentColor;
+  color: currentColor;
   font-weight: 600;
+  white-space: nowrap;
 }
 
+@media (prefers-color-scheme: light) {
+  .cc-learn-essay-relevant-now {
+    background: var(--bg-panel);
+    color: var(--text-main);
+    /* border stays currentColor — accent color is fine as border on light */
+  }
+}
+
+/* Legacy single-string body (fallback render path). Sectioned bodies use the
+   `.cc-learn-essay-section` + `.cc-learn-essay-paragraph` rules below. */
 .cc-learn-essay-body {
   margin: 0 0 10px;
-  font-size: 0.85rem;
-  line-height: 1.6;
+  font-size: 0.9rem;
+  line-height: 1.7;
   color: var(--text-main);
+  /* A5: min(68ch, 100%) survives WCAG 1.4.4 200% zoom without horizontal scroll */
+  max-width: min(68ch, 100%);
+}
+
+/* Phase 1 sectioned-essay anatomy: icon, read-time, pull-quote, sections.
+   Calm typography (line-height 1.7, max-width 68ch) reduces cognitive load
+   for neurodivergent readers without imposing alternative layouts. */
+.cc-learn-essay-icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  /* Inherits color from the per-essay accent rail via currentColor. */
+}
+
+.cc-learn-essay-readtime {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 2px 7px;
+  border: 1px solid var(--border-rim);
+  border-radius: 10px;
+  background: transparent;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  /* A7: tabular-nums so ~1m / ~2m / ~10m align in the vertical card stack */
+  font-variant-numeric: tabular-nums;
+}
+
+.cc-learn-essay-section {
+  margin: 14px 0;
+}
+
+.cc-learn-essay-section + .cc-learn-essay-section {
+  margin-top: 18px;
+}
+
+.cc-learn-essay-section-heading {
+  margin: 0 0 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-main);
+  letter-spacing: 0.01em;
+  /* A8: text-wrap balance prevents orphans */
+  text-wrap: balance;
+}
+
+.cc-learn-essay-paragraph {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: var(--text-main);
+  /* A5: min(68ch, 100%) survives 200% zoom without horizontal scroll */
+  max-width: min(68ch, 100%);
+}
+
+.cc-learn-essay-paragraph:last-child {
+  margin-bottom: 0;
+}
+
+.cc-learn-essay-pullquote {
+  margin: 0 0 12px;
+  padding: 6px 0 6px 14px;
+  border-left: 2px solid currentColor;
+  font-style: italic;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--text-main);
+  max-width: 60ch;
+  opacity: 0.92;
+}
+
+.cc-learn-essay-template-title {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
 }
 
 .cc-learn-essay-template {
@@ -1515,4 +1686,338 @@ select option {
 .cc-learn-option-table th {
   color: var(--text-muted);
   font-weight: 600;
+}
+
+/* Phase 2 visual rebuild — Read sub-view additions
+ * --------------------------------------------------------------------- */
+
+/* Template inset sub-panel (acceptance-criteria + option-evaluation).
+ * Replaces the flat `<details>` wrapper with a visually-distinct callout
+ * that signals "this is a tool you can use" not "more body text". */
+.cc-learn-essay-template--inset {
+  position: relative;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-rim);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin: 12px 0;
+}
+
+.cc-learn-essay-template-copy {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  background: transparent;
+  border: 1px solid var(--border-rim);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: color 0.15s, border-color 0.15s;
+}
+.cc-learn-essay-template-copy:hover {
+  color: var(--text-main);
+  border-color: var(--accent-cyan);
+}
+
+/* FX619 Direction-B graft: sticky horizontal jump-strip at top of Read.
+ * Flex-wrap under narrow webview widths; 6-8px breathing room between anchors. */
+.cc-learn-essay-jump {
+  position: sticky;
+  top: 8px;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 4px;
+  margin-bottom: 16px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-rim);
+}
+
+.cc-learn-essay-jump-anchor {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border-rim);
+  border-radius: 12px;
+  text-decoration: none;
+  transition: color 0.15s, border-color 0.15s;
+}
+.cc-learn-essay-jump-anchor:hover {
+  color: currentColor; /* per-essay accent set via modifier classes below */
+  border-color: currentColor;
+}
+
+.cc-learn-essay-jump-anchor--accent-green:hover  { color: var(--accent-green); }
+.cc-learn-essay-jump-anchor--accent-cyan:hover   { color: var(--accent-cyan); }
+.cc-learn-essay-jump-anchor--accent-gold:hover   { color: var(--accent-gold); }
+.cc-learn-essay-jump-anchor--accent-orange:hover { color: var(--accent-orange); }
+.cc-learn-essay-jump-anchor--accent-red:hover    { color: var(--accent-red); }
+
+.cc-learn-essay-jump-anchor-num {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cc-learn-essay-jump-dot {
+  display: inline-block;
+  margin-left: 4px;
+  color: var(--accent-gold);
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+/* Smooth-scroll target offset so the sticky jump-strip doesn't overlap the
+ * card top when navigating via hash. */
+.cc-learn-essay-card {
+  scroll-margin-top: 56px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Phase 3 visual rebuild — Glossary sub-view (LearnGlossary)
+ * Replaces unstyled v2A Reference. Section-grouped layout per ui-designer
+ * spec: 3 sections (Software craft / FailSafe terms / Integration partners),
+ * NO per-row chips. Search input above; aria-live region around results.
+ * --------------------------------------------------------------------------- */
+.cc-learn-glossary {
+  padding: 16px 20px;
+}
+
+.cc-learn-glossary-head {
+  margin-bottom: 16px;
+}
+
+.cc-learn-glossary-title {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: var(--text-main);
+  letter-spacing: 0.02em;
+}
+
+.cc-learn-glossary-intro {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.cc-learn-glossary-controls {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+/* Search input — mirrors skills.js L143 tag-input idiom. */
+.cc-learn-glossary-search {
+  width: 100%;
+  max-width: 480px;
+  padding: 8px 14px;
+  background: var(--bg-dark);
+  color: var(--text-main);
+  border: 1px solid var(--border-rim);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: var(--font-body);
+}
+
+.cc-learn-glossary-search::placeholder {
+  color: var(--text-muted);
+}
+
+.cc-learn-glossary-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
+}
+
+.cc-learn-glossary-filter,
+.cc-learn-glossary-sort {
+  border: 1px solid var(--border-rim);
+  border-radius: 999px;
+  background: var(--bg-dark);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-family: var(--font-body);
+}
+
+.cc-learn-glossary-filter {
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.cc-learn-glossary-filter.active {
+  border-color: var(--accent-cyan);
+  color: var(--text-main);
+  background: rgba(63, 211, 255, 0.12);
+}
+
+.cc-learn-glossary-sort {
+  margin-left: auto;
+  padding: 5px 9px;
+}
+
+.cc-learn-glossary-results {
+  /* aria-live region — no visible style */
+}
+
+.cc-learn-glossary-section {
+  margin-bottom: 28px;
+}
+
+/* Section header — display font, uppercase, accent-tinted top + bottom rule
+ * via pseudo-elements (40px wide flanking the heading text). Per-section
+ * accent set by the modifier classes below — color cascades to ::before /
+ * ::after via currentColor. */
+.cc-learn-glossary-section-head {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-wrap: balance;
+}
+
+.cc-learn-glossary-section-head::before {
+  content: '';
+  width: 40px;
+  height: 1px;
+  background: currentColor;
+  flex: 0 0 40px;
+  opacity: 0.6;
+}
+
+.cc-learn-glossary-section--all         { color: var(--accent-cyan); }
+.cc-learn-glossary-section--all         .cc-learn-glossary-section-head { color: var(--accent-cyan); }
+.cc-learn-glossary-section--swe         { color: var(--accent-cyan); }
+.cc-learn-glossary-section--swe         .cc-learn-glossary-section-head { color: var(--accent-cyan); }
+.cc-learn-glossary-section--fs          { color: var(--accent-gold); }
+.cc-learn-glossary-section--fs          .cc-learn-glossary-section-head { color: var(--accent-gold); }
+.cc-learn-glossary-section--integration { color: var(--accent-orange); }
+.cc-learn-glossary-section--integration .cc-learn-glossary-section-head { color: var(--accent-orange); }
+
+/* Override head text color back to text-main so only the rule + count carry
+ * the accent; the section label itself stays neutral for readability. */
+.cc-learn-glossary-section-head > :not(.cc-learn-glossary-section-count) {
+  color: var(--text-main);
+}
+
+.cc-learn-glossary-section-count {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+  letter-spacing: 0.02em;
+}
+
+.cc-learn-glossary-section-zero {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 4px 0 16px;
+}
+
+.cc-learn-glossary-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.cc-learn-glossary-row {
+  padding: 12px 8px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.cc-learn-glossary-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.cc-learn-glossary-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cc-learn-glossary-row-term {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.cc-learn-glossary-tag {
+  flex: 0 0 auto;
+  border: 1px solid var(--border-rim);
+  border-radius: 999px;
+  padding: 3px 8px;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  line-height: 1;
+}
+
+.cc-learn-glossary-tag--swe {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+
+.cc-learn-glossary-tag--fs {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+.cc-learn-glossary-tag--integration {
+  border-color: var(--accent-orange);
+  color: var(--accent-orange);
+}
+
+.cc-learn-glossary-row-body {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+  max-width: min(68ch, 100%);
+}
+
+.cc-learn-glossary-row-extra {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  background: var(--bg-deep);
+  border-left: 2px solid var(--border-rim);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--text-main);
+  max-width: min(68ch, 100%);
+}
+
+.cc-learn-glossary-row-expand {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  background: transparent;
+  border: 1px solid var(--border-rim);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.cc-learn-glossary-row-expand:hover {
+  color: var(--text-main);
+  border-color: var(--accent-cyan);
 }

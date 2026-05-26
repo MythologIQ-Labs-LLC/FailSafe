@@ -29,8 +29,11 @@ export class LlmStatusRenderer {
       nativeAvailable: this.webLlm.isNativeAiAvailable,
       wasmReady: !!this.webLlm.pipeline,
       loading: this.webLlm.loadingStatus === 'loading' || this.webLlm.loadingStatus === 'downloading',
-      browserSupported: true
+      browserSupported: true,
+      ollamaAvailable: false,
+      ollamaUnavailableReason: 'not-probed',
     };
+    this._client = client; // retained for the recheck button click handler
 
     const priority = this.store.getLlmPriority();
     let html = '<div style="display:flex; flex-direction:column; gap:8px;">';
@@ -71,7 +74,20 @@ export class LlmStatusRenderer {
       // Default fallback
       return { label: 'Gemini Nano (Native)', status: '<span style="opacity:0.4">Unavailable</span>', active: false, color: 'var(--text-muted)' };
     }
-    if (id === 'server') return { label: 'Ollama (Server)', status: '<span style="opacity:0.6">Connected</span>', active: true, color: 'var(--text-main)' };
+    if (id === 'server') {
+      if (state.ollamaAvailable) {
+        return { label: 'Ollama (Server)', status: '<span style="color:var(--accent-green)">Connected ✓</span>', active: true, color: 'var(--text-main)' };
+      }
+      // Probe in flight / never run — show neutral state, not a false-positive "Connected".
+      if (state.ollamaUnavailableReason === 'not-probed') {
+        return { label: 'Ollama (Server)', status: '<span style="opacity:0.4">Checking…</span>', active: false, color: 'var(--text-muted)' };
+      }
+      // Common case: Ollama not installed / not running on :11434.
+      if (state.ollamaUnavailableReason === 'not-running') {
+        return { label: 'Ollama (Server)', status: '<span style="opacity:0.4">Not Running</span>', active: false, color: 'var(--text-muted)' };
+      }
+      return { label: 'Ollama (Server)', status: '<span style="opacity:0.4">Unavailable</span>', active: false, color: 'var(--text-muted)' };
+    }
     if (id === 'wasm') {
       if (state.wasmReady) return { label: 'WASM Core (Local)', status: 'Standby', active: true, color: 'var(--text-main)' };
       if (state.loading) return { label: 'WASM Core (Local)', status: '<span style="color:var(--accent-gold)">Loading...</span>', active: false, color: 'var(--text-muted)' };

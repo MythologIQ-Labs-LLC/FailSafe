@@ -131,15 +131,15 @@
       },
       {
         "command": "failsafe.openPlannerHub",
-        "title": "FailSafe: Open Command Center (Browser Popout)"
+        "title": "FailSafe: Open Console (Browser Popout)"
       },
       {
         "command": "failsafe.openRoadmap",
-        "title": "FailSafe: Open Command Center (Browser)"
+        "title": "FailSafe: Open Console (Browser)"
       },
       {
         "command": "failsafe.openPlannerHubEditor",
-        "title": "FailSafe: Open Command Center (Editor Tab)"
+        "title": "FailSafe: Open Console (Editor Tab)"
       },
       {
         "command": "failsafe.auditFile",
@@ -383,7 +383,7 @@
         "failsafe.qorelogic.externalRuntime.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable Qor runtime integration in Command Center monitor."
+          "description": "Enable Qor runtime integration in Console monitor."
         },
         "failsafe.qorelogic.externalRuntime.baseUrl": {
           "type": "string",

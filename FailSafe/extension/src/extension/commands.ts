@@ -57,7 +57,7 @@ async function waitForConsoleServerReady(
 }
 
 async function openRoadmapExternal(view?: string): Promise<void> {
-  // Open the new Command Center UI
+  // Open the new Console UI
   const targetUrl = new URL(getBaseUrl());
   // Add workspace identity for multi-workspace support
   if (workspaceRoot) {
@@ -82,7 +82,7 @@ async function openRoadmapExternal(view?: string): Promise<void> {
   const ready = await waitForConsoleServerReady();
   if (!ready) {
     vscode.window.showWarningMessage(
-      "FailSafe Command Center is starting. Opening browser now; refresh in a moment if needed.",
+      "FailSafe Console is starting. Opening browser now; refresh in a moment if needed.",
     );
   }
   try {
@@ -92,7 +92,7 @@ async function openRoadmapExternal(view?: string): Promise<void> {
     }
   } catch {
     vscode.window.showErrorMessage(
-      "Could not open FailSafe Command Center in browser. Check your system browser configuration.",
+      "Could not open FailSafe Console in browser. Check your system browser configuration.",
     );
   }
 }
@@ -334,7 +334,7 @@ export function registerCommands(
       return vscode.commands.executeCommand("failsafe.openPlannerHub");
     }),
   );
-  // Explicit in-editor tab variant of the Command Center.
+  // Explicit in-editor tab variant of the Console.
   context.subscriptions.push(
     vscode.commands.registerCommand("failsafe.openPlannerHubEditor", () => {
       return openRoadmapCompactEditor();

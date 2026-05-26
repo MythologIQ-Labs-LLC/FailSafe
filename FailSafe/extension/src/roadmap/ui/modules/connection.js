@@ -25,8 +25,16 @@ export class ConnectionClient {
       nativeUnavailableReason: null,  // 'no-api' | 'not-supported' | 'probe-error' | null
       wasmReady: false,
       loading: false,
-      browserSupported: isChrome || isEdge
+      browserSupported: isChrome || isEdge,
+      // Ollama server probe (was hardcoded "Connected" in llm-status.js without
+      // any probe — corrected: actually check http://localhost:11434/api/tags).
+      ollamaAvailable: false,
+      ollamaUnavailableReason: 'not-probed',  // 'not-probed' | 'not-running' | 'probe-error' | null
+      ollamaLastProbedAt: 0,
     };
+    this._ollamaProbeTtlMs = 30000;
+    // Fire-and-forget initial probe; subsequent renders refresh on TTL.
+    this._probeOllama();
 
     this.lastHubData = null;  // Cache for tab switches
     this.ws = null;
@@ -258,6 +266,55 @@ export class ConnectionClient {
   setWebLlmStatus(status) {
     this.webLlmState = { ...this.webLlmState, ...status };
     this.notify('webLlmStatus', this.webLlmState);
+  }
+
+  /**
+   * Probe the local Ollama server at the default port (11434). Updates
+   * `webLlmState.ollamaAvailable` + `ollamaUnavailableReason` + the last-
+   * probed timestamp. Notifies `webLlmStatus` listeners on completion so
+   * the LLM-status renderer refreshes. Skipped (no-op) if the prior probe
+   * landed within `_ollamaProbeTtlMs`. Best-effort: any thrown error is
+   * treated as "not running" — Ollama not being installed is the common
+   * case and must not produce a console error spam.
+   */
+  async _probeOllama() {
+    const now = Date.now();
+    if (now - (this.webLlmState.ollamaLastProbedAt || 0) < this._ollamaProbeTtlMs) return;
+    this.webLlmState = { ...this.webLlmState, ollamaLastProbedAt: now };
+    let available = false;
+    let reason = 'not-running';
+    try {
+      const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const timeoutId = ctrl ? setTimeout(() => ctrl.abort(), 1500) : null;
+      const res = await fetch('http://localhost:11434/api/tags', {
+        method: 'GET',
+        signal: ctrl ? ctrl.signal : undefined,
+        cache: 'no-store',
+      });
+      if (timeoutId) clearTimeout(timeoutId);
+      available = !!(res && res.ok);
+      reason = available ? null : 'probe-error';
+    } catch (_e) {
+      // Network failure / abort / CORS — treat all as "not-running" so the
+      // common-case (no Ollama installed) doesn't surface as an error.
+      available = false;
+      reason = 'not-running';
+    }
+    this.webLlmState = {
+      ...this.webLlmState,
+      ollamaAvailable: available,
+      ollamaUnavailableReason: reason,
+    };
+    this.notify('webLlmStatus', this.webLlmState);
+  }
+
+  /**
+   * Force a fresh Ollama probe by clearing the TTL guard. Called by the UI
+   * after the operator installs Ollama and wants to refresh status.
+   */
+  recheckOllama() {
+    this.webLlmState = { ...this.webLlmState, ollamaLastProbedAt: 0 };
+    return this._probeOllama();
   }
 
   // --- Workspace isolation: switch to a different server --- //

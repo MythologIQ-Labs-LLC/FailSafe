@@ -39,7 +39,7 @@ test('compact webpanel renders without in-panel hub button', async ({ page }) =>
     await expect(page.locator('.brand-title', { hasText: 'FailSafe Monitor' })).toBeVisible();
     await expect(page.locator('.brand-title')).toHaveAttribute('data-tooltip', 'Real-time governance monitoring and system health');
     await expect(page.locator('.brand-subtitle')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Open FailSafe Command Center' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Open FailSafe Console' })).toHaveCount(0);
     await expect(page.locator('#status-line')).toBeVisible();
     await expect(page.locator('#recent-line')).toBeVisible();
     await expect(page.locator('#sentinel-label')).toBeVisible();

@@ -1,0 +1,246 @@
+// FailSafe Educational Component — Phase 2A: SWE-domain glossary (C/3).
+//
+// RD-6 / RD-1: leaf data module — no runtime imports, no DOM. Carries the
+// agentic-coding + runtime slice. See `glossary-content.ts` for conventions;
+// `lessons.ts` concatenates all SWE_GLOSSARY_LESSONS_*. The general `agent`
+// term is intentionally left to the FailSafe-domain entry in `glossary-content-2.ts`.
+
+import type { Lesson } from "./lessons";
+
+/** SWE-domain glossary, part C of 3 — agentic coding & runtime. */
+export const SWE_GLOSSARY_LESSONS_C: Lesson[] = [
+  {
+    id: "glossary-prompt",
+    anchor: "glossary.swe.prompt",
+    kind: "glossary",
+    domain: "swe",
+    term: "Prompt",
+    levels: ["beginner", "intermediate", "advanced"],
+    body: {
+      beginner: "A prompt is what you say to a model to get an answer back. It is instructions plus context plus any examples you want it to follow. Writing a clear prompt is most of what separates a useful answer from a vague one.",
+      intermediate: "A prompt is the conditioning input that shapes a model's output distribution. Structure matters: explicit role, constraints, examples, and output format usually beat raw instruction.",
+      advanced: "Prompt = conditioning input = output-distribution shaper. Structure > verbosity.",
+    },
+  },
+  {
+    id: "glossary-context-window",
+    anchor: "glossary.swe.context-window",
+    kind: "glossary",
+    domain: "swe",
+    term: "Context window",
+    levels: ["beginner", "intermediate", "advanced"],
+    body: {
+      beginner: "The context window is how much text a model can hold in its head at once — your instructions, the conversation so far, and any files you handed it. Once it fills up, older content gets dropped or summarised and the model effectively forgets it.",
+      intermediate: "The context window is the maximum token span the model can attend over in a single pass. Filling it has a cost in latency and fee; running past it forces truncation or summarisation, both lossy.",
+      advanced: "Context window = max attended token span per pass. Overflow = lossy truncate/summarise.",
+    },
+  },
+  {
+    id: "glossary-hallucination",
+    anchor: "glossary.swe.hallucination",
+    kind: "glossary",
+    domain: "swe",
+    term: "Hallucination",
+    levels: ["beginner", "intermediate", "advanced"],
+    body: {
+      beginner: "A hallucination is when a model confidently states something that is not true — a function that does not exist, a citation that was never published, an API that nobody shipped. It looks just as polished as the correct parts, which is why you check.",
+      intermediate: "Hallucination is plausible-sounding output unsupported by ground truth. Grounding (retrieval, tool calls, type checking) cuts the rate; trust without grounding is how it sneaks into production.",
+      advanced: "Hallucination = ungrounded plausible output. Grounding lowers rate; never zero.",
+    },
+  },
+  {
+    id: "glossary-model",
+    anchor: "glossary.swe.model",
+    kind: "glossary",
+    domain: "swe",
+    term: "Model",
+    levels: ["beginner", "intermediate", "advanced"],
+    body: {
+      beginner: "A model is the trained piece of software that turns your prompt into a response. Different models have different sizes, strengths, costs, and quirks — picking the right one for the job is part of the work, like picking the right tool from a toolbox.",
+      intermediate: "A model is a parameterised function trained to map inputs to outputs over a target distribution. Selection is a Pareto choice across capability, latency, cost, and context length.",
+      advanced: "Model = trained parametric function. Selection = Pareto over capability/latency/cost/context.",
+    },
+  },
+  {
+    id: "glossary-tool-call",
+    anchor: "glossary.swe.tool-call",
+    kind: "glossary",
+    domain: "swe",
+    term: "Tool call",
+    levels: ["beginner", "intermediate", "advanced"],
+    body: {
+      beginner: "A tool call is when the model asks the runtime to actually do something — read a file, run a search, execute a command — instead of just writing text about it. The runtime runs the tool, hands the result back, and the model continues with that result.",
+      intermediate: "A tool call is a structured request emitted by the model and executed by the runtime, returning a result back into context. Tools are where models meet side effects — and where governance lives.",
+      advanced: "Tool call = model-emitted runtime invocation + return-to-context. Effect boundary.",
+    },
+  },
+  {
+    id: "glossary-retry",
+    anchor: "glossary.swe.retry",
+    kind: "glossary",
+    domain: "swe",
+    term: "Retry",
+    levels: ["beginner", "intermediate", "advanced"],
+    body: {
+      beginner: "A retry is just trying again after something failed. Networks blip, services hiccup; often a second attempt works. The catch is that some operations should never be retried blindly — sending a payment twice is worse than sending it zero times.",
+      intermediate: "A retry re-invokes a failed operation, usually with backoff and a cap. Safe only for idempotent operations; for non-idempotent ones you need an idempotency key or a state check first.",
+      advanced: "Retry = re-invoke on failure (backoff + cap). Safe only for idempotent ops.",
+    },
+  },
+  {
+    id: "glossary-idempotent",
+    anchor: "glossary.swe.idempotent",
+    kind: "glossary",
+    domain: "swe",
+    term: "Idempotent",
+    levels: ["beginner", "intermediate", "advanced"],
+    body: {
+      beginner: "An idempotent operation is one you can run many times and the result is the same as running it once. Setting a field to a value is idempotent; appending to a list is not. The property matters because retries and replays only work safely on idempotent ops.",
+      intermediate: "Idempotence means repeated execution yields the same observable state as a single execution. It is the property that makes at-least-once delivery, retries, and replays safe in distributed systems.",
+      advanced: "Idempotent = f(f(x)) = f(x). Enables safe at-least-once delivery.",
+    },
+  },
+  {
+    id: "glossary-race-condition",
+    anchor: "glossary.swe.race-condition",
+    kind: "glossary",
+    domain: "swe",
+    term: "Race condition",
+    levels: ["beginner", "intermediate", "advanced"],
+    body: {
+      beginner: "A race condition is a bug where the outcome depends on which of two things finishes first — and sometimes one wins, sometimes the other. They are nasty because the code looks right and the bug only shows up under load or on certain machines.",
+      intermediate: "A race condition is a correctness defect arising from unsynchronised concurrent access to shared state. Reproduction is non-deterministic; fixes mean ordering, locking, or eliminating the shared state.",
+      advanced: "Race = unsynchronised concurrent state access. Non-deterministic repro; fix by order/lock/eliminate-share.",
+    },
+  },
+  {
+    id: "glossary-edge-case",
+    anchor: "glossary.swe.edge-case",
+    kind: "glossary",
+    domain: "swe",
+    term: "Edge case",
+    levels: ["beginner", "intermediate", "advanced"],
+    body: {
+      beginner: "An edge case is an input or situation at the boundary of what your code expects — an empty list, a zero, a maximum-length string, a leap day. The happy path covers most uses; edge cases are where most bugs hide.",
+      intermediate: "An edge case sits at the boundary of an input domain or state space — empty, max, null, negative, off-by-one, time-zone boundaries. Enumerating them is half the test-design work.",
+      advanced: "Edge case = boundary-of-domain input/state. Half of test design = enumeration.",
+    },
+  },
+  {
+    id: "glossary-environment",
+    anchor: "glossary.swe.environment",
+    kind: "glossary",
+    domain: "swe",
+    term: "Environment",
+    levels: ["beginner", "intermediate", "advanced"],
+    body: {
+      beginner: "An environment is a specific place your code runs — your laptop, a staging server, production. Each one has its own settings, secrets, and data. \"Works on my machine\" usually means it works in one environment and not another.",
+      intermediate: "An environment is the combination of runtime, config, secrets, and dependencies a deployment lives in. Parity between dev, staging, and prod is the cheapest way to kill late-stage surprises.",
+      advanced: "Environment = runtime + config + secrets + deps tuple. Parity = surprise prophylaxis.",
+    },
+  },
+  {
+    id: "glossary-deployment",
+    anchor: "glossary.swe.deployment",
+    kind: "glossary",
+    domain: "swe",
+    term: "Deployment",
+    levels: ["beginner", "intermediate", "advanced"],
+    body: {
+      beginner: "A deployment is the act of moving a new version of your code to the place where users (or other services) will run it. It is different from merging a pull request — merging records the change, deploying makes the change actually live.",
+      intermediate: "Deployment is the release of a built artifact into a target environment, possibly staged (canary, blue/green, rolling). Decoupling deploy from release via feature flags shrinks risk windows.",
+      advanced: "Deployment = artifact-to-env release. Decouple deploy/release via flags to shrink risk window.",
+    },
+  },
+  {
+    id: "glossary-build",
+    anchor: "glossary.swe.build",
+    kind: "glossary",
+    domain: "swe",
+    term: "Build",
+    levels: ["beginner", "intermediate", "advanced"],
+    body: {
+      beginner: "A build is the process that turns your source code into the thing that actually runs — compiling, bundling, minifying, packaging. The output is an artifact you can install or deploy. If the build fails, nothing downstream runs.",
+      intermediate: "A build transforms source into a runnable artifact through a deterministic pipeline. Reproducibility — same inputs producing the same artifact — is what makes provenance and rollback credible.",
+      advanced: "Build = source-to-artifact transform. Reproducibility = provenance + rollback credibility.",
+    },
+  },
+  {
+    id: "glossary-test",
+    anchor: "glossary.swe.test",
+    kind: "glossary",
+    domain: "swe",
+    term: "Test",
+    levels: ["beginner", "intermediate", "advanced"],
+    body: {
+      beginner: "A test is code that runs your other code and asserts the result is what you expected. If the result drifts, the test fails and you find out before users do. Tests are the safety net that lets you change code without holding your breath.",
+      intermediate: "A test is an executable assertion about a unit, integration, or end-to-end behaviour. Each layer trades fidelity for speed — fast unit tests for tight loops, slower e2e for real-user confidence.",
+      advanced: "Test = executable assertion. Layer = fidelity/speed trade.",
+    },
+  },
+  {
+    id: "glossary-lint",
+    anchor: "glossary.swe.lint",
+    kind: "glossary",
+    domain: "swe",
+    term: "Lint",
+    levels: ["beginner", "intermediate", "advanced"],
+    body: {
+      beginner: "A linter reads your code and flags stylistic or risky patterns without actually running it — unused variables, inconsistent formatting, suspicious comparisons. It is the spell-check of code: cheap to run, catches a lot of noise before review.",
+      intermediate: "A linter applies static rules to source to catch style breaks and common defects pre-runtime. Auto-fixers convert the lint result into a code change, keeping human review focused on intent.",
+      advanced: "Lint = static rule check pre-runtime. Auto-fix offloads style from review.",
+    },
+  },
+  {
+    id: "glossary-log",
+    anchor: "glossary.swe.log",
+    kind: "glossary",
+    domain: "swe",
+    term: "Log",
+    levels: ["beginner", "intermediate", "advanced"],
+    body: {
+      beginner: "A log is a timestamped line of text the program writes out as it runs, recording what happened. When something breaks in production, logs are usually the first place you look to reconstruct what the code was actually doing.",
+      intermediate: "A log is a structured (ideally) event stream emitted at runtime for diagnosis and audit. Levels (debug/info/warn/error) and context fields decide whether logs are searchable or just noise.",
+      advanced: "Log = timestamped runtime event stream. Structure + levels = searchability.",
+    },
+  },
+  {
+    id: "glossary-observability",
+    anchor: "glossary.swe.observability",
+    kind: "glossary",
+    domain: "swe",
+    term: "Observability",
+    levels: ["beginner", "intermediate", "advanced"],
+    body: {
+      beginner: "Observability is how well you can tell, from the outside, what a running system is doing. Logs, metrics, and traces together let you answer \"why is it slow?\" or \"why did this request fail?\" without attaching a debugger.",
+      intermediate: "Observability is the property of being able to infer internal state from external outputs — typically the logs/metrics/traces triad. It is a precondition for debugging at production scale.",
+      advanced: "Observability = infer-internal-state-from-outputs property. Logs + metrics + traces triad.",
+    },
+  },
+  {
+    id: "glossary-latency",
+    anchor: "glossary.swe.latency",
+    kind: "glossary",
+    domain: "swe",
+    term: "Latency",
+    levels: ["beginner", "intermediate", "advanced"],
+    body: {
+      beginner: "Latency is how long one request takes from start to finish. Low latency feels fast; high latency feels laggy. It is different from throughput, which is how many requests you handle per second — a system can have great throughput and still feel slow.",
+      intermediate: "Latency is per-operation duration, usually reported at percentiles (p50, p95, p99) because averages hide tail pain. The user feels p95+, not the mean.",
+      advanced: "Latency = per-op duration. Track tails (p95/p99); means deceive.",
+    },
+  },
+  {
+    id: "glossary-exception",
+    anchor: "glossary.swe.exception",
+    kind: "glossary",
+    domain: "swe",
+    term: "Exception",
+    levels: ["beginner", "intermediate", "advanced"],
+    body: {
+      beginner: "An exception is an error that interrupts the normal flow of the program and travels upward looking for code that wants to handle it. If nothing catches it, the program (or at least that request) crashes with a stack trace.",
+      intermediate: "An exception unwinds the call stack until a matching handler catches it, or the process terminates. Catching too broadly hides bugs; catching too narrowly leaks crashes — the boundary is a design call.",
+      advanced: "Exception = stack-unwinding signalled failure. Catch boundary = design call.",
+    },
+  },
+];

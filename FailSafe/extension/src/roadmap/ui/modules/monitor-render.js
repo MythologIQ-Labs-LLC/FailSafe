@@ -1,24 +1,10 @@
-// FailSafe Command Center — Monitor Phase Track Renderer
+// FailSafe Console - Monitor Phase Track Renderer.
 // Extracted from roadmap.js per audit Entry #278 Amendment 2.
 // Pure functions over hub data + element handles. The Monitor's compact UI
 // shell (`roadmap.js`) wires these into its render() pipeline.
 
-import { renderLesson } from './education-lesson.js';
-
 const PHASE_INDEX_MAP = { PLAN: 0, GATE: 1, IMPLEMENT: 2, SUBSTANTIATE: 4, SEALED: 5 };
 const PHASE_LABELS = ['Plan', 'Audit', 'Implement', 'Substantiate'];
-
-// phaseInfo.index → education lesson anchor. The index space follows
-// PHASE_INDEX_MAP (PLAN=0, GATE/Audit=1, IMPLEMENT=2, SUBSTANTIATE=4,
-// SEALED=5) — note SUBSTANTIATE is index 4, not 3 (index 3 is the Debug
-// sub-state). Only the three SHIELD phases wired in v1 (Plan / Audit /
-// Substantiate) carry a micro-lesson; Implement, Debug, and Sealed map to
-// undefined.
-const PHASE_LESSON_ANCHORS = {
-  0: 'shield.plan',
-  1: 'shield.audit',
-  4: 'shield.substantiate',
-};
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (c) =>
@@ -86,9 +72,6 @@ function summaryFromGovernance(gov, phases, milestones, blockers, risks) {
   };
 }
 
-// Render a governance-recentCompletion entry without emitting "undefined: ..."
-// strings. Returns null when neither phase nor plan/entry is meaningful so the
-// caller can filter the entry out entirely.
 function formatGovernanceCompletion(c) {
   if (!c) return null;
   const phase = c.phase ? String(c.phase) : '';
@@ -126,8 +109,6 @@ function summaryFromPlanData(phases, milestones, blockers, risks, recentCompleti
   };
 }
 
-// Render a plan-data recentCompletion entry without emitting "undefined:
-// undefined". Returns null when neither type nor phase is meaningful.
 function formatPlanDataCompletion(c) {
   if (!c) return null;
   const type = c.type ? String(c.type) : '';
@@ -146,17 +127,17 @@ function countCritical(blockers, risks) {
 /**
  * Render the SHIELD phase track.
  *
- * @param {{title:string, index:number}} phaseInfo  resolved phase state.
- * @param {object} els  element handles (`phaseTitle`, `phaseTrack`).
- * @param {{enabled?:boolean, proficiency?:string}} [educationConfig]
- *        threaded from the hub snapshot (`hub.education`). When education is
- *        enabled, the active SHIELD phase's micro-lesson is folded into the
- *        phaseTrack template (A2: phaseTitle is left untouched).
+ * @param {{title:string, index:number}} phaseInfo resolved phase state.
+ * @param {object} els element handles (`phaseTitle`, `phaseTrack`, `debugStatus`).
  */
-export function renderPhase(phaseInfo, els, educationConfig) {
-  // A2: phaseTitle is written here and is NOT a lesson host — leave it alone.
+export function renderPhase(phaseInfo, els) {
   if (els.phaseTitle) {
     els.phaseTitle.textContent = phaseInfo.title.toUpperCase();
+  }
+  if (els.debugStatus) {
+    const debugState = getDebugState(phaseInfo.index);
+    els.debugStatus.textContent = debugState.label;
+    els.debugStatus.className = `debug-status ${debugState.className}`;
   }
   if (!els.phaseTrack) return;
 
@@ -168,27 +149,13 @@ export function renderPhase(phaseInfo, els, educationConfig) {
     return `<div class="step ${status}">${escapeHtml(label)}</div>`;
   }).join('');
 
-  const debugStatus = phaseInfo.index === 3 ? 'debugging' : phaseInfo.index > 3 ? 'active' : 'pending';
-  const debugLabel = phaseInfo.index === 3 ? 'Debugging...' : phaseInfo.index > 3 ? 'Debugged' : 'Debug';
-  // A2: lesson markup is folded ONLY into the phaseTrack innerHTML, never
-  // phaseTitle. The lesson is contextual to the currently-active SHIELD step.
   els.phaseTrack.innerHTML = `
     <div class="phase-row">${rowOne}</div>
-    <div class="phase-row debug-row"><div class="step ${debugStatus}">${debugLabel}</div></div>
-    ${renderPhaseLessons(phaseInfo, educationConfig)}
   `;
 }
 
-// Build the micro-lesson markup for the SHIELD phase track. Returns the
-// concatenated expanders for the active SHIELD phase (Plan / Audit /
-// Substantiate). renderLesson() yields '' when education is disabled, the
-// lesson was dismissed, or no lesson exists for the anchor — so this is always
-// safe to interpolate into the phaseTrack innerHTML.
-function renderPhaseLessons(phaseInfo, educationConfig) {
-  const cfg = educationConfig || {};
-  if (!cfg.enabled) return '';
-  const anchor = PHASE_LESSON_ANCHORS[phaseInfo.index];
-  if (!anchor) return '';
-  const lesson = renderLesson(anchor, cfg);
-  return lesson ? `<div class="phase-row phase-lesson-row">${lesson}</div>` : '';
+function getDebugState(index) {
+  if (index === 3) return { label: 'Debugging', className: 'debugging' };
+  if (index > 3) return { label: 'Debugged', className: 'resolved' };
+  return { label: 'Debug', className: 'pending' };
 }

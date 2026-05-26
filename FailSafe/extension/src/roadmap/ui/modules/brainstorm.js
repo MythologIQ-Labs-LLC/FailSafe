@@ -62,6 +62,10 @@ export class BrainstormRenderer {
       if (m) this.showStatus(m[0], m[1]);
     };
     this.webLlm.init().then(() => this.llmStatus.render(this.client)).catch(() => this.llmStatus.render(this.client));
+    // Refresh the LLM status panel when the async Ollama probe (or any other
+    // webLlmState update) completes — fixes the false-positive "Connected"
+    // that was hardcoded into llm-status.js for the Ollama row.
+    this.client?.on?.('webLlmStatus', () => this.llmStatus.render(this.client));
     this._heartbeatInterval = setInterval(() => {
       if (typeof document !== 'undefined' && document.hidden) return;
       this.webLlm.recheckNative().then(() => this.llmStatus.render(this.client));

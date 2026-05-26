@@ -38,6 +38,31 @@ The v1 Educational Component (sealed META_LEDGER #388) and v3 Guided Dev Cycle (
 - FX598's v3 track-command extension reverted.
 - The 4 v1 governance-moment lesson literals (`governance-mode`, `shield.plan`, `shield.audit`, `shield.substantiate`) carry forward in the registry — they power the v1 Settings governance-mode card + Monitor SHIELD phase tracker (both kept unchanged); they are NOT the Learn tab's content.
 
+### Visual rebuild (2026-05-25 — in flight, uncommitted)
+
+The v2 Learn tab shipped a single-pane composition (essay list + glossary stacked); the visual treatment was operator-rejected as low quality (no design reference consulted, no Chrome verification). This rebuild redoes the visual layer on top of the existing content, dispatched against 3 parallel design-research sources (`ui-designer` Direction A + Direction B + `accessibility-tester` + `web-design-guidelines`). Plan: `plan-learn-tab-visual-rebuild.md`.
+
+- **Two-sub-tab `TabGroup` host** on the Learn tab — pills `[Read][Glossary]`. Default active is Read. Practice surface deleted in this cycle (the Mad-Libs prompt builder was hollow; a follow-up "zoom-in evaluator" plan will re-add a genuine Practice surface).
+- **Read sub-view sectioned-essay rebuild** — each essay card carries a per-essay accent rail (4px, mapped to existing `--accent-{green/cyan/gold/orange/red}` tokens), inline-SVG icon, `~Nm read` chip (top-right, `tabular-nums`), pull-quote callout, H4-subheaded sections, and (for `acceptance-criteria` + `choose-agent-option`) inline template sub-panels. The acceptance-criteria template gains a **Copy** button that writes the canonical template to the clipboard.
+- **Sticky horizontal jump-strip** at top of Read (FX619 NEW) — five anchor links with per-essay accent on hover + a relevant-now dot when the contextual trigger fires. Cards carry matching `id="cc-learn-essay-<slug>"` for browser-native scroll. Wraps to 2 lines under narrow webview widths.
+- **Reference sub-view → Glossary** (FX615 modified) — renamed file `learn-reference.js` → `learn-glossary.js`, class `LearnReference` → `LearnGlossary`, all CSS `.cc-learn-ref-*` → `.cc-learn-glossary-*`. Per-row `[SWE]/[FS]` chips removed. The current visual treatment is a tag-filter UI (filter buttons + A-Z/Z-A sort dropdown) over a single alphabetized all-terms list. Search input adopts a11y attrs (`inputmode="search"`, `spellcheck="false"`, `autocomplete="off"`, paired `.visually-hidden` `<label>`); results container is `aria-live="polite"`.
+- **Bicameral co-existence** (FX618 modified) — the integration-partner entry `glossary.bicameral-integration` co-exists with the v1 two-chambers `glossary.bicameral` entry; both render in the Glossary with distinct display terms. The two-chambers framing is preserved as a regression guard.
+- **48-term SWE software glossary** (FX617) — 15 + 15 + 18 entries across `glossary-content-swe.ts` / `-swe-2.ts` / `-swe-3.ts`, joined through `glossary-aggregator.ts`. No anchor collisions with the legacy 12 FailSafe glossary entries (namespaced `glossary.swe.*`).
+
+### A11y baseline (2026-05-25 — global CSS)
+
+Added once near the top of `command-center.css`, applies extension-wide (not just Learn):
+
+- **`@media (prefers-reduced-motion: reduce)`** disables all transitions + animations (`transition-duration: 0.01ms !important`). Closes WCAG 2.3.3 — the existing CC had zero coverage despite 21 `transition:` declarations.
+- **Global `:focus-visible`** outline (`2px solid var(--primary)`, 2px offset) on `.cc-pill`, the Copy button, jump-strip anchors, glossary search input, glossary row-expand toggles. Closes WCAG 2.4.7 — the existing CC had a single `:focus-visible` rule, leaving every other interactive surface keyboard-blind.
+- **`.visually-hidden` utility** — standard SR-only label class for the glossary search input's WCAG 3.3.2 paired label.
+- **`max-width: min(68ch, 100%)`** on body prose — preserves 45-75ch readable line length while surviving WCAG 1.4.4 200% zoom without horizontal scroll.
+- **Light-theme accent badge fallback** — `--accent-gold` (1.7:1) and `--accent-green` (2.5:1) on white panel fail WCAG 1.4.3 AA; `@media (prefers-color-scheme: light)` switches the relevant-now badge to a neutral `var(--bg-panel)` background. (Operator verification noted: in VS Code webviews `prefers-color-scheme` may not track the editor theme; theme-class selector swap is a deferred follow-up.)
+
+### Fixed
+
+- **Mindmap "Ollama (Server)" false-positive "Connected"** — `llm-status.js:74` previously hardcoded `status: 'Connected', active: true` for the Ollama row with no probe of any kind, so the panel claimed Ollama was running even when it wasn't installed. Added an actual probe: `_probeOllama()` in `connection.js` fetches `http://localhost:11434/api/tags` with a 1.5s timeout, caches the result with a 30s TTL, and notifies `webLlmStatus` listeners on completion. The Ollama row now reflects reality (`Connected ✓` / `Not Running` / `Checking…` / `Unavailable`). FX192 test suite extended from 1 case (the bug-encoding "always Connected") to 4 cases covering the full probe state space. Brainstorm renderer subscribes to `webLlmStatus` notifications so the async probe result triggers a re-render.
+
 ### Compliance
 
 - **`docs/compliance-education-component.md`** — fresh determination for FailSafe Learn v2. Stays **outside** EU AI Act Annex III high-risk education/training classification (no assessment, no scoring, no learning-outcome evaluation, no level inference — operator self-selects tier). More strongly aligned with Article 4 AI-literacy than v1 was. Binding GDPR design contract: session-duration timing client-side only. Two binding escalation triggers: any introduction of scoring/grading/inference → re-ideate; any expansion to a full curriculum within the open extension → escalate to FailSafe Pro / separate-extension scope decision.
