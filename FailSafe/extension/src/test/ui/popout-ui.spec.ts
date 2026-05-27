@@ -1,53 +1,50 @@
-import fs from 'fs';
-import http from 'http';
-import path from 'path';
-import { test, expect } from '@playwright/test';
+// Popout UI shell coverage — every top-level tab button is present, clicking
+// the workspace/governance/settings tabs activates the matching panel, and the
+// Settings panel renders the 6 theme select rows.
+//
+// FX621 (v5.2.1 hotfix): migrated from the legacy in-process static-file
+// server to `serveConsoleServerUI` because `learn.js` / `learn-essay-list.js`
+// / `learn-glossary.js` (added in v5.2.0) import `../../../education/lessons.js`
+// and `lessonTriggers.js`. Those imports require the ConsoleServer's module
+// resolution to load as proper ES modules; serving the source tree as raw
+// static files makes the browser fail to import the CommonJS-compiled output,
+// the module chain aborts, `command-center.js` never bootstraps, and the
+// `.tab-btn` click handlers are never attached (silent break that masked the
+// v5.2.0 Release Pipeline failure until v5.2.1's unit-test fixes made the
+// Build & Test job reach the Playwright phase).
 
-test('popout UI shell renders required sections', async ({ page }) => {
-  const root = path.resolve(__dirname, '../../roadmap/ui');
-  const server = http.createServer((req, res) => {
-    const requestPath = decodeURIComponent((req.url || '/').split('?')[0]);
-    const relative = requestPath === '/' ? 'command-center.html' : requestPath.replace(/^\/+/, '');
-    const filePath = path.join(root, relative);
-    if (!filePath.startsWith(root) || !fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
-      res.statusCode = 404;
-      res.end('not found');
-      return;
-    }
-    if (filePath.endsWith('.html')) res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    if (filePath.endsWith('.css')) res.setHeader('Content-Type', 'text/css; charset=utf-8');
-    if (filePath.endsWith('.js')) res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-    if (filePath.endsWith('.png')) res.setHeader('Content-Type', 'image/png');
-    res.end(fs.readFileSync(filePath));
+import { test, expect } from "@playwright/test";
+import {
+  serveConsoleServerUI,
+  ConsoleServerController,
+} from "./helpers/serveConsoleServerUI";
+
+let controller: ConsoleServerController;
+
+test.afterEach(async () => {
+  await controller?.close();
+});
+
+test("popout UI shell renders required sections", async ({ page }) => {
+  controller = await serveConsoleServerUI({
+    initialHub: { version: "test", bootstrapState: {}, agentHealth: null } as any,
   });
+  await page.goto(`${controller.url}/command-center.html`);
 
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()));
-  const address = server.address();
-  if (!address || typeof address === 'string') {
-    server.close();
-    throw new Error('Failed to bind test server');
-  }
+  await expect(page.locator('.tab-btn[data-target="overview"]')).toBeVisible();
+  await expect(page.locator('.tab-btn[data-target="agents"]')).toBeVisible();
+  await expect(page.locator('.tab-btn[data-target="governance"]')).toBeVisible();
+  await expect(page.locator('.tab-btn[data-target="workspace"]')).toBeVisible();
+  await expect(page.locator('.tab-btn[data-target="settings"]')).toBeVisible();
+  await expect(page.locator("#theme-select")).toBeHidden();
 
-  try {
-    await page.goto(`http://127.0.0.1:${address.port}/command-center.html`);
+  await page.locator('.tab-btn[data-target="workspace"]').click();
+  await expect(page.locator("#workspace")).toHaveClass(/active/);
 
-    await expect(page.locator('.tab-btn[data-target="overview"]')).toBeVisible();
-    await expect(page.locator('.tab-btn[data-target="agents"]')).toBeVisible();
-    await expect(page.locator('.tab-btn[data-target="governance"]')).toBeVisible();
-    await expect(page.locator('.tab-btn[data-target="workspace"]')).toBeVisible();
-    await expect(page.locator('.tab-btn[data-target="settings"]')).toBeVisible();
-    await expect(page.locator('#theme-select')).toBeHidden();
+  await page.locator('.tab-btn[data-target="governance"]').click();
+  await expect(page.locator("#governance")).toHaveClass(/active/);
 
-    await page.locator('.tab-btn[data-target="workspace"]').click();
-    await expect(page.locator('#workspace')).toHaveClass(/active/);
-
-    await page.locator('.tab-btn[data-target="governance"]').click();
-    await expect(page.locator('#governance')).toHaveClass(/active/);
-
-    await page.locator('.tab-btn[data-target="settings"]').click();
-    await expect(page.locator('#settings')).toHaveClass(/active/);
-    await expect(page.locator('.cc-theme-select')).toHaveCount(6);
-  } finally {
-    await new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
-  }
+  await page.locator('.tab-btn[data-target="settings"]').click();
+  await expect(page.locator("#settings")).toHaveClass(/active/);
+  await expect(page.locator(".cc-theme-select")).toHaveCount(6);
 });
