@@ -20470,3 +20470,92 @@ _Hash provenance_: Content Hash = `SHA256` of this entry's body text (everything
 
 _Chain integrity: VALID_
 _Session: 2026-05-26-hotfix-v5-2-2-popout-ui-harness_
+
+### Entry #397: RESEARCH BRIEF — Open Design integration scope
+
+**Date**: 2026-05-27
+**Timestamp**: 2026-05-27T03:00:00Z
+**Phase**: research
+**Plan**: none (greenfield research; no prior ARCHITECTURE_PLAN)
+**Branch**: `hotfix/v5.2.2` (research conducted while v5.2.2 Marketplace publish is pending)
+**Author**: The Qor-logic Analyst
+**Risk Grade**: L2 (research findings only; no implementation; no chain-modifying decisions)
+
+## Target
+
+`nexu-io/open-design` — local-first open-source design-generation agent host (53,194 stars, ~30 days old, Apache 2.0, v0.8.0 shipped 2026-05-20).
+
+## Scope
+
+Establish baseline facts before any `/qor-plan` for a FailSafe ↔ Open Design integration. No prior FailSafe `ARCHITECTURE_PLAN.md` exists for this target.
+
+## Output
+
+Research brief written at `.failsafe/governance/RESEARCH_BRIEF_open-design-integration-2026-05-27.md` (gitignored governance dir per `governance_doc_storage` convention).
+
+## Key findings
+
+1. **Open Design is an agent HOST, not an MCP server.** The conversation that scoped this research assumed Open Design was "structurally identical to Bicameral MCP" and proposed an `OpenDesignMcpClient`. This is **DRIFT** — Open Design CONSUMES MCP (`packages/contracts/src/api/mcp.ts`) and CONSUMES other CLI agents via its AgentAdapter interface (`apps/daemon/src/agents.ts`); it does not EXPOSE an MCP tool surface for external consumers.
+2. **Integration handshake is REST + SSE at `/api/*`** owned by `apps/daemon`. The 24 endpoint groups in `packages/contracts/src/api/` are the surface (`artifacts.ts`, `projects.ts`, `chat.ts`, `finalize.ts`, etc.). SSE streams (`packages/contracts/src/sse/`) provide real-time event subscription.
+3. **v0.8.0 (2026-05-20) shipped a major architectural rebuild** — "everything-is-a-plugin" model with new `packages/plugin-runtime`, `packages/registry-protocol`, `packages/host`. The skills surface is still supported but secondary. Recommend targeting the stable REST API (works across both architectures) rather than skills or plugins directly.
+4. **Critique Theater Phase 16** ships 9 Prometheus metrics + OTel span + Grafana dashboard. FailSafe can consume this telemetry directly into its transparency stream.
+5. **Agent adapter catalog ⊇ FailSafe install-host list.** Open Design adapters cover claude-code, codex, cursor-agent, gemini-cli, opencode, openclaw, copilot, kiro, kilo, vibe, trae-cli, deepseek, qoder, pi, devin — every CLI agent FailSafe targets.
+
+## Recommended path (priority-ordered)
+
+1. **[P0]** Complete v5.2.x dead-tag recovery first (v5.2.2 Marketplace publish currently pending).
+2. **[P0]** Author memory entry `project_open_design_integration.md` capturing this brief's findings — **DONE in this seal**.
+3. **[P0]** Delete deprecated `ql-*` skill files (per operator side-note to this research invocation) — pending operator approval; skill deletion is non-reversible governance change.
+4. **[P1]** Research v2: source-dive Open Design's daemon for default port / auth model / `@open-design/contracts` npm-publication status. Required before `/qor-plan` v1.
+5. **[P1]** Once research v2 completes, `/qor-plan` for Pattern A v1 integration following the Bicameral cycle template. Estimated effort: 0.7× Bicameral cycle (~1.5 release cycles).
+
+## Pattern A (recommended v1)
+
+Mirror Bicameral layout, client speaks REST + SSE not MCP:
+
+- `src/integrations/open-design/OpenDesignDaemonClient.ts` (typed REST wrappers, 24 endpoint groups)
+- `src/integrations/open-design/OpenDesignSseClient.ts` (chat/proxy SSE subscriber → transparency bus)
+- `src/integrations/open-design/UpstreamMonitor.ts` (verbatim port from Bicameral)
+- `src/roadmap/routes/OpenDesignRoute.ts` (REST + intercept routes)
+- `src/roadmap/ui/modules/open-design-card.js` (Settings card)
+- L3 gate on `/api/projects/{id}/artifacts/{id}/finalize`
+- DriftToRiskMediator analogue reusing `RiskRegisterManager`
+
+## Patterns deferred
+
+- Pattern B (FailSafe-as-OpenDesign-plugin) → v2 candidate; defer until plugin engine matures past v0.8.x
+- Pattern C (bidirectional skill-publish + observer) → v3 candidate
+
+## Other valuable integration candidates (ranked)
+
+1. Open Design — recommended next
+2. OpenHands (formerly OpenDevin) — action-space governance; structurally different
+3. Continue.dev — most-installed VS Code AI assistant
+4. Cline (formerly Claude Dev) — already in install-host list; deepen to runtime
+5. Roo Code / Kilo Code — same as Cline
+6. Aider — CLI pair programmer; git-commit gate
+7. Microsoft AGT — adapter shape (different from integration)
+8. Sourcegraph Cody — FailSafe Pro enterprise overlap
+9. Devin (Cognition Labs) — closed-source, limited integration depth
+10. Generic MCP-server-registry-aware governance layer — highest leverage, biggest scope
+
+## Decision
+
+**Research COMPLETE.** Findings advisory; implementation decisions remain with the Governor. Memory and ledger updated. Chain advances #396 → #397. No code changes from this entry.
+
+_Next operator action_: address the P0 items (v5.2.x recovery completion + `ql-*` deletion approval) before invoking `/qor-research` v2 or `/qor-plan`.
+
+## Content Hash
+
+**Content Hash**: `40b525ce7c7b228c37b90442c6c7cb7564ceb7301948eba67b97455eee65a9be`
+**Previous Hash**: `5bdb145eb2de736ae9d4947e8efd9c48837553eb3a9aa09baaad240396b91c06` (Entry #396 Chain Hash)
+**Chain Hash**: `ba045c959e19c70a6c95a3f467630bbaa543d9a251689bf63cb7846cf3083485`
+**Merkle Seal**: `206a4beacfaaf5186f72dee8d4b172be442ba453398f8abd3f92c7dccbc8c39a` — gate_seal_research_open_design_integration
+**Session ID**: `2026-05-27-research-open-design-integration`
+
+_Hash provenance_: Content Hash = `SHA256` of this entry's body text (everything above the Content Hash line). Chain Hash = `SHA256(content_hash + previous_hash)` linking forward from #396. Merkle Seal = `SHA256(chain_hash + gate_label)`. Computed via Python stdlib `hashlib.sha256` because the `qor.scripts.ledger_hash` helper is absent on this Node-archetype host (Phase 75 skip).
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-05-27-research-open-design-integration_
