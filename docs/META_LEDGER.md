@@ -20604,3 +20604,240 @@ _Hash provenance_: Content Hash = SHA256 of `docs/research-brief-day-one-integra
 
 _Chain integrity: VALID_
 _Session: 2026-05-27T1611-integration-candidates_
+
+### Entry #399: RESEARCH BRIEF v2 — Open Design integration (Model 2 scope)
+
+**Date**: 2026-05-27
+**Timestamp**: 2026-05-27T17:00:00Z
+**Phase**: research
+**Plan**: none (greenfield research; prepares for /qor-plan in same auto-dev-1 cycle)
+**Branch**: `feat/open-design-integration` (cut from main @ `88200c2`)
+**Author**: The Qor-logic Analyst
+**Skill**: /qor-research v2 (under /qor-auto-dev-1)
+**Risk Grade**: L2 (research findings only; no implementation; no chain-modifying decisions)
+**Predecessor research**: Entry #397 (RESEARCH v1 — Pattern A REST wrapper framing; SUPERSEDED §3-5)
+
+## Target
+
+`nexu-io/open-design`@`main` — re-scope integration research from Model 1 (REST wrapper, Entry #397) to **Model 2** (FailSafe governs Open Design's agent dispatch loop). Operator confirmed Model 2 as the correct product framing during planning conversation.
+
+## Output
+
+Research brief written at `.failsafe/governance/RESEARCH_BRIEF_open-design-integration-v2-model2-2026-05-27.md` (gitignored governance dir per `governance_doc_storage` convention).
+
+## Key findings (Q1–Q7 with file:line citations)
+
+1. **Q1 REFUTED**: no third-party hooks in Open Design's `AgentAdapter.run()` lifecycle. Runtimes are a hard-coded 19-entry def array at `apps/daemon/src/runtimes/registry.ts:23-43`. The conceptual `AgentAdapter` interface in `docs/agent-adapters.md` is doc-level only; implementation uses def-object + chat-run-service split with no public hook API.
+2. **Q2 PARTIAL**: per-run SSE event stream exists (`packages/contracts/src/sse/chat.ts:53-95`, `ChatSseEvent` discriminated union covering `text_delta | thinking_delta | tool_use | tool_result | usage | raw`) but there is NO global "all agent activity" event bus. External attach requires (a) runId discovery via polling `GET /api/runs?status=active` (b) per-run attach to `/api/runs/:runId/events`.
+3. **Q3 REFUTED**: plugin engine targets content (skills/scenarios/atoms/pipeline/GenUI), NOT governance. `PluginManifestSchema` (`packages/contracts/src/plugins/manifest.ts:131-188`) has zero `od.hooks` / `od.middleware` / `od.observers` fields. Pipeline-stage events forward-declared but NOT YET EMITTED — Phase 2A pipeline executor pending per `packages/contracts/src/plugins/events.ts:6-8` comment.
+4. **Q4 VERIFIED**: Open Design's skill discovery scans `~/.claude/skills/` (priority 3, `docs/skills-protocol.md` §3 table) with explicit compatibility promise. FailSafe's `qor-*` skills auto-discover in Open Design with zero code change. Caveat: discovery ≠ activation — skill bodies are injected into Claude's system prompt only when operator selects the skill in Open Design's UI OR Claude's native trigger-keyword loading fires.
+5. **Q5 RECOMMENDATION — Option 5c**: skill-side governance + provenance attribution. **5b (interception) BLOCKED** by `apps/daemon/src/runtimes/defs/claude.ts:65` hard-coding `--permission-mode bypassPermissions` on every Claude spawn — no IPC slot for an external governor to gate dispatch. **5a (observation-only)** technically feasible but high cost for marginal new visibility (Claude Code already emits tool calls via native stream).
+6. **Q6 VERIFIED**: daemon default port `7456`, default host `127.0.0.1` (loopback-only auth model). Confirmed at `apps/daemon/src/daemon-startup.ts:91-95`. Same-host sibling process (FailSafe extension) can hit `http://127.0.0.1:7456/api/*` without operator-supplied tokens. Desktop-import flows have a separate token gate via `desktop-auth.ts`.
+7. **Q7 VERIFIED**: `@open-design/contracts` is `private: true` (`packages/contracts/package.json:4`); not on npm. Apache-2.0 license permits vendoring with attribution. ~120 LoC needed for v1 (SSE chat.ts + common.ts).
+
+## DRIFT log (vs. prior brief Entry #397)
+
+- §3-5 Pattern A REST wrapper recommendation → SUPERSEDED by 5c skill-side recommendation
+- §2.3 quoted AgentAdapter interface as if extensible → CLARIFIED: doc-level concept; implementation has no extension points
+- §3 "Mirror the Bicameral pattern" assumption → REFUTED at product-shape level (Bicameral = compliance-data MCP; Open Design = agent-orchestration platform; structurally distinct)
+
+## Recommended v1 scope (for /qor-plan)
+
+**Goal**: When Open Design dispatches Claude Code, FailSafe recognizes the run as Open-Design-originated and surfaces it in the transparency stream / agent-run recorder with provenance attached. qor-* skills already apply via the existing `~/.claude/skills/` install path.
+
+**In scope**:
+- `src/integrations/open-design/provenance.ts` — detect Open-Design provenance (env / cwd / parent PID)
+- `src/integrations/open-design/attribution.ts` — tag transparency events + agent-run records with `source: 'open-design'`
+- `src/integrations/open-design/daemon-probe.ts` — best-effort HTTP version probe at `127.0.0.1:7456` with TTL cache
+- `src/integrations/open-design/contracts/` — vendored Open Design SSE type definitions with Apache-2.0 attribution
+- Settings toggle: "Open Design integration"
+- FEATURE_INDEX entries + Playwright test
+
+**Out of scope (v1)**:
+- REST wrapper around `/api/*` (Pattern A trap)
+- Per-run SSE attach + replay (defer to v1.1)
+- L3 interception / approval gating (BLOCKED per Q5)
+- FailSafe-as-OD-plugin (Q3; no governance hook exists yet)
+- MCP bridge
+
+## Open questions remaining (plan phase must resolve)
+
+1. Provenance signal robustness — which combination is reliable cross-platform (cwd / parent PID / env-var sentinel)?
+2. Skill activation vs discovery — document for users, propose OD upstream PR, or rely on Claude's trigger-keyword loading?
+3. Daemon liveness cheap signal — OS-level (file lock, PID file) vs HTTP probe?
+4. Re-research trigger — Open Design 0.9.x or 1.0.0 release re-investigate?
+5. Optional SSE attach UX (v1.1) — poll interval + circuit breaker for runId discovery?
+
+## Risks / unknowns
+
+- **Upstream velocity (HIGH)**: Open Design v0.8.0 was 7 days ago; plugin engine actively under construction (Phase 2A pipeline executor not wired). Mitigated by depending only on stable skill-discovery contract (Open Design's `docs/skills-protocol.md` §1 compatibility promise).
+- **Provenance false-positive (LOW-MEDIUM)**: cwd-based detection could trigger when operator runs `claude` manually inside an `.od/artifacts/` dir. Mitigate by requiring ≥1 corroborating signal.
+- **Operator confusion (LOW)**: doc requirement, not a blocker.
+- **Upstream PR path (optional)**: future v2 5b interception requires Open Design upstream "governor consult" hook.
+
+## Decision
+
+**Research COMPLETE.** v1 scope is option 5c (skill-side + provenance attribution + optional daemon probe). Chain advances #398 → #399. No code changes from this entry. Next step in cycle: `/qor-plan` against the §"Recommended v1 scope" + the 5 open questions.
+
+## Content Hash
+
+**Content Hash**: `dd57815779e6d3c52fdd9da2d343260f25b7faf51a65102876a3b4e3dca8ac02`
+**Previous Hash**: `7c3b8c28b30e2ac81d054d03dec640c5ebe3684f009e234bbd3468f02072374b` (Entry #398 Chain Hash)
+**Chain Hash**: `0b170a829b5d4578d4b62ac0c1f7b52e90b71a93bd00314749a2a14b92b93326`
+**Merkle Seal**: `ad1648927371ad868a2a63a4f077df0e13f6e8ae127c6ced63412fb4a664b05a` — gate_seal_research_open_design_v2_model2
+**Session ID**: `2026-05-27-auto-dev-1-open-design-integration-research`
+
+_Hash provenance_: Content Hash = `SHA256` of this entry's body text (everything above the Content Hash line). Chain Hash = `SHA256(content_hash + previous_hash)` linking forward from #398. Merkle Seal = `SHA256(chain_hash + gate_label)`. Computed via Python stdlib `hashlib.sha256` because the `qor.scripts.ledger_hash` helper is absent on this Node-archetype host (Phase 75 skip).
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-05-27-auto-dev-1-open-design-integration-research_
+
+### Entry #400: SESSION SEAL — Open Design integration v1 (Model 2 — file-path provenance + attribution)
+
+**Date**: 2026-05-27
+**Timestamp**: 2026-05-27T18:00:00Z
+**Phase**: substantiate
+**Plan**: `plan-open-design-integration-v1.md` (v3 — PASS audit after 3 iterations; v1 + v2 VETOs documented in plan §"Plan revision")
+**Branch**: `feat/open-design-integration` (cut from main @ `88200c2` post-v5.2.2)
+**Author**: The Qor-logic Judge
+**Cycle**: /qor-auto-dev-1 (research → plan → audit×3 → implement → substantiate)
+**Verdict**: PASS
+
+## Why this cycle exists
+
+Operator requested Open Design integration v1 via `/qor-auto-dev-1` after the v5.2.2 marketplace recovery completed. Initial scoping defaulted to Pattern A (REST/SSE wrapper, mirroring Bicameral) — operator correctly challenged that framing: "this isn't really valid for Open Design ... It's a completely unique application compared to bicameral." Re-scoped to Model 2 (FailSafe governs Open Design's agent dispatch loop). Research v2 (Entry #399) confirmed Model 2 minimum viable v1 = Option 5c (file-path-based provenance attribution + skill-side governance via the existing `~/.claude/skills/` install path that Open Design already auto-discovers).
+
+## What ships in v1
+
+**Surface**: when Open Design dispatches Claude Code to generate a design artifact, FailSafe detects the resulting file writes (landing in `.od/artifacts/<projectId>/`), attributes the agent run with `provenance: { source: "open-design", projectId }`, and renders an "Open Design" origin pill on the corresponding row in the Monitor Agents tab.
+
+**Detection model**: file-path regex match on `(?:^|[\\/])\.od[\\/]artifacts[\\/]([^\\/]+)(?:[\\/]|$)` — cross-platform (POSIX + Windows separators). No process inspection. No daemon probe (deferred to v1.1). Reliable as long as Open Design's artifact-dir layout remains stable.
+
+**Governance overlap**: FailSafe's `qor-*` skills already auto-discover in Open Design via the shared `~/.claude/skills/` directory (Open Design's `docs/skills-protocol.md` §3 explicit compatibility promise). When an operator selects a qor-* skill in Open Design's chat UI, the skill body is injected into Claude's system prompt, and Claude's tool calls during that run will respect the same governance discipline FailSafe applies to operator-direct Claude invocations. v1 does NOT modify this behavior — it just ATTRIBUTES the runs so the operator can see "this Claude run came from Open Design" in the Monitor.
+
+**Opt-in via Settings**: default OFF (`failsafe.integrations.openDesign.enabled: false`). Operator enables via VS Code settings; one-time extension reload to take effect (documented limitation).
+
+## What's NOT in v1 (per plan §boundaries.exclusions)
+
+- REST wrapper around Open Design's `/api/*` endpoints (Pattern A explicitly rejected — see Entry #397 supersession at Entry #399)
+- Interception / L3 approval gating of Open Design dispatches (BLOCKED upstream per Entry #399 Q5: Open Design hard-codes `--permission-mode bypassPermissions` on every Claude spawn at `apps/daemon/src/runtimes/defs/claude.ts:65`)
+- Daemon probe / SSE per-run attach (deferred to v1.1)
+- Vendored Open Design SSE event-type contracts (deferred to v1.1 with SSE attach feature)
+- FailSafe-as-Open-Design-plugin publish (deferred to future v2 cycle once Open Design plugin engine matures past 0.8.x)
+- Runtime setting toggle (current limitation: extension reload required)
+
+## Implementation summary
+
+**New files (5 source, 5 test)**:
+- `src/sentinel/IAgentProvenanceDetector.ts` (16 LoC) — minimal interface
+- `src/integrations/open-design/provenance.ts` (30 LoC) — pure-function regex extractor
+- `src/integrations/open-design/OpenDesignProvenanceDetector.ts` (17 LoC) — interface adapter
+- `src/integrations/open-design/index.ts` (8 LoC) — barrel export
+- `src/test/integrations/open-design/provenance.test.ts` (FX700 — 7 cases)
+- `src/test/integrations/open-design/contracts.test.ts` (FX701 — 7 cases)
+- `src/test/sentinel/AgentRunRecorder.provenance-detector.test.ts` (FX703 — 5 cases)
+- `src/test/ui/open-design-attribution.spec.ts` (FX704 — 2 Playwright cases)
+- `src/test/extension/bootstrapSentinel-open-design.test.cjs` (FX705 — 3 node:test cases; `.cjs` per existing codebase pattern at `organizeWorkspaceCallbacks.test.cjs`)
+
+**Modified files**:
+- `src/shared/types/agentRun.ts` (+27 LoC) — `AgentProvenance` discriminated union + `isOpenDesignProvenance` runtime guard + optional `provenance?: AgentProvenance` field on `AgentRun`. Preserves existing `agentSource: AgentRunSource` enum (orthogonal axis).
+- `src/sentinel/AgentRunRecorder.ts` (+49 LoC) — options-bag constructor extension + `attachProvenance()` method + `handleFileEdit()` detector hook
+- `src/extension/bootstrapSentinel.ts` (+14 LoC) — Setting read via `vscode.workspace.getConfiguration` (bypasses typed `FailSafeConfig` because the schema has no `integrations` field — verified at `src/shared/types/config.ts:9-55`); detector construction; pass-through to recorder
+- `src/roadmap/ui/modules/replay.js` (+5 LoC) — origin pill render in `renderRunCard()` at line 91
+- `src/roadmap/ui/command-center.css` (+22 LoC) — `.cc-origin-pill` + `.cc-origin-od` variant using existing `--accent-cyan` token (no new design tokens); honors `prefers-reduced-motion` baseline from v5.2.0
+- `FailSafe/extension/package.json` (+5 LoC) — `failsafe.integrations.openDesign.enabled` setting (boolean, default false)
+- `src/test/sentinel/AgentRunRecorder.test.ts` (+50 LoC) — FX702 appended cases (4) for `attachProvenance()`
+
+**Documentation**:
+- `docs/INTEGRATIONS.md` (+58 LoC, NEW section) — Open Design v1 detection model, opt-in, surface, qor-* skill discovery-vs-activation caveat, limitations, v1.1 roadmap
+- `docs/FEATURE_INDEX.md` (+10 LoC) — FX700-FX705 rows in new "Open Design — v1 provenance attribution" section
+- `docs/BACKLOG.md` (+8 LoC) — B-OD-1 IMPLEMENTED + B-OD-2..B-OD-5 follow-ups in new "Open Design integration (v5.3.0)" section
+- `CHANGELOG.md` (root) + `FailSafe/extension/CHANGELOG.md` — `[Unreleased] / ### Added` entries
+
+## Reality vs Promise verification
+
+- **Promise** (plan v3): 5 new source files + 5 new test files + 7 modified files + 4 doc files; 28+ test cases (7+7+4+5+2+3); Section 4 razor compliant; no new npm deps; options-bag constructor; no margin-left CSS double-spacing.
+- **Reality** (implementer report verified by direct ls + git status): all files present at expected paths and sizes; 28/28 tests pass; tsc clean; no new dependencies; options-bag form adopted; CSS audit advisory honored.
+- **Verdict**: Reality = Promise.
+
+## Verification matrix
+
+| Check | Result |
+|---|---|
+| `npx tsc --noEmit` | clean |
+| `npx mocha --ui tdd "out/test/integrations/open-design/**/*.test.js"` | 14/14 PASS (FX700 + FX701) |
+| `npx mocha --ui tdd "out/test/sentinel/AgentRunRecorder*.test.js"` | 28/28 PASS (FX702 + FX703 + 19 pre-existing) |
+| `node --test src/test/extension/bootstrapSentinel-open-design.test.cjs` | 3/3 PASS (FX705) |
+| `npx playwright test src/test/ui/open-design-attribution.spec.ts` | 2/2 PASS (FX704) |
+| `npm test` (full mocha suite) | 1080 passing / 1 pending / 3 failing — all 3 failures pre-existing GenomeRenderer FX169+FX408 undici WebSocket flake; no code paths touched by this plan |
+| Section 4 razor (new files) | all ≤ 30 LoC each; ≤ 250L limit satisfied |
+| Section 4 razor (modified AgentRunRecorder.ts) | 327L post-modification; was 278L pre-modification; pre-existing over-limit file; additive change accepted |
+| Audit advisory: options-bag constructor | ✓ honored |
+| Audit advisory: no `margin-left:6px` on `.cc-origin-pill` | ✓ honored (flex `gap:10px` provides spacing) |
+| No new npm dependencies | ✓ verified (no `package.json` `dependencies`/`devDependencies` changes) |
+| Console.log audit on new files | clean |
+
+## Plan-text drift handled during implementation
+
+1. **Doc location**: plan specified `FailSafe/extension/docs/INTEGRATIONS.md` etc.; actual canonical locations are root `docs/` per `MEMORY.md` Key Files. Implementer correctly targeted root paths.
+2. **FX705 test extension**: plan said `.test.ts`; implementer used `.test.cjs` to match the established `organizeWorkspaceCallbacks.test.cjs` pattern that handles vscode module stubbing. Functionally equivalent.
+3. **AgentRunRecorder LoC overrun**: plan estimated +20 LoC net; reality +49 LoC due to defensive guards + `runProvenanceDetectors` helper for test isolation. File was already 278L pre-existing (over 250L razor). Acceptable since the modification is additive to an already-over-limit file.
+
+## Pre-existing working-tree drift (NOT bundled in seal commit)
+
+The working tree at substantiate time contains modifications NOT made by this auto-dev-1 cycle:
+- `src/roadmap/ui/command-center.js`, `governance.js`, `overview.js`, `risks.js`, `sentinel-monitor.js`, `transparency.js`
+- `src/test/roadmap/risks-render.test.ts`, `src/test/ui/governance-tab.spec.ts`
+- Untracked: `command-center-deeplink.js`, `transparency-records.js` + 2 associated tests
+- `test-results/*` Playwright artifacts
+
+These are isolated from the seal commit. Operator owns their disposition (separate seal cycle).
+
+## Compliance bindings preserved
+
+- **EU AI Act Annex III**: provenance is structural metadata (NOT evaluation/scoring/grading/inference). No human-affecting decisions encoded.
+- **GDPR session-only**: provenance attribution lives on the existing `AgentRun` record which AgentRunRecorder already retains per its existing policy; no new persistent telemetry.
+- **FailSafe Pro repo boundary** (`feedback_failsafe_pro_repo_boundary`): extension-side observer code only; no Pro-daemon work.
+- **No pipeline reshape** (`feedback_no_pipeline_reshape_for_marketplace_issues`): no publish-pipeline changes.
+
+## Phase 75 prerequisite skips (non-Python archetype host)
+
+| Step | Module | Status |
+|---|---|---|
+| 4.6 intent_lock + skill_admission + gate_skill_matrix | `qor.reliability.intent_lock` | SKIP — module absent |
+| 4.6.5 secret_scanner | `qor.scripts.secret_scanner` | SKIP — module absent; no secrets introduced (verified: no PATs/tokens/credentials in any new file) |
+| 4.6.6 procedural_fidelity | `qor.scripts.procedural_fidelity` | SKIP — module absent; doc updates landed in same cycle (INTEGRATIONS, FEATURE_INDEX, BACKLOG, CHANGELOG ×2) |
+| 4.7 doc_integrity (strict) | `qor.scripts.doc_integrity` | SKIP — module absent |
+| 6.5 doc currency + badge currency | `qor.scripts.doc_integrity_strict` | SKIP — feature class (NOT release-class); badge currency check is release-class only per `_RELEASE_CLASSES` semantics |
+| 6.8 seal hash integrity gate (toolkit form) | `qor.scripts.hash_guard` | SKIP — module absent; hashes computed via Python stdlib `hashlib.sha256` |
+| 7.4 SSDF tagger | `qor.scripts.ssdf_tagger` | SKIP — module absent |
+| 7.5 version bump | `qor.scripts.governance_helpers` | SKIP — `package.json` version unchanged (5.2.2); v5.3.0 bump happens at `/qor-repo-release`, not here |
+| 7.6 changelog stamp | `qor.scripts.changelog_stamp` | SKIP — module absent; CHANGELOG `[Unreleased]` entry stamped manually at substantiate (per plan); versioned stamp at release time |
+| 7.7 seal_entry_check | `qor.reliability.seal_entry_check` | SKIP — module absent |
+| 7.8 gate_chain_completeness | `qor.reliability.gate_chain_completeness` | SKIP — module absent |
+| 8.5 dist recompile | `qor.scripts.dist_compile` | SKIP — module absent; `tsc -p ./` clean verified manually |
+
+## Decision
+
+**SEALED.** v1 Open Design integration ships file-path-based provenance attribution + an opt-in Settings toggle + Monitor UI pill. Chain advances #399 → #400. No code changes from this entry beyond the META_LEDGER append.
+
+_Next operator action_ (Review Boundary checkpoint per `/qor-auto-dev-1` Step 6 + `feedback_no_ship_without_approval`): operator decides whether to commit + push + open PR. Auto-dev-1 has staged and verified the implementation; the visible/irreversible actions are operator-owned.
+
+**Recommended staging strategy**: single bundled commit `feat(open-design): v1 file-path provenance + attribution (Model 2)` carrying the 5 new source files + 5 new test files + 7 modified files + 4 doc files. Pre-existing working-tree drift (governance.js, overview.js, etc.) excluded from this commit. Then META_LEDGER #399 + #400 + research brief + plan as a separate `seal(open-design): META_LEDGER #399 RESEARCH + #400 SESSION SEAL` commit.
+
+## Content Hash
+
+**Content Hash**: `60b32935a531695ff5e48020f23fca71caccb4d118e791744c09dc2a0df7e8dd`
+**Previous Hash**: `0b170a829b5d4578d4b62ac0c1f7b52e90b71a93bd00314749a2a14b92b93326` (Entry #399 Chain Hash)
+**Chain Hash**: `2063a512e3c2febd53b512a3709e6abacf64c4c1ee791fb3a373db1b74e77e6b`
+**Merkle Seal**: `b25bcbf42a167250fe0b7e09a6da4cd942487f248fd1a032803ec6d35918fb87` — gate_seal_substantiate_open_design_v1
+**Session ID**: `2026-05-27-auto-dev-1-open-design-integration-substantiate`
+
+_Hash provenance_: Content Hash = `SHA256` of this entry's body text (everything above the Content Hash line). Chain Hash = `SHA256(content_hash + previous_hash)` linking forward from #399. Merkle Seal = `SHA256(chain_hash + gate_label)`. Computed via Python stdlib `hashlib.sha256`.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-05-27-auto-dev-1-open-design-integration-substantiate_

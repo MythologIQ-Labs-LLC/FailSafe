@@ -186,4 +186,60 @@ describe("AgentRunRecorder", () => {
     assert.equal(recorder.getActiveRuns().length, 0);
     assert.equal(recorder.getCompletedRuns().length, 1);
   });
+
+  // FX702 — attachProvenance method
+  describe("FX702 — attachProvenance", () => {
+    it("sets provenance on an active run and returns true", () => {
+      const run = recorder.startRun("did:test:1", "claude");
+      const ok = recorder.attachProvenance(run.id, {
+        source: "open-design",
+        projectId: "proj-fx702",
+      });
+      assert.equal(ok, true);
+      const fetched = recorder.getRun(run.id);
+      assert.ok(fetched);
+      assert.deepEqual(fetched!.provenance, {
+        source: "open-design",
+        projectId: "proj-fx702",
+      });
+    });
+
+    it("returns false for an unknown runId", () => {
+      const ok = recorder.attachProvenance("nonexistent-run-id", {
+        source: "open-design",
+        projectId: "p",
+      });
+      assert.equal(ok, false);
+    });
+
+    it("is idempotent on repeat call with same provenance", () => {
+      const run = recorder.startRun("did:test:1", "claude");
+      recorder.attachProvenance(run.id, {
+        source: "open-design",
+        projectId: "proj-idem",
+      });
+      const ok = recorder.attachProvenance(run.id, {
+        source: "open-design",
+        projectId: "proj-idem",
+      });
+      assert.equal(ok, true);
+      const fetched = recorder.getRun(run.id);
+      assert.deepEqual(fetched!.provenance, {
+        source: "open-design",
+        projectId: "proj-idem",
+      });
+    });
+
+    it("clears the provenance field when null is passed", () => {
+      const run = recorder.startRun("did:test:1", "claude");
+      recorder.attachProvenance(run.id, {
+        source: "open-design",
+        projectId: "p",
+      });
+      const ok = recorder.attachProvenance(run.id, null);
+      assert.equal(ok, true);
+      const fetched = recorder.getRun(run.id);
+      assert.equal(fetched!.provenance, undefined);
+    });
+  });
 });

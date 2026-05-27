@@ -5,6 +5,12 @@ All notable changes to FailSafe will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Open Design integration v1 (B-OD-1)** — file-path-based provenance attribution for agent runs whose edits land in `.od/artifacts/<projectId>/` paths. Opt-in via `failsafe.integrations.openDesign.enabled` (default `false`; requires extension reload). New `AgentProvenance` discriminated union on `AgentRun`; new `IAgentProvenanceDetector` interface + `OpenDesignProvenanceDetector` implementation; `AgentRunRecorder` gains an optional `{ provenanceDetectors }` options-bag constructor argument + a public `attachProvenance(runId, provenance)` method. Monitor Agents → Replay sub-view renders an "Open Design" origin pill on attributed runs. FX700-FX705 (28 cases). Plan: `plan-open-design-integration-v1.md` (v3). See `docs/INTEGRATIONS.md` (Open Design section) for the v1 surface + v1.1 roadmap.
+
 ## [5.2.2] - 2026-05-26
 
 Hotfix release for the v5.2.x cycle. v5.2.0 and v5.2.1 are both dead-on-marketplace git tags in `main` — each had a Release Pipeline run that failed at the Build & Test job before the publish jobs ran. v5.2.0 (`ba9a927`, run `26470883885`) failed on 5 unit-test failures from orphaned SHIELD-anchor lesson literals + an FX615 tag-filter test race. v5.2.1 (`7631ac1`, run `26484008504`) failed on a latent Playwright harness regression in `popout-ui.spec.ts:6` that was masked by v5.2.0's earlier unit-test failures (CI never reached Playwright in v5.2.0's run; v5.2.1's unit-test fix made the latent regression visible). v5.2.2 closes the harness regression. **Zero feature delta from v5.2.1** (which itself had zero feature delta from v5.2.0) — the FailSafe Learn rebuild, Ollama probe fix, and a11y baseline ship verbatim. See the [5.2.0] entry below for the full content.

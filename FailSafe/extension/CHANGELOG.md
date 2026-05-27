@@ -5,6 +5,12 @@ All notable changes to the MythologIQ FailSafe extension will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Open Design integration v1 (B-OD-1)** — file-path-based provenance attribution for agent runs whose edits land in `.od/artifacts/<projectId>/` paths. Opt-in via `failsafe.integrations.openDesign.enabled` (default `false`; requires extension reload). New `AgentProvenance` discriminated union on `AgentRun`; new `IAgentProvenanceDetector` interface + `OpenDesignProvenanceDetector` implementation; `AgentRunRecorder` gains an optional `{ provenanceDetectors }` options-bag constructor argument + a public `attachProvenance(runId, provenance)` method. Monitor Agents → Replay sub-view renders an "Open Design" origin pill on attributed runs. FX700-FX705 (28 cases). Plan: `plan-open-design-integration-v1.md` (v3). See `docs/INTEGRATIONS.md` (Open Design section) for the v1 surface + v1.1 roadmap.
+
 ## [5.2.2] - 2026-05-26
 
 Hotfix release. v5.2.1 was tagged but its Release Pipeline failed at Build & Test — for a different reason than v5.2.0. v5.2.1's unit-test fix correctly cleared the FX598/FX602/FX615 unit failures and let `npm run test:all` reach the Playwright phase for the first time in the v5.2.x line, exposing a latent harness regression that prevented `popout-ui.spec.ts` from bootstrapping `command-center.js`. v5.2.2 is the first v5.2.x build that actually ships to the marketplaces. **No feature changes from v5.2.1** (which itself had zero feature delta from v5.2.0) — the same FailSafe Learn rebuild, Ollama probe fix, and a11y baseline ship verbatim. See the [5.2.0] entry below for the full feature list.

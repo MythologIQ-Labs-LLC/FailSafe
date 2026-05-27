@@ -193,3 +193,62 @@ B-B199-6) for the full rationale and accepted residual risk.
 ### License credit
 
 `piper-tts-web` is the work of its upstream maintainers. `@xenova/transformers` is the work of HuggingFace and the Transformers.js maintainers. ONNX Runtime is the work of the Microsoft ONNX Runtime project. All three are distributed under their own licenses (consult upstream READMEs). FailSafe's voice substrate code (engines, controllers, UI cards, install handler, route module) is part of the FailSafe extension and ships under the FailSafe license; no upstream source is vendored or redistributed in the base VSIX. The companion voice pack mirrors the existing license terms of each upstream.
+
+## Open Design (nexu-io/open-design) — v1 provenance attribution
+
+[Open Design](https://github.com/nexu-io/open-design) is an external agent dispatcher that writes generated artifacts under `.od/artifacts/<projectId>/` in the workspace cwd. FailSafe v5.3.0 ships a v1 observation-only integration that **attributes** agent runs to Open Design whenever the run's file edits land inside that subtree. This is a passive surface — FailSafe does not intercept Open Design's dispatch or gate its requests.
+
+### Detection model — file-path-based
+
+The detector inspects every file-edit event observed by `AgentRunRecorder.handleFileEdit(filePath)`. When the path matches `(^|/|\\).od[/\\]artifacts[/\\]<projectId>[/\\]...`, the active run gains a `provenance: { source: "open-design", projectId }` field. The Monitor Agents → Replay sub-view then surfaces an "Open Design" pill on that run's row.
+
+The match is cross-platform (POSIX `/` and Windows `\` separators). No daemon probe, no env-var inspection, no PID lookup — purely file-path-based. This means:
+- **No false positives** on workspaces without an active Open Design daemon — runs that don't touch `.od/artifacts/` are never tagged.
+- **Silent false negatives** if Open Design changes its artifact-dir layout in a future release. The 0.8.x and 0.9.x layouts (`.od/artifacts/<projectId>/`) are confirmed stable; a v1.1 daemon-probe will provide a stronger signal.
+
+### How to enable
+
+The integration is **off by default**. Operators opt in via the VS Code setting:
+
+```jsonc
+// settings.json
+{
+  "failsafe.integrations.openDesign.enabled": true
+}
+```
+
+Toggling the setting requires an extension reload to take effect (v1 limitation — runtime hot-toggle is tracked in the v1.1 roadmap below). When the setting is `false`, no detector is registered and `AgentRunRecorder` retains its prior behaviour exactly.
+
+### What's surfaced
+
+- An "Open Design" origin pill on each affected run card in the Monitor Agents → Replay sub-view.
+- A `provenance: { source, projectId }` field on the persisted `AgentRun` record at `.failsafe/runs/<uuid>.json`.
+- No automatic skill activation — see the discovery-vs-activation caveat below.
+
+### Discovery vs activation caveat (qor-* skills)
+
+FailSafe's qor-* skill suite is **discoverable** to Open Design (Open Design's skill loader can read the workspace's `.claude/skills/qor-*/SKILL.md` files), but Open Design does **not auto-activate** them when it dispatches a sub-agent run. Operators who want qor-* coverage on Open Design runs must explicitly invoke the relevant skill in their Open Design prompt (e.g., "use /qor-audit before applying these edits"). FailSafe surfaces this caveat in the Integrations tab once the operator enables the setting. An upstream PR adding auto-selection is tracked in the v2 roadmap.
+
+### v1 limitations
+
+- File-path detection only (no daemon probe, no env / PID).
+- Per-run SSE attach is deferred to v1.1.
+- Runtime toggle requires extension reload.
+- Symlinks, junction points, and case-insensitive Windows path edges are not handled (v1.1 hardening).
+- No L3 approval gating (interception is blocked upstream — see Q5 of the research brief).
+
+### v1.1 roadmap
+
+- Daemon-probe: HTTP version-probe at `127.0.0.1:7456` with TTL cache. Enriches provenance with daemon-confirmed `projectId` lookup; allows stronger signal when no `.od/` directory is present but a daemon is running.
+- Vendored Open Design SSE contracts with Apache-2.0 attribution; per-run SSE attach + replay (opt-in operator consent flow).
+- File-path edge cases (symlinks, case-insensitive Windows paths, junction points).
+- Eliminate the "extension reload" caveat — true runtime toggle.
+
+### Test coverage
+
+- Provenance extractor (`extractOpenDesignProvenance`): 7 cases in `src/test/integrations/open-design/provenance.test.ts` (FX700).
+- Type contracts + runtime guard: 7 cases in `src/test/integrations/open-design/contracts.test.ts` (FX701).
+- `AgentRunRecorder.attachProvenance`: 4 cases appended to `src/test/sentinel/AgentRunRecorder.test.ts` (FX702).
+- Detector wiring through `handleFileEdit`: 5 cases in `src/test/sentinel/AgentRunRecorder.provenance-detector.test.ts` (FX703).
+- UI pill render (Playwright): 2 cases in `src/test/ui/open-design-attribution.spec.ts` (FX704).
+- Bootstrap setting → detector construction: 3 cases in `src/test/extension/bootstrapSentinel-open-design.test.cjs` (FX705).

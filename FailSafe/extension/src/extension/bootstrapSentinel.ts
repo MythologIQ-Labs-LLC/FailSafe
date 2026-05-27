@@ -10,6 +10,8 @@ import { VerdictRouter } from "../sentinel/VerdictRouter";
 import { ArchitectureEngine } from "../sentinel/engines/ArchitectureEngine";
 import { AgentTimelineService } from "../sentinel/AgentTimelineService";
 import { AgentRunRecorder } from "../sentinel/AgentRunRecorder";
+import { OpenDesignProvenanceDetector } from "../integrations/open-design";
+import type { IAgentProvenanceDetector } from "../sentinel/IAgentProvenanceDetector";
 import { CoreSubstrate } from "./bootstrapCore";
 import { QorLogicSubstrate } from "./bootstrapQorLogic";
 import { Logger } from "../shared/Logger";
@@ -72,7 +74,20 @@ export async function bootstrapSentinel(
     context.subscriptions.push({ dispose: () => agentTimelineService.dispose() });
 
     const runsPath = path.join(core.workspaceRoot, ".failsafe", "runs");
-    const agentRunRecorder = new AgentRunRecorder(core.eventBus, runsPath);
+    // Open Design integration v1 (opt-in via failsafe.integrations.openDesign.enabled).
+    // Setting is read via vscode.workspace.getConfiguration directly because
+    // the typed FailSafeConfig schema does NOT carry an `integrations` field.
+    const odEnabled = vscode.workspace
+      .getConfiguration("failsafe")
+      .get<boolean>("integrations.openDesign.enabled", false);
+    const provenanceDetectors: IAgentProvenanceDetector[] = odEnabled
+      ? [new OpenDesignProvenanceDetector()]
+      : [];
+    const agentRunRecorder = new AgentRunRecorder(
+      core.eventBus,
+      runsPath,
+      { provenanceDetectors },
+    );
     context.subscriptions.push({ dispose: () => agentRunRecorder.dispose() });
 
     return { sentinelDaemon, architectureEngine, agentTimelineService, agentRunRecorder };

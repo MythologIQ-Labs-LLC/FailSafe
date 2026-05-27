@@ -270,6 +270,11 @@
           "default": "",
           "description": "Override the Python interpreter used to install qor-logic. Leave empty to auto-detect (VS Code Python extension, then python3/python/py -3 probe)."
         },
+        "failsafe.integrations.openDesign.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Tag agent runs whose file edits land in `.od/artifacts/<projectId>/` paths with Open Design provenance attribution. Surfaces an 'Open Design' pill in the Monitor Agents tab. Loopback-only; works without the Open Design daemon being reachable (file-path detection is the v1 signal). Requires extension reload after toggling."
+        },
         "failsafe.education.enabled": {
           "type": "boolean",
           "default": true,
