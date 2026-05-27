@@ -20559,3 +20559,48 @@ _Hash provenance_: Content Hash = `SHA256` of this entry's body text (everything
 
 _Chain integrity: VALID_
 _Session: 2026-05-27-research-open-design-integration_
+
+---
+
+### Entry #398: RESEARCH BRIEF - Day-One Integration Candidates
+
+**Date**: 2026-05-27
+**Timestamp**: 2026-05-27T20:11:55Z
+**Phase**: RESEARCH
+**Author**: The Qor-logic Analyst
+**Risk Grade**: L2 (research findings and GitHub issue creation only; no implementation)
+**Session ID**: `2026-05-27T1611-integration-candidates`
+
+## Target
+
+FailSafe integration candidates that provide obvious day-one product value beyond Bicameral MCP and Open Design.
+
+## Output
+
+Research brief written at `docs/research-brief-day-one-integration-candidates-2026-05-27.md`. Research gate artifact written at `.qor/gates/2026-05-27T1611-integration-candidates/research.json`.
+
+## Key findings
+
+1. The current Command Center Integrations tab is intentionally Bicameral-only; `integrations.js` renders one card.
+2. The highest-value integration set spans separate control planes: GitHub delivery gates, Linear/Jira intent sync, Semgrep/SARIF security ingestion, Slack/Teams notification surfaces, Sentry/OpenTelemetry runtime evidence, agent-runtime adapters, and MCP Registry admission.
+3. Open Design remains the UI-efficacy integration, but prior research confirms it is REST/SSE-based rather than MCP-based.
+4. The active `docs/ARCHITECTURE_PLAN.md` is stale for this decision; future implementation must begin with a focused `/qor-plan` and PASS audit.
+5. Integration candidates should be split by auth/event/execution boundary. Similar product value is not enough to share a first implementation plan.
+
+## Decision
+
+Research COMPLETE. Open issues are authorized as planning artifacts only. Implementation remains gated by future `/qor-plan` and `/qor-audit` PASS verdicts.
+
+## Content Hash
+
+**Content Hash**: `d5f27302aa1a0a03fdf05449694f89865360f95bb68c8daabc214570c2d6c8be`
+**Previous Hash**: `ba045c959e19c70a6c95a3f467630bbaa543d9a251689bf63cb7846cf3083485` (Entry #397 Chain Hash)
+**Chain Hash**: `7c3b8c28b30e2ac81d054d03dec640c5ebe3684f009e234bbd3468f02072374b`
+**Merkle Seal**: `e63e5abcb5c59ad8730daebf46bf68f1829cb6f40a049a0fe8b2a876855b1d2a` - gate_seal_research_day_one_integration_candidates
+
+_Hash provenance_: Content Hash = SHA256 of `docs/research-brief-day-one-integration-candidates-2026-05-27.md`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate label). Computed with PowerShell/.NET SHA256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-05-27T1611-integration-candidates_
