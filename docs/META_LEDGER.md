@@ -20363,3 +20363,110 @@ _Hash provenance_: Content Hash = `SHA256` of this entry's body text (everything
 
 _Chain integrity: VALID_
 _Session: 2026-05-26-hotfix-v5-2-1-shield-anchor-orphans_
+
+### Entry #396: SESSION SEAL — v5.2.2 hotfix (popout-ui Playwright harness migration)
+
+**Date**: 2026-05-26
+**Timestamp**: 2026-05-27T02:15:45Z
+**Phase**: substantiate
+**Plan**: none (hotfix recovery cycle; no formal plan-*.md authored)
+**Branch**: `hotfix/v5.2.2` (cut from `main` post-#395 SUBSTANTIATE / post-PR #93 merge)
+**Commit**: `1727820` ("fix(v5.2.2): migrate popout-ui.spec.ts to serveConsoleServerUI harness")
+**Verdict**: PASS
+
+## Why this hotfix exists
+
+The v5.2.1 Release Pipeline (run id `26484008504`) failed at the Build & Test job — same failure mode as v5.2.0, but for a different reason. With v5.2.1's unit-test fix (Entry #395) clearing the FX598 / FX602 / FX615 unit failures, `xvfb-run -a npm run test:all` reached the Playwright phase for the first time in the v5.2.x line. Playwright then surfaced a latent regression: `src/test/ui/popout-ui.spec.ts:6` `popout UI shell renders required sections` — the workspace tab `.active` assertion timed out (9 retries × `class="tab-panel"`, no `.active`).
+
+The marketplace publish jobs were SKIPPED again. v5.2.1 became the second consecutive v5.2.x git tag in `main`'s history that never installed (`7631ac1` is in main but the VS Code Marketplace + Open VSX never received the extension). See `[[project-v5-2-x-dead-tags]]` for the two-tag dead-on-marketplace ledger.
+
+## Root cause
+
+v5.2.0 added `LearnRenderer` to `command-center.js` (commit `9c40860`). `LearnRenderer` and its children import across `src/` directory boundaries:
+
+- `src/roadmap/ui/modules/learn.js` imports `../../../education/lessonTriggers.js`
+- `src/roadmap/ui/modules/learn-essay-list.js` imports `../../../education/lessons.js`
+- `src/roadmap/ui/modules/learn-glossary.js` imports `../../../education/lessons.js`
+
+In production these resolve via the bundling step and (during other Playwright tests) via the `ConsoleServer`'s module-resolution machinery — both paths know how to serve `/education/*.js` as proper ES modules.
+
+The legacy `popout-ui.spec.ts` (pre-v5.2.0) used a raw `http.createServer` static-file server rooted only at `src/roadmap/ui/`. It never resolved the cross-`src/` imports — the browser issued 404s for `/education/lessons.js` and `/education/lessonTriggers.js`, the ES module chain aborted (`net::ERR_ABORTED`), `command-center.js` never bootstrapped, the `.tab-btn` click handlers at `src/roadmap/ui/command-center.js:152-174` were never attached, and clicking the workspace tab silently did nothing. The initial visibility assertions on the tab buttons (lines 34-38 of the original spec) still passed because the buttons are static HTML — the failure only surfaced at the post-click assertion.
+
+The regression was masked through v5.2.0's release pipeline because the 5 unit-test failures (orphaned SHIELD anchors) stopped CI at the mocha phase before Playwright ran. v5.2.1's unit-test fix (Entry #395) was correct on its own merits but inadvertently lifted the masking — letting Playwright execute and exposing the latent harness break.
+
+## What changed
+
+| File | Δ | Intent |
+|---|---|---|
+| `src/test/ui/popout-ui.spec.ts` | -50 / +47 | Replace the raw `http.createServer` static-file harness with `serveConsoleServerUI` — the same harness used by every other v5.2.0+ Playwright spec that boots `command-center.html` (`command-center-learn-multimode.spec.ts`, `agents-tab.spec.ts`, `workspace-tab.spec.ts`, etc.). Functional assertions unchanged: same 5 tab-button visibility checks, same 3 tab-click → `#panel.active` assertions, same 6-row `.cc-theme-select` count assertion. |
+
+No production-code change. The hotfix is test-infrastructure only.
+
+## Reality vs Promise verification
+
+- **Promise** (encoded in commit message + this hotfix's stated scope): migrate `popout-ui.spec.ts` to `serveConsoleServerUI`, preserve every functional assertion, restore CI green.
+- **Reality** (verified): diff is 1 file, -50 / +47 lines, body matches the migration pattern from sibling specs. `npx playwright test src/test/ui/popout-ui.spec.ts` passes locally in 24.6s (single-spec) and in 30.4s (post-branch-switch verification). Broader suite of 14 related Playwright specs (popout-ui + workspace-tab + agents-tab + command-center-learn-multimode) all pass in 2.3m total. No regression in adjacent tab/Learn coverage.
+- **Verdict**: Reality = Promise.
+
+## Verification matrix
+
+| Check | Result |
+|---|---|
+| `npx playwright test src/test/ui/popout-ui.spec.ts` | 1/1 passing / 30.4s / exit 0 |
+| `npx playwright test popout-ui + workspace-tab + agents-tab + command-center-learn-multimode` (14 tests) | 14/14 passing / 2.3m total / exit 0 |
+| `npx tsc --noEmit` | clean (0 errors) |
+| Section 4 razor on modified file (`popout-ui.spec.ts` 50L) | PASS — well under 250L limit |
+| Console.log audit on modified file | clean (0 matches) |
+| Skill file integrity (no skill files modified in commit) | N/A |
+| Forward-future contract documented | YES — spec header banner instructs every new Playwright spec that boots `command-center.html` to use `serveConsoleServerUI`; the static-file pattern is dead for v5.2.0+ |
+
+### Carry-forward (non-blocker)
+
+The local `bicameral-advanced-tools.spec.ts:60` Playwright failure observed during v5.2.1 substantiation did NOT reproduce in the v5.2.1 CI run (`gh run view 26484008504 --log-failed` shows the only Playwright failure was `popout-ui.spec.ts:6`). The bicameral failure is therefore confirmed as a local-environment-only issue (likely needs the Bicameral MCP server running in the test harness, which isn't started locally). Not a v5.2.2 publish blocker; tracked separately for follow-up.
+
+## Compliance bindings preserved
+
+- **EU AI Act Annex III(3) exclusion** — unchanged. No scoring/grading touched.
+- **GDPR session-only contract** — unchanged. No persistence layer touched.
+
+## Phase 75 prerequisite skips (non-Python archetype host)
+
+This repo is the Node/TypeScript FailSafe extension; the `qor.scripts.*` and `qor.reliability.*` Python toolkits are not installed. Per Phase 75 (GH #38) the following gates are recorded as `gate_skipped_prerequisite_absent` (severity-1 shadow event):
+
+| Step | Module | Status |
+|---|---|---|
+| 4.6 intent_lock + skill_admission + gate_skill_matrix | `qor.reliability.intent_lock` | SKIP — module absent |
+| 4.6.5 secret_scanner | `qor.scripts.secret_scanner` | SKIP — module absent |
+| 4.6.6 procedural_fidelity | `qor.scripts.procedural_fidelity` | SKIP — module absent |
+| 4.7 doc_integrity (strict) | `qor.scripts.doc_integrity` | SKIP — module absent |
+| 6.5 doc currency + badge currency | `qor.scripts.doc_integrity_strict` | SKIP — module absent; hotfix is Phase 49 `_RELEASE_CLASSES`-exempt |
+| 6.8 seal hash integrity gate (toolkit form) | `qor.scripts.hash_guard` | SKIP — module absent; hashes computed via Python stdlib `hashlib.sha256` |
+| 7.4 SSDF tagger | `qor.scripts.ssdf_tagger` | SKIP — module absent |
+| 7.5 version bump | `qor.scripts.governance_helpers` | SKIP — module absent; `release-gate.cjs` handles the bump in `/qor-repo-release` |
+| 7.6 changelog stamp | `qor.scripts.changelog_stamp` | SKIP — module absent; `/qor-document` handles the stamp |
+| 7.7 seal_entry_check | `qor.reliability.seal_entry_check` | SKIP — module absent |
+| 7.8 gate_chain_completeness | `qor.reliability.gate_chain_completeness` | SKIP — module absent |
+| 8.5 dist recompile | `qor.scripts.dist_compile` | SKIP — module absent; extension compiles via `tsc` invoked by release-gate preflight |
+
+The substantive gates that remain in force on this host (version validation, reality audit, test verification, Section 4 razor, console.log audit, Merkle seal continuity) all PASS.
+
+## Decision
+
+**SEALED.** The v5.2.2 hotfix closes the latent popout-ui Playwright regression that surfaced when v5.2.1's unit-test fix let Build & Test reach the Playwright phase. Reality matches Promise. Chain advances #395 → #396.
+
+_Next operator action_: invoke `/qor-repo-release` with `patch` bump (v5.2.1 → v5.2.2); push the v5.2.2 tag (operator pre-authorized) to re-trigger the Release Pipeline workflow → marketplace publish. v5.2.2 will be the first v5.2.x build to actually reach VS Code Marketplace + Open VSX (v5.2.0 + v5.2.1 are both dead-on-marketplace tags per `[[project-v5-2-x-dead-tags]]`).
+
+## Content Hash
+
+**Content Hash**: `03cb083ed1ebb26e01979ce74199d9cc07f9702c834dfdc6b2c6d391925046dd`
+**Previous Hash**: `bd1956a5918f6b1be13404cc049516e5545e4024402cf18c9d6094b407cf3eb1` (Entry #395 Chain Hash)
+**Chain Hash**: `5bdb145eb2de736ae9d4947e8efd9c48837553eb3a9aa09baaad240396b91c06`
+**Merkle Seal**: `e127d911e272e07ed63a608c85309774aadac94d4f0259163569deadbc9d2192` — gate_seal_substantiate_v5_2_2_hotfix
+**Session ID**: `2026-05-26-hotfix-v5-2-2-popout-ui-harness`
+
+_Hash provenance_: Content Hash = `SHA256` of this entry's body text (everything above the Content Hash line). Chain Hash = `SHA256(content_hash + previous_hash)` linking forward from #395. Merkle Seal = `SHA256(chain_hash + gate_label)`. Computed via Python stdlib `hashlib.sha256` because the `qor.scripts.ledger_hash` helper is absent on this Node-archetype host (Phase 75 skip).
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-05-26-hotfix-v5-2-2-popout-ui-harness_

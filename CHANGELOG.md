@@ -5,6 +5,22 @@ All notable changes to FailSafe will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.2.2] - 2026-05-26
+
+Hotfix release for the v5.2.x cycle. v5.2.0 and v5.2.1 are both dead-on-marketplace git tags in `main` — each had a Release Pipeline run that failed at the Build & Test job before the publish jobs ran. v5.2.0 (`ba9a927`, run `26470883885`) failed on 5 unit-test failures from orphaned SHIELD-anchor lesson literals + an FX615 tag-filter test race. v5.2.1 (`7631ac1`, run `26484008504`) failed on a latent Playwright harness regression in `popout-ui.spec.ts:6` that was masked by v5.2.0's earlier unit-test failures (CI never reached Playwright in v5.2.0's run; v5.2.1's unit-test fix made the latent regression visible). v5.2.2 closes the harness regression. **Zero feature delta from v5.2.1** (which itself had zero feature delta from v5.2.0) — the FailSafe Learn rebuild, Ollama probe fix, and a11y baseline ship verbatim. See the [5.2.0] entry below for the full content.
+
+### Fixed
+
+- **`popout-ui.spec.ts` Playwright harness migration to `serveConsoleServerUI`** — the legacy `http.createServer` static-file harness rooted at `src/roadmap/ui/` could not resolve the cross-directory ESM imports introduced by `LearnRenderer` in v5.2.0: `src/roadmap/ui/modules/learn.js` imports `../../../education/lessonTriggers.js`; `learn-essay-list.js` + `learn-glossary.js` import `../../../education/lessons.js`. These resolve in production through the bundling step and (during other Playwright specs) through the `ConsoleServer`'s module-resolution machinery, but the static-file pattern never reached outside `src/roadmap/ui/`. The browser issued 404s for `/education/*.js`, the `<script type="module">` import chain aborted with `net::ERR_ABORTED`, `command-center.js` never bootstrapped, the `.tab-btn` click handlers at `command-center.js:152-174` were never attached, and clicking the workspace tab silently did nothing. The new spec uses `serveConsoleServerUI` — the same harness as `command-center-learn-multimode.spec.ts`, `agents-tab.spec.ts`, `workspace-tab.spec.ts`, and every other v5.2.0+ Playwright spec that boots `command-center.html`. All functional assertions preserved verbatim (5 tab visibility checks + 3 tab-click → `#panel.active` assertions + 6-row theme select assertion). Forward contract documented in the spec header: any new Playwright spec that boots `command-center.html` must use `serveConsoleServerUI`; the static-file pattern is dead for the v5.2.0+ codebase.
+- **No production-code change in this release.** The hotfix is test-infrastructure only.
+
+### Process / lessons captured
+
+- **CI failure masking is a real risk.** v5.2.0's 5 unit-test failures stopped `xvfb-run -a npm run test:all` before Playwright ran, silently hiding the popout-ui regression for the entire v5.2.0 → v5.2.1 cycle. A CI run that fails at phase N can mask additional regressions in phase N+1. Operators should expect at least one more iteration after the first fix when CI fails early.
+- The two-tag dead-on-marketplace sequence (v5.2.0 + v5.2.1) is documented in operator memory `project_v5_2_x_dead_tags` for future-cycle reference.
+
+_v5.2.2 released 2026-05-26 — `package.json` bumped to 5.2.2; META_LEDGER seal entry #396._
+
 ## [5.2.1] - 2026-05-26
 
 Hotfix release for the v5.2.0 cycle. The v5.2.0 Release Pipeline (run id `26470883885`) failed at the Build & Test job with 5 unit-test failures; the VS Code Marketplace + Open VSX publish jobs were SKIPPED, so the `v5.2.0` git tag exists in main's history (`ba9a927`) but the extension was never installable. v5.2.1 is the first v5.2.x build that ships to the marketplaces. **Zero feature delta from v5.2.0** — the FailSafe Learn rebuild, the Ollama probe fix, and the global a11y baseline ship verbatim. See the [5.2.0] entry below for the full content.
