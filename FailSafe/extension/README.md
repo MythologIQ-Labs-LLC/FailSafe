@@ -18,6 +18,12 @@ FailSafe runs locally inside VS Code and Cursor. It monitors what AI agents do, 
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
 
+## What's New in v5.2.1
+
+Hotfix release. v5.2.0 was tagged but its publish pipeline failed at Build & Test (5 unit-test failures from three orphaned SHIELD-anchor lesson literals + an FX615 tag-filter test race); the VS Code Marketplace + Open VSX publish jobs were skipped, so v5.2.0 was never installable. **v5.2.1 is the first v5.2.x build that actually ships to the marketplaces.**
+
+**Zero feature changes from v5.2.0** — the FailSafe Learn rebuild, the Ollama probe fix, and the global a11y baseline below ship verbatim. The hotfix only resolves the test regressions that blocked publish.
+
 ## What's New in v5.2.0
 
 The v5.2.0 release delivers on the learning promise: a Learn tab that teaches the software-development craft to non-traditional builders, with a redesigned visual surface and accessibility baseline.
