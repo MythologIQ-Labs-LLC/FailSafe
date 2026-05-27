@@ -88,7 +88,17 @@ export class GovernanceRenderer {
     const hash = (typeof window !== 'undefined' && window.location?.hash) || '';
     const queryStr = hash.split('?')[1] || '';
     if (!queryStr) return;
-    const ts = new URLSearchParams(queryStr).get('verdict');
+    const params = new URLSearchParams(queryStr);
+    const section = params.get('section');
+    if (section) {
+      const safeSection = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(section) : section.replace(/"/g, '\\"');
+      const target = this.container.querySelector(`[data-section="${safeSection}"]`);
+      target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      target?.classList.add('cc-section--highlighted');
+      setTimeout(() => target?.classList.remove('cc-section--highlighted'), 3000);
+      return;
+    }
+    const ts = params.get('verdict');
     if (!ts) return;
     const row = this.container.querySelector(`[data-verdict-ts="${CSS.escape(ts)}"]`);
     if (row) {
@@ -160,7 +170,7 @@ export class GovernanceRenderer {
 
   renderL3Queue(queue) {
     if (!queue.length) {
-      return `<div class="cc-card" style="margin-bottom:16px">
+      return `<div class="cc-card" data-section="l3-chain" style="margin-bottom:16px">
         <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;
           letter-spacing:0.08em;margin-bottom:6px">L3 Verification Queue</div>
         <div style="color:var(--text-muted);font-size:0.82rem">No pending items</div>
@@ -179,7 +189,7 @@ export class GovernanceRenderer {
       </div>`).join('');
 
     return `
-      <div class="cc-card" style="margin-bottom:16px">
+      <div class="cc-card" data-section="l3-chain" style="margin-bottom:16px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
           <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;
             letter-spacing:0.08em">L3 Verification Queue (${queue.length})</div>

@@ -2,6 +2,7 @@
 
 import { renderLatestAudit } from './latest-audit.js';
 import { renderRecentReleases } from './recent-releases.js';
+import { navigationHash } from './command-center-deeplink.js';
 
 function esc(value) {
   const d = document.createElement('div');
@@ -47,14 +48,14 @@ export class OverviewRenderer {
           </div>
         </div>
 
-        <div class="card clickable-card" data-nav="governance:audit" style="background: var(--bg-panel); border: 1px solid var(--border-rim); border-radius: 12px; padding: 16px; cursor: pointer; transition: border-color 0.15s, transform 0.1s;" title="View Audit Log">
+        <div class="card clickable-card" data-nav="governance:risks?severity=high" style="background: var(--bg-panel); border: 1px solid var(--border-rim); border-radius: 12px; padding: 16px; cursor: pointer; transition: border-color 0.15s, transform 0.1s;" title="View Active Threats">
           <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Active Threats</div>
           <div style="font-size: 1.8rem; font-weight: 700; color: ${hubData?.riskSummary?.high > 0 ? 'var(--accent-red)' : 'var(--accent-green)'}; font-family: var(--font-display); margin-top: 8px;">
             ${hubData?.riskSummary?.high || 0}
           </div>
         </div>
 
-        <div class="card clickable-card" data-nav="governance:compliance" style="background: var(--bg-panel); border: 1px solid var(--border-rim); border-radius: 12px; padding: 16px; cursor: pointer; transition: border-color 0.15s, transform 0.1s;" title="View Chain Integrity">
+        <div class="card clickable-card" data-nav="governance:compliance?section=l3-chain" style="background: var(--bg-panel); border: 1px solid var(--border-rim); border-radius: 12px; padding: 16px; cursor: pointer; transition: border-color 0.15s, transform 0.1s;" title="View Chain Integrity">
           <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">L3 Chain</div>
           <div style="font-size: 1.8rem; font-weight: 700; color: ${chainColor}; font-family: var(--font-display); margin-top: 8px;">
             ${chainLabel}
@@ -105,17 +106,16 @@ export class OverviewRenderer {
       card.addEventListener('click', () => {
         const nav = card.dataset.nav;
         if (!nav) return;
-        const [tab, subTab] = nav.split(':');
-        // Click the main tab
+        const [target] = nav.split('?');
+        const [tab, subTab] = target.split(':');
+        const nextHash = navigationHash(nav);
+        window.location.hash = nextHash;
         const tabBtn = document.querySelector(`.tab-btn[data-target="${tab}"]`);
         if (tabBtn) tabBtn.click();
-        // If subtab specified, click it after a brief delay for tab to render
-        if (subTab) {
-          setTimeout(() => {
-            const subTabBtn = document.querySelector(`#${tab} .sub-tab-btn[data-subtab="${subTab}"]`);
-            if (subTabBtn) subTabBtn.click();
-          }, 50);
-        }
+        setTimeout(() => {
+          const subTabBtn = document.querySelector(`#${tab} .cc-pill[data-key="${subTab}"]`);
+          if (subTabBtn) subTabBtn.click();
+        }, 0);
       });
       // Hover effects
       card.addEventListener('mouseenter', () => {
@@ -200,7 +200,7 @@ export class OverviewRenderer {
     if (critical.length === 0) return '';
     const latest = critical[critical.length - 1];
     return `
-      <div class="clickable-card" data-nav="governance:audit" style="background:rgba(255,60,60,0.12);border:1px solid var(--accent-red);
+      <div class="clickable-card" data-nav="governance:audit?verdict=${encodeURIComponent(String(latest.timestamp || ''))}" style="background:rgba(255,60,60,0.12);border:1px solid var(--accent-red);
         border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:background 0.15s,transform 0.1s" title="View in Audit Log">
         <span style="font-size:1.2rem">!</span>
         <div style="flex:1">

@@ -17,6 +17,7 @@ import { IntegrationsRenderer } from './modules/integrations.js';
 import { TabGroup } from './modules/tab-group.js';
 import { updateTickers, updateBootstrapBanner } from './modules/tickers.js';
 import { setWorkspaceRegistryClient, loadWorkspaceRegistry, initWorkspaceSelector } from './modules/workspace-registry.js';
+import { governanceSubviewForRoute, parseCommandCenterHash } from './modules/command-center-deeplink.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   const client = new ConnectionClient();
@@ -185,14 +186,25 @@ document.addEventListener('DOMContentLoaded', () => {
     if (bsRenderer?.llmStatus) { bsRenderer.llmStatus.toggleHelp(); bsRenderer.llmStatus.render(bsRenderer.client); }
   });
 
-  // Restore saved tab (URL hash takes priority). Strip the query suffix so
-  // deep-link parameters like `#governance?verdict=<ts>` still resolve the
-  // correct tab name. Renderers parse the query themselves.
-  const hashRaw = window.location.hash?.replace('#', '') || '';
-  const hashTab = hashRaw.split('?')[0];
+  const applyHashRoute = () => {
+    const route = parseCommandCenterHash(window.location.hash);
+    const active = document.querySelector(`.tab-btn[data-target="${route.tab}"]`);
+    if (route.tab && active && !active.classList.contains('active')) active.click();
+    if (route.tab === 'governance') {
+      const subview = governanceSubviewForRoute(route);
+      if (subview) renderers.governance.switchTo(subview, client.lastHubData || {});
+      updateUIForPanelState();
+    }
+  };
+
+  // Restore saved tab. URL hash takes priority; query parameters are resolved
+  // after activation so deep links can select Governance subviews.
+  const hashTab = parseCommandCenterHash(window.location.hash).tab;
   const savedTab = hashTab || store.getActiveTab();
   const savedBtn = [...tabs].find(t => t.dataset.target === savedTab);
   if (savedBtn) savedBtn.click();
+  applyHashRoute();
+  window.addEventListener('hashchange', applyHashRoute);
 
   // Theme restore
   const saved = store.getTheme();

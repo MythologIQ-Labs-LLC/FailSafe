@@ -39,8 +39,8 @@ export class SentinelMonitor {
     this.elements.sentinelAlert.onclick = () => {
       const ts = alert.timestamp ? encodeURIComponent(String(alert.timestamp)) : '';
       const url = ts
-        ? `/command-center.html#governance?verdict=${ts}`
-        : '/command-center.html#governance';
+        ? `/command-center.html#governance:audit?verdict=${ts}`
+        : '/command-center.html#governance:audit';
       window.open(url, '_blank');
     };
   }

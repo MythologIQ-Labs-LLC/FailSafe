@@ -80,4 +80,21 @@ suite('risks.js RisksRenderer source pill (FX420)', () => {
       assert.equal(pill!.textContent!.trim(), 'manual');
     } finally { restore(); }
   });
+
+  test('deep-linked high severity risk is marked as highlighted', () => {
+    const { container, dom, restore } = setupDom();
+    try {
+      dom.reconfigure({ url: 'http://localhost/command-center.html#governance:risks?severity=high' });
+      const renderer = new RisksRenderer('risks-root');
+      renderer.render({
+        risks: [{
+          id: 'r4', title: 'Active threat', severity: 'high',
+          description: 'desc', source: 'manual',
+        }],
+      });
+      const row = container.querySelector('[data-risk-severity="high"]');
+      assert.ok(row, 'expected severity data attribute on the risk row');
+      assert.equal(row!.classList.contains('cc-risk--highlighted'), true);
+    } finally { restore(); }
+  });
 });
