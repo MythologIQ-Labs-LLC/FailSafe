@@ -32,9 +32,15 @@ _Local-first safety for AI coding assistants._
 
 <div align="center">
 
-**Current Release**: v5.2.0 (2026-05-26)
+**Current Release**: v5.2.1 (2026-05-26)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
+
+## What's new in v5.2.1
+
+Hotfix release. v5.2.0 was tagged but its publish pipeline failed at Build & Test (5 unit-test failures from three orphaned SHIELD-anchor lesson literals + an FX615 tag-filter test race); the VS Code Marketplace + Open VSX publish jobs were skipped, so v5.2.0 was never installable. **v5.2.1 is the first v5.2.x build that actually ships to the marketplaces.**
+
+**Zero feature changes from v5.2.0** — the FailSafe Learn rebuild, the Ollama probe fix, and the global a11y baseline below ship verbatim. The hotfix only resolves the test regressions that blocked publish. See [CHANGELOG.md](CHANGELOG.md) for the full v5.2.1 release notes.
 
 ## What's new in v5.2.0
 

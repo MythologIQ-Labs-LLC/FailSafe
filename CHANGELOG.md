@@ -5,6 +5,22 @@ All notable changes to FailSafe will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.2.1] - 2026-05-26
+
+Hotfix release for the v5.2.0 cycle. The v5.2.0 Release Pipeline (run id `26470883885`) failed at the Build & Test job with 5 unit-test failures; the VS Code Marketplace + Open VSX publish jobs were SKIPPED, so the `v5.2.0` git tag exists in main's history (`ba9a927`) but the extension was never installable. v5.2.1 is the first v5.2.x build that ships to the marketplaces. **Zero feature delta from v5.2.0** — the FailSafe Learn rebuild, the Ollama probe fix, and the global a11y baseline ship verbatim. See the [5.2.0] entry below for the full content.
+
+### Fixed
+
+- **Three orphaned SHIELD-anchor lesson literals** in `src/education/lessons.ts` — `shield.plan`, `shield.audit`, `shield.substantiate` were left in `LESSON_LIST` after the v5.2.0 cycle stripped the Monitor SHIELD lesson expander, becoming dead content that the FX598 lesson-anchor coherence check (`every lesson anchor is mounted somewhere`), the FX598 webview-mount assertion, the FX598 ghost-fixture parity test, and the FX602 governance-moment classifier all correctly flagged. v5.2.1 drops the literals and adds a dead-entry guard. The surviving `governance-mode` lesson (Settings card + `FirstRunModePicker`) carries forward unchanged. Header comment on `LESSON_LIST` documents the re-introduction protocol: re-add the literal AND a consuming mount in the same commit, never one without the other.
+- **FX615 Glossary tag-filter test re-render race** in `src/test/education/learn-glossary-render.test.ts` — the test held a stale button reference across the post-click DOM rebuild that the tag filter triggers. Updated to re-query the button after the click event. No production change; test-only stability fix.
+- **Five governance test files** updated to assert against the surviving `governance-mode` carry-forward + a regression guard that the three dropped SHIELD anchors are not silently re-introduced (`src/test/education/lessons.test.ts`, `lesson-types.test.ts`, `glossary-lessons.test.ts`, `lesson-anchor-coherence.test.ts`, `learn-glossary-render.test.ts`).
+
+### Process / known follow-ups
+
+- Two pre-existing Playwright spec failures (`src/test/ui/popout-ui.spec.ts`, `src/test/ui/bicameral-advanced-tools.spec.ts`) were observed locally but are **not** v5.2.1 regressions and were never part of the 5 CI failures that blocked v5.2.0. Both pre-date this hotfix branch; both will be triaged in a separate follow-up. They are explicit non-blockers for the v5.2.1 publish.
+
+_v5.2.1 released 2026-05-26 — `package.json` bumped to 5.2.1; META_LEDGER seal entry #395._
+
 ## [5.2.0] - 2026-05-26
 
 **FailSafe Learn — Software Development Craft** is the v5.2.0 release-gating feature. The Learn tab on the Command Center teaches the software-development craft to AI-assisted builders, PMs gaining developer literacy, and true beginners — through five short essays surfaced contextually as they work, plus the FailSafe Glossary as a secondary reference. Mantra: *Slow down to speed up.* Not training software — no quizzes, no scoring, no grading, no learner inference. FX591 / FX598 / FX601 / FX606 modified; FX608–FX613 added. See `docs/plan-qor-failsafe-learn-swe-craft.md`, `docs/EDUCATION.md`, `docs/VIBE_CODER_PLAYBOOK.md`, and `docs/compliance-education-component.md`.

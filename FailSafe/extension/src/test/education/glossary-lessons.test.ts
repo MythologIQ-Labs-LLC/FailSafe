@@ -20,9 +20,10 @@ suite("Education glossary lessons (FX599)", () => {
   const allLessons: Lesson[] = Object.values(LESSONS);
   const glossary: Lesson[] = glossaryLessons();
 
-  test("FX599 A1 — the four 'moment' lessons OMIT the kind literal", () => {
-    // A1: the existing literals must not have been edited to carry `kind`.
-    for (const anchor of ["governance-mode", "shield.plan", "shield.audit", "shield.substantiate"]) {
+  test("FX599 A1 — the surviving 'moment' lesson OMITs the kind literal", () => {
+    // A1: the existing literal must not have been edited to carry `kind`.
+    // The three SHIELD anchors were dropped in v5.2.1 (see lessons.ts header).
+    for (const anchor of ["governance-mode"]) {
       const lesson = LESSONS[anchor];
       assert.ok(lesson, `${anchor} present in registry`);
       assert.equal(
@@ -36,7 +37,7 @@ suite("Education glossary lessons (FX599)", () => {
   test("FX599 A1 — kind defaults to 'moment' at read time", () => {
     // lessonKind() applies the `kind ?? 'moment'` default. A literal that
     // omits `kind` reads as 'moment'.
-    for (const anchor of ["governance-mode", "shield.plan", "shield.audit", "shield.substantiate"]) {
+    for (const anchor of ["governance-mode"]) {
       assert.equal(
         lessonKind(LESSONS[anchor]),
         "moment",

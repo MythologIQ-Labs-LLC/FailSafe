@@ -42,13 +42,16 @@ suite("Lesson-anchor coherence (FX598)", () => {
     );
   });
 
-  test("FX598 shipped registry — webview anchors resolve to webview mounts", () => {
-    const inventory = buildSourceInventory(glossaryAnchors, essayAnchors);
-    const { results } = runCoherenceCheck(registryAnchors, inventory, glossaryAnchorSet, essayAnchorSet);
+  test("FX598 v5.2.1 — the three SHIELD anchors are no longer in the registry", () => {
+    // v5.2.0 stripped the Monitor SHIELD lesson expander; v5.2.1 drops the
+    // orphaned registry entries. See src/education/lessons.ts header for
+    // re-introduction protocol.
     for (const anchor of ["shield.plan", "shield.audit", "shield.substantiate"]) {
-      const r = results.find((x) => x.anchor === anchor);
-      assert.ok(r, `${anchor} present in registry`);
-      assert.equal(r!.mountClass, "webview", `${anchor} should be webview-mounted, got ${r!.mountClass}`);
+      assert.equal(
+        LESSONS[anchor],
+        undefined,
+        `${anchor} must not be reintroduced without a consuming mount`,
+      );
     }
   });
 
@@ -133,10 +136,11 @@ suite("Lesson-anchor coherence (FX598)", () => {
   });
 
   test("FX602 governance-moment anchors are NOT mis-flagged as glossary", () => {
-    // A2 no-false-positive: the four 'moment' anchors must keep their
-    // webview/native classification — they are not in the glossary set.
+    // A2 no-false-positive: the surviving 'moment' anchor must keep its
+    // webview/native classification — it is not in the glossary set.
+    // (The three SHIELD anchors were dropped in v5.2.1; see lessons.ts.)
     const inventory = buildSourceInventory(glossaryAnchors, essayAnchors);
-    const momentAnchors = ["governance-mode", "shield.plan", "shield.audit", "shield.substantiate"];
+    const momentAnchors = ["governance-mode"];
     const { results } = runCoherenceCheck(momentAnchors, inventory, glossaryAnchorSet);
     for (const r of results) {
       assert.notEqual(r.mountClass, "glossary", `${r.anchor} is a governance moment, must not classify as glossary`);

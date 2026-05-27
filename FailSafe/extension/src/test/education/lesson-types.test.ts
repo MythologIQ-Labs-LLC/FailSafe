@@ -82,14 +82,15 @@ suite("Lesson.body sectioned-shape type guard + registry round-trip", () => {
     }
   });
 
-  test("getLesson still resolves legacy string bodies (v1 governance-moment lessons)", () => {
-    // The four carry-forward `'moment'` lessons (governance-mode, shield.plan,
-    // shield.audit, shield.substantiate) remain string-bodied.
-    const body = getLesson("shield.plan", "beginner");
+  test("getLesson still resolves legacy string bodies (v1 governance-moment lesson)", () => {
+    // The sole carry-forward `'moment'` lesson is `governance-mode`
+    // (the three `shield.*` literals were dropped in v5.2.1; see
+    // src/education/lessons.ts header note).
+    const body = getLesson("governance-mode", "beginner");
     assert.ok(body !== undefined);
     assert.equal(typeof body, "string", "v1 moment lessons remain string-bodied");
     // And `getLessonBody` returns the same string (not a SectionBlock[]).
-    const raw = getLessonBody("shield.plan", "beginner");
+    const raw = getLessonBody("governance-mode", "beginner");
     assert.equal(typeof raw, "string");
     assert.equal(isSectionBlockBody(raw), false);
   });
