@@ -1,8 +1,6 @@
 // FailSafe Command Center — Transparency Stream Renderer
-// Filter bar, live event stream, pause/resume, 500-item cap.
-
+import { eventId, eventKey, eventTimestamp, hasAuditHashFilter, highlightRecordFromHash, recordLevel, summarizeTransparencyEvent } from './transparency-records.js';
 const CATEGORIES = ['All', 'Sentinel', 'Prompt', 'Governance', 'Trust', 'Risk'];
-
 const CATEGORY_PATTERNS = {
   Sentinel: /sentinel|verdict/i,
   Prompt: /prompt|chat/i,
@@ -10,7 +8,6 @@ const CATEGORY_PATTERNS = {
   Trust: /trust|chain|checkpoint/i,
   Risk: /risk/i,
 };
-
 export class TransparencyRenderer {
   constructor(containerId, deps = {}) {
     this.container = document.getElementById(containerId);
@@ -43,7 +40,8 @@ export class TransparencyRenderer {
 
     this.streamEl = this.container.querySelector('.cc-transparency-stream');
     this.renderFilterBar();
-    this.renderEmptyState();
+    if (this.events.length) this.refilter();
+    else this.renderEmptyState();
     this.bindPause();
     this.bindDateFilters();
     this.fetchHistory();
@@ -95,9 +93,11 @@ export class TransparencyRenderer {
       time: event.time || event.payload?.timestamp || now.toISOString().slice(0, 16),
       displayTime: event.time || event.payload?.timestamp || now.toLocaleTimeString(),
       type: event.type || event.payload?.type || 'unknown',
+      id: event.payload?.id || event.id || '',
       payload: event.payload || event,
-      summary: event.payload?.message || this.summarize(event),
+      summary: summarizeTransparencyEvent(event),
     };
+    if (eventKey(entry) && this.events.some(e => eventKey(e) === eventKey(entry))) return;
     if (this.events.length === 0 && this.streamEl) this.streamEl.innerHTML = '';
     this.events.push(entry);
     if (this.paused) {
@@ -108,16 +108,12 @@ export class TransparencyRenderer {
     this.enforceLimit();
   }
 
-  summarize(event) {
-    const raw = JSON.stringify(event.payload || event);
-    return raw.length > 120 ? raw.slice(0, 117) + '...' : raw;
-  }
-
   matchesFilter(entry) {
     if (this.activeFilter !== 'All') {
       const pattern = CATEGORY_PATTERNS[this.activeFilter];
       if (pattern && !pattern.test(entry.type)) return false;
     }
+    if (hasAuditHashFilter()) return true;
     const { from, to } = this.getDateRange();
     if (from && entry.time < from) return false;
     if (to && entry.time > to) return false;
@@ -127,7 +123,11 @@ export class TransparencyRenderer {
   appendCard(entry) {
     if (!this.streamEl || !this.matchesFilter(entry)) return;
     const card = document.createElement('div');
-    card.className = 'cc-card';
+    const level = recordLevel(entry);
+    card.className = `cc-card cc-transparency-record cc-verdict--${level}`;
+    card.dataset.eventId = eventId(entry);
+    card.dataset.eventTs = eventTimestamp(entry);
+    card.dataset.eventType = entry.type;
     card.style.cssText = 'margin-bottom:6px;padding:10px 14px;cursor:pointer;font-size:0.82rem';
     card.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center">
@@ -143,6 +143,7 @@ export class TransparencyRenderer {
       if (pre) pre.style.display = pre.style.display === 'none' ? 'block' : 'none';
     });
     this.streamEl.prepend(card);
+    highlightRecordFromHash(this.streamEl);
   }
 
   flushBuffer() {
