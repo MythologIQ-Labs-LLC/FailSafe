@@ -5,6 +5,16 @@ All notable changes to the MythologIQ FailSafe extension will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.2.2] - 2026-05-26
+
+Hotfix release. v5.2.1 was tagged but its Release Pipeline failed at Build & Test — for a different reason than v5.2.0. v5.2.1's unit-test fix correctly cleared the FX598/FX602/FX615 unit failures and let `npm run test:all` reach the Playwright phase for the first time in the v5.2.x line, exposing a latent harness regression that prevented `popout-ui.spec.ts` from bootstrapping `command-center.js`. v5.2.2 is the first v5.2.x build that actually ships to the marketplaces. **No feature changes from v5.2.1** (which itself had zero feature delta from v5.2.0) — the same FailSafe Learn rebuild, Ollama probe fix, and a11y baseline ship verbatim. See the [5.2.0] entry below for the full feature list.
+
+### Fixed
+
+- **Latent Playwright harness regression in `popout-ui.spec.ts`** — the test used a raw `http.createServer` static-file harness that could not resolve the cross-`src/` ESM imports introduced by `LearnRenderer` in v5.2.0 (`learn.js` / `learn-essay-list.js` / `learn-glossary.js` import `../../../education/lessons.js` + `lessonTriggers.js`). The browser issued 404s for `/education/*.js`, the ES module chain aborted, `command-center.js` never bootstrapped, and `.tab-btn` click handlers were never attached. Migrated the spec to `serveConsoleServerUI` — the same harness used by every other v5.2.0+ Playwright spec that boots `command-center.html`. All functional assertions preserved. The regression was masked through v5.2.0's CI by the unit-test failures stopping the run before Playwright; v5.2.1's unit-test fix made it visible.
+
+_v5.2.2 released 2026-05-26 — `package.json` bumped to 5.2.2; META_LEDGER seal entry #396._
+
 ## [5.2.1] - 2026-05-26
 
 Hotfix release. v5.2.0 was tagged in main but its Release Pipeline failed at Build & Test (5 unit-test failures); the marketplace publish jobs were skipped. v5.2.1 is the first v5.2.x build that users will actually receive. **No feature changes from v5.2.0** — the same FailSafe Learn (Read sub-view with sectioned essays + jump-strip + Copy template button; Glossary sub-view with tag-filter UI + 48 SWE terms + Bicameral co-existence), Ollama probe fix, and global a11y baseline ship verbatim. See the [5.2.0] entry below for the full feature list.
