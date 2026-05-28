@@ -31,6 +31,7 @@ import { bootstrapQorLogic } from "./bootstrapQorLogic";
 import { bootstrapSentinel } from "./bootstrapSentinel";
 import { bootstrapGenesis } from "./bootstrapGenesis";
 import { bootstrapMCP } from "./bootstrapMCP";
+import { bootstrapOpenDesignMcp } from "./bootstrapOpenDesignMcp";
 import { bootstrapServers } from "./bootstrapServers";
 import { bootstrapIdeActivity } from "./bootstrapIdeActivity";
 import { registerAdvancedCommands } from "./bootstrapAdvancedCommands";
@@ -206,6 +207,11 @@ export async function activate(
     //      failsafe.create_risk tool. Per plan-qor-model-sourced-risks Phase 2.
     //      mcpServer is otherwise unused by Genesis/chat/server steps.)
     mcpServer = await bootstrapMCP(context, sentinel, qor, gov, logger, servers.riskManager);
+
+    // 8.1b. Open Design v1.1 MCP + SSE + daemon-probe bootstrap.
+    //       Registers the `failsafe.openDesign.registerMcp` operator wizard.
+    //       Per plan-open-design-integration-v1.1.md Phase 2.
+    bootstrapOpenDesignMcp(context, core.workspaceRoot);
 
     // 8.2. Chat participant (deferred so RiskManager is available for the
     //      /risk subcommand. Per plan-qor-model-sourced-risks Phase 4.)

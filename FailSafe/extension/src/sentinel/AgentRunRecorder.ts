@@ -10,7 +10,14 @@ import * as path from "path";
 import { randomUUID } from "crypto";
 import type { EventBus } from "../shared/EventBus";
 import type { FailSafeEvent, FailSafeEventType } from "../shared/types/events";
-import type { AgentRun, AgentRunSource, RunStep, RunStepKind } from "../shared/types/agentRun";
+import type {
+  AgentProvenance,
+  AgentRun,
+  AgentRunSource,
+  RunStep,
+  RunStepKind,
+} from "../shared/types/agentRun";
+import type { IAgentProvenanceDetector } from "./IAgentProvenanceDetector";
 
 const MAX_COMPLETED_RUNS = 50;
 
@@ -46,11 +53,14 @@ export class AgentRunRecorder {
   private unsubscribe: (() => void) | null = null;
   private lastFileEditTime = 0;
   private rapidEditThreshold = 5000; // 5 seconds
+  private readonly provenanceDetectors: IAgentProvenanceDetector[];
 
   constructor(
     private readonly eventBus: EventBus,
     private readonly storagePath: string,
+    options?: { provenanceDetectors?: IAgentProvenanceDetector[] },
   ) {
+    this.provenanceDetectors = options?.provenanceDetectors ?? [];
     this.ensureStorageDir();
     this.unsubscribe = this.eventBus.onAll((event: FailSafeEvent) => {
       this.handleEvent(event);
@@ -127,7 +137,46 @@ export class AgentRunRecorder {
       for (const run of this.activeRuns.values()) {
         run.steps.push({ ...step, seq: run.steps.length + 1 });
       }
+      // Detector-driven provenance attribution (additive — see plan v3 line 173).
+      // Run detectors ONCE per filePath, take first non-null, then attach
+      // to every active run that does not already carry provenance.
+      if (this.provenanceDetectors.length > 0) {
+        const detected = this.runProvenanceDetectors(filePath);
+        if (detected) {
+          for (const run of this.activeRuns.values()) {
+            if (!run.provenance) {
+              this.attachProvenance(run.id, detected);
+            }
+          }
+        }
+      }
     }
+  }
+
+  /**
+   * Attach (or clear) external-system provenance on an existing run.
+   * Returns true if the run was found and updated, false otherwise.
+   * Persists the run to disk on success.
+   */
+  attachProvenance(runId: string, provenance: AgentProvenance | null): boolean {
+    const run = this.activeRuns.get(runId)
+      ?? this.completedRuns.find((r) => r.id === runId);
+    if (!run) return false;
+    run.provenance = provenance ?? undefined;
+    this.persistRun(run);
+    return true;
+  }
+
+  private runProvenanceDetectors(filePath: string): AgentProvenance | null {
+    for (const det of this.provenanceDetectors) {
+      try {
+        const result = det.detectFromFilePath(filePath);
+        if (result) return result;
+      } catch {
+        // Detector failures are non-fatal — isolate + continue.
+      }
+    }
+    return null;
   }
 
   loadRun(runId: string): AgentRun | null {

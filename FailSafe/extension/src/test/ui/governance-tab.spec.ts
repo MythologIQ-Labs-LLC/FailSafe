@@ -17,6 +17,7 @@ import {
   serveConsoleServerUI,
   ConsoleServerController,
 } from "./helpers/serveConsoleServerUI";
+import { buildTimelineEvent } from "./helpers/consoleServerFixtures";
 
 let controller: ConsoleServerController;
 
@@ -58,4 +59,57 @@ test("FX522 Governance tab — Risks click activates pill + renders subview", as
   await page.locator('#governance .cc-pill[data-key="risks"]').click();
   await expect(page.locator('#governance .cc-pill[data-key="risks"]')).toHaveClass(/active/);
   await expect(page.locator('#governance .cc-subview-content')).toBeVisible();
+});
+
+test("Governance deep link routes severity to Risks and highlights matching record", async ({ page }) => {
+  controller = await serveConsoleServerUI({
+    initialHub: {
+      version: 'test',
+      bootstrapState: {},
+      risks: [{
+        id: 'risk-high-1',
+        title: 'Active threat',
+        severity: 'high',
+        description: 'Threat from test fixture',
+        source: 'manual',
+      }],
+    } as any,
+  });
+  await page.goto(`${controller.url}/command-center.html#governance:risks?severity=high`);
+  await expect(page.locator('#governance .cc-pill[data-key="risks"]')).toHaveClass(/active/);
+  await expect(page.locator('#governance [data-risk-severity="high"]')).toHaveClass(/cc-risk--highlighted/);
+});
+
+test("Governance deep link routes L3 chain to Compliance and highlights chain section", async ({ page }) => {
+  controller = await serveConsoleServerUI({
+    initialHub: {
+      version: 'test',
+      bootstrapState: {},
+      sentinelStatus: { running: true },
+      l3Queue: [{ id: 'l3-1', riskGrade: 'L3', filePath: 'src/secure.ts' }],
+      metricIntegrity: [],
+      unattributedFileActivity: { count: 0, recent: [] },
+      recentModeTransitions: [],
+    } as any,
+  });
+  await page.goto(`${controller.url}/command-center.html#governance:compliance?section=l3-chain`);
+  await expect(page.locator('#governance .cc-pill[data-key="compliance"]')).toHaveClass(/active/);
+  await expect(page.locator('#governance [data-section="l3-chain"]')).toHaveClass(/cc-section--highlighted/);
+});
+
+test("Governance audit deep link filters by event id and highlights the record", async ({ page }) => {
+  controller = await serveConsoleServerUI({
+    timelineEvents: [
+      buildTimelineEvent('evt-1', 'sentinel.verdict', { decision: 'WARN', riskGrade: 'L2', filePath: 'src/a.ts' }),
+      buildTimelineEvent('evt-2', 'sentinel.verdict', { decision: 'BLOCK', riskGrade: 'L3', filePath: 'src/b.ts' }),
+    ],
+  });
+  await page.goto(`${controller.url}/command-center.html#governance:audit?id=evt-2`);
+  const body = await page.evaluate(async () => (await fetch('/api/transparency')).json());
+  expect((body.events as Array<{ id?: string }>).map((e) => e.id)).toContain('evt-2');
+  expect(await page.evaluate(() => window.location.hash)).toBe('#governance:audit?id=evt-2');
+  await expect(page.locator('#governance .cc-pill[data-key="audit"]')).toHaveClass(/active/);
+  await expect(page.locator('#governance .cc-transparency-record')).toHaveCount(1);
+  await expect(page.locator('#governance [data-event-id="evt-2"]')).toHaveClass(/cc-verdict--highlighted/);
+  await expect(page.locator('#governance [data-event-id="evt-2"]')).toContainText('Sentinel BLOCK L3 - src/b.ts');
 });

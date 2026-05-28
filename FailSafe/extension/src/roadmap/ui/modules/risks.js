@@ -70,8 +70,12 @@ export class RisksRenderer {
         </div>`;
       return;
     }
+    const query = (typeof window !== 'undefined' && window.location?.hash.split('?')[1]) || '';
+    const params = new URLSearchParams(query);
+    const linkedRisk = params.get('risk');
+    const linkedSeverity = params.get('severity');
     listEl.innerHTML = this.risks.map(r => `
-      <div class="cc-card" style="margin-bottom:6px;padding:12px 16px" data-rid="${this.esc(r.id)}">
+      <div class="cc-card${linkedRisk === r.id || linkedSeverity === r.severity ? ' cc-risk--highlighted' : ''}" style="margin-bottom:6px;padding:12px 16px" data-rid="${this.esc(r.id)}" data-risk-severity="${this.esc(r.severity)}">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <span class="cc-badge cc-badge--${this.esc(r.severity)}">${this.esc(r.severity)}</span>

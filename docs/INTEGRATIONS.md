@@ -193,3 +193,102 @@ B-B199-6) for the full rationale and accepted residual risk.
 ### License credit
 
 `piper-tts-web` is the work of its upstream maintainers. `@xenova/transformers` is the work of HuggingFace and the Transformers.js maintainers. ONNX Runtime is the work of the Microsoft ONNX Runtime project. All three are distributed under their own licenses (consult upstream READMEs). FailSafe's voice substrate code (engines, controllers, UI cards, install handler, route module) is part of the FailSafe extension and ships under the FailSafe license; no upstream source is vendored or redistributed in the base VSIX. The companion voice pack mirrors the existing license terms of each upstream.
+
+## Open Design (nexu-io/open-design) — v1 provenance attribution
+
+[Open Design](https://github.com/nexu-io/open-design) is an external agent dispatcher that writes generated artifacts under `.od/artifacts/<projectId>/` in the workspace cwd. FailSafe v5.3.0 ships a v1 observation-only integration that **attributes** agent runs to Open Design whenever the run's file edits land inside that subtree. This is a passive surface — FailSafe does not intercept Open Design's dispatch or gate its requests.
+
+### Detection model — file-path-based
+
+The detector inspects every file-edit event observed by `AgentRunRecorder.handleFileEdit(filePath)`. When the path matches `(^|/|\\).od[/\\]artifacts[/\\]<projectId>[/\\]...`, the active run gains a `provenance: { source: "open-design", projectId }` field. The Monitor Agents → Replay sub-view then surfaces an "Open Design" pill on that run's row.
+
+The match is cross-platform (POSIX `/` and Windows `\` separators). No daemon probe, no env-var inspection, no PID lookup — purely file-path-based. This means:
+- **No false positives** on workspaces without an active Open Design daemon — runs that don't touch `.od/artifacts/` are never tagged.
+- **Silent false negatives** if Open Design changes its artifact-dir layout in a future release. The 0.8.x and 0.9.x layouts (`.od/artifacts/<projectId>/`) are confirmed stable; a v1.1 daemon-probe will provide a stronger signal.
+
+### How to enable
+
+The integration is **off by default**. Operators opt in via the VS Code setting:
+
+```jsonc
+// settings.json
+{
+  "failsafe.integrations.openDesign.enabled": true
+}
+```
+
+Toggling the setting requires an extension reload to take effect (v1 limitation — runtime hot-toggle is tracked in the v1.1 roadmap below). When the setting is `false`, no detector is registered and `AgentRunRecorder` retains its prior behaviour exactly.
+
+### What's surfaced
+
+- An "Open Design" origin pill on each affected run card in the Monitor Agents → Replay sub-view.
+- A `provenance: { source, projectId }` field on the persisted `AgentRun` record at `.failsafe/runs/<uuid>.json`.
+- No automatic skill activation — see the discovery-vs-activation caveat below.
+
+### Discovery vs activation caveat (qor-* skills)
+
+FailSafe's qor-* skill suite is **discoverable** to Open Design (Open Design's skill loader can read the workspace's `.claude/skills/qor-*/SKILL.md` files), but Open Design does **not auto-activate** them when it dispatches a sub-agent run. Operators who want qor-* coverage on Open Design runs must explicitly invoke the relevant skill in their Open Design prompt (e.g., "use /qor-audit before applying these edits"). FailSafe surfaces this caveat in the Integrations tab once the operator enables the setting. An upstream PR adding auto-selection is tracked in the v2 roadmap.
+
+### v1 limitations
+
+- File-path detection only (no daemon probe, no env / PID).
+- Per-run SSE attach is deferred to v1.1.
+- Runtime toggle requires extension reload.
+- Symlinks, junction points, and case-insensitive Windows path edges are not handled (v1.1 hardening).
+- No L3 approval gating (interception is blocked upstream — see Q5 of the research brief).
+
+### v1.1 roadmap
+
+- Daemon-probe: HTTP version-probe at `127.0.0.1:7456` with TTL cache. Enriches provenance with daemon-confirmed `projectId` lookup; allows stronger signal when no `.od/` directory is present but a daemon is running.
+- Vendored Open Design SSE contracts with Apache-2.0 attribution; per-run SSE attach + replay (opt-in operator consent flow).
+- File-path edge cases (symlinks, case-insensitive Windows paths, junction points).
+- Eliminate the "extension reload" caveat — true runtime toggle.
+
+### Test coverage
+
+- Provenance extractor (`extractOpenDesignProvenance`): 7 cases in `src/test/integrations/open-design/provenance.test.ts` (FX700).
+- Type contracts + runtime guard: 7 cases in `src/test/integrations/open-design/contracts.test.ts` (FX701).
+- `AgentRunRecorder.attachProvenance`: 4 cases appended to `src/test/sentinel/AgentRunRecorder.test.ts` (FX702).
+- Detector wiring through `handleFileEdit`: 5 cases in `src/test/sentinel/AgentRunRecorder.provenance-detector.test.ts` (FX703).
+- UI pill render (Playwright): 2 cases in `src/test/ui/open-design-attribution.spec.ts` (FX704).
+- Bootstrap setting → detector construction: 3 cases in `src/test/extension/bootstrapSentinel-open-design.test.cjs` (FX705).
+
+## Open Design v1.1 — MCP adapter + per-run SSE attach + daemon probe
+
+Building on v1's file-path provenance, v1.1 adds three observation surfaces against a locally-running Open Design daemon (default `http://127.0.0.1:7456`). All three are opt-in and degrade gracefully when the daemon is unreachable.
+
+### Surfaces
+
+- **`OpenDesignDaemonProbe`** — `GET /api/version` HTTP probe with 5s timeout, 30s TTL cache, and discriminated failure modes (`refused`, `timeout`, `non_200`, `parse_error`). Operators get a precise hint instead of a stack trace.
+- **`OpenDesignMcpClient`** — stdio MCP client (`od mcp`) transplanted from the Bicameral pattern: concurrent-connect coalescing, idle-disconnect (15min default), transport.onclose teardown, capability cache populated from `client.listTools()`, test seams via `clientFactory` + `transportFactory`. **v1.1 invariant — read-only only**: `callRaw()` rejects non-allowlisted tools at runtime with `WRITE_TOOL_NOT_ENABLED` before reaching the transport.
+- **`OpenDesignSseClient`** — per-run `/api/runs/<runId>/events` SSE subscriber with line-by-line wire-format parsing, `Last-Event-ID` re-attach on reconnect, and capped exponential backoff (max 3 attempts; falls back to a `subscribe-error` sentinel event).
+
+### MCP allowlist
+
+Every tool name in `OpenDesignMcpAllowlist` is back-cited to the upstream `nexu-io/open-design@abe72af apps/daemon/src/mcp.ts` TOOL_DEFS by line number — no paraphrasing, no inference. The 7 read tools (`list_projects`, `get_active_context`, `get_artifact`, `get_project`, `get_file`, `search_files`, `list_files`) are admitted in v1.1; the 4 write tools (`create_artifact`, `write_file`, `delete_file`, `delete_project` — 3 of the 4 destructive) are REJECTED at runtime. Write-tool exposure is deferred to v1.2 (B-OD-8) with explicit L3 approval per call.
+
+### Operator wizard
+
+The `FailSafe: Register Open Design MCP Connection` command palette entry (`failsafe.openDesign.registerMcp`) runs a one-shot probe-then-connect flow. If the daemon is unreachable, the operator gets a warning with the specific reason. If reachable, the MCP client connects and surfaces the available tool count.
+
+### Settings (all default `false`)
+
+- `failsafe.integrations.openDesign.mcpEnabled` — pre-construct the MCP client at activation (vs. lazy construction on first wizard invocation). The daemon is NOT auto-probed at activation; the wizard runs the probe.
+- `failsafe.integrations.openDesign.sseEnabled` — forward setting for per-run SSE subscribe UX (v1.1 wires the client; per-run subscribe lands in v1.2).
+
+### v1.1 limitations
+
+- **Read-only only.** All 4 write tools rejected at runtime — L3-gated exposure ships in v1.2 (B-OD-8).
+- **Single daemon URL** (`127.0.0.1:7456`). Multi-daemon discovery (OD + FailSafe Pro coexistence) ships in v1.2 (B-OD-10).
+- **No AG-UI stream** (`/api/runs/:id/agui`) — deferred to v1.2 (B-OD-9).
+- **No auto-register of FailSafe-as-MCP-server** in OD's registry. Manual wizard only (matches `feedback_no_ship_without_approval`).
+- **Daemon lifecycle not managed.** FailSafe does NOT spawn or kill the OD daemon; only consumes when reachable.
+
+### Test coverage (v1.1)
+
+- Vendored `ChatSseEvent` contracts: 9 cases in `src/test/integrations/open-design/contracts/sse-chat.test.ts` (FX720).
+- `OpenDesignDaemonProbe`: 7 cases in `src/test/integrations/open-design/OpenDesignDaemonProbe.test.ts` (FX721).
+- `OpenDesignMcpClient`: 10 cases in `src/test/integrations/open-design/OpenDesignMcpClient.test.ts` (FX722).
+- `OpenDesignSseClient`: 6 cases in `src/test/integrations/open-design/OpenDesignSseClient.test.ts` (FX723).
+- `OpenDesignMcpAllowlist` (incl. 4-cycle Plan-Time Hallucination regression guard): 7 cases in `src/test/integrations/open-design/OpenDesignMcpAllowlist.test.ts` (FX724).
+- `bootstrapOpenDesignMcp` (node:test using the require.cache vscode-stub pattern): 7 cases in `src/test/extension/bootstrapOpenDesignMcp.test.cjs` (FX725).

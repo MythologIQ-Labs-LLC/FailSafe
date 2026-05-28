@@ -1,0 +1,46 @@
+{
+  "ts": "2026-05-27T16:11:55-04:00",
+  "phase": "research",
+  "session_id": "2026-05-27T1611-integration-candidates",
+  "questions": [
+    "Which integrations provide obvious day-one value beyond Bicameral MCP and Open Design?",
+    "What verified API or runtime surface supports each candidate?",
+    "Which candidates deserve separate GitHub issues?"
+  ],
+  "findings": [
+    {
+      "id": "L1",
+      "summary": "The local Integrations tab is Bicameral-only today.",
+      "sources": [
+        "FailSafe/extension/src/roadmap/ui/modules/integrations.js:2",
+        "FailSafe/extension/src/roadmap/ui/modules/integrations.js:46"
+      ]
+    },
+    {
+      "id": "L2",
+      "summary": "FailSafe already has a reusable MCP/tool-call governance seam.",
+      "sources": [
+        "FailSafe/extension/src/governance/interceptor/README.md:9",
+        "FailSafe/extension/src/governance/interceptor/adapters/McpInterceptor.ts:28"
+      ]
+    },
+    {
+      "id": "E1",
+      "summary": "GitHub, ticket trackers, security scanners, team chat, observability, agent runtimes, and MCP registry are separate day-one control planes.",
+      "sources": [
+        "docs/research-brief-day-one-integration-candidates-2026-05-27.md"
+      ]
+    }
+  ],
+  "sources": [
+    "docs/research-brief-day-one-integration-candidates-2026-05-27.md",
+    "docs/research-brief-integration-alternatives-2026-05-23.md",
+    "docs/META_LEDGER.md"
+  ],
+  "brief_path": "docs/research-brief-day-one-integration-candidates-2026-05-27.md",
+  "ai_provenance": {
+    "producer": "codex",
+    "human_oversight": "absent",
+    "purpose": "research"
+  }
+}

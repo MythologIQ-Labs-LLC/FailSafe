@@ -93,6 +93,11 @@ export class ReplayRenderer {
     const stepCount = run.steps?.length || run.stepCount || 0;
     const statusColor = isActive ? 'var(--accent-green)' : 'var(--text-muted)';
     const pulse = isActive ? ';animation:pulse 2s infinite' : '';
+    // Open Design v1 provenance pill — static literal per plan v3 (no escaping
+    // needed). Source field is the discriminator; only "open-design" surfaces.
+    const odPill = (run.provenance && run.provenance.source === 'open-design')
+      ? '<span class="cc-origin-pill cc-origin-od" title="Dispatched by Open Design">Open Design</span>'
+      : '';
     return `<div class="cc-card cc-replay-run" data-run-id="${esc(run.id)}" style="margin-bottom:6px;padding:12px 16px;cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div style="display:flex;align-items:center;gap:8px">
@@ -101,6 +106,7 @@ export class ReplayRenderer {
         </div>
         <div style="display:flex;align-items:center;gap:10px">
           <span style="font-size:0.75rem;color:var(--text-muted)">${stepCount} steps</span>
+          ${odPill}
           <span style="font-size:0.7rem;color:var(--text-muted);font-family:var(--font-mono)">${esc(time)}</span>
         </div>
       </div>

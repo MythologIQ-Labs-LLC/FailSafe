@@ -609,6 +609,7 @@ body {
 .cc-verdict--violation { border-left-color: var(--accent-red); }
 .cc-verdict--highlighted { outline: 2px solid var(--accent-gold, #f5a524); background: rgba(245, 165, 36, 0.15); }
 .cc-mode-transition--highlighted { outline: 2px solid var(--accent-gold, #f5a524); background: rgba(245, 165, 36, 0.15); }
+.cc-section--highlighted, .cc-risk--highlighted { outline: 2px solid var(--accent-gold, #f5a524); background: rgba(245, 165, 36, 0.15) !important; }
 .mode-banner { background: rgba(245, 165, 36, 0.15); border-left: 3px solid var(--accent-gold, #f5a524); }
 
 .cc-chip {
@@ -2020,4 +2021,25 @@ select option {
 .cc-learn-glossary-row-expand:hover {
   color: var(--text-main);
   border-color: var(--accent-cyan);
+}
+
+/* Open Design v1 — provenance origin pill (FX704).
+   Parent flex `gap:10px` provides spacing; no margin-left needed (audit advisory). */
+.cc-origin-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  user-select: none;
+}
+.cc-origin-pill.cc-origin-od {
+  background-color: color-mix(in srgb, var(--accent-cyan) 18%, transparent);
+  color: var(--accent-cyan);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cc-origin-pill { transition: none; }
 }

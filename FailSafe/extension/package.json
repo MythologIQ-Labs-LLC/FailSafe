@@ -107,6 +107,10 @@
         "title": "FailSafe: Open Sidebar"
       },
       {
+        "command": "failsafe.openDesign.registerMcp",
+        "title": "FailSafe: Register Open Design MCP Connection"
+      },
+      {
         "command": "failsafe.substrate.run",
         "title": "FailSafe: Run Governance Substrate Checks",
         "category": "FailSafe"
@@ -275,6 +279,21 @@
           "type": "string",
           "default": "",
           "description": "Override the Python interpreter used to install qor-logic. Leave empty to auto-detect (VS Code Python extension, then python3/python/py -3 probe)."
+        },
+        "failsafe.integrations.openDesign.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Tag agent runs whose file edits land in `.od/artifacts/<projectId>/` paths with Open Design provenance attribution. Surfaces an 'Open Design' pill in the Monitor Agents tab. Loopback-only; works without the Open Design daemon being reachable (file-path detection is the v1 signal). Requires extension reload after toggling."
+        },
+        "failsafe.integrations.openDesign.mcpEnabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Pre-construct the Open Design MCP client at activation time (vs. lazy construction on first wizard invocation). The daemon is still NOT auto-probed at activation; the `FailSafe: Register Open Design MCP Connection` command runs the probe + connect. v1.1 exposes read-only tools only; write tools deferred to v1.2 with explicit L3 approval (B-OD-8)."
+        },
+        "failsafe.integrations.openDesign.sseEnabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable per-run SSE attach against the local Open Design daemon (`GET /api/runs/<runId>/events`). When false the SSE client is constructed but never subscribes. Requires the daemon to be reachable at `127.0.0.1:7456`. Forward setting — v1.1 wires the client; per-run subscribe UX lands in v1.2."
         },
         "failsafe.education.enabled": {
           "type": "boolean",

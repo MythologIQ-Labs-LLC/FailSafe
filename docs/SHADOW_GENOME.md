@@ -2842,3 +2842,16 @@ Output: `dist/override-staleness.findings.json` (gitignored runtime artifact). A
 **Counter-pattern**: when remaining-scope work must touch over-cap files, first route through `/qor-refactor` or amend the plan so the substantive work lands in new bounded modules with only minimal, audited integration bridges. Every new test file must be listed as `NEW` in Affected Files before the infrastructure-alignment pass.
 
 **Status**: amended by `/qor-refactor` planning pass. Phase 60 now includes a Refactor Enablement Gate with split modules and explicit `NEW` test declarations. Implementation remains blocked until a follow-up audit returns PASS and the ledger-chain blocker is repaired or formally quarantined.
+
+
+---
+
+## SG-IntegrationControlPlaneConflation - day-one integration research (2026-05-27)
+
+**Pattern**: product-level integration ideas get grouped because they solve the same user story, even when their control planes differ. This creates overbroad planning artifacts where one implementation must handle unrelated auth, webhook, runtime, and data-retention models.
+
+**FailSafe surface**: post-Bicameral integration planning initially grouped pairs such as Linear/Jira, Slack/Teams, Sentry/OpenTelemetry, and multiple coding agents. The day-one integration research split them into separate issue tracks because their first safe slices differ: GitHub checks need app/check permissions, Linear is GraphQL/webhook-based, Jira is JQL-webhook-based, Slack is simple outbound webhook, Teams is Workflow/Power Automate-oriented, Sentry is release/commit correlation, OpenTelemetry is vendor-neutral signal export/import, and agent runtimes are process/plugin wrappers.
+
+**Counter-pattern**: split integration planning by control-plane boundary first, then consolidate only after two implementations prove the same abstraction. Similar product value is not sufficient evidence of shared implementation shape.
+
+**Status**: open as a planning discipline. The research brief `docs/research-brief-day-one-integration-candidates-2026-05-27.md` records the candidate split and issue set.
