@@ -32,9 +32,19 @@ _Local-first safety for AI coding assistants._
 
 <div align="center">
 
-**Current Release**: v5.2.2 (2026-05-26)
+**Current Release**: v5.3.0 (2026-05-28)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
+
+## What's new in v5.3.0
+
+Feature release. v5.3.0 doubles FailSafe's integration surface — Open Design joins Bicameral as a first-class MCP peer — and adds a WARN-only governance substrate (secret scanning, FEATURE_INDEX coverage, model-pinning lint) for substantiate-time signals.
+
+- **Open Design integration** — file-path provenance attribution on agent runs that touch Open Design artifacts + MCP adapter + per-run SSE attach + daemon-liveness probe against the local daemon at `127.0.0.1:7456`. Read-only this release; write tools deferred to v1.2.
+- **Governance substrate (WARN-only)** — new `FailSafe: Run Governance Substrate Checks` command runs gitleaks-backed secret scanning, FEATURE_INDEX coverage verification, and model-pinning lint on demand. Findings surface in a dedicated Output channel + summary toast; never blocks operator workflow.
+- **Both integrations are opt-in and default `false`** — no behavior change for operators who don't configure them.
+
+See [CHANGELOG.md](CHANGELOG.md) for the full v5.3.0 release notes.
 
 ## What's new in v5.2.2
 

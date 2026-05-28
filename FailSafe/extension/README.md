@@ -14,9 +14,17 @@ FailSafe runs locally inside VS Code and Cursor. It monitors what AI agents do, 
 
 ---
 
-**Current Release**: v5.2.2 (2026-05-26)
+**Current Release**: v5.3.0 (2026-05-28)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v5.3.0
+
+Feature release. v5.3.0 doubles FailSafe's integration surface — Open Design joins Bicameral as a first-class MCP peer — and adds a WARN-only governance substrate for substantiate-time signals (secret scanning, FEATURE_INDEX coverage, model-pinning lint).
+
+- **Open Design integration (v1 + v1.1)** — FailSafe now attributes agent runs that touch Open Design artifacts (file-path provenance detector + "Open Design" origin pill on the Agents → Replay sub-view), AND ships an MCP adapter + per-run SSE attach + daemon-liveness probe so the Open Design local daemon at `127.0.0.1:7456` is governable alongside Bicameral. New `failsafe.openDesign.registerMcp` Command Palette entry walks operators through the registration. Opt-in via `failsafe.integrations.openDesign.{enabled,mcpEnabled,sseEnabled}` (all default `false`). Write tools (`create_artifact`, `write_file`, `delete_file`, `delete_project`) are read-only-blocked this release; L3-gated exposure deferred to v1.2.
+- **Governance substrate (WARN-only)** — new `FailSafe: Run Governance Substrate Checks` Command Palette entry runs three substantiate-time governance signals on demand: gitleaks-backed secret scanning over staged content, FEATURE_INDEX coverage verification, and model-pinning lint. Findings stream to a dedicated FailSafe Substrate Output channel + summary toast. WARN-only posture: never blocks operator workflow.
+- **Integrations tab** now renders an Open Design Settings card alongside the existing Bicameral card.
 
 ## What's New in v5.2.2
 
