@@ -1,6 +1,6 @@
 # Governance Index
 
-**Last Reviewed:** 2026-05-28 (B-INT-4 substrate refactor cycle — McpClientHost extraction)
+**Last Reviewed:** 2026-05-28 (B-INT-5 SUBSTANTIATE SEAL, META_LEDGER Entry #408 — Integrations tab sub-tab switcher + qor-debug TabGroup clobber fix; plan `plan-b-int-5-integrations-subtabs.md`; FEATURE_INDEX FX802/FX803/FX804 `verified` on a real vscode-test+Playwright run; B-INT-12 registered for the pre-existing 6-renderer clobber follow-up)
 **Maintainer:** every cycle that touches governance artifacts (write-time obligation, not periodic chore)
 **Purpose:** Authoritative hierarchical index of every governance artifact in this repository. Every governance doc MUST be registered here. Drift in this index = governance drift.
 

@@ -21598,3 +21598,111 @@ _Hash provenance_: Content Hash = SHA256 of this entry's body text from line 1 t
 
 _Chain integrity: VALID_
 _Session: 2026-05-28-substantiate-b-int-4-mcp-client-host_
+
+### Entry #408: SESSION SEAL — plan-b-int-5-integrations-subtabs (Integrations tab sub-tab switcher + qor-debug clobber fix)
+
+**Date**: 2026-05-28
+**Phase**: substantiate
+**Plan**: `.failsafe/governance/plans/plan-b-int-5-integrations-subtabs.md`
+**Branch**: `feat/b-int-5-integrations-subtabs`
+**Author**: krknapp@gmail.com
+**Predecessor**: Entry #407 (SUBSTANTIATE — B-INT-4 McpClientHost; chain hash `75958b22152358f5a27da34fe75c2b128b4be346f54d2d7a3e71544d7809ff85`)
+**Verdict**: SEALED — Reality matches Promise (one MEDIUM regression found by /qor-debug, fixed test-first, all suites green)
+
+## What ships
+
+The Integrations top-level Command Center tab moved from a single stacked-card panel to a `TabGroup` sub-tab switcher (one sub-view per integration), matching the established `agents` / `governance` / `workspace` TabGroup pattern in `command-center.js`. The former monolithic `IntegrationsRenderer` split into two focused renderers.
+
+### New files
+
+| File | LoC | Purpose |
+|---|---|---|
+| `FailSafe/extension/src/roadmap/ui/modules/bicameral-renderer.js` | 250 | Bicameral sub-view: owns the card's state + lifecycle (status / connect / history / drift / ratify / install / open-binding). Extracted verbatim from `integrations.js`; `this.state.bicameral.*` flattened to `this.state.*`. At the Section-4 250-LoC razor limit. |
+| `FailSafe/extension/src/roadmap/ui/modules/open-design-renderer.js` | 39 | Open Design sub-view: read-only static card (no install/connect orchestration — daemon lifecycle is operator-owned); `onEvent` is a no-op (no Open Design WS stream in v1.1). |
+
+### Modified files
+
+| File | Change |
+|---|---|
+| `FailSafe/extension/src/roadmap/ui/command-center.js` | `integrations:` renderer changed from `new IntegrationsRenderer(...)` to `new TabGroup('integrations', [{bicameral, BicameralRenderer}, {opendesign, OpenDesignRenderer}])`. |
+| `FailSafe/extension/src/roadmap/ui/modules/tab-group.js` | qor-debug fix: `renderActive()` tags every sub-view `renderer._tgMounted = (other === sv)` so an event-driven re-render of an inactive sub-view can no-op. Additive flag; non-reading renderers unaffected. |
+| `FailSafe/extension/src/test/roadmap/integrations-tab.test.ts` | Rewired from `IntegrationsRenderer` to the `TabGroup` composition; T1–T5 assert pill switching; **T6** is the qor-debug regression guard. |
+| `FailSafe/extension/src/test/roadmap/bicameral-composite-sync.test.ts` | Rewired to `BicameralRenderer` + flat `state` shape; FX562 Sync semantics unchanged. |
+| `FailSafe/extension/src/test/ui/integrations-tab.spec.ts` | New Playwright case for the pill switch (real-browser visual verification). |
+| `docs/FEATURE_INDEX.md` | FX802/FX803 `unverified`→`verified`; new FX804 (clobber guard); FX486/FX562/FX563/FX564 `Code` paths de-staled from the deleted `integrations.js`; coverage-summary header dated. |
+| `docs/BACKLOG.md` | **B-INT-12** registered (universal TabGroup clobber follow-up). B-INT-5 line is the work sealed here. |
+| `docs/SYSTEM_STATE.md` | B-INT-5 seal section + post-v5.3.1 unreleased baseline note. |
+| `docs/GOVERNANCE_INDEX.md` | "Last Reviewed" advanced to the seal state. |
+
+### Deleted files
+
+- `FailSafe/extension/src/roadmap/ui/modules/integrations.js` (275 LoC) — superseded by the two renderers above. No live importer remains (`git grep` clean; only doc-comment + CHANGELOG history reference it).
+
+## qor-debug finding (the value of this cycle)
+
+A `/qor-debug` proactive two-phase sweep (axes: regression · code instability · security) on the refactor surface found **one MEDIUM regression** introduced by the split:
+
+- **Root cause**: `TabGroup.onEvent` fans events to ALL sub-views, but all sub-views share one reused `contentEl` and only the active one's `.container` is reassigned in `renderActive()`. `bootstrapBicameral.ts:244` broadcasts `bicameral.connected` AUTONOMOUSLY at activation (background auto-connect) — not only on a user click from the card. Cause→effect: autonomous broadcast → `BicameralRenderer.onEvent` (even when inactive) → `_refreshStatus` → `_setState` → `render()` → `contentEl.innerHTML=` → clobbers the visible Open Design pane. Impossible in the old monolith (both cards always rendered together).
+- **Fix (test-first)**: additive `_tgMounted` flag on `renderActive()` + `if (this._tgMounted === false) return;` guard in `BicameralRenderer.render()`. State still mutates while inactive, so re-selecting Bicameral repaints fresh data. `undefined` standalone → renders (no TabGroup). Zero blast radius: `_tgMounted` has exactly 3 occurrences, all in the 2 edited files (Phase-2 residual sweep, grep-verified).
+- **Security + instability axes**: clean. All server-derived Bicameral fields escaped via DOM-based `esc()`; Open Design card static; all fetches localhost-relative; no listener leak across re-renders.
+
+## Reality vs Promise verdict
+
+| Promise | Reality | Status |
+|---|---|---|
+| Integrations tab becomes a `TabGroup` sub-tab switcher | `command-center.js` wires `new TabGroup('integrations', [bicameral, opendesign])` | **MATCH** |
+| `IntegrationsRenderer` split into `BicameralRenderer` + `OpenDesignRenderer` | Both created; `integrations.js` deleted; no live importer | **MATCH** |
+| Both renderers ≤ Section-4 razor | 250 (at limit) + 39 | **MATCH** |
+| Pill switching surfaces exactly one sub-view at a time | T1–T3 + Playwright assert it | **MATCH** |
+| No regression introduced | /qor-debug found 1 MEDIUM → fixed test-first (T6) | **MATCH (fixed in-cycle)** |
+| Bicameral surface behaviorally unchanged by extraction | composite-sync 3/3 + card/capability/FX800 30/30 | **MATCH** |
+
+## Verification matrix
+
+| Gate | Tool | Result |
+|---|---|---|
+| TypeScript typecheck | `npx tsc -p ./` | PASS (clean) |
+| ESLint | `npx eslint src/test/roadmap/integrations-tab.test.ts` | PASS (0) |
+| Integrations + composite sync | `vscode-test --grep "B-INT-5\|composite Sync"` | **9 passing** (T1–T6 + 3 composite) |
+| TabGroup lifecycle + FX188 | `vscode-test --grep "TabGroup"` | **19 passing** (fan-out semantics unchanged) |
+| Bicameral card / capability / FX800 | `vscode-test --grep "...card\|capability\|B-BIC-13\|FX800"` | **30 passing** (extraction did not regress the surface) |
+| Playwright (visual verification) | `npx playwright test integrations-tab` | **2 passed / 1 pre-existing skip** |
+| Section 4 razor | `wc -l` | bicameral-renderer 250 (at limit), open-design 39, tab-group 81, command-center 222 — all compliant |
+| Dead-reference check | `git grep "modules/integrations\.js"` | No live importer (doc-comment + CHANGELOG history only) |
+
+## Carry-over (NOT closed)
+
+- **B-INT-12** — the same latent inactive-sub-view clobber pattern is pre-existing (since the B198 TabGroup consolidation) in 6 other TabGroup sub-views: `timeline.js:119`, `genome.js:106`, `replay.js:189` (agents group), `risks.js:157`, `governance.js:280` (governance group; partially self-guarded by an `if (logEl)` check), `skills.js:300` (workspace group). The Bicameral-only `_tgMounted` guard does NOT cover them. Promoting it to a TabGroup-level concern (fan only to active, or have every hosted renderer honor `_tgMounted`) is architectural → routed to `/qor-plan`, targeted v5.3.x+.
+
+## Phase 75 SKIP records (Node-archetype host)
+
+- Gate-chain artifacts (`.qor/gates/<sid>/{plan,audit,implement}.json`) — NOT PRESENT for this branch. This work proceeded via `/qor-debug` + manual test-first verification + a `.failsafe/governance/plans/` plan, not the Python qor-logic plan→audit→implement gate flow. Steps 0 / 4.6 intent_lock / 7.8 gate_chain_completeness have no artifacts to verify; recorded SKIP, consistent with the Node-archetype seal posture of Entries #405–#407.
+- `qor.scripts.ledger_hash` — although importable on this host, hash computation was performed via Node 20 `crypto.createHash('sha256')` to match the exact #405–#407 chain methodology (string-concat of hex digests). `gate_skipped_prerequisite_absent` posture retained for the gate-chain artifacts above.
+- Steps 7.5/7.6/9.5.5 (version bump / CHANGELOG stamp / seal tag) — N/A. No version bump, no tag (refactor + fix; bundles into a future v5.4.x release per the B-INT-4 precedent at Entry #407).
+
+## Decision
+
+**SEALED** with chain advance #407 → #408. The B-INT-5 refactor matches its plan; the one MEDIUM regression surfaced by `/qor-debug` was fixed test-first (T6 red→green) with a zero-blast-radius guard; the Bicameral surface is behaviorally unchanged (30/30); the visual surface is Playwright-verified. The pre-existing 6-renderer clobber is tracked as B-INT-12 for a TabGroup-level fix.
+
+## Next operator actions (NOT executed by orchestrator per Review Boundary)
+
+1. Operator review of staged changes + verification matrix.
+2. `git add -f` the new + modified files (note: `docs/` is gitignored-but-tracked — uses `-f`).
+3. `git commit` (`feat(B-INT-5): Integrations tab sub-tab switcher + qor-debug TabGroup clobber guard`).
+4. Open PR against `main` (no marketplace publish; no version bump — refactor + fix).
+5. Tag-and-publish belongs to a future release cycle that bundles other v5.4.x work.
+
+## Content Hash
+
+**Content Hash**: `7863fbd7b0872e5415ccc3d810e02209cda95e3e61cfae1fca1e899f4b670b8f`
+**Previous Hash**: `75958b22152358f5a27da34fe75c2b128b4be346f54d2d7a3e71544d7809ff85` (Entry #407 Chain Hash)
+**Chain Hash**: `b2018b2cccc1fe8302352851b8eaa00af43084027d86c572eb8ddbb0408a7a4f`
+**Merkle Seal**: `510e28e9eaa6f354619363d2ccc151bcb3c5e388eb6ef17f5dfc291ca94eae37` — gate_seal_substantiate_b_int_5_integrations_subtabs
+**Session ID**: `2026-05-28-substantiate-b-int-5-integrations-subtabs`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`### Entry #408`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Computed via Node 20 `crypto.createHash('sha256')` (Phase 75 skip — gate-chain artifacts absent on this Node-archetype branch; same posture as Entries #405–#407).
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-05-28-substantiate-b-int-5-integrations-subtabs_

@@ -14,9 +14,13 @@ FailSafe runs locally inside VS Code and Cursor. It monitors what AI agents do, 
 
 ---
 
-**Current Release**: v5.3.1 (2026-05-28)
+**Current Release**: v5.3.2 (2026-05-28)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v5.3.2
+
+Internal-quality release. The **Integrations** tab now uses a sub-tab pill switcher (Bicameral · Open Design) — one sub-view per integration, matching the Agents/Governance/Workspace tabs — replacing the former stacked-card panel. The Bicameral + Open Design MCP clients now share a single `McpClientHost` substrate. A `/qor-debug` sweep caught and fixed one event-routing regression in the new switcher before release (test-first). No marketplace-feature change beyond the tab layout.
 
 ## What's New in v5.3.1
 

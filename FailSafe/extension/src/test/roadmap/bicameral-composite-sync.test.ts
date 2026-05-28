@@ -7,7 +7,7 @@
 import { strict as assert } from 'assert';
 import { JSDOM } from 'jsdom';
 // @ts-expect-error JS module import in TS test context
-import { IntegrationsRenderer } from '../../../src/roadmap/ui/modules/integrations.js';
+import { BicameralRenderer } from '../../../src/roadmap/ui/modules/bicameral-renderer.js';
 // @ts-expect-error JS module import in TS test context
 import { renderBicameralCard, INITIAL_BICAMERAL_STATE } from '../../../src/roadmap/ui/modules/bicameral-card.js';
 
@@ -64,12 +64,12 @@ suite('FX562 bicameral composite Sync (B-BIC-14)', () => {
       '/api/actions/bicameral-history': { ok: true, features },
       '/api/actions/bicameral-drift': { ok: true, drift: [] },
     });
-    const renderer = new IntegrationsRenderer('integrations', {});
+    const renderer = new BicameralRenderer('integrations', {});
     renderer.render();
     await flush();             // initial _refreshStatus + history
     await flush();
     // Seed running state with a binding path so the drift fetch has a target.
-    renderer.state.bicameral = { ...renderer.state.bicameral, installState: 'running', features };
+    renderer.state = { ...renderer.state, installState: 'running', features };
     const before = calls.length;
     renderer.handlers.onDetect();
     await flush();
@@ -86,10 +86,10 @@ suite('FX562 bicameral composite Sync (B-BIC-14)', () => {
     const calls = installFetch({
       '/api/integrations/bicameral/status': { ok: true, state: 'configured-not-running', capabilities: [] },
     });
-    const renderer = new IntegrationsRenderer('integrations', {});
+    const renderer = new BicameralRenderer('integrations', {});
     renderer.render();
     await flush();
-    renderer.state.bicameral = { ...renderer.state.bicameral, installState: 'configured-not-running' };
+    renderer.state = { ...renderer.state, installState: 'configured-not-running' };
     const before = calls.length;
     renderer.handlers.onDetect();
     await flush();

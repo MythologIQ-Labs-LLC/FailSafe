@@ -2,10 +2,23 @@
 
 **Last Updated:** 2026-05-28
 **Current Release:** v5.3.1 (DELIVER at Entry #406) — first v5.3.x build to ship to VS Code Marketplace + Open VSX
-**Sealed baseline:** v5.2.0 → v5.2.2 hotfix line (Entries #392-#396) → v5.3.0 (Entry #400 Open Design v1 + Entry #402 substrate v1) → v5.3.0 release (`08916d9`, dead-on-marketplace) → v5.3.1 hotfix (DELIVER at #406)
+**Unreleased post-v5.3.1 (sealed, bundles into a future v5.4.x):** B-INT-4 McpClientHost substrate (Entry #407) · B-INT-5 Integrations sub-tab switcher + qor-debug clobber fix (Entry #408)
+**Sealed baseline:** v5.2.0 → v5.2.2 hotfix line (Entries #392-#396) → v5.3.0 (Entry #400 Open Design v1 + Entry #402 substrate v1) → v5.3.0 release (`08916d9`, dead-on-marketplace) → v5.3.1 hotfix (DELIVER at #406) → post-release refactor seals #407 (B-INT-4) → #408 (B-INT-5)
 **Active integrations:** Bicameral MCP (sealed Entry #372 + earlier cluster) · Open Design v1 (provenance, Entry #400) · Open Design v1.1 (MCP + SSE + probe, Entry #405)
 **Governance substrate:** qor.scripts substrate modules v1 WARN-only (Entry #402) — secret_scanner, feature_index_verify, model_pinning_lint
 **Doctrine additions since 2026-05-22:** `feedback_no_pipeline_reshape_for_marketplace_issues` (2026-05-27, v5.2.2 hold-pat precedent) · `feedback_verify_external_names_at_plan_time` (2026-05-27, Citation Inventory Pass — broke 4-cycle Plan-Time Hallucination loop at Entry #405)
+
+---
+
+## 2026-05-28 — B-INT-5 Integrations sub-tab switcher + qor-debug clobber fix (Entry #408)
+
+Branch `feat/b-int-5-integrations-subtabs`. The Integrations tab moved from a single stacked-card panel to a `TabGroup` sub-tab switcher, matching the agents/governance/workspace pattern. The former monolithic `IntegrationsRenderer` (`src/roadmap/ui/modules/integrations.js`, deleted) split into `BicameralRenderer` (`bicameral-renderer.js`, 250 lines — at the Section-4 razor limit) and `OpenDesignRenderer` (`open-design-renderer.js`, 39 lines, read-only static card); `command-center.js` wires `integrations: new TabGroup('integrations', [bicameral, opendesign])`.
+
+A `/qor-debug` proactive sweep (regression · instability · security) found one MEDIUM regression: `TabGroup.onEvent` fans events to ALL sub-views, but only the active one owns the shared `contentEl`, so an autonomous `bicameral.connected` broadcast (`bootstrapBicameral.ts:244`, background auto-connect) arriving while Open Design was active re-painted the Bicameral card over the live pane. Fixed with an additive `_tgMounted` flag on `TabGroup.renderActive()` + an early-return DOM-write guard in `BicameralRenderer.render()` (zero blast radius — flag has 3 occurrences, all in the 2 edited files; state still mutates while inactive so re-select shows fresh data). Test-first: T6 written red → fixed → green. Security + instability axes clean (XSS escaped, localhost-only fetches, no listener leak).
+
+Verification (real `vscode-test` Electron host + Playwright, superseding the staged "host could not launch" note): jsdom 9/9 (T1–T6 + 3 composite-sync) · TabGroup 19/19 · bicameral card/capability/FX800 30/30 · Playwright `integrations-tab` 2 pass / 1 pre-existing skip · `tsc` 0 · eslint 0. FEATURE_INDEX: FX802/FX803 `unverified`→`verified`, new FX804 (clobber guard), FX486/FX562/FX563/FX564 `Code` paths de-staled from the deleted `integrations.js`.
+
+Carry-over (NOT closed): **B-INT-12** — the same latent inactive-sub-view clobber is pre-existing in 6 other TabGroup sub-views (timeline/genome/replay/risks/governance/skills); the Bicameral-only guard does not cover them. Promoting it to a TabGroup-level concern is architectural → routed to `/qor-plan`, targeted v5.3.x+. No version bump / no tag this seal (refactor + fix; bundles into a future v5.4.x release per the B-INT-4 precedent at Entry #407).
 
 ---
 

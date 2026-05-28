@@ -7,9 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.3.2] - 2026-05-28
+
+Internal-quality release bundling the two post-v5.3.1 integration-surface refactors (B-INT-4 + B-INT-5). No marketplace-feature change beyond the Integrations tab now presenting one sub-view per integration. Sealed at META_LEDGER Entry #407 (B-INT-4) + #408 (B-INT-5).
+
 ### Changed
 
+- **Integrations tab sub-tab switcher (B-INT-5)** — the Integrations tab moved from a single stacked-card panel to a `TabGroup` sub-tab switcher (one sub-view per integration), matching the agents/governance/workspace pattern. The monolithic `IntegrationsRenderer` split into `BicameralRenderer` (`bicameral-renderer.js`, 250 LoC — at the Section 4 razor) + `OpenDesignRenderer` (`open-design-renderer.js`, 39 LoC, read-only static card); `integrations.js` deleted. FX802/FX803 verified (jsdom 9/9 + Playwright pill-switch). Plan: `plan-b-int-5-integrations-subtabs.md`.
 - **Internal refactor (B-INT-4)** — Bicameral + Open Design MCP clients now extend a shared `McpClientHost` substrate at `src/integrations/mcp/`. The two near-identical `idle-scheduler.ts` copies are consolidated into a single canonical module. **Zero behavioral delta** — all existing unit suites (156 Bicameral cases + 64 Open Design / contracts cases) plus the FX487/488/489/490 + FX589 Playwright specs pass verbatim. `BicameralMcpClient.ts` drops from 291 → 188 LoC (back under the Section 4 razor); `OpenDesignMcpClient.ts` drops from 185 → 91 LoC. New FX800 (15 cases — McpClientHost lifecycle, including the preCallGate-before-not-connected-check and postConnectAssertion-after-fetchCapabilities ordering invariants) + FX801 (6 cases — consolidated IdleScheduler).
+
+### Fixed
+
+- **TabGroup inactive-sub-view clobber (B-INT-5 qor-debug, FX804)** — `TabGroup.onEvent` fans events to all sub-views, but only the active one owns the shared content element; an autonomous `bicameral.connected` broadcast (background auto-connect) arriving while the Open Design sub-tab was active re-painted the Bicameral card over the live pane. Fixed with an additive `_tgMounted` flag (`TabGroup.renderActive`) + an early-return DOM-write guard in `BicameralRenderer.render()` (state still mutates while inactive → fresh on re-select). Test-first regression guard T6 (red→green). The same latent pattern in 6 other TabGroup sub-views is pre-existing and tracked as **B-INT-12** for a TabGroup-level fix.
 
 ## [5.3.1] - 2026-05-28
 
