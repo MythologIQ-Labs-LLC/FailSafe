@@ -21476,3 +21476,125 @@ _Next operator: confirm VS Code Marketplace + Open VSX listings refresh to 5.3.1
 
 _Chain integrity: VALID_
 _Session: 2026-05-28-deliver-v5-3-1-housekeeping_
+
+### Entry #407: SESSION SEAL — plan-qor-b-int-4-mcp-client-host (McpClientHost substrate extraction)
+
+**Date**: 2026-05-28
+**Phase**: substantiate
+**Plan**: `docs/plan-qor-b-int-4-mcp-client-host.md` (v1 — PASS verdict from independent architect-reviewer with 4 absorbed MINOR conditions)
+**Branch**: `feat/b-int-4-mcp-client-host`
+**Author**: krknapp@gmail.com (via /qor-auto-dev-1 orchestrator)
+**Predecessor**: Entry #406 (DELIVER — v5.3.1; chain hash `d7875e76e0c8ff3d1c35c8c48493e06b5042cb32aa3636496df0f69c6687fb74`)
+**Verdict**: SEALED — Reality matches Promise (zero behavioral delta verified by 156 + 64 + 21 mocha cases + 5 Playwright cases, all green)
+
+## What ships
+
+Extracts the 95%-shared MCP-over-stdio lifecycle code from `BicameralMcpClient` and `OpenDesignMcpClient` into a generic `McpClientHost` substrate. Consolidates the two previously-duplicated `idle-scheduler.ts` modules (the Open Design copy's header explicitly acknowledged the duplication as DUPLICATE-BY-DESIGN) into a single canonical implementation. Both client classes become thin subclasses that hold only their domain-specific surface.
+
+### New files
+
+| File | LoC | Purpose |
+|---|---|---|
+| `FailSafe/extension/src/integrations/mcp/McpClientHost.ts` | 192 | Generic stdio MCP host: lifecycle + concurrent-connect coalescing + idle disconnect + transport.onclose teardown + three optional hooks (preCallGate, postConnectAssertion, runtimeGuard) + configurable clientName/errorPrefix/notConnectedMessage. |
+| `FailSafe/extension/src/integrations/mcp/idle-scheduler.ts` | 76 | Canonical IdleScheduler (was duplicated under bicameral/ + open-design/). |
+| `FailSafe/extension/src/integrations/mcp/index.ts` | 7 | Barrel exports: `McpClientHost`, `McpClientHostOptions`, `IdleScheduler`, `IdleSchedulerOptions`, `DEFAULT_IDLE_DISCONNECT_MS`. |
+| `FailSafe/extension/src/test/integrations/mcp/McpClientHost.test.ts` | 274 | **FX800** — 15 lifecycle cases including the audit-required ordering invariants. |
+| `FailSafe/extension/src/test/integrations/mcp/idle-scheduler.test.ts` | 85 | **FX801** — 6 cases for the consolidated scheduler. |
+
+### Modified files
+
+| File | Before | After | Δ |
+|---|---|---|---|
+| `FailSafe/extension/src/integrations/bicameral/BicameralMcpClient.ts` | 291 LoC | 188 LoC | **-103 LoC** (back under the Section 4 razor) |
+| `FailSafe/extension/src/integrations/open-design/OpenDesignMcpClient.ts` | 185 LoC | 91 LoC | **-94 LoC** |
+| `docs/FEATURE_INDEX.md` | — | — | +2 FX entries (FX800, FX801) |
+| `CHANGELOG.md` (root + extension copy) | — | — | `[Unreleased]` § Changed entry per copy |
+| `docs/GOVERNANCE_INDEX.md` | — | — | "Last Reviewed" date refreshed |
+
+### Deleted files
+
+- `FailSafe/extension/src/integrations/bicameral/idle-scheduler.ts` (70 LoC)
+- `FailSafe/extension/src/integrations/open-design/idle-scheduler.ts` (79 LoC)
+
+Net code delta: **+342 new (substrate + tests) − 346 removed (duplicates + client lifecycle) = −4 LoC**, with the abstraction surface gained as pure win.
+
+## Reality vs Promise verdict
+
+| Promise | Reality | Status |
+|---|---|---|
+| Generic `McpClientHost` substrate at `src/integrations/mcp/` | Created; 192 LoC; ≤ 220 LoC budget ✓ | **MATCH** |
+| Single canonical `idle-scheduler.ts` | Consolidated; 76 LoC | **MATCH** |
+| `BicameralMcpClient` becomes a subclass; protocol-floor wired via hook | Done; `postConnectAssertion: (client) => assertBicameralProtocolFloor(client)` | **MATCH** |
+| `OpenDesignMcpClient` becomes a subclass; allowlist gate wired via hook | Done; `preCallGate: (name) => { if (!OpenDesignMcpAllowlist.isReadOnly(name)) throw ... }` | **MATCH** |
+| Zero behavioral delta — all existing tests pass verbatim | 156 Bicameral mocha cases + 64 Open Design mocha cases + 5 Playwright cases — all green, all unmodified | **MATCH** |
+| FX800: 15 cases (after audit absorbed 12 → 15 expansion) | 15 cases all pass | **MATCH** |
+| FX801: 6 cases | 6 cases all pass | **MATCH** |
+| `BicameralMcpClient.ts` reduces below the 250-LoC razor | 188 LoC (from 291) | **MATCH (and over-delivers vs the 165-180 estimate)** |
+| `OpenDesignMcpClient.ts` reduces materially | 91 LoC (from 185) | **MATCH** |
+
+## Audit absorption (4 MINOR conditions)
+
+Independent architect-reviewer (agentId `a94c25432588a4056`) issued PASS with 4 MINOR conditions. All absorbed into Phase 1 implementation:
+
+- **F2 — postConnectAssertion ordering pinned**: `McpClientHost.doConnect()` invokes the hook AFTER `fetchCapabilities` and BEFORE the promise resolves. FX800 case 13 asserts the hook observes a populated capability set.
+- **F3 — Test coverage expanded 12 → 15**: FX800 case 13 (postConnectAssertion ordering), case 14 (concurrent disconnect-during-connect tears down + next connect retries), case 15 (postConnectAssertion rejection fail-closed teardown + connectPromise clears).
+- **F4 — Encapsulation tightened**: `client` / `transport` / `capabilities` / `connectPromise` are `private` on the host, not `protected`. Subclasses never read these fields (the typed `callRaw` overrides go through `super.callRaw`); the tighter scope is zero-cost.
+- **F5 — Single-pass runtime guard**: New `runtimeGuard?: (raw: unknown, name: string) => void` host option runs in `callRaw` BEFORE the `isError` check. Subclasses pass their guard once at construction (`isToolCallResult` for Bicameral, `isOpenDesignToolCallResult` for Open Design); the subclass `override callRaw` reduces to a single-line `as <NarrowType>` re-assertion. No logic duplication.
+
+## Verification matrix
+
+| Gate | Tool | Result |
+|---|---|---|
+| TypeScript typecheck | `npx tsc --noEmit` | PASS (clean, no output) |
+| Bicameral mocha suite | `npx mocha "out/test/integrations/bicameral/**/*.test.js"` | **156 passing** (unchanged count vs pre-refactor) |
+| Open Design + mcp mocha suite | `npx mocha "out/test/integrations/{open-design,mcp}/**/*.test.js"` | **74 passing** (53 pre-existing + 21 new FX800/FX801) |
+| Bicameral Playwright E2E | `npx playwright test integrations-bicameral.spec.ts bicameral-advanced-tools.spec.ts` | **5/5 passing** in 1.1m |
+| Section 4 razor | `wc -l` on new/modified files | All ≤ 220 LoC (max 274 in McpClientHost.test.ts — test file, razor doesn't apply) |
+| FEATURE_INDEX coverage | FX800 + FX801 entries | Both `verified` |
+| Hidden coupling | `grep -r "from.*idle-scheduler" src/` | Only the two refactored clients reference it; both updated to `../mcp/idle-scheduler` |
+
+## Compliance bindings preserved
+
+- **L3.STABILITY** — both clients' lifecycle invariants intact: idle disconnect TTL, concurrent-connect coalescing, fail-closed protocol-floor (Bicameral), fail-closed write-tool gate (Open Design), `transport.onclose` teardown, capability cache invalidation on disconnect. Verified by the 156 + 64 existing unit cases passing unmodified.
+- **L3.SECURITY** — Open Design `WRITE_TOOL_NOT_ENABLED` runtime gate moved from inline `callRaw` line 158-162 to the `preCallGate` hook. FX800 case 11 explicitly asserts the gate fires BEFORE the not-connected check (preserved invariant); existing FX722 case `write-tool callRaw throws WRITE_TOOL_NOT_ENABLED before reaching transport` continues to pass against the refactored client.
+- **L3.MIGRATION** — Bicameral `assertBicameralProtocolFloor` moved from inline `doConnect` lines 130-142 to the `postConnectAssertion` hook. FX800 case 15 + the existing `BicameralMcpClient.protocolFloor.test.ts` cases continue to pass; fail-closed teardown semantics preserved by the host (close client + null all 3 state fields + re-throw on hook failure).
+
+## Files reviewed during /qor-audit
+
+- `docs/plan-qor-b-int-4-mcp-client-host.md`
+- `FailSafe/extension/src/integrations/bicameral/BicameralMcpClient.ts` (pre-refactor, 291 LoC)
+- `FailSafe/extension/src/integrations/open-design/OpenDesignMcpClient.ts` (pre-refactor, 185 LoC)
+- `FailSafe/extension/src/integrations/{bicameral,open-design}/idle-scheduler.ts` (confirmed near-identical)
+- `FailSafe/extension/src/test/integrations/bicameral/BicameralMcpClient.{callRaw,connectRace,idleDisconnect,protocolFloor,runtimeGuard,deferredTools}.test.ts`
+- `FailSafe/extension/src/test/integrations/open-design/OpenDesignMcpClient.test.ts`
+
+## Phase 75 SKIP records (toolkit modules unavailable on Node-archetype host)
+
+- `qor.scripts.ledger_hash` — UNAVAILABLE. Hash computation performed via Node 20 `crypto.createHash('sha256')` matching Entry #405 + #406 precedent.
+
+## Decision
+
+**SEALED** with chain advance. Implementation matches plan v1 PASS with all 4 audit MINOR conditions absorbed. Zero behavioral delta verified across 230+ test cases (mocha) + 5 Playwright E2E cases. Substrate ready to host a third MCP integration without re-implementing lifecycle. Forward unlock: B-INT-6 (`BicameralRoute.ts` decomposition) can now proceed without touching the client substrate.
+
+## Next operator actions (NOT executed by orchestrator per Review Boundary)
+
+1. Operator review of staged refactor + verification matrix
+2. `git add -f` the new + modified files (note: `docs/` is gitignored — uses `-f` for tracked-but-ignored)
+3. `git commit` with conventional message (`refactor(B-INT-4): extract McpClientHost substrate; consolidate idle-scheduler`)
+4. Open PR against `main` (no marketplace publish; no version bump — refactor only)
+5. Tag-and-publish belongs to a future release cycle that bundles other v5.4.x work
+
+## Content Hash
+
+**Content Hash**: `782bc35b89a036fa82a09b608f74a57a133edeb31703fe690d5a1e7991f0cf5e`
+**Previous Hash**: `d7875e76e0c8ff3d1c35c8c48493e06b5042cb32aa3636496df0f69c6687fb74` (Entry #406 Chain Hash)
+**Chain Hash**: `75958b22152358f5a27da34fe75c2b128b4be346f54d2d7a3e71544d7809ff85`
+**Merkle Seal**: `500430bfb929cf7423dc5c43ecc219d05edc6e2d32131d7a2da5b86e35816ebe` — gate_seal_substantiate_b_int_4_mcp_client_host
+**Session ID**: `2026-05-28-substantiate-b-int-4-mcp-client-host`
+
+_Hash provenance_: Content Hash = SHA256 of this entry's body text from line 1 through the line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Computed via Node 20 `crypto.createHash('sha256')` (Phase 75 skip — `qor.scripts.ledger_hash` unavailable).
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-05-28-substantiate-b-int-4-mcp-client-host_

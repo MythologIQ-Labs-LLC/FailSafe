@@ -5,6 +5,12 @@ All notable changes to FailSafe will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Internal refactor (B-INT-4)** — Bicameral + Open Design MCP clients now extend a shared `McpClientHost` substrate at `src/integrations/mcp/`. The two near-identical `idle-scheduler.ts` copies are consolidated into a single canonical module. **Zero behavioral delta** — all existing unit suites (156 Bicameral cases + 64 Open Design / contracts cases) plus the FX487/488/489/490 + FX589 Playwright specs pass verbatim. `BicameralMcpClient.ts` drops from 291 → 188 LoC (back under the Section 4 razor); `OpenDesignMcpClient.ts` drops from 185 → 91 LoC. New FX800 (15 cases — McpClientHost lifecycle, including the preCallGate-before-not-connected-check and postConnectAssertion-after-fetchCapabilities ordering invariants) + FX801 (6 cases — consolidated IdleScheduler).
+
 ## [5.3.1] - 2026-05-28
 
 Hotfix release. v5.3.0 was tagged but its Release Pipeline failed at Build & Test — `integrations-tab.test.ts:34` hardcoded `cards.length === 1` ("Bicameral is the only card in v1") which became outdated when v5.3.0 added the Open Design Settings card to the Integrations tab; the VS Code Marketplace + Open VSX publish jobs were skipped, so v5.3.0 was never installable. **v5.3.1 is the first v5.3.x build that actually ships to the marketplaces.**

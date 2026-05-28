@@ -1,16 +1,14 @@
 /**
- * IdleScheduler — idle-disconnect scheduler for the OpenDesignMcpClient.
+ * IdleScheduler — canonical idle-disconnect scheduler for MCP stdio clients.
  *
- * DUPLICATE-BY-DESIGN of `src/integrations/bicameral/idle-scheduler.ts` (70L,
- * verified 2026-05-27). Rationale: cross-integration coupling would violate
- * the `src/integrations/` self-containment principle; the duplication cost
- * is low (~70 LoC) and decouples OD evolution from any future Bicameral
- * refactor. Any bug-fix here should be cross-applied to the Bicameral copy.
+ * Consolidated by B-INT-4 (plan-qor-b-int-4-mcp-client-host) from the two
+ * previously-duplicated copies under `src/integrations/bicameral/` and
+ * `src/integrations/open-design/`. The two copies were near-identical (the
+ * Open Design copy's header acknowledged it as DUPLICATE-BY-DESIGN); this
+ * module is the single source of truth.
  *
  * Owns timer lifecycle + race-safety (inflight counter so long-running calls
  * do NOT trigger spurious disconnects).
- *
- * See plan-open-design-integration-v1.1.md REMEDIATION §Correction 4.
  */
 
 export const DEFAULT_IDLE_DISCONNECT_MS = 900_000; // 15 minutes

@@ -1,6 +1,6 @@
 # Governance Index
 
-**Last Reviewed:** 2026-05-28
+**Last Reviewed:** 2026-05-28 (B-INT-4 substrate refactor cycle — McpClientHost extraction)
 **Maintainer:** every cycle that touches governance artifacts (write-time obligation, not periodic chore)
 **Purpose:** Authoritative hierarchical index of every governance artifact in this repository. Every governance doc MUST be registered here. Drift in this index = governance drift.
 
