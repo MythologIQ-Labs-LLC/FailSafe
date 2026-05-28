@@ -1,7 +1,64 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-05-22
-**Version:** v5.1.10-baseline plus Phase 60 SEALED at #354 plus v5.1.0 publish-block-lift SEALED at #359 plus organize-ux-hotfix SEALED at #364 plus install-skills-ux-expansion SEALED at #371 plus **plan-qor-model-sourced-risks substantiated** (Risk Register now sourced by coding model via MCP tool failsafe.create_risk + @failsafe /risk chat subcommand + SHIELD-lifecycle auto-derivation; failsafe.addRisk command + QuickPick wizard removed; 36 new FX415-FX420 tests; OpenVSX v5.0.0 alignment complete) plus Phase 61 ledger repair plus Phase 62 Item B sweep follow-ups
+**Last Updated:** 2026-05-28
+**Current Release:** v5.3.1 (DELIVER at Entry #406) — first v5.3.x build to ship to VS Code Marketplace + Open VSX
+**Unreleased post-v5.3.1 (sealed, bundles into a future v5.4.x):** B-INT-4 McpClientHost substrate (Entry #407) · B-INT-5 Integrations sub-tab switcher + qor-debug clobber fix (Entry #408)
+**Sealed baseline:** v5.2.0 → v5.2.2 hotfix line (Entries #392-#396) → v5.3.0 (Entry #400 Open Design v1 + Entry #402 substrate v1) → v5.3.0 release (`08916d9`, dead-on-marketplace) → v5.3.1 hotfix (DELIVER at #406) → post-release refactor seals #407 (B-INT-4) → #408 (B-INT-5)
+**Active integrations:** Bicameral MCP (sealed Entry #372 + earlier cluster) · Open Design v1 (provenance, Entry #400) · Open Design v1.1 (MCP + SSE + probe, Entry #405)
+**Governance substrate:** qor.scripts substrate modules v1 WARN-only (Entry #402) — secret_scanner, feature_index_verify, model_pinning_lint
+**Doctrine additions since 2026-05-22:** `feedback_no_pipeline_reshape_for_marketplace_issues` (2026-05-27, v5.2.2 hold-pat precedent) · `feedback_verify_external_names_at_plan_time` (2026-05-27, Citation Inventory Pass — broke 4-cycle Plan-Time Hallucination loop at Entry #405)
+
+---
+
+## 2026-05-28 — B-INT-5 Integrations sub-tab switcher + qor-debug clobber fix (Entry #408)
+
+Branch `feat/b-int-5-integrations-subtabs`. The Integrations tab moved from a single stacked-card panel to a `TabGroup` sub-tab switcher, matching the agents/governance/workspace pattern. The former monolithic `IntegrationsRenderer` (`src/roadmap/ui/modules/integrations.js`, deleted) split into `BicameralRenderer` (`bicameral-renderer.js`, 250 lines — at the Section-4 razor limit) and `OpenDesignRenderer` (`open-design-renderer.js`, 39 lines, read-only static card); `command-center.js` wires `integrations: new TabGroup('integrations', [bicameral, opendesign])`.
+
+A `/qor-debug` proactive sweep (regression · instability · security) found one MEDIUM regression: `TabGroup.onEvent` fans events to ALL sub-views, but only the active one owns the shared `contentEl`, so an autonomous `bicameral.connected` broadcast (`bootstrapBicameral.ts:244`, background auto-connect) arriving while Open Design was active re-painted the Bicameral card over the live pane. Fixed with an additive `_tgMounted` flag on `TabGroup.renderActive()` + an early-return DOM-write guard in `BicameralRenderer.render()` (zero blast radius — flag has 3 occurrences, all in the 2 edited files; state still mutates while inactive so re-select shows fresh data). Test-first: T6 written red → fixed → green. Security + instability axes clean (XSS escaped, localhost-only fetches, no listener leak).
+
+Verification (real `vscode-test` Electron host + Playwright, superseding the staged "host could not launch" note): jsdom 9/9 (T1–T6 + 3 composite-sync) · TabGroup 19/19 · bicameral card/capability/FX800 30/30 · Playwright `integrations-tab` 2 pass / 1 pre-existing skip · `tsc` 0 · eslint 0. FEATURE_INDEX: FX802/FX803 `unverified`→`verified`, new FX804 (clobber guard), FX486/FX562/FX563/FX564 `Code` paths de-staled from the deleted `integrations.js`.
+
+Carry-over (NOT closed): **B-INT-12** — the same latent inactive-sub-view clobber is pre-existing in 6 other TabGroup sub-views (timeline/genome/replay/risks/governance/skills); the Bicameral-only guard does not cover them. Promoting it to a TabGroup-level concern is architectural → routed to `/qor-plan`, targeted v5.3.x+. No version bump / no tag this seal (refactor + fix; bundles into a future v5.4.x release per the B-INT-4 precedent at Entry #407).
+
+---
+
+## 2026-05-28 — v5.3.1 DELIVER + governance housekeeping (Entry #406)
+
+Hotfix release closes the v5.3.0 dead-on-marketplace state. Zero feature delta from v5.3.0; the test-infrastructure fixes (`integrations-tab.test.ts` 2-card assertion + `transparency-renderer` timestamp stability) only restore CI green so the Release Pipeline reaches publish jobs. First v5.3.x build that actually ships to both marketplaces. Honors the hold-pat doctrine: no pipeline reshape attempted; diagnosis isolated FailSafe-side stale unit-test variables.
+
+Housekeeping completed alongside DELIVER: BACKLOG v5.3.1 row promoted RELEASING → RELEASED; META_LEDGER #406 appended (Merkle chain extends #405 → #406; gate `gate_seal_deliver_v5_3_1`); 19 stale governance artifacts archived from `.agent/staging/` (deprecated path per CLAUDE.md convention) + `.failsafe/governance/` root to `.failsafe/archive/2026-05-stale-cleanup/` across 5 topic subfolders.
+
+Carry-over open work (NOT closed by this DELIVER): Learn-tab visual rebuild (operator-rejected v1; pending `/frontend-design` + ui-designer pass per `project_learn_tab_visual_rebuild_pending`) · Monitor SHIELD stacking regression (3 redundant PLAN affordances; follow-up plan pending per `project_monitor_shield_stacking_regression`) · Bicameral MCP integration Phases 4-5 (FEATURE_INDEX + Playwright + substantiate, paused per carry-over `.failsafe/governance/SESSION_STATE_bicameral-mcp-integration.md`).
+
+---
+
+## 2026-05-28 — Open Design integration v1.1 SUBSTANTIATION SEAL (Entry #405)
+
+Plan: `plan-open-design-integration-v1.1.md` (v3 PASS, the **first end-to-end PASS** under the new Citation Inventory Pass doctrine; broke the 4-cycle Plan-Time Hallucination ghost-helper streak). **Seal verdict: PASS — Reality matches Promise (with documented minor drift).**
+
+Three new client modules + 1 daemon probe + 1 vendored SSE contract + 1 allowlist enumeration + 1 bootstrap wire — 14 new files / 9 modified, all ≤ 250 LoC. 46 new test cases across FX720-FX725 (mocha) + 7 cases (node:test bootstrap). v1.1 invariant: 4 write tools (incl. 3 destructive) enumerated in allowlist but rejected at runtime in `OpenDesignMcpClient.callRaw()` with `WRITE_TOOL_NOT_ENABLED` — L3-gated exposure deferred to v1.2 (B-OD-8). Apache-2.0 attribution pinned at `contracts/NOTICE.md` to upstream SHA `abe72af`.
+
+Predecessor #404 RESEARCH SEAL verified upstream `nexu-io/open-design@main` source independently; resolves Entry #403 DRIFT in favor of "stdio MCP server exists" with the framing refinement that the surface is NOT read-only (4 write + 3 destructive) — the v1.1 plan resolves this via runtime gate, not omission.
+
+---
+
+## 2026-05-27 — Open Design integration v1 SUBSTANTIATION SEAL (Entry #400) + qor.scripts substrate modules v1 SEAL (Entry #402)
+
+Two parallel v5.3.0 baseline contributions sealed in the same evening.
+
+**Open Design v1 (Model 2, Entry #400):** File-path-based provenance attribution. Opt-in via `failsafe.integrations.openDesign.enabled` (default false). New `AgentProvenance` discriminated union on `AgentRun`; `AgentRunRecorder` gains `{ provenanceDetectors }` options-bag + `attachProvenance(runId, provenance)` method. Monitor Agents → Replay sub-view renders an "Open Design" origin pill on attributed runs. FX700-FX705 (28 cases). Plan: `plan-open-design-integration-v1.md` (v3).
+
+**qor.scripts substrate modules v1 (Entry #402):** WARN-only governance substrate invoked via `failsafe.substrate.run` command. Three modules: `secret_scanner` (gitleaks v8), `feature_index_verify` (TS-local adapter correcting upstream column-header DRIFT), `model_pinning_lint` (silent-no-op against `.claude/skills/`, documented). One `'substrate.run.complete'` event per run; findings surface in "FailSafe Substrate" Output channel + `showInformationMessage` toast. FX710-FX715 (32 cases). Plan: `plan-qor-substrate-modules-v1.md`.
+
+---
+
+## 2026-05-26 — v5.2.x DELIVER trilogy (Entries #394, #395, #396)
+
+v5.2.0 DELIVER (#394) shipped FailSafe Learn — Software Development Craft (per Entry #390). **v5.2.0 tag `ba9a927` is dead-on-marketplace** — Release Pipeline failed at Build & Test (5 unit-test failures from orphaned SHIELD-anchor lesson literals + FX615 tag-filter race); marketplace publish jobs skipped.
+
+**v5.2.1 SESSION SEAL (#395)** closed those 5 unit-test failures; tag `7631ac1`. Release Pipeline failed again at Build & Test with a latent `popout-ui.spec.ts` Playwright harness regression that was masked in v5.2.0 because unit-test failures stopped CI before Playwright ran.
+
+**v5.2.2 SESSION SEAL (#396)** migrated `popout-ui.spec.ts` to `serveConsoleServerUI` harness — the same harness every other v5.2.0+ Playwright spec uses. **First v5.2.x build to actually publish to both marketplaces.** Zero feature delta from v5.2.0/v5.2.1. The two-tag dead-on-marketplace sequence documented in `project_v5_2_x_dead_tags`.
 
 ---
 

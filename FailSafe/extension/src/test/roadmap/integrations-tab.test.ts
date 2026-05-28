@@ -1,12 +1,25 @@
 // Functional tests for the Integrations top-level Command Center tab.
 // SG-035: assertions verify actual unit output, not artifact existence.
+//
+// B-INT-5: the Integrations tab moved from a single stacked-card panel to a
+// TabGroup sub-tab switcher (one sub-view per integration). These tests build
+// the same TabGroup composition that command-center.js wires and assert the
+// pill switching surfaces exactly one integration sub-view at a time.
 
 import { strict as assert } from 'assert';
 import { JSDOM } from 'jsdom';
 import {
-  IntegrationsRenderer,
+  TabGroup,
 // @ts-expect-error JS module import in TS test context
-} from '../../../src/roadmap/ui/modules/integrations.js';
+} from '../../../src/roadmap/ui/modules/tab-group.js';
+import {
+  BicameralRenderer,
+// @ts-expect-error JS module import in TS test context
+} from '../../../src/roadmap/ui/modules/bicameral-renderer.js';
+import {
+  OpenDesignRenderer,
+// @ts-expect-error JS module import in TS test context
+} from '../../../src/roadmap/ui/modules/open-design-renderer.js';
 
 function setupDom(): JSDOM {
   const dom = new JSDOM(`<!DOCTYPE html><div id="integrations" class="tab-panel"></div>`);
@@ -20,50 +33,112 @@ function teardownDom() {
   (globalThis as { window?: unknown }).window = undefined;
 }
 
-suite('IntegrationsRenderer (Command Center tab)', () => {
+// Mirrors the command-center.js wiring (integrations: new TabGroup('integrations', [...])).
+function buildIntegrationsTabs(): InstanceType<typeof TabGroup> {
+  return new TabGroup('integrations', [
+    { key: 'bicameral',  label: 'Bicameral',   renderer: new BicameralRenderer('integrations', { client: null }) },
+    { key: 'opendesign', label: 'Open Design', renderer: new OpenDesignRenderer('integrations') },
+  ]);
+}
+
+function pillByLabel(label: string): HTMLButtonElement | undefined {
+  return Array.from(document.querySelectorAll<HTMLButtonElement>('.cc-subview-bar .cc-pill')).find(
+    (p) => p.textContent === label,
+  );
+}
+
+suite('Integrations tab sub-tab switcher (B-INT-5)', () => {
   teardown(() => teardownDom());
 
-  test('render — produces a Bicameral card slot inside the panel', () => {
+  test('T1 — renders Bicameral + Open Design sub-tab pills', () => {
     setupDom();
-    const r = new IntegrationsRenderer('integrations', { client: null });
-    r.render({});
-    const card = document.querySelector('.cc-bicameral-card');
-    assert.ok(card, 'Bicameral card must be rendered');
+    buildIntegrationsTabs().render({});
+    const pills = Array.from(document.querySelectorAll('.cc-subview-bar .cc-pill')).map((p) => p.textContent);
+    assert.deepEqual(pills, ['Bicameral', 'Open Design'], 'expect exactly two integration pills in order');
   });
 
-  test('render — v5.3.0 ships Bicameral + Open Design cards', () => {
+  test('T2 — Bicameral is the default active sub-view (its card shows on first render)', () => {
     setupDom();
-    const r = new IntegrationsRenderer('integrations', { client: null });
-    r.render({});
-    const cards = document.querySelectorAll('.cc-integrations > *');
-    assert.equal(cards.length, 2, 'expect exactly 2 integration cards (Bicameral + Open Design)');
-    assert.ok(document.querySelector('.cc-bicameral-card'), 'Bicameral card must be present');
-    const openDesignCard = Array.from(cards).find((el) =>
-      el.textContent?.includes('Open Design MCP'),
-    );
-    assert.ok(openDesignCard, 'Open Design card must be present');
+    buildIntegrationsTabs().render({});
+    assert.ok(document.querySelector('.cc-bicameral-card'), 'Bicameral card must render by default');
+    assert.ok(!document.querySelector('.cc-open-design-card'), 'Open Design card must NOT render until selected');
+    assert.equal(pillByLabel('Bicameral')?.classList.contains('active'), true, 'Bicameral pill is active');
   });
 
-  test('render — uses unknown state by default → "Detecting" message', () => {
+  test('T3 — clicking a pill swaps the visible integration sub-view', () => {
     setupDom();
-    const r = new IntegrationsRenderer('integrations', { client: null });
-    r.render({});
-    const card = document.querySelector('.cc-bicameral-card');
-    assert.ok(card?.textContent?.includes('Detecting Bicameral MCP'));
+    buildIntegrationsTabs().render({});
+
+    pillByLabel('Open Design')!.click();
+    assert.ok(document.querySelector('.cc-open-design-card'), 'Open Design card visible after selecting its pill');
+    assert.ok(document.querySelector('.cc-open-design-card')?.textContent?.includes('Open Design MCP'));
+    assert.ok(!document.querySelector('.cc-bicameral-card'), 'Bicameral card hidden when Open Design active');
+    assert.equal(pillByLabel('Open Design')?.classList.contains('active'), true, 'Open Design pill is active');
+
+    pillByLabel('Bicameral')!.click();
+    assert.ok(document.querySelector('.cc-bicameral-card'), 'Bicameral card restored when reselected');
+    assert.ok(!document.querySelector('.cc-open-design-card'), 'Open Design card hidden again');
   });
 
-  test('onEvent — does not throw on irrelevant event types', () => {
+  test('T4 — onEvent fans bicameral.* events to sub-views without throwing', () => {
     setupDom();
-    const r = new IntegrationsRenderer('integrations', { client: null });
-    assert.doesNotThrow(() => r.onEvent({ type: 'unrelated' }));
-    assert.doesNotThrow(() => r.onEvent(null as unknown as object));
-    assert.doesNotThrow(() => r.onEvent(undefined as unknown as object));
+    const tabs = buildIntegrationsTabs();
+    tabs.render({});
+    assert.doesNotThrow(() => tabs.onEvent({ type: 'bicameral.connected' }));
+    assert.doesNotThrow(() => tabs.onEvent({ type: 'unrelated' }));
+    assert.doesNotThrow(() => tabs.onEvent(null as unknown as object));
+    assert.doesNotThrow(() => tabs.onEvent(undefined as unknown as object));
   });
 
-  test('render — silently no-ops when panel is missing from DOM', () => {
+  test('T5 — silently no-ops when the panel is missing from the DOM', () => {
     const dom = new JSDOM(`<!DOCTYPE html><div></div>`);
     (globalThis as { document?: unknown }).document = dom.window.document;
-    const r = new IntegrationsRenderer('integrations', { client: null });
-    assert.doesNotThrow(() => r.render({}));
+    (globalThis as { window?: unknown }).window = dom.window as unknown;
+    const tabs = buildIntegrationsTabs();
+    assert.doesNotThrow(() => tabs.render({}));
+  });
+
+  // T6 — qor-debug regression guard. TabGroup fans onEvent to EVERY sub-view
+  // (tab-group.js), and BicameralRenderer reacts to bicameral.* events by
+  // re-rendering. bootstrapBicameral.ts:244 broadcasts `bicameral.connected`
+  // AUTONOMOUSLY at activation (background auto-connect) — not only on a
+  // user click from the card. If that broadcast lands while the operator is
+  // viewing the Open Design sub-tab, the inactive Bicameral sub-view must NOT
+  // paint its card into the shared content element and clobber the live pane.
+  test('T6 — autonomous bicameral.connected must not clobber the active Open Design pane', async () => {
+    setupDom();
+    const flush = () => new Promise((r) => setTimeout(r, 0));
+    const origFetch = (globalThis as { fetch?: unknown }).fetch;
+    (globalThis as { fetch?: unknown }).fetch = (async (url: string) => ({
+      ok: true,
+      json: async () =>
+        String(url).includes('/status')
+          ? { ok: true, state: 'running', capabilities: [] }
+          : { ok: true, features: [] },
+    })) as unknown;
+    try {
+      const tabs = buildIntegrationsTabs();
+      tabs.render({});
+      await flush();
+      // Navigate to the Open Design sub-view — Bicameral is now inactive.
+      pillByLabel('Open Design')!.click();
+      assert.ok(document.querySelector('.cc-open-design-card'), 'precondition: Open Design pane is active');
+
+      // Autonomous activation-time broadcast arrives while Open Design is showing.
+      tabs.onEvent({ type: 'bicameral.connected' });
+      await flush();
+      await flush();
+
+      assert.ok(
+        document.querySelector('.cc-open-design-card'),
+        'Open Design pane must survive an autonomous bicameral.connected broadcast',
+      );
+      assert.ok(
+        !document.querySelector('.cc-bicameral-card'),
+        'inactive Bicameral sub-view must NOT paint over the active pane',
+      );
+    } finally {
+      (globalThis as { fetch?: unknown }).fetch = origFetch;
+    }
   });
 });

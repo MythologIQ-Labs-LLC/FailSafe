@@ -32,9 +32,13 @@ _Local-first safety for AI coding assistants._
 
 <div align="center">
 
-**Current Release**: v5.3.1 (2026-05-28)
+**Current Release**: v5.3.2 (2026-05-28)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
+
+## What's new in v5.3.2
+
+Internal-quality release bundling two post-v5.3.1 integration-surface refactors. The **Integrations** tab now presents one sub-view per integration via a sub-tab pill switcher (Bicameral · Open Design), matching the Agents/Governance/Workspace tabs — replacing the former stacked-card panel. Under the hood, the Bicameral and Open Design MCP clients now share a single `McpClientHost` substrate. No marketplace-feature change beyond the Integrations tab layout. A `/qor-debug` sweep caught and fixed one event-routing regression in the new sub-tab switcher before release (test-first). See [CHANGELOG.md](CHANGELOG.md) for full notes.
 
 ## What's new in v5.3.1
 

@@ -60,3 +60,35 @@ test.skip("FX519 Bicameral card dims affordances for unsupported tools (deferred
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _placeholder = page;
 });
+
+// B-INT-5 — the Integrations tab is now a TabGroup sub-tab switcher. E1 verifies
+// the pill switching in a real browser engine (the visual-verification surface
+// for this UI change): two pills, Bicameral active by default, clicking the
+// Open Design pill swaps to the Open Design card and hides the Bicameral card.
+test("B-INT-5 Integrations sub-tabs — pill switch swaps the visible integration", async ({ page }) => {
+  controller = await serveConsoleServerUI({});
+  await page.goto(`${controller.url}/command-center.html`);
+  await page.locator('.tab-btn[data-target="integrations"]').click();
+
+  // Two integration pills render in the sub-view bar.
+  const pills = page.locator('#integrations .cc-subview-bar .cc-pill');
+  await expect(pills).toHaveCount(2, { timeout: 10000 });
+  await expect(pills.nth(0)).toHaveText('Bicameral');
+  await expect(pills.nth(1)).toHaveText('Open Design');
+
+  // Bicameral is the default active sub-view.
+  await expect(page.locator('#integrations .cc-bicameral-card')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#integrations .cc-open-design-card')).toHaveCount(0);
+
+  // Selecting the Open Design pill swaps the visible sub-view.
+  await pills.nth(1).click();
+  const odCard = page.locator('#integrations .cc-open-design-card');
+  await expect(odCard).toBeVisible({ timeout: 10000 });
+  await expect(odCard).toContainText('Open Design MCP');
+  await expect(page.locator('#integrations .cc-bicameral-card')).toHaveCount(0);
+
+  // Selecting Bicameral again restores it.
+  await pills.nth(0).click();
+  await expect(page.locator('#integrations .cc-bicameral-card')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#integrations .cc-open-design-card')).toHaveCount(0);
+});

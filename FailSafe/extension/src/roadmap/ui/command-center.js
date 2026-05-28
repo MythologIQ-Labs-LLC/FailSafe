@@ -13,7 +13,8 @@ import { LearnRenderer } from './modules/learn.js';
 import { TimelineRenderer } from './modules/timeline.js';
 import { GenomeRenderer } from './modules/genome.js';
 import { ReplayRenderer } from './modules/replay.js';
-import { IntegrationsRenderer } from './modules/integrations.js';
+import { BicameralRenderer } from './modules/bicameral-renderer.js';
+import { OpenDesignRenderer } from './modules/open-design-renderer.js';
 import { TabGroup } from './modules/tab-group.js';
 import { updateTickers, updateBootstrapBanner } from './modules/tickers.js';
 import { setWorkspaceRegistryClient, loadWorkspaceRegistry, initWorkspaceSelector } from './modules/workspace-registry.js';
@@ -41,7 +42,10 @@ document.addEventListener('DOMContentLoaded', () => {
       { key: 'skills',     label: 'Skills',     renderer: new SkillsRenderer('workspace', { client }) },
       { key: 'brainstorm', label: 'Mindmap',    renderer: new BrainstormRenderer('workspace', { store, client }) },
     ]),
-    integrations: new IntegrationsRenderer('integrations', { client }),
+    integrations: new TabGroup('integrations', [
+      { key: 'bicameral',  label: 'Bicameral',   renderer: new BicameralRenderer('integrations', { client }) },
+      { key: 'opendesign', label: 'Open Design', renderer: new OpenDesignRenderer('integrations') },
+    ]),
     settings:   new SettingsRenderer('settings', { store }),
   };
 

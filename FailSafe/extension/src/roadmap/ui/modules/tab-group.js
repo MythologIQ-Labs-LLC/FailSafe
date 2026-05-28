@@ -59,6 +59,13 @@ export class TabGroup {
   renderActive(hubData) {
     const sv = this.subViews.find(s => s.key === this.activeKey);
     if (!sv || !this.contentEl) return;
+    // B-INT-5 regression guard: onEvent() fans to every sub-view, but only the
+    // active one owns the shared contentEl. Tag each renderer with its mounted
+    // state so an event-driven re-render of an INACTIVE sub-view can no-op
+    // instead of clobbering the live pane (e.g. an autonomous bicameral.connected
+    // broadcast arriving while another sub-tab is showing). Additive flag —
+    // renderers that don't read it are unaffected.
+    for (const other of this.subViews) other.renderer._tgMounted = other === sv;
     sv.renderer.container = this.contentEl;
     sv.renderer.render(hubData);
   }

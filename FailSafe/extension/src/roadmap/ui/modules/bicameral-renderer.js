@@ -1,50 +1,30 @@
-// FailSafe Command Center — Integrations tab renderer.
-// Hosts third-party service cards. Bicameral MCP is the only entry in v1.
-// Pattern is extensible: additional MCP servers / services drop a new card
-// import + a state slot below.
+// FailSafe Command Center — Bicameral MCP sub-view renderer.
+// Extracted from the former IntegrationsRenderer during B-INT-5 (the Integrations
+// tab moved to a TabGroup sub-tab switcher). This class owns the Bicameral card's
+// state + lifecycle (status / connect / history / drift / ratify / install) and
+// renders into the container assigned by its parent TabGroup.
 
 import { renderBicameralCard, bindBicameralCard, INITIAL_BICAMERAL_STATE } from './bicameral-card.js';
 
-// Open Design v1.1 — read-only Settings card. Mirrors the Bicameral card
-// shell but omits install/connect orchestration (Open Design daemon lifecycle
-// is operator-owned; FailSafe only consumes when reachable). Three status
-// rows: daemon-probe, MCP client, SSE attach. Buttons surface the operator
-// wizard command from the command palette.
-function renderOpenDesignCard() {
-  return `
-    <div class="cc-integration-card" style="padding:12px;border:1px solid var(--border, #2a2a2a);border-radius:6px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <div style="display:flex;align-items:center;gap:10px">
-          <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em">Open Design MCP</div>
-          <span style="font-size:0.65rem;color:var(--text-muted)">v1.1 — read-only</span>
-        </div>
-      </div>
-      <div style="font-size:0.78rem;line-height:1.6;color:var(--text-main)">
-        <div>Daemon: <span style="color:var(--text-muted)">probe via wizard</span></div>
-        <div>MCP client: <span style="color:var(--text-muted)">disconnected</span></div>
-        <div>SSE attach: <span style="color:var(--text-muted)">idle</span></div>
-      </div>
-      <div style="margin-top:8px;font-size:0.7rem;color:var(--text-muted)">
-        Run <code>FailSafe: Register Open Design MCP Connection</code> from the command palette to probe the daemon at <code>127.0.0.1:7456</code> and connect the MCP client. Write tools (<code>create_artifact</code>, <code>write_file</code>, <code>delete_file</code>, <code>delete_project</code>) are rejected at runtime in v1.1; L3-gated exposure ships in v1.2 (B-OD-8).
-      </div>
-    </div>
-  `;
-}
-
-export class IntegrationsRenderer {
-  constructor(panelId, { client } = {}) {
-    this.panelId = panelId;
+export class BicameralRenderer {
+  constructor(containerId, { client } = {}) {
+    this.container = document.getElementById(containerId);
     this.client = client;
-    this.state = { bicameral: { ...INITIAL_BICAMERAL_STATE } };
+    this.state = { ...INITIAL_BICAMERAL_STATE };
     this.handlers = this._buildHandlers();
     this._detectedOnce = false;
   }
 
   render(_hubData) {
-    const panel = document.getElementById(this.panelId);
-    if (!panel) return;
-    panel.innerHTML = this._renderCards();
-    bindBicameralCard(panel, this.handlers);
+    if (!this.container) return;
+    // B-INT-5 regression guard: when hosted in a TabGroup, only paint while this
+    // is the mounted (active) sub-view. Event-driven _setState renders still run
+    // their state mutation; this only suppresses the DOM write so an inactive
+    // Bicameral sub-view cannot clobber a sibling pane sharing the container.
+    // `_tgMounted` is undefined when used standalone (no TabGroup) → renders.
+    if (this._tgMounted === false) return;
+    this.container.innerHTML = this._renderCard();
+    bindBicameralCard(this.container, this.handlers);
     if (!this._detectedOnce) {
       this._detectedOnce = true;
       void this._refreshStatus();
@@ -66,13 +46,8 @@ export class IntegrationsRenderer {
     }
   }
 
-  _renderCards() {
-    return `
-      <div class="cc-integrations" style="padding:16px;display:flex;flex-direction:column;gap:16px">
-        ${renderBicameralCard(this.state.bicameral)}
-        ${renderOpenDesignCard()}
-      </div>
-    `;
+  _renderCard() {
+    return renderBicameralCard(this.state);
   }
 
   _buildHandlers() {
@@ -100,7 +75,7 @@ export class IntegrationsRenderer {
    */
   async _sync() {
     await this._refreshStatus();
-    if (this.state.bicameral.installState !== 'running') return;
+    if (this.state.installState !== 'running') return;
     await this._refreshHistory({ silent: true });
     await this._refreshDrift();
   }
@@ -124,7 +99,7 @@ export class IntegrationsRenderer {
   /** Unique binding file paths drawn from the features already in card state. */
   _collectBindingPaths() {
     const paths = new Set();
-    for (const feature of this.state.bicameral.features || []) {
+    for (const feature of this.state.features || []) {
       for (const decision of feature.decisions || []) {
         const binding = (decision.bindings || [])[0];
         if (binding && binding.filePath) paths.add(binding.filePath);
@@ -239,7 +214,7 @@ export class IntegrationsRenderer {
       if (!res.ok || json?.ok === false) {
         this._setState({
           installProgress: {
-            ...(this.state.bicameral.installProgress || { mode, steps: [] }),
+            ...(this.state.installProgress || { mode, steps: [] }),
             done: true,
             ok: false,
             error: json?.error || res.statusText || 'install failed',
@@ -253,7 +228,7 @@ export class IntegrationsRenderer {
     } catch (err) {
       this._setState({
         installProgress: {
-          ...(this.state.bicameral.installProgress || { mode, steps: [] }),
+          ...(this.state.installProgress || { mode, steps: [] }),
           done: true,
           ok: false,
           error: String(err),
@@ -269,7 +244,7 @@ export class IntegrationsRenderer {
   }
 
   _setState(patch) {
-    this.state.bicameral = { ...this.state.bicameral, ...patch };
+    this.state = { ...this.state, ...patch };
     this.render();
   }
 }

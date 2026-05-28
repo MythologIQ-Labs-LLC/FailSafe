@@ -5,6 +5,21 @@ All notable changes to the MythologIQ FailSafe extension will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [5.3.2] - 2026-05-28
+
+Internal-quality release bundling the two post-v5.3.1 integration-surface refactors (B-INT-4 + B-INT-5). Sealed at META_LEDGER #407 (B-INT-4) + #408 (B-INT-5).
+
+### Changed
+
+- **Integrations tab sub-tab switcher (B-INT-5)** — the Integrations tab moved from a single stacked-card panel to a `TabGroup` sub-tab switcher. The monolithic `IntegrationsRenderer` split into `BicameralRenderer` (250 LoC) + `OpenDesignRenderer` (39 LoC); `integrations.js` deleted. FX802/FX803 verified (jsdom 9/9 + Playwright). Plan: `plan-b-int-5-integrations-subtabs.md`.
+- **Internal refactor (B-INT-4)** — Bicameral + Open Design MCP clients now extend a shared `McpClientHost` substrate at `src/integrations/mcp/`. Two near-identical `idle-scheduler.ts` copies consolidated into a single canonical module. Zero behavioral delta. `BicameralMcpClient.ts` drops from 291 → 188 LoC; `OpenDesignMcpClient.ts` drops from 185 → 91 LoC. New FX800 (15 cases) + FX801 (6 cases). Plan: `plan-qor-b-int-4-mcp-client-host.md`. Audit: independent architect-reviewer PASS with 4 absorbed MINOR conditions.
+
+### Fixed
+
+- **TabGroup inactive-sub-view clobber (B-INT-5 qor-debug, FX804)** — an autonomous `bicameral.connected` broadcast arriving while the Open Design sub-tab was active re-painted the Bicameral card over the live pane. Fixed with an additive `_tgMounted` flag + early-return DOM-write guard in `BicameralRenderer.render()`. Test-first guard T6 (red→green). Pre-existing in 6 other TabGroup sub-views → tracked as B-INT-12.
+
 ## [5.3.1] - 2026-05-28
 
 Hotfix release. v5.3.0 was tagged but its Release Pipeline failed at Build & Test — `integrations-tab.test.ts:34` hardcoded `cards.length === 1` ("Bicameral is the only card in v1") which became outdated when v5.3.0 added the Open Design Settings card to the Integrations tab; the VS Code Marketplace + Open VSX publish jobs were skipped, so v5.3.0 was never installable. **v5.3.1 is the first v5.3.x build that actually ships to the marketplaces.**

@@ -1,12 +1,13 @@
 // BicameralMcpClient — MCP client wrapper for v1 tools + deferred surfaces.
 // Plan: docs/plan-qor-bicameral-cluster-high.md Phase 1 (B-BIC-19).
 // Extended by docs/plan-qor-bicameral-safety-concurrency.md for B-BIC-8/9/11/21/22/23.
-//
-// Section 4 razor: parsers + runtime guards in parsers.ts, idle scheduler
-// in idle-scheduler.ts, semver compare in semver.ts.
+// Refactored by docs/plan-qor-b-int-4-mcp-client-host.md (B-INT-4) onto the
+// shared McpClientHost substrate; this subclass holds only Bicameral-specific
+// surface (typed wrappers + protocol-floor wiring).
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { McpClientHost } from '../mcp/McpClientHost';
 import {
   BicameralDriftStatus,
   BicameralFeatureBrief,
@@ -43,10 +44,7 @@ import {
   isValidateSymbolsResult,
   isGetNeighborsResult,
 } from './parsers';
-import { IdleScheduler } from './idle-scheduler';
 import { assertBicameralProtocolFloor } from './protocol-floor';
-
-const DEFAULT_IDLE_DISCONNECT_MS = 900_000; // 15 minutes
 
 interface BicameralMcpClientOptions {
   command: string;
@@ -64,136 +62,35 @@ interface BicameralMcpClientOptions {
   transportFactory?: (command: string, args: string[], cwd: string) => StdioClientTransport;
 }
 
-export class BicameralMcpClient {
-  private client: Client | null = null;
-  private transport: StdioClientTransport | null = null;
-  /** B-BIC-4: capability set populated from client.listTools() on connect. */
-  private capabilities: Set<string> | null = null;
-  /** B-BIC-8: cached in-flight connect promise so concurrent connect() calls
-   *  share the same transport spawn and don't leak resources. */
-  private connectPromise: Promise<void> | null = null;
-  /** B-BIC-9: idle-disconnect scheduler. Owns timer + inflight counter. */
-  private readonly idle: IdleScheduler;
-  private readonly opts: BicameralMcpClientOptions;
-
+export class BicameralMcpClient extends McpClientHost {
   constructor(opts: BicameralMcpClientOptions) {
-    this.opts = opts;
-    this.idle = new IdleScheduler({
-      idleMs: opts.idleDisconnectMs ?? DEFAULT_IDLE_DISCONNECT_MS,
-      onIdle: () => { void this.disconnect().catch(() => undefined); },
+    super({
+      clientName: 'failsafe-bicameral-client',
+      errorPrefix: 'bicameral tool',
+      notConnectedMessage: 'BicameralMcpClient not connected',
+      command: opts.command,
+      args: opts.args,
+      cwd: opts.cwd,
+      env: opts.env,
+      idleDisconnectMs: opts.idleDisconnectMs,
+      clientFactory: opts.clientFactory,
+      transportFactory: opts.transportFactory,
+      runtimeGuard: (raw, name) => {
+        if (!isToolCallResult(raw)) {
+          throw new Error(`bicameral tool ${name} returned a result that failed runtime type guard`);
+        }
+      },
+      // B-BIC-22: protocol/version floor assertion. Fail-closed on missing or
+      // below-floor versions so the operator can't accidentally talk to a
+      // schema-incompatible upstream. Runs AFTER capability fetch.
+      postConnectAssertion: (client) => { assertBicameralProtocolFloor(client); },
     });
   }
 
-  isConnected(): boolean {
-    return this.client !== null;
-  }
-
-  /** B-BIC-4: defensive copy of the capability set. */
-  getCapabilities(): Set<string> {
-    return new Set(this.capabilities ?? []);
-  }
-
-  async connect(): Promise<void> {
-    if (this.client) return;
-    // B-BIC-8: cache the in-flight promise so concurrent callers share the
-    // same spawn. Cleared on settle so the next connect() can retry.
-    if (this.connectPromise) return this.connectPromise;
-    this.connectPromise = this.doConnect().finally(() => { this.connectPromise = null; });
-    return this.connectPromise;
-  }
-
-  private async doConnect(): Promise<void> {
-    const transport = this.opts.transportFactory
-      ? this.opts.transportFactory(this.opts.command, this.opts.args ?? [], this.opts.cwd)
-      : new StdioClientTransport({
-          command: this.opts.command,
-          args: this.opts.args ?? [],
-          cwd: this.opts.cwd,
-          // StdioClientTransport restricts inherited env to an allowlist; any
-          // extra vars (e.g. ELECTRON_RUN_AS_NODE) must be passed explicitly.
-          ...(this.opts.env ? { env: this.opts.env } : {}),
-        });
-    const client = this.opts.clientFactory
-      ? this.opts.clientFactory()
-      : new Client({ name: 'failsafe-bicameral-client', version: '1.0.0' });
-    await client.connect(transport);
-    this.transport = transport;
-    this.client = client;
-    transport.onclose = () => {
-      this.client = null;
-      this.transport = null;
-      this.capabilities = null;
-      // B-BIC-9: cancel pending idle fire when transport closes externally.
-      this.idle.cancel();
-    };
-    await this.fetchCapabilities(client);
-    // B-BIC-22: protocol/version floor assertion. Fail-closed on missing or
-    // below-floor versions so the operator can't accidentally talk to a
-    // schema-incompatible upstream.
-    try {
-      assertBicameralProtocolFloor(client);
-    } catch (err) {
-      // Tear down to avoid leaving a half-connected client around.
-      try { await client.close(); } catch { /* noop */ }
-      this.client = null;
-      this.transport = null;
-      this.capabilities = null;
-      throw err;
-    }
-  }
-
-  private async fetchCapabilities(client: Client): Promise<void> {
-    try {
-      const result = await client.listTools();
-      const list = (result as { tools?: unknown }).tools;
-      if (Array.isArray(list)) {
-        const names = list
-          .map((t) => (t && typeof t === 'object' ? (t as { name?: unknown }).name : null))
-          .filter((n): n is string => typeof n === 'string' && n.length > 0);
-        this.capabilities = new Set(names);
-        return;
-      }
-      this.capabilities = new Set();
-    } catch {
-      this.capabilities = new Set();
-    }
-  }
-
-  async disconnect(): Promise<void> {
-    // B-BIC-9: cancel pending idle fire on explicit disconnect.
-    this.idle.cancel();
-    if (!this.client) return;
-    try { await this.client.close(); } catch { /* noop */ }
-    this.client = null;
-    this.transport = null;
-    this.capabilities = null;
-  }
-
-  /** B-BIC-19: generic, public callRaw for deferred-tool surfaces.
-   *  Underpins all typed wrappers; throws on isError or when disconnected.
-   *  B-BIC-9: increments idle inflight-counter so long-running calls don't
-   *  trigger spurious idle disconnects; counter decrements after response.
-   *  B-BIC-23: result is runtime-narrowed via isToolCallResult before use.
-   *  B-BIC-11: when isError, surface result.content[0].text in the message. */
-  async callRaw(name: string, args: Record<string, unknown>): Promise<ToolCallResult> {
-    if (!this.client) throw new Error('BicameralMcpClient not connected');
-    this.idle.beginCall();
-    try {
-      const raw = await this.client.callTool({ name, arguments: args });
-      if (!isToolCallResult(raw)) {
-        throw new Error(`bicameral tool ${name} returned a result that failed runtime type guard`);
-      }
-      if (raw.isError) {
-        const detail = raw.content?.[0]?.text;
-        const msg = typeof detail === 'string' && detail.length > 0
-          ? `bicameral tool ${name} reported isError=true: ${detail.slice(0, 200)}`
-          : `bicameral tool ${name} reported isError=true`;
-        throw new Error(msg);
-      }
-      return raw;
-    } finally {
-      this.idle.endCall();
-    }
+  /** B-BIC-19: type-narrowed callRaw. The host's runtimeGuard already
+   *  validated the shape; this override just re-asserts the narrower type. */
+  override async callRaw(name: string, args: Record<string, unknown>): Promise<ToolCallResult> {
+    return (await super.callRaw(name, args)) as ToolCallResult;
   }
 
   // ── v1 tools ──────────────────────────────────────────────────────────
