@@ -5,6 +5,12 @@ All notable changes to the MythologIQ FailSafe extension will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **qor.scripts substrate modules v1** (target v5.3.0; plan-qor-substrate-modules-v1) — adds a WARN-only governance substrate layer invoked via the new `failsafe.substrate.run` Command Palette entry. Three modules ship in v1: `secret_scanner` (gitleaks v8 underneath), `feature_index_verify` (TS-local Markdown table parser; not subprocess — works around an upstream column-header naming DRIFT), and `model_pinning_lint` (silent-no-op against `.claude/skills/` layout; documented in `summary.note`). Runner emits one `'substrate.run.complete'` event on the FailSafe EventBus per run; findings surface in a dedicated "FailSafe Substrate" Output channel and a `showInformationMessage` toast. WARN-only posture: findings never block any operator workflow. FX710-FX715 (28 mocha cases + 4 `node --test` cases = 32 total). New `'substrate.run.complete'` member added to `FailSafeEventType` union. New docs at `docs/SUBSTRATE_MODULES.md`. Tracked as `[B-SUBSTRATE-1]` IMPLEMENTED + `[B-SUBSTRATE-2..6]` follow-ups in `docs/BACKLOG.md`.
+
 ## [5.2.2] - 2026-05-26
 
 Hotfix release. v5.2.1 was tagged but its Release Pipeline failed at Build & Test — for a different reason than v5.2.0. v5.2.1's unit-test fix correctly cleared the FX598/FX602/FX615 unit failures and let `npm run test:all` reach the Playwright phase for the first time in the v5.2.x line, exposing a latent harness regression that prevented `popout-ui.spec.ts` from bootstrapping `command-center.js`. v5.2.2 is the first v5.2.x build that actually ships to the marketplaces. **No feature changes from v5.2.1** (which itself had zero feature delta from v5.2.0) — the same FailSafe Learn rebuild, Ollama probe fix, and a11y baseline ship verbatim. See the [5.2.0] entry below for the full feature list.

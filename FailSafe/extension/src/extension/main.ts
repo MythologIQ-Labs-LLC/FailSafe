@@ -37,6 +37,8 @@ import { registerAdvancedCommands } from "./bootstrapAdvancedCommands";
 import { registerCommands, setServerPort } from "./commands";
 import { createVscodeFeatureGate } from "../core/adapters/vscode";
 import { bootstrapStartupChecks } from "./bootstrapStartupChecks";
+import { registerSubstrateCommand } from "./substrate-command";
+import { defaultRun } from "../qorlogic/PythonInterpreterResolver";
 
 let genesisManager: GenesisManager;
 let qorelogicManager: QorLogicManager;
@@ -135,6 +137,19 @@ export async function activate(
         eventBus: core.eventBus,
       },
       logger,
+    );
+
+    // 3.12 Substrate runner command (qor.scripts WARN-only governance checks).
+    // Per plan-qor-substrate-modules-v1 §Phase 2 + drift note: pass
+    // vscode.workspace.getConfiguration('failsafe') (ConfigLike), not
+    // core.configManager — the FailSafe ConfigManager class does not
+    // implement ConfigLike.get(key:string):string|undefined. This matches the
+    // pattern used at bootstrapServers.ts:162.
+    registerSubstrateCommand(
+      context,
+      core.eventBus,
+      vscode.workspace.getConfiguration('failsafe'),
+      defaultRun,
     );
 
     // 4. Sentinel

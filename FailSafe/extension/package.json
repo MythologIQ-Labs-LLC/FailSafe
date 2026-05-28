@@ -65,7 +65,8 @@
     "onCommand:failsafe.removeCommitHook",
     "onCommand:failsafe.installQorLogicSkillsDefaults",
     "onCommand:failsafe.installVoicePack",
-    "onCommand:failsafe.uninstallVoicePack"
+    "onCommand:failsafe.uninstallVoicePack",
+    "onCommand:failsafe.substrate.run"
   ],
   "main": "./dist/extension/main.js",
   "contributes": {
@@ -104,6 +105,11 @@
       {
         "command": "failsafe.openSidebar",
         "title": "FailSafe: Open Sidebar"
+      },
+      {
+        "command": "failsafe.substrate.run",
+        "title": "FailSafe: Run Governance Substrate Checks",
+        "category": "FailSafe"
       },
       {
         "command": "failsafe.openFailSafeProAbout",
