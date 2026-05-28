@@ -21402,3 +21402,77 @@ session-od-v1.1-substantiate-2026-05-28T09:10:00Z
 **Merkle Seal**: `94b5c82cff43e210aa3b333dfeb5a9fe5a2e82117aba5c8c417a0266884f64e1` — gate_seal_substantiate_open_design_v1_1
 
 _Hash provenance_: Content Hash = SHA256 of this entry's body text from line 1 through the line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Computed via Node 20 `crypto.createHash('sha256')` because the `qor.scripts.ledger_hash` helper is absent on this Node-archetype host (Phase 75 skip — see "Phase 75 SKIP records" §).
+
+### Entry #406: DELIVER — v5.3.1 (Integration Surface hotfix)
+
+**Date**: 2026-05-28
+**Phase**: deliver
+**Plan**: hotfix cycle — no plan-*.md (test-and-changelog only, scope per `feedback_no_pipeline_reshape_for_marketplace_issues.md` precedent)
+**Branch**: `main` (release branch `release/v5.3.1` merged via PR #113; follow-up fix PR #114)
+**Predecessor**: Entry #405 (SESSION SEAL — Open Design integration v1.1; chain hash `c2ab9df971ba9a959c066d66a62b1dba66436c96863238b700ecb21ecddbdb43`)
+
+## Release metadata
+
+- **Version**: 5.3.1
+- **Tag**: `v5.3.1` (annotated; tagger `WulfForge <krknapp@gmail.com>`; date 2026-05-28T13:39:56-04:00)
+- **Release commit**: `52f0cb8` ("[RELEASE] v5.3.1 — hotfix integrations-tab test for 2-card v5.3.0 reality (#113)")
+- **Follow-up fix commit**: `8de92b0` ("fix(v5.3.1): transparency-renderer tests — current timestamp not 2026-05-27 (#114)")
+- **Tag annotation**: "v5.3.1 — hotfix integrations-tab + transparency-renderer date-stability"
+
+## What ships
+
+**Zero feature delta from v5.3.0.** The Open Design integration v1 (Model 2 provenance), v1.1 (MCP + SSE + probe), and the WARN-only governance substrate v1 ship verbatim. v5.3.1 is the first v5.3.x build that actually reaches the VS Code Marketplace + Open VSX — v5.3.0 was tagged but its Release Pipeline failed at Build & Test, so the publish jobs were skipped and the extension was never installable.
+
+### Test-infrastructure-only fixes
+
+- **`integrations-tab.test.ts` — assert 2 cards for v5.3.0+** (PR #113 / commit `52f0cb8`). The legacy `cards.length === 1` assertion ("Bicameral is the only card in v1") fired `2 !== 1` after v5.3.0 added `renderOpenDesignCard()` to `IntegrationsRenderer._renderCards()`. Test now asserts exactly 2 cards plus positive presence checks for both `.cc-bicameral-card` and the Open Design card (matched via `textContent`).
+- **`transparency-renderer` test timestamp stability** (PR #114 / commit `8de92b0`). Tests previously hardcoded `2026-05-27` as the "current" timestamp comparison; flake risk once date rolled. Replaced with current-timestamp computation. Test-only.
+
+## Compliance bindings preserved
+
+- **No production-code change.** Zero impact to L3.SECURITY, L3.STABILITY, L3.MIGRATION bindings established at #405 + earlier seals.
+- **EU AI Act exclusions unchanged** from v5.2.0/v5.3.0 baseline.
+
+## Verification matrix
+
+| Check | Result |
+|---|---|
+| `git show v5.3.1` | Annotated tag confirmed, signed by WulfForge, points at `52f0cb8` |
+| `git log v5.3.0..v5.3.1` | 2 commits — `52f0cb8` ([RELEASE]) + `8de92b0` (transparency-renderer follow-up) |
+| `CHANGELOG.md` [5.3.1] entry | Present, dated 2026-05-28 |
+| `docs/BACKLOG.md` v5.3.1 row | Marked ✅ RELEASED in this housekeeping cycle |
+| GitHub Actions Release Pipeline | Triggered on `v5.3.1` tag push; outcome — first v5.3.x publish to reach marketplaces |
+
+## Ledger seal lineage
+
+- **#404** — RESEARCH SEAL — Open Design v1.1 full-scope verification · chain `f65ceee1...`
+- **#405** — SESSION SEAL — Open Design integration v1.1 (implementation + substantiate) · chain `c2ab9df9...`
+- **#406** (this entry) — DELIVER — v5.3.1
+
+## Release-process discipline notes
+
+- **Hold-pat doctrine honored**: per `feedback_no_pipeline_reshape_for_marketplace_issues.md` (codified 2026-05-27 from the v5.2.2 timeout precedent), the v5.3.0 → v5.3.1 cycle did NOT propose workflow/PAT/manifest reshapes when the v5.3.0 Release Pipeline failed at Build & Test. Diagnosis isolated a single stale unit-test (FailSafe-side variable) — fixed in PR #113. The follow-up transparency-renderer date-stability fix landed as PR #114, again with zero pipeline reshape.
+- **Tag placement**: v5.3.1 tag created on `release/v5.3.1` branch and pushed only after PR #113 merged to main, per CLAUDE.md memory "ALWAYS merge release branch to main BEFORE tagging."
+- **Housekeeping deferral**: per `/qor-repo-release` Step 10, this DELIVER entry was deferred during the v5.3.1 cycle's post-publish window and is being appended now in a follow-up `/qor-auto-dev-1` cycle dedicated to governance housekeeping + stale-doc archival.
+
+## Content Hash
+
+**Content Hash**: `e5bab57677434d260efcae2f19a1d6b565ba485f502b8c9cdb97f7aef9ee9dd8`
+**Previous Hash**: `c2ab9df971ba9a959c066d66a62b1dba66436c96863238b700ecb21ecddbdb43` (Entry #405 Chain Hash)
+**Chain Hash**: `d7875e76e0c8ff3d1c35c8c48493e06b5042cb32aa3636496df0f69c6687fb74`
+**Merkle Seal**: `e8395c029dcbf170c26e51cdfbb5197794f8a8399e3444e57629810ba9782993` — gate_seal_deliver_v5_3_1
+**Session ID**: `2026-05-28-deliver-v5-3-1-housekeeping`
+
+_Hash provenance_: Content Hash = SHA256 of this entry's body text from line 1 through the line above `## Content Hash`. Chain Hash = SHA256(content + previous). Merkle Seal = SHA256(chain + gate_label). Computed via Node 20 `crypto.createHash('sha256')` (Phase 75 skip — `qor.scripts.ledger_hash` unavailable on Node-archetype host, same posture as Entry #405).
+
+## Decision
+
+**DELIVERED.** v5.3.1 — Integration Surface (hotfix 1) — published to VS Code Marketplace + Open VSX via the Release Pipeline workflow on tag push. Closes the v5.3.0 dead-on-marketplace state. Closes housekeeping carry-over from the v5.3.1 release cycle (BACKLOG status update + DELIVER ledger entry, both deferred during release recovery and applied in this cycle).
+
+_Chain Status: v5.3.1 DELIVERED at Entry #406; chain advances from #405 → #406._
+_Next operator: confirm VS Code Marketplace + Open VSX listings refresh to 5.3.1; review the parallel stale-governance-doc archival cycle that accompanies this DELIVER entry._
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-05-28-deliver-v5-3-1-housekeeping_
