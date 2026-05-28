@@ -252,3 +252,43 @@ FailSafe's qor-* skill suite is **discoverable** to Open Design (Open Design's s
 - Detector wiring through `handleFileEdit`: 5 cases in `src/test/sentinel/AgentRunRecorder.provenance-detector.test.ts` (FX703).
 - UI pill render (Playwright): 2 cases in `src/test/ui/open-design-attribution.spec.ts` (FX704).
 - Bootstrap setting → detector construction: 3 cases in `src/test/extension/bootstrapSentinel-open-design.test.cjs` (FX705).
+
+## Open Design v1.1 — MCP adapter + per-run SSE attach + daemon probe
+
+Building on v1's file-path provenance, v1.1 adds three observation surfaces against a locally-running Open Design daemon (default `http://127.0.0.1:7456`). All three are opt-in and degrade gracefully when the daemon is unreachable.
+
+### Surfaces
+
+- **`OpenDesignDaemonProbe`** — `GET /api/version` HTTP probe with 5s timeout, 30s TTL cache, and discriminated failure modes (`refused`, `timeout`, `non_200`, `parse_error`). Operators get a precise hint instead of a stack trace.
+- **`OpenDesignMcpClient`** — stdio MCP client (`od mcp`) transplanted from the Bicameral pattern: concurrent-connect coalescing, idle-disconnect (15min default), transport.onclose teardown, capability cache populated from `client.listTools()`, test seams via `clientFactory` + `transportFactory`. **v1.1 invariant — read-only only**: `callRaw()` rejects non-allowlisted tools at runtime with `WRITE_TOOL_NOT_ENABLED` before reaching the transport.
+- **`OpenDesignSseClient`** — per-run `/api/runs/<runId>/events` SSE subscriber with line-by-line wire-format parsing, `Last-Event-ID` re-attach on reconnect, and capped exponential backoff (max 3 attempts; falls back to a `subscribe-error` sentinel event).
+
+### MCP allowlist
+
+Every tool name in `OpenDesignMcpAllowlist` is back-cited to the upstream `nexu-io/open-design@abe72af apps/daemon/src/mcp.ts` TOOL_DEFS by line number — no paraphrasing, no inference. The 7 read tools (`list_projects`, `get_active_context`, `get_artifact`, `get_project`, `get_file`, `search_files`, `list_files`) are admitted in v1.1; the 4 write tools (`create_artifact`, `write_file`, `delete_file`, `delete_project` — 3 of the 4 destructive) are REJECTED at runtime. Write-tool exposure is deferred to v1.2 (B-OD-8) with explicit L3 approval per call.
+
+### Operator wizard
+
+The `FailSafe: Register Open Design MCP Connection` command palette entry (`failsafe.openDesign.registerMcp`) runs a one-shot probe-then-connect flow. If the daemon is unreachable, the operator gets a warning with the specific reason. If reachable, the MCP client connects and surfaces the available tool count.
+
+### Settings (all default `false`)
+
+- `failsafe.integrations.openDesign.mcpEnabled` — pre-construct the MCP client at activation (vs. lazy construction on first wizard invocation). The daemon is NOT auto-probed at activation; the wizard runs the probe.
+- `failsafe.integrations.openDesign.sseEnabled` — forward setting for per-run SSE subscribe UX (v1.1 wires the client; per-run subscribe lands in v1.2).
+
+### v1.1 limitations
+
+- **Read-only only.** All 4 write tools rejected at runtime — L3-gated exposure ships in v1.2 (B-OD-8).
+- **Single daemon URL** (`127.0.0.1:7456`). Multi-daemon discovery (OD + FailSafe Pro coexistence) ships in v1.2 (B-OD-10).
+- **No AG-UI stream** (`/api/runs/:id/agui`) — deferred to v1.2 (B-OD-9).
+- **No auto-register of FailSafe-as-MCP-server** in OD's registry. Manual wizard only (matches `feedback_no_ship_without_approval`).
+- **Daemon lifecycle not managed.** FailSafe does NOT spawn or kill the OD daemon; only consumes when reachable.
+
+### Test coverage (v1.1)
+
+- Vendored `ChatSseEvent` contracts: 9 cases in `src/test/integrations/open-design/contracts/sse-chat.test.ts` (FX720).
+- `OpenDesignDaemonProbe`: 7 cases in `src/test/integrations/open-design/OpenDesignDaemonProbe.test.ts` (FX721).
+- `OpenDesignMcpClient`: 10 cases in `src/test/integrations/open-design/OpenDesignMcpClient.test.ts` (FX722).
+- `OpenDesignSseClient`: 6 cases in `src/test/integrations/open-design/OpenDesignSseClient.test.ts` (FX723).
+- `OpenDesignMcpAllowlist` (incl. 4-cycle Plan-Time Hallucination regression guard): 7 cases in `src/test/integrations/open-design/OpenDesignMcpAllowlist.test.ts` (FX724).
+- `bootstrapOpenDesignMcp` (node:test using the require.cache vscode-stub pattern): 7 cases in `src/test/extension/bootstrapOpenDesignMcp.test.cjs` (FX725).

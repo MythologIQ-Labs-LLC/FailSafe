@@ -5,6 +5,32 @@
 
 import { renderBicameralCard, bindBicameralCard, INITIAL_BICAMERAL_STATE } from './bicameral-card.js';
 
+// Open Design v1.1 — read-only Settings card. Mirrors the Bicameral card
+// shell but omits install/connect orchestration (Open Design daemon lifecycle
+// is operator-owned; FailSafe only consumes when reachable). Three status
+// rows: daemon-probe, MCP client, SSE attach. Buttons surface the operator
+// wizard command from the command palette.
+function renderOpenDesignCard() {
+  return `
+    <div class="cc-integration-card" style="padding:12px;border:1px solid var(--border, #2a2a2a);border-radius:6px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em">Open Design MCP</div>
+          <span style="font-size:0.65rem;color:var(--text-muted)">v1.1 — read-only</span>
+        </div>
+      </div>
+      <div style="font-size:0.78rem;line-height:1.6;color:var(--text-main)">
+        <div>Daemon: <span style="color:var(--text-muted)">probe via wizard</span></div>
+        <div>MCP client: <span style="color:var(--text-muted)">disconnected</span></div>
+        <div>SSE attach: <span style="color:var(--text-muted)">idle</span></div>
+      </div>
+      <div style="margin-top:8px;font-size:0.7rem;color:var(--text-muted)">
+        Run <code>FailSafe: Register Open Design MCP Connection</code> from the command palette to probe the daemon at <code>127.0.0.1:7456</code> and connect the MCP client. Write tools (<code>create_artifact</code>, <code>write_file</code>, <code>delete_file</code>, <code>delete_project</code>) are rejected at runtime in v1.1; L3-gated exposure ships in v1.2 (B-OD-8).
+      </div>
+    </div>
+  `;
+}
+
 export class IntegrationsRenderer {
   constructor(panelId, { client } = {}) {
     this.panelId = panelId;
@@ -44,6 +70,7 @@ export class IntegrationsRenderer {
     return `
       <div class="cc-integrations" style="padding:16px;display:flex;flex-direction:column;gap:16px">
         ${renderBicameralCard(this.state.bicameral)}
+        ${renderOpenDesignCard()}
       </div>
     `;
   }
