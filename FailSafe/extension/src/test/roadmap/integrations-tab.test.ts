@@ -31,12 +31,17 @@ suite('IntegrationsRenderer (Command Center tab)', () => {
     assert.ok(card, 'Bicameral card must be rendered');
   });
 
-  test('render — Bicameral is the only card in v1', () => {
+  test('render — v5.3.0 ships Bicameral + Open Design cards', () => {
     setupDom();
     const r = new IntegrationsRenderer('integrations', { client: null });
     r.render({});
     const cards = document.querySelectorAll('.cc-integrations > *');
-    assert.equal(cards.length, 1);
+    assert.equal(cards.length, 2, 'expect exactly 2 integration cards (Bicameral + Open Design)');
+    assert.ok(document.querySelector('.cc-bicameral-card'), 'Bicameral card must be present');
+    const openDesignCard = Array.from(cards).find((el) =>
+      el.textContent?.includes('Open Design MCP'),
+    );
+    assert.ok(openDesignCard, 'Open Design card must be present');
   });
 
   test('render — uses unknown state by default → "Detecting" message', () => {
