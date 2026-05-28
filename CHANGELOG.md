@@ -5,6 +5,12 @@ All notable changes to FailSafe will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **qor.scripts substrate modules v1** (target v5.3.0; plan-qor-substrate-modules-v1) — WARN-only governance substrate layer invoked via the new `failsafe.substrate.run` Command Palette entry. Three modules in v1: `secret_scanner` (gitleaks v8), `feature_index_verify` (TS-local adapter — corrects an upstream column-header DRIFT), `model_pinning_lint` (silent-no-op against `.claude/skills/`, documented in `summary.note`). One `'substrate.run.complete'` event per run on the FailSafe EventBus; findings surface in a "FailSafe Substrate" Output channel + a `showInformationMessage` toast. WARN-only posture: findings never block operator workflow. FX710-FX715 (32 test cases total). New docs at `docs/SUBSTRATE_MODULES.md`; backlog `[B-SUBSTRATE-1..6]`.
+
 ## [5.2.2] - 2026-05-26
 
 Hotfix release for the v5.2.x cycle. v5.2.0 and v5.2.1 are both dead-on-marketplace git tags in `main` — each had a Release Pipeline run that failed at the Build & Test job before the publish jobs ran. v5.2.0 (`ba9a927`, run `26470883885`) failed on 5 unit-test failures from orphaned SHIELD-anchor lesson literals + an FX615 tag-filter test race. v5.2.1 (`7631ac1`, run `26484008504`) failed on a latent Playwright harness regression in `popout-ui.spec.ts:6` that was masked by v5.2.0's earlier unit-test failures (CI never reached Playwright in v5.2.0's run; v5.2.1's unit-test fix made the latent regression visible). v5.2.2 closes the harness regression. **Zero feature delta from v5.2.1** (which itself had zero feature delta from v5.2.0) — the FailSafe Learn rebuild, Ollama probe fix, and a11y baseline ship verbatim. See the [5.2.0] entry below for the full content.

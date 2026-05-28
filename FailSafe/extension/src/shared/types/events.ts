@@ -49,7 +49,8 @@ export type FailSafeEventType =
   | "agentRun.completed"
   | "agentRun.replaying"
   | "transparency.prompt"
-  | "bicameral.verdict";
+  | "bicameral.verdict"
+  | "substrate.run.complete";
 
 export interface FailSafeEvent<T = unknown> {
   type: FailSafeEventType;

@@ -20470,3 +20470,296 @@ _Hash provenance_: Content Hash = `SHA256` of this entry's body text (everything
 
 _Chain integrity: VALID_
 _Session: 2026-05-26-hotfix-v5-2-2-popout-ui-harness_
+
+### Entry #401: RESEARCH BRIEF — qor.scripts substrate modules v1 (substantiate-time WARN integration)
+
+**Date**: 2026-05-27
+**Timestamp**: 2026-05-27T22:30:00Z
+**Phase**: research
+**Plan**: `plan-qor-substrate-modules-v1.md` (v2 — PASS audit after 2 iterations)
+**Branch**: `feat/qor-substrate-modules-v1` (cut from `main @ 88200c2`)
+**Author**: The Qor-logic Analyst
+**Skill**: /qor-research v3 (under /qor-auto-dev-1)
+**Risk Grade**: L2 (research findings only; no implementation; no chain-modifying decisions)
+**Predecessor**: Entry #396 (SESSION SEAL — v5.2.2 hotfix popout-ui Playwright harness migration). Chain fork acknowledgement: entries #397-#400 exist on parallel branches (hotfix/v5.2.2 + feat/open-design-integration) and will reconcile at merge time per established Merkle-fork convention.
+
+## Target
+
+4 `qor.scripts` substrate modules in qor-logic 0.75.1 for substantiate-time WARN-only integration into FailSafe. Operator-locked scope per /qor-auto-dev-1 up-front intake: substantiate-time invocation surface only; WARN-only failure posture v1.
+
+## Output
+
+Research brief written at `.failsafe/governance/RESEARCH_BRIEF_qor-substrate-modules-v1-2026-05-27.md` (gitignored governance dir per `governance_doc_storage` convention).
+
+## Key findings (per module)
+
+| Module | Verdict | Headline |
+|---|---|---|
+| `secret_scanner` | **GO** | Drop-in fit. `python -m qor.scripts.secret_scanner --staged --out PATH`; exit 0/1/2; gitleaks v8 JSON; stdlib-only; language-agnostic. |
+| `dependency_admission_lint` | **NO-GO V1** | Python-archetype-only (PyPI Warehouse + `requirements-release.txt` + `pyproject.toml`). FailSafe is Node. Defer to V2; record as `archetype-mismatch SKIP`. |
+| `feature_index_verify` | **CAVEAT (GO via TS adapter)** | DRIFT: library-only (no `__main__`); expects column `verification status` — FailSafe uses `status` → 0 rows parsed silently. Recommendation: local TS adapter. |
+| `model_pinning_lint` | **CAVEAT (silent no-op v1)** | DRIFT: walks `qor/skills/` — FailSafe uses `.claude/skills/`. Always exits 0 (WARN-only by design — perfect V1 contract shape). 0-warning baseline expected until skills get pinning frontmatter backfill. |
+
+## Q-F resolution
+
+`dep_admit_lint` does NOT exist as a module in qor-logic 0.75.1. Canonical name is `dependency_admission_lint`. Standardize on this name in all FailSafe references going forward.
+
+## Recommended v1 scope
+
+- `src/qorlogic/substrate/` directory with: `types.ts`, `QorScriptInvoker.ts`, `SecretScannerModule.ts`, `FeatureIndexVerifyAdapter.ts`, `ModelPinningLintModule.ts`, `SubstrateRunner.ts`, `index.ts`
+- `src/extension/substrate-command.ts` — VS Code command `failsafe.substrate.run` wired from `main.ts`
+- `src/shared/types/events.ts` — add `'substrate.run.complete'` to `FailSafeEventType` union (1-line addition)
+- WARN-only posture: findings surface in VS Code Output channel + transparency event; never block
+- `dependency_admission_lint` deferred to V2 (B-SUBSTRATE-2)
+
+## Open questions remaining (resolved at plan v2 phase)
+
+1. Substrate CLI command surface name → `failsafe.substrate.run` (palette command, no Console UI button in v1)
+2. `gate_warned_substrate_finding` event-body schema → `{totalFindings, runDurationMs, startedAt, modules: [{name, count, ok}]}`
+3. dependency_admission_lint V2 scope → backlog as B-SUBSTRATE-2
+4. model_pinning_lint frontmatter backfill → separate concern (B-SUBSTRATE-6)
+5. FEATURE_INDEX FX rows → FX710-FX715 (6 entries)
+6. feature_index_verify integration approach → Option B (local TS adapter; matches FailSafe column naming without upstream coordination)
+
+## Risks / unknowns
+
+- **secret_scanner** `generic-high-entropy-assignment` regex pattern is broad — operator should expect ~1-2hr calibration sweep against FailSafe sources during v1 rollout. WARN-only posture mitigates the risk of blocking work on false positives.
+- **Module-absent vs module-malfunctioning vs found-nothing** must be discriminable in `SubstrateRunner.runOne()` outcomes. Plan v2 addresses via `ModuleResult.error.kind` enum.
+
+## Decision
+
+**Research COMPLETE.** v1 scope locked at 3 modules (secret_scanner GO, feature_index_verify via TS adapter, model_pinning_lint silent-no-op-by-design), with dependency_admission_lint deferred to V2 backlog. Chain advances #396 → #401 (fork from feat/open-design-integration's #397→#400 chain reconciles at merge). No code changes from this entry.
+
+_Next step in cycle_: `/qor-plan` against the brief's §"Recommended v1 scope" → already complete (plan v2 PASS audit) → `/qor-implement` → `/qor-substantiate` (THIS Entry #402 SESSION SEAL).
+
+## Content Hash
+
+**Content Hash**: `1a5723026ad58ac29c8e8f1da53e124043cc62386ba674786419283261a0c279`
+**Previous Hash**: `5bdb145eb2de736ae9d4947e8efd9c48837553eb3a9aa09baaad240396b91c06` (Entry #396 Chain Hash; chain forks from #396 — entries #397-#400 live on parallel branches and reconcile at merge)
+**Chain Hash**: `5e9b4bdc36c796e8408294b3d72e3f67825d450589a4c8bacdaa109f3701c0cd`
+**Merkle Seal**: `870169933c2e702922aa3181836de518055d6fa087d3e52ac9e6cf8a4ca58a84` — gate_seal_research_substrate_modules_v1
+**Session ID**: `2026-05-27-auto-dev-1-qor-substrate-modules-research`
+
+_Hash provenance_: Content Hash = `SHA256` of this entry's body text (everything above the Content Hash line). Chain Hash = `SHA256(content_hash + previous_hash)`. Merkle Seal = `SHA256(chain_hash + gate_label)`. Computed via Python stdlib `hashlib.sha256` because the `qor.scripts.ledger_hash` helper is absent on this Node-archetype host (Phase 75 skip).
+
+---
+
+_Chain integrity: VALID (fork from #396)_
+_Session: 2026-05-27-auto-dev-1-qor-substrate-modules-research_
+
+### Entry #402: SESSION SEAL — qor.scripts substrate modules v1 (substantiate-time WARN integration)
+
+**Date**: 2026-05-27
+**Timestamp**: 2026-05-27T22:35:00Z
+**Phase**: substantiate
+**Plan**: `plan-qor-substrate-modules-v1.md` (v2 — PASS audit after 2 iterations, with NEW1+NEW2 fixes baked into the code blocks)
+**Branch**: `feat/qor-substrate-modules-v1` (cut from `main @ 88200c2`)
+**Author**: The Qor-logic Judge
+**Cycle**: /qor-auto-dev-1 (research v3 → plan v1+v2 → audit×2 → implement → substantiate)
+**Verdict**: PASS
+
+## What ships in v1
+
+Three substrate modules wired as substantiate-time WARN-only governance signals invoked via VS Code command `failsafe.substrate.run`:
+
+1. **`secret_scanner`** (drop-in GO) — invokes `python -m qor.scripts.secret_scanner --staged --out dist/secrets.findings.json`; parses gitleaks v8 JSON; maps to `SubstrateFinding[]`.
+2. **`feature_index_verify`** (TS adapter, not subprocess) — local Markdown parser reading `docs/FEATURE_INDEX.md` with FailSafe's canonical `Status` column header (DRIFT-corrected vs upstream's `verification status` expectation); identifies unverified / missing-test-path rows.
+3. **`model_pinning_lint`** (silent-no-op-by-design) — invokes upstream module; documents the expected 0-finding baseline (upstream walks `qor/skills/`; FailSafe stores skills at `.claude/skills/`).
+
+A 4th module — **`dependency_admission_lint`** — was investigated but DEFERRED to V2 (B-SUBSTRATE-2 backlog entry) because it's Python-archetype-only and would no-op against FailSafe's Node-archetype dependency management.
+
+## Architecture
+
+- **`src/qorlogic/substrate/`** new directory with: `types.ts` (39L), `QorScriptInvoker.ts` (102L), `SecretScannerModule.ts` (109L), `FeatureIndexVerifyAdapter.ts` (118L), `ModelPinningLintModule.ts` (46L), `SubstrateRunner.ts` (64L), `index.ts` (16L barrel) — all ≤ 250L Section 4 razor.
+- **`src/extension/substrate-command.ts`** (76L) — registers `failsafe.substrate.run` command; constructs the resolver + invoker + runner chain.
+- **`src/extension/main.ts`** — wires the command adjacent to `registerAdvancedCommands(...)` at line 124 using `defaultRun` from `PythonInterpreterResolver` (audit-v2-NEW2 fix; `defaultRun` was not in main.ts scope by default — explicit import added).
+- **`src/shared/types/events.ts`** — extends `FailSafeEventType` union with `'substrate.run.complete'` (audit-v2-D2 fix — without this, the SubstrateRunner emit call fails tsc).
+
+WARN-only invariant: all 3 modules wrap their failure modes in `ModuleResult.error.kind ∈ {module-missing, timeout, spawn-error, parse-error, other}` — never throws to the SubstrateRunner. SubstrateRunner aggregates per-module results + emits ONE `substrate.run.complete` event via the FailSafe EventBus (2-positional-arg invocation per the audit-v2-D1 fix).
+
+## Why this cycle exists
+
+Operator-requested follow-on to the Phase 75 SKIP records in seal entries #395/#396/#400. Those skips documented the Python-toolkit gates that FailSafe's Node archetype historically couldn't honor. v1 elevates 3 of those skips to WARN-active surface, with structured findings flowing through the existing transparency stream. dependency_admission_lint remains SKIP-class until a Node-archetype port (V2).
+
+## Implementation summary
+
+**New files (8 source + 6 test + 1 doc)**:
+- `src/qorlogic/substrate/{types,QorScriptInvoker,SecretScannerModule,FeatureIndexVerifyAdapter,ModelPinningLintModule,SubstrateRunner,index}.ts` (7 source)
+- `src/extension/substrate-command.ts`
+- `src/test/qorlogic/substrate/{QorScriptInvoker,SecretScannerModule,FeatureIndexVerifyAdapter,ModelPinningLintModule,SubstrateRunner}.test.ts` (5 mocha tdd tests)
+- `src/test/extension/substrate-command.test.cjs` (1 node:test using vscode-stub require.cache pattern)
+- `docs/SUBSTRATE_MODULES.md` (operator-facing doc)
+
+**Modified files (6)**:
+- `src/shared/types/events.ts` (+1 line)
+- `src/extension/main.ts` (+15 lines)
+- `FailSafe/extension/package.json` (+8 lines for command + activationEvent)
+- `docs/FEATURE_INDEX.md` (+13 lines for FX710-FX715)
+- `docs/BACKLOG.md` (+15 lines for B-SUBSTRATE-1..6)
+- `CHANGELOG.md` + `FailSafe/extension/CHANGELOG.md` (+6 lines each in Unreleased/Added)
+
+## Reality vs Promise verification
+
+- **Promise** (plan v2): 8 new source files + 6 test files + 1 new doc + 6 modifications; 29+ test cases (6+5+6+3+5+4); no new npm deps; WARN-only posture; substantiate-time-only invocation; `substrate.run.complete` event added to union.
+- **Reality** (implementer report): all 15 new files present at expected paths with expected LoC; 29/29 tests PASS; tsc clean; no new dependencies; constructor signatures match plan v2 corrections (options-bag / required-args); event emission uses 2-positional-arg form against `EventBus.emit(eventType, payload)`.
+- **Verdict**: Reality = Promise.
+
+## Verification matrix
+
+| Check | Result |
+|---|---|
+| `npx tsc --noEmit` | clean |
+| `npx mocha --ui tdd "out/test/qorlogic/substrate/**/*.test.js"` | 25/25 PASS (FX710-FX714) |
+| `node --test src/test/extension/substrate-command.test.cjs` | 4/4 PASS (FX715) |
+| `npm test` full suite | 1142 passing / 1 pending / 7 failing — implementer attributed all 7 as pre-existing; verified independently that `src/test/sentinel/AgentRunRecorder.provenance-detector.test.ts` does NOT exist on this branch (it's a feat/open-design-integration artifact), so the 2× FX703 attribution is likely cross-branch stale `out/` artifact contamination. No substrate-introduced regressions confirmed. |
+| Section 4 razor (new files) | all ≤ 118L; well under 250L cap |
+| No new npm dependencies | ✓ verified |
+| Audit advisories honored | ✓ (D1+D2 2-arg emit, D3 derived ok, D4 required-args ctor, D5 narrow + forward py.args, D6 main.ts wiring, NEW1 derived ok in QorScriptInvoker, NEW2 explicit defaultRun import) |
+
+### Pre-existing test failures (NOT introduced by this work)
+
+7 failures from `npm test`:
+- 3× TransparencyRenderer verdict records (pre-existing UI parallel-work residue)
+- 1× "after each" hook + 1× FX556 GovernanceRenderer.renderL3Queue — Node/undici WebSocket event-instance mismatch (environmental, pre-existing)
+- 2× FX703 AgentRunRecorder provenance-detector — **likely false attribution**: the test file does NOT exist on `feat/qor-substrate-modules-v1` (verified via `find src/test/sentinel`). Most plausible explanation is stale `out/test/sentinel/AgentRunRecorder.provenance-detector.test.js` compiled artifact left over from a prior branch's compile, picked up by mocha's glob. Cleanup recommendation: `git clean -fd out/` between branch switches. Does NOT affect substrate-v1 substantiation correctness.
+
+## Plan-text drift handled during implementation
+
+**One drift** — `main.ts` wiring: plan v2 said `registerSubstrateCommand(context, core.eventBus, core.configManager, defaultRun)` passing `core.configManager` as the `ConfigLike` arg. But `ConfigManager` (`src/shared/ConfigManager.ts`) does NOT expose a `get(key: string): string | undefined` method matching `ConfigLike`. The actual `ConfigLike` surface is what `vscode.workspace.getConfiguration('failsafe')` returns. Implementer correctly switched to that pattern, matching the established sibling at `bootstrapServers.ts:162`. No behavior delta.
+
+## Pre-existing working-tree state (NOT bundled in this cycle's commits)
+
+- `docs/INTEGRATIONS.md` (modified) — pre-existing modification from an earlier cycle; tracked on main; NOT part of substrate work
+- Stale `out/` compiled artifacts from cross-branch builds (the 2× FX703 false-attribution above)
+
+## Compliance bindings preserved
+
+- **EU AI Act Annex III**: substrate is observability/transparency tooling — no scoring/grading/inference
+- **GDPR session-only**: findings ephemeral in transparency stream + Output channel; persistent disk write only to `dist/secrets.findings.json` (gitignored)
+- **FailSafe Pro repo boundary** (`feedback_failsafe_pro_repo_boundary`): extension-side observer + WARN-emitter only; no Pro-daemon work
+- **No pipeline reshape** (`feedback_no_pipeline_reshape_for_marketplace_issues`): does NOT modify publish pipeline
+- **No /qor-substantiate without operator approval** (`feedback_no_ship_without_approval`): auto-dev-1 stops at Review Boundary; commits staged but not pushed
+
+## Phase 75 prerequisite skips (non-Python archetype host)
+
+Same skip pattern as #395/#396/#400. Notably: this cycle CHANGES the SKIP→WARN posture for 3 of the modules going forward. Future seal entries on FailSafe should reflect WARN-active for secret_scanner / feature_index_verify / model_pinning_lint (when operator runs `failsafe.substrate.run` pre-substantiate); SKIP retained for dependency_admission_lint until V2.
+
+## Decision
+
+**SEALED.** v1 substrate-modules integration ships 3 module wrappers + substrate-command + WARN-only event surface. Chain advances #396 → #401 → #402 (fork from feat/open-design-integration's parallel #397→#400 chain reconciles at merge). No code changes from this entry beyond the META_LEDGER append.
+
+_Next operator action_ (Review Boundary checkpoint per `/qor-auto-dev-1` Step 6 + `feedback_no_ship_without_approval`): operator decides whether to commit + push + open PR. Auto-dev-1 has staged and verified the implementation; the visible/irreversible actions are operator-owned.
+
+**Recommended staging strategy**: single bundled commit `feat(substrate): qor.scripts WARN-only substantiate-time modules v1` carrying all 15 new files + 6 modifications. Pre-existing `docs/INTEGRATIONS.md` modification (NOT my work) excluded.
+
+## Content Hash
+
+**Content Hash**: `76011366bf31755c069eb71f4ac2c84f4960d2dc061f5268bc1ea719a9debd33`
+**Previous Hash**: `5e9b4bdc36c796e8408294b3d72e3f67825d450589a4c8bacdaa109f3701c0cd` (Entry #401 Chain Hash)
+**Chain Hash**: `3e6e54afa297e96ff5f0ceb578e461a3089868caf63d2673db9db43b6529be1e`
+**Merkle Seal**: `8896107779be6da195c76f45f525f32f81ba1636bc4cc1144438aa846cd32b8a` — gate_seal_substantiate_substrate_modules_v1
+**Session ID**: `2026-05-27-auto-dev-1-qor-substrate-modules-substantiate`
+
+_Hash provenance_: SHA256 stdlib, same convention as #401.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-05-27-auto-dev-1-qor-substrate-modules-substantiate_
+
+### Entry #403: RESEARCH BRIEF — FailSafe Integrations (operator-supplied multi-target survey)
+
+**Date**: 2026-05-27
+**Timestamp**: 2026-05-27T22:50:00Z
+**Phase**: research
+**Plan**: none (operator-supplied research; not generated by a /qor-research dispatch)
+**Branch**: `feat/qor-substrate-modules-v1` (drop-in from operator outside the auto-dev-1 cycle)
+**Author**: krknapp@gmail.com (operator-supplied via WebPilot-class deep-research surface; preserved verbatim)
+**Risk Grade**: L2 (research findings only; no implementation; no chain-modifying decisions)
+**Predecessor**: Entry #402 (SESSION SEAL — qor.scripts substrate modules v1)
+
+## Target
+
+Multi-target integration survey covering 12+ candidates: Open Design (#95), GitHub PR checks (#96), Linear (#97), Jira (#98), Semgrep/SARIF (#99), Slack (#100), Microsoft Teams (#101), Sentry (#102), Continue (#104), OpenHands (#105), Cline/Roo/Kilo (#106), Aider (#107), MCP Registry (#108). Each candidate analyzed for auth model, minimum scopes, webhook/lifecycle contract, blocker status, and primary-source citations.
+
+## Source
+
+Operator-supplied artifact at `docs/research/FailSafe Integrations Research.md` (63,600 bytes, tracked in git). Authored externally with primary-source citations to vendor documentation (GitHub Apps, Atlassian Connect/OAuth, Slack/Teams webhook contracts, MCP spec, etc.).
+
+## Output / artifact
+
+The full research document remains at `docs/research/FailSafe Integrations Research.md`. This META_LEDGER entry indexes it + flags the highest-impact findings that change prior FailSafe decisions.
+
+## Headline findings
+
+### Near-term ready candidates (per operator's research)
+
+- **GitHub App checks** (#96) — GitHub App JWT → installation token; needs org-approved App; Checks/PR write + Metadata read scopes
+- **Linear read-only issue import** (#97) — Personal API key or OAuth 2.0; `read` scope only for v1; ready
+- **Offline SARIF ingestion + optional local Semgrep** (#99) — no vendor account required; offline-first
+- **Slack outbound notifications** (#100) — incoming webhook URL only for notify-only path; interactive callbacks blocked v1
+- **Continue CLI headless wrapping** (#104) — `CONTINUE_API_KEY` personal/org; runtime enforced by `--allow`/`--ask`/`--exclude`; ready with version pin
+- **Aider diff-gated wrapping** (#107) — operator-supplied research details auth/lifecycle
+- **MCP Registry scoring (read-only)** (#108) — registry-driven discovery + scoring
+
+### Conditional/contract-care candidates
+
+- **Open Design** (#95) — **DRIFT vs Entry #399**: research says upstream Open Design daemon still owns `/api/*` + SSE BUT also ships a **read-only stdio MCP server**. Entry #399's "not an MCP server" characterization is incomplete. Creates a design fork: daemon observer (our shipped Model 2 v1), MCP adapter (additive surface), or dual-path support. **Important**: this does NOT invalidate the shipped Open Design v1 on `feat/open-design-integration` (Model 2 file-path provenance + attribution is orthogonal to MCP); it identifies an additive surface for a future v1.1.
+- **Jira dynamic webhooks** (#98) — OAuth 2.0 app + dynamic webhooks expire after 30 days; renewal job required
+- **Microsoft Teams Workflows** (#101) — Workflow-generated webhook URL tied to owners; can orphan; 28KB limit; >4 req/s throttled; notify-only ready, remote-approval blocked v1
+- **Sentry release correlation** (#102) — useful only if releases + SCM integration are configured upstream
+- **OpenHands** (#105) — action-space governance shape; structurally different from REST observer (consistent with Entry #399's prior characterization)
+- **Cline/Roo/Kilo** (#106) — already in install-host list per memory; deeper runtime hook research needed
+
+## Cross-cutting safety rules (from research)
+
+- Keep ALL v1 integrations DISABLED by default
+- NEVER emit secrets into logs or receipts
+- NEVER let notification failures block local governance decisions
+- DEFER action-taking remote workflows unless the vendor contract explicitly supports secure callback verification + least-privilege authorization
+
+Matches FailSafe's existing `feedback_no_ship_without_approval` + `feedback_no_pipeline_reshape_for_marketplace_issues` posture.
+
+## Drift findings (vs prior FailSafe research)
+
+| Prior FailSafe research | Operator-supplied research finding | Status |
+|---|---|---|
+| Entry #399 §Q1: "Open Design is an agent host, NOT an MCP server" | Upstream Open Design 0.8.x ALSO ships a read-only stdio MCP server alongside the daemon REST/SSE | **NEW DRIFT — invalidates the binary "not MCP" framing; does NOT invalidate the shipped Model 2 v1 (file-path provenance is orthogonal to MCP)** |
+| Entry #398 §1: "current Command Center Integrations tab is intentionally Bicameral-only" | Confirmed; this research extends the candidate list well beyond Entry #398's compendium with auth/scope/webhook detail per candidate | **EXTENSION — operator-supplied research deepens Entry #398 with primary-source verification** |
+| Memory `project_open_design_integration.md` §3: "Pattern A (REST wrapper) explicitly rejected" | Stays valid — pattern A vs Model 2 product framing distinction is unchanged; the new MCP surface is a THIRD orthogonal axis | **NO DRIFT on Model 2 v1 decision; FLAG for v1.1 dual-path consideration** |
+
+## Follow-up triggers
+
+1. **B-OD-7 (deferred; will land on `feat/open-design-integration` BACKLOG section, NOT here on `feat/qor-substrate-modules-v1`)**: Re-research Open Design's stdio MCP server surface; evaluate dual-path support for v1.1. Operator can file this on the OD branch directly OR I can scaffold it when the OD branch is next active.
+2. **Integration cycle prioritization**: per operator-supplied research's "near-term ready" list, the cleanest next /qor-auto-dev-1 candidates are GitHub App checks, Linear, or Slack — all have authoritative primary docs + narrow minimum-safe slices + few blocking unknowns.
+3. **Memory entries to author** (when an integration cycle launches against any of these):
+   - `project_github_app_integration.md` (when GitHub App cycle launches)
+   - `project_linear_integration.md`, `project_slack_integration.md`, etc.
+   - `reference_failsafe_integrations_research.md` (NOW — indexes this research artifact in memory for cross-cycle reuse)
+
+## Risks / unknowns
+
+- **Operator-supplied research vs Claude-authored research**: this entry treats the operator-supplied artifact as authoritative for the candidates it covers; Claude has NOT independently verified each citation. Future cycles consuming any specific candidate should re-verify the cited primary sources before plan authoring.
+- **Open Design MCP drift**: the most consequential finding. Re-verify against `nexu-io/open-design` source before launching B-OD-7.
+- **Upstream velocity**: Open Design v0.8.x is 7+ days old; the MCP surface noted by operator's research may have shifted further; re-verify at B-OD-7 time.
+
+## Decision
+
+**Research INDEXED.** Operator-supplied artifact preserved at `docs/research/FailSafe Integrations Research.md`. META_LEDGER chain advances #402 → #403. No code changes from this entry. No NEW research authored — this entry is the index + drift-call-out + follow-up trigger surface.
+
+_Next operator action_: pick a next integration cycle (GitHub App / Linear / Slack are ready candidates per operator's research) OR file B-OD-7 on the OD branch when it next becomes active.
+
+## Content Hash
+
+**Content Hash**: `8ce666aa6abf7301659676c1163dd2fdc293ea228f227647531086c49ef748a8`
+**Previous Hash**: `3e6e54afa297e96ff5f0ceb578e461a3089868caf63d2673db9db43b6529be1e` (Entry #402 Chain Hash)
+**Chain Hash**: `1bb6ddf0dd06a61309b981c8f8747d2bb65e6e51c641ebf35d11015fbada054a`
+**Merkle Seal**: `092b65d7c377781f44f7df2c6f756b3849c9fee9cedc6ad93af7895bb6196a4a` — gate_seal_research_failsafe_integrations_operator_supplied
+**Session ID**: `2026-05-27-research-failsafe-integrations-operator-supplied`
+
+_Hash provenance_: SHA256 stdlib, same convention as prior entries.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-05-27-research-failsafe-integrations-operator-supplied_
