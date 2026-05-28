@@ -5,6 +5,16 @@ All notable changes to FailSafe will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.3.1] - 2026-05-28
+
+Hotfix release. v5.3.0 was tagged but its Release Pipeline failed at Build & Test — `integrations-tab.test.ts:34` hardcoded `cards.length === 1` ("Bicameral is the only card in v1") which became outdated when v5.3.0 added the Open Design Settings card to the Integrations tab; the VS Code Marketplace + Open VSX publish jobs were skipped, so v5.3.0 was never installable. **v5.3.1 is the first v5.3.x build that actually ships to the marketplaces.**
+
+**Zero feature changes from v5.3.0** — the Open Design integration v1 (provenance) + v1.1 (MCP + SSE + probe) + WARN-only governance substrate v1 ship verbatim.
+
+### Fixed
+
+- **`integrations-tab.test.ts` — assert 2 cards for v5.3.0+** — the legacy `Bicameral is the only card in v1` test fired `2 !== 1` after v5.3.0 added `renderOpenDesignCard()` to `IntegrationsRenderer._renderCards()`. Test now asserts exactly 2 cards plus positive presence checks for both `.cc-bicameral-card` and the Open Design card (matched via `textContent`).
+
 ## [5.3.0] - 2026-05-28
 
 ### Added
