@@ -1,6 +1,6 @@
 # FailSafe Process Guide
 
-Audience: operators who need fast, accurate workflows for the shipped `v5.3.0` UI and governance stack.
+Audience: operators who need fast, accurate workflows for the shipped `v5.3.1` UI and governance stack.
 
 ## First Run (Recommended Path)
 
@@ -112,7 +112,7 @@ Removal:
 
 ## Mindmap Workflow (Current Release)
 
-`v5.3.0` supports voice-assisted and manual ideation in Console `Mindmap`:
+`v5.3.1` supports voice-assisted and manual ideation in Console `Mindmap`:
 
 1. (Optional) Open Console Settings → Voice & Audio. Pick Whisper model size and STT language; enable Auto-match voice if you want the TTS voice to follow the language.
 2. Click the mic button and speak your idea (or use the configured push-to-talk key).

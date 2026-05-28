@@ -14,9 +14,15 @@ FailSafe runs locally inside VS Code and Cursor. It monitors what AI agents do, 
 
 ---
 
-**Current Release**: v5.3.0 (2026-05-28)
+**Current Release**: v5.3.1 (2026-05-28)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v5.3.1
+
+Hotfix release. v5.3.0 was tagged but its Release Pipeline failed at Build & Test — `integrations-tab.test.ts` hardcoded "Bicameral is the only card" which became outdated when v5.3.0 added the Open Design Settings card; the marketplace publish jobs were skipped, so v5.3.0 was never installable. **v5.3.1 is the first v5.3.x build that actually ships to the marketplaces.**
+
+**Zero feature changes from v5.3.0** — the Open Design integration and WARN-only governance substrate below ship verbatim. The hotfix only updates the test to assert v5.3.0's reality (2 cards: Bicameral + Open Design).
 
 ## What's New in v5.3.0
 

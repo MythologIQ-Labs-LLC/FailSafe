@@ -32,9 +32,15 @@ _Local-first safety for AI coding assistants._
 
 <div align="center">
 
-**Current Release**: v5.3.0 (2026-05-28)
+**Current Release**: v5.3.1 (2026-05-28)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
+
+## What's new in v5.3.1
+
+Hotfix release. v5.3.0 was tagged but its Release Pipeline failed at Build & Test — `integrations-tab.test.ts` hardcoded "Bicameral is the only card" which became outdated when v5.3.0 added the Open Design Settings card; the VS Code Marketplace + Open VSX publish jobs were skipped, so v5.3.0 was never installable. **v5.3.1 is the first v5.3.x build that actually ships to the marketplaces.**
+
+**Zero feature changes from v5.3.0** — the Open Design integration and WARN-only governance substrate below ship verbatim. The hotfix only updates the test to assert v5.3.0's reality.
 
 ## What's new in v5.3.0
 
