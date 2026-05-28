@@ -22,6 +22,7 @@ suite('TransparencyRenderer verdict records', () => {
   test('sentinel verdict summary names decision, risk, and subject', () => {
     const { container, restore } = setupDom();
     try {
+      const ts = new Date().toISOString();
       const renderer = new TransparencyRenderer('audit-root');
       renderer.render();
       renderer.onEvent({
@@ -31,7 +32,7 @@ suite('TransparencyRenderer verdict records', () => {
           decision: 'WARN',
           riskGrade: 'L2',
           filePath: 'src/example.ts',
-          timestamp: '2026-05-27T19:37:56.730Z',
+          timestamp: ts,
         },
       });
       const card = container.querySelector('.cc-transparency-record');
@@ -39,12 +40,13 @@ suite('TransparencyRenderer verdict records', () => {
       assert.match(card!.textContent || '', /Sentinel WARN/);
       assert.match(card!.textContent || '', /L2/);
       assert.match(card!.textContent || '', /src\/example\.ts/);
-      assert.equal(card!.getAttribute('data-event-ts'), '2026-05-27T19:37:56.730Z');
+      assert.equal(card!.getAttribute('data-event-ts'), ts);
     } finally { restore(); }
   });
 
   test('verdict deep link highlights the matching transparency row', () => {
-    const url = 'http://localhost/command-center.html#governance:audit?verdict=2026-05-27T19%3A37%3A56.730Z';
+    const ts = new Date().toISOString();
+    const url = `http://localhost/command-center.html#governance:audit?verdict=${encodeURIComponent(ts)}`;
     const { container, restore } = setupDom(url);
     try {
       const renderer = new TransparencyRenderer('audit-root');
@@ -54,10 +56,10 @@ suite('TransparencyRenderer verdict records', () => {
         payload: {
           decision: 'BLOCK',
           riskGrade: 'L3',
-          timestamp: '2026-05-27T19:37:56.730Z',
+          timestamp: ts,
         },
       });
-      const card = container.querySelector('[data-event-ts="2026-05-27T19:37:56.730Z"]');
+      const card = container.querySelector(`[data-event-ts="${ts}"]`);
       assert.equal(card!.classList.contains('cc-verdict--highlighted'), true);
     } finally { restore(); }
   });
