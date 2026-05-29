@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-> Staged for **v5.3.3** (held under Review Boundary — not yet committed):
+## [5.3.3] - 2026-05-28
+
+Integration-surface batch: the first Open Design write path (L3-gated `create_artifact`), Section-4 razor + clobber-guard cleanup across the Bicameral / Marketplace / TabGroup surfaces, and a transparency audit date-filter fix. Sealed at META_LEDGER #409–#414.
 
 ### Added
 
@@ -17,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Decompose `BicameralRoute.ts` (B-INT-6)** — 490 → 34 LoC under the Section-4 razor. Extracted `bicameralRouteShared.ts` (deps + `governToolCall` + helpers) + `bicameralLifecycleRoutes.ts` + `bicameralDecisionRoutes.ts`; `bicameralToolRoutes.ts` repointed at the shared core (breaks the prior import cycle). Public surface preserved via re-export; zero behavioral change (195 Bicameral mocha + 7 Playwright pass verbatim). Sealed META_LEDGER #410.
 - **Decompose `bicameral-card.js` + `MarketplaceRoute.ts` (B-INT-7)** — both under the Section-4 razor. `bicameral-card.js` 314 → 98 (state renderers → `bicameral-card-render.js`); `MarketplaceRoute.ts` 382 → 29 (shared HITL-nonce core + read/install/scan route modules). Public surfaces preserved; zero behavioral change (90 mocha + 10 Playwright pass verbatim). Sealed META_LEDGER #411. Follow-up (#413): the marketplace `install/:id/confirm` completion decomposed into `handleInstallCompletion`/`runPostInstallScan`/`recordInstallLedger` to clear the 40-line function razor (58 marketplace tests verbatim).
+
+### Fixed
+
+- **TabGroup-level clobber guard for all sub-views (B-INT-12, FX812)** — generalizes the v5.3.2 Bicameral-only guard: `TabGroup.renderActive` gives every inactive sub-view a persistent detached scratch container, so an event-driven render on any inactive sub-view (timeline/genome/replay/risks/governance/skills) writes off-DOM and is rebuilt into the live pane on re-activation. One-place change, zero per-renderer edits, behavior-preserving. Independent audit PASS; 29 TabGroup + 481 sub-view + 14 Playwright verbatim. Sealed META_LEDGER #412.
+- **Transparency audit date-filter dropped late-in-day records (FX813, qor-debug)** — `TransparencyRenderer.matchesFilter` compared a UTC ISO instant (`Z`, ms precision) against local minute-precision date bounds using lexicographic string `<`/`>`, silently hiding evening records (UTC date past local midnight) + the final minute of each day. Fixed by comparing on the epoch axis (`Date.parse`, `to` inclusive of its whole minute). TZ-independent regression test added. Sealed META_LEDGER #414.
 
 ## [5.3.2] - 2026-05-28
 
@@ -30,8 +37,6 @@ Internal-quality release bundling the two post-v5.3.1 integration-surface refact
 ### Fixed
 
 - **TabGroup inactive-sub-view clobber (B-INT-5 qor-debug, FX804)** — `TabGroup.onEvent` fans events to all sub-views, but only the active one owns the shared content element; an autonomous `bicameral.connected` broadcast (background auto-connect) arriving while the Open Design sub-tab was active re-painted the Bicameral card over the live pane. Fixed with an additive `_tgMounted` flag (`TabGroup.renderActive`) + an early-return DOM-write guard in `BicameralRenderer.render()` (state still mutates while inactive → fresh on re-select). Test-first regression guard T6 (red→green).
-- **TabGroup-level clobber guard for all sub-views (B-INT-12, FX812)** — generalizes the above: `TabGroup.renderActive` gives every inactive sub-view a persistent detached scratch container, so an event-driven render on any inactive sub-view (timeline/genome/replay/risks/governance/skills) writes off-DOM and is rebuilt into the live pane on re-activation. One-place change, zero per-renderer edits, behavior-preserving. Independent audit PASS; 29 TabGroup + 481 sub-view + 14 Playwright verbatim. Sealed META_LEDGER #412.
-- **Transparency audit date-filter dropped late-in-day records (FX813, qor-debug)** — `TransparencyRenderer.matchesFilter` compared a UTC ISO instant (`Z`, ms precision) against local minute-precision date bounds using lexicographic string `<`/`>`, silently hiding evening records (UTC date past local midnight) + the final minute of each day. Fixed by comparing on the epoch axis (`Date.parse`, `to` inclusive of its whole minute). TZ-independent regression test added. Sealed META_LEDGER #414.
 
 ## [5.3.1] - 2026-05-28
 

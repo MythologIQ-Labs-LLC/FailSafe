@@ -14,9 +14,24 @@ FailSafe runs locally inside VS Code and Cursor. It monitors what AI agents do, 
 
 ---
 
-**Current Release**: v5.3.2 (2026-05-28)
+## 🧩 Integration Beta — Bicameral MCP + Open Design
+
+**FailSafe now connects to two best-in-class design & decision tools — live in beta as of v5.3.3.**
+
+- **🧠 Bicameral MCP** — bring your architecture *decisions* and their drift into the Command Center. Detect, connect, and ratify decision records inline; every Bicameral tool call is governed through FailSafe's universal interceptor.
+- **🎨 Open Design** — observe Open Design agent runs **and now act on them**: the new L3-gated `create_artifact` lets FailSafe create design artifacts only with explicit human approval (Buffer & auto-execute). Destructive write tools stay locked by design.
+
+Both are **opt-in and local-first** — disabled by default, no network until you enable them. Open the **Integrations** tab to connect. Feedback welcome while these mature out of beta.
+
+---
+
+**Current Release**: v5.3.3 (2026-05-28)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v5.3.3
+
+Integration-surface batch. **Open Design integration enters beta** with its first write path: `create_artifact` admitted through L3 human approval (Buffer & auto-execute) — the daemon executes only after you approve it in the Governance L3 queue; destructive write tools stay rejected. Plus a Section-4 razor + clobber-guard cleanup across the Bicameral / Marketplace / TabGroup surfaces (zero behavioral change) and a transparency audit date-filter fix that no longer hides evening records.
 
 ## What's New in v5.3.2
 
