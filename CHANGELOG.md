@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+> Staged for **v5.3.3** (held under Review Boundary — not yet committed):
+
+### Added
+
+- **Open Design `create_artifact` through L3 (B-OD-8)** — the non-destructive `create_artifact` write tool is admitted via L3 human approval (Buffer & auto-execute): `POST /api/actions/open-design-create-artifact` enqueues an L3 item and returns 409 pending; `OpenDesignL3Executor` runs the buffered call on approval + appends a ledger USER_OVERRIDE. Gate-by-construction one-shot token on `OpenDesignMcpClient`; the 3 destructive tools stay rejected. New per-item `POST /api/actions/decide-l3` + L3-queue UI. FX806–FX811. Sealed META_LEDGER #409.
+
+### Changed
+
+- **Decompose `BicameralRoute.ts` (B-INT-6)** — 490 → 34 LoC under the Section-4 razor. Extracted `bicameralRouteShared.ts` (deps + `governToolCall` + helpers) + `bicameralLifecycleRoutes.ts` + `bicameralDecisionRoutes.ts`; `bicameralToolRoutes.ts` repointed at the shared core (breaks the prior import cycle). Public surface preserved via re-export; zero behavioral change (195 Bicameral mocha + 7 Playwright pass verbatim). Sealed META_LEDGER #410.
+- **Decompose `bicameral-card.js` + `MarketplaceRoute.ts` (B-INT-7)** — both under the Section-4 razor. `bicameral-card.js` 314 → 98 (state renderers → `bicameral-card-render.js`); `MarketplaceRoute.ts` 382 → 29 (shared HITL-nonce core + read/install/scan route modules). Public surfaces preserved; zero behavioral change (90 mocha + 10 Playwright pass verbatim). Sealed META_LEDGER #411. Follow-up (#413): the marketplace `install/:id/confirm` completion decomposed into `handleInstallCompletion`/`runPostInstallScan`/`recordInstallLedger` to clear the 40-line function razor (58 marketplace tests verbatim).
+
 ## [5.3.2] - 2026-05-28
 
 Internal-quality release bundling the two post-v5.3.1 integration-surface refactors (B-INT-4 + B-INT-5). No marketplace-feature change beyond the Integrations tab now presenting one sub-view per integration. Sealed at META_LEDGER Entry #407 (B-INT-4) + #408 (B-INT-5).
@@ -18,7 +29,8 @@ Internal-quality release bundling the two post-v5.3.1 integration-surface refact
 
 ### Fixed
 
-- **TabGroup inactive-sub-view clobber (B-INT-5 qor-debug, FX804)** — `TabGroup.onEvent` fans events to all sub-views, but only the active one owns the shared content element; an autonomous `bicameral.connected` broadcast (background auto-connect) arriving while the Open Design sub-tab was active re-painted the Bicameral card over the live pane. Fixed with an additive `_tgMounted` flag (`TabGroup.renderActive`) + an early-return DOM-write guard in `BicameralRenderer.render()` (state still mutates while inactive → fresh on re-select). Test-first regression guard T6 (red→green). The same latent pattern in 6 other TabGroup sub-views is pre-existing and tracked as **B-INT-12** for a TabGroup-level fix.
+- **TabGroup inactive-sub-view clobber (B-INT-5 qor-debug, FX804)** — `TabGroup.onEvent` fans events to all sub-views, but only the active one owns the shared content element; an autonomous `bicameral.connected` broadcast (background auto-connect) arriving while the Open Design sub-tab was active re-painted the Bicameral card over the live pane. Fixed with an additive `_tgMounted` flag (`TabGroup.renderActive`) + an early-return DOM-write guard in `BicameralRenderer.render()` (state still mutates while inactive → fresh on re-select). Test-first regression guard T6 (red→green).
+- **TabGroup-level clobber guard for all sub-views (B-INT-12, FX812)** — generalizes the above: `TabGroup.renderActive` gives every inactive sub-view a persistent detached scratch container, so an event-driven render on any inactive sub-view (timeline/genome/replay/risks/governance/skills) writes off-DOM and is rebuilt into the live pane on re-activation. One-place change, zero per-renderer edits, behavior-preserving. Independent audit PASS; 29 TabGroup + 481 sub-view + 14 Playwright verbatim. Sealed META_LEDGER #412.
 
 ## [5.3.1] - 2026-05-28
 

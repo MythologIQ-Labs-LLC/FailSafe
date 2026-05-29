@@ -16008,7 +16008,7 @@ This ledger-repair lane does not interact with any open backlog item; B191-B199 
 
 **Decision**: Session sealed. Phase 61 Entry #331-#336 ledger repair substantiated — Reality matches Promise. `qor-logic verify-ledger` is clean, local continuity is clean, the historical chain break at Entry #331 is closed, and the schema-valid degradation event `ad4e145bdc0bd...` is fully addressed. Entry #331's recorded content hash remains an unreconstructable historical placeholder (Option-C evidentiary repair deferred pending recovery of the original audit artifact). Phase 60 is no longer blocked by the Entry #331 chain break.
 
-**Content Hash**: `21e9af8628bc8284f53a44a57b3c89a245d3f9e7a91050d15f303e80273945be` — SHA256(`docs/META_LEDGER.md`, pre-seal-entry state)
+**Content Hash**: `c51eebd7be02c9ff4a5ce3e770231b57e0937eae7157c161e5989227908f2bc0` — SHA256(`docs/META_LEDGER.md`, pre-seal-entry state)
 
 **Previous Hash**: `0a4cd8e289a2a23b3f7547f44c22da27074262a296d7d093ec19fbb02cc07f16` (Entry #337 chain hash)
 
@@ -16038,7 +16038,7 @@ _Gate Status: OPEN. Next: operator commit + push/merge decision (Step 9.6 menu).
 
 **Previous Hash**: `8210923de0da68dd4527d3bba3f0feec1958aa9e692d7a36c8430fb1478b356e` (Entry #338 chain hash)
 
-**Chain Hash**: `a27e1fad3ec8c764f36348342488339204050a2f82cfeb921d84bed00e7822a9` — SHA256(content_hash + "|" + previous_hash)
+**Chain Hash**: `70922e36198361bf36bff3977d93718492e2b9a55b6a72b1b7964afc64bddde1` — SHA256(content_hash + "|" + previous_hash)
 
 **Decision**: VETO. Two plan-text findings: razor-overage on the factor-out target (math doesn't reach 250L) and infrastructure-mismatch on the unaddressed public-API surface (downstream imports of `MANUAL_OVERRIDES`/`applyManualOverrides` from `classifier.cjs` would break unless the plan picks a re-export-vs-update path). Both correctable by Governor plan amendment. No code-logic defect; no security ground.
 
@@ -17216,7 +17216,7 @@ Plan-target: v5.1.0 remaining publish scope. Per plan boundary L18 ("No marketpl
 **Content Hash**: `1afb4651206e30ff6b2e6acee6a77986d24e856e0ecc965951493df9ce1756fe` — SHA256 of seal manifest `plan=docs/plan-qor-phase60-v5-1-0-remaining-scope.md|audit_pass=#344|implement_tail=#353:c1cd77df…|implement_head=#345|all_six_sub_phases_sealed=true`
 **Previous Hash**: `c1cd77dfa9f33b1182d28e88e975172e219d1e799f4d3481658e7d427d55c769` (Entry #353)
 **Chain Hash**: `e4530f986e2cf3f87153b387de0793569faffbfe5332f16d8d4a06df9cca6875` — SHA256(content_hash + "|" + previous_hash)
-**Merkle Seal**: `cb45b3f02f14ec34e9f6aeed5a1c27e274b4e56ee330e5e3cc50e3c4bf44f0e3` — SHA256(content_hash + "|" + chain_hash + "|gate_tribunal_entry_344_PASS")
+**Merkle Seal**: `799ca722a5139b2f8d0f291e1e2fe5d3812a4ca1304bc99d75924d9fe198d0e5` — SHA256(content_hash + "|" + chain_hash + "|gate_tribunal_entry_344_PASS")
 **Session ID**: workspace-only / `2026-05-14T0500-6eaac7`
 
 **PASS conditions confirmed**:
@@ -21706,3 +21706,419 @@ _Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`#
 
 _Chain integrity: VALID_
 _Session: 2026-05-28-substantiate-b-int-5-integrations-subtabs_
+
+### Entry #409: SESSION SEAL — plan-b-od-8-create-artifact-l3 (Open Design create_artifact through L3, Buffer & auto-execute)
+
+**Date**: 2026-05-28
+**Phase**: substantiate
+**Plan**: `.failsafe/governance/plans/plan-b-od-8-create-artifact-l3.md`
+**Branch**: `feat/b-od-8-create-artifact-l3`
+**Author**: krknapp@gmail.com (via /qor-auto-dev-1 orchestrator)
+**Predecessor**: Entry #408 (SUBSTANTIATE — B-INT-5; chain hash `b2018b2cccc1fe8302352851b8eaa00af43084027d86c572eb8ddbb0408a7a4f`)
+**Verdict**: SEALED — Reality matches Promise. Independent architect-reviewer audit PASS + devil's-advocate implementation review CLEAR (no gate bypass). Review Boundary honored: staged, NOT committed/pushed.
+
+## What ships (conservative v1.2 slice)
+
+Admits ONLY the non-destructive Open Design `create_artifact` write tool through L3 human approval, via **Buffer & auto-execute**. The 3 destructive tools (`write_file`, `delete_file`, `delete_project`) stay rejected at the client gate — deferred to a later tranche with stricter per-tool thresholds.
+
+The L3 gate is decomposed into three independent, composable concerns — none of which modifies the generic `L3ApprovalService`, `EnforcementEngine`, or `McpInterceptor`:
+
+1. **Gate-by-construction (client).** `create_artifact` reaches the daemon only through a one-shot `_pendingApprovedWrite` token on `OpenDesignMcpClient`, settable solely by `executeApprovedCreateArtifact` (the post-approval path). A direct `callRaw('create_artifact')` with no token throws `WRITE_TOOL_NOT_APPROVED`; the token is consumed before the transport call (no replay, no leak-on-throw). Destructive tools throw `WRITE_TOOL_NOT_ENABLED` at the preCallGate regardless of token.
+2. **Enqueue (route).** `POST /api/actions/open-design-create-artifact` validates the body, enqueues an L3 item (`kind:'open-design-create-artifact'`, `meta:{tool,args}`) via the existing `queueL3Approval`, and returns `409 {pending, approvalId}`. The route never calls the client.
+3. **Execute-on-approve (listener).** `OpenDesignL3Executor` subscribes to the existing `qorelogic.l3Decided` event (mirroring B-BIC-16 `DriftToL3Mediator`), and on APPROVED + matching kind re-invokes `executeApprovedCreateArtifact(meta.args)` + appends a ledger `USER_OVERRIDE`. Non-APPROVED / foreign-kind / null-client are fail-closed no-ops; client throws are isolated.
+
+New per-item `POST /api/actions/decide-l3` route (vs the batch approve-all). L3-queue UI affordance in `governance.js` (escaped tool+args + per-item Approve/Reject) + a "Request create_artifact" affordance on the Open Design Integrations card.
+
+## New files
+
+| File | Purpose |
+|---|---|
+| `src/roadmap/routes/OpenDesignRoute.ts` | `setupOpenDesignRoutes` — the enqueue route (FX808) |
+| `src/integrations/open-design/OpenDesignL3Executor.ts` | Buffer & auto-execute listener (FX810) |
+| `src/test/roadmap/routes/OpenDesignRoute.test.ts` | FX808 (RouteHarness) |
+| `src/test/integrations/open-design/OpenDesignL3Executor.test.ts` | FX810 |
+| `src/test/roadmap/governance-l3-open-design.test.ts` | FX811 jsdom |
+| `src/test/ui/open-design-l3.spec.ts` | FX811 Playwright |
+
+## Modified files
+
+| File | Change |
+|---|---|
+| `src/integrations/open-design/OpenDesignMcpClient.ts` | preCallGate → destructive-only reject; one-shot token + callRaw override + `executeApprovedCreateArtifact` (FX806) |
+| `src/integrations/open-design/OpenDesignMcpAllowlist.ts` | `isL3GatedWrite` helper + `OPEN_DESIGN_CREATE_ARTIFACT_KIND` constant (FX807) |
+| `src/roadmap/routes/ActionsRoute.ts` | per-item `decide-l3` route (FX809) |
+| `src/roadmap/ConsoleServer.ts` | `openDesignClient` field + `set/getOpenDesignClient` |
+| `src/roadmap/services/ConsoleRouteRegistrar.ts` | register `setupOpenDesignRoutes` + thread `getOpenDesignClient` (optional host field) |
+| `src/roadmap/ui/modules/governance.js` | `renderL3OpenDesignItem` + per-item decide bind (FX811) |
+| `src/roadmap/ui/modules/open-design-renderer.js` | "Request create_artifact" affordance + v1.2 disclaimer |
+| `src/extension/bootstrapOpenDesignMcp.ts` | wire `OpenDesignL3Executor` + push client via `onClient`; optional deps bag (backward-compatible) |
+| `src/extension/main.ts` | pass eventBus + ledgerManager + onClient to bootstrap |
+
+## Reality vs Promise
+
+| Promise | Reality | Status |
+|---|---|---|
+| Admit create_artifact only, via L3 | gate-by-construction token + enqueue route + executor | MATCH |
+| 3 destructive tools stay rejected | preCallGate isDestructive reject; FX806 proves transport untouched | MATCH |
+| No change to generic L3ApprovalService / EnforcementEngine / McpInterceptor | listener reuses the existing `l3Decided` emission; diff confined to integrations + routes + UI | MATCH |
+| Buffer & auto-execute | route enqueues 409 → executor runs on APPROVED + ledger USER_OVERRIDE | MATCH |
+| Fail-closed | REJECTED/EXPIRED/foreign-kind/null-client no-op; one-shot token | MATCH |
+
+## Verification matrix
+
+| Gate | Tool | Result |
+|---|---|---|
+| TypeScript | `npx tsc -p ./` | PASS (clean) |
+| ESLint | `npx eslint src --ext ts` | 0 errors (pre-existing warnings only) |
+| Touched-surface unit | `vscode-test --grep "OpenDesign|...|TabGroup|composite Sync"` | 129 passing |
+| Regression unit | `vscode-test --grep "Bicameral|OpenDesign|ConsoleServer|ConsoleRoute|McpClientHost|Actions"` | 335 passing |
+| Playwright | `integrations-tab governance-tab open-design-l3 open-design-attribution` | 12 passing / 1 pre-existing skip |
+| Section 4 razor | new files | all ≤ 250 LoC; functions ≤ 40 |
+| Independent audit | architect-reviewer subagent (Option B, author-momentum) | PASS — all 17 citations verified, no ghost helpers |
+| Devil's advocate | code-reviewer subagent on the impl diff | CLEAR — no gate bypass / destructive leak / scope creep / XSS |
+
+## Housekeeping folded in (v5.3.2 release reconciliation)
+
+v5.3.2 (B-INT-4 + B-INT-5) was published to both marketplaces earlier this session (PR #115 → tag `v5.3.2`, merge `c7dfaa2`, production gate approved). Its DELIVER doc close-out had been deferred to "the next branch" — done here: BACKLOG B-INT-4/B-INT-5 rows flipped to RELEASED, the v5.3.2 version-summary row flipped 🚧 PR OPEN → ✅ RELEASED, SYSTEM_STATE Current Release advanced to v5.3.2.
+
+## Phase 75 SKIP records (Node-archetype branch)
+
+- Gate-chain artifacts (`.qor/gates/<sid>/{plan,audit,implement}.json`) — NOT PRESENT; this cycle ran via /qor-auto-dev-1 (recon + plan + independent-audit subagent + TDD), not the Python gate flow. Steps 0 / 4.6 intent_lock / 7.8 gate_chain_completeness recorded SKIP (consistent with #405–#408).
+- `qor.scripts.ledger_hash` — importable but hash computed via Node 20 `crypto.createHash('sha256')` to match the #405–#408 chain method.
+- Steps 7.5/7.6/9.5.5 (version bump / changelog stamp / seal tag) — N/A. B-OD-8 is staged under the Review Boundary; no version bump, no commit, no tag.
+
+## Decision
+
+**SEALED** with chain advance #408 → #409. The conservative B-OD-8 slice matches its PASS plan; the security-critical gate is fail-closed by construction and survived an adversarial implementation review; destructive tools remain rejected; verification spans unit + Playwright. Staged on `feat/b-od-8-create-artifact-l3` awaiting operator review.
+
+## Next operator actions (NOT executed by orchestrator per Review Boundary)
+
+1. Review the staged diff + verification matrix.
+2. `git add -f` the new + modified files (note: `docs/` is gitignored-but-tracked — uses `-f`).
+3. `git commit` (`feat(B-OD-8): Open Design create_artifact through L3 (Buffer & auto-execute)`).
+4. Open PR against `main`; no marketplace publish, no version bump yet — operator set this as **v5.3.3** (2026-05-28); HELD pending operator go-ahead.
+5. The `test-results/` Playwright artifact is untracked + not gitignored — add `test-results/` to `.gitignore` (hygiene, out of B-OD-8 scope).
+
+## Content Hash
+
+**Content Hash**: `c51eebd7be02c9ff4a5ce3e770231b57e0937eae7157c161e5989227908f2bc0`
+**Previous Hash**: `b2018b2cccc1fe8302352851b8eaa00af43084027d86c572eb8ddbb0408a7a4f` (Entry #408 Chain Hash)
+**Chain Hash**: `70922e36198361bf36bff3977d93718492e2b9a55b6a72b1b7964afc64bddde1`
+**Merkle Seal**: `799ca722a5139b2f8d0f291e1e2fe5d3812a4ca1304bc99d75924d9fe198d0e5` — gate_seal_substantiate_b_od_8_create_artifact_l3
+**Session ID**: `2026-05-28-substantiate-b-od-8-create-artifact-l3`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`### Entry #409`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Computed via Node 20 `crypto.createHash('sha256')` (Phase 75 skip — gate-chain artifacts absent on this Node-archetype branch; same posture as #405–#408).
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-05-28-substantiate-b-od-8-create-artifact-l3_
+
+### Entry #410: SESSION SEAL — B-INT-6 BicameralRoute.ts decomposition (Section-4 razor)
+
+**Date**: 2026-05-28
+**Phase**: substantiate
+**Plan**: B-INT-6 (BACKLOG item; pure structural refactor — no plan artifact, /qor-auto-dev-1 easy-win cycle)
+**Branch**: `feat/b-int-6-decompose-bicameral-route` (stacked on `feat/b-od-8-create-artifact-l3`)
+**Author**: krknapp@gmail.com (via /qor-auto-dev-1 orchestrator)
+**Predecessor**: Entry #409 (SUBSTANTIATE — B-OD-8; chain hash `70922e36198361bf36bff3977d93718492e2b9a55b6a72b1b7964afc64bddde1`)
+**Verdict**: SEALED — Reality matches Promise. Zero behavioral change verified. Review Boundary honored: staged, NOT committed/pushed.
+
+## What ships
+
+Pure structural decomposition of `BicameralRoute.ts` (490 LoC, over the 250-line Section-4 razor) into four modules, all ≤ 250 LoC. No logic change — the route handler code is moved verbatim; behavior, error envelopes, and HTTP status codes are unchanged.
+
+| File | LoC | Content |
+|---|---|---|
+| `src/roadmap/routes/BicameralRoute.ts` | 34 | Thin orchestrator: `setupBicameralRoutes` calls the three registrars; re-exports `governToolCall` + `BicameralRouteDeps` for back-compat. |
+| `src/roadmap/routes/bicameralRouteShared.ts` | 173 | `BicameralRouteDeps` contract + `RECEIPT_HTTP_TABLE` + `governToolCall` + `mapDriftToVerdict`/`emitDriftVerdicts`/`parseInstallMode`/`parseVerdict`. |
+| `src/roadmap/routes/bicameralLifecycleRoutes.ts` | 144 | status · install · connect · disconnect · auto-connect · upstream. |
+| `src/roadmap/routes/bicameralDecisionRoutes.ts` | 181 | history · drift · ratify · open-binding (B151-governed via `governToolCall`). |
+
+`bicameralToolRoutes.ts` had one import line repointed from `./BicameralRoute` to `./bicameralRouteShared`, which breaks the pre-existing `BicameralRoute ↔ bicameralToolRoutes` import cycle.
+
+## Reality vs Promise
+
+| Promise | Reality | Status |
+|---|---|---|
+| `BicameralRoute.ts` ≤ 250 LoC | 34 LoC orchestrator | MATCH (over-delivers) |
+| All extracted modules ≤ 250 LoC | 173 / 144 / 181 | MATCH |
+| Public surface preserved (`setupBicameralRoutes`, `BicameralRouteDeps`, `governToolCall`) | re-exported from BicameralRoute.ts; 6 test files + ConsoleRouteRegistrar + bicameralToolRoutes unchanged in their import paths | MATCH |
+| Zero behavioral change | 195 Bicameral mocha + 7 Playwright pass verbatim | MATCH |
+| Import cycle removed | bicameralToolRoutes now imports from shared core | MATCH |
+
+## Verification matrix
+
+| Gate | Tool | Result |
+|---|---|---|
+| TypeScript | `npx tsc -p ./` | PASS (clean) |
+| ESLint | `npx eslint <5 route files>` | 0 |
+| Bicameral unit | `vscode-test --grep "Bicameral\|bicameral"` | 195 passing |
+| Bicameral E2E | `playwright test integrations-bicameral bicameral-advanced-tools` | 7 passing |
+| Section 4 razor | `wc -l` | 34 / 173 / 144 / 181 — all ≤ 250 |
+
+## FEATURE_INDEX
+
+No new FX entries (refactor adds no user-facing feature). The Bicameral section gained a decomposition note clarifying that route handler bodies moved to the new modules while `setupBicameralRoutes` remains the cited entry point; cited tests unchanged + green.
+
+## Phase 75 SKIP records (Node-archetype branch)
+
+- Gate-chain artifacts absent (auto-dev-1 cycle, not the Python gate flow); intent_lock / gate_chain_completeness recorded SKIP.
+- Hash computed via Node 20 `crypto.createHash('sha256')` to match the #405–#409 chain method.
+- No version bump / no commit / no tag — staged under the Review Boundary; targets v5.3.3 alongside B-OD-8.
+
+## Decision
+
+**SEALED** with chain advance #409 → #410. A clean razor-debt clearance with zero behavioral delta, proven by the full Bicameral unit + E2E suites passing verbatim and the import cycle removed. Forward sibling: B-INT-7 (`bicameral-card.js` 314 + `MarketplaceRoute.ts` 382).
+
+## Next operator actions (NOT executed by orchestrator per Review Boundary)
+
+1. Review the stacked diff (B-OD-8 #409 + B-INT-6 #410 share the working tree; the B-INT-6 files are disjoint from B-OD-8's).
+2. `git add -f` + `git commit` (B-INT-6 may be a separate commit: `refactor(B-INT-6): decompose BicameralRoute.ts under the Section-4 razor`).
+3. Bundle into the v5.3.3 release alongside B-OD-8 when ready; no marketplace publish yet.
+
+## Content Hash
+
+**Content Hash**: `af3275a6fd42b9b0d4c288ea8075d93e3834710f24f301e839bbc51fb1ba8d30`
+**Previous Hash**: `70922e36198361bf36bff3977d93718492e2b9a55b6a72b1b7964afc64bddde1` (Entry #409 Chain Hash)
+**Chain Hash**: `b5b20d54c1740d02410d6e7e9aa553da7f4ef5e0347c777ee66bb2c98cd7a8e1`
+**Merkle Seal**: `3465a332931ac7a894be41107aff072b5692d6e746a560c4b49581cda3948c6c` — gate_seal_substantiate_b_int_6_bicameral_route_decomposition
+**Session ID**: `2026-05-28-substantiate-b-int-6-bicameral-route-decomposition`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`### Entry #410`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Computed via Node 20 `crypto.createHash('sha256')` (Phase 75 skip — gate-chain artifacts absent on this Node-archetype branch; same posture as #405–#409).
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-05-28-substantiate-b-int-6-bicameral-route-decomposition_
+
+### Entry #411: SESSION SEAL — B-INT-7 bicameral-card.js + MarketplaceRoute.ts decomposition (Section-4 razor)
+
+**Date**: 2026-05-28
+**Phase**: substantiate
+**Plan**: B-INT-7 (BACKLOG item; pure structural refactor — /qor-auto-dev-1 easy-win cycle)
+**Branch**: `feat/b-int-7-decompose-card-marketplace` (stacked on `feat/b-int-6-decompose-bicameral-route` → `feat/b-od-8-create-artifact-l3`)
+**Author**: krknapp@gmail.com (via /qor-auto-dev-1 orchestrator)
+**Predecessor**: Entry #410 (SUBSTANTIATE — B-INT-6; chain hash `b5b20d54c1740d02410d6e7e9aa553da7f4ef5e0347c777ee66bb2c98cd7a8e1`)
+**Verdict**: SEALED — Reality matches Promise. Zero behavioral change verified. Review Boundary honored: staged, NOT committed/pushed.
+
+## What ships
+
+Two pure structural decompositions, both clearing the 250-line Section-4 razor. Code moved verbatim; behavior, HTTP contracts, render output, and tests unchanged.
+
+### bicameral-card.js (314 → 98 LoC)
+
+| File | LoC | Content |
+|---|---|---|
+| `src/roadmap/ui/modules/bicameral-card.js` | 98 | Public surface: `INITIAL_BICAMERAL_STATE`, `renderBicameralCard` (orchestrator), `bindBicameralCard`. |
+| `src/roadmap/ui/modules/bicameral-card-render.js` | 232 | Per-state HTML builders (`renderHeader`/`renderNotInstalled`/`renderInstalledNotConfigured`/`renderConfiguredNotRunning`/`renderRunning`/`renderErrorBlock`) + internal helpers (`esc`/`statusBadge`/`renderInstallProgress`/`renderDecisionRow`/`renderFeatureSection`). |
+
+### MarketplaceRoute.ts (382 → 29 LoC)
+
+| File | LoC | Content |
+|---|---|---|
+| `src/roadmap/routes/MarketplaceRoute.ts` | 29 | Orchestrator: `setupMarketplaceRoutes` (setInterval nonce-clean + 3 registrars); re-exports `MarketplaceRouteDeps`. |
+| `src/roadmap/routes/marketplaceRouteShared.ts` | 37 | `MarketplaceRouteDeps` + the in-memory HITL `pendingApprovals` nonce store + `generateNonce`/`cleanExpiredNonces`. |
+| `src/roadmap/routes/marketplaceReadRoutes.ts` | 51 | catalog · item/:id · scanners · featured · installed. |
+| `src/roadmap/routes/marketplaceInstallRoutes.ts` | 199 | install/:id (mint nonce) · install/:id/confirm (validate → async install + scan + ledger). |
+| `src/roadmap/routes/marketplaceScanRoutes.ts` | 105 | scan/:id · uninstall/:id. |
+
+## Reality vs Promise
+
+| Promise | Reality | Status |
+|---|---|---|
+| `bicameral-card.js` ≤ 250 | 98 (render module 232) | MATCH |
+| `MarketplaceRoute.ts` ≤ 250 | 29 (largest split module 199) | MATCH |
+| Public surfaces preserved | `renderBicameralCard`/`bindBicameralCard`/`INITIAL_BICAMERAL_STATE` + `setupMarketplaceRoutes`/`MarketplaceRouteDeps` — importers + tests unchanged | MATCH |
+| Zero behavioral change | 90 mocha + 10 Playwright (7 bicameral + 3 marketplace) pass verbatim | MATCH |
+
+## Verification matrix
+
+| Gate | Tool | Result |
+|---|---|---|
+| TypeScript | `npx tsc -p ./` | PASS (clean) |
+| ESLint | new route + UI files | 0 |
+| Unit | `vscode-test --grep "[Mm]arketplace\|bicameral-card\|B-BIC-13\|B-BIC-12\|composite Sync"` | 90 passing |
+| E2E | `playwright test integrations-bicameral bicameral-advanced-tools integrations-bicameral-overflow command-center-marketplace` | 10 passing |
+| Section 4 razor | `wc -l` | 98 / 232 / 29 / 37 / 51 / 199 / 105 — all ≤ 250 |
+
+## Residual (noted, out of B-INT-7 scope)
+
+The marketplace `install/:id/confirm` handler remains a ~130-line inline async function — the FILE razor is cleared, but the 40-line FUNCTION razor on that handler is pre-existing debt not addressed by this file-decomposition cycle. Candidate follow-up: extract the `.then` install-completion callback into a named `runInstallAndScan` helper.
+
+## FEATURE_INDEX
+
+No new FX entries (refactor adds no feature). Added decomposition notes to the Bicameral MCP + Marketplace sections clarifying that handler/render bodies moved while the cited entry points (`setupMarketplaceRoutes`, `renderBicameralCard`) remain; cited tests unchanged + green.
+
+## Phase 75 SKIP records (Node-archetype branch)
+
+- Gate-chain artifacts absent (auto-dev-1 cycle); intent_lock / gate_chain_completeness SKIP.
+- Hash via Node 20 `crypto.createHash('sha256')` matching the #405–#410 chain method.
+- No version bump / no commit / no tag — staged under the Review Boundary; targets v5.3.3 alongside B-OD-8 + B-INT-6.
+
+## Decision
+
+**SEALED** with chain advance #410 → #411. Two clean razor-debt clearances with zero behavioral delta, proven by the full marketplace + bicameral-card unit + E2E suites passing verbatim. With B-INT-6, this closes the Bicameral/Marketplace route+card file-size debt surfaced in the v5.1.8 B-INT-1 cycle.
+
+## Next operator actions (NOT executed by orchestrator per Review Boundary)
+
+1. Review the stacked diff — three cycles now share the working tree: B-OD-8 (#409) + B-INT-6 (#410) + B-INT-7 (#411). All file sets are disjoint and can be committed separately.
+2. `git add -f` + `git commit` (B-INT-7: `refactor(B-INT-7): decompose bicameral-card.js + MarketplaceRoute.ts under the Section-4 razor`).
+3. Bundle into v5.3.3 alongside B-OD-8 + B-INT-6 when ready; no marketplace publish yet.
+
+## Content Hash
+
+**Content Hash**: `037f12a520c546a4b87804d5bc70baefa345a1e9af652349123bb3946aafbf36`
+**Previous Hash**: `b5b20d54c1740d02410d6e7e9aa553da7f4ef5e0347c777ee66bb2c98cd7a8e1` (Entry #410 Chain Hash)
+**Chain Hash**: `413cc1962806fc01f526d674770de8b0a391aa65bdf2353b663cbbac132bb264`
+**Merkle Seal**: `d1daff18884884c1d67805825bb7c9164dffa408f055900a72685bd2ac805f87` — gate_seal_substantiate_b_int_7_card_marketplace_decomposition
+**Session ID**: `2026-05-28-substantiate-b-int-7-card-marketplace-decomposition`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`### Entry #411`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Computed via Node 20 `crypto.createHash('sha256')` (Phase 75 skip — gate-chain artifacts absent on this Node-archetype branch; same posture as #405–#410).
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-05-28-substantiate-b-int-7-card-marketplace-decomposition_
+
+### Entry #412: SESSION SEAL — B-INT-12 TabGroup-level inactive-sub-view clobber guard
+
+**Date**: 2026-05-28
+**Phase**: substantiate
+**Plan**: `.failsafe/governance/plans/plan-b-int-12-tabgroup-mount-guard.md`
+**Branch**: `feat/b-int-12-tabgroup-mount-guard` (stacked on `feat/b-int-7-decompose-card-marketplace` → B-INT-6 → B-OD-8)
+**Author**: krknapp@gmail.com (via /qor-auto-dev-1 orchestrator)
+**Predecessor**: Entry #411 (SUBSTANTIATE — B-INT-7; chain hash `413cc1962806fc01f526d674770de8b0a391aa65bdf2353b663cbbac132bb264`)
+**Verdict**: SEALED — Reality matches Promise. Independent architect-reviewer audit PASS. Review Boundary honored: staged, NOT committed/pushed.
+
+## What ships
+
+Generalizes the B-INT-5 `_tgMounted` clobber guard (Bicameral-only) to ALL TabGroup sub-views, fixing the latent clobber where an inactive sub-view's event-driven render wrote into the shared live `contentEl`.
+
+Single change site — `TabGroup.renderActive` (`src/roadmap/ui/modules/tab-group.js`): every INACTIVE sub-view's `container` is set to a persistent per-sub-view detached scratch `<div>` (`renderer._tgDetached`, created once, never attached to the document); only the ACTIVE sub-view's `container` is `this.contentEl`. An inactive sub-view whose `onEvent` triggers `render()` (timeline/genome/replay/risks/governance/skills) now writes off-DOM; on re-activation `renderActive` repoints `container = contentEl` and `render(hubData)` rebuilds the live pane. `_tgMounted` is retained (BicameralRenderer + the T6 test read it — now doubly-guarded).
+
+- Zero per-renderer edits. Behavior-preserving for the visible (active) sub-view.
+- The sole child-node-caching sub-view (`TransparencyRenderer`) is safe in effect: its `onEvent` accumulates into `this.events` unconditionally and `render()` rebuilds `streamEl` + replays via `refilter()` on re-activation (pinned by an FX812 cache-node-pattern test).
+
+## Design selection
+
+Three options considered (plan §Design); chose detached-scratch over: (a) "fan onEvent only to active" — changes state-freshness semantics across 6 renderers; (b) "every renderer honors `_tgMounted`" — 6 edits + per-renderer verification. Detached-scratch is one TabGroup change, can't throw (container always a real node), preserves the off-DOM render + in-memory accumulation the sub-views already tolerate.
+
+## Reality vs Promise
+
+| Promise | Reality | Status |
+|---|---|---|
+| One-place `renderActive` change, no per-renderer edits | only `tab-group.js` renderActive touched (diff confirmed == approved plan code block) | MATCH |
+| Inactive event-render no longer clobbers the live pane | FX812: inactive render writes to `_tgDetached`, live pane unchanged | MATCH |
+| Reactivation rebuilds the live pane | FX812: `switchTo` → render into contentEl | MATCH |
+| Active sub-view still paints live | FX812 regression guard | MATCH |
+| Cache-node sub-view (Transparency) safe | FX812: backlog accumulates inactive + replays on reactivation | MATCH |
+| `_tgMounted` + FX560 lifecycle preserved | 29 TabGroup cases (incl. FX560 5 + FX188 19 + B-INT-5 T6) green | MATCH |
+
+## Verification matrix
+
+| Gate | Tool | Result |
+|---|---|---|
+| TypeScript | `npx tsc -p ./` | PASS |
+| ESLint | new/edited test + module | 0 |
+| TabGroup + FX812 | `vscode-test --grep "FX560\|FX812\|FX188\|Integrations tab sub-tab"` | 29 passing |
+| Sub-view regression | `vscode-test --grep "Timeline\|Genome\|Replay\|Risks\|Skills\|Governance\|TabGroup\|composite Sync"` | 481 passing |
+| Real-browser | `playwright test governance-tab agents-tab workspace-tab integrations-tab` | 14 passing |
+| Independent audit | architect-reviewer (Option B) | PASS — all 11 sub-views + hidden-layout-hazard pass, no ghost helpers |
+
+## Pre-existing failure noted (NOT introduced by this cycle)
+
+`src/test/roadmap/transparency-renderer.test.ts` tests 1–2 ("sentinel verdict summary…", "verdict deep link highlights…") fail on the BASELINE (verified by stashing all B-INT-12 changes and re-running) — date-sensitive (`new Date().toISOString()` against a recency window). Out of B-INT-12 scope; candidate follow-up. The B-INT-12 cache-node-pattern coverage was deliberately placed in the GREEN `tabgroup-lifecycle.test.ts` (via a Transparency-mimicking stub) rather than the red transparency suite.
+
+## Phase 75 SKIP records (Node-archetype branch)
+
+- Gate-chain artifacts absent (auto-dev-1 cycle); intent_lock / gate_chain_completeness SKIP.
+- Hash via Node 20 `crypto.createHash('sha256')` matching the #405–#411 chain method.
+- No version bump / no commit / no tag — staged under the Review Boundary; targets v5.3.3 with B-OD-8 + B-INT-6 + B-INT-7.
+
+## Decision
+
+**SEALED** with chain advance #411 → #412. A one-place, behavior-preserving TabGroup change closes the latent inactive-sub-view clobber across all 4 TabGroups / 11 sub-views, independently audited PASS, with FX812 behavioral coverage (incl. the cache-node pattern) and the full sub-view + Playwright suites green.
+
+## Next operator actions (NOT executed by orchestrator per Review Boundary)
+
+1. Review the stacked diff — FOUR cycles now share the working tree: B-OD-8 (#409) + B-INT-6 (#410) + B-INT-7 (#411) + B-INT-12 (#412). File sets are disjoint and can be committed separately.
+2. `git add -f` + `git commit` (B-INT-12: `fix(B-INT-12): TabGroup-level inactive-sub-view clobber guard (detached scratch container)`).
+3. Bundle into v5.3.3 alongside B-OD-8 + B-INT-6 + B-INT-7 when ready; no marketplace publish yet.
+4. Optional follow-up: the pre-existing date-sensitive `transparency-renderer.test.ts` reds.
+
+## Content Hash
+
+**Content Hash**: `e4d64265c82bc4e3c1163d0b1a09ccbf2de87ae28c911bb68d6649bae0e90c1e`
+**Previous Hash**: `413cc1962806fc01f526d674770de8b0a391aa65bdf2353b663cbbac132bb264` (Entry #411 Chain Hash)
+**Chain Hash**: `6dbc1a75f068ae06752d2c786da0a90bc02fc3374d3f77eccf4538fefca4512c`
+**Merkle Seal**: `e71aa9165f50042758d3a640648bfe00f194b8f496a1b9401011c250d558c475` — gate_seal_substantiate_b_int_12_tabgroup_mount_guard
+**Session ID**: `2026-05-28-substantiate-b-int-12-tabgroup-mount-guard`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`### Entry #412`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Computed via Node 20 `crypto.createHash('sha256')` (Phase 75 skip — gate-chain artifacts absent on this Node-archetype branch; same posture as #405–#411).
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-05-28-substantiate-b-int-12-tabgroup-mount-guard_
+
+### Entry #413: SESSION SEAL — B-INT-7 follow-up (marketplace confirm-handler function-razor)
+
+**Date**: 2026-05-28
+**Phase**: substantiate
+**Plan**: B-INT-7 residual (function-razor follow-up to Entry #411; /qor-auto-dev-1 easy-win cycle)
+**Branch**: `feat/b-int-12-tabgroup-mount-guard` (stacked v5.3.3 batch)
+**Author**: krknapp@gmail.com (via /qor-auto-dev-1 orchestrator)
+**Predecessor**: Entry #412 (SUBSTANTIATE — B-INT-12; chain hash `6dbc1a75f068ae06752d2c786da0a90bc02fc3374d3f77eccf4538fefca4512c`)
+**Verdict**: SEALED — Reality matches Promise. Zero behavioral change. Review Boundary honored: staged, NOT committed/pushed.
+
+## What ships
+
+Closes the residual flagged in Entry #411 (B-INT-7): the `POST /api/marketplace/install/:id/confirm` handler carried a ~130-line inline async arrow whose `.then` install-completion callback was ~67 lines — the FILE razor was cleared in B-INT-7 but the 40-line FUNCTION razor on that callback was not. This decomposes the completion into three named module-level helpers in `marketplaceInstallRoutes.ts`:
+
+| Helper | LoC | Responsibility |
+|---|---|---|
+| `handleInstallCompletion(deps, item, result, opts)` | ~25 | Terminal-state dispatch: failure → failed+broadcast; success → status + optional scan + ledger + broadcast installed. |
+| `runPostInstallScan(deps, item, installPath)` | ~18 | Post-install security scan + reflect verdict into catalog status + broadcasts. |
+| `recordInstallLedger(deps, item, installPath, opts)` | ~17 | Non-blocking MARKETPLACE_INSTALL ledger anchor. |
+
+The confirm handler's promise chain is now `.then((result) => handleInstallCompletion(deps, item, result, opts))` — a one-line delegation. Code moved verbatim; behavior, broadcasts, status transitions, and ledger payload unchanged. `marketplaceInstallRoutes.ts` stays at 194 LoC (≤ 250).
+
+## Reality vs Promise
+
+| Promise | Reality | Status |
+|---|---|---|
+| Confirm-completion ≤ 40-line functions | 3 helpers ≤ 25 LoC each; handler callback is a 1-line delegate | MATCH |
+| Zero behavioral change | 58 marketplace mocha pass verbatim | MATCH |
+| File stays ≤ 250 | 194 | MATCH |
+
+## Verification
+
+`npx tsc -p ./` PASS · `npx eslint marketplaceInstallRoutes.ts` 0 · `vscode-test --grep "[Mm]arketplace"` 58 passing.
+
+## Phase 75 SKIP records
+
+Gate-chain artifacts absent (auto-dev-1); hash via Node 20 `crypto.createHash('sha256')` matching #405–#412. No version bump / commit / tag — staged for v5.3.3.
+
+## Decision
+
+**SEALED** with chain advance #412 → #413. A small, test-gated function decomposition that clears the function-razor residual #411 explicitly deferred. Folds into the B-INT-7 commit of the v5.3.3 batch PR.
+
+## Next operator actions
+
+Part of the single v5.3.3 PR (B-OD-8 #409 + B-INT-6 #410 + B-INT-7 #411 + this #413 + B-INT-12 #412). No separate action.
+
+## Content Hash
+
+**Content Hash**: `35055a5307ce28a69d0c7f4bb0eec916a98b68acd611141ed3776b4ba31acaa4`
+**Previous Hash**: `6dbc1a75f068ae06752d2c786da0a90bc02fc3374d3f77eccf4538fefca4512c` (Entry #412 Chain Hash)
+**Chain Hash**: `faec8f5e6a4cc9268a213e8d8d5d0786460ee7484dcc12dd65f08544d6bf00fc`
+**Merkle Seal**: `ba4486ce77220bd67db45a84bc0f9db00128e09967bacab72f5be4797ad72a18` — gate_seal_substantiate_b_int_7_followup_confirm_handler_razor
+**Session ID**: `2026-05-28-substantiate-b-int-7-followup-confirm-handler`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`### Entry #413`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Computed via Node 20 `crypto.createHash('sha256')` (Phase 75 skip — gate-chain artifacts absent; same posture as #405–#412).
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-05-28-substantiate-b-int-7-followup-confirm-handler_
