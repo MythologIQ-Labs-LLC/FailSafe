@@ -27,6 +27,13 @@
  * See plan-open-design-integration-v1.1.md §Open-Q1.
  */
 
+/**
+ * B-OD-8: the L3 `kind` discriminator for a buffered Open Design create_artifact
+ * call. Lives in the integrations layer so both the route (enqueue) and the
+ * executor (consume l3Decided) import it downward.
+ */
+export const OPEN_DESIGN_CREATE_ARTIFACT_KIND = 'open-design-create-artifact';
+
 const READ_ONLY_TOOLS = new Set<string>([
   'list_projects',
   'get_active_context',
@@ -59,6 +66,16 @@ export class OpenDesignMcpAllowlist {
 
   static isDestructive(toolName: string): boolean {
     return WRITE_TOOLS.get(toolName)?.destructive === true;
+  }
+
+  /**
+   * B-OD-8: a write tool admitted through L3 approval this cycle. Conservative
+   * v1.2 admits only the non-destructive write tool (`create_artifact`); the
+   * 3 destructive tools stay rejected. Composed from the existing predicates
+   * so the classification data (WRITE_TOOLS) remains the single source of truth.
+   */
+  static isL3GatedWrite(toolName: string): boolean {
+    return WRITE_TOOLS.has(toolName) && !this.isDestructive(toolName);
   }
 
   static getReadOnlyTools(): readonly string[] {

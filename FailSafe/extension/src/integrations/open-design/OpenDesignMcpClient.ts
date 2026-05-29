@@ -7,10 +7,14 @@
  * specialization: the read-only allowlist preCallGate and the typed
  * `callRaw` re-assertion.
  *
- * v1.1 invariant: write tools (4 total, including 3 destructive — `delete_file`,
- * `delete_project`, `write_file`) are enumerated in `OpenDesignMcpAllowlist`
- * but REJECTED at runtime by the `preCallGate` hook with `WRITE_TOOL_NOT_ENABLED`
- * BEFORE reaching the transport. L3-gated exposure deferred to v1.2 (B-OD-8).
+ * v1.2 invariant (B-OD-8): the 3 destructive write tools (`delete_file`,
+ * `delete_project`, `write_file`) are REJECTED at runtime by the `preCallGate`
+ * hook with `WRITE_TOOL_NOT_ENABLED` BEFORE reaching the transport. The one
+ * non-destructive write tool (`create_artifact`) is admitted ONLY through L3
+ * approval: it is gated by construction via a one-shot approval token that only
+ * `executeApprovedCreateArtifact` (invoked by `OpenDesignL3Executor` after an
+ * APPROVED L3 decision) can set; a direct `callRaw('create_artifact', …)` with
+ * no pending token throws `WRITE_TOOL_NOT_APPROVED`.
  */
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -62,11 +66,15 @@ export class OpenDesignMcpClient extends McpClientHost {
       idleDisconnectMs: opts.idleDisconnectMs,
       clientFactory: opts.clientFactory,
       transportFactory: opts.transportFactory,
-      // v1.1 invariant: gate write tools BEFORE idle.beginCall — fail-fast.
+      // B-OD-8: reject destructive write tools BEFORE idle.beginCall —
+      // fail-fast. Read-only tools and the L3-gated create_artifact pass this
+      // gate; create_artifact is additionally token-gated in callRaw below.
+      // (This closure is passed to super() and cannot reference `this`; the
+      //  one-shot approval-token check therefore lives in the callRaw override.)
       preCallGate: (name) => {
-        if (!OpenDesignMcpAllowlist.isReadOnly(name)) {
+        if (OpenDesignMcpAllowlist.isDestructive(name)) {
           throw new Error(
-            `WRITE_TOOL_NOT_ENABLED: open-design write tools deferred to v1.2 — see plan-open-design-integration-v1.1.md §Open-Q1`,
+            `WRITE_TOOL_NOT_ENABLED: open-design destructive write tools (${name}) deferred beyond v1.2 — see plan-b-od-8-create-artifact-l3.md`,
           );
         }
       },
@@ -80,12 +88,46 @@ export class OpenDesignMcpClient extends McpClientHost {
     });
   }
 
-  /** Type-narrowed callRaw. The host's runtimeGuard already validated the
-   *  shape; this override just re-asserts the narrower type. */
+  /**
+   * B-OD-8 one-shot approval token. Set ONLY by executeApprovedCreateArtifact
+   * (invoked by OpenDesignL3Executor after an APPROVED L3 decision) and consumed
+   * by the next create_artifact callRaw. Narrowly scoped mutable state — never
+   * exposed; the only way to flip it true is the sanctioned approved-execute path.
+   */
+  private _pendingApprovedWrite = false;
+
+  /**
+   * B-OD-8: the ONLY sanctioned entry for create_artifact. Sets the one-shot
+   * token then performs the call; the token is consumed in callRaw before the
+   * transport call. Called by OpenDesignL3Executor post-APPROVAL.
+   */
+  async executeApprovedCreateArtifact(
+    args: Record<string, unknown>,
+  ): Promise<OpenDesignToolCallResult> {
+    this._pendingApprovedWrite = true;
+    return this.callRaw('create_artifact', args);
+  }
+
+  /**
+   * Type-narrowed callRaw with the B-OD-8 L3 gate-by-construction check. For an
+   * L3-gated write tool (create_artifact), require a pending one-shot approval
+   * token and consume it before the call; absent the token, reject. Destructive
+   * tools never reach this branch (isL3GatedWrite is false) and are rejected by
+   * the host preCallGate inside super.callRaw. The host's runtimeGuard validated
+   * the shape; this override re-asserts the narrower type.
+   */
   override async callRaw(
     name: string,
     args: Record<string, unknown>,
   ): Promise<OpenDesignToolCallResult> {
+    if (OpenDesignMcpAllowlist.isL3GatedWrite(name)) {
+      if (!this._pendingApprovedWrite) {
+        throw new Error(
+          `WRITE_TOOL_NOT_APPROVED: open-design ${name} requires L3 approval (B-OD-8) — route via /api/actions/open-design-create-artifact`,
+        );
+      }
+      this._pendingApprovedWrite = false; // consume one-shot token before the call
+    }
     return (await super.callRaw(name, args)) as OpenDesignToolCallResult;
   }
 }

@@ -1,12 +1,42 @@
 # SYSTEM STATE
 
 **Last Updated:** 2026-05-28
-**Current Release:** v5.3.1 (DELIVER at Entry #406) — first v5.3.x build to ship to VS Code Marketplace + Open VSX
-**Unreleased post-v5.3.1 (sealed, bundles into a future v5.4.x):** B-INT-4 McpClientHost substrate (Entry #407) · B-INT-5 Integrations sub-tab switcher + qor-debug clobber fix (Entry #408)
-**Sealed baseline:** v5.2.0 → v5.2.2 hotfix line (Entries #392-#396) → v5.3.0 (Entry #400 Open Design v1 + Entry #402 substrate v1) → v5.3.0 release (`08916d9`, dead-on-marketplace) → v5.3.1 hotfix (DELIVER at #406) → post-release refactor seals #407 (B-INT-4) → #408 (B-INT-5)
-**Active integrations:** Bicameral MCP (sealed Entry #372 + earlier cluster) · Open Design v1 (provenance, Entry #400) · Open Design v1.1 (MCP + SSE + probe, Entry #405)
+**Current Release:** v5.3.2 (published to VS Code Marketplace + Open VSX via PR #115 → tag `v5.3.2`, merge `c7dfaa2`) — bundles B-INT-4 (#407) + B-INT-5 (#408)
+**Staged, unreleased (Review Boundary — not committed), targeting v5.3.3:** B-OD-8 — Open Design `create_artifact` through L3 (Entry #409) · B-INT-6 — `BicameralRoute.ts` 490→34 LoC (Entry #410) · B-INT-7 — `bicameral-card.js` 314→98 + `MarketplaceRoute.ts` 382→29 (Entry #411) · B-INT-12 — TabGroup-level inactive-sub-view clobber guard (Entry #412). Stacked on one branch (`feat/b-int-12-tabgroup-mount-guard`); disjoint file sets.
+**Sealed baseline:** v5.2.0 → v5.2.2 hotfix line (Entries #392-#396) → v5.3.0 (Entry #400 Open Design v1 + Entry #402 substrate v1) → v5.3.0 release (`08916d9`, dead-on-marketplace) → v5.3.1 hotfix (DELIVER at #406) → v5.3.2 release (refactor bundle #407 B-INT-4 + #408 B-INT-5)
+**Active integrations:** Bicameral MCP (sealed Entry #372 + earlier cluster) · Open Design v1 (provenance, Entry #400) · Open Design v1.1 (MCP + SSE + probe, Entry #405) · Open Design v1.2 (`create_artifact` L3-gated, Entry #409 — staged)
 **Governance substrate:** qor.scripts substrate modules v1 WARN-only (Entry #402) — secret_scanner, feature_index_verify, model_pinning_lint
 **Doctrine additions since 2026-05-22:** `feedback_no_pipeline_reshape_for_marketplace_issues` (2026-05-27, v5.2.2 hold-pat precedent) · `feedback_verify_external_names_at_plan_time` (2026-05-27, Citation Inventory Pass — broke 4-cycle Plan-Time Hallucination loop at Entry #405)
+
+---
+
+## 2026-05-28 — B-INT-12 TabGroup-level inactive-sub-view clobber guard (Entry #412, STAGED)
+
+Branch `feat/b-int-12-tabgroup-mount-guard` (auto-dev-1 cycle, stacked on B-INT-7/6/B-OD-8). Generalizes the B-INT-5 `_tgMounted` guard (Bicameral-only) to all TabGroup sub-views: `TabGroup.renderActive` now assigns every INACTIVE sub-view a persistent detached scratch `<div>` (`_tgDetached`); only the active sub-view's `container` is the shared `contentEl`. An inactive sub-view's event-driven render writes off-DOM and is reconstructed into the live pane on re-activation — fixing the latent clobber in timeline/genome/replay/risks/governance/skills. One-place TabGroup change, zero per-renderer edits, behavior-preserving for the active sub-view; `_tgMounted` retained (Bicameral + T6 read it).
+
+SHIELD: recon (all 11 sub-views + hubData-freshness) → plan → independent architect-reviewer audit **PASS** (all sub-views + hidden-layout-hazard pass) → TDD implement → diff confirmed == approved design. FX812 (5 jsdom cases incl. the Transparency cache-node pattern: backlog accumulates while inactive + replays on reactivation). Verified: 29 TabGroup + 481 sub-view mocha + 14 Playwright (governance/agents/workspace/integrations) verbatim; tsc 0; eslint 0. **Review Boundary honored.** Pre-existing unrelated reds noted: `transparency-renderer.test.ts` tests 1–2 fail on baseline (date-sensitive; NOT caused by this cycle) — candidate follow-up.
+
+---
+
+## 2026-05-28 — B-INT-7 bicameral-card.js + MarketplaceRoute.ts decomposition (Entry #411, STAGED)
+
+Branch `feat/b-int-7-decompose-card-marketplace` (auto-dev-1 easy-win cycle, stacked on B-INT-6/B-OD-8). Two pure structural refactors clearing the Section-4 razor: `bicameral-card.js` 314 → 98 LoC (state renderers extracted to `bicameral-card-render.js`, 232) and `MarketplaceRoute.ts` 382 → 29 LoC (orchestrator) with `marketplaceRouteShared.ts` (37 — deps + HITL nonce store) + `marketplaceReadRoutes.ts` (51) + `marketplaceInstallRoutes.ts` (199) + `marketplaceScanRoutes.ts` (105). All modules ≤ 250. Public surfaces preserved via re-export/orchestrator — importers + tests unchanged. **Zero behavioral change:** 90 mocha + 10 Playwright (7 bicameral + 3 marketplace) pass verbatim; tsc 0; eslint 0. Review Boundary honored. Residual (noted, out of scope): the marketplace `install/:id/confirm` handler remains a ~130-line function (file-razor cleared; function-razor debt).
+
+---
+
+## 2026-05-28 — B-INT-6 BicameralRoute.ts decomposition (Entry #410, STAGED)
+
+Branch `feat/b-int-6-decompose-bicameral-route` (auto-dev-1 easy-win cycle, stacked on B-OD-8). Pure structural refactor clearing the Section-4 razor: `BicameralRoute.ts` 490 → 34 LoC (thin orchestrator). Extracted `bicameralRouteShared.ts` (173 — `BicameralRouteDeps` + `governToolCall` + `RECEIPT_HTTP_TABLE` + drift/parse helpers), `bicameralLifecycleRoutes.ts` (144), `bicameralDecisionRoutes.ts` (181); `bicameralToolRoutes.ts` repointed at the shared core (breaks the prior `BicameralRoute ↔ bicameralToolRoutes` import cycle). Public surface (`setupBicameralRoutes`/`BicameralRouteDeps`/`governToolCall`) preserved via re-export — all importers + 6 test files unchanged. **Zero behavioral change:** 195 Bicameral mocha + 7 Playwright pass verbatim; tsc 0; eslint 0. Review Boundary honored (staged, not committed). Forward: B-INT-7 (`bicameral-card.js` 314 + `MarketplaceRoute.ts` 382) is the sibling razor debt.
+
+---
+
+## 2026-05-28 — B-OD-8 Open Design create_artifact through L3 (Entry #409, STAGED)
+
+Branch `feat/b-od-8-create-artifact-l3` (auto-dev-1 cycle). Conservative v1.2 slice: admits ONLY the non-destructive `create_artifact` write tool through L3 approval via **Buffer & auto-execute**; the 3 destructive tools (`write_file`/`delete_file`/`delete_project`) stay rejected at the client gate.
+
+Three decoupled concerns: (1) **gate-by-construction** — `create_artifact` reaches the daemon only via a one-shot `_pendingApprovedWrite` token on `OpenDesignMcpClient`, set solely by `executeApprovedCreateArtifact`; (2) **enqueue** — `POST /api/actions/open-design-create-artifact` enqueues an L3 item (`kind:'open-design-create-artifact'`, `meta:{tool,args}`) and returns 409 pending, never calling the client; (3) **execute-on-approve** — `OpenDesignL3Executor` listens on the existing `qorelogic.l3Decided` event (mirroring B-BIC-16 `DriftToL3Mediator`), and on APPROVED re-invokes the buffered call + appends a ledger USER_OVERRIDE. The generic `L3ApprovalService` / `EnforcementEngine` / `McpInterceptor` are untouched. New per-item `POST /api/actions/decide-l3` route + L3-queue UI affordance.
+
+SHIELD: recon Citation Inventory Pass (2 agents) → plan → independent architect-reviewer audit **PASS** → TDD implement (4 phases) → devil's-advocate impl review **CLEAR** (no gate bypass). FX806–FX811. Verification: `tsc` 0 · eslint 0 errors · vscode-test 129 touched-surface + 335 Bicameral/OD/Console regression · Playwright 12 (incl. FX811 + B-INT-5 + governance). **Review Boundary honored — staged, not committed.** Carry-over: B-OD-8 destructive-tool tranche + B-OD-9/10.
 
 ---
 

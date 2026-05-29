@@ -11,7 +11,7 @@
 // history/drift/ratify precedent — see the plan's F6 note.
 
 import type { Request, Response } from "express";
-import { governToolCall, type BicameralRouteDeps } from "./BicameralRoute";
+import { governToolCall, type BicameralRouteDeps } from "./bicameralRouteShared";
 
 /**
  * A tool route spec. `client` resolves the typed client method's result from

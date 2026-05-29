@@ -16,6 +16,7 @@ import { setupBrainstormRoutes } from "../routes/BrainstormRoute";
 import { setupCheckpointRoutes } from "../routes/CheckpointRoute";
 import { setupActionsRoutes } from "../routes/ActionsRoute";
 import { setupBicameralRoutes } from "../routes/BicameralRoute";
+import { setupOpenDesignRoutes } from "../routes/OpenDesignRoute";
 import { setupTransparencyRiskRoutes } from "../routes/TransparencyRiskRoute";
 import { registerQorRoute } from "../routes/QorRoute";
 import { registerFeatureStatusRoute } from "../routes/FeatureStatusRoute";
@@ -81,6 +82,9 @@ export interface ConsoleRouteHost {
   qorelogicManager: { getLedgerManager: () => unknown; getShadowGenomeManager: () => unknown };
   featureGate: unknown;
   getBicameralClient: () => import("../../integrations/bicameral").BicameralMcpClient | null;
+  /** B-OD-8: Open Design MCP client accessor; null until bootstrapOpenDesignMcp
+   *  wires it. Optional on the host so older route-host fixtures stay valid. */
+  getOpenDesignClient?: () => import("../../integrations/open-design/OpenDesignMcpClient").OpenDesignMcpClient | null;
   /** B151: universal governance interceptor accessor; null when bootstrap didn't wire one. */
   getMcpInterceptor: () => import("../../governance/interceptor").McpInterceptor | null;
   /** B-BIC-12: editor-open dep accessor; null when bootstrap didn't wire one.
@@ -291,6 +295,17 @@ export class ConsoleRouteRegistrar {
       // B-BIC-17/18 (Batch 4): pass the shared event bus so the drift/ratify
       // handlers emit `bicameral.verdict` events.
       eventBus: this.host.eventBus,
+    });
+    // B-OD-8: governed Open Design create_artifact route. Enqueues an L3 item;
+    // execution happens in OpenDesignL3Executor on APPROVED.
+    setupOpenDesignRoutes(app, {
+      rejectIfRemote: (req, res) => this.host.rejectIfRemote(req, res),
+      broadcast: (d) => this.host.broadcast(d),
+      getOpenDesignClient: () => this.host.getOpenDesignClient?.() ?? null,
+      queueL3Approval: (request) =>
+        (this.host.qorelogicManager as unknown as {
+          queueL3Approval: (r: typeof request) => Promise<string>;
+        }).queueL3Approval(request),
     });
     setupMarketplaceRoutes(app, {
       rejectIfRemote: (req, res) => this.host.rejectIfRemote(req, res),

@@ -1,6 +1,6 @@
 # Governance Index
 
-**Last Reviewed:** 2026-05-28 (B-INT-5 SUBSTANTIATE SEAL, META_LEDGER Entry #408 — Integrations tab sub-tab switcher + qor-debug TabGroup clobber fix; plan `plan-b-int-5-integrations-subtabs.md`; FEATURE_INDEX FX802/FX803/FX804 `verified` on a real vscode-test+Playwright run; B-INT-12 registered for the pre-existing 6-renderer clobber follow-up)
+**Last Reviewed:** 2026-05-28 (qor-debug SEAL, META_LEDGER Entry #414 — transparency audit date-filter epoch-comparison fix (FX813); two-defect TZ+precision string-compare bug root-caused + fixed test-first + residual-swept clean; resolves the pre-existing reds flagged at #412. All work committed to PR #116 `feat/v5.3.3-integration-batch`. Same-day chain: B-OD-8 #409, B-INT-6 #410, B-INT-7 #411/#413, B-INT-12 #412, qor-debug #414; v5.3.2 RELEASED. All target v5.3.3.)
 **Maintainer:** every cycle that touches governance artifacts (write-time obligation, not periodic chore)
 **Purpose:** Authoritative hierarchical index of every governance artifact in this repository. Every governance doc MUST be registered here. Drift in this index = governance drift.
 

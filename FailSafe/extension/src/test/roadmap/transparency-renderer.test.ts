@@ -78,4 +78,27 @@ suite('TransparencyRenderer verdict records', () => {
       assert.equal(cards[0].classList.contains('cc-verdict--highlighted'), true);
     } finally { restore(); }
   });
+
+  // qor-debug regression guard — the default date filter compared a UTC ISO
+  // entry.time (with `Z`, ms precision) against LOCAL minute-precision bounds
+  // using lexicographic string `<`/`>`. An event late in the local day (whose
+  // UTC instant + ms precision pushes its string past the `T23:59` bound) was
+  // wrongly filtered out. Deterministic across runner timezones: an event at
+  // today-local 23:59:30 must render under the default today bounds.
+  test('late-in-day event (UTC/precision edge) still renders under the default date filter', () => {
+    const { container, restore } = setupDom();
+    try {
+      const today = new Date();
+      // today-local 23:59:30 → toISOString() yields the matching UTC instant.
+      const lateLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 30);
+      const renderer = new TransparencyRenderer('audit-root');
+      renderer.render(); // bindDateFilters defaults from/to to today-local 00:00..23:59
+      renderer.onEvent({
+        type: 'sentinel.verdict',
+        payload: { decision: 'WARN', riskGrade: 'L2', timestamp: lateLocal.toISOString() },
+      });
+      const card = container.querySelector('.cc-transparency-record');
+      assert.ok(card, 'a 23:59:30 local event must pass the today date filter (epoch compare, inclusive minute)');
+    } finally { restore(); }
+  });
 });

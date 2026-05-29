@@ -115,8 +115,18 @@ export class TransparencyRenderer {
     }
     if (hasAuditHashFilter()) return true;
     const { from, to } = this.getDateRange();
-    if (from && entry.time < from) return false;
-    if (to && entry.time > to) return false;
+    // entry.time is a UTC ISO instant (e.g. `2026-05-29T01:24:43.452Z`); the
+    // from/to bounds are LOCAL minute-precision wall-clock (`YYYY-MM-DDTHH:mm`,
+    // set by bindDateFilters). Comparing them as strings dropped late-in-day
+    // events (UTC date rolled past local midnight) + the final minute of every
+    // day (ms vs minute precision). Compare on the epoch axis instead: Date.parse
+    // reads the no-offset bound strings as local and the `Z` instant as UTC, so
+    // both collapse onto one timeline. `to` is inclusive of its whole minute.
+    const t = Date.parse(entry.time);
+    if (!Number.isNaN(t)) {
+      if (from && t < Date.parse(from)) return false;
+      if (to && t > Date.parse(to) + 59_999) return false;
+    }
     return true;
   }
 

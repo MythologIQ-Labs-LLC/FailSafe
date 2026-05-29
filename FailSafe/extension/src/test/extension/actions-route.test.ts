@@ -318,4 +318,59 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
     const captured = await invokeRemote(app, 'POST', '/api/actions/approve-l3-batch');
     assert.equal(captured.statusCode, 403);
   });
+
+  // FX809 — B-OD-8: per-item L3 decision route.
+  test('FX809 POST /api/actions/decide-l3 — routes one item to processL3Decision(id,decision)', async () => {
+    const app = makeApp();
+    const calls: Array<{ id: string; decision: string }> = [];
+    const { deps, log } = makeDeps({
+      qorelogicManager: {
+        getL3Queue: () => [],
+        processL3Decision: async (id: string, decision: string) => { calls.push({ id, decision }); },
+      } as never,
+    });
+    setupActionsRoutes(app, deps);
+    harness = new RouteHarness(app);
+    await harness.start();
+    const res = await harness.request({
+      method: 'POST', path: '/api/actions/decide-l3', body: { id: 'q42', decision: 'APPROVED' },
+    });
+    assert.equal(res.status, 200);
+    assert.equal(res.body.ok, true);
+    assert.deepEqual(calls, [{ id: 'q42', decision: 'APPROVED' }]);
+    assert.ok(log.broadcasts.some((b) => b.type === 'l3.decided'));
+  });
+
+  test('FX809 POST /api/actions/decide-l3 — missing id returns 400 without deciding', async () => {
+    const app = makeApp();
+    const calls: string[] = [];
+    const { deps } = makeDeps({
+      qorelogicManager: {
+        getL3Queue: () => [],
+        processL3Decision: async (id: string) => { calls.push(id); },
+      } as never,
+    });
+    setupActionsRoutes(app, deps);
+    harness = new RouteHarness(app);
+    await harness.start();
+    const res = await harness.request({ method: 'POST', path: '/api/actions/decide-l3', body: { decision: 'APPROVED' } });
+    assert.equal(res.status, 400);
+    assert.equal(calls.length, 0);
+  });
+
+  test('FX809 POST /api/actions/decide-l3 — unknown id surfaces 404', async () => {
+    const app = makeApp();
+    const { deps } = makeDeps({
+      qorelogicManager: {
+        getL3Queue: () => [],
+        processL3Decision: async () => { throw new Error('L3 request not found: q99'); },
+      } as never,
+    });
+    setupActionsRoutes(app, deps);
+    harness = new RouteHarness(app);
+    await harness.start();
+    const res = await harness.request({ method: 'POST', path: '/api/actions/decide-l3', body: { id: 'q99' } });
+    assert.equal(res.status, 404);
+    assert.match(String(res.body.error), /not found/);
+  });
 });

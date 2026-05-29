@@ -59,14 +59,24 @@ export class TabGroup {
   renderActive(hubData) {
     const sv = this.subViews.find(s => s.key === this.activeKey);
     if (!sv || !this.contentEl) return;
-    // B-INT-5 regression guard: onEvent() fans to every sub-view, but only the
-    // active one owns the shared contentEl. Tag each renderer with its mounted
-    // state so an event-driven re-render of an INACTIVE sub-view can no-op
-    // instead of clobbering the live pane (e.g. an autonomous bicameral.connected
-    // broadcast arriving while another sub-tab is showing). Additive flag —
-    // renderers that don't read it are unaffected.
-    for (const other of this.subViews) other.renderer._tgMounted = other === sv;
-    sv.renderer.container = this.contentEl;
+    // B-INT-5 / B-INT-12: onEvent() fans to EVERY sub-view, but only the active
+    // one owns the shared contentEl. Two coordinated guards keep an inactive
+    // sub-view's event-driven render from clobbering the live pane:
+    //   - `_tgMounted` flag (B-INT-5): the opt-in early-return BicameralRenderer reads.
+    //   - detached scratch container (B-INT-12): every INACTIVE sub-view renders
+    //     into its own persistent off-DOM `<div>`, so any sub-view whose onEvent
+    //     calls render() writes harmlessly off-screen and is reconstructed into
+    //     the live contentEl on re-activation. No per-renderer change required.
+    for (const other of this.subViews) {
+      const isActive = other === sv;
+      other.renderer._tgMounted = isActive;
+      if (isActive) {
+        other.renderer.container = this.contentEl;
+      } else {
+        if (!other.renderer._tgDetached) other.renderer._tgDetached = document.createElement('div');
+        other.renderer.container = other.renderer._tgDetached;
+      }
+    }
     sv.renderer.render(hubData);
   }
 

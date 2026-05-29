@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+> Staged for **v5.3.3** (held — not yet committed):
+
+### Added
+
+- **Open Design `create_artifact` through L3 (B-OD-8)** — non-destructive `create_artifact` admitted via L3 approval (Buffer & auto-execute); gate-by-construction token; 3 destructive tools stay rejected. New decide-l3 route + L3-queue UI. FX806–FX811. META_LEDGER #409.
+
+### Changed
+
+- **Decompose `BicameralRoute.ts` (B-INT-6)** — 490 → 34 LoC under the razor (shared core + lifecycle + decision route modules); public surface preserved; zero behavioral change (195 mocha + 7 Playwright verbatim). META_LEDGER #410.
+- **Decompose `bicameral-card.js` + `MarketplaceRoute.ts` (B-INT-7)** — 314 → 98 (render module) and 382 → 29 (shared nonce core + read/install/scan modules), all under the razor; public surfaces preserved; zero behavioral change (90 mocha + 10 Playwright verbatim). META_LEDGER #411.
+
 ## [5.3.2] - 2026-05-28
 
 Internal-quality release bundling the two post-v5.3.1 integration-surface refactors (B-INT-4 + B-INT-5). Sealed at META_LEDGER #407 (B-INT-4) + #408 (B-INT-5).
@@ -18,7 +29,9 @@ Internal-quality release bundling the two post-v5.3.1 integration-surface refact
 
 ### Fixed
 
-- **TabGroup inactive-sub-view clobber (B-INT-5 qor-debug, FX804)** — an autonomous `bicameral.connected` broadcast arriving while the Open Design sub-tab was active re-painted the Bicameral card over the live pane. Fixed with an additive `_tgMounted` flag + early-return DOM-write guard in `BicameralRenderer.render()`. Test-first guard T6 (red→green). Pre-existing in 6 other TabGroup sub-views → tracked as B-INT-12.
+- **TabGroup inactive-sub-view clobber (B-INT-5 qor-debug, FX804)** — an autonomous `bicameral.connected` broadcast arriving while the Open Design sub-tab was active re-painted the Bicameral card over the live pane. Fixed with an additive `_tgMounted` flag + early-return DOM-write guard in `BicameralRenderer.render()`. Test-first guard T6 (red→green).
+- **TabGroup-level clobber guard for all sub-views (B-INT-12, FX812)** — `TabGroup.renderActive` gives inactive sub-views a detached scratch container so an event-driven render on any inactive sub-view writes off-DOM, rebuilt on re-activation. One-place change, behavior-preserving; independent audit PASS; 29 + 481 mocha + 14 Playwright verbatim. META_LEDGER #412.
+- **Transparency audit date-filter dropped late-in-day records (FX813, qor-debug)** — `matchesFilter` string-compared a UTC `Z` instant against local minute-precision bounds, hiding evening + last-minute records. Fixed via epoch comparison (`Date.parse`, inclusive minute) + a TZ-independent regression test. META_LEDGER #414.
 
 ## [5.3.1] - 2026-05-28
 
