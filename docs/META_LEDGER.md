@@ -22122,3 +22122,76 @@ _Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`#
 
 _Chain integrity: VALID_
 _Session: 2026-05-28-substantiate-b-int-7-followup-confirm-handler_
+
+### Entry #414: SESSION SEAL — qor-debug: transparency date-filter epoch comparison
+
+**Date**: 2026-05-28
+**Phase**: substantiate (cross-cutting /qor-debug fix)
+**Plan**: none — /qor-debug two-phase diagnosis (root-cause + residual sweep)
+**Branch**: `feat/v5.3.3-integration-batch` (folds into PR #116)
+**Author**: krknapp@gmail.com (via /qor-debug)
+**Predecessor**: Entry #413 (SUBSTANTIATE — B-INT-7 follow-up; chain hash `faec8f5e6a4cc9268a213e8d8d5d0786460ee7484dcc12dd65f08544d6bf00fc`)
+**Verdict**: SEALED — root cause proven + fixed test-first; residual sweep clean. Review Boundary: staged, NOT committed/pushed by the orchestrator.
+
+## Symptom
+
+`src/test/roadmap/transparency-renderer.test.ts` tests 1–2 ("sentinel verdict summary…", "verdict deep link highlights…") were RED on the baseline (flagged during the B-INT-12 cycle, #412, as pre-existing/unrelated). Both build an event with `payload.timestamp = new Date().toISOString()` and assert a `.cc-transparency-record` card renders; the card was absent ("expected a rendered transparency record" / null classList).
+
+## Root cause (Phase 1, four-layer)
+
+`TransparencyRenderer.matchesFilter` (`transparency.js:117-119`) compared `entry.time` — a UTC ISO instant with `Z` + millisecond precision (`transparency.js:93`) — against the default date-range bounds, which `bindDateFilters` (`:184-193`) sets to LOCAL minute-precision wall-clock (`YYYY-MM-DDTHH:mm`). The comparison was lexicographic string `<`/`>`. Two compounding defects:
+- **TZ mismatch**: a UTC `Z` instant whose date has rolled past local midnight (evenings in negative-offset zones) string-compares greater than the local `T23:59` upper bound → dropped.
+- **Precision mismatch**: `entry.time` carries `:ss.mmmZ`; the bound is minute-only — so any event in the final minute of the day (`23:59:30`) string-compares greater than `23:59` → dropped.
+
+Zeller delta: the passing test 3 uses an `id=` audit-hash deep link, which short-circuits `matchesFilter` at `:116` (`if (hasAuditHashFilter()) return true`) before the date gate; the failing tests fall through to the broken comparison. The v5.3.1 fix (`8de92b0`) only de-hardcoded the test's date string — symptom, not the comparison.
+
+## Fix (SOURCE, test-first)
+
+Deterministic regression test added FIRST (red): an event at **today-local 23:59:30** must render under the default today bounds — trips the precision/TZ edge in every runner timezone. Then `matchesFilter` rewritten to compare on the epoch axis:
+
+```js
+const t = Date.parse(entry.time);
+if (!Number.isNaN(t)) {
+  if (from && t < Date.parse(from)) return false;
+  if (to && t > Date.parse(to) + 59_999) return false;  // inclusive whole minute
+}
+```
+
+`Date.parse` reads the no-offset bound strings as local and the `Z` instant as UTC, collapsing both onto one timeline; `+ 59_999` closes the minute-precision gap. Behavior for in-range events unchanged; the renderer now correctly retains late-in-day + sub-minute-edge events.
+
+## Verification
+
+`tsc` 0 · eslint 0 · transparency suite 4/4 (the 2 formerly-red + test 3 + the new deterministic regression) · regression sweep 373 passing (transparency/governance/audit/TabGroup) · governance-tab Playwright 6/6. Red→green confirmed for the new test.
+
+## Residual sweep (Phase 2)
+
+Swept the codebase for the same UTC-vs-local / precision string-compare class. **None elsewhere** — `L3ApprovalService` (slaDeadline), marketplace nonce `expiresAt`, and `CheckpointStore` cutoff all use epoch math (`getTime()`) or same-basis UTC-ISO `Z` strings of identical precision (verified file:line). `matchesFilter` is the ONLY date-range gate in transparency.js; `refilter`/`appendCard`/`flushBuffer` delegate to it; `enforceLimit` trims by count only.
+
+**Noted residual (NOT fixed — out of scope + has dedup-key surface):** the no-timestamp fallback `entry.time = now.toISOString().slice(0,16)` (`:93`, no `Z`) is read as local by `Date.parse`, a minor UTC/local inconsistency for synthesized events with no timestamp. `eventKey` (`transparency-records.js:10`) uses the timestamp for dedup when no id, so changing the fallback format has dedup surface — deferred as a low-severity follow-up. Real sentinel verdicts carry `Z` timestamps and are unaffected.
+
+## Phase 75 SKIP records
+
+Gate-chain artifacts absent (debug cycle); hash via Node 20 `crypto.createHash('sha256')` matching #405–#413.
+
+## Decision
+
+**SEALED** with chain advance #413 → #414. A two-defect (TZ + precision) date-filter bug — a real production defect that would silently hide evening/end-of-day transparency records — root-caused, fixed test-first with a TZ-independent regression test, and residual-swept clean. Folds into PR #116 (v5.3.3). Resolves the pre-existing reds flagged at #412.
+
+## Next operator actions
+
+Part of PR #116. Optional low-severity follow-up: normalize the no-timestamp `entry.time` fallback to a `Z` instant (closes the residual; verify `eventKey` dedup first).
+
+## Content Hash
+
+**Content Hash**: `27b0b75289a52651df0970cbc58668d70b55a4b96fbd0de24d4195e9c3c1bb83`
+**Previous Hash**: `faec8f5e6a4cc9268a213e8d8d5d0786460ee7484dcc12dd65f08544d6bf00fc` (Entry #413 Chain Hash)
+**Chain Hash**: `8a8a96369b79880ae2e884fa26da186b6c09ef73afc531f2a2a1717f0c026e67`
+**Merkle Seal**: `27c8cfdebbe71cfaa30dd4b984f31c0d5726e0fd07b1b9ed51cbc30779e5398a` — gate_seal_qor_debug_transparency_date_filter
+**Session ID**: `2026-05-28-qor-debug-transparency-date-filter`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`### Entry #414`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Computed via Node 20 `crypto.createHash('sha256')` (Phase 75 skip — gate-chain artifacts absent; same posture as #405–#413).
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-05-28-qor-debug-transparency-date-filter_

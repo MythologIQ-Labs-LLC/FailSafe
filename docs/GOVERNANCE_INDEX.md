@@ -1,6 +1,6 @@
 # Governance Index
 
-**Last Reviewed:** 2026-05-28 (B-INT-12 SUBSTANTIATE SEAL, META_LEDGER Entry #412 — TabGroup-level inactive-sub-view clobber guard (detached scratch container); independent audit PASS; FX812; 29 TabGroup + 481 sub-view mocha + 14 Playwright verbatim; staged on `feat/b-int-12-tabgroup-mount-guard` under Review Boundary. Same-day chain: B-OD-8 #409, B-INT-6 #410, B-INT-7 #411; v5.3.2 RELEASED. B-OD-8 + B-INT-6 + B-INT-7 + B-INT-12 all target v5.3.3.)
+**Last Reviewed:** 2026-05-28 (qor-debug SEAL, META_LEDGER Entry #414 — transparency audit date-filter epoch-comparison fix (FX813); two-defect TZ+precision string-compare bug root-caused + fixed test-first + residual-swept clean; resolves the pre-existing reds flagged at #412. All work committed to PR #116 `feat/v5.3.3-integration-batch`. Same-day chain: B-OD-8 #409, B-INT-6 #410, B-INT-7 #411/#413, B-INT-12 #412, qor-debug #414; v5.3.2 RELEASED. All target v5.3.3.)
 **Maintainer:** every cycle that touches governance artifacts (write-time obligation, not periodic chore)
 **Purpose:** Authoritative hierarchical index of every governance artifact in this repository. Every governance doc MUST be registered here. Drift in this index = governance drift.
 

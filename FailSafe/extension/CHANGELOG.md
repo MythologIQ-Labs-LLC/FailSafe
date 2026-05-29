@@ -31,6 +31,7 @@ Internal-quality release bundling the two post-v5.3.1 integration-surface refact
 
 - **TabGroup inactive-sub-view clobber (B-INT-5 qor-debug, FX804)** — an autonomous `bicameral.connected` broadcast arriving while the Open Design sub-tab was active re-painted the Bicameral card over the live pane. Fixed with an additive `_tgMounted` flag + early-return DOM-write guard in `BicameralRenderer.render()`. Test-first guard T6 (red→green).
 - **TabGroup-level clobber guard for all sub-views (B-INT-12, FX812)** — `TabGroup.renderActive` gives inactive sub-views a detached scratch container so an event-driven render on any inactive sub-view writes off-DOM, rebuilt on re-activation. One-place change, behavior-preserving; independent audit PASS; 29 + 481 mocha + 14 Playwright verbatim. META_LEDGER #412.
+- **Transparency audit date-filter dropped late-in-day records (FX813, qor-debug)** — `matchesFilter` string-compared a UTC `Z` instant against local minute-precision bounds, hiding evening + last-minute records. Fixed via epoch comparison (`Date.parse`, inclusive minute) + a TZ-independent regression test. META_LEDGER #414.
 
 ## [5.3.1] - 2026-05-28
 
