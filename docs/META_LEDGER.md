@@ -22195,3 +22195,65 @@ _Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`#
 
 _Chain integrity: VALID_
 _Session: 2026-05-28-qor-debug-transparency-date-filter_
+
+### Entry #415: DELIVER — v5.3.3 dual-marketplace publish + governance close-out
+
+**Date**: 2026-05-28
+**Phase**: DELIVER (/qor-repo-release close-out + /qor-document)
+**Plan**: none — release delivery + governance reconciliation cycle
+**Branch**: `chore/deliver-v5.3.3` (folds into the DELIVER close-out PR)
+**Author**: krknapp@gmail.com
+**Predecessor**: Entry #414 (SESSION SEAL — qor-debug transparency date-filter; chain hash `8a8a96369b79880ae2e884fa26da186b6c09ef73afc531f2a2a1717f0c026e67`)
+**Verdict**: SEALED — v5.3.3 published to both marketplaces; backlog + system-state reconciled to RELEASED.
+
+## What shipped
+
+v5.3.3 ("Integration Beta") bundles five governed cycles, all previously sealed:
+- **B-OD-8** (#409) — Open Design v1.2 first write path: L3-gated `create_artifact` via Buffer & auto-execute (one-shot token + enqueue route + per-item decide-l3 + `OpenDesignL3Executor` + L3-queue UI). Destructive tools remain rejected (split to **B-OD-12**). FX806–FX811.
+- **B-INT-6** (#410) — `BicameralRoute.ts` 490→34 LoC; extracted shared/lifecycle/decision route modules, all ≤250.
+- **B-INT-7** (#411/#413) — `bicameral-card.js` 314→98 + `MarketplaceRoute.ts` 382→29; confirm-handler function-razor cleared. FX (card/marketplace) verbatim.
+- **B-INT-12** (#412) — TabGroup-level inactive-sub-view clobber guard (detached scratch `<div>` per inactive sub-view). FX812.
+- **transparency date-filter** (#414) — `matchesFilter` epoch comparison fix. FX813.
+
+## Delivery path
+
+- PR #116 (`520fdd0`) merged the five-cycle batch to `main` (admin-override merge; Review Boundary honored — operator-approved).
+- PR #117 (`d56197b`) carried the `5.3.2`→`5.3.3` version bump + doc-coherence stamp (CHANGELOG ×2, README ×2 with the Integration Beta announcement banner, COMPONENT_HELP, PROCESS_GUIDE) via /qor-document.
+- Tag `v5.3.3` (`d3a0b75`) cut from `main` per release-from-main discipline; `release.yml` (tag-triggered) ran the production-gated publish.
+- **Open VSX**: published by CI.
+- **VS Code Marketplace**: CI publish hit the documented `/_apis/gallery` ~3-min timeout (the v5.2.2 VSCE_PAT auth signature; PAT rotated but CI path still failed). Per `reference_vsce_azure_credential_auth` + the no-pipeline-reshape doctrine, no workflow reshape was attempted — published locally with `vsce publish --packagePath .vsix-dl/mythologiq-failsafe-5.3.3.vsix --azure-credential` (cached `az login` Entra OAuth) using the identical CI-built VSIX artifact. Result: `DONE Published MythologIQ.mythologiq-failsafe v5.3.3`.
+- A CI Build & Test rerun was needed once for an unrelated flaky real-timer test (`BicameralMcpClient.idleDisconnect.test.js:49`, last touched `5691d3a`/v5.1.6); cleared via `gh run rerun --failed` (filed as **B-BIC-24**).
+
+## Governance reconciliation (this entry)
+
+- `docs/BACKLOG.md`: flipped B-OD-8 / B-INT-6 / B-INT-7 / B-INT-12 from `[~]`→`[x]` RELEASED; v5.3.3 version-summary row 🚧 RELEASING → ✅ RELEASED.
+- Filed new items: **B-OD-12** (Open Design destructive write-tool tranche, split from B-OD-8), **B-BIC-24** (de-flake the idle-disconnect TTL test), **B200** (transparency `entry.time` no-`Z` fallback UTC normalization — #414 residual).
+- `docs/SYSTEM_STATE.md`: Current Release → v5.3.3; staged tranche promoted to released; Open Design v1.2 marked shipped.
+- `docs/GOVERNANCE_INDEX.md`: Last Reviewed refreshed to 2026-05-28 + #415 registered.
+
+## Phase 75 SKIP records
+
+Gate-chain artifacts absent (delivery/reconciliation cycle); hash via Node 20 `crypto.createHash('sha256')` matching #405–#414.
+
+## Decision
+
+**SEALED** with chain advance #414 → #415. v5.3.3 is live on VS Code Marketplace + Open VSX from the identical CI-built artifact; the integration-debt cluster (B-OD-8 + B-INT-6/7/12 + transparency) is delivered and the governance ledger now matches marketplace reality. Remaining integration work is gated (B-INT-8 research → B-INT-9/10/11) or deferred (B-OD-9/10/12, B-SUBSTRATE-2..6, B148/149, B-BIC-24, B200).
+
+## Next operator actions
+
+Pick the next track: B-INT-8 (unblocks the new-vendor tranches), a deferred-debt sweep (B-BIC-24 + B200), or a substrate/replay item. No release action pending.
+
+## Content Hash
+
+**Content Hash**: `76a3f87076762fa7b9f8f3d11161384b896b54bd16fc4415d6a87d20795928c6`
+**Previous Hash**: `8a8a96369b79880ae2e884fa26da186b6c09ef73afc531f2a2a1717f0c026e67` (Entry #414 Chain Hash)
+**Chain Hash**: `c81ffbe208325d46f3d704ccce22fba22cd406613ea6013aa880f2fe48c31a98`
+**Merkle Seal**: `f32a2c93c2086f451d103b9c4ecab5b3c5ea32c31c8c242c62d92b8e6351d766` — gate_seal_deliver_v5_3_3
+**Session ID**: `2026-05-28-deliver-v5.3.3`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`### Entry #415`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Computed via Node 20 `crypto.createHash('sha256')` (Phase 75 skip — gate-chain artifacts absent; same posture as #405–#414).
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-05-28-deliver-v5.3.3_

@@ -1,6 +1,6 @@
 # Governance Index
 
-**Last Reviewed:** 2026-05-28 (qor-debug SEAL, META_LEDGER Entry #414 — transparency audit date-filter epoch-comparison fix (FX813); two-defect TZ+precision string-compare bug root-caused + fixed test-first + residual-swept clean; resolves the pre-existing reds flagged at #412. All work committed to PR #116 `feat/v5.3.3-integration-batch`. Same-day chain: B-OD-8 #409, B-INT-6 #410, B-INT-7 #411/#413, B-INT-12 #412, qor-debug #414; v5.3.2 RELEASED. All target v5.3.3.)
+**Last Reviewed:** 2026-05-28 (DELIVER, META_LEDGER Entry #415 — v5.3.3 dual-marketplace publish + governance close-out. v5.3.3 ("Integration Beta") RELEASED to VS Code Marketplace + Open VSX via tag `v5.3.3` `d3a0b75` (Open VSX via CI; VS Code Marketplace via local `vsce publish --azure-credential` after the documented `/_apis/gallery` PAT-auth timeout — identical CI-built artifact). Bundles B-OD-8 #409, B-INT-6 #410, B-INT-7 #411/#413, B-INT-12 #412, transparency date-filter #414. BACKLOG flipped B-OD-8/B-INT-6/7/12 → RELEASED + v5.3.3 row ✅; filed B-OD-12 / B-BIC-24 / B200. SYSTEM_STATE Current Release → v5.3.3. Merge chain: PR #116 `520fdd0` (batch) + PR #117 `d56197b` (release bump/doc stamp).)
 **Maintainer:** every cycle that touches governance artifacts (write-time obligation, not periodic chore)
 **Purpose:** Authoritative hierarchical index of every governance artifact in this repository. Every governance doc MUST be registered here. Drift in this index = governance drift.
 
