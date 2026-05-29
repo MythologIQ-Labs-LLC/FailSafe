@@ -133,6 +133,35 @@ export function setupActionsRoutes(
       res.json({ ok: true, processed: results.length, results });
     },
   );
+
+  // B-OD-8: per-item L3 decision. Unlike approve-l3-batch (all-or-nothing),
+  // this decides a single queued item by id — required so the operator can
+  // approve/reject one pending tool call (e.g. open-design-create-artifact)
+  // without acting on every other queued item.
+  app.post(
+    "/api/actions/decide-l3",
+    async (req: Request, res: Response) => {
+      if (deps.rejectIfRemote(req, res)) return;
+      const id: unknown = req.body?.id;
+      if (typeof id !== "string" || id.length === 0) {
+        res.status(400).json({ ok: false, error: "id (string) required" });
+        return;
+      }
+      const decision: "APPROVED" | "REJECTED" =
+        req.body?.decision === "REJECTED" ? "REJECTED" : "APPROVED";
+      const conditions: string[] = Array.isArray(req.body?.conditions)
+        ? req.body.conditions
+        : [];
+      try {
+        await deps.qorelogicManager.processL3Decision(id, decision, conditions);
+      } catch (e: unknown) {
+        res.status(404).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+        return;
+      }
+      deps.broadcast({ type: "l3.decided", payload: { id, decision } });
+      res.json({ ok: true, id, decision });
+    },
+  );
 }
 
 /* ------------------------------------------------------------------ */

@@ -17,16 +17,32 @@ import * as vscode from 'vscode';
 import { OpenDesignMcpClient } from '../integrations/open-design/OpenDesignMcpClient';
 import { OpenDesignDaemonProbe } from '../integrations/open-design/OpenDesignDaemonProbe';
 import { OpenDesignSseClient } from '../integrations/open-design/OpenDesignSseClient';
+import {
+  OpenDesignL3Executor,
+  type OpenDesignLedgerLike,
+} from '../integrations/open-design/OpenDesignL3Executor';
+import type { EventBus } from '../shared/EventBus';
 
 export interface OpenDesignBootstrapHandle {
   mcpClient: OpenDesignMcpClient | null;
   probe: OpenDesignDaemonProbe;
   sseClient: OpenDesignSseClient;
+  /** B-OD-8: present only when an eventBus dep was supplied. */
+  l3Executor: OpenDesignL3Executor | null;
+}
+
+/** B-OD-8 governance deps. Optional so existing 2-arg callers/tests stay valid. */
+export interface OpenDesignBootstrapDeps {
+  eventBus?: EventBus;
+  ledgerManager?: OpenDesignLedgerLike;
+  /** Push the live client to ConsoleServer so the route/executor can reach it. */
+  onClient?: (client: OpenDesignMcpClient | null) => void;
 }
 
 export function bootstrapOpenDesignMcp(
   context: vscode.ExtensionContext,
   workspaceRoot: string,
+  deps: OpenDesignBootstrapDeps = {},
 ): OpenDesignBootstrapHandle {
   const cfg = vscode.workspace.getConfiguration('failsafe');
   const mcpEnabled = cfg.get<boolean>('integrations.openDesign.mcpEnabled', false);
@@ -41,6 +57,22 @@ export function bootstrapOpenDesignMcp(
       args: ['mcp'],
       cwd: workspaceRoot,
     });
+  }
+  // Push the (possibly null) client to the host so the open-design-create-artifact
+  // route + executor resolve the live client; re-pushed after the wizard connects.
+  deps.onClient?.(mcpClient);
+
+  // B-OD-8: the Buffer & auto-execute listener. Reads the live `mcpClient`
+  // (which the wizard may (re)construct) via the getClient closure.
+  const l3Executor = deps.eventBus
+    ? new OpenDesignL3Executor({
+        eventBus: deps.eventBus,
+        getClient: () => mcpClient,
+        ledgerManager: deps.ledgerManager,
+      })
+    : null;
+  if (l3Executor) {
+    context.subscriptions.push({ dispose: () => l3Executor.dispose() });
   }
 
   context.subscriptions.push(
@@ -58,6 +90,8 @@ export function bootstrapOpenDesignMcp(
           args: ['mcp'],
           cwd: workspaceRoot,
         });
+        // Re-push so the route/executor see the wizard-constructed client.
+        deps.onClient?.(mcpClient);
       }
       try {
         await mcpClient.connect();
@@ -81,5 +115,5 @@ export function bootstrapOpenDesignMcp(
     },
   });
 
-  return { mcpClient, probe, sseClient };
+  return { mcpClient, probe, sseClient, l3Executor };
 }

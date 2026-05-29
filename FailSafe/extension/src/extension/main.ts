@@ -211,7 +211,14 @@ export async function activate(
     // 8.1b. Open Design v1.1 MCP + SSE + daemon-probe bootstrap.
     //       Registers the `failsafe.openDesign.registerMcp` operator wizard.
     //       Per plan-open-design-integration-v1.1.md Phase 2.
-    bootstrapOpenDesignMcp(context, core.workspaceRoot);
+    // B-OD-8: wire the Open Design create_artifact L3 path — push the live
+    // client to ConsoleServer (for the open-design-create-artifact route) and
+    // construct the Buffer & auto-execute listener (eventBus + ledger).
+    bootstrapOpenDesignMcp(context, core.workspaceRoot, {
+      eventBus,
+      ledgerManager,
+      onClient: (c) => consoleServer?.setOpenDesignClient(c),
+    });
 
     // 8.2. Chat participant (deferred so RiskManager is available for the
     //      /risk subcommand. Per plan-qor-model-sourced-risks Phase 4.)

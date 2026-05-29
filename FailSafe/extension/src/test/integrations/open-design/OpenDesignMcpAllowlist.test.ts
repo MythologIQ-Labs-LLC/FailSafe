@@ -89,4 +89,25 @@ suite('integrations/open-design OpenDesignMcpAllowlist', () => {
     // Should be a fresh array per call.
     assert.notStrictEqual(r, OpenDesignMcpAllowlist.getReadOnlyTools());
   });
+
+  // FX807 — B-OD-8: isL3GatedWrite admits only the non-destructive write tool.
+  test('FX807 isL3GatedWrite is true ONLY for create_artifact', () => {
+    assert.equal(OpenDesignMcpAllowlist.isL3GatedWrite('create_artifact'), true);
+    for (const t of DESTRUCTIVE_TOOLS) {
+      assert.equal(OpenDesignMcpAllowlist.isL3GatedWrite(t), false, `destructive ${t} is NOT L3-gated`);
+    }
+    for (const t of READ_TOOLS) {
+      assert.equal(OpenDesignMcpAllowlist.isL3GatedWrite(t), false, `read tool ${t} is NOT a write`);
+    }
+    assert.equal(OpenDesignMcpAllowlist.isL3GatedWrite('not_a_real_tool_xyz'), false, 'unknown is NOT L3-gated');
+  });
+
+  // Inverse coverage: every WRITE_TOOL is classified destructive XOR L3-gated, never both/neither.
+  test('FX807 every write tool is exactly one of destructive | L3-gated', () => {
+    for (const t of WRITE_TOOLS) {
+      const d = OpenDesignMcpAllowlist.isDestructive(t);
+      const g = OpenDesignMcpAllowlist.isL3GatedWrite(t);
+      assert.equal(d !== g, true, `${t} must be exactly one of destructive/L3-gated (d=${d}, g=${g})`);
+    }
+  });
 });

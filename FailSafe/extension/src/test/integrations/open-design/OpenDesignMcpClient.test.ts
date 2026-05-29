@@ -132,7 +132,7 @@ suite('integrations/open-design OpenDesignMcpClient', () => {
     assert.equal(r.isError, false);
   });
 
-  test('callRaw on write tool throws WRITE_TOOL_NOT_ENABLED before reaching transport', async () => {
+  test('callRaw on destructive write tool throws WRITE_TOOL_NOT_ENABLED before reaching transport', async () => {
     const calls: CallRecord[] = [];
     const c = new OpenDesignMcpClient({
       command: 'od',
@@ -146,8 +146,68 @@ suite('integrations/open-design OpenDesignMcpClient', () => {
       /WRITE_TOOL_NOT_ENABLED/,
     );
     await assert.rejects(c.callRaw('write_file', { path: '/x', content: 'y' }), /WRITE_TOOL_NOT_ENABLED/);
-    await assert.rejects(c.callRaw('create_artifact', {}), /WRITE_TOOL_NOT_ENABLED/);
-    assert.equal(calls.length, 0, 'no write call should have reached the transport');
+    await assert.rejects(c.callRaw('delete_file', { path: '/x' }), /WRITE_TOOL_NOT_ENABLED/);
+    assert.equal(calls.length, 0, 'no destructive write call should have reached the transport');
+  });
+
+  // FX806 — B-OD-8: create_artifact is gated by a one-shot approval token.
+  test('FX806 create_artifact without approval token throws WRITE_TOOL_NOT_APPROVED, transport untouched', async () => {
+    const calls: CallRecord[] = [];
+    const c = new OpenDesignMcpClient({
+      command: 'od',
+      cwd: '/tmp',
+      transportFactory: makeFakeTransport({}),
+      clientFactory: () => makeFakeClient({ create_artifact: { id: 'a1' } }, calls) as never,
+    });
+    await c.connect();
+    await assert.rejects(c.callRaw('create_artifact', { name: 'x' }), /WRITE_TOOL_NOT_APPROVED/);
+    assert.equal(calls.length, 0, 'un-approved create_artifact must not reach the transport');
+  });
+
+  test('FX806 executeApprovedCreateArtifact performs exactly one create_artifact transport call', async () => {
+    const calls: CallRecord[] = [];
+    const c = new OpenDesignMcpClient({
+      command: 'od',
+      cwd: '/tmp',
+      transportFactory: makeFakeTransport({}),
+      clientFactory: () => makeFakeClient({ create_artifact: { id: 'a1' } }, calls) as never,
+    });
+    await c.connect();
+    const r = await c.executeApprovedCreateArtifact({ name: 'hero.svg' });
+    assert.equal(calls.length, 1, 'exactly one transport call');
+    assert.equal(calls[0].name, 'create_artifact');
+    assert.deepEqual(calls[0].args, { name: 'hero.svg' });
+    assert.equal(r.isError, false);
+  });
+
+  test('FX806 approval token is one-shot: second direct create_artifact after one approved call throws', async () => {
+    const calls: CallRecord[] = [];
+    const c = new OpenDesignMcpClient({
+      command: 'od',
+      cwd: '/tmp',
+      transportFactory: makeFakeTransport({}),
+      clientFactory: () => makeFakeClient({ create_artifact: { id: 'a1' } }, calls) as never,
+    });
+    await c.connect();
+    await c.executeApprovedCreateArtifact({ name: 'a' });
+    await assert.rejects(c.callRaw('create_artifact', { name: 'b' }), /WRITE_TOOL_NOT_APPROVED/);
+    assert.equal(calls.length, 1, 'only the approved call reached the transport');
+  });
+
+  test('FX806 destructive tools still throw WRITE_TOOL_NOT_ENABLED even after a create_artifact token is set', async () => {
+    const calls: CallRecord[] = [];
+    const c = new OpenDesignMcpClient({
+      command: 'od',
+      cwd: '/tmp',
+      transportFactory: makeFakeTransport({}),
+      clientFactory: () => makeFakeClient({ create_artifact: { id: 'a1' } }, calls) as never,
+    });
+    await c.connect();
+    // Set the token via the sanctioned path, then attempt a destructive tool.
+    await c.executeApprovedCreateArtifact({ name: 'a' }); // consumes token
+    c['_pendingApprovedWrite'] = true; // force token set to prove destructive is unaffected
+    await assert.rejects(c.callRaw('delete_project', { projectId: 'p1' }), /WRITE_TOOL_NOT_ENABLED/);
+    assert.equal(calls.length, 1, 'destructive tool never reached the transport regardless of token');
   });
 
   test('callRaw surfaces isError content via thrown error message', async () => {

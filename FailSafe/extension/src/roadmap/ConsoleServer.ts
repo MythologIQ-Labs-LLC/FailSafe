@@ -102,6 +102,9 @@ export class ConsoleServer {
   private agentHealthIndicator: AgentHealthIndicator | null = null;
   private agentRunRecorder: AgentRunRecorder | null = null;
   private bicameralClient: import("../integrations/bicameral").BicameralMcpClient | null = null;
+  /** B-OD-8: Open Design MCP client wired by bootstrapOpenDesignMcp; the
+   *  open-design-create-artifact route + OpenDesignL3Executor reach it here. */
+  private openDesignClient: import("../integrations/open-design/OpenDesignMcpClient").OpenDesignMcpClient | null = null;
   /** B151: universal governance interceptor wired by bootstrapBicameral. */
   private mcpInterceptor: import("../governance/interceptor").McpInterceptor | null = null;
   /** B-BIC-12: editor-open dep wired by bootstrapBicameral (vscode.open). */
@@ -188,6 +191,10 @@ export class ConsoleServer {
   /** B-BIC-2: typed accessor so bootstrapBicameral can disconnect the prior
    *  client on rewire and push an extension-deactivate disposer. */
   getBicameralClient(): import("../integrations/bicameral").BicameralMcpClient | null { return this.bicameralClient; }
+  /** B-OD-8: register/read the Open Design MCP client. Wired by
+   *  bootstrapOpenDesignMcp; null in test fixtures + before connect. */
+  setOpenDesignClient(c: import("../integrations/open-design/OpenDesignMcpClient").OpenDesignMcpClient | null): void { this.openDesignClient = c; }
+  getOpenDesignClient(): import("../integrations/open-design/OpenDesignMcpClient").OpenDesignMcpClient | null { return this.openDesignClient; }
   /** B151: register the universal governance interceptor. The 3 bicameral tool
    *  routes govern their tool calls through it. Null in test fixtures. */
   setMcpInterceptor(i: import("../governance/interceptor").McpInterceptor | null): void { this.mcpInterceptor = i; }
@@ -290,6 +297,7 @@ export class ConsoleServer {
       brainstormService: this.brainstormService,
       audioVaultService: this.audioVaultService,
       getBicameralClient: () => this.bicameralClient,
+      getOpenDesignClient: () => this.openDesignClient,
       getMcpInterceptor: () => this.mcpInterceptor,
       getBicameralOpenFileInEditor: () => this.bicameralOpenFileInEditor,
       getDriftToL3Mediator: () => this.driftToL3Mediator,

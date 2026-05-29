@@ -186,6 +186,7 @@ export class GovernanceRenderer {
           <span style="color:var(--text-muted);font-size:0.7rem">${item.queuedAt || ''}</span>
         </div>
         ${this.renderL3PreflightConflicts(item)}
+        ${this.renderL3OpenDesignItem(item)}
       </div>`).join('');
 
     return `
@@ -213,6 +214,30 @@ export class GovernanceRenderer {
       const title = this.esc(String((d && d.title) || 'unknown decision'));
       return `<div class="l3-preflight-conflict" style="margin-top:4px;font-size:0.75rem;color:var(--accent-red)">Conflicts with decision: ${title}</div>`;
     }).join('');
+  }
+
+  /**
+   * B-OD-8: render a pending Open Design create_artifact L3 item — the buffered
+   * tool + an args summary (from meta) + per-item Approve/Reject controls wired
+   * to POST /api/actions/decide-l3. Empty string for any other kind.
+   */
+  renderL3OpenDesignItem(item) {
+    if (!item || item.kind !== 'open-design-create-artifact') return '';
+    const meta = item.meta || {};
+    const tool = this.esc(String(meta.tool || 'create_artifact'));
+    let argsSummary = '';
+    try { argsSummary = this.esc(JSON.stringify(meta.args || {})); } catch { argsSummary = '{}'; }
+    return `
+      <div class="cc-l3-opendesign" style="margin-top:6px;font-size:0.78rem">
+        <div style="color:var(--text-main)">Open Design write: <code>${tool}</code></div>
+        <div style="color:var(--text-muted);font-size:0.72rem;margin:2px 0 6px">${argsSummary}</div>
+        <div style="display:flex;gap:6px">
+          <button class="cc-btn cc-btn--primary cc-l3-decide" data-id="${this.esc(String(item.id))}" data-decision="APPROVED"
+            style="padding:3px 10px;font-size:0.72rem">Approve</button>
+          <button class="cc-btn cc-l3-decide" data-id="${this.esc(String(item.id))}" data-decision="REJECTED"
+            style="padding:3px 10px;font-size:0.72rem">Reject</button>
+        </div>
+      </div>`;
   }
 
   renderAuditLog() {
@@ -274,6 +299,19 @@ export class GovernanceRenderer {
       e.target.disabled = true;
       try { await this.client.postAction('/api/actions/approve-l3-batch', { decision: 'APPROVED' }); }
       finally { e.target.disabled = false; }
+    });
+    // B-OD-8: per-item L3 decide (Open Design create_artifact Approve/Reject).
+    this.container.querySelectorAll('.cc-l3-decide').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        if (!this.client) return;
+        const el = e.currentTarget;
+        const id = el.dataset.id;
+        const decision = el.dataset.decision === 'REJECTED' ? 'REJECTED' : 'APPROVED';
+        if (!id) return;
+        el.disabled = true;
+        try { await this.client.postAction('/api/actions/decide-l3', { id, decision }); }
+        finally { el.disabled = false; }
+      });
     });
   }
 
