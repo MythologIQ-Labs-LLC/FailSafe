@@ -23,6 +23,7 @@ import { SubstrateRunner } from '../qorlogic/substrate/SubstrateRunner';
 import { SecretScannerModule } from '../qorlogic/substrate/SecretScannerModule';
 import { FeatureIndexVerifyAdapter } from '../qorlogic/substrate/FeatureIndexVerifyAdapter';
 import { ModelPinningLintModule } from '../qorlogic/substrate/ModelPinningLintModule';
+import { DependencyAdmissionLintModule } from '../qorlogic/substrate/DependencyAdmissionLintModule';
 import { QorScriptInvoker } from '../qorlogic/substrate/QorScriptInvoker';
 import {
   PythonInterpreterResolver,
@@ -53,6 +54,7 @@ export function registerSubstrateCommand(
         new SecretScannerModule(invoker, ws),
         new FeatureIndexVerifyAdapter(ws),
         new ModelPinningLintModule(invoker, ws),
+        new DependencyAdmissionLintModule(ws),
       ],
       eventBus,
     );
