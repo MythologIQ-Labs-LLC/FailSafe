@@ -37,6 +37,26 @@ function newClient(idleMs: number, fake?: ReturnType<typeof makeFake>): Bicamera
   return client;
 }
 
+// Poll a predicate until true or timeout. The idle disconnect is applied
+// asynchronously — McpClientHost wires `onIdle: () => void this.disconnect()`,
+// a fire-and-forget async call — so the connected->disconnected transition
+// lands some microtasks AFTER the idle timer fires. Asserting it on a fixed
+// sleep budget raced under CI load (B-BIC-24: intermittent `true !== false`).
+// Polling makes the assertion deterministic: it resolves as soon as the
+// transition happens and only fails if it never does (a real regression).
+async function waitFor(
+  predicate: () => boolean,
+  timeoutMs = 2000,
+  intervalMs = 5,
+): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (predicate()) return true;
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+  return predicate();
+}
+
 suite('BicameralMcpClient idle disconnect (FX544 — B-BIC-9)', () => {
   test('idleDisconnectMs=0 disables the feature (no auto-disconnect)', async () => {
     const client = newClient(0);
@@ -52,9 +72,11 @@ suite('BicameralMcpClient idle disconnect (FX544 — B-BIC-9)', () => {
     const client = newClient(40);
     await client.connect();
     await client.callRaw('bicameral.history', {});
-    // After TTL + buffer, the idle fire should have triggered disconnect.
-    await new Promise((r) => setTimeout(r, 80));
-    assert.equal(client.isConnected(), false, 'idle TTL should have disconnected the client');
+    // Poll for the async idle disconnect instead of asserting on a fixed sleep
+    // (B-BIC-24 de-flake): the 40ms TTL still fires the timer; waitFor removes
+    // the wall-clock race against the fire-and-forget disconnect.
+    const disconnected = await waitFor(() => !client.isConnected());
+    assert.equal(disconnected, true, 'idle TTL should have disconnected the client');
   });
 
   test('long-running call (inflight) suppresses idle fire', async () => {
