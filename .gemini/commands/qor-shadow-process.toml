@@ -16,6 +16,16 @@ Record **process-level** failures (distinct from `docs/SHADOW_GENOME.md` which r
 
 Events flow into a threshold-gated GitHub issue pipeline (see `qor/scripts/check_shadow_threshold.py` and `create_shadow_issue.py`).
 
+## Environment (Phase 90 wiring; GH #79)
+
+This skill invokes integrity gates via `qor-logic reliability <module>` / `qor-logic scripts <module>`, which run the module through the CLI's own interpreter and so resolve from any shell. The bare `python -m qor.reliability.<module>` / `python -m qor.scripts.<module>` form remains a valid in-venv fallback. The Python interpreter on PATH must have `qor-logic` importable; verify before invocation:
+
+```bash
+python -c "import qor.reliability"
+```
+
+If that command fails, activate the venv where `pip show qor-logic` resolves, or run `pipx install qor-logic` for a global install. On hosts without Python or where `qor-logic` is not installable (e.g., pure non-Python archetypes), Phase 75 declarative-tolerance applies — the missing-prerequisite gates record SKIP in the seal entry and emit `gate_skipped_prerequisite_absent` events per `qor/references/doctrine-shadow-genome-countermeasures.md` `SG-HalfSealedClaim-A`. The Phase 90 preflight at the top of `## Execution Protocol` below surfaces the misconfiguration once at skill entry so the SKIP cascade is operator-visible instead of silent.
+
 ## Event Schema
 
 ```json
@@ -44,6 +54,14 @@ Events flow into a threshold-gated GitHub issue pipeline (see `qor/scripts/check
 - Reverse transitions forbidden (re-opening requires a new event)
 
 ## Execution Protocol
+
+```bash
+# Phase 90 preflight (GH #79): surface qor-logic module misconfiguration
+# once at skill entry. WARN-only -- Phase 75 SKIP fallback still applies.
+if ! python -c "import qor.reliability" 2>/dev/null; then
+  echo "WARN [qor-logic]: modules not importable from $(command -v python). Steps with module: prerequisites will record SKIP per Phase 75. Activate the venv where 'pip show qor-logic' resolves, or 'pipx install qor-logic', to restore the integrity gates." >&2
+fi
+```
 
 ### Recording an event
 
@@ -75,7 +93,7 @@ Validates against `qor/gates/schema/shadow_event.schema.json`, computes `id` = S
 ### Threshold check (periodic or post-skill-run)
 
 ```bash
-python -m qor.scripts.check_shadow_threshold
+qor-logic scripts check_shadow_threshold
 ```
 
 - Applies stale expiry: severities 1–2 unaddressed > 90 days → `addressed=true`, `addressed_reason="stale"`
@@ -87,7 +105,7 @@ Exit 10 is the `/qor-remediate` trigger signal. Skills consuming this script sho
 ### Issue creation (manual or via /qor-remediate)
 
 ```bash
-python -m qor.scripts.create_shadow_issue
+qor-logic scripts create_shadow_issue
 ```
 
 - Validates `gh auth status`

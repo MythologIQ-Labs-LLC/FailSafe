@@ -58,15 +58,15 @@
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-ab-run.toml",
-      "sha256": "76c8c93de7c504a3c4a54bb71ac3fcf211ea0f43e355c5397bf52449faef79ea"
+      "sha256": "bc52f98e82051474e6a026806d56bbe36501c0c38f7f59460a449100b9b0e280"
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-audit.toml",
-      "sha256": "c7d9758ffc987fd899e90953e59aa7997d1119365e38d3d7409b154ebea45f76"
+      "sha256": "dd19bfdc1124b46bd5b3b795b14c54173ac58e0fb5e9a518a13924d68deea052"
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-bootstrap.toml",
-      "sha256": "873e7468174170ddcd47e08653dfb5dac575a602a806ab3051170b6244dea4f7"
+      "sha256": "8af9211e669cb0942b7a3c8acc3ffc5a2ce4dce5094d21f12bc25b49dc82a1d7"
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-debug.toml",
@@ -74,7 +74,7 @@
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-deep-audit-recon.toml",
-      "sha256": "e74ca694b532855fd812e582424c0f7db43376fa83097696766ded51bc6bc4fe"
+      "sha256": "58c7f572a98fbb736a691e3ddd0214ce43f0f7e3888ddccc89694a409b23e2d0"
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-deep-audit-remediate.toml",
@@ -90,7 +90,7 @@
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-document.toml",
-      "sha256": "f1c73979c6b8a57421edc019df93102948edaa3284224340233df42609a6a696"
+      "sha256": "ccad41d6dd5f178a49cb59cd8ad050e09561cae44d86f81e1b39a634d14ca5a8"
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-governance-compliance.toml",
@@ -98,23 +98,23 @@
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-help.toml",
-      "sha256": "0ac8df2c667ffa4c754351d425c57a48e0281e17a3a236c153a0ac92291a9591"
+      "sha256": "8e7a40f8eb0f1b645bea5f05c99be29bd111e01c20ae6bfd99c05a39f8e7251e"
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-ideate.toml",
-      "sha256": "5e9353c51726d724bb2a28ddd6b020716cfcd6630c22bc21903c80544404f73b"
+      "sha256": "c911d8a62c4cbb58a86743a68a76ca5d563b3bd126c09e29c4e96e7bd3c4a365"
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-implement.toml",
-      "sha256": "afe38e9a36559a406fa391423f850996c1f0a2f137410dc9f23f9b1185058c47"
+      "sha256": "5e702ab1ed9b341e01216de6d46d9776dfc8a7664d6f26641ad7b79e165a2668"
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-meta-log-decision.toml",
-      "sha256": "18c436f6fb391b09c1f1b1a0ff5db46d8231c1c54954bb7b0b195ea4bf67b6c0"
+      "sha256": "fb91c6989390ce89a3102ff040929d0b878848b51ae8fc7300dece6fcaf8d5c6"
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-meta-track-shadow.toml",
-      "sha256": "95ed89fe013b0d99a1b58a6c31a6bf8b954c39f7e839b8d05eabd6b4a7131c38"
+      "sha256": "47a81d324ea454e89315501dd86629dea5751115d0d793b183ee465d1c57ad84"
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-onboard-codebase.toml",
@@ -126,55 +126,55 @@
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-plan.toml",
-      "sha256": "c75e30accae5635c2f81ba0c1aef6668160e01d824097dbe1f62ed93f2b1021b"
+      "sha256": "88c31ab8a92a8e05317d2b3a459ee99de9f69d5bfd3ecea115bbd813a637a62a"
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-process-review-cycle.toml",
-      "sha256": "fc657645a4182ae7924ac4ebdde3d88ff4bd79a19078baee5b4256e6970d0948"
+      "sha256": "831f8945856a98c8a0d77f47cae1fafc080faa79fc3c3db4d8fb1ca1eb33447a"
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-refactor.toml",
-      "sha256": "e5af8a928323f745371ad03b74f7eab3f8f2dfb59d52a8e9b4bcb94d7a30ec6d"
+      "sha256": "b5b257a7fb9495c7b0a33e1d7bf44ce1b226d6437993a1741149dcdd49300959"
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-remediate.toml",
-      "sha256": "4a35608f21075df35a0726eedea002c05093bb57e20ab6d1cf92362be4c423bd"
+      "sha256": "0001282c03c9ff19d905f84a487f35b2c3b6fba0b43376795c8385ae2c7876f5"
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-repo-audit.toml",
-      "sha256": "ee685b94e2eedd0896ec37fd581ff83d1663da76b9ce45c538a56ab4987fda8d"
+      "sha256": "fca5e4337e7ff5ad5e0aba061900ca20519eca7f892836588afdfb9f86c439f8"
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-repo-release.toml",
-      "sha256": "f7872bdcd43503756937e038ffb3970da0be3795b41ec1ca463f17bc62b8c27a"
+      "sha256": "cf1b873ee07a189db5b801359b5ac57129aa76e4384071eb10d94bfa7221165f"
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-repo-scaffold.toml",
-      "sha256": "ebd7ac778f4b67af0a32bfd963d2f8f00a7b7d452262e55587dfc5fc7f4eebf0"
+      "sha256": "5578ee7cf6bd86035f3af3005dfca77d95214e3f6370302551afca3b57ad4de9"
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-research.toml",
-      "sha256": "80c906d659e9ee1a50ca579755074725086e7653ce9a994617d4846b601f2b06"
+      "sha256": "af350d0cdb1e81081da830b904d0c14c1b466f59f3a619e4be4ee03a7f5e1063"
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-shadow-process.toml",
-      "sha256": "8d7cbb34a29b0f21567fba4d2309534ab2091dc18cac89aba7636f4552a8bbd9"
+      "sha256": "db6bcd0dd292f30cac16078f16b4f7346b4fae3dbd7c821dace772b2166cd67c"
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-status.toml",
-      "sha256": "5e35107b678db3465f43fb89e80923773eec39c3d68f86dacf86d9d796df149e"
+      "sha256": "81e258e22ae780e78f7638a8dbc45fbf98d4663037e49fdc8e1622af90c14483"
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-substantiate.toml",
-      "sha256": "bb1717e14c230bbf70f27bfb34fad5da33fe83e96ef14197a7cc11dd51d5539d"
+      "sha256": "916636f3d2eb3a8ad16e3d6798184d5f9fc7af0fb7926a72d8b0931f09ce3f79"
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-tone.toml",
-      "sha256": "0e9b14f0e68a98679ef8a2f4be97b51968487d2b252fe3a8a07f045ca9e07ddf"
+      "sha256": "d02d289176a77c59770f2d3012867dc219e62044d805b50314182d311caece50"
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\qor-validate.toml",
-      "sha256": "2627934dc8c9b759fa31ee8a7c3f8330bc08a587bb37858f8e3afec36043dab2"
+      "sha256": "d9e8c0be498e2f4866414c8fe98675022660bf6cd63a9f008980deaefcf58846"
     },
     {
       "path": "G:\\MythologIQ\\FailSafe\\.gemini\\commands\\track-shadow-genome.toml",

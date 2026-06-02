@@ -27,11 +27,34 @@ min_model_capability: opus
   <output>Source code in src/, tests in tests/</output>
 </skill>
 
+## Governance Health Preflight
+
+<!-- qor:governance-health-preflight -->
+Run `qor-logic governance-health --profile skill-entry` before reading governance artifacts. If any finding is `DAMAGED` or `INCOMPLETE`, do not continue: report the finding's `path`, `reason`, and `legal_next`. Only `UNINITIALIZED` or scaffold-owned `MISSING` may be resolved by `qor-logic seed` (interactive: offer Y/N; autonomous: seed silently). `DAMAGED` and `INCOMPLETE` always route to `/qor-remediate` or section completion -- never to seed or bootstrap.
+
 ## Purpose
 
 Translate the gated blueprint into maintainable reality using strict Section 4 Simplicity Razor constraints and TDD-Light methodology.
 
+## Environment (Phase 90 wiring; GH #79)
+
+This skill invokes integrity gates via `qor-logic reliability <module>` / `qor-logic scripts <module>`, which run the module through the CLI's own interpreter and so resolve from any shell. The bare `python -m qor.reliability.<module>` / `python -m qor.scripts.<module>` form remains a valid in-venv fallback. The Python interpreter on PATH must have `qor-logic` importable; verify before invocation:
+
+```bash
+python -c "import qor.reliability"
+```
+
+If that command fails, activate the venv where `pip show qor-logic` resolves, or run `pipx install qor-logic` for a global install. On hosts without Python or where `qor-logic` is not installable (e.g., pure non-Python archetypes), Phase 75 declarative-tolerance applies — the missing-prerequisite gates record SKIP in the seal entry and emit `gate_skipped_prerequisite_absent` events per `qor/references/doctrine-shadow-genome-countermeasures.md` `SG-HalfSealedClaim-A`. The Phase 90 preflight at the top of `## Execution Protocol` below surfaces the misconfiguration once at skill entry so the SKIP cascade is operator-visible instead of silent.
+
 ## Execution Protocol
+
+```bash
+# Phase 90 preflight (GH #79): surface qor-logic module misconfiguration
+# once at skill entry. WARN-only -- Phase 75 SKIP fallback still applies.
+if ! python -c "import qor.reliability" 2>/dev/null; then
+  echo "WARN [qor-logic]: modules not importable from $(command -v python). Steps with module: prerequisites will record SKIP per Phase 75. Activate the venv where 'pip show qor-logic' resolves, or 'pipx install qor-logic', to restore the integrity gates." >&2
+fi
+```
 
 ### Step 0: Gate Check (advisory — Phase 8 wiring)
 
@@ -62,6 +85,16 @@ elif not result.valid:
 Override is permitted (advisory gate) but logged as severity-1 `gate_override` event in the Process Shadow Genome.
 
 **Phase 54 wiring**: when `gate_chain.emit_gate_override` raises `OverrideFrictionRequired`, prompt the operator for a written justification (>=50 chars) and re-call `emit_gate_override` with `justification=<text>`. Per `qor/references/doctrine-ai-rmf.md` §MANAGE-1.1 + `qor/references/doctrine-eu-ai-act.md` Art. 14.
+
+### Step 0.6: Impl-phase scope-boundary warning (Phase 129 wiring; GH #154)
+
+Before building, surface the workspace stabilization-capacity signal so implementation stays within the absorbable scope. WARN-only.
+
+```bash
+qor-logic scripts workspace_fragility_check --repo-root . || true
+```
+
+When `recommended_action` is `narrow_scope`, `hardening_only`, or `branch_only` (high `shared_surface_risk`), keep this pass inside the approved blueprint scope — do not broaden the feature or touch additional shared surface. Per `qor/references/doctrine-shadow-genome-countermeasures.md` SG-MergePaceThrottle-A.
 
 ### Step 1: Identity Activation
 
@@ -169,7 +202,7 @@ PLAN_PATH=$(python -c "from qor.scripts.governance_helpers import current_phase_
 # Resolve session_id via the canonical helper (reads .qor/session/current AND
 # validates against SESSION_ID_PATTERN per Phase 23 LOW-2 / Phase 50 doctrine)
 SESSION_ID=$(python -c "from qor.scripts.session import current; print(current() or 'default')")
-python -m qor.reliability.intent_lock capture \
+qor-logic reliability intent_lock capture \
   --session "$SESSION_ID" \
   --plan "$PLAN_PATH" \
   --audit .agent/staging/AUDIT_REPORT.md
@@ -196,6 +229,27 @@ For UI examples, see:
 
 Final pass checklist:
 `references/qor-implement-patterns.md`.
+
+### Step 8.5: Documentation Sync (Phase 79 wiring; GH #52)
+
+Closes the doc-lifecycle gap where authoring was structurally deferred to `/qor-substantiate` (Steps 4.7 / 6 / 6.5) when the implementing agent has already lost the context needed to write accurate docs. Authors the docs now, when context is freshest; substantiation's existing currency / integrity checks become verification gates rather than the primary authoring surface.
+
+For every file created or modified in this implementation pass, identify which documentation surfaces should reflect the change and update them in the same commit batch:
+
+1. **`ARCHITECTURE_PLAN.md` file tree**: add new files, remove deleted files, reflect restructured directories. Required when the plan's `doc_tier` is `standard` or `system` AND `src/` files (or other architecture-bearing paths) were touched.
+2. **Architecture docs** (`docs/architecture.md` or domain-specific architecture references): update interface contracts, data flows, dependency tables for new tables, functions, env vars, cron jobs, or modules introduced. Required at `doc_tier: system`; encouraged at `doc_tier: standard`.
+3. **Operations docs** (`docs/operations.md`): document new scripts, env vars, deployment steps, runtime knobs. Required at `doc_tier: system` when operational surfaces were touched.
+4. **Schema docs** (`docs/schema.md` or migration READMEs): document new migrations, RLS policies, function signatures, table additions. Required at `doc_tier: system` when schema-affecting files were touched.
+
+`doc_tier` behavior (read from the plan artifact via `gate_chain.read_phase_artifact("plan", session_id=sid)`):
+- `minimal`: skip Step 8.5 with WARN ("doc_tier=minimal; doc sync skipped; substantiate Step 6.5 will WARN if it detects drift").
+- `standard`: require item 1 + at least the relevant architecture-doc section from item 2.
+- `system`: require items 1-4 as applicable to the files touched in this pass.
+- `legacy`: skip (matches `qor/references/doctrine-documentation-integrity.md` legacy-tier bypass).
+
+The downstream verification gates are unchanged: `/qor-substantiate` Step 4.7 (Documentation Integrity Check, strict glossary/orphan/term-drift), Step 6 (SYSTEM_STATE.md sync), Step 6.5 (Documentation Currency Check, WARN at `standard`, ABORT for README badge currency on release classes per Phase 49), and Step 4.6.6 (procedural fidelity post-hoc catch). Step 8.5 ensures the authoring happens in-context so those gates have something to verify.
+
+Per `qor/references/doctrine-shadow-genome-countermeasures.md` `SG-DocsBackloadedToSubstantiate-A`.
 
 ### Step 9: Complexity Self-Check
 

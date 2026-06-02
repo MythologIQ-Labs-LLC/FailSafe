@@ -24,7 +24,25 @@ Process drift accumulates: gate overrides, capability shortfalls, repeated regre
 
 NOT for code defects — those route to `/qor-debug`. This is for PROCESS issues (the way we work, not the code we write).
 
+## Environment (Phase 90 wiring; GH #79)
+
+This skill invokes integrity gates via `qor-logic reliability <module>` / `qor-logic scripts <module>`, which run the module through the CLI's own interpreter and so resolve from any shell. The bare `python -m qor.reliability.<module>` / `python -m qor.scripts.<module>` form remains a valid in-venv fallback. The Python interpreter on PATH must have `qor-logic` importable; verify before invocation:
+
+```bash
+python -c "import qor.reliability"
+```
+
+If that command fails, activate the venv where `pip show qor-logic` resolves, or run `pipx install qor-logic` for a global install. On hosts without Python or where `qor-logic` is not installable (e.g., pure non-Python archetypes), Phase 75 declarative-tolerance applies — the missing-prerequisite gates record SKIP in the seal entry and emit `gate_skipped_prerequisite_absent` events per `qor/references/doctrine-shadow-genome-countermeasures.md` `SG-HalfSealedClaim-A`. The Phase 90 preflight at the top of `## Bundle protocol` below surfaces the misconfiguration once at skill entry so the SKIP cascade is operator-visible instead of silent.
+
 ## Bundle protocol
+
+```bash
+# Phase 90 preflight (GH #79): surface qor-logic module misconfiguration
+# once at skill entry. WARN-only -- Phase 75 SKIP fallback still applies.
+if ! python -c "import qor.reliability" 2>/dev/null; then
+  echo "WARN [qor-logic]: modules not importable from $(command -v python). Steps with module: prerequisites will record SKIP per Phase 75. Activate the venv where 'pip show qor-logic' resolves, or 'pipx install qor-logic', to restore the integrity gates." >&2
+fi
+```
 
 Governed by `qor/gates/workflow-bundles.md`.
 
@@ -35,7 +53,7 @@ Run the threshold checker. This applies stale expiry (sev 1-2 only after 90 days
 If the threshold is breached, `.qor/remediate-pending` exists with aggregated event ids. If not, the sweep summary still shows recent activity.
 
 ```bash
-python -m qor.scripts.check_shadow_threshold
+qor-logic scripts check_shadow_threshold
 ```
 
 **CHECKPOINT — after-shadow-sweep**: Surface (a) total unaddressed severity, (b) breached/under threshold, (c) event-type distribution, (d) whether `.qor/remediate-pending` exists. Prompt: continue to remediate / scope-down (focus on subset) / stop with summary.
@@ -60,6 +78,16 @@ Adversarial audit of the remediation proposal. Process changes deserve the same 
 - Is there a ghost handler — a proposed change with no implementation path?
 
 Audit verdict is binding. PASS → operator can implement. VETO → revise per audit's mandated next actions.
+
+### Phase 4 — Corpus-weight sweep (Phase 132 wiring; GH #162)
+
+The counterweight to additive corpus growth (SG-SkillCorpusGrowth-A). Run the consolidation report so the periodic review surfaces a ranked worklist of skills/sections to pay down, balancing the additive bias of the backlog:
+
+```bash
+qor-logic scripts corpus_consolidation_report --skills-root qor/skills
+```
+
+`corpus_consolidation_report` aggregates total SKILL.md corpus bytes, per-skill size-budget findings (`skill_size_budget_lint`), and progressive-disclosure extraction candidates (`progressive_disclosure_lint`) into a ranked list — EXCEEDED skills first, then WARN skills, then oversized inline sections to move into `references/`. Advisory (exit 0; never blocks); the operator picks consolidation work from the top of the list. Per `qor/references/doctrine-shadow-genome-countermeasures.md` SG-SkillCorpusGrowth-A.
 
 ## Constraints
 
