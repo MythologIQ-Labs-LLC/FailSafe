@@ -151,6 +151,7 @@ export async function activate(
       core.eventBus,
       vscode.workspace.getConfiguration('failsafe'),
       defaultRun,
+      core.mutationBus, // B-SUBSTRATE-3: enables the seal auto-hook
     );
 
     // 4. Sentinel
