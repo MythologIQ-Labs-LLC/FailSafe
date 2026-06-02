@@ -10,11 +10,34 @@ prompt = """
   <output>Gap report with compliance score and GitHub API metrics</output>
 </skill>
 
+## Governance Health Preflight
+
+<!-- qor:governance-health-preflight -->
+Run `qor-logic governance-health --profile skill-entry` before reading governance artifacts. If any finding is `DAMAGED` or `INCOMPLETE`, do not continue: report the finding's `path`, `reason`, and `legal_next`. Only `UNINITIALIZED` or scaffold-owned `MISSING` may be resolved by `qor-logic seed` (interactive: offer Y/N; autonomous: seed silently). `DAMAGED` and `INCOMPLETE` always route to `/qor-remediate` or section completion -- never to seed or bootstrap.
+
 ## Purpose
 
 Audit repository against GitHub Gold Standard. Integrates with GitHub API for community profile score when available.
 
+## Environment (Phase 90 wiring; GH #79)
+
+This skill invokes integrity gates via `qor-logic reliability <module>` / `qor-logic scripts <module>`, which run the module through the CLI's own interpreter and so resolve from any shell. The bare `python -m qor.reliability.<module>` / `python -m qor.scripts.<module>` form remains a valid in-venv fallback. The Python interpreter on PATH must have `qor-logic` importable; verify before invocation:
+
+```bash
+python -c "import qor.reliability"
+```
+
+If that command fails, activate the venv where `pip show qor-logic` resolves, or run `pipx install qor-logic` for a global install. On hosts without Python or where `qor-logic` is not installable (e.g., pure non-Python archetypes), Phase 75 declarative-tolerance applies — the missing-prerequisite gates record SKIP in the seal entry and emit `gate_skipped_prerequisite_absent` events per `qor/references/doctrine-shadow-genome-countermeasures.md` `SG-HalfSealedClaim-A`. The Phase 90 preflight at the top of `## Execution Protocol` below surfaces the misconfiguration once at skill entry so the SKIP cascade is operator-visible instead of silent.
+
 ## Execution Protocol
+
+```bash
+# Phase 90 preflight (GH #79): surface qor-logic module misconfiguration
+# once at skill entry. WARN-only -- Phase 75 SKIP fallback still applies.
+if ! python -c "import qor.reliability" 2>/dev/null; then
+  echo "WARN [qor-logic]: modules not importable from $(command -v python). Steps with module: prerequisites will record SKIP per Phase 75. Activate the venv where 'pip show qor-logic' resolves, or 'pipx install qor-logic', to restore the integrity gates." >&2
+fi
+```
 
 ### Step 0.6: Pre-audit lints (Phase 55 wiring — best-effort)
 
@@ -23,8 +46,8 @@ If a current-phase plan file is discoverable, run the pre-audit lints against it
 ```bash
 PLAN_PATH=$(python -c "from qor.scripts.governance_helpers import current_phase_plan_path; print(current_phase_plan_path() or '')" 2>/dev/null || echo "")
 if [ -n "$PLAN_PATH" ] && [ -f "$PLAN_PATH" ]; then
-  python -m qor.scripts.plan_test_lint --plan "$PLAN_PATH" || true
-  python -m qor.scripts.plan_grep_lint --plan "$PLAN_PATH" --repo-root . || true
+  qor-logic scripts plan_test_lint --plan "$PLAN_PATH" || true
+  qor-logic scripts plan_grep_lint --plan "$PLAN_PATH" --repo-root . || true
 fi
 ```
 

@@ -10,9 +10,24 @@ prompt = """
   <output>plan-*.md file with incremental phases and unit test descriptions</output>
 </skill>
 
+## Governance Health Preflight
+
+<!-- qor:governance-health-preflight -->
+Run `qor-logic governance-health --profile skill-entry` before reading governance artifacts. If any finding is `DAMAGED` or `INCOMPLETE`, do not continue: report the finding's `path`, `reason`, and `legal_next`. Only `UNINITIALIZED` or scaffold-owned `MISSING` may be resolved by `qor-logic seed` (interactive: offer Y/N; autonomous: seed silently). `DAMAGED` and `INCOMPLETE` always route to `/qor-remediate` or section completion -- never to seed or bootstrap.
+
 ## Purpose
 
 Create implementation plans following Rich Hickey's "Simple Made Easy" principles. This skill focuses on objective simplicity over subjective ease, avoiding complecting, and favoring composable, declarative, value-oriented designs.
+
+## Environment (Phase 90 wiring; GH #79)
+
+This skill invokes integrity gates via `qor-logic reliability <module>` / `qor-logic scripts <module>`, which run the module through the CLI's own interpreter and so resolve from any shell. The bare `python -m qor.reliability.<module>` / `python -m qor.scripts.<module>` form remains a valid in-venv fallback. The Python interpreter on PATH must have `qor-logic` importable; verify before invocation:
+
+```bash
+python -c "import qor.reliability"
+```
+
+If that command fails, activate the venv where `pip show qor-logic` resolves, or run `pipx install qor-logic` for a global install. On hosts without Python or where `qor-logic` is not installable (e.g., pure non-Python archetypes), Phase 75 declarative-tolerance applies — the missing-prerequisite gates record SKIP in the seal entry and emit `gate_skipped_prerequisite_absent` events per `qor/references/doctrine-shadow-genome-countermeasures.md` `SG-HalfSealedClaim-A`. The Phase 90 preflight at the top of `## Execution Protocol` below surfaces the misconfiguration once at skill entry so the SKIP cascade is operator-visible instead of silent.
 
 ## Core Principles
 
@@ -45,6 +60,14 @@ Separate data definitions, behavior specifications, and their connections. Avoid
 Tests, static checks, and refactors are valuable, but cannot compensate for complex design. Seek to remove complexity first.
 
 ## Execution Protocol
+
+```bash
+# Phase 90 preflight (GH #79): surface qor-logic module misconfiguration
+# once at skill entry. WARN-only -- Phase 75 SKIP fallback still applies.
+if ! python -c "import qor.reliability" 2>/dev/null; then
+  echo "WARN [qor-logic]: modules not importable from $(command -v python). Steps with module: prerequisites will record SKIP per Phase 75. Activate the venv where 'pip show qor-logic' resolves, or 'pipx install qor-logic', to restore the integrity gates." >&2
+fi
+```
 
 ### Step 0: Gate Check (advisory — Phase 8 wiring)
 
@@ -81,7 +104,7 @@ Override is permitted (advisory gate) but logged as severity-1 `gate_override` e
 Detect whether the operator's locally installed skills differ from the repo source. Non-blocking WARN; operator decides whether to reinstall before proceeding.
 
 ```bash
-python -m qor.scripts.install_drift_check --host claude --scope repo || \\
+qor-logic scripts install_drift_check --host claude --scope repo || \\
   echo "WARNING: Local skill install differs from repo source. Consider: qor-logic install --host claude --scope repo"
 ```
 
@@ -92,10 +115,20 @@ Fix on drift: `qor-logic install --host <host> --scope <scope>` regenerates the 
 Verify the operator's running model meets each scoped skill's declared `min_model_capability`. Non-blocking WARN; operator decides whether to swap models before proceeding.
 
 ```bash
-python -m qor.scripts.model_pinning_lint --repo-root . || true
+qor-logic scripts model_pinning_lint --repo-root . || true
 ```
 
 Reads `QOR_MODEL_FAMILY` env (set by harness when available) and walks `qor/skills/**/SKILL.md` for `model_compatibility` + `min_model_capability` frontmatter. Emits stderr warnings for any skill whose declared minimum exceeds the current model's tier (`haiku < sonnet < opus`). Per `qor/references/doctrine-ai-rmf.md` §MANAGE-3.1.
+
+### Step 0.4: Stabilization-capacity checkpoint (Phase 129 wiring; GH #154)
+
+Surface the local workspace's stabilization capacity before planning new scope, so a fragile/over-extended workspace is visible at plan time (not just at audit). WARN-only.
+
+```bash
+qor-logic scripts workspace_fragility_check --repo-root . || true
+```
+
+Reports `workspace_fragility` (low/medium/high), `stabilization_capacity` (healthy/strained/exceeded), `shared_surface_risk`, and a `recommended_action` (`merge_ok` / `narrow_scope` / `hardening_only` / `branch_only`). On `high` / `branch_only`, prefer narrowing this plan's scope or isolating the branch over adding new surface. Companion to the substantiate Step 4.6.8 merge-velocity gate (backward-looking); this is the forward-looking pre-plan signal. Per `qor/references/doctrine-shadow-genome-countermeasures.md` SG-MergePaceThrottle-A.
 
 ### Step 0.5: Phase branch creation (Phase 13 wiring)
 
@@ -246,6 +279,18 @@ Create plan markdown file with specific requirements:
 
 - [test file path] - [what it tests, why important]
 
+## Definition of Done
+
+[Per `qor/references/doctrine-definition-of-done.md` (Phase 92 wiring; GH #86), every deliverable declares D1-D4 acceptance.]
+
+### Deliverable: [name]
+
+- **D1**: [vision / specification statement]
+- **D2**: [code-level acceptance: signature, types, file location]
+- **D3**: [governance acceptance: ledger entry shape, doc surfaces]
+- **D4**: [test name + observed behavior assertion]
+- OR **D4.d**: [waiver rationale]. **Follow-up phase**: [reference]
+
 ## CI Commands
 
 - `<command 1>` — <what it validates>
@@ -253,6 +298,8 @@ Create plan markdown file with specific requirements:
 ```
 
 **Phase 38 B22 contract**: every plan from Phase 38 forward carries a `## CI Commands` section listing the commands the operator runs locally to validate the plan before substantiate. The same list appears in the plan gate artifact's `ci_commands` field (required by `qor/gates/schema/plan.schema.json`). Pre-Phase-38 plans are grandfathered at the test layer; no retroactive migration.
+
+**Phase 92 wiring (GH #86)**: every plan from Phase 92 forward carries a `## Definition of Done` section between `## Phase N` and `## CI Commands`, declaring per-deliverable D1 (vision/spec), D2 (code), D3 (governance), and D4 (empirical/runtime verification) acceptance criteria. D4 may be replaced with a `D4.d` waiver row carrying a rationale and a `**Follow-up phase**:` reference. The Definition of Done is structurally verified at `/qor-substantiate` Step 4.6.7 (WARN-only in V1) per `qor/references/doctrine-definition-of-done.md` and `qor/references/doctrine-shadow-genome-countermeasures.md` `SG-DoDImplicit-A`. V1 enforces declaration presence; V2 (deferred) will verify D4's truth by cross-referencing named tests against pytest output. Pre-Phase-92 plans are grandfathered.
 
 #### Plan Requirements
 
@@ -288,7 +335,9 @@ Before finalizing, ensure:
 - [ ] No backwards compatibility concerns
 - [ ] No concluding errata sections
 - [ ] Each unit test description names the behavior it confirms (the unit's output for a given input), not the artifact it expects to find. Per `qor/references/doctrine-test-functionality.md`.
-- [ ] Plan asserts the same command, dependency, or filesystem path identically at every site where it appears (Phase 67 wiring; GH #42). Verify by running `python -m qor.scripts.plan_text_consistency_lint --check <plan-path>`; any drift surfaces as exit 1 with the divergent sites named. Per `qor/references/doctrine-shadow-genome-countermeasures.md` SG-PlanTextDrift-A.
+- [ ] When the plan declares a closed-enum taxonomy (a `CANONICAL_*_VALUES` constant plus a `normalize*` function), the test list includes BOTH the forward round-trip assertion and the inverse coverage assertion. Per `qor/references/doctrine-test-functionality.md` inverse-coverage discipline.
+- [ ] Plan asserts the same command, dependency, or filesystem path identically at every site where it appears (Phase 67 wiring; GH #42). Verify by running `qor-logic scripts plan_text_consistency_lint --check <plan-path>`; any drift surfaces as exit 1 with the divergent sites named. Per `qor/references/doctrine-shadow-genome-countermeasures.md` SG-PlanTextDrift-A.
+- [ ] For every function or struct signature change declared in this plan, every caller (cross-file) and every persistence touchpoint (SQL schema, INSERT/SELECT, frontend TS/JS type) is enumerated in the relevant phase's Affected Files OR explicitly declared exempt with rationale (e.g., backward-compatible wrapper, transient-field). Use `grep -rn '<function_name>('` and `grep -rn 'CREATE TABLE <table>'` to verify. Per `qor/references/doctrine-shadow-genome-countermeasures.md` SG-AffectedFilesContract-A (Phase 110 wiring; GH #137).
 
 #### Feature Inventory Touches declaration (Phase 73 wiring; GH #40 + #41)
 

@@ -10,6 +10,11 @@ prompt = """
   <output>docs/research-brief-<slug>.md with findings + META_LEDGER entry</output>
 </skill>
 
+## Governance Health Preflight
+
+<!-- qor:governance-health-preflight -->
+Run `qor-logic governance-health --profile skill-entry` before reading governance artifacts. If any finding is `DAMAGED` or `INCOMPLETE`, do not continue: report the finding's `path`, `reason`, and `legal_next`. Only `UNINITIALIZED` or scaffold-owned `MISSING` may be resolved by `qor-logic seed` (interactive: offer Y/N; autonomous: seed silently). `DAMAGED` and `INCOMPLETE` always route to `/qor-remediate` or section completion -- never to seed or bootstrap.
+
 ## Purpose
 
 Systematic investigation of external codebases, APIs, and dependencies to build verified integration knowledge. Prevents API assumption drift (Shadow Genome Entry #2) by grounding all interface contracts in actual source code.
@@ -32,6 +37,30 @@ Your role is to discover facts, not to assume. Every finding must be traceable t
 Read: docs/META_LEDGER.md (verify chain state)
 Read: docs/ARCHITECTURE_PLAN.md (understand what we're building)
 ```
+
+### Step 2.5: Issue-state pre-check (when target is an existing GH issue)
+
+If the research target is an existing GH issue (e.g., `#80`), check whether
+a PR has already addressed it before doing fresh research:
+
+```bash
+gh pr list --state all --search "#<ISSUE_NUMBER>" --limit 5 \\
+  --json number,state,title,mergedAt
+gh pr list --state all --search "in:body <ISSUE_NUMBER>" --limit 5 \\
+  --json number,state,title
+```
+
+If any PR is MERGED and closes the target issue, surface the PR number,
+state, mergedAt, and title to the operator before continuing. The operator
+decides whether the existing PR truly closed the same target (the body of
+an old issue can still read as a fresh defect; `/qor-research` should not
+redo work that has already shipped).
+
+When `gh` is not on PATH or the target is not an existing GH issue
+(e.g., the target is an API surface or a dependency rather than an issue
+number), skip this step with a one-line note and continue.
+
+Closes GH #80; pairs with the existing target-verification chain.
 
 ### Step 3: Target Discovery
 

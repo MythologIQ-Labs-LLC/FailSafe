@@ -15,6 +15,20 @@ prompt = """
 
 The investigation half of `/qor-deep-audit`. Identifies and verifies production gaps without proposing or executing fixes. Output is a single `RESEARCH_BRIEF.md` that the operator reviews before deciding to invoke `/qor-deep-audit-remediate`.
 
+## Environment (Phase 90 wiring; GH #79)
+
+```bash
+# Phase 90 preflight (GH #79): surface qor-logic module misconfiguration
+# once at skill entry. WARN-only -- Phase 75 SKIP fallback still applies.
+if ! python -c "import qor.reliability" 2>/dev/null; then
+  echo "WARN [qor-logic]: modules not importable from $(command -v python). Phase 3 Round 0 (Reachability Probe) will record SKIP per Phase 75. Activate the venv where 'pip show qor-logic' resolves, or 'pipx install qor-logic', to restore the integrity gate." >&2
+fi
+```
+
+This skill invokes `qor-logic scripts reachability_probe` (Phase 96 wiring; GH #108) to run the recon reachability probe at Phase 3 Round 0. The Python interpreter on PATH must have `qor-logic` importable; the preflight above verifies this once at skill entry.
+
+If the import check fails, activate the venv where `pip show qor-logic` resolves, or run `pipx install qor-logic` for a global install. On hosts without Python or where `qor-logic` is not installable (e.g., pure non-Python archetypes), Phase 75 declarative-tolerance applies — the missing-prerequisite gates record SKIP in the seal entry and emit `gate_skipped_prerequisite_absent` events per `qor/references/doctrine-shadow-genome-countermeasures.md` `SG-HalfSealedClaim-A`. The Phase 90 preflight surfaces the misconfiguration once at skill entry so the SKIP cascade is operator-visible instead of silent.
+
 ## When to use
 
 - You want to scope a production gap without committing to remediation
@@ -34,6 +48,12 @@ Launch parallel subagent investigations per the matrix in `qor/skills/meta/qor-d
 Compile findings into `RESEARCH_BRIEF.md` per the schema in `qor-deep-audit` §Phase 2 (Executive Summary, Categories, Gap IDs, Summary Matrix, Sprint Plan).
 
 **CHECKPOINT — after-synthesis**: Surface the Summary Matrix. Prompt: continue / scope-down / stop.
+
+### Phase 3 Round 0: Reachability Probe (Phase 96 wiring; GH #108)
+
+Before grading any finding HIGH or production-critical, run the reachability probe against the cited surface. Any single probe failure downgrades the finding to `reachability-gap` classification until end-to-end runtime evidence is added. The probe is WARN-only in V1; Phase 99 V2 layers blocking enforcement in `/qor-audit` Step 3 Infrastructure Alignment Pass.
+
+The detailed five-check protocol (importability, test collection, caller graph, packaging, interface match), the downgrade rule, and the COREFORGE Phase 371 originating case study live in `qor/references/recon-reachability-probe.md`. The probe is invoked via `qor-logic scripts reachability_probe --claims <claims.json>`; see `SG-GrepShapedRunclaim-A` in `qor/references/doctrine-shadow-genome-countermeasures.md` for the binding doctrine.
 
 ### Phase 3: VERIFICATION (max 3 rounds, per budget)
 

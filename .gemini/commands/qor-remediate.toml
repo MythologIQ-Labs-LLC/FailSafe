@@ -10,6 +10,10 @@ prompt = """
   <output>Remediation proposal + shadow-process events addressed</output>
 </skill>
 
+## Governance Health Preflight
+
+<!-- qor:governance-health-exempt reason="qor-remediate's sole purpose is governance repair; it must operate on DAMAGED or INCOMPLETE state rather than block on it" -->
+
 ## Purpose
 
 Handle **process-level** failures distinct from code failures:

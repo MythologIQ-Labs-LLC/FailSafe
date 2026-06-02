@@ -10,6 +10,11 @@ prompt = """
   <output>.qor/gates/&lt;sid&gt;/ideation.json</output>
 </skill>
 
+## Governance Health Preflight
+
+<!-- qor:governance-health-preflight -->
+Run `qor-logic governance-health --profile skill-entry` before reading governance artifacts. If any finding is `DAMAGED` or `INCOMPLETE`, do not continue: report the finding's `path`, `reason`, and `legal_next`. Only `UNINITIALIZED` or scaffold-owned `MISSING` may be resolved by `qor-logic seed` (interactive: offer Y/N; autonomous: seed silently). `DAMAGED` and `INCOMPLETE` always route to `/qor-remediate` or section completion -- never to seed or bootstrap.
+
 ## Purpose
 
 Convert a raw concept into a governed, traceable intent package before submission to research, planning, and downstream SDLC workflows. Closes Issue #20: makes ideation a first-class auditable phase rather than an informal prelude. Prevents drift before code exists by capturing intent, assumptions, boundaries, and failure remediation routes structurally.
