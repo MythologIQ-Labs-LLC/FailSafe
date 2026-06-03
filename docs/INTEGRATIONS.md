@@ -316,3 +316,19 @@ The `FailSafe: Register Open Design MCP Connection` command palette entry (`fail
 **Governance posture (planned).** Govern through `McpClientHost`; read-only query tools only. **Data minimization is the key control:** queries send only a library id + topic string — never repo source, plans, or secrets. Outbound network egress to the Context7 service (disclose + make opt-in, consistent with the dependency-admission lint's network-egress precedent).
 
 **Open before build:** confirm transport + auth, pin behavior, define the redaction guard that prevents any workspace content from entering a query.
+
+## Slack (notify-only) — B-INT-9 / #100
+
+**Status:** shipped (v1). FailSafe posts governance **enforcement events** to a Slack **incoming webhook**. Notify-only and **non-blocking** — a Slack outage never affects any FailSafe workflow. The extension isn't agentic, so this is one-way notification posting, nothing more.
+
+**Events posted:** `sentinel.verdict` (only on a blocking decision — VETO/BLOCK), `qorelogic.l3Queued`, `qorelogic.l3Decided`, `governance.driftDetected` → concise Block Kit cards (header + summary + a **link back to the local Command Center**). No interactive approvals (those need a full Slack app + signed verification — deferred); the operator acts in the console, not in Slack.
+
+**Privacy:** messages carry only a sanitized path/summary — never raw prompts, content, or secrets (`mapGovernanceEvent` reads a fixed set of fields defensively).
+
+**Config (disabled by default):**
+- `failsafe.integrations.slack.enabled` — boolean.
+- `failsafe.integrations.slack.webhookUrl` — the incoming-webhook URL (**secret** — grants posting to the channel; leave empty to disable).
+
+**Code:** `src/integrations/slack/` — `slack-notify.ts` (Block Kit builder), `slack-sender.ts` (injectable, non-blocking POST), `slack-notify-map.ts` (EventBus→notify mapping), `SlackNotifier.ts` (event subscription). FX825.
+
+**Deferred:** full Slack-app interactivity (action callbacks, signing-secret verification) → a separate issue.
