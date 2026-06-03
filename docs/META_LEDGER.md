@@ -22311,7 +22311,60 @@ Optional: implement the next integration tranche (any of #96/#97/#98/#101/#102/#
 
 _Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`### Entry #416`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Computed via Node 20 `crypto.createHash('sha256')` (Phase 75 skip — gate-chain artifacts absent; same posture as #405–#415).
 
+### Entry #417: DELIVER — v5.4.3 dual-marketplace publish (Development Tracker + AGT installer)
+
+**Date**: 2026-06-03
+**Phase**: DELIVER (/qor-repo-release close-out)
+**Plan**: none — release delivery cycle (Tracker + AGT installer)
+**Branch**: `hotfix/v5.4.3` → `main` (PR #142)
+**Author**: krknapp@gmail.com
+**Predecessor**: Entry #416 (DELIVER — v5.4.2; chain hash `78285936852ef001c6cff55157f4eaa0c40caadada9ed27ff64c019419d0bf6d`)
+**Verdict**: SEALED — v5.4.3 published to VS Code Marketplace + Open VSX; GitHub Release auto-created.
+
+## What shipped
+
+- **Development Tracker (B-INT-17, PR #141)** — premium, data-driven status dashboard at `/console/tracker`, embedded as a Workspace-tab sub-view (+ Pop out ↗ + `FailSafe: Open Development Tracker`). Full release history discovered from the CHANGELOG (v0.1.0→current); major-default timeline zoom with drill-in; traceable record per release; tiered program-progress (majors full history; minors/patches within configurable `progressWindows`). Engine + manifest (`docs/roadmap/programs.yaml`) + pure model (`tracker-model.ts`). Replaces the lint-row tracker.
+- **Agent Governance Toolkit installer (B-INT-16, PR #140)** — Integrations → Agent Governance sub-view; auto-detects the workspace environment and serves the matching registry-verified AGT installer (9 modules; run-in-terminal, no silent install).
+
+## Delivery path
+
+- PRs #141 (Tracker) + #140 (AGT) merged to `main` (admin-override; both full-test gates green). `hotfix/v5.4.3` cut from main, `5.4.2`→`5.4.3` bump + doc-coherence stamp, PR #142 (gate green).
+- A new `main` repository ruleset (`code_scanning` + `code_quality`, requiring unconfigured CodeQL) blocked the merge; `gh pr merge --admin` does NOT bypass rulesets. Operator resolved via a temporary ruleset bypass (NOT a pipeline reshape on my part).
+- Tag `v5.4.3` (`2c7b49c`) cut from main; Release Pipeline ran. Build & Test failed once on the known flaky `idle-scheduler.test.js` timer race (1/3203; B-BIC-24 territory) — cleared by `gh run rerun --failed` (the PR gate passed on identical code).
+- **VS Code Marketplace + Open VSX**: both published by CI (production-gate approved). **GitHub Release**: auto-created by the new `github-release` pipeline job (added in PR #136) — first release to benefit, no manual release object.
+
+## Governance reconciliation (this entry)
+
+- `docs/BACKLOG.md`: v5.4.3 row 🚀 RELEASING → ✅ RELEASED.
+- `docs/GOVERNANCE_INDEX.md`: Last Reviewed refreshed to 2026-06-03 + #417 registered.
+
+## Process learning
+
+The `idle-scheduler` timer flake remains a recurring release hazard (it failed v5.3.3's pipeline too). The B-BIC-24 de-flake did not fully cover it — a proper fake-timer rewrite is overdue. Separately, the new `code_scanning`/`code_quality` ruleset will block every future merge until CodeQL is configured or release-mergers are bypass-listed — a follow-up for the operator.
+
+## Phase 75 SKIP records
+
+Gate-chain artifacts absent (delivery cycle); hash via Node 20 `crypto.createHash('sha256')` matching #405–#416.
+
+## Decision
+
+**SEALED** with chain advance #416 → #417. v5.4.3 is live on both marketplaces; the Development Tracker + AGT installer are delivered and the ledger matches marketplace reality.
+
+## Next operator actions
+
+Work the open-issue backlog (12 open) — next: #96 GitHub PR checks (operator pick) / #101 Teams (fastest close). De-flake `idle-scheduler.test.js`; resolve the CodeQL ruleset.
+
+## Content Hash
+
+**Content Hash**: `697f4fa4a0de6bbe96d3a21394e376b0f932dff5166bcd304d78a860dcb17e34`
+**Previous Hash**: `78285936852ef001c6cff55157f4eaa0c40caadada9ed27ff64c019419d0bf6d` (Entry #416 Chain Hash)
+**Chain Hash**: `894b0f0b2d439ad856cb331933759f7dfbb11a0ede14de92c20991a6c0f7849f`
+**Merkle Seal**: `2d70e0f82f619e2c55900955c6e61980eb69e6d4c9f853180be0f15632113d3a` — gate_seal_deliver_v5_4_3
+**Session ID**: `2026-06-03-deliver-v5.4.3`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`### Entry #417`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Computed via Node 20 `crypto.createHash('sha256')` (Phase 75 skip — gate-chain artifacts absent; same posture as #405–#416).
+
 ---
 
 _Chain integrity: VALID_
-_Session: 2026-06-03-deliver-v5.4.2_
+_Session: 2026-06-03-deliver-v5.4.3_
