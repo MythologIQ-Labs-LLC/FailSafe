@@ -66,17 +66,19 @@ test.skip("FX519 Bicameral card dims affordances for unsupported tools (deferred
 // for this UI change): three pills (Bicameral, Open Design, MCP Catalog),
 // Bicameral active by default, clicking the Open Design pill swaps to the Open
 // Design card and hides the Bicameral card.
-// (B-INT-13/14, v5.4.0 — MCP Catalog pill added as the third sub-view.)
+// (B-INT-13/14, v5.4.0 — MCP Catalog pill added as the third sub-view;
+//  B-INT-16 — Agent Governance pill added as the fourth.)
 test("B-INT-5 Integrations sub-tabs — pill switch swaps the visible integration", async ({ page }) => {
   controller = await serveConsoleServerUI({});
   await page.goto(`${controller.url}/command-center.html`);
   await page.locator('.tab-btn[data-target="integrations"]').click();
 
-  // Three integration pills render in the sub-view bar.
+  // Four integration pills render in the sub-view bar.
   const pills = page.locator('#integrations .cc-subview-bar .cc-pill');
-  await expect(pills).toHaveCount(3, { timeout: 10000 });
+  await expect(pills).toHaveCount(4, { timeout: 10000 });
   await expect(pills.nth(0)).toHaveText('Bicameral');
   await expect(pills.nth(1)).toHaveText('Open Design');
+  await expect(pills.nth(3)).toHaveText('Agent Governance');
   await expect(pills.nth(2)).toHaveText('MCP Catalog');
 
   // Bicameral is the default active sub-view.
