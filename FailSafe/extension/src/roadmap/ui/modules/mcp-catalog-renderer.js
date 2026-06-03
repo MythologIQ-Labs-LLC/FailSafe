@@ -61,6 +61,8 @@ export class McpCatalogRenderer {
       return;
     }
     const entries = (data && data.entries) || [];
+    // Future: render a search/filter bar above the cards when the catalog grows
+    // past ~20 entries (small catalog today — Context7 + Mermaid Chart).
     const cards = entries.map((e) => `
       <div class="cc-mcp-card" data-id="${esc(e.id)}">
         <div class="cc-mcp-head"><strong>${esc(e.name)}</strong>
