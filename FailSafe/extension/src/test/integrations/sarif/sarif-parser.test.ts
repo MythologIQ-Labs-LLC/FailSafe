@@ -1,6 +1,6 @@
 import { strict as assert } from 'assert';
 import { parseSarif } from '../../../integrations/sarif/sarif-parser';
-import { sarifFindingsToRisks } from '../../../integrations/sarif/sarif-to-risk';
+import { sarifFindingsToRisks, importSarifText } from '../../../integrations/sarif/sarif-to-risk';
 
 /** Minimal Semgrep-CE-shaped SARIF 2.1.0 fixture. */
 function fixture(results: unknown[]): string {
@@ -62,6 +62,25 @@ suite('sarif-parser (B-INT-9 #99)', () => {
     assert.match(parseSarif('{not json').errors[0], /malformed JSON/);
     assert.match(parseSarif(JSON.stringify({ version: '1.0.0', runs: [] })).errors[0], /unsupported SARIF version/);
     assert.match(parseSarif(JSON.stringify({ version: '2.1.0' })).errors[0], /no runs/);
+  });
+
+  test('importSarifText: parses → upserts deduped risks via injected sink, returns counts', () => {
+    const dup = { ruleId: 'r.d', level: 'warning', message: { text: 'd' }, locations: [{ physicalLocation: { artifactLocation: { uri: 'a.js' }, region: { startLine: 5, startColumn: 1 } } }] };
+    const upserted: Array<Record<string, unknown>> = [];
+    const res = importSarifText(fixture([dup, dup, { ruleId: 'r.o', level: 'error', message: { text: 'o' }, locations: [] }]), (r) => upserted.push(r));
+    assert.equal(res.findings, 3);
+    assert.equal(res.risks, 2);        // r.d deduped
+    assert.equal(upserted.length, 2);
+    assert.equal(res.errors.length, 0);
+  });
+
+  test('importSarifText: malformed input → 0 findings/risks + errors, no upsert', () => {
+    const upserted: unknown[] = [];
+    const res = importSarifText('{bad json', (r) => upserted.push(r));
+    assert.equal(res.findings, 0);
+    assert.equal(res.risks, 0);
+    assert.equal(upserted.length, 0);
+    assert.ok(res.errors.length > 0);
   });
 
   test('dedupKey is stable + identical for duplicate results; sarifFindingsToRisks dedups', () => {
