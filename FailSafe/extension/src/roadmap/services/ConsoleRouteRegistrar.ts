@@ -10,6 +10,7 @@ import {
   AgentCoverageRoute, SreRoute,
 } from "../routes";
 import { TrackerRoute, type TrackerRouteDeps } from "../routes/TrackerRoute";
+import { McpRoute } from "../routes/McpRoute";
 import type { RouteDeps } from "../routes";
 import type { ApiRouteDeps } from "../routes/types";
 import { ConfigurationProfile } from "../../genesis/ConfigurationProfile";
@@ -382,6 +383,9 @@ export class ConsoleRouteRegistrar {
     });
     app.get("/console/tracker", (req, res) => TrackerRoute.render(req, res, trackerDeps()));
     app.get("/api/v1/tracker", (req, res) => TrackerRoute.api(req, res, trackerDeps()));
+    // MCP catalog surface (B-INT-13/14): list + governed install into .mcp.json.
+    app.get("/api/v1/mcp/catalog", (req, res) => McpRoute.catalog(req, res));
+    app.post("/api/actions/mcp-install", (req, res) => McpRoute.install(req, res, { workspaceRoot: this.host.workspaceRoot }));
     this.registerConsoleExtras();
   }
 
