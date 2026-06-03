@@ -16,7 +16,7 @@ FailSafe runs locally inside VS Code and Cursor. It monitors what AI agents do, 
 
 ## 🧩 Integration Beta — Bicameral MCP + Open Design
 
-**FailSafe now connects to two best-in-class design & decision tools — live in beta as of v5.3.3.**
+**FailSafe now connects to best-in-class design & decision tools — Bicameral MCP + Open Design in beta, and (new in v5.4.0) governed one-click installers for Context7 + Mermaid Chart MCP.**
 
 - **🧠 Bicameral MCP** — bring your architecture *decisions* and their drift into the Command Center. Detect, connect, and ratify decision records inline; every Bicameral tool call is governed through FailSafe's universal interceptor.
 - **🎨 Open Design** — observe Open Design agent runs **and now act on them**: the new L3-gated `create_artifact` lets FailSafe create design artifacts only with explicit human approval (Buffer & auto-execute). Destructive write tools stay locked by design.
@@ -25,9 +25,13 @@ Both are **opt-in and local-first** — disabled by default, no network until yo
 
 ---
 
-**Current Release**: v5.3.3 (2026-05-28)
+**Current Release**: v5.4.0 (2026-06-03)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v5.4.0
+
+Integration + governance expansion. The integration research gate is cleared and FailSafe ships its first **governed third-party integrations**: **SARIF** finding ingestion, **MCP Registry** local risk scoring, **Slack** notify-only governance notifications (off by default), and one-click **governed MCP installers** for **Context7** and **Mermaid Chart** under a new **Integrations → MCP Catalog** tab. Plus the new **Development Tracker** (evidence-enforced, console-hosted) and substrate hardening (dependency-admission cooling-period lint + a seal auto-hook).
 
 ## What's New in v5.3.3
 

@@ -32,7 +32,7 @@ _Local-first safety for AI coding assistants._
 
 ## 🧩 Integration Beta — Bicameral MCP + Open Design
 
-**FailSafe now connects to two best-in-class design & decision tools — live in beta as of v5.3.3.**
+**FailSafe now connects to best-in-class design & decision tools — Bicameral MCP + Open Design in beta, and (new in v5.4.0) governed one-click installers for Context7 + Mermaid Chart MCP.**
 
 - **🧠 Bicameral MCP** — bring your architecture *decisions* and their drift into the Command Center. Detect, connect, and ratify decision records inline; every Bicameral tool call is governed through FailSafe's universal interceptor.
 - **🎨 Open Design** — observe Open Design agent runs **and now act on them**: the new L3-gated `create_artifact` lets FailSafe create design artifacts only with explicit human approval (Buffer & auto-execute). Destructive write tools stay locked by design.
@@ -43,9 +43,13 @@ Both are **opt-in and local-first** — disabled by default, no network until yo
 
 <div align="center">
 
-**Current Release**: v5.3.3 (2026-05-28)
+**Current Release**: v5.4.0 (2026-06-03)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
+
+## What's new in v5.4.0
+
+Integration + governance expansion. The integration research gate is cleared and FailSafe ships its first **governed third-party integrations**: **SARIF** finding ingestion into the risk register, **MCP Registry** local risk scoring, **Slack** notify-only governance notifications (VETO / L3 / drift → your incoming webhook, off by default), and one-click **governed MCP installers** for **Context7** and **Mermaid Chart** under a new **Integrations → MCP Catalog** tab. Plus the new **Development Tracker** — an evidence-enforced, always-current status board served alongside the console — and substrate hardening (a dependency-admission cooling-period lint + a seal auto-hook that runs the governance substrate on every seal). See [CHANGELOG.md](CHANGELOG.md) for full notes.
 
 ## What's new in v5.3.3
 
