@@ -292,3 +292,27 @@ The `FailSafe: Register Open Design MCP Connection` command palette entry (`fail
 - `OpenDesignSseClient`: 6 cases in `src/test/integrations/open-design/OpenDesignSseClient.test.ts` (FX723).
 - `OpenDesignMcpAllowlist` (incl. 4-cycle Plan-Time Hallucination regression guard): 7 cases in `src/test/integrations/open-design/OpenDesignMcpAllowlist.test.ts` (FX724).
 - `bootstrapOpenDesignMcp` (node:test using the require.cache vscode-stub pattern): 7 cases in `src/test/extension/bootstrapOpenDesignMcp.test.cjs` (FX725).
+
+## Mermaid Chart MCP — candidate (B-INT-13, not yet built)
+
+**Status:** candidate on the integrations list; no code shipped. Contract review pending (B-INT-13) before any wiring, per the B-INT-8 research-gate discipline.
+
+**What it is.** An MCP server exposing diagram tooling — primary tool `validate_and_render_mermaid_diagram` (validate Mermaid syntax + render). Read-only/compute; no workspace write surface.
+
+**Why for FailSafe.** Render and *validate* governance diagrams as first-class, lint-checked artifacts instead of hand-drawn ASCII: the SHIELD lifecycle, the Bicameral decision graph, dependency/sequence graphs, and — directly relevant — the **Development Tracker's** Convergence + Recommended-Sequence sections (currently rendered as tables). A validate step means a malformed governance diagram fails fast rather than shipping broken.
+
+**Governance posture (planned).** Govern through the existing `McpClientHost` substrate (same pattern as Bicameral/Open Design): read-only tool allowlist, no write tools, admit via the MCP-Registry scoring pattern (#108). Trust boundary: treat registration like installing a trusted extension; outbound render calls carry only diagram source, never repo/secret data.
+
+**Open before build:** confirm transport (stdio vs remote), pin a version, decide render target (inline SVG in the console vs. a docs build step).
+
+## Context7 MCP — candidate (B-INT-14, not yet built)
+
+**Status:** candidate on the integrations list; no code shipped. Contract review pending (B-INT-14).
+
+**What it is.** An MCP server for up-to-date library/framework/SDK documentation — tools `resolve-library-id` (name → canonical id) + `query-docs` (fetch current API/config/migration docs). Read-only doc retrieval.
+
+**Why for FailSafe.** Directly powers `/qor-research` and the **plan-time external-name verification** discipline (`feedback_verify_external_names_at_plan_time` + the B-INT-8 research-gate doctrine): before a plan's external API/SDK names ship to `/qor-audit`, Context7 verifies them against *current* docs — closing the ghost-helper / stale-API class of VETO at its source. Also useful for the integration contract reviews themselves (verifying each vendor's current auth/scope/lifecycle contract).
+
+**Governance posture (planned).** Govern through `McpClientHost`; read-only query tools only. **Data minimization is the key control:** queries send only a library id + topic string — never repo source, plans, or secrets. Outbound network egress to the Context7 service (disclose + make opt-in, consistent with the dependency-admission lint's network-egress precedent).
+
+**Open before build:** confirm transport + auth, pin behavior, define the redaction guard that prevents any workspace content from entering a query.
