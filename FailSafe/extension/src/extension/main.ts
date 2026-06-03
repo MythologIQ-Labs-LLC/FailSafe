@@ -41,6 +41,7 @@ import { bootstrapStartupChecks } from "./bootstrapStartupChecks";
 import { registerSubstrateCommand } from "./substrate-command";
 import { registerSarifImportCommand } from "./sarif-command";
 import { registerMcpInstallCommand } from "./mcp-install-command";
+import { registerLinearImportCommand } from "./linear-command";
 import { SlackNotifier } from "../integrations/slack/SlackNotifier";
 import { defaultRun } from "../qorlogic/PythonInterpreterResolver";
 

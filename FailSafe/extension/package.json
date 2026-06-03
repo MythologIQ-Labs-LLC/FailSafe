@@ -68,7 +68,8 @@
     "onCommand:failsafe.uninstallVoicePack",
     "onCommand:failsafe.substrate.run",
     "onCommand:failsafe.sarif.import",
-    "onCommand:failsafe.mcp.installCatalog"
+    "onCommand:failsafe.mcp.installCatalog",
+    "onCommand:failsafe.linear.import"
   ],
   "main": "./dist/extension/main.js",
   "contributes": {
@@ -125,6 +126,11 @@
       {
         "command": "failsafe.mcp.installCatalog",
         "title": "FailSafe: Install MCP Integration (governed)",
+        "category": "FailSafe"
+      },
+      {
+        "command": "failsafe.linear.import",
+        "title": "FailSafe: Import Linear Issue (preview)",
         "category": "FailSafe"
       },
       {
@@ -310,6 +316,16 @@
           "type": "string",
           "default": "",
           "markdownDescription": "Slack **incoming webhook URL** to post governance notifications to. Treat as a secret — it grants posting to the target channel. Messages are notify-only (no interactive approvals; a link back to the local Command Center is included). Leave empty to disable."
+        },
+        "failsafe.integrations.linear.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable read-only Linear issue import. The `FailSafe: Import Linear Issue (preview)` command resolves a Linear issue URL/identifier to an UNCOMMITTED intent preview — nothing is created or synced. Requires an API key below."
+        },
+        "failsafe.integrations.linear.apiKey": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Linear **personal API key** (or OAuth access token) used for read-only issue lookups. Treat as a secret — prefer a team-scoped, read-only key. The value is sent only in the `Authorization` header and is never logged. Leave empty to disable."
         },
         "failsafe.integrations.openDesign.mcpEnabled": {
           "type": "boolean",
