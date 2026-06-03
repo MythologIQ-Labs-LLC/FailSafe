@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.4.1] - 2026-06-03
+
+Hotfix for v5.4.0, whose Release Pipeline failed at `npm run test:all` (publish jobs skipped — v5.4.0 never reached either marketplace). The B-INT-5 Integrations sub-tab Playwright test still asserted 2 sub-view pills, but v5.4.0's MCP Catalog tab (B-INT-13/14) added a third; updated the assertion to expect 3 pills and check the `MCP Catalog` label. The UI was correct — only the stale test count was wrong. Carries forward the full v5.4.0 batch below.
+
 ## [5.4.0] - 2026-06-03
 
 Integration + governance batch (33 commits since v5.3.3). Cleared the B-INT-8 integration research gate (13 contract reviews) and shipped governed integrations: SARIF ingestion (#99), MCP Registry risk scoring (#108), Slack notify-only governance notifications (#100), and Context7 + Mermaid Chart MCP installers with an Integrations → MCP Catalog tab (B-INT-13/14). Added the evidence-enforced Development Tracker (`/console/tracker`, v1 + v1.1), the Node dependency-admission cooling-period lint + substrate seal auto-hook (B-SUBSTRATE-2/3), de-flaked the Bicameral idle-disconnect test (B-BIC-24), and synced governance skills to qor-logic 0.102.1.

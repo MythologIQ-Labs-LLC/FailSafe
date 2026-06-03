@@ -43,9 +43,13 @@ Both are **opt-in and local-first** — disabled by default, no network until yo
 
 <div align="center">
 
-**Current Release**: v5.4.0 (2026-06-03)
+**Current Release**: v5.4.1 (2026-06-03)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
+
+## What's new in v5.4.1
+
+Hotfix that makes the v5.4.0 integration batch shippable: the v5.4.0 tag's release pipeline failed a stale UI test (the Integrations sub-tab test still expected 2 pills after the MCP Catalog tab made it 3), so v5.4.0 never reached the marketplace. v5.4.1 corrects the test — the v5.4.0 features below all ship in v5.4.1. See [CHANGELOG.md](CHANGELOG.md) for full notes.
 
 ## What's new in v5.4.0
 
