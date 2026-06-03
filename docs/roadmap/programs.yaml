@@ -40,6 +40,27 @@ meta:
     - { label: Marketplaces, value: VS Code + Open VSX }
     - { label: In-flight, value: AGT installer }
   footer: Generated from docs/roadmap/programs.yaml + live META_LEDGER/tags. Completion estimates ±~10%. Programs and weights are operator-declared during planning.
+  # Decisions ledger (§06) — the anti-"feelings" register: every call traces to a
+  # requirement + verifiable evidence.
+  decisions:
+    - decision: Release only from main; merge the release branch before tagging
+      drivenBy: Tagging before merge triggers the publish workflow too early; the pre-push hook blocks main
+      evidence: "Release-process lessons; .githooks/pre-push"
+    - decision: Pin the VS Code test version (1.122.1) in the release gate
+      drivenBy: An editor auto-update (1.122.1→1.123.0) broke the better-sqlite3 native build mid-release
+      evidence: "v5.4.0/v5.4.1 dead tags; .vscode-test.mjs + rebuild-vscode-electron.cjs pin"
+    - decision: Run the full test:all suite on every PR to main
+      drivenBy: Native-build + UI regressions were invisible until the release tag fired
+      evidence: ".github/workflows/pr-full-test.yml; two dead tags caught after"
+    - decision: Forward-only dead-tag recovery — never re-use a burned version tag
+      drivenBy: Re-tagging a published version is ambiguous; forward-only stays auditable
+      evidence: "v5.2.x + v5.4.x recovery precedent (META_LEDGER)"
+    - decision: Governed, risk-scored MCP/AGT installs — no silent install
+      drivenBy: High-capability tools (browser automation, agent governance) need admission control
+      evidence: "MCP Catalog #108 scoring; AGT installer run-in-terminal (operator presses enter)"
+    - decision: v5 publicly reveals the FailSafe / FailSafe Pro product split
+      drivenBy: The open-extension vs desktop-daemon boundary needed a public framing
+      evidence: "PRIVATE/docs/LICENSING_POSTURE.md; v5 README reveal"
 
 # Release axis is DISCOVERED from the repo's CHANGELOG (the complete history,
 # v0.1.0 → current — the governance files don't span it). Declare ONLY forecast
@@ -102,3 +123,59 @@ verticals:
     backend:
       - "`ConsoleServer` (Express :9376) + `ConsoleRouteRegistrar`"
       - "`/console/tracker` + `/api/v1/tracker`"
+
+# §03 Convergence — where FailSafe meets adjacent systems at NAMED contracts
+# (not vibes). Each bridge faces a governing contract in the middle.
+convergence:
+  - left:  { title: FailSafe (open extension), body: Editor-boundary governance — audits, skills, checkpoints, MCP/integration admission. }
+    mid:   { glyph: "⟷", contract: Pro feature boundary }
+    right: { title: FailSafe Pro (desktop daemon), body: OS-level enforcement, team workflows, runtime operations beyond the editor. }
+    status: "**Public split revealed in v5** — Pro is now named in the marketplace + Settings."
+  - left:  { title: FailSafe, body: Consumes the SHIELD skill corpus + a version floor. }
+    mid:   { glyph: "→", contract: "qor-logic (PyPI)" }
+    right: { title: qor-logic, body: Deterministic governance engine + SHIELD lifecycle skills. }
+    status: "**Synced to qor-logic 0.102.1** — fail-closed gates adopted."
+  - left:  { title: FailSafe, body: agent-failsafe adapter + the AGT installer surface. }
+    mid:   { glyph: "→", contract: Agent Governance Toolkit }
+    right: { title: Microsoft AGT, body: Per-environment governance modules + agent-sre observability. }
+    status: "**AGT installer in flight (v5.5)** — agent-failsafe adapter is the external bridge."
+
+# §04 Promotion record — what shipped per program (cross-filters on the deep-dive tab).
+promotion:
+  - title: Governance Engine
+    vert: governance
+    accent: "#38d6c8"
+    phaseCount: 3
+    rows:
+      - { pill: stg, text: "SHIELD lifecycle + Merkle-chained ledger (v5.3.3)" }
+      - { pill: stg, text: "Universal governance interceptor — B151 (v5.4.2)" }
+      - { pill: stg, text: "Substrate seal gates + dependency-admission lint (v5.4.2)" }
+  - title: Integrations
+    vert: integrations
+    accent: "#e7b04b"
+    phaseCount: 3
+    rows:
+      - { pill: stg, text: "Bicameral + Open Design L3 write path (v5.3.3)" }
+      - { pill: stg, text: "SARIF · MCP Registry · Slack · MCP Catalog (v5.4.2)" }
+      - { pill: x,   text: "Agent Governance Toolkit installer (v5.5, in flight)" }
+  - title: Experience
+    vert: experience
+    accent: "#f0728f"
+    phaseCount: 3
+    rows:
+      - { pill: stg, text: "Command Center 8-tab browser console (v5.3.3)" }
+      - { pill: x,   text: "Development Tracker — this dashboard (v5.5)" }
+      - { pill: stg, text: "Voice + Mindmap — Whisper/Piper voice pack (v5.3.3)" }
+
+# §05 Levers — the few moves that actually move the numbers.
+levers:
+  - num: "596"
+    title: Verified-feature coverage gate
+    body: Every FEATURE_INDEX entry must carry a test (or a justified n/a) before any marketplace publish.
+    ship: "✓ full-coverage publish gate enforced"
+    done: true
+  - num: "test:all"
+    title: PR-gated full suite
+    body: The complete mocha + Playwright + native-rebuild suite runs on every PR to main, catching regressions before a release tag is ever cut.
+    ship: "✓ pr-full-test.yml live on main"
+    done: true
