@@ -25,9 +25,13 @@ Both are **opt-in and local-first** — disabled by default, no network until yo
 
 ---
 
-**Current Release**: v5.4.0 (2026-06-03)
+**Current Release**: v5.4.1 (2026-06-03)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v5.4.1
+
+Hotfix that makes the v5.4.0 integration batch shippable: the v5.4.0 release pipeline failed a stale UI test (the Integrations sub-tab test expected 2 pills after the MCP Catalog tab made it 3), so v5.4.0 never published. v5.4.1 corrects the test — all v5.4.0 features below ship in v5.4.1.
 
 ## What's New in v5.4.0
 

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.4.1] - 2026-06-03
+
+Hotfix for the v5.4.0 release. The v5.4.0 tag's Release Pipeline failed at `npm run test:all` (so its publish jobs skipped and v5.4.0 never reached either marketplace).
+
+- **Fix:** the B-INT-5 Integrations sub-tab Playwright test (`integrations-tab.spec.ts`) asserted exactly **2** sub-view pills (Bicameral, Open Design), but v5.4.0's MCP Catalog tab (B-INT-13/14) added a **third** pill. Updated the assertion to expect 3 pills and verify the `MCP Catalog` label. The Integrations UI itself was correct; only the stale test count was wrong.
+- Carries forward the full v5.4.0 integration + governance batch (see below).
+
 ## [5.4.0] - 2026-06-03
 
 Integration + governance batch (33 commits since v5.3.3).
