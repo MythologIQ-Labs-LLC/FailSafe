@@ -39,6 +39,7 @@ import { registerCommands, setServerPort } from "./commands";
 import { createVscodeFeatureGate } from "../core/adapters/vscode";
 import { bootstrapStartupChecks } from "./bootstrapStartupChecks";
 import { registerSubstrateCommand } from "./substrate-command";
+import { registerSarifImportCommand } from "./sarif-command";
 import { defaultRun } from "../qorlogic/PythonInterpreterResolver";
 
 let genesisManager: GenesisManager;
@@ -153,6 +154,10 @@ export async function activate(
       defaultRun,
       core.mutationBus, // B-SUBSTRATE-3: enables the seal auto-hook
     );
+
+    // 3.13 SARIF offline import (B-INT-9 / #99): parse a SARIF file → upsert
+    // findings as WARN-only risk records.
+    registerSarifImportCommand(context, core.workspaceRoot);
 
     // 4. Sentinel
     const sentinel = await bootstrapSentinel(context, core, qor, logger);

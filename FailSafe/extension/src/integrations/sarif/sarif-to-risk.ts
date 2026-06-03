@@ -6,7 +6,7 @@
  * triages) per the contract review.
  */
 
-import type { SarifFinding } from './sarif-parser';
+import { parseSarif, type SarifFinding } from './sarif-parser';
 
 export function sarifFindingToRisk(f: SarifFinding): Record<string, unknown> {
   const risk: Record<string, unknown> = {
@@ -33,4 +33,19 @@ export function sarifFindingsToRisks(findings: SarifFinding[]): Array<Record<str
     out.push(risk);
   }
   return out;
+}
+
+/**
+ * Orchestrate a SARIF text import: parse → map+dedup → upsert each risk via the
+ * injected `upsert` (RiskRegisterManager.upsertRisk at runtime). Pure-testable —
+ * the upsert sink is injected, so no fs/RiskRegisterManager is needed in tests.
+ */
+export function importSarifText(
+  text: string,
+  upsert: (risk: Record<string, unknown>) => void,
+): { findings: number; risks: number; errors: string[] } {
+  const { findings, errors } = parseSarif(text);
+  const risks = sarifFindingsToRisks(findings);
+  for (const r of risks) upsert(r);
+  return { findings: findings.length, risks: risks.length, errors };
 }

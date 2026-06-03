@@ -66,7 +66,8 @@
     "onCommand:failsafe.installQorLogicSkillsDefaults",
     "onCommand:failsafe.installVoicePack",
     "onCommand:failsafe.uninstallVoicePack",
-    "onCommand:failsafe.substrate.run"
+    "onCommand:failsafe.substrate.run",
+    "onCommand:failsafe.sarif.import"
   ],
   "main": "./dist/extension/main.js",
   "contributes": {
@@ -113,6 +114,11 @@
       {
         "command": "failsafe.substrate.run",
         "title": "FailSafe: Run Governance Substrate Checks",
+        "category": "FailSafe"
+      },
+      {
+        "command": "failsafe.sarif.import",
+        "title": "FailSafe: Import SARIF Findings",
         "category": "FailSafe"
       },
       {
