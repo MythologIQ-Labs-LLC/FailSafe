@@ -35,6 +35,7 @@ import { SecretScannerModule } from '../qorlogic/substrate/SecretScannerModule';
 import { FeatureIndexVerifyAdapter } from '../qorlogic/substrate/FeatureIndexVerifyAdapter';
 import { ModelPinningLintModule } from '../qorlogic/substrate/ModelPinningLintModule';
 import { DependencyAdmissionLintModule } from '../qorlogic/substrate/DependencyAdmissionLintModule';
+import { TrackerEvidenceLintModule } from '../qorlogic/substrate/TrackerEvidenceLintModule';
 import { QorScriptInvoker } from '../qorlogic/substrate/QorScriptInvoker';
 import { SealWatchState } from '../qorlogic/substrate/seal-detection';
 import {
@@ -62,6 +63,7 @@ export function createSubstrateRunner(
       new FeatureIndexVerifyAdapter(ws),
       new ModelPinningLintModule(invoker, ws),
       new DependencyAdmissionLintModule(ws),
+      new TrackerEvidenceLintModule(ws),
     ],
     eventBus,
   );

@@ -81,8 +81,8 @@ suite('FX503 ConsoleLifecycleService — watchMetaLedger bus migration', () => {
       mutationCallback!();
       assert.deepStrictEqual(
         broadcasts,
-        [{ type: 'hub.refresh' }],
-        'mutation event triggered hub.refresh broadcast',
+        [{ type: 'hub.refresh' }, { type: 'tracker.refresh' }],
+        'mutation event triggered hub.refresh + tracker.refresh broadcasts (Tracker v1.1)',
       );
     } finally {
       fs.rmSync(workspaceRoot, { recursive: true, force: true });
