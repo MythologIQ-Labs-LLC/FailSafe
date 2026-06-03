@@ -41,6 +41,7 @@ import { bootstrapStartupChecks } from "./bootstrapStartupChecks";
 import { registerSubstrateCommand } from "./substrate-command";
 import { registerSarifImportCommand } from "./sarif-command";
 import { registerMcpInstallCommand } from "./mcp-install-command";
+import { registerGitHubChecksCommand } from "./github-checks-command";
 import { SlackNotifier } from "../integrations/slack/SlackNotifier";
 import { defaultRun } from "../qorlogic/PythonInterpreterResolver";
 
@@ -164,6 +165,10 @@ export async function activate(
     // 3.14 Governed MCP install (B-INT-13/14): risk-scored install of catalog
     // MCP integrations (Context7, Mermaid Chart) into .mcp.json.
     registerMcpInstallCommand(context, core.workspaceRoot);
+
+    // 3.14b GitHub Checks publish (#96): post SHIELD verdicts as Check Runs at
+    // the merge gate. Off-by-default; degrades to local-only without auth.
+    registerGitHubChecksCommand(context);
 
     // 3.15 Slack notify-only (B-INT-9 / #100): post governance enforcement
     // events to a configured incoming webhook. Disabled by default; non-blocking.

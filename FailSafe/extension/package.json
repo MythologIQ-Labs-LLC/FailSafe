@@ -68,7 +68,8 @@
     "onCommand:failsafe.uninstallVoicePack",
     "onCommand:failsafe.substrate.run",
     "onCommand:failsafe.sarif.import",
-    "onCommand:failsafe.mcp.installCatalog"
+    "onCommand:failsafe.mcp.installCatalog",
+    "onCommand:failsafe.github.publishCheck"
   ],
   "main": "./dist/extension/main.js",
   "contributes": {
@@ -125,6 +126,11 @@
       {
         "command": "failsafe.mcp.installCatalog",
         "title": "FailSafe: Install MCP Integration (governed)",
+        "category": "FailSafe"
+      },
+      {
+        "command": "failsafe.github.publishCheck",
+        "title": "FailSafe: Publish SHIELD Verdict to GitHub Check",
         "category": "FailSafe"
       },
       {
@@ -310,6 +316,21 @@
           "type": "string",
           "default": "",
           "markdownDescription": "Slack **incoming webhook URL** to post governance notifications to. Treat as a secret — it grants posting to the target channel. Messages are notify-only (no interactive approvals; a link back to the local Command Center is included). Leave empty to disable."
+        },
+        "failsafe.integrations.github.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Publish FailSafe SHIELD verdicts to GitHub as Check Runs at the merge gate. The `FailSafe: Publish SHIELD Verdict to GitHub Check` command posts a single completed check for the current HEAD. No network call is made unless this is enabled AND a token is set; fork-PR contexts degrade to local-only."
+        },
+        "failsafe.integrations.github.token": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "GitHub token used to create Check Runs — a **GitHub App installation token** (recommended; the Checks API is App-oriented and needs `checks: write`) or a PAT where the org permits it. Treat as a secret — it is sent only in the `Authorization` header and is never logged. Leave empty to disable."
+        },
+        "failsafe.integrations.github.apiBaseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Optional GitHub API base URL for GitHub Enterprise Server (e.g. https://ghe.example.com/api/v3). Leave empty to use https://api.github.com."
         },
         "failsafe.integrations.openDesign.mcpEnabled": {
           "type": "boolean",
