@@ -30,14 +30,20 @@ _Local-first safety for AI coding assistants._
 
 ---
 
-## 🧩 Integration Beta — Bicameral MCP + Open Design
+## 🔌 Integrations — govern your entire AI toolchain, not just the editor
 
-**FailSafe now connects to best-in-class design & decision tools — Bicameral MCP + Open Design in beta, and (new in v5.4.0) governed one-click installers for Context7 + Mermaid Chart MCP.**
+FailSafe v5.4 turns the editor into a **governance hub** for the tools your AI agents actually use. Every integration is **local-first, opt-in, and routed through the same deterministic policy engine** that guards your edits — so connecting a tool never widens your attack surface or sends data anywhere by default.
 
-- **🧠 Bicameral MCP** — bring your architecture *decisions* and their drift into the Command Center. Detect, connect, and ratify decision records inline; every Bicameral tool call is governed through FailSafe's universal interceptor.
-- **🎨 Open Design** — observe Open Design agent runs **and now act on them**: the new L3-gated `create_artifact` lets FailSafe create design artifacts only with explicit human approval (Buffer & auto-execute). Destructive write tools stay locked by design.
+| Integration | What it does | Why it matters |
+|---|---|---|
+| 🛡️ **SARIF security ingestion** | Import Semgrep / CodeQL / any SARIF 2.1.0 scanner output into the risk register (`FailSafe: Import SARIF Findings`). | Your security scanner stops being a separate silo — every finding becomes a *governed* risk in the same audit trail as agent decisions. One source of truth for security **and** AI governance. |
+| 🧮 **MCP Registry risk scoring** | Score any MCP server locally — read-only, with field sanitization — before you trust it. | The MCP ecosystem is exploding and anything can claim to be a tool server. Adopt servers on **evidence, not vibes** — a supply-chain admission check at the door. |
+| 📣 **Slack governance notifications** | Post VETO / L3-approval / drift events to a Slack webhook. Notify-only, off by default. | Governance becomes a **team** signal: when FailSafe blocks a risky action or queues a human approval, the right people see it in their channel — without anyone watching the editor. |
+| 📦 **MCP Catalog installers** | One-click, risk-scored installs of **Context7** (live library docs) and **Mermaid Chart** (diagrams) into your `.mcp.json` — new **Integrations → MCP Catalog** tab (`FailSafe: Install MCP Integration (governed)`). | No hand-editing config, no guesswork — governed installs of tools that make your agents measurably better, with the trust check built in. |
+| 🧠 **Bicameral MCP** | Detect, connect, and ratify architecture *decision* records and their drift inline. | Every Bicameral tool call passes through FailSafe's universal interceptor — the reasoning behind your system stays as governed as the code. |
+| 🎨 **Open Design** | Observe Open Design agent runs and act on them via the L3-gated `create_artifact` (Buffer & auto-execute; destructive writes stay locked). | Design tooling gets the same human-in-the-loop guarantee as everything else FailSafe touches. |
 
-Both are **opt-in and local-first** — disabled by default, no network until you enable them. Find them under the **Integrations** tab. Feedback welcome while these mature out of beta.
+**Everything above is disabled by default and runs locally — no network call until you turn one on.** Open the **Integrations** tab to connect.
 
 ---
 
@@ -324,7 +330,7 @@ Switch modes via the `FailSafe: Set Governance Mode` command or the `failsafe.go
 
 ## Qor-Logic: The Governance Layer
 
-Qor-Logic is the deterministic governance engine that enforces safety policies at the editor boundary. It operates on a fundamental principle: **governance decisions are made by code, not by asking an LLM to follow rules.**
+Qor-Logic is two things working as one: the **deterministic governance engine** that enforces safety policies at the editor boundary, and the **SHIELD skill corpus** — sourced from the [`qor-logic`](https://pypi.org/project/qor-logic/) PyPI package — that drives a governed _plan → audit → implement → substantiate → deliver_ lifecycle for AI-assisted work. Both rest on one principle: **governance decisions are made by code, not by asking an LLM to follow rules.**
 
 ### Prompt Guidelines vs. Deterministic Governance
 
@@ -357,6 +363,8 @@ Qor-Logic is the deterministic governance engine that enforces safety policies a
    - Approved L3 actions → trust increase
    - Rejected or failed actions → trust decrease
    - Trust scores influence future routing decisions
+
+5. **Universal Interception** — The same deterministic boundary governs more than file edits. Every MCP tool call from a connected integration (Bicameral, Open Design, MCP Catalog servers) is routed through a single `IGovernanceInterceptor` seam, so a risky _tool invocation_ is classified, gated, and ledgered exactly like a risky _edit_. Governance follows the agent wherever it acts.
 
 ### Why Deterministic Matters
 
