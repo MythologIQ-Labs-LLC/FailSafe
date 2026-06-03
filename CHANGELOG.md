@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.4.0] - 2026-06-03
+
+Integration + governance batch (33 commits since v5.3.3). Cleared the B-INT-8 integration research gate (13 contract reviews) and shipped governed integrations: SARIF ingestion (#99), MCP Registry risk scoring (#108), Slack notify-only governance notifications (#100), and Context7 + Mermaid Chart MCP installers with an Integrations → MCP Catalog tab (B-INT-13/14). Added the evidence-enforced Development Tracker (`/console/tracker`, v1 + v1.1), the Node dependency-admission cooling-period lint + substrate seal auto-hook (B-SUBSTRATE-2/3), de-flaked the Bicameral idle-disconnect test (B-BIC-24), and synced governance skills to qor-logic 0.102.1.
+
 ## [5.3.3] - 2026-05-28
 
 Integration-surface batch: the first Open Design write path (L3-gated `create_artifact`), Section-4 razor + clobber-guard cleanup across the Bicameral / Marketplace / TabGroup surfaces, and a transparency audit date-filter fix. Sealed at META_LEDGER #409–#414.

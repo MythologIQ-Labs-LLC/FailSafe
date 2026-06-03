@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.4.0] - 2026-06-03
+
+Integration + governance batch (33 commits since v5.3.3).
+
+- **Integrations (B-INT-8/9/13/14):** the integration research gate is cleared — 13 per-vendor contract reviews under `docs/research/integrations/`. New, governed integrations: **SARIF offline ingestion** + `FailSafe: Import SARIF Findings` command (#99); **MCP Registry local risk scoring** + stored-XSS sanitizer (#108); **Slack notify-only** governance notifications — posts VETO / L3 / drift events to an incoming webhook, non-blocking, off by default (#100); and **governed MCP installers for Context7 + Mermaid Chart** — risk-scored install into `.mcp.json` via the new **Integrations → MCP Catalog** tab and the `FailSafe: Install MCP Integration` command (B-INT-13/14).
+- **Development Tracker (new):** an evidence-enforced, auto-current status/decision tracker generated from FEATURE_INDEX / BACKLOG / META_LEDGER, served at `/console/tracker` + `/api/v1/tracker`; its evidence-lint runs as a substrate gate on every seal (v1 + v1.1).
+- **Substrate hardening:** Node-archetype **dependency-admission cooling-period lint** (B-SUBSTRATE-2) and a **substrate seal auto-hook** that runs all substrate checks on every `/qor-substantiate` seal (B-SUBSTRATE-3).
+- **Reliability:** de-flaked the Bicameral idle-disconnect TTL test (B-BIC-24); synced the governance skills to qor-logic 0.102.1.
+
 ## [5.3.3] - 2026-05-28
 
 Integration-surface batch: the first Open Design write path (L3-gated `create_artifact`), Section-4 razor + clobber-guard cleanup across the Bicameral / Marketplace / TabGroup surfaces, and a transparency audit date-filter fix. Sealed at META_LEDGER #409–#414.
