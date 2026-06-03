@@ -297,6 +297,16 @@
           "default": false,
           "description": "Tag agent runs whose file edits land in `.od/artifacts/<projectId>/` paths with Open Design provenance attribution. Surfaces an 'Open Design' pill in the Monitor Agents tab. Loopback-only; works without the Open Design daemon being reachable (file-path detection is the v1 signal). Requires extension reload after toggling."
         },
+        "failsafe.integrations.slack.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Post FailSafe governance enforcement events (VETO, L3 queued/decided, critical drift) to a Slack incoming webhook. Notify-only and non-blocking — a Slack outage never affects any FailSafe workflow. Requires a webhook URL below."
+        },
+        "failsafe.integrations.slack.webhookUrl": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Slack **incoming webhook URL** to post governance notifications to. Treat as a secret — it grants posting to the target channel. Messages are notify-only (no interactive approvals; a link back to the local Command Center is included). Leave empty to disable."
+        },
         "failsafe.integrations.openDesign.mcpEnabled": {
           "type": "boolean",
           "default": false,

@@ -41,6 +41,7 @@ import { bootstrapStartupChecks } from "./bootstrapStartupChecks";
 import { registerSubstrateCommand } from "./substrate-command";
 import { registerSarifImportCommand } from "./sarif-command";
 import { registerMcpInstallCommand } from "./mcp-install-command";
+import { SlackNotifier } from "../integrations/slack/SlackNotifier";
 import { defaultRun } from "../qorlogic/PythonInterpreterResolver";
 
 let genesisManager: GenesisManager;
@@ -163,6 +164,16 @@ export async function activate(
     // 3.14 Governed MCP install (B-INT-13/14): risk-scored install of catalog
     // MCP integrations (Context7, Mermaid Chart) into .mcp.json.
     registerMcpInstallCommand(context, core.workspaceRoot);
+
+    // 3.15 Slack notify-only (B-INT-9 / #100): post governance enforcement
+    // events to a configured incoming webhook. Disabled by default; non-blocking.
+    new SlackNotifier(core.eventBus, () => {
+      const c = vscode.workspace.getConfiguration('failsafe');
+      return {
+        enabled: c.get<boolean>('integrations.slack.enabled', false),
+        webhookUrl: c.get<string>('integrations.slack.webhookUrl', ''),
+      };
+    }).register();
 
     // 4. Sentinel
     const sentinel = await bootstrapSentinel(context, core, qor, logger);
