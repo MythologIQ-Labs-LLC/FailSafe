@@ -311,6 +311,16 @@
           "default": "",
           "markdownDescription": "Slack **incoming webhook URL** to post governance notifications to. Treat as a secret — it grants posting to the target channel. Messages are notify-only (no interactive approvals; a link back to the local Command Center is included). Leave empty to disable."
         },
+        "failsafe.integrations.teams.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Post FailSafe governance enforcement events (VETO, L3 queued/decided, critical drift) to a Microsoft Teams channel via a Power Automate Workflows incoming webhook. Notify-only and non-blocking — a Teams outage never affects any FailSafe workflow. Requires a webhook URL below."
+        },
+        "failsafe.integrations.teams.webhookUrl": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Microsoft Teams **Workflows incoming webhook URL** (Power Automate; legacy M365 connectors are deprecated). Treat as a secret. Messages are notify-only Adaptive Cards (no action buttons — Workflows can't render them; a link back to the local Command Center is included). Note: a Workflows webhook is owner-linked — document an owner + co-owner before enabling in shared production. Leave empty to disable."
+        },
         "failsafe.integrations.openDesign.mcpEnabled": {
           "type": "boolean",
           "default": false,

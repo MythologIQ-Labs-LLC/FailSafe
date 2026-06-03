@@ -42,6 +42,7 @@ import { registerSubstrateCommand } from "./substrate-command";
 import { registerSarifImportCommand } from "./sarif-command";
 import { registerMcpInstallCommand } from "./mcp-install-command";
 import { SlackNotifier } from "../integrations/slack/SlackNotifier";
+import { TeamsNotifier } from "../integrations/teams/TeamsNotifier";
 import { defaultRun } from "../qorlogic/PythonInterpreterResolver";
 
 let genesisManager: GenesisManager;
@@ -172,6 +173,16 @@ export async function activate(
       return {
         enabled: c.get<boolean>('integrations.slack.enabled', false),
         webhookUrl: c.get<string>('integrations.slack.webhookUrl', ''),
+      };
+    }).register();
+
+    // 3.16 Teams notify-only (B-INT-10 / #101): same enforcement events posted
+    // as an Adaptive Card to a Power Automate Workflows webhook. Off by default.
+    new TeamsNotifier(core.eventBus, () => {
+      const c = vscode.workspace.getConfiguration('failsafe');
+      return {
+        enabled: c.get<boolean>('integrations.teams.enabled', false),
+        webhookUrl: c.get<string>('integrations.teams.webhookUrl', ''),
       };
     }).register();
 
