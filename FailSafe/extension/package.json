@@ -67,7 +67,8 @@
     "onCommand:failsafe.installVoicePack",
     "onCommand:failsafe.uninstallVoicePack",
     "onCommand:failsafe.substrate.run",
-    "onCommand:failsafe.sarif.import"
+    "onCommand:failsafe.sarif.import",
+    "onCommand:failsafe.mcp.installCatalog"
   ],
   "main": "./dist/extension/main.js",
   "contributes": {
@@ -119,6 +120,11 @@
       {
         "command": "failsafe.sarif.import",
         "title": "FailSafe: Import SARIF Findings",
+        "category": "FailSafe"
+      },
+      {
+        "command": "failsafe.mcp.installCatalog",
+        "title": "FailSafe: Install MCP Integration (governed)",
         "category": "FailSafe"
       },
       {

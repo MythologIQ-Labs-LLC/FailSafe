@@ -295,7 +295,7 @@ The `FailSafe: Register Open Design MCP Connection` command palette entry (`fail
 
 ## Mermaid Chart MCP — candidate (B-INT-13, not yet built)
 
-**Status:** candidate on the integrations list; no code shipped. Contract review pending (B-INT-13) before any wiring, per the B-INT-8 research-gate discipline.
+**Status:** **installable** via the governed installer — `FailSafe: Install MCP Integration (governed)` (`failsafe.mcp.installCatalog`). Picking it shows the #108 local risk score, then on modal confirm writes `{ "mcpServers": { "mermaid": { "command": "npx", "args": ["-y", "mcp-mermaid"] } } }` to `.mcp.json`. Verified install command (`mcp-mermaid`, hustcc). A discoverable Integrations-tab UI surface is the next slice (design-reference + visual verification per `feedback_design_reference_required`).
 
 **What it is.** An MCP server exposing diagram tooling — primary tool `validate_and_render_mermaid_diagram` (validate Mermaid syntax + render). Read-only/compute; no workspace write surface.
 
@@ -307,7 +307,7 @@ The `FailSafe: Register Open Design MCP Connection` command palette entry (`fail
 
 ## Context7 MCP — candidate (B-INT-14, not yet built)
 
-**Status:** candidate on the integrations list; no code shipped. Contract review pending (B-INT-14).
+**Status:** **installable** via the governed installer — `FailSafe: Install MCP Integration (governed)` (`failsafe.mcp.installCatalog`). Picking it shows the #108 local risk score, then on modal confirm writes `{ "mcpServers": { "context7": { "command": "npx", "args": ["-y", "@upstash/context7-mcp"] } } }` to `.mcp.json`. Verified install command (`@upstash/context7-mcp`, Upstash). Read-only doc queries; the data-minimization redaction guard (queries carry only library id + topic) remains a build item before FailSafe routes any query through it.
 
 **What it is.** An MCP server for up-to-date library/framework/SDK documentation — tools `resolve-library-id` (name → canonical id) + `query-docs` (fetch current API/config/migration docs). Read-only doc retrieval.
 
