@@ -14,7 +14,18 @@ const __dirname = path.dirname(__filename);
 // operator editor windows holding the same workspace.
 const isolatedUserDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-vscode-test-'));
 
+// Release-gate determinism: pin the VS Code (Electron) version the test host
+// runs against. Defaulting to 'stable' silently tracks VS Code's auto-update,
+// and on 2026-06-03 the stable bump 1.122.1 -> 1.123.0 shipped a newer Electron
+// (V8 13.x) whose removed APIs broke the better-sqlite3@12.6.2 native rebuild,
+// turning two otherwise-ready releases (v5.4.0/v5.4.1) into dead tags. Pinning
+// to the last-known-good stable decouples the release gate from editor
+// auto-update. Keep this in lockstep with VSCODE_TEST_VERSION in
+// scripts/rebuild-vscode-electron.cjs (both must target the same Electron).
+const VSCODE_TEST_VERSION = '1.122.1';
+
 export default defineConfig({
+  version: VSCODE_TEST_VERSION,
   files: 'out/test/**/*.test.js',
   extensionDevelopmentPath: __dirname,
   workspaceFolder: path.join(__dirname, 'src', 'test', 'test-workspace'),

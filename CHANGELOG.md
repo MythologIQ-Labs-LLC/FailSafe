@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.4.2] - 2026-06-03
+
+Release-gate hotfix for the v5.4.1 dead tag. v5.4.1's Release Pipeline failed at the `better-sqlite3` native rebuild (publish skipped — never reached either marketplace), but not for a code reason: VS Code stable bumped 1.122.1 → 1.123.0 between the v5.4.0 and v5.4.1 runs, shipping a newer Electron (V8 13.x) whose removed APIs break `better-sqlite3@12.6.2`. Fix: pin the VS Code test version to the last-known-good 1.122.1 in `.vscode-test.mjs` and `scripts/rebuild-vscode-electron.cjs` so the gate no longer tracks VS Code auto-update (overridable via `FAILSAFE_VSCODE_TEST_VERSION`). Carries the full v5.4.0 batch + v5.4.1 stale-test fix.
+
 ## [5.4.1] - 2026-06-03
 
 Hotfix for v5.4.0, whose Release Pipeline failed at `npm run test:all` (publish jobs skipped — v5.4.0 never reached either marketplace). The B-INT-5 Integrations sub-tab Playwright test still asserted 2 sub-view pills, but v5.4.0's MCP Catalog tab (B-INT-13/14) added a third; updated the assertion to expect 3 pills and check the `MCP Catalog` label. The UI was correct — only the stale test count was wrong. Carries forward the full v5.4.0 batch below.

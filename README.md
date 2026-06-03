@@ -43,13 +43,13 @@ Both are **opt-in and local-first** — disabled by default, no network until yo
 
 <div align="center">
 
-**Current Release**: v5.4.1 (2026-06-03)
+**Current Release**: v5.4.2 (2026-06-03)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
 
-## What's new in v5.4.1
+## What's new in v5.4.2
 
-Hotfix that makes the v5.4.0 integration batch shippable: the v5.4.0 tag's release pipeline failed a stale UI test (the Integrations sub-tab test still expected 2 pills after the MCP Catalog tab made it 3), so v5.4.0 never reached the marketplace. v5.4.1 corrects the test — the v5.4.0 features below all ship in v5.4.1. See [CHANGELOG.md](CHANGELOG.md) for full notes.
+Release-gate hotfix that finally ships the v5.4.0 integration batch. Two prior tags died in the release pipeline: v5.4.0 on a stale UI test (fixed in v5.4.1), then v5.4.1 when VS Code stable auto-updated mid-release (1.122.1 → 1.123.0) and its newer Electron broke a native module rebuild. v5.4.2 pins the test gate to a known-good VS Code version so editor auto-updates can't break releases. All v5.4.0 features below ship in v5.4.2. See [CHANGELOG.md](CHANGELOG.md) for full notes.
 
 ## What's new in v5.4.0
 

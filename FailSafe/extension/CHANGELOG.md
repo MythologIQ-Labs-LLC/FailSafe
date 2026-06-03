@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.4.2] - 2026-06-03
+
+Release-gate hotfix for the v5.4.1 dead tag. v5.4.1's Release Pipeline failed at the `better-sqlite3` native rebuild (publish jobs skipped — v5.4.1 never reached either marketplace), but **not** for any code reason: VS Code stable bumped **1.122.1 → 1.123.0** between the v5.4.0 and v5.4.1 pipeline runs, shipping a newer Electron (V8 13.x) whose removed APIs (`v8::External::Value()`, `PropertyCallbackInfo::This()`) break `better-sqlite3@12.6.2`'s C++.
+
+- **Fix:** pin the VS Code test version to the last-known-good **1.122.1** in `.vscode-test.mjs` (test host) and `scripts/rebuild-vscode-electron.cjs` (native rebuild target), so the release gate no longer silently tracks VS Code's auto-update. Overridable via `FAILSAFE_VSCODE_TEST_VERSION` for a deliberate, verified Electron bump. The local VS Code cache is now reused only when it matches the pinned version.
+- Carries forward the full v5.4.0 integration + governance batch and the v5.4.1 stale-test fix.
+
 ## [5.4.1] - 2026-06-03
 
 Hotfix for the v5.4.0 release. The v5.4.0 tag's Release Pipeline failed at `npm run test:all` (so its publish jobs skipped and v5.4.0 never reached either marketplace).
