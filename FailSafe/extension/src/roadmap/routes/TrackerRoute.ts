@@ -1,29 +1,61 @@
 import { Request, Response } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
-import { TrackerGenerator } from '../tracker/TrackerGenerator';
+import { execFileSync } from 'child_process';
+import * as yaml from 'js-yaml';
+import { buildTrackerModel, validateManifest, discoverReleases, type TrackerManifest } from '../tracker/tracker-model';
 
 /**
  * TrackerRoute — serves the Development Tracker (standard:
  * docs/design/DEVELOPMENT_TRACKER_STANDARD.md).
  *
- *   GET /console/tracker  → the interactive HTML template
- *   GET /api/v1/tracker   → { model, lint, ok } generated fresh per request
+ *   GET /console/tracker  → the premium dashboard ENGINE (static HTML; fetches
+ *                            its data from /api/v1/tracker at runtime)
+ *   GET /api/v1/tracker   → { model, lint, ok } — the PLANNED manifest
+ *                            (docs/roadmap/programs.yaml) overlaid with the LIVE
+ *                            layer (shipped releases from git tags force prod)
  *
- * `render` reads the canonical template from docs/design/templates via
- * workspaceRoot (present at runtime regardless of the UI build/copy step), so
- * serving does not depend on uiDir resolution or copy-ui-js.
+ * The dashboard is data-driven: editing the tracker = editing the manifest, not
+ * markup. The engine is a single static file; this route only supplies data.
  */
 
 export interface TrackerRouteDeps {
   workspaceRoot: string;
   uiDir: string;
+  /** Program-progress retroactive windows (operator-configurable via VS Code
+   *  settings failsafe.tracker.{minor,patch}WindowDays). Default 60 / 30. */
+  minorWindowDays?: number;
+  patchWindowDays?: number;
 }
 
 const TEMPLATE_CANDIDATES = (deps: TrackerRouteDeps): string[] => [
-  path.join(deps.workspaceRoot, 'docs', 'design', 'templates', 'development-tracker.template.html'),
-  path.join(deps.uiDir, 'development-tracker.html'),
+  path.join(deps.uiDir, 'tracker', 'tracker-dashboard.html'),
+  // src fallback (Playwright/dev resolve uiDir to a src tree)
+  path.join(deps.uiDir, '..', '..', 'roadmap', 'ui', 'tracker', 'tracker-dashboard.html'),
+  path.join(deps.workspaceRoot, 'FailSafe', 'extension', 'src', 'roadmap', 'ui', 'tracker', 'tracker-dashboard.html'),
 ];
+
+const MANIFEST_PATH = (workspaceRoot: string): string =>
+  path.join(workspaceRoot, 'docs', 'roadmap', 'programs.yaml');
+
+/** Best-effort: the git tags present in the repo (corroborate shipped state). */
+function shippedReleaseIds(workspaceRoot: string): string[] {
+  try {
+    const out = execFileSync('git', ['tag'], { cwd: workspaceRoot, encoding: 'utf-8', timeout: 4000 });
+    return out.split('\n').map((t) => t.trim()).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+/** The repo's CHANGELOG is the complete release-history source (v0.1.0 → now). */
+function readChangelog(workspaceRoot: string): string {
+  try {
+    return fs.readFileSync(path.join(workspaceRoot, 'CHANGELOG.md'), 'utf-8');
+  } catch {
+    return '';
+  }
+}
 
 export const TrackerRoute = {
   render(_req: Request, res: Response, deps: TrackerRouteDeps): void {
@@ -31,20 +63,38 @@ export const TrackerRoute = {
       try { return fs.existsSync(f); } catch { return false; }
     });
     if (!file) {
-      res.status(503).send('Development Tracker template not found (docs/design/templates/development-tracker.template.html)');
+      res.status(503).send('Development Tracker dashboard not found (src/roadmap/ui/tracker/tracker-dashboard.html)');
       return;
     }
     res.type('html').send(fs.readFileSync(file, 'utf-8'));
   },
 
-  async api(_req: Request, res: Response, deps: TrackerRouteDeps): Promise<void> {
+  api(_req: Request, res: Response, deps: TrackerRouteDeps): void {
     try {
-      const gen = new TrackerGenerator({
-        workspaceRoot: deps.workspaceRoot,
-        now: () => new Date(),
+      const manifestPath = MANIFEST_PATH(deps.workspaceRoot);
+      if (!fs.existsSync(manifestPath)) {
+        res.status(503).json({ error: 'programs manifest not found at docs/roadmap/programs.yaml', model: null, lint: [], ok: false });
+        return;
+      }
+      const manifest = (yaml.load(fs.readFileSync(manifestPath, 'utf-8')) ?? {}) as TrackerManifest;
+      // Discover the complete release axis from the CHANGELOG (the governance
+      // files don't span the full history); the manifest only adds forecasts.
+      const discoveredReleases = discoverReleases(readChangelog(deps.workspaceRoot));
+      // Retroactive windows: deps override (future VS Code settings) → manifest
+      // progressWindows (user-editable today) → defaults 60 / 30.
+      const pw = manifest.progressWindows ?? {};
+      const model = buildTrackerModel(manifest, {
+        discoveredReleases,
+        shippedReleaseIds: shippedReleaseIds(deps.workspaceRoot),
+        now: new Date(),
+        minorDays: deps.minorWindowDays ?? pw.minorDays ?? 60,
+        patchDays: deps.patchWindowDays ?? pw.patchDays ?? 30,
       });
-      const { model, lint } = await gen.generate();
-      res.json({ model, lint, ok: !lint.some((f) => f.severity === 'abort') });
+      // Validate phases against the RESOLVED axis (discovered + manifest forecasts).
+      const lint = validateManifest(manifest, model.rcs.map((r) => r.id));
+      // The dashboard reads the data fields at the TOP LEVEL (data.rcs, data.meta,
+      // …), so spread the model out; lint/ok ride along for diagnostics.
+      res.json({ ...model, lint, ok: !lint.some((f) => f.severity === 'abort') });
     } catch (e) {
       res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
     }

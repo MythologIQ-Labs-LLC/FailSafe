@@ -127,6 +127,27 @@ async function openRoadmapCompactEditor(): Promise<void> {
   }
 }
 
+async function openDevelopmentTracker(): Promise<void> {
+  const base = getBaseUrl().replace(/\/$/, "");
+  const target = `${base}/console/tracker`;
+  const ready = await waitForConsoleServerReady();
+  if (!ready) {
+    vscode.window.showWarningMessage(
+      "FailSafe Console is starting. Opening the Development Tracker now; refresh in a moment if needed.",
+    );
+  }
+  try {
+    const opened = await vscode.env.openExternal(vscode.Uri.parse(target));
+    if (!opened) {
+      throw new Error("openExternal returned false");
+    }
+  } catch {
+    vscode.window.showErrorMessage(
+      "Could not open the Development Tracker in browser. Check your system browser configuration.",
+    );
+  }
+}
+
 export function registerCommands(
   context: vscode.ExtensionContext,
   genesis: GenesisManager,
@@ -217,6 +238,9 @@ export function registerCommands(
   context.subscriptions.push(
     vscode.commands.registerCommand("failsafe.showDashboard", () => {
       return openRoadmapCompactEditor();
+    }),
+    vscode.commands.registerCommand("failsafe.openDevelopmentTracker", () => {
+      return openDevelopmentTracker();
     }),
   );
   context.subscriptions.push(

@@ -156,6 +156,10 @@
         "title": "FailSafe: Open Console (Browser Popout)"
       },
       {
+        "command": "failsafe.openDevelopmentTracker",
+        "title": "FailSafe: Open Development Tracker"
+      },
+      {
         "command": "failsafe.openRoadmap",
         "title": "FailSafe: Open Console (Browser)"
       },
