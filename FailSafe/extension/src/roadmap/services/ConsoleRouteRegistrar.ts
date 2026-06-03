@@ -9,6 +9,7 @@ import {
   ReportsRoute, SettingsRoute, PreflightRoute, GovernanceKPIRoute,
   AgentCoverageRoute, SreRoute,
 } from "../routes";
+import { TrackerRoute, type TrackerRouteDeps } from "../routes/TrackerRoute";
 import type { RouteDeps } from "../routes";
 import type { ApiRouteDeps } from "../routes/types";
 import { ConfigurationProfile } from "../../genesis/ConfigurationProfile";
@@ -372,6 +373,15 @@ export class ConsoleRouteRegistrar {
     app.get("/console/reports", async (req, res) => ReportsRoute.render(req, res, d()));
     app.get("/console/settings", (req, res) => SettingsRoute.render(req, res, d()));
     app.get("/console/kpi", async (req, res) => GovernanceKPIRoute.render(req, res, { ledgerManager: d().ledgerManager }));
+    // Development Tracker (docs/design/DEVELOPMENT_TRACKER_STANDARD.md):
+    // /console/tracker serves the interactive template; /api/v1/tracker returns
+    // the freshly-generated { model, lint, ok }.
+    const trackerDeps = (): TrackerRouteDeps => ({
+      workspaceRoot: this.host.workspaceRoot,
+      uiDir: this.host.uiDir,
+    });
+    app.get("/console/tracker", (req, res) => TrackerRoute.render(req, res, trackerDeps()));
+    app.get("/api/v1/tracker", (req, res) => TrackerRoute.api(req, res, trackerDeps()));
     this.registerConsoleExtras();
   }
 

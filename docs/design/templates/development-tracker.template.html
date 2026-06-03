@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<!--
+  FailSafe Development Tracker — interactive template.
+  Implements docs/design/DEVELOPMENT_TRACKER_STANDARD.md.
+
+  Data: renders ONLY from a TrackerModel (see the standard §3). In the console it
+  fetches GET /api/v1/tracker (port 9376) and re-fetches on the `tracker.refresh`
+  WebSocket event. Standalone (file://) it falls back to the embedded FALLBACK_MODEL
+  so the layout previews without the server.
+
+  Doctrine (standard §1): every claim renders its evidence[] as chips; every value
+  exposes a provenance ⓘ (source + formula). The generator (tracker_evidence_lint,
+  standard §7) guarantees no uncited claim reaches this template — the template
+  additionally renders an inline "⚠ uncited" marker if one ever does, so a gap is
+  visible rather than silently trusted.
+
+  Interactivity (standard §5): bars ⇄ deep-dive tabs, provenance popovers, evidence
+  chips, view toggle (cards⇄table), filter chips, density toggle, export — all
+  progressive enhancement over a static, accessible table fallback.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FailSafe Development Tracker</title>
+<style>
+  :root {
+    /* Console command-center dark theme tokens (bento-tile). */
+    --bg: #0b0f14; --panel: #141a22; --panel-2: #10161e;
+    --line: #273140; --line-soft: #202938;
+    --text: #f1efe7; --muted: #9aa5b4; --faint: #657080;
+    /* FailSafe vertical accents */
+    --kernel: #68d391; --auth: #5cc8ff; --agent: #f6ad55;
+    --data: #b794f4; --workspace: #fc8181; --insight: #4fd1c5; --substrate: #34d399;
+    --ok: #68d391; --warn: #f6ad55; --gate: #b794f4;
+    --radius: 10px; --shadow: 0 18px 46px rgba(0,0,0,.34);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; color: var(--text); line-height: 1.5; font-variant-numeric: tabular-nums;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: linear-gradient(140deg, rgba(104,211,145,.08), transparent 32%),
+                linear-gradient(220deg, rgba(92,200,255,.08), transparent 36%), var(--bg);
+  }
+  body[data-density="compact"] { line-height: 1.35; font-size: 0.94rem; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 40px 22px 72px; }
+  a { color: inherit; }
+  code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  code { color: #f8e7a1; font-size: 0.9em; }
+
+  header { border-bottom: 1px solid var(--line); padding-bottom: 24px; margin-bottom: 30px; }
+  .eyebrow { display:flex; align-items:center; gap:10px; color:var(--kernel);
+    text-transform:uppercase; letter-spacing:.16em; font-size:.74rem; font-weight:700; margin-bottom:12px; }
+  .eyebrow span { width:8px; height:8px; border-radius:2px; background:var(--kernel); }
+  h1 { margin:0 0 10px; font-size:clamp(1.8rem,4.5vw,3.4rem); line-height:1; letter-spacing:-.03em; }
+  .sub { max-width:820px; color:var(--muted); margin:0; }
+  .meta { display:flex; flex-wrap:wrap; gap:8px 16px; margin-top:18px; color:var(--faint); font-size:.78rem; }
+  .meta b { color:var(--muted); font-weight:600; }
+
+  .toolbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:18px 0 0; }
+  .btn { background:var(--panel); color:var(--muted); border:1px solid var(--line-soft);
+    border-radius:999px; padding:6px 12px; font:inherit; font-size:.8rem; cursor:pointer; min-height:34px; }
+  .btn[aria-pressed="true"], .btn.active { color:var(--text); border-color:color-mix(in srgb,var(--kernel) 50%,var(--line)); }
+  .btn:focus-visible { outline:2px solid var(--kernel); outline-offset:2px; }
+  .freshness { margin-left:auto; font-size:.76rem; color:var(--faint); display:flex; align-items:center; gap:6px; }
+  .freshness .dot { width:8px; height:8px; border-radius:50%; background:var(--ok); }
+  .freshness.stale .dot { background:var(--warn); }
+  .freshness.stale { color:var(--warn); }
+
+  .summary-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-top:22px; }
+  @media (max-width:820px){ .summary-grid{ grid-template-columns:1fr; } }
+  .card { background:linear-gradient(180deg,var(--panel),var(--panel-2)); border:1px solid var(--line-soft);
+    border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); }
+  .card .label { color:var(--muted); font-size:.8rem; text-transform:uppercase; letter-spacing:.08em; margin-bottom:8px; }
+  .card .value { font-size:1.5rem; font-weight:800; letter-spacing:-.02em; }
+  .card p { margin:8px 0 0; color:var(--muted); font-size:.9rem; }
+
+  section { margin:0 0 42px; }
+  h2 { margin:0 0 4px; font-size:clamp(1.3rem,3vw,1.9rem); letter-spacing:-.02em; }
+  .section-sub { margin:0 0 18px; color:var(--muted); max-width:820px; }
+
+  .bars { display:grid; gap:14px; }
+  .bar-card { --accent:var(--kernel); background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border:1px solid var(--line-soft); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); }
+  .bar-head { display:flex; justify-content:space-between; gap:14px; align-items:baseline; margin-bottom:10px; }
+  .bar-title { display:flex; align-items:center; gap:10px; font-weight:800; font-size:1.02rem; }
+  .dot-sq { width:10px; height:10px; border-radius:3px; background:var(--accent); flex:none; }
+  .pct { color:var(--accent); font-size:1.12rem; font-weight:800; }
+  .track { width:100%; height:12px; border:1px solid var(--line); border-radius:999px; background:#0b1118; overflow:hidden; }
+  .fill { width:var(--pct); height:100%; border-radius:999px;
+    background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 62%,white)); }
+  .bar-card p { margin:10px 0 0; color:var(--muted); font-size:.92rem; }
+  .next { display:inline-flex; margin-top:10px; color:var(--text); border-radius:999px; padding:5px 10px; font-size:.76rem;
+    border:1px solid color-mix(in srgb,var(--accent) 42%,var(--line)); background:color-mix(in srgb,var(--accent) 10%,transparent); }
+  .gatepill { display:inline-flex; align-items:center; gap:6px; margin-top:8px; font-size:.74rem; padding:3px 9px;
+    border-radius:999px; border:1px solid color-mix(in srgb,var(--gate) 45%,var(--line)); color:var(--gate);
+    background:color-mix(in srgb,var(--gate) 10%,transparent); }
+
+  /* evidence chips + provenance */
+  .ev { display:inline-flex; gap:5px; flex-wrap:wrap; margin-top:8px; }
+  .chip { font-size:.72rem; padding:2px 8px; border-radius:999px; border:1px solid var(--line);
+    background:var(--panel-2); color:var(--muted); text-decoration:none; }
+  .chip:hover { color:var(--text); border-color:var(--kernel); }
+  .chip.pr{ color:var(--auth);} .chip.ledger{ color:var(--data);} .chip.feature{ color:var(--kernel);}
+  .chip.test{ color:var(--insight);} .chip.backlog{ color:var(--agent);} .chip.runtime{ color:var(--substrate);}
+  .uncited { color:var(--warn); font-size:.74rem; font-weight:700; }
+  .info { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; margin-left:6px;
+    border-radius:50%; border:1px solid var(--line); color:var(--faint); font-size:.7rem; cursor:help; position:relative; }
+  .info:hover .pop, .info:focus .pop { display:block; }
+  .pop { display:none; position:absolute; bottom:130%; left:50%; transform:translateX(-50%); width:280px; z-index:9;
+    background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px; box-shadow:var(--shadow);
+    color:var(--muted); font-size:.78rem; text-align:left; }
+  .pop b { color:var(--text); }
+  .provisional { color:var(--warn); font-size:.7rem; margin-left:4px; }
+
+  .tabs { display:flex; flex-wrap:wrap; gap:6px; border-bottom:1px solid var(--line); margin-bottom:20px; }
+  .tab { --accent:var(--kernel); color:var(--muted); background:transparent; border:0; border-radius:8px 8px 0 0;
+    padding:12px 14px; font:inherit; font-weight:750; cursor:pointer; position:relative; min-height:44px; }
+  .tab[aria-selected="true"] { color:var(--text); }
+  .tab[aria-selected="true"]::after { content:""; position:absolute; left:10px; right:10px; bottom:-1px;
+    height:2px; border-radius:999px; background:var(--accent); }
+  .tab:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .panel { display:none; } .panel.active { display:block; }
+  .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width:820px){ .detail-grid{ grid-template-columns:1fr; } }
+  .detail-card { background:linear-gradient(180deg,var(--panel),var(--panel-2)); border:1px solid var(--line-soft);
+    border-radius:var(--radius); padding:18px; }
+  .detail-card.span { grid-column:1/-1; }
+  .detail-card h3 { margin:0 0 10px; color:var(--accent); text-transform:uppercase; letter-spacing:.08em; font-size:.76rem; }
+  .detail-card ul { margin:0; padding-left:18px; } .detail-card li { margin:7px 0; color:var(--text); }
+
+  .sequence { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; }
+  @media (max-width:980px){ .sequence{ grid-template-columns:1fr; } }
+  .step { background:var(--panel); border:1px solid var(--line-soft); border-radius:var(--radius); padding:16px; }
+  .step .num { color:var(--faint); font-size:1.4rem; font-weight:900; }
+  .step h3 { margin:6px 0; font-size:1rem; } .step p { margin:0; color:var(--muted); font-size:.88rem; }
+
+  table { width:100%; border-collapse:collapse; background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border-radius:var(--radius); overflow:hidden; border:1px solid var(--line-soft); }
+  th,td { text-align:left; padding:12px 14px; border-bottom:1px solid var(--line-soft); vertical-align:top; }
+  th { color:var(--faint); text-transform:uppercase; letter-spacing:.08em; font-size:.72rem; }
+  td { color:var(--muted); } td strong { color:var(--text); }
+  tr:last-child td { border-bottom:0; }
+  .cards-list .card { margin-bottom:12px; }
+  .hidden { display:none !important; }
+  .badge { font-size:.7rem; padding:2px 8px; border-radius:999px; border:1px solid var(--line); }
+  .badge.merged{ color:var(--ok);} .badge.verified-applied{ color:var(--substrate);}
+  .badge.Open{ color:var(--warn);} .badge.Closed{ color:var(--faint); text-decoration:line-through;}
+  .badge.Deferred{ color:var(--faint);} .badge\.Out{ color:var(--faint);}
+
+  footer { border-top:1px solid var(--line); margin-top:42px; padding-top:18px; color:var(--faint); font-size:.82rem; }
+  .errbanner { background:color-mix(in srgb,var(--warn) 14%,transparent); border:1px solid var(--warn); color:var(--warn);
+    border-radius:8px; padding:10px 14px; margin-bottom:18px; font-size:.85rem; }
+</style>
+</head>
+<body data-density="comfortable">
+<main class="wrap">
+  <div id="err" class="errbanner hidden" role="alert"></div>
+
+  <header>
+    <div class="eyebrow"><span></span> <span id="eyebrow-text" style="background:none;width:auto;height:auto">FailSafe development tracker</span></div>
+    <h1 id="title">Development Tracker</h1>
+    <p class="sub" id="scope"></p>
+    <div class="meta" id="basis"></div>
+    <div class="toolbar" role="group" aria-label="View controls">
+      <button class="btn" id="view-toggle" aria-pressed="false">Cards ⇄ Table</button>
+      <button class="btn" id="density-toggle" aria-pressed="false">Density: comfortable</button>
+      <button class="btn" id="export-md">Export .md</button>
+      <button class="btn" id="export-json">Export .json</button>
+      <span class="freshness" id="freshness"><span class="dot"></span><span id="fresh-text">live</span></span>
+    </div>
+    <div class="summary-grid" id="summary"></div>
+  </header>
+
+  <section><h2>Vertical Completion</h2>
+    <p class="section-sub">Per-vertical % complete — <strong>computed</strong> from FEATURE_INDEX / BACKLOG (artifact-in-tree), never hand-set. Each bar exposes its scoring formula (ⓘ) and the evidence behind it.</p>
+    <div class="bars" id="bars"></div>
+  </section>
+
+  <section><h2>Vertical Deep Dive</h2>
+    <p class="section-sub">The same verticals, as detailed panels — what is in place, why it matters, open work. Keyboard: ◂ ▸ Home End.</p>
+    <div class="tabs" role="tablist" aria-label="Verticals" id="tabs"></div>
+    <div id="panels"></div>
+  </section>
+
+  <section><h2>Shipped This Cycle</h2>
+    <p class="section-sub">The evidence trail — merged to <code>main</code> + verified-applied facts, dated. <span id="ship-filters"></span></p>
+    <div id="shipped"></div>
+  </section>
+
+  <section><h2>Implementation Manifest</h2>
+    <p class="section-sub">What is in-tree now — the active base for the next waves.</p>
+    <table><thead><tr><th>Area</th><th>In-tree evidence</th></tr></thead><tbody id="manifest"></tbody></table>
+  </section>
+
+  <section><h2>Recommended Sequence</h2>
+    <div class="sequence" id="sequence"></div>
+  </section>
+
+  <section><h2>Decisions → Requirement</h2>
+    <p class="section-sub">The anti-"feelings" ledger: every decision traces to the requirement that drove it (never preference) + the evidence that records it.</p>
+    <div id="decisions"></div>
+  </section>
+
+  <section><h2>Risks To Watch</h2>
+    <table><thead><tr><th>Risk</th><th>Why it matters</th><th>Mitigation</th></tr></thead><tbody id="risks"></tbody></table>
+  </section>
+
+  <section><h2>Convergence</h2>
+    <table><thead><tr><th>Left</th><th></th><th>Right</th><th>Governing contract / gate</th><th>Status</th></tr></thead><tbody id="convergence"></tbody></table>
+  </section>
+
+  <section><h2>Pending Decisions</h2>
+    <p class="section-sub">Items outside the code that gate downstream work or need an operator/legal call. <span id="pend-filters"></span></p>
+    <table><thead><tr><th>Decision / action</th><th>Why it's pending</th><th>Decider</th><th>Status</th></tr></thead><tbody id="pending"></tbody></table>
+  </section>
+
+  <footer id="footer"></footer>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---- FALLBACK_MODEL: the worked example (standard §9), so file:// previews. ----
+  // In the console this is replaced by GET /api/v1/tracker.
+  var FALLBACK_MODEL = {
+    title: "FailSafe Development Tracker",
+    date: "2026-06-02",
+    scope: "FailSafe extension verticals, scored by artifact-in-tree (merged to main + verified tests), with each decision traced to its requirement.",
+    basis: { text: "merged PRs #121–#122 + branch work; FEATURE_INDEX FX711–FX816; META_LEDGER Merkle chain", evidence: [{kind:"pr",number:122},{kind:"feature",id:"FX816",status:"verified"}] },
+    summary: { posture: "Governed & evidence-grounded", nextGate: "Tracker generator + evidence lint", mainConstraint: "No uncited claim renders" },
+    verticals: [{
+      key:"substrate", name:"Governance Substrate", accent:"var(--substrate)", pct:71,
+      provenance:{ source:"FEATURE_INDEX FX + BACKLOG B-SUBSTRATE", formula:"round(100·verified/(verified+open)) over FX711-713, FX814-816 + B-SUBSTRATE-4/5/6" },
+      scoredOn:{ text:"5 modules + seal auto-hook verified; SBOM + UI-history + frontmatter backfill open.", evidence:[{kind:"feature",id:"FX814",status:"verified"},{kind:"feature",id:"FX816",status:"verified"},{kind:"pr",number:122}] },
+      nextGate:"Ship the tracker generator + tracker_evidence_lint.",
+      inPlace:[
+        {text:"dependency-admission cooling-period lint (Node port), 15 tests", evidence:[{kind:"feature",id:"FX814",status:"verified"},{kind:"feature",id:"FX815",status:"verified"}]},
+        {text:"substrate seal auto-hook into /qor-substantiate, 11 tests", evidence:[{kind:"feature",id:"FX816",status:"verified"},{kind:"backlog",id:"B-SUBSTRATE-3"}]}],
+      whyItMatters:"WARN-only governance signals that surface at seal time without blocking the operator.",
+      openWork:["SBOM emit (B-SUBSTRATE-5)","Console run-history panel (B-SUBSTRATE-4)","Skill-frontmatter backfill (B-SUBSTRATE-6)"],
+      gate:{ built:true, inert:false, reason:"" }
+    },{
+      key:"integration", name:"Integration Research Gate", accent:"var(--auth)", pct:100,
+      provenance:{ source:"docs/research/integrations/*", formula:"13 of 13 contract reviews extracted with dispositions" },
+      scoredOn:{ text:"All 13 integration contract reviews dispositioned; #95-#108 unblocked.", evidence:[{kind:"backlog",id:"B-INT-8"},{kind:"pr",number:121}] },
+      nextGate:"B-INT-9 first tranche implementation.",
+      inPlace:[{text:"13 INTEGRATION_*_CONTRACT_REVIEW.md with ready/conditional/research dispositions", evidence:[{kind:"backlog",id:"B-INT-8"},{kind:"pr",number:121}]}],
+      whyItMatters:"Gate that blocked 14 integration issues; now cleared.",
+      openWork:["B-INT-9 ready tranche","B-INT-10 conditional tranche"],
+      gate:{ built:true, inert:false, reason:"" }
+    }],
+    shipped:[
+      { date:"2026-06-02", channel:"merged", text:"B-BIC-24 idle-disconnect de-flake + 0.102.1 skill sync + B-INT-8 contract reviews", evidence:[{kind:"pr",number:121,sha:"b0d1a42"}] },
+      { date:"2026-06-02", channel:"merged", text:"B-SUBSTRATE-2 dependency-admission cooling-period lint", evidence:[{kind:"pr",number:122,sha:"725a6ca"}] }],
+    manifest:[
+      { area:"Substrate modules", evidence:[{kind:"artifact",path:"src/qorlogic/substrate/"},{kind:"artifact",path:"src/extension/substrate-command.ts"}] },
+      { area:"Integration contract reviews", evidence:[{kind:"artifact",path:"docs/research/integrations/"}] }],
+    sequence:[
+      {n:1,title:"Generator",detail:"Build the TrackerModel generator off FEATURE_INDEX/BACKLOG/META_LEDGER."},
+      {n:2,title:"Evidence lint",detail:"tracker_evidence_lint: fail-closed on uncited claims."},
+      {n:3,title:"Route",detail:"/console/tracker + /api/v1/tracker on 9376."},
+      {n:4,title:"Auto-update",detail:"WorkspaceMutationBus watchers + tracker.refresh broadcast."},
+      {n:5,title:"Substrate gate",detail:"Run the lint on every seal via the B-SUBSTRATE-3 hook."}],
+    decisions:[
+      { decision:"Node-port dependency_admission_lint (FailSafe-local TS) over upstream contribution", drivenBy:"FailSafe is downstream; substrate pattern is local (FeatureIndexVerifyAdapter precedent)", evidence:[{kind:"backlog",id:"B-SUBSTRATE-2"},{kind:"pr",number:122}] },
+      { decision:"Path A (extension seal-watch) for the substrate auto-hook", drivenBy:"FailSafe controls only the extension; the META_LEDGER watcher already exists as the seam", evidence:[{kind:"feature",id:"FX816",status:"verified"}] }],
+    risks:[
+      { risk:"A claim rendered without evidence", whyItMatters:"Would let opinion masquerade as proof", mitigation:"tracker_evidence_lint ABORTs generation on any uncited claim", evidence:[{kind:"artifact",path:"docs/design/DEVELOPMENT_TRACKER_STANDARD.md",note:"§7"}] }],
+    convergence:[
+      { left:"FailSafe (extension)", flow:"⟷", right:"FailSafe Pro (daemon)", contract:"shared filesystem; LICENSING_POSTURE boundary", status:"extension = observe/assist; Pro = OS-level enforce" }],
+    pending:[
+      { decision:"Build the tracker generator + lint", whyPending:"This standard defines it; implementation is the next cycle", decider:"operator", status:"Open" }],
+    footer:"Generated artifact — every percentage resolves to an FX/B set; every claim to a PR/SHA/ledger entry/test. Change the evidence, not the tracker.",
+    generatedAt:"2026-06-02T00:00:00Z",
+    generatedFrom:[{kind:"artifact",path:"docs/FEATURE_INDEX.md"},{kind:"artifact",path:"docs/BACKLOG.md"},{kind:"artifact",path:"docs/META_LEDGER.md"}]
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+
+  // evidence chip rendering — links each ref to its anchor where possible.
+  function chip(ev) {
+    var label, cls = ev.kind, href = "#";
+    switch (ev.kind) {
+      case "pr": label = "PR #" + ev.number + (ev.sha ? " " + ev.sha.slice(0,7) : ""); href = ev.url || "#pr-" + ev.number; break;
+      case "commit": label = ev.sha.slice(0,7); break;
+      case "ledger": label = "Entry #" + ev.entry; href = "#ledger-" + ev.entry; break;
+      case "feature": label = ev.id + (ev.status && ev.status !== "verified" ? " (" + ev.status + ")" : ""); href = "#" + ev.id; break;
+      case "test": label = "test:" + ev.path.split("/").pop() + (ev.result ? " " + ev.result : ""); break;
+      case "backlog": label = ev.id; href = "#" + ev.id; break;
+      case "artifact": label = ev.path + (ev.note ? " " + ev.note : ""); break;
+      case "runtime": label = "verified: " + ev.statement; break;
+      default: label = JSON.stringify(ev);
+    }
+    return '<a class="chip ' + cls + '" href="' + esc(href) + '">' + esc(label) + "</a>";
+  }
+  function evidence(arr) {
+    if (!arr || !arr.length) return '<span class="uncited">⚠ uncited</span>';
+    return '<span class="ev">' + arr.map(chip).join("") + "</span>";
+  }
+  function provenance(p) {
+    if (!p) return "";
+    return '<span class="info" tabindex="0">ⓘ<span class="pop"><b>Source:</b> ' + esc(p.source) +
+      '<br><b>Formula:</b> <span class="mono">' + esc(p.formula) + "</span>" +
+      (p.provisional ? '<br><span class="provisional">provisional</span>' : "") + "</span></span>";
+  }
+
+  function render(m) {
+    $("title").textContent = m.title;
+    $("scope").textContent = m.scope;
+    $("basis").innerHTML = '<span><b>Date:</b> ' + esc(m.date) + "</span><span><b>Basis:</b> " + esc(m.basis.text) + "</span> " + evidence(m.basis.evidence);
+    $("summary").innerHTML =
+      card("Overall posture", m.summary.posture) + card("Next gate", m.summary.nextGate) + card("Main constraint", m.summary.mainConstraint);
+
+    // §1 bars
+    $("bars").innerHTML = m.verticals.map(function (v) {
+      var gate = v.gate && v.gate.built && v.gate.inert
+        ? '<div class="gatepill" title="built but gated">⛓ built · inert — ' + esc(v.gate.reason) + "</div>" : "";
+      return '<article class="bar-card" style="--accent:' + v.accent + ';--pct:' + v.pct + '%">' +
+        '<div class="bar-head"><div class="bar-title"><span class="dot-sq"></span>' + esc(v.name) +
+        provenance(v.provenance) + '</div><div class="pct">~' + v.pct + '%</div></div>' +
+        '<div class="track" aria-hidden="true"><div class="fill"></div></div>' +
+        "<p>" + esc(v.scoredOn.text) + "</p>" + evidence(v.scoredOn.evidence) +
+        '<div class="next">Next: ' + esc(v.nextGate) + "</div>" + gate + "</article>";
+    }).join("");
+
+    // §2 tabs + panels
+    $("tabs").innerHTML = m.verticals.map(function (v,i){
+      return '<button class="tab" type="button" role="tab" id="tab-'+v.key+'" aria-controls="panel-'+v.key+
+        '" aria-selected="'+(i===0)+'" style="--accent:'+v.accent+'">'+esc(v.name)+"</button>";
+    }).join("");
+    $("panels").innerHTML = m.verticals.map(function (v,i){
+      return '<div class="panel'+(i===0?" active":"")+'" role="tabpanel" id="panel-'+v.key+'" aria-labelledby="tab-'+v.key+'" style="--accent:'+v.accent+'">'+
+        '<div class="detail-grid"><div class="detail-card"><h3>What is in place</h3><ul>'+
+        v.inPlace.map(function(x){return "<li>"+esc(x.text)+" "+evidence(x.evidence)+"</li>";}).join("")+
+        '</ul></div><div class="detail-card"><h3>Why it matters</h3><p style="color:var(--muted)">'+esc(v.whyItMatters)+
+        '</p></div><div class="detail-card span"><h3>Open work</h3><ul>'+
+        v.openWork.map(function(o){return "<li>"+esc(o)+"</li>";}).join("")+"</ul></div></div></div>";
+    }).join("");
+    wireTabs();
+
+    renderShipped(m);
+    $("manifest").innerHTML = m.manifest.map(function(a){ return "<tr><td><strong>"+esc(a.area)+"</strong></td><td>"+evidence(a.evidence)+"</td></tr>"; }).join("");
+    $("sequence").innerHTML = m.sequence.map(function(s){ return '<div class="step"><div class="num">'+s.n+'</div><h3>'+esc(s.title)+"</h3><p>"+esc(s.detail)+"</p></div>"; }).join("");
+    renderDecisions(m);
+    $("risks").innerHTML = m.risks.map(function(r){ return "<tr><td><strong>"+esc(r.risk)+"</strong></td><td>"+esc(r.whyItMatters)+"</td><td>"+esc(r.mitigation)+" "+evidence(r.evidence)+"</td></tr>"; }).join("");
+    $("convergence").innerHTML = m.convergence.map(function(b){ return "<tr><td><strong>"+esc(b.left)+"</strong></td><td>"+esc(b.flow)+"</td><td>"+esc(b.right)+"</td><td><code>"+esc(b.contract)+"</code></td><td>"+esc(b.status)+"</td></tr>"; }).join("");
+    renderPending(m);
+    $("footer").innerHTML = esc(m.footer) + "<br>Generated " + esc(m.generatedAt) + " from " + evidence(m.generatedFrom);
+
+    buildFilters(m);
+    freshness(m);
+    window.__model = m;
+  }
+  function card(label, value){ return '<div class="card"><div class="label">'+esc(label)+'</div><div class="value">'+esc(value)+"</div></div>"; }
+
+  // §3 Shipped — cards or table (view toggle)
+  function renderShipped(m){
+    var asTable = document.body.getAttribute("data-view") === "table";
+    var rows = m.shipped.filter(passShipFilter);
+    if (asTable) {
+      $("shipped").innerHTML = "<table><thead><tr><th>Date</th><th>Channel</th><th>What</th><th>Evidence</th></tr></thead><tbody>"+
+        rows.map(function(s){ return "<tr><td>"+esc(s.date)+'</td><td><span class="badge '+s.channel+'">'+esc(s.channel)+"</span></td><td>"+esc(s.text)+"</td><td>"+evidence(s.evidence)+"</td></tr>"; }).join("")+"</tbody></table>";
+    } else {
+      $("shipped").innerHTML = '<div class="cards-list">'+rows.map(function(s){ return '<div class="card"><div class="label">'+esc(s.date)+' · <span class="badge '+s.channel+'">'+esc(s.channel)+'</span></div><div style="margin:6px 0">'+esc(s.text)+"</div>"+evidence(s.evidence)+"</div>"; }).join("")+"</div>";
+    }
+  }
+  function renderDecisions(m){
+    var asTable = document.body.getAttribute("data-view") === "table";
+    if (asTable) {
+      $("decisions").innerHTML = "<table><thead><tr><th>Decision</th><th>Driven by (requirement)</th><th>Evidence</th></tr></thead><tbody>"+
+        m.decisions.map(function(d){ return "<tr><td><strong>"+esc(d.decision)+"</strong></td><td>"+esc(d.drivenBy)+"</td><td>"+evidence(d.evidence)+"</td></tr>"; }).join("")+"</tbody></table>";
+    } else {
+      $("decisions").innerHTML = '<div class="cards-list">'+m.decisions.map(function(d){ return '<div class="card"><div style="font-weight:700">'+esc(d.decision)+'</div><div style="color:var(--muted);margin:6px 0"><b>Driven by:</b> '+esc(d.drivenBy)+"</div>"+evidence(d.evidence)+"</div>"; }).join("")+"</div>";
+    }
+  }
+  function renderPending(m){
+    $("pending").innerHTML = m.pending.filter(passPendFilter).map(function(p){
+      return "<tr><td><strong>"+esc(p.decision)+'</strong></td><td>'+esc(p.whyPending)+"</td><td>"+esc(p.decider)+'</td><td><span class="badge '+esc(p.status.replace(/\s/g,""))+'">'+esc(p.status)+"</span></td></tr>";
+    }).join("");
+  }
+
+  // ---- filters ----
+  var shipFilter = "all", pendFilter = "all";
+  function passShipFilter(s){ return shipFilter === "all" || s.channel === shipFilter; }
+  function passPendFilter(p){ return pendFilter === "all" || p.status === pendFilter; }
+  function buildFilters(m){
+    var ch = ["all"].concat(m.shipped.map(function(s){return s.channel;}).filter(uniq));
+    $("ship-filters").innerHTML = "Filter: " + ch.map(function(c){ return '<button class="btn ship-f'+(c===shipFilter?" active":"")+'" data-c="'+esc(c)+'">'+esc(c)+"</button>"; }).join(" ");
+    var st = ["all"].concat(m.pending.map(function(p){return p.status;}).filter(uniq));
+    $("pend-filters").innerHTML = "Filter: " + st.map(function(s){ return '<button class="btn pend-f'+(s===pendFilter?" active":"")+'" data-s="'+esc(s)+'">'+esc(s)+"</button>"; }).join(" ");
+    Array.prototype.forEach.call(document.querySelectorAll(".ship-f"), function(b){ b.onclick=function(){ shipFilter=b.getAttribute("data-c"); renderShipped(window.__model); buildFilters(window.__model); }; });
+    Array.prototype.forEach.call(document.querySelectorAll(".pend-f"), function(b){ b.onclick=function(){ pendFilter=b.getAttribute("data-s"); renderPending(window.__model); buildFilters(window.__model); }; });
+  }
+  function uniq(v,i,a){ return a.indexOf(v)===i; }
+
+  function wireTabs(){
+    var tabsEl = $("tabs"); var btns = Array.prototype.slice.call(tabsEl.querySelectorAll(".tab"));
+    function select(i){ btns.forEach(function(t,j){ var sel=j===i; t.setAttribute("aria-selected",sel); $(t.getAttribute("aria-controls")).classList.toggle("active",sel); }); }
+    tabsEl.onclick = function(e){ var t=e.target.closest(".tab"); if(t) select(btns.indexOf(t)); };
+    tabsEl.onkeydown = function(e){ var c=btns.indexOf(document.activeElement); if(c<0)return; var n=null;
+      if(e.key==="ArrowRight")n=(c+1)%btns.length; if(e.key==="ArrowLeft")n=(c-1+btns.length)%btns.length;
+      if(e.key==="Home")n=0; if(e.key==="End")n=btns.length-1;
+      if(n!==null){ e.preventDefault(); select(n); btns[n].focus(); } };
+  }
+
+  function freshness(m){
+    var el = $("freshness");
+    // In the console, compare m.generatedFrom SHAs vs HEAD via a server hint; here just show generatedAt.
+    $("fresh-text").textContent = "as of " + (m.generatedAt||"").slice(0,10);
+  }
+
+  // ---- toolbar: view / density / export ----
+  $("view-toggle").onclick = function(){
+    var t = document.body.getAttribute("data-view") === "table";
+    document.body.setAttribute("data-view", t ? "cards" : "table");
+    this.setAttribute("aria-pressed", String(!t));
+    renderShipped(window.__model); renderDecisions(window.__model);
+  };
+  $("density-toggle").onclick = function(){
+    var c = document.body.getAttribute("data-density") === "compact";
+    var next = c ? "comfortable" : "compact";
+    document.body.setAttribute("data-density", next);
+    try { localStorage.setItem("tracker-density", next); } catch(e){}
+    this.textContent = "Density: " + next; this.setAttribute("aria-pressed", String(!c));
+  };
+  (function(){ try { var d=localStorage.getItem("tracker-density"); if(d){ document.body.setAttribute("data-density",d); $("density-toggle").textContent="Density: "+d; } } catch(e){} })();
+  $("export-json").onclick = function(){ download("tracker.json", JSON.stringify(window.__model,null,2)); };
+  $("export-md").onclick = function(){ download("tracker.md", toMarkdown(window.__model)); };
+  function download(name, text){ var a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([text],{type:"text/plain"})); a.download=name; a.click(); }
+  function toMarkdown(m){
+    var L=["# "+m.title,"","**Date:** "+m.date,"**Scope:** "+m.scope,"","## Vertical Completion",""];
+    m.verticals.forEach(function(v){ L.push("- **"+v.name+"** ~"+v.pct+"% — "+v.scoredOn.text+" ["+v.scoredOn.evidence.map(evText).join(", ")+"]"); });
+    L.push("","## Decisions → Requirement","");
+    m.decisions.forEach(function(d){ L.push("| "+d.decision+" | "+d.drivenBy+" | "+d.evidence.map(evText).join(", ")+" |"); });
+    L.push("","_"+m.footer+"_"); return L.join("\n");
+  }
+  function evText(e){ return e.kind==="pr"?("#"+e.number):e.kind==="ledger"?("Entry #"+e.entry):e.kind==="feature"?e.id:e.kind==="backlog"?e.id:e.kind==="test"?("test:"+e.path):e.kind==="artifact"?e.path:e.kind==="commit"?e.sha.slice(0,7):e.statement||JSON.stringify(e); }
+
+  // ---- load: fetch /api/v1/tracker in the console, else fallback ----
+  function load(){
+    if (location.protocol === "http:" || location.protocol === "https:") {
+      fetch("/api/v1/tracker").then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+        .then(render).catch(function(e){ $("err").classList.remove("hidden"); $("err").textContent="Could not load /api/v1/tracker ("+e.message+"); showing embedded preview."; render(FALLBACK_MODEL); });
+    } else { render(FALLBACK_MODEL); }
+  }
+  // live refresh in the console (the page subscribes to the existing console WS).
+  try {
+    if (location.protocol.indexOf("http") === 0) {
+      var ws = new WebSocket((location.protocol==="https:"?"wss://":"ws://")+location.host);
+      // Re-fetch on the existing console hub.refresh (fired on META_LEDGER mutation)
+      // and on a dedicated tracker.refresh, so the view stays current automatically.
+      ws.onmessage = function(ev){ try{ var d=JSON.parse(ev.data); if(d && (d.type==="hub.refresh" || d.type==="tracker.refresh")) load(); }catch(e){} };
+    }
+  } catch(e){}
+  load();
+})();
+</script>
+</body>
+</html>
