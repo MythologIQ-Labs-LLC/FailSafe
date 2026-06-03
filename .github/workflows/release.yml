@@ -130,3 +130,45 @@ jobs:
       - run: npx ovsx publish "mythologiq-failsafe-${VSIX_VERSION}.vsix"
         env:
           OVSX_PAT: ${{ secrets.OVSX_TOKEN }}
+
+  # Create the GitHub Release object once BOTH marketplaces have the VSIX, so
+  # the Releases page stays in lockstep with what actually shipped. Prior to
+  # v5.4.2 this step did not exist: tags + marketplace publishes advanced while
+  # GitHub Releases froze at v4.8.0. Gated behind the publish jobs (which sit
+  # behind the `production` reviewer gate) so an unapproved/dead tag never
+  # produces a Release object.
+  github-release:
+    name: Create GitHub Release
+    needs: [publish-vscode, publish-openvsx]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build release notes from CHANGELOG
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          # Extract the "## [VERSION] ..." section body from the root CHANGELOG.
+          awk -v ver="[$VERSION]" '
+            index($0, "## " ver) == 1 { found=1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "No CHANGELOG section for $VERSION; will fall back to auto-generated notes." >&2
+          fi
+      - name: Create GitHub Release from tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -s release-notes.md ]; then
+            gh release create "${GITHUB_REF_NAME}" \
+              --title "${GITHUB_REF_NAME} — FailSafe" \
+              --notes-file release-notes.md \
+              --latest --verify-tag
+          else
+            gh release create "${GITHUB_REF_NAME}" \
+              --title "${GITHUB_REF_NAME} — FailSafe" \
+              --generate-notes \
+              --latest --verify-tag
+          fi
