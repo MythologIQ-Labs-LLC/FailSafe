@@ -49,9 +49,13 @@ FailSafe v5.4 turns the editor into a **governance hub** for the tools your AI a
 
 <div align="center">
 
-**Current Release**: v5.4.2 (2026-06-03)
+**Current Release**: v5.4.3 (2026-06-03)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
+
+## What's new in v5.4.3
+
+**Development Tracker** + **Agent Governance Toolkit installer**. The Development Tracker is a premium, data-driven status dashboard embedded in the Workspace tab (with a Pop out ↗ and the `FailSafe: Open Development Tracker` command): it discovers your complete release history from the CHANGELOG, zooms the timeline from major anchors down to minor/patch, makes every release a traceable record, and tiers program-progress to where the data is meaningful. The AGT installer auto-detects your workspace environment and serves the matching, registry-verified Agent Governance Toolkit installer. See [CHANGELOG.md](CHANGELOG.md) for full notes.
 
 ## What's new in v5.4.2
 

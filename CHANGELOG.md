@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.4.3] - 2026-06-03
+
+Premium Development Tracker + Agent Governance Toolkit installer. The **Development Tracker** (B-INT-17) is a premium, data-driven status dashboard at `/console/tracker`, embedded in the Workspace tab (+ Pop out ↗ + `FailSafe: Open Development Tracker`): full release history discovered from the CHANGELOG (v0.1.0→current), major-default timeline zoom with drill-in, a traceable record per release, and tiered program-progress (majors full history; minors/patches within configurable recent windows). The **AGT installer** (B-INT-16) is an Integrations → Agent Governance sub-view that auto-detects the workspace environment and serves the matching registry-verified Agent Governance Toolkit installer (run-in-terminal, no silent install).
+
 ## [5.4.2] - 2026-06-03
 
 Release-gate hotfix for the v5.4.1 dead tag. v5.4.1's Release Pipeline failed at the `better-sqlite3` native rebuild (publish skipped — never reached either marketplace), but not for a code reason: VS Code stable bumped 1.122.1 → 1.123.0 between the v5.4.0 and v5.4.1 runs, shipping a newer Electron (V8 13.x) whose removed APIs break `better-sqlite3@12.6.2`. Fix: pin the VS Code test version to the last-known-good 1.122.1 in `.vscode-test.mjs` and `scripts/rebuild-vscode-electron.cjs` so the gate no longer tracks VS Code auto-update (overridable via `FAILSAFE_VSCODE_TEST_VERSION`). Carries the full v5.4.0 batch + v5.4.1 stale-test fix.

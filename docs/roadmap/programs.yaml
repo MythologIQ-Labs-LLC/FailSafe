@@ -66,7 +66,7 @@ meta:
 # v0.1.0 → current — the governance files don't span it). Declare ONLY forecast
 # releases here: future versions not yet shipped / not yet in the changelog.
 rcs:
-  - { id: v5.5, state: forecast, tag: planned, note: AGT installer + next integration tranche }
+  - { id: v5.4.3, state: forecast, tag: planned, note: AGT installer + next integration tranche }
 
 programs:
   - { key: governance,   name: Governance Engine, accent: "#38d6c8" }   # teal
@@ -82,11 +82,11 @@ phases:
   # Integrations
   - { prog: integrations, key: BICAMERAL, rc: v5.3.3, w: 25, title: Bicameral + Open Design, what: Architecture-decision governance + L3-gated Open Design create_artifact., benefit: Decision reasoning stays as governed as code. }
   - { prog: integrations, key: BATCH,     rc: v5.4.2, w: 45, title: SARIF · MCP Registry · Slack · Catalog, what: SARIF ingestion, MCP risk scoring, Slack notify-only, Context7/Mermaid installers., benefit: One governed source of truth across the AI toolchain., links: [ { t: issue, n: 99, label: "#99" }, { t: issue, n: 100, label: "#100" }, { t: issue, n: 108, label: "#108" } ] }
-  - { prog: integrations, key: AGT,       rc: v5.5,   w: 30, title: Agent Governance Toolkit installer, what: Auto-detect the workspace environment + serve the matching verified AGT installer., benefit: Governed admission of Microsoft's AGT modules per environment., links: [ { t: url, href: "https://github.com/microsoft/agent-governance-toolkit", label: AGT upstream }, { t: issue, n: 140, label: "PR #140" } ] }
+  - { prog: integrations, key: AGT,       rc: v5.4.3,   w: 30, title: Agent Governance Toolkit installer, what: Auto-detect the workspace environment + serve the matching verified AGT installer., benefit: Governed admission of Microsoft's AGT modules per environment., links: [ { t: url, href: "https://github.com/microsoft/agent-governance-toolkit", label: AGT upstream }, { t: issue, n: 140, label: "PR #140" } ] }
 
   # Experience
   - { prog: experience, key: CONSOLE, rc: v5.3.3, w: 40, title: Command Center, what: Browser-served console — Overview/Operations/Transparency/Governance/Skills/Integrations/Workspace tabs., benefit: One control surface for governance + history. }
-  - { prog: experience, key: TRACKER, rc: v5.5,   w: 30, title: Development Tracker, what: Evidence-enforced, organically-generated status dashboard embedded in the Workspace tab., benefit: Reality-vs-promise visible at a glance, current by construction. }
+  - { prog: experience, key: TRACKER, rc: v5.4.3,   w: 30, title: Development Tracker, what: Evidence-enforced, organically-generated status dashboard embedded in the Workspace tab., benefit: Reality-vs-promise visible at a glance, current by construction. }
   - { prog: experience, key: VOICE,   rc: v5.3.3, w: 30, title: Voice + Mindmap, what: Multilingual Whisper STT + Piper TTS in the Mindmap, shipped as a separate voice pack., benefit: Hands-free ideation that degrades gracefully when absent. }
 
 verticals:
@@ -138,7 +138,7 @@ convergence:
   - left:  { title: FailSafe, body: agent-failsafe adapter + the AGT installer surface. }
     mid:   { glyph: "→", contract: Agent Governance Toolkit }
     right: { title: Microsoft AGT, body: Per-environment governance modules + agent-sre observability. }
-    status: "**AGT installer in flight (v5.5)** — agent-failsafe adapter is the external bridge."
+    status: "**AGT installer in flight (v5.4.3)** — agent-failsafe adapter is the external bridge."
 
 # §04 Promotion record — what shipped per program (cross-filters on the deep-dive tab).
 promotion:
@@ -157,14 +157,14 @@ promotion:
     rows:
       - { pill: stg, text: "Bicameral + Open Design L3 write path (v5.3.3)" }
       - { pill: stg, text: "SARIF · MCP Registry · Slack · MCP Catalog (v5.4.2)" }
-      - { pill: x,   text: "Agent Governance Toolkit installer (v5.5, in flight)" }
+      - { pill: x,   text: "Agent Governance Toolkit installer (v5.4.3, in flight)" }
   - title: Experience
     vert: experience
     accent: "#f0728f"
     phaseCount: 3
     rows:
       - { pill: stg, text: "Command Center 8-tab browser console (v5.3.3)" }
-      - { pill: x,   text: "Development Tracker — this dashboard (v5.5)" }
+      - { pill: x,   text: "Development Tracker — this dashboard (v5.4.3)" }
       - { pill: stg, text: "Voice + Mindmap — Whisper/Piper voice pack (v5.3.3)" }
 
 # §05 Levers — the few moves that actually move the numbers.

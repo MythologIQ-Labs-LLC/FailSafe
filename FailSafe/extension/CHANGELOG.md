@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.4.3] - 2026-06-03
+
+Premium Development Tracker + Agent Governance Toolkit installer.
+
+- **Development Tracker (B-INT-17)** — a premium, data-driven status dashboard served at `/console/tracker` and embedded in the **Workspace** tab (+ a **Pop out ↗** affordance and the `FailSafe: Open Development Tracker` command). The complete release history is discovered from the repo's `CHANGELOG` (v0.1.0 → current); the timeline **zooms** (major-default anchors → drill into a major's minor/patch releases); **every release is a traceable record** (what shipped + date + audit link); and program progress is **tiered** — majors tracked for the full history, minors/patches only within configurable recent windows (`progressWindows`, default 60 / 30 days). Replaces the prior lint-row tracker. Generated organically from `docs/roadmap/programs.yaml` + live history; reusable for any repo.
+- **Agent Governance Toolkit installer (B-INT-16)** — a new **Integrations → Agent Governance** sub-view that **auto-detects the workspace environment** (TypeScript / Python / .NET / Rust / Go + Claude Code / Copilot / OpenCode / Antigravity hosts) and serves the matching, **registry-verified** AGT installer. Install runs in an integrated terminal (you review + press enter — no silent install); Claude Code is copy-only (its install is in-agent slash commands). Each module is risk-noted; AGT is surfaced as Public Preview.
+
 ## [5.4.2] - 2026-06-03
 
 Release-gate hotfix for the v5.4.1 dead tag. v5.4.1's Release Pipeline failed at the `better-sqlite3` native rebuild (publish jobs skipped — v5.4.1 never reached either marketplace), but **not** for any code reason: VS Code stable bumped **1.122.1 → 1.123.0** between the v5.4.0 and v5.4.1 pipeline runs, shipping a newer Electron (V8 13.x) whose removed APIs (`v8::External::Value()`, `PropertyCallbackInfo::This()`) break `better-sqlite3@12.6.2`'s C++.

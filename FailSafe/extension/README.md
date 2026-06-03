@@ -31,9 +31,13 @@ FailSafe v5.4 turns the editor into a **governance hub** for the tools your AI a
 
 ---
 
-**Current Release**: v5.4.2 (2026-06-03)
+**Current Release**: v5.4.3 (2026-06-03)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v5.4.3
+
+**Development Tracker** + **Agent Governance Toolkit installer**. The Development Tracker is a premium, data-driven status dashboard in the Workspace tab (+ Pop out ↗ + `FailSafe: Open Development Tracker`): full release history discovered from the CHANGELOG, major→minor/patch timeline zoom, a traceable record per release, tiered program-progress. The AGT installer auto-detects your workspace environment and serves the matching, registry-verified Agent Governance Toolkit installer (run-in-terminal, no silent install).
 
 ## What's New in v5.4.2
 
