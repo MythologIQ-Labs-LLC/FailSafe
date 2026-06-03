@@ -3,12 +3,26 @@ const fs = require('fs');
 const { spawnSync } = require('child_process');
 const { downloadAndUnzipVSCode } = require('@vscode/test-electron');
 
+// Release-gate determinism: pin the VS Code (Electron) version we rebuild
+// better-sqlite3 against. MUST match VSCODE_TEST_VERSION in .vscode-test.mjs so
+// the native module ABI matches the editor the test host launches. Defaulting
+// to 'stable' silently tracks VS Code auto-update — the 2026-06-03 stable bump
+// 1.122.1 -> 1.123.0 (Electron/V8 13.x) removed APIs used by better-sqlite3@12.6.2
+// and dead-tagged v5.4.0/v5.4.1. Override via FAILSAFE_VSCODE_TEST_VERSION only
+// for a deliberate, verified compatibility bump.
+const VSCODE_TEST_VERSION = process.env.FAILSAFE_VSCODE_TEST_VERSION || '1.122.1';
+
 async function resolveAppRoot() {
   const localTestDir = path.join(__dirname, '..', '.vscode-test');
   if (fs.existsSync(localTestDir)) {
     const entries = fs.readdirSync(localTestDir, { withFileTypes: true });
+    // Only reuse a cache dir for the pinned version; a stale dir for a
+    // different VS Code version would rebuild against the wrong Electron ABI.
     const vscodeDir = entries.find(
-      (entry) => entry.isDirectory() && entry.name.startsWith('vscode-')
+      (entry) =>
+        entry.isDirectory() &&
+        entry.name.startsWith('vscode-') &&
+        entry.name.includes(VSCODE_TEST_VERSION)
     );
     if (vscodeDir) {
       const directRoot = path.join(localTestDir, vscodeDir.name, 'resources', 'app');
@@ -31,7 +45,7 @@ async function resolveAppRoot() {
     }
   }
 
-  const vscodePath = await downloadAndUnzipVSCode();
+  const vscodePath = await downloadAndUnzipVSCode(VSCODE_TEST_VERSION);
   const vscodeDir = path.dirname(vscodePath);
   return path.join(vscodeDir, 'resources', 'app');
 }
