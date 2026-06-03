@@ -330,7 +330,7 @@ Switch modes via the `FailSafe: Set Governance Mode` command or the `failsafe.go
 
 ## Qor-Logic: The Governance Layer
 
-Qor-Logic is the deterministic governance engine that enforces safety policies at the editor boundary. It operates on a fundamental principle: **governance decisions are made by code, not by asking an LLM to follow rules.**
+Qor-Logic is two things working as one: the **deterministic governance engine** that enforces safety policies at the editor boundary, and the **SHIELD skill corpus** — sourced from the [`qor-logic`](https://pypi.org/project/qor-logic/) PyPI package — that drives a governed _plan → audit → implement → substantiate → deliver_ lifecycle for AI-assisted work. Both rest on one principle: **governance decisions are made by code, not by asking an LLM to follow rules.**
 
 ### Prompt Guidelines vs. Deterministic Governance
 
@@ -363,6 +363,8 @@ Qor-Logic is the deterministic governance engine that enforces safety policies a
    - Approved L3 actions → trust increase
    - Rejected or failed actions → trust decrease
    - Trust scores influence future routing decisions
+
+5. **Universal Interception** — The same deterministic boundary governs more than file edits. Every MCP tool call from a connected integration (Bicameral, Open Design, MCP Catalog servers) is routed through a single `IGovernanceInterceptor` seam, so a risky _tool invocation_ is classified, gated, and ledgered exactly like a risky _edit_. Governance follows the agent wherever it acts.
 
 ### Why Deterministic Matters
 
