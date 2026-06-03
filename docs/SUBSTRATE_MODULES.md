@@ -30,14 +30,21 @@ This is a deliberate **WARN-only governance signal** disposition (see *Terms* be
 
 ## How to invoke
 
+There are two triggers:
+
+**Manual (Command Palette):**
+
 1. Open the VS Code Command Palette (Ctrl/Cmd+Shift+P).
 2. Run `FailSafe: Run Governance Substrate Checks`.
 3. The "FailSafe Substrate" Output channel is revealed and receives:
-   - A `[FailSafe Substrate] starting run at <iso-timestamp>` line.
-   - A `[FailSafe Substrate] complete: <N> finding(s) across 3 module(s) in <ms>ms` line.
+   - A `[FailSafe Substrate] starting manual run at <iso-timestamp>` line.
+   - A `[FailSafe Substrate] complete: <N> finding(s) across 4 module(s) in <ms>ms` line.
    - One indented per-module summary line (with any error or note suffix).
 4. A `vscode.window.showInformationMessage` toast surfaces the total finding count and points back at the Output channel.
-5. One `substrate.run.complete` event is emitted on the FailSafe EventBus with the shape:
+
+**Automatic on seal (B-SUBSTRATE-3):** when `/qor-substantiate` seals a session it appends a new `### Entry #N: SESSION SEAL` to `docs/META_LEDGER.md`. A `WorkspaceMutationBus` watcher detects that new seal (via `seal-detection.ts`) and auto-runs the same module list (WARN-only, **no toast**), writing a `[FailSafe Substrate] new SESSION SEAL detected — auto-running substrate` line + the usual complete/per-module lines to the Output channel. The pre-existing latest seal is seeded at activation, so startup does not trigger a run.
+
+5. One `substrate.run.complete` event is emitted on the FailSafe EventBus per run (manual or auto) with the shape:
 
 ```ts
 {
