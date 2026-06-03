@@ -15,6 +15,7 @@ import { GenomeRenderer } from './modules/genome.js';
 import { ReplayRenderer } from './modules/replay.js';
 import { BicameralRenderer } from './modules/bicameral-renderer.js';
 import { OpenDesignRenderer } from './modules/open-design-renderer.js';
+import { McpCatalogRenderer } from './modules/mcp-catalog-renderer.js';
 import { TabGroup } from './modules/tab-group.js';
 import { updateTickers, updateBootstrapBanner } from './modules/tickers.js';
 import { setWorkspaceRegistryClient, loadWorkspaceRegistry, initWorkspaceSelector } from './modules/workspace-registry.js';
@@ -45,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
     integrations: new TabGroup('integrations', [
       { key: 'bicameral',  label: 'Bicameral',   renderer: new BicameralRenderer('integrations', { client }) },
       { key: 'opendesign', label: 'Open Design', renderer: new OpenDesignRenderer('integrations') },
+      { key: 'mcp',        label: 'MCP Catalog', renderer: new McpCatalogRenderer('integrations') },
     ]),
     settings:   new SettingsRenderer('settings', { store }),
   };
