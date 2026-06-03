@@ -109,6 +109,7 @@ export class ConsoleServer {
   private mcpInterceptor: import("../governance/interceptor").McpInterceptor | null = null;
   /** B-BIC-12: editor-open dep wired by bootstrapBicameral (vscode.open). */
   private bicameralOpenFileInEditor: ((filePath: string, startLine?: number) => Promise<void>) | null = null;
+  private agtRunInTerminal: ((name: string, command: string) => void) | null = null;
   private bicameralCommand = "bicameral-mcp";
   private bicameralAutoConnect = false;
   private bicameralAutoConnectWriter: (value: boolean) => Promise<void> = async () => {};
@@ -204,6 +205,12 @@ export class ConsoleServer {
    *  vscode.open; null in test fixtures (route 503s). */
   setBicameralOpenFileInEditor(fn: ((filePath: string, startLine?: number) => Promise<void>) | null): void { this.bicameralOpenFileInEditor = fn; }
   getBicameralOpenFileInEditor(): ((filePath: string, startLine?: number) => Promise<void>) | null { return this.bicameralOpenFileInEditor; }
+  /** B-INT-16: register the integrated-terminal runner so the agt-install route
+   *  can pre-fill a terminal with a verified AGT install command (operator
+   *  presses enter). Wired by bootstrapServers to vscode.window.createTerminal;
+   *  null in test fixtures (route 503s). */
+  setAgtRunInTerminal(fn: ((name: string, command: string) => void) | null): void { this.agtRunInTerminal = fn; }
+  getAgtRunInTerminal(): ((name: string, command: string) => void) | null { return this.agtRunInTerminal; }
   /** B-BIC-16: drift-to-L3 mediator slot. Set by bootstrapBicameral when
    *  l3Service + eventBus + logger deps are available. Null in test fixtures
    *  that don't wire the mediator. */
@@ -300,6 +307,7 @@ export class ConsoleServer {
       getOpenDesignClient: () => this.openDesignClient,
       getMcpInterceptor: () => this.mcpInterceptor,
       getBicameralOpenFileInEditor: () => this.bicameralOpenFileInEditor,
+      getAgtRunInTerminal: () => this.agtRunInTerminal,
       getDriftToL3Mediator: () => this.driftToL3Mediator,
       getUpstreamMonitor: () => this.upstreamMonitor,
       getBicameralCommand: () => this.bicameralCommand,

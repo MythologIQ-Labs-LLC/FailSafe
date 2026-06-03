@@ -11,6 +11,7 @@ import {
 } from "../routes";
 import { TrackerRoute, type TrackerRouteDeps } from "../routes/TrackerRoute";
 import { McpRoute } from "../routes/McpRoute";
+import { AgtRoute } from "../routes/AgtRoute";
 import type { RouteDeps } from "../routes";
 import type { ApiRouteDeps } from "../routes/types";
 import { ConfigurationProfile } from "../../genesis/ConfigurationProfile";
@@ -92,6 +93,9 @@ export interface ConsoleRouteHost {
   /** B-BIC-12: editor-open dep accessor; null when bootstrap didn't wire one.
    *  Optional on the host so older route-host fixtures stay valid. */
   getBicameralOpenFileInEditor?: () => ((filePath: string, startLine?: number) => Promise<void>) | null;
+  /** B-INT-16: integrated-terminal runner accessor for the agt-install route;
+   *  null when bootstrap didn't wire one. Optional so older fixtures stay valid. */
+  getAgtRunInTerminal?: () => ((name: string, command: string) => void) | null;
   /** B-BIC-16: drift-to-L3 mediator accessor; null when bootstrap didn't wire one. */
   getDriftToL3Mediator: () => import("../../integrations/bicameral/DriftToL3Mediator").DriftToL3Mediator | null;
   /** Phase 4: upstream monitor accessor; null when bootstrap didn't wire one. */
@@ -386,6 +390,21 @@ export class ConsoleRouteRegistrar {
     // MCP catalog surface (B-INT-13/14): list + governed install into .mcp.json.
     app.get("/api/v1/mcp/catalog", (req, res) => McpRoute.catalog(req, res));
     app.post("/api/actions/mcp-install", (req, res) => McpRoute.install(req, res, { workspaceRoot: this.host.workspaceRoot }));
+
+    // Agent Governance Toolkit surface (B-INT-16): env-detected installer. The
+    // modules route auto-detects the workspace language; the install route
+    // pre-fills an integrated terminal with the verified command (operator
+    // presses enter — no silent run). runInTerminal is resolved lazily because
+    // routes register before bootstrapServers wires the vscode dep.
+    app.get("/api/v1/agt/modules", (req, res) => AgtRoute.modules(req, res, { workspaceRoot: this.host.workspaceRoot }));
+    app.post("/api/actions/agt-install", (req, res) => AgtRoute.install(req, res, {
+      workspaceRoot: this.host.workspaceRoot,
+      runInTerminal: (name, command) => {
+        const fn = this.host.getAgtRunInTerminal?.();
+        if (!fn) throw new Error("runInTerminal not wired");
+        fn(name, command);
+      },
+    }));
     this.registerConsoleExtras();
   }
 

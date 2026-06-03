@@ -98,6 +98,14 @@ export async function bootstrapServers(
   );
   consoleServer.setIdeTracker(ideTracker);
   consoleServer.setSystemRegistry(deps.systemRegistry);
+  // B-INT-16: integrated-terminal runner for the AGT installer. sendText with
+  // addNewLine=false pre-fills the command but does NOT execute it — the
+  // operator reviews and presses enter (no silent install).
+  consoleServer.setAgtRunInTerminal((name, command) => {
+    const terminal = vscode.window.createTerminal(name);
+    terminal.sendText(command, false);
+    terminal.show();
+  });
   wireBicameralIntegration(context, consoleServer, deps.workspaceRoot, {
     l3Service: {
       queueL3Approval: (req) => deps.qorelogicManager.queueL3Approval(req),
