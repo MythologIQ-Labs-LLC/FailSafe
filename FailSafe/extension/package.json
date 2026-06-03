@@ -68,7 +68,8 @@
     "onCommand:failsafe.uninstallVoicePack",
     "onCommand:failsafe.substrate.run",
     "onCommand:failsafe.sarif.import",
-    "onCommand:failsafe.mcp.installCatalog"
+    "onCommand:failsafe.mcp.installCatalog",
+    "onCommand:failsafe.jira.import"
   ],
   "main": "./dist/extension/main.js",
   "contributes": {
@@ -125,6 +126,11 @@
       {
         "command": "failsafe.mcp.installCatalog",
         "title": "FailSafe: Install MCP Integration (governed)",
+        "category": "FailSafe"
+      },
+      {
+        "command": "failsafe.jira.import",
+        "title": "FailSafe: Import Jira Issue (preview)",
         "category": "FailSafe"
       },
       {
@@ -310,6 +316,26 @@
           "type": "string",
           "default": "",
           "markdownDescription": "Slack **incoming webhook URL** to post governance notifications to. Treat as a secret — it grants posting to the target channel. Messages are notify-only (no interactive approvals; a link back to the local Command Center is included). Leave empty to disable."
+        },
+        "failsafe.integrations.jira.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable read-only Jira Cloud issue import. The `FailSafe: Import Jira Issue (preview)` command resolves a Jira issue URL/key to an UNCOMMITTED intent preview — nothing is created or synced. Requires base URL + email + API token below."
+        },
+        "failsafe.integrations.jira.baseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Jira Cloud base URL, e.g. https://your-site.atlassian.net. Leave empty to disable."
+        },
+        "failsafe.integrations.jira.email": {
+          "type": "string",
+          "default": "",
+          "description": "Atlassian account email used for Jira Cloud Basic authentication (paired with the API token below)."
+        },
+        "failsafe.integrations.jira.apiToken": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Jira Cloud **API token** (create at id.atlassian.com → Security → API tokens). Treat as a secret — prefer a token scoped to a read-only account. It is sent only in the `Authorization` header (Basic email:token) and is never logged. Leave empty to disable."
         },
         "failsafe.integrations.openDesign.mcpEnabled": {
           "type": "boolean",
