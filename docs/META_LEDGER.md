@@ -22253,7 +22253,65 @@ Pick the next track: B-INT-8 (unblocks the new-vendor tranches), a deferred-debt
 
 _Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`### Entry #415`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Computed via Node 20 `crypto.createHash('sha256')` (Phase 75 skip — gate-chain artifacts absent; same posture as #405–#414).
 
+### Entry #416: DELIVER — v5.4.2 dual-marketplace publish (Integration Expansion) + two-dead-tag recovery
+
+**Date**: 2026-06-03
+**Phase**: DELIVER (/qor-repo-release close-out)
+**Plan**: none — release delivery cycle (Integration Expansion batch)
+**Branch**: `hotfix/v5.4.2` → `main` (PR #135), pipeline follow-up `fix/release-pipeline-github-release` (PR #136)
+**Author**: krknapp@gmail.com
+**Predecessor**: Entry #415 (DELIVER — v5.3.3; chain hash `c81ffbe208325d46f3d704ccce22fba22cd406613ea6013aa880f2fe48c31a98`)
+**Verdict**: SEALED — v5.4.2 published to VS Code Marketplace + Open VSX; two prior tags (v5.4.0/v5.4.1) recorded as forward-only dead tags.
+
+## What shipped
+
+v5.4.2 ("Integration Expansion") is the first PUBLISHED cut of the batch (33 commits since v5.3.3, PRs #121–#135):
+- **B-INT-9** — governed integrations: SARIF ingestion (#99, FX820/FX822), MCP Registry local risk scoring (#108, FX821), Slack notify-only governance notifications (#100, FX825), Context7 + Mermaid Chart MCP installers + Integrations → MCP Catalog tab (B-INT-13/14, FX823/FX824).
+- **B-INT-8** (#109) — 13 integration contract reviews; research gate cleared.
+- **Development Tracker v1 + v1.1** (FX817–FX819) — evidence-enforced, console-hosted, organic to the repo lifecycle.
+- **B-SUBSTRATE-2/3** (FX814–FX816) — dependency-admission cooling-period lint + seal auto-hook.
+- **B-BIC-24** idle-disconnect de-flake; **qor-logic 0.102.1** sync.
+
+## Delivery path (three tags; forward-only recovery)
+
+- **v5.4.0** (`1563c80`) — DEAD TAG. Release Pipeline failed at `npm run test:all`: the B-INT-5 Integrations sub-tab Playwright test asserted 2 sub-view pills but the new MCP Catalog tab made it 3. Publish jobs skipped; never reached a marketplace.
+- **v5.4.1** (`02a7d8f`) — DEAD TAG. Fixed the pill test, but VS Code stable auto-updated 1.122.1 → 1.123.0 between the v5.4.0 (06:51) and v5.4.1 (13:17) pipeline runs; the newer Electron (V8 13.x) removed APIs (`v8::External::Value()`, `PropertyCallbackInfo::This()`) used by `better-sqlite3@12.6.2`, breaking the native rebuild. Environment drift, not code. Publish jobs skipped.
+- **v5.4.2** (`fdbf779`) — PUBLISHED. Pinned the VS Code test version to last-known-good 1.122.1 in `.vscode-test.mjs` + `scripts/rebuild-vscode-electron.cjs` (overridable via `FAILSAFE_VSCODE_TEST_VERSION`). Build & Test green on Linux CI; both publish jobs approved at the `production` reviewer gate. **VS Code Marketplace**: published by CI. **Open VSX**: published by CI. OpenVSX-alignment rule satisfied (both marketplaces from the identical CI-built VSIX).
+
+## Governance reconciliation (this entry)
+
+- `docs/BACKLOG.md`: v5.4.0 + v5.4.1 marked DEAD TAG; v5.4.2 RELEASING → RELEASED.
+- GitHub Releases: created the `v5.4.2` Release object (page was frozen at v4.8.0); added a `github-release` job to `release.yml` (PR #136) so future tags auto-create the Release after both publishes succeed.
+- Issues: closed #99 / #100 / #108 / #95 / #109 (shipped). The 9 researched-but-unbuilt integrations (#96/#97/#98/#101/#102/#104/#105/#106/#107) + #90/#118/#83 remain correctly open.
+- `docs/GOVERNANCE_INDEX.md`: Last Reviewed refreshed to 2026-06-03 + #416 registered.
+
+## Process learning
+
+Both dead tags were invisible until the tag fired, because the PR gate runs only `standards` + `vsix-guardrails` while `test:all` runs only on the Release Pipeline. Two countermeasures landed: (1) pin the editor version so auto-update can't break the gate; (2) follow-up filed to run `test:all` on release-class PRs. The `production` reviewer gate held correctly — no unapproved or dead tag ever published.
+
+## Phase 75 SKIP records
+
+Gate-chain artifacts absent (delivery cycle); hash via Node 20 `crypto.createHash('sha256')` matching #405–#415.
+
+## Decision
+
+**SEALED** with chain advance #415 → #416. v5.4.2 is live on both marketplaces; the Integration Expansion batch is delivered and the ledger matches marketplace reality. The two dead tags remain in history per the v5.2.0/v5.2.1 forward-only precedent.
+
+## Next operator actions
+
+Optional: implement the next integration tranche (any of #96/#97/#98/#101/#102/#104/#105/#106/#107, all contract-reviewed), or a substrate/replay item. No release action pending.
+
+## Content Hash
+
+**Content Hash**: `f1021ddad359fa73c715925a42b8627a7eb0670687e88971dd0994e08a724b36`
+**Previous Hash**: `c81ffbe208325d46f3d704ccce22fba22cd406613ea6013aa880f2fe48c31a98` (Entry #415 Chain Hash)
+**Chain Hash**: `78285936852ef001c6cff55157f4eaa0c40caadada9ed27ff64c019419d0bf6d`
+**Merkle Seal**: `d6d162ca4f095278f4a700ae79511f93f5dbee40b3cc8142950316de39cd2efc` — gate_seal_deliver_v5_4_2
+**Session ID**: `2026-06-03-deliver-v5.4.2`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`### Entry #416`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Computed via Node 20 `crypto.createHash('sha256')` (Phase 75 skip — gate-chain artifacts absent; same posture as #405–#415).
+
 ---
 
 _Chain integrity: VALID_
-_Session: 2026-05-28-deliver-v5.3.3_
+_Session: 2026-06-03-deliver-v5.4.2_
