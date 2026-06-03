@@ -103,7 +103,7 @@ export class ConsoleLifecycleService {
     if (this.deps.mutationBus) {
       this.ledgerWatcherDisposable = this.deps.mutationBus.registerWatcher(
         ledgerPath,
-        () => this.deps.broadcast({ type: "hub.refresh" }),
+        () => this.broadcastLedgerChange(),
         1500,
       );
       return;
@@ -113,10 +113,18 @@ export class ConsoleLifecycleService {
       this.ledgerWatcher = fs.watch(ledgerPath, () => {
         if (this.ledgerDebounceTimer) clearTimeout(this.ledgerDebounceTimer);
         this.ledgerDebounceTimer = setTimeout(() => {
-          this.deps.broadcast({ type: "hub.refresh" });
+          this.broadcastLedgerChange();
         }, 1500);
       });
     } catch { /* File watcher unsupported — degrade silently */ }
+  }
+
+  /** Broadcast on META_LEDGER mutation: hub.refresh for the existing console
+   *  surfaces + tracker.refresh so the Development Tracker (Tracker v1.1) re-fetches
+   *  its freshly-generated model. */
+  private broadcastLedgerChange(): void {
+    this.deps.broadcast({ type: "hub.refresh" });
+    this.deps.broadcast({ type: "tracker.refresh" });
   }
 
   private async findAvailablePort(preferred: number): Promise<number> {
