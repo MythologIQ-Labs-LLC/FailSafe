@@ -20,9 +20,12 @@ suite('McpRoute (B-INT-13/14 UI backing)', () => {
     const r = res();
     McpRoute.catalog({} as never, r as never);
     const body = r.body as { entries: Array<{ id: string; risk: { level: string } }> };
-    assert.equal(body.entries.length, 2);
-    assert.deepEqual(body.entries.map((e) => e.id).sort(), ['context7', 'mermaid']);
+    assert.equal(body.entries.length, 3);
+    assert.deepEqual(body.entries.map((e) => e.id).sort(), ['context7', 'mermaid', 'playwright']);
     assert.ok(body.entries.every((e) => typeof e.risk.level === 'string'));
+    // The route must surface the per-entry risk level the UI badges on — Playwright
+    // is high-capability (browser automation + code-eval) and must read as 'high'.
+    assert.equal(body.entries.find((e) => e.id === 'playwright')!.risk.level, 'high');
   });
 
   test('install writes the server entry to .mcp.json (added=true), idempotent on re-install', () => {

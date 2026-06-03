@@ -5,28 +5,48 @@ import { mergeMcpConfig, buildMcpServerEntry } from '../../../integrations/mcp-c
 const NOW = new Date('2026-06-02T00:00:00Z');
 
 suite('mcp-catalog + installer (B-INT-13/14)', () => {
-  test('catalog has Context7 + Mermaid with verified npx install commands', () => {
+  test('catalog has Context7 + Mermaid + Playwright with verified npx install commands', () => {
     const ids = MCP_CATALOG.map((e) => e.id).sort();
-    assert.deepEqual(ids, ['context7', 'mermaid']);
+    assert.deepEqual(ids, ['context7', 'mermaid', 'playwright']);
     const c7 = MCP_CATALOG.find((e) => e.id === 'context7')!;
     assert.deepEqual(c7.install.args, ['-y', '@upstash/context7-mcp']);
     const mer = MCP_CATALOG.find((e) => e.id === 'mermaid')!;
     assert.deepEqual(mer.install.args, ['-y', 'mcp-mermaid']);
+    const pw = MCP_CATALOG.find((e) => e.id === 'playwright')!;
+    assert.deepEqual(pw.install.args, ['-y', '@playwright/mcp@latest']);
   });
 
-  test('assessCatalog risk-rates each entry (both low: publisher+repo+stdio, no dangerous tools)', () => {
+  test('assessCatalog risk-rates each entry (read-only servers low; Playwright high via code-eval tool)', () => {
     const a = assessCatalog(NOW);
-    assert.equal(a.length, 2);
-    for (const { assessment } of a) {
-      assert.equal(assessment.level, 'low');
-      // only unknown-recency (no publish date) — never a high signal.
-      assert.ok(!assessment.signals.some((s) => s.severity === 'high'));
+    assert.equal(a.length, 3);
+    const byId = Object.fromEntries(a.map(({ entry, assessment }) => [entry.id, assessment]));
+    // Read-only doc/diagram servers: low risk, never a high signal.
+    for (const id of ['context7', 'mermaid']) {
+      assert.equal(byId[id].level, 'low', `${id} should be low`);
+      assert.ok(!byId[id].signals.some((s) => s.severity === 'high'));
     }
+    // Playwright: high-capability browser automation → high, flagged on its
+    // code-evaluation tool (browser_evaluate matches the dangerous-tool rule),
+    // and it must out-score the read-only entries.
+    assert.equal(byId['playwright'].level, 'high');
+    assert.ok(
+      byId['playwright'].signals.some((s) => s.id === 'broad-tool-names' && s.severity === 'high'),
+      'Playwright must carry the broad-tool-names high signal (browser_evaluate)',
+    );
+    assert.ok(byId['playwright'].score > byId['context7'].score, 'Playwright out-scores read-only Context7');
   });
 
   test('buildMcpServerEntry yields the .mcp.json command/args shape', () => {
     const c7 = MCP_CATALOG.find((e) => e.id === 'context7')!;
     assert.deepEqual(buildMcpServerEntry(c7), { command: 'npx', args: ['-y', '@upstash/context7-mcp'] });
+  });
+
+  test('Playwright installs under mcpServers.playwright with the verified args', () => {
+    const pw = MCP_CATALOG.find((e) => e.id === 'playwright')!;
+    assert.deepEqual(buildMcpServerEntry(pw), { command: 'npx', args: ['-y', '@playwright/mcp@latest'] });
+    const { text, added } = mergeMcpConfig('', pw);
+    assert.equal(added, true);
+    assert.deepEqual(JSON.parse(text).mcpServers.playwright, { command: 'npx', args: ['-y', '@playwright/mcp@latest'] });
   });
 
   test('mergeMcpConfig: empty → adds under mcpServers (added=true, valid JSON)', () => {

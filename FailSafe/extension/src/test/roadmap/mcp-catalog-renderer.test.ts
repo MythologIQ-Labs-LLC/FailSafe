@@ -43,6 +43,23 @@ suite('McpCatalogRenderer (B-INT-13/14, jsdom structural)', () => {
     } finally { ctx.cleanup(); }
   });
 
+  test('renders the high-risk badge for a high-capability entry (Playwright)', async () => {
+    const HIGH_CATALOG = {
+      entries: [
+        { id: 'playwright', name: 'Playwright', description: 'browser automation', install: { command: 'npx', args: ['-y', '@playwright/mcp@latest'] }, risk: { level: 'high', score: 4, signals: [{ id: 'broad-tool-names', severity: 'high', detail: 'browser_evaluate' }] } },
+      ],
+    };
+    const ctx = setupDom(async () => ({ ok: true, json: async () => HIGH_CATALOG }));
+    try {
+      await new McpCatalogRenderer('integrations').render();
+      // The governance payoff: a high-capability server surfaces a HIGH risk badge,
+      // not a generic/low one.
+      assert.equal(ctx.doc.querySelectorAll('.cc-mcp-risk-high').length, 1, 'high-risk badge renders');
+      assert.equal(ctx.doc.querySelectorAll('.cc-mcp-risk-low').length, 0);
+      assert.ok(ctx.doc.body.innerHTML.includes('@playwright/mcp@latest'));
+    } finally { ctx.cleanup(); }
+  });
+
   test('install button is confirm-then-POST (no silent install)', async () => {
     const calls: string[] = [];
     const ctx = setupDom(async (url: string) => {
