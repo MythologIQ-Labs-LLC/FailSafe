@@ -4,8 +4,13 @@
 // ACP is JSON-RPC 2.0 over stdio between a code-editor CLIENT and an AI AGENT.
 // FailSafe governs the AGENT→CLIENT methods that carry side-effecting intent:
 // `session/request_permission`, `fs/write_text_file`, and `terminal/create`,
-// plus the tool-call reporting surfaced on `session/update`. See
-// docs/research-brief-acp-governance-2026-06-04.md.
+// plus the tool-call reporting surfaced on `session/update`. See the research
+// brief at <repo-root>/docs/research-brief-acp-governance-2026-06-04.md and
+// the review at <repo-root>/docs/review-acp-governance-2026-06-04.md.
+//
+// HONEST SCOPE: governance here is cooperative-path + mode-dependent — see the
+// AcpInterceptor.ts and acpPermissionAuthority.ts headers. This is the pure
+// offline core; it does not speak ACP transport.
 //
 // These are LOCAL types covering only the governable subset — NOT a full ACP
 // SDK binding. Field names are confirmed against the canonical schema

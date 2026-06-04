@@ -7,10 +7,20 @@
 // schema-valid `RequestPermissionResponse.outcome`, choosing a concrete
 // allow/reject `optionId` from the options the agent offered.
 //
-// IMPORTANT (honest scope): this gate is COOPERATIVE-PATH only. A compliant
-// agent calls `session/request_permission`; a malicious/non-cooperative agent
-// MAY skip it and act off-channel. Closing that gap requires FailSafe Pro's
-// OS-level enforcement — out of scope for this in-editor foundation.
+// HONEST SCOPE — two limits, stated plainly (do not read this as unconditional
+// "fail-closed"):
+//   1. COOPERATIVE-PATH only. A compliant agent calls `session/request_permission`;
+//      a malicious/non-cooperative agent MAY skip it and act off-channel. Closing
+//      that gap requires FailSafe Pro's OS-level enforcement.
+//   2. MODE-DEPENDENT enforcement (ACP-ADV-02). The ALLOW path here simply
+//      reflects the backing engine's VERDICT. Under a non-enforcing governance
+//      mode (observe / assist / lockstep-off) the engine returns ALLOW by design
+//      (telemetry-only — "would have blocked"), so a grant produced here is only
+//      as strong as the engine's current mode. Genuine deny-by-default applies to
+//      DENY verdicts (BLOCK/QUARANTINE/ESCALATE/MODIFY) and to malformed/unmapped
+//      intents (QUARANTINE) — NOT to ALLOW verdicts under observe mode. Surfacing
+//      the effective mode in the outcome/receipt is wired with the engine receipt
+//      change in the live-transport follow-up.
 //
 // Unlike the MCP path, the HTTP receipt→status table (RECEIPT_HTTP_TABLE) does
 // NOT transfer: ACP is JSON-RPC over stdio, so the mapping target is the ACP
@@ -25,7 +35,6 @@ import type {
   AcpPermissionOutcome,
 } from './acpTypes';
 
-const ALLOW_KINDS: readonly AcpPermissionOptionKind[] = ['allow_once', 'allow_always'];
 const REJECT_KINDS: readonly AcpPermissionOptionKind[] = ['reject_once', 'reject_always'];
 
 /** Pick the first option matching `preferred` kind, else any option whose kind
@@ -42,21 +51,26 @@ function pickOption(
 
 /**
  * Map a governance verdict onto an ACP permission outcome over the offered
- * options. Fail-closed:
- *   - ALLOW → a permissive option (prefer `allow_once`; never auto-`allow_always`
- *     since the spec does not guarantee `always` is persisted/honored).
- *   - BLOCK / QUARANTINE / MODIFY → a reject option (prefer `reject_once`).
- *     MODIFY has no ACP narrowing channel in the foundation, so it denies.
- *   - ESCALATE → conservative `reject_once` (no ACP "pending/deferred" outcome
- *     exists; a held/deferred decision is a transport-layer follow-up).
- *   - If the required option kind is absent → `cancelled` (safe non-grant).
+ * options:
+ *   - ALLOW → ONLY an `allow_once` option. We never auto-select `allow_always`
+ *     (ACP-ADV-07) — the spec does not guarantee `always` is persisted/honored,
+ *     and standing grants must be an explicit operator act, not an inferred one.
+ *     If no `allow_once` option is offered → `cancelled` (safe non-grant).
+ *   - BLOCK / QUARANTINE / MODIFY → a reject option (prefer `reject_once`, else
+ *     `reject_always`). MODIFY has no ACP narrowing channel here, so it denies.
+ *   - ESCALATE → conservative reject (no ACP "pending/deferred" outcome exists).
+ *   - If no reject option is offered for a deny verdict → `cancelled` (the agent
+ *     offered no way to express refusal; never falls through to allow).
+ * Note the mode caveat in the file header: ALLOW here reflects the engine
+ * verdict, which under observe mode is auto-allow by design.
  */
 export function verdictToOutcome(
   verdict: ReceiptVerdict,
   options: AcpPermissionOption[],
 ): AcpPermissionOutcome {
   if (verdict === 'ALLOW') {
-    const opt = pickOption(options, ALLOW_KINDS, 'allow_once');
+    // ACP-ADV-07: allow_once ONLY — no fallback to allow_always.
+    const opt = options.find((o) => o.kind === 'allow_once') ?? null;
     return opt ? { outcome: 'selected', optionId: opt.optionId } : { outcome: 'cancelled' };
   }
   // BLOCK, QUARANTINE, MODIFY, ESCALATE all deny on the cooperative path.

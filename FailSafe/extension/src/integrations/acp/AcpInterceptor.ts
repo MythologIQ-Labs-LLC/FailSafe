@@ -8,16 +8,32 @@
 // Boundary: imports only from `src/contracts/`, `src/governance/interceptor/`,
 // and the local ACP modules. It does NOT speak ACP transport (no stdio, no agent
 // spawn, no SDK) — that is a follow-up. This is the pure governance core.
+//
+// SCOPE (honest): "fail-closed" here means malformed/unmapped/oversized intents
+// QUARANTINE WITHOUT reaching the engine. It does NOT mean an enforced verdict on
+// well-formed intents — the verdict reflects the engine's governance mode (observe
+// mode auto-allows by design), and governing the agent at all assumes the
+// cooperative path (the agent surfaces the intent). See
+// acpPermissionAuthority.ts header.
 
 import type { EvaluationRequestContract, ReceiptContract } from '../../contracts';
 import type { IGovernanceInterceptor } from '../../governance/interceptor/IGovernanceInterceptor';
 import { deriveEvaluationRequestId, quarantineReceipt } from '../../governance/interceptor/contractMappers';
 import { getValidator } from '../../governance/interceptor/ajv-instance';
 import { acpIntentToAction } from './acpMapper';
-import type { AcpGovernableIntent } from './acpTypes';
+import type { AcpGovernableIntent, AcpPermissionOptionKind } from './acpTypes';
 
 const DEFAULT_AGENT_DID = 'did:failsafe:agent:acp';
 const ISSUED_BY = 'did:failsafe:interceptor:acp';
+
+/** The four valid ACP permission-option kinds — anything else is malformed. */
+const VALID_OPTION_KINDS: ReadonlySet<AcpPermissionOptionKind> = new Set([
+  'allow_once', 'allow_always', 'reject_once', 'reject_always',
+]);
+
+/** Max serialized `action.payload` size (ACP-AGENTIC-03 DoS / unbounded-payload
+ *  guard). Oversized payloads QUARANTINE rather than reach the engine. */
+const MAX_PAYLOAD_BYTES = 64 * 1024;
 
 export interface AcpInterceptorConfig {
   /** Agent DID stamped onto evaluation requests. Defaults to the ACP agent DID. */
@@ -46,11 +62,23 @@ function describeMalformedIntent(intent: AcpGovernableIntent): string | null {
         return 'terminal_create requires a non-empty params.command';
       }
       return null;
-    case 'permission':
-      if (!intent.request || !Array.isArray(intent.request.options)) {
-        return 'permission requires request.options (array)';
+    case 'permission': {
+      const req = intent.request;
+      if (!req || !Array.isArray(req.options)) return 'permission requires request.options (array)';
+      if (req.options.length === 0) return 'permission requires at least one option';
+      // ACP-AGENTIC-05: validate every option so an agent cannot smuggle a
+      // mislabeled / empty-id option set that distorts the verdict→outcome map.
+      const seen = new Set<string>();
+      for (const o of req.options) {
+        if (!o || typeof o.optionId !== 'string' || o.optionId.length === 0) {
+          return 'each permission option requires a non-empty optionId';
+        }
+        if (seen.has(o.optionId)) return `duplicate permission optionId: ${o.optionId}`;
+        seen.add(o.optionId);
+        if (!VALID_OPTION_KINDS.has(o.kind)) return `invalid permission option kind: ${String(o.kind)}`;
       }
       return null;
+    }
     default:
       return `unknown ACP intent type: ${String((intent as { type?: unknown }).type)}`;
   }
@@ -77,6 +105,13 @@ export class AcpInterceptor {
     const malformed = describeMalformedIntent(intent);
     if (malformed) {
       return quarantineReceipt(deriveEvaluationRequestId(req), ISSUED_BY, `malformed ACP intent: ${malformed}`);
+    }
+    // ACP-AGENTIC-03: cap the payload so an unbounded agent payload cannot reach
+    // the engine (DoS) or bloat a future ledger record. fs-write content is
+    // already digested in the mapper; this bounds rawInput/argv/env.
+    const payloadBytes = Buffer.byteLength(JSON.stringify(req.action.payload ?? {}), 'utf8');
+    if (payloadBytes > MAX_PAYLOAD_BYTES) {
+      return quarantineReceipt(deriveEvaluationRequestId(req), ISSUED_BY, `ACP intent payload exceeds ${MAX_PAYLOAD_BYTES} bytes (${payloadBytes})`);
     }
     const validate = getValidator('evaluation_request');
     if (!validate(req)) {

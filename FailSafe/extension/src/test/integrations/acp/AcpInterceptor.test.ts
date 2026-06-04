@@ -39,8 +39,40 @@ suite('integrations/acp AcpInterceptor', () => {
     const i = new AcpInterceptor(fakeBacking('ALLOW', cap));
     await i.intercept({ type: 'tool_call', toolCall: { toolCallId: 't' } });
     await i.intercept({ type: 'terminal_create', params: { sessionId: 's', command: 'ls' } });
-    await i.intercept({ type: 'permission', request: { sessionId: 's', options: [] } });
+    await i.intercept({ type: 'permission', request: { sessionId: 's', options: [{ optionId: 'a', name: 'A', kind: 'allow_once' }] } });
     assert.deepEqual(cap.map((r) => r.action.kind), ['acp_tool_call', 'acp_terminal_create', 'acp_permission']);
+  });
+
+  test('ACP-AGENTIC-05: permission with an invalid option kind → QUARANTINE (no backing call)', async () => {
+    const captured: EvaluationRequestContract[] = [];
+    const bad = { type: 'permission', request: { sessionId: 's', options: [{ optionId: 'x', name: 'X', kind: 'allow_forever' }] } } as unknown as AcpGovernableIntent;
+    const out = await new AcpInterceptor(fakeBacking('ALLOW', captured)).intercept(bad);
+    assert.equal(out.verdict, 'QUARANTINE');
+    assert.equal(captured.length, 0);
+    assert.match(out.verdictRationale || '', /invalid permission option kind/);
+  });
+
+  test('ACP-AGENTIC-05: empty options / empty optionId / duplicate ids → QUARANTINE', async () => {
+    const i = new AcpInterceptor(fakeBacking('ALLOW', []));
+    assert.equal((await i.intercept({ type: 'permission', request: { sessionId: 's', options: [] } })).verdict, 'QUARANTINE');
+    assert.equal((await i.intercept({ type: 'permission', request: { sessionId: 's', options: [{ optionId: '', name: 'A', kind: 'allow_once' }] } })).verdict, 'QUARANTINE');
+    assert.equal((await i.intercept({ type: 'permission', request: { sessionId: 's', options: [{ optionId: 'd', name: 'A', kind: 'allow_once' }, { optionId: 'd', name: 'B', kind: 'reject_once' }] } })).verdict, 'QUARANTINE');
+  });
+
+  test('ACP-AGENTIC-03: an oversized payload → QUARANTINE WITHOUT invoking the backing', async () => {
+    const captured: EvaluationRequestContract[] = [];
+    const huge = 'x'.repeat(70 * 1024);
+    const intent: AcpGovernableIntent = { type: 'tool_call', toolCall: { toolCallId: 't', rawInput: { blob: huge } } };
+    const out = await new AcpInterceptor(fakeBacking('ALLOW', captured)).intercept(intent);
+    assert.equal(out.verdict, 'QUARANTINE');
+    assert.equal(captured.length, 0);
+    assert.match(out.verdictRationale || '', /payload exceeds/);
+  });
+
+  test('ACP-AGENTIC-03: fs_write payload carries a digest, never the raw content', async () => {
+    const captured: EvaluationRequestContract[] = [];
+    await new AcpInterceptor(fakeBacking('ALLOW', captured)).intercept({ type: 'fs_write', params: { sessionId: 's', path: '/p', content: 'SECRET_TOKEN_123' } });
+    assert.ok(!JSON.stringify(captured[0].action.payload).includes('SECRET_TOKEN_123'), 'raw content never reaches the engine payload');
   });
 
   test('malformed intent → QUARANTINE WITHOUT invoking the backing (fail-closed)', async () => {

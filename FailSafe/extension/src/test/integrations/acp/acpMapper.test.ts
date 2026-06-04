@@ -27,12 +27,16 @@ suite('integrations/acp acpMapper', () => {
     assert.equal(a.payload?.toolKind, 'other');
   });
 
-  test('fs_write → acp_fs_write with the ABSOLUTE path as target (for Axiom2 scoping)', () => {
-    const a = acpFsWriteToAction({ sessionId: 's', path: '/abs/secret.env', content: 'TOKEN=x' });
+  test('fs_write → acp_fs_write digests content (NEVER carries it verbatim — ACP-AGENTIC-03)', () => {
+    const a = acpFsWriteToAction({ sessionId: 's', path: '/abs/secret.env', content: 'TOKEN=supersecret' });
     assert.equal(a.kind, 'acp_fs_write');
     assert.equal(a.target, '/abs/secret.env');
     assert.equal(a.payload?.path, '/abs/secret.env');
-    assert.equal(a.payload?.content, 'TOKEN=x');
+    // content is reduced to a digest + byte length; the raw body never appears.
+    assert.match(String(a.payload?.contentSha256), /^[a-f0-9]{64}$/);
+    assert.equal(a.payload?.contentBytes, 17);
+    assert.equal(a.payload?.content, undefined, 'no raw content field');
+    assert.ok(!JSON.stringify(a.payload).includes('supersecret'), 'secret never in the payload');
   });
 
   test('terminal_create → acp_terminal_create with command target + full argv payload', () => {

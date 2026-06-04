@@ -23,6 +23,14 @@ suite('integrations/acp acpPermissionAuthority', () => {
     assert.deepEqual(verdictToOutcome('ALLOW', ALL_OPTIONS), { outcome: 'selected', optionId: 'ao' });
   });
 
+  test('ACP-ADV-07: ALLOW with only allow_always offered → cancelled (NEVER auto-selects allow_always)', () => {
+    const alwaysOnly: AcpPermissionOption[] = [
+      { optionId: 'aa', name: 'Allow always', kind: 'allow_always' },
+      { optionId: 'ro', name: 'Reject once', kind: 'reject_once' },
+    ];
+    assert.deepEqual(verdictToOutcome('ALLOW', alwaysOnly), { outcome: 'cancelled' });
+  });
+
   test('BLOCK and QUARANTINE select a reject option (prefer reject_once)', () => {
     assert.deepEqual(verdictToOutcome('BLOCK', ALL_OPTIONS), { outcome: 'selected', optionId: 'ro' });
     assert.deepEqual(verdictToOutcome('QUARANTINE', ALL_OPTIONS), { outcome: 'selected', optionId: 'ro' });

@@ -7,8 +7,16 @@
 // MCP adapter's flat `tool_call`) for ledger fidelity — `action.kind` is a
 // free-form string in `evaluation_request.json`, so they validate as-is.
 //
-// No I/O, no logging, no `Date` — pure functions, JSDOM/unit friendly.
+// SECRET HYGIENE (ACP-AGENTIC-03): fs-write CONTENT is NEVER carried verbatim —
+// it is reduced to a sha256 digest + byte length so the governance payload (and
+// any future immutable ledger record of it) cannot leak file bodies. Govern on
+// path/scope/hash, never the body. Agent-supplied `rawInput` is passed through
+// for command-policy signal but is size-capped at the interceptor boundary.
+//
+// Pure + deterministic — no fs/network/logging/`Date`. `crypto.createHash` is a
+// pure transform (no I/O), so these stay JSDOM/unit friendly.
 
+import { createHash } from 'crypto';
 import type { EvaluationRequestContract } from '../../contracts';
 import type {
   AcpGovernableIntent,
@@ -19,6 +27,11 @@ import type {
 } from './acpTypes';
 
 type Action = EvaluationRequestContract['action'];
+
+/** sha256 hex digest of a string (UTF-8). Pure. */
+function sha256(s: string): string {
+  return createHash('sha256').update(s, 'utf8').digest('hex');
+}
 
 /** ACP tool-call report → action. `target` is the human title (falling back to
  *  the tool-call id); `payload` carries the original tool params. */
@@ -31,17 +44,21 @@ export function acpToolCallToAction(tc: AcpToolCall): Action {
 }
 
 /** `fs/write_text_file` → action. `target` is the ABSOLUTE path so a future
- *  engine widening can scope it via Axiom2; `payload` carries path + content. */
+ *  engine widening can scope it via Axiom2. The content is reduced to a digest
+ *  (sha256 + byte length) — it is NEVER carried verbatim (ACP-AGENTIC-03). */
 export function acpFsWriteToAction(p: AcpFsWriteParams): Action {
+  const content = typeof p.content === 'string' ? p.content : '';
   return {
     kind: 'acp_fs_write',
     target: p.path,
-    payload: { path: p.path, content: p.content },
+    payload: { path: p.path, contentSha256: sha256(content), contentBytes: Buffer.byteLength(content, 'utf8') },
   };
 }
 
 /** `terminal/create` → action. `target` is the command; `payload` carries the
- *  full argv + cwd for command-policy evaluation. */
+ *  argv + cwd. NOTE: the engine does not yet read `action.payload` for command
+ *  policy (brief GAP #1 / ACP-AGENTIC-01) — until it does, terminal command
+ *  policy is NOT enforced; this payload is recorded for provenance only. */
 export function acpTerminalCreateToAction(p: AcpCreateTerminalParams): Action {
   return {
     kind: 'acp_terminal_create',
