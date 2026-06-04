@@ -10,8 +10,9 @@
  * All four pieces are pure (no fs/network/secrets) → deterministically tested.
  */
 
-/** A Linear issue identifier is a team key (uppercase) + number, e.g. ENG-123. */
-const IDENTIFIER_RE = /\b([A-Z][A-Z0-9]*-\d+)\b/;
+/** A Linear issue identifier is a team key + number, e.g. ENG-123. Case-insensitive
+ *  so a lowercased paste (`eng-123`) still resolves; the result is upper-cased. */
+const IDENTIFIER_RE = /\b([A-Za-z][A-Za-z0-9]*-\d+)\b/;
 
 /**
  * Resolve a Linear issue URL or a bare identifier to the canonical identifier.
