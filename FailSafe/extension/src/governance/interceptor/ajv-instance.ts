@@ -4,20 +4,26 @@
 // compiles exactly once and the `ValidateFunction` is cached so the interceptor
 // hot path never recompiles. `getValidator` is idempotent and `===`-stable.
 //
-// Schemas are loaded from the compiled `contracts/` tree (copy-ui-js mirrors
-// the `.json` schema files into `out/contracts/`), resolved relative to this
-// module so it works under both `src/` (ts-node) and `out/` (compiled) layouts.
+// Schemas are STATICALLY IMPORTED so they inline at build time. This removes a
+// fragile runtime `__dirname`-relative `fs.readFileSync` that (a) broke when this
+// module is bundled to an ESM target (`__dirname` is undefined in ESM scope —
+// e.g. the standalone ACP enforce-proxy bundle, GH #172) and (b) depended on a
+// sibling `contracts/` dir existing next to the compiled module. Inlining is
+// behavior-identical for every consumer: the same schema objects compile + cache
+// the same way; only the source (import vs disk read) changed. resolveJsonModule
+// is on, and esbuild inlines `.json` by default.
 
-import * as fs from "fs";
-import * as path from "path";
 import Ajv2020 from "ajv/dist/2020";
 import addFormats from "ajv-formats";
 import type { ValidateFunction } from "ajv";
+import evaluationRequestSchema from "../../contracts/evaluation_request.json";
+import receiptSchema from "../../contracts/receipt.json";
 
-/** Contract schema names this interceptor validates against. */
-const KNOWN_SCHEMAS = new Set(["evaluation_request", "receipt"]);
-
-const CONTRACTS_DIR = path.resolve(__dirname, "..", "..", "contracts");
+/** Contract schemas this interceptor validates against, keyed by name. */
+const SCHEMAS: Readonly<Record<string, object>> = {
+  evaluation_request: evaluationRequestSchema as object,
+  receipt: receiptSchema as object,
+};
 
 let ajv: Ajv2020 | null = null;
 const validatorCache = new Map<string, ValidateFunction>();
@@ -43,11 +49,10 @@ function getAjv(): Ajv2020 {
 export function getValidator(schemaName: string): ValidateFunction {
   const cached = validatorCache.get(schemaName);
   if (cached) return cached;
-  if (!KNOWN_SCHEMAS.has(schemaName)) {
+  const schema = SCHEMAS[schemaName];
+  if (!schema) {
     throw new Error(`ajv-instance: unknown governance schema "${schemaName}"`);
   }
-  const schemaPath = path.join(CONTRACTS_DIR, `${schemaName}.json`);
-  const schema = JSON.parse(fs.readFileSync(schemaPath, "utf8")) as object;
   const validate = getAjv().compile(schema);
   validatorCache.set(schemaName, validate);
   return validate;

@@ -2,7 +2,7 @@
 // contract that tells the proxy which real agent to wrap. SDK-free → headless.
 
 import { strict as assert } from 'assert';
-import { parseProxyArgs } from '../../../../integrations/acp/proxy/AcpProxyArgs';
+import { parseProxyArgs, parseWorkspaceArg } from '../../../../integrations/acp/proxy/AcpProxyArgs';
 
 suite('integrations/acp/proxy parseProxyArgs', () => {
   test('splits the real-agent command tail after the bare `--`', () => {
@@ -22,5 +22,19 @@ suite('integrations/acp/proxy parseProxyArgs', () => {
 
   test('fail-closed: a trailing `--` with no command throws', () => {
     assert.throws(() => parseProxyArgs(['--workspace', '/w', '--']), /missing real-agent command/);
+  });
+});
+
+suite('integrations/acp/proxy parseWorkspaceArg', () => {
+  test('reads --workspace from the proxy flags', () => {
+    assert.equal(parseWorkspaceArg(['--workspace', '/repo', '--', 'agent'], '/cwd'), '/repo');
+  });
+
+  test('falls back when --workspace is absent', () => {
+    assert.equal(parseWorkspaceArg(['--', 'agent'], '/cwd'), '/cwd');
+  });
+
+  test('a --workspace in the AGENT tail is NOT consumed (scanned only before `--`)', () => {
+    assert.equal(parseWorkspaceArg(['--', 'agent', '--workspace', '/evil'], '/cwd'), '/cwd');
   });
 });

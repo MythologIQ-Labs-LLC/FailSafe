@@ -161,6 +161,29 @@ async function main() {
     console.log(`bundle: emitted browser-ESM education/${eduName}.js → dist/education-browser/`);
   }
 
+  // ACP enforce-proxy entrypoint (GH #172 Part 2, v5.6.0): the standalone MITM
+  // governance proxy Devin Desktop launches in place of an ACP agent. Bundled as a
+  // SELF-CONTAINED node script; the ESM-only @agentclientprotocol/sdk is inlined.
+  // Output is CJS so transitive CJS deps in the EnforcementEngine path (e.g.
+  // proper-lockfile, which does dynamic `require('path')`) keep working — an ESM
+  // output breaks them. `vscode` is intentionally NOT marked external: the proxy
+  // runs outside the extension host, so any accidental vscode import must FAIL
+  // this build (a vscode-coupling guard).
+  const acpEntry = path.join(root, "src", "integrations", "acp", "proxy", "acpProxyBootstrap.ts");
+  if (fs.existsSync(acpEntry)) {
+    esbuild.buildSync({
+      entryPoints: [acpEntry],
+      outfile: path.join(distDir, "acp-proxy.js"),
+      format: "cjs",
+      bundle: true,
+      platform: "node",
+      target: "node20",
+      external: ["better-sqlite3"],
+      logLevel: "info",
+    });
+    console.log("bundle: emitted self-contained ACP enforce-proxy → dist/acp-proxy.js");
+  }
+
   // Post-bundle integrity check: verify UI files were copied correctly
   const srcHtml = fs.readFileSync(path.join(root, "src", "roadmap", "ui", "command-center.html"), "utf8");
   const distHtml = fs.readFileSync(path.join(distDir, "extension", "ui", "command-center.html"), "utf8");
