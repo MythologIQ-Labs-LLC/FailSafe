@@ -110,6 +110,10 @@ export class ConsoleServer {
   /** B-BIC-12: editor-open dep wired by bootstrapBicameral (vscode.open). */
   private bicameralOpenFileInEditor: ((filePath: string, startLine?: number) => Promise<void>) | null = null;
   private agtRunInTerminal: ((name: string, command: string) => void) | null = null;
+  /** GH #167: boolean-only `failsafe.*` config snapshot provider for the
+   *  Integrations Catalog. Wired by bootstrapServers to read vscode settings;
+   *  null in test fixtures (catalog renders all-disabled). */
+  private integrationConfigSnapshot: (() => Record<string, boolean>) | null = null;
   private bicameralCommand = "bicameral-mcp";
   private bicameralAutoConnect = false;
   private bicameralAutoConnectWriter: (value: boolean) => Promise<void> = async () => {};
@@ -211,6 +215,11 @@ export class ConsoleServer {
    *  null in test fixtures (route 503s). */
   setAgtRunInTerminal(fn: ((name: string, command: string) => void) | null): void { this.agtRunInTerminal = fn; }
   getAgtRunInTerminal(): ((name: string, command: string) => void) | null { return this.agtRunInTerminal; }
+  /** GH #167: set the boolean-only integration config snapshot provider. The
+   *  provider returns ONLY booleans (enabled flags + secret-present flags),
+   *  never token/key/webhook values — secrets never leave the host. */
+  setIntegrationConfigSnapshotProvider(fn: (() => Record<string, boolean>) | null): void { this.integrationConfigSnapshot = fn; }
+  getIntegrationConfigSnapshot(): Record<string, boolean> { return this.integrationConfigSnapshot?.() ?? {}; }
   /** B-BIC-16: drift-to-L3 mediator slot. Set by bootstrapBicameral when
    *  l3Service + eventBus + logger deps are available. Null in test fixtures
    *  that don't wire the mediator. */
@@ -308,6 +317,7 @@ export class ConsoleServer {
       getMcpInterceptor: () => this.mcpInterceptor,
       getBicameralOpenFileInEditor: () => this.bicameralOpenFileInEditor,
       getAgtRunInTerminal: () => this.agtRunInTerminal,
+      getIntegrationConfigSnapshot: () => this.getIntegrationConfigSnapshot(),
       getDriftToL3Mediator: () => this.driftToL3Mediator,
       getUpstreamMonitor: () => this.upstreamMonitor,
       getBicameralCommand: () => this.bicameralCommand,

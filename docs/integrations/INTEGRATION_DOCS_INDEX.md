@@ -35,6 +35,14 @@ _Last reviewed: 2026-06-04._
 | **Bicameral MCP** | mcp | Upstream repo (see contract review) | `src/integrations/bicameral/` · shipped v5.1.5 |
 | **Agent Governance Toolkit (AGT) installer** | installer | https://github.com/microsoft/agent-governance-toolkit | `src/integrations/agt/` · built (PR #140, held) |
 
+> **Integrations-tab "Catalog" sub-view** (#167) — the command/config integrations
+> without a dedicated sub-view (Continue, Aider, OpenHands, Cline/Roo/Kilo, Linear,
+> Jira, GitHub Checks, Sentry, Teams, Slack) are surfaced as a registry-driven card
+> grid with live enabled/configured state. Source of truth:
+> `src/integrations/catalog/integration-catalog.ts` (pure, secret-safe) →
+> `GET /api/v1/integrations/catalog`. Adding/removing an integration here MUST keep
+> this index and the per-integration READMEs in sync.
+
 ## In review (PR open, merge-blocked by `main` ruleset)
 
 | Integration | Pattern | Official documentation | Local reference / status |

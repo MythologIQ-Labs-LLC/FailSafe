@@ -3,6 +3,15 @@
 // razor. Pure HTML string builders, JSDOM-friendly; the orchestrator
 // (bicameral-card.js renderBicameralCard) composes these by install state.
 
+// GH #166: the install step-list now comes from the shared install-progress
+// component. `cc-bicameral-install-progress` is preserved as a wrapper class so
+// existing CSS/test hooks keep matching.
+import { renderInstallProgress as renderSharedInstallProgress } from './install-progress.js';
+
+function renderInstallProgress(progress) {
+  return renderSharedInstallProgress(progress, { className: 'cc-bicameral-install-progress' });
+}
+
 function esc(value) {
   if (value === null || value === undefined) return '';
   const d = (typeof document !== 'undefined') ? document.createElement('div') : null;
@@ -42,29 +51,6 @@ export function renderHeader(state) {
         ${versionTag}
       </div>
       <button class="cc-btn" data-action="bicameral-detect" style="font-size:0.75rem;padding:4px 10px">${detectLabel}</button>
-    </div>
-  `;
-}
-
-function renderInstallStep(step) {
-  const icon = step.status === 'success' ? '✓'
-    : step.status === 'error' ? '✗'
-    : '⏳';
-  const errorSpan = step.error
-    ? ` <span style="color:var(--accent-red)">${esc(step.error)}</span>`
-    : '';
-  return `<li style="font-size:0.78rem;color:var(--text-muted)">${icon} ${esc(step.phase)}${errorSpan}</li>`;
-}
-
-function renderInstallProgress(progress) {
-  if (!progress || !progress.steps || progress.steps.length === 0) {
-    return `<div style="font-size:0.78rem;color:var(--text-muted);margin-top:8px">Starting ${esc(progress?.mode || '')} install…</div>`;
-  }
-  const rows = progress.steps.map(renderInstallStep).join('');
-  return `
-    <div class="cc-bicameral-install-progress" style="margin-top:10px;padding:8px 10px;background:rgba(255,255,255,0.03);border-radius:4px">
-      <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Install — ${esc(progress.mode)} mode</div>
-      <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:2px">${rows}</ul>
     </div>
   `;
 }

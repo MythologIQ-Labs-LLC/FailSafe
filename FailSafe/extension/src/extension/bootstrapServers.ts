@@ -26,6 +26,7 @@ import { wireBicameralIntegration, maybeAutoConnectBicameral } from "./bootstrap
 import { wireVoicePack, reprobeAndSet } from "./bootstrapVoicePack";
 import { setupVoicePackRoutes } from "../roadmap/routes/VoicePackRoute";
 import { readEducationConfig } from "../education/educationConfig";
+import { catalogConfigKeys } from "../integrations/catalog/integration-catalog";
 
 export interface ServerDeps {
   planManager: PlanManager;
@@ -105,6 +106,24 @@ export async function bootstrapServers(
     const terminal = vscode.window.createTerminal(name);
     terminal.sendText(command, false);
     terminal.show();
+  });
+  // GH #167: boolean-only config snapshot for the Integrations Catalog. Reads
+  // each catalog `failsafe.*` key from vscode settings and emits whether it is
+  // ON (enabled flag) / NON-EMPTY (required/secret key) — NEVER the value. This
+  // is the secret boundary: tokens, API keys, and webhook URLs never leave the
+  // extension host; only the derived booleans reach the route/wire/browser.
+  consoleServer.setIntegrationConfigSnapshotProvider(() => {
+    const cfg = vscode.workspace.getConfiguration();
+    const snapshot: Record<string, boolean> = {};
+    for (const key of catalogConfigKeys()) {
+      const value = cfg.get(key);
+      snapshot[key] = value === true
+        ? true
+        : typeof value === "string"
+          ? value.trim().length > 0
+          : false;
+    }
+    return snapshot;
   });
   wireBicameralIntegration(context, consoleServer, deps.workspaceRoot, {
     l3Service: {
