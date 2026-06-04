@@ -72,11 +72,16 @@ export const TrackerRoute = {
   api(_req: Request, res: Response, deps: TrackerRouteDeps): void {
     try {
       const manifestPath = MANIFEST_PATH(deps.workspaceRoot);
-      if (!fs.existsSync(manifestPath)) {
-        res.status(503).json({ error: 'programs manifest not found at docs/roadmap/programs.yaml', model: null, lint: [], ok: false });
-        return;
-      }
-      const manifest = (yaml.load(fs.readFileSync(manifestPath, 'utf-8')) ?? {}) as TrackerManifest;
+      // GH #167-followup: a missing planning manifest is NOT a failure. The
+      // PLANNED layer (programs.yaml) is optional — the DISCOVERED layer
+      // (CHANGELOG + git tags) is enough to render the tracker. Degrade to an
+      // empty manifest + a non-blocking advisory so any workspace without a
+      // programs.yaml still gets a populated (or honestly-empty) dashboard
+      // instead of a hard 503.
+      const manifestPresent = fs.existsSync(manifestPath);
+      const manifest = (manifestPresent
+        ? (yaml.load(fs.readFileSync(manifestPath, 'utf-8')) ?? {})
+        : {}) as TrackerManifest;
       // Discover the complete release axis from the CHANGELOG (the governance
       // files don't span the full history); the manifest only adds forecasts.
       const discoveredReleases = discoverReleases(readChangelog(deps.workspaceRoot));
@@ -92,9 +97,18 @@ export const TrackerRoute = {
       });
       // Validate phases against the RESOLVED axis (discovered + manifest forecasts).
       const lint = validateManifest(manifest, model.rcs.map((r) => r.id));
+      // Surface the absent planning manifest as a non-blocking advisory (never an
+      // abort) so the dashboard can show guidance without failing.
+      if (!manifestPresent) {
+        lint.push({
+          severity: 'warn',
+          code: 'manifest-absent',
+          detail: 'No planning manifest at docs/roadmap/programs.yaml — showing discovered releases only. Add the manifest to plan forecasts.',
+        });
+      }
       // The dashboard reads the data fields at the TOP LEVEL (data.rcs, data.meta,
-      // …), so spread the model out; lint/ok ride along for diagnostics.
-      res.json({ ...model, lint, ok: !lint.some((f) => f.severity === 'abort') });
+      // …), so spread the model out; lint/ok/manifestPresent ride along.
+      res.json({ ...model, lint, manifestPresent, ok: !lint.some((f) => f.severity === 'abort') });
     } catch (e) {
       res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
     }

@@ -12,6 +12,7 @@ import {
 import { TrackerRoute, type TrackerRouteDeps } from "../routes/TrackerRoute";
 import { McpRoute } from "../routes/McpRoute";
 import { AgtRoute } from "../routes/AgtRoute";
+import { IntegrationCatalogRoute } from "../routes/IntegrationCatalogRoute";
 import type { RouteDeps } from "../routes";
 import type { ApiRouteDeps } from "../routes/types";
 import { ConfigurationProfile } from "../../genesis/ConfigurationProfile";
@@ -96,6 +97,11 @@ export interface ConsoleRouteHost {
   /** B-INT-16: integrated-terminal runner accessor for the agt-install route;
    *  null when bootstrap didn't wire one. Optional so older fixtures stay valid. */
   getAgtRunInTerminal?: () => ((name: string, command: string) => void) | null;
+  /** GH #167: boolean-only `failsafe.*` config snapshot for the Integrations
+   *  Catalog route. Each catalog key → on (enabled flag) / non-empty (required
+   *  key). SECRET-SAFE: returns only booleans, never token/key/webhook VALUES.
+   *  Absent → the catalog renders every integration as disabled. */
+  getIntegrationConfigSnapshot?: () => Record<string, boolean>;
   /** B-BIC-16: drift-to-L3 mediator accessor; null when bootstrap didn't wire one. */
   getDriftToL3Mediator: () => import("../../integrations/bicameral/DriftToL3Mediator").DriftToL3Mediator | null;
   /** Phase 4: upstream monitor accessor; null when bootstrap didn't wire one. */
@@ -409,6 +415,13 @@ export class ConsoleRouteRegistrar {
         fn(name, command);
       },
     }));
+    // GH #167: Integrations Catalog — surfaces the command/config integrations
+    // that lack a dedicated sub-view. Secret-safe: the snapshot getter returns
+    // booleans only. Absent getter → all-disabled (still renders the list).
+    app.get("/api/v1/integrations/catalog", (req, res) =>
+      IntegrationCatalogRoute.catalog(req, res, {
+        getIntegrationConfigSnapshot: () => this.host.getIntegrationConfigSnapshot?.() ?? {},
+      }));
     this.registerConsoleExtras();
   }
 

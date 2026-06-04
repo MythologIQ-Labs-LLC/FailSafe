@@ -29,6 +29,24 @@ export interface OpenDesignRouteDeps {
 }
 
 export function setupOpenDesignRoutes(app: Application, deps: OpenDesignRouteDeps): void {
+  // GH #166: live state probe for the Open Design card. Replaces the renderer's
+  // former hard-coded "disconnected/idle" strings with the real MCP client
+  // connection state + capability set (mirrors the Bicameral status pattern).
+  // Local-only via rejectIfRemote. Never returns secrets.
+  app.get(
+    '/api/integrations/open-design/status',
+    (req: Request, res: Response) => {
+      if (deps.rejectIfRemote(req, res)) return;
+      const client = deps.getOpenDesignClient();
+      const connected = client?.isConnected() === true;
+      const capabilities =
+        connected && typeof client?.getCapabilities === 'function'
+          ? [...client.getCapabilities()]
+          : [];
+      res.json({ ok: true, connected, capabilities });
+    },
+  );
+
   // B-OD-8: request an Open Design create_artifact. Enqueues an L3 item and
   // returns 409 pending; never executes the call here.
   app.post(

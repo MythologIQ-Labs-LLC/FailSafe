@@ -10,6 +10,41 @@
 export class OpenDesignRenderer {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
+    // GH #166: live MCP connection state, probed from
+    // /api/integrations/open-design/status. null = not yet probed.
+    this._connected = null;
+  }
+
+  // GH #166: replace the former hard-coded "disconnected/idle" strings with the
+  // live MCP client state. When connected, the stdio client + its SSE attach are
+  // active and the daemon is necessarily reachable (the client cannot connect
+  // otherwise), so the three lines reflect the single authoritative signal.
+  _statusBlock() {
+    const connected = this._connected === true;
+    const tone = connected ? 'var(--accent-green, #68d391)' : 'var(--text-muted)';
+    const daemon = this._connected === null ? 'probe via wizard' : connected ? 'reachable' : 'unreachable';
+    const mcp = this._connected === null ? 'unknown' : connected ? 'connected' : 'disconnected';
+    const sse = this._connected === null ? 'idle' : connected ? 'attached' : 'idle';
+    return `
+      <div style="font-size:0.78rem;line-height:1.6;color:var(--text-main)">
+        <div>Daemon: <span style="color:${tone}">${daemon}</span></div>
+        <div>MCP client: <span style="color:${tone}">${mcp}</span></div>
+        <div>SSE attach: <span style="color:${tone}">${sse}</span></div>
+      </div>`;
+  }
+
+  async _refreshStatus() {
+    try {
+      const res = await fetch('/api/integrations/open-design/status');
+      const json = await res.json().catch(() => ({}));
+      this._connected = json && json.ok ? json.connected === true : false;
+    } catch {
+      this._connected = false;
+    }
+    // Patch only the status block in place so an in-flight create request input
+    // is not clobbered by the async refresh.
+    const block = this.container && this.container.querySelector('.cc-od-status-block');
+    if (block) block.innerHTML = this._statusBlock();
   }
 
   render() {
@@ -22,11 +57,7 @@ export class OpenDesignRenderer {
             <span style="font-size:0.65rem;color:var(--text-muted)">v1.2 — read + L3-gated create_artifact</span>
           </div>
         </div>
-        <div style="font-size:0.78rem;line-height:1.6;color:var(--text-main)">
-          <div>Daemon: <span style="color:var(--text-muted)">probe via wizard</span></div>
-          <div>MCP client: <span style="color:var(--text-muted)">disconnected</span></div>
-          <div>SSE attach: <span style="color:var(--text-muted)">idle</span></div>
-        </div>
+        <div class="cc-od-status-block">${this._statusBlock()}</div>
         <div class="cc-open-design-create" style="margin-top:10px;display:flex;gap:6px;align-items:center">
           <input class="cc-od-artifact-name" type="text" placeholder="artifact name (create_artifact)"
             style="flex:1;padding:4px 8px;font-size:0.75rem;background:var(--bg-input,#1a1a1a);border:1px solid var(--border-rim,#333);border-radius:4px;color:var(--text-main)" />
@@ -39,6 +70,9 @@ export class OpenDesignRenderer {
       </div>
     `;
     this._bind();
+    // GH #166: probe live MCP state after the static shell renders. Runs on
+    // every hub tick (render is re-invoked per refresh), so the card stays live.
+    this._refreshStatus();
   }
 
   _bind() {
@@ -72,6 +106,12 @@ export class OpenDesignRenderer {
     });
   }
 
-  // No Open Design WS event stream — accept and ignore for TabGroup parity.
-  onEvent() {}
+  // GH #166: re-probe live state when an Open Design lifecycle event arrives
+  // (connect/disconnect/create-artifact). Other events are ignored.
+  onEvent(evt) {
+    const type = evt && (evt.type || (evt.payload && evt.payload.type));
+    if (typeof type === 'string' && type.indexOf('open-design') === 0) {
+      this._refreshStatus();
+    }
+  }
 }
