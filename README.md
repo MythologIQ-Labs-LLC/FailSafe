@@ -66,9 +66,13 @@ Under the hood, a **Tier 1 supply-chain CI baseline** (least-privilege workflow 
 
 <div align="center">
 
-**Current Release**: v5.4.3 (2026-06-03)
+**Current Release**: v5.5.0 (2026-06-04)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
+
+## What's new in v5.5.0
+
+**Integration suite expansion** — FailSafe becomes a governance hub for your whole AI toolchain. New **governed CLI agent wrappers** run **Continue** and **Aider** through FailSafe (argv-form, allowlist + produced-diff risk classification, L3 escalation, API key in the child env only); new **agent observe/audit** adapters cover the **OpenHands** run observer and the **Cline/Roo/Kilo** MCP-policy audit (flags remote MCP / wildcard auto-approval / shell-capable tools, secrets redacted). Plus read-only **Linear** + **Jira** issue→intent-preview import, **GitHub PR checks** (SHIELD verdicts → Check Runs at the merge gate), **Sentry** runtime-regression correlation, **Microsoft Teams** notifications, **Playwright MCP** in the catalog, and a **Tier 1 supply-chain CI baseline**. Every external API name was verified against official docs (the cycle's review caught and fixed four real defects), every integration ships its own README, and everything is off by default. See [CHANGELOG.md](CHANGELOG.md) for full notes.
 
 ## What's new in v5.4.3
 

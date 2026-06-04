@@ -48,9 +48,13 @@ Each integration ships with its own README and its external API names are back-c
 
 ---
 
-**Current Release**: v5.4.3 (2026-06-03)
+**Current Release**: v5.5.0 (2026-06-04)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v5.5.0
+
+**Integration suite expansion** — a governance hub for your whole AI toolchain. New **governed CLI agent wrappers** run **Continue** and **Aider** through FailSafe (argv-form spawn, tool-allowlist + produced-diff risk classification, L3 escalation, API key in the child env only); **agent observe/audit** adapters add the **OpenHands** run observer and the **Cline/Roo/Kilo** MCP-policy audit (flags remote MCP / wildcard auto-approval / shell-capable tools, secrets redacted). Plus read-only **Linear** + **Jira** issue→intent-preview import, **GitHub PR checks** (SHIELD verdicts → Check Runs), **Sentry** regression correlation, **Microsoft Teams** notifications, **Playwright MCP** in the catalog, and a **Tier 1 supply-chain CI baseline**. Every external API name verified against official docs; every integration off by default with its own README. See [CHANGELOG.md](CHANGELOG.md) for full notes.
 
 ## What's New in v5.4.3
 

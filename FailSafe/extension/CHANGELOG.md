@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.5.0] - 2026-06-04
+
+Integration suite expansion — FailSafe becomes a governance hub for your whole AI toolchain. Every integration is off by default, routed through the same deterministic policy engine, ships with its own README, and has its external API names verified against official docs.
+
+### Added
+
+- **Governed CLI agent wrappers (#104, #107)** — run **Continue** (`cn`) and **Aider** through FailSafe (`FailSafe: Run Continue/Aider (governed)`): argv-form spawn (no shell), tool-allowlist / produced-diff risk classification via the live PolicyEngine, and L3-risk changes routed to the L3 approval queue. The Continue API key travels in the child environment only — never argv or any receipt. Aider runs auto-commit-off and refuses a dirty worktree so the captured diff is unambiguously the agent's.
+- **Agent observe / audit (#105, #106)** — read-only **OpenHands** run observer (`FailSafe: Import OpenHands Run (observe)`; maps SDK events → transparency records, version-gated, never mutates a live run) and **Cline / Roo / Kilo** MCP-policy audit (`FailSafe: Audit Agent MCP Policy`; flags remote MCP servers, wildcard auto-approval, shell-capable tools; redacts env values + URL tokens before recording).
+- **Issue → intent-preview import (#97, #98)** — read-only **Linear** + **Jira** issue resolution to an *uncommitted* intent preview (`FailSafe: Import Linear/Jira Issue (preview)`).
+- **GitHub PR checks (#96)** — publish SHIELD verdicts (PASS/WARN/VETO) as GitHub Check Runs (`FailSafe: Publish SHIELD Verdict to GitHub Check`); fork PRs degrade to local-only.
+- **Sentry regression correlation (#102)** — import a project's unresolved issues into the risk register as runtime-regression risks (`FailSafe: Import Sentry Regressions`); no raw event payloads stored.
+- **Microsoft Teams notifications (#101)** — notify-only governance events via an incoming webhook (Adaptive Cards), alongside the existing Slack notifier.
+- **Tier 1 supply-chain CI baseline (#90)** — least-privilege workflow tokens, SHA-pinned Actions, Dependabot, dependency review, CODEOWNERS, and a documented AI-agent workflow-boundary policy.
+- **Playwright MCP** added to the governed MCP Catalog installers. Per-integration READMEs (15) + a documentation-links registry + a uniform integration folder-structure standard.
+
+### Fixed
+
+- External-name correctness pass (verified against live docs): Aider **`--yes-always`** (the prior `--yes` is not a valid flag), Sentry environment folded into the search **query** (the issues endpoint ignores a standalone param), OpenHands mapper aligned to the **real SDK event shape** (object `action`/`observation` + `tool_name`), Linear bare-identifier matching made **case-insensitive**.
+- De-flaked the FX801 IdleScheduler timing tests (poll-until-condition instead of fixed sleeps) — removes a release-pipeline dead-tag hazard.
+
+### Security
+
+- Every integration is **off by default**; secrets are sent only in auth headers / the child environment and are never logged (masking tests). Read-only integrations make **no network call** unless explicitly enabled.
+
 ## [5.4.3] - 2026-06-03
 
 Premium Development Tracker + Agent Governance Toolkit installer.

@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.5.0] - 2026-06-04
+
+Integration suite expansion — FailSafe becomes a governance hub for your whole AI toolchain. Every integration is off by default, routed through the same deterministic policy engine, and ships with its own README; external API names are verified against official docs.
+
+### Added
+- **Governed CLI agent wrappers** — run **Continue** (`cn`) and **Aider** through FailSafe: argv-form spawn (no shell), tool-allowlist / produced-diff risk classification with the live PolicyEngine, and L3-risk changes routed to human approval. API keys travel in the child environment only, never in argv or any receipt. (#104, #107)
+- **Agent observe / audit** — read-only **OpenHands** run observer (maps SDK events to transparency records, version-gated, never mutates a live run) and **Cline / Roo / Kilo** MCP-policy audit (flags remote MCP servers, wildcard auto-approval, and shell-capable tools; redacts env values + URL tokens before recording). (#105, #106)
+- **Issue → intent-preview import** — read-only **Linear** and **Jira** issue resolution to an *uncommitted* intent preview; nothing is created or synced. (#97, #98)
+- **GitHub PR checks** — publish SHIELD verdicts (PASS / WARN / VETO) as GitHub Check Runs at the merge gate; fork PRs degrade to local-only. (#96)
+- **Sentry regression correlation** — import a project's unresolved issues into the risk register as runtime-regression risks; no raw event payloads stored. (#102)
+- **Microsoft Teams notifications** — notify-only governance events via an incoming webhook (Adaptive Cards), alongside the existing Slack notifier. (#101)
+- **Tier 1 supply-chain CI baseline** — least-privilege workflow tokens, SHA-pinned Actions, Dependabot, dependency review, CODEOWNERS, and a documented AI-agent workflow-boundary policy. (#90)
+- **Playwright MCP** added to the governed MCP Catalog installers.
+- Per-integration READMEs (15), a documentation-links registry, and a uniform integration folder-structure standard.
+
+### Fixed
+- External-name correctness pass (verified against live docs): Aider **`--yes-always`** (the prior `--yes` is not a valid flag), Sentry environment folded into the search **query** (the issues endpoint ignores a standalone param), OpenHands mapper aligned to the **real SDK event shape** (object `action`/`observation` + `tool_name`), and Linear bare-identifier matching made **case-insensitive**.
+- De-flaked the FX801 IdleScheduler timing tests (poll-until-condition instead of fixed sleeps) — removes a release-pipeline dead-tag hazard.
+
+### Security
+- Every integration is **off by default**; secrets are sent only in auth headers / the child environment and are never logged (masking tests). Read-only integrations make **no network call** unless explicitly enabled.
+
 ## [5.4.3] - 2026-06-03
 
 Premium Development Tracker + Agent Governance Toolkit installer. The **Development Tracker** (B-INT-17) is a premium, data-driven status dashboard at `/console/tracker`, embedded in the Workspace tab (+ Pop out ↗ + `FailSafe: Open Development Tracker`): full release history discovered from the CHANGELOG (v0.1.0→current), major-default timeline zoom with drill-in, a traceable record per release, and tiered program-progress (majors full history; minors/patches within configurable recent windows). The **AGT installer** (B-INT-16) is an Integrations → Agent Governance sub-view that auto-detects the workspace environment and serves the matching registry-verified Agent Governance Toolkit installer (run-in-terminal, no silent install).
