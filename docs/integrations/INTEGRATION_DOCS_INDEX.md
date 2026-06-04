@@ -52,6 +52,7 @@ _Last reviewed: 2026-06-04._
 | **GitHub Checks** (#96) | notify (merge gate) | REST API — https://docs.github.com/en/rest?apiVersion=2026-03-10 · Checks: https://docs.github.com/en/rest/checks/runs | `src/integrations/github-checks/` · PR #147 |
 | **Jira** (#98) | ingest | Cloud REST v3 — https://developer.atlassian.com/cloud/jira/platform/rest/v3/intro/ · Server/DC REST 7.6.1 — https://docs.atlassian.com/software/jira/docs/api/REST/7.6.1/ | `src/integrations/jira/` · PR #148 (uses REST v2 for string descriptions) |
 | **ACP governance adapter** (#172) | mcp / JSON-RPC (govern) | Agent Client Protocol — https://agentclientprotocol.com · schema: https://github.com/agentclientprotocol/agent-client-protocol (`/schema/schema.json`, v1) | `src/integrations/acp/` · PR #173 · **foundation only** (types + mapper + interceptor + permission authority; no transport yet). Govern any ACP agent (Devin Desktop/Zed/JetBrains) via the existing interceptor seam. |
+| **Devin Desktop** (#161) | observe (host detection) | Devin Desktop (formerly Windsurf) — https://docs.devin.ai/desktop/getting-started · ACP — https://docs.devin.ai/desktop/acp | `src/qorelogic/AgentDefinitions.ts` (+ ModelAdapterConfigs/AgentConfigInjector/TerminalCorrelator) · host-detection alias only (Part 1); ACP enforce-proxy is forward work (see docs/plan-devin-acp-enforce-2026-06-04.md) |
 
 ## Planned (backlog)
 

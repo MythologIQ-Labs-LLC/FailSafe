@@ -1,7 +1,7 @@
 /**
  * AgentDefinitions - Built-In Agent System Manifests
  *
- * Defines the 7 supported AI coding agents with their detection rules and
+ * Defines the 8 supported AI coding agents with their detection rules and
  * governance paths. Detection markers are tuned to avoid false positives:
  * each agent carries at least one high-confidence signal (an exact extension
  * id or an agent-specific dot-directory). `terminalPatterns` are populated now
@@ -92,5 +92,22 @@ export const BUILT_IN_AGENTS: AgentSystemManifest[] = [
       terminalPatterns: ["kilo"],
     },
     governancePaths: [".kilo/skills", ".kilo/agents", ".kilo/kilo.json"],
+  },
+  {
+    // GH #161: Devin Desktop is the rebranded Windsurf (Cognition). It keeps the
+    // legacy `.windsurf` config dirs but PREFERS `.devin`, and the host app +
+    // binary were renamed Windsurf→Devin — so the app name is the disambiguator
+    // from a (legacy) Windsurf workspace. `.devin` is Devin-specific (Windsurf
+    // never creates it), so it is the high-confidence folder signal.
+    id: "devin-desktop",
+    name: "Devin Desktop",
+    description: "Devin Desktop (formerly Windsurf) — Cognition's ACP-host AI IDE",
+    targetDir: null,
+    detection: {
+      folderExists: [".devin"],
+      hostAppNames: ["devin", "devin desktop"],
+      terminalPatterns: ["devin"],
+    },
+    governancePaths: [".devin/rules", ".windsurfrules"],
   },
 ];

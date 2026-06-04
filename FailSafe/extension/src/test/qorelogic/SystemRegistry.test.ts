@@ -50,12 +50,12 @@ suite("SystemRegistry Test Suite", () => {
     cleanup(tempDir);
   });
 
-  test("should return all 7 built-in agent systems", async () => {
+  test("should return all 8 built-in agent systems", async () => {
     const registry = new SystemRegistry(tempDir, undefined, emptyEnv());
     const systems = await registry.getSystems();
-    assert.strictEqual(systems.length, 7, "Should return exactly 7 built-in agents");
+    assert.strictEqual(systems.length, 8, "Should return exactly 8 built-in agents");
     const agentIds = systems.map((s) => s.getManifest().id);
-    for (const id of ["claude", "copilot", "cursor", "codex", "windsurf", "gemini", "kilo-code"]) {
+    for (const id of ["claude", "copilot", "cursor", "codex", "windsurf", "devin-desktop", "gemini", "kilo-code"]) {
       assert.ok(agentIds.includes(id), `missing built-in: ${id}`);
     }
   });
@@ -177,7 +177,7 @@ suite("SystemRegistry Test Suite", () => {
       const claude = await registry.findById("claude");
       assert.ok(claude);
       assert.strictEqual(claude.getManifest().name, "Claude Override");
-      assert.strictEqual((await registry.getSystems()).length, 7);
+      assert.strictEqual((await registry.getSystems()).length, 8);
     } finally {
       cleanup(root);
     }
@@ -194,7 +194,7 @@ suite("SystemRegistry Test Suite", () => {
       );
       const registry = new SystemRegistry(root, undefined, emptyEnv());
       const systems = await registry.getSystems();
-      assert.strictEqual(systems.length, 8);
+      assert.strictEqual(systems.length, 9);
       assert.ok(systems.some((s) => s.getManifest().id === "cline"));
     } finally {
       cleanup(root);
@@ -207,7 +207,7 @@ suite("SystemRegistry Test Suite", () => {
       fs.mkdirSync(path.join(root, ".failsafe"), { recursive: true });
       fs.writeFileSync(path.join(root, ".failsafe", "agents.json"), "{ not json", "utf-8");
       const registry = new SystemRegistry(root, undefined, emptyEnv());
-      assert.strictEqual((await registry.getSystems()).length, 7);
+      assert.strictEqual((await registry.getSystems()).length, 8);
     } finally {
       cleanup(root);
     }
