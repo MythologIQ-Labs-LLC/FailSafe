@@ -50,7 +50,7 @@ Devin ⇄ [AgentSideConnection]  acp-proxy  [ClientSideConnection] ⇄ real agen
 
 ## Command / wiring
 
-**Built (PR #177):** the standalone enforce-proxy (`proxy/` + `proxy/backing/`), the esbuild `dist/acp-proxy.js` entrypoint, and the extension-side governance-mode mirror. **Remaining:** registering the proxy in Devin's ACP registry (install UX) + the engine `ProposedAction` widening (B2) for content/argv policy.
+**Built (PR #177):** the standalone enforce-proxy (`proxy/` + `proxy/backing/`), the esbuild `dist/acp-proxy.js` entrypoint, the extension-side governance-mode mirror, and the **install UX** — operator commands `failsafe.acp.install/uninstallGovernedProxy` register a FailSafe-governed twin in Devin's `~/.windsurf/acp/registry.json` (`registry/AcpInstall.ts` + `DevinRegistryWriter.buildGovernedTwin` + `extension/bootstrapAcpProxy.ts`). **Remaining (deferred, B-INT-15):** the engine `ProposedAction` widening for deep fs/terminal *content/argv* policy — own governed cycle.
 
 ## Files
 

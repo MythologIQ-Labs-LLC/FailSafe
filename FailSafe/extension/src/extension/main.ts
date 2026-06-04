@@ -32,6 +32,7 @@ import { bootstrapSentinel } from "./bootstrapSentinel";
 import { bootstrapGenesis } from "./bootstrapGenesis";
 import { bootstrapMCP } from "./bootstrapMCP";
 import { bootstrapOpenDesignMcp } from "./bootstrapOpenDesignMcp";
+import { bootstrapAcpProxy } from "./bootstrapAcpProxy";
 import { bootstrapServers } from "./bootstrapServers";
 import { bootstrapIdeActivity } from "./bootstrapIdeActivity";
 import { registerAdvancedCommands } from "./bootstrapAdvancedCommands";
@@ -279,6 +280,11 @@ export async function activate(
       ledgerManager,
       onClient: (c) => consoleServer?.setOpenDesignClient(c),
     });
+
+    // 8.1c. ACP enforce-proxy install UX (GH #172 Part 2). Registers the
+    //       failsafe.acp.install/uninstallGovernedProxy operator commands that
+    //       register a FailSafe-governed twin in Devin Desktop's ACP registry.
+    bootstrapAcpProxy(context, core.workspaceRoot);
 
     // 8.2. Chat participant (deferred so RiskManager is available for the
     //      /risk subcommand. Per plan-qor-model-sourced-risks Phase 4.)

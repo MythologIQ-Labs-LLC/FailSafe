@@ -82,6 +82,41 @@ export function buildFailSafeAgent(opts: {
   };
 }
 
+/**
+ * Build a GOVERNED TWIN of an existing registry agent: each platform's binary is
+ * rewritten to launch the FailSafe proxy, which wraps the source agent's real
+ * command via the `-- <cmd> <args…>` tail. The registry is a per-machine,
+ * user-writable file, so baking the installing machine's `nodePath` +
+ * `workspaceRoot` is correct (the twin is only ever run on this machine).
+ *
+ * Note: an agent whose binary uses a non-empty `archive` (Devin-managed download)
+ * exposes a download-relative `cmd` the proxy cannot resolve; twins are cleanest
+ * for agents with `archive: ''` (a PATH/absolute command). The tail is passed
+ * through verbatim either way.
+ */
+export function buildGovernedTwin(
+  source: DevinAgent,
+  opts: { nodePath: string; proxyJsPath: string; workspaceRoot: string; id?: string; name?: string },
+): DevinAgent {
+  const binary: Record<string, DevinBinarySpec> = {};
+  for (const [platform, spec] of Object.entries(source.distribution?.binary ?? {})) {
+    binary[platform] = {
+      archive: '',
+      cmd: opts.nodePath,
+      args: [opts.proxyJsPath, '--workspace', opts.workspaceRoot, '--', spec.cmd, ...(spec.args ?? [])],
+    };
+  }
+  return {
+    id: opts.id ?? FAILSAFE_AGENT_ID,
+    name: opts.name ?? `FailSafe (governing ${source.name})`,
+    version: '1.0.0',
+    description: `FailSafe ACP governance proxy wrapping "${source.name}" — mediates it through FailSafe enforcement.`,
+    authors: ['MythologIQ'],
+    license: 'Apache-2.0',
+    distribution: { binary },
+  };
+}
+
 /** Pure: upsert an agent by id, PRESERVING every other agent + extensions. */
 export function upsertAgent(reg: DevinRegistry, agent: DevinAgent): DevinRegistry {
   const agents = reg.agents.filter((a) => a && a.id !== agent.id);
