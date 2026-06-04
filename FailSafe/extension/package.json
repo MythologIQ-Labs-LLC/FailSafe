@@ -68,7 +68,15 @@
     "onCommand:failsafe.uninstallVoicePack",
     "onCommand:failsafe.substrate.run",
     "onCommand:failsafe.sarif.import",
-    "onCommand:failsafe.mcp.installCatalog"
+    "onCommand:failsafe.mcp.installCatalog",
+    "onCommand:failsafe.linear.import",
+    "onCommand:failsafe.jira.import",
+    "onCommand:failsafe.github.publishCheck",
+    "onCommand:failsafe.sentry.import",
+    "onCommand:failsafe.continue.run",
+    "onCommand:failsafe.aider.run",
+    "onCommand:failsafe.agentAudit.run",
+    "onCommand:failsafe.openhands.observe"
   ],
   "main": "./dist/extension/main.js",
   "contributes": {
@@ -125,6 +133,46 @@
       {
         "command": "failsafe.mcp.installCatalog",
         "title": "FailSafe: Install MCP Integration (governed)",
+        "category": "FailSafe"
+      },
+      {
+        "command": "failsafe.linear.import",
+        "title": "FailSafe: Import Linear Issue (preview)",
+        "category": "FailSafe"
+      },
+      {
+        "command": "failsafe.jira.import",
+        "title": "FailSafe: Import Jira Issue (preview)",
+        "category": "FailSafe"
+      },
+      {
+        "command": "failsafe.github.publishCheck",
+        "title": "FailSafe: Publish SHIELD Verdict to GitHub Check",
+        "category": "FailSafe"
+      },
+      {
+        "command": "failsafe.sentry.import",
+        "title": "FailSafe: Import Sentry Regressions",
+        "category": "FailSafe"
+      },
+      {
+        "command": "failsafe.continue.run",
+        "title": "FailSafe: Run Continue (governed)",
+        "category": "FailSafe"
+      },
+      {
+        "command": "failsafe.aider.run",
+        "title": "FailSafe: Run Aider (governed)",
+        "category": "FailSafe"
+      },
+      {
+        "command": "failsafe.agentAudit.run",
+        "title": "FailSafe: Audit Agent MCP Policy (Cline/Roo/Kilo)",
+        "category": "FailSafe"
+      },
+      {
+        "command": "failsafe.openhands.observe",
+        "title": "FailSafe: Import OpenHands Run (observe)",
         "category": "FailSafe"
       },
       {
@@ -310,6 +358,147 @@
           "type": "string",
           "default": "",
           "markdownDescription": "Slack **incoming webhook URL** to post governance notifications to. Treat as a secret — it grants posting to the target channel. Messages are notify-only (no interactive approvals; a link back to the local Command Center is included). Leave empty to disable."
+        },
+        "failsafe.integrations.teams.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Post governance notifications to a Microsoft Teams incoming webhook (Adaptive Cards). Notify-only; non-blocking. Requires the webhook URL below."
+        },
+        "failsafe.integrations.teams.webhookUrl": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Microsoft Teams **incoming webhook URL**. Treat as a secret — it grants posting to the target channel. Leave empty to disable."
+        },
+        "failsafe.integrations.linear.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable read-only Linear issue import. The `FailSafe: Import Linear Issue (preview)` command resolves a Linear issue URL/identifier to an UNCOMMITTED intent preview — nothing is created or synced. Requires an API key below."
+        },
+        "failsafe.integrations.linear.apiKey": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Linear **personal API key** (or OAuth access token) for read-only issue lookups. Treat as a secret — the value is sent only in the `Authorization` header and is never logged. Leave empty to disable."
+        },
+        "failsafe.integrations.jira.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable read-only Jira Cloud issue import. The `FailSafe: Import Jira Issue (preview)` command resolves a Jira issue URL/key to an UNCOMMITTED intent preview — nothing is created or synced. Requires base URL + email + API token below."
+        },
+        "failsafe.integrations.jira.baseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Jira Cloud base URL, e.g. https://your-site.atlassian.net. Leave empty to disable."
+        },
+        "failsafe.integrations.jira.email": {
+          "type": "string",
+          "default": "",
+          "description": "Atlassian account email used for Jira Cloud Basic authentication (paired with the API token below)."
+        },
+        "failsafe.integrations.jira.apiToken": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Jira Cloud **API token** (create at id.atlassian.com → Security → API tokens). Treat as a secret — sent only in the `Authorization` header (Basic email:token) and never logged. Leave empty to disable."
+        },
+        "failsafe.integrations.github.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Publish FailSafe SHIELD verdicts to GitHub as Check Runs at the merge gate. The `FailSafe: Publish SHIELD Verdict to GitHub Check` command posts a single completed check for the current HEAD. No network call is made unless this is enabled AND a token is set; fork-PR contexts degrade to local-only."
+        },
+        "failsafe.integrations.github.token": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "GitHub token used to create Check Runs — a **GitHub App installation token** (recommended; the Checks API is App-oriented and needs `checks: write`) or a PAT where the org permits it. Treat as a secret — sent only in the `Authorization` header and never logged. Leave empty to disable."
+        },
+        "failsafe.integrations.github.apiBaseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Optional GitHub API base URL for GitHub Enterprise Server (e.g. https://ghe.example.com/api/v3). Leave empty to use https://api.github.com."
+        },
+        "failsafe.integrations.sentry.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable read-only Sentry import. The `FailSafe: Import Sentry Regressions` command pulls a project's unresolved issues and upserts them as runtime-regression risk records in the Risk Register. No network call is made unless this is enabled AND token + org + project are set. No raw event payloads are stored — only canonical fields."
+        },
+        "failsafe.integrations.sentry.token": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Sentry **auth token** (org-level or internal-integration token with `project:read` / `event:read`). Treat as a secret — sent only as a Bearer `Authorization` header and never logged. Leave empty to disable."
+        },
+        "failsafe.integrations.sentry.org": {
+          "type": "string",
+          "default": "",
+          "description": "Sentry organization slug (e.g. `acme`)."
+        },
+        "failsafe.integrations.sentry.project": {
+          "type": "string",
+          "default": "",
+          "description": "Sentry project slug to import issues from (e.g. `backend`)."
+        },
+        "failsafe.integrations.sentry.environment": {
+          "type": "string",
+          "default": "",
+          "description": "Optional Sentry environment to scope the import to (e.g. `production`); folded into the search query as `environment:<name>`. Leave empty for all environments."
+        },
+        "failsafe.integrations.sentry.apiBaseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Optional Sentry API base URL for self-hosted Sentry (e.g. https://sentry.example.com). Leave empty to use https://sentry.io."
+        },
+        "failsafe.integrations.continue.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the governed Continue (`cn`) headless wrapper. The `FailSafe: Run Continue (governed)` command runs a prompt through Continue with a restricted tool allowlist, classifies the produced diff, and routes L3-risk changes to the L3 approval queue. Spawns argv-form (no shell). No network unless you run the command."
+        },
+        "failsafe.integrations.continue.apiKey": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Continue API key (`CONTINUE_API_KEY`). Treat as a secret — passed to the `cn` child process via the environment only, never in the command line or any receipt, and never logged. Leave empty if `cn` is already authenticated."
+        },
+        "failsafe.integrations.continue.allow": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Explicit Continue tool allowlist (passed as repeated `--allow <tool>`). Shell/exec tools map to risk tier L3, file-write tools to L2, read-only to L1. An L3 allowlist is escalated to L3 approval BEFORE the agent runs."
+        },
+        "failsafe.integrations.continue.allowWrites": {
+          "type": "boolean",
+          "default": false,
+          "description": "Permit Continue runs whose risk tier is below L3 to proceed without escalation. When false, any write-tier request is blocked. L3 always escalates regardless."
+        },
+        "failsafe.integrations.aider.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the governed Aider wrapper. The `FailSafe: Run Aider (governed)` command runs Aider with auto-commit OFF, captures the resulting (uncommitted) diff, and routes L3-risk changes to the L3 approval queue. Spawns argv-form (no shell)."
+        },
+        "failsafe.integrations.aider.allowDirty": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow running Aider against a worktree that already has uncommitted changes. When false (default), a dirty worktree is refused so the captured diff is unambiguously Aider's."
+        },
+        "failsafe.integrations.aider.autoCommit": {
+          "type": "boolean",
+          "default": false,
+          "description": "Let Aider auto-commit its changes (`--auto-commits`). Off by default (`--no-auto-commits`) so changes stay uncommitted for the diff gate."
+        },
+        "failsafe.integrations.aider.allowWrites": {
+          "type": "boolean",
+          "default": false,
+          "description": "Permit Aider runs whose diff risk tier is below L3 to proceed without escalation. When false, sub-L3 changes are blocked. L3 always escalates regardless."
+        },
+        "failsafe.integrations.agentAudit.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the read-only Cline/Roo/Kilo MCP-policy audit. The `FailSafe: Audit Agent MCP Policy` command scans known workspace MCP config files and upserts risk records for risky posture (remote MCP servers, wildcard auto-approval, shell-capable tools). Secrets (env values, URL tokens) are redacted before any record is written. Read-only; works when the agents are absent."
+        },
+        "failsafe.integrations.openhands.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the read-only OpenHands run observer. The `FailSafe: Import OpenHands Run (observe)` command maps an exported run's events into FailSafe transparency records and degrades on an unsupported version. Read-only; never mutates an active run."
+        },
+        "failsafe.integrations.openhands.version": {
+          "type": "string",
+          "default": "",
+          "description": "Optional OpenHands version (e.g. 0.30.1) used for the supported-version gate when the run export does not declare one. Versions outside the supported major lines degrade gracefully."
         },
         "failsafe.integrations.openDesign.mcpEnabled": {
           "type": "boolean",

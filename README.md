@@ -32,16 +32,33 @@ _Local-first safety for AI coding assistants._
 
 ## 🔌 Integrations — govern your entire AI toolchain, not just the editor
 
-FailSafe v5.4 turns the editor into a **governance hub** for the tools your AI agents actually use. Every integration is **local-first, opt-in, and routed through the same deterministic policy engine** that guards your edits — so connecting a tool never widens your attack surface or sends data anywhere by default.
+FailSafe v5.5 turns the editor into a **governance hub** for the tools your AI agents actually use. Every integration is **local-first, opt-in, and routed through the same deterministic policy engine** that guards your edits — so connecting a tool never widens your attack surface or sends data anywhere by default. Each integration ships with its own README (`src/integrations/<name>/README.md`) and the external API names it depends on are back-cited to official docs in [`docs/integrations/INTEGRATION_DOCS_INDEX.md`](docs/integrations/INTEGRATION_DOCS_INDEX.md).
+
+**Govern the agents themselves** — run a headless coding agent through FailSafe and gate what it does:
 
 | Integration | What it does | Why it matters |
 |---|---|---|
-| 🛡️ **SARIF security ingestion** | Import Semgrep / CodeQL / any SARIF 2.1.0 scanner output into the risk register (`FailSafe: Import SARIF Findings`). | Your security scanner stops being a separate silo — every finding becomes a *governed* risk in the same audit trail as agent decisions. One source of truth for security **and** AI governance. |
-| 🧮 **MCP Registry risk scoring** | Score any MCP server locally — read-only, with field sanitization — before you trust it. | The MCP ecosystem is exploding and anything can claim to be a tool server. Adopt servers on **evidence, not vibes** — a supply-chain admission check at the door. |
-| 📣 **Slack governance notifications** | Post VETO / L3-approval / drift events to a Slack webhook. Notify-only, off by default. | Governance becomes a **team** signal: when FailSafe blocks a risky action or queues a human approval, the right people see it in their channel — without anyone watching the editor. |
-| 📦 **MCP Catalog installers** | One-click, risk-scored installs of **Context7** (live library docs) and **Mermaid Chart** (diagrams) into your `.mcp.json` — new **Integrations → MCP Catalog** tab (`FailSafe: Install MCP Integration (governed)`). | No hand-editing config, no guesswork — governed installs of tools that make your agents measurably better, with the trust check built in. |
+| 🤖 **Continue (`cn`) governed wrapper** | Run a Continue headless prompt through FailSafe with a tool allowlist; the produced diff is risk-classified and L3-risk changes route to human approval (`FailSafe: Run Continue (governed)`). | The agent runs argv-form (no shell), the API key never leaves the child env, and a shell/write allowlist is escalated **before** it can act. |
+| 🔧 **Aider git-gate wrapper** | Run Aider with auto-commit off, capture the uncommitted diff, and route high-risk changes to L3 (`FailSafe: Run Aider (governed)`). | A dirty worktree is refused so the captured diff is unambiguously the agent's — your commit gate, not the agent's. |
+| 👁️ **OpenHands run observer** | Map an exported OpenHands run into FailSafe transparency records, version-gated and read-only (`FailSafe: Import OpenHands Run (observe)`). | See what a full agent-loop runtime actually did, scored by risk — without ever mutating a live run. |
+| 🔎 **Cline / Roo / Kilo policy audit** | Scan workspace MCP/tool config and flag risky posture — remote MCP servers, wildcard auto-approval, shell-capable tools (`FailSafe: Audit Agent MCP Policy`). | Catch an over-permissioned agent before it bites; secrets in the config are redacted before any finding is recorded. |
+
+**Connect your issue tracker, security, and team tooling** — govern the whole toolchain:
+
+| Integration | What it does | Why it matters |
+|---|---|---|
+| 📥 **Linear / Jira issue import** | Resolve a Linear or Jira issue URL/key to an **uncommitted intent preview** — read-only (`FailSafe: Import Linear/Jira Issue (preview)`). | Your tracker is the intent source; FailSafe pulls the ticket context so you never retype it — and nothing is created or synced without you. |
+| ✅ **GitHub PR checks** | Publish FailSafe SHIELD verdicts (PASS/WARN/VETO) as GitHub Check Runs at the merge gate (`FailSafe: Publish SHIELD Verdict to GitHub Check`). | Your governance verdict shows up **where the merge happens**, not just in the local console; fork PRs degrade to local-only. |
+| 🐞 **Sentry regression correlation** | Pull a Sentry project's unresolved issues into the risk register as runtime-regression risks (`FailSafe: Import Sentry Regressions`). | Production failures become governed risk records tied to project / environment / release — no raw event payloads stored. |
+| 🛡️ **SARIF security ingestion** | Import Semgrep / CodeQL / any SARIF 2.1.0 scanner output into the risk register (`FailSafe: Import SARIF Findings`). | Your security scanner stops being a separate silo — every finding becomes a *governed* risk in the same audit trail as agent decisions. |
+| 📣 **Slack / Microsoft Teams notifications** | Post VETO / L3-approval / drift events to a Slack or Teams webhook. Notify-only, off by default. | Governance becomes a **team** signal: when FailSafe blocks a risky action or queues a human approval, the right people see it in their channel. |
+| 🧮 **MCP Registry risk scoring** | Score any MCP server locally — read-only, with field sanitization — before you trust it. | The MCP ecosystem is exploding and anything can claim to be a tool server. Adopt servers on **evidence, not vibes**. |
+| 📦 **MCP Catalog installers** | One-click, risk-scored installs of **Context7**, **Mermaid Chart**, and **Playwright MCP** into your `.mcp.json` (`FailSafe: Install MCP Integration (governed)`). | Governed installs of tools that make your agents measurably better, with the trust check built in. |
 | 🧠 **Bicameral MCP** | Detect, connect, and ratify architecture *decision* records and their drift inline. | Every Bicameral tool call passes through FailSafe's universal interceptor — the reasoning behind your system stays as governed as the code. |
-| 🎨 **Open Design** | Observe Open Design agent runs and act on them via the L3-gated `create_artifact` (Buffer & auto-execute; destructive writes stay locked). | Design tooling gets the same human-in-the-loop guarantee as everything else FailSafe touches. |
+| 🎨 **Open Design** | Observe Open Design agent runs and act on them via the L3-gated `create_artifact`. | Design tooling gets the same human-in-the-loop guarantee as everything else FailSafe touches. |
+| 🧰 **Agent Governance Toolkit installer** | Auto-detect your workspace environment and serve the matching, registry-verified AGT installer. | One governed entry point to instrument whatever stack you actually run. |
+
+Under the hood, a **Tier 1 supply-chain CI baseline** (least-privilege workflow tokens, SHA-pinned Actions, dependency review, CODEOWNERS) hardens the repository itself against Shai-Hulud-class attacks.
 
 **Everything above is disabled by default and runs locally — no network call until you turn one on.** Open the **Integrations** tab to connect.
 

@@ -1,0 +1,19 @@
+# CODEOWNERS — required review for security-sensitive surfaces.
+# #90 Tier 1 supply-chain baseline.
+#
+# Last matching pattern wins (GitHub semantics). For this file to *enforce*
+# review, the `main` branch ruleset must enable "Require review from Code
+# Owners" — that is an operator settings action (see
+# docs/security/SUPPLY_CHAIN_BASELINE.md → Operator settings follow-ups).
+
+# CI/CD workflows, Actions config, and everything under .github — the highest
+# value supply-chain target (workflow mutation, privileged tokens, secrets).
+/.github/                              @Knapp-Kevin
+
+# Dependency manifests and lockfiles anywhere in the tree — dependency
+# admission control (frozen-install + cooling-period policy live here).
+package.json                           @Knapp-Kevin
+package-lock.json                      @Knapp-Kevin
+
+# The ownership file itself — prevent silent self-service ownership changes.
+/.github/CODEOWNERS                    @Knapp-Kevin

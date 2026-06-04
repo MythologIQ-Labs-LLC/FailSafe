@@ -60,5 +60,13 @@ FailSafe implements multiple security layers:
 
 All security-critical components require L3 risk grade and mandatory `/qor-audit` before changes.
 
+## Supply-Chain & CI Security
+
+FailSafe enforces a Tier 1 supply-chain and AI-agent workflow security baseline
+(minimized Actions tokens, SHA-pinned actions, dependency review, frozen
+installs, CODEOWNERS, and explicit AI-agent action boundaries). See
+[`docs/security/SUPPLY_CHAIN_BASELINE.md`](docs/security/SUPPLY_CHAIN_BASELINE.md)
+for the full control inventory and the operator settings follow-ups.
+
 ---
 _Thank you for helping keep FailSafe secure._

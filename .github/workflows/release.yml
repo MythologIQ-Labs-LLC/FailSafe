@@ -19,12 +19,19 @@ on:
           - feature
           - breaking
 
+# Least-privilege default for the whole pipeline. Publish jobs authenticate via
+# environment secrets (VSCE_PAT / OVSX_TOKEN), not GITHUB_TOKEN, so read is
+# sufficient for them. The github-release job re-grants `contents: write`
+# per-job (it creates the Release object). #90 supply-chain baseline.
+permissions:
+  contents: read
+
 jobs:
   validate:
     name: SemVer 2.0.0 Gate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0 # Full history needed for tag comparison
       - name: Verify tag is on main branch
@@ -47,11 +54,11 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - name: Repository validation gate
         shell: pwsh
         run: ./scripts/validate.ps1 -Version ${{ github.ref_name }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "20"
       - run: npm ci
@@ -69,7 +76,7 @@ jobs:
       - name: Upload governance context
         if: ${{ always() && hashFiles('.failsafe-ci-context/**') != '' }}
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: governance-context
           path: .failsafe-ci-context/
@@ -90,7 +97,7 @@ jobs:
         working-directory: FailSafe/extension
       - run: npm run validate:vsix
         working-directory: FailSafe/extension
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: vsix
           path: FailSafe/extension/mythologiq-failsafe-${{ env.VSIX_VERSION }}.vsix
@@ -106,7 +113,7 @@ jobs:
     steps:
       - name: Derive release version from tag
         run: echo "VSIX_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: vsix
       - run: npx @vscode/vsce publish --packagePath "mythologiq-failsafe-${VSIX_VERSION}.vsix"
@@ -124,7 +131,7 @@ jobs:
     steps:
       - name: Derive release version from tag
         run: echo "VSIX_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: vsix
       - run: npx ovsx publish "mythologiq-failsafe-${VSIX_VERSION}.vsix"
@@ -144,7 +151,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - name: Build release notes from CHANGELOG
         run: |
           VERSION="${GITHUB_REF_NAME#v}"

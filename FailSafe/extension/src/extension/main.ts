@@ -41,7 +41,14 @@ import { bootstrapStartupChecks } from "./bootstrapStartupChecks";
 import { registerSubstrateCommand } from "./substrate-command";
 import { registerSarifImportCommand } from "./sarif-command";
 import { registerMcpInstallCommand } from "./mcp-install-command";
+import { registerLinearImportCommand } from "./linear-command";
+import { registerJiraImportCommand } from "./jira-command";
+import { registerGitHubChecksCommand } from "./github-checks-command";
+import { registerSentryImportCommand } from "./sentry-command";
+import { registerAgentCliCommands } from "./agent-cli-command";
+import { registerAgentObserveCommands } from "./agent-observe-command";
 import { SlackNotifier } from "../integrations/slack/SlackNotifier";
+import { TeamsNotifier } from "../integrations/teams/TeamsNotifier";
 import { defaultRun } from "../qorlogic/PythonInterpreterResolver";
 
 let genesisManager: GenesisManager;
@@ -165,13 +172,44 @@ export async function activate(
     // MCP integrations (Context7, Mermaid Chart) into .mcp.json.
     registerMcpInstallCommand(context, core.workspaceRoot);
 
-    // 3.15 Slack notify-only (B-INT-9 / #100): post governance enforcement
+    // 3.14a Read-only issue → intent-preview imports (Linear #97, Jira #98).
+    registerLinearImportCommand(context);
+    registerJiraImportCommand(context);
+
+    // 3.14b GitHub Checks publish (#96): post SHIELD verdicts as Check Runs.
+    registerGitHubChecksCommand(context);
+
+    // 3.14c Sentry runtime-regression import (#102): pull a project's unresolved
+    // issues read-only → upsert as risk records.
+    registerSentryImportCommand(context, core.workspaceRoot);
+
+    // 3.14d Governed CLI agent wrappers (Group B — #104 Continue, #107 Aider):
+    // run a headless coding-agent CLI argv-form, classify the produced diff with
+    // the live PolicyEngine, and route L3-risk changes to the L3 queue.
+    registerAgentCliCommands(context, {
+      workspaceRoot: core.workspaceRoot,
+      policyEngine: qor.policyEngine,
+      qorelogicManager: qor.qorelogicManager,
+    });
+
+    // 3.14e Agent observe/audit (Group C — #106 Cline/Roo/Kilo MCP-policy audit,
+    // #105 OpenHands run observer). Read-only; no spawning, no mutation.
+    registerAgentObserveCommands(context, core.workspaceRoot);
+
+    // 3.15 Slack + Teams notify-only (#100 / #101): post governance enforcement
     // events to a configured incoming webhook. Disabled by default; non-blocking.
     new SlackNotifier(core.eventBus, () => {
       const c = vscode.workspace.getConfiguration('failsafe');
       return {
         enabled: c.get<boolean>('integrations.slack.enabled', false),
         webhookUrl: c.get<string>('integrations.slack.webhookUrl', ''),
+      };
+    }).register();
+    new TeamsNotifier(core.eventBus, () => {
+      const c = vscode.workspace.getConfiguration('failsafe');
+      return {
+        enabled: c.get<boolean>('integrations.teams.enabled', false),
+        webhookUrl: c.get<string>('integrations.teams.webhookUrl', ''),
       };
     }).register();
 

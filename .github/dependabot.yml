@@ -1,0 +1,21 @@
+# Dependabot — keep SHA-pinned GitHub Actions current. #90 supply-chain
+# baseline. The Tier 1 baseline pins every action to a commit SHA (not a
+# floating tag); Dependabot is the maintenance channel that proposes the next
+# audited SHA + version comment so the pins do not silently rot.
+#
+# Scope is intentionally narrow: github-actions only. npm dependency currency
+# for the extension is handled through the dependency-review gate + the
+# cooling-period policy in docs/security/SUPPLY_CHAIN_BASELINE.md, not by an
+# auto-PR firehose.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci(deps)"
+    labels:
+      - "area:ci"
+      - "dependencies"
+    open-pull-requests-limit: 5

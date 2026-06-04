@@ -1,0 +1,26 @@
+name: Dependency Review
+
+# Blocks PRs that introduce known-vulnerable dependencies (and surfaces a diff
+# of dependency changes) at the merge gate. Uses the public-repo dependency
+# graph (free; no GHAS required for public repositories). #90 supply-chain
+# baseline → "Require dependency review checks" acceptance criterion.
+on:
+  pull_request:
+    branches: [main]
+
+# Read-only: the action reads the dependency graph via the API. It does NOT
+# comment on the PR (which would require pull-requests: write) — the failing
+# check + the job summary are the signal, keeping the token least-privilege.
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Dependency Review
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high

@@ -1007,4 +1007,24 @@ Note: F026 `failsafe.showAgentHealth` is documented but no matching command hand
 
 ---
 
+## Section: Integrations — v5.5.0 batch (2026-06-04)
+
+External-name verified against live docs (Linear/Jira/GitHub/Sentry/Continue/Aider/OpenHands/Cline-Roo-Kilo); see `docs/integrations/INTEGRATION_DOCS_INDEX.md`. All pure-logic + injectable-transport with behaviour tests (no live network/process). Doc column = per-integration README.
+
+| ID | Feature | Doc | Code | Test | Status | Notes |
+|---|---|---|---|---|---|---|
+| FX826 | failsafe.linear.import (Linear issue → intent preview) | integrations/linear/README.md | integrations/linear/linear-import.ts + linear-client.ts | integrations/linear/linear.test.ts | verified | read-only; `issue(id:"ENG-123")` + raw-key auth verified; secret-masking test |
+| FX827 | failsafe.jira.import (Jira issue → intent preview) | integrations/jira/README.md | integrations/jira/jira-import.ts + jira-client.ts | integrations/jira/jira.test.ts | verified | read-only; REST v2 string description; Basic auth; token+base64 masking test |
+| FX828 | failsafe.github.publishCheck (SHIELD verdict → Check Run) | integrations/github-checks/README.md | integrations/github-checks/github-checks-map.ts + github-checks-client.ts | integrations/github-checks/github-checks.test.ts | verified | conclusion enum + headers verified; local-only on disabled/no-auth/fork; token masking |
+| FX829 | failsafe.sentry.import (regression → risk record) | integrations/sentry/README.md | integrations/sentry/sentry-to-risk.ts + sentry-client.ts | integrations/sentry/sentry.test.ts | verified | env folded into `query`; Bearer masking; no raw payloads; dedup upsert |
+| FX830 | Teams governance notify (TeamsNotifier) | integrations/teams/README.md | integrations/teams/teams-notify.ts + teams-sender.ts + TeamsNotifier.ts | integrations/teams/teams.test.ts | verified | notify-only; Adaptive Card under budget; non-throwing sender |
+| FX831 | failsafe.continue.run (governed Continue wrapper) | integrations/agent-cli/README.md | integrations/agent-cli/continue-wrapper.ts + agent-cli-core.ts | integrations/agent-cli/agent-cli.test.ts | verified | argv-form; allowlist→tier; two-phase gate; CONTINUE_API_KEY env-only masking |
+| FX832 | failsafe.aider.run (governed Aider wrapper) | integrations/agent-cli/README.md | integrations/agent-cli/aider-wrapper.ts | integrations/agent-cli/agent-cli.test.ts | verified | `--yes-always` (verified); dirty-worktree refusal; non-zero-exit robust diff |
+| FX833 | failsafe.agentAudit.run (Cline/Roo/Kilo MCP-policy audit) | integrations/agent-observe/README.md | integrations/agent-observe/mcp-policy-audit.ts | integrations/agent-observe/agent-observe.test.ts | verified | redacts env values + URL tokens; flags remote/wildcard/shell; safe/risky/missing fixtures |
+| FX834 | failsafe.openhands.observe (run observer) | integrations/agent-observe/README.md | integrations/agent-observe/openhands-observer.ts | integrations/agent-observe/agent-observe.test.ts | verified | maps real SDK shape (object action/observation + tool_name); version-gated degrade; fork-not-mutate |
+| FX835 | CLI-agent L3 escalation request shape | integrations/agent-cli/README.md | integrations/agent-cli/agent-cli-core.ts (buildL3EscalationRequest) | integrations/agent-cli/agent-cli.test.ts | verified | command-glue extracted to pure helper; matches queueL3Approval Omit shape; no secret in request |
+| FX836 | Tier-1 supply-chain CI baseline (#90) | docs/security/SUPPLY_CHAIN_BASELINE.md | .github/workflows/* + CODEOWNERS + dependabot.yml + dependency-review.yml | n/a | n/a | CI/workflow hardening — verified by all workflows running green on the batch PR; not unit-testable in vscode-test (operator-justified n/a) |
+
+---
+
 **End of FEATURE_INDEX.md**
