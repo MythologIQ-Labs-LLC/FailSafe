@@ -1063,6 +1063,17 @@ function render(data) {
   const main = $("#main");
   main.innerHTML = "";
 
+  // Non-blocking advisory when no planning manifest is present: the tracker
+  // still renders discovered releases; this just points the way to the planning
+  // layer (so a missing programs.yaml never reads as a failure).
+  if (d.manifestPresent === false) {
+    const note = el("div", "emptycard");
+    note.style.textAlign = "left";
+    note.innerHTML = "Showing discovered releases only — no planning manifest at "
+      + "<code>docs/roadmap/programs.yaml</code>. Add one to forecast upcoming programs and phases.";
+    main.appendChild(note);
+  }
+
   let secNum = 0;
   const nextIdx = () => pad2(++secNum);
 
