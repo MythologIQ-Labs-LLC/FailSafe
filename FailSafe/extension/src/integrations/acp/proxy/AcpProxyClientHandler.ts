@@ -15,19 +15,31 @@ import type {
   WriteTextFileRequest, WriteTextFileResponse,
   CreateTerminalRequest, CreateTerminalResponse,
   ReadTextFileRequest, ReadTextFileResponse,
+  TerminalOutputRequest, TerminalOutputResponse,
+  WaitForTerminalExitRequest, WaitForTerminalExitResponse,
+  KillTerminalRequest, KillTerminalResponse,
+  ReleaseTerminalRequest, ReleaseTerminalResponse,
   SessionNotification,
 } from '@agentclientprotocol/sdk';
 import type { AcpProxyGovernor } from './AcpProxyGovernor';
 import type { AcpPermissionRequest, AcpPermissionOption, AcpPermissionOptionKind } from '../acpTypes';
 
-/** The subset of client-direction methods the proxy RELAYS toward Devin (backed
- *  by the SDK `AgentSideConnection` at runtime; a mock in tests). */
+/** The client-direction surface the proxy RELAYS toward Devin (the real client).
+ *  Backed at runtime by `AcpProxyForwarder` (which adapts the SDK
+ *  `AgentSideConnection` + owns the terminalId→TerminalHandle map); a mock in
+ *  tests. The lifecycle/ext methods are optional — a client need not support them. */
 export interface AcpDevinForwarder {
   requestPermission(params: RequestPermissionRequest): Promise<RequestPermissionResponse>;
   sessionUpdate(params: SessionNotification): Promise<void>;
   writeTextFile?(params: WriteTextFileRequest): Promise<WriteTextFileResponse>;
   readTextFile?(params: ReadTextFileRequest): Promise<ReadTextFileResponse>;
   createTerminal?(params: CreateTerminalRequest): Promise<CreateTerminalResponse>;
+  terminalOutput?(params: TerminalOutputRequest): Promise<TerminalOutputResponse>;
+  waitForTerminalExit?(params: WaitForTerminalExitRequest): Promise<WaitForTerminalExitResponse>;
+  killTerminal?(params: KillTerminalRequest): Promise<KillTerminalResponse | void>;
+  releaseTerminal?(params: ReleaseTerminalRequest): Promise<ReleaseTerminalResponse | void>;
+  extMethod?(method: string, params: Record<string, unknown>): Promise<Record<string, unknown>>;
+  extNotification?(method: string, params: Record<string, unknown>): Promise<void>;
 }
 
 /** Thrown when the governor withholds an effect under an enforcing mode — the
@@ -103,5 +115,40 @@ export class AcpProxyClientHandler implements Client {
   async readTextFile(params: ReadTextFileRequest): Promise<ReadTextFileResponse> {
     if (!this.devin.readTextFile) return { content: '' } as unknown as ReadTextFileResponse;
     return this.devin.readTextFile(params);
+  }
+
+  // ── Terminal lifecycle — RELAYED. These operate on a terminal whose CREATION
+  //    was already governed; re-governing output/wait/kill/release would add no
+  //    enforcement value, so they pass through to the live terminal handle. ──
+  async terminalOutput(params: TerminalOutputRequest): Promise<TerminalOutputResponse> {
+    if (!this.devin.terminalOutput) throw new AcpGovernanceDenied('terminal/output', 'NO_CLIENT_SUPPORT');
+    return this.devin.terminalOutput(params);
+  }
+
+  async waitForTerminalExit(params: WaitForTerminalExitRequest): Promise<WaitForTerminalExitResponse> {
+    if (!this.devin.waitForTerminalExit) throw new AcpGovernanceDenied('terminal/wait_for_exit', 'NO_CLIENT_SUPPORT');
+    return this.devin.waitForTerminalExit(params);
+  }
+
+  async killTerminal(params: KillTerminalRequest): Promise<KillTerminalResponse | void> {
+    if (!this.devin.killTerminal) return;
+    return this.devin.killTerminal(params);
+  }
+
+  async releaseTerminal(params: ReleaseTerminalRequest): Promise<ReleaseTerminalResponse | void> {
+    if (!this.devin.releaseTerminal) return;
+    return this.devin.releaseTerminal(params);
+  }
+
+  /** RELAYED — arbitrary extension method (not part of the governed ACP surface). */
+  async extMethod(method: string, params: Record<string, unknown>): Promise<Record<string, unknown>> {
+    if (!this.devin.extMethod) return {};
+    return this.devin.extMethod(method, params);
+  }
+
+  /** RELAYED — arbitrary extension notification. */
+  async extNotification(method: string, params: Record<string, unknown>): Promise<void> {
+    if (!this.devin.extNotification) return;
+    return this.devin.extNotification(method, params);
   }
 }
