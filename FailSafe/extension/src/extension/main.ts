@@ -40,6 +40,7 @@ import { createVscodeFeatureGate } from "../core/adapters/vscode";
 import { bootstrapStartupChecks } from "./bootstrapStartupChecks";
 import { registerSubstrateCommand } from "./substrate-command";
 import { registerSarifImportCommand } from "./sarif-command";
+import { registerSentryImportCommand } from "./sentry-command";
 import { registerMcpInstallCommand } from "./mcp-install-command";
 import { SlackNotifier } from "../integrations/slack/SlackNotifier";
 import { defaultRun } from "../qorlogic/PythonInterpreterResolver";
@@ -160,6 +161,11 @@ export async function activate(
     // 3.13 SARIF offline import (B-INT-9 / #99): parse a SARIF file → upsert
     // findings as WARN-only risk records.
     registerSarifImportCommand(context, core.workspaceRoot);
+
+    // 3.13b Sentry runtime-regression import (#102): pull a project's unresolved
+    // issues read-only → upsert as risk records. Off-by-default; no network
+    // unless token + org + project are configured.
+    registerSentryImportCommand(context, core.workspaceRoot);
 
     // 3.14 Governed MCP install (B-INT-13/14): risk-scored install of catalog
     // MCP integrations (Context7, Mermaid Chart) into .mcp.json.

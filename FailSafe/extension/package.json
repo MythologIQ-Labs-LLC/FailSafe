@@ -68,7 +68,8 @@
     "onCommand:failsafe.uninstallVoicePack",
     "onCommand:failsafe.substrate.run",
     "onCommand:failsafe.sarif.import",
-    "onCommand:failsafe.mcp.installCatalog"
+    "onCommand:failsafe.mcp.installCatalog",
+    "onCommand:failsafe.sentry.import"
   ],
   "main": "./dist/extension/main.js",
   "contributes": {
@@ -125,6 +126,11 @@
       {
         "command": "failsafe.mcp.installCatalog",
         "title": "FailSafe: Install MCP Integration (governed)",
+        "category": "FailSafe"
+      },
+      {
+        "command": "failsafe.sentry.import",
+        "title": "FailSafe: Import Sentry Regressions",
         "category": "FailSafe"
       },
       {
@@ -310,6 +316,36 @@
           "type": "string",
           "default": "",
           "markdownDescription": "Slack **incoming webhook URL** to post governance notifications to. Treat as a secret — it grants posting to the target channel. Messages are notify-only (no interactive approvals; a link back to the local Command Center is included). Leave empty to disable."
+        },
+        "failsafe.integrations.sentry.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable read-only Sentry import. The `FailSafe: Import Sentry Regressions` command pulls a project's unresolved issues and upserts them as runtime-regression risk records in the Risk Register. No network call is made unless this is enabled AND token + org + project are set. No raw event payloads are stored — only canonical fields (source URL, project, environment, release, suspect commit, first/last seen)."
+        },
+        "failsafe.integrations.sentry.token": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Sentry **auth token** (org-level auth token or internal-integration token with `project:read` / `event:read`). Treat as a secret — it is sent only as a Bearer `Authorization` header and is never logged. Leave empty to disable."
+        },
+        "failsafe.integrations.sentry.org": {
+          "type": "string",
+          "default": "",
+          "description": "Sentry organization slug (e.g. `acme`)."
+        },
+        "failsafe.integrations.sentry.project": {
+          "type": "string",
+          "default": "",
+          "description": "Sentry project slug to import issues from (e.g. `backend`)."
+        },
+        "failsafe.integrations.sentry.environment": {
+          "type": "string",
+          "default": "",
+          "description": "Optional Sentry environment to scope the import to (e.g. `production`). Leave empty for all environments."
+        },
+        "failsafe.integrations.sentry.apiBaseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Optional Sentry API base URL for self-hosted Sentry (e.g. https://sentry.example.com). Leave empty to use https://sentry.io."
         },
         "failsafe.integrations.openDesign.mcpEnabled": {
           "type": "boolean",
