@@ -68,7 +68,9 @@
     "onCommand:failsafe.uninstallVoicePack",
     "onCommand:failsafe.substrate.run",
     "onCommand:failsafe.sarif.import",
-    "onCommand:failsafe.mcp.installCatalog"
+    "onCommand:failsafe.mcp.installCatalog",
+    "onCommand:failsafe.continue.run",
+    "onCommand:failsafe.aider.run"
   ],
   "main": "./dist/extension/main.js",
   "contributes": {
@@ -125,6 +127,16 @@
       {
         "command": "failsafe.mcp.installCatalog",
         "title": "FailSafe: Install MCP Integration (governed)",
+        "category": "FailSafe"
+      },
+      {
+        "command": "failsafe.continue.run",
+        "title": "FailSafe: Run Continue (governed)",
+        "category": "FailSafe"
+      },
+      {
+        "command": "failsafe.aider.run",
+        "title": "FailSafe: Run Aider (governed)",
         "category": "FailSafe"
       },
       {
@@ -310,6 +322,47 @@
           "type": "string",
           "default": "",
           "markdownDescription": "Slack **incoming webhook URL** to post governance notifications to. Treat as a secret — it grants posting to the target channel. Messages are notify-only (no interactive approvals; a link back to the local Command Center is included). Leave empty to disable."
+        },
+        "failsafe.integrations.continue.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the governed Continue (`cn`) headless wrapper. The `FailSafe: Run Continue (governed)` command runs a prompt through Continue with a restricted tool allowlist, classifies the produced diff, and routes L3-risk changes to the L3 approval queue. Spawns argv-form (no shell). No network unless you run the command."
+        },
+        "failsafe.integrations.continue.apiKey": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Continue API key (`CONTINUE_API_KEY`). Treat as a secret — it is passed to the `cn` child process via the environment only, never in the command line or any receipt, and is never logged. Leave empty if `cn` is already authenticated."
+        },
+        "failsafe.integrations.continue.allow": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Explicit Continue tool allowlist (passed as repeated `--allow <tool>`). Shell/exec tools map to risk tier L3, file-write tools to L2, read-only to L1. An L3 allowlist is escalated to L3 approval BEFORE the agent runs."
+        },
+        "failsafe.integrations.continue.allowWrites": {
+          "type": "boolean",
+          "default": false,
+          "description": "Permit Continue runs whose risk tier is below L3 to proceed without escalation. When false, any write-tier request is blocked. L3 always escalates regardless."
+        },
+        "failsafe.integrations.aider.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the governed Aider wrapper. The `FailSafe: Run Aider (governed)` command runs Aider with auto-commit OFF, captures the resulting (uncommitted) diff, and routes L3-risk changes to the L3 approval queue. Spawns argv-form (no shell)."
+        },
+        "failsafe.integrations.aider.allowDirty": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow running Aider against a worktree that already has uncommitted changes. When false (default), a dirty worktree is refused so the captured diff is unambiguously Aider's."
+        },
+        "failsafe.integrations.aider.autoCommit": {
+          "type": "boolean",
+          "default": false,
+          "description": "Let Aider auto-commit its changes (`--auto-commits`). Off by default (`--no-auto-commits`) so changes stay uncommitted for the diff gate."
+        },
+        "failsafe.integrations.aider.allowWrites": {
+          "type": "boolean",
+          "default": false,
+          "description": "Permit Aider runs whose diff risk tier is below L3 to proceed without escalation. When false, sub-L3 changes are blocked. L3 always escalates regardless."
         },
         "failsafe.integrations.openDesign.mcpEnabled": {
           "type": "boolean",

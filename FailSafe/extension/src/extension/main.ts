@@ -41,6 +41,7 @@ import { bootstrapStartupChecks } from "./bootstrapStartupChecks";
 import { registerSubstrateCommand } from "./substrate-command";
 import { registerSarifImportCommand } from "./sarif-command";
 import { registerMcpInstallCommand } from "./mcp-install-command";
+import { registerAgentCliCommands } from "./agent-cli-command";
 import { SlackNotifier } from "../integrations/slack/SlackNotifier";
 import { defaultRun } from "../qorlogic/PythonInterpreterResolver";
 
@@ -164,6 +165,15 @@ export async function activate(
     // 3.14 Governed MCP install (B-INT-13/14): risk-scored install of catalog
     // MCP integrations (Context7, Mermaid Chart) into .mcp.json.
     registerMcpInstallCommand(context, core.workspaceRoot);
+
+    // 3.14d Governed CLI agent wrappers (Group B — #104 Continue, #107 Aider):
+    // run a headless coding-agent CLI argv-form, classify the produced diff with
+    // the live PolicyEngine, and route L3-risk changes to the L3 queue.
+    registerAgentCliCommands(context, {
+      workspaceRoot: core.workspaceRoot,
+      policyEngine: qor.policyEngine,
+      qorelogicManager: qor.qorelogicManager,
+    });
 
     // 3.15 Slack notify-only (B-INT-9 / #100): post governance enforcement
     // events to a configured incoming webhook. Disabled by default; non-blocking.
