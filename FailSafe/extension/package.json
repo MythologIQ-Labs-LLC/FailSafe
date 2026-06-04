@@ -3,7 +3,7 @@
   "displayName": "FailSafe (feat. Qor-Logic)",
   "description": "Open-source VS Code/Cursor governance and skills surface for AI coding agents. Pairs with FailSafe Pro for desktop enforcement.",
   "icon": "media/icon.png",
-  "version": "5.4.3",
+  "version": "5.5.0",
   "publisher": "MythologIQ",
   "license": "Apache-2.0",
   "repository": {
@@ -456,7 +456,9 @@
         },
         "failsafe.integrations.continue.allow": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "default": [],
           "description": "Explicit Continue tool allowlist (passed as repeated `--allow <tool>`). Shell/exec tools map to risk tier L3, file-write tools to L2, read-only to L1. An L3 allowlist is escalated to L3 approval BEFORE the agent runs."
         },
