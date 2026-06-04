@@ -55,6 +55,8 @@ const FEATURES: BicameralFeatureBrief[] = [
 async function gotoRunningFeed(page: import('@playwright/test').Page, url: string) {
   await page.goto(`${url}/command-center.html`);
   await page.locator('.tab-btn[data-target="integrations"]').click();
+  // Catalog is now the default Integrations sub-view (#167) — select Bicameral.
+  await page.locator('.cc-pill[data-key="bicameral"]').click();
   await page.locator('[data-action="bicameral-connect"]').click();
   await expect(page.locator('.cc-bicameral-decision[data-decision-id="d-long"]')).toBeVisible({ timeout: 5000 });
 }

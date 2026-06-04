@@ -98,6 +98,8 @@ test.describe('FX487/488/489/490 — Bicameral Integrations tab (Phase 5)', () =
     controller = await serveConsoleServerUI({ bicameralClient: client, bicameralConfigured: true });
     await page.goto(`${controller.url}/command-center.html`);
     await page.locator('.tab-btn[data-target="integrations"]').click();
+    // Catalog is now the default Integrations sub-view (#167) — select Bicameral.
+    await page.locator('.cc-pill[data-key="bicameral"]').click();
 
     // The integrations.js renderer runs the status probe on first render;
     // wait for the configured-not-running state to surface the Connect button.
@@ -112,6 +114,8 @@ test.describe('FX487/488/489/490 — Bicameral Integrations tab (Phase 5)', () =
     controller = await serveConsoleServerUI({ bicameralClient: client, bicameralConfigured: true });
     await page.goto(`${controller.url}/command-center.html`);
     await page.locator('.tab-btn[data-target="integrations"]').click();
+    // Catalog is now the default Integrations sub-view (#167) — select Bicameral.
+    await page.locator('.cc-pill[data-key="bicameral"]').click();
 
     const connectBtn = page.locator('[data-action="bicameral-connect"]');
     await expect(connectBtn).toBeVisible({ timeout: 5000 });
@@ -135,6 +139,8 @@ test.describe('FX487/488/489/490 — Bicameral Integrations tab (Phase 5)', () =
     controller = await serveConsoleServerUI({ bicameralClient: client, bicameralConfigured: true });
     await page.goto(`${controller.url}/command-center.html`);
     await page.locator('.tab-btn[data-target="integrations"]').click();
+    // Catalog is now the default Integrations sub-view (#167) — select Bicameral.
+    await page.locator('.cc-pill[data-key="bicameral"]').click();
     await page.locator('[data-action="bicameral-connect"]').click();
 
     // Wait for the feed to render, then click the Ratify button on d-001.
@@ -154,6 +160,8 @@ test.describe('FX487/488/489/490 — Bicameral Integrations tab (Phase 5)', () =
     controller = await serveConsoleServerUI({ bicameralCommand: '__failsafe_test_no_such_command__' });
     await page.goto(`${controller.url}/command-center.html`);
     await page.locator('.tab-btn[data-target="integrations"]').click();
+    // Catalog is now the default Integrations sub-view (#167) — select Bicameral.
+    await page.locator('.cc-pill[data-key="bicameral"]').click();
 
     // Both install buttons render in not-installed state per bicameral-card.js.
     const installSolo = page.locator('[data-action="bicameral-install"][data-mode="solo"]');

@@ -73,27 +73,32 @@ test("B-INT-5 Integrations sub-tabs — pill switch swaps the visible integratio
   await page.goto(`${controller.url}/command-center.html`);
   await page.locator('.tab-btn[data-target="integrations"]').click();
 
-  // Four integration pills render in the sub-view bar.
+  // Five integration pills render in the sub-view bar (Catalog added first, #167).
   const pills = page.locator('#integrations .cc-subview-bar .cc-pill');
-  await expect(pills).toHaveCount(4, { timeout: 10000 });
-  await expect(pills.nth(0)).toHaveText('Bicameral');
-  await expect(pills.nth(1)).toHaveText('Open Design');
-  await expect(pills.nth(3)).toHaveText('Agent Governance');
-  await expect(pills.nth(2)).toHaveText('MCP Catalog');
+  await expect(pills).toHaveCount(5, { timeout: 10000 });
+  await expect(pills.nth(0)).toHaveText('Catalog');
+  await expect(pills.nth(1)).toHaveText('Bicameral');
+  await expect(pills.nth(2)).toHaveText('Open Design');
+  await expect(pills.nth(3)).toHaveText('MCP Catalog');
+  await expect(pills.nth(4)).toHaveText('Agent Governance');
 
-  // Bicameral is the default active sub-view.
-  await expect(page.locator('#integrations .cc-bicameral-card')).toBeVisible({ timeout: 10000 });
-  await expect(page.locator('#integrations .cc-open-design-card')).toHaveCount(0);
+  // Catalog is the default active sub-view (#167).
+  await expect(page.locator('#integrations .cc-intcat-card').first()).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#integrations .cc-bicameral-card')).toHaveCount(0);
 
-  // Selecting the Open Design pill swaps the visible sub-view.
+  // Selecting the Bicameral pill swaps the visible sub-view.
   await pills.nth(1).click();
+  await expect(page.locator('#integrations .cc-bicameral-card')).toBeVisible({ timeout: 10000 });
+
+  // Selecting the Open Design pill swaps it again.
+  await pills.nth(2).click();
   const odCard = page.locator('#integrations .cc-open-design-card');
   await expect(odCard).toBeVisible({ timeout: 10000 });
   await expect(odCard).toContainText('Open Design MCP');
   await expect(page.locator('#integrations .cc-bicameral-card')).toHaveCount(0);
 
   // Selecting Bicameral again restores it.
-  await pills.nth(0).click();
+  await pills.nth(1).click();
   await expect(page.locator('#integrations .cc-bicameral-card')).toBeVisible({ timeout: 10000 });
   await expect(page.locator('#integrations .cc-open-design-card')).toHaveCount(0);
 });
