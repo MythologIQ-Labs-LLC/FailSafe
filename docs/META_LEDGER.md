@@ -22419,3 +22419,53 @@ _Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`#
 
 _Chain integrity: VALID_
 _Session: 2026-06-04-deliver-v5.5.0_
+
+### Entry #419: DELIVER — v5.5.1 dual-marketplace publish (Maintenance)
+
+**Date**: 2026-06-04
+**Phase**: DELIVER (/qor-repo-release close-out)
+**Plan**: none — maintenance patch (Dependabot GitHub Actions bumps + Development Tracker error-surfacing fix)
+**Branch**: `release/v5.5.1` → `main` (PR #162, squash)
+**Author**: krknapp@gmail.com
+
+**Version**: 5.5.1
+**Tag**: v5.5.1 (`f130701`)
+**Commit**: f130701 (`[RELEASE] v5.5.1`)
+
+## Decision
+
+Release v5.5.1 delivered. Maintenance patch: the four evaluated Dependabot GitHub Actions bumps (`checkout` v6.0.3, `setup-node` v6.4.0, `upload-artifact` v7.0.1, `download-artifact` v8.0.1 — all Node.js 24 runtimes, SHA-pinned) + the Development Tracker dashboard error-surfacing fix (surface the server `{error}` body instead of a bare "HTTP 500"). Squash-merged via PR #162; tag `v5.5.1` pushed; SemVer + Build & Test passed; both publishes approved at the `production` gate; published to VS Code Marketplace + Open VSX; GitHub Release auto-created (https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/tag/v5.5.1).
+
+## Dependabot evaluation + publish-path validation
+
+The four bumps were closely evaluated before merge: all are Node.js 24 runtime majors with NO caller-facing `with:` API change; GitHub-hosted runners + the existing `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` env already anticipate Node 24. `download-artifact` v8's only non-Node24 breaking change (digest-mismatch now defaults to error) is a fail-closed security upgrade for the publish hand-off. PR CI validated `checkout`/`setup-node` v6 + `upload-artifact` v7 across standards/guardrails/full-test; the one bump PR CI could NOT exercise — `download-artifact` v8 in the publish jobs (runs only on a tag) — ran clean here, so the upload-v7 → download-v8 VSIX hand-off + the new digest check are now validated end-to-end. PRs #155–#158 incorporated + closed.
+
+## Issues filed this cycle (not closed by this release)
+
+#161 (Windsurf compatibility assessment), #163 (Development Tracker loading/progress + freshness indicators). #154 (GitHub PR↔issue linkage governance, from the v5.5.0 cycle) remains open.
+
+## Governance note
+
+The `code_scanning`/`code_quality` ruleset on `main` is an INTENTIONAL human-gate (operator-confirmed: it exists to prevent silently publishing unfinished work); v5.5.1's merges (#162) used operator-explicitly-authorized `--admin`. Not to be configured away.
+
+## Phase 75 SKIP records
+
+Gate-chain artifacts absent (delivery cycle). Hash via Node 20 `crypto.createHash('sha256')` over CRLF, matching #405–#418.
+
+## Next operator actions
+
+Reinstall the extension to pick up v5.5.1. Progress-bar UX theme emerging (#163 tracker; install flows flagged next). Windsurf assessment (#161) + linkage governance (#154) open.
+## Content Hash
+
+**Content Hash**: `09c1663ff626c41f4ac6f646d06edee1695c07cb4158cc8dfe7a735d9eda2c38`
+**Previous Hash**: `a9b18f8641fde45c959982514c1be57a3434bab9b461bdf49ee6b5a05c7d3351` (Entry #418 Chain Hash)
+**Chain Hash**: `3f4b2d9b6d220f01966123656c7c4c66e459de319815d0f2587002d201b4db6e`
+**Merkle Seal**: `4f77c7b0b8f918e922cbc6a39b08f453a97123b8bd4f73e02f205d3f2666a155` — gate_seal_deliver_v5_5_1
+**Session ID**: `2026-06-04-deliver-v5.5.1`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`### Entry #419`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Computed via Node 20 `crypto.createHash('sha256')` over CRLF line endings (Phase 75 skip — gate-chain artifacts absent; same posture as #405–#418).
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-06-04-deliver-v5.5.1_
