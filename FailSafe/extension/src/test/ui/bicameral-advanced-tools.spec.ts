@@ -64,6 +64,8 @@ test.describe('FX589 — Bicameral Advanced-tools section (B-INT-1)', () => {
     });
     await page.goto(`${controller.url}/command-center.html`);
     await page.locator('.tab-btn[data-target="integrations"]').click();
+    // Catalog is now the default Integrations sub-view (#167) — select Bicameral.
+    await page.locator('.cc-pill[data-key="bicameral"]').click();
 
     // Connect to reach the running state, where the Advanced-tools section mounts.
     const connectBtn = page.locator('[data-action="bicameral-connect"]');
