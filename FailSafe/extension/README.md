@@ -48,9 +48,17 @@ Each integration ships with its own README and its external API names are back-c
 
 ---
 
-**Current Release**: v5.5.1 (2026-06-04)
+**Current Release**: v5.5.2 (2026-06-04)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v5.5.2
+
+- 🧩 **Integration Catalog** — the Integrations tab now lists every command/config integration (Continue, Aider, OpenHands, Cline/Roo/Kilo, Linear, Jira, GitHub Checks, Sentry, Teams, Slack) in one place, each with a live enabled/configured status and a one-click jump to Settings.
+- 🔌 **Bicameral team-mode fix** — the interactive Google Drive sign-in now runs in an integrated terminal, so "team" setup no longer hangs; a per-step timeout guards every install step.
+- 📊 **Tracker resilience** — the Development Tracker loads gracefully even when no planning manifest is present (shows discovered releases instead of erroring), and the Open Design card now shows live MCP state.
+
+See [CHANGELOG.md](CHANGELOG.md).
 
 ## What's New in v5.5.1
 

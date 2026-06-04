@@ -22469,3 +22469,56 @@ _Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`#
 
 _Chain integrity: VALID_
 _Session: 2026-06-04-deliver-v5.5.1_
+
+### Entry #420: DELIVER  v5.5.2 Integration UX (Catalog + live state + fixes)
+
+**Date**: 2026-06-04
+**Phase**: DELIVER (/qor-repo-release close-out; substantiation verified inline  Reality=Promise PASS)
+**Plan**: docs/research-brief-integration-installation-ux-2026-06-04.md (v5.5.2 patch  completes v5.5.0s integration delivery that shipped wired but invisible)
+**Branch**: `release/v5.5.2` ’ `main` (release PR, squash)
+**Author**: krknapp@gmail.com
+
+**Version**: 5.5.2
+**Tag**: v5.5.2
+**Commit**: a88eae7 (`[RELEASE] v5.5.2`)
+
+## Decision
+
+Release v5.5.2 delivered  Integration UX completion. Surfaces the command/config integrations that shipped wired in v5.5.0 but had no UI home, fixes the Bicameral team-mode setup hang, and hardens the Development Tracker. Merged to `main` via PRs #168 (#165) + #169 (#167/#166 + tracker), with prerequisite PR #164 (ledger #419) settling the chain first.
+
+## Scope
+
+- **#167 Integration Catalog**  Integrations-tab sub-view listing the 9 command/config integrations (Continue, Aider, OpenHands, Cline/Roo/Kilo, Linear, Jira, GitHub Checks, Sentry, Teams) + Slack, each with live enabled/configured state. Pure secret-safe registry (boolean-only host snapshot  tokens/keys/webhook URLs never leave the extension host). FX837FX839.
+- **#166 shared install-progress + Open Design live state**  extracted shared step-list component (Bicameral back-compat preserved); the Open Design card now probes live MCP connection state instead of a hard-coded placeholder. FX840/FX841.
+- **#165 Bicameral team-mode fix**  interactive Google Drive OAuth routed through the integrated terminal (the non-interactive spawn hung); added a per-step install timeout. FailSafe never touches the OAuth token.
+- **Tracker graceful degradation**  absent `docs/roadmap/programs.yaml` now returns 200 + `manifestPresent:false` + a non-blocking advisory (discovered releases still render) instead of a hard 503. FX842.
+
+## Verification
+
+Reality=Promise: 21 files, every planned surface present with its test + doc, no unplanned files. 25 unit tests + 4 Playwright (real ConsoleServer + Chromium: Catalog default/all-disabled/grouping/Configure’Settings; Open Design live probe) + 2 tracker-route tests. tsc 0 errors; eslint 0 new errors; 0 console.log; secret-safety asserted (boolean-only snapshot, non-leak tests). FEATURE_INDEX FX837FX842 verified.
+
+## Governance note
+
+PRs #164/#168/#169 were merged via operator-explicitly-authorized `--admin` over the INTENTIONAL `code_scanning`/`code_quality` ruleset  a deliberate human-gate that exists to prevent silently publishing unfinished work; not to be configured away. Each merge carried fresh per-action authorization.
+
+## Phase 75 SKIP records
+
+Gate-chain artifacts absent (delivery cycle). Hash via Node 20 crypto SHA-256 over CRLF, matching #405#419.
+
+## Next operator actions
+
+Tag `v5.5.2` on `main` after the release PR merges; push the tag to trigger the pipeline; approve the `production` gate for the dual-marketplace (VS Code Marketplace + Open VSX) publish.
+## Content Hash
+
+**Content Hash**: `74f3e0be835847123aeefacad35cb8c05d51c9d684f700895facfc1c9d2f226d`
+**Previous Hash**: `3f4b2d9b6d220f01966123656c7c4c66e459de319815d0f2587002d201b4db6e` (Entry #419 Chain Hash)
+**Chain Hash**: `fb0411c78d4403b7cd5d2983f02690c88decf26675a85b34397cb871f193bf8f`
+**Merkle Seal**: `85373f4c033f3fe59db9a0dcfa322856d9188635a121487fa829615d0ac429c9`  gate_seal_deliver_v5_5_2
+**Session ID**: `2026-06-04-deliver-v5.5.2`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`### Entry #420`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Computed via Node 20 crypto SHA-256 over CRLF line endings (Phase 75 skip  gate-chain artifacts absent; same posture as #405#419).
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-06-04-deliver-v5.5.2_
