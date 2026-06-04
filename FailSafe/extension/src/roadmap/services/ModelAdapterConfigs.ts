@@ -4,7 +4,7 @@
  */
 
 export interface AdapterConfig {
-  modelId: "claude" | "gemini" | "copilot" | "codex" | "cursor" | "windsurf" | "kilocode";
+  modelId: "claude" | "gemini" | "copilot" | "codex" | "cursor" | "windsurf" | "devin-desktop" | "kilocode";
   outputDir: string;
   format: "markdown" | "yaml" | "json";
   conventions: {
@@ -86,6 +86,19 @@ export const BUILTIN_ADAPTER_CONFIGS: Record<string, AdapterConfig> = {
   windsurf: {
     modelId: "windsurf",
     outputDir: ".windsurf/rules/",
+    format: "markdown",
+    conventions: {
+      fileNaming: "kebab",
+      metadataFormat: "yaml-frontmatter",
+      maxPromptLength: 8000,
+      supportsSubagents: false,
+      supportsHooks: false,
+    },
+  },
+  "devin-desktop": {
+    // GH #161: Devin Desktop (formerly Windsurf) prefers `.devin/rules/`.
+    modelId: "devin-desktop",
+    outputDir: ".devin/rules/",
     format: "markdown",
     conventions: {
       fileNaming: "kebab",

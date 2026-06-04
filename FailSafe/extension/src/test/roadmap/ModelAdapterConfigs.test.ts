@@ -36,12 +36,16 @@ suite('BUILTIN_ADAPTER_CONFIGS (FX371 + FX372)', () => {
     assert.equal(cfg.conventions.supportsHooks, false);
   });
 
-  test('FX371+FX372 — all 7 expected adapters present (claude/codex/gemini/copilot/cursor/windsurf/kilocode)', () => {
-    const expected = ['claude', 'codex', 'gemini', 'copilot', 'cursor', 'windsurf', 'kilocode'];
+  test('FX371+FX372 — all 8 expected adapters present (claude/codex/gemini/copilot/cursor/windsurf/devin-desktop/kilocode)', () => {
+    const expected = ['claude', 'codex', 'gemini', 'copilot', 'cursor', 'windsurf', 'devin-desktop', 'kilocode'];
     for (const id of expected) {
       assert.ok(BUILTIN_ADAPTER_CONFIGS[id], `expected adapter ${id} to be present`);
       assert.equal(BUILTIN_ADAPTER_CONFIGS[id].modelId, id);
     }
+  });
+
+  test('GH #161 — devin-desktop adapter writes to the Devin-preferred .devin/rules/', () => {
+    assert.equal(BUILTIN_ADAPTER_CONFIGS['devin-desktop'].outputDir, '.devin/rules/');
   });
 
   test('FX371+FX372 — claude is the only adapter supporting both subagents and hooks', () => {

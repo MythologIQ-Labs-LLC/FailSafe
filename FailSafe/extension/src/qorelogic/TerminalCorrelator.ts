@@ -7,6 +7,7 @@ const AGENT_PATTERNS: Record<string, string> = {
   cursor: 'cursor',
   codex: 'codex',
   windsurf: 'windsurf',
+  'devin-desktop': 'devin', // GH #161: Devin Desktop (formerly Windsurf)
 };
 
 export class TerminalCorrelator {
