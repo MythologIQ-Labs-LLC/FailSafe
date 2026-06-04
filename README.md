@@ -66,9 +66,13 @@ Under the hood, a **Tier 1 supply-chain CI baseline** (least-privilege workflow 
 
 <div align="center">
 
-**Current Release**: v5.5.0 (2026-06-04)
+**Current Release**: v5.5.1 (2026-06-04)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
+
+## What's new in v5.5.1
+
+**Maintenance patch.** CI Actions bumped to their Node.js 24 runtimes (checkout/setup-node/upload-artifact/download-artifact, SHA-pinned — `download-artifact` v8 now fails closed on a digest mismatch). Development Tracker now surfaces the server's actual error instead of a bare "HTTP 500". See [CHANGELOG.md](CHANGELOG.md).
 
 ## What's new in v5.5.0
 

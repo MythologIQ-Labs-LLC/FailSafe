@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.5.1] - 2026-06-04
+
+Maintenance patch.
+
+### Changed
+
+- **CI Actions bumped to their Node.js 24 runtimes** (Dependabot, SHA-pinned): `actions/checkout` v4→v6.0.3, `actions/setup-node` v4→v6.4.0, `actions/upload-artifact` v4→v7.0.1, `actions/download-artifact` v4→v8.0.1. No caller-facing API change; the project still installs Node 20. `download-artifact` v8 fails the run on an artifact digest mismatch (fail-closed — a security upgrade for the VSIX publish hand-off).
+
+### Fixed
+
+- **Development Tracker** dashboard now surfaces the server's actual error ("HTTP 500 — &lt;reason&gt;") instead of a bare "HTTP 500", so a failed `/api/v1/tracker` fetch is diagnosable. (The transient 500 seen during the v5.5.0 release was the route reading `CHANGELOG.md`/`BACKLOG.md` live from disk mid-edit; clears on reload.)
+
 ## [5.5.0] - 2026-06-04
 
 Integration suite expansion — FailSafe becomes a governance hub for your whole AI toolchain. Every integration is off by default, routed through the same deterministic policy engine, ships with its own README, and has its external API names verified against official docs.

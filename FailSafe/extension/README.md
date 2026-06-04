@@ -48,9 +48,13 @@ Each integration ships with its own README and its external API names are back-c
 
 ---
 
-**Current Release**: v5.5.0 (2026-06-04)
+**Current Release**: v5.5.1 (2026-06-04)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v5.5.1
+
+**Maintenance patch.** CI Actions bumped to their Node.js 24 runtimes (SHA-pinned; `download-artifact` v8 fails closed on a digest mismatch). Development Tracker dashboard now surfaces the server's actual error instead of a bare "HTTP 500". See [CHANGELOG.md](CHANGELOG.md).
 
 ## What's New in v5.5.0
 
