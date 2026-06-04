@@ -22368,3 +22368,54 @@ _Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`#
 
 _Chain integrity: VALID_
 _Session: 2026-06-03-deliver-v5.4.3_
+
+### Entry #418: DELIVER — v5.5.0 dual-marketplace publish (Integration Suite)
+
+**Date**: 2026-06-04
+**Phase**: DELIVER (/qor-repo-release close-out)
+**Plan**: none — release delivery cycle (integration-suite consolidation + /qor-substantiate VETO remediation)
+**Branch**: `release/v5.5.0` → `main` (PR #159)
+**Author**: krknapp@gmail.com
+
+**Version**: 5.5.0
+**Tag**: v5.5.0 (`201152a`)
+**Commit**: bd504a7 (`[RELEASE] v5.5.0`)
+
+## Decision
+
+Release v5.5.0 delivered. The integration suite (#90 supply-chain baseline, #96 GitHub Checks, #97 Linear, #98 Jira, #101 Teams, #102 Sentry, #104 Continue, #105 OpenHands, #106 Cline/Roo/Kilo, #107 Aider) was consolidated via PR #153, VETO-remediated, then released via PR #159. Tag `v5.5.0` pushed; SemVer Gate + Build & Test passed; both publish jobs approved at the `production` environment gate; **published to VS Code Marketplace + Open VSX**; GitHub Release auto-created (https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/tag/v5.5.0).
+
+## VETO remediation (this cycle's substantiation evidence)
+
+The /qor-substantiate VETO held that green tsc/eslint/unit checks were necessary but not sufficient. External-name verification against live docs found and fixed FOUR real defects that circular fixtures had hidden: Aider `--yes` → `--yes-always`; Sentry `environment` folded into the search `query` (the issues endpoint ignores a standalone param); the OpenHands mapper rewritten to the real SDK event shape (object `action`/`observation` + `tool_name` — it had produced ZERO records against real events); and Linear bare-identifier matching made case-insensitive (caught only by the full extension-host suite, not by individual-branch CI or partial temp-compile checks). Added 15 per-integration READMEs + a uniform folder-structure standard + FEATURE_INDEX FX826–FX836 + a command-glue L3-escalation test.
+
+## Issues closed
+
+#90, #96, #97, #98, #101, #102, #104, #105, #106, #107 — auto-closed on the PR #153 squash-merge (per-issue `Closes` keywords). Superseded PRs #144–#152 closed as redundant. Enhancement #154 filed (GitHub PR↔issue linkage governance — extends #96).
+
+## Process learning
+
+The consolidated full extension-host suite caught a real bug (Linear case-sensitivity) that neither the individual-branch CI (never green) nor my partial temp-compile checks surfaced — running the REAL suite is load-bearing, exactly as the VETO argued. The `code_scanning`/`code_quality` CodeQL ruleset still blocks all merges; v5.5.0's merges (#153, #159) used operator-explicitly-authorized `--admin`. The Development Tracker route reads CHANGELOG/BACKLOG live from disk, so `/api/v1/tracker` can 500 transiently during release editing; the dashboard also swallows the server error body (shows bare "HTTP 500") — a v5.5.1 observability follow-up.
+
+## Phase 75 SKIP records
+
+Gate-chain artifacts absent (delivery cycle ran via /qor-auto-dev-1, not a formal plan→audit→implement→substantiate gate chain; the VETO + remediation + dual-marketplace-green CI stood in for the Reality=Promise proof). Hash via Node 20 `crypto.createHash('sha256')` matching #405–#417.
+
+## Next operator actions
+
+Optional **v5.5.1** patch: surface the tracker dashboard's server-error body (currently bare "HTTP 500"). Configure CodeQL or bypass-list release-mergers to clear the ruleset blocker. Remaining open: #118 (upstream-blocked), #83 (tracking), #154 (new enhancement). Reinstall the extension to pick up v5.5.0 (the local `dist` bundle was pre-v5.5.0).
+
+## Content Hash
+
+**Content Hash**: `09e9b5f4ff39c406ad57a91e79494f26656b63ef89b7c6288899aee40ac60222`
+**Previous Hash**: `894b0f0b2d439ad856cb331933759f7dfbb11a0ede14de92c20991a6c0f7849f` (Entry #417 Chain Hash)
+**Chain Hash**: `a9b18f8641fde45c959982514c1be57a3434bab9b461bdf49ee6b5a05c7d3351`
+**Merkle Seal**: `793eef77e4488694a37dad9d1d6994cd4bd7fcf4ddce82b2f3418eb02c312c5f` — gate_seal_deliver_v5_5_0
+**Session ID**: `2026-06-04-deliver-v5.5.0`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`### Entry #418`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Computed via Node 20 `crypto.createHash('sha256')` over CRLF line endings (Phase 75 skip — gate-chain artifacts absent; same posture as #405–#417).
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-06-04-deliver-v5.5.0_
