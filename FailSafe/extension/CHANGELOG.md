@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.5.2] - 2026-06-04
+
+### Added
+- **Integration Catalog** — the Integrations tab now lists every command/config integration (Continue, Aider, OpenHands, Cline/Roo/Kilo, Linear, Jira, GitHub Checks, Sentry, Teams, Slack) in one place, each with a live enabled/configured status and a one-click jump to its Settings. (#167)
+
+### Changed
+- The Open Design card now reflects the **live** MCP connection state instead of a static placeholder. (#166)
+- Integration install progress is now rendered by a shared, consistent step-by-step component. (#166)
+
+### Fixed
+- **Bicameral "team" setup no longer hangs.** Its interactive Google Drive sign-in now runs in an integrated terminal, and a per-step timeout prevents any install step from stalling indefinitely. (#165)
+- The **Development Tracker** no longer fails to load when no planning manifest is present — it shows discovered releases with a short hint instead of an error.
+
 ## [5.5.1] - 2026-06-04
 
 Maintenance patch.
