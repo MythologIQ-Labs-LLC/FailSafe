@@ -22522,3 +22522,84 @@ _Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`#
 
 _Chain integrity: VALID_
 _Session: 2026-06-04-deliver-v5.5.2_
+
+### Entry #421: SUBSTANTIATE - ACP enforce-proxy (#172 Part 2)
+
+**Date**: 2026-06-04
+**Phase**: SUBSTANTIATE (/qor-substantiate; Reality=Promise PASS; held local per Review Boundary)
+**Plan**: docs/plan-devin-acp-enforce-2026-06-04.md (#172 Part 2; v5.6.0-bound; PR #177)
+**Branch**: `feat/acp-enforce-proxy` (4 commits d891294 -> f0feb24; awaits operator --admin merge)
+**Author**: krknapp@gmail.com
+
+## Decision
+
+Sealed the FailSafe ACP enforce-proxy: a standalone MITM governance proxy that mediates any
+Agent Client Protocol agent (Devin Desktop, Zed, etc.) through the REAL EnforcementEngine. The
+proxy runs as a separate process and reuses the engine verbatim via EngineBackedInterceptor
+behind vscode-free, file-backed providers - no duplicated enforcement logic. B1 decision = OPEN
+(ships in the open extension; FailSafe Pro monetizes on Rust/Tauri OS-level + local-inference
+advantages). One minor, v5.6.0, alongside #175 (Devin detection) + #176 (tracker resilience).
+
+## Scope (FX846-FX856)
+
+- FX846-FX849: governable ACP surface (acpTypes/acpMapper), fail-closed AcpInterceptor,
+  acpPermissionAuthority, AcpProxyGovernor (B3 mode-surfacing + B7 ledger).
+- FX850-FX853: MITM transport - AcpProxyClientHandler (governs effects), AcpProxyAgentHandler
+  (relays client->agent), AcpProxyForwarder (terminalId->handle map), AcpStreamFactory +
+  AcpProxyMain + AcpProxyArgs + AcpProxyEntry + acpProxyBootstrap (CJS dist/acp-proxy.js).
+- FX854: createWorkspaceAcpBacking - vscode-free FileConfigProvider/FileIntentProvider(read-only)
+  /NoopNotificationService/FileLedgerSink feeding the real engine.
+- FX855: governance-mode mirror (.failsafe/governance/runtime-mode.json) via the B194 hook so the
+  separate-process proxy reads the live mode; missing -> observe (fail-safe).
+- FX856: install UX - failsafe.acp.install/uninstallGovernedProxy register a governed twin in
+  Devin's ~/.windsurf/acp/registry.json (buildGovernedTwin; never wraps itself; merge-not-clobber).
+- Shared fix: ajv-instance contract schemas STATICALLY IMPORTED (was __dirname disk read; broke the
+  ESM/bundled target) - behavior-identical for the extension (24 interceptor tests green).
+
+## Verification (Reality=Promise PASS)
+
+- 66 headless tests green: 48 proxy (Args/Governor/ClientHandler/AgentHandler/Forwarder/Backing/
+  Enforcement) incl. 7 END-TO-END enforcement proofs vs the real engine (enforce -> out-of-scope
+  fs-write BLOCKED + dangerous permission reject_once; observe/assist -> enforcing=false; ledger
+  carries no content) + 18 registry (install + DevinRegistry). 24 ajv/interceptor regression green.
+- LIVE MITM smoke: a real `initialize` handshake relayed Devin->proxy->agent->proxy->Devin through
+  the bundled dist/acp-proxy.js spawning the SDK example agent.
+- tsc 0; eslint 0 (new files); secret-scan clean; esbuild emits a self-contained CJS bundle.
+- No presence-only tests: every new test invokes its unit and asserts behavior.
+
+## Governance note (Review Boundary)
+
+Honored throughout: 4 commits pushed to PR #177 only - NO push to main, NO tag, NO version bump,
+NO publish. v5.6.0 awaits fresh per-action operator --admin authorization over the intentional
+CodeQL/code_quality human-gate. B2 (deep fs/terminal content/argv policy) deferred to backlog
+B-INT-15 (operator-chosen) - own governed cycle w/ adversarial review; the proxy enforces a
+legitimate v1 posture (effect existence + path + scope + intent) today.
+
+## Preflight residual acceptance (operator-authorized)
+
+Governance-health flagged two PRE-EXISTING findings (neither touched this branch): DAMAGED
+docs/META_LEDGER.md (cp1252 byte 0x92 in Entry #420, an unfixable-without-chain-break residual
+per project policy) and INCOMPLETE docs/SHADOW_GENOME.md (false-positive: 'TODO' appears in
+narrative prose). Operator explicitly authorized accept-and-seal; chain integrity for this entry
+is unaffected (each entry hashes its own body and links via #420's recorded chain_hash).
+
+## Phase 75 SKIP records
+
+Gate-chain artifacts absent (/qor-auto-dev-1 cycle, not a discrete plan->audit->implement chain).
+Hash via Python hashlib SHA-256 over CRLF; ASCII-only body (no new cp1252 bytes). Same posture as
+#405-#420.
+
+## Content Hash
+
+**Content Hash**: `0ea7c3cce8de33ef8cf9ad41539db7224f5f743b80d8489c06a64bdf4644e912`
+**Previous Hash**: `fb0411c78d4403b7cd5d2983f02690c88decf26675a85b34397cb871f193bf8f` (Entry #420 Chain Hash)
+**Chain Hash**: `ad66cddf67a2ea7588813bde0ef1eda4579f0fcb127bd4a6620b419d97418f36`
+**Merkle Seal**: `75581f0c16ea9cfac3c67fcf5eaaeca2b347978f69dea8edc6ef13c5a6159c5b`  gate_seal_substantiate_acp_enforce_proxy
+**Session ID**: `2026-06-04-substantiate-acp-enforce-proxy`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`### Entry #421`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Computed via Python hashlib SHA-256 over CRLF line endings; ASCII-only body. Phase 75 skip - gate-chain artifacts absent; same posture as #405-#420.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-06-04-substantiate-acp-enforce-proxy_
