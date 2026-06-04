@@ -68,7 +68,9 @@
     "onCommand:failsafe.uninstallVoicePack",
     "onCommand:failsafe.substrate.run",
     "onCommand:failsafe.sarif.import",
-    "onCommand:failsafe.mcp.installCatalog"
+    "onCommand:failsafe.mcp.installCatalog",
+    "onCommand:failsafe.agentAudit.run",
+    "onCommand:failsafe.openhands.observe"
   ],
   "main": "./dist/extension/main.js",
   "contributes": {
@@ -125,6 +127,16 @@
       {
         "command": "failsafe.mcp.installCatalog",
         "title": "FailSafe: Install MCP Integration (governed)",
+        "category": "FailSafe"
+      },
+      {
+        "command": "failsafe.agentAudit.run",
+        "title": "FailSafe: Audit Agent MCP Policy (Cline/Roo/Kilo)",
+        "category": "FailSafe"
+      },
+      {
+        "command": "failsafe.openhands.observe",
+        "title": "FailSafe: Import OpenHands Run (observe)",
         "category": "FailSafe"
       },
       {
@@ -310,6 +322,21 @@
           "type": "string",
           "default": "",
           "markdownDescription": "Slack **incoming webhook URL** to post governance notifications to. Treat as a secret — it grants posting to the target channel. Messages are notify-only (no interactive approvals; a link back to the local Command Center is included). Leave empty to disable."
+        },
+        "failsafe.integrations.agentAudit.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the read-only Cline/Roo/Kilo MCP-policy audit. The `FailSafe: Audit Agent MCP Policy` command scans known workspace MCP config files and upserts risk records for risky posture (remote MCP servers, wildcard auto-approval, shell-capable tools). Secrets (env values, URL tokens) are redacted before any record is written. Read-only; works when the agents are absent."
+        },
+        "failsafe.integrations.openhands.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the read-only OpenHands run observer. The `FailSafe: Import OpenHands Run (observe)` command maps an exported run's events into FailSafe transparency records and degrades on an unsupported version. Read-only; never mutates an active run."
+        },
+        "failsafe.integrations.openhands.version": {
+          "type": "string",
+          "default": "",
+          "description": "Optional OpenHands version (e.g. 0.30.1) used for the supported-version gate when the run export does not declare one. Versions outside the supported major lines degrade gracefully."
         },
         "failsafe.integrations.openDesign.mcpEnabled": {
           "type": "boolean",
