@@ -727,7 +727,6 @@
   "devDependencies": {
     "@playwright/test": "^1.49.1",
     "@types/better-sqlite3": "^7.6.13",
-    "ajv": "^8.17.1",
     "@types/express": "^5.0.6",
     "@types/glob": "^8.1.0",
     "@types/js-yaml": "^4.0.9",
@@ -742,6 +741,7 @@
     "@vscode/test-electron": "^2.3.8",
     "@vscode/vsce": "^2.22.0",
     "@xenova/transformers": "^2.17.2",
+    "ajv": "^8.17.1",
     "esbuild": "^0.27.3",
     "eslint": "^8.50.0",
     "jsdom": "^27.0.1",
@@ -749,6 +749,7 @@
     "typescript": "^5.2.0"
   },
   "dependencies": {
+    "@agentclientprotocol/sdk": "^0.24.0",
     "@modelcontextprotocol/sdk": "^1.25.3",
     "chokidar": "^3.5.3",
     "d3": "^7.8.5",
