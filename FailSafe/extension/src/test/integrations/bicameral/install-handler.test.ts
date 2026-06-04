@@ -65,16 +65,64 @@ suite('integrations/bicameral install-handler', () => {
     assert.equal(last.ok, true);
   });
 
-  test('team mode passes --mode team to setup', async () => {
+  // GH #165: team-mode setup runs an interactive Google Drive OAuth that cannot
+  // complete in a non-interactive spawn (no TTY) — it must route to the terminal.
+  test('team mode routes setup to the integrated terminal (NOT a non-interactive spawn)', async () => {
     const events: InstallProgressEvent[] = [];
-    const spawnFake = makeSpawnFake([{ exitCode: 0 }, { exitCode: 0 }]);
-    await runBicameralInstall({
+    const spawnFake = makeSpawnFake([{ exitCode: 0 }]); // only pip should spawn
+    const terminalCalls: Array<{ name: string; command: string }> = [];
+    const result = await runBicameralInstall({
       workspaceRoot: '/tmp/ws',
       onProgress: (e) => events.push(e),
       spawn: spawnFake.fn as never,
+      runInTerminal: (name, command) => terminalCalls.push({ name, command }),
       verifyState: fakeVerify('configured-not-running'),
     }, 'team');
-    assert.deepEqual(spawnFake.calls[1].args, ['setup', '--mode', 'team']);
+    assert.equal(spawnFake.calls.length, 1, 'team setup must NOT spawn (it would hang on OAuth)');
+    assert.equal(spawnFake.calls[0].bin, 'pip');
+    assert.equal(terminalCalls.length, 1, 'team setup routed to the integrated terminal');
+    assert.match(terminalCalls[0].command, /setup --mode team/);
+    assert.equal(result.done, true);
+    assert.equal(result.ok, true);
+    const setupStep = result.steps.find((s) => s.phase === 'setup');
+    assert.equal(setupStep?.status, 'success');
+    assert.match(setupStep?.stdoutTail || '', /OAuth/i);
+  });
+
+  test('team mode without a terminal bridge errors with guidance (does not hang/spawn setup)', async () => {
+    const events: InstallProgressEvent[] = [];
+    const spawnFake = makeSpawnFake([{ exitCode: 0 }]);
+    const result = await runBicameralInstall({
+      workspaceRoot: '/tmp/ws',
+      onProgress: (e) => events.push(e),
+      spawn: spawnFake.fn as never,
+      // no runInTerminal wired
+    }, 'team');
+    assert.equal(spawnFake.calls.length, 1, 'only pip spawns; setup is never spawned');
+    assert.equal(result.ok, false);
+    assert.match(result.error || '', /interactive terminal/i);
+    assert.equal(result.steps.find((s) => s.phase === 'setup')?.status, 'error');
+  });
+
+  test('runStep timeout: a spawned child that never closes is killed and errors', async () => {
+    const events: InstallProgressEvent[] = [];
+    let killed = false;
+    const spawnFn = (() => {
+      const child = new EventEmitter() as EventEmitter & { stdout: EventEmitter; stderr: EventEmitter; kill: () => void };
+      (child as { stdout: EventEmitter }).stdout = new EventEmitter();
+      (child as { stderr: EventEmitter }).stderr = new EventEmitter();
+      child.kill = () => { killed = true; };
+      return child; // never emits 'close'/'error' → the timeout must fire
+    }) as never;
+    const result = await runBicameralInstall({
+      workspaceRoot: '/tmp/ws',
+      onProgress: (e) => events.push(e),
+      spawn: spawnFn,
+      stepTimeoutMs: 30, // tiny + child never closes → deterministic, not flaky
+    }, 'solo');
+    assert.equal(result.ok, false);
+    assert.match(result.error || '', /timed out/i);
+    assert.equal(killed, true, 'the hung child must be killed');
   });
 
   test('pip install failure halts before setup', async () => {

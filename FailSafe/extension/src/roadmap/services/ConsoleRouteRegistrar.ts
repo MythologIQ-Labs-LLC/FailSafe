@@ -291,6 +291,10 @@ export class ConsoleRouteRegistrar {
       },
       getAutoConnect: () => this.host.getBicameralAutoConnect(),
       setAutoConnect: (v) => this.host.setBicameralAutoConnect(v),
+      // GH #165: reuse the shared integrated-terminal runner (same one the AGT
+      // installer uses) so team-mode setup's interactive Google Drive OAuth runs
+      // in a real TTY. Lazy-resolved at request time (wired by bootstrap).
+      getRunInTerminal: () => this.host.getAgtRunInTerminal?.() ?? null,
       // B-BIC-1: pass ledger handle so ratify appends USER_OVERRIDE entry.
       ledgerManager: this.host.qorelogicManager.getLedgerManager() as any,
       // B-BIC-16: pass mediator handle so drift route forwards results

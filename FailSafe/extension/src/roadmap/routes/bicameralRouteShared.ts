@@ -85,6 +85,15 @@ export interface BicameralRouteDeps {
   eventBus?: {
     emit(type: "bicameral.verdict", payload: BicameralVerdictEventPayload): void;
   };
+  /**
+   * GH #165: optional interactive-terminal bridge (shared with the AGT
+   * installer). When provided, team-mode `bicameral-mcp setup --mode team` is
+   * routed through the integrated terminal so its interactive Google Drive
+   * OAuth completes in a real TTY (the non-interactive spawn path hangs).
+   * Resolved at request time so it reflects the lazily-wired runner; absent →
+   * the install handler errors with operator guidance instead of hanging.
+   */
+  getRunInTerminal?: () => ((name: string, command: string) => void) | null;
 }
 
 /**
