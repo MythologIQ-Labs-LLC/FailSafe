@@ -84,7 +84,13 @@ suite('integrations/acp/proxy backing — FileIntentProvider (read-only)', () =>
   });
 
   test('createIntent REJECTS — the proxy never fabricates governance state', async () => {
-    await assert.rejects(() => new FileIntentProvider('/w').createIntent(), /read-only/);
+    // Use a real temp workspace: FileIntentProvider's IntentStore mkdirs
+    // `.failsafe/manifest` at construction, which EACCES-fails on a non-writable
+    // root path (e.g. `/w` on the Linux CI runner).
+    const ws = tmp();
+    try {
+      await assert.rejects(() => new FileIntentProvider(ws).createIntent(), /read-only/);
+    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
   });
 });
 
