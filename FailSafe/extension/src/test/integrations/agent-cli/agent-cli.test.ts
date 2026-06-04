@@ -3,6 +3,7 @@ import type { RiskGrade } from '../../../shared/types/risk';
 import {
   type AgentRunFn, type AgentRunResult,
   maxRisk, detectBinary, summarizeDiff, classifyDiffRisk, decideAgentRun, buildAgentReceipt,
+  buildL3EscalationRequest,
 } from '../../../integrations/agent-cli/agent-cli-core';
 import { mapAllowlistToRisk, buildContinueArgs, runContinueGoverned } from '../../../integrations/agent-cli/continue-wrapper';
 import { buildAiderArgs, runAiderGoverned } from '../../../integrations/agent-cli/aider-wrapper';
@@ -73,6 +74,29 @@ suite('agent-cli-core (Group B)', () => {
     assert.equal(decideAgentRun('L3', { writesAllowed: true }).verdict, 'ESCALATE');
     assert.equal(decideAgentRun('L2', { writesAllowed: false }).verdict, 'BLOCK');
     assert.equal(decideAgentRun('L1', { writesAllowed: true }).verdict, 'ALLOW');
+  });
+
+  test('buildL3EscalationRequest matches queueL3Approval shape (command-glue, no vscode)', async () => {
+    // Drive a real ESCALATE outcome through the wrapper, then check the L3 request.
+    const diff = 'diff --git a/src/security/Auth.ts b/src/security/Auth.ts\n--- a/src/security/Auth.ts\n+++ b/src/security/Auth.ts\n-o\n+a\n+b\n';
+    const { run } = makeRunner({ diff });
+    const out = await runContinueGoverned({ prompt: 'edit', allow: [], cwd: '/repo', writesAllowed: true }, { run, classify, issuedAt: 'T' });
+    assert.equal(out.decision?.verdict, 'ESCALATE');
+    const req = buildL3EscalationRequest('continue', out);
+    assert.equal(req.riskGrade, 'L3');
+    assert.equal(req.agentDid, 'did:failsafe:agent:continue');
+    assert.equal(req.kind, 'cli-agent-run');
+    assert.equal(req.filePath, 'src/security/Auth.ts');     // first changed path
+    assert.deepEqual(req.flags, ['cli-agent', 'continue']);
+    assert.match(req.sentinelSummary, /L3-risk change \(1 file/);
+    assert.ok(typeof req.agentTrust === 'number');
+    assert.ok(req.meta.receipt, 'receipt rides in meta');
+    // required L3ApprovalRequest (minus auto fields) keys all present
+    for (const k of ['filePath', 'riskGrade', 'agentDid', 'agentTrust', 'sentinelSummary', 'flags']) {
+      assert.ok(k in req, `missing required L3 field ${k}`);
+    }
+    // the API key must never reach the L3 request
+    assert.ok(!JSON.stringify(req).includes('CONTINUE_API_KEY'));
   });
 
   test('buildAgentReceipt is deterministic + never carries env/secret', () => {

@@ -175,6 +175,37 @@ export interface AgentRunOutcome {
   error?: string;
 }
 
+/** The L3 approval request a CLI-agent escalation enqueues (matches the
+ *  `Omit<L3ApprovalRequest, 'id'|'state'|'queuedAt'|'slaDeadline'>` accepted by
+ *  QorLogicManager.queueL3Approval). Pure builder so the escalation request
+ *  shape is unit-testable without the vscode/command layer. */
+export interface L3EscalationRequest {
+  filePath: string;
+  riskGrade: 'L3';
+  agentDid: string;
+  agentTrust: number;
+  sentinelSummary: string;
+  flags: string[];
+  kind: string;
+  meta: Record<string, unknown>;
+}
+
+/** Build the L3 escalation request from a governed-run outcome. The receipt
+ *  (which carries argv but never secrets) rides in `meta`. */
+export function buildL3EscalationRequest(agent: string, outcome: AgentRunOutcome): L3EscalationRequest {
+  const d = outcome.diff;
+  return {
+    filePath: d?.paths[0] ?? `<${agent}-run>`,
+    riskGrade: 'L3',
+    agentDid: `did:failsafe:agent:${agent}`,
+    agentTrust: 0.5,
+    sentinelSummary: `${agent} CLI produced an L3-risk change (${d?.files ?? 0} file(s), +${d?.additions ?? 0}/-${d?.deletions ?? 0}). ${outcome.decision?.reason ?? ''}`.trim(),
+    flags: ['cli-agent', agent],
+    kind: 'cli-agent-run',
+    meta: { receipt: outcome.receipt },
+  };
+}
+
 /** Default argv-form runner (production). `shell: false` — no shell-injection
  *  surface. cwd/env optional; env carries secrets to the child only. */
 export const defaultAgentRun: AgentRunFn = (cmd, args, opts) =>

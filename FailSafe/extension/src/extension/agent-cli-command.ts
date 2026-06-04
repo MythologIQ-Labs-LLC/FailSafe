@@ -12,7 +12,7 @@
 
 import * as vscode from 'vscode';
 import type { RiskGrade } from '../shared/types/risk';
-import { defaultAgentRun, type AgentRunOutcome } from '../integrations/agent-cli/agent-cli-core';
+import { defaultAgentRun, buildL3EscalationRequest, type AgentRunOutcome } from '../integrations/agent-cli/agent-cli-core';
 import { runContinueGoverned } from '../integrations/agent-cli/continue-wrapper';
 import { runAiderGoverned } from '../integrations/agent-cli/aider-wrapper';
 
@@ -31,17 +31,8 @@ export interface AgentCliDeps {
 }
 
 async function escalate(deps: AgentCliDeps, agent: string, out: AgentRunOutcome): Promise<void> {
-  const filePath = out.diff?.paths[0] ?? `<${agent}-run>`;
-  await deps.qorelogicManager.queueL3Approval({
-    filePath,
-    riskGrade: 'L3',
-    agentDid: `did:failsafe:agent:${agent}`,
-    agentTrust: 0.5,
-    sentinelSummary: `${agent} CLI produced an L3-risk change (${out.diff?.files ?? 0} file(s), +${out.diff?.additions ?? 0}/-${out.diff?.deletions ?? 0}). ${out.decision?.reason ?? ''}`.trim(),
-    flags: ['cli-agent', agent],
-    kind: 'cli-agent-run',
-    meta: { receipt: out.receipt },
-  });
+  // Shape built by the unit-tested pure helper (agent-cli-core).
+  await deps.qorelogicManager.queueL3Approval(buildL3EscalationRequest(agent, out));
 }
 
 async function report(deps: AgentCliDeps, agent: string, out: AgentRunOutcome): Promise<void> {
