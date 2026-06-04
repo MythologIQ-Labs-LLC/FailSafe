@@ -47,6 +47,16 @@ export interface InstallHandlerOptions {
   spawn?: typeof child_process.spawn;
   /** Test seam: override the post-setup verify probe. */
   verifyState?: (workspaceRoot: string, command: string) => Promise<BicameralInstallState>;
+  /** Interactive-terminal bridge (same shape as the AGT installer's runInTerminal).
+   *  REQUIRED for team-mode setup, which performs an interactive Google Drive
+   *  OAuth that cannot complete in the non-interactive spawn path (no TTY).
+   *  When absent in team mode, the handler errors with operator guidance rather
+   *  than hanging. FailSafe never reads/writes the OAuth token. */
+  runInTerminal?: (name: string, command: string) => void;
+  /** Per-step spawn timeout (ms). Defense-in-depth: kills a spawned child that
+   *  never responds (e.g. a process blocked on an interactive prompt) so the
+   *  install cannot hang indefinitely. Default 120000 (2 min). */
+  stepTimeoutMs?: number;
 }
 
 const VALID_MODES: ReadonlySet<InstallMode> = new Set(['solo', 'team']);
@@ -86,9 +96,33 @@ export async function runBicameralInstall(
   });
   if (!pipResult.ok) return finish(opts, mode, steps, pipResult.error || 'pip install failed');
 
+  const setupCommand = `${bicameral} setup --mode ${mode}`;
+
+  if (mode === 'team') {
+    // Team setup performs an interactive Google Drive OAuth (browser + console
+    // prompt). That CANNOT complete in the non-interactive spawn path (no TTY) —
+    // it would block forever (GH #165). Route it through the integrated terminal
+    // so the operator completes the OAuth in a real TTY, then re-probes via the
+    // card's Refresh. FailSafe never touches the OAuth token
+    // (~/.bicameral/google-drive-token.json). Verify is deferred because the
+    // config is not done until the operator finishes the OAuth.
+    const setupStep: InstallStep = { phase: 'setup', status: 'running', command: setupCommand };
+    steps.push(setupStep);
+    emit(opts, mode, steps, false);
+    if (!opts.runInTerminal) {
+      setupStep.status = 'error';
+      setupStep.error = `Team setup needs an interactive terminal for the Google Drive OAuth. Run \`${setupCommand}\` in a terminal, then click Refresh.`;
+      return finish(opts, mode, steps, setupStep.error);
+    }
+    opts.runInTerminal('Bicameral: team setup', setupCommand);
+    setupStep.status = 'success';
+    setupStep.stdoutTail = 'Complete the Google Drive OAuth in the opened terminal, then click Refresh to verify.';
+    return finish(opts, mode, steps);
+  }
+
   const setupResult = await runStep(opts, mode, steps, {
     phase: 'setup',
-    command: `${bicameral} setup --mode ${mode}`,
+    command: setupCommand,
     bin: bicameral,
     args: ['setup', '--mode', mode],
   });
@@ -147,6 +181,24 @@ async function runStep(
       resolve({ ok: false, error: step.error });
       return;
     }
+    // Defense-in-depth: a child that never closes (e.g. one blocked on an
+    // interactive prompt) must not hang the install forever. `settled` guards
+    // against a timeout/close race double-resolving or double-mutating the step.
+    let settled = false;
+    const timeoutMs = opts.stepTimeoutMs ?? 120_000;
+    const settle = (result: { ok: boolean; error?: string }) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(result);
+    };
+    const timer = setTimeout(() => {
+      step.status = 'error';
+      step.error = `${req.bin} timed out after ${timeoutMs}ms (no response — an interactive prompt may be blocking).`;
+      try { child.kill(); } catch { /* best-effort */ }
+      emit(opts, mode, steps, false);
+      settle({ ok: false, error: step.error });
+    }, timeoutMs);
     let tail = '';
     child.stdout?.on('data', (chunk) => {
       tail = (tail + String(chunk)).slice(-STDOUT_TAIL_BYTES);
@@ -159,21 +211,23 @@ async function runStep(
       step.stdoutTail = sanitizeStdoutTail(tail);
     });
     child.on('error', (err) => {
+      if (settled) return;
       step.status = 'error';
       step.error = String(err);
       emit(opts, mode, steps, false);
-      resolve({ ok: false, error: step.error });
+      settle({ ok: false, error: step.error });
     });
     child.on('close', (code) => {
+      if (settled) return;
       if (code === 0) {
         step.status = 'success';
         emit(opts, mode, steps, false);
-        resolve({ ok: true });
+        settle({ ok: true });
       } else {
         step.status = 'error';
         step.error = `${req.bin} exited with code ${code}`;
         emit(opts, mode, steps, false);
-        resolve({ ok: false, error: step.error });
+        settle({ ok: false, error: step.error });
       }
     });
   });

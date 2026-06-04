@@ -61,6 +61,11 @@ export function registerBicameralLifecycleRoutes(
       const result = await runBicameralInstall(
         {
           workspaceRoot: deps.workspaceRoot,
+          // GH #165: team-mode setup needs an interactive TTY for the Google
+          // Drive OAuth — route it through the integrated terminal bridge.
+          // Resolved at request time (the runner is wired lazily by bootstrap);
+          // undefined when no terminal is available → handler errors with guidance.
+          runInTerminal: deps.getRunInTerminal?.() ?? undefined,
           onProgress: (evt: InstallProgressEvent) => {
             deps.broadcast({
               type: evt.done ? "bicameral.install.complete" : "bicameral.install.progress",
