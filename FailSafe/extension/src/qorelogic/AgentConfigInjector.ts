@@ -18,6 +18,9 @@ export const AGENT_CONFIG_MAP: Record<string, InjectionConfig> = {
   cursor: { configPath: '.cursor/rules/failsafe.mdc', format: 'mdc' },
   codex: { configPath: 'codex.md', format: 'markdown' },
   windsurf: { configPath: '.windsurfrules', format: 'markdown' },
+  // GH #161: Devin Desktop (formerly Windsurf) prefers `.devin/rules/` over the
+  // legacy `.windsurfrules` (which it still reads).
+  'devin-desktop': { configPath: '.devin/rules/failsafe.md', format: 'markdown' },
   gemini: { configPath: 'GEMINI.md', format: 'markdown' },
 };
 

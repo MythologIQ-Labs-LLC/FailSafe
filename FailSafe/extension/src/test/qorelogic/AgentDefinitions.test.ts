@@ -2,13 +2,21 @@ import * as assert from "assert";
 import { BUILT_IN_AGENTS } from "../../qorelogic/AgentDefinitions";
 
 suite("AgentDefinitions Test Suite", () => {
-  test("BUILT_IN_AGENTS has exactly 7 entries", () => {
-    assert.strictEqual(BUILT_IN_AGENTS.length, 7);
+  test("BUILT_IN_AGENTS has exactly 8 entries", () => {
+    assert.strictEqual(BUILT_IN_AGENTS.length, 8);
   });
 
   test("includes the kilo-code built-in", () => {
     const ids = BUILT_IN_AGENTS.map((a) => a.id);
     assert.ok(ids.includes("kilo-code"), "kilo-code must be a built-in agent");
+  });
+
+  test("GH #161: includes the devin-desktop built-in (formerly Windsurf) with the .devin signal", () => {
+    const devin = BUILT_IN_AGENTS.find((a) => a.id === "devin-desktop");
+    assert.ok(devin, "devin-desktop must be a built-in agent");
+    assert.ok(devin!.detection?.folderExists?.includes(".devin"), "high-confidence .devin folder signal");
+    assert.ok(devin!.detection?.hostAppNames?.includes("devin"), "devin host app name disambiguates from Windsurf");
+    assert.ok(devin!.governancePaths?.includes(".devin/rules"), "writes to the Devin-preferred .devin/rules");
   });
 
   test("all agent IDs are unique", () => {
