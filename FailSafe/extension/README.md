@@ -48,9 +48,16 @@ Each integration ships with its own README and its external API names are back-c
 
 ---
 
-**Current Release**: v5.6.0 (2026-06-04)
+**Current Release**: v5.6.1 (2026-06-05)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v5.6.1
+
+- 📊 **Development Tracker now works on any repo** — repositories with no semantic-version releases (PR-incremental history) no longer show an empty dashboard; the tracker detects the release cadence and renders a merged-PR timeline with full detail.
+- 🧱 **Generate a tracker from your history** — the new `FailSafe: Generate Tracker Manifest` command scaffolds the tracker's planning manifest from your merged PRs + CHANGELOG, so any repository gets a detailed, data-driven tracker without hand-authoring.
+- ✋ **You own the categories** — generated programs and verticals are routed through an interactive keep / drop / rename / fold confirmation before they're written; the tracker reflects how *you* slice your work, not a commit-message heuristic.
+- 🔗 **Bicameral decision enrichment** — when the Bicameral integration is connected, the tracker deepens with decision-aware verticals (in-sync / drifted / open-question) and a governed-decisions ledger.
 
 ## What's New in v5.6.0
 
