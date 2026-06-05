@@ -48,9 +48,17 @@ Each integration ships with its own README and its external API names are back-c
 
 ---
 
-**Current Release**: v5.5.2 (2026-06-04)
+**Current Release**: v5.6.0 (2026-06-04)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v5.6.0
+
+- 🤝 **Govern any Agent Client Protocol (ACP) agent** — FailSafe now speaks ACP, the open editor↔agent standard used by Devin Desktop, Zed, JetBrains and more. An agent's tool calls, file writes, terminal commands, and permission requests route through FailSafe's enforcement engine.
+- 🛡️ **Standalone ACP enforce-proxy** — sits between the editor and an ACP agent and mediates it through FailSafe's *real* governance engine: enforce mode blocks out-of-scope file writes and denies dangerous permission requests; observe/assist record every decision. Verified end-to-end against the live protocol.
+- ⚡ **One-click governed install for Devin Desktop** — *FailSafe: Install Governed ACP Proxy* registers a FailSafe-governed twin of any agent in Devin's ACP registry.
+- 🧭 **Devin Desktop is a first-class host** — detected automatically, with agent rules from `.devin/rules/`.
+- 📊 **Tracker handles non-semver repos** — repositories that ship by incremental PRs are now discovered and rendered, with automatic cadence detection.
 
 ## What's New in v5.5.2
 

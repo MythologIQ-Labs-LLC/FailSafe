@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.6.0] - 2026-06-04
+
+### Added
+- **Govern any Agent Client Protocol (ACP) agent.** FailSafe now speaks ACP — the open editor↔agent standard used by Devin Desktop, Zed, JetBrains, and a growing list of agents. A new ACP governance adapter routes an agent's tool calls, file writes, terminal commands, and permission requests through FailSafe's existing enforcement engine. (#172)
+- **Standalone ACP enforce-proxy.** A self-contained proxy can sit between the editor and an ACP agent and mediate it through FailSafe's *real* governance engine — in enforce mode it blocks out-of-scope file writes and denies dangerous permission requests; in observe/assist it records every decision without blocking. Verified end-to-end against the live protocol. (#172)
+- **One-click governed install for Devin Desktop.** New commands — *FailSafe: Install / Uninstall Governed ACP Proxy* — register a FailSafe-governed twin of any agent in Devin's ACP registry, so the agent runs under FailSafe governance. (#172)
+- **Devin Desktop is a first-class host.** FailSafe detects Devin Desktop (the rebranded Windsurf) and applies its agent rules from `.devin/rules/`. (#161)
+
+### Changed
+- **Development Tracker handles non-semver repos.** Repositories that ship by incremental PRs (no semantic-version tags) are now discovered and rendered, with automatic cadence detection (semver vs PR-incremental). (#174)
+
 ## [5.5.2] - 2026-06-04
 
 ### Added

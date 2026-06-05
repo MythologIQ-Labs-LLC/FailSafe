@@ -66,15 +66,16 @@ Under the hood, a **Tier 1 supply-chain CI baseline** (least-privilege workflow 
 
 <div align="center">
 
-**Current Release**: v5.5.2 (2026-06-04)
+**Current Release**: v5.6.0 (2026-06-04)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
 
-## What's new in v5.5.2
+## What's new in v5.6.0
 
-- 🧩 **Integration Catalog** — every command/config integration (Continue, Aider, OpenHands, Cline/Roo/Kilo, Linear, Jira, GitHub Checks, Sentry, Teams, Slack) now has a home in the Integrations tab with live enabled/configured status and a one-click jump to Settings.
-- 🔌 **Bicameral team-mode fix** — interactive Google Drive sign-in now runs in an integrated terminal, so "team" setup no longer hangs; a per-step install timeout was added.
-- 📊 **Tracker resilience** — the Development Tracker loads gracefully without a planning manifest, and the Open Design card shows live MCP connection state. See [CHANGELOG.md](CHANGELOG.md).
+- 🤝 **Govern any Agent Client Protocol (ACP) agent** — FailSafe speaks ACP, the open editor↔agent standard used by Devin Desktop, Zed, JetBrains and more; an agent's tool calls, file writes, terminal commands, and permission requests route through FailSafe's enforcement engine.
+- 🛡️ **Standalone ACP enforce-proxy** — mediates an ACP agent through FailSafe's *real* governance engine (enforce blocks out-of-scope writes + denies dangerous permissions; observe/assist record). Verified end-to-end against the live protocol.
+- ⚡ **One-click governed install for Devin Desktop** + first-class **Devin Desktop host detection** (rebranded Windsurf).
+- 📊 **Tracker handles non-semver repos** — PR-incremental repositories are discovered and rendered with automatic cadence detection. See [CHANGELOG.md](CHANGELOG.md).
 
 ## What's new in v5.5.1
 
