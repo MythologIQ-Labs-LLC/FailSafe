@@ -4,6 +4,7 @@ import * as path from 'path';
 import { execFileSync } from 'child_process';
 import * as yaml from 'js-yaml';
 import { buildTrackerModel, validateManifest, discoverReleases, type TrackerManifest } from '../tracker/tracker-model';
+import { discoverMergedPrs, detectCadence } from '../tracker/tracker-pr-discovery';
 
 /**
  * TrackerRoute — serves the Development Tracker (standard:
@@ -57,6 +58,20 @@ function readChangelog(workspaceRoot: string): string {
   }
 }
 
+/** Merged-PR git-log text (`<date>\t<subject>` per line) — the FALLBACK axis for
+ *  PR-incremental repos with no semver CHANGELOG. Degrade-safe (no git / not a
+ *  repo → ''), mirroring shippedReleaseIds. Matches discoverMergedPrs's expected
+ *  input (GH #174). */
+function readGitLog(workspaceRoot: string): string {
+  try {
+    return execFileSync('git', ['log', '--pretty=format:%ad%x09%s', '--date=short'], {
+      cwd: workspaceRoot, encoding: 'utf-8', timeout: 4000, maxBuffer: 8 * 1024 * 1024,
+    });
+  } catch {
+    return '';
+  }
+}
+
 export const TrackerRoute = {
   render(_req: Request, res: Response, deps: TrackerRouteDeps): void {
     const file = TEMPLATE_CANDIDATES(deps).find((f) => {
@@ -85,11 +100,18 @@ export const TrackerRoute = {
       // Discover the complete release axis from the CHANGELOG (the governance
       // files don't span the full history); the manifest only adds forecasts.
       const discoveredReleases = discoverReleases(readChangelog(deps.workspaceRoot));
+      // GH #174 Part 2: PR-incremental fallback. A repo with no semver releases
+      // (e.g. only `## Unreleased` + merged-PR git history) would otherwise show a
+      // blank shell. Detect the cadence and, when it's pr-incremental, use the
+      // merged-PR anchors as the timeline axis. Semver repos are unaffected.
+      const prAnchors = discoverMergedPrs(readGitLog(deps.workspaceRoot));
+      const cadence = detectCadence(discoveredReleases, prAnchors);
+      const axis = cadence === 'pr-incremental' ? prAnchors : discoveredReleases;
       // Retroactive windows: deps override (future VS Code settings) → manifest
       // progressWindows (user-editable today) → defaults 60 / 30.
       const pw = manifest.progressWindows ?? {};
       const model = buildTrackerModel(manifest, {
-        discoveredReleases,
+        discoveredReleases: axis,
         shippedReleaseIds: shippedReleaseIds(deps.workspaceRoot),
         now: new Date(),
         minorDays: deps.minorWindowDays ?? pw.minorDays ?? 60,
@@ -108,7 +130,7 @@ export const TrackerRoute = {
       }
       // The dashboard reads the data fields at the TOP LEVEL (data.rcs, data.meta,
       // …), so spread the model out; lint/ok/manifestPresent ride along.
-      res.json({ ...model, lint, manifestPresent, ok: !lint.some((f) => f.severity === 'abort') });
+      res.json({ ...model, lint, manifestPresent, cadence, ok: !lint.some((f) => f.severity === 'abort') });
     } catch (e) {
       res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
     }

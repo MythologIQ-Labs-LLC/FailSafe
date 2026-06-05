@@ -7,6 +7,7 @@ import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { execFileSync } from 'child_process';
 import { Request, Response } from 'express';
 import { TrackerRoute } from '../../../roadmap/routes/TrackerRoute';
 
@@ -61,5 +62,64 @@ suite('TrackerRoute.api graceful degradation', () => {
     assert.equal(captured.body!.manifestPresent, true);
     const lint = captured.body!.lint as Array<{ code: string }>;
     assert.ok(!lint.some((f) => f.code === 'manifest-absent'), 'no absent-advisory when present');
+  });
+});
+
+// GH #174 Part 2: PR-incremental (non-semver) cadence fallback.
+suite('TrackerRoute.api cadence (GH #174 Part 2)', () => {
+  function gitRepo(ws: string, subjects: string[]): void {
+    const git = (args: string[]) => execFileSync('git', args, { cwd: ws, stdio: 'ignore' });
+    git(['init', '-q']);
+    git(['config', 'user.email', 't@example.com']);
+    git(['config', 'user.name', 'Tester']);
+    git(['config', 'commit.gpgsign', 'false']);
+    for (const s of subjects) git(['commit', '--allow-empty', '-q', '-m', s]);
+  }
+
+  test('no semver releases + merged-PR git history → cadence=pr-incremental with pr-<N> anchors', () => {
+    const ws = tmpWorkspace();
+    try {
+      // CHANGELOG with ONLY an Unreleased section — no released semver versions.
+      fs.writeFileSync(path.join(ws, 'CHANGELOG.md'), '# Changelog\n\n## Unreleased\n\n- wip\n');
+      gitRepo(ws, [
+        'feat: thing one (#1)',
+        'Merge pull request #2 from acme/feat-two',
+        'feat: thing three (#3)',
+      ]);
+      const { res, captured } = fakeResponse();
+      TrackerRoute.api({} as Request, res, { workspaceRoot: ws, uiDir: '' });
+      assert.equal(captured.status, 200);
+      assert.equal(captured.body!.cadence, 'pr-incremental', 'falls back to PR cadence');
+      const rcs = captured.body!.rcs as Array<{ id: string; state: string }>;
+      assert.ok(rcs.length >= 3, 'PR anchors populate the axis (not a blank shell)');
+      assert.ok(rcs.every((r) => /^pr-\d+$/.test(r.id)), 'every anchor is a pr-<N>');
+      // oldest-first: pr-1 before pr-3
+      assert.ok(rcs.findIndex((r) => r.id === 'pr-1') < rcs.findIndex((r) => r.id === 'pr-3'), 'ascending order preserved');
+    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+  });
+
+  test('semver releases present → cadence=semver (PR fallback does NOT hijack)', () => {
+    const ws = tmpWorkspace();
+    try {
+      fs.writeFileSync(path.join(ws, 'CHANGELOG.md'), '# Changelog\n\n## [1.2.0] - 2026-01-01\n\n### Added\n- x\n\n## [1.1.0] - 2025-12-01\n\n- y\n');
+      gitRepo(ws, ['Merge pull request #9 from acme/x']); // PRs exist, but semver wins
+      const { res, captured } = fakeResponse();
+      TrackerRoute.api({} as Request, res, { workspaceRoot: ws, uiDir: '' });
+      assert.equal(captured.body!.cadence, 'semver', 'semver takes precedence over PRs');
+      const rcs = captured.body!.rcs as Array<{ id: string }>;
+      assert.ok(rcs.some((r) => r.id === 'v1.2.0'), 'semver releases on the axis');
+      assert.ok(!rcs.some((r) => /^pr-/.test(r.id)), 'no PR anchors when semver releases exist');
+    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+  });
+
+  test('empty repo (no releases, no PRs) → cadence=empty, no crash', () => {
+    const ws = tmpWorkspace();
+    try {
+      const { res, captured } = fakeResponse();
+      TrackerRoute.api({} as Request, res, { workspaceRoot: ws, uiDir: '' });
+      assert.equal(captured.status, 200);
+      assert.equal(captured.body!.cadence, 'empty');
+      assert.deepEqual(captured.body!.rcs, []);
+    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
   });
 });

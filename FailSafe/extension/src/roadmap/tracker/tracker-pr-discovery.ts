@@ -17,7 +17,7 @@ import type { TrackerRc } from './tracker-model';
 /** A squash-merge subject ends with `(#123)`; a GitHub merge-commit subject is
  *  `Merge pull request #123 from owner/branch`. Both carry the PR number. */
 const SQUASH_RE = /\(#(\d+)\)\s*$/;
-const MERGE_RE = /^Merge pull request #(\d+) from \S+(?:\s+(.*))?$/;
+const MERGE_RE = /^Merge pull request #(\d+) from (\S+)/;
 
 interface ParsedCommit { date?: string; subject: string; }
 
@@ -37,13 +37,31 @@ function parseLogLines(gitLogText: string): ParsedCommit[] {
   return out;
 }
 
-/** A clean, human title for a PR anchor: squash subjects keep their text minus
- *  the trailing `(#N)`; merge-commit subjects keep the merged branch hint. */
-function titleFor(subject: string, prNumber: string): string {
+/** "owner/feat/live-emission" → "live emission": drop the owner segment + a
+ *  conventional-commit type prefix, then de-slug. Used as a merge-title fallback. */
+function humanizeBranch(branch: string): string {
+  const noOwner = branch.includes('/') ? branch.slice(branch.indexOf('/') + 1) : branch;
+  const noType = noOwner.replace(/^(feat|fix|docs|chore|refactor|test|ci|perf|build|style)\//, '');
+  return noType.replace(/[-_/]+/g, ' ').trim();
+}
+
+/**
+ * A clean, human title for a PR anchor:
+ * - squash subjects → their own text minus the trailing `(#N)`;
+ * - merge-commit subjects → the FOLLOWING feature commit's subject (the merged
+ *   branch tip, since `git log` is newest-first), when it isn't itself a PR commit;
+ *   else the humanized branch hint; else `Merge #N`.
+ */
+function titleFor(subject: string, prNumber: string, next?: ParsedCommit): string {
   const squash = subject.replace(SQUASH_RE, '').trim();
   if (squash && squash !== subject) return squash;
   const m = MERGE_RE.exec(subject);
-  if (m) return (m[2]?.trim() || `Merge #${prNumber}`);
+  if (m) {
+    const ns = next?.subject?.trim();
+    if (ns && !MERGE_RE.test(ns) && !SQUASH_RE.test(ns)) return ns;
+    const hint = humanizeBranch(m[2] ?? '');
+    return hint || `Merge #${prNumber}`;
+  }
   return subject;
 }
 
@@ -57,7 +75,8 @@ export function discoverMergedPrs(gitLogText: string): TrackerRc[] {
   const byNumber = new Map<number, TrackerRc>();
   // git log is newest-first; iterate so the FIRST (newest) wins the title, but
   // keep the oldest date — we re-sort ascending at the end.
-  for (const c of commits) {
+  for (let i = 0; i < commits.length; i++) {
+    const c = commits[i];
     const squash = SQUASH_RE.exec(c.subject);
     const merge = MERGE_RE.exec(c.subject);
     const numStr = squash?.[1] ?? merge?.[1];
@@ -69,7 +88,7 @@ export function discoverMergedPrs(gitLogText: string): TrackerRc[] {
       id: `pr-${n}`,
       state: 'pr',
       note: c.date,
-      summary: titleFor(c.subject, numStr) || undefined,
+      summary: titleFor(c.subject, numStr, commits[i + 1]) || undefined,
       progressEligible: false,
     };
     if (!existing) {
