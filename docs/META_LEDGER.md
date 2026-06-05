@@ -22662,3 +22662,84 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 _Chain integrity: VALID_
 _Session: 2026-06-04-deliver-v5.6.0_
+
+### Entry #423: SUBSTANTIATE - Development Tracker generator + operator categorization (#174)
+
+**Date**: 2026-06-05
+**Phase**: SUBSTANTIATE (/qor-substantiate)
+**Author**: Judge
+
+**Target Version**: next release (tracker fix bundle; bump decided at DELIVER)
+**Branch**: feat/tracker-manifest-generator (PR #183, supersedes #182)
+
+## Decision
+
+Reality=Promise PASS. The Development Tracker now renders on ANY repo (semver or PR-incremental),
+and the generated program/vertical taxonomy is an explicit operator decision rather than a
+commit-scope guess. Sealed for release; the publish itself is gated on operator approval (no-ship
+rule) plus a bump selection.
+
+## Scope (this seal)
+
+- FX847 Part 2 - PR-incremental render wiring (TrackerRoute.api cadence/axis + dashboard
+  buildPrBuckets). Fixes the blank-shell on non-semver repos (PRs #182/#183).
+- FX857 - manifest generator: scaffold docs/roadmap/programs.yaml from merged PRs + CHANGELOG
+  (gh/git/fs, read-only over the operator's existing auth, degrade-safe).
+- FX858 - Bicameral-MCP Layer 3 enrichment: decision-aware verticals + decisions ledger when the
+  local daemon is connected; degrade-safe to L1/L2 when absent.
+- FX859 - operator categorization: programs/verticals are a human taxonomy. Interactive
+  keep/drop/rename/fold confirm (collectCategoryDecisions) feeds the pure applyCategoryDecisions;
+  runs AFTER Bicameral enrichment so the operator confirms the FINAL taxonomy.
+
+## Verification
+
+- tsc --noEmit: 0 errors. eslint: clean on all touched files.
+- Tracker unit suite 20/20 (manifest-categorize 6 + manifest-generator 5 + manifest-bicameral 4
+  + tracker-route 5).
+- NEW Playwright e2e tracker-dashboard.spec.ts 3/3 in real chromium: pr-incremental POPULATES
+  (the blank-shell regression guard), semver unaffected, empty degrades gracefully. This closes
+  the user-facing-visual gate (feedback_e2e_before_claim_closed + design_reference_required) the
+  prior render fix lacked - jsdom alone was necessary-not-sufficient.
+- Live demonstration on the real bicameral-integrations repo: generator -> 4 programs / 22 phases
+  / 6 verticals / 3 decisions; operator-categorized render collapses the scope-less Other bucket.
+
+## FEATURE_INDEX
+
+FX859 added; e2e spec cited on FX847 + FX859. No newly-unverified rows.
+
+## Coverage gate
+
+PUBLISH_BLOCK.md Active: no (unchanged). Every new row carries a real test; no presence-only seals.
+
+## Governance note
+
+Code bundle committed locally (741e226) on the feature branch. NO push / merge / tag / publish
+performed - those await explicit per-action operator approval and a DELIVER bump decision
+(5.6.0 -> patch 5.6.1 or minor 5.7.0). The intentional CodeQL/code_quality human-gate stands;
+any merge needs fresh --admin.
+
+## Bicameral --mode follow-up
+
+Upstream bicameral-mcp setup --mode {solo,team} flag (PR #553, ships 0.16.5) unblocks FailSafe's
+non-interactive solo install; a later FailSafe cycle bumps the pin to >=0.16.5,<0.17 plus a
+graceful guard for older installs.
+
+## Phase 75 SKIP records
+
+Python qor-logic reliability gates not importable in this TS repo - SKIP per Phase 75 (same
+posture as #405-#422). Hash via Python hashlib SHA-256 over CRLF; cp1252 body.
+
+## Content Hash
+
+**Content Hash**: `fea194057f91398696f2f48425e4bbc13e4ade7aad3399cb94a5346f62dc947a`
+**Previous Hash**: `13cc3885e3fa1f67ccceb5e3c843e97a72f136ede84310d555170b2463fe9091` (Entry #422 Chain Hash)
+**Chain Hash**: `f2c4099c9ac041c421afef23f442a6c70ff898fda61ff7508da9218512c5752f`
+**Merkle Seal**: `6924f4d4aa2d27dc8db8f8584c571b2acde8be6d8cdc73bb44c9fa455bec0c5e`  gate_seal_substantiate_tracker_generator
+**Session ID**: `2026-06-05-substantiate-tracker-generator`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #423`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#422.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-06-05-substantiate-tracker-generator_

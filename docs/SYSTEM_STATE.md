@@ -1,7 +1,7 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-06-04
-**Current Release:** v5.5.2 (DELIVER seal #420; dual-marketplace). Working state: ACP enforce-proxy for v5.6.0 on branch `feat/acp-enforce-proxy` (PR #177, SUBSTANTIATE seal #421 — held local, awaits operator `--admin` merge).
+**Last Updated:** 2026-06-05
+**Current Release:** v5.6.0 (DELIVER seal #422; dual-marketplace — ACP governance). Working state: Development Tracker generator + operator categorization + non-semver render resilience on branch `feat/tracker-manifest-generator` (PR #183, supersedes #182; SUBSTANTIATE seal #423 — held local, awaits operator bump decision + `--admin` merge + `production`-gate publish). Closes the user-facing-visual e2e gate the prior render fix lacked (tracker-dashboard.spec.ts 3/3 in real chromium).
 **Prior release detail:** v5.3.3 (published to VS Code Marketplace + Open VSX via tag `v5.3.3` (`d3a0b75`); Open VSX via CI, VS Code Marketplace via local `vsce publish --azure-credential` from the identical CI-built VSIX after the CI marketplace job hit the documented `/_apis/gallery` PAT-auth timeout) — bundles B-OD-8 (#409) + B-INT-6 (#410) + B-INT-7 (#411/#413) + B-INT-12 (#412) + transparency date-filter fix (#414); DELIVER seal #415
 **Sealed baseline:** v5.2.0 → v5.2.2 hotfix line (Entries #392-#396) → v5.3.0 (Entry #400 Open Design v1 + Entry #402 substrate v1) → v5.3.0 release (`08916d9`, dead-on-marketplace) → v5.3.1 hotfix (DELIVER at #406) → v5.3.2 release (refactor bundle #407 B-INT-4 + #408 B-INT-5) → v5.3.3 release (integration beta bundle #409–#414; DELIVER #415)
 **Active integrations:** Bicameral MCP (sealed Entry #372 + earlier cluster) · Open Design v1 (provenance, Entry #400) · Open Design v1.1 (MCP + SSE + probe, Entry #405) · Open Design v1.2 (`create_artifact` L3-gated, Entry #409 — RELEASED v5.3.3; destructive write-tools deferred to B-OD-12)
