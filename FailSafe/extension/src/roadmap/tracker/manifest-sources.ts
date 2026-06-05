@@ -11,6 +11,7 @@ import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import type { ManifestSources, GeneratorPr } from './manifest-generator';
+import type { BicameralMcpClient, BicameralFeatureBrief } from '../../integrations/bicameral';
 
 /** owner/repo from the origin remote, or '' if not a GitHub repo. */
 export function resolveRepoSlug(workspaceRoot: string): string {
@@ -57,4 +58,24 @@ export function gatherManifestSources(workspaceRoot: string): ManifestSources {
     prs: repo ? fetchMergedPrs(repo) : [],
     changelog: readChangelog(workspaceRoot),
   };
+}
+
+/**
+ * Layer 3 (GH #174): the optional Bicameral-MCP enrichment signal. When the
+ * Bicameral integration is connected, ingest the repo into its decision graph and
+ * return the feature-area briefs (features + governed decisions). Degrade-safe —
+ * no client / not connected / any tool error → [] (the generator falls back to
+ * the git + CHANGELOG layers). Only the local Bicameral daemon is contacted.
+ */
+export async function gatherBicameralBriefs(
+  client: BicameralMcpClient | null,
+  workspaceRoot: string,
+): Promise<BicameralFeatureBrief[]> {
+  if (!client) return [];
+  try {
+    await client.ingest({ repoPath: workspaceRoot });
+    return await client.history();
+  } catch {
+    return [];
+  }
 }

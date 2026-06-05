@@ -171,8 +171,12 @@ export async function activate(
     registerSarifImportCommand(context, core.workspaceRoot);
 
     // 3.13b Tracker manifest generator (GH #174): scaffold docs/roadmap/programs.yaml
-    // from merged PRs + CHANGELOG so any repo gets a detailed Development Tracker.
-    registerGenerateTrackerManifestCommand(context, core.workspaceRoot);
+    // from merged PRs + CHANGELOG (+ the Bicameral decision graph when connected)
+    // so any repo gets a detailed Development Tracker.
+    registerGenerateTrackerManifestCommand(
+      context, core.workspaceRoot,
+      () => consoleServer?.getBicameralClient() ?? null,
+    );
 
     // 3.14 Governed MCP install (B-INT-13/14): risk-scored install of catalog
     // MCP integrations (Context7, Mermaid Chart) into .mcp.json.
