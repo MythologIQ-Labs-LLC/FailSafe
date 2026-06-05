@@ -66,9 +66,16 @@ Under the hood, a **Tier 1 supply-chain CI baseline** (least-privilege workflow 
 
 <div align="center">
 
-**Current Release**: v5.6.0 (2026-06-04)
+**Current Release**: v5.6.1 (2026-06-05)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
+
+## What's new in v5.6.1
+
+- 📊 **Development Tracker now works on any repo** — repositories with no semantic-version releases (PR-incremental history) no longer show an empty dashboard; the tracker detects the release cadence and renders a merged-PR timeline with full detail.
+- 🧱 **Generate a tracker from your history** — the new `FailSafe: Generate Tracker Manifest` command scaffolds the tracker from your merged PRs + CHANGELOG.
+- ✋ **You own the categories** — generated programs and verticals are yours to keep / drop / rename / fold before they're written; the tracker reflects how *you* slice your work, not a commit-message guess.
+- 🔗 **Bicameral decision enrichment** — when the Bicameral integration is connected, the tracker deepens with decision-aware verticals and a governed-decisions ledger. See [CHANGELOG.md](CHANGELOG.md).
 
 ## What's new in v5.6.0
 

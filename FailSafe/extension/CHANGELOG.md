@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.6.1] - 2026-06-05
+
+### Fixed
+- **Development Tracker renders on any repository** — repos without semantic-version releases (PR-incremental history) previously showed an empty dashboard; the tracker now detects the release cadence and renders a merged-PR timeline with full program and vertical detail. (#174)
+
+### Added
+- **Generate a tracker from your repo's history** — the new "FailSafe: Generate Tracker Manifest" command scaffolds the tracker's planning manifest from your merged PRs and CHANGELOG, so any repository gets a detailed, data-driven tracker without hand-authoring. (#174)
+- **You own the categories** — generated programs and verticals are routed through an interactive keep / drop / rename / fold confirmation before they're written, so the tracker reflects how *you* slice your work rather than a commit-message heuristic. (#174)
+- **Bicameral decision enrichment** — when the Bicameral integration is connected, the generated tracker deepens with decision-aware verticals (in-sync / drifted / open-question) and a governed-decisions ledger. (#174)
+
 ## [5.6.0] - 2026-06-04
 
 ### Added
