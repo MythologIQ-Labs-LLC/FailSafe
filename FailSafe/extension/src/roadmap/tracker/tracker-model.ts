@@ -50,6 +50,8 @@ export interface TrackerMeta {
   eyebrow?: string; title?: string; titleEm?: string; sub?: string;
   metaRow?: Array<{ label: string; value: string }>;
   preamble?: string; footer?: string;
+  /** The §06 Decisions ledger — read by the dashboard; authored in the manifest. */
+  decisions?: Array<{ decision: string; drivenBy: string; evidence: string }>;
 }
 export interface TrackerManifest {
   repo?: string;

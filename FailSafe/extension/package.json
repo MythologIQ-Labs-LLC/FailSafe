@@ -121,6 +121,10 @@
         "title": "FailSafe: Register Open Design MCP Connection"
       },
       {
+        "command": "failsafe.generateTrackerManifest",
+        "title": "FailSafe: Generate Tracker Manifest (from PRs + CHANGELOG)"
+      },
+      {
         "command": "failsafe.acp.installGovernedProxy",
         "title": "FailSafe: Install Governed ACP Proxy (Devin Desktop)"
       },

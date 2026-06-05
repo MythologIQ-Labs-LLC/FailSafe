@@ -41,6 +41,7 @@ import { createVscodeFeatureGate } from "../core/adapters/vscode";
 import { bootstrapStartupChecks } from "./bootstrapStartupChecks";
 import { registerSubstrateCommand } from "./substrate-command";
 import { registerSarifImportCommand } from "./sarif-command";
+import { registerGenerateTrackerManifestCommand } from "./tracker-manifest-command";
 import { registerMcpInstallCommand } from "./mcp-install-command";
 import { registerLinearImportCommand } from "./linear-command";
 import { registerJiraImportCommand } from "./jira-command";
@@ -168,6 +169,10 @@ export async function activate(
     // 3.13 SARIF offline import (B-INT-9 / #99): parse a SARIF file → upsert
     // findings as WARN-only risk records.
     registerSarifImportCommand(context, core.workspaceRoot);
+
+    // 3.13b Tracker manifest generator (GH #174): scaffold docs/roadmap/programs.yaml
+    // from merged PRs + CHANGELOG so any repo gets a detailed Development Tracker.
+    registerGenerateTrackerManifestCommand(context, core.workspaceRoot);
 
     // 3.14 Governed MCP install (B-INT-13/14): risk-scored install of catalog
     // MCP integrations (Context7, Mermaid Chart) into .mcp.json.
