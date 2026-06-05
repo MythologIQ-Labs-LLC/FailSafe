@@ -22603,3 +22603,62 @@ _Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`#
 
 _Chain integrity: VALID_
 _Session: 2026-06-04-substantiate-acp-enforce-proxy_
+
+### Entry #422: DELIVER - v5.6.0 (Agent Client Protocol governance)
+
+**Date**: 2026-06-04
+**Phase**: DELIVER (/qor-repo-release)
+**Author**: Governor
+
+**Version**: 5.6.0
+**Tag**: v5.6.0
+**Commit**: 87ec625 (`[RELEASE] v5.6.0 (#179)`)
+
+## Decision
+
+Release v5.6.0 delivered - Agent Client Protocol (ACP) governance. FailSafe now governs any
+ACP agent (Devin Desktop / Zed / JetBrains) through the existing enforcement engine, including a
+standalone enforce-proxy that mediates an agent through the REAL EnforcementEngine. Tag v5.6.0
+pushed to trigger the dual-marketplace pipeline; awaits operator `production`-gate approval to
+publish to VS Code Marketplace + Open VSX.
+
+## Scope
+
+- #173 ACP governance adapter foundation (FX843-845) - types/mapper + AcpInterceptor + permission authority.
+- #175 Devin Desktop host-detection alias (#161; FX846).
+- #176 Tracker PR-incremental discovery + cadence detection (#174; FX847).
+- #178 ACP enforce-proxy (#172 Part 2; FX848-856 + ajv static-schema fix) - MITM transport + vscode-free
+  file-backed backing over the real engine + governance-mode mirror + governed-twin install UX.
+
+## Verification
+
+Reality=Promise PASS (SUBSTANTIATE seal #421). 4 PRs `--admin`-merged to main over the intentional
+CodeQL/code_quality human-gate, each with fresh per-action authorization. Full `test:all` green on the
+final PR (#178, 7m4s; one CI-only EACCES test-path bug fixed first - the headless Windows run had
+masked it). 66 proxy/registry tests incl. 7 e2e enforcement proofs + a live MITM `initialize`
+handshake through the bundled `dist/acp-proxy.js`. Release-gate preflight all-PASS at v5.6.0.
+
+## Governance note
+
+The `production` environment gate (dual-marketplace publish) is NOT self-approved - it is the operator's
+explicit permit, held per the no-ship rule. B2 (deep fs/terminal content/argv policy) deferred to B-INT-15.
+
+## Phase 75 SKIP records
+
+Gate-chain artifacts absent (auto-dev-1 + release cycle). Hash via Python hashlib SHA-256 over CRLF;
+ASCII-only body. Same posture as #405-#421.
+
+## Content Hash
+
+**Content Hash**: `2942cdfe73b2f256b6e1ee5e6a6c07a1b30f50487e19af911d3843f3118430bf`
+**Previous Hash**: `ad66cddf67a2ea7588813bde0ef1eda4579f0fcb127bd4a6620b419d97418f36` (Entry #421 Chain Hash)
+**Chain Hash**: `13cc3885e3fa1f67ccceb5e3c843e97a72f136ede84310d555170b2463fe9091`
+**Merkle Seal**: `a711c876cbaf9ecf2bc77d02d7ba8a04154e9d28a923714410ca650b21e397c6`  gate_seal_deliver_v5_6_0
+**Session ID**: `2026-06-04-deliver-v5.6.0`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #422`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; ASCII-only body. Phase 75 skip; same posture as #405-#421.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-06-04-deliver-v5.6.0_
