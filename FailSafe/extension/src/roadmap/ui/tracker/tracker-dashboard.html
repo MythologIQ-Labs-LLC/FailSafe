@@ -1114,13 +1114,19 @@ function render(data) {
   // 1 · Methodology preamble (no section index — it's an intro band)
   if (d.meta && d.meta.preamble) main.appendChild(buildPreamble(d.meta.preamble));
 
-  // 2 · §01 Release timeline  +  3 · §01 Program bars (share index 01)
+  // 2 · §01 Release timeline (always) + 3 · §01 Program bars (manifest-only)
   const relIdx = nextIdx();
   main.appendChild(buildTimelineSection(rcs, relIdx));
-  main.appendChild(buildProgramBarsSection(relIdx));
+  // GH #174: program bars + verticals are PLANNED-layer (manifest) content. A
+  // repo with no programs.yaml (e.g. a PR-incremental repo) has none — render the
+  // section only when there's data, so it shows a clean timeline instead of a
+  // hollow "Program progress / Vertical deep-dive" shell.
+  if (Array.isArray(d.programs) && d.programs.length)
+    main.appendChild(buildProgramBarsSection(relIdx));
 
-  // 4 · §02 Vertical deep-dive
-  main.appendChild(buildVerticalsSection(d.verticals, nextIdx()));
+  // 4 · §02 Vertical deep-dive (manifest-only)
+  if (Array.isArray(d.verticals) && d.verticals.length)
+    main.appendChild(buildVerticalsSection(d.verticals, nextIdx()));
 
   // 5 · §03 Convergence (optional)
   if (Array.isArray(d.convergence) && d.convergence.length)
@@ -1217,7 +1223,15 @@ function buildSection(idx, title, subText) {
    2 · §01 TIMELINE
    ============================================================ */
 function buildTimelineSection(rcs, idx) {
-  const sec = buildSection(idx, "Release timeline", "Releases collapse to one anchor per major version. Activate a major to drill into its minor/patch releases; Esc or “zoom out” returns. Selecting any anchor recomputes every program’s shipped percentage against the full release axis.");
+  // GH #174: cadence-aware copy — PR-incremental repos group merged PRs into
+  // number ranges, not semver majors.
+  const pr = STATE.cadence === "pr-incremental";
+  const sec = buildSection(
+    idx,
+    pr ? "Merged-PR timeline" : "Release timeline",
+    pr
+      ? "Merged PRs grouped into number ranges. Activate a range to drill into individual PRs; Esc or “zoom out” returns. No semantic-version releases were found, so throughput is the timeline axis."
+      : "Releases collapse to one anchor per major version. Activate a major to drill into its minor/patch releases; Esc or “zoom out” returns. Selecting any anchor recomputes every program’s shipped percentage against the full release axis.");
 
   if (!rcs.length) {
     sec.appendChild(emptyCard("No releases defined yet."));

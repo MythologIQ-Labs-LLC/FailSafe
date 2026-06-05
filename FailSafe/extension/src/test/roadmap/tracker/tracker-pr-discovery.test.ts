@@ -24,6 +24,21 @@ suite('roadmap/tracker tracker-pr-discovery', () => {
     assert.equal(prs[0].id, 'pr-7');
   });
 
+  test('merge-commit title comes from the FOLLOWING feature commit; else the humanized branch', () => {
+    const log = [
+      '2026-06-05\tMerge pull request #39 from BicameralAI/feat/live-emission',
+      '2026-06-05\tfeat(runtime): make GatewaySink real',         // the merged tip → real title
+      '2026-06-04\tMerge pull request #38 from acme/feat/readme-upcycle', // last line → branch fallback
+    ].join('\n');
+    const prs = discoverMergedPrs(log);
+    const p39 = prs.find((p) => p.id === 'pr-39')!;
+    assert.equal(p39.summary, 'feat(runtime): make GatewaySink real', 'uses the merged feature commit, not "Merge #39"');
+    const p38 = prs.find((p) => p.id === 'pr-38')!;
+    assert.equal(p38.summary, 'readme upcycle', 'humanized branch (owner + feat/ stripped) when no feature commit follows');
+    // the bare feature commit must NOT create its own spurious anchor
+    assert.equal(prs.length, 2);
+  });
+
   test('orders anchors oldest-first by date', () => {
     const log = [
       '2026-06-10\tc (#3)',
