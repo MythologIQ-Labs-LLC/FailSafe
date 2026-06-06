@@ -23135,3 +23135,66 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 _Chain integrity: VALID_
 _Session: 2026-06-06-substantiate-shadow-genome-client_
+
+### Entry #430: SUBSTANTIATE - PR-linkage Check Run live-wiring (#154 part 2)
+
+**Date**: 2026-06-06
+**Phase**: SUBSTANTIATE (/qor-substantiate)
+**Author**: Judge
+
+**Target Version**: 5.6.3 (bundle: FX861/862/863/864)
+**Branch**: feat/pr-linkage-publish-154
+
+## Decision
+
+Reality=Promise PASS. Completes #154 (FX861 was built but INERT - never invoked). The auditor now
+publishes a PR-linkage Check Run beside the #96 SHIELD verdict.
+
+## Scope
+
+- FX864 - github-checks-client.ts: extracted a generic publishCheckRunPayload(payload, ctx, opts,
+  post) from publishCheckRun (BEHAVIOUR-PRESERVING - the existing #96 tests still pass) + added a
+  defaultGitHubGet transport. pr-linkage-publish.ts: publishLinkageCheck bridge (runLinkageAudit ->
+  buildLinkageCheckRunPayload -> publishCheckRunPayload; off-by-default; injected GET/POST; token
+  header-only, never in results). github-checks-command.ts: failsafe.github.publishCheck now
+  resolves the PR number (gh) + publishes the linkage check after the SHIELD verdict.
+
+## Verification
+
+- tsc 0, eslint clean.
+- 27 github-checks tests green: 8 NEW (generic publish guards/success/401 + bridge disabled/
+  footgun->failure/clean->success/fetch-fail) + the existing #96 + #154-part-1 suites (the refactor
+  preserved publishCheckRun behaviour, proven by the unchanged #96 tests). Backend - no visual gate.
+
+## FEATURE_INDEX
+
+FX864 added (after FX863 from #118; rebase FEATURE_INDEX conflict resolved keeping FX861-864 in order).
+
+## Coverage gate
+
+PUBLISH_BLOCK Active: no. FX864 carries real tests.
+
+## Governance note
+
+Committed local on feat/pr-linkage-publish-154 (rebased onto main @ #429). Awaits operator --admin
+merge + the v5.6.3 bundle release (FX861 + FX862 + FX863 + FX864).
+
+## Phase 75 SKIP records
+
+Python qor-logic gates not importable into this TS repo's substantiate flow - SKIP per Phase 75.
+Hash via Python hashlib SHA-256 over CRLF; cp1252 body. Same posture as #405-#429.
+
+## Content Hash
+
+**Content Hash**: `3b5feb8e3ccae4b7f6acc8a2c8cf903cc8a16503c427594a781d382e2e304bc4`
+**Previous Hash**: `b36343195451d6aab3b8a486fc43805df83eb0bb95837467363e6c314b3d8fe9` (Entry #429 Chain Hash)
+**Chain Hash**: `a1a470c88cff7d0d8bb05f2eaf8b0064f2a9d4acfd7869df4e4bfb895e65d025`
+**Merkle Seal**: `30efc8718f005f44dee0ecc1e8175286b8809a6015da0c4df1fe151d28326bf9`  gate_seal_substantiate_pr_linkage_publish
+**Session ID**: `2026-06-06-substantiate-pr-linkage-publish`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #430`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#429.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-06-06-substantiate-pr-linkage-publish_
