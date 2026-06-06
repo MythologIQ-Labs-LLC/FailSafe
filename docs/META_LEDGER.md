@@ -22991,3 +22991,74 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 _Chain integrity: VALID_
 _Session: 2026-06-06-substantiate-pr-linkage-governance_
+
+### Entry #428: SUBSTANTIATE - Tracker GovernanceProjection reader (A.1)
+
+**Date**: 2026-06-06
+**Phase**: SUBSTANTIATE (/qor-substantiate)
+**Author**: Judge
+
+**Target Version**: 5.6.3 (next patch) or bundle
+**Branch**: feat/governance-projection-tracker
+
+## Decision
+
+Reality=Promise PASS. First slice of the tracker-as-governance-sidecar direction (research brief
+.failsafe/governance/research-brief-tracker-governance-sidecar-2026-06-06.md): the Development
+Tracker is a VIEW of the governance ledger, not a PR scrape. A PURE projection of a TrackerManifest
+from META_LEDGER (release axis + decisions) + FEATURE_INDEX (verticals).
+
+## Scope
+
+- FX862 - governance-projection.ts (PURE). projectTrackerManifest({metaLedger, featureIndex}) ->
+  TrackerManifest. rcs from DELIVER entries (Version/Tag); meta.decisions from each sealed entry's
+  ## Decision (drivenBy=phase, evidence=Entry #N); verticals from FEATURE_INDEX rows grouped by
+  top-level code area (legacy component-ID rows skipped, src/ prefix normalized). Degrade-safe.
+  GOVERNED-repo authoritative source; FX857 generator = ungoverned fallback; FX859 categorization on top.
+
+## Verification
+
+- tsc 0, eslint clean.
+- 6 unit tests + REAL-DATA SMOKE against this repo: 12 releases / 15 verticals / 54 decisions. The
+  smoke SURFACED + FIXED a real DRIFT - the FEATURE_INDEX Code column is mixed (file paths on modern
+  rows, component-IDs like C001 on legacy rows) -> 383 spurious verticals before filtering, 15 after.
+  Reality=Promise verified against the actual META_LEDGER + FEATURE_INDEX, not just fixtures.
+- Backend logic - no visual surface, so no Playwright gate (the render is covered elsewhere).
+
+## FEATURE_INDEX
+
+FX862 added (after FX861 from #154; rebase FEATURE_INDEX conflict resolved keeping both rows).
+
+## Follow-ups
+
+A.1b: plans (.failsafe/governance/plans/*) -> phases/programs. A.2: sidecar emission via the
+WorkspaceMutationBus on governance writes. B: shadow_genome_graph viewer (#118, unblocked).
+
+## Coverage gate
+
+PUBLISH_BLOCK Active: no. FX862 carries real tests.
+
+## Governance note
+
+Committed local on feat/governance-projection-tracker (rebased onto main @ #427). Awaits operator
+--admin merge + release decision (bundle with #154's #427 into one patch, or separate).
+
+## Phase 75 SKIP records
+
+Python qor-logic gates not importable (TS repo) - SKIP per Phase 75. Hash via Python hashlib
+SHA-256 over CRLF; cp1252 body. Same posture as #405-#427.
+
+## Content Hash
+
+**Content Hash**: `efc49fcdf4722147459653ac9642e698a388181633f95c0b6a556d631461303d`
+**Previous Hash**: `36ec958e57b945c2df3f5c97d1227f049e1a3c3166b59c775c21c46dc3b3908f` (Entry #427 Chain Hash)
+**Chain Hash**: `15a6cae3630df73bbaf483f2868a3b5ff2d1e6d45422b8957dce5be69eca1b69`
+**Merkle Seal**: `470b6355981adbfa10ea75ab3e72ff823cb900a7f79b511c44892bdbbe634f24`  gate_seal_substantiate_governance_projection
+**Session ID**: `2026-06-06-substantiate-governance-projection`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #428`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#427.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-06-06-substantiate-governance-projection_
