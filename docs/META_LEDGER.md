@@ -22743,3 +22743,63 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 _Chain integrity: VALID_
 _Session: 2026-06-05-substantiate-tracker-generator_
+
+### Entry #424: DELIVER - v5.6.1 (Development Tracker for any repo)
+
+**Date**: 2026-06-05
+**Phase**: DELIVER (/qor-repo-release)
+**Author**: Governor
+
+**Version**: 5.6.1
+**Tag**: v5.6.1
+**Commit**: d3d7f57 (`[RELEASE] v5.6.1 (#184)`)
+
+## Decision
+
+Release v5.6.1 delivered and PUBLISHED to VS Code Marketplace + Open VSX (both verified live at
+5.6.1). The Development Tracker now renders on ANY repo (semver or PR-incremental), and the
+generated program/vertical taxonomy is an explicit operator decision. Patch release off the
+v5.6.0 baseline.
+
+## Scope
+
+- FX847 Part 2 - PR-incremental render resilience (the blank-shell fix, #174).
+- FX857 - manifest generator (programs.yaml from merged PRs + CHANGELOG).
+- FX858 - Bicameral-MCP Layer 3 enrichment.
+- FX859 - operator categorization (keep/drop/rename/fold).
+- tracker-dashboard.spec.ts 3/3 (real chromium) - closed the user-facing-visual gate.
+
+## Verification
+
+Reality=Promise PASS (SUBSTANTIATE seal #423). PR #183 (code) + PR #184 (release metadata)
+--admin-merged to main over the intentional CodeQL/code_quality human-gate, each with fresh
+per-action authorization. Full test:all green on both PR runs. The release-pipeline Build & Test
+flaked once on a PRE-EXISTING FX525 teardown timeout (bus-renderer-flow.spec.ts, NOT a v5.6.1
+change); cleared on re-run; both marketplace publishes succeeded; production gate operator-approved.
+Marketplace versions verified live: VS Code 5.6.1 + Open VSX 5.6.1. Issues #174/#172/#167/#166 closed.
+
+## Follow-ups (staged for v5.6.2)
+
+FX525 teardown de-flake (root cause: leaked ConsoleLifecycleService ledgerWatcher; the test
+helper close() now calls server.stop() - verified 36/36 under 4-worker x 3-repeat stress) +
+#163 tracker loading/freshness (FX860). Both committed on branch feat/tracker-loading-freshness-163.
+
+## Phase 75 SKIP records
+
+Gate-chain artifacts absent (release cycle). Hash via Python hashlib SHA-256 over CRLF; cp1252
+body. Same posture as #405-#423.
+
+## Content Hash
+
+**Content Hash**: `3fdf502dd719d601dddb56dafe77eb2983929819010a3a73ebac28e02ea705e8`
+**Previous Hash**: `f2c4099c9ac041c421afef23f442a6c70ff898fda61ff7508da9218512c5752f` (Entry #423 Chain Hash)
+**Chain Hash**: `726b244d20134821bfaa575071b5dd3b9984f23323eac4d1dbdd663f4aa328b3`
+**Merkle Seal**: `9f7c15573594ef5ae5694a6d6d2e823ba7f9f90d0587995c30bf1df38cdcd2b2`  gate_seal_deliver_v5_6_1
+**Session ID**: `2026-06-05-deliver-v5.6.1`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #424`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#423.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-06-05-deliver-v5.6.1_
