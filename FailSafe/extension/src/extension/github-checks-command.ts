@@ -9,11 +9,22 @@
 
 import * as vscode from 'vscode';
 import { execFileSync } from 'child_process';
-import { publishCheckRun, defaultGitHubPost, type GitContext } from '../integrations/github-checks/github-checks-client';
+import { publishCheckRun, defaultGitHubPost, defaultGitHubGet, type GitContext } from '../integrations/github-checks/github-checks-client';
+import { publishLinkageCheck } from '../integrations/github-checks/pr-linkage-publish';
+import { parseRepoSlug } from '../integrations/github-checks/github-checks-map';
 
 function git(args: string[], cwd: string): string | undefined {
   try {
     return execFileSync('git', args, { cwd, encoding: 'utf8', timeout: 5000 }).trim() || undefined;
+  } catch { return undefined; }
+}
+
+/** Best-effort PR number for HEAD via the gh CLI (read-only). Undefined if no PR. */
+function resolvePrNumber(cwd: string): number | undefined {
+  try {
+    const out = execFileSync('gh', ['pr', 'view', '--json', 'number', '-q', '.number'], { cwd, encoding: 'utf8', timeout: 8000 }).trim();
+    const n = parseInt(out, 10);
+    return Number.isFinite(n) ? n : undefined;
   } catch { return undefined; }
 }
 
@@ -67,6 +78,25 @@ export function registerGitHubChecksCommand(context: vscode.ExtensionContext): v
         vscode.window.showInformationMessage(`Published SHIELD ${pick.label} check to GitHub${result.checkRunId ? ` (run #${result.checkRunId})` : ''}.`);
       } else {
         vscode.window.showErrorMessage(`GitHub check publish failed: ${result.error ?? 'unknown error'}`);
+      }
+
+      // #154: also publish the PR↔issue linkage check when HEAD has a PR — the
+      // `Closes #1, #2` footgun guard, beside the SHIELD verdict.
+      const slug = parseRepoSlug(ctx.remoteUrl || '');
+      const prNumber = resolvePrNumber(root);
+      if (slug && prNumber) {
+        const linkage = await vscode.window.withProgress(
+          { location: vscode.ProgressLocation.Notification, title: 'Publishing PR-linkage check…' },
+          () => publishLinkageCheck({
+            ctx, opts: { enabled, token, apiBaseUrl }, owner: slug.owner, repo: slug.repo,
+            prNumber, get: defaultGitHubGet, post: defaultGitHubPost,
+          }),
+        );
+        if (!linkage.localOnly && linkage.ok) {
+          vscode.window.showInformationMessage(`Published PR-linkage check to GitHub${linkage.checkRunId ? ` (run #${linkage.checkRunId})` : ''}.`);
+        } else if (!linkage.ok) {
+          vscode.window.showWarningMessage(`PR-linkage check skipped: ${linkage.error ?? 'unknown error'}.`);
+        }
       }
     }),
   );
