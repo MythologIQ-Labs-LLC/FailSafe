@@ -48,9 +48,13 @@ Each integration ships with its own README and its external API names are back-c
 
 ---
 
-**Current Release**: v5.6.1 (2026-06-05)
+**Current Release**: v5.6.2 (2026-06-06)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v5.6.2
+
+- 📊 **Development Tracker loading + freshness indicators** — a loading skeleton replaces the brief blank while the tracker builds, plus a "last refreshed" timestamp and a manual ↻ Refresh button to re-fetch on demand. (#163)
 
 ## What's New in v5.6.1
 
