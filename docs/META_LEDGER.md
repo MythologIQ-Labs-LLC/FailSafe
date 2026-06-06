@@ -22869,3 +22869,55 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 _Chain integrity: VALID_
 _Session: 2026-06-06-substantiate-tracker-loading-freshness_
+
+### Entry #426: DELIVER - v5.6.2 (Tracker loading/freshness + FX525 de-flake)
+
+**Date**: 2026-06-06
+**Phase**: DELIVER (/qor-repo-release)
+**Author**: Governor
+
+**Version**: 5.6.2
+**Tag**: v5.6.2
+**Commit**: 87d3e9a (`[RELEASE] v5.6.2 (#187)`)
+
+## Decision
+
+Release v5.6.2 delivered. Development Tracker loading/progress + freshness indicators (#163) plus
+the FX525 test-teardown de-flake that dead-tagged v5.6.1's release pipeline. Published: Open VSX
+live at 5.6.2; VS Code Marketplace publish job succeeded (query-API ingestion lag at seal time -
+Open VSX confirms the artifact landed; no pipeline reshape per the v5.2.2 marketplace-lag precedent).
+
+## Scope
+
+- FX860 (#163) - tracker dashboard loading skeleton ("Building the tracker..." + shimmer) +
+  "last refreshed" stamp + manual Refresh; pure client-side, no server contract change.
+- FX525 de-flake - the test helper close() now calls server.stop() (was leaking the
+  ConsoleLifecycleService ledgerWatcher that raced fs.rmSync under parallel load).
+
+## Verification
+
+Reality=Promise PASS (SUBSTANTIATE seal #425). PR #187 --admin-merged to main over the intentional
+CodeQL/code_quality human-gate (fresh per-action authorization). Release-pipeline Build & Test
+PASSED ON THE FIRST RUN - no FX525 flake, no re-run needed; the de-flake held end-to-end in the
+real pipeline (contrast v5.6.1, which needed a re-run). Both publish jobs succeeded; production
+gate operator-approved. Closes #163.
+
+## Phase 75 SKIP records
+
+Gate-chain artifacts absent (release cycle). Hash via Python hashlib SHA-256 over CRLF; cp1252
+body. Same posture as #405-#425.
+
+## Content Hash
+
+**Content Hash**: `7517498d4da989d4f13afb112d1387b5fbd05248bfb2038922e7f5b35225e13b`
+**Previous Hash**: `9b7b64b50546d34780d941615fddaa30c971c1245d045aab3cb89024b8f94962` (Entry #425 Chain Hash)
+**Chain Hash**: `d64d9b9b55f0fb4a9c04257e08008458e6d6012277afafdb1f8f49b85858dac4`
+**Merkle Seal**: `36201bc8a391ccfaed0283269af79f4670897cd9f492eb011615e5aa5d06c310`  gate_seal_deliver_v5_6_2
+**Session ID**: `2026-06-06-deliver-v5.6.2`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #426`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#425.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-06-06-deliver-v5.6.2_
