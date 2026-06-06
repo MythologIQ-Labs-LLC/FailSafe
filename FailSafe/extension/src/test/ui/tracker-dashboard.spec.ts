@@ -144,3 +144,50 @@ test.describe('Development Tracker dashboard render (#174)', () => {
     expect(errors, `no uncaught page errors: ${errors.join('; ')}`).toHaveLength(0);
   });
 });
+
+// #163 — loading/progress + freshness indicators. The first slice is a pure
+// client-side change in tracker-dashboard.html: a loading state (no more blank
+// while /api/v1/tracker is in flight), a "last refreshed" timestamp, and a
+// manual Refresh affordance. Real chromium (jsdom-insufficient per the rules).
+test.describe('Development Tracker loading + freshness (#163)', () => {
+  let controller: ConsoleServerController;
+
+  test.afterEach(async () => {
+    if (controller) { await controller.close(); await new Promise((r) => setTimeout(r, 50)); }
+  });
+
+  test('shows a loading state while the fetch is in flight, then renders (no blank)', async ({ page }) => {
+    controller = await serveConsoleServerUI();
+    // Hold the response so the loading state is observable.
+    await page.route('**/api/v1/tracker', async (r) => {
+      await new Promise((res) => setTimeout(res, 1200));
+      await r.fulfill({ json: PR_PAYLOAD });
+    });
+    await page.goto(`${controller.url}/console/tracker`); // page loaded; fetch still pending
+    // Loading affordance is visible during the delay (not a blank #main).
+    await expect(page.getByText('Building the tracker').first()).toBeVisible({ timeout: 1000 });
+    // Once the fetch resolves, the timeline replaces the loading state.
+    await expect(page.locator('#timeline .tl-node').first()).toBeVisible({ timeout: 6000 });
+    await expect(page.getByText('Building the tracker')).toHaveCount(0);
+  });
+
+  test('surfaces a "last refreshed" timestamp after load', async ({ page }) => {
+    controller = await serveConsoleServerUI();
+    await page.route('**/api/v1/tracker', (r) => r.fulfill({ json: PR_PAYLOAD }));
+    await page.goto(`${controller.url}/console/tracker`);
+    await expect(page.locator('#timeline .tl-node').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('#tracker-freshness')).toContainText('Updated');
+  });
+
+  test('manual Refresh re-fetches and re-renders', async ({ page }) => {
+    controller = await serveConsoleServerUI();
+    let calls = 0;
+    await page.route('**/api/v1/tracker', (r) => { calls += 1; return r.fulfill({ json: PR_PAYLOAD }); });
+    await page.goto(`${controller.url}/console/tracker`);
+    await expect(page.locator('#timeline .tl-node').first()).toBeVisible({ timeout: 5000 });
+    expect(calls).toBe(1);
+    await page.locator('#tracker-refresh').click();
+    await expect.poll(() => calls, { timeout: 5000 }).toBe(2);
+    await expect(page.locator('#timeline .tl-node').first()).toBeVisible();
+  });
+});

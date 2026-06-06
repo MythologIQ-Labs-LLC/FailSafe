@@ -22803,3 +22803,69 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 _Chain integrity: VALID_
 _Session: 2026-06-05-deliver-v5.6.1_
+
+### Entry #425: SUBSTANTIATE - Tracker loading/freshness (#163) + FX525 de-flake
+
+**Date**: 2026-06-06
+**Phase**: SUBSTANTIATE (/qor-substantiate)
+**Author**: Judge
+
+**Target Version**: 5.6.2 (next patch)
+**Branch**: feat/tracker-loading-freshness-163
+
+## Decision
+
+Reality=Promise PASS. Two bundled items for v5.6.2: the Development Tracker loading/progress +
+freshness indicators (#163, FX860) and the FX525 test-teardown de-flake that dead-tagged the
+v5.6.1 release pipeline's Build & Test.
+
+## Scope
+
+- FX860 (#163) - tracker dashboard loading skeleton ("Building the tracker..." + shimmer) +
+  "last refreshed" stamp + manual Refresh; pure client-side in tracker-dashboard.html (no server
+  contract change). load/empty/error/success all legible; status bar mounted outside #main.
+- FX525 de-flake - root cause: ConsoleLifecycleService leaks its ledgerWatcher (fs.watch) because
+  the test helper's controller.close() never called server.stop(); the leaked watcher raced
+  bus-renderer-flow.spec.ts's fs.rmSync(tmpWorkspace) under parallel load -> 45s afterEach timeout.
+  Fix: close() now calls server.stop() (idempotent) before harness.close().
+
+## Verification
+
+- tsc 0, eslint clean.
+- #163: 3 Playwright e2e (real chromium) - loading-then-render / freshness stamp / manual refresh;
+  + visual verification (loading + loaded screenshots). 6/6 with the #174 render specs.
+- FX525 de-flake: 36/36 under 4-worker x 3-repeat stress across FX525 + the ConsoleServer-heavy
+  tracker + integrations specs - the exact parallel-teardown condition that produced the hang.
+
+## FEATURE_INDEX
+
+FX860 added (tracker loading/freshness). No newly-unverified rows.
+
+## Coverage gate
+
+PUBLISH_BLOCK Active: no. FX860 carries a real Playwright test.
+
+## Governance note
+
+Committed local on feat/tracker-loading-freshness-163 (rebased onto main @ #424). Awaits operator
+bump 5.6.1 -> 5.6.2 + --admin merge + production gate.
+
+## Phase 75 SKIP records
+
+Python qor-logic gates not importable (TS repo) - SKIP per Phase 75. Hash via Python hashlib
+SHA-256 over CRLF; cp1252 body. Same posture as #405-#424.
+
+## Content Hash
+
+**Content Hash**: `5313b46e9ece368bd22a5bbce6c0f502a0ef2b7b5d64ff727baf17c985f3d428`
+**Previous Hash**: `726b244d20134821bfaa575071b5dd3b9984f23323eac4d1dbdd663f4aa328b3` (Entry #424 Chain Hash)
+**Chain Hash**: `9b7b64b50546d34780d941615fddaa30c971c1245d045aab3cb89024b8f94962`
+**Merkle Seal**: `ace226180b144fb0c98d8dff1b1abefb44c9ee069861d7abe4523e7167007c21`  gate_seal_substantiate_tracker_loading_freshness
+**Session ID**: `2026-06-06-substantiate-tracker-loading-freshness`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #425`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#424.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-06-06-substantiate-tracker-loading-freshness_

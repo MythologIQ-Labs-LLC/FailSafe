@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.6.2] - 2026-06-06
+
+### Added
+- **Development Tracker loading + freshness indicators** — a loading skeleton ("Building the tracker…") now replaces the brief blank while the tracker builds, plus a visible "last refreshed" timestamp and a manual ↻ Refresh button to re-fetch on demand. (#163)
+
 ## [5.6.1] - 2026-06-05
 
 ### Fixed

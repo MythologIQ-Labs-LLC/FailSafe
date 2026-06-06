@@ -191,6 +191,8 @@ function buildController(
   sockets: Set<WebSocket>,
   checkpointRef: CheckpointRecord[],
   hubRef: { current: HubFixture | null },
+  /** Stops the ConsoleServer's lifecycle (closes its META_LEDGER fs.watch). */
+  stopServer: () => void,
 ): ConsoleServerController {
   const broadcastRaw = (raw: string): void => {
     for (const ws of sockets) {
@@ -213,8 +215,17 @@ function buildController(
     closeAllSockets() { terminateAll(sockets); },
     close() {
       terminateAll(sockets);
-      return new Promise<void>((resolve, reject) => {
-        harness.close((err) => (err ? reject(err) : resolve()));
+      // FX525 de-flake: tear down the ConsoleServer's lifecycle fs.watch
+      // (ledgerWatcher) BEFORE closing the http harness. Without this the
+      // watcher leaks and races afterEach `fs.rmSync(tmpWorkspace)` under
+      // parallel load — the root of the FX525 45s teardown timeout that
+      // dead-tagged v5.6.1's release pipeline.
+      try { stopServer(); } catch { /* idempotent teardown */ }
+      return new Promise<void>((resolve) => {
+        // stopServer() may already have closed the server; resolve on the
+        // callback regardless of an "already closed" error so teardown is
+        // bounded and never hangs the suite.
+        harness.close(() => resolve());
       });
     },
   };
@@ -281,7 +292,7 @@ export async function serveConsoleServerUI(
   attachWebSocket(server, harness, sockets, fakes.hubRef);
 
   const url = await listenAndResolveUrl(harness);
-  return buildController(url, harness, sockets, checkpointRef, fakes.hubRef);
+  return buildController(url, harness, sockets, checkpointRef, fakes.hubRef, () => server.stop());
 }
 
 function setupVoicePackFixture(

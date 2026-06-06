@@ -66,9 +66,13 @@ Under the hood, a **Tier 1 supply-chain CI baseline** (least-privilege workflow 
 
 <div align="center">
 
-**Current Release**: v5.6.1 (2026-06-05)
+**Current Release**: v5.6.2 (2026-06-06)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
+
+## What's new in v5.6.2
+
+- 📊 **Development Tracker loading + freshness** — a loading skeleton replaces the brief blank while the tracker builds, with a "last refreshed" time and a manual ↻ Refresh. See [CHANGELOG.md](CHANGELOG.md).
 
 ## What's new in v5.6.1
 
