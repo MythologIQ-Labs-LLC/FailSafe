@@ -15,7 +15,7 @@
  */
 
 import * as https from 'https';
-import { buildCheckRunPayload, parseRepoSlug, type CheckRunInput } from './github-checks-map';
+import { buildCheckRunPayload, parseRepoSlug, type CheckRunInput, type CheckRunPayload } from './github-checks-map';
 
 const GITHUB_API = 'https://api.github.com';
 
@@ -64,6 +64,24 @@ export async function publishCheckRun(
   opts: PublishOptions,
   post: GitHubPostFn,
 ): Promise<PublishCheckResult> {
+  const input: CheckRunInput = {
+    verdict, headSha: (ctx.headSha || '').trim(), name: opts.name, summary: opts.summary, detailsUrl: opts.detailsUrl,
+  };
+  return publishCheckRunPayload(buildCheckRunPayload(input), ctx, opts, post);
+}
+
+/**
+ * Publish a PRE-BUILT Check Run payload. The generic publish path shared by the
+ * #96 SHIELD-verdict check and the #154 PR-linkage check. Off-by-default +
+ * fork-safe; the token appears only in the Authorization header, never in the
+ * result.
+ */
+export async function publishCheckRunPayload(
+  payload: CheckRunPayload,
+  ctx: GitContext,
+  opts: PublishOptions,
+  post: GitHubPostFn,
+): Promise<PublishCheckResult> {
   if (!opts.enabled) return { ok: true, localOnly: true, error: 'integration disabled' };
   if (!opts.token || !opts.token.trim()) return { ok: true, localOnly: true, error: 'no token configured' };
   if (ctx.isFork) return { ok: true, localOnly: true, error: 'fork PR context — local-only' };
@@ -72,10 +90,6 @@ export async function publishCheckRun(
   if (!slug) return { ok: true, localOnly: true, error: 'no GitHub remote resolved' };
   if (!ctx.headSha || !ctx.headSha.trim()) return { ok: true, localOnly: true, error: 'no HEAD sha resolved' };
 
-  const input: CheckRunInput = {
-    verdict, headSha: ctx.headSha.trim(), name: opts.name, summary: opts.summary, detailsUrl: opts.detailsUrl,
-  };
-  const payload = buildCheckRunPayload(input);
   const base = (opts.apiBaseUrl || GITHUB_API).replace(/\/$/, '');
   const url = `${base}/repos/${slug.owner}/${slug.repo}/check-runs`;
 
@@ -125,6 +139,32 @@ export const defaultGitHubPost: GitHubPostFn = (url, headers, body) =>
       req.on('timeout', () => req.destroy(new Error('timeout')));
       req.on('error', reject);
       req.write(body);
+      req.end();
+    } catch (e) {
+      reject(e instanceof Error ? e : new Error(String(e)));
+    }
+  });
+
+/** Injected GET transport (read-only; the #154 linkage audit fetches PR + issues). */
+export interface GitHubGetFn {
+  (url: string, headers: Record<string, string>): Promise<{ status: number; body: string }>;
+}
+
+/** Default https GET transport (production; tests inject their own). */
+export const defaultGitHubGet: GitHubGetFn = (url, headers) =>
+  new Promise((resolve, reject) => {
+    try {
+      const u = new URL(url);
+      const req = https.request(
+        { hostname: u.hostname, path: u.pathname + u.search, method: 'GET', headers, timeout: 8000 },
+        (res) => {
+          const chunks: Buffer[] = [];
+          res.on('data', (c) => chunks.push(c as Buffer));
+          res.on('end', () => resolve({ status: res.statusCode ?? 0, body: Buffer.concat(chunks).toString('utf8') }));
+        },
+      );
+      req.on('timeout', () => req.destroy(new Error('timeout')));
+      req.on('error', reject);
       req.end();
     } catch (e) {
       reject(e instanceof Error ? e : new Error(String(e)));
