@@ -23062,3 +23062,76 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 _Chain integrity: VALID_
 _Session: 2026-06-06-substantiate-governance-projection_
+
+### Entry #429: SUBSTANTIATE - Shadow-genome client (#118, data layer)
+
+**Date**: 2026-06-06
+**Phase**: SUBSTANTIATE (/qor-substantiate)
+**Author**: Judge
+
+**Target Version**: 5.6.3 (bundle with #154 + A.1)
+**Branch**: feat/shadow-genome-viewer-118
+
+## Decision
+
+Reality=Promise PASS. First slice of #118 (UNBLOCKED - qor-logic's shadow_genome_graph is shipped;
+Qor-logic#139 closed). The DATA layer only: consume the causal governance graph (the dashboard /
+trust-level / federation UI surfaces are a deliberate follow-up). Adjacent to the tracker-as-
+governance-projection (FX862) - both are views of the governance/decision ledger.
+
+## Scope
+
+- FX863 - qorlogic/shadow-genome-client.ts (PURE + injected I/O). parseGenomeGraph (tolerant parse
+  of the verified to_json() contract) + summarizeGenome (counts by type, mirrors Python snapshot())
+  + governanceSubgraph (governance-typed nodes + incident edges + reached neighbours - the tracker-
+  relevant causal slice). loadShadowGenome: OFF by default (injected RunCommand from
+  PythonInterpreterResolver; enabled!==true -> localOnly, no subprocess; non-zero exit / parse
+  error -> degrade-safe {ok:false}, never throws; only the local .qor/genome.jsonl is read).
+
+## Verification
+
+- tsc 0, eslint clean.
+- 7 unit tests + REAL-PYTHON SMOKE: built a genome via the actual ShadowGenomeGraph API and round-
+  tripped its to_json() through the parser (Reality=Promise vs the real contract, not just a
+  fixture - parsed nodes=2/edges=1, governance subgraph resolved). No real populated genome exists
+  on disk, so the absent path (localOnly) is the live default; it is the tested degrade case.
+- Backend logic - no visual surface, no Playwright gate.
+
+## FEATURE_INDEX
+
+FX863 added (after FX862 from A.1; rebase FEATURE_INDEX conflict resolved keeping FX861/862/863).
+
+## Follow-ups
+
+#118 part 2: the dashboard / trust-level / federation UI surfaces + a console route (visual gate
+applies there). Plus the shared GovernanceProjection substrate (tracker FX862 + genome FX863 both
+consume the governance ledger) per the research brief.
+
+## Coverage gate
+
+PUBLISH_BLOCK Active: no. FX863 carries real tests.
+
+## Governance note
+
+Committed local on feat/shadow-genome-viewer-118 (rebased onto main @ #428). Awaits operator
+--admin merge + the v5.6.3 bundle release (#154 FX861 + A.1 FX862 + #118 FX863).
+
+## Phase 75 SKIP records
+
+Python qor-logic gates not importable into THIS TS repo's substantiate flow - SKIP per Phase 75.
+Hash via Python hashlib SHA-256 over CRLF; cp1252 body. Same posture as #405-#428.
+
+## Content Hash
+
+**Content Hash**: `032b04666ca113dc025ba355335afcace40920b5699a08bd7904e8cbfa98dde6`
+**Previous Hash**: `15a6cae3630df73bbaf483f2868a3b5ff2d1e6d45422b8957dce5be69eca1b69` (Entry #428 Chain Hash)
+**Chain Hash**: `b36343195451d6aab3b8a486fc43805df83eb0bb95837467363e6c314b3d8fe9`
+**Merkle Seal**: `1bbd3013cededb2138d3f7d036329f0c86e80d0ba01de1d15d050c091d426608`  gate_seal_substantiate_shadow_genome_client
+**Session ID**: `2026-06-06-substantiate-shadow-genome-client`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #429`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#428.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-06-06-substantiate-shadow-genome-client_
