@@ -141,3 +141,6 @@ Thumbs.db
 !.github/
 !.github/workflows/
 !.github/workflows/vsix-proprietary-guardrails.yml
+
+# Generated governance tracker sidecar (GH #194) — projection artifact, never committed
+docs/roadmap/programs.generated.yaml

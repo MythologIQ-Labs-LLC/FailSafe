@@ -42,6 +42,7 @@ import { bootstrapStartupChecks } from "./bootstrapStartupChecks";
 import { registerSubstrateCommand } from "./substrate-command";
 import { registerSarifImportCommand } from "./sarif-command";
 import { registerGenerateTrackerManifestCommand } from "./tracker-manifest-command";
+import { registerGovernanceSidecarCommand, wireGovernanceSidecarAutoEmit } from "./tracker-sidecar-command";
 import { registerMcpInstallCommand } from "./mcp-install-command";
 import { registerLinearImportCommand } from "./linear-command";
 import { registerJiraImportCommand } from "./jira-command";
@@ -177,6 +178,14 @@ export async function activate(
       context, core.workspaceRoot,
       () => consoleServer?.getBicameralClient() ?? null,
     );
+
+    // 3.13c Governance tracker sidecar (GH #194; A.2): emit a Development Tracker manifest
+    // PROJECTED from the governance ledger (META_LEDGER + FEATURE_INDEX) to a generated
+    // sidecar (docs/roadmap/programs.generated.yaml) — the governed-repo authoritative
+    // source, distinct from the operator's hand-curated programs.yaml (FX859, never
+    // clobbered). On-demand command + opt-in auto-emit on governance writes.
+    registerGovernanceSidecarCommand(context, core.workspaceRoot);
+    wireGovernanceSidecarAutoEmit(context, core.workspaceRoot, core.mutationBus);
 
     // 3.14 Governed MCP install (B-INT-13/14): risk-scored install of catalog
     // MCP integrations (Context7, Mermaid Chart) into .mcp.json.
