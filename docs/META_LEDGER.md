@@ -23196,5 +23196,66 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 ---
 
+### Entry #431: DELIVER - v5.6.3 (Governance bundle: PR-linkage auditor + GovernanceProjection + shadow-genome client)
+
+**Date**: 2026-06-06
+**Phase**: DELIVER (/qor-repo-release)
+**Author**: Governor
+
+**Version**: 5.6.3
+**Tag**: v5.6.3
+**Commit**: e716767 (`[RELEASE] v5.6.3 (#193)`)
+
+## Decision
+
+Release v5.6.3 delivered. A four-feature governance bundle - three views of the same governance
+ledger: PR<->issue linkage governance (#154), tracker-as-governance-sidecar projection (A.1), and
+a shadow-genome causal-graph consumer (#118). Published: VS Code Marketplace + Open VSX publish jobs
+both succeeded; production gate operator-approved. Open VSX query-API showed 5.6.2 at seal time
+(ingestion lag); the publish job's success is authoritative - no pipeline reshape per the v5.2.2
+marketplace-lag precedent.
+
+## Scope
+
+- FX861 (#154 part 1, seal #427) - pr-linkage-audit.ts: pure auditor for GitHub's per-number
+  close-keyword footgun (`Closes #1, #2` only closes #1); findings -> CheckConclusion. 9 tests.
+- FX862 (A.1, seal #428) - governance-projection.ts: projectTrackerManifest({metaLedger,
+  featureIndex}) -> TrackerManifest; DELIVER entries -> rcs, every `## Decision` -> meta.decisions,
+  FEATURE_INDEX code areas -> verticals. The governed-repo authoritative projection (FX857
+  PR-scrape stays the ungoverned-repo fallback). 6 tests + real-data smoke.
+- FX863 (#118, seal #429) - shadow-genome-client.ts: parse/summarize/governanceSubgraph over
+  qor-logic's shipped shadow_genome_graph causal graph; off-by-default loadShadowGenome (injected
+  RunCommand, localOnly unless enabled, reads only .qor/genome.jsonl). 7 tests + real-Python smoke.
+  UI deferred (#196).
+- FX864 (#154 part 2, seal #430) - pr-linkage-publish.ts + github-checks-client.ts refactor: the
+  auditor now publishes a PR-linkage Check Run beside the #96 SHIELD verdict (was inert). 8 tests.
+
+## Verification
+
+Reality=Promise PASS across per-feature SUBSTANTIATE seals #427 (FX861), #428 (FX862), #429
+(FX863), #430 (FX864). PRs #190/#191/#192 + release PR #193 --admin-merged to main over the
+intentional CodeQL/code_quality human-gate (fresh per-action authorization each). Release-pipeline
+Build & Test PASSED on the first run - the FX525 de-flake held (no dead-tag, contrast v5.6.1). Both
+publish jobs succeeded. Closes #154, #118. Deferred follow-ups filed: #194 (A.2 sidecar emission),
+#195 (A.1b plans->phases), #196 (#118 UI), #197 (shared GovernanceProjection substrate), #198
+(taxonomy polish).
+
+## Phase 75 SKIP records
+
+Gate-chain artifacts absent (release cycle). Hash via Python hashlib SHA-256 over CRLF; cp1252
+body. Same posture as #405-#430.
+
+## Content Hash
+
+**Content Hash**: `64fb1bc9f57d8d3fe2f6eec9e956a6f518d1384e9fc635e852ab1d9de50e3224`
+**Previous Hash**: `a1a470c88cff7d0d8bb05f2eaf8b0064f2a9d4acfd7869df4e4bfb895e65d025` (Entry #430 Chain Hash)
+**Chain Hash**: `760886ac74aacc11443c8c2efdfef7f0cc64c15f0304498ebf5b9bcc3964e3f1`
+**Merkle Seal**: `a75b6f9f1c3f4f4fa4abe39be0292eacace41fe08b86f7590085b1e465b55a0f`  gate_seal_deliver_v5_6_3
+**Session ID**: `2026-06-06-deliver-v5.6.3`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #431`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#430.
+
+---
+
 _Chain integrity: VALID_
-_Session: 2026-06-06-substantiate-pr-linkage-publish_
+_Session: 2026-06-06-deliver-v5.6.3_
