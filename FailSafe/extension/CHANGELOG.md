@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.6.3] - 2026-06-06
+
+### Added
+- **PR↔issue linkage governance** — a new GitHub Check Run flags the `Closes #1, #2` footgun where GitHub auto-closes only the first issue and silently leaves the rest open. Off by default; publishes beside the SHIELD-verdict check. (#154)
+- **Governed Development Tracker source** — the Development Tracker can now be built directly from your governance ledger (META_LEDGER decisions/releases + FEATURE_INDEX) as the authoritative source on governed repos, with the PR/CHANGELOG generator remaining the fallback.
+- **Shadow-genome consumer** — FailSafe can now read qor-logic's causal governance graph (`shadow_genome_graph`), the foundation for upcoming decision-traceability views. (#118)
+
 ## [5.6.2] - 2026-06-06
 
 ### Added
