@@ -22921,3 +22921,73 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 _Chain integrity: VALID_
 _Session: 2026-06-06-deliver-v5.6.2_
+
+### Entry #427: SUBSTANTIATE - PR-issue linkage governance auditor (#154)
+
+**Date**: 2026-06-06
+**Phase**: SUBSTANTIATE (/qor-substantiate)
+**Author**: Judge
+
+**Target Version**: 5.6.3 (next patch) or bundle
+**Branch**: feat/pr-linkage-governance-154
+
+## Decision
+
+Reality=Promise PASS. First safe slice of #154: a PURE PR-issue linkage auditor (parse + audit +
+Check Run payload + off-by-default live path) beside the #96 SHIELD-verdict Check Run. Governs the
+`Closes #1, #2` footgun that silently leaves issues open - the exact bug that stranded
+#166/#167/#172/#174 this session (GitHub closes only the first number in a keyword'd comma-list).
+
+## Scope
+
+- FX861 - integrations/github-checks/pr-linkage-audit.ts (PURE + injected GET transport).
+  parsePrLinkage (GitHub's 9 close-keywords applied per-number) + auditPrLinkage (findings +
+  deterministic CheckConclusion: clean->success, advisory->neutral, footgun->failure; reuses the
+  #96 map types) + buildLinkageCheckRunPayload (issue numbers + finding kinds only, never PR
+  content/tokens) + runLinkageAudit (off-by-default; no token -> localOnly, GET never called).
+
+## Verification
+
+- tsc 0, eslint clean.
+- 9 unit tests: parse (per-number keyword + all 3 keyword families), multi-close-no-keyword (the
+  footgun, fail), closes-stale-or-missing (fail), referenced-not-closed (warn), clean (success),
+  payload builder, off-by-default no-network, with-token fetch-and-audit. Backend logic - NOT a
+  visual surface, so no Playwright gate (contrast the tracker work).
+
+## FEATURE_INDEX
+
+FX861 added. No newly-unverified rows.
+
+## Next (not in this first slice)
+
+Wire runLinkageAudit + buildLinkageCheckRunPayload into github-checks-command to PUBLISH the second
+Check Run via the existing publishCheckRun (thin integration glue).
+
+## Coverage gate
+
+PUBLISH_BLOCK Active: no. FX861 carries real tests.
+
+## Governance note
+
+Committed local on feat/pr-linkage-governance-154 (rebased onto main @ #426). Awaits operator
+--admin merge + release decision.
+
+## Phase 75 SKIP records
+
+Python qor-logic gates not importable (TS repo) - SKIP per Phase 75. Hash via Python hashlib
+SHA-256 over CRLF; cp1252 body. Same posture as #405-#426.
+
+## Content Hash
+
+**Content Hash**: `aa3f8cf0f4474a11d780c76bef932c1228a01b974f5abcc3a6fd42e41a20afc3`
+**Previous Hash**: `d64d9b9b55f0fb4a9c04257e08008458e6d6012277afafdb1f8f49b85858dac4` (Entry #426 Chain Hash)
+**Chain Hash**: `36ec958e57b945c2df3f5c97d1227f049e1a3c3166b59c775c21c46dc3b3908f`
+**Merkle Seal**: `9daba5061f62b208f641d0c73ef09f921ac92f9fb809cb9f0268bb447952eb71`  gate_seal_substantiate_pr_linkage_governance
+**Session ID**: `2026-06-06-substantiate-pr-linkage-governance`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #427`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#426.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-06-06-substantiate-pr-linkage-governance_
