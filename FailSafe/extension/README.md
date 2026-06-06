@@ -48,9 +48,15 @@ Each integration ships with its own README and its external API names are back-c
 
 ---
 
-**Current Release**: v5.6.2 (2026-06-06)
+**Current Release**: v5.6.3 (2026-06-06)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v5.6.3
+
+- 🔗 **PR↔issue linkage governance** — a Check Run catches the `Closes #1, #2` footgun (GitHub closes only the first issue; the rest silently stay open). Off by default; publishes beside the SHIELD-verdict check.
+- 📊 **Governed tracker source** — the Development Tracker can be built from your governance ledger (META_LEDGER + FEATURE_INDEX), not just PR/CHANGELOG history.
+- 🧬 **Shadow-genome consumer** — read qor-logic's causal governance graph (foundation for decision-traceability views).
 
 ## What's New in v5.6.2
 
