@@ -865,6 +865,27 @@ footer.foot{
 @media (prefers-reduced-motion: reduce){
   *{transition:none !important; animation:none !important}
 }
+
+/* ============================================================
+   STATUS BAR + LOADING (GH #163)
+   ============================================================ */
+.tracker-statusbar{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin:0 0 16px;font-family:var(--mono);font-size:12px;color:var(--text-faint)}
+.tracker-freshness{letter-spacing:.02em}
+.tracker-refresh{font-family:var(--mono);font-size:12px;color:var(--text-dim);background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:5px 11px;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.tracker-refresh:hover:not(:disabled){background:var(--panel);border-color:var(--text-faint);color:var(--text)}
+.tracker-refresh:focus-visible{outline:2px solid var(--good);outline-offset:2px}
+.tracker-refresh:disabled{opacity:.5;cursor:default}
+.tracker-refresh.is-refreshing{opacity:.6}
+.tracker-loading{padding:6px 0}
+.tracker-loading-label{font-family:var(--mono);font-size:13px;color:var(--text-faint);margin:0 0 16px}
+.tracker-skel{display:flex;flex-direction:column;gap:14px}
+.tracker-skel-bar{height:20px;border-radius:8px;background:linear-gradient(90deg,var(--line-soft) 25%,var(--line) 37%,var(--line-soft) 63%);background-size:400% 100%;animation:tracker-shimmer 1.5s ease infinite}
+.tracker-skel-bar:nth-child(1){width:60%}
+.tracker-skel-bar:nth-child(2){width:88%}
+.tracker-skel-bar:nth-child(3){width:72%}
+.tracker-skel-bar:nth-child(4){width:80%}
+.tracker-skel-bar:nth-child(5){width:54%}
+@keyframes tracker-shimmer{0%{background-position:100% 0}100%{background-position:0 0}}
 </style>
 </head>
 <body>
@@ -876,6 +897,11 @@ footer.foot{
     <p class="sub" id="sub"></p>
     <div class="meta-row" id="meta-row"></div>
   </header>
+
+  <div class="tracker-statusbar" id="tracker-statusbar">
+    <span class="tracker-freshness" id="tracker-freshness" aria-live="polite"></span>
+    <button type="button" class="tracker-refresh" id="tracker-refresh" aria-label="Refresh tracker data">↻ Refresh</button>
+  </div>
 
   <main id="main"></main>
 
@@ -1022,7 +1048,42 @@ function majorKeyForRcIndex(rcIndex) {
 /* ============================================================
    BOOTSTRAP
    ============================================================ */
-document.addEventListener("DOMContentLoaded", () => {
+// GH #163: loading affordance — replaces the blank #main while the fetch is in
+// flight, composing with the existing error + rendered states.
+function renderLoading() {
+  const main = $("#main");
+  if (!main) return;
+  main.innerHTML = "";
+  const wrap = el("div", "tracker-loading");
+  wrap.setAttribute("aria-busy", "true");
+  wrap.appendChild(el("p", "tracker-loading-label", "Building the tracker…"));
+  const skel = el("div", "tracker-skel");
+  for (let i = 0; i < 5; i++) skel.appendChild(el("div", "tracker-skel-bar"));
+  wrap.appendChild(skel);
+  main.appendChild(wrap);
+}
+
+// GH #163: client-side "last refreshed" stamp — the model carries no server
+// build time, so this reflects when the view last fetched/rendered (view
+// staleness), updated on every successful load + manual Refresh.
+function markRefreshed() {
+  const f = $("#tracker-freshness");
+  if (!f) return;
+  const t = new Date();
+  f.textContent = "Updated " + t.toLocaleTimeString();
+  f.setAttribute("title", "Tracker data last fetched at " + t.toLocaleString());
+}
+
+function setRefreshing(on) {
+  const btn = $("#tracker-refresh");
+  if (!btn) return;
+  btn.disabled = !!on;
+  btn.classList.toggle("is-refreshing", !!on);
+}
+
+function loadTracker() {
+  renderLoading();
+  setRefreshing(true);
   fetch("/api/v1/tracker", { headers: { "Accept": "application/json" } })
     .then(async (r) => {
       if (!r.ok) {
@@ -1034,8 +1095,15 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       return r.json();
     })
-    .then((data) => render(data))
-    .catch((err) => renderError(err));
+    .then((data) => { render(data); markRefreshed(); })
+    .catch((err) => renderError(err))
+    .finally(() => setRefreshing(false));
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = $("#tracker-refresh");
+  if (btn) btn.addEventListener("click", () => loadTracker());
+  loadTracker();
 });
 
 function renderError(err) {
