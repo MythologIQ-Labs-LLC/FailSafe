@@ -23326,5 +23326,72 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 ---
 
+### Entry #433: SUBSTANTIATE - Plans projection + vertical taxonomy polish (A.1b, #195/#198)
+
+**Date**: 2026-06-08
+**Phase**: SUBSTANTIATE (/qor-substantiate)
+**Author**: Judge
+
+**Target Version**: 5.6.x (next bundle; FX866)
+**Branch**: feat/plans-projection-195
+
+## Decision
+
+Reality=Promise PASS. A.1b completes the tracker-as-governance-sidecar PROJECTION: plans are the
+last + least-structured governance source. The projection now fills programs + phases (were empty
+after A.1), and #198 cleans the vertical taxonomy. Closes #195 + #198.
+
+## Scope
+
+- governance-projection.ts - parsePlans (.failsafe/governance/plans/*.md -> slug/title/theme/Target
+  Version), programsFromPlans (theme buckets from the slug leading token; versioned prefixes collapse
+  to major family v5/v4; singletons fold to Other - mirrors FX857, ~10 programs not 61),
+  phasesFromPlans (one per plan, even weight per program, rc-anchored to Target Version when present).
+  GovernanceSources.plans (optional, degrade-safe) wired into projectTrackerManifest.
+- #198 - areaOf strips the full FailSafe/extension/src/ build prefix (FailSafe/extension only as a
+  PAIR, never extension alone) + a NON_CAPABILITY denylist (test/.github/...) + a file-extension
+  heuristic drop leaked-filename verticals (real repo: 15 noisy -> 12 clean capability areas).
+- governance-sidecar.ts - SidecarDeps.readPlans + nodeSidecarDeps reads the plans dir + emit passes
+  plans to the projection + counts.programs. tracker-sidecar-command.ts message mentions programs.
+
+## Verification
+
+tsc 0, eslint clean, npm run compile clean. 16 unit tests green via the esbuild probe (9 projection:
+3 new = parsePlans / programs+phases / #198 taxonomy; 7 sidecar: 1 new = A.1b plans feed). Real-data
+smoke vs THIS repo: status written, 13 releases / 10 programs / 12 verticals / 60 decisions. The smoke
+caught + fixed an over-aggressive areaOf strip (extension-alone) that leaked filename verticals, and a
+leaked root package.json vertical (file-extension heuristic). Backend logic - NO visual surface change
+(render consumption stays the A.2b follow-up, which carries the visual gate).
+
+## FEATURE_INDEX
+
+FX866 added (after FX865). FX866 verified (tests + real-data smoke).
+
+## Coverage gate
+
+PUBLISH_BLOCK Active: no. FX866 carries real tests. Not a release this cycle (no publish).
+
+## Governance note
+
+Committed local on feat/plans-projection-195 (off main @ #432/#200). Awaits operator --admin merge.
+No release this cycle (folds into the next bundle).
+
+## Phase 75 SKIP records
+
+Python qor-logic gates not importable into this TS repo's substantiate flow - SKIP per Phase 75.
+Hash via Python hashlib SHA-256 over CRLF; cp1252 body. Same posture as #405-#432.
+
+## Content Hash
+
+**Content Hash**: `de26ed8a183d523eb7720ffab0e4b51e1198f7220ab3cec86f55e913644afbdb`
+**Previous Hash**: `481edef342a51fae185abd5376b6b85097273eb787507bb8382a5686e96e7328` (Entry #432 Chain Hash)
+**Chain Hash**: `e5f755d9564eae89967a1f2c1c80ca83614d66dcfe58a34818e9aacaae81d55c`
+**Merkle Seal**: `9295894173243abc07a40ac5d5b6841a0f50257a23192e7bbeb5562ae16f3ee2`  gate_seal_substantiate_plans_projection
+**Session ID**: `2026-06-08-substantiate-plans-projection`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #433`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#432.
+
+---
+
 _Chain integrity: VALID_
-_Session: 2026-06-06-substantiate-governance-sidecar_
+_Session: 2026-06-08-substantiate-plans-projection_

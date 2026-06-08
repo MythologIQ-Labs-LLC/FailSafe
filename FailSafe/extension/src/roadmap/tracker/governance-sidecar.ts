@@ -52,6 +52,9 @@ export interface SidecarDeps {
   writeFile(relPath: string, data: string): void;
   /** GitHub `owner/repo` slug, or undefined when not a GitHub repo. */
   repoSlug(): string | undefined;
+  /** Plan docs from `.failsafe/governance/plans/*.md` (A.1b, #195) → programs/phases.
+   *  Empty array when the dir is absent (ungoverned repo). */
+  readPlans(): Array<{ slug: string; content: string }>;
 }
 
 export type SidecarStatus = 'written' | 'unchanged' | 'skipped-no-governance' | 'error';
@@ -61,7 +64,7 @@ export interface SidecarEmitResult {
   /** Workspace-relative path of the generated sidecar (always the generated path). */
   path: string;
   reason?: string;
-  counts?: { rcs: number; verticals: number; decisions: number };
+  counts?: { rcs: number; programs: number; verticals: number; decisions: number };
 }
 
 /**
@@ -88,9 +91,11 @@ export function emitGovernanceSidecar(deps: SidecarDeps): SidecarEmitResult {
       metaLedger,
       featureIndex,
       repo: slug && slug.trim() ? slug : undefined,
+      plans: deps.readPlans(),
     });
     const counts = {
       rcs: manifest.rcs?.length ?? 0,
+      programs: manifest.programs?.length ?? 0,
       verticals: manifest.verticals?.length ?? 0,
       decisions: manifest.meta?.decisions?.length ?? 0,
     };
@@ -130,6 +135,16 @@ export function nodeSidecarDeps(workspaceRoot: string): SidecarDeps {
     repoSlug() {
       const slug = resolveRepoSlug(workspaceRoot);
       return slug ? slug : undefined;
+    },
+    readPlans() {
+      const dir = path.join(workspaceRoot, '.failsafe', 'governance', 'plans');
+      try {
+        return fs.readdirSync(dir)
+          .filter((f) => f.toLowerCase().endsWith('.md'))
+          .map((f) => ({ slug: f, content: fs.readFileSync(path.join(dir, f), 'utf-8') }));
+      } catch {
+        return [];
+      }
     },
   };
 }

@@ -28,7 +28,7 @@ function describe(result: SidecarEmitResult): string {
   const rel = GOVERNANCE_SIDECAR_RELPATH; // already a POSIX workspace-relative key
   switch (result.status) {
     case 'written':
-      return `Emitted ${rel} — ${result.counts?.rcs ?? 0} releases, `
+      return `Emitted ${rel} — ${result.counts?.rcs ?? 0} releases, ${result.counts?.programs ?? 0} programs, `
         + `${result.counts?.verticals ?? 0} verticals, ${result.counts?.decisions ?? 0} decisions.`;
     case 'unchanged':
       return `${rel} already up to date with the governance ledger.`;

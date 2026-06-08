@@ -60,7 +60,10 @@ const FEATURE_INDEX = `# Feature Index
 `;
 
 /** Spy deps recording every read/write path; seeds files from an in-memory store. */
-function spyDeps(initial: Record<string, string> = {}, opts: { writeThrows?: boolean } = {}) {
+function spyDeps(
+  initial: Record<string, string> = {},
+  opts: { writeThrows?: boolean; plans?: Array<{ slug: string; content: string }> } = {},
+) {
   const store = new Map<string, string>(Object.entries(initial));
   const reads: string[] = [];
   const writes: Array<{ path: string; data: string }> = [];
@@ -76,6 +79,9 @@ function spyDeps(initial: Record<string, string> = {}, opts: { writeThrows?: boo
     },
     repoSlug() {
       return 'MythologIQ-Labs-LLC/FailSafe';
+    },
+    readPlans() {
+      return opts.plans ?? [];
     },
   };
   return { deps, reads, writes, store };
@@ -137,6 +143,25 @@ suite('roadmap/tracker governance-sidecar (A.2 — #194 sidecar emission)', () =
     const second = emitGovernanceSidecar(deps); // store now holds the prior output
     assert.equal(second.status, 'unchanged');
     assert.equal(writes.length, 1, 'only the first emit wrote');
+  });
+
+  test('A.1b: plans feed programs/phases into the emitted manifest', () => {
+    const plans = [
+      { slug: 'plan-qor-a.md', content: '# Plan: Qor A\n\n**Target Version**: v5.7.0\n' },
+      { slug: 'plan-qor-b.md', content: '# Plan: Qor B\n' },
+      { slug: 'plan-monitor-x.md', content: '# Plan: Monitor X\n' }, // singleton theme -> Other
+    ];
+    const { deps, writes } = spyDeps(
+      { [`docs/META_LEDGER.md`]: LEDGER, [`docs/FEATURE_INDEX.md`]: FEATURE_INDEX },
+      { plans },
+    );
+    const r = emitGovernanceSidecar(deps);
+    assert.equal(r.status, 'written');
+    assert.ok((r.counts?.programs ?? 0) >= 2, 'qor theme + Other');
+    const yamlText = writes[0].data;
+    const parsed = yaml.load(yamlText.slice(yamlText.indexOf('meta:'))) as TrackerManifest;
+    assert.ok(parsed.programs!.some((p) => p.key === 'qor'), 'qor program present');
+    assert.equal(parsed.phases!.length, 3, 'one phase per plan');
   });
 
   test('ungoverned repo: no META_LEDGER → skipped-no-governance, no write', () => {
