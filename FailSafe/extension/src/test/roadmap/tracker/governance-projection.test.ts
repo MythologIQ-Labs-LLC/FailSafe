@@ -5,7 +5,7 @@
 
 import { strict as assert } from 'assert';
 import {
-  parseLedgerEntries, parseFeatureIndex, projectTrackerManifest,
+  parseLedgerEntries, parseFeatureIndex, projectTrackerManifest, parsePlans,
 } from '../../../roadmap/tracker/governance-projection';
 
 const LEDGER = `# META LEDGER
@@ -128,6 +128,53 @@ suite('roadmap/tracker governance-projection (A.1 — tracker sidecar)', () => {
     const m = projectTrackerManifest({ metaLedger: '', featureIndex: '' });
     assert.deepEqual(m.rcs, []);
     assert.deepEqual(m.verticals, []);
+    assert.deepEqual(m.programs, []);
+    assert.deepEqual(m.phases, []);
     assert.ok(m.meta, 'meta always present');
+  });
+
+  // --- A.1b (#195): plans → programs/phases ---
+
+  test('parsePlans: extracts slug / title / theme / target version', () => {
+    const docs = parsePlans([
+      { slug: 'plan-qor-stale-cache.md', content: '# Plan: Stale Cache Remediation\n\n**Target Version**: v5.1.0\n' },
+      { slug: 'plan-v5-round2-install-ux.md', content: '# Plan: v5 Install UX\n' },
+    ]);
+    assert.equal(docs[0].slug, 'qor-stale-cache');
+    assert.equal(docs[0].title, 'Stale Cache Remediation');
+    assert.equal(docs[0].theme, 'qor');
+    assert.equal(docs[0].targetVersion, 'v5.1.0');
+    assert.equal(docs[1].theme, 'v5', 'versioned prefix collapses to the major family');
+    assert.equal(docs[1].targetVersion, undefined);
+  });
+
+  test('programs: theme buckets at >=2 plans, singletons fold to Other; phases: one per plan', () => {
+    const plans = [
+      { slug: 'plan-qor-a.md', content: '# Plan: Qor A\n' },
+      { slug: 'plan-qor-b.md', content: '# Plan: Qor B\n' },
+      { slug: 'plan-v5-a.md', content: '# Plan: V5 A\n' },
+      { slug: 'plan-v5-b.md', content: '# Plan: V5 B\n' },
+      { slug: 'plan-monitor-x.md', content: '# Plan: Monitor X\n' }, // singleton -> Other
+    ];
+    const m = projectTrackerManifest({ metaLedger: '', featureIndex: '', plans });
+    const keys = m.programs!.map((p) => p.key).sort();
+    assert.deepEqual(keys, ['other', 'qor', 'v5']);
+    assert.equal(m.phases!.length, 5, 'one phase per plan');
+    assert.equal(m.phases!.find((ph) => ph.key === 'monitor-x')!.prog, 'other', 'singleton -> Other program');
+    assert.ok(m.phases!.every((ph) => ph.w >= 1), 'even integer weights');
+  });
+
+  test('#198: non-capability areas (test/.github) skipped; FailSafe/extension/src prefix normalized', () => {
+    const fi = [
+      '| ID | Feature | Doc | Code | Test | Status | Notes |',
+      '| --- | --- | --- | --- | --- | --- | --- |',
+      '| FX1 | A | d | src/integrations/x.ts | t | verified | - |',
+      '| FX2 | B | d | src/test/y.test.ts | t | verified | - |',          // test area -> skipped
+      '| FX3 | C | d | .github/workflows/z.yml | t | verified | - |',     // .github -> skipped
+      '| FX4 | D | d | FailSafe/extension/src/roadmap/w.ts | t | verified | - |', // prefix -> roadmap
+    ].join('\n');
+    const m = projectTrackerManifest({ metaLedger: '', featureIndex: fi });
+    const keys = m.verticals!.map((v) => v.key).sort();
+    assert.deepEqual(keys, ['integrations', 'roadmap'], 'test + .github dropped; FailSafe-prefixed row -> roadmap');
   });
 });
