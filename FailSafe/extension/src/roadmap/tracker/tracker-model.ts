@@ -217,7 +217,12 @@ export function validateManifest(m: TrackerManifest, knownReleaseIds?: string[])
     if (!progKeys.has(ph.prog)) {
       out.push({ severity: 'abort', code: 'phase-unknown-program', detail: `phase ${ph.key} → program '${ph.prog}' not in programs[]` });
     }
-    if (!rcIds.has(ph.rc)) {
+    if (!ph.rc) {
+      // Unanchored phase (no release pin) — legitimate for governance-projected
+      // plan phases that don't declare/match a shipped release. Counts toward its
+      // program total but isn't pinned to a timeline point. WARN, never abort.
+      out.push({ severity: 'warn', code: 'phase-unanchored', detail: `phase ${ph.key} has no release anchor — counts toward its program total, not pinned to the timeline` });
+    } else if (!rcIds.has(ph.rc)) {
       out.push({ severity: 'abort', code: 'phase-unknown-rc', detail: `phase ${ph.key} → release '${ph.rc}' not in rcs[]` });
     }
     if (typeof ph.w !== 'number' || ph.w < 0) {

@@ -123,3 +123,55 @@ suite('TrackerRoute.api cadence (GH #174 Part 2)', () => {
     } finally { fs.rmSync(ws, { recursive: true, force: true }); }
   });
 });
+
+// A.2b (#202): governed-repo projection fallback when programs.yaml is absent.
+suite('TrackerRoute.api governance projection (A.2b #202)', () => {
+  function governedWorkspace(): string {
+    const ws = tmpWorkspace();
+    fs.writeFileSync(path.join(ws, 'CHANGELOG.md'),
+      '# Changelog\n\n## [5.6.1] - 2026-06-05\n\n- shipped the tracker\n\n## [5.6.2] - 2026-06-06\n\n- ux\n');
+    fs.mkdirSync(path.join(ws, 'docs'), { recursive: true });
+    fs.writeFileSync(path.join(ws, 'docs', 'META_LEDGER.md'),
+      '# META LEDGER\n\n### Entry #1: DELIVER - v5.6.1\n\n**Phase**: DELIVER\n**Version**: 5.6.1\n**Tag**: v5.6.1\n\n## Decision\n\nShipped v5.6.1 to both marketplaces.\n\n---\n');
+    fs.writeFileSync(path.join(ws, 'docs', 'FEATURE_INDEX.md'),
+      '# Feature Index\n\n| ID | Feature | Doc | Code | Test | Status | Notes |\n| --- | --- | --- | --- | --- | --- | --- |\n| FX1 | A thing | d | src/integrations/x.ts | t | verified | - |\n');
+    fs.mkdirSync(path.join(ws, '.failsafe', 'governance', 'plans'), { recursive: true });
+    fs.writeFileSync(path.join(ws, '.failsafe', 'governance', 'plans', 'plan-qor-a.md'),
+      '# Plan: Qor A\n\n**Target Version**: v5.6.1\n'); // anchors (in CHANGELOG axis)
+    fs.writeFileSync(path.join(ws, '.failsafe', 'governance', 'plans', 'plan-qor-b.md'),
+      '# Plan: Qor B\n\n**Target Version**: v4.9.3\n'); // never shipped → must degrade, not abort
+    return ws;
+  }
+
+  test('programs.yaml absent on a governed repo → projection populates programs/verticals/decisions, ok:true', () => {
+    const ws = governedWorkspace();
+    try {
+      const { res, captured } = fakeResponse();
+      TrackerRoute.api({} as Request, res, { workspaceRoot: ws, uiDir: '' });
+      assert.equal(captured.status, 200);
+      assert.equal(captured.body!.manifestPresent, false);
+      assert.equal(captured.body!.manifestSource, 'projection');
+      assert.equal(captured.body!.ok, true, 'dangling v4.9.3 degrades to unanchored — never an abort');
+      assert.ok((captured.body!.programs as unknown[]).length >= 1, 'programs projected from plans');
+      assert.ok((captured.body!.verticals as unknown[]).length >= 1, 'verticals from FEATURE_INDEX');
+      const meta = captured.body!.meta as { decisions?: unknown[] };
+      assert.ok((meta.decisions?.length ?? 0) >= 1, 'decisions from META_LEDGER');
+      const lint = captured.body!.lint as Array<{ code: string; severity: string }>;
+      assert.ok(lint.some((f) => f.code === 'manifest-projected'), 'projected advisory present');
+      assert.ok(lint.some((f) => f.code === 'phase-unanchored'), 'unversioned/never-shipped plans → unanchored warn');
+      assert.ok(!lint.some((f) => f.severity === 'abort'), 'no aborts');
+    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+  });
+
+  test('operator programs.yaml present → projection NOT used (operator authoritative)', () => {
+    const ws = governedWorkspace();
+    try {
+      fs.mkdirSync(path.join(ws, 'docs', 'roadmap'), { recursive: true });
+      fs.writeFileSync(path.join(ws, 'docs', 'roadmap', 'programs.yaml'), 'programs: []\nphases: []\n', 'utf-8');
+      const { res, captured } = fakeResponse();
+      TrackerRoute.api({} as Request, res, { workspaceRoot: ws, uiDir: '' });
+      assert.equal(captured.body!.manifestPresent, true);
+      assert.equal(captured.body!.manifestSource, 'operator');
+    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+  });
+});

@@ -46,6 +46,13 @@ suite('tracker-model (B-INT-17)', () => {
     assert.ok(lint.some((f) => f.severity === 'abort' && f.code === 'phase-unknown-rc'));
   });
 
+  test('validateManifest: unanchored phase (rc="") → warn not abort (A.2b #202)', () => {
+    const unanchored = { ...MANIFEST, phases: [{ prog: 'core', key: 'A', rc: '', w: 100, title: 'A' }] };
+    const lint = validateManifest(unanchored);
+    assert.ok(lint.some((f) => f.severity === 'warn' && f.code === 'phase-unanchored'), 'empty rc → phase-unanchored warn');
+    assert.ok(!lint.some((f) => f.severity === 'abort'), 'unanchored is never an abort');
+  });
+
   test('validateManifest: phase referencing an undeclared program → abort', () => {
     const bad = { ...MANIFEST, phases: [{ prog: 'ghost', key: 'A', rc: 'v1.0', w: 100, title: 'A' }] };
     assert.ok(validateManifest(bad).some((f) => f.severity === 'abort' && f.code === 'phase-unknown-program'));

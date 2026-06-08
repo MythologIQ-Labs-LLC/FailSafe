@@ -23393,5 +23393,75 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 ---
 
+### Entry #434: SUBSTANTIATE - Tracker route consumes the governance projection (A.2b-data, #202)
+
+**Date**: 2026-06-08
+**Phase**: SUBSTANTIATE (/qor-substantiate)
+**Author**: Judge
+
+**Target Version**: 5.6.x (next bundle; FX867)
+**Branch**: feat/tracker-projection-consume-202
+
+## Decision
+
+Reality=Promise PASS. The data half of A.2b (#202): the Development Tracker route now PROJECTS its
+manifest from the governance ledger when the operator programs.yaml is absent, with the operator-chosen
+unanchored-tolerant reconciliation so projected plan phases never abort the render. UI work deferred.
+
+## Scope
+
+- TrackerRoute.ts - projectGovernanceManifest(workspaceRoot, knownReleaseIds): when docs/roadmap/
+  programs.yaml is ABSENT on a governed repo, project the manifest via projectTrackerManifest over
+  META_LEDGER + FEATURE_INDEX + plans (reusing the FX865 nodeSidecarDeps I/O seam); operator manifest
+  stays authoritative. Axis discovered FIRST (so plan phases can anchor to it). New manifestSource
+  field (operator|projection|none) + manifest-projected advisory. Ungoverned repo -> {} -> discovered-
+  only, unchanged.
+- tracker-model.ts validateManifest - an empty rc is now phase-unanchored WARN (not a phase-unknown-rc
+  ABORT). A non-empty rc not in the axis still aborts (unchanged). Operator decision: unanchored-tolerant.
+- governance-projection.ts - phasesFromPlans gains knownReleaseIds: a plan anchors to its Target Version
+  ONLY when that version is a real release; otherwise unanchored (a Target Version is intent, not a ship
+  record - e.g. v4.9.3 never shipped). GovernanceSources.knownReleaseIds threaded through.
+
+## Verification
+
+tsc 0, eslint clean, npm run compile clean. 44 unit tests green via the esbuild probe (new: validator
+unanchored-warn; projection axis-aware anchoring x2; route governed-projection + operator-authoritative).
+TWO real-data smokes: (1) operator path on this repo - manifestSource=operator, ok:true, 0 aborts (no
+regression); (2) projection path on real governance data - 10 programs / 61 phases / 12 verticals / 61
+decisions, 4 phases anchor (v4.8.0/v4.9.0/v4.9.2/v4.9.5), 57 unanchored (incl. never-shipped v4.9.3),
+0 ABORTS -> ok:true. Backend logic - NO dashboard change, no visual gate. The client cumulative()
+unanchored-counting fix + Accountable-reference visual fidelity are the deferred A.2b-visual half (the
+dashboard cumulative() currently SKIPS unanchored phases - tracked for the visual pass).
+
+## FEATURE_INDEX
+
+FX867 added (after FX866). FX867 verified (tests + two real-data smokes).
+
+## Coverage gate
+
+PUBLISH_BLOCK Active: no. FX867 carries real tests. Not a release this cycle (no publish).
+
+## Governance note
+
+Committed local on feat/tracker-projection-consume-202 (off main @ #433/#201). Awaits operator --admin
+merge. No release this cycle. Design source for A.2b-visual recorded (Accountable status HTML refs, #202).
+
+## Phase 75 SKIP records
+
+Python qor-logic gates not importable into this TS repo's substantiate flow - SKIP per Phase 75.
+Hash via Python hashlib SHA-256 over CRLF; cp1252 body. Same posture as #405-#433.
+
+## Content Hash
+
+**Content Hash**: `183cef7cb1320d8624caaaae8a082bc6a0dbde2da037473a6b8d0822fe5c1bdc`
+**Previous Hash**: `e5f755d9564eae89967a1f2c1c80ca83614d66dcfe58a34818e9aacaae81d55c` (Entry #433 Chain Hash)
+**Chain Hash**: `c0efbbe1e31371c7cfa5add64e07799b337c1c3158f4be8b8dbe8df031bcfd84`
+**Merkle Seal**: `5c4bbd6b3c178ae83b3da4b93e852412811269a0774d3f57d1a447e67557bed2`  gate_seal_substantiate_tracker_projection_consume
+**Session ID**: `2026-06-08-substantiate-tracker-projection-consume`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #434`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#433.
+
+---
+
 _Chain integrity: VALID_
-_Session: 2026-06-08-substantiate-plans-projection_
+_Session: 2026-06-08-substantiate-tracker-projection-consume_

@@ -5,6 +5,8 @@ import { execFileSync } from 'child_process';
 import * as yaml from 'js-yaml';
 import { buildTrackerModel, validateManifest, discoverReleases, type TrackerManifest } from '../tracker/tracker-model';
 import { discoverMergedPrs, detectCadence } from '../tracker/tracker-pr-discovery';
+import { projectTrackerManifest } from '../tracker/governance-projection';
+import { nodeSidecarDeps } from '../tracker/governance-sidecar';
 
 /**
  * TrackerRoute — serves the Development Tracker (standard:
@@ -38,6 +40,26 @@ const TEMPLATE_CANDIDATES = (deps: TrackerRouteDeps): string[] => [
 
 const MANIFEST_PATH = (workspaceRoot: string): string =>
   path.join(workspaceRoot, 'docs', 'roadmap', 'programs.yaml');
+
+/**
+ * Project a manifest from the governance ledger (A.2b, #202) — the GOVERNED-repo
+ * fallback when the operator has no hand-authored programs.yaml. Reuses the FX865
+ * sidecar I/O seam (nodeSidecarDeps) to read META_LEDGER + FEATURE_INDEX + plans.
+ * `knownReleaseIds` (the discovered axis) lets plan phases anchor only to real
+ * releases. Ungoverned repo (no META_LEDGER) → {} → discovered-only, as before.
+ */
+function projectGovernanceManifest(workspaceRoot: string, knownReleaseIds: string[]): TrackerManifest {
+  const d = nodeSidecarDeps(workspaceRoot);
+  const metaLedger = d.readFile('docs/META_LEDGER.md');
+  if (!metaLedger || !metaLedger.trim()) return {};
+  return projectTrackerManifest({
+    metaLedger,
+    featureIndex: d.readFile('docs/FEATURE_INDEX.md') ?? '',
+    plans: d.readPlans(),
+    repo: d.repoSlug(),
+    knownReleaseIds,
+  });
+}
 
 /** Best-effort: the git tags present in the repo (corroborate shipped state). */
 function shippedReleaseIds(workspaceRoot: string): string[] {
@@ -87,18 +109,9 @@ export const TrackerRoute = {
   api(_req: Request, res: Response, deps: TrackerRouteDeps): void {
     try {
       const manifestPath = MANIFEST_PATH(deps.workspaceRoot);
-      // GH #167-followup: a missing planning manifest is NOT a failure. The
-      // PLANNED layer (programs.yaml) is optional — the DISCOVERED layer
-      // (CHANGELOG + git tags) is enough to render the tracker. Degrade to an
-      // empty manifest + a non-blocking advisory so any workspace without a
-      // programs.yaml still gets a populated (or honestly-empty) dashboard
-      // instead of a hard 503.
-      const manifestPresent = fs.existsSync(manifestPath);
-      const manifest = (manifestPresent
-        ? (yaml.load(fs.readFileSync(manifestPath, 'utf-8')) ?? {})
-        : {}) as TrackerManifest;
       // Discover the complete release axis from the CHANGELOG (the governance
       // files don't span the full history); the manifest only adds forecasts.
+      // Computed FIRST so a governance projection can anchor plan phases to it.
       const discoveredReleases = discoverReleases(readChangelog(deps.workspaceRoot));
       // GH #174 Part 2: PR-incremental fallback. A repo with no semver releases
       // (e.g. only `## Unreleased` + merged-PR git history) would otherwise show a
@@ -107,6 +120,24 @@ export const TrackerRoute = {
       const prAnchors = discoverMergedPrs(readGitLog(deps.workspaceRoot));
       const cadence = detectCadence(discoveredReleases, prAnchors);
       const axis = cadence === 'pr-incremental' ? prAnchors : discoveredReleases;
+
+      // Manifest source (A.2b, #202): operator programs.yaml is authoritative; absent
+      // on a GOVERNED repo → project the manifest from the governance ledger
+      // (META_LEDGER + FEATURE_INDEX + plans) so the dashboard populates from
+      // governance instead of showing a bare timeline; absent + ungoverned → {}.
+      // GH #167-followup: a missing planning manifest is NEVER a hard failure.
+      const manifestPresent = fs.existsSync(manifestPath);
+      let manifestSource: 'operator' | 'projection' | 'none' = 'none';
+      let manifest: TrackerManifest;
+      if (manifestPresent) {
+        manifest = (yaml.load(fs.readFileSync(manifestPath, 'utf-8')) ?? {}) as TrackerManifest;
+        manifestSource = 'operator';
+      } else {
+        manifest = projectGovernanceManifest(deps.workspaceRoot, axis.map((r) => r.id));
+        if ((manifest.programs?.length ?? 0) || (manifest.verticals?.length ?? 0) || (manifest.meta?.decisions?.length ?? 0)) {
+          manifestSource = 'projection';
+        }
+      }
       // Retroactive windows: deps override (future VS Code settings) → manifest
       // progressWindows (user-editable today) → defaults 60 / 30.
       const pw = manifest.progressWindows ?? {};
@@ -119,18 +150,23 @@ export const TrackerRoute = {
       });
       // Validate phases against the RESOLVED axis (discovered + manifest forecasts).
       const lint = validateManifest(manifest, model.rcs.map((r) => r.id));
-      // Surface the absent planning manifest as a non-blocking advisory (never an
-      // abort) so the dashboard can show guidance without failing.
+      // Surface the manifest source as a non-blocking advisory (never an abort).
       if (!manifestPresent) {
-        lint.push({
-          severity: 'warn',
-          code: 'manifest-absent',
-          detail: 'No planning manifest at docs/roadmap/programs.yaml — showing discovered releases only. Add the manifest to plan forecasts.',
-        });
+        lint.push(manifestSource === 'projection'
+          ? {
+            severity: 'warn',
+            code: 'manifest-projected',
+            detail: 'No docs/roadmap/programs.yaml — projected the tracker from the governance ledger (META_LEDGER + FEATURE_INDEX + plans). Add a programs.yaml to override.',
+          }
+          : {
+            severity: 'warn',
+            code: 'manifest-absent',
+            detail: 'No planning manifest at docs/roadmap/programs.yaml — showing discovered releases only. Add the manifest to plan forecasts.',
+          });
       }
       // The dashboard reads the data fields at the TOP LEVEL (data.rcs, data.meta,
-      // …), so spread the model out; lint/ok/manifestPresent ride along.
-      res.json({ ...model, lint, manifestPresent, cadence, ok: !lint.some((f) => f.severity === 'abort') });
+      // …), so spread the model out; lint/ok/manifestPresent/manifestSource ride along.
+      res.json({ ...model, lint, manifestPresent, manifestSource, cadence, ok: !lint.some((f) => f.severity === 'abort') });
     } catch (e) {
       res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
     }
