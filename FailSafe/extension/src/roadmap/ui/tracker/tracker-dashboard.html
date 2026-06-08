@@ -1109,12 +1109,30 @@ document.addEventListener("DOMContentLoaded", () => {
 function renderError(err) {
   const main = $("#main");
   main.innerHTML = "";
+  const msg = err && err.message ? err.message : String(err);
+  // A fetch NETWORK rejection (TypeError: "Failed to fetch" / "NetworkError" /
+  // "Load failed") means /api/v1/tracker was unreachable — almost always because
+  // this dashboard was opened on its own (e.g. the raw file:// template) instead of
+  // from the FailSafe Console that serves it. Guide the user, don't show a raw error.
+  // A genuine server fault arrives as `Error: HTTP <status>` and keeps the detail.
+  const unreachable = (err instanceof TypeError) || /failed to fetch|networkerror|load failed/i.test(msg);
   const card = el("div", "errcard");
-  card.appendChild(el("h2", null, "Couldn’t load the tracker"));
-  const p = el("p");
-  p.innerHTML = "The dashboard data could not be fetched from <code>/api/v1/tracker</code>. "
-    + "Reason: <code>" + esc(err && err.message ? err.message : String(err)) + "</code>.";
-  card.appendChild(p);
+  if (unreachable) {
+    card.appendChild(el("h2", null, "Open the tracker from the FailSafe Console"));
+    const p = el("p");
+    p.innerHTML = "This dashboard is served by the FailSafe Console — it can’t load on its own. "
+      + "Open it from the extension: <strong>Console → Workspace → Tracker</strong>, or the "
+      + "<strong>Open Command Center</strong> pop-out. "
+      + "(Opening <code>tracker-dashboard.html</code> directly has no server to fetch "
+      + "<code>/api/v1/tracker</code> from.)";
+    card.appendChild(p);
+  } else {
+    card.appendChild(el("h2", null, "Couldn’t load the tracker"));
+    const p = el("p");
+    p.innerHTML = "The dashboard data could not be fetched from <code>/api/v1/tracker</code>. "
+      + "Reason: <code>" + esc(msg) + "</code>.";
+    card.appendChild(p);
+  }
   main.appendChild(card);
 }
 

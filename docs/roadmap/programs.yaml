@@ -89,40 +89,83 @@ phases:
   - { prog: experience, key: TRACKER, rc: v5.4.3,   w: 30, title: Development Tracker, what: Evidence-enforced, organically-generated status dashboard embedded in the Workspace tab., benefit: Reality-vs-promise visible at a glance, current by construction. }
   - { prog: experience, key: VOICE,   rc: v5.3.3, w: 30, title: Voice + Mindmap, what: Multilingual Whisper STT + Piper TTS in the Mindmap, shipped as a separate voice pack., benefit: Hands-free ideation that degrades gracefully when absent. }
 
+# Verticals = the product's 7 user-facing surfaces (the Console Center tabs). These
+# are a FIXED taxonomy sourced from src/roadmap/ui/command-center.{html,js}; the
+# `programs` above (Governance Engine / Integrations / Experience) are a separate,
+# program-progress dimension and are intentionally distinct from these surfaces.
 verticals:
-  - key: governance
-    name: Governance Engine
+  - key: monitor
+    name: Monitor
     accent: "#38d6c8"
-    summary: Deterministic policy at the editor boundary + a verifiable decision ledger.
+    summary: Live status + trust posture at a glance — the sidebar Monitor and the Console Overview.
     functionality:
-      - "**Risk classification** L1/L2/L3 by path + content triggers"
-      - "**Sentinel verdicts** PASS / WARN / BLOCK / ESCALATE with confidence"
-      - "**Merkle-chained ledger** every decision append-only + hash-linked"
+      - "**Trust snapshot** current posture + confidence"
+      - "**Operation stream** recent governed actions, live"
+      - "**Threat + chain status** Merkle-ledger integrity"
     backend:
-      - "`META_LEDGER.md` — chain-verified decision record"
-      - "`EnforcementEngine` + `IGovernanceInterceptor` seam"
+      - "`OverviewRenderer` (Console `overview` tab)"
+      - "`FailSafeSidebarProvider` (VS Code sidebar Monitor)"
+  - key: learn
+    name: Learn
+    accent: "#e7b04b"
+    summary: Onboarding & education — governance concepts, lessons, and the SHIELD glossary.
+    functionality:
+      - "**SWE-craft lessons** governance + engineering practice"
+      - "**Glossary** the SHIELD vocabulary"
+    backend:
+      - "`LearnRenderer` · `education/*`"
+  - key: agents
+    name: Agents
+    accent: "#f0728f"
+    summary: Agent observability — what agents did and how governance responded.
+    functionality:
+      - "**Operations** mission strip, phase progress, integrity + rollback"
+      - "**Timeline** categorized agent-execution events"
+      - "**Genome** Shadow Genome failure-pattern debugger"
+      - "**Replay** deterministic verdict replay"
+    backend:
+      - "`AgentTimelineService` · `ShadowGenomePanel` · `sentinel/*`"
+  - key: governance
+    name: Governance
+    accent: "#7aa2f7"
+    summary: Audit & compliance — the Merkle audit log, risk register, policies and the L3 approval queue.
+    functionality:
+      - "**Audit Log** real-time governed-event stream"
+      - "**Risks** durable risk register CRUD"
+      - "**Compliance** Sentinel status, policies, L3 queue — verdicts PASS/WARN/BLOCK/ESCALATE; risk classes L1/L2/L3"
+    backend:
+      - "`META_LEDGER.md` (Merkle chain) · `EnforcementEngine`"
+      - "`RiskRegisterManager` · `TransparencyRenderer` · `GovernanceRenderer`"
+  - key: workspace
+    name: Workspace
+    accent: "#9ece6a"
+    summary: Workspace tools — skills, the ideation mindmap, and the development tracker.
+    functionality:
+      - "**Skills** governance-aware skill discovery + intent shell"
+      - "**Mindmap** node-based ideation + Whisper/Piper voice (voice pack)"
+      - "**Tracker** this evidence-enforced development dashboard"
+    backend:
+      - "`SkillRegistry` · `brainstorm/*` · `TrackerRoute` (`/console/tracker`)"
   - key: integrations
     name: Integrations
-    accent: "#e7b04b"
-    summary: Govern the whole AI toolchain — every integration local-first, opt-in, risk-scored.
+    accent: "#bb9af7"
+    summary: Third-party integrations — the catalog plus governed, risk-scored connectors.
     functionality:
-      - "**SARIF** scanner findings into the risk register"
-      - "**MCP Catalog** governed, env-detected installs (Context7, Mermaid, Playwright)"
-      - "**Slack** VETO / L3 / drift notifications, off by default"
+      - "**Catalog** env-detected, governed installs"
+      - "**Bicameral · Open Design** decision-graph + L3 write path"
+      - "**MCP Catalog** risk-scored MCP installs (Context7, Mermaid)"
+      - "**Agent Governance** Microsoft AGT installer · **SARIF** ingest · **Slack** notify-only"
     backend:
-      - "`src/integrations/*` — pure, injectable-transport clients"
-      - "`/api/v1/mcp/catalog` + `/api/v1/agt/modules`"
-  - key: experience
-    name: Experience
-    accent: "#f0728f"
-    summary: The surfaces operators actually touch — console, learning, voice, tracker.
+      - "`src/integrations/*` (injectable transports)"
+      - "`/api/v1/mcp/catalog` · `/api/v1/agt/modules`"
+  - key: config
+    name: Config
+    accent: "#ff9e64"
+    summary: System config — theme + local console preferences; a dependency of every other surface.
     functionality:
-      - "**Command Center** 8-tab browser console on :9376"
-      - "**Learn** SWE-craft education tab"
-      - "**Development Tracker** this dashboard, organically generated"
+      - "**Settings** theme · voice/audio · notifications · skills install"
     backend:
-      - "`ConsoleServer` (Express :9376) + `ConsoleRouteRegistrar`"
-      - "`/console/tracker` + `/api/v1/tracker`"
+      - "`SettingsRenderer` · VS Code `failsafe.*` configuration"
 
 # §03 Convergence — where FailSafe meets adjacent systems at NAMED contracts
 # (not vibes). Each bridge faces a governing contract in the middle.
@@ -159,7 +202,7 @@ promotion:
       - { pill: stg, text: "SARIF · MCP Registry · Slack · MCP Catalog (v5.4.2)" }
       - { pill: x,   text: "Agent Governance Toolkit installer (v5.4.3, in flight)" }
   - title: Experience
-    vert: experience
+    vert: workspace   # cross-filter target: the Workspace surface (verticals are now the 7 Console surfaces)
     accent: "#f0728f"
     phaseCount: 3
     rows:
