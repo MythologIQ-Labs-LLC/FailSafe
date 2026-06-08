@@ -164,6 +164,25 @@ suite('roadmap/tracker governance-projection (A.1 — tracker sidecar)', () => {
     assert.ok(m.phases!.every((ph) => ph.w >= 1), 'even integer weights');
   });
 
+  test('A.2b: plan phases anchor to Target Version only when it is a known release', () => {
+    const plans = [
+      { slug: 'plan-qor-a.md', content: '# Plan: Qor A\n\n**Target Version**: v5.6.1\n' }, // real release
+      { slug: 'plan-qor-b.md', content: '# Plan: Qor B\n\n**Target Version**: v4.9.3\n' }, // never shipped
+      { slug: 'plan-qor-c.md', content: '# Plan: Qor C\n' },                               // no version
+    ];
+    const m = projectTrackerManifest({ metaLedger: '', featureIndex: '', plans, knownReleaseIds: ['v5.6.1', 'v5.6.2'] });
+    const byKey = (k: string) => m.phases!.find((p) => p.key === k)!;
+    assert.equal(byKey('qor-a').rc, 'v5.6.1', 'known release → anchored');
+    assert.equal(byKey('qor-b').rc, '', 'unknown release (v4.9.3) → unanchored, not a dangling rc');
+    assert.equal(byKey('qor-c').rc, '', 'no version → unanchored');
+  });
+
+  test('A.2b: without knownReleaseIds, every plan phase is unanchored', () => {
+    const plans = [{ slug: 'plan-qor-a.md', content: '# Plan: Qor A\n\n**Target Version**: v5.6.1\n' }];
+    const m = projectTrackerManifest({ metaLedger: '', featureIndex: '', plans });
+    assert.equal(m.phases![0].rc, '', 'no axis supplied → unanchored');
+  });
+
   test('#198: non-capability areas (test/.github) skipped; FailSafe/extension/src prefix normalized', () => {
     const fi = [
       '| ID | Feature | Doc | Code | Test | Status | Notes |',

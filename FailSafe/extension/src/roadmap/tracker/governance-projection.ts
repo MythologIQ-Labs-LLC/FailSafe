@@ -178,13 +178,23 @@ function programsFromPlans(plans: PlanDoc[]): TrackerProgram[] {
 }
 
 /** One phase per plan, mapped to its theme program (or "other"); even weight per
- *  program; anchored to the plan's Target Version rc when it declares one. */
-function phasesFromPlans(plans: PlanDoc[], programs: TrackerProgram[]): TrackerPhase[] {
+ *  program. Anchored to the plan's Target Version ONLY when that version is a real
+ *  release (in `knownReleaseIds`); otherwise unanchored (rc='') — a Target Version
+ *  is a plan's intent, not a ship record, and may name a release that never shipped
+ *  (e.g. v4.9.3). Unanchored phases count toward their program but aren't pinned to
+ *  the timeline (validated as `phase-unanchored` WARN, never a `phase-unknown-rc`
+ *  abort). */
+function phasesFromPlans(
+  plans: PlanDoc[],
+  programs: TrackerProgram[],
+  knownReleaseIds?: string[],
+): TrackerPhase[] {
   const known = new Set(programs.map((p) => p.key));
+  const axis = knownReleaseIds ? new Set(knownReleaseIds) : null;
   const phases: TrackerPhase[] = plans.map((p) => ({
     prog: known.has(p.theme) ? p.theme : 'other',
     key: p.slug,
-    rc: p.targetVersion ?? '',
+    rc: p.targetVersion && axis?.has(p.targetVersion) ? p.targetVersion : '',
     w: 1,
     title: p.title,
   }));
@@ -231,6 +241,10 @@ export interface GovernanceSources {
   /** Plan docs (`.failsafe/governance/plans/*.md`) → programs/phases (A.1b, #195).
    *  Optional + degrade-safe: absent -> programs/phases stay empty. */
   plans?: Array<{ slug: string; content: string }>;
+  /** The resolved release axis (rc ids). When supplied, plan phases anchor to a
+   *  Target Version only if it's a real release here; otherwise unanchored (A.2b,
+   *  #202). Absent -> every plan phase is unanchored. */
+  knownReleaseIds?: string[];
 }
 
 /** Project a TrackerManifest from the governance artifacts. */
@@ -241,7 +255,7 @@ export function projectTrackerManifest(sources: GovernanceSources): TrackerManif
   const verticals = verticalsFromFeatureIndex(parseFeatureIndex(sources.featureIndex));
   const planDocs = parsePlans(sources.plans ?? []);
   const programs = programsFromPlans(planDocs);
-  const phases = phasesFromPlans(planDocs, programs);
+  const phases = phasesFromPlans(planDocs, programs, sources.knownReleaseIds);
 
   return {
     repo: sources.repo,
