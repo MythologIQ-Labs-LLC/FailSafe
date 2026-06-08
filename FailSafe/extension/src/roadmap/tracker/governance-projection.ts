@@ -57,48 +57,65 @@ export function parseLedgerEntries(metaLedger: string): LedgerEntry[] {
   return out;
 }
 
-export interface FeatureRow {
-  id: string;
-  feature: string;
-  code: string;
-  test: string;
-  status: string;
+// --- Verticals = the product's 7 Console surfaces (the AUTHORITATIVE taxonomy) ---
+// Verticals are NOT code directories. They are the user-facing product surfaces, and
+// the SOURCE OF TRUTH is the Console Center tab nav + renderer wiring:
+//   src/roadmap/ui/command-center.html  (tab nav, data-target keys)
+//   src/roadmap/ui/command-center.js    (`renderers` map: each tab → its sub-views)
+// The projection is pure (no DOM), so these are pinned here as a constant and a
+// DRIFT-GUARD test (governance-projection.test.ts) parses command-center.js and fails
+// if this list diverges from the real Console. Summaries are from docs/COMPONENT_HELP.md.
+// (Supersedes the earlier FEATURE_INDEX path-grouping, which grouped IMPLEMENTATION
+//  directories — sentinel/genesis/qorelogic/… — and so misrepresented the product.)
+
+export interface ConsoleVerticalSpec {
+  /** Vertical identity (product slug). */
+  key: string;
+  /** The command-center `renderers` key / tab `data-target` (drift-guard anchor). */
+  tab: string;
+  /** Product label. */
+  name: string;
+  summary: string;
+  /** Sub-view labels (the TabGroup labels) — the real "functionality" of the surface. */
+  subviews: string[];
+  /** Config is a dependency of every other surface, not a peer feature area. */
+  secondary?: boolean;
 }
 
-/** Parse the `| ID | Feature | Doc | Code | Test | Status | Notes |` table. */
-export function parseFeatureIndex(featureIndex: string): FeatureRow[] {
-  const out: FeatureRow[] = [];
-  for (const line of (featureIndex || '').split('\n')) {
-    const m = /^\|\s*(FX\d+)\s*\|(.+)$/.exec(line.trim());
-    if (!m) continue;
-    const cells = line.split('|').map((c) => c.trim());
-    // cells: ['', ID, Feature, Doc, Code, Test, Status, Notes, '']
-    if (cells.length < 7) continue;
-    out.push({ id: cells[1], feature: cells[2], code: cells[4], test: cells[5], status: cells[6] });
-  }
-  return out;
-}
+export const CONSOLE_VERTICALS: ConsoleVerticalSpec[] = [
+  { key: 'monitor', tab: 'overview', name: 'Monitor',
+    summary: 'Live status + trust posture at a glance — the sidebar Monitor and Console Overview (trust snapshot, operation stream, threat & chain status).',
+    subviews: ['Overview'] },
+  { key: 'learn', tab: 'learn', name: 'Learn',
+    summary: 'Onboarding & education — governance concepts, lessons, and glossary.',
+    subviews: ['Learn'] },
+  { key: 'agents', tab: 'agents', name: 'Agents',
+    summary: 'Agent observability — what agents did and how governance responded.',
+    subviews: ['Operations', 'Timeline', 'Genome', 'Replay'] },
+  { key: 'governance', tab: 'governance', name: 'Governance',
+    summary: 'Audit & compliance — the Merkle audit log, risk register, policies and the L3 approval queue.',
+    subviews: ['Audit Log', 'Risks', 'Compliance'] },
+  { key: 'workspace', tab: 'workspace', name: 'Workspace',
+    summary: 'Workspace tools — skills, the ideation mindmap, and the development tracker.',
+    subviews: ['Skills', 'Mindmap', 'Tracker'] },
+  { key: 'integrations', tab: 'integrations', name: 'Integrations',
+    summary: 'Third-party integrations — the catalog plus governed connectors.',
+    subviews: ['Catalog', 'Bicameral', 'Open Design', 'MCP Catalog', 'Agent Governance'] },
+  { key: 'config', tab: 'settings', name: 'Config',
+    summary: 'System config — theme and local console preferences; a dependency of every other surface.',
+    subviews: ['Settings'], secondary: true },
+];
 
-/** Coarse capability area = the top-level segment of the first code path, after
- *  normalizing build-prefix noise. */
-function areaOf(code: string): string {
-  const firstPath = (code || '').trim().split(/[\s(,;]/)[0];
-  let segs = firstPath.split('/').filter(Boolean);
-  // Normalize the occasional fully-qualified `FailSafe/extension/src/...` build
-  // prefix, then a leading `src/` (#198 — was leaking a stray `FailSafe` vertical).
-  // Only strip `extension` as part of the `FailSafe/extension` pair — never on its
-  // own, since `extension/` is itself a real capability area.
-  if (segs[0] === 'FailSafe' && segs[1] === 'extension') segs = segs.slice(2);
-  if (segs[0] === 'src') segs = segs.slice(1);
-  // Top-level capability area (e.g. integrations / roadmap / qorelogic). This is
-  // a coarse DEFAULT taxonomy; FX859 operator categorization refines it on top.
-  return segs[0] || 'other';
+/** Project the 7 fixed Console verticals (with their real sub-views as functionality). */
+function verticalsFromConsole(): TrackerVertical[] {
+  return CONSOLE_VERTICALS.map((v, i) => ({
+    key: v.key,
+    name: v.name,
+    accent: ACCENTS[i % ACCENTS.length],
+    summary: v.summary,
+    functionality: v.subviews,
+  }));
 }
-
-// #198 — areas that are infrastructure, not product capabilities. Skipped so they
-// don't surface as verticals on the tracker (the operator never wants a "tests" or
-// "CI" vertical). `scripts` is intentionally NOT here — it is substantive tooling.
-const NON_CAPABILITY_AREAS = new Set(['test', 'tests', '.github', 'github', 'node_modules', 'out', 'dist']);
 
 function humanizeArea(area: string): string {
   return area.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -204,39 +221,12 @@ function phasesFromPlans(
   return phases;
 }
 
-function verticalsFromFeatureIndex(rows: FeatureRow[]): TrackerVertical[] {
-  const groups = new Map<string, FeatureRow[]>();
-  for (const r of rows) {
-    // The FEATURE_INDEX Code column is mixed: modern rows carry real file paths,
-    // legacy rows carry component-IDs (e.g. "C001"). Only path-coded rows map to
-    // a meaningful capability area — skip the legacy component-ID rows so each
-    // doesn't become its own vertical.
-    const firstPath = (r.code || '').trim().split(/[\s(,;]/)[0];
-    if (!firstPath.includes('/')) continue;
-    const area = areaOf(r.code);
-    // #198 — skip infra areas + any area that is actually a leaked filename
-    // (ends in a file extension, e.g. a root `package.json` row → `package.json`).
-    if (NON_CAPABILITY_AREAS.has(area) || /\.[a-z0-9]+$/i.test(area)) continue;
-    (groups.get(area) ?? groups.set(area, []).get(area)!).push(r);
-  }
-  let i = 0;
-  const out: TrackerVertical[] = [];
-  for (const [area, members] of groups) {
-    out.push({
-      key: area.replace(/[/]/g, '-'),
-      name: humanizeArea(area),
-      accent: ACCENTS[i++ % ACCENTS.length],
-      summary: `${members.length} feature(s) — projected from the governance feature index.`,
-      functionality: members.map((m) => m.feature),
-      backend: members.map((m) => '`' + (m.code.split(/[\s(]/)[0]) + '`'),
-    });
-  }
-  return out;
-}
-
 export interface GovernanceSources {
   metaLedger: string;
-  featureIndex: string;
+  /** Reserved: feature-level mapping of FEATURE_INDEX rows INTO the 7 Console
+   *  verticals is a follow-up. No longer used to DERIVE verticals (that produced an
+   *  implementation-directory taxonomy, not the product surfaces). Optional. */
+  featureIndex?: string;
   repo?: string;
   /** Plan docs (`.failsafe/governance/plans/*.md`) → programs/phases (A.1b, #195).
    *  Optional + degrade-safe: absent -> programs/phases stay empty. */
@@ -252,7 +242,7 @@ export function projectTrackerManifest(sources: GovernanceSources): TrackerManif
   const entries = parseLedgerEntries(sources.metaLedger);
   const rcs = rcsFromLedger(entries);
   const decisions = decisionsFromLedger(entries);
-  const verticals = verticalsFromFeatureIndex(parseFeatureIndex(sources.featureIndex));
+  const verticals = verticalsFromConsole();
   const planDocs = parsePlans(sources.plans ?? []);
   const programs = programsFromPlans(planDocs);
   const phases = phasesFromPlans(planDocs, programs, sources.knownReleaseIds);
@@ -263,7 +253,7 @@ export function projectTrackerManifest(sources: GovernanceSources): TrackerManif
       eyebrow: 'Governance ledger · development tracker',
       title: 'Governed tracker',
       titleEm: sources.repo ? `for ${sources.repo}` : 'from the governance ledger',
-      sub: 'Projected from the SHIELD governance ledger (META_LEDGER + FEATURE_INDEX + plans). A view of governance, not a PR scrape.',
+      sub: "Projected from the SHIELD governance ledger (META_LEDGER + plans) across the product's Console surfaces. A view of governance, not a PR scrape.",
       metaRow: [
         { label: 'Source', value: 'Governance ledger' },
         { label: 'Releases', value: String(rcs.length) },
@@ -271,7 +261,7 @@ export function projectTrackerManifest(sources: GovernanceSources): TrackerManif
         { label: 'Verticals', value: String(verticals.length) },
         { label: 'Decisions', value: String(decisions.length) },
       ],
-      footer: 'Projected by FailSafe from docs/META_LEDGER.md + docs/FEATURE_INDEX.md + .failsafe/governance/plans/ (governed-repo authoritative source).',
+      footer: 'Projected by FailSafe from docs/META_LEDGER.md + .failsafe/governance/plans/ + the Console surface taxonomy (governed-repo authoritative source).',
       decisions,
     },
     programs,

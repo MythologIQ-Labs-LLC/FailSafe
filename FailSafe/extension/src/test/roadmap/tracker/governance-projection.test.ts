@@ -1,11 +1,13 @@
 // Functional tests for the GovernanceProjection reader (A.1, tracker-as-sidecar).
-// Pure: governance docs (META_LEDGER + FEATURE_INDEX) → TrackerManifest. The
+// Pure: governance docs (META_LEDGER + plans) + the Console surface taxonomy → TrackerManifest. The
 // governed-repo authoritative source; FX857 generator stays the ungoverned
 // fallback. Backend logic (no visual surface) — render is covered elsewhere.
 
 import { strict as assert } from 'assert';
+import * as fs from 'fs';
+import * as path from 'path';
 import {
-  parseLedgerEntries, parseFeatureIndex, projectTrackerManifest, parsePlans,
+  parseLedgerEntries, projectTrackerManifest, parsePlans, CONSOLE_VERTICALS,
 } from '../../../roadmap/tracker/governance-projection';
 
 const LEDGER = `# META LEDGER
@@ -58,16 +60,6 @@ Release v5.6.2 delivered.
 **Content Hash**: \`ccc\`
 `;
 
-const FEATURE_INDEX = `# Feature Index
-
-| ID | Feature | Doc | Code | Test | Status | Notes |
-|---|---|---|---|---|---|---|
-| FX860 | Tracker loading/freshness | docs/x.md | roadmap/ui/tracker/tracker-dashboard.html (loadTracker) | test/ui/a.spec.ts | verified | loading skeleton |
-| FX859 | Operator categorization | docs/x.md | roadmap/tracker/manifest-categorize.ts | test/b.ts | verified | keep/drop/rename |
-| FX861 | PR linkage auditor | docs/y.md | integrations/github-checks/pr-linkage-audit.ts | test/c.ts | verified | closes-keyword footgun |
-| FX001 | failsafe.openSidebar | F001 | C001 | test/legacy.ts | verified | legacy component-ID Code column |
-`;
-
 suite('roadmap/tracker governance-projection (A.1 — tracker sidecar)', () => {
   test('parseLedgerEntries: extracts n / phase / version / tag / decision per entry', () => {
     const entries = parseLedgerEntries(LEDGER);
@@ -100,34 +92,18 @@ suite('roadmap/tracker governance-projection (A.1 — tracker sidecar)', () => {
     assert.ok(/Entry #425/.test(sub!.evidence));
   });
 
-  test('parseFeatureIndex: parses the FX table rows (id / feature / code / status)', () => {
-    const rows = parseFeatureIndex(FEATURE_INDEX);
-    assert.equal(rows.length, 4, 'all FX rows parsed (incl. the legacy one)');
-    assert.equal(rows[0].id, 'FX860');
-    assert.ok(/tracker-dashboard\.html/.test(rows[0].code));
-    assert.equal(rows[0].status, 'verified');
+  test('verticals = the 7 fixed Console surfaces (NOT derived from FEATURE_INDEX paths)', () => {
+    const m = projectTrackerManifest({ metaLedger: '' });
+    const keys = m.verticals!.map((v) => v.key);
+    assert.deepEqual(keys, ['monitor', 'learn', 'agents', 'governance', 'workspace', 'integrations', 'config']);
+    const agents = m.verticals!.find((v) => v.key === 'agents')!;
+    assert.deepEqual(agents.functionality, ['Operations', 'Timeline', 'Genome', 'Replay'], 'sub-views are the real functionality');
   });
 
-  test('verticals: path-coded FX rows grouped by top-level area; legacy rows skipped', () => {
-    const m = projectTrackerManifest({ metaLedger: '', featureIndex: FEATURE_INDEX });
-    const v = m.verticals || [];
-    // top-level areas: roadmap (×2 rows) + integrations (×1) → 2 verticals;
-    // the legacy FX001 (Code = "C001", no path) is NOT a vertical.
-    assert.equal(v.length, 2);
-    assert.ok(!v.some((x) => x.key === 'C001'), 'legacy component-ID not a vertical');
-    const integrations = v.find((x) => x.key === 'integrations')!;
-    assert.ok(integrations, 'integrations vertical');
-    assert.ok(integrations.functionality!.some((f) => /PR linkage/i.test(f)));
-    assert.ok(integrations.backend!.some((b) => /pr-linkage-audit\.ts/.test(b)));
-    const roadmap = v.find((x) => x.key === 'roadmap')!;
-    assert.ok(roadmap, 'roadmap vertical groups both roadmap rows');
-    assert.equal(roadmap.functionality!.length, 2);
-  });
-
-  test('degrade-safe: empty inputs → a valid (empty) manifest, no throw', () => {
-    const m = projectTrackerManifest({ metaLedger: '', featureIndex: '' });
+  test('degrade-safe: empty inputs → valid manifest (verticals always the 7 surfaces), no throw', () => {
+    const m = projectTrackerManifest({ metaLedger: '' });
     assert.deepEqual(m.rcs, []);
-    assert.deepEqual(m.verticals, []);
+    assert.equal(m.verticals!.length, 7, 'verticals are the fixed product surfaces, not data-derived');
     assert.deepEqual(m.programs, []);
     assert.deepEqual(m.phases, []);
     assert.ok(m.meta, 'meta always present');
@@ -183,17 +159,32 @@ suite('roadmap/tracker governance-projection (A.1 — tracker sidecar)', () => {
     assert.equal(m.phases![0].rc, '', 'no axis supplied → unanchored');
   });
 
-  test('#198: non-capability areas (test/.github) skipped; FailSafe/extension/src prefix normalized', () => {
-    const fi = [
-      '| ID | Feature | Doc | Code | Test | Status | Notes |',
-      '| --- | --- | --- | --- | --- | --- | --- |',
-      '| FX1 | A | d | src/integrations/x.ts | t | verified | - |',
-      '| FX2 | B | d | src/test/y.test.ts | t | verified | - |',          // test area -> skipped
-      '| FX3 | C | d | .github/workflows/z.yml | t | verified | - |',     // .github -> skipped
-      '| FX4 | D | d | FailSafe/extension/src/roadmap/w.ts | t | verified | - |', // prefix -> roadmap
-    ].join('\n');
-    const m = projectTrackerManifest({ metaLedger: '', featureIndex: fi });
-    const keys = m.verticals!.map((v) => v.key).sort();
-    assert.deepEqual(keys, ['integrations', 'roadmap'], 'test + .github dropped; FailSafe-prefixed row -> roadmap');
+  // DRIFT GUARD: CONSOLE_VERTICALS is the source of truth pinned from the Console.
+  // This parses the REAL command-center.js and fails if the constant diverges from
+  // the actual tab nav + renderer wiring — so the projection can never silently lie
+  // about the product's surfaces.
+  test('drift-guard: CONSOLE_VERTICALS matches the real command-center.js tab + sub-view wiring', () => {
+    const candidates = [
+      path.resolve(process.cwd(), 'src/roadmap/ui/command-center.js'),
+      path.resolve(process.cwd(), 'FailSafe/extension/src/roadmap/ui/command-center.js'),
+    ];
+    const ccPath = candidates.find((p) => fs.existsSync(p));
+    assert.ok(ccPath, 'command-center.js found for drift-guard');
+    const cc = fs.readFileSync(ccPath!, 'utf-8');
+    // The `renderers = { ... }` block: top-level tab keys.
+    const renderersBlock = cc.slice(cc.indexOf('const renderers = {'), cc.indexOf('// Connection status'));
+    const tabKeys = [...renderersBlock.matchAll(/^\s{4}(\w+):\s/gm)].map((m) => m[1]);
+    assert.deepEqual(
+      CONSOLE_VERTICALS.map((v) => v.tab),
+      tabKeys,
+      'the 7 vertical tabs must match command-center.js renderers (order + keys)',
+    );
+    // Sub-view labels for the TabGroup tabs must match the constant's `subviews`.
+    for (const v of CONSOLE_VERTICALS) {
+      if (v.subviews.length <= 1) continue; // single-renderer tabs have no TabGroup labels
+      const tg = cc.slice(cc.indexOf(`${v.tab}:`), cc.indexOf(']', cc.indexOf(`${v.tab}:`)));
+      const labels = [...tg.matchAll(/label:\s*'([^']+)'/g)].map((m) => m[1]);
+      assert.deepEqual(v.subviews, labels, `sub-views for '${v.tab}' must match command-center.js TabGroup labels`);
+    }
   });
 });

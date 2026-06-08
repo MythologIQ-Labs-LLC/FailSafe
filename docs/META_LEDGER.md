@@ -23463,5 +23463,75 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 ---
 
+### Entry #435: SUBSTANTIATE - Tracker verticals = the 7 Console surfaces (accuracy correction)
+
+**Date**: 2026-06-08
+**Phase**: SUBSTANTIATE (/qor-substantiate)
+**Author**: Judge
+
+**Target Version**: 5.6.x (next bundle; FX868)
+**Branch**: feat/tracker-verticals-console-spine
+
+## Decision
+
+Reality=Promise PASS. Root-cause accuracy fix raised by the operator: the tracker's verticals must be
+the PRODUCT's user-facing surfaces, not code directories. FX862 grouped FEATURE_INDEX rows by code dir
+(an implementation taxonomy that misrepresented the product). Replaced with the authoritative 7 Console
+surfaces, read from the source of truth (command-center.html nav + command-center.js renderers), pinned
++ drift-guarded so the projection can never silently lie about the product.
+
+## Scope
+
+- governance-projection.ts - CONSOLE_VERTICALS (the 7 = Monitor/Learn/Agents/Governance/Workspace/
+  Integrations/Config, keyed to the command-center tab data-targets overview/learn/agents/governance/
+  workspace/integrations/settings), each carrying its real sub-views as functionality (e.g. Agents =
+  Operations/Timeline/Genome/Replay) + a COMPONENT_HELP summary. verticalsFromConsole() replaces
+  verticalsFromFeatureIndex in projectTrackerManifest. Removed the rejected path-grouping
+  (verticalsFromFeatureIndex/areaOf/NON_CAPABILITY/parseFeatureIndex/FeatureRow). GovernanceSources.
+  featureIndex now optional/reserved (feature->vertical row mapping is a follow-up). sub/footer reworded.
+- governance-projection.test.ts - replaced the FEATURE_INDEX vertical tests with: the-7-surfaces test +
+  a DRIFT-GUARD that parses the real command-center.js and fails if CONSOLE_VERTICALS diverges from the
+  actual tab keys + TabGroup sub-view labels.
+
+## Verification
+
+tsc 0, eslint clean, npm run compile clean. 24 unit tests green via the esbuild probe (incl. the
+drift-guard reading the real command-center.js; the route + sidecar suites still pass - verticals.length
+now 7). Real-data smoke vs THIS repo: exactly the 7 surfaces with their real sub-views (monitor[Overview]
+learn[Learn] agents[Operations/Timeline/Genome/Replay] governance[Audit Log/Risks/Compliance]
+workspace[Skills/Mindmap/Tracker] integrations[Catalog/Bicameral/Open Design/MCP Catalog/Agent
+Governance] config[Settings]). Backend logic - no visual surface change this cycle. The earlier #198
+path-grouping fix (FX866 areaOf/denylist) is now SUPERSEDED + removed - it was patching the wrong model.
+
+## FEATURE_INDEX
+
+FX868 added (after FX867). FX868 verified (tests + drift-guard + real-data smoke).
+
+## Coverage gate
+
+PUBLISH_BLOCK Active: no. FX868 carries real tests. Not a release this cycle (no publish).
+
+## Governance note
+
+Committed local on feat/tracker-verticals-console-spine (off main @ #434/#203). Awaits operator --admin
+merge. Source of truth for verticals = the Console tab nav; a drift-guard test keeps the constant honest.
+
+## Phase 75 SKIP records
+
+Python qor-logic gates not importable into this TS repo's substantiate flow - SKIP per Phase 75.
+Hash via Python hashlib SHA-256 over CRLF; cp1252 body. Same posture as #405-#434.
+
+## Content Hash
+
+**Content Hash**: `4f8bf639149433cb0e99a58861efe19292212d0f8f6a6bf4926639281f760ace`
+**Previous Hash**: `c0efbbe1e31371c7cfa5add64e07799b337c1c3158f4be8b8dbe8df031bcfd84` (Entry #434 Chain Hash)
+**Chain Hash**: `0707a8d575dd353f0bdb7d4842f6ad062bafcea82ef486016373296fd6b3ed56`
+**Merkle Seal**: `069d234c7aa1c618f152e9b66995ac249eed69f61ac1fcdc6c6b37f1425fbf94`  gate_seal_substantiate_verticals_console_spine
+**Session ID**: `2026-06-08-substantiate-verticals-console-spine`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #435`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#434.
+
+---
+
 _Chain integrity: VALID_
-_Session: 2026-06-08-substantiate-tracker-projection-consume_
+_Session: 2026-06-08-substantiate-verticals-console-spine_
