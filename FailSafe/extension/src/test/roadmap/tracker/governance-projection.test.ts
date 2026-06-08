@@ -109,6 +109,34 @@ suite('roadmap/tracker governance-projection (A.1 — tracker sidecar)', () => {
     assert.ok(m.meta, 'meta always present');
   });
 
+  // --- #206 (FX869): per-surface governed attribution from the FEATURE_INDEX Surface column ---
+
+  test('FX869: features attribute to the 7 verticals via their Surface tag; platform excluded; degrade-safe', () => {
+    const featureIndex = [
+      '| ID | Feature | Doc | Code | Test | Status | Notes | Surface |',
+      '|---|---|---|---|---|---|---|---|',
+      '| FX1 | Bicameral | d | s | a.test.ts | verified | n | integrations |',
+      '| FX2 | Open Design | d | s |  | n/a | n | integrations |',
+      '| FX3 | Monitor UI | d | s | b.test.ts | verified | n | monitor |',
+      '| FX4 | API route | d | s | c.test.ts | verified | n | platform |', // cross-cutting → no vertical
+    ].join('\n');
+    const m = projectTrackerManifest({ metaLedger: '', featureIndex });
+    const v = (k: string) => m.verticals!.find((x) => x.key === k)!;
+    assert.deepEqual(v('integrations').featureStats, { total: 2, verified: 1, na: 1 }, 'integrations: 2 rows (1 verified, 1 n/a)');
+    assert.deepEqual(v('monitor').featureStats, { total: 1, verified: 1, na: 0 }, 'monitor: 1 verified');
+    // platform-tagged FX4 belongs to NO user-facing vertical.
+    const attributedTotal = m.verticals!.reduce((s, x) => s + (x.featureStats?.total ?? 0), 0);
+    assert.equal(attributedTotal, 3, 'platform row (FX4) is not attributed to any of the 7 verticals');
+    // verticals with no rows of their surface carry no featureStats.
+    assert.equal(v('learn').featureStats, undefined, 'no learn-tagged rows → no featureStats');
+  });
+
+  test('FX869: absent featureIndex → every vertical featureStats is undefined (degrade-safe)', () => {
+    const m = projectTrackerManifest({ metaLedger: '' });
+    assert.ok(m.verticals!.every((x) => x.featureStats === undefined), 'no source → no attribution, the 7 surfaces still render');
+    assert.equal(m.verticals!.length, 7);
+  });
+
   // --- A.1b (#195): plans → programs/phases ---
 
   test('parsePlans: extracts slug / title / theme / target version', () => {

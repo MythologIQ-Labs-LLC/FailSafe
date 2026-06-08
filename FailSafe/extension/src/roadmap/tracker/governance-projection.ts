@@ -16,6 +16,7 @@
  */
 
 import type { TrackerManifest, TrackerRc, TrackerVertical, TrackerProgram, TrackerPhase } from './tracker-model';
+import { parseFeatureIndex } from './tracker-parsers';
 
 const ACCENTS = ['#38d6c8', '#e7b04b', '#f0728f', '#7aa2f7', '#9ece6a', '#bb9af7', '#ff9e64'];
 
@@ -115,6 +116,30 @@ function verticalsFromConsole(): TrackerVertical[] {
     summary: v.summary,
     functionality: v.subviews,
   }));
+}
+
+/** Attribute FEATURE_INDEX rows to the 7 Console verticals via their governed
+ *  Surface tag (FX869). Each vertical gains `featureStats` (total / verified /
+ *  n-a counts) for the features whose `surface === vertical.key`. `platform`-tagged
+ *  rows belong to no user-facing surface and are attributed to none of the 7.
+ *  Degrade-safe: absent/empty featureIndex -> verticals returned unchanged (no
+ *  featureStats), so the 7 surfaces still render. PURE. */
+function attributeFeatures(verticals: TrackerVertical[], featureIndex?: string): TrackerVertical[] {
+  if (!featureIndex) return verticals;
+  const rows = parseFeatureIndex(featureIndex);
+  if (rows.length === 0) return verticals;
+  return verticals.map((v) => {
+    const mine = rows.filter((r) => r.surface === v.key);
+    if (mine.length === 0) return v;
+    return {
+      ...v,
+      featureStats: {
+        total: mine.length,
+        verified: mine.filter((r) => r.status === 'verified').length,
+        na: mine.filter((r) => r.status === 'n/a').length,
+      },
+    };
+  });
 }
 
 function humanizeArea(area: string): string {
@@ -223,9 +248,11 @@ function phasesFromPlans(
 
 export interface GovernanceSources {
   metaLedger: string;
-  /** Reserved: feature-level mapping of FEATURE_INDEX rows INTO the 7 Console
-   *  verticals is a follow-up. No longer used to DERIVE verticals (that produced an
-   *  implementation-directory taxonomy, not the product surfaces). Optional. */
+  /** FEATURE_INDEX.md text. Consumed for per-surface ATTRIBUTION (FX869): rows are
+   *  attributed to the 7 Console verticals via their governed `Surface` column tag
+   *  (NOT used to DERIVE the verticals — that produced an implementation-directory
+   *  taxonomy, superseded in #204). Optional + degrade-safe: absent -> verticals
+   *  carry no featureStats. */
   featureIndex?: string;
   repo?: string;
   /** Plan docs (`.failsafe/governance/plans/*.md`) → programs/phases (A.1b, #195).
@@ -242,7 +269,7 @@ export function projectTrackerManifest(sources: GovernanceSources): TrackerManif
   const entries = parseLedgerEntries(sources.metaLedger);
   const rcs = rcsFromLedger(entries);
   const decisions = decisionsFromLedger(entries);
-  const verticals = verticalsFromConsole();
+  const verticals = attributeFeatures(verticalsFromConsole(), sources.featureIndex);
   const planDocs = parsePlans(sources.plans ?? []);
   const programs = programsFromPlans(planDocs);
   const phases = phasesFromPlans(planDocs, programs, sources.knownReleaseIds);

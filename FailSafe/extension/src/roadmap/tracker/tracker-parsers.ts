@@ -4,10 +4,15 @@
  * parsers are deterministically testable.
  */
 
-export interface FeatureRow { id: string; status: 'verified' | 'unverified' | 'n/a'; testPath: string | null }
+export interface FeatureRow { id: string; status: 'verified' | 'unverified' | 'n/a'; testPath: string | null; surface: string | null }
 export interface BacklogItem { id: string; done: boolean; version: string | null; text: string }
 
 const STATUS_VALUES = new Set(['verified', 'unverified', 'n/a']);
+
+/** The 8 allowed Surface values: the 7 user-facing Console surfaces
+ *  (CONSOLE_VERTICALS in governance-projection.ts) + `platform` for cross-cutting
+ *  infra rows (API routes, websocket types, the console shell) that aren't a tab. */
+const SURFACE_VALUES = new Set(['monitor', 'learn', 'agents', 'governance', 'workspace', 'integrations', 'config', 'platform']);
 
 function cells(row: string): string[] {
   return row.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
@@ -17,7 +22,9 @@ function cells(row: string): string[] {
  * Parse FEATURE_INDEX.md table rows into FeatureRow[]. Robust to the column
  * count varying: the status is the cell whose value is verified/unverified/n/a,
  * and the test path is the cell that looks like a `*.test.*` / `*.spec.*` /
- * `src/test/...` path. Rows without an `FX###` id cell are skipped.
+ * `src/test/...` path. The surface is the cell whose value is one of the 8
+ * SURFACE_VALUES; scanned right-to-left so the appended Surface column wins over
+ * any rare feature-name collision. Rows without an `FX###` id cell are skipped.
  */
 export function parseFeatureIndex(text: string): FeatureRow[] {
   const out: FeatureRow[] = [];
@@ -34,7 +41,9 @@ export function parseFeatureIndex(text: string): FeatureRow[] {
     if (!status) continue; // a row with no recognizable status is not a scorable feature
     const testCell = c.find((cell) => /\.(test|spec)\.|src[\\/]test/.test(cell));
     const testPath = testCell ? (testCell.match(/[\w./\\-]+\.(?:test|spec)\.[\w.]+/) || [testCell])[0] : null;
-    out.push({ id, status, testPath });
+    const surfaceCell = [...c].reverse().find((cell) => SURFACE_VALUES.has(cell.toLowerCase()));
+    const surface = surfaceCell ? surfaceCell.toLowerCase() : null;
+    out.push({ id, status, testPath, surface });
   }
   return out;
 }
