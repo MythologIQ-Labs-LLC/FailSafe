@@ -23257,5 +23257,74 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 ---
 
+### Entry #432: SUBSTANTIATE - Tracker governance-sidecar emission (A.2, #194)
+
+**Date**: 2026-06-06
+**Phase**: SUBSTANTIATE (/qor-substantiate)
+**Author**: Judge
+
+**Target Version**: 5.6.x (next bundle; FX865)
+**Branch**: feat/governance-sidecar-emission-194
+
+## Decision
+
+Reality=Promise PASS. A.2 of tracker-as-governance-sidecar: the FX862 governance projection is now
+MATERIALIZED to disk as a generated sidecar, wired to a command + opt-in WorkspaceMutationBus
+auto-emit. The governed-repo tracker can ride sidecar to the SHIELD lifecycle instead of scraping PRs.
+
+## Scope
+
+- governance-sidecar.ts (NEW) - pure emitGovernanceSidecar(SidecarDeps): projectTrackerManifest
+  (FX862) over META_LEDGER + FEATURE_INDEX -> serialize (js-yaml + banner) -> write the GENERATED
+  docs/roadmap/programs.generated.yaml. HARD INVARIANT: never reads/writes the operator
+  docs/roadmap/programs.yaml (FX859). Status written/unchanged/skipped-no-governance/error;
+  degrade-safe, idempotent (skip-if-unchanged -> no churn / no fs.watch loop), never throws.
+  nodeSidecarDeps is the only I/O seam.
+- tracker-sidecar-command.ts (NEW) - failsafe.emitGovernanceSidecar command (always available) +
+  wireGovernanceSidecarAutoEmit (opt-in failsafe.tracker.emitGovernanceSidecar, default off;
+  WorkspaceMutationBus watchers on META_LEDGER + FEATURE_INDEX, debounced, degrade-safe).
+- main.ts + package.json - command + config + wiring at the existing tracker-command site.
+- .gitignore - docs/roadmap/programs.generated.yaml (generated artifact, never committed).
+
+## Verification
+
+tsc 0, eslint clean, npm run compile clean. 6 unit tests (serialize round-trip; written-to-generated-
+path + counts; HARD-INVARIANT non-clobber of programs.yaml; idempotent unchanged; ungoverned skip;
+degrade-safe error) all green via the esbuild probe. Real-data smoke vs THIS repo: status written,
+12 releases / 15 verticals / 58 decisions, operator programs.yaml never read, YAML round-trips.
+Backend logic - NO visual surface change (render consumption = A.2b follow-up, which carries the
+visual gate). The Windows path-key bug (path.join backslash vs forward-slash test keys) surfaced in
+the suite + was fixed (POSIX relpath keys).
+
+## FEATURE_INDEX
+
+FX865 added (after FX864). FX865 verified (test + real-data smoke).
+
+## Coverage gate
+
+PUBLISH_BLOCK Active: no. FX865 carries real tests. Not a release this cycle (no publish).
+
+## Governance note
+
+Committed local on feat/governance-sidecar-emission-194 (rebased onto main @ #431/#199). Awaits
+operator --admin merge. No release this cycle (folds into the next bundle).
+
+## Phase 75 SKIP records
+
+Python qor-logic gates not importable into this TS repo's substantiate flow - SKIP per Phase 75.
+Hash via Python hashlib SHA-256 over CRLF; cp1252 body. Same posture as #405-#431.
+
+## Content Hash
+
+**Content Hash**: `ca7bd4eac09f9c7ba760bf34a3471f7c696a2f07a8738571f71a91f2f5a5474e`
+**Previous Hash**: `760886ac74aacc11443c8c2efdfef7f0cc64c15f0304498ebf5b9bcc3964e3f1` (Entry #431 Chain Hash)
+**Chain Hash**: `481edef342a51fae185abd5376b6b85097273eb787507bb8382a5686e96e7328`
+**Merkle Seal**: `05e8f36f355cc61711b7d1bfca77935b1840006df3e78ac93081ef1ff82ef949`  gate_seal_substantiate_governance_sidecar
+**Session ID**: `2026-06-06-substantiate-governance-sidecar`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #432`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#431.
+
+---
+
 _Chain integrity: VALID_
-_Session: 2026-06-06-deliver-v5.6.3_
+_Session: 2026-06-06-substantiate-governance-sidecar_

@@ -125,6 +125,10 @@
         "title": "FailSafe: Generate Tracker Manifest (from PRs + CHANGELOG)"
       },
       {
+        "command": "failsafe.emitGovernanceSidecar",
+        "title": "FailSafe: Emit Governance Tracker Sidecar (from the governance ledger)"
+      },
+      {
         "command": "failsafe.acp.installGovernedProxy",
         "title": "FailSafe: Install Governed ACP Proxy (Devin Desktop)"
       },
@@ -351,6 +355,11 @@
     "configuration": {
       "title": "FailSafe",
       "properties": {
+        "failsafe.tracker.emitGovernanceSidecar": {
+          "type": "boolean",
+          "default": false,
+          "description": "Auto-emit docs/roadmap/programs.generated.yaml — a Development Tracker manifest projected from the SHIELD governance ledger (docs/META_LEDGER.md + docs/FEATURE_INDEX.md) — whenever those files change. The generated sidecar never overwrites your hand-curated docs/roadmap/programs.yaml. Off by default; the manual command 'FailSafe: Emit Governance Tracker Sidecar' always works regardless. Requires extension reload after toggling."
+        },
         "failsafe.qorlogic.pythonPath": {
           "type": "string",
           "default": "",
