@@ -68,61 +68,132 @@ meta:
 rcs:
   - { id: v5.4.3, state: forecast, tag: planned, note: AGT installer + next integration tranche }
 
+# Programs MIRROR the verticals — the 7 Console surfaces — so the §01 progress bars
+# and the §02 deep-dive describe the same product structure. Surfaces with no tracked
+# phases yet render an honestly-empty bar.
 programs:
-  - { key: governance,   name: Governance Engine, accent: "#38d6c8" }   # teal
-  - { key: integrations, name: Integrations,       accent: "#e7b04b" }   # amber
-  - { key: experience,   name: Experience,         accent: "#f0728f" }   # pink
+  - { key: monitor,      name: Monitor,      accent: "#38d6c8" }
+  - { key: learn,        name: Learn,        accent: "#e7b04b" }
+  - { key: agents,       name: Agents,       accent: "#f0728f" }
+  - { key: governance,   name: Governance,   accent: "#7aa2f7" }
+  - { key: workspace,    name: Workspace,    accent: "#9ece6a" }
+  - { key: integrations, name: Integrations, accent: "#bb9af7" }
+  - { key: config,       name: Config,       accent: "#ff9e64" }
 
+# Phases mirror the 7 surfaces. Every phase is evidence-anchored: rc = a real CHANGELOG
+# release; titles trace to FEATURE_INDEX FX rows + CHANGELOG entries.
 phases:
-  # Governance Engine
+  # Monitor — Overview tab + VS Code sidebar Monitor
+  - { prog: monitor, key: SHIELD_TRACKER, rc: v4.6.6, w: 40, title: SHIELD phase tracker, what: Sidebar + Overview render live SHIELD phase progression + compliance grade, parsed from META_LEDGER., benefit: Governance state visible at a glance, current by construction. }
+  - { prog: monitor, key: AGENT_HEALTH,   rc: v4.8.0, w: 30, title: Agent Health indicator, what: Status-bar agent-health level (Healthy/Elevated/Warning/Critical) surfaced in the Monitor., benefit: At-a-glance agent risk awareness while coding. }
+  - { prog: monitor, key: STALENESS,      rc: v4.9.2, w: 30, title: Staleness + live refresh, what: WS-disconnect staleness banner + META_LEDGER file-watch auto-refresh., benefit: The Monitor never silently shows stale governance state. }
+
+  # Learn — onboarding & education
+  - { prog: learn, key: SWE_ESSAYS, rc: v5.2.2, w: 50, title: SWE-craft essays, what: Five contextual software-craft essays at three proficiency tiers, surfaced by a pure trigger engine., benefit: Governance + engineering practice taught in-context. }
+  - { prog: learn, key: GLOSSARY,   rc: v5.2.2, w: 50, title: Learn TabGroup + glossary, what: Read / Glossary sub-tabs with a searchable 48-term SWE + FailSafe glossary and jump-strip., benefit: The SHIELD vocabulary is discoverable, not assumed. }
+
+  # Agents — observability (Operations/Timeline/Genome/Replay)
+  - { prog: agents, key: DEBUG_SUITE, rc: v4.8.0, w: 40, title: Timeline + Shadow Genome, what: Agent Execution Timeline (governed-event overlay) + Shadow Genome failure-pattern debugger., benefit: What agents did + how governance responded is inspectable. }
+  - { prog: agents, key: RUN_REPLAY,  rc: v4.9.0, w: 30, title: Agent Run Replay, what: Execution-trace capture + step-by-step replay of an agent session., benefit: Deterministic time-travel debugging of agent runs. }
+  - { prog: agents, key: TABGROUP,    rc: v5.1.0, w: 30, title: Operations/Timeline/Genome/Replay, what: Four-sub-view Agents tab with category/severity filters + a genome status toggle., benefit: One cockpit for agent observability. }
+
+  # Governance — audit & compliance (Audit Log/Risks/Compliance)
   - { prog: governance, key: SHIELD,    rc: v5.3.3, w: 40, title: SHIELD lifecycle + ledger, what: Deterministic plan→audit→implement→substantiate→deliver with a Merkle-chained decision ledger., benefit: Governance decisions are code + provenance, not prompt compliance. }
   - { prog: governance, key: INTERCEPT, rc: v5.4.2, w: 35, title: Universal interceptor, what: Every MCP tool call routes through a single IGovernanceInterceptor seam., benefit: Risky tool invocations are classified + gated like risky edits., links: [ { t: issue, n: 151, label: "B151" } ] }
   - { prog: governance, key: SUBSTRATE, rc: v5.4.2, w: 25, title: Substrate gates, what: Dependency-admission cooling-period lint + seal auto-hook on every substantiate., benefit: Supply-chain + seal integrity checked every cycle. }
 
-  # Integrations
-  - { prog: integrations, key: BICAMERAL, rc: v5.3.3, w: 25, title: Bicameral + Open Design, what: Architecture-decision governance + L3-gated Open Design create_artifact., benefit: Decision reasoning stays as governed as code. }
+  # Workspace — skills, mindmap, tracker
+  - { prog: workspace, key: SKILLS,  rc: v5.0.0, w: 34, title: Skills, what: Skill discovery from project roots + governed qor-logic skills install/refresh., benefit: Governance-aware execution scaffolds, on demand. }
+  - { prog: workspace, key: MINDMAP, rc: v5.0.0, w: 33, title: Mindmap + voice, what: Voice-assisted node-based ideation (Whisper STT + Piper TTS) with transcript-to-graph extraction., benefit: Hands-free ideation that degrades gracefully when absent. }
+  - { prog: workspace, key: TRACKER, rc: v5.4.3, w: 33, title: Development Tracker, what: Evidence-enforced, organically-generated status dashboard embedded in the Workspace tab., benefit: Reality-vs-promise visible at a glance, current by construction. }
+
+  # Integrations — catalog + governed connectors
+  - { prog: integrations, key: BICAMERAL, rc: v5.1.5, w: 25, title: Bicameral + Open Design, what: Architecture-decision governance + L3-gated Open Design create_artifact write path., benefit: Decision reasoning stays as governed as code. }
   - { prog: integrations, key: BATCH,     rc: v5.4.2, w: 45, title: SARIF · MCP Registry · Slack · Catalog, what: SARIF ingestion, MCP risk scoring, Slack notify-only, Context7/Mermaid installers., benefit: One governed source of truth across the AI toolchain., links: [ { t: issue, n: 99, label: "#99" }, { t: issue, n: 100, label: "#100" }, { t: issue, n: 108, label: "#108" } ] }
-  - { prog: integrations, key: AGT,       rc: v5.4.3,   w: 30, title: Agent Governance Toolkit installer, what: Auto-detect the workspace environment + serve the matching verified AGT installer., benefit: Governed admission of Microsoft's AGT modules per environment., links: [ { t: url, href: "https://github.com/microsoft/agent-governance-toolkit", label: AGT upstream }, { t: issue, n: 140, label: "PR #140" } ] }
+  - { prog: integrations, key: AGT,       rc: v5.4.3, w: 30, title: Agent Governance Toolkit installer, what: Auto-detect the workspace environment + serve the matching verified AGT installer., benefit: Governed admission of Microsoft's AGT modules per environment., links: [ { t: url, href: "https://github.com/microsoft/agent-governance-toolkit", label: AGT upstream }, { t: issue, n: 140, label: "PR #140" } ] }
 
-  # Experience
-  - { prog: experience, key: CONSOLE, rc: v5.3.3, w: 40, title: Command Center, what: Browser-served console — Overview/Operations/Transparency/Governance/Skills/Integrations/Workspace tabs., benefit: One control surface for governance + history. }
-  - { prog: experience, key: TRACKER, rc: v5.4.3,   w: 30, title: Development Tracker, what: Evidence-enforced, organically-generated status dashboard embedded in the Workspace tab., benefit: Reality-vs-promise visible at a glance, current by construction. }
-  - { prog: experience, key: VOICE,   rc: v5.3.3, w: 30, title: Voice + Mindmap, what: Multilingual Whisper STT + Piper TTS in the Mindmap, shipped as a separate voice pack., benefit: Hands-free ideation that degrades gracefully when absent. }
+  # Config — system settings
+  - { prog: config, key: CARDS,     rc: v5.0.0, w: 40, title: Settings card suite, what: Theme · Voice & Audio · Notifications · Brainstorm · Skills · FailSafe Pro cards compose the Settings tab., benefit: Presentation + substrate configuration in one place. }
+  - { prog: config, key: INSTALL,   rc: v5.0.0, w: 30, title: Install transparency, what: Per-phase skills-install report (python-probe/pip/qorlogic/provenance) + host/scope QuickPick., benefit: No silent installs — every step is shown. }
+  - { prog: config, key: VOICE_CFG, rc: v5.0.0, w: 30, title: Voice & Audio settings, what: Whisper model picker, 12-language BCP-47 selector, auto-match voice, allowlist-hardened., benefit: Multilingual voice, configured safely. }
 
+# Verticals = the product's 7 user-facing surfaces (the Console Center tabs). These
+# are a FIXED taxonomy sourced from src/roadmap/ui/command-center.{html,js}; the
+# `programs` above (Governance Engine / Integrations / Experience) are a separate,
+# program-progress dimension and are intentionally distinct from these surfaces.
 verticals:
-  - key: governance
-    name: Governance Engine
+  - key: monitor
+    name: Monitor
     accent: "#38d6c8"
-    summary: Deterministic policy at the editor boundary + a verifiable decision ledger.
+    summary: Live status + trust posture at a glance — the sidebar Monitor and the Console Overview.
     functionality:
-      - "**Risk classification** L1/L2/L3 by path + content triggers"
-      - "**Sentinel verdicts** PASS / WARN / BLOCK / ESCALATE with confidence"
-      - "**Merkle-chained ledger** every decision append-only + hash-linked"
+      - "**Trust snapshot** current posture + confidence"
+      - "**Operation stream** recent governed actions, live"
+      - "**Threat + chain status** Merkle-ledger integrity"
     backend:
-      - "`META_LEDGER.md` — chain-verified decision record"
-      - "`EnforcementEngine` + `IGovernanceInterceptor` seam"
+      - "`OverviewRenderer` (Console `overview` tab)"
+      - "`FailSafeSidebarProvider` (VS Code sidebar Monitor)"
+  - key: learn
+    name: Learn
+    accent: "#e7b04b"
+    summary: Onboarding & education — governance concepts, lessons, and the SHIELD glossary.
+    functionality:
+      - "**SWE-craft lessons** governance + engineering practice"
+      - "**Glossary** the SHIELD vocabulary"
+    backend:
+      - "`LearnRenderer` · `education/*`"
+  - key: agents
+    name: Agents
+    accent: "#f0728f"
+    summary: Agent observability — what agents did and how governance responded.
+    functionality:
+      - "**Operations** mission strip, phase progress, integrity + rollback"
+      - "**Timeline** categorized agent-execution events"
+      - "**Genome** Shadow Genome failure-pattern debugger"
+      - "**Replay** deterministic verdict replay"
+    backend:
+      - "`AgentTimelineService` · `ShadowGenomePanel` · `sentinel/*`"
+  - key: governance
+    name: Governance
+    accent: "#7aa2f7"
+    summary: Audit & compliance — the Merkle audit log, risk register, policies and the L3 approval queue.
+    functionality:
+      - "**Audit Log** real-time governed-event stream"
+      - "**Risks** durable risk register CRUD"
+      - "**Compliance** Sentinel status, policies, L3 queue — verdicts PASS/WARN/BLOCK/ESCALATE; risk classes L1/L2/L3"
+    backend:
+      - "`META_LEDGER.md` (Merkle chain) · `EnforcementEngine`"
+      - "`RiskRegisterManager` · `TransparencyRenderer` · `GovernanceRenderer`"
+  - key: workspace
+    name: Workspace
+    accent: "#9ece6a"
+    summary: Workspace tools — skills, the ideation mindmap, and the development tracker.
+    functionality:
+      - "**Skills** governance-aware skill discovery + intent shell"
+      - "**Mindmap** node-based ideation + Whisper/Piper voice (voice pack)"
+      - "**Tracker** this evidence-enforced development dashboard"
+    backend:
+      - "`SkillRegistry` · `brainstorm/*` · `TrackerRoute` (`/console/tracker`)"
   - key: integrations
     name: Integrations
-    accent: "#e7b04b"
-    summary: Govern the whole AI toolchain — every integration local-first, opt-in, risk-scored.
+    accent: "#bb9af7"
+    summary: Third-party integrations — the catalog plus governed, risk-scored connectors.
     functionality:
-      - "**SARIF** scanner findings into the risk register"
-      - "**MCP Catalog** governed, env-detected installs (Context7, Mermaid, Playwright)"
-      - "**Slack** VETO / L3 / drift notifications, off by default"
+      - "**Catalog** env-detected, governed installs"
+      - "**Bicameral · Open Design** decision-graph + L3 write path"
+      - "**MCP Catalog** risk-scored MCP installs (Context7, Mermaid)"
+      - "**Agent Governance** Microsoft AGT installer · **SARIF** ingest · **Slack** notify-only"
     backend:
-      - "`src/integrations/*` — pure, injectable-transport clients"
-      - "`/api/v1/mcp/catalog` + `/api/v1/agt/modules`"
-  - key: experience
-    name: Experience
-    accent: "#f0728f"
-    summary: The surfaces operators actually touch — console, learning, voice, tracker.
+      - "`src/integrations/*` (injectable transports)"
+      - "`/api/v1/mcp/catalog` · `/api/v1/agt/modules`"
+  - key: config
+    name: Config
+    accent: "#ff9e64"
+    summary: System config — theme + local console preferences; a dependency of every other surface.
     functionality:
-      - "**Command Center** 8-tab browser console on :9376"
-      - "**Learn** SWE-craft education tab"
-      - "**Development Tracker** this dashboard, organically generated"
+      - "**Settings** theme · voice/audio · notifications · skills install"
     backend:
-      - "`ConsoleServer` (Express :9376) + `ConsoleRouteRegistrar`"
-      - "`/console/tracker` + `/api/v1/tracker`"
+      - "`SettingsRenderer` · VS Code `failsafe.*` configuration"
 
 # §03 Convergence — where FailSafe meets adjacent systems at NAMED contracts
 # (not vibes). Each bridge faces a governing contract in the middle.
@@ -142,30 +213,61 @@ convergence:
 
 # §04 Promotion record — what shipped per program (cross-filters on the deep-dive tab).
 promotion:
-  - title: Governance Engine
-    vert: governance
+  - title: Monitor
+    vert: monitor
     accent: "#38d6c8"
+    phaseCount: 3
+    rows:
+      - { pill: stg, text: "SHIELD phase tracker + compliance grade (v4.6.6)" }
+      - { pill: stg, text: "Agent Health status-bar indicator (v4.8.0)" }
+      - { pill: stg, text: "Staleness banner + META_LEDGER auto-refresh (v4.9.2)" }
+  - title: Learn
+    vert: learn
+    accent: "#e7b04b"
+    phaseCount: 2
+    rows:
+      - { pill: stg, text: "Five SWE-craft essays + trigger engine (v5.2.2)" }
+      - { pill: stg, text: "Learn TabGroup + 48-term SWE glossary (v5.2.2)" }
+  - title: Agents
+    vert: agents
+    accent: "#f0728f"
+    phaseCount: 3
+    rows:
+      - { pill: stg, text: "Agent Timeline + Shadow Genome debugger (v4.8.0)" }
+      - { pill: stg, text: "Agent Run Replay (v4.9.0)" }
+      - { pill: stg, text: "Operations/Timeline/Genome/Replay TabGroup (v5.1.0)" }
+  - title: Governance
+    vert: governance
+    accent: "#7aa2f7"
     phaseCount: 3
     rows:
       - { pill: stg, text: "SHIELD lifecycle + Merkle-chained ledger (v5.3.3)" }
       - { pill: stg, text: "Universal governance interceptor — B151 (v5.4.2)" }
       - { pill: stg, text: "Substrate seal gates + dependency-admission lint (v5.4.2)" }
+  - title: Workspace
+    vert: workspace
+    accent: "#9ece6a"
+    phaseCount: 3
+    rows:
+      - { pill: stg, text: "Skills discovery + governed qor-logic install (v5.0.0)" }
+      - { pill: stg, text: "Mindmap + Whisper/Piper voice (v5.0.0)" }
+      - { pill: stg, text: "Development Tracker — this dashboard (v5.4.3)" }
   - title: Integrations
     vert: integrations
-    accent: "#e7b04b"
+    accent: "#bb9af7"
     phaseCount: 3
     rows:
-      - { pill: stg, text: "Bicameral + Open Design L3 write path (v5.3.3)" }
+      - { pill: stg, text: "Bicameral + Open Design L3 write path (v5.1.5)" }
       - { pill: stg, text: "SARIF · MCP Registry · Slack · MCP Catalog (v5.4.2)" }
       - { pill: x,   text: "Agent Governance Toolkit installer (v5.4.3, in flight)" }
-  - title: Experience
-    vert: experience
-    accent: "#f0728f"
+  - title: Config
+    vert: config
+    accent: "#ff9e64"
     phaseCount: 3
     rows:
-      - { pill: stg, text: "Command Center 8-tab browser console (v5.3.3)" }
-      - { pill: x,   text: "Development Tracker — this dashboard (v5.4.3)" }
-      - { pill: stg, text: "Voice + Mindmap — Whisper/Piper voice pack (v5.3.3)" }
+      - { pill: stg, text: "Settings card suite — theme/voice/notifications (v5.0.0)" }
+      - { pill: stg, text: "Skills-install transparency report + QuickPick (v5.0.0)" }
+      - { pill: stg, text: "Voice & Audio settings — multilingual, hardened (v5.0.0)" }
 
 # §05 Levers — the few moves that actually move the numbers.
 levers:

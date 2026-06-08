@@ -23533,5 +23533,84 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 ---
 
+### Entry #436: SUBSTANTIATE - Tracker live programs.yaml = the 7 Console surfaces + graceful no-server message
+
+**Date**: 2026-06-08
+**Phase**: SUBSTANTIATE (/qor-substantiate)
+**Author**: Judge
+
+**Target Version**: 5.6.x (next bundle; tracker live-accuracy)
+**Branch**: fix/tracker-live-accuracy
+
+## Decision
+
+Reality=Promise PASS. Operator-raised live-data accuracy fix: the SERVED tracker (driven by the operator
+manifest docs/roadmap/programs.yaml, not the TS projection) still showed inaccurate verticals (Governance
+Engine / Integrations / Experience) and code-derived programs. Rewrote the manifest so the live tracker
+tells the truth about the product: verticals = the 7 Console surfaces, programs = the SAME 7 surfaces
+(identical axes), every surface populated with evidence-anchored shipped work. Plus a graceful-degradation
+message when the dashboard is opened without a server.
+
+## Scope
+
+- docs/roadmap/programs.yaml - full rewrite. verticals = the 7 Console surfaces (Monitor/Learn/Agents/
+  Governance/Workspace/Integrations/Config), each carrying its real sub-views as functionality + a
+  COMPONENT_HELP summary. programs = the SAME 7 surfaces (identical keys + order to verticals). phases
+  evidence-anchored to real CHANGELOG releases for ALL 7 surfaces:
+    monitor: SHIELD_TRACKER v4.6.6 / AGENT_HEALTH v4.8.0 / STALENESS v4.9.2
+    learn: SWE_ESSAYS v5.2.2 / GLOSSARY v5.2.2
+    agents: DEBUG_SUITE v4.8.0 / RUN_REPLAY v4.9.0 / TABGROUP v5.1.0
+    governance: SHIELD v5.3.3 / INTERCEPT v5.4.2 / SUBSTRATE v5.4.2
+    workspace: SKILLS v5.0.0 / MINDMAP v5.0.0 / TRACKER v5.4.3
+    integrations: BICAMERAL v5.1.5 / BATCH v5.4.2 / AGT v5.4.3
+    config: CARDS v5.0.0 / INSTALL v5.0.0 / VOICE_CFG v5.0.0
+  promotion re-bucketed to the 7 surface groups; rcs/meta/convergence/levers unchanged.
+- tracker-dashboard.html - renderError() now distinguishes a network rejection (err instanceof TypeError
+  || /failed to fetch|networkerror|load failed/i) from a genuine HTTP fault: the network-rejection path
+  shows "Open the tracker from the FailSafe Console" (the file:// no-server case); real HTTP faults keep
+  the status/detail. Removes the bare "Failed to fetch" dead-end the operator hit opening the raw HTML.
+
+## Verification
+
+Manifest validator (validateManifest): ok=true, 0 warnings. programs == verticals (identical keys + order),
+every program weight-sum = 100, all phase.prog + promotion.vert references valid, every phase rc is a real
+CHANGELOG header. All 7 program bars render populated (100% at the latest release - every phase anchors to
+a shipped version, so the timeline scrub is the value, not a single snapshot). Visual surface: tracker-
+dashboard.html renderError verified via headless chromium render - the network-rejection path shows the
+open-from-Console message; the HTTP-fault path retains detail.
+
+## FEATURE_INDEX
+
+No new FX this cycle (FX868 covers the TS projection; this is the operator manifest + an existing-helper UI
+branch). programs.yaml is operator data, not a code feature row.
+
+## Coverage gate
+
+PUBLISH_BLOCK Active: no. Not a release this cycle (no publish). The dashboard change is a degradation-path
+message on an existing verified surface.
+
+## Governance note
+
+Rebased onto main @ #435 (squash-merge of #204) before sealing, so this seal chains #435 -> #436 with no
+fork. Awaits operator --admin squash-merge of #205. The live manifest now matches the authoritative product
+verticals (the Console tab nav); the TS projection (#204/FX868) and the operator manifest now agree.
+
+## Phase 75 SKIP records
+
+Python qor-logic gates not importable into this TS repo's substantiate flow - SKIP per Phase 75.
+Hash via Python hashlib SHA-256 over CRLF; cp1252 body. Same posture as #405-#435.
+
+## Content Hash
+
+**Content Hash**: `085daa5fec890cb9d71585ee55ca0a8ad38d58ee8f52b7a3b45b8730589db06a`
+**Previous Hash**: `0707a8d575dd353f0bdb7d4842f6ad062bafcea82ef486016373296fd6b3ed56` (Entry #435 Chain Hash)
+**Chain Hash**: `b6b5b761c946e8d39c9ee93a0e3ac10078ec2ca536ae893181675d4e78e93e88`
+**Merkle Seal**: `026edd4fca881cc340d1d8a13ad03e07da1f12564a17cda230cf0d5958db6e4d`  gate_seal_substantiate_tracker_live_accuracy
+**Session ID**: `2026-06-08-substantiate-tracker-live-accuracy`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #436`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#435.
+
+---
+
 _Chain integrity: VALID_
-_Session: 2026-06-08-substantiate-verticals-console-spine_
+_Session: 2026-06-08-substantiate-tracker-live-accuracy_
