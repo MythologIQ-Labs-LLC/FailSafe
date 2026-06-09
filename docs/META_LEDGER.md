@@ -24091,3 +24091,57 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 _Chain integrity: VALID_
 _Session: 
+
+### Entry #444: SUBSTANTIATE - Shadow Genome structural Genome Map (#196 Phase 4)
+
+**Date**: 2026-06-09
+**Phase**: SUBSTANTIATE (/qor-substantiate; Reality=Promise PASS; held local per Review Boundary)
+**Plan**: .failsafe/governance/plans/plan-shadow-genome-ui-196-phase4.md
+**Branch**: feat/shadow-genome-ui-196-phase1 (Phase 4 folded onto the branch / PR #211)
+**Author**: krknapp@gmail.com
+
+## Decision
+
+Sealed Phase 4 of the Shadow Genome UI (#196): the structural Genome Map (spec section 6), /frontend-design-
+led - a 'governance constellation'. Governance gates anchor their failure nodes in a DETERMINISTIC radial
+layout (pure function of sorted ids; no force-simulation, no animation -> stable Playwright screenshots).
+Backend: GovernanceDashboardResponse gains a trimmed graph (governance subgraph, id/type/label + edge
+{source,target,type}, no metadata passthrough). Frontend: new shadow-genome-graph.js (193 lines) - layout +
+SVG (typed nodes/edges, radial gradients, glow filter, arrow markers, dashed insufficient-evidence, severity
+colors), click-select highlight + inspector (causal relationships + neighbours), legend, and a 'View as
+Table' accessibility fallback (graph is NOT the only access path, spec section 15). Keyboard-navigable nodes,
+reduced-motion, token-only CSS, deep-space canvas. Replaces the Phase-2 placeholder map summary.
+
+## Scope (FX878)
+
+- qorlogic/governance-dashboard.ts: graph field + trimGraph (secret-safe topology).
+- roadmap/ui/modules/shadow-genome-graph.js (NEW, 193 lines) + shadow-genome.js delegation (214 lines).
+- roadmap/ui/command-center.css: .sg-graph-* / .sg-node-* / .sg-edge / .sg-legend / .sg-data-table.
+- test/qorlogic/governance-dashboard.test.ts (+2) + test/ui/shadow-genome-tab.spec.ts (+3). FX878.
+
+## Verification
+
+Reality=Promise: exactly 7 files, all planned. tsc 0 errors; project lint 0 errors; 9/9 builder + 4/4 route
+(graph additive, no regression) + 8/8 Playwright (real Chromium: SVG node/edge counts, node-select inspector
++ reset, View-as-Table a11y fallback). VISUAL GATE: governance-constellation screenshot (node selected,
+inspector populated) visually verified against the Mythiq design intent. Both UI modules < 250 lines (Razor).
+
+## Next operator actions
+
+Review PR #211 (now Phases 1-4). Remaining #196 phases: live trust + federation data (5); learning-maturity
+panel + full a11y / screenshot-regression suite + pan/zoom (6).
+
+## Content Hash
+
+**Content Hash**: `af3d8cb4265a4f04b036aa0146f6f06cbaa38acf3f0aadfb321589c24bc5a3f5`
+**Previous Hash**: `5293b5513ee3b72ddda6a45594bf759a8167604b4063c439468defe63e2f4046` (Entry #443 Chain Hash)
+**Chain Hash**: `f6a4265176ffbd4f762edc37427ddc7cca23e11985a39be891b5933006a32d4a`
+**Merkle Seal**: `8ded16133b3ee549366858f29419587ba2e371e601c1fd3c3ad99862aae3046c` -- gate_seal_substantiate_shadow_genome_map_196_p4
+**Session ID**: `2026-06-09-substantiate-shadow-genome-196-p4`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #444`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). .NET SHA-256 over CRLF; ASCII body.
+
+---
+
+_Chain integrity: VALID_
+_Session: 
