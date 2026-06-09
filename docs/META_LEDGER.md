@@ -24145,3 +24145,55 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 _Chain integrity: VALID_
 _Session: 
+
+### Entry #445: SUBSTANTIATE - Shadow Genome trust + federation + maturity (#196 Phase 5)
+
+**Date**: 2026-06-09
+**Phase**: SUBSTANTIATE (/qor-substantiate; Reality=Promise PASS; held local per Review Boundary)
+**Plan**: .failsafe/governance/plans/plan-shadow-genome-ui-196-phase5.md
+**Branch**: feat/shadow-genome-ui-196-phase1 (Phase 5 folded onto the branch / PR #211)
+**Author**: krknapp@gmail.com
+
+## Decision
+
+Sealed Phase 5 of the Shadow Genome UI (#196): the Trust Transitions (spec section 9), Federation (section
+10), and Learning Maturity (section 8) surfaces - operator decision: build RENDER-READY. None have a data
+producer in the canonical FX863 graph yet, so they render REAL API data when present (fixture-tested) and
+honest empty / 'not yet sourced' states in production. No faked data. Learning maturity 'Observed' = failure-
+node count (canonical); deeper stages (Classified .. Verified) honestly read 0 - the section-8 'recording is
+not learning' message. The upstream trust/federation/maturity DATA is a separate qor-logic dependency.
+
+## Scope (FX879)
+
+- qorlogic/governance-dashboard.ts: FederationState + FederationPeer + LearningMaturityStage + buildMaturity.
+- roadmap/ui/modules/shadow-genome-panels.js (NEW, 55 lines): trust chains / federation peer badges / maturity funnel.
+- roadmap/ui/modules/shadow-genome.js (203 lines): delegation + always-visible maturity panel.
+- roadmap/ui/command-center.css: .sg-trust-* / .sg-fed-* / .sg-mat-*.
+- test/qorlogic/governance-dashboard.test.ts (+2) + test/ui/shadow-genome-tab.spec.ts (+3). FX879.
+
+## Verification
+
+Reality=Promise: exactly 7 files, all planned. tsc 0 errors; project lint 0 errors; 11/11 builder + 4/4 route
+(additive fields, no regression) + 11/11 Playwright (real Chromium: maturity Observed populated + Verified 0,
+trust CBT->KBT promotion chain, federation peer-state badges). VISUAL GATE: federation (4 peer states) +
+maturity funnel screenshot visually verified. Both UI modules < 250 lines (Razor).
+
+## Next operator actions
+
+Review PR #211 (now Phases 1-5). Remaining #196 Phase 6: Genome Map pan/zoom (section 6.4) + full a11y +
+screenshot-regression suite. Separately: file the upstream qor-logic trust/federation/maturity DATA dependency.
+
+## Content Hash
+
+**Content Hash**: `e0b4e2c5f6f83576840fae9fd3ea86770f89e6ebcf10a8ec598fcbea0b4685a8`
+**Previous Hash**: `f6a4265176ffbd4f762edc37427ddc7cca23e11985a39be891b5933006a32d4a` (Entry #444 Chain Hash)
+**Chain Hash**: `381646f02e53292dd6a45e8ce71e78fa4f1b407bb44d966351af2bfa64273c94`
+**Merkle Seal**: `21e19d0266ae10279b6d8db721d9845d896575967172685d1d401f664da04cf7` -- gate_seal_substantiate_shadow_genome_trust_federation_196_p5
+**Session ID**: `2026-06-09-substantiate-shadow-genome-196-p5`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #445`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). .NET SHA-256 over CRLF; ASCII body.
+
+---
+
+_Chain integrity: VALID_
+_Session: 
