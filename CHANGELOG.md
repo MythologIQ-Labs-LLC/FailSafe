@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.6.4] - 2026-06-08
+
 ### Added
 - **Development Tracker — per-surface coverage.** Each product surface (Monitor, Learn, Agents, Governance, Workspace, Integrations, Config) now shows a governed coverage bar — verified vs. total features — projected from a new `Surface` tag on every feature-index entry. The per-surface picture is accurate by construction, not hand-maintained. (#206, #202)
 
