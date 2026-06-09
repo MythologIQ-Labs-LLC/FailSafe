@@ -23766,5 +23766,77 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 ---
 
+### Entry #439: SUBSTANTIATE - Release-readiness consolidation (doc currency + qor-logic 0.103.1 skill sync)
+
+**Date**: 2026-06-08
+**Phase**: SUBSTANTIATE (/qor-substantiate)
+**Author**: Judge
+
+**Target Version**: 5.6.x (release-readiness; precedes the v5.6.4 DELIVER)
+**Branch**: release/v5.6.4
+
+## Decision
+
+Reality=Promise PASS for a release-readiness consolidation that precedes the v5.6.4 DELIVER. The whole
+tracker-as-governance-sidecar thread (#432-#438) is on main, CI green, and individually sealed; this seal
+brings the living documentation current with it and re-syncs the governed SHIELD skills to qor-logic 0.103.1.
+Not a feature cycle - no new source; docs + a governed-skill sync.
+
+## Scope
+
+- docs: CHANGELOG.md (root) + FailSafe/extension/CHANGELOG.md [Unreleased] sections filled with the user-facing
+  tracker work (per-surface coverage; verticals = the 7 product surfaces / projected-from-ledger view; accurate
+  program completion incl. projected work). docs/SYSTEM_STATE.md Last Updated -> 2026-06-08 + an 'Unreleased on
+  main (since v5.6.3)' summary of #432-#438. docs/GOVERNANCE_INDEX.md Last Reviewed advanced with the
+  #439/#438/#437/#436 narrative (a stale index is a governance bug per CLAUDE.md).
+- .claude/skills/qor-substantiate/SKILL.md: re-synced to qor-logic 0.103.1 via `qor-logic install --host claude
+  --scope repo` (pip upgrade 0.102.1 -> 0.103.1). The only real content drift across the 66 distributed files
+  was the substantiate skill gaining a step-7 **surface-tag lint** (Qor-logic#196 - the upstream gate filed
+  during #206): `qor-logic scripts feature_index_verify --surface-lint`. EOL-only churn on the other skills was
+  discarded; drift check returns OK.
+
+## Verification
+
+npm run compile 0 (101 .js mirrored). release-gate.cjs --preflight: 8/8 PASS (CHANGELOG/README/COMPONENT_HELP/
+PROCESS_GUIDE/BACKLOG all coherent at v5.6.3; [Unreleased] additions non-breaking). Secret scan over staged: 0
+findings. The new surface-tag lint runs live against FailSafe: `feature_index_surface: ok (all non-n/a rows
+tagged)` - #206's Surface backfill satisfies the upstream gate (loop closed: #206 column -> #196 gate -> 0.103.1
+shipped -> passes). No extension source changed since the green CI run on #208 (1f2e022); the consolidation is
+docs + a .claude skill sync, so the prior test:all green on PR #208 still holds.
+
+## FEATURE_INDEX
+
+No new FX (no source feature this cycle). FX862-874 (the tracker thread) already present + verified.
+
+## Coverage gate
+
+PUBLISH_BLOCK Active: no (operator release-readiness consolidation). The v5.6.4 DELIVER + marketplace publish is
+the separate /qor-repo-release flow (version bump, metadata, tag, production-gate publish) - operator-gated.
+
+## Governance note
+
+Sealed on release/v5.6.4 (off main @ #438/#208). Chains #438 -> #439. Version bump + CHANGELOG stamp +
+tag are DEFERRED to /qor-repo-release (release-gate.cjs owns version management on this Node repo; substantiate
+Steps 7.5/7.6/9.5.5 skipped accordingly - same posture as the v4.10.x precedent). Next: /qor-repo-release for
+v5.6.4, then queue #196 (shadow-genome UI).
+
+## Phase 75 SKIP records
+
+Python qor-logic gates not run as the TS-repo substantiate flow (compile + preflight + secret-scan + the live
+surface-lint WERE run + clean). Version-bump/tag steps owned by /qor-repo-release. Hash via Python hashlib
+SHA-256 over CRLF; cp1252 body. Same posture as #405-#438.
+
+## Content Hash
+
+**Content Hash**: `fa632e2a8244dfa86a3a6b7d484128996db2fbe532d56d505d6b984457407a52`
+**Previous Hash**: `40400a0c97d4e3ef58e689e7f24479866a3d80270b3127709252eedc89872018` (Entry #438 Chain Hash)
+**Chain Hash**: `7923ef2eaee02d570e1478be996c975cec1de7fbd272e9fd1c7f7e551c707165`
+**Merkle Seal**: `497172085c7197ff6970005d8466c3ab622e412fea6d9a81fb4b5c95956a5d85`  gate_seal_substantiate_release_readiness_consolidation
+**Session ID**: `2026-06-08-substantiate-release-readiness`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #439`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#438.
+
+---
+
 _Chain integrity: VALID_
-_Session: 2026-06-08-substantiate-tracker-visual-202_
+_Session: 2026-06-08-substantiate-release-readiness_
