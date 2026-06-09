@@ -24197,3 +24197,58 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 _Chain integrity: VALID_
 _Session: 
+
+### Entry #446: SUBSTANTIATE - Shadow Genome Map zoom + a11y + visual gate (#196 Phase 6)
+
+**Date**: 2026-06-09
+**Phase**: SUBSTANTIATE (/qor-substantiate; Reality=Promise PASS; held local per Review Boundary)
+**Plan**: .failsafe/governance/plans/plan-shadow-genome-ui-196-phase6.md
+**Branch**: feat/shadow-genome-ui-196-phase1 (Phase 6 folded onto the branch / PR #211)
+**Author**: krknapp@gmail.com
+
+## Decision
+
+Sealed the FINAL phase of the Shadow Genome UI (#196 Phase 6): Genome Map zoom/fit (spec section 6.4) +
+accessibility hardening (section 15) + the section-17 visual gate. Deterministic viewBox-based zoom in/out/
+reset (clamped 0.5-3x, accessible control names; Reset clears selection AND zoom). A11y: keyboard-operable
+nodes (role/tabindex/aria-label + Enter-select), accessible control names, the View-as-Table fallback,
+reduced-motion, no color-only state. The section-17 visual gate is realized as an EXPANDED SEMANTIC coverage
+suite (zoom viewBox, keyboard nav, empty-graph, narrow-responsive) - platform-robust. Pixel toHaveScreenshot
+baselines were deliberately AVOIDED: CI is ubuntu-latest (Linux) while authoring is Windows, so committed
+baselines would mismatch; local screenshots remain the human-verification step. This CLOSES the #196 visual
+build (Phases 1-6: API -> sub-view -> incident ledger/drawer -> causal-graph map -> trust/federation/maturity
+-> zoom/a11y/visual-gate).
+
+## Scope (FX880)
+
+- roadmap/ui/modules/shadow-genome-graph.js (211 lines): viewBoxFor + zoom controls + bindings.
+- roadmap/ui/modules/shadow-genome.js: mapState.zoom.
+- roadmap/ui/command-center.css: .sg-zoom.
+- test/ui/shadow-genome-tab.spec.ts (+4: zoom, a11y/keyboard, empty-graph, responsive). FX880.
+
+## Verification
+
+Reality=Promise: exactly 5 files, all planned. tsc 0 errors; project lint 0 errors; 11/11 builder + 4/4 route
+(unchanged - no backend change) + 15/15 Playwright (real Chromium). Earlier full-suite build test: compile +
+esbuild bundle clean, npm run test:ui 153 passed (only the pre-existing FX589 bicameral flake, passes in
+isolation). VISUAL GATE: zoomed-map (node selected, inspector populated) screenshot visually verified.
+
+## Next operator actions
+
+#196 visual build is COMPLETE (Phases 1-6, FX875-880) on PR #211 - awaits operator --admin merge. Separately:
+file the upstream qor-logic trust/federation/maturity DATA dependency (no producer in this repo).
+
+## Content Hash
+
+**Content Hash**: `c195525c401d320574d440bad1a6b899f84115c1214e7f0dc4f1080b2952a5ea`
+**Previous Hash**: `381646f02e53292dd6a45e8ce71e78fa4f1b407bb44d966351af2bfa64273c94` (Entry #445 Chain Hash)
+**Chain Hash**: `ab9d66afa4cc5ccd84a975c73257f6c3eaf6bdce12eaa2cb695d85f5a609ced5`
+**Merkle Seal**: `d04d611184e8766cf6bbd608244ffc2a44588c269106a41cb45832eef79756f9` -- gate_seal_substantiate_shadow_genome_map_polish_196_p6
+**Session ID**: `2026-06-09-substantiate-shadow-genome-196-p6`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #446`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). .NET SHA-256 over CRLF; ASCII body.
+
+---
+
+_Chain integrity: VALID_
+_Session: 
