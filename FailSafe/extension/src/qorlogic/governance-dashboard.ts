@@ -19,7 +19,15 @@ import {
 export interface GovernanceChainSummary { rootId: string; failureId: string; depth: number; nodeTypes: string[] }
 export interface ProjectSurfaceSummary { id: string; label: string; failureCount: number; unresolvedCount: number }
 export interface TrustTransitionSummary { from: string; to: string; direction: 'promotion' | 'demotion'; governanceNodeId: string; at: string }
-export interface FederationSummary { sourced: boolean; peers: never[]; note?: string }
+export type FederationState = 'synced' | 'syncing' | 'stale' | 'degraded' | 'incompatible' | 'unauthorized' | 'offline';
+export interface FederationPeer { id: string; name: string; state: FederationState; lastSync?: string }
+export interface FederationSummary { sourced: boolean; peers: FederationPeer[]; note?: string }
+/** The §8 learning-maturity progression; only "Observed" is derivable from the canonical graph today. */
+export interface LearningMaturityStage { stage: string; count: number }
+const MATURITY_STAGES = ['Observed', 'Classified', 'Constraint extracted', 'Detectable', 'Enforced', 'Verified'];
+function buildMaturity(observed: number): LearningMaturityStage[] {
+  return MATURITY_STAGES.map((stage, i) => ({ stage, count: i === 0 ? observed : 0 }));
+}
 
 /** Severity derived from canonical recurrence only (no remediation signal in the graph yet). */
 export type IncidentSeverity = 'active' | 'repeated' | 'emerging';
@@ -51,6 +59,7 @@ export interface GovernanceDashboardResponse {
   /** The canonical governance subgraph topology (trimmed: id/type/label + edge types) for the Genome Map. */
   graph: GenomeGraph;
   trustTransitions: TrustTransitionSummary[];
+  learningMaturity: LearningMaturityStage[];
   federation: FederationSummary;
 }
 
@@ -63,7 +72,7 @@ function zeroed(generatedAt: string): GovernanceDashboardResponse {
     generatedAt, enabled: false, degraded: true,
     summary: { nodeCount: 0, edgeCount: 0, unresolvedCount: 0, recurringPatternCount: 0, trustTransitionCount: 0 },
     typeDistribution: {}, recentChains: [], projectSurfaces: [], incidents: [],
-    graph: { nodes: [], edges: [] }, trustTransitions: [],
+    graph: { nodes: [], edges: [] }, trustTransitions: [], learningMaturity: buildMaturity(0),
     federation: FEDERATION_UNSOURCED,
   };
 }
@@ -156,6 +165,7 @@ export function buildGovernanceDashboard(
     incidents: deriveIncidents(sub),
     graph: trimGraph(sub),
     trustTransitions: [],
+    learningMaturity: buildMaturity(unresolvedCount),
     federation: FEDERATION_UNSOURCED,
   };
 }

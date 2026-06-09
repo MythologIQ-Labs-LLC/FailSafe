@@ -39,6 +39,10 @@ const DASHBOARD = {
     ],
   },
   trustTransitions: [],
+  learningMaturity: [
+    { stage: "Observed", count: 2 }, { stage: "Classified", count: 0 }, { stage: "Constraint extracted", count: 0 },
+    { stage: "Detectable", count: 0 }, { stage: "Enforced", count: 0 }, { stage: "Verified", count: 0 },
+  ],
   federation: { sourced: false, peers: [], note: "Federation peer status is not yet sourced." },
 };
 
@@ -46,7 +50,7 @@ const DEGRADED = {
   enabled: false, degraded: true,
   summary: { nodeCount: 0, edgeCount: 0, unresolvedCount: 0, recurringPatternCount: 0, trustTransitionCount: 0 },
   typeDistribution: {}, recentChains: [], projectSurfaces: [], incidents: [],
-  graph: { nodes: [], edges: [] }, trustTransitions: [],
+  graph: { nodes: [], edges: [] }, trustTransitions: [], learningMaturity: [],
   federation: { sourced: false, peers: [] },
 };
 
@@ -146,6 +150,48 @@ test("Genome Map — View as Table is the accessible fallback (graph is not the 
   await expect(page.locator("#governance .sg-data-table")).toHaveCount(2); // nodes + edges tables
   await expect(page.locator("#governance .sg-graph-svg")).toHaveCount(0);
   await expect(page.locator("#governance .sg-data-table tbody tr").first()).toBeVisible();
+});
+
+test("Learning maturity panel — Observed populated, deeper stages honest-0", async ({ page }) => {
+  controller = await serveConsoleServerUI({});
+  await page.route("**/api/qor/governance-dashboard", (r) => r.fulfill({ json: DASHBOARD }));
+  await gotoShadowGenome(page, controller.url);
+
+  await expect(page.locator("#governance .sg-maturity .sg-panel-title")).toContainText("Learning maturity");
+  await expect(page.locator("#governance .sg-mat-row")).toHaveCount(6);
+  await expect(page.locator("#governance .sg-mat-row", { hasText: "Observed" }).locator(".sg-mat-num")).toHaveText("2");
+  await expect(page.locator("#governance .sg-mat-row", { hasText: "Verified" }).locator(".sg-mat-num")).toHaveText("0");
+});
+
+test("Trust Transitions — render-ready: honest empty, and chains when data is present", async ({ page }) => {
+  controller = await serveConsoleServerUI({});
+  const withTrust = {
+    ...DASHBOARD,
+    trustTransitions: [{ from: "CBT", to: "KBT", direction: "promotion", governanceNodeId: "audit-gate", at: "2026-06-09" }],
+  };
+  await page.route("**/api/qor/governance-dashboard", (r) => r.fulfill({ json: withTrust }));
+  await gotoShadowGenome(page, controller.url);
+  await page.locator('#governance .sg-pill[data-mode="trust"]').click();
+
+  await expect(page.locator("#governance .sg-trust-card")).toHaveCount(1);
+  await expect(page.locator("#governance .sg-trust-card")).toContainText("CBT");
+  await expect(page.locator("#governance .sg-trust-card")).toContainText("KBT");
+  await expect(page.locator("#governance .sg-trust-card")).toHaveClass(/sg-trust-promotion/);
+});
+
+test("Federation — render-ready: 'not yet sourced', and peer states when present", async ({ page }) => {
+  controller = await serveConsoleServerUI({});
+  const withPeers = {
+    ...DASHBOARD,
+    federation: { sourced: true, peers: [{ id: "qor", name: "QorLogic", state: "synced", lastSync: "2m ago" }, { id: "acc", name: "Accountable", state: "stale" }] },
+  };
+  await page.route("**/api/qor/governance-dashboard", (r) => r.fulfill({ json: withPeers }));
+  await gotoShadowGenome(page, controller.url);
+  await page.locator('#governance .sg-pill[data-mode="federation"]').click();
+
+  await expect(page.locator("#governance .sg-fed-peer")).toHaveCount(2);
+  await expect(page.locator("#governance .sg-fed-state.sg-fed-synced")).toBeVisible();
+  await expect(page.locator("#governance .sg-fed-peer", { hasText: "Accountable" }).locator(".sg-fed-stale")).toBeVisible();
 });
 
 test("disabled loader → spec §14 degraded empty card", async ({ page }) => {

@@ -7,6 +7,7 @@
 // (Phase 5) are deferred. Mythiq theme, token-only colors (spec §16).
 
 import { renderGenomeMode, bindGenome } from './shadow-genome-graph.js';
+import { renderTrustPanel, renderFederationPanel, renderMaturity } from './shadow-genome-panels.js';
 
 function esc(value) {
   const d = document.createElement('div');
@@ -49,7 +50,8 @@ export class ShadowGenomeRenderer {
       this.renderHeader(true) +
       this.renderSummary(d.summary || {}) +
       this.renderModeTabs() +
-      `<div class="sg-mode-body">${this.renderMode(d)}</div>`;
+      `<div class="sg-mode-body">${this.renderMode(d)}</div>` +
+      renderMaturity(d);
     this.bindModeSwitch();
     this.bindMode();
   }
@@ -98,8 +100,8 @@ export class ShadowGenomeRenderer {
   renderMode(d) {
     if (this.mode === 'map') return this.renderMap(d);
     if (this.mode === 'incidents') return this.renderIncidents(d);
-    if (this.mode === 'trust') return this.renderTrust(d);
-    return this.renderFederation(d);
+    if (this.mode === 'trust') return renderTrustPanel(d);
+    return renderFederationPanel(d);
   }
 
   renderMap(d) {
@@ -147,19 +149,6 @@ export class ShadowGenomeRenderer {
       <div class="sg-drawer-section"><div class="sg-drawer-h">Node / ledger id</div><code class="sg-id">${esc(i.id)}</code></div>
       <div class="sg-drawer-section"><div class="sg-drawer-h">Remediation &amp; trust consequence</div><span class="sg-chip sg-chip-degraded">not yet sourced</span></div>
       <button class="sg-locate" type="button">Locate in Genome &rarr;</button>`;
-  }
-
-  renderTrust() {
-    return `<div class="sg-panel"><div class="sg-panel-title">Trust transitions</div>
-      <div class="sg-muted">No trust transitions recorded yet.</div>
-      <div class="sg-note">Evidence-backed CBT/KBT/IBT promotion + demotion chains arrive in a later phase.</div></div>`;
-  }
-
-  renderFederation(d) {
-    const f = d.federation || { sourced: false };
-    return `<div class="sg-panel"><div class="sg-panel-title">Federation</div>
-      <div class="sg-muted">${f.sourced ? 'Connected peers' : esc(f.note || 'Federation peer status is not yet sourced.')}</div>
-      <div class="sg-note">Peer health + causal-origin provenance arrive in a later phase.</div></div>`;
   }
 
   bindModeSwitch() {

@@ -87,4 +87,17 @@ suite('buildGovernanceDashboard', () => {
     const r = buildGovernanceDashboard({ ok: true, localOnly: true }, { generatedAt: AT });
     assert.deepEqual(r.graph, { nodes: [], edges: [] });
   });
+
+  test('learningMaturity: Observed = failure-node count, deeper stages honest-0', () => {
+    const r = buildGovernanceDashboard({ ok: true, graph: FIXTURE_GENOME }, { generatedAt: AT });
+    assert.equal(r.learningMaturity.length, 6);
+    assert.deepEqual(r.learningMaturity[0], { stage: 'Observed', count: 2 }); // f1, f2
+    assert.equal(r.learningMaturity.slice(1).every((s) => s.count === 0), true);
+  });
+
+  test('federation: peers typed (empty until an adapter sources them)', () => {
+    const r = buildGovernanceDashboard({ ok: true, graph: FIXTURE_GENOME }, { generatedAt: AT });
+    assert.equal(r.federation.sourced, false);
+    assert.deepEqual(r.federation.peers, []);
+  });
 });

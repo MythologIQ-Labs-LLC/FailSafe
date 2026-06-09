@@ -2152,3 +2152,31 @@ select option {
 .sg-data-table td { padding: 6px 10px; border-bottom: 1px solid var(--border-rim); color: var(--text-main); }
 @media (max-width: 1100px) { .sg-graph-wrap { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { .sg-node, .sg-view-btn { transition: none; } }
+
+/* --- Trust / Federation / Learning-maturity panels (#196 Phase 5) --- */
+.sg-trust-list, .sg-fed-list { display: flex; flex-direction: column; gap: 8px; }
+.sg-trust-card { border: 1px solid var(--border-rim); border-left: 3px solid var(--sev, var(--primary)); border-radius: 10px; padding: 10px 14px; background: var(--bg-deep); }
+.sg-trust-promotion { --sev: var(--accent-green); }
+.sg-trust-demotion { --sev: var(--accent-orange); }
+.sg-trust-flow { display: flex; align-items: center; gap: 10px; }
+.sg-trust-lvl { font-family: var(--font-display); font-size: 0.84rem; font-weight: 600; color: var(--text-main); }
+.sg-trust-arrow { color: var(--sev); font-size: 1rem; }
+.sg-trust-meta { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; }
+.sg-trust-dir { color: var(--sev); text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.66rem; }
+.sg-fed-peer { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border: 1px solid var(--border-rim); border-radius: 10px; background: var(--bg-deep); font-size: 0.8rem; color: var(--text-main); }
+.sg-fed-state { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 8px; border-radius: 10px; }
+.sg-fed-synced { color: var(--accent-green); background: color-mix(in srgb, var(--accent-green) 14%, transparent); }
+.sg-fed-syncing { color: var(--accent-cyan); background: color-mix(in srgb, var(--accent-cyan) 14%, transparent); }
+.sg-fed-stale { color: var(--accent-gold); background: color-mix(in srgb, var(--accent-gold) 14%, transparent); }
+.sg-fed-degraded { color: var(--accent-orange); background: color-mix(in srgb, var(--accent-orange) 14%, transparent); }
+.sg-fed-incompatible, .sg-fed-unauthorized { color: var(--accent-red); background: color-mix(in srgb, var(--accent-red) 14%, transparent); }
+.sg-fed-offline { color: var(--text-muted); }
+.sg-fed-name { font-weight: 600; }
+.sg-maturity { margin-top: 14px; }
+.sg-mat-cap { font-size: 0.7rem; color: var(--text-muted); font-weight: 400; font-style: italic; margin-left: 6px; }
+.sg-mat-row { display: grid; grid-template-columns: 130px 1fr 34px; align-items: center; gap: 10px; margin-bottom: 7px; }
+.sg-mat-stage { font-size: 0.74rem; color: var(--text-muted); }
+.sg-mat-track { height: 8px; background: var(--bg-deep); border-radius: 5px; overflow: hidden; }
+.sg-mat-fill { display: block; height: 100%; background: linear-gradient(90deg, var(--accent-gold), var(--accent-green)); border-radius: 5px; transition: width 0.3s ease; }
+.sg-mat-num { font-size: 0.74rem; color: var(--text-main); text-align: right; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .sg-mat-fill { transition: none; } }
