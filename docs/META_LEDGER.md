@@ -23930,3 +23930,60 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 _Chain integrity: VALID_
 _Session: 2026-06-09-chain-repair-420_
+
+### Entry #441: SUBSTANTIATE - Shadow Genome dashboard API (#196 Phase 1)
+
+**Date**: 2026-06-09
+**Phase**: SUBSTANTIATE (/qor-substantiate; Reality=Promise PASS; held local per Review Boundary)
+**Plan**: .failsafe/governance/plans/plan-shadow-genome-ui-196-phase1.md
+**Branch**: feat/shadow-genome-ui-196-phase1 (off repaired main; awaits operator --admin merge)
+**Author**: krknapp@gmail.com
+
+## Decision
+
+Sealed Phase 1 of the Shadow Genome UI (#196, part 2 of #118): the read-only dashboard contract +
+GET /api/qor/governance-dashboard route over the shipped FX863 data layer. Pure buildGovernanceDashboard
+derives GovernanceDashboardResponse solely from governanceSubgraph + summarizeGenome (no persistence,
+canonical node/edge semantics only). Degrade-safe (off/absent/degraded loader -> enabled:false zeroed).
+trustTransitions + federation are honest-empty until spec Phase 5 (no FX863 producer yet). Backend-only
+slice; the Playwright visual + a11y gate applies at spec Phase 6, not here.
+
+## Scope (FX875)
+
+- governance-dashboard.ts: pure builder + GovernanceDashboardResponse types.
+- QorRoute.ts: GET /api/qor/governance-dashboard (rejectIfRemote-gated, always 200).
+- ApiRouteDeps.loadShadowGenome (optional, degrade-safe) wired enabled:false in ConsoleRouteRegistrar.
+- Deterministic genome fixture + FEATURE_INDEX FX875 (governance surface).
+
+## Verification
+
+Reality=Promise: exactly 8 files, every planned surface present, no unplanned files. tsc 0 errors;
+eslint 0 errors (any-warnings consistent with codebase convention); 9/9 unit+route tests green (mocha,
+real express harness, no electron). Audit PASS (L2, all 14 passes):
+.failsafe/governance/AUDIT_REPORT_shadow-genome-ui-196-phase1.md.
+
+## Governance note
+
+Design source operator-supplied: docs/design/SHADOW_GENOME_UI.md (17bd813) + Mythiq mockup. Placement
+corrected to a standalone top-level Shadow Genome / Governance domain (not Agents). Sealed on the repaired
+ledger (Entry #440 merged via PR #210). Held local per Review Boundary; push/PR are operator decisions.
+
+## Next operator actions
+
+Review the #196 PR. Subsequent phases 2-6 build shared view-state, the operational incident surface, the
+structural Genome Map, trust/federation, and the Playwright visual + a11y gate.
+
+## Content Hash
+
+**Content Hash**: `2d86bad74d94977dd4929b9ada538ca801fac9279f6617566aaad03137ededac`
+**Previous Hash**: `6b8697d1cc5ba45d51cb837c8b67e5089b73e96f620baff5bbf5e4becaabd784` (Entry #440 Chain Hash)
+**Chain Hash**: `759644852b5065ffc8970be3a8dc8feb24edfbdd417e41f48a5d72b845c39da8`
+**Merkle Seal**: `7b343443d25504868f0bfce4c85ab4632eb07fa61411e6925fd5eaa6555e48cc` -- gate_seal_substantiate_shadow_genome_dashboard_196
+**Session ID**: `2026-06-09-substantiate-shadow-genome-196`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #441`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). .NET SHA-256 over CRLF; ASCII body.
+
+---
+
+_Chain integrity: VALID_
+_Session: 
