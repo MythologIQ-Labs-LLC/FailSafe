@@ -23692,5 +23692,79 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 ---
 
+### Entry #438: SUBSTANTIATE - Tracker render consumption / A.2b-visual (#202)
+
+**Date**: 2026-06-08
+**Phase**: SUBSTANTIATE (/qor-substantiate)
+**Author**: Judge
+
+**Target Version**: 5.6.x (next bundle; FX872/873/874)
+**Branch**: feat/tracker-visual-202
+
+## Decision
+
+Reality=Promise PASS. The visual half of A.2b: the now-backend-complete governance projection is SURFACED in
+the dashboard render. Additive to the existing App-lineage shell (the dashboard already clones the Accountable
+reference tokens; the prior 'shit quality' rejection was the Learn tab, a different surface). Operator visual
+sign-off received against the Accountable App reference.
+
+## Scope
+
+- tracker-dashboard.html buildVerticalPanel + .cov-* CSS (FX872): per-vertical COVERAGE BAR from
+  v.featureStats - an OS-style .track/.fill device, pct = verified/(total - na) (n/a excluded, 0-guarded ->
+  renders 'n/a' not NaN), accent-tinted, with a mono caption 'N verified / M features - K n/a'. Degrade-safe:
+  no featureStats -> no block (the panel is unchanged).
+- tracker-dashboard.html cumulative() (FX873): unanchored phases (rc='' / off-axis) now count toward the
+  program total UNCONDITIONALLY; anchored phases keep the i<=rcIndex gate. Fixes an under-reporting bug vs the
+  tracker-model phase-unanchored contract (bars now read true planned completion; e.g. anchored 60 + unanchored
+  25 = 85%, was 60%).
+- tracker-dashboard.html render advisory (FX874): branch on d.manifestSource - 'projection' shows a positive
+  'Projected from the governance ledger' note; 'none' keeps the 'discovered releases only' copy. No backend
+  change (manifestSource was already in the payload, unread).
+- tracker-dashboard.html token: #e76ea8 admin color promoted to a --admin token (both .who-badge.admin +
+  .acc-chip.admin). Accent ramp left as-is (the projection already assigns accents deterministically).
+
+## Verification
+
+tsc --noEmit 0, eslint 0, npm run compile 0. Playwright 9/9 GREEN in real chromium (3 new FX872/873/874
+behavior assertions - coverage 75%, cumulative 60%, advisory branch + degrade-safe - plus the 6 existing
+render/loading tests, no regression). VISUAL gate satisfied: served via the real ConsoleServer, rendered +
+screenshotted in chromium, compared against the Accountable App reference; operator signed off. jsdom is
+insufficient for this surface (inline render script) - Playwright + the visual sign-off are the gate per
+feedback_design_reference_required + feedback_e2e_before_claim_closed.
+
+## FEATURE_INDEX
+
+FX872/873/874 added after FX871 (Surface=workspace, the tracker is a Workspace sub-view). All three carry
+behavior-asserting Playwright tests, written red-then-green. The FX871 completeness gate stays satisfied.
+
+## Coverage gate
+
+PUBLISH_BLOCK Active: no. Not a release this cycle (no publish). FX872/873/874 carry real tests.
+
+## Governance note
+
+Committed local on feat/tracker-visual-202 (off main @ #437/#206). Research brief: research-brief-tracker-
+visual-202-2026-06-08.md. Audit PASS (L2, visual) first pass - no VETO. Chains #437 -> #438. Closes #202.
+Design source of record: the two Accountable Upgrades-status HTML files. The dashboard scales with governance
+richness - a fuller ledger yields a denser timeline + fuller coverage bars (operator observation).
+
+## Phase 75 SKIP records
+
+Python qor-logic gates not run as the TS-repo substantiate flow (plan/audit lints WERE run + clean). Hash via
+Python hashlib SHA-256 over CRLF; cp1252 body. Same posture as #405-#437.
+
+## Content Hash
+
+**Content Hash**: `b9b18a13e1f35a500c6c6472bc9d8877f51640522bc84486a52fbad69271638b`
+**Previous Hash**: `9013685dee5df16ba068ba3937f5481db49f14633bfcdcd949f2fd5fa0b1e38b` (Entry #437 Chain Hash)
+**Chain Hash**: `40400a0c97d4e3ef58e689e7f24479866a3d80270b3127709252eedc89872018`
+**Merkle Seal**: `ecdb5349a0f7e684b30320feb5d07be3aab11fe766c46fba8146c0b2434dd048`  gate_seal_substantiate_tracker_visual_202
+**Session ID**: `2026-06-08-substantiate-tracker-visual-202`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #438`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#437.
+
+---
+
 _Chain integrity: VALID_
-_Session: 2026-06-08-substantiate-feature-index-surface_
+_Session: 2026-06-08-substantiate-tracker-visual-202_
