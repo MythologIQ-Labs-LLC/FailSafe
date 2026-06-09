@@ -24039,3 +24039,55 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 _Chain integrity: VALID_
 _Session: 
+
+### Entry #443: SUBSTANTIATE - Shadow Genome incident ledger + drawer (#196 Phase 3)
+
+**Date**: 2026-06-09
+**Phase**: SUBSTANTIATE (/qor-substantiate; Reality=Promise PASS; held local per Review Boundary)
+**Plan**: .failsafe/governance/plans/plan-shadow-genome-ui-196-phase3.md
+**Branch**: feat/shadow-genome-ui-196-phase1 (Phase 3 folded onto the branch / PR #211)
+**Author**: krknapp@gmail.com
+
+## Decision
+
+Sealed Phase 3 of the Shadow Genome UI (#196): the operational Incidents surface (spec section 7),
+/frontend-design-led. Backend: GovernanceDashboardResponse gains an incidents[] array (IncidentSummary)
+derived from the governance-subgraph failure nodes - recurrence = incident-edge count, governanceRoots =
+the governance nodes applied to the failure, severity from recurrence (active>=3 / repeated>=2 / emerging).
+No new persistence; no faked data. Frontend: the Incidents mode is now an evidence-ledger table (severity-
+spined, keyboard-navigable rows) opening a slide-over case-file drawer (What failed / governance roots /
+recurrence / node id / honest 'not yet sourced' for remediation + trust) with Locate-in-Genome -> Genome Map.
+
+## Scope (FX877)
+
+- qorlogic/governance-dashboard.ts: IncidentSeverity + IncidentSummary + deriveIncidents/severityFor.
+- roadmap/ui/modules/shadow-genome.js: incident table + case-file drawer (216 lines, Razor < 250).
+- roadmap/ui/command-center.css: .sg-incident-* / .sg-drawer-* / .sg-sev-* token-only styles.
+- test/qorlogic/governance-dashboard.test.ts (+2) + test/ui/shadow-genome-tab.spec.ts (+2). FX877.
+
+## Verification
+
+Reality=Promise: exactly 6 files, all planned. tsc 0 errors; project lint 0 errors; 7/7 builder + 4/4 route
+(incidents additive, no regression) + 5/5 Playwright (real Chromium: ledger rows + severity class, drawer
+open + governance roots + 'not yet sourced', Locate-in-Genome). VISUAL GATE: incidents+drawer screenshot
+visually verified against the Mythiq mockup. Audit PASS (L2, inline) - ghost-UI-clean (real API, honest empties).
+
+## Next operator actions
+
+Review PR #211 (now Phases 1+2+3). Remaining #196 phases: structural Genome Map graph (4), live trust +
+federation (5), learning-maturity panel + full a11y / screenshot-regression suite (6).
+
+## Content Hash
+
+**Content Hash**: `703582d16e51e19ba7d605d158df00b61c7cd65fdf416de03d543bf5d7ec3696`
+**Previous Hash**: `18925cfa2de3ca7cd24e2dc88ca1c06daf4fc673d854f3cf7680aaf8426f5055` (Entry #442 Chain Hash)
+**Chain Hash**: `5293b5513ee3b72ddda6a45594bf759a8167604b4063c439468defe63e2f4046`
+**Merkle Seal**: `f25775018737204778699a85e9a1d3c49365cf13db47e4fcf296c46cd1509960` -- gate_seal_substantiate_shadow_genome_incidents_196_p3
+**Session ID**: `2026-06-09-substantiate-shadow-genome-196-p3`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #443`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). .NET SHA-256 over CRLF; ASCII body.
+
+---
+
+_Chain integrity: VALID_
+_Session: 
