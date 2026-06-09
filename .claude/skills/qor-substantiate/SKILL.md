@@ -370,9 +370,10 @@ When `FEATURE_INDEX.md` exists in the repo, verify every declared feature after 
    `**Newly unverified**: FX091, FX093, ...`
 6. Run the regression ABORT (Phase 114; fail-closed since Phase 122, GH #155/#40):
    `qor-logic scripts feature_index_verify --snapshot <prior-seal-session-id> --repo-root . || ABORT`
-   Non-zero exit aborts on an outside-scope `verified->unverified` regression. To accept a known regression, re-run with `--override` (logged `gate_override` shadow event, `details.gate = feature_index_verify`) — the explicit escape required by GH #155.
+   Non-zero exit aborts on an outside-scope `verified->unverified` regression. To accept a known regression, re-run with `--override` (logged `gate_override` shadow event, `details.gate = feature_index_verify`).
+7. Surface-tag lint (GH #196), WARN-only: `qor-logic scripts feature_index_verify --surface-lint --session "$SESSION_ID" --repo-root .`. See `references/seal-gate-ladder.md`.
 
-Repos without `FEATURE_INDEX.md` record `**Feature Inventory**: not adopted` and skip the pass (the gate `qor.scripts.feature_index_verify` prints `feature_index: skip` and exits 0). Per `qor/references/doctrine-feature-inventory.md` + `qor/references/doctrine-verification-closure-integrity.md`.
+Repos without `FEATURE_INDEX.md` record `**Feature Inventory**: not adopted` and skip the pass (`qor.scripts.feature_index_verify` prints `feature_index: skip`). Per `qor/references/doctrine-feature-inventory.md` + `qor/references/doctrine-verification-closure-integrity.md`.
 
 #### Acceptance-criteria close guard (Phase 114; GH #158, WARN-first)
 

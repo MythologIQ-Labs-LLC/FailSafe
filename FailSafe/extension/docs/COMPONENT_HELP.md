@@ -1,6 +1,6 @@
 # FailSafe Component Help
 
-Audience: operators using the packaged VS Code extension (`v5.6.3`).
+Audience: operators using the packaged VS Code extension (`v5.6.4`).
 
 Scope: shipped UI surfaces, governance components, and Voice + Mindmap Status in the current release.
 

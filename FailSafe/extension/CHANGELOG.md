@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.6.4] - 2026-06-08
+
+### Added
+- **Development Tracker — per-surface coverage.** Each product surface (Monitor, Learn, Agents, Governance, Workspace, Integrations, Config) now shows a governed coverage bar — verified vs. total features — projected from a new `Surface` tag on every feature-index entry. The per-surface picture is accurate by construction, not hand-maintained. (#206, #202)
+
+### Changed
+- **Development Tracker — verticals are the product's surfaces.** The tracker now presents the seven Console surfaces (not code directories) as its verticals, and on a governed repo with no hand-curated manifest it shows a "projected from the governance ledger" view rather than a bare one. (#204, #205, #202)
+
+### Fixed
+- **Development Tracker — accurate program completion.** Program-progress bars now count planned-but-unreleased work, so a program's true completion shows even before its phases anchor to a published release. (#202)
+
 ## [5.6.3] - 2026-06-06
 
 ### Added

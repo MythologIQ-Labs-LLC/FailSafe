@@ -66,11 +66,11 @@ Under the hood, a **Tier 1 supply-chain CI baseline** (least-privilege workflow 
 
 <div align="center">
 
-**Current Release**: v5.6.3 (2026-06-06)
+**Current Release**: v5.6.4 (2026-06-08)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
 
-## What's new in v5.6.3
+## What's new in v5.6.4
 
 - 🔗 **PR↔issue linkage governance** — a Check Run catches the `Closes #1, #2` footgun (GitHub closes only the first; the rest silently stay open). Off by default.
 - 📊 **Governed tracker source** — build the Development Tracker from your governance ledger (META_LEDGER + FEATURE_INDEX), not just PR history.
