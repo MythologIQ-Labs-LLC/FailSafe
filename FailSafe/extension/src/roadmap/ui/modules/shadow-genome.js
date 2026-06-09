@@ -35,7 +35,7 @@ export class ShadowGenomeRenderer {
     this.container = document.getElementById(containerId);
     this.data = null;
     this.mode = 'map';
-    this.mapState = { view: 'graph', selectedId: null };
+    this.mapState = { view: 'graph', selectedId: null, zoom: 1 };
   }
 
   async render() {

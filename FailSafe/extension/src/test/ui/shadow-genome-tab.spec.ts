@@ -194,6 +194,55 @@ test("Federation — render-ready: 'not yet sourced', and peer states when prese
   await expect(page.locator("#governance .sg-fed-peer", { hasText: "Accountable" }).locator(".sg-fed-stale")).toBeVisible();
 });
 
+test("Genome Map — zoom controls change the viewBox; Reset restores the default", async ({ page }) => {
+  controller = await serveConsoleServerUI({});
+  await page.route("**/api/qor/governance-dashboard", (r) => r.fulfill({ json: DASHBOARD }));
+  await gotoShadowGenome(page, controller.url);
+
+  const svg = page.locator("#governance .sg-graph-svg");
+  const base = await svg.getAttribute("viewBox");
+  expect(base).toBe("0.0 0.0 800.0 520.0");
+  await page.locator('#governance .sg-zoom[data-zoom="in"]').click();
+  await expect(svg).not.toHaveAttribute("viewBox", base!);
+  await page.locator("#governance .sg-reset").click();
+  await expect(svg).toHaveAttribute("viewBox", base!);
+});
+
+test("Genome Map — accessibility: control names + keyboard node selection", async ({ page }) => {
+  controller = await serveConsoleServerUI({});
+  await page.route("**/api/qor/governance-dashboard", (r) => r.fulfill({ json: DASHBOARD }));
+  await gotoShadowGenome(page, controller.url);
+
+  await expect(page.locator('#governance .sg-zoom[data-zoom="in"]')).toHaveAttribute("aria-label", "Zoom in");
+  await expect(page.locator("#governance .sg-reset")).toHaveAttribute("aria-label", "Reset view");
+  const node = page.locator('#governance .sg-node[data-node="f1"]');
+  await expect(node).toHaveAttribute("role", "button");
+  await expect(node).toHaveAttribute("tabindex", "0");
+  await node.focus();
+  await node.press("Enter");
+  await expect(page.locator("#governance .sg-graph-rail .sg-drawer-title")).toHaveText("Spec Drift");
+});
+
+test("Genome Map — empty graph shows the honest 'No causal graph yet' state", async ({ page }) => {
+  controller = await serveConsoleServerUI({});
+  const noGraph = { ...DASHBOARD, graph: { nodes: [], edges: [] } };
+  await page.route("**/api/qor/governance-dashboard", (r) => r.fulfill({ json: noGraph }));
+  await gotoShadowGenome(page, controller.url);
+
+  await expect(page.locator("#governance .sg-graph-wrap")).toContainText("No causal graph yet");
+  await expect(page.locator("#governance .sg-graph-svg")).toHaveCount(0);
+});
+
+test("Genome Map — narrow viewport keeps graph + inspector accessible (responsive)", async ({ page }) => {
+  controller = await serveConsoleServerUI({});
+  await page.setViewportSize({ width: 700, height: 900 });
+  await page.route("**/api/qor/governance-dashboard", (r) => r.fulfill({ json: DASHBOARD }));
+  await gotoShadowGenome(page, controller.url);
+
+  await expect(page.locator("#governance .sg-graph-svg")).toBeVisible();
+  await expect(page.locator("#governance .sg-graph-rail")).toBeVisible();
+});
+
 test("disabled loader → spec §14 degraded empty card", async ({ page }) => {
   controller = await serveConsoleServerUI({});
   await page.route("**/api/qor/governance-dashboard", (r) => r.fulfill({ json: DEGRADED }));

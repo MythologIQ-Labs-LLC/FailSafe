@@ -2123,6 +2123,9 @@ select option {
 .sg-view-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 .sg-view-btn:hover:not(.active), .sg-reset:not([disabled]):hover { border-color: var(--primary); color: var(--text-main); }
 .sg-reset[disabled] { opacity: 0.4; cursor: default; }
+.sg-zoom { background: var(--bg-deep); border: 1px solid var(--border-rim); color: var(--text-muted); width: 28px; padding: 4px 0; border-radius: 8px; font-size: 0.95rem; line-height: 1; cursor: pointer; transition: all 0.15s ease; }
+.sg-zoom:not([disabled]):hover { border-color: var(--primary); color: var(--text-main); }
+.sg-zoom[disabled] { opacity: 0.4; cursor: default; }
 .sg-graph-canvas { position: relative; border: 1px solid var(--border-rim); border-radius: 12px; background: radial-gradient(ellipse at 50% 42%, color-mix(in srgb, var(--primary) 10%, transparent), var(--bg-deep) 72%); overflow: hidden; }
 .sg-graph-svg { display: block; width: 100%; height: auto; }
 .sg-edge { stroke: var(--border-rim); }

@@ -109,7 +109,14 @@ function nodeSvg(n, p, deg, sev, sel, nb) {
   return `<g class="sg-node${dim}${n.id === sel ? ' sel' : ''}" transform="translate(${p.x.toFixed(1)},${p.y.toFixed(1)})" data-node="${esc(n.id)}" tabindex="0" role="button" aria-label="${esc(n.type)}: ${esc(n.label)}">${ring}${shape}${label}<title>${esc(n.label)} (${esc(n.type)})</title></g>`;
 }
 
-function buildSvg(graph, pos, sev, deg, sel) {
+/** Deterministic viewBox for a zoom level (centered on the 800×520 stage). */
+function viewBoxFor(zoom) {
+  const z = Math.max(0.5, Math.min(3, zoom || 1));
+  const w = 800 / z, h = 520 / z;
+  return `${(400 - w / 2).toFixed(1)} ${(260 - h / 2).toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)}`;
+}
+
+function buildSvg(graph, pos, sev, deg, sel, zoom) {
   const nb = sel ? neighbours(graph, sel) : null;
   const edges = graph.edges.map((e) => {
     const a = pos.get(e.source), b = pos.get(e.target);
@@ -118,7 +125,7 @@ function buildSvg(graph, pos, sev, deg, sel) {
     return `<line class="sg-edge${on ? ' on' : ''}" x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}" style="${EDGE_STYLE[e.type] || 'stroke-width:1.2'}"><title>${esc(e.source)} ${esc(e.type)} ${esc(e.target)}</title></line>`;
   }).join('');
   const nodes = graph.nodes.map((n) => { const p = pos.get(n.id); return p ? nodeSvg(n, p, deg, sev, sel, nb) : ''; }).join('');
-  return `<svg class="sg-graph-svg" viewBox="0 0 800 520" role="img" aria-label="Genome causal map">${defs()}<g class="sg-edges">${edges}</g><g class="sg-nodes">${nodes}</g></svg>`;
+  return `<svg class="sg-graph-svg" viewBox="${viewBoxFor(zoom)}" role="img" aria-label="Genome causal map — ${graph.nodes.length} nodes, ${graph.edges.length} edges">${defs()}<g class="sg-edges">${edges}</g><g class="sg-nodes">${nodes}</g></svg>`;
 }
 
 function buildLegend() {
@@ -163,7 +170,12 @@ export function renderGenomeMode(d, state) {
   const sev = new Map((d.incidents || []).map((i) => [i.id, i.severity]));
   const deg = degreeMap(graph);
   const view = state.view === 'table' ? 'table' : 'graph';
-  const body = view === 'table' ? buildTable(graph, sev) : buildSvg(graph, layout(graph), sev, deg, state.selectedId);
+  const zoom = state.zoom || 1;
+  const body = view === 'table' ? buildTable(graph, sev) : buildSvg(graph, layout(graph), sev, deg, state.selectedId, zoom);
+  const zoomCtl = view === 'graph'
+    ? `<button class="sg-zoom" data-zoom="out" type="button" aria-label="Zoom out"${zoom <= 0.5 ? ' disabled' : ''}>−</button><button class="sg-zoom" data-zoom="in" type="button" aria-label="Zoom in"${zoom >= 3 ? ' disabled' : ''}>+</button>`
+    : '';
+  const canReset = state.selectedId || zoom !== 1;
   return `<div class="sg-graph-wrap">
     <div class="sg-graph-main">
       <div class="sg-graph-toolbar">
@@ -171,7 +183,8 @@ export function renderGenomeMode(d, state) {
         <div class="sg-graph-controls">
           <button class="sg-view-btn${view === 'graph' ? ' active' : ''}" data-view="graph" type="button">Graph</button>
           <button class="sg-view-btn${view === 'table' ? ' active' : ''}" data-view="table" type="button">Table</button>
-          <button class="sg-reset" type="button"${state.selectedId ? '' : ' disabled'}>Reset</button>
+          ${zoomCtl}
+          <button class="sg-reset" type="button" aria-label="Reset view"${canReset ? '' : ' disabled'}>Reset</button>
         </div>
       </div>
       <div class="sg-graph-canvas">${body}</div>
@@ -183,7 +196,12 @@ export function renderGenomeMode(d, state) {
 
 export function bindGenome(wrap, d, state, onChange) {
   wrap.querySelectorAll('.sg-view-btn').forEach((b) => b.addEventListener('click', () => { state.view = b.getAttribute('data-view'); onChange(); }));
-  wrap.querySelector('.sg-reset')?.addEventListener('click', () => { state.selectedId = null; onChange(); });
+  wrap.querySelector('.sg-reset')?.addEventListener('click', () => { state.selectedId = null; state.zoom = 1; onChange(); });
+  wrap.querySelectorAll('.sg-zoom').forEach((b) => b.addEventListener('click', () => {
+    const dir = b.getAttribute('data-zoom');
+    state.zoom = Math.max(0.5, Math.min(3, (state.zoom || 1) * (dir === 'in' ? 1.3 : 1 / 1.3)));
+    onChange();
+  }));
   wrap.querySelectorAll('.sg-node').forEach((g) => {
     const id = g.getAttribute('data-node');
     const sel = () => { state.selectedId = state.selectedId === id ? null : id; onChange(); };
