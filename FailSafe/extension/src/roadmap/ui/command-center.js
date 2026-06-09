@@ -4,6 +4,7 @@ import { StateStore } from './modules/state.js';
 import { OverviewRenderer } from './modules/overview.js';
 import { OperationsRenderer } from './modules/operations.js';
 import { TransparencyRenderer } from './modules/transparency.js';
+import { ShadowGenomeRenderer } from './modules/shadow-genome.js';
 import { RisksRenderer } from './modules/risks.js';
 import { SkillsRenderer } from './modules/skills.js';
 import { GovernanceRenderer } from './modules/governance.js';
@@ -41,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
       { key: 'audit',      label: 'Audit Log',  renderer: new TransparencyRenderer('governance') },
       { key: 'risks',      label: 'Risks',      renderer: new RisksRenderer('governance', { client }) },
       { key: 'compliance', label: 'Compliance',  renderer: new GovernanceRenderer('governance', { client }) },
+      { key: 'shadow-genome', label: 'Shadow Genome', renderer: new ShadowGenomeRenderer('governance') },
     ]),
     workspace: new TabGroup('workspace', [
       { key: 'skills',     label: 'Skills',     renderer: new SkillsRenderer('workspace', { client }) },

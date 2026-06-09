@@ -2043,3 +2043,40 @@ select option {
 @media (prefers-reduced-motion: reduce) {
   .cc-origin-pill { transition: none; }
 }
+
+/* ===== Shadow Genome dashboard (#196 Phase 2) — token-only, Mythiq reference ===== */
+.sg-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.sg-title { font-family: var(--font-display); font-size: 1.15rem; font-weight: 700; color: var(--text-main); letter-spacing: 0.04em; }
+.sg-subtitle { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; max-width: 540px; }
+.sg-chip { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; padding: 4px 10px; border-radius: 12px; white-space: nowrap; }
+.sg-chip-live { color: var(--accent-green); background: color-mix(in srgb, var(--accent-green) 16%, transparent); border: 1px solid color-mix(in srgb, var(--accent-green) 40%, transparent); }
+.sg-chip-degraded { color: var(--accent-gold); background: color-mix(in srgb, var(--accent-gold) 14%, transparent); border: 1px solid color-mix(in srgb, var(--accent-gold) 38%, transparent); }
+.sg-summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 18px; }
+.sg-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 14px 16px; }
+.sg-card-num { font-family: var(--font-display); font-size: 1.7rem; font-weight: 700; line-height: 1.1; }
+.sg-card-label { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+.sg-pills { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.sg-pill { background: var(--bg-deep); border: 1px solid var(--border-rim); color: var(--text-muted); padding: 6px 14px; border-radius: 16px; font-size: 0.78rem; cursor: pointer; transition: all 0.15s ease; }
+.sg-pill:hover:not(.active) { border-color: var(--primary); color: var(--text-main); }
+.sg-pill.active { background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: 0 0 16px 0 var(--primary-glow); }
+.sg-mode-body { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.sg-panel { background: var(--bg-panel); border: 1px solid var(--border-rim); border-radius: 12px; padding: 16px; }
+.sg-panel-title { font-size: 0.82rem; font-weight: 600; color: var(--text-main); margin-bottom: 12px; }
+.sg-bar-row { display: grid; grid-template-columns: 96px 1fr 34px; align-items: center; gap: 10px; margin-bottom: 8px; }
+.sg-bar-label { font-size: 0.74rem; color: var(--text-muted); text-transform: capitalize; }
+.sg-bar { height: 8px; background: var(--bg-deep); border-radius: 5px; overflow: hidden; }
+.sg-bar-fill { display: block; height: 100%; background: linear-gradient(90deg, var(--accent-cyan), var(--primary)); border-radius: 5px; transition: width 0.3s ease; }
+.sg-bar-num { font-size: 0.74rem; color: var(--text-main); text-align: right; font-variant-numeric: tabular-nums; }
+.sg-surfaces { list-style: none; margin: 0; padding: 0; }
+.sg-surfaces li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border-rim); font-size: 0.78rem; color: var(--text-main); }
+.sg-surfaces li:last-child { border-bottom: none; }
+.sg-surface-meta { font-size: 0.72rem; color: var(--text-muted); }
+.sg-id { font-family: var(--font-body); font-size: 0.72rem; background: var(--bg-deep); padding: 2px 6px; border-radius: 5px; color: var(--accent-cyan); }
+.sg-id-fail { color: var(--accent-red); }
+.sg-muted { font-size: 0.8rem; color: var(--text-muted); padding: 8px 0; }
+.sg-note { font-size: 0.72rem; color: var(--text-muted); margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border-rim); font-style: italic; }
+.sg-empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 28px 20px; }
+.sg-empty-title { font-size: 0.98rem; font-weight: 600; color: var(--text-main); margin-bottom: 8px; }
+.sg-empty-msg { font-size: 0.82rem; color: var(--text-muted); max-width: 460px; line-height: 1.5; }
+@media (max-width: 900px) { .sg-summary { grid-template-columns: repeat(2, 1fr); } .sg-mode-body { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .sg-bar-fill, .sg-pill { transition: none; } }
