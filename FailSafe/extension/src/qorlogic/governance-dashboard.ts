@@ -21,6 +21,16 @@ export interface ProjectSurfaceSummary { id: string; label: string; failureCount
 export interface TrustTransitionSummary { from: string; to: string; direction: 'promotion' | 'demotion'; governanceNodeId: string; at: string }
 export interface FederationSummary { sourced: boolean; peers: never[]; note?: string }
 
+/** Severity derived from canonical recurrence only (no remediation signal in the graph yet). */
+export type IncidentSeverity = 'active' | 'repeated' | 'emerging';
+export interface IncidentSummary {
+  id: string;            // failure node id — the node/ledger reference
+  label: string;         // failure-mode label
+  recurrence: number;    // incident edges touching the failure node
+  severity: IncidentSeverity;
+  governanceRoots: { id: string; label: string }[]; // governance nodes applied to this failure
+}
+
 export interface GovernanceDashboardSummary {
   nodeCount: number;
   edgeCount: number;
@@ -37,6 +47,7 @@ export interface GovernanceDashboardResponse {
   typeDistribution: Record<string, number>;
   recentChains: GovernanceChainSummary[];
   projectSurfaces: ProjectSurfaceSummary[];
+  incidents: IncidentSummary[];
   trustTransitions: TrustTransitionSummary[];
   federation: FederationSummary;
 }
@@ -49,9 +60,32 @@ function zeroed(generatedAt: string): GovernanceDashboardResponse {
   return {
     generatedAt, enabled: false, degraded: true,
     summary: { nodeCount: 0, edgeCount: 0, unresolvedCount: 0, recurringPatternCount: 0, trustTransitionCount: 0 },
-    typeDistribution: {}, recentChains: [], projectSurfaces: [], trustTransitions: [],
+    typeDistribution: {}, recentChains: [], projectSurfaces: [], incidents: [], trustTransitions: [],
     federation: FEDERATION_UNSOURCED,
   };
+}
+
+function severityFor(recurrence: number): IncidentSeverity {
+  if (recurrence >= 3) return 'active';
+  if (recurrence >= 2) return 'repeated';
+  return 'emerging';
+}
+
+/** One incident per failure node: recurrence (incident edges) + the governance roots applied to it. */
+function deriveIncidents(sub: GenomeGraph): IncidentSummary[] {
+  const govLabel = new Map(sub.nodes.filter((n) => n.type === 'governance').map((n) => [n.id, n.label] as const));
+  return sub.nodes.filter((n) => n.type === 'failure').map((f) => {
+    const roots: { id: string; label: string }[] = [];
+    let recurrence = 0;
+    for (const e of sub.edges) {
+      const touches = e.source === f.id || e.target === f.id;
+      if (!touches) continue;
+      recurrence += 1;
+      const other = e.source === f.id ? e.target : e.source;
+      if (govLabel.has(other)) roots.push({ id: other, label: govLabel.get(other) as string });
+    }
+    return { id: f.id, label: f.label, recurrence, severity: severityFor(recurrence), governanceRoots: roots };
+  });
 }
 
 /** Direct governance→failure causal pairs in the subgraph (depth 1, canonical only). */
@@ -108,6 +142,7 @@ export function buildGovernanceDashboard(
     typeDistribution: sum.nodeTypes,
     recentChains: deriveChains(sub),
     projectSurfaces: deriveSurfaces(sub),
+    incidents: deriveIncidents(sub),
     trustTransitions: [],
     federation: FEDERATION_UNSOURCED,
   };

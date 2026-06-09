@@ -21,6 +21,10 @@ const DASHBOARD = {
   typeDistribution: { governance: 2, failure: 2 },
   recentChains: [{ rootId: "g1", failureId: "f1", depth: 1, nodeTypes: ["governance", "failure"] }],
   projectSurfaces: [{ id: "g1", label: "Governance: plan gate", failureCount: 2, unresolvedCount: 2 }],
+  incidents: [
+    { id: "f1", label: "Spec Drift", recurrence: 2, severity: "repeated", governanceRoots: [{ id: "g1", label: "Governance: plan gate" }, { id: "p1", label: "Governance: deploy gate" }] },
+    { id: "f2", label: "Authority Leak", recurrence: 1, severity: "emerging", governanceRoots: [{ id: "g1", label: "Governance: plan gate" }] },
+  ],
   trustTransitions: [],
   federation: { sourced: false, peers: [], note: "Federation peer status is not yet sourced." },
 };
@@ -28,9 +32,13 @@ const DASHBOARD = {
 const DEGRADED = {
   enabled: false, degraded: true,
   summary: { nodeCount: 0, edgeCount: 0, unresolvedCount: 0, recurringPatternCount: 0, trustTransitionCount: 0 },
-  typeDistribution: {}, recentChains: [], projectSurfaces: [], trustTransitions: [],
+  typeDistribution: {}, recentChains: [], projectSurfaces: [], incidents: [], trustTransitions: [],
   federation: { sourced: false, peers: [] },
 };
+
+async function openIncidents(page: import("@playwright/test").Page): Promise<void> {
+  await page.locator('#governance .sg-pill[data-mode="incidents"]').click();
+}
 
 async function gotoShadowGenome(page: import("@playwright/test").Page, url: string): Promise<void> {
   await page.goto(`${url}/command-center.html`);
@@ -61,6 +69,35 @@ test("mode switch — clicking Federation swaps the active mode body", async ({ 
   await page.locator('#governance .sg-pill[data-mode="federation"]').click();
   await expect(page.locator("#governance .sg-panel-title", { hasText: "Federation" })).toBeVisible();
   await expect(page.locator("#governance").getByText("not yet sourced")).toBeVisible();
+});
+
+test("Incidents mode — evidence ledger renders one row per incident", async ({ page }) => {
+  controller = await serveConsoleServerUI({});
+  await page.route("**/api/qor/governance-dashboard", (r) => r.fulfill({ json: DASHBOARD }));
+  await gotoShadowGenome(page, controller.url);
+  await openIncidents(page);
+
+  await expect(page.locator("#governance .sg-incident")).toHaveCount(2);
+  await expect(page.locator("#governance .sg-incident").first()).toContainText("Spec Drift");
+  await expect(page.locator("#governance .sg-incident").first()).toHaveClass(/sg-sev-repeated/);
+});
+
+test("incident row opens the case-file drawer; Locate in Genome returns to the map", async ({ page }) => {
+  controller = await serveConsoleServerUI({});
+  await page.route("**/api/qor/governance-dashboard", (r) => r.fulfill({ json: DASHBOARD }));
+  await gotoShadowGenome(page, controller.url);
+  await openIncidents(page);
+
+  await page.locator("#governance .sg-incident").first().click();
+  await expect(page.locator("#governance .sg-drawer")).toBeVisible();
+  await expect(page.locator("#governance .sg-drawer-title")).toHaveText("Spec Drift");
+  // the drawer shows the governance roots applied to this failure
+  await expect(page.locator("#governance .sg-drawer")).toContainText("Governance: deploy gate");
+  // honest "not yet sourced" for ungraphed fields
+  await expect(page.locator("#governance .sg-drawer")).toContainText("not yet sourced");
+
+  await page.locator("#governance .sg-locate").click();
+  await expect(page.locator("#governance .sg-panel-title", { hasText: "Node distribution" })).toBeVisible();
 });
 
 test("disabled loader → spec §14 degraded empty card", async ({ page }) => {

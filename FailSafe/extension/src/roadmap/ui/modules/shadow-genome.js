@@ -48,6 +48,7 @@ export class ShadowGenomeRenderer {
       this.renderModeTabs() +
       `<div class="sg-mode-body">${this.renderMode(d)}</div>`;
     this.bindModeSwitch();
+    this.bindMode();
   }
 
   async fetch() {
@@ -120,12 +121,46 @@ export class ShadowGenomeRenderer {
   }
 
   renderIncidents(d) {
-    const chains = (d.recentChains || []).map((c) =>
-      `<li><code class="sg-id">${esc(c.rootId)}</code> → <code class="sg-id sg-id-fail">${esc(c.failureId)}</code><span class="sg-surface-meta">depth ${esc(c.depth)}</span></li>`,
-    ).join('');
-    return `<div class="sg-panel"><div class="sg-panel-title">Recent governance → failure chains</div>
-      ${chains ? `<ul class="sg-surfaces">${chains}</ul>` : '<div class="sg-muted">No incidents recorded yet.</div>'}
-      <div class="sg-note">Per-incident detail, remediation, and the causal drawer arrive in a later phase.</div></div>`;
+    const items = d.incidents || [];
+    if (!items.length) {
+      return `<div class="sg-panel sg-incidents-wrap"><div class="sg-panel-title">Incident ledger</div><div class="sg-muted">No incidents recorded yet.</div></div>`;
+    }
+    const rows = items.map((i, idx) => {
+      const surfaces = (i.governanceRoots || []).map((g) => esc(g.label)).join(', ') || '—';
+      return `<button class="sg-incident sg-sev-${esc(i.severity)}" data-incident="${idx}" tabindex="0">
+        <span class="sg-sev-spine" aria-hidden="true"></span>
+        <span class="sg-incident-main"><span class="sg-incident-label">${esc(i.label)}</span><span class="sg-incident-surface">${surfaces}</span></span>
+        <span class="sg-incident-rec" title="recurrence">×${esc(i.recurrence)}</span>
+        <span class="sg-incident-sev">${esc(i.severity)}</span>
+        <span class="sg-incident-chev" aria-hidden="true">›</span>
+      </button>`;
+    }).join('');
+    return `<div class="sg-incidents-wrap">
+      <div class="sg-panel sg-incidents">
+        <div class="sg-panel-title">Incident ledger <span class="sg-count">${items.length}</span></div>
+        <div class="sg-incident-table" role="list" aria-label="Incident ledger">${rows}</div>
+        <div class="sg-note">Each row opens a case file. The structural map (Phase 4) and remediation/trust status (Phase 5) arrive later.</div>
+      </div>
+      <div class="sg-drawer" role="dialog" aria-label="Incident detail" hidden><div class="sg-drawer-body"></div></div>
+      <div class="sg-backdrop" hidden></div>
+    </div>`;
+  }
+
+  renderDrawerBody(i) {
+    const roots = (i.governanceRoots || []).length
+      ? `<ul class="sg-surfaces">${i.governanceRoots.map((g) => `<li><span class="sg-surface-label">${esc(g.label)}</span><code class="sg-id">${esc(g.id)}</code></li>`).join('')}</ul>`
+      : '<div class="sg-muted">No governance root recorded.</div>';
+    return `<div class="sg-drawer-head sg-sev-${esc(i.severity)}">
+        <span class="sg-sev-spine" aria-hidden="true"></span>
+        <div class="sg-drawer-headtext"><div class="sg-drawer-title">${esc(i.label)}</div><div class="sg-drawer-sub">${esc(i.severity)} · recurrence ×${esc(i.recurrence)}</div></div>
+        <button class="sg-drawer-close" aria-label="Close detail">✕</button>
+      </div>
+      <div class="sg-drawer-section"><div class="sg-drawer-h">What failed</div><div class="sg-drawer-p">${esc(i.label)} — a governed failure observed in the causal graph.</div></div>
+      <div class="sg-drawer-section"><div class="sg-drawer-h">Applies to (governance roots)</div>${roots}</div>
+      <div class="sg-drawer-section"><div class="sg-drawer-h">Recurrence</div><div class="sg-drawer-p">${esc(i.recurrence)} incident edge${i.recurrence === 1 ? '' : 's'} in the governance subgraph.</div></div>
+      <div class="sg-drawer-section"><div class="sg-drawer-h">Node / ledger id</div><code class="sg-id">${esc(i.id)}</code></div>
+      <div class="sg-drawer-section"><div class="sg-drawer-h">Remediation &amp; trust consequence</div><span class="sg-chip sg-chip-degraded">not yet sourced</span></div>
+      <button class="sg-locate" type="button">Locate in Genome &rarr;</button>`;
   }
 
   renderTrust() {
@@ -143,12 +178,39 @@ export class ShadowGenomeRenderer {
 
   bindModeSwitch() {
     this.container.querySelectorAll('.sg-pill').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        this.mode = btn.getAttribute('data-mode');
-        this.container.querySelectorAll('.sg-pill').forEach((b) => b.classList.toggle('active', b === btn));
-        const body = this.container.querySelector('.sg-mode-body');
-        if (body && this.data) body.innerHTML = this.renderMode(this.data);
+      btn.addEventListener('click', () => this.switchMode(btn.getAttribute('data-mode')));
+    });
+  }
+
+  switchMode(mode) {
+    this.mode = mode;
+    this.container.querySelectorAll('.sg-pill').forEach((b) => b.classList.toggle('active', b.getAttribute('data-mode') === mode));
+    const body = this.container.querySelector('.sg-mode-body');
+    if (body && this.data) { body.innerHTML = this.renderMode(this.data); this.bindMode(); }
+  }
+
+  bindMode() {
+    if (this.mode !== 'incidents') return;
+    const wrap = this.container.querySelector('.sg-incidents-wrap');
+    if (!wrap) return;
+    const drawer = wrap.querySelector('.sg-drawer');
+    const backdrop = wrap.querySelector('.sg-backdrop');
+    const close = () => { if (drawer) drawer.hidden = true; if (backdrop) backdrop.hidden = true; };
+    const open = (idx) => {
+      const i = (this.data.incidents || [])[idx];
+      if (!i || !drawer) return;
+      drawer.querySelector('.sg-drawer-body').innerHTML = this.renderDrawerBody(i);
+      drawer.hidden = false; if (backdrop) backdrop.hidden = false;
+      drawer.querySelector('.sg-drawer-close')?.addEventListener('click', close);
+      drawer.querySelector('.sg-locate')?.addEventListener('click', () => { close(); this.switchMode('map'); });
+    };
+    wrap.querySelectorAll('.sg-incident').forEach((row) => {
+      const idx = Number(row.getAttribute('data-incident'));
+      row.addEventListener('click', () => open(idx));
+      row.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(idx); }
       });
     });
+    backdrop?.addEventListener('click', close);
   }
 }

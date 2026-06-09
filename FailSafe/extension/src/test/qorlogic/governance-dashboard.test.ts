@@ -52,4 +52,25 @@ suite('buildGovernanceDashboard', () => {
     assert.equal(g1?.failureCount, 2);
     assert.equal(p1?.failureCount, 1);
   });
+
+  test('incidents: one per failure node with recurrence-derived severity + governance roots', () => {
+    const r = buildGovernanceDashboard({ ok: true, graph: FIXTURE_GENOME }, { generatedAt: AT });
+    assert.equal(r.incidents.length, 2);
+    const f1 = r.incidents.find((i) => i.id === 'f1');
+    const f2 = r.incidents.find((i) => i.id === 'f2');
+    // f1: 2 incident edges (g1, p1) → repeated; both governance roots
+    assert.equal(f1?.label, 'Spec Drift');
+    assert.equal(f1?.recurrence, 2);
+    assert.equal(f1?.severity, 'repeated');
+    assert.deepEqual(f1?.governanceRoots.map((g) => g.id).sort(), ['g1', 'p1']);
+    // f2: 1 incident edge (g1) → emerging
+    assert.equal(f2?.recurrence, 1);
+    assert.equal(f2?.severity, 'emerging');
+    assert.deepEqual(f2?.governanceRoots.map((g) => g.id), ['g1']);
+  });
+
+  test('degraded result → incidents empty', () => {
+    const r = buildGovernanceDashboard({ ok: true, localOnly: true }, { generatedAt: AT });
+    assert.deepEqual(r.incidents, []);
+  });
 });
