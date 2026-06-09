@@ -22470,12 +22470,12 @@ _Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`#
 _Chain integrity: VALID_
 _Session: 2026-06-04-deliver-v5.5.1_
 
-### Entry #420: DELIVER  v5.5.2 Integration UX (Catalog + live state + fixes)
+### Entry #420: DELIVER — v5.5.2 Integration UX (Catalog + live state + fixes)
 
 **Date**: 2026-06-04
-**Phase**: DELIVER (/qor-repo-release close-out; substantiation verified inline  Reality=Promise PASS)
-**Plan**: docs/research-brief-integration-installation-ux-2026-06-04.md (v5.5.2 patch  completes v5.5.0s integration delivery that shipped wired but invisible)
-**Branch**: `release/v5.5.2` � `main` (release PR, squash)
+**Phase**: DELIVER (/qor-repo-release close-out; substantiation verified inline — Reality=Promise PASS)
+**Plan**: docs/research-brief-integration-installation-ux-2026-06-04.md (v5.5.2 patch — completes v5.5.0’s integration delivery that shipped wired but invisible)
+**Branch**: `release/v5.5.2` → `main` (release PR, squash)
 **Author**: krknapp@gmail.com
 
 **Version**: 5.5.2
@@ -22484,39 +22484,39 @@ _Session: 2026-06-04-deliver-v5.5.1_
 
 ## Decision
 
-Release v5.5.2 delivered  Integration UX completion. Surfaces the command/config integrations that shipped wired in v5.5.0 but had no UI home, fixes the Bicameral team-mode setup hang, and hardens the Development Tracker. Merged to `main` via PRs #168 (#165) + #169 (#167/#166 + tracker), with prerequisite PR #164 (ledger #419) settling the chain first.
+Release v5.5.2 delivered — Integration UX completion. Surfaces the command/config integrations that shipped wired in v5.5.0 but had no UI home, fixes the Bicameral team-mode setup hang, and hardens the Development Tracker. Merged to `main` via PRs #168 (#165) + #169 (#167/#166 + tracker), with prerequisite PR #164 (ledger #419) settling the chain first.
 
 ## Scope
 
-- **#167 Integration Catalog**  Integrations-tab sub-view listing the 9 command/config integrations (Continue, Aider, OpenHands, Cline/Roo/Kilo, Linear, Jira, GitHub Checks, Sentry, Teams) + Slack, each with live enabled/configured state. Pure secret-safe registry (boolean-only host snapshot  tokens/keys/webhook URLs never leave the extension host). FX837FX839.
-- **#166 shared install-progress + Open Design live state**  extracted shared step-list component (Bicameral back-compat preserved); the Open Design card now probes live MCP connection state instead of a hard-coded placeholder. FX840/FX841.
-- **#165 Bicameral team-mode fix**  interactive Google Drive OAuth routed through the integrated terminal (the non-interactive spawn hung); added a per-step install timeout. FailSafe never touches the OAuth token.
-- **Tracker graceful degradation**  absent `docs/roadmap/programs.yaml` now returns 200 + `manifestPresent:false` + a non-blocking advisory (discovered releases still render) instead of a hard 503. FX842.
+- **#167 Integration Catalog** — Integrations-tab sub-view listing the 9 command/config integrations (Continue, Aider, OpenHands, Cline/Roo/Kilo, Linear, Jira, GitHub Checks, Sentry, Teams) + Slack, each with live enabled/configured state. Pure secret-safe registry (boolean-only host snapshot — tokens/keys/webhook URLs never leave the extension host). FX837–FX839.
+- **#166 shared install-progress + Open Design live state** — extracted shared step-list component (Bicameral back-compat preserved); the Open Design card now probes live MCP connection state instead of a hard-coded placeholder. FX840/FX841.
+- **#165 Bicameral team-mode fix** — interactive Google Drive OAuth routed through the integrated terminal (the non-interactive spawn hung); added a per-step install timeout. FailSafe never touches the OAuth token.
+- **Tracker graceful degradation** — absent `docs/roadmap/programs.yaml` now returns 200 + `manifestPresent:false` + a non-blocking advisory (discovered releases still render) instead of a hard 503. FX842.
 
 ## Verification
 
-Reality=Promise: 21 files, every planned surface present with its test + doc, no unplanned files. 25 unit tests + 4 Playwright (real ConsoleServer + Chromium: Catalog default/all-disabled/grouping/Configure�Settings; Open Design live probe) + 2 tracker-route tests. tsc 0 errors; eslint 0 new errors; 0 console.log; secret-safety asserted (boolean-only snapshot, non-leak tests). FEATURE_INDEX FX837FX842 verified.
+Reality=Promise: 21 files, every planned surface present with its test + doc, no unplanned files. 25 unit tests + 4 Playwright (real ConsoleServer + Chromium: Catalog default/all-disabled/grouping/Configure→Settings; Open Design live probe) + 2 tracker-route tests. tsc 0 errors; eslint 0 new errors; 0 console.log; secret-safety asserted (boolean-only snapshot, non-leak tests). FEATURE_INDEX FX837–FX842 verified.
 
 ## Governance note
 
-PRs #164/#168/#169 were merged via operator-explicitly-authorized `--admin` over the INTENTIONAL `code_scanning`/`code_quality` ruleset  a deliberate human-gate that exists to prevent silently publishing unfinished work; not to be configured away. Each merge carried fresh per-action authorization.
+PRs #164/#168/#169 were merged via operator-explicitly-authorized `--admin` over the INTENTIONAL `code_scanning`/`code_quality` ruleset — a deliberate human-gate that exists to prevent silently publishing unfinished work; not to be configured away. Each merge carried fresh per-action authorization.
 
 ## Phase 75 SKIP records
 
-Gate-chain artifacts absent (delivery cycle). Hash via Node 20 crypto SHA-256 over CRLF, matching #405#419.
+Gate-chain artifacts absent (delivery cycle). Hash via Node 20 crypto SHA-256 over CRLF, matching #405–#419.
 
 ## Next operator actions
 
 Tag `v5.5.2` on `main` after the release PR merges; push the tag to trigger the pipeline; approve the `production` gate for the dual-marketplace (VS Code Marketplace + Open VSX) publish.
 ## Content Hash
 
-**Content Hash**: `74f3e0be835847123aeefacad35cb8c05d51c9d684f700895facfc1c9d2f226d`
+**Content Hash**: `bf3157578b300c581b47c8081fd6bf5bbf530f9340a35d964744e45d5083c8a5`
 **Previous Hash**: `3f4b2d9b6d220f01966123656c7c4c66e459de319815d0f2587002d201b4db6e` (Entry #419 Chain Hash)
-**Chain Hash**: `fb0411c78d4403b7cd5d2983f02690c88decf26675a85b34397cb871f193bf8f`
-**Merkle Seal**: `85373f4c033f3fe59db9a0dcfa322856d9188635a121487fa829615d0ac429c9`  gate_seal_deliver_v5_5_2
+**Chain Hash**: `d4e7cebbf10dab032b2a753f15dd1a6290946c78070bd267a0f7cbe0119a43b9`
+**Merkle Seal**: `bc53f2b8e875fe3eddbb39e25e640498df8df0dd3a0395bbd15d930e3e3e42d6` — gate_seal_deliver_v5_5_2
 **Session ID**: `2026-06-04-deliver-v5.5.2`
 
-_Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`### Entry #420`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Computed via Node 20 crypto SHA-256 over CRLF line endings (Phase 75 skip  gate-chain artifacts absent; same posture as #405#419).
+_Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`### Entry #420`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Computed via Node 20 crypto SHA-256 over CRLF line endings (Phase 75 skip — gate-chain artifacts absent; same posture as #405–#419).
 
 ---
 
@@ -22592,9 +22592,9 @@ Hash via Python hashlib SHA-256 over CRLF; ASCII-only body (no new cp1252 bytes)
 ## Content Hash
 
 **Content Hash**: `0ea7c3cce8de33ef8cf9ad41539db7224f5f743b80d8489c06a64bdf4644e912`
-**Previous Hash**: `fb0411c78d4403b7cd5d2983f02690c88decf26675a85b34397cb871f193bf8f` (Entry #420 Chain Hash)
-**Chain Hash**: `ad66cddf67a2ea7588813bde0ef1eda4579f0fcb127bd4a6620b419d97418f36`
-**Merkle Seal**: `75581f0c16ea9cfac3c67fcf5eaaeca2b347978f69dea8edc6ef13c5a6159c5b`  gate_seal_substantiate_acp_enforce_proxy
+**Previous Hash**: `d4e7cebbf10dab032b2a753f15dd1a6290946c78070bd267a0f7cbe0119a43b9` (Entry #420 Chain Hash)
+**Chain Hash**: `787703a3e0556dc4ae094506a461b8223c1752c7cf94351cbf91c3d6c6835dd5`
+**Merkle Seal**: `bebffb6f76f8472a24fcabcc9fb76a5c79bc3595c6a51d09367a16682b6d0522`  gate_seal_substantiate_acp_enforce_proxy
 **Session ID**: `2026-06-04-substantiate-acp-enforce-proxy`
 
 _Hash provenance_: Content Hash = SHA256 of this entry body text from line 1 (`### Entry #421`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Computed via Python hashlib SHA-256 over CRLF line endings; ASCII-only body. Phase 75 skip - gate-chain artifacts absent; same posture as #405-#420.
@@ -22651,9 +22651,9 @@ ASCII-only body. Same posture as #405-#421.
 ## Content Hash
 
 **Content Hash**: `2942cdfe73b2f256b6e1ee5e6a6c07a1b30f50487e19af911d3843f3118430bf`
-**Previous Hash**: `ad66cddf67a2ea7588813bde0ef1eda4579f0fcb127bd4a6620b419d97418f36` (Entry #421 Chain Hash)
-**Chain Hash**: `13cc3885e3fa1f67ccceb5e3c843e97a72f136ede84310d555170b2463fe9091`
-**Merkle Seal**: `a711c876cbaf9ecf2bc77d02d7ba8a04154e9d28a923714410ca650b21e397c6`  gate_seal_deliver_v5_6_0
+**Previous Hash**: `787703a3e0556dc4ae094506a461b8223c1752c7cf94351cbf91c3d6c6835dd5` (Entry #421 Chain Hash)
+**Chain Hash**: `94d18d035a5068702a2521ded174424c4fde9e30a93ae63a1056277fbc41a4eb`
+**Merkle Seal**: `2ad8b09f4f048b3e33f392a0fed2a7403cbd4af03d616fa0c5e5e84ecb154f70`  gate_seal_deliver_v5_6_0
 **Session ID**: `2026-06-04-deliver-v5.6.0`
 
 _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #422`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; ASCII-only body. Phase 75 skip; same posture as #405-#421.
@@ -22732,9 +22732,9 @@ posture as #405-#422). Hash via Python hashlib SHA-256 over CRLF; cp1252 body.
 ## Content Hash
 
 **Content Hash**: `fea194057f91398696f2f48425e4bbc13e4ade7aad3399cb94a5346f62dc947a`
-**Previous Hash**: `13cc3885e3fa1f67ccceb5e3c843e97a72f136ede84310d555170b2463fe9091` (Entry #422 Chain Hash)
-**Chain Hash**: `f2c4099c9ac041c421afef23f442a6c70ff898fda61ff7508da9218512c5752f`
-**Merkle Seal**: `6924f4d4aa2d27dc8db8f8584c571b2acde8be6d8cdc73bb44c9fa455bec0c5e`  gate_seal_substantiate_tracker_generator
+**Previous Hash**: `94d18d035a5068702a2521ded174424c4fde9e30a93ae63a1056277fbc41a4eb` (Entry #422 Chain Hash)
+**Chain Hash**: `39fc9cfc9d520297d53a7e6e91a6bd492e796b46426e6849d2850971804b623f`
+**Merkle Seal**: `37fd23e03d6d28a477b03287cd94b035fc0d99bdfe1cf932f549f2aa84b3c341`  gate_seal_substantiate_tracker_generator
 **Session ID**: `2026-06-05-substantiate-tracker-generator`
 
 _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #423`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#422.
@@ -22792,9 +22792,9 @@ body. Same posture as #405-#423.
 ## Content Hash
 
 **Content Hash**: `3fdf502dd719d601dddb56dafe77eb2983929819010a3a73ebac28e02ea705e8`
-**Previous Hash**: `f2c4099c9ac041c421afef23f442a6c70ff898fda61ff7508da9218512c5752f` (Entry #423 Chain Hash)
-**Chain Hash**: `726b244d20134821bfaa575071b5dd3b9984f23323eac4d1dbdd663f4aa328b3`
-**Merkle Seal**: `9f7c15573594ef5ae5694a6d6d2e823ba7f9f90d0587995c30bf1df38cdcd2b2`  gate_seal_deliver_v5_6_1
+**Previous Hash**: `39fc9cfc9d520297d53a7e6e91a6bd492e796b46426e6849d2850971804b623f` (Entry #423 Chain Hash)
+**Chain Hash**: `f9f03c1ef21538c1160e4685fd9461180783cb1b2f6c6f8d3eec1677fa833757`
+**Merkle Seal**: `42ed5fce1c6d12de75043aebad48a284e2173f41c005225299a3466418f1845c`  gate_seal_deliver_v5_6_1
 **Session ID**: `2026-06-05-deliver-v5.6.1`
 
 _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #424`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#423.
@@ -22858,9 +22858,9 @@ SHA-256 over CRLF; cp1252 body. Same posture as #405-#424.
 ## Content Hash
 
 **Content Hash**: `5313b46e9ece368bd22a5bbce6c0f502a0ef2b7b5d64ff727baf17c985f3d428`
-**Previous Hash**: `726b244d20134821bfaa575071b5dd3b9984f23323eac4d1dbdd663f4aa328b3` (Entry #424 Chain Hash)
-**Chain Hash**: `9b7b64b50546d34780d941615fddaa30c971c1245d045aab3cb89024b8f94962`
-**Merkle Seal**: `ace226180b144fb0c98d8dff1b1abefb44c9ee069861d7abe4523e7167007c21`  gate_seal_substantiate_tracker_loading_freshness
+**Previous Hash**: `f9f03c1ef21538c1160e4685fd9461180783cb1b2f6c6f8d3eec1677fa833757` (Entry #424 Chain Hash)
+**Chain Hash**: `4279c1c43c91624d6bcb2ccab4a57a54865982c5d75e58eb3471b9fb2731cde9`
+**Merkle Seal**: `430f505054fc6d1e19140e333b6198f25853efdf92cc5d3477edb00909b4668e`  gate_seal_substantiate_tracker_loading_freshness
 **Session ID**: `2026-06-06-substantiate-tracker-loading-freshness`
 
 _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #425`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#424.
@@ -22910,9 +22910,9 @@ body. Same posture as #405-#425.
 ## Content Hash
 
 **Content Hash**: `7517498d4da989d4f13afb112d1387b5fbd05248bfb2038922e7f5b35225e13b`
-**Previous Hash**: `9b7b64b50546d34780d941615fddaa30c971c1245d045aab3cb89024b8f94962` (Entry #425 Chain Hash)
-**Chain Hash**: `d64d9b9b55f0fb4a9c04257e08008458e6d6012277afafdb1f8f49b85858dac4`
-**Merkle Seal**: `36201bc8a391ccfaed0283269af79f4670897cd9f492eb011615e5aa5d06c310`  gate_seal_deliver_v5_6_2
+**Previous Hash**: `4279c1c43c91624d6bcb2ccab4a57a54865982c5d75e58eb3471b9fb2731cde9` (Entry #425 Chain Hash)
+**Chain Hash**: `bca2baeffb2a4c61292aea2af3474a342b76e640e01053c408a629a36265a645`
+**Merkle Seal**: `448d2b77c3fa467637bfdfac6ae84114d7426f739f30ed1b6d50755e7d2a88be`  gate_seal_deliver_v5_6_2
 **Session ID**: `2026-06-06-deliver-v5.6.2`
 
 _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #426`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#425.
@@ -22980,9 +22980,9 @@ SHA-256 over CRLF; cp1252 body. Same posture as #405-#426.
 ## Content Hash
 
 **Content Hash**: `aa3f8cf0f4474a11d780c76bef932c1228a01b974f5abcc3a6fd42e41a20afc3`
-**Previous Hash**: `d64d9b9b55f0fb4a9c04257e08008458e6d6012277afafdb1f8f49b85858dac4` (Entry #426 Chain Hash)
-**Chain Hash**: `36ec958e57b945c2df3f5c97d1227f049e1a3c3166b59c775c21c46dc3b3908f`
-**Merkle Seal**: `9daba5061f62b208f641d0c73ef09f921ac92f9fb809cb9f0268bb447952eb71`  gate_seal_substantiate_pr_linkage_governance
+**Previous Hash**: `bca2baeffb2a4c61292aea2af3474a342b76e640e01053c408a629a36265a645` (Entry #426 Chain Hash)
+**Chain Hash**: `bd7a621add973e1d321aa3ff3c30e26a99593aea8d989a16a3b044afb36c692d`
+**Merkle Seal**: `ed2f30dd9d116b88c0d1fd39f9514a49bcd483b241a84299571396eba48fd477`  gate_seal_substantiate_pr_linkage_governance
 **Session ID**: `2026-06-06-substantiate-pr-linkage-governance`
 
 _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #427`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#426.
@@ -23051,9 +23051,9 @@ SHA-256 over CRLF; cp1252 body. Same posture as #405-#427.
 ## Content Hash
 
 **Content Hash**: `efc49fcdf4722147459653ac9642e698a388181633f95c0b6a556d631461303d`
-**Previous Hash**: `36ec958e57b945c2df3f5c97d1227f049e1a3c3166b59c775c21c46dc3b3908f` (Entry #427 Chain Hash)
-**Chain Hash**: `15a6cae3630df73bbaf483f2868a3b5ff2d1e6d45422b8957dce5be69eca1b69`
-**Merkle Seal**: `470b6355981adbfa10ea75ab3e72ff823cb900a7f79b511c44892bdbbe634f24`  gate_seal_substantiate_governance_projection
+**Previous Hash**: `bd7a621add973e1d321aa3ff3c30e26a99593aea8d989a16a3b044afb36c692d` (Entry #427 Chain Hash)
+**Chain Hash**: `de30c6fadda8e97bb190726acb4032d2446982bf2633211ec33551d08578df0a`
+**Merkle Seal**: `4bf61bb3fc7cf61034c8785c8b6b1e80027352493a990acbfe24e4f6a3d1eead`  gate_seal_substantiate_governance_projection
 **Session ID**: `2026-06-06-substantiate-governance-projection`
 
 _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #428`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#427.
@@ -23124,9 +23124,9 @@ Hash via Python hashlib SHA-256 over CRLF; cp1252 body. Same posture as #405-#42
 ## Content Hash
 
 **Content Hash**: `032b04666ca113dc025ba355335afcace40920b5699a08bd7904e8cbfa98dde6`
-**Previous Hash**: `15a6cae3630df73bbaf483f2868a3b5ff2d1e6d45422b8957dce5be69eca1b69` (Entry #428 Chain Hash)
-**Chain Hash**: `b36343195451d6aab3b8a486fc43805df83eb0bb95837467363e6c314b3d8fe9`
-**Merkle Seal**: `1bbd3013cededb2138d3f7d036329f0c86e80d0ba01de1d15d050c091d426608`  gate_seal_substantiate_shadow_genome_client
+**Previous Hash**: `de30c6fadda8e97bb190726acb4032d2446982bf2633211ec33551d08578df0a` (Entry #428 Chain Hash)
+**Chain Hash**: `b779a057d11553a3000b29ae6e7917d5d93f2bebf7059acbdf615f35b03fafbc`
+**Merkle Seal**: `34e798823dcb4103204c62c0e80b52e9f1a43d7813f92ca89ae40685d1d1ef8b`  gate_seal_substantiate_shadow_genome_client
 **Session ID**: `2026-06-06-substantiate-shadow-genome-client`
 
 _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #429`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#428.
@@ -23187,9 +23187,9 @@ Hash via Python hashlib SHA-256 over CRLF; cp1252 body. Same posture as #405-#42
 ## Content Hash
 
 **Content Hash**: `3b5feb8e3ccae4b7f6acc8a2c8cf903cc8a16503c427594a781d382e2e304bc4`
-**Previous Hash**: `b36343195451d6aab3b8a486fc43805df83eb0bb95837467363e6c314b3d8fe9` (Entry #429 Chain Hash)
-**Chain Hash**: `a1a470c88cff7d0d8bb05f2eaf8b0064f2a9d4acfd7869df4e4bfb895e65d025`
-**Merkle Seal**: `30efc8718f005f44dee0ecc1e8175286b8809a6015da0c4df1fe151d28326bf9`  gate_seal_substantiate_pr_linkage_publish
+**Previous Hash**: `b779a057d11553a3000b29ae6e7917d5d93f2bebf7059acbdf615f35b03fafbc` (Entry #429 Chain Hash)
+**Chain Hash**: `bccd95a71c0dc63ad9d64e61ae902272290a08eb2b1fb272954920ff055ac900`
+**Merkle Seal**: `4065565251fed59050841ccbd5c1ad267d83425b097b0f0020255c4afe646ecc`  gate_seal_substantiate_pr_linkage_publish
 **Session ID**: `2026-06-06-substantiate-pr-linkage-publish`
 
 _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #430`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#429.
@@ -23248,9 +23248,9 @@ body. Same posture as #405-#430.
 ## Content Hash
 
 **Content Hash**: `64fb1bc9f57d8d3fe2f6eec9e956a6f518d1384e9fc635e852ab1d9de50e3224`
-**Previous Hash**: `a1a470c88cff7d0d8bb05f2eaf8b0064f2a9d4acfd7869df4e4bfb895e65d025` (Entry #430 Chain Hash)
-**Chain Hash**: `760886ac74aacc11443c8c2efdfef7f0cc64c15f0304498ebf5b9bcc3964e3f1`
-**Merkle Seal**: `a75b6f9f1c3f4f4fa4abe39be0292eacace41fe08b86f7590085b1e465b55a0f`  gate_seal_deliver_v5_6_3
+**Previous Hash**: `bccd95a71c0dc63ad9d64e61ae902272290a08eb2b1fb272954920ff055ac900` (Entry #430 Chain Hash)
+**Chain Hash**: `a2850743e1ebeaa44de813cf17791a3c818a2ffa4911c5ea2c45b17aa9871ed1`
+**Merkle Seal**: `3fe638852cbaf972833c3b15b893125fbf82d81076dd0d411adfc70e23faee32`  gate_seal_deliver_v5_6_3
 **Session ID**: `2026-06-06-deliver-v5.6.3`
 
 _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #431`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#430.
@@ -23317,9 +23317,9 @@ Hash via Python hashlib SHA-256 over CRLF; cp1252 body. Same posture as #405-#43
 ## Content Hash
 
 **Content Hash**: `ca7bd4eac09f9c7ba760bf34a3471f7c696a2f07a8738571f71a91f2f5a5474e`
-**Previous Hash**: `760886ac74aacc11443c8c2efdfef7f0cc64c15f0304498ebf5b9bcc3964e3f1` (Entry #431 Chain Hash)
-**Chain Hash**: `481edef342a51fae185abd5376b6b85097273eb787507bb8382a5686e96e7328`
-**Merkle Seal**: `05e8f36f355cc61711b7d1bfca77935b1840006df3e78ac93081ef1ff82ef949`  gate_seal_substantiate_governance_sidecar
+**Previous Hash**: `a2850743e1ebeaa44de813cf17791a3c818a2ffa4911c5ea2c45b17aa9871ed1` (Entry #431 Chain Hash)
+**Chain Hash**: `3839e940c994657b608d9c38acb8d699dd3550d79d80b7943307b113e5288b9a`
+**Merkle Seal**: `ddf052cd552bce27f616621d58d95544e27b4c4356a3a73bfc406c61def069fe`  gate_seal_substantiate_governance_sidecar
 **Session ID**: `2026-06-06-substantiate-governance-sidecar`
 
 _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #432`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#431.
@@ -23384,9 +23384,9 @@ Hash via Python hashlib SHA-256 over CRLF; cp1252 body. Same posture as #405-#43
 ## Content Hash
 
 **Content Hash**: `de26ed8a183d523eb7720ffab0e4b51e1198f7220ab3cec86f55e913644afbdb`
-**Previous Hash**: `481edef342a51fae185abd5376b6b85097273eb787507bb8382a5686e96e7328` (Entry #432 Chain Hash)
-**Chain Hash**: `e5f755d9564eae89967a1f2c1c80ca83614d66dcfe58a34818e9aacaae81d55c`
-**Merkle Seal**: `9295894173243abc07a40ac5d5b6841a0f50257a23192e7bbeb5562ae16f3ee2`  gate_seal_substantiate_plans_projection
+**Previous Hash**: `3839e940c994657b608d9c38acb8d699dd3550d79d80b7943307b113e5288b9a` (Entry #432 Chain Hash)
+**Chain Hash**: `dc83802c283220db7a370525dd4124c52c3a64825e8fcd9688b5dfc9a24b1771`
+**Merkle Seal**: `d252536f7b3d4b789dd8ce93a22924cc39944d8423445aa21ee83a270989fddd`  gate_seal_substantiate_plans_projection
 **Session ID**: `2026-06-08-substantiate-plans-projection`
 
 _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #433`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#432.
@@ -23454,9 +23454,9 @@ Hash via Python hashlib SHA-256 over CRLF; cp1252 body. Same posture as #405-#43
 ## Content Hash
 
 **Content Hash**: `183cef7cb1320d8624caaaae8a082bc6a0dbde2da037473a6b8d0822fe5c1bdc`
-**Previous Hash**: `e5f755d9564eae89967a1f2c1c80ca83614d66dcfe58a34818e9aacaae81d55c` (Entry #433 Chain Hash)
-**Chain Hash**: `c0efbbe1e31371c7cfa5add64e07799b337c1c3158f4be8b8dbe8df031bcfd84`
-**Merkle Seal**: `5c4bbd6b3c178ae83b3da4b93e852412811269a0774d3f57d1a447e67557bed2`  gate_seal_substantiate_tracker_projection_consume
+**Previous Hash**: `dc83802c283220db7a370525dd4124c52c3a64825e8fcd9688b5dfc9a24b1771` (Entry #433 Chain Hash)
+**Chain Hash**: `bd7e1187f0939fb3be71f4054d83c2d5c85f1eea06573900460283bf7b980982`
+**Merkle Seal**: `4c4157b4ad8a6678cb45c5744389b3674f98a8cc7d1076c7adfb6a2406ac8b11`  gate_seal_substantiate_tracker_projection_consume
 **Session ID**: `2026-06-08-substantiate-tracker-projection-consume`
 
 _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #434`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#433.
@@ -23524,9 +23524,9 @@ Hash via Python hashlib SHA-256 over CRLF; cp1252 body. Same posture as #405-#43
 ## Content Hash
 
 **Content Hash**: `4f8bf639149433cb0e99a58861efe19292212d0f8f6a6bf4926639281f760ace`
-**Previous Hash**: `c0efbbe1e31371c7cfa5add64e07799b337c1c3158f4be8b8dbe8df031bcfd84` (Entry #434 Chain Hash)
-**Chain Hash**: `0707a8d575dd353f0bdb7d4842f6ad062bafcea82ef486016373296fd6b3ed56`
-**Merkle Seal**: `069d234c7aa1c618f152e9b66995ac249eed69f61ac1fcdc6c6b37f1425fbf94`  gate_seal_substantiate_verticals_console_spine
+**Previous Hash**: `bd7e1187f0939fb3be71f4054d83c2d5c85f1eea06573900460283bf7b980982` (Entry #434 Chain Hash)
+**Chain Hash**: `35585ac1d0d3ca59e0ed0d86a8ebce82998c608fe237dca30974d02b136cbc47`
+**Merkle Seal**: `a37b6dadea2c7f0f969ebd11ab9d06e9f2961ceef9467e55eaad87c592b3987f`  gate_seal_substantiate_verticals_console_spine
 **Session ID**: `2026-06-08-substantiate-verticals-console-spine`
 
 _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #435`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#434.
@@ -23603,9 +23603,9 @@ Hash via Python hashlib SHA-256 over CRLF; cp1252 body. Same posture as #405-#43
 ## Content Hash
 
 **Content Hash**: `085daa5fec890cb9d71585ee55ca0a8ad38d58ee8f52b7a3b45b8730589db06a`
-**Previous Hash**: `0707a8d575dd353f0bdb7d4842f6ad062bafcea82ef486016373296fd6b3ed56` (Entry #435 Chain Hash)
-**Chain Hash**: `b6b5b761c946e8d39c9ee93a0e3ac10078ec2ca536ae893181675d4e78e93e88`
-**Merkle Seal**: `026edd4fca881cc340d1d8a13ad03e07da1f12564a17cda230cf0d5958db6e4d`  gate_seal_substantiate_tracker_live_accuracy
+**Previous Hash**: `35585ac1d0d3ca59e0ed0d86a8ebce82998c608fe237dca30974d02b136cbc47` (Entry #435 Chain Hash)
+**Chain Hash**: `2945f2e3b748a3200ad675d5f4bc21f839501c8fa0d5762b5d4061ec66c4632e`
+**Merkle Seal**: `85b6f2c137690c25ba17274e7bbc4c536e80f975634ce002e3ec469572f6ed1f`  gate_seal_substantiate_tracker_live_accuracy
 **Session ID**: `2026-06-08-substantiate-tracker-live-accuracy`
 
 _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #436`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#435.
@@ -23683,9 +23683,9 @@ posture as #405-#436.
 ## Content Hash
 
 **Content Hash**: `5d29f19f386cd22c02c64d2e5c30cf0239d41b75978f4b0570a623741372942b`
-**Previous Hash**: `b6b5b761c946e8d39c9ee93a0e3ac10078ec2ca536ae893181675d4e78e93e88` (Entry #436 Chain Hash)
-**Chain Hash**: `9013685dee5df16ba068ba3937f5481db49f14633bfcdcd949f2fd5fa0b1e38b`
-**Merkle Seal**: `75f20508b6f919081be7046b5d3aa2bd02f88360533ef83b8c16342cd20f3d81`  gate_seal_substantiate_feature_index_surface
+**Previous Hash**: `2945f2e3b748a3200ad675d5f4bc21f839501c8fa0d5762b5d4061ec66c4632e` (Entry #436 Chain Hash)
+**Chain Hash**: `3579dad60ed80d1ac21c84a0eb992240fb07452bfb05ec1910acf61fcd29495d`
+**Merkle Seal**: `eaab43a81b1d252f4a89aa9d653c8f46b476613c5ecdea5c61f5b253a6aaa851`  gate_seal_substantiate_feature_index_surface
 **Session ID**: `2026-06-08-substantiate-feature-index-surface`
 
 _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #437`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#436.
@@ -23757,9 +23757,9 @@ Python hashlib SHA-256 over CRLF; cp1252 body. Same posture as #405-#437.
 ## Content Hash
 
 **Content Hash**: `b9b18a13e1f35a500c6c6472bc9d8877f51640522bc84486a52fbad69271638b`
-**Previous Hash**: `9013685dee5df16ba068ba3937f5481db49f14633bfcdcd949f2fd5fa0b1e38b` (Entry #437 Chain Hash)
-**Chain Hash**: `40400a0c97d4e3ef58e689e7f24479866a3d80270b3127709252eedc89872018`
-**Merkle Seal**: `ecdb5349a0f7e684b30320feb5d07be3aab11fe766c46fba8146c0b2434dd048`  gate_seal_substantiate_tracker_visual_202
+**Previous Hash**: `3579dad60ed80d1ac21c84a0eb992240fb07452bfb05ec1910acf61fcd29495d` (Entry #437 Chain Hash)
+**Chain Hash**: `f60b79d6d3751997dba7558204af5e34eea670e2bad82274226a7b4242acc76c`
+**Merkle Seal**: `bff1d7e31c53fa44a6a9b73f9d2ff2dca74e5c036b7fe84667689dc3caff1e05`  gate_seal_substantiate_tracker_visual_202
 **Session ID**: `2026-06-08-substantiate-tracker-visual-202`
 
 _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #438`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#437.
@@ -23829,9 +23829,9 @@ SHA-256 over CRLF; cp1252 body. Same posture as #405-#438.
 ## Content Hash
 
 **Content Hash**: `fa632e2a8244dfa86a3a6b7d484128996db2fbe532d56d505d6b984457407a52`
-**Previous Hash**: `40400a0c97d4e3ef58e689e7f24479866a3d80270b3127709252eedc89872018` (Entry #438 Chain Hash)
-**Chain Hash**: `7923ef2eaee02d570e1478be996c975cec1de7fbd272e9fd1c7f7e551c707165`
-**Merkle Seal**: `497172085c7197ff6970005d8466c3ab622e412fea6d9a81fb4b5c95956a5d85`  gate_seal_substantiate_release_readiness_consolidation
+**Previous Hash**: `f60b79d6d3751997dba7558204af5e34eea670e2bad82274226a7b4242acc76c` (Entry #438 Chain Hash)
+**Chain Hash**: `3c600268aece4f0614cec946b3df44d42b6dd4b830cd74c617802300cdc59e58`
+**Merkle Seal**: `5a6a43fe124cecf5adb335cb9ca77ae0ad92f8332bd0e71487108f35e0c96a2b`  gate_seal_substantiate_release_readiness_consolidation
 **Session ID**: `2026-06-08-substantiate-release-readiness`
 
 _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #439`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#438.
@@ -23840,3 +23840,93 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 _Chain integrity: VALID_
 _Session: 2026-06-08-substantiate-release-readiness_
+
+### Entry #440: CHAIN REPAIR - Entry #420 UTF-8 restoration + re-chain #420..#439
+
+**Date**: 2026-06-09
+**Phase**: REMEDIATE (/qor-remediate; operator-authorized chain repair)
+**Author**: krknapp@gmail.com
+
+## Decision
+
+Entry #420 (DELIVER v5.5.2) was sealed with 19 codepoint-truncated punctuation bytes
+(em-dash U+2014->0x14 x12, en-dash U+2013->0x13 x4, right-quote U+2019->0x19 x1,
+arrow U+2192->0x92 x2). The two 0x92 bytes are invalid UTF-8, which blocked the entire
+governance toolchain (governance-health/validate/index) from reading the ledger.
+
+Proven via hash oracle: SHA-256 of #420's CORRUPTED body equals its stored Content Hash
+74f3e0be... while the restored-punctuation body does not -- i.e. the corruption predated
+the seal and was load-bearing in it. Making the file valid UTF-8 therefore required
+recomputing #420's seal and re-chaining all downstream entries.
+
+## Action
+
+Restored the 19 bytes in #420 to proper UTF-8. Recomputed #420 Content/Chain/Merkle Seal.
+Cascade-recomputed Previous/Chain/Merkle Seal for #421..#439 (their bodies are byte-identical;
+only chain linkage changed). Bodies of #421..#439 Content Hashes are unchanged. Original file
+preserved at docs/META_LEDGER.md.pre-chain-repair.bak. Operator-authorized 2026-06-09.
+
+## Old -> New (Chain Hash / Merkle Seal)
+
+- #420 chain fb0411c78d44 -> d4e7cebbf10d
+       seal  85373f4c033f -> bc53f2b8e875
+- #421 chain ad66cddf67a2 -> 787703a3e055
+       seal  75581f0c16ea -> bebffb6f76f8
+- #422 chain 13cc3885e3fa -> 94d18d035a50
+       seal  a711c876cbaf -> 2ad8b09f4f04
+- #423 chain f2c4099c9ac0 -> 39fc9cfc9d52
+       seal  6924f4d4aa2d -> 37fd23e03d6d
+- #424 chain 726b244d2013 -> f9f03c1ef215
+       seal  9f7c15573594 -> 42ed5fce1c6d
+- #425 chain 9b7b64b50546 -> 4279c1c43c91
+       seal  ace226180b14 -> 430f505054fc
+- #426 chain d64d9b9b55f0 -> bca2baeffb2a
+       seal  36201bc8a391 -> 448d2b77c3fa
+- #427 chain 36ec958e57b9 -> bd7a621add97
+       seal  9daba5061f62 -> ed2f30dd9d11
+- #428 chain 15a6cae3630d -> de30c6fadda8
+       seal  470b6355981a -> 4bf61bb3fc7c
+- #429 chain b36343195451 -> b779a057d115
+       seal  1bbd3013cede -> 34e798823dcb
+- #430 chain a1a470c88cff -> bccd95a71c0d
+       seal  30efc8718f00 -> 4065565251fe
+- #431 chain 760886ac74aa -> a2850743e1eb
+       seal  a75b6f9f1c3f -> 3fe638852cba
+- #432 chain 481edef342a5 -> 3839e940c994
+       seal  05e8f36f355c -> ddf052cd552b
+- #433 chain e5f755d9564e -> dc83802c2832
+       seal  929589417324 -> d252536f7b3d
+- #434 chain c0efbbe1e313 -> bd7e1187f093
+       seal  5c4bbd6b3c17 -> 4c4157b4ad8a
+- #435 chain 0707a8d575dd -> 35585ac1d0d3
+       seal  069d234c7aa1 -> a37b6dadea2c
+- #436 chain b6b5b761c946 -> 2945f2e3b748
+       seal  026edd4fca88 -> 85b6f2c13769
+- #437 chain 9013685dee5d -> 3579dad60ed8
+       seal  75f20508b6f9 -> eaab43a81b1d
+- #438 chain 40400a0c97d4 -> f60b79d6d375
+       seal  ecdb5349a0f7 -> bff1d7e31c53
+- #439 chain 7923ef2eaee0 -> 3c600268aece
+       seal  497172085c71 -> 5a6a43fe124c
+
+#420 Content 74f3e0be8358 -> bf3157578b30
+
+## Next operator actions
+
+Re-run /qor-validate to confirm the chain over valid UTF-8. Separately: complete docs/SHADOW_GENOME.md
+(INCOMPLETE/TODO) and adopt the seal-step UTF-8 validity gate (process remediation).
+
+## Content Hash
+
+**Content Hash**: `a0bf6b4ed4b4014b4b2da4024974c30699caebf0acabc555c6b7b53350e5e86f`
+**Previous Hash**: `3c600268aece4f0614cec946b3df44d42b6dd4b830cd74c617802300cdc59e58` (Entry #439 Chain Hash)
+**Chain Hash**: `6b8697d1cc5ba45d51cb837c8b67e5089b73e96f620baff5bbf5e4becaabd784`
+**Merkle Seal**: `f17426b1c273dde599be5b6823d0224162cd55a27160a5e64185e696a8e7d64f` -- gate_seal_chain_repair_420
+**Session ID**: `2026-06-09-chain-repair-420`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #440`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). .NET SHA-256 over CRLF; ASCII body.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-06-09-chain-repair-420_
