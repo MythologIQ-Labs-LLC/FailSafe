@@ -6,6 +6,8 @@
 // (Phase 4), incident drawer (Phase 3), and live trust/federation data
 // (Phase 5) are deferred. Mythiq theme, token-only colors (spec §16).
 
+import { renderGenomeMode, bindGenome } from './shadow-genome-graph.js';
+
 function esc(value) {
   const d = document.createElement('div');
   d.textContent = String(value ?? '');
@@ -32,6 +34,7 @@ export class ShadowGenomeRenderer {
     this.container = document.getElementById(containerId);
     this.data = null;
     this.mode = 'map';
+    this.mapState = { view: 'graph', selectedId: null };
   }
 
   async render() {
@@ -100,24 +103,7 @@ export class ShadowGenomeRenderer {
   }
 
   renderMap(d) {
-    const types = Object.entries(d.typeDistribution || {});
-    const max = types.reduce((m, [, n]) => Math.max(m, n), 0) || 1;
-    const bars = types.length
-      ? types.map(([t, n]) => `
-        <div class="sg-bar-row">
-          <span class="sg-bar-label">${esc(t)}</span>
-          <span class="sg-bar"><span class="sg-bar-fill" style="width:${Math.round((n / max) * 100)}%"></span></span>
-          <span class="sg-bar-num">${esc(n)}</span>
-        </div>`).join('')
-      : '<div class="sg-muted">No graph nodes yet.</div>';
-    const surfaces = (d.projectSurfaces || []).map((p) =>
-      `<li><span class="sg-surface-label">${esc(p.label)}</span><span class="sg-surface-meta">${esc(p.failureCount)} failure surface${p.failureCount === 1 ? '' : 's'}</span></li>`,
-    ).join('');
-    return `<div class="sg-panel"><div class="sg-panel-title">Node distribution</div>${bars}</div>
-      <div class="sg-panel"><div class="sg-panel-title">Project surfaces</div>
-        ${surfaces ? `<ul class="sg-surfaces">${surfaces}</ul>` : '<div class="sg-muted">No governed surfaces yet.</div>'}
-        <div class="sg-note">The structural causal map arrives in a later phase; this is its evidence summary.</div>
-      </div>`;
+    return renderGenomeMode(d, this.mapState);
   }
 
   renderIncidents(d) {
@@ -190,7 +176,19 @@ export class ShadowGenomeRenderer {
   }
 
   bindMode() {
-    if (this.mode !== 'incidents') return;
+    if (this.mode === 'incidents') return this.bindIncidents();
+    if (this.mode === 'map') {
+      const wrap = this.container.querySelector('.sg-graph-wrap');
+      if (wrap) bindGenome(wrap, this.data, this.mapState, () => this.rerenderMode());
+    }
+  }
+
+  rerenderMode() {
+    const body = this.container.querySelector('.sg-mode-body');
+    if (body && this.data) { body.innerHTML = this.renderMode(this.data); this.bindMode(); }
+  }
+
+  bindIncidents() {
     const wrap = this.container.querySelector('.sg-incidents-wrap');
     if (!wrap) return;
     const drawer = wrap.querySelector('.sg-drawer');

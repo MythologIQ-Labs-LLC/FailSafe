@@ -48,6 +48,8 @@ export interface GovernanceDashboardResponse {
   recentChains: GovernanceChainSummary[];
   projectSurfaces: ProjectSurfaceSummary[];
   incidents: IncidentSummary[];
+  /** The canonical governance subgraph topology (trimmed: id/type/label + edge types) for the Genome Map. */
+  graph: GenomeGraph;
   trustTransitions: TrustTransitionSummary[];
   federation: FederationSummary;
 }
@@ -60,8 +62,17 @@ function zeroed(generatedAt: string): GovernanceDashboardResponse {
   return {
     generatedAt, enabled: false, degraded: true,
     summary: { nodeCount: 0, edgeCount: 0, unresolvedCount: 0, recurringPatternCount: 0, trustTransitionCount: 0 },
-    typeDistribution: {}, recentChains: [], projectSurfaces: [], incidents: [], trustTransitions: [],
+    typeDistribution: {}, recentChains: [], projectSurfaces: [], incidents: [],
+    graph: { nodes: [], edges: [] }, trustTransitions: [],
     federation: FEDERATION_UNSOURCED,
+  };
+}
+
+/** Trim the subgraph to the secret-safe topology the Genome Map needs (no metadata passthrough). */
+function trimGraph(sub: GenomeGraph): GenomeGraph {
+  return {
+    nodes: sub.nodes.map((n) => ({ id: n.id, type: n.type, label: n.label })),
+    edges: sub.edges.map((e) => ({ id: e.id, source: e.source, target: e.target, type: e.type })),
   };
 }
 
@@ -143,6 +154,7 @@ export function buildGovernanceDashboard(
     recentChains: deriveChains(sub),
     projectSurfaces: deriveSurfaces(sub),
     incidents: deriveIncidents(sub),
+    graph: trimGraph(sub),
     trustTransitions: [],
     federation: FEDERATION_UNSOURCED,
   };

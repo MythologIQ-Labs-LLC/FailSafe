@@ -25,6 +25,19 @@ const DASHBOARD = {
     { id: "f1", label: "Spec Drift", recurrence: 2, severity: "repeated", governanceRoots: [{ id: "g1", label: "Governance: plan gate" }, { id: "p1", label: "Governance: deploy gate" }] },
     { id: "f2", label: "Authority Leak", recurrence: 1, severity: "emerging", governanceRoots: [{ id: "g1", label: "Governance: plan gate" }] },
   ],
+  graph: {
+    nodes: [
+      { id: "g1", type: "governance", label: "Governance: plan gate" },
+      { id: "p1", type: "governance", label: "Governance: deploy gate" },
+      { id: "f1", type: "failure", label: "Spec Drift" },
+      { id: "f2", type: "failure", label: "Authority Leak" },
+    ],
+    edges: [
+      { id: "e3", source: "g1", target: "f1", type: "applies_to" },
+      { id: "e4", source: "g1", target: "f2", type: "triggered_by" },
+      { id: "e5", source: "p1", target: "f1", type: "applies_to" },
+    ],
+  },
   trustTransitions: [],
   federation: { sourced: false, peers: [], note: "Federation peer status is not yet sourced." },
 };
@@ -32,7 +45,8 @@ const DASHBOARD = {
 const DEGRADED = {
   enabled: false, degraded: true,
   summary: { nodeCount: 0, edgeCount: 0, unresolvedCount: 0, recurringPatternCount: 0, trustTransitionCount: 0 },
-  typeDistribution: {}, recentChains: [], projectSurfaces: [], incidents: [], trustTransitions: [],
+  typeDistribution: {}, recentChains: [], projectSurfaces: [], incidents: [],
+  graph: { nodes: [], edges: [] }, trustTransitions: [],
   federation: { sourced: false, peers: [] },
 };
 
@@ -65,7 +79,7 @@ test("mode switch — clicking Federation swaps the active mode body", async ({ 
   await gotoShadowGenome(page, controller.url);
 
   // default mode = Genome Map
-  await expect(page.locator("#governance .sg-panel-title", { hasText: "Node distribution" })).toBeVisible();
+  await expect(page.locator("#governance .sg-graph-svg")).toBeVisible();
   await page.locator('#governance .sg-pill[data-mode="federation"]').click();
   await expect(page.locator("#governance .sg-panel-title", { hasText: "Federation" })).toBeVisible();
   await expect(page.locator("#governance").getByText("not yet sourced")).toBeVisible();
@@ -97,7 +111,41 @@ test("incident row opens the case-file drawer; Locate in Genome returns to the m
   await expect(page.locator("#governance .sg-drawer")).toContainText("not yet sourced");
 
   await page.locator("#governance .sg-locate").click();
-  await expect(page.locator("#governance .sg-panel-title", { hasText: "Node distribution" })).toBeVisible();
+  await expect(page.locator("#governance .sg-graph-svg")).toBeVisible();
+});
+
+test("Genome Map — deterministic causal-graph SVG renders one node per graph node", async ({ page }) => {
+  controller = await serveConsoleServerUI({});
+  await page.route("**/api/qor/governance-dashboard", (r) => r.fulfill({ json: DASHBOARD }));
+  await gotoShadowGenome(page, controller.url); // default mode = Genome Map
+
+  await expect(page.locator("#governance .sg-graph-svg")).toBeVisible();
+  await expect(page.locator("#governance .sg-node")).toHaveCount(4);
+  await expect(page.locator('#governance .sg-edge')).toHaveCount(3);
+});
+
+test("Genome Map — selecting a node populates the inspector; reset clears it", async ({ page }) => {
+  controller = await serveConsoleServerUI({});
+  await page.route("**/api/qor/governance-dashboard", (r) => r.fulfill({ json: DASHBOARD }));
+  await gotoShadowGenome(page, controller.url);
+
+  await page.locator('#governance .sg-node[data-node="f1"]').click();
+  await expect(page.locator("#governance .sg-graph-rail .sg-drawer-title")).toHaveText("Spec Drift");
+  // the inspector lists the causal relationship type
+  await expect(page.locator("#governance .sg-graph-rail")).toContainText("applies_to");
+  await page.locator("#governance .sg-reset").click();
+  await expect(page.locator("#governance .sg-graph-rail")).toContainText("Select a node");
+});
+
+test("Genome Map — View as Table is the accessible fallback (graph is not the only path)", async ({ page }) => {
+  controller = await serveConsoleServerUI({});
+  await page.route("**/api/qor/governance-dashboard", (r) => r.fulfill({ json: DASHBOARD }));
+  await gotoShadowGenome(page, controller.url);
+
+  await page.locator('#governance .sg-view-btn[data-view="table"]').click();
+  await expect(page.locator("#governance .sg-data-table")).toHaveCount(2); // nodes + edges tables
+  await expect(page.locator("#governance .sg-graph-svg")).toHaveCount(0);
+  await expect(page.locator("#governance .sg-data-table tbody tr").first()).toBeVisible();
 });
 
 test("disabled loader → spec §14 degraded empty card", async ({ page }) => {

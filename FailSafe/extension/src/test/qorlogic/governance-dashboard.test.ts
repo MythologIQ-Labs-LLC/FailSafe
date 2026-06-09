@@ -73,4 +73,18 @@ suite('buildGovernanceDashboard', () => {
     const r = buildGovernanceDashboard({ ok: true, localOnly: true }, { generatedAt: AT });
     assert.deepEqual(r.incidents, []);
   });
+
+  test('graph: trimmed governance subgraph (id/type/label + edge types, no metadata)', () => {
+    const r = buildGovernanceDashboard({ ok: true, graph: FIXTURE_GENOME }, { generatedAt: AT });
+    assert.equal(r.graph.nodes.length, 4); // g1,p1,f1,f2
+    assert.equal(r.graph.edges.length, 3); // e3,e4,e5
+    assert.deepEqual(r.graph.nodes.map((n) => n.id).sort(), ['f1', 'f2', 'g1', 'p1']);
+    assert.equal(r.graph.nodes.every((n) => (n as { metadata?: unknown }).metadata === undefined), true);
+    assert.ok(r.graph.edges.some((e) => e.type === 'applies_to'));
+  });
+
+  test('degraded result → empty graph', () => {
+    const r = buildGovernanceDashboard({ ok: true, localOnly: true }, { generatedAt: AT });
+    assert.deepEqual(r.graph, { nodes: [], edges: [] });
+  });
 });

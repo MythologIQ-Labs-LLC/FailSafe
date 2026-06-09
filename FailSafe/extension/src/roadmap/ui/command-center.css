@@ -2112,3 +2112,43 @@ select option {
 .sg-locate { display: block; margin: 16px 18px; padding: 9px 14px; width: calc(100% - 36px); background: color-mix(in srgb, var(--primary) 18%, transparent); border: 1px solid var(--primary); color: var(--text-main); border-radius: 9px; font-size: 0.8rem; cursor: pointer; transition: all 0.15s ease; }
 .sg-locate:hover { background: var(--primary); color: #fff; box-shadow: 0 0 16px 0 var(--primary-glow); }
 @media (max-width: 900px) { .sg-drawer { width: 100%; } }
+
+/* --- Genome Map (#196 Phase 4) — governance constellation --- */
+.sg-sev-gov { --sev: var(--primary); }
+.sg-graph-wrap { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 300px; gap: 14px; }
+.sg-graph-main { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.sg-graph-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sg-graph-controls { display: flex; gap: 6px; }
+.sg-view-btn, .sg-reset { background: var(--bg-deep); border: 1px solid var(--border-rim); color: var(--text-muted); padding: 4px 12px; border-radius: 8px; font-size: 0.74rem; cursor: pointer; transition: all 0.15s ease; }
+.sg-view-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.sg-view-btn:hover:not(.active), .sg-reset:not([disabled]):hover { border-color: var(--primary); color: var(--text-main); }
+.sg-reset[disabled] { opacity: 0.4; cursor: default; }
+.sg-graph-canvas { position: relative; border: 1px solid var(--border-rim); border-radius: 12px; background: radial-gradient(ellipse at 50% 42%, color-mix(in srgb, var(--primary) 10%, transparent), var(--bg-deep) 72%); overflow: hidden; }
+.sg-graph-svg { display: block; width: 100%; height: auto; }
+.sg-edge { stroke: var(--border-rim); }
+.sg-edge.on { stroke: color-mix(in srgb, var(--primary) 60%, var(--text-muted)); }
+.sg-node { cursor: pointer; transition: opacity 0.15s ease; }
+.sg-node.dim { opacity: 0.22; }
+.sg-node:focus-visible { outline: none; }
+.sg-node:focus-visible .sg-node-shape, .sg-node.sel .sg-node-shape { filter: drop-shadow(0 0 6px var(--primary-glow)); }
+.sg-node-shape { stroke-width: 1.5; }
+.sg-node-dashed { stroke-dasharray: 3 2; }
+.sg-node-ring { fill: none; stroke: var(--primary); stroke-opacity: 0.35; stroke-width: 1; }
+.sg-node-label { fill: var(--text-muted); font-size: 10px; text-anchor: middle; font-family: var(--font-body); pointer-events: none; }
+.sg-node.sel .sg-node-label { fill: var(--text-main); }
+.sg-legend { display: flex; flex-wrap: wrap; gap: 12px; padding: 8px 4px; }
+.sg-leg { display: inline-flex; align-items: center; gap: 6px; font-size: 0.68rem; color: var(--text-muted); }
+.sg-leg-dot { width: 9px; height: 9px; border-radius: 50%; }
+.sg-leg-line { width: 18px; border-top: 2px solid var(--text-muted); }
+.sg-leg-dotted { border-top-style: dotted; }
+.sg-leg-arrow { position: relative; }
+.sg-leg-arrow::after { content: '\25B8'; position: absolute; right: -5px; top: -9px; color: var(--text-muted); font-size: 9px; }
+.sg-graph-rail { min-width: 0; }
+.sg-rel { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--accent-cyan); }
+.sg-table-view { display: flex; flex-direction: column; gap: 14px; padding: 12px; }
+.sg-data-table { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
+.sg-data-table caption { text-align: left; color: var(--text-muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+.sg-data-table th { text-align: left; color: var(--text-muted); font-weight: 600; padding: 6px 10px; border-bottom: 1px solid var(--border-rim); font-size: 0.7rem; }
+.sg-data-table td { padding: 6px 10px; border-bottom: 1px solid var(--border-rim); color: var(--text-main); }
+@media (max-width: 1100px) { .sg-graph-wrap { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .sg-node, .sg-view-btn { transition: none; } }
