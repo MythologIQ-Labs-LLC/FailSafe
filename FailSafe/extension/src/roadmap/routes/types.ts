@@ -2,6 +2,7 @@ import type { QorLogicInstallReport } from '../../extension/installSkillsReport'
 import type { QorRuntimeService } from '../services/QorRuntimeService';
 import type { IFeatureGate } from '../../core/interfaces/IFeatureGate';
 import type { QorLogicHost } from '../../qorlogic/hostLayouts';
+import type { ShadowGenomeResult } from '../../qorlogic/shadow-genome-client';
 
 /**
  * Dependency injection interface for API route modules extracted
@@ -53,6 +54,13 @@ export interface ApiRouteDeps {
   getGenomePatterns: () => Promise<any[]>;
   getGenomeAllPatterns: () => Promise<any[]>; // B183: All patterns regardless of status
   getGenomeUnresolved: (limit: number) => Promise<any[]>;
+  /**
+   * FX863 shadow-genome causal-graph loader (#196 governance dashboard).
+   * Optional + degrade-safe: absent ⇒ the route returns a zeroed `enabled:false`
+   * payload. OFF by default (the loader itself only runs a subprocess when
+   * `enabled:true`), so this never reaches the network or a remote store.
+   */
+  loadShadowGenome?: () => Promise<ShadowGenomeResult>;
   getActiveRuns: () => any[];
   getCompletedRuns: () => any[];
   getRun: (runId: string) => any | undefined;

@@ -23,6 +23,7 @@ import { setupBicameralRoutes } from "../routes/BicameralRoute";
 import { setupOpenDesignRoutes } from "../routes/OpenDesignRoute";
 import { setupTransparencyRiskRoutes } from "../routes/TransparencyRiskRoute";
 import { registerQorRoute } from "../routes/QorRoute";
+import { loadShadowGenome } from "../../qorlogic/shadow-genome-client";
 import { registerFeatureStatusRoute } from "../routes/FeatureStatusRoute";
 import { registerSkillsApiRoute } from "../routes/SkillsApiRoute";
 import { registerHookRoute } from "../routes/HookRoute";
@@ -241,6 +242,14 @@ export class ConsoleRouteRegistrar {
       getGenomePatterns: () => sg().analyzeFailurePatterns(),
       getGenomeAllPatterns: () => sg().analyzeAllPatterns(),
       getGenomeUnresolved: (l) => sg().getUnresolvedEntries(l),
+      // #196 Phase 1: OFF (enabled:false) ⇒ degrade-safe localOnly path; the
+      // injected runner is never invoked. Live enablement (config flag + real
+      // RunCommand/python) is the deferred Open Question in the plan.
+      loadShadowGenome: () => loadShadowGenome({
+        run: async () => ({ stdout: "", stderr: "", code: 1 }),
+        python: "",
+        enabled: false,
+      }),
       getActiveRuns: () => h.getAgentRunRecorder()?.getActiveRuns() || [],
       getCompletedRuns: () => h.getAgentRunRecorder()?.getCompletedRuns() || [],
       getRun: (id) => h.getAgentRunRecorder()?.getRun(id),

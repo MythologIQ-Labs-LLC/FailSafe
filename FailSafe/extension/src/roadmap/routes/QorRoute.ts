@@ -9,6 +9,7 @@
  */
 import type { Application, Request, Response } from "express";
 import type { ApiRouteDeps } from "./types";
+import { buildGovernanceDashboard } from "../../qorlogic/governance-dashboard";
 
 export function registerQorRoute(
   app: Application,
@@ -17,6 +18,17 @@ export function registerQorRoute(
   app.get("/api/qor/runtime", async (req: Request, res: Response) => {
     if (deps.rejectIfRemote(req, res)) return;
     res.json(await deps.qorRuntimeService.fetchSnapshot());
+  });
+
+  // #196 Phase 1: read-only Shadow Genome dashboard over the FX863 data layer.
+  // Always 200 (degrade-safe): an absent/off/degraded loader yields a zeroed
+  // `enabled:false` payload. Determinism lives in the pure builder.
+  app.get("/api/qor/governance-dashboard", async (req: Request, res: Response) => {
+    if (deps.rejectIfRemote(req, res)) return;
+    const result = deps.loadShadowGenome
+      ? await deps.loadShadowGenome()
+      : { ok: true, localOnly: true };
+    res.json(buildGovernanceDashboard(result, { generatedAt: new Date().toISOString() }));
   });
 
   app.get("/api/qor/health", async (req: Request, res: Response) => {
