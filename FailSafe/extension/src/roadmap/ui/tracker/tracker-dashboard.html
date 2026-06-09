@@ -23,6 +23,7 @@
   --text-faint:#5f6875;
   --good:#5fd49a;
   --warn:#e7b04b;
+  --admin:#e76ea8;
   --radius:14px;
   --shadow:0 18px 50px -20px rgba(0,0,0,.7);
   --serif:'Fraunces', Georgia, 'Times New Roman', serif;
@@ -483,6 +484,11 @@ section.sec > h2 .idx{
      rgba(12,15,20,.0) 0 6px,
      rgba(12,15,20,.32) 6px 12px);
 }
+/* Coverage bar (FX872) — per-vertical featureStats device (OS-file lineage) */
+.cov-row{display:flex;align-items:center;gap:12px}
+.cov-row .track{flex:1}
+.cov-pct{font-family:var(--mono);font-size:1.5rem;color:var(--accent);font-weight:600;line-height:1;min-width:3.4ch;text-align:right}
+.cov-caption{font-family:var(--mono);font-size:11px;color:var(--text-faint);margin-top:8px}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 .chip{
   display:inline-flex;
@@ -597,7 +603,7 @@ section.sec > h2 .idx{
   border-radius:999px;padding:2px 9px;flex:0 0 auto;
 }
 .who-badge.paid  {color:var(--good);border:1px solid var(--good)}
-.who-badge.admin {color:#e76ea8;border:1px solid #e76ea8}
+.who-badge.admin {color:var(--admin);border:1px solid var(--admin)}
 .who-badge.public{color:var(--warn);border:1px solid var(--warn)}
 
 .vtable{width:100%;border-collapse:collapse;font-size:.88rem}
@@ -609,7 +615,7 @@ section.sec > h2 .idx{
   border-radius:999px;padding:1px 8px;
 }
 .acc-chip.paid{color:var(--good);border:1px solid var(--good)}
-.acc-chip.admin{color:#e76ea8;border:1px solid #e76ea8}
+.acc-chip.admin{color:var(--admin);border:1px solid var(--admin)}
 .acc-chip.public{color:var(--warn);border:1px solid var(--warn)}
 .vd-bg{color:var(--text-faint);font-size:.88rem;margin:0}
 
@@ -1183,10 +1189,17 @@ function render(data) {
   const main = $("#main");
   main.innerHTML = "";
 
-  // Non-blocking advisory when no planning manifest is present: the tracker
-  // still renders discovered releases; this just points the way to the planning
-  // layer (so a missing programs.yaml never reads as a failure).
-  if (d.manifestPresent === false) {
+  // Non-blocking advisory keyed off manifestSource (operator|projection|none).
+  // A governed repo with no programs.yaml is PROJECTED from the ledger — a real
+  // governed view, not a degraded one — so it gets a positive note; only a repo
+  // with neither manifest nor projection shows the "discovered releases only" note.
+  if (d.manifestSource === "projection") {
+    const note = el("div", "emptycard");
+    note.style.textAlign = "left";
+    note.innerHTML = "Projected from the governance ledger (META_LEDGER + plans) — "
+      + "add <code>docs/roadmap/programs.yaml</code> to override with a hand-curated manifest.";
+    main.appendChild(note);
+  } else if (d.manifestSource === "none" || (d.manifestSource == null && d.manifestPresent === false)) {
     const note = el("div", "emptycard");
     note.style.textAlign = "left";
     note.innerHTML = "Showing discovered releases only — no planning manifest at "
@@ -1613,7 +1626,12 @@ function cumulative(progKey, rcIndex) {
   let sum = 0;
   prog.phases.forEach((ph) => {
     const i = STATE.rcIndexById[ph.rc];
-    if (i != null && i <= rcIndex) sum += (Number(ph.w) || 0);
+    // Unanchored phases (rc not on the release axis) count toward the program
+    // total unconditionally — planned work not yet pinned to a release
+    // (tracker-model.ts phase-unanchored contract). Anchored phases stay gated
+    // by the selected release.
+    const counts = (i == null) ? true : (i <= rcIndex);
+    if (counts) sum += (Number(ph.w) || 0);
   });
   return Math.min(100, Math.round(sum));
 }
@@ -1861,6 +1879,29 @@ function buildVerticalPanel(v, panelId, tabId) {
       ul.appendChild(li);
     });
     b.appendChild(ul);
+    grid.appendChild(b);
+  }
+
+  // Coverage (FX872) — governed per-surface feature attribution from the
+  // FEATURE_INDEX Surface column. Testable-coverage pct = verified/(total - n/a),
+  // n/a excluded from the denominator (mirrors FEATURE_INDEX scoring). Degrade-safe:
+  // no featureStats → no block.
+  if (v.featureStats && typeof v.featureStats.total === "number") {
+    const fs = v.featureStats;
+    const denom = fs.total - (fs.na || 0);
+    const hasPct = denom > 0;
+    const pct = hasPct ? Math.round(100 * (fs.verified || 0) / denom) : 0;
+    const b = vdBlock("Coverage");
+    const row = el("div", "cov-row");
+    row.appendChild(el("div", "cov-pct", hasPct ? pct + "%" : "n/a"));
+    const track = el("div", "track");
+    const fill = el("div", "fill");
+    fill.style.width = (hasPct ? pct : 0) + "%";
+    track.appendChild(fill);
+    row.appendChild(track);
+    b.appendChild(row);
+    b.appendChild(el("div", "cov-caption",
+      (fs.verified || 0) + " verified / " + fs.total + " features · " + (fs.na || 0) + " n/a"));
     grid.appendChild(b);
   }
 

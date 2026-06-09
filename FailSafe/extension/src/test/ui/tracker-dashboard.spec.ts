@@ -191,3 +191,77 @@ test.describe('Development Tracker loading + freshness (#163)', () => {
     await expect(page.locator('#timeline .tl-node').first()).toBeVisible();
   });
 });
+
+// #202 (FX872/873/874) — surface the governance projection in the RENDER: the
+// per-vertical featureStats coverage bar, unanchored-phase counting in the program
+// bars, and the manifestSource-aware advisory. Real chromium (visual surface — the
+// jsdom layer cannot exercise the inline render script).
+test.describe('Development Tracker projection render (#202)', () => {
+  let controller: ConsoleServerController;
+  test.afterEach(async () => {
+    if (controller) { await controller.close(); await new Promise((r) => setTimeout(r, 50)); }
+  });
+
+  // FX872 — coverage bar from featureStats; pct = verified/(total - na); degrade-safe.
+  test('FX872: vertical panel renders a coverage bar from featureStats; absent → no block', async ({ page }) => {
+    const withStats = {
+      ...buildTrackerModel(manifest({
+        verticals: [{ key: 'cov', name: 'Covered surface', accent: '#38d6c8', summary: 's',
+          featureStats: { total: 10, verified: 6, na: 2 } }],
+      }), { discoveredReleases: SEMVER_AXIS, shippedReleaseIds: ['v2.0.0'], now: new Date('2026-02-01T00:00:00Z') }),
+      verticals: [{ key: 'cov', name: 'Covered surface', accent: '#38d6c8', summary: 's',
+        featureStats: { total: 10, verified: 6, na: 2 } }],
+      cadence: 'semver', manifestPresent: true, lint: [], ok: true,
+    };
+    const noStats = { ...withStats, verticals: [{ key: 'bare', name: 'Bare surface', accent: '#e7b04b', summary: 's' }] };
+    controller = await serveConsoleServerUI();
+    let payload: unknown = withStats;
+    await page.route('**/api/v1/tracker', (r) => r.fulfill({ json: payload }));
+    await page.goto(`${controller.url}/console/tracker`);
+    // 6/(10-2) = 75% — the computed coverage, caption, and fill width.
+    await expect(page.locator('.cov-pct')).toHaveText('75%', { timeout: 5000 });
+    await expect(page.locator('.cov-caption')).toHaveText('6 verified / 10 features · 2 n/a');
+    await expect(page.locator('.cov-row .fill')).toHaveAttribute('style', /width:\s*75%/);
+    // Degrade-safe: a vertical with no featureStats renders NO coverage block.
+    payload = noStats;
+    await page.goto(`${controller.url}/console/tracker`);
+    await expect(page.locator('[role="tablist"][aria-label="Verticals"] [role="tab"]').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.cov-pct')).toHaveCount(0);
+  });
+
+  // FX873 — program bar counts unanchored phases (the under-reporting bug fix).
+  test('FX873: cumulative() counts unanchored phases (60%, not 40%)', async ({ page }) => {
+    const payload = {
+      ...buildTrackerModel({
+        repo: 'x/y', meta: { title: 'Unanchored' },
+        programs: [{ key: 'p1', name: 'Prog One', accent: '#38d6c8' }],
+        phases: [
+          { prog: 'p1', key: 'A', rc: 'v1.0.0', w: 40, title: 'anchored' },
+          { prog: 'p1', key: 'U', rc: '', w: 20, title: 'unanchored (projected)' },
+        ],
+        verticals: [],
+      }, { discoveredReleases: [{ id: 'v1.0.0', state: 'prod' }], shippedReleaseIds: ['v1.0.0'], now: new Date('2026-02-01T00:00:00Z') }),
+      cadence: 'semver', manifestPresent: true, lint: [], ok: true,
+    };
+    controller = await serveConsoleServerUI();
+    await page.route('**/api/v1/tracker', (r) => r.fulfill({ json: payload }));
+    await page.goto(`${controller.url}/console/tracker`);
+    await expect(page.locator('.bar-row')).toHaveCount(1);
+    // At the latest release: anchored(40) + unanchored(20) = 60% (the fix; was 40%).
+    await expect(page.locator('.bar-row .pct')).toHaveText('60%', { timeout: 5000 });
+  });
+
+  // FX874 — advisory note branches on manifestSource.
+  test('FX874: advisory branches on manifestSource (projection vs none)', async ({ page }) => {
+    controller = await serveConsoleServerUI();
+    let payload: unknown = { ...SEMVER_PAYLOAD, manifestPresent: false, manifestSource: 'projection' };
+    await page.route('**/api/v1/tracker', (r) => r.fulfill({ json: payload }));
+    await page.goto(`${controller.url}/console/tracker`);
+    await expect(page.getByText('Projected from the governance ledger').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('discovered releases only')).toHaveCount(0);
+    // manifestSource 'none' keeps the discovered-only copy.
+    payload = { ...SEMVER_PAYLOAD, manifestPresent: false, manifestSource: 'none' };
+    await page.goto(`${controller.url}/console/tracker`);
+    await expect(page.getByText('discovered releases only').first()).toBeVisible({ timeout: 5000 });
+  });
+});
