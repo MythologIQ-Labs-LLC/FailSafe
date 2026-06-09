@@ -23987,3 +23987,55 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 _Chain integrity: VALID_
 _Session: 
+
+### Entry #442: SUBSTANTIATE - Shadow Genome dashboard sub-view (#196 Phase 2)
+
+**Date**: 2026-06-09
+**Phase**: SUBSTANTIATE (/qor-substantiate; Reality=Promise PASS; held local per Review Boundary)
+**Plan**: .failsafe/governance/plans/plan-shadow-genome-ui-196-phase2.md
+**Branch**: feat/shadow-genome-ui-196-phase1 (Phase 2 folded onto the Phase-1 branch / PR #211)
+**Author**: krknapp@gmail.com
+
+## Decision
+
+Sealed Phase 2 of the Shadow Genome UI (#196): the Governance dashboard sub-view over the Phase-1
+/api/qor/governance-dashboard API. ShadowGenomeRenderer is the 4th sub-pill in the governance TabGroup
+(NOT a top-level tab - the 7 Console verticals are pinned by the FX868 drift-guard; the shadow genome is a
+Governance concern, operator-corrected). Header + LIVE/degraded chip, 5 summary cards, 4-mode navigation
+(Genome Map / Incidents / Trust Transitions / Federation). Each mode renders its REAL slice of the API with
+honest empty states (typeDistribution + projectSurfaces; recentChains; trust/federation empty states) - no
+placeholder bodies. Spec section 14 degraded empty card when enabled:false. Mythiq theme, token-only CSS.
+
+## Scope (FX876)
+
+- roadmap/ui/modules/shadow-genome.js: ShadowGenomeRenderer (154 lines, Razor < 250).
+- roadmap/ui/command-center.js: governance TabGroup 4th pill + import.
+- roadmap/ui/command-center.css: .sg-* token-only styles (responsive + reduced-motion).
+- test/ui/shadow-genome-tab.spec.ts: Playwright sub-view spec. FEATURE_INDEX FX876.
+
+## Verification
+
+Reality=Promise: exactly 5 files, all planned, no unplanned. UI .js syntax OK + lint-consistent (project
+lints .ts only; 0 errors). VISUAL GATE: 3/3 Playwright green in real Chromium (summary-card counts, mode
+switch, degraded card) + a captured screenshot visually verified against the Mythiq mockup (docs/design/
+SHADOW_GENOME_UI.md design source). Audit PASS (L2, inline) - ghost-UI-clean (real API data, honest empties).
+
+## Next operator actions
+
+Review PR #211 (now Phases 1+2). Remaining #196 phases: incident detail drawer (3), structural Genome Map
+graph (4), live trust/federation (5), full a11y + screenshot regression suite (6).
+
+## Content Hash
+
+**Content Hash**: `a3f2918d79f5b7aa8b3dbd546cac8ab002aece95b30a929ffb5113549e95abb8`
+**Previous Hash**: `759644852b5065ffc8970be3a8dc8feb24edfbdd417e41f48a5d72b845c39da8` (Entry #441 Chain Hash)
+**Chain Hash**: `18925cfa2de3ca7cd24e2dc88ca1c06daf4fc673d854f3cf7680aaf8426f5055`
+**Merkle Seal**: `9f730ce2417e1c72c60033da5820a6e1e00115aef982edc339653a6358fbf685` -- gate_seal_substantiate_shadow_genome_dashboard_ui_196_p2
+**Session ID**: `2026-06-09-substantiate-shadow-genome-196-p2`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #442`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). .NET SHA-256 over CRLF; ASCII body.
+
+---
+
+_Chain integrity: VALID_
+_Session: 
