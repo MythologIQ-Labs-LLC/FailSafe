@@ -23612,5 +23612,85 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 ---
 
+### Entry #437: SUBSTANTIATE - FEATURE_INDEX Surface column + per-surface governed attribution (#206)
+
+**Date**: 2026-06-08
+**Phase**: SUBSTANTIATE (/qor-substantiate)
+**Author**: Judge
+
+**Target Version**: 5.6.x (next bundle; FX869/870/871)
+**Branch**: feat/feature-index-surface-206
+
+## Decision
+
+Reality=Promise PASS. FailSafe-side half of the tracker-as-governance-sidecar surface mapping (#206): the
+surface<->feature mapping is now captured as GOVERNED DATA in FEATURE_INDEX (a Surface column), and the TS
+projection attributes features to the 7 Console verticals from that column - so the tracker's per-surface
+picture is accurate by construction, not by hand re-derivation. The upstream seal-time gate that will make
+the column non-optional is Qor-logic#196 (out of scope here).
+
+## Scope
+
+- docs/FEATURE_INDEX.md - added a `Surface` column to all 38 tables; backfilled every FX row with one of the
+  7 Console verticals (monitor/learn/agents/governance/workspace/integrations/config) + `platform` for
+  cross-cutting infra (commands/routes/websocket/console-shell). Section-deterministic backfill with
+  evidence-based per-row overrides (tracker code paths -> workspace; Learn/Educational content -> learn) so
+  ALL 7 user-facing surfaces are represented. Distribution: platform 254 / governance 126 / integrations 98
+  / workspace 75 / config 49 / agents 34 / monitor 28 / learn 25; 0 untagged. + FX869/870/871 rows + a
+  Surface-column definition note.
+- tracker-parsers.ts - FeatureRow gains `surface: string|null`; SURFACE_VALUES (the 8); parseFeatureIndex
+  detects the tag by cell VALUE scanned right-to-left (appended-column wins over a rare name collision);
+  degrade-safe (null when absent/illegal).
+- governance-projection.ts - `attributeFeatures()` attributes parsed rows to the 7 verticals via
+  surface===vertical.key; each vertical gains featureStats {total,verified,na}; platform rows attribute to
+  none; absent featureIndex -> no featureStats. Wired through projectTrackerManifest; GovernanceSources.
+  featureIndex now CONSUMED (was reserved). No programs/phases change (plan-based A.1b model preserved).
+- tracker-model.ts - TrackerVertical.featureStats? (additive, UNRENDERED - dashboard render is #202).
+
+## Verification
+
+tsc --noEmit 0, eslint 0, npm run compile 0 (101 .js mirrored). 17/17 tracker unit suites green via the
+esbuild+mocha(tdd) probe: FX869 per-surface attribution + platform-exclusion + degrade-safe; FX870 surface-
+by-value + null/illegal (closed enum); FX871 real-FEATURE_INDEX completeness (0 untagged, all 7 surfaces
+present); the FX868 drift-guard + all prior tracker tests still pass (no regression). Secret scan clean over
+staged content. Backend/data + a docs table - NO visual surface change (featureStats is an unrendered model
+field). FX859 invariant preserved (operator programs.yaml untouched).
+
+## FEATURE_INDEX
+
+FX869 (per-surface attribution) + FX870 (Surface-column parser) + FX871 (backfill completeness) added after
+FX868. All three carry behavior-asserting tests, written red-then-green. Every one of the 689 FX rows now
+carries a legal Surface tag (FX871 gate).
+
+## Coverage gate
+
+PUBLISH_BLOCK Active: no. Not a release this cycle (no publish). FX869/870/871 carry real tests.
+
+## Governance note
+
+Committed local on feat/feature-index-surface-206 (off main @ #436/#205). Audit: 1 VETO (missing Feature
+Inventory Touches block) -> remediated -> PASS (L2). Chains #436 -> #437. Deferred (D4.d waiver): release-
+anchored per-surface PHASES need a per-row Release field FEATURE_INDEX lacks - a future enhancement that
+pairs with Qor-logic#196. governance-health DAMAGED/INCOMPLETE findings (META_LEDGER cp1252 byte, SHADOW_
+GENOME TODO) are PRE-EXISTING accepted residual, outside this cycle's write scope.
+
+## Phase 75 SKIP records
+
+Python qor-logic gates not run as the TS-repo substantiate flow (the lints WERE run at plan/audit: feature-
+tdd, test-lint, secret-scanner - all clean). Hash via Python hashlib SHA-256 over CRLF; cp1252 body. Same
+posture as #405-#436.
+
+## Content Hash
+
+**Content Hash**: `5d29f19f386cd22c02c64d2e5c30cf0239d41b75978f4b0570a623741372942b`
+**Previous Hash**: `b6b5b761c946e8d39c9ee93a0e3ac10078ec2ca536ae893181675d4e78e93e88` (Entry #436 Chain Hash)
+**Chain Hash**: `9013685dee5df16ba068ba3937f5481db49f14633bfcdcd949f2fd5fa0b1e38b`
+**Merkle Seal**: `75f20508b6f919081be7046b5d3aa2bd02f88360533ef83b8c16342cd20f3d81`  gate_seal_substantiate_feature_index_surface
+**Session ID**: `2026-06-08-substantiate-feature-index-surface`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #437`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). Python hashlib SHA-256 over CRLF; cp1252 body. Phase 75 skip; same posture as #405-#436.
+
+---
+
 _Chain integrity: VALID_
-_Session: 2026-06-08-substantiate-tracker-live-accuracy_
+_Session: 2026-06-08-substantiate-feature-index-surface_

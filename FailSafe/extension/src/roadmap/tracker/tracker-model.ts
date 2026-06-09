@@ -45,6 +45,10 @@ export interface TrackerVertical {
   components?: Array<{ c: string; w: string; a: 'paid' | 'admin' | 'public' }>;
   access?: Array<{ a: string; t: string }>;
   backend?: string[]; background?: string;
+  /** Governed per-surface feature attribution (FX869): the FEATURE_INDEX rows
+   *  tagged with this surface, projected from the Surface column. Absent when no
+   *  featureIndex source was supplied (degrade-safe). */
+  featureStats?: { total: number; verified: number; na: number };
 }
 export interface TrackerMeta {
   eyebrow?: string; title?: string; titleEm?: string; sub?: string;
