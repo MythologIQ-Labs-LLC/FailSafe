@@ -1,0 +1,161 @@
+/*
+ * FailSafe theme tokens — the single source of truth for the 6 Console themes.
+ * Linked by command-center.html (the Console) AND fetched + injected by the
+ * Monitor sidebar (FailSafeSidebarProvider) so the sidebar chrome inherits the
+ * operator's selected theme (#196 follow-up). Theme is selected via data-theme
+ * on <html>; the sidebar receives it from the embedded Console via postMessage.
+ */
+:root {
+  /* Default to Mythiq (Indigo Dark) */
+  --bg-dark: #0f1219; /* Deep Indigo-Black */
+  --bg-panel: #161b2e; /* Indigo-Slate */
+  --primary: #6366f1; /* Indigo 500 */
+  --primary-glow: rgba(99, 102, 241, 0.4);
+  --accent-cyan: #38bdf8; /* Sky 400 */
+  --accent-gold: #facc15;
+  --accent-green: #34d399;
+  --accent-red: #f87171;
+  --accent-orange: #e67e22;
+  --glass-bg: rgba(20, 25, 45, 0.7);
+  --glass-border: rgba(99, 102, 241, 0.25);
+  --text-main: #e2e8f0;
+  --text-muted: #94a3b8;
+  --font-display: 'Orbitron', system-ui, -apple-system, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Metallic Border Base */
+  --border-rim: rgba(192, 192, 192, 0.3);
+  --border-glow: rgba(255, 255, 255, 0.1);
+
+  /* Deep Background (inputs, nested panels) */
+  --bg-deep: rgba(0, 0, 0, 0.4);
+
+  /* Console Colors */
+  --console-bg: rgba(0, 0, 0, 0.3);
+  --console-text: #e2e8f0;
+  --console-meta: #94a3b8;
+}
+
+/* PEGASUS (Light Mode) */
+[data-theme="pegasus"] {
+  --bg-dark: #f1f5f9; /* Slate 100 */
+  --bg-panel: #ffffff;
+  --primary: #3b82f6; /* Blue 500 */
+  --primary-glow: rgba(59, 130, 246, 0.3);
+  --accent-cyan: #0ea5e9; /* Sky 500 */
+  --accent-gold: #eab308; /* Yellow 500 */
+  --accent-green: #10b981; /* Emerald 500 */
+  --accent-red: #ef4444; /* Red 500 */
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(148, 163, 184, 0.4);
+  --text-main: #0f172a; /* Slate 900 */
+  --text-muted: #64748b; /* Slate 500 */
+
+  --border-rim: rgba(100, 116, 139, 0.2);
+  --border-glow: rgba(255, 255, 255, 0.8);
+
+  --bg-deep: rgba(226, 232, 240, 0.6);
+
+  /* Console - Lighter BG, Darker Text for Contrast */
+  --console-bg: rgba(241, 245, 249, 0.8); /* Slate 100ish */
+  --console-text: #0f172a; /* Dark Slate */
+  --console-meta: #475569; /* Slate 600 */
+}
+
+/* MYTHIQ (Indigo Dark - Explicit) */
+[data-theme="mythiq"] {
+  --bg-dark: #0f1219;
+  --bg-panel: #161b2e;
+  --primary: #6366f1;
+  --primary-glow: rgba(99, 102, 241, 0.4);
+  --accent-cyan: #38bdf8;
+  --accent-gold: #facc15;
+  --accent-green: #34d399;
+  --accent-red: #f87171;
+  --glass-bg: rgba(20, 25, 45, 0.7);
+  --glass-border: rgba(99, 102, 241, 0.25);
+  --text-main: #e2e8f0;
+  --text-muted: #94a3b8;
+}
+
+/* MIDNIGHT (Ultra Dark) */
+[data-theme="midnight"] {
+  --bg-dark: #000000;
+  --bg-panel: #050505;
+  --bg-deep: rgba(0, 0, 0, 0.6);
+  --primary: #475569; /* Slate 600 */
+  --primary-glow: rgba(255, 255, 255, 0.15);
+  --accent-cyan: #e2e8f0; /* Slate 200 */
+  --accent-gold: #94a3b8; /* Slate 400 (Muted Gold) */
+  --accent-green: #22c55e;
+  --accent-red: #ef4444;
+  --glass-bg: rgba(10, 10, 10, 0.9);
+  --glass-border: rgba(50, 50, 50, 0.6);
+  --text-main: #f8fafc;
+  --text-muted: #64748b;
+
+  --border-rim: rgba(80, 80, 80, 0.5);
+  --border-glow: rgba(255, 255, 255, 0.05);
+}
+
+/* AURORA (Teal/Green) */
+[data-theme="aurora"] {
+  --bg-dark: #022c22; /* Teal 950 */
+  --bg-panel: #0f1219; /* Dark, but let's go greenish black? #062420 */
+  --bg-deep: rgba(0, 20, 15, 0.5);
+  --primary: #2dd4bf; /* Teal 400 */
+  --primary-glow: rgba(45, 212, 191, 0.3);
+  --accent-cyan: #14b8a6;
+  --accent-gold: #fde047;
+  --accent-green: #34d399;
+  --accent-red: #f43f5e;
+  --glass-bg: rgba(6, 36, 32, 0.8);
+  --glass-border: rgba(45, 212, 191, 0.3);
+  --text-main: #f0fdfa;
+  --text-muted: #99f6e4;
+  --console-bg: rgba(0, 0, 0, 0.4);
+  --console-text: #ccfbf1;
+  --console-meta: #5eead4;
+}
+
+/* CRIMSON (Red/Black) */
+[data-theme="crimson"] {
+  --bg-dark: #2a0a0a;
+  --bg-panel: #1a0505;
+  --bg-deep: rgba(15, 0, 0, 0.5);
+  --primary: #ef4444; /* Red 500 */
+  --primary-glow: rgba(239, 68, 68, 0.4);
+  --accent-cyan: #f87171;
+  --accent-gold: #fca5a5;
+  --accent-green: #10b981;
+  --accent-red: #991b1b;
+  --glass-bg: rgba(40, 10, 10, 0.8);
+  --glass-border: rgba(239, 68, 68, 0.4);
+  --text-main: #fef2f2;
+  --text-muted: #fca5a5;
+  --console-bg: rgba(20, 0, 0, 0.5);
+  --console-text: #fee2e2;
+  --console-meta: #f87171;
+}
+
+/* ATMOSPHERE (Dynamic/Gradient) */
+[data-theme="atmosphere"] {
+  --bg-dark: #0f172a;
+  --bg-panel: #1e293b;
+  --bg-deep: rgba(15, 23, 42, 0.6);
+  --primary: #38bdf8;
+  --primary-glow: rgba(56, 189, 248, 0.5);
+  --accent-cyan: #0ea5e9;
+  --accent-gold: #facc15;
+  --accent-green: #4ade80;
+  --accent-red: #f87171;
+  --glass-bg: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --text-main: #ffffff;
+  --text-muted: #cbd5e1;
+}
+
+/* Special Body Gradient for Atmosphere */
+[data-theme="atmosphere"] body {
+  background-image: linear-gradient(to top right, #0f172a, #334155, #475569);
+}

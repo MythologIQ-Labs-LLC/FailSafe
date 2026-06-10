@@ -24252,3 +24252,87 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 _Chain integrity: VALID_
 _Session: 
+
+
+### Entry #447: RECONCILIATION
+
+**Timestamp**: 2026-06-10T02:35:11Z
+**Phase**: RECONCILE
+**Author**: Operator
+**Reconciled Entries**: #397, #401
+**Reconciled Previous-Hashes**: 5bdb145eb2de736ae9d4947e8efd9c48837553eb3a9aa09baaad240396b91c06
+**Proposal ID**: `b8ea90463906`
+**Entry ID**: `ebf5fc119e7f`
+
+**Scope**: Operator-authorized forward-only reconciliation of 2 duplicate-previous_hash residual entries (#397, #401) per SG-ConcurrentLedgerRace-A. No sealed entries renumbered or rewritten. proposal_id=b8ea90463906 ts=2026-06-10T02:35:11Z
+
+**Content Hash**: `7f7dd3075d17cf1fa3cf15087d9778686526d17b81142654decb958fd4fd0854`
+**Previous Hash**: `ab9d66afa4cc5ccd84a975c73257f6c3eaf6bdce12eaa2cb695d85f5a609ced5`
+**Chain Hash (Merkle seal)**: `7810ada522ffc5f55d160d0951f0b5128f74c2cb3f655d323e058c5edd2648c3`
+
+### Entry #448: SUBSTANTIATE - Monitor sidebar inherits the Console theme (FX881)
+
+**Date**: 2026-06-10
+**Phase**: SUBSTANTIATE (/qor-substantiate; Reality=Promise PASS; held local per Review Boundary)
+**Plan**: plan-monitor-theme-inheritance.md
+**Branch**: main (working tree; uncommitted per Review Boundary)
+**Author**: krknapp@gmail.com
+
+## Decision
+
+Sealed the Monitor sidebar theme-inheritance feature (FX881). The embedded Console announces its active
+theme to the embedding Monitor sidebar via a postMessage ({type:'failsafe.theme', theme}); the sidebar
+chrome inherits the shared design tokens and applies the announced data-theme so its chrome matches the
+operator's selected Console theme, live on change and on boot. The 6 theme token blocks were extracted to a
+single shared theme-tokens.css (the Console links it; the sidebar inlines it). The sidebar reads the tokens
+FROM DISK in the Node extension host (resolveUiDir + fs.readFileSync) rather than fetching them cross-origin
+from the localhost Console server -- that server serves no CORS headers, so a webview-origin fetch would
+reject and silently leave the chrome unthemed. Degrades to hardcoded var() fallbacks if the tokens are
+unreadable.
+
+## Scope (FX881)
+
+- FailSafe/extension/src/roadmap/ui/theme-tokens.css (NEW): shared :root + 6 [data-theme] blocks + atmosphere body.
+- FailSafe/extension/src/roadmap/ui/command-center.css: token blocks removed -> pointer comment.
+- FailSafe/extension/src/roadmap/ui/command-center.html: theme-tokens.css link before command-center.css.
+- FailSafe/extension/src/roadmap/ui/modules/state.js: setTheme -> emitTheme(theme) postMessage (no-op top-level).
+- FailSafe/extension/src/roadmap/FailSafeSidebarProvider.ts: token var() chrome + inline tokens from disk + data-theme handler; connect-src dropped from CSP.
+- FailSafe/extension/src/test/roadmap/state-store.test.ts (+2): emit-when-embedded / no-emit-top-level.
+- FailSafe/extension/src/test/ui/monitor-theme-inheritance.spec.ts (NEW): e2e loop.
+
+## Verification
+
+Reality=Promise: exactly 7 files, all planned. tsc 0 errors. mocha 27 passing (2 emit tests + the FX868
+CONSOLE_VERTICALS drift-guard). Playwright command-center-settings 3/3 (Console still themes after the token
+extraction). End-to-end monitor-theme-inheritance 1/1: a host page mirroring the provider embeds the LIVE
+Console; selecting Crimson drives setTheme -> emitTheme -> the host chrome computed background becomes
+rgb(26,5,5) and the host data-theme mirrors 'crimson'. Screenshot visually verified.
+
+## Governance context
+
+This seal followed: qor-logic upgrade 0.106.0 -> 0.109.0 (upstream Qor-logic #199/#200/#201 CLOSED); the
+#199 disclosed-pre-anchor tolerance cleared the #330/#331 manual-era band at the governance-health preflight;
+and forward-only RECONCILIATION Entry #447 attested the disclosed #397/#401 duplicate-previous_hash fork
+(SG-ConcurrentLedgerRace-A), clearing the substantiate Step 7.7 uniqueness check.
+
+## Next operator actions
+
+Held local per Review Boundary (no version bump / tag / push). Code is staged-uncommitted in the working
+tree; operator decides commit / PR. No marketplace publish (waiting on upstream).
+
+
+## Content Hash
+
+**Content Hash**: `801c9ca750b7fd7933086f8cda15b356b3686effe48467dd32242a962507ba91`
+**Previous Hash**: `7810ada522ffc5f55d160d0951f0b5128f74c2cb3f655d323e058c5edd2648c3` (Entry #447 Chain Hash)
+**Chain Hash**: `ec2f38551ad7b2d0c428239f3f61cb73427e1a6d5dfd2e65f24de9b4c895e9ca`
+**Merkle Seal**: `05c0d79bfd2b583fe0644a0eb8bf23d480e9bbf502739ec06714ca57fa7b83f5` -- gate_seal_substantiate_monitor_theme_inheritance_fx881
+**Session ID**: `2026-06-10-substantiate-monitor-theme-inheritance`
+**Entry ID**: `a622c84b1e87`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #448`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). .NET SHA-256 over CRLF; ASCII body.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-06-10T0240-372951_
