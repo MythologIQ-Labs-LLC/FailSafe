@@ -450,7 +450,7 @@ Any raised `ValueError`/`RuntimeError` (missing toolkit or invalid hash) ABORTs:
 
 Calculate session seal:
 
-Reference implementation: `.claude/commands/scripts/calculate-session-seal.py`.
+Seal hashes via `ledger_hash.content_hash(plan)` + `chain_hash` (bound at Step 7.7; GAP-GOV-01).
 
 Update `docs/META_LEDGER.md`:
 

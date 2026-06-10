@@ -1,5 +1,8 @@
 import * as vscode from "vscode";
+import * as fs from "fs";
+import * as path from "path";
 import { decideSidebarClick } from "./sidebarInitializeLogic";
+import { resolveUiDir } from "./services/ConsoleServerSupport";
 
 type SidebarMessage =
   | { command: "openPopout" }
@@ -78,28 +81,50 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
     this.view.webview.html = this.getHtml();
   }
 
+  /** The shared Console design tokens, read from disk so they can be inlined
+   *  into the sidebar chrome. The provider runs in the Node extension host, so
+   *  a direct file read avoids a cross-origin fetch to the Console server (the
+   *  webview origin differs from the localhost server, and no CORS headers are
+   *  served). Returns "" on any miss — the chrome's hardcoded var() fallbacks
+   *  then apply, so the sidebar degrades to the default look. */
+  private readThemeTokens(): string {
+    try {
+      const uiDir = resolveUiDir(__dirname);
+      return fs.readFileSync(path.join(uiDir, "theme-tokens.css"), "utf8");
+    } catch {
+      return "";
+    }
+  }
+
   private getHtml(): string {
     const nonce = getNonce();
     const compactUrl = `${this.baseUrl}/?ui=compact`;
+    const themeTokens = this.readThemeTokens();
     return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="mythiq">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${this.view?.webview.cspSource ?? ""} data: https:; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'; frame-src ${this.baseUrl}; connect-src ${this.baseUrl};" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${this.view?.webview.cspSource ?? ""} data: https:; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'; frame-src ${this.baseUrl};" />
+  <style>${themeTokens}</style>
   <style>
-    html, body { margin: 0; padding: 0; height: 100%; background: #071539; color: #f3f7ff; font-family: "Segoe UI", sans-serif; }
+    /* Chrome inherits the Console theme: the shared design tokens are inlined
+       above (read from disk), and the embedded Console announces the active
+       data-theme via postMessage (failsafe.theme). Hardcoded values are
+       fallbacks for when the tokens cannot be read. */
+    html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-dark, #071539); color: var(--text-main, #f3f7ff); font-family: var(--font-body, "Segoe UI", sans-serif); }
     .shell { display: grid; grid-template-rows: auto auto 1fr; height: 100%; }
-    .toolbar { display: flex; gap: 6px; padding: 6px; border-bottom: 1px solid rgba(95, 150, 255, 0.35); background: #0a1f4a; align-items: center; }
-    .btn { border: 1px solid #3568d8; color: #eaf1ff; background: #1f4ea8; padding: 5px 8px; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: 700; white-space: nowrap; line-height: 1.15; }
-    .btn.secondary { background: #10357a; border-color: #2c5bb9; }
-    .btn.init { margin-left: auto; background: #ffffff; color: #3d7dff; border-color: #ffffff; box-shadow: 0 0 8px rgba(0,0,0,0.25); }
-    .btn.init:hover { background: #f0f4ff; box-shadow: 0 0 12px rgba(0,0,0,0.35); }
+    .toolbar { display: flex; gap: 6px; padding: 6px; border-bottom: 1px solid var(--border-rim, rgba(95, 150, 255, 0.35)); background: var(--bg-panel, #0a1f4a); align-items: center; }
+    .btn { border: 1px solid var(--glass-border, #3568d8); color: var(--text-main, #eaf1ff); background: var(--bg-deep, #1f4ea8); padding: 5px 8px; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: 700; white-space: nowrap; line-height: 1.15; }
+    .btn:hover { border-color: var(--primary, #3568d8); }
+    .btn.secondary { background: var(--bg-deep, #10357a); border-color: var(--border-rim, #2c5bb9); }
+    .btn.init { margin-left: auto; background: var(--primary, #ffffff); color: #ffffff; border-color: var(--primary, #ffffff); box-shadow: 0 0 8px var(--primary-glow, rgba(0,0,0,0.25)); }
+    .btn.init:hover { box-shadow: 0 0 12px var(--primary-glow, rgba(0,0,0,0.35)); filter: brightness(1.08); }
     .frame-wrap { position: relative; min-height: 0; }
-    iframe { border: 0; width: 100%; height: 100%; display: block; background: #071539; }
-    .sre-toggle { display:flex; gap:6px; padding:4px 8px; background:#0a1f4a; border-bottom:1px solid rgba(95,150,255,0.35); justify-content:flex-start; }
-    .sre-toggle button { flex:0 0 auto; width:auto; padding:3px 12px; border:1px solid #3568d8; border-radius:6px; background:#10357a; font-size:10px; font-weight:600; cursor:pointer; color:#eaf1ff; line-height:1.2; }
-    .sre-toggle button[aria-selected="true"] { background:#2c74f2; border-color:#2c74f2; }
+    iframe { border: 0; width: 100%; height: 100%; display: block; background: var(--bg-dark, #071539); }
+    .sre-toggle { display:flex; gap:6px; padding:4px 8px; background:var(--bg-panel, #0a1f4a); border-bottom:1px solid var(--border-rim, rgba(95,150,255,0.35)); justify-content:flex-start; }
+    .sre-toggle button { flex:0 0 auto; width:auto; padding:3px 12px; border:1px solid var(--glass-border, #3568d8); border-radius:6px; background:var(--bg-deep, #10357a); font-size:10px; font-weight:600; cursor:pointer; color:var(--text-main, #eaf1ff); line-height:1.2; }
+    .sre-toggle button[aria-selected="true"] { background:var(--primary, #2c74f2); border-color:var(--primary, #2c74f2); color:#fff; }
     @media (max-width: 340px) {
       .toolbar { gap: 4px; padding: 5px; }
       .btn { font-size: 10px; padding: 4px 6px; }
@@ -125,6 +150,10 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
     const vscode = acquireVsCodeApi();
     const initBtn = document.getElementById('init-workspace');
 
+    // Theme tokens are inlined in <head> (read from disk by the provider); the
+    // chrome follows the data-theme the embedded Console announces via the
+    // failsafe.theme postMessage handled below.
+
     // Restore label state; the host owns the decision logic.
     const state = vscode.getState() || { initDone: false };
     if (state.initDone && initBtn) {
@@ -144,6 +173,10 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
     window.addEventListener('message', (event) => {
       const data = event && event.data ? event.data : null;
       if (!data || typeof data !== 'object') return;
+      if (data.type === 'failsafe.theme' && typeof data.theme === 'string') {
+        document.documentElement.setAttribute('data-theme', data.theme);
+        return;
+      }
       if (data.type === 'failsafe.button.update' && initBtn) {
         initBtn.textContent = data.text;
         initBtn.title = data.title;
