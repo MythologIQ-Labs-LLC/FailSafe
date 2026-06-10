@@ -25,6 +25,10 @@ export interface MetaLedgerEntry {
   decision?: string;
   /** The entry's `**Chain Hash**` (64 hex), when present. */
   chainHash?: string;
+  /** The gate verdict (`**Verdict**`, e.g. `PASS` / `VETO`), when present. */
+  verdict?: string;
+  /** The entry's `**Risk Grade**` (e.g. `L1` / `L2` / `L3`), when present. */
+  riskGrade?: string;
 }
 
 const CHAIN_HASH_RE = /\*\*Chain Hash\*\*:\s*`([0-9a-f]{64})`/;
@@ -47,6 +51,8 @@ export function parseMetaLedgerEntries(metaLedger: string): MetaLedgerEntry[] {
     const tag = /^\*\*Tag\*\*:\s*(.+)$/m.exec(block)?.[1]?.trim();
     const date = /^\*\*Date\*\*:\s*(.+)$/m.exec(block)?.[1]?.trim();
     const chainHash = CHAIN_HASH_RE.exec(block)?.[1];
+    const verdict = /^\*\*Verdict\*\*:\s*(.+)$/m.exec(block)?.[1]?.trim().split(/\s+/)[0];
+    const riskGrade = /^\*\*Risk Grade\*\*:\s*(.+)$/m.exec(block)?.[1]?.trim().split(/\s+/)[0];
     // First non-empty paragraph under `## Decision` (stop at the next `##`).
     let decision: string | undefined;
     const dec = /^## Decision\s*$([\s\S]*?)(?=^## |$(?![\s\S]))/m.exec(block);
@@ -54,7 +60,7 @@ export function parseMetaLedgerEntries(metaLedger: string): MetaLedgerEntry[] {
       const para = dec[1].split(/\n\s*\n/).map((s) => s.trim()).find(Boolean);
       if (para) decision = para.replace(/\s+/g, ' ').trim().slice(0, 300);
     }
-    out.push({ n, phase, title, version, tag, date, decision, chainHash });
+    out.push({ n, phase, title, version, tag, date, decision, chainHash, verdict, riskGrade });
   }
   return out;
 }

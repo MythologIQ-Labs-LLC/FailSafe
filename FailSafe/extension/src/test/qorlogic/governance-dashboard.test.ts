@@ -1,6 +1,6 @@
 import { strict as assert } from 'assert';
 import { buildGovernanceDashboard } from '../../qorlogic/governance-dashboard';
-import type { ShadowGenomeResult } from '../../qorlogic/shadow-genome-client';
+import type { ShadowGenomeResult, GenomeGraph } from '../../qorlogic/shadow-genome-client';
 import { FIXTURE_GENOME, FIXTURE_GENOME_213 } from './fixtures/genome-graph.fixture';
 
 const AT = '2026-01-01T00:00:00.000Z';
@@ -132,5 +132,31 @@ suite('buildGovernanceDashboard — #213 producer surfaces wired', () => {
     assert.deepEqual(r.trustTransitions, []);
     assert.equal(r.federation.sourced, false);
     assert.equal(r.learningMaturity[0].stage, 'Observed'); // buildMaturity fallback
+  });
+});
+
+suite('buildGovernanceDashboard — per-record provenance (#454)', () => {
+  const RECON: GenomeGraph = {
+    nodes: [
+      { id: 'g', type: 'governance', label: 'Gate', provenance: 'reconstructed' },
+      { id: 'f', type: 'failure', label: 'VETO', provenance: 'reconstructed' },
+    ],
+    edges: [{ id: 'e', source: 'g', target: 'f', type: 'applies_to' }],
+  };
+
+  test('incidents carry the failure node provenance', () => {
+    const r = buildGovernanceDashboard({ ok: true, graph: RECON }, { generatedAt: AT });
+    assert.equal(r.incidents.length, 1);
+    assert.equal(r.incidents[0].provenance, 'reconstructed');
+  });
+
+  test('trimmed graph nodes carry provenance into the map', () => {
+    const r = buildGovernanceDashboard({ ok: true, graph: RECON }, { generatedAt: AT });
+    assert.ok(r.graph.nodes.every((n) => n.provenance === 'reconstructed'));
+  });
+
+  test('absent provenance (live recorded graph) leaves incidents unflagged', () => {
+    const r = buildGovernanceDashboard({ ok: true, graph: FIXTURE_GENOME }, { generatedAt: AT });
+    assert.equal(r.incidents[0].provenance, undefined);
   });
 });

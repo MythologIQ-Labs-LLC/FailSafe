@@ -24579,9 +24579,118 @@ genome -> lit panels) requires a populated .qor/genome.jsonl with #213 events, a
 **Session ID**: `2026-06-10-substantiate-shadow-genome-213-wiring`
 **Entry ID**: `55e12b99c44b`
 
-_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #453`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). .NET SHA-256 over CRLF; ASCII body.
+### Entry #454: RESEARCH BRIEF - historical genome reconstruction (FailSafe appendix)
+
+**Date**: 2026-06-10
+**Phase**: RESEARCH (/qor-research)
+**Risk Grade**: L2 (new consumer surface; derivation honesty)
+**Author**: Analyst
+**Brief**: .failsafe/governance/research-brief-historical-genome-reconstruction-2026-06-10.md
+
+## Decision
+
+Operator-directed design: FailSafe reconstructs a Shadow Genome graph from historical governance (META_LEDGER)
+as a SEPARATE, UNGOVERNED appendix -- never editing qor's .qor/genome.jsonl -- ingested alongside the real
+genome with a redundancy/dedup check, and NOT part of the governance tree (not Merkle-chained, not in
+META_LEDGER), so no ledger is dirtied. This lights up the #196 genome-map + incidents + maturity panels with
+real, evidence-traced derived data (every node back-cites an entry #). trust_transitions + federation_peers
+have no source in META_LEDGER, so those two panels stay honest-empty. It is the #197 convergence forcing
+function (META_LEDGER feeding both the tracker and the genome view, reusing parseMetaLedgerEntries) achieved
+without a unifying engine and without crossing the qor-logic boundary.
+
+## Findings
+
+- F1: mapping is parseable + evidence-traceable. GATE entries carry **Verdict**: PASS|VETO + **Risk Grade**.
+  PASS/GOVERNANCE/SECURE -> governance node; VETO -> failure node; SUBSTANTIATE/DELIVER -> checkpoint;
+  IMPLEMENT -> state; DEBUG/REMEDIATE -> governance applied to a failure (drives maturity).
+- F2: ids do not collide -- real genome n{seq}/e{seq} vs appendix lg-<entryN>-<role> + source='appendix'
+  metadata. Merge = id-namespaced concat + a redundancy rule (real recorded node wins). Additive today
+  (real genome empty); future-proofs co-existence.
+- F3: new pure modules genome-reconstruction.ts + genome-merge.ts; extend parseMetaLedgerEntries with
+  verdict/riskGrade; wire at the dashboard route after loadShadowGenome. No qor boundary crossing.
+- F4: honesty boundary -- a node from a VETO entry is an INTERPRETATION, not a recorded shadow event; the
+  appendix is labeled source='appendix' + a dashboard 'reconstructed from governance history' note.
+
+## Recommendations
+
+Slice 1 (next cycle): the two pure modules + parser extension + route wiring + per-feature tests + honest
+labeling; degrade-safe (no ledger -> empty appendix -> current behavior). Keep appendix derive-on-read
+in-memory for v1 (no persisted artifact). Maturity map kept conservative. Do NOT persist/modify qor's genome;
+do NOT add appendix entries to META_LEDGER (boundary).
+
+## Next operator action
+
+/qor-plan on Slice 1 after operator review of the node-type mapping + dedup rule (the consequential choices).
+Held local per Review Boundary (brief gitignored; this seal staged).
+
+## Content Hash
+
+**Content Hash**: `19bce7ce398d099a7118099b9eb72120302f03504c403bacfd25704a9c3022b6`
+**Previous Hash**: `23ff537d34b2f55d40cbbb7b12568d3fbe437c55d7bf9603f933cf8244adb9c9` (Entry #453 Chain Hash)
+**Chain Hash**: `6c2e3890bebda9eec35dc4a93f1083daed8e740b9c0ebd6f2f6759fd80e4a018`
+**Merkle Seal**: `11518074cf104233bf59f262177323c101a06e80abe7743956dd46e586454a53` -- gate_seal_research_historical_genome_reconstruction
+**Session ID**: `2026-06-10-research-historical-genome-reconstruction`
+**Entry ID**: `fd92f1e92f1b`
+
+### Entry #455: SUBSTANTIATE - historical genome reconstruction appendix (#454, FX884)
+
+**Date**: 2026-06-10
+**Phase**: SUBSTANTIATE (/qor-auto-dev-1; Reality=Promise PASS; held local per Review Boundary)
+**Plan**: research-brief-historical-genome-reconstruction-2026-06-10.md
+**Branch**: feat/historical-genome-reconstruction
+**Risk Grade**: L2 (new consumer surface; derivation honesty)
+**Author**: krknapp@gmail.com
+
+## Decision
+
+Built the operator-directed historical genome reconstruction: FailSafe reconstructs a Shadow Genome from the
+historical governance ledger (META_LEDGER) as a SEPARATE, UNGOVERNED appendix and the dashboard loader ingests
+BOTH the real (recorded) genome and the appendix, deduped (recorded wins). qor-logic's .qor/genome.jsonl is
+never written; the appendix is not Merkle-chained and not a ledger entry -- no governance tree is dirtied.
+Per operator refinement, honesty is PER-RECORD: every node/incident is flagged recorded (live, active
+governance) vs reconstructed (derived from history), not a blanket banner, so a mixed graph never misreads.
+This lights up the genome-map + incidents + maturity panels; trust + federation stay honest-empty (no ledger
+source). It reuses the #197 Slice-1 parseMetaLedgerEntries, realizing the #197 convergence (one source feeding
+both the tracker and the genome view) without an engine and without crossing the qor boundary.
+
+## Scope (FX884)
+
+- qorlogic/genome-reconstruction.ts (NEW, pure): reconstructGenomeFromLedger -- GATE/VETO->failure(+gate),
+  PASS/GOVERNANCE/SECURE->governance, SUBSTANTIATE/DELIVER->checkpoint, IMPLEMENT->state, DEBUG/REMEDIATE->
+  remediation governance; nodes provenance='reconstructed', ids lg-<n>-<role>, back-cite ledgerEntry.
+- qorlogic/genome-merge.ts (NEW, pure): mergeGenomes -- real tagged 'recorded', dedup by id (recorded wins),
+  trust/federation carried from the real genome only.
+- qorlogic/meta-ledger-model.ts: +verdict/+riskGrade fields. governance-dashboard.ts: provenance on incidents
+  + trimGraph. roadmap/routes/QorRoute.ts + types.ts + ConsoleRouteRegistrar.ts: loadMetaLedger + the
+  reconstruct->merge wiring (degrade-safe). roadmap/ui/modules/shadow-genome.js + command-center.css: per-record
+  provBadge + .sg-prov styling.
+
+## Verification
+
+Reality=Promise: the planned modules + wiring + UI flag. tsc 0; npm run lint 0 errors (pre-existing any/no-undef
+warnings only, none in changed lines); mocha 48/48 (reconstruction 5 + merge 4 + meta-ledger-model 9 +
+dashboard 18 + client 9 + route 3, all prior tests verbatim); Playwright 16/16 in real Chromium (15 verbatim +
+1 new: the reconstructed-vs-recorded badge renders, f2 without provenance shows none). Route stays degrade-safe
+(no loadMetaLedger dep -> empty appendix -> unchanged).
+
+## Next operator actions
+
+Held local per Review Boundary (branch feat/historical-genome-reconstruction; staged-uncommitted). Operator
+decides commit / PR / merge. Carries this session's #454 RESEARCH seal. The genome now populates from history
+on a governed repo -- a real, honest, per-record-flagged dashboard.
+
+## Content Hash
+
+**Content Hash**: `a3a73b006b03e2fc8db4a723e3d3c37cd1900ffdf16aad067ddfdec1aaa46944`
+**Previous Hash**: `6c2e3890bebda9eec35dc4a93f1083daed8e740b9c0ebd6f2f6759fd80e4a018` (Entry #454 Chain Hash)
+**Chain Hash**: `0536254bb406a440e1306c833d525f836e73842947dea464942e28f13b8198ca`
+**Merkle Seal**: `54e9acf7a0db532c4f4f46a2f989c766e089cf98341ba9b733c1789ce8bd87b7` -- gate_seal_substantiate_historical_genome_reconstruction
+**Session ID**: `2026-06-10-substantiate-historical-genome-reconstruction`
+**Entry ID**: `3bdd0d72e22d`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #455`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). .NET SHA-256 over CRLF; ASCII body.
 
 ---
 
 _Chain integrity: VALID_
-_Session: 2026-06-10-substantiate-shadow-genome-213-wiring_
+_Session: 2026-06-10-substantiate-historical-genome-reconstruction_

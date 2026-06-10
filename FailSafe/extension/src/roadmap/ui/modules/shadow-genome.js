@@ -15,6 +15,17 @@ function esc(value) {
   return d.innerHTML;
 }
 
+// #454: per-record honesty badge. 'recorded' = a live event from active governance;
+// 'reconstructed' = derived from governance history (META_LEDGER appendix), not a live
+// shadow event. Absent provenance renders nothing (back-compat with a pure live graph).
+function provBadge(p) {
+  if (p !== 'recorded' && p !== 'reconstructed') return '';
+  const title = p === 'reconstructed'
+    ? 'Derived from governance history — not a live recorded shadow event'
+    : 'Recorded in line with active governance';
+  return `<span class="sg-prov sg-prov-${esc(p)}" title="${esc(title)}">${esc(p)}</span>`;
+}
+
 const MODES = [
   { key: 'map', label: 'Genome Map' },
   { key: 'incidents', label: 'Incidents' },
@@ -117,17 +128,21 @@ export class ShadowGenomeRenderer {
       const surfaces = (i.governanceRoots || []).map((g) => esc(g.label)).join(', ') || '—';
       return `<button class="sg-incident sg-sev-${esc(i.severity)}" data-incident="${idx}" tabindex="0">
         <span class="sg-sev-spine" aria-hidden="true"></span>
-        <span class="sg-incident-main"><span class="sg-incident-label">${esc(i.label)}</span><span class="sg-incident-surface">${surfaces}</span></span>
+        <span class="sg-incident-main"><span class="sg-incident-label">${esc(i.label)}</span>${provBadge(i.provenance)}<span class="sg-incident-surface">${surfaces}</span></span>
         <span class="sg-incident-rec" title="recurrence">×${esc(i.recurrence)}</span>
         <span class="sg-incident-sev">${esc(i.severity)}</span>
         <span class="sg-incident-chev" aria-hidden="true">›</span>
       </button>`;
     }).join('');
+    const anyRecon = items.some((i) => i.provenance === 'reconstructed');
+    const provNote = anyRecon
+      ? 'Each record is flagged <em>recorded</em> (live, in line with active governance) or <em>reconstructed</em> (derived from governance history, not a live shadow event).'
+      : 'Each row opens a case file.';
     return `<div class="sg-incidents-wrap">
       <div class="sg-panel sg-incidents">
         <div class="sg-panel-title">Incident ledger <span class="sg-count">${items.length}</span></div>
         <div class="sg-incident-table" role="list" aria-label="Incident ledger">${rows}</div>
-        <div class="sg-note">Each row opens a case file. The structural map (Phase 4) and remediation/trust status (Phase 5) arrive later.</div>
+        <div class="sg-note">${provNote}</div>
       </div>
       <div class="sg-drawer" role="dialog" aria-label="Incident detail" hidden><div class="sg-drawer-body"></div></div>
       <div class="sg-backdrop" hidden></div>
@@ -140,7 +155,7 @@ export class ShadowGenomeRenderer {
       : '<div class="sg-muted">No governance root recorded.</div>';
     return `<div class="sg-drawer-head sg-sev-${esc(i.severity)}">
         <span class="sg-sev-spine" aria-hidden="true"></span>
-        <div class="sg-drawer-headtext"><div class="sg-drawer-title">${esc(i.label)}</div><div class="sg-drawer-sub">${esc(i.severity)} · recurrence ×${esc(i.recurrence)}</div></div>
+        <div class="sg-drawer-headtext"><div class="sg-drawer-title">${esc(i.label)}</div><div class="sg-drawer-sub">${esc(i.severity)} · recurrence ×${esc(i.recurrence)}${provBadge(i.provenance)}</div></div>
         <button class="sg-drawer-close" aria-label="Close detail">✕</button>
       </div>
       <div class="sg-drawer-section"><div class="sg-drawer-h">What failed</div><div class="sg-drawer-p">${esc(i.label)} — a governed failure observed in the causal graph.</div></div>

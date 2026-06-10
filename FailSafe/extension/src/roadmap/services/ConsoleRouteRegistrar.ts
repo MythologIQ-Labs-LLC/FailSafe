@@ -250,6 +250,11 @@ export class ConsoleRouteRegistrar {
         python: "",
         enabled: false,
       }),
+      // #454: feed the reconstructed-genome appendix from the historical ledger.
+      loadMetaLedger: () => {
+        try { return fs.readFileSync(path.join(h.workspaceRoot, "docs", "META_LEDGER.md"), "utf-8"); }
+        catch { return ""; }
+      },
       getActiveRuns: () => h.getAgentRunRecorder()?.getActiveRuns() || [],
       getCompletedRuns: () => h.getAgentRunRecorder()?.getCompletedRuns() || [],
       getRun: (id) => h.getAgentRunRecorder()?.getRun(id),

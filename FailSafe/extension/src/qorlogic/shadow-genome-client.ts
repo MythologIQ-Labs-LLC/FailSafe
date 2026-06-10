@@ -23,7 +23,10 @@ import type { RunCommand } from './PythonInterpreterResolver';
 
 /** #213: a failure node's learning-maturity annotation (derive_maturity_stage). */
 export interface GenomeMaturity { stage: string; [k: string]: unknown }
-export interface GenomeNode { id: string; type: string; label: string; metadata?: Record<string, unknown>; maturity?: GenomeMaturity }
+/** Per-record honesty: `recorded` = a live event from active governance (qor's
+ *  genome); `reconstructed` = derived from historical governance (FailSafe appendix). */
+export type GenomeProvenance = 'recorded' | 'reconstructed';
+export interface GenomeNode { id: string; type: string; label: string; metadata?: Record<string, unknown>; maturity?: GenomeMaturity; provenance?: GenomeProvenance }
 export interface GenomeEdge { id: string; source: string; target: string; type: string; metadata?: Record<string, unknown> }
 /** #213: a CBT/KBT/IBT trust-level transition (camelCased from `to_dict`). */
 export interface GenomeTrustTransition { id: string; fromLevel: string; toLevel: string; direction: string; at?: string; governanceNodeId?: string }

@@ -10,6 +10,9 @@
 import type { Application, Request, Response } from "express";
 import type { ApiRouteDeps } from "./types";
 import { buildGovernanceDashboard } from "../../qorlogic/governance-dashboard";
+import { parseMetaLedgerEntries } from "../../qorlogic/meta-ledger-model";
+import { reconstructGenomeFromLedger } from "../../qorlogic/genome-reconstruction";
+import { mergeGenomes } from "../../qorlogic/genome-merge";
 
 export function registerQorRoute(
   app: Application,
@@ -20,15 +23,23 @@ export function registerQorRoute(
     res.json(await deps.qorRuntimeService.fetchSnapshot());
   });
 
-  // #196 Phase 1: read-only Shadow Genome dashboard over the FX863 data layer.
-  // Always 200 (degrade-safe): an absent/off/degraded loader yields a zeroed
-  // `enabled:false` payload. Determinism lives in the pure builder.
+  // Read-only Shadow Genome dashboard. Ingests BOTH the real (recorded) genome and
+  // a reconstructed appendix derived from historical governance (META_LEDGER, #454) —
+  // merged per-record (recorded wins). Always 200 (degrade-safe): no genome AND no
+  // ledger ⇒ the zeroed `enabled:false` payload. Determinism lives in the pure pieces.
   app.get("/api/qor/governance-dashboard", async (req: Request, res: Response) => {
     if (deps.rejectIfRemote(req, res)) return;
     const result = deps.loadShadowGenome
       ? await deps.loadShadowGenome()
       : { ok: true, localOnly: true };
-    res.json(buildGovernanceDashboard(result, { generatedAt: new Date().toISOString() }));
+    const real = result.ok && result.graph ? result.graph : { nodes: [], edges: [] };
+    const ledger = deps.loadMetaLedger ? deps.loadMetaLedger() : "";
+    const appendix = ledger
+      ? reconstructGenomeFromLedger(parseMetaLedgerEntries(ledger))
+      : { nodes: [], edges: [] };
+    const merged = mergeGenomes(real, appendix);
+    const effective = merged.nodes.length > 0 ? { ok: true as const, graph: merged } : result;
+    res.json(buildGovernanceDashboard(effective, { generatedAt: new Date().toISOString() }));
   });
 
   app.get("/api/qor/health", async (req: Request, res: Response) => {

@@ -61,6 +61,9 @@ export interface ApiRouteDeps {
    * `enabled:true`), so this never reaches the network or a remote store.
    */
   loadShadowGenome?: () => Promise<ShadowGenomeResult>;
+  /** #454: raw `docs/META_LEDGER.md` text — the source for the reconstructed-genome
+   *  appendix the dashboard merges in. Absent/empty → no appendix (degrade-safe). */
+  loadMetaLedger?: () => string;
   getActiveRuns: () => any[];
   getCompletedRuns: () => any[];
   getRun: (runId: string) => any | undefined;

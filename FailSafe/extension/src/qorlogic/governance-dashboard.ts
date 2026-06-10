@@ -13,7 +13,7 @@
  * concepts) — Phase 1 returns honest empties; real sourcing is spec Phase 5.
  */
 import {
-  GenomeGraph, GenomeTrustTransition, GenomeFederationPeer,
+  GenomeGraph, GenomeProvenance, GenomeTrustTransition, GenomeFederationPeer,
   ShadowGenomeResult, governanceSubgraph, summarizeGenome,
 } from './shadow-genome-client';
 
@@ -38,6 +38,7 @@ export interface IncidentSummary {
   recurrence: number;    // incident edges touching the failure node
   severity: IncidentSeverity;
   governanceRoots: { id: string; label: string }[]; // governance nodes applied to this failure
+  provenance?: GenomeProvenance; // recorded (live) vs reconstructed (from governance history)
 }
 
 export interface GovernanceDashboardSummary {
@@ -81,7 +82,7 @@ function zeroed(generatedAt: string): GovernanceDashboardResponse {
 /** Trim the subgraph to the secret-safe topology the Genome Map needs (no metadata passthrough). */
 function trimGraph(sub: GenomeGraph): GenomeGraph {
   return {
-    nodes: sub.nodes.map((n) => ({ id: n.id, type: n.type, label: n.label })),
+    nodes: sub.nodes.map((n) => ({ id: n.id, type: n.type, label: n.label, ...(n.provenance ? { provenance: n.provenance } : {}) })),
     edges: sub.edges.map((e) => ({ id: e.id, source: e.source, target: e.target, type: e.type })),
   };
 }
@@ -105,7 +106,7 @@ function deriveIncidents(sub: GenomeGraph): IncidentSummary[] {
       const other = e.source === f.id ? e.target : e.source;
       if (govLabel.has(other)) roots.push({ id: other, label: govLabel.get(other) as string });
     }
-    return { id: f.id, label: f.label, recurrence, severity: severityFor(recurrence), governanceRoots: roots };
+    return { id: f.id, label: f.label, recurrence, severity: severityFor(recurrence), governanceRoots: roots, provenance: f.provenance };
   });
 }
 
