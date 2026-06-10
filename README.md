@@ -66,9 +66,14 @@ Under the hood, a **Tier 1 supply-chain CI baseline** (least-privilege workflow 
 
 <div align="center">
 
-**Current Release**: v5.6.4 (2026-06-08)
+**Current Release**: v5.7.0 (2026-06-10)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
+
+## What's new in v5.7.0
+
+- 🧬 **Shadow Genome governance dashboard** — a new Governance › Shadow Genome view renders qor-logic's causal governance graph: a zoomable Genome Map plus an incident ledger with a case-file drawer, with trust / federation / learning-maturity panels that populate as their data sources come online.
+- 🎨 **Monitor sidebar inherits the Console theme** — switch themes in the Console and the sidebar chrome restyles to match (all six themes), instead of staying on the default look. See [CHANGELOG.md](CHANGELOG.md).
 
 ## What's new in v5.6.4
 
