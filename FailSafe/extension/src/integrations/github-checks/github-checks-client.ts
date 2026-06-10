@@ -122,6 +122,73 @@ export async function publishCheckRunPayload(
   }
 }
 
+export interface CreatePullRequestOptions {
+  token?: string;
+  apiBaseUrl?: string;
+  remoteUrl?: string;
+  head: string;   // branch to merge from
+  base: string;   // branch to merge into (e.g. main)
+  title: string;
+  body: string;
+}
+
+export interface CreatePullRequestResult {
+  ok: boolean;
+  /** True when we deliberately did NOT call the network (no token / no remote). */
+  localOnly?: boolean;
+  status?: number;
+  url?: string;     // the created PR's html_url
+  number?: number;
+  error?: string;
+}
+
+/**
+ * Open a pull request via `POST /repos/{owner}/{repo}/pulls`. Same transport +
+ * degrade-safe contract as `publishCheckRunPayload`: no token or no GitHub remote
+ * → `localOnly` (the caller's branch is still pushed); the token appears only in
+ * the Authorization header, never in the result. Non-throwing.
+ */
+export async function createPullRequest(
+  opts: CreatePullRequestOptions,
+  post: GitHubPostFn,
+): Promise<CreatePullRequestResult> {
+  if (!opts.token || !opts.token.trim()) return { ok: true, localOnly: true, error: 'no token configured' };
+  const slug = opts.remoteUrl ? parseRepoSlug(opts.remoteUrl) : null;
+  if (!slug) return { ok: true, localOnly: true, error: 'no GitHub remote resolved' };
+
+  const base = (opts.apiBaseUrl || GITHUB_API).replace(/\/$/, '');
+  const url = `${base}/repos/${slug.owner}/${slug.repo}/pulls`;
+  try {
+    const res = await post(
+      url,
+      {
+        'Content-Type': 'application/json',
+        Accept: 'application/vnd.github+json',
+        Authorization: `token ${opts.token}`,
+        'User-Agent': 'FailSafe',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+      JSON.stringify({ title: opts.title, head: opts.head, base: opts.base, body: opts.body }),
+    );
+    if (res.status === 401 || res.status === 403) {
+      return { ok: false, status: res.status, error: 'GitHub auth failed — check the token / pull-request write permission.' };
+    }
+    if (res.status === 422) {
+      // 422 also fires when a PR for this head already exists — not a hard failure.
+      return { ok: false, status: 422, error: 'GitHub rejected the PR (422) — branch may be unpushed or a PR already exists for it.' };
+    }
+    if (res.status < 200 || res.status >= 300) {
+      return { ok: false, status: res.status, error: `GitHub returned HTTP ${res.status}.` };
+    }
+    let prUrl: string | undefined;
+    let num: number | undefined;
+    try { const j = JSON.parse(res.body); if (j && typeof j.html_url === 'string') prUrl = j.html_url; if (j && typeof j.number === 'number') num = j.number; } catch { /* tolerate */ }
+    return { ok: true, status: res.status, url: prUrl, number: num };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 /** Default https transport (used in production; tests inject their own). */
 export const defaultGitHubPost: GitHubPostFn = (url, headers, body) =>
   new Promise((resolve, reject) => {
