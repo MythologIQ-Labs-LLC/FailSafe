@@ -12,30 +12,22 @@
  * deterministically testable — no watcher/clock races (B-BIC-24 lesson).
  */
 
-const ENTRY_HEADER_RE = /^### Entry #(\d+):([^\n]*)$/gm;
-const CHAIN_HASH_RE = /\*\*Chain Hash\*\*:\s*`([0-9a-f]{64})`/;
+import { parseMetaLedgerEntries } from '../meta-ledger-model';
 
 /**
  * Return a stable marker for the latest SESSION SEAL entry in the ledger, or
  * null when there is none. The marker is that entry's Chain Hash (unique per
  * seal), falling back to `entry-<N>` when no chain hash is present. Only the
- * entry HEADER line is matched for "SESSION SEAL" — body mentions of prior seal
- * entries (e.g. a DELIVER entry's `Predecessor:` line) do not count.
+ * entry HEADER (title) is matched for "SESSION SEAL" — body mentions of prior
+ * seal entries (e.g. a DELIVER entry's `Predecessor:` line) do not count.
+ *
+ * Parsing is delegated to the canonical `parseMetaLedgerEntries` (#197).
  */
 export function latestSealMarker(ledgerText: string): string | null {
-  const matches = [...ledgerText.matchAll(ENTRY_HEADER_RE)];
-  if (matches.length === 0) return null;
-  let marker: string | null = null;
-  for (let i = 0; i < matches.length; i += 1) {
-    const header = matches[i][2];
-    if (!/SESSION SEAL/i.test(header)) continue;
-    const start = matches[i].index ?? 0;
-    const end = i + 1 < matches.length ? (matches[i + 1].index ?? ledgerText.length) : ledgerText.length;
-    const body = ledgerText.slice(start, end);
-    const chain = body.match(CHAIN_HASH_RE);
-    marker = chain ? chain[1] : `entry-${matches[i][1]}`;
-  }
-  return marker;
+  const seals = parseMetaLedgerEntries(ledgerText).filter((e) => /SESSION SEAL/i.test(e.title));
+  if (seals.length === 0) return null;
+  const last = seals[seals.length - 1];
+  return last.chainHash ?? `entry-${last.n}`;
 }
 
 /**

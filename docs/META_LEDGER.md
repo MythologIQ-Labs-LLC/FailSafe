@@ -24378,9 +24378,111 @@ Next development cycle starts from main at the v5.7.0 tag.
 **Session ID**: `2026-06-10-deliver-v5.7.0`
 **Entry ID**: `e12f54402a3c`
 
-_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #449`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). .NET SHA-256 over CRLF; ASCII body.
+### Entry #450: RESEARCH BRIEF - shared GovernanceProjection substrate (#197)
+
+**Date**: 2026-06-10
+**Phase**: RESEARCH (/qor-research)
+**Risk Grade**: L1 (advisory; no code change)
+**Author**: Analyst
+**Brief**: .failsafe/governance/research-brief-governance-projection-substrate-2026-06-10.md
+
+## Decision
+
+Researched issue #197 (extract a shared GovernanceProjection abstraction: pluggable source-readers ->
+pluggable views across the tracker FX862 + shadow-genome FX863 consumers). VERDICT: the convergence is a
+sound design north star but a DRIFT from current code reality in its concrete framing. The two named
+consumers read DISJOINT sources (governance-projection.ts:268 takes markdown strings META_LEDGER/
+FEATURE_INDEX/plans; governance-dashboard.ts:149 takes an async-loaded GenomeGraph from .qor/genome.jsonl)
+and emit DISJOINT view types (TrackerManifest vs GovernanceDashboardResponse), and NO existing consumer
+reads both -- so a unifying project() engine today is the speculative generality the issue itself flags
+(Hickey). The REAL, non-speculative duplication is the META_LEDGER entry parser, implemented twice
+independently (governance-projection.ts:41 + seal-detection.ts:15) with the LedgerEntry model buried in the
+tracker module; 10+ modules read META_LEDGER.
+
+## Findings
+
+- F1 DRIFT: tracker + genome consumers are structurally disjoint (sources, parsers, outputs all unrelated).
+- F2 MATCH: duplicate `### Entry #N` parse at governance-projection.ts:41 and seal-detection.ts:15.
+- F3: ShadowGenomeManager.ts reads a SEPARATE SQLite store (.failsafe/ledger/shadow_genome.db), not the
+  jsonl graph nor META_LEDGER -- so no dual-source forcing consumer exists.
+- F4: GenomeGraph + governanceSubgraph + summarizeGenome already shared (shadow-genome-client.ts) -> no work.
+
+## Recommendations
+
+Narrow #197 for /qor-plan: Slice 1 (now, zero-behavior) = extract canonical meta-ledger-model.ts
+(LedgerEntry + parseLedgerEntries), repoint governance-projection.ts + seal-detection.ts, tests green.
+Slice 2 (optional) = thin degrade-safe GovernanceFileReader. DEFER the view-unifying engine until a third
+consumer needs both a text source and the genome graph in one view (the forcing function). Do not touch the
+already-shared GenomeGraph vocabulary or the ShadowGenomeManager SQLite store.
+
+## Next operator action
+
+/qor-plan on the narrowed Slice-1 scope. Held local per Review Boundary (brief in gitignored
+.failsafe/governance/; this seal staged-uncommitted).
+
+## Content Hash
+
+**Content Hash**: `c5938a1d098acb3979facaa7da92c4b8641c7a298df60aaa05344ef01e82d0f5`
+**Previous Hash**: `36d9edcf36d1f858c5837613761639501958174eaa1dcf9e28984f9d9070db1e` (Entry #449 Chain Hash)
+**Chain Hash**: `aa66ba58107eccc9a858a06ab777926f5178079d60d93db7c8741d7ed76ad9c7`
+**Merkle Seal**: `8b2bc5547ead8f97f0de96d3ec89dc4c620633cabcfbe1e9579e0078ba93ecd2` -- gate_seal_research_governance_projection_substrate
+**Session ID**: `2026-06-10-research-governance-projection-substrate`
+**Entry ID**: `9f997ebd5678`
+
+### Entry #451: SUBSTANTIATE - canonical META_LEDGER entry parser (#197 Slice 1, FX882)
+
+**Date**: 2026-06-10
+**Phase**: SUBSTANTIATE (/qor-auto-dev-1; Reality=Promise PASS; held local per Review Boundary)
+**Plan**: plan-meta-ledger-model-197.md
+**Branch**: feat/meta-ledger-model-197
+**Risk Grade**: L1 (pure refactor, zero behavior change)
+**Author**: krknapp@gmail.com
+
+## Decision
+
+Extracted the canonical META_LEDGER `### Entry #N` parser into a single shared module
+(qorlogic/meta-ledger-model.ts: MetaLedgerEntry + parseMetaLedgerEntries), removing the duplicate that
+existed in roadmap/tracker/governance-projection.ts and qorlogic/substrate/seal-detection.ts (research #450
+F2). The new parser adds a `chainHash` field so seal-detection's latestSealMarker delegates to it instead of
+its own ENTRY_HEADER_RE/CHAIN_HASH_RE. Named MetaLedgerEntry (not LedgerEntry) to avoid collision with the 3
+pre-existing unrelated `LedgerEntry` types (shared/types, GovernancePhaseTracker, the old tracker-local
+shape). This is the narrowed, non-speculative #197 Slice 1; the view-unifying engine + GovernanceFileReader
+are DEFERRED (research F1/F3 - disjoint sources/views, no forcing third consumer).
+
+## Scope (FX882)
+
+- qorlogic/meta-ledger-model.ts (NEW): MetaLedgerEntry + parseMetaLedgerEntries (pure; +chainHash).
+- roadmap/tracker/governance-projection.ts: dropped local LedgerEntry/parseLedgerEntries; imports the shared
+  model; internal refs renamed (rcsFromLedger/decisionsFromLedger params, projectTrackerManifest call).
+- qorlogic/substrate/seal-detection.ts: latestSealMarker delegates to parseMetaLedgerEntries; dropped local
+  ENTRY_HEADER_RE/CHAIN_HASH_RE; SealWatchState unchanged.
+- test/qorlogic/meta-ledger-model.test.ts (NEW, 7): per-feature parser tests.
+- test/roadmap/tracker/governance-projection.test.ts: import repointed (parseMetaLedgerEntries).
+
+## Verification
+
+Reality=Promise: exactly the planned files. tsc --noEmit 0 errors. eslint 0 on all touched files. mocha 30/30
+green: meta-ledger-model 7/7 + governance-projection 12/12 (incl. the FX868 CONSOLE_VERTICALS drift-guard) +
+seal-detection 11/11 VERBATIM (the zero-behavior-change proof: body-mention-excluded, last-seal-then-DELIVER,
+and entry-N-fallback cases all still pass against the delegated parser).
+
+## Next operator actions
+
+Held local per Review Boundary (branch feat/meta-ledger-model-197; staged-uncommitted). Operator decides
+commit / PR / merge. Not a release. Carries this session's #450 RESEARCH seal on the same branch.
+
+## Content Hash
+
+**Content Hash**: `cbf35e7daaf8df6870f90b64de3267782280fdf6467bd58da505757ca31658a6`
+**Previous Hash**: `aa66ba58107eccc9a858a06ab777926f5178079d60d93db7c8741d7ed76ad9c7` (Entry #450 Chain Hash)
+**Chain Hash**: `6ec638a4d1e7d1f5ef19792012404a1f2b00eae9fef428d354adc3997a93351c`
+**Merkle Seal**: `31e000756639b50c05c69381a49df655d536e8c601681bd90668a5a8fd18ff60` -- gate_seal_substantiate_meta_ledger_model_197
+**Session ID**: `2026-06-10-substantiate-meta-ledger-model-197`
+**Entry ID**: `cc8dafb66537`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #451`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). .NET SHA-256 over CRLF; ASCII body.
 
 ---
 
 _Chain integrity: VALID_
-_Session: 2026-06-10-deliver-v5.7.0_
+_Session: 2026-06-10-substantiate-meta-ledger-model-197_

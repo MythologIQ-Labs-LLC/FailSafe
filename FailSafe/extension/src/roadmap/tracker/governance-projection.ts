@@ -17,46 +17,12 @@
 
 import type { TrackerManifest, TrackerRc, TrackerVertical, TrackerProgram, TrackerPhase } from './tracker-model';
 import { parseFeatureIndex } from './tracker-parsers';
+import { MetaLedgerEntry, parseMetaLedgerEntries } from '../../qorlogic/meta-ledger-model';
 
 const ACCENTS = ['#38d6c8', '#e7b04b', '#f0728f', '#7aa2f7', '#9ece6a', '#bb9af7', '#ff9e64'];
 
-export interface LedgerEntry {
-  n: number;
-  phase: string;
-  title: string;
-  version?: string;
-  tag?: string;
-  date?: string;
-  decision?: string;
-}
-
-/** Parse `### Entry #N: <title>` blocks → structured entries (markers are stable
- *  across the Merkle ledger: `**Phase**`, `**Version**`, `**Tag**`, `## Decision`). */
-export function parseLedgerEntries(metaLedger: string): LedgerEntry[] {
-  const text = metaLedger || '';
-  const out: LedgerEntry[] = [];
-  // Split on the entry header; keep the header with its block.
-  const parts = text.split(/(?=^### Entry #\d+:)/m);
-  for (const block of parts) {
-    const head = /^### Entry #(\d+):\s*(.+)$/m.exec(block);
-    if (!head) continue;
-    const n = parseInt(head[1], 10);
-    const title = head[2].trim();
-    const phase = (/^\*\*Phase\*\*:\s*(.+)$/m.exec(block)?.[1] || '').trim().split(/\s+/)[0];
-    const version = /^\*\*Version\*\*:\s*(.+)$/m.exec(block)?.[1]?.trim();
-    const tag = /^\*\*Tag\*\*:\s*(.+)$/m.exec(block)?.[1]?.trim();
-    const date = /^\*\*Date\*\*:\s*(.+)$/m.exec(block)?.[1]?.trim();
-    // First non-empty paragraph under `## Decision` (stop at the next `##`).
-    let decision: string | undefined;
-    const dec = /^## Decision\s*$([\s\S]*?)(?=^## |$(?![\s\S]))/m.exec(block);
-    if (dec) {
-      const para = dec[1].split(/\n\s*\n/).map((s) => s.trim()).find(Boolean);
-      if (para) decision = para.replace(/\s+/g, ' ').trim().slice(0, 300);
-    }
-    out.push({ n, phase, title, version, tag, date, decision });
-  }
-  return out;
-}
+// `MetaLedgerEntry` + `parseMetaLedgerEntries` are the canonical META_LEDGER parser
+// (qorlogic/meta-ledger-model.ts), shared with the substantiate seal-detector (#197).
 
 // --- Verticals = the product's 7 Console surfaces (the AUTHORITATIVE taxonomy) ---
 // Verticals are NOT code directories. They are the user-facing product surfaces, and
@@ -146,7 +112,7 @@ function humanizeArea(area: string): string {
   return area.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function rcsFromLedger(entries: LedgerEntry[]): TrackerRc[] {
+function rcsFromLedger(entries: MetaLedgerEntry[]): TrackerRc[] {
   const byId = new Map<string, TrackerRc>();
   for (const e of entries) {
     if (e.phase !== 'DELIVER' || !e.version) continue;
@@ -159,7 +125,7 @@ function rcsFromLedger(entries: LedgerEntry[]): TrackerRc[] {
 
 type MetaDecision = { decision: string; drivenBy: string; evidence: string };
 
-function decisionsFromLedger(entries: LedgerEntry[]): MetaDecision[] {
+function decisionsFromLedger(entries: MetaLedgerEntry[]): MetaDecision[] {
   return entries
     .filter((e) => e.decision)
     .map((e) => ({
@@ -266,7 +232,7 @@ export interface GovernanceSources {
 
 /** Project a TrackerManifest from the governance artifacts. */
 export function projectTrackerManifest(sources: GovernanceSources): TrackerManifest {
-  const entries = parseLedgerEntries(sources.metaLedger);
+  const entries = parseMetaLedgerEntries(sources.metaLedger);
   const rcs = rcsFromLedger(entries);
   const decisions = decisionsFromLedger(entries);
   const verticals = attributeFeatures(verticalsFromConsole(), sources.featureIndex);
