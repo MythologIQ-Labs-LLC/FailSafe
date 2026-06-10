@@ -24688,9 +24688,61 @@ on a governed repo -- a real, honest, per-record-flagged dashboard.
 **Session ID**: `2026-06-10-substantiate-historical-genome-reconstruction`
 **Entry ID**: `3bdd0d72e22d`
 
-_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #455`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). .NET SHA-256 over CRLF; ASCII body.
+### Entry #456: SUBSTANTIATE - Organize/Initialize self-commit -> push -> PR (FX885)
+
+**Date**: 2026-06-10
+**Phase**: SUBSTANTIATE (/qor-auto-dev-1; Reality=Promise PASS; held local per Review Boundary)
+**Plan**: operator chat directive (design operator-approved via question gate)
+**Branch**: feat/organize-governed-pr
+**Risk Grade**: L2 (drives git + opens PRs in arbitrary user repos)
+**Author**: krknapp@gmail.com
+
+## Decision
+
+Fixed the annoyance that UI Organize/Initialize leave a lingering 'dirty' working tree. Per operator direction:
+after the command applies edits, offer (operator-confirmed) to commit + push + open a PR explaining the
+changes, so a UI click yields a clean tree + an auditable, attributed PR. The changed-path set is a precise
+before/after `git status` diff (never sweeps unrelated dirty files). On decline, the action + timestamp +
+change list is recorded to .failsafe/governance/workspace-actions.jsonl (append-only audit ledger, gitignored)
+so it is identified, not anonymous drift. Degrade-safe ladder, operator-chosen floor = commit+push branch,
+skip PR: not-a-repo -> noop; no origin -> commit local; no GitHub token -> push branch + compare URL; full ->
+PR. Reuses the github-checks POST transport + token (config integrations.github.token); the new
+createPullRequest mirrors publishCheckRunPayload (degrade-safe, token only in the header).
+
+## Scope (FX885)
+
+- extension/governedCommit.ts (NEW): commitPushOpenPr ladder + defaultGitRunner (spawn) + statusPaths.
+- extension/governedCommitFlow.ts (NEW): runGovernedCommitFlow -- operator-confirm orchestration + decline
+  -> recordDeclined; branch fix/<action>-<timestamp>; PR body from the executed labels.
+- integrations/github-checks/github-checks-client.ts: createPullRequest (POST /repos/{o}/{r}/pulls).
+- extension/bootstrapServers.ts: offerGovernedCommit wired into failsafe.organize + failsafe.bootstrap
+  (before/after status diff; vscode confirm; jsonl audit record; config token; defaultGitHubPost).
+
+## Verification
+
+Reality=Promise: the planned modules + wiring. tsc 0; npm run lint 0 errors (123 pre-existing warnings, none
+new -- count unchanged); mocha 11/11 (governedCommit 8 ladder rungs + governedCommitFlow 3), all with INJECTED
+git/post/clock/confirm/ledger -- no spawn, no network, no vscode. No UI surface (native confirm dialog), so no
+Playwright. The vscode glue (offerGovernedCommit) is a thin best-effort adapter that degrades silently.
+
+## Next operator actions
+
+Held local per Review Boundary (branch feat/organize-governed-pr; staged-uncommitted). Operator decides
+commit / PR / merge. After this ships, clicking Organize/Initialize in the Monitor offers a governed PR for its
+own output -- the dirty-tree annoyance is resolved at the source.
+
+## Content Hash
+
+**Content Hash**: `d5311eaac1d691678b61841906432fbac6512a608d4c8ba764c06836b334f7ed`
+**Previous Hash**: `0536254bb406a440e1306c833d525f836e73842947dea464942e28f13b8198ca` (Entry #455 Chain Hash)
+**Chain Hash**: `a5e5b5f77f193151d26d2f42ed77da480435f4922740536425d8242afeedd4f7`
+**Merkle Seal**: `3bdb3bee51b036c72d615cefab13d5a5db7f4953009f87527d3e2ce764f8af16` -- gate_seal_substantiate_organize_governed_pr
+**Session ID**: `2026-06-10-substantiate-organize-governed-pr`
+**Entry ID**: `73dc58602c80`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #456`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). .NET SHA-256 over CRLF; ASCII body.
 
 ---
 
 _Chain integrity: VALID_
-_Session: 2026-06-10-substantiate-historical-genome-reconstruction_
+_Session: 2026-06-10-substantiate-organize-governed-pr_

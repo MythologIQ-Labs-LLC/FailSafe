@@ -25,6 +25,55 @@ import { runWorkspaceBootstrap, type BootstrapReport } from "./bootstrapWorkspac
 import { wireBicameralIntegration, maybeAutoConnectBicameral } from "./bootstrapBicameral";
 import { wireVoicePack, reprobeAndSet } from "./bootstrapVoicePack";
 import { setupVoicePackRoutes } from "../roadmap/routes/VoicePackRoute";
+import * as fs from "fs";
+import * as path from "path";
+import { defaultGitRunner, statusPaths } from "./governedCommit";
+import { runGovernedCommitFlow } from "./governedCommitFlow";
+import { defaultGitHubPost } from "../integrations/github-checks/github-checks-client";
+
+/**
+ * After Organize/Initialize applies edits, offer to commit+push+open a PR for them
+ * (operator-confirmed). Changed paths = a before/after `git status` diff (precise).
+ * On decline, the action is recorded to `.failsafe/governance/workspace-actions.jsonl`
+ * (append-only audit ledger) so it's identified, not anonymous drift. Best-effort:
+ * any failure degrades silently to the prior behavior.
+ */
+async function offerGovernedCommit(
+  action: string,
+  before: string[],
+  labels: string[],
+  workspaceRoot: string,
+  outputChannel: vscode.OutputChannel,
+): Promise<void> {
+  try {
+    const after = await statusPaths(defaultGitRunner, workspaceRoot);
+    const changed = after.filter((p) => !before.includes(p));
+    if (changed.length === 0) return;
+    const token = vscode.workspace.getConfiguration("failsafe").get<string>("integrations.github.token", "") || undefined;
+    const result = await runGovernedCommitFlow(action, changed, labels.length ? labels : changed, {
+      workspaceRoot,
+      git: defaultGitRunner,
+      confirm: async (msg) => (await vscode.window.showInformationMessage(msg, "Yes", "No")) === "Yes",
+      recordDeclined: async (info) => {
+        try {
+          const dir = path.join(workspaceRoot, ".failsafe", "governance");
+          await fs.promises.mkdir(dir, { recursive: true });
+          await fs.promises.appendFile(path.join(dir, "workspace-actions.jsonl"), `${JSON.stringify({ ...info, committed: false })}\n`);
+        } catch { /* best-effort audit */ }
+      },
+      now: () => new Date().toISOString(),
+      post: defaultGitHubPost,
+      token,
+    });
+    const r = result as { step: string; prUrl?: string; branch?: string; compareUrl?: string; warning?: string };
+    if (r.step === "pr") void vscode.window.showInformationMessage(`FailSafe ${action}: opened ${r.prUrl}`);
+    else if (r.step === "pushed") void vscode.window.showInformationMessage(`FailSafe ${action}: pushed ${r.branch} — open a PR: ${r.compareUrl ?? ""}`);
+    else if (r.step === "committed") void vscode.window.showInformationMessage(`FailSafe ${action}: committed locally (${r.warning ?? ""}).`);
+    else if (r.step === "declined") outputChannel.appendLine(`[${action}] commit declined — recorded to .failsafe/governance/workspace-actions.jsonl`);
+  } catch (e) {
+    outputChannel.appendLine(`[${action}] governed-commit offer failed: ${e instanceof Error ? e.message : String(e)}`);
+  }
+}
 import { readEducationConfig } from "../education/educationConfig";
 import { catalogConfigKeys } from "../integrations/catalog/integration-catalog";
 
@@ -323,15 +372,18 @@ export async function bootstrapServers(
 
   context.subscriptions.push(
     vscode.commands.registerCommand("failsafe.bootstrap", async () => {
+      const before = await statusPaths(defaultGitRunner, bootstrapDeps.workspaceRoot);
       const report = await runWorkspaceBootstrap(bootstrapDeps, "interactive");
       reportBootstrapToUser(report, outputChannel);
+      await offerGovernedCommit("initialize", before, [], bootstrapDeps.workspaceRoot, outputChannel);
     }),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("failsafe.organize", async () => {
       const { runOrganize } = await import("./organizeWorkspace");
-      await runOrganize(deps.workspaceRoot, outputChannel, {
+      const before = await statusPaths(defaultGitRunner, deps.workspaceRoot);
+      const report = await runOrganize(deps.workspaceRoot, outputChannel, {
         onToast: (message) => { void vscode.window.showInformationMessage(message); },
         onHubRefresh: (reason) => consoleServer.broadcastEvent({ type: "hub.refresh", reason }),
         onNextStep: (suggestion) => {
@@ -343,6 +395,7 @@ export async function bootstrapServers(
           }
         },
       });
+      await offerGovernedCommit("organize", before, report?.executed ?? [], deps.workspaceRoot, outputChannel);
     }),
   );
 
