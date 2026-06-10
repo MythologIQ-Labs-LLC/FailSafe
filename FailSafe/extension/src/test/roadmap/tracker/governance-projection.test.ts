@@ -7,8 +7,9 @@ import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
 import {
-  parseLedgerEntries, projectTrackerManifest, parsePlans, CONSOLE_VERTICALS,
+  projectTrackerManifest, parsePlans, CONSOLE_VERTICALS,
 } from '../../../roadmap/tracker/governance-projection';
+import { parseMetaLedgerEntries } from '../../../qorlogic/meta-ledger-model';
 
 const LEDGER = `# META LEDGER
 
@@ -61,8 +62,8 @@ Release v5.6.2 delivered.
 `;
 
 suite('roadmap/tracker governance-projection (A.1 — tracker sidecar)', () => {
-  test('parseLedgerEntries: extracts n / phase / version / tag / decision per entry', () => {
-    const entries = parseLedgerEntries(LEDGER);
+  test('parseMetaLedgerEntries: extracts n / phase / version / tag / decision per entry', () => {
+    const entries = parseMetaLedgerEntries(LEDGER);
     assert.equal(entries.length, 3);
     const e424 = entries.find((e) => e.n === 424)!;
     assert.equal(e424.phase, 'DELIVER');
