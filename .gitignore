@@ -144,3 +144,4 @@ Thumbs.db
 
 # Generated governance tracker sidecar (GH #194) — projection artifact, never committed
 docs/roadmap/programs.generated.yaml
+.gemini/
