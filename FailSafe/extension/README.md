@@ -48,9 +48,14 @@ Each integration ships with its own README and its external API names are back-c
 
 ---
 
-**Current Release**: v5.7.0 (2026-06-10)
+**Current Release**: v5.8.0 (2026-06-10)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v5.8.0
+
+- 🧬 **Shadow Genome shows real data** — trust / federation / learning-maturity now populate from qor-logic's governance graph, and the genome map + incidents + maturity reconstruct from your own governance history (META_LEDGER), each record flagged *recorded* vs *reconstructed*.
+- 🧹 **Organize & Initialize self-commit** — the Monitor's cleanup commands offer to commit, push & open a PR for their changes (operator-confirmed), so a UI click leaves a clean tree + an auditable PR instead of "drift".
 
 ## What's New in v5.7.0
 
