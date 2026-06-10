@@ -66,9 +66,14 @@ Under the hood, a **Tier 1 supply-chain CI baseline** (least-privilege workflow 
 
 <div align="center">
 
-**Current Release**: v5.7.0 (2026-06-10)
+**Current Release**: v5.8.0 (2026-06-10)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
+
+## What's new in v5.8.0
+
+- 🧬 **Shadow Genome shows real data** — trust / federation / learning-maturity now populate from qor-logic's governance graph, and the genome map + incidents + maturity reconstruct from your own governance history (META_LEDGER), each record flagged *recorded* vs *reconstructed*.
+- 🧹 **Organize & Initialize self-commit** — the Monitor's cleanup commands offer to commit, push & open a PR for their changes (operator-confirmed), so a UI click leaves a clean tree + an auditable PR instead of "drift". See [CHANGELOG.md](CHANGELOG.md).
 
 ## What's new in v5.7.0
 

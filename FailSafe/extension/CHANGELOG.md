@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.8.0] - 2026-06-10
+
+### Added
+- **Shadow Genome shows real data.** The Governance › Shadow Genome panels are no longer empty: trust transitions, federation-peer status, and learning-maturity now populate from qor-logic's governance graph (qor-logic 0.111.0), and the genome map, incident ledger, and maturity funnel **reconstruct from your own governance history** (META_LEDGER) when no live genome is present. Every record is flagged **recorded** (live, in line with active governance) vs **reconstructed** (derived from history) so a mixed view stays honest. (#196)
+- **Organize & Initialize clean up after themselves.** After the Monitor's Organize/Initialize commands apply workspace edits, FailSafe offers to commit, push, and open a pull request explaining the changes — so a one-click cleanup leaves a clean working tree and an auditable PR instead of a lingering "dirty" copy. Degrades gracefully (commits locally, or pushes a branch, when there's no GitHub token/remote); declining records the action to a local audit log.
+
 ## [5.7.0] - 2026-06-10
 
 ### Added
