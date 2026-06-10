@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.7.0] - 2026-06-10
+
+### Added
+- **Shadow Genome governance dashboard.** A new **Governance › Shadow Genome** view renders qor-logic's causal governance graph as a decision-traceability surface — a deterministic, zoomable **Genome Map** of governance nodes and their causal links, and an **incident ledger** with a slide-over case-file drawer (governance roots, severity, recurrence), both derived from real governance data. Trust, federation, and learning-maturity panels are included and populate as their upstream data sources come online. The map is keyboard-operable with a "View as Table" accessibility fallback. (#196)
+- **Monitor sidebar inherits the Console theme.** The Monitor sidebar chrome now follows the embedded Console's active theme — switch to Crimson (or any of the six themes) and the whole panel restyles to match, instead of the frame staying on the default look. Degrades gracefully to the default if the shared design tokens can't be read. (#212)
+
 ## [5.6.4] - 2026-06-08
 
 ### Added

@@ -48,9 +48,14 @@ Each integration ships with its own README and its external API names are back-c
 
 ---
 
-**Current Release**: v5.6.4 (2026-06-08)
+**Current Release**: v5.7.0 (2026-06-10)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v5.7.0
+
+- 🧬 **Shadow Genome governance dashboard** — a new Governance › Shadow Genome view renders qor-logic's causal governance graph: a zoomable Genome Map plus an incident ledger with a case-file drawer, with trust / federation / learning-maturity panels that populate as their data sources come online.
+- 🎨 **Monitor sidebar inherits the Console theme** — switch themes in the Console and the sidebar chrome restyles to match (all six themes), instead of staying on the default look. See [CHANGELOG.md](CHANGELOG.md).
 
 ## What's New in v5.6.4
 
