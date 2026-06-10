@@ -22,7 +22,7 @@ const DASHBOARD = {
   recentChains: [{ rootId: "g1", failureId: "f1", depth: 1, nodeTypes: ["governance", "failure"] }],
   projectSurfaces: [{ id: "g1", label: "Governance: plan gate", failureCount: 2, unresolvedCount: 2 }],
   incidents: [
-    { id: "f1", label: "Spec Drift", recurrence: 2, severity: "repeated", governanceRoots: [{ id: "g1", label: "Governance: plan gate" }, { id: "p1", label: "Governance: deploy gate" }] },
+    { id: "f1", label: "Spec Drift", recurrence: 2, severity: "repeated", provenance: "reconstructed", governanceRoots: [{ id: "g1", label: "Governance: plan gate" }, { id: "p1", label: "Governance: deploy gate" }] },
     { id: "f2", label: "Authority Leak", recurrence: 1, severity: "emerging", governanceRoots: [{ id: "g1", label: "Governance: plan gate" }] },
   ],
   graph: {
@@ -98,6 +98,19 @@ test("Incidents mode — evidence ledger renders one row per incident", async ({
   await expect(page.locator("#governance .sg-incident")).toHaveCount(2);
   await expect(page.locator("#governance .sg-incident").first()).toContainText("Spec Drift");
   await expect(page.locator("#governance .sg-incident").first()).toHaveClass(/sg-sev-repeated/);
+});
+
+test("Incidents — per-record provenance badge (#454: reconstructed vs recorded)", async ({ page }) => {
+  controller = await serveConsoleServerUI({});
+  await page.route("**/api/qor/governance-dashboard", (r) => r.fulfill({ json: DASHBOARD }));
+  await gotoShadowGenome(page, controller.url);
+  await openIncidents(page);
+
+  // f1 is flagged reconstructed (derived); f2 has no provenance → no badge.
+  const badge = page.locator("#governance .sg-incident", { hasText: "Spec Drift" }).locator(".sg-prov-reconstructed");
+  await expect(badge).toBeVisible();
+  await expect(badge).toHaveText("reconstructed");
+  await expect(page.locator("#governance .sg-incident", { hasText: "Authority Leak" }).locator(".sg-prov")).toHaveCount(0);
 });
 
 test("incident row opens the case-file drawer; Locate in Genome returns to the map", async ({ page }) => {

@@ -1941,6 +1941,10 @@ select option {
 .sg-incident-surface { font-size: 0.72rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sg-incident-rec { font-size: 0.74rem; color: var(--text-main); font-variant-numeric: tabular-nums; }
 .sg-incident-sev { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--sev); border: 1px solid color-mix(in srgb, var(--sev) 45%, transparent); background: color-mix(in srgb, var(--sev) 12%, transparent); padding: 2px 8px; border-radius: 10px; }
+/* #454: per-record provenance badge — recorded (live) vs reconstructed (derived from governance history). */
+.sg-prov { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 1px 7px; border-radius: 10px; margin-left: 8px; vertical-align: middle; white-space: nowrap; font-weight: 600; }
+.sg-prov-recorded { color: var(--accent-green, #9ece6a); border: 1px solid color-mix(in srgb, var(--accent-green, #9ece6a) 45%, transparent); background: color-mix(in srgb, var(--accent-green, #9ece6a) 12%, transparent); }
+.sg-prov-reconstructed { color: var(--text-muted); border: 1px dashed var(--border-rim); background: color-mix(in srgb, var(--text-muted) 8%, transparent); }
 .sg-incident-chev { color: var(--text-muted); font-size: 1.1rem; line-height: 1; }
 .sg-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 40; }
 .sg-drawer { position: fixed; top: 0; right: 0; height: 100%; width: 380px; max-width: 90vw; background: var(--bg-panel); border-left: 1px solid var(--glass-border); box-shadow: -12px 0 40px -12px rgba(0, 0, 0, 0.6); z-index: 41; overflow-y: auto; }

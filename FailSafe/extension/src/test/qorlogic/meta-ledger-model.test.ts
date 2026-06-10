@@ -78,4 +78,14 @@ suite('parseMetaLedgerEntries (#197)', () => {
     assert.deepEqual(parseMetaLedgerEntries(''), []);
     assert.deepEqual(parseMetaLedgerEntries('no entries here'), []);
   });
+
+  test('extracts verdict + riskGrade (first token) when present', () => {
+    const gate = ['### Entry #7: GATE TRIBUNAL', '', '**Phase**: GATE', '**Risk Grade**: L3', '**Verdict**: VETO', '', '## Decision', '', 'Blocked.'].join('\n');
+    const [e] = parseMetaLedgerEntries(gate);
+    assert.equal(e.verdict, 'VETO');
+    assert.equal(e.riskGrade, 'L3');
+    const [none] = parseMetaLedgerEntries('### Entry #8: X\n\n**Phase**: PLAN\n');
+    assert.equal(none.verdict, undefined);
+    assert.equal(none.riskGrade, undefined);
+  });
 });
