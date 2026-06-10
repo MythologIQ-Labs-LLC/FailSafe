@@ -33,6 +33,18 @@ export class StateStore {
   setTheme(theme) {
     this.set('theme', theme);
     document.documentElement.setAttribute('data-theme', theme);
+    this.emitTheme(theme);
+  }
+
+  /** Notify an embedding host (the Monitor sidebar) of the selected theme so its
+   *  chrome inherits it. No-op when not embedded (top-level window). Fires on
+   *  boot (command-center.js applies the stored theme) and on every change. */
+  emitTheme(theme) {
+    try {
+      if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'failsafe.theme', theme }, '*');
+      }
+    } catch { /* not embedded / cross-origin — ignore */ }
   }
 
   getLlmPriority() {

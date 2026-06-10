@@ -104,6 +104,32 @@ suite('StateStore (FX189)', () => {
     assert.equal(docEl.getAttribute('data-theme'), 'dark');
   });
 
+  test('setTheme emits failsafe.theme to the parent when embedded (Monitor sidebar sync)', () => {
+    const posted: unknown[] = [];
+    const realWin = (globalThis as { window?: unknown }).window;
+    (globalThis as { window: unknown }).window = { parent: { postMessage: (m: unknown) => posted.push(m) } };
+    try {
+      new StateStore().setTheme('crimson');
+      assert.deepEqual(posted, [{ type: 'failsafe.theme', theme: 'crimson' }]);
+    } finally {
+      (globalThis as { window: unknown }).window = realWin;
+    }
+  });
+
+  test('setTheme does NOT emit at top level (parent === self)', () => {
+    const posted: unknown[] = [];
+    const win: { parent?: unknown; postMessage: (m: unknown) => void } = { postMessage: (m: unknown) => posted.push(m) };
+    win.parent = win; // a top-level window: its parent is itself
+    const realWin = (globalThis as { window?: unknown }).window;
+    (globalThis as { window: unknown }).window = win;
+    try {
+      new StateStore().setTheme('mythiq');
+      assert.equal(posted.length, 0);
+    } finally {
+      (globalThis as { window: unknown }).window = realWin;
+    }
+  });
+
   test('FX189 getLlmPriority default is server/native/wasm', () => {
     const ss = new StateStore();
     assert.deepEqual(ss.getLlmPriority(), ['server', 'native', 'wasm']);
