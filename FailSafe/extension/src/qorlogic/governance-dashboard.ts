@@ -13,7 +13,8 @@
  * concepts) — Phase 1 returns honest empties; real sourcing is spec Phase 5.
  */
 import {
-  GenomeGraph, ShadowGenomeResult, governanceSubgraph, summarizeGenome,
+  GenomeGraph, GenomeTrustTransition, GenomeFederationPeer,
+  ShadowGenomeResult, governanceSubgraph, summarizeGenome,
 } from './shadow-genome-client';
 
 export interface GovernanceChainSummary { rootId: string; failureId: string; depth: number; nodeTypes: string[] }
@@ -146,6 +147,45 @@ function countRecurring(sub: GenomeGraph): number {
   return sub.nodes.filter((n) => n.type === 'failure' && (incident.get(n.id) ?? 0) >= 2).length;
 }
 
+// #213 producer surfaces are top-level on the FULL graph (not the governance
+// subgraph) — qor-logic owns the schema; this is the derive half of the model.
+
+/** Map the `trust_transitions` surface → the §4 transition summaries. */
+function deriveTrustTransitions(tts?: GenomeTrustTransition[]): TrustTransitionSummary[] {
+  if (!tts) return [];
+  return tts.map((t) => ({
+    from: t.fromLevel, to: t.toLevel,
+    direction: t.direction === 'demotion' ? 'demotion' : 'promotion',
+    governanceNodeId: t.governanceNodeId ?? '', at: t.at ?? '',
+  }));
+}
+
+const PEER_STATES = new Set<string>(['synced', 'syncing', 'stale', 'degraded', 'incompatible', 'unauthorized', 'offline']);
+const coerceState = (s: string): FederationState => (PEER_STATES.has(s) ? s as FederationState : 'offline');
+
+/** Map the `federation_peers` surface → §10 federation state; honest-unsourced when empty/absent. */
+function deriveFederation(peers?: GenomeFederationPeer[]): FederationSummary {
+  if (!peers || peers.length === 0) return FEDERATION_UNSOURCED;
+  return {
+    sourced: true,
+    peers: peers.map((p) => ({ id: p.id, name: p.name ?? p.id, state: coerceState(p.state), lastSync: p.lastSync })),
+  };
+}
+
+// MaturityStage values (lowercase_snake) in §8 order — aligns 1:1 with MATURITY_STAGES labels.
+const MATURITY_STAGE_ORDER = ['observed', 'classified', 'constraint_extracted', 'detectable', 'enforced', 'verified'];
+
+/** §8 cumulative funnel: each failure counts at every stage up to its highest satisfied
+ *  one (a verified failure was also observed). Falls back to the Phase-1 Observed-only
+ *  shape when no failure node carries a maturity annotation (older genome, pre-0.111). */
+function deriveMaturityStages(sub: GenomeGraph, fallbackObserved: number): LearningMaturityStage[] {
+  const idxs = sub.nodes
+    .filter((n) => n.type === 'failure' && n.maturity?.stage)
+    .map((n) => { const i = MATURITY_STAGE_ORDER.indexOf(String(n.maturity?.stage)); return i < 0 ? 0 : i; });
+  if (idxs.length === 0) return buildMaturity(fallbackObserved);
+  return MATURITY_STAGES.map((stage, i) => ({ stage, count: idxs.filter((x) => x >= i).length }));
+}
+
 export function buildGovernanceDashboard(
   result: ShadowGenomeResult, opts: { generatedAt: string },
 ): GovernanceDashboardResponse {
@@ -153,19 +193,23 @@ export function buildGovernanceDashboard(
   const sub = governanceSubgraph(result.graph);
   const sum = summarizeGenome(sub);
   const unresolvedCount = sub.nodes.filter((n) => n.type === 'failure').length;
+  // #213: derive the trust / federation / maturity slices from the producer surfaces.
+  const trustTransitions = deriveTrustTransitions(result.graph.trustTransitions);
+  const federation = deriveFederation(result.graph.federationPeers);
+  const learningMaturity = deriveMaturityStages(sub, unresolvedCount);
   return {
     generatedAt: opts.generatedAt, enabled: true, degraded: false,
     summary: {
       nodeCount: sum.nodes, edgeCount: sum.edges, unresolvedCount,
-      recurringPatternCount: countRecurring(sub), trustTransitionCount: 0,
+      recurringPatternCount: countRecurring(sub), trustTransitionCount: trustTransitions.length,
     },
     typeDistribution: sum.nodeTypes,
     recentChains: deriveChains(sub),
     projectSurfaces: deriveSurfaces(sub),
     incidents: deriveIncidents(sub),
     graph: trimGraph(sub),
-    trustTransitions: [],
-    learningMaturity: buildMaturity(unresolvedCount),
-    federation: FEDERATION_UNSOURCED,
+    trustTransitions,
+    learningMaturity,
+    federation,
   };
 }

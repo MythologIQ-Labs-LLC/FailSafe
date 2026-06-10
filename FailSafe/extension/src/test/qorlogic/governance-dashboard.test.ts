@@ -1,7 +1,7 @@
 import { strict as assert } from 'assert';
 import { buildGovernanceDashboard } from '../../qorlogic/governance-dashboard';
 import type { ShadowGenomeResult } from '../../qorlogic/shadow-genome-client';
-import { FIXTURE_GENOME } from './fixtures/genome-graph.fixture';
+import { FIXTURE_GENOME, FIXTURE_GENOME_213 } from './fixtures/genome-graph.fixture';
 
 const AT = '2026-01-01T00:00:00.000Z';
 
@@ -99,5 +99,38 @@ suite('buildGovernanceDashboard', () => {
     const r = buildGovernanceDashboard({ ok: true, graph: FIXTURE_GENOME }, { generatedAt: AT });
     assert.equal(r.federation.sourced, false);
     assert.deepEqual(r.federation.peers, []);
+  });
+});
+
+suite('buildGovernanceDashboard — #213 producer surfaces wired', () => {
+  test('trustTransitions surfaced + counted from the producer', () => {
+    const r = buildGovernanceDashboard({ ok: true, graph: FIXTURE_GENOME_213 }, { generatedAt: AT });
+    assert.equal(r.summary.trustTransitionCount, 1);
+    assert.equal(r.trustTransitions.length, 1);
+    assert.deepEqual(
+      { from: r.trustTransitions[0].from, to: r.trustTransitions[0].to, direction: r.trustTransitions[0].direction, governanceNodeId: r.trustTransitions[0].governanceNodeId },
+      { from: 'CBT', to: 'KBT', direction: 'promotion', governanceNodeId: 'g1' },
+    );
+  });
+
+  test('federation: sourced=true with coerced peer states when peers present', () => {
+    const r = buildGovernanceDashboard({ ok: true, graph: FIXTURE_GENOME_213 }, { generatedAt: AT });
+    assert.equal(r.federation.sourced, true);
+    assert.deepEqual(r.federation.peers.map((p) => [p.id, p.state]), [['peerA', 'synced'], ['peerB', 'stale']]);
+  });
+
+  test('learningMaturity: cumulative funnel from failure-node maturity', () => {
+    const r = buildGovernanceDashboard({ ok: true, graph: FIXTURE_GENOME_213 }, { generatedAt: AT });
+    // f1 enforced(4) + f2 classified(1) → each counts at every stage up to its own.
+    assert.deepEqual(r.learningMaturity.map((s) => s.count), [2, 2, 1, 1, 1, 0]);
+    assert.deepEqual(r.learningMaturity.map((s) => s.stage),
+      ['Observed', 'Classified', 'Constraint extracted', 'Detectable', 'Enforced', 'Verified']);
+  });
+
+  test('degrade-safe: a graph without #213 surfaces falls back to honest-empty', () => {
+    const r = buildGovernanceDashboard({ ok: true, graph: FIXTURE_GENOME }, { generatedAt: AT });
+    assert.deepEqual(r.trustTransitions, []);
+    assert.equal(r.federation.sourced, false);
+    assert.equal(r.learningMaturity[0].stage, 'Observed'); // buildMaturity fallback
   });
 });

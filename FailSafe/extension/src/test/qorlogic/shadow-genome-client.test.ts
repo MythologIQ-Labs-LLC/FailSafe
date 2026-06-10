@@ -83,4 +83,27 @@ suite('qorlogic shadow-genome client (#118)', () => {
     assert.ok(res.error && res.error.length > 0);
     assert.equal(res.graph, undefined);
   });
+
+  test('parseGenomeGraph: #213 surfaces (trust_transitions / federation_peers / failure maturity)', () => {
+    const json = JSON.stringify({
+      nodes: [
+        { id: 'f1', type: 'failure', label: 'Drift', maturity: { stage: 'enforced', enforced_by: 'p7' } },
+        { id: 'c1', type: 'checkpoint', label: 'Plan' },
+      ],
+      edges: [],
+      trust_transitions: [{ id: 't1', from_level: 'CBT', to_level: 'KBT', direction: 'promotion', at: 'T', governance_node_id: 'g1' }],
+      federation_peers: [{ id: 'peerA', name: 'A', state: 'synced', last_sync: 'T', origin: 'o' }],
+    });
+    const g = parseGenomeGraph(json);
+    assert.deepEqual(g.nodes[0].maturity, { stage: 'enforced', enforced_by: 'p7' });
+    assert.equal(g.nodes[1].maturity, undefined);
+    assert.deepEqual(g.trustTransitions, [{ id: 't1', fromLevel: 'CBT', toLevel: 'KBT', direction: 'promotion', at: 'T', governanceNodeId: 'g1' }]);
+    assert.deepEqual(g.federationPeers, [{ id: 'peerA', name: 'A', state: 'synced', lastSync: 'T', origin: 'o' }]);
+  });
+
+  test('parseGenomeGraph: a graph without #213 keys omits the optional surfaces (back-compat)', () => {
+    const g = parseGenomeGraph(JSON.stringify({ nodes: [], edges: [] }));
+    assert.equal(g.trustTransitions, undefined);
+    assert.equal(g.federationPeers, undefined);
+  });
 });

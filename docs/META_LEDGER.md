@@ -24480,9 +24480,108 @@ commit / PR / merge. Not a release. Carries this session's #450 RESEARCH seal on
 **Session ID**: `2026-06-10-substantiate-meta-ledger-model-197`
 **Entry ID**: `cc8dafb66537`
 
-_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #451`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). .NET SHA-256 over CRLF; ASCII body.
+### Entry #452: RESEARCH BRIEF - wire qor-logic #213 producer surfaces (#196 Phase 5)
+
+**Date**: 2026-06-10
+**Phase**: RESEARCH (/qor-research)
+**Risk Grade**: L2 (parse a new external contract)
+**Author**: Analyst
+**Brief**: .failsafe/governance/research-brief-shadow-genome-213-producer-wiring-2026-06-10.md
+
+## Decision
+
+qor-logic 0.111.0 ships the #213 producer surfaces the #196 UI was render-ready but honest-empty waiting for.
+shadow_genome_graph.to_dict() (:269-286) now emits trust_transitions[] (id/from_level/to_level/direction/at/
+triggering_evidence/governance_node_id), federation_peers[] (id/name/state/last_sync/origin), and a maturity
+{stage,...} field on every FAILURE node (_node_dict :264-266; derive_maturity_stage :76-92). FailSafe's
+shadow-genome-client.ts parses only {nodes,edges} (stale contract comment :8) and governance-dashboard.ts
+hard-returns honest-empty stubs (trustTransitions:[] :167, FEDERATION_UNSOURCED :169, buildMaturity observed
+only :168). The producer now exists -> wire it. Types pre-align: FederationState (governance-dashboard.ts:22)
+== PeerState value-for-value; TrustTransitionSummary maps 1:1; MaturityStage == MATURITY_STAGES modulo casing.
+
+## Findings
+
+- F1: exact to_dict contract back-cited to shadow_genome_graph.py line numbers (trust_transitions/
+  federation_peers/per-failure maturity + the 3 enums).
+- F2: FailSafe types already aligned (low integration risk; PeerState==FederationState exactly).
+- F3: consumer gap = shadow-genome-client.ts (parse) + governance-dashboard.ts (derive); the dashboard RESPONSE
+  already exposes the 3 slices the #196 FX879 panels render, so backend wiring lights them up with no UI change.
+
+## Recommendations
+
+Slice: (1) shadow-genome-client.ts extend GenomeGraph + parseGenomeGraph (tolerant, degrade-safe) + refresh
+contract comment; (2) governance-dashboard.ts derive real trustTransitions/federation/learningMaturity +
+trustTransitionCount, keeping every absent-field path on the existing honest-empty behavior; (3) fixtures +
+per-feature tests + re-run #196 Playwright. Relates to #197 as a shadow-genome-side SOURCE expansion only --
+no tracker source, no forcing third consumer, so the #197 unifying engine stays DEFERRED.
+
+## Next operator action
+
+/qor-plan on the two-module wiring. Held local per Review Boundary (brief gitignored; this seal staged).
+
+## Content Hash
+
+**Content Hash**: `959f25c9445a308804461fc67f4fc47b49068fc34c4befc4047e48998d5c0218`
+**Previous Hash**: `6ec638a4d1e7d1f5ef19792012404a1f2b00eae9fef428d354adc3997a93351c` (Entry #451 Chain Hash)
+**Chain Hash**: `a72395de1a3691fc129f5e0e55d984f2f6742fb5692716a9c30c320ff28010ac`
+**Merkle Seal**: `7e048fb9fc9bfb7bbc7d72b3ffaba9dce55599b680ad030b65aa9c34fa4e399e` -- gate_seal_research_shadow_genome_213_producer_wiring
+**Session ID**: `2026-06-10-research-shadow-genome-213-producer-wiring`
+**Entry ID**: `8c9687636e92`
+
+### Entry #453: SUBSTANTIATE - Shadow Genome #213 producer wiring (#196 Phase 5, FX883)
+
+**Date**: 2026-06-10
+**Phase**: SUBSTANTIATE (/qor-auto-dev-1; Reality=Promise PASS; held local per Review Boundary)
+**Plan**: research-brief-shadow-genome-213-producer-wiring-2026-06-10.md (two-module wiring)
+**Branch**: feat/shadow-genome-213-wiring
+**Risk Grade**: L2 (parse a new external contract)
+**Author**: krknapp@gmail.com
+
+## Decision
+
+Wired qor-logic 0.111.0's #213 producer surfaces into FailSafe's shadow-genome consumer, lighting up the
+#196 FX879 trust/federation/learning-maturity panels that shipped render-ready but honest-empty. to_dict()
+now emits trust_transitions[], federation_peers[], and a per-failure-node maturity{stage} field; the consumer
+parses them (degrade-safe) and the dashboard derives the real slices. No UI change -- shadow-genome-panels.js
+already renders trustTransitions/federation/learningMaturity. Pre-0.111 graphs (no surfaces) fall back to the
+Phase-1 honest-empty behavior, so it is a pure additive wiring.
+
+## Scope (FX883)
+
+- qorlogic/shadow-genome-client.ts: GenomeGraph gains optional trustTransitions/federationPeers + per-node
+  maturity; parseGenomeGraph reads the 3 new fields tolerantly (included only when the producer emitted them);
+  contract comment refreshed.
+- qorlogic/governance-dashboard.ts: deriveTrustTransitions/deriveFederation/deriveMaturityStages replace the
+  hardcoded stubs (trustTransitions:[], FEDERATION_UNSOURCED, buildMaturity-observed-only); trustTransitionCount
+  now real. FederationState coerced; maturity = a cumulative section 8 funnel.
+- test/qorlogic/shadow-genome-client.test.ts (+2), test/qorlogic/governance-dashboard.test.ts (+4),
+  genome-graph.fixture.ts (FIXTURE_GENOME_213).
+
+## Verification
+
+Reality=Promise: exactly the two consumer modules + their tests/fixture. Every upstream field back-cited to
+shadow_genome_graph.py line numbers (no ghost names; FederationState == PeerState value-for-value). tsc 0,
+eslint 0, mocha 24/24: shadow-genome-client 9/9 (7 verbatim + 2 new) + governance-dashboard 15/15 (11 verbatim
+incl. the honest-empty fallbacks + 4 new). The verbatim degrade-safe tests are the zero-regression proof.
+
+## Next operator actions
+
+Held local per Review Boundary (branch feat/shadow-genome-213-wiring; staged-uncommitted). Operator decides
+commit / PR / merge. Carries this session's #452 RESEARCH seal on the same branch. Live end-to-end (real
+genome -> lit panels) requires a populated .qor/genome.jsonl with #213 events, absent in this repo.
+
+## Content Hash
+
+**Content Hash**: `c5fdb0c008395dfd4089d0d97e2083ae1960b4b473a52f766a9cb6e6c27a233c`
+**Previous Hash**: `a72395de1a3691fc129f5e0e55d984f2f6742fb5692716a9c30c320ff28010ac` (Entry #452 Chain Hash)
+**Chain Hash**: `23ff537d34b2f55d40cbbb7b12568d3fbe437c55d7bf9603f933cf8244adb9c9`
+**Merkle Seal**: `e3bf448f19aa07703c19e3366c8df335e527b63926072e738358bab52d63f060` -- gate_seal_substantiate_shadow_genome_213_wiring
+**Session ID**: `2026-06-10-substantiate-shadow-genome-213-wiring`
+**Entry ID**: `55e12b99c44b`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #453`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). .NET SHA-256 over CRLF; ASCII body.
 
 ---
 
 _Chain integrity: VALID_
-_Session: 2026-06-10-substantiate-meta-ledger-model-197_
+_Session: 2026-06-10-substantiate-shadow-genome-213-wiring_
