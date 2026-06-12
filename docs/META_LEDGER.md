@@ -24032,6 +24032,64 @@ _Hash provenance_: Content Hash = SHA256 of the research brief file. Chain Hash 
 _Chain integrity: VALID_
 _Session: 2026-06-11-research-tracker-mindmap-shadow-genome_
 
+### Entry #459: SUBSTANTIATE+DELIVER - v5.9.0 Command Center suite (FX886-891)
+
+**Date**: 2026-06-12
+**Phase**: SUBSTANTIATE + DELIVER (/qor-auto-dev-1 x6 + operator publish directive; Reality=Promise PASS; shipped)
+**Plan**: docs/research-brief-tracker-mindmap-shadow-genome-remediation-2026-06-11.md (Entry #458 RESEARCH) -> six governed plan->audit->implement cycles + an operator-directed taxonomy editor
+**Released**: v5.9.0 (tag v5.9.0; VS Code Marketplace + Open VSX; GitHub Release non-draft 2026-06-12)
+**Branch**: main (PR #223 features + PR #224 release, both --admin-merged over the CodeQL human-gate)
+**Risk Grade**: L2 (UI surfaces + a governed local-write route)
+**Author**: krknapp@gmail.com
+
+## Decision
+
+Closed the seven-issue Command Center remediation from the #458 research brief, plus an operator-directed
+taxonomy editor, and delivered them as v5.9.0. Each feature ran a governed plan -> audit -> implement cycle;
+the four highest-risk plans (Mind Map seed, Shadow Genome contract, and the taxonomy editor) cleared a
+MANDATORY Option-B independent architect-reviewer audit (SG-007 author-momentum) -- one VETOed and was
+amended to PASS before implementation. Per operator directive the suite was published first (commit/push/PR/
+merge/publish); this SESSION SEAL is the post-ship governance close.
+
+## Scope (FX886-891)
+
+- FX886 Workspace > Tracker: idempotent TabGroup/embed render (no iframe reload on hub refresh) + full-bleed layout.
+- FX887 Tracker taxonomy contract (programs || verticals) + agent-discovery mapping scaffold + validateManifest checks.
+- FX888 Tracker PDF export (print-CSS, native Save-as-PDF; live controls hidden, timestamp + evidence kept).
+- FX889 Mind Map repository seed (governance/genome graph -> brainstorm nodes; auto-seed on empty + REPO/CLEAR LAYER).
+- FX890 Shadow Genome: 'Failure Nodes' -> 'Graph Nodes' label fix + Observed-count invariant + table-default at scale + label truncation.
+- FX891 Workspace > Taxonomy editor -> governed docs/roadmap/tracker-config.yaml + emitted directive + CLAUDE.md force-discover binding.
+
+## Verification
+
+Reality=Promise: every planned module + wiring shipped. tsc 0; TS-lint 0; real-Chromium Playwright across all
+surfaces; pure-logic node harnesses for the config/route/transform layers. The full test:all (mocha + Playwright
++ native rebuild) passed in CI on BOTH PR #223 and PR #224. FX868 CONSOLE_VERTICALS drift-guard kept green
+(workspace sub-views = Skills/Mindmap/Tracker/Taxonomy). FEATURE_INDEX FX886-891 verified; 0 unverified across
+the index. New governed config registered in GOVERNANCE_INDEX (Tier 1 tracker-config.yaml, Tier 2 directive).
+
+## Delivery
+
+PR #223 (features) --admin-merged to main; release PR #224 ([RELEASE] v5.9.0) --admin-merged; tag v5.9.0 from
+main triggered the Release Pipeline; SemVer Gate + Build & Test PASS; production reviewer gate operator-approved;
+both publish jobs succeeded (Open VSX + VS Code Marketplace); GitHub Release v5.9.0 created non-draft.
+
+## Content Hash
+
+**Content Hash**: `4b99d927f1f6cd5335bbec27fb4ab4cffc008721b4204ede34eae5fe1fedb18a`
+**Previous Hash**: `40980313d6f12ee432732bbabf2468253189d73f60301f3559314aefbbe545dd` (Entry #458 Chain Hash)
+**Chain Hash**: `c6eea56931603b441b6a14de061f0e3264abb79746d2e174cd1c52f059d1011e`
+**Merkle Seal**: `36d8607b5ae7c8885133a084acded9ef4c3f66646563ab835c97d84170dea14f` -- gate_seal_deliver_v5_9_0_command_center
+**Session ID**: `2026-06-12-deliver-v5-9-0-command-center`
+**Entry ID**: `c5f464361c3f`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #459`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). SHA-256 over CRLF; ASCII body.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-06-12-deliver-v5-9-0-command-center_
+
 ### Entry #442: SUBSTANTIATE - Shadow Genome dashboard sub-view (#196 Phase 2)
 
 **Date**: 2026-06-09
