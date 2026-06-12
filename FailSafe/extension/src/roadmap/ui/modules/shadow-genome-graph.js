@@ -12,6 +12,14 @@ function esc(value) {
   return d.innerHTML;
 }
 
+// FX890: truncate the VISIBLE node label so dense graphs don't collapse into
+// overlapping text. Truncates the RAW string (before esc) so an HTML entity is
+// never split; the full label is kept in <title> + the group aria-label.
+function truncateLabel(value, max = 16) {
+  const s = String(value ?? '');
+  return s.length > max ? `${s.slice(0, max - 1)}…` : s;
+}
+
 const CX = 400, CY = 250;
 const SEV_GRAD = { active: 'active', repeated: 'repeated', emerging: 'emerging', remediated: 'remediated', informational: 'cyan' };
 const EDGE_STYLE = {
@@ -105,7 +113,7 @@ function nodeSvg(n, p, deg, sev, sel, nb) {
   const shape = (!isGov && !isFail)
     ? `<rect x="${(-r).toFixed(1)}" y="${(-r).toFixed(1)}" width="${(r * 2).toFixed(1)}" height="${(r * 2).toFixed(1)}" transform="rotate(45)" class="sg-node-shape" style="fill:url(#sg-grad-muted);stroke:${stroke}"/>`
     : `<circle r="${r.toFixed(1)}" class="sg-node-shape${dashed}" style="fill:url(#sg-grad-${gradId});stroke:${stroke}"/>`;
-  const label = (isGov || n.id === sel) ? `<text class="sg-node-label" y="${(r + 13).toFixed(1)}">${esc(n.label)}</text>` : '';
+  const label = (isGov || n.id === sel) ? `<text class="sg-node-label" y="${(r + 13).toFixed(1)}">${esc(truncateLabel(n.label))}</text>` : '';
   return `<g class="sg-node${dim}${n.id === sel ? ' sel' : ''}" transform="translate(${p.x.toFixed(1)},${p.y.toFixed(1)})" data-node="${esc(n.id)}" tabindex="0" role="button" aria-label="${esc(n.type)}: ${esc(n.label)}">${ring}${shape}${label}<title>${esc(n.label)} (${esc(n.type)})</title></g>`;
 }
 

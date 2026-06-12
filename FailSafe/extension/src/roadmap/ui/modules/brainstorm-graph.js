@@ -62,6 +62,44 @@ export class BrainstormGraph {
     } catch {}
     // Server empty or unavailable — restore from localStorage
     this._loadLocal();
+    // FX889: an empty Mind Map preloads the repository knowledge graph so the
+    // operator starts from repo facts, not a blank canvas.
+    if (!this.nodes.length) await this.seedFromRepo();
+  }
+
+  // FX889: merge the repository seed graph. By default only fills an EMPTY map
+  // (never overwrites brainstorm work); `force` re-seeds on demand (the REPO
+  // button). mergeNodes dedupes by id, so a re-seed is idempotent on cb- nodes.
+  async seedFromRepo({ force = false } = {}) {
+    if (!force && this.nodes.length) return;
+    try {
+      const res = await fetch('/api/v1/brainstorm/seed');
+      const data = await res.json();
+      if (data.nodes?.length || data.edges?.length) {
+        this.mergeNodes(data.nodes || [], data.edges || []);
+      }
+    } catch {}
+  }
+
+  // FX889: strip the operator's brainstorm layer, KEEP the repo seed (source:
+  // "codebase"), so source facts survive while the user's edits are cleared.
+  clearBrainstormLayer() {
+    const before = { nodes: [...this.nodes], edges: [...this.edges] };
+    const keptIds = new Set(this.nodes.filter(n => n.source === 'codebase').map(n => n.id));
+    const prune = () => {
+      this.nodes = this.nodes.filter(n => keptIds.has(n.id));
+      this.edges = this.edges.filter(e => keptIds.has(e.source) && keptIds.has(e.target));
+    };
+    prune();
+    this._pushUndo({
+      type: 'clear-layer',
+      forward: prune,
+      backward: () => { this.nodes = [...before.nodes]; this.edges = [...before.edges]; },
+    });
+    this.canvas?.setNodes(this.nodes);
+    this.canvas?.setEdges(this.edges, this.nodes);
+    this.onSelectionChange?.(null);
+    this._saveLocal();
   }
 
   _saveLocal() {

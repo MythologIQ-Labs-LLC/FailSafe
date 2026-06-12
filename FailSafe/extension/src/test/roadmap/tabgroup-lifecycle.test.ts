@@ -240,6 +240,41 @@ suite('FX560 TabGroup sub-view lifecycle', () => {
     assert.equal(contentEl.querySelectorAll('.rec').length, 3, 'all 3 background events replayed on reactivation');
   });
 
+  // FX886 — TabGroup.render() is idempotent across hub re-renders: once the
+  // scaffold (pill bar + contentEl) is mounted, a subsequent render() must NOT
+  // tear it down (that destroyed the active sub-view's live DOM — e.g. the
+  // Tracker iframe — forcing a full reload on every hub payload).
+  test('FX886 render() reuses contentEl + preserves its live children across re-render', () => {
+    const a = makeStub();
+    const tg = new TabGroup('tg-container', [{ key: 'a', label: 'A', renderer: a }]);
+    tg.render({});
+    const firstContent = dom.window.document.querySelector('.cc-subview-content')!;
+    const sentinel = dom.window.document.createElement('span');
+    sentinel.id = 'persist-sentinel';
+    firstContent.appendChild(sentinel); // simulates a live iframe/DOM in the pane
+    tg.render({}); // hub-refresh-style re-render
+    const secondContent = dom.window.document.querySelector('.cc-subview-content')!;
+    assert.equal(secondContent, firstContent, 'contentEl node identity preserved (not rebuilt)');
+    assert.ok(dom.window.document.getElementById('persist-sentinel'),
+      'live child survived the re-render (no teardown)');
+    assert.equal(a.renderCalls, 2, 'active sub-view still re-rendered with fresh hub data');
+  });
+
+  test('FX886 render() rebuilds a fresh contentEl after destroy()', () => {
+    const a = makeStub();
+    const tg = new TabGroup('tg-container', [{ key: 'a', label: 'A', renderer: a }]);
+    tg.render({});
+    const first = dom.window.document.querySelector('.cc-subview-content')!;
+    const s2 = dom.window.document.createElement('span'); s2.id = 's2';
+    first.appendChild(s2);
+    tg.destroy();
+    tg.render({});
+    const second = dom.window.document.querySelector('.cc-subview-content')!;
+    assert.notEqual(second, first, 'fresh contentEl built after destroy()');
+    assert.equal(dom.window.document.getElementById('s2'), null,
+      'stale live children gone after destroy + rebuild');
+  });
+
   test('FX560 destroy() removes a window/document listener the renderer registered', () => {
     let handlerRuns = 0;
     const handler = () => { handlerRuns += 1; };

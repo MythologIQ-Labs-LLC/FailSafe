@@ -118,9 +118,12 @@ phases:
   - { prog: config, key: VOICE_CFG, rc: v5.0.0, w: 30, title: Voice & Audio settings, what: Whisper model picker, 12-language BCP-47 selector, auto-match voice, allowlist-hardened., benefit: Multilingual voice, configured safely. }
 
 # Verticals = the product's 7 user-facing surfaces (the Console Center tabs). These
-# are a FIXED taxonomy sourced from src/roadmap/ui/command-center.{html,js}; the
-# `programs` above (Governance Engine / Integrations / Experience) are a separate,
-# program-progress dimension and are intentionally distinct from these surfaces.
+# are a FIXED taxonomy sourced from src/roadmap/ui/command-center.{html,js} (pinned
+# by the FX868 drift-guard). By design they PARALLEL the `programs` above (same 7
+# surface keys): §01 tracks each surface's program-progress, §02 deep-dives the same
+# surface — one product structure, two views. Every vertical key maps to a program
+# key (validateManifest warns on `vertical-unknown-program`); a genuinely
+# cross-cutting surface that maps to no single program sets `crossCutting: true`.
 verticals:
   - key: monitor
     name: Monitor

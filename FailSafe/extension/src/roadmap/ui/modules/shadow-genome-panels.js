@@ -44,12 +44,27 @@ export function renderFederationPanel(d) {
 export function renderMaturity(d) {
   const stages = d.learningMaturity || [];
   if (!stages.length) return '';
-  const max = stages.reduce((m, s) => Math.max(m, s.count), 0) || 1;
-  const bars = stages.map((s) => `<div class="sg-mat-row">
+  // FX890 — observed-count invariant: the canonical backend always sets Observed =
+  // failure count, but a foreign/corrupted payload can report all-zero maturity while
+  // the graph clearly has failure nodes. In that case derive Observed from the graph
+  // failure count (summary.unresolvedCount) and mark the panel degraded, so Observed
+  // never reads 0 against a non-empty failure set.
+  const failureCount = (d.summary && typeof d.summary.unresolvedCount === 'number') ? d.summary.unresolvedCount : 0;
+  const allZero = stages.every((s) => !s.count);
+  const degraded = allZero && failureCount > 0;
+  const countFor = (s) => (degraded && s.stage === 'Observed' ? failureCount : s.count);
+  const max = stages.reduce((m, s) => Math.max(m, countFor(s)), 0) || 1;
+  const bars = stages.map((s) => {
+    const c = countFor(s);
+    return `<div class="sg-mat-row" data-stage="${esc(s.stage)}">
     <span class="sg-mat-stage">${esc(s.stage)}</span>
-    <span class="sg-mat-track"><span class="sg-mat-fill" style="width:${Math.round((s.count / max) * 100)}%"></span></span>
-    <span class="sg-mat-num">${esc(s.count)}</span>
-  </div>`).join('');
-  return `<div class="sg-panel sg-maturity"><div class="sg-panel-title">Learning maturity <span class="sg-mat-cap">has failure become protection?</span></div>${bars}
-    <div class="sg-note">Recording a failure is not learning from it. Only "Observed" is sourced today; deeper stages light up as constraints, detectors, and enforcement gates are recorded (spec §8).</div></div>`;
+    <span class="sg-mat-track"><span class="sg-mat-fill" style="width:${Math.round((c / max) * 100)}%"></span></span>
+    <span class="sg-mat-num">${esc(c)}</span>
+  </div>`;
+  }).join('');
+  const note = degraded
+    ? 'Maturity stages are not sourced for this graph — "Observed" shows the graph failure count so it cannot contradict the map.'
+    : 'Recording a failure is not learning from it. Only "Observed" is sourced today; deeper stages light up as constraints, detectors, and enforcement gates are recorded (spec §8).';
+  return `<div class="sg-panel sg-maturity${degraded ? ' sg-maturity-degraded' : ''}"><div class="sg-panel-title">Learning maturity <span class="sg-mat-cap">has failure become protection?</span></div>${bars}
+    <div class="sg-note">${note}</div></div>`;
 }

@@ -8,7 +8,7 @@
 // Output is a DRAFT for operator review, never a final authored manifest.
 
 import type {
-  TrackerManifest, TrackerProgram, TrackerPhase, TrackerVertical,
+  TrackerManifest, TrackerProgram, TrackerPhase, TrackerVertical, TrackerAgent,
 } from './tracker-model';
 
 /** One merged PR, as gathered from `gh pr list` (or git log). */
@@ -118,6 +118,27 @@ export function verticalsFromChangelog(changelog: string, programs: TrackerProgr
   return verticals;
 }
 
+/**
+ * FX887 — propose one agent-discovery mapping per program (a DRAFT the operator
+ * confirms via the keep/drop/rename taxonomy step). `vertical` is set only when a
+ * parallel vertical key exists; `patterns` is the program/scope token; `evidence`
+ * is the distinct release anchors of that program's phases. Pure + deterministic.
+ */
+export function agentsFromPrograms(
+  programs: TrackerProgram[], verticals: TrackerVertical[], phases: TrackerPhase[],
+): TrackerAgent[] {
+  const vertKeys = new Set(verticals.map((v) => v.key));
+  return programs.map((p) => {
+    const evidence = [...new Set(phases.filter((ph) => ph.prog === p.key && ph.rc).map((ph) => ph.rc))];
+    return {
+      key: p.key, name: p.name, program: p.key,
+      ...(vertKeys.has(p.key) ? { vertical: p.key } : {}),
+      patterns: [p.key],
+      ...(evidence.length ? { evidence } : {}),
+    };
+  });
+}
+
 /** Decisions from ADR references in the CHANGELOG (`ADR-0008 …`). */
 function decisionsFromChangelog(changelog: string): Array<{ decision: string; drivenBy: string; evidence: string }> {
   const out: Array<{ decision: string; drivenBy: string; evidence: string }> = [];
@@ -143,6 +164,7 @@ export function generateTrackerManifest(sources: ManifestSources): TrackerManife
   const programs = programsFromPrs(prs);
   const phases = phasesFromPrs(prs, programs);
   const verticals = verticalsFromChangelog(sources.changelog, programs);
+  const agents = agentsFromPrograms(programs, verticals, phases);
   const decisions = decisionsFromChangelog(sources.changelog);
   const name = sources.repo.split('/').pop() ?? sources.repo;
   return {
@@ -163,5 +185,6 @@ export function generateTrackerManifest(sources: ManifestSources): TrackerManife
     programs,
     phases,
     verticals,
+    agents,
   } as TrackerManifest;
 }

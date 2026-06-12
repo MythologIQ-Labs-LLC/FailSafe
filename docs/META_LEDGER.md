@@ -23986,7 +23986,51 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 ---
 
 _Chain integrity: VALID_
-_Session: 
+_Session: 2026-06-10-research-vscode-agents-window_
+
+---
+
+### Entry #458: RESEARCH BRIEF - Tracker, Mind Map, and Shadow Genome remediation
+
+**Date**: 2026-06-11
+**Phase**: RESEARCH (/qor-research)
+**Risk Grade**: L2 (Command Center UI/data-contract remediation)
+**Author**: Analyst
+**Brief**: docs/research-brief-tracker-mindmap-shadow-genome-remediation-2026-06-11.md
+
+## Decision
+
+Split the operator-observed Command Center defects into seven remediation issues: Tracker reload persistence, Tracker full-space layout, Tracker taxonomy/agent mapping, Tracker PDF export, Mind Map seed graph, Shadow Genome graph usability, and Shadow Genome maturity/summary contract. Research found the Tracker iframe reload is caused by all-renderer hub refresh plus TabGroup DOM rebuild plus iframe recreation; Mind Map has no preloaded codebase graph source; Shadow Genome uses a fixed-ring graph layout that fails at realistic graph size; and the "Failure Nodes" card is backed by total `nodeCount`, which can make `Observed` appear inconsistent.
+
+## Findings
+
+- F1: Tracker iframe reload is source-confirmed at `command-center.js:84-89`, `tab-group.js:10-29`, and `tracker-embed-renderer.js:36-71`.
+- F2: Tracker space underuse is source-confirmed at `tracker-embed-renderer.js:13-20`, `tracker-dashboard.html:94-98`, and `command-center.css:366-407`.
+- F3: Tracker taxonomy is operator-configurable, but `docs/roadmap/programs.yaml:71-81` conflicts with `:120-123` on whether programs and verticals mirror or diverge.
+- F4: PDF export is absent from tracker route/dashboard sources; `rg` found no print/PDF implementation.
+- F5: Mind Map only loads `/api/v1/brainstorm/graph` plus localStorage, while the codebase/governance graph exists under `/api/qor/governance-dashboard`.
+- F6: Shadow Genome graph uses a fixed 800x520 deterministic ring layout with no label-collision policy.
+- F7: Shadow Genome summary labels `nodeCount` as "Failure Nodes" while backend `nodeCount` is total graph nodes; maturity counts are driven by failure nodes.
+
+## Recommendations
+
+Proceed to `/qor-plan` with seven issue tracks. Phase order recommended: (1) idempotent Tracker embed + full-space layout, (2) taxonomy contract and agent mapping, (3) PDF export, (4) Mind Map seed graph, (5) Shadow Genome graph/table threshold and label policy, (6) summary/maturity contract correction, (7) Playwright visual/lifecycle coverage for production-size fixtures.
+
+## Content Hash
+
+**Content Hash**: `0333b252a48e49b7166442144b983add75438d040cea03d5196c9747c8e73692`
+**Previous Hash**: `5b27fbc997dcd5c885481366b6181cb1f5d2726bcd1559a347a2e4e8a38f2cef` (Entry #457 Chain Hash)
+**Chain Hash**: `40980313d6f12ee432732bbabf2468253189d73f60301f3559314aefbbe545dd`
+**Merkle Seal**: `40b40b4bb75412477e44d8e85f3f3f8406dde9e1519867dccae762eceef6c347` -- gate_seal_research_tracker_mindmap_shadow_genome
+**Session ID**: `2026-06-11-research-tracker-mindmap-shadow-genome`
+**Entry ID**: `0333b252a48e`
+
+_Hash provenance_: Content Hash = SHA256 of the research brief file. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). UTF-8 SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-06-11-research-tracker-mindmap-shadow-genome_
 
 ### Entry #442: SUBSTANTIATE - Shadow Genome dashboard sub-view (#196 Phase 2)
 
@@ -24038,7 +24082,7 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 ---
 
 _Chain integrity: VALID_
-_Session: 
+_Session: 2026-06-10-research-vscode-agents-window_
 
 ### Entry #443: SUBSTANTIATE - Shadow Genome incident ledger + drawer (#196 Phase 3)
 
@@ -24090,7 +24134,7 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 ---
 
 _Chain integrity: VALID_
-_Session: 
+_Session: 2026-06-10-research-vscode-agents-window_
 
 ### Entry #444: SUBSTANTIATE - Shadow Genome structural Genome Map (#196 Phase 4)
 
@@ -24144,7 +24188,7 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 ---
 
 _Chain integrity: VALID_
-_Session: 
+_Session: 2026-06-10-research-vscode-agents-window_
 
 ### Entry #445: SUBSTANTIATE - Shadow Genome trust + federation + maturity (#196 Phase 5)
 
@@ -24196,7 +24240,7 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 ---
 
 _Chain integrity: VALID_
-_Session: 
+_Session: 2026-06-10-research-vscode-agents-window_
 
 ### Entry #446: SUBSTANTIATE - Shadow Genome Map zoom + a11y + visual gate (#196 Phase 6)
 
@@ -24251,7 +24295,7 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 ---
 
 _Chain integrity: VALID_
-_Session: 
+_Session: 2026-06-10-research-vscode-agents-window_
 
 
 ### Entry #447: RECONCILIATION
@@ -24742,7 +24786,71 @@ own output -- the dirty-tree annoyance is resolved at the source.
 
 _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #456`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). .NET SHA-256 over CRLF; ASCII body.
 
+### Entry #457: RESEARCH BRIEF - VS Code Agents window compatibility (#83)
+
+**Date**: 2026-06-10
+**Phase**: RESEARCH (/qor-research)
+**Risk Grade**: L2 (external host-surface integration; governance-state worktree split)
+**Author**: Analyst
+**Brief**: docs/research-brief-vscode-agents-window-2026-06-10.md
+
+## Decision
+
+Validated Issue #83's upstream brief + docs/research/VSCodeAgents-issue83.docx against FailSafe source. The
+upstream read is directionally correct: the Agents window is a narrowed extension host (custom views,
+status-bar items, debuggers UNSUPPORTED; opt-in via extensions.supportAgentsWindow keyed by extension id).
+Recommended posture stands -- VS Code owns session/worktree/remote orchestration; FailSafe governs via
+commands, validation tasks, hooks, independently-configured MCP, evidence collection, and CI/branch release
+gates. AHP is a future separate adapter, not an in-extension dependency. Scope a doc-first plan (Issue #83
+Phase 0 + Phase 1 compat matrix); defer the worktree-aware ledger (Phase 3) and the
+Configure-Agents-Governance command (Phase 2) to follow-on plans gated on matrix results.
+
+## Findings
+
+- F1 (DRIFT-1): brief claims FailSafe's extension-contributed MCP server definition is blocked by upstream
+  #317460. Source shows NO registerMcpServerDefinitionProvider / mcpServerDefinitionProviders anywhere --
+  FailSafe is an MCP CLIENT (Bicameral, Open Design) + ACP host, not a server-def contributor. #317460
+  blocks nothing FailSafe ships; the claim overstates exposure (reduces, not increases, scope risk).
+- F2 (confirmed real): governance state is single-workspaceRoot anchored -- VscodeConfigProvider.ts:80
+  (.failsafe = join(workspaceRoot,'.failsafe')), :91 (ledger db), substrate-command.ts:119
+  (docs/META_LEDGER.md). Watchers bind to root: WorkspaceMutationBus.ts:55 (fs.watch abs path),
+  SentinelDaemon.ts:143 (chokidar.watch(workspaceRoot)). => Agents-window worktree isolation splits
+  .failsafe/ + META_LEDGER per session. Present-tense risk, independent of opt-in.
+- F3: surface classification grounded -- 50 failsafe.* commands SUPPORTED; @failsafe chat participant
+  (package.json:83, FailSafeChatParticipant.ts:27) UNVERIFIED; sidebar webview failsafe.sidebarView
+  (package.json:328, bootstrapServers.ts:442) UNSUPPORTED (custom view); status bars
+  AgentHealthIndicator.ts:57 + GovernanceStatusBar.ts:23/25 UNSUPPORTED.
+- F4 (DRIFT-2, gap): no extensions.supportAgentsWindow in FailSafe source/config -- opt-in not yet shipped.
+  .vscode-test/ already holds VS Code 1.120-1.122 archives, so Phase 1 matrix is feasible in-repo (modulo
+  #318103 dev-host caveat: Agents window loads the installed default-profile VSIX, not
+  extensionDevelopmentPath).
+
+## Recommendations
+
+R1 (HIGH): doc-first SHIELD plan = Phase 0 (docs/VS_CODE_AGENTS_WINDOW.md) + Phase 1 compat checklist on the
+downloaded 1.121/1.122 archives; carry DRIFT-1/DRIFT-2 corrections. R2 (MED): worktree-aware two-layer ledger
+as a SEPARATE release-class plan (per-feature TDD + e2e). R3 (MED): defer the Configure-Agents-Governance
+command until the matrix proves surviving surfaces. R4 (LOW): AHP backlog adapter (sibling to ACP proxy);
+remote/Pro enforcement boundary stays in the FailSafe-Pro repo. R5 (PLAN-GATE): re-verify all upstream
+PR/issue ids against live source at /qor-plan per feedback_verify_external_names_at_plan_time.
+
+## Next operator action
+
+/qor-plan on R1 (doc-first Phase 0+1). Held local per Review Boundary (brief tracked in docs/; this seal
+appended to META_LEDGER). No build/publish; no visible-side action.
+
+## Content Hash
+
+**Content Hash**: `a676f62b458a263762d950cdd78eac55e535f54477d01d3326ecd57dad286cb7`
+**Previous Hash**: `a5e5b5f77f193151d26d2f42ed77da480435f4922740536425d8242afeedd4f7` (Entry #456 Chain Hash)
+**Chain Hash**: `5b27fbc997dcd5c885481366b6181cb1f5d2726bcd1559a347a2e4e8a38f2cef`
+**Merkle Seal**: `1271ac4e9cb91d352cf1c60ac4f70dfc3ea35cbaf23edf4e39640dd416c717fa` -- gate_seal_research_vscode_agents_window
+**Session ID**: `2026-06-10-research-vscode-agents-window`
+**Entry ID**: `a676f62b458a`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #457`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). .NET SHA-256 over CRLF; ASCII body.
+
 ---
 
 _Chain integrity: VALID_
-_Session: 2026-06-10-substantiate-organize-governed-pr_
+_Session: 2026-06-10-research-vscode-agents-window_

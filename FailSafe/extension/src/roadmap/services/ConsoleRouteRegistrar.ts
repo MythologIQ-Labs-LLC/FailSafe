@@ -17,6 +17,7 @@ import type { RouteDeps } from "../routes";
 import type { ApiRouteDeps } from "../routes/types";
 import { ConfigurationProfile } from "../../genesis/ConfigurationProfile";
 import { setupBrainstormRoutes } from "../routes/BrainstormRoute";
+import { setupTrackerConfigRoutes } from "../routes/TrackerConfigRoute";
 import { setupCheckpointRoutes } from "../routes/CheckpointRoute";
 import { setupActionsRoutes } from "../routes/ActionsRoute";
 import { setupBicameralRoutes } from "../routes/BicameralRoute";
@@ -289,6 +290,7 @@ export class ConsoleRouteRegistrar {
     const adapterUrl = this.host.adapterService.getConfig()?.adapterBaseUrl;
     setupSreApiRoutes(app, { rejectIfRemote: (req, res) => this.host.rejectIfRemote(req, res) }, adapterUrl);
     setupBrainstormRoutes(app, apiDeps);
+    setupTrackerConfigRoutes(app, apiDeps);
     setupCheckpointRoutes(app, apiDeps);
     setupActionsRoutes(app, apiDeps);
     setupBicameralRoutes(app, {

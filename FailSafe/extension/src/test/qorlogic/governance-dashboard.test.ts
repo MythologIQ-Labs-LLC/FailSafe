@@ -159,4 +159,24 @@ suite('buildGovernanceDashboard — per-record provenance (#454)', () => {
     const r = buildGovernanceDashboard({ ok: true, graph: FIXTURE_GENOME }, { generatedAt: AT });
     assert.equal(r.incidents[0].provenance, undefined);
   });
+
+  // FX890 — the contract behind the frontend "Failure Nodes" mislabel: on a graph
+  // with many nodes but few failures, nodeCount (total) ≫ unresolvedCount (failures),
+  // and Observed = failures — so a card labeled "Failure Nodes" reading nodeCount lies.
+  test('FX890: 20+ node / 2-failure graph → nodeCount(total) ≫ unresolvedCount(failures); Observed = failures', () => {
+    const nodes: GenomeGraph['nodes'] = [];
+    for (let i = 0; i < 25; i += 1) nodes.push({ id: `g${i}`, type: 'governance', label: `Gate ${i}` });
+    nodes.push({ id: 'f0', type: 'failure', label: 'Fail A' });
+    nodes.push({ id: 'f1', type: 'failure', label: 'Fail B' });
+    const edges: GenomeGraph['edges'] = [
+      { id: 'e0', source: 'g0', target: 'f0', type: 'applies_to' },
+      { id: 'e1', source: 'g1', target: 'f1', type: 'applies_to' },
+    ];
+    const r = buildGovernanceDashboard({ ok: true, graph: { nodes, edges } }, { generatedAt: AT });
+    assert.equal(r.summary.unresolvedCount, 2, 'failure count is 2');
+    assert.ok(r.summary.nodeCount >= 27, `nodeCount counts ALL graph nodes (got ${r.summary.nodeCount}), not just failures`);
+    assert.ok(r.summary.nodeCount > r.summary.unresolvedCount, 'nodeCount (total) is not the failure count — the mislabel root');
+    const observed = r.learningMaturity.find((s) => s.stage === 'Observed');
+    assert.equal(observed?.count, 2, 'Observed = failure count, not total nodes');
+  });
 });

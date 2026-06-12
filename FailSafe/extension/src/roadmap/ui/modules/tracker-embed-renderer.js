@@ -10,14 +10,14 @@
 
 const STYLE_ID = 'cc-tracker-embed-style';
 const STYLE = `
-.cc-trk { display:flex; flex-direction:column; gap:10px; height:100%; min-height:600px; }
+.cc-trk { display:flex; flex-direction:column; gap:10px; height:100%; min-height:0; flex:1; }
 .cc-trk-bar { display:flex; align-items:center; justify-content:space-between; gap:10px; }
 .cc-trk-bar h3 { margin:0; font-size:1.02rem; }
 .cc-trk-bar .cc-trk-sub { color:#9aa5b4; font-size:.84rem; }
 .cc-trk-popout { background:#141a22; color:#f1efe7; border:1px solid #3a4658; border-radius:8px;
   padding:5px 12px; cursor:pointer; font:inherit; font-size:.85rem; text-decoration:none; white-space:nowrap; }
 .cc-trk-popout:hover { border-color:#68d391; }
-.cc-trk-frame { flex:1; width:100%; min-height:600px; border:1px solid #202938; border-radius:10px; background:#0c0f14; }
+.cc-trk-frame { flex:1; width:100%; min-height:0; border:1px solid #202938; border-radius:10px; background:#0c0f14; }
 `;
 
 export class TrackerEmbedRenderer {
@@ -37,6 +37,17 @@ export class TrackerEmbedRenderer {
     if (!this.container) return;
     this.ensureStyle();
     const url = '/console/tracker';
+
+    // FX886: idempotent. If the same-src iframe is already mounted, keep the
+    // live document (do NOT replace innerHTML — that reloaded the dashboard on
+    // every hub refresh). Refresh only the heading chrome and return.
+    const existing = this.container.querySelector('iframe.cc-trk-frame');
+    if (existing && (existing.getAttribute('src') || '').endsWith(url)) {
+      const h3 = this.container.querySelector('.cc-trk-bar h3');
+      if (h3) h3.textContent = 'Development Tracker';
+      return;
+    }
+
     const wrap = document.createElement('div');
     wrap.className = 'cc-trk';
 

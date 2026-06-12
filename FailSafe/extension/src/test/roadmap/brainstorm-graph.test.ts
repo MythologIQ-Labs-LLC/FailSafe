@@ -229,3 +229,70 @@ suite('BrainstormGraph (FX207, FX213)', () => {
     assert.equal(graph.nodes.length, 0);
   });
 });
+
+// FX889 — repository seed (Phase 4): seedFromRepo / clearBrainstormLayer / auto-seed.
+suite('FX889 BrainstormGraph repository seed', () => {
+  let lsRestore: () => void;
+  let fetchRestore: () => void;
+  let lsStore: Map<string, string>;
+  teardown(() => { fetchRestore?.(); lsRestore?.(); });
+
+  function setupStubs(handler: (url: string) => unknown) {
+    const ls = installLocalStorageStub(); lsRestore = ls.restore; lsStore = ls.store;
+    fetchRestore = installFetchStub((url: string) => handler(url));
+  }
+  const SEED = { nodes: [{ id: 'cb-a', label: 'A', type: 'Architecture', confidence: 100, source: 'codebase' }], edges: [] };
+
+  test('seedFromRepo: no-op when the map is non-empty and not forced', async () => {
+    setupStubs(() => SEED);
+    const graph = new BrainstormGraph({ store: makeStore() });
+    graph.mergeNodes([{ id: 'mine', label: 'M', type: 'Idea' }], []);
+    await graph.seedFromRepo();
+    assert.deepEqual(graph.nodes.map((n: { id: string }) => n.id), ['mine'], 'existing work not overwritten');
+  });
+
+  test('seedFromRepo: merges the seed into an empty map', async () => {
+    setupStubs((url) => (url.includes('/seed') ? SEED : {}));
+    const graph = new BrainstormGraph({ store: makeStore() });
+    await graph.seedFromRepo();
+    assert.equal(graph.nodes.length, 1);
+    assert.equal(graph.nodes[0].source, 'codebase');
+  });
+
+  test('seedFromRepo: force merges even when non-empty, deduping cb- ids', async () => {
+    setupStubs((url) => (url.includes('/seed') ? SEED : {}));
+    const graph = new BrainstormGraph({ store: makeStore() });
+    graph.mergeNodes([{ id: 'mine', label: 'M', type: 'Idea' }], []);
+    await graph.seedFromRepo({ force: true });
+    await graph.seedFromRepo({ force: true }); // idempotent — cb-a not duplicated
+    assert.deepEqual(graph.nodes.map((n: { id: string }) => n.id).sort(), ['cb-a', 'mine']);
+  });
+
+  test('clearBrainstormLayer: keeps source:codebase nodes, drops the rest + dangling edges', async () => {
+    setupStubs(() => ({}));
+    const graph = new BrainstormGraph({ store: makeStore() });
+    graph.mergeNodes(
+      [{ id: 'cb-a', label: 'A', type: 'Architecture', source: 'codebase' }, { id: 'mine', label: 'M', type: 'Idea' }],
+      [{ source: 'cb-a', target: 'mine', label: 'x' }],
+    );
+    graph.clearBrainstormLayer();
+    assert.deepEqual(graph.nodes.map((n: { id: string }) => n.id), ['cb-a'], 'codebase node kept, brainstorm node dropped');
+    assert.equal(graph.edges.length, 0, 'edge touching the dropped node is pruned');
+  });
+
+  test('fetchGraph: auto-seeds when both server and localStorage are empty', async () => {
+    setupStubs((url) => (url.includes('/seed') ? SEED : { nodes: [], edges: [] }));
+    const graph = new BrainstormGraph({ store: makeStore() });
+    await graph.fetchGraph();
+    assert.equal(graph.nodes.length, 1, 'empty map auto-seeded from repo');
+    assert.equal(graph.nodes[0].source, 'codebase');
+  });
+
+  test('fetchGraph: does NOT auto-seed when localStorage already has nodes', async () => {
+    setupStubs((url) => (url.includes('/seed') ? SEED : { nodes: [], edges: [] }));
+    lsStore.set('failsafe-brainstorm-graph', JSON.stringify({ nodes: [{ id: 'saved', label: 'S', type: 'Idea' }], edges: [] }));
+    const graph = new BrainstormGraph({ store: makeStore() });
+    await graph.fetchGraph();
+    assert.deepEqual(graph.nodes.map((n: { id: string }) => n.id), ['saved'], 'restored local work, no seed');
+  });
+});

@@ -65,6 +65,34 @@ suite('tracker-model (B-INT-17)', () => {
     assert.ok(!lint.some((f) => f.severity === 'abort'), 'weight mismatch is warn, not abort');
   });
 
+  // FX887 — taxonomy contract: every vertical key parallels a program key.
+  test('validateManifest: vertical with no parallel program → warn vertical-unknown-program', () => {
+    const bad: TrackerManifest = { ...MANIFEST, verticals: [{ key: 'orphan', name: 'Orphan', accent: '#0f0' }] };
+    const lint = validateManifest(bad);
+    assert.ok(lint.some((f) => f.severity === 'warn' && f.code === 'vertical-unknown-program'),
+      'orphan vertical key (not a program) → warn');
+    assert.ok(!lint.some((f) => f.severity === 'abort'), 'taxonomy mismatch is warn, not abort (route stays ok)');
+    // The parallel MANIFEST (vertical key === program key) emits no such finding.
+    assert.ok(!validateManifest(MANIFEST).some((f) => f.code === 'vertical-unknown-program'));
+  });
+
+  test('validateManifest: crossCutting vertical is exempt from the parallel requirement', () => {
+    const xcut: TrackerManifest = { ...MANIFEST, verticals: [{ key: 'orphan', name: 'Orphan', accent: '#0f0', crossCutting: true }] };
+    assert.ok(!validateManifest(xcut).some((f) => f.code === 'vertical-unknown-program'),
+      'crossCutting:true suppresses the vertical-unknown-program warn');
+  });
+
+  // FX887 — agent-discovery mapping: agent program/vertical refs must resolve.
+  test('validateManifest: agent with unresolved program/vertical → warn (each), resolved → none', () => {
+    const badProg: TrackerManifest = { ...MANIFEST, agents: [{ key: 'a1', name: 'A1', program: 'ghost' }] };
+    assert.ok(validateManifest(badProg).some((f) => f.severity === 'warn' && f.code === 'agent-unknown-program'));
+    const badVert: TrackerManifest = { ...MANIFEST, agents: [{ key: 'a1', name: 'A1', program: 'core', vertical: 'ghost' }] };
+    assert.ok(validateManifest(badVert).some((f) => f.severity === 'warn' && f.code === 'agent-unknown-vertical'));
+    const ok: TrackerManifest = { ...MANIFEST, agents: [{ key: 'a1', name: 'A1', program: 'core', vertical: 'core', patterns: ['core'], evidence: ['v1.0'] }] };
+    assert.ok(!validateManifest(ok).some((f) => f.code.startsWith('agent-unknown')), 'fully-resolved agent → no agent finding');
+    assert.ok(!validateManifest(badProg).some((f) => f.severity === 'abort'), 'agent refs are advisory (warn), never abort');
+  });
+
   // --- release-axis discovery from the CHANGELOG (complete history) ---
 
   const CHANGELOG = [

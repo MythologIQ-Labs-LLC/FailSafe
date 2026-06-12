@@ -21,6 +21,7 @@ import { AgtRenderer } from './modules/agt-renderer.js';
 import { IntegrationCatalogRenderer } from './modules/integration-catalog-renderer.js';
 import { TabGroup } from './modules/tab-group.js';
 import { TrackerEmbedRenderer } from './modules/tracker-embed-renderer.js';
+import { TrackerTaxonomyRenderer } from './modules/tracker-taxonomy-renderer.js';
 import { updateTickers, updateBootstrapBanner } from './modules/tickers.js';
 import { setWorkspaceRegistryClient, loadWorkspaceRegistry, initWorkspaceSelector } from './modules/workspace-registry.js';
 import { governanceSubviewForRoute, parseCommandCenterHash } from './modules/command-center-deeplink.js';
@@ -48,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
       { key: 'skills',     label: 'Skills',     renderer: new SkillsRenderer('workspace', { client }) },
       { key: 'brainstorm', label: 'Mindmap',    renderer: new BrainstormRenderer('workspace', { store, client }) },
       { key: 'tracker',    label: 'Tracker',    renderer: new TrackerEmbedRenderer('workspace') },
+      { key: 'taxonomy',   label: 'Taxonomy',   renderer: new TrackerTaxonomyRenderer('workspace') },
     ]),
     integrations: new TabGroup('integrations', [
       { key: 'catalog',    label: 'Catalog',     renderer: new IntegrationCatalogRenderer('integrations') },

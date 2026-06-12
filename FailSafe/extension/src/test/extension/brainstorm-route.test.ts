@@ -317,4 +317,38 @@ suite('BrainstormRoute (FX082, FX083, FX084 + node CRUD)', () => {
     assert.equal(res.body.processed, 2);
     assert.equal(broadcasts.filter((b) => b.type === 'brainstorm.update').length, 2);
   });
+
+  // FX889 — GET /api/v1/brainstorm/seed projects the governance/genome graph.
+  test('FX889 GET /seed — projects the genome graph into source:codebase nodes', async () => {
+    const app = makeApp();
+    const { deps } = makeDeps(makeBrainstormStub(), {
+      loadShadowGenome: async () => ({
+        ok: true,
+        graph: { nodes: [
+          { id: 'g1', type: 'governance', label: 'Plan' },
+          { id: 'f1', type: 'failure', label: 'Drift' },
+        ], edges: [{ id: 'e1', source: 'g1', target: 'f1', type: 'caused' }] },
+      }),
+    } as Partial<ApiRouteDeps>);
+    setupBrainstormRoutes(app, deps);
+    harness = new RouteHarness(app);
+    await harness.start();
+    const res = await harness.request({ method: 'GET', path: '/api/v1/brainstorm/seed' });
+    assert.equal(res.status, 200);
+    assert.equal(res.body.nodes.length, 2);
+    assert.ok(res.body.nodes.every((n: { source: string }) => n.source === 'codebase'));
+    assert.equal(res.body.nodes[0].id, 'cb-g1');
+    assert.deepEqual(res.body.edges[0], { source: 'cb-g1', target: 'cb-f1', label: 'caused' });
+  });
+
+  test('FX889 GET /seed — degrade-safe: no genome loader → empty seed, still 200', async () => {
+    const app = makeApp();
+    const { deps } = makeDeps(makeBrainstormStub()); // no loadShadowGenome/loadMetaLedger
+    setupBrainstormRoutes(app, deps);
+    harness = new RouteHarness(app);
+    await harness.start();
+    const res = await harness.request({ method: 'GET', path: '/api/v1/brainstorm/seed' });
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body, { nodes: [], edges: [] });
+  });
 });
