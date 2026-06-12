@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.9.0] - 2026-06-12
+
+### Added
+- Development Tracker: no-reload on live refresh + full-space layout (FX886); Export PDF (FX888); operator taxonomy contract + agent mappings (FX887).
+- Mind Map: repository knowledge seed from governance history + Seed/Clear-layer controls (FX889).
+- Workspace › Taxonomy editor → governed `docs/roadmap/tracker-config.yaml` the assistant consults next cycle (FX891).
+
+### Fixed
+- Shadow Genome: "Failure Nodes" → "Graph Nodes" label, Observed-count invariant, table-default for large graphs, label truncation (FX890).
+
 ## [5.8.0] - 2026-06-10
 
 ### Added
