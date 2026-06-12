@@ -1,6 +1,10 @@
 import express, { Request, Response } from "express";
 import type { ApiRouteDeps } from "./types";
 import { NODE_LABEL_MAX, withTruncationInfo } from "./brainstorm-label-truncation";
+import { seedGraphFromGenome } from "../services/brainstorm-seed";
+import { reconstructGenomeFromLedger } from "../../qorlogic/genome-reconstruction";
+import { parseMetaLedgerEntries } from "../../qorlogic/meta-ledger-model";
+import { mergeGenomes } from "../../qorlogic/genome-merge";
 
 /**
  * Voice-brainstorm routes: transcript processing, audio vault,
@@ -160,6 +164,24 @@ export function setupBrainstormRoutes(
   app.get("/api/v1/brainstorm/graph", (req: Request, res: Response) => {
     if (deps.rejectIfRemote(req, res)) return;
     res.json(deps.brainstormService.getGraph());
+  });
+
+  // API: Brainstorm - read-only repository seed (FX889). Projects the EXISTING
+  // governance/genome graph (recorded Shadow Genome + META_LEDGER reconstruction —
+  // the QorRoute pattern) into brainstorm nodes tagged source:"codebase". Always
+  // 200 (degrade-safe): no genome AND no ledger ⇒ empty seed.
+  app.get("/api/v1/brainstorm/seed", async (req: Request, res: Response) => {
+    if (deps.rejectIfRemote(req, res)) return;
+    const result = deps.loadShadowGenome
+      ? await deps.loadShadowGenome()
+      : { ok: true as const, localOnly: true };
+    const real = result.ok && result.graph ? result.graph : { nodes: [], edges: [] };
+    const ledger = deps.loadMetaLedger ? deps.loadMetaLedger() : "";
+    const appendix = ledger
+      ? reconstructGenomeFromLedger(parseMetaLedgerEntries(ledger))
+      : { nodes: [], edges: [] };
+    const merged = mergeGenomes(real, appendix);
+    res.json(seedGraphFromGenome(merged));
   });
 
   // API: Brainstorm - clear graph

@@ -49,6 +49,27 @@ export interface TrackerVertical {
    *  tagged with this surface, projected from the Surface column. Absent when no
    *  featureIndex source was supplied (degrade-safe). */
   featureStats?: { total: number; verified: number; na: number };
+  /** FX887 — exempt this vertical from the programs∥verticals parallel contract
+   *  (validateManifest emits `vertical-unknown-program` otherwise). Set true for a
+   *  genuinely cross-cutting surface that maps to no single program. */
+  crossCutting?: boolean;
+}
+/**
+ * FX887 — agent-discovery mapping (manifest-only metadata). Maps a detected/known
+ * agent to the program + vertical it contributes to, with the patterns that
+ * identify its work and the evidence backing the mapping. NOT carried into the
+ * render model — validated by validateManifest; awaiting a downstream consumer.
+ */
+export interface TrackerAgent {
+  key: string; name: string;
+  /** Must resolve to a programs[] key (validateManifest warns otherwise). */
+  program?: string;
+  /** Must resolve to a verticals[] key (validateManifest warns otherwise). */
+  vertical?: string;
+  /** Commit scopes / path globs that identify this agent's work. */
+  patterns?: string[];
+  /** Backing references (PR/release ids, file paths) for the mapping. */
+  evidence?: string[];
 }
 export interface TrackerMeta {
   eyebrow?: string; title?: string; titleEm?: string; sub?: string;
@@ -67,6 +88,8 @@ export interface TrackerManifest {
   programs?: TrackerProgram[];
   phases?: TrackerPhase[];
   verticals?: TrackerVertical[];
+  /** FX887 — optional agent-discovery mappings (manifest-only; not rendered). */
+  agents?: TrackerAgent[];
   convergence?: unknown[];
   promotion?: unknown[];
   levers?: unknown[];
@@ -239,6 +262,26 @@ export function validateManifest(m: TrackerManifest, knownReleaseIds?: string[])
     const sum = (m.phases ?? []).filter((p) => p.prog === prog.key).reduce((a, p) => a + (typeof p.w === 'number' ? p.w : 0), 0);
     if (sum !== 100) {
       out.push({ severity: 'warn', code: 'program-weight-sum', detail: `program '${prog.key}' phase weights sum to ${sum}, not 100` });
+    }
+  }
+
+  // FX887 — taxonomy contract: programs ∥ verticals. Every vertical key should
+  // parallel a program key unless explicitly crossCutting. WARN (coherence
+  // advisory) — verticals render independently, so this never breaks the route.
+  const vertKeys = new Set((m.verticals ?? []).map((v) => v.key));
+  for (const v of m.verticals ?? []) {
+    if (!v.crossCutting && !progKeys.has(v.key)) {
+      out.push({ severity: 'warn', code: 'vertical-unknown-program', detail: `vertical '${v.key}' has no parallel program (mark crossCutting:true if intentional)` });
+    }
+  }
+
+  // FX887 — agent-discovery mappings must resolve to declared programs/verticals.
+  for (const a of m.agents ?? []) {
+    if (a.program && !progKeys.has(a.program)) {
+      out.push({ severity: 'warn', code: 'agent-unknown-program', detail: `agent ${a.key} → program '${a.program}' not in programs[]` });
+    }
+    if (a.vertical && !vertKeys.has(a.vertical)) {
+      out.push({ severity: 'warn', code: 'agent-unknown-vertical', detail: `agent ${a.key} → vertical '${a.vertical}' not in verticals[]` });
     }
   }
   return out;

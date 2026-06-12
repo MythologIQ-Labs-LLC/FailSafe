@@ -4,7 +4,7 @@
 import { strict as assert } from 'assert';
 import {
   parseConventional, programsFromPrs, phasesFromPrs, verticalsFromChangelog,
-  generateTrackerManifest, type GeneratorPr,
+  agentsFromPrograms, generateTrackerManifest, type GeneratorPr,
 } from '../../../roadmap/tracker/manifest-generator';
 
 const PRS: GeneratorPr[] = [
@@ -66,5 +66,28 @@ suite('roadmap/tracker manifest-generator', () => {
     assert.equal(m.meta!.metaRow!.find((r) => r.label === 'Merged PRs')!.value, '7');
     assert.ok(m.meta!.decisions!.some((d) => d.decision.startsWith('ADR-0008')), 'ADR decision captured cleanly');
     assert.ok(m.meta!.title && m.meta!.footer, 'meta is populated');
+  });
+
+  // FX887 — agent-discovery mapping: one proposed agent per program, evidence-backed.
+  test('agentsFromPrograms proposes one agent per program: program=key, vertical iff matching, patterns + evidence', () => {
+    const programs = programsFromPrs(PRS);
+    const phases = phasesFromPrs(PRS, programs);
+    const verticals = [{ key: 'connectors', name: 'Connectors', accent: '#0f0' }]; // parallels the connectors program
+    const agents = agentsFromPrograms(programs, verticals, phases);
+    assert.equal(agents.length, programs.length, 'one agent row per program');
+    const conn = agents.find((a) => a.program === 'connectors')!;
+    assert.equal(conn.key, 'connectors');
+    assert.equal(conn.vertical, 'connectors', 'vertical set when a parallel vertical key exists');
+    assert.deepEqual(conn.patterns, ['connectors'], 'patterns = the program/scope token');
+    // evidence = the distinct rcs of that program's phases (PR1 + PR2 → pr-1, pr-2).
+    assert.deepEqual([...conn.evidence!].sort(), ['pr-1', 'pr-2']);
+    const other = agents.find((a) => a.program === 'other')!;
+    assert.equal(other.vertical, undefined, 'no vertical ref when no parallel vertical key exists');
+  });
+
+  test('generateTrackerManifest includes the proposed agents[] scaffold', () => {
+    const m = generateTrackerManifest({ repo: 'acme/widgets', prs: PRS, changelog: '' });
+    assert.ok(Array.isArray(m.agents), 'agents[] present on the draft');
+    assert.equal(m.agents!.length, m.programs!.length, 'one proposed agent per generated program');
   });
 });

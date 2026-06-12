@@ -229,3 +229,53 @@ test("FX539.10 — empty graph response renders shell without error", async ({ p
   // No uncaught page errors from rendering an empty graph.
   expect(consoleErrors).toEqual([]);
 });
+
+// FX889 — repository seed (Phase 4). The Mind Map preloads repo knowledge when
+// empty + the operator can strip their own layer keeping the seed. Real Chromium.
+const SEED_BODY = JSON.stringify({
+  nodes: [
+    { id: "cb-g1", label: "Plan #196", type: "Architecture", confidence: 100, source: "codebase" },
+    { id: "cb-f1", label: "SG-Drift", type: "Risk", confidence: 100, source: "codebase" },
+  ],
+  edges: [{ source: "cb-g1", target: "cb-f1", label: "caused" }],
+});
+async function stubSeedRoutes(page: import("@playwright/test").Page): Promise<void> {
+  await page.route("**/api/v1/brainstorm/graph", (r) =>
+    r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ nodes: [], edges: [] }) }));
+  await page.route("**/api/v1/brainstorm/seed", (r) =>
+    r.fulfill({ status: 200, contentType: "application/json", body: SEED_BODY }));
+}
+function graphNodeIds() {
+  const g = (globalThis as unknown as { __failsafeRenderers?: { workspace?: { subViews?: Array<{ key: string; renderer?: { graph?: { nodes?: Array<{ id: string; source?: string }> } } }> } } }).__failsafeRenderers;
+  const graph = g?.workspace?.subViews?.find((s) => s.key === "brainstorm")?.renderer?.graph;
+  return (graph?.nodes ?? []).map((n) => ({ id: n.id, source: n.source }));
+}
+
+test("FX889 — empty Mind Map auto-seeds codebase nodes from the repo", async ({ page }) => {
+  controller = await serveConsoleServerUI({});
+  await stubSeedRoutes(page);
+  await gotoMindmap(page, controller.url);
+  await expect(page.locator('#workspace .cc-bs-seed')).toBeVisible();
+  await expect(page.locator('#workspace .cc-bs-clear-layer')).toBeVisible();
+  // fetchGraph auto-seeds the empty map; codebase nodes land in the graph.
+  await expect.poll(() => page.evaluate(graphNodeIds).then((ns) => ns.length), { timeout: 8000 }).toBe(2);
+  const nodes = await page.evaluate(graphNodeIds);
+  expect(nodes.every((n) => n.source === "codebase")).toBe(true);
+});
+
+test("FX889 — CLEAR LAYER keeps repo nodes, drops the operator's brainstorm node", async ({ page }) => {
+  controller = await serveConsoleServerUI({});
+  await stubSeedRoutes(page);
+  await gotoMindmap(page, controller.url);
+  await expect.poll(() => page.evaluate(graphNodeIds).then((ns) => ns.length), { timeout: 8000 }).toBe(2);
+  // Operator adds a brainstorm node (no source).
+  await page.evaluate(() => {
+    const g = (globalThis as unknown as { __failsafeRenderers?: { workspace?: { subViews?: Array<{ key: string; renderer?: { graph?: { mergeNodes?: (n: unknown[], e: unknown[]) => void } } }> } } }).__failsafeRenderers;
+    g?.workspace?.subViews?.find((s) => s.key === "brainstorm")?.renderer?.graph?.mergeNodes?.([{ id: "mine", label: "My idea", type: "Idea" }], []);
+  });
+  await expect.poll(() => page.evaluate(graphNodeIds).then((ns) => ns.length)).toBe(3);
+  await page.locator('#workspace .cc-bs-clear-layer').click();
+  const after = await page.evaluate(graphNodeIds);
+  expect(after.map((n) => n.id).sort()).toEqual(["cb-f1", "cb-g1"]);
+  expect(after.every((n) => n.source === "codebase")).toBe(true);
+});

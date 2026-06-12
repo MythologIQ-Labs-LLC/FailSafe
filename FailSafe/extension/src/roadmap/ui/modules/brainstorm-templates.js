@@ -20,6 +20,8 @@ export function renderShell() {
         <button class="cc-btn cc-bs-view" data-view="3D">3D</button>
       </div>
       <div class="cc-bs-meta-row">
+        <button class="cc-btn cc-bs-seed" title="Preload nodes from the repository knowledge graph">REPO</button>
+        <button class="cc-btn cc-bs-clear-layer" title="Remove your brainstorm nodes, keep the repo nodes">CLEAR LAYER</button>
         <button class="cc-btn cc-bs-undo" title="Undo (Ctrl+Z)">UNDO</button>
         <button class="cc-btn cc-bs-redo" title="Redo (Ctrl+Y)">REDO</button>
         <button class="cc-btn cc-bs-export">EXPORT</button>

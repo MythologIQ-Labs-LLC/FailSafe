@@ -265,3 +265,46 @@ test.describe('Development Tracker projection render (#202)', () => {
     await expect(page.getByText('discovered releases only').first()).toBeVisible({ timeout: 5000 });
   });
 });
+
+// FX888 — PDF export (research-brief Phase 3). Print-CSS-first slice: an Export
+// control triggers native print ("Save as PDF"); the @media print stylesheet
+// hides interactive chrome while keeping the generated timestamp + evidence
+// source. Real Chromium (the design-reference visual gate) — print LAYOUT via
+// emulateMedia, not a binary PDF snapshot (per the brief).
+test.describe('Development Tracker PDF export (FX888 / Phase 3)', () => {
+  let controller: ConsoleServerController;
+  test.afterEach(async () => {
+    if (controller) { await controller.close(); await new Promise((r) => setTimeout(r, 50)); }
+  });
+
+  test('FX888: Export PDF control is present and clicking it invokes window.print()', async ({ page }) => {
+    controller = await serveConsoleServerUI();
+    // Stub print BEFORE any document script runs so the click counts, not a dialog.
+    await page.addInitScript(() => {
+      (window as unknown as { __printed: number }).__printed = 0;
+      window.print = () => { (window as unknown as { __printed: number }).__printed += 1; };
+    });
+    await page.route('**/api/v1/tracker', (r) => r.fulfill({ json: PR_PAYLOAD }));
+    await page.goto(`${controller.url}/console/tracker`);
+    const exportBtn = page.locator('#tracker-export');
+    await expect(exportBtn).toBeVisible({ timeout: 5000 });
+    await exportBtn.click();
+    expect(await page.evaluate(() => (window as unknown as { __printed: number }).__printed)).toBe(1);
+  });
+
+  test('FX888: print media hides live controls but keeps the timestamp + evidence source', async ({ page }) => {
+    controller = await serveConsoleServerUI();
+    await page.route('**/api/v1/tracker', (r) => r.fulfill({ json: PR_PAYLOAD }));
+    await page.goto(`${controller.url}/console/tracker`);
+    await expect(page.locator('#timeline .tl-node').first()).toBeVisible({ timeout: 5000 });
+    // Provenance is present on screen (timestamp + evidence-source footer).
+    await expect(page.locator('#tracker-freshness')).toContainText('Updated');
+    await expect(page.locator('#foot')).not.toHaveText('');
+    // Under print media, interactive chrome is hidden; provenance is kept.
+    await page.emulateMedia({ media: 'print' });
+    await expect(page.locator('#tracker-refresh')).toBeHidden();
+    await expect(page.locator('#tracker-export')).toBeHidden();
+    await expect(page.locator('#tracker-freshness')).toBeVisible();
+    await expect(page.locator('#foot')).toBeVisible();
+  });
+});

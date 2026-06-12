@@ -26,6 +26,10 @@ function provBadge(p) {
   return `<span class="sg-prov sg-prov-${esc(p)}" title="${esc(title)}">${esc(p)}</span>`;
 }
 
+// FX890: above this node count the dense graph collapses into overlapping labels,
+// so the Genome Map opens in the readable Table view by default (one-time).
+const SG_TABLE_THRESHOLD = 24;
+
 const MODES = [
   { key: 'map', label: 'Genome Map' },
   { key: 'incidents', label: 'Incidents' },
@@ -36,7 +40,7 @@ const MODES = [
 const SUMMARY_CARDS = [
   { key: 'unresolvedCount', label: 'Unresolved', accent: 'var(--accent-red)' },
   { key: 'recurringPatternCount', label: 'Recurring', accent: 'var(--accent-orange)' },
-  { key: 'nodeCount', label: 'Failure Nodes', accent: 'var(--accent-gold)' },
+  { key: 'nodeCount', label: 'Graph Nodes', accent: 'var(--accent-gold)' },
   { key: 'edgeCount', label: 'Causal Edges', accent: 'var(--accent-cyan)' },
   { key: 'trustTransitionCount', label: 'Trust Events', accent: 'var(--accent-green)' },
 ];
@@ -56,6 +60,13 @@ export class ShadowGenomeRenderer {
     if (!d || d.enabled === false) {
       this.container.innerHTML = this.renderHeader(false) + this.renderEmpty();
       return;
+    }
+    // FX890: one-time default to the Table view for large graphs. The flag is set
+    // unconditionally on the first render, so subsequent hub refreshes never touch
+    // mapState.view — the operator's later Graph/Table toggle is never clobbered.
+    if (!this._viewDefaulted) {
+      if ((d.graph?.nodes?.length || 0) > SG_TABLE_THRESHOLD) this.mapState.view = 'table';
+      this._viewDefaulted = true;
     }
     this.container.innerHTML =
       this.renderHeader(true) +

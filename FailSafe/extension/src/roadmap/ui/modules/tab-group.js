@@ -9,6 +9,16 @@ export class TabGroup {
 
   render(hubData) {
     if (!this.container) return;
+    // FX886: idempotent across hub re-renders. Once the scaffold (pill bar +
+    // contentEl) is mounted, do NOT tear it down on every hub payload — that
+    // destroyed the active sub-view's live DOM (e.g. the Tracker iframe →
+    // full reload). Keep the scaffold and just re-render the active sub-view
+    // into the stable contentEl. First mount (or post-destroy / external clear)
+    // falls through to the full build below.
+    if (this.contentEl && this.container.contains(this.contentEl)) {
+      this.renderActive(hubData);
+      return;
+    }
     this.container.innerHTML = '';
     const bar = document.createElement('div');
     bar.className = 'cc-subview-bar';
@@ -87,5 +97,6 @@ export class TabGroup {
   destroy() {
     for (const sv of this.subViews) sv.renderer.destroy?.();
     if (this.container) this.container.innerHTML = '';
+    this.contentEl = null; // FX886: force a fresh scaffold on the next render()
   }
 }

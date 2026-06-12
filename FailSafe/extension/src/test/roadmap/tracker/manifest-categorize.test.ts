@@ -109,4 +109,28 @@ suite('roadmap/tracker manifest-categorize (operator decision)', () => {
     assert.equal(BASE.phases!.find((p) => p.key === 'PR2')!.prog, 'connectors', 'base phase untouched');
     assert.equal(BASE.verticals!.length, 2, 'base verticals untouched');
   });
+
+  // FX887 — agents follow the operator-confirmed taxonomy: dropped program folds,
+  // unkept vertical refs clear, kept-program agents survive.
+  test('agents: dropped program folds, unkept vertical ref clears, kept survives', () => {
+    const withAgents: TrackerManifest = {
+      ...BASE,
+      agents: [
+        { key: 'ci', name: 'CI', program: 'ci', vertical: 'adapter', patterns: ['ci'] },
+        { key: 'connectors', name: 'Conn', program: 'connectors', vertical: 'zendesk' },
+      ],
+    };
+    const d: CategoryDecisions = {
+      programs: [{ key: 'ci', name: 'CI/CD' }],                       // keep ci, drop connectors + runtime
+      folds: [{ from: 'connectors', into: 'ci' }, { from: 'runtime', into: 'other' }],
+      verticals: [{ key: 'adapter', name: 'Adapter core' }],          // keep adapter, drop zendesk
+    };
+    const out = applyCategoryDecisions(withAgents, d);
+    const ci = out.agents!.find((a) => a.key === 'ci')!;
+    assert.equal(ci.program, 'ci', 'kept-program agent keeps its program');
+    assert.equal(ci.vertical, 'adapter', 'kept vertical ref preserved');
+    const conn = out.agents!.find((a) => a.key === 'connectors')!;
+    assert.equal(conn.program, 'ci', 'dropped program agent folds to the fold target');
+    assert.equal(conn.vertical, undefined, 'dropped vertical ref (zendesk) cleared');
+  });
 });

@@ -2855,3 +2855,33 @@ Output: `dist/override-staleness.findings.json` (gitignored runtime artifact). A
 **Counter-pattern**: split integration planning by control-plane boundary first, then consolidate only after two implementations prove the same abstraction. Similar product value is not sufficient evidence of shared implementation shape.
 
 **Status**: open as a planning discipline. The research brief `docs/research-brief-day-one-integration-candidates-2026-05-27.md` records the candidate split and issue set.
+
+
+---
+
+## SG-UpstreamClaimSurfaceMismatch - VS Code Agents window research (2026-06-10)
+
+**Pattern**: an upstream/external compatibility brief asserts that a *named host limitation* blocks one of "our" contribution surfaces, but the surface it names is not actually contributed by our codebase. The claim is plausible because the surface is adjacent (we consume the same capability in a different role), so the assertion survives review unless someone greps our own manifest/source.
+
+**FailSafe incident**: the Issue #83 brief (+ `docs/research/VSCodeAgents-issue83.docx`) stated FailSafe's "extension-contributed MCP server definition is blocked by upstream microsoft/vscode#317460." Source check found **no `registerMcpServerDefinitionProvider` / `mcpServerDefinitionProviders` anywhere** — FailSafe is an MCP *client* (Bicameral, Open Design) and an ACP proxy host, never a server-definition contributor. #317460 therefore blocks nothing FailSafe ships; the claim overstated exposure (DRIFT-1 in the brief). A second gap (DRIFT-2): the brief's recommended `extensions.supportAgentsWindow` opt-in is not present in FailSafe source/config at all — not yet shipped.
+
+**Detection**: before accepting any external claim of the form "upstream X blocks our surface Y," grep our own `package.json` `contributes.*` and source for the actual registration of Y. Verify the *role* (client vs server, consumer vs contributor) — adjacency is not equivalence.
+
+**Counter-pattern**: every external compatibility claim about a FailSafe surface must be back-cited to the FailSafe registration site (file:line in `package.json`/source) before it drives scope. A blocker that targets a surface we do not contribute is a non-blocker and must be corrected in the brief, not carried into the plan. Pairs with `feedback_verify_external_names_at_plan_time` (which governs the *upstream* names) — this rule governs the *our-side* names the upstream claim depends on.
+
+**Status**: recorded in `docs/research-brief-vscode-agents-window-2026-06-10.md` (META_LEDGER Entry #457). The durable Agents-window surfaces for FailSafe = commands + validation tasks + hooks + independently-configured MCP + worktree-scoped evidence + CI/branch release gates; fragile/unusable = sidebar webview, status-bar items, (unverified) chat participant, AHP internals. Confirmed-real present-tense risk: single-`workspaceRoot` ledger resolution (`VscodeConfigProvider.ts:80`) splits `.failsafe/` + `docs/META_LEDGER.md` across Agents-window worktree sessions.
+
+
+---
+
+## SG-VisualizationContractDrift - Tracker/Mind Map/Shadow Genome research (2026-06-11)
+
+**Pattern**: a dashboard can render real data and still mislead the operator when the UI label, layout default, or refresh lifecycle no longer preserves the backend contract. Minimal structural tests pass because elements exist, while production-sized data exposes false counters, unreadable graphs, or destructive rerenders.
+
+**FailSafe incident**: the Tracker iframe is rebuilt on every hub render, so live refreshes reload `/console/tracker`. The Tracker manifest already supports operator-controlled programs and verticals, but current comments conflict on whether the two taxonomies mirror or diverge. The Mind Map only loads the transient Brainstorm graph/localStorage rather than seeding from the existing governance/codebase graph. Shadow Genome labels `nodeCount` as "Failure Nodes" while backend `nodeCount` is total graph nodes; its fixed-ring SVG layout becomes unreadable on realistic graphs.
+
+**Detection**: compare every displayed counter/label against the exact API field it consumes; include lifecycle tests that count iframe navigations across repeated hub refreshes; include large-fixture visual tests, not only four-node structural graph tests; verify empty-state claims against available alternate sources before declaring a surface empty.
+
+**Counter-pattern**: treat visualization contracts as part of the data contract. UI renderers that embed expensive/live documents must be idempotent across hub refresh. Summary labels must either name the exact backend field or the backend must expose a field that matches the label. Graph views need a thresholded table/list fallback and label collision policy before they become the default for production-size data.
+
+**Status**: open. Research brief `docs/research-brief-tracker-mindmap-shadow-genome-remediation-2026-06-11.md` recommends seven issue tracks: Tracker reload persistence, Tracker full-space layout, Tracker taxonomy/agent mapping, Tracker PDF export, Mind Map seed graph, Shadow Genome graph usability, and Shadow Genome maturity/summary contract.

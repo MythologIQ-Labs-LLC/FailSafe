@@ -173,6 +173,10 @@ export class BrainstormRenderer {
     const canvas = this.graph.canvas;
     if (!canvas) return;
 
+    // FX889: seed the Mind Map from the repository knowledge graph / clear only
+    // the operator's brainstorm layer (keeping repo seed nodes).
+    this._getEl('.cc-bs-seed')?.addEventListener('click', () => this.graph.seedFromRepo({ force: true }));
+    this._getEl('.cc-bs-clear-layer')?.addEventListener('click', () => this.graph.clearBrainstormLayer());
     this._getEl('.cc-bs-undo')?.addEventListener('click', () => this.graph.undo());
     this._getEl('.cc-bs-redo')?.addEventListener('click', () => this.graph.redo());
     this._getEl('.cc-bs-export')?.addEventListener('click', () => this.graph.exportJSON());

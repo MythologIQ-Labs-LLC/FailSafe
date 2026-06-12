@@ -6,6 +6,9 @@ export interface BrainstormNode {
   label: string;
   type: string;
   confidence: number;
+  /** FX889 — provenance of the node. "codebase" = seeded from the repository
+   *  knowledge graph (distinct from operator/voice brainstorm nodes, which omit it). */
+  source?: string;
 }
 
 export interface BrainstormEdge {

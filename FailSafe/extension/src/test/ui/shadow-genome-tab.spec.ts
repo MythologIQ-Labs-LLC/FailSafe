@@ -264,3 +264,54 @@ test("disabled loader → spec §14 degraded empty card", async ({ page }) => {
   await expect(page.locator("#governance .sg-empty-title")).toHaveText(/No failure evidence/);
   await expect(page.locator("#governance .sg-chip-degraded")).toBeVisible();
 });
+
+// FX890 — Issues 6 & 7 (research-brief Phase 5). A large, few-failure graph:
+// nodeCount is labeled "Graph Nodes" (not "Failure Nodes"); the dense map opens in
+// the Table view; Observed reflects failures, not total. Real Chromium.
+const DASHBOARD_LARGE = {
+  ...DASHBOARD,
+  summary: { nodeCount: 32, edgeCount: 2, unresolvedCount: 2, recurringPatternCount: 0, trustTransitionCount: 0 },
+  graph: {
+    nodes: [
+      ...Array.from({ length: 30 }, (_v, i) => ({ id: `g${i}`, type: "governance", label: `Governance gate number ${i} with a long label` })),
+      { id: "f0", type: "failure", label: "Fail A" },
+      { id: "f1", type: "failure", label: "Fail B" },
+    ],
+    edges: [
+      { id: "e0", source: "g0", target: "f0", type: "applies_to" },
+      { id: "e1", source: "g1", target: "f1", type: "applies_to" },
+    ],
+  },
+};
+
+test("FX890 — summary labels nodeCount 'Graph Nodes' (never 'Failure Nodes'); total ≠ failures", async ({ page }) => {
+  controller = await serveConsoleServerUI({});
+  await page.route("**/api/qor/governance-dashboard", (r) => r.fulfill({ json: DASHBOARD_LARGE }));
+  await gotoShadowGenome(page, controller.url);
+  await expect(page.locator("#governance .sg-card", { hasText: "Graph Nodes" })).toHaveCount(1);
+  await expect(page.locator("#governance .sg-card", { hasText: "Failure Nodes" })).toHaveCount(0);
+  await expect(page.locator("#governance .sg-card", { hasText: "Graph Nodes" }).locator(".sg-card-num")).toHaveText("32");
+  await expect(page.locator("#governance .sg-card", { hasText: "Unresolved" }).locator(".sg-card-num")).toHaveText("2");
+});
+
+test("FX890 — dense graph opens in Table view; small graph stays Graph (regression)", async ({ page }) => {
+  controller = await serveConsoleServerUI({});
+  await page.route("**/api/qor/governance-dashboard", (r) => r.fulfill({ json: DASHBOARD_LARGE }));
+  await gotoShadowGenome(page, controller.url);
+  await expect(page.locator('#governance .sg-view-btn[data-view="table"]')).toHaveClass(/active/);
+  await expect(page.locator("#governance .sg-data-table").first()).toBeVisible();
+  await expect(page.locator("#governance .sg-graph-svg")).toHaveCount(0);
+
+  await controller.close();
+  controller = await serveConsoleServerUI({});
+  await page.route("**/api/qor/governance-dashboard", (r) => r.fulfill({ json: DASHBOARD }));
+  await gotoShadowGenome(page, controller.url);
+  await expect(page.locator("#governance .sg-graph-svg")).toBeVisible(); // 4-node → Graph default
+});
+
+test("FX890 — Observed maturity reads the failure count, not the total node count", async ({ page }) => {
+  controller = await serveConsoleServerUI({});
+  await page.route("**/api/qor/governance-dashboard", (r) => r.fulfill({ json: DASHBOARD_LARGE }));
+  await gotoShadowGenome(page, controller.url);
+  await expect(page.locator('#governance [data-stage="Observed"] .sg-mat-num')).toHaveText("2");
+});

@@ -68,6 +68,20 @@ export function applyCategoryDecisions(base: TrackerManifest, d: CategoryDecisio
     .filter((v) => vRename.has(v.key))
     .map((v) => ({ ...v, name: vRename.get(v.key) ?? v.name }));
 
+  // FX887 — agents follow the operator-confirmed taxonomy: an agent whose program
+  // was dropped folds to the same target as its phases would; a vertical ref the
+  // operator didn't keep is cleared. Absent agents[] stays absent.
+  const agents = base.agents?.map((a) => {
+    let program = a.program;
+    if (program && !keptKeys.has(program)) {
+      let into = foldMap.get(program) ?? 'other';
+      if (into !== 'other' && !keptKeys.has(into)) into = 'other';
+      program = into;
+    }
+    const vertical = a.vertical && vRename.has(a.vertical) ? a.vertical : undefined;
+    return { ...a, ...(program ? { program } : {}), vertical };
+  });
+
   // Refresh a "Programs" count metaRow if the generator emitted one.
   const meta = base.meta ? { ...base.meta } : undefined;
   if (meta?.metaRow) {
@@ -75,5 +89,5 @@ export function applyCategoryDecisions(base: TrackerManifest, d: CategoryDecisio
       r.label === 'Programs' ? { ...r, value: String(programs.length) } : r);
   }
 
-  return { ...base, meta, programs, phases, verticals };
+  return { ...base, meta, programs, phases, verticals, ...(agents ? { agents } : {}) };
 }
