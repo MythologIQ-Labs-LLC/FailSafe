@@ -24090,6 +24090,49 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 _Chain integrity: VALID_
 _Session: 2026-06-12-deliver-v5-9-0-command-center_
 
+### Entry #460: DELIVER - v5.9.0 Command Center suite
+
+**Date**: 2026-06-12
+**Phase**: DELIVER (/qor-repo-release; formal close of the D phase, distinct from the #459 Lock-Proof seal)
+**Version**: 5.9.0
+**Tag**: v5.9.0
+**Commit**: e5cc6d1 ([RELEASE] v5.9.0, PR #224)
+**Author**: krknapp@gmail.com
+
+## Decision
+
+Release v5.9.0 (Command Center suite, FX886-891) delivered to production. Version 5.8.0 -> 5.9.0 (minor);
+release metadata authored (CHANGELOG x2, README x2, COMPONENT_HELP, PROCESS_GUIDE, BACKLOG version summary);
+PR #224 ([RELEASE] v5.9.0) --admin-merged to main; tag v5.9.0 created from main and pushed; the Release Pipeline
+passed SemVer Gate + Build & Test, the production reviewer gate was operator-approved, and both publish jobs
+succeeded -- VS Code Marketplace + Open VSX -- with a non-draft GitHub Release created. This DELIVER entry chains
+from the #459 SUBSTANTIATE seal; the outward delivery was operator-directed publish-first, so this is the
+canonical D-phase record completing the S.H.I.E.L.D. lifecycle for v5.9.0.
+
+## Delivery evidence
+
+- Tag: v5.9.0 (annotated, preflight-gated).
+- Marketplaces: VS Code Marketplace + Open VSX (both publish jobs success).
+- GitHub Release: 'v5.9.0 -- FailSafe' (non-draft, 2026-06-12).
+- Pipeline: Release Pipeline run for tag v5.9.0 -> success.
+- Closes the FX886-891 Command Center remediation (research brief, Entry #458).
+
+## Content Hash
+
+**Content Hash**: `d53e0fce6d243b2eced3871fb6ab49b8a4c71b448e3a610eff0fc4297d172512`
+**Previous Hash**: `c6eea56931603b441b6a14de061f0e3264abb79746d2e174cd1c52f059d1011e` (Entry #459 Chain Hash)
+**Chain Hash**: `12f4daa5a0184143bc5fdcf69a2ed0960c5f47e0692d3c3c431c7bde8f321ac7`
+**Merkle Seal**: `4728cfbd90c0f8928e6d7ab8f8f1afedf91f8b0eb49fd3473a352e72600b86e3` -- gate_seal_repo_release_v5_9_0
+**Session ID**: `2026-06-12-deliver-repo-release-v5-9-0`
+**Entry ID**: `53466ed2ca3e`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #460`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). SHA-256 over CRLF; ASCII body.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-06-12-deliver-repo-release-v5-9-0_
+
 ### Entry #442: SUBSTANTIATE - Shadow Genome dashboard sub-view (#196 Phase 2)
 
 **Date**: 2026-06-09
