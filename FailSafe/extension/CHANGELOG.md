@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.9.0] - 2026-06-12
+
+### Added
+- **The Development Tracker stays put.** The embedded tracker no longer reloads every time live governance data refreshes, and it now fills the available space instead of a fixed-height box. (FX886)
+- **Export the tracker as a PDF.** A new Export PDF control produces a clean, shareable tracker via the browser's native Save-as-PDF — live controls hidden, the generated timestamp and evidence source kept. (FX888)
+- **The Mind Map starts from your repo.** An empty Mind Map now preloads a knowledge graph projected from your governance history, kept visually distinct from your own brainstorm work; "Seed from repo" and "Clear brainstorm layer" controls manage the two layers. (FX889)
+- **Workspace › Taxonomy editor.** A new Workspace sub-view to review and edit the tracker's programs, verticals, and agent mappings; Save writes a governed `docs/roadmap/tracker-config.yaml` the assistant is directed to consult on its next cycle. (FX887, FX891)
+
+### Fixed
+- **Shadow Genome tells the truth.** The summary card labeled "Failure Nodes" was actually showing the total graph-node count — it now reads "Graph Nodes", and "Observed" can no longer contradict the failure count. Dense graphs open in a readable Table view by default, and long node labels are truncated (full label on hover). (FX890)
+
 ## [5.8.0] - 2026-06-10
 
 ### Added

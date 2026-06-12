@@ -48,11 +48,18 @@ Each integration ships with its own README and its external API names are back-c
 
 ---
 
-**Current Release**: v5.8.0 (2026-06-10)
+**Current Release**: v5.9.0 (2026-06-12)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
 
-## What's New in v5.8.0
+## What's New in v5.9.0
+
+- 📌 **The Development Tracker stays put** — no more reloads when live data refreshes, it fills the available space, and you can export it as a clean PDF.
+- 🌱 **The Mind Map starts from your repo** — an empty map preloads a knowledge graph projected from your governance history, kept distinct from your own brainstorm work.
+- 🗂️ **Workspace › Taxonomy editor** — review and edit the tracker's programs, verticals, and agent mappings; Save writes a governed `tracker-config.yaml` the assistant is directed to consult on its next cycle.
+- 🧬 **Shadow Genome tells the truth** — the summary card now reads "Graph Nodes" (not "Failure Nodes"), "Observed" can no longer contradict the failure count, and dense graphs open in a readable table.
+
+## Previously — v5.8.0
 
 - 🧬 **Shadow Genome shows real data** — trust / federation / learning-maturity now populate from qor-logic's governance graph, and the genome map + incidents + maturity reconstruct from your own governance history (META_LEDGER), each record flagged *recorded* vs *reconstructed*.
 - 🧹 **Organize & Initialize self-commit** — the Monitor's cleanup commands offer to commit, push & open a PR for their changes (operator-confirmed), so a UI click leaves a clean tree + an auditable PR instead of "drift".
