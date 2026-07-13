@@ -32,6 +32,38 @@ export function loadLocal(graph) {
   } catch {}
 }
 
+// FX897 (#235): fx/fy/fz are client-only pin state the server never carries.
+// When the server graph wins on reload (fetchGraph server branch), overlay the
+// persisted pins by node id so dragged positions survive reload against a
+// populated server, not only the server-empty restore path. Server stays the
+// source of truth for graph CONTENT; localStorage owns pin POSITION.
+function collectPins(nodes) {
+  const pins = new Map();
+  if (!Array.isArray(nodes)) return pins;
+  for (const n of nodes) {
+    if (n && n.id != null && (n.fx != null || n.fy != null || n.fz != null)) {
+      pins.set(n.id, { fx: n.fx, fy: n.fy, fz: n.fz });
+    }
+  }
+  return pins;
+}
+
+function overlayPin(node, pin) {
+  if (!pin) return;
+  if (pin.fx != null) node.fx = pin.fx;
+  if (pin.fy != null) node.fy = pin.fy;
+  if (pin.fz != null) node.fz = pin.fz;
+}
+
+export function applyPersistedPins(graph) {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const pins = collectPins(JSON.parse(raw).nodes);
+    for (const n of graph.nodes) overlayPin(n, pins.get(n.id));
+  } catch {}
+}
+
 // FX889: merge the repository seed graph. By default only fills an EMPTY map
 // (never overwrites brainstorm work); `force` re-seeds on demand (the REPO
 // button). mergeNodes dedupes by node id AND edge key, so a re-seed is

@@ -58,6 +58,7 @@ export class BrainstormGraph {
         const repaired = dedupeEdges(data.edges || []); // FX894 server-branch repair
         this.edges = repaired.edges;
         this._duplicatesRemoved += repaired.removed;
+        graphIO.applyPersistedPins(this); // FX897: server wins on content, pins survive
         this._saveLocal();
         return;
       }

@@ -26032,3 +26032,38 @@ _Hash provenance_: Content Hash = SHA256 of the substantiation evidence file. Ch
 _Chain integrity: VALID_
 _Session: 
 
+### Entry #499: DEBUG+SUBSTANTIATE CORRECTION - FX897 drag-position reload persistence (CI-caught)
+
+**Date**: 2026-07-13
+**Phase**: DEBUG (/qor-debug-class defect fix under the existing #235 audit; Reality=Promise re-verified; held local per Review Boundary)
+**Risk Grade**: L2
+**Branch**: feat/qor-consumer-stabilization-232 (PR #245 open)
+
+## Decision
+
+HONEST CORRECTION to Entry #484 (FX897 substantiation): it claimed dragged positions survive reload, evidenced by a LOCAL 6/6 Playwright run ? but that run exercised the server-EMPTY restore path. PR #245 CI (Full Test Suite) failed exactly one test: brainstorm-viewport.spec.ts:111 'dragged node position survives reload (fx/fy persisted)', which uses a POPULATED server (SEED2). Root cause (read-verified, not hypothesized): fetchGraph (brainstorm-graph.js:51-68) prefers the server graph and only falls back to localStorage when the server is EMPTY; fx/fy(/fz) are client-only pin state the server never carries, so a populated-server reload dropped the pins -> undefined. brainstorm.js:152-158 correctly pinned + debounce-saved; the gap was purely the reload-merge precedence. This is a real gap against #235 acceptance D1 ('positions survive reload', unconditional), not a bad test - so the PRODUCT was fixed, the test was NOT weakened.
+
+## Fix
+
+NEW brainstorm-graph-io.js pplyPersistedPins(graph) (+ private collectPins/overlayPin, razor depth <=3): when the server branch of fetchGraph wins, overlay persisted fx/fy/fz from localStorage onto matching nodes by id BEFORE the re-save. Server stays source-of-truth for graph CONTENT; localStorage owns pin POSITION. One call added at brainstorm-graph.js fetchGraph server branch (file now exactly 250, at cap). io module 103->135.
+
+## Verification
+
+tsc 0; the exact CI-failing spec now 6/6 GREEN locally incl. test :111 (populated-server scenario reproduced + fixed). CI lint (eslint src --ext ts) unaffected - the .js UI modules are out of its scope (the 5 localStorage no-undef from a direct .js lint are pre-existing in kind and not a CI gate). Pushed to re-run PR #245; merge remains gated on the operator's 'if green' condition - NOT merged until CI is fully green.
+
+## Content Hash
+
+**Content Hash**: `7121f46cc1165f171841802ac1e446514791289c25536e3072fac16227e95352`
+**Previous Hash**: `2645aa91131cb73887b8624404ae6758b71147b36d1cfe5c9f2de9fa1862b5bf` (Entry #498 Chain Hash)
+**Chain Hash**: `19e6dd62f995187034c42d4bd11e54a8c9f66438c675ce1ac206556a2d905a23`
+**Merkle Seal**: `2047f574e4eec9362fbfb205712ba8a10e80a257e99e6da96151b49eb2c8bdcc` -- gate_seal_debug_fx897_reload_pin_fix
+**Session ID**: `2026-07-13-fx897-reload-pin-fix`
+**Entry ID**: `7121f46cc116`
+
+_Hash provenance_: Content Hash = SHA256 of the fixed brainstorm-graph-io.js. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session: 
+
