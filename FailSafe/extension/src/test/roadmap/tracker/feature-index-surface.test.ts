@@ -6,26 +6,14 @@
 
 import { strict as assert } from 'assert';
 import * as fs from 'fs';
-import * as path from 'path';
 import { parseFeatureIndex } from '../../../roadmap/tracker/tracker-parsers';
+import { resolveTestRepoPath } from './test-repo-root';
 
 const ALLOWED = new Set(['monitor', 'learn', 'agents', 'governance', 'workspace', 'integrations', 'config', 'platform']);
 
-function findFeatureIndex(): string {
-  const candidates = [
-    path.resolve(process.cwd(), '../../docs/FEATURE_INDEX.md'),
-    path.resolve(process.cwd(), 'docs/FEATURE_INDEX.md'),
-    path.resolve(process.cwd(), '../docs/FEATURE_INDEX.md'),
-    path.resolve(process.cwd(), '../../../docs/FEATURE_INDEX.md'),
-  ];
-  const hit = candidates.find((p) => fs.existsSync(p));
-  assert.ok(hit, `docs/FEATURE_INDEX.md not found from cwd ${process.cwd()}`);
-  return hit!;
-}
-
 suite('FEATURE_INDEX Surface backfill completeness (FX871, #206)', () => {
   test('every FX row carries a legal Surface tag (0 null / 0 illegal)', () => {
-    const text = fs.readFileSync(findFeatureIndex(), 'utf-8');
+    const text = fs.readFileSync(resolveTestRepoPath('docs', 'FEATURE_INDEX.md'), 'utf-8');
     const rows = parseFeatureIndex(text);
     assert.ok(rows.length > 600, `expected the full FX inventory, got ${rows.length}`);
     const untagged = rows.filter((r) => r.surface === null).map((r) => r.id);

@@ -2885,3 +2885,17 @@ Output: `dist/override-staleness.findings.json` (gitignored runtime artifact). A
 **Counter-pattern**: treat visualization contracts as part of the data contract. UI renderers that embed expensive/live documents must be idempotent across hub refresh. Summary labels must either name the exact backend field or the backend must expose a field that matches the label. Graph views need a thresholded table/list fallback and label collision policy before they become the default for production-size data.
 
 **Status**: open. Research brief `docs/research-brief-tracker-mindmap-shadow-genome-remediation-2026-06-11.md` recommends seven issue tracks: Tracker reload persistence, Tracker full-space layout, Tracker taxonomy/agent mapping, Tracker PDF export, Mind Map seed graph, Shadow Genome graph usability, and Shadow Genome maturity/summary contract.
+
+---
+
+## SG-RazorMetricScopeDrift - Consumer stabilization remediation audit VETO (2026-07-13)
+
+**Pattern**: a remediation plan promises a strict physical line cap across every touched source and test file, but its mechanical command measures a different metric or scans only a hand-selected subset. The prose sounds stricter than the executable gate, so oversized or omitted files can still pass.
+
+**FailSafe incident**: `docs/plan-qor-phase232-consumer-stabilization-veto-remediation.md` iteration 1 promised a 250-physical-line cap but configured ESLint with `skipBlankLines:true` and `skipComments:true`, and omitted several affected production and test files from the Razor command.
+
+**Detection**: compare the Definition of Done metric byte-for-byte with the CI command's rule options, then compare the Affected Files union with the command's argv file set.
+
+**Counter-pattern**: define one canonical Razor command that scans the complete affected production/test union and uses the same physical/effective metric named in the plan. A plan cannot claim coverage broader than its executable file set.
+
+**Status**: open for plan iteration 2; implementation remains blocked until a fresh audit returns PASS.

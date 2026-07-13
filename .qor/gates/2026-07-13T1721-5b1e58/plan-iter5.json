@@ -1,0 +1,118 @@
+{
+  "phase": "plan",
+  "session_id": "2026-07-13T1721-5b1e58",
+  "terms": [],
+  "high_risk_target": false,
+  "open_questions": [],
+  "originating_remediation": "2026-07-13 final review VETO for branch feat/qor-consumer-stabilization-232",
+  "feature_inventory_touches": [
+    {
+      "operation": "MODIFIED",
+      "test_path": "src/test/roadmap/voice-controller-transitions.test.ts",
+      "entry_id": "FX201",
+      "test_descriptor": "Deferred PTT start and stop expose active state only after successful engine transitions."
+    },
+    {
+      "operation": "MODIFIED",
+      "test_path": "src/test/roadmap/brainstorm-view-prefs.test.ts",
+      "entry_id": "FX204",
+      "test_descriptor": "Layout persisted for workspace A does not change workspace B."
+    },
+    {
+      "operation": "MODIFIED",
+      "test_path": "src/test/roadmap/brainstorm-view-prefs.test.ts",
+      "entry_id": "FX205",
+      "test_descriptor": "View mode persisted for workspace A does not change workspace B."
+    },
+    {
+      "operation": "MODIFIED",
+      "test_path": "src/test/sentinel/DefaultPatterns.test.ts",
+      "entry_id": "FX347",
+      "test_descriptor": "PatternLoader compiles the default complexity pattern without an error."
+    },
+    {
+      "operation": "MODIFIED",
+      "test_path": "src/test/sentinel/DefaultPatterns.test.ts",
+      "entry_id": "FX348",
+      "test_descriptor": "The compiled complexity heuristic matches deep braces and ignores shallow braces."
+    },
+    {
+      "operation": "MODIFIED",
+      "test_path": "src/test/roadmap/voice-pack-settings-completion.test.ts",
+      "entry_id": "FX493",
+      "test_descriptor": "Completion refetches installed state and failed HTTP actions render a retryable error."
+    },
+    {
+      "operation": "MODIFIED",
+      "test_path": "src/test/roadmap/hub-payload-assembler.test.ts",
+      "entry_id": "FX893",
+      "test_descriptor": "Extracted payload assembly preserves Qor consumer diagnostics at the served boundary."
+    },
+    {
+      "operation": "MODIFIED",
+      "test_path": "src/test/roadmap/voice-controller-transitions.test.ts",
+      "entry_id": "FX896",
+      "test_descriptor": "Controller state remains truthful before, during, and after each awaited transition."
+    },
+    {
+      "operation": "MODIFIED",
+      "test_path": "src/test/roadmap/brainstorm-view-prefs.test.ts",
+      "entry_id": "FX897",
+      "test_descriptor": "View preferences round-trip under distinct workspace-derived keys."
+    },
+    {
+      "operation": "MODIFIED",
+      "test_path": "src/test/roadmap/voice-pack-settings-completion.test.ts",
+      "entry_id": "FX898",
+      "test_descriptor": "Voice-pack progress reaches an authoritative installed or visible error terminal state."
+    }
+  ],
+  "phases": [
+    "Remove Section 4 debt without contract drift",
+    "Repair voice and workspace state semantics",
+    "Restore truthful gates and governance surfaces"
+  ],
+  "boundaries": {
+    "non_goals": [
+      "No new product capability",
+      "No release or marketplace work",
+      "No unrelated backlog cleanup"
+    ],
+    "exclusions": [
+      "Historical gate directories",
+      "Unrelated Claude skill-sync edits",
+      "Remote git operations"
+    ],
+    "limitations": [
+      "Repairs only the reviewed staged branch; preserves public route and hub payload contracts"
+    ]
+  },
+  "plan_path": "docs/plan-qor-phase232-consumer-stabilization-veto-remediation.md",
+  "change_class": "hotfix",
+  "ci_commands": [
+    "npm run compile",
+    "npm run lint",
+    "npx eslint src/roadmap/services/HubSnapshotService.ts src/roadmap/services/hub-payload-assembler.ts src/roadmap/services/hub-revert-deps.ts src/roadmap/routes/BrainstormRoute.ts src/roadmap/routes/brainstorm-transcript-routes.ts src/roadmap/routes/brainstorm-graph-routes.ts src/roadmap/routes/brainstorm-pending-routes.ts src/roadmap/ui/modules/brainstorm-voice-wiring.js src/roadmap/ui/modules/voice-session-state.js src/roadmap/ui/modules/voice-controller.js src/roadmap/ui/modules/voice-controller-support.js src/roadmap/ui/modules/stt-engine.js src/roadmap/ui/modules/settings.js src/roadmap/ui/modules/voice-pack-settings-card.js src/roadmap/ui/modules/brainstorm-graph-io.js src/roadmap/ui/modules/brainstorm-toolbar-wiring.js src/roadmap/ui/modules/brainstorm.js src/sentinel/patterns/heuristics.ts src/test/roadmap/hub-payload-assembler.test.ts src/test/roadmap/install-skills-card.test.ts src/test/roadmap/install-skills-card-status.test.ts src/test/extension/voice-pack-install.test.ts src/test/extension/voice-pack-install-guards.test.ts src/test/extension/voice-pack-install-test-helpers.ts src/test/roadmap/voice-controller-transitions.test.ts src/test/roadmap/voice-controller-wake-destroy.test.ts src/test/roadmap/stt-engine-destroy.test.ts src/test/roadmap/stt-silence-timer.test.ts src/test/roadmap/voice-pack-settings-completion.test.ts src/test/roadmap/brainstorm-view-prefs.test.ts src/test/roadmap/brainstorm-toolbar-wiring.test.ts src/test/roadmap/tracker/test-repo-root.ts src/test/roadmap/tracker/test-repo-root.test.ts src/test/roadmap/tracker/governance-projection.test.ts src/test/roadmap/tracker/feature-index-surface.test.ts src/test/sentinel/DefaultPatterns.test.ts src/test/ui/brainstorm-viewport.spec.ts --rule \"max-lines:[2,{max:250}]\" --rule \"max-lines-per-function:[2,{max:40,skipBlankLines:true,skipComments:true}]\" --rule \"max-depth:[2,3]\" --rule \"no-nested-ternary:2\"",
+    "npx vscode-test --config .vscode-test.mjs --reporter dot",
+    "npm run test:ui",
+    "npm run docs:validate",
+    "git diff --cached --check",
+    "qor-logic verify-ledger --ledger docs/META_LEDGER.md --post-anchor --tolerate-known-grandfathered"
+  ],
+  "ts": "2026-07-13T18:29:17Z",
+  "required_gate_artifacts": [
+    "plan",
+    "audit",
+    "implement",
+    "substantiate"
+  ],
+  "doc_tier": "standard",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.15.1",
+    "host": "unknown",
+    "model_family": "unknown",
+    "human_oversight": "absent",
+    "ts": "2026-07-13T18:29:17Z"
+  }
+}

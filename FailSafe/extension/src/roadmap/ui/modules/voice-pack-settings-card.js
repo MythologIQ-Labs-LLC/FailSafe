@@ -3,14 +3,16 @@
 // F1 remediation (audit cycle 1): four render states including error with Dismiss + Retry.
 
 import { escapeHtml } from './brainstorm-templates.js';
+import { buildVoiceDiagnostics } from './voice-capability-presenter.js';
 
 const LBL = 'font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em';
 
 const STATE_LABEL = {
-  'absent':    'Not installed',
-  'installed': 'Installed',
-  'stale':     'Update available',
-  'corrupt':   'Corrupt (needs reinstall)',
+  'absent':     'Not installed',
+  'installed':  'Installed',
+  'stale':      'Update available',
+  'corrupt':    'Corrupt (needs reinstall)',
+  'installing': 'Installing…',
 };
 
 function fmtBytes(bytes) {
@@ -21,7 +23,7 @@ function fmtBytes(bytes) {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
-export async function renderVoicePackSettingsCard(slot, { bindOnce }) {
+export async function renderVoicePackSettingsCard(slot, { bindOnce, diagnosticsDeps }) {
   if (!slot) return;
   let status;
   try {
@@ -32,32 +34,44 @@ export async function renderVoicePackSettingsCard(slot, { bindOnce }) {
     slot.remove();
     return;
   }
-  const renderer = new VoicePackCardRenderer(slot, bindOnce, status);
+  const renderer = new VoicePackCardRenderer(slot, bindOnce, status, diagnosticsDeps);
   renderer.renderInitial();
   // Expose for host-driven error injection (WS-broadcast install errors).
   slot._voicePackRenderer = renderer;
 }
 
 class VoicePackCardRenderer {
-  constructor(slot, bindOnce, status) {
+  constructor(slot, bindOnce, status, diagnosticsDeps) {
     this.slot = slot;
     this.bindOnce = bindOnce;
     this.status = status;
     this.priorState = null;
     this.errorEvent = null;
+    this.installingEvent = null;
+    this.diagnosticsDeps = diagnosticsDeps || null; // #237 LD6 injected deps
   }
 
   renderInitial() {
     this.render(this.status.state || 'absent');
   }
 
-  /** Called by the host (or test) with each InstallProgressEvent broadcast. */
+  /** Called by the host (settings.js onEvent) or tests with each install
+   *  broadcast. Accepts a bare InstallProgressEvent or the WS envelope
+   *  ({ type, invocation } — bootstrapServers.ts:326-328 / VoicePackRoute.ts:62-75).
+   *  settings.js forwards ONLY .progress and .error envelopes (#237 A8
+   *  narrow-forward) — .complete never reaches this method; the card's own
+   *  status refetch on re-render owns the completed presentation. */
   onInstallProgress(evt) {
-    if (evt && evt.status === 'error') {
+    const e = evt?.invocation ?? evt;
+    if (!e) return;
+    if (e.status === 'error' || (!e.status && e.error)) {
       this.priorState = this.status.state || 'absent';
-      this.errorEvent = evt;
+      this.errorEvent = e;
       this.render('error');
+      return;
     }
+    this.installingEvent = e; // #237 LD6: non-error progress → installing line
+    this.render('installing');
   }
 
   onDismiss() {
@@ -68,10 +82,19 @@ class VoicePackCardRenderer {
   async onRetry() {
     this.errorEvent = null;
     this.render(this.priorState || 'absent');
+    await this.postAction('install-voice-pack');
+  }
+
+  async onInstallComplete() {
     try {
-      await fetch('/api/actions/install-voice-pack', { method: 'POST' });
-    } catch (err) {
-      this.onInstallProgress({ phase: 'download', status: 'error', error: String(err) });
+      const response = await fetch('/api/integrations/voice-pack/status');
+      if (!response.ok) throw new Error(`status ${response.status}`);
+      this.status = await response.json();
+      this.errorEvent = null;
+      this.installingEvent = null;
+      this.render(this.status.state || 'absent');
+    } catch (error) {
+      this.onInstallProgress({ phase: 'status', status: 'error', error: String(error) });
     }
   }
 
@@ -90,16 +113,27 @@ class VoicePackCardRenderer {
         ${versionLine}
         ${diskLine}
       </div>
-      ${this.renderBody(state)}`;
+      ${this.renderBody(state)}
+      <div style="margin-top:12px;border-top:1px solid var(--border-rim);padding-top:8px">
+        <button class="cc-btn" data-action="copy-voice-diagnostics" style="font-size:0.8rem;padding:6px 12px">Copy diagnostics</button>
+        <div data-role="voice-pack-diagnostics-note" style="font-size:0.75rem;color:var(--text-muted);margin-top:6px;word-break:break-all"></div>
+      </div>`;
     this.bind();
   }
 
   renderBody(state) {
+    if (state === 'installing' && this.installingEvent) {
+      const phase = escapeHtml(this.installingEvent.phase || 'download');
+      const bytes = typeof this.installingEvent.bytesTransferred === 'number' && typeof this.installingEvent.totalBytes === 'number'
+        ? ` (${fmtBytes(this.installingEvent.bytesTransferred)} / ${fmtBytes(this.installingEvent.totalBytes)})`
+        : '';
+      return `<div data-role="voice-pack-installing" style="font-size:0.8rem;color:var(--accent-cyan,#22d3ee);margin-bottom:10px">Installing voice pack — ${phase}${escapeHtml(bytes)}…</div>`;
+    }
     if (state === 'error' && this.errorEvent) {
       const errMsg = this.errorEvent.error || 'unknown error';
       return `
         <div style="background:rgba(239,68,68,0.1);border-radius:4px;padding:8px 10px;margin-bottom:10px;color:var(--accent-red,#ef4444);font-size:0.8rem">
-          Install failed during <strong>${escapeHtml(this.errorEvent.phase)}</strong>: ${escapeHtml(errMsg)}
+          Install failed during <strong>${escapeHtml(this.errorEvent.phase || 'install')}</strong>: ${escapeHtml(errMsg)}
         </div>
         <div style="display:flex;gap:8px">
           <button class="cc-btn" data-action="dismiss-voice-pack-error" style="font-size:0.8rem;padding:6px 12px">Dismiss</button>
@@ -125,15 +159,37 @@ class VoicePackCardRenderer {
     const uninstall = this.slot.querySelector('[data-action="uninstall-voice-pack"]');
     const dismiss = this.slot.querySelector('[data-action="dismiss-voice-pack-error"]');
     const retry = this.slot.querySelector('[data-action="retry-voice-pack-install"]');
+    const copyDiag = this.slot.querySelector('[data-action="copy-voice-diagnostics"]');
     if (install) this.bindOnce(install, 'click', () => this.postAction('install-voice-pack'));
     if (uninstall) this.bindOnce(uninstall, 'click', () => this.postAction('uninstall-voice-pack'));
     if (dismiss) this.bindOnce(dismiss, 'click', () => this.onDismiss());
     if (retry) this.bindOnce(retry, 'click', () => this.onRetry());
+    if (copyDiag) this.bindOnce(copyDiag, 'click', () => this.onCopyDiagnostics());
+  }
+
+  /** #237 LD6: allow-listed diagnostics (buildVoiceDiagnostics) to the
+   *  clipboard; degrade-safe — no clipboard surface → JSON shown visibly. */
+  async onCopyDiagnostics() {
+    const diag = buildVoiceDiagnostics({
+      packState: this.status.state || null,
+      packVersion: this.status.version || null,
+      lastFailure: this.errorEvent?.error || null,
+      ...(this.diagnosticsDeps?.() || {}),
+    });
+    const json = JSON.stringify(diag, null, 2);
+    const note = this.slot.querySelector('[data-role="voice-pack-diagnostics-note"]');
+    try {
+      await globalThis.navigator.clipboard.writeText(json);
+      if (note) note.textContent = 'Diagnostics copied to clipboard.';
+    } catch {
+      if (note) note.textContent = `Clipboard unavailable — copy manually: ${json}`;
+    }
   }
 
   async postAction(action) {
     try {
-      await fetch(`/api/actions/${action}`, { method: 'POST' });
+      const response = await fetch(`/api/actions/${action}`, { method: 'POST' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
     } catch (err) {
       this.onInstallProgress({ phase: 'download', status: 'error', error: String(err) });
     }

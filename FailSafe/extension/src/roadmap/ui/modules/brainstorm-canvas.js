@@ -15,6 +15,9 @@ const CATEGORY_COLORS = {
   Integration: '#f59e0b',
 };
 
+// FX897: DAG modes per layout; FORCE (and anything unknown) maps to null.
+const DAG_MODES = { TREE: 'td', CIRCLE: 'radialout' };
+
 function confidenceColor(score) {
   if (score < 0) return null;
   if (score >= 80) return '#10b981'; // Green
@@ -24,16 +27,20 @@ function confidenceColor(score) {
 }
 
 export class BrainstormCanvas {
-  constructor(container) {
+  constructor(container, prefs = {}) {
     this.container = container;
-    this.viewMode = '2D'; // Default to 2D (research: 3D harms accuracy at 10-100 nodes)
+    // FX897: restore persisted view prefs; 2D default (research: 3D harms
+    // accuracy at 10-100 nodes), FORCE default layout.
+    this.viewMode = prefs.viewMode === '3D' ? '3D' : '2D';
+    this.layout = prefs.layout || 'FORCE';
+    this.onDagFallback = null; // FX897 LD1: invoked when a DAG layout meets a cycle
     this._reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     this.nodes = [];
     this.edges = [];
     this.graph = null;
-    this._initGraph();
-    
-    // B128: Debounced resize handler
+
+    // B128: Debounced resize handler — defined BEFORE _initGraph so the FX897
+    // ResizeObserver registration inside _initGraph can bind it.
     this._resizeHandler = () => {
       clearTimeout(this._resizeDebounce);
       this._resizeDebounce = setTimeout(() => {
@@ -43,11 +50,17 @@ export class BrainstormCanvas {
         }
       }, 150);
     };
+    // FX897: ResizeObserver (in _observeResize) is primary; window.resize stays as fallback.
     window.addEventListener('resize', this._resizeHandler);
+    this._initGraph();
     setTimeout(this._resizeHandler, 100);
   }
 
   _initGraph() {
+    if (this._resizeObserver) {
+      this._resizeObserver.disconnect();
+      this._resizeObserver = null;
+    }
     if (this.graph) {
       if (this.graph.pauseAnimation) this.graph.pauseAnimation();
       this.container.innerHTML = '';
@@ -59,7 +72,17 @@ export class BrainstormCanvas {
       return;
     }
 
-    this.graph = factory()(this.container)
+    this.graph = this._buildGraph(factory);
+    if (this.viewMode === '3D') this._setup3D();
+    this.graph = applyPhysicsAdapters(this.graph);
+    this._wireDagError();
+    this._applyLayout();
+    this._observeResize();
+    if (this.nodes.length) this._updateGraph();
+  }
+
+  _buildGraph(factory) {
+    return factory()(this.container)
       .backgroundColor('rgba(0,0,0,0)')
       .nodeLabel(node => escapeHtml(node.label))
       .nodeColor(node => {
@@ -81,32 +104,68 @@ export class BrainstormCanvas {
       .onNodeRightClick(node => {
         if (this.dblClickCallback) this.dblClickCallback(node.id);
       })
-      .onNodeDragEnd(node => {
-        if (this.moveCallback) {
-          this.moveCallback(node.id, node.x, node.y, node.z);
-        }
-      });
+      .onNodeDragEnd(node => this._pinAndReport(node));
+  }
 
-    if (this.viewMode === '3D') {
-      if (typeof this.graph.showNavInfo === 'function') {
-        this.graph.showNavInfo(false);
-      }
-      this.graph.nodeResolution(32);
-      if (!this._reduceMotion) {
-        const distance = 400;
-        let angle = 0;
-        this._rotateTimer = setInterval(() => {
-          this.graph.cameraPosition({
-            x: distance * Math.sin(angle),
-            z: distance * Math.cos(angle)
-          });
-          angle += Math.PI / 3000;
-        }, 50);
-      }
+  _setup3D() {
+    if (typeof this.graph.showNavInfo === 'function') {
+      this.graph.showNavInfo(false);
     }
+    this.graph.nodeResolution(32);
+    if (this._reduceMotion) return;
+    const distance = 400;
+    let angle = 0;
+    this._rotateTimer = setInterval(() => {
+      this.graph.cameraPosition({
+        x: distance * Math.sin(angle),
+        z: distance * Math.cos(angle)
+      });
+      angle += Math.PI / 3000;
+    }, 50);
+  }
 
-    this.graph = applyPhysicsAdapters(this.graph);
-    if (this.nodes.length) this._updateGraph();
+  // FX897 LD4: dragEnd pins the node (fx/fy, plus fz when z is defined — 3D)
+  // so operator positions survive relayout; RESET VIEW clears pins, never data.
+  _pinAndReport(node) {
+    node.fx = node.x;
+    node.fy = node.y;
+    if (node.z !== undefined) node.fz = node.z;
+    if (this.moveCallback) {
+      this.moveCallback(node.id, node.x, node.y, node.z);
+    }
+  }
+
+  // FX897 LD1: vendor-native cycle hook (present in BOTH force-graph and
+  // 3d-force-graph) — a cyclic graph under a DAG layout reverts to FORCE
+  // instead of crashing/blanking; the fallback callback surfaces a status note.
+  _wireDagError() {
+    if (typeof this.graph.onDagError !== 'function') return;
+    this.graph.onDagError(() => {
+      const attempted = this.layout;
+      this.layout = 'FORCE';
+      if (this.graph.dagMode) this.graph.dagMode(null);
+      this.onDagFallback?.(attempted);
+    });
+  }
+
+  // FX897: primary resize tracking — fires on container size changes (e.g.
+  // sidebar collapse, panel drag, reappearance from 0) without a window resize.
+  _observeResize() {
+    if (typeof window.ResizeObserver !== 'function') return;
+    this._resizeObserver = new window.ResizeObserver(this._resizeHandler);
+    this._resizeObserver.observe(this.container);
+  }
+
+  _applyLayout() {
+    if (!this.graph || typeof this.graph.dagMode !== 'function') return;
+    this.graph.dagMode(DAG_MODES[this.layout] ?? null);
+  }
+
+  // FX897 LD3: reduced motion ⇒ instant jump (duration 0), else 400ms; 40px padding.
+  fitToView() {
+    if (this.graph && typeof this.graph.zoomToFit === 'function') {
+      this.graph.zoomToFit(this._reduceMotion ? 0 : 400, 40);
+    }
   }
 
   setViewMode(mode) {
@@ -118,18 +177,13 @@ export class BrainstormCanvas {
 
   setLayout(layout) {
     if (!this.graph) return;
-    // Basic layout hooks for ForceGraph
-    if (layout === 'TREE' && this.graph.dagMode) {
-      this.graph.dagMode('td');
-    } else if (layout === 'CIRCLE' && this.graph.dagMode) {
-      this.graph.dagMode('radialout');
-    } else {
-      if (this.graph.dagMode) this.graph.dagMode(null);
-    }
+    this.layout = layout;
+    this._applyLayout();
+    this.fitToView(); // LD6: refit after a layout switch
   }
 
   setNodes(nodes) {
-    this.nodes = nodes.map(n => ({ ...n })); 
+    this.nodes = nodes.map(n => ({ ...n }));
     this._updateGraph();
   }
 
@@ -175,6 +229,8 @@ export class BrainstormCanvas {
     if (this._rotateTimer) clearInterval(this._rotateTimer);
     clearTimeout(this._resizeDebounce);
     window.removeEventListener('resize', this._resizeHandler);
+    this._resizeObserver?.disconnect();
+    this._resizeObserver = null;
     if (this.graph && this.graph.pauseAnimation) this.graph.pauseAnimation();
     this.container.innerHTML = '';
   }

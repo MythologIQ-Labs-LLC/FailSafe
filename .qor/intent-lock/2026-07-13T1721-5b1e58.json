@@ -1,0 +1,9 @@
+{
+  "session": "2026-07-13T1721-5b1e58",
+  "plan_path": "docs/plan-qor-phase232-consumer-stabilization-veto-remediation.md",
+  "plan_hash": "f40e526f7a6047b7999ecaae6c7fa84c566156381953571ae5926c3eeec5e322",
+  "audit_path": ".agent/staging/AUDIT_VERDICT.md",
+  "audit_hash": "daf24a0860cce0f4a134a709435436403c6af791b7882d11284cd95730316704",
+  "head_commit": "9e7a2d62ba83cf0c56e1a904e1afe6c81654540e",
+  "captured_ts": "2026-07-13T19:10:25.090791Z"
+}

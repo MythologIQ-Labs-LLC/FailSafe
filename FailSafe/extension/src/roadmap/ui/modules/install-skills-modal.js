@@ -129,6 +129,7 @@ function setState(container, state) {
 }
 
 function tryNewWebSocket() {
+  if (typeof window === 'undefined') return null; // window-less hardening only (plan-240 LD3)
   try { return new WebSocket('ws://localhost:9376'); } catch { return null; }
 }
 

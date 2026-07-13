@@ -60,14 +60,14 @@ suite('package-voice-pack.cjs', () => {
       const extractDir = mkTempDir('failsafe-pack-asm-extract-');
       try {
         const tarball = path.join(repoRoot, 'dist', 'failsafe-voice-pack-5.2.0.tar.gz');
-        // Cygwin tar quirks on Windows: drive-letter paths look like `host:path`
-        // SSH remotes. --force-local makes the `-f` arg treat them as local;
-        // forward-slash normalization works around the `-C` arg's separate path.
+        // Portable extraction (plan-240 LD4a): --force-local is GNU-only and
+        // rejected by bsdtar 3.8.x, so spawn with cwd = the tarball's dir and
+        // a basename `-f` arg (no drive-letter path hits tar's `host:path`
+        // remote heuristic); keep forward-slash normalization for `-C`.
         const ex = cp.spawnSync('tar', [
-          '--force-local',
-          '-xzf', tarball,
+          '-xzf', path.basename(tarball),
           '-C', extractDir.replace(/\\/g, '/'),
-        ], { encoding: 'utf8' });
+        ], { encoding: 'utf8', cwd: path.dirname(tarball) });
         assert.strictEqual(ex.status, 0, `tar -xzf exit 0; stderr=${ex.stderr}`);
 
         const manifestPath = path.join(extractDir, 'voice-pack.manifest.json');

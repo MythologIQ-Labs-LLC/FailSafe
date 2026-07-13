@@ -1,8 +1,6 @@
 /** HubSnapshotService — assembles `/api/hub` payload + owns checkpoint /
  *  transparency / risk / unattributed-file state. Pre-snapshot refresh
  *  hooks run BEFORE composition. Extracted (Phase 60 §0). */
-import * as path from "path";
-import * as fs from "fs";
 import * as crypto from "crypto";
 import { TransparencyLogger } from "./TransparencyLogger";
 import { RiskRegisterManager } from "./RiskRegisterManager";
@@ -19,13 +17,10 @@ import {
   CHECKPOINT_INIT_SQL,
 } from "./CheckpointStore";
 import { QorRuntimeService } from "./QorRuntimeService";
-import {
-  buildGovernancePhase, buildMetricIntegrity, buildUnattributedFileActivity,
-  buildRepoCompliance, buildTrustSummary, buildNodeStatus,
-  inferActivePhaseTitle, buildRiskSummary, buildRecentCompletions,
-} from "../ConsoleServerHub";
-import type { CheckpointRef, RevertRequest } from "../../governance/revert/types";
-import { FailSafeRevertService, RevertDeps } from "../../governance/revert/FailSafeRevertService";
+import { buildGovernancePhase, buildTrustSummary, buildNodeStatus,
+  inferActivePhaseTitle } from "../ConsoleServerHub";
+import type { CheckpointRef } from "../../governance/revert/types";
+import { FailSafeRevertService } from "../../governance/revert/FailSafeRevertService";
 import { GitResetService } from "../../governance/revert/GitResetService";
 import type { PlanManager } from "../../qorelogic/planning/PlanManager";
 import type { QorLogicManager } from "../../qorelogic/QorLogicManager";
@@ -33,7 +28,8 @@ import type { SentinelDaemon } from "../../sentinel/SentinelDaemon";
 import type { AgentHealthIndicator } from "../../sentinel/AgentHealthIndicator";
 import type { IdeActivityTracker } from "./IdeActivityTracker";
 import type { WorkspaceMutationBus, MutationDisposable } from "../../shared/WorkspaceMutationBus";
-
+import { assembleServiceHubPayload, type HubPayloadSource } from "./hub-payload-assembler";
+import { createHubRevertDeps } from "./hub-revert-deps";
 export type UnattributedFileChange = { eventId: string; timestamp: string; type: string; artifactPath?: string; decision?: string; };
 export type RecordCheckpointInput = { checkpointType: string; actor: string; phase: string; status: CheckpointStatus; policyVerdict: string; evidenceRefs: string[]; payload: unknown; };
 export interface HubSnapshotServiceDeps {
@@ -47,34 +43,14 @@ export interface HubSnapshotServiceDeps {
   getIdeTracker: () => IdeActivityTracker | null;
   getAgentHealthIndicator: () => AgentHealthIndicator | null;
   checkpointTypeRegistry: Set<string>;
-  /** Optional WorkspaceMutationBus (B192 remediation). When provided,
-   *  HubSnapshotService subscribes to the SQLite db path's mutations and
-   *  clears its cached chain validity so the next getCheckpointSummary()
-   *  re-walks the chain via verifyCheckpointChain. Pro-coexistence: external
-   *  db writes trigger refresh. */
   mutationBus?: WorkspaceMutationBus;
-  /** B194: ring buffer of recent governance-mode transitions. */
   modeTransitionHistory?: import("../../governance/ModeTransitionHistory").ModeTransitionHistory;
-  /** B194: callback returning current governance mode state. Without this,
-   *  `hub.governanceModeState` stays absent (legacy behavior, settings card
-   *  falls back to "(default)"). */
   getGovernanceMode?: () => import("../../governance/types").GovernanceModeState;
-  /** B197: optional verifier returning the qor-logic install version-floor
-   *  status. When provided, HubSnapshotService resolves it once per hub
-   *  rebuild and threads the result through WorkspaceArtifactBuilder so the
-   *  Settings card can surface a floor-violation warning. */
   getQorLogicVerifier?: () => Promise<import("../../qorlogic/qorLogicInstallRecord").QorLogicVersionStatus>;
-  /** Educational Component (v5.2.0): callback returning the normalized
-   *  {enabled, proficiency} education settings. Threaded into `hub.education`
-   *  so the webview micro-lesson affordance can read it. Without this dep the
-   *  field stays absent and renderLesson() degrades to the empty string. */
   getEducationConfig?: () => import("../../education/educationConfig").EducationConfig;
 }
-
 const FILE_EVENT_TYPES = new Set(["FILE_CREATED", "FILE_MODIFIED", "FILE_DELETED"]);
-
 export interface CheckpointStoreRef { db: CheckpointDb; memory: CheckpointRecord[]; }
-
 export class HubSnapshotService {
   private store: CheckpointStoreRef;
   private chainValidAt: string | null = null;
@@ -86,40 +62,40 @@ export class HubSnapshotService {
   constructor(private readonly deps: HubSnapshotServiceDeps & { storeRef?: CheckpointStoreRef }) {
     this.store = deps.storeRef ?? { db: null, memory: [] };
     this.initializeCheckpointStore();
-    this.revertService = new FailSafeRevertService(this.buildRevertDeps());
+    this.revertService = new FailSafeRevertService(createHubRevertDeps({
+      workspaceRoot: deps.workspaceRoot,
+      gitService: deps.gitResetService,
+      getCheckpoint: (id) => this.getCheckpointById(id),
+      recordCheckpoint: (request) => this.recordCheckpoint({
+        checkpointType: "governance.revert", actor: request.actor, phase: "revert",
+        status: "sealed", policyVerdict: "PASS", evidenceRefs: [],
+        payload: { targetCheckpointId: request.targetCheckpoint.checkpointId,
+          targetGitHash: request.targetCheckpoint.gitHash, reason: request.reason },
+      }),
+    }));
     this.subscribeToChainValidityMutations();
   }
 
-  /** B192 remediation: subscribe to the SQLite db file path so external
-   *  mutations (e.g., FailSafe Pro writing to the same db) invalidate the
-   *  cached chain validity. Idempotent: clearing cachedChainValid +
-   *  chainValidAt means the next getCheckpointSummary() call re-walks
-   *  the chain via verifyCheckpointChain. */
   private subscribeToChainValidityMutations(): void {
     if (!this.deps.mutationBus) return;
     try {
       const ledgerManager = this.deps.qorelogicManager.getLedgerManager();
       const dbPath = ledgerManager?.getLedgerPath?.();
-      if (!dbPath) return; // ledger not initialized; bus subscription deferred
+      if (!dbPath) return;
       this.chainValidityDisposable = this.deps.mutationBus.registerWatcher(
         dbPath,
         () => this.refreshChainValidity(),
       );
     } catch {
-      // Ledger manager unavailable; degrade silently. The existing
-      // belt-and-suspenders refresh hooks in buildHubSnapshot still apply.
+      // Ledger access is optional during bootstrap.
     }
   }
 
-  /** Clear cached chain validity so the next getCheckpointSummary call
-   *  re-runs verifyCheckpointChain over the full chain. */
   refreshChainValidity(): void {
     this.chainValidAt = null;
-    this.cachedChainValid = true; // optimistic default until re-walk
+    this.cachedChainValid = true;
   }
 
-  /** Release the mutation-bus subscription. Called by ConsoleServer.stop or
-   *  extension deactivate. */
   dispose(): void {
     if (this.chainValidityDisposable) {
       try { this.chainValidityDisposable.dispose(); } catch { /* already gone */ }
@@ -141,7 +117,6 @@ export class HubSnapshotService {
   getCheckpointSummary(): Record<string, unknown> {
     return ckptGetSummary(this.checkpointDb, this.checkpointMemory, this.cachedChainValid, this.chainValidAt);
   }
-
   getCheckpointById(id: string): CheckpointRef | null {
     if (this.checkpointDb) {
       try {
@@ -216,66 +191,38 @@ export class HubSnapshotService {
     const phaseTitle = inferActivePhaseTitle(activePlan as unknown as Record<string, unknown>, (l) => this.getRecentCheckpoints(l));
     const runState = d.getIdeTracker()?.getRunState(phaseTitle) ?? { currentPhase: "Plan", activeTasks: [], activeDebugSessions: [] };
     const nodeStatusArr = buildNodeStatus(sentinelStatus as { running?: boolean; filesWatched?: number; queueDepth?: number; [k: string]: unknown }, l3Queue, trust, qorRuntime);
-    return this.assembleHubPayload({ activePlan, sentinelStatus, l3Queue, trust, qorRuntime, checkpointSummary, governancePhase, artifacts, runState, nodeStatusArr });
+    return assembleServiceHubPayload(this.payloadSource(), {
+      activePlan, sentinelStatus, l3Queue, trust, qorRuntime, checkpointSummary,
+      governancePhase, artifacts, runState, nodeStatus: nodeStatusArr,
+    });
   }
 
-  private assembleHubPayload(a: {
-    activePlan: unknown; sentinelStatus: Record<string, unknown>;
-    l3Queue: unknown; trust: unknown; qorRuntime: unknown;
-    checkpointSummary: Record<string, unknown>;
-    governancePhase: ReturnType<typeof buildGovernancePhase>;
-    artifacts: WorkspaceArtifactSnapshot;
-    runState: { activeTasks?: unknown[]; activeDebugSessions?: unknown[] };
-    nodeStatusArr: unknown;
-  }): Record<string, unknown> {
-    const hubDeps = { chainValidAt: this.chainValidAt, unattributedFileChanges: this.unattributedFileChanges };
+  private payloadSource(): HubPayloadSource {
+    const d = this.deps;
     return {
-      version: this.deps.extensionVersion,
-      sprints: this.deps.planManager.getAllSprints(),
-      currentSprint: this.deps.planManager.getCurrentSprint(),
-      activePlan: this.deps.mergePlanBlockers(a.activePlan, a.artifacts),
-      sentinelStatus: a.sentinelStatus,
-      recentVerdicts: this.coalesceVerdicts(a.artifacts),
-      l3Queue: a.l3Queue, trustSummary: a.trust, nodeStatus: a.nodeStatusArr,
-      checkpointSummary: a.checkpointSummary,
-      recentCheckpoints: this.getRecentCheckpoints(12),
-      qorRuntime: a.qorRuntime, runState: a.runState,
-      riskSummary: buildRiskSummary((l) => this.getRecentVerdicts(l)),
-      recentCompletions: this.coalesceCompletions(a.artifacts),
-      transparencyEvents: this.deps.transparencyLogger.getEvents(20).reverse(),
-      unattributedFileActivity: buildUnattributedFileActivity(this.unattributedFileChanges),
-      metricIntegrity: buildMetricIntegrity(a.governancePhase, a.checkpointSummary, a.sentinelStatus, a.runState, hubDeps),
-      bootstrapState: {
-        skillsInstalled: a.artifacts.qorLogicInstall.anyInstalled,
-        governanceInitialized: fs.existsSync(path.join(this.deps.workspaceRoot, "docs", "CONCEPT.md")),
-        workspaceName: path.basename(this.deps.workspaceRoot),
-        systemState: a.artifacts.systemState,
-        qorLogicInstall: a.artifacts.qorLogicInstall,
-      },
-      ledgerSummary: a.artifacts.ledgerSummary,
-      latestAudit: a.artifacts.latestAudit,
-      recentReleases: a.artifacts.recentReleases,
-      workspaceName: path.basename(this.deps.workspaceRoot),
-      workspacePath: this.deps.workspaceRoot,
-      serverPort: this.deps.getActualPort(),
-      governancePhase: a.governancePhase,
-      repoCompliance: buildRepoCompliance(this.deps.workspaceRoot),
-      chainValid: this.cachedChainValid ?? null,
-      risks: this.getRiskRegister(),
-      agentHealth: this.deps.getAgentHealthIndicator()?.buildMetrics() || null,
+      version: d.extensionVersion, workspaceRoot: d.workspaceRoot,
+      chainValidAt: this.chainValidAt, cachedChainValid: this.cachedChainValid,
+      unattributedFileChanges: this.unattributedFileChanges,
+      getAllSprints: () => d.planManager.getAllSprints(),
+      getCurrentSprint: () => d.planManager.getCurrentSprint(),
+      mergePlanBlockers: d.mergePlanBlockers,
+      getRecentCheckpoints: (limit) => this.getRecentCheckpoints(limit),
+      getRecentVerdicts: (limit) => this.getRecentVerdicts(limit),
+      getTransparencyEvents: () => d.transparencyLogger.getEvents(20).reverse(),
+      getRiskRegister: () => this.getRiskRegister(), getPort: d.getActualPort,
+      getAgentHealth: () => d.getAgentHealthIndicator()?.buildMetrics() || null,
+      getGovernanceMode: () => d.getGovernanceMode?.(),
+      getModeTransitions: () => d.modeTransitionHistory?.getRecent(10) ?? [],
+      getEducation: () => d.getEducationConfig?.(),
+    };
+  }
       // B194: governance mode state + recent transition feed. Both optional;
       // when deps absent, fields stay undefined (legacy behavior).
-      governanceModeState: this.deps.getGovernanceMode?.(),
-      recentModeTransitions: this.deps.modeTransitionHistory?.getRecent(10) ?? [],
       // Educational Component (v5.2.0): the {enabled, proficiency} pair the
       // webview micro-lesson affordance consumes. Threaded through the SAME
       // dep-callback pattern as getGovernanceMode — when the dep is absent
       // (test contexts) the field stays undefined and renderLesson() degrades
       // to the empty string.
-      education: this.deps.getEducationConfig?.(),
-      generatedAt: new Date().toISOString(),
-    };
-  }
 
   private backfillSentinelEvents(sentinelStatus: Record<string, unknown>): void {
     if (!this.checkpointDb || sentinelStatus.eventsProcessed !== 0) return;
@@ -285,18 +232,6 @@ export class HubSnapshotService {
       ).get() as { cnt: number } | undefined;
       if (row?.cnt) sentinelStatus.eventsProcessed = row.cnt;
     } catch { /* non-fatal */ }
-  }
-
-  private coalesceVerdicts(artifacts: WorkspaceArtifactSnapshot): Array<Record<string, unknown>> {
-    const live = this.getRecentVerdicts(10);
-    if (live.length > 0) return live;
-    return artifacts.ledgerVerdicts.map((v) => ({ id: v.id, number: v.number, kind: v.kind, title: v.title, source: "meta-ledger" }));
-  }
-
-  private coalesceCompletions(artifacts: WorkspaceArtifactSnapshot): unknown {
-    const live = buildRecentCompletions((l) => this.getRecentCheckpoints(l));
-    if (Array.isArray(live) && live.length > 0) return live;
-    return artifacts.ledgerCompletions.map((c) => ({ id: c.id, number: c.number, kind: c.kind, title: c.title, source: "meta-ledger" }));
   }
 
   private initializeCheckpointStore(): void {
@@ -312,20 +247,4 @@ export class HubSnapshotService {
     }
   }
 
-  private buildRevertDeps(): RevertDeps {
-    return {
-      getCheckpoint: (id) => this.getCheckpointById(id),
-      gitService: this.deps.gitResetService, purgeRagAfter: () => 0,
-      recordRevertCheckpoint: (req: RevertRequest) => {
-        this.recordCheckpoint({
-          checkpointType: "governance.revert", actor: req.actor, phase: "revert",
-          status: "sealed", policyVerdict: "PASS", evidenceRefs: [],
-          payload: { targetCheckpointId: req.targetCheckpoint.checkpointId,
-            targetGitHash: req.targetCheckpoint.gitHash, reason: req.reason },
-        });
-        return crypto.randomUUID();
-      },
-      workspaceRoot: this.deps.workspaceRoot,
-    };
-  }
 }

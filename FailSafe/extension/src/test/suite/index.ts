@@ -1,10 +1,14 @@
+// TRUTH HEADER (plan-240 LD5): this is NOT the active runner when the
+// .vscode-test.mjs config is present — @vscode/test-cli's config-mode shadows
+// --extensionTestsPath and its built-in runner.cjs executes instead. Retained
+// only for the package.json:729 --extensionTestsPath fallback flag.
 import * as path from 'path';
 import Mocha from 'mocha';
 import { glob } from 'glob';
 
 export async function run(): Promise<void> {
   const mocha = new Mocha({
-    ui: 'bdd',
+    ui: 'tdd',
     color: true,
     timeout: 15000
   });

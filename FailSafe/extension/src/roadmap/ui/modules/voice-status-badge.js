@@ -28,6 +28,15 @@ export class VoiceStatusBadge {
     this._unsubscribe = null;
   }
 
+  /** #237 LD5: presenter-driven capability note (voice-pack state). The
+   *  presenter returns null for 'installed', so null is a strict NO-OP. */
+  setCapabilityNote(presentation) {
+    if (!presentation || !this._el) return;
+    this._el.textContent = presentation.text;
+    this._el.style.color = presentation.color;
+    if (presentation.title) this._el.title = presentation.title;
+  }
+
   _render(state) {
     if (!this._el) return;
     const preset = STATE_PRESENTATION[state] || this._renderError(state);

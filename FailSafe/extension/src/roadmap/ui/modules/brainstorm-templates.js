@@ -19,6 +19,10 @@ export function renderShell() {
         <button class="cc-btn cc-bs-view active" data-view="2D">2D</button>
         <button class="cc-btn cc-bs-view" data-view="3D">3D</button>
       </div>
+      <div class="cc-bs-viewport-row">
+        <button class="cc-btn cc-bs-fit" title="Fit the whole graph in the viewport">FIT VIEW</button>
+        <button class="cc-btn cc-bs-reset-view" title="Release pinned node positions and relayout (keeps all nodes)">RESET VIEW</button>
+      </div>
       <div class="cc-bs-meta-row">
         <button class="cc-btn cc-bs-seed" title="Preload nodes from the repository knowledge graph">REPO</button>
         <button class="cc-btn cc-bs-clear-layer" title="Remove your brainstorm nodes, keep the repo nodes">CLEAR LAYER</button>

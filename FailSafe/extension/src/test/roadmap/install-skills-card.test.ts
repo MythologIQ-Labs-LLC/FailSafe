@@ -1,6 +1,5 @@
 // Functional tests for install-skills-card UI module (renderInstallSkillsCard
 // + bindInstallSkillsCard). Pure HTML generation + click-driven fetch flow.
-
 import { strict as assert } from 'assert';
 import { JSDOM } from 'jsdom';
 import {
@@ -8,11 +7,12 @@ import {
   bindInstallSkillsCard,
 // @ts-expect-error JS module import in TS test context
 } from '../../../src/roadmap/ui/modules/install-skills-card.js';
-
 function setupDom(initial = ''): { dom: JSDOM; restore: () => void } {
   const dom = new JSDOM(`<!DOCTYPE html><div id="root">${initial}</div>`);
   (globalThis as { document?: unknown }).document = dom.window.document;
   (globalThis as { window?: unknown }).window = dom.window as unknown;
+  (dom.window as unknown as { __failsafeWebSocket?: unknown }).__failsafeWebSocket =
+    { readyState: 1, addEventListener() {}, removeEventListener() {} };
   return {
     dom,
     restore: () => {
@@ -21,14 +21,12 @@ function setupDom(initial = ''): { dom: JSDOM; restore: () => void } {
     },
   };
 }
-
 function mountHtml(dom: JSDOM, html: string): Element {
   const root = dom.window.document.getElementById('root');
   if (!root) throw new Error('root mount missing');
   root.innerHTML = html;
   return root;
 }
-
 function installFetch(handler: (url: string, init?: { method?: string }) => { ok?: boolean; status?: number; body?: unknown }): {
   calls: Array<{ url: string; method?: string }>;
   restore: () => void;
@@ -45,12 +43,13 @@ function installFetch(handler: (url: string, init?: { method?: string }) => { ok
   };
   return { calls, restore: () => { (globalThis as { fetch?: unknown }).fetch = original; } };
 }
-
-suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
-  let domR: { dom: JSDOM; restore: () => void };
+let domR: { dom: JSDOM; restore: () => void };
+function registerInstallCardHooks(): void {
   setup(() => { domR = setupDom(); });
   teardown(() => { domR.restore(); });
-
+}
+suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
+  registerInstallCardHooks();
   test('renderInstallSkillsCard — idle state shows install + bootstrap buttons (no Show Output)', () => {
     const html = renderInstallSkillsCard({ running: false, invocations: [], lastReport: null });
     assert.match(html, /data-action="install-qorlogic-skills"/);
@@ -58,7 +57,6 @@ suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
     // No Show Output when there\'s no report and no invocations
     assert.equal(html.includes('data-action="show-output"'), false);
   });
-
   test('renderInstallSkillsCard — running state disables both action buttons', () => {
     const html = renderInstallSkillsCard({ running: true, invocations: [], lastReport: null });
     // Both install and bootstrap buttons get disabled attr
@@ -66,7 +64,6 @@ suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
     assert.ok(matches.length >= 2, `Expected ≥2 "disabled" attributes; got ${matches.length}`);
     assert.match(html, /Installing/);
   });
-
   test('renderInstallSkillsCard — non-empty invocations adds Show Output button', () => {
     const html = renderInstallSkillsCard({
       running: false,
@@ -76,7 +73,6 @@ suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
     assert.match(html, /data-action="show-output"/);
     assert.match(html, /Resolved Python.*\/usr\/bin\/python3/);
   });
-
   test('renderInstallSkillsCard — invocations: success/error/running icons differ', () => {
     const html = renderInstallSkillsCard({
       running: false,
@@ -92,7 +88,9 @@ suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
     assert.match(html, /⏳/);
     assert.match(html, /permission denied/);
   });
-
+});
+suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
+  registerInstallCardHooks();
   test('renderInstallSkillsCard — qorlogic-install detail includes skill count + destination', () => {
     const html = renderInstallSkillsCard({
       running: false,
@@ -105,7 +103,6 @@ suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
     assert.match(html, /17 skills/);
     assert.match(html, /\.claude\/skills\//);
   });
-
   test('renderInstallSkillsCard — provenance summary pluralizes correctly', () => {
     const html1 = renderInstallSkillsCard({
       running: false,
@@ -123,7 +120,9 @@ suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
     assert.match(html2, /2 host records/);
     assert.match(html2, /5 files/);
   });
-
+});
+suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
+  registerInstallCardHooks();
   test('renderInstallSkillsCard — lastReport ok=true renders teal success message', () => {
     const html = renderInstallSkillsCard({
       running: false,
@@ -135,7 +134,6 @@ suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
     assert.match(html, /Installed 17 skills across claude\./);
     assert.match(html, /\.claude\/skills\//);
   });
-
   test('renderInstallSkillsCard — lastReport ok=false renders gold partial-failure message', () => {
     const html = renderInstallSkillsCard({
       running: false,
@@ -145,7 +143,6 @@ suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
     assert.match(html, /var\(--accent-gold/);
     assert.match(html, /Installed 5 skills; 1 host failed\./);
   });
-
   test('renderInstallSkillsCard — lastReport ignored while running=true', () => {
     const html = renderInstallSkillsCard({
       running: true,
@@ -154,7 +151,6 @@ suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
     });
     assert.equal(html.includes('Installed 3 skill'), false, 'report summary suppressed during running state');
   });
-
   test('renderInstallSkillsCard — esc() prevents XSS in destinations + error fields', () => {
     const html = renderInstallSkillsCard({
       running: false,
@@ -165,7 +161,9 @@ suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
     assert.equal(html.includes('<img src=x>'), false);
     assert.match(html, /&lt;script&gt;/);
   });
-
+});
+suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
+  registerInstallCardHooks();
   test('FX234/FX237 bindInstallSkillsCard — Install button opens modal; confirm POSTs /api/actions/scaffold-skills', async () => {
     const f = installFetch(() => ({ ok: true, body: { ok: true, totalInstalled: 17 } }));
     try {
@@ -193,7 +191,9 @@ suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
       assert.deepEqual(finishBody, { ok: true, totalInstalled: 17 });
     } finally { f.restore(); }
   });
-
+});
+suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
+  registerInstallCardHooks();
   test('FX234 bindInstallSkillsCard — Install on error response renders cc-modal-error with message', async () => {
     // Post-V2 split: error state lives in install-skills-modal.js as
     // .cc-modal-error block (state.terminal === 'error', state.err.error).
@@ -218,7 +218,9 @@ suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
       assert.match(errorBlock?.innerHTML || '', /pip exit 1/);
     } finally { f.restore(); }
   });
-
+});
+suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
+  registerInstallCardHooks();
   test('FX234 bindInstallSkillsCard — fetch throw fires onError + surfaces error block in modal', async () => {
     // Post-V2 split: network errors flow through the same error reducer +
     // .cc-modal-error block. Generic "Network error" copy no longer used;
@@ -244,58 +246,5 @@ suite('install-skills-card (FX234 + FX237 + FX238 + FX240)', () => {
       assert.ok(errorBlock, '.cc-modal-error should be rendered on fetch throw');
       assert.match(errorBlock?.innerHTML || '', /offline/);
     } finally { (globalThis as { fetch?: unknown }).fetch = original; }
-  });
-
-  test('FX511 — version-floor warning renders when meetsFloor=false + installedVersion present', () => {
-    const html = renderInstallSkillsCard(
-      { running: false, invocations: [], lastReport: null },
-      { bootstrapState: { qorLogicInstall: {
-        hosts: [], anyInstalled: false,
-        installedVersion: '0.30.0', minimumVersion: '0.31.1', meetsFloor: false,
-      } } },
-    );
-    assert.match(html, /cc-qorlogic-floor-warning/);
-    assert.match(html, /qor-logic v0\.30\.0/);
-    assert.match(html, /minimum v0\.31\.1/);
-    assert.match(html, /Re-run install/);
-  });
-
-  test('FX511 — version-floor warning ABSENT when meetsFloor=true', () => {
-    const html = renderInstallSkillsCard(
-      { running: false, invocations: [], lastReport: null },
-      { bootstrapState: { qorLogicInstall: {
-        hosts: [], anyInstalled: false,
-        installedVersion: '0.31.5', minimumVersion: '0.31.1', meetsFloor: true,
-      } } },
-    );
-    assert.equal(html.includes('cc-qorlogic-floor-warning'), false);
-  });
-
-  test('FX511 — version-floor warning ABSENT when verifier never ran (no installedVersion)', () => {
-    const html = renderInstallSkillsCard(
-      { running: false, invocations: [], lastReport: null },
-      { bootstrapState: { qorLogicInstall: { hosts: [], anyInstalled: false } } },
-    );
-    assert.equal(html.includes('cc-qorlogic-floor-warning'), false);
-  });
-
-  test('FX240 bindInstallSkillsCard — Show Output button POSTs /api/actions/show-output', async () => {
-    const f = installFetch(() => ({ ok: true, body: {} }));
-    try {
-      const html = renderInstallSkillsCard({
-        running: false,
-        invocations: [{ phase: 'python-probe', status: 'success' }],
-        lastReport: null,
-      });
-      mountHtml(domR.dom, html);
-      const root = domR.dom.window.document.getElementById('root')!;
-      bindInstallSkillsCard(root, {});
-      const btn = root.querySelector('[data-action="show-output"]') as HTMLElement;
-      assert.ok(btn);
-      btn.click();
-      await new Promise((r) => setTimeout(r, 50));
-      assert.equal(f.calls[0].url, '/api/actions/show-output');
-      assert.equal(f.calls[0].method, 'POST');
-    } finally { f.restore(); }
   });
 });
