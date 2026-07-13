@@ -1,7 +1,7 @@
 // Functional tests for BrainstormService (FX446 + FX212 orchestrator).
 
 import { strict as assert } from 'assert';
-import { BrainstormService } from '../../roadmap/services/BrainstormService';
+import { BrainstormService, isPlaceholderTranscript } from '../../roadmap/services/BrainstormService';
 
 const VALID_RESPONSE = JSON.stringify({
   nodes: [
@@ -45,8 +45,8 @@ suite('BrainstormService (FX446 + FX212)', () => {
     await s.processTranscript('second');
     // Same node IDs (n1, n2) → should not duplicate
     assert.equal(s.getGraph().nodes.length, 2);
-    // Edges accumulate (no dedup logic)
-    assert.equal(s.getGraph().edges.length, 2);
+    // FX894: identical edges are deduped by brainstormEdgeKey — second call adds nothing
+    assert.equal(s.getGraph().edges.length, 1);
   });
 
   test('FX446 processTranscript — invalid JSON triggers retry with strict prompt', async () => {
@@ -159,5 +159,41 @@ suite('BrainstormService (FX446 + FX212)', () => {
     const s = new BrainstormService(fn);
     const r = await s.processTranscript('bad');
     assert.ok(r.queued, 'malformed shape → queued not extraction');
+  });
+
+  // FX895 (#238) — placeholder/diagnostic transcripts are rejected BEFORE any
+  // LLM extraction tier and never mutate the graph.
+  test('FX895 processTranscript — placeholder literal rejected before any LLM call', async () => {
+    const llm = makeLlm([VALID_RESPONSE]);
+    const s = new BrainstormService(llm.fn);
+    const r = await s.processTranscript('[transcription failed]');
+    assert.deepEqual(r, { rejected: { reason: 'placeholder_rejected' } });
+    assert.equal(llm.calls, 0, 'llmEvaluate must never be invoked for placeholder text');
+    assert.deepEqual(s.getGraph(), { nodes: [], edges: [] }, 'graph must not mutate');
+  });
+
+  test('FX895 processTranscript — rejection leaves an existing graph untouched', async () => {
+    const llm = makeLlm([VALID_RESPONSE, VALID_RESPONSE]);
+    const s = new BrainstormService(llm.fn);
+    await s.processTranscript('real ideas about auth');
+    const before = s.getGraph();
+    const r = await s.processTranscript('[decode error]');
+    assert.ok(r.rejected, 'bracket-wrapped diagnostic must be rejected');
+    assert.deepEqual(s.getGraph(), before, 'graph identical after rejection');
+    assert.equal(llm.calls, 1, 'no additional LLM call for the rejected transcript');
+  });
+
+  test('FX895 isPlaceholderTranscript — matcher matrix', () => {
+    const matrix: Array<[string, boolean]> = [
+      ['[transcription failed]', true],
+      ['[decode error]', true],
+      ['[BLANK_AUDIO]', false],
+      ['real idea [not failure]', false],
+      ['  ', true],
+      ['We should cache the auth token', false],
+    ];
+    for (const [input, expected] of matrix) {
+      assert.equal(isPlaceholderTranscript(input), expected, `verdict for ${JSON.stringify(input)}`);
+    }
   });
 });

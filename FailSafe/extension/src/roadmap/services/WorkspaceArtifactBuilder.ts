@@ -15,7 +15,10 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import { MetaLedgerReader, type LedgerSummary } from "./MetaLedgerReader";
+import { MetaLedgerReader, summarizeEntries, type LedgerSummary } from "./MetaLedgerReader";
+import { readMetaLedgerArtifact } from "../../qorlogic/consumer/consumer-adapter";
+import { buildConsumerDiagnostics } from "../../qorlogic/consumer/diagnostics";
+import type { ConsumerDiagnostics } from "../../qorlogic/consumer/types";
 import { PlanFileReader, type ParsedPlan } from "./PlanFileReader";
 import { SystemStateReader, type SystemStateSnapshot } from "./SystemStateReader";
 import { BacklogReader, type PlanBlockerProjection } from "./BacklogReader";
@@ -49,6 +52,8 @@ export interface WorkspaceArtifactSnapshot {
   shieldPhase: ShieldPhase;
   latestVerdict: string | undefined;
   derivedShieldPhases: ShieldPhaseStatus[];
+  /** #233 consumer-adapter diagnostics: per-artifact state + compatibility. */
+  qorConsumer: ConsumerDiagnostics;
 }
 
 export class WorkspaceArtifactBuilder {
@@ -64,13 +69,22 @@ export class WorkspaceArtifactBuilder {
   ) {}
 
   build(): WorkspaceArtifactSnapshot {
+    // #233: the MetaLedgerReader/summarize path is gated by the consumer
+    // adapter so a MALFORMED ledger degrades to an EXPLICIT empty summary
+    // (fail-visible via the qorConsumer block) instead of an
+    // indistinguishable silent empty; `unavailable` matches the previous
+    // missing-file posture. Version-floor incompatibility is surfaced in the
+    // diagnostics block rather than by suppressing ledger rendering, so
+    // below-floor installs keep today's hub behavior (B197 warning UX).
+    const ledgerEnvelope = readMetaLedgerArtifact(this.workspaceRoot);
+    const ledgerReadable = ledgerEnvelope.state === "ok" || ledgerEnvelope.state === "stale";
     const ledger = new MetaLedgerReader(this.workspaceRoot);
     const { shieldPhase, latestVerdict } = this.readGovernanceState();
     const derivedShieldPhases = derivePlanPhaseStatuses(shieldPhase, latestVerdict);
     return {
-      ledgerSummary: ledger.summarize(),
-      ledgerVerdicts: ledger.recentVerdicts(10),
-      ledgerCompletions: ledger.recentCompletions(12),
+      ledgerSummary: ledgerReadable ? ledger.summarize() : summarizeEntries([]),
+      ledgerVerdicts: ledgerReadable ? ledger.recentVerdicts(10) : [],
+      ledgerCompletions: ledgerReadable ? ledger.recentCompletions(12) : [],
       activePlanFromFile: new PlanFileReader(this.workspaceRoot).pickLatestPlan(),
       planBlockers: new BacklogReader(this.workspaceRoot).parseOpenBlockers(),
       systemState: new SystemStateReader(this.workspaceRoot).read(),
@@ -80,6 +94,9 @@ export class WorkspaceArtifactBuilder {
       shieldPhase,
       latestVerdict,
       derivedShieldPhases,
+      qorConsumer: buildConsumerDiagnostics(this.workspaceRoot, {
+        versionStatus: this.qorLogicVersionStatus,
+      }),
     };
   }
 

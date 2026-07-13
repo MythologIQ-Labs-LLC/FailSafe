@@ -83,8 +83,7 @@ export const DEFAULT_PATTERNS: HeuristicPattern[] = [
     name: "Deeply Nested Logic",
     category: "complexity",
     severity: "medium",
-    // Looking for 5+ levels of indentation or nested braces (approximate)
-    pattern: "(\\{[^}]*(\\{[^}]*(\\{[^}]*(\\{[^}]*\\{)", 
+    pattern: "(?:\\{[^{}\\n]*){5}",
     description: "Potential excessive nesting detected (heuristic)",
     remediation: "Refactor into smaller functions",
     falsePositiveRate: 0.3,

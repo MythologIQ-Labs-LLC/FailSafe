@@ -5,11 +5,11 @@
 
 import { strict as assert } from 'assert';
 import * as fs from 'fs';
-import * as path from 'path';
 import {
   projectTrackerManifest, parsePlans, CONSOLE_VERTICALS,
 } from '../../../roadmap/tracker/governance-projection';
 import { parseMetaLedgerEntries } from '../../../qorlogic/meta-ledger-model';
+import { resolveTestRepoPath } from './test-repo-root';
 
 const LEDGER = `# META LEDGER
 
@@ -100,7 +100,9 @@ suite('roadmap/tracker governance-projection (A.1 — tracker sidecar)', () => {
     const agents = m.verticals!.find((v) => v.key === 'agents')!;
     assert.deepEqual(agents.functionality, ['Operations', 'Timeline', 'Genome', 'Replay'], 'sub-views are the real functionality');
   });
+});
 
+suite('roadmap/tracker governance-projection (A.1 — tracker sidecar)', () => {
   test('degrade-safe: empty inputs → valid manifest (verticals always the 7 surfaces), no throw', () => {
     const m = projectTrackerManifest({ metaLedger: '' });
     assert.deepEqual(m.rcs, []);
@@ -139,7 +141,9 @@ suite('roadmap/tracker governance-projection (A.1 — tracker sidecar)', () => {
   });
 
   // --- A.1b (#195): plans → programs/phases ---
+});
 
+suite('roadmap/tracker governance-projection (A.1 — tracker sidecar)', () => {
   test('parsePlans: extracts slug / title / theme / target version', () => {
     const docs = parsePlans([
       { slug: 'plan-qor-stale-cache.md', content: '# Plan: Stale Cache Remediation\n\n**Target Version**: v5.1.0\n' },
@@ -168,7 +172,9 @@ suite('roadmap/tracker governance-projection (A.1 — tracker sidecar)', () => {
     assert.equal(m.phases!.find((ph) => ph.key === 'monitor-x')!.prog, 'other', 'singleton -> Other program');
     assert.ok(m.phases!.every((ph) => ph.w >= 1), 'even integer weights');
   });
+});
 
+suite('roadmap/tracker governance-projection (A.1 — tracker sidecar)', () => {
   test('A.2b: plan phases anchor to Target Version only when it is a known release', () => {
     const plans = [
       { slug: 'plan-qor-a.md', content: '# Plan: Qor A\n\n**Target Version**: v5.6.1\n' }, // real release
@@ -192,14 +198,10 @@ suite('roadmap/tracker governance-projection (A.1 — tracker sidecar)', () => {
   // This parses the REAL command-center.js and fails if the constant diverges from
   // the actual tab nav + renderer wiring — so the projection can never silently lie
   // about the product's surfaces.
+
   test('drift-guard: CONSOLE_VERTICALS matches the real command-center.js tab + sub-view wiring', () => {
-    const candidates = [
-      path.resolve(process.cwd(), 'src/roadmap/ui/command-center.js'),
-      path.resolve(process.cwd(), 'FailSafe/extension/src/roadmap/ui/command-center.js'),
-    ];
-    const ccPath = candidates.find((p) => fs.existsSync(p));
-    assert.ok(ccPath, 'command-center.js found for drift-guard');
-    const cc = fs.readFileSync(ccPath!, 'utf-8');
+    const ccPath = resolveTestRepoPath('FailSafe', 'extension', 'src', 'roadmap', 'ui', 'command-center.js');
+    const cc = fs.readFileSync(ccPath, 'utf-8');
     // The `renderers = { ... }` block: top-level tab keys.
     const renderersBlock = cc.slice(cc.indexOf('const renderers = {'), cc.indexOf('// Connection status'));
     const tabKeys = [...renderersBlock.matchAll(/^\s{4}(\w+):\s/gm)].map((m) => m[1]);

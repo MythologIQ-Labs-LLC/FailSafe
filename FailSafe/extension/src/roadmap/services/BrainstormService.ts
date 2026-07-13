@@ -17,6 +17,15 @@ export interface BrainstormEdge {
   label: string;
 }
 
+/** FX894 — collision-proof directed edge identity: JSON-array encoding of
+ *  (source, target, label). Twin of `edgeKey` in the UI's
+ *  brainstorm-edge-identity.js — keep the formulas byte-identical (#234 LD4);
+ *  edge-identity-consistency.test.ts pins them together. LLM-extracted edges
+ *  are cast without validation, so `label` may be absent at runtime. */
+export function brainstormEdgeKey(e: BrainstormEdge): string {
+  return JSON.stringify([e.source, e.target, e.label ?? ""]);
+}
+
 export interface ExtractionResult {
   nodes: BrainstormNode[];
   edges: BrainstormEdge[];
@@ -52,6 +61,20 @@ export interface QueuedTranscript {
 export interface TranscriptResult {
   extraction?: ExtractionResult;
   queued?: QueuedTranscript;
+  rejected?: { reason: "placeholder_rejected" };
+}
+
+/** FX895 (#238) — placeholder/diagnostic transcript gate. True for
+ *  empty-after-trim, the exact STT failure literal, or a bracket-wrapped
+ *  diagnostic phrase containing fail/error. Twin of the client mirror in
+ *  prep-bay.js (browser/extension boundary, LD6) — keep verdicts identical;
+ *  placeholder-matcher-consistency.test.ts pins them together. Input is
+ *  bounded upstream by the route's 10,000-char slice. */
+export function isPlaceholderTranscript(t: string): boolean {
+  const s = (t || "").trim();
+  if (!s) return true;
+  if (s === "[transcription failed]") return true;
+  return /^\[[a-z0-9_ .:-]*(fail|error)[a-z0-9_ .:-]*\]$/i.test(s);
 }
 
 export class BrainstormService {
@@ -62,6 +85,10 @@ export class BrainstormService {
   constructor(private llmEvaluate: LlmEvaluateFn) {}
 
   async processTranscript(transcript: string): Promise<TranscriptResult> {
+    // FX895: failure/diagnostic text never reaches any extraction tier.
+    if (isPlaceholderTranscript(transcript)) {
+      return { rejected: { reason: "placeholder_rejected" } };
+    }
     try {
       const raw = await this.llmEvaluate(MINDMAP_EXTRACTOR_PROMPT, transcript);
       let parsed: ExtractionResult;
@@ -83,8 +110,14 @@ export class BrainstormService {
           this.nodes.set(node.id, node);
         }
       }
+      // FX894: guard against duplicate edges across repeated extractions.
+      const edgeKeys = new Set(this.edges.map(brainstormEdgeKey));
       for (const edge of parsed.edges) {
-        this.edges.push(edge);
+        const key = brainstormEdgeKey(edge);
+        if (!edgeKeys.has(key)) {
+          edgeKeys.add(key);
+          this.edges.push(edge);
+        }
       }
       return { extraction: parsed };
     } catch (err) {

@@ -3,13 +3,13 @@
 
 import { exportBrainstormJSON } from './brainstorm-export.js';
 import { showTruncationNotice } from './brainstorm-truncation-notice.js';
-
-const STORAGE_KEY = 'failsafe-brainstorm-graph';
+import { edgeKey, isWellFormedEdge, dedupeEdges } from './brainstorm-edge-identity.js';
+import * as graphIO from './brainstorm-graph-io.js';
 
 export class BrainstormGraph {
   constructor({ showStatus, store } = {}) {
     this.nodes = [];
-    this.edges = [];
+    this.edges = []; this._duplicatesRemoved = 0;
     this.canvas = null;
     this.onSelectionChange = null;
     this._undoStack = [];
@@ -55,67 +55,31 @@ export class BrainstormGraph {
       const data = await res.json();
       if (data.nodes?.length || data.edges?.length) {
         this.nodes = data.nodes || [];
-        this.edges = data.edges || [];
+        const repaired = dedupeEdges(data.edges || []); // FX894 server-branch repair
+        this.edges = repaired.edges;
+        this._duplicatesRemoved += repaired.removed;
         this._saveLocal();
         return;
       }
     } catch {}
     // Server empty or unavailable — restore from localStorage
     this._loadLocal();
-    // FX889: an empty Mind Map preloads the repository knowledge graph so the
-    // operator starts from repo facts, not a blank canvas.
+    // FX889: an empty Mind Map preloads the repository knowledge graph.
     if (!this.nodes.length) await this.seedFromRepo();
   }
 
-  // FX889: merge the repository seed graph. By default only fills an EMPTY map
-  // (never overwrites brainstorm work); `force` re-seeds on demand (the REPO
-  // button). mergeNodes dedupes by id, so a re-seed is idempotent on cb- nodes.
-  async seedFromRepo({ force = false } = {}) {
-    if (!force && this.nodes.length) return;
-    try {
-      const res = await fetch('/api/v1/brainstorm/seed');
-      const data = await res.json();
-      if (data.nodes?.length || data.edges?.length) {
-        this.mergeNodes(data.nodes || [], data.edges || []);
-      }
-    } catch {}
-  }
+  // FX889 seed + persistence live in brainstorm-graph-io.js (#234 LD6 split);
+  // delegating wrappers keep every internal + external call site intact.
+  async seedFromRepo(opts) { return graphIO.seedFromRepo(this, opts); }
 
-  // FX889: strip the operator's brainstorm layer, KEEP the repo seed (source:
-  // "codebase"), so source facts survive while the user's edits are cleared.
-  clearBrainstormLayer() {
-    const before = { nodes: [...this.nodes], edges: [...this.edges] };
-    const keptIds = new Set(this.nodes.filter(n => n.source === 'codebase').map(n => n.id));
-    const prune = () => {
-      this.nodes = this.nodes.filter(n => keptIds.has(n.id));
-      this.edges = this.edges.filter(e => keptIds.has(e.source) && keptIds.has(e.target));
-    };
-    prune();
-    this._pushUndo({
-      type: 'clear-layer',
-      forward: prune,
-      backward: () => { this.nodes = [...before.nodes]; this.edges = [...before.edges]; },
-    });
-    this.canvas?.setNodes(this.nodes);
-    this.canvas?.setEdges(this.edges, this.nodes);
-    this.onSelectionChange?.(null);
-    this._saveLocal();
-  }
+  clearBrainstormLayer() { graphIO.clearBrainstormLayer(this); }
 
-  _saveLocal() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ nodes: this.nodes, edges: this.edges }));
-    } catch {}
-  }
+  _saveLocal() { graphIO.saveLocal(this); }
 
-  _loadLocal() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const data = JSON.parse(raw);
-      this.nodes = data.nodes || [];
-      this.edges = data.edges || [];
-    } catch {}
+  _loadLocal() { graphIO.loadLocal(this); }
+
+  getStats() {
+    return { nodeCount: this.nodes.length, edgeCount: this.edges.length, duplicatesRemoved: this._duplicatesRemoved };
   }
 
   async addNode(label, type) {
@@ -182,7 +146,10 @@ export class BrainstormGraph {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ transcript }),
       });
-      if (!res.ok) return { error: `Server error (${res.status})` };
+      if (!res.ok) {
+        const body = await res.json().catch(() => null); // FX895 typed-rejection passthrough
+        return body && (body.rejected || body.status === 'rejected') ? body : { error: `Server error (${res.status})` };
+      }
       return await res.json();
     } catch { return null; }
   }
@@ -198,34 +165,48 @@ export class BrainstormGraph {
     }
     this._mutating = true;
     try {
-    const existingIds = new Set(this.nodes.map(n => n.id));
-    const actuallyAdded = [];
-    for (const n of newNodes) {
-      if (!existingIds.has(n.id)) { this.nodes.push(n); actuallyAdded.push(n); }
-    }
-    const addedEdges = [...newEdges];
-    for (const e of addedEdges) this.edges.push(e);
-    if (actuallyAdded.length || addedEdges.length) {
-      const addedNodeIds = new Set(actuallyAdded.map(n => n.id));
-      this._pushUndo({
-        type: 'merge',
-        forward: () => {
-          for (const n of actuallyAdded) {
-            if (!this.nodes.some(x => x.id === n.id)) this.nodes.push(n);
-          }
-          this.edges.push(...addedEdges);
-        },
-        backward: () => {
-          this.nodes = this.nodes.filter(n => !addedNodeIds.has(n.id));
-          this.edges = this.edges.filter(e =>
-            !addedEdges.some(ae => ae.source === e.source && ae.target === e.target));
-        }
-      });
-    }
-    this.canvas?.setNodes(this.nodes);
-    this.canvas?.setEdges(this.edges, this.nodes);
-    this._saveLocal();
+      const existingIds = new Set(this.nodes.map(n => n.id));
+      const actuallyAdded = [];
+      for (const n of newNodes) {
+        if (!existingIds.has(n.id)) { this.nodes.push(n); actuallyAdded.push(n); }
+      }
+      // FX894: idempotent merge — well-formed only, deduped against existing + in-batch edges.
+      const existingKeys = new Set(this.edges.map(edgeKey));
+      const actuallyAddedEdges = [];
+      for (const e of newEdges) {
+        if (!isWellFormedEdge(e) || existingKeys.has(edgeKey(e))) continue;
+        existingKeys.add(edgeKey(e));
+        this.edges.push(e); actuallyAddedEdges.push(e);
+      }
+      if (actuallyAdded.length || actuallyAddedEdges.length) {
+        this._pushMergeUndo(actuallyAdded, actuallyAddedEdges);
+      }
+      this.canvas?.setNodes(this.nodes);
+      this.canvas?.setEdges(this.edges, this.nodes);
+      this._saveLocal();
     } finally { this._mutating = false; }
+  }
+
+  // FX894: key-exact undo record — backward() removes exactly ONE instance per
+  // recorded key (a label-blind endpoint twin survives); forward() re-adds guarded.
+  _pushMergeUndo(addedNodes, addedEdges) {
+    const addedNodeIds = new Set(addedNodes.map(n => n.id));
+    const addedKeys = addedEdges.map(edgeKey);
+    this._pushUndo({
+      type: 'merge',
+      forward: () => {
+        for (const n of addedNodes) { if (!this.nodes.some(x => x.id === n.id)) this.nodes.push(n); }
+        const present = new Set(this.edges.map(edgeKey));
+        for (const e of addedEdges) { if (!present.has(edgeKey(e))) this.edges.push(e); }
+      },
+      backward: () => {
+        this.nodes = this.nodes.filter(n => !addedNodeIds.has(n.id));
+        for (const key of addedKeys) {
+          const idx = this.edges.findIndex(e => edgeKey(e) === key);
+          if (idx !== -1) this.edges.splice(idx, 1);
+        }
+      },
+    });
   }
 
   async clearAll() {

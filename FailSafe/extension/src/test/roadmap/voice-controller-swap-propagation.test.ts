@@ -41,6 +41,10 @@ suite("VoiceController.swapWhisperModel id propagation + reentry (D-6)", () => {
     const ctrl = new VoiceController(stt, makeTts(), makeStore());
     const p1 = ctrl.swapWhisperModel('Xenova/whisper-base');
     const p2 = ctrl.swapWhisperModel('Xenova/whisper-small'); // should be no-op while p1 in flight
+    // FX896: swap bodies now run behind the transition gate (one microtask
+    // deferred), so flush until the gated body has invoked stt.init and the
+    // mock has captured the real resolver before releasing it.
+    for (let i = 0; i < 6 && initCount === 0; i++) await Promise.resolve();
     resolveFirst();
     await Promise.all([p1, p2]);
     assert.strictEqual(initCount, 1, 'reentry guard must collapse concurrent calls into one init');

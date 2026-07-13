@@ -46,5 +46,9 @@ export default defineConfig({
     // shadowing .json config, we must declare 'tdd' explicitly.
     ui: 'tdd',
     color: true,
+    // Test-run census (plan-240 LD5): test-cli's built-in runner.cjs:19-22
+    // require()s every mochaOpts.require entry in-process before addFile/run.
+    // Plain CJS from src/ — needs no compile step, patches the shared mocha.
+    require: [path.join(__dirname, 'src', 'test', 'census.cjs')],
   },
 });

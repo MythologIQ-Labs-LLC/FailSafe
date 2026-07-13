@@ -1,0 +1,4 @@
+repo: fixture/supported
+programs:
+  - id: core
+    name: Core Program

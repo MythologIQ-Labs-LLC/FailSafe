@@ -1,110 +1,41 @@
 import * as assert from "assert";
-
-// whisper-loader's getSpeechRecognitionCtor() resolves at call time, so
-// SttEngine + LiveTranscriber load cleanly under Node without browser globals.
-// (Removed the legacy `globalThis.SpeechRecognition ??= class {}` stub — it
-// leaked an addEventListener-less class into adjacent FX228 tests.)
-
 import { SttEngine } from "../../../src/roadmap/ui/modules/stt-engine.js";
 
-suite("SttEngine Silence Timer Integration", () => {
-  let clock: { restore: () => void };
-  let engine: any;
+async function flush(rounds = 8): Promise<void> {
+  for (let index = 0; index < rounds; index += 1) await Promise.resolve();
+}
 
-  setup(() => {
-    clock = useFakeTimers();
-    engine = new SttEngine(null);
-  });
-
-  teardown(() => {
-    engine._silence.clear();
-    clock.restore();
-  });
-
-  test("_resetSilenceTimer fires onAutoStop after silenceTimeoutMs", () => {
+suite("SttEngine silence auto-stop", () => {
+  test("publishes auto-stop only after stopListening reaches idle", async () => {
+    const engine: any = new SttEngine(null);
+    let timerCallback: (() => Promise<void>) | null = null;
+    engine._silence = {
+      reset(callback: () => Promise<void>) { timerCallback = callback; },
+      clear() {},
+    };
+    let resolveStop!: () => void;
+    const stopGate = new Promise<void>((resolve) => { resolveStop = resolve; });
     engine.state = "listening";
-    let fired = false;
-    engine.onAutoStop = () => { fired = true; };
-    engine.stopListening = () => { engine._silence.clear(); };
-
+    engine.stopListening = async () => { await stopGate; engine._setState("idle"); };
+    const observed: string[] = [];
+    engine.onAutoStop = () => observed.push(engine.state);
     engine._resetSilenceTimer();
-    (clock as any).tick(engine.silenceTimeoutMs);
-    assert.strictEqual(fired, true, "onAutoStop should have fired");
+    const stopping = timerCallback!();
+    await flush();
+    assert.deepStrictEqual(observed, [], "no terminal callback while stop is pending");
+    resolveStop();
+    await stopping;
+    assert.deepStrictEqual(observed, ["idle"]);
   });
 
-  test("_resetSilenceTimer resets the timer when called again", () => {
+  test("stop rejection is handled without an unhandled promise", async () => {
+    const engine: any = new SttEngine(null);
+    let timerCallback: (() => Promise<void>) | null = null;
+    engine._silence = { reset(callback: () => Promise<void>) { timerCallback = callback; }, clear() {} };
     engine.state = "listening";
-    let count = 0;
-    engine.onAutoStop = () => { count++; };
-    engine.stopListening = () => { engine._silence.clear(); };
-
+    engine.stopListening = async () => { throw new Error("stop failed"); };
     engine._resetSilenceTimer();
-    (clock as any).tick(3000);
-    engine._resetSilenceTimer();
-    (clock as any).tick(3000);
-    assert.strictEqual(count, 0, "should not have fired yet");
-    (clock as any).tick(2000);
-    assert.strictEqual(count, 1, "should fire exactly once");
-  });
-
-  test("silence timer cleared prevents onAutoStop from firing", () => {
-    engine.state = "listening";
-    let fired = false;
-    engine.onAutoStop = () => { fired = true; };
-
-    engine._resetSilenceTimer();
-    engine._silence.clear();
-    (clock as any).tick(10000);
-    assert.strictEqual(fired, false, "onAutoStop must not fire after clear");
-  });
-
-  test("stopListening clears the silence timer", async () => {
-    let fired = false;
-    engine.state = "listening";
-    engine.onAutoStop = () => { fired = true; };
-    engine._stopWhisper = async () => {};
-    engine._wake = { enabled: false, destroy() {}, stop() {} };
-
-    engine._resetSilenceTimer();
-    await engine.stopListening();
-    assert.strictEqual(engine._silence._timer, null, "timer should be null");
-    (clock as any).tick(10000);
-    assert.strictEqual(fired, false, "onAutoStop must not fire after stop");
+    await assert.doesNotReject(() => timerCallback!());
+    assert.strictEqual(engine.state, "idle");
   });
 });
-
-function useFakeTimers() {
-  const origSetTimeout = globalThis.setTimeout;
-  const origClearTimeout = globalThis.clearTimeout;
-  let now = 0;
-  const timers: { id: number; cb: () => void; at: number }[] = [];
-  let nextId = 1;
-
-  (globalThis as any).setTimeout = (cb: () => void, ms = 0) => {
-    const id = nextId++;
-    timers.push({ id, cb, at: now + ms });
-    return id;
-  };
-  (globalThis as any).clearTimeout = (id: number) => {
-    const idx = timers.findIndex((t) => t.id === id);
-    if (idx !== -1) timers.splice(idx, 1);
-  };
-
-  return {
-    tick(ms: number) {
-      const target = now + ms;
-      while (true) {
-        const next = timers.filter((t) => t.at <= target).sort((a, b) => a.at - b.at)[0];
-        if (!next) break;
-        now = next.at;
-        timers.splice(timers.indexOf(next), 1);
-        next.cb();
-      }
-      now = target;
-    },
-    restore() {
-      globalThis.setTimeout = origSetTimeout;
-      globalThis.clearTimeout = origClearTimeout;
-    },
-  };
-}

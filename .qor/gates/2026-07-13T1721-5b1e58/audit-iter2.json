@@ -1,0 +1,19 @@
+{
+  "phase": "audit",
+  "session_id": "2026-07-13T1721-5b1e58",
+  "ts": "2026-07-13T17:38:17Z",
+  "target": "docs/plan-qor-phase232-consumer-stabilization-veto-remediation.md",
+  "target_content_hash": "b4419ad9fdc0b4da21dcc6ecf91d9f676a8e6d4b2ca674406a5c87bffa64a2e8",
+  "verdict": "PASS",
+  "report_path": ".agent/staging/AUDIT_REPORT.md",
+  "risk_grade": "L2",
+  "findings_categories": [],
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.15.1",
+    "host": "unknown",
+    "model_family": "unknown",
+    "human_oversight": "pass",
+    "ts": "2026-07-13T17:38:17Z"
+  }
+}

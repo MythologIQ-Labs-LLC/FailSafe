@@ -5,6 +5,14 @@ import { escapeHtml } from './brainstorm-templates.js';
 import { wireModalVisualizer } from './modal-visualizer.js';
 import { showStatusGated } from './notifications.js';
 
+// FX895 - client mirror of BrainstormService.isPlaceholderTranscript (#238 LD6
+// boundary twin); placeholder-matcher-consistency.test.ts pins the verdicts.
+export function isPlaceholderTranscript(t) {
+  const s = (t || '').trim();
+  if (!s || s === '[transcription failed]') return true;
+  return /^\[[a-z0-9_ .:-]*(fail|error)[a-z0-9_ .:-]*\]$/i.test(s);
+}
+
 export class PrepBayController {
   constructor(graph, webLlm, ideationBuffer, voice, getEl, showStatus, store) {
     this.graph = graph;
@@ -40,6 +48,11 @@ export class PrepBayController {
       this._showModalStatus('Listening...', 'var(--accent-gold)');
     }
     target.scrollTop = target.scrollHeight;
+  }
+
+  // FX895 - typed STT failure: buffer untouched; textarea keeps interim text.
+  onTranscriptError(reason) { // eslint-disable-line no-unused-vars
+    this._showModalStatus('Transcription failed \u2014 retry or type instead', 'var(--accent-red)');
   }
 
   _showModalStatus(text, color) {
@@ -80,6 +93,11 @@ export class PrepBayController {
 
   async submit(transcript) {
     if (!transcript?.trim()) return;
+    if (isPlaceholderTranscript(transcript)) {
+      // FX895 primary client gate (LD4): terminal - no POST, no webLlm tier.
+      this._toast('error', 'Failure text cannot be sent to the map \u2014 retry or type instead', 'var(--accent-red)');
+      return;
+    }
     this._toast('info', 'Processing transcript...', 'var(--accent-cyan)');
     const extraction = await this.graph.submitTranscript(transcript);
 
@@ -95,6 +113,15 @@ export class PrepBayController {
       return;
     }
 
+    if (extraction && (extraction.rejected || extraction.status === 'rejected')) {
+      // FX895 server-detected rejection is terminal: skip the webLlm tier.
+      this._toast('error', 'Server rejected failure text \u2014 retry or type instead', 'var(--accent-red)');
+      return;
+    }
+    await this._localFallback(transcript, extraction);
+  }
+
+  async _localFallback(transcript, extraction) {
     const reason = extraction?.error || extraction?.message || 'Server unavailable';
     this._toast('info', `${reason} \u2014 engaging local brain...`, 'var(--accent-cyan)');
     try {
@@ -109,7 +136,6 @@ export class PrepBayController {
     } catch (err) {
       console.error('Browser LLM extraction unexpected failure:', err);
     }
-
     console.error('FailSafe CRITICAL: All extraction tiers failed. This should not happen.');
     this._toast('error', 'Extraction error \u2014 try rephrasing or adding nodes manually', 'var(--accent-red)');
   }

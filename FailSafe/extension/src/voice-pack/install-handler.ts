@@ -135,11 +135,18 @@ function sha256OfFile(p: string): string {
 
 function runTarExtract(tarballPath: string, destDir: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    // --force-local: tells GNU tar / Cygwin tar to treat Windows-style paths
-    // with drive letters as local filenames rather than as `host:path` SSH
-    // remotes. Windows 10+ built-in tar.exe accepts the flag. Mirrors the
-    // package-voice-pack.cjs assembler.
-    const child = spawn('tar', ['--force-local', '-xzf', tarballPath, '-C', destDir], { shell: false });
+    // Portable extraction (plan-240 LD4b): GNU/Cygwin tar treat Windows
+    // drive-letter paths as `host:path` SSH remotes, but the GNU-only
+    // --force-local escape hatch is REJECTED by bsdtar 3.8.x (Windows'
+    // built-in tar.exe). Instead, spawn with cwd = the tarball's directory
+    // and pass a bare basename to `-f` so no drive-letter path reaches the
+    // remote heuristic; the absolute `-C` arg is exempt from that heuristic
+    // (the package-voice-pack.cjs assembler's `-C stagingDir` is the
+    // working precedent).
+    const child = spawn('tar', ['-xzf', path.basename(tarballPath), '-C', destDir], {
+      shell: false,
+      cwd: path.dirname(tarballPath),
+    });
     let stderr = '';
     child.stderr?.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
     child.on('error', reject);

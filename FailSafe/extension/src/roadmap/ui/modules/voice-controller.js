@@ -3,47 +3,46 @@
 // and (per v4.10.1a B127) multi-subscriber state + analyser fan-out with cache
 // and replay so late subscribers (Voice status badge, Prep Bay modal visualizer)
 // see the most recent value on attach instead of waiting for the next event.
-
+// FX896 (#236): transitions serialize through one gate; state derives from
+// the awaited engine state with rollback.
 import { DEFAULT_STT_LANGUAGE, LANGUAGE_TO_DEFAULT_VOICE, ALLOWED_WHISPER_MODELS } from './voice-catalog.js';
-
+import { applyVoiceSettings, createTransitionGate } from './voice-controller-support.js';
+import { presentModelProgress } from './voice-capability-presenter.js';
+import {
+  createVoiceSession, transitionVoiceSession, isVoiceActive, isPttActive,
+} from './voice-session-state.js';
 export class VoiceController {
   constructor(stt, tts, store) {
     this.stt = stt;
     this.tts = tts;
     this.store = store;
-    this.voiceActive = false;
-    this.pttActive = false;
-
+    this._session = createVoiceSession();
     // Legacy single-slot UI callbacks (kept for back-compat with existing wiring).
-    this.onMicButton = null;
-    this.onStatus = null;
-    this.onAnalyser = null;
-
+    this.onMicButton = null; this.onStatus = null; this.onAnalyser = null;
     // Multi-subscriber fan-out (B127 keystone).
     this._state = 'idle';
     this._stateListeners = new Set();
     this._lastAnalyser = null;
     this._analyserListeners = new Set();
-
+    // FX896: transition gate + auto-stop composition hook (LD6) + LD8 flag.
+    this._gate = createTransitionGate();
+    this._onAutoStopSettings = null; this._destroyed = false;
     this._wireStateEmit();
   }
-
   // -- Public API --------------------------------------------------------------
+  get voiceActive() { return isVoiceActive(this._session); }
+  get pttActive() { return isPttActive(this._session); }
 
-  /** Probe the operator-installed voice pack. Returns `installed` when the
-   *  pack is ready; any other state means voice features are disabled and
-   *  the UI should surface an Install Voice Pack affordance. Existing
-   *  engine error path (`error:piper_not_vendored`) remains the runtime
-   *  safety net; this method is the UI-side gate. Phase 3 of
-   *  voice-substrate-extraction. */
+  /** Probe the operator-installed voice pack. Returns `installed` when ready;
+   *  any other state means voice features are disabled and the UI should
+   *  surface an Install Voice Pack affordance. Engine error path
+   *  (`error:piper_not_vendored`) remains the runtime safety net; this is the
+   *  UI-side gate. Phase 3 of voice-substrate-extraction. */
   async probeVoicePack() {
     try {
       const res = await fetch('/api/integrations/voice-pack/status');
       if (!res.ok) return 'absent';
       const status = await res.json();
-      if (status && status.state !== 'installed') {
-        this._emitState?.('voicePackAbsent');
-      }
       return (status && status.state) || 'absent';
     } catch {
       return 'absent';
@@ -82,61 +81,39 @@ export class VoiceController {
 
   async swapWhisperModel(newModelId) {
     if (!newModelId || !ALLOWED_WHISPER_MODELS.has(newModelId)) return;
-    if (this._swapping) return;
+    if (this._swapping) return; // swap-specific re-entry fast-path
     this._swapping = true;
-    try {
-      this.store?.set?.('whisper-model', newModelId);
-      if (this.stt.setModelId) this.stt.setModelId(newModelId);
-      if (this.stt.teardownPipeline) this.stt.teardownPipeline();
-      this._emitState('idle');
-      this._lastAnalyser = null;
-      await this.stt.init?.();
-    } finally {
-      this._swapping = false;
-    }
+    return this._gate.run(async () => {
+      try {
+        if (this._destroyed) return;
+        this.store?.set?.('whisper-model', newModelId);
+        if (this.stt.setModelId) this.stt.setModelId(newModelId);
+        if (this.stt.teardownPipeline) this.stt.teardownPipeline();
+        this._setSession({ type: 'stopped' });
+        this._emitState('idle');
+        this._lastAnalyser = null;
+        await this.stt.init?.();
+      } finally {
+        this._swapping = false;
+      }
+    });
   }
 
   wireModelProgress() {
     this.stt.onModelProgress = (status, msg) => {
-      if (status === 'downloading') {
-        this._setMicContent('🎙️ PREPARING', true, 'Preparing security model...');
-      } else if (status === 'loading') {
-        this._setMicContent('⏳ LOADING', true, 'Loading Whisper model...');
-      } else if (status === 'ready') {
-        this._setMicContent('🎙️ LISTEN', false, 'Click to speak');
-      } else if (status === 'error' || (typeof status === 'string' && status.startsWith('error'))) {
-        const title = msg || 'Whisper unavailable — check permissions';
-        this._setMicContent('❌ NO MIC', true, title);
-        this.onStatus?.(title, 'var(--accent-red)');
-      }
+      const p = presentModelProgress(status, msg, this.stt.modelId); // #237 LD1 presenter delegate
+      if (!p) return; // statuses the UI doesn't present (parity: no-op)
+      this._setMicContent(p.micHtml, p.disabled, p.title);
+      if (p.statusMsg) this.onStatus?.(p.statusMsg, p.statusColor);
     };
   }
 
   loadSettings() {
-    const timeout = this.store?.get('stt-silence-timeout');
-    if (timeout) this.stt.setSilenceTimeout(Number(timeout));
-
-    this.stt.onAutoStop = () => {
-      this.voiceActive = false;
-      this.pttActive = false;
-      this.onMicButton?.('🎙️ LISTEN', false);
-      this.onStatus?.('Auto-stopped (silence)', 'var(--accent-cyan)');
-    };
-
-    this.stt.onWakeWordTriggered = () => {
-      this.voiceActive = true;
-      this.onMicButton?.('⏹️ STOP', true);
-      this.onStatus?.('Wake word detected — recording...', 'var(--accent-red)');
-    };
-
-    const wakeEnabled = this.store?.get('wake-word-enabled');
-    if (wakeEnabled === 'true' || wakeEnabled === true) {
-      this.stt.startWakeWordListener();
-    }
+    applyVoiceSettings(this, this.stt, this.store);
   }
 
   async toggle() {
-    if (this.pttActive || this._toggling) return;
+    if (this.pttActive) return;
     if (!this.stt.modelReady) {
       const msg = this.stt.loadingStatus === 'downloading' || this.stt.loadingStatus === 'loading'
         ? 'Security model is still preparing — please wait...'
@@ -144,46 +121,44 @@ export class VoiceController {
       this.onStatus?.(msg, 'var(--accent-gold)');
       return;
     }
-    this._toggling = true;
-    try {
+    return this._gate.run(async () => {
+      if (this._destroyed) return;
       if (this.voiceActive) {
-        this.voiceActive = false;
-        this.onMicButton?.('🎙️ LISTEN', false);
-        this.onStatus?.('Processing...', 'var(--accent-cyan)');
+        this._setSession({ type: 'stop_requested' });
+        this._emitState('stopping');
         await this.stt.stopListening();
+        if (this._destroyed) return;
+        this._completeStop('Processing...');
       } else {
-        this.voiceActive = true;
-        this.onMicButton?.('⏹️ STOP', true);
-        this.onStatus?.('Recording...', 'var(--accent-red)');
-        this.stt.startListening();
+        await this._startRecording('Recording...', 'voice');
       }
-    } finally {
-      this._toggling = false;
-    }
+    });
   }
 
-  startPtt() {
+  async startPtt() {
     if (this.voiceActive || this.pttActive || !this.stt.modelReady) return false;
-    this.pttActive = true;
-    this.voiceActive = true;
-    this.onMicButton?.('⏹️ STOP', true);
-    this.onStatus?.('Recording (PTT)...', 'var(--accent-red)');
-    this.stt.startListening();
-    return true;
+    return this._gate.run(async () => {
+      if (this._destroyed || this.voiceActive || this.pttActive) return false;
+      return this._startRecording('Recording (PTT)...', 'ptt');
+    });
   }
 
   async stopPtt() {
     if (!this.pttActive) return;
-    this.pttActive = false;
-    this.voiceActive = false;
-    this.onMicButton?.('🎙️ LISTEN', false);
-    this.onStatus?.('Processing...', 'var(--accent-cyan)');
-    this.stt.stopListening();
+    return this._gate.run(async () => {
+      if (this._destroyed || !this.pttActive) return;
+      this._setSession({ type: 'stop_requested' });
+      await this.stt.stopListening();
+      if (this._destroyed) return;
+      this._completeStop('Processing...');
+    });
   }
 
   destroy() {
+    // LD8: flag set synchronously, teardown immediate (never gate-queued).
     if (this._destroyed) return;
     this._destroyed = true;
+    this._setSession({ type: 'destroyed' });
     this._swapping = false;
     this.stt.destroy();
     this.tts.destroy();
@@ -193,6 +168,45 @@ export class VoiceController {
   }
 
   // -- Private helpers ---------------------------------------------------------
+
+  // Gate-internal start: derive success from stt.state, roll back otherwise.
+  async _startRecording(recordingStatus, mode) {
+    this._setSession({ type: 'start_requested', mode });
+    this._emitState('requesting_permission');
+    await this.stt.startListening();
+    if (this._destroyed) return false;
+    if (this.stt.state !== 'listening') {
+      this._setSession({ type: 'start_failed' });
+      this.onMicButton?.('🎙️ LISTEN', false);
+      return false;
+    }
+    this._setSession({ type: 'started' });
+    this.onMicButton?.('⏹️ STOP', true);
+    this.onStatus?.(recordingStatus, 'var(--accent-red)');
+    return true;
+  }
+
+  // LD7 single wake owner: engine emits the trigger; the start happens here.
+  _onWakeTriggered() {
+    return this._gate.run(async () => {
+      if (this._destroyed || this.voiceActive || this.pttActive) return;
+      await this._startRecording('Wake word detected — recording...', 'voice');
+    });
+  }
+
+  _setSession(event) {
+    this._session = transitionVoiceSession(this._session, event);
+  }
+
+  _completeStop(status) {
+    this._setSession({ type: 'stopped' });
+    this.onMicButton?.('🎙️ LISTEN', false);
+    this.onStatus?.(status, 'var(--accent-cyan)');
+  }
+
+  _completeAutoStop() {
+    this._completeStop('Auto-stopped (silence)');
+  }
 
   _wireStateEmit() {
     // Translation table: 4 underlying signals → unified state stream.
@@ -213,6 +227,7 @@ export class VoiceController {
     this.stt.onAutoStop = () => {
       this._lastAnalyser = null;
       origAutoStop?.();
+      this._onAutoStopSettings?.(); // LD6 composition: settings half, post-cache-clear
     };
   }
 

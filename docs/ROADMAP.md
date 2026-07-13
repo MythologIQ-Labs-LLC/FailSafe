@@ -10,7 +10,7 @@ _Last refreshed: 2026-06-02 — current release **v5.3.3** (2026-05-28)._
 
 The M-Core→M11 phases below were the v1–v4 remediation arc and are largely shipped. v5 reframed the product:
 
-- **v5.0.0 — Product reveal & split.** FailSafe (open VS Code/Cursor governance extension) + **FailSafe Pro** (downloadable desktop/daemon for OS-level enforcement, team workflows) named publicly for the first time. Download: `https://mythologiq.studio/failsafe-pro/download`.
+- **v5.0.0 — Product reveal & split.** FailSafe (open VS Code/Cursor governance extension) + **FailSafe Pro** (downloadable desktop/daemon for OS-level enforcement, team workflows) named publicly for the first time. Download: `https://mythologiq.studio/products/failsafe-download`.
 - **v5.1.5 — Bicameral MCP integration.** 5-phase plan sealed (META_LEDGER #372); FX483–FX490 verified.
 - **v5.2.x — Educational surface + Learn tab** (multimode); Open Design v1 (REST + SSE observer, Pattern A).
 - **v5.3.3 — Integration Beta.** Open Design write path + L3-mediated `create_artifact`; razor/clobber cleanup.

@@ -181,6 +181,17 @@ export class SettingsRenderer {
       this._refreshInstallCard();
       return;
     }
+    // #237 (A8 narrow-forward): ONLY voicePack.install.progress + .error are
+    // forwarded to the card — NOT .complete; the card's own status refetch on
+    // re-render owns completion (forwarding it would misrender an installing line).
+    if (event.type === 'voicePack.install.progress' || event.type === 'voicePack.install.error') {
+      this.container?.querySelector('#cc-voice-pack-settings-slot')?._voicePackRenderer?.onInstallProgress(event);
+      return;
+    }
+    if (event.type === 'voicePack.install.complete') {
+      void this.container?.querySelector('#cc-voice-pack-settings-slot')?._voicePackRenderer?.onInstallComplete();
+      return;
+    }
   }
 
   /**

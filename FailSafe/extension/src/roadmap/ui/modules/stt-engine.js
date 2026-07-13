@@ -4,33 +4,33 @@ import { SilenceTimer } from './silence-timer.js';
 import { WakeWordListener } from './wake-word-listener.js';
 import { LiveTranscriber } from './live-transcriber.js';
 import { WhisperPipeline } from './whisper-pipeline.js';
+import { decodeAndTranscribe } from './whisper-decode.js';
 import { DEFAULT_STT_LANGUAGE, ALLOWED_WHISPER_MODELS } from './voice-catalog.js';
-
 const DEFAULT_MODEL_ID = 'Xenova/whisper-tiny';
-
 export class SttEngine {
   constructor(store) {
     this.store = store;
     this.onTranscript = null; this.onStateChange = null; this.onAutoStop = null;
     this.onWakeWordTriggered = null; this.onModelProgress = null;
     this.onAnalyserCreated = null; this.onAudioCaptured = null;
+    this.onTranscriptError = null; // FX895 typed failure channel
     this.state = 'idle';
     this._recorder = null;
     this._pipeline = new WhisperPipeline();
     this._chunks = [];
     this._stream = null;
+    this._lifecycleGeneration = 0;
+    this._destroyed = false;
     this.modelReady = false;
     this.loadingStatus = 'idle';
     this.micDeviceId = null;
     this.language = null;
     const stored = store?.get?.('whisper-model');
     this.modelId = ALLOWED_WHISPER_MODELS.has(stored) ? stored : DEFAULT_MODEL_ID;
-
     this._silence = new SilenceTimer(5000);
     this._wake = new WakeWordListener(store);
     this._live = new LiveTranscriber();
   }
-
   async init() {
     this._loadSettings();
     if (!(await checkMicAvailable())) {
@@ -39,7 +39,6 @@ export class SttEngine {
     }
     await this._loadWhisperModel();
   }
-
   async _loadWhisperModel() {
     await this._pipeline.load(this.modelId, (status, value) => {
       this.loadingStatus = this._pipeline.status();
@@ -47,17 +46,14 @@ export class SttEngine {
     });
     this.modelReady = this._pipeline.isReady();
   }
-
   teardownPipeline() {
     this._pipeline.teardown();
     this.modelReady = false;
     this.loadingStatus = 'idle';
   }
-
   setModelId(id) {
     if (ALLOWED_WHISPER_MODELS.has(id)) this.modelId = id;
   }
-
   _loadSettings() {
     const timeout = this.store?.get('stt-silence-timeout');
     if (timeout) this._silence.setTimeout(Number(timeout));
@@ -65,12 +61,11 @@ export class SttEngine {
     if (mic) this.micDeviceId = mic;
     this.language = this.store?.get('stt-language') || navigator.language || DEFAULT_STT_LANGUAGE;
   }
-
   async startListening() {
-    this._setState('listening');
-    await this._startWhisper();
+    if (this._destroyed) return;
+    this._setState('requesting_permission');
+    if (await this._startWhisper()) this._setState('listening');
   }
-
   async stopListening() {
     this._silence.clear();
     this._setState('processing');
@@ -78,21 +73,22 @@ export class SttEngine {
     this._setState('idle');
     if (this._wake.enabled) this.startWakeWordListener();
   }
-
   setSilenceTimeout(ms) {
     this._silence.setTimeout(ms);
     this.store?.set('stt-silence-timeout', this._silence.timeoutMs);
   }
-
   _resetSilenceTimer() {
-    this._silence.reset(() => {
-      if (this.state === 'listening') {
+    this._silence.reset(async () => {
+      if (this.state !== 'listening') return;
+      try {
+        await this.stopListening();
         this.onAutoStop?.();
-        this.stopListening();
+      } catch {
+        this._releaseStream();
+        this._setState('idle');
       }
     });
   }
-
   get wakeWordEnabled() { return this._wake.enabled; }
   get wakePhrase() { return this._wake.phrase; }
   get silenceTimeoutMs() { return this._silence.timeoutMs; }
@@ -107,7 +103,7 @@ export class SttEngine {
 
   startWakeWordListener() {
     this._wake.start(
-      () => { this.onWakeWordTriggered?.(); this.startListening(); },
+      () => { this.onWakeWordTriggered?.(); },
       (status, msg) => this.onModelProgress?.(status, msg),
       () => this.state
     );
@@ -116,6 +112,8 @@ export class SttEngine {
   stopWakeWordListener() { this._wake.stop(); }
 
   destroy() {
+    this._destroyed = true;
+    this._lifecycleGeneration += 1;
     this._silence.clear();
     this._wake.destroy();
     this._live.stop();
@@ -123,19 +121,20 @@ export class SttEngine {
     this._setState('idle');
     this.onTranscript = null; this.onStateChange = null; this.onAutoStop = null;
     this.onWakeWordTriggered = null; this.onModelProgress = null;
-    this.onAnalyserCreated = null; this.onAudioCaptured = null;
+    this.onAnalyserCreated = null; this.onAudioCaptured = null; this.onTranscriptError = null;
   }
 
   async _startWhisper() {
     if (!this._pipeline.isReady()) {
       this.onModelProgress?.('error', 'Voice model not loaded — check network connection');
       this._setState('idle');
-      return;
+      return false;
     }
 
     this._chunks = [];
-    if (!(await this._acquireStream())) return;
-    if (!this._createRecorder()) return;
+    const generation = this._lifecycleGeneration;
+    if (!(await this._acquireStream(generation))) return false;
+    if (!this._createRecorder()) return false;
 
     this._recorder.start();
     this._resetSilenceTimer();
@@ -145,14 +144,20 @@ export class SttEngine {
       () => this._resetSilenceTimer(),
       () => this.state
     );
+    return true;
   }
 
-  async _acquireStream() {
+  async _acquireStream(generation) {
     try {
       const audioConstraint = this.micDeviceId
         ? { deviceId: { exact: this.micDeviceId } }
         : true;
-      this._stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraint });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraint });
+      if (this._destroyed || generation !== this._lifecycleGeneration) {
+        stream.getTracks().forEach((track) => track.stop());
+        return false;
+      }
+      this._stream = stream;
       this._audioCtx = new (globalThis.AudioContext || globalThis.webkitAudioContext)();
       this._analyser = this._audioCtx.createAnalyser();
       this._analyser.fftSize = 256;
@@ -202,25 +207,27 @@ export class SttEngine {
     const blob = new Blob(this._chunks, { type: 'audio/webm' });
     if (this.onAudioCaptured) this.onAudioCaptured(blob);
 
-    const arrayBuf = await blob.arrayBuffer();
-    const ctx = new (globalThis.AudioContext || globalThis.webkitAudioContext)({ sampleRate: 16000 });
+    // FX895: failures emit a typed reason — NEVER transcript text.
     try {
-      const decoded = await ctx.decodeAudioData(arrayBuf);
-      const pipelineFn = this._pipeline.pipeline();
-      const result = await pipelineFn(decoded.getChannelData(0), { language: this.language });
-      this.onTranscript?.(result.text, true);
-    } catch {
-      this.onTranscript?.('[transcription failed]', true);
-    } finally {
-      ctx.close().catch(() => {});
+      const text = await decodeAndTranscribe(blob, this._pipeline.pipeline(), this.language);
+      if (text) this.onTranscript?.(text, true);
+      else this._emitTranscriptError('empty_result');
+    } catch (err) {
+      this._emitTranscriptError(err.reason ?? 'decode_failed');
     }
     this._chunks = [];
     this._recorder = null;
   }
 
+  _emitTranscriptError(reason) {
+    this._setState('idle');
+    this.onTranscriptError?.(reason);
+  }
+
   _stopRecorder() {
-    if (!this._recorder) return;
-    try { this._recorder.stop(); } catch { /* already stopped */ }
+    if (this._recorder) {
+      try { this._recorder.stop(); } catch { /* already stopped */ }
+    }
     this._releaseStream();
     this._recorder = null;
     this._chunks = [];

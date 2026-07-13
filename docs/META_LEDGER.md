@@ -24955,3 +24955,1080 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 _Chain integrity: VALID_
 _Session: 2026-06-10-research-vscode-agents-window_
+### Entry #461: RESEARCH BRIEF - Versioned Qor-logic consumer adapter (#233)
+
+**Date**: 2026-07-13
+**Phase**: RESEARCH (/qor-research; /qor-auto-dev-1 orchestrated)
+**Risk Grade**: L2
+**Author**: Analyst
+**Brief**: .failsafe/governance/research-brief-qor-consumer-adapter-233-2026-07-13.md
+
+## Decision
+
+Inventoried all Qor-logic artifact consumption (10+ sites, 2 duplicate META_LEDGER parsers, universal silent-degrade posture). Adapter design: thin facade classifying ok/unavailable/malformed/unsupported/stale over existing canonical parsers; version anchor = B197 QorLogicVersionStatus; migrate hub+tracker paths, schedule the rest. 4 MATCH, 0 upstream drift; gap findings F3 (silent degrade) and F4 (no artifact versioning) drive the plan.
+
+## Content Hash
+
+**Content Hash**: `b5c1ac39bb33c8af1383a49a9bea61dd791779697f294b709a8e916169ec4538`
+**Previous Hash**: `12f4daa5a0184143bc5fdcf69a2ed0960c5f47e0692d3c3c431c7bde8f321ac7` (Entry #460 Chain Hash)
+**Chain Hash**: `472d940683f83565c1d219464ddd0cd7c776495de31f92dd91b296d7cf228960`
+**Merkle Seal**: `f9ca44cf9d44b96592c996b092010cfe9e413c18551d3c65c9966fadc1abc168` -- gate_seal_research_qor_consumer_adapter_233
+**Session ID**: `2026-07-13-research-qor-consumer-adapter-233`
+**Entry ID**: `b5c1ac39bb33`
+
+_Hash provenance_: Content Hash = SHA256 of the research brief file. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-13-research-qor-consumer-adapter-233_
+
+### Entry #462: RESEARCH BRIEF - Mind Map edge idempotency (#234)
+
+**Date**: 2026-07-13
+**Phase**: RESEARCH (/qor-research; /qor-auto-dev-1 orchestrated)
+**Risk Grade**: L2
+**Author**: Analyst
+**Brief**: .failsafe/governance/research-brief-mindmap-edge-idempotency-234-2026-07-13.md
+
+## Decision
+
+Confirmed brainstorm-graph.js:206-207 appends every incoming edge unconditionally across 5 caller paths; server twin defect at BrainstormService.ts:86-87; undo removes ALL copies of a (source,target) pair. Edge shape uniformly {source,target,label}; identity = directed (source,target,label). Two DRIFTs narrow scope: no legacy edge shapes exist; edges carry no provenance today.
+
+## Content Hash
+
+**Content Hash**: `707ad6793ebd295b4bebfc4ef936252bf4458f19cda348d2f7fd89fdf90bdfdc`
+**Previous Hash**: `472d940683f83565c1d219464ddd0cd7c776495de31f92dd91b296d7cf228960` (Entry #461 Chain Hash)
+**Chain Hash**: `43a2e5be4276bc8cae901d796162b5629240ae36a14f3efecf5e7b10727a5190`
+**Merkle Seal**: `9084eb46d6ec6c8a67d62c495895c684084deac40a0eb79abdc80b42b5b12c44` -- gate_seal_research_mindmap_edge_idempotency_234
+**Session ID**: `2026-07-13-research-mindmap-edge-idempotency-234`
+**Entry ID**: `707ad6793ebd`
+
+_Hash provenance_: Content Hash = SHA256 of the research brief file. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-13-research-mindmap-edge-idempotency-234_
+
+### Entry #463: RESEARCH BRIEF - STT failure isolation (#238)
+
+**Date**: 2026-07-13
+**Phase**: RESEARCH (/qor-research; /qor-auto-dev-1 orchestrated)
+**Risk Grade**: L2
+**Author**: Analyst
+**Brief**: .failsafe/governance/research-brief-stt-failure-isolation-238-2026-07-13.md
+
+## Decision
+
+Confirmed stt-engine.js:213 emits literal [transcription failed] as a FINAL transcript into the full extraction chain (prep-bay -> POST /transcript -> LLM -> graph nodes). No typed error channel; no filter at any hop; interim text is never auto-committed (already safe). Plan: typed onTranscriptError channel + PrepBay recovery UX + service-boundary placeholder guard.
+
+## Content Hash
+
+**Content Hash**: `27549b0c1e6a6045383456ea805f6c34392153445cc8fd74824d603134998cb0`
+**Previous Hash**: `43a2e5be4276bc8cae901d796162b5629240ae36a14f3efecf5e7b10727a5190` (Entry #462 Chain Hash)
+**Chain Hash**: `573736e1a10c1becf85e7dd37cf09a251b0849a93b4d2c99c833621fdc2c30c8`
+**Merkle Seal**: `20274c6c36e39e48d95d6043d28a7bded3c4f7a1618ca758d0dbb8a26ff16130` -- gate_seal_research_stt_failure_isolation_238
+**Session ID**: `2026-07-13-research-stt-failure-isolation-238`
+**Entry ID**: `27549b0c1e6a`
+
+_Hash provenance_: Content Hash = SHA256 of the research brief file. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-13-research-stt-failure-isolation-238_
+
+
+### Entry #464: GATE TRIBUNAL - Versioned Qor-logic consumer adapter (#233)
+
+**Date**: 2026-07-13
+**Phase**: GATE (/qor-audit; Option B independent architect-reviewer, iteration 2)
+**Verdict**: PASS
+**Risk Grade**: L2
+**Plan**: plan-qor-consumer-adapter-233.md (mirror: .failsafe/governance/plans/)
+**Report**: .failsafe/governance/AUDIT_REPORT_qor-consumer-adapter-233.md
+
+## Decision
+
+Iteration 1 VETO (infrastructure-mismatch: HubSnapshotService builder.build() cited :193-200, actual :215) remediated; iteration 2 full Locked-Decision re-walk verified every citation verbatim (parseMetaLedgerEntries meta-ledger-model.ts:39; QorLogicVersionStatus qorLogicInstallRecord.ts:38-42; parseFeatureIndex tracker-parsers.ts:29; AuditGateArtifactReader.ts:26-41; WorkspaceArtifactBuilder.ts:67/:87-92/:93; HubSnapshotService.ts:210-219). All 11 passes PASS. One non-blocking quote-fidelity advisory corrected post-audit. Next: /qor-implement.
+
+## Content Hash
+
+**Content Hash**: `3c3b6cebc12496aaf586923c81fa74a8e7b154cc78472ca9f2a1b8e452cba799`
+**Previous Hash**: `573736e1a10c1becf85e7dd37cf09a251b0849a93b4d2c99c833621fdc2c30c8` (Entry #463 Chain Hash)
+**Chain Hash**: `9d9689fffed10746af7b63a2ecb64a1e549d15a73139953de0923f950e27ec99`
+**Merkle Seal**: `a5a64f2d125b30c60ca427b956ae96fb887bbb657059009fac572fd7c25dc518` -- gate_seal_audit_qor_consumer_adapter_233
+**Session ID**: `2026-07-13-research-qor-consumer-adapter-233`
+**Entry ID**: `3c3b6cebc124`
+
+_Hash provenance_: Content Hash = SHA256 of the audit report file. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session:
+
+### Entry #465: RESEARCH BRIEF - Voice recording state machine (#236)
+
+**Date**: 2026-07-13
+**Phase**: RESEARCH (/qor-research; /qor-auto-dev-1 orchestrated)
+**Risk Grade**: L2
+**Artifact**: .failsafe/governance/research-brief-voice-state-machine-236-2026-07-13.md
+
+## Decision
+
+Verified all six #236 claims at source: un-awaited startListening at voice-controller.js:158/:171, un-awaited stopListening at :181, engine-idle-vs-controller-active divergence (stt-engine.js:137-138/:168/:182 vs :155), loadSettings onAutoStop clobber (:119 vs :212-216, ordering brainstorm.js:47), per-op guards without cross-operation mutual exclusion. One claim refined: toggle STOP path already awaits. Plan direction: transition mutex + engine-derived state + composing onAutoStop setter. Sequenced AFTER #238 (shared stt-engine.js shape).
+
+## Content Hash
+
+**Content Hash**: `5863f4203fd3d3d3c9259e94c1e2e1243c020f1f62e1d7b2dedc4d94b23ac72f`
+**Previous Hash**: `9d9689fffed10746af7b63a2ecb64a1e549d15a73139953de0923f950e27ec99` (Entry #464 Chain Hash)
+**Chain Hash**: `36b175deeb91443a42650a5f946000506892b0c2ef33c8e9aab60e5e6f454f9a`
+**Merkle Seal**: `9ebcc6de359f640b71e4ebb20828ceef0b5efa57b7cceb7e57fc9b8ead83bb79` -- gate_seal_research_voice_state_machine_236
+**Session ID**: `2026-07-13-research-voice-state-machine-236`
+**Entry ID**: `5863f4203fd3`
+
+_Hash provenance_: Content Hash = SHA256 of the artifact file. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-13-research-voice-state-machine-236_
+
+### Entry #466: RESEARCH BRIEF - VS Code Agents Window upstream revalidation (#83)
+
+**Date**: 2026-07-13
+**Phase**: RESEARCH (/qor-research revalidation; primary sources observed 2026-07-13)
+**Risk Grade**: L2
+**Artifact**: .failsafe/governance/research-brief-agents-window-83-revalidation-2026-07-13.md
+
+## Decision
+
+Hold NOT cleared. Stable=1.128 (weekly cadence; 5 releases touched the surface since #457); docs still say "currently in preview"; sessions mid-rearchitecture onto the now-public Agent Host Protocol (microsoft/agent-host-protocol, MIT, 5 client SDKs); #318103 dev-path OPEN (Backlog); #317460 MCP OPEN; agentsWindow APIs proposed-only (2 placeholders). Disposition: REMAIN PARKED for build work; execute bounded date-pinned DOC-ONLY deliverable (docs/VS_CODE_AGENTS_WINDOW.md, no un-citable unsupported-list); add AHP to adapter watchlist beside ACP.
+
+## Content Hash
+
+**Content Hash**: `b3c3b4a3c10dbb715c0b273ae2fbc4c690be99c03399624957bea6af8b724032`
+**Previous Hash**: `36b175deeb91443a42650a5f946000506892b0c2ef33c8e9aab60e5e6f454f9a` (Entry #465 Chain Hash)
+**Chain Hash**: `a4113faa0562a19d0e8c436ee7c2caa272cc627ffd950d25b07f7945fb973afd`
+**Merkle Seal**: `c0cc64898384861a74b7b94ef0e1a24b774ed5297d5cf933c83682ed96926d14` -- gate_seal_research_agents_window_83_reval
+**Session ID**: `2026-07-13-research-agents-window-83-reval`
+**Entry ID**: `b3c3b4a3c10d`
+
+_Hash provenance_: Content Hash = SHA256 of the artifact file. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-13-research-agents-window-83-reval_
+
+### Entry #467: RESEARCH BRIEF - Voice capability detection and diagnostics (#237)
+
+**Date**: 2026-07-13
+**Phase**: RESEARCH (/qor-research; /qor-auto-dev-1 orchestrated)
+**Risk Grade**: L2
+**Artifact**: .failsafe/governance/research-brief-voice-capability-ux-237-2026-07-13.md
+
+## Decision
+
+All three #237 claims MATCH: probeVoicePack orphan (voice-controller.js:39-51, 0 callers), TTS init swallow (brainstorm.js:48), NO-MIC conflation (voice-controller.js:107-110). Decisive finding: the B195 voice-pack stack already provides probe/install/repair/progress/diagnostics primitives (voice-pack-detector.ts:30-71, VoicePackRoute.ts:32-92, voice-pack-settings-card.js:97-121, typed TTS error states tts-engine.js:38/:43/:51) - the gap is wiring + differentiated presentation, not new infrastructure. Missing signals: degraded text-only, explicit TTS-ready, storage impact. Sequenced AFTER #236.
+
+## Content Hash
+
+**Content Hash**: `6e8734245f2a0f69985fc8514dc131f9de164c61a668a36ce96b5a10ba32093a`
+**Previous Hash**: `a4113faa0562a19d0e8c436ee7c2caa272cc627ffd950d25b07f7945fb973afd` (Entry #466 Chain Hash)
+**Chain Hash**: `0953e9b13c9a4f86b9236edc771910cb4ccb3b12432cdfba0ebceb75289b74cb`
+**Merkle Seal**: `517ed26754d16e86fa8e5f6e0f4acd43be6fb64d0e65a8a104b9204e91658961` -- gate_seal_research_voice_capability_237
+**Session ID**: `2026-07-13-research-voice-capability-237`
+**Entry ID**: `6e8734245f2a`
+
+_Hash provenance_: Content Hash = SHA256 of the artifact file. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-13-research-voice-capability-237_
+
+### Entry #468: GATE TRIBUNAL - Mind Map edge idempotency (#234)
+
+**Date**: 2026-07-13
+**Phase**: GATE (/qor-audit; Option B independent architect-reviewer, iteration 3)
+**Risk Grade**: L2
+**Artifact**: .failsafe/governance/AUDIT_REPORT_mindmap-edge-idempotency-234.md
+
+## Decision
+
+PASS after 3 iterations. V1 VETO razor-overage + key-collision drift; V2 VETO test-tier razor recurrence; V3 all passes clear with tribunal-measured arithmetic (brainstorm-graph.js 268 -> 241-246 via brainstorm-edge-identity.js + brainstorm-graph-io.js splits; new suites in NEW test files; collision-proof JSON.stringify edge key both domains + cross-consistency test). Carried obligations: BACKLOG row for legacy test-file razor debt; record actual line counts vs declared band at substantiation. Next: /qor-implement (before #238).
+
+## Content Hash
+
+**Content Hash**: `f498eb1b4d652735fd517d05f98fc155bcc39c986d9882a1f2b894cd3f9364d4`
+**Previous Hash**: `0953e9b13c9a4f86b9236edc771910cb4ccb3b12432cdfba0ebceb75289b74cb` (Entry #467 Chain Hash)
+**Chain Hash**: `c15a84394839432aa4f96d133a0d469cbbdf5081903d011ad8fdd6989aff847f`
+**Merkle Seal**: `4b1b1663548e29da74092438b7757756868ef46a6fabb84ab69064658fa7afdc` -- gate_seal_audit_mindmap_edge_idempotency_234
+**Session ID**: `2026-07-13-research-mindmap-edge-idempotency-234`
+**Entry ID**: `f498eb1b4d65`
+
+_Hash provenance_: Content Hash = SHA256 of the artifact file. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-13-research-mindmap-edge-idempotency-234_
+
+
+### Entry #469: GATE TRIBUNAL - STT failure isolation (#238)
+
+**Date**: 2026-07-13
+**Phase**: GATE (/qor-audit; Option B independent architect-reviewer, iteration 3)
+**Verdict**: PASS
+**Risk Grade**: L2
+**Plan**: plan-stt-failure-isolation-238.md (mirror: .failsafe/governance/plans/)
+**Report**: .failsafe/governance/AUDIT_REPORT_stt-failure-isolation-238.md
+
+## Decision
+
+PASS after 3 iterations. V1 VETO caught a would-be production hang (TranscriptResult third variant vs the no-else route branch at BrainstormRoute.ts:32-45) and the webLlm fallback tier ingesting placeholder text despite a server 422; V2 VETO caught BrainstormRoute.ts's own undisclosed 258-line razor overage and a mis-cited extraction block. V3: layered defense (typed TranscribeError in whisper-decode.js -> client submit gate -> server isPlaceholderTranscript guard -> route 422 no-broadcast), all 14 citations source-true, razor arithmetic verified with declared splits (brainstorm-voice-wiring.js, brainstorm-route-errors.ts), #234-before-#238 sequencing declared. Next: /qor-implement after #234 lands.
+
+## Content Hash
+
+**Content Hash**: `ec0bf03e5d59933f550714ba7e8bdac74dcde88802fe9ad21c6e5b6d1b912997`
+**Previous Hash**: `c15a84394839432aa4f96d133a0d469cbbdf5081903d011ad8fdd6989aff847f` (Entry #468 Chain Hash)
+**Chain Hash**: `1f09e51a838fe1ad3a5c1de67083bd145d3583ac9e1bbe3666f9ca2fdb62c0a1`
+**Merkle Seal**: `ee8d7260f5a76ddedbb308ff788570a8ee840fd7dd3b031f63c608c9b3cb96b5` -- gate_seal_audit_stt_failure_isolation_238
+**Session ID**: `2026-07-13-research-stt-failure-isolation-238`
+**Entry ID**: `ec0bf03e5d59`
+
+_Hash provenance_: Content Hash = SHA256 of the audit report file. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session:
+
+### Entry #470: RESEARCH BRIEF - Mind Map layout, viewport, resize, persistence (#235)
+
+**Date**: 2026-07-13
+**Phase**: RESEARCH (/qor-research; /qor-auto-dev-1 orchestrated)
+**Risk Grade**: L2
+**Artifact**: .failsafe/governance/research-brief-mindmap-layout-viewport-235-2026-07-13.md
+
+## Decision
+
+All eight #235 claims MATCH: no persistence of positions/layout/view (brainstorm.js:149-151/:189-201, brainstorm-canvas.js:29/:112-129), zero fit/center/zoomToFit calls repo-wide, window.resize-only handling (brainstorm-canvas.js:36-48, no ResizeObserver), async seed with no fit-on-load (brainstorm.js:42-45), dagMode td/radialout applied to cyclic graphs without validation (brainstorm-canvas.js:122-125), and no viewport recovery control in the toolbar (brainstorm-templates.js:9-36). Reduced motion already plumbed (brainstorm-canvas.js:30/:75/:95-105) - new camera moves must respect it. Post-#234 shapes recorded; plan must sequence AFTER #238 (brainstorm.js 244 baseline), verify vendor zoomToFit API at plan time, and honor the design-reference rule for new toolbar controls.
+
+## Content Hash
+
+**Content Hash**: `ee5b5f7e765de7c72b0949f022e6834c04d16d499b974540e28630a0571377b9`
+**Previous Hash**: `1f09e51a838fe1ad3a5c1de67083bd145d3583ac9e1bbe3666f9ca2fdb62c0a1` (Entry #469 Chain Hash)
+**Chain Hash**: `892e968ecb819b4e6099d0ee721c56e3b44dbc379c2ede64fae3a956cec8a59a`
+**Merkle Seal**: `721708cce09b760723f84dc8b1440579cc45d1bf9fdc7c72e6b0fb4d6fbe212d` -- gate_seal_research_mindmap_layout_viewport_235
+**Session ID**: `2026-07-13-research-mindmap-layout-viewport-235`
+**Entry ID**: `ee5b5f7e765d`
+
+_Hash provenance_: Content Hash = SHA256 of the artifact file. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session:
+
+### Entry #471: GATE TRIBUNAL - Qor consumer adapter delta re-audit (#233, iterations 3-4)
+
+**Date**: 2026-07-13
+**Phase**: GATE (/qor-audit delta re-audit after implementation-time drift; Option B independent architect-reviewer)
+**Verdict**: PASS (iteration 4)
+**Risk Grade**: L2
+**Plan**: plan-qor-consumer-adapter-233.md (iteration 4)
+**Report**: .failsafe/governance/AUDIT_REPORT_qor-consumer-adapter-233.md (updated in place)
+
+## Decision
+
+Implementation discovered assembleHubPayload FIELD-PICKS from the builder snapshot (HubSnapshotService.ts:222-278), falsifying the iter-2 "requires no change" claim at the served-payload boundary; per governance rule the plan was regenerated and re-audited. Iter-3 delta VETO: HubSnapshotService.ts is pre-existing over-cap (332 lines / 57-line function). Iter-4 PASS via auditor path (a): section4_exception declared and tribunal-fact-checked (Entry #277/#278 precedent verified; three-extraction seam analysis grounded), scoped to the single qorConsumer pick line; decomposition filed as BACKLOG [B205]; FX893 descriptor repointed to the served-payload boundary. BINDING CONDITION: the exception is declared, not ratified - operator ratification is requested in the final review packet; if declined, the pick is blocked and the /qor-refactor extraction becomes mandatory. Amended slice implemented same-day (one pick line + payload-boundary test in consumer-diagnostics.test.ts; B205+B206 BACKLOG rows filed).
+
+## Content Hash
+
+**Content Hash**: `4ff0ff12a6366b15a6e5f2b73d53d167a0b891c5131182c6f816c186c9c8468b`
+**Previous Hash**: `892e968ecb819b4e6099d0ee721c56e3b44dbc379c2ede64fae3a956cec8a59a` (Entry #470 Chain Hash)
+**Chain Hash**: `3b3473155c64b120ed46d2e66cbb55e04777c8bbecf533aa9da42063aec6eb6f`
+**Merkle Seal**: `12d28834dc151d353df7c3438e07ffa7147ae6abea229749385d08669ff969ca` -- gate_seal_audit_qor_consumer_adapter_233_iter4
+**Session ID**: `2026-07-13-research-qor-consumer-adapter-233`
+**Entry ID**: `4ff0ff12a636`
+
+_Hash provenance_: Content Hash = SHA256 of the updated audit report file. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session:
+
+### Entry #472: IMPLEMENTATION - Wave 1 stabilization (#233 + #234 + #238)
+
+**Date**: 2026-07-13
+**Phase**: IMPLEMENT (/qor-implement; agent-team parallel tracks with disjoint ownership; /qor-auto-dev-1 orchestrated)
+**Risk Grade**: L2
+**Branch**: feat/qor-consumer-stabilization-232 (staged, uncommitted; Review Boundary intact)
+**Author**: krknapp@gmail.com (operator) via /qor-auto-dev-1 orchestrator
+
+## Decision
+
+Three PASS-gated plans implemented. #233: qorlogic/consumer/{types,consumer-adapter,diagnostics}.ts + 6 fixture sets + WorkspaceArtifactBuilder adapter gating + the exception-scoped HubSnapshotService qorConsumer pick (1 insertion/0 deletions, git-verified) + BACKLOG B202-B205. #234: brainstorm-edge-identity.js + brainstorm-graph-io.js splits, guarded mergeNodes + key-exact undo/redo + getStats, server brainstormEdgeKey guard; brainstorm-graph.js 268->249 incl. the reserved #238 +3. #238: whisper-decode.js TranscribeError + onTranscriptError channel + brainstorm-voice-wiring.js + prep-bay client gate/_localFallback + TranscriptResult.rejected + route 422 + brainstorm-route-errors.ts split; B206 razor-debt row. 14 new/modified test files; red-then-green per feature; every produced file <=250 lines (prep-bay exactly 250); FEATURE_INDEX FX892-895 + 4 supplements. Content hash = central verification log.
+
+## Content Hash
+
+**Content Hash**: `812905b8531865c45f16543e6018eefe0b7f5e9e85f6dd41da3473d975a98e2d`
+**Previous Hash**: `3b3473155c64b120ed46d2e66cbb55e04777c8bbecf533aa9da42063aec6eb6f` (Entry #471 Chain Hash)
+**Chain Hash**: `9e0c8c0682611c7c596d63b57c7dd2a9855bef5e7904434cf5ab41f3cdd21da4`
+**Merkle Seal**: `9dd5470192628f6a90d743f5e5f68224c40c6db1e9bc89fbe85cc3516bf8ae58` -- gate_seal_implement_wave1_233_234_238
+**Session ID**: `2026-07-13-implement-wave1`
+**Entry ID**: `812905b85318`
+
+_Hash provenance_: Content Hash = SHA256 of the cited evidence artifact. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-13-implement-wave1_
+
+### Entry #473: SUBSTANTIATE - Versioned Qor-logic consumer adapter (#233, FX892/FX893)
+
+**Date**: 2026-07-13
+**Phase**: SUBSTANTIATE (/qor-substantiate; Reality=Promise PASS; held local per Review Boundary)
+**Risk Grade**: L2
+**Branch**: feat/qor-consumer-stabilization-232 (staged, uncommitted; Review Boundary intact)
+**Author**: krknapp@gmail.com (operator) via /qor-auto-dev-1 orchestrator
+
+## Decision
+
+Reality=Promise PASS (independent observer + devil-advocate clean). 16/16 in a REAL scoped vscode-test extension host over supported AND unsupported fixture workspaces (the issue acceptance evidence); 5/5 diagnostics incl. the served-payload boundary test. Secret scan clean; governance-index advanced+enforced clean. CONDITION FOR OPERATOR: Section 4 exception on the one-line HubSnapshotService pick awaits ratification (Entry #471; decline path = revert line + B205 refactor). Remaining consumers scheduled B202-B204. Evidence: SUBSTANTIATION_wave1-2026-07-13.md (content hash).
+
+## Content Hash
+
+**Content Hash**: `99c1770925f216c8060c59f0358b4aa4e89b54fc717620a6ac5f49d96668974a`
+**Previous Hash**: `9e0c8c0682611c7c596d63b57c7dd2a9855bef5e7904434cf5ab41f3cdd21da4` (Entry #472 Chain Hash)
+**Chain Hash**: `cb47b155eb31f30cee1e894fbf44213936c4cc17d609a12589beba9b5935260f`
+**Merkle Seal**: `9c7e0d37036f505664ee35cb81411df883ea143eff4250a6269aa4a87e588f94` -- gate_seal_substantiate_qor_consumer_adapter_233
+**Session ID**: `2026-07-13-research-qor-consumer-adapter-233`
+**Entry ID**: `99c1770925f2`
+
+_Hash provenance_: Content Hash = SHA256 of the cited evidence artifact. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-13-research-qor-consumer-adapter-233_
+
+### Entry #474: SUBSTANTIATE - Mind Map edge idempotency (#234, FX894)
+
+**Date**: 2026-07-13
+**Phase**: SUBSTANTIATE (/qor-substantiate; Reality=Promise PASS; held local per Review Boundary)
+**Risk Grade**: L2
+**Branch**: feat/qor-consumer-stabilization-232 (staged, uncommitted; Review Boundary intact)
+**Author**: krknapp@gmail.com (operator) via /qor-auto-dev-1 orchestrator
+
+## Decision
+
+Reality=Promise PASS. 8/8 FX894 idempotency + 3/3 cross-domain key consistency + FX446 accumulation flip green in central run; brainstorm-reseed.spec.ts green in full Playwright (175 passed) = the browser acceptance evidence (repeated RE-SEED keeps edge count constant). Devil-advocate proved undo exactness safe under the global-dedup invariant across hostile interleavings. Line-count actuals inside declared bands (brainstorm-graph.js 249 incl. #238 reservation). B206 filed (audit-carried obligation). Evidence: SUBSTANTIATION_wave1-2026-07-13.md.
+
+## Content Hash
+
+**Content Hash**: `99c1770925f216c8060c59f0358b4aa4e89b54fc717620a6ac5f49d96668974a`
+**Previous Hash**: `cb47b155eb31f30cee1e894fbf44213936c4cc17d609a12589beba9b5935260f` (Entry #473 Chain Hash)
+**Chain Hash**: `eb658f6e47d4a8a5f328ef6cb4c20a28e815306e5574833f298c396d13ee5689`
+**Merkle Seal**: `c274c10ca60820d97f84f2d592c2e4b2876aa7684f73eb0ea9363ece2eb79c0c` -- gate_seal_substantiate_mindmap_edge_idempotency_234
+**Session ID**: `2026-07-13-research-mindmap-edge-idempotency-234`
+**Entry ID**: `99c1770925f2`
+
+_Hash provenance_: Content Hash = SHA256 of the cited evidence artifact. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-13-research-mindmap-edge-idempotency-234_
+
+### Entry #475: SUBSTANTIATE - STT failure isolation (#238, FX895)
+
+**Date**: 2026-07-13
+**Phase**: SUBSTANTIATE (/qor-substantiate; Reality=Promise PASS; held local per Review Boundary)
+**Risk Grade**: L2
+**Branch**: feat/qor-consumer-stabilization-232 (staged, uncommitted; Review Boundary intact)
+**Author**: krknapp@gmail.com (operator) via /qor-auto-dev-1 orchestrator
+
+## Decision
+
+Reality=Promise PASS. Layered defense verified at every tier in the central run: FX895 engine suite 6/6 (typed decode_failed/pipeline_failed/empty_result; onTranscript NEVER fires on failure), prep-bay 3/3 (partial-only interim never committed; no POST; no webLlm tier), matcher cross-consistency 2/2, route rejection 2/2 (422, no broadcast, graph byte-identical via REAL BrainstormService at the API boundary = the real-host failure-does-not-mutate-graph evidence). Declared boundary: bracket-wrapped fail/error phrases over-reject visibly (devil-advocate non-blocking note; follow-up in packet). Evidence: SUBSTANTIATION_wave1-2026-07-13.md.
+
+## Content Hash
+
+**Content Hash**: `99c1770925f216c8060c59f0358b4aa4e89b54fc717620a6ac5f49d96668974a`
+**Previous Hash**: `eb658f6e47d4a8a5f328ef6cb4c20a28e815306e5574833f298c396d13ee5689` (Entry #474 Chain Hash)
+**Chain Hash**: `bae42957abfdedf4a3246b3846b62265a46dc2a7705d7c830e7ed38ca46a2806`
+**Merkle Seal**: `6c65069d669b9dfa2e96b849b7e248c2f0fde96ec227e6fdfdf484e8287c0f53` -- gate_seal_substantiate_stt_failure_isolation_238
+**Session ID**: `2026-07-13-research-stt-failure-isolation-238`
+**Entry ID**: `99c1770925f2`
+
+_Hash provenance_: Content Hash = SHA256 of the cited evidence artifact. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-13-research-stt-failure-isolation-238_
+
+
+### Entry #476: GATE TRIBUNAL - Agents Window Phase-0 doc (#83, DOC-ONLY)
+
+**Date**: 2026-07-13
+**Phase**: GATE (/qor-audit; Option B independent architect-reviewer, iteration 1)
+**Risk Grade**: L1
+**Plan**: plan-agents-window-doc-83.md (mirror: .failsafe/governance/plans/)
+**Branch**: feat/qor-consumer-stabilization-232 (staged, uncommitted)
+
+## Decision
+
+PASS, L1, first iteration. Fabrication pass (operator hard rule: no compatibility claims without real validation) verified airtight at three layers; 9/11 in-repo anchors exact with 2 disclosed offsets; D4.d waiver compliant. Four advisories adopted at implement (EXPECTED-UNKNOWN vocabulary, Tier 5 FAST-DRIFT registration carrying the section-6 triggers, anchor corrections :331/:118, GH-issue comment left to operator as a visible-side action).
+
+## Content Hash
+
+**Content Hash**: `0629580d0132173661f97911de2ba1989145b9299c3bdcaba7926e0e746dd94d`
+**Previous Hash**: `bae42957abfdedf4a3246b3846b62265a46dc2a7705d7c830e7ed38ca46a2806` (Entry #475 Chain Hash)
+**Chain Hash**: `58f67c7cafd68a80cbe6e3bfa4b81ab2c5416822ee3d380a3d7e76dbe416f5f0`
+**Merkle Seal**: `9843600b1009e0a95a87b8b0006bbb80486c10a402d0ed768cd89f49e3de9077` -- gate_seal_audit_agents_window_doc_83
+**Session ID**: `2026-07-13-agents-window-doc-83`
+**Entry ID**: `0629580d0132`
+
+_Hash provenance_: Content Hash = SHA256 of the cited artifact. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session:
+
+### Entry #477: IMPLEMENT+SUBSTANTIATE - docs/VS_CODE_AGENTS_WINDOW.md (#83 disposition: REMAIN PARKED, doc delivered)
+
+**Date**: 2026-07-13
+**Phase**: IMPLEMENT + SUBSTANTIATE (docs-only; Reality=Promise PASS; held local per Review Boundary)
+**Risk Grade**: L1
+**Plan**: plan-agents-window-doc-83.md (mirror: .failsafe/governance/plans/)
+**Branch**: feat/qor-consumer-stabilization-232 (staged, uncommitted)
+
+## Decision
+
+#83 disposition per the 2026-07-13 revalidation (Entry #466): the parked hold has NOT cleared - still Preview, mid-AHP rearchitecture, weekly cadence, #318103 Backlog, #317460 open, APIs proposed-only. Delivered the bounded locally-achievable set: docs/VS_CODE_AGENTS_WINDOW.md (date-pinned snapshot; opt-in + default-profile + no-dev-path caveats; six-row UNVERIFIED compatibility matrix with in-repo anchors; SHIELD agent-first workflow; worktree single-root risk; six-blocker record with sources + observation dates + legal next action; AHP watchlist) + GOVERNANCE_INDEX Tier 5 registration with FAST-DRIFT triggers + BACKLOG [B207] AHP adapter watchlist row. Gates: docs:validate PASS; governance-index --advance-last-reviewed 2026-07-13 --enforce exit 0. NO compatibility claimed as validated anywhere. Content hash = the delivered doc.
+
+## Content Hash
+
+**Content Hash**: `d2a555608bb575f9360b3ae972effaae2c6adba6ad207c7e3185f12b2c602b91`
+**Previous Hash**: `58f67c7cafd68a80cbe6e3bfa4b81ab2c5416822ee3d380a3d7e76dbe416f5f0` (Entry #476 Chain Hash)
+**Chain Hash**: `d6c993a1d7efb0df92c3e06ed6c596ae9abb784225c8f0e41da85702656a3955`
+**Merkle Seal**: `d066cf57448640b885a87f2b5ba2373928c0a57895957ce615aba9ac04b4ad0f` -- gate_seal_substantiate_agents_window_doc_83
+**Session ID**: `2026-07-13-agents-window-doc-83`
+**Entry ID**: `d2a555608bb5`
+
+_Hash provenance_: Content Hash = SHA256 of the cited artifact. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session:
+
+
+### Entry #478: GATE TRIBUNAL - Voice recording lifecycle state machine (#236)
+
+**Date**: 2026-07-13
+**Phase**: GATE (/qor-audit; Option B independent architect-reviewer, iteration 3)
+**Verdict**: PASS
+**Risk Grade**: L2
+**Plan**: plan-voice-state-machine-236.md (mirror: .failsafe/governance/plans/)
+**Report**: .failsafe/governance/AUDIT_REPORT_voice-state-machine-236.md
+
+## Decision
+
+PASS after 3 iterations. V1 caught a real file collision (voice-settings.js already exists, 239 lines, XSS-tested) and the decisive discovery that wake-start is ENGINE-internal (stt-engine.js:112) - the mutex design was re-grounded as controller-owned wake with a one-statement engine edit; V1 also surfaced a genuine destroy deadlock (hung getUserMedia) closed by LD8 synchronous-destroy. V2's single finding (engine half unpinned) closed by a real-SttEngine regression test whose red/green mechanics the tribunal verified against actual microtask ordering. Advisories A1 (synchronous assertion / emission-capture) + A2 (:114 is a restart gate, not suppression) carried to implementation. Next: /qor-implement.
+
+## Content Hash
+
+**Content Hash**: `c88dd7844ce8c607c2aea121cebc083623e9f949bff1604f813593f18b2d36de`
+**Previous Hash**: `d6c993a1d7efb0df92c3e06ed6c596ae9abb784225c8f0e41da85702656a3955` (Entry #477 Chain Hash)
+**Chain Hash**: `e8a05e9fbc3470912411414bef12f1ed23aeca129580ed12607518341096a09d`
+**Merkle Seal**: `d3021c0d3a74bcf0efe482cb6c20ef0c4fed90f6a15961a7f167e83e8f613555` -- gate_seal_audit_voice_state_machine_236
+**Session ID**: `2026-07-13-voice-state-machine-236`
+**Entry ID**: `c88dd7844ce8`
+
+_Hash provenance_: Content Hash = SHA256 of the audit report file. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session:
+
+### Entry #479: IMPLEMENT+SUBSTANTIATE - Voice transition state machine (#236, FX896)
+
+**Date**: 2026-07-13
+**Phase**: IMPLEMENT + SUBSTANTIATE (/qor-implement + /qor-substantiate; Reality=Promise PASS; held local per Review Boundary)
+**Plan**: plan-voice-state-machine-236.md (iter 3 PASS, Entry #478)
+**Risk Grade**: L2
+**Branch**: feat/qor-consumer-stabilization-232 (staged, uncommitted)
+
+## Decision
+
+Implemented per the iteration-3 plan: gate-serialized toggle/PTT/wake/swap with voiceActive/pttActive DERIVED from awaited engine state + rollback (voice-controller.js, exactly 250 lines - cap honored, the LD8 no-op re-checks consumed the declared slack, disclosed); NEW voice-controller-support.js (45: applyVoiceSettings + createTransitionGate two-promise shape); stt-engine.js:112 wake self-start removed (1 insertion/1 deletion, file stays 246); LD6 composition hook makes the onAutoStop clobber structurally impossible. Audit advisories honored: A1 emission-capture form for the real-SttEngine wake pin; A2 (:114 restart-gate mischaracterization) NOT claimed as a defense layer. VERIFICATION: 49/49 scoped extension-relevant suites green (10 new FX896 tests + all 8 legacy voice suites + 3 stt suites incl. #238's); tsc 0; lint clean; secret scan clean (wave2-236-secrets.findings.json). DISCLOSED DEVIATIONS: (1) the 10-test file split into voice-controller-transitions.test.ts (156) + voice-controller-wake-destroy.test.ts (191) to honor the 250 cap; (2) legacy voice-controller-swap-propagation.test.ts:44 mock timing updated (gate defers swap bodies one microtask; reentry BEHAVIOR unchanged - initCount still 1; unplanned test-only touch); (3) wake handler assignment stays in applyVoiceSettings but delegates to controller._onWakeTriggered (reconciles byte-preserved relocation with controller wake ownership). FEATURE_INDEX: FX896 NEW + FX201 supplemented. Real-device microphone walkthrough remains a requires-a-human item (declared plan exclusion).
+
+## Content Hash
+
+**Content Hash**: `e4ba6530e192c43901d9aa083fc75f2e8084f2dbbd9f771dcaf9788a91d02901`
+**Previous Hash**: `e8a05e9fbc3470912411414bef12f1ed23aeca129580ed12607518341096a09d` (Entry #478 Chain Hash)
+**Chain Hash**: `4eee16ba5443c152b5cd42e144d4cac46ac0dcd8a4b6e0565e4e1dba66456c5d`
+**Merkle Seal**: `aa1a22bcc3c0fdcbe37fffea78b0d4071a75d458868d7d396d012c01cdf11dcc` -- gate_seal_substantiate_voice_state_machine_236
+**Session ID**: `2026-07-13-voice-state-machine-236`
+**Entry ID**: `e4ba6530e192`
+
+_Hash provenance_: Content Hash = SHA256 of the primary implementation artifact (voice-controller.js). Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session:
+
+### Entry #480: GATE TRIBUNAL - Mind Map layout/viewport/persistence (#235)
+
+**Date**: 2026-07-13
+**Phase**: GATE (/qor-audit; Option B independent architect-reviewer, iteration 3)
+**Verdict**: PASS
+**Risk Grade**: L2
+**Plan**: plan-mindmap-viewport-235.md (mirror: .failsafe/governance/plans/)
+
+## Decision
+
+PASS after 3 iterations. V1 caught two stale pre-#238 coordinates (the relocation block cited :189-201 was WAKE wiring; correct block :176-188) and the missing fz pin for 3D mode; V2 caught the coordinate residue surviving in LD5. Vendor surface fully verified by tribunal grep: zoomToFit (1x/2x), onDagError (3x/3x - the native cyclic-safety hook), d3ReheatSimulation (2x/2x), zoom/centerAt getters. Design-reference rule satisfied (FX539 toolbar idiom + real-Chromium screenshot gate). Iteration metadata advisory applied. Content hash = the sealed plan. Next: /qor-implement (before #237's brainstorm.js touch).
+
+## Content Hash
+
+**Content Hash**: `d307c836110dd5c565a0d1f4870e9265cc56c9857f001133cb0b865db494c9de`
+**Previous Hash**: `4eee16ba5443c152b5cd42e144d4cac46ac0dcd8a4b6e0565e4e1dba66456c5d` (Entry #479 Chain Hash)
+**Chain Hash**: `e834750a393bb27fc1a0f6a8c376c171743e44ef3586720a98c623610f4501e5`
+**Merkle Seal**: `2b0c1e6eb4692d1f7464c1a9c923e48aa20e7920a5d487879e8323e77b9f4ffd` -- gate_seal_audit_mindmap_viewport_235
+**Session ID**: `2026-07-13-mindmap-viewport-235`
+**Entry ID**: `d307c836110d`
+
+_Hash provenance_: Content Hash = SHA256 of the sealed plan file. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session:
+
+### Entry #481: INTERROGATE - #239 program evidence passes (#240 #241 #242 #243 #244)
+
+**Date**: 2026-07-13
+**Phase**: INTERROGATE (read-only evidence audits; /qor-auto-dev-1 orchestrated; five fresh-context auditors)
+**Risk Grade**: L2
+**Artifacts**: .failsafe/governance/evidence-240-lifecycle-2026-07-13.md, evidence-241-integrations-2026-07-13.md, evidence-242-accessibility-2026-07-13.md, evidence-243-packaging-2026-07-13.md, evidence-244-performance-2026-07-13.md, issue-drafts-239-children-2026-07-13.md (content hash), issue-draft-test-suite-truncation-2026-07-13.md
+
+## Decision
+
+All five #239 child review domains evidence-audited read-only with file:line citations. Headline verdicts: deactivate() comprehensively wired but the Playwright browser-side WebSocket leak (truncating the full mocha run) is ROOT-CAUSED (#240 D1, fix class identified); ALL integrations verified default-off with header-only credentials and bounded egress (#241 - advisory-grade findings only); packaging/parity/offline-safety CLEAN with the tar failure reclassified as a bsdtar test-portability defect, product script already portable (#243); two HIGH performance defects confirmed (25,520-line ledger re-parsed with zero cache on every hub refresh; dual-broadcast fan-out) plus silent-stale-on-WS-death (#244); accessibility has 4 P1 keyboard-unreachable surfaces + 7 P2 gaps with exemplary in-repo patterns (modal-helper, FX878/FX880) to replicate (#242). Eight consolidated local child-issue DRAFTS produced (not filed - Review Boundary); no speculative enhancement was converted to a defect; requires-live-host evidence items enumerated per issue for the #239 release-readiness summary.
+
+## Content Hash
+
+**Content Hash**: `224f7a29da46ff44b2376416ecdb7975278e211d3d69efaa799444c910a08ecb`
+**Previous Hash**: `e834750a393bb27fc1a0f6a8c376c171743e44ef3586720a98c623610f4501e5` (Entry #480 Chain Hash)
+**Chain Hash**: `acb3203dc9def6a7d37360c6ff5e419e10ea3493c7ead63877ab496031eaa936`
+**Merkle Seal**: `fd91a2e3997fa68c45a95ce9ea6e13529a4e65854c5ac0a00d4139611a1e1318` -- gate_seal_evidence_239_program_passes
+**Session ID**: `2026-07-13-audit-evidence-239-program`
+**Entry ID**: `224f7a29da46`
+
+_Hash provenance_: Content Hash = SHA256 of the consolidated child-issue drafts file. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session:
+
+### Entry #482: GATE TRIBUNAL - ecosystem-position doc (#232 workstream 7)
+
+**Date**: 2026-07-13
+**Phase**: GATE (/qor-audit; Option B independent architect-reviewer, iteration 2)
+**Risk Grade**: L1
+**Plan**: plan-ecosystem-position-232.md (mirror: .failsafe/governance/plans/)
+**Branch**: feat/qor-consumer-stabilization-232 (staged, uncommitted)
+
+## Decision
+
+PASS at iteration 2, L1. V1 VETOs both closed with in-repo evidence: the #233 boundary quote captured verbatim (evidence-233-issue-body-2026-07-13.md, UTF-8 re-emit per advisory) and the Pro link corrected to the SHIPPED constants.ts:14 value with the LIVE URL drift (ROADMAP.md:13 + SYSTEM_STATE.md:1254 vs constants.ts) filed as BACKLOG [B208] for operator ruling. Confidentiality pass CLEAN end-to-end (WorkspaceMutationBus coexistence clause verified publicly grounded). Advisories adopted: neutral published-link phrasing; marketplace-distribution sentence anchored to #243-verified parity.
+
+## Content Hash
+
+**Content Hash**: `264a2b9b4e26654be2796b4afbd989ad26d329c8b1a9c4692753b3dab2236bc4`
+**Previous Hash**: `acb3203dc9def6a7d37360c6ff5e419e10ea3493c7ead63877ab496031eaa936` (Entry #481 Chain Hash)
+**Chain Hash**: `1527d3997ff820fba1fd952439bd92c9deb9a185341904bfcc66815e4a3d252d`
+**Merkle Seal**: `0d15944bb8cff07bd9f5673c2c3c00522d33cd2cbcea0ca3cb690e632d04be43` -- gate_seal_audit_ecosystem_position_232
+**Session ID**: `2026-07-13-ecosystem-position-232`
+**Entry ID**: `264a2b9b4e26`
+
+_Hash provenance_: Content Hash = SHA256 of the cited artifact. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session:
+
+### Entry #483: IMPLEMENT+SUBSTANTIATE - docs/ecosystem-position.md (#232 workstream 7 closed)
+
+**Date**: 2026-07-13
+**Phase**: IMPLEMENT + SUBSTANTIATE (docs-only; Reality=Promise PASS; held local per Review Boundary)
+**Risk Grade**: L1
+**Plan**: plan-ecosystem-position-232.md (mirror: .failsafe/governance/plans/)
+**Branch**: feat/qor-consumer-stabilization-232 (staged, uncommitted)
+
+## Decision
+
+docs/ecosystem-position.md delivered per the PASSed plan: identity + Marketplace/Open VSX acquisition + anti-goals; the Qor-logic -> FailSafe -> operator governance stack with the verbatim #233 boundary quote and the consumer adapter as the in-repo seam mechanism (no shipped-in-release claim); Pro sibling with shipped links + shared-filesystem coexistence; SDLC-loop table anchored to shipped surfaces; agent-seam authority-class table (all default-off); trust posture. GOVERNANCE_INDEX Tier 5 registration + Last Reviewed advanced; BACKLOG [B208] URL-drift ruling row (with the stale ARCHITECTURE_PLAN.md sibling note) filed. Gates: governance-index --enforce exit 0; docs:validate PASS. Content hash = the delivered doc.
+
+## Content Hash
+
+**Content Hash**: `186ebd9cd2abc0c7e63ac15490ef3d5c7e9369eefc017de2fa7429891d226034`
+**Previous Hash**: `1527d3997ff820fba1fd952439bd92c9deb9a185341904bfcc66815e4a3d252d` (Entry #482 Chain Hash)
+**Chain Hash**: `42bc0fdbd37fdf496bcb438277f18cf448a84721a4dc3d97769138906473d628`
+**Merkle Seal**: `b00819014ef45d1450446efc1779f1ec6b4d01544a0121d8dd3cd9c0e10ea37b` -- gate_seal_substantiate_ecosystem_position_232
+**Session ID**: `2026-07-13-ecosystem-position-232`
+**Entry ID**: `186ebd9cd2ab`
+
+_Hash provenance_: Content Hash = SHA256 of the cited artifact. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session:
+
+
+### Entry #484: IMPLEMENT+SUBSTANTIATE - Mind Map viewport stability (#235, FX897)
+
+**Date**: 2026-07-13
+**Phase**: IMPLEMENT + SUBSTANTIATE (/qor-implement + /qor-substantiate; Reality=Promise PASS; held local per Review Boundary)
+**Plan**: plan-mindmap-viewport-235.md (iter 3 PASS, Entry #480)
+**Risk Grade**: L2
+**Branch**: feat/qor-consumer-stabilization-232 (staged, uncommitted)
+
+## Decision
+
+Implemented per the iteration-3 plan: fitToView (reduced-motion duration 0), ResizeObserver with window fallback + disconnect paths, vendor onDagError cyclic fallback to FORCE with dagFallback status note, fx/fy/fz drag pinning riding the FX894 graph store, view-prefs persistence (corrupt-safe), NEW brainstorm-toolbar-wiring.js with FIT VIEW/RESET VIEW (RESET clears all pins + d3ReheatSimulation + refit, never data), restore-on-init, LD6 fit triggers. Razor: canvas 237, io 95, wiring 55, brainstorm.js 250 (at cap; recount corrected the agent-reported 249; the #237 follow-on is locked to a zero-net-line change there), templates 112; initCanvas mid-work overage self-split into _wireCanvasData/_bindUndoKeys. VERIFICATION: 54/54 scoped suites (3 new + canvas/graph/idempotency/consistency regressions); 6/6 Playwright REAL Chromium x2 runs incl. reload-persistence, FIT recovery via vendor zoom/centerAt getters, cyclic-TREE fallback, 400->1200px container resize, 100+-node density; DESIGN GATE: toolbar screenshot test-results/brainstorm-viewport-toolbar.png (FX539 idiom, prefs highlights). tsc 0; lint 0 errors; secret scan clean (wave2-235-secrets.findings.json). DISCLOSED DEVIATIONS: wiring module 55 vs ~34 (parity helpers); brainstorm.js 250 vs 238 estimate (LD6 extras + razor self-split); vendor-hook typeof guards (legacy mock compatibility; inert in production); Playwright drag simulated via moveCallback (pointer-drag flake); RESET clears pins on BOTH model+canvas node copies (superset, sim owns copies); initial-render fit via 600ms timer (persistent onEngineStop would re-fit after drags). FEATURE_INDEX: FX897 NEW + FX204/FX205 supplemented.
+
+## Content Hash
+
+**Content Hash**: `f5e6079672e6bb53d2ec3f0548653734a1b66b857e9e29db23ed5db6033a55ed`
+**Previous Hash**: `42bc0fdbd37fdf496bcb438277f18cf448a84721a4dc3d97769138906473d628` (Entry #483 Chain Hash)
+**Chain Hash**: `a68b65a67aacb59f9a70395304efc72d65d6c1a813aa2698177b66b78d25e04d`
+**Merkle Seal**: `47cd276ab95dab40fc5a4269a8c1cbf25ec9dcdf982c49ec3fa3e6b70dfa1ccc` -- gate_seal_substantiate_mindmap_viewport_235
+**Session ID**: `2026-07-13-mindmap-viewport-235`
+**Entry ID**: `f5e6079672e6`
+
+_Hash provenance_: Content Hash = SHA256 of the primary implementation artifact (brainstorm-canvas.js). Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session:
+
+### Entry #485: GATE TRIBUNAL - Voice capability detection/install UX/diagnostics (#237)
+
+**Date**: 2026-07-13
+**Phase**: GATE (/qor-audit; Option B independent architect-reviewer, iteration 3)
+**Verdict**: PASS
+**Risk Grade**: L2
+**Plan**: plan-voice-capability-237.md (mirror: .failsafe/governance/plans/)
+
+## Decision
+
+PASS after 3 iterations embodying the issue's own lesson: V1 shipped presentation without wiring (deriveCapabilitySummary/presentVoicePackState orphans; probe return discarded); V2 shipped wiring without delivery (badge dual-writer collision; voicePack.install.* broadcasts with zero production consumers; unassemblable ttsState); V3 names every chain signal -> transport -> consumer -> render with live back-cites. Key mechanics: the :49 voicePackAbsent emission is DELETED (grep-verified sole occurrence; zero blast radius) making probe-return -> presenter -> setCapabilityNote the sole channel; the settings.js onEvent seam delivers install progress to the card (reviving its dead error path); every summary input source cited (tts-engine.js:47, stt-engine.js:50). Both at-cap files land AT/UNDER cap (brainstorm.js 250 zero-net; controller ~236-237 self-funded by the extraction). Advisories A7 (renderer.voiceStatusBadge accessor + setCapabilityNote(null) no-op pin) and A8 (handle voicePack.install.complete - narrow the forward or no-op) carried BINDING to implementation. Next: /qor-implement.
+
+## Content Hash
+
+**Content Hash**: `a35b765b398761b53a73358f0eef4d97b96637950f615389a04701fbe8ea6bf8`
+**Previous Hash**: `a68b65a67aacb59f9a70395304efc72d65d6c1a813aa2698177b66b78d25e04d` (Entry #484 Chain Hash)
+**Chain Hash**: `54590289966134e62080b0fcd60eaf02f0048435d434400ffa979cc2bb983224`
+**Merkle Seal**: `72e28203cad80d2ec325efc7367da4faa2505c1ecaef88e0709124f20998d85b` -- gate_seal_audit_voice_capability_237
+**Session ID**: `2026-07-13-voice-capability-237`
+**Entry ID**: `a35b765b3987`
+
+_Hash provenance_: Content Hash = SHA256 of the sealed plan file. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session:
+
+### Entry #486: GATE TRIBUNAL - Test-harness truthfulness + tar portability (#240 child / #243 product fix)
+
+**Date**: 2026-07-13
+**Phase**: GATE (/qor-audit; Option B independent architect-reviewer, iteration 4)
+**Verdict**: PASS
+**Risk Grade**: L2
+**Plan**: plan-test-harness-truthfulness-240.md (mirror: .failsafe/governance/plans/)
+
+## Decision
+
+PASS after 4 iterations / 3 VETOs, each disproving a piece of the causal model against source: V1 - the 9376 listener is the ACTIVATED extension (bootstrapServers.ts:276), not fixture leaks, and the window guard cannot fire under jsdom; V2 - the census was wired into a runner that provably never executes (.vscode-test.mjs config-mode shadows --extensionTestsPath; the ui interface contradiction proves it); V3 - census delivery was a ghost (copy step's .js-only filter). Final design: setupDom shared-socket fake kills the undici crash client (branch-adoption verified against modal.js:137-151); src-direct mocha.require census with EVENT_RUN_END + globalTeardown dual write (every runner.cjs wiring site verified to file:line inside node_modules); TWO product red-green pairs (window-less guard; the LD4b argv pin, red-verified against install-handler.ts:142); the PRODUCTION bsdtar defect at install-handler.ts:142 fixed with its stale :138-141 comment named as evidence-243's error origin. Substantiation contract (tribunal F3) binds the seal: triple-run census missing:[] x3, exactly two reds claimed, evidence-240 D6 + evidence-243 corrections, B206 extension, operator ratification of the +2 exemption. Next: /qor-implement.
+
+## Content Hash
+
+**Content Hash**: `6481b87c34b929dceef34682c424ff97d26174cfda92b446df27c80ae9e2cea3`
+**Previous Hash**: `54590289966134e62080b0fcd60eaf02f0048435d434400ffa979cc2bb983224` (Entry #485 Chain Hash)
+**Chain Hash**: `55f85a036618a2523b73347ab2a32234c0d83a5b483857671b2250e34b94c003`
+**Merkle Seal**: `2843088e0c1d8d5835fb161cea2b4da05dbdf89acef827bc837168ec96325e0f` -- gate_seal_audit_test_harness_truthfulness_240
+**Session ID**: `2026-07-13-test-harness-truthfulness-240`
+**Entry ID**: `6481b87c34b9`
+
+_Hash provenance_: Content Hash = SHA256 of the sealed plan file. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session:
+
+### Entry #487: IMPLEMENT+SUBSTANTIATE - Test-harness truthfulness + tar portability (#240 child / #243 fix)
+
+**Date**: 2026-07-13
+**Phase**: per title (/qor-auto-dev-1 orchestrated; held local per Review Boundary)
+**Risk Grade**: L2
+**Branch**: feat/qor-consumer-stabilization-232 (staged, uncommitted)
+
+## Decision
+
+Entry #486 substantiation contract fulfilled: (a) EXACTLY TWO product red-green pairs claimed and evidenced verbatim (window-less guard test; LD4b argv-shape pin, red at install-handler.js:152 pre-change); the jsdom fake-socket test honestly labeled GREEN characterization; (b) TRIPLE-RUN CENSUS: missing:[] x3 (orchestrator-verified directly from out/test-run-census-run{1,2,3}.json: 419/419, 422/422, 422/422); runs 2-3 byte-identical at 3684 passing / 5 pending / 2 failing; NO undici crash in any run; run-1->2 delta fully attributed to the concurrent #237 suites entering pretest compile. THE STANDING TRUNCATION DISCLOSURE IS RETIRED - the suite that silently ran ~1557 tests now provably runs 3684. Dual-write vindicated: all three runs exited nonzero so ONLY the EVENT_RUN_END path wrote the census (teardown-only would have produced zero evidence). (c) evidence-243 correction (product bsdtar defect + the :138-141 comment origin) appended; (d) evidence-240 D6 RETRACTED; (e) B206 extended (install-skills-card 303 + voice-pack-install 264); (f) the +2 exemption rides the operator-ratification list. RESIDUALS disclosed, not absorbed: R1 = 2 identical pre-existing cwd-offset test failures newly EXPOSED by completeness (Draft 9); R2 = voice-pack-install.test.ts was ALREADY 257 pre-cycle (B206); R3 concurrent-agent src-import hazard + R4 stale-census blind spot recorded (Draft 9 fold). Deviations D1-D5 disclosed (4th run attempt root-caused, not retry-looped).
+
+## Content Hash
+
+**Content Hash**: `cbb6ab8e5267a5b3ee0b32edeb62df55cb4fd810dedf983f71b5b9eef349371d`
+**Previous Hash**: `55f85a036618a2523b73347ab2a32234c0d83a5b483857671b2250e34b94c003` (Entry #486 Chain Hash)
+**Chain Hash**: `033455bb47aacd2839ac61af1fbcdc7e827050e4d33f4563e50fc7393b3a2057`
+**Merkle Seal**: `f02e61c4d704f63ed925cdd004a16001022252993c224030251ed6a364582797` -- gate_seal_substantiate_test_harness_truthfulness_240
+**Session ID**: `2026-07-13-test-harness-truthfulness-240`
+**Entry ID**: `cbb6ab8e5267`
+
+_Hash provenance_: Content Hash = SHA256 of the cited primary artifact. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-13-test-harness-truthfulness-240_
+
+### Entry #488: IMPLEMENT+SUBSTANTIATE - Voice capability detection/install UX/diagnostics (#237, FX898)
+
+**Date**: 2026-07-13
+**Phase**: per title (/qor-auto-dev-1 orchestrated; held local per Review Boundary)
+**Risk Grade**: L2
+**Branch**: feat/qor-consumer-stabilization-232 (staged, uncommitted)
+
+## Decision
+
+Implemented per the iteration-3 plan with binding advisories A7/A8 honored. The NO-MIC conflation is dead (denied -> MIC BLOCKED, red-verified pre-change at :114-117); probeVoicePack finally CALLED with its RETURNED state driving presentation through the single channel (the :49 emission deleted; setCapabilityNote; stale/corrupt reachable); degraded text-only via the wired summary with every input source live-cited; diagnostics EXACT-allow-listed; TTS-installing delivered through the settings.js onEvent seam (narrow forward per A8; revives the dead error-injection path; real WS envelope unwrapped + both shapes tested). Line actuals vs D2 recorded: presenter 101, controller 241 (A2 band), wiring 59 (disclosed: LD4 call-site costs), brainstorm.js EXACTLY 250 zero-net, badge 55, card 187, settings 239; disclosed sibling test split (3 suites: 188/150/136). VERIFICATION: tsc 0; eslint 0; node smokes; AND the FX898 suites ran GREEN inside the census-verified complete 3684-passing full suite x2 (the +39 tests attributed in Entry #487) - central-run confirmation achieved. tts_init_rejected harness = source-contract + channel-behavior pair (no BrainstormRenderer mocha harness exists; disclosed). Requires-a-human items per plan exclusions carried to the packet.
+
+## Content Hash
+
+**Content Hash**: `2a389c94c5307a4a9d6b414c24384ae92c5441d8cc7087a0aa74c7480fa59099`
+**Previous Hash**: `033455bb47aacd2839ac61af1fbcdc7e827050e4d33f4563e50fc7393b3a2057` (Entry #487 Chain Hash)
+**Chain Hash**: `9835bc387f8b2f6a4f067870188498b7aa8462b688435146dd6bf034f1600d71`
+**Merkle Seal**: `d59dcc7058fa875c1bdb7afcf05b15861d9759ddb2295554612666f2e9c277ac` -- gate_seal_substantiate_voice_capability_237
+**Session ID**: `2026-07-13-voice-capability-237`
+**Entry ID**: `2a389c94c530`
+
+_Hash provenance_: Content Hash = SHA256 of the cited primary artifact. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-13-voice-capability-237_
+
+### Entry #489: SUBSTANTIATE - Program #232 acceptance matrix (all seven workstreams)
+
+**Date**: 2026-07-13
+**Phase**: per title (/qor-auto-dev-1 orchestrated; held local per Review Boundary)
+**Risk Grade**: L2
+**Branch**: feat/qor-consumer-stabilization-232 (staged, uncommitted)
+
+## Decision
+
+Program #232 locally substantiated: all seven workstreams complete (six code cycles FX892-FX898 + the ecosystem-position doc), every program acceptance criterion dispositioned in the acceptance matrix (content hash) with evidence pointers; the ws5 PENDING-RUN condition cleared by Entry #488 central-run confirmation. Every issue-body review-evidence item root-caused and fixed. Real-host evidence: real-Chromium Playwright for visual surfaces, real extension-host mocha for API/state surfaces; REAL-DEVICE items (mic prompt, pack install walkthroughs) are declared HUMAN items in the review packet. Held local; the operator decides issue closures.
+
+## Content Hash
+
+**Content Hash**: `2614d3c8c0ea117dbecc46f78d24c398496d7b66e75349e1946ba4f157826424`
+**Previous Hash**: `9835bc387f8b2f6a4f067870188498b7aa8462b688435146dd6bf034f1600d71` (Entry #488 Chain Hash)
+**Chain Hash**: `f5412a29686bbee519c8834296e4ab2db945b33aac1b3710f98ed0ade65ace5c`
+**Merkle Seal**: `20a0d0e377e7e495ad935425071803f395236144be08da06b43e4ebec1641bf8` -- gate_seal_substantiate_program_232
+**Session ID**: `2026-07-13-program-232-seal`
+**Entry ID**: `2614d3c8c0ea`
+
+_Hash provenance_: Content Hash = SHA256 of the cited primary artifact. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-13-program-232-seal_
+
+### Entry #490: INTERROGATE - Program #239 release-readiness summary
+
+**Date**: 2026-07-13
+**Phase**: per title (/qor-auto-dev-1 orchestrated; held local per Review Boundary)
+**Risk Grade**: L2
+**Branch**: feat/qor-consumer-stabilization-232 (staged, uncommitted)
+
+## Decision
+
+#239 program close-out (content hash = the summary): readiness verdicts for all eight domains (governance consumption / MindMap-voice / harness / integrations / packaging READY; performance + accessibility NOT READY with the P1 blockers named; lifecycle PARTIAL), a dependency-ordered nine-draft implementation sequence, the requires-a-human evidence list, and the acceptance disposition (every domain owned, evidenced, dispositioned; defects separated from enhancements; no duplicates). #239 and children stay OPEN for the operator - drafts await conversion (Review Boundary).
+
+## Content Hash
+
+**Content Hash**: `a1fbd494bb154e377073c0e2b0a8c5b699e71ecb5ff3b2cbf9c881d68f60bf35`
+**Previous Hash**: `f5412a29686bbee519c8834296e4ab2db945b33aac1b3710f98ed0ade65ace5c` (Entry #489 Chain Hash)
+**Chain Hash**: `c400e3453e923d021c775033a3bc82524267d1215911e97332375cf9a362554f`
+**Merkle Seal**: `444980052f3e86d3b52389f4b1225bb870a51d4b5f4ba23a8422d0dfe93799c3` -- gate_seal_release_readiness_239
+**Session ID**: `2026-07-13-program-239-summary`
+**Entry ID**: `a1fbd494bb15`
+
+_Hash provenance_: Content Hash = SHA256 of the cited primary artifact. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-13-program-239-summary_
+
+### Entry #491: GATE TRIBUNAL - Consumer stabilization VETO remediation, iteration 1
+
+**Date**: 2026-07-13
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: VETO
+**Branch**: feat/qor-consumer-stabilization-232 (local Review Boundary)
+
+## Decision
+
+The remediation plan is behaviorally coherent but its Section 4 promise is not mechanically enforced: the declared lint command measures effective rather than physical lines and omits affected production and test files. Implementation remains blocked. The Governor must align the plan, D1-D4 criteria, and CI command, then re-run the tribunal.
+
+## Content Hash
+
+**Content Hash**: `7b399419772da9315dfb813f2eab4103b7485a5b47bdcad9fa31fb56f4e6f2ac`
+**Previous Hash**: `c400e3453e923d021c775033a3bc82524267d1215911e97332375cf9a362554f` (Entry #490 Chain Hash)
+**Chain Hash**: `292a07dac9a06878df98e90a39d4d8946c6384b318e02d518b4e87b56e8b4a1f`
+**Merkle Seal**: `924b4908ee39e3258c02e6668032f7a29ffb459838d784a5bb19d9d6b855d794` -- gate_audit_veto_consumer_stabilization_232_iter1
+**Session ID**: `2026-07-13T1721-5b1e58`
+**Entry ID**: `7b399419772d`
+
+_Hash provenance_: Content Hash = SHA256 of `.agent/staging/AUDIT_REPORT.md` at iteration 1. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via Python hashlib.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-13T1721-5b1e58_
+
+
+
+
+
+
+
+
+
+
+### Entry #492: GATE TRIBUNAL - Consumer stabilization VETO remediation, iteration 2
+
+**Date**: 2026-07-13
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS
+**Branch**: feat/qor-consumer-stabilization-232 (local Review Boundary)
+
+## Decision
+
+The amended remediation plan passes the tribunal. Its binding Razor command now enumerates all 36 affected source and test files, applies the promised physical 250-line file metric, and independently enforces the 40-line function and depth-three limits. All security, Ghost UI, test-functionality, dependency, architecture, infrastructure, orphan, prompt-injection, and plan-consistency passes are clean. Implementation is authorized within the plan boundary.
+
+## Content Hash
+
+**Content Hash**: `4cd2ba25ee1709fae317b694ba1a09fd17e91382e158761706f3d2b3bb2f2aab`
+**Previous Hash**: `292a07dac9a06878df98e90a39d4d8946c6384b318e02d518b4e87b56e8b4a1f` (Entry #491 Chain Hash)
+**Chain Hash**: `b1b60d62571a250458a5d294782905779ebce56c8cd0ef67bde43fcce0547681`
+**Merkle Seal**: `5079149b4df114859e39c312cd5e3e2789745cb3acd4d39e63abea777d5698bd` -- gate_audit_pass_consumer_stabilization_232_iter2
+**Session ID**: `2026-07-13T1721-5b1e58`
+**Entry ID**: `4cd2ba25ee17`
+
+_Hash provenance_: Content Hash = SHA256 of `.agent/staging/AUDIT_REPORT.md` at iteration 2. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via Python hashlib.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-13T1721-5b1e58_
+
+### Entry #493: GATE TRIBUNAL - Consumer stabilization VETO remediation, iteration 3
+
+**Date**: 2026-07-13
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS
+**Branch**: feat/qor-consumer-stabilization-232 (local Review Boundary)
+
+## Decision
+
+The scope amendment passes the tribunal. The Chromium viewport test is now an explicit affected file and derives the persistence key from the live workspace identity, closing the verification gap without widening the product contract. The binding Razor command covers all 37 affected source and test files. Implementation may resume within the amended boundary.
+
+## Content Hash
+
+**Content Hash**: `90e3e8977fb27fc7cd67b9618540933ebf0195ba2bce1ee04cca8aece7ba592d`
+**Previous Hash**: `b1b60d62571a250458a5d294782905779ebce56c8cd0ef67bde43fcce0547681` (Entry #492 Chain Hash)
+**Chain Hash**: `8b9bc63984ffe4fbf1ffda96c20f70ef9949543a933fa902a9e6a0f30814bfe8`
+**Merkle Seal**: `6eb465fe5631453e3e5a83074780149de9eaebe0417e54b17270a4c04f4983fa` -- gate_audit_pass_consumer_stabilization_232_iter3
+**Session ID**: `2026-07-13T1721-5b1e58`
+**Entry ID**: `90e3e8977fb2`
+
+_Hash provenance_: Content Hash = SHA256 of `.agent/staging/AUDIT_REPORT.md` at iteration 3. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-13T1721-5b1e58_
+
+### Entry #494: GATE TRIBUNAL - Consumer stabilization VETO remediation, iteration 4
+
+**Date**: 2026-07-13
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: VETO
+**Branch**: feat/qor-consumer-stabilization-232 (local Review Boundary)
+
+## Decision
+
+The binding Razor command is not truthful under the repository's default ESLint environment: affected browser JavaScript produces unrelated `no-undef` failures for valid browser globals. Implementation is blocked until the plan declares the browser environment and the amended command is re-audited.
+
+## Content Hash
+
+**Content Hash**: `f4fc544eae7ebbba3af8d09a6efe1b61352bf8340d6cab611e304db0f374b277`
+**Previous Hash**: `8b9bc63984ffe4fbf1ffda96c20f70ef9949543a933fa902a9e6a0f30814bfe8` (Entry #493 Chain Hash)
+**Chain Hash**: `14223b4a6a3bf87c5e9936f3f7af1ff52a19462c9d3ed17ad23d003ee51af216`
+**Merkle Seal**: `2a9a241be57abce5ff8c28815f549a00cafaec3f100158689ba237d5ea5e9f6f` -- gate_audit_veto_consumer_stabilization_232_iter4
+**Session ID**: `2026-07-13T1721-5b1e58`
+**Entry ID**: `f4fc544eae7e`
+
+_Hash provenance_: Content Hash = SHA256 of `.agent/staging/AUDIT_REPORT.md` at iteration 4. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-13T1721-5b1e58_
+
+### Entry #495: GATE TRIBUNAL - Consumer stabilization VETO remediation, iteration 5
+
+**Date**: 2026-07-13
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS
+**Branch**: feat/qor-consumer-stabilization-232 (local Review Boundary)
+
+## Decision
+
+The corrected plan passes the tribunal. Its binding Razor command declares the browser environment, enumerates the complete 37-file affected set, and isolates the promised physical file, effective function, nesting, and nested-ternary limits. Implementation is authorized within the amended boundary.
+
+## Content Hash
+
+**Content Hash**: `5579a353442d735ff3b7c254cff5e7f525576261def9d514bb94aee8e9eedde4`
+**Previous Hash**: `14223b4a6a3bf87c5e9936f3f7af1ff52a19462c9d3ed17ad23d003ee51af216` (Entry #494 Chain Hash)
+**Chain Hash**: `4a1cdc79623dd42a40c911a367b95d6e34a1e0d751fb1904d65c6a1c6d22fedc`
+**Merkle Seal**: `b36cc4c5f15873db322d319611e7b68a5651d0ce0a5685496adecba42a6f49d9` -- gate_audit_pass_consumer_stabilization_232_iter5
+**Session ID**: `2026-07-13T1721-5b1e58`
+**Entry ID**: `5579a353442d`
+
+_Hash provenance_: Content Hash = SHA256 of `.agent/staging/AUDIT_REPORT.md` at iteration 5. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-13T1721-5b1e58_
+
+### Entry #496: GATE TRIBUNAL - Consumer stabilization VETO remediation, iteration 6
+
+**Date**: 2026-07-13
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS
+**Branch**: feat/qor-consumer-stabilization-232 (local Review Boundary)
+
+## Decision
+
+The parallel-load fixture amendment passes the tribunal. The Bicameral advanced-tools browser test is now an explicit affected file, its configured-state probe/refresh behavior is bounded and observable, and the binding Razor covers all 38 affected files. Implementation is authorized within the amended boundary.
+
+## Content Hash
+
+**Content Hash**: `18da83a209d2c94f03bdd407fd75536bc9a763bf753432775f48c050322818e9`
+**Previous Hash**: `4a1cdc79623dd42a40c911a367b95d6e34a1e0d751fb1904d65c6a1c6d22fedc` (Entry #495 Chain Hash)
+**Chain Hash**: `1d86f00e7ca5c10a636c47ac5fdef3cdae22bbd48fdf82868c2550c2d606310e`
+**Merkle Seal**: `9387ba929ad42cad53d7b0e6c977b2201875cffba10415ffccb449eb96f9fa13` -- gate_audit_pass_consumer_stabilization_232_iter6
+**Session ID**: `2026-07-13T1721-5b1e58`
+**Entry ID**: `18da83a209d2`
+
+_Hash provenance_: Content Hash = SHA256 of `.agent/staging/AUDIT_REPORT.md` at iteration 6. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-13T1721-5b1e58_
+
+### Entry #497: IMPLEMENTATION - Consumer stabilization VETO remediation
+
+**Date**: 2026-07-13
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Verdict**: PASS
+**Branch**: feat/qor-consumer-stabilization-232 (local Review Boundary)
+
+## Decision
+
+The iteration-6 PASS plan is implemented. All 38 audited source and test files satisfy the binding Section 4 Razor; voice lifecycle state, workspace-scoped Mind Map preferences, authoritative voice-pack completion, heuristic loading, repository-root drift checks, and the Bicameral parallel fixture are repaired. Compile, lint, the 3,688-test extension census, the 182-test Playwright suite, documentation validation, and ledger verification are green. No release or remote mutation is authorized; substantiation remains pending because its mandatory version-bump and seal-commit steps cross the Review Boundary.
+
+## Content Hash
+
+**Content Hash**: `069574440affa28133f8c1b2733dbf25cc48b18702de54b1fa35c0b730c22027`
+**Previous Hash**: `1d86f00e7ca5c10a636c47ac5fdef3cdae22bbd48fdf82868c2550c2d606310e` (Entry #496 Chain Hash)
+**Chain Hash**: `486e2b1bf7e798d60492bbf44d11e0dc1b944096e07b89d9468217250d9c2a65`
+**Merkle Seal**: `05b84867538031026e06210a55657bdd3cf59b023f6b530ee1cd2ccc486f496c` -- gate_implement_consumer_stabilization_232
+**Session ID**: `2026-07-13T1721-5b1e58`
+**Entry ID**: `069574440aff`
+
+_Hash provenance_: Content Hash = SHA256 of `.agent/staging/IMPLEMENTATION_REPORT.md`. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-13T1721-5b1e58_
+### Entry #498: SUBSTANTIATE - Consumer stabilization VETO remediation (local-hold seal)
+
+**Date**: 2026-07-13
+**Phase**: SUBSTANTIATE (/qor-substantiate; Reality=Promise PASS; held local per Review Boundary)
+**Plan**: docs/plan-qor-phase232-consumer-stabilization-veto-remediation.md (iter 6 PASS Entry #496; implemented Entry #497)
+**Risk Grade**: L2
+**Branch**: feat/qor-consumer-stabilization-232 (staged, uncommitted)
+
+## Decision
+
+Completes the SHIELD phase Entry #497 left open: the remediation cycle was PASS-audited (6 iterations) and fully implemented but never substantiated (its gate dir had plan+audit+implement, no substantiate.json). Entry #497's claim that substantiation "crosses the Review Boundary" holds only for the version-bump/tag/seal-commit steps, which take the sanctioned LOCAL-HOLD path (identical to this session's six prior cycle seals). Reality=Promise INDEPENDENTLY re-verified (not trusting the implement report): HubSnapshotService.ts 332->250 via real B205 decomposition (hub-payload-assembler.ts 129 + hub-revert-deps.ts 24) - the #233 Section 4 EXCEPTION IS NOW MOOT, resolved not deferred; BrainstormRoute.ts 11-line composition entry over three split route modules; the B206 over-cap test files split under 250 (superseding the +2 exemption); the B208 Pro-URL drift reconciled to the shipped constant repo-wide (zero /failsafe-pro/download remaining). tsc 0; eslint 0 on the 6 decomposed files; secret_scanner clean; 81/81 targeted re-run across all decomposed+split surfaces corroborating the remediation's 3,688-test census. Scope integrity held (4 baseline .claude/skills unstaged; no remote op). OPERATOR RATIFICATION LIST from the prior final packet is now SHORTER: the #233 Section-4 exception and the B208 URL ruling are RESOLVED by this remediation; the harness +2 test-exemption is likewise superseded by the razor-split. Remaining operator actions: review the staged tree, then version bump / seal commit / PR under --admin when authorized.
+
+## Content Hash
+
+**Content Hash**: `c7c5ba2b715761ff0a9262276cbb40c0576ace5e10c2f12f82a6d01ea0fe4fb9`
+**Previous Hash**: `486e2b1bf7e798d60492bbf44d11e0dc1b944096e07b89d9468217250d9c2a65` (Entry #497 Chain Hash)
+**Chain Hash**: `2645aa91131cb73887b8624404ae6758b71147b36d1cfe5c9f2de9fa1862b5bf`
+**Merkle Seal**: `235357d99b83af6430a774c95f3f1b8cff2830fd02e4650886732bc1dc0027a5` -- gate_seal_substantiate_consumer_stabilization_232
+**Session ID**: `2026-07-13T1721-5b1e58`
+**Entry ID**: `c7c5ba2b7157`
+
+_Hash provenance_: Content Hash = SHA256 of the substantiation evidence file. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session: 
+

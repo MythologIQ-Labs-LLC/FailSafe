@@ -10,7 +10,7 @@
 // documented coverage trade-off; no live `pip` runs here.
 // ===========================================================================
 
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 import { serveConsoleServerUI, ConsoleServerController } from './helpers/serveConsoleServerUI';
 
@@ -47,6 +47,13 @@ function makeStubClient(): any {
   };
 }
 
+async function waitForConfiguredState(page: Page, url: string): Promise<void> {
+  await expect.poll(async () => {
+    const response = await page.request.get(`${url}/api/integrations/bicameral/status`);
+    return (await response.json()).state;
+  }, { timeout: 15_000 }).toBe('configured-not-running');
+}
+
 test.describe('FX589 — Bicameral Advanced-tools section (B-INT-1)', () => {
   let controller: ConsoleServerController;
 
@@ -62,10 +69,12 @@ test.describe('FX589 — Bicameral Advanced-tools section (B-INT-1)', () => {
       bicameralClient: makeStubClient(),
       bicameralConfigured: true,
     });
+    await waitForConfiguredState(page, controller.url);
     await page.goto(`${controller.url}/command-center.html`);
     await page.locator('.tab-btn[data-target="integrations"]').click();
     // Catalog is now the default Integrations sub-view (#167) — select Bicameral.
     await page.locator('.cc-pill[data-key="bicameral"]').click();
+    await page.locator('[data-action="bicameral-detect"]').click();
 
     // Connect to reach the running state, where the Advanced-tools section mounts.
     const connectBtn = page.locator('[data-action="bicameral-connect"]');
