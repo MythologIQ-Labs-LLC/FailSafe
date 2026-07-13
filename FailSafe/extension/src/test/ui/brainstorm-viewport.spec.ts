@@ -116,8 +116,13 @@ test("FX897 — dragged node position survives reload (fx/fy persisted)", async 
     // real pointer drags on the force canvas are flaky headless.
     const r = (globalThis as any).__bs();
     r.graph.canvas.moveCallback(r.graph.nodes[0].id, 4242, -777, undefined);
+    // moveCallback sets fx/fy synchronously then schedules a 400ms debounced
+    // _saveLocal; flush it deterministically rather than racing the timer
+    // (headless CI throttles setTimeout, so a wall-clock wait is flaky and the
+    // reload can tear the page down before the debounce fires). The feature
+    // under test is pin-persist-across-reload, not the debounce interval.
+    r.graph._saveLocal();
   });
-  await page.waitForTimeout(700); // > 400ms debounce on _saveLocal
   await gotoMindmap(page, controller.url);
   await expect.poll(() => page.evaluate(() => {
     const n = (globalThis as any).__bs?.()?.graph?.nodes?.[0];
