@@ -26125,3 +26125,36 @@ _Hash provenance_: Content Hash = SHA256 of validate-branch-policy.ps1. Chain Ha
 
 _Chain integrity: VALID_
 _Session: 2026-07-13-dependabot-branch-policy_
+
+### Entry #502: FIX - vsce 3.x VSIX archive-path adaptation (#230 unblock)
+
+**Date**: 2026-07-14
+**Phase**: SHIELD cycle (research->plan->audit PASS->implement->verify->substantiate); local-hold at Review Boundary (publish tooling)
+**Risk Grade**: L2
+**Branch**: fix/vsce-3x-vsix-readme-path
+
+## Decision
+
+Research-led (/qor-auto-dev-1) cycle to unblock dependabot #230 (@vscode/vsce ^2.22.0->^3.9.2, markdown-it ^12.3.2->^14.1.0). ROOT CAUSE (empirically confirmed): @vscode/vsce 3.2.0+ renames the README/CHANGELOG archive entries to lowercase (extension/readme.md, extension/changelog.md) regardless of on-disk casing; vsce 2.x preserved casing. scripts/validate-vsix.cjs asserted the uppercase archive paths (list entries + archive.read of README@158/184 and CHANGELOG@159/192), so under vsce 3.x it failed "Archive entry missing: extension/README.md" in the standards job. README/CHANGELOG still SHIP (vsce renames, does not drop; .vscodeignore keeps them) - only the validator's path expectation was stale. markdown-it is not imported anywhere in src (0 matches) - a pure vsce transitive, no code impact.
+
+FIX (validate-vsix.cjs only): added case-insensitive resolveArchiveEntry(list, expectedPath); README/CHANGELOG resolved via it (both the presence assertion and archive.read use the resolved actual entry). Tolerates BOTH vsce majors - no flag-day for contributors still on 2.x. Content assertions (release marker/heading, changelog entry) UNCHANGED - the ships-in-VSIX guarantee is preserved.
+
+Independent Option-B audit: PASS (2 non-blocking). Auditor independently confirmed installed vsce=2.32.0 preserves casing (explains why uppercase passes today), and that validate-vsix.cjs is the ONLY casing-sensitive archive consumer (vsix-proprietary-guardrails greps prohibited patterns; release.yml reads disk, not archive) - scope complete.
+
+VERIFICATION (both majors, empirical - closes audit NB-1): STEP A vsce 2.32.0 package+validate:vsix = PASS (no regression). STEP B npx @vscode/vsce@3.9.2 package+validate:vsix = PASS; the packaged archive entries under 3.x are lowercase extension/readme.md + extension/changelog.md (rename proven directly). Node v22.22.3 local (satisfies vsce 3.x Node 20+; CI standards job uses Node 20).
+
+## Content Hash
+
+**Content Hash**: `db032b9dcda1b5b59b658211c5d849bbdce9a828ed7d03dd74dde7e970f7170f`
+**Previous Hash**: `5822eee59a54ed969cfa6e72603ecdea433fa31a872af9186eec24137f0f2d33` (Entry #501 Chain Hash)
+**Chain Hash**: `3704bb001fdf1b020927a6ad4344f2ed3f2b23fa7434c6dcc4c158ef6f068054`
+**Merkle Seal**: `aa9926ca9d78ae6463face092379da7b07ac0fafbefbf5d8e17861398eaaa275` -- gate_seal_vsce_3x_vsix_readme_path
+**Session ID**: `2026-07-14-vsce-3x-vsix-readme-path`
+**Entry ID**: `db032b9dcda1`
+
+_Hash provenance_: Content Hash = SHA256 of validate-vsix.cjs. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-14-vsce-3x-vsix-readme-path_
