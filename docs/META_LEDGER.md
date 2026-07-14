@@ -26096,3 +26096,32 @@ _Hash provenance_: Content Hash = SHA256 of census.cjs. Chain Hash = SHA256(cont
 
 _Chain integrity: VALID_
 _Session: 2026-07-13-debug-ci-cwd-findings_
+
+### Entry #501: GOVERNANCE - dependabot branch-policy allowlist
+
+**Date**: 2026-07-13
+**Phase**: DELIVER (operator-directed policy amendment; "proceed with your recommendations")
+**Risk Grade**: L2
+**Branch**: fix/dependabot-branch-policy-allowlist
+
+## Decision
+
+The 'standards' Branch-policy gate (validate-branch-policy.ps1) rejected every open dependabot PR (#227-#231): the regex ^(plan|feat|fix|release|hotfix)/[a-z0-9][a-z0-9\-._]*$ cannot match dependabot/<ecosystem>/<path> branch names (nested slashes, underscores, mixed case). All 5 PRs passed every OTHER check (Full Test Suite, CodeQL, Dependency Review, vsix-guardrails, skills-governance) - the naming gate was the sole blocker.
+
+Operator-approved remediation (recommendation option 1): add a dependabot early-exit that mirrors the existing tag/detached-HEAD skips. Keyed on branch NAME (GITHUB_HEAD_REF), so bot-authored dependency bumps - which carry no hand-written code and remain fully test/CodeQL/Dependency-Review gated - are exempt from the human naming convention while every real code gate still applies. The human naming policy is UNCHANGED for all hand-authored branches; only the bot lane is opened. Because the standards workflow is pull_request-triggered (checkout = merge ref), the 5 dependabot PRs pick up this script from main on re-run without rebasing.
+
+## Content Hash
+
+**Content Hash**: `4ccee607658b267f89d589ad1a62b70761b4e0149b19adb0c81f7f94d27511ae`
+**Previous Hash**: `0922b58a23a266a28dd092ce6b6461e1da98bf32e705d1e4d5ca6f078226dd74` (Entry #500 Chain Hash)
+**Chain Hash**: `5822eee59a54ed969cfa6e72603ecdea433fa31a872af9186eec24137f0f2d33`
+**Merkle Seal**: `d329769aaf29de90bb3f41eea775539f9aece19c1b47d22f882cf0676bf8235d` -- gate_seal_dependabot_branch_policy_allowlist
+**Session ID**: `2026-07-13-dependabot-branch-policy`
+**Entry ID**: `4ccee607658b`
+
+_Hash provenance_: Content Hash = SHA256 of validate-branch-policy.ps1. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-13-dependabot-branch-policy_
