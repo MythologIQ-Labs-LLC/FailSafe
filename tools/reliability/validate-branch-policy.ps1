@@ -44,6 +44,15 @@ if ($effectiveBranch -eq "HEAD") {
   exit 0
 }
 
+# Dependabot branches (dependabot/<ecosystem>/<path>) are bot-authored and cannot
+# conform to the human naming policy (nested slashes, underscores, mixed case).
+# They carry no hand-written code -- only dependency version bumps, still gated by
+# the full test/CodeQL/Dependency-Review suite -- so branch naming is not applicable.
+if ($effectiveBranch -like "dependabot/*") {
+  Write-Host "[OK] Dependabot branch detected ('$effectiveBranch'). Branch policy not applicable (bot-authored dependency bump)." -ForegroundColor Green
+  exit 0
+}
+
 $allowedPattern = '^(plan|feat|fix|release|hotfix)\/[a-z0-9][a-z0-9\-._]*$'
 $isMain = $effectiveBranch -eq "main"
 
