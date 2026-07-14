@@ -38,13 +38,22 @@ export class BrainstormRenderer {
     this.prepBay = new PrepBayController(this.graph, this.webLlm, this.ideationBuffer, this.voice, getEl, showStatus, this.store);
     this.nodeEditor = new NodeEditor(this.graph, getEl);
     this.voiceStatusBadge = null;
+    this._canvasInit = false; // #261: in-flight guard for the async canvas-construction window
   }
 
   render(hubData = {}) {
     this.workspacePath = hubData.workspacePath || this.workspacePath || '';
-    if (!this.container || this.graph.canvas) return;
+    // #261: graph.canvas is set only AFTER the async fetchGraph resolves, so it
+    // cannot block a re-entrant render() during the construction window (render
+    // fires 2-3x on load: WS init + REST hub + tab activation). _canvasInit
+    // flips synchronously at dispatch, collapsing the extra renders into one
+    // construction (also prevents duplicate heartbeat interval + settings listeners).
+    if (!this.container || this.graph.canvas || this._canvasInit) return;
+    this._canvasInit = true;
     this.container.innerHTML = renderShell();
-    this.graph.fetchGraph().then(() => this.initCanvas());
+    this.graph.fetchGraph()
+      .then(() => this.initCanvas())
+      .catch(() => { this._canvasInit = false; }); // permit retry if construction failed
     this._wireVoice();
     this.voice.stt.init().finally(() => this.voice.loadSettings());
     this.voice.tts.init().catch(() => this.voice._emitState?.('error:tts_init_rejected')); // #237 LD3: rejection surfaces via the state channel

@@ -26193,3 +26193,61 @@ _Hash provenance_: Content Hash = SHA256 of brainstorm-viewport.spec.ts. Chain H
 
 _Chain integrity: VALID_
 _Session: 2026-07-14-fx897-reload-flake_
+
+### Entry #504: RESEARCH BRIEF - double-canvas construction race (#261)
+
+**Date**: 2026-07-14
+**Phase**: RESEARCH
+**Author**: Analyst
+**Risk Grade**: L2
+
+## Decision
+
+Research on FailSafe #261 (latent double-canvas construction race). CONFIRMED against source: BrainstormRenderer.render() (brainstorm.js:43-47) gates async canvas construction on this.graph.canvas, which is null through the whole fetchGraph().then(initCanvas) window (canvas assigned only at :122). render() fires 2-3x on load - WS init hub (connection.js:117) + REST /api/hub (connection.js:241), both fanned to all renderers (command-center.js:87-90), plus tab activation (tab-group.js:90) - so a second render() in the async window passes the :45 guard and builds a redundant second canvas (earlier instances orphaned). NOT user-visible-broken (both build from loadViewPrefs; pins re-apply) - wasted construction + leaked listeners; correctly deferred from the FX897 flake fix (#503). Fix shape = synchronous in-flight guard flag mirroring existing idempotency precedents (brainstorm.js:210-214 bindToolbar self-replacement; tab-group.js:12 FX886). Test = Playwright with a delayed graph route + double render(), assert exactly one canvas built. No external API/dep involved; blueprint alignment N/A (no drift). Brief: .failsafe/governance/RESEARCH_BRIEF_double-canvas-race.md.
+
+## Content Hash
+
+**Content Hash**: `efc8ef503b6ce6cc8363320f6663c448caae1d9a99956e9cdd830e8d55bb629b`
+**Previous Hash**: `4663079ec7516d1dab02706f9b21e9c91172a4fc7343842cfe508c67c213803c` (Entry #503 Chain Hash)
+**Chain Hash**: `9743d70374184175b36c0e956bbb0a858bfb7ae0bb75af32356a3ee53e175a04`
+**Merkle Seal**: `150cb750c59a56c9ed04c88da859baf4d6256181dff550625da6fb215b343669` -- gate_seal_research_double_canvas_race
+**Session ID**: `2026-07-14-double-canvas-race`
+**Entry ID**: `efc8ef503b6c`
+
+_Hash provenance_: Content Hash = SHA256 of RESEARCH_BRIEF_double-canvas-race.md. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-14-double-canvas-race_
+
+### Entry #505: FIX - double-canvas construction guard (#261)
+
+**Date**: 2026-07-14
+**Phase**: SHIELD cycle (research #504 -> plan -> audit PASS -> implement -> verify -> substantiate); local-hold at Review Boundary
+**Risk Grade**: L2
+**Branch**: fix/double-canvas-race-261
+
+## Decision
+
+Fixes #261 (latent double-canvas construction race). BrainstormRenderer.render() gated async canvas construction on this.graph.canvas (set only after fetchGraph resolves, brainstorm.js:122), so a re-entrant render() during the async window (render fires 2-3x on load: WS init + REST hub fanned to all renderers + tab activation) built a redundant second canvas AND re-ran one-time side-effects (30s heartbeat setInterval :71, _wireSettingsBridges addEventListener :84) -> leaked duplicate interval + listeners. FIX (brainstorm.js only, ~4 lines): synchronous _canvasInit in-flight flag set at dispatch, added to the :45 guard, reset in a .catch to preserve retry-on-failure. Mirrors existing idempotency precedents (bindToolbar self-replacement :210-214; FX886 tab-group.js:12). Single guard fixes canvas + interval + listener leaks together (no scope expansion).
+
+Independent Option-B audit: PASS (2 required remediations applied: (F4) documented that destroy() leaves graph.canvas truthy so tab re-show is already gated today and _canvasInit does not regress it [source-verified brainstorm.js:248]; (F6) test counter isolated to the held-window so the natural on-load render does not confound the 1-vs-2 signal). Advisories folded in (fetchGraph resolve-in-practice wording; disclosed pre-existing destroy()-re-show gap as scoped-out follow-up). All audit claims re-verified against source before acceptance.
+
+VERIFICATION: red-then-green proven (revert guard -> new spec FAILS at graphHits==1 [2 fetches]; fix -> PASS [1 fetch]). New per-feature Playwright spec brainstorm-render-idempotency.spec.ts (held graph route + explicit second render, counts graph fetches) --repeat-each=5 = 5/5. Full test:all: new spec + 181 pass; sole failure = disclosed bicameral B-BIC-24 ambient flake (passed 7/7 on isolated re-run - unrelated to this brainstorm-render change). brainstorm-viewport (adjacent) 6/6 no regression. tsc 0. Secret scan clean.
+
+## Content Hash
+
+**Content Hash**: `a8c4bdd9f6b9dc45060ed77f60f00fce1c21182d3ef8145dc2241e30962a0056`
+**Previous Hash**: `9743d70374184175b36c0e956bbb0a858bfb7ae0bb75af32356a3ee53e175a04` (Entry #504 Chain Hash)
+**Chain Hash**: `f8b96db15123a5dd6de2da3b53a7dc1cbbff64a1a91e9c928685839e84402ebf`
+**Merkle Seal**: `643b136651ab765b2ff0d5ddc6a424a9769eaba1ed25c2ec09c4caf228630d48` -- gate_seal_double_canvas_race_fix
+**Session ID**: `2026-07-14-double-canvas-race`
+**Entry ID**: `a8c4bdd9f6b9`
+
+_Hash provenance_: Content Hash = SHA256 of brainstorm.js. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-14-double-canvas-race_
