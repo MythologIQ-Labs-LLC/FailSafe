@@ -68,6 +68,15 @@ function assertIncludes(haystack, needle, label) {
   }
 }
 
+// @vscode/vsce 3.2.0+ renames the README/CHANGELOG archive entries to lowercase
+// (extension/readme.md, extension/changelog.md) regardless of on-disk casing;
+// vsce 2.x preserves casing. Resolve the actual entry case-insensitively so the
+// validator tolerates both majors without weakening the ships-in-VSIX guarantee.
+function resolveArchiveEntry(list, expectedPath) {
+  const lower = expectedPath.toLowerCase();
+  return list.split(/\r?\n/).map((s) => s.trim()).find((line) => line.toLowerCase() === lower) || null;
+}
+
 function readJson(filePath) {
   try {
     return JSON.parse(fs.readFileSync(filePath, "utf8"));
@@ -155,8 +164,6 @@ function main() {
   [
     "extension.vsixmanifest",
     "extension/package.json",
-    "extension/README.md",
-    "extension/CHANGELOG.md",
     "extension/docs/COMPONENT_HELP.md",
     "extension/docs/PROCESS_GUIDE.md",
     "extension/dist/extension/main.js",
@@ -165,6 +172,16 @@ function main() {
     "extension/dist/extension/ui/command-center.js",
     "extension/dist/extension/ui/command-center.css",
   ].forEach((entry) => assertIncludes(list, entry, "Archive entry"));
+
+  // README/CHANGELOG resolved case-insensitively (vsce 3.x lowercases the entry).
+  const readmeEntry = resolveArchiveEntry(list, "extension/README.md");
+  if (!readmeEntry) {
+    fail("Archive entry missing: extension/README.md");
+  }
+  const changelogEntry = resolveArchiveEntry(list, "extension/CHANGELOG.md");
+  if (!changelogEntry) {
+    fail("Archive entry missing: extension/CHANGELOG.md");
+  }
 
   const packagedPkg = JSON.parse(archive.read("extension/package.json"));
   if (packagedPkg.version !== sourcePkg.version) {
@@ -181,7 +198,7 @@ function main() {
   assertIncludes(manifest, `Version="${sourcePkg.version}"`, "VSIX manifest version");
   assertIncludes(manifest, `DisplayName>${sourcePkg.displayName}<`, "VSIX display name");
 
-  const readme = archive.read("extension/README.md");
+  const readme = archive.read(readmeEntry);
   assertIncludes(
     readme,
     `**Current Release**: v${sourcePkg.version} (${latestRelease.date})`,
@@ -189,7 +206,7 @@ function main() {
   );
   assertIncludes(readme, `## What's New in v${sourcePkg.version}`, "Packaged README release notes");
 
-  const changelog = archive.read("extension/CHANGELOG.md");
+  const changelog = archive.read(changelogEntry);
   assertIncludes(changelog, `## [${sourcePkg.version}] - ${latestRelease.date}`, "Packaged changelog release entry");
 
   // B195 acceptance gate — VSIX size ceiling. Plan: docs/plan-qor-voice-substrate-extraction.md Phase 4.
