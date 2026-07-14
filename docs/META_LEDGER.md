@@ -26158,3 +26158,38 @@ _Hash provenance_: Content Hash = SHA256 of validate-vsix.cjs. Chain Hash = SHA2
 
 _Chain integrity: VALID_
 _Session: 2026-07-14-vsce-3x-vsix-readme-path_
+
+### Entry #503: FIX - FX897 reload-test flake stabilization (brainstorm-viewport)
+
+**Date**: 2026-07-14
+**Phase**: SHIELD cycle (research->plan->audit PASS->implement->verify->substantiate); local-hold at Review Boundary
+**Risk Grade**: L2 (test-only; no product/behavior change)
+**Branch**: fix/fx897-reload-flake (stacked on fix/vsce-3x-vsix-readme-path for linear ledger)
+
+## Decision
+
+Research-led (/qor-auto-dev-1) cycle to stabilize the heavy headless-CI flake on brainstorm-viewport.spec.ts "FX897 - layout + view selection survive page reload" (failed on #227/#230/#248/#249 first-runs during the dependabot sweep). ROOT CAUSE (instrumented reproduction, NOT a product bug): the canvas is built behind an async render->fetchGraph().then(initCanvas) chain (brainstorm.js:47); the test helper gotoMindmap waited only for the synchronously-rendered .cc-bs-export shell, so navigation "completes" while graph.canvas is still undefined. The reload assertion polled canvas.layout/viewMode with a fixed 10s timeout, returning null while the canvas was absent; under CI fetch-chain latency the window expired -> "Timeout 10000ms exceeded". Reproduced: 2.5s injected fetch delay -> null-canvas window; 12s -> exact CI signature. RULED OUT: identity mismatch (workspacePath="" both save+reload; localStorage held {TREE,3D} throughout), orphaned shell, default-pref canvas (constructor sets layout/viewMode synchronously; no async reset). The product is correct; the test's wait contract was wrong.
+
+Initial research draft mis-attributed the cause to a "surviving canvas reverts to defaults"; independent verification against the constructor (brainstorm-canvas.js:34-35, no async reset) refuted it and the researcher retracted -> definitive null-canvas root cause (verify-subagent-findings rule earned its keep).
+
+FIX (brainstorm-viewport.spec.ts only): fold a canvas-existence wait (expect.poll !!__bs().graph.canvas, 15s) into gotoMindmap after shell visibility. Waits on the canvas OBJECT (exact readiness signal - layout/viewMode set synchronously at construction), NOT c.graph (would over-couple to async vendor-script load). Wait-for-condition, not a fixed sleep. The layout/viewMode toEqual assertion is UNCHANGED - correctness still validated, cannot mask a regression. All three gotoMindmap callers (spec:83 boot, :104 layout reload, :126 drag reload) are post-canvas -> safe. Three sibling specs have independent gotoMindmap copies, untouched (scope isolation).
+
+Independent Option-B audit: PASS (F1 text correction applied - three callers not two; F6 adversarial "does it mask a product bug?" -> NO, verified). Deferred out-of-scope (noted, NOT bundled): latent double-render construction guard (brainstorm.js:45) - real but did not cause this flake.
+
+VERIFICATION: brainstorm-viewport.spec.ts --repeat-each=6 = 36/36 PASS incl. the reload test 6/6 (was ~50%+ flaky). Full test:ui no-regression gate: see session record. tsc --noEmit clean.
+
+## Content Hash
+
+**Content Hash**: `b9fa508cd49bec11ca9c72da0c98dbe7a1de08b959284a8db7c00c5366fd7d7f`
+**Previous Hash**: `3704bb001fdf1b020927a6ad4344f2ed3f2b23fa7434c6dcc4c158ef6f068054` (Entry #502 Chain Hash)
+**Chain Hash**: `4663079ec7516d1dab02706f9b21e9c91172a4fc7343842cfe508c67c213803c`
+**Merkle Seal**: `b290db0466b1c3fca85a086ecbcff96f21fd5774062a919abbe28c06ed825fc0` -- gate_seal_fx897_reload_flake
+**Session ID**: `2026-07-14-fx897-reload-flake`
+**Entry ID**: `b9fa508cd49b`
+
+_Hash provenance_: Content Hash = SHA256 of brainstorm-viewport.spec.ts. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-14-fx897-reload-flake_

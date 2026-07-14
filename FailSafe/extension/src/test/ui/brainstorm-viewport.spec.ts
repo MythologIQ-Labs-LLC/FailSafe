@@ -56,6 +56,16 @@ async function gotoMindmap(page: Pg, url: string): Promise<void> {
   await expect(page.locator("#workspace")).toBeVisible({ timeout: 10000 });
   await page.locator('#workspace .cc-pill[data-key="brainstorm"]').click();
   await expect(page.locator("#workspace .cc-bs-export")).toBeVisible({ timeout: 10000 });
+  // FX897: the shell (.cc-bs-export) renders synchronously, but the canvas is
+  // built behind an async render→fetchGraph→initCanvas chain — so shell
+  // visibility does NOT imply a live canvas. Wait for the canvas object to
+  // exist before returning; otherwise reload assertions race the fetch window
+  // and flake under headless-CI latency (the poll observes a null canvas and
+  // times out). layout/viewMode are set synchronously in the BrainstormCanvas
+  // constructor, so canvas-existence is the exact readiness signal.
+  await expect.poll(() => page.evaluate(() => {
+    return !!(globalThis as any).__bs?.()?.graph?.canvas;
+  }), { timeout: 15000 }).toBe(true);
 }
 
 /** Boots a ConsoleServer, stubs graph/seed routes, installs page-context
