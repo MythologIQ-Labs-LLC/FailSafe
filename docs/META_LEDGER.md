@@ -26067,3 +26067,32 @@ _Hash provenance_: Content Hash = SHA256 of the fixed brainstorm-graph-io.js. Ch
 _Chain integrity: VALID_
 _Session: 
 
+
+### Entry #500: DEBUG - CI findings sweep (cwd test-path resolution + census R4)
+
+**Date**: 2026-07-13
+**Phase**: DEBUG (/qor-debug two-phase; general-subagent Fixer; held local per Review Boundary)
+**Risk Grade**: L2
+**Branch**: fix/ci-cwd-test-path-resolution-240
+
+## Decision
+
+Operator-requested /qor-debug on the CI findings. PRIMARY RESULT: the Draft-9 cwd-offset test-path defect (feature-index-surface.test.ts + governance-projection.test.ts resolving repo files from fixed process.cwd() offsets) was ALREADY FIXED on main by the between-turns remediation cycle (#491-#497) via test-repo-root.ts (__dirname-anchored resolveTestRepoPath). The Fixer confirmed rather than re-derived: four-layer root-cause + a cwd-manipulation proof (both suites + the helper test = 15 passing from a NON-repo cwd, where the old cwd-based resolver returned null). Residual sweep of src/test/** found NO other fragile repo-file-by-cwd instances (4 process.cwd() hits are all legitimate save/restore or env-fallback; two __dirname package.json reads are already the correct pattern). ONE genuine new hardening applied: census.cjs R4 - require-time rmSync of a stale out/test-run-census.json so a load-phase crash cannot let a prior run's census masquerade as fresh (absence stays a loud signal). tsc 0; census eslint clean (.cjs, outside the ts lint scope); no .claude/skills touched; no product code changed.
+
+SEPARATE FINDING (governance decision, NOT actioned - reported to operator): all 5 open dependabot PRs (#227-#231) fail the 'standards' check at the Branch-policy step - validate-branch-policy.ps1 enforces ^(plan|feat|fix|release|hotfix)/ and rejects every dependabot/* branch name (confirmed against fixed main; Full Test Suite + CodeQL pass). This is a deliberate governance gate the automated author cannot satisfy; unblocking it (add 'dependabot' to the allowed prefixes, or admin-merge, or rebrand branches) is an operator policy decision - not weakened unilaterally.
+
+## Content Hash
+
+**Content Hash**: `c5bf620e78e64b4b05228af9d715eb1d77a62868fa8a387a39cc56adb22ae8fe`
+**Previous Hash**: `19e6dd62f995187034c42d4bd11e54a8c9f66438c675ce1ac206556a2d905a23` (Entry #499 Chain Hash)
+**Chain Hash**: `0922b58a23a266a28dd092ce6b6461e1da98bf32e705d1e4d5ca6f078226dd74`
+**Merkle Seal**: `8ac3636d3687cd125c9e2b8c68da09c63898d85c1d61175b1699d3ef4afbbe4f` -- gate_seal_debug_ci_cwd_findings_240
+**Session ID**: `2026-07-13-debug-ci-cwd-findings`
+**Entry ID**: `c5bf620e78e6`
+
+_Hash provenance_: Content Hash = SHA256 of census.cjs. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-07-13-debug-ci-cwd-findings_

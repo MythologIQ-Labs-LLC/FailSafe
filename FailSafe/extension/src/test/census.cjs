@@ -16,6 +16,12 @@ const EXTENSION_ROOT = path.resolve(__dirname, '..', '..');
 const OUT_TEST_DIR = path.join(EXTENSION_ROOT, 'out', 'test');
 const CENSUS_PATH = path.join(EXTENSION_ROOT, 'out', 'test-run-census.json');
 
+// R4: delete any stale census at require-time. This module is require()d before
+// the run starts (runner.cjs:19-22). If a load-phase crash means run() never
+// returns, writeCensus never fires; without this, a PRIOR run's census would
+// masquerade as fresh. Removing it up front keeps absence-of-file a loud signal.
+try { fs.rmSync(CENSUS_PATH, { force: true }); } catch { /* best-effort */ }
+
 const executedFiles = new Set();
 let summaryPrinted = false;
 
