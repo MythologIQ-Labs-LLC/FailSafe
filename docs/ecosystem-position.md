@@ -53,7 +53,7 @@ The versioned Qor-logic consumer adapter is the compatibility seam. Consumed art
 
 FailSafe may integrate with systems such as:
 
-- Bicameral for reviewed decisions, grounding, drift, and preflight context;
+- Qortara-owned external adapters for adopter products such as Bicameral, providing reviewed decisions, grounding, drift, and preflight context;
 - Microsoft Agent Governance Toolkit installers or supported governance adapters;
 - GitHub checks and repository workflows;
 - issue trackers, security scanners, notifications, and supported MCP or agent clients;
