@@ -1,62 +1,110 @@
-# FailSafe — Ecosystem Position
+# FailSafe Ecosystem Position
 
-_Where FailSafe sits in the AI-assisted software development lifecycle. Sources: this repository's public artifacts only (README, CONCEPT, FAILSAFE_SPECIFICATION, INTEGRATIONS docs, captured issue text). Maintained under GOVERNANCE_INDEX Tier 5._
+## Role
 
-## 1. What FailSafe is — and is not
+FailSafe is the public, local-first VS Code and Cursor product for governing AI-assisted software development inside the editor and repository workspace.
 
-FailSafe is an **Agent Debugger & Stability Monitor for AI-assisted development**: an open (Apache-2.0) VS Code/Cursor extension providing local-first, editor-level governance for AI coding workflows — trust, traceability, and safety for autonomous agent work. It is obtained from the **VS Code Marketplace and Open VSX**; both channels publish the **same build artifact** (single-VSIX release pipeline).
+It provides a focused experience for developers who need local governance, evidence, debugging, stability monitoring, integrations, and visible intervention without adopting a broader hosted platform.
 
-It is NOT (per `docs/CONCEPT.md`): a permissive system that allows unchecked agent actions; a logging-only solution without enforcement capability; or a replacement for human oversight on critical decisions. Organization-wide / cross-repository governance is explicitly **out of scope** for the extension — its governance domain is the open workspace.
+## Position
 
-## 2. The governance stack
+```mermaid
+flowchart LR
+    Developer[Developer and Coding Agents]
+    Logic[Qor-logic]
+    Repo[Repository and Git]
+    Integrations[Public Integrations]
+    FailSafe[FailSafe]
+    Evidence[Local Governance Evidence]
+    Operator[Human Operator]
 
+    Developer --> FailSafe
+    Logic --> FailSafe
+    Repo --> FailSafe
+    Integrations --> FailSafe
+    FailSafe --> Evidence
+    Evidence --> Operator
 ```
-Qor-logic  (upstream)   — owns governance SEMANTICS: SHIELD lifecycle doctrine, gate
-   │                      schemas, the Merkle-chained META_LEDGER format, Shadow Genome.
-   ▼
-FailSafe   (this repo)  — the reference ENFORCEMENT CONSUMER: editor/runtime enforcement,
-   │                      developer interaction, and presentation of governance evidence.
-   ▼
-The operator            — human gates: L3 approvals, branch-protection rulesets,
-                          release reviewer gates, and the local review boundary.
-```
 
-The seam is defined by the program issue's own boundary statement: **"Qor-logic owns governance semantics. FailSafe owns developer-facing enforcement and presentation. This adapter is the compatibility seam between them."** The mechanical realization is the **versioned Qor-logic consumer adapter** (`src/qorlogic/consumer/`): every file-based governance artifact FailSafe consumes (META_LEDGER, FEATURE_INDEX, tracker manifest, audit gates) flows through one boundary that classifies it as `ok | unavailable | malformed | unsupported | stale` — fail-visible, never guessed into compatibility. (The adapter is the in-repo boundary mechanism; it ships with the next release.)
+The arrows describe current public inputs and outputs. They do not transfer authority from Qor-logic, an integration, or the human operator into FailSafe.
 
-## 3. Sibling product: FailSafe Pro
+## Owns
 
-FailSafe (this extension) guards the **editor**. **FailSafe Pro** is the desktop-native, higher-tier application for full-stack AI governance: OS-level enforcement, team workflows, and commercial distribution ([about FailSafe Pro](https://mythologiq.studio/products/failsafe-pro) · [download](https://mythologiq.studio/products/failsafe-download)). The two coexist on a workspace through the **shared filesystem** — governance state lives in files (`.failsafe/`, the META_LEDGER), and FailSafe's mutation bus watches those paths, so an external Pro process's writes refresh the extension's views without any cross-process protocol.
+- the shipped VS Code and Cursor extension behavior;
+- editor-local governance interventions;
+- developer-facing governance, evidence, replay, risk, and stability UX;
+- supported host integrations;
+- accessibility and local-first behavior;
+- Marketplace and Open VSX identity;
+- existing-user compatibility and support obligations;
+- release and maintenance policy for the FailSafe product.
 
-## 4. Where it sits in the SDLC loop
+## Consumes
+
+- Qor-logic lifecycle, skill, gate, policy, ledger, and Shadow Genome contracts;
+- repository and source-control state;
+- explicitly enabled public integrations;
+- local validators and evidence providers;
+- supported agent and editor protocols.
+
+The versioned Qor-logic consumer adapter is the compatibility seam. Consumed artifacts must resolve to explicit states such as `ok`, `unavailable`, `malformed`, `unsupported`, or `stale`; compatibility must never be guessed into success.
+
+## Public integration seams
+
+FailSafe may integrate with systems such as:
+
+- Bicameral for reviewed decisions, grounding, drift, and preflight context;
+- Microsoft Agent Governance Toolkit installers or supported governance adapters;
+- GitHub checks and repository workflows;
+- issue trackers, security scanners, notifications, and supported MCP or agent clients;
+- ACP and governed CLI agent paths;
+- Sentry, SARIF, Slack, Teams, Jira, Linear, and other explicitly enabled sources.
+
+Every integration is opt-in. An integration supplies data or enforcement at its declared boundary. It does not silently transfer product or semantic authority into FailSafe.
+
+## SDLC coverage
 
 | Stage | FailSafe surface |
-|---|---|
-| **Plan** | SHIELD lifecycle gates (plan → adversarial audit PASS/VETO → implement → substantiate → seal), Merkle-ledger evidence chain |
-| **Code** | Editor governance (Sentinel monitoring, enforcement modes), governed agent execution (ACP proxy, CLI wrappers), Mind Map ideation |
-| **Review** | GitHub Checks verdict publication, PR↔issue linkage audit, SARIF ingestion |
-| **Ship** | Release gates (SemVer gate, preflight, publish-block discipline), dual-marketplace parity |
-| **Operate** | Sentry issue ingestion into the risk register, Slack/Teams notifications, transparency event stream |
+| --- | --- |
+| Plan | SHIELD planning, audit, and evidence workflow |
+| Code | Editor governance, monitoring, governed agents, and local intervention |
+| Review | GitHub checks, issue linkage, risk, and security evidence |
+| Ship | Release gates, preflight, and marketplace release discipline |
+| Operate | Runtime issue ingestion, notifications, replay, and transparency views |
 
-## 5. Agent-ecosystem seams
+## Does not own
 
-| Seam | Authority class | Status |
-|---|---|---|
-| ACP enforce-proxy (Devin / any ACP agent) | observe / assist / **enforce** (cooperative path; OS-level is Pro's domain) | shipped |
-| Continue + Aider governed CLI wrappers | assist/enforce (pre-run gate + post-run diff escalation) | shipped |
-| OpenHands run observer | observe | shipped |
-| Cline / Roo / Kilo MCP-policy audit | observe | shipped |
-| Bicameral MCP + Open Design (MCP/SSE clients) | assist / observe | shipped |
-| GitHub / Jira / Linear / Sentry / SARIF / Slack / Teams | external-read / external-action | shipped |
-| Microsoft Agent Governance Toolkit installer | assist | shipped |
-| VS Code Agents Window | — | parked upstream-preview; see `docs/VS_CODE_AGENTS_WINDOW.md` |
-| Agent Host Protocol (AHP) | — | watchlist (BACKLOG B207) |
+- organization-wide actor, claim, admission, obligation, or release semantics;
+- hosted tenant identity, subscriptions, billing, or fleet operations;
+- certification or compliance conclusions;
+- external agent-attestation or confidential-computing standards;
+- the authority to reinterpret upstream Qor-logic contracts;
+- unrelated product roadmaps merely because FailSafe integrates with them.
 
-Every integration is **default-off** and operator-enabled.
+## Product lifecycle
 
-## 6. Trust posture
+FailSafe remains a supported product. Its lifecycle may eventually become feature-complete and maintenance-focused, while retaining:
 
-Local-first by construction: integrations are opt-in; credentials are placed in request headers only and never echoed into results, logs, or diagnostics; network egress is bounded to operator-configured endpoints (plus a fixed GitHub-release allowlist for the optional voice pack); governance evidence stays in the workspace. Detail per integration: `docs/integrations/INTEGRATION_DOCS_INDEX.md`.
+- security fixes;
+- critical and high-impact defect fixes;
+- VS Code, Cursor, Marketplace, Open VSX, and dependency compatibility;
+- accessibility fixes;
+- documentation and installation continuity;
+- bounded integration compatibility;
+- existing-user support.
 
----
+Feature completion is not retirement, archive, deletion, renaming, or abandonment.
 
-_Drift signals: the Pro positioning or published download link changes (BACKLOG B208 tracks a pending link ruling); the adapter boundary contract changes; a new agent-protocol seam ships._
+## Immediate path forward
+
+1. Complete current public commitments and stabilization work.
+2. Preserve reliable Marketplace and Open VSX releases.
+3. Move duplicated lifecycle meaning behind versioned Qor-logic contracts.
+4. Publish compatibility information for supported agent, IDE, MCP, and governance integrations.
+5. Keep public behavior local-first, opt-in, and explicit about degraded states.
+6. Define evidence-backed criteria for a future feature-complete maintenance phase.
+7. Continue security, accessibility, documentation, and host-compatibility work indefinitely.
+
+## Public disclosure boundary
+
+This public document describes FailSafe as it exists and is supported today. It does not announce private branding, product-transition, migration, or launch plans.
