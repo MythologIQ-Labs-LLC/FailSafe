@@ -144,11 +144,32 @@ async function defaultRunner(
   cwd?: string,
 ): Promise<{ code: number; stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
-      cwd,
-      shell: false,
-      windowsHide: true,
-    });
+    const options = { cwd, shell: false as const, windowsHide: true };
+    const child = command === "git"
+      ? spawn("git", args, options)
+      : command === "winget"
+        ? spawn("winget", args, options)
+        : command === "choco"
+          ? spawn("choco", args, options)
+          : command === "brew"
+            ? spawn("brew", args, options)
+            : command === "apt-get"
+              ? spawn("apt-get", args, options)
+              : command === "dnf"
+                ? spawn("dnf", args, options)
+                : command === "yum"
+                  ? spawn("yum", args, options)
+                  : command === "pacman"
+                    ? spawn("pacman", args, options)
+                    : null;
+    if (!child) {
+      resolve({
+        code: 126,
+        stdout: "",
+        stderr: `Unsupported Git bootstrap executable: ${command}`,
+      });
+      return;
+    }
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (chunk) => {
