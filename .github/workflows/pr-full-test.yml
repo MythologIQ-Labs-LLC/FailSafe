@@ -11,11 +11,14 @@ name: PR Full Test
 on:
   pull_request:
     branches: [main]
+  push:
+    branches:
+      - feat/security-codeql-cross-platform
 
 # A newer push to the same PR cancels the in-flight run (the full suite is slow;
 # no value finishing a stale commit).
 concurrency:
-  group: pr-full-test-${{ github.event.pull_request.number }}
+  group: pr-full-test-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 # Least-privilege default token: these gates only read the repo and
@@ -25,6 +28,7 @@ permissions:
 
 jobs:
   full-test:
+    if: github.event_name == 'pull_request'
     name: Full Test Suite (test:all)
     runs-on: ubuntu-latest
     steps:
@@ -52,10 +56,9 @@ jobs:
   command-boundary-hardening:
     name: Commit command-boundary hardening
     if: >-
+      github.event_name == 'push' &&
       github.repository == 'MythologIQ-Labs-LLC/FailSafe' &&
-      github.event.pull_request.number == 267 &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.event.pull_request.head.ref == 'feat/security-codeql-cross-platform'
+      github.ref == 'refs/heads/feat/security-codeql-cross-platform'
     permissions:
       contents: write
     runs-on: ubuntu-latest
