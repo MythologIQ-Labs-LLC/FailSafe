@@ -38,8 +38,20 @@ jobs:
         working-directory: FailSafe/extension
       - run: npm run compile
         working-directory: FailSafe/extension
-      - run: xvfb-run -a npm run test:all
+      - name: Run complete suite with durable diagnostics
+        shell: bash
         working-directory: FailSafe/extension
+        run: |
+          set -o pipefail
+          xvfb-run -a npm run test:all 2>&1 | tee full-test.log
+      - name: Upload full-suite diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: full-test-diagnostics
+          path: FailSafe/extension/full-test.log
+          if-no-files-found: error
+          retention-days: 30
       - name: Upload Playwright report on failure
         if: ${{ failure() && hashFiles('FailSafe/extension/playwright-report/**') != '' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
