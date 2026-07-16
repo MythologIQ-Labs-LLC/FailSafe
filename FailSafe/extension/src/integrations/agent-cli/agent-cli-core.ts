@@ -210,7 +210,23 @@ export function buildL3EscalationRequest(agent: string, outcome: AgentRunOutcome
  *  surface. cwd/env optional; env carries secrets to the child only. */
 export const defaultAgentRun: AgentRunFn = (cmd, args, opts) =>
   new Promise((resolve) => {
-    const child = spawn(cmd, [...args], { shell: false, cwd: opts?.cwd, env: opts?.env ?? process.env });
+    const spawnOptions = {
+      shell: false as const,
+      cwd: opts?.cwd,
+      env: opts?.env ?? process.env,
+    };
+    const argv = [...args];
+    const child = cmd === 'git'
+      ? spawn('git', argv, spawnOptions)
+      : cmd === 'aider'
+        ? spawn('aider', argv, spawnOptions)
+        : cmd === 'cn'
+          ? spawn('cn', argv, spawnOptions)
+          : null;
+    if (!child) {
+      resolve({ stdout: '', stderr: `Unsupported agent executable: ${cmd}`, code: 126 });
+      return;
+    }
     let stdout = '';
     let stderr = '';
     child.stdout?.on('data', (c: Buffer) => { stdout += c.toString(); });
