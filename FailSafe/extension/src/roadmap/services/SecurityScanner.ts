@@ -24,11 +24,22 @@ function defaultRunner(
   timeout = SCAN_TIMEOUT,
 ): Promise<CommandRunnerResult> {
   return new Promise((resolve) => {
-    const proc = spawn(command, args, {
-      cwd,
-      shell: true,
-      timeout,
-    });
+    const options = { cwd, shell: false as const, timeout };
+    const proc = command === "garak"
+      ? spawn("garak", args, options)
+      : command === "npx"
+        ? spawn("npx", args, options)
+        : command === "git"
+          ? spawn("git", args, options)
+          : null;
+    if (!proc) {
+      resolve({
+        code: 126,
+        stdout: "",
+        stderr: `Unsupported scanner executable: ${command}`,
+      });
+      return;
+    }
 
     let stdout = "";
     let stderr = "";
