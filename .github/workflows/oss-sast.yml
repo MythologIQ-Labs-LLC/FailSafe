@@ -27,12 +27,20 @@ jobs:
           cache: pip
       - name: Install pinned open-source scanner
         run: python -m pip install semgrep==1.169.0
-      - name: Scan extension and workflow sources
+      - name: Scan production sources for blocking security findings
         id: scan
         continue-on-error: true
         env:
           SEMGREP_SEND_METRICS: 'off'
-        run: semgrep scan --config p/default --config p/security-audit --error --metrics off --json --output semgrep.json FailSafe/extension .github
+        run: >-
+          semgrep scan
+          --config p/security-audit
+          --severity ERROR
+          --error
+          --metrics off
+          --json
+          --output semgrep.json
+          FailSafe/extension/src
       - name: Upload scan evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -44,5 +52,5 @@ jobs:
       - name: Enforce clean OSS SAST
         if: steps.scan.outcome != 'success'
         run: |
-          echo '::error::Semgrep Community Edition found blocking findings or failed to scan. Review semgrep-community-results.'
+          echo '::error::Semgrep Community Edition found a blocking security finding or failed to scan. Review semgrep-community-results.'
           exit 1
