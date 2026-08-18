@@ -2,57 +2,60 @@
 // workspaceRoot to workspaceFolders[0] once at activation and never
 // rebinds; VS Code does not restart the extension host for an in-place
 // folder add/remove, so nothing previously observed that mismatch. This
-// suite exercises registerWorkspaceFolderChangeGuard against the real
-// vscode.workspace API: adding/removing a folder must warn exactly once
-// and offer "Reload Window", and a second folder-set change after the
-// guard already fired must not warn again (no listener leak / no
-// duplicate-prompt spam across repeated transitions).
+// suite exercises registerWorkspaceFolderChangeGuard: adding/removing a
+// folder must warn exactly once and offer "Reload Window", and a second
+// folder-set change after the guard already fired must not warn again
+// (no listener leak / no duplicate-prompt spam across repeated
+// transitions).
 //
-// The extra folder is created *inside* the already-open (and therefore
-// already-trusted) test workspace root rather than under os.tmpdir().
-// VS Code's Workspace Trust prompts for any folder outside an already
-// -trusted path before it can be added via updateWorkspaceFolders; an
-// unrelated tmpdir path triggers that prompt, which has nothing to
-// dismiss it under the headless xvfb test host and hangs until the
-// mocha timeout. A nested path inherits the parent's trust decision.
+// The folder-change event source is injected (a fake, not
+// vscode.workspace) rather than driven through a real
+// vscode.workspace.updateWorkspaceFolders() call: mutating the real test
+// host's workspace folder set is environment-fragile here (Workspace
+// Trust prompts on an unfamiliar path, and this harness's mutation did
+// not reliably fire onDidChangeWorkspaceFolders at all when tried against
+// the real API). The guard itself only depends on the
+// onDidChangeWorkspaceFolders event shape, so a fake source exercises the
+// same logic deterministically. vscode.window.showWarningMessage and
+// vscode.commands.executeCommand are still the real module, monkey-patched
+// per this repo's existing commands-dispatch.test.ts / commands-state.test.ts
+// convention.
 
 import { strict as assert } from 'assert';
-import * as fs from 'fs';
-import * as path from 'path';
 import * as vscode from 'vscode';
 
 import { registerWorkspaceFolderChangeGuard } from '../../extension/workspaceFolderChangeGuard';
 import { Logger } from '../../shared/Logger';
 
-function waitForNextFolderChange(): Promise<vscode.WorkspaceFoldersChangeEvent> {
-  return new Promise((resolve) => {
-    const sub = vscode.workspace.onDidChangeWorkspaceFolders((event) => {
-      sub.dispose();
-      resolve(event);
-    });
-  });
+function makeFakeFolderChangeSource() {
+  const listeners: Array<(event: vscode.WorkspaceFoldersChangeEvent) => unknown> = [];
+  return {
+    source: {
+      onDidChangeWorkspaceFolders: (listener: (event: vscode.WorkspaceFoldersChangeEvent) => unknown) => {
+        listeners.push(listener);
+        return {
+          dispose: () => {
+            const idx = listeners.indexOf(listener);
+            if (idx >= 0) {
+              listeners.splice(idx, 1);
+            }
+          },
+        };
+      },
+    },
+    fire(event: vscode.WorkspaceFoldersChangeEvent): void {
+      for (const listener of listeners.slice()) {
+        listener(event);
+      }
+    },
+  };
+}
+
+function makeFolder(fsPath: string): vscode.WorkspaceFolder {
+  return { uri: vscode.Uri.file(fsPath), name: fsPath, index: 0 };
 }
 
 suite('workspaceFolderChangeGuard', () => {
-  let extraFolder: string;
-
-  setup(() => {
-    const trustedRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-    assert.ok(trustedRoot, 'test host must have an open workspace folder');
-    extraFolder = fs.mkdtempSync(path.join(trustedRoot, '.wfc-guard-'));
-  });
-
-  teardown(async () => {
-    const folders = vscode.workspace.workspaceFolders ?? [];
-    const idx = folders.findIndex((folder) => folder.uri.fsPath === extraFolder);
-    if (idx >= 0) {
-      const changed = waitForNextFolderChange();
-      vscode.workspace.updateWorkspaceFolders(idx, 1);
-      await changed;
-    }
-    fs.rmSync(extraFolder, { recursive: true, force: true });
-  });
-
   test('warns once with a Reload Window action when a folder is added, and does not warn again on a further change', async () => {
     const warnCalls: Array<{ message: string; items: string[] }> = [];
     const originalWarn = vscode.window.showWarningMessage;
@@ -66,16 +69,11 @@ suite('workspaceFolderChangeGuard', () => {
 
     const fakeContext = { subscriptions: [] } as unknown as vscode.ExtensionContext;
     const logger = new Logger('workspaceFolderChangeGuard.test');
-    const disposable = registerWorkspaceFolderChangeGuard(fakeContext, logger);
+    const { source, fire } = makeFakeFolderChangeSource();
+    const disposable = registerWorkspaceFolderChangeGuard(fakeContext, logger, source);
 
     try {
-      const startCount = vscode.workspace.workspaceFolders?.length ?? 0;
-
-      const firstChange = waitForNextFolderChange();
-      vscode.workspace.updateWorkspaceFolders(startCount, 0, {
-        uri: vscode.Uri.file(extraFolder),
-      });
-      await firstChange;
+      fire({ added: [makeFolder('/fake/added')], removed: [] });
 
       assert.equal(warnCalls.length, 1, 'guard must warn exactly once after the first folder-set change');
       assert.ok(
@@ -83,16 +81,11 @@ suite('workspaceFolderChangeGuard', () => {
         'warning must offer a Reload Window action',
       );
 
-      // A second folder-set change (remove the folder we just added) must
-      // not produce a second prompt — the guard fires once per activation,
-      // not once per transition, since the only correct remediation
-      // (reload) already invalidates the extension host that is warning.
-      const secondChange = waitForNextFolderChange();
-      const idx = (vscode.workspace.workspaceFolders ?? []).findIndex(
-        (folder) => folder.uri.fsPath === extraFolder,
-      );
-      vscode.workspace.updateWorkspaceFolders(idx, 1);
-      await secondChange;
+      // A second folder-set change must not produce a second prompt — the
+      // guard fires once per activation, not once per transition, since
+      // the only correct remediation (reload) already invalidates the
+      // extension host that is warning.
+      fire({ added: [], removed: [makeFolder('/fake/added')] });
 
       assert.equal(warnCalls.length, 1, 'guard must not warn again on a subsequent folder-set change');
     } finally {
@@ -119,19 +112,15 @@ suite('workspaceFolderChangeGuard', () => {
 
     const fakeContext = { subscriptions: [] } as unknown as vscode.ExtensionContext;
     const logger = new Logger('workspaceFolderChangeGuard.test');
-    const disposable = registerWorkspaceFolderChangeGuard(fakeContext, logger);
+    const { source, fire } = makeFakeFolderChangeSource();
+    const disposable = registerWorkspaceFolderChangeGuard(fakeContext, logger, source);
 
     try {
-      const startCount = vscode.workspace.workspaceFolders?.length ?? 0;
-      const change = waitForNextFolderChange();
-      vscode.workspace.updateWorkspaceFolders(startCount, 0, {
-        uri: vscode.Uri.file(extraFolder),
-      });
-      await change;
+      fire({ added: [makeFolder('/fake/added')], removed: [] });
 
       // The guard's own showWarningMessage(...).then(...) resolution is a
-      // microtask queued after the synchronous event dispatch above; give
-      // it a turn before asserting on the follow-up command.
+      // microtask queued after the synchronous fire() above; give it a
+      // turn before asserting on the follow-up command.
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       assert.ok(
@@ -142,6 +131,28 @@ suite('workspaceFolderChangeGuard', () => {
       (vscode.window as { showWarningMessage: unknown }).showWarningMessage = originalWarn;
       (vscode.commands as { executeCommand: unknown }).executeCommand = originalExec;
       disposable.dispose();
+    }
+  });
+
+  test('registered disposable removes the listener from the folder-change source', () => {
+    const fakeContext = { subscriptions: [] } as unknown as vscode.ExtensionContext;
+    const logger = new Logger('workspaceFolderChangeGuard.test');
+    const { source, fire } = makeFakeFolderChangeSource();
+
+    const warnCalls: unknown[] = [];
+    const originalWarn = vscode.window.showWarningMessage;
+    (vscode.window as { showWarningMessage: unknown }).showWarningMessage = (...args: unknown[]) => {
+      warnCalls.push(args);
+      return Promise.resolve(undefined);
+    };
+
+    const disposable = registerWorkspaceFolderChangeGuard(fakeContext, logger, source);
+    try {
+      disposable.dispose();
+      fire({ added: [makeFolder('/fake/added')], removed: [] });
+      assert.equal(warnCalls.length, 0, 'a disposed guard must not react to further folder-change events');
+    } finally {
+      (vscode.window as { showWarningMessage: unknown }).showWarningMessage = originalWarn;
     }
   });
 });

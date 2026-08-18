@@ -29,13 +29,24 @@ import { Logger } from '../shared/Logger';
 
 const RELOAD_ACTION = 'Reload Window';
 
+type FolderChangeSource = Pick<typeof vscode.workspace, 'onDidChangeWorkspaceFolders'>;
+
+/**
+ * `folderChangeSource` defaults to the real `vscode.workspace` and only
+ * exists as a seam for tests: driving a real workspace-folder mutation
+ * through `vscode.workspace.updateWorkspaceFolders()` in a test host is
+ * environment-fragile (workspace trust, whether the harness even applies
+ * the mutation), so tests inject a fake event source instead of asserting
+ * against real Electron workspace state.
+ */
 export function registerWorkspaceFolderChangeGuard(
   context: vscode.ExtensionContext,
   logger: Logger,
+  folderChangeSource: FolderChangeSource = vscode.workspace,
 ): vscode.Disposable {
   let warned = false;
 
-  const disposable = vscode.workspace.onDidChangeWorkspaceFolders((event) => {
+  const disposable = folderChangeSource.onDidChangeWorkspaceFolders((event) => {
     if (warned) {
       return;
     }
