@@ -87,11 +87,17 @@ test("#263 — repeated round trips do not leak heartbeat intervals or settings-
   await stubGraphRoute(page);
   await gotoMindmap(page, controller.url);
 
+  // Spy installed AFTER the initial mount (gotoMindmap above), so only the 3
+  // round trips below are captured — the initial build's installs are not.
   await page.evaluate(() => {
     const orig = (globalThis as any).setInterval;
-    (globalThis as any).__intervalCount = 0;
+    (globalThis as any).__heartbeatInstallCount = 0;
     (globalThis as any).setInterval = function (...args: unknown[]) {
-      (globalThis as any).__intervalCount++;
+      // Filter to the heartbeat's own exact signature (brainstorm.js:
+      // `setInterval(() => {...}, 30000)`) so other subsystems' intervals
+      // (voice/webLlm init, wired unconditionally on every render()) don't
+      // pollute this count — this test is scoped to #263's own mechanism.
+      if (args[1] === 30000) (globalThis as any).__heartbeatInstallCount++;
       return orig.apply(globalThis, args as never);
     };
     const origAdd = (globalThis as any).window.addEventListener.bind(globalThis.window);
@@ -120,17 +126,18 @@ test("#263 — repeated round trips do not leak heartbeat intervals or settings-
     const g = (globalThis as any).__failsafeRenderers;
     const r = g?.workspace?.subViews?.find((s: any) => s.key === "brainstorm")?.renderer;
     return {
-      heartbeatCount: (globalThis as any).__intervalCount,
+      heartbeatInstallCount: (globalThis as any).__heartbeatInstallCount,
       listenerAddCount: (globalThis as any).__listenerAddCount,
       hasCanvas: !!r?.graph?.canvas,
     };
   });
-  // Initial mount + 3 round trips = 4 total heartbeat-interval installs; each
-  // prior one must have been cleared by destroy(), so exactly one is live —
-  // that liveness is asserted above. Here we assert no unbounded growth: the
-  // observed install count must equal exactly the number of (re)builds.
+  // The spy was installed after the initial mount, so only the 3 round trips
+  // above are counted. Each prior heartbeat must have been cleared by
+  // destroy() so exactly one is live — that liveness is asserted in the test
+  // above. Here we assert no unbounded growth: the observed install count
+  // must equal exactly the number of (re)builds captured by the spy.
   expect(state.hasCanvas).toBe(true);
-  expect(state.heartbeatCount, "one setInterval call per (re)build, no duplicate installs per build").toBe(4);
+  expect(state.heartbeatInstallCount, "one heartbeat setInterval call per (re)build, no duplicate installs per build").toBe(3);
   // 3 settings-bridge listener names registered per build (audio-device / whisper-model / stt-language).
-  expect(state.listenerAddCount, "settings-bridge listeners must not accumulate beyond one set per live build").toBe(4 * 3);
+  expect(state.listenerAddCount, "settings-bridge listeners must not accumulate beyond one set per live build").toBe(3 * 3);
 });
