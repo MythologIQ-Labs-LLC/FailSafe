@@ -65,6 +65,13 @@ test("#263 — switching away from and back to Mind Map rebuilds a live canvas e
   await page.locator('#workspace .cc-pill[data-key="brainstorm"]').click();
   await expect(page.locator("#workspace .cc-bs-export")).toBeVisible({ timeout: 10000 });
 
+  // initCanvas() runs after the async fetchGraph() the re-shown render() kicks
+  // off, so poll rather than reading state synchronously after the shell paints.
+  await expect.poll(() => page.evaluate(() => {
+    const g = (globalThis as any).__failsafeRenderers;
+    return !!g?.workspace?.subViews?.find((s: any) => s.key === "brainstorm")?.renderer?.graph?.canvas;
+  }), { timeout: 10000 }).toBe(true);
+
   const rebuilt = await page.evaluate(() => {
     const g = (globalThis as any).__failsafeRenderers;
     const r = g?.workspace?.subViews?.find((s: any) => s.key === "brainstorm")?.renderer;
@@ -101,6 +108,12 @@ test("#263 — repeated round trips do not leak heartbeat intervals or settings-
     await expect(page.locator("#workspace .cc-bs-export")).toBeHidden();
     await page.locator('#workspace .cc-pill[data-key="brainstorm"]').click();
     await expect(page.locator("#workspace .cc-bs-export")).toBeVisible({ timeout: 10000 });
+    // initCanvas() runs after the async fetchGraph() this render() kicks off —
+    // poll for it before driving the next round trip (or reading final state).
+    await expect.poll(() => page.evaluate(() => {
+      const g = (globalThis as any).__failsafeRenderers;
+      return !!g?.workspace?.subViews?.find((s: any) => s.key === "brainstorm")?.renderer?.graph?.canvas;
+    }), { timeout: 10000 }).toBe(true);
   }
 
   const state = await page.evaluate(() => {
