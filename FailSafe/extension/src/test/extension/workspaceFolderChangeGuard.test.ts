@@ -7,10 +7,17 @@
 // and offer "Reload Window", and a second folder-set change after the
 // guard already fired must not warn again (no listener leak / no
 // duplicate-prompt spam across repeated transitions).
+//
+// The extra folder is created *inside* the already-open (and therefore
+// already-trusted) test workspace root rather than under os.tmpdir().
+// VS Code's Workspace Trust prompts for any folder outside an already
+// -trusted path before it can be added via updateWorkspaceFolders; an
+// unrelated tmpdir path triggers that prompt, which has nothing to
+// dismiss it under the headless xvfb test host and hangs until the
+// mocha timeout. A nested path inherits the parent's trust decision.
 
 import { strict as assert } from 'assert';
 import * as fs from 'fs';
-import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
@@ -30,7 +37,9 @@ suite('workspaceFolderChangeGuard', () => {
   let extraFolder: string;
 
   setup(() => {
-    extraFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-wfc-guard-'));
+    const trustedRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    assert.ok(trustedRoot, 'test host must have an open workspace folder');
+    extraFolder = fs.mkdtempSync(path.join(trustedRoot, '.wfc-guard-'));
   });
 
   teardown(async () => {
