@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Agent Skills marketplace category.** The Integrations Marketplace gains an Agent Skills category with the MIT-licensed [mattpocock/skills](https://github.com/mattpocock/skills) pack (Wayfinder decision-ticket planning + companions) as its first entry. (FX904)
+
 ## [6.0.0] - 2026-08-19
 
 ### Fixed (stabilization wave, rolled into this release)

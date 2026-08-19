@@ -172,3 +172,41 @@ describe("MarketplaceCatalog crash-stale install/scan recovery (FailSafe#240)", 
     });
   });
 });
+
+// Wayfinder integration (plan-wayfinder-integration, META_LEDGER #514-#515):
+// the mattpocock/skills engineering pack ships as a catalog entry under the
+// NEW "agent-skills" category.
+describe("MarketplaceCatalog — agent-skills category (mattpocock-skills)", () => {
+  it("catalog returns the mattpocock-skills entry with agent-skills category, MIT license, sandbox on", () => {
+    withTempHome(() => {
+      const catalog = new MarketplaceCatalog();
+      const item = catalog.getCatalog().find((i) => i.id === "mattpocock-skills");
+      assert.ok(item, "mattpocock-skills entry must exist in the curated catalog");
+      assert.equal(item!.category, "agent-skills");
+      assert.equal(item!.licenseType, "MIT");
+      assert.equal(item!.sandboxEnabled, true);
+      assert.equal(item!.repoUrl, "https://github.com/mattpocock/skills");
+      assert.equal(
+        catalog.getByCategory("agent-skills").some((i) => i.id === "mattpocock-skills"),
+        true,
+        "getByCategory must surface the entry under agent-skills",
+      );
+    });
+  });
+
+  it("every category used by any catalog entry carries a label in CATEGORY_LABELS (inverse coverage)", () => {
+    withTempHome(() => {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { CATEGORY_LABELS } = require("../../roadmap/services/MarketplaceTypes");
+      const catalog = new MarketplaceCatalog();
+      const used = new Set(catalog.getCatalog().map((i) => i.category));
+      for (const cat of used) {
+        assert.equal(
+          typeof CATEGORY_LABELS[cat], "string",
+          `category "${cat}" must have a CATEGORY_LABELS entry (unlabeled categories render as ghost filters)`,
+        );
+      }
+      assert.ok(used.has("agent-skills"), "agent-skills must be an in-use category");
+    });
+  });
+});
