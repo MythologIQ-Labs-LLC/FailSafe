@@ -785,5 +785,12 @@
   },
   "optionalDependencies": {
     "better-sqlite3": "^12.6.2"
+  },
+  "overrides": {
+    "protobufjs": "^8.0.0",
+    "minimatch@9": "^9.0.9",
+    "diff": "^8.0.3",
+    "serialize-javascript": "^7.0.5",
+    "sharp": "^0.35.0"
   }
 }

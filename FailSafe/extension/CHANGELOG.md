@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - Zero-cost OSS SAST wiring and hardened command boundaries (#267).
 - Dependency updates: hono, @hono/node-server, js-yaml, fast-uri, undici, ip-address, brace-expansion, linkify-it, body-parser, actions/checkout, actions/setup-node (11 Dependabot PRs).
+- **Dependabot backlog cleared to zero before ship.** All 18 open alerts (1 critical, 11 high, 6 moderate) remediated via `npm audit fix` plus pinned overrides: protobufjs 8.7.2, minimatch 9.0.9, picomatch 2.3.2, flatted 3.4.4, serialize-javascript 7.1.0, sharp 0.35.3, diff 8.0.4, ajv 8.18+. All affected packages were devDependency chains (voice/test/lint tooling) — none shipped in the VSIX — and `npm audit` now reports 0 vulnerabilities.
 
 ### Changed (Breaking)
 - **Enforce is now the default governance mode.** Never-configured installs gate writes out of the box (intent-gated saves, L3 approvals); a one-time notice on upgrade offers the mode picker. Observe and Assist are unchanged and one QuickPick away (`FailSafe: Set Governance Mode`). An unresolvable mode value now fails closed to enforce, and the ACP proxy's missing/malformed mode mirror also resolves to enforce (was observe). (FX899, FX902)
