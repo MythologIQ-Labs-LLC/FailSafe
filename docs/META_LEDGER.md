@@ -26884,3 +26884,35 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 Implemented plan-worktree-commitguard-83a.md (audit PASS #526) on branch fix/worktree-commitguard-83a (stacked). LD-1 resolveGitDirs (spawnSync argv, 5s timeout, <root>/.git fallback). LD-2 CommitGuard worktree-correct: hooks+config from commonDir, token in gitDir, lazy apiPort resolved at hook-write. LD-3 CommitCheckRoute shipped (token gate 401; block verdicts HTTP 200 per curl -sf constraint). LD-4/5 threading: ConsoleServerOptions.validateCommitToken -> ConsoleRouteHost -> ApiRouteDeps; commitGuardPortSource ref repointed by bootstrapServers to the live port. LD-6 ConfigManager.getGovernanceRoot() (cached; dirname of common .git). TDD: T4/T5/T7-T10 red then 33/33 green (real git init + worktree add fixtures); tsc 0; lint 0 errors. Hermeticity finding recorded: this machine carries a stray .git at C:\ — ambient ancestor-repo discovery is REAL, which validated the fallback/injection design (legacy CommitGuard suite now injects explicit dirs; T3 uses a nonexistent cwd). FEATURE_INDEX: FX115 n/a->verified (route shipped), FX284 refreshed (worktree), FX906 NEW (planned FX907 landed on existing FX115; FX908 landed on existing FX284 — recorded per implement Step 12.5). Docs: AGENTS_WINDOW SS5 note; CHANGELOGs [Unreleased].
+
+
+---
+
+### Entry #528: SESSION SEAL - worktree-commitguard-83a
+
+**Timestamp**: 2026-08-19T22:35:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L2
+**Entry ID**: `e9f8609615e7`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-worktree-commitguard-83a.md)
+= 882c159148ed0dffe2701984a121c1218e2065108d79cf240a1d5774541698ee
+```
+
+**Previous Hash**: `6b684893f9aaa155ff6f6d989403dcf82e745270e24caa51be09012e0cc1c140` (Entry #527 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= c4a5c36baaf901a073d52a401d3f99ec80600484c0c1811f9b870da79ead8a43
+```
+
+**Merkle Seal**: `105588609c4b4ae10a4b13f7624bc0de6da627bc4d09288e517575df28e5d0b5` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for burndown Cycle 3 (#83 Phase A core; session 2026-08-19T2021-9acb11; research = deep-dive #517 with citations re-verified, audit PASS #526, implement #527; branch fix/worktree-commitguard-83a stacked). Reality = Promise: all 13 declared src/test files + 5 doc surfaces, no unplanned files. Verification: 33/33 green under shim-mocha with REAL git init/worktree fixtures; tsc + eslint 0 errors. Gate ladder all exit 0; intent lock VERIFIED. DISCLOSED: electron-host run defers to CI (updater mutex, third consecutive cycle); no version bump/tag (HOLD); attribution trailer absent per operator identity directive. Board effect at delivery: #83 Phases A-C progress (A core done; B/C next cycle); FX115 promoted n/a->verified closing a documented-but-unimplemented gap. Hermeticity lesson recorded in #527. Next: Cycle 4 (#83 B/C) then voice/audits/#233.
