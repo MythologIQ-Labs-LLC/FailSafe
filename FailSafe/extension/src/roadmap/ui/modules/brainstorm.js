@@ -39,9 +39,20 @@ export class BrainstormRenderer {
     this.nodeEditor = new NodeEditor(this.graph, getEl);
     this.voiceStatusBadge = null;
     this._canvasInit = false; // #261: in-flight guard for the async canvas-construction window
+    // #319 (FX897/#263 residual): render() only fires for the ACTIVE TabGroup
+    // sub-view, so workspacePath arriving while Mind Map is inactive — or
+    // arriving without any further render() call at all — could otherwise
+    // never reach a live canvas, leaving it permanently stuck under the wrong
+    // identity. Subscribing directly to hub delivery decouples identity
+    // arrival from render()/tab-activation timing, so a live canvas is
+    // reconciled the moment identity heals, regardless of which fires first.
+    this.client?.on?.('hub', (hubData) => this._syncWorkspaceIdentity(hubData));
   }
 
-  render(hubData = {}) {
+  // Shared by render() and the direct hub subscription above so both paths
+  // reconcile a live canvas identically regardless of which one observes the
+  // identity change first.
+  _syncWorkspaceIdentity(hubData = {}) {
     const prevWorkspacePath = this.workspacePath;
     this.workspacePath = hubData.workspacePath || this.workspacePath || '';
     // FX897/#263 v6.0.1: the canvas may have constructed before the hub
@@ -51,6 +62,10 @@ export class BrainstormRenderer {
     if (this.graph.canvas && this.workspacePath !== prevWorkspacePath) {
       applyViewPrefs(this);
     }
+  }
+
+  render(hubData = {}) {
+    this._syncWorkspaceIdentity(hubData);
     // #261: graph.canvas is set only AFTER the async fetchGraph resolves, so it
     // cannot block a re-entrant render() during the construction window (render
     // fires 2-3x on load: WS init + REST hub + tab activation). _canvasInit
