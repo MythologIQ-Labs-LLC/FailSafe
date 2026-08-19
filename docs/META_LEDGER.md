@@ -26795,3 +26795,35 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 Implemented plan-repo-scoped-first-run-295.md (audit PASS #523) on branch fix/repo-scoped-first-run-295 (stacked on Cycle 1). LD-1: both gates swapped to ConfigManager workspace-state accessors (FirstRunModePicker isOnboarded/markOnboarded; FirstRunOnboarding isFirstRun/markOnboarded). LD-2: mode persists at ConfigurationTarget.Workspace. LD-3: inspect()-based explicit-mode suppression (global/workspace/workspaceFolder values) silently onboards the repo. LD-5: wiring comment rewritten; FX538/FX275 rows + BACKLOG B-EM-3 + both CHANGELOGs updated. TDD: harnesses converted to workspace-state mocks -> full RED (9+6 failing) -> GREEN (9/9 + 6/6) via local mocha with a scratchpad vscode-module shim (electron host mutex-blocked; shim is NOT in the repo tree; CI runs the real host at delivery). tsc 0 errors; lint 0 errors.
+
+
+---
+
+### Entry #525: SESSION SEAL - repo-scoped-first-run-295
+
+**Timestamp**: 2026-08-19T21:30:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L2
+**Entry ID**: `e8ac868f887c`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-repo-scoped-first-run-295.md)
+= d48145d28028108760df8085dfce8aeb0063aa30594f0b92e8262183a4e9eda5
+```
+
+**Previous Hash**: `1a0c6332a378c14db59f8f0e72f38c9ef2249701d1532c7f17b47ffc518ea239` (Entry #524 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= df01a5ebeee0f2c117f3e58d7bebd054cc269090855af2a29a6efc6ac5fc759c
+```
+
+**Merkle Seal**: `8ddc8ad7f8372716fb101769f99c7e9bc33d5e9ca396a4509c3d0d69bb3f31de` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for burndown Cycle 2 (session 2026-08-19T2009-834004; research #522 -> audit PASS #523 -> implement #524; commit on fix/repo-scoped-first-run-295, stacked on Cycle 1). Reality = Promise: five src/test files per plan, docs truth updated (FX538/FX275/B-EM-3/CHANGELOGs), no unplanned files. Verification: full RED (9+6) -> GREEN (9/9 + 6/6) under local mocha with a scratchpad vscode-module shim; tsc + eslint 0 errors. Gate ladder: intent_lock VERIFIED, skill_admission ADMITTED, secret_scanner/merge_velocity/instruction_hygiene/governance-index all exit 0. DISCLOSED: (1) electron-host run mutex-blocked locally (same CodeSetup installer as Cycle 1); shim-based mocha is the local evidence, CI the authoritative host run at delivery; (2) no version bump/tag (release train HELD); (3) attribution trailer intentionally absent per operator identity directive. Board effect at delivery: #295 closes. Next: remaining burndown cycles (#83 A-C, voice #236/#237, audits #241-#244, #233).
