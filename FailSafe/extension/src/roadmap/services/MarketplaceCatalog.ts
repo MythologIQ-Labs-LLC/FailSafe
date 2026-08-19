@@ -16,6 +16,30 @@ import type {
 
 const MARKETPLACE_CATALOG: MarketplaceItem[] = [
   // ═══════════════════════════════════════════════════════════════════════════
+  // Agent Skills
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    id: "mattpocock-skills",
+    name: "Matt Pocock Engineering Skills (Wayfinder)",
+    description:
+      "MIT-licensed agent skill packs (engineering + productivity): wayfinder charts big, foggy efforts as decision-ticket maps on your issue tracker; plus grilling, domain-modeling, research, prototype, spec/ticket handoffs, and writing-for-agents.",
+    category: "agent-skills",
+    author: "mattpocock",
+    repoUrl: "https://github.com/mattpocock/skills",
+    repoRef: "main",
+    status: "not-installed",
+    trustTier: "unverified",
+    sandboxEnabled: true,
+    requiredPermissions: ["file:read", "file:write"],
+    featured: true,
+    tags: ["wayfinder", "planning", "skills", "issue-tracker", "decision-tickets", "productivity", "grilling"],
+    techStack: ["Markdown", "Agent Skills"],
+    version: "latest",
+    difficulty: "beginner",
+    auditStatus: "community",
+    licenseType: "MIT",
+  },
+  // ═══════════════════════════════════════════════════════════════════════════
   // Autonomous & Multi-Agent Frameworks
   // ═══════════════════════════════════════════════════════════════════════════
   {

@@ -8,7 +8,8 @@
 export type MarketplaceCategory =
   | "autonomous-multi-agent"
   | "safety-red-teaming"
-  | "ui-orchestration";
+  | "ui-orchestration"
+  | "agent-skills";
 
 export type InstallationStatus =
   | "not-installed"
@@ -129,6 +130,7 @@ export const CATEGORY_LABELS: Record<MarketplaceCategory, string> = {
   "autonomous-multi-agent": "Autonomous & Multi-Agent",
   "safety-red-teaming": "Safety & Red Teaming",
   "ui-orchestration": "UI & Orchestration",
+  "agent-skills": "Agent Skills",
 };
 
 export const DIFFICULTY_LABELS: Record<string, string> = {
