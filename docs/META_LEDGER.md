@@ -26973,3 +26973,35 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 Implemented plan-agents-window-configure-83bc.md (audit PASS #529) on fix/agents-window-configure-83bc (stacked). LD-3 runAgentsWindowConfigure pure-logic io-seam module + failsafe.configureAgentsWindow registration + manifest entry. LD-1/LD-2/LD-4: AGENTS_WINDOW doc SS2 guided-path pointer + SS4.x in-process-MCP reality check + SS4.y Agent Plugin DRAFT; BACKLOG [B209] standalone MCP bridge filed; FX909 row; CHANGELOGs. TDD note: T1-T4 are a brand-new pure unit (compile-red only, green on first run — disclosed); T5 observed genuinely red (manifest+wiring absent) then green. 5/5 passing; tsc 0 errors. Board effect at delivery: #83 closes (A+B+C complete; Phase-D validation issue splits out per operator ruling).
+
+
+---
+
+### Entry #531: SESSION SEAL - agents-window-configure-83bc
+
+**Timestamp**: 2026-08-19T23:25:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L2
+**Entry ID**: `9f52c6d31901`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-agents-window-configure-83bc.md)
+= ea4379fb5b3fccc20f766fa9c46f0628a640fc4bbedb18bbb1bbb7fe312860ea
+```
+
+**Previous Hash**: `ad30fbe6967493488a7ad35f23e4be91d3f88a2a49411a82840a1c4e0e444908` (Entry #530 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 78ef6e59f1e5724f543c2a2c05160f99f162445e9e6f58a6abb2f31251f5899c
+```
+
+**Merkle Seal**: `7d31d26c75e9e3bf3a9002b5979b00e1f8c4e558b45424bfc0c199c407452718` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for burndown Cycle 4 (#83 Phases B+C; session 2026-08-19T2041-fd571d; research #517-derived + in-process-MCP verification, audit PASS #529, implement #530; branch fix/agents-window-configure-83bc stacked). Reality = Promise: 4 src/test files + manifest + 5 doc surfaces. Verification: 5/5 green (T5 observed red->green; T1-T4 new pure unit, compile-red disclosed); tsc + eslint 0 errors. Gate ladder all exit 0. DISCLOSED: electron-host run defers to CI (updater mutex); no version bump/tag (HOLD); attribution trailer absent per operator identity directive. #83 A+B+C now COMPLETE across Cycles 3+4 — at delivery: close #83, file the Phase-D live-window validation issue (operator-run). Remaining burndown: voice #236/#237, audits #241-#244, #233, programs #232/#239.
