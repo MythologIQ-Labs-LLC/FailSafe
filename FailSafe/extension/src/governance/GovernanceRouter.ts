@@ -3,7 +3,7 @@ import * as fs from "fs";
 import { IntentService } from "./IntentService";
 import { EnforcementEngine, CommandExecutor } from "./EnforcementEngine";
 import { GovernanceStatusBar } from "./GovernanceStatusBar";
-import { ProposedAction, BlockVerdict } from "./types/IntentTypes";
+import { ProposedAction, BlockVerdict, Verdict } from "./types/IntentTypes";
 import { EvaluationRouter, CortexEvent } from "./EvaluationRouter";
 import { INotificationService } from "../core/interfaces/INotificationService";
 import { QorLogicManager } from "../qorelogic/QorLogicManager";
@@ -146,7 +146,31 @@ export class GovernanceRouter {
     }
 
     // 3. Evaluate Verdict via EnforcementEngine
-    const verdict = await this.enforcement.evaluateAction(action);
+    // Fail-closed on verdict-generation faults: unlike the ACP/MCP path
+    // (EngineBackedInterceptor, which maps an engine throw to a QUARANTINE
+    // receipt so "evaluate never rejects"), this editor-save path had no
+    // equivalent guard. A thrown/rejected evaluateAction() propagated as an
+    // uncaught rejection into vscode.workspace.onWillSaveTextDocument's
+    // event.waitUntil(...) — which is not guaranteed to block the save — and
+    // broke handleFileOperation's own documented "Returns FALSE if blocked"
+    // contract.
+    let verdict: Verdict;
+    try {
+      verdict = await this.enforcement.evaluateAction(action);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error("Verdict generation failed; failing closed", {
+        error: message,
+        targetFile: action.targetPath,
+      });
+      await this.showBlockade(
+        "Governance verdict generation failed",
+        "The action was blocked because FailSafe could not safely evaluate it against governance policy. Retry the save, or check FailSafe logs.",
+        { message },
+        action.targetPath,
+      );
+      return false;
+    }
 
     // 4. Handle Result
     if (verdict.status === "ALLOW") {
