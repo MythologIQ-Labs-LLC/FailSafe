@@ -95,7 +95,7 @@ suite("brainstorm listener hygiene (B198)", () => {
       r.prepBay = { destroy() {} };
       r.voice = { destroy() {} };
       r.webLlm = { destroy() {} };
-      r.graph = { canvas: null };
+      r.graph = { canvas: null, setCanvas(c: any) { this.canvas = c; } };
       r.container = null;
       const installedId = intervalCalls[0].id;
       r.destroy();
@@ -109,6 +109,36 @@ suite("brainstorm listener hygiene (B198)", () => {
     }
   });
 
+  test("#263 — BrainstormRenderer.destroy() resets graph.canvas and the #261 in-flight guard so a later render() rebuilds", () => {
+    let canvasDestroyCalls = 0;
+    const setCanvasCalls: any[] = [];
+    const canvasInstance = { destroy() { canvasDestroyCalls++; } };
+    const r: any = Object.create(BrainstormRenderer.prototype);
+    r._heartbeatInterval = null;
+    r._settingsBridges = {};
+    r._visualizerHandle = null;
+    r.keyboard = { unbind() {} };
+    r.voiceStatusBadge = null;
+    r.prepBay = { destroy() {} };
+    r.voice = { destroy() {} };
+    r.webLlm = { destroy() {} };
+    // #261: simulate a live, already-constructed canvas + tripped in-flight guard,
+    // i.e. the state BrainstormRenderer is in while the Mind Map tab is active.
+    r._canvasInit = true;
+    r.graph = {
+      canvas: canvasInstance,
+      setCanvas(c: any) { setCanvasCalls.push(c); this.canvas = c; },
+    };
+    r.container = null;
+    r.destroy();
+    assert.strictEqual(canvasDestroyCalls, 1, "the live canvas instance's destroy() must still be invoked");
+    assert.deepStrictEqual(setCanvasCalls, [null],
+      "graph.setCanvas(null) must be called so render()'s guard (`this.graph.canvas`) does not see a stale destroyed instance");
+    assert.strictEqual(r.graph.canvas, null);
+    assert.strictEqual(r._canvasInit, false,
+      "the #261 in-flight guard must be reset so a subsequent render() (tab re-show) does not early-return and silently fail to rebuild");
+  });
+
   test("BrainstormRenderer.destroy() invokes visualizer handle destroy() (cancels rAF)", () => {
     let visualizerDestroyCalls = 0;
     const r: any = Object.create(BrainstormRenderer.prototype);
@@ -120,7 +150,7 @@ suite("brainstorm listener hygiene (B198)", () => {
     r.prepBay = { destroy() {} };
     r.voice = { destroy() {} };
     r.webLlm = { destroy() {} };
-    r.graph = { canvas: null };
+    r.graph = { canvas: null, setCanvas(c: any) { this.canvas = c; } };
     r.container = null;
     r.destroy();
     assert.strictEqual(visualizerDestroyCalls, 1,
@@ -152,7 +182,7 @@ suite("brainstorm listener hygiene (B198)", () => {
       r.prepBay = { destroy() {} };
       r.voice = { destroy() {} };
       r.webLlm = { destroy() {} };
-      r.graph = { canvas: null };
+      r.graph = { canvas: null, setCanvas(c: any) { this.canvas = c; } };
       r.container = null;
       r.destroy();
       const removedNames = removed.map(r2 => r2.name).sort();

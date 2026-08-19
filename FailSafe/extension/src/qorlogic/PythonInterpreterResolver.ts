@@ -1,4 +1,5 @@
 import { spawn } from 'child_process';
+import * as path from 'path';
 
 export type RunResult = { stdout: string; stderr: string; code: number | null };
 export type RunCommand = (cmd: string, args: ReadonlyArray<string>) => Promise<RunResult>;
@@ -36,6 +37,22 @@ export type InterpreterResult = ResolvedInterpreter | UnresolvedInterpreter;
 const SETTING_KEY = 'failsafe.qorlogic.pythonPath';
 const MIN_MAJOR = 3;
 const MIN_MINOR = 11;
+const BARE_PYTHON_COMMANDS = new Set(['python3', 'python', 'py']);
+
+export function isSafePythonCommand(command: string): boolean {
+  if (
+    typeof command !== 'string'
+    || command.length === 0
+    || command.includes('\0')
+    || command.startsWith('-')
+  ) {
+    return false;
+  }
+  if (path.isAbsolute(command)) {
+    return true;
+  }
+  return BARE_PYTHON_COMMANDS.has(command);
+}
 
 const PROBE_CANDIDATES: ReadonlyArray<{ cmd: string; args: ReadonlyArray<string> }> = [
   { cmd: 'python3', args: [] },
@@ -79,18 +96,21 @@ export class PythonInterpreterResolver {
     return this.probeCandidates();
   }
 
-  private async tryUserPath(path: string): Promise<InterpreterResult> {
-    const probe = await this.runVersion(path, []);
-    if (!probe.found) return { ok: false, reason: 'user-path-invalid', detail: path };
+  private async tryUserPath(command: string): Promise<InterpreterResult> {
+    if (!isSafePythonCommand(command)) {
+      return { ok: false, reason: 'user-path-invalid', detail: command };
+    }
+    const probe = await this.runVersion(command, []);
+    if (!probe.found) return { ok: false, reason: 'user-path-invalid', detail: command };
     if (!isAcceptable(probe.version)) {
       return { ok: false, reason: 'version-too-old', detail: probe.raw };
     }
-    return { ok: true, command: path, args: [], version: probe.version, source: 'user-setting' };
+    return { ok: true, command, args: [], version: probe.version, source: 'user-setting' };
   }
 
   private async tryMsPython(): Promise<InterpreterResult> {
     const cmd = await this.readMsPythonInterpreter();
-    if (!cmd) return notFound();
+    if (!cmd || !isSafePythonCommand(cmd)) return notFound();
     const probe = await this.runVersion(cmd, []);
     if (!probe.found || !isAcceptable(probe.version)) return notFound();
     return { ok: true, command: cmd, args: [], version: probe.version, source: 'ms-python' };
@@ -170,7 +190,18 @@ function readArrayHead(details: unknown): string | null {
 }
 
 export const defaultRun: RunCommand = (cmd, args) => new Promise((resolve) => {
-  const child = spawn(cmd, [...args], { shell: false });
+  if (!isSafePythonCommand(cmd)) {
+    resolve({ stdout: '', stderr: `Unsupported Python executable: ${cmd}`, code: 126 });
+    return;
+  }
+  const argv = [...args];
+  const child = cmd === 'python3'
+    ? spawn('python3', argv, { shell: false })
+    : cmd === 'python'
+      ? spawn('python', argv, { shell: false })
+      : cmd === 'py'
+        ? spawn('py', argv, { shell: false })
+        : spawn(cmd, argv, { shell: false }); // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- absolute interpreter path validated by isSafePythonCommand
   let stdout = '';
   let stderr = '';
   child.stdout?.on('data', (chunk) => { stdout += chunk.toString(); });

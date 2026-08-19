@@ -52,7 +52,11 @@ export class CommitGuard {
     const backupPath = this.hookPath + this.backupSuffix;
     if (fs.existsSync(backupPath)) {
       fs.renameSync(backupPath, this.hookPath);
-    } else if (fs.existsSync(this.hookPath)) {
+    } else if (await this.isInstalled()) {
+      // Only remove hookPath if it is still FailSafe's own script. A prior
+      // uninstall() may already have consumed the backup and restored the
+      // user's real hook (or another actor may have written an unrelated
+      // file there); unconditionally deleting it would destroy that file.
       fs.unlinkSync(this.hookPath);
     }
     if (fs.existsSync(this.tokenPath)) {

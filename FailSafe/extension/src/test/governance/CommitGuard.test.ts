@@ -173,6 +173,50 @@ describe("CommitGuard", function () {
       assert.ok(content.includes("original"));
       assert.ok(!content.includes("FailSafe"));
     });
+
+    it("a second uninstall() call does not delete the just-restored original hook", async () => {
+      const hookPath = path.join(tmpDir, ".git", "hooks", "pre-commit");
+      fs.writeFileSync(hookPath, '#!/bin/sh\necho "original"', { mode: 0o755 });
+
+      await guard.install();
+      await guard.uninstall();
+      // Backup is consumed; hookPath now holds the user's real restored hook.
+      await guard.uninstall();
+
+      assert.ok(
+        fs.existsSync(hookPath),
+        "second uninstall() must not delete the restored non-FailSafe hook",
+      );
+      const content = fs.readFileSync(hookPath, "utf8");
+      assert.ok(content.includes("original"));
+    });
+
+    it("a duplicate uninstall() call after install-without-backup is a safe no-op", async () => {
+      await guard.install();
+      await guard.uninstall();
+      // No backup ever existed and hookPath is already gone; must not throw.
+      await guard.uninstall();
+      const hookPath = path.join(tmpDir, ".git", "hooks", "pre-commit");
+      assert.ok(!fs.existsSync(hookPath));
+    });
+
+    it("uninstall() does not delete an unrelated file left at hookPath after the backup is gone", async () => {
+      const hookPath = path.join(tmpDir, ".git", "hooks", "pre-commit");
+      fs.writeFileSync(hookPath, '#!/bin/sh\necho "original"', { mode: 0o755 });
+
+      await guard.install();
+      await guard.uninstall();
+      // Simulate another actor placing an unrelated file at hookPath between calls.
+      fs.writeFileSync(hookPath, '#!/bin/sh\necho "someone-elses-hook"', {
+        mode: 0o755,
+      });
+      await guard.uninstall();
+
+      assert.ok(
+        fs.existsSync(hookPath),
+        "uninstall() must not delete a non-FailSafe file it did not install",
+      );
+    });
   });
 
   describe("isInstalled", () => {

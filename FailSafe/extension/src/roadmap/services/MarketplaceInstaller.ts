@@ -26,11 +26,22 @@ function defaultRunner(
   timeout = DEFAULT_TIMEOUT,
 ): Promise<CommandRunnerResult> {
   return new Promise((resolve) => {
-    const proc = spawn(command, args, {
-      cwd,
-      shell: true,
-      timeout,
-    });
+    const options = { cwd, shell: false as const, timeout };
+    const proc = command === "git"
+      ? spawn("git", args, options)
+      : command === "pip"
+        ? spawn("pip", args, options)
+        : command === "npm"
+          ? spawn("npm", args, options)
+          : null;
+    if (!proc) {
+      resolve({
+        code: 126,
+        stdout: "",
+        stderr: `Unsupported marketplace executable: ${command}`,
+      });
+      return;
+    }
 
     let stdout = "";
     let stderr = "";
