@@ -58,11 +58,11 @@ Under the hood, a **Tier 1 supply-chain CI baseline** (least-privilege workflow 
 
 <div align="center">
 
-**Current Release**: v6.0.1 (2026-08-19)
+**Current Release**: v6.0.0 (2026-08-19)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
 
-## What's new in v6.0.1
+## What's new in v6.0.0
 
 - **Mind Map view prefs survive reload on any machine.** Fixed an identity race the v6.0.0 release gate caught (that tag was never published).
 - **More fail-closed hardening + accessibility.** L3 escalation-queue failures fail visibly; ACP mirror-write and fs no-client paths fail closed; real ARIA tab semantics on the Command Center nav and sub-view pills; Space push-to-talk guarded against focused controls.

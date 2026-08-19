@@ -7,13 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [6.0.1] - 2026-08-19
+## [6.0.0] - 2026-08-19
 
 ### Fixed
 - **Fail-closed + accessibility hardening (rolled in):** L3 escalation-queue fail-visible (#308); ACP governance-mode mirror-write fail-closed (#299); ACP fs no-client-support fail-closed (#300); ARIA tab semantics for primary nav (#302) and sub-view pills (#304); Mind Map Space push-to-talk guard (#307).
-- **Mind Map view prefs survive reload on slow machines.** The canvas could construct before the hub delivered the workspace identity, loading persisted layout/view prefs under the wrong key and sticking on FORCE/2D defaults (caught by the v6.0.0 release gate — that tag was never published). Prefs now reconcile to the live canvas whenever the identity arrives. (#309 sibling fix; FX897/#263)
-
-## [6.0.0] - 2026-08-19
+- **Mind Map view prefs survive reload on slow machines.** The canvas could construct before the hub delivered the workspace identity, loading persisted layout/view prefs under the wrong key and sticking on FORCE/2D defaults (caught by this release's own gate on a prior tag attempt). Prefs now reconcile to the live canvas whenever the identity arrives. (#309 sibling fix; FX897/#263)
 
 ### Fixed (stabilization wave, rolled into this release)
 - Extension lifecycle: activation-crash and deactivate teardown resilience; workspace-folder changes surfaced instead of silently ignored (#285, #288).

@@ -40,11 +40,11 @@ Each integration ships with its own README and its external API names are back-c
 
 ---
 
-**Current Release**: v6.0.1 (2026-08-19)
+**Current Release**: v6.0.0 (2026-08-19)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
 
-## What's New in v6.0.1
+## What's New in v6.0.0
 
 - **Mind Map view prefs survive reload on any machine.** Fixed an identity race the v6.0.0 release gate caught (that tag was never published).
 - **More fail-closed hardening + accessibility.** L3 escalation-queue failures fail visibly; ACP mirror-write and fs no-client paths fail closed; real ARIA tab semantics on the Command Center nav and sub-view pills; Space push-to-talk guarded against focused controls.
