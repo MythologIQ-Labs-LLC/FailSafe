@@ -50,3 +50,31 @@ export function writeRuntimeMode(workspaceRoot: string, mode: GovernanceMode): v
   fs.writeFileSync(tmp, `${JSON.stringify({ mode }, null, 2)}\n`, 'utf8');
   fs.renameSync(tmp, target);
 }
+
+/** Mirror the mode; on write failure, best-effort DELETE the mirror instead of
+ *  leaving stale (possibly more-permissive) content in place. `writeRuntimeMode`
+ *  is atomic against corruption (temp+rename), but a mid-write failure — mkdir,
+ *  write, or rename — simply leaves the PREVIOUS valid file untouched, and the
+ *  caller had no way to distinguish "wrote fine" from "failed, old value still
+ *  there." Without this, a mode tightened from observe/assist to enforce that
+ *  fails to persist silently leaves the standalone ACP proxy reading the old,
+ *  more-permissive mode on every subsequent decision. Deleting the mirror
+ *  forces `readRuntimeMode`'s existing missing-mirror fail-closed default
+ *  ("enforce") to take over instead. Returns true on a successful write. */
+export function writeRuntimeModeOrInvalidate(
+  workspaceRoot: string,
+  mode: GovernanceMode,
+  write: (workspaceRoot: string, mode: GovernanceMode) => void = writeRuntimeMode,
+): boolean {
+  try {
+    write(workspaceRoot, mode);
+    return true;
+  } catch {
+    try {
+      fs.unlinkSync(runtimeModePath(workspaceRoot));
+    } catch {
+      /* best-effort; a missing/already-invalid mirror is already fail-closed */
+    }
+    return false;
+  }
+}
