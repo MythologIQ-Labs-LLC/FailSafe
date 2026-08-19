@@ -23,9 +23,11 @@ function repoRoot(): string {
 }
 
 suite('v5 documentation coherence', () => {
-  test('extension package.json version matches /^5\\.\\d+\\.\\d+$/', () => {
+  test('extension package.json version is a bare semver at major >= 5', () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(extensionRoot(), 'package.json'), 'utf8'));
-    assert.match(pkg.version, /^5\.\d+\.\d+$/);
+    assert.match(pkg.version, /^\d+\.\d+\.\d+$/);
+    assert.ok(Number(pkg.version.split('.')[0]) >= 5,
+      `major must be >= 5 (the v5 reveal baseline); got ${pkg.version}`);
   });
 
   test('extension package.json description is not the legacy "AI governance platform" framing', () => {

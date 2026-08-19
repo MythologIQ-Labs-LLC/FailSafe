@@ -40,9 +40,16 @@ Each integration ships with its own README and its external API names are back-c
 
 ---
 
-**Current Release**: v5.9.0 (2026-06-12)
+**Current Release**: v6.0.0 (2026-08-19)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v6.0.0
+
+- **Enforce is now the default governance mode.** New and never-configured installs gate writes out of the box (intent-gated saves, L3 approvals). Observe and Assist are unchanged and one command away (`FailSafe: Set Governance Mode`); a one-time notice on upgrade offers the mode picker. Unresolvable mode values and a missing ACP mode mirror now fail closed to enforce.
+- **Enforcement works on every tier.** The editor enforcement path no longer consults any feature gate.
+- **Enforce-mode Create Intent flow.** Creating an intent in enforce mode first selects the plan it serves, with an explicit switch-mode escape; the writes-blocked dialog offers `Set Governance Mode`.
+- **Cleaner product surface.** The observe-mode advisory banner and settings hint are removed, and `/api/v1/status` now reports the true governance mode.
 
 ## What's New in v5.9.0
 

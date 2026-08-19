@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0] - 2026-08-19
+
+### Fixed (stabilization wave, rolled into this release)
+- Extension lifecycle: activation-crash and deactivate teardown resilience; workspace-folder changes surfaced instead of silently ignored (#285, #288).
+- Console/roadmap: WebSocket clients terminated on ConsoleServer teardown (#284); Mind Map canvas + in-flight guard reset on destroy for tab round-trips (#283); real-socket lifecycle evidence for ConsoleLifecycleService (#281).
+- Governance: break-glass override recovered across extension-host restart (#290); CommitGuard.uninstall() made idempotent (#291).
+- ACP: orphaned real-agent child killed on proxy interruption (#287).
+- Voice: wake-word retry timer cancelled on stop/destroy (#286).
+- Genesis/UI: disposed Command Center panels no longer reveal()ed (#289); marketplace crash-stale installing/scanning state recovered on restart (#293).
+
+### Security
+- Zero-cost OSS SAST wiring and hardened command boundaries (#267).
+- Dependency updates: hono, @hono/node-server, js-yaml, fast-uri, undici, ip-address, brace-expansion, linkify-it, body-parser, actions/checkout, actions/setup-node (11 Dependabot PRs).
+
 ### Changed (Breaking)
 - **Enforce is now the default governance mode.** Never-configured installs gate writes out of the box (intent-gated saves, L3 approvals); a one-time notice on upgrade offers the mode picker. Observe and Assist are unchanged and one QuickPick away (`FailSafe: Set Governance Mode`). An unresolvable mode value now fails closed to enforce, and the ACP proxy's missing/malformed mode mirror also resolves to enforce (was observe). (FX899, FX902)
 - **Editor-level enforce works on every tier.** The internal `governance.lockstep` feature-gate check was removed from the editor enforcement path; enforcement no longer depends on license tier. (FX900)
