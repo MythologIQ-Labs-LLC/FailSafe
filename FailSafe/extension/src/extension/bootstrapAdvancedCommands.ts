@@ -14,7 +14,7 @@ import type { CommitGuard } from "../governance/CommitGuard";
 import type { ConfigManager } from "../shared/ConfigManager";
 import type { EventBus } from "../shared/EventBus";
 import type { GovernanceMode } from "../governance/types";
-import { writeRuntimeMode } from "../integrations/acp/proxy/backing/runtimeMode";
+import { writeRuntimeModeOrInvalidate } from "../integrations/acp/proxy/backing/runtimeMode";
 
 export interface AdvancedCommandsDeps {
   ledgerManager: LedgerManager;
@@ -44,10 +44,13 @@ export function registerAdvancedCommands(
   // (a separate process that cannot read VS Code settings) reads the current mode.
   // Mirror once on activation, then on every change below. Degrade-safe.
   const mirrorMode = (mode: string): void => {
-    try {
-      writeRuntimeMode(deps.workspaceRoot, mode as GovernanceMode);
-    } catch (err) {
-      logger.error("Failed to mirror governance mode for ACP proxy", err);
+    const ok = writeRuntimeModeOrInvalidate(deps.workspaceRoot, mode as GovernanceMode);
+    if (!ok) {
+      logger.error(
+        "Failed to mirror governance mode for ACP proxy; invalidated the stale mirror " +
+          "so the proxy falls back to its fail-closed default instead of an old, " +
+          "possibly more-permissive mode",
+      );
     }
   };
   mirrorMode(lastKnownMode);
