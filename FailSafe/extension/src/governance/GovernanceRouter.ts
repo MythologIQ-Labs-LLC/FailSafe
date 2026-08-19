@@ -125,14 +125,35 @@ export class GovernanceRouter {
         // Non-fatal: proceed without hash
       }
 
-      const governanceResult = await this.governanceAdapter.evaluate({
-        action: "file.write",
-        agentDid: "vscode-user",
-        intentId: activeIntent?.id,
-        artifactPath: fsPath,
-        artifactHash,
-        payload: { actionType: action.type },
-      });
+      // Fail-closed on GovernanceAdapter faults, mirroring the step-3
+      // EnforcementEngine guard below: an uncaught throw/reject here would
+      // otherwise propagate out of handleFileOperation as an uncaught
+      // promise rejection into event.waitUntil(...), breaking the method's
+      // own "Returns FALSE if blocked" contract.
+      let governanceResult;
+      try {
+        governanceResult = await this.governanceAdapter.evaluate({
+          action: "file.write",
+          agentDid: "vscode-user",
+          intentId: activeIntent?.id,
+          artifactPath: fsPath,
+          artifactHash,
+          payload: { actionType: action.type },
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        this.logger.error("Governance preflight evaluation failed; failing closed", {
+          error: message,
+          targetFile: action.targetPath,
+        });
+        await this.showBlockade(
+          "Governance preflight evaluation failed",
+          "The action was blocked because FailSafe could not safely evaluate it against governance policy. Retry the save, or check FailSafe logs.",
+          { message },
+          action.targetPath,
+        );
+        return false;
+      }
 
       if (!governanceResult.allowed) {
         await this.showBlockade(
