@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **`/api/v1/status` `governance.mode`** now reports the governance mode (observe/assist/enforce) instead of echoing the Sentinel analysis mode. (FX903)
 - **GovernanceRouter fails closed on verdict faults.** When verdict generation throws (e.g., a corrupted intent store), the router now returns a blocking verdict instead of silently allowing the write. (#296)
+- **VerdictArbiter escalates malformed payloads.** A verdict payload that fails schema validation now escalates for review instead of silently PASSing. (#297, #316)
 - **Malformed META_LEDGER is reported as damaged, not idle.** The governance-phase projection distinguishes a ledger that fails to parse from a workspace with no governance activity. (#244, #312)
 - **Command Center primary navigation announces its state to assistive tech.** The Overview/Learn/Agents/Governance/Workspace/Integrations/Config tab strip communicated the active section by color and a left border only; screen-reader users had no `role`/`aria-selected` to tell which section was current. The tab strip is now a proper `role="tablist"` of `role="tab"` buttons with `aria-controls`/`aria-selected` kept in sync on every switch, and each panel is a labelled `role="tabpanel"`. (FX904)
 

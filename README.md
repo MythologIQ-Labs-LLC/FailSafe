@@ -70,7 +70,7 @@ Under the hood, a **Tier 1 supply-chain CI baseline** (least-privilege workflow 
 - **Cleaner product surface.** The observe-mode advisory banner and settings hint are removed, and `/api/v1/status` now reports the true governance mode.
 - **Agent Skills marketplace category.** Install the MIT-licensed [mattpocock/skills](https://github.com/mattpocock/skills) packs (Wayfinder decision-ticket planning + engineering/productivity companions) as governed, risk-scored marketplace entries.
 - **Mind Map view prefs survive reload on any machine.** Fixed a view-preferences identity race caught by the release gate.
-- **More fail-closed hardening + accessibility.** GovernanceRouter verdict faults now block instead of silently allowing; a malformed META_LEDGER reads as damaged, not idle; L3 escalation-queue failures fail visibly; ACP mirror-write and fs no-client paths fail closed; real ARIA tab semantics on the Command Center nav and sub-view pills; Space push-to-talk guarded against focused controls.
+- **More fail-closed hardening + accessibility.** GovernanceRouter verdict faults now block instead of silently allowing; malformed verdict payloads escalate instead of silently PASSing; a malformed META_LEDGER reads as damaged, not idle; L3 escalation-queue failures fail visibly; ACP mirror-write and fs no-client paths fail closed; real ARIA tab semantics on the Command Center nav and sub-view pills; Space push-to-talk guarded against focused controls.
 
 ## What's new in v5.9.0
 
