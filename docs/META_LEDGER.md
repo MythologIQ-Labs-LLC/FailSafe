@@ -26916,3 +26916,60 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 SESSION SEAL for burndown Cycle 3 (#83 Phase A core; session 2026-08-19T2021-9acb11; research = deep-dive #517 with citations re-verified, audit PASS #526, implement #527; branch fix/worktree-commitguard-83a stacked). Reality = Promise: all 13 declared src/test files + 5 doc surfaces, no unplanned files. Verification: 33/33 green under shim-mocha with REAL git init/worktree fixtures; tsc + eslint 0 errors. Gate ladder all exit 0; intent lock VERIFIED. DISCLOSED: electron-host run defers to CI (updater mutex, third consecutive cycle); no version bump/tag (HOLD); attribution trailer absent per operator identity directive. Board effect at delivery: #83 Phases A-C progress (A core done; B/C next cycle); FX115 promoted n/a->verified closing a documented-but-unimplemented gap. Hermeticity lesson recorded in #527. Next: Cycle 4 (#83 B/C) then voice/audits/#233.
+
+
+---
+
+### Entry #529: GATE TRIBUNAL - agents-window-configure-83bc
+
+**Timestamp**: 2026-08-19T22:55:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= 8a83a4d9c75ed6704262ac26a0ad3a3aa35400b064d6ae1532b0b736492a8a03
+```
+
+**Previous Hash**: `c4a5c36baaf901a073d52a401d3f99ec80600484c0c1811f9b870da79ead8a43` (Entry #528 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 81f3a0195aff2b6bffa75b98d99e1b624a9c09656b541e7e68550691a024f9d7
+```
+
+## Decision
+
+PASS on plan-agents-window-configure-83bc.md iteration 1 (#83 Phases B+C). Ghost-config refusal verified (FailSafeServer in-process; B209 filed instead); plan-authoring ghost command name caught by the grep pass and corrected pre-audit (failsafe.mcp.installCatalog). Next: /qor-implement on fix/agents-window-configure-83bc, local commits only.
+
+
+---
+
+### Entry #530: IMPLEMENTATION - agents-window-configure-83bc
+
+**Timestamp**: 2026-08-19T23:15:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(git diff -- FailSafe/extension/src FailSafe/extension/package.json)
+= af21ee62880988d42b822af30896f1e8edf91a9751ef28062b2617913d18c6d2
+```
+
+**Previous Hash**: `81f3a0195aff2b6bffa75b98d99e1b624a9c09656b541e7e68550691a024f9d7` (Entry #529 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= ad30fbe6967493488a7ad35f23e4be91d3f88a2a49411a82840a1c4e0e444908
+```
+
+## Decision
+
+Implemented plan-agents-window-configure-83bc.md (audit PASS #529) on fix/agents-window-configure-83bc (stacked). LD-3 runAgentsWindowConfigure pure-logic io-seam module + failsafe.configureAgentsWindow registration + manifest entry. LD-1/LD-2/LD-4: AGENTS_WINDOW doc SS2 guided-path pointer + SS4.x in-process-MCP reality check + SS4.y Agent Plugin DRAFT; BACKLOG [B209] standalone MCP bridge filed; FX909 row; CHANGELOGs. TDD note: T1-T4 are a brand-new pure unit (compile-red only, green on first run — disclosed); T5 observed genuinely red (manifest+wiring absent) then green. 5/5 passing; tsc 0 errors. Board effect at delivery: #83 closes (A+B+C complete; Phase-D validation issue splits out per operator ruling).

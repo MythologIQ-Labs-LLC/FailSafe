@@ -287,6 +287,10 @@
         "title": "FailSafe: Install Commit Hook"
       },
       {
+        "command": "failsafe.configureAgentsWindow",
+        "title": "FailSafe: Configure VS Code Agents Window Governance"
+      },
+      {
         "command": "failsafe.removeCommitHook",
         "title": "FailSafe: Remove Commit Hook"
       },

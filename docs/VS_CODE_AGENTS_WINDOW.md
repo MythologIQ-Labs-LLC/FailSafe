@@ -15,6 +15,8 @@ A dedicated, chat-first VS Code window that works across workspaces and runs/tra
 
 ## 2. Opting FailSafe in
 
+> **Guided path:** run `FailSafe: Configure VS Code Agents Window Governance` (`failsafe.configureAgentsWindow`, shipped with #83 B+C) — it walks the user-setting opt-in, worktree commit-hook install, and governed `.mcp.json` integration install without writing any user-level setting itself.
+
 ```jsonc
 // USER settings, default profile. There is NO package.json manifest key —
 // enablement is entirely user-side; FailSafe cannot self-opt-in.
@@ -50,6 +52,25 @@ With agent runtime outside the extension host, extension-host interception canno
 3. **Workspace `.mcp.json`** — governance MCP config the Agent Host forwards.
 4. **Agent Plugins 1.0** — a FailSafe plugin package (skills + instructions + MCP) as first-class packaging.
 Do NOT design workflows around the sidebar Command Center, status bars, or extension chat tools inside Agent Host sessions.
+
+
+### 4.x MCP reality check (#83 B, 2026-08-19)
+
+FailSafe's own MCP server (`src/mcp/FailSafeServer.ts`) runs **in-process in the extension host** — there is no standalone spawnable entry, so a workspace `.mcp.json` entry naming FailSafe would be a ghost config the Agent Host cannot launch. Until the standalone governance MCP bridge ships (**BACKLOG [B209]**: a thin stdio-MCP client proxying to the ConsoleServer HTTP API, esbuild-bundled like `dist/acp-proxy.js`), route MCP needs through the governed catalog installer (`FailSafe: Install MCP Integration (governed)`), which writes real, launchable entries.
+
+### 4.y Agent Plugin package — DRAFT (not shipped, no compatibility claim)
+
+Agent Plugins 1.0 (VS Code 1.133) would package FailSafe governance as `failsafe-plugin/`:
+
+```text
+failsafe-plugin/
+├── plugin.json          # name, version, description
+├── skills/              # the qor-logic SHIELD skill corpus (same payload the
+│                        #   Install QorLogic Skills machinery deploys today)
+└── mcp.json             # BLOCKED on [B209] — no standalone server to declare
+```
+
+This section is a design draft only: nothing ships until [B209] gives `mcp.json` something real to point at, and the Agents window remains upstream-preview (no validated-compatibility claims, per this document's standing posture).
 
 ## 5. Worktree isolation (present-tense risk, now sharper)
 

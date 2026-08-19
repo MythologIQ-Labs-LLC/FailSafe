@@ -221,6 +221,24 @@ async function registerCeremonyCommands(
     ),
   );
 
+  // #83 Phases B+C (FX909): guided Agents-window preparation. Pure logic in
+  // agentsWindowConfigure.ts; this wiring only supplies the vscode io seam.
+  context.subscriptions.push(
+    vscode.commands.registerCommand("failsafe.configureAgentsWindow", async () => {
+      const { runAgentsWindowConfigure } = await import("./agentsWindowConfigure");
+      await runAgentsWindowConfigure({
+        showInfo: (message, ...buttons) =>
+          Promise.resolve(vscode.window.showInformationMessage(message, ...buttons)),
+        openSettings: async (query) => {
+          await vscode.commands.executeCommand("workbench.action.openSettings", query);
+        },
+        runCommand: async (id) => {
+          await vscode.commands.executeCommand(id);
+        },
+      });
+    }),
+  );
+
   // First-Run Onboarding (B88)
   const { FirstRunOnboarding } = await import("../genesis/FirstRunOnboarding");
   const onboarding = new FirstRunOnboarding(deps.configManager, ceremony);
