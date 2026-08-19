@@ -254,6 +254,11 @@ export class BrainstormRenderer {
     this._wakeHandler = null; this.keyboard.unbind();
     this.voiceStatusBadge?.detach(); this.voiceStatusBadge = null;
     this.prepBay.destroy(); this.voice.destroy(); this.webLlm.destroy();
-    this.graph.canvas?.destroy(); if (this.container) this.container.innerHTML = '';
+    this.graph.canvas?.destroy(); this.graph.setCanvas(null);
+    // #263: reset the #261 in-flight guard alongside the canvas reference so a
+    // later render() (tab re-show) reconstructs cleanly instead of early-returning
+    // against a stale destroyed canvas / stale in-flight flag.
+    this._canvasInit = false;
+    if (this.container) this.container.innerHTML = '';
   }
 }
