@@ -26593,3 +26593,88 @@ _Hash provenance_: Content Hash = SHA256 of the brief. Chain Hash = SHA256(conte
 
 _Chain integrity: VALID_
 _Session: 2026-08-19T0540-98a3b2_
+
+
+---
+
+### Entry #518: RESEARCH BRIEF - #297 completion + #319 FX897 residual
+
+**Timestamp**: 2026-08-19T19:20:00Z
+**Phase**: RESEARCH
+**Author**: Analyst
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(.failsafe/governance/RESEARCH_BRIEF_297-319-fail-closed-fx897-2026-08-19.md)
+= 6735bda4bf7835746ace591ef8f9e3e6f95e89f7324ea0e4261820b1f581532d
+```
+
+**Previous Hash**: `c4028a116fb42d5002a85fce24850e8525653644df7c42768d288a5e976677dd` (Entry #517 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= e08699d0c4d386cb47d0862b130017e5df53f7bdaac2a23941a686f9cc2b503a
+```
+
+## Decision
+
+Cycle 1 of the operator-directed issue burndown (release HOLD until board clear; pipeline run 32288150900 cancelled at the production gate, nothing published, Build & Test green on rerun). Scope A (#297): four unguarded awaits in GovernanceRouter.handleFileOperation (:82/:102/:108/:128) ahead of the Slice-1 guard; sole production caller wires the promise into event.waitUntil where rejection is not a guaranteed block; showBlockade awaits the notifier (:279) so the guard must tolerate a throwing notifier; NO timeout machinery exists in EnforcementEngine (deeper than the issue's missing-test framing). Scope B (#319): reconcile fires only on identity change observed by render(); the defect window is [canvas construction, first hub delivery) — WS-to-SSE failover on slow CI delays that beyond the spec's 10s poll; identity-absence at construction is the true gap (fallback-key + post-construction reconcile recommended). Findings advisory; next: /qor-plan.
+
+
+---
+
+### Entry #519: GATE TRIBUNAL - fail-closed-297-319
+
+**Timestamp**: 2026-08-19T19:55:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= 4de7dc7952efa790242c83b57fb14a980f19f35b93a329fbf5c00c655ef4ee33
+```
+
+**Previous Hash**: `e08699d0c4d386cb47d0862b130017e5df53f7bdaac2a23941a686f9cc2b503a` (Entry #518 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 4fdedd1301ef2f8f40da517cc7fbe60605c29d772817996e6a59bf5b3c8966cd
+```
+
+## Decision
+
+PASS on plan-fail-closed-297-319.md iteration 1. All twelve passes clear. Disclosures: (1) pre-existing Razor overage in GovernanceRouter.ts (293 lines; handleFileOperation body >40L moved verbatim) — future /qor-refactor candidate, not introduced by this plan; (2) plan_grep_lint canonical-shape WARN on 6 citations — inline command+observed-text evidence re-verified live by the Judge this audit. Non-blocking observations: T4 must stub route() to invokeQorLogic:true; LD-2 timeout cannot extend the VS Code waitUntil platform budget (declared limitation). Next: /qor-implement on fix/fail-closed-297-319, local commits only (operator release HOLD).
+
+
+---
+
+### Entry #520: IMPLEMENTATION - fail-closed-297-319
+
+**Timestamp**: 2026-08-19T20:10:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(git diff -- FailSafe/extension/src)
+= 5c470f0648b5251640097c121e6900715017b75a69eab1a3241115deb5c6c3b1
+```
+
+**Previous Hash**: `4fdedd1301ef2f8f40da517cc7fbe60605c29d772817996e6a59bf5b3c8966cd` (Entry #519 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 44195b56b9c1f3dca8a0a2cca9a775c9e4811e2a171c458cc11f4466224a4ac2
+```
+
+## Decision
+
+Implemented plan-fail-closed-297-319.md (audit PASS #519) on branch fix/fail-closed-297-319. Phase 1 (#297/FX905): handleFileOperation total guard (outer try/catch delegating to handleFileOperationInner), withTimeout helper applied at the evaluateAction and governanceAdapter.evaluate sites (verdictTimeoutMs ctor param, default 10_000ms), showBlockade notifier-fault totality. Phase 2 (#319/FX897): LAST_IDENTITY_KEY + resolveIdentity fallback in brainstorm-graph-io.js (save records real identity; identity-less load/save fall back), initCanvas post-construction applyViewPrefs reconcile, spec identity-poll sequencing. TDD: T1-T6 red (6 failing) then green; T7/T9/T10 red (T8 pinned existing default, green) then green; 22/22 passing across the three suites; Slice-1 test unbroken. Lint 0 errors. FEATURE_INDEX: FX905 NEW + FX897 refreshed; CHANGELOG [Unreleased] both files. Full unit suite result recorded at seal (local VS Code updater mutex may defer to CI).

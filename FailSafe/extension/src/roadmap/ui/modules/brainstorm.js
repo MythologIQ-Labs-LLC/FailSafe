@@ -137,6 +137,10 @@ export class BrainstormRenderer {
     if (!container) return;
     const canvas = new BrainstormCanvas(container, loadViewPrefs(this.workspacePath));
     this.graph.setCanvas(canvas);
+    // #319: reconcile once the canvas exists — heals any identity that arrived
+    // (or was recorded by a prior save) between render dispatch and fetch
+    // resolution; idempotent, also syncs the toolbar highlights.
+    applyViewPrefs(this);
     canvas.onDagFallback = (layout) => this.showStatus(`${layout} layout needs an acyclic graph — reverted to FORCE.`, 'var(--accent-gold)');
     this._updateEmptyState = () => {
       const el = this.container?.querySelector('.cc-bs-empty-state');

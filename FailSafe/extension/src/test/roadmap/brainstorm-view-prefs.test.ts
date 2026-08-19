@@ -65,6 +65,32 @@ suite("FX897 brainstorm view prefs", () => {
   });
 });
 
+// #319 — identity fallback: prefs must survive the [canvas construction,
+// first hub delivery) window where workspacePath is still '' on reload.
+// saveViewPrefs records the last real identity; both IO functions fall back
+// to it when called identity-less.
+suite("FX897/#319 brainstorm view prefs — identity fallback", () => {
+  registerViewPrefsHooks();
+
+  test("T7: loadViewPrefs('') returns prefs saved under the recorded last identity", () => {
+    saveViewPrefs({ layout: "TREE", viewMode: "3D" }, "G:/repo/A");
+    assert.deepEqual(loadViewPrefs(""), { layout: "TREE", viewMode: "3D" });
+  });
+
+  test("T8: loadViewPrefs('') with no recorded identity keeps the terminal defaults", () => {
+    assert.deepEqual(loadViewPrefs(""), { layout: "FORCE", viewMode: "2D" });
+  });
+
+  test("T9: saveViewPrefs(prefs, '') after a real-identity save persists under the real key", () => {
+    saveViewPrefs({ layout: "TREE", viewMode: "3D" }, "G:/repo/A");
+    saveViewPrefs({ layout: "CIRCLE", viewMode: "2D" }, "");
+    assert.deepEqual(loadViewPrefs("G:/repo/A"), { layout: "CIRCLE", viewMode: "2D" },
+      "an identity-less save heals onto the last recorded identity");
+    assert.equal(store.has(viewPrefsKey("")), false,
+      "nothing lands in the 'local' bucket while a real identity is known");
+  });
+});
+
 suite("FX897 brainstorm view prefs", () => {
   registerViewPrefsHooks();
   test("save never throws when localStorage is unavailable", () => {

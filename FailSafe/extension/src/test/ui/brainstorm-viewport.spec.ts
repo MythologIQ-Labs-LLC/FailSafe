@@ -112,6 +112,13 @@ test("FX897 — layout + view selection survive page reload (toolbar screenshot 
     return JSON.parse(localStorage.getItem(key) || "{}");
   })).toEqual({ layout: "TREE", viewMode: "3D" });
   await gotoMindmap(page, controller.url); // full reload
+  // #319: sequence identity delivery out of the product assertion — on slow
+  // runners the first hub event (WS→SSE failover) can lag; the prefs heal via
+  // the last-identity fallback regardless, but the poll makes the intended
+  // path explicit instead of entangling environment latency with the gate.
+  await expect.poll(() => page.evaluate(() => {
+    return (globalThis as any).__bs?.()?.workspacePath || "";
+  }), { timeout: 20000 }).not.toBe("");
   await expect.poll(() => page.evaluate(() => {
     const c = (globalThis as any).__bs?.()?.graph?.canvas;
     return c ? { layout: c.layout, viewMode: c.viewMode } : null;
