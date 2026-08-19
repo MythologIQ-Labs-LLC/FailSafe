@@ -7,10 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- **Agent Skills marketplace category.** The Integrations Marketplace gains an Agent Skills category with the MIT-licensed [mattpocock/skills](https://github.com/mattpocock/skills) pack (Wayfinder decision-ticket planning + companions) as its first entry. (FX904)
-
 ## [6.0.0] - 2026-08-19
+
+### Fixed
+- **Fail-closed + accessibility hardening (rolled in):** L3 escalation-queue fail-visible (#308); ACP governance-mode mirror-write fail-closed (#299); ACP fs no-client-support fail-closed (#300); ARIA tab semantics for primary nav (#302) and sub-view pills (#304); Mind Map Space push-to-talk guard (#307).
+- **Mind Map view prefs survive reload on slow machines.** The canvas could construct before the hub delivered the workspace identity, loading persisted layout/view prefs under the wrong key and sticking on FORCE/2D defaults (caught by this release's own gate on a prior tag attempt). Prefs now reconcile to the live canvas whenever the identity arrives. (#309 sibling fix; FX897/#263)
 
 ### Fixed (stabilization wave, rolled into this release)
 - Extension lifecycle: activation-crash and deactivate teardown resilience; workspace-folder changes surfaced instead of silently ignored (#285, #288).
@@ -23,12 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - Zero-cost OSS SAST wiring and hardened command boundaries (#267).
 - Dependency updates: hono, @hono/node-server, js-yaml, fast-uri, undici, ip-address, brace-expansion, linkify-it, body-parser, actions/checkout, actions/setup-node (11 Dependabot PRs).
+- **Dependabot backlog cleared to zero before ship.** All 18 open alerts (1 critical, 11 high, 6 moderate) remediated via `npm audit fix` plus pinned overrides: protobufjs 8.7.2, minimatch 9.0.9, picomatch 2.3.2, flatted 3.4.4, serialize-javascript 7.1.0, sharp 0.35.3, diff 8.0.4, ajv 8.18+. All affected packages were devDependency chains (voice/test/lint tooling) — none shipped in the VSIX — and `npm audit` now reports 0 vulnerabilities.
 
 ### Changed (Breaking)
 - **Enforce is now the default governance mode.** Never-configured installs gate writes out of the box (intent-gated saves, L3 approvals); a one-time notice on upgrade offers the mode picker. Observe and Assist are unchanged and one QuickPick away (`FailSafe: Set Governance Mode`). An unresolvable mode value now fails closed to enforce, and the ACP proxy's missing/malformed mode mirror also resolves to enforce (was observe). (FX899, FX902)
 - **Editor-level enforce works on every tier.** The internal `governance.lockstep` feature-gate check was removed from the editor enforcement path; enforcement no longer depends on license tier. (FX900)
 
 ### Added
+- **Agent Skills marketplace category.** The Integrations Marketplace gains an Agent Skills category with the MIT-licensed [mattpocock/skills](https://github.com/mattpocock/skills) pack (Wayfinder decision-ticket planning + companions) as its first entry. (FX904)
 - **Enforce-mode Create Intent funnel.** In enforce mode, `FailSafe: Create Intent` first resolves the plan the intent serves (picker sourced from PlanManager) with an explicit "switch governance mode" escape; the writes-blocked dialog now offers `Set Governance Mode` alongside `Create Intent`. (FX901)
 
 ### Removed
@@ -37,6 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **`/api/v1/status` `governance.mode`** now reports the governance mode (observe/assist/enforce) instead of echoing the Sentinel analysis mode. (FX903)
+- **GovernanceRouter fails closed on verdict faults.** When verdict generation throws (e.g., a corrupted intent store), the router now returns a blocking verdict instead of silently allowing the write. (#296)
+- **VerdictArbiter escalates malformed payloads.** A verdict payload that fails schema validation now escalates for review instead of silently PASSing. (#297, #316)
+- **Malformed META_LEDGER is reported as damaged, not idle.** The governance-phase projection distinguishes a ledger that fails to parse from a workspace with no governance activity. (#244, #312)
 
 ## [5.9.0] - 2026-06-12
 

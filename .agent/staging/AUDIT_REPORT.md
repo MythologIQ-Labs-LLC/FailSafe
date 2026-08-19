@@ -1,30 +1,26 @@
-# AUDIT REPORT — Remove live FailSafe Pro surfaces
+# AUDIT REPORT — Wayfinder integration (use + marketplace catalog)
 
 **Tribunal Date**: 2026-08-19
-**Target**: `plan-depro-live-surfaces.md` (session 2026-08-19T0540-98a3b2)
+**Target**: `plan-wayfinder-integration.md` (session 2026-08-19T0540-98a3b2)
 **Risk Grade**: L2 (change_class: feature)
 **Auditor**: The Qor-logic Judge
-**Mode**: solo (Option B not required by `audit_risk_score`; every plan citation direct-verified by the Judge in-session before authoring — no author-momentum gap between claim and evidence)
+**Mode**: solo (audit_risk_score: no Option B mandate; every upstream citation fetched live this session — SKILL.md frontmatter names, LICENSE, templates, MarketplaceTypes/Catalog/Installer line cites)
 
 ---
 
 ## VERDICT: PASS
 
-## Entry Gates
-- Prompt-injection canaries: CLEAN. Pre-audit lints: consistency/test/grep/feature-tdd all PASS.
-- Mid-review completeness amendment (pre-verdict): extension README:229 dangling `PRO_INTEGRATION.md` reference added to LD-4 scope.
-
 ## Passes
-- **Security L3 / OWASP / Data-API**: pure removal; no credentials, subprocess, deserialization, or DB surface. PASS.
-- **Ghost UI**: the card, its `[data-action]` bind block, the command registration, and the manifest contribution are removed TOGETHER — no orphaned button, no dead handler, no dangling activation event. PASS.
-- **Razor**: deletions only. PASS.
-- **Test Functionality / Feature Declaration**: every surviving assertion invokes a unit (getCommands(true) membership, renderer HTML output, live Playwright DOM count); deleted test files accompany deleted units (about-pro-command, constants). PASS.
-- **Dependency**: none. PASS.
-- **Macro / Orphans**: `constants.ts` deletion is safe — grep-proven sole importer is the removed `commands.ts:14`; `FAILSAFE_PRO_DOWNLOAD_URL` has zero non-test consumers. PASS.
-- **Infrastructure Alignment**: all cited lines verified against source this session (package.json:44/:195-196; commands.ts:14/:175-181; settings.js:65/:86-91/:224-231; README:229; v5-coherence :41-47/:88/:96; commands-dispatch:145; settings-renderer:165-169; command-center-settings:49-58). PASS.
+- **Security L3**: third-party PROMPT content enters `.claude/skills/` (agent-executed) — REQUIRED CONDITION C1 below. Marketplace half is metadata-only (no code execution; installer is clone+sandbox with trustTier `unverified` + `sandboxEnabled: true`, consistent with all 14 existing entries). License MIT verified. PASS with C1.
+- **Ghost UI**: new category flows through the closed-enum union + BOTH label maps; declared inverse-coverage test (every union member labeled) prevents an unlabeled-category ghost filter. PASS.
+- **Test Functionality**: catalog test invokes the catalog and asserts entry fields; inverse-coverage per closed-enum doctrine. Phase 1 is prompt/doc content — functional gate is the tracker contract file + governance-index clean (D4). PASS.
+- **Dependency**: none (vendored markdown + one catalog record). PASS.
+- **Infrastructure Alignment**: MarketplaceTypes.ts:8-11/:129-131, marketplace.js:9-11, MarketplaceCatalog.ts shape, MarketplaceInstaller.ts:2/78-89, `.claude/` gitignore status, AGENTS.md existence — all direct-verified this session. Upstream contract (sub-issues endpoint, dependencies/blocked_by database-id) quoted from the fetched template itself. PASS.
+- **Razor / Macro / Orphans / Filter-stage**: metadata + docs; no pipeline shapes; no orphans (catalog entry reachable from the marketplace UI; vendored skills reachable via Skill tool by name). PASS.
 
 ## Conditions
-- Branch continues `feat/qor155-align-enforce-default`; Review Boundary holds (no push/PR/release).
-- FX414-FX418 index rows updated in the same commit; CHANGELOG Removed bullets required (change_class feature → README/CHANGELOG currency rule).
+- **C1 (binding)**: run `prompt_injection_canaries` over EVERY fetched upstream file in a staging dir BEFORE copying into `.claude/skills/`; any canary hit quarantines the file and returns to the operator.
+- C2: record the upstream commit SHA in the provenance file (point-in-time vendoring disclosure).
+- C3: no `.claude/` content staged into git; tracked writes limited to docs/agents, AGENTS.md, GOVERNANCE_INDEX, marketplace source/tests, FEATURE_INDEX, CHANGELOGs.
 
 **On PASS: next phase is `/qor-implement`.**
