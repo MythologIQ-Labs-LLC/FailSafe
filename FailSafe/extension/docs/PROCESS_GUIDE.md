@@ -1,6 +1,6 @@
 # FailSafe Process Guide
 
-Audience: operators who need fast, accurate workflows for the shipped `v5.9.0` UI and governance stack.
+Audience: operators who need fast, accurate workflows for the shipped `v6.0.0` UI and governance stack.
 
 ## First Run (Recommended Path)
 

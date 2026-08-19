@@ -58,9 +58,16 @@ Under the hood, a **Tier 1 supply-chain CI baseline** (least-privilege workflow 
 
 <div align="center">
 
-**Current Release**: v5.9.0 (2026-06-12)
+**Current Release**: v6.0.0 (2026-08-19)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
+
+## What's new in v6.0.0
+
+- **Enforce is now the default governance mode.** New and never-configured installs gate writes out of the box (intent-gated saves, L3 approvals). Observe and Assist are unchanged and one command away (`FailSafe: Set Governance Mode`); a one-time notice on upgrade offers the mode picker. Unresolvable mode values and a missing ACP mode mirror now fail closed to enforce.
+- **Enforcement works on every tier.** The editor enforcement path no longer consults any feature gate.
+- **Enforce-mode Create Intent flow.** Creating an intent in enforce mode first selects the plan it serves, with an explicit switch-mode escape; the writes-blocked dialog offers `Set Governance Mode`.
+- **Cleaner product surface.** The observe-mode advisory banner and settings hint are removed, and `/api/v1/status` now reports the true governance mode.
 
 ## What's new in v5.9.0
 

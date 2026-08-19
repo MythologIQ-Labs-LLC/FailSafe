@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0] - 2026-08-19
+
 ### Changed (Breaking)
 - **Enforce is now the default governance mode.** Never-configured installs gate writes out of the box (intent-gated saves, L3 approvals); a one-time notice on upgrade offers the mode picker. Observe and Assist are unchanged and one QuickPick away (`FailSafe: Set Governance Mode`). An unresolvable mode value now fails closed to enforce, and the ACP proxy's missing/malformed mode mirror also resolves to enforce (was observe). (FX899, FX902)
 - **Editor-level enforce works on every tier.** The internal `governance.lockstep` feature-gate check was removed from the editor enforcement path; enforcement no longer depends on license tier. (FX900)
