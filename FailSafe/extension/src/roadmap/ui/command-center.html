@@ -20,32 +20,32 @@
         <div class="app-name">FAILSAFE</div>
       </div>
 
-      <nav class="tab-nav">
-        <button class="tab-btn active" data-target="overview" title="Console Overview">
+      <nav class="tab-nav" role="tablist" aria-label="Command Center sections">
+        <button class="tab-btn active" id="tab-overview" data-target="overview" title="Console Overview" role="tab" aria-selected="true" aria-controls="overview">
           <div class="tab-icon"><img src="/overview.png" alt="Overview"></div>
           Overview
         </button>
-        <button class="tab-btn" data-target="learn" title="Onboarding & Education">
+        <button class="tab-btn" id="tab-learn" data-target="learn" title="Onboarding & Education" role="tab" aria-selected="false" aria-controls="learn">
           <div class="tab-icon"><img src="/audit.png" alt="Learn"></div>
           Learn
         </button>
-        <button class="tab-btn" data-target="agents" title="Agent Observability">
+        <button class="tab-btn" id="tab-agents" data-target="agents" title="Agent Observability" role="tab" aria-selected="false" aria-controls="agents">
           <div class="tab-icon"><img src="/operations.png" alt="Agents"></div>
           Agents
         </button>
-        <button class="tab-btn" data-target="governance" title="Audit & Compliance">
+        <button class="tab-btn" id="tab-governance" data-target="governance" title="Audit & Compliance" role="tab" aria-selected="false" aria-controls="governance">
           <div class="tab-icon"><img src="/laws.png" alt="Governance"></div>
           Governance
         </button>
-        <button class="tab-btn" data-target="workspace" title="Workspace Tools">
+        <button class="tab-btn" id="tab-workspace" data-target="workspace" title="Workspace Tools" role="tab" aria-selected="false" aria-controls="workspace">
           <div class="tab-icon"><img src="/skills.png" alt="Workspace"></div>
           Workspace
         </button>
-        <button class="tab-btn" data-target="integrations" title="Third-party Integrations">
+        <button class="tab-btn" id="tab-integrations" data-target="integrations" title="Third-party Integrations" role="tab" aria-selected="false" aria-controls="integrations">
           <div class="tab-icon"><img src="/mindmap.png" alt="Integrations"></div>
           Integrations
         </button>
-        <button class="tab-btn" data-target="settings" title="System Config">
+        <button class="tab-btn" id="tab-settings" data-target="settings" title="System Config" role="tab" aria-selected="false" aria-controls="settings">
           <div class="tab-icon"><img src="/config.png" alt="Config"></div>
           Config
         </button>
@@ -87,13 +87,13 @@
       <div class="viewport-hub">
         <!-- Main Viewport Area -->
         <main class="content-area">
-          <div id="overview" class="tab-panel active"></div>
-          <div id="learn" class="tab-panel"></div>
-          <div id="agents" class="tab-panel"></div>
-          <div id="governance" class="tab-panel"></div>
-          <div id="workspace" class="tab-panel"></div>
-          <div id="integrations" class="tab-panel"></div>
-          <div id="settings" class="tab-panel"></div>
+          <div id="overview" class="tab-panel active" role="tabpanel" aria-labelledby="tab-overview"></div>
+          <div id="learn" class="tab-panel" role="tabpanel" aria-labelledby="tab-learn"></div>
+          <div id="agents" class="tab-panel" role="tabpanel" aria-labelledby="tab-agents"></div>
+          <div id="governance" class="tab-panel" role="tabpanel" aria-labelledby="tab-governance"></div>
+          <div id="workspace" class="tab-panel" role="tabpanel" aria-labelledby="tab-workspace"></div>
+          <div id="integrations" class="tab-panel" role="tabpanel" aria-labelledby="tab-integrations"></div>
+          <div id="settings" class="tab-panel" role="tabpanel" aria-labelledby="tab-settings"></div>
         </main>
 
         <!-- Right Intelligence/Action Panel -->
