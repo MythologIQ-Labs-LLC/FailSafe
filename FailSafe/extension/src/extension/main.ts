@@ -53,6 +53,7 @@ import { registerAgentObserveCommands } from "./agent-observe-command";
 import { SlackNotifier } from "../integrations/slack/SlackNotifier";
 import { TeamsNotifier } from "../integrations/teams/TeamsNotifier";
 import { defaultRun } from "../qorlogic/PythonInterpreterResolver";
+import { disposeResources } from "./disposeResources";
 
 let genesisManager: GenesisManager;
 let qorelogicManager: QorLogicManager;
@@ -76,6 +77,29 @@ let featureGate:
 // duplicate `failsafe.breakGlass` registration. Module-level flag is reset
 // at deactivate; the duplicate-command catch covers the cross-process case.
 let __failsafeActivated = false;
+
+// Tears down every long-lived resource `activate()` may have already
+// acquired, independently of whether the others succeed or fail. Shared by
+// `deactivate()` (normal teardown) and `activate()`'s catch block
+// (crash-during-activation teardown) so a partial-activation failure does
+// not leak the resources it already started, and so a broken resource's
+// teardown failure is logged instead of aborting every subsequent one.
+async function teardownActivatedResources(): Promise<void> {
+  await disposeResources(
+    [
+      { name: "consoleServer", dispose: () => consoleServer?.stop() },
+      { name: "ledgerManager", dispose: () => ledgerManager?.close() },
+      { name: "shadowGenomeManager", dispose: () => shadowGenomeManager?.close() },
+      { name: "sentinelDaemon", dispose: () => sentinelDaemon?.stop() },
+      { name: "mcpServer", dispose: () => mcpServer?.stop() },
+      { name: "qorelogicManager", dispose: () => qorelogicManager?.dispose() },
+      { name: "genesisManager", dispose: () => genesisManager?.dispose() },
+      { name: "governanceStatusBar", dispose: () => governanceStatusBar?.dispose() },
+      { name: "eventBus", dispose: () => eventBus?.dispose() },
+    ],
+    logger,
+  );
+}
 
 export async function activate(
   context: vscode.ExtensionContext,
@@ -381,25 +405,24 @@ export async function activate(
     if (/command '.*' already exists/.test(msg) || /EADDRINUSE/.test(msg)) {
       logger.info("FailSafe already activated in a sibling extension host; skipping duplicate bootstrap.");
       // Best-effort cleanup of anything this partial activate did start.
-      try { consoleServer?.stop(); } catch { /* ignore */ }
+      await teardownActivatedResources();
       __failsafeActivated = false;
       return;
     }
     logger.error("Activation failed", error);
+    // Crash during activation: whatever was already acquired above (server,
+    // ledger connection, sentinel daemon, ...) is otherwise leaked forever,
+    // and the module-level re-entry guard would otherwise stay stuck `true`
+    // for the lifetime of this extension host, silently no-op'ing any retry
+    // that doesn't go through a full window reload.
+    await teardownActivatedResources();
+    __failsafeActivated = false;
     throw error;
   }
 }
 
 export async function deactivate(): Promise<void> {
   logger?.info("Deactivating FailSafe...");
-  consoleServer?.stop();
-  ledgerManager?.close();
-  shadowGenomeManager?.close();
-  sentinelDaemon?.stop();
-  if (mcpServer) await mcpServer.stop();
-  qorelogicManager?.dispose();
-  genesisManager?.dispose();
-  governanceStatusBar?.dispose();
-  eventBus?.dispose();
+  await teardownActivatedResources();
   __failsafeActivated = false;
 }
