@@ -12,6 +12,8 @@ import type { ShadowGenomeResult } from '../../qorlogic/shadow-genome-client';
 export interface ApiRouteDeps {
   rejectIfRemote: (req: any, res: any) => boolean;
   broadcast: (data: Record<string, unknown>) => void;
+  /** #83A: commit-hook token validator (CommitGuard.validateToken). */
+  validateCommitToken?: (token: string) => boolean;
   // Phase 2 (B166) deps for QorRoute / FeatureStatusRoute / SkillsApiRoute / HookRoute
   qorRuntimeService: QorRuntimeService;
   buildHubSnapshot: () => Promise<Record<string, unknown>>;

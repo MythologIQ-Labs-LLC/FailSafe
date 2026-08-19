@@ -53,6 +53,8 @@ Do NOT design workflows around the sidebar Command Center, status bars, or exten
 
 ## 5. Worktree isolation (present-tense risk, now sharper)
 
+> **#83 Phase A shipped (2026-08-19):** CommitGuard is worktree-correct (hooks in the common `.git/hooks`, token in the per-checkout gitDir), the `commit-check` route exists with the hook's port tracking the live Console server, and `ConfigManager.getGovernanceRoot()` provides the canonical repository root. The split-state threading below (ledger/intents/risks per worktree) remains parked.
+
 Worktree isolation is opt-in per session ("New Worktree" checkbox; Claude and Codex too since 1.130). Worktrees live **sibling to the repo** (`<repo>.worktrees/<name>` — bug-report evidence #325527/#293139, not contract), start from the **committed state** of the base branch (no uncommitted/ignored files; `git.worktreeIncludeFiles` copies named ignored files), and **default to Bypass Approvals**.
 
 Consequences for FailSafe today (full inventory: Entry #517 brief):

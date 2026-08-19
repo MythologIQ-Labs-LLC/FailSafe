@@ -1,6 +1,7 @@
 import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
+import { resolveGitDirs, GitDirs } from "./gitDirs";
 
 export interface HookDetection {
   exists: boolean;
@@ -10,6 +11,7 @@ export interface HookDetection {
 
 export class CommitGuard {
   private token: string | null = null;
+  private readonly commonDir: string;
   private readonly hookDir: string;
   private readonly hookPath: string;
   private readonly tokenPath: string;
@@ -17,11 +19,18 @@ export class CommitGuard {
 
   constructor(
     private readonly workspaceRoot: string,
-    private readonly apiPort: number,
+    private readonly apiPort: number | (() => number),
+    dirs?: GitDirs,
   ) {
-    this.hookDir = path.join(workspaceRoot, ".git", "hooks");
+    // #83 Phase A: worktree-correct paths. In a linked worktree `.git` is a
+    // FILE — hooks live in the COMMON dir (shared across worktrees; one
+    // install governs all), while the token must sit in the per-checkout
+    // gitDir because the hook script reads $(git rev-parse --git-dir).
+    const resolved = dirs ?? resolveGitDirs(workspaceRoot);
+    this.commonDir = resolved.commonDir;
+    this.hookDir = path.join(resolved.commonDir, "hooks");
     this.hookPath = path.join(this.hookDir, "pre-commit");
-    this.tokenPath = path.join(workspaceRoot, ".git", "failsafe-hook-token");
+    this.tokenPath = path.join(resolved.gitDir, "failsafe-hook-token");
   }
 
   generateToken(): string {
@@ -92,9 +101,9 @@ export class CommitGuard {
     return { exists: false, path: this.hookPath, type: "none" };
   }
 
-  /** Reads core.hooksPath from .git/config without spawning a shell process. */
+  /** Reads core.hooksPath from the shared git config without spawning a shell process. */
   private readGitConfigHooksPath(): string | null {
-    const gitConfigPath = path.join(this.workspaceRoot, ".git", "config");
+    const gitConfigPath = path.join(this.commonDir, "config");
     if (!fs.existsSync(gitConfigPath)) {
       return null;
     }
@@ -124,10 +133,13 @@ export class CommitGuard {
     const chainLine = fs.existsSync(backupPath)
       ? `\n# Chain to original hook\n"${backupPath}" "$@" || exit $?\n`
       : "";
+    // Lazy port: resolved at write time so the hook carries the ConsoleServer's
+    // actual bound port, not a compile-time constant.
+    const port = typeof this.apiPort === "function" ? this.apiPort() : this.apiPort;
     const script = [
       "#!/bin/sh",
       "# FailSafe Pre-Commit Guard — thin client querying commit-check endpoint",
-      `FAILSAFE_PORT="${this.apiPort}"`,
+      `FAILSAFE_PORT="${port}"`,
       `TOKEN_FILE="$(git rev-parse --git-dir)/failsafe-hook-token"`,
       "",
       'if [ ! -f "$TOKEN_FILE" ]; then',

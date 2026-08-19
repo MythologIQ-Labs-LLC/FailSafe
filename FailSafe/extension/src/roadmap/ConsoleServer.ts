@@ -70,6 +70,8 @@ type ConsoleServerOptions = {
   /** Educational Component (v5.2.0): callback returning the {enabled,
    *  proficiency} education settings for hub.education. */
   getEducationConfig?: () => import("../education/educationConfig").EducationConfig;
+  /** #83A: commit-hook token validator for /api/v1/governance/commit-check. */
+  validateCommitToken?: (token: string) => boolean;
 };
 
 // Re-export public test surface from support module for backward compat.
@@ -87,6 +89,7 @@ export class ConsoleServer {
   private gitResetService = new GitResetService();
   private brainstormService: BrainstormService;
   private audioVaultService: AudioVaultService;
+  private validateCommitToken?: (token: string) => boolean;
   private enforcementEngine: EnforcementEngine | null = null;
   private permissionManager: PermissionScopeManager | null = null;
   private systemRegistry: import("../qorelogic/SystemRegistry").SystemRegistry | null = null;
@@ -149,6 +152,7 @@ export class ConsoleServer {
     this.adapterService = new AdapterService(eventBus);
     this.transparencyLogger = new TransparencyLogger(this.workspaceRoot);
     this.riskRegisterManager = new RiskRegisterManager(this.workspaceRoot);
+    this.validateCommitToken = options.validateCommitToken;
     this.hub = this.buildHubService(options.mutationBus, options.modeTransitionHistory, options.getGovernanceMode, options.getQorLogicVerifier, options.getEducationConfig);
     this.lifecycle = new ConsoleLifecycleService({
       app: this.app, port: PORT, host: HOST, workspaceRoot: this.workspaceRoot,
@@ -300,6 +304,9 @@ export class ConsoleServer {
       broadcast: (d) => this.broadcast(d),
       getUiEntryFile: (req) => this.getUiEntryFile(req),
       getInstalledSkills: () => this.getInstalledSkills() as any,
+      // #83A: token gate for the commit-check route; late-read so bootstrap
+      // wiring order does not matter.
+      validateCommitToken: (tok: string) => this.validateCommitToken?.(tok) ?? false,
       getEnforcementEngine: () => this.enforcementEngine,
       getPermissionManager: () => this.permissionManager as any,
       getSystemRegistry: () => this.systemRegistry,

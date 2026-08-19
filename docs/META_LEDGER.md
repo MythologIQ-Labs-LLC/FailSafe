@@ -26827,3 +26827,60 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 SESSION SEAL for burndown Cycle 2 (session 2026-08-19T2009-834004; research #522 -> audit PASS #523 -> implement #524; commit on fix/repo-scoped-first-run-295, stacked on Cycle 1). Reality = Promise: five src/test files per plan, docs truth updated (FX538/FX275/B-EM-3/CHANGELOGs), no unplanned files. Verification: full RED (9+6) -> GREEN (9/9 + 6/6) under local mocha with a scratchpad vscode-module shim; tsc + eslint 0 errors. Gate ladder: intent_lock VERIFIED, skill_admission ADMITTED, secret_scanner/merge_velocity/instruction_hygiene/governance-index all exit 0. DISCLOSED: (1) electron-host run mutex-blocked locally (same CodeSetup installer as Cycle 1); shim-based mocha is the local evidence, CI the authoritative host run at delivery; (2) no version bump/tag (release train HELD); (3) attribution trailer intentionally absent per operator identity directive. Board effect at delivery: #295 closes. Next: remaining burndown cycles (#83 A-C, voice #236/#237, audits #241-#244, #233).
+
+
+---
+
+### Entry #526: GATE TRIBUNAL - worktree-commitguard-83a
+
+**Timestamp**: 2026-08-19T21:55:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= 2d754843b0245c2cb11f97be9fa5b35139f3421c954e49fba9508ca144e26263
+```
+
+**Previous Hash**: `df01a5ebeee0f2c117f3e58d7bebd054cc269090855af2a29a6efc6ac5fc759c` (Entry #525 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= ad413f9028f92134011f48c04c35befeb8a76c25e52947551260bb3c22eda9d7
+```
+
+## Decision
+
+PASS on plan-worktree-commitguard-83a.md iteration 1 (#83 Phase A core). Audit-caught defect remediated pre-verdict: block verdicts must be HTTP 200 because the hook's curl -sf fails open on non-2xx (LD-3 amended; T10 asserts status). Worktree hooks-in-commonDir semantics proven empirically by T4 (real git worktree add) per SG-GrepShapedRunclaim-A. Observations: 401 fail-open is deliberate stale-token posture; spawnSync activation cost flagged for #244 baseline; install-before-server port fallback disclosed. Next: /qor-implement on fix/worktree-commitguard-83a (stacked), local commits only.
+
+
+---
+
+### Entry #527: IMPLEMENTATION - worktree-commitguard-83a
+
+**Timestamp**: 2026-08-19T22:20:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(git diff -- FailSafe/extension/src)
+= 1c48b01301e2c8a76274674e78c9ce836bc87a9866ba9dbf25b7018e28a99000
+```
+
+**Previous Hash**: `ad413f9028f92134011f48c04c35befeb8a76c25e52947551260bb3c22eda9d7` (Entry #526 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 6b684893f9aaa155ff6f6d989403dcf82e745270e24caa51be09012e0cc1c140
+```
+
+## Decision
+
+Implemented plan-worktree-commitguard-83a.md (audit PASS #526) on branch fix/worktree-commitguard-83a (stacked). LD-1 resolveGitDirs (spawnSync argv, 5s timeout, <root>/.git fallback). LD-2 CommitGuard worktree-correct: hooks+config from commonDir, token in gitDir, lazy apiPort resolved at hook-write. LD-3 CommitCheckRoute shipped (token gate 401; block verdicts HTTP 200 per curl -sf constraint). LD-4/5 threading: ConsoleServerOptions.validateCommitToken -> ConsoleRouteHost -> ApiRouteDeps; commitGuardPortSource ref repointed by bootstrapServers to the live port. LD-6 ConfigManager.getGovernanceRoot() (cached; dirname of common .git). TDD: T4/T5/T7-T10 red then 33/33 green (real git init + worktree add fixtures); tsc 0; lint 0 errors. Hermeticity finding recorded: this machine carries a stray .git at C:\ — ambient ancestor-repo discovery is REAL, which validated the fallback/injection design (legacy CommitGuard suite now injects explicit dirs; T3 uses a nonexistent cwd). FEATURE_INDEX: FX115 n/a->verified (route shipped), FX284 refreshed (worktree), FX906 NEW (planned FX907 landed on existing FX115; FX908 landed on existing FX284 — recorded per implement Step 12.5). Docs: AGENTS_WINDOW SS5 note; CHANGELOGs [Unreleased].

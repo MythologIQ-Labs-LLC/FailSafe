@@ -26,6 +26,7 @@ import { setupTransparencyRiskRoutes } from "../routes/TransparencyRiskRoute";
 import { registerQorRoute } from "../routes/QorRoute";
 import { loadShadowGenome } from "../../qorlogic/shadow-genome-client";
 import { registerFeatureStatusRoute } from "../routes/FeatureStatusRoute";
+import { registerCommitCheckRoute } from "../routes/CommitCheckRoute";
 import { registerSkillsApiRoute } from "../routes/SkillsApiRoute";
 import { registerHookRoute } from "../routes/HookRoute";
 import { setupMarketplaceRoutes } from "../routes/MarketplaceRoute";
@@ -66,6 +67,8 @@ export interface ConsoleRouteHost {
   hub: HubSnapshotService;
   rejectIfRemote(req: Request, res: Response): boolean;
   broadcast(data: Record<string, unknown>): void;
+  /** #83A: commit-hook token validator for the commit-check route. */
+  validateCommitToken?(token: string): boolean;
   getUiEntryFile(req: Request): "command-center.html" | "index.html";
   getInstalledSkills: () => unknown[];
   getEnforcementEngine(): unknown | null;
@@ -159,6 +162,7 @@ export class ConsoleRouteRegistrar {
     registerSkillsApiRoute(app, deps);
     this.registerApiRoutes(deps);
     registerFeatureStatusRoute(app, deps);
+    registerCommitCheckRoute(app, deps);
     this.registerVerdictAndTrustRoutes();
     registerHookRoute(app, deps);
     this.setupConsoleRoutes();
@@ -219,6 +223,7 @@ export class ConsoleRouteRegistrar {
     const deps = {
       rejectIfRemote: (req, res) => h.rejectIfRemote(req, res),
       broadcast: (d) => h.broadcast(d),
+      validateCommitToken: (tok: string) => h.validateCommitToken?.(tok) ?? false,
       qorRuntimeService: h.qorRuntimeService as any,
       buildHubSnapshot: () => hub.buildHubSnapshot(),
       featureGate: h.featureGate as any,
