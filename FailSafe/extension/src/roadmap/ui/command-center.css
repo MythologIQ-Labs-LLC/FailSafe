@@ -465,7 +465,6 @@ body {
 .cc-verdict--highlighted { outline: 2px solid var(--accent-gold, #f5a524); background: rgba(245, 165, 36, 0.15); }
 .cc-mode-transition--highlighted { outline: 2px solid var(--accent-gold, #f5a524); background: rgba(245, 165, 36, 0.15); }
 .cc-section--highlighted, .cc-risk--highlighted { outline: 2px solid var(--accent-gold, #f5a524); background: rgba(245, 165, 36, 0.15) !important; }
-.mode-banner { background: rgba(245, 165, 36, 0.15); border-left: 3px solid var(--accent-gold, #f5a524); }
 
 .cc-chip {
   background: var(--console-bg);

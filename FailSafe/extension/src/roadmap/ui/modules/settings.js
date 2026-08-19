@@ -62,11 +62,9 @@ export class SettingsRenderer {
       ${renderInstallSkillsCard(this._installState, hub)}
       ${renderGovernanceModeCard(hub)}
       ${renderQorVersionWarning(hub)}
-      ${renderFailSafeProCard()}
       <div class="cc-card" id="cc-bicameral-settings-slot" style="margin-top:16px"></div>
       <div class="cc-card" id="cc-voice-pack-settings-slot" style="margin-top:16px"></div>`;
     this._bindQorLogicActions();
-    this._bindFailSafeProActions();
     bindGovernanceModeCard(this.container);
     this.bindChips();
     bindVoiceSettings(this.container, this.store);
@@ -80,16 +78,6 @@ export class SettingsRenderer {
   _renderVoicePackSettings() {
     const slot = this.container?.querySelector('#cc-voice-pack-settings-slot');
     return renderVoicePackSettingsCard(slot, { bindOnce });
-  }
-
-  _bindFailSafeProActions() {
-    const aboutLink = this.container?.querySelector('[data-action="open-failsafe-pro-about"]');
-    // Webview anchor + target=_blank handles navigation; command-uri provides
-    // VS Code-native external open as backup. Destination is About, never download.
-    bindOnce(aboutLink, 'click', (e) => {
-      try { e.preventDefault(); window.location.href = 'command:failsafe.openFailSafeProAbout'; }
-      catch { window.open('https://mythologiq.studio/products/failsafe-pro', '_blank', 'noopener'); }
-    });
   }
 
   _bindQorLogicActions() {
@@ -220,14 +208,6 @@ export class SettingsRenderer {
 }
 
 const LBL = 'font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em';
-
-function renderFailSafeProCard() {
-  return `<div class="cc-card" id="cc-failsafe-pro" style="margin-top:16px">
-      <div style="${LBL};margin-bottom:8px">FailSafe Pro</div>
-      <p style="font-size:0.85rem;color:var(--text-muted);margin:0 0 12px">Desktop native application for SDLC visibility and governance: OS-level enforcement, file locking, team workflows, and remote connections beyond the editor boundary.</p>
-      <a href="https://mythologiq.studio/products/failsafe-pro" target="_blank" rel="noopener" class="cc-btn cc-btn--primary" data-action="open-failsafe-pro-about" style="display:inline-block;font-size:0.8rem;padding:6px 14px;text-decoration:none">About FailSafe Pro</a>
-    </div>`;
-}
 
 function renderQorVersionWarning(hub) {
   const status = hub?.qorLogic?.versionStatus;

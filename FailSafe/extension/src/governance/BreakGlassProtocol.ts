@@ -156,6 +156,9 @@ export class BreakGlassProtocol {
       reason: request.reason,
       requestedBy: request.requestedBy,
       previousMode: currentMode,
+      // LD-11 (2026-08-19): defaulting the break-glass TARGET to observe is the
+      // mechanism's purpose — emergency de-escalation to the most-permissive
+      // audited state. Deliberately unchanged by the enforce-default flip.
       overrideMode: request.targetMode || "observe",
       status: "active",
     };

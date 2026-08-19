@@ -71,14 +71,14 @@ suite('integrations/acp/proxy ENFORCEMENT (real engine, file-backed)', () => {
     } finally { fs.rmSync(ws, { recursive: true, force: true }); }
   });
 
-  test('the absent-mirror default (observe) also does not withhold', async () => {
-    const ws = tmpWs(); // no runtime-mode.json written
+  test('the absent-mirror default (enforce, fail-closed per LD-3) withholds an ungated effect', async () => {
+    const ws = tmpWs(); // no runtime-mode.json written → readRuntimeMode → 'enforce'
     try {
       const dec = await governorFor(ws).governEffect({
         type: 'terminal_create', params: { sessionId: 's', command: 'rm' },
       });
-      assert.equal(dec.blocked, false);
-      assert.equal(dec.record.enforcing, false);
+      assert.equal(dec.blocked, true, 'a degraded mirror must withhold, never silently grant');
+      assert.equal(dec.record.enforcing, true, 'B3 surfacing records the enforcing posture');
     } finally { fs.rmSync(ws, { recursive: true, force: true }); }
   });
 

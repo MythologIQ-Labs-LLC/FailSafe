@@ -71,7 +71,7 @@ export class ConfigManager implements IConfigProvider {
                 maxComplexity: sentinelYaml?.architecture?.maxComplexity ?? config.get<number>('architecture.maxComplexity', 20)
             },
             governance: {
-                mode: sentinelYaml?.governance?.mode ?? config.get<"observe" | "assist" | "enforce">("governance.mode", "observe"),
+                mode: sentinelYaml?.governance?.mode ?? config.get<"observe" | "assist" | "enforce">("governance.mode", "enforce"),
                 overseerId: sentinelYaml?.governance?.overseerId ?? config.get<string>("governance.overseerId", "did:myth:overseer:local"),
             },
         };

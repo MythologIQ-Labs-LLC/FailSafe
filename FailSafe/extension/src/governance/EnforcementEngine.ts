@@ -7,7 +7,6 @@ import type { ProposedAction, Verdict, Intent } from "./types/IntentTypes";
 import { Logger } from "../shared/Logger";
 import type { IConfigProvider } from "../core/interfaces/IConfigProvider";
 import type { INotificationService } from "../core/interfaces/INotificationService";
-import type { IFeatureGate } from "../core/interfaces/IFeatureGate";
 import {
   Axiom1Enforcer,
   Axiom2Enforcer,
@@ -48,7 +47,6 @@ export class EnforcementEngine {
   private logger: Logger;
   private configProvider: IConfigProvider;
   private notifications: INotificationService;
-  private featureGate: IFeatureGate | undefined;
   private executeCommand: CommandExecutor;
   private axiom1: Axiom1Enforcer;
   private axiom2: Axiom2Enforcer;
@@ -59,7 +57,6 @@ export class EnforcementEngine {
     workspaceRoot: string,
     configProvider: IConfigProvider,
     notifications: INotificationService,
-    featureGate?: IFeatureGate,
     executeCommand?: CommandExecutor,
   ) {
     this.intentProvider = intentProvider;
@@ -67,15 +64,10 @@ export class EnforcementEngine {
     this.configProvider = configProvider;
     this.notifications = notifications;
     this.logger = new Logger("EnforcementEngine");
-    this.featureGate = featureGate;
     this.executeCommand = executeCommand ?? (() => {});
     this.axiom1 = new Axiom1Enforcer();
     this.axiom2 = new Axiom2Enforcer(workspaceRoot);
     this.axiom3 = new Axiom3Enforcer();
-  }
-
-  setFeatureGate(gate: IFeatureGate): void {
-    this.featureGate = gate;
   }
 
   getGovernanceMode(): GovernanceMode {
@@ -91,7 +83,7 @@ export class EnforcementEngine {
     if (typeof candidate === "string" && VALID_MODES.has(candidate as GovernanceMode)) {
       return { mode: candidate as GovernanceMode, defaulted: false };
     }
-    return { mode: "observe", defaulted: true };
+    return { mode: "enforce", defaulted: true };
   }
 
   isPathInScope(targetPath: string, scopePaths: string[]): boolean {
@@ -131,7 +123,6 @@ export class EnforcementEngine {
       axiom2: this.axiom2,
       axiom3: this.axiom3,
       logger: this.logger,
-      featureGate: this.featureGate,
     });
   }
 }

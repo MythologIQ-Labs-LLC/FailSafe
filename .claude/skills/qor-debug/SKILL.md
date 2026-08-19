@@ -8,7 +8,7 @@ metadata:
   category: development
   author: MythologIQ
   source:
-    repository: https://github.com/MythologIQ/Qor-logic
+    repository: https://github.com/MythologIQ-Labs-LLC/Qor-logic
     path: qor/skills/sdlc/qor-debug
 user-invocable: true
 allowed-tools: Read, Glob, Grep, Edit, Write, Bash

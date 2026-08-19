@@ -44,7 +44,7 @@ export class GovernanceStatusBar implements vscode.Disposable {
     const label = this.renderModeLabel(state);
     this.modeItem.text = label;
     this.modeItem.tooltip = state.defaulted
-      ? 'Governance mode defaulted to Observe. Click to choose Assist or Enforce.'
+      ? 'Governance mode defaulted to Enforce. Click to choose Assist or Observe.'
       : `Governance mode: ${MODE_LABEL_MAP[state.mode]}. Click to change.`;
     this.modeItem.show();
   }

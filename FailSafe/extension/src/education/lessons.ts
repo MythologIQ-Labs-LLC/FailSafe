@@ -52,8 +52,8 @@ const LESSON_LIST: Lesson[] = [
         "Governance mode decides how strict FailSafe is with AI agents. " +
         "Observe just watches and records what an agent does. Assist warns " +
         "you before something risky happens but still lets it through. " +
-        "Enforce stops risky actions until you approve them. Start with " +
-        "Observe to learn what your agents do, then tighten up when ready.",
+        "Enforce stops risky actions until you approve them. Enforce is the " +
+        "default — pick the mode that matches your risk posture.",
       intermediate:
         "The three modes trade safety against momentum. Observe keeps a " +
         "full record with zero friction — best while you build trust. " +

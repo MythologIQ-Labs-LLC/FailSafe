@@ -1,7 +1,7 @@
 {
   "name": "mythologiq-failsafe",
   "displayName": "FailSafe (feat. Qor-Logic)",
-  "description": "Open-source VS Code/Cursor governance and skills surface for AI coding agents. Pairs with FailSafe Pro for desktop enforcement.",
+  "description": "Open-source VS Code/Cursor governance and skills surface for AI coding agents.",
   "icon": "media/icon.png",
   "version": "5.9.0",
   "publisher": "MythologIQ",
@@ -41,7 +41,6 @@
     "onChatParticipant:failsafe.chat",
     "onView:failsafe.sidebarView",
     "onCommand:failsafe.openSidebar",
-    "onCommand:failsafe.openFailSafeProAbout",
     "onCommand:failsafe.bootstrap",
     "onCommand:failsafe.organize",
     "onCommand:failsafe.openPlannerHub",
@@ -190,10 +189,6 @@
         "command": "failsafe.openhands.observe",
         "title": "FailSafe: Import OpenHands Run (observe)",
         "category": "FailSafe"
-      },
-      {
-        "command": "failsafe.openFailSafeProAbout",
-        "title": "FailSafe: About FailSafe Pro"
       },
       {
         "command": "failsafe.bootstrap",
@@ -622,11 +617,11 @@
           ],
           "enumDescriptions": [
             "Observe only - No blocking, just visibility and logging. Zero friction.",
-            "Assist - Smart defaults, auto-intent creation, gentle prompts. Recommended for most users.",
-            "Enforce - Full control, intent-gated saves, L3 approvals. For compliance workflows."
+            "Assist - Smart defaults, auto-intent creation, gentle prompts.",
+            "Enforce - Default. Full control, intent-gated saves, L3 approvals."
           ],
-          "default": "observe",
-          "description": "Governance mode determines how FailSafe interacts with your workflow. Start with 'observe' and increase when ready."
+          "default": "enforce",
+          "description": "Governance mode determines how FailSafe interacts with your workflow. Enforce is the default; switch to 'assist' or 'observe' for lighter-touch governance."
         },
         "failsafe.governance.overseerId": {
           "type": "string",

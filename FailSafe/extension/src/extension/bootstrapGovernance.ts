@@ -24,6 +24,7 @@ import { SystemRegistry } from "../qorelogic/SystemRegistry";
 import { CoreSubstrate } from "./bootstrapCore";
 import { Logger } from "../shared/Logger";
 import { registerGovernanceCommands } from "./commands";
+import { maybeShowModeDefaultNotice } from "./modeDefaultNotice";
 
 export interface GovernanceSubstrate {
   sessionManager: SessionManager;
@@ -84,7 +85,6 @@ export async function bootstrapGovernance(
     core.workspaceRoot,
     configProvider,
     notifications,
-    undefined, // featureGate - set later if available
     executeCommand,
   );
   // B66: Wire governance mode getter for planId enforcement
@@ -122,7 +122,22 @@ export async function bootstrapGovernance(
     }),
   );
 
-  registerGovernanceCommands(context, intentService, core.workspaceRoot);
+  registerGovernanceCommands(
+    context,
+    intentService,
+    core.workspaceRoot,
+    core.planManager,
+  );
+
+  // LD-6: one-time notice for installs that silently landed on the new
+  // enforce default (globalState-keyed; explicit configs never see it).
+  void maybeShowModeDefaultNotice({
+    getModeState: () => enforcement.getGovernanceModeState(),
+    getGlobalState: (key) => context.globalState.get<boolean>(key),
+    setGlobalState: (key, value) => context.globalState.update(key, value),
+    notifications,
+    executeCommand,
+  });
 
   // Initialize security and transparency services
   const replayGuard = new SecurityReplayGuard(core.workspaceRoot);

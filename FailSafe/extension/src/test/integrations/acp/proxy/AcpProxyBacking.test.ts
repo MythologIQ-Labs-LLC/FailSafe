@@ -24,20 +24,20 @@ suite('integrations/acp/proxy backing — runtime-mode mirror', () => {
     } finally { fs.rmSync(ws, { recursive: true, force: true }); }
   });
 
-  test('missing mirror → "observe" (fail-safe default, never silent enforce)', () => {
+  test('missing mirror → "enforce" (fail-closed default — a degraded mirror never silently grants; LD-3)', () => {
     const ws = tmp();
-    try { assert.equal(readRuntimeMode(ws), 'observe'); }
+    try { assert.equal(readRuntimeMode(ws), 'enforce'); }
     finally { fs.rmSync(ws, { recursive: true, force: true }); }
   });
 
-  test('malformed JSON or invalid mode value → "observe"', () => {
+  test('malformed JSON or invalid mode value → "enforce" (fail-closed)', () => {
     const ws = tmp();
     try {
       fs.mkdirSync(path.dirname(runtimeModePath(ws)), { recursive: true });
       fs.writeFileSync(runtimeModePath(ws), '{ not json', 'utf8');
-      assert.equal(readRuntimeMode(ws), 'observe');
+      assert.equal(readRuntimeMode(ws), 'enforce');
       fs.writeFileSync(runtimeModePath(ws), JSON.stringify({ mode: 'YOLO' }), 'utf8');
-      assert.equal(readRuntimeMode(ws), 'observe');
+      assert.equal(readRuntimeMode(ws), 'enforce');
     } finally { fs.rmSync(ws, { recursive: true, force: true }); }
   });
 });
@@ -52,9 +52,9 @@ suite('integrations/acp/proxy backing — FileConfigProvider', () => {
     } finally { fs.rmSync(ws, { recursive: true, force: true }); }
   });
 
-  test('absent mirror → observe through the provider', () => {
+  test('absent mirror → enforce through the provider (fail-closed; LD-3)', () => {
     const ws = tmp();
-    try { assert.equal(new FileConfigProvider(ws).getConfig().governance?.mode, 'observe'); }
+    try { assert.equal(new FileConfigProvider(ws).getConfig().governance?.mode, 'enforce'); }
     finally { fs.rmSync(ws, { recursive: true, force: true }); }
   });
 

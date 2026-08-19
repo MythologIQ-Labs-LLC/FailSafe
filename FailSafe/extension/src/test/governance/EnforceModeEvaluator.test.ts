@@ -1,4 +1,6 @@
 // Functional tests for EnforceModeEvaluator (extension of FX244 mode coverage).
+// LD-9 (2026-08-19): the lockstep featureGate fallback is deleted — editor-level
+// enforcement is unconditional and tier-independent; EnforceDeps has no gate seam.
 
 import { strict as assert } from 'assert';
 import { evaluateEnforceMode } from '../../governance/enforcement/EnforceModeEvaluator';
@@ -17,33 +19,13 @@ const CTX = (overrides: any = {}) => ({
 });
 
 suite('EnforceModeEvaluator (FX244 EnforceMode)', () => {
-  test('FX244 enforce — featureGate disabled → ALLOW with fallback message', () => {
+  test('FX244 enforce — unconditional enforcement: all 3 axioms pass → ALLOW scoped to intent', () => {
     const r = evaluateEnforceMode(CTX(), {
       axiom1: makeAxiom(ALLOW), axiom2: makeAxiom(ALLOW), axiom3: makeAxiom(ALLOW),
       logger: new Logger('test'),
-      featureGate: { isEnabled: () => false } as never,
-    });
-    assert.equal(r.status, 'ALLOW');
-    assert.match(String(r.reason), /Lock-step.*not enabled/);
-  });
-
-  test('FX244 enforce — featureGate undefined → enforces normally (no fallback)', () => {
-    const r = evaluateEnforceMode(CTX(), {
-      axiom1: makeAxiom(ALLOW), axiom2: makeAxiom(ALLOW), axiom3: makeAxiom(ALLOW),
-      logger: new Logger('test'),
-      featureGate: undefined,
     });
     assert.equal(r.status, 'ALLOW');
     assert.match(String(r.reason), /within Intent.*intent-1.*scope/);
-  });
-
-  test('FX244 enforce — featureGate enabled + all 3 axioms pass → ALLOW', () => {
-    const r = evaluateEnforceMode(CTX(), {
-      axiom1: makeAxiom(ALLOW), axiom2: makeAxiom(ALLOW), axiom3: makeAxiom(ALLOW),
-      logger: new Logger('test'),
-      featureGate: { isEnabled: () => true } as never,
-    });
-    assert.equal(r.status, 'ALLOW');
   });
 
   test('FX244 enforce — axiom1 BLOCK short-circuits before axiom3 + axiom2', () => {
@@ -53,7 +35,6 @@ suite('EnforceModeEvaluator (FX244 EnforceMode)', () => {
     const r = evaluateEnforceMode(CTX(), {
       axiom1: makeAxiom(BLOCK), axiom2: ax2 as never, axiom3: ax3 as never,
       logger: new Logger('test'),
-      featureGate: { isEnabled: () => true } as never,
     });
     assert.equal(r.status, 'BLOCK');
     assert.equal(axiom2Called, 0);
@@ -66,7 +47,6 @@ suite('EnforceModeEvaluator (FX244 EnforceMode)', () => {
     const r = evaluateEnforceMode(CTX(), {
       axiom1: makeAxiom(ALLOW), axiom2: ax2 as never, axiom3: makeAxiom(BLOCK),
       logger: new Logger('test'),
-      featureGate: { isEnabled: () => true } as never,
     });
     assert.equal(r.status, 'BLOCK');
     assert.equal(axiom2Called, 0, 'axiom2 should NOT be called when axiom3 blocks');
@@ -76,7 +56,6 @@ suite('EnforceModeEvaluator (FX244 EnforceMode)', () => {
     const r = evaluateEnforceMode(CTX(), {
       axiom1: makeAxiom(ALLOW), axiom2: makeAxiom(BLOCK), axiom3: makeAxiom(ALLOW),
       logger: new Logger('test'),
-      featureGate: { isEnabled: () => true } as never,
     });
     assert.equal(r.status, 'BLOCK');
   });
@@ -89,7 +68,6 @@ suite('EnforceModeEvaluator (FX244 EnforceMode)', () => {
     evaluateEnforceMode(CTX(), {
       axiom1: ax1 as never, axiom2: ax2 as never, axiom3: ax3 as never,
       logger: new Logger('test'),
-      featureGate: { isEnabled: () => true } as never,
     });
     assert.deepEqual(order, ['1', '3', '2']);
   });
@@ -98,7 +76,6 @@ suite('EnforceModeEvaluator (FX244 EnforceMode)', () => {
     const r = evaluateEnforceMode(CTX(), {
       axiom1: makeAxiom(ALLOW), axiom2: makeAxiom(ALLOW), axiom3: makeAxiom(ALLOW),
       logger: new Logger('test'),
-      featureGate: { isEnabled: () => true } as never,
     });
     assert.equal((r as any).intentId, 'intent-1');
   });

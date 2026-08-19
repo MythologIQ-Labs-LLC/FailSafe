@@ -42,7 +42,7 @@ export class PlanManager {
       this.deriveState(planId);
     }
     // B192 remediation: subscribe to mutations on the backing-store files so
-    // external writes (e.g., another tool, or a future FailSafe Pro) trigger
+    // external writes (e.g., another tool or a companion daemon) trigger
     // refresh without waiting for the next hub-snapshot pull. The existing
     // HubSnapshotService.buildHubSnapshot pull-call to refreshFromWorkspace
     // remains as defensive belt-and-suspenders coverage on platforms where

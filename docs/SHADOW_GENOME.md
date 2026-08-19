@@ -2899,3 +2899,9 @@ Output: `dist/override-staleness.findings.json` (gitignored runtime artifact). A
 **Counter-pattern**: define one canonical Razor command that scans the complete affected production/test union and uses the same physical/effective metric named in the plan. A plan cannot claim coverage broader than its executable file set.
 
 **Status**: open for plan iteration 2; implementation remains blocked until a fresh audit returns PASS.
+
+## SG Event 2026-08-19: VETO - default-flip plan ignored the mode's own escape hatch and tier boundary (qor155-align-enforce-default iter 1)
+
+**Pattern**: A plan flipping a *default* to a stricter mode audited every site that RESOLVES the mode but never walked what a user LANDS ON once the stricter mode is the resting state: (1) the enforce-mode remediation path (Create Intent) throws by design under B66 without a planId, so the new default population inherits a dead-end (F1); (2) the mode's semantics for the default population were themselves undefined - enforce-blocks-writes is an accident of an unwired Pro-tier lockstep gate (setFeatureGate never called), so the plan's central D1 rested on incomplete wiring (F2).
+**Lesson**: when a plan changes a DEFAULT, the audit surface is not the default-resolution sites - it is the full first-run experience of the population that lands on the new default: escape hatches, tier gates, and every remediation affordance the blocked state advertises. Walk the funnel a blocked fresh-install user actually follows, command by command, before locking the flip.
+**Countermeasure applied**: VETO with operator decision request on the tier boundary; plan returns to Governor for LD coverage of the first-run funnel.
