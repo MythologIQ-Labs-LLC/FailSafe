@@ -26484,3 +26484,30 @@ _Hash provenance_: Content Hash = SHA256 of plan-depro-live-surfaces.md. Chain H
 
 _Chain integrity: VALID_
 _Session: 2026-08-19T0540-98a3b2_
+
+### Entry #517: RESEARCH BRIEF - #83 Agents Window deep dive (@1.134)
+
+**Date**: 2026-08-19
+**Phase**: RESEARCH
+**Author**: Analyst
+**Risk Grade**: L2
+
+## Decision
+
+Operator-directed full deep dive on #83. Upstream (primary sources @2026-08-19, VS Code 1.134): Agent Host re-architecture (1.129-1.134) moved agent runtime OUT of the extension host - extension chat tools explicitly unavailable in Agent Host sessions; five harnesses (Local/Copilot/Claude/Codex/Cloud); opt-in is the USER setting extensions.supportAgentsWindow (object map) + default-profile install, NO manifest key exists; worktree sessions live SIBLING at <repo>.worktrees/<name>, committed-state-only, DEFAULT Bypass Approvals; extension-registered MCP still broken (#317460 OPEN/assigned/no-milestone) - durable channels are workspace .mcp.json + ~/.copilot/mcp-config.json + Agent Plugins 1.0 (1.133); watch #325827 (harness API) + #305332 (AHP customizations). FailSafe-side worktree map (file:line inventory): HARD failure CommitGuard ENOTDIR (.git-as-file, CommitGuard.ts:22-162); LATENT FAIL-OPEN today - hook curls hardcoded port 7777 but /api/v1/governance/commit-check route does not exist (bootstrapGovernance.ts:163) so the pre-commit guard is decorative; split-state HIGH writes (soa_ledger.db, IntentStore, runtime-mode.json, break-glass, risks, plans, session, acp-ledger); cross-session collisions (single-slot Devin twin registry -> cross-worktree audit contamination, marketplace rm-reclone races, unlocked servers.json RMW, port scan cap); WorkspaceMutationBus.ts:47 silent no-op on absent paths. Fix seam: governanceRoot resolver via git rev-parse --git-common-dir at the ConfigManager.ts:26 chokepoint (+4 mirrors), two-value CoreSubstrate end state. Re-scoped phases A (worktree-aware governanceRoot + CommitGuard/route repair + per-session twin id - fixes real defects independent of the Agents window), B (doc refresh @1.134 + .mcp.json + Agent Plugin draft), C (Configure command), D (human validation checklist). All three Phase-0 doc revalidation triggers effectively fired. Brief: .failsafe/governance/RESEARCH_BRIEF_agents-window-83-deep-dive-2026-08-19.md
+
+## Content Hash
+
+**Content Hash**: `89924fb07521f6d2c7b44e48a3861bbeb2ee90c4e3809ccd122c4e13d74e263f`
+**Previous Hash**: `d41c5bde6111ede0b025ad09c19d4d6eeb80d1eda0a823f692c24c95c5aeec99` (Entry #516 Chain Hash)
+**Chain Hash**: `61742ad5ff21d2fa08236f38781baff261ff037fa1aa96857c73d2bdaf6ba09f`
+**Merkle Seal**: `0161ea6f4dbb082b611e15060bc45df843978454e3280b2bf86e136211ff8cf2` -- gate_seal_research_agents_window_83_deep_dive
+**Session ID**: `2026-08-19T0540-98a3b2`
+**Entry ID**: `89924fb07521`
+
+_Hash provenance_: Content Hash = SHA256 of the brief. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-08-19T0540-98a3b2_
