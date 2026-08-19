@@ -26364,3 +26364,38 @@ _Hash provenance_: Content Hash = SHA256 of plan-qor155-align-enforce-default.md
 
 _Chain integrity: VALID_
 _Session: 2026-08-19-qor155-align-enforce-default_
+
+### Entry #510: SESSION SEAL - qor155-align-enforce-default
+
+**Date**: 2026-08-19
+**Phase**: SUBSTANTIATE (S.H.I.E.L.D. cycle complete: research #506 -> audit VETO #507 -> audit PASS #508 -> implement #509 -> seal)
+**Author**: Judge
+**Risk Grade**: L2
+**Branch**: feat/qor155-align-enforce-default (3 commits: 06462e9 A1, 8a12ec8 A2, 5e934ef B1-C; seal commit follows)
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1, PW.4.1
+
+## Decision
+
+Reality = Promise VERIFIED for plan-qor155-align-enforce-default iteration 3. All planned files exist (modeDefaultNotice.ts, create-intent-enforce.test.ts, mode-default-notice.test.ts NEW; sentinel-monitor-mode-banner.test.ts DELETED; 50-file implementation commit). Four recorded deviations, each verified sound: notice wired in bootstrapGovernance (deps locality), root README delete range +1 line (:244 dangling link), AcpProxyEnforcement absent-mirror e2e inverted (plan-map miss, red-then-green), GovernanceStatusBar observe-defaulted case replaced by enforce-defaulted (unproducible state, deletion-over-duplication).
+
+GATE LADDER: intent_lock VERIFIED (default + named session) - skill_admission ADMITTED - gate_skill_matrix OK - secret_scanner CLEAN - procedural_fidelity 0 findings - dod_check WARN x2 (missing D3 tier on 2 deliverables; WARN-only, D3 evidence exists in this entry) - merge_velocity healthy (repair_density 0.0) - skill_size_budget 3 WARN on workspace .claude (qor-audit 38.8KB approaches the 40KB V2 ABORT - upstream refactor flag) - data_api_acl SKIP (no SQL; disclosed) - instruction_hygiene CLEAN - doc_integrity strict PASS - governance-index --advance-last-reviewed 2026-08-19 --enforce PASS - feature_index_verify parses 0 rows (upstream row-shape mismatch vs FailSafe index format; disclosed - per-feature verification via suite + FX rows below) - seal hashes helper-produced + hash_guard ALL VALID.
+
+**Feature Inventory**: FailSafe-format index; this cycle: FX899-FX903 NEW verified, FX044/FX509/FX513 MODIFIED verified, FX507 removed, FX506 n/a-justified. Verification: tsc 0 - eslint 0 errors - mocha 3690 passing / 0 failing / 5 pending (census 430/430) - Playwright 183 passed + bicameral ambient flake green on isolated re-run + 4 skipped.
+
+DISCLOSED RESIDUALS carried forward: (1) pre-existing ledger BREAKs #340/#382 - dangling previous_hash, repair-era, confirmed present in the pre-reorder backup; reconcile candidates for a future operator-authorized cycle. (2) Undeclared entry gaps [158, 298] - no consumer KNOWN_ENTRY_GAPS surface exists in qor-logic 0.155.0 (ledger_hash.py:149 upstream constant); upstream feature request pending operator decision. (3) Version bump / CHANGELOG stamp / seal tag SKIPPED by operator policy: no release is authorized this cycle (Review Boundary; the breaking change ships in the next operator-authorized release). (4) Seal-commit attribution trailer OMITTED by standing operator identity directive (no Co-Authored-By / agent attribution, fleet instruction overrides skill template); seal_trailer_check consequently not applied. (5) Upstream-repo-only steps (seal_artifacts badge regeneration, spec folding under qor/specs, dist_compile of qor/dist variants) SKIP per Phase 75 prerequisite-absent tolerance - gate_skipped_prerequisite_absent semantics; FailSafe SYSTEM_STATE/READMEs updated directly instead.
+
+## Content Hash
+
+**Content Hash**: `7b62c59c5618cb2bca8b72a602ff99b4885943533a8e1cac96a24213fba7c581`
+**Previous Hash**: `47c6535dd5b34cfb1b929827121c6999b69b6ad7a7e957b4be124937e4c1d02a` (Entry #509 Chain Hash)
+**Chain Hash**: `da96df1cac749d940f8228c9795553e1854ea3e779ede82ce930f8725635c7b6`
+**Merkle Seal**: `2e09a26e2823d3fb9965141d7e62607ea0d4d795b0cad2c6ff51738770351ac9` -- gate_seal_session_qor155_align_enforce_default
+**Session ID**: `2026-08-19-qor155-align-enforce-default`
+**Entry ID**: `d35f102b2176`
+
+_Hash provenance_: Content Hash = qor.scripts.ledger_hash.content_hash(plan-qor155-align-enforce-default.md). Chain Hash = ledger_hash.chain_hash(content, previous). Merkle Seal = SHA256(chain_hash + gate_label). Entry ID = entry_id.derive_entry_id(2026-08-19T05:39:47Z, "510", content_hash). hash_guard validated all four.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-08-19-qor155-align-enforce-default_
