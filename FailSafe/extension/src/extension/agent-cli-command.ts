@@ -35,12 +35,28 @@ async function escalate(deps: AgentCliDeps, agent: string, out: AgentRunOutcome)
   await deps.qorelogicManager.queueL3Approval(buildL3EscalationRequest(agent, out));
 }
 
-async function report(deps: AgentCliDeps, agent: string, out: AgentRunOutcome): Promise<void> {
+/** Exported for direct unit testing (see agent-cli-command.test.cjs) — the real
+ *  production entry point (`registerAgentCliCommands`) is wired to `vscode`
+ *  and the live `defaultAgentRun`/config, which cannot deterministically reach
+ *  every decision branch without a full extension-host harness. */
+export async function report(deps: AgentCliDeps, agent: string, out: AgentRunOutcome): Promise<void> {
   if (!out.available) { vscode.window.showWarningMessage(`${out.error ?? `${agent} not available`}.`); return; }
   const d = out.decision;
   if (d?.verdict === 'ESCALATE') {
-    await escalate(deps, agent, out);
-    vscode.window.showWarningMessage(`${agent}: L3-risk change — escalated to the L3 approval queue (${out.diff?.files ?? 0} file(s), uncommitted).`);
+    // An L3-risk diff already sits uncommitted in the worktree at this point
+    // (Continue/Aider already ran). If the L3 queue itself fails to accept it,
+    // the failure must stay visible — a silent throw here would leave an
+    // unreviewed, unlogged high-risk change with no operator-facing trace.
+    try {
+      await escalate(deps, agent, out);
+      vscode.window.showWarningMessage(`${agent}: L3-risk change — escalated to the L3 approval queue (${out.diff?.files ?? 0} file(s), uncommitted).`);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      vscode.window.showErrorMessage(
+        `${agent}: L3-risk change was produced but could NOT be queued for L3 approval (${detail}). `
+        + `${out.diff?.files ?? 0} file(s) remain uncommitted in the worktree — review and queue manually; do not trust this change as governed.`,
+      );
+    }
   } else if (d?.verdict === 'BLOCK') {
     vscode.window.showWarningMessage(`${agent}: ${d.reason}.`);
   } else if (d?.verdict === 'ALLOW') {
