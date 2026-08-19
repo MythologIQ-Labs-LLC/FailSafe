@@ -192,7 +192,9 @@ function runVersionProbe(command: string, timeoutMs: number): Promise<{ state: '
     };
     let child;
     try {
-      child = spawn(command, ['--version'], { shell: false });
+      // The operator-supplied executable passed lexical validation, anchored-root
+      // containment, realpath resolution, and symlink-containment verification.
+      child = spawn(command, ['--version'], { shell: false }); // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process
     } catch {
       settle({ state: 'not-installed' });
       return;

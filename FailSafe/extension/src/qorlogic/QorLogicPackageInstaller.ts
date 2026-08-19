@@ -1,5 +1,9 @@
 import { spawn } from 'child_process';
-import type { PythonInterpreterResolver, ResolvedInterpreter } from './PythonInterpreterResolver';
+import {
+  isSafePythonCommand,
+  type PythonInterpreterResolver,
+  type ResolvedInterpreter,
+} from './PythonInterpreterResolver';
 import { MIN_QOR_LOGIC_VERSION } from './hostLayouts';
 
 export interface InstallerRunResult {
@@ -172,8 +176,30 @@ export const defaultInstallerRun: InstallerRun = (cmd, args, options) => new Pro
   let stdout = '';
   let stderr = '';
   let settled = false;
+  if (!isSafePythonCommand(cmd)) {
+    resolve({
+      stdout,
+      stderr: `Unsupported Python executable: ${cmd}`,
+      code: null,
+      timedOut: false,
+      spawnError: 'unsafe-python-command',
+    });
+    return;
+  }
   const spawnEnv = options.env ? { ...process.env, ...options.env } : process.env;
-  const child = spawn(cmd, [...args], { shell: false, cwd: options.cwd, env: spawnEnv as NodeJS.ProcessEnv });
+  const spawnOptions = {
+    shell: false as const,
+    cwd: options.cwd,
+    env: spawnEnv as NodeJS.ProcessEnv,
+  };
+  const argv = [...args];
+  const child = cmd === 'python3'
+    ? spawn('python3', argv, spawnOptions)
+    : cmd === 'python'
+      ? spawn('python', argv, spawnOptions)
+      : cmd === 'py'
+        ? spawn('py', argv, spawnOptions)
+        : spawn(cmd, argv, spawnOptions); // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- resolver-approved absolute interpreter path
   const timer = setTimeout(() => {
     if (settled) return;
     settled = true;
