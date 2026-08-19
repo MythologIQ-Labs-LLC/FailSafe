@@ -49,7 +49,23 @@ export function wireToolbar(renderer) {
   }));
   renderer._getEl('.cc-bs-fit')?.addEventListener('click', () => canvas.fitToView());
   renderer._getEl('.cc-bs-reset-view')?.addEventListener('click', () => resetView(renderer, canvas));
+  applyViewPrefs(renderer);
+}
+
+// FX897/#263 v6.0.1: reconcile the LIVE canvas (and toolbar highlights) to the
+// persisted prefs under the renderer's CURRENT workspacePath identity. The
+// canvas can construct from a render that lost the race with the hub bootstrap
+// (workspacePath unknown → prefs looked up under the wrong identity → FORCE/2D
+// defaults stick, because the #261 in-flight guard rightly refuses a rebuild).
+// Safe to call on every hub render: every user-driven change persists via
+// saveViewPrefs before/with the canvas setter, so prefs === canvas after any
+// interaction and the reconcile is a no-op except when a load was missed.
+export function applyViewPrefs(renderer) {
+  const canvas = renderer.graph.canvas;
+  if (!canvas) return;
   const prefs = loadViewPrefs(renderer.workspacePath);
-  highlight(layoutBtns, prefs.layout, 'data-layout');
-  highlight(viewBtns, prefs.viewMode, 'data-view');
+  if (canvas.viewMode !== prefs.viewMode) canvas.setViewMode(prefs.viewMode);
+  if (canvas.layout !== prefs.layout) canvas.setLayout(prefs.layout);
+  highlight(renderer._getAll('.cc-bs-layout'), prefs.layout, 'data-layout');
+  highlight(renderer._getAll('.cc-bs-view'), prefs.viewMode, 'data-view');
 }
