@@ -191,6 +191,56 @@ suite('TabGroup (FX188)', () => {
     assert.equal(c.events.length, 1);
   });
 
+  test('FX301 render() — pill bar exposes ARIA tablist/tab semantics', () => {
+    const subviews = [
+      { key: 'a', label: 'Alpha', renderer: makeRenderer() },
+      { key: 'b', label: 'Beta', renderer: makeRenderer() },
+    ];
+    const tg = new TabGroup('tg-container', subviews);
+    tg.render({});
+    const doc = (globalThis as { document: Document }).document;
+    const bar = doc.querySelector('.cc-subview-bar')!;
+    assert.equal(bar.getAttribute('role'), 'tablist');
+    assert.ok(bar.getAttribute('aria-label'), 'tablist has a non-empty aria-label');
+    const pills = doc.querySelectorAll('.cc-pill');
+    assert.equal(pills[0].getAttribute('role'), 'tab');
+    assert.equal(pills[0].getAttribute('aria-selected'), 'true');
+    assert.equal(pills[1].getAttribute('aria-selected'), 'false');
+    const panel = doc.querySelector('.cc-subview-content')!;
+    assert.equal(panel.getAttribute('role'), 'tabpanel');
+    assert.equal(pills[0].getAttribute('aria-controls'), panel.id);
+    assert.equal(panel.getAttribute('aria-labelledby'), pills[0].id);
+  });
+
+  test('FX301 switchTo(key) — moves aria-selected and aria-labelledby to the new active pill', () => {
+    const tg = new TabGroup('tg-container', [
+      { key: 'a', label: 'A', renderer: makeRenderer() },
+      { key: 'b', label: 'B', renderer: makeRenderer() },
+    ]);
+    tg.render({});
+    tg.switchTo('b', {});
+    const doc = (globalThis as { document: Document }).document;
+    const pills = doc.querySelectorAll('.cc-pill');
+    assert.equal(pills[0].getAttribute('aria-selected'), 'false');
+    assert.equal(pills[1].getAttribute('aria-selected'), 'true');
+    const panel = doc.querySelector('.cc-subview-content')!;
+    assert.equal(panel.getAttribute('aria-labelledby'), pills[1].id);
+  });
+
+  test('FX301 pill ids are unique across two TabGroup instances sharing sub-view keys', () => {
+    const dom = (globalThis as { document: Document }).document;
+    const other = dom.createElement('div');
+    other.id = 'tg-container-2';
+    dom.body.appendChild(other);
+    const tgA = new TabGroup('tg-container', [{ key: 'shared', label: 'A', renderer: makeRenderer() }]);
+    const tgB = new TabGroup('tg-container-2', [{ key: 'shared', label: 'B', renderer: makeRenderer() }]);
+    tgA.render({});
+    tgB.render({});
+    const pillA = dom.querySelector('#tg-container .cc-pill')!;
+    const pillB = dom.querySelector('#tg-container-2 .cc-pill')!;
+    assert.notEqual(pillA.id, pillB.id);
+  });
+
   test('FX188 destroy() — destroys all subviews + clears container', () => {
     const a = makeRenderer();
     const b = makeRenderer();

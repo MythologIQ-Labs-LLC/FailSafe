@@ -6,7 +6,7 @@ import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { readRuntimeMode, writeRuntimeMode, runtimeModePath } from '../../../../integrations/acp/proxy/backing/runtimeMode';
+import { readRuntimeMode, writeRuntimeMode, writeRuntimeModeOrInvalidate, runtimeModePath } from '../../../../integrations/acp/proxy/backing/runtimeMode';
 import { FileConfigProvider } from '../../../../integrations/acp/proxy/backing/FileConfigProvider';
 import { FileIntentProvider } from '../../../../integrations/acp/proxy/backing/FileIntentProvider';
 import { FileLedgerSink } from '../../../../integrations/acp/proxy/backing/FileLedgerSink';
@@ -37,6 +37,38 @@ suite('integrations/acp/proxy backing — runtime-mode mirror', () => {
       fs.writeFileSync(runtimeModePath(ws), '{ not json', 'utf8');
       assert.equal(readRuntimeMode(ws), 'enforce');
       fs.writeFileSync(runtimeModePath(ws), JSON.stringify({ mode: 'YOLO' }), 'utf8');
+      assert.equal(readRuntimeMode(ws), 'enforce');
+    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+  });
+
+  test('writeRuntimeModeOrInvalidate: a failed write invalidates the stale mirror instead of leaving old (possibly more-permissive) content readable — fail-closed', () => {
+    const ws = tmp();
+    try {
+      writeRuntimeMode(ws, 'observe');
+      assert.equal(readRuntimeMode(ws), 'observe');
+      const failingWrite = (): void => { throw new Error('simulated disk failure'); };
+      const ok = writeRuntimeModeOrInvalidate(ws, 'enforce', failingWrite);
+      assert.equal(ok, false, 'reports the failure to the caller');
+      assert.equal(fs.existsSync(runtimeModePath(ws)), false, 'the stale mirror file itself is removed');
+      assert.equal(readRuntimeMode(ws), 'enforce', 'a tightened-but-failed-to-persist mode must never leave the old, looser mode in effect');
+    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+  });
+
+  test('writeRuntimeModeOrInvalidate: success path mirrors normally and reports true', () => {
+    const ws = tmp();
+    try {
+      const ok = writeRuntimeModeOrInvalidate(ws, 'assist');
+      assert.equal(ok, true);
+      assert.equal(readRuntimeMode(ws), 'assist');
+    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+  });
+
+  test('writeRuntimeModeOrInvalidate: failure with no prior mirror stays fail-closed (idempotent)', () => {
+    const ws = tmp();
+    try {
+      const failingWrite = (): void => { throw new Error('simulated disk failure'); };
+      const ok = writeRuntimeModeOrInvalidate(ws, 'enforce', failingWrite);
+      assert.equal(ok, false);
       assert.equal(readRuntimeMode(ws), 'enforce');
     } finally { fs.rmSync(ws, { recursive: true, force: true }); }
   });

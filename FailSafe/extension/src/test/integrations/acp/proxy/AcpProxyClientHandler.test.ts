@@ -27,6 +27,17 @@ function setup(verdict: ReceiptVerdict) {
   return { handler: new AcpProxyClientHandler(governor, devin), calls };
 }
 
+/** Forwarder without the optional fs capabilities — exercises the no-client-support path. */
+function setupNoFsCapability(verdict: ReceiptVerdict) {
+  const calls: string[] = [];
+  const devin = {
+    requestPermission: async () => { calls.push('rp'); return { outcome: { outcome: 'cancelled' } }; },
+    sessionUpdate: async () => { calls.push('su'); },
+  } as unknown as AcpDevinForwarder;
+  const governor = new AcpProxyGovernor(new AcpInterceptor(backing(verdict)), { effectiveMode: () => ({ mode: 'enforce', enforcing: true }) });
+  return { handler: new AcpProxyClientHandler(governor, devin), calls };
+}
+
 const PERM = {
   sessionId: 's',
   toolCall: { toolCallId: 't', title: 'shell', rawInput: { command: ['/bin/zsh', '-lc', 'rm x'] } },
@@ -84,5 +95,25 @@ suite('integrations/acp/proxy AcpProxyClientHandler', () => {
     const r = await handler.readTextFile({ sessionId: 's', path: '/x' } as never);
     assert.ok(calls.includes('su') && calls.includes('rtf'));
     assert.deepEqual(r, { content: 'relayed' });
+  });
+
+  test('writeTextFile: ALLOW but forwarder lacks fs support → throws NO_CLIENT_SUPPORT, does not fabricate success', async () => {
+    const { handler } = setupNoFsCapability('ALLOW');
+    await assert.rejects(
+      () => handler.writeTextFile({ sessionId: 's', path: '/x', content: 'hi' } as never),
+      (e: unknown) => e instanceof AcpGovernanceDenied
+        && /fs\/write_text_file/.test((e as Error).message)
+        && /NO_CLIENT_SUPPORT/.test((e as Error).message),
+    );
+  });
+
+  test('readTextFile: forwarder lacks fs support → throws NO_CLIENT_SUPPORT, does not fabricate empty-file content', async () => {
+    const { handler } = setupNoFsCapability('ALLOW');
+    await assert.rejects(
+      () => handler.readTextFile({ sessionId: 's', path: '/x' } as never),
+      (e: unknown) => e instanceof AcpGovernanceDenied
+        && /fs\/read_text_file/.test((e as Error).message)
+        && /NO_CLIENT_SUPPORT/.test((e as Error).message),
+    );
   });
 });

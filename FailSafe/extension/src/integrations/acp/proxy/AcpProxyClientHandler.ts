@@ -81,14 +81,17 @@ export class AcpProxyClientHandler implements Client {
     return { outcome } as unknown as RequestPermissionResponse;
   }
 
-  /** GOVERNED. A withheld write (deny under enforce) throws; otherwise relay to Devin. */
+  /** GOVERNED. A withheld write (deny under enforce) throws; otherwise relay to Devin.
+   *  A forwarder without write support also throws — silently returning a fabricated
+   *  empty success would be indistinguishable from a real write to the agent or a
+   *  ledger auditor (mirrors createTerminal's NO_CLIENT_SUPPORT handling). */
   async writeTextFile(params: WriteTextFileRequest): Promise<WriteTextFileResponse> {
     const dec = await this.governor.governEffect({
       type: 'fs_write',
       params: { sessionId: String(params.sessionId), path: params.path, content: params.content },
     });
     if (dec.blocked) throw new AcpGovernanceDenied('fs/write_text_file', dec.receipt.verdict, dec.record.rationale);
-    if (!this.devin.writeTextFile) return {} as WriteTextFileResponse;
+    if (!this.devin.writeTextFile) throw new AcpGovernanceDenied('fs/write_text_file', 'NO_CLIENT_SUPPORT');
     return this.devin.writeTextFile(params);
   }
 
@@ -111,9 +114,11 @@ export class AcpProxyClientHandler implements Client {
     return this.devin.sessionUpdate(params);
   }
 
-  /** RELAYED — reads are not governed here (low-risk; path scoping is engine work). */
+  /** RELAYED — reads are not governed here (low-risk; path scoping is engine work).
+   *  A forwarder without read support throws rather than fabricating an empty-file
+   *  read, which would be indistinguishable from a genuinely empty file to the agent. */
   async readTextFile(params: ReadTextFileRequest): Promise<ReadTextFileResponse> {
-    if (!this.devin.readTextFile) return { content: '' } as unknown as ReadTextFileResponse;
+    if (!this.devin.readTextFile) throw new AcpGovernanceDenied('fs/read_text_file', 'NO_CLIENT_SUPPORT');
     return this.devin.readTextFile(params);
   }
 

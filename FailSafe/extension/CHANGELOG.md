@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **`/api/v1/status` `governance.mode`** now reports the governance mode (observe/assist/enforce) instead of echoing the Sentinel analysis mode. (FX903)
+- **Command Center primary navigation announces its state to assistive tech.** The Overview/Learn/Agents/Governance/Workspace/Integrations/Config tab strip communicated the active section by color and a left border only; screen-reader users had no `role`/`aria-selected` to tell which section was current. The tab strip is now a proper `role="tablist"` of `role="tab"` buttons with `aria-controls`/`aria-selected` kept in sync on every switch, and each panel is a labelled `role="tabpanel"`. (FX904)
 
 ## [5.9.0] - 2026-06-12
 
