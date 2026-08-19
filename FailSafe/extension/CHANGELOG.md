@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.1] - 2026-08-19
+
+### Fixed
+- **Mind Map view prefs survive reload on slow machines.** The canvas could construct before the hub delivered the workspace identity, loading persisted layout/view prefs under the wrong key and sticking on FORCE/2D defaults (caught by the v6.0.0 release gate — that tag was never published). Prefs now reconcile to the live canvas whenever the identity arrives. (#309 sibling fix; FX897/#263)
+
 ## [6.0.0] - 2026-08-19
 
 ### Fixed (stabilization wave, rolled into this release)
