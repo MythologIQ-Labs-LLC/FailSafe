@@ -6,7 +6,7 @@ metadata:
   category: development
   author: MythologIQ
   source:
-    repository: https://github.com/MythologIQ/Qor-logic
+    repository: https://github.com/MythologIQ-Labs-LLC/Qor-logic
     path: qor/skills/sdlc/qor-implement
 phase: implement
 tone_aware: false
@@ -133,6 +133,17 @@ Contract for `teams` mode (reserved for future harness wiring): `TeamCreate(<spe
 ```
 Read: .agent/staging/AUDIT_REPORT.md
 ```
+
+**Reconcile before trusting the verdict (Phase 218 wiring; GH #313).**
+`.agent/staging/` is not session-scoped, so a report from an earlier phase
+survives and its PASS reads as permission for this one:
+
+```bash
+qor-logic scripts verdict_reconcile --report .agent/staging/AUDIT_REPORT.md   --artifact ".qor/gates/$SESSION_ID/audit.json" || ABORT
+```
+
+Any finding ABORTs: `target-mismatch` means the report belongs to another phase,
+`digest-mismatch` means the plan changed after the verdict.
 
 **INTERDICTION**: If verdict is NOT "PASS":
 
@@ -354,6 +365,23 @@ gate_chain.write_gate_artifact(
 ```
 
 Schema lives at `qor/gates/schema/implement.schema.json`; the helper validates before write. Per Phase 54: every gate-writing skill calls `ai_provenance.build_manifest` and passes the result through `ai_provenance=manifest`; closes EU AI Act Art. 13/50 transparency surface.
+
+### Step 6.5: Execution-continuity implementation rules (Phase 216 wiring; GH #285)
+
+When the plan declares `execution_continuity`:
+
+1. Tests precede continuity behavior, as for any other logic.
+2. Produce a checkpoint before a voluntary provider handoff, and before
+   anticipated exhaustion when the host supports it.
+3. Never place secrets, credentials, hidden reasoning, or unrestricted private
+   source bodies in a checkpoint.
+4. A successor assesses reconstruction BEFORE editing anything.
+5. Refuse to proceed on a concurrent writer or a stale target revision.
+6. Preserve the governed scope. Widening it requires a new plan/audit cycle,
+   not a continuation.
+
+A continuation carries the same authority as the original worker and no more.
+Full contract: `qor/references/doctrine-execution-continuity.md`.
 
 ## Delegation
 
