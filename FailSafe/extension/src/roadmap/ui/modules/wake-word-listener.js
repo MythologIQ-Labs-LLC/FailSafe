@@ -11,6 +11,7 @@ export class WakeWordListener {
     this._recognition = null;
     this._retries = 0;
     this._onError = null;
+    this._retryTimer = null;
 
     const saved = store?.get('wake-word-enabled');
     if (saved === 'true' || saved === true) this.enabled = true;
@@ -71,7 +72,10 @@ export class WakeWordListener {
       }
       if (this.enabled && getState?.() === 'idle') {
         const delay = Math.min(1000 * Math.pow(2, this._retries - 1), 30000);
-        globalThis.setTimeout(() => this.start(onTriggered, onError, getState), delay);
+        this._retryTimer = globalThis.setTimeout(() => {
+          this._retryTimer = null;
+          this.start(onTriggered, onError, getState);
+        }, delay);
       }
     });
 
@@ -80,6 +84,10 @@ export class WakeWordListener {
   }
 
   stop() {
+    if (this._retryTimer) {
+      globalThis.clearTimeout(this._retryTimer);
+      this._retryTimer = null;
+    }
     if (!this._recognition) return;
     try { this._recognition.stop(); } catch { /* already stopped */ }
     this._recognition = null;
