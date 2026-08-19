@@ -26678,3 +26678,35 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 Implemented plan-fail-closed-297-319.md (audit PASS #519) on branch fix/fail-closed-297-319. Phase 1 (#297/FX905): handleFileOperation total guard (outer try/catch delegating to handleFileOperationInner), withTimeout helper applied at the evaluateAction and governanceAdapter.evaluate sites (verdictTimeoutMs ctor param, default 10_000ms), showBlockade notifier-fault totality. Phase 2 (#319/FX897): LAST_IDENTITY_KEY + resolveIdentity fallback in brainstorm-graph-io.js (save records real identity; identity-less load/save fall back), initCanvas post-construction applyViewPrefs reconcile, spec identity-poll sequencing. TDD: T1-T6 red (6 failing) then green; T7/T9/T10 red (T8 pinned existing default, green) then green; 22/22 passing across the three suites; Slice-1 test unbroken. Lint 0 errors. FEATURE_INDEX: FX905 NEW + FX897 refreshed; CHANGELOG [Unreleased] both files. Full unit suite result recorded at seal (local VS Code updater mutex may defer to CI).
+
+
+---
+
+### Entry #521: SESSION SEAL - fail-closed-297-319
+
+**Timestamp**: 2026-08-19T20:30:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L2
+**Entry ID**: `3210eee7d90b`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-fail-closed-297-319.md)
+= 369f9faa563b59f58c87c68c930a1eee5a646c6b83b4606287754697735efc50
+```
+
+**Previous Hash**: `44195b56b9c1f3dca8a0a2cca9a775c9e4811e2a171c458cc11f4466224a4ac2` (Entry #520 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= afbf3095cfc60b1c7d9b1bb9e2d81bef915c7277e72d40312b557322ff9d0c5f
+```
+
+**Merkle Seal**: `c6e32c6c92da6e1fc7082316a9a81b535503665483fa562e504c0cc13aadda81` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for burndown Cycle 1 (session 2026-08-19T0540-98a3b2; research #518 -> audit PASS #519 -> implement #520; commit f440b7b6 on fix/fail-closed-297-319). Reality = Promise: all plan-declared files touched, no unplanned files, no orphans. Verification: T1-T10 red-then-green; 22/22 targeted mocha (GovernanceRouter + brainstorm-view-prefs + brainstorm-toolbar-wiring); tsc + eslint 0 errors. Gate ladder: intent_lock VERIFIED, skill_admission ADMITTED, gate_skill_matrix 0 broken, secret_scanner clean, merge_velocity exit 0, instruction_hygiene clean, data_api_acl disclosed-skip (no SQL), governance-index enforce exit 0. DISCLOSED: (1) full vscode-test npm test blocked locally by the VS Code updater mutex (stuck CodeSetup installer) — targeted mocha covers every touched suite; authoritative full run lands in CI at delivery (gate_skipped_prerequisite_absent-class disclosure); (2) no version bump/tag/CHANGELOG stamp this seal — the v6.0.0 release train is operator-HELD until the issue board clears; changes recorded under [Unreleased] fold into the re-cut release; (3) seal-commit attribution trailer intentionally absent per the operator's binding identity directive (no Co-Authored-By/AI attribution — overrides the skill template). Feature Inventory: FX905 verified (new), FX897 verified (refreshed). Next: remaining burndown cycles; #297/#319 close with evidence at operator-authorized delivery.
