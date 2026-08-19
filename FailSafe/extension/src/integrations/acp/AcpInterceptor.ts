@@ -12,7 +12,8 @@
 // SCOPE (honest): "fail-closed" here means malformed/unmapped/oversized intents
 // QUARANTINE WITHOUT reaching the engine. It does NOT mean an enforced verdict on
 // well-formed intents — the verdict reflects the engine's governance mode (observe
-// mode auto-allows by design), and governing the agent at all assumes the
+// mode auto-allows by design; enforce is the fail-closed default since the
+// 2026-08-19 ruling), and governing the agent at all assumes the
 // cooperative path (the agent surfaces the intent). See
 // acpPermissionAuthority.ts header.
 

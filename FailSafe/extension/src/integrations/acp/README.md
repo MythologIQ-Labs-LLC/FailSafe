@@ -30,7 +30,7 @@ Devin ⇄ [AgentSideConnection]  acp-proxy  [ClientSideConnection] ⇄ real agen
 ```
 
 - **Standalone enforcement.** The proxy runs as a separate process (no VS Code runtime) and reuses the **real `EnforcementEngine`** verbatim through `EngineBackedInterceptor`, behind vscode-free file-backed providers (`backing/`). No duplicated enforcement logic.
-- **Mode source.** The extension mirrors `governance.mode` to `.failsafe/governance/runtime-mode.json`; the proxy reads it per-decision. Missing/malformed → `observe` (fail-safe). assist-in-proxy ≈ observe (no operator to auto-create intents).
+- **Mode source.** The extension mirrors `governance.mode` to `.failsafe/governance/runtime-mode.json`; the proxy reads it per-decision. Missing/malformed → `enforce` (fail-closed — a degraded mirror withholds rather than silently granting; operator ruling 2026-08-19). assist-in-proxy ≈ observe (no operator to auto-create intents).
 - **Bundle.** esbuild emits a self-contained `dist/acp-proxy.js` (CJS — keeps transitive `require` deps in the engine path working; the ESM SDK is inlined).
 - **Verified end-to-end:** a real `initialize` handshake relays Devin→proxy→agent→proxy→Devin through the bundle; enforce mode blocks an out-of-scope fs-write + denies a dangerous permission; observe/assist record `enforcing=false`.
 

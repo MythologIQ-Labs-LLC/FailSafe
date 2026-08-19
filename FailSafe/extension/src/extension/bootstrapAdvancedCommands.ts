@@ -37,7 +37,7 @@ export function registerAdvancedCommands(
   // Gap 1: Mode-change audit trail
   let lastKnownMode = vscode.workspace
     .getConfiguration("failsafe")
-    .get<string>("governance.mode", "observe");
+    .get<string>("governance.mode", "enforce");
 
   // GH #172 Part 2: mirror the governance mode to
   // `.failsafe/governance/runtime-mode.json` so the standalone ACP enforce-proxy
@@ -57,7 +57,7 @@ export function registerAdvancedCommands(
       if (e.affectsConfiguration("failsafe.governance.mode")) {
         const newMode = vscode.workspace
           .getConfiguration("failsafe")
-          .get<string>("governance.mode", "observe");
+          .get<string>("governance.mode", "enforce");
         if (newMode !== lastKnownMode) {
           const previousMode = lastKnownMode;
           lastKnownMode = newMode;
@@ -103,7 +103,7 @@ export function registerAdvancedCommands(
 
       const currentMode = vscode.workspace
         .getConfiguration("failsafe")
-        .get<string>("governance.mode", "observe") as "observe" | "assist" | "enforce";
+        .get<string>("governance.mode", "enforce") as "observe" | "assist" | "enforce";
       try {
         const record = await deps.breakGlass.activate(
           { reason, durationMinutes: parseInt(durationStr, 10), requestedBy: "vscode-user" },

@@ -26334,3 +26334,33 @@ _Hash provenance_: Content Hash = SHA256 of AUDIT_REPORT.md. Chain Hash = SHA256
 
 _Chain integrity: VALID_
 _Session: 2026-08-19-qor155-align-enforce-default_
+
+### Entry #509: IMPLEMENTATION - qor155-align-enforce-default (Phases A1-C)
+
+**Date**: 2026-08-19
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+**Branch**: feat/qor155-align-enforce-default
+
+## Decision
+
+Implements plan-qor155-align-enforce-default iteration 3 (audit PASS Entry #508). A1: qor-logic 0.155.0 payload synced (71 files local; 4 tracked committed 06462e9); install_drift_check clean. A2 (operator-approved): META_LEDGER #442-#457 band physically reordered before #458 - 822 lines moved, per-entry SHA256 manifest identical across 506 entry numbers, the 3 targeted verifier BREAKs healed; newly observed PRE-EXISTING residuals disclosed: BREAKs #340/#382 (dangling previous_hash, repair-era; confirmed present in pre-reorder backup) + gap WARN [158,298] - reconcile candidates for a future cycle, out of this audit-locked scope. B1: enforce default at 8 resolution sites (package.json:628 manifest default; EnforcementEngine unset-branch; ConfigManager; bootstrapAdvancedCommands x3; commands.ts; SettingsRoute x2; governance-mode-card.js; runtimeMode.ts fail-closed with rewritten LD-3 contract header); LD-9 lockstep fallback + featureGate seam + dead setFeatureGate removed (EnforceModeEvaluator, EnforcementEngine, bootstrapGovernance ctor); LD-10 funnel (exported pickPlanIdForEnforce + planId QuickPick from PlanManager.getAllPlans + escape item + Set Governance Mode block-dialog action; registerGovernanceCommands gains planManager, sole caller updated); LD-4/LD-11 disclosure comments. B2: renderModeBanner + #mode-banner + .mode-banner CSS + call site deleted; mode-card hint removed, lesson mount preserved (lesson-anchor-coherence green). B3: FeatureStatusRoute governance/sentinel conflation fixed (governanceModeState source); NEW modeDefaultNotice.ts one-time upgrade notice wired in bootstrapGovernance (wiring-site deviation from the plan's bootstrapAdvancedCommands - bootstrapGovernance holds all deps; disclosed); QuickPick/first-run/lesson copy updated. C: FailSafe Pro references removed from both READMEs (v5-coherence guards inverted to pin ABSENCE); root :25-29 + :235-244 (incl. the dangling Download line, one past the cited range - disclosed), extension per-cited ranges. Tests: FX044 inversion (invalid mode -> BLOCK), EnforceModeEvaluator rewritten (8 gate literals removed, fallback case deleted), ACP backing + enforcement e2e inverted to fail-closed (incl. AcpProxyEnforcement absent-mirror case - a plan-map miss found red-then-green at suite time), commands-state baseline + observe-pinned wizard cases, GovernanceStatusBar enforce-defaulted case (observe-defaulted case replaced - unproducible), settings-coherence painter bannerText param + true-initial-state case, settings-cards + governance-mode-card fixtures refreshed, NEW create-intent-enforce.test.ts (5 cases) + mode-default-notice.test.ts (4 cases), FX509 spec rewritten to the no-#mode-banner negative contract, feature-status-route decoupling case. Docs: governance-mode-transitions.md, PROCESS_GUIDE, both READMEs mode tables, BACKLOG B194 supersession, FEATURE_INDEX (FX044/FX507-removed/FX509/FX513 + NEW FX899-FX903), CHANGELOGs breaking entries, GOVERNANCE_INDEX Last Reviewed 2026-08-19 + marker format aligned to the parser (**Last Reviewed**: colon-outside; root cause of the long-standing stale-tier1 WARN, now CLEAN).
+
+VERIFICATION: tsc 0; eslint 0 errors; mocha 3690 passing / 0 failing / 5 pending (census 430/430); Playwright 183 passed + bicameral-advanced-tools ambient flake passed on isolated re-run + 4 skipped; verify-ledger BREAKs #442/#458/#461 gone; install_drift_check clean; governance-index clean. Red-then-green: FX044/ACP/coherence inversions red by construction against old code (asserted new contracts); the 9-failure first suite run + targeted fixes documented in session transcript.
+
+## Content Hash
+
+**Content Hash**: `7b62c59c5618cb2bca8b72a602ff99b4885943533a8e1cac96a24213fba7c581`
+**Previous Hash**: `cf030d22c423ae38427bb789574b95d90795165da621fb8b15b584ec551b27e8` (Entry #508 Chain Hash)
+**Chain Hash**: `47c6535dd5b34cfb1b929827121c6999b69b6ad7a7e957b4be124937e4c1d02a`
+**Merkle Seal**: `c87550d519e9266991aadbd94dff49ee41c9106eaaea8d4afb7061a2de1f5707` -- gate_seal_implement_qor155_align_enforce_default
+**Session ID**: `2026-08-19-qor155-align-enforce-default`
+**Entry ID**: `7b62c59c5618`
+
+_Hash provenance_: Content Hash = SHA256 of plan-qor155-align-enforce-default.md (iteration 3, the implemented blueprint). Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-08-19-qor155-align-enforce-default_

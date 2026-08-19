@@ -53,20 +53,19 @@ suite('v5 documentation coherence', () => {
     assert.equal(props['failsafe.qorlogic.pythonPath'].type, 'string');
   });
 
-  test('root README links to the Pro about URL at least once', () => {
+  // LD-12 (2026-08-19 operator directive): FailSafe Pro references are REMOVED
+  // from both README surfaces — these guards now pin the ABSENCE. The live
+  // About-Pro command + constants stay (explicitly out of LD-12 scope).
+  test('root README contains no FailSafe Pro references (LD-12)', () => {
     const readme = fs.readFileSync(path.join(repoRoot(), 'README.md'), 'utf8');
-    const matches = readme.match(/https:\/\/mythologiq\.studio\/products\/failsafe-pro\b/g) || [];
-    assert.ok(matches.length >= 1, 'root README should link to Pro about URL');
+    assert.equal(/failsafe pro\b|failsafe-pro/i.test(readme), false,
+      'root README must not reference FailSafe Pro (name or URL slug)');
   });
 
-  test('root README has FailSafe / FailSafe Pro section', () => {
-    const readme = fs.readFileSync(path.join(repoRoot(), 'README.md'), 'utf8');
-    assert.match(readme, /##\s+FailSafe and FailSafe Pro/);
-  });
-
-  test('extension README mentions FailSafe Pro and PyPI qor-logic', () => {
+  test('extension README contains no FailSafe Pro references but keeps PyPI qor-logic (LD-12)', () => {
     const readme = fs.readFileSync(path.join(extensionRoot(), 'README.md'), 'utf8');
-    assert.match(readme, /FailSafe Pro/);
+    assert.equal(/failsafe pro\b|failsafe-pro/i.test(readme), false,
+      'extension README must not reference FailSafe Pro (name or URL slug)');
     assert.match(readme, /pypi\.org\/project\/qor-logic/);
   });
 

@@ -106,9 +106,31 @@ suite('registerFeatureStatusRoute', () => {
 
     assert.equal(res.status, 200);
     assert.deepEqual(res.body.sentinel, { running: true, mode: 'observe', eventsProcessed: 7 });
-    assert.deepEqual(res.body.governance, { mode: 'observe' });
+    // No governanceModeState on the hub → governance.mode falls back to the
+    // enforce default; it must NOT echo the Sentinel mode (B-EM-1 conflation).
+    assert.deepEqual(res.body.governance, { mode: 'enforce' });
     assert.deepEqual(res.body.chain, { valid: true });
     assert.equal(res.body.version, '5.0.0');
+  });
+
+  test('GET /api/v1/status governance.mode reports governanceModeState.mode, decoupled from sentinel.mode', async () => {
+    const hub = {
+      sentinelStatus: { running: true, mode: 'heuristic', eventsProcessed: 3 },
+      governanceModeState: { mode: 'observe', defaulted: false },
+      chainValid: true,
+      version: '5.9.0',
+    };
+    const app = makeApp();
+    registerFeatureStatusRoute(app, makeDeps({ buildHubSnapshot: async () => hub }));
+    harness = new RouteHarness(app);
+    await harness.start();
+
+    const res = await harness.request({ path: '/api/v1/status' });
+
+    assert.equal(res.status, 200);
+    assert.equal(res.body.sentinel.mode, 'heuristic', 'sentinel block keeps the Sentinel analysis mode');
+    assert.deepEqual(res.body.governance, { mode: 'observe' },
+      'governance.mode must come from governanceModeState, not sentinel.mode');
   });
 
   test('GET /api/v1/status applies safe defaults when hub fields missing', async () => {
@@ -123,7 +145,7 @@ suite('registerFeatureStatusRoute', () => {
     assert.equal(res.body.sentinel.running, false);
     assert.equal(res.body.sentinel.mode, 'unknown');
     assert.equal(res.body.sentinel.eventsProcessed, 0);
-    assert.equal(res.body.governance.mode, 'observe');
+    assert.equal(res.body.governance.mode, 'enforce');
     assert.equal(res.body.chain.valid, false);
     assert.equal(res.body.version, 'unknown');
   });

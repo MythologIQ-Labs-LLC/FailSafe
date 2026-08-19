@@ -6,9 +6,9 @@ interface ModeView { mode: string; defaulted: boolean; }
 function readModeState(engine: any): ModeView {
   if (engine && typeof engine.getGovernanceModeState === 'function') {
     const s = engine.getGovernanceModeState();
-    return { mode: String(s?.mode ?? 'observe'), defaulted: Boolean(s?.defaulted) };
+    return { mode: String(s?.mode ?? 'enforce'), defaulted: Boolean(s?.defaulted) };
   }
-  const legacy = engine?.getGovernanceMode?.() ?? 'observe';
+  const legacy = engine?.getGovernanceMode?.() ?? 'enforce';
   return { mode: String(legacy), defaulted: false };
 }
 

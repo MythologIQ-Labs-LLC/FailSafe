@@ -46,19 +46,21 @@ test("FX513 Voice Pack card — absent state shows Install button + hint", async
   await expect(slot).toContainText(/not installed|Install Voice Pack|absent/i);
 });
 
-test("FX513 Governance Mode card — observe shows '(default)' tag", async ({ page }) => {
+test("FX513 Governance Mode card — defaulted enforce shows '(default)' tag", async ({ page }) => {
   controller = await serveConsoleServerUI({
     initialHub: {
       version: "test",
-      governanceModeState: { mode: "observe", defaulted: true },
+      governanceModeState: { mode: "enforce", defaulted: true },
       bootstrapState: {},
     } as any,
   });
   await gotoSettings(page, controller.url);
   const modeCard = page.locator('#cc-governance-mode');
   await expect(modeCard).toBeVisible({ timeout: 10000 });
-  await expect(modeCard).toContainText(/observe/i);
+  await expect(modeCard).toContainText(/enforce/i);
   await expect(modeCard).toContainText(/default/i);
+  // The observe-advisory hint was removed with the enforce-default flip.
+  await expect(modeCard).not.toContainText(/You're in Observe mode by default/i);
 });
 
 test("FX513 Governance Mode card — assist hides '(default)' tag", async ({ page }) => {

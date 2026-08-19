@@ -22,14 +22,6 @@ _Local-first safety for AI coding assistants._
 
 ---
 
-## 🚀 Introducing FailSafe Pro — Now Available
-
-**FailSafe Pro is the desktop-native, higher-tier application for full-stack AI governance.** Where this open extension guards your editor, **FailSafe Pro guards your entire SDLC** — OS-level enforcement, file locking, team workflows, remote orchestration, and managed runtime operations that go beyond the editor boundary.
-
-[**→ Learn more about FailSafe Pro**](https://mythologiq.studio/products/failsafe-pro) · [**Download FailSafe Pro**](https://mythologiq.studio/products/failsafe-download)
-
----
-
 ## 🔌 Integrations — govern your entire AI toolchain, not just the editor
 
 FailSafe v5.5 turns the editor into a **governance hub** for the tools your AI agents actually use. Every integration is **local-first, opt-in, and routed through the same deterministic policy engine** that guards your edits — so connecting a tool never widens your attack surface or sends data anywhere by default. Each integration ships with its own README (`src/integrations/<name>/README.md`) and the external API names it depends on are back-cited to official docs in [`docs/integrations/INTEGRATION_DOCS_INDEX.md`](docs/integrations/INTEGRATION_DOCS_INDEX.md).
@@ -232,16 +224,9 @@ See [CHANGELOG.md](CHANGELOG.md) for the full v5.1.5 release notes.
 
 See [CHANGELOG.md](CHANGELOG.md) for the full v5.1.0 release notes.
 
-## FailSafe and FailSafe Pro
+## About FailSafe
 
 FailSafe is the open-source VS Code and Cursor extension for local AI coding governance — audits, skills, checkpoints, and editor-visible safety workflows. Skills are sourced from the [`qor-logic`](https://pypi.org/project/qor-logic/) PyPI package.
-
-FailSafe Pro is the desktop native application for SDLC visibility and governance — OS-level enforcement, file locking, team workflows, and remote connections beyond the editor boundary.
-
-Use FailSafe when you want local editor guardrails. Use FailSafe Pro when you need full SDLC visibility and managed runtime operations.
-
-Learn more: <https://mythologiq.studio/products/failsafe-pro>
-Download: <https://mythologiq.studio/products/failsafe-download>
 
 
 [Quick Start](#quick-example) | [Documentation](docs/FAILSAFE_SPECIFICATION.md) | [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=MythologIQ.mythologiq-failsafe) | [Open VSX](https://open-vsx.org/extension/MythologIQ/mythologiq-failsafe) | [Roadmap](docs/ROADMAP.md)
@@ -390,11 +375,11 @@ FailSafe supports three governance modes to match your workflow needs:
 
 | Mode        | Behavior                                                           | Best For                         |
 | ----------- | ------------------------------------------------------------------ | -------------------------------- |
-| **Observe** | No blocking, just visibility and logging. Zero friction.           | New users, exploration, learning |
-| **Assist**  | Smart defaults, auto-intent creation, gentle prompts. Recommended. | Most development workflows       |
-| **Enforce** | Full control, intent-gated saves, L3 approvals.                    | Compliance, regulated industries |
+| **Enforce** | Default. Full control, intent-gated saves, L3 approvals.           | Governed development, compliance |
+| **Assist**  | Smart defaults, auto-intent creation, gentle prompts.              | Lighter-touch workflows          |
+| **Observe** | No blocking, just visibility and logging. Zero friction.           | Exploration, learning            |
 
-Switch modes via the `FailSafe: Set Governance Mode` command or the `failsafe.governance.mode` setting.
+Enforce is the default mode. Switch modes via the `FailSafe: Set Governance Mode` command or the `failsafe.governance.mode` setting.
 
 ---
 

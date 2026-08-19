@@ -16,8 +16,10 @@ import type { AcpPermissionRequest, AcpPermissionOutcome, AcpGovernableIntent } 
 
 /**
  * Effective governance posture at decision time. `enforcing` is FALSE under
- * observe / assist / lockstep-off, where the engine returns ALLOW by design —
- * so any ALLOW produced then is telemetry-only, not an enforced grant.
+ * observe / assist, where the engine returns ALLOW by design — so any ALLOW
+ * produced then is telemetry-only, not an enforced grant. (Editor-level
+ * enforce is tier-independent per the 2026-08-19 ruling; the former
+ * lockstep-off ALLOW path no longer exists.)
  */
 export interface AcpEffectiveMode {
   mode: string;

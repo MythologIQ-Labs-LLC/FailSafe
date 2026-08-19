@@ -622,11 +622,11 @@
           ],
           "enumDescriptions": [
             "Observe only - No blocking, just visibility and logging. Zero friction.",
-            "Assist - Smart defaults, auto-intent creation, gentle prompts. Recommended for most users.",
-            "Enforce - Full control, intent-gated saves, L3 approvals. For compliance workflows."
+            "Assist - Smart defaults, auto-intent creation, gentle prompts.",
+            "Enforce - Default. Full control, intent-gated saves, L3 approvals."
           ],
-          "default": "observe",
-          "description": "Governance mode determines how FailSafe interacts with your workflow. Start with 'observe' and increase when ready."
+          "default": "enforce",
+          "description": "Governance mode determines how FailSafe interacts with your workflow. Enforce is the default; switch to 'assist' or 'observe' for lighter-touch governance."
         },
         "failsafe.governance.overseerId": {
           "type": "string",

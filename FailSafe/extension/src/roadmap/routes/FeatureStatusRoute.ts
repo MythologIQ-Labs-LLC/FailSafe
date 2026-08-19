@@ -37,13 +37,19 @@ export function registerFeatureStatusRoute(
   app.get("/api/v1/status", async (_req: Request, res: Response) => {
     const hub = await deps.buildHubSnapshot();
     const sentinel = hub.sentinelStatus as Record<string, unknown> | undefined;
+    // governance.mode reports the GOVERNANCE mode (observe/assist/enforce),
+    // not the Sentinel analysis mode — the prior sentinel?.mode read was a
+    // B-EM-1-class conflation. Fallback matches the enforce default.
+    const governanceMode = (
+      hub as unknown as Record<string, { mode?: string } | undefined>
+    ).governanceModeState?.mode;
     res.json({
       sentinel: {
         running: sentinel?.running ?? false,
         mode: sentinel?.mode ?? "unknown",
         eventsProcessed: sentinel?.eventsProcessed ?? 0,
       },
-      governance: { mode: sentinel?.mode ?? "observe" },
+      governance: { mode: governanceMode ?? "enforce" },
       chain: { valid: hub.chainValid ?? false },
       version: hub.version ?? "unknown",
     });

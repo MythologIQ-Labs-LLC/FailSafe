@@ -6,14 +6,6 @@ FailSafe runs locally inside VS Code and Cursor. It monitors what AI agents do, 
 
 ---
 
-## 🚀 Introducing FailSafe Pro — Now Available
-
-**FailSafe Pro is the desktop-native, higher-tier application for full-stack AI governance.** Where this open extension guards your editor, **FailSafe Pro guards your entire SDLC** — OS-level enforcement, file locking, team workflows, remote orchestration, and managed runtime operations that go beyond the editor boundary.
-
-[**→ Learn more**](https://mythologiq.studio/products/failsafe-pro) · [**Download FailSafe Pro**](https://mythologiq.studio/products/failsafe-download)
-
----
-
 ## 🔌 Integrations — govern your entire AI toolchain, not just the editor
 
 FailSafe v5.5 turns the editor into a **governance hub** for the tools your AI agents actually use. Every integration is **local-first, opt-in, and routed through the same deterministic policy engine** that guards your edits — so connecting a tool never widens your attack surface or sends data anywhere by default.
@@ -204,7 +196,7 @@ See root [CHANGELOG.md](../../CHANGELOG.md) for the full v5.1.7 release notes.
 - **B197 qor-logic version-floor surfacing**: hub payload carries `installedVersion` + `meetsFloor`; Settings card surfaces a floor warning when below `MIN_QOR_LOGIC_VERSION`.
 - **B194 enforcement-mode escalation UX**: observe-mode advisory banner + Governance tab "Mode Transitions" feed with reverse-chronological history.
 - **B193 SentinelDaemon governance-file coverage**: governance markdown/yaml/json watched; canonical fs paths; `.failsafe/governance/` blanket-prefix match.
-- **B192 stale-cache remediation**: `WorkspaceMutationBus` substrate routes filesystem mutations to PlanManager + HubSnapshotService + TrustEngine + ConsoleLifecycleService subscribers. Closes the FailSafe-Pro-coexistence concern. See `docs/governance-cache-invalidation.md`.
+- **B192 stale-cache remediation**: `WorkspaceMutationBus` substrate routes filesystem mutations to PlanManager + HubSnapshotService + TrustEngine + ConsoleLifecycleService subscribers. Closes the external-daemon coexistence concern. See `docs/governance-cache-invalidation.md`.
 - **B195 voice substrate extraction**: heavy Piper TTS + Whisper STT vendor binaries (~86 MB uncompressed) moved out of the base VSIX into a separate `failsafe-voice-pack-<version>.tar.gz` companion download. Voice features become opt-in: run `FailSafe: Install Voice Pack`. Base extension drops below the 30 MB marketplace ceiling. See `docs/INTEGRATIONS.md` Voice Pack section.
 - **Test isolation hardening**: `vscode-test` now pins a unique `--user-data-dir` per invocation to eliminate dual extension-host races against ambient editor processes — pre-push gate becomes fully deterministic.
 
@@ -225,7 +217,7 @@ Minor release: B199 Phase 1 ships the comprehensive E2E coverage methodology and
 
 ## What's New in v5.0.0
 
-Major release: skills ingested from the [`qor-logic`](https://pypi.org/project/qor-logic/) PyPI package, public reveal of the FailSafe / FailSafe Pro product split, and the Command Center now reads workspace truth (META_LEDGER, BACKLOG, plans, audit, changelog) instead of empty placeholder state.
+Major release: skills ingested from the [`qor-logic`](https://pypi.org/project/qor-logic/) PyPI package, and the Command Center now reads workspace truth (META_LEDGER, BACKLOG, plans, audit, changelog) instead of empty placeholder state.
 
 ### Added
 
@@ -233,7 +225,6 @@ Major release: skills ingested from the [`qor-logic`](https://pypi.org/project/q
 - **Python interpreter auto-detection** — Resolves Python in priority order: `failsafe.qorlogic.pythonPath` setting → VS Code Python extension (`ms-python.python`) → probe `python3` → `python` → `py -3`.
 - **`failsafe.bootstrap` and `failsafe.organize` commands** — Idempotent workspace-readiness gate; runs in silent mode on every activation, full bootstrap (incl. `pip install qor-logic`) on user trigger.
 - **Always-visible Settings card** — "Install / Refresh QorLogic Skills" + "Bootstrap Workspace" buttons; no longer gated on a brittle "is something on disk" heuristic.
-- **FailSafe Pro discovery** — New `FailSafe: About FailSafe Pro` command and a Settings panel card link to <https://mythologiq.studio/products/failsafe-download>.
 - **Workspace-truth UI** — Operations Phases stat reflects META_LEDGER history (was 0/0); Risks tab shows BACKLOG open items when no `risks.json` exists; Overview gains Latest Audit + Recent Releases cards parsed from `.failsafe/governance/AUDIT_REPORT.md` + `CHANGELOG.md`.
 - See `docs/v5/QORLOGIC_SKILL_INGESTION.md` and `docs/v5/PRO_INTEGRATION.md`.
 
@@ -260,15 +251,6 @@ Major release: skills ingested from the [`qor-logic`](https://pypi.org/project/q
 - **Notifications severity gating** — independent toggles for info-tier and error-tier toasts in Settings → Notifications.
 - **Security hardening** — XSS escape discipline applied across all settings/overview innerHTML interpolation; Whisper model and Piper voice allowlists close supply-chain pivot risks.
 - **Internal architecture** — ConsoleServer decomposition (`QoreRuntimeService` + 4 route extractions). No user-visible API change.
-
-### About FailSafe Pro
-
-FailSafe Pro is the desktop native application for SDLC visibility and governance — OS-level enforcement, file locking, team workflows, and remote connections beyond the editor boundary. The open extension remains the editor surface; pair it with Pro for full SDLC operations.
-
-Learn more: <https://mythologiq.studio/products/failsafe-pro>
-Download: <https://mythologiq.studio/products/failsafe-download>
-
-Or open the Command Center Settings tab and choose "About FailSafe Pro".
 
 ## What's New in v4.9.9
 
@@ -526,9 +508,9 @@ FailSafe now supports three governance modes to match your workflow needs:
 
 | Mode        | Behavior                                                           | Best For                         |
 | ----------- | ------------------------------------------------------------------ | -------------------------------- |
-| **Observe** | No blocking, just visibility and logging. Zero friction.           | New users, exploration, learning |
-| **Assist**  | Smart defaults, auto-intent creation, gentle prompts. Recommended. | Most development workflows       |
-| **Enforce** | Full control, intent-gated saves, L3 approvals.                    | Compliance, regulated industries |
+| **Enforce** | Default. Full control, intent-gated saves, L3 approvals.           | Governed development, compliance |
+| **Assist**  | Smart defaults, auto-intent creation, gentle prompts.              | Lighter-touch workflows          |
+| **Observe** | No blocking, just visibility and logging. Zero friction.           | Exploration, learning            |
 
 Switch modes via:
 
@@ -666,7 +648,7 @@ Open Settings and search for `FailSafe`:
 
 | Setting                                           | Default                          | Description                                                        |
 | ------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------ |
-| `failsafe.governance.mode`                        | `observe`                        | Governance mode: observe, assist, or enforce                       |
+| `failsafe.governance.mode`                        | `enforce`                        | Governance mode: observe, assist, or enforce                       |
 | `failsafe.genesis.livingGraph`                    | `true`                           | Enable Living Graph visualization                                  |
 | `failsafe.genesis.cortexOmnibar`                  | `true`                           | Enable Cortex Omnibar                                              |
 | `failsafe.genesis.theme`                          | `starry-night`                   | Genesis UI theme                                                   |

@@ -29,10 +29,10 @@ export class FirstRunModePicker {
 
     const picks: ModePick[] = [
       {
-        label: "$(eye) Observe",
-        description: "Watch what AI agents do; no blocking",
+        label: "$(shield) Enforce",
+        description: "Default — block risky actions; require approval",
         detail: modeLesson,
-        mode: "observe",
+        mode: "enforce",
       },
       {
         label: "$(warning) Assist",
@@ -41,16 +41,16 @@ export class FirstRunModePicker {
         mode: "assist",
       },
       {
-        label: "$(shield) Enforce",
-        description: "Block risky actions; require approval",
+        label: "$(eye) Observe",
+        description: "Watch what AI agents do; no blocking",
         detail: modeLesson,
-        mode: "enforce",
+        mode: "observe",
       },
     ];
 
     const chosen = await vscode.window.showQuickPick(picks, {
       title: "FailSafe — Choose Governance Mode",
-      placeHolder: "Pick how FailSafe should treat AI-agent actions",
+      placeHolder: "Pick how FailSafe should treat AI-agent actions (dismissing keeps the Enforce default)",
       ignoreFocusOut: true,
     });
 
