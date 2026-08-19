@@ -1,7 +1,7 @@
 {
   "name": "mythologiq-failsafe",
   "displayName": "FailSafe (feat. Qor-Logic)",
-  "description": "Open-source VS Code/Cursor governance and skills surface for AI coding agents. Pairs with FailSafe Pro for desktop enforcement.",
+  "description": "Open-source VS Code/Cursor governance and skills surface for AI coding agents.",
   "icon": "media/icon.png",
   "version": "5.9.0",
   "publisher": "MythologIQ",
@@ -41,7 +41,6 @@
     "onChatParticipant:failsafe.chat",
     "onView:failsafe.sidebarView",
     "onCommand:failsafe.openSidebar",
-    "onCommand:failsafe.openFailSafeProAbout",
     "onCommand:failsafe.bootstrap",
     "onCommand:failsafe.organize",
     "onCommand:failsafe.openPlannerHub",
@@ -190,10 +189,6 @@
         "command": "failsafe.openhands.observe",
         "title": "FailSafe: Import OpenHands Run (observe)",
         "category": "FailSafe"
-      },
-      {
-        "command": "failsafe.openFailSafeProAbout",
-        "title": "FailSafe: About FailSafe Pro"
       },
       {
         "command": "failsafe.bootstrap",

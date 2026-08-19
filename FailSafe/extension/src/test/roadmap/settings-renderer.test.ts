@@ -162,11 +162,13 @@ suite('SettingsRenderer (FX241 + FX230 + FX242)', () => {
     assert.equal(document.getElementById('set-root')!.innerHTML, '');
   });
 
-  test('FX242 — FailSafe Pro card has About button (not download link)', () => {
+  test('FX242 — Settings renders with NO FailSafe Pro card (removed 2026-08-19)', () => {
     const r = new SettingsRenderer('set-root', { store: makeStore() });
     r.render({});
     const html = document.getElementById('set-root')!.innerHTML;
-    assert.match(html, /About FailSafe Pro/);
-    assert.match(html, /open-failsafe-pro-about/);
+    assert.ok(html.length > 0, 'settings must still render content');
+    assert.ok(!/cc-failsafe-pro/.test(html), 'Pro card element must not render');
+    assert.ok(!/About FailSafe Pro/.test(html), 'Pro card copy must not render');
+    assert.ok(!/open-failsafe-pro-about/.test(html), 'Pro bind action must not render');
   });
 });

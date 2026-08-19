@@ -26399,3 +26399,88 @@ _Hash provenance_: Content Hash = qor.scripts.ledger_hash.content_hash(plan-qor1
 
 _Chain integrity: VALID_
 _Session: 2026-08-19-qor155-align-enforce-default_
+
+### Entry #511: GATE TRIBUNAL - depro-live-surfaces
+
+**Date**: 2026-08-19
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+
+## Decision
+
+VERDICT: PASS (solo; audit_risk_score did not mandate Option B; every citation direct-verified in-session). Target plan-depro-live-surfaces.md - operator directive extends LD-12 (seal #510) to the live Pro surfaces: failsafe.openFailSafeProAbout command + activation event, Settings renderFailSafeProCard + bind, shared/constants.ts (sole-importer-proven whole-file deletion), PRO_INTEGRATION.md archived + README:229 dangling reference (mid-review completeness amendment, pre-verdict). All tests inverted to pin ABSENCE (getCommands membership, renderer output, Playwright DOM count); about-pro-command + constants test files deleted with their units. All passes clean. Conditions: continues feat/qor155-align-enforce-default; Review Boundary holds; FX414-FX418 rows + CHANGELOG Removed bullets in the same commit.
+
+## Content Hash
+
+**Content Hash**: `37f22caa8e2b1e427a8869b690ab0ac01db6c111a1722b442e9bab45fa74ecd6`
+**Previous Hash**: `da96df1cac749d940f8228c9795553e1854ea3e779ede82ce930f8725635c7b6` (Entry #510 Chain Hash)
+**Chain Hash**: `2f91827f277c6d471e5b22104809dbbf443ea1ed6fc514ee4da43f136ed5998e`
+**Merkle Seal**: `601094dff3cf9efbca94ad555d1b5e3114ddd962d0edf54824434dd0930fe9e6` -- gate_seal_audit_depro_live_surfaces
+**Session ID**: `2026-08-19T0540-98a3b2`
+**Entry ID**: `37f22caa8e2b`
+
+_Hash provenance_: Content Hash = SHA256 of AUDIT_REPORT.md. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-08-19T0540-98a3b2_
+
+### Entry #512: IMPLEMENTATION - depro-live-surfaces
+
+**Date**: 2026-08-19
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+**Branch**: feat/qor155-align-enforce-default
+
+## Decision
+
+Implements plan-depro-live-surfaces (audit PASS Entry #511). Removed: failsafe.openFailSafeProAbout (package.json activation event + contributes.commands + commands.ts registration/import), Settings renderFailSafeProCard + call site + bind block (settings.js), shared/constants.ts DELETED WHOLE (sole importer was the removed command; FAILSAFE_PRO_DOWNLOAD_URL had zero non-test consumers), about-pro-command.test.ts + constants.test.ts DELETED (with stale out/ artifacts), PRO_INTEGRATION.md archived to .failsafe/archive/PRO_INTEGRATION_2026-08-19.md + README:229 dangling reference dropped. Two in-cycle completeness amendments beyond the plan, same directive: (1) marketplace package.json description sentence "Pairs with FailSafe Pro for desktop enforcement." removed - the most public Pro string, missed at plan time; (2) four internal code comments neutralized to external-daemon wording (acpPermissionAuthority.ts, runtimeMode.ts, PlanManager.ts, TrustEngine.ts) so the D4 source grep is strictly Pro-free. Tests inverted to pin ABSENCE: v5-coherence (command absent + activation event absent + constants module deleted + PRO_INTEGRATION archived), commands-dispatch FX002 (getCommands membership false), settings-renderer FX242 (no #cc-failsafe-pro / copy / bind in rendered HTML), command-center-settings Playwright (zero Pro-card elements, governance-mode card as positive anchor). FEATURE_INDEX FX414 superseded / FX415-FX416 removed; CHANGELOG Removed bullets both files.
+
+VERIFICATION: eslint 0 errors; compile clean; mocha 3680 passing / 0 failing / 5 pending; Playwright settings specs 6 passed / 2 skipped incl. the inverted no-Pro-card case; secret scan + instruction hygiene CLEAN on staged; D4 grep (case-insensitive failsafe pro|failsafe-pro over src + package.json, vendor/test excluded) returns zero hits.
+
+## Content Hash
+
+**Content Hash**: `f2e4540ff7815ec695a58309cfbd7378471dd241b16951e08e76da6bc6da7055`
+**Previous Hash**: `2f91827f277c6d471e5b22104809dbbf443ea1ed6fc514ee4da43f136ed5998e` (Entry #511 Chain Hash)
+**Chain Hash**: `5f37b6be3a5d12fd978e7fda40ce18ed3565d5c719918f5fa9b74d374563ff00`
+**Merkle Seal**: `4af36a880cb0e51e5efb462db5556f064a9a3f25ad0e37a293317c9e7f902d52` -- gate_seal_implement_depro_live_surfaces
+**Session ID**: `2026-08-19T0540-98a3b2`
+**Entry ID**: `f2e4540ff781`
+
+_Hash provenance_: Content Hash = SHA256 of plan-depro-live-surfaces.md. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-08-19T0540-98a3b2_
+
+### Entry #513: SESSION SEAL - depro-live-surfaces
+
+**Date**: 2026-08-19
+**Phase**: SUBSTANTIATE (compact governed cycle: plan -> audit PASS #511 -> implement #512 -> seal)
+**Author**: Judge
+**Risk Grade**: L2
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1, PW.4.1
+
+## Decision
+
+Reality = Promise VERIFIED for plan-depro-live-surfaces. All removals executed; two disclosed in-cycle amendments (marketplace description, comment neutralization) recorded at #512 - both narrower-than-scope extensions of the same operator directive, no new surface. D4 gates: source Pro-free by case-insensitive grep; inverted tests green (mocha 3680/0; Playwright 6/2-skipped); eslint 0 errors. Gate ladder: secret scan CLEAN, instruction hygiene CLEAN, intent lock captured, gate chain plan/audit/implement/substantiate present for session 2026-08-19T0540-98a3b2. Companion actions under the same operator directive ("address the follow ups now"): upstream Qor-logic issues FILED - #356 (consumer ledger-residual attestation surfaces: workspace KNOWN_ENTRY_GAPS + dangling-previous_hash reconcile mode, covering FailSafe residuals #340/#382 + gaps [158,298]) and #357 (qor-audit SKILL.md 38.8KB vs the 40KB Phase-234 hard ABORT). Confidentiality memory updated: FULL Pro-naming backtrack recorded; the 2026-04-25 public-naming rule superseded. Version bump / tag / push SKIPPED by operator policy (no release authorized; Review Boundary holds); attribution trailer omitted per standing operator identity directive.
+
+## Content Hash
+
+**Content Hash**: `f2e4540ff7815ec695a58309cfbd7378471dd241b16951e08e76da6bc6da7055`
+**Previous Hash**: `5f37b6be3a5d12fd978e7fda40ce18ed3565d5c719918f5fa9b74d374563ff00` (Entry #512 Chain Hash)
+**Chain Hash**: `d41c5bde6111ede0b025ad09c19d4d6eeb80d1eda0a823f692c24c95c5aeec99`
+**Merkle Seal**: `14714a2759bdcf49b4573459bf02101f39a6245165d2c27d44477547d36e8183` -- gate_seal_session_depro_live_surfaces
+**Session ID**: `2026-08-19T0540-98a3b2`
+**Entry ID**: `f2e4540ff781-s513`
+
+_Hash provenance_: Content Hash = SHA256 of plan-depro-live-surfaces.md. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-08-19T0540-98a3b2_

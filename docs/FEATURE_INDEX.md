@@ -652,9 +652,9 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 | ID | Feature | Doc | Code | Test | Status | Notes | Surface |
 |---|---|---|---|---|---|---|---|
-| FX414 | Public reveal of FailSafe / FailSafe Pro split | F285 | — | docs/v5-coherence.test.ts | verified | Doc-coherence test | config |
-| FX415 | FAILSAFE_PRO_DOWNLOAD_URL constant | F286 | shared/constants.ts | shared/constants.test.ts | verified | Canonical route `https://mythologiq.studio/products/failsafe-download`; current Tier-1 docs reconciled 2026-07-13. | config |
-| FX416 | About FailSafe Pro card (Settings) | F287 | C002, C192 | extension/about-pro-command.test.ts | verified | | config |
+| FX414 | Public reveal of FailSafe / FailSafe Pro split | F285 | — | src/test/docs/v5-coherence.test.ts | superseded | Backtracked 2026-08-19 (operator directive): Pro removed from READMEs (seal #510) AND live surfaces (this cycle); coherence guards now pin ABSENCE. | config |
+| FX415 | FAILSAFE_PRO_DOWNLOAD_URL constant | F286 | (removed) | src/test/docs/v5-coherence.test.ts | removed | constants.ts deleted 2026-08-19 (sole importer was the removed About command); coherence guard asserts the module does not exist. | config |
+| FX416 | About FailSafe Pro card (Settings) | F287 | (removed) | src/test/ui/command-center-settings.spec.ts, src/test/roadmap/settings-renderer.test.ts, src/test/extension/commands-dispatch.test.ts | removed | Card + bind + failsafe.openFailSafeProAbout command removed 2026-08-19; tests assert zero #cc-failsafe-pro elements + command absent from getCommands. | config |
 | FX417 | CodeGenome substrate link | F288 | — | — | n/a | Marketing/forward-looking link | config |
 | FX418 | Pro daemon detection (thin client) | F289 | — | — | n/a | Documented but acknowledged ambiguous; not implemented | config |
 

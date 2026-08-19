@@ -49,7 +49,7 @@ export class TrustEngine {
         this.db = this.ledgerManager.getDatabase();
         this.refreshFromDb();
         // B192 remediation: subscribe to external SQLite db mutations
-        // (FailSafe Pro coexistence). In-process EventBus subscriptions above
+        // (external-daemon coexistence). In-process EventBus subscriptions above
         // catch our OWN writes; mutationBus catches external writers.
         if (this.mutationBus) {
             const dbPath = this.ledgerManager.getLedgerPath();

@@ -46,17 +46,13 @@ test.describe('FX-BROWSER-VERIFY-SETTINGS — settings tab coherence', () => {
     expect(settingsText).toContain('Configuration');
   });
 
-  test('FailSafe Pro card wires About button (not download) per public-positioning rule', async ({ page }) => {
+  test('Settings tab renders with NO FailSafe Pro card (removed 2026-08-19)', async ({ page }) => {
     controller = await serveConsoleServerUI({});
     await page.goto(`${controller.url}/command-center.html`);
     await page.locator('.tab-btn[data-target="settings"]').click();
-    // settings.js:69-73 emits `data-action="open-failsafe-pro-about"` with
-    // text "About FailSafe Pro". A download surface would have a different
-    // anchor target / action — assert the About wiring is in place.
-    const about = page.locator('[data-action="open-failsafe-pro-about"]');
-    await expect(about).toBeVisible();
-    await expect(about).toContainText('About FailSafe Pro');
-    // No download button mistakenly co-rendered.
-    await expect(page.locator('[data-action="download-failsafe-pro"]')).toHaveCount(0);
+    // Positive anchor proving the tab rendered, then the negative contract.
+    await expect(page.locator('#cc-governance-mode')).toBeVisible();
+    await expect(page.locator('#cc-failsafe-pro')).toHaveCount(0);
+    await expect(page.locator('[data-action="open-failsafe-pro-about"]')).toHaveCount(0);
   });
 });

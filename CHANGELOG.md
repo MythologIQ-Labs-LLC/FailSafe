@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Enforce-mode Create Intent funnel.** In enforce mode, `FailSafe: Create Intent` first resolves the plan the intent serves (picker sourced from PlanManager) with an explicit "switch governance mode" escape; the writes-blocked dialog now offers `Set Governance Mode` alongside `Create Intent`. (FX901)
 
 ### Removed
+- **All remaining FailSafe Pro surfaces.** The `FailSafe: About FailSafe Pro` command, the Settings-panel Pro card, the Pro URL constants module, and the marketplace-description mention are removed (operator directive, completing the README removal). (FX414-FX416 superseded/removed)
 - **Observe-mode advisory banner and default hint.** The Monitor sidebar banner and the Settings-card "You're in Observe mode by default" hint are gone with the default flip. (FX507 removed)
 
 ### Fixed

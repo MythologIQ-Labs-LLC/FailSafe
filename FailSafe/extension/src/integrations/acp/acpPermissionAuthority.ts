@@ -11,7 +11,7 @@
 // "fail-closed"):
 //   1. COOPERATIVE-PATH only. A compliant agent calls `session/request_permission`;
 //      a malicious/non-cooperative agent MAY skip it and act off-channel. Closing
-//      that gap requires FailSafe Pro's OS-level enforcement.
+//      that gap requires OS-level enforcement outside the editor boundary.
 //   2. MODE-DEPENDENT enforcement (ACP-ADV-02). The ALLOW path here simply
 //      reflects the backing engine's VERDICT. Under a non-enforcing governance
 //      mode (observe / assist) the engine returns ALLOW by design

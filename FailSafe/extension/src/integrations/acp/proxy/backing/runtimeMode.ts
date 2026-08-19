@@ -4,7 +4,7 @@
 // current mode to `.failsafe/governance/runtime-mode.json`, which the proxy reads.
 //
 // Contract chosen by evidence (matches the WorkspaceMutationBus substrate +
-// FailSafe-Pro-coexistence-via-shared-filesystem, no IPC). File shape:
+// external-daemon-coexistence-via-shared-filesystem, no IPC). File shape:
 //   { "mode": "observe" | "assist" | "enforce" }
 //
 // FAIL-CLOSED DEFAULT (operator ruling 2026-08-19): a missing/unreadable/
