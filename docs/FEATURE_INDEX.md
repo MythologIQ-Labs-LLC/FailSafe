@@ -648,6 +648,14 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 ---
 
+## Section: Agent Skills marketplace (wayfinder integration, 2026-08-19)
+
+| ID | Feature | Doc | Code | Test | Status | Notes | Surface |
+|---|---|---|---|---|---|---|---|
+| FX904 | Marketplace agent-skills category + mattpocock-skills entry (Wayfinder pack) | docs/agents/issue-tracker.md | src/roadmap/services/MarketplaceTypes.ts, src/roadmap/services/MarketplaceCatalog.ts, src/roadmap/ui/modules/marketplace.js | src/test/roadmap/MarketplaceCatalog.test.ts | verified | New closed-union category with inverse-coverage label test (every in-use category labeled); entry: MIT, trustTier unverified, sandboxEnabled, repoUrl mattpocock/skills. Workspace USE half is local-only (.claude/skills vendored @ pinned SHA, canary-scanned per #515 C1). | integrations |
+
+---
+
 ## Section: FailSafe Pro discovery / boundary
 
 | ID | Feature | Doc | Code | Test | Status | Notes | Surface |

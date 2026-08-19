@@ -372,5 +372,35 @@ Some random text without entries.
       assert.strictEqual(state.current, "SEALED");
       assert.ok(state.nextSteps[0].toLowerCase().includes("release"));
     });
+
+    // FX-244A: Tranche A status-truth audit. Non-empty content that fails
+    // to parse into any recognizable entry is evidence that exists but
+    // could not be read -- it must not be indistinguishable from a
+    // genuinely empty/never-started ledger.
+    it("flags evidenceState=malformed for non-empty content with zero parseable entries", () => {
+      const state = buildGovernanceState(
+        "# META_LEDGER\nfile got truncated mid-write; no entry headers survive.\n",
+      );
+      assert.strictEqual(state.current, "IDLE");
+      assert.strictEqual(state.evidenceState, "malformed");
+    });
+
+    it("does not flag evidenceState for genuinely empty content", () => {
+      const state = buildGovernanceState("");
+      assert.strictEqual(state.current, "IDLE");
+      assert.strictEqual(state.evidenceState, undefined);
+    });
+
+    it("does not flag evidenceState for whitespace-only content", () => {
+      const state = buildGovernanceState("   \n\n  \n");
+      assert.strictEqual(state.evidenceState, undefined);
+    });
+
+    it("does not flag evidenceState when entries parse successfully", () => {
+      const state = buildGovernanceState(
+        "### Entry #1: PLAN Phase\n\n**Timestamp**: 2025-03-09T10:00:00Z\n**Phase**: PLAN\n",
+      );
+      assert.strictEqual(state.evidenceState, undefined);
+    });
   });
 });

@@ -59,5 +59,8 @@ test("primary tab-nav exposes role=tablist/tab and keeps aria-selected in sync",
   await expect(overviewTab).toHaveAttribute("aria-selected", "false");
 
   // Playwright's role engine must now actually resolve these as tabs.
-  await expect(page.getByRole("tab")).toHaveCount(7);
+  // Scoped to the primary tab-nav: page-wide role=tab also matches the
+  // per-section TabGroup sub-view pills (FailSafe#303/PR #304), which this
+  // spec does not own and whose count varies by which section is active.
+  await expect(nav.getByRole("tab")).toHaveCount(7);
 });

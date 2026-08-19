@@ -26484,3 +26484,112 @@ _Hash provenance_: Content Hash = SHA256 of plan-depro-live-surfaces.md. Chain H
 
 _Chain integrity: VALID_
 _Session: 2026-08-19T0540-98a3b2_
+
+### Entry #514: RESEARCH BRIEF - Wayfinder (mattpocock/skills) integration
+
+**Date**: 2026-08-19
+**Phase**: RESEARCH
+**Author**: Analyst
+**Risk Grade**: L2
+
+## Decision
+
+Operator directive: integrate AND use https://github.com/mattpocock/skills skills/engineering/wayfinder (context: aihero.dev/skills-wayfinder). Findings: MIT-licensed multi-session planning skill (map issue + decision tickets: grilling/prototype/grilling/task; plan-don't-do; one-ticket-per-session; fog-of-war graduation); direct Skill-tool deps grill-with-docs/domain-modeling/research/prototype, handoffs to-spec/to-tickets, one-time setup-matt-pocock-skills whose issue-tracker-github.md template ships the exact Wayfinding operations contract (wayfinder:map label, GitHub sub-issues, native issue dependencies via database-id, self-assign claims). USE half is local-only (.claude/skills gitignored) + two tracked docs (docs/agents/issue-tracker.md, AGENTS.md Agent-skills section, GOVERNANCE_INDEX registration). INTEGRATE half = MarketplaceCatalog entry + NEW agent-skills category (MarketplaceTypes.ts:8-11 union + :129-131 labels + marketplace.js:9-11 + catalog test). Domain-doc scaffolding + triage skipped (qor topology collision; disclosed). First real chart (#239 program) deferred to operator /wayfinder invocation (creates GH issues). Brief: .failsafe/governance/RESEARCH_BRIEF_wayfinder-integration-2026-08-19.md
+
+## Content Hash
+
+**Content Hash**: `18d7b522fe373df26bd701eefc6b46089ce9dc31c7d876c43f2884255b24da89`
+**Previous Hash**: `d41c5bde6111ede0b025ad09c19d4d6eeb80d1eda0a823f692c24c95c5aeec99` (Entry #513 Chain Hash)
+**Chain Hash**: `1259b62dadf54fd4ce262a77f88dfaa3ca7bb701823cc0f37c9462ca0c3fc877`
+**Merkle Seal**: `20d6f3c6e6b1b6bc95300def7e9f3a3d747678f1ad70f1e3c5d7af9b3d27cee5` -- gate_seal_research_wayfinder_integration
+**Session ID**: `2026-08-19T0540-98a3b2`
+**Entry ID**: `18d7b522fe37`
+
+_Hash provenance_: Content Hash = SHA256 of RESEARCH_BRIEF_wayfinder-integration-2026-08-19.md. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-08-19T0540-98a3b2_
+
+### Entry #515: GATE TRIBUNAL - wayfinder-integration
+
+**Date**: 2026-08-19
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+
+## Decision
+
+VERDICT: PASS (solo; no Option B mandate; upstream citations fetched live). Target plan-wayfinder-integration.md (research #514). Two halves: USE (vendor 8 MIT skills verbatim into gitignored .claude/skills + docs/agents/issue-tracker.md from the upstream GitHub template + AGENTS.md Agent-skills section + GOVERNANCE_INDEX registration) and INTEGRATE (MarketplaceCatalog mattpocock-skills entry + NEW agent-skills category through the closed union + both label maps + inverse-coverage test). BINDING CONDITION C1: canary-scan every fetched upstream file in staging BEFORE install (third-party prompt content is agent-executed); C2 record upstream commit SHA; C3 no .claude content staged to git.
+
+## Content Hash
+
+**Content Hash**: `93d721cba7262cff59605908c4e77590b5362a8dcffca0d386e875f829727c44`
+**Previous Hash**: `1259b62dadf54fd4ce262a77f88dfaa3ca7bb701823cc0f37c9462ca0c3fc877` (Entry #514 Chain Hash)
+**Chain Hash**: `04e7bd9247960bb5dabca2cce4d50054455b37ba45857671bb2eb0930c0514a1`
+**Merkle Seal**: `d014857b0690a88467a864b35a9c367457118d4afc0a3da9da4515b824389222` -- gate_seal_audit_wayfinder_integration
+**Session ID**: `2026-08-19T0540-98a3b2`
+**Entry ID**: `93d721cba726`
+
+_Hash provenance_: Content Hash = SHA256 of AUDIT_REPORT.md. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-08-19T0540-98a3b2_
+
+### Entry #516: IMPLEMENTATION - wayfinder-integration (Phases 1+2)
+
+**Date**: 2026-08-19
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+**Branch**: feat/wayfinder-integration
+
+## Decision
+
+Implements plan-wayfinder-integration (audit PASS #515). USE: 15 skills vendored VERBATIM into gitignored .claude/skills at pinned mattpocock/skills@885e2ca4 - engineering pack (wayfinder + agents/openai.yaml, grill-with-docs, domain-modeling, research, prototype, to-spec, to-tickets, setup-matt-pocock-skills + 4 templates) AND productivity pack (grill-me, grilling, handoff, teach, to-questionnaire, wait-what, writing-for-agents; operator-directed mid-cycle - the productivity `grilling` skill is a REAL wayfinder Skill-tool dependency the engineering-only set would have missed). C1 SATISFIED: all 21 fetched files canary-scanned CLEAN via the scanner module directly (CLI wrapper is governance-path-allowlisted); C2 pinned SHA in .claude/skills/MATTPOCOCK-SKILLS-LICENSE; C3 no .claude content staged. Tracked writes: docs/agents/issue-tracker.md (upstream GitHub template verbatim incl. Wayfinding operations + FailSafe-notes footer: qor doc topology, SHIELD precedence for handed-off implementation), AGENTS.md Agent-skills section, GOVERNANCE_INDEX Tier 5 registration (enforce CLEAN). INTEGRATE: MarketplaceCategory union + agent-skills (MarketplaceTypes.ts) + both label maps (CATEGORY_LABELS + marketplace.js) + MARKETPLACE_CATALOG mattpocock-skills entry (both packs; MIT, trustTier unverified, sandboxEnabled, featured) + 2 new MarketplaceCatalog.test.ts cases incl. closed-enum inverse-coverage (every in-use category labeled). Red-then-green: agent-skills union absence produced 2 tsc errors pre-change; tsc 0 post. FX904 registered; CHANGELOG Added bullets. Local mocha ambient-blocked (host vscode-updating mutex, known environmental); CI carries the suite proof on the PR.
+
+## Content Hash
+
+**Content Hash**: `8b5c8cdb930e87989fcf3c5ea2efded5cc5ce4e07ca191bbe398318db1c81783`
+**Previous Hash**: `04e7bd9247960bb5dabca2cce4d50054455b37ba45857671bb2eb0930c0514a1` (Entry #515 Chain Hash)
+**Chain Hash**: `0fbafb4417639986055df4890ea5140647b190578eb4683328281f84f435d5ed`
+**Merkle Seal**: `5f4e892f998148a7b84c327ba84a1fe39c83d44145546ab2de44c90b727f53a3` -- gate_seal_implement_wayfinder_integration
+**Session ID**: `2026-08-19T0540-98a3b2`
+**Entry ID**: `8b5c8cdb930e`
+
+_Hash provenance_: Content Hash = SHA256 of plan-wayfinder-integration.md. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-08-19T0540-98a3b2_
+
+### Entry #517: RESEARCH BRIEF - #83 Agents Window deep dive (@1.134)
+
+**Date**: 2026-08-19
+**Phase**: RESEARCH
+**Author**: Analyst
+**Risk Grade**: L2
+
+## Decision
+
+Operator-directed full deep dive on #83. Upstream (primary sources @2026-08-19, VS Code 1.134): Agent Host re-architecture (1.129-1.134) moved agent runtime OUT of the extension host - extension chat tools explicitly unavailable in Agent Host sessions; five harnesses (Local/Copilot/Claude/Codex/Cloud); opt-in is the USER setting extensions.supportAgentsWindow (object map) + default-profile install, NO manifest key exists; worktree sessions live SIBLING at <repo>.worktrees/<name>, committed-state-only, DEFAULT Bypass Approvals; extension-registered MCP still broken (#317460 OPEN/assigned/no-milestone) - durable channels are workspace .mcp.json + ~/.copilot/mcp-config.json + Agent Plugins 1.0 (1.133); watch #325827 (harness API) + #305332 (AHP customizations). FailSafe-side worktree map (file:line inventory): HARD failure CommitGuard ENOTDIR (.git-as-file, CommitGuard.ts:22-162); LATENT FAIL-OPEN today - hook curls hardcoded port 7777 but /api/v1/governance/commit-check route does not exist (bootstrapGovernance.ts:163) so the pre-commit guard is decorative; split-state HIGH writes (soa_ledger.db, IntentStore, runtime-mode.json, break-glass, risks, plans, session, acp-ledger); cross-session collisions (single-slot Devin twin registry -> cross-worktree audit contamination, marketplace rm-reclone races, unlocked servers.json RMW, port scan cap); WorkspaceMutationBus.ts:47 silent no-op on absent paths. Fix seam: governanceRoot resolver via git rev-parse --git-common-dir at the ConfigManager.ts:26 chokepoint (+4 mirrors), two-value CoreSubstrate end state. Re-scoped phases A (worktree-aware governanceRoot + CommitGuard/route repair + per-session twin id - fixes real defects independent of the Agents window), B (doc refresh @1.134 + .mcp.json + Agent Plugin draft), C (Configure command), D (human validation checklist). All three Phase-0 doc revalidation triggers effectively fired. Brief: .failsafe/governance/RESEARCH_BRIEF_agents-window-83-deep-dive-2026-08-19.md
+
+## Content Hash
+
+**Content Hash**: `89924fb07521f6d2c7b44e48a3861bbeb2ee90c4e3809ccd122c4e13d74e263f`
+**Previous Hash**: `0fbafb4417639986055df4890ea5140647b190578eb4683328281f84f435d5ed` (Entry #516 Chain Hash)
+**Chain Hash**: `c4028a116fb42d5002a85fce24850e8525653644df7c42768d288a5e976677dd`
+**Merkle Seal**: `716e64e4018c996650aae80d1ce1717ded306d8aee203fa9e3fcf321e31da104` -- gate_seal_research_agents_window_83_deep_dive
+**Session ID**: `2026-08-19T0540-98a3b2`
+**Entry ID**: `89924fb07521`
+
+_Hash provenance_: Content Hash = SHA256 of the brief. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-08-19T0540-98a3b2_
