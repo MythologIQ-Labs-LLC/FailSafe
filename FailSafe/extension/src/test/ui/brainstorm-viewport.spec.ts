@@ -118,6 +118,41 @@ test("FX897 — layout + view selection survive page reload (toolbar screenshot 
   }), { timeout: 10000 }).toEqual({ layout: "TREE", viewMode: "3D" });
 });
 
+test("FX897/#263 — persisted prefs re-apply when the canvas constructs before the hub delivers workspacePath (identity race)", async ({ page }) => {
+  // Root cause caught by the v6.0.0 release gate: view prefs are keyed by
+  // workspacePath, but the canvas can construct from a render that fires
+  // BEFORE the hub bootstrap delivers workspacePath — the prefs then load
+  // under the 'local' identity (miss → FORCE/2D defaults) and the #261
+  // in-flight guard correctly refuses a rebuild, so defaults stick. Fast
+  // machines rarely lose this race; CI runners deterministically do. Here we
+  // force it by delaying /api/hub on the reload.
+  await boot(page, SEED2);
+  await page.locator('#workspace .cc-bs-layout[data-layout="TREE"]').click();
+  await page.locator('#workspace .cc-bs-view[data-view="3D"]').click();
+  await expect.poll(() => page.evaluate(() => {
+    const renderer = (globalThis as any).__bs?.();
+    const identity = renderer?.workspacePath || "local";
+    const key = `failsafe-brainstorm-view:${encodeURIComponent(identity)}`;
+    return JSON.parse(localStorage.getItem(key) || "{}");
+  })).toEqual({ layout: "TREE", viewMode: "3D" });
+
+  // Delay the hub REST bootstrap so the tab-activation render (hubData = {})
+  // wins the canvas-construction race with workspacePath still unknown.
+  await page.route("**/api/hub", async (route) => {
+    await new Promise((r) => setTimeout(r, 3000));
+    await route.continue();
+  });
+  await gotoMindmap(page, controller.url); // reload under the forced race
+
+  // The canvas exists (constructed under 'local' identity with defaults);
+  // once the delayed hub delivers workspacePath, the persisted prefs must be
+  // re-applied to the LIVE canvas — no rebuild.
+  await expect.poll(() => page.evaluate(() => {
+    const c = (globalThis as any).__bs?.()?.graph?.canvas;
+    return c ? { layout: c.layout, viewMode: c.viewMode } : null;
+  }), { timeout: 15000 }).toEqual({ layout: "TREE", viewMode: "3D" });
+});
+
 test("FX897 — dragged node position survives reload (fx/fy persisted)", async ({ page }) => {
   await boot(page, SEED2);
   await page.evaluate(() => {
