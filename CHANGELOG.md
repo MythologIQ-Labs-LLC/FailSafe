@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **First-run gates are repository-scoped.** The governance-mode picker and the onboarding offer now fire once per repository (workspaceState) instead of once per installation; the chosen mode persists to Workspace settings, and an explicitly configured mode at any scope suppresses the prompt so existing setups are never re-prompted. (#295, FX538/FX275)
+
 ### Fixed
 - **Editor-save governance can no longer fail open on any routing fault.** `handleFileOperation` is now total: faults in intent lookup, evaluation routing, qorlogic dispatch, or the adapter preflight — plus a hung verdict generation (bounded at 10s) or a throwing blockade notifier — all block the save instead of surfacing as an unhandled rejection. (#297, FX905)
 - **Mind Map view prefs survive identity-less reload windows.** The view-prefs store records the last real workspace identity and falls back to it when the hub hasn't delivered one yet; the canvas reconciles its prefs right after construction. (#319, FX897)

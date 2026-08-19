@@ -26710,3 +26710,88 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 SESSION SEAL for burndown Cycle 1 (session 2026-08-19T0540-98a3b2; research #518 -> audit PASS #519 -> implement #520; commit f440b7b6 on fix/fail-closed-297-319). Reality = Promise: all plan-declared files touched, no unplanned files, no orphans. Verification: T1-T10 red-then-green; 22/22 targeted mocha (GovernanceRouter + brainstorm-view-prefs + brainstorm-toolbar-wiring); tsc + eslint 0 errors. Gate ladder: intent_lock VERIFIED, skill_admission ADMITTED, gate_skill_matrix 0 broken, secret_scanner clean, merge_velocity exit 0, instruction_hygiene clean, data_api_acl disclosed-skip (no SQL), governance-index enforce exit 0. DISCLOSED: (1) full vscode-test npm test blocked locally by the VS Code updater mutex (stuck CodeSetup installer) — targeted mocha covers every touched suite; authoritative full run lands in CI at delivery (gate_skipped_prerequisite_absent-class disclosure); (2) no version bump/tag/CHANGELOG stamp this seal — the v6.0.0 release train is operator-HELD until the issue board clears; changes recorded under [Unreleased] fold into the re-cut release; (3) seal-commit attribution trailer intentionally absent per the operator's binding identity directive (no Co-Authored-By/AI attribution — overrides the skill template). Feature Inventory: FX905 verified (new), FX897 verified (refreshed). Next: remaining burndown cycles; #297/#319 close with evidence at operator-authorized delivery.
+
+
+---
+
+### Entry #522: RESEARCH BRIEF - #295 repository-scoped first-run gates
+
+**Timestamp**: 2026-08-19T20:50:00Z
+**Phase**: RESEARCH
+**Author**: Analyst
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(.failsafe/governance/RESEARCH_BRIEF_295-repo-scoped-first-run-2026-08-19.md)
+= 81b6035851f631e07140ad7cc32cb1f007997a8afde45d2b7360d56278258995
+```
+
+**Previous Hash**: `afbf3095cfc60b1c7d9b1bb9e2d81bef915c7277e72d40312b557322ff9d0c5f` (Entry #521 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 8ba98804b3a842b82695091b06b3ee89818fbb054d5f650d2fe03e94ef879e72
+```
+
+## Decision
+
+Cycle 2 of the operator-directed issue burndown. Operator ruling: REPOSITORY-SCOPED first-run gates (both gates once per repository; mode persists per-repo; no cross-repo inheritance). Findings: both gates use ConfigManager globalState wrappers (FirstRunModePicker.ts:16/:67-73; FirstRunOnboarding.ts:45-51); mode write is ConfigurationTarget.Global (FirstRunModePicker.ts:57-61); ConfigManager ALREADY exposes workspace-state accessors (ConfigManager.ts:318-326) so no new API is needed; tests pin Global behavior (FirstRunModePicker.test.ts:93; FirstRunOnboarding.test.ts:119-149); docs contradiction confirmed at FEATURE_INDEX.md:726 (FX538 'workspace config' claim) vs BACKLOG.md:499 ('Global scope', matches code). Design recommendations for plan: inspect()-based suppression (explicit mode at any scope means no per-repo prompt), keep modeDefaultNotice global (upgrade notice, not per-repo decision), no key migration (old global keys become dead; suppression prevents nag-storms). Next: /qor-plan.
+
+
+---
+
+### Entry #523: GATE TRIBUNAL - repo-scoped-first-run-295
+
+**Timestamp**: 2026-08-19T21:05:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= 05f97cece7f2a8c4a0ab8dd7e3d85eb61c99815439f7b61d49b7319aadb2e135
+```
+
+**Previous Hash**: `8ba98804b3a842b82695091b06b3ee89818fbb054d5f650d2fe03e94ef879e72` (Entry #522 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 5f0780a4ba91776be98061f407d793eca9fed7437372c9ed3eddeaff39546a35
+```
+
+## Decision
+
+PASS on plan-repo-scoped-first-run-295.md iteration 1. All passes clear; LD-3 amended pre-audit to cover workspaceFolderValue. Non-blocking observations: per-repo onboarding notification is the ruled behavior (asks exactly once per repo); dead global gate keys disclosed; FX016 target claim flagged for the audits tranche. Next: /qor-implement on fix/repo-scoped-first-run-295, local commits only (operator release HOLD).
+
+
+---
+
+### Entry #524: IMPLEMENTATION - repo-scoped-first-run-295
+
+**Timestamp**: 2026-08-19T21:20:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(git diff -- FailSafe/extension/src)
+= 98c08669c3eb48b33ed4c7171d78acce69b2cc3a563fe1806c340b2b5a9ab295
+```
+
+**Previous Hash**: `5f0780a4ba91776be98061f407d793eca9fed7437372c9ed3eddeaff39546a35` (Entry #523 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 1a0c6332a378c14db59f8f0e72f38c9ef2249701d1532c7f17b47ffc518ea239
+```
+
+## Decision
+
+Implemented plan-repo-scoped-first-run-295.md (audit PASS #523) on branch fix/repo-scoped-first-run-295 (stacked on Cycle 1). LD-1: both gates swapped to ConfigManager workspace-state accessors (FirstRunModePicker isOnboarded/markOnboarded; FirstRunOnboarding isFirstRun/markOnboarded). LD-2: mode persists at ConfigurationTarget.Workspace. LD-3: inspect()-based explicit-mode suppression (global/workspace/workspaceFolder values) silently onboards the repo. LD-5: wiring comment rewritten; FX538/FX275 rows + BACKLOG B-EM-3 + both CHANGELOGs updated. TDD: harnesses converted to workspace-state mocks -> full RED (9+6 failing) -> GREEN (9/9 + 6/6) via local mocha with a scratchpad vscode-module shim (electron host mutex-blocked; shim is NOT in the repo tree; CI runs the real host at delivery). tsc 0 errors; lint 0 errors.

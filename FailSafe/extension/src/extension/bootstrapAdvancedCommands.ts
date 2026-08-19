@@ -226,10 +226,11 @@ async function registerCeremonyCommands(
   const onboarding = new FirstRunOnboarding(deps.configManager, ceremony);
   await onboarding.checkAndRun();
 
-  // First-Run Mode Picker (B-EM-3): independent gate (failsafe.onboarded.mode);
-  // surfaces three-option modal explaining observe/assist/enforce. Fires once
-  // per operator across all workspaces. Dismissal still marks onboarded so
-  // the picker does not re-prompt.
+  // First-Run Mode Picker (B-EM-3, re-scoped by #295): independent gate
+  // (failsafe.onboarded.mode in workspaceState); surfaces three-option modal
+  // explaining observe/assist/enforce. Fires once per REPOSITORY; an explicit
+  // mode at any config scope suppresses it. Dismissal still marks the repo
+  // onboarded so the picker does not re-prompt.
   const { FirstRunModePicker } = await import("../governance/FirstRunModePicker");
   const modePicker = new FirstRunModePicker(deps.configManager);
   await modePicker.checkAndRun();
