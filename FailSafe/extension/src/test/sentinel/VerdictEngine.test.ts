@@ -217,4 +217,52 @@ suite('VerdictEngine (FX346)', () => {
     assert.equal(log!.status, 'failed');
     assert.match(String(log!.details), /Failed to log/);
   });
+
+  // FX297: generateVerdict's optional forceDecision/forceSummary params
+  // (FailSafe#297 Slice 2 — VerdictArbiter's malformed-payload fail-open fix).
+  test('FX297 generateVerdict — no forceDecision: L1 with zero heuristic results still defaults to PASS', async () => {
+    const s = makeStubs({ riskGrade: 'L1' });
+    const e = new VerdictEngine(s.trust, s.policy, s.ledger, s.shadow);
+    const v = await e.generateVerdict(EVT(), 'unknown', []);
+    assert.equal(v.decision, 'PASS');
+  });
+
+  test('FX297 generateVerdict — forceDecision overrides an otherwise-PASS computation', async () => {
+    const s = makeStubs({ riskGrade: 'L1' });
+    const e = new VerdictEngine(s.trust, s.policy, s.ledger, s.shadow);
+    const v = await e.generateVerdict(EVT(), 'unknown', [], undefined, 'ESCALATE');
+    assert.equal(v.decision, 'ESCALATE');
+  });
+
+  test('FX297 generateVerdict — forceSummary overrides the generated summary', async () => {
+    const s = makeStubs({ riskGrade: 'L1' });
+    const e = new VerdictEngine(s.trust, s.policy, s.ledger, s.shadow);
+    const v = await e.generateVerdict(
+      EVT(), 'unknown', [], undefined, 'ESCALATE',
+      'Malformed event payload: missing or invalid file path -- cannot verify, escalating for human review'
+    );
+    assert.equal(
+      v.summary,
+      'Malformed event payload: missing or invalid file path -- cannot verify, escalating for human review'
+    );
+  });
+
+  test('FX297 generateVerdict — forceDecision=ESCALATE still executes the normal action pipeline', async () => {
+    const s = makeStubs({ riskGrade: 'L1' });
+    const e = new VerdictEngine(s.trust, s.policy, s.ledger, s.shadow);
+    const v = await e.generateVerdict(EVT(), 'unknown', [], undefined, 'ESCALATE', 'forced');
+    assert.equal(s.ledgerCalls[0].eventType, 'AUDIT_FAIL');
+    assert.equal(s.ledgerCalls[0].verificationResult, 'ESCALATE');
+    assert.equal(s.shadowArchives.length, 1);
+    const l3 = v.actions.find(a => a.type === 'L3_QUEUE');
+    assert.ok(l3, 'forceDecision=ESCALATE must still queue L3 approval like a naturally-computed ESCALATE');
+  });
+
+  test('FX297 generateVerdict — without forceDecision, decision/summary are unaffected (backward compatible)', async () => {
+    const s = makeStubs({ riskGrade: 'L1' });
+    const e = new VerdictEngine(s.trust, s.policy, s.ledger, s.shadow);
+    const v = await e.generateVerdict(EVT(), 'src/foo.ts', []);
+    assert.equal(v.decision, 'PASS');
+    assert.equal(v.summary, 'File passed verification (L1)');
+  });
 });
