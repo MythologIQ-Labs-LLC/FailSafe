@@ -39,6 +39,7 @@ import { registerAdvancedCommands } from "./bootstrapAdvancedCommands";
 import { registerCommands, setServerPort } from "./commands";
 import { createVscodeFeatureGate } from "../core/adapters/vscode";
 import { bootstrapStartupChecks } from "./bootstrapStartupChecks";
+import { registerWorkspaceFolderChangeGuard } from "./workspaceFolderChangeGuard";
 import { registerSubstrateCommand } from "./substrate-command";
 import { registerSarifImportCommand } from "./sarif-command";
 import { registerGenerateTrackerManifestCommand } from "./tracker-manifest-command";
@@ -89,6 +90,13 @@ export async function activate(
   logger.info("Activating FailSafe...");
 
   try {
+    // 0. Workspace-folder-change guard (GH #240): FailSafe binds
+    // workspaceRoot and every downstream watcher/server to
+    // workspaceFolders[0] once, here, at activation. Register the guard
+    // before anything else captures that snapshot so an in-place folder
+    // add/remove afterward is surfaced instead of silently ignored.
+    registerWorkspaceFolderChangeGuard(context, logger);
+
     // 1. Core
     const core = await bootstrapCore(context, logger, logSink);
     eventBus = core.eventBus;
