@@ -7,9 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- **Agent Skills marketplace category.** The Integrations Marketplace gains an Agent Skills category with the MIT-licensed [mattpocock/skills](https://github.com/mattpocock/skills) pack (Wayfinder decision-ticket planning + companions) as its first entry. (FX904)
-
 ## [6.0.0] - 2026-08-19
 
 ### Fixed
@@ -33,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Editor-level enforce works on every tier.** The internal `governance.lockstep` feature-gate check was removed from the editor enforcement path; enforcement no longer depends on license tier. (FX900)
 
 ### Added
+- **Agent Skills marketplace category.** The Integrations Marketplace gains an Agent Skills category with the MIT-licensed [mattpocock/skills](https://github.com/mattpocock/skills) pack (Wayfinder decision-ticket planning + companions) as its first entry. (FX904)
 - **Enforce-mode Create Intent funnel.** In enforce mode, `FailSafe: Create Intent` first resolves the plan the intent serves (picker sourced from PlanManager) with an explicit "switch governance mode" escape; the writes-blocked dialog now offers `Set Governance Mode` alongside `Create Intent`. (FX901)
 
 ### Removed
@@ -41,6 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **`/api/v1/status` `governance.mode`** now reports the governance mode (observe/assist/enforce) instead of echoing the Sentinel analysis mode. (FX903)
+- **GovernanceRouter fails closed on verdict faults.** When verdict generation throws (e.g., a corrupted intent store), the router now returns a blocking verdict instead of silently allowing the write. (#296)
+- **Malformed META_LEDGER is reported as damaged, not idle.** The governance-phase projection distinguishes a ledger that fails to parse from a workspace with no governance activity. (#244, #312)
 
 ## [5.9.0] - 2026-06-12
 
