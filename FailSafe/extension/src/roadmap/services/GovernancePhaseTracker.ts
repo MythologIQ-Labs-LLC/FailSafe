@@ -34,6 +34,14 @@ export interface GovernanceState {
   recentCompletions: LedgerEntry[];
   nextSteps: string[];
   activeAlerts: Alert[];
+  /** Set to "malformed" when the source ledger content was non-empty but
+   *  parsed to zero recognizable entries -- i.e. evidence exists but could
+   *  not be read, which must render distinctly from a genuinely idle/empty
+   *  ledger. Absent (undefined) means the read is trusted as a clean IDLE.
+   *  Callers that read a bounded slice of a larger file (not the complete
+   *  content) must not trust this flag -- a slice landing between two
+   *  entries can look identical to corruption without being corrupt. */
+  evidenceState?: "malformed";
 }
 
 const PHASE_PATTERN = /\*\*Phase\*\*:?\s*(\w+)/i;
@@ -173,10 +181,17 @@ export function buildGovernanceState(content: string): GovernanceState {
   const entries = parseMetaLedger(content);
   const current = getCurrentPhase(entries);
 
-  return {
+  const state: GovernanceState = {
     current,
     recentCompletions: entries.slice(0, 5),
     nextSteps: getNextSteps(current, entries[0]),
     activeAlerts: getActiveAlerts(entries),
   };
+  // Non-empty content that parsed to zero entries is evidence that exists
+  // but could not be understood (corruption, truncation, format drift) --
+  // distinct from a genuinely empty/never-started ledger (content === "").
+  if (content.trim().length > 0 && entries.length === 0) {
+    state.evidenceState = "malformed";
+  }
+  return state;
 }
