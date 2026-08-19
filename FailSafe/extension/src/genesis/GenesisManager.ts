@@ -75,11 +75,6 @@ export class GenesisManager {
   }
 
   showDashboard(): void {
-    if (this.dashboardPanel) {
-      this.dashboardPanel.reveal();
-      return;
-    }
-
     this.dashboardPanel = DashboardPanel.createOrShow(
       this.context.extensionUri,
       this.sentinel,
@@ -92,7 +87,6 @@ export class GenesisManager {
   }
 
   showLivingGraph(): void {
-    if (this.livingGraphPanel) { this.livingGraphPanel.reveal(); return; }
     this.livingGraphPanel = LivingGraphPanel.createOrShow(
       this.context.extensionUri, this.graphData, this.eventBus,
     );
@@ -111,11 +105,6 @@ export class GenesisManager {
       return;
     }
 
-    if (this.planningHubPanel) {
-      this.planningHubPanel.reveal();
-      return;
-    }
-
     this.planningHubPanel = PlanningHubPanel.createOrShow(
       this.context.extensionUri,
       this.sentinel,
@@ -127,14 +116,12 @@ export class GenesisManager {
 
   showAnalyticsDashboard(): void {
     if (!this.workspaceRoot) { vscode.window.showWarningMessage('No workspace folder open'); return; }
-    if (this.analyticsDashboardPanel) { this.analyticsDashboardPanel.reveal(); return; }
     this.analyticsDashboardPanel = AnalyticsDashboardPanel.createOrShow(
       this.context.extensionUri, this.eventBus, this.workspaceRoot,
     );
   }
 
   showEconomics(): void {
-    if (this.economicsPanel) { this.economicsPanel.reveal(); return; }
     this.economicsPanel = EconomicsPanel.createOrShow(this.context.extensionUri, this.tokenAggregator);
   }
 
@@ -147,12 +134,10 @@ export class GenesisManager {
       vscode.window.showWarningMessage('Revert service not initialized');
       return;
     }
-    if (!this.revertPanel) {
-      const { svc, git, lookup } = this.revertDeps;
-      this.revertPanel = RevertPanel.createOrShow(
-        this.context.extensionUri, svc, git, lookup, this.workspaceRoot,
-      );
-    }
+    const { svc, git, lookup } = this.revertDeps;
+    this.revertPanel = RevertPanel.createOrShow(
+      this.context.extensionUri, svc, git, lookup, this.workspaceRoot,
+    );
     this.revertPanel.reveal();
     void this.revertPanel.showForCheckpoint(checkpointId);
   }
@@ -174,14 +159,12 @@ export class GenesisManager {
   }
 
   showLedgerViewer(): void {
-    if (this.ledgerViewerPanel) { this.ledgerViewerPanel.reveal(); return; }
     this.ledgerViewerPanel = LedgerViewerPanel.createOrShow(
       this.context.extensionUri, this.qorelogic.getLedgerManager(),
     );
   }
 
   showL3ApprovalQueue(): void {
-    if (this.l3ApprovalPanel) { this.l3ApprovalPanel.reveal(); return; }
     this.l3ApprovalPanel = L3ApprovalPanel.createOrShow(
       this.context.extensionUri, this.qorelogic, this.eventBus,
     );
