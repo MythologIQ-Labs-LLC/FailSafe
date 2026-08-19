@@ -13,6 +13,12 @@ function escapeHtml(value) {
 
 export function getPhaseInfo(hub) {
   const gov = hub?.governancePhase;
+  // FX-244A: a malformed META_LEDGER (exists, non-empty, unreadable as
+  // entries) must render distinctly from a genuinely idle/empty ledger --
+  // both used to collapse to a plain "IDLE" label.
+  if (gov?.evidenceState === 'malformed') {
+    return { title: 'GOVERNANCE DATA MALFORMED', index: -1, malformed: true };
+  }
   if (gov?.current && gov.current !== 'IDLE') {
     return { title: gov.current, index: PHASE_INDEX_MAP[gov.current] ?? 0 };
   }
