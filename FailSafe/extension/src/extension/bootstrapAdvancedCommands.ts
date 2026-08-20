@@ -221,15 +221,34 @@ async function registerCeremonyCommands(
     ),
   );
 
+  // #83 Phases B+C (FX909): guided Agents-window preparation. Pure logic in
+  // agentsWindowConfigure.ts; this wiring only supplies the vscode io seam.
+  context.subscriptions.push(
+    vscode.commands.registerCommand("failsafe.configureAgentsWindow", async () => {
+      const { runAgentsWindowConfigure } = await import("./agentsWindowConfigure");
+      await runAgentsWindowConfigure({
+        showInfo: (message, ...buttons) =>
+          Promise.resolve(vscode.window.showInformationMessage(message, ...buttons)),
+        openSettings: async (query) => {
+          await vscode.commands.executeCommand("workbench.action.openSettings", query);
+        },
+        runCommand: async (id) => {
+          await vscode.commands.executeCommand(id);
+        },
+      });
+    }),
+  );
+
   // First-Run Onboarding (B88)
   const { FirstRunOnboarding } = await import("../genesis/FirstRunOnboarding");
   const onboarding = new FirstRunOnboarding(deps.configManager, ceremony);
   await onboarding.checkAndRun();
 
-  // First-Run Mode Picker (B-EM-3): independent gate (failsafe.onboarded.mode);
-  // surfaces three-option modal explaining observe/assist/enforce. Fires once
-  // per operator across all workspaces. Dismissal still marks onboarded so
-  // the picker does not re-prompt.
+  // First-Run Mode Picker (B-EM-3, re-scoped by #295): independent gate
+  // (failsafe.onboarded.mode in workspaceState); surfaces three-option modal
+  // explaining observe/assist/enforce. Fires once per REPOSITORY; an explicit
+  // mode at any config scope suppresses it. Dismissal still marks the repo
+  // onboarded so the picker does not re-prompt.
   const { FirstRunModePicker } = await import("../governance/FirstRunModePicker");
   const modePicker = new FirstRunModePicker(deps.configManager);
   await modePicker.checkAndRun();

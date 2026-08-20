@@ -112,10 +112,16 @@ test("FX897 — layout + view selection survive page reload (toolbar screenshot 
     return JSON.parse(localStorage.getItem(key) || "{}");
   })).toEqual({ layout: "TREE", viewMode: "3D" });
   await gotoMindmap(page, controller.url); // full reload
+  // #319: the prefs must heal REGARDLESS of when (or whether) the hub delivers
+  // workspacePath after reload — that is exactly what the last-identity
+  // fallback guarantees, so the product assertion polls the canvas state
+  // directly. (An earlier revision gated on identity arrival first; CI showed
+  // hub delivery itself is transport-variant — WS→SSE failover can delay it
+  // past any reasonable budget — which is the very race the fallback closes.)
   await expect.poll(() => page.evaluate(() => {
     const c = (globalThis as any).__bs?.()?.graph?.canvas;
     return c ? { layout: c.layout, viewMode: c.viewMode } : null;
-  }), { timeout: 10000 }).toEqual({ layout: "TREE", viewMode: "3D" });
+  }), { timeout: 20000 }).toEqual({ layout: "TREE", viewMode: "3D" });
 });
 
 test("FX897/#263 — persisted prefs re-apply when the canvas constructs before the hub delivers workspacePath (identity race)", async ({ page }) => {

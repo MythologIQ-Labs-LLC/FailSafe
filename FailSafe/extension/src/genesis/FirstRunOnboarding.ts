@@ -42,11 +42,12 @@ export class FirstRunOnboarding {
     await vscode.window.showInformationMessage(lesson, 'Got it');
   }
 
+  // #295: the ceremony offer is repository-scoped — each repo gets asked once.
   private isFirstRun(): boolean {
-    return !this.configManager.getGlobalState<boolean>('failsafe.onboarded', false);
+    return !this.configManager.getWorkspaceState<boolean>('failsafe.onboarded', false);
   }
 
   private async markOnboarded(): Promise<void> {
-    await this.configManager.setGlobalState('failsafe.onboarded', true);
+    await this.configManager.setWorkspaceState('failsafe.onboarded', true);
   }
 }

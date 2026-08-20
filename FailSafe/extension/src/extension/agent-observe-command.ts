@@ -28,6 +28,47 @@ const MCP_CONFIG_CANDIDATES: Array<{ agent: string; rel: string }> = [
   { agent: 'kilo', rel: path.join('.kilocode', 'mcp.json') },
 ];
 
+export interface McpPolicyScanResult {
+  scanned: number;
+  total: number;
+  high: number;
+  /** #241 (FX910): risk-sink writes that threw — surfaced, never loop-aborting. */
+  failed: number;
+}
+
+/**
+ * #241 named-candidate fix (FX910): the scan loop behind
+ * `failsafe.agentAudit.run`, extracted so the sink-failure behavior is
+ * testable. A throwing `upsert` no longer aborts the remaining configs
+ * mid-loop — it is counted in `failed` and the scan continues.
+ */
+export function runMcpPolicyScan(
+  workspaceRoot: string,
+  upsert: (risk: Record<string, unknown>) => void,
+  readFile: (file: string) => string = (file) => fs.readFileSync(file, 'utf-8'),
+): McpPolicyScanResult {
+  let scanned = 0;
+  let total = 0;
+  let high = 0;
+  let failed = 0;
+  for (const cand of MCP_CONFIG_CANDIDATES) {
+    const file = path.join(workspaceRoot, cand.rel);
+    let text: string;
+    try { text = readFile(file); } catch { continue; }
+    scanned++;
+    for (const risk of auditMcpConfig(cand.agent, text)) {
+      try {
+        upsert(risk as unknown as Record<string, unknown>);
+        total++;
+        if (risk.severity === 'high') high++;
+      } catch {
+        failed++;
+      }
+    }
+  }
+  return { scanned, total, high, failed };
+}
+
 export function registerAgentObserveCommands(context: vscode.ExtensionContext, workspaceRoot: string): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('failsafe.agentAudit.run', async () => {
@@ -37,22 +78,12 @@ export function registerAgentObserveCommands(context: vscode.ExtensionContext, w
         return;
       }
       const riskManager = new RiskRegisterManager(workspaceRoot);
-      let scanned = 0;
-      let total = 0;
-      let high = 0;
-      for (const cand of MCP_CONFIG_CANDIDATES) {
-        const file = path.join(workspaceRoot, cand.rel);
-        let text: string;
-        try { text = fs.readFileSync(file, 'utf-8'); } catch { continue; }
-        scanned++;
-        for (const risk of auditMcpConfig(cand.agent, text)) {
-          riskManager.upsertRisk(risk as unknown as Record<string, unknown>);
-          total++;
-          if (risk.severity === 'high') high++;
-        }
+      const r = runMcpPolicyScan(workspaceRoot, (risk) => riskManager.upsertRisk(risk));
+      if (r.scanned === 0) { vscode.window.showInformationMessage('Agent MCP-policy audit: no Cline/Roo/Kilo/project MCP config found in this workspace.'); return; }
+      if (r.failed > 0) {
+        vscode.window.showWarningMessage(`Agent MCP-policy audit: ${r.failed} finding(s) could not be written to the Risk Register — findings may be missing. Check FailSafe logs and re-run.`);
       }
-      if (scanned === 0) { vscode.window.showInformationMessage('Agent MCP-policy audit: no Cline/Roo/Kilo/project MCP config found in this workspace.'); return; }
-      vscode.window.showInformationMessage(`Agent MCP-policy audit: scanned ${scanned} config(s) → ${total} risk(s) upserted (${high} high-severity).`);
+      vscode.window.showInformationMessage(`Agent MCP-policy audit: scanned ${r.scanned} config(s) → ${r.total} risk(s) upserted (${r.high} high-severity).`);
     }),
 
     vscode.commands.registerCommand('failsafe.openhands.observe', async () => {

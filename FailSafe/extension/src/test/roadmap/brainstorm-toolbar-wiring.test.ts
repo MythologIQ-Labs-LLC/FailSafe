@@ -7,7 +7,7 @@
 import { strict as assert } from "assert";
 import { JSDOM } from "jsdom";
 // @ts-expect-error JS module import in TS test context
-import { wireToolbar } from "../../../src/roadmap/ui/modules/brainstorm-toolbar-wiring.js";
+import { wireToolbar, applyViewPrefs } from "../../../src/roadmap/ui/modules/brainstorm-toolbar-wiring.js";
 // @ts-expect-error JS module import in TS test context
 import { loadViewPrefs, saveViewPrefs, viewPrefsKey } from "../../../src/roadmap/ui/modules/brainstorm-graph-io.js";
 // @ts-expect-error JS module import in TS test context
@@ -108,6 +108,17 @@ suite("FX897 brainstorm toolbar wiring", () => {
     const prefs = JSON.parse(store.get(viewPrefsKey()) as string);
     assert.equal(prefs.viewMode, "3D");
     assert.equal(prefs.layout, "FORCE", "layout carried alongside the view pref");
+  });
+
+  test("T10 (#319): applyViewPrefs on an identity-less renderer reconciles to the last real identity's prefs", () => {
+    const f = makeFixture(dom.window.document);
+    (f.renderer as any).workspacePath = "";
+    saveViewPrefs({ layout: "TREE", viewMode: "3D" }, "G:/repo/A");
+    applyViewPrefs(f.renderer);
+    assert.equal(f.canvas.layout, "TREE",
+      "canvas constructed before identity delivery must heal to the persisted layout");
+    assert.equal(f.canvas.viewMode, "3D",
+      "canvas constructed before identity delivery must heal to the persisted view mode");
   });
 
   test("restore-on-init: saved {TREE, 3D} applies through the canvas constructor path", () => {

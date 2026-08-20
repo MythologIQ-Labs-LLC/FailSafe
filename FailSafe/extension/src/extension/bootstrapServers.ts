@@ -95,6 +95,10 @@ export interface ServerDeps {
    *  threaded into wireBicameralIntegration so the bicameral tool routes are
    *  governed. Absent in test contexts that don't exercise governed routes. */
   enforcementEngine?: import("../governance/EnforcementEngine").EnforcementEngine;
+  /** #83A: commit-hook token validator source for the commit-check route. */
+  commitGuard?: import("../governance/CommitGuard").CommitGuard;
+  /** #83A: late-bound hook-port ref — repointed at the live ConsoleServer port. */
+  commitGuardPortSource?: { current: () => number };
 }
 
 export interface ServerResult {
@@ -144,8 +148,15 @@ export async function bootstrapServers(
       // education settings per hub rebuild so the webview micro-lesson
       // affordance picks up Settings changes without a reload.
       getEducationConfig: () => readEducationConfig(),
+      // #83A: token gate for GET /api/v1/governance/commit-check.
+      validateCommitToken: (t: string) =>
+        deps.commitGuard ? deps.commitGuard.validateToken(t) : false,
     },
   );
+  // #83A: the pre-commit hook's port now tracks the real bound port.
+  if (deps.commitGuardPortSource) {
+    deps.commitGuardPortSource.current = () => consoleServer.getPort();
+  }
   consoleServer.setIdeTracker(ideTracker);
   consoleServer.setSystemRegistry(deps.systemRegistry);
   // B-INT-16: integrated-terminal runner for the AGT installer. sendText with

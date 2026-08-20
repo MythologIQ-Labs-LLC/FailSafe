@@ -135,8 +135,9 @@ suite("FirstRunModePicker lesson-derived detail (FX595 Part B)", () => {
   function makeConfigManager(): ConfigManager {
     const state: Record<string, unknown> = { "failsafe.onboarded.mode": false };
     return {
-      getGlobalState: <T>(key: string, dv: T): T => (state[key] as T | undefined) ?? dv,
-      setGlobalState: async <T>(key: string, value: T): Promise<void> => { state[key] = value; },
+      // #295: the picker's gate is repository-scoped (workspaceState).
+      getWorkspaceState: <T>(key: string, dv: T): T => (state[key] as T | undefined) ?? dv,
+      setWorkspaceState: async <T>(key: string, value: T): Promise<void> => { state[key] = value; },
     } as unknown as ConfigManager;
   }
 

@@ -308,6 +308,9 @@ export async function activate(
         getGovernanceMode: () => gov.enforcementEngine.getGovernanceModeState(),
         // B151: back the universal governance interceptor for bicameral routes.
         enforcementEngine: gov.enforcementEngine,
+        // #83A: commit-check route token gate + live hook port.
+        commitGuard: gov.commitGuard,
+        commitGuardPortSource: gov.commitGuardPortSource,
       },
       logger,
     );

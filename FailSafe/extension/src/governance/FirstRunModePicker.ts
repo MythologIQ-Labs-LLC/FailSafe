@@ -1,7 +1,9 @@
 // B-EM-3: first-run governance-mode picker. Shows a guided three-option
-// QuickPick on first activation per global state, persists the choice to
+// QuickPick on first activation, persists the choice to
 // `failsafe.governance.mode`, marks onboarded so the picker fires at most
-// once per operator.
+// once per REPOSITORY (#295: workspaceState-gated; the choice writes at
+// Workspace scope, and an explicit mode configured at any scope suppresses
+// the prompt so pre-existing installs are never re-prompted per repo).
 
 import * as vscode from "vscode";
 import type { ConfigManager } from "../shared/ConfigManager";
@@ -20,6 +22,21 @@ export class FirstRunModePicker {
 
   async checkAndRun(): Promise<void> {
     if (this.isOnboarded()) return;
+
+    // #295: an explicit prior choice at ANY scope beats a fresh prompt —
+    // repositories opened by a pre-existing install are silently onboarded.
+    const existing = vscode.workspace
+      .getConfiguration("failsafe")
+      .inspect<string>("governance.mode");
+    if (
+      existing &&
+      (existing.globalValue !== undefined ||
+        existing.workspaceValue !== undefined ||
+        existing.workspaceFolderValue !== undefined)
+    ) {
+      await this.markOnboarded();
+      return;
+    }
 
     // Educational Component (v5.2.0): the quickpick item `detail` is drawn
     // from the lesson registry — a native (no webview expander) surfacing of
@@ -57,7 +74,7 @@ export class FirstRunModePicker {
     if (chosen) {
       await vscode.workspace
         .getConfiguration("failsafe")
-        .update("governance.mode", chosen.mode, vscode.ConfigurationTarget.Global);
+        .update("governance.mode", chosen.mode, vscode.ConfigurationTarget.Workspace);
     }
 
     // Mark onboarded EVEN if dismissed (no re-prompting per B-EM-3 design).
@@ -65,10 +82,10 @@ export class FirstRunModePicker {
   }
 
   private isOnboarded(): boolean {
-    return !!this.configManager.getGlobalState<boolean>(ONBOARDED_KEY, false);
+    return !!this.configManager.getWorkspaceState<boolean>(ONBOARDED_KEY, false);
   }
 
   private async markOnboarded(): Promise<void> {
-    await this.configManager.setGlobalState(ONBOARDED_KEY, true);
+    await this.configManager.setWorkspaceState(ONBOARDED_KEY, true);
   }
 }

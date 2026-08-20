@@ -12,6 +12,29 @@ import { Plan, PlanPhase } from "../qorelogic/planning/types";
 import { Logger } from "../shared/Logger";
 import { GovernanceAdapter } from "./GovernanceAdapter";
 
+// Bounded verdict generation (#297): a hung evaluator must resolve to a
+// fail-closed block within our own budget instead of hanging past VS Code's
+// platform-side waitUntil budget (which we cannot extend — a promise still
+// pending when that budget lapses lets the save proceed platform-side).
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms,
+    );
+    p.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      },
+    );
+  });
+}
+
 // ======================================================================================
 // GovernanceRouter: The Central Nervous System for Governance
 //
@@ -26,6 +49,7 @@ export class GovernanceRouter {
   private notifications: INotificationService;
   private executeCommand: CommandExecutor;
   private qorLogicManager?: QorLogicManager;
+  private verdictTimeoutMs: number;
 
   constructor(
     private intentService: IntentService,
@@ -35,11 +59,13 @@ export class GovernanceRouter {
     notifications: INotificationService,
     executeCommand?: CommandExecutor,
     qorLogicManager?: QorLogicManager,
+    verdictTimeoutMs?: number,
   ) {
     this.logger = new Logger("GovernanceRouter");
     this.notifications = notifications;
     this.executeCommand = executeCommand ?? (() => {});
     this.qorLogicManager = qorLogicManager;
+    this.verdictTimeoutMs = verdictTimeoutMs ?? 10_000;
   }
 
   setGovernanceAdapter(adapter: GovernanceAdapter): void {
@@ -73,8 +99,38 @@ export class GovernanceRouter {
    * Accepts a plain filesystem path string instead of vscode.Uri.
    * The bootstrap layer is responsible for extracting uri.fsPath
    * before calling this method.
+   *
+   * Total fail-closed guard (#297): this method NEVER rejects. The sole
+   * production caller feeds the returned promise into
+   * onWillSaveTextDocument's event.waitUntil, where a rejection is not a
+   * guaranteed save-block — so any fault anywhere in governance routing
+   * (intent lookup, evaluation routing, qorlogic dispatch, adapter
+   * preflight, verdict generation, or the blockade notifier itself)
+   * resolves to false instead of propagating.
    */
   async handleFileOperation(
+    type: ProposedAction["type"],
+    fsPath: string,
+  ): Promise<boolean> {
+    try {
+      return await this.handleFileOperationInner(type, fsPath);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error("Governance routing failed; failing closed", {
+        error: message,
+        targetFile: fsPath,
+      });
+      await this.showBlockade(
+        "Governance routing failed",
+        "The action was blocked because FailSafe could not safely evaluate it against governance policy. Retry the save, or check FailSafe logs.",
+        { message },
+        fsPath,
+      );
+      return false;
+    }
+  }
+
+  private async handleFileOperationInner(
     type: ProposedAction["type"],
     fsPath: string,
   ): Promise<boolean> {
@@ -125,14 +181,18 @@ export class GovernanceRouter {
         // Non-fatal: proceed without hash
       }
 
-      const governanceResult = await this.governanceAdapter.evaluate({
-        action: "file.write",
-        agentDid: "vscode-user",
-        intentId: activeIntent?.id,
-        artifactPath: fsPath,
-        artifactHash,
-        payload: { actionType: action.type },
-      });
+      const governanceResult = await withTimeout(
+        this.governanceAdapter.evaluate({
+          action: "file.write",
+          agentDid: "vscode-user",
+          intentId: activeIntent?.id,
+          artifactPath: fsPath,
+          artifactHash,
+          payload: { actionType: action.type },
+        }),
+        this.verdictTimeoutMs,
+        "governance-adapter",
+      );
 
       if (!governanceResult.allowed) {
         await this.showBlockade(
@@ -156,7 +216,11 @@ export class GovernanceRouter {
     // contract.
     let verdict: Verdict;
     try {
-      verdict = await this.enforcement.evaluateAction(action);
+      verdict = await withTimeout(
+        this.enforcement.evaluateAction(action),
+        this.verdictTimeoutMs,
+        "verdict-generation",
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error("Verdict generation failed; failing closed", {
@@ -275,12 +339,22 @@ export class GovernanceRouter {
 
     errorMessage += `\n\nRemediation: ${remediation}`;
 
-    const choice = await this.notifications.showError(
-      errorMessage,
-      "Create Intent",
-      "View Active Intent",
-      "Show Logs",
-    );
+    // Totality (#297): the block decision is already made by the caller's
+    // `return false` — a faulting notifier must not turn it into a rejection.
+    let choice: string | undefined;
+    try {
+      choice = await this.notifications.showError(
+        errorMessage,
+        "Create Intent",
+        "View Active Intent",
+        "Show Logs",
+      );
+    } catch (notifyError) {
+      const message =
+        notifyError instanceof Error ? notifyError.message : String(notifyError);
+      this.logger.error("Blockade notification failed", { error: message });
+      return;
+    }
 
     if (choice === "Create Intent") {
       this.executeCommand("failsafe.createIntent");

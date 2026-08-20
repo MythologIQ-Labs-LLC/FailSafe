@@ -45,6 +45,9 @@ export interface GovernanceSubstrate {
   rbacManager: RBACManager;
   artifactHasher: ArtifactHasher;
   commitGuard: CommitGuard;
+  /** #83A: late-bound port source for the commit hook — bootstrapServers
+   *  repoints `current` at the running ConsoleServer's actual port. */
+  commitGuardPortSource: { current: () => number };
   provenanceTracker: ProvenanceTracker;
 }
 
@@ -160,7 +163,13 @@ export async function bootstrapGovernance(
   const artifactHasher = new ArtifactHasher();
 
   // v4.3.0: Commit guard + provenance tracker (B92/B93)
-  const commitGuard = new CommitGuard(core.workspaceRoot, 7777);
+  // #83A: the hook's port resolves at install time through this ref, which
+  // bootstrapServers repoints at the live ConsoleServer port. 7777 remains
+  // only the no-server-yet fallback (hook heals on next install).
+  const commitGuardPortSource = { current: () => 7777 };
+  const commitGuard = new CommitGuard(core.workspaceRoot, () =>
+    commitGuardPortSource.current(),
+  );
   const provenanceRegistry = new SystemRegistry(core.workspaceRoot);
   const provenanceTracker = new ProvenanceTracker(
     null as unknown as import('../qorelogic/ledger/LedgerManager').LedgerManager,
@@ -196,6 +205,7 @@ export async function bootstrapGovernance(
     rbacManager,
     artifactHasher,
     commitGuard,
+    commitGuardPortSource,
     provenanceTracker,
   };
 }

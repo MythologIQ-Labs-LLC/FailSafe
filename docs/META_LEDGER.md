@@ -26593,3 +26593,504 @@ _Hash provenance_: Content Hash = SHA256 of the brief. Chain Hash = SHA256(conte
 
 _Chain integrity: VALID_
 _Session: 2026-08-19T0540-98a3b2_
+
+
+---
+
+### Entry #518: RESEARCH BRIEF - #297 completion + #319 FX897 residual
+
+**Timestamp**: 2026-08-19T19:20:00Z
+**Phase**: RESEARCH
+**Author**: Analyst
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(.failsafe/governance/RESEARCH_BRIEF_297-319-fail-closed-fx897-2026-08-19.md)
+= 6735bda4bf7835746ace591ef8f9e3e6f95e89f7324ea0e4261820b1f581532d
+```
+
+**Previous Hash**: `c4028a116fb42d5002a85fce24850e8525653644df7c42768d288a5e976677dd` (Entry #517 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= e08699d0c4d386cb47d0862b130017e5df53f7bdaac2a23941a686f9cc2b503a
+```
+
+## Decision
+
+Cycle 1 of the operator-directed issue burndown (release HOLD until board clear; pipeline run 32288150900 cancelled at the production gate, nothing published, Build & Test green on rerun). Scope A (#297): four unguarded awaits in GovernanceRouter.handleFileOperation (:82/:102/:108/:128) ahead of the Slice-1 guard; sole production caller wires the promise into event.waitUntil where rejection is not a guaranteed block; showBlockade awaits the notifier (:279) so the guard must tolerate a throwing notifier; NO timeout machinery exists in EnforcementEngine (deeper than the issue's missing-test framing). Scope B (#319): reconcile fires only on identity change observed by render(); the defect window is [canvas construction, first hub delivery) — WS-to-SSE failover on slow CI delays that beyond the spec's 10s poll; identity-absence at construction is the true gap (fallback-key + post-construction reconcile recommended). Findings advisory; next: /qor-plan.
+
+
+---
+
+### Entry #519: GATE TRIBUNAL - fail-closed-297-319
+
+**Timestamp**: 2026-08-19T19:55:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= 4de7dc7952efa790242c83b57fb14a980f19f35b93a329fbf5c00c655ef4ee33
+```
+
+**Previous Hash**: `e08699d0c4d386cb47d0862b130017e5df53f7bdaac2a23941a686f9cc2b503a` (Entry #518 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 4fdedd1301ef2f8f40da517cc7fbe60605c29d772817996e6a59bf5b3c8966cd
+```
+
+## Decision
+
+PASS on plan-fail-closed-297-319.md iteration 1. All twelve passes clear. Disclosures: (1) pre-existing Razor overage in GovernanceRouter.ts (293 lines; handleFileOperation body >40L moved verbatim) — future /qor-refactor candidate, not introduced by this plan; (2) plan_grep_lint canonical-shape WARN on 6 citations — inline command+observed-text evidence re-verified live by the Judge this audit. Non-blocking observations: T4 must stub route() to invokeQorLogic:true; LD-2 timeout cannot extend the VS Code waitUntil platform budget (declared limitation). Next: /qor-implement on fix/fail-closed-297-319, local commits only (operator release HOLD).
+
+
+---
+
+### Entry #520: IMPLEMENTATION - fail-closed-297-319
+
+**Timestamp**: 2026-08-19T20:10:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(git diff -- FailSafe/extension/src)
+= 5c470f0648b5251640097c121e6900715017b75a69eab1a3241115deb5c6c3b1
+```
+
+**Previous Hash**: `4fdedd1301ef2f8f40da517cc7fbe60605c29d772817996e6a59bf5b3c8966cd` (Entry #519 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 44195b56b9c1f3dca8a0a2cca9a775c9e4811e2a171c458cc11f4466224a4ac2
+```
+
+## Decision
+
+Implemented plan-fail-closed-297-319.md (audit PASS #519) on branch fix/fail-closed-297-319. Phase 1 (#297/FX905): handleFileOperation total guard (outer try/catch delegating to handleFileOperationInner), withTimeout helper applied at the evaluateAction and governanceAdapter.evaluate sites (verdictTimeoutMs ctor param, default 10_000ms), showBlockade notifier-fault totality. Phase 2 (#319/FX897): LAST_IDENTITY_KEY + resolveIdentity fallback in brainstorm-graph-io.js (save records real identity; identity-less load/save fall back), initCanvas post-construction applyViewPrefs reconcile, spec identity-poll sequencing. TDD: T1-T6 red (6 failing) then green; T7/T9/T10 red (T8 pinned existing default, green) then green; 22/22 passing across the three suites; Slice-1 test unbroken. Lint 0 errors. FEATURE_INDEX: FX905 NEW + FX897 refreshed; CHANGELOG [Unreleased] both files. Full unit suite result recorded at seal (local VS Code updater mutex may defer to CI).
+
+
+---
+
+### Entry #521: SESSION SEAL - fail-closed-297-319
+
+**Timestamp**: 2026-08-19T20:30:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L2
+**Entry ID**: `3210eee7d90b`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-fail-closed-297-319.md)
+= 369f9faa563b59f58c87c68c930a1eee5a646c6b83b4606287754697735efc50
+```
+
+**Previous Hash**: `44195b56b9c1f3dca8a0a2cca9a775c9e4811e2a171c458cc11f4466224a4ac2` (Entry #520 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= afbf3095cfc60b1c7d9b1bb9e2d81bef915c7277e72d40312b557322ff9d0c5f
+```
+
+**Merkle Seal**: `c6e32c6c92da6e1fc7082316a9a81b535503665483fa562e504c0cc13aadda81` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for burndown Cycle 1 (session 2026-08-19T0540-98a3b2; research #518 -> audit PASS #519 -> implement #520; commit f440b7b6 on fix/fail-closed-297-319). Reality = Promise: all plan-declared files touched, no unplanned files, no orphans. Verification: T1-T10 red-then-green; 22/22 targeted mocha (GovernanceRouter + brainstorm-view-prefs + brainstorm-toolbar-wiring); tsc + eslint 0 errors. Gate ladder: intent_lock VERIFIED, skill_admission ADMITTED, gate_skill_matrix 0 broken, secret_scanner clean, merge_velocity exit 0, instruction_hygiene clean, data_api_acl disclosed-skip (no SQL), governance-index enforce exit 0. DISCLOSED: (1) full vscode-test npm test blocked locally by the VS Code updater mutex (stuck CodeSetup installer) — targeted mocha covers every touched suite; authoritative full run lands in CI at delivery (gate_skipped_prerequisite_absent-class disclosure); (2) no version bump/tag/CHANGELOG stamp this seal — the v6.0.0 release train is operator-HELD until the issue board clears; changes recorded under [Unreleased] fold into the re-cut release; (3) seal-commit attribution trailer intentionally absent per the operator's binding identity directive (no Co-Authored-By/AI attribution — overrides the skill template). Feature Inventory: FX905 verified (new), FX897 verified (refreshed). Next: remaining burndown cycles; #297/#319 close with evidence at operator-authorized delivery.
+
+
+---
+
+### Entry #522: RESEARCH BRIEF - #295 repository-scoped first-run gates
+
+**Timestamp**: 2026-08-19T20:50:00Z
+**Phase**: RESEARCH
+**Author**: Analyst
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(.failsafe/governance/RESEARCH_BRIEF_295-repo-scoped-first-run-2026-08-19.md)
+= 81b6035851f631e07140ad7cc32cb1f007997a8afde45d2b7360d56278258995
+```
+
+**Previous Hash**: `afbf3095cfc60b1c7d9b1bb9e2d81bef915c7277e72d40312b557322ff9d0c5f` (Entry #521 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 8ba98804b3a842b82695091b06b3ee89818fbb054d5f650d2fe03e94ef879e72
+```
+
+## Decision
+
+Cycle 2 of the operator-directed issue burndown. Operator ruling: REPOSITORY-SCOPED first-run gates (both gates once per repository; mode persists per-repo; no cross-repo inheritance). Findings: both gates use ConfigManager globalState wrappers (FirstRunModePicker.ts:16/:67-73; FirstRunOnboarding.ts:45-51); mode write is ConfigurationTarget.Global (FirstRunModePicker.ts:57-61); ConfigManager ALREADY exposes workspace-state accessors (ConfigManager.ts:318-326) so no new API is needed; tests pin Global behavior (FirstRunModePicker.test.ts:93; FirstRunOnboarding.test.ts:119-149); docs contradiction confirmed at FEATURE_INDEX.md:726 (FX538 'workspace config' claim) vs BACKLOG.md:499 ('Global scope', matches code). Design recommendations for plan: inspect()-based suppression (explicit mode at any scope means no per-repo prompt), keep modeDefaultNotice global (upgrade notice, not per-repo decision), no key migration (old global keys become dead; suppression prevents nag-storms). Next: /qor-plan.
+
+
+---
+
+### Entry #523: GATE TRIBUNAL - repo-scoped-first-run-295
+
+**Timestamp**: 2026-08-19T21:05:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= 05f97cece7f2a8c4a0ab8dd7e3d85eb61c99815439f7b61d49b7319aadb2e135
+```
+
+**Previous Hash**: `8ba98804b3a842b82695091b06b3ee89818fbb054d5f650d2fe03e94ef879e72` (Entry #522 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 5f0780a4ba91776be98061f407d793eca9fed7437372c9ed3eddeaff39546a35
+```
+
+## Decision
+
+PASS on plan-repo-scoped-first-run-295.md iteration 1. All passes clear; LD-3 amended pre-audit to cover workspaceFolderValue. Non-blocking observations: per-repo onboarding notification is the ruled behavior (asks exactly once per repo); dead global gate keys disclosed; FX016 target claim flagged for the audits tranche. Next: /qor-implement on fix/repo-scoped-first-run-295, local commits only (operator release HOLD).
+
+
+---
+
+### Entry #524: IMPLEMENTATION - repo-scoped-first-run-295
+
+**Timestamp**: 2026-08-19T21:20:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(git diff -- FailSafe/extension/src)
+= 98c08669c3eb48b33ed4c7171d78acce69b2cc3a563fe1806c340b2b5a9ab295
+```
+
+**Previous Hash**: `5f0780a4ba91776be98061f407d793eca9fed7437372c9ed3eddeaff39546a35` (Entry #523 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 1a0c6332a378c14db59f8f0e72f38c9ef2249701d1532c7f17b47ffc518ea239
+```
+
+## Decision
+
+Implemented plan-repo-scoped-first-run-295.md (audit PASS #523) on branch fix/repo-scoped-first-run-295 (stacked on Cycle 1). LD-1: both gates swapped to ConfigManager workspace-state accessors (FirstRunModePicker isOnboarded/markOnboarded; FirstRunOnboarding isFirstRun/markOnboarded). LD-2: mode persists at ConfigurationTarget.Workspace. LD-3: inspect()-based explicit-mode suppression (global/workspace/workspaceFolder values) silently onboards the repo. LD-5: wiring comment rewritten; FX538/FX275 rows + BACKLOG B-EM-3 + both CHANGELOGs updated. TDD: harnesses converted to workspace-state mocks -> full RED (9+6 failing) -> GREEN (9/9 + 6/6) via local mocha with a scratchpad vscode-module shim (electron host mutex-blocked; shim is NOT in the repo tree; CI runs the real host at delivery). tsc 0 errors; lint 0 errors.
+
+
+---
+
+### Entry #525: SESSION SEAL - repo-scoped-first-run-295
+
+**Timestamp**: 2026-08-19T21:30:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L2
+**Entry ID**: `e8ac868f887c`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-repo-scoped-first-run-295.md)
+= d48145d28028108760df8085dfce8aeb0063aa30594f0b92e8262183a4e9eda5
+```
+
+**Previous Hash**: `1a0c6332a378c14db59f8f0e72f38c9ef2249701d1532c7f17b47ffc518ea239` (Entry #524 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= df01a5ebeee0f2c117f3e58d7bebd054cc269090855af2a29a6efc6ac5fc759c
+```
+
+**Merkle Seal**: `8ddc8ad7f8372716fb101769f99c7e9bc33d5e9ca396a4509c3d0d69bb3f31de` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for burndown Cycle 2 (session 2026-08-19T2009-834004; research #522 -> audit PASS #523 -> implement #524; commit on fix/repo-scoped-first-run-295, stacked on Cycle 1). Reality = Promise: five src/test files per plan, docs truth updated (FX538/FX275/B-EM-3/CHANGELOGs), no unplanned files. Verification: full RED (9+6) -> GREEN (9/9 + 6/6) under local mocha with a scratchpad vscode-module shim; tsc + eslint 0 errors. Gate ladder: intent_lock VERIFIED, skill_admission ADMITTED, secret_scanner/merge_velocity/instruction_hygiene/governance-index all exit 0. DISCLOSED: (1) electron-host run mutex-blocked locally (same CodeSetup installer as Cycle 1); shim-based mocha is the local evidence, CI the authoritative host run at delivery; (2) no version bump/tag (release train HELD); (3) attribution trailer intentionally absent per operator identity directive. Board effect at delivery: #295 closes. Next: remaining burndown cycles (#83 A-C, voice #236/#237, audits #241-#244, #233).
+
+
+---
+
+### Entry #526: GATE TRIBUNAL - worktree-commitguard-83a
+
+**Timestamp**: 2026-08-19T21:55:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= 2d754843b0245c2cb11f97be9fa5b35139f3421c954e49fba9508ca144e26263
+```
+
+**Previous Hash**: `df01a5ebeee0f2c117f3e58d7bebd054cc269090855af2a29a6efc6ac5fc759c` (Entry #525 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= ad413f9028f92134011f48c04c35befeb8a76c25e52947551260bb3c22eda9d7
+```
+
+## Decision
+
+PASS on plan-worktree-commitguard-83a.md iteration 1 (#83 Phase A core). Audit-caught defect remediated pre-verdict: block verdicts must be HTTP 200 because the hook's curl -sf fails open on non-2xx (LD-3 amended; T10 asserts status). Worktree hooks-in-commonDir semantics proven empirically by T4 (real git worktree add) per SG-GrepShapedRunclaim-A. Observations: 401 fail-open is deliberate stale-token posture; spawnSync activation cost flagged for #244 baseline; install-before-server port fallback disclosed. Next: /qor-implement on fix/worktree-commitguard-83a (stacked), local commits only.
+
+
+---
+
+### Entry #527: IMPLEMENTATION - worktree-commitguard-83a
+
+**Timestamp**: 2026-08-19T22:20:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(git diff -- FailSafe/extension/src)
+= 1c48b01301e2c8a76274674e78c9ce836bc87a9866ba9dbf25b7018e28a99000
+```
+
+**Previous Hash**: `ad413f9028f92134011f48c04c35befeb8a76c25e52947551260bb3c22eda9d7` (Entry #526 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 6b684893f9aaa155ff6f6d989403dcf82e745270e24caa51be09012e0cc1c140
+```
+
+## Decision
+
+Implemented plan-worktree-commitguard-83a.md (audit PASS #526) on branch fix/worktree-commitguard-83a (stacked). LD-1 resolveGitDirs (spawnSync argv, 5s timeout, <root>/.git fallback). LD-2 CommitGuard worktree-correct: hooks+config from commonDir, token in gitDir, lazy apiPort resolved at hook-write. LD-3 CommitCheckRoute shipped (token gate 401; block verdicts HTTP 200 per curl -sf constraint). LD-4/5 threading: ConsoleServerOptions.validateCommitToken -> ConsoleRouteHost -> ApiRouteDeps; commitGuardPortSource ref repointed by bootstrapServers to the live port. LD-6 ConfigManager.getGovernanceRoot() (cached; dirname of common .git). TDD: T4/T5/T7-T10 red then 33/33 green (real git init + worktree add fixtures); tsc 0; lint 0 errors. Hermeticity finding recorded: this machine carries a stray .git at C:\ — ambient ancestor-repo discovery is REAL, which validated the fallback/injection design (legacy CommitGuard suite now injects explicit dirs; T3 uses a nonexistent cwd). FEATURE_INDEX: FX115 n/a->verified (route shipped), FX284 refreshed (worktree), FX906 NEW (planned FX907 landed on existing FX115; FX908 landed on existing FX284 — recorded per implement Step 12.5). Docs: AGENTS_WINDOW SS5 note; CHANGELOGs [Unreleased].
+
+
+---
+
+### Entry #528: SESSION SEAL - worktree-commitguard-83a
+
+**Timestamp**: 2026-08-19T22:35:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L2
+**Entry ID**: `e9f8609615e7`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-worktree-commitguard-83a.md)
+= 882c159148ed0dffe2701984a121c1218e2065108d79cf240a1d5774541698ee
+```
+
+**Previous Hash**: `6b684893f9aaa155ff6f6d989403dcf82e745270e24caa51be09012e0cc1c140` (Entry #527 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= c4a5c36baaf901a073d52a401d3f99ec80600484c0c1811f9b870da79ead8a43
+```
+
+**Merkle Seal**: `105588609c4b4ae10a4b13f7624bc0de6da627bc4d09288e517575df28e5d0b5` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for burndown Cycle 3 (#83 Phase A core; session 2026-08-19T2021-9acb11; research = deep-dive #517 with citations re-verified, audit PASS #526, implement #527; branch fix/worktree-commitguard-83a stacked). Reality = Promise: all 13 declared src/test files + 5 doc surfaces, no unplanned files. Verification: 33/33 green under shim-mocha with REAL git init/worktree fixtures; tsc + eslint 0 errors. Gate ladder all exit 0; intent lock VERIFIED. DISCLOSED: electron-host run defers to CI (updater mutex, third consecutive cycle); no version bump/tag (HOLD); attribution trailer absent per operator identity directive. Board effect at delivery: #83 Phases A-C progress (A core done; B/C next cycle); FX115 promoted n/a->verified closing a documented-but-unimplemented gap. Hermeticity lesson recorded in #527. Next: Cycle 4 (#83 B/C) then voice/audits/#233.
+
+
+---
+
+### Entry #529: GATE TRIBUNAL - agents-window-configure-83bc
+
+**Timestamp**: 2026-08-19T22:55:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= 8a83a4d9c75ed6704262ac26a0ad3a3aa35400b064d6ae1532b0b736492a8a03
+```
+
+**Previous Hash**: `c4a5c36baaf901a073d52a401d3f99ec80600484c0c1811f9b870da79ead8a43` (Entry #528 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 81f3a0195aff2b6bffa75b98d99e1b624a9c09656b541e7e68550691a024f9d7
+```
+
+## Decision
+
+PASS on plan-agents-window-configure-83bc.md iteration 1 (#83 Phases B+C). Ghost-config refusal verified (FailSafeServer in-process; B209 filed instead); plan-authoring ghost command name caught by the grep pass and corrected pre-audit (failsafe.mcp.installCatalog). Next: /qor-implement on fix/agents-window-configure-83bc, local commits only.
+
+
+---
+
+### Entry #530: IMPLEMENTATION - agents-window-configure-83bc
+
+**Timestamp**: 2026-08-19T23:15:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(git diff -- FailSafe/extension/src FailSafe/extension/package.json)
+= af21ee62880988d42b822af30896f1e8edf91a9751ef28062b2617913d18c6d2
+```
+
+**Previous Hash**: `81f3a0195aff2b6bffa75b98d99e1b624a9c09656b541e7e68550691a024f9d7` (Entry #529 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= ad30fbe6967493488a7ad35f23e4be91d3f88a2a49411a82840a1c4e0e444908
+```
+
+## Decision
+
+Implemented plan-agents-window-configure-83bc.md (audit PASS #529) on fix/agents-window-configure-83bc (stacked). LD-3 runAgentsWindowConfigure pure-logic io-seam module + failsafe.configureAgentsWindow registration + manifest entry. LD-1/LD-2/LD-4: AGENTS_WINDOW doc SS2 guided-path pointer + SS4.x in-process-MCP reality check + SS4.y Agent Plugin DRAFT; BACKLOG [B209] standalone MCP bridge filed; FX909 row; CHANGELOGs. TDD note: T1-T4 are a brand-new pure unit (compile-red only, green on first run — disclosed); T5 observed genuinely red (manifest+wiring absent) then green. 5/5 passing; tsc 0 errors. Board effect at delivery: #83 closes (A+B+C complete; Phase-D validation issue splits out per operator ruling).
+
+
+---
+
+### Entry #531: SESSION SEAL - agents-window-configure-83bc
+
+**Timestamp**: 2026-08-19T23:25:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L2
+**Entry ID**: `9f52c6d31901`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-agents-window-configure-83bc.md)
+= ea4379fb5b3fccc20f766fa9c46f0628a640fc4bbedb18bbb1bbb7fe312860ea
+```
+
+**Previous Hash**: `ad30fbe6967493488a7ad35f23e4be91d3f88a2a49411a82840a1c4e0e444908` (Entry #530 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 78ef6e59f1e5724f543c2a2c05160f99f162445e9e6f58a6abb2f31251f5899c
+```
+
+**Merkle Seal**: `7d31d26c75e9e3bf3a9002b5979b00e1f8c4e558b45424bfc0c199c407452718` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for burndown Cycle 4 (#83 Phases B+C; session 2026-08-19T2041-fd571d; research #517-derived + in-process-MCP verification, audit PASS #529, implement #530; branch fix/agents-window-configure-83bc stacked). Reality = Promise: 4 src/test files + manifest + 5 doc surfaces. Verification: 5/5 green (T5 observed red->green; T1-T4 new pure unit, compile-red disclosed); tsc + eslint 0 errors. Gate ladder all exit 0. DISCLOSED: electron-host run defers to CI (updater mutex); no version bump/tag (HOLD); attribution trailer absent per operator identity directive. #83 A+B+C now COMPLETE across Cycles 3+4 — at delivery: close #83, file the Phase-D live-window validation issue (operator-run). Remaining burndown: voice #236/#237, audits #241-#244, #233, programs #232/#239.
+
+
+---
+
+### Entry #532: GATE TRIBUNAL - agent-audit-scan-guard-241
+
+**Timestamp**: 2026-08-20T00:20:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L1
+**Verdict**: PASS (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= ae81998d1f9853dca013b72c44fb1c2675bb2c0adc836a364c01a1bc85cfbd16
+```
+
+**Previous Hash**: `78ef6e59f1e5724f543c2a2c05160f99f162445e9e6f58a6abb2f31251f5899c` (Entry #531 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= c0c2a4a3d728bce8ef9490b9dac0452f97e837b3b5ae4df934cab42a5540383e
+```
+
+## Decision
+
+PASS on plan-agent-audit-scan-guard-241.md iteration 1 (#241 named candidate: guard the agentAudit.run risk-upsert loop via a testable runMcpPolicyScan seam + failed-count warning). L1 (observe-only surface). Next: /qor-implement on the stacked branch.
+
+
+---
+
+### Entry #533: IMPLEMENTATION - agent-audit-scan-guard-241 (+ LD-6 spec correction)
+
+**Timestamp**: 2026-08-20T00:50:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L1
+
+**Content Hash**:
+```
+SHA256(git diff -- FailSafe/extension/src)
+= dc64f67b4917c64ac821c626cf57332c7402769f09bc6c73dfb1c3daa688c17f
+```
+
+**Previous Hash**: `c0c2a4a3d728bce8ef9490b9dac0452f97e837b3b5ae4df934cab42a5540383e` (Entry #532 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 3a6556117f038414b490d9d0e70b60968501b8137045e86355ef2cbd7e49feab
+```
+
+## Decision
+
+(1) Implemented plan-agent-audit-scan-guard-241.md (audit PASS #532): runMcpPolicyScan seam extracted from failsafe.agentAudit.run with try/catch'd sink (failed counter; loop never aborts), handler shows a warning when failed>0. TDD: compile-red then T1-T3 green (15/15 suite); tsc + lint clean. FX910. (2) POST-SEAL CORRECTION to Cycle-1's LD-6 (seal #521 disclosure): the reload spec's identity-arrival poll turned an optional signal into a hard gate — CI run 2 on PR #323 showed hub delivery is transport-variant (WS->SSE) and can exceed any budget; the LD-4 fallback makes identity unnecessary for the product promise, so the spec now polls the healed canvas state directly (20s). FX897 spec 7/7 green locally post-correction. Also this session: #295 missed-consumer harness fix (monitor-phase-lessons, FX595) after CI run 1.
+
+
+---
+
+### Entry #534: SESSION SEAL - agent-audit-scan-guard-241
+
+**Timestamp**: 2026-08-20T01:00:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L1
+**Entry ID**: `ea8eeb7bdafa`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-agent-audit-scan-guard-241.md)
+= 0de54c4dbb5a656401a72b64db0c56ff4d3072b33726b950b74373ffe28a7c2d
+```
+
+**Previous Hash**: `3a6556117f038414b490d9d0e70b60968501b8137045e86355ef2cbd7e49feab` (Entry #533 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 310505a32d74dbdd7dabd595fcd32c337cc764bc13f0ddff5ce3311ca03509dd
+```
+
+**Merkle Seal**: `4d4e897c3e98a36811be942e81ce8cb44456a707eccfd60f8c401ddf39072ec2` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for burndown Cycle 5 (#241 named candidate; session 2026-08-19T2050-306452; audit PASS #532, implement #533). runMcpPolicyScan sink-fault resilience shipped (FX910); LD-6 spec correction rode along (disclosed in #533). Verification: 15/15 + FX897 spec 7/7 locally; tsc + lint clean; gate ladder exit 0. DISCLOSED: electron host defers to CI; no version bump (HOLD); trailer absent per operator identity directive. Pushed to the authorized #323 lane (CI running).

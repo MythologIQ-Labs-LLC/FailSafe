@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`FailSafe: Configure VS Code Agents Window Governance`.** A guided, idempotent command covering the Agents-window user-setting opt-in, worktree commit-hook governance, and governed `.mcp.json` integration installs — with docs that state the in-process-MCP constraint honestly instead of scaffolding a ghost config (standalone bridge filed as B209). (#83 B+C, FX909)
+
+### Changed
+- **First-run gates are repository-scoped.** The governance-mode picker and the onboarding offer now fire once per repository (workspaceState) instead of once per installation; the chosen mode persists to Workspace settings, and an explicitly configured mode at any scope suppresses the prompt so existing setups are never re-prompted. (#295, FX538/FX275)
+
+### Fixed
+- **Agent MCP-policy audit no longer aborts silently on a Risk-Register write failure.** The scan continues past a failed write, counts it, and warns the operator that findings may be missing. (#241, FX910)
+- **The pre-commit guard is real now, and worktree-safe.** `GET /api/v1/governance/commit-check` ships (it was documented but never implemented, so the hook always failed open); the hook's port tracks the live Console server; installing from a linked git worktree works (hooks land in the shared `.git/hooks`, the token where the hook reads it); and `ConfigManager.getGovernanceRoot()` gives worktree-aware consumers one canonical repository root. (#83 Phase A, FX115/FX284/FX906)
+- **Editor-save governance can no longer fail open on any routing fault.** `handleFileOperation` is now total: faults in intent lookup, evaluation routing, qorlogic dispatch, or the adapter preflight — plus a hung verdict generation (bounded at 10s) or a throwing blockade notifier — all block the save instead of surfacing as an unhandled rejection. (#297, FX905)
+- **Mind Map view prefs survive identity-less reload windows.** The view-prefs store records the last real workspace identity and falls back to it when the hub hasn't delivered one yet; the canvas reconciles its prefs right after construction. (#319, FX897)
+
 ## [6.0.0] - 2026-08-19
 
 ### Fixed
