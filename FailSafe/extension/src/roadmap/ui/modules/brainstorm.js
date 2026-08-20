@@ -97,6 +97,18 @@ export class BrainstormRenderer {
       'failsafe:audio-device-changed': (e) => { if (e.detail.type === 'input') this.voice.stt.setMicDevice(e.detail.deviceId); },
       'failsafe:whisper-model-changed': (e) => this.voice.swapWhisperModel(e.detail.modelId),
       'failsafe:stt-language-changed': (e) => this.voice.setLanguage(e.detail.language),
+      // #346: the wake bridge lives in this map so it re-registers on every
+      // build and tears down symmetrically — its old home (first-run
+      // bindToolbar) died permanently after one tab round trip. Toggle sync
+      // stays null-guarded: a wake event before the toolbar exists applies
+      // stt state and skips the checkbox.
+      'failsafe:wake-word-changed': (e) => {
+        this.voice.stt.setWakeWordEnabled(e.detail.enabled);
+        if (e.detail.enabled) this.voice.stt.startWakeWordListener();
+        else this.voice.stt.stopWakeWordListener();
+        const toggle = this._getEl('.cc-bs-wake-toggle');
+        if (toggle && toggle.checked !== e.detail.enabled) toggle.checked = e.detail.enabled;
+      },
     };
     for (const [name, fn] of Object.entries(this._settingsBridges)) window.addEventListener(name, fn);
   }
@@ -214,16 +226,10 @@ export class BrainstormRenderer {
 
     wireToolbar(this); // FX897: layout/view/FIT/RESET bindings + prefs (#235 LD5 split)
     this._bindWakeToggle();
-    if (!this._wakeHandler) {
-      this._wakeHandler = (e) => {
-        this.voice.stt.setWakeWordEnabled(e.detail.enabled);
-        if (e.detail.enabled) this.voice.stt.startWakeWordListener();
-        else this.voice.stt.stopWakeWordListener();
-        const toggle = this._getEl('.cc-bs-wake-toggle');
-        if (toggle && toggle.checked !== e.detail.enabled) toggle.checked = e.detail.enabled;
-      };
-      window.addEventListener('failsafe:wake-word-changed', this._wakeHandler);
-    }
+    // #346: wake-bridge registration moved to _wireSettingsBridges (per-build,
+    // symmetric teardown) — the first-run-only registration here died after one
+    // tab round trip because this method self-replaces below and destroy()
+    // never restored it.
     this.prepBay.bindEvents();
     this._getEl('.cc-bs-voice')?.addEventListener('click', () => this.voice.toggle());
     this.llmStatus.render(this.client);
@@ -260,10 +266,9 @@ export class BrainstormRenderer {
     if (this._heartbeatInterval) { clearInterval(this._heartbeatInterval); this._heartbeatInterval = null; }
     this._visualizerHandle?.destroy?.(); this._visualizerHandle = null;
     for (const [name, fn] of Object.entries(this._settingsBridges || {})) window.removeEventListener(name, fn);
-    if (this._wakeHandler) window.removeEventListener('failsafe:wake-word-changed', this._wakeHandler);
     if (this._undoKeyHandler) document.removeEventListener('keydown', this._undoKeyHandler);
     clearTimeout(this._pinSaveTimer);
-    this._wakeHandler = null; this.keyboard.unbind();
+    this.keyboard.unbind();
     this.voiceStatusBadge?.detach(); this.voiceStatusBadge = null;
     this.prepBay.destroy(); this.voice.destroy(); this.webLlm.destroy();
     this.graph.canvas?.destroy(); this.graph.setCanvas(null);
