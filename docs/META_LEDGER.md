@@ -27361,3 +27361,60 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 SESSION SEAL for burndown Cycle 8 (#325 Mind Map accessible alternative; session 2026-08-20T0219-da1bc0; audit PASS #541, implement #542; branch fix/mindmap-list-view-325 stacked on Cycle 7). Reality = Promise: 4 src/test files + 4 doc surfaces. Verification: T1-T4 red -> 32/32 green; tsc + compile (browser-ESM emit) + lint clean. Gate ladder exit 0; intent lock VERIFIED. DISCLOSED: rendered Playwright re-probe of the fixed surface rides the next #242 slice (the unit layer pins template + wiring behavior); electron host defers to CI; no version bump (HOLD); trailer absent per operator identity directive. Board effect at delivery: #325 closes.
+
+
+---
+
+### Entry #544: GATE TRIBUNAL - integration-defects-241c
+
+**Timestamp**: 2026-08-20T04:40:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= b5f4278da373deaa7658be9fa9c863ea65f8bc5abae270527e56809c24dc3f55
+```
+
+**Previous Hash**: `fe6a67a2df87680eec72f2eebfeb9266160940d106da5bcaa567e060789d585c` (Entry #543 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= ee584686edc47e991f4f7f691f4aa3eacf03f2eadff2d80e01240a834d0cba01
+```
+
+## Decision
+
+PASS on plan-integration-defects-241c.md iteration 1 (#241 Tranche C defects D-1..D-4: non-destructive mcp merge, never-throws SARIF + guarded upsert loops, paginated+disclosed linkage audit, SARIF opt-in). Findings originated from an independent audit agent and were each re-verified by direct read before planning. Next: /qor-implement on fix/integration-defects-241c.
+
+
+---
+
+### Entry #545: IMPLEMENTATION - integration-defects-241c
+
+**Timestamp**: 2026-08-20T05:30:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(git diff -- FailSafe/extension/src FailSafe/extension/package.json)
+= 5c43697da7d7cd75b7f80020c052b6814ea4f4381d9eb1b645f074ad4250871a
+```
+
+**Previous Hash**: `ee584686edc47e991f4f7f691f4aa3eacf03f2eadff2d80e01240a834d0cba01` (Entry #544 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 1831a42b99c108642724f7d698a49d55815c2290dc4928a60b6d54fcf7e804d1
+```
+
+## Decision
+
+Implemented plan-integration-defects-241c.md (audit PASS #544). LD-1 (D-1/FX913): mergeMcpConfig returns a discriminated McpMergeResult — unparseable existing config REFUSES the merge (ok:false, no text); command shows an explicit nothing-was-written error; HTTP route returns 409; the legacy 'malformed -> starts fresh' test INVERTED (it pinned the destructive behavior). LD-2/3 (D-2/FX915): parseSarif honors never-throws (null-run guard; non-array rules/results skipped with notes); importSarifText + importSentryRisks adopt the FX910 guarded-loop pattern (failed counters, loop never aborts). LD-4 (D-3/FX914): runLinkageAudit paginates to 10 pages and appends a truncated-issue-list WARN finding on a full final page (new LinkageFindingKind member + audit view on LinkageRunResult); false already-closed findings for page-2+ issues eliminated (T7). LD-5 (D-4/FX915): failsafe.integrations.sarif.enabled (default false) + command guard + Integrations Catalog entry (new 'Security Scanning' category). TDD: 7 red -> 63/63 green across the six integration suites + T9; tsc 0; lint 0 errors.

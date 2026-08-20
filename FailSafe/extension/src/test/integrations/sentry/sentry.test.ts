@@ -145,3 +145,24 @@ suite('sentry-client (#102)', () => {
     assert.match(sentUrl, /^https:\/\/sentry\.acme\.com\/api\/0\/projects\/acme\/backend\/issues\//);
   });
 });
+
+// #241 Tranche C D-2 shared class (FX915): guarded upsert loop.
+suite('sentry upsert resilience (FX915/#241C)', () => {
+  test('T6: throwing upsert mid-stream -> loop completes, failed counted on the result', async () => {
+    const issues = [
+      { id: '1', title: 'a', level: 'error', permalink: 'https://x/1' },
+      { id: '2', title: 'b', level: 'error', permalink: 'https://x/2' },
+      { id: '3', title: 'c', level: 'error', permalink: 'https://x/3' },
+    ];
+    const get: SentryGetFn = async () => ({ status: 200, body: JSON.stringify(issues) });
+    let calls = 0;
+    const r = await importSentryRisks(
+      { enabled: true, token: 't', org: 'o', project: 'p' },
+      get,
+      () => { calls++; if (calls === 2) throw new Error('write refused'); },
+    );
+    assert.equal(r.ok, true);
+    assert.equal(calls, 3, 'every risk still offered to the sink');
+    assert.equal((r as any).failed, 1);
+  });
+});

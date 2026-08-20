@@ -88,3 +88,45 @@ suite('github-checks PR↔issue linkage auditor (#154)', () => {
     assert.equal(calls.length, 2, 'PR body + open issues');
   });
 });
+
+// #241 Tranche C D-3 (FX914): pagination + truncation disclosure.
+suite('runLinkageAudit pagination (FX914/#241C)', () => {
+  function pagedGet(pages: Array<Array<{ number: number }>>, prBody: string) {
+    return async (url: string) => {
+      if (url.includes('/pulls/')) return { status: 200, body: JSON.stringify({ body: prBody }) };
+      const m = url.match(/[?&]page=([0-9]+)/);
+      const page = m ? Number(m[1]) : 1;
+      return { status: 200, body: JSON.stringify(pages[page - 1] ?? []) };
+    };
+  }
+
+  test('T7: an open issue on page 2 is recognized (no false already-closed finding)', async () => {
+    const page1 = Array.from({ length: 100 }, (_, i) => ({ number: i + 1 }));
+    const page2 = [{ number: 555 }];
+    const r = await runLinkageAudit({
+      enabled: true, token: 't', owner: 'o', repo: 'r', prNumber: 9,
+      get: pagedGet([page1, page2], 'Closes #555'),
+    } as any);
+    assert.equal(r.ok, true);
+    const findings = (r as any).audit?.findings ?? [];
+    assert.ok(
+      !findings.some((f: any) => f.kind === 'closes-stale-or-missing'),
+      'issue #555 is open on page 2 — must not be reported stale/closed',
+    );
+  });
+
+  test('T8: ten full pages -> truncation disclosure finding appended', async () => {
+    const full = (start: number) => Array.from({ length: 100 }, (_, i) => ({ number: start + i }));
+    const pages = Array.from({ length: 10 }, (_, p) => full(p * 100 + 1));
+    const r = await runLinkageAudit({
+      enabled: true, token: 't', owner: 'o', repo: 'r', prNumber: 9,
+      get: pagedGet(pages, 'Closes #1'),
+    } as any);
+    assert.equal(r.ok, true);
+    const findings = (r as any).audit?.findings ?? [];
+    assert.ok(
+      findings.some((f: any) => f.kind === 'truncated-issue-list'),
+      'a full 10th page must disclose truncation in the findings',
+    );
+  });
+});

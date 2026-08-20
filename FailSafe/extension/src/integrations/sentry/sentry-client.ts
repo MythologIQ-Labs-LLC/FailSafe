@@ -37,6 +37,8 @@ export interface SentryFetchResult {
   count: number;
   status?: number;
   error?: string;
+  /** #241 (FX915): risk-sink writes that threw during import (never loop-aborting). */
+  failed?: number;
 }
 
 /** Pure builder for the project-issues path + query. The project-issues
@@ -104,7 +106,17 @@ export async function importSentryRisks(
 ): Promise<SentryFetchResult> {
   const result = await fetchSentryRisks(opts, get);
   if (result.ok && !result.localOnly) {
-    for (const r of result.risks) upsert(r);
+    // #241 Tranche C (FX915): guarded per-item upsert — a failing write is
+    // counted, never loop-aborting (FX910 pattern).
+    let failed = 0;
+    for (const r of result.risks) {
+      try {
+        upsert(r);
+      } catch {
+        failed++;
+      }
+    }
+    return { ...result, failed };
   }
   return result;
 }

@@ -43,7 +43,14 @@ export function registerMcpInstallCommand(context: vscode.ExtensionContext, work
     const cfgPath = path.join(workspaceRoot, '.mcp.json');
     let existing = '';
     try { existing = fs.readFileSync(cfgPath, 'utf-8'); } catch { /* no existing config */ }
-    const { text, added } = mergeMcpConfig(existing, entry);
+    const merged = mergeMcpConfig(existing, entry);
+    if (!merged.ok) {
+      vscode.window.showErrorMessage(
+        `MCP install: existing .mcp.json could not be parsed (${merged.reason}) — nothing was written. Fix or remove the file and retry; your current MCP servers were left untouched.`,
+      );
+      return;
+    }
+    const { text, added } = merged;
     try {
       fs.writeFileSync(cfgPath, text);
     } catch (e) {

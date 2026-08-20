@@ -81,15 +81,23 @@ export function parseSarif(text: string): SarifParseResult {
 
   const findings: SarifFinding[] = [];
   for (const run of doc.runs) {
+    if (!run || typeof run !== 'object') {
+      errors.push('run is not an object — skipped');
+      continue;
+    }
     const driver = run.tool?.driver;
     const tool = driver?.name ?? 'unknown';
     const toolVersion = driver?.version ?? null;
     // Rule-default levels for results that omit `level`.
     const ruleLevels = new Map<string, string>();
-    for (const r of driver?.rules ?? []) {
+    const rules = Array.isArray(driver?.rules) ? driver.rules : [];
+    if (driver?.rules && !Array.isArray(driver.rules)) errors.push('driver.rules is not an array — skipped');
+    for (const r of rules) {
       if (r.id && r.defaultConfiguration?.level) ruleLevels.set(r.id, r.defaultConfiguration.level);
     }
-    for (const res of run.results ?? []) {
+    const results = Array.isArray(run.results) ? run.results : [];
+    if (run.results && !Array.isArray(run.results)) errors.push('run.results is not an array — skipped');
+    for (const res of results) {
       const ruleId = res.ruleId ?? res.rule?.id;
       if (!ruleId) { errors.push('result missing ruleId — skipped'); continue; }
       const level = res.level ?? ruleLevels.get(ruleId) ?? 'warning';

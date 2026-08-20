@@ -18,6 +18,7 @@ export type IntegrationCategory =
   | 'Issue Tracker'
   | 'CI / Checks'
   | 'Error Monitoring'
+  | 'Security Scanning'
   | 'Notifications';
 
 export interface IntegrationDescriptor {
@@ -143,6 +144,16 @@ export const INTEGRATION_CATALOG: readonly IntegrationDescriptor[] = [
     requiredKeys: ['failsafe.integrations.github.token'],
     docsId: 'github-checks',
     configHint: 'Enable + set a GitHub token (checks:write) under Settings → Integrations → GitHub.',
+  },
+  {
+    id: 'sarif',
+    label: 'SARIF Import',
+    category: 'Security Scanning',
+    summary: 'Imports SARIF 2.1.0 scanner output (Semgrep, CodeQL, ...) as governed risk records. Fully offline.',
+    enabledKey: 'failsafe.integrations.sarif.enabled',
+    requiredKeys: [],
+    docsId: 'sarif',
+    configHint: 'Enable, then run `FailSafe: Import SARIF Findings` and pick a .sarif/.json file.',
   },
   {
     id: 'sentry',

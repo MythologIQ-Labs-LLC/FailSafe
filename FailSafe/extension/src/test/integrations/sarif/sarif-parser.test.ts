@@ -95,3 +95,63 @@ suite('sarif-parser (B-INT-9 #99)', () => {
     assert.equal(risks[0].status, 'open');
   });
 });
+
+// #241 Tranche C D-2 (FX915): never-throws contract + guarded upsert loop.
+suite('sarif resilience (FX915/#241C)', () => {
+  test('T3: runs:[null] -> errors[] note, zero throw', () => {
+    const r = parseSarif(JSON.stringify({ version: '2.1.0', runs: [null] }));
+    assert.equal(r.findings.length, 0);
+    assert.ok(r.errors.some((e) => /run/i.test(e)), 'null run must be reported, not thrown');
+  });
+
+  test('T4: non-array rules/results objects -> skipped with errors[] notes, zero throw', () => {
+    const r = parseSarif(JSON.stringify({
+      version: '2.1.0',
+      runs: [{ tool: { driver: { name: 't', rules: { bogus: true } } }, results: { bogus: true } }],
+    }));
+    assert.equal(r.findings.length, 0);
+    assert.ok(r.errors.length >= 1, 'non-iterable shapes must surface as parse notes');
+  });
+
+  test('T5: throwing upsert mid-stream -> remaining risks processed, failed counted', () => {
+    const text = JSON.stringify({
+      version: '2.1.0',
+      runs: [{
+        tool: { driver: { name: 't' } },
+        results: [
+          { ruleId: 'r1', level: 'error', message: { text: 'a' } },
+          { ruleId: 'r2', level: 'error', message: { text: 'b' } },
+          { ruleId: 'r3', level: 'error', message: { text: 'c' } },
+        ],
+      }],
+    });
+    let calls = 0;
+    const r = importSarifText(text, () => {
+      calls++;
+      if (calls === 2) throw new Error('register write refused');
+    });
+    assert.equal(calls, 3, 'every risk is still offered to the sink');
+    assert.equal((r as any).failed, 1);
+    assert.equal(r.risks, 2, 'risks counts only successful upserts');
+  });
+});
+
+// #241C D-4 (FX915): opt-in parity — manifest + guard.
+suite('sarif opt-in (FX915/#241C)', () => {
+  test('T9: manifest declares failsafe.integrations.sarif.enabled default false + catalog lists it', () => {
+    const fs = require('fs') as typeof import('fs');
+    const path = require('path') as typeof import('path');
+    const root = path.resolve(__dirname, '..', '..', '..', '..');
+    const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+    const prop = pkg.contributes.configuration.properties['failsafe.integrations.sarif.enabled'];
+    assert.ok(prop, 'manifest must declare the sarif opt-in');
+    assert.equal(prop.default, false, 'default must be OFF');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { INTEGRATION_CATALOG } = require('../../../integrations/catalog/integration-catalog');
+    assert.ok(
+      INTEGRATION_CATALOG.some((e: { id: string; enabledKey: string }) =>
+        e.id === 'sarif' && e.enabledKey === 'failsafe.integrations.sarif.enabled'),
+      'the Integrations Catalog must list SARIF with its enabledKey',
+    );
+  });
+});

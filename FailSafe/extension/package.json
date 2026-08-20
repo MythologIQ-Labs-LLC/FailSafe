@@ -434,6 +434,11 @@
           "default": "",
           "description": "Optional GitHub API base URL for GitHub Enterprise Server (e.g. https://ghe.example.com/api/v3). Leave empty to use https://api.github.com."
         },
+        "failsafe.integrations.sarif.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable SARIF import. The `FailSafe: Import SARIF Findings` command parses an operator-picked SARIF 2.1.0 file (fully offline — no network) and upserts findings as risk records in the Risk Register."
+        },
         "failsafe.integrations.sentry.enabled": {
           "type": "boolean",
           "default": false,
