@@ -27005,3 +27005,60 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 SESSION SEAL for burndown Cycle 4 (#83 Phases B+C; session 2026-08-19T2041-fd571d; research #517-derived + in-process-MCP verification, audit PASS #529, implement #530; branch fix/agents-window-configure-83bc stacked). Reality = Promise: 4 src/test files + manifest + 5 doc surfaces. Verification: 5/5 green (T5 observed red->green; T1-T4 new pure unit, compile-red disclosed); tsc + eslint 0 errors. Gate ladder all exit 0. DISCLOSED: electron-host run defers to CI (updater mutex); no version bump/tag (HOLD); attribution trailer absent per operator identity directive. #83 A+B+C now COMPLETE across Cycles 3+4 — at delivery: close #83, file the Phase-D live-window validation issue (operator-run). Remaining burndown: voice #236/#237, audits #241-#244, #233, programs #232/#239.
+
+
+---
+
+### Entry #532: GATE TRIBUNAL - agent-audit-scan-guard-241
+
+**Timestamp**: 2026-08-20T00:20:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L1
+**Verdict**: PASS (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= ae81998d1f9853dca013b72c44fb1c2675bb2c0adc836a364c01a1bc85cfbd16
+```
+
+**Previous Hash**: `78ef6e59f1e5724f543c2a2c05160f99f162445e9e6f58a6abb2f31251f5899c` (Entry #531 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= c0c2a4a3d728bce8ef9490b9dac0452f97e837b3b5ae4df934cab42a5540383e
+```
+
+## Decision
+
+PASS on plan-agent-audit-scan-guard-241.md iteration 1 (#241 named candidate: guard the agentAudit.run risk-upsert loop via a testable runMcpPolicyScan seam + failed-count warning). L1 (observe-only surface). Next: /qor-implement on the stacked branch.
+
+
+---
+
+### Entry #533: IMPLEMENTATION - agent-audit-scan-guard-241 (+ LD-6 spec correction)
+
+**Timestamp**: 2026-08-20T00:50:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L1
+
+**Content Hash**:
+```
+SHA256(git diff -- FailSafe/extension/src)
+= dc64f67b4917c64ac821c626cf57332c7402769f09bc6c73dfb1c3daa688c17f
+```
+
+**Previous Hash**: `c0c2a4a3d728bce8ef9490b9dac0452f97e837b3b5ae4df934cab42a5540383e` (Entry #532 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 3a6556117f038414b490d9d0e70b60968501b8137045e86355ef2cbd7e49feab
+```
+
+## Decision
+
+(1) Implemented plan-agent-audit-scan-guard-241.md (audit PASS #532): runMcpPolicyScan seam extracted from failsafe.agentAudit.run with try/catch'd sink (failed counter; loop never aborts), handler shows a warning when failed>0. TDD: compile-red then T1-T3 green (15/15 suite); tsc + lint clean. FX910. (2) POST-SEAL CORRECTION to Cycle-1's LD-6 (seal #521 disclosure): the reload spec's identity-arrival poll turned an optional signal into a hard gate — CI run 2 on PR #323 showed hub delivery is transport-variant (WS->SSE) and can exceed any budget; the LD-4 fallback makes identity unnecessary for the product promise, so the spec now polls the healed canvas state directly (20s). FX897 spec 7/7 green locally post-correction. Also this session: #295 missed-consumer harness fix (monitor-phase-lessons, FX595) after CI run 1.

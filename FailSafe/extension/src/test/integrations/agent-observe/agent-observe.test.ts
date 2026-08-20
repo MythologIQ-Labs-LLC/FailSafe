@@ -1,4 +1,7 @@
 import { strict as assert } from 'assert';
+import * as path from 'path';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+import { runMcpPolicyScan } from '../../../extension/agent-observe-command';
 import {
   parseMcpPolicyConfig, flagMcpRisks, auditMcpConfig,
 } from '../../../integrations/agent-observe/mcp-policy-audit';
@@ -128,5 +131,49 @@ suite('openhands-observer (#105)', () => {
     const plan = planToolPolicyChange();
     assert.equal(plan.action, 'new-conversation');
     assert.equal(plan.mutatesActiveRun, false);
+  });
+});
+
+
+// ---- #241 named candidate (FX910): resilient risk-upsert loop ------------
+
+suite('runMcpPolicyScan sink resilience (FX910/#241)', () => {
+  // Injected reader: only the shared project config exists, carrying the
+  // 3-server RISKY_CONFIG (multiple risks so a mid-stream throw is meaningful).
+  const readRisky = (file: string): string => {
+    if (path.basename(file) === '.mcp.json') return RISKY_CONFIG;
+    throw new Error('ENOENT');
+  };
+
+  test('T3: healthy sink parity — counters match direct auditMcpConfig output, failed=0', () => {
+    const direct = auditMcpConfig('project', RISKY_CONFIG);
+    const seen: unknown[] = [];
+    const r = runMcpPolicyScan('/ws', (risk: Record<string, unknown>) => { seen.push(risk); }, readRisky);
+    assert.equal(r.scanned, 1);
+    assert.equal(r.total, direct.length);
+    assert.equal(r.high, direct.filter((x) => x.severity === 'high').length);
+    assert.equal(r.failed, 0);
+    assert.equal(seen.length, direct.length);
+  });
+
+  test('T1: a sink that throws on the SECOND risk keeps scanning; failed counted, total only successes', () => {
+    const direct = auditMcpConfig('project', RISKY_CONFIG);
+    assert.ok(direct.length >= 3, 'fixture must yield several risks');
+    let calls = 0;
+    const r = runMcpPolicyScan('/ws', () => {
+      calls++;
+      if (calls === 2) throw new Error('ledger write refused');
+    }, readRisky);
+    assert.equal(calls, direct.length, 'every risk is still offered to the sink');
+    assert.equal(r.failed, 1);
+    assert.equal(r.total, direct.length - 1);
+  });
+
+  test('T2: an all-throwing sink never escapes the scan; total=0, failed=all', () => {
+    const direct = auditMcpConfig('project', RISKY_CONFIG);
+    const r = runMcpPolicyScan('/ws', () => { throw new Error('db gone'); }, readRisky);
+    assert.equal(r.total, 0);
+    assert.equal(r.failed, direct.length);
+    assert.equal(r.scanned, 1);
   });
 });
