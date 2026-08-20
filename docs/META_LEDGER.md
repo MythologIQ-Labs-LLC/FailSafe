@@ -27803,3 +27803,91 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 SESSION SEAL for the #242 first slice + release-gate What's-New preflight (FX917; session 2026-08-20T1440-d69349; audit #554 VETO -> #555 PASS -> #556 amendment PASS; implement #557; branch fix/monitor-a11y-release-gate). Reality = Promise on all four phases incl. the audited re-anchor amendment; 15 files staged. Verification: lint 0; census 444/444; test:ui 193/193 (zero flakes this run); keyboard-only e2e green end to end. Gate ladder exit 0 (intent re-lock after audited amendment; secret scan clean; procedural fidelity 0 findings; dod clean; doc-integrity strict PASS). **Feature Inventory**: Total: 734 / verified: 684 / n/a: 43 / other: 7. **Newly unverified**: none. DISCLOSED: a first append of this entry was corrupted by CRLF-bearing shell interpolation and was truncated + re-appended atomically in-process before any downstream reference (the #420 lesson applied preemptively); makeActionable is 4-arg vs the plan's 3-arg declaration (observer finding 3); first-landing may move user-held focus once on late row render (accepted residual, LD4 intent); severity-2 gate_override shadow event (Step 6.5 lesson) countermeasure SHIPPED but the addressed-flip awaits the governed remediate-review mechanism (disclosed rather than hand-edited); extension README versioned What's-New heading is release-time by structure - the copy is authored in both CHANGELOG Unreleased sections and the new preflight enforces the heading at [RELEASE] time; no version bump (versioning at /qor-repo-release); seal COMMIT not created - staged only at the Review Boundary. Residuals -> next #242 slice: N5 filter-chip rebuild focus destruction, N6 per-re-render AT re-announcement, health-item cards + modal focus-return, .governance-alert rows.
+
+
+---
+
+### Entry #559: GATE TRIBUNAL - 263-leak-spec-determinism
+
+**Timestamp**: 2026-08-20T21:20:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L1
+**Verdict**: PASS (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= a1a03d756646aeaddec22a0f2dc21db3e2e86e0dd7ea7adcdfbf71cea99b98f0
+```
+
+**Previous Hash**: `33e3b0cf1d98e2f91b8410b10d19c1891c5f0deadb37af1f8adc2b3fa98e3db5` (prior entry Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 18a34a7f75c01dc7554232b274d78bc0f27cfa2b4f63aab60cb7f32396e9673c
+```
+
+## Decision
+
+PASS on plan-263-leak-spec-determinism.md (compact hotfix; L1). Root cause: the #263 leak spec's spy installs during the initial build's async tail — the wake-word failsafe: listener registers in bindToolbar via initCanvas after fetchGraph resolves, so scheduler timing decided whether it leaked into the round-trip-scoped count (10 vs 9; 2x consecutive CI failures on PR #345, 2/4 local repro). Reviewer verified the chain end to end, proved the counted universe closed (wake is the ONLY async failsafe: registration; voice/tts/webLlm continuations register none), proved poll sufficiency (synchronous initCanvas), and confirmed no assertion weakening. Product defect surfaced by diagnosis filed as issue #346 (wake bridge dead after round trip; expected-count coupling 9->12 noted per advisory A1). Next: implement (spec-only).
+
+
+---
+
+### Entry #560: IMPLEMENTATION - 263-leak-spec-determinism
+
+**Timestamp**: 2026-08-20T21:30:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L1
+**Content Hash**:
+```
+SHA256(git diff -- FailSafe/extension/src/test/ui/brainstorm-tab-roundtrip.spec.ts)
+= 237b0b548002613e8df236af775d61b5d0b90291fe515b1e48338fb2aacaf38b
+```
+
+**Previous Hash**: `18a34a7f75c01dc7554232b274d78bc0f27cfa2b4f63aab60cb7f32396e9673c` (prior entry Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 2caa0c6941cf99eefd7b2cb5d2787c5c4c690d5de75a79347ffd0f10f6ddf456
+```
+
+## Decision
+
+Implemented plan-263-leak-spec-determinism.md: the leak test awaits the spec's own canvas-ready poll BEFORE installing the failsafe: listener spy, with a comment naming the closed race. No assertion or count changes; no product code touched. Verification: --repeat-each=8 -> 16/16 green (pre-fix baseline: 2/4 failures at --repeat-each=4; two consecutive CI failures on PR #345). Delivery: lands on fix/monitor-a11y-release-gate so PR #345 is self-fixing and the ledger chain stays linear.
+
+
+---
+
+### Entry #561: SESSION SEAL - 263-leak-spec-determinism
+
+**Timestamp**: 2026-08-20T21:35:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L1
+**Entry ID**: `b06e85ab3411`
+**SSDF Practices**: PO.1.4, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-263-leak-spec-determinism.md)
+= 09ca6f454389ded3feed99ae1155e2d5df04317fea37e504128fa18f7baef178
+```
+
+**Previous Hash**: `2caa0c6941cf99eefd7b2cb5d2787c5c4c690d5de75a79347ffd0f10f6ddf456` (prior entry Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 84e3d3503435636007f9400145c12d9843f328ce44d8ca051321d342bdee2019
+```
+
+**Merkle Seal**: `828fc4c7497a0e71f3b8bf5fc1e95ea20f9f4813eb31a15bd5742ca5f336b049` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for the #263 leak-spec determinism hotfix (session 2026-08-20T1730-4d4b31; audit PASS #559, implement #560). Reality = Promise: one spec file, poll-before-spy, comment in place. D4: 16/16 under --repeat-each=8. DISCLOSED: test-only hotfix (minimal doc tier; no version bump; no FEATURE_INDEX rows); rides PR #345 with the sealed FX917 work; the four release-adjacent CI failures today were all this race. Issue #346 carries the product-side wake-bridge defect with the 9->12 spec coupling.
