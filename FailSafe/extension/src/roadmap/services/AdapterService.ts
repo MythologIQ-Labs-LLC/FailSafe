@@ -37,11 +37,24 @@ function defaultRunner(
   timeout = DEFAULT_TIMEOUT,
 ): Promise<AdapterCommandResult> {
   return new Promise((resolve) => {
-    const proc = spawn(command, args, {
-      cwd,
-      shell: true,
-      timeout,
-    });
+    const options = { cwd, shell: false as const, timeout };
+    const proc = command === "python3"
+      ? spawn("python3", args, options)
+      : command === "python"
+        ? spawn("python", args, options)
+        : command === "pip3"
+          ? spawn("pip3", args, options)
+          : command === "pip"
+            ? spawn("pip", args, options)
+            : null;
+    if (!proc) {
+      resolve({
+        code: 126,
+        stdout: "",
+        stderr: `Unsupported adapter executable: ${command}`,
+      });
+      return;
+    }
 
     let stdout = "";
     let stderr = "";

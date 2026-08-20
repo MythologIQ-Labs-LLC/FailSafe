@@ -45,7 +45,9 @@ export class VerdictEngine {
         event: SentinelEvent,
         filePath: string,
         heuristicResults: HeuristicResult[],
-        llmEvaluation?: LLMEvaluation
+        llmEvaluation?: LLMEvaluation,
+        forceDecision?: VerdictDecision,
+        forceSummary?: string
     ): Promise<SentinelVerdict> {
         // Determine risk grade
         const riskGrade = this.policyEngine.classifyRisk(filePath);
@@ -58,8 +60,11 @@ export class VerdictEngine {
             .filter(r => r.matched)
             .map(r => r.patternId);
 
-        // Determine decision
-        const decision = this.determineDecision(
+        // Determine decision. FX297 FIX: callers with no heuristic evidence to
+        // grade (e.g. a malformed event payload) must be able to force a
+        // non-PASS decision instead of falling through determineDecision's
+        // default-to-PASS-on-no-evidence branch.
+        const decision = forceDecision ?? this.determineDecision(
             riskGrade,
             heuristicResults,
             llmEvaluation,
@@ -67,7 +72,7 @@ export class VerdictEngine {
         );
 
         // Generate summary
-        const summary = this.generateSummary(decision, matchedPatterns, riskGrade);
+        const summary = forceSummary ?? this.generateSummary(decision, matchedPatterns, riskGrade);
 
         // Generate details
         const details = this.generateDetails(heuristicResults, llmEvaluation);

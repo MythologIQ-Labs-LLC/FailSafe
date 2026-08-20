@@ -142,10 +142,12 @@ suite('Command dispatch (FX001-FX029 cluster)', () => {
     );
   });
 
-  test('FX002 failsafe.openFailSafeProAbout — opens about URL via env.openExternal', async () => {
-    await vscode.commands.executeCommand('failsafe.openFailSafeProAbout');
-    assert.equal(capture.externalUrls.length, 1);
-    assert.match(capture.externalUrls[0], /failsafe-pro|mythologiq\.studio/);
+  test('FX002 failsafe.openFailSafeProAbout — command is NOT registered (removed 2026-08-19)', async () => {
+    // De-Pro directive: the About-Pro command was removed with the Settings
+    // card and constants; the id must no longer resolve.
+    const all = await vscode.commands.getCommands(true);
+    assert.equal(all.includes('failsafe.openFailSafeProAbout'), false,
+      'failsafe.openFailSafeProAbout should be removed from the command surface');
   });
 
   test('FX014 failsafe.openRiskRegister — focuses sidebar container', async () => {

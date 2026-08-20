@@ -97,8 +97,15 @@ function defaultRunner(
   args: string[],
   cwd?: string,
 ): Promise<{ code: number; stdout: string; stderr: string }> {
+  if (command !== "git") {
+    return Promise.resolve({
+      code: 126,
+      stdout: "",
+      stderr: `Unsupported GitResetService executable: ${command}`,
+    });
+  }
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
+    const child = spawn("git", args, {
       cwd,
       shell: false,
       windowsHide: true,

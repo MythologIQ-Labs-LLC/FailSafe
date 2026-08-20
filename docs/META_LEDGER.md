@@ -23990,149 +23990,6 @@ _Session: 2026-06-10-research-vscode-agents-window_
 
 ---
 
-### Entry #458: RESEARCH BRIEF - Tracker, Mind Map, and Shadow Genome remediation
-
-**Date**: 2026-06-11
-**Phase**: RESEARCH (/qor-research)
-**Risk Grade**: L2 (Command Center UI/data-contract remediation)
-**Author**: Analyst
-**Brief**: docs/research-brief-tracker-mindmap-shadow-genome-remediation-2026-06-11.md
-
-## Decision
-
-Split the operator-observed Command Center defects into seven remediation issues: Tracker reload persistence, Tracker full-space layout, Tracker taxonomy/agent mapping, Tracker PDF export, Mind Map seed graph, Shadow Genome graph usability, and Shadow Genome maturity/summary contract. Research found the Tracker iframe reload is caused by all-renderer hub refresh plus TabGroup DOM rebuild plus iframe recreation; Mind Map has no preloaded codebase graph source; Shadow Genome uses a fixed-ring graph layout that fails at realistic graph size; and the "Failure Nodes" card is backed by total `nodeCount`, which can make `Observed` appear inconsistent.
-
-## Findings
-
-- F1: Tracker iframe reload is source-confirmed at `command-center.js:84-89`, `tab-group.js:10-29`, and `tracker-embed-renderer.js:36-71`.
-- F2: Tracker space underuse is source-confirmed at `tracker-embed-renderer.js:13-20`, `tracker-dashboard.html:94-98`, and `command-center.css:366-407`.
-- F3: Tracker taxonomy is operator-configurable, but `docs/roadmap/programs.yaml:71-81` conflicts with `:120-123` on whether programs and verticals mirror or diverge.
-- F4: PDF export is absent from tracker route/dashboard sources; `rg` found no print/PDF implementation.
-- F5: Mind Map only loads `/api/v1/brainstorm/graph` plus localStorage, while the codebase/governance graph exists under `/api/qor/governance-dashboard`.
-- F6: Shadow Genome graph uses a fixed 800x520 deterministic ring layout with no label-collision policy.
-- F7: Shadow Genome summary labels `nodeCount` as "Failure Nodes" while backend `nodeCount` is total graph nodes; maturity counts are driven by failure nodes.
-
-## Recommendations
-
-Proceed to `/qor-plan` with seven issue tracks. Phase order recommended: (1) idempotent Tracker embed + full-space layout, (2) taxonomy contract and agent mapping, (3) PDF export, (4) Mind Map seed graph, (5) Shadow Genome graph/table threshold and label policy, (6) summary/maturity contract correction, (7) Playwright visual/lifecycle coverage for production-size fixtures.
-
-## Content Hash
-
-**Content Hash**: `0333b252a48e49b7166442144b983add75438d040cea03d5196c9747c8e73692`
-**Previous Hash**: `5b27fbc997dcd5c885481366b6181cb1f5d2726bcd1559a347a2e4e8a38f2cef` (Entry #457 Chain Hash)
-**Chain Hash**: `40980313d6f12ee432732bbabf2468253189d73f60301f3559314aefbbe545dd`
-**Merkle Seal**: `40b40b4bb75412477e44d8e85f3f3f8406dde9e1519867dccae762eceef6c347` -- gate_seal_research_tracker_mindmap_shadow_genome
-**Session ID**: `2026-06-11-research-tracker-mindmap-shadow-genome`
-**Entry ID**: `0333b252a48e`
-
-_Hash provenance_: Content Hash = SHA256 of the research brief file. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). UTF-8 SHA-256 via .NET.
-
----
-
-_Chain integrity: VALID_
-_Session: 2026-06-11-research-tracker-mindmap-shadow-genome_
-
-### Entry #459: SUBSTANTIATE+DELIVER - v5.9.0 Command Center suite (FX886-891)
-
-**Date**: 2026-06-12
-**Phase**: SUBSTANTIATE + DELIVER (/qor-auto-dev-1 x6 + operator publish directive; Reality=Promise PASS; shipped)
-**Plan**: docs/research-brief-tracker-mindmap-shadow-genome-remediation-2026-06-11.md (Entry #458 RESEARCH) -> six governed plan->audit->implement cycles + an operator-directed taxonomy editor
-**Released**: v5.9.0 (tag v5.9.0; VS Code Marketplace + Open VSX; GitHub Release non-draft 2026-06-12)
-**Branch**: main (PR #223 features + PR #224 release, both --admin-merged over the CodeQL human-gate)
-**Risk Grade**: L2 (UI surfaces + a governed local-write route)
-**Author**: krknapp@gmail.com
-
-## Decision
-
-Closed the seven-issue Command Center remediation from the #458 research brief, plus an operator-directed
-taxonomy editor, and delivered them as v5.9.0. Each feature ran a governed plan -> audit -> implement cycle;
-the four highest-risk plans (Mind Map seed, Shadow Genome contract, and the taxonomy editor) cleared a
-MANDATORY Option-B independent architect-reviewer audit (SG-007 author-momentum) -- one VETOed and was
-amended to PASS before implementation. Per operator directive the suite was published first (commit/push/PR/
-merge/publish); this SESSION SEAL is the post-ship governance close.
-
-## Scope (FX886-891)
-
-- FX886 Workspace > Tracker: idempotent TabGroup/embed render (no iframe reload on hub refresh) + full-bleed layout.
-- FX887 Tracker taxonomy contract (programs || verticals) + agent-discovery mapping scaffold + validateManifest checks.
-- FX888 Tracker PDF export (print-CSS, native Save-as-PDF; live controls hidden, timestamp + evidence kept).
-- FX889 Mind Map repository seed (governance/genome graph -> brainstorm nodes; auto-seed on empty + REPO/CLEAR LAYER).
-- FX890 Shadow Genome: 'Failure Nodes' -> 'Graph Nodes' label fix + Observed-count invariant + table-default at scale + label truncation.
-- FX891 Workspace > Taxonomy editor -> governed docs/roadmap/tracker-config.yaml + emitted directive + CLAUDE.md force-discover binding.
-
-## Verification
-
-Reality=Promise: every planned module + wiring shipped. tsc 0; TS-lint 0; real-Chromium Playwright across all
-surfaces; pure-logic node harnesses for the config/route/transform layers. The full test:all (mocha + Playwright
-+ native rebuild) passed in CI on BOTH PR #223 and PR #224. FX868 CONSOLE_VERTICALS drift-guard kept green
-(workspace sub-views = Skills/Mindmap/Tracker/Taxonomy). FEATURE_INDEX FX886-891 verified; 0 unverified across
-the index. New governed config registered in GOVERNANCE_INDEX (Tier 1 tracker-config.yaml, Tier 2 directive).
-
-## Delivery
-
-PR #223 (features) --admin-merged to main; release PR #224 ([RELEASE] v5.9.0) --admin-merged; tag v5.9.0 from
-main triggered the Release Pipeline; SemVer Gate + Build & Test PASS; production reviewer gate operator-approved;
-both publish jobs succeeded (Open VSX + VS Code Marketplace); GitHub Release v5.9.0 created non-draft.
-
-## Content Hash
-
-**Content Hash**: `4b99d927f1f6cd5335bbec27fb4ab4cffc008721b4204ede34eae5fe1fedb18a`
-**Previous Hash**: `40980313d6f12ee432732bbabf2468253189d73f60301f3559314aefbbe545dd` (Entry #458 Chain Hash)
-**Chain Hash**: `c6eea56931603b441b6a14de061f0e3264abb79746d2e174cd1c52f059d1011e`
-**Merkle Seal**: `36d8607b5ae7c8885133a084acded9ef4c3f66646563ab835c97d84170dea14f` -- gate_seal_deliver_v5_9_0_command_center
-**Session ID**: `2026-06-12-deliver-v5-9-0-command-center`
-**Entry ID**: `c5f464361c3f`
-
-_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #459`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). SHA-256 over CRLF; ASCII body.
-
----
-
-_Chain integrity: VALID_
-_Session: 2026-06-12-deliver-v5-9-0-command-center_
-
-### Entry #460: DELIVER - v5.9.0 Command Center suite
-
-**Date**: 2026-06-12
-**Phase**: DELIVER (/qor-repo-release; formal close of the D phase, distinct from the #459 Lock-Proof seal)
-**Version**: 5.9.0
-**Tag**: v5.9.0
-**Commit**: e5cc6d1 ([RELEASE] v5.9.0, PR #224)
-**Author**: krknapp@gmail.com
-
-## Decision
-
-Release v5.9.0 (Command Center suite, FX886-891) delivered to production. Version 5.8.0 -> 5.9.0 (minor);
-release metadata authored (CHANGELOG x2, README x2, COMPONENT_HELP, PROCESS_GUIDE, BACKLOG version summary);
-PR #224 ([RELEASE] v5.9.0) --admin-merged to main; tag v5.9.0 created from main and pushed; the Release Pipeline
-passed SemVer Gate + Build & Test, the production reviewer gate was operator-approved, and both publish jobs
-succeeded -- VS Code Marketplace + Open VSX -- with a non-draft GitHub Release created. This DELIVER entry chains
-from the #459 SUBSTANTIATE seal; the outward delivery was operator-directed publish-first, so this is the
-canonical D-phase record completing the S.H.I.E.L.D. lifecycle for v5.9.0.
-
-## Delivery evidence
-
-- Tag: v5.9.0 (annotated, preflight-gated).
-- Marketplaces: VS Code Marketplace + Open VSX (both publish jobs success).
-- GitHub Release: 'v5.9.0 -- FailSafe' (non-draft, 2026-06-12).
-- Pipeline: Release Pipeline run for tag v5.9.0 -> success.
-- Closes the FX886-891 Command Center remediation (research brief, Entry #458).
-
-## Content Hash
-
-**Content Hash**: `d53e0fce6d243b2eced3871fb6ab49b8a4c71b448e3a610eff0fc4297d172512`
-**Previous Hash**: `c6eea56931603b441b6a14de061f0e3264abb79746d2e174cd1c52f059d1011e` (Entry #459 Chain Hash)
-**Chain Hash**: `12f4daa5a0184143bc5fdcf69a2ed0960c5f47e0692d3c3c431c7bde8f321ac7`
-**Merkle Seal**: `4728cfbd90c0f8928e6d7ab8f8f1afedf91f8b0eb49fd3473a352e72600b86e3` -- gate_seal_repo_release_v5_9_0
-**Session ID**: `2026-06-12-deliver-repo-release-v5-9-0`
-**Entry ID**: `53466ed2ca3e`
-
-_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #460`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). SHA-256 over CRLF; ASCII body.
-
----
-
-_Chain integrity: VALID_
-_Session: 2026-06-12-deliver-repo-release-v5-9-0_
-
 ### Entry #442: SUBSTANTIATE - Shadow Genome dashboard sub-view (#196 Phase 2)
 
 **Date**: 2026-06-09
@@ -24955,6 +24812,149 @@ _Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### En
 
 _Chain integrity: VALID_
 _Session: 2026-06-10-research-vscode-agents-window_
+### Entry #458: RESEARCH BRIEF - Tracker, Mind Map, and Shadow Genome remediation
+
+**Date**: 2026-06-11
+**Phase**: RESEARCH (/qor-research)
+**Risk Grade**: L2 (Command Center UI/data-contract remediation)
+**Author**: Analyst
+**Brief**: docs/research-brief-tracker-mindmap-shadow-genome-remediation-2026-06-11.md
+
+## Decision
+
+Split the operator-observed Command Center defects into seven remediation issues: Tracker reload persistence, Tracker full-space layout, Tracker taxonomy/agent mapping, Tracker PDF export, Mind Map seed graph, Shadow Genome graph usability, and Shadow Genome maturity/summary contract. Research found the Tracker iframe reload is caused by all-renderer hub refresh plus TabGroup DOM rebuild plus iframe recreation; Mind Map has no preloaded codebase graph source; Shadow Genome uses a fixed-ring graph layout that fails at realistic graph size; and the "Failure Nodes" card is backed by total `nodeCount`, which can make `Observed` appear inconsistent.
+
+## Findings
+
+- F1: Tracker iframe reload is source-confirmed at `command-center.js:84-89`, `tab-group.js:10-29`, and `tracker-embed-renderer.js:36-71`.
+- F2: Tracker space underuse is source-confirmed at `tracker-embed-renderer.js:13-20`, `tracker-dashboard.html:94-98`, and `command-center.css:366-407`.
+- F3: Tracker taxonomy is operator-configurable, but `docs/roadmap/programs.yaml:71-81` conflicts with `:120-123` on whether programs and verticals mirror or diverge.
+- F4: PDF export is absent from tracker route/dashboard sources; `rg` found no print/PDF implementation.
+- F5: Mind Map only loads `/api/v1/brainstorm/graph` plus localStorage, while the codebase/governance graph exists under `/api/qor/governance-dashboard`.
+- F6: Shadow Genome graph uses a fixed 800x520 deterministic ring layout with no label-collision policy.
+- F7: Shadow Genome summary labels `nodeCount` as "Failure Nodes" while backend `nodeCount` is total graph nodes; maturity counts are driven by failure nodes.
+
+## Recommendations
+
+Proceed to `/qor-plan` with seven issue tracks. Phase order recommended: (1) idempotent Tracker embed + full-space layout, (2) taxonomy contract and agent mapping, (3) PDF export, (4) Mind Map seed graph, (5) Shadow Genome graph/table threshold and label policy, (6) summary/maturity contract correction, (7) Playwright visual/lifecycle coverage for production-size fixtures.
+
+## Content Hash
+
+**Content Hash**: `0333b252a48e49b7166442144b983add75438d040cea03d5196c9747c8e73692`
+**Previous Hash**: `5b27fbc997dcd5c885481366b6181cb1f5d2726bcd1559a347a2e4e8a38f2cef` (Entry #457 Chain Hash)
+**Chain Hash**: `40980313d6f12ee432732bbabf2468253189d73f60301f3559314aefbbe545dd`
+**Merkle Seal**: `40b40b4bb75412477e44d8e85f3f3f8406dde9e1519867dccae762eceef6c347` -- gate_seal_research_tracker_mindmap_shadow_genome
+**Session ID**: `2026-06-11-research-tracker-mindmap-shadow-genome`
+**Entry ID**: `0333b252a48e`
+
+_Hash provenance_: Content Hash = SHA256 of the research brief file. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). UTF-8 SHA-256 via .NET.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-06-11-research-tracker-mindmap-shadow-genome_
+
+### Entry #459: SUBSTANTIATE+DELIVER - v5.9.0 Command Center suite (FX886-891)
+
+**Date**: 2026-06-12
+**Phase**: SUBSTANTIATE + DELIVER (/qor-auto-dev-1 x6 + operator publish directive; Reality=Promise PASS; shipped)
+**Plan**: docs/research-brief-tracker-mindmap-shadow-genome-remediation-2026-06-11.md (Entry #458 RESEARCH) -> six governed plan->audit->implement cycles + an operator-directed taxonomy editor
+**Released**: v5.9.0 (tag v5.9.0; VS Code Marketplace + Open VSX; GitHub Release non-draft 2026-06-12)
+**Branch**: main (PR #223 features + PR #224 release, both --admin-merged over the CodeQL human-gate)
+**Risk Grade**: L2 (UI surfaces + a governed local-write route)
+**Author**: krknapp@gmail.com
+
+## Decision
+
+Closed the seven-issue Command Center remediation from the #458 research brief, plus an operator-directed
+taxonomy editor, and delivered them as v5.9.0. Each feature ran a governed plan -> audit -> implement cycle;
+the four highest-risk plans (Mind Map seed, Shadow Genome contract, and the taxonomy editor) cleared a
+MANDATORY Option-B independent architect-reviewer audit (SG-007 author-momentum) -- one VETOed and was
+amended to PASS before implementation. Per operator directive the suite was published first (commit/push/PR/
+merge/publish); this SESSION SEAL is the post-ship governance close.
+
+## Scope (FX886-891)
+
+- FX886 Workspace > Tracker: idempotent TabGroup/embed render (no iframe reload on hub refresh) + full-bleed layout.
+- FX887 Tracker taxonomy contract (programs || verticals) + agent-discovery mapping scaffold + validateManifest checks.
+- FX888 Tracker PDF export (print-CSS, native Save-as-PDF; live controls hidden, timestamp + evidence kept).
+- FX889 Mind Map repository seed (governance/genome graph -> brainstorm nodes; auto-seed on empty + REPO/CLEAR LAYER).
+- FX890 Shadow Genome: 'Failure Nodes' -> 'Graph Nodes' label fix + Observed-count invariant + table-default at scale + label truncation.
+- FX891 Workspace > Taxonomy editor -> governed docs/roadmap/tracker-config.yaml + emitted directive + CLAUDE.md force-discover binding.
+
+## Verification
+
+Reality=Promise: every planned module + wiring shipped. tsc 0; TS-lint 0; real-Chromium Playwright across all
+surfaces; pure-logic node harnesses for the config/route/transform layers. The full test:all (mocha + Playwright
++ native rebuild) passed in CI on BOTH PR #223 and PR #224. FX868 CONSOLE_VERTICALS drift-guard kept green
+(workspace sub-views = Skills/Mindmap/Tracker/Taxonomy). FEATURE_INDEX FX886-891 verified; 0 unverified across
+the index. New governed config registered in GOVERNANCE_INDEX (Tier 1 tracker-config.yaml, Tier 2 directive).
+
+## Delivery
+
+PR #223 (features) --admin-merged to main; release PR #224 ([RELEASE] v5.9.0) --admin-merged; tag v5.9.0 from
+main triggered the Release Pipeline; SemVer Gate + Build & Test PASS; production reviewer gate operator-approved;
+both publish jobs succeeded (Open VSX + VS Code Marketplace); GitHub Release v5.9.0 created non-draft.
+
+## Content Hash
+
+**Content Hash**: `4b99d927f1f6cd5335bbec27fb4ab4cffc008721b4204ede34eae5fe1fedb18a`
+**Previous Hash**: `40980313d6f12ee432732bbabf2468253189d73f60301f3559314aefbbe545dd` (Entry #458 Chain Hash)
+**Chain Hash**: `c6eea56931603b441b6a14de061f0e3264abb79746d2e174cd1c52f059d1011e`
+**Merkle Seal**: `36d8607b5ae7c8885133a084acded9ef4c3f66646563ab835c97d84170dea14f` -- gate_seal_deliver_v5_9_0_command_center
+**Session ID**: `2026-06-12-deliver-v5-9-0-command-center`
+**Entry ID**: `c5f464361c3f`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #459`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). SHA-256 over CRLF; ASCII body.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-06-12-deliver-v5-9-0-command-center_
+
+### Entry #460: DELIVER - v5.9.0 Command Center suite
+
+**Date**: 2026-06-12
+**Phase**: DELIVER (/qor-repo-release; formal close of the D phase, distinct from the #459 Lock-Proof seal)
+**Version**: 5.9.0
+**Tag**: v5.9.0
+**Commit**: e5cc6d1 ([RELEASE] v5.9.0, PR #224)
+**Author**: krknapp@gmail.com
+
+## Decision
+
+Release v5.9.0 (Command Center suite, FX886-891) delivered to production. Version 5.8.0 -> 5.9.0 (minor);
+release metadata authored (CHANGELOG x2, README x2, COMPONENT_HELP, PROCESS_GUIDE, BACKLOG version summary);
+PR #224 ([RELEASE] v5.9.0) --admin-merged to main; tag v5.9.0 created from main and pushed; the Release Pipeline
+passed SemVer Gate + Build & Test, the production reviewer gate was operator-approved, and both publish jobs
+succeeded -- VS Code Marketplace + Open VSX -- with a non-draft GitHub Release created. This DELIVER entry chains
+from the #459 SUBSTANTIATE seal; the outward delivery was operator-directed publish-first, so this is the
+canonical D-phase record completing the S.H.I.E.L.D. lifecycle for v5.9.0.
+
+## Delivery evidence
+
+- Tag: v5.9.0 (annotated, preflight-gated).
+- Marketplaces: VS Code Marketplace + Open VSX (both publish jobs success).
+- GitHub Release: 'v5.9.0 -- FailSafe' (non-draft, 2026-06-12).
+- Pipeline: Release Pipeline run for tag v5.9.0 -> success.
+- Closes the FX886-891 Command Center remediation (research brief, Entry #458).
+
+## Content Hash
+
+**Content Hash**: `d53e0fce6d243b2eced3871fb6ab49b8a4c71b448e3a610eff0fc4297d172512`
+**Previous Hash**: `c6eea56931603b441b6a14de061f0e3264abb79746d2e174cd1c52f059d1011e` (Entry #459 Chain Hash)
+**Chain Hash**: `12f4daa5a0184143bc5fdcf69a2ed0960c5f47e0692d3c3c431c7bde8f321ac7`
+**Merkle Seal**: `4728cfbd90c0f8928e6d7ab8f8f1afedf91f8b0eb49fd3473a352e72600b86e3` -- gate_seal_repo_release_v5_9_0
+**Session ID**: `2026-06-12-deliver-repo-release-v5-9-0`
+**Entry ID**: `53466ed2ca3e`
+
+_Hash provenance_: Content Hash = SHA256 of this entry body from line 1 (`### Entry #460`) through the blank line above `## Content Hash`. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). SHA-256 over CRLF; ASCII body.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-06-12-deliver-repo-release-v5-9-0_
+
 ### Entry #461: RESEARCH BRIEF - Versioned Qor-logic consumer adapter (#233)
 
 **Date**: 2026-07-13
@@ -26251,3 +26251,1113 @@ _Hash provenance_: Content Hash = SHA256 of brainstorm.js. Chain Hash = SHA256(c
 
 _Chain integrity: VALID_
 _Session: 2026-07-14-double-canvas-race_
+
+### Entry #506: RESEARCH BRIEF - qor-logic 0.155.0 alignment + governance-mode default flip
+
+**Date**: 2026-08-19
+**Phase**: RESEARCH
+**Author**: Analyst
+**Risk Grade**: L2
+
+## Decision
+
+Two-item cycle scope researched. (1) qor-logic 0.145.0 -> 0.155.0 alignment (upstream phases 222-234): sync delta = 19 of 76 payload files (17 changed, 2 new: qor-audit/references/version-applicability-pass.md + qor-guard-instructions/SKILL.md); the 4 modified-uncommitted workspace skills are a stale org-rename sync, superseded. TOOLING FINDING: 0.155.0 verify-ledger flags 3 BREAKs (#442/#458/#461) + undeclared gaps [158, 298]; forensics prove the chain is LOGICALLY INTACT (every previous_hash resolves to its numeric predecessor) but the file is physically misordered (a #458-#460 band spliced after #441). New seal gates bind future substantiates: size-budget V2 hard ABORT (>=40KB SKILL.md), seal-artifact relocation to Step 7.7.5, version-applicability pass, fail-closed instruction-hygiene lint. failsafe-qor-hook constraint satisfied; upstream #223 (plan-filename rigidity) closed 2026-06-10. (2) Governance-mode default flip observe->enforce (operator-scoped 2026-08-19: keep observe selectable, remove both observe alerts): 9 literal "observe" default sites mapped (package.json:628 is the operative default for VS Code hosts; EnforcementEngine.ts:94 governs ACP/test contexts); 2 UI removals (sentinel-monitor.js renderModeBanner B194/FX507 + governance-mode-card.js hint) with lesson-anchor-coherence constraint; test inversions led by governance-mode-routing.test.ts FX044 (invalid mode now BLOCKs); ACP proxy fail-safe direction inverts fail-open -> fail-closed (runtimeMode.ts:38 decision); 6 operator-surprise risks incl. unmitigated silent upgrade escalation (no settings-migration mechanism exists). Pre-existing drift: FeatureStatusRoute.ts:46 reports Sentinel mode as governance.mode on /api/v1/status.
+
+**Brief**: .failsafe/governance/RESEARCH_BRIEF_qor155-align-enforce-default-2026-08-19.md
+
+## Content Hash
+
+**Content Hash**: `de35b33076126468a9dff9b563aa1b21cdfcd49a70edede2e74c2905e63ce426`
+**Previous Hash**: `f8b96db15123a5dd6de2da3b53a7dc1cbbff64a1a91e9c928685839e84402ebf` (Entry #505 Chain Hash)
+**Chain Hash**: `81a247a05f4798daa21d4a4caf9eca65ee18e4477aab328bf2103d20d893241e`
+**Merkle Seal**: `839645c234666bcce7cf34660648e3be70ee43b910e9c568314be8cc751e11ea` -- gate_seal_research_qor155_align_enforce_default
+**Session ID**: `2026-08-19-qor155-align-enforce-default`
+**Entry ID**: `de35b3307612`
+
+_Hash provenance_: Content Hash = SHA256 of RESEARCH_BRIEF_qor155-align-enforce-default-2026-08-19.md. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-08-19-qor155-align-enforce-default_
+
+### Entry #507: GATE TRIBUNAL - qor155-align-enforce-default (iter 1)
+
+**Date**: 2026-08-19
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+
+## Decision
+
+VERDICT: VETO. Target plan-qor155-align-enforce-default.md (research Entry #506). Mode: adversarial (voluntary Option B independent fresh-context reviewer; audit_risk_score did not mandate). Both CRITICAL findings re-verified by the Judge against source before acceptance. F1 CRITICAL specification-drift: enforce-by-default fresh install dead-ends - every save BLOCKs with no active intent (EnforceModeEvaluator via axiom1), the block dialog funnels to failsafe.createIntent (commands.ts:588-589) which supplies no planId (commands.ts:564-569) so IntentService.createIntent throws under B66 (IntentService.ts:44-46); plan never analyzed the interaction. F2 CRITICAL specification-drift: the flip's D1 rests on an unwired Pro-tier gate - FeatureGateService.ts:18 maps governance.lockstep to pro, EnforceModeEvaluator.ts:18-28 blanket-ALLOWs when gate present + lockstep disabled, setFeatureGate never called in non-test src; what "enforce" means for free tier is an unresolved operator-owned licensing decision. F3 MAJOR coverage-gap: feature-status-route.test.ts:94-112 shape test breaks under LD-5, absent from plan test map. F4-F8 MINOR (AcpProxyBacking FileConfigProvider case, FX509 citation :641->:635, settings-coherence detector semantics, GovernanceStatusBar unproducible fixture, BreakGlassProtocol.ts:159 undisclosed observe default). Clean: security/OWASP, ghost-UI, razor, dependency, orphan, macro-architecture, test-functionality, feature-TDD, filter-stage; resolution-site sweep found no ninth site; LD-7 reorder verified sound against physical sequence. Route: operator decides F2; Governor amends plan; re-audit. Report: .agent/staging/AUDIT_REPORT.md (mid-audit pre-verdict amendments: LD-3/4/5 evidence strengthened; KNOWN_ENTRY_GAPS mechanism corrected to disclosed-residual after Judge established it is an upstream constant, ledger_hash.py:149).
+
+## Content Hash
+
+**Content Hash**: `414e5d6a633c10e26b3922343da68ff477e40a79e7c44cef288ceaf239f893b5`
+**Previous Hash**: `81a247a05f4798daa21d4a4caf9eca65ee18e4477aab328bf2103d20d893241e` (Entry #506 Chain Hash)
+**Chain Hash**: `8d83eb25b380b67929d3bfe32d774333fc120434bc37a23072fe46a5ddc38426`
+**Merkle Seal**: `683ee4ab2dbed25d21b487847e246f515e2bf1bbfdc23cae5292799c64a4e47c` -- gate_seal_audit_qor155_align_enforce_default_iter1
+**Session ID**: `2026-08-19-qor155-align-enforce-default`
+**Entry ID**: `414e5d6a633c`
+
+_Hash provenance_: Content Hash = SHA256 of AUDIT_REPORT.md. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-08-19-qor155-align-enforce-default_
+
+### Entry #508: GATE TRIBUNAL - qor155-align-enforce-default (iter 2)
+
+**Date**: 2026-08-19
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+
+## Decision
+
+VERDICT: PASS (plan iteration 3). Sequence disclosed in full in the report: iter-1 VETO (Entry #507) -> operator rulings (editor-level enforce is FREE, lockstep stays Pro for OS-level surfaces; FailSafe Pro references removed from both READMEs) -> iter-2 amendment (LD-9..LD-12: lockstep removal from editor path, createIntent enforce funnel fix via PlanManager.getAllPlans QuickPick + Set Governance Mode block-dialog action, BreakGlass disclosure, README de-Pro Phase C) -> independent reviewer second pass: all 8 original findings RESOLVED, 5 new defects (2 MAJOR: unimplementable stub-injection descriptor vs LD-9's own API removal; EnforceModeEvaluator.test.ts unenumerated breaking file with 8 featureGate literals + the deleted-behavior case) -> iter-3 amendment fixed all 5 (descriptor retargeted to API-removal proof + existing :182-202 BLOCK case; test file fully enumerated; ctor call-sites bootstrapGovernance.ts:87 + 5 routing-test sites + stub :98-106; bannerText defaults to legacy blocked-copy; root README range :235-243 after the case-insensitive :243 URL hit). All CRITICAL/MAJOR reviewer claims Judge-verified by direct source reads. All lints PASS on iter 3 (consistency, test, feature-tdd, grep-lint truth-checks). Conditions to implement: LD-7 META_LEDGER reorder requires explicit operator approval in-session; branch_only isolation on feat/qor155-align-enforce-default; Review Boundary holds. Next: /qor-implement.
+
+## Content Hash
+
+**Content Hash**: `2855ebd538f46bcd13a3e7916c2612ae7a3d463f8fedb84a637f51fd4084a181`
+**Previous Hash**: `8d83eb25b380b67929d3bfe32d774333fc120434bc37a23072fe46a5ddc38426` (Entry #507 Chain Hash)
+**Chain Hash**: `cf030d22c423ae38427bb789574b95d90795165da621fb8b15b584ec551b27e8`
+**Merkle Seal**: `57901e4305cf468a4aa3b7435a5c9e5270e5e16ecf120418cfbe9f93466b679e` -- gate_seal_audit_qor155_align_enforce_default_iter2_pass
+**Session ID**: `2026-08-19-qor155-align-enforce-default`
+**Entry ID**: `2855ebd538f4`
+
+_Hash provenance_: Content Hash = SHA256 of AUDIT_REPORT.md. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-08-19-qor155-align-enforce-default_
+
+### Entry #509: IMPLEMENTATION - qor155-align-enforce-default (Phases A1-C)
+
+**Date**: 2026-08-19
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+**Branch**: feat/qor155-align-enforce-default
+
+## Decision
+
+Implements plan-qor155-align-enforce-default iteration 3 (audit PASS Entry #508). A1: qor-logic 0.155.0 payload synced (71 files local; 4 tracked committed 06462e9); install_drift_check clean. A2 (operator-approved): META_LEDGER #442-#457 band physically reordered before #458 - 822 lines moved, per-entry SHA256 manifest identical across 506 entry numbers, the 3 targeted verifier BREAKs healed; newly observed PRE-EXISTING residuals disclosed: BREAKs #340/#382 (dangling previous_hash, repair-era; confirmed present in pre-reorder backup) + gap WARN [158,298] - reconcile candidates for a future cycle, out of this audit-locked scope. B1: enforce default at 8 resolution sites (package.json:628 manifest default; EnforcementEngine unset-branch; ConfigManager; bootstrapAdvancedCommands x3; commands.ts; SettingsRoute x2; governance-mode-card.js; runtimeMode.ts fail-closed with rewritten LD-3 contract header); LD-9 lockstep fallback + featureGate seam + dead setFeatureGate removed (EnforceModeEvaluator, EnforcementEngine, bootstrapGovernance ctor); LD-10 funnel (exported pickPlanIdForEnforce + planId QuickPick from PlanManager.getAllPlans + escape item + Set Governance Mode block-dialog action; registerGovernanceCommands gains planManager, sole caller updated); LD-4/LD-11 disclosure comments. B2: renderModeBanner + #mode-banner + .mode-banner CSS + call site deleted; mode-card hint removed, lesson mount preserved (lesson-anchor-coherence green). B3: FeatureStatusRoute governance/sentinel conflation fixed (governanceModeState source); NEW modeDefaultNotice.ts one-time upgrade notice wired in bootstrapGovernance (wiring-site deviation from the plan's bootstrapAdvancedCommands - bootstrapGovernance holds all deps; disclosed); QuickPick/first-run/lesson copy updated. C: FailSafe Pro references removed from both READMEs (v5-coherence guards inverted to pin ABSENCE); root :25-29 + :235-244 (incl. the dangling Download line, one past the cited range - disclosed), extension per-cited ranges. Tests: FX044 inversion (invalid mode -> BLOCK), EnforceModeEvaluator rewritten (8 gate literals removed, fallback case deleted), ACP backing + enforcement e2e inverted to fail-closed (incl. AcpProxyEnforcement absent-mirror case - a plan-map miss found red-then-green at suite time), commands-state baseline + observe-pinned wizard cases, GovernanceStatusBar enforce-defaulted case (observe-defaulted case replaced - unproducible), settings-coherence painter bannerText param + true-initial-state case, settings-cards + governance-mode-card fixtures refreshed, NEW create-intent-enforce.test.ts (5 cases) + mode-default-notice.test.ts (4 cases), FX509 spec rewritten to the no-#mode-banner negative contract, feature-status-route decoupling case. Docs: governance-mode-transitions.md, PROCESS_GUIDE, both READMEs mode tables, BACKLOG B194 supersession, FEATURE_INDEX (FX044/FX507-removed/FX509/FX513 + NEW FX899-FX903), CHANGELOGs breaking entries, GOVERNANCE_INDEX Last Reviewed 2026-08-19 + marker format aligned to the parser (**Last Reviewed**: colon-outside; root cause of the long-standing stale-tier1 WARN, now CLEAN).
+
+VERIFICATION: tsc 0; eslint 0 errors; mocha 3690 passing / 0 failing / 5 pending (census 430/430); Playwright 183 passed + bicameral-advanced-tools ambient flake passed on isolated re-run + 4 skipped; verify-ledger BREAKs #442/#458/#461 gone; install_drift_check clean; governance-index clean. Red-then-green: FX044/ACP/coherence inversions red by construction against old code (asserted new contracts); the 9-failure first suite run + targeted fixes documented in session transcript.
+
+## Content Hash
+
+**Content Hash**: `7b62c59c5618cb2bca8b72a602ff99b4885943533a8e1cac96a24213fba7c581`
+**Previous Hash**: `cf030d22c423ae38427bb789574b95d90795165da621fb8b15b584ec551b27e8` (Entry #508 Chain Hash)
+**Chain Hash**: `47c6535dd5b34cfb1b929827121c6999b69b6ad7a7e957b4be124937e4c1d02a`
+**Merkle Seal**: `c87550d519e9266991aadbd94dff49ee41c9106eaaea8d4afb7061a2de1f5707` -- gate_seal_implement_qor155_align_enforce_default
+**Session ID**: `2026-08-19-qor155-align-enforce-default`
+**Entry ID**: `7b62c59c5618`
+
+_Hash provenance_: Content Hash = SHA256 of plan-qor155-align-enforce-default.md (iteration 3, the implemented blueprint). Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-08-19-qor155-align-enforce-default_
+
+### Entry #510: SESSION SEAL - qor155-align-enforce-default
+
+**Date**: 2026-08-19
+**Phase**: SUBSTANTIATE (S.H.I.E.L.D. cycle complete: research #506 -> audit VETO #507 -> audit PASS #508 -> implement #509 -> seal)
+**Author**: Judge
+**Risk Grade**: L2
+**Branch**: feat/qor155-align-enforce-default (3 commits: 06462e9 A1, 8a12ec8 A2, 5e934ef B1-C; seal commit follows)
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1, PW.4.1
+
+## Decision
+
+Reality = Promise VERIFIED for plan-qor155-align-enforce-default iteration 3. All planned files exist (modeDefaultNotice.ts, create-intent-enforce.test.ts, mode-default-notice.test.ts NEW; sentinel-monitor-mode-banner.test.ts DELETED; 50-file implementation commit). Four recorded deviations, each verified sound: notice wired in bootstrapGovernance (deps locality), root README delete range +1 line (:244 dangling link), AcpProxyEnforcement absent-mirror e2e inverted (plan-map miss, red-then-green), GovernanceStatusBar observe-defaulted case replaced by enforce-defaulted (unproducible state, deletion-over-duplication).
+
+GATE LADDER: intent_lock VERIFIED (default + named session) - skill_admission ADMITTED - gate_skill_matrix OK - secret_scanner CLEAN - procedural_fidelity 0 findings - dod_check WARN x2 (missing D3 tier on 2 deliverables; WARN-only, D3 evidence exists in this entry) - merge_velocity healthy (repair_density 0.0) - skill_size_budget 3 WARN on workspace .claude (qor-audit 38.8KB approaches the 40KB V2 ABORT - upstream refactor flag) - data_api_acl SKIP (no SQL; disclosed) - instruction_hygiene CLEAN - doc_integrity strict PASS - governance-index --advance-last-reviewed 2026-08-19 --enforce PASS - feature_index_verify parses 0 rows (upstream row-shape mismatch vs FailSafe index format; disclosed - per-feature verification via suite + FX rows below) - seal hashes helper-produced + hash_guard ALL VALID.
+
+**Feature Inventory**: FailSafe-format index; this cycle: FX899-FX903 NEW verified, FX044/FX509/FX513 MODIFIED verified, FX507 removed, FX506 n/a-justified. Verification: tsc 0 - eslint 0 errors - mocha 3690 passing / 0 failing / 5 pending (census 430/430) - Playwright 183 passed + bicameral ambient flake green on isolated re-run + 4 skipped.
+
+DISCLOSED RESIDUALS carried forward: (1) pre-existing ledger BREAKs #340/#382 - dangling previous_hash, repair-era, confirmed present in the pre-reorder backup; reconcile candidates for a future operator-authorized cycle. (2) Undeclared entry gaps [158, 298] - no consumer KNOWN_ENTRY_GAPS surface exists in qor-logic 0.155.0 (ledger_hash.py:149 upstream constant); upstream feature request pending operator decision. (3) Version bump / CHANGELOG stamp / seal tag SKIPPED by operator policy: no release is authorized this cycle (Review Boundary; the breaking change ships in the next operator-authorized release). (4) Seal-commit attribution trailer OMITTED by standing operator identity directive (no Co-Authored-By / agent attribution, fleet instruction overrides skill template); seal_trailer_check consequently not applied. (5) Upstream-repo-only steps (seal_artifacts badge regeneration, spec folding under qor/specs, dist_compile of qor/dist variants) SKIP per Phase 75 prerequisite-absent tolerance - gate_skipped_prerequisite_absent semantics; FailSafe SYSTEM_STATE/READMEs updated directly instead.
+
+## Content Hash
+
+**Content Hash**: `7b62c59c5618cb2bca8b72a602ff99b4885943533a8e1cac96a24213fba7c581`
+**Previous Hash**: `47c6535dd5b34cfb1b929827121c6999b69b6ad7a7e957b4be124937e4c1d02a` (Entry #509 Chain Hash)
+**Chain Hash**: `da96df1cac749d940f8228c9795553e1854ea3e779ede82ce930f8725635c7b6`
+**Merkle Seal**: `2e09a26e2823d3fb9965141d7e62607ea0d4d795b0cad2c6ff51738770351ac9` -- gate_seal_session_qor155_align_enforce_default
+**Session ID**: `2026-08-19-qor155-align-enforce-default`
+**Entry ID**: `d35f102b2176`
+
+_Hash provenance_: Content Hash = qor.scripts.ledger_hash.content_hash(plan-qor155-align-enforce-default.md). Chain Hash = ledger_hash.chain_hash(content, previous). Merkle Seal = SHA256(chain_hash + gate_label). Entry ID = entry_id.derive_entry_id(2026-08-19T05:39:47Z, "510", content_hash). hash_guard validated all four.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-08-19-qor155-align-enforce-default_
+
+### Entry #511: GATE TRIBUNAL - depro-live-surfaces
+
+**Date**: 2026-08-19
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+
+## Decision
+
+VERDICT: PASS (solo; audit_risk_score did not mandate Option B; every citation direct-verified in-session). Target plan-depro-live-surfaces.md - operator directive extends LD-12 (seal #510) to the live Pro surfaces: failsafe.openFailSafeProAbout command + activation event, Settings renderFailSafeProCard + bind, shared/constants.ts (sole-importer-proven whole-file deletion), PRO_INTEGRATION.md archived + README:229 dangling reference (mid-review completeness amendment, pre-verdict). All tests inverted to pin ABSENCE (getCommands membership, renderer output, Playwright DOM count); about-pro-command + constants test files deleted with their units. All passes clean. Conditions: continues feat/qor155-align-enforce-default; Review Boundary holds; FX414-FX418 rows + CHANGELOG Removed bullets in the same commit.
+
+## Content Hash
+
+**Content Hash**: `37f22caa8e2b1e427a8869b690ab0ac01db6c111a1722b442e9bab45fa74ecd6`
+**Previous Hash**: `da96df1cac749d940f8228c9795553e1854ea3e779ede82ce930f8725635c7b6` (Entry #510 Chain Hash)
+**Chain Hash**: `2f91827f277c6d471e5b22104809dbbf443ea1ed6fc514ee4da43f136ed5998e`
+**Merkle Seal**: `601094dff3cf9efbca94ad555d1b5e3114ddd962d0edf54824434dd0930fe9e6` -- gate_seal_audit_depro_live_surfaces
+**Session ID**: `2026-08-19T0540-98a3b2`
+**Entry ID**: `37f22caa8e2b`
+
+_Hash provenance_: Content Hash = SHA256 of AUDIT_REPORT.md. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-08-19T0540-98a3b2_
+
+### Entry #512: IMPLEMENTATION - depro-live-surfaces
+
+**Date**: 2026-08-19
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+**Branch**: feat/qor155-align-enforce-default
+
+## Decision
+
+Implements plan-depro-live-surfaces (audit PASS Entry #511). Removed: failsafe.openFailSafeProAbout (package.json activation event + contributes.commands + commands.ts registration/import), Settings renderFailSafeProCard + call site + bind block (settings.js), shared/constants.ts DELETED WHOLE (sole importer was the removed command; FAILSAFE_PRO_DOWNLOAD_URL had zero non-test consumers), about-pro-command.test.ts + constants.test.ts DELETED (with stale out/ artifacts), PRO_INTEGRATION.md archived to .failsafe/archive/PRO_INTEGRATION_2026-08-19.md + README:229 dangling reference dropped. Two in-cycle completeness amendments beyond the plan, same directive: (1) marketplace package.json description sentence "Pairs with FailSafe Pro for desktop enforcement." removed - the most public Pro string, missed at plan time; (2) four internal code comments neutralized to external-daemon wording (acpPermissionAuthority.ts, runtimeMode.ts, PlanManager.ts, TrustEngine.ts) so the D4 source grep is strictly Pro-free. Tests inverted to pin ABSENCE: v5-coherence (command absent + activation event absent + constants module deleted + PRO_INTEGRATION archived), commands-dispatch FX002 (getCommands membership false), settings-renderer FX242 (no #cc-failsafe-pro / copy / bind in rendered HTML), command-center-settings Playwright (zero Pro-card elements, governance-mode card as positive anchor). FEATURE_INDEX FX414 superseded / FX415-FX416 removed; CHANGELOG Removed bullets both files.
+
+VERIFICATION: eslint 0 errors; compile clean; mocha 3680 passing / 0 failing / 5 pending; Playwright settings specs 6 passed / 2 skipped incl. the inverted no-Pro-card case; secret scan + instruction hygiene CLEAN on staged; D4 grep (case-insensitive failsafe pro|failsafe-pro over src + package.json, vendor/test excluded) returns zero hits.
+
+## Content Hash
+
+**Content Hash**: `f2e4540ff7815ec695a58309cfbd7378471dd241b16951e08e76da6bc6da7055`
+**Previous Hash**: `2f91827f277c6d471e5b22104809dbbf443ea1ed6fc514ee4da43f136ed5998e` (Entry #511 Chain Hash)
+**Chain Hash**: `5f37b6be3a5d12fd978e7fda40ce18ed3565d5c719918f5fa9b74d374563ff00`
+**Merkle Seal**: `4af36a880cb0e51e5efb462db5556f064a9a3f25ad0e37a293317c9e7f902d52` -- gate_seal_implement_depro_live_surfaces
+**Session ID**: `2026-08-19T0540-98a3b2`
+**Entry ID**: `f2e4540ff781`
+
+_Hash provenance_: Content Hash = SHA256 of plan-depro-live-surfaces.md. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-08-19T0540-98a3b2_
+
+### Entry #513: SESSION SEAL - depro-live-surfaces
+
+**Date**: 2026-08-19
+**Phase**: SUBSTANTIATE (compact governed cycle: plan -> audit PASS #511 -> implement #512 -> seal)
+**Author**: Judge
+**Risk Grade**: L2
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1, PW.4.1
+
+## Decision
+
+Reality = Promise VERIFIED for plan-depro-live-surfaces. All removals executed; two disclosed in-cycle amendments (marketplace description, comment neutralization) recorded at #512 - both narrower-than-scope extensions of the same operator directive, no new surface. D4 gates: source Pro-free by case-insensitive grep; inverted tests green (mocha 3680/0; Playwright 6/2-skipped); eslint 0 errors. Gate ladder: secret scan CLEAN, instruction hygiene CLEAN, intent lock captured, gate chain plan/audit/implement/substantiate present for session 2026-08-19T0540-98a3b2. Companion actions under the same operator directive ("address the follow ups now"): upstream Qor-logic issues FILED - #356 (consumer ledger-residual attestation surfaces: workspace KNOWN_ENTRY_GAPS + dangling-previous_hash reconcile mode, covering FailSafe residuals #340/#382 + gaps [158,298]) and #357 (qor-audit SKILL.md 38.8KB vs the 40KB Phase-234 hard ABORT). Confidentiality memory updated: FULL Pro-naming backtrack recorded; the 2026-04-25 public-naming rule superseded. Version bump / tag / push SKIPPED by operator policy (no release authorized; Review Boundary holds); attribution trailer omitted per standing operator identity directive.
+
+## Content Hash
+
+**Content Hash**: `f2e4540ff7815ec695a58309cfbd7378471dd241b16951e08e76da6bc6da7055`
+**Previous Hash**: `5f37b6be3a5d12fd978e7fda40ce18ed3565d5c719918f5fa9b74d374563ff00` (Entry #512 Chain Hash)
+**Chain Hash**: `d41c5bde6111ede0b025ad09c19d4d6eeb80d1eda0a823f692c24c95c5aeec99`
+**Merkle Seal**: `14714a2759bdcf49b4573459bf02101f39a6245165d2c27d44477547d36e8183` -- gate_seal_session_depro_live_surfaces
+**Session ID**: `2026-08-19T0540-98a3b2`
+**Entry ID**: `f2e4540ff781-s513`
+
+_Hash provenance_: Content Hash = SHA256 of plan-depro-live-surfaces.md. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-08-19T0540-98a3b2_
+
+### Entry #514: RESEARCH BRIEF - Wayfinder (mattpocock/skills) integration
+
+**Date**: 2026-08-19
+**Phase**: RESEARCH
+**Author**: Analyst
+**Risk Grade**: L2
+
+## Decision
+
+Operator directive: integrate AND use https://github.com/mattpocock/skills skills/engineering/wayfinder (context: aihero.dev/skills-wayfinder). Findings: MIT-licensed multi-session planning skill (map issue + decision tickets: grilling/prototype/grilling/task; plan-don't-do; one-ticket-per-session; fog-of-war graduation); direct Skill-tool deps grill-with-docs/domain-modeling/research/prototype, handoffs to-spec/to-tickets, one-time setup-matt-pocock-skills whose issue-tracker-github.md template ships the exact Wayfinding operations contract (wayfinder:map label, GitHub sub-issues, native issue dependencies via database-id, self-assign claims). USE half is local-only (.claude/skills gitignored) + two tracked docs (docs/agents/issue-tracker.md, AGENTS.md Agent-skills section, GOVERNANCE_INDEX registration). INTEGRATE half = MarketplaceCatalog entry + NEW agent-skills category (MarketplaceTypes.ts:8-11 union + :129-131 labels + marketplace.js:9-11 + catalog test). Domain-doc scaffolding + triage skipped (qor topology collision; disclosed). First real chart (#239 program) deferred to operator /wayfinder invocation (creates GH issues). Brief: .failsafe/governance/RESEARCH_BRIEF_wayfinder-integration-2026-08-19.md
+
+## Content Hash
+
+**Content Hash**: `18d7b522fe373df26bd701eefc6b46089ce9dc31c7d876c43f2884255b24da89`
+**Previous Hash**: `d41c5bde6111ede0b025ad09c19d4d6eeb80d1eda0a823f692c24c95c5aeec99` (Entry #513 Chain Hash)
+**Chain Hash**: `1259b62dadf54fd4ce262a77f88dfaa3ca7bb701823cc0f37c9462ca0c3fc877`
+**Merkle Seal**: `20d6f3c6e6b1b6bc95300def7e9f3a3d747678f1ad70f1e3c5d7af9b3d27cee5` -- gate_seal_research_wayfinder_integration
+**Session ID**: `2026-08-19T0540-98a3b2`
+**Entry ID**: `18d7b522fe37`
+
+_Hash provenance_: Content Hash = SHA256 of RESEARCH_BRIEF_wayfinder-integration-2026-08-19.md. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-08-19T0540-98a3b2_
+
+### Entry #515: GATE TRIBUNAL - wayfinder-integration
+
+**Date**: 2026-08-19
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+
+## Decision
+
+VERDICT: PASS (solo; no Option B mandate; upstream citations fetched live). Target plan-wayfinder-integration.md (research #514). Two halves: USE (vendor 8 MIT skills verbatim into gitignored .claude/skills + docs/agents/issue-tracker.md from the upstream GitHub template + AGENTS.md Agent-skills section + GOVERNANCE_INDEX registration) and INTEGRATE (MarketplaceCatalog mattpocock-skills entry + NEW agent-skills category through the closed union + both label maps + inverse-coverage test). BINDING CONDITION C1: canary-scan every fetched upstream file in staging BEFORE install (third-party prompt content is agent-executed); C2 record upstream commit SHA; C3 no .claude content staged to git.
+
+## Content Hash
+
+**Content Hash**: `93d721cba7262cff59605908c4e77590b5362a8dcffca0d386e875f829727c44`
+**Previous Hash**: `1259b62dadf54fd4ce262a77f88dfaa3ca7bb701823cc0f37c9462ca0c3fc877` (Entry #514 Chain Hash)
+**Chain Hash**: `04e7bd9247960bb5dabca2cce4d50054455b37ba45857671bb2eb0930c0514a1`
+**Merkle Seal**: `d014857b0690a88467a864b35a9c367457118d4afc0a3da9da4515b824389222` -- gate_seal_audit_wayfinder_integration
+**Session ID**: `2026-08-19T0540-98a3b2`
+**Entry ID**: `93d721cba726`
+
+_Hash provenance_: Content Hash = SHA256 of AUDIT_REPORT.md. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-08-19T0540-98a3b2_
+
+### Entry #516: IMPLEMENTATION - wayfinder-integration (Phases 1+2)
+
+**Date**: 2026-08-19
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+**Branch**: feat/wayfinder-integration
+
+## Decision
+
+Implements plan-wayfinder-integration (audit PASS #515). USE: 15 skills vendored VERBATIM into gitignored .claude/skills at pinned mattpocock/skills@885e2ca4 - engineering pack (wayfinder + agents/openai.yaml, grill-with-docs, domain-modeling, research, prototype, to-spec, to-tickets, setup-matt-pocock-skills + 4 templates) AND productivity pack (grill-me, grilling, handoff, teach, to-questionnaire, wait-what, writing-for-agents; operator-directed mid-cycle - the productivity `grilling` skill is a REAL wayfinder Skill-tool dependency the engineering-only set would have missed). C1 SATISFIED: all 21 fetched files canary-scanned CLEAN via the scanner module directly (CLI wrapper is governance-path-allowlisted); C2 pinned SHA in .claude/skills/MATTPOCOCK-SKILLS-LICENSE; C3 no .claude content staged. Tracked writes: docs/agents/issue-tracker.md (upstream GitHub template verbatim incl. Wayfinding operations + FailSafe-notes footer: qor doc topology, SHIELD precedence for handed-off implementation), AGENTS.md Agent-skills section, GOVERNANCE_INDEX Tier 5 registration (enforce CLEAN). INTEGRATE: MarketplaceCategory union + agent-skills (MarketplaceTypes.ts) + both label maps (CATEGORY_LABELS + marketplace.js) + MARKETPLACE_CATALOG mattpocock-skills entry (both packs; MIT, trustTier unverified, sandboxEnabled, featured) + 2 new MarketplaceCatalog.test.ts cases incl. closed-enum inverse-coverage (every in-use category labeled). Red-then-green: agent-skills union absence produced 2 tsc errors pre-change; tsc 0 post. FX904 registered; CHANGELOG Added bullets. Local mocha ambient-blocked (host vscode-updating mutex, known environmental); CI carries the suite proof on the PR.
+
+## Content Hash
+
+**Content Hash**: `8b5c8cdb930e87989fcf3c5ea2efded5cc5ce4e07ca191bbe398318db1c81783`
+**Previous Hash**: `04e7bd9247960bb5dabca2cce4d50054455b37ba45857671bb2eb0930c0514a1` (Entry #515 Chain Hash)
+**Chain Hash**: `0fbafb4417639986055df4890ea5140647b190578eb4683328281f84f435d5ed`
+**Merkle Seal**: `5f4e892f998148a7b84c327ba84a1fe39c83d44145546ab2de44c90b727f53a3` -- gate_seal_implement_wayfinder_integration
+**Session ID**: `2026-08-19T0540-98a3b2`
+**Entry ID**: `8b5c8cdb930e`
+
+_Hash provenance_: Content Hash = SHA256 of plan-wayfinder-integration.md. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-08-19T0540-98a3b2_
+
+### Entry #517: RESEARCH BRIEF - #83 Agents Window deep dive (@1.134)
+
+**Date**: 2026-08-19
+**Phase**: RESEARCH
+**Author**: Analyst
+**Risk Grade**: L2
+
+## Decision
+
+Operator-directed full deep dive on #83. Upstream (primary sources @2026-08-19, VS Code 1.134): Agent Host re-architecture (1.129-1.134) moved agent runtime OUT of the extension host - extension chat tools explicitly unavailable in Agent Host sessions; five harnesses (Local/Copilot/Claude/Codex/Cloud); opt-in is the USER setting extensions.supportAgentsWindow (object map) + default-profile install, NO manifest key exists; worktree sessions live SIBLING at <repo>.worktrees/<name>, committed-state-only, DEFAULT Bypass Approvals; extension-registered MCP still broken (#317460 OPEN/assigned/no-milestone) - durable channels are workspace .mcp.json + ~/.copilot/mcp-config.json + Agent Plugins 1.0 (1.133); watch #325827 (harness API) + #305332 (AHP customizations). FailSafe-side worktree map (file:line inventory): HARD failure CommitGuard ENOTDIR (.git-as-file, CommitGuard.ts:22-162); LATENT FAIL-OPEN today - hook curls hardcoded port 7777 but /api/v1/governance/commit-check route does not exist (bootstrapGovernance.ts:163) so the pre-commit guard is decorative; split-state HIGH writes (soa_ledger.db, IntentStore, runtime-mode.json, break-glass, risks, plans, session, acp-ledger); cross-session collisions (single-slot Devin twin registry -> cross-worktree audit contamination, marketplace rm-reclone races, unlocked servers.json RMW, port scan cap); WorkspaceMutationBus.ts:47 silent no-op on absent paths. Fix seam: governanceRoot resolver via git rev-parse --git-common-dir at the ConfigManager.ts:26 chokepoint (+4 mirrors), two-value CoreSubstrate end state. Re-scoped phases A (worktree-aware governanceRoot + CommitGuard/route repair + per-session twin id - fixes real defects independent of the Agents window), B (doc refresh @1.134 + .mcp.json + Agent Plugin draft), C (Configure command), D (human validation checklist). All three Phase-0 doc revalidation triggers effectively fired. Brief: .failsafe/governance/RESEARCH_BRIEF_agents-window-83-deep-dive-2026-08-19.md
+
+## Content Hash
+
+**Content Hash**: `89924fb07521f6d2c7b44e48a3861bbeb2ee90c4e3809ccd122c4e13d74e263f`
+**Previous Hash**: `0fbafb4417639986055df4890ea5140647b190578eb4683328281f84f435d5ed` (Entry #516 Chain Hash)
+**Chain Hash**: `c4028a116fb42d5002a85fce24850e8525653644df7c42768d288a5e976677dd`
+**Merkle Seal**: `716e64e4018c996650aae80d1ce1717ded306d8aee203fa9e3fcf321e31da104` -- gate_seal_research_agents_window_83_deep_dive
+**Session ID**: `2026-08-19T0540-98a3b2`
+**Entry ID**: `89924fb07521`
+
+_Hash provenance_: Content Hash = SHA256 of the brief. Chain Hash = SHA256(content_hash + "|" + previous_hash). Merkle Seal = SHA256(chain_hash + gate_label). ASCII SHA-256.
+
+---
+
+_Chain integrity: VALID_
+_Session: 2026-08-19T0540-98a3b2_
+
+
+---
+
+### Entry #518: RESEARCH BRIEF - #297 completion + #319 FX897 residual
+
+**Timestamp**: 2026-08-19T19:20:00Z
+**Phase**: RESEARCH
+**Author**: Analyst
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(.failsafe/governance/RESEARCH_BRIEF_297-319-fail-closed-fx897-2026-08-19.md)
+= 6735bda4bf7835746ace591ef8f9e3e6f95e89f7324ea0e4261820b1f581532d
+```
+
+**Previous Hash**: `c4028a116fb42d5002a85fce24850e8525653644df7c42768d288a5e976677dd` (Entry #517 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= e08699d0c4d386cb47d0862b130017e5df53f7bdaac2a23941a686f9cc2b503a
+```
+
+## Decision
+
+Cycle 1 of the operator-directed issue burndown (release HOLD until board clear; pipeline run 32288150900 cancelled at the production gate, nothing published, Build & Test green on rerun). Scope A (#297): four unguarded awaits in GovernanceRouter.handleFileOperation (:82/:102/:108/:128) ahead of the Slice-1 guard; sole production caller wires the promise into event.waitUntil where rejection is not a guaranteed block; showBlockade awaits the notifier (:279) so the guard must tolerate a throwing notifier; NO timeout machinery exists in EnforcementEngine (deeper than the issue's missing-test framing). Scope B (#319): reconcile fires only on identity change observed by render(); the defect window is [canvas construction, first hub delivery) — WS-to-SSE failover on slow CI delays that beyond the spec's 10s poll; identity-absence at construction is the true gap (fallback-key + post-construction reconcile recommended). Findings advisory; next: /qor-plan.
+
+
+---
+
+### Entry #519: GATE TRIBUNAL - fail-closed-297-319
+
+**Timestamp**: 2026-08-19T19:55:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= 4de7dc7952efa790242c83b57fb14a980f19f35b93a329fbf5c00c655ef4ee33
+```
+
+**Previous Hash**: `e08699d0c4d386cb47d0862b130017e5df53f7bdaac2a23941a686f9cc2b503a` (Entry #518 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 4fdedd1301ef2f8f40da517cc7fbe60605c29d772817996e6a59bf5b3c8966cd
+```
+
+## Decision
+
+PASS on plan-fail-closed-297-319.md iteration 1. All twelve passes clear. Disclosures: (1) pre-existing Razor overage in GovernanceRouter.ts (293 lines; handleFileOperation body >40L moved verbatim) — future /qor-refactor candidate, not introduced by this plan; (2) plan_grep_lint canonical-shape WARN on 6 citations — inline command+observed-text evidence re-verified live by the Judge this audit. Non-blocking observations: T4 must stub route() to invokeQorLogic:true; LD-2 timeout cannot extend the VS Code waitUntil platform budget (declared limitation). Next: /qor-implement on fix/fail-closed-297-319, local commits only (operator release HOLD).
+
+
+---
+
+### Entry #520: IMPLEMENTATION - fail-closed-297-319
+
+**Timestamp**: 2026-08-19T20:10:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(git diff -- FailSafe/extension/src)
+= 5c470f0648b5251640097c121e6900715017b75a69eab1a3241115deb5c6c3b1
+```
+
+**Previous Hash**: `4fdedd1301ef2f8f40da517cc7fbe60605c29d772817996e6a59bf5b3c8966cd` (Entry #519 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 44195b56b9c1f3dca8a0a2cca9a775c9e4811e2a171c458cc11f4466224a4ac2
+```
+
+## Decision
+
+Implemented plan-fail-closed-297-319.md (audit PASS #519) on branch fix/fail-closed-297-319. Phase 1 (#297/FX905): handleFileOperation total guard (outer try/catch delegating to handleFileOperationInner), withTimeout helper applied at the evaluateAction and governanceAdapter.evaluate sites (verdictTimeoutMs ctor param, default 10_000ms), showBlockade notifier-fault totality. Phase 2 (#319/FX897): LAST_IDENTITY_KEY + resolveIdentity fallback in brainstorm-graph-io.js (save records real identity; identity-less load/save fall back), initCanvas post-construction applyViewPrefs reconcile, spec identity-poll sequencing. TDD: T1-T6 red (6 failing) then green; T7/T9/T10 red (T8 pinned existing default, green) then green; 22/22 passing across the three suites; Slice-1 test unbroken. Lint 0 errors. FEATURE_INDEX: FX905 NEW + FX897 refreshed; CHANGELOG [Unreleased] both files. Full unit suite result recorded at seal (local VS Code updater mutex may defer to CI).
+
+
+---
+
+### Entry #521: SESSION SEAL - fail-closed-297-319
+
+**Timestamp**: 2026-08-19T20:30:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L2
+**Entry ID**: `3210eee7d90b`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-fail-closed-297-319.md)
+= 369f9faa563b59f58c87c68c930a1eee5a646c6b83b4606287754697735efc50
+```
+
+**Previous Hash**: `44195b56b9c1f3dca8a0a2cca9a775c9e4811e2a171c458cc11f4466224a4ac2` (Entry #520 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= afbf3095cfc60b1c7d9b1bb9e2d81bef915c7277e72d40312b557322ff9d0c5f
+```
+
+**Merkle Seal**: `c6e32c6c92da6e1fc7082316a9a81b535503665483fa562e504c0cc13aadda81` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for burndown Cycle 1 (session 2026-08-19T0540-98a3b2; research #518 -> audit PASS #519 -> implement #520; commit f440b7b6 on fix/fail-closed-297-319). Reality = Promise: all plan-declared files touched, no unplanned files, no orphans. Verification: T1-T10 red-then-green; 22/22 targeted mocha (GovernanceRouter + brainstorm-view-prefs + brainstorm-toolbar-wiring); tsc + eslint 0 errors. Gate ladder: intent_lock VERIFIED, skill_admission ADMITTED, gate_skill_matrix 0 broken, secret_scanner clean, merge_velocity exit 0, instruction_hygiene clean, data_api_acl disclosed-skip (no SQL), governance-index enforce exit 0. DISCLOSED: (1) full vscode-test npm test blocked locally by the VS Code updater mutex (stuck CodeSetup installer) — targeted mocha covers every touched suite; authoritative full run lands in CI at delivery (gate_skipped_prerequisite_absent-class disclosure); (2) no version bump/tag/CHANGELOG stamp this seal — the v6.0.0 release train is operator-HELD until the issue board clears; changes recorded under [Unreleased] fold into the re-cut release; (3) seal-commit attribution trailer intentionally absent per the operator's binding identity directive (no Co-Authored-By/AI attribution — overrides the skill template). Feature Inventory: FX905 verified (new), FX897 verified (refreshed). Next: remaining burndown cycles; #297/#319 close with evidence at operator-authorized delivery.
+
+
+---
+
+### Entry #522: RESEARCH BRIEF - #295 repository-scoped first-run gates
+
+**Timestamp**: 2026-08-19T20:50:00Z
+**Phase**: RESEARCH
+**Author**: Analyst
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(.failsafe/governance/RESEARCH_BRIEF_295-repo-scoped-first-run-2026-08-19.md)
+= 81b6035851f631e07140ad7cc32cb1f007997a8afde45d2b7360d56278258995
+```
+
+**Previous Hash**: `afbf3095cfc60b1c7d9b1bb9e2d81bef915c7277e72d40312b557322ff9d0c5f` (Entry #521 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 8ba98804b3a842b82695091b06b3ee89818fbb054d5f650d2fe03e94ef879e72
+```
+
+## Decision
+
+Cycle 2 of the operator-directed issue burndown. Operator ruling: REPOSITORY-SCOPED first-run gates (both gates once per repository; mode persists per-repo; no cross-repo inheritance). Findings: both gates use ConfigManager globalState wrappers (FirstRunModePicker.ts:16/:67-73; FirstRunOnboarding.ts:45-51); mode write is ConfigurationTarget.Global (FirstRunModePicker.ts:57-61); ConfigManager ALREADY exposes workspace-state accessors (ConfigManager.ts:318-326) so no new API is needed; tests pin Global behavior (FirstRunModePicker.test.ts:93; FirstRunOnboarding.test.ts:119-149); docs contradiction confirmed at FEATURE_INDEX.md:726 (FX538 'workspace config' claim) vs BACKLOG.md:499 ('Global scope', matches code). Design recommendations for plan: inspect()-based suppression (explicit mode at any scope means no per-repo prompt), keep modeDefaultNotice global (upgrade notice, not per-repo decision), no key migration (old global keys become dead; suppression prevents nag-storms). Next: /qor-plan.
+
+
+---
+
+### Entry #523: GATE TRIBUNAL - repo-scoped-first-run-295
+
+**Timestamp**: 2026-08-19T21:05:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= 05f97cece7f2a8c4a0ab8dd7e3d85eb61c99815439f7b61d49b7319aadb2e135
+```
+
+**Previous Hash**: `8ba98804b3a842b82695091b06b3ee89818fbb054d5f650d2fe03e94ef879e72` (Entry #522 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 5f0780a4ba91776be98061f407d793eca9fed7437372c9ed3eddeaff39546a35
+```
+
+## Decision
+
+PASS on plan-repo-scoped-first-run-295.md iteration 1. All passes clear; LD-3 amended pre-audit to cover workspaceFolderValue. Non-blocking observations: per-repo onboarding notification is the ruled behavior (asks exactly once per repo); dead global gate keys disclosed; FX016 target claim flagged for the audits tranche. Next: /qor-implement on fix/repo-scoped-first-run-295, local commits only (operator release HOLD).
+
+
+---
+
+### Entry #524: IMPLEMENTATION - repo-scoped-first-run-295
+
+**Timestamp**: 2026-08-19T21:20:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(git diff -- FailSafe/extension/src)
+= 98c08669c3eb48b33ed4c7171d78acce69b2cc3a563fe1806c340b2b5a9ab295
+```
+
+**Previous Hash**: `5f0780a4ba91776be98061f407d793eca9fed7437372c9ed3eddeaff39546a35` (Entry #523 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 1a0c6332a378c14db59f8f0e72f38c9ef2249701d1532c7f17b47ffc518ea239
+```
+
+## Decision
+
+Implemented plan-repo-scoped-first-run-295.md (audit PASS #523) on branch fix/repo-scoped-first-run-295 (stacked on Cycle 1). LD-1: both gates swapped to ConfigManager workspace-state accessors (FirstRunModePicker isOnboarded/markOnboarded; FirstRunOnboarding isFirstRun/markOnboarded). LD-2: mode persists at ConfigurationTarget.Workspace. LD-3: inspect()-based explicit-mode suppression (global/workspace/workspaceFolder values) silently onboards the repo. LD-5: wiring comment rewritten; FX538/FX275 rows + BACKLOG B-EM-3 + both CHANGELOGs updated. TDD: harnesses converted to workspace-state mocks -> full RED (9+6 failing) -> GREEN (9/9 + 6/6) via local mocha with a scratchpad vscode-module shim (electron host mutex-blocked; shim is NOT in the repo tree; CI runs the real host at delivery). tsc 0 errors; lint 0 errors.
+
+
+---
+
+### Entry #525: SESSION SEAL - repo-scoped-first-run-295
+
+**Timestamp**: 2026-08-19T21:30:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L2
+**Entry ID**: `e8ac868f887c`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-repo-scoped-first-run-295.md)
+= d48145d28028108760df8085dfce8aeb0063aa30594f0b92e8262183a4e9eda5
+```
+
+**Previous Hash**: `1a0c6332a378c14db59f8f0e72f38c9ef2249701d1532c7f17b47ffc518ea239` (Entry #524 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= df01a5ebeee0f2c117f3e58d7bebd054cc269090855af2a29a6efc6ac5fc759c
+```
+
+**Merkle Seal**: `8ddc8ad7f8372716fb101769f99c7e9bc33d5e9ca396a4509c3d0d69bb3f31de` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for burndown Cycle 2 (session 2026-08-19T2009-834004; research #522 -> audit PASS #523 -> implement #524; commit on fix/repo-scoped-first-run-295, stacked on Cycle 1). Reality = Promise: five src/test files per plan, docs truth updated (FX538/FX275/B-EM-3/CHANGELOGs), no unplanned files. Verification: full RED (9+6) -> GREEN (9/9 + 6/6) under local mocha with a scratchpad vscode-module shim; tsc + eslint 0 errors. Gate ladder: intent_lock VERIFIED, skill_admission ADMITTED, secret_scanner/merge_velocity/instruction_hygiene/governance-index all exit 0. DISCLOSED: (1) electron-host run mutex-blocked locally (same CodeSetup installer as Cycle 1); shim-based mocha is the local evidence, CI the authoritative host run at delivery; (2) no version bump/tag (release train HELD); (3) attribution trailer intentionally absent per operator identity directive. Board effect at delivery: #295 closes. Next: remaining burndown cycles (#83 A-C, voice #236/#237, audits #241-#244, #233).
+
+
+---
+
+### Entry #526: GATE TRIBUNAL - worktree-commitguard-83a
+
+**Timestamp**: 2026-08-19T21:55:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= 2d754843b0245c2cb11f97be9fa5b35139f3421c954e49fba9508ca144e26263
+```
+
+**Previous Hash**: `df01a5ebeee0f2c117f3e58d7bebd054cc269090855af2a29a6efc6ac5fc759c` (Entry #525 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= ad413f9028f92134011f48c04c35befeb8a76c25e52947551260bb3c22eda9d7
+```
+
+## Decision
+
+PASS on plan-worktree-commitguard-83a.md iteration 1 (#83 Phase A core). Audit-caught defect remediated pre-verdict: block verdicts must be HTTP 200 because the hook's curl -sf fails open on non-2xx (LD-3 amended; T10 asserts status). Worktree hooks-in-commonDir semantics proven empirically by T4 (real git worktree add) per SG-GrepShapedRunclaim-A. Observations: 401 fail-open is deliberate stale-token posture; spawnSync activation cost flagged for #244 baseline; install-before-server port fallback disclosed. Next: /qor-implement on fix/worktree-commitguard-83a (stacked), local commits only.
+
+
+---
+
+### Entry #527: IMPLEMENTATION - worktree-commitguard-83a
+
+**Timestamp**: 2026-08-19T22:20:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(git diff -- FailSafe/extension/src)
+= 1c48b01301e2c8a76274674e78c9ce836bc87a9866ba9dbf25b7018e28a99000
+```
+
+**Previous Hash**: `ad413f9028f92134011f48c04c35befeb8a76c25e52947551260bb3c22eda9d7` (Entry #526 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 6b684893f9aaa155ff6f6d989403dcf82e745270e24caa51be09012e0cc1c140
+```
+
+## Decision
+
+Implemented plan-worktree-commitguard-83a.md (audit PASS #526) on branch fix/worktree-commitguard-83a (stacked). LD-1 resolveGitDirs (spawnSync argv, 5s timeout, <root>/.git fallback). LD-2 CommitGuard worktree-correct: hooks+config from commonDir, token in gitDir, lazy apiPort resolved at hook-write. LD-3 CommitCheckRoute shipped (token gate 401; block verdicts HTTP 200 per curl -sf constraint). LD-4/5 threading: ConsoleServerOptions.validateCommitToken -> ConsoleRouteHost -> ApiRouteDeps; commitGuardPortSource ref repointed by bootstrapServers to the live port. LD-6 ConfigManager.getGovernanceRoot() (cached; dirname of common .git). TDD: T4/T5/T7-T10 red then 33/33 green (real git init + worktree add fixtures); tsc 0; lint 0 errors. Hermeticity finding recorded: this machine carries a stray .git at C:\ — ambient ancestor-repo discovery is REAL, which validated the fallback/injection design (legacy CommitGuard suite now injects explicit dirs; T3 uses a nonexistent cwd). FEATURE_INDEX: FX115 n/a->verified (route shipped), FX284 refreshed (worktree), FX906 NEW (planned FX907 landed on existing FX115; FX908 landed on existing FX284 — recorded per implement Step 12.5). Docs: AGENTS_WINDOW SS5 note; CHANGELOGs [Unreleased].
+
+
+---
+
+### Entry #528: SESSION SEAL - worktree-commitguard-83a
+
+**Timestamp**: 2026-08-19T22:35:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L2
+**Entry ID**: `e9f8609615e7`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-worktree-commitguard-83a.md)
+= 882c159148ed0dffe2701984a121c1218e2065108d79cf240a1d5774541698ee
+```
+
+**Previous Hash**: `6b684893f9aaa155ff6f6d989403dcf82e745270e24caa51be09012e0cc1c140` (Entry #527 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= c4a5c36baaf901a073d52a401d3f99ec80600484c0c1811f9b870da79ead8a43
+```
+
+**Merkle Seal**: `105588609c4b4ae10a4b13f7624bc0de6da627bc4d09288e517575df28e5d0b5` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for burndown Cycle 3 (#83 Phase A core; session 2026-08-19T2021-9acb11; research = deep-dive #517 with citations re-verified, audit PASS #526, implement #527; branch fix/worktree-commitguard-83a stacked). Reality = Promise: all 13 declared src/test files + 5 doc surfaces, no unplanned files. Verification: 33/33 green under shim-mocha with REAL git init/worktree fixtures; tsc + eslint 0 errors. Gate ladder all exit 0; intent lock VERIFIED. DISCLOSED: electron-host run defers to CI (updater mutex, third consecutive cycle); no version bump/tag (HOLD); attribution trailer absent per operator identity directive. Board effect at delivery: #83 Phases A-C progress (A core done; B/C next cycle); FX115 promoted n/a->verified closing a documented-but-unimplemented gap. Hermeticity lesson recorded in #527. Next: Cycle 4 (#83 B/C) then voice/audits/#233.
+
+
+---
+
+### Entry #529: GATE TRIBUNAL - agents-window-configure-83bc
+
+**Timestamp**: 2026-08-19T22:55:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= 8a83a4d9c75ed6704262ac26a0ad3a3aa35400b064d6ae1532b0b736492a8a03
+```
+
+**Previous Hash**: `c4a5c36baaf901a073d52a401d3f99ec80600484c0c1811f9b870da79ead8a43` (Entry #528 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 81f3a0195aff2b6bffa75b98d99e1b624a9c09656b541e7e68550691a024f9d7
+```
+
+## Decision
+
+PASS on plan-agents-window-configure-83bc.md iteration 1 (#83 Phases B+C). Ghost-config refusal verified (FailSafeServer in-process; B209 filed instead); plan-authoring ghost command name caught by the grep pass and corrected pre-audit (failsafe.mcp.installCatalog). Next: /qor-implement on fix/agents-window-configure-83bc, local commits only.
+
+
+---
+
+### Entry #530: IMPLEMENTATION - agents-window-configure-83bc
+
+**Timestamp**: 2026-08-19T23:15:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(git diff -- FailSafe/extension/src FailSafe/extension/package.json)
+= af21ee62880988d42b822af30896f1e8edf91a9751ef28062b2617913d18c6d2
+```
+
+**Previous Hash**: `81f3a0195aff2b6bffa75b98d99e1b624a9c09656b541e7e68550691a024f9d7` (Entry #529 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= ad30fbe6967493488a7ad35f23e4be91d3f88a2a49411a82840a1c4e0e444908
+```
+
+## Decision
+
+Implemented plan-agents-window-configure-83bc.md (audit PASS #529) on fix/agents-window-configure-83bc (stacked). LD-3 runAgentsWindowConfigure pure-logic io-seam module + failsafe.configureAgentsWindow registration + manifest entry. LD-1/LD-2/LD-4: AGENTS_WINDOW doc SS2 guided-path pointer + SS4.x in-process-MCP reality check + SS4.y Agent Plugin DRAFT; BACKLOG [B209] standalone MCP bridge filed; FX909 row; CHANGELOGs. TDD note: T1-T4 are a brand-new pure unit (compile-red only, green on first run — disclosed); T5 observed genuinely red (manifest+wiring absent) then green. 5/5 passing; tsc 0 errors. Board effect at delivery: #83 closes (A+B+C complete; Phase-D validation issue splits out per operator ruling).
+
+
+---
+
+### Entry #531: SESSION SEAL - agents-window-configure-83bc
+
+**Timestamp**: 2026-08-19T23:25:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L2
+**Entry ID**: `9f52c6d31901`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-agents-window-configure-83bc.md)
+= ea4379fb5b3fccc20f766fa9c46f0628a640fc4bbedb18bbb1bbb7fe312860ea
+```
+
+**Previous Hash**: `ad30fbe6967493488a7ad35f23e4be91d3f88a2a49411a82840a1c4e0e444908` (Entry #530 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 78ef6e59f1e5724f543c2a2c05160f99f162445e9e6f58a6abb2f31251f5899c
+```
+
+**Merkle Seal**: `7d31d26c75e9e3bf3a9002b5979b00e1f8c4e558b45424bfc0c199c407452718` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for burndown Cycle 4 (#83 Phases B+C; session 2026-08-19T2041-fd571d; research #517-derived + in-process-MCP verification, audit PASS #529, implement #530; branch fix/agents-window-configure-83bc stacked). Reality = Promise: 4 src/test files + manifest + 5 doc surfaces. Verification: 5/5 green (T5 observed red->green; T1-T4 new pure unit, compile-red disclosed); tsc + eslint 0 errors. Gate ladder all exit 0. DISCLOSED: electron-host run defers to CI (updater mutex); no version bump/tag (HOLD); attribution trailer absent per operator identity directive. #83 A+B+C now COMPLETE across Cycles 3+4 — at delivery: close #83, file the Phase-D live-window validation issue (operator-run). Remaining burndown: voice #236/#237, audits #241-#244, #233, programs #232/#239.
+
+
+---
+
+### Entry #532: GATE TRIBUNAL - agent-audit-scan-guard-241
+
+**Timestamp**: 2026-08-20T00:20:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L1
+**Verdict**: PASS (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= ae81998d1f9853dca013b72c44fb1c2675bb2c0adc836a364c01a1bc85cfbd16
+```
+
+**Previous Hash**: `78ef6e59f1e5724f543c2a2c05160f99f162445e9e6f58a6abb2f31251f5899c` (Entry #531 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= c0c2a4a3d728bce8ef9490b9dac0452f97e837b3b5ae4df934cab42a5540383e
+```
+
+## Decision
+
+PASS on plan-agent-audit-scan-guard-241.md iteration 1 (#241 named candidate: guard the agentAudit.run risk-upsert loop via a testable runMcpPolicyScan seam + failed-count warning). L1 (observe-only surface). Next: /qor-implement on the stacked branch.
+
+
+---
+
+### Entry #533: IMPLEMENTATION - agent-audit-scan-guard-241 (+ LD-6 spec correction)
+
+**Timestamp**: 2026-08-20T00:50:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L1
+
+**Content Hash**:
+```
+SHA256(git diff -- FailSafe/extension/src)
+= dc64f67b4917c64ac821c626cf57332c7402769f09bc6c73dfb1c3daa688c17f
+```
+
+**Previous Hash**: `c0c2a4a3d728bce8ef9490b9dac0452f97e837b3b5ae4df934cab42a5540383e` (Entry #532 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 3a6556117f038414b490d9d0e70b60968501b8137045e86355ef2cbd7e49feab
+```
+
+## Decision
+
+(1) Implemented plan-agent-audit-scan-guard-241.md (audit PASS #532): runMcpPolicyScan seam extracted from failsafe.agentAudit.run with try/catch'd sink (failed counter; loop never aborts), handler shows a warning when failed>0. TDD: compile-red then T1-T3 green (15/15 suite); tsc + lint clean. FX910. (2) POST-SEAL CORRECTION to Cycle-1's LD-6 (seal #521 disclosure): the reload spec's identity-arrival poll turned an optional signal into a hard gate — CI run 2 on PR #323 showed hub delivery is transport-variant (WS->SSE) and can exceed any budget; the LD-4 fallback makes identity unnecessary for the product promise, so the spec now polls the healed canvas state directly (20s). FX897 spec 7/7 green locally post-correction. Also this session: #295 missed-consumer harness fix (monitor-phase-lessons, FX595) after CI run 1.
+
+
+---
+
+### Entry #534: SESSION SEAL - agent-audit-scan-guard-241
+
+**Timestamp**: 2026-08-20T01:00:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L1
+**Entry ID**: `ea8eeb7bdafa`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-agent-audit-scan-guard-241.md)
+= 0de54c4dbb5a656401a72b64db0c56ff4d3072b33726b950b74373ffe28a7c2d
+```
+
+**Previous Hash**: `3a6556117f038414b490d9d0e70b60968501b8137045e86355ef2cbd7e49feab` (Entry #533 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 310505a32d74dbdd7dabd595fcd32c337cc764bc13f0ddff5ce3311ca03509dd
+```
+
+**Merkle Seal**: `4d4e897c3e98a36811be942e81ce8cb44456a707eccfd60f8c401ddf39072ec2` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for burndown Cycle 5 (#241 named candidate; session 2026-08-19T2050-306452; audit PASS #532, implement #533). runMcpPolicyScan sink-fault resilience shipped (FX910); LD-6 spec correction rode along (disclosed in #533). Verification: 15/15 + FX897 spec 7/7 locally; tsc + lint clean; gate ladder exit 0. DISCLOSED: electron host defers to CI; no version bump (HOLD); trailer absent per operator identity directive. Pushed to the authorized #323 lane (CI running).
+
+
+---
+
+### Entry #535: GATE TRIBUNAL - vsix-hygiene-243a
+
+**Timestamp**: 2026-08-20T01:20:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= f67811d3497ef9a8158059a2ef71455116c090d366f7ea4802d673f7419dae70
+```
+
+**Previous Hash**: `310505a32d74dbdd7dabd595fcd32c337cc764bc13f0ddff5ce3311ca03509dd` (Entry #534 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= cc67f33504b7f3e2914aac74433ad191fd09ce48a6502c938c1da05fa45cc0b2
+```
+
+## Decision
+
+PASS on plan-vsix-hygiene-243a.md iteration 1 (#243 Tranche A finding: .failsafe/ scan outputs + build intermediates can ship in the VSIX; fix = .vscodeignore exclusions + a durable validate-vsix hygiene gate, red/green against real archives). Next: /qor-implement.
+
+
+---
+
+### Entry #536: IMPLEMENTATION - vsix-hygiene-243a
+
+**Timestamp**: 2026-08-20T02:10:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(git diff -- scripts/validate-vsix.cjs .vscodeignore)
+= 9eb8c584423fa047553a851bcec3794900e061aeaf42c0fb3ed08a455ce89470
+```
+
+**Previous Hash**: `cc67f33504b7f3e2914aac74433ad191fd09ce48a6502c938c1da05fa45cc0b2` (Entry #535 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= e11a91239d7820c85a63e1d1b467c8b7ad87820ac6b2d9a793e8dea6aeef6078
+```
+
+## Decision
+
+Implemented plan-vsix-hygiene-243a.md (audit PASS #535) on fix/vsix-hygiene-243a (fresh off post-#323 main). LD-2 validate-vsix packaged-hygiene gate (fails on .failsafe/ paths, *.findings.json, build-intermediate entries); LD-1 .vscodeignore: .failsafe/** + **/*.findings.json excluded AND the better-sqlite3 re-include narrowed from !build/Release/** to !build/Release/*.node (the broad re-include was overriding any exclusion — vsce negation precedence). Red observed on the real 20.1MB archive (26 violations incl. the 8MB sqlite3.c amalgamation and an empty-but-dangerous .failsafe scan-output); green on rebuild: 173 files, 6.17MB (-69%), runtime better_sqlite3.node verified present. release.yml single-artifact parity (vsce package once -> both marketplaces publish the same VSIX) confirmed as #243 Tranche A evidence.
+
+
+---
+
+### Entry #537: SESSION SEAL - vsix-hygiene-243a
+
+**Timestamp**: 2026-08-20T02:20:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L2
+**Entry ID**: `8a6cc35d30ad`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-vsix-hygiene-243a.md)
+= d93d3bff96aaee22988321fab9d294b3a0aa5200b82ebbccbbaaf5f96cc09abd
+```
+
+**Previous Hash**: `e11a91239d7820c85a63e1d1b467c8b7ad87820ac6b2d9a793e8dea6aeef6078` (Entry #536 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= da44a8cae94fa397856762a0e70de5af42836ba711b363361e545e3dac4a59d2
+```
+
+**Merkle Seal**: `6ebee61de47b62e5aa61a2b8836cbfc7d376f942606e92978322677f1fd4bcf8` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for burndown Cycle 6 (#243 Tranche A finding; session 2026-08-20T0151-1e49ea; audit PASS #535, implement #536; branch fix/vsix-hygiene-243a off post-#323 main). Reality = Promise. Verification: red observed on the real archive (26 violations), green on rebuild (6.17MB, -69%, runtime binary present); validate:vsix runs in CI verify-vsix-guardrails. Gate ladder exit 0; intent lock VERIFIED. DISCLOSED: no version bump (HOLD); trailer absent per operator identity directive. Tranche A remaining half (fresh-install runtime walkthrough) is extension-host class -> #326 checklist. Next: push + PR in the authorized lane; then Cycle 7 (#233 consumer migration).
+
+
+---
+
+### Entry #538: GATE TRIBUNAL - consumer-route-migration-233
+
+**Timestamp**: 2026-08-20T02:40:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= 6393f4c3a2d1fcc3a0f1e74e48b29593d48ec1369fdb1f019166238e5b53546d
+```
+
+**Previous Hash**: `da44a8cae94fa397856762a0e70de5af42836ba711b363361e545e3dac4a59d2` (Entry #537 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= a4848343a6ab5c51dd1db3490edfd55a3ed439aafcf73026ff8711ceec83de9f
+```
+
+## Decision
+
+PASS on plan-consumer-route-migration-233.md iteration 1 (#233 consumer migration: replace the raw-string loadMetaLedger route seam with adapter envelopes; complete 4-site caller enumeration verified; pure transformers explicitly scheduled). Next: /qor-implement on fix/consumer-route-migration-233 (stacked on Cycle 6 for linear ledger).
+
+
+---
+
+### Entry #539: IMPLEMENTATION - consumer-route-migration-233
+
+**Timestamp**: 2026-08-20T03:05:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(git diff -- FailSafe/extension/src)
+= e037ab2bc19b3b898bd3b171a13b82d743b6e700760b075a83584231fc54c205
+```
+
+**Previous Hash**: `a4848343a6ab5c51dd1db3490edfd55a3ed439aafcf73026ff8711ceec83de9f` (Entry #538 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= b95570ca1f56e8cc2181b21671c828434b1e630bcd43a84bd659429c4fb6e349
+```
+
+## Decision
+
+Implemented plan-consumer-route-migration-233.md (audit PASS #538). LD-1: ApiRouteDeps.loadMetaLedger (raw string) REPLACED by readMetaLedgerEnvelope (ArtifactEnvelope<MetaLedgerEntry[]>). LD-2: ConsoleRouteRegistrar wires the adapter (readMetaLedgerArtifact) — the old fs.readFileSync+empty-string-catch is gone. LD-3: brainstorm seed route + governance-dashboard route consume envelopes (ok -> parsed entries reconstruct the appendix; any other state -> explicit empty appendix); the double-parse and both direct parseMetaLedgerEntries route imports deleted. TDD: T1 red (envelope ignored pre-change) -> green; T2 degrade pin; T3 envelope≡legacy equivalence over a real fixture workspace. 39/39 across the three suites; tsc 0. Pure transformers (seal-detection, governance-projection, genome-reconstruction) explicitly scheduled (they take text/entries; their feeders are separate seams).
+
+
+---
+
+### Entry #540: SESSION SEAL - consumer-route-migration-233
+
+**Timestamp**: 2026-08-20T03:15:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L2
+**Entry ID**: `45174f821830`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-consumer-route-migration-233.md)
+= 6ee011f9f40e64e665be801c886d8598799d177251bd112fcf36485ec02eb810
+```
+
+**Previous Hash**: `b95570ca1f56e8cc2181b21671c828434b1e630bcd43a84bd659429c4fb6e349` (Entry #539 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 5bbbe56120d318f542d8f6720787b3bced3690b3af9648c0bb053566fce76b89
+```
+
+**Merkle Seal**: `d347d0796f254bb455c569271f30a94df31631ce0aec59077f20f04a42fa7bd4` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for burndown Cycle 7 (#233 consumer migration; session 2026-08-20T0205-76164c; audit PASS #538, implement #539; branch fix/consumer-route-migration-233). Reality = Promise: 6 src/test files + 4 doc surfaces; loadMetaLedger seam deleted (grep 0 prod references). Verification: T1 red->green, T2 degrade pin, T3 envelope-equivalence; 39/39; tsc 0. Gate ladder exit 0; intent lock VERIFIED. DISCLOSED: electron host defers to CI; no version bump (HOLD); trailer absent per operator identity directive. #233 remaining after this: upstream fixture issue (file at delivery) + pure-transformer feeder slice (scheduled) + host evidence (#326).
+
+
+---
+
+### Entry #541: GATE TRIBUNAL - mindmap-list-view-325
+
+**Timestamp**: 2026-08-20T03:35:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L1
+**Verdict**: PASS (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= d110a4b8dfed22938766bf4390802089527900bf8f3dab9fca96973dcc63f728
+```
+
+**Previous Hash**: `5bbbe56120d318f542d8f6720787b3bced3690b3af9648c0bb053566fce76b89` (Entry #540 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= f08da1453a9071f0f229be1860ca124d48dfbe74ae7f6cc5797fc29ad67344be
+```
+
+## Decision
+
+PASS on plan-mindmap-list-view-325.md iteration 1 (#325: Mind Map accessible name + FX890-pattern list-view alternative; design source = in-repo Shadow Genome table view). Next: /qor-implement on fix/mindmap-list-view-325.
+
+
+---
+
+### Entry #542: IMPLEMENTATION - mindmap-list-view-325
+
+**Timestamp**: 2026-08-20T04:00:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L1
+
+**Content Hash**:
+```
+SHA256(git diff -- FailSafe/extension/src)
+= 1a166c3af16c00d3eb8ce35f13d5cce5a19cc4c82986b6fa1ebe36c9b7000ce1
+```
+
+**Previous Hash**: `f08da1453a9071f0f229be1860ca124d48dfbe74ae7f6cc5797fc29ad67344be` (Entry #541 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= c3ef88bb9f106f3c368723e5e76cb5bf2bd7f744f4b96823948e8c55f688be8c
+```
+
+## Decision
+
+Implemented plan-mindmap-list-view-325.md (audit PASS #541). LD-1 renderShell: canvas role=img + aria-label; LIST VIEW toggle (aria-pressed) + hidden .cc-bs-list-view container. LD-2 renderListView(nodes, edges): captioned Nodes (Label/Type/Connections=degree) + Edges (Source/Label/Target) tables, all cells through escapeHtml (XSS pinned by T2 script-label case). LD-3 wireToolbar: toggle renders from LIVE graph state each activation, swaps displays, aria-pressed round-trips. TDD: T1-T4 red (3 failing + compile) -> 32/32 green; tsc + compile + lint clean. Closes the #242 AC gap the Tranche-B rendered audit filed as #325; rendered re-probe rides the next #242 slice.
+
+
+---
+
+### Entry #543: SESSION SEAL - mindmap-list-view-325
+
+**Timestamp**: 2026-08-20T04:10:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L1
+**Entry ID**: `b16a9251cdf9`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-mindmap-list-view-325.md)
+= 5f3c8dd3218718f2f690011342f684108f64ec5ff0e4b28024045cb07a0aa95a
+```
+
+**Previous Hash**: `c3ef88bb9f106f3c368723e5e76cb5bf2bd7f744f4b96823948e8c55f688be8c` (Entry #542 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= fe6a67a2df87680eec72f2eebfeb9266160940d106da5bcaa567e060789d585c
+```
+
+**Merkle Seal**: `3c59e5b8506ddaaee93701b1007216e7b3edb8dd68d8a3c4e1b62ea8e94dd686` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for burndown Cycle 8 (#325 Mind Map accessible alternative; session 2026-08-20T0219-da1bc0; audit PASS #541, implement #542; branch fix/mindmap-list-view-325 stacked on Cycle 7). Reality = Promise: 4 src/test files + 4 doc surfaces. Verification: T1-T4 red -> 32/32 green; tsc + compile (browser-ESM emit) + lint clean. Gate ladder exit 0; intent lock VERIFIED. DISCLOSED: rendered Playwright re-probe of the fixed surface rides the next #242 slice (the unit layer pins template + wiring behavior); electron host defers to CI; no version bump (HOLD); trailer absent per operator identity directive. Board effect at delivery: #325 closes.

@@ -15,6 +15,7 @@ import { AgtRoute } from "../routes/AgtRoute";
 import { IntegrationCatalogRoute } from "../routes/IntegrationCatalogRoute";
 import type { RouteDeps } from "../routes";
 import type { ApiRouteDeps } from "../routes/types";
+import { readMetaLedgerArtifact } from "../../qorlogic/consumer/consumer-adapter";
 import { ConfigurationProfile } from "../../genesis/ConfigurationProfile";
 import { setupBrainstormRoutes } from "../routes/BrainstormRoute";
 import { setupTrackerConfigRoutes } from "../routes/TrackerConfigRoute";
@@ -26,6 +27,7 @@ import { setupTransparencyRiskRoutes } from "../routes/TransparencyRiskRoute";
 import { registerQorRoute } from "../routes/QorRoute";
 import { loadShadowGenome } from "../../qorlogic/shadow-genome-client";
 import { registerFeatureStatusRoute } from "../routes/FeatureStatusRoute";
+import { registerCommitCheckRoute } from "../routes/CommitCheckRoute";
 import { registerSkillsApiRoute } from "../routes/SkillsApiRoute";
 import { registerHookRoute } from "../routes/HookRoute";
 import { setupMarketplaceRoutes } from "../routes/MarketplaceRoute";
@@ -66,6 +68,8 @@ export interface ConsoleRouteHost {
   hub: HubSnapshotService;
   rejectIfRemote(req: Request, res: Response): boolean;
   broadcast(data: Record<string, unknown>): void;
+  /** #83A: commit-hook token validator for the commit-check route. */
+  validateCommitToken?(token: string): boolean;
   getUiEntryFile(req: Request): "command-center.html" | "index.html";
   getInstalledSkills: () => unknown[];
   getEnforcementEngine(): unknown | null;
@@ -159,6 +163,7 @@ export class ConsoleRouteRegistrar {
     registerSkillsApiRoute(app, deps);
     this.registerApiRoutes(deps);
     registerFeatureStatusRoute(app, deps);
+    registerCommitCheckRoute(app, deps);
     this.registerVerdictAndTrustRoutes();
     registerHookRoute(app, deps);
     this.setupConsoleRoutes();
@@ -219,6 +224,7 @@ export class ConsoleRouteRegistrar {
     const deps = {
       rejectIfRemote: (req, res) => h.rejectIfRemote(req, res),
       broadcast: (d) => h.broadcast(d),
+      validateCommitToken: (tok: string) => h.validateCommitToken?.(tok) ?? false,
       qorRuntimeService: h.qorRuntimeService as any,
       buildHubSnapshot: () => hub.buildHubSnapshot(),
       featureGate: h.featureGate as any,
@@ -251,11 +257,10 @@ export class ConsoleRouteRegistrar {
         python: "",
         enabled: false,
       }),
-      // #454: feed the reconstructed-genome appendix from the historical ledger.
-      loadMetaLedger: () => {
-        try { return fs.readFileSync(path.join(h.workspaceRoot, "docs", "META_LEDGER.md"), "utf-8"); }
-        catch { return ""; }
-      },
+      // #454 -> #233 (FX892): the reconstructed-genome appendix now arrives as
+      // an adapter envelope — classified (ok/unavailable/malformed/...) instead
+      // of a best-effort raw string.
+      readMetaLedgerEnvelope: () => readMetaLedgerArtifact(h.workspaceRoot),
       getActiveRuns: () => h.getAgentRunRecorder()?.getActiveRuns() || [],
       getCompletedRuns: () => h.getAgentRunRecorder()?.getCompletedRuns() || [],
       getRun: (id) => h.getAgentRunRecorder()?.getRun(id),

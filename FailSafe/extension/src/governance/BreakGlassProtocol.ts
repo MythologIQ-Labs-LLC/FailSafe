@@ -7,6 +7,7 @@ import * as crypto from "crypto";
 import { Logger } from "../shared/Logger";
 import { EventBus } from "../shared/EventBus";
 import { LedgerManager } from "../qorelogic/ledger/LedgerManager";
+import { readBreakGlassState, writeBreakGlassState } from "./breakGlassState";
 
 export type { GovernanceMode } from "./types";
 import type { GovernanceMode } from "./types";
@@ -40,10 +41,40 @@ export class BreakGlassProtocol {
   constructor(
     private readonly ledger: LedgerManager,
     private readonly eventBus: EventBus,
+    /** Optional so existing unit tests can construct without disk access; production wiring always passes it. */
+    private readonly workspaceRoot?: string,
   ) {}
 
   setModeChangeHandler(handler: (mode: GovernanceMode) => Promise<void>): void {
     this.onModeChange = handler;
+  }
+
+  /**
+   * Recover an override left active by a prior process (crash, "Reload
+   * Window", or an ordinary reactivation). Must run once at startup, after
+   * setModeChangeHandler. A persisted record past its expiry is reverted
+   * immediately; one still within its window has its revert timer
+   * rescheduled for the remaining duration.
+   */
+  async reconcile(): Promise<void> {
+    if (!this.workspaceRoot) return;
+    const persisted = readBreakGlassState(this.workspaceRoot);
+    if (!persisted) return;
+
+    if (new Date() >= new Date(persisted.expiresAt)) {
+      this.logger.warn("Break-glass override recovered past expiry on restart; reverting now", {
+        id: persisted.id,
+      });
+      await this.handleExpiry(persisted);
+      return;
+    }
+
+    this.activeOverride = persisted;
+    this.scheduleRevert(persisted);
+    this.logger.warn("Break-glass override recovered across restart; revert timer rescheduled", {
+      id: persisted.id,
+      expiresAt: persisted.expiresAt,
+    });
   }
 
   async activate(
@@ -75,6 +106,7 @@ export class BreakGlassProtocol {
     if (this.onModeChange) await this.onModeChange(record.overrideMode);
     this.scheduleRevert(record);
     this.activeOverride = record;
+    this.persistOverride(record);
 
     this.logger.warn("Break-glass ACTIVATED", {
       id: record.id,
@@ -111,6 +143,7 @@ export class BreakGlassProtocol {
 
     this.logger.warn("Break-glass REVOKED", { id: record.id });
     this.activeOverride = null;
+    this.persistOverride(null);
     return record;
   }
 
@@ -156,6 +189,9 @@ export class BreakGlassProtocol {
       reason: request.reason,
       requestedBy: request.requestedBy,
       previousMode: currentMode,
+      // LD-11 (2026-08-19): defaulting the break-glass TARGET to observe is the
+      // mechanism's purpose — emergency de-escalation to the most-permissive
+      // audited state. Deliberately unchanged by the enforce-default flip.
       overrideMode: request.targetMode || "observe",
       status: "active",
     };
@@ -226,5 +262,15 @@ export class BreakGlassProtocol {
     if (this.onModeChange) await this.onModeChange(record.previousMode);
     this.logger.warn("Break-glass EXPIRED", { id: record.id });
     this.activeOverride = null;
+    this.persistOverride(null);
+  }
+
+  private persistOverride(record: BreakGlassRecord | null): void {
+    if (!this.workspaceRoot) return;
+    try {
+      writeBreakGlassState(this.workspaceRoot, record);
+    } catch (err) {
+      this.logger.warn("Failed to persist break-glass state", { error: String(err) });
+    }
   }
 }

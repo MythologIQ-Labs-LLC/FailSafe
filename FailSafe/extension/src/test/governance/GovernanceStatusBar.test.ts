@@ -93,12 +93,13 @@ suite('GovernanceStatusBar (FX299)', () => {
     sb.dispose();
   });
 
-  test('B194 updateMode — defaulted observe DOES include "(default)"', () => {
+  test('B194 updateMode — defaulted enforce DOES include "(default)" (post-flip default state)', () => {
     const sb = new GovernanceStatusBar();
-    sb.updateMode({ mode: 'observe', defaulted: true });
+    sb.updateMode({ mode: 'enforce', defaulted: true });
     const modeItem = (sb as any).modeItem as vscode.StatusBarItem;
-    assert.match(String(modeItem.text), /Observe/);
+    assert.match(String(modeItem.text), /Enforce/);
     assert.match(String(modeItem.text), /\(default\)/);
+    assert.match(String(modeItem.tooltip), /defaulted to Enforce/);
     sb.dispose();
   });
 

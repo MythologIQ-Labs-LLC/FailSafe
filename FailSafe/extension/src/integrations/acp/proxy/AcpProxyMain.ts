@@ -48,6 +48,11 @@ export interface RunAcpProxyOptions {
   backing: AcpGovernanceBacking;
   /** Injectable for tests; defaults to node:child_process spawn. */
   spawnFn?: (cmd: string, args: string[]) => ChildProcessWithoutNullStreams;
+  /** Source of SIGTERM/SIGINT for interruption teardown. Defaults to the real
+   *  `process`; injectable so tests can simulate a host-issued signal without
+   *  emitting on the real process object (which would also reach every other
+   *  listener sharing this process, e.g. other suites' own cleanup hooks). */
+  signals?: NodeJS.EventEmitter;
 }
 
 export interface AcpProxyRun {
@@ -63,6 +68,23 @@ export interface AcpProxyRun {
 export function runAcpProxy(opts: RunAcpProxyOptions): AcpProxyRun {
   const spawnFn = opts.spawnFn ?? ((c, a) => spawn(c, a, { stdio: 'pipe' }) as ChildProcessWithoutNullStreams);
   const child = spawnFn(opts.agentCommand, opts.agentArgs);
+
+  // Interruption teardown (GH #240 — integration child process interrupted by
+  // close/reload): this proxy runs as a standalone process the host (e.g. Devin)
+  // launches and can terminate independently of the spawned real-agent child.
+  // Node does not kill a child when its parent exits, so a host-issued SIGTERM/
+  // SIGINT, or the host simply closing its stdio pipe (disconnecting without a
+  // signal), would otherwise orphan the still-running governed agent process.
+  const signals = opts.signals ?? process;
+  const killChild = (): void => { if (!child.killed) child.kill(); };
+  signals.once('SIGTERM', killChild);
+  signals.once('SIGINT', killChild);
+  opts.incoming.once('close', killChild);
+  child.once('exit', () => {
+    signals.removeListener('SIGTERM', killChild);
+    signals.removeListener('SIGINT', killChild);
+    opts.incoming.removeListener('close', killChild);
+  });
 
   const governor = new AcpProxyGovernor(
     new AcpInterceptor(opts.backing.governanceInterceptor),

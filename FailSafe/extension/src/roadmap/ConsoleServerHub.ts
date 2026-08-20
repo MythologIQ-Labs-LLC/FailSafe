@@ -53,14 +53,23 @@ export interface HubSnapshotDeps {
 const IDLE_STATE: GovernanceState = { current: "IDLE", recentCompletions: [], nextSteps: [], activeAlerts: [] };
 let lastKnownGovState: GovernanceState | null = null;
 
-function readLedgerTail(filePath: string, bytes: number = 4096): string {
+interface LedgerTailRead {
+  content: string;
+  /** True when `content` is the entire file (size <= the byte budget), i.e.
+   *  a trustworthy basis for classifying zero-parsed-entries as malformed.
+   *  False when only a trailing slice was read -- that slice can land
+   *  between two entries and look "empty" without the file being corrupt. */
+  complete: boolean;
+}
+
+function readLedgerTail(filePath: string, bytes: number = 4096): LedgerTailRead {
   const stat = fs.statSync(filePath);
-  if (stat.size <= bytes) return fs.readFileSync(filePath, "utf-8");
+  if (stat.size <= bytes) return { content: fs.readFileSync(filePath, "utf-8"), complete: true };
   const fd = fs.openSync(filePath, "r");
   try {
     const buf = Buffer.alloc(bytes);
     fs.readSync(fd, buf, 0, bytes, stat.size - bytes);
-    return buf.toString("utf-8");
+    return { content: buf.toString("utf-8"), complete: false };
   } finally {
     fs.closeSync(fd);
   }
@@ -70,8 +79,13 @@ export function buildGovernancePhase(workspaceRoot: string): GovernanceState {
   const ledgerPath = path.join(workspaceRoot, "docs", "META_LEDGER.md");
   if (!fs.existsSync(ledgerPath)) return IDLE_STATE;
   try {
-    const content = readLedgerTail(ledgerPath);
+    const { content, complete } = readLedgerTail(ledgerPath);
     const state = buildGovernanceState(content);
+    // Only a complete read can trust a "malformed" verdict (see
+    // LedgerTailRead.complete); a truncated tail read that happens to land
+    // between two entries is not evidence of corruption and must not be
+    // reported as such.
+    if (!complete) delete state.evidenceState;
     lastKnownGovState = state;
     return state;
   } catch (err) {

@@ -92,11 +92,18 @@ export class VerdictArbiter {
 
         if (!filePath || typeof filePath !== 'string') {
             this.logger.warn('Invalid event payload: missing or invalid path', { eventId: event.id });
+            // FX297 FIX: zero heuristic results with no forced decision falls
+            // through VerdictEngine.determineDecision's default branch to
+            // PASS -- malformed/unverifiable input must never silently pass.
+            // Force ESCALATE (queued for human review) rather than BLOCK,
+            // since VerdictRouter does not yet enforce BLOCK for file events.
             return this.verdictEngine.generateVerdict(
                 event,
                 'unknown',
                 [],
-                undefined
+                undefined,
+                'ESCALATE',
+                'Malformed event payload: missing or invalid file path -- cannot verify, escalating for human review'
             );
         }
 

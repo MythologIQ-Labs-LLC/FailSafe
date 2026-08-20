@@ -141,18 +141,28 @@ suite('Command state mutations (setGovernanceMode, createIntent)', () => {
   });
 
   test('FX016 failsafe.setGovernanceMode — cancel does NOT persist or notify', async () => {
-    // Set baseline to a known value (different from default 'observe')
+    // Set baseline to a known explicit value (different from default 'enforce')
     await vscode.workspace.getConfiguration('failsafe').update(
-      'governance.mode', 'enforce', vscode.ConfigurationTarget.Workspace,
+      'governance.mode', 'observe', vscode.ConfigurationTarget.Workspace,
     );
     capture.quickQueue.push(undefined); // user cancels
     await vscode.commands.executeCommand('failsafe.setGovernanceMode');
-    const stillEnforce = vscode.workspace.getConfiguration('failsafe').get<string>('governance.mode');
-    assert.equal(stillEnforce, 'enforce', 'Mode should not change when user cancels');
+    const stillObserve = vscode.workspace.getConfiguration('failsafe').get<string>('governance.mode');
+    assert.equal(stillObserve, 'observe', 'Mode should not change when user cancels');
     assert.equal(capture.infos.length, 0, 'No info message on cancel');
   });
 
+  // The wizard-shape tests below pin mode=observe so the LD-10 enforce-mode
+  // planId picker (covered in create-intent-enforce.test.ts) does not prepend
+  // an extra QuickPick — the wizard itself is what's under test here.
+  async function pinObserveMode(): Promise<void> {
+    await vscode.workspace.getConfiguration('failsafe').update(
+      'governance.mode', 'observe', vscode.ConfigurationTarget.Workspace,
+    );
+  }
+
   test('failsafe.createIntent — cancel at type-pick stops the flow', async () => {
+    await pinObserveMode();
     capture.quickQueue.push(undefined);
     await vscode.commands.executeCommand('failsafe.createIntent');
     assert.equal(capture.quicks.length, 1);
@@ -160,6 +170,7 @@ suite('Command state mutations (setGovernanceMode, createIntent)', () => {
   });
 
   test('failsafe.createIntent — cancel at purpose input stops the flow', async () => {
+    await pinObserveMode();
     capture.quickQueue.push('feature');
     capture.inputQueue.push(undefined);
     await vscode.commands.executeCommand('failsafe.createIntent');
@@ -170,6 +181,7 @@ suite('Command state mutations (setGovernanceMode, createIntent)', () => {
   });
 
   test('failsafe.createIntent — empty scope input is treated as no files (continues)', async () => {
+    await pinObserveMode();
     capture.quickQueue.push('refactor');
     capture.inputQueue.push('Improve readability');
     capture.inputQueue.push(''); // empty scope

@@ -12,6 +12,8 @@ import type { ShadowGenomeResult } from '../../qorlogic/shadow-genome-client';
 export interface ApiRouteDeps {
   rejectIfRemote: (req: any, res: any) => boolean;
   broadcast: (data: Record<string, unknown>) => void;
+  /** #83A: commit-hook token validator (CommitGuard.validateToken). */
+  validateCommitToken?: (token: string) => boolean;
   // Phase 2 (B166) deps for QorRoute / FeatureStatusRoute / SkillsApiRoute / HookRoute
   qorRuntimeService: QorRuntimeService;
   buildHubSnapshot: () => Promise<Record<string, unknown>>;
@@ -63,7 +65,11 @@ export interface ApiRouteDeps {
   loadShadowGenome?: () => Promise<ShadowGenomeResult>;
   /** #454: raw `docs/META_LEDGER.md` text — the source for the reconstructed-genome
    *  appendix the dashboard merges in. Absent/empty → no appendix (degrade-safe). */
-  loadMetaLedger?: () => string;
+  /** #233 (FX892): ledger consumption goes through the adapter envelope —
+   *  routes never read or parse META_LEDGER text directly. */
+  readMetaLedgerEnvelope?: () => import("../../qorlogic/consumer/types").ArtifactEnvelope<
+    import("../../qorlogic/meta-ledger-model").MetaLedgerEntry[]
+  >;
   getActiveRuns: () => any[];
   getCompletedRuns: () => any[];
   getRun: (runId: string) => any | undefined;

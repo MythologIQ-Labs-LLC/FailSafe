@@ -39,7 +39,11 @@ export class IntentService {
     const active = await this.getActiveIntent();
     if (active && active.status !== 'SEALED') throw new Error(`Active Intent "${active.id}" must be SEALED.`);
 
-    // B66: Require planId in enforce mode
+    // B66: Require planId in enforce mode.
+    // LD-4 (2026-08-19): the 'observe' fallback is an unwired-getter guard, NOT
+    // a mode-resolution site — production wiring always sets the getter
+    // (bootstrapGovernance). Flipping it to 'enforce' would make unwired
+    // test/legacy constructions throw here without changing wired behavior.
     const mode = this.getGovernanceMode?.() ?? 'observe';
     if (mode === 'enforce' && !params.planId) {
       throw new Error('Intent creation requires a planId in enforce mode.');
@@ -63,7 +67,8 @@ export class IntentService {
     const active = await this.getActiveIntent();
     if (!active) throw new Error('No active Intent.');
     if (active.status === 'SEALED') throw new Error(`Intent "${active.id}" is SEALED.`);
-    // B67: PASS status requires audit sign-off in enforce mode
+    // B67: PASS status requires audit sign-off in enforce mode.
+    // LD-4: 'observe' fallback = unwired-getter guard (see createIntent above).
     const mode = this.getGovernanceMode?.() ?? 'observe';
     if (newStatus === 'PASS' && mode === 'enforce' && !auditVerified) {
       throw new Error('Intent cannot reach PASS without audit sign-off in enforce mode.');

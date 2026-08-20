@@ -22,13 +22,12 @@ function repoRoot(): string {
   return path.resolve(extensionRoot(), '..', '..');
 }
 
-const PRO_ABOUT_URL = 'https://mythologiq.studio/products/failsafe-pro';
-const PRO_DOWNLOAD_URL = 'https://mythologiq.studio/products/failsafe-download';
-
 suite('v5 documentation coherence', () => {
-  test('extension package.json version matches /^5\\.\\d+\\.\\d+$/', () => {
+  test('extension package.json version is a bare semver at major >= 5', () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(extensionRoot(), 'package.json'), 'utf8'));
-    assert.match(pkg.version, /^5\.\d+\.\d+$/);
+    assert.match(pkg.version, /^\d+\.\d+\.\d+$/);
+    assert.ok(Number(pkg.version.split('.')[0]) >= 5,
+      `major must be >= 5 (the v5 reveal baseline); got ${pkg.version}`);
   });
 
   test('extension package.json description is not the legacy "AI governance platform" framing', () => {
@@ -38,12 +37,14 @@ suite('v5 documentation coherence', () => {
       `description should not contain "AI governance"; got: ${pkg.description}`);
   });
 
-  test('extension package.json registers failsafe.openFailSafeProAbout command', () => {
+  test('extension package.json does NOT register failsafe.openFailSafeProAbout (removed 2026-08-19)', () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(extensionRoot(), 'package.json'), 'utf8'));
     const commands: Array<{ command: string; title: string }> = pkg.contributes.commands;
-    const found = commands.find((c) => c.command === 'failsafe.openFailSafeProAbout');
-    assert.ok(found, 'failsafe.openFailSafeProAbout command should be registered');
-    assert.match(found!.title, /About FailSafe Pro/);
+    assert.equal(commands.some((c) => c.command === 'failsafe.openFailSafeProAbout'), false,
+      'the About-Pro command must be gone from contributes.commands');
+    const events: string[] = pkg.activationEvents ?? [];
+    assert.equal(events.includes('onCommand:failsafe.openFailSafeProAbout'), false,
+      'the About-Pro activation event must be gone');
   });
 
   test('extension package.json declares failsafe.qorlogic.pythonPath setting', () => {
@@ -53,20 +54,19 @@ suite('v5 documentation coherence', () => {
     assert.equal(props['failsafe.qorlogic.pythonPath'].type, 'string');
   });
 
-  test('root README links to the Pro about URL at least once', () => {
+  // De-Pro directive (2026-08-19, two steps): LD-12 removed Pro from both
+  // READMEs; the follow-on cycle removed the live surfaces too (About command,
+  // Settings card, constants, PRO_INTEGRATION doc). These guards pin ABSENCE.
+  test('root README contains no FailSafe Pro references (LD-12)', () => {
     const readme = fs.readFileSync(path.join(repoRoot(), 'README.md'), 'utf8');
-    const matches = readme.match(/https:\/\/mythologiq\.studio\/products\/failsafe-pro\b/g) || [];
-    assert.ok(matches.length >= 1, 'root README should link to Pro about URL');
+    assert.equal(/failsafe pro\b|failsafe-pro/i.test(readme), false,
+      'root README must not reference FailSafe Pro (name or URL slug)');
   });
 
-  test('root README has FailSafe / FailSafe Pro section', () => {
-    const readme = fs.readFileSync(path.join(repoRoot(), 'README.md'), 'utf8');
-    assert.match(readme, /##\s+FailSafe and FailSafe Pro/);
-  });
-
-  test('extension README mentions FailSafe Pro and PyPI qor-logic', () => {
+  test('extension README contains no FailSafe Pro references but keeps PyPI qor-logic (LD-12)', () => {
     const readme = fs.readFileSync(path.join(extensionRoot(), 'README.md'), 'utf8');
-    assert.match(readme, /FailSafe Pro/);
+    assert.equal(/failsafe pro\b|failsafe-pro/i.test(readme), false,
+      'extension README must not reference FailSafe Pro (name or URL slug)');
     assert.match(readme, /pypi\.org\/project\/qor-logic/);
   });
 
@@ -85,17 +85,15 @@ suite('v5 documentation coherence', () => {
     assert.match(v5Section, /Install QorLogic Skills/);
   });
 
-  test('shared/constants.ts contains both ABOUT and DOWNLOAD URL constants', () => {
-    const constants = fs.readFileSync(
-      path.join(extensionRoot(), 'src', 'shared', 'constants.ts'), 'utf8',
-    );
-    assert.ok(constants.includes(PRO_ABOUT_URL), `constants.ts should contain ${PRO_ABOUT_URL}`);
-    assert.ok(constants.includes(PRO_DOWNLOAD_URL), `constants.ts should contain ${PRO_DOWNLOAD_URL}`);
+  test('shared/constants.ts is deleted (Pro URLs removed 2026-08-19)', () => {
+    assert.equal(fs.existsSync(path.join(extensionRoot(), 'src', 'shared', 'constants.ts')), false,
+      'the Pro-URL constants module must not exist');
   });
 
-  test('v5 docs exist at expected paths', () => {
+  test('v5 docs exist at expected paths (PRO_INTEGRATION archived 2026-08-19)', () => {
     const docsDir = path.join(extensionRoot(), 'docs', 'v5');
-    assert.ok(fs.existsSync(path.join(docsDir, 'PRO_INTEGRATION.md')));
+    assert.equal(fs.existsSync(path.join(docsDir, 'PRO_INTEGRATION.md')), false,
+      'PRO_INTEGRATION.md must be archived out of the public docs tree');
     assert.ok(fs.existsSync(path.join(docsDir, 'QORLOGIC_SKILL_INGESTION.md')));
   });
 });

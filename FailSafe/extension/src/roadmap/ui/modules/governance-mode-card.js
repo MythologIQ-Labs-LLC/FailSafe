@@ -44,12 +44,9 @@ export const MODE_OPTIONS = [
  * @returns {string} card markup including the embedded micro-lesson.
  */
 export function renderGovernanceModeCard(hub) {
-  const state = hub?.governanceModeState || { mode: 'observe', defaulted: true };
-  const current = String(state.mode || 'observe');
+  const state = hub?.governanceModeState || { mode: 'enforce', defaulted: true };
+  const current = String(state.mode || 'enforce');
   const defaulted = state.defaulted === true;
-  const hint = defaulted
-    ? `<p style="font-size:0.8rem;color:var(--text-muted);margin:0 0 10px">You're in Observe mode by default. Switch to Assist when ready to enable governance suggestions, or Enforce for hard gating.</p>`
-    : '';
   const buttons = MODE_OPTIONS.map((m) => {
     const active = m.id === current;
     const cls = active ? 'cc-btn cc-btn--primary' : 'cc-btn';
@@ -65,7 +62,6 @@ export function renderGovernanceModeCard(hub) {
   return `<div class="cc-card" id="cc-governance-mode" style="margin-top:16px">
       <div style="${LBL};margin-bottom:8px">Governance Mode</div>
       <div style="font-size:0.9rem;margin-bottom:10px">Mode: <strong data-governance-current>${label}</strong>${tag}</div>
-      ${hint}
       <div style="display:flex;gap:8px;flex-wrap:wrap">${buttons}</div>
       ${lesson}
     </div>`;

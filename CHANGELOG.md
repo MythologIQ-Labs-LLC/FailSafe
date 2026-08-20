@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **The Mind Map has an accessible alternative.** The graph carries an accessible name, and a LIST VIEW toggle renders real captioned node/edge tables (with connection counts) from live graph state — the same pattern as the Shadow Genome table view. (#325, FX912)
+- **`FailSafe: Configure VS Code Agents Window Governance`.** A guided, idempotent command covering the Agents-window user-setting opt-in, worktree commit-hook governance, and governed `.mcp.json` integration installs — with docs that state the in-process-MCP constraint honestly instead of scaffolding a ghost config (standalone bridge filed as B209). (#83 B+C, FX909)
+
+### Changed
+- **Console routes consume the Qor artifact adapter.** The Mind Map seed and governance-dashboard routes read META_LEDGER through classified adapter envelopes instead of raw text — malformed or unavailable ledgers degrade explicitly instead of being best-effort parsed. (#233, FX892)
+- **First-run gates are repository-scoped.** The governance-mode picker and the onboarding offer now fire once per repository (workspaceState) instead of once per installation; the chosen mode persists to Workspace settings, and an explicitly configured mode at any scope suppresses the prompt so existing setups are never re-prompted. (#295, FX538/FX275)
+
+### Fixed
+- **The VSIX is 69% smaller and can never ship governance scan outputs.** Packaging excluded `.failsafe/**`, `*.findings.json`, and better-sqlite3 build intermediates (an 8MB `sqlite3.c` was shipping); `validate:vsix` now carries a durable archive-level hygiene gate. (#243, FX911)
+- **Agent MCP-policy audit no longer aborts silently on a Risk-Register write failure.** The scan continues past a failed write, counts it, and warns the operator that findings may be missing. (#241, FX910)
+- **The pre-commit guard is real now, and worktree-safe.** `GET /api/v1/governance/commit-check` ships (it was documented but never implemented, so the hook always failed open); the hook's port tracks the live Console server; installing from a linked git worktree works (hooks land in the shared `.git/hooks`, the token where the hook reads it); and `ConfigManager.getGovernanceRoot()` gives worktree-aware consumers one canonical repository root. (#83 Phase A, FX115/FX284/FX906)
+- **Editor-save governance can no longer fail open on any routing fault.** `handleFileOperation` is now total: faults in intent lookup, evaluation routing, qorlogic dispatch, or the adapter preflight — plus a hung verdict generation (bounded at 10s) or a throwing blockade notifier — all block the save instead of surfacing as an unhandled rejection. (#297, FX905)
+- **Mind Map view prefs survive identity-less reload windows.** The view-prefs store records the last real workspace identity and falls back to it when the hub hasn't delivered one yet; the canvas reconciles its prefs right after construction. (#319, FX897)
+
+## [6.0.0] - 2026-08-19
+
+### Fixed
+- **Fail-closed + accessibility hardening (rolled in):** L3 escalation-queue fail-visible (#308); ACP governance-mode mirror-write fail-closed (#299); ACP fs no-client-support fail-closed (#300); ARIA tab semantics for primary nav (#302) and sub-view pills (#304); Mind Map Space push-to-talk guard (#307).
+- **Mind Map view prefs survive reload on slow machines.** The canvas could construct before the hub delivered the workspace identity, loading persisted layout/view prefs under the wrong key and sticking on FORCE/2D defaults (caught by this release's own gate on a prior tag attempt). Prefs now reconcile to the live canvas whenever the identity arrives. (#309 sibling fix; FX897/#263)
+
+### Fixed (stabilization wave, rolled into this release)
+- Extension lifecycle: activation-crash and deactivate teardown resilience; workspace-folder changes surfaced instead of silently ignored (#285, #288).
+- Console/roadmap: WebSocket clients terminated on ConsoleServer teardown (#284); Mind Map canvas + in-flight guard reset on destroy for tab round-trips (#283); real-socket lifecycle evidence for ConsoleLifecycleService (#281).
+- Governance: break-glass override recovered across extension-host restart (#290); CommitGuard.uninstall() made idempotent (#291).
+- ACP: orphaned real-agent child killed on proxy interruption (#287).
+- Voice: wake-word retry timer cancelled on stop/destroy (#286).
+- Genesis/UI: disposed Command Center panels no longer reveal()ed (#289); marketplace crash-stale installing/scanning state recovered on restart (#293).
+
+### Security
+- Zero-cost OSS SAST wiring and hardened command boundaries (#267).
+- Dependency updates: hono, @hono/node-server, js-yaml, fast-uri, undici, ip-address, brace-expansion, linkify-it, body-parser, actions/checkout, actions/setup-node (11 Dependabot PRs).
+- **Dependabot backlog cleared to zero before ship.** All 18 open alerts (1 critical, 11 high, 6 moderate) remediated via `npm audit fix` plus pinned overrides: protobufjs 8.7.2, minimatch 9.0.9, picomatch 2.3.2, flatted 3.4.4, serialize-javascript 7.1.0, sharp 0.35.3, diff 8.0.4, ajv 8.18+. All affected packages were devDependency chains (voice/test/lint tooling) — none shipped in the VSIX — and `npm audit` now reports 0 vulnerabilities.
+
+### Changed (Breaking)
+- **Enforce is now the default governance mode.** Never-configured installs gate writes out of the box (intent-gated saves, L3 approvals); a one-time notice on upgrade offers the mode picker. Observe and Assist are unchanged and one QuickPick away (`FailSafe: Set Governance Mode`). An unresolvable mode value now fails closed to enforce, and the ACP proxy's missing/malformed mode mirror also resolves to enforce (was observe). (FX899, FX902)
+- **Editor-level enforce works on every tier.** The internal `governance.lockstep` feature-gate check was removed from the editor enforcement path; enforcement no longer depends on license tier. (FX900)
+
+### Added
+- **Agent Skills marketplace category.** The Integrations Marketplace gains an Agent Skills category with the MIT-licensed [mattpocock/skills](https://github.com/mattpocock/skills) pack (Wayfinder decision-ticket planning + companions) as its first entry. (FX904)
+- **Enforce-mode Create Intent funnel.** In enforce mode, `FailSafe: Create Intent` first resolves the plan the intent serves (picker sourced from PlanManager) with an explicit "switch governance mode" escape; the writes-blocked dialog now offers `Set Governance Mode` alongside `Create Intent`. (FX901)
+
+### Removed
+- **All remaining FailSafe Pro surfaces.** The `FailSafe: About FailSafe Pro` command, the Settings-panel Pro card, the Pro URL constants module, and the marketplace-description mention are removed (operator directive, completing the README removal). (FX414-FX416 superseded/removed)
+- **Observe-mode advisory banner and default hint.** The Monitor sidebar banner and the Settings-card "You're in Observe mode by default" hint are gone with the default flip. (FX507 removed)
+
+### Fixed
+- **`/api/v1/status` `governance.mode`** now reports the governance mode (observe/assist/enforce) instead of echoing the Sentinel analysis mode. (FX903)
+- **GovernanceRouter fails closed on verdict faults.** When verdict generation throws (e.g., a corrupted intent store), the router now returns a blocking verdict instead of silently allowing the write. (#296)
+- **VerdictArbiter escalates malformed payloads.** A verdict payload that fails schema validation now escalates for review instead of silently PASSing. (#297, #316)
+- **Malformed META_LEDGER is reported as damaged, not idle.** The governance-phase projection distinguishes a ledger that fails to parse from a workspace with no governance activity. (#244, #312)
+
 ## [5.9.0] - 2026-06-12
 
 ### Added

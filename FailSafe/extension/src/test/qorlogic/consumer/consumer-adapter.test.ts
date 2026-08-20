@@ -20,6 +20,7 @@ import {
 } from '../../../qorlogic/consumer/consumer-adapter';
 import { WorkspaceArtifactBuilder } from '../../../roadmap/services/WorkspaceArtifactBuilder';
 import type { QorLogicVersionStatus } from '../../../qorlogic/qorLogicInstallRecord';
+import { parseMetaLedgerEntries } from '../../../qorlogic/meta-ledger-model';
 
 const FIXTURE_ROOT = path.resolve(
   __dirname, '..', '..', '..', '..', 'src', 'test', 'fixtures', 'qor-consumer',
@@ -158,5 +159,30 @@ suite('qor consumer adapter (#233 FX892)', () => {
     const ledgerDiag = snapshot.qorConsumer.artifacts.find((a) => a.artifact === 'META_LEDGER');
     assert.equal(ledgerDiag?.state, 'ok');
     assert.equal(snapshot.ledgerSummary.totalEntries, 2);
+  });
+});
+
+suite('#233 route-seam equivalence (FX892 MODIFIED)', () => {
+  test('T3: envelope entries ≡ legacy parseMetaLedgerEntries over the same fixture workspace', () => {
+    const ws = fs.mkdtempSync(path.join(os.tmpdir(), 'consumer-233-'));
+    const ledgerText = [
+      '### Entry #7: SESSION SEAL - fixture',
+      '',
+      '**Timestamp**: 2026-08-20T00:00:00Z',
+      '**Phase**: SUBSTANTIATE',
+      '**Author**: Judge',
+      '**Risk Grade**: L2',
+      '',
+      '## Decision',
+      '',
+      'Fixture seal.',
+    ].join('\n');
+    fs.mkdirSync(path.join(ws, 'docs'), { recursive: true });
+    fs.writeFileSync(path.join(ws, 'docs', 'META_LEDGER.md'), ledgerText);
+    const envelope = readMetaLedgerArtifact(ws);
+    assert.equal(envelope.state, 'ok');
+    const legacy = parseMetaLedgerEntries(ledgerText);
+    assert.deepEqual(envelope.data, legacy,
+      'the adapter envelope must carry exactly what the legacy direct-parse path produced');
   });
 });

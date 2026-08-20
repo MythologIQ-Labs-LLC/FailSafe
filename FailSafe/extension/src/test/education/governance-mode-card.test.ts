@@ -55,7 +55,7 @@ suite("governance-mode-card extraction + lesson mount (FX594)", () => {
   test("FX594 card renders the governance-mode lesson when education enabled", () => {
     const doc = env.dom.window.document;
     const html = renderGovernanceModeCard({
-      governanceModeState: { mode: "observe", defaulted: true },
+      governanceModeState: { mode: "enforce", defaulted: true },
       education: { enabled: true, proficiency: "beginner" },
     });
     doc.getElementById("root")!.innerHTML = html;
@@ -69,7 +69,7 @@ suite("governance-mode-card extraction + lesson mount (FX594)", () => {
   test("FX594 no lesson renders when education disabled", () => {
     const doc = env.dom.window.document;
     const html = renderGovernanceModeCard({
-      governanceModeState: { mode: "observe", defaulted: true },
+      governanceModeState: { mode: "enforce", defaulted: true },
       education: { enabled: false, proficiency: "beginner" },
     });
     doc.getElementById("root")!.innerHTML = html;
@@ -122,7 +122,7 @@ suite("governance-mode-card extraction + lesson mount (FX594)", () => {
     const doc = env.dom.window.document;
     const root = doc.getElementById("root")!;
     root.innerHTML = renderGovernanceModeCard({
-      governanceModeState: { mode: "observe", defaulted: true },
+      governanceModeState: { mode: "enforce", defaulted: true },
       education: { enabled: true, proficiency: "beginner" },
     });
     bindGovernanceModeCard(root);
@@ -137,7 +137,7 @@ suite("governance-mode-card extraction + lesson mount (FX594)", () => {
   test("FX594 (default) tag shown when governance mode is defaulted", () => {
     const doc = env.dom.window.document;
     doc.getElementById("root")!.innerHTML = renderGovernanceModeCard({
-      governanceModeState: { mode: "observe", defaulted: true },
+      governanceModeState: { mode: "enforce", defaulted: true },
       education: { enabled: true, proficiency: "beginner" },
     });
     assert.match(doc.getElementById("root")!.innerHTML, /\(default\)/);

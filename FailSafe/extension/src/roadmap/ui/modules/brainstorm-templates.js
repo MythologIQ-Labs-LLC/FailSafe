@@ -22,6 +22,7 @@ export function renderShell() {
       <div class="cc-bs-viewport-row">
         <button class="cc-btn cc-bs-fit" title="Fit the whole graph in the viewport">FIT VIEW</button>
         <button class="cc-btn cc-bs-reset-view" title="Release pinned node positions and relayout (keeps all nodes)">RESET VIEW</button>
+        <button class="cc-btn cc-bs-list-toggle" aria-pressed="false" title="Accessible table representation of the graph (#325)">LIST VIEW</button>
       </div>
       <div class="cc-bs-meta-row">
         <button class="cc-btn cc-bs-seed" title="Preload nodes from the repository knowledge graph">REPO</button>
@@ -33,10 +34,34 @@ export function renderShell() {
       </div>
     </div>
 
-    <!-- 3D Graph Container -->
-    <div class="cc-canvas cc-brainstorm-canvas"></div>
+    <!-- 3D Graph Container (accessible alternative: LIST VIEW toggle, #325) -->
+    <div class="cc-canvas cc-brainstorm-canvas" role="img" aria-label="Mind Map graph — interactive view. Use LIST VIEW for the accessible table representation."></div>
+    <div class="cc-bs-list-view" style="display:none;"></div>
 
     <div class="cc-bs-node-info" style="display:none;"></div>`;
+}
+
+
+// #325 (FX912): accessible list-view alternative — real captioned tables in
+// the FX890 Shadow Genome pattern. Pure; all cell content escaped.
+export function renderListView(nodes, edges) {
+  const degree = new Map();
+  for (const e of edges || []) {
+    degree.set(e.source, (degree.get(e.source) || 0) + 1);
+    degree.set(e.target, (degree.get(e.target) || 0) + 1);
+  }
+  const label = (id) => {
+    const n = (nodes || []).find((x) => x.id === id);
+    return escapeHtml(n ? (n.label ?? n.id) : id);
+  };
+  const nodeRows = (nodes || []).map((n) =>
+    `<tr><td>${escapeHtml(n.label ?? n.id)}</td><td>${escapeHtml(n.level ?? n.type ?? '')}</td><td>${degree.get(n.id) || 0}</td></tr>`).join('');
+  const edgeRows = (edges || []).map((e) =>
+    `<tr><td>${label(e.source)}</td><td>${escapeHtml(e.label ?? '')}</td><td>${label(e.target)}</td></tr>`).join('');
+  return `<div class="cc-bs-list-tables">
+    <table class="cc-bs-data-table"><caption>Nodes</caption><thead><tr><th>Label</th><th>Type</th><th>Connections</th></tr></thead><tbody>${nodeRows}</tbody></table>
+    <table class="cc-bs-data-table"><caption>Edges</caption><thead><tr><th>Source</th><th>Label</th><th>Target</th></tr></thead><tbody>${edgeRows}</tbody></table>
+  </div>`;
 }
 
 export function renderRightPanel() {

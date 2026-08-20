@@ -14,7 +14,7 @@ import type { CommitGuard } from "../governance/CommitGuard";
 import type { ConfigManager } from "../shared/ConfigManager";
 import type { EventBus } from "../shared/EventBus";
 import type { GovernanceMode } from "../governance/types";
-import { writeRuntimeMode } from "../integrations/acp/proxy/backing/runtimeMode";
+import { writeRuntimeModeOrInvalidate } from "../integrations/acp/proxy/backing/runtimeMode";
 
 export interface AdvancedCommandsDeps {
   ledgerManager: LedgerManager;
@@ -37,17 +37,20 @@ export function registerAdvancedCommands(
   // Gap 1: Mode-change audit trail
   let lastKnownMode = vscode.workspace
     .getConfiguration("failsafe")
-    .get<string>("governance.mode", "observe");
+    .get<string>("governance.mode", "enforce");
 
   // GH #172 Part 2: mirror the governance mode to
   // `.failsafe/governance/runtime-mode.json` so the standalone ACP enforce-proxy
   // (a separate process that cannot read VS Code settings) reads the current mode.
   // Mirror once on activation, then on every change below. Degrade-safe.
   const mirrorMode = (mode: string): void => {
-    try {
-      writeRuntimeMode(deps.workspaceRoot, mode as GovernanceMode);
-    } catch (err) {
-      logger.error("Failed to mirror governance mode for ACP proxy", err);
+    const ok = writeRuntimeModeOrInvalidate(deps.workspaceRoot, mode as GovernanceMode);
+    if (!ok) {
+      logger.error(
+        "Failed to mirror governance mode for ACP proxy; invalidated the stale mirror " +
+          "so the proxy falls back to its fail-closed default instead of an old, " +
+          "possibly more-permissive mode",
+      );
     }
   };
   mirrorMode(lastKnownMode);
@@ -57,7 +60,7 @@ export function registerAdvancedCommands(
       if (e.affectsConfiguration("failsafe.governance.mode")) {
         const newMode = vscode.workspace
           .getConfiguration("failsafe")
-          .get<string>("governance.mode", "observe");
+          .get<string>("governance.mode", "enforce");
         if (newMode !== lastKnownMode) {
           const previousMode = lastKnownMode;
           lastKnownMode = newMode;
@@ -103,7 +106,7 @@ export function registerAdvancedCommands(
 
       const currentMode = vscode.workspace
         .getConfiguration("failsafe")
-        .get<string>("governance.mode", "observe") as "observe" | "assist" | "enforce";
+        .get<string>("governance.mode", "enforce") as "observe" | "assist" | "enforce";
       try {
         const record = await deps.breakGlass.activate(
           { reason, durationMinutes: parseInt(durationStr, 10), requestedBy: "vscode-user" },
@@ -218,15 +221,34 @@ async function registerCeremonyCommands(
     ),
   );
 
+  // #83 Phases B+C (FX909): guided Agents-window preparation. Pure logic in
+  // agentsWindowConfigure.ts; this wiring only supplies the vscode io seam.
+  context.subscriptions.push(
+    vscode.commands.registerCommand("failsafe.configureAgentsWindow", async () => {
+      const { runAgentsWindowConfigure } = await import("./agentsWindowConfigure");
+      await runAgentsWindowConfigure({
+        showInfo: (message, ...buttons) =>
+          Promise.resolve(vscode.window.showInformationMessage(message, ...buttons)),
+        openSettings: async (query) => {
+          await vscode.commands.executeCommand("workbench.action.openSettings", query);
+        },
+        runCommand: async (id) => {
+          await vscode.commands.executeCommand(id);
+        },
+      });
+    }),
+  );
+
   // First-Run Onboarding (B88)
   const { FirstRunOnboarding } = await import("../genesis/FirstRunOnboarding");
   const onboarding = new FirstRunOnboarding(deps.configManager, ceremony);
   await onboarding.checkAndRun();
 
-  // First-Run Mode Picker (B-EM-3): independent gate (failsafe.onboarded.mode);
-  // surfaces three-option modal explaining observe/assist/enforce. Fires once
-  // per operator across all workspaces. Dismissal still marks onboarded so
-  // the picker does not re-prompt.
+  // First-Run Mode Picker (B-EM-3, re-scoped by #295): independent gate
+  // (failsafe.onboarded.mode in workspaceState); surfaces three-option modal
+  // explaining observe/assist/enforce. Fires once per REPOSITORY; an explicit
+  // mode at any config scope suppresses it. Dismissal still marks the repo
+  // onboarded so the picker does not re-prompt.
   const { FirstRunModePicker } = await import("../governance/FirstRunModePicker");
   const modePicker = new FirstRunModePicker(deps.configManager);
   await modePicker.checkAndRun();

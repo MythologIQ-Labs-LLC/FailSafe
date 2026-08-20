@@ -22,17 +22,9 @@ _Local-first safety for AI coding assistants._
 
 ---
 
-## 🚀 Introducing FailSafe Pro — Now Available
-
-**FailSafe Pro is the desktop-native, higher-tier application for full-stack AI governance.** Where this open extension guards your editor, **FailSafe Pro guards your entire SDLC** — OS-level enforcement, file locking, team workflows, remote orchestration, and managed runtime operations that go beyond the editor boundary.
-
-[**→ Learn more about FailSafe Pro**](https://mythologiq.studio/products/failsafe-pro) · [**Download FailSafe Pro**](https://mythologiq.studio/products/failsafe-download)
-
----
-
 ## 🔌 Integrations — govern your entire AI toolchain, not just the editor
 
-FailSafe v5.5 turns the editor into a **governance hub** for the tools your AI agents actually use. Every integration is **local-first, opt-in, and routed through the same deterministic policy engine** that guards your edits — so connecting a tool never widens your attack surface or sends data anywhere by default. Each integration ships with its own README (`src/integrations/<name>/README.md`) and the external API names it depends on are back-cited to official docs in [`docs/integrations/INTEGRATION_DOCS_INDEX.md`](docs/integrations/INTEGRATION_DOCS_INDEX.md).
+FailSafe turns the editor into a **governance hub** for the tools your AI agents actually use. Every integration is **local-first, opt-in, and routed through the same deterministic policy engine** that guards your edits — so connecting a tool never widens your attack surface or sends data anywhere by default. Each integration ships with its own README (`src/integrations/<name>/README.md`) and the external API names it depends on are back-cited to official docs in [`docs/integrations/INTEGRATION_DOCS_INDEX.md`](docs/integrations/INTEGRATION_DOCS_INDEX.md).
 
 **Govern the agents themselves** — run a headless coding agent through FailSafe and gate what it does:
 
@@ -66,9 +58,19 @@ Under the hood, a **Tier 1 supply-chain CI baseline** (least-privilege workflow 
 
 <div align="center">
 
-**Current Release**: v5.9.0 (2026-06-12)
+**Current Release**: v6.0.0 (2026-08-19)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
+
+## What's new in v6.0.0
+
+- **Enforce is now the default governance mode.** New and never-configured installs gate writes out of the box (intent-gated saves, L3 approvals). Observe and Assist are unchanged and one command away (`FailSafe: Set Governance Mode`); a one-time notice on upgrade offers the mode picker. Unresolvable mode values and a missing ACP mode mirror now fail closed to enforce.
+- **Enforcement works on every tier.** The editor enforcement path no longer consults any feature gate.
+- **Enforce-mode Create Intent flow.** Creating an intent in enforce mode first selects the plan it serves, with an explicit switch-mode escape; the writes-blocked dialog offers `Set Governance Mode`.
+- **Cleaner product surface.** The observe-mode advisory banner and settings hint are removed, and `/api/v1/status` now reports the true governance mode.
+- **Agent Skills marketplace category.** Install the MIT-licensed [mattpocock/skills](https://github.com/mattpocock/skills) packs (Wayfinder decision-ticket planning + engineering/productivity companions) as governed, risk-scored marketplace entries.
+- **Mind Map view prefs survive reload on any machine.** Fixed a view-preferences identity race caught by the release gate.
+- **More fail-closed hardening + accessibility.** GovernanceRouter verdict faults now block instead of silently allowing; malformed verdict payloads escalate instead of silently PASSing; a malformed META_LEDGER reads as damaged, not idle; L3 escalation-queue failures fail visibly; ACP mirror-write and fs no-client paths fail closed; real ARIA tab semantics on the Command Center nav and sub-view pills; Space push-to-talk guarded against focused controls.
 
 ## What's new in v5.9.0
 
@@ -77,171 +79,13 @@ Under the hood, a **Tier 1 supply-chain CI baseline** (least-privilege workflow 
 - 🗂️ **Workspace › Taxonomy editor** — edit the tracker's programs / verticals / agent mappings; Save writes a governed config the assistant consults next cycle.
 - 🧬 **Shadow Genome tells the truth** — "Graph Nodes" (not "Failure Nodes"), Observed can't contradict the failure count, dense graphs open as a readable table. See [CHANGELOG.md](CHANGELOG.md).
 
-## Previously — v5.8.0
+## Previous releases
 
-- 🧬 **Shadow Genome shows real data** — trust / federation / learning-maturity now populate from qor-logic's governance graph, and the genome map + incidents + maturity reconstruct from your own governance history (META_LEDGER), each record flagged *recorded* vs *reconstructed*.
-- 🧹 **Organize & Initialize self-commit** — the Monitor's cleanup commands offer to commit, push & open a PR for their changes (operator-confirmed), so a UI click leaves a clean tree + an auditable PR instead of "drift". See [CHANGELOG.md](CHANGELOG.md).
+The full release-by-release history (v5.x and earlier) lives in [CHANGELOG.md](CHANGELOG.md).
 
-## What's new in v5.7.0
-
-- 🧬 **Shadow Genome governance dashboard** — a new Governance › Shadow Genome view renders qor-logic's causal governance graph: a zoomable Genome Map plus an incident ledger with a case-file drawer, with trust / federation / learning-maturity panels that populate as their data sources come online.
-- 🎨 **Monitor sidebar inherits the Console theme** — switch themes in the Console and the sidebar chrome restyles to match (all six themes), instead of staying on the default look. See [CHANGELOG.md](CHANGELOG.md).
-
-## What's new in v5.6.4
-
-- 🔗 **PR↔issue linkage governance** — a Check Run catches the `Closes #1, #2` footgun (GitHub closes only the first; the rest silently stay open). Off by default.
-- 📊 **Governed tracker source** — build the Development Tracker from your governance ledger (META_LEDGER + FEATURE_INDEX), not just PR history.
-- 🧬 **Shadow-genome consumer** — read qor-logic's causal governance graph (foundation for decision-traceability views). See [CHANGELOG.md](CHANGELOG.md).
-
-## What's new in v5.6.2
-
-- 📊 **Development Tracker loading + freshness** — a loading skeleton replaces the brief blank while the tracker builds, with a "last refreshed" time and a manual ↻ Refresh. See [CHANGELOG.md](CHANGELOG.md).
-
-## What's new in v5.6.1
-
-- 📊 **Development Tracker now works on any repo** — repositories with no semantic-version releases (PR-incremental history) no longer show an empty dashboard; the tracker detects the release cadence and renders a merged-PR timeline with full detail.
-- 🧱 **Generate a tracker from your history** — the new `FailSafe: Generate Tracker Manifest` command scaffolds the tracker from your merged PRs + CHANGELOG.
-- ✋ **You own the categories** — generated programs and verticals are yours to keep / drop / rename / fold before they're written; the tracker reflects how *you* slice your work, not a commit-message guess.
-- 🔗 **Bicameral decision enrichment** — when the Bicameral integration is connected, the tracker deepens with decision-aware verticals and a governed-decisions ledger. See [CHANGELOG.md](CHANGELOG.md).
-
-## What's new in v5.6.0
-
-- 🤝 **Govern any Agent Client Protocol (ACP) agent** — FailSafe speaks ACP, the open editor↔agent standard used by Devin Desktop, Zed, JetBrains and more; an agent's tool calls, file writes, terminal commands, and permission requests route through FailSafe's enforcement engine.
-- 🛡️ **Standalone ACP enforce-proxy** — mediates an ACP agent through FailSafe's *real* governance engine (enforce blocks out-of-scope writes + denies dangerous permissions; observe/assist record). Verified end-to-end against the live protocol.
-- ⚡ **One-click governed install for Devin Desktop** + first-class **Devin Desktop host detection** (rebranded Windsurf).
-- 📊 **Tracker handles non-semver repos** — PR-incremental repositories are discovered and rendered with automatic cadence detection. See [CHANGELOG.md](CHANGELOG.md).
-
-## What's new in v5.5.1
-
-**Maintenance patch.** CI Actions bumped to their Node.js 24 runtimes (checkout/setup-node/upload-artifact/download-artifact, SHA-pinned — `download-artifact` v8 now fails closed on a digest mismatch). Development Tracker now surfaces the server's actual error instead of a bare "HTTP 500". See [CHANGELOG.md](CHANGELOG.md).
-
-## What's new in v5.5.0
-
-**Integration suite expansion** — FailSafe becomes a governance hub for your whole AI toolchain. New **governed CLI agent wrappers** run **Continue** and **Aider** through FailSafe (argv-form, allowlist + produced-diff risk classification, L3 escalation, API key in the child env only); new **agent observe/audit** adapters cover the **OpenHands** run observer and the **Cline/Roo/Kilo** MCP-policy audit (flags remote MCP / wildcard auto-approval / shell-capable tools, secrets redacted). Plus read-only **Linear** + **Jira** issue→intent-preview import, **GitHub PR checks** (SHIELD verdicts → Check Runs at the merge gate), **Sentry** runtime-regression correlation, **Microsoft Teams** notifications, **Playwright MCP** in the catalog, and a **Tier 1 supply-chain CI baseline**. Every external API name was verified against official docs (the cycle's review caught and fixed four real defects), every integration ships its own README, and everything is off by default. See [CHANGELOG.md](CHANGELOG.md) for full notes.
-
-## What's new in v5.4.3
-
-**Development Tracker** + **Agent Governance Toolkit installer**. The Development Tracker is a premium, data-driven status dashboard embedded in the Workspace tab (with a Pop out ↗ and the `FailSafe: Open Development Tracker` command): it discovers your complete release history from the CHANGELOG, zooms the timeline from major anchors down to minor/patch, makes every release a traceable record, and tiers program-progress to where the data is meaningful. The AGT installer auto-detects your workspace environment and serves the matching, registry-verified Agent Governance Toolkit installer. See [CHANGELOG.md](CHANGELOG.md) for full notes.
-
-## What's new in v5.4.2
-
-Release-gate hotfix that finally ships the v5.4.0 integration batch. Two prior tags died in the release pipeline: v5.4.0 on a stale UI test (fixed in v5.4.1), then v5.4.1 when VS Code stable auto-updated mid-release (1.122.1 → 1.123.0) and its newer Electron broke a native module rebuild. v5.4.2 pins the test gate to a known-good VS Code version so editor auto-updates can't break releases. All v5.4.0 features below ship in v5.4.2. See [CHANGELOG.md](CHANGELOG.md) for full notes.
-
-## What's new in v5.4.0
-
-Integration + governance expansion. The integration research gate is cleared and FailSafe ships its first **governed third-party integrations**: **SARIF** finding ingestion into the risk register, **MCP Registry** local risk scoring, **Slack** notify-only governance notifications (VETO / L3 / drift → your incoming webhook, off by default), and one-click **governed MCP installers** for **Context7** and **Mermaid Chart** under a new **Integrations → MCP Catalog** tab. Plus the new **Development Tracker** — an evidence-enforced, always-current status board served alongside the console — and substrate hardening (a dependency-admission cooling-period lint + a seal auto-hook that runs the governance substrate on every seal). See [CHANGELOG.md](CHANGELOG.md) for full notes.
-
-## What's new in v5.3.3
-
-Integration-surface batch. **Open Design integration enters beta** with its first write path: `create_artifact` admitted through L3 human approval (Buffer & auto-execute) — the daemon executes the call only after you approve it in the Governance L3 queue; destructive write tools stay rejected. Plus a Section-4 razor + clobber-guard cleanup across the Bicameral / Marketplace / TabGroup surfaces (zero behavioral change) and a transparency audit date-filter fix that no longer hides evening records. See [CHANGELOG.md](CHANGELOG.md) for full notes.
-
-## What's new in v5.3.2
-
-Internal-quality release bundling two post-v5.3.1 integration-surface refactors. The **Integrations** tab now presents one sub-view per integration via a sub-tab pill switcher (Bicameral · Open Design), matching the Agents/Governance/Workspace tabs — replacing the former stacked-card panel. Under the hood, the Bicameral and Open Design MCP clients now share a single `McpClientHost` substrate. No marketplace-feature change beyond the Integrations tab layout. A `/qor-debug` sweep caught and fixed one event-routing regression in the new sub-tab switcher before release (test-first). See [CHANGELOG.md](CHANGELOG.md) for full notes.
-
-## What's new in v5.3.1
-
-Hotfix release. v5.3.0 was tagged but its Release Pipeline failed at Build & Test — `integrations-tab.test.ts` hardcoded "Bicameral is the only card" which became outdated when v5.3.0 added the Open Design Settings card; the VS Code Marketplace + Open VSX publish jobs were skipped, so v5.3.0 was never installable. **v5.3.1 is the first v5.3.x build that actually ships to the marketplaces.**
-
-**Zero feature changes from v5.3.0** — the Open Design integration and WARN-only governance substrate below ship verbatim. The hotfix only updates the test to assert v5.3.0's reality.
-
-## What's new in v5.3.0
-
-Feature release. v5.3.0 doubles FailSafe's integration surface — Open Design joins Bicameral as a first-class MCP peer — and adds a WARN-only governance substrate (secret scanning, FEATURE_INDEX coverage, model-pinning lint) for substantiate-time signals.
-
-- **Open Design integration** — file-path provenance attribution on agent runs that touch Open Design artifacts + MCP adapter + per-run SSE attach + daemon-liveness probe against the local daemon at `127.0.0.1:7456`. Read-only this release; write tools deferred to v1.2.
-- **Governance substrate (WARN-only)** — new `FailSafe: Run Governance Substrate Checks` command runs gitleaks-backed secret scanning, FEATURE_INDEX coverage verification, and model-pinning lint on demand. Findings surface in a dedicated Output channel + summary toast; never blocks operator workflow.
-- **Both integrations are opt-in and default `false`** — no behavior change for operators who don't configure them.
-
-See [CHANGELOG.md](CHANGELOG.md) for the full v5.3.0 release notes.
-
-## What's new in v5.2.2
-
-Hotfix release. v5.2.1 was tagged but its publish pipeline failed at Build & Test on a latent Playwright harness regression — `popout-ui.spec.ts`'s legacy static-file harness couldn't resolve the cross-directory ESM imports introduced by `LearnRenderer` in v5.2.0. The marketplace publish jobs were skipped, so v5.2.1 was never installable either. **v5.2.2 is the first v5.2.x build that actually ships to the marketplaces.**
-
-**Zero feature changes from v5.2.1 (or v5.2.0)** — the FailSafe Learn rebuild, the Ollama probe fix, and the global a11y baseline below ship verbatim. The hotfix migrates `popout-ui.spec.ts` to `serveConsoleServerUI` — the same harness used by every other v5.2.0+ Playwright spec. See [CHANGELOG.md](CHANGELOG.md) for the full v5.2.2 release notes.
-
-## What's new in v5.2.1
-
-Hotfix release. v5.2.0 was tagged but its publish pipeline failed at Build & Test (5 unit-test failures from three orphaned SHIELD-anchor lesson literals + an FX615 tag-filter test race); the VS Code Marketplace + Open VSX publish jobs were skipped, so v5.2.0 was never installable. **v5.2.1 was the next attempt — also failed (see v5.2.2 above for the harness regression).**
-
-**Zero feature changes from v5.2.0** — the FailSafe Learn rebuild, the Ollama probe fix, and the global a11y baseline below ship verbatim. The hotfix only resolves the test regressions that blocked publish. See [CHANGELOG.md](CHANGELOG.md) for the full v5.2.1 release notes.
-
-## What's new in v5.2.0
-
-The v5.2.0 release delivers on the learning promise: a Learn tab that teaches the software-development craft to non-traditional builders, with a redesigned visual surface and accessibility baseline.
-
-- **Learn tab is now a two-sub-tab `TabGroup`**: `[Read][Glossary]`. Read is default active.
-- **Read sub-view**: sectioned essays with per-essay accent rail, inline-SVG icon, read-time chip, pull-quote callout, H4 sub-sections. Sticky horizontal jump-strip (FX619) for at-a-glance navigation + relevant-now dots. Acceptance-criteria template gains a **Copy** button.
-- **Glossary sub-view** (renamed from Reference): search input + tag-filter buttons + A-Z/Z-A sort. ~60 unified terms (48 SWE-craft + 12 FailSafe + 1 Bicameral integration partner).
-- **Global a11y baseline** in `command-center.css`: `prefers-reduced-motion` honored, global `:focus-visible` on interactive surfaces, `.visually-hidden` SR-label utility, prose `max-width: min(68ch, 100%)`. Closes WCAG 2.3.3 + 2.4.7 + 1.4.4.
-- **Fixed: Mindmap "Ollama (Server)" false-positive "Connected"** — the panel previously hardcoded a Connected status with no probe. Now actually probes `http://localhost:11434/api/tags` with 30s TTL and reflects reality (`Connected ✓` / `Not Running` / `Checking…` / `Unavailable`).
-
-See [CHANGELOG.md](CHANGELOG.md) for the full v5.2.0 release notes and `docs/EDUCATION.md` / `docs/LEARN_TAB.md` for component documentation.
-
-## What's new in v5.1.8
-
-- **Bicameral Advanced-tools surface** (B-INT-1): the 11 remaining Bicameral MCP tools (`ingest`, `search`, `brief`, `judgeGaps`, `resolveCompliance`, `linkCommit`, `update`, `reset`, `dashboard`, `validateSymbols`, `getNeighbors`) are now reachable — `POST /api/actions/bicameral-<tool>` routes plus a styled, collapsible **"Advanced tools"** card section with query/mutation tool grouping, per-row loading state, and labelled success/error results.
-- **Sentinel-evaluator vs Governance-mode UI disambiguation** (B-EM-1): five UI sites that rendered the Sentinel evaluator mode are relabelled to avoid confusion with the governance mode; the invalid `'observe'` fallback is corrected.
-- **Brainstorm node-label truncation feedback** (B132): a dismissible inline notice when a node label is shortened to the 200-character cap — no more silent truncation.
-- **B199 test-coverage epic closed**: the CRITICAL Playwright + integration-coverage epic is verified complete and closed.
-- **Activation-test regression fix**: a latent v5.1.7 async-timing test regression is fixed; the full `vscode-test` suite is restored to green.
-
-See [CHANGELOG.md](CHANGELOG.md) for the full v5.1.8 release notes.
-
-## What's new in v5.1.7
-
-- **Universal governance interceptor** (B151): an `IGovernanceInterceptor` single-`evaluate` seam — `EngineBackedInterceptor` maps engine verdicts to receipts, `McpInterceptor` adapts MCP envelopes; `BicameralRoute` is migrated through it with behavioural-parity proof. Opens the B190 → B151 → B152 → B153 architecture chain.
-- **Bicameral preflight → L3** (B-INT-2): drifted-decision evidence attaches to queued tier-3 L3 approvals; a preflight-conflict line surfaces on the approval card before you approve.
-- **Subscribe-without-mutate UI remediation** (B198): a shared accessible modal helper, event-driven Skills-cache invalidation, and TabGroup sub-view lifecycle cleanup.
-- **Bicameral hardening**: install-detector symlink-containment + extra-roots allowlist (B-BIC-6/7); decision-row UX — open-binding, capability hint, composite sync, overflow clamp (B-BIC-12/13/14/15); drift verdict events feed Sentinel + the Risks Register (B-BIC-17/18).
-- **Test-coverage hardening** (B-B199-3/4/5/6): per-file-scoped E2E coverage-gate overrides, cross-host install-record coverage, and documented voice/stub trade-offs.
-
-See [CHANGELOG.md](CHANGELOG.md) for the full v5.1.7 release notes.
-
-## What's new in v5.1.6
-
-- **Bicameral MCP — HIGH cluster**: 11 typed wrappers for the deferred bicameral tools (ingest, search, brief, judgeGaps, resolveCompliance, linkCommit, update, reset, dashboard, validateSymbols, getNeighbors) + `callRaw` public surface + per-tool runtime guards (B-BIC-19).
-- **Live-subprocess integration test**: vendored TypeScript echo-mcp-server spawned via `process.execPath` exercises the real `@modelcontextprotocol/sdk` transport handshake (B-BIC-20).
-- **DriftToL3Mediator**: bicameral drift status-edges enqueue L3 approvals; L3 decisions ratify upstream (APPROVED → `ratify`, REJECTED → `reject`, DEFERRED/EXPIRED no-op) (B-BIC-16).
-- **Upstream awareness**: pip floor pin `bicameral-mcp>=0.14,<0.16` + `UpstreamMonitor` service (24h poll, SSRF-allowlisted owner/repo slug, fail-closed before any fetch) + `GET /api/integrations/bicameral/upstream` local-only route + Settings card upstream row (B-INT-3).
-- **B-B199-2 Replay + Genome behavioral E2E**: 14 new Playwright cases cover the Agents-tab Replay and Genome sub-views (empty state, list/detail nav, WS-event refresh, slice caps).
-- **B-EM-2/B-EM-3 enforcement-mode polish**: `ModeTransitionHistory.hydrateFromLedger` replays governance.modeChanged on activation; `FirstRunModePicker` quickpick on initial install.
-
-See [CHANGELOG.md](CHANGELOG.md) for the full v5.1.6 release notes.
-
-## What's new in v5.1.5
-
-- **Bicameral MCP — Integrations tab**: full v1 surface (install bridge, settings card, history/preflight/drift/ratify) plus 5 quick-win hardening fixes (B-BIC-1..5): ratify → META_LEDGER USER_OVERRIDE; extension-deactivate disposer; transport.onclose crash recovery; capability cache; install stdout/stderr ANSI sanitizer.
-- **B199 Command Center E2E coverage**: structural Playwright specs for all 6 top-level tabs (Settings, Overview, Skills, Agents, Workspace, Governance) + 16-broadcast WebSocket matrix + real-disk META_LEDGER → /api/hub → Monitor renderer end-to-end (FX511-FX525).
-- **B197 qor-logic version-floor surfacing**: hub payload carries `installedVersion` + `meetsFloor`; Settings card surfaces a floor warning when below `MIN_QOR_LOGIC_VERSION`.
-- **B194 enforcement-mode escalation UX**: observe-mode advisory banner + Governance tab "Mode Transitions" feed with reverse-chronological history.
-- **B193 SentinelDaemon governance-file coverage**: governance markdown/yaml/json watched; canonical fs paths; `.failsafe/governance/` blanket-prefix match.
-- **B192 stale-cache remediation**: `WorkspaceMutationBus` substrate routes filesystem mutations to PlanManager + HubSnapshotService + TrustEngine + ConsoleLifecycleService subscribers.
-- **B195 voice substrate extraction**: heavy vendor binaries moved out of base VSIX into separate voice-pack companion download.
-
-See [CHANGELOG.md](CHANGELOG.md) for the full v5.1.5 release notes.
-
-## What's new in v5.1.0
-
-- **Model-sourced Risk Register**: coding agents author risks via the MCP tool `failsafe.create_risk`, the `@failsafe /risk` chat subcommand, or FailSafe auto-derives them from SHIELD lifecycle (GATE VETOs, DEBUG entries, Shadow-Genome failure events). The manual "Add Risk" wizard is removed.
-- **Install Skills UX expansion**: live-progress modal, per-host skill picker, dry-run preview, operator-editable host registry, and a workspace `LiveProgressInvariant` doctrine.
-- **SRE panel**: now attributes the [Microsoft Agent Governance Toolkit](https://github.com/microsoft/agent-governance-toolkit) (data source) and [Qortara](https://www.qortara.com).
-- **Release pipeline safety gate**: both VS Code Marketplace and OpenVSX publish jobs now sit behind a `production` GitHub environment requiring reviewer approval.
-- **OpenVSX alignment**: VS Code Marketplace and OpenVSX are both at v5.0.0 baseline; v5.1.0 publishes to both.
-
-See [CHANGELOG.md](CHANGELOG.md) for the full v5.1.0 release notes.
-
-## FailSafe and FailSafe Pro
+## About FailSafe
 
 FailSafe is the open-source VS Code and Cursor extension for local AI coding governance — audits, skills, checkpoints, and editor-visible safety workflows. Skills are sourced from the [`qor-logic`](https://pypi.org/project/qor-logic/) PyPI package.
-
-FailSafe Pro is the desktop native application for SDLC visibility and governance — OS-level enforcement, file locking, team workflows, and remote connections beyond the editor boundary.
-
-Use FailSafe when you want local editor guardrails. Use FailSafe Pro when you need full SDLC visibility and managed runtime operations.
-
-Learn more: <https://mythologiq.studio/products/failsafe-pro>
-Download: <https://mythologiq.studio/products/failsafe-download>
 
 
 [Quick Start](#quick-example) | [Documentation](docs/FAILSAFE_SPECIFICATION.md) | [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=MythologIQ.mythologiq-failsafe) | [Open VSX](https://open-vsx.org/extension/MythologIQ/mythologiq-failsafe) | [Roadmap](docs/ROADMAP.md)
@@ -390,11 +234,11 @@ FailSafe supports three governance modes to match your workflow needs:
 
 | Mode        | Behavior                                                           | Best For                         |
 | ----------- | ------------------------------------------------------------------ | -------------------------------- |
-| **Observe** | No blocking, just visibility and logging. Zero friction.           | New users, exploration, learning |
-| **Assist**  | Smart defaults, auto-intent creation, gentle prompts. Recommended. | Most development workflows       |
-| **Enforce** | Full control, intent-gated saves, L3 approvals.                    | Compliance, regulated industries |
+| **Enforce** | Default. Full control, intent-gated saves, L3 approvals.           | Governed development, compliance |
+| **Assist**  | Smart defaults, auto-intent creation, gentle prompts.              | Lighter-touch workflows          |
+| **Observe** | No blocking, just visibility and logging. Zero friction.           | Exploration, learning            |
 
-Switch modes via the `FailSafe: Set Governance Mode` command or the `failsafe.governance.mode` setting.
+Enforce is the default mode. Switch modes via the `FailSafe: Set Governance Mode` command or the `failsafe.governance.mode` setting.
 
 ---
 
@@ -543,17 +387,6 @@ npm run compile
 ```
 
 ---
-
-## What's New in v4.9.0
-
-> _Agent debugging, execution replay, and cross-agent skill portability._
-
-### Highlights
-
-- **Agent Run Replay and Execution Timeline** - Step-by-step replay of AI agent execution traces with a filterable event timeline and severity indicators for rapid root-cause analysis.
-- **Risk and Stability Indicators** - Composite health score displayed in the status bar, combining risk grade distribution, Sentinel verdicts, and trust dynamics into a single signal.
-- **Shadow Genome and DiffGuard Panels** - Failure pattern analysis (Shadow Genome) and AI diff risk analysis (DiffGuard) surfaced as dedicated debugging panels in the Command Center.
-- **Cross-Agent Skill Propagation** - Skills defined once propagate across Claude Code, Codex CLI, GitHub Copilot, Gemini, Cursor, and Windsurf via standardized adapters.
 
 > **We'd love your review!** If FailSafe is useful to you, please leave a review on the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=MythologIQ.mythologiq-failsafe) or [Open VSX](https://open-vsx.org/extension/MythologIQ/mythologiq-failsafe). Your feedback helps other developers discover FailSafe and directly shapes its roadmap. Bug reports and feature requests welcome on [GitHub Issues](https://github.com/MythologIQ/FailSafe/issues).
 

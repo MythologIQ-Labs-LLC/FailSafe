@@ -23,17 +23,26 @@ export class TabGroup {
     const bar = document.createElement('div');
     bar.className = 'cc-subview-bar';
     bar.style.cssText = 'display:flex;gap:4px;margin-bottom:12px;border-bottom:1px solid var(--border-rim);padding-bottom:8px';
+    bar.setAttribute('role', 'tablist');
+    bar.setAttribute('aria-label', `${this.container.id} sub-sections`);
+    this.contentEl = document.createElement('div');
+    this.contentEl.id = `tabgroup-${this.container.id}-panel`;
+    this.contentEl.className = 'cc-subview-content';
+    this.contentEl.setAttribute('role', 'tabpanel');
     for (const sv of this.subViews) {
       const pill = document.createElement('button');
       pill.className = `cc-pill${sv.key === this.activeKey ? ' active' : ''}`;
       pill.textContent = sv.label;
       pill.dataset.key = sv.key;
+      pill.id = `tabgroup-${this.container.id}-${sv.key}`;
+      pill.setAttribute('role', 'tab');
+      pill.setAttribute('aria-selected', String(sv.key === this.activeKey));
+      pill.setAttribute('aria-controls', this.contentEl.id);
+      if (sv.key === this.activeKey) this.contentEl.setAttribute('aria-labelledby', pill.id);
       pill.addEventListener('click', () => this.switchTo(sv.key, hubData));
       bar.appendChild(pill);
     }
     this.container.appendChild(bar);
-    this.contentEl = document.createElement('div');
-    this.contentEl.className = 'cc-subview-content';
     this.container.appendChild(this.contentEl);
     this.renderActive(hubData);
   }
@@ -60,7 +69,10 @@ export class TabGroup {
     }
     this.activeKey = key;
     this.container.querySelector('.cc-subview-bar')?.querySelectorAll('.cc-pill').forEach(p => {
-      p.classList.toggle('active', p.dataset.key === key);
+      const isActive = p.dataset.key === key;
+      p.classList.toggle('active', isActive);
+      p.setAttribute('aria-selected', String(isActive));
+      if (isActive) this.contentEl?.setAttribute('aria-labelledby', p.id);
     });
     this.renderActive(hubData);
     this.onSubViewSwitch?.();

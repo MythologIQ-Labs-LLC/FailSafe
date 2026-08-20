@@ -3,6 +3,7 @@ import { strict as assert } from "assert";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import { spawnSync } from "child_process";
 import { CommitGuard } from "../../governance/CommitGuard";
 
 describe("CommitGuard", function () {
@@ -14,7 +15,14 @@ describe("CommitGuard", function () {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "commitguard-"));
     const gitDir = path.join(tmpDir, ".git", "hooks");
     fs.mkdirSync(gitDir, { recursive: true });
-    guard = new CommitGuard(tmpDir, 7777);
+    // Explicit dirs keep this suite hermetic: the fake .git here is not a
+    // real repo, and live resolution would otherwise discover any ambient
+    // ancestor repo (e.g. a stray .git at the drive root). Real-git
+    // resolution is covered by the FX908 worktree suite below.
+    guard = new CommitGuard(tmpDir, 7777, {
+      gitDir: path.join(tmpDir, ".git"),
+      commonDir: path.join(tmpDir, ".git"),
+    });
   });
 
   afterEach(function () {
@@ -173,6 +181,50 @@ describe("CommitGuard", function () {
       assert.ok(content.includes("original"));
       assert.ok(!content.includes("FailSafe"));
     });
+
+    it("a second uninstall() call does not delete the just-restored original hook", async () => {
+      const hookPath = path.join(tmpDir, ".git", "hooks", "pre-commit");
+      fs.writeFileSync(hookPath, '#!/bin/sh\necho "original"', { mode: 0o755 });
+
+      await guard.install();
+      await guard.uninstall();
+      // Backup is consumed; hookPath now holds the user's real restored hook.
+      await guard.uninstall();
+
+      assert.ok(
+        fs.existsSync(hookPath),
+        "second uninstall() must not delete the restored non-FailSafe hook",
+      );
+      const content = fs.readFileSync(hookPath, "utf8");
+      assert.ok(content.includes("original"));
+    });
+
+    it("a duplicate uninstall() call after install-without-backup is a safe no-op", async () => {
+      await guard.install();
+      await guard.uninstall();
+      // No backup ever existed and hookPath is already gone; must not throw.
+      await guard.uninstall();
+      const hookPath = path.join(tmpDir, ".git", "hooks", "pre-commit");
+      assert.ok(!fs.existsSync(hookPath));
+    });
+
+    it("uninstall() does not delete an unrelated file left at hookPath after the backup is gone", async () => {
+      const hookPath = path.join(tmpDir, ".git", "hooks", "pre-commit");
+      fs.writeFileSync(hookPath, '#!/bin/sh\necho "original"', { mode: 0o755 });
+
+      await guard.install();
+      await guard.uninstall();
+      // Simulate another actor placing an unrelated file at hookPath between calls.
+      fs.writeFileSync(hookPath, '#!/bin/sh\necho "someone-elses-hook"', {
+        mode: 0o755,
+      });
+      await guard.uninstall();
+
+      assert.ok(
+        fs.existsSync(hookPath),
+        "uninstall() must not delete a non-FailSafe file it did not install",
+      );
+    });
   });
 
   describe("isInstalled", () => {
@@ -196,5 +248,77 @@ describe("CommitGuard", function () {
       fs.writeFileSync(hookPath, '#!/bin/sh\necho "not failsafe"');
       assert.equal(await guard.isInstalled(), false);
     });
+  });
+});
+
+// #83 Phase A (FX908) — worktree-correctness + live port. Written FIRST per TDD.
+describe("CommitGuard worktree + live port (FX908/#83A)", function () {
+  this.timeout(20000);
+  let base: string;
+  let repo: string;
+  let worktree: string;
+
+  function git(cwd: string, ...args: string[]): void {
+    const r = spawnSync("git", args, { cwd, encoding: "utf8" });
+    assert.equal(r.status, 0, `git ${args.join(" ")} failed: ${r.stderr}`);
+  }
+
+  beforeEach(() => {
+    base = fs.mkdtempSync(path.join(os.tmpdir(), "cg-wt-"));
+    repo = path.join(base, "repo");
+    worktree = path.join(base, "wt");
+    fs.mkdirSync(repo);
+    git(repo, "init");
+    git(repo, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "--allow-empty", "-m", "seed");
+    git(repo, "worktree", "add", worktree);
+  });
+
+  afterEach(() => {
+    try {
+      fs.rmSync(base, { recursive: true, force: true });
+    } catch {
+      // Windows temp-dir lock tolerance
+    }
+  });
+
+  it("T4: install() from a worktree succeeds — hook in MAIN .git/hooks, token in the worktree gitDir", async () => {
+    const wtGuard = new CommitGuard(worktree, 7777);
+    await wtGuard.install(); // pre-fix: ENOTDIR (mkdirSync under the .git FILE)
+    const mainHook = path.join(repo, ".git", "hooks", "pre-commit");
+    assert.ok(fs.existsSync(mainHook), "hook must land in the shared (common) hooks dir");
+    const gitDir = spawnSync("git", ["rev-parse", "--path-format=absolute", "--git-dir"], {
+      cwd: worktree, encoding: "utf8",
+    }).stdout.trim();
+    assert.ok(
+      fs.existsSync(path.join(gitDir, "failsafe-hook-token")),
+      "token must land where the hook script reads it ($(git rev-parse --git-dir))",
+    );
+  });
+
+  it("T5: a function apiPort is resolved at hook-write time", async () => {
+    const mainGuard = new CommitGuard(repo, () => 9412);
+    await mainGuard.install();
+    const hook = fs.readFileSync(path.join(repo, ".git", "hooks", "pre-commit"), "utf8");
+    assert.ok(hook.includes('FAILSAFE_PORT="9412"'), "lazy port must bake the resolved value");
+  });
+
+  it("T6: main-checkout install/uninstall round-trip unchanged (fallback parity)", async () => {
+    const mainGuard = new CommitGuard(repo, 7777);
+    await mainGuard.install();
+    assert.ok(fs.existsSync(path.join(repo, ".git", "hooks", "pre-commit")));
+    assert.ok(fs.existsSync(path.join(repo, ".git", "failsafe-hook-token")));
+    await mainGuard.uninstall();
+    assert.equal(fs.existsSync(path.join(repo, ".git", "hooks", "pre-commit")), false);
+    assert.equal(fs.existsSync(path.join(repo, ".git", "failsafe-hook-token")), false);
+  });
+
+  it("T11: the generated hook curls exactly /api/v1/governance/commit-check", async () => {
+    const mainGuard = new CommitGuard(repo, 7777);
+    await mainGuard.install();
+    const hook = fs.readFileSync(path.join(repo, ".git", "hooks", "pre-commit"), "utf8");
+    assert.ok(
+      hook.includes("/api/v1/governance/commit-check"),
+      "writer and route must agree on the endpoint path",
+    );
   });
 });

@@ -92,12 +92,15 @@ export async function bootstrapQorLogic(
   gov.governanceRouter.setGovernanceAdapter(governanceAdapter);
 
   // Gap 2: Instantiate BreakGlassProtocol (after ledger exists)
-  const breakGlass = new BreakGlassProtocol(ledgerManager, core.eventBus);
+  const breakGlass = new BreakGlassProtocol(ledgerManager, core.eventBus, core.workspaceRoot);
   breakGlass.setModeChangeHandler(async (mode) => {
     await vscode.workspace
       .getConfiguration("failsafe")
       .update("governance.mode", mode, vscode.ConfigurationTarget.Workspace);
   });
+  // Recover any override left active by a prior process before anything else
+  // reads governance.mode (see BreakGlassProtocol.reconcile doc comment).
+  await breakGlass.reconcile();
   context.subscriptions.push({ dispose: () => breakGlass.dispose() });
 
   // v4.2.0: QorLogic services

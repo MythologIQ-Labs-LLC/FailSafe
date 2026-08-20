@@ -14,7 +14,7 @@ import { PrepBayController } from './prep-bay.js';
 import { NodeEditor } from './node-editor.js';
 import { wireVoiceCallbacks } from './brainstorm-voice-wiring.js';
 import { drawSidebarVisualizer } from './brainstorm-visualizer.js';
-import { wireToolbar } from './brainstorm-toolbar-wiring.js';
+import { wireToolbar, applyViewPrefs } from './brainstorm-toolbar-wiring.js';
 import { loadViewPrefs } from './brainstorm-graph-io.js';
 export class BrainstormRenderer {
   constructor(containerId, deps = {}) {
@@ -42,7 +42,15 @@ export class BrainstormRenderer {
   }
 
   render(hubData = {}) {
+    const prevWorkspacePath = this.workspacePath;
     this.workspacePath = hubData.workspacePath || this.workspacePath || '';
+    // FX897/#263 v6.0.1: the canvas may have constructed before the hub
+    // delivered workspacePath (prefs then resolved under the wrong identity and
+    // defaulted). When a live canvas exists, reconcile it to the persisted
+    // prefs under the CURRENT identity — idempotent, heals any missed load.
+    if (this.graph.canvas && this.workspacePath !== prevWorkspacePath) {
+      applyViewPrefs(this);
+    }
     // #261: graph.canvas is set only AFTER the async fetchGraph resolves, so it
     // cannot block a re-entrant render() during the construction window (render
     // fires 2-3x on load: WS init + REST hub + tab activation). _canvasInit
@@ -129,6 +137,10 @@ export class BrainstormRenderer {
     if (!container) return;
     const canvas = new BrainstormCanvas(container, loadViewPrefs(this.workspacePath));
     this.graph.setCanvas(canvas);
+    // #319: reconcile once the canvas exists — heals any identity that arrived
+    // (or was recorded by a prior save) between render dispatch and fetch
+    // resolution; idempotent, also syncs the toolbar highlights.
+    applyViewPrefs(this);
     canvas.onDagFallback = (layout) => this.showStatus(`${layout} layout needs an acyclic graph — reverted to FORCE.`, 'var(--accent-gold)');
     this._updateEmptyState = () => {
       const el = this.container?.querySelector('.cc-bs-empty-state');
@@ -254,6 +266,11 @@ export class BrainstormRenderer {
     this._wakeHandler = null; this.keyboard.unbind();
     this.voiceStatusBadge?.detach(); this.voiceStatusBadge = null;
     this.prepBay.destroy(); this.voice.destroy(); this.webLlm.destroy();
-    this.graph.canvas?.destroy(); if (this.container) this.container.innerHTML = '';
+    this.graph.canvas?.destroy(); this.graph.setCanvas(null);
+    // #263: reset the #261 in-flight guard alongside the canvas reference so a
+    // later render() (tab re-show) reconstructs cleanly instead of early-returning
+    // against a stale destroyed canvas / stale in-flight flag.
+    this._canvasInit = false;
+    if (this.container) this.container.innerHTML = '';
   }
 }

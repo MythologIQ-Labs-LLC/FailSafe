@@ -10,7 +10,6 @@
 import type { Application, Request, Response } from "express";
 import type { ApiRouteDeps } from "./types";
 import { buildGovernanceDashboard } from "../../qorlogic/governance-dashboard";
-import { parseMetaLedgerEntries } from "../../qorlogic/meta-ledger-model";
 import { reconstructGenomeFromLedger } from "../../qorlogic/genome-reconstruction";
 import { mergeGenomes } from "../../qorlogic/genome-merge";
 
@@ -33,9 +32,10 @@ export function registerQorRoute(
       ? await deps.loadShadowGenome()
       : { ok: true, localOnly: true };
     const real = result.ok && result.graph ? result.graph : { nodes: [], edges: [] };
-    const ledger = deps.loadMetaLedger ? deps.loadMetaLedger() : "";
-    const appendix = ledger
-      ? reconstructGenomeFromLedger(parseMetaLedgerEntries(ledger))
+    // #233 (FX892): adapter envelope in, parsed entries out; non-ok -> no appendix.
+    const envelope = deps.readMetaLedgerEnvelope ? deps.readMetaLedgerEnvelope() : null;
+    const appendix = envelope && envelope.state === "ok" && envelope.data
+      ? reconstructGenomeFromLedger(envelope.data)
       : { nodes: [], edges: [] };
     const merged = mergeGenomes(real, appendix);
     const effective = merged.nodes.length > 0 ? { ok: true as const, graph: merged } : result;

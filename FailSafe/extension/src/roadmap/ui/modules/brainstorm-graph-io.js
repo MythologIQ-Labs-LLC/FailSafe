@@ -91,9 +91,24 @@ export function viewPrefsKey(workspacePath) {
   return `${VIEW_PREFS_KEY}:${encodeURIComponent(identity)}`;
 }
 
+// #319: prefs written before the hub delivers workspacePath (reload window)
+// must still resolve to the real identity's bucket. saveViewPrefs records the
+// last real identity; identity-less calls fall back to it. The 'local' bucket
+// remains the terminal fallback for a never-identified browser profile.
+const LAST_IDENTITY_KEY = 'failsafe-brainstorm-last-identity';
+
+function resolveIdentity(workspacePath) {
+  if (workspacePath) return workspacePath;
+  try {
+    return localStorage.getItem(LAST_IDENTITY_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
 export function loadViewPrefs(workspacePath) {
   try {
-    const raw = localStorage.getItem(viewPrefsKey(workspacePath));
+    const raw = localStorage.getItem(viewPrefsKey(resolveIdentity(workspacePath)));
     const data = raw ? JSON.parse(raw) : {};
     return {
       layout: LAYOUTS.has(data.layout) ? data.layout : 'FORCE',
@@ -106,10 +121,11 @@ export function loadViewPrefs(workspacePath) {
 
 export function saveViewPrefs(prefs, workspacePath) {
   try {
-    localStorage.setItem(viewPrefsKey(workspacePath), JSON.stringify({
+    localStorage.setItem(viewPrefsKey(resolveIdentity(workspacePath)), JSON.stringify({
       layout: prefs.layout,
       viewMode: prefs.viewMode,
     }));
+    if (workspacePath) localStorage.setItem(LAST_IDENTITY_KEY, workspacePath);
   } catch {}
 }
 

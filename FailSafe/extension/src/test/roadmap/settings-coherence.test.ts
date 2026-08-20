@@ -33,7 +33,15 @@ function loadSettingsHtml(): JSDOM {
   return new JSDOM(stripped);
 }
 
-function paintSettingsFragment(doc: Document, mode: string, bannerVisible: boolean): void {
+function paintSettingsFragment(
+  doc: Document,
+  mode: string,
+  bannerVisible: boolean,
+  // Defaults to the legacy blocked-copy so pre-existing paints (including the
+  // detector-trips contradiction case) keep their behavior; the initial-default
+  // case passes '' to model "enforce, no block yet" (audit F6 resolution).
+  bannerText: string = 'Enforcement is blocking writes.',
+): void {
   const panel = doc.getElementById('settings');
   if (!panel) throw new Error('settings panel missing in command-center.html');
   panel.innerHTML = `
@@ -41,7 +49,7 @@ function paintSettingsFragment(doc: Document, mode: string, bannerVisible: boole
       <span id="governance-mode-badge" class="cc-badge mode-${mode}">${mode}</span>
     </div>
     <div id="writes-blocked-banner" class="banner ${bannerVisible ? '' : 'hidden'}">
-      Enforcement is blocking writes.
+      ${bannerText}
     </div>`;
 }
 
@@ -75,12 +83,16 @@ function detectSettingsCoherence(state: SettingsPaintedState): CoherenceVerdict 
 }
 
 suite('Settings cross-component coherence (FX-MONITOR-COHERENCE)', () => {
-  test('initial defaults — empty settings panel is coherent (no painted contradiction)', () => {
+  test('initial defaults — enforce mode with no block yet is coherent (empty banner)', () => {
+    // The true fresh-install state post-flip: enforce is the resting mode and
+    // no write has been blocked, so the banner is hidden AND carries no
+    // blocked-copy. The unchanged detector classifies this coherent because
+    // its rule targets the painted LIE (copy claims blocked while hidden).
     const dom = loadSettingsHtml();
-    paintSettingsFragment(dom.window.document, 'observe', false);
+    paintSettingsFragment(dom.window.document, 'enforce', false, '');
     const verdict = detectSettingsCoherence(readPainted(dom.window.document));
     assert.equal(verdict.coherent, true,
-      `Default observe-mode painted state must be coherent. Reason: ${verdict.reason ?? 'n/a'}`);
+      `Default enforce-mode no-block painted state must be coherent. Reason: ${verdict.reason ?? 'n/a'}`);
   });
 
   test('coherent state — enforce mode + writes-blocked banner visible', () => {
@@ -156,10 +168,11 @@ suite('Settings Track C — governance mode + qor version surface', () => {
     assert.ok(!/\(default\)/.test(html), '(default) tag must not appear when defaulted:false');
   });
 
-  test('(default) indicator shown when defaulted:true', async () => {
-    const html = await paintTrackCSettings({ governanceModeState: { mode: 'observe', defaulted: true } });
-    assert.match(html, /Mode:\s*<strong[^>]*>Observe<\/strong>\s*<span[^>]*>\(default\)<\/span>/);
-    assert.match(html, /You're in Observe mode by default/);
+  test('(default) indicator shown when defaulted:true (enforce is the post-flip default)', async () => {
+    const html = await paintTrackCSettings({ governanceModeState: { mode: 'enforce', defaulted: true } });
+    assert.match(html, /Mode:\s*<strong[^>]*>Enforce<\/strong>\s*<span[^>]*>\(default\)<\/span>/);
+    assert.ok(!/You're in Observe mode by default/.test(html),
+      'the removed observe-default hint must not render');
   });
 
   test('escalation buttons dispatch failsafe.setGovernanceMode for all three modes', async () => {

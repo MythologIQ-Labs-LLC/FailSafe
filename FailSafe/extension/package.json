@@ -1,9 +1,9 @@
 {
   "name": "mythologiq-failsafe",
   "displayName": "FailSafe (feat. Qor-Logic)",
-  "description": "Open-source VS Code/Cursor governance and skills surface for AI coding agents. Pairs with FailSafe Pro for desktop enforcement.",
+  "description": "Open-source VS Code/Cursor governance and skills surface for AI coding agents.",
   "icon": "media/icon.png",
-  "version": "5.9.0",
+  "version": "6.0.0",
   "publisher": "MythologIQ",
   "license": "Apache-2.0",
   "repository": {
@@ -41,7 +41,6 @@
     "onChatParticipant:failsafe.chat",
     "onView:failsafe.sidebarView",
     "onCommand:failsafe.openSidebar",
-    "onCommand:failsafe.openFailSafeProAbout",
     "onCommand:failsafe.bootstrap",
     "onCommand:failsafe.organize",
     "onCommand:failsafe.openPlannerHub",
@@ -192,10 +191,6 @@
         "category": "FailSafe"
       },
       {
-        "command": "failsafe.openFailSafeProAbout",
-        "title": "FailSafe: About FailSafe Pro"
-      },
-      {
         "command": "failsafe.bootstrap",
         "title": "FailSafe: Bootstrap Workspace (install qor-logic + scaffold)"
       },
@@ -290,6 +285,10 @@
       {
         "command": "failsafe.installCommitHook",
         "title": "FailSafe: Install Commit Hook"
+      },
+      {
+        "command": "failsafe.configureAgentsWindow",
+        "title": "FailSafe: Configure VS Code Agents Window Governance"
       },
       {
         "command": "failsafe.removeCommitHook",
@@ -622,11 +621,11 @@
           ],
           "enumDescriptions": [
             "Observe only - No blocking, just visibility and logging. Zero friction.",
-            "Assist - Smart defaults, auto-intent creation, gentle prompts. Recommended for most users.",
-            "Enforce - Full control, intent-gated saves, L3 approvals. For compliance workflows."
+            "Assist - Smart defaults, auto-intent creation, gentle prompts.",
+            "Enforce - Default. Full control, intent-gated saves, L3 approvals."
           ],
-          "default": "observe",
-          "description": "Governance mode determines how FailSafe interacts with your workflow. Start with 'observe' and increase when ready."
+          "default": "enforce",
+          "description": "Governance mode determines how FailSafe interacts with your workflow. Enforce is the default; switch to 'assist' or 'observe' for lighter-touch governance."
         },
         "failsafe.governance.overseerId": {
           "type": "string",
@@ -776,7 +775,7 @@
     "d3": "^7.8.5",
     "express": "^5.2.1",
     "glob": "^10.5.0",
-    "js-yaml": "^4.3.0",
+    "js-yaml": "^4.3.1",
     "proper-lockfile": "^4.1.2",
     "ws": "^8.21.0",
     "zod": "^3.25.76"
@@ -790,5 +789,12 @@
   },
   "optionalDependencies": {
     "better-sqlite3": "^12.6.2"
+  },
+  "overrides": {
+    "protobufjs": "^8.0.0",
+    "minimatch@9": "^9.0.9",
+    "diff": "^8.0.3",
+    "serialize-javascript": "^7.0.5",
+    "sharp": "^0.35.0"
   }
 }

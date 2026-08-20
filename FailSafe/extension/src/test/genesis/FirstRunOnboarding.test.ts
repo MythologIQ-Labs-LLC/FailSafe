@@ -3,19 +3,21 @@ import { strict as assert } from 'assert';
 import * as vscode from 'vscode';
 import { FirstRunOnboarding } from '../../genesis/FirstRunOnboarding';
 
+// #295 re-scope: the onboarding gate is repository-scoped — the class must
+// read/write workspaceState, so the mock exposes ONLY workspace-state methods.
 interface MockConfigManager {
-  getGlobalState<T>(key: string, defaultValue: T): T;
-  setGlobalState<T>(key: string, value: T): Promise<void>;
+  getWorkspaceState<T>(key: string, defaultValue: T): T;
+  setWorkspaceState<T>(key: string, value: T): Promise<void>;
   getSetCalls(): Array<{ key: string; value: unknown }>;
 }
 
 function createMockConfigManager(onboarded: boolean): MockConfigManager {
   const setCalls: Array<{ key: string; value: unknown }> = [];
   return {
-    getGlobalState<T>(_key: string, defaultValue: T): T {
+    getWorkspaceState<T>(_key: string, defaultValue: T): T {
       return (onboarded as unknown as T) ?? defaultValue;
     },
-    async setGlobalState<T>(key: string, value: T): Promise<void> {
+    async setWorkspaceState<T>(key: string, value: T): Promise<void> {
       setCalls.push({ key, value });
     },
     getSetCalls: () => setCalls,
@@ -116,7 +118,7 @@ describe('FirstRunOnboarding', () => {
     assert.strictEqual(ceremony.callCount(), 0, 'ceremony.showQuickPick should not be called');
   });
 
-  it('persists onboarded flag via setGlobalState after user dismisses', async () => {
+  it('persists onboarded flag via setWorkspaceState (repo-scoped, #295) after user dismisses', async () => {
     const config = createMockConfigManager(false);
     const ceremony = createMockCeremony();
     const restore = patchShowInfoMessage('Not Now');
@@ -129,12 +131,12 @@ describe('FirstRunOnboarding', () => {
     }
 
     const setCalls = config.getSetCalls();
-    assert.strictEqual(setCalls.length, 1, 'setGlobalState should be called once');
+    assert.strictEqual(setCalls.length, 1, 'setWorkspaceState should be called once');
     assert.strictEqual(setCalls[0].key, 'failsafe.onboarded');
     assert.strictEqual(setCalls[0].value, true);
   });
 
-  it('does not call setGlobalState when already onboarded', async () => {
+  it('does not call setWorkspaceState when already onboarded', async () => {
     const config = createMockConfigManager(true);
     const ceremony = createMockCeremony();
     const restore = patchShowInfoMessage(undefined);
@@ -146,6 +148,6 @@ describe('FirstRunOnboarding', () => {
       restore();
     }
 
-    assert.strictEqual(config.getSetCalls().length, 0, 'setGlobalState should not be called');
+    assert.strictEqual(config.getSetCalls().length, 0, 'setWorkspaceState should not be called');
   });
 });

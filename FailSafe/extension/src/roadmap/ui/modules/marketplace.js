@@ -9,6 +9,7 @@ const CATEGORY_LABELS = {
   'autonomous-multi-agent': 'Autonomous',
   'safety-red-teaming': 'Safety',
   'ui-orchestration': 'UI & Orchestration',
+  'agent-skills': 'Skills',
 };
 
 export class MarketplaceRenderer {

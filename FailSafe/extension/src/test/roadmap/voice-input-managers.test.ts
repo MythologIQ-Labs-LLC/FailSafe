@@ -126,8 +126,21 @@ suite('KeyboardManager (FX229 PTT hotkey)', () => {
     let stopped = 0;
     km.onPttStop = () => { stopped += 1; };
     km.bind();
+    // FailSafe#305: keyup only fires onPttStop for a PTT that an unguarded
+    // keydown actually started — a bare keyup with no matching keydown must
+    // not fabricate a stop (see the dedicated no-op case below).
+    mockDoc.dispatch('keydown', { code: 'Space' });
     mockDoc.dispatch('keyup', { code: 'Space' });
     assert.equal(stopped, 1);
+  });
+
+  test('keyup with no matching prior keydown does NOT fire onPttStop (FailSafe#305)', () => {
+    const km = new KeyboardManager(new MemoryStore());
+    let stopped = 0;
+    km.onPttStop = () => { stopped += 1; };
+    km.bind();
+    mockDoc.dispatch('keyup', { code: 'Space' });
+    assert.equal(stopped, 0);
   });
 
   test('unbind() removes listeners and prevents further dispatch', () => {

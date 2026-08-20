@@ -8,9 +8,9 @@ import { IntentType } from "../governance/types/IntentTypes";
 import { DetectedSystem, FrameworkSync } from "../qorelogic/FrameworkSync";
 import { WorkspaceMigration } from "../qorelogic/WorkspaceMigration";
 import { RiskManager } from "../qorelogic/risk";
+import type { PlanManager } from "../qorelogic/planning/PlanManager";
 import { ProjectOverviewPanel } from "../genesis/panels/ProjectOverviewPanel";
 import { EventBus } from "../shared/EventBus";
-import { FAILSAFE_PRO_ABOUT_URL } from "../shared/constants";
 import * as http from "http";
 
 // Workspace isolation: dynamic port and workspace root
@@ -168,15 +168,6 @@ export function registerCommands(
       } catch {
         // Best-effort focus; container open is the primary action.
       }
-    }),
-  );
-
-  // v5: "About FailSafe Pro" opens the learn-more product page. The download
-  // URL is reachable from that page; the extension does NOT link to it directly
-  // because "About" should not mean "download right now".
-  context.subscriptions.push(
-    vscode.commands.registerCommand("failsafe.openFailSafeProAbout", async () => {
-      await vscode.env.openExternal(vscode.Uri.parse(FAILSAFE_PRO_ABOUT_URL));
     }),
   );
 
@@ -482,36 +473,61 @@ export function registerCommands(
   );
 }
 
+const SWITCH_MODE_ITEM = "$(arrow-swap) No plan yet — switch governance mode instead";
+
+/** B66 funnel fix: resolve a planId before intent creation in enforce mode.
+ *  Returns undefined when the user escapes (mode picker opened) or dismisses.
+ *  Exported for direct unit coverage in create-intent-enforce.test.ts. */
+export async function pickPlanIdForEnforce(
+  planManager: PlanManager | undefined,
+): Promise<string | undefined> {
+  const plans = planManager?.getAllPlans() ?? [];
+  const items = [
+    ...plans.map((p) => ({ label: p.title, description: p.id, planId: p.id })),
+    { label: SWITCH_MODE_ITEM, description: "", planId: undefined },
+  ];
+  const chosen = await vscode.window.showQuickPick(items, {
+    placeHolder: "Enforce mode requires a plan. Select the plan this intent serves:",
+  });
+  if (!chosen) return undefined;
+  if (!chosen.planId) {
+    vscode.commands.executeCommand("failsafe.setGovernanceMode");
+    return undefined;
+  }
+  return chosen.planId;
+}
+
 export function registerGovernanceCommands(
   context: vscode.ExtensionContext,
   intentService: IntentService,
   workspaceRoot: string,
+  planManager?: PlanManager,
 ) {
   // Set Governance Mode Command
   context.subscriptions.push(
     vscode.commands.registerCommand("failsafe.setGovernanceMode", async () => {
       const currentMode = vscode.workspace
         .getConfiguration("failsafe")
-        .get<string>("governance.mode", "observe");
+        .get<string>("governance.mode", "enforce");
 
       const modes = [
+        {
+          label: "$(lock) Enforce",
+          description:
+            "Default — full governance: intent-gated saves, L3 approvals.",
+          value: "enforce",
+        },
+        {
+          label: "$(lightbulb) Assist",
+          description:
+            "Smart defaults, auto-intent creation, gentle prompts.",
+          value: "assist",
+        },
         {
           label: "$(eye) Observe",
           description:
             "No blocking, just visibility and logging. Zero friction.",
           value: "observe",
-        },
-        {
-          label: "$(lightbulb) Assist",
-          description:
-            "Smart defaults, auto-intent creation, gentle prompts. Recommended for most users.",
-          value: "assist",
-        },
-        {
-          label: "$(lock) Enforce",
-          description:
-            "Full control, intent-gated saves, L3 approvals. For compliance workflows.",
-          value: "enforce",
         },
       ];
 
@@ -537,6 +553,17 @@ export function registerGovernanceCommands(
   // Create Intent Command
   context.subscriptions.push(
     vscode.commands.registerCommand("failsafe.createIntent", async () => {
+      // B66: enforce mode requires a planId — resolve it FIRST so the
+      // command cannot dead-end in IntentService's planId throw.
+      let planId: string | undefined;
+      const mode = vscode.workspace
+        .getConfiguration("failsafe")
+        .get<string>("governance.mode", "enforce");
+      if (mode === "enforce") {
+        planId = await pickPlanIdForEnforce(planManager);
+        if (!planId) return; // escape item or dismissal already handled
+      }
+
       // 1. Select Type
       const type = await vscode.window.showQuickPick(
         ["feature", "bugfix", "refactor", "security", "docs"] as IntentType[],
@@ -566,6 +593,7 @@ export function registerGovernanceCommands(
           purpose,
           scope: { files, modules: [], riskGrade: "L1" }, // Default L1 for now
           metadata: { author: "user", tags: [] },
+          planId,
         });
         vscode.window.showInformationMessage("Intent Created Successfully");
         vscode.commands.executeCommand("failsafe.showMenu"); // Update UI
@@ -584,9 +612,12 @@ export function registerGovernanceCommands(
         const choice = await vscode.window.showInformationMessage(
           "FailSafe: No Active Intent. Writes are BLOCKED.",
           "Create Intent",
+          "Set Governance Mode",
         );
         if (choice === "Create Intent") {
           vscode.commands.executeCommand("failsafe.createIntent");
+        } else if (choice === "Set Governance Mode") {
+          vscode.commands.executeCommand("failsafe.setGovernanceMode");
         }
         return;
       }

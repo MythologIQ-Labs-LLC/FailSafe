@@ -1,6 +1,6 @@
 # FailSafe Process Guide
 
-Audience: operators who need fast, accurate workflows for the shipped `v5.9.0` UI and governance stack.
+Audience: operators who need fast, accurate workflows for the shipped `v6.0.0` UI and governance stack.
 
 ## First Run (Recommended Path)
 
@@ -8,7 +8,7 @@ Audience: operators who need fast, accurate workflows for the shipped `v5.9.0` U
 2. Open a git-backed workspace.
 3. Run `FailSafe: Open Command Center (Browser Popout)` or `FailSafe: Open Command Center (Editor Tab)`.
 4. Run `FailSafe: Set Up Agent Governance`.
-5. Set `FailSafe: Set Governance Mode` to `observe` first.
+5. FailSafe starts in `enforce` mode (the default). Use `FailSafe: Set Governance Mode` to switch to `assist` or `observe` if you want lighter-touch governance while onboarding.
 
 ## Daily Operator Loop
 
@@ -40,9 +40,9 @@ powershell -ExecutionPolicy Bypass -File tools/reliability/prepush-validate.ps1
 
 | Mode | Behavior | Use It When |
 | --- | --- | --- |
-| `observe` | Logs and reports without hard stops | onboarding, baseline visibility |
+| `enforce` | Strict policy gating (default) | governed development, compliance-critical workflows |
 | `assist` | Guidance and lightweight friction | normal development with guardrails |
-| `enforce` | Strict policy gating | compliance-critical workflows |
+| `observe` | Logs and reports without hard stops | baseline visibility, exploration |
 
 ## Core Procedures
 

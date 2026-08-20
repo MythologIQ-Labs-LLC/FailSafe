@@ -16,6 +16,30 @@ import type {
 
 const MARKETPLACE_CATALOG: MarketplaceItem[] = [
   // ═══════════════════════════════════════════════════════════════════════════
+  // Agent Skills
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    id: "mattpocock-skills",
+    name: "Matt Pocock Engineering Skills (Wayfinder)",
+    description:
+      "MIT-licensed agent skill packs (engineering + productivity): wayfinder charts big, foggy efforts as decision-ticket maps on your issue tracker; plus grilling, domain-modeling, research, prototype, spec/ticket handoffs, and writing-for-agents.",
+    category: "agent-skills",
+    author: "mattpocock",
+    repoUrl: "https://github.com/mattpocock/skills",
+    repoRef: "main",
+    status: "not-installed",
+    trustTier: "unverified",
+    sandboxEnabled: true,
+    requiredPermissions: ["file:read", "file:write"],
+    featured: true,
+    tags: ["wayfinder", "planning", "skills", "issue-tracker", "decision-tickets", "productivity", "grilling"],
+    techStack: ["Markdown", "Agent Skills"],
+    version: "latest",
+    difficulty: "beginner",
+    auditStatus: "community",
+    licenseType: "MIT",
+  },
+  // ═══════════════════════════════════════════════════════════════════════════
   // Autonomous & Multi-Agent Frameworks
   // ═══════════════════════════════════════════════════════════════════════════
   {
@@ -310,6 +334,36 @@ export class MarketplaceCatalog {
     } catch {
       // State file doesn't exist or is invalid - use defaults
     }
+
+    if (this.reconcileStaleTransientState()) {
+      this.persistState();
+    }
+  }
+
+  /**
+   * "installing"/"scanning" are only ever set by this session's own live
+   * install lifecycle (see updateItemStatus() call sites in
+   * marketplaceInstallRoutes.ts). A status of either at load time was
+   * therefore always written by a *previous* extension-host session, whose
+   * in-memory install promise/timer died with it — nothing in this new
+   * session will ever resolve it. Left alone it durably deadlocks the
+   * install route's `status === "installing" || status === "scanning"`
+   * 409 guard forever. Reclassify it as "failed" (truthful: the prior
+   * attempt is over and did not complete) so retries are unblocked; never
+   * promote it to "installed" or "quarantined", which would fabricate
+   * completion/verification evidence this session never produced.
+   * Returns true if any item was reconciled.
+   */
+  private reconcileStaleTransientState(): boolean {
+    let changed = false;
+    for (const item of this.catalog.values()) {
+      if (item.status === "installing" || item.status === "scanning") {
+        item.status = "failed";
+        item.lastUpdated = new Date().toISOString();
+        changed = true;
+      }
+    }
+    return changed;
   }
 
   persistState(): void {
@@ -335,11 +389,12 @@ export class MarketplaceCatalog {
       this.state.items = itemState;
       this.state.lastSyncedAt = new Date().toISOString();
 
-      fs.writeFileSync(
-        this.statePath,
-        JSON.stringify(this.state, null, 2),
-        "utf-8",
-      );
+      // Atomic temp+rename (matches repository convention, e.g.
+      // runtimeMode.ts / breakGlassState.ts) so a crash mid-write cannot
+      // leave state.json truncated/malformed.
+      const tmpPath = `${this.statePath}.${process.pid}.tmp`;
+      fs.writeFileSync(tmpPath, JSON.stringify(this.state, null, 2), "utf-8");
+      fs.renameSync(tmpPath, this.statePath);
     } catch (error) {
       console.error("Failed to persist marketplace state:", error);
     }

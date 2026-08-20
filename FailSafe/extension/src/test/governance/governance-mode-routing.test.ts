@@ -27,7 +27,6 @@ import { EnforcementEngine, IntentProvider } from "../../governance/EnforcementE
 import type { ProposedAction, Intent } from "../../governance/types/IntentTypes";
 import type { IConfigProvider } from "../../core/interfaces/IConfigProvider";
 import type { INotificationService } from "../../core/interfaces/INotificationService";
-import type { IFeatureGate } from "../../core/interfaces/IFeatureGate";
 import type { FailSafeConfig } from "../../shared/types";
 
 type ModeString = "observe" | "assist" | "enforce";
@@ -95,15 +94,9 @@ const intentProvider: IntentProvider = {
   }),
 };
 
-// FeatureGate that ENABLES governance.lockstep so EnforceModeEvaluator does
-// not short-circuit to ALLOW. Without this the enforce path would behave
-// like assist and our distinguishing assertion would be invalid.
-const featureGate: IFeatureGate = {
-  getTier: () => "pro",
-  isEnabled: (flag) => flag === "governance.lockstep",
-  requireFeature: () => {},
-  onTierChange: () => () => {},
-};
+// LD-9 (2026-08-19): editor-level enforcement is tier-independent — the
+// evaluator has no featureGate seam, so no lockstep-enabling stub is needed
+// (or possible) to make the enforce path distinguishing.
 
 // A path guaranteed to make Axiom1 BLOCK: there is no active intent, so the
 // "every action must belong to an Intent" axiom fails. That gives every
@@ -125,7 +118,6 @@ suite("FX044 governance.mode config consumption (routing)", () => {
       "/workspace",
       makeConfigProvider(modeRef),
       makeNotifications(capture),
-      featureGate,
     );
 
     const verdict = await engine.evaluateAction(blockingAction);
@@ -159,7 +151,6 @@ suite("FX044 governance.mode config consumption (routing)", () => {
       "/workspace",
       makeConfigProvider(modeRef),
       makeNotifications(capture),
-      featureGate,
     );
 
     const verdict = await engine.evaluateAction(blockingAction);
@@ -187,7 +178,6 @@ suite("FX044 governance.mode config consumption (routing)", () => {
       "/workspace",
       makeConfigProvider(modeRef),
       makeNotifications(capture),
-      featureGate,
     );
 
     const verdict = await engine.evaluateAction(blockingAction);
@@ -211,7 +201,6 @@ suite("FX044 governance.mode config consumption (routing)", () => {
       "/workspace",
       makeConfigProvider(modeRef),
       makeNotifications(capture),
-      featureGate,
     );
 
     const first = await engine.evaluateAction(blockingAction);
@@ -223,9 +212,10 @@ suite("FX044 governance.mode config consumption (routing)", () => {
     assert.strictEqual(second.status, "BLOCK", "enforce path must take over after config flip");
   });
 
-  test("FX044 — invalid/missing governance.mode defaults to observe routing", async () => {
-    // EnforcementEngine.getGovernanceModeState() falls back to 'observe' on
-    // unknown strings — this guards the production default-to-safe behavior.
+  test("FX044 — invalid/missing governance.mode defaults to enforce routing (fail-closed)", async () => {
+    // EnforcementEngine.getGovernanceModeState() falls back to 'enforce' on
+    // unknown strings (2026-08-19 default flip) — an unresolvable mode must
+    // gate, never silently permit. An ungated write therefore BLOCKs.
     const modeRef: { value: string } = { value: "totally-invalid-mode" };
     const capture: NotifyCapture = { info: [], warning: [], error: [] };
     const engine = new EnforcementEngine(
@@ -233,14 +223,13 @@ suite("FX044 governance.mode config consumption (routing)", () => {
       "/workspace",
       makeConfigProvider(modeRef as { value: ModeString }),
       makeNotifications(capture),
-      featureGate,
     );
 
     const verdict = await engine.evaluateAction(blockingAction);
-    assert.strictEqual(verdict.status, "ALLOW");
-    assert.ok(
-      verdict.reason.startsWith("Observe mode:"),
-      `invalid mode should fall back to observe routing, got reason: ${verdict.reason}`,
+    assert.strictEqual(
+      verdict.status,
+      "BLOCK",
+      `invalid mode must fall back to enforce (fail-closed) routing, got ${verdict.status}: ${(verdict as { reason?: string }).reason ?? ""}`,
     );
   });
 });

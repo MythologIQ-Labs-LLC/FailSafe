@@ -6,6 +6,7 @@
  */
 
 import * as vscode from 'vscode';
+import { resolveGitDirs } from '../governance/gitDirs';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as yaml from 'js-yaml';
@@ -18,6 +19,7 @@ type SentinelYamlConfig = Partial<FailSafeConfig> & Record<string, unknown>;
 export class ConfigManager implements IConfigProvider {
     private context: vscode.ExtensionContext;
     private workspaceRoot: string | undefined;
+    private governanceRoot: string | undefined;
     private configChangeEmitter = new vscode.EventEmitter<FailSafeConfig>();
 
 
@@ -71,7 +73,7 @@ export class ConfigManager implements IConfigProvider {
                 maxComplexity: sentinelYaml?.architecture?.maxComplexity ?? config.get<number>('architecture.maxComplexity', 20)
             },
             governance: {
-                mode: sentinelYaml?.governance?.mode ?? config.get<"observe" | "assist" | "enforce">("governance.mode", "observe"),
+                mode: sentinelYaml?.governance?.mode ?? config.get<"observe" | "assist" | "enforce">("governance.mode", "enforce"),
                 overseerId: sentinelYaml?.governance?.overseerId ?? config.get<string>("governance.overseerId", "did:myth:overseer:local"),
             },
         };
@@ -296,6 +298,28 @@ auto_classification:
     getSentinelSection<T>(section: string, defaultValue: T): T {
         const yamlConfig = this.readSentinelYaml();
         return (yamlConfig?.[section] as T) ?? defaultValue;
+    }
+
+    /**
+     * #83A: canonical governance root for worktree-aware consumers.
+     * On a linked worktree this resolves to the MAIN checkout's repository
+     * root (parent of the common .git), so governance artifacts converge on
+     * one location per repository. Falls back to workspaceRoot outside a
+     * repo. Cached once per activation.
+     */
+    getGovernanceRoot(): string {
+        if (this.governanceRoot === undefined) {
+            const root = this.workspaceRoot ?? "";
+            if (!root) {
+                this.governanceRoot = "";
+            } else {
+                const { commonDir } = resolveGitDirs(root);
+                this.governanceRoot = commonDir.endsWith(".git")
+                    ? path.dirname(commonDir)
+                    : root;
+            }
+        }
+        return this.governanceRoot;
     }
 
     /**
