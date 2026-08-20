@@ -249,20 +249,46 @@ export async function activate(
 
     // 3.15 Slack + Teams notify-only (#100 / #101): post governance enforcement
     // events to a configured incoming webhook. Disabled by default; non-blocking.
-    new SlackNotifier(core.eventBus, () => {
-      const c = vscode.workspace.getConfiguration('failsafe');
-      return {
-        enabled: c.get<boolean>('integrations.slack.enabled', false),
-        webhookUrl: c.get<string>('integrations.slack.webhookUrl', ''),
+    // Delivery failures never block, but they are logged every time and warned
+    // once per channel per session — an undelivered VETO alert must not look
+    // like an absence of vetoes.
+    const notifyFailureWarned = new Set<string>();
+    const reportNotifyFailure =
+      (channel: 'Slack' | 'Teams') =>
+      (failure: { kind: string; status?: number; error?: string }) => {
+        logger.warn(`${channel} governance notification not delivered`, failure);
+        if (notifyFailureWarned.has(channel)) return;
+        notifyFailureWarned.add(channel);
+        const reason = failure.error ?? `HTTP ${failure.status ?? 'unknown'}`;
+        void vscode.window.showWarningMessage(
+          `FailSafe governance alerts are not reaching ${channel} (${reason}). Check the webhook in settings; see the FailSafe output channel for details.`,
+        );
       };
-    }).register();
-    new TeamsNotifier(core.eventBus, () => {
-      const c = vscode.workspace.getConfiguration('failsafe');
-      return {
-        enabled: c.get<boolean>('integrations.teams.enabled', false),
-        webhookUrl: c.get<string>('integrations.teams.webhookUrl', ''),
-      };
-    }).register();
+
+    new SlackNotifier(
+      core.eventBus,
+      () => {
+        const c = vscode.workspace.getConfiguration('failsafe');
+        return {
+          enabled: c.get<boolean>('integrations.slack.enabled', false),
+          webhookUrl: c.get<string>('integrations.slack.webhookUrl', ''),
+        };
+      },
+      undefined,
+      reportNotifyFailure('Slack'),
+    ).register();
+    new TeamsNotifier(
+      core.eventBus,
+      () => {
+        const c = vscode.workspace.getConfiguration('failsafe');
+        return {
+          enabled: c.get<boolean>('integrations.teams.enabled', false),
+          webhookUrl: c.get<string>('integrations.teams.webhookUrl', ''),
+        };
+      },
+      undefined,
+      reportNotifyFailure('Teams'),
+    ).register();
 
     // 4. Sentinel
     const sentinel = await bootstrapSentinel(context, core, qor, logger);

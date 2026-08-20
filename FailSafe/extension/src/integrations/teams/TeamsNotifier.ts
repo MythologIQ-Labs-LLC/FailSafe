@@ -14,6 +14,8 @@ import * as https from 'https';
 import type { EventBus } from '../../shared/EventBus';
 import { sendTeamsNotification, type TeamsPostFn } from './teams-sender';
 import { mapGovernanceEvent, TEAMS_NOTIFY_EVENTS } from './teams-notify-map';
+import type { TeamsNotifyKind } from './teams-notify';
+import { readEventBusEvent, redactWebhookUrl } from '../notify-event';
 
 const defaultPost: TeamsPostFn = (url, body) =>
   new Promise((resolve, reject) => {
@@ -43,24 +45,46 @@ const defaultPost: TeamsPostFn = (url, body) =>
 
 export interface TeamsNotifierConfig { enabled: boolean; webhookUrl?: string }
 
+/** A notification that was built and attempted but did not reach Teams. */
+export interface TeamsDeliveryFailure { kind: TeamsNotifyKind; status?: number; throttled?: boolean; error?: string }
+
+/** Receives every non-delivery. Must never throw — delivery stays non-blocking. */
+export type TeamsFailureSink = (failure: TeamsDeliveryFailure) => void;
+
+const defaultOnFailure: TeamsFailureSink = (failure) =>
+  console.warn('[FailSafe] Teams governance notification not delivered', failure);
+
 export class TeamsNotifier {
   constructor(
     private readonly eventBus: EventBus,
     private readonly getConfig: () => TeamsNotifierConfig,
     private readonly post: TeamsPostFn = defaultPost,
+    private readonly onFailure: TeamsFailureSink = defaultOnFailure,
   ) {}
 
   register(): void {
     for (const evt of TEAMS_NOTIFY_EVENTS) {
-      this.eventBus.on(evt, (payload: unknown) => { void this.handle(evt, payload); });
+      this.eventBus.on(evt, (event: unknown) => { void this.handle(evt, event); });
     }
   }
 
-  private async handle(eventType: string, payload: unknown): Promise<void> {
+  private async handle(eventType: string, event: unknown): Promise<void> {
     const cfg = this.getConfig();
     if (!cfg.enabled || !cfg.webhookUrl) return;
-    const event = mapGovernanceEvent(eventType, payload);
-    if (!event) return;
-    await sendTeamsNotification(cfg.webhookUrl, event, this.post); // non-blocking by contract
+    const { payload, timestamp } = readEventBusEvent(event);
+    const notice = mapGovernanceEvent(eventType, payload);
+    if (!notice) return;
+    if (!notice.ts) notice.ts = timestamp;
+    const result = await sendTeamsNotification(cfg.webhookUrl, notice, this.post); // non-blocking by contract
+    // Notify-only never blocks a workflow, but a dropped governance alert must
+    // still leave a trace — silence would read as "no veto happened".
+    if (!result.ok && !result.skipped) {
+      this.onFailure({
+        kind: notice.kind,
+        status: result.status,
+        throttled: result.throttled,
+        error: redactWebhookUrl(result.error, cfg.webhookUrl),
+      });
+    }
   }
 }
