@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0] - 2026-08-20
+
 ### Added
 - **The Mind Map has an accessible alternative.** The graph carries an accessible name, and a LIST VIEW toggle renders real captioned node/edge tables (with connection counts) from live graph state — the same pattern as the Shadow Genome table view. (#325, FX912)
 - **`FailSafe: Configure VS Code Agents Window Governance`.** A guided, idempotent command covering the Agents-window user-setting opt-in, worktree commit-hook governance, and governed `.mcp.json` integration installs — with docs that state the in-process-MCP constraint honestly instead of scaffolding a ghost config (standalone bridge filed as B209). (#83 B+C, FX909)
@@ -22,9 +24,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The pre-commit guard is real now, and worktree-safe.** `GET /api/v1/governance/commit-check` ships (it was documented but never implemented, so the hook always failed open); the hook's port tracks the live Console server; installing from a linked git worktree works (hooks land in the shared `.git/hooks`, the token where the hook reads it); and `ConfigManager.getGovernanceRoot()` gives worktree-aware consumers one canonical repository root. (#83 Phase A, FX115/FX284/FX906)
 - **Editor-save governance can no longer fail open on any routing fault.** `handleFileOperation` is now total: faults in intent lookup, evaluation routing, qorlogic dispatch, or the adapter preflight — plus a hung verdict generation (bounded at 10s) or a throwing blockade notifier — all block the save instead of surfacing as an unhandled rejection. (#297, FX905)
 - **Mind Map view prefs survive identity-less reload windows.** The view-prefs store records the last real workspace identity and falls back to it when the hub hasn't delivered one yet; the canvas reconciles its prefs right after construction. (#319, FX897)
-
-## [6.0.0] - 2026-08-19
-
 ### Fixed
 - **Fail-closed + accessibility hardening (rolled in):** L3 escalation-queue fail-visible (#308); ACP governance-mode mirror-write fail-closed (#299); ACP fs no-client-support fail-closed (#300); ARIA tab semantics for primary nav (#302) and sub-view pills (#304); Mind Map Space push-to-talk guard (#307).
 - **Mind Map view prefs survive reload on slow machines.** The canvas could construct before the hub delivered the workspace identity, loading persisted layout/view prefs under the wrong key and sticking on FORCE/2D defaults (caught by this release's own gate on a prior tag attempt). Prefs now reconcile to the live canvas whenever the identity arrives. (#309 sibling fix; FX897/#263)
