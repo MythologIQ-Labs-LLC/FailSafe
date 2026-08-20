@@ -57,6 +57,16 @@ function compareUrl(remoteUrl: string, base: string, head: string): string | und
   return `https://github.com/${slug.owner}/${slug.repo}/compare/${base}...${head}`;
 }
 
+/**
+ * Strip http(s) userinfo (`https://user:pw@host` → `https://***@host`). `git remote
+ * get-url` returns userinfo verbatim, and whether git redacts it in error text is
+ * version-dependent — so redact at our own boundary rather than trusting the caller's
+ * git. ssh URLs are left alone: `git@host` is a username, not a credential.
+ */
+export function redactUrlCredentials(text: string): string {
+  return text.replace(/(https?:\/\/)[^/@\s]+@/gi, '$1***@');
+}
+
 export async function commitPushOpenPr(
   req: GovernedCommitRequest,
   deps: GovernedCommitDeps,
@@ -87,15 +97,18 @@ export async function commitPushOpenPr(
     return { step: 'committed', branch: req.branch, commit, warning: 'no `origin` remote — committed locally only' };
   }
   const remoteUrl = remote.stdout.trim();
+  // Redacted copy for anything that leaves this function; `remoteUrl` itself stays
+  // intact for slug parsing and the PR call.
+  const safeRemoteUrl = redactUrlCredentials(remoteUrl);
 
   const pushed = await git(['push', '-u', 'origin', req.branch], cwd);
   if (pushed.code !== 0) {
-    return { step: 'committed', branch: req.branch, commit, remoteUrl, warning: `push failed: ${pushed.stderr.trim()}` };
+    return { step: 'committed', branch: req.branch, commit, remoteUrl: safeRemoteUrl, warning: `push failed: ${redactUrlCredentials(pushed.stderr.trim())}` };
   }
 
   const cmp = compareUrl(remoteUrl, req.base, req.branch);
   if (!deps.post || !deps.token || !deps.token.trim()) {
-    return { step: 'pushed', branch: req.branch, commit, remoteUrl, compareUrl: cmp, warning: 'no GitHub token — branch pushed; open the PR manually' };
+    return { step: 'pushed', branch: req.branch, commit, remoteUrl: safeRemoteUrl, compareUrl: cmp, warning: 'no GitHub token — branch pushed; open the PR manually' };
   }
 
   const pr = await createPullRequest(
@@ -103,9 +116,9 @@ export async function commitPushOpenPr(
     deps.post,
   );
   if (pr.ok && pr.url) {
-    return { step: 'pr', branch: req.branch, commit, remoteUrl, prUrl: pr.url, compareUrl: cmp };
+    return { step: 'pr', branch: req.branch, commit, remoteUrl: safeRemoteUrl, prUrl: pr.url, compareUrl: cmp };
   }
-  return { step: 'pushed', branch: req.branch, commit, remoteUrl, compareUrl: cmp, warning: pr.error || 'PR not created — open it manually' };
+  return { step: 'pushed', branch: req.branch, commit, remoteUrl: safeRemoteUrl, compareUrl: cmp, warning: pr.error || 'PR not created — open it manually' };
 }
 
 /** Production git runner — `spawn` (shell:false), never throws (non-zero → {code}). */

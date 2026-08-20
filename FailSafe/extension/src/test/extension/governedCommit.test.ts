@@ -2,7 +2,7 @@
 // self-commit). Fully injected git runner + POST transport — no spawn / no network.
 
 import { strict as assert } from 'assert';
-import { commitPushOpenPr, type GitRunner, type GovernedCommitDeps } from '../../extension/governedCommit';
+import { commitPushOpenPr, redactUrlCredentials, type GitRunner, type GovernedCommitDeps } from '../../extension/governedCommit';
 import type { GitHubPostFn } from '../../integrations/github-checks/github-checks-client';
 
 type GitResp = { code: number; stdout: string; stderr: string };
@@ -76,5 +76,69 @@ suite('commitPushOpenPr — governed Organize ladder', () => {
     await commitPushOpenPr(REQ, { git, post: okPost, token: 'tok' });
     const add = calls.find((c) => c[0] === 'add');
     assert.deepEqual(add, ['add', '-A', '--', '.gitignore', '.editorconfig', 'prs.json']);
+  });
+});
+
+// #241 F-3: `git remote get-url` returns userinfo verbatim, so a credential-embedded
+// origin reaches both the `remoteUrl` result field and the push-failure warning that
+// bootstrapServers.ts surfaces via showInformationMessage. The placeholder below is a
+// fake stand-in for an operator's real token.
+suite('commitPushOpenPr — credential redaction (#241 F-3)', () => {
+  const CRED = 'https://someuser:NOTAREALPW@github.com/o/r.git';
+  const withRemote = (stdout: string, extra: (a: string[]) => Partial<GitResp> | undefined = () => undefined) =>
+    gitWith((a) => (a[0] === 'remote' ? { stdout } : extra(a)));
+
+  test('credentialed origin → remoteUrl in the result is redacted', async () => {
+    const r = await commitPushOpenPr(REQ, { git: withRemote(CRED) });
+    assert.equal(r.remoteUrl, 'https://***@github.com/o/r.git');
+  });
+
+  test('push stderr echoing a credentialed url → warning is redacted', async () => {
+    const r = await commitPushOpenPr(REQ, {
+      git: withRemote(CRED, (a) =>
+        a[0] === 'push' ? { code: 1, stderr: `fatal: Authentication failed for '${CRED}/'` } : undefined),
+    });
+    assert.equal(r.step, 'committed');
+    assert.ok(!(r.warning || '').includes('NOTAREALPW'), `warning leaked the credential: ${r.warning}`);
+    assert.match(r.warning || '', /push failed: fatal: Authentication failed for 'https:\/\/\*\*\*@github\.com\/o\/r\.git\/'/);
+  });
+
+  test('redaction leaves the slug-derived compare url and PR creation intact', async () => {
+    const r = await commitPushOpenPr(REQ, { git: withRemote(CRED), post: okPost, token: 'tok' });
+    assert.equal(r.step, 'pr');
+    assert.equal(r.prUrl, 'https://github.com/o/r/pull/9');
+    assert.equal(r.compareUrl, 'https://github.com/o/r/compare/main...fix/organize-123');
+  });
+
+  test('ssh remotes are untouched — `git@` is a username, not a secret', async () => {
+    const r = await commitPushOpenPr(REQ, { git: withRemote('git@github.com:o/r.git') });
+    assert.equal(r.remoteUrl, 'git@github.com:o/r.git');
+  });
+
+  test('token-as-username origin (no colon) is redacted too', async () => {
+    const r = await commitPushOpenPr(REQ, { git: withRemote('https://NOTAREALPW@github.com/o/r.git') });
+    assert.equal(r.remoteUrl, 'https://***@github.com/o/r.git');
+  });
+});
+
+suite('redactUrlCredentials', () => {
+  test('redacts every credentialed http(s) url in a multi-line blob', () => {
+    const out = redactUrlCredentials(
+      "remote: rejected\nfatal: could not read 'https://u:NOTAREALPW@github.com/o/r.git'\nhint: retry http://t@example.com/x",
+    );
+    assert.ok(!out.includes('NOTAREALPW'));
+    assert.match(out, /https:\/\/\*\*\*@github\.com\/o\/r\.git/);
+    assert.match(out, /http:\/\/\*\*\*@example\.com\/x/);
+  });
+
+  test('leaves urls without userinfo untouched, including @ inside a path', () => {
+    for (const url of ['https://github.com/o/r.git', 'https://registry.example/@scope/pkg', 'git@github.com:o/r.git', 'ssh://git@github.com/o/r.git']) {
+      assert.equal(redactUrlCredentials(url), url);
+    }
+  });
+
+  test('is idempotent — re-redacting an already-redacted url is stable', () => {
+    const once = redactUrlCredentials('https://u:NOTAREALPW@github.com/o/r.git');
+    assert.equal(redactUrlCredentials(once), once);
   });
 });
