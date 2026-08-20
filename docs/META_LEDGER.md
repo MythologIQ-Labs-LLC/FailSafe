@@ -27450,3 +27450,31 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 SESSION SEAL for burndown Cycle 9 (#241 Tranche C defects D-1..D-4; session 2026-08-20T0227-a1b316; audit PASS #544, implement #545; branch fix/integration-defects-241c). Reality = Promise: 14 src/test/manifest files + 4 doc surfaces. Verification: 7 red -> 63/63 green + T9; tsc + lint 0. Gate ladder exit 0; intent lock VERIFIED. DISCLOSED: electron host defers to CI; no version bump (HOLD); trailer absent per operator identity directive. With this cycle #241's audit scope is COMPLETE (Tranches A/B/C + all four confirmed defects fixed; F-1..F-7 recorded as named follow-ups on the issue) — #241 closable at delivery, which also progresses program #239.
+
+
+---
+
+### Entry #547: IMPLEMENTATION - integration-defects-241c amendment (F-1 via CodeQL gate)
+
+**Timestamp**: 2026-08-20T06:15:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(git diff -- src package.json package-lock.json)
+= c03c7a135384d76f13ffdfc908db719cdb3691b0697c6162cc95ddc49f609d93
+```
+
+**Previous Hash**: `9b68383064e4ecf9b04e19d7e1641e416c5aa75af66f7427d5ffb41694d628df` (Entry #546 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 4cd68d225922c372dee13fe7da1a067af94407bc542b995af3844f6867efdd95
+```
+
+## Decision
+
+POST-SEAL AMENDMENT to Cycle 9 (disclosed, same branch): CodeQL gated PR #331 with js/missing-rate-limiting (high) on the mcp-install route — D-1's rewrite changed the route's dataflow fingerprint, re-attributing the pre-existing gap as new. This is exactly Tranche-C follow-up F-1, so the amendment closes F-1 itself rather than suppressing the alert: both filesystem-mutating install routes (mcp-install, agt-install) gain the rejectIfRemote loopback guard every other mutating family has PLUS an express-rate-limit limiter (5/min); express-rate-limit@^8.2.1 promoted from transitive to a declared dependency (it was importable-but-undeclared — supply-chain hygiene). tsc + lint 0; suites green. CodeQL re-run on push is the empirical verifier for this class.
