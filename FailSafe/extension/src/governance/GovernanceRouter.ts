@@ -12,6 +12,14 @@ import { Plan, PlanPhase } from "../qorelogic/planning/types";
 import { Logger } from "../shared/Logger";
 import { GovernanceAdapter } from "./GovernanceAdapter";
 
+// FX297 candidate 3: verdict generation previously had no bound on how long
+// it could run. Slice 1/2's try/catch fails closed on a rejection, but
+// neither guards against a promise that never settles (e.g. a stalled
+// ledger/db write) -- that left the editor-save gate hanging indefinitely
+// with no guaranteed fail-closed outcome, relying entirely on undocumented
+// VS Code waitUntil-timeout behavior instead of an explicit decision.
+const VERDICT_GENERATION_TIMEOUT_MS = 10_000;
+
 // ======================================================================================
 // GovernanceRouter: The Central Nervous System for Governance
 //
@@ -26,6 +34,7 @@ export class GovernanceRouter {
   private notifications: INotificationService;
   private executeCommand: CommandExecutor;
   private qorLogicManager?: QorLogicManager;
+  private verdictTimeoutMs: number;
 
   constructor(
     private intentService: IntentService,
@@ -35,11 +44,13 @@ export class GovernanceRouter {
     notifications: INotificationService,
     executeCommand?: CommandExecutor,
     qorLogicManager?: QorLogicManager,
+    verdictTimeoutMs?: number,
   ) {
     this.logger = new Logger("GovernanceRouter");
     this.notifications = notifications;
     this.executeCommand = executeCommand ?? (() => {});
     this.qorLogicManager = qorLogicManager;
+    this.verdictTimeoutMs = verdictTimeoutMs ?? VERDICT_GENERATION_TIMEOUT_MS;
   }
 
   setGovernanceAdapter(adapter: GovernanceAdapter): void {
@@ -52,6 +63,34 @@ export class GovernanceRouter {
 
   setPlanManager(manager: PlanManager): void {
     this.planManager = manager;
+  }
+
+  /**
+   * Bound how long verdict generation may run. A promise that never settles
+   * (as opposed to one that rejects, already handled by the caller's
+   * try/catch) must still resolve to an explicit fail-closed outcome rather
+   * than hanging the editor-save gate indefinitely.
+   */
+  private withVerdictTimeout(pending: Promise<Verdict>): Promise<Verdict> {
+    return new Promise<Verdict>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(
+          new Error(
+            `Verdict generation timed out after ${this.verdictTimeoutMs}ms`,
+          ),
+        );
+      }, this.verdictTimeoutMs);
+      pending.then(
+        (verdict) => {
+          clearTimeout(timer);
+          resolve(verdict);
+        },
+        (error) => {
+          clearTimeout(timer);
+          reject(error);
+        },
+      );
+    });
   }
 
   /**
@@ -156,7 +195,9 @@ export class GovernanceRouter {
     // contract.
     let verdict: Verdict;
     try {
-      verdict = await this.enforcement.evaluateAction(action);
+      verdict = await this.withVerdictTimeout(
+        this.enforcement.evaluateAction(action),
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error("Verdict generation failed; failing closed", {
