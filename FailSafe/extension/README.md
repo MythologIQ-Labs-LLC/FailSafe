@@ -40,12 +40,17 @@ Each integration ships with its own README and its external API names are back-c
 
 ---
 
-**Current Release**: v6.0.0 (2026-08-19)
+**Current Release**: v6.0.0 (2026-08-20)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
 
 ## What's New in v6.0.0
 
+- **The pre-commit guard is real.** The commit-check endpoint ships (it was documented but never implemented), the hook's port tracks the live Console server, and installing from a git worktree governs every worktree of the repo.
+- **Guided Agents-window setup.** `FailSafe: Configure VS Code Agents Window Governance` walks the opt-in, worktree commit-hook install, and governed MCP integration installs.
+- **Repository-scoped first-run.** Each repository gets its own governance-mode decision; an explicitly configured mode anywhere suppresses re-prompting.
+- **Accessible Mind Map.** The graph carries an accessible name and a LIST VIEW toggle renders real node/edge tables — same pattern as the Shadow Genome table view.
+- **Integration hardening + a 69% smaller package.** MCP installs can no longer destroy an unparseable `.mcp.json`; SARIF/Sentry imports are malformed-proof and never silently drop findings; the PR-linkage check paginates (no more false findings); build intermediates and governance scan outputs can never ship in the VSIX.
 - **Enforce is now the default governance mode.** New and never-configured installs gate writes out of the box (intent-gated saves, L3 approvals). Observe and Assist are unchanged and one command away (`FailSafe: Set Governance Mode`); a one-time notice on upgrade offers the mode picker. Unresolvable mode values and a missing ACP mode mirror now fail closed to enforce.
 - **Enforcement works on every tier.** The editor enforcement path no longer consults any feature gate.
 - **Enforce-mode Create Intent flow.** Creating an intent in enforce mode first selects the plan it serves, with an explicit switch-mode escape; the writes-blocked dialog offers `Set Governance Mode`.
