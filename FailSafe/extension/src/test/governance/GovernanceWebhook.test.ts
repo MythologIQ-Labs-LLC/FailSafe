@@ -13,7 +13,7 @@ describe('GovernanceWebhook', () => {
     const rejects = (label: string, ip: string) => {
       it(`rejects ${label} (${ip})`, () => {
         assert.throws(
-          () => webhook.register({ url: `https://${ip}/hook`, events: ['*'] }),
+          () => webhook.register({ url: `https://${ip}/hook`, events: ['*'], payloadFields: ['verdict'] }),
           /Invalid webhook URL/,
         );
       });
@@ -23,7 +23,7 @@ describe('GovernanceWebhook', () => {
       it(`accepts ${label} (${host})`, () => {
         const authority = host.includes(':') ? `[${host}]` : host;
         assert.doesNotThrow(
-          () => webhook.register({ url: `https://${authority}/hook`, events: ['*'] }),
+          () => webhook.register({ url: `https://${authority}/hook`, events: ['*'], payloadFields: ['verdict'] }),
         );
       });
     };
@@ -59,7 +59,7 @@ describe('GovernanceWebhook', () => {
   describe('register – protocol enforcement', () => {
     it('rejects HTTP URLs', () => {
       assert.throws(
-        () => webhook.register({ url: 'http://example.com/hook', events: ['*'] }),
+        () => webhook.register({ url: 'http://example.com/hook', events: ['*'], payloadFields: ['verdict'] }),
         /Invalid webhook URL/,
       );
     });
