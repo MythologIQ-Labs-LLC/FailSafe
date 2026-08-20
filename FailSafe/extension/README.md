@@ -40,7 +40,7 @@ Each integration ships with its own README and its external API names are back-c
 
 ---
 
-**Current Release**: v6.0.0 (2026-08-20)
+**Current Release**: v6.0.1 (2026-08-20)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
 
