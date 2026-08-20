@@ -42,7 +42,9 @@ node_modules/**
 !node_modules/better-sqlite3/package.json
 !node_modules/better-sqlite3/LICENSE
 !node_modules/better-sqlite3/lib/**
-!node_modules/better-sqlite3/build/Release/**
+# FX911: only the built native binary ships — obj/ compile intermediates
+# (tlog, .obj, the 8MB sqlite3.c amalgamation) must not (was Release/**).
+!node_modules/better-sqlite3/build/Release/*.node
 !node_modules/bindings/package.json
 !node_modules/bindings/LICENSE.md
 !node_modules/bindings/bindings.js
@@ -86,3 +88,9 @@ dist/extension/ui/vendor/piper/**
 dist/extension/ui/vendor/whisper/**
 dist/failsafe-voice-pack-*.tar.gz
 dist/failsafe-voice-pack-*.sha256
+
+# FX911 (#243 Tranche A): governance scan outputs + native build intermediates
+# must never ship. validate-vsix carries the durable archive-level gate.
+.failsafe/**
+**/*.findings.json
+node_modules/better-sqlite3/build/Release/obj/**

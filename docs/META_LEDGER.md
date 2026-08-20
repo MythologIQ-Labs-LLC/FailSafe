@@ -27094,3 +27094,92 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 SESSION SEAL for burndown Cycle 5 (#241 named candidate; session 2026-08-19T2050-306452; audit PASS #532, implement #533). runMcpPolicyScan sink-fault resilience shipped (FX910); LD-6 spec correction rode along (disclosed in #533). Verification: 15/15 + FX897 spec 7/7 locally; tsc + lint clean; gate ladder exit 0. DISCLOSED: electron host defers to CI; no version bump (HOLD); trailer absent per operator identity directive. Pushed to the authorized #323 lane (CI running).
+
+
+---
+
+### Entry #535: GATE TRIBUNAL - vsix-hygiene-243a
+
+**Timestamp**: 2026-08-20T01:20:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= f67811d3497ef9a8158059a2ef71455116c090d366f7ea4802d673f7419dae70
+```
+
+**Previous Hash**: `310505a32d74dbdd7dabd595fcd32c337cc764bc13f0ddff5ce3311ca03509dd` (Entry #534 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= cc67f33504b7f3e2914aac74433ad191fd09ce48a6502c938c1da05fa45cc0b2
+```
+
+## Decision
+
+PASS on plan-vsix-hygiene-243a.md iteration 1 (#243 Tranche A finding: .failsafe/ scan outputs + build intermediates can ship in the VSIX; fix = .vscodeignore exclusions + a durable validate-vsix hygiene gate, red/green against real archives). Next: /qor-implement.
+
+
+---
+
+### Entry #536: IMPLEMENTATION - vsix-hygiene-243a
+
+**Timestamp**: 2026-08-20T02:10:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(git diff -- scripts/validate-vsix.cjs .vscodeignore)
+= 9eb8c584423fa047553a851bcec3794900e061aeaf42c0fb3ed08a455ce89470
+```
+
+**Previous Hash**: `cc67f33504b7f3e2914aac74433ad191fd09ce48a6502c938c1da05fa45cc0b2` (Entry #535 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= e11a91239d7820c85a63e1d1b467c8b7ad87820ac6b2d9a793e8dea6aeef6078
+```
+
+## Decision
+
+Implemented plan-vsix-hygiene-243a.md (audit PASS #535) on fix/vsix-hygiene-243a (fresh off post-#323 main). LD-2 validate-vsix packaged-hygiene gate (fails on .failsafe/ paths, *.findings.json, build-intermediate entries); LD-1 .vscodeignore: .failsafe/** + **/*.findings.json excluded AND the better-sqlite3 re-include narrowed from !build/Release/** to !build/Release/*.node (the broad re-include was overriding any exclusion — vsce negation precedence). Red observed on the real 20.1MB archive (26 violations incl. the 8MB sqlite3.c amalgamation and an empty-but-dangerous .failsafe scan-output); green on rebuild: 173 files, 6.17MB (-69%), runtime better_sqlite3.node verified present. release.yml single-artifact parity (vsce package once -> both marketplaces publish the same VSIX) confirmed as #243 Tranche A evidence.
+
+
+---
+
+### Entry #537: SESSION SEAL - vsix-hygiene-243a
+
+**Timestamp**: 2026-08-20T02:20:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L2
+**Entry ID**: `8a6cc35d30ad`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-vsix-hygiene-243a.md)
+= d93d3bff96aaee22988321fab9d294b3a0aa5200b82ebbccbbaaf5f96cc09abd
+```
+
+**Previous Hash**: `e11a91239d7820c85a63e1d1b467c8b7ad87820ac6b2d9a793e8dea6aeef6078` (Entry #536 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= da44a8cae94fa397856762a0e70de5af42836ba711b363361e545e3dac4a59d2
+```
+
+**Merkle Seal**: `6ebee61de47b62e5aa61a2b8836cbfc7d376f942606e92978322677f1fd4bcf8` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for burndown Cycle 6 (#243 Tranche A finding; session 2026-08-20T0151-1e49ea; audit PASS #535, implement #536; branch fix/vsix-hygiene-243a off post-#323 main). Reality = Promise. Verification: red observed on the real archive (26 violations), green on rebuild (6.17MB, -69%, runtime binary present); validate:vsix runs in CI verify-vsix-guardrails. Gate ladder exit 0; intent lock VERIFIED. DISCLOSED: no version bump (HOLD); trailer absent per operator identity directive. Tranche A remaining half (fresh-install runtime walkthrough) is extension-host class -> #326 checklist. Next: push + PR in the authorized lane; then Cycle 7 (#233 consumer migration).
