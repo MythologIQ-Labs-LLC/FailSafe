@@ -27183,3 +27183,92 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 SESSION SEAL for burndown Cycle 6 (#243 Tranche A finding; session 2026-08-20T0151-1e49ea; audit PASS #535, implement #536; branch fix/vsix-hygiene-243a off post-#323 main). Reality = Promise. Verification: red observed on the real archive (26 violations), green on rebuild (6.17MB, -69%, runtime binary present); validate:vsix runs in CI verify-vsix-guardrails. Gate ladder exit 0; intent lock VERIFIED. DISCLOSED: no version bump (HOLD); trailer absent per operator identity directive. Tranche A remaining half (fresh-install runtime walkthrough) is extension-host class -> #326 checklist. Next: push + PR in the authorized lane; then Cycle 7 (#233 consumer migration).
+
+
+---
+
+### Entry #538: GATE TRIBUNAL - consumer-route-migration-233
+
+**Timestamp**: 2026-08-20T02:40:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= 6393f4c3a2d1fcc3a0f1e74e48b29593d48ec1369fdb1f019166238e5b53546d
+```
+
+**Previous Hash**: `da44a8cae94fa397856762a0e70de5af42836ba711b363361e545e3dac4a59d2` (Entry #537 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= a4848343a6ab5c51dd1db3490edfd55a3ed439aafcf73026ff8711ceec83de9f
+```
+
+## Decision
+
+PASS on plan-consumer-route-migration-233.md iteration 1 (#233 consumer migration: replace the raw-string loadMetaLedger route seam with adapter envelopes; complete 4-site caller enumeration verified; pure transformers explicitly scheduled). Next: /qor-implement on fix/consumer-route-migration-233 (stacked on Cycle 6 for linear ledger).
+
+
+---
+
+### Entry #539: IMPLEMENTATION - consumer-route-migration-233
+
+**Timestamp**: 2026-08-20T03:05:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(git diff -- FailSafe/extension/src)
+= e037ab2bc19b3b898bd3b171a13b82d743b6e700760b075a83584231fc54c205
+```
+
+**Previous Hash**: `a4848343a6ab5c51dd1db3490edfd55a3ed439aafcf73026ff8711ceec83de9f` (Entry #538 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= b95570ca1f56e8cc2181b21671c828434b1e630bcd43a84bd659429c4fb6e349
+```
+
+## Decision
+
+Implemented plan-consumer-route-migration-233.md (audit PASS #538). LD-1: ApiRouteDeps.loadMetaLedger (raw string) REPLACED by readMetaLedgerEnvelope (ArtifactEnvelope<MetaLedgerEntry[]>). LD-2: ConsoleRouteRegistrar wires the adapter (readMetaLedgerArtifact) — the old fs.readFileSync+empty-string-catch is gone. LD-3: brainstorm seed route + governance-dashboard route consume envelopes (ok -> parsed entries reconstruct the appendix; any other state -> explicit empty appendix); the double-parse and both direct parseMetaLedgerEntries route imports deleted. TDD: T1 red (envelope ignored pre-change) -> green; T2 degrade pin; T3 envelope≡legacy equivalence over a real fixture workspace. 39/39 across the three suites; tsc 0. Pure transformers (seal-detection, governance-projection, genome-reconstruction) explicitly scheduled (they take text/entries; their feeders are separate seams).
+
+
+---
+
+### Entry #540: SESSION SEAL - consumer-route-migration-233
+
+**Timestamp**: 2026-08-20T03:15:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L2
+**Entry ID**: `45174f821830`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-consumer-route-migration-233.md)
+= 6ee011f9f40e64e665be801c886d8598799d177251bd112fcf36485ec02eb810
+```
+
+**Previous Hash**: `b95570ca1f56e8cc2181b21671c828434b1e630bcd43a84bd659429c4fb6e349` (Entry #539 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 5bbbe56120d318f542d8f6720787b3bced3690b3af9648c0bb053566fce76b89
+```
+
+**Merkle Seal**: `d347d0796f254bb455c569271f30a94df31631ce0aec59077f20f04a42fa7bd4` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for burndown Cycle 7 (#233 consumer migration; session 2026-08-20T0205-76164c; audit PASS #538, implement #539; branch fix/consumer-route-migration-233). Reality = Promise: 6 src/test files + 4 doc surfaces; loadMetaLedger seam deleted (grep 0 prod references). Verification: T1 red->green, T2 degrade pin, T3 envelope-equivalence; 39/39; tsc 0. Gate ladder exit 0; intent lock VERIFIED. DISCLOSED: electron host defers to CI; no version bump (HOLD); trailer absent per operator identity directive. #233 remaining after this: upstream fixture issue (file at delivery) + pure-transformer feeder slice (scheduled) + host evidence (#326).

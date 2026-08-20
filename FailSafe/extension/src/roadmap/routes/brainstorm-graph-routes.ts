@@ -3,7 +3,6 @@ import type { ApiRouteDeps } from "./types";
 import { NODE_LABEL_MAX, withTruncationInfo } from "./brainstorm-label-truncation";
 import { seedGraphFromGenome } from "../services/brainstorm-seed";
 import { reconstructGenomeFromLedger } from "../../qorlogic/genome-reconstruction";
-import { parseMetaLedgerEntries } from "../../qorlogic/meta-ledger-model";
 import { mergeGenomes } from "../../qorlogic/genome-merge";
 
 function addNode(req: Request, res: Response, deps: ApiRouteDeps): void {
@@ -47,9 +46,11 @@ async function seedGraph(req: Request, res: Response, deps: ApiRouteDeps) {
     ? await deps.loadShadowGenome()
     : { ok: true as const, localOnly: true };
   const graph = result.ok && result.graph ? result.graph : { nodes: [], edges: [] };
-  const ledger = deps.loadMetaLedger ? deps.loadMetaLedger() : "";
-  const appendix = ledger
-    ? reconstructGenomeFromLedger(parseMetaLedgerEntries(ledger))
+  // #233 (FX892): consume the adapter envelope — entries arrive parsed and
+  // classified; any non-ok state degrades to an empty appendix explicitly.
+  const envelope = deps.readMetaLedgerEnvelope ? deps.readMetaLedgerEnvelope() : null;
+  const appendix = envelope && envelope.state === "ok" && envelope.data
+    ? reconstructGenomeFromLedger(envelope.data)
     : { nodes: [], edges: [] };
   res.json(seedGraphFromGenome(mergeGenomes(graph, appendix)));
 }

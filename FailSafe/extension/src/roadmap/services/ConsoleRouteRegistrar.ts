@@ -15,6 +15,7 @@ import { AgtRoute } from "../routes/AgtRoute";
 import { IntegrationCatalogRoute } from "../routes/IntegrationCatalogRoute";
 import type { RouteDeps } from "../routes";
 import type { ApiRouteDeps } from "../routes/types";
+import { readMetaLedgerArtifact } from "../../qorlogic/consumer/consumer-adapter";
 import { ConfigurationProfile } from "../../genesis/ConfigurationProfile";
 import { setupBrainstormRoutes } from "../routes/BrainstormRoute";
 import { setupTrackerConfigRoutes } from "../routes/TrackerConfigRoute";
@@ -256,11 +257,10 @@ export class ConsoleRouteRegistrar {
         python: "",
         enabled: false,
       }),
-      // #454: feed the reconstructed-genome appendix from the historical ledger.
-      loadMetaLedger: () => {
-        try { return fs.readFileSync(path.join(h.workspaceRoot, "docs", "META_LEDGER.md"), "utf-8"); }
-        catch { return ""; }
-      },
+      // #454 -> #233 (FX892): the reconstructed-genome appendix now arrives as
+      // an adapter envelope — classified (ok/unavailable/malformed/...) instead
+      // of a best-effort raw string.
+      readMetaLedgerEnvelope: () => readMetaLedgerArtifact(h.workspaceRoot),
       getActiveRuns: () => h.getAgentRunRecorder()?.getActiveRuns() || [],
       getCompletedRuns: () => h.getAgentRunRecorder()?.getCompletedRuns() || [],
       getRun: (id) => h.getAgentRunRecorder()?.getRun(id),
