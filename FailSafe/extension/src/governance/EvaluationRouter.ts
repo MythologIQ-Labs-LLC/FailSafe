@@ -78,7 +78,12 @@ export class EvaluationRouter {
   private thresholds: RoutingThresholds;
   private ledgerConfig: LedgerTierConfig;
   private eventBus?: EventBus;
-  private confidenceCache: Map<string, ConfidenceLevel> = new Map();
+  // #244 Tranche C: was an unbounded `Map`, growing by one entry per
+  // distinct governed-agent event id for the lifetime of this (long-lived,
+  // one-per-session) instance. Bounded to match the sibling
+  // fingerprint/novelty caches below (LRUCache(100), same 5-minute TTL
+  // used for the other short-lived per-event correlation cache).
+  private confidenceCache = new LRUCache<string, ConfidenceLevel>(100);
   private fingerprintCache = new LRUCache<string, ContentFingerprint>(100);
   private noveltyCache = new LRUCache<string, NoveltyLevel>(100);
   private cacheMetrics = new CacheInstrumentation();
@@ -115,7 +120,7 @@ export class EvaluationRouter {
       this.eventBus.on("sentinel.confidence", (event) => {
         const payload = event.payload as { eventId?: string; confidence?: number };
         if (payload?.eventId && typeof payload.confidence === "number") {
-          this.confidenceCache.set(payload.eventId, this.toConfidenceLevel(payload.confidence));
+          this.confidenceCache.set(payload.eventId, this.toConfidenceLevel(payload.confidence), 5 * 60 * 1000);
         }
       });
     }
