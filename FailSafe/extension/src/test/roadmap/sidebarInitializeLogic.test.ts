@@ -3,7 +3,7 @@
 // so this is effectively a pure unit test of a discriminated-union decision function.
 
 import { strict as assert } from "assert";
-import { decideSidebarClick } from "../../roadmap/sidebarInitializeLogic";
+import { decideSidebarClick, sanitizeConsoleRoute } from "../../roadmap/sidebarInitializeLogic";
 
 suite("decideSidebarClick (UX hotfix Phase 2)", () => {
   test("Organize label + organize command registered → run-organize", () => {
@@ -43,5 +43,31 @@ suite("decideSidebarClick (UX hotfix Phase 2)", () => {
     const b = decideSidebarClick("Initialize", input);
     assert.deepEqual(a, b);
     assert.equal(input.size, sizeBefore);
+  });
+});
+
+suite("sanitizeConsoleRoute (FX916 webview→host boundary)", () => {
+  test("legal deep-link route passes unchanged", () => {
+    const route = "governance:audit?verdict=2026-08-20T01%3A02%3A03.000Z";
+    assert.equal(sanitizeConsoleRoute(route), route);
+  });
+
+  test("bare tab routes pass unchanged", () => {
+    assert.equal(sanitizeConsoleRoute("governance"), "governance");
+    assert.equal(sanitizeConsoleRoute("agents"), "agents");
+  });
+
+  test("routes that could smuggle URLs or scripts are rejected", () => {
+    assert.equal(sanitizeConsoleRoute("javascript:alert(1)"), null, "parens rejected");
+    assert.equal(sanitizeConsoleRoute("//evil.example/x"), null, "slashes rejected");
+    assert.equal(sanitizeConsoleRoute("governance /x"), null, "whitespace rejected");
+    assert.equal(sanitizeConsoleRoute("a#b"), null, "hash rejected");
+  });
+
+  test("oversized and non-string inputs are rejected", () => {
+    assert.equal(sanitizeConsoleRoute("g".repeat(257)), null, "over 256 chars rejected");
+    assert.equal(sanitizeConsoleRoute(42), null, "number rejected");
+    assert.equal(sanitizeConsoleRoute(undefined), null, "undefined rejected");
+    assert.equal(sanitizeConsoleRoute({ route: "governance" }), null, "object rejected");
   });
 });

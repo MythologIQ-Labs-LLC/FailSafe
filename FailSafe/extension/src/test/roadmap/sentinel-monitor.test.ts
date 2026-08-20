@@ -111,4 +111,53 @@ suite('Sentinel monitor render (FX-MONITOR-SENTINEL)', () => {
     assert.equal(elements.sentinelAlert.onclick, null,
       `sentinelAlert.onclick should be null`);
   });
+
+  test('FX916 WARN verdict with timestamp — alert click navigates to the specific verdict route', () => {
+    const elements = buildElementsMock();
+    const routes: string[] = [];
+    const monitor = new SentinelMonitor(elements, (r: string) => routes.push(r));
+    const ts = '2026-08-20T12:00:00.000Z';
+    monitor.renderSentinel(
+      { running: true, lastVerdict: { decision: 'WARN' } },
+      [{ decision: 'WARN', summary: '1 issue(s) detected - review recommended', timestamp: ts }],
+    );
+    assert.ok(elements.sentinelAlert.onclick, 'alert must be clickable');
+    elements.sentinelAlert.onclick!();
+    assert.deepEqual(routes, [`governance:audit?verdict=${encodeURIComponent(ts)}`],
+      'click carries the triggering verdict timestamp as the deep-link identity');
+  });
+
+  test('FX916 WARN verdict without timestamp — alert click falls back to the audit-log route', () => {
+    const elements = buildElementsMock();
+    const routes: string[] = [];
+    const monitor = new SentinelMonitor(elements, (r: string) => routes.push(r));
+    monitor.renderSentinel(
+      { running: false, lastVerdict: { decision: 'WARN' } },
+      [{ decision: 'WARN', summary: 'no ts' }],
+    );
+    elements.sentinelAlert.onclick!();
+    assert.deepEqual(routes, ['governance:audit'], 'timestamp-less alert still opens the Audit Log');
+  });
+
+  test('FX916 blockers graphic + error-budget gauge — click navigates to governance', () => {
+    const routes: string[] = [];
+    const graphic = { title: '', style: {} as Record<string, string>, onclick: null as (() => void) | null };
+    const gaugeWrap = { title: '', style: {} as Record<string, string>, onclick: null as (() => void) | null };
+    const elements = {
+      ...buildElementsMock(),
+      healthBlockers: { textContent: '' },
+      blockerBar: { style: {} as Record<string, string> },
+      blockersGraphic: graphic,
+      gaugeValue: { style: {} as Record<string, string> },
+      errorBudget: { textContent: '' },
+      gaugeWrap,
+    };
+    const monitor = new SentinelMonitor(elements, (r: string) => routes.push(r));
+    monitor.renderBlockers(2);
+    monitor.renderErrorBudget(50);
+    graphic.onclick!();
+    gaugeWrap.onclick!();
+    assert.deepEqual(routes, ['governance', 'governance'],
+      'sibling click-throughs use the same relay instead of sandboxed window.open');
+  });
 });

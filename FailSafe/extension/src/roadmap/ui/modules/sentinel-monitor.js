@@ -1,9 +1,13 @@
 // SentinelMonitor — Extracted from roadmap.js for Section 4 Razor compliance
 // Handles sentinel status, workspace health metrics, and metric explanations
+import { openConsole } from './console-nav.js';
 
 export class SentinelMonitor {
-  constructor(elements) {
+  // nav is injectable for tests; production uses the console-nav relay, which
+  // works both embedded in the sidebar webview and browser-served (FX916).
+  constructor(elements, nav = openConsole) {
     this.elements = elements;
+    this.nav = nav;
   }
 
   metricColor(value) {
@@ -35,13 +39,10 @@ export class SentinelMonitor {
     }
     this.elements.sentinelAlert.classList.remove('hidden');
     this.elements.sentinelAlert.textContent = String(alert.summary || 'Sentinel raised a risk signal.');
-    this.elements.sentinelAlert.title = 'Click to open the triggering verdict in the Governance tab';
+    this.elements.sentinelAlert.title = 'Click to open the triggering verdict in the Console Audit Log';
     this.elements.sentinelAlert.onclick = () => {
       const ts = alert.timestamp ? encodeURIComponent(String(alert.timestamp)) : '';
-      const url = ts
-        ? `/command-center.html#governance:audit?verdict=${ts}`
-        : '/command-center.html#governance:audit';
-      window.open(url, '_blank');
+      this.nav(ts ? `governance:audit?verdict=${ts}` : 'governance:audit');
     };
   }
 
@@ -84,7 +85,7 @@ export class SentinelMonitor {
     if (this.elements.blockersGraphic) {
       this.elements.blockersGraphic.title = `Critical blockers detected: ${hardBlockers}.`;
       this.elements.blockersGraphic.style.cursor = 'pointer';
-      this.elements.blockersGraphic.onclick = () => window.open('/command-center.html#governance', '_blank');
+      this.elements.blockersGraphic.onclick = () => this.nav('governance');
     }
   }
 
@@ -106,7 +107,7 @@ export class SentinelMonitor {
     if (this.elements.gaugeWrap) {
       this.elements.gaugeWrap.title = `Error budget burn: ${burn}%. Derived from unresolved blockers, queue depth, and risk verdicts.`;
       this.elements.gaugeWrap.style.cursor = 'pointer';
-      this.elements.gaugeWrap.onclick = () => window.open('/command-center.html#governance', '_blank');
+      this.elements.gaugeWrap.onclick = () => this.nav('governance');
     }
   }
 

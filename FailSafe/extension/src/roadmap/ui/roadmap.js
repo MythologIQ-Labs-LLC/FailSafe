@@ -3,6 +3,7 @@ import { getPhaseInfo, getFeatureSummary, renderPhase } from './modules/monitor-
 import { MonitorStaleness } from './modules/monitor-staleness.js';
 import { installMonitorViewportFit, fitMonitorToViewport } from './modules/monitor-viewport-fit.js';
 import { openModal } from './modules/modal-helper.js';
+import { openConsole } from './modules/console-nav.js';
 
 export class WebPanelClient {
   constructor() {
@@ -424,21 +425,21 @@ export class WebPanelClient {
         event.preventDefault();
         event.stopPropagation();
         const target = button.getAttribute('data-info-target') || 'overview';
-        window.open(this.commandCenterUrlFor(target), '_blank');
+        openConsole(this.commandCenterRouteFor(target));
       });
     });
   }
 
-  commandCenterUrlFor(target) {
-    if (target === 'recent') return '/command-center.html#agents';
-    if (target === 'debug') return '/command-center.html#agents';
-    if (target !== 'next') return '/command-center.html#overview';
+  commandCenterRouteFor(target) {
+    if (target === 'recent') return 'agents';
+    if (target === 'debug') return 'agents';
+    if (target !== 'next') return 'overview';
 
     const index = this.currentPhaseInfo?.index ?? -1;
-    if (index === 0) return '/command-center.html#workspace';
-    if (index === 1 || index >= 4) return '/command-center.html#governance';
-    if (index === 2 || index === 3) return '/command-center.html#agents';
-    return '/command-center.html#overview';
+    if (index === 0) return 'workspace';
+    if (index === 1 || index >= 4) return 'governance';
+    if (index === 2 || index === 3) return 'agents';
+    return 'overview';
   }
 
   // Transparency and risk data now served via Console modules only.

@@ -58,5 +58,7 @@ export function highlightRecordFromHash(container) {
 export function hasAuditHashFilter() {
   const hash = (typeof window !== 'undefined' && window.location?.hash) || '';
   const params = new URLSearchParams(hash.split('?')[1] || '');
-  return Boolean(params.get('id') || params.get('eventId'));
+  // `verdict` deep links (Monitor sentinel alert) must bypass the default
+  // same-day date filter like `id` links do, or older verdicts never render.
+  return Boolean(params.get('id') || params.get('eventId') || params.get('verdict'));
 }

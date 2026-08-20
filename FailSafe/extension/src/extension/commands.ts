@@ -6,6 +6,7 @@ import { FeedbackManager } from "../genesis/FeedbackManager";
 import { IntentService } from "../governance/IntentService";
 import { IntentType } from "../governance/types/IntentTypes";
 import { DetectedSystem, FrameworkSync } from "../qorelogic/FrameworkSync";
+import { sanitizeConsoleRoute } from "../roadmap/sidebarInitializeLogic";
 import { WorkspaceMigration } from "../qorelogic/WorkspaceMigration";
 import { RiskManager } from "../qorelogic/risk";
 import type { PlanManager } from "../qorelogic/planning/PlanManager";
@@ -56,7 +57,7 @@ async function waitForConsoleServerReady(
   return false;
 }
 
-async function openRoadmapExternal(view?: string): Promise<void> {
+async function openRoadmapExternal(view?: string, hash?: string): Promise<void> {
   // Open the new Console UI
   const targetUrl = new URL(getBaseUrl());
   // Add workspace identity for multi-workspace support
@@ -66,6 +67,10 @@ async function openRoadmapExternal(view?: string): Promise<void> {
   targetUrl.searchParams.set("ui", "console");
   if (view) {
     targetUrl.searchParams.set("view", view);
+  }
+  if (hash) {
+    // Console hash-route deep link (FX916), e.g. governance:audit?verdict=<ts>.
+    targetUrl.hash = hash;
   }
 
   const themeKind = vscode.window.activeColorTheme.kind;
@@ -342,6 +347,17 @@ export function registerCommands(
   context.subscriptions.push(
     vscode.commands.registerCommand("failsafe.openPlannnerHub", () => {
       return openRoadmapExternal();
+    }),
+  );
+  // Console deep link at a hash route (FX916); relayed from the sidebar
+  // Monitor's sentinel alert via FailSafeSidebarProvider. The provider already
+  // sanitizes, but the command is publicly executable, so it re-applies the
+  // same allowlist fail-closed.
+  context.subscriptions.push(
+    vscode.commands.registerCommand("failsafe.openConsoleRoute", (route?: unknown) => {
+      const safe = sanitizeConsoleRoute(route);
+      if (!safe) return;
+      return openRoadmapExternal(undefined, safe);
     }),
   );
   context.subscriptions.push(
