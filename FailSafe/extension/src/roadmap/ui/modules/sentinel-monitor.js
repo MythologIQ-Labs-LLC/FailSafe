@@ -1,6 +1,7 @@
 // SentinelMonitor — Extracted from roadmap.js for Section 4 Razor compliance
 // Handles sentinel status, workspace health metrics, and metric explanations
 import { openConsole } from './console-nav.js';
+import { makeActionable } from './actionable.js';
 
 export class SentinelMonitor {
   // nav is injectable for tests; production uses the console-nav relay, which
@@ -16,18 +17,11 @@ export class SentinelMonitor {
     return '#ef4444';
   }
 
-  /** FX917: make a mouse-only affordance keyboard/AT-operable (setAttribute per
-   *  the FX880 precedent). Title stays device-neutral — with an aria-label
-   *  present it demotes to accessible description and must not say "Click". */
+  /** FX917: delegates to the shared actionable helper (extracted in FX920 so
+   *  the sentinel affordances, health-item cards, and governance-alert rows
+   *  share one body — no copy drift). */
   makeActionable(el, label, title, activate) {
-    el.setAttribute('tabindex', '0');
-    el.setAttribute('role', 'button');
-    el.setAttribute('aria-label', label);
-    el.title = title;
-    el.onclick = activate;
-    el.onkeydown = (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); }
-    };
+    makeActionable(el, label, title, activate);
   }
 
   renderSentinel(status, verdicts) {

@@ -28124,3 +28124,149 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 Merge substantiation for parallel-session PR #354 (MCP Registry stored-XSS claim; closes #352 / #241 F-5) under the operator's delegation. Independent adversarial audit PASS: the fix retracts the false README claim AND refuses the naive sanitizeField wiring (double-escape hazard recorded at the sink), hardens latently (apostrophe added to the escape class, honestly labeled), and converts the true control into an adversarial DOM test - hostile payloads through the real render path with element-creation, escaping-not-stripping, exhaustive on*-attribute sweep, and attribute-breakout round-trip assertions; mutation resistance verified per field. Full-renderer sink sweep clean (all innerHTML interpolations esc()-wrapped; remaining sinks textContent; no href/src, pinned by test). mcp-risk-score.ts hunks comment-only. Attribution footer stripped pre-merge (fourth occurrence today - web PR flow auto-appends; operator settings fix remains the durable path). NB residuals: apostrophe-only revert uncaught (declared latent; sink comment guards), import-path style split, entity-form note. MERGED rollup-green; #352 auto-closed.
+
+
+---
+
+### Entry #570: GATE TRIBUNAL - 242-slice2-modal-triggers
+
+**Timestamp**: 2026-08-21T02:10:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: VETO (iteration 1)
+
+**Content Hash**:
+```
+SHA256("plan-242-slice2|iter1-VETO-V1-detached-previousFocus|2026-08-20")
+= a4e2522a4bce11300982c2fe66eefd446b6e22b40a4eaa91a8f331b44fca5257
+```
+
+**Previous Hash**: `c3dd32bc1074f89b4c707c4c285246b78e0d15d554146208e4d1d00d3e4a1d2f` (Entry #569 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 8217d1290da349f0ae9aafd6dce4aa33b9c8a69df0780de72ed5a1683538a73a
+```
+
+## Decision
+
+VETO on plan-242-slice2-modal-triggers.md iteration 1 (Option B mandatory). V1: governance-alert rows are destroyed/recreated on EVERY hub refresh, so openModal's element-captured previousFocus is detached by the time a normally-paced reader closes the alert modal (focus() on a detached node silently no-ops; user lands on body) - the slice-1 element-state-vs-destructive-re-render lesson class, now on the restore side - AND the declared e2e used a static fixture that would certify the broken production journey (test-passes/production-fails). Amendment: showAlertDetails onClose restore-by-selector fallback ([data-alert-id] + CSS.escape; resolved-while-open = declared residual), a re-render-while-open jsdom pin, and the e2e now DRIVES a hub refresh while the modal is open. Also folded: A1 the metric-card click binding is REPLACED not duplicated (double-open + mis-bound close buttons hazard); A2 accessible names exclude the info-icon '?' and the five pointer-worded info-icon titles are reworded; A3 the chip test descriptor corrected to keyboard semantics (focus B, activate B - the as-written cross-chip assertion was impossible-green); A4 Space keydown-vs-keyup comment. Clean and carried: LD1 machinery-sufficiency verified TRUE for metric cards (walked incl. capture-phase Escape and post-return close-button bindings); LD4 two-path chip design verified; delegation extraction drift-proof; all ten citations exact. Next: iteration 2 re-verification.
+
+
+---
+
+### Entry #571: GATE TRIBUNAL - 242-slice2-modal-triggers
+
+**Timestamp**: 2026-08-21T02:40:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (iteration 2)
+
+**Content Hash**:
+```
+SHA256("plan-242-slice2|iter2-PASS|2026-08-20")
+= 54256bfeb51f8dc7d352bf32f179650388f63c101edfd336eab2ec6bd230c712
+```
+
+**Previous Hash**: `8217d1290da349f0ae9aafd6dce4aa33b9c8a69df0780de72ed5a1683538a73a` (Entry #570 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 325b65bdf28871c3ba1bd795748a05b83331097c9bd7522b7a92d8cc7f02eaa8
+```
+
+## Decision
+
+PASS on plan-242-slice2-modal-triggers.md iteration 2 (Option B full delta re-verification). V1 closed on all three legs: onClose restore-by-selector design in LD3, governance-alerts-a11y.test.ts re-render-while-open pin, and the e2e drives a mid-modal hub refresh via controller.setHub (mechanism verified real at serveConsoleServerUI.ts:63/204-209 — no static-fixture certification). Fallback condition proven a STRICT NO-OP in the connected case (states provably disjoint: any refresh destroys all rows via the unconditional innerHTML reassignment; no refresh means the helper's own restore already succeeded); no theft path introducible (Tab trap + overlay confine focus while open; empty-alerts path clears innerHTML so connected-but-hidden is unreachable). CSS.escape verified identity-safe for every id the hub emits (veto-/block-/fail-<entry> from GovernancePhaseTracker.ts:145-177) with the escapeHtml round-trip sound for arbitrary future ids. A1-A4 folded. Implement-pass conditions: N1 wire globalThis.CSS in the new jsdom harness (setupDom pattern); N2 FX920 descriptor aligned to anchor-identity (folded pre-verdict); fallback closure captures document.activeElement at showAlertDetails entry. Next: /qor-implement on feat/242-slice2-modal-triggers.
+
+
+---
+
+### Entry #572: IMPLEMENTATION - 242-slice2-modal-triggers
+
+**Timestamp**: 2026-08-21T04:05:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(git diff --cached -- FailSafe/extension/src FailSafe/extension/CHANGELOG.md)
+= 98699621fe55db688d135f8ee1f8fb5a1aac89a0add143f2b7f56645976df32b
+```
+
+**Previous Hash**: `325b65bdf28871c3ba1bd795748a05b83331097c9bd7522b7a92d8cc7f02eaa8` (Entry #571 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= b0a09e802ef68cea5fe24f0e8728c759e6e49416cd8092bbc208b6a91c375fac
+```
+
+## Decision
+
+Implemented plan-242-slice2-modal-triggers.md iteration 2 (audit VETO #570 -> PASS #571). Shared actionable.js helper (SentinelMonitor delegating - no copy drift; FX917 suite green unchanged); five health-item cards keyboard-operable (labels exclude the info-icon glyph per A2; old click binding REPLACED per A1; five info-icon titles reworded device-neutral + aria-hidden); governance-alert rows actionable via the per-render loop (letter-deviation from in-template attributes, observer-judged EQUIVALENT - the loop runs after every innerHTML rebuild - disclosed); showAlertDetails onClose restore-by-selector fallback with guarded CSS.escape (precedent-matched after a jsdom window.CSS absence surfaced the unguarded form) and strict connected-case no-op; N5 filter chips build-once + in-place class toggle (focused chip survives by object identity; deep-link re-anchor coincidence window closed). Observer APPROVE (zero blocking); two hardening lines applied in-pass: the e2e now PROVES the mid-modal rebuild happened (pre-refresh marker vanishes) before asserting the re-anchor (finding 3), and a click-fires-once jsdom case guards A1 (finding 4). DISCLOSED pre-existing defect (observer finding 1, out of diff): the compact Monitor loads no .cc-modal-overlay styles - the B198 openModal migration never ported them to roadmap.css (orphaned .alert-modal-overlay/.metric-modal-overlay blocks remain) - modals function but render unstyled, and the missing backdrop leaves pointer users a two-overlay mis-bind route; queued as the immediate next mini-cycle. Verification: lint 0; census 448/448 (3886 passing); test:ui 195 passed; targeted suites green on final text. Upstream Qor-logic#359 filed (consumer-extensible secret-scanner allowlist surface).
+
+
+---
+
+### Entry #573: SESSION SEAL - 242-slice2-modal-triggers
+
+**Timestamp**: 2026-08-21T04:10:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L2
+**Entry ID**: `34bdd651b374`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-242-slice2-modal-triggers.md)
+= 19785882b0888d85c502355edf57d4b0c62cb3df7627ba224c07d4e5019f3c21
+```
+
+**Previous Hash**: `b0a09e802ef68cea5fe24f0e8728c759e6e49416cd8092bbc208b6a91c375fac` (Entry #572 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= e81fb368645fc8559ea0fb9b3495ce7a70dd4e03c9c5528cdc2e1caae1a07390
+```
+
+**Merkle Seal**: `ffb77a77e51fadc187afc8d08729b5da8249bac5b29194b777802d83686cf930` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for #242 slice 2 (session 2026-08-20T1929-e7f249; audit #570 VETO -> #571 PASS; implement #572; branch feat/242-slice2-modal-triggers). Reality = Promise on every audited condition (V1 with the strict-no-op proof honored in code, A1-A4, N1-N3) - observer-verified APPROVE with in-pass hardening. Release-notes copy authored in BOTH CHANGELOGs in-cycle. Gate ladder: intent VERIFIED, secret scan clean, doc-integrity strict PASS. **Feature Inventory**: Total: 736 / verified: 687 / n/a: 43 / other: 7. **Newly unverified**: none. Residual queue after this slice: unstyled Monitor .cc-modal-overlay (pre-existing, observer finding 1 - NEXT mini-cycle, CSS-only) + orphaned modal CSS blocks; #242 program remainder (contrast, reduced-motion, zoom, exports, manual AT review - operator evidence); escapeHtml double-quote nit + untested CSS.escape fallback arm (marginal, recorded); workspace-fragility housekeeping. Delivery: PR under the CI-green+substantiated delegation (advances #242, does not close it).
+
+
+---
+
+### Entry #574: IMPLEMENTATION AMENDMENT - 242-slice2 CodeQL follow-through
+
+**Timestamp**: 2026-08-21T04:50:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(git diff -- FailSafe/extension/src)
+= c9a6fb39e887991b19a0cbca618d58ee696bc19977141853cf92b94c62af4d16
+```
+
+**Previous Hash**: `e81fb368645fc8559ea0fb9b3495ce7a70dd4e03c9c5528cdc2e1caae1a07390` (Entry #573 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 314c546702fa079105ee23acaeb90f9f84db6bc410dd2a64633da1da29d96569
+```
+
+## Decision
+
+Pre-merge amendment to the #573-sealed slice, driven by PR #359's CodeQL gate: js/incomplete-sanitization (HIGH) on the CSS.escape fallback arm - the quote-only replace missed backslashes (the exact arm the observer had flagged untested). Fix: backslashes escaped BEFORE quotes. Writing the pinning test then exposed the deeper layer the observer had noted as a nit (5b): the local escapeHtml (innerHTML round-trip) does not escape quotes, so a quote-bearing id TRUNCATES the data-alert-id attribute and is attribute-injectable - escapeHtml now completes the canonical [&<>"'] class. New hostile-id test drives the full flow (CSS global absent, id with backslash+quote) through render -> modal -> destructive re-render -> re-anchor. Suites re-verified: 30 unit green incl. the new case; monitor-a11y 3/3. Pre-existing SIBLING sites with the identical incomplete fallback (governance.js:94, transparency-records.js:50 - unflagged because unchanged) filed as issue #360 with the proven fix shape. Layered-defense note for the record: three review passes missed what the CodeQL PR scan caught, and the pinning test for THAT fix caught what CodeQL could not see - each layer earned its place today.

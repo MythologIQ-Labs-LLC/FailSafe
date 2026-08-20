@@ -4,6 +4,7 @@ import { MonitorStaleness } from './modules/monitor-staleness.js';
 import { installMonitorViewportFit, fitMonitorToViewport } from './modules/monitor-viewport-fit.js';
 import { openModal } from './modules/modal-helper.js';
 import { openConsole } from './modules/console-nav.js';
+import { makeActionable } from './modules/actionable.js';
 
 export class WebPanelClient {
   constructor() {
@@ -313,7 +314,7 @@ export class WebPanelClient {
       const typeClass = alert.type?.toLowerCase() || 'warning';
       const icon = alert.type === 'VETO' ? '⛔' : alert.type === 'BLOCK' ? '🚫' : '⚠️';
       return `
-        <div class="governance-alert ${typeClass}" data-alert-id="${this.escapeHtml(alert.id)}" title="Click for details">
+        <div class="governance-alert ${typeClass}" data-alert-id="${this.escapeHtml(alert.id)}">
           <span class="alert-icon">${icon}</span>
           <span class="alert-message">${this.escapeHtml(alert.message)}</span>
           ${alert.entry ? `<span class="alert-entry">#${alert.entry}</span>` : ''}
@@ -321,15 +322,19 @@ export class WebPanelClient {
       `;
     }).join('');
 
-    // Add click handlers for details modal
+    // FX920: rows are recreated by this innerHTML render on every hub refresh,
+    // so the actionable wiring (tabindex/role/name + click/keyboard) runs here,
+    // after every rebuild — attributes and handlers always exist on live rows.
     this.elements.governanceAlerts.querySelectorAll('.governance-alert').forEach((el) => {
-      el.addEventListener('click', () => {
-        const alertId = el.getAttribute('data-alert-id');
-        const alert = alerts.find((a) => a.id === alertId);
-        if (alert) {
-          this.showAlertDetails(alert);
-        }
-      });
+      const alertId = el.getAttribute('data-alert-id');
+      const alert = alerts.find((a) => a.id === alertId);
+      if (!alert) return;
+      makeActionable(
+        el,
+        `${alert.type}: ${alert.message} — open details`,
+        'Opens the alert details',
+        () => this.showAlertDetails(alert),
+      );
     });
   }
 
@@ -349,7 +354,32 @@ export class WebPanelClient {
       <div class="alert-modal-footer">
         <button class="alert-modal-dismiss">Dismiss</button>
       </div>`;
-    const handle = openModal({ title: `Alert: ${alert.type || ''}`, bodyHtml });
+    // FX920/V1 (#570): alert rows are innerHTML-recreated on every hub refresh,
+    // so the modal helper's element-captured focus restore can be a detached
+    // no-op by close time. Re-anchor by identity — ONLY when the invoker was
+    // destroyed (strict no-op when connected: the helper already restored;
+    // states are disjoint since any refresh destroys every row). If the alert
+    // resolved while open, the selector misses and focus stays as-is
+    // (declared residual, audit #571).
+    const invoker = document.activeElement;
+    const handle = openModal({
+      title: `Alert: ${alert.type || ''}`,
+      bodyHtml,
+      onClose: () => {
+        if (invoker && !invoker.isConnected) {
+          const id = String(alert.id);
+          // Fallback escaping must handle backslashes BEFORE quotes (CodeQL
+          // js/incomplete-sanitization, PR #359 alert 33) — a trailing \ would
+          // otherwise neutralize the quote escape and break the selector.
+          const safeId = typeof CSS !== 'undefined' && CSS.escape
+            ? CSS.escape(id)
+            : id.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+          this.elements.governanceAlerts
+            ?.querySelector(`[data-alert-id="${safeId}"]`)
+            ?.focus();
+        }
+      },
+    });
     const root = document.querySelector('.cc-modal-overlay');
     root?.querySelector('.alert-modal-close')?.addEventListener('click', () => handle.close());
     root?.querySelector('.alert-modal-dismiss')?.addEventListener('click', () => handle.close());
@@ -363,9 +393,13 @@ export class WebPanelClient {
   }
 
   escapeHtml(value) {
+    // The innerHTML round-trip covers & < > only; quotes must be escaped too
+    // or interpolation into double-quoted attributes (data-alert-id) truncates
+    // and becomes attribute-injectable (canonical class: htmlSanitizer's
+    // [&<>"']; surfaced by the PR #359 CodeQL follow-through).
     const div = document.createElement('div');
     div.textContent = String(value || '');
-    return div.innerHTML;
+    return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#039;');
   }
 
   // Metric Explanations
@@ -409,13 +443,24 @@ export class WebPanelClient {
   }
 
   setupMetricClickHandlers() {
+    // FX920: makeActionable's onclick is the ONLY activation path — the old
+    // addEventListener binding is replaced wholesale (a surviving duplicate
+    // would double-open the modal and mis-bind close buttons; audit #570 A1).
     document.querySelectorAll('.health-item[data-metric]').forEach((item) => {
-      item.addEventListener('click', (e) => {
-        const metricKey = item.getAttribute('data-metric');
-        if (metricKey) {
-          this.showMetricExplanation(metricKey);
-        }
-      });
+      const metricKey = item.getAttribute('data-metric');
+      if (!metricKey) return;
+      const labelEl = item.querySelector('.health-label');
+      // Accessible name from the visible label TEXT only — the info-icon's
+      // "?" glyph is excluded (audit #570 A2).
+      const label = labelEl
+        ? Array.from(labelEl.childNodes)
+            .filter((n) => n.nodeType === 3)
+            .map((n) => n.textContent.trim())
+            .filter(Boolean)
+            .join(' ')
+        : metricKey;
+      makeActionable(item, `${label} — open explanation`, 'Opens the metric explanation', () =>
+        this.showMetricExplanation(metricKey));
     });
   }
 

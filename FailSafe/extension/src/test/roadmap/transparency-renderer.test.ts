@@ -214,6 +214,39 @@ suite('TransparencyRenderer verdict records', () => {
     } finally { restore(); }
   });
 
+  test('FX920/N5 — activating a filter chip preserves the focused element (in-place update)', () => {
+    const { container, restore } = setupDom();
+    try {
+      const renderer = new TransparencyRenderer('audit-root');
+      renderer.render();
+      const bar = container.querySelector('.cc-filter-bar')!;
+      const chips = Array.from(bar.querySelectorAll('.cc-chip')) as HTMLElement[];
+      assert.ok(chips.length > 1, 'precondition: multiple category chips');
+      const target = chips[1];
+      // Keyboard semantics: Enter on a focused button fires click.
+      target.focus();
+      target.click();
+      assert.equal((globalThis as any).document.activeElement, target,
+        'the focused chip must survive selection by OBJECT IDENTITY (pre-fix: innerHTML rebuild destroys it, focus falls to body)');
+      assert.ok(target.classList.contains('active'), 'active class moved to the selected chip');
+    } finally { restore(); }
+  });
+
+  test('FX920/N5 — chip nodes are stable across selections (no rebuild after first paint)', () => {
+    const { container, restore } = setupDom();
+    try {
+      const renderer = new TransparencyRenderer('audit-root');
+      renderer.render();
+      const bar = container.querySelector('.cc-filter-bar')!;
+      const before = Array.from(bar.querySelectorAll('.cc-chip'));
+      (before[1] as HTMLElement).click();
+      (before[2] as HTMLElement).click();
+      const after = Array.from(bar.querySelectorAll('.cc-chip'));
+      assert.equal(before.length, after.length);
+      before.forEach((node, i) => assert.equal(node, after[i], `chip ${i} must be the same node`));
+    } finally { restore(); }
+  });
+
   // qor-debug regression guard — the default date filter compared a UTC ISO
   // entry.time (with `Z`, ms precision) against LOCAL minute-precision bounds
   // using lexicographic string `<`/`>`. An event late in the local day (whose

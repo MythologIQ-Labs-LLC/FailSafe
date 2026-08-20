@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Every Monitor modal is keyboard-reachable.** The five workspace-health metric cards and governance-alert rows are focusable with visible focus rings and screen-reader names; Enter opens the explanation/details modal, and Escape returns focus to where you were — even when a live hub refresh rebuilt the alert list while the modal was open. Filtering the Console audit stream no longer throws keyboard focus away on chip selection. (#242 slice 2, FX920)
 - **Wake-word settings changes reach the Mind Map again after tab switches.** The wake-word bridge re-registers on every rebuild instead of dying permanently after one round trip away from the Mind Map tab. (#346, FX918)
 - **Credential redaction covers passwords containing `@`.** The governed-commit redactor now strips to the last `@` of the userinfo, so no password tail can survive in results or warnings. (#349)
 - **The governance webhook's outbound contract is provably wired and bounded.** What's transmitted is byte-identical to the signed builder output; oversized payloads fail closed per-target before signing without disturbing sibling deliveries. (#350, FX919)

@@ -99,3 +99,98 @@ test.describe('FX917 - Monitor deep-link keyboard accessibility', () => {
     await popup.close();
   });
 });
+
+test.describe('FX920 - Monitor modal triggers keyboard journeys', () => {
+  let controller: ConsoleServerController;
+
+  function alertHub(): HubFixture {
+    const hub = warnHub();
+    hub.governancePhase = {
+      ...hub.governancePhase,
+      activeAlerts: [
+        { id: 'veto-548', type: 'VETO', message: 'Audit VETO on plan X', entry: 548 },
+      ],
+    };
+    return hub;
+  }
+
+  test.afterEach(async () => {
+    if (controller) await controller.close();
+  });
+
+  async function tabUntilFocused(page: import('@playwright/test').Page, selector: string, max = 25): Promise<boolean> {
+    for (let i = 0; i < max; i += 1) {
+      await page.keyboard.press('Tab');
+      const focused = await page.evaluate(
+        (sel) => document.activeElement?.matches?.(sel) ?? false, selector);
+      if (focused) return true;
+    }
+    return false;
+  }
+
+  test('keyboard-only: metric card opens its explanation modal; Escape returns focus to the card', async ({ page }) => {
+    controller = await serveConsoleServerUI({ initialHub: warnHub() });
+    await page.goto(`${controller.url}/?ui=compact`);
+    await expect(page.locator('.health-item[data-metric="blockers"]')).toBeVisible({ timeout: 10000 });
+
+    const reached = await tabUntilFocused(page, '.health-item[data-metric="blockers"]');
+    expect(reached, 'the blockers card must be Tab-reachable').toBe(true);
+
+    const card = page.locator('.health-item[data-metric="blockers"]');
+    await expect(card).toHaveAttribute('role', 'button');
+    const name = await card.getAttribute('aria-label');
+    expect(name).toContain('Critical Blockers');
+    expect(name).not.toContain('?');
+    const outline = await card.evaluate((el) => getComputedStyle(el).outlineStyle);
+    expect(outline).not.toBe('none');
+
+    await page.keyboard.press('Enter');
+    const dialog = page.locator('.cc-modal-overlay[role="dialog"]');
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+    const focusInside = await page.evaluate(() =>
+      document.querySelector('.cc-modal-overlay')?.contains(document.activeElement) ?? false);
+    expect(focusInside, 'focus must land inside the dialog').toBe(true);
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    const returned = await page.evaluate(() =>
+      document.activeElement?.matches?.('.health-item[data-metric="blockers"]') ?? false);
+    expect(returned, 'Escape must return focus to the invoking card').toBe(true);
+  });
+
+  test('keyboard-only: alert row opens details; a mid-modal hub refresh recreates rows; Escape re-anchors', async ({ page }) => {
+    controller = await serveConsoleServerUI({ initialHub: alertHub() });
+    await page.goto(`${controller.url}/?ui=compact`);
+    const row = page.locator('.governance-alert[data-alert-id="veto-548"]');
+    await expect(row).toBeVisible({ timeout: 10000 });
+
+    const reached = await tabUntilFocused(page, '.governance-alert[data-alert-id="veto-548"]');
+    expect(reached, 'the alert row must be Tab-reachable').toBe(true);
+    await expect(row).toHaveAttribute('role', 'button');
+
+    await page.keyboard.press('Enter');
+    const dialog = page.locator('.cc-modal-overlay[role="dialog"]');
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+
+    // Production cadence (audit #570 V1): a hub refresh arrives while the
+    // modal is open, destroying and recreating every alert row. Mark the
+    // pre-refresh row so we can PROVE the destructive rebuild happened —
+    // without this the assertion could pass via the plain connected-case
+    // restore and silently certify nothing (observer finding 3).
+    await page.evaluate(() => {
+      document.querySelector('.governance-alert[data-alert-id="veto-548"]')
+        ?.setAttribute('data-prerefresh', '1');
+    });
+    controller.setHub(alertHub());
+    await expect.poll(async () => page.evaluate(() =>
+      document.querySelector('.governance-alert[data-alert-id="veto-548"]')
+        ?.getAttribute('data-prerefresh') ?? null,
+    ), { timeout: 5000 }).toBe(null); // recreated row lacks the marker ⇒ rebuild proven
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    const anchored = await page.evaluate(() =>
+      document.activeElement?.getAttribute?.('data-alert-id') ?? null);
+    expect(anchored, 'focus must re-anchor to the recreated row with the same data-alert-id').toBe('veto-548');
+  });
+});
