@@ -3,7 +3,7 @@
 
 import { strict as assert } from 'assert';
 // @ts-expect-error JS module import in TS test context
-import { escapeHtml, renderShell, renderRightPanel } from '../../../src/roadmap/ui/modules/brainstorm-templates.js';
+import { escapeHtml, renderShell, renderRightPanel, renderListView } from '../../../src/roadmap/ui/modules/brainstorm-templates.js';
 
 suite('brainstorm-templates (FX214)', () => {
   test('FX214 escapeHtml — escapes the 5 HTML-significant characters', () => {
@@ -88,3 +88,34 @@ suite('brainstorm-templates (FX214)', () => {
     assert.match(html, /class="cc-bs-history"/);
   });
 });
+
+// #325 (FX912) — accessible name + list-view alternative. Written FIRST per TDD.
+suite('brainstorm-templates list view (FX912/#325)', () => {
+  test('T1: renderShell carries the canvas accessible name and the LIST VIEW toggle', () => {
+    const html = renderShell();
+    assert.match(html, /cc-brainstorm-canvas"[^>]*role="img"/s);
+    assert.match(html, /aria-label="Mind Map graph[^"]*"/);
+    assert.match(html, /class="cc-btn cc-bs-list-toggle" aria-pressed="false"/);
+    assert.match(html, /class="cc-bs-list-view" style="display:none;"/);
+  });
+
+  test('T2: renderListView renders captioned node/edge tables with degrees and escaped content', () => {
+    const html = renderListView(
+      [
+        { id: 'a', label: 'Alpha <script>alert(1)</script>', level: 'core' },
+        { id: 'b', label: 'Beta', level: 'idea' },
+      ],
+      [{ source: 'a', target: 'b', label: 'links' }],
+    );
+    assert.match(html, /<caption>Nodes<\/caption>/);
+    assert.match(html, /<caption>Edges<\/caption>/);
+    assert.ok(!html.includes('<script>alert(1)</script>'), 'labels must be escaped');
+    assert.match(html, /&lt;script&gt;/);
+    assert.match(html, /<td>Beta<\/td>/);
+    // degree: both nodes touch the single edge once
+    const degreeCells = html.match(/<td>1<\/td>/g) || [];
+    assert.ok(degreeCells.length >= 2, 'each node shows its connection degree');
+    assert.match(html, /<td>Alpha[\s\S]*?<td>links<\/td>[\s\S]*?<td>Beta/, 'edge row shows source/label/target');
+  });
+});
+

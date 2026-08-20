@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **The Mind Map has an accessible alternative.** The graph carries an accessible name, and a LIST VIEW toggle renders real captioned node/edge tables (with connection counts) from live graph state — the same pattern as the Shadow Genome table view. (#325, FX912)
 - **`FailSafe: Configure VS Code Agents Window Governance`.** A guided, idempotent command covering the Agents-window user-setting opt-in, worktree commit-hook governance, and governed `.mcp.json` integration installs — with docs that state the in-process-MCP constraint honestly instead of scaffolding a ghost config (standalone bridge filed as B209). (#83 B+C, FX909)
 
 ### Changed

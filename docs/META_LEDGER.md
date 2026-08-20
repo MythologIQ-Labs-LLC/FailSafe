@@ -27272,3 +27272,92 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 SESSION SEAL for burndown Cycle 7 (#233 consumer migration; session 2026-08-20T0205-76164c; audit PASS #538, implement #539; branch fix/consumer-route-migration-233). Reality = Promise: 6 src/test files + 4 doc surfaces; loadMetaLedger seam deleted (grep 0 prod references). Verification: T1 red->green, T2 degrade pin, T3 envelope-equivalence; 39/39; tsc 0. Gate ladder exit 0; intent lock VERIFIED. DISCLOSED: electron host defers to CI; no version bump (HOLD); trailer absent per operator identity directive. #233 remaining after this: upstream fixture issue (file at delivery) + pure-transformer feeder slice (scheduled) + host evidence (#326).
+
+
+---
+
+### Entry #541: GATE TRIBUNAL - mindmap-list-view-325
+
+**Timestamp**: 2026-08-20T03:35:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L1
+**Verdict**: PASS (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= d110a4b8dfed22938766bf4390802089527900bf8f3dab9fca96973dcc63f728
+```
+
+**Previous Hash**: `5bbbe56120d318f542d8f6720787b3bced3690b3af9648c0bb053566fce76b89` (Entry #540 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= f08da1453a9071f0f229be1860ca124d48dfbe74ae7f6cc5797fc29ad67344be
+```
+
+## Decision
+
+PASS on plan-mindmap-list-view-325.md iteration 1 (#325: Mind Map accessible name + FX890-pattern list-view alternative; design source = in-repo Shadow Genome table view). Next: /qor-implement on fix/mindmap-list-view-325.
+
+
+---
+
+### Entry #542: IMPLEMENTATION - mindmap-list-view-325
+
+**Timestamp**: 2026-08-20T04:00:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L1
+
+**Content Hash**:
+```
+SHA256(git diff -- FailSafe/extension/src)
+= 1a166c3af16c00d3eb8ce35f13d5cce5a19cc4c82986b6fa1ebe36c9b7000ce1
+```
+
+**Previous Hash**: `f08da1453a9071f0f229be1860ca124d48dfbe74ae7f6cc5797fc29ad67344be` (Entry #541 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= c3ef88bb9f106f3c368723e5e76cb5bf2bd7f744f4b96823948e8c55f688be8c
+```
+
+## Decision
+
+Implemented plan-mindmap-list-view-325.md (audit PASS #541). LD-1 renderShell: canvas role=img + aria-label; LIST VIEW toggle (aria-pressed) + hidden .cc-bs-list-view container. LD-2 renderListView(nodes, edges): captioned Nodes (Label/Type/Connections=degree) + Edges (Source/Label/Target) tables, all cells through escapeHtml (XSS pinned by T2 script-label case). LD-3 wireToolbar: toggle renders from LIVE graph state each activation, swaps displays, aria-pressed round-trips. TDD: T1-T4 red (3 failing + compile) -> 32/32 green; tsc + compile + lint clean. Closes the #242 AC gap the Tranche-B rendered audit filed as #325; rendered re-probe rides the next #242 slice.
+
+
+---
+
+### Entry #543: SESSION SEAL - mindmap-list-view-325
+
+**Timestamp**: 2026-08-20T04:10:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L1
+**Entry ID**: `b16a9251cdf9`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-mindmap-list-view-325.md)
+= 5f3c8dd3218718f2f690011342f684108f64ec5ff0e4b28024045cb07a0aa95a
+```
+
+**Previous Hash**: `c3ef88bb9f106f3c368723e5e76cb5bf2bd7f744f4b96823948e8c55f688be8c` (Entry #542 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= fe6a67a2df87680eec72f2eebfeb9266160940d106da5bcaa567e060789d585c
+```
+
+**Merkle Seal**: `3c59e5b8506ddaaee93701b1007216e7b3edb8dd68d8a3c4e1b62ea8e94dd686` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for burndown Cycle 8 (#325 Mind Map accessible alternative; session 2026-08-20T0219-da1bc0; audit PASS #541, implement #542; branch fix/mindmap-list-view-325 stacked on Cycle 7). Reality = Promise: 4 src/test files + 4 doc surfaces. Verification: T1-T4 red -> 32/32 green; tsc + compile (browser-ESM emit) + lint clean. Gate ladder exit 0; intent lock VERIFIED. DISCLOSED: rendered Playwright re-probe of the fixed surface rides the next #242 slice (the unit layer pins template + wiring behavior); electron host defers to CI; no version bump (HOLD); trailer absent per operator identity directive. Board effect at delivery: #325 closes.
