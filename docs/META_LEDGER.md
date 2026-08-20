@@ -27062,3 +27062,35 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 (1) Implemented plan-agent-audit-scan-guard-241.md (audit PASS #532): runMcpPolicyScan seam extracted from failsafe.agentAudit.run with try/catch'd sink (failed counter; loop never aborts), handler shows a warning when failed>0. TDD: compile-red then T1-T3 green (15/15 suite); tsc + lint clean. FX910. (2) POST-SEAL CORRECTION to Cycle-1's LD-6 (seal #521 disclosure): the reload spec's identity-arrival poll turned an optional signal into a hard gate — CI run 2 on PR #323 showed hub delivery is transport-variant (WS->SSE) and can exceed any budget; the LD-4 fallback makes identity unnecessary for the product promise, so the spec now polls the healed canvas state directly (20s). FX897 spec 7/7 green locally post-correction. Also this session: #295 missed-consumer harness fix (monitor-phase-lessons, FX595) after CI run 1.
+
+
+---
+
+### Entry #534: SESSION SEAL - agent-audit-scan-guard-241
+
+**Timestamp**: 2026-08-20T01:00:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L1
+**Entry ID**: `ea8eeb7bdafa`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-agent-audit-scan-guard-241.md)
+= 0de54c4dbb5a656401a72b64db0c56ff4d3072b33726b950b74373ffe28a7c2d
+```
+
+**Previous Hash**: `3a6556117f038414b490d9d0e70b60968501b8137045e86355ef2cbd7e49feab` (Entry #533 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 310505a32d74dbdd7dabd595fcd32c337cc764bc13f0ddff5ce3311ca03509dd
+```
+
+**Merkle Seal**: `4d4e897c3e98a36811be942e81ce8cb44456a707eccfd60f8c401ddf39072ec2` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for burndown Cycle 5 (#241 named candidate; session 2026-08-19T2050-306452; audit PASS #532, implement #533). runMcpPolicyScan sink-fault resilience shipped (FX910); LD-6 spec correction rode along (disclosed in #533). Verification: 15/15 + FX897 spec 7/7 locally; tsc + lint clean; gate ladder exit 0. DISCLOSED: electron host defers to CI; no version bump (HOLD); trailer absent per operator identity directive. Pushed to the authorized #323 lane (CI running).
