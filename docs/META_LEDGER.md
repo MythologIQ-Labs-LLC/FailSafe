@@ -27478,3 +27478,33 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 POST-SEAL AMENDMENT to Cycle 9 (disclosed, same branch): CodeQL gated PR #331 with js/missing-rate-limiting (high) on the mcp-install route — D-1's rewrite changed the route's dataflow fingerprint, re-attributing the pre-existing gap as new. This is exactly Tranche-C follow-up F-1, so the amendment closes F-1 itself rather than suppressing the alert: both filesystem-mutating install routes (mcp-install, agt-install) gain the rejectIfRemote loopback guard every other mutating family has PLUS an express-rate-limit limiter (5/min); express-rate-limit@^8.2.1 promoted from transitive to a declared dependency (it was importable-but-undeclared — supply-chain hygiene). tsc + lint 0; suites green. CodeQL re-run on push is the empirical verifier for this class.
+
+
+---
+
+### Entry #548: DELIVER - v6.0.0 published
+
+**Timestamp**: 2026-08-20T04:00:00Z
+**Phase**: DELIVER
+**Author**: Governor
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256("v6.0.0|44e44bfa422dd8ee1c6729d06442a7eb72afaefc|run-32329150025|2026-08-20")
+= 68b58678030df086802f3f5016f33ac89a1a6404f7f3befdbccaea32344e5912
+```
+
+**Previous Hash**: `4cd68d225922c372dee13fe7da1a067af94407bc542b995af3844f6867efdd95` (Entry #547 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= b498c370ea5bde75d4c3d7b6eb95ab680e09cb27488fe84efd524e5da69c5137
+```
+
+**Merkle Seal**: `19c4bbec7daecc59e7bda9a62dd8dd7c990a7b69a4b51f7893c3c953cfa54c0f` (SHA256(chain_hash + "DELIVER"))
+
+## Decision
+
+DELIVER seal for FailSafe v6.0.0 — the single consolidated release (three tag cuts; only the third published). Final release commit 44e44bfa (PR #332 merge); tag v6.0.0 annotated on it; Release Pipeline run 32329150025 ALL GREEN end-to-end: SemVer gate, Build & Test, operator-approved production gate, Publish to VS Code Marketplace SUCCESS, Publish to Open VSX SUCCESS, GitHub Release published non-draft 2026-08-20T03:51Z. Scope shipped: enforce-by-default governance (FX899-FX903) + free-tier enforce; de-Pro'd public surfaces; dependency backlog cleared to 0; the 9-cycle issue burndown (#518-#547: fail-closed total guard FX905, FX897 identity fallback, repo-scoped first-run, #83 Phases A-C incl. live commit-check + worktree CommitGuard FX115/FX284/FX906 + configureAgentsWindow FX909, VSIX hygiene FX911 (-69%), adapter route migration FX892, Mind Map LIST VIEW FX912, #241 defect fixes FX910/FX913-FX915 + F-1 rate-limit) + parallel-lane #244 fixes (#324/#330). Issues CLOSED this train: #297 #319 #295 #83 #325 #241 (+#234/#235/#238 earlier). Post-release board (9): operator items #236/#237 (spot-check), #326 (live window), #242 screen-reader slice; autonomous remainders dispositioned per-issue; upstream Qor-logic#358 filed. Residual watch: brainstorm-tab-roundtrip #263 leak-spec flaked on two release runs — next determinism candidate. Open VSX ingestion verified lagging at seal time (publish job SUCCESS; index re-check queued).
