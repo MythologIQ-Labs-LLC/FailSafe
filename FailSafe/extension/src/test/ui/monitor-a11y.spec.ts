@@ -151,6 +151,25 @@ test.describe('FX920 - Monitor modal triggers keyboard journeys', () => {
       document.querySelector('.cc-modal-overlay')?.contains(document.activeElement) ?? false);
     expect(focusInside, 'focus must land inside the dialog').toBe(true);
 
+    // The compact Monitor loads only roadmap.css — the .cc-modal-overlay
+    // wrapper must be styled THERE, not just in command-center.css, or the
+    // modal renders in-flow with no overlay chrome (audit-verified gap).
+    const overlayStyle = await dialog.evaluate((el) => {
+      const s = getComputedStyle(el);
+      return { position: s.position, background: s.backgroundColor, z: s.zIndex };
+    });
+    expect(overlayStyle.position, 'overlay must be a fixed full-viewport layer').toBe('fixed');
+    expect(overlayStyle.background, 'overlay must dim the page behind the modal')
+      .not.toMatch(/rgba\(0,\s*0,\s*0,\s*0\)|transparent/);
+    expect(Number(overlayStyle.z)).toBeGreaterThan(0);
+    const cardStyle = await page.locator('.cc-modal').evaluate((el) => {
+      const s = getComputedStyle(el);
+      return { border: s.borderTopWidth, radius: s.borderTopLeftRadius, maxWidth: s.maxWidth };
+    });
+    expect(cardStyle.maxWidth, 'modal card must be width-bounded for the sidebar').not.toBe('none');
+    expect(parseFloat(cardStyle.radius), 'modal card must have card chrome').toBeGreaterThan(0);
+    await page.screenshot({ path: 'test-results/monitor-metric-modal-styled.png' });
+
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
     const returned = await page.evaluate(() =>

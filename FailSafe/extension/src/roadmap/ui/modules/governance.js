@@ -3,6 +3,7 @@
 
 import { renderIntegrityCard, renderUnattributedCard, derivePolicies } from './integrity.js';
 import { sentinelModeValue } from './sentinel-mode.js';
+import { escapeSelectorValue } from './escape-selector.js';
 
 export class GovernanceRenderer {
   constructor(containerId, deps = {}) {
@@ -91,7 +92,7 @@ export class GovernanceRenderer {
     const params = new URLSearchParams(queryStr);
     const section = params.get('section');
     if (section) {
-      const safeSection = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(section) : section.replace(/"/g, '\\"');
+      const safeSection = escapeSelectorValue(section);
       const target = this.container.querySelector(`[data-section="${safeSection}"]`);
       target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       target?.classList.add('cc-section--highlighted');
@@ -100,7 +101,7 @@ export class GovernanceRenderer {
     }
     const ts = params.get('verdict');
     if (!ts) return;
-    const row = this.container.querySelector(`[data-verdict-ts="${CSS.escape(ts)}"]`);
+    const row = this.container.querySelector(`[data-verdict-ts="${escapeSelectorValue(ts)}"]`);
     if (row) {
       row.scrollIntoView({ behavior: 'smooth', block: 'center' });
       row.classList.add('cc-verdict--highlighted');

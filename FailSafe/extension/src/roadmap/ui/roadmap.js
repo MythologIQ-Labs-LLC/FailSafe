@@ -5,6 +5,7 @@ import { installMonitorViewportFit, fitMonitorToViewport } from './modules/monit
 import { openModal } from './modules/modal-helper.js';
 import { openConsole } from './modules/console-nav.js';
 import { makeActionable } from './modules/actionable.js';
+import { escapeSelectorValue } from './modules/escape-selector.js';
 
 export class WebPanelClient {
   constructor() {
@@ -367,15 +368,8 @@ export class WebPanelClient {
       bodyHtml,
       onClose: () => {
         if (invoker && !invoker.isConnected) {
-          const id = String(alert.id);
-          // Fallback escaping must handle backslashes BEFORE quotes (CodeQL
-          // js/incomplete-sanitization, PR #359 alert 33) — a trailing \ would
-          // otherwise neutralize the quote escape and break the selector.
-          const safeId = typeof CSS !== 'undefined' && CSS.escape
-            ? CSS.escape(id)
-            : id.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
           this.elements.governanceAlerts
-            ?.querySelector(`[data-alert-id="${safeId}"]`)
+            ?.querySelector(`[data-alert-id="${escapeSelectorValue(String(alert.id))}"]`)
             ?.focus();
         }
       },
