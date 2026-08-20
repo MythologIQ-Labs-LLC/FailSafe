@@ -124,6 +124,30 @@ suite('CheckpointStore (FX319)', () => {
     assert.ok(verdicts.every(v => 'verdict' in v && 'timestamp' in v));
   });
 
+  test('FX110 getRecentVerdicts — payload timestamp wins over the persist stamp (memory + db)', () => {
+    const verdictTs = '2026-08-20T12:00:00.000Z';
+    const memory: CheckpointRecord[] = [];
+    persistCheckpoint(build({ type: 'policy.checked', payload: { verdict: 'WARN', timestamp: verdictTs } }, null, memory), null, memory);
+    const memVerdicts = getRecentVerdicts(null, memory, 10);
+    assert.equal(memVerdicts[0].timestamp, verdictTs,
+      'memory branch: verdict origin timestamp survives, persist stamp does not override');
+
+    const db = makeDb() as any;
+    persistCheckpoint(build({ type: 'policy.checked', payload: { verdict: 'WARN', timestamp: verdictTs } }, db, []), db, []);
+    const dbVerdicts = getRecentVerdicts(db, [], 10);
+    assert.equal(dbVerdicts[0].timestamp, verdictTs,
+      'db branch: verdict origin timestamp survives, row stamp does not override');
+    db.close();
+  });
+
+  test('FX110 getRecentVerdicts — falls back to the record stamp when payload has no timestamp', () => {
+    const memory: CheckpointRecord[] = [];
+    persistCheckpoint(build({ type: 'policy.checked', payload: { verdict: 'PASS' } }, null, memory), null, memory);
+    const verdicts = getRecentVerdicts(null, memory, 10);
+    assert.equal(verdicts[0].timestamp, memory[0].timestamp,
+      'pre-fix checkpoints keep the persist stamp as fallback');
+  });
+
   test('FX319 getAllCheckpointsAsc — memory mode reverses to ASC order', () => {
     const memory: CheckpointRecord[] = [];
     const r1 = build({ phase: 'first' }, null, memory);

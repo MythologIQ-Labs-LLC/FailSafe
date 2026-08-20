@@ -79,6 +79,26 @@ suite('TransparencyRenderer verdict records', () => {
     } finally { restore(); }
   });
 
+  test('FX916 non-today verdict deep link bypasses the default date filter and highlights', () => {
+    const today = new Date();
+    const yesterdayNoon = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 12, 0, 0);
+    const ts = yesterdayNoon.toISOString();
+    const url = `http://localhost/command-center.html#governance:audit?verdict=${encodeURIComponent(ts)}`;
+    const { container, restore } = setupDom(url);
+    try {
+      const renderer = new TransparencyRenderer('audit-root');
+      renderer.render(); // bindDateFilters defaults from/to to today-local bounds
+      renderer.onEvent({
+        type: 'sentinel.verdict',
+        payload: { decision: 'WARN', riskGrade: 'L2', timestamp: ts },
+      });
+      const card = container.querySelector(`[data-event-ts="${ts}"]`);
+      assert.ok(card, 'a deep-linked verdict from yesterday must render despite the default today filter');
+      assert.equal(card!.classList.contains('cc-verdict--highlighted'), true,
+        'and must be highlighted as the deep-link target');
+    } finally { restore(); }
+  });
+
   // qor-debug regression guard — the default date filter compared a UTC ISO
   // entry.time (with `Z`, ms precision) against LOCAL minute-precision bounds
   // using lexicographic string `<`/`>`. An event late in the local day (whose

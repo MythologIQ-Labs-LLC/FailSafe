@@ -163,6 +163,35 @@ suite('EventSubscriptionManager (FX448)', () => {
     assert.equal(exitedCount, 1, 'dedup blocks second emission');
   });
 
+  test('FX110 sentinel.verdict — checkpoint payload + transparency log carry the verdict timestamp', () => {
+    const cap = captured();
+    const deps = makeDeps(cap);
+    new EventSubscriptionManager(deps).subscribe();
+    deps.eventBus.emit('sentinel.verdict' as never, {
+      decision: 'WARN', riskGrade: 'L2', summary: '1 issue(s) detected - review recommended',
+      timestamp: '2026-08-20T12:00:00.000Z',
+    });
+    const checkpoint = cap.checkpoints.find(c => c.checkpointType === 'policy.checked');
+    assert.ok(checkpoint, 'policy.checked checkpoint recorded');
+    assert.equal(checkpoint.payload.timestamp, '2026-08-20T12:00:00.000Z',
+      'checkpoint payload carries the verdict\'s own timestamp (deep-link identity)');
+    const logged = cap.transparencyEvents.find(e => e.type === 'sentinel.verdict');
+    assert.ok(logged, 'transparency event logged');
+    assert.equal(logged.timestamp, '2026-08-20T12:00:00.000Z',
+      'transparency log entry carries the verdict\'s own timestamp, not a fresh clock');
+  });
+
+  test('FX110 sentinel.verdict — timestamp-less payload still logs a valid ISO fallback stamp', () => {
+    const cap = captured();
+    const deps = makeDeps(cap);
+    new EventSubscriptionManager(deps).subscribe();
+    deps.eventBus.emit('sentinel.verdict' as never, { decision: 'WARN', riskGrade: 'L2', summary: 'no ts' });
+    const logged = cap.transparencyEvents.find(e => e.type === 'sentinel.verdict');
+    assert.ok(logged, 'transparency event logged');
+    assert.match(String(logged.timestamp), /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/,
+      'fallback clock still produces a valid ISO stamp');
+  });
+
   test('FX448 phase.completed for non-substantiate phase — no phase.exited checkpoint', () => {
     const cap = captured();
     const deps = makeDeps(cap, {

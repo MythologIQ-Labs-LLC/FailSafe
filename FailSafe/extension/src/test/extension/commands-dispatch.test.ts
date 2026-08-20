@@ -159,6 +159,21 @@ suite('Command dispatch (FX001-FX029 cluster)', () => {
     );
   });
 
+  test('FX916 failsafe.openConsoleRoute — opens Console externally with the route as URL hash', async function () {
+    this.timeout(30000);
+    const route = 'governance:audit?verdict=2026-08-20T12%3A00%3A00.000Z';
+    await vscode.commands.executeCommand('failsafe.openConsoleRoute', route);
+    assert.equal(capture.externalUrls.length, 1,
+      `expected exactly one external open; got ${JSON.stringify(capture.externalUrls)}`);
+    // Capture idiom (see FX006): uri.toString() over-encodes relative to what
+    // the opener emits; a single decode recovers the semantic URL. A
+    // double-encoded timestamp would decode to %3A here and fail the equality.
+    const decoded = decodeURIComponent(capture.externalUrls[0]);
+    const hash = decoded.split('#')[1] ?? '';
+    assert.equal(hash, 'governance:audit?verdict=2026-08-20T12:00:00.000Z',
+      `hash must carry the deep-link route losslessly; got ${capture.externalUrls[0]}`);
+  });
+
   test('FX007 failsafe.openRoadmap — chains to failsafe.openPlannerHub', async () => {
     await vscode.commands.executeCommand('failsafe.openRoadmap');
     const downstream = capture.commands.map((c) => c.name);

@@ -1,13 +1,14 @@
 import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
-import { decideSidebarClick } from "./sidebarInitializeLogic";
+import { decideSidebarClick, sanitizeConsoleRoute } from "./sidebarInitializeLogic";
 import { resolveUiDir } from "./services/ConsoleServerSupport";
 
 type SidebarMessage =
   | { command: "openPopout" }
   | { command: "openEditor" }
   | { command: "reload" }
+  | { command: "openConsole"; route: string }
   | { command: "sidebar.click"; currentLabel: string };
 
 export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
@@ -46,6 +47,9 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
       case "reload":
         this.refresh();
         break;
+      case "openConsole":
+        await this.openConsoleFromSidebar(message.route);
+        break;
       case "sidebar.click": {
         const allCmds = new Set(await vscode.commands.getCommands(true));
         const decision = decideSidebarClick(message.currentLabel, allCmds);
@@ -72,6 +76,15 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
         break;
       }
     }
+  }
+
+  /** Monitor-iframe deep link (FX916): sanitize the relayed route, then open
+   *  the Console externally at that hash via the host command. Invalid routes
+   *  are dropped fail-closed — no fallback open. */
+  private async openConsoleFromSidebar(route: unknown): Promise<void> {
+    const safe = sanitizeConsoleRoute(route);
+    if (!safe) return;
+    await vscode.commands.executeCommand("failsafe.openConsoleRoute", safe);
   }
 
   private refresh(): void {
@@ -149,6 +162,7 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
   <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
     const initBtn = document.getElementById('init-workspace');
+    const mainFrame = document.getElementById('main-frame');
 
     // Theme tokens are inlined in <head> (read from disk by the provider); the
     // chrome follows the data-theme the embedded Console announces via the
@@ -187,12 +201,17 @@ export class FailSafeSidebarProvider implements vscode.WebviewViewProvider {
       }
       if (data.type === 'failsafe.openPopout') {
         vscode.postMessage({ command: 'openPopout' });
+        return;
+      }
+      // FX916 deep-link relay: only the embedded Monitor iframe may drive it.
+      if (data.type === 'failsafe.openConsole' && typeof data.route === 'string'
+          && event.source === mainFrame.contentWindow) {
+        vscode.postMessage({ command: 'openConsole', route: data.route });
       }
     });
 
     const sreUrl = '${this.baseUrl}/console/sre';
     const compactUrl = '${compactUrl}';
-    const mainFrame = document.getElementById('main-frame');
     const btnMonitor = document.getElementById('btn-monitor');
     const btnSre = document.getElementById('btn-sre');
 

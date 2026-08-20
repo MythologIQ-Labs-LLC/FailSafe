@@ -64,7 +64,9 @@ export function getRecentVerdicts(
          WHERE checkpoint_type = 'policy.checked'
          ORDER BY id DESC LIMIT ?`,
       ).all(limit) as Array<{ payload_json: string; timestamp: string }>;
-      return rows.map(row => ({ ...JSON.parse(row.payload_json), timestamp: row.timestamp }));
+      // Row stamp is persist time; a payload timestamp (the verdict's origin
+      // time, the deep-link identity) takes precedence when present.
+      return rows.map(row => ({ timestamp: row.timestamp, ...JSON.parse(row.payload_json) }));
     } catch (err) {
       console.warn("[CheckpointStore] getRecentVerdicts query failed:", err);
       /* fall through to memory */
@@ -73,7 +75,7 @@ export function getRecentVerdicts(
   return memory
     .filter(r => r.checkpointType === "policy.checked")
     .slice(0, limit)
-    .map(r => ({ ...JSON.parse(r.payloadJson), timestamp: r.timestamp }));
+    .map(r => ({ timestamp: r.timestamp, ...JSON.parse(r.payloadJson) }));
 }
 
 export function getAllCheckpointsAsc(

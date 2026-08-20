@@ -61,7 +61,9 @@ export class EventSubscriptionManager {
       logTransparencyEvent({
         type: "sentinel.verdict", decision: p.decision,
         riskGrade: p.riskGrade, filePath: p.filePath,
-        timestamp: new Date().toISOString(),
+        // Verdict origin time is the deep-link identity the Monitor sends
+        // (#governance:audit?verdict=<ts>); a fresh clock here would never match.
+        timestamp: typeof p.timestamp === "string" ? p.timestamp : new Date().toISOString(),
       });
       broadcast({ type: "transparency", payload: {
         type: "sentinel.verdict", decision: p.decision, riskGrade: p.riskGrade,
@@ -141,7 +143,7 @@ export class EventSubscriptionManager {
       status: "validated",
       policyVerdict: String(verdict.decision || "UNKNOWN"),
       evidenceRefs: [],
-      payload: { decision: verdict.decision, riskGrade: verdict.riskGrade, summary: verdict.summary },
+      payload: { decision: verdict.decision, riskGrade: verdict.riskGrade, summary: verdict.summary, timestamp: verdict.timestamp },
     });
   }
 
