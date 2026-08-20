@@ -28095,3 +28095,32 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 SESSION SEAL for the hardening bundle (session 2026-08-20T1820-63e94c; audit #565 VETO -> #566 PASS; implement #567; branch fix/hardening-346-349-350; carries deviation record #564 with operator ratification). Reality = Promise across all three phases incl. every audited condition (F1-F7, N1-N3) - observer-verified with both deliberate traps passed (throw-before-signing order; zero orphan state). Release-notes copy authored in-cycle in BOTH CHANGELOGs (the Step 6.5 rule, honored without prompting this time). Gate ladder: intent VERIFIED, secret scan clean post-allowlist-markers, doc-integrity strict PASS. **Feature Inventory**: Total: 735 / verified: 686 / n/a: 43 / other: 7. **Newly unverified**: none. Delivery: PR closes #346 + #349 + #350; merge under the operator's CI-green+substantiated delegation. Residual queue after this cycle: #242 slice 2 (modal focus-return, health-item cards, governance-alert rows, N5, N6), workspace-fragility housekeeping, upstream allowlist-surface request.
+
+
+---
+
+### Entry #569: GATE TRIBUNAL - PR #354 merge substantiation (external work)
+
+**Timestamp**: 2026-08-21T01:20:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (footer condition remediated pre-audit-return)
+
+**Content Hash**:
+```
+SHA256("pr354|substantiation-audit-PASS|2026-08-20")
+= 3eec8d82cb973b04271ac0f9ce137271d0e4cbc660a365e5e227166f564c3ca8
+```
+
+**Previous Hash**: `951c19c7c4c088fc698555cec66cfb4d4c927a965c9681042cd6a027dc2ea8ea` (Entry #568 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= c3dd32bc1074f89b4c707c4c285246b78e0d15d554146208e4d1d00d3e4a1d2f
+```
+
+## Decision
+
+Merge substantiation for parallel-session PR #354 (MCP Registry stored-XSS claim; closes #352 / #241 F-5) under the operator's delegation. Independent adversarial audit PASS: the fix retracts the false README claim AND refuses the naive sanitizeField wiring (double-escape hazard recorded at the sink), hardens latently (apostrophe added to the escape class, honestly labeled), and converts the true control into an adversarial DOM test - hostile payloads through the real render path with element-creation, escaping-not-stripping, exhaustive on*-attribute sweep, and attribute-breakout round-trip assertions; mutation resistance verified per field. Full-renderer sink sweep clean (all innerHTML interpolations esc()-wrapped; remaining sinks textContent; no href/src, pinned by test). mcp-risk-score.ts hunks comment-only. Attribution footer stripped pre-merge (fourth occurrence today - web PR flow auto-appends; operator settings fix remains the durable path). NB residuals: apostrophe-only revert uncaught (declared latent; sink comment guards), import-path style split, entity-form note. MERGED rollup-green; #352 auto-closed.
