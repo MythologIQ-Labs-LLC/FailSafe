@@ -2921,3 +2921,11 @@ Output: `dist/override-staleness.findings.json` (gitignored runtime artifact). A
 **Lesson**: A WARN-only gate an agent can "judge away" is only as strong as the judgment discipline around it. Two rules restore it: (1) reachable mechanical checks RUN, always - judgment applies to their output, never replaces their execution; (2) "operator-judgment continue" may only be recorded when the operator actually judged. Consumer-flow nuance to encode: version NUMBERS are release-time, but release-notes COPY (README What's-New bullet, CHANGELOG entry) is implement-phase work - author it version-agnostic in the cycle, stamp the number at release.
 
 **Countermeasure applied**: severity-2 gate_override event in the Process Shadow Genome; standing rule recorded in operator memory (feature-class cycles author the extension README What's-New copy during implement; Step 6.5 runs mechanically with verbatim warnings in the seal entry). Candidate durable fix for a process-review cycle: mirror the validate-vsix What's-New assertion into release-gate --preflight AND into the consumer seal checklist so the gap cannot recur silently at either end.
+
+## SG Event 2026-08-20: VETO - single-shot tests cannot pin side-effects of re-executing code paths (monitor-a11y iter 1)
+
+**Pattern**: A plan added a one-time side-effect (focus move) inside a function that the host page re-executes continuously (per-append highlighter), and declared only single-invocation tests. Each test would pass while the shipped behavior misfires on every re-execution - the defect lives in the CALL FREQUENCY of the host path, not in the function body the tests exercise.
+
+**Lesson**: When a plan adds any stateful or user-facing side-effect (focus, scroll, announcement, animation trigger) to an existing function, the audit must enumerate that function's call sites and frequencies FIRST, and the test list must include a repeated-invocation case asserting the side-effect fires exactly once (or as specified). Corollary: DOM-recreation paths (innerHTML rebuilds) invalidate element-attached latches - one-shot guards belong at module/state scope keyed on intent, not on the element.
+
+**Countermeasure applied**: VETO; iteration 2 specifies a module-scope latch keyed on the deep-link target plus a mandatory no-re-steal repeated-append unit case.

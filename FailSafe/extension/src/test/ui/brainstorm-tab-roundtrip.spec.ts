@@ -87,8 +87,21 @@ test("#263 — repeated round trips do not leak heartbeat intervals or settings-
   await stubGraphRoute(page);
   await gotoMindmap(page, controller.url);
 
-  // Spy installed AFTER the initial mount (gotoMindmap above), so only the 3
-  // round trips below are captured — the initial build's installs are not.
+  // Await the initial build's FULL async tail before installing the spy:
+  // the wake-word `failsafe:` listener registers inside bindToolbar, called
+  // from initCanvas, which runs only after the async fetchGraph resolves —
+  // gotoMindmap's shell-visibility wait does not cover it. initCanvas is
+  // synchronous (setCanvas precedes bindToolbar in one task), so a truthy
+  // graph.canvas guarantees the registration has executed; counting after
+  // this poll closes the scheduler race that intermittently produced 10
+  // (initial wake registration leaking into a round-trip-scoped count).
+  await expect.poll(() => page.evaluate(() => {
+    const g = (globalThis as any).__failsafeRenderers;
+    return !!g?.workspace?.subViews?.find((s: any) => s.key === "brainstorm")?.renderer?.graph?.canvas;
+  }), { timeout: 10000 }).toBe(true);
+
+  // Spy installed AFTER the initial mount fully settles (poll above), so only
+  // the 3 round trips below are captured — the initial build's installs are not.
   await page.evaluate(() => {
     const orig = (globalThis as any).setInterval;
     (globalThis as any).__heartbeatInstallCount = 0;
