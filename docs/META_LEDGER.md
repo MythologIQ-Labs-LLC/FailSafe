@@ -27094,3 +27094,60 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 SESSION SEAL for burndown Cycle 5 (#241 named candidate; session 2026-08-19T2050-306452; audit PASS #532, implement #533). runMcpPolicyScan sink-fault resilience shipped (FX910); LD-6 spec correction rode along (disclosed in #533). Verification: 15/15 + FX897 spec 7/7 locally; tsc + lint clean; gate ladder exit 0. DISCLOSED: electron host defers to CI; no version bump (HOLD); trailer absent per operator identity directive. Pushed to the authorized #323 lane (CI running).
+
+
+---
+
+### Entry #535: GATE TRIBUNAL - vsix-hygiene-243a
+
+**Timestamp**: 2026-08-20T01:20:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= f67811d3497ef9a8158059a2ef71455116c090d366f7ea4802d673f7419dae70
+```
+
+**Previous Hash**: `310505a32d74dbdd7dabd595fcd32c337cc764bc13f0ddff5ce3311ca03509dd` (Entry #534 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= cc67f33504b7f3e2914aac74433ad191fd09ce48a6502c938c1da05fa45cc0b2
+```
+
+## Decision
+
+PASS on plan-vsix-hygiene-243a.md iteration 1 (#243 Tranche A finding: .failsafe/ scan outputs + build intermediates can ship in the VSIX; fix = .vscodeignore exclusions + a durable validate-vsix hygiene gate, red/green against real archives). Next: /qor-implement.
+
+
+---
+
+### Entry #536: IMPLEMENTATION - vsix-hygiene-243a
+
+**Timestamp**: 2026-08-20T02:10:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(git diff -- scripts/validate-vsix.cjs .vscodeignore)
+= 9eb8c584423fa047553a851bcec3794900e061aeaf42c0fb3ed08a455ce89470
+```
+
+**Previous Hash**: `cc67f33504b7f3e2914aac74433ad191fd09ce48a6502c938c1da05fa45cc0b2` (Entry #535 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= e11a91239d7820c85a63e1d1b467c8b7ad87820ac6b2d9a793e8dea6aeef6078
+```
+
+## Decision
+
+Implemented plan-vsix-hygiene-243a.md (audit PASS #535) on fix/vsix-hygiene-243a (fresh off post-#323 main). LD-2 validate-vsix packaged-hygiene gate (fails on .failsafe/ paths, *.findings.json, build-intermediate entries); LD-1 .vscodeignore: .failsafe/** + **/*.findings.json excluded AND the better-sqlite3 re-include narrowed from !build/Release/** to !build/Release/*.node (the broad re-include was overriding any exclusion — vsce negation precedence). Red observed on the real 20.1MB archive (26 violations incl. the 8MB sqlite3.c amalgamation and an empty-but-dangerous .failsafe scan-output); green on rebuild: 173 files, 6.17MB (-69%), runtime better_sqlite3.node verified present. release.yml single-artifact parity (vsce package once -> both marketplaces publish the same VSIX) confirmed as #243 Tranche A evidence.

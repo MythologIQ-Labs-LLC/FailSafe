@@ -212,6 +212,25 @@ function main() {
   // B195 acceptance gate — VSIX size ceiling. Plan: docs/plan-qor-voice-substrate-extraction.md Phase 4.
   assertVsixUnderCeiling(vsixPath, 30 * 1024 * 1024);
 
+  // FX911 (#243 Tranche A): packaged-hygiene gate. Governance scan outputs
+  // (secret-scanner findings can contain matched snippets) and native build
+  // intermediates must never ship — .vscodeignore drift alone is silent, so
+  // the archive listing is the durable guard.
+  const hygieneViolations = list
+    .split(/\r?\n/)
+    .filter(
+      (entry) =>
+        entry.includes("/.failsafe/") ||
+        entry.endsWith(".findings.json") ||
+        /\/build\/Release\/obj\//.test(entry),
+    );
+  if (hygieneViolations.length > 0) {
+    fail(
+      `Packaged-hygiene violations (governance scan outputs / build intermediates must not ship): ${hygieneViolations.join(", ")}`,
+    );
+  }
+  console.log("[PASS] Packaged hygiene: no .failsafe/, *.findings.json, or build-intermediate entries");
+
   console.log(`[PASS] VSIX validated: ${vsixPath}`);
 }
 
