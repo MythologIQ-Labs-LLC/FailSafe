@@ -27656,3 +27656,150 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 DELIVER seal for FailSafe v6.0.1 (patch over v6.0.0). Scope: FX916 Monitor sentinel-alert Console deep link (SESSION SEAL #552; PR #334). Release train: PRs #333 (v6.0.0 DELIVER seal) + #334 (fix) + #335 (release metadata) merged to main under explicit operator authorization; tag v6.0.1 annotated on merge commit f838cb1d; Release Pipeline run 32390907124 ALL GREEN — SemVer gate, Build & Test (first-run pass), operator-authorized production gate (enacted via API under operator credentials/directive after the UI button was not found; reviewer=operator, current_user_can_approve=true), Publish to VS Code Marketplace SUCCESS, Publish to Open VSX SUCCESS, GitHub Release v6.0.1 published non-draft 2026-08-20T16:50:45Z. Release-path events this train: standards gate caught a missing extension-README What's-New section — ratified by operator as a substantiate-phase process failure (Step 6.5 judged away instead of run; severity-2 gate_override shadow event + SHADOW_GENOME entry recorded in this commit; durable release-gate preflight fix scheduled into the next cycle with the #242 accessibility slice); Full Test Suite flaked once on the known #263 brainstorm-tab-roundtrip leak-spec (green on re-run; third release-adjacent flake — determinism cycle overdue); PR #339 (parallel session, governed-commit URL redaction) failed the branch-naming policy gate, branch renamed and superseded by PR #341 (CI green, held unmerged pending operator decision). Open VSX ingestion not re-verified at seal time (publish job authoritative per standing practice).
+
+
+---
+
+### Entry #554: GATE TRIBUNAL - monitor-a11y-release-gate
+
+**Timestamp**: 2026-08-20T18:20:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: VETO (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= b6f5f4f145e5610b3c334450dd7c05dba39e51716c3816382d4bb8bcf0ad3922
+```
+
+**Previous Hash**: `789a2c95c452409655d94cbf24c40c11922fe7a5fd7b0795b3dd0c2918033ee9` (Entry #553 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 52a1d0036339348fcba49abd029d7c38e3af16754dfe10d893b2230cf9274457
+```
+
+## Decision
+
+VETO on plan-monitor-a11y-release-gate.md iteration 1 (#242 slice + release-gate What's-New preflight). Option B independent review was MANDATORY (audit_risk_score high-citation-surface) and earned its mandate: F1 — the planned unconditional row.focus() inside highlightRecordFromHash re-executes after every appendCard (transparency.js:156; live events :107, flush :160, refilter element-recreation :167-169), producing repeated keyboard/AT focus theft the plan's single-shot tests could not detect; the a11y fix would have shipped a worse a11y defect. Advisories: attribute-vs-property mechanism unpinned vs mocks (F2); keydown preventDefault stub (F3); pointer-worded title double-announce (F4); screenshot-only focus-ring assertion replaced by getComputedStyle outline (F5); .governance-alert rows named into exclusions, D1 over-claim tightened (F6). All 10 LD citations re-verified clean; release-gate phase fully clean. Next: /qor-plan iteration 2 (one-shot target latch surviving refilter + mandatory no-re-steal unit case; F2-F6 folded), then /qor-audit full LD re-walk.
+
+
+---
+
+### Entry #555: GATE TRIBUNAL - monitor-a11y-release-gate
+
+**Timestamp**: 2026-08-20T18:50:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (iteration 2)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= cf16c7ac90638917e553412533addee2afb3ed1c9b481ae86c5a40519448e358
+```
+
+**Previous Hash**: `52a1d0036339348fcba49abd029d7c38e3af16754dfe10d893b2230cf9274457` (Entry #554 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 8f96c1bb15ee1fc01d28092a42cc53d232540439c4f9c150aadc3fc444b54b42
+```
+
+## Decision
+
+PASS on plan-monitor-a11y-release-gate.md iteration 2 (#242 slice: keyboard/AT operability for the Monitor's three deep-link affordances + one-shot focus landing on the Console verdict record; plus release-gate What's-New preflight per the #553-train SG lesson). F1 focus-theft closed by a module-scope target-keyed latch verified against all three highlighter re-execution paths, with red states that discriminate both naive implementations; F2-F6 closed; reviewer advisories N1-N3 folded pre-verdict (two-target hashchange case, FX917 descriptor sync, jsdom focusable park element). 12 citations mechanically truth-checked + full independent re-walk (Option B mandatory, high-citation-surface). Next: /qor-implement on fix/monitor-a11y-release-gate.
+
+
+---
+
+### Entry #556: GATE TRIBUNAL - monitor-a11y-release-gate (amendment)
+
+**Timestamp**: 2026-08-20T19:40:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (iteration 3 targeted delta)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= 3767e3c009a7dd39160479ba770206ee6f0a7be2e85bb10e389a8f51d20f8d22
+```
+
+**Previous Hash**: `8f96c1bb15ee1fc01d28092a42cc53d232540439c4f9c150aadc3fc444b54b42` (Entry #555 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 86836691340462b478a6d7f6ca20484bc318829d0c612b2f8ce98dc3332beb5c
+```
+
+## Decision
+
+PASS on the iteration-3 Phase 2 amendment (re-anchor rule). The e2e keyboard journey did the job the per-feature e2e rule exists for: unit-green latch design was defeated in the real Console by boot-time destructive re-renders (render() innerHTML rebuild; same-key switchTo re-render on every hashchange), leaving the deep-link user focused on body. Amendment audited by the same independent reviewer: fire gate = first-landing OR (same target AND stored row disconnected AND focus idle); provably never steals user-held focus, settles without oscillation, O(1) retention. N4 idle-guard widening applied in-implement; N5 (filter-chip rebuild focus destruction, pre-existing) and N6 (per-re-render AT re-announcement) logged for the next #242 slice. Implementation resumes.
+
+
+---
+
+### Entry #557: IMPLEMENTATION - monitor-a11y-release-gate
+
+**Timestamp**: 2026-08-20T20:10:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(git diff -- FailSafe/extension/src FailSafe/extension/scripts)
+= 3a745a1744b915cc6d56bfef9029d4b76db573f606f659891cfcd6fafab994fe
+```
+
+**Previous Hash**: `86836691340462b478a6d7f6ca20484bc318829d0c612b2f8ce98dc3332beb5c` (Entry #556 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= e577f502b07025c5cd3d96d92edd7cd3e810f368ff393e55bdabd4d81fc2aecb
+```
+
+## Decision
+
+Implemented plan-monitor-a11y-release-gate.md iteration 3 (audit PASS #555 + amendment PASS #556), FX917. Phase 1: makeActionable(el, label, title, activate) — setAttribute tabindex/role/aria-label per the FX880 precedent, device-neutral titles, Enter/Space keydown with preventDefault — applied at the sentinel alert, blockers graphic, and error-budget gauge; hidden-alert path leaves the tab order. roadmap.css :focus-visible rules mirror the Console convention (WCAG 2.4.7). Phase 2: target-keyed deep-link focus latch + re-anchor (fire on first landing OR same-target + stored-row disconnected + focus idle, idle incl. detached activeElement per audit N4; N6 comment in code); six unit cases discriminate naive, element-latched, boolean-latched, and no-re-anchor implementations. Phase 3: readme-whats-new preflight check in release-gate.cjs (same string contract as validate-vsix; SG-2026-08-20 countermeasure shipped). Phase 4: monitor-a11y.spec.ts keyboard-only journey green in real Chromium (Tab reach, computed-outline focus ring, Enter popup, verdict record as activeElement on landing). Observer SUSPEND→resolved in-pass: extension CHANGELOG Unreleased copy authored (finding 1 — the exact Step 6.5 failure class, caught in-cycle this time); removal-path test hardened (finding 2); helper-signature deviation makeActionable/4-arg vs plan's 3-arg DISCLOSED (finding 3); date-filter provenance proven sealed history 5caf0394 (finding 4); first-landing-over-held-focus accepted residual per LD4 intent (finding 5). Residuals for next #242 slice: N5 filter-chip rebuild focus destruction (pre-existing), N6 per-re-render AT re-announcement, health-item cards + modal focus-return, .governance-alert rows. Verification: lint 0 errors; npm test census 444/444 green; test:ui 193 passed 0 failed (flakes quiet).
+
+
+---
+
+### Entry #558: SESSION SEAL - monitor-a11y-release-gate
+
+**Timestamp**: 2026-08-20T20:35:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L2
+**Entry ID**: `8c9d42e75aa8`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-monitor-a11y-release-gate.md)
+= def117e1fe5ba7d959dd42ef6925182e9f2031c3d8aebd4fd33fc41fd6591e84
+```
+
+**Previous Hash**: `e577f502b07025c5cd3d96d92edd7cd3e810f368ff393e55bdabd4d81fc2aecb` (Entry #557 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 33e3b0cf1d98e2f91b8410b10d19c1891c5f0deadb37af1f8adc2b3fa98e3db5
+```
+
+**Merkle Seal**: `df842f1471c7c93c476ca65d09ad02b2fd10a4116d9ae8ebf95f1f955fede201` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for the #242 first slice + release-gate What's-New preflight (FX917; session 2026-08-20T1440-d69349; audit #554 VETO -> #555 PASS -> #556 amendment PASS; implement #557; branch fix/monitor-a11y-release-gate). Reality = Promise on all four phases incl. the audited re-anchor amendment; 15 files staged. Verification: lint 0; census 444/444; test:ui 193/193 (zero flakes this run); keyboard-only e2e green end to end. Gate ladder exit 0 (intent re-lock after audited amendment; secret scan clean; procedural fidelity 0 findings; dod clean; doc-integrity strict PASS). **Feature Inventory**: Total: 734 / verified: 684 / n/a: 43 / other: 7. **Newly unverified**: none. DISCLOSED: a first append of this entry was corrupted by CRLF-bearing shell interpolation and was truncated + re-appended atomically in-process before any downstream reference (the #420 lesson applied preemptively); makeActionable is 4-arg vs the plan's 3-arg declaration (observer finding 3); first-landing may move user-held focus once on late row render (accepted residual, LD4 intent); severity-2 gate_override shadow event (Step 6.5 lesson) countermeasure SHIPPED but the addressed-flip awaits the governed remediate-review mechanism (disclosed rather than hand-edited); extension README versioned What's-New heading is release-time by structure - the copy is authored in both CHANGELOG Unreleased sections and the new preflight enforces the heading at [RELEASE] time; no version bump (versioning at /qor-repo-release); seal COMMIT not created - staged only at the Review Boundary. Residuals -> next #242 slice: N5 filter-chip rebuild focus destruction, N6 per-re-render AT re-announcement, health-item cards + modal focus-return, .governance-alert rows.

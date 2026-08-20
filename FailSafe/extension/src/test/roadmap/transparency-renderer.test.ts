@@ -2,6 +2,8 @@ import { strict as assert } from 'assert';
 import { JSDOM } from 'jsdom';
 // @ts-expect-error JS module import in TS test context
 import { TransparencyRenderer } from '../../../src/roadmap/ui/modules/transparency.js';
+// @ts-expect-error JS module import in TS test context
+import { resetDeepLinkFocusLatch } from '../../../src/roadmap/ui/modules/transparency-records.js';
 
 function setupDom(url = 'http://localhost/command-center.html#governance:audit') {
   const dom = new JSDOM('<!DOCTYPE html><div id="audit-root"></div>', { url });
@@ -76,6 +78,119 @@ suite('TransparencyRenderer verdict records', () => {
       assert.equal(cards.length, 1);
       assert.equal(cards[0].getAttribute('data-event-id'), 'evt-2');
       assert.equal(cards[0].classList.contains('cc-verdict--highlighted'), true);
+    } finally { restore(); }
+  });
+
+  test('FX917 deep-link landing — focus moves to the matched record exactly once', () => {
+    resetDeepLinkFocusLatch();
+    const ts = new Date().toISOString();
+    const url = `http://localhost/command-center.html#governance:audit?verdict=${encodeURIComponent(ts)}`;
+    const { container, restore } = setupDom(url);
+    try {
+      const renderer = new TransparencyRenderer('audit-root');
+      renderer.render();
+      renderer.onEvent({ type: 'sentinel.verdict', payload: { decision: 'WARN', riskGrade: 'L2', timestamp: ts } });
+      const row = container.querySelector(`[data-event-ts="${ts}"]`) as HTMLElement;
+      assert.ok(row, 'matched record renders');
+      assert.equal(row.getAttribute('tabindex'), '-1', 'record must be programmatically focusable');
+      assert.equal((globalThis as any).document.activeElement, row,
+        'keyboard/AT users must land focused on the deep-linked verdict');
+    } finally { restore(); }
+  });
+
+  test('FX917 no-re-steal (VETO #554 F1) — a later live append does not re-steal focus', () => {
+    resetDeepLinkFocusLatch();
+    const ts = new Date().toISOString();
+    const url = `http://localhost/command-center.html#governance:audit?verdict=${encodeURIComponent(ts)}`;
+    const { container, restore } = setupDom(url);
+    try {
+      const doc = (globalThis as any).document;
+      const park = doc.createElement('button');
+      doc.body.appendChild(park);
+      const renderer = new TransparencyRenderer('audit-root');
+      renderer.render();
+      renderer.onEvent({ type: 'sentinel.verdict', payload: { decision: 'WARN', riskGrade: 'L2', timestamp: ts } });
+      assert.equal(doc.activeElement?.getAttribute?.('data-event-ts'), ts, 'first landing focuses the record');
+      park.focus();
+      assert.equal(doc.activeElement, park, 'user moved focus to the park element');
+      renderer.onEvent({ type: 'sentinel.verdict', payload: { decision: 'PASS', riskGrade: 'L1', timestamp: new Date(Date.now() + 1000).toISOString() } });
+      assert.equal(doc.activeElement, park,
+        'a live event re-running the highlighter must NOT re-steal focus');
+    } finally { restore(); }
+  });
+
+  test('FX917 latch survives element recreation — refilter rebuild does not re-steal focus', () => {
+    resetDeepLinkFocusLatch();
+    const ts = new Date().toISOString();
+    const url = `http://localhost/command-center.html#governance:audit?verdict=${encodeURIComponent(ts)}`;
+    const { container, restore } = setupDom(url);
+    try {
+      const doc = (globalThis as any).document;
+      const park = doc.createElement('button');
+      doc.body.appendChild(park);
+      const renderer = new TransparencyRenderer('audit-root');
+      renderer.render();
+      renderer.onEvent({ type: 'sentinel.verdict', payload: { decision: 'WARN', riskGrade: 'L2', timestamp: ts } });
+      park.focus();
+      renderer.refilter(); // destroys + recreates every card element
+      renderer.onEvent({ type: 'sentinel.verdict', payload: { decision: 'PASS', riskGrade: 'L1', timestamp: new Date(Date.now() + 2000).toISOString() } });
+      assert.equal(doc.activeElement, park,
+        'element recreation must not reset the one-shot latch (module-state, not element-attached)');
+    } finally { restore(); }
+  });
+
+  test('FX917 latch is target-keyed — a hashchange to a NEW target focuses once', () => {
+    resetDeepLinkFocusLatch();
+    const tsA = new Date().toISOString();
+    const tsB = new Date(Date.now() + 5000).toISOString();
+    const url = `http://localhost/command-center.html#governance:audit?verdict=${encodeURIComponent(tsA)}`;
+    const { container, restore } = setupDom(url);
+    try {
+      const doc = (globalThis as any).document;
+      const win = (globalThis as any).window;
+      const renderer = new TransparencyRenderer('audit-root');
+      renderer.render();
+      renderer.onEvent({ type: 'sentinel.verdict', payload: { decision: 'WARN', riskGrade: 'L2', timestamp: tsA } });
+      assert.equal(doc.activeElement?.getAttribute?.('data-event-ts'), tsA, 'target A focused');
+      win.location.hash = `#governance:audit?verdict=${encodeURIComponent(tsB)}`;
+      renderer.onEvent({ type: 'sentinel.verdict', payload: { decision: 'BLOCK', riskGrade: 'L3', timestamp: tsB } });
+      assert.equal(doc.activeElement?.getAttribute?.('data-event-ts'), tsB,
+        'a new deep-link target must receive focus (a global-boolean latch fails this)');
+    } finally { restore(); }
+  });
+
+  test('FX917 re-anchor — a destructive re-render with idle focus re-focuses the recreated row', () => {
+    resetDeepLinkFocusLatch();
+    const ts = new Date().toISOString();
+    const url = `http://localhost/command-center.html#governance:audit?verdict=${encodeURIComponent(ts)}`;
+    const { container, restore } = setupDom(url);
+    try {
+      const doc = (globalThis as any).document;
+      const renderer = new TransparencyRenderer('audit-root');
+      renderer.render();
+      renderer.onEvent({ type: 'sentinel.verdict', payload: { decision: 'WARN', riskGrade: 'L2', timestamp: ts } });
+      assert.equal(doc.activeElement?.getAttribute?.('data-event-ts'), ts, 'first landing focuses the record');
+      // Console boot path: a full render() rebuilds the container (innerHTML),
+      // destroying the focused row while nothing else holds focus.
+      renderer.render();
+      const recreated = container.querySelector(`[data-event-ts="${ts}"]`) as HTMLElement;
+      assert.ok(recreated, 'row recreated by the rebuild');
+      assert.equal(doc.activeElement, recreated,
+        'idle focus + destroyed row must re-anchor to the recreated record (audit #556)');
+    } finally { restore(); }
+  });
+
+  test('FX917 no match — focus is untouched', () => {
+    resetDeepLinkFocusLatch();
+    const url = `http://localhost/command-center.html#governance:audit?verdict=${encodeURIComponent('2020-01-01T00:00:00.000Z')}`;
+    const { container, restore } = setupDom(url);
+    try {
+      const doc = (globalThis as any).document;
+      const before = doc.activeElement;
+      const renderer = new TransparencyRenderer('audit-root');
+      renderer.render();
+      renderer.onEvent({ type: 'sentinel.verdict', payload: { decision: 'WARN', riskGrade: 'L2', timestamp: new Date().toISOString() } });
+      assert.equal(doc.activeElement, before, 'no focus theft on a missed deep link');
     } finally { restore(); }
   });
 

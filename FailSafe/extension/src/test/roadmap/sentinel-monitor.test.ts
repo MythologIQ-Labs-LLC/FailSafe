@@ -16,13 +16,33 @@ import { SentinelMonitor } from '../../../src/roadmap/ui/modules/sentinel-monito
 
 interface SentinelAlertMock {
   _classes: Set<string>;
+  _attrs: Map<string, string>;
   textContent: string;
   title: string;
   onclick: (() => void) | null;
+  onkeydown: ((e: { key: string; preventDefault: () => void }) => void) | null;
+  setAttribute(name: string, value: string): void;
+  getAttribute(name: string): string | null;
+  removeAttribute(name: string): void;
   classList: {
     add(c: string): void;
     remove(c: string): void;
     contains(c: string): boolean;
+  };
+}
+
+/** Attribute-capable mock for the graphic/gauge affordances (FX917). */
+function actionableMock() {
+  const attrs = new Map<string, string>();
+  return {
+    _attrs: attrs,
+    title: '',
+    style: {} as Record<string, string>,
+    onclick: null as (() => void) | null,
+    onkeydown: null as ((e: { key: string; preventDefault: () => void }) => void) | null,
+    setAttribute(name: string, value: string) { attrs.set(name, value); },
+    getAttribute(name: string) { return attrs.has(name) ? attrs.get(name)! : null; },
+    removeAttribute(name: string) { attrs.delete(name); },
   };
 }
 
@@ -34,11 +54,17 @@ interface ElementsMock {
 }
 
 function buildElementsMock(): ElementsMock {
+  const attrs = new Map<string, string>();
   const sentinelAlert: SentinelAlertMock = {
     _classes: new Set<string>(),
+    _attrs: attrs,
     textContent: '',
     title: '',
     onclick: null,
+    onkeydown: null,
+    setAttribute(name: string, value: string) { attrs.set(name, value); },
+    getAttribute(name: string) { return attrs.has(name) ? attrs.get(name)! : null; },
+    removeAttribute(name: string) { attrs.delete(name); },
     classList: {
       add(c: string) { sentinelAlert._classes.add(c); },
       remove(c: string) { sentinelAlert._classes.delete(c); },
@@ -141,8 +167,8 @@ suite('Sentinel monitor render (FX-MONITOR-SENTINEL)', () => {
 
   test('FX916 blockers graphic + error-budget gauge — click navigates to governance', () => {
     const routes: string[] = [];
-    const graphic = { title: '', style: {} as Record<string, string>, onclick: null as (() => void) | null };
-    const gaugeWrap = { title: '', style: {} as Record<string, string>, onclick: null as (() => void) | null };
+    const graphic = actionableMock();
+    const gaugeWrap = actionableMock();
     const elements = {
       ...buildElementsMock(),
       healthBlockers: { textContent: '' },
@@ -159,5 +185,68 @@ suite('Sentinel monitor render (FX-MONITOR-SENTINEL)', () => {
     gaugeWrap.onclick!();
     assert.deepEqual(routes, ['governance', 'governance'],
       'sibling click-throughs use the same relay instead of sandboxed window.open');
+  });
+
+  test('FX917 WARN alert — focusable, role=button, labelled, Enter/Space activate the verdict route', () => {
+    const elements = buildElementsMock();
+    const routes: string[] = [];
+    const monitor = new SentinelMonitor(elements, (r: string) => routes.push(r));
+    const ts = '2026-08-20T12:00:00.000Z';
+    monitor.renderSentinel(
+      { running: true, lastVerdict: { decision: 'WARN' } },
+      [{ decision: 'WARN', summary: '1 issue(s) detected - review recommended', timestamp: ts }],
+    );
+    assert.equal(elements.sentinelAlert.getAttribute('tabindex'), '0', 'alert must be in the tab order');
+    assert.equal(elements.sentinelAlert.getAttribute('role'), 'button', 'alert must announce as actionable');
+    const label = elements.sentinelAlert.getAttribute('aria-label') || '';
+    assert.ok(label.includes('1 issue(s) detected'), `aria-label must contain the visible summary (label-in-name); got '${label}'`);
+    assert.ok(!/click/i.test(elements.sentinelAlert.title), `title must be device-neutral; got '${elements.sentinelAlert.title}'`);
+    assert.ok(elements.sentinelAlert.onkeydown, 'keydown handler must be registered');
+    elements.sentinelAlert.onkeydown!({ key: 'Enter', preventDefault: () => {} });
+    elements.sentinelAlert.onkeydown!({ key: ' ', preventDefault: () => {} });
+    elements.sentinelAlert.onkeydown!({ key: 'a', preventDefault: () => {} });
+    const expected = `governance:audit?verdict=${encodeURIComponent(ts)}`;
+    assert.deepEqual(routes, [expected, expected], 'Enter and Space activate exactly like click; other keys do not');
+  });
+
+  test('FX917 no alert — leaves the tab order and clears keyboard activation', () => {
+    const elements = buildElementsMock();
+    const monitor = new SentinelMonitor(elements, () => {});
+    // Render WARN first so the removal path is exercised for real — a fresh
+    // mock passes trivially on a partial revert (observer finding 2).
+    monitor.renderSentinel(
+      { running: true, lastVerdict: { decision: 'WARN' } },
+      [{ decision: 'WARN', summary: 'transient', timestamp: '2026-08-20T12:00:00.000Z' }],
+    );
+    assert.equal(elements.sentinelAlert.getAttribute('tabindex'), '0', 'precondition: alert was tabbable');
+    monitor.renderSentinel({ running: true }, []);
+    assert.equal(elements.sentinelAlert.getAttribute('tabindex'), null, 'hidden banner must not be tabbable');
+    assert.equal(elements.sentinelAlert.onkeydown, null, 'no keyboard activation while hidden');
+  });
+
+  test('FX917 blockers graphic + gauge — focusable, labelled, Enter/Space navigate to governance', () => {
+    const routes: string[] = [];
+    const graphic = actionableMock();
+    const gaugeWrap = actionableMock();
+    const elements = {
+      ...buildElementsMock(),
+      healthBlockers: { textContent: '' },
+      blockerBar: { style: {} as Record<string, string> },
+      blockersGraphic: graphic,
+      gaugeValue: { style: {} as Record<string, string> },
+      errorBudget: { textContent: '' },
+      gaugeWrap,
+    };
+    const monitor = new SentinelMonitor(elements, (r: string) => routes.push(r));
+    monitor.renderBlockers(1);
+    monitor.renderErrorBudget(40);
+    for (const el of [graphic, gaugeWrap]) {
+      assert.equal(el.getAttribute('tabindex'), '0');
+      assert.equal(el.getAttribute('role'), 'button');
+      assert.ok((el.getAttribute('aria-label') || '').length > 0, 'graphic needs an accessible name');
+      assert.ok(!/click/i.test(el.title), `title must be device-neutral; got '${el.title}'`);
+      el.onkeydown!({ key: 'Enter', preventDefault: () => {} });
+    }
+    assert.deepEqual(routes, ['governance', 'governance'], 'keyboard activation mirrors click');
   });
 });

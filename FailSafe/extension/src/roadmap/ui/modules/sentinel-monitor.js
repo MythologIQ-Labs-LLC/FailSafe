@@ -16,6 +16,20 @@ export class SentinelMonitor {
     return '#ef4444';
   }
 
+  /** FX917: make a mouse-only affordance keyboard/AT-operable (setAttribute per
+   *  the FX880 precedent). Title stays device-neutral — with an aria-label
+   *  present it demotes to accessible description and must not say "Click". */
+  makeActionable(el, label, title, activate) {
+    el.setAttribute('tabindex', '0');
+    el.setAttribute('role', 'button');
+    el.setAttribute('aria-label', label);
+    el.title = title;
+    el.onclick = activate;
+    el.onkeydown = (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); }
+    };
+  }
+
   renderSentinel(status, verdicts) {
     const queueDepth = Number(status.queueDepth || 0);
     const verdict = String(status.lastVerdict?.decision || 'PASS');
@@ -35,15 +49,22 @@ export class SentinelMonitor {
       this.elements.sentinelAlert.classList.add('hidden');
       this.elements.sentinelAlert.textContent = '';
       this.elements.sentinelAlert.onclick = null;
+      this.elements.sentinelAlert.onkeydown = null;
+      this.elements.sentinelAlert.removeAttribute('tabindex');
       return;
     }
+    const summary = String(alert.summary || 'Sentinel raised a risk signal.');
     this.elements.sentinelAlert.classList.remove('hidden');
-    this.elements.sentinelAlert.textContent = String(alert.summary || 'Sentinel raised a risk signal.');
-    this.elements.sentinelAlert.title = 'Click to open the triggering verdict in the Console Audit Log';
-    this.elements.sentinelAlert.onclick = () => {
-      const ts = alert.timestamp ? encodeURIComponent(String(alert.timestamp)) : '';
-      this.nav(ts ? `governance:audit?verdict=${ts}` : 'governance:audit');
-    };
+    this.elements.sentinelAlert.textContent = summary;
+    this.makeActionable(
+      this.elements.sentinelAlert,
+      `${summary} — opens the triggering verdict in the Console Audit Log`,
+      'Opens the triggering verdict in the Console Audit Log',
+      () => {
+        const ts = alert.timestamp ? encodeURIComponent(String(alert.timestamp)) : '';
+        this.nav(ts ? `governance:audit?verdict=${ts}` : 'governance:audit');
+      },
+    );
   }
 
   renderWorkspaceHealth(hub, plan, blockers, risks, verdicts) {
@@ -83,9 +104,13 @@ export class SentinelMonitor {
     if (this.elements.healthBlockers) this.elements.healthBlockers.textContent = String(hardBlockers);
     if (this.elements.blockerBar) this.elements.blockerBar.style.opacity = hardBlockers > 0 ? '1' : '0.5';
     if (this.elements.blockersGraphic) {
-      this.elements.blockersGraphic.title = `Critical blockers detected: ${hardBlockers}.`;
       this.elements.blockersGraphic.style.cursor = 'pointer';
-      this.elements.blockersGraphic.onclick = () => this.nav('governance');
+      this.makeActionable(
+        this.elements.blockersGraphic,
+        `Critical blockers: ${hardBlockers} — opens governance in the Console`,
+        `Critical blockers detected: ${hardBlockers}. Opens governance in the Console.`,
+        () => this.nav('governance'),
+      );
     }
   }
 
@@ -105,9 +130,13 @@ export class SentinelMonitor {
     }
     if (this.elements.errorBudget) this.elements.errorBudget.textContent = `${burn}%`;
     if (this.elements.gaugeWrap) {
-      this.elements.gaugeWrap.title = `Error budget burn: ${burn}%. Derived from unresolved blockers, queue depth, and risk verdicts.`;
       this.elements.gaugeWrap.style.cursor = 'pointer';
-      this.elements.gaugeWrap.onclick = () => this.nav('governance');
+      this.makeActionable(
+        this.elements.gaugeWrap,
+        `Error budget burn: ${burn}% — opens governance in the Console`,
+        `Error budget burn: ${burn}%. Derived from unresolved blockers, queue depth, and risk verdicts. Opens governance in the Console.`,
+        () => this.nav('governance'),
+      );
     }
   }
 

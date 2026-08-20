@@ -35,6 +35,40 @@ export function summarizeTransparencyEvent(event) {
   return raw.length > 120 ? `${raw.slice(0, 117)}...` : raw;
 }
 
+// FX917: deep-link focus latch, keyed on the target VALUE so it survives
+// refilter()'s element recreation and re-arms on a hashchange to a new
+// target. Module state — the highlighter re-runs on every card append
+// (live events, buffer flush, refilter), and an unguarded focus() would
+// repeatedly steal keyboard/AT focus (VETO #554 F1).
+let focusedDeepLinkTarget = null;
+let focusedDeepLinkRow = null;
+
+export function resetDeepLinkFocusLatch() {
+  focusedDeepLinkTarget = null;
+  focusedDeepLinkRow = null;
+}
+
+// Fire on first landing per target, OR re-anchor when a destructive re-render
+// (render()'s innerHTML rebuild — e.g. the Console's WS-init/hashchange paths)
+// destroyed the focused row while focus sits idle. "Idle" includes a detached
+// activeElement (jsdom may skip Chromium's focus-fixup-to-body on removal).
+// Never fires while a user holds focus on a connected element. One AT
+// re-announcement per destructive re-render is expected here — not focus
+// flapping (audit #556 N6).
+function maybeFocusDeepLinkRow(row, target) {
+  const doc = row.ownerDocument;
+  const active = doc ? doc.activeElement : null;
+  const focusIdle = !active || active === doc.body || !active.isConnected;
+  const firstLanding = focusedDeepLinkTarget !== target;
+  const reAnchor = !firstLanding && focusedDeepLinkRow
+    && !focusedDeepLinkRow.isConnected && focusIdle;
+  if (!firstLanding && !reAnchor) return;
+  focusedDeepLinkTarget = target;
+  focusedDeepLinkRow = row;
+  row.setAttribute('tabindex', '-1');
+  row.focus?.({ preventScroll: true });
+}
+
 export function highlightRecordFromHash(container) {
   const hash = (typeof window !== 'undefined' && window.location?.hash) || '';
   const query = hash.split('?')[1] || '';
@@ -50,6 +84,7 @@ export function highlightRecordFromHash(container) {
   const safeTarget = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(target) : target.replace(/"/g, '\\"');
   const row = container.querySelector(`[data-event-id="${safeTarget}"],[data-event-ts="${safeTarget}"]`);
   if (!row) return;
+  maybeFocusDeepLinkRow(row, target);
   row.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
   row.classList.add('cc-verdict--highlighted');
   setTimeout(() => row.classList.remove('cc-verdict--highlighted'), 3000);

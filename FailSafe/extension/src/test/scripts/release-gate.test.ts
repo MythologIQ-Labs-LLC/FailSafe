@@ -135,6 +135,22 @@ suite("release-gate: preflight", function () {
     assert.strictEqual(rm.pass, false);
   });
 
+  test("FX916/SG-2026-08-20: detects missing README What's-New section (mirrors validate-vsix)", () => {
+    // The v6.0.1 train shipped without this heading and only CI's
+    // validate-vsix caught it; the preflight (run by the [RELEASE]
+    // commit-msg hook) must now fail the same way, locally and earlier.
+    const { dir, rootDir } = writeFixture("4.5.0", {
+      readme: "**Current Release**: v4.5.0 (2026-03-07)\n\nNo release notes section here",
+    });
+    const result = releaseGate.preflight("4.5.0", dir, rootDir);
+    const wn = result.checks.find(
+      (c: { name: string }) => c.name === "readme-whats-new",
+    );
+    assert.ok(wn, "preflight must include a readme-whats-new check");
+    assert.strictEqual(wn.pass, false, "missing What's-New heading must fail preflight");
+    assert.strictEqual(result.pass, false);
+  });
+
   test("detects missing root CHANGELOG entry", () => {
     const { dir, rootDir } = writeFixture("4.5.0", {
       rootChangelog: "## [4.4.0]\n\nOld root entry",

@@ -61,6 +61,15 @@ function preflight(version, extDir, rootDir) {
     message: `README.md contains version ${version}`,
   });
 
+  // 2b. README What's-New section (SG 2026-08-20: the v6.0.1 train shipped
+  // without this heading and only CI's validate-vsix caught it; the same
+  // assertion must fail here, at the [RELEASE] commit hook, first).
+  checks.push({
+    name: "readme-whats-new",
+    pass: rmContent.includes(`## What's New in v${version}`),
+    message: `README.md contains ## What's New in v${version}`,
+  });
+
   // 3. Root CHANGELOG entry
   const rcPath = path.join(rootDir, "CHANGELOG.md");
   const rcContent = fs.existsSync(rcPath) ? fs.readFileSync(rcPath, "utf8") : "";

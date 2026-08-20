@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **The Monitor's governance affordances work without a mouse.** The warning banner, critical-blockers graphic, and error-budget gauge are keyboard-focusable with visible focus rings and screen-reader names; Enter/Space activate exactly like click, and following the deep link lands keyboard/AT users focused on the triggering verdict record in the Console Audit Log — held across the Console's boot-time re-renders, never stolen from focus the user holds elsewhere. (#242 slice, FX917)
+- **Release preflight now catches missing release notes locally.** The `[RELEASE]` commit hook fails when the extension README lacks the version's What's New section — the gap that previously surfaced only at CI. (FX917)
+
 ## [6.0.1] - 2026-08-20
 
 ### Fixed
