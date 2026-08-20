@@ -30,8 +30,12 @@ const STYLE = `
 .cc-mcp-status { color:#9aa5b4; font-size:.82rem; }
 `;
 
+// This is the ONLY escaping applied to catalog/registry-sourced strings on the
+// display path — `sanitizeField` in ../../integrations/mcp-registry is not wired
+// here and must not be (it escapes too, so chaining them double-escapes).
+// Char class matches the canonical shared/utils/htmlSanitizer.escapeHtml.
 function esc(s) {
-  return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[c]));
 }
 
 export class McpCatalogRenderer {

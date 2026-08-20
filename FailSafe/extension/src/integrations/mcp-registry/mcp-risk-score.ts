@@ -4,8 +4,9 @@
  * Per the contract review (INTEGRATION_MCP_REGISTRY_CONTRACT_REVIEW.md): the
  * registry is a good read-only discovery + LOCAL-scoring source and a bad v1
  * install surface. This module is the day-one value: pure, offline risk scoring
- * over a server's registry metadata + a sanitizer for the registry's stored-XSS
- * advisory (render every registry field as inert text). No network, no install.
+ * over a server's registry metadata. No network, no install.
+ *
+ * `sanitizeField` is NOT wired into any render path — see its own doc comment.
  *
  * Pure (no fs/network) → deterministically testable; `now` is injected.
  */
@@ -69,8 +70,14 @@ export function scoreMcpServer(meta: McpServerMeta, opts?: { now?: Date; staleDa
 }
 
 /**
- * Render a registry-returned string as inert text — escape HTML and neutralize
- * active URI schemes — to close the registry stored-XSS advisory before display.
+ * Escape HTML and neutralize active URI schemes in a registry-returned string.
+ *
+ * NOT CURRENTLY A CONTROL IN EFFECT: no production caller exists. Today the only
+ * MCP metadata reaching an operator surface is the static in-repo `MCP_CATALOG`,
+ * and the console renderer escapes at its own sink. Do not "wire this up" for
+ * symmetry — chaining it with that sink double-escapes (`&amp;lt;`). It is kept
+ * for the not-yet-built dynamic-registry path, where a URL sink would need the
+ * scheme neutralization the plain HTML escaper does not provide.
  */
 export function sanitizeField(value: string): string {
   if (value == null) return '';
