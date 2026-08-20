@@ -497,7 +497,9 @@ body {
    mirrors command-center.css :focus-visible (2px primary outline, 2px offset). */
 .sentinel-alert:focus-visible,
 .rainbow-bar:focus-visible,
-.gauge-wrap:focus-visible {
+.gauge-wrap:focus-visible,
+.health-item[data-metric]:focus-visible,
+.governance-alert:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
   border-radius: 4px;

@@ -64,16 +64,25 @@ export class TransparencyRenderer {
   renderFilterBar() {
     const bar = this.container.querySelector('.cc-filter-bar');
     if (!bar) return;
-    bar.innerHTML = CATEGORIES.map(c =>
-      `<button class="cc-chip${c === this.activeFilter ? ' active' : ''}" data-cat="${c}">${c}</button>`
-    ).join('');
-    bar.querySelectorAll('.cc-chip').forEach(chip => {
-      chip.addEventListener('click', () => {
-        this.activeFilter = chip.dataset.cat;
-        this.renderFilterBar();
-        this.refilter();
+    // FX920/N5: build the chips ONCE (bar empty = fresh render() rebuilt the
+    // container); selection updates the active class IN PLACE so the focused
+    // chip element survives — the old innerHTML rebuild destroyed it, dropping
+    // keyboard users to body and opening the deep-link re-anchor window
+    // (audit #556 coincidence path, closed here).
+    if (!bar.children.length) {
+      bar.innerHTML = CATEGORIES.map(c =>
+        `<button class="cc-chip" data-cat="${c}">${c}</button>`
+      ).join('');
+      bar.querySelectorAll('.cc-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          this.activeFilter = chip.dataset.cat;
+          this.renderFilterBar();
+          this.refilter();
+        });
       });
-    });
+    }
+    bar.querySelectorAll('.cc-chip').forEach(chip =>
+      chip.classList.toggle('active', chip.dataset.cat === this.activeFilter));
   }
 
   bindPause() {
