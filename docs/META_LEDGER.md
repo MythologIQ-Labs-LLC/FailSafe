@@ -27891,3 +27891,61 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 SESSION SEAL for the #263 leak-spec determinism hotfix (session 2026-08-20T1730-4d4b31; audit PASS #559, implement #560). Reality = Promise: one spec file, poll-before-spy, comment in place. D4: 16/16 under --repeat-each=8. DISCLOSED: test-only hotfix (minimal doc tier; no version bump; no FEATURE_INDEX rows); rides PR #345 with the sealed FX917 work; the four release-adjacent CI failures today were all this race. Issue #346 carries the product-side wake-bridge defect with the 9->12 spec coupling.
+
+
+---
+
+### Entry #562: GATE TRIBUNAL - PR #340 merge substantiation (external work)
+
+**Timestamp**: 2026-08-20T22:20:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (conditions remediated pre-merge)
+
+**Content Hash**:
+```
+SHA256("pr340|2395f577|substantiation-audit-PASS|2026-08-20")
+= d87d1f8fb0cac3c06f4f9a9309f124ed666d0c4d54d24e6319c9fef2cf41de00
+```
+
+**Previous Hash**: `84e3d3503435636007f9400145c12d9843f328ce44d8ca051321d342bdee2019` (Entry #561 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 8734be56705444f7cb84017b043a1b1cb3480423aad1ced03a30e965b5d2c9cb
+```
+
+## Decision
+
+Merge substantiation for parallel-session PR #340 (governed-commit credential redaction; closes #338 / #241 F-3) under the operator's 2026-08-20 delegation (CI green + substantiated => merge). Independent adversarial audit PASS on the code: all four remoteUrl result paths + the push-failed stderr warning redacted; consumer sweep found no surviving escape (compareUrl slug-rebuilt; createPullRequest errors never embed the URL); redactor verified on IPv6/path-@/idempotency/multi-URL; ssh exclusion sound (no password slot); fail-open is correct for a message redactor. Tests honest against silent revert (absence + exact-redacted-form assertions on the real flow). Blocking condition B1 remediated pre-merge: prohibited AI-attribution footer stripped from the PR body per the operator's fleet identity rule. Non-blocking NB1 (greedy last-@ redaction edge) + NB2 (remoteUrl contract doc) filed as issue #349. MERGED with rollup verified green; #338 auto-closed.
+
+
+---
+
+### Entry #563: GATE TRIBUNAL - PR #348 merge substantiation (external work)
+
+**Timestamp**: 2026-08-20T22:25:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (VETO condition remediated pre-merge)
+
+**Content Hash**:
+```
+SHA256("pr348|substantiation-audit-PASS-after-B1|2026-08-20")
+= c15b6f4f8f566d7dc368d589c8a32107b0afb78fcb2be3ae45d480ba07dba554
+```
+
+**Previous Hash**: `8734be56705444f7cb84017b043a1b1cb3480423aad1ced03a30e965b5d2c9cb` (Entry #562 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 5e1dc73d3b7fd0eac8a8ff5f1a5e51f19dfc607295777792f73e9a3742e5f3a3
+```
+
+## Decision
+
+Merge substantiation for parallel-session PR #348 (GovernanceWebhook authenticated/bounded outbound contract; closes #347 / #241 F-4). Independent adversarial audit: initial VETO solely on the same prohibited attribution footer (remediated by PR-body edit; auditor pre-declared conversion to PASS with no code re-audit). Code clean on all five dimensions: HMAC-SHA256 over the EXACT transmitted bytes (sha256=<hex>, x-failsafe-signature-256, GitHub-compatible; signed bytes = declared Content-Length = written bytes; no truncation step exists so no truncated-body/stale-signature hazard); query string preserved matching every live sender; secret never logged/returned/echoed, memory-only; dormant off-by-default posture intact; razor clean. Non-blocking residuals filed as issue #350 (send()<->builder wiring untested - a targeted D2 revert would pass all 36 tests; field-bounded not byte-bounded; double URL parse; consumerless signature break on WebhookConfig/getRegistered). Test-count arithmetic in the PR body noted wrong in both directions (18+18=36, not 19+17). MERGED with rollup verified green; #347 auto-closed. PROCESS PATTERN: both cloud-session PRs today carried the prohibited Generated-by footer - the web PR flow appends it automatically; surfaced to the operator for a settings-level fix.
