@@ -166,3 +166,53 @@ suite("FX897 brainstorm toolbar wiring", () => {
     assert.equal(f.calls.saveLocal.length, 1, "unpinned state persisted");
   });
 });
+
+suite('FX912/#325 LIST VIEW toggle', () => {
+  registerToolbarHooks();
+
+  function makeListFixture() {
+    const dom2 = new JSDOM(`<!DOCTYPE html><div id="root">
+      <button class="cc-btn cc-bs-list-toggle" aria-pressed="false">LIST VIEW</button>
+      <div class="cc-canvas cc-brainstorm-canvas"></div>
+      <div class="cc-bs-list-view" style="display:none;"></div></div>`);
+    const doc = dom2.window.document;
+    const renderer = {
+      graph: {
+        canvas: { layout: 'FORCE', viewMode: '2D', setLayout() {}, setViewMode() {} },
+        nodes: [{ id: 'a', label: 'Alpha', level: 'core' }, { id: 'b', label: 'Beta', level: 'idea' }],
+        edges: [{ source: 'a', target: 'b', label: 'links' }],
+      },
+      _getEl: (sel: string) => doc.querySelector(sel),
+      _getAll: (sel: string) => [...doc.querySelectorAll(sel)],
+    };
+    const click = (sel: string) => doc.querySelector(sel)!.dispatchEvent(
+      new (dom2.window as any).Event('click', { bubbles: true }));
+    return { doc, renderer, click };
+  }
+
+  test('T3: toggle click renders the tables from live graph state, hides the canvas, aria-pressed=true', () => {
+    const f = makeListFixture();
+    wireToolbar(f.renderer as any);
+    f.click('.cc-bs-list-toggle');
+    const list = f.doc.querySelector('.cc-bs-list-view') as HTMLElement;
+    const canvas = f.doc.querySelector('.cc-brainstorm-canvas') as HTMLElement;
+    assert.equal(list.style.display, 'block');
+    assert.equal(canvas.style.display, 'none');
+    assert.ok(list.querySelectorAll('table').length >= 2, 'node + edge tables render');
+    assert.ok(list.innerHTML.includes('Alpha') && list.innerHTML.includes('links'));
+    assert.equal(f.doc.querySelector('.cc-bs-list-toggle')!.getAttribute('aria-pressed'), 'true');
+  });
+
+  test('T4: second click restores the canvas and aria-pressed=false', () => {
+    const f = makeListFixture();
+    wireToolbar(f.renderer as any);
+    f.click('.cc-bs-list-toggle');
+    f.click('.cc-bs-list-toggle');
+    const list = f.doc.querySelector('.cc-bs-list-view') as HTMLElement;
+    const canvas = f.doc.querySelector('.cc-brainstorm-canvas') as HTMLElement;
+    assert.equal(list.style.display, 'none');
+    assert.notEqual(canvas.style.display, 'none');
+    assert.equal(f.doc.querySelector('.cc-bs-list-toggle')!.getAttribute('aria-pressed'), 'false');
+  });
+});
+

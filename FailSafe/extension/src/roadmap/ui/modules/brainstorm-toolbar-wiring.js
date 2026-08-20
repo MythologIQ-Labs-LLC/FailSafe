@@ -5,6 +5,7 @@
 // instance (owns _getEl/_getAll + graph/canvas).
 
 import { loadViewPrefs, saveViewPrefs } from './brainstorm-graph-io.js';
+import { renderListView } from './brainstorm-templates.js';
 
 function highlight(buttons, active, attr) {
   buttons.forEach(b => {
@@ -50,6 +51,28 @@ export function wireToolbar(renderer) {
   renderer._getEl('.cc-bs-fit')?.addEventListener('click', () => canvas.fitToView());
   renderer._getEl('.cc-bs-reset-view')?.addEventListener('click', () => resetView(renderer, canvas));
   applyViewPrefs(renderer);
+
+  // #325 (FX912): LIST VIEW toggle — accessible table alternative. Renders
+  // from LIVE graph state on every activation (no stale cache); read-only.
+  const listToggle = renderer._getEl('.cc-bs-list-toggle');
+  if (listToggle) {
+    listToggle.addEventListener('click', () => {
+      const list = renderer._getEl('.cc-bs-list-view');
+      const canvasEl = renderer._getEl('.cc-brainstorm-canvas');
+      if (!list || !canvasEl) return;
+      const showing = listToggle.getAttribute('aria-pressed') === 'true';
+      if (showing) {
+        list.style.display = 'none';
+        canvasEl.style.display = '';
+        listToggle.setAttribute('aria-pressed', 'false');
+      } else {
+        list.innerHTML = renderListView(renderer.graph.nodes, renderer.graph.edges);
+        list.style.display = 'block';
+        canvasEl.style.display = 'none';
+        listToggle.setAttribute('aria-pressed', 'true');
+      }
+    });
+  }
 }
 
 // FX897/#263 v6.0.1: reconcile the LIVE canvas (and toolbar highlights) to the
