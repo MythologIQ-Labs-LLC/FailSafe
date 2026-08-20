@@ -64,7 +64,7 @@ suite('github-checks publishLinkageCheck (#154 live bridge)', () => {
   test('enabled ⇒ audits the PR + publishes the linkage Check Run (the footgun → failure)', async () => {
     const get: GitHubGetFn = async (url) => {
       if (/\/pulls\/7\b/.test(url)) return { status: 200, body: JSON.stringify({ body: 'Closes #3, #4' }) };
-      if (/\/issues\b/.test(url)) return { status: 200, body: JSON.stringify([{ number: 3 }, { number: 4 }]) };
+      if (/\/issues\b/.test(url)) return { status: 200, body: JSON.stringify([{ number: 3, state: 'open' }, { number: 4, state: 'open' }]) };
       return { status: 404, body: '' };
     };
     let posted = '';
@@ -79,7 +79,7 @@ suite('github-checks publishLinkageCheck (#154 live bridge)', () => {
   test('clean PR ⇒ publishes a success Check Run', async () => {
     const get: GitHubGetFn = async (url) =>
       /\/pulls\//.test(url) ? { status: 200, body: JSON.stringify({ body: 'Closes #3' }) }
-        : { status: 200, body: JSON.stringify([{ number: 3 }]) };
+        : { status: 200, body: JSON.stringify([{ number: 3, state: 'open' }]) };
     let posted = '';
     const post: GitHubPostFn = async (_u, _h, body) => { posted = body; return { status: 201, body: JSON.stringify({ id: 1 }) }; };
     const res = await publishLinkageCheck({ ctx: CTX, opts: OPTS, owner: 'a', repo: 'b', prNumber: 3, get, post });
