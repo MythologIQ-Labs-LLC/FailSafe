@@ -107,6 +107,28 @@ suite('governance-alert rows a11y (FX920)', () => {
     } finally { restore(); }
   });
 
+  test('fallback escaping arm — hostile id with backslash+quote cannot break the selector (CSS global absent)', () => {
+    const { dom, host, render, restore } = setup();
+    try {
+      // Force the non-CSS.escape arm (previously untested — observer 5a; the
+      // arm itself was then flagged by CodeQL for missing backslash escaping).
+      (globalThis as { CSS?: unknown }).CSS = undefined;
+      const hostile = [{ id: 'x\\"onmouseover="1', type: 'VETO', message: 'hostile id', entry: 1 }];
+      render(hostile);
+      const row = host.querySelector('.governance-alert') as HTMLElement;
+      assert.ok(row, 'row rendered');
+      row.focus();
+      row.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+      render(hostile); // destroy + recreate → fallback path must run on close
+      assert.doesNotThrow(() => {
+        dom.window.document.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      }, 'escaped selector must be syntactically valid');
+      const active = dom.window.document.activeElement as HTMLElement;
+      assert.equal(active?.classList?.contains('governance-alert'), true,
+        'the re-anchor must still find the recreated row through complete escaping');
+    } finally { restore(); }
+  });
+
   test('resolved-while-open residual — selector miss leaves focus as-is (no throw)', () => {
     const { dom, host, render, restore } = setup();
     try {

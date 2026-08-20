@@ -368,7 +368,12 @@ export class WebPanelClient {
       onClose: () => {
         if (invoker && !invoker.isConnected) {
           const id = String(alert.id);
-          const safeId = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(id) : id.replace(/"/g, '\\"');
+          // Fallback escaping must handle backslashes BEFORE quotes (CodeQL
+          // js/incomplete-sanitization, PR #359 alert 33) — a trailing \ would
+          // otherwise neutralize the quote escape and break the selector.
+          const safeId = typeof CSS !== 'undefined' && CSS.escape
+            ? CSS.escape(id)
+            : id.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
           this.elements.governanceAlerts
             ?.querySelector(`[data-alert-id="${safeId}"]`)
             ?.focus();
@@ -388,9 +393,13 @@ export class WebPanelClient {
   }
 
   escapeHtml(value) {
+    // The innerHTML round-trip covers & < > only; quotes must be escaped too
+    // or interpolation into double-quoted attributes (data-alert-id) truncates
+    // and becomes attribute-injectable (canonical class: htmlSanitizer's
+    // [&<>"']; surfaced by the PR #359 CodeQL follow-through).
     const div = document.createElement('div');
     div.textContent = String(value || '');
-    return div.innerHTML;
+    return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#039;');
   }
 
   // Metric Explanations
