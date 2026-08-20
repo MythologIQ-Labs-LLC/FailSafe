@@ -28299,3 +28299,38 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 Merge substantiation for parallel-session PR #358 (Slack/Teams notifier envelope fix + delivery-failure surfacing; closes #357). Independent adversarial audit PASS with the defect CONFIRMED LIVE end-to-end: EventBus delivers the full envelope but the notifiers read it as the payload, so sentinel.verdict decision resolved undefined and VETO NOTIFICATIONS HAVE NEVER SENT since the integrations shipped (l3Decided degraded, driftDetected lost its summary; timestamps worked only by envelope accident); delivery-failure results were discarded, fabricating a healthy-webhook signal. Fix verified: single-unwrap readEventBusEvent (no double-unwrap path; wire format untouched); failure sink honors the notify-only non-blocking contract (never-throw sinks; log-every + warn-once-per-channel-per-session; Teams throttling distinct); error text redacted against the configured URL before ANY sink. Posture intact (off-by-default, config-only URLs, notify maps untouched). Regression suite drives the real EventBus->register->unwrap->map->send layer with mutation numbers that reconcile independently (8/14 and 4/14 re-derived exactly). Correctly-triaged residual recorded on #357: l3Decided mapper reads filePath at the wrong depth. Attribution footer stripped pre-merge (fifth occurrence today). MERGED rollup-green; #357 auto-closed.
+
+
+---
+
+### Entry #576: GATE - modal wrapper CSS port + shared selector escaping (#360)
+
+**Timestamp**: 2026-08-21T06:55:00Z
+**Phase**: GATE
+**Author**: Governor
+**Risk Grade**: L2
+**Verdict**: PASS
+
+**Content Hash**:
+```
+SHA256("modal-css-escape-360|audit-PASS-implement-substantiate|2026-08-21")
+= 18c1d8d8d8c5abd87ed1fe2cc372e4ca1927f2d54071525f7c68d43f7ef81993
+```
+
+**Previous Hash**: `8256de5ed725b9fecb089a79293096239fe1fd1e4dceabb803621eea2cfb7bff` (Entry #575 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 1eb1aa42014b5a5e1fcf11042f01e080159294fa4e54bf9c840ef934a58e9d01
+```
+
+**Session Seal (Merkle)**:
+```
+SHA256(chain_hash + "SESSION-SEAL")
+= 40c3ddef5b9a634fb198a2a8cda499597fe14c322faa23f89f73ba4aec08d63c
+```
+
+## Decision
+
+Full SHIELD mini-cycle: Monitor modal wrapper CSS port + shared selector-escape helper (closes #360; observer finding 1 from the #573 slice). Plan plan-modal-css-escape-360.md (mirrored), plan-grep-lint clean, independent adversarial audit PASS (every citation reproduced; repo-wide coupling search proved the four orphaned wrapper classes referenced ONLY at their own definitions; no page loads both stylesheets so no cascade conflict; red-first Playwright claim verified feasible against ConsoleRouteRegistrar static serving). Defect 1: modal-helper.js builds .cc-modal-overlay>.cc-modal but the compact Monitor loads only roadmap.css, which styled the pre-helper wrappers no JS creates - sidebar modals rendered in-flow with no overlay chrome. Fix: wrapper rules ported into roadmap.css under the live class names (fidelity port of the in-repo alert-modal design source, roadmap tokens); both orphaned wrapper blocks deleted; content classes untouched. Defect 2 (#360): governance.js:94 + transparency-records.js:84 still carried the quote-only CSS.escape fallback (sibling of the #574 CodeQL remediation). Fix: shared modules/escape-selector.js (backslash-first, plus CSS-newline hex escapes per audit advisory 5) consumed at all three sites plus the bare unguarded CSS.escape(ts) at governance.js:103 (advisory 6). TDD: escape-selector.test.ts (6 cases incl. hostile trailing-backslash round-trip and newline parseability) red-first (module absent); Playwright computed-style wrapper assertion red-first OBSERVED at HEAD (position static) then green (fixed overlay, dimmed background, bounded card). Green: 26 targeted unit + monitor-a11y 3/3 + full npm test exit 0. Visual spot-check artifact reviewed (advisory 8b): dimmed blurred overlay, centered card chrome - fidelity matches the design source. Governance: CHANGELOG both files, FEATURE_INDEX FX920 row extended (source/tests/verification), plan mirrored. Residual: metric modal inherits the shared 340px/0.7-alpha wrapper (disclosed trivial visual delta, audit 8a).

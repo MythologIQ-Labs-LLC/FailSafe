@@ -1,3 +1,5 @@
+import { escapeSelectorValue } from './escape-selector.js';
+
 export function eventTimestamp(entry) {
   return entry?.payload?.timestamp || entry?.time || '';
 }
@@ -81,7 +83,7 @@ export function highlightRecordFromHash(container) {
   }
   const target = idTarget || params.get('verdict') || params.get('event');
   if (!target || !container) return;
-  const safeTarget = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(target) : target.replace(/"/g, '\\"');
+  const safeTarget = escapeSelectorValue(target);
   const row = container.querySelector(`[data-event-id="${safeTarget}"],[data-event-ts="${safeTarget}"]`);
   if (!row) return;
   maybeFocusDeepLinkRow(row, target);

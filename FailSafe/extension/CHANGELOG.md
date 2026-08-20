@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Monitor modals now draw their overlay chrome in the sidebar.** The shared modal wrapper was styled only in the Console stylesheet, so sidebar Monitor modals rendered in-flow with no dimmed overlay or card frame; the wrapper styles now live in the Monitor's own stylesheet (real-browser computed-style proof in CI). (#242 slice 2 follow-up)
+- **Deep-link selector escaping is complete at every site.** The backslash-aware attribute-selector escaping from the CodeQL remediation is now a single shared helper used by the Console section/verdict deep links and the Monitor alert focus re-anchor, closing the two remaining quote-only fallbacks. (#360)
 - **Every Monitor modal is keyboard-reachable.** The five workspace-health metric cards and governance-alert rows are focusable with visible focus rings and screen-reader names; Enter opens the explanation/details modal, and Escape returns focus to where you were — even when a live hub refresh rebuilt the alert list while the modal was open. Filtering the Console audit stream no longer throws keyboard focus away on chip selection. (#242 slice 2, FX920)
 - **Wake-word settings changes reach the Mind Map again after tab switches.** The wake-word bridge re-registers on every rebuild instead of dying permanently after one round trip away from the Mind Map tab. (#346, FX918)
 - **Credential redaction covers passwords containing `@`.** The governed-commit redactor now strips to the last `@` of the userinfo, so no password tail can survive in results or warnings. (#349)

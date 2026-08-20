@@ -889,8 +889,10 @@ body {
   border-radius: 4px;
 }
 
-/* Alert Modal */
-.alert-modal-overlay {
+/* Shared modal wrapper (modal-helper.js builds .cc-modal-overlay > .cc-modal;
+   the compact Monitor loads only this sheet, so the wrapper must be styled
+   here, not just in command-center.css) */
+.cc-modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.7);
@@ -902,7 +904,7 @@ body {
   padding: 20px;
 }
 
-.alert-modal {
+.cc-modal {
   width: 100%;
   max-width: 340px;
   background: linear-gradient(180deg, var(--card), var(--card-soft));
@@ -1046,29 +1048,7 @@ body {
   background: rgba(61, 125, 255, 0.08);
 }
 
-/* Metric Explanation Modal */
-.metric-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 16px;
-}
-
-.metric-modal {
-  width: 100%;
-  max-width: 320px;
-  background: linear-gradient(180deg, var(--card), var(--card-soft));
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-}
-
+/* Metric Explanation Modal (wrapper styles: shared .cc-modal block above) */
 .metric-modal-header {
   display: flex;
   justify-content: space-between;
