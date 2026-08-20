@@ -40,9 +40,13 @@ Each integration ships with its own README and its external API names are back-c
 
 ---
 
-**Current Release**: v6.0.0 (2026-08-20)
+**Current Release**: v6.0.1 (2026-08-20)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v6.0.1
+
+- **The Monitor's warning banner is now a working link.** Clicking "N issue(s) detected" opens the Console's governance Audit Log focused on the triggering verdict — from the embedded sidebar (a webview-safe relay replaces the sandboxed `window.open`, which used to silently do nothing) and from browser-served Monitors alike. Verdict events carry their own timestamp through the checkpoint and transparency logs so the deep link lands on the exact record, and verdict deep links bypass the Audit Log's default same-day date filter. The blockers and error-budget click-throughs use the same relay.
 
 ## What's New in v6.0.0
 

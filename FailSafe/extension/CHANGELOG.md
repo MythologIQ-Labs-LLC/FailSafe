@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.1] - 2026-08-20
+
+### Fixed
+- **The Monitor's warning banner is now a working link.** Clicking "N issue(s) detected" in the sidebar Monitor opens the Console's governance Audit Log focused on the triggering verdict — from the embedded sidebar (via a webview-safe relay; `window.open` is sandboxed there and used to silently no-op) and from a browser-served Monitor alike. Verdict events now carry their own timestamp through the checkpoint and transparency logs so the deep link lands on the exact record, and verdict deep links bypass the Audit Log's default same-day date filter. The blockers and error-budget click-throughs use the same relay. (FX916)
+
 ## [6.0.0] - 2026-08-20
 
 ### Added
