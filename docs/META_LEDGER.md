@@ -28270,3 +28270,32 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 Pre-merge amendment to the #573-sealed slice, driven by PR #359's CodeQL gate: js/incomplete-sanitization (HIGH) on the CSS.escape fallback arm - the quote-only replace missed backslashes (the exact arm the observer had flagged untested). Fix: backslashes escaped BEFORE quotes. Writing the pinning test then exposed the deeper layer the observer had noted as a nit (5b): the local escapeHtml (innerHTML round-trip) does not escape quotes, so a quote-bearing id TRUNCATES the data-alert-id attribute and is attribute-injectable - escapeHtml now completes the canonical [&<>"'] class. New hostile-id test drives the full flow (CSS global absent, id with backslash+quote) through render -> modal -> destructive re-render -> re-anchor. Suites re-verified: 30 unit green incl. the new case; monitor-a11y 3/3. Pre-existing SIBLING sites with the identical incomplete fallback (governance.js:94, transparency-records.js:50 - unflagged because unchanged) filed as issue #360 with the proven fix shape. Layered-defense note for the record: three review passes missed what the CodeQL PR scan caught, and the pinning test for THAT fix caught what CodeQL could not see - each layer earned its place today.
+
+
+---
+
+### Entry #575: GATE TRIBUNAL - PR #358 merge substantiation (external work)
+
+**Timestamp**: 2026-08-21T05:40:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (footer condition remediated pre-audit-return)
+
+**Content Hash**:
+```
+SHA256("pr358|substantiation-audit-PASS|2026-08-21")
+= f92c7fcb3329f0aa1565c11859f821687d67a946c8e497ddc2a75ca52429bf94
+```
+
+**Previous Hash**: `314c546702fa079105ee23acaeb90f9f84db6bc410dd2a64633da1da29d96569` (Entry #574 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 8256de5ed725b9fecb089a79293096239fe1fd1e4dceabb803621eea2cfb7bff
+```
+
+## Decision
+
+Merge substantiation for parallel-session PR #358 (Slack/Teams notifier envelope fix + delivery-failure surfacing; closes #357). Independent adversarial audit PASS with the defect CONFIRMED LIVE end-to-end: EventBus delivers the full envelope but the notifiers read it as the payload, so sentinel.verdict decision resolved undefined and VETO NOTIFICATIONS HAVE NEVER SENT since the integrations shipped (l3Decided degraded, driftDetected lost its summary; timestamps worked only by envelope accident); delivery-failure results were discarded, fabricating a healthy-webhook signal. Fix verified: single-unwrap readEventBusEvent (no double-unwrap path; wire format untouched); failure sink honors the notify-only non-blocking contract (never-throw sinks; log-every + warn-once-per-channel-per-session; Teams throttling distinct); error text redacted against the configured URL before ANY sink. Posture intact (off-by-default, config-only URLs, notify maps untouched). Regression suite drives the real EventBus->register->unwrap->map->send layer with mutation numbers that reconcile independently (8/14 and 4/14 re-derived exactly). Correctly-triaged residual recorded on #357: l3Decided mapper reads filePath at the wrong depth. Attribution footer stripped pre-merge (fifth occurrence today). MERGED rollup-green; #357 auto-closed.
