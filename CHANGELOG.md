@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Wake-word settings changes reach the Mind Map again after tab switches.** The wake-word bridge re-registers on every rebuild instead of dying permanently after one round trip away from the Mind Map tab. (#346, FX918)
+- **Credential redaction covers passwords containing `@`.** The governed-commit redactor now strips to the last `@` of the userinfo, so no password tail can survive in results or warnings. (#349)
+- **The governance webhook's outbound contract is provably wired and bounded.** What's transmitted is byte-identical to the signed builder output; oversized payloads fail closed per-target before signing without disturbing sibling deliveries. (#350, FX919)
+
 ### Added
 - **The Monitor's governance affordances work without a mouse.** The warning banner, critical-blockers graphic, and error-budget gauge are keyboard-focusable with visible focus rings and screen-reader names; Enter/Space activate exactly like click, and following the deep link lands keyboard/AT users focused on the triggering verdict record in the Console Audit Log — held across the Console's boot-time re-renders, never stolen from focus the user holds elsewhere. (#242 slice, FX917)
 - **Release preflight now catches missing release notes locally.** The `[RELEASE]` commit hook fails when the extension README lacks the version's What's New section — the gap that previously surfaced only at CI. (FX917)

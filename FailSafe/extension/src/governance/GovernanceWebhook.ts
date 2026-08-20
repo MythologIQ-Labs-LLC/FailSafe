@@ -13,6 +13,9 @@ export interface WebhookConfig {
    */
   payloadFields: string[];
   secret?: string;
+  /** Byte cap on the serialized body; non-positive/absent means the 65536 default.
+   *  Enforced fail-closed in the builder BEFORE signing (#350). */
+  maxPayloadBytes?: number;
 }
 
 /** Registration view safe to log or surface: never carries the shared secret. */
@@ -28,6 +31,20 @@ interface WebhookResult {
   statusCode?: number;
   error?: string;
 }
+
+/** Injectable network seam (SlackNotifier pattern): receives exactly the
+ *  builder's contract; the default is the real https shell below. */
+export type WebhookTransport = (
+  options: {
+    hostname: string;
+    port: string | number;
+    path: string;
+    headers: Record<string, string | number>;
+  },
+  body: string,
+) => Promise<WebhookResult>;
+
+export const DEFAULT_MAX_PAYLOAD_BYTES = 65536;
 
 export const SIGNATURE_HEADER = 'x-failsafe-signature-256';
 
@@ -60,26 +77,68 @@ export function buildWebhookRequest(
   event: string,
   payload: Record<string, unknown>,
   timestamp: string,
-): { path: string; body: string; headers: Record<string, string | number> } {
+): { hostname: string; port: string | number; path: string; body: string; headers: Record<string, string | number> } {
   const allow = Array.isArray(config.payloadFields) ? config.payloadFields : [];
   const body = JSON.stringify({
     event,
     payload: applyPayloadAllowlist(allow, payload),
     timestamp,
   });
+  // Byte bound (#350): enforced BEFORE signing so the signature-over-
+  // transmitted-bytes invariant is never in tension with the cap; the guard is
+  // the single source of truth (direct callers bypass register()).
+  const cap = Number.isFinite(config.maxPayloadBytes) && (config.maxPayloadBytes as number) > 0
+    ? (config.maxPayloadBytes as number)
+    : DEFAULT_MAX_PAYLOAD_BYTES;
+  const bytes = Buffer.byteLength(body);
+  if (bytes > cap) {
+    throw new Error(`webhook payload exceeds maxPayloadBytes (${bytes} > ${cap}); refused fail-closed`);
+  }
   const parsed = new url.URL(config.url);
   const headers: Record<string, string | number> = {
     'Content-Type': 'application/json',
-    'Content-Length': Buffer.byteLength(body),
+    'Content-Length': bytes,
   };
   if (config.secret) {
     headers[SIGNATURE_HEADER] = signWebhookBody(config.secret, body);
   }
-  return { path: `${parsed.pathname}${parsed.search}`, body, headers };
+  return {
+    // hostname stays VERBATIM from url.URL (brackets preserved for IPv6
+    // literals): normalizing brackets would make the deliberately-unfixed
+    // #347 bracketed-private-IPv6 SSRF residual in isPrivateIp() reachable.
+    // Bracket normalization is blocked on that guard fix (noted on #347).
+    hostname: parsed.hostname,
+    port: parsed.port || 443,
+    path: `${parsed.pathname}${parsed.search}`,
+    body,
+    headers,
+  };
 }
+
+/** Real network shell — thin by design; everything decision-shaped lives in the builder. */
+const defaultTransport: WebhookTransport = (options, body) =>
+  new Promise((resolve) => {
+    const req = https.request({
+      hostname: options.hostname,
+      port: options.port,
+      path: options.path,
+      method: 'POST',
+      headers: options.headers,
+      timeout: 5000,
+    }, (res) => {
+      resolve({ success: res.statusCode === 200, statusCode: res.statusCode });
+      res.resume();
+    });
+    req.on('error', (err) => resolve({ success: false, error: err.message }));
+    req.on('timeout', () => { req.destroy(); resolve({ success: false, error: 'Timeout' }); });
+    req.write(body);
+    req.end();
+  });
 
 export class GovernanceWebhook {
   private configs: WebhookConfig[] = [];
+
+  constructor(private readonly transport: WebhookTransport = defaultTransport) {}
 
   register(config: WebhookConfig): void {
     if (!this.isValidUrl(config.url)) {
@@ -120,31 +179,20 @@ export class GovernanceWebhook {
     event: string,
     payload: Record<string, unknown>,
   ): Promise<WebhookResult> {
-    const { path, body, headers } = buildWebhookRequest(
-      config,
-      event,
-      payload,
-      new Date().toISOString(),
+    // Resolve-only contract: ANY builder throw (byte bound, malformed URL)
+    // becomes the per-target failure result — dispatch()'s Promise.all must
+    // never reject, and sibling targets' results must never be discarded.
+    let built: ReturnType<typeof buildWebhookRequest>;
+    try {
+      built = buildWebhookRequest(config, event, payload, new Date().toISOString());
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) };
+    }
+    // Single parse: hostname/port/path all come from the builder (#350).
+    return this.transport(
+      { hostname: built.hostname, port: built.port, path: built.path, headers: built.headers },
+      built.body,
     );
-    const parsed = new url.URL(config.url);
-
-    return new Promise((resolve) => {
-      const req = https.request({
-        hostname: parsed.hostname,
-        port: parsed.port || 443,
-        path,
-        method: 'POST',
-        headers,
-        timeout: 5000,
-      }, (res) => {
-        resolve({ success: res.statusCode === 200, statusCode: res.statusCode });
-        res.resume();
-      });
-      req.on('error', (err) => resolve({ success: false, error: err.message }));
-      req.on('timeout', () => { req.destroy(); resolve({ success: false, error: 'Timeout' }); });
-      req.write(body);
-      req.end();
-    });
   }
 
   private isValidAllowlist(fields: string[]): boolean {

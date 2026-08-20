@@ -44,6 +44,7 @@ export interface GovernedCommitResult {
   step: GovernedCommitStep;
   branch?: string;
   commit?: string;
+  /** Always credential-redacted (`https://***@host/...`) — never a fetchable URL. */
   remoteUrl?: string;
   prUrl?: string;
   compareUrl?: string;
@@ -64,7 +65,10 @@ function compareUrl(remoteUrl: string, base: string, head: string): string | und
  * git. ssh URLs are left alone: `git@host` is a username, not a credential.
  */
 export function redactUrlCredentials(text: string): string {
-  return text.replace(/(https?:\/\/)[^/@\s]+@/gi, '$1***@');
+  // Greedy to the LAST `@` before the path/whitespace (#349): curl/git parse
+  // userinfo to the last `@`, so a raw `@` inside a password must not leave a
+  // tail exposed. Path `@` stays safe — `/` remains excluded from the run.
+  return text.replace(/(https?:\/\/)[^/\s]+@/gi, '$1***@');
 }
 
 export async function commitPushOpenPr(

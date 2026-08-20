@@ -87,14 +87,12 @@ test("#263 — repeated round trips do not leak heartbeat intervals or settings-
   await stubGraphRoute(page);
   await gotoMindmap(page, controller.url);
 
-  // Await the initial build's FULL async tail before installing the spy:
-  // the wake-word `failsafe:` listener registers inside bindToolbar, called
-  // from initCanvas, which runs only after the async fetchGraph resolves —
-  // gotoMindmap's shell-visibility wait does not cover it. initCanvas is
-  // synchronous (setCanvas precedes bindToolbar in one task), so a truthy
-  // graph.canvas guarantees the registration has executed; counting after
-  // this poll closes the scheduler race that intermittently produced 10
-  // (initial wake registration leaking into a round-trip-scoped count).
+  // Await the initial build's async tail before installing the spy. Since
+  // #346 all four `failsafe:` bridges register synchronously in render()
+  // (the historical race — the wake listener riding initCanvas's async tail —
+  // is retired), but the canvas poll remains the correct settle point: it
+  // gates round-trip determinism (each loop iteration polls the same
+  // liveness) and keeps the count's start strictly after the initial mount.
   await expect.poll(() => page.evaluate(() => {
     const g = (globalThis as any).__failsafeRenderers;
     return !!g?.workspace?.subViews?.find((s: any) => s.key === "brainstorm")?.renderer?.graph?.canvas;
@@ -151,6 +149,41 @@ test("#263 — repeated round trips do not leak heartbeat intervals or settings-
   // must equal exactly the number of (re)builds captured by the spy.
   expect(state.hasCanvas).toBe(true);
   expect(state.heartbeatInstallCount, "one heartbeat setInterval call per (re)build, no duplicate installs per build").toBe(3);
-  // 3 settings-bridge listener names registered per build (audio-device / whisper-model / stt-language).
-  expect(state.listenerAddCount, "settings-bridge listeners must not accumulate beyond one set per live build").toBe(3 * 3);
+  // 4 settings-bridge listener names registered per build (audio-device /
+  // whisper-model / stt-language / wake-word — the wake bridge joined the map
+  // in #346 so it survives round trips; expected count moved 9 -> 12).
+  expect(state.listenerAddCount, "settings-bridge listeners must not accumulate beyond one set per live build").toBe(4 * 3);
+});
+
+test("#346 — the wake-word bridge stays alive after a tab round trip", async ({ page }) => {
+  controller = await serveConsoleServerUI({});
+  await stubGraphRoute(page);
+  await gotoMindmap(page, controller.url);
+  await expect.poll(() => page.evaluate(() => {
+    const g = (globalThis as any).__failsafeRenderers;
+    return !!g?.workspace?.subViews?.find((s: any) => s.key === "brainstorm")?.renderer?.graph?.canvas;
+  }), { timeout: 10000 }).toBe(true);
+
+  // One full round trip — pre-#346 this permanently killed the wake bridge
+  // (destroy removed the listener; the self-replaced lightweight bindToolbar
+  // never re-registered it).
+  await page.locator('#workspace .cc-pill[data-key="skills"]').click();
+  await expect(page.locator("#workspace .cc-bs-export")).toBeHidden();
+  await page.locator('#workspace .cc-pill[data-key="brainstorm"]').click();
+  await expect(page.locator("#workspace .cc-bs-export")).toBeVisible({ timeout: 10000 });
+  await expect.poll(() => page.evaluate(() => {
+    const g = (globalThis as any).__failsafeRenderers;
+    return !!g?.workspace?.subViews?.find((s: any) => s.key === "brainstorm")?.renderer?.graph?.canvas;
+  }), { timeout: 10000 }).toBe(true);
+
+  // Cross-surface wake event (the voice-settings panel's dispatch shape) must
+  // reach the rebuilt Mind Map: the handler syncs the wake toggle checkbox.
+  const synced = await page.evaluate(() => {
+    const toggle = document.querySelector('.cc-bs-wake-toggle') as HTMLInputElement | null;
+    if (!toggle) return 'no-toggle';
+    toggle.checked = false;
+    window.dispatchEvent(new CustomEvent('failsafe:wake-word-changed', { detail: { enabled: true } }));
+    return toggle.checked;
+  });
+  expect(synced, "post-round-trip wake event must sync the toggle (bridge alive)").toBe(true);
 });

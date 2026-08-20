@@ -7,7 +7,18 @@ import {
   signWebhookBody,
   SIGNATURE_HEADER,
   type WebhookConfig,
+  type WebhookTransport,
 } from '../../governance/GovernanceWebhook';
+
+/** Captures every transport invocation; resolves success without touching a socket. */
+function captureTransport() {
+  const calls: Array<{ options: { hostname: string; port: string | number; path: string; headers: Record<string, string | number> }; body: string }> = [];
+  const transport: WebhookTransport = (options, body) => {
+    calls.push({ options, body });
+    return Promise.resolve({ success: true, statusCode: 200 });
+  };
+  return { calls, transport };
+}
 
 const TS = '2026-08-20T00:00:00.000Z';
 const SECRET = 'NOTAREALSECRET';
@@ -153,5 +164,99 @@ describe('GovernanceWebhook – diagnostics redaction (F-4)', () => {
     original.payloadFields.push('everything');
     assert.strictEqual(webhook.getRegistered()[0].url, 'https://example.com/hook');
     assert.deepStrictEqual(webhook.getRegistered()[0].payloadFields, ['verdict']);
+  });
+});
+
+describe('GovernanceWebhook – transport wiring + byte bound (#350 / FX919)', () => {
+  it('transmits EXACTLY the builder contract: path, signature header, and body byte-identical', async () => {
+    const { calls, transport } = captureTransport();
+    const hook = new GovernanceWebhook(transport);
+    hook.register({
+      url: 'https://example.com/hook/path?tenant=t1&mode=live',
+      events: ['*'], payloadFields: ['verdict'], secret: 'NOTAREALSECRET',
+    });
+    const results = await hook.dispatch('veto', { verdict: 'VETO' });
+    assert.strictEqual(results.length, 1);
+    assert.strictEqual(results[0].success, true);
+    assert.strictEqual(calls.length, 1);
+    const sent = calls[0];
+    // Byte-identity mechanism (audit #565 F3): extract the timestamp from the
+    // transmitted body and recompute the builder output with it — the signature
+    // covers the body, so extraction is legitimate; structural comparison is
+    // deliberately NOT used (it would not catch a send() that rebuilds parts).
+    const ts = JSON.parse(sent.body).timestamp as string;
+    const expected = buildWebhookRequest(
+      { url: 'https://example.com/hook/path?tenant=t1&mode=live', events: ['*'], payloadFields: ['verdict'], secret: 'NOTAREALSECRET' },
+      'veto', { verdict: 'VETO' }, ts,
+    );
+    assert.strictEqual(sent.body, expected.body, 'transmitted body must be the builder body, byte-identical');
+    assert.strictEqual(sent.options.path, expected.path, 'transmitted path must preserve the query string');
+    assert.strictEqual(sent.options.headers[SIGNATURE_HEADER], expected.headers[SIGNATURE_HEADER],
+      'transmitted signature must be the builder signature over the transmitted bytes');
+    // Single parse (audit #565 F2/F6): hostname/port come from the builder's
+    // one url.URL parse — hostname verbatim, port defaulted by the builder.
+    assert.strictEqual(sent.options.hostname, expected.hostname);
+    assert.strictEqual(sent.options.port, expected.port);
+    assert.strictEqual(expected.port, 443);
+  });
+
+  it('oversized payload resolves the per-target failure — dispatch never rejects, siblings isolated', async () => {
+    const { calls, transport } = captureTransport();
+    const hook = new GovernanceWebhook(transport);
+    // Sibling-isolation mechanism (audit #566 N3): per-target divergence via
+    // differing allowlists — target A declares the huge key, target B does not.
+    hook.register({
+      url: 'https://oversized.invalid/hook', events: ['*'],
+      payloadFields: ['verdict', 'blob'], secret: 'NOTAREALSECRET', maxPayloadBytes: 1024,
+    });
+    hook.register({
+      url: 'https://small.example.com/hook', events: ['*'], payloadFields: ['verdict'],
+    });
+    const results = await hook.dispatch('veto', { verdict: 'VETO', blob: 'x'.repeat(4096) });
+    assert.strictEqual(results.length, 2, 'dispatch must resolve BOTH per-target results (never rejects)');
+    const failed = results.find(r => !r.success);
+    const ok = results.find(r => r.success);
+    assert.ok(failed && /maxPayloadBytes|exceeds/i.test(failed.error ?? ''),
+      `oversized target must fail-closed naming the bound; got ${JSON.stringify(results)}`);
+    assert.ok(ok, 'the in-bounds sibling must still transmit and succeed');
+    // "No signature for the oversized target" is carried structurally by
+    // calls.length === 1: its transport call never exists, so no header of
+    // any kind was ever produced for it.
+    assert.strictEqual(calls.length, 1, 'transport must never be invoked for the oversized target');
+    assert.strictEqual(calls[0].options.hostname, 'small.example.com');
+  });
+
+  it('a body at exactly the cap passes', () => {
+    const probe = buildWebhookRequest(
+      { url: 'https://example.com/hook', events: ['*'], payloadFields: ['verdict'] },
+      'veto', { verdict: 'V' }, '2026-08-20T00:00:00.000Z',
+    );
+    const exact = Buffer.byteLength(probe.body);
+    const req = buildWebhookRequest(
+      { url: 'https://example.com/hook', events: ['*'], payloadFields: ['verdict'], maxPayloadBytes: exact },
+      'veto', { verdict: 'V' }, '2026-08-20T00:00:00.000Z',
+    );
+    assert.strictEqual(Buffer.byteLength(req.body), exact);
+  });
+
+  it('non-positive maxPayloadBytes falls back to the default in the builder (single source of truth)', () => {
+    // audit #566 N1: direct builder callers bypass register(); a negative cap
+    // must not make every body oversized.
+    const req = buildWebhookRequest(
+      { url: 'https://example.com/hook', events: ['*'], payloadFields: ['verdict'], maxPayloadBytes: -1 },
+      'veto', { verdict: 'VETO' }, '2026-08-20T00:00:00.000Z',
+    );
+    assert.ok(req.body.includes('VETO'), 'negative cap must mean default, not reject-everything');
+  });
+
+  it('builder returns the url.URL hostname VERBATIM (brackets preserved for IPv6 literals)', () => {
+    // Deliberate coupling (audit #565 F2): normalizing brackets would make the
+    // deliberately-unfixed #347 bracketed-private-IPv6 SSRF residual reachable.
+    const req = buildWebhookRequest(
+      { url: 'https://[2001:db8::1]:8443/hook', events: ['*'], payloadFields: ['verdict'] },
+      'veto', { verdict: 'VETO' }, '2026-08-20T00:00:00.000Z',
+    );
+    assert.strictEqual(req.hostname, '[2001:db8::1]');
+    assert.strictEqual(req.port, '8443');
   });
 });

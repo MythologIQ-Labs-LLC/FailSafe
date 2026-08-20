@@ -84,7 +84,7 @@ suite('commitPushOpenPr — governed Organize ladder', () => {
 // bootstrapServers.ts surfaces via showInformationMessage. The placeholder below is a
 // fake stand-in for an operator's real token.
 suite('commitPushOpenPr — credential redaction (#241 F-3)', () => {
-  const CRED = 'https://someuser:NOTAREALPW@github.com/o/r.git';
+  const CRED = 'https://someuser:NOTAREALPW@github.com/o/r.git'; // EXAMPLE_SECRET: fake fixture credential, never real
   const withRemote = (stdout: string, extra: (a: string[]) => Partial<GitResp> | undefined = () => undefined) =>
     gitWith((a) => (a[0] === 'remote' ? { stdout } : extra(a)));
 
@@ -124,7 +124,7 @@ suite('commitPushOpenPr — credential redaction (#241 F-3)', () => {
 suite('redactUrlCredentials', () => {
   test('redacts every credentialed http(s) url in a multi-line blob', () => {
     const out = redactUrlCredentials(
-      "remote: rejected\nfatal: could not read 'https://u:NOTAREALPW@github.com/o/r.git'\nhint: retry http://t@example.com/x",
+      "remote: rejected\nfatal: could not read 'https://u:NOTAREALPW@github.com/o/r.git'\nhint: retry http://t@example.com/x", // EXAMPLE_SECRET: fake fixture credential, never real
     );
     assert.ok(!out.includes('NOTAREALPW'));
     assert.match(out, /https:\/\/\*\*\*@github\.com\/o\/r\.git/);
@@ -137,8 +137,20 @@ suite('redactUrlCredentials', () => {
     }
   });
 
+  test('#349 — a raw @ inside the password redacts to the LAST @ (no tail leak)', () => {
+    // curl/git parse userinfo to the last @, so `p@ss` genuinely authenticates;
+    // the first-@ regex left `ss@host` exposed.
+    const out = redactUrlCredentials('push failed: https://u:p@ss@github.com/o/r.git rejected');
+    assert.equal(out, 'push failed: https://***@github.com/o/r.git rejected');
+    assert.ok(!out.includes('p@ss') && !out.includes('ss@'), `tail must not survive; got '${out}'`);
+  });
+
+  test('#349 — a previously partial redaction collapses correctly', () => {
+    assert.equal(redactUrlCredentials('https://***@ss@github.com/o/r.git'), 'https://***@github.com/o/r.git');
+  });
+
   test('is idempotent — re-redacting an already-redacted url is stable', () => {
-    const once = redactUrlCredentials('https://u:NOTAREALPW@github.com/o/r.git');
+    const once = redactUrlCredentials('https://u:NOTAREALPW@github.com/o/r.git'); // EXAMPLE_SECRET: fake fixture credential, never real
     assert.equal(redactUrlCredentials(once), once);
   });
 });
