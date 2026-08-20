@@ -27626,3 +27626,33 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 SESSION SEAL for the Monitor sentinel-alert Console deep link (FX916; session 2026-08-20T0244-4cfa93; audit VETO #549 -> PASS #550, implement #551; branch fix/monitor-alert-console-deeplink). Reality = Promise: all 4 plan phases shipped exactly as declared — verdict-timestamp identity propagation (EventSubscriptionManager + CheckpointStore), console-nav relay module + three Monitor click sites + commandCenterRouteFor rename + hasAuditHashFilter verdict bypass, sidebar chrome/host relay (sanitizeConsoleRoute allowlist, source-guarded forward, failsafe.openConsoleRoute with defense-in-depth re-sanitize), e2e spec both host contexts. Verification: red->green unit+feature TDD; lint 0 errors; npm test 3832 passing (census 444/444); test:ui 191 passed + monitor-alert-deeplink.spec 2/2; independent observer APPROVE (8 non-blocking; 2 hardened in-pass). Gate ladder: intent-lock VERIFIED, admission+matrix OK, secret-scan clean, procedural-fidelity 0 findings, dod-check clean, doc-integrity strict PASS. **Feature Inventory**: Total: 733 / verified: 683 / n/a: 43 / other: 7. **Newly unverified**: none. DISCLOSED: merge-velocity strained (54 PRs/7d — v6.0.0 release week; narrow_scope honored, single-scope cycle); workspace-fragility high (pre-existing branch/gate-artifact debt, cleanup cycle recommended); no version bump or CHANGELOG stamp (post-v6.0.0 publish HOLD; Unreleased entry authored; versioning deferred to /qor-repo-release); README untouched (internal fix, no badge/version drift — operator-judgment continue per Step 6.5); skill-size-budget + dist-recompile + pyproject steps SKIP prerequisite-absent (consumer repo); seal COMMIT not created — staged only at the Review Boundary per operator standing directive (no commit/push/PR/tag without explicit approval); commit-trailer steps n/a accordingly. Residuals: bicameral-advanced-tools parallel-load flake (green in isolation; determinism watch-list with #263); post-deep-link date-filter inertness + live-WS arrival-clock rows recorded as declared limitations.
+
+
+---
+
+### Entry #553: DELIVER - v6.0.1 published
+
+**Timestamp**: 2026-08-20T17:00:00Z
+**Phase**: DELIVER
+**Author**: Governor
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256("v6.0.1|f838cb1d|run-32390907124|2026-08-20")
+= 31b645f4d28d25e6f7f1d9c8eebba471d6110d8f602b98c2c0473e07cf11bb65
+```
+
+**Previous Hash**: `2b7707c5273392a2b695b4376a34023bc2fe4c3c1d3234accb4110add257c426` (Entry #552 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 789a2c95c452409655d94cbf24c40c11922fe7a5fd7b0795b3dd0c2918033ee9
+```
+
+**Merkle Seal**: `49ebd3c6d78ff623b71623f78e4583a61251bcc8ed6ce2be06fc68219934bb21` (SHA256(chain_hash + "DELIVER"))
+
+## Decision
+
+DELIVER seal for FailSafe v6.0.1 (patch over v6.0.0). Scope: FX916 Monitor sentinel-alert Console deep link (SESSION SEAL #552; PR #334). Release train: PRs #333 (v6.0.0 DELIVER seal) + #334 (fix) + #335 (release metadata) merged to main under explicit operator authorization; tag v6.0.1 annotated on merge commit f838cb1d; Release Pipeline run 32390907124 ALL GREEN — SemVer gate, Build & Test (first-run pass), operator-authorized production gate (enacted via API under operator credentials/directive after the UI button was not found; reviewer=operator, current_user_can_approve=true), Publish to VS Code Marketplace SUCCESS, Publish to Open VSX SUCCESS, GitHub Release v6.0.1 published non-draft 2026-08-20T16:50:45Z. Release-path events this train: standards gate caught a missing extension-README What's-New section — ratified by operator as a substantiate-phase process failure (Step 6.5 judged away instead of run; severity-2 gate_override shadow event + SHADOW_GENOME entry recorded in this commit; durable release-gate preflight fix scheduled into the next cycle with the #242 accessibility slice); Full Test Suite flaked once on the known #263 brainstorm-tab-roundtrip leak-spec (green on re-run; third release-adjacent flake — determinism cycle overdue); PR #339 (parallel session, governed-commit URL redaction) failed the branch-naming policy gate, branch renamed and superseded by PR #341 (CI green, held unmerged pending operator decision). Open VSX ingestion not re-verified at seal time (publish job authoritative per standing practice).
