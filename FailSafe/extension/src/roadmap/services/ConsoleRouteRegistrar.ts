@@ -28,6 +28,7 @@ import { registerQorRoute } from "../routes/QorRoute";
 import { loadShadowGenome } from "../../qorlogic/shadow-genome-client";
 import { registerFeatureStatusRoute } from "../routes/FeatureStatusRoute";
 import { registerCommitCheckRoute } from "../routes/CommitCheckRoute";
+import { rateLimit } from "express-rate-limit";
 import { registerSkillsApiRoute } from "../routes/SkillsApiRoute";
 import { registerHookRoute } from "../routes/HookRoute";
 import { setupMarketplaceRoutes } from "../routes/MarketplaceRoute";
@@ -420,7 +421,14 @@ export class ConsoleRouteRegistrar {
     app.get("/api/v1/tracker", (req, res) => TrackerRoute.api(req, res, trackerDeps()));
     // MCP catalog surface (B-INT-13/14): list + governed install into .mcp.json.
     app.get("/api/v1/mcp/catalog", (req, res) => McpRoute.catalog(req, res));
-    app.post("/api/actions/mcp-install", (req, res) => McpRoute.install(req, res, { workspaceRoot: this.host.workspaceRoot }));
+    // #241C F-1 (CodeQL js/missing-rate-limiting): the two filesystem-mutating
+    // install routes get the loopback guard every other mutating family has,
+    // plus a rate limit (they write .mcp.json / pre-fill a terminal).
+    const installLimiter = rateLimit({ windowMs: 60_000, limit: 5, standardHeaders: false, legacyHeaders: false });
+    app.post("/api/actions/mcp-install", installLimiter, (req, res) => {
+      if (this.host.rejectIfRemote(req, res)) return;
+      McpRoute.install(req, res, { workspaceRoot: this.host.workspaceRoot });
+    });
 
     // Agent Governance Toolkit surface (B-INT-16): env-detected installer. The
     // modules route auto-detects the workspace language; the install route
@@ -428,14 +436,17 @@ export class ConsoleRouteRegistrar {
     // presses enter — no silent run). runInTerminal is resolved lazily because
     // routes register before bootstrapServers wires the vscode dep.
     app.get("/api/v1/agt/modules", (req, res) => AgtRoute.modules(req, res, { workspaceRoot: this.host.workspaceRoot }));
-    app.post("/api/actions/agt-install", (req, res) => AgtRoute.install(req, res, {
-      workspaceRoot: this.host.workspaceRoot,
-      runInTerminal: (name, command) => {
-        const fn = this.host.getAgtRunInTerminal?.();
-        if (!fn) throw new Error("runInTerminal not wired");
-        fn(name, command);
-      },
-    }));
+    app.post("/api/actions/agt-install", installLimiter, (req, res) => {
+      if (this.host.rejectIfRemote(req, res)) return;
+      AgtRoute.install(req, res, {
+        workspaceRoot: this.host.workspaceRoot,
+        runInTerminal: (name, command) => {
+          const fn = this.host.getAgtRunInTerminal?.();
+          if (!fn) throw new Error("runInTerminal not wired");
+          fn(name, command);
+        },
+      });
+    });
     // GH #167: Integrations Catalog — surfaces the command/config integrations
     // that lack a dedicated sub-view. Secret-safe: the snapshot getter returns
     // booleans only. Absent getter → all-disabled (still renders the list).

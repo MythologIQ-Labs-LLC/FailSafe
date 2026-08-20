@@ -17,16 +17,26 @@ export function buildMcpServerEntry(entry: McpCatalogEntry): { command: string; 
  * Tolerates empty/malformed input (starts fresh). Returns the merged JSON text
  * and whether the entry was newly added (vs. updated).
  */
-export function mergeMcpConfig(existingText: string, entry: McpCatalogEntry): { text: string; added: boolean } {
+export type McpMergeResult =
+  | { ok: true; text: string; added: boolean }
+  | { ok: false; reason: 'unparseable-existing' };
+
+// #241 Tranche C D-1 (FX913): an unparseable existing config REFUSES the merge
+// instead of silently replacing the operator's other MCP servers with {}.
+export function mergeMcpConfig(existingText: string, entry: McpCatalogEntry): McpMergeResult {
   let config: { mcpServers?: Record<string, unknown> } & Record<string, unknown>;
-  try {
-    config = existingText.trim() ? (JSON.parse(existingText) as typeof config) : {};
-  } catch {
+  if (!existingText.trim()) {
     config = {};
+  } else {
+    try {
+      config = JSON.parse(existingText) as typeof config;
+    } catch {
+      return { ok: false, reason: 'unparseable-existing' };
+    }
   }
   if (!config.mcpServers || typeof config.mcpServers !== 'object') config.mcpServers = {};
   const servers = config.mcpServers as Record<string, unknown>;
   const added = !(entry.id in servers);
   servers[entry.id] = buildMcpServerEntry(entry);
-  return { text: `${JSON.stringify(config, null, 2)}\n`, added };
+  return { ok: true, text: `${JSON.stringify(config, null, 2)}\n`, added };
 }

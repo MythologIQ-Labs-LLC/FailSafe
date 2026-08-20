@@ -434,6 +434,11 @@
           "default": "",
           "description": "Optional GitHub API base URL for GitHub Enterprise Server (e.g. https://ghe.example.com/api/v3). Leave empty to use https://api.github.com."
         },
+        "failsafe.integrations.sarif.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable SARIF import. The `FailSafe: Import SARIF Findings` command parses an operator-picked SARIF 2.1.0 file (fully offline — no network) and upserts findings as risk records in the Risk Register."
+        },
         "failsafe.integrations.sentry.enabled": {
           "type": "boolean",
           "default": false,
@@ -774,6 +779,7 @@
     "chokidar": "^3.5.3",
     "d3": "^7.8.5",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.2.1",
     "glob": "^10.5.0",
     "js-yaml": "^4.3.1",
     "proper-lockfile": "^4.1.2",

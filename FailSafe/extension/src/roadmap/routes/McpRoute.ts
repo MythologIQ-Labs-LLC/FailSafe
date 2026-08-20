@@ -40,9 +40,16 @@ export const McpRoute = {
     let existing = '';
     try { existing = fs.readFileSync(cfgPath, 'utf-8'); } catch { /* none */ }
     try {
-      const { text, added } = mergeMcpConfig(existing, entry);
-      fs.writeFileSync(cfgPath, text);
-      res.json({ ok: true, added, id });
+      const merged = mergeMcpConfig(existing, entry);
+      if (!merged.ok) {
+        res.status(409).json({
+          ok: false,
+          error: 'existing .mcp.json is unparseable — nothing was written; fix or remove it and retry',
+        });
+        return;
+      }
+      fs.writeFileSync(cfgPath, merged.text);
+      res.json({ ok: true, added: merged.added, id });
     } catch (e) {
       res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
     }

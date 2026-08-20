@@ -27361,3 +27361,120 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 SESSION SEAL for burndown Cycle 8 (#325 Mind Map accessible alternative; session 2026-08-20T0219-da1bc0; audit PASS #541, implement #542; branch fix/mindmap-list-view-325 stacked on Cycle 7). Reality = Promise: 4 src/test files + 4 doc surfaces. Verification: T1-T4 red -> 32/32 green; tsc + compile (browser-ESM emit) + lint clean. Gate ladder exit 0; intent lock VERIFIED. DISCLOSED: rendered Playwright re-probe of the fixed surface rides the next #242 slice (the unit layer pins template + wiring behavior); electron host defers to CI; no version bump (HOLD); trailer absent per operator identity directive. Board effect at delivery: #325 closes.
+
+
+---
+
+### Entry #544: GATE TRIBUNAL - integration-defects-241c
+
+**Timestamp**: 2026-08-20T04:40:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (iteration 1)
+
+**Content Hash**:
+```
+SHA256(.agent/staging/AUDIT_REPORT.md)
+= b5f4278da373deaa7658be9fa9c863ea65f8bc5abae270527e56809c24dc3f55
+```
+
+**Previous Hash**: `fe6a67a2df87680eec72f2eebfeb9266160940d106da5bcaa567e060789d585c` (Entry #543 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= ee584686edc47e991f4f7f691f4aa3eacf03f2eadff2d80e01240a834d0cba01
+```
+
+## Decision
+
+PASS on plan-integration-defects-241c.md iteration 1 (#241 Tranche C defects D-1..D-4: non-destructive mcp merge, never-throws SARIF + guarded upsert loops, paginated+disclosed linkage audit, SARIF opt-in). Findings originated from an independent audit agent and were each re-verified by direct read before planning. Next: /qor-implement on fix/integration-defects-241c.
+
+
+---
+
+### Entry #545: IMPLEMENTATION - integration-defects-241c
+
+**Timestamp**: 2026-08-20T05:30:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(git diff -- FailSafe/extension/src FailSafe/extension/package.json)
+= 5c43697da7d7cd75b7f80020c052b6814ea4f4381d9eb1b645f074ad4250871a
+```
+
+**Previous Hash**: `ee584686edc47e991f4f7f691f4aa3eacf03f2eadff2d80e01240a834d0cba01` (Entry #544 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 1831a42b99c108642724f7d698a49d55815c2290dc4928a60b6d54fcf7e804d1
+```
+
+## Decision
+
+Implemented plan-integration-defects-241c.md (audit PASS #544). LD-1 (D-1/FX913): mergeMcpConfig returns a discriminated McpMergeResult — unparseable existing config REFUSES the merge (ok:false, no text); command shows an explicit nothing-was-written error; HTTP route returns 409; the legacy 'malformed -> starts fresh' test INVERTED (it pinned the destructive behavior). LD-2/3 (D-2/FX915): parseSarif honors never-throws (null-run guard; non-array rules/results skipped with notes); importSarifText + importSentryRisks adopt the FX910 guarded-loop pattern (failed counters, loop never aborts). LD-4 (D-3/FX914): runLinkageAudit paginates to 10 pages and appends a truncated-issue-list WARN finding on a full final page (new LinkageFindingKind member + audit view on LinkageRunResult); false already-closed findings for page-2+ issues eliminated (T7). LD-5 (D-4/FX915): failsafe.integrations.sarif.enabled (default false) + command guard + Integrations Catalog entry (new 'Security Scanning' category). TDD: 7 red -> 63/63 green across the six integration suites + T9; tsc 0; lint 0 errors.
+
+
+---
+
+### Entry #546: SESSION SEAL - integration-defects-241c
+
+**Timestamp**: 2026-08-20T05:45:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L2
+**Entry ID**: `6f8cca4b3fcb`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-integration-defects-241c.md)
+= 9b4d868b9dbdb099ef24fe07d898e0636940d4b81d971ad83388be97006d36ba
+```
+
+**Previous Hash**: `1831a42b99c108642724f7d698a49d55815c2290dc4928a60b6d54fcf7e804d1` (Entry #545 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 9b68383064e4ecf9b04e19d7e1641e416c5aa75af66f7427d5ffb41694d628df
+```
+
+**Merkle Seal**: `7e59b22649f6269118d90c2334dbf6033799a07cd1a66aa5aa72902580fbefbb` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for burndown Cycle 9 (#241 Tranche C defects D-1..D-4; session 2026-08-20T0227-a1b316; audit PASS #544, implement #545; branch fix/integration-defects-241c). Reality = Promise: 14 src/test/manifest files + 4 doc surfaces. Verification: 7 red -> 63/63 green + T9; tsc + lint 0. Gate ladder exit 0; intent lock VERIFIED. DISCLOSED: electron host defers to CI; no version bump (HOLD); trailer absent per operator identity directive. With this cycle #241's audit scope is COMPLETE (Tranches A/B/C + all four confirmed defects fixed; F-1..F-7 recorded as named follow-ups on the issue) — #241 closable at delivery, which also progresses program #239.
+
+
+---
+
+### Entry #547: IMPLEMENTATION - integration-defects-241c amendment (F-1 via CodeQL gate)
+
+**Timestamp**: 2026-08-20T06:15:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(git diff -- src package.json package-lock.json)
+= c03c7a135384d76f13ffdfc908db719cdb3691b0697c6162cc95ddc49f609d93
+```
+
+**Previous Hash**: `9b68383064e4ecf9b04e19d7e1641e416c5aa75af66f7427d5ffb41694d628df` (Entry #546 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 4cd68d225922c372dee13fe7da1a067af94407bc542b995af3844f6867efdd95
+```
+
+## Decision
+
+POST-SEAL AMENDMENT to Cycle 9 (disclosed, same branch): CodeQL gated PR #331 with js/missing-rate-limiting (high) on the mcp-install route — D-1's rewrite changed the route's dataflow fingerprint, re-attributing the pre-existing gap as new. This is exactly Tranche-C follow-up F-1, so the amendment closes F-1 itself rather than suppressing the alert: both filesystem-mutating install routes (mcp-install, agt-install) gain the rejectIfRemote loopback guard every other mutating family has PLUS an express-rate-limit limiter (5/min); express-rate-limit@^8.2.1 promoted from transitive to a declared dependency (it was importable-but-undeclared — supply-chain hygiene). tsc + lint 0; suites green. CodeQL re-run on push is the empirical verifier for this class.

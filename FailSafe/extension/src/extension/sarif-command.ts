@@ -14,6 +14,15 @@ import { RiskRegisterManager } from '../roadmap/services/RiskRegisterManager';
 
 export function registerSarifImportCommand(context: vscode.ExtensionContext, workspaceRoot: string): void {
   const disposable = vscode.commands.registerCommand('failsafe.sarif.import', async () => {
+    // #241C D-4 (FX915): opt-in parity with every sibling integration — the
+    // surface must be visible to config-level policy even though it is offline.
+    const cfg = vscode.workspace.getConfiguration('failsafe');
+    if (!cfg.get<boolean>('integrations.sarif.enabled', false)) {
+      vscode.window.showWarningMessage(
+        'SARIF import is disabled. Enable `failsafe.integrations.sarif.enabled`.',
+      );
+      return;
+    }
     const picked = await vscode.window.showOpenDialog({
       canSelectMany: false,
       openLabel: 'Import SARIF',

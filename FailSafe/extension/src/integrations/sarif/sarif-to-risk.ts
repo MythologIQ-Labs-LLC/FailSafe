@@ -43,9 +43,20 @@ export function sarifFindingsToRisks(findings: SarifFinding[]): Array<Record<str
 export function importSarifText(
   text: string,
   upsert: (risk: Record<string, unknown>) => void,
-): { findings: number; risks: number; errors: string[] } {
+): { findings: number; risks: number; failed: number; errors: string[] } {
   const { findings, errors } = parseSarif(text);
-  const risks = sarifFindingsToRisks(findings);
-  for (const r of risks) upsert(r);
-  return { findings: findings.length, risks: risks.length, errors };
+  const riskRecords = sarifFindingsToRisks(findings);
+  // #241 Tranche C (FX915): a failing register write must not abort the
+  // remaining findings mid-stream — count it and continue (FX910 pattern).
+  let risks = 0;
+  let failed = 0;
+  for (const r of riskRecords) {
+    try {
+      upsert(r);
+      risks++;
+    } catch {
+      failed++;
+    }
+  }
+  return { findings: findings.length, risks, failed, errors };
 }

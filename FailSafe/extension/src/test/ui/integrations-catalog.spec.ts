@@ -29,14 +29,14 @@ test.describe('FX839 — Integrations Catalog sub-view (#167)', () => {
     const cards = page.locator('.cc-intcat-card');
     await expect(cards.first()).toBeVisible({ timeout: 5000 });
     // 10 integrations in the catalog (9 #167 + Slack).
-    await expect(cards).toHaveCount(10);
+    await expect(cards).toHaveCount(11); // +sarif (#241C D-4, FX915)
     // No config snapshot wired in the harness → all default to Disabled.
-    await expect(page.locator('.cc-intcat-pill-disabled')).toHaveCount(10);
+    await expect(page.locator('.cc-intcat-pill-disabled')).toHaveCount(11);
     await expect(page.locator('.cc-intcat-pill-active')).toHaveCount(0);
     await expect(page.locator('.cc-intcat-pill-needs')).toHaveCount(0);
     // Grouped by category (Agent CLI, Agent Observe, Issue Tracker, CI/Checks,
     // Error Monitoring, Notifications) → 6 group headers.
-    await expect(page.locator('.cc-intcat-group')).toHaveCount(6);
+    await expect(page.locator('.cc-intcat-group')).toHaveCount(7); // +Security Scanning
   });
 
   test('a known integration card renders its label + a Configure affordance', async ({ page }) => {
