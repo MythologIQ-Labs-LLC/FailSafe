@@ -27418,3 +27418,35 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 Implemented plan-integration-defects-241c.md (audit PASS #544). LD-1 (D-1/FX913): mergeMcpConfig returns a discriminated McpMergeResult — unparseable existing config REFUSES the merge (ok:false, no text); command shows an explicit nothing-was-written error; HTTP route returns 409; the legacy 'malformed -> starts fresh' test INVERTED (it pinned the destructive behavior). LD-2/3 (D-2/FX915): parseSarif honors never-throws (null-run guard; non-array rules/results skipped with notes); importSarifText + importSentryRisks adopt the FX910 guarded-loop pattern (failed counters, loop never aborts). LD-4 (D-3/FX914): runLinkageAudit paginates to 10 pages and appends a truncated-issue-list WARN finding on a full final page (new LinkageFindingKind member + audit view on LinkageRunResult); false already-closed findings for page-2+ issues eliminated (T7). LD-5 (D-4/FX915): failsafe.integrations.sarif.enabled (default false) + command guard + Integrations Catalog entry (new 'Security Scanning' category). TDD: 7 red -> 63/63 green across the six integration suites + T9; tsc 0; lint 0 errors.
+
+
+---
+
+### Entry #546: SESSION SEAL - integration-defects-241c
+
+**Timestamp**: 2026-08-20T05:45:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L2
+**Entry ID**: `6f8cca4b3fcb`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**:
+```
+SHA256(plan-integration-defects-241c.md)
+= 9b4d868b9dbdb099ef24fe07d898e0636940d4b81d971ad83388be97006d36ba
+```
+
+**Previous Hash**: `1831a42b99c108642724f7d698a49d55815c2290dc4928a60b6d54fcf7e804d1` (Entry #545 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 9b68383064e4ecf9b04e19d7e1641e416c5aa75af66f7427d5ffb41694d628df
+```
+
+**Merkle Seal**: `7e59b22649f6269118d90c2334dbf6033799a07cd1a66aa5aa72902580fbefbb` (SHA256(chain_hash + "SESSION-SEAL"))
+
+## Decision
+
+SESSION SEAL for burndown Cycle 9 (#241 Tranche C defects D-1..D-4; session 2026-08-20T0227-a1b316; audit PASS #544, implement #545; branch fix/integration-defects-241c). Reality = Promise: 14 src/test/manifest files + 4 doc surfaces. Verification: 7 red -> 63/63 green + T9; tsc + lint 0. Gate ladder exit 0; intent lock VERIFIED. DISCLOSED: electron host defers to CI; no version bump (HOLD); trailer absent per operator identity directive. With this cycle #241's audit scope is COMPLETE (Tranches A/B/C + all four confirmed defects fixed; F-1..F-7 recorded as named follow-ups on the issue) — #241 closable at delivery, which also progresses program #239.
