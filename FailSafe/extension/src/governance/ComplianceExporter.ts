@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { LedgerManager } from '../qorelogic/ledger/LedgerManager';
 import { ShadowGenomeManager } from '../qorelogic/shadow/ShadowGenomeManager';
+import { PatternLoader } from '../sentinel/PatternLoader';
 
 type ComplianceFramework = 'SOC2' | 'ISO27001' | 'EU_AI_ACT';
 
@@ -12,11 +13,66 @@ interface ControlMapping {
   controls: Array<{ id: string; description: string; evidenceType: string }>;
 }
 
+// #244 Tranche D: this bundle carries free-form fields written by agents and
+// operators (ledger entry `payload`, Shadow Genome `decisionRationale` /
+// `environmentContext` / `causalVector` / `remediationNotes`, etc.) into a
+// file meant to leave the workspace for a third-party SOC2/ISO27001/EU_AI_ACT
+// auditor. Reuse the Sentinel secrets/PII heuristics (the same detector
+// already used to redact MCP policy config, see mcp-policy-audit.ts) rather
+// than inventing a second pattern set. Cryptographic chain fields are
+// excluded from scanning so a redaction can never silently corrupt the
+// exported hash chain an auditor needs to verify.
+const CHAIN_INTEGRITY_KEYS = new Set(['entryHash', 'prevHash', 'signature']);
+const REDACTED = '[REDACTED]';
+
+function compileRedactionPatterns(): RegExp[] {
+  const loader = new PatternLoader();
+  return loader
+    .getPatterns()
+    .filter((p) => p.category === 'secrets' || p.category === 'pii')
+    .map((p) => loader.compilePattern(p))
+    .filter((r): r is RegExp => r !== null);
+}
+
 export class ComplianceExporter {
+  private redactionPatterns: RegExp[] | null = null;
+
   constructor(
     private ledgerManager: LedgerManager,
     private shadowGenomeManager: ShadowGenomeManager,
   ) {}
+
+  private getRedactionPatterns(): RegExp[] {
+    if (!this.redactionPatterns) {
+      this.redactionPatterns = compileRedactionPatterns();
+    }
+    return this.redactionPatterns;
+  }
+
+  /** Recursively redacts secret/PII-shaped substrings from free-text fields, preserving chain-integrity fields verbatim. */
+  private redact(value: unknown, key?: string): unknown {
+    if (typeof value === 'string') {
+      if (key && CHAIN_INTEGRITY_KEYS.has(key)) {
+        return value;
+      }
+      let redacted = value;
+      for (const pattern of this.getRedactionPatterns()) {
+        redacted = redacted.replace(pattern, REDACTED);
+      }
+      return redacted;
+    }
+    if (Array.isArray(value)) {
+      return value.map((item) => this.redact(item));
+    }
+    if (value && typeof value === 'object') {
+      const out: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+        out[k] = this.redact(v, k);
+      }
+      return out;
+    }
+    return value;
+  }
 
   setLedgerManager(ledger: LedgerManager): void {
     this.ledgerManager = ledger;
@@ -30,9 +86,9 @@ export class ComplianceExporter {
     const bundle = {
       framework,
       exportedAt: new Date().toISOString(),
-      ledger: await this.ledgerManager.getRecentEntries(10000),
-      shadowGenome: await this.shadowGenomeManager.analyzeFailurePatterns(),
-      unresolvedFailures: await this.shadowGenomeManager.getUnresolvedEntries(),
+      ledger: this.redact(await this.ledgerManager.getRecentEntries(10000)),
+      shadowGenome: this.redact(await this.shadowGenomeManager.analyzeFailurePatterns()),
+      unresolvedFailures: this.redact(await this.shadowGenomeManager.getUnresolvedEntries()),
       chainVerification: this.ledgerManager.verifyChain(),
       controlMapping: this.mapToFramework(framework),
     };

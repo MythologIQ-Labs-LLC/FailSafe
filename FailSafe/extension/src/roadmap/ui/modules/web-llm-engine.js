@@ -8,6 +8,22 @@ import { heuristicExtract } from './heuristic-extractor.js';
 
 const LLM_MODULE = '../vendor/whisper/transformers.min.js'; // Re-use vendored transformers
 
+// #244 Tranche D: neither browser inference tier (native Gemini Nano prompt(),
+// WASM Transformers.js pipeline()) carries any cancellation/timeout of its own.
+// A stalled model call would otherwise hang extractGraph() forever, making
+// Tier C (the "MUST ALWAYS return usable nodes" heuristic fallback above)
+// unreachable. TIER_TIMEOUT_MS bounds each tier so a stuck model degrades to
+// the next tier instead of hanging the extraction indefinitely.
+const TIER_TIMEOUT_MS = 20000;
+
+function withTimeout(promise, ms, label) {
+    let timer;
+    const timeout = new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 async function checkVendorAvailable() {
     try {
         await import(LLM_MODULE);
@@ -45,11 +61,13 @@ async function loadPipeline(...args) {
 export class WebLlmEngine {
     constructor(store) {
         this.store = store;
-        this.modelId = 'Xenova/Qwen1.5-0.5B-Chat'; 
+        this.modelId = 'Xenova/Qwen1.5-0.5B-Chat';
         this.pipeline = null;
         this.loadingStatus = 'idle';
         this.onProgress = null;
         this.isReady = false;
+        // #244 Tranche D: per-instance override point for tests; production default is TIER_TIMEOUT_MS.
+        this.tierTimeoutMs = TIER_TIMEOUT_MS;
         this._initAttempts = 0;
         this._maxInitAttempts = 3;
 
@@ -164,7 +182,7 @@ export class WebLlmEngine {
         // ── Tier A: Native AI (Gemini Nano) ──
         if (this.isNativeAiAvailable) {
             try {
-                const result = await this._extractWithNativeAi(transcript);
+                const result = await withTimeout(this._extractWithNativeAi(transcript), this.tierTimeoutMs, 'Native AI extraction');
                 if (result && !result.error && result.nodes?.length) return result;
             } catch (err) {
                 console.warn('Native AI extraction failed:', err);
@@ -181,12 +199,12 @@ export class WebLlmEngine {
 Type must be: Feature, Architecture, Risk, Question, Database, Integration.
 Transcript: ${transcript}
 JSON Output:`;
-                const out = await this.pipeline(prompt, {
+                const out = await withTimeout(this.pipeline(prompt, {
                     max_new_tokens: 512,
                     temperature: 0.2,
                     do_sample: false,
                     return_full_text: false,
-                });
+                }), this.tierTimeoutMs, 'WASM pipeline extraction');
                 const parsed = this._parseJson(out[0].generated_text);
                 if (parsed && !parsed.error && parsed.nodes?.length) return parsed;
             } catch (err) {
