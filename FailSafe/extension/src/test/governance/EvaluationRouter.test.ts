@@ -2,6 +2,7 @@
 
 import { strict as assert } from 'assert';
 import { EvaluationRouter, type CortexEvent } from '../../governance/EvaluationRouter';
+import { EventBus } from '../../shared/EventBus';
 
 function evt(overrides: Partial<CortexEvent> = {}): CortexEvent {
   return {
@@ -121,5 +122,40 @@ suite('EvaluationRouter (FX294)', () => {
     // R3 → tier 3, but tier3_enabled=false → writeLedger should be false
     assert.equal(decision.tier, 3);
     assert.equal(decision.writeLedger, false);
+  });
+
+  // Tranche C (native #244): SentinelDaemon.processSingleEvent() emits
+  // 'sentinel.confidence' with a unique eventId for every governed-agent
+  // event it processes (src/sentinel/SentinelDaemon.ts:211). EvaluationRouter
+  // is a single long-lived instance for the extension's session
+  // (bootstrapGovernance.ts wires EvaluationRouter.fromConfigManager once).
+  // Its sibling per-key caches (fingerprintCache/noveltyCache) are bounded
+  // LRUCache(100) instances; confidenceCache must be equally bounded so a
+  // long-running session with many distinct governed-agent events doesn't
+  // grow it without limit.
+  test('FX294/#244 Tranche C — confidenceCache stays bounded under long-running governed-agent load', () => {
+    const bus = new EventBus();
+    const r = new EvaluationRouter(undefined, undefined, bus);
+    const priv = r as unknown as { confidenceCache: { size(): number } };
+
+    for (let i = 0; i < 5000; i++) {
+      bus.emit('sentinel.confidence', { eventId: `evt-${i}`, confidence: 0.9 });
+    }
+
+    // Bound generously (5x the LRUCache's own maxSize=100) rather than
+    // asserting an exact cap: LRUCache.evictLRU() breaks ties on
+    // millisecond-resolution `lastAccessed`, so a tight synchronous loop
+    // (many inserts landing in the same millisecond, as in this synthetic
+    // stress test) can transiently overshoot the configured maxSize before
+    // settling. What matters here is "bounded", not "exactly 100" — before
+    // the fix this reached the full 5000 (unbounded); after the fix it
+    // stays a small, non-growing multiple of maxSize regardless of event
+    // volume.
+    const size = priv.confidenceCache.size();
+    assert.ok(
+      size <= 500,
+      `confidenceCache grew to ${size} entries after 5000 distinct ` +
+        `governed-agent events; expected it bounded like the sibling fingerprint/novelty caches (~100, not linear in event count)`,
+    );
   });
 });
