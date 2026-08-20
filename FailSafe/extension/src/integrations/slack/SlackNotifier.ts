@@ -13,6 +13,8 @@ import * as https from 'https';
 import type { EventBus } from '../../shared/EventBus';
 import { sendSlackNotification, type SlackPostFn } from './slack-sender';
 import { mapGovernanceEvent, SLACK_NOTIFY_EVENTS } from './slack-notify-map';
+import type { SlackNotifyKind } from './slack-notify';
+import { readEventBusEvent, redactWebhookUrl } from '../notify-event';
 
 const defaultPost: SlackPostFn = (url, body) =>
   new Promise((resolve, reject) => {
@@ -42,24 +44,45 @@ const defaultPost: SlackPostFn = (url, body) =>
 
 export interface SlackNotifierConfig { enabled: boolean; webhookUrl?: string }
 
+/** A notification that was built and attempted but did not reach Slack. */
+export interface SlackDeliveryFailure { kind: SlackNotifyKind; status?: number; error?: string }
+
+/** Receives every non-delivery. Must never throw — delivery stays non-blocking. */
+export type SlackFailureSink = (failure: SlackDeliveryFailure) => void;
+
+const defaultOnFailure: SlackFailureSink = (failure) =>
+  console.warn('[FailSafe] Slack governance notification not delivered', failure);
+
 export class SlackNotifier {
   constructor(
     private readonly eventBus: EventBus,
     private readonly getConfig: () => SlackNotifierConfig,
     private readonly post: SlackPostFn = defaultPost,
+    private readonly onFailure: SlackFailureSink = defaultOnFailure,
   ) {}
 
   register(): void {
     for (const evt of SLACK_NOTIFY_EVENTS) {
-      this.eventBus.on(evt, (payload: unknown) => { void this.handle(evt, payload); });
+      this.eventBus.on(evt, (event: unknown) => { void this.handle(evt, event); });
     }
   }
 
-  private async handle(eventType: string, payload: unknown): Promise<void> {
+  private async handle(eventType: string, event: unknown): Promise<void> {
     const cfg = this.getConfig();
     if (!cfg.enabled || !cfg.webhookUrl) return;
-    const event = mapGovernanceEvent(eventType, payload);
-    if (!event) return;
-    await sendSlackNotification(cfg.webhookUrl, event, this.post); // non-blocking by contract
+    const { payload, timestamp } = readEventBusEvent(event);
+    const notice = mapGovernanceEvent(eventType, payload);
+    if (!notice) return;
+    if (!notice.ts) notice.ts = timestamp;
+    const result = await sendSlackNotification(cfg.webhookUrl, notice, this.post); // non-blocking by contract
+    // Notify-only never blocks a workflow, but a dropped governance alert must
+    // still leave a trace — silence would read as "no veto happened".
+    if (!result.ok && !result.skipped) {
+      this.onFailure({
+        kind: notice.kind,
+        status: result.status,
+        error: redactWebhookUrl(result.error, cfg.webhookUrl),
+      });
+    }
   }
 }
