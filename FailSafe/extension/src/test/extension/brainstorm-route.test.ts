@@ -341,6 +341,58 @@ suite('BrainstormRoute (FX082, FX083, FX084 + node CRUD)', () => {
     assert.deepEqual(res.body.edges[0], { source: 'cb-g1', target: 'cb-f1', label: 'caused' });
   });
 
+
+  // #233 (FX892 MODIFIED): the seed route consumes adapter ENVELOPES, not raw
+  // ledger text — ok-state entries reconstruct the appendix; malformed-state
+  // degrades to genome-only without throwing.
+  test('T1 (#233) GET /seed — ok envelope entries reconstruct the ledger appendix', async () => {
+    const app = makeApp();
+    const { deps } = makeDeps(makeBrainstormStub(), {
+      readMetaLedgerEnvelope: () => ({
+        artifact: 'META_LEDGER',
+        state: 'ok',
+        data: [
+          { n: 7, title: 'SESSION SEAL - x', phase: 'SUBSTANTIATE', verdict: '', riskGrade: 'L2' },
+        ],
+        reason: null,
+        provenance: { sourcePath: 'docs/META_LEDGER.md', mtimeIso: null },
+      }),
+    } as unknown as Partial<ApiRouteDeps>);
+    setupBrainstormRoutes(app, deps);
+    harness = new RouteHarness(app);
+    await harness.start();
+    const res = await harness.request({ method: 'GET', path: '/api/v1/brainstorm/seed' });
+    assert.equal(res.status, 200);
+    assert.ok(
+      res.body.nodes.some((n: { id: string }) => n.id.includes('lg-7-cp')),
+      'the reconstructed checkpoint node from the envelope entries must seed the graph',
+    );
+  });
+
+  test('T2 (#233) GET /seed — malformed envelope degrades to genome-only, still 200', async () => {
+    const app = makeApp();
+    const { deps } = makeDeps(makeBrainstormStub(), {
+      loadShadowGenome: async () => ({
+        ok: true,
+        graph: { nodes: [{ id: 'g1', type: 'governance', label: 'Plan' }], edges: [] },
+      }),
+      readMetaLedgerEnvelope: () => ({
+        artifact: 'META_LEDGER',
+        state: 'malformed',
+        data: null,
+        reason: 'garbage at docs/META_LEDGER.md',
+        provenance: { sourcePath: 'docs/META_LEDGER.md', mtimeIso: null },
+      }),
+    } as unknown as Partial<ApiRouteDeps>);
+    setupBrainstormRoutes(app, deps);
+    harness = new RouteHarness(app);
+    await harness.start();
+    const res = await harness.request({ method: 'GET', path: '/api/v1/brainstorm/seed' });
+    assert.equal(res.status, 200);
+    assert.equal(res.body.nodes.length, 1, 'malformed ledger contributes NO appendix');
+    assert.equal(res.body.nodes[0].id, 'cb-g1');
+  });
+
   test('FX889 GET /seed — degrade-safe: no genome loader → empty seed, still 200', async () => {
     const app = makeApp();
     const { deps } = makeDeps(makeBrainstormStub()); // no loadShadowGenome/loadMetaLedger

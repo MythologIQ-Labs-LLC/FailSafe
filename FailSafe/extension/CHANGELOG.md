@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`FailSafe: Configure VS Code Agents Window Governance`.** A guided, idempotent command covering the Agents-window user-setting opt-in, worktree commit-hook governance, and governed `.mcp.json` integration installs — with docs that state the in-process-MCP constraint honestly instead of scaffolding a ghost config (standalone bridge filed as B209). (#83 B+C, FX909)
 
 ### Changed
+- **Console routes consume the Qor artifact adapter.** The Mind Map seed and governance-dashboard routes read META_LEDGER through classified adapter envelopes instead of raw text — malformed or unavailable ledgers degrade explicitly instead of being best-effort parsed. (#233, FX892)
 - **First-run gates are repository-scoped.** The governance-mode picker and the onboarding offer now fire once per repository (workspaceState) instead of once per installation; the chosen mode persists to Workspace settings, and an explicitly configured mode at any scope suppresses the prompt so existing setups are never re-prompted. (#295, FX538/FX275)
 
 ### Fixed
