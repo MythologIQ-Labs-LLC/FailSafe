@@ -43,4 +43,15 @@ suite('integrations/acp/registry DevinRegistryDriftCheck', () => {
     });
     assert.deepEqual(checkInstalledEntryDrift(text, AGENT), { status: 'intact', driftedPlatforms: [] });
   });
+
+  test('reports malformed (distinct from missing) when the registry file exists but is not valid JSON', () => {
+    // FX898 review: parseRegistry's parse-tolerant fallback used to make a
+    // corrupt registry.json indistinguishable from a cleanly-removed entry.
+    const result = checkInstalledEntryDrift('{ this is not json', AGENT);
+    assert.deepEqual(result, { status: 'malformed', driftedPlatforms: [] });
+  });
+
+  test('an existing-but-empty (0-byte / truncated) file is malformed, not silently "missing"', () => {
+    assert.deepEqual(checkInstalledEntryDrift('', AGENT), { status: 'malformed', driftedPlatforms: [] });
+  });
 });

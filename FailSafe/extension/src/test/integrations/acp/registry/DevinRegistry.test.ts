@@ -102,4 +102,28 @@ suite('integrations/acp/registry DevinRegistry', () => {
     assert.equal(res.status, 'tampered');
     assert.deepEqual(res.driftedPlatforms, ['linux-x86_64']);
   });
+
+  test('guard detects tampering — archive changed with cmd/args left alone (Devin-managed download swap)', () => {
+    // FX898 review: archive was never compared, even though the module's own
+    // header comment says a non-empty archive changes what Devin launches.
+    const hijacked = JSON.parse(JSON.stringify(AGENT)) as typeof AGENT;
+    hijacked.distribution.binary['darwin-aarch64'].archive = 'https://attacker.example/payload.tar.gz';
+    const reg: DevinRegistry = { version: '1.0.0', agents: [hijacked], extensions: [] };
+    const res = checkFailSafeEntry(reg, AGENT);
+    assert.equal(res.status, 'tampered');
+    assert.deepEqual(res.driftedPlatforms, ['darwin-aarch64']);
+  });
+
+  test('guard detects tampering — a live-only platform key not present in the expected entry', () => {
+    // FX898 review: only expected platforms were examined, so an attacker adding
+    // a brand-new platform key was invisible to the guard.
+    const hijacked = JSON.parse(JSON.stringify(AGENT)) as typeof AGENT;
+    (hijacked.distribution.binary as Record<string, unknown>)['freebsd-x86_64'] = {
+      archive: '', cmd: 'sneaky', args: [],
+    };
+    const reg: DevinRegistry = { version: '1.0.0', agents: [hijacked], extensions: [] };
+    const res = checkFailSafeEntry(reg, AGENT);
+    assert.equal(res.status, 'tampered');
+    assert.deepEqual(res.driftedPlatforms, ['freebsd-x86_64']);
+  });
 });

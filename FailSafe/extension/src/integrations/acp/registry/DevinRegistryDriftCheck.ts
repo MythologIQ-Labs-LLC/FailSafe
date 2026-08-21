@@ -11,7 +11,15 @@
 // look like.
 
 import { parseRegistry, type DevinAgent } from './DevinRegistryWriter';
-import { checkFailSafeEntry, type GuardResult } from './DevinRegistryGuard';
+import { checkFailSafeEntry, type GuardStatus } from './DevinRegistryGuard';
+
+export type DriftStatus = GuardStatus | 'malformed';
+
+export interface DriftCheckResult {
+  status: DriftStatus;
+  /** The platform keys whose cmd/args/archive drifted (only for `tampered`). */
+  driftedPlatforms: string[];
+}
 
 /**
  * Compare the live registry text against a previously-installed FailSafe
@@ -19,11 +27,26 @@ import { checkFailSafeEntry, type GuardResult } from './DevinRegistryGuard';
  * this channel (persisted by the caller); when it is `undefined` — FailSafe
  * was never installed here, or was explicitly uninstalled — there is nothing
  * to drift from, so this returns `null` rather than a false "missing" alarm.
+ *
+ * `registryText` present but not valid JSON is reported as `malformed`, not
+ * `missing` — `DevinRegistryWriter.parseRegistry`'s parse-tolerant fallback
+ * (used by the actual install/uninstall writers, where "degrade to an empty
+ * skeleton rather than block install" is the right behavior) would otherwise
+ * make an unreadable/corrupt registry indistinguishable from a cleanly
+ * removed entry, which understates the real risk and points the operator at
+ * the wrong remedy.
  */
 export function checkInstalledEntryDrift(
   registryText: string | null | undefined,
   expected: DevinAgent | undefined,
-): GuardResult | null {
+): DriftCheckResult | null {
   if (!expected) return null;
+  if (registryText != null) {
+    try {
+      JSON.parse(registryText);
+    } catch {
+      return { status: 'malformed', driftedPlatforms: [] };
+    }
+  }
   return checkFailSafeEntry(parseRegistry(registryText), expected);
 }
