@@ -10,21 +10,25 @@
  *
  * Pure (no fs / vscode / timers) so the new-seal state machine is
  * deterministically testable — no watcher/clock races (B-BIC-24 lesson).
+ *
+ * Takes already-parsed `MetaLedgerEntry[]` rather than raw ledger text (#233
+ * consumer-adapter migration): the caller reads the ledger through the shared
+ * qorlogic consumer adapter (`readMetaLedgerArtifact`), which already delegates
+ * to the canonical `parseMetaLedgerEntries` — this module does not re-parse.
  */
 
-import { parseMetaLedgerEntries } from '../meta-ledger-model';
+import type { MetaLedgerEntry } from '../meta-ledger-model';
 
 /**
- * Return a stable marker for the latest SESSION SEAL entry in the ledger, or
+ * Return a stable marker for the latest SESSION SEAL entry among `entries`, or
  * null when there is none. The marker is that entry's Chain Hash (unique per
  * seal), falling back to `entry-<N>` when no chain hash is present. Only the
  * entry HEADER (title) is matched for "SESSION SEAL" — body mentions of prior
- * seal entries (e.g. a DELIVER entry's `Predecessor:` line) do not count.
- *
- * Parsing is delegated to the canonical `parseMetaLedgerEntries` (#197).
+ * seal entries (e.g. a DELIVER entry's `Predecessor:` line) do not count,
+ * because `MetaLedgerEntry.title` is header-only (meta-ledger-model.ts).
  */
-export function latestSealMarker(ledgerText: string): string | null {
-  const seals = parseMetaLedgerEntries(ledgerText).filter((e) => /SESSION SEAL/i.test(e.title));
+export function latestSealMarker(entries: MetaLedgerEntry[]): string | null {
+  const seals = entries.filter((e) => /SESSION SEAL/i.test(e.title));
   if (seals.length === 0) return null;
   const last = seals[seals.length - 1];
   return last.chainHash ?? `entry-${last.n}`;
@@ -39,14 +43,14 @@ export function latestSealMarker(ledgerText: string): string | null {
 export class SealWatchState {
   private lastMarker: string | null;
 
-  constructor(initialLedgerText: string) {
-    this.lastMarker = latestSealMarker(initialLedgerText);
+  constructor(initialEntries: MetaLedgerEntry[]) {
+    this.lastMarker = latestSealMarker(initialEntries);
   }
 
-  /** True (and advances state) iff `newLedgerText` carries a seal marker that
+  /** True (and advances state) iff `newEntries` carries a seal marker that
    *  differs from the last one seen. A null/unchanged marker returns false. */
-  shouldFire(newLedgerText: string): boolean {
-    const marker = latestSealMarker(newLedgerText);
+  shouldFire(newEntries: MetaLedgerEntry[]): boolean {
+    const marker = latestSealMarker(newEntries);
     if (marker !== null && marker !== this.lastMarker) {
       this.lastMarker = marker;
       return true;

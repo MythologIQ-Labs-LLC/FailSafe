@@ -157,3 +157,98 @@ describe('failsafe.substrate.run command (FX715)', () => {
     }
   });
 });
+
+// B-SUBSTRATE-3 seal auto-hook — ledger reads now go through the qorlogic
+// consumer adapter (#233 migration). Covers the adapter-classified states the
+// watcher branches on: ok (fires on a new seal), unavailable (no watcher
+// wired), and malformed (logged, never fires / never throws).
+describe('failsafe.substrate.run seal auto-hook (B-SUBSTRATE-3, #233 adapter migration)', () => {
+  function fakeMutationBus() {
+    const watchers = [];
+    return {
+      registerWatcher: (absPath, onMutation) => {
+        watchers.push({ absPath, onMutation });
+        return { dispose: () => {} };
+      },
+      watchers,
+    };
+  }
+
+  function writeLedger(tmp, text) {
+    fs.mkdirSync(path.join(tmp, 'docs'), { recursive: true });
+    fs.writeFileSync(path.join(tmp, 'docs', 'META_LEDGER.md'), text, 'utf-8');
+  }
+
+  const SEAL_1 = '### Entry #1: SESSION SEAL — first\n\n**Phase**: SUBSTANTIATE\n**Chain Hash**: `'
+    + 'a'.repeat(64) + '`\n\n';
+  const SEAL_2 = '### Entry #2: SESSION SEAL — second\n\n**Phase**: SUBSTANTIATE\n**Chain Hash**: `'
+    + 'b'.repeat(64) + '`\n\n';
+
+  beforeEach(() => {
+    registeredCommand = null;
+    registeredHandler = null;
+    outputChannelLines.length = 0;
+    infoMessages = [];
+    warnMessages = [];
+    subscriptions.length = 0;
+    workspaceFolders = [];
+  });
+
+  it('no docs/META_LEDGER.md at activation → no watcher registered', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-substrate-seal-none-'));
+    workspaceFolders = [{ uri: { fsPath: tmp } }];
+    const bus = fakeMutationBus();
+    try {
+      registerSubstrateCommand(mkContext(), fakeBus(), fakeConfig(), fakeRun, bus);
+      assert.equal(bus.watchers.length, 0, 'unavailable ledger wires no watcher');
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it('a new SESSION SEAL entry → auto-runs substrate; the pre-existing seal does not', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-substrate-seal-ok-'));
+    writeLedger(tmp, SEAL_1);
+    workspaceFolders = [{ uri: { fsPath: tmp } }];
+    const bus = fakeMutationBus();
+    try {
+      registerSubstrateCommand(mkContext(), fakeBus(), fakeConfig(), fakeRun, bus);
+      assert.equal(bus.watchers.length, 1, 'watcher registered for an available ledger');
+
+      // Re-firing on the SAME (seeded) content must not fire — it's the
+      // pre-existing seal, not a new one.
+      bus.watchers[0].onMutation();
+      assert.ok(!outputChannelLines.some((l) => /new SESSION SEAL detected/.test(l)), 'no fire on unchanged ledger');
+
+      // Append a second seal and fire again → new seal → auto-run.
+      writeLedger(tmp, SEAL_1 + SEAL_2);
+      bus.watchers[0].onMutation();
+      assert.ok(outputChannelLines.some((l) => /new SESSION SEAL detected/.test(l)), 'fires on a genuinely new seal');
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it('malformed ledger (no entries) at watcher-fire time → logs and does not fire or throw', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-substrate-seal-malformed-'));
+    writeLedger(tmp, SEAL_1);
+    workspaceFolders = [{ uri: { fsPath: tmp } }];
+    const bus = fakeMutationBus();
+    try {
+      registerSubstrateCommand(mkContext(), fakeBus(), fakeConfig(), fakeRun, bus);
+      assert.equal(bus.watchers.length, 1);
+
+      // Corrupt the ledger to something with no `### Entry #N:` headers at all
+      // → parseMetaLedgerEntries → [] on a non-empty file → adapter: malformed.
+      writeLedger(tmp, 'not a valid governance ledger, no entries here\n');
+      assert.doesNotThrow(() => bus.watchers[0].onMutation());
+      assert.ok(
+        outputChannelLines.some((l) => /META_LEDGER\.md is malformed/.test(l)),
+        'malformed state is logged (fail-visible)',
+      );
+      assert.ok(!outputChannelLines.some((l) => /new SESSION SEAL detected/.test(l)), 'malformed ledger never fires');
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+});
