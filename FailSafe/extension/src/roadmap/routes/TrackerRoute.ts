@@ -7,6 +7,7 @@ import { buildTrackerModel, validateManifest, discoverReleases, type TrackerMani
 import { discoverMergedPrs, detectCadence } from '../tracker/tracker-pr-discovery';
 import { projectTrackerManifest } from '../tracker/governance-projection';
 import { nodeSidecarDeps } from '../tracker/governance-sidecar';
+import { GIT_LOG_MAX_COMMITS } from '../tracker/git-log-window';
 
 /**
  * TrackerRoute — serves the Development Tracker (standard:
@@ -83,14 +84,35 @@ function readChangelog(workspaceRoot: string): string {
 /** Merged-PR git-log text (`<date>\t<subject>` per line) — the FALLBACK axis for
  *  PR-incremental repos with no semver CHANGELOG. Degrade-safe (no git / not a
  *  repo → ''), mirroring shippedReleaseIds. Matches discoverMergedPrs's expected
- *  input (GH #174). */
+ *  input (GH #174). Bounded to the GIT_LOG_MAX_COMMITS most recent commits
+ *  (FailSafe#244 large-repo audit, FailSafe#391) so a deep history cannot block
+ *  the extension host for multiple seconds or exceed the output buffer. */
 function readGitLog(workspaceRoot: string): string {
   try {
-    return execFileSync('git', ['log', '--pretty=format:%ad%x09%s', '--date=short'], {
+    return execFileSync('git', [
+      'log', `--max-count=${GIT_LOG_MAX_COMMITS}`, '--pretty=format:%ad%x09%s', '--date=short',
+    ], {
       cwd: workspaceRoot, encoding: 'utf-8', timeout: 4000, maxBuffer: 8 * 1024 * 1024,
     });
   } catch {
     return '';
+  }
+}
+
+/** Best-effort total commit count on HEAD — cheap even on a deep history since
+ *  it does no per-commit formatting. Used only to detect whether readGitLog's
+ *  bounded window silently dropped older commits, so truncation can be
+ *  disclosed instead of degrading PR-cadence detection with no operator-
+ *  visible signal. null on any failure (not a repo, git absent, timeout). */
+function totalCommitCount(workspaceRoot: string): number | null {
+  try {
+    const out = execFileSync('git', ['rev-list', '--count', 'HEAD'], {
+      cwd: workspaceRoot, encoding: 'utf-8', timeout: 4000,
+    });
+    const n = parseInt(out.trim(), 10);
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
   }
 }
 
@@ -150,6 +172,19 @@ export const TrackerRoute = {
       });
       // Validate phases against the RESOLVED axis (discovered + manifest forecasts).
       const lint = validateManifest(manifest, model.rcs.map((r) => r.id));
+      // Disclose a bounded git-log window (FailSafe#244 large-repo audit): only
+      // relevant when PR anchors are actually driving the axis, so the extra
+      // rev-list call is skipped for semver/empty repos.
+      if (cadence === 'pr-incremental') {
+        const totalCommits = totalCommitCount(deps.workspaceRoot);
+        if (totalCommits !== null && totalCommits > GIT_LOG_MAX_COMMITS) {
+          lint.push({
+            severity: 'warn',
+            code: 'git-log-truncated',
+            detail: `PR-incremental cadence detection used only the most recent ${GIT_LOG_MAX_COMMITS} of ${totalCommits} commits; older merged-PR anchors are not represented on this axis.`,
+          });
+        }
+      }
       // Surface the manifest source as a non-blocking advisory (never an abort).
       if (!manifestPresent) {
         lint.push(manifestSource === 'projection'

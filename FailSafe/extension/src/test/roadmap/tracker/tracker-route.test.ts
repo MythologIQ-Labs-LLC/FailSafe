@@ -10,6 +10,7 @@ import * as path from 'path';
 import { execFileSync } from 'child_process';
 import { Request, Response } from 'express';
 import { TrackerRoute } from '../../../roadmap/routes/TrackerRoute';
+import { GIT_LOG_MAX_COMMITS } from '../../../roadmap/tracker/git-log-window';
 
 interface CapturedRes {
   status: number;
@@ -120,6 +121,81 @@ suite('TrackerRoute.api cadence (GH #174 Part 2)', () => {
       assert.equal(captured.status, 200);
       assert.equal(captured.body!.cadence, 'empty');
       assert.deepEqual(captured.body!.rcs, []);
+    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+  });
+});
+
+// FailSafe#391 (FailSafe#244 large-repo/deep-history audit): unbounded `git log`
+// measured at 1s+/8.9MB and an ENOBUFS throw on a synthetic 150k-commit repo.
+// readGitLog is now bounded to the most recent GIT_LOG_MAX_COMMITS commits, and
+// a truncated window must be disclosed rather than silently degrading PR-cadence
+// detection.
+suite('TrackerRoute.api git-log window (FailSafe#244 large-repo audit)', () => {
+  // Bulk-construct a deep linear history via `git fast-import` — creating
+  // GIT_LOG_MAX_COMMITS+N commits one at a time via `git commit` would make this
+  // test far too slow.
+  function fastImportHistory(ws: string, subjects: string[]): void {
+    const git = (args: string[]) => execFileSync('git', args, { cwd: ws, stdio: 'ignore' });
+    git(['init', '-q', '-b', 'main']);
+    git(['config', 'user.email', 't@example.com']);
+    git(['config', 'user.name', 'Tester']);
+    const lines: string[] = [];
+    subjects.forEach((subject, i) => {
+      const mark = i + 1;
+      lines.push('commit refs/heads/main');
+      lines.push(`mark :${mark}`);
+      lines.push(`author Tester <t@example.com> ${1700000000 + mark} +0000`);
+      lines.push(`committer Tester <t@example.com> ${1700000000 + mark} +0000`);
+      lines.push(`data ${Buffer.byteLength(subject, 'utf-8')}`);
+      lines.push(subject);
+      if (mark > 1) lines.push(`from :${mark - 1}`);
+      lines.push('');
+    });
+    execFileSync('git', ['fast-import', '--quiet'], {
+      cwd: ws, input: lines.join('\n'), stdio: ['pipe', 'ignore', 'ignore'],
+    });
+    git(['checkout', 'main']);
+  }
+
+  test('history deeper than the window → cadence still detects the RECENT merge anchors + truncation disclosed', () => {
+    const ws = tmpWorkspace();
+    try {
+      // Old filler commits push the total past the window; recent merge-pattern
+      // commits (within the window) must still be discovered.
+      const fillerCount = GIT_LOG_MAX_COMMITS + 50;
+      const subjects: string[] = [];
+      for (let i = 1; i <= fillerCount; i++) subjects.push(`chore: filler ${i}`);
+      for (let i = 1; i <= 5; i++) subjects.push(`Merge pull request #${i} from acme/feat-${i}`);
+      fastImportHistory(ws, subjects);
+
+      const { res, captured } = fakeResponse();
+      TrackerRoute.api({} as Request, res, { workspaceRoot: ws, uiDir: '' });
+      assert.equal(captured.status, 200);
+      assert.equal(captured.body!.cadence, 'pr-incremental', 'recent merge anchors within the window are still found');
+      const rcs = captured.body!.rcs as Array<{ id: string }>;
+      assert.ok(rcs.some((r) => r.id === 'pr-5'), 'the newest merge anchor is present');
+      const lint = captured.body!.lint as Array<{ code: string; severity: string; detail: string }>;
+      const truncated = lint.find((f) => f.code === 'git-log-truncated');
+      assert.ok(truncated, 'truncated-window advisory present when history exceeds the bound');
+      assert.equal(truncated!.severity, 'warn', 'truncation advisory is non-blocking');
+      assert.ok(truncated!.detail.includes(String(GIT_LOG_MAX_COMMITS)), 'advisory names the window size');
+    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+  });
+
+  test('history within the window → no truncation advisory', () => {
+    const ws = tmpWorkspace();
+    try {
+      const git = (args: string[]) => execFileSync('git', args, { cwd: ws, stdio: 'ignore' });
+      git(['init', '-q']);
+      git(['config', 'user.email', 't@example.com']);
+      git(['config', 'user.name', 'Tester']);
+      git(['config', 'commit.gpgsign', 'false']);
+      git(['commit', '--allow-empty', '-q', '-m', 'Merge pull request #1 from acme/feat-one']);
+      const { res, captured } = fakeResponse();
+      TrackerRoute.api({} as Request, res, { workspaceRoot: ws, uiDir: '' });
+      assert.equal(captured.body!.cadence, 'pr-incremental');
+      const lint = captured.body!.lint as Array<{ code: string }>;
+      assert.ok(!lint.some((f) => f.code === 'git-log-truncated'), 'no truncation advisory below the window size');
     } finally { fs.rmSync(ws, { recursive: true, force: true }); }
   });
 });
