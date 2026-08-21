@@ -52,6 +52,15 @@ export async function bootstrapQorLogic(
 
   const trustEngine = new TrustEngine(ledgerManager, core.eventBus, core.mutationBus);
   await trustEngine.initialize();
+  // FailSafe#388 (Relay Cycle 074), narrower same-shape residual: trustEngine
+  // is normally disposed via qorelogicManager.dispose(), but qorelogicManager
+  // is only constructed later in this same function and only reaches
+  // main.ts's crash-path teardown once bootstrapQorLogic() resolves. Any
+  // throw between here and that return (e.g. governanceAdapter/breakGlass
+  // construction below) would otherwise leak trustEngine's mutation-bus
+  // watcher. dispose() is idempotent, so this is safe alongside the existing
+  // qorelogicManager.dispose() call in the normal-teardown path.
+  context.subscriptions.push({ dispose: () => trustEngine.dispose() });
 
   const policyEngine = new PolicyEngine(configProvider);
   await policyEngine.loadPolicies();

@@ -60,6 +60,14 @@ export async function bootstrapCore(
   // ConsoleLifecycleService watchMetaLedger).
   const mutationBus = new WorkspaceMutationBus();
   const planManager = new PlanManager(workspaceRoot, eventBus, mutationBus);
+  // FailSafe#388 (Relay Cycle 074): planManager is constructor-injected into
+  // ConsoleServer, genesisManager, and governanceRouter, none of which own
+  // it. bootstrapCore constructs it, so bootstrapCore owns its teardown.
+  // context.subscriptions fires on normal deactivate AND on the activation
+  // catch block's teardownActivatedResources() call, unlike a disposer
+  // reachable only through a later-constructed service (e.g. ConsoleServer),
+  // which is a no-op if activation throws before that service exists.
+  context.subscriptions.push({ dispose: () => planManager.dispose() });
 
   // B194: ring buffer subscribes to governance.modeChanged + breakGlass* events.
   const modeTransitionHistory = new ModeTransitionHistory(eventBus);

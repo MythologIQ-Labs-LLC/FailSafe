@@ -172,12 +172,17 @@ export class ConsoleServer {
   finalizeRoutes(): void { this.registrar.finalizeFallback(); }
   stop(): void {
     this.lifecycle.stop();
-    // Relay Cycle 070 (Myth-Tech-Forge#189): hub/planManager each own a
-    // WorkspaceMutationBus fs.watch subscription (chain-validity + plans/
-    // roadmap files) that nothing was releasing. try/catch guards fakes
-    // used in test harnesses that don't implement dispose().
+    // Relay Cycle 070 (Myth-Tech-Forge#189) disposed hub's WorkspaceMutationBus
+    // fs.watch subscription here, which nothing else was releasing. try/catch
+    // guards fakes used in test harnesses that don't implement dispose().
+    // Relay Cycle 074 (Myth-Tech-Forge#193 / FailSafe#388): planManager used
+    // to be disposed here too, but it is constructor-injected and shared with
+    // genesisManager and governanceRouter — ConsoleServer does not own it, so
+    // disposing it here reached outside stop()'s blast radius. A future
+    // console restart (stop() then start()) would leave those other
+    // consumers holding a permanently-dead planManager. Disposal now happens
+    // once, at the actual owner (bootstrapCore, via context.subscriptions).
     try { this.hub.dispose(); } catch { /* already gone or unsupported */ }
-    try { this.planManager.dispose?.(); } catch { /* already gone or unsupported */ }
   }
   getPort(): number { return this.lifecycle.getPort(); }
   broadcastEvent(data: Record<string, unknown>): void { this.broadcast(data); }
