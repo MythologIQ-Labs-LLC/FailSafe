@@ -263,22 +263,23 @@ suite('bootstrapAcpProxy', () => {
     assert.match(errors[0], /boom/);
   });
 
-  suite('real registry lifecycle (HOME-scoped temp dir, real fs/os)', () => {
+  suite('real registry lifecycle (HOME-scoped temp dir via homeDir param, real fs/os)', () => {
+    // Passes a throwaway directory through bootstrapAcpProxy's `homeDir`
+    // parameter rather than mutating process.env.HOME — HOME is shared by
+    // every test file in this extension-host run, so a leak (a missed
+    // restore, a hook ordering surprise) would corrupt unrelated suites,
+    // as opposed to a plain function argument, which cannot leak.
     let tmpHome: string;
     let tmpExt: string;
-    let prevHome: string | undefined;
 
     setup(() => {
       tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-acp-proxy-test-home-'));
       tmpExt = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-acp-proxy-test-ext-'));
       fs.mkdirSync(path.join(tmpExt, 'dist'), { recursive: true });
       fs.writeFileSync(path.join(tmpExt, 'dist', 'acp-proxy.js'), '// stub proxy bundle for tests\n');
-      prevHome = process.env.HOME;
-      process.env.HOME = tmpHome;
     });
 
     teardown(() => {
-      process.env.HOME = prevHome;
       fs.rmSync(tmpHome, { recursive: true, force: true });
       fs.rmSync(tmpExt, { recursive: true, force: true });
     });
@@ -311,7 +312,7 @@ suite('bootstrapAcpProxy', () => {
       quickPickAnswer = (items) => (items as unknown[])[0];
 
       const { context, globalState, workspaceState } = makeContext(undefined, tmpExt);
-      bootstrapAcpProxy(context, '/repo');
+      bootstrapAcpProxy(context, '/repo', tmpHome);
       const install = commands.get('failsafe.acp.installGovernedProxy');
       assert.ok(install, 'install command must be registered');
       await install!();
@@ -334,7 +335,7 @@ suite('bootstrapAcpProxy', () => {
       quickPickAnswer = (items) => (items as unknown[])[0];
 
       const { context, globalState } = makeContext(undefined, tmpExt);
-      bootstrapAcpProxy(context, '/repo');
+      bootstrapAcpProxy(context, '/repo', tmpHome);
       await commands.get('failsafe.acp.installGovernedProxy')!();
       assert.equal(globalState._state.has('failsafe.acp.expectedRegistryEntry.stable'), true);
 
@@ -351,7 +352,7 @@ suite('bootstrapAcpProxy', () => {
         { 'failsafe.acp.expectedRegistryEntry.stable': { agent: staleAgent, workspaceRoot: '/repo' } },
         tmpExt,
       );
-      bootstrapAcpProxy(context, '/repo'); // no registry file exists in tmpHome at all
+      bootstrapAcpProxy(context, '/repo', tmpHome); // no registry file exists in tmpHome at all
       await commands.get('failsafe.acp.uninstallGovernedProxy')!();
       assert.equal(globalState.get('failsafe.acp.expectedRegistryEntry.stable'), undefined);
       assert.equal(infos.length, 1);

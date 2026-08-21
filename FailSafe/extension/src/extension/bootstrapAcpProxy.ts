@@ -114,11 +114,20 @@ export function verifyGovernedProxyEntries(
 export function bootstrapAcpProxy(
   context: vscode.ExtensionContext,
   workspaceRoot: string,
+  /**
+   * Overrides `os.homedir()` for every registry-path lookup below. Exists so
+   * tests can point this at a throwaway directory without mutating the
+   * process-global `process.env.HOME` — that env var is shared by every test
+   * file in the same extension-host run, so overriding and restoring it
+   * around a single test is a real cross-test leak risk in a way an
+   * ordinary function parameter is not. Production callers omit it.
+   */
+  homeDir: string = os.homedir(),
 ): void {
   const proxyJsPath = path.join(context.extensionPath, 'dist', 'acp-proxy.js');
 
   async function pickRegistry(): Promise<DevinRegistryLocation | undefined> {
-    const found = resolveDevinRegistries(os.homedir(), fs.existsSync);
+    const found = resolveDevinRegistries(homeDir, fs.existsSync);
     if (found.length === 0) {
       await vscode.window.showWarningMessage(
         'No Devin Desktop ACP registry found (~/.windsurf/acp/registry.json). Install/run Devin Desktop, then retry.',
@@ -174,7 +183,7 @@ export function bootstrapAcpProxy(
 
   context.subscriptions.push(
     vscode.commands.registerCommand('failsafe.acp.uninstallGovernedProxy', async () => {
-      const found = resolveDevinRegistries(os.homedir(), fs.existsSync);
+      const found = resolveDevinRegistries(homeDir, fs.existsSync);
       try {
         for (const loc of found) uninstallFailSafeAgent(loc.path);
         // Always clear persisted expected state for every channel, even when no
@@ -199,7 +208,7 @@ export function bootstrapAcpProxy(
     verifyGovernedProxyEntries(
       context,
       workspaceRoot,
-      os.homedir(),
+      homeDir,
       (p) => (fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : null),
     );
   } catch (e) {
