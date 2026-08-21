@@ -85,7 +85,7 @@ function readChangelog(workspaceRoot: string): string {
  *  PR-incremental repos with no semver CHANGELOG. Degrade-safe (no git / not a
  *  repo → ''), mirroring shippedReleaseIds. Matches discoverMergedPrs's expected
  *  input (GH #174). Bounded to the GIT_LOG_MAX_COMMITS most recent commits
- *  (FailSafe#244 large-repo audit, FailSafe#391) so a deep history cannot block
+ *  (FailSafe#244 large-repo audit, FailSafe#393) so a deep history cannot block
  *  the extension host for multiple seconds or exceed the output buffer. */
 function readGitLog(workspaceRoot: string): string {
   try {
@@ -172,16 +172,20 @@ export const TrackerRoute = {
       });
       // Validate phases against the RESOLVED axis (discovered + manifest forecasts).
       const lint = validateManifest(manifest, model.rcs.map((r) => r.id));
-      // Disclose a bounded git-log window (FailSafe#244 large-repo audit): only
-      // relevant when PR anchors are actually driving the axis, so the extra
-      // rev-list call is skipped for semver/empty repos.
-      if (cadence === 'pr-incremental') {
+      // Disclose a bounded git-log window (FailSafe#244 large-repo audit).
+      // MUST NOT gate on cadence === 'pr-incremental': when the bounded window
+      // drops every merge anchor, cadence silently collapses to 'empty' instead
+      // — exactly the case that most needs disclosure. Gate on whether the
+      // git-log axis was actually consulted for cadence resolution instead
+      // (i.e. no semver releases won outright); skip the extra rev-list call
+      // only when semver releases already make the git-log axis irrelevant.
+      if (discoveredReleases.length === 0) {
         const totalCommits = totalCommitCount(deps.workspaceRoot);
         if (totalCommits !== null && totalCommits > GIT_LOG_MAX_COMMITS) {
           lint.push({
             severity: 'warn',
             code: 'git-log-truncated',
-            detail: `PR-incremental cadence detection used only the most recent ${GIT_LOG_MAX_COMMITS} of ${totalCommits} commits; older merged-PR anchors are not represented on this axis.`,
+            detail: `Merged-PR anchor detection used only the most recent ${GIT_LOG_MAX_COMMITS} of ${totalCommits} commits; older merged-PR anchors are not represented on this axis.`,
           });
         }
       }

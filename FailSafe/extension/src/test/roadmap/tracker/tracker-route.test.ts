@@ -125,11 +125,14 @@ suite('TrackerRoute.api cadence (GH #174 Part 2)', () => {
   });
 });
 
-// FailSafe#391 (FailSafe#244 large-repo/deep-history audit): unbounded `git log`
+// FailSafe#393 (FailSafe#244 large-repo/deep-history audit): unbounded `git log`
 // measured at 1s+/8.9MB and an ENOBUFS throw on a synthetic 150k-commit repo.
-// readGitLog is now bounded to the most recent GIT_LOG_MAX_COMMITS commits, and
-// a truncated window must be disclosed rather than silently degrading PR-cadence
-// detection.
+// readGitLog is now bounded to the most recent GIT_LOG_MAX_COMMITS commits via
+// --max-count, and a truncated window is disclosed via a `git-log-truncated`
+// lint finding whenever the git-log axis was actually consulted for cadence
+// (no semver releases to win outright) — not only when the resolved cadence
+// happens to be pr-incremental, since a fully-truncated-away anchor set must
+// still be disclosed even though it collapses cadence to 'empty'.
 suite('TrackerRoute.api git-log window (FailSafe#244 large-repo audit)', () => {
   // Bulk-construct a deep linear history via `git fast-import` — creating
   // GIT_LOG_MAX_COMMITS+N commits one at a time via `git commit` would make this
@@ -157,28 +160,55 @@ suite('TrackerRoute.api git-log window (FailSafe#244 large-repo audit)', () => {
     git(['checkout', 'main']);
   }
 
-  test('history deeper than the window → cadence still detects the RECENT merge anchors + truncation disclosed', () => {
+  // Pins the actual --max-count bound: an OLD merge anchor sits more than
+  // GIT_LOG_MAX_COMMITS commits before HEAD, a RECENT one sits at HEAD. If
+  // --max-count were removed, both would be discovered (this test would still
+  // pass on the old anchor's presence) — asserting the old one is ABSENT is
+  // what fails without the bound.
+  test('merge anchor older than the window is dropped; a recent one is still found', () => {
     const ws = tmpWorkspace();
     try {
-      // Old filler commits push the total past the window; recent merge-pattern
-      // commits (within the window) must still be discovered.
       const fillerCount = GIT_LOG_MAX_COMMITS + 50;
-      const subjects: string[] = [];
+      const subjects: string[] = ['Merge pull request #1 from acme/feat-old'];
       for (let i = 1; i <= fillerCount; i++) subjects.push(`chore: filler ${i}`);
-      for (let i = 1; i <= 5; i++) subjects.push(`Merge pull request #${i} from acme/feat-${i}`);
+      subjects.push('Merge pull request #2 from acme/feat-recent');
       fastImportHistory(ws, subjects);
 
       const { res, captured } = fakeResponse();
       TrackerRoute.api({} as Request, res, { workspaceRoot: ws, uiDir: '' });
       assert.equal(captured.status, 200);
-      assert.equal(captured.body!.cadence, 'pr-incremental', 'recent merge anchors within the window are still found');
+      assert.equal(captured.body!.cadence, 'pr-incremental', 'the recent anchor keeps cadence pr-incremental');
       const rcs = captured.body!.rcs as Array<{ id: string }>;
-      assert.ok(rcs.some((r) => r.id === 'pr-5'), 'the newest merge anchor is present');
+      assert.ok(rcs.some((r) => r.id === 'pr-2'), 'the anchor within the window is present');
+      assert.ok(!rcs.some((r) => r.id === 'pr-1'), 'the anchor outside the window is DROPPED (pins --max-count)');
       const lint = captured.body!.lint as Array<{ code: string; severity: string; detail: string }>;
       const truncated = lint.find((f) => f.code === 'git-log-truncated');
       assert.ok(truncated, 'truncated-window advisory present when history exceeds the bound');
       assert.equal(truncated!.severity, 'warn', 'truncation advisory is non-blocking');
       assert.ok(truncated!.detail.includes(String(GIT_LOG_MAX_COMMITS)), 'advisory names the window size');
+    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+  });
+
+  // The regression a reviewer caught on PR #394: when EVERY merge anchor falls
+  // outside the window, cadence silently collapses pr-incremental → empty. That
+  // is exactly the case that most needs disclosure, so it must not be gated on
+  // cadence === 'pr-incremental'.
+  test('every merge anchor outside the window → cadence collapses to empty, but truncation is still disclosed', () => {
+    const ws = tmpWorkspace();
+    try {
+      const fillerCount = GIT_LOG_MAX_COMMITS + 50;
+      const subjects: string[] = ['Merge pull request #1 from acme/feat-old'];
+      for (let i = 1; i <= fillerCount; i++) subjects.push(`chore: filler ${i}`);
+      fastImportHistory(ws, subjects);
+
+      const { res, captured } = fakeResponse();
+      TrackerRoute.api({} as Request, res, { workspaceRoot: ws, uiDir: '' });
+      assert.equal(captured.body!.cadence, 'empty', 'the only anchor is outside the window — cadence degrades');
+      assert.deepEqual(captured.body!.rcs, [], 'empty axis, not a crash');
+      const lint = captured.body!.lint as Array<{ code: string; severity: string }>;
+      const truncated = lint.find((f) => f.code === 'git-log-truncated');
+      assert.ok(truncated, 'truncation is disclosed even though cadence is NOT pr-incremental');
+      assert.equal(truncated!.severity, 'warn');
     } finally { fs.rmSync(ws, { recursive: true, force: true }); }
   });
 

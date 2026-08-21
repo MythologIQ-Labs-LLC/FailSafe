@@ -1,6 +1,6 @@
 /**
  * Bound on how many recent commits `TrackerRoute`'s PR-cadence fallback reads
- * via `git log` (FailSafe#244 large-repo/deep-history audit, FailSafe#391).
+ * via `git log` (FailSafe#244 large-repo/deep-history audit, FailSafe#393).
  *
  * An unbounded `git log` measured 1s+ of blocking `execFileSync` work and an
  * `ENOBUFS` throw past the 8MB output ceiling on a synthetic 150k-commit
