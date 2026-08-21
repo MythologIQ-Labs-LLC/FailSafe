@@ -52,6 +52,13 @@ const KIND_KEYWORDS: ReadonlyArray<{ kind: LedgerEntryKind; match: string }> = [
 ];
 
 export class MetaLedgerReader {
+  // Each build() cycle constructs a fresh MetaLedgerReader (see
+  // WorkspaceArtifactBuilder/TrackerGenerator), so an instance-scoped cache
+  // cannot go stale across refreshes while still saving the redundant
+  // file-read + regex-parse pass otherwise repeated by summarize(),
+  // recentVerdicts(), and recentCompletions() within the same build.
+  private cachedEntries: LedgerEntry[] | null = null;
+
   constructor(private readonly workspaceRoot: string) {}
 
   exists(): boolean {
@@ -59,11 +66,12 @@ export class MetaLedgerReader {
   }
 
   parseEntries(): LedgerEntry[] {
-    if (!this.exists()) return [];
+    if (this.cachedEntries !== null) return this.cachedEntries;
+    if (!this.exists()) return (this.cachedEntries = []);
     let content: string;
     try { content = fs.readFileSync(this.ledgerPath(), "utf8"); }
-    catch { return []; }
-    return parseEntriesFromText(content);
+    catch { return (this.cachedEntries = []); }
+    return (this.cachedEntries = parseEntriesFromText(content));
   }
 
   summarize(): LedgerSummary {

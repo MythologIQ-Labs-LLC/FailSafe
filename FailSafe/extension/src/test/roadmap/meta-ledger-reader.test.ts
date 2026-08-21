@@ -1,5 +1,9 @@
 import { strict as assert } from 'assert';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import {
+  MetaLedgerReader,
   parseEntriesFromText,
   summarizeEntries,
   recentVerdictsFromEntries,
@@ -173,6 +177,69 @@ suite('MetaLedgerReader: recentVerdictsFromEntries', () => {
     const noGates = `### Entry #1: GENESIS\n### Entry #2: PLAN — alpha`;
     const verdicts = recentVerdictsFromEntries(parseEntriesFromText(noGates), 10);
     assert.deepEqual(verdicts, []);
+  });
+});
+
+suite('MetaLedgerReader: parseEntries() caching', () => {
+  let workspaceRoot: string;
+
+  const writeLedger = (root: string, body: string) => {
+    const docsDir = path.join(root, 'docs');
+    fs.mkdirSync(docsDir, { recursive: true });
+    fs.writeFileSync(path.join(docsDir, 'META_LEDGER.md'), body, 'utf8');
+  };
+
+  setup(() => {
+    workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'meta-ledger-reader-'));
+  });
+
+  teardown(() => {
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  });
+
+  test('parses the on-disk ledger on first call', () => {
+    writeLedger(workspaceRoot, FIXTURE);
+    const reader = new MetaLedgerReader(workspaceRoot);
+    const entries = reader.parseEntries();
+    assert.deepEqual(entries.map((e) => e.number), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  });
+
+  test('memoizes per instance: a later on-disk edit does not change subsequent calls', () => {
+    writeLedger(workspaceRoot, FIXTURE);
+    const reader = new MetaLedgerReader(workspaceRoot);
+    const first = reader.parseEntries();
+
+    writeLedger(workspaceRoot, `${FIXTURE}\n### Entry #10: PLAN — Added after first read\n`);
+
+    const second = reader.parseEntries();
+    assert.deepEqual(second, first, 'second call must return the cached result, not re-read the file');
+    assert.equal(second.length, 9);
+  });
+
+  test('summarize/recentVerdicts/recentCompletions on one instance agree with a single parseEntries() call', () => {
+    writeLedger(workspaceRoot, FIXTURE);
+    const reader = new MetaLedgerReader(workspaceRoot);
+    const entries = reader.parseEntries();
+    assert.deepEqual(reader.summarize(), summarizeEntries(entries));
+    assert.deepEqual(reader.recentVerdicts(10), recentVerdictsFromEntries(entries, 10));
+    assert.deepEqual(reader.recentCompletions(10), recentCompletionsFromEntries(entries, 10));
+  });
+
+  test('a fresh instance re-reads the current on-disk state (no cross-instance staleness)', () => {
+    writeLedger(workspaceRoot, FIXTURE);
+    const first = new MetaLedgerReader(workspaceRoot).parseEntries();
+    assert.equal(first.length, 9);
+
+    writeLedger(workspaceRoot, `${FIXTURE}\n### Entry #10: PLAN — Added between instances\n`);
+
+    const second = new MetaLedgerReader(workspaceRoot).parseEntries();
+    assert.equal(second.length, 10, 'a new instance must observe the updated file');
+  });
+
+  test('missing ledger file caches an empty array without throwing on repeat calls', () => {
+    const reader = new MetaLedgerReader(workspaceRoot);
+    assert.deepEqual(reader.parseEntries(), []);
+    assert.deepEqual(reader.parseEntries(), []);
   });
 });
 
