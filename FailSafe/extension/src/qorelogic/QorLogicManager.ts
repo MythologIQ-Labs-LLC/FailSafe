@@ -235,6 +235,7 @@ export class QorLogicManager {
     }
 
     dispose(): void {
+        this.trustEngine.dispose();
         this.shadowGenomeManager.close();
     }
 }

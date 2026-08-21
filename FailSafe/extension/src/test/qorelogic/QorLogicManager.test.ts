@@ -9,6 +9,7 @@ interface CapturedCalls {
   trustRegister: any[];
   shadowArchive: any[];
   shadowDispose: number;
+  trustDispose: number;
 }
 
 function makeStubs(opts: {
@@ -17,7 +18,7 @@ function makeStubs(opts: {
   shadowArchiveThrows?: boolean;
 } = {}): { mgr: QorLogicManager; calls: CapturedCalls; stubs: any } {
   const calls: CapturedCalls = {
-    ledger: [], trustRegister: [], shadowArchive: [], shadowDispose: 0,
+    ledger: [], trustRegister: [], shadowArchive: [], shadowDispose: 0, trustDispose: 0,
   };
   const stateStore: any = {
     get: <T>(_k: string, def: T) => def,
@@ -36,6 +37,7 @@ function makeStubs(opts: {
     updateTrust: async () => {},
     quarantineAgent: async () => {},
     getTrustScore: () => ({ score: 0.5 }),
+    dispose: () => { calls.trustDispose++; },
   };
   const policy: any = {};
   const shadow: any = {
@@ -158,5 +160,17 @@ suite('QorLogicManager (FX333)', () => {
     const { mgr, calls } = makeStubs();
     mgr.dispose();
     assert.equal(calls.shadowDispose, 1);
+  });
+
+  // Relay Cycle 070 (Myth-Tech-Forge#189): dispose() previously left
+  // TrustEngine's WorkspaceMutationBus fs.watch subscription on the ledger
+  // db path open on every teardown that doesn't restart the process (the
+  // documented parallel-activate/crash-recovery path in main.ts), leaking
+  // one watcher handle per cycle. QorLogicManager owns trustEngine as a
+  // constructor-injected field, so its dispose() must release it too.
+  test('FX499-followup dispose — releases TrustEngine mutation-bus subscription', () => {
+    const { mgr, calls } = makeStubs();
+    mgr.dispose();
+    assert.equal(calls.trustDispose, 1);
   });
 });

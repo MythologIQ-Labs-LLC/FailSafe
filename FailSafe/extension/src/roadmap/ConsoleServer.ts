@@ -170,7 +170,15 @@ export class ConsoleServer {
   /** Register the SPA fallback. Bootstrap calls this AFTER all late
    *  registrations (e.g., QorlogicRoute) so they win over the catch-all. */
   finalizeRoutes(): void { this.registrar.finalizeFallback(); }
-  stop(): void { this.lifecycle.stop(); }
+  stop(): void {
+    this.lifecycle.stop();
+    // Relay Cycle 070 (Myth-Tech-Forge#189): hub/planManager each own a
+    // WorkspaceMutationBus fs.watch subscription (chain-validity + plans/
+    // roadmap files) that nothing was releasing. try/catch guards fakes
+    // used in test harnesses that don't implement dispose().
+    try { this.hub.dispose(); } catch { /* already gone or unsupported */ }
+    try { this.planManager.dispose?.(); } catch { /* already gone or unsupported */ }
+  }
   getPort(): number { return this.lifecycle.getPort(); }
   broadcastEvent(data: Record<string, unknown>): void { this.broadcast(data); }
   /** @internal — preserved for legacy test reach-ins; routes use HubSnapshotService directly. */
