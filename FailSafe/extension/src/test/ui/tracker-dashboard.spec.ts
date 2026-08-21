@@ -264,6 +264,22 @@ test.describe('Development Tracker projection render (#202)', () => {
     await page.goto(`${controller.url}/console/tracker`);
     await expect(page.getByText('discovered releases only').first()).toBeVisible({ timeout: 5000 });
   });
+
+  // FailSafe#393 (FailSafe#244 large-repo audit) — a git-log-truncated lint
+  // finding must actually render; the API's `lint` array is otherwise never
+  // read by this dashboard (the regression a reviewer caught on PR #394).
+  test('FailSafe#393: git-log-truncated lint finding renders as a visible advisory', async ({ page }) => {
+    controller = await serveConsoleServerUI();
+    const detail = 'Merged-PR anchor detection used only the most recent 5000 of 87654 commits; '
+      + 'older merged-PR anchors are not represented on this axis.';
+    const payload = {
+      ...SEMVER_PAYLOAD,
+      lint: [{ severity: 'warn', code: 'git-log-truncated', detail }],
+    };
+    await page.route('**/api/v1/tracker', (r) => r.fulfill({ json: payload }));
+    await page.goto(`${controller.url}/console/tracker`);
+    await expect(page.getByText(detail).first()).toBeVisible({ timeout: 5000 });
+  });
 });
 
 // FX888 — PDF export (research-brief Phase 3). Print-CSS-first slice: an Export

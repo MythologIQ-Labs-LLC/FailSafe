@@ -38,6 +38,43 @@ after(() => {
   fs.rmSync(TMP_DIR, { recursive: true, force: true });
 });
 
+
+// #404: these smoke tests hardcoded a row count (476) that silently rotted as
+// the index grew to 742 — and because this suite ran in no CI gate, nobody saw
+// it. They now derive the expectation from the file, and the header test
+// asserts HEADER == REALITY, the invariant that actually drifted (the header
+// claimed 494 for three months).
+function countRowsInFile(p) {
+  const lines = require('fs').readFileSync(p, 'utf-8').split(String.fromCharCode(10));
+  const rowRe = new RegExp('^\\| FX\\d+ \\|');
+  return lines.filter((l) => rowRe.test(l)).length;
+}
+// Parses the coverage-summary bullets without regex escapes — an earlier
+// revision built these with `new RegExp('...\*\*(\d+)...')`, where the JS
+// string literal swallowed the backslashes and produced `**(d+)**`, an invalid
+// pattern. Plain line scanning cannot fail that way.
+function declaredCountsInHeader(p) {
+  const lines = require('fs').readFileSync(p, 'utf-8').split(String.fromCharCode(10));
+  const firstNumberAfter = (prefix) => {
+    const line = lines.find((l) => l.startsWith(prefix));
+    if (!line) return null;
+    const digits = line.slice(prefix.length).match(/\d+/);
+    return digits ? Number(digits[0]) : null;
+  };
+  return {
+    total: firstNumberAfter('- Total unified entries:'),
+    verified: firstNumberAfter('- **Verified:'),
+    unverified: firstNumberAfter('- **Unverified:'),
+    na: firstNumberAfter('- **N/A (operator-justified):'),
+    other: firstNumberAfter('- **Other statuses:'),
+  };
+}
+function declaredTotalInHeader(p) {
+  const m = require('fs').readFileSync(p, 'utf-8')
+    .match(/^- Total unified entries: \*\*(\d+)\*\*/m);
+  return m ? Number(m[1]) : null;
+}
+
 describe('parseFeatureIndexRows', () => {
   it('parses a standard verified row', () => {
     const text = [
@@ -96,13 +133,14 @@ describe('parseFeatureIndexRows', () => {
     assert.equal(rows[1].entryId, 'FX002');
   });
 
-  it('smoke test: returns 476 rows when given the actual FEATURE_INDEX.md', () => {
+  it('smoke test: row count matches the table itself (#404: was a rotted 476 snapshot)', () => {
     if (!fs.existsSync(FEATURE_INDEX_PATH)) {
       assert.fail(`FEATURE_INDEX.md not found at ${FEATURE_INDEX_PATH}`);
     }
     const text = fs.readFileSync(FEATURE_INDEX_PATH, 'utf-8');
     const rows = classifier.parseFeatureIndexRows(text);
-    assert.equal(rows.length, 476);
+    assert.equal(rows.length, countRowsInFile(FEATURE_INDEX_PATH),
+      'parser must return exactly the FX rows present in the file');
   });
 });
 
@@ -261,15 +299,15 @@ describe('classifyEntry', () => {
 });
 
 describe('runAudit', () => {
-  it('smoke test against actual docs/FEATURE_INDEX.md — returns total 476', () => {
+  it('smoke test against actual docs/FEATURE_INDEX.md — total matches the table', () => {
     if (!fs.existsSync(FEATURE_INDEX_PATH)) {
       assert.fail(`FEATURE_INDEX.md not found at ${FEATURE_INDEX_PATH}`);
     }
     const audit = classifier.runAudit(FEATURE_INDEX_PATH, REPO_ROOT);
     assert.ok(audit.summary, 'audit.summary missing');
-    assert.equal(audit.summary.total, 476);
+    assert.equal(audit.summary.total, countRowsInFile(FEATURE_INDEX_PATH));
     assert.ok(Array.isArray(audit.rows), 'audit.rows must be array');
-    assert.equal(audit.rows.length, 476);
+    assert.equal(audit.rows.length, countRowsInFile(FEATURE_INDEX_PATH));
   });
 });
 
@@ -508,13 +546,32 @@ describe('runAudit summary counts match FEATURE_INDEX header (Phase 60 §1)', ()
       assert.fail(`FEATURE_INDEX.md not found at ${FEATURE_INDEX_PATH}`);
     }
     const audit = classifier.runAudit(FEATURE_INDEX_PATH, REPO_ROOT);
-    assert.equal(audit.summary.total, 476,
-      `expected 476 total rows per header; got ${audit.summary.total}`);
-    assert.equal(audit.summary.byCurrentStatus.verified, 411,
-      `expected 411 verified per header; got ${audit.summary.byCurrentStatus.verified}`);
-    assert.equal(audit.summary.byCurrentStatus.unverified, 22,
-      `expected 22 unverified per header; got ${audit.summary.byCurrentStatus.unverified}`);
-    assert.equal(audit.summary.byCurrentStatus['n/a'], 43,
-      `expected 43 n/a per header; got ${audit.summary.byCurrentStatus['n/a']}`);
+    // HEADER == REALITY, for every number the header declares. An earlier
+    // revision only compared the total and asserted `verified > 0`, which is
+    // unfailable — so flipping 100 verified rows to `partial` still passed.
+    // That is exactly the drift class this test exists to catch (the header
+    // claimed 451 verified against 690 real for three months).
+    const declared = declaredCountsInHeader(FEATURE_INDEX_PATH);
+    const actual = audit.summary.byCurrentStatus;
+    assert.ok(declared.total !== null, 'header must declare a total');
+    assert.equal(audit.summary.total, declared.total,
+      `header claims ${declared.total} entries but the table has ${audit.summary.total} — refresh the coverage summary`);
+    assert.ok(declared.verified !== null, 'header must declare a verified count');
+    assert.equal(actual.verified, declared.verified,
+      `header claims ${declared.verified} verified but the table has ${actual.verified}`);
+    // absent key == zero rows of that status; PUBLISH_BLOCK condition 1
+    assert.equal(actual.unverified || 0, declared.unverified,
+      `header claims ${declared.unverified} unverified but the table has ${actual.unverified || 0}`);
+    assert.equal(actual['n/a'], declared.na,
+      `header claims ${declared.na} n/a but the table has ${actual['n/a']}`);
+    const otherActual = Object.entries(actual)
+      .filter(([k]) => !['verified', 'unverified', 'n/a'].includes(k))
+      .reduce((n, [, v]) => n + v, 0);
+    assert.equal(otherActual, declared.other,
+      `header claims ${declared.other} other-status rows but the table has ${otherActual}`);
+    assert.equal(
+      declared.verified + declared.unverified + declared.na + declared.other,
+      declared.total,
+      'the header own numbers must sum to its declared total');
   });
 });
