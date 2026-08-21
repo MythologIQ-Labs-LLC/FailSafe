@@ -22,6 +22,10 @@ import * as yaml from 'js-yaml';
 import type { TrackerManifest } from './tracker-model';
 import { projectTrackerManifest } from './governance-projection';
 import { resolveRepoSlug } from './manifest-sources';
+import {
+  classifyMetaLedgerText, type ConsumerReadOptions, type RawArtifactRead,
+} from '../../qorlogic/consumer/consumer-adapter';
+import type { ArtifactState } from '../../qorlogic/consumer/types';
 
 // Workspace-relative keys are logical POSIX paths (forward slash); nodeSidecarDeps
 // normalizes them to OS separators via path.join only at the I/O boundary. This keeps
@@ -39,9 +43,16 @@ const BANNER =
   + '# NOT a PR scrape. Do not hand-edit — re-emitted on governance writes. The operator taxonomy\n'
   + '# lives in docs/roadmap/programs.yaml (FX859), which this file never overwrites.\n';
 
-/** Serialize a projected manifest to the sidecar YAML text. Pure. */
-export function serializeGovernanceSidecar(manifest: TrackerManifest): string {
-  return BANNER + yaml.dump(manifest, { lineWidth: 120 });
+/**
+ * Serialize a projected manifest to the sidecar YAML text. Pure. `staleCaveat`, when set,
+ * is baked into the persisted banner itself (#233 fail-visible contract) — a stale source
+ * ledger must not produce a generated file indistinguishable from a fresh one.
+ */
+export function serializeGovernanceSidecar(manifest: TrackerManifest, staleCaveat?: string): string {
+  const banner = staleCaveat
+    ? `${BANNER}# STALE SOURCE EVIDENCE (#233): ${staleCaveat}\n`
+    : BANNER;
+  return banner + yaml.dump(manifest, { lineWidth: 120 });
 }
 
 /** Injected I/O seam so the emit core stays pure + unit-testable. */
@@ -55,9 +66,20 @@ export interface SidecarDeps {
   /** Plan docs from `.failsafe/governance/plans/*.md` (A.1b, #195) → programs/phases.
    *  Empty array when the dir is absent (ungoverned repo). */
   readPlans(): Array<{ slug: string; content: string }>;
+  /**
+   * Optional: a full-fidelity read of the META_LEDGER path for the one read where "absent"
+   * vs "present but unreadable" and mtime change the #233 classification outcome. Omit to
+   * fall back to `readFile()`'s plain absent-or-unreadable=null contract with no mtime —
+   * exact for in-memory test doubles (a missing store entry really IS absent, never a
+   * permission/EISDIR error) but wrong for `nodeSidecarDeps`'s real filesystem, which
+   * implements this to distinguish the two (see its own comment) rather than let a real
+   * read failure masquerade as "no governance" through the coarser `readFile` fallback.
+   */
+  readMetaLedgerRaw?(relPath: string): RawArtifactRead;
 }
 
-export type SidecarStatus = 'written' | 'unchanged' | 'skipped-no-governance' | 'error';
+export type SidecarStatus =
+  | 'written' | 'unchanged' | 'skipped-no-governance' | 'skipped-ledger-untrusted' | 'error';
 
 export interface SidecarEmitResult {
   status: SidecarStatus;
@@ -65,25 +87,71 @@ export interface SidecarEmitResult {
   path: string;
   reason?: string;
   counts?: { rcs: number; programs: number; verticals: number; decisions: number };
+  /** The classified META_LEDGER state behind this result (#233), when a ledger was read at all. */
+  ledgerState?: ArtifactState;
 }
 
 /**
  * Project the governance manifest and emit it to the generated sidecar.
  *
- * Degrade-safe: a missing/empty META_LEDGER yields `skipped-no-governance` (ungoverned
- * repo → the FX857 generator is the fallback path, not this one); any thrown error yields
- * `error` rather than propagating. Idempotent: a re-emit with unchanged governance yields
- * `unchanged` and performs no write (prevents churn + fs.watch feedback loops).
+ * The META_LEDGER read is classified through the qorlogic consumer adapter's shared
+ * `classifyRead` ladder (`classifyMetaLedgerText`, #233 migration) instead of a raw
+ * truthy/empty check, so a ledger that exists but fails to parse is reported as
+ * `skipped-ledger-untrusted` — never silently treated as "ungoverned repo" (which would hide
+ * that governance evidence exists but cannot be trusted) and never silently written as an
+ * apparently-valid but empty projection. The read itself goes through `deps.readMetaLedgerRaw`
+ * when available (real `nodeSidecarDeps`) rather than plain `readFile`, because a present-but-
+ * unreadable ledger (EACCES/EISDIR) must classify as `malformed`, not `unavailable` — a
+ * catch-all-to-null read cannot make that distinction and would misreport a real read failure
+ * as "no governance at all". Degrade-safe: a missing OR truly-empty META_LEDGER still yields
+ * `skipped-no-governance` (ungoverned repo → the FX857 generator is the fallback path, not
+ * this one), matching the pre-#233 contract; any thrown error yields `error` rather than
+ * propagating. Idempotent: a re-emit with unchanged governance yields `unchanged` and
+ * performs no write (prevents churn + fs.watch feedback loops).
+ *
+ * `opts` (version floor / staleness threshold) is threaded straight into the ledger
+ * classification — this production entry point, not just the standalone
+ * `classifyMetaLedgerText` helper, is what a caller with real B197 version evidence or a
+ * freshness threshold should exercise; no production call site currently supplies `opts`
+ * (matching `WorkspaceArtifactBuilder.ts`'s established precedent of consuming `ok`/`stale`
+ * ledger data unconditionally and surfacing version-floor incompatibility only through a
+ * separate diagnostics block, not by gating consumption — see its `build()` comment). Unlike
+ * that precedent, `stale` here is not just a passive return-value field: the caveat is baked
+ * into the persisted sidecar's own banner (`serializeGovernanceSidecar`'s `staleCaveat`) so
+ * the generated file itself — not only a caller that happens to inspect `ledgerState` — is
+ * fail-visible. A caller that supplies `versionStatus`/`maxAgeMs` gets the same
+ * `unsupported`/`stale` fail-visible classification the canonical adapter gives every other
+ * consumer; `tracker-sidecar-command.ts`'s operator-facing message likewise branches on
+ * `ledgerState` rather than only `status`.
  *
  * NEVER reads or writes OPERATOR_MANIFEST_RELPATH.
  */
-export function emitGovernanceSidecar(deps: SidecarDeps): SidecarEmitResult {
+export function emitGovernanceSidecar(deps: SidecarDeps, opts?: ConsumerReadOptions): SidecarEmitResult {
   const outPath = GOVERNANCE_SIDECAR_RELPATH;
   try {
-    const metaLedger = deps.readFile(META_LEDGER_RELPATH);
-    if (!metaLedger || !metaLedger.trim()) {
-      return { status: 'skipped-no-governance', path: outPath, reason: 'no docs/META_LEDGER.md' };
+    const raw: RawArtifactRead = deps.readMetaLedgerRaw
+      ? deps.readMetaLedgerRaw(META_LEDGER_RELPATH)
+      : { text: deps.readFile(META_LEDGER_RELPATH), mtimeIso: null };
+    const ledger = classifyMetaLedgerText(raw, META_LEDGER_RELPATH, opts);
+    if (ledger.state === 'unavailable' || (ledger.data !== null && ledger.data.length === 0)) {
+      // No file, or a file present but truly empty — both mean "nothing to project yet",
+      // same as the pre-#233 `!metaLedger || !metaLedger.trim()` check.
+      return {
+        status: 'skipped-no-governance', path: outPath,
+        reason: ledger.reason ?? 'no docs/META_LEDGER.md', ledgerState: ledger.state,
+      };
     }
+    if (ledger.data === null) {
+      // malformed | unsupported: a ledger exists but cannot be trusted. Fail-visible per
+      // #233 acceptance boundary #5 — do not fall through to skipped-no-governance (which
+      // would misreport "ungoverned") or to the projector (which would silently emit an
+      // apparently-valid but empty sidecar from unparseable content).
+      return {
+        status: 'skipped-ledger-untrusted', path: outPath,
+        reason: ledger.reason ?? undefined, ledgerState: ledger.state,
+      };
+    }
+    const metaLedger = raw.text as string;
     const featureIndex = deps.readFile(FEATURE_INDEX_RELPATH) ?? '';
     const slug = deps.repoSlug();
 
@@ -100,14 +168,20 @@ export function emitGovernanceSidecar(deps: SidecarDeps): SidecarEmitResult {
       decisions: manifest.meta?.decisions?.length ?? 0,
     };
 
-    const next = serializeGovernanceSidecar(manifest);
+    // Stale evidence is still consumed (matching WorkspaceArtifactBuilder's precedent — the
+    // adapter's own `stale` contract keeps data usable), but never indistinguishably from
+    // fresh: the caveat rides in the persisted banner itself, not only the return value.
+    const staleCaveat = ledger.state === 'stale'
+      ? ledger.reason ?? `${META_LEDGER_RELPATH} is older than the configured freshness threshold`
+      : undefined;
+    const next = serializeGovernanceSidecar(manifest, staleCaveat);
     const current = deps.readFile(outPath);
     if (current === next) {
-      return { status: 'unchanged', path: outPath, counts };
+      return { status: 'unchanged', path: outPath, counts, ledgerState: ledger.state };
     }
 
     deps.writeFile(outPath, next);
-    return { status: 'written', path: outPath, counts };
+    return { status: 'written', path: outPath, counts, ledgerState: ledger.state };
   } catch (err) {
     return { status: 'error', path: outPath, reason: String(err instanceof Error ? err.message : err) };
   }
@@ -125,6 +199,26 @@ export function nodeSidecarDeps(workspaceRoot: string): SidecarDeps {
         return fs.readFileSync(abs(relPath), 'utf-8');
       } catch {
         return null;
+      }
+    },
+    // #233 review finding: readFile()'s catch-all-to-null cannot distinguish "absent" from
+    // "present but unreadable" (EACCES/EISDIR/etc), so a governed repo whose ledger is
+    // locked or a directory would otherwise be silently reported as "no governance" —
+    // exactly the silent-degrade class this whole migration exists to close. stat first (an
+    // EISDIR directory still stats successfully, giving a real mtime) so a subsequent read
+    // failure is correctly attributed to "exists but unreadable", not "doesn't exist".
+    readMetaLedgerRaw(relPath) {
+      const target = abs(relPath);
+      let mtimeIso: string | null;
+      try {
+        mtimeIso = fs.statSync(target).mtime.toISOString();
+      } catch {
+        return { text: null, mtimeIso: null };
+      }
+      try {
+        return { text: fs.readFileSync(target, 'utf-8'), mtimeIso };
+      } catch (err) {
+        return { text: null, mtimeIso, readError: err instanceof Error ? err.message : String(err) };
       }
     },
     writeFile(relPath, data) {

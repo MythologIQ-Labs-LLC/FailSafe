@@ -61,11 +61,93 @@ function unsupportedReason(opts?: ConsumerReadOptions): string | null {
 }
 
 /**
- * Classify one file-based artifact: below-floor version -> `unsupported`;
- * absent -> `unavailable`; read/parse throw OR non-empty-file-parses-empty ->
- * `malformed` (reason names the source path; plan LD3); older than
- * `maxAgeMs` -> `stale` (data kept); else `ok`. Never writes.
+ * One already-attempted read: `text` is non-null exactly on success. `readError`, set only
+ * when `text` is null, distinguishes "the artifact does not exist" (`readError` absent) from
+ * "the artifact exists but could not be read" (EACCES/EISDIR/etc — `readError` set), which
+ * `classifyRead` maps to `unavailable` vs `malformed` respectively. This is the one seam
+ * every classifier (fs-backed or a caller's own injected read) must fill in correctly: an fs
+ * read that swallows every error to a single "absent" value cannot make that distinction, and
+ * silently misreports a present-but-unreadable artifact as "nothing here" instead of
+ * "cannot be trusted" — exactly the silent-degrade class #233 exists to close.
  */
+export interface RawArtifactRead {
+  text: string | null;
+  /** ISO-8601 mtime when known; null when unavailable (absent artifact, or a seam with no
+   *  real mtime to report, e.g. an in-memory test double). */
+  mtimeIso: string | null;
+  readError?: string;
+}
+
+/**
+ * The one classification ladder every artifact reader shares (#233), whether the read came
+ * from a real fs stat+read (`classifyFile`) or a caller-supplied seam that already attempted
+ * its own read (`classifyMetaLedgerText`). below-floor version -> `unsupported`; `text ===
+ * null` with no `readError` -> `unavailable`; `text === null` WITH a `readError`, parse
+ * throw, or non-empty-input-parses-empty -> `malformed` (reason names the source path); older
+ * than `maxAgeMs` (only checked when `mtimeIso` is known) -> `stale` (data kept); else `ok`.
+ * Never writes.
+ */
+function classifyRead<T>(
+  artifact: string,
+  sourcePath: string,
+  read: RawArtifactRead,
+  parse: (text: string) => T,
+  isEmpty: (data: T) => boolean,
+  opts?: ConsumerReadOptions,
+): ArtifactEnvelope<T> {
+  const provenance: ArtifactProvenance = {
+    sourcePath, mtimeIso: read.mtimeIso, qorVersion: opts?.versionStatus?.installed ?? null,
+  };
+  const versionReason = unsupportedReason(opts);
+  if (versionReason) {
+    return { artifact, state: 'unsupported', data: null, provenance, reason: versionReason };
+  }
+  if (read.text === null) {
+    if (read.readError) {
+      return {
+        artifact, state: 'malformed', data: null, provenance,
+        reason: `failed to read ${sourcePath}: ${read.readError}`,
+      };
+    }
+    return { artifact, state: 'unavailable', data: null, provenance, reason: `artifact not found: ${sourcePath}` };
+  }
+  let data: T;
+  try {
+    data = parse(read.text);
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    return { artifact, state: 'malformed', data: null, provenance, reason: `failed to parse ${sourcePath}: ${detail}` };
+  }
+  if (read.text.trim().length > 0 && isEmpty(data)) {
+    return {
+      artifact, state: 'malformed', data: null, provenance,
+      reason: `non-empty artifact parsed to empty: ${sourcePath}`,
+    };
+  }
+  const maxAgeMs = opts?.maxAgeMs;
+  if (maxAgeMs !== undefined && read.mtimeIso !== null && Date.now() - Date.parse(read.mtimeIso) > maxAgeMs) {
+    return {
+      artifact, state: 'stale', data, provenance,
+      reason: `artifact is older than maxAgeMs=${maxAgeMs}: ${sourcePath}`,
+    };
+  }
+  return { artifact, state: 'ok', data, provenance, reason: null };
+}
+
+/** Real fs stat+read for `classifyFile`. Absent (stat fails) -> `{ text: null, mtimeIso:
+ *  null }`; present but unreadable (read throws after a successful stat, e.g. EACCES/EISDIR)
+ *  -> `{ text: null, mtimeIso, readError }`, never conflated with "absent". */
+function fsRead(sourcePath: string): RawArtifactRead {
+  const mtimeIso = mtimeIsoOf(sourcePath);
+  if (mtimeIso === null) return { text: null, mtimeIso: null };
+  try {
+    return { text: fs.readFileSync(sourcePath, 'utf8'), mtimeIso };
+  } catch (err) {
+    return { text: null, mtimeIso, readError: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/** Classify one fs-backed artifact via the shared `classifyRead` ladder. */
 function classifyFile<T>(
   root: string,
   relPath: string,
@@ -75,31 +157,7 @@ function classifyFile<T>(
   opts?: ConsumerReadOptions,
 ): ArtifactEnvelope<T> {
   const sourcePath = path.join(root, relPath);
-  const versionReason = unsupportedReason(opts);
-  if (versionReason) {
-    return envelope<T>(artifact, 'unsupported', null, sourcePath, versionReason, opts);
-  }
-  const mtimeIso = mtimeIsoOf(sourcePath);
-  if (mtimeIso === null) {
-    return envelope<T>(artifact, 'unavailable', null, sourcePath, `artifact not found: ${sourcePath}`, opts);
-  }
-  let text: string;
-  let data: T;
-  try {
-    text = fs.readFileSync(sourcePath, 'utf8');
-    data = parse(text);
-  } catch (err) {
-    const detail = err instanceof Error ? err.message : String(err);
-    return envelope<T>(artifact, 'malformed', null, sourcePath, `failed to parse ${sourcePath}: ${detail}`, opts);
-  }
-  if (text.trim().length > 0 && isEmpty(data)) {
-    return envelope<T>(artifact, 'malformed', null, sourcePath, `non-empty artifact parsed to empty: ${sourcePath}`, opts);
-  }
-  const maxAgeMs = opts?.maxAgeMs;
-  if (maxAgeMs !== undefined && Date.now() - Date.parse(mtimeIso) > maxAgeMs) {
-    return envelope(artifact, 'stale', data, sourcePath, `artifact is older than maxAgeMs=${maxAgeMs}: ${sourcePath}`, opts);
-  }
-  return envelope(artifact, 'ok', data, sourcePath, null, opts);
+  return classifyRead(artifact, sourcePath, fsRead(sourcePath), parse, isEmpty, opts);
 }
 
 /** docs/META_LEDGER.md via the canonical parser (meta-ledger-model.ts:39). */
@@ -111,6 +169,24 @@ export function readMetaLedgerArtifact(
     root, path.join('docs', 'META_LEDGER.md'), 'META_LEDGER',
     parseMetaLedgerEntries, (d) => d.length === 0, opts,
   );
+}
+
+/**
+ * Classify an already-attempted META_LEDGER read through the SAME `classifyRead` ladder
+ * `readMetaLedgerArtifact` uses, for callers with their own injected read seam (e.g.
+ * governance-sidecar.ts's `SidecarDeps`, #233 migration) rather than a workspace root. The
+ * caller is responsible for supplying an accurate `read.readError` when its seam distinguishes
+ * "absent" from "present but unreadable" (a seam that collapses both to `text: null` with no
+ * `readError` — e.g. a plain try/catch-to-null — will under-report the file as `unavailable`
+ * rather than `malformed`, which is why `governance-sidecar.ts`'s real fs seam does the
+ * stat+read itself instead of reusing a generic catch-all).
+ */
+export function classifyMetaLedgerText(
+  read: RawArtifactRead,
+  sourcePath: string,
+  opts?: ConsumerReadOptions,
+): ArtifactEnvelope<MetaLedgerEntry[]> {
+  return classifyRead('META_LEDGER', sourcePath, read, parseMetaLedgerEntries, (d) => d.length === 0, opts);
 }
 
 /** docs/FEATURE_INDEX.md via parseFeatureIndex (tracker-parsers.ts:29). */

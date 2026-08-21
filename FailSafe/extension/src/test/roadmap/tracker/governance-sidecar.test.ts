@@ -5,10 +5,14 @@
 // unchanged (no Playwright gate); consumption of the sidecar is a follow-up (A.2b).
 
 import { strict as assert } from 'assert';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import * as yaml from 'js-yaml';
 import {
   emitGovernanceSidecar,
   serializeGovernanceSidecar,
+  nodeSidecarDeps,
   GOVERNANCE_SIDECAR_RELPATH,
   OPERATOR_MANIFEST_RELPATH,
   type SidecarDeps,
@@ -62,7 +66,14 @@ const FEATURE_INDEX = `# Feature Index
 /** Spy deps recording every read/write path; seeds files from an in-memory store. */
 function spyDeps(
   initial: Record<string, string> = {},
-  opts: { writeThrows?: boolean; plans?: Array<{ slug: string; content: string }> } = {},
+  opts: {
+    writeThrows?: boolean;
+    plans?: Array<{ slug: string; content: string }>;
+    mtimes?: Record<string, string | null>;
+    /** Simulates a present-but-unreadable path (EACCES/EISDIR-equivalent) — the entry
+     *  is ignored by the plain `readFile` seam but honored by `readMetaLedgerRaw`. */
+    readErrors?: Record<string, string>;
+  } = {},
 ) {
   const store = new Map<string, string>(Object.entries(initial));
   const reads: string[] = [];
@@ -83,6 +94,17 @@ function spyDeps(
     readPlans() {
       return opts.plans ?? [];
     },
+    // Only present when a test opts in — mirrors that SidecarDeps.readMetaLedgerRaw is
+    // optional, so most doubles (and pre-#233-freshness callers) never define it.
+    ...(opts.mtimes || opts.readErrors ? {
+      readMetaLedgerRaw: (relPath: string) => {
+        reads.push(relPath);
+        const readError = opts.readErrors?.[relPath];
+        const mtimeIso = opts.mtimes?.[relPath] ?? null;
+        if (readError) return { text: null, mtimeIso, readError };
+        return { text: store.has(relPath) ? store.get(relPath)! : null, mtimeIso };
+      },
+    } : {}),
   };
   return { deps, reads, writes, store };
 }
@@ -105,6 +127,16 @@ suite('roadmap/tracker governance-sidecar (A.2 — #194 sidecar emission)', () =
     assert.equal(parsed.meta?.decisions?.length, 1);
   });
 
+  test('serializeGovernanceSidecar: staleCaveat bakes a caveat comment into the banner (#233)', () => {
+    const manifest: TrackerManifest = { rcs: [], programs: [], phases: [], verticals: [] };
+    const fresh = serializeGovernanceSidecar(manifest);
+    const stale = serializeGovernanceSidecar(manifest, 'META_LEDGER.md is older than the freshness threshold');
+    assert.ok(!/STALE SOURCE EVIDENCE/.test(fresh), 'no caveat when none supplied');
+    assert.ok(/STALE SOURCE EVIDENCE/.test(stale));
+    assert.ok(stale.includes('older than the freshness threshold'), 'the actual reason text is preserved');
+    assert.ok(yaml.load(stale.slice(stale.indexOf('rcs:'))), 'still valid YAML after the caveat line');
+  });
+
   test('emit: governed repo → written to the GENERATED path, counts reflect the projection', () => {
     const { deps, writes } = spyDeps({
       [`docs/META_LEDGER.md`]: LEDGER,
@@ -112,6 +144,7 @@ suite('roadmap/tracker governance-sidecar (A.2 — #194 sidecar emission)', () =
     });
     const r = emitGovernanceSidecar(deps);
     assert.equal(r.status, 'written');
+    assert.equal(r.ledgerState, 'ok');
     assert.equal(r.path, GOVERNANCE_SIDECAR_RELPATH);
     assert.equal(writes.length, 1);
     assert.equal(writes[0].path, GOVERNANCE_SIDECAR_RELPATH);
@@ -168,7 +201,111 @@ suite('roadmap/tracker governance-sidecar (A.2 — #194 sidecar emission)', () =
     const { deps, writes } = spyDeps({ [`docs/FEATURE_INDEX.md`]: FEATURE_INDEX });
     const r = emitGovernanceSidecar(deps);
     assert.equal(r.status, 'skipped-no-governance');
+    assert.equal(r.ledgerState, 'unavailable');
     assert.equal(writes.length, 0);
+  });
+
+  test('present but truly empty META_LEDGER (whitespace only) → still skipped-no-governance, no write', () => {
+    const { deps, writes } = spyDeps({
+      [`docs/META_LEDGER.md`]: '   \n',
+      [`docs/FEATURE_INDEX.md`]: FEATURE_INDEX,
+    });
+    const r = emitGovernanceSidecar(deps);
+    assert.equal(r.status, 'skipped-no-governance');
+    assert.equal(writes.length, 0);
+  });
+
+  // #233: a META_LEDGER that exists but does not parse to any entries must be reported
+  // explicitly, never silently treated as "ungoverned" nor silently written as an
+  // apparently-valid but empty sidecar (the same silent-degrade problem #233 closed for
+  // TrackerRoute — see Myth-Tech-Forge#199/PR FailSafe#405).
+  test('malformed META_LEDGER (non-empty, no parseable entries) → skipped-ledger-untrusted, no write', () => {
+    const { deps, writes } = spyDeps({
+      [`docs/META_LEDGER.md`]: 'not a valid governance ledger, no entries here\n',
+      [`docs/FEATURE_INDEX.md`]: FEATURE_INDEX,
+    });
+    const r = emitGovernanceSidecar(deps);
+    assert.equal(r.status, 'skipped-ledger-untrusted');
+    assert.equal(r.ledgerState, 'malformed');
+    assert.ok(r.reason?.includes('META_LEDGER.md'), `reason names the source: ${r.reason}`);
+    assert.equal(writes.length, 0, 'never silently writes from unparseable content');
+  });
+
+  // #233 review G1: a present-but-unreadable ledger (EACCES/EISDIR-equivalent) must classify
+  // as untrusted, NEVER as "no governance" — the exact distinction a plain readFile()
+  // catch-all-to-null seam cannot make, which is why readMetaLedgerRaw carries readError.
+  test('present but unreadable META_LEDGER (readError, distinct from absent) → skipped-ledger-untrusted, never "ungoverned"', () => {
+    const { deps, writes } = spyDeps(
+      { [`docs/FEATURE_INDEX.md`]: FEATURE_INDEX },
+      { readErrors: { [`docs/META_LEDGER.md`]: 'EISDIR: illegal operation on a directory, read' } },
+    );
+    const r = emitGovernanceSidecar(deps);
+    assert.equal(r.status, 'skipped-ledger-untrusted', 'must not collapse to skipped-no-governance');
+    assert.equal(r.ledgerState, 'malformed');
+    assert.ok(r.reason?.includes('EISDIR'), `reason should surface the cause: ${r.reason}`);
+    assert.equal(writes.length, 0);
+  });
+
+  // Production-path regressions (not just classifyMetaLedgerText helper tests): opts is
+  // threaded through the actual emitGovernanceSidecar entry point a real caller invokes.
+  suite('emitGovernanceSidecar(deps, opts) — version floor + freshness threaded through', () => {
+    test('below-floor version, supplied via opts → skipped-ledger-untrusted (unsupported), no write', () => {
+      const { deps, writes } = spyDeps({
+        [`docs/META_LEDGER.md`]: LEDGER,
+        [`docs/FEATURE_INDEX.md`]: FEATURE_INDEX,
+      });
+      const r = emitGovernanceSidecar(deps, {
+        versionStatus: { installed: '0.50.0', minimum: '0.100.0', meetsFloor: false },
+      });
+      assert.equal(r.status, 'skipped-ledger-untrusted');
+      assert.equal(r.ledgerState, 'unsupported');
+      assert.ok(r.reason?.includes('0.50.0') && r.reason?.includes('0.100.0'), `reason: ${r.reason}`);
+      assert.equal(writes.length, 0, 'below-floor evidence is never parsed into a sidecar write');
+    });
+
+    test('no opts supplied (today\'s only production call sites) → version floor is not enforced, unchanged from pre-#233', () => {
+      const { deps, writes } = spyDeps({
+        [`docs/META_LEDGER.md`]: LEDGER,
+        [`docs/FEATURE_INDEX.md`]: FEATURE_INDEX,
+      });
+      const r = emitGovernanceSidecar(deps);
+      assert.equal(r.status, 'written');
+      assert.equal(r.ledgerState, 'ok', 'no versionStatus supplied -> nothing to fail against, same as every other opts-less adapter call site');
+      assert.equal(writes.length, 1);
+    });
+
+    test('stale (old mtime + maxAgeMs) → still written, ledgerState reports stale rather than claiming fresh ok', () => {
+      const { deps, writes } = spyDeps(
+        { [`docs/META_LEDGER.md`]: LEDGER, [`docs/FEATURE_INDEX.md`]: FEATURE_INDEX },
+        { mtimes: { [`docs/META_LEDGER.md`]: '2000-01-01T00:00:00.000Z' } },
+      );
+      const r = emitGovernanceSidecar(deps, { maxAgeMs: 1 });
+      assert.equal(r.status, 'written', 'stale data is still usable data, per the adapter\'s own stale contract');
+      assert.equal(r.ledgerState, 'stale');
+      assert.equal(writes.length, 1);
+      // #233 review follow-up: the caveat must ride in the PERSISTED file, not only the
+      // return value — a caller that never inspects `ledgerState` still can't mistake this
+      // for a routine fresh emit.
+      assert.ok(/STALE SOURCE EVIDENCE/.test(writes[0].data), 'persisted banner carries the staleness caveat');
+    });
+
+    test('unchanged + stale: re-emit of the same stale content still carries the caveat in its status', () => {
+      const { deps } = spyDeps(
+        { [`docs/META_LEDGER.md`]: LEDGER, [`docs/FEATURE_INDEX.md`]: FEATURE_INDEX },
+        { mtimes: { [`docs/META_LEDGER.md`]: '2000-01-01T00:00:00.000Z' } },
+      );
+      const first = emitGovernanceSidecar(deps, { maxAgeMs: 1 });
+      assert.equal(first.status, 'written');
+      const second = emitGovernanceSidecar(deps, { maxAgeMs: 1 });
+      assert.equal(second.status, 'unchanged');
+      assert.equal(second.ledgerState, 'stale', 'staleness stays visible on re-emit, not lost once written once');
+    });
+
+    test('maxAgeMs supplied but no readMetaLedgerRaw on deps (typical test double) → freshness stays unknown, no fabricated staleness', () => {
+      const { deps } = spyDeps({ [`docs/META_LEDGER.md`]: LEDGER, [`docs/FEATURE_INDEX.md`]: FEATURE_INDEX });
+      const r = emitGovernanceSidecar(deps, { maxAgeMs: 1 });
+      assert.equal(r.ledgerState, 'ok', 'no mtime source -> never guessed stale');
+    });
   });
 
   test('degrade-safe: a write failure → error result, never throws', () => {
@@ -180,5 +317,35 @@ suite('roadmap/tracker governance-sidecar (A.2 — #194 sidecar emission)', () =
     assert.doesNotThrow(() => { result = emitGovernanceSidecar(deps); });
     assert.equal(result!.status, 'error');
     assert.ok(/disk full/.test(result!.reason ?? ''));
+  });
+});
+
+// #233 review G1, real filesystem (not the spy): nodeSidecarDeps() is the actual production
+// seam. A directory at the ledger's path reproduces a real EISDIR the same way a locked file
+// would reproduce EACCES — both must classify as untrusted, never as "no governance".
+suite('nodeSidecarDeps + emitGovernanceSidecar — real fs, unreadable META_LEDGER (#233 G1)', () => {
+  test('META_LEDGER.md is a directory (real EISDIR) → skipped-ledger-untrusted, not skipped-no-governance', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-sidecar-eisdir-'));
+    try {
+      fs.mkdirSync(path.join(tmp, 'docs', 'META_LEDGER.md'), { recursive: true });
+      const r = emitGovernanceSidecar(nodeSidecarDeps(tmp));
+      assert.equal(r.status, 'skipped-ledger-untrusted',
+        'a directory where the ledger should be is a real, present artifact that cannot be read — not an absent one');
+      assert.equal(r.ledgerState, 'malformed');
+      assert.ok(/EISDIR/.test(r.reason ?? ''), `reason: ${r.reason}`);
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  test('no docs/ directory at all (genuinely absent) → skipped-no-governance, distinct from the EISDIR case above', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-sidecar-absent-'));
+    try {
+      const r = emitGovernanceSidecar(nodeSidecarDeps(tmp));
+      assert.equal(r.status, 'skipped-no-governance');
+      assert.equal(r.ledgerState, 'unavailable');
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
   });
 });
