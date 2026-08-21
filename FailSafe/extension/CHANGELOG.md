@@ -7,8 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.3] - 2026-08-21
+
 ### Fixed
-- **The Development Tracker's governance projection and the substantiate seal auto-hook no longer bypass the Qor artifact adapter.** `TrackerRoute.projectGovernanceManifest` and `substrate-command.ts`'s seal watcher now read `docs/META_LEDGER.md` through classified `readMetaLedgerArtifact` envelopes instead of raw text — a malformed OR empty/whitespace-only ledger no longer masquerades as a real governance projection (it previously produced the fixed Console-vertical list unconditionally), and a malformed ledger at seal-watch time is now logged instead of silently never firing. (#233, FX892)
+- **The enforce-default upgrade notice now actually appears.** v6.0.0 flipped the governance-mode default from Observe to Enforce and shipped a one-time notice to warn existing installs whose behavior silently changed. That notice could never fire: `EnforcementEngine` inferred "defaulted" from `getConfig()`, which always resolves `governance.mode` to a concrete string because `package.json` declares a schema default — VS Code's `WorkspaceConfiguration.get()` cannot tell "the user chose enforce" from "enforce is the default." Only `.inspect()` can, which `FirstRunModePicker` already used. Every install that predated 6.0.0 and never explicitly set a mode moved from Observe to Enforce with no notification. (#412, FX929)
+- **Voice synthesis can no longer hang the Mind Map indefinitely.** `TtsEngine.speak()`'s `predict()` call is bounded by a timeout with a cancel-safe generation token, so a stalled Piper synthesis surfaces as an error instead of leaving the voice controls wedged. (#395)
+- **Watcher handles are released when their owners are.** `planManager` and `trustEngine` were disposed by a component that did not own them; disposal now happens in their bootstrap owner, so teardown releases them correctly. (#388)
+- **The Development Tracker no longer stalls on large repositories.** Its PR-cadence read ran an unbounded, synchronous `git log` on every dashboard load — measured at 1.07s and 8.9MB output on a 150k-commit repository, past the 8MB buffer, where it threw and was silently swallowed. The read is now bounded to the most recent commits, and when the window truncates, the dashboard says so instead of degrading invisibly. (#393)
+- **The ACP registry is checked for drift at activation.** `~/.windsurf/acp/registry.json` is unsigned and user-writable, so an external rewrite could quietly point FailSafe's entry back at the raw agent while Devin still displayed the governed name — a full proxy bypass with no signal. Activation now distinguishes intact, tampered, missing, and malformed registries, and warns when an otherwise-intact entry was installed for a different workspace. Detection failure can never block activation. (#398, FX928)
+
+### Added
+- **Mind Map shows how dense the current graph is.** An always-visible `N nodes · N edges` status reports the live graph size, and discloses merged duplicate edges when any occurred. Disclosure only — no cap or threshold is imposed. (#391)
+- **Audit Log records carry an explicit resolution link.** A WARN/BLOCK/ESCALATE entry now records the exact ledger row a later L3 decision resolves, by id rather than by inferring from path and timestamp. Deliberately scoped: no content-based supersession, and an escalation that expired without a decision is reported as undecided rather than as awaiting review, because the ledger cannot evidence the difference. (#367, FX927)
+
+### Changed
+- **Governance artifact reads go through one versioned boundary.** The remaining `docs/META_LEDGER.md` consumers — the Tracker's governance projection, the substantiate seal watcher, and the governance sidecar — now read through classified adapter envelopes instead of raw text. A ledger that exists but cannot be parsed is reported as malformed rather than silently producing an empty-but-plausible result. (#233, FX892)
+
+### Internal
+- **22 test suites containing 223 cases were executing in zero CI gates.** They are now run, and a coverage guard fails the build when any test file matches no runner, so this cannot recur silently. Running them immediately exposed five real defects, including a governance doc whose coverage header had drifted by roughly 250 entries and two "verified" claims citing test files that no longer resolved. (#404)
+- **The end-to-end coverage gate no longer fails the build on a transient subprocess error.** A failed `git` invocation and a genuinely missing ref were indistinguishable, so momentary resource pressure under parallel CI presented as a coverage BLOCK. The two are now told apart by whether the process actually completed; transient failures retry once and then report as an infrastructure condition, while a genuinely unresolvable ref still fails closed. (#410)
 
 ## [6.0.2] - 2026-08-21
 
