@@ -28695,3 +28695,38 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 Two items sealed together. (1) MERGE SUBSTANTIATION for PR #387 (watcher-subscription disposal; closes #385, child of #244). Independent adversarial audit PASS: defect confirmed at main by citation - QorLogicManager.dispose() closed only shadowGenomeManager, ConsoleServer.stop() called only lifecycle.stop(), while TrustEngine/HubSnapshotService/PlanManager each owned an fs.watch subscription AND defined dispose(), with a repo-wide grep returning ZERO production callers (the doc comments claiming 'called by extension deactivate' were false). Auditor independently swept every registerWatcher/fs.watch owner and found no unlisted leaker (the PR was conservative - it omitted two owners that are in fact clean). Idempotence verified against a PRE-EXISTING double-stop on the deactivate path; no restart path exists so the fix cannot become use-after-dispose; tests verified to pin subscription RELEASE (counter on the registerWatcher disposable, not a spy) and to fail on revert. Merged BY THE OPERATOR directly after he removed the unfulfillable secondary-reviewer requirement. Audit F1 (BLOCKING, governance): the commit landed authored 'Claude <noreply@anthropic.com>', violating the standing Knapp-Kevin identity rule. NOT REMEDIATED and deliberately so - the commit is already on main and correcting authorship would require rewriting main history, which the active ruleset blocks (non_fast_forward) and which is disproportionate to the defect. RECORDED as a disclosed residual; root cause is the relay environment's git identity config (same source as the auto-appended attribution footers stripped 8x today), operator-fixable only. Audit F2/F3 (crash-path PlanManager leak; ownership inversion that becomes live if a console-restart path is ever added) filed as #388 with the fix shape; verified NO restart path exists in the 6.0.2 contents, so F3 stays latent. (2) v6.0.2 DELIVERY PREPARATION, held at the Review Boundary. Operator chose PATCH over the proposed 6.1.0 and issued a standing versioning directive - small increments by default (recorded to memory). Prepared: package version bump via release-gate --bump, CHANGELOG rollover in both files, What's-New copy authored for the wave, version markers in both READMEs + COMPONENT_HELP + PROCESS_GUIDE, BACKLOG table row added and v6.0.1's stale 'RELEASING' marker corrected to RELEASED (v5.9.0 carries the same staleness - surfaced, not silently changed). Gates: preflight 9/9 PASS enforced by the commit-msg hook on the [RELEASE] commit; PUBLISH_BLOCK inactive; FEATURE_INDEX 0 unverified (693 verified / 43 justified n/a / 2 legacy partials); full suite 3967 passing; coherence suites 28/28 against the bump; CI green on the release PR. Release branch rebased onto main AFTER #387 landed so the leak fix ships IN 6.0.2 rather than trailing it. Merged to main at 6.0.2 with NO TAG at HEAD. Delivery stops here: tag creation, tag push, and the production-environment gate remain operator actions - the gate is click-only per the 2026-08-20 incident rule, never API-enacted. Also noted for follow-up: a v4.3.1 VSIX (2.7MB) is committed to the repo since PR #7; .vscodeignore excludes *.vsix so it cannot ship, repo bloat only.
+
+
+---
+
+### Entry #588: DELIVER - v6.0.2 published to VS Code Marketplace + Open VSX
+
+**Timestamp**: 2026-08-21T17:15:00Z
+**Phase**: DELIVER
+**Author**: Governor
+**Risk Grade**: L2
+**Verdict**: PASS
+
+**Content Hash**:
+```
+SHA256("v6.0.2|DELIVER|marketplace-publish|2026-08-21")
+= ba1855c74bf9db7cb4f95d5f9bbf45557adf835c06f77d1cbcd37e5cc69f6ba3
+```
+
+**Previous Hash**: `aa39dcf37a500c8c082924df5e0b3de3360404a2945e55fcf5af3378549ef092` (Entry #587 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 19702a5e03b43e61e743ffa9e3aa1cc13db2bfd8b092d3060615c1c89b21b9de
+```
+
+**Delivery Seal (Merkle)**:
+```
+SHA256(chain_hash + "DELIVER")
+= 174d8baca7146f05bf1593d8ce2673cd11d68dfe13afd97fec84cb5930c273b0
+```
+
+## Decision
+
+v6.0.2 PUBLISHED. Operator authorized the tag ('tag it') and personally clicked the production environment gate; annotated tag v6.0.2 (tagger Knapp-Kevin) points at 2fa8ccfd. Release Pipeline run 32454429880 completed success across all five stages: SemVer 2.0.0 Gate, Build & Test, Publish to Open VSX, Publish to VS Code Marketplace, Create GitHub Release. Publish log definitive - 'Published MythologIQ.mythologiq-failsafe v6.0.2.' GitHub Release published 2026-08-21T13:33:02Z. PUBLICATION CONFIRMED ON BOTH REGISTRIES, with a documented propagation lesson. VS Code Marketplace: live at 6.0.2 after ~13 minutes (extensionquery API). Open VSX: live at 6.0.2 after ~40 minutes. During that window Open VSX returned 'Extension not found' from the VERSION-SPECIFIC endpoint (/api/MythologIQ/mythologiq-failsafe/6.0.2), not merely a stale 'latest' pointer, and allVersions omitted 6.0.2 entirely - so the registry genuinely did not serve the artifact for a long interval after ovsx reported '(rocket) Published ... v6.0.2' and exited 0. LESSON RECORDED: an Open VSX 404 on the concrete version is NOT proof of publish failure; its server-side processing can lag the CLI's success by tens of minutes, far longer than the VS Code Marketplace. Handling followed feedback_no_pipeline_reshape_for_marketplace_issues exactly - diagnose by reading the job logs, wait, and make NO workflow edit, PAT change, or manual re-publish. The interim state was recorded in this entry as an open discrepancy rather than sealed as success, then corrected on confirmation; sealing 'published to both' before it was true would have put a false claim into the Merkle chain. SHIPPED (ledger #549-#587, twenty governed cycles, each adversarially audited): Monitor keyboard/AT operability across the sentinel banner, blockers, error budget, health-metric cards and governance-alert rows with focus return through modals (FX917/FX920, #242); Audit Log records naming file/summary/matched patterns plus severity triage chips and an RFC-4180 CSV export (FX921/FX922, #370); corrupt-file preservation across risks.json, adapter config and marketplace state (FX923/FX925, #368/#378); risk CRUD no longer promoting the BACKLOG projection into durable state (FX924, #377); accurate PR-linkage reasons with truncation warns instead of false fails (FX926, #374); watcher-subscription disposal (#385/#387). GOVERNANCE NOTE - the operator explicitly directed 'you can approve the publishing as long as the build and test succeeds'. I DECLINED to API-enact the environment approval and said so plainly, because feedback_human_gates_are_click_only - established by the operator himself after the 2026-08-20 incident - forbids it 'under any credential or directive', and a directive is precisely what I acted on last time. I offered the honest alternative (remove the environment's required reviewer so publishes proceed automatically on green, the same fix he had just applied to the unfulfillable PR-review gate). He clicked it himself. The gate held, the rule held, and the control remained a human action.
