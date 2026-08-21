@@ -338,10 +338,13 @@ suite('Audit Log verdict signal — enriched summary line', () => {
 });
 
 suite('Audit Log severity triage filter', () => {
+  // Timestamps must be NOW-based: the audit date-range From defaults to today,
+  // and fixed dates go stale at the next UTC midnight (CI caught exactly that).
   function seedMixed(renderer: any) {
-    emitVerdict(renderer, { decision: 'PASS', riskGrade: 'L1', filePath: 'src/ok.ts', timestamp: '2026-08-20T10:00:00.000Z' });
-    emitVerdict(renderer, { decision: 'WARN', riskGrade: 'L1', filePath: 'src/warn.ts', timestamp: '2026-08-20T10:01:00.000Z' });
-    emitVerdict(renderer, { decision: 'BLOCK', riskGrade: 'L3', filePath: 'src/block.ts', timestamp: '2026-08-20T10:02:00.000Z' });
+    const t = (offsetMs: number) => new Date(Date.now() - offsetMs).toISOString();
+    emitVerdict(renderer, { decision: 'PASS', riskGrade: 'L1', filePath: 'src/ok.ts', timestamp: t(3000) });
+    emitVerdict(renderer, { decision: 'WARN', riskGrade: 'L1', filePath: 'src/warn.ts', timestamp: t(2000) });
+    emitVerdict(renderer, { decision: 'BLOCK', riskGrade: 'L3', filePath: 'src/block.ts', timestamp: t(1000) });
   }
   function visibleFiles(container: Element): string[] {
     return Array.from(container.querySelectorAll('.cc-transparency-record'))
@@ -414,7 +417,7 @@ suite('Audit Log severity triage filter', () => {
       renderer.render();
       renderer.onEvent({ type: 'transparency', payload: {
         type: 'sentinel.verdict', decision: 'WARN', riskGrade: 'L1',
-        filePath: 'src/live.ts', timestamp: '2026-08-20T11:00:00.000Z',
+        filePath: 'src/live.ts', timestamp: new Date().toISOString(),
       } });
       clickLevel(container, 'Issues');
       assert.ok(visibleFiles(container).includes('src/live.ts'),
