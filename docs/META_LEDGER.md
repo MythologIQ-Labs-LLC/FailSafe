@@ -28889,3 +28889,47 @@ PASSES CLEARED: prompt injection (exit 0; three `'<script'` canary WARNs in this
 WHAT SURVIVES, recorded so remediation does not relitigate it: the retarget is correct (adapter migration is largely done; the defect is that nothing shares the envelope); the measurements reproduce (5 reads / 8,715,735 bytes / 477ms cold; 7.7ms IO + 13.9ms parseMetaLedgerEntries + 5.5ms parseMetaLedger warm); defining `readMetaLedgerArtifact` in terms of `readMetaLedgerRaw` is the right shape and is why V2 is a one-line fix rather than a redesign; the F1/F2/F3/F4/F5 exclusions are correctly scoped; rejecting the mtime-keyed memo was correct; and the plan's own correction of its "5 -> 2" preview to "5 -> 3" is accurate.
 
 Required next action: `/qor-plan` to amend (V1 evidence format; V2 versionStatus propagation plus the `ledgerReadable` decision it forces), then re-run `/qor-audit`. No implementation authorized.
+
+---
+
+### Entry #593: GATE TRIBUNAL - plan-233-read-ledger-once (iteration 2, Option B independent review)
+
+**Timestamp**: 2026-08-21T22:10:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: VETO
+
+**Content Hash**:
+```
+SHA256("plan-233-read-ledger-once|audit-VETO-iter2|2026-08-21")
+= 6943b2829760800ee5ca6fd2dc3888fae2be5b92c992d7b1632536905cac0ad6
+```
+
+**Previous Hash**: `2bb67f935bc489da098f746954b1a27406c9859706b945a810b3ac15128b395e` (Entry #592 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 5f8cf20ea32cd28e03d81bbc67dd75308a3554abf67f8df92352f99d69e65e2e
+```
+
+## Decision
+
+VETO on iteration 2. Mode: OPTION B ADVERSARIAL - `audit_risk_score` flipped to `option_b_required: true` (flag `high-citation-surface`) once iteration 2 raised the citation surface to 9, forbidding a solo self-audit. That collided with a standing operator instruction against subagents; the conflict was surfaced rather than resolved silently, and the operator explicitly authorized a one-off `code-reviewer` subagent receiving only the plan and the repo, with no exposure to the author's reasoning. Report at `.agent/staging/AUDIT_REPORT.md`.
+
+ITERATION-1 FINDINGS BOTH RESOLVED AND VERIFIED RESOLVED. V1 (0 citations truth-checked): root cause was `_LD_HEADING_RE` in `plan_evidence.py` - the scanner enters ONLY regions under a heading matching "locked decision"/"citation inventory", and the LDs were inline text, so no region was ever entered and the lint exited 0 having read nothing. Restructured under explicit headings; `plan_grep_lint` now reports 9 citation(s) truth-checked against 9 Locked Decisions, and the independent reviewer separately confirmed all nine (LD0-LD8) resolve to the exact cited line, indentation and text, each pattern matching exactly one line in its file. V2 (`versionStatus` dropped): `build()` now derives a floor-aware envelope through the new `applyVersionFloor` for diagnostics while the floor-blind envelope keeps gating `ledgerReadable`, preserving the B197 render contract at WorkspaceArtifactBuilder.ts:78; reviewer confirmed routing and floor-before-content precedence.
+
+V3 - `applyVersionFloor` HONORS HALF THE TYPE IT ACCEPTS (`specification-drift`, blocking). `ConsumerReadOptions` carries two fields (consumer-adapter.ts:22-27) and `classifyRead` consumes both - floor at :101-104, staleness at :127-133. The helper reads only `unsupportedReason` + `versionStatus.installed`, so it has no stale rung: `applyVersionFloor(classifyMetaLedgerText(read,p), {maxAgeMs:1})` yields `ok`/null where `classifyMetaLedgerText(read,p,{maxAgeMs:1})` yields `stale` with a reason. Every other branch IS equivalent, confirmed field-by-field twice independently (provenance incl. the `opts===undefined` case; the floor branch's artifact/state/data/reason; floor-before-content precedence; and the readError-to-malformed, no-readError-to-unavailable, parse-throw, parses-empty and ok rungs, none of which read opts). Blocking DESPITE being latent - no production caller passes `maxAgeMs`, and the sole production `buildConsumerDiagnostics` caller is WorkspaceArtifactBuilder.ts:97 - because the defect is the LOCKED CONTRACT, not today's output: a NEW exported API typed on `ConsumerReadOptions` that silently honors one of its two fields, a doc comment claiming it reproduces `classifyRead`'s precedence unqualified, and that unqualified equivalence written into FX930's permanent FEATURE_INDEX descriptor. `maxAgeMs` is live and exercised (consumer-adapter.test.ts:118-131).
+
+V4 - THE EQUIVALENCE TEST CANNOT REACH TWO OF THE FIVE STATES IT CLAIMS (`coverage-gap`, blocking). Phase 1's fixture-equivalence test calls `readMetaLedgerArtifact(root)` with NO opts while claiming coverage across ok/malformed/stale/unsupported/absent. Both `stale` and `unsupported` are unreachable without opts, and the EXISTING suite proves it: consumer-adapter.test.ts:109 needs `{versionStatus: BELOW_FLOOR}` for unsupported, and :118-121 needs `{maxAgeMs:1}` PLUS an `fs.utimesSync` mtime rewind for stale. The `stale` and `unsupported-version` fixtures would be materialized, classified `ok`, and the assertion would pass. Compounding with V3: FX930's matrix is {below-floor, meets-floor, undefined} - its opts axis never carries `maxAgeMs`, so it passes against the very implementation that drops it, while the plan bills it as "the anti-drift assertion that makes deriving the second envelope safe". Net: no test in the plan drives `maxAgeMs` through either new seam, while the plan's central promise is proven-zero-behavior-change.
+
+V4 WAS FOUND BY THE INDEPENDENT REVIEWER AND MISSED BY THE AUTHOR, on the second consecutive audit of a plan the author had already been VETOed on once. That is exactly the SG-007 author-momentum bias the Option B mandate exists to catch; the mandate earned its cost on first use. The author independently found V3 before the reviewer reported, so the two findings are corroborated from separate traces rather than inherited.
+
+VERIFIED CORRECT, not to be relitigated: read count 5 to 3 (with the subtlety that `MetaLedgerReader` reads ONCE - `parseEntries` caches, so its three call sites share one read - and `SystemStateReader` genuinely fires because its `^##` CHAIN_STATUS_RE anchor does not match this repo's `_Chain Status: ..._` line); parse count 2 to 1 (`applyVersionFloor` performs no parse; `opts?.ledger ??` short-circuits diagnostics.ts:40); all 9 LD citations; `readGovernanceState(text)` degradation identity (fsRead returns text===null for BOTH absent and unreadable, both to IDLE, matching the prior existsSync+catch posture, no error path dropped); envelope routing against the B197 contract; no missing callers; harmless data-array aliasing (neither consumer mutates, `summarize` drops data). Seven non-blocking items recorded in the report (MetaLedgerRead shape vs two DoD criteria; a Phase-2 snippet that does not compile for want of a `MetaLedgerEntry` import in diagnostics.ts; "three seams" vs 5-to-3; two measurement instants where 8,715,735/5 = 1,743,147 exactly, which independently corroborates five whole-file reads; title overstating "once per hub snapshot" given buildGovernancePhase; a pathless ConsoleServerHub citation; and a read-count caveat that the malformed fixture is 4-to-2).
+
+REVIEWER-DECLARED LIMITS, recorded rather than papered over: the independent reviewer had no execution tool and explicitly marked as NOT VERIFIED the wall-clock figures (7.7/13.9/5.5/477/~120ms), the on-disk ledger size, and the text of entries #591/#592; it verified the six #591 exclusions directly against source instead. Those timings remain author-measured and independently unconfirmed.
+
+ESCALATION POSTURE: two consecutive VETOs with DIFFERING signatures, so the 3-consecutive-same-signature threshold is not met and `/qor-remediate` is not yet the legal next action. Named for the record because it is the same underlying failure in two costumes - a completeness claim (`ConsumerReadOptions` handled; five states covered) asserted without exercising what would falsify it. Iteration 3 is the last before escalation; a third variant of "claimed coverage that isn't" is a process signal, not a plan defect.
+
+Required next action: `/qor-plan` iteration 3 (V3 helper contract - add the stale rung or narrow the parameter type so `maxAgeMs` is unrepresentable, `QorLogicVersionStatus` already imported at consumer-adapter.ts:19; V4 test reachability; plus the seven non-blocking items), then re-run `/qor-audit`. No implementation authorized.
