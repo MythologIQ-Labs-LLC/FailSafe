@@ -205,9 +205,12 @@ suite('AuditResolutionProjector — SLA-expiry blind spot (FailSafe#367 review)'
       get: <T,>(k: string, def: T) => (state[k] ?? def) as T,
       update: async (k: string, v: any) => { state[k] = v; },
     };
-    // l3SLA: 0 -> the queued item is already past its deadline the instant
-    // it's queued, matching pruneExpired's `deadline < now` branch.
-    const config: any = { getConfig: () => ({ qorelogic: { l3SLA: 0 } }) };
+    // l3SLA: -3600 -> the deadline lands an hour in the past regardless of
+    // clock resolution. l3SLA: 0 (deadline === queuedAt) raced pruneExpired's
+    // strict `deadline < now` on fast hosts where both Date.now() calls can
+    // land in the same millisecond (observed CI-flaky on the vscode-test
+    // Electron host); this makes expiry unambiguous instead of timing-luck.
+    const config: any = { getConfig: () => ({ qorelogic: { l3SLA: -3600 } }) };
     const bus = new EventBus();
     const trust: any = { updateTrust: async () => {} };
     const svc = new L3ApprovalService(stateStore, config, ledger, trust, bus);
