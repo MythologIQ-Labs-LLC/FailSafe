@@ -19,24 +19,35 @@ export interface GuardResult {
 /**
  * Compare the FailSafe agent in the live registry against the expected entry.
  *   - `missing`  — the entry was removed (or never installed).
- *   - `tampered` — present, but one or more platforms' `cmd`/`args` drifted from
- *                  expected (the bypass attack).
- *   - `intact`   — every expected platform's `cmd`/`args` match.
+ *   - `tampered` — present, but one or more platforms' `cmd`/`args`/`archive`
+ *                  drifted from expected (the bypass attack), OR the live entry
+ *                  carries a platform key the expected entry never had.
+ *   - `intact`   — every platform on both sides matches exactly.
+ *
+ * `archive` is compared too: a non-empty `archive` makes Devin download a
+ * binary before launching it, which changes what actually runs even if `cmd`
+ * is untouched (see DevinRegistryWriter's `buildGovernedTwin` comment). Live
+ * platform keys absent from `expected` are also drift — restricting the scan
+ * to `expected`'s keys would let an attacker add a new platform variant that
+ * the guard never looks at.
  */
 export function checkFailSafeEntry(reg: DevinRegistry, expected: DevinAgent): GuardResult {
   const live = reg.agents.find((a) => a && a.id === expected.id);
   if (!live) return { status: 'missing', driftedPlatforms: [] };
   const liveBin = live.distribution?.binary ?? {};
   const expBin = expected.distribution.binary;
-  const drifted: string[] = [];
+  const drifted = new Set<string>();
   for (const key of Object.keys(expBin)) {
     const l = liveBin[key];
     const e = expBin[key];
-    if (!l || l.cmd !== e.cmd || JSON.stringify(l.args) !== JSON.stringify(e.args)) {
-      drifted.push(key);
+    if (!l || l.cmd !== e.cmd || l.archive !== e.archive || JSON.stringify(l.args) !== JSON.stringify(e.args)) {
+      drifted.add(key);
     }
   }
-  return drifted.length > 0
-    ? { status: 'tampered', driftedPlatforms: drifted }
+  for (const key of Object.keys(liveBin)) {
+    if (!(key in expBin)) drifted.add(key);
+  }
+  return drifted.size > 0
+    ? { status: 'tampered', driftedPlatforms: [...drifted] }
     : { status: 'intact', driftedPlatforms: [] };
 }
