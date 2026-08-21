@@ -1,6 +1,6 @@
-# Plan: read the META_LEDGER once per hub snapshot (#233 retargeted slice)
+# Plan: collapse WorkspaceArtifactBuilder's redundant META_LEDGER reads (#233 retargeted slice)
 
-**iteration**: 2 (iteration 1 VETOed — ledger #592; findings V1 evidence-format, V2 versionStatus drop)
+**iteration**: 3 (iter 1 VETOed — ledger #592, V1 evidence-format + V2 versionStatus drop; iter 2 VETOed — ledger #593, V3 half-honored option type + V4 unreachable test states)
 
 **change_class**: feature
 
@@ -21,7 +21,7 @@
   - No parser unification. `GovernancePhaseTracker.parseMetaLedger` stays.
   - No change to any artifact's classification semantics — including the B197 version-floor verdict, which iteration 1 dropped (V2) and this iteration preserves explicitly.
 - exclusions:
-  - `ConsoleServerHub.ts:79` — bounded 4 KB tail read, measured 0.4 ms vs 24.0 ms. Must stay bounded (#591 F3).
+  - `src/roadmap/ConsoleServerHub.ts:79` — bounded 4 KB tail read, measured 0.4 ms vs 24.0 ms. Must stay bounded (#591 F3). Also touches the ledger in the same hub snapshot via `HubSnapshotService.ts:180`, so this slice does not make the snapshot literally single-read.
   - `GovernancePhaseTracker.ts`, `ConsoleLifecycleService.ts:98` — not consumers (#591 F1/F2).
   - `MetaLedgerReader.ts`, `SystemStateReader.ts` — #591 F4/F5.
 
@@ -52,7 +52,13 @@ Ledger rendering must **not** be suppressed on a below-floor install; the floor 
 | `ledgerReadable` gating | classified **without** `versionStatus` | preserves the B197 render intent above |
 | `qorConsumer` diagnostics | classified **with** `versionStatus` | preserves the `unsupported` row + real `qorVersion` |
 
-Naively that is two classifications, i.e. two parses — which would give back most of what this slice buys. Instead the second is *derived* from the first by an exported overlay, `applyVersionFloor`, so the file is read once and parsed once. The overlay reuses the existing `unsupportedReason` predicate rather than restating the floor rule, and Phase 2's equivalence test pins the derivation against the real `classifyRead` path so the two cannot drift.
+Naively that is two classifications, i.e. two parses — which would give back most of what this slice buys. Instead the second is *derived* from the first by an exported overlay, `applyVersionFloor`, so the file is read once and parsed once. The overlay reuses the existing `unsupportedReason` predicate rather than restating the floor rule, and Phase 1's equivalence test pins the derivation against the real `classifyRead` path so the two cannot drift.
+
+## Resolution of iteration-2 VETO findings
+
+**V3 (`applyVersionFloor` honored half the type it accepted).** The helper took `ConsumerReadOptions` but consumed only `versionStatus`, so a caller passing `maxAgeMs` would get `ok` where `classifyRead` (line 127) gives `stale`. Fixed by **narrowing the parameter to `versionStatus?: QorLogicVersionStatus`** rather than by adding a stale rung: the overlay exists to reproduce the *floor* short-circuit against an already-classified envelope, and staleness is a property of the read that a derivation cannot honestly recompute. The narrowed type makes the wrong call a compile error instead of a documented hazard, and Phase 1 adds a `@ts-expect-error` pin so widening it back fails the build. `QorLogicVersionStatus` is already imported at `consumer-adapter.ts:19`. FX930's descriptor is restated to the narrowed claim.
+
+**V4 (equivalence test could not reach two of the five states it claimed).** The fixture test called `readMetaLedgerArtifact(root)` with no options while claiming `ok`/`malformed`/`stale`/`unsupported`/absent coverage; the existing suite proves `unsupported` needs `{versionStatus}` and `stale` needs `{maxAgeMs}` plus an mtime rewind. Fixed by driving each state with the options that actually reach it. The read-count test now also names its fixtures and asserts both branches (`supported` 5→3, `malformed` 4→2).
 
 ## Measured baseline (ledger #591, this repo, 1,751,562-byte ledger)
 
@@ -62,6 +68,8 @@ Naively that is two classifications, i.e. two parses — which would give back m
 | `parseMetaLedgerEntries` | 13.9 ms |
 | `parseMetaLedger` (GovernancePhaseTracker) | 5.5 ms |
 | `WorkspaceArtifactBuilder.build()` today | 5 reads, 8,715,735 bytes, 477 ms cold / ~120 ms warm |
+
+The 1,751,562-byte figure and the 8,715,735-byte total were taken at different instants (this session appended ledger entries between them); 8,715,735 / 5 = 1,743,147 exactly, which independently corroborates five whole-file reads. Timings are author-measured and were explicitly **not** independently verified by the iteration-2 reviewer, which had no execution tool.
 
 After this slice: **3 reads, 1 `parseMetaLedgerEntries`** (was 2). Removed: read #2 I/O (7.7) + read #5 I/O (7.7) + read #5 parse (13.9) = **~29 ms warm**, on the path `CommitCheckRoute:33` blocks commits behind.
 
@@ -74,8 +82,9 @@ Make the shared read *the* read: `readMetaLedgerArtifact` is redefined in terms 
 ### Unit Tests (written first)
 
 - `src/test/qorlogic/consumer/consumer-adapter.test.ts` — `readMetaLedgerRaw` returns `{text: <contents>, mtimeIso: <iso>}` for a present ledger, `{text: null, mtimeIso: null}` with no `readError` for an absent one, and `{text: null, mtimeIso: <iso>, readError: <msg>}` for a present-but-unreadable one (directory planted at the ledger path). Confirms absent and unreadable stay discriminated — the conflation a naive catch-to-null seam introduces.
-- `src/test/qorlogic/consumer/consumer-adapter.test.ts` — for each of the six `src/test/fixtures/qor-consumer/*` workspaces, `readMetaLedgerArtifact(root)` returns an envelope whose `state`, `reason`, `provenance`, and `data` length equal those returned by the pre-change implementation captured as fixtures. Confirms the redefinition is behavior-preserving across `ok`/`malformed`/`stale`/`unsupported`/absent.
-- `src/test/qorlogic/consumer/consumer-adapter.test.ts` — `applyVersionFloor(classifyMetaLedgerText(read, path), opts)` deep-equals `classifyMetaLedgerText(read, path, opts)` across the matrix of `opts` ∈ {below-floor, meets-floor, undefined} × read ∈ {ok, malformed, absent}. Confirms the overlay reproduces the real ladder exactly — the anti-drift assertion that makes deriving the second envelope safe.
+- `src/test/qorlogic/consumer/consumer-adapter.test.ts` — for each of the six `src/test/fixtures/qor-consumer/*` workspaces, `readMetaLedgerArtifact(root, opts)` returns an envelope whose `state`, `reason`, `provenance`, and `data` length equal those of the pre-change implementation, **with each state driven by the options that actually reach it**: `unsupported` via `{versionStatus: BELOW_FLOOR}` (mirroring the existing case at `consumer-adapter.test.ts:109`), `stale` via `{maxAgeMs: 1}` plus an `fs.utimesSync` mtime rewind (mirroring `:118-121`), and `ok`/`malformed`/absent with no options. Confirms the redefinition is behavior-preserving across all five states — a bare no-options call reaches only three of them and would classify the `stale` and `unsupported-version` fixtures as `ok` while passing.
+- `src/test/qorlogic/consumer/consumer-adapter.test.ts` — `applyVersionFloor(classifyMetaLedgerText(read, path), versionStatus)` deep-equals `classifyMetaLedgerText(read, path, {versionStatus})` across `versionStatus` ∈ {below-floor, meets-floor, undefined} × read ∈ {ok, malformed, absent}. Confirms the overlay reproduces the real ladder for the options it accepts.
+- `src/test/qorlogic/consumer/consumer-adapter.test.ts` — `applyVersionFloor` does not accept `maxAgeMs`: a `@ts-expect-error` on `applyVersionFloor(env, { maxAgeMs: 1 } as never)` compiles only while the narrowed parameter type holds, and `classifyMetaLedgerText(read, path, {maxAgeMs: 1})` on a rewound mtime returns `stale` — proving the state the overlay cannot express is still reachable through the full ladder. Pins the V3 boundary so a later widening of the parameter back to `ConsumerReadOptions` fails the build rather than silently reintroducing the half-honored contract.
 - `src/test/qorlogic/consumer/consumer-adapter.test.ts` — with a below-floor `versionStatus`, `applyVersionFloor` returns `state: 'unsupported'`, `data: null`, and `provenance.qorVersion` equal to the installed version; with a meets-floor `versionStatus` over an `ok` read it returns `state: 'ok'` and the same non-null `qorVersion`. Confirms the overlay carries the floor verdict and the provenance, not just one of them.
 
 ### Affected Files
@@ -113,15 +122,22 @@ export function readMetaLedgerRaw(root: string): MetaLedgerRead {
   return { read: fsRead(sourcePath), sourcePath };
 }
 
-/** Overlay the B197 version-floor verdict onto an envelope classified WITHOUT versionStatus,
- *  reproducing `classifyRead`'s precedence (the floor short-circuits ahead of content state).
- *  Lets one read+parse serve both a floor-blind consumer and a floor-aware one. */
+/** Overlay the B197 version-floor verdict onto an envelope classified WITHOUT options,
+ *  reproducing `classifyRead`'s floor precedence (the floor short-circuits ahead of content
+ *  state). Lets one read+parse serve both a floor-blind consumer and a floor-aware one.
+ *
+ *  Accepts ONLY `versionStatus`, deliberately NOT `ConsumerReadOptions`. `classifyRead` also
+ *  branches on `maxAgeMs` (:127) to yield `stale`, and this overlay has no stale rung — a
+ *  caller passing `maxAgeMs` would silently get `ok` where the real ladder gives `stale`.
+ *  The narrowed parameter makes that call unrepresentable rather than merely undocumented.
+ *  A consumer needing staleness must classify through `classifyMetaLedgerText` with full
+ *  options instead of deriving. */
 export function applyVersionFloor<T>(
   env: ArtifactEnvelope<T>,
-  opts?: ConsumerReadOptions,
+  versionStatus?: QorLogicVersionStatus,
 ): ArtifactEnvelope<T> {
-  const provenance = { ...env.provenance, qorVersion: opts?.versionStatus?.installed ?? null };
-  const reason = unsupportedReason(opts);
+  const provenance = { ...env.provenance, qorVersion: versionStatus?.installed ?? null };
+  const reason = unsupportedReason({ versionStatus });
   if (reason) return { artifact: env.artifact, state: 'unsupported', data: null, provenance, reason };
   return { ...env, provenance };
 }
@@ -150,7 +166,7 @@ export function readMetaLedgerArtifact(
 
 ### Affected Files
 
-- `src/qorlogic/consumer/diagnostics.ts` — `ConsumerDiagnosticsOptions` gains `ledger?`; `buildConsumerDiagnostics` prefers it.
+- `src/qorlogic/consumer/diagnostics.ts` — `ConsumerDiagnosticsOptions` gains `ledger?`; `buildConsumerDiagnostics` prefers it; add `type MetaLedgerEntry` to the existing `./consumer-adapter` import (diagnostics.ts line 10-17 does not import it today, so the snippet below does not compile without this).
 
 ### Changes
 
@@ -190,7 +206,7 @@ const artifacts = [
 
 ### Unit Tests (written first)
 
-- `src/test/roadmap/WorkspaceArtifactBuilder.test.ts` — counting `fs.readFileSync` over a fixture workspace, `build()` reads `META_LEDGER.md` exactly **3** times (down from 5), the residual two attributable to `MetaLedgerReader` and `SystemStateReader`. Confirms the reduction empirically and pins the out-of-scope pair.
+- `src/test/roadmap/WorkspaceArtifactBuilder.test.ts` — counting `fs.readFileSync` over the **`supported`** fixture, `build()` reads `META_LEDGER.md` exactly **3** times (down from 5), the residual two attributable to `MetaLedgerReader` and `SystemStateReader`; and over the **`malformed`** fixture exactly **2** (down from 4), because `MetaLedgerReader` is skipped when `ledgerReadable` is false. Confirms the reduction empirically on both branches and pins the out-of-scope pair.
 - `src/test/roadmap/WorkspaceArtifactBuilder.test.ts` — on the `supported` fixture, every field of the returned snapshot (`ledgerSummary`, `ledgerVerdicts`, `ledgerCompletions`, `shieldPhase`, `latestVerdict`, `qorConsumer`) deep-equals the pre-change output captured from the same fixture. Confirms zero behavior change.
 - `src/test/roadmap/WorkspaceArtifactBuilder.test.ts` — with a **below-floor** `versionStatus`, `ledgerSummary` still reports the real entry counts (rendering NOT suppressed) while `qorConsumer`'s `META_LEDGER` row reports `unsupported` and `compatible` is `false`. Confirms both halves of the B197 contract at line 78 simultaneously — the exact pair iteration 1 broke.
 - `src/test/roadmap/WorkspaceArtifactBuilder.test.ts` — on the `malformed` fixture, `ledgerSummary` is the empty summary AND `qorConsumer` reports `META_LEDGER` `malformed` with `compatible === false`. Confirms fail-visible gating still holds when the envelope is shared.
@@ -226,9 +242,7 @@ build(): WorkspaceArtifactSnapshot {
   const ledgerEnvelope = classifyMetaLedgerText(rawLedger.read, rawLedger.sourcePath);
   const ledgerReadable = ledgerEnvelope.state === "ok" || ledgerEnvelope.state === "stale";
   // Floor-AWARE view: derived, not re-read and not re-parsed.
-  const ledgerForDiagnostics = applyVersionFloor(ledgerEnvelope, {
-    versionStatus: this.qorLogicVersionStatus,
-  });
+  const ledgerForDiagnostics = applyVersionFloor(ledgerEnvelope, this.qorLogicVersionStatus);
   const ledger = new MetaLedgerReader(this.workspaceRoot);
   const { shieldPhase, latestVerdict } = this.readGovernanceState(rawLedger.read.text);
   // ... unchanged ...
@@ -260,7 +274,7 @@ private readGovernanceState(text: string | null): { shieldPhase: ShieldPhase; la
 | entry_id | operation | test_path | test_descriptor |
 |---|---|---|---|
 | FX929 | NEW | `src/test/roadmap/WorkspaceArtifactBuilder.test.ts` | `build()` reads `docs/META_LEDGER.md` exactly 3 times (was 5) while every snapshot field deep-equals the pre-change output on the `supported` fixture |
-| FX930 | NEW | `src/test/qorlogic/consumer/consumer-adapter.test.ts` | `applyVersionFloor(env, opts)` deep-equals `classifyMetaLedgerText(read, path, opts)` across {below-floor, meets-floor, undefined} x {ok, malformed, absent} |
+| FX930 | NEW | `src/test/qorlogic/consumer/consumer-adapter.test.ts` | `applyVersionFloor(env, versionStatus)` deep-equals `classifyMetaLedgerText(read, path, {versionStatus})` across {below-floor, meets-floor, undefined} x {ok, malformed, absent}; the narrowed parameter makes a `maxAgeMs` call a compile error, and `stale` stays reachable through the full ladder |
 | FX893 | MODIFIED | `src/test/qorlogic/consumer/consumer-diagnostics.test.ts` | with a below-floor `versionStatus`, the injected-`ledger` path still reports `META_LEDGER` `unsupported` + non-null `qorVersion` and `compatible === false` |
 | FX892 | MODIFIED | `src/test/qorlogic/consumer/consumer-adapter.test.ts` | `readMetaLedgerArtifact` routed through `readMetaLedgerRaw` yields envelopes equal to the prior path across all six `qor-consumer` fixtures |
 
@@ -268,7 +282,7 @@ private readGovernanceState(text: string | null): { shieldPhase: ShieldPhase; la
 
 ### Deliverable: single-read ledger consumption in `WorkspaceArtifactBuilder`
 
-- **D1**: One hub-snapshot build touches `docs/META_LEDGER.md` once through the adapter's own ladder, instead of three times through three seams, with no change to any reported state.
+- **D1**: One `WorkspaceArtifactBuilder.build()` reads `docs/META_LEDGER.md` 3 times instead of 5, collapsing the three seams it owns (the adapter gate, `readGovernanceState`'s raw read, and diagnostics' second adapter call) into one read and one `parseMetaLedgerEntries`, with no change to any reported state.
 - **D2**: `readMetaLedgerRaw(root: string): MetaLedgerRead` and `applyVersionFloor<T>(env, opts)` exported from `src/qorlogic/consumer/consumer-adapter.ts`; `readMetaLedgerArtifact` defined in terms of them; `ConsumerDiagnosticsOptions.ledger?: ArtifactEnvelope<MetaLedgerEntry[]>`; `WorkspaceArtifactBuilder.readGovernanceState(text: string | null)`.
 - **D3**: Ledger entry citing brief `docs/research-brief-233-residual-ledger-consumers-2026-08-21.md` (#591) and the iteration-1 VETO (#592); FEATURE_INDEX FX929 + FX930 added with header counts reconciled (the #408 `header==reality` gate); FX892/FX893 rows updated.
 - **D4**: `WorkspaceArtifactBuilder.test.ts` read-count test observes exactly 3 reads where the pre-change tree observes 5, and the deep-equal snapshot test passes on the `supported` fixture.
@@ -283,7 +297,7 @@ private readGovernanceState(text: string | null): { shieldPhase: ShieldPhase; la
 ### Deliverable: absent-vs-unreadable fidelity preserved
 
 - **D1**: Sharing one read must not collapse "no ledger" into "unreadable ledger".
-- **D2**: `readMetaLedgerRaw` returns `fsRead`'s result unmodified.
+- **D2**: `readMetaLedgerRaw` wraps `fsRead`'s result unmodified as `{read, sourcePath}` — the `read` field is `fsRead`'s return value, passed through without alteration.
 - **D3**: Recorded in this plan's boundaries.
 - **D4**: `consumer-adapter.test.ts` asserts `{text: null, mtimeIso: null}` for absent and `{text: null, mtimeIso: <iso>, readError: <msg>}` for a directory planted at the ledger path.
 
