@@ -84,13 +84,20 @@ function readChangelog(workspaceRoot: string): string {
 /** Merged-PR git-log text (`<date>\t<subject>` per line) — the FALLBACK axis for
  *  PR-incremental repos with no semver CHANGELOG. Degrade-safe (no git / not a
  *  repo → ''), mirroring shippedReleaseIds. Matches discoverMergedPrs's expected
- *  input (GH #174). Bounded to the GIT_LOG_MAX_COMMITS most recent commits
+ *  input (GH #174). Bounded to GIT_LOG_MAX_COMMITS + 1 most recent commits
  *  (FailSafe#244 large-repo audit, FailSafe#393) so a deep history cannot block
- *  the extension host for multiple seconds or exceed the output buffer. */
+ *  the extension host for multiple seconds or exceed the output buffer. The +1
+ *  serves two purposes together: it gives the last IN-WINDOW commit a real
+ *  `next` for discoverMergedPrs's titleFor lookahead (without it, a merge
+ *  commit landing exactly at the window edge would wrongly fall back to a
+ *  humanized branch name — call discoverMergedPrs with maxAnchors:
+ *  GIT_LOG_MAX_COMMITS so that extra commit is lookahead-only, never its own
+ *  anchor), and its mere presence signals truncation with no second git call
+ *  (see readGitLogTruncated). */
 function readGitLog(workspaceRoot: string): string {
   try {
     return execFileSync('git', [
-      'log', `--max-count=${GIT_LOG_MAX_COMMITS}`, '--pretty=format:%ad%x09%s', '--date=short',
+      'log', `--max-count=${GIT_LOG_MAX_COMMITS + 1}`, '--pretty=format:%ad%x09%s', '--date=short',
     ], {
       cwd: workspaceRoot, encoding: 'utf-8', timeout: 4000, maxBuffer: 8 * 1024 * 1024,
     });
@@ -99,21 +106,18 @@ function readGitLog(workspaceRoot: string): string {
   }
 }
 
-/** Best-effort total commit count on HEAD — cheap even on a deep history since
- *  it does no per-commit formatting. Used only to detect whether readGitLog's
- *  bounded window silently dropped older commits, so truncation can be
- *  disclosed instead of degrading PR-cadence detection with no operator-
- *  visible signal. null on any failure (not a repo, git absent, timeout). */
-function totalCommitCount(workspaceRoot: string): number | null {
-  try {
-    const out = execFileSync('git', ['rev-list', '--count', 'HEAD'], {
-      cwd: workspaceRoot, encoding: 'utf-8', timeout: 4000,
-    });
-    const n = parseInt(out.trim(), 10);
-    return Number.isFinite(n) ? n : null;
-  } catch {
-    return null;
-  }
+/** Whether readGitLog's text actually received its +1 lookahead line — i.e.
+ *  history is deeper than GIT_LOG_MAX_COMMITS and the window is truncated.
+ *  (Received exactly GIT_LOG_MAX_COMMITS + 1 lines is ambiguous — the repo
+ *  could have exactly that many commits, not more — but that ambiguity only
+ *  affects the exact boundary and errs toward disclosing, not toward silence.
+ *  The exact total (M in "N of M") is no longer known without a second git
+ *  call; the message is honest about the window without claiming the total.) */
+function readGitLogTruncated(gitLogText: string): boolean {
+  if (!gitLogText) return false;
+  let lines = 1;
+  for (let i = 0; i < gitLogText.length; i++) if (gitLogText.charCodeAt(i) === 10) lines++;
+  return lines > GIT_LOG_MAX_COMMITS;
 }
 
 export const TrackerRoute = {
@@ -139,7 +143,8 @@ export const TrackerRoute = {
       // (e.g. only `## Unreleased` + merged-PR git history) would otherwise show a
       // blank shell. Detect the cadence and, when it's pr-incremental, use the
       // merged-PR anchors as the timeline axis. Semver repos are unaffected.
-      const prAnchors = discoverMergedPrs(readGitLog(deps.workspaceRoot));
+      const gitLogText = readGitLog(deps.workspaceRoot);
+      const prAnchors = discoverMergedPrs(gitLogText, GIT_LOG_MAX_COMMITS);
       const cadence = detectCadence(discoveredReleases, prAnchors);
       const axis = cadence === 'pr-incremental' ? prAnchors : discoveredReleases;
 
@@ -177,17 +182,14 @@ export const TrackerRoute = {
       // drops every merge anchor, cadence silently collapses to 'empty' instead
       // — exactly the case that most needs disclosure. Gate on whether the
       // git-log axis was actually consulted for cadence resolution instead
-      // (i.e. no semver releases won outright); skip the extra rev-list call
-      // only when semver releases already make the git-log axis irrelevant.
-      if (discoveredReleases.length === 0) {
-        const totalCommits = totalCommitCount(deps.workspaceRoot);
-        if (totalCommits !== null && totalCommits > GIT_LOG_MAX_COMMITS) {
-          lint.push({
-            severity: 'warn',
-            code: 'git-log-truncated',
-            detail: `Merged-PR anchor detection used only the most recent ${GIT_LOG_MAX_COMMITS} of ${totalCommits} commits; older merged-PR anchors are not represented on this axis.`,
-          });
-        }
+      // (i.e. no semver releases won outright); skip the check only when
+      // semver releases already make the git-log axis irrelevant.
+      if (discoveredReleases.length === 0 && readGitLogTruncated(gitLogText)) {
+        lint.push({
+          severity: 'warn',
+          code: 'git-log-truncated',
+          detail: `Merged-PR anchor detection used only the most recent ${GIT_LOG_MAX_COMMITS} commits; older merged-PR anchors (and possibly earlier merge dates for anchors shown) are not represented on this axis.`,
+        });
       }
       // Surface the manifest source as a non-blocking advisory (never an abort).
       if (!manifestPresent) {

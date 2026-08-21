@@ -212,6 +212,43 @@ suite('TrackerRoute.api git-log window (FailSafe#244 large-repo audit)', () => {
     } finally { fs.rmSync(ws, { recursive: true, force: true }); }
   });
 
+  // A second regression the same reviewer caught: bounding readGitLog moves
+  // titleFor's `commits[i+1]` lookahead boundary from "the true end of all
+  // history" (essentially never a merge commit) to "wherever we cut the
+  // window" (an arbitrary position any merge commit can land on). Without the
+  // +1 lookahead-only commit, a merge commit exactly at the window edge falls
+  // back to a humanized branch name instead of its real feature-commit title.
+  test('merge anchor exactly at the window edge resolves its real title via the +1 lookahead commit', () => {
+    const ws = tmpWorkspace();
+    try {
+      // Exactly GIT_LOG_MAX_COMMITS + 1 commits total, oldest-first as authored:
+      //   subjects[0]                → the merge's TRUE next commit (distance
+      //                                 GIT_LOG_MAX_COMMITS from HEAD — only
+      //                                 visible via the +1 fetch)
+      //   subjects[1]                → the merge commit itself (distance
+      //                                 GIT_LOG_MAX_COMMITS - 1 — the LAST
+      //                                 in-window anchor position)
+      //   subjects[2..]              → filler down to HEAD
+      const subjects: string[] = [
+        'feat: unique boundary feature xyz123',
+        'Merge pull request #7 from acme/boundary-feat',
+      ];
+      for (let i = 1; i < GIT_LOG_MAX_COMMITS; i++) subjects.push(`chore: filler ${i}`);
+      assert.equal(subjects.length, GIT_LOG_MAX_COMMITS + 1, 'test fixture sizing sanity check');
+      fastImportHistory(ws, subjects);
+
+      const { res, captured } = fakeResponse();
+      TrackerRoute.api({} as Request, res, { workspaceRoot: ws, uiDir: '' });
+      const rcs = captured.body!.rcs as Array<{ id: string; summary?: string }>;
+      const anchor = rcs.find((r) => r.id === 'pr-7');
+      assert.ok(anchor, 'the boundary merge anchor is still found');
+      assert.equal(
+        anchor!.summary, 'feat: unique boundary feature xyz123',
+        'resolves the TRUE next-commit title, not a humanized-branch-name fallback ("boundary feat") or "Merge #7"',
+      );
+    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+  });
+
   test('history within the window → no truncation advisory', () => {
     const ws = tmpWorkspace();
     try {
