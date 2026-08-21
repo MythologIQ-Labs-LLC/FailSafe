@@ -437,4 +437,32 @@ describe('check-e2e-coverage.cjs resolveReleaseRange', () => {
     assert.equal(range.ok, false);
     assert.match(range.reason, /cannot resolve/i);
   });
+
+  // #410: a resolution failure must name which ref (base/head) failed and
+  // why, rather than collapsing every cause into one indistinguishable
+  // message. Without this, "ref doesn't exist" and "the git subprocess
+  // itself failed" are impossible to tell apart from CI output alone.
+  it('names the unresolved ref and carries a non-empty diagnostic reason', () => {
+    const range = withReleaseBase('no-such-ref-xyz', () => gate.resolveReleaseRange(tmp));
+    assert.equal(range.ok, false);
+    assert.match(range.reason, /base=no-such-ref-xyz/);
+    assert.doesNotMatch(range.reason, /\(\)/, 'reason must not be empty for the named ref');
+  });
+
+  it('reports both base and head independently when both are unresolved', () => {
+    // withReleaseBase only overrides FAILSAFE_RELEASE_HEAD is untouched, so
+    // set it directly to an invalid ref alongside an invalid base.
+    const savedHead = process.env.FAILSAFE_RELEASE_HEAD;
+    process.env.FAILSAFE_RELEASE_HEAD = 'no-such-head-xyz';
+    let range;
+    try {
+      range = withReleaseBase('no-such-base-xyz', () => gate.resolveReleaseRange(tmp));
+    } finally {
+      if (savedHead === undefined) delete process.env.FAILSAFE_RELEASE_HEAD;
+      else process.env.FAILSAFE_RELEASE_HEAD = savedHead;
+    }
+    assert.equal(range.ok, false);
+    assert.match(range.reason, /base=no-such-base-xyz/);
+    assert.match(range.reason, /head=no-such-head-xyz/);
+  });
 });
