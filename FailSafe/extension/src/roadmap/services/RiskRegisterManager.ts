@@ -26,6 +26,16 @@ export class RiskRegisterManager {
     return this.readBacklogFallback();
   }
 
+  /**
+   * #377: durable-store-only read for MUTATION paths (the Console CRUD routes).
+   * Unlike getRisks(), never returns the BACKLOG.md display fallback — a
+   * read-modify-write through the display view durably promoted the entire
+   * projection on first write (#241 F-6 sibling).
+   */
+  getStoredRisks(): Array<Record<string, unknown>> {
+    return this.readStoredRisks();
+  }
+
   writeRisks(risks: Array<Record<string, unknown>>): void {
     const dir = path.dirname(this.risksPath);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });

@@ -244,6 +244,7 @@ export class ConsoleRouteRegistrar {
       setCachedChainValid: (v, at) => hub.setCachedChainValid(v, at),
       getTransparencyEvents: (l) => hub.getTransparencyEvents(l),
       getRiskRegister: () => hub.getRiskRegister(),
+      getStoredRiskRegister: () => hub.getStoredRiskRegister(),
       writeRiskRegister: (r) => hub.writeRiskRegister(r),
       getTimelineEntries: (f) => h.getAgentTimelineService()?.getEntries(f) || [],
       getHealthMetrics: () => h.getAgentHealthIndicator()?.buildMetrics() || null,

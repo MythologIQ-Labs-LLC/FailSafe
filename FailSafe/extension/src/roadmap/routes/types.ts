@@ -42,6 +42,8 @@ export interface ApiRouteDeps {
   setCachedChainValid: (valid: boolean, at: string) => void;
   getTransparencyEvents: (limit: number) => any[];
   getRiskRegister: () => any[];
+  /** #377: durable-store-only view for mutation reads (no backlog fallback). */
+  getStoredRiskRegister: () => any[];
   writeRiskRegister: (risks: any[]) => void;
   scaffoldSkills?: () => Promise<QorLogicInstallReport | null>;
   scaffoldWithWebOptions?: (
