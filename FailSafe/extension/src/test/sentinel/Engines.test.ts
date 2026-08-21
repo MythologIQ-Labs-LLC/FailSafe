@@ -12,6 +12,7 @@ import { ExistenceEngine } from '../../sentinel/engines/ExistenceEngine';
 import { HeuristicEngine } from '../../sentinel/engines/HeuristicEngine';
 import { PatternLoader } from '../../sentinel/PatternLoader';
 import { VerdictRouter } from '../../sentinel/VerdictRouter';
+import { VerdictEngine } from '../../sentinel/engines/VerdictEngine';
 import { EventBus } from '../../shared/EventBus';
 
 function makeConfigManager(workspaceRoot: string | undefined): any {
@@ -190,6 +191,29 @@ suite('VerdictRouter (FX342)', () => {
     assert.deepEqual(queued.flags, ['p1']);
   });
 
+  // FailSafe#367: the L3 request must carry the originating verdict's own
+  // ledger entry id, so a later decision can be linked back to the exact
+  // WARN/BLOCK/ESCALATE record instead of being inferred from artifactPath.
+  test('FX342/#367 route — ESCALATE forwards verdict.ledgerEntryId as sourceLedgerEntryId', async () => {
+    let queued: any = null;
+    const ql: any = { queueL3Approval: async (req: any) => { queued = req; } };
+    const r = new VerdictRouter(new EventBus(), ql);
+    await r.route({
+      decision: 'ESCALATE', riskGrade: 'L3', artifactPath: 'src/auth.ts',
+      agentDid: 'did:t:a', agentTrustAtVerdict: 0.5, summary: 'risky', matchedPatterns: ['p1'],
+      ledgerEntryId: 42,
+    } as never);
+    assert.equal(queued.sourceLedgerEntryId, 42);
+  });
+
+  test('FX342/#367 route — ESCALATE with no ledgerEntryId forwards undefined, not a fabricated id', async () => {
+    let queued: any = null;
+    const ql: any = { queueL3Approval: async (req: any) => { queued = req; } };
+    const r = new VerdictRouter(new EventBus(), ql);
+    await r.route({ decision: 'ESCALATE', riskGrade: 'L3', artifactPath: 'src/auth.ts' } as never);
+    assert.equal(queued.sourceLedgerEntryId, undefined);
+  });
+
   test('FX342 route — non-ESCALATE decision does NOT call queueL3Approval', async () => {
     let calls = 0;
     const ql: any = { queueL3Approval: async () => { calls++; } };
@@ -216,5 +240,34 @@ suite('VerdictRouter (FX342)', () => {
     const r = new VerdictRouter(new EventBus(), ql);
     await r.route({ decision: 'ESCALATE', riskGrade: 'L3' } as never);
     assert.equal(queued.filePath, 'unknown');
+  });
+});
+
+// FailSafe#367: AuditResolutionProjector's entire linkage mechanism rests
+// on VerdictEngine.executeActions setting `verdict.ledgerEntryId = entry.id`
+// (VerdictEngine.ts) BEFORE VerdictRouter.route() reads it. Every other test
+// of that field hand-constructs a verdict with ledgerEntryId already set,
+// so none of them would catch that assignment being removed. This wires
+// the real VerdictEngine into a real VerdictRouter to pin the invariant
+// end-to-end.
+suite('VerdictEngine -> VerdictRouter integration (FailSafe#367)', () => {
+  test('an ESCALATE verdict\'s real ledger entry id reaches queueL3Approval as sourceLedgerEntryId', async () => {
+    const ledgerCalls: any[] = [];
+    const ledger = { appendEntry: async (e: any) => { ledgerCalls.push(e); return { id: 777 }; } };
+    const trust = { getTrustScore: () => ({ score: 0.5 }), updateTrust: async () => {}, quarantineAgent: async () => {} };
+    const policy = { classifyRisk: () => 'L3' };
+    const engine = new VerdictEngine(trust as never, policy as never, ledger as never);
+
+    let queued: any = null;
+    const ql: any = { queueL3Approval: async (req: any) => { queued = req; } };
+    const router = new VerdictRouter(new EventBus(), ql);
+
+    const event = { id: 'evt-1', timestamp: new Date().toISOString(), type: 'file.modified', payload: {} } as never;
+    const verdict = await engine.generateVerdict(event, 'src/a.ts', []);
+    assert.equal(verdict.decision, 'ESCALATE');
+    assert.equal(verdict.ledgerEntryId, 777, 'VerdictEngine must set ledgerEntryId from the real appendEntry result');
+
+    await router.route(verdict);
+    assert.equal(queued.sourceLedgerEntryId, 777, 'VerdictRouter must forward the real ledgerEntryId, not a stale/undefined value');
   });
 });

@@ -115,7 +115,11 @@ export class L3ApprovalService {
             agentTrustAtAction: request.agentTrust,
             artifactPath: request.filePath,
             riskGrade: request.riskGrade,
-            payload: { sentinelSummary: request.sentinelSummary, flags: request.flags }
+            payload: {
+                sentinelSummary: request.sentinelSummary,
+                flags: request.flags,
+                sourceLedgerEntryId: request.sourceLedgerEntryId,
+            }
         });
 
         this.eventBus.emit('qorelogic.l3Queued', fullRequest);
@@ -284,7 +288,7 @@ export class L3ApprovalService {
             riskGrade: request.riskGrade,
             overseerDid,
             overseerDecision: decision,
-            payload: { conditions }
+            payload: { conditions, sourceLedgerEntryId: request.sourceLedgerEntryId }
         });
     }
 
