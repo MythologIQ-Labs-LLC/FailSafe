@@ -9,6 +9,13 @@
  * The proxy itself (dist/acp-proxy.js) enforces using the workspace governance
  * mode (mirrored to .failsafe/governance/runtime-mode.json). No network activity;
  * the only side effect is editing the user-writable ~/.windsurf/acp/registry.json.
+ *
+ * On every activation it also re-checks any entry FailSafe previously installed
+ * in *this* workspace against the live registry (FailSafe#398) — the registry is
+ * unsigned + user-writable, so an external rewrite (a Devin auto-update, a user
+ * "repair") can silently point the entry back at the raw, ungoverned agent while
+ * still showing the FailSafe-branded name in Devin. A workspace that never
+ * installed the proxy has nothing to compare against and stays silent.
  */
 
 import * as vscode from 'vscode';
@@ -20,6 +27,46 @@ import {
   type DevinAgent,
 } from '../integrations/acp/registry/DevinRegistryWriter';
 import { resolveDevinRegistries, listWrappableAgents, type DevinRegistryLocation } from '../integrations/acp/registry/AcpInstall';
+import type { DevinChannel } from '../integrations/acp/registry/DevinRegistryPaths';
+import { devinRegistryPath } from '../integrations/acp/registry/DevinRegistryPaths';
+import { checkInstalledEntryDrift } from '../integrations/acp/registry/DevinRegistryDriftCheck';
+
+const DEVIN_CHANNELS: DevinChannel[] = ['stable', 'next'];
+
+function expectedEntryStateKey(channel: DevinChannel): string {
+  return `failsafe.acp.expectedRegistryEntry.${channel}`;
+}
+
+/**
+ * Re-check every channel this workspace previously installed a FailSafe entry
+ * for against the live registry, and warn (once, per channel) on drift. Never
+ * mutates the registry itself — repair stays an explicit operator action via
+ * the existing install command.
+ */
+export function verifyGovernedProxyEntries(
+  context: vscode.ExtensionContext,
+  home: string,
+  readFileFn: (p: string) => string | null,
+): void {
+  for (const channel of DEVIN_CHANNELS) {
+    const expected = context.workspaceState.get<DevinAgent>(expectedEntryStateKey(channel));
+    if (!expected) continue; // never installed here (or explicitly uninstalled) — nothing to drift from.
+
+    const result = checkInstalledEntryDrift(readFileFn(devinRegistryPath(channel, home)), expected);
+    if (!result || result.status === 'intact') continue;
+
+    const label = expected.name;
+    if (result.status === 'tampered') {
+      void vscode.window.showWarningMessage(
+        `FailSafe's ACP registry entry for "${label}" (${channel}) no longer matches what FailSafe installed — the agent may now be running ungoverned. Run "FailSafe: Install ACP Governed Proxy" to restore it, or uninstall if this was intentional.`,
+      );
+    } else {
+      void vscode.window.showWarningMessage(
+        `FailSafe's ACP registry entry for "${label}" (${channel}) is missing even though FailSafe installed it in this workspace — governance for that agent is no longer active. Run "FailSafe: Install ACP Governed Proxy" to reinstall it, or ignore if this was intentional.`,
+      );
+    }
+  }
+}
 
 export function bootstrapAcpProxy(
   context: vscode.ExtensionContext,
@@ -71,6 +118,7 @@ export function bootstrapAcpProxy(
       });
       try {
         installFailSafeAgent(loc.path, twin);
+        await context.workspaceState.update(expectedEntryStateKey(loc.channel), twin);
         await vscode.window.showInformationMessage(
           `FailSafe governed proxy installed for "${picked.agent.name}". Select "${twin.name}" in Devin to run it under FailSafe governance.`,
         );
@@ -88,11 +136,25 @@ export function bootstrapAcpProxy(
         return;
       }
       try {
-        for (const loc of found) uninstallFailSafeAgent(loc.path);
+        for (const loc of found) {
+          uninstallFailSafeAgent(loc.path);
+          await context.workspaceState.update(expectedEntryStateKey(loc.channel), undefined);
+        }
         await vscode.window.showInformationMessage('FailSafe governed proxy removed from the Devin registry.');
       } catch (e) {
         await vscode.window.showErrorMessage(`Failed to update the Devin registry: ${(e as Error).message}`);
       }
     }),
   );
+
+  try {
+    verifyGovernedProxyEntries(
+      context,
+      os.homedir(),
+      (p) => (fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : null),
+    );
+  } catch (e) {
+    // Best-effort: a detection failure must never block activation.
+    void vscode.window.showErrorMessage(`FailSafe ACP registry drift check failed: ${(e as Error).message}`);
+  }
 }
