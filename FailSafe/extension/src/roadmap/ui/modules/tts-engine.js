@@ -130,8 +130,13 @@ export class TtsEngine {
     this._synthesizing = false;
     if (!this.audio) {
       // A speak() may still be waiting on predict()/the timeout race with no
-      // Audio created yet — surface the cancellation instead of leaving the
-      // operator with no signal that anything happened.
+      // Audio created yet. Emit 'idle' at this engine's own state channel so
+      // any direct subscriber sees the cancellation rather than silence.
+      // NOTE: this is not yet operator-visible end-to-end — VoiceController's
+      // _wireStateEmit() only forwards a tts 'idle' once its unified state has
+      // already reached 'speaking', which never happens during a pending-
+      // synthesis cancel (that transition only fires after audio.play()).
+      // Closing that gap is a separate, unbuilt affordance, not this fix.
       if (wasSynthesizing) this.onStateChange?.('idle');
       return;
     }

@@ -16,20 +16,26 @@ class NeverResolvingPiper {
   predict() { return new Promise(() => { /* never settles, simulating a stuck WASM call */ }); }
 }
 
-// Resolvers are keyed by the `text` argument so a test can settle a specific
-// in-flight predict() call regardless of call order — real Piper concurrency
-// ordering is not something this suite should assume.
+// Resolvers/rejecters are keyed by the `text` argument so a test can settle a
+// specific in-flight predict() call regardless of call order — real Piper
+// concurrency ordering is not something this suite should assume.
 class ManualPiper {
-  pending: Map<string, (wav: unknown) => void> = new Map();
+  pending: Map<string, { resolve: (wav: unknown) => void; reject: (err: unknown) => void }> = new Map();
   async init() { /* no-op stub */ }
   predict({ text }: { text: string }) {
-    return new Promise((resolve) => { this.pending.set(text, resolve); });
+    return new Promise((resolve, reject) => { this.pending.set(text, { resolve, reject }); });
   }
   resolveFor(text: string, wav: unknown) {
     const r = this.pending.get(text);
     assert.ok(r, `no pending predict() call for text=${JSON.stringify(text)}`);
     this.pending.delete(text);
-    r!(wav);
+    r!.resolve(wav);
+  }
+  rejectFor(text: string, err: unknown) {
+    const r = this.pending.get(text);
+    assert.ok(r, `no pending predict() call for text=${JSON.stringify(text)}`);
+    this.pending.delete(text);
+    r!.reject(err);
   }
 }
 
@@ -61,7 +67,13 @@ suite("TtsEngine predict() timeout boundary (#244 Tranche D)", () => {
     assert.strictEqual(tts.audio, null, 'no Audio object must be created for a timed-out attempt');
   });
 
-  test("stop() called while predict() is still pending immediately surfaces idle (operator-visible cancellation)", async () => {
+  test("stop() called while predict() is still pending immediately signals idle on the engine's own state channel", async () => {
+    // NOTE: this only asserts TtsEngine.onStateChange itself — it does not
+    // assert operator-facing UI reach. VoiceController's _wireStateEmit()
+    // only forwards a tts 'idle' once its unified state has already reached
+    // 'speaking', which never happens during a pending-synthesis cancel, so
+    // this signal does not yet propagate to the badge. See the comment on
+    // stop() in tts-engine.js.
     const piper = new ManualPiper();
     const tts = await makeReadyEngine(piper, 15000);
     const events: string[] = [];
@@ -71,7 +83,7 @@ suite("TtsEngine predict() timeout boundary (#244 Tranche D)", () => {
     // predict() has not resolved yet: no Audio exists, so pre-fix stop() was a silent no-op.
     assert.strictEqual(tts.audio, null);
     tts.stop();
-    assert.deepStrictEqual(events, ['idle'], 'operator must see the cancellation take effect immediately');
+    assert.deepStrictEqual(events, ['idle'], 'the engine-level cancellation signal must fire immediately');
 
     piper.resolveFor('hello', new Uint8Array([1, 2, 3]));
     await speakPromise;
@@ -136,6 +148,41 @@ suite("TtsEngine predict() timeout boundary (#244 Tranche D)", () => {
 
     // 'b' is the current attempt and must still be seen as synthesizing —
     // pre-fix, 'a's late settlement unconditionally cleared _synthesizing here.
+    tts.stop();
+    assert.deepStrictEqual(events, ['idle'], "stop() during b's pending predict() must surface idle, not silently no-op");
+
+    piper.resolveFor('b', new Uint8Array([2])); // let 'b' drain so the test doesn't leave a dangling promise
+    await speakB;
+  });
+
+  test("a superseded attempt that REJECTS late must not clobber a newer attempt's synthesizing flag either (catch-path clobber)", async () => {
+    // Same defect class as the success-path clobber test above, but exercised
+    // through speak()'s catch branch specifically -- the success path and the
+    // catch path are two independent token guards, and the review that caught
+    // the original clobber only exercised the success-path one. A rejected
+    // predict() lands in the same catch block a real timeout would (withTimeout
+    // just races predict() against a timer into the same Promise.race), so this
+    // is a deterministic stand-in for a stale timeout settling late, without a
+    // real-timer race between two concurrently-timing-out calls.
+    const piper = new ManualPiper();
+    const tts = await makeReadyEngine(piper, 15000);
+    const events: string[] = [];
+    tts.onStateChange = (s: string) => events.push(s);
+
+    const speakA = tts.speak('a'); // predict() call #1, still pending
+    const speakB = tts.speak('b'); // speak('b') supersedes 'a' (one idle emitted), then issues predict() call #2, still pending
+
+    assert.deepStrictEqual(events, ['idle'], "starting 'b' must supersede 'a' with exactly one idle notification");
+    events.length = 0;
+
+    // 'a's stale predict() finally rejects (standing in for a late timeout) while 'b' is still in flight.
+    piper.rejectFor('a', new Error('simulated stale predict() failure'));
+    await speakA;
+    assert.deepStrictEqual(events, [], 'the stale rejection of a superseded attempt must not emit any further state change');
+
+    // 'b' is the current attempt and must still be seen as synthesizing --
+    // pre-fix, 'a's late rejection unconditionally cleared _synthesizing here,
+    // specifically via the catch-path branch.
     tts.stop();
     assert.deepStrictEqual(events, ['idle'], "stop() during b's pending predict() must surface idle, not silently no-op");
 
