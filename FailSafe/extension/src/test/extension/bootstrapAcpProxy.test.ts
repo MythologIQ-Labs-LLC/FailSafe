@@ -233,7 +233,7 @@ suite('bootstrapAcpProxy', () => {
   });
 
   test('an intact entry installed for a different workspace discloses the mismatch instead of staying silent', () => {
-    // FX898 review: --workspace <root> is baked into the twin's launch args,
+    // FX928 review: --workspace <root> is baked into the twin's launch args,
     // but the registry (and now globalState) are both machine-global with a
     // single id. An entry that is byte-for-byte "intact" can still be
     // pointed at a DIFFERENT workspace's governance root — selecting it here
@@ -305,7 +305,7 @@ suite('bootstrapAcpProxy', () => {
     }
 
     test('install persists the expected entry to globalState, never workspaceState — the registry is one machine-global resource, not per-workspace', async () => {
-      // FX898 review: workspaceState scoping caused a workspace-B install to
+      // FX928 review: workspaceState scoping caused a workspace-B install to
       // read as "tampered" from workspace A's next activation, even though
       // the single shared registry entry was still fully governed.
       seedRegistry('.windsurf');
@@ -344,7 +344,7 @@ suite('bootstrapAcpProxy', () => {
     });
 
     test('uninstall clears stale expected state even when no registry file currently exists (stale-state-unclearable fix)', async () => {
-      // FX898 review: the uninstall command used to early-return on "no
+      // FX928 review: the uninstall command used to early-return on "no
       // registry found" BEFORE clearing persisted state, so a deleted
       // registry left the drift warning firing forever with no way to quiet it.
       const staleAgent = buildAgent('FailSafe (governing stale-agent)', '/usr/bin/node');

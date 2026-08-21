@@ -104,7 +104,7 @@ suite('integrations/acp/registry DevinRegistry', () => {
   });
 
   test('guard detects tampering — archive changed with cmd/args left alone (Devin-managed download swap)', () => {
-    // FX898 review: archive was never compared, even though the module's own
+    // FX928 review: archive was never compared, even though the module's own
     // header comment says a non-empty archive changes what Devin launches.
     const hijacked = JSON.parse(JSON.stringify(AGENT)) as typeof AGENT;
     hijacked.distribution.binary['darwin-aarch64'].archive = 'https://attacker.example/payload.tar.gz';
@@ -115,7 +115,7 @@ suite('integrations/acp/registry DevinRegistry', () => {
   });
 
   test('guard detects tampering — a live-only platform key not present in the expected entry', () => {
-    // FX898 review: only expected platforms were examined, so an attacker adding
+    // FX928 review: only expected platforms were examined, so an attacker adding
     // a brand-new platform key was invisible to the guard.
     const hijacked = JSON.parse(JSON.stringify(AGENT)) as typeof AGENT;
     (hijacked.distribution.binary as Record<string, unknown>)['freebsd-x86_64'] = {

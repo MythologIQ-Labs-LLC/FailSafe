@@ -45,7 +45,7 @@ suite('integrations/acp/registry DevinRegistryDriftCheck', () => {
   });
 
   test('reports malformed (distinct from missing) when the registry file exists but is not valid JSON', () => {
-    // FX898 review: parseRegistry's parse-tolerant fallback used to make a
+    // FX928 review: parseRegistry's parse-tolerant fallback used to make a
     // corrupt registry.json indistinguishable from a cleanly-removed entry.
     const result = checkInstalledEntryDrift('{ this is not json', AGENT);
     assert.deepEqual(result, { status: 'malformed', driftedPlatforms: [] });
@@ -55,7 +55,7 @@ suite('integrations/acp/registry DevinRegistryDriftCheck', () => {
     assert.deepEqual(checkInstalledEntryDrift('', AGENT), { status: 'malformed', driftedPlatforms: [] });
   });
 
-  test('syntactically valid but semantically nonsensical JSON is malformed, not "missing" (FX898 advisory)', () => {
+  test('syntactically valid but semantically nonsensical JSON is malformed, not "missing" (FX928 advisory)', () => {
     // `null` and `{"agents": "oops"}` both parse successfully, so the earlier
     // JSON.parse-only check let them fall through to parseRegistry's
     // tolerant fallback and read back as a clean "missing" entry.
