@@ -41,13 +41,36 @@
  * excluding synthetic non-file identities (`'unknown'`, `'claim_manifest'`)
  * from any path-based correlation. That is deferred to a follow-up
  * tranche; `FailSafe#367` stays open for it.
+ *
+ * Two further scope notes (also post-review):
+ *
+ * - Only `VerdictRouter.route()`'s ESCALATE branch ever calls
+ *   `queueL3Approval`. WARN and BLOCK verdicts never reach L3, so under
+ *   this projector they are structurally always `LIVE` — that's a
+ *   constant, not a computed distinction, until content-based supersession
+ *   (above) exists.
+ * - `L3ApprovalService.pruneExpired()` drops an SLA-expired queue item
+ *   (default 120s, `ConfigManager.ts`) from the in-memory/persisted queue
+ *   and emits an `l3Decided`/`EXPIRED` event, but **never calls
+ *   `ledgerManager.appendEntry`** — expiry leaves no ledger row. An
+ *   escalated entry whose SLA lapsed unattended is therefore
+ *   indistinguishable, from the ledger alone, from one still genuinely
+ *   awaiting review. `ESCALATED_UNDECIDED` is named and worded to reflect
+ *   exactly that (not "pending", which would claim someone is looking at
+ *   it) — see the dedicated blind-spot test in
+ *   `AuditResolutionProjector.test.ts`. Closing that gap for real means
+ *   making `L3ApprovalService.getQueue()`/`pruneExpired()` log expiry to
+ *   the ledger, which would require an async signature change rippling
+ *   through 7+ production call sites (`HubSnapshotService`,
+ *   `ActionsRoute`, four `genesis/panels/*`) — out of scope for this
+ *   tranche; disclosed rather than attempted blind.
  */
 
 import type { LedgerEntry } from "../../shared/types";
 
 export type ResolutionState =
   | "LIVE"
-  | "PENDING_DECISION"
+  | "ESCALATED_UNDECIDED"
   | "DECIDED_APPROVED"
   | "DECIDED_REJECTED";
 
@@ -116,9 +139,13 @@ function projectOne(source: LedgerEntry, sorted: LedgerEntry[]): ResolutionProje
   if (queued) {
     return {
       sourceEntryId: source.id,
-      state: "PENDING_DECISION",
+      state: "ESCALATED_UNDECIDED",
       resolvedByEntryId: queued.id,
-      reason: "queued for L3 review via explicit source-entry back-reference; no decision yet",
+      reason:
+        "escalated for L3 review via explicit source-entry back-reference; no decision is " +
+        "recorded in the ledger. May still be awaiting review, or may have silently expired " +
+        "past its SLA without a ledger record (L3ApprovalService.pruneExpired() does not " +
+        "currently log expiry) — the ledger alone cannot distinguish the two.",
     };
   }
 

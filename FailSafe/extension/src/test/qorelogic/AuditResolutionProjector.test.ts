@@ -2,6 +2,8 @@
 
 import { strict as assert } from 'assert';
 import { projectResolution } from '../../qorelogic/ledger/AuditResolutionProjector';
+import { L3ApprovalService } from '../../qorelogic/L3ApprovalService';
+import { EventBus } from '../../shared/EventBus';
 
 let nextId = 1;
 function entry(overrides: Partial<Record<string, unknown>> & { eventType: string }): any {
@@ -59,14 +61,14 @@ suite('AuditResolutionProjector (FailSafe#367)', () => {
     assert.equal(proj.state, 'LIVE');
   });
 
-  test('ESCALATE queued for L3 review (no decision yet) reports PENDING_DECISION, not LIVE', () => {
+  test('ESCALATE queued for L3 review (no decision yet) reports ESCALATED_UNDECIDED, not LIVE', () => {
     const escalate = entry({ eventType: 'AUDIT_FAIL', verificationResult: 'ESCALATE', artifactPath: 'src/a.ts' });
     const queued = entry({
       eventType: 'L3_QUEUED', artifactPath: 'src/a.ts',
       payload: { sourceLedgerEntryId: escalate.id },
     });
     const [proj] = projectResolution([escalate, queued]);
-    assert.equal(proj.state, 'PENDING_DECISION');
+    assert.equal(proj.state, 'ESCALATED_UNDECIDED');
     assert.equal(proj.resolvedByEntryId, queued.id);
   });
 
@@ -92,7 +94,7 @@ suite('AuditResolutionProjector (FailSafe#367)', () => {
     assert.equal(proj.state, 'DECIDED_REJECTED');
   });
 
-  test('a decided entry (APPROVED/REJECTED) outranks its own earlier PENDING_DECISION', () => {
+  test('a decided entry (APPROVED/REJECTED) outranks its own earlier ESCALATED_UNDECIDED', () => {
     const escalate = entry({ eventType: 'AUDIT_FAIL', verificationResult: 'ESCALATE', artifactPath: 'src/a.ts' });
     const queued = entry({ eventType: 'L3_QUEUED', artifactPath: 'src/a.ts', payload: { sourceLedgerEntryId: escalate.id } });
     const rejected = entry({
@@ -114,7 +116,7 @@ suite('AuditResolutionProjector (FailSafe#367)', () => {
     assert.equal(proj.state, 'LIVE');
   });
 
-  test('a queued entry that references a different source does not mark this one PENDING_DECISION', () => {
+  test('a queued entry that references a different source does not mark this one ESCALATED_UNDECIDED', () => {
     const warnA = entry({ eventType: 'AUDIT_FAIL', verificationResult: 'WARN', artifactPath: 'src/a.ts' });
     const queuedForSomethingElse = entry({
       eventType: 'L3_QUEUED', artifactPath: 'src/a.ts', payload: { sourceLedgerEntryId: 9999 },
@@ -177,5 +179,69 @@ suite('AuditResolutionProjector (FailSafe#367)', () => {
     });
     const [proj] = projectResolution([escalate, approved]);
     assert.equal(proj.state, 'DECIDED_APPROVED');
+  });
+});
+
+// Pins the documented SLA blind spot (module header, and the review that
+// found it): L3ApprovalService.pruneExpired() discards an SLA-expired queue
+// item with no ledger record, so the projector cannot tell a genuinely
+// pending escalation from one that silently lapsed. This wires a REAL
+// L3ApprovalService (not a hand-built ledger fixture) so the pin breaks if
+// that behavior is ever fixed without updating this test and the module
+// doc comment together.
+suite('AuditResolutionProjector — SLA-expiry blind spot (FailSafe#367 review)', () => {
+  test('an expired-and-discarded L3 escalation still projects ESCALATED_UNDECIDED, not a distinct "expired" state', async () => {
+    const ledgerCalls: any[] = [];
+    let nextLedgerId = 1;
+    const ledger: any = {
+      appendEntry: async (e: any) => {
+        const stored = { id: nextLedgerId++, ...e };
+        ledgerCalls.push(stored);
+        return stored;
+      },
+    };
+    const state: any = { l3Queue: [] };
+    const stateStore: any = {
+      get: <T,>(k: string, def: T) => (state[k] ?? def) as T,
+      update: async (k: string, v: any) => { state[k] = v; },
+    };
+    // l3SLA: 0 -> the queued item is already past its deadline the instant
+    // it's queued, matching pruneExpired's `deadline < now` branch.
+    const config: any = { getConfig: () => ({ qorelogic: { l3SLA: 0 } }) };
+    const bus = new EventBus();
+    const trust: any = { updateTrust: async () => {} };
+    const svc = new L3ApprovalService(stateStore, config, ledger, trust, bus);
+
+    // Simulate VerdictRouter escalating a real ledger entry (id 1 below).
+    const sourceLedgerEntryId = 1;
+    ledgerCalls.push({ id: sourceLedgerEntryId, eventType: 'AUDIT_FAIL', verificationResult: 'ESCALATE', artifactPath: 'src/a.ts' });
+    nextLedgerId = 2;
+    await svc.queueL3Approval({
+      agentDid: 'did:t:agent-1', agentTrust: 0.5, filePath: 'src/a.ts',
+      riskGrade: 'L3', sentinelSummary: 'escalated', flags: [], sourceLedgerEntryId,
+    });
+
+    // Bypass the 5s prune throttle (mirrors L3ApprovalService.test.ts's
+    // own EXPIRED-pruning test) and force the prune to run.
+    (svc as any).lastPruneAt = 0;
+    const queueAfterExpiry = svc.getQueue();
+
+    assert.equal(queueAfterExpiry.length, 0, 'expired item must be gone from the live queue');
+    assert.equal(
+      ledgerCalls.filter((c) => c.eventType !== 'AUDIT_FAIL').length, 1,
+      'pruneExpired must not append any ledger entry beyond the original L3_QUEUED — this is the blind spot',
+    );
+
+    const entries = ledgerCalls.map((c, i) => ({
+      id: c.id ?? i + 1, timestamp: '2026-08-21T00:00:00Z', agentDid: 'did:t:agent-1',
+      agentTrustAtAction: 0.5, gdprTrigger: false, entryHash: 'h', prevHash: 'p', signature: 's',
+      payload: c.payload ?? {}, eventType: c.eventType, verificationResult: c.verificationResult,
+      artifactPath: c.artifactPath,
+    })) as any;
+    const [proj] = projectResolution(entries);
+    assert.equal(
+      proj.state, 'ESCALATED_UNDECIDED',
+      'ledger evidence alone cannot show this was silently discarded, not genuinely pending',
+    );
   });
 });
