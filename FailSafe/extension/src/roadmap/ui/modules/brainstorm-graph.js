@@ -175,7 +175,11 @@ export class BrainstormGraph {
       const existingKeys = new Set(this.edges.map(edgeKey));
       const actuallyAddedEdges = [];
       for (const e of newEdges) {
-        if (!isWellFormedEdge(e) || existingKeys.has(edgeKey(e))) continue;
+        // Same "removed" accounting as FX894 dedupeEdges (malformed + duplicate
+        // both count) so getStats().duplicatesRemoved covers every dedup path,
+        // not only the server-fetch/seed branch — this is the manual/voice
+        // node-creation route (addNode/applyExtraction all funnel here).
+        if (!isWellFormedEdge(e) || existingKeys.has(edgeKey(e))) { this._duplicatesRemoved++; continue; }
         existingKeys.add(edgeKey(e));
         this.edges.push(e); actuallyAddedEdges.push(e);
       }
@@ -212,12 +216,16 @@ export class BrainstormGraph {
 
   async clearAll() {
     const snapshot = { nodes: [...this.nodes], edges: [...this.edges] };
+    const prevDuplicatesRemoved = this._duplicatesRemoved;
     try { await fetch('/api/v1/brainstorm/graph', { method: 'DELETE' }); } catch {}
-    this.nodes = []; this.edges = [];
+    this.nodes = []; this.edges = []; this._duplicatesRemoved = 0;
     this._pushUndo({
       type: 'clear',
-      forward: () => { this.nodes = []; this.edges = []; },
-      backward: () => { this.nodes = [...snapshot.nodes]; this.edges = [...snapshot.edges]; }
+      // A cleared graph has no edges, so a stale nonzero duplicatesRemoved
+      // would read as "N duplicate edges merged" against zero edges — a false
+      // statement the density-status label would otherwise render verbatim.
+      forward: () => { this.nodes = []; this.edges = []; this._duplicatesRemoved = 0; },
+      backward: () => { this.nodes = [...snapshot.nodes]; this.edges = [...snapshot.edges]; this._duplicatesRemoved = prevDuplicatesRemoved; }
     });
     this.canvas?.setNodes([]); this.canvas?.setEdges([], []);
     this.onSelectionChange?.(null);
@@ -241,7 +249,7 @@ export class BrainstormGraph {
       this._saveLocal();
     }
     if (evt.type === 'brainstorm.reset') {
-      this.nodes = []; this.edges = [];
+      this.nodes = []; this.edges = []; this._duplicatesRemoved = 0;
       this.canvas?.setNodes([]); this.canvas?.setEdges([], []);
       this.onSelectionChange?.(null);
       this._saveLocal();

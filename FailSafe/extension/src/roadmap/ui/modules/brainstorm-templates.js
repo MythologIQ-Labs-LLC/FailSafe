@@ -34,6 +34,11 @@ export function renderShell() {
       </div>
     </div>
 
+    <!-- Truthful, always-visible node/edge count — no cap, no threshold.
+         Starts blank (not "0 nodes") until the first real measurement lands,
+         so an aria-live reader never announces a count that was never taken. -->
+    <span class="cc-bs-density-status" role="status" aria-live="polite"></span>
+
     <!-- 3D Graph Container (accessible alternative: LIST VIEW toggle, #325) -->
     <div class="cc-canvas cc-brainstorm-canvas" role="img" aria-label="Mind Map graph — interactive view. Use LIST VIEW for the accessible table representation."></div>
     <div class="cc-bs-list-view" style="display:none;"></div>
