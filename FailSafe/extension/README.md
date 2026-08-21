@@ -40,9 +40,17 @@ Each integration ships with its own README and its external API names are back-c
 
 ---
 
-**Current Release**: v6.0.1 (2026-08-20)
+**Current Release**: v6.0.2 (2026-08-21)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v6.0.2
+
+- **The Monitor works without a mouse.** The sentinel warning banner, critical-blockers graphic, error-budget readout, the five workspace-health metric cards, and governance-alert rows are all keyboard-reachable with visible focus rings and screen-reader names; Enter opens the explanation or details modal, and Escape returns focus to where you were — even when a live refresh rebuilt the list underneath the modal.
+- **Audit Log records now say what, where, and why.** A sentinel verdict used to render as bare identity JSON; records now name the triggering file, the human summary, and which heuristics fired. A severity chip row — All levels · Issues · Warn · Block — isolates what needs attention, and the CSV export is a real RFC-4180 CSV with the columns you triage by (it was previously unparseable).
+- **Corrupt files are preserved instead of destroyed.** If the risk register, adapter config, or marketplace state exists but is unreadable, the original is set aside as a `.corrupt-<timestamp>.bak` before anything overwrites it. Previously the first write replaced the file and the data was gone.
+- **The risk register no longer absorbs your backlog.** Adding or importing a risk on a fresh workspace used to durably persist the entire `BACKLOG.md` projection as if you had authored every row; mutations now touch only the durable store, and backlog-derived rows are shown read-only.
+- **Sharper governance signals.** The PR-linkage check reports accurate reasons (a pull-request number is named as one, and unverifiable references warn instead of falsely failing), the governance webhook's payload is provably what was signed and fails closed when oversized, credential redaction covers passwords containing `@`, and sidebar Monitor modals draw their proper overlay chrome.
 
 ## What's New in v6.0.1
 

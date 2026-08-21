@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.2] - 2026-08-21
+
 ### Fixed
+- **Watcher handles are released on teardown.** `TrustEngine`, `HubSnapshotService`, and `PlanManager` each owned a filesystem-watch subscription and each defined a disposer, but nothing ever called them — every teardown short of a full extension-host restart leaked all three. They are now disposed with their owners. (#385)
 - **The PR-linkage check now says what it means.** Closing a pull-request number is flagged as exactly that (closing keywords only act on issues) instead of the false "does not exist"; on repos past the fetch window, unverifiable references warn instead of failing; and the nonexistent-issue message explains the three possible causes. (#374, FX926)
 - **Corrupt adapter and marketplace files are preserved, not destroyed.** The #368 protection is now a shared guard: a corrupt `adapter/config.json` or marketplace `state.json` is set aside as a `.corrupt-<ts>.bak` before any save overwrites it, instead of being silently replaced with defaults. (#378, FX925)
 - **Adding a risk from the Console no longer swallows the backlog.** The risk CRUD API read the display view (which projects docs/BACKLOG.md when the register is empty) and wrote it back - one POST durably promoted the entire backlog projection as if it were operator-authored records. Mutations now read the durable store only, and backlog-derived rows show a read-only note instead of Edit/Delete buttons that could never work. (#377, FX924)
