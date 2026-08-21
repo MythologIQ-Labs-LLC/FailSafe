@@ -49,3 +49,27 @@ suite('teardown resource list (#388)', () => {
     assert.doesNotThrow(() => { for (const e of entries) { void e.dispose(); } });
   });
 });
+
+// #388: the trustEngine handle must be published AT CONSTRUCTION, not from
+// bootstrapQorLogic's resolved value — TrustEngine is built near the top of
+// that function and several throw sites precede its return, so assigning from
+// the return value leaves the crash-path window open. This pins the ordering
+// contract of the publish callback against the real source, without paying for
+// a full bootstrapQorLogic harness.
+suite('trustEngine publish-at-construction (#388)', () => {
+  test('publishTrustEngine is invoked before any post-construction await in bootstrapQorLogic', () => {
+    const fs = require('fs') as typeof import('fs');
+    const path = require('path') as typeof import('path');
+    const src = fs.readFileSync(
+      path.join(__dirname, '..', '..', '..', 'src', 'extension', 'bootstrapQorLogic.ts'), 'utf-8');
+    const construct = src.indexOf('const trustEngine = new TrustEngine(');
+    const publish = src.indexOf('publishTrustEngine?.(trustEngine)');
+    const policyLoad = src.indexOf('policyEngine.loadPolicies()');
+    assert.notEqual(construct, -1, 'TrustEngine construction site must exist');
+    assert.notEqual(publish, -1,
+      'the handle must be published inside bootstrapQorLogic — assigning from its return value is too late');
+    assert.ok(publish > construct, 'publish must come after construction');
+    assert.ok(publish < policyLoad,
+      'publish must precede the first throwable step after construction (policyEngine.loadPolicies)');
+  });
+});

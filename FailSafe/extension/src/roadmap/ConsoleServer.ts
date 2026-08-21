@@ -172,21 +172,23 @@ export class ConsoleServer {
   finalizeRoutes(): void { this.registrar.finalizeFallback(); }
   stop(): void {
     this.lifecycle.stop();
-    // Relay Cycle 070 (Myth-Tech-Forge#189) disposed hub's WorkspaceMutationBus
-    // fs.watch subscription here, which nothing else was releasing. try/catch
-    // fs.watch subscription here, which nothing else was releasing.
-    // Relay Cycle 074 (Myth-Tech-Forge#193 / FailSafe#388): planManager used
-    // to be disposed here too, but it is constructor-injected and shared with
-    // genesisManager and governanceRouter — ConsoleServer does not own it, so
-    // disposing it here reached outside stop()'s blast radius. A future
-    // console restart (stop() then start()) would leave those other
-    // consumers holding a permanently-dead planManager. Disposal now happens
-    // once, at the actual owner (bootstrapCore, via context.subscriptions).
-    // #388: no try/catch — `hub` is always a real HubSnapshotService built
-    // internally by buildHubService, and HubSnapshotService.dispose() already
-    // guards its own field and try/catches the inner disposal, so it cannot
-    // throw. A catch here would only hide a future real failure, which is
-    // what disposeResources exists to prevent.
+    // Relay Cycle 070 (Myth-Tech-Forge#189): dispose hub's WorkspaceMutationBus
+    // fs.watch subscription, which nothing else releases.
+    //
+    // FailSafe#388: planManager used to be disposed here too, but it is
+    // constructor-injected and shared with genesisManager and governanceRouter
+    // — ConsoleServer does not own it, so disposing it here reached outside
+    // stop()'s blast radius (a future stop()/start() restart would leave those
+    // consumers holding a permanently-dead planManager). It is now disposed by
+    // its owner: bootstrapCore's context.subscriptions for normal unload, and
+    // main.ts's teardown handle for the activation-failure path. Both are
+    // idempotent, so it may run twice.
+    //
+    // No try/catch around hub.dispose(): `hub` is always a real
+    // HubSnapshotService built internally by buildHubService, and
+    // HubSnapshotService.dispose() null-guards its field and try/catches the
+    // inner disposal, so it cannot throw. A catch here would only hide a
+    // future real failure — which is what disposeResources exists to prevent.
     this.hub.dispose();
   }
   getPort(): number { return this.lifecycle.getPort(); }

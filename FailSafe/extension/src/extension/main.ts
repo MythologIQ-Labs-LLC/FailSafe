@@ -150,8 +150,12 @@ export async function activate(
     governanceStatusBar = gov.governanceStatusBar;
 
     // 3. QorLogic
-    const qor = await bootstrapQorLogic(context, core, gov, logger);
-    trustEngine = qor.trustEngine; // #388 F2: same reasoning as planManager above
+    // #388: publish trustEngine AT CONSTRUCTION (inside bootstrapQorLogic),
+    // not from the resolved value — TrustEngine is built near the top of that
+    // function and several throw sites precede its return.
+    const qor = await bootstrapQorLogic(context, core, gov, logger, (te) => {
+      trustEngine = te;
+    });
     qorelogicManager = qor.qorelogicManager;
     ledgerManager = qor.ledgerManager;
     shadowGenomeManager = qor.shadowGenomeManager;
