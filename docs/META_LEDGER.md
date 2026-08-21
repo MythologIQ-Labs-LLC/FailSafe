@@ -28979,3 +28979,47 @@ WHAT SURVIVES, VERIFIED TWICE INDEPENDENTLY - the remediation must not relitigat
 NOT VERIFIED by the reviewer (no execution tool): the wall-clock figures and the on-disk ledger size, already disclosed in-plan as author-measured. The read counts, by contrast, WERE empirically measured this cycle and are no longer author-assertion.
 
 Required next action: `/qor-remediate`. The target is the process defect - a plan-authoring and self-review habit that produces completeness claims whose falsifying case is never exercised - not a fourth patch of this plan. The #233 slice's design survives intact and is recoverable from this plan once the process finding is addressed.
+
+---
+
+### Entry #595: ADDENDUM to #594 - finding B3, arrived after the escalation was sealed
+
+**Timestamp**: 2026-08-21T23:45:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: VETO stands (no change); escalation target sharpened
+
+**Content Hash**:
+```
+SHA256("plan-233-read-ledger-once|audit-addendum-B3|2026-08-21")
+= 03515e48e62f34caf5211bd63861e91f78257c43162b1e5f1cd31be684d39954
+```
+
+**Previous Hash**: `52b2717fd9feae125f7381958a5ac70046bb42715e12cfb295571a4bc524dcc3` (Entry #594 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 70f931b736eb448dcb1e6c36dc8188fe0a26f3bae884d1d75fe1bedb59e2dbdc
+```
+
+## Decision
+
+The independent reviewer re-read the amended plan and returned a further finding AFTER #594 was written and committed. Recorded as an addendum rather than folded back into #594, so the record shows what was known when the escalation was made and what arrived after.
+
+B3 - THE "PARSED ONCE" HALF OF THE DELIVERABLE HAS NO FALSIFYING CHECK. The plan asserts the parse reduction in five places (the read-once/parse-once rationale for `applyVersionFloor`; the "3 reads, 1 `parseMetaLedgerEntries` (was 2)" baseline; the Phase-3 code comment "derived, not re-read and not re-parsed"; Deliverable-1 D1; Deliverable-2 D2). EVERY check in the plan counts `fs.readFileSync` and nothing else. No test counts parses.
+
+The consequence is not theoretical. Replacing the Phase-3 overlay with the obvious behavior-identical simplification - a second `classifyMetaLedgerText(rawLedger.read, rawLedger.sourcePath, {versionStatus})` instead of `applyVersionFloor(ledgerEnvelope, versionStatus)` - passes 100% of the plan's tests: `classifyMetaLedgerText` consumes an already-attempted `RawArtifactRead` and touches no fs, so the read count stays exactly 3, and the outputs are equal, which is precisely what the Phase-1 equivalence matrix asserts.
+
+EMPIRICALLY CONFIRMED this cycle against the compiled adapter and a materialized `supported` fixture: shape A (second `classifyMetaLedgerText`) = 2 parses; shape B (overlay) = 1 parse; `JSON.stringify` of the two envelopes identical -> true. So the substitution is invisible to output-equality and read-count assertions alike, while costing +13.9ms per build - 13.9 of the 29.3ms the entire slice claims, roughly 47% of the deliverable - on the `CommitCheckRoute:33` commit-blocking path. It also deletes the ONLY stated justification for `applyVersionFloor` existing at all: the plan introduced the overlay specifically because two classifications would mean two parses and "would give back most of what this slice buys". A reviewer diffing that one line would see identical behavior, identical read counts, and green CI.
+
+This is the same signature as V1/V3/V4/B2, and the most consequential instance of it: a deliverable defended by a proxy measurement. The plan counted reads because reads were easy to count, while claiming reads AND parses. THE COUNTERMEASURE IS MECHANICAL AND WAS VERIFIED FEASIBLE: `parseMetaLedgerEntries` is emitted as a plain CommonJS export with `writable=true configurable=true`, so a parse-count spy installs exactly as the read-count spies do. Assert it is invoked exactly once per `build()` on the `supported` fixture, and zero times inside `applyVersionFloor`.
+
+ALSO IN THIS PASS. B1 is independently confirmed RESOLVED by the reviewer with the corrected pin verified sound in both directions: under the narrowed `QorLogicVersionStatus` a bare `{maxAgeMs: 1}` produces TS2345 (missing required members) which the directive consumes; under a widened `ConsumerReadOptions` both members are optional so zero errors fire and TS2578 "unused directive" fails the build. One precision correction to the plan's wording, recorded for the remediation: TypeScript reports the missing-members diagnostic and subsumes the excess-property check, so the pin rests entirely on `QorLogicVersionStatus` having REQUIRED members - if that interface ever becomes all-optional or is typed `Partial<>`, the pin's failure mode changes. A durability note also stands: `@ts-expect-error` is error-agnostic and would swallow a TS2304 from a later rename, degrading to a silent false-green, so the bare single-line call form must survive into the implement phase rather than living only in plan prose.
+
+Four further non-blocking items, each a smaller instance of the same class: the read-count test asserts attribution ("the residual two attributable to MetaLedgerReader and SystemStateReader") that it does not measure - it counts a total; the "pre-change output" baselines have no capture discipline, so a baseline snapshotted after the edit is tautological (this is the author-found circular-baseline finding from #594, independently reached); one diagnostics bullet claims to confirm "injection changes cost, not output" while measuring no cost and being unable to fail if `opts?.ledger` were silently ignored, because the fallback re-reads and yields an identical envelope (its siblings carry the real load, so coverage is intact - only the stated purpose is wrong); and one Phase-3 bullet omits its fixture name while all four siblings supply one.
+
+B2 unchanged and still blocking, with a sharper rationale than #594 recorded: the redefinition is COMPOSITIONALLY IDENTICAL to what it replaces (old `classifyFile` and new `classifyMetaLedgerText(fsRead(p), p, opts)` reach the same `classifyRead` call with the same arguments), so there is no input for which they differ. The six-fixture equivalence test therefore has exactly ONE real failure mode - a `readMetaLedgerRaw` that botches absent-vs-unreadable discrimination - and no fixture can reach it, because all six ship a `META_LEDGER.md`. FX892's MODIFIED descriptor would lock a test with no failing mode into FEATURE_INDEX.
+
+ESCALATION UNCHANGED: `/qor-remediate`, not a fourth plan iteration. B3 sharpens the target rather than moving it. The remediation now has a concrete, verified-feasible countermeasure to generalize: a claim must be tested on the property claimed, not on a proxy that happens to be easy to instrument.
