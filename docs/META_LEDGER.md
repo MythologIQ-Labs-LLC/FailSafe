@@ -28456,3 +28456,38 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 Merge substantiation for parallel-session PR #366 (PR-linkage audit fail-severity path unreachable; #241 F-7; closes #365). Independent adversarial audit PASS: dead branch confirmed at main by citation (pr-linkage-audit.ts line 100 fail branch guarded by knownIssues that line 204 never passes; only open-state issues were ever fetched); fix fetches state=all, filters PRs, derives openIssues/knownIssues with the subset invariant intact; severity scoping verified not-too-eager (valid-open passes, known-closed warns, only nonexistent references fail). Blast radius verified bounded: no workflow files touched, the Check Run is operator-invoked and advisory-only - both rulesets carry ZERO required_status_checks, so a failure conclusion cannot block merges. Red/green independently reproduced (main + branch tests: exactly the two F-7 cases fail; branch: 20/20). Fixture updates verified necessary (unrealistic stateless fixtures would have degraded clean-PR to neutral). Data-source posture: abstain-visible on API failure, no false success. Advisories A-1 (misleading detail for PR-number/transferred references) and A-2 (state=all truncation past 1000 items -> false fail; demote to warn when truncated) filed as issue #374. MERGED rollup-green under the delegation; #365 auto-closed.
+
+
+---
+
+### Entry #581: SUBSTANTIATE - Audit Log CSV export repair (FX922)
+
+**Timestamp**: 2026-08-21T10:45:00Z
+**Phase**: GATE
+**Author**: Governor
+**Risk Grade**: L2
+**Verdict**: PASS
+
+**Content Hash**:
+```
+SHA256("audit-csv-export-370|conditional-PASS-implement-substantiate|2026-08-21")
+= 74530665d33e8813c43fbb5058a19fb73cc8a4f4d5524c8056a6b697fab3bd3c
+```
+
+**Previous Hash**: `3007715d646d90a2deaf1630d8e0a629842f440c6d4074b731d640eff31c1a46` (Entry #580 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= e4462afa49557d8c79c79bd2088e55764609f6935bf7efb88556dd9eb09d99b1
+```
+
+**Session Seal (Merkle)**:
+```
+SHA256(chain_hash + "SESSION-SEAL")
+= b821235aaa0fcd7311c8d3b565118d1668c95fcd4dfc16d5e94742f4a7533f02
+```
+
+## Decision
+
+Full SHIELD mini-cycle closing #370 (Audit Log CSV export malformed; filed from the FX921 audit's A4) under the ui-data-point-value-test ruling. Plan plan-audit-csv-export-370.md; independent adversarial audit CONDITIONAL PASS whose mandatory F1 exposed a real cross-cycle fact: live sentinel entries reach the renderer ONLY via the 'verdict' wrap carrying the RAW SentinelVerdict (no client route consumes the FX921-enriched transparency broadcast), and the id-keyed onEvent dedupe drops the later enriched history copy - so the File column and the summarizer subject chain both need the artifactPath alias. All F1-F7 items folded in and implemented: csvField (RFC-4180 unconditional quoting; OWASP leading-char neutralization incl. tab/CR; disclosed mutate-for-safety fidelity residual), exported pure buildCsv (informative columns Decision/Risk/File/Summary/Patterns + quoted raw-JSON tail; File = filePath||artifactPath||path; Type normalizes the live wrap; Summary falls back to the rendered line), WYSIWYG filter-respecting export (arrow-bound matchesFilter per F5; category-still-applies deep-link disclosure and today-only default disclosure per F4), filename carries the active level; summarizer subject chain gains artifactPath (C2.5 - live cards now name the file). TDD: 7 red observed (buildCsv absent + live-subject case) then 29/29; full npm test 3938 passing; Playwright governance-tab + monitor-a11y 10/10. Sibling hunt clean (sole CSV builder). Blob/anchor wire code intentionally untested (jsdom lacks URL.createObjectURL) - declared residual.
