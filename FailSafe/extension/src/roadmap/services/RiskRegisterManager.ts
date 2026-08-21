@@ -34,11 +34,19 @@ export class RiskRegisterManager {
 
   /**
    * B-BIC-18 (Batch 4): keyed idempotent create. Finds an existing risk by
-   * the `id` key and replaces it in place; otherwise appends. Built on the
-   * existing getRisks/writeRisks — no storage-format change to risks.json.
+   * the `id` key and replaces it in place; otherwise appends. Built on
+   * readStoredRisks/writeRisks — no storage-format change to risks.json.
+   *
+   * #241 F-6: mutates the durable store only, never `getRisks()`. Reading
+   * through `getRisks()` here previously meant that if `risks.json` was
+   * absent/empty, this call would read the derived BACKLOG.md fallback array
+   * and write the *entire* fallback back to risks.json alongside the one
+   * intentional record, silently promoting dozens of derived items into
+   * durable authoritative state while callers (SARIF/Sentry import, MCP
+   * policy scan) reported only the count of records they explicitly upserted.
    */
   upsertRisk(risk: Record<string, unknown>): void {
-    const risks = this.getRisks();
+    const risks = this.readStoredRisks();
     const id = risk.id;
     const index = risks.findIndex((r) => r.id === id);
     if (index >= 0) {
@@ -52,10 +60,12 @@ export class RiskRegisterManager {
   /**
    * B-BIC-18 (Batch 4): close a risk by its `id` key — sets `status:'closed'`
    * and persists. A no-op (no throw, register unchanged) when the id is
-   * absent.
+   * absent. #241 F-6: operates on the durable store only, matching
+   * `upsertRisk` — closing a BACKLOG-fallback-only id (never explicitly
+   * upserted) remains a no-op rather than materializing the fallback.
    */
   closeRisk(id: string): void {
-    const risks = this.getRisks();
+    const risks = this.readStoredRisks();
     const index = risks.findIndex((r) => r.id === id);
     if (index < 0) return;
     risks[index] = { ...risks[index], status: "closed" };
