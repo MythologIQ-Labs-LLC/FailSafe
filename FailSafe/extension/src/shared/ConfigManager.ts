@@ -80,6 +80,26 @@ export class ConfigManager implements IConfigProvider {
     }
 
     /**
+     * Whether `governance.mode` was explicitly set (VS Code setting at any
+     * scope, or sentinel.yaml) rather than resolved from the package.json
+     * schema default. See IConfigProvider for why this can't be derived
+     * from getConfig() alone.
+     */
+    isGovernanceModeExplicit(): boolean {
+        if (this.readSentinelYaml()?.governance?.mode !== undefined) {
+            return true;
+        }
+        const inspected = vscode.workspace
+            .getConfiguration('failsafe')
+            .inspect<string>('governance.mode');
+        return (
+            inspected?.globalValue !== undefined ||
+            inspected?.workspaceValue !== undefined ||
+            inspected?.workspaceFolderValue !== undefined
+        );
+    }
+
+    /**
      * Get the workspace root path
      */
     getWorkspaceRoot(): string | undefined {

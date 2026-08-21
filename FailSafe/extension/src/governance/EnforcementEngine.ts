@@ -80,10 +80,18 @@ export class EnforcementEngine {
       | Record<string, unknown>
       | undefined;
     const candidate = raw?.["mode"];
-    if (typeof candidate === "string" && VALID_MODES.has(candidate as GovernanceMode)) {
-      return { mode: candidate as GovernanceMode, defaulted: false };
+    if (typeof candidate !== "string" || !VALID_MODES.has(candidate as GovernanceMode)) {
+      return { mode: "enforce", defaulted: true };
     }
-    return { mode: "enforce", defaulted: true };
+    // getConfig() always resolves governance.mode to a concrete string (the
+    // package.json schema default is "enforce"), so a resolvable candidate
+    // alone can never tell an explicit user choice apart from an untouched
+    // install. Providers that can answer that question say so directly;
+    // providers that can't (isGovernanceModeExplicit absent) preserve the
+    // prior behavior of treating a resolvable value as not-defaulted rather
+    // than guessing.
+    const explicit = this.configProvider.isGovernanceModeExplicit?.();
+    return { mode: candidate as GovernanceMode, defaulted: explicit === false };
   }
 
   isPathInScope(targetPath: string, scopePaths: string[]): boolean {
