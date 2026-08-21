@@ -28334,3 +28334,32 @@ SHA256(chain_hash + "SESSION-SEAL")
 ## Decision
 
 Full SHIELD mini-cycle: Monitor modal wrapper CSS port + shared selector-escape helper (closes #360; observer finding 1 from the #573 slice). Plan plan-modal-css-escape-360.md (mirrored), plan-grep-lint clean, independent adversarial audit PASS (every citation reproduced; repo-wide coupling search proved the four orphaned wrapper classes referenced ONLY at their own definitions; no page loads both stylesheets so no cascade conflict; red-first Playwright claim verified feasible against ConsoleRouteRegistrar static serving). Defect 1: modal-helper.js builds .cc-modal-overlay>.cc-modal but the compact Monitor loads only roadmap.css, which styled the pre-helper wrappers no JS creates - sidebar modals rendered in-flow with no overlay chrome. Fix: wrapper rules ported into roadmap.css under the live class names (fidelity port of the in-repo alert-modal design source, roadmap tokens); both orphaned wrapper blocks deleted; content classes untouched. Defect 2 (#360): governance.js:94 + transparency-records.js:84 still carried the quote-only CSS.escape fallback (sibling of the #574 CodeQL remediation). Fix: shared modules/escape-selector.js (backslash-first, plus CSS-newline hex escapes per audit advisory 5) consumed at all three sites plus the bare unguarded CSS.escape(ts) at governance.js:103 (advisory 6). TDD: escape-selector.test.ts (6 cases incl. hostile trailing-backslash round-trip and newline parseability) red-first (module absent); Playwright computed-style wrapper assertion red-first OBSERVED at HEAD (position static) then green (fixed overlay, dimmed background, bounded card). Green: 26 targeted unit + monitor-a11y 3/3 + full npm test exit 0. Visual spot-check artifact reviewed (advisory 8b): dimmed blurred overlay, centered card chrome - fidelity matches the design source. Governance: CHANGELOG both files, FEATURE_INDEX FX920 row extended (source/tests/verification), plan mirrored. Residual: metric modal inherits the shared 340px/0.7-alpha wrapper (disclosed trivial visual delta, audit 8a).
+
+
+---
+
+### Entry #577: GATE TRIBUNAL - PR #364 merge substantiation (external work)
+
+**Timestamp**: 2026-08-21T07:55:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS
+
+**Content Hash**:
+```
+SHA256("pr364|substantiation-audit-PASS|2026-08-21")
+= ec2039cf26c234eb47b430cb21747a9c6f6e757ff1f25d93c62dac8b85799c3f
+```
+
+**Previous Hash**: `1eb1aa42014b5a5e1fcf11042f01e080159294fa4e54bf9c840ef934a58e9d01` (Entry #576 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 0a2a88f7d383f17a5cb8fb9bed1e3336fdcac8acda80b25fc7b5c6609d1a26eb
+```
+
+## Decision
+
+Merge substantiation for parallel-session PR #364 (RiskRegisterManager BACKLOG.md fallback materialization; closes #363; audit #241 F-6). Independent adversarial audit PASS with the defect CONFIRMED at main by direct citation: upsertRisk/closeRisk read through getRisks(), whose backlog fallback meant the FIRST explicit mutation (one SARIF finding, one Sentry regression, one drift upsert) durably wrote the ENTIRE backlog projection into risks.json while the operator-facing message counted only explicitly-touched records. Precedence-contract claim verified GENUINE (class doc at main: stored-if-non-empty else fallback, never merged) - the disclosed consequence is the documented contract, not a smuggled behavior change. Scope clean (2 files, +134/-5, no protected surfaces). Tests verified strong: real class against real mkdtemp workspaces and a real BacklogReader parse, exact on-disk counts, revert-detection confirmed by inspection. Caller hunt clean: all sinks (sarif/sentry/agent-observe/DriftToRiskMediator) report their own counts; no consumer depended on the materialization side-effect; no UI close-affordance exists for backlog-derived ids. Local verification in an isolated worktree: 9/9 passing in a REAL extension host (the authoring session had no vscode-test environment; first worktree run was a SILENT NO-OP - corrupt fresh archive, exit 0 with zero tests - caught and re-run against the pinned known-good install; lesson: never accept exit-0 without a passing-count line). CI rollup verified 0 non-pass pre-merge. Attribution footer stripped (sixth occurrence). Advisories: corrupt-store silent overwrite filed as #368; non-atomic RMW pre-existing; stale test header cosmetic; merged-view UX future note. MERGED under the CI-green+substantiated delegation; #363 auto-closed.
