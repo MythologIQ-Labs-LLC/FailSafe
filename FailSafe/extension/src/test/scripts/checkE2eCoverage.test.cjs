@@ -436,6 +436,10 @@ describe('check-e2e-coverage.cjs resolveReleaseRange', () => {
     const range = withReleaseBase('no-such-ref-xyz', () => gate.resolveReleaseRange(tmp));
     assert.equal(range.ok, false);
     assert.match(range.reason, /cannot resolve/i);
+    // #410 pin: a genuinely missing ref must NOT be classified transient —
+    // fail-CLOSED behavior for this case must hold regardless of the
+    // transient-failure retry/reporting path added alongside it.
+    assert.equal(range.transient, false);
   });
 
   // #410: a resolution failure must name which ref (base/head) failed and
@@ -464,5 +468,135 @@ describe('check-e2e-coverage.cjs resolveReleaseRange', () => {
     assert.equal(range.ok, false);
     assert.match(range.reason, /base=no-such-base-xyz/);
     assert.match(range.reason, /head=no-such-head-xyz/);
+  });
+});
+
+// #410 follow-up: a transient subprocess failure (the git invocation never
+// completed -- e.g. EAGAIN under fork pressure) must be told apart from a
+// genuinely missing ref, and retried before being reported. Exercising this
+// requires a fake execSync, and check-e2e-coverage.cjs destructures execSync
+// from `child_process` at module load (line 23) -- patching the real
+// child_process.execSync AFTER the module is already loaded is a silent
+// no-op, since the module's local binding was already captured. So this
+// suite deletes the module from the require cache, patches
+// child_process.execSync, re-requires a FRESH module instance (which
+// captures the patched fn), and restores both afterward. The `gate` binding
+// used by every other describe block in this file is untouched: it was
+// captured at this file's own top-level require, before any patching here.
+describe('check-e2e-coverage.cjs transient vs missing-ref classification (#410)', () => {
+  let tmp;
+  beforeEach(() => { tmp = mkTempRepo('failsafe-e2e-gate-transient-'); });
+  afterEach(() => { fs.rmSync(tmp, { recursive: true, force: true }); });
+
+  const gatePath = path.resolve(__dirname, '..', '..', '..', 'scripts', 'check-e2e-coverage.cjs');
+
+  // Throws a synthetic spawn-level error (no `.status`, like a real EAGAIN
+  // fork failure) for the first `failCount` calls whose command contains
+  // `matchFragment`; every other call — including the same command once
+  // failCount is exhausted — goes through to the real execSync.
+  function makeFakeExecSync(realExecSync, matchFragment, failCount) {
+    let remaining = failCount;
+    return (cmd, opts) => {
+      if (remaining > 0 && cmd.includes(matchFragment)) {
+        remaining -= 1;
+        const err = new Error('spawn git EAGAIN');
+        err.code = 'EAGAIN';
+        err.errno = -11;
+        err.syscall = 'spawn git';
+        throw err;
+      }
+      return realExecSync(cmd, opts);
+    };
+  }
+
+  function withFreshGate(fakeExecSync, fn) {
+    const cp = require('child_process');
+    const originalExecSync = cp.execSync;
+    delete require.cache[gatePath];
+    cp.execSync = fakeExecSync;
+    try {
+      const freshGate = require(gatePath);
+      return fn(freshGate);
+    } finally {
+      cp.execSync = originalExecSync;
+      delete require.cache[gatePath];
+    }
+  }
+
+  function withReleaseBase(value, fn) {
+    const saved = process.env.FAILSAFE_RELEASE_BASE;
+    process.env.FAILSAFE_RELEASE_BASE = value;
+    try {
+      return fn();
+    } finally {
+      if (saved === undefined) delete process.env.FAILSAFE_RELEASE_BASE;
+      else process.env.FAILSAFE_RELEASE_BASE = saved;
+    }
+  }
+
+  it('recovers from a single transient failure via retry', () => {
+    execSync('git tag transient-base', { cwd: tmp });
+    const fake = makeFakeExecSync(execSync, 'transient-base', 1);
+    const range = withFreshGate(fake, (freshGate) => withReleaseBase(
+      'transient-base',
+      () => freshGate.resolveReleaseRange(tmp),
+    ));
+    assert.equal(range.ok, true, `expected retry to recover; got reason=${range.reason}`);
+    assert.equal(range.base, 'transient-base');
+  });
+
+  it('reports a persistent transient failure distinctly from a missing ref', () => {
+    execSync('git tag transient-base2', { cwd: tmp });
+    // failCount 2 == TRANSIENT_RETRY_LIMIT attempts, so every attempt throws.
+    const fake = makeFakeExecSync(execSync, 'transient-base2', 2);
+    const range = withFreshGate(fake, (freshGate) => withReleaseBase(
+      'transient-base2',
+      () => freshGate.resolveReleaseRange(tmp),
+    ));
+    assert.equal(range.ok, false);
+    assert.equal(range.transient, true);
+    assert.match(range.reason, /transient subprocess failure/);
+    assert.doesNotMatch(
+      range.reason,
+      /^cannot resolve release range:/,
+      'a transient failure must not be worded as a missing-ref BLOCK',
+    );
+  });
+
+  it('main()/release mode exits 2 (INFRA) on a persistent transient failure, distinct from exit 1 (BLOCK)', () => {
+    execSync('git tag transient-base3', { cwd: tmp });
+    const plansDir = path.join(tmp, '.failsafe', 'governance', 'plans');
+    fs.mkdirSync(plansDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(plansDir, 'plan-test.md'),
+      '# Plan: test\n\n**change_class**: feature\n\n## Phase 1\n',
+      'utf8',
+    );
+    const fake = makeFakeExecSync(execSync, 'transient-base3', 2);
+    const result = withFreshGate(fake, (freshGate) => withReleaseBase(
+      'transient-base3',
+      () => {
+        const saved = {};
+        const keys = ['FAILSAFE_GATE_MODE', 'FAILSAFE_GATE_BYPASS', 'FAILSAFE_CHANGE_CLASS'];
+        for (const k of keys) { saved[k] = process.env[k]; delete process.env[k]; }
+        const prevLog = console.log; const prevError = console.error;
+        const stdout = []; const stderr = [];
+        console.log = (m) => stdout.push(String(m));
+        console.error = (m) => stderr.push(String(m));
+        let exitCode;
+        try {
+          exitCode = freshGate.main({ repoRoot: tmp, mode: 'release' });
+        } finally {
+          console.log = prevLog; console.error = prevError;
+          for (const k of keys) {
+            if (saved[k] === undefined) delete process.env[k]; else process.env[k] = saved[k];
+          }
+        }
+        return { exitCode, stdout: stdout.join('\n'), stderr: stderr.join('\n') };
+      },
+    ));
+    assert.equal(result.exitCode, 2, `stdout=${result.stdout} stderr=${result.stderr}`);
+    assert.match(result.stderr, /\[e2e-gate\] INFRA/);
+    assert.doesNotMatch(result.stderr, /\[e2e-gate\] BLOCK/);
   });
 });
