@@ -6,7 +6,7 @@
 import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import {
-  projectTrackerManifest, parsePlans, CONSOLE_VERTICALS,
+  projectTrackerManifest, projectTrackerManifestFromEntries, parsePlans, CONSOLE_VERTICALS,
 } from '../../../roadmap/tracker/governance-projection';
 import { parseMetaLedgerEntries } from '../../../qorlogic/meta-ledger-model';
 import { resolveTestRepoPath } from './test-repo-root';
@@ -99,6 +99,42 @@ suite('roadmap/tracker governance-projection (A.1 — tracker sidecar)', () => {
     assert.deepEqual(keys, ['monitor', 'learn', 'agents', 'governance', 'workspace', 'integrations', 'config']);
     const agents = m.verticals!.find((v) => v.key === 'agents')!;
     assert.deepEqual(agents.functionality, ['Operations', 'Timeline', 'Genome', 'Replay'], 'sub-views are the real functionality');
+  });
+});
+
+// #233 route-seam equivalence (mirrors the consumer-adapter T1-T3 convention from
+// PR #328): projectTrackerManifestFromEntries is the entry point TrackerRoute
+// calls with an already-classified adapter envelope. Prove it directly, and prove
+// it is equivalent to (not a fork of) the raw-string projectTrackerManifest for
+// the same underlying ledger — the refactor must not change projection behavior.
+suite('roadmap/tracker governance-projection — projectTrackerManifestFromEntries (#233 FX892)', () => {
+  const SOURCES = { featureIndex: '', repo: 'acme/widget', knownReleaseIds: ['v5.6.1', 'v5.6.2'] };
+
+  test('entries ≡ parseMetaLedgerEntries(same text): identical manifest either way in', () => {
+    const fromText = projectTrackerManifest({ metaLedger: LEDGER, ...SOURCES });
+    const fromEntries = projectTrackerManifestFromEntries(parseMetaLedgerEntries(LEDGER), SOURCES);
+    assert.deepEqual(fromEntries, fromText, 'entries-based and text-based projection must be identical');
+  });
+
+  test('direct: hand-built entries produce rcs/decisions without going through the parser', () => {
+    const entries = [
+      { n: 1, phase: 'DELIVER', title: 'DELIVER - v9.9.9', version: '9.9.9', tag: 'v9.9.9', decision: 'shipped it' },
+    ];
+    const m = projectTrackerManifestFromEntries(entries, { featureIndex: '' });
+    assert.deepEqual((m.rcs || []).map((r) => r.id), ['v9.9.9']);
+    assert.equal(m.meta!.decisions!.length, 1);
+    assert.equal(m.verticals!.length, 7, 'verticals are always the fixed Console surfaces');
+  });
+
+  test('empty entries → still the fixed 7 verticals (caller, not this function, must gate on zero entries)', () => {
+    // #233 review finding on PR #405: this function has NO opinion about whether
+    // zero entries means "no ledger" — CONSOLE_VERTICALS is unconditional by
+    // design (verticals describe the PRODUCT, not ledger content). The
+    // "should an empty ledger even call this" decision belongs to the caller
+    // (TrackerRoute's ledger.data.length === 0 guard), not this pure projector.
+    const m = projectTrackerManifestFromEntries([], { featureIndex: '' });
+    assert.equal(m.verticals!.length, 7);
+    assert.deepEqual(m.rcs, []);
   });
 });
 

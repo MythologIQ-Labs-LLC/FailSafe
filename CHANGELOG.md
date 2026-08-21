@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **The Development Tracker's governance projection and the substantiate seal auto-hook no longer bypass the Qor artifact adapter.** `TrackerRoute.projectGovernanceManifest` and `substrate-command.ts`'s seal watcher now read `docs/META_LEDGER.md` through classified `readMetaLedgerArtifact` envelopes instead of raw text — a malformed OR empty/whitespace-only ledger no longer masquerades as a real governance projection (it previously produced the fixed Console-vertical list unconditionally), and a malformed ledger at seal-watch time is now logged instead of silently never firing. (#233, FX892)
+
 ## [6.0.2] - 2026-08-21
 
 ### Fixed

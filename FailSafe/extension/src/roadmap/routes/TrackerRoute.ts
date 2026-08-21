@@ -53,17 +53,26 @@ const MANIFEST_PATH = (workspaceRoot: string): string =>
  * still flow through the FX865 sidecar I/O seam (nodeSidecarDeps) — that reader
  * already degrade-safes absent files to `null`/`[]`, which is the boundary #233
  * requires only for the ledger itself. `knownReleaseIds` (the discovered axis) lets
- * plan phases anchor only to real releases. No ledger (`unavailable`) → {} →
- * discovered-only, as before.
+ * plan phases anchor only to real releases.
+ *
+ * `ledger.data === []` (empty/whitespace-only ledger) is deliberately treated the
+ * same as `null` (unavailable/malformed/unsupported): the adapter's `classifyFile`
+ * only runs its malformed check when the raw text is non-blank, so a blank ledger
+ * classifies `ok` with zero entries — matching #407's `data.length === 0` boundary.
+ * Falling through to `projectTrackerManifestFromEntries` on zero entries would
+ * still report `manifestSource: "projection"`, since `CONSOLE_VERTICALS` is a
+ * fixed non-empty list independent of ledger content — the exact silent-degrade
+ * #233 exists to close, just for the empty case instead of the garbage case.
  */
 function projectGovernanceManifest(
   workspaceRoot: string,
   knownReleaseIds: string[],
-): { manifest: TrackerManifest; ledgerState: ArtifactState } {
+): { manifest: TrackerManifest; ledgerState: ArtifactState; ledgerReason: string | null } {
   const ledger = readMetaLedgerArtifact(workspaceRoot);
-  if (ledger.data === null) {
-    // unavailable | malformed | unsupported — no trustworthy ledger to project from.
-    return { manifest: {}, ledgerState: ledger.state };
+  if (ledger.data === null || ledger.data.length === 0) {
+    // unavailable | malformed | unsupported | blank-but-"ok" — no trustworthy
+    // non-empty ledger to project from.
+    return { manifest: {}, ledgerState: ledger.state, ledgerReason: ledger.reason };
   }
   const d = nodeSidecarDeps(workspaceRoot);
   const manifest = projectTrackerManifestFromEntries(ledger.data, {
@@ -72,7 +81,7 @@ function projectGovernanceManifest(
     repo: d.repoSlug(),
     knownReleaseIds,
   });
-  return { manifest, ledgerState: ledger.state };
+  return { manifest, ledgerState: ledger.state, ledgerReason: ledger.reason };
 }
 
 /** Best-effort: the git tags present in the repo (corroborate shipped state). */
@@ -144,6 +153,7 @@ export const TrackerRoute = {
       let manifestSource: 'operator' | 'projection' | 'none' = 'none';
       let manifest: TrackerManifest;
       let ledgerState: ArtifactState | undefined;
+      let ledgerReason: string | null = null;
       if (manifestPresent) {
         manifest = (yaml.load(fs.readFileSync(manifestPath, 'utf-8')) ?? {}) as TrackerManifest;
         manifestSource = 'operator';
@@ -151,6 +161,7 @@ export const TrackerRoute = {
         const projected = projectGovernanceManifest(deps.workspaceRoot, axis.map((r) => r.id));
         manifest = projected.manifest;
         ledgerState = projected.ledgerState;
+        ledgerReason = projected.ledgerReason;
         if ((manifest.programs?.length ?? 0) || (manifest.verticals?.length ?? 0) || (manifest.meta?.decisions?.length ?? 0)) {
           manifestSource = 'projection';
         }
@@ -180,12 +191,19 @@ export const TrackerRoute = {
             detail: 'No docs/roadmap/programs.yaml — projected the tracker from the governance ledger (META_LEDGER + FEATURE_INDEX + plans). Add a programs.yaml to override.',
           });
         } else if (ledgerState === 'malformed' || ledgerState === 'unsupported') {
+          // `unsupported` cannot currently occur from this call site — it requires a
+          // `versionStatus` opt that TrackerRouteDeps doesn't carry — but the branch
+          // stays state-driven (not hardcoded to 'malformed') so it degrades safely
+          // rather than mis-labeling the ledgerReason if that ever changes.
+          const base = ledgerState === 'malformed'
+            ? 'docs/META_LEDGER.md exists but could not be parsed into governance entries'
+            : 'The installed qor-logic version does not meet the required minimum for governance projection';
           lint.push({
             severity: 'warn',
-            code: ledgerState === 'malformed' ? 'manifest-projection-malformed' : 'manifest-projection-unsupported',
-            detail: ledgerState === 'malformed'
-              ? 'docs/META_LEDGER.md exists but could not be parsed into governance entries — showing discovered releases only. Repair the ledger or add docs/roadmap/programs.yaml.'
-              : 'The installed qor-logic version does not meet the required minimum for governance projection — showing discovered releases only. Add docs/roadmap/programs.yaml to override.',
+            code: `manifest-projection-${ledgerState}`,
+            detail: `${base}${ledgerReason ? ` (${ledgerReason})` : ''} — showing discovered releases only. `
+              + (ledgerState === 'malformed' ? 'Repair the ledger or add' : 'Add')
+              + ' docs/roadmap/programs.yaml to override.',
           });
         } else {
           lint.push({
