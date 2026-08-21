@@ -131,6 +131,31 @@ suite('L3ApprovalService (FX249)', () => {
     await assert.rejects(svc.processL3Decision('does-not-exist', 'APPROVED'), /not found/);
   });
 
+  test('FailSafe#367 queueL3Approval — sourceLedgerEntryId is carried into the L3_QUEUED ledger payload', async () => {
+    const s = makeStubs();
+    const svc = new L3ApprovalService(s.stateStore, s.config, s.ledger, s.trust, s.bus);
+    await svc.queueL3Approval({ ...REQ, sourceLedgerEntryId: 7 });
+    const queued = s.ledgerCalls.find(c => c.eventType === 'L3_QUEUED');
+    assert.equal(queued.payload.sourceLedgerEntryId, 7);
+  });
+
+  test('FailSafe#367 processL3Decision — sourceLedgerEntryId is carried into the L3_APPROVED/L3_REJECTED payload', async () => {
+    const s = makeStubs();
+    const svc = new L3ApprovalService(s.stateStore, s.config, s.ledger, s.trust, s.bus);
+    const id = await svc.queueL3Approval({ ...REQ, sourceLedgerEntryId: 7 });
+    await svc.processL3Decision(id, 'APPROVED');
+    const approval = s.ledgerCalls.find(c => c.eventType === 'L3_APPROVED');
+    assert.equal(approval.payload.sourceLedgerEntryId, 7);
+  });
+
+  test('FailSafe#367 queueL3Approval — absent sourceLedgerEntryId stays undefined, not fabricated', async () => {
+    const s = makeStubs();
+    const svc = new L3ApprovalService(s.stateStore, s.config, s.ledger, s.trust, s.bus);
+    await svc.queueL3Approval(REQ);
+    const queued = s.ledgerCalls.find(c => c.eventType === 'L3_QUEUED');
+    assert.equal(queued.payload.sourceLedgerEntryId, undefined);
+  });
+
   test('FX249 mapRiskToLegacy — R0/R1→L1, R2→L2, R3→L3', () => {
     const s = makeStubs();
     const svc = new L3ApprovalService(s.stateStore, s.config, s.ledger, s.trust, s.bus);

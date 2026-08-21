@@ -190,6 +190,29 @@ suite('VerdictRouter (FX342)', () => {
     assert.deepEqual(queued.flags, ['p1']);
   });
 
+  // FailSafe#367: the L3 request must carry the originating verdict's own
+  // ledger entry id, so a later decision can be linked back to the exact
+  // WARN/BLOCK/ESCALATE record instead of being inferred from artifactPath.
+  test('FX342/#367 route — ESCALATE forwards verdict.ledgerEntryId as sourceLedgerEntryId', async () => {
+    let queued: any = null;
+    const ql: any = { queueL3Approval: async (req: any) => { queued = req; } };
+    const r = new VerdictRouter(new EventBus(), ql);
+    await r.route({
+      decision: 'ESCALATE', riskGrade: 'L3', artifactPath: 'src/auth.ts',
+      agentDid: 'did:t:a', agentTrustAtVerdict: 0.5, summary: 'risky', matchedPatterns: ['p1'],
+      ledgerEntryId: 42,
+    } as never);
+    assert.equal(queued.sourceLedgerEntryId, 42);
+  });
+
+  test('FX342/#367 route — ESCALATE with no ledgerEntryId forwards undefined, not a fabricated id', async () => {
+    let queued: any = null;
+    const ql: any = { queueL3Approval: async (req: any) => { queued = req; } };
+    const r = new VerdictRouter(new EventBus(), ql);
+    await r.route({ decision: 'ESCALATE', riskGrade: 'L3', artifactPath: 'src/auth.ts' } as never);
+    assert.equal(queued.sourceLedgerEntryId, undefined);
+  });
+
   test('FX342 route — non-ESCALATE decision does NOT call queueL3Approval', async () => {
     let calls = 0;
     const ql: any = { queueL3Approval: async () => { calls++; } };
