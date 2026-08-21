@@ -4,7 +4,11 @@
 // already computes { nodeCount, edgeCount, duplicatesRemoved } via getStats();
 // nothing rendered it, so density was invisible to the operator at any graph
 // size, and the edge count an operator authored could silently read lower
-// than what they entered (dedup on server-branch fetch/seed) with no signal.
+// than what they entered with no signal -- duplicatesRemoved now accumulates
+// across every dedup path (server-fetch/seed AND the mergeNodes route every
+// manual/voice node add funnels through), and resets to 0 alongside every
+// clear operation so it never discloses a merge against edges that no longer
+// exist in the current graph.
 
 const STATUS_CLASS = 'cc-bs-density-status';
 
