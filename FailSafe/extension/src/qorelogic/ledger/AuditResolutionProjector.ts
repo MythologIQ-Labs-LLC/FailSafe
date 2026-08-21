@@ -1,6 +1,14 @@
 /**
  * AuditResolutionProjector — FailSafe#367 resolution-linkage projection.
  *
+ * NOT YET WIRED: this module has no production consumer. It is tranche 1 —
+ * the identity and read-model — and the renderer that surfaces it lands in a
+ * later tranche (see the FX927 row in docs/FEATURE_INDEX.md). Shipping a
+ * correct, tested, zero-consumer module is itself a defect class this repo has
+ * been burned by (the ACP tamper detector in #398 sat uncalled for months), so
+ * this banner exists to keep that visible to the next reader rather than only
+ * in a PR description.
+ *
  * Pure read-model over soa_ledger entries. Never mutates the ledger: the
  * chain stays append-only, and a WARN/BLOCK/ESCALATE record is never
  * rewritten. Resolution is represented as a *projection* — for a given
@@ -130,9 +138,12 @@ function projectOne(source: LedgerEntry, sorted: LedgerEntry[]): ResolutionProje
     };
   }
 
-  // 2. Escalated and queued for human review, but no decision has landed
-  //    yet: distinct from LIVE (no attention at all) — this one is
-  //    already in front of a human.
+  // 2. Escalated and queued for L3, but no decision has landed yet. Distinct
+  //    from LIVE (never escalated) — but deliberately NOT a claim that a human
+  //    is looking at it: pruneExpired() discards past-SLA items without writing
+  //    any ledger entry, so from the ledger alone "awaiting review" and
+  //    "silently expired unattended" are indistinguishable. The projected
+  //    reason string says exactly that; keep this comment consistent with it.
   const queued = later.find(
     (e) => e.eventType === "L3_QUEUED" && sourceLedgerEntryIdOf(e) === source.id,
   );
