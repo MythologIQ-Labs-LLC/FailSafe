@@ -748,7 +748,7 @@
     "package": "vsce package",
     "publish": "vsce publish",
     "vendor:piper": "node ./scripts/vendor-piper.cjs",
-    "test:node": "node --test \"src/test/**/*.test.cjs\"",
+    "test:node": "node --test $(find src/test -name '*.test.cjs')",
     "test:runner-coverage": "node ./scripts/check-test-runner-coverage.cjs"
   },
   "devDependencies": {
