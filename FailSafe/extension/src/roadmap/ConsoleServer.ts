@@ -174,7 +174,7 @@ export class ConsoleServer {
     this.lifecycle.stop();
     // Relay Cycle 070 (Myth-Tech-Forge#189) disposed hub's WorkspaceMutationBus
     // fs.watch subscription here, which nothing else was releasing. try/catch
-    // guards fakes used in test harnesses that don't implement dispose().
+    // fs.watch subscription here, which nothing else was releasing.
     // Relay Cycle 074 (Myth-Tech-Forge#193 / FailSafe#388): planManager used
     // to be disposed here too, but it is constructor-injected and shared with
     // genesisManager and governanceRouter — ConsoleServer does not own it, so
@@ -182,7 +182,12 @@ export class ConsoleServer {
     // console restart (stop() then start()) would leave those other
     // consumers holding a permanently-dead planManager. Disposal now happens
     // once, at the actual owner (bootstrapCore, via context.subscriptions).
-    try { this.hub.dispose(); } catch { /* already gone or unsupported */ }
+    // #388: no try/catch — `hub` is always a real HubSnapshotService built
+    // internally by buildHubService, and HubSnapshotService.dispose() already
+    // guards its own field and try/catches the inner disposal, so it cannot
+    // throw. A catch here would only hide a future real failure, which is
+    // what disposeResources exists to prevent.
+    this.hub.dispose();
   }
   getPort(): number { return this.lifecycle.getPort(); }
   broadcastEvent(data: Record<string, unknown>): void { this.broadcast(data); }

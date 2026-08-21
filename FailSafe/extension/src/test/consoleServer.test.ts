@@ -260,7 +260,7 @@ describe("ConsoleServer workspace-root scoped reads", () => {
     }
   });
 
-  it("stop() does not throw when planManager has no dispose method", () => {
+  it("stop() does not throw with a real hub after the dead catch was removed (#388)", () => {
     const workspaceRoot = mkTempDir("failsafe-roadmap-stop-no-dispose-");
     try {
       const eventBus = new EventBus();

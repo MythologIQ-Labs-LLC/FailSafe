@@ -55,6 +55,7 @@ import { SlackNotifier } from "../integrations/slack/SlackNotifier";
 import { TeamsNotifier } from "../integrations/teams/TeamsNotifier";
 import { defaultRun } from "../qorlogic/PythonInterpreterResolver";
 import { disposeResources } from "./disposeResources";
+import { buildTeardownResources } from "./teardownResources";
 
 let genesisManager: GenesisManager;
 let qorelogicManager: QorLogicManager;
@@ -67,6 +68,13 @@ let ledgerManager: LedgerManager;
 let shadowGenomeManager: ShadowGenomeManager;
 let mcpServer: FailSafeMCPServer | undefined;
 let consoleServer: ConsoleServer | undefined;
+// #388 F2: these own WorkspaceMutationBus watchers and are constructed EARLY,
+// long before `consoleServer` exists. `context.subscriptions` alone cannot
+// release them on an activation failure — VS Code disposes that store on
+// extension unload, and a rejected `activate()` never unloads — so they need
+// module-level handles reachable from teardownActivatedResources().
+let planManager: import("../qorelogic/planning/PlanManager").PlanManager | undefined;
+let trustEngine: import("../qorelogic/trust/TrustEngine").TrustEngine | undefined;
 let featureGate:
   | import("../core/FeatureGateService").FeatureGateService
   | undefined;
@@ -87,17 +95,19 @@ let __failsafeActivated = false;
 // teardown failure is logged instead of aborting every subsequent one.
 async function teardownActivatedResources(): Promise<void> {
   await disposeResources(
-    [
-      { name: "consoleServer", dispose: () => consoleServer?.stop() },
-      { name: "ledgerManager", dispose: () => ledgerManager?.close() },
-      { name: "shadowGenomeManager", dispose: () => shadowGenomeManager?.close() },
-      { name: "sentinelDaemon", dispose: () => sentinelDaemon?.stop() },
-      { name: "mcpServer", dispose: () => mcpServer?.stop() },
-      { name: "qorelogicManager", dispose: () => qorelogicManager?.dispose() },
-      { name: "genesisManager", dispose: () => genesisManager?.dispose() },
-      { name: "governanceStatusBar", dispose: () => governanceStatusBar?.dispose() },
-      { name: "eventBus", dispose: () => eventBus?.dispose() },
-    ],
+    buildTeardownResources({
+      consoleServer,
+      planManager,
+      ledgerManager,
+      shadowGenomeManager,
+      sentinelDaemon,
+      mcpServer,
+      qorelogicManager,
+      trustEngine,
+      genesisManager,
+      governanceStatusBar,
+      eventBus,
+    }),
     logger,
   );
 }
@@ -123,6 +133,9 @@ export async function activate(
 
     // 1. Core
     const core = await bootstrapCore(context, logger, logSink);
+    // #388 F2: publish the handle immediately so an activation failure below
+    // still releases the plans/roadmap watchers via teardownActivatedResources().
+    planManager = core.planManager;
     eventBus = core.eventBus;
     featureGate = createVscodeFeatureGate(core.configManager);
 
@@ -138,6 +151,7 @@ export async function activate(
 
     // 3. QorLogic
     const qor = await bootstrapQorLogic(context, core, gov, logger);
+    trustEngine = qor.trustEngine; // #388 F2: same reasoning as planManager above
     qorelogicManager = qor.qorelogicManager;
     ledgerManager = qor.ledgerManager;
     shadowGenomeManager = qor.shadowGenomeManager;
