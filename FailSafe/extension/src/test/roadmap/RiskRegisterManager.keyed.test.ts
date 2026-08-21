@@ -208,3 +208,98 @@ suite("FX241-F6 RiskRegisterManager BACKLOG-fallback materialization boundary", 
     }
   });
 });
+
+// ── #368: corrupt risks.json preservation (plan-risks-corrupt-store-368) ──────
+// A mutation against an existing-but-unparseable store must preserve the
+// original bytes aside (.corrupt-<ts>.bak) before overwriting — the check
+// lives in writeRisks() so EVERY mutation path is covered (upsert, close,
+// the Console CRUD routes, future callers). Reads never preserve/rename.
+
+function corruptBaks(dir: string): string[] {
+  const risksDir = path.join(dir, ".failsafe", "risks");
+  if (!fs.existsSync(risksDir)) return [];
+  return fs.readdirSync(risksDir).filter((f) => /^risks\.json\.corrupt-\d+\.bak$/.test(f));
+}
+
+suite("#368 corrupt-store preservation", () => {
+  const CORRUPT = '{"risks": [{"id": "old-1"}, TRUNCATED';
+
+  function makeCorruptWorkspace(content: string = CORRUPT): string {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fx368-risks-"));
+    const risksDir = path.join(dir, ".failsafe", "risks");
+    fs.mkdirSync(risksDir, { recursive: true });
+    fs.writeFileSync(path.join(risksDir, "risks.json"), content, "utf-8");
+    return dir;
+  }
+
+  test("corrupt JSON + upsertRisk: original bytes preserved in exactly one .bak; store holds only the new record", () => {
+    const dir = makeCorruptWorkspace();
+    try {
+      new RiskRegisterManager(dir).upsertRisk({ id: "new-1", status: "open" });
+      const baks = corruptBaks(dir);
+      assert.equal(baks.length, 1, "exactly one .corrupt-*.bak must exist");
+      const preserved = fs.readFileSync(path.join(dir, ".failsafe", "risks", baks[0]), "utf-8");
+      assert.equal(preserved, CORRUPT, "the .bak must hold the ORIGINAL corrupt bytes");
+      assert.deepEqual(readRisksJson(dir).map((r) => r.id), ["new-1"]);
+    } finally { cleanup(dir); }
+  });
+
+  test("wrong-shape JSON ({\"foo\":1}) gets the same preservation", () => {
+    const dir = makeCorruptWorkspace('{"foo": 1}');
+    try {
+      new RiskRegisterManager(dir).upsertRisk({ id: "new-1", status: "open" });
+      assert.equal(corruptBaks(dir).length, 1);
+    } finally { cleanup(dir); }
+  });
+
+  test("healthy store: no false preservation", () => {
+    const dir = makeWorkspace();
+    try {
+      new RiskRegisterManager(dir).upsertRisk({ id: "new-1", status: "open" });
+      assert.equal(corruptBaks(dir).length, 0, "a parseable store must never be renamed aside");
+    } finally { cleanup(dir); }
+  });
+
+  test("absent file: no .bak, store created (existing behavior pinned)", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fx368-absent-"));
+    try {
+      new RiskRegisterManager(dir).upsertRisk({ id: "new-1", status: "open" });
+      assert.equal(corruptBaks(dir).length, 0);
+      assert.deepEqual(readRisksJson(dir).map((r) => r.id), ["new-1"]);
+    } finally { cleanup(dir); }
+  });
+
+  test("corrupt store + closeRisk: early return, corrupt file left in place untouched", () => {
+    const dir = makeCorruptWorkspace();
+    try {
+      new RiskRegisterManager(dir).closeRisk("any-id");
+      assert.equal(corruptBaks(dir).length, 0, "a no-op close must not preserve/rename");
+      assert.equal(fs.readFileSync(risksJsonPath(dir), "utf-8"), CORRUPT,
+        "the corrupt file must be untouched");
+    } finally { cleanup(dir); }
+  });
+
+  test("getRisks() with a corrupt store still degrades to the backlog fallback (reads never rename)", () => {
+    const dir = makeWorkspaceWithBacklog(3);
+    try {
+      fs.mkdirSync(path.join(dir, ".failsafe", "risks"), { recursive: true });
+      fs.writeFileSync(risksJsonPath(dir), CORRUPT, "utf-8");
+      const risks = new RiskRegisterManager(dir).getRisks();
+      assert.equal(risks.length, 3, "display path keeps the fallback contract");
+      assert.equal(corruptBaks(dir).length, 0, "reads must never preserve/rename");
+      assert.equal(fs.readFileSync(risksJsonPath(dir), "utf-8"), CORRUPT);
+    } finally { cleanup(dir); }
+  });
+
+  test("writeRisks() called directly on a corrupt store (the Console route path) preserves too", () => {
+    const dir = makeCorruptWorkspace();
+    try {
+      new RiskRegisterManager(dir).writeRisks([{ id: "route-1", status: "open" }]);
+      const baks = corruptBaks(dir);
+      assert.equal(baks.length, 1, "route-path writes must get the same preservation (audit F1)");
+      assert.equal(
+        fs.readFileSync(path.join(dir, ".failsafe", "risks", baks[0]), "utf-8"), CORRUPT);
+      assert.deepEqual(readRisksJson(dir).map((r) => r.id), ["route-1"]);
+    } finally { cleanup(dir); }
+  });
+});

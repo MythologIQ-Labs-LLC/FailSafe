@@ -29,7 +29,47 @@ export class RiskRegisterManager {
   writeRisks(risks: Array<Record<string, unknown>>): void {
     const dir = path.dirname(this.risksPath);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    this.preserveCorruptStore();
     fs.writeFileSync(this.risksPath, JSON.stringify({ risks }, null, 2), "utf-8");
+  }
+
+  /**
+   * #368: an existing-but-unparseable (or wrong-shape) risks.json must be
+   * preserved aside before ANY write overwrites it — readStoredRisks() swallows
+   * parse errors into [], so without this a single upsert would destroy the
+   * operator's prior durable risks. The check lives here so every mutation
+   * path is covered (upsertRisk, closeRisk, the Console /api/v1/risks routes
+   * via HubSnapshotService.writeRiskRegister, and future callers). Reads never
+   * preserve/rename. Preservation reflects on-disk state at write time;
+   * concurrent-writer lost-updates are the declared out-of-scope RMW hazard.
+   * Posture is preserve+warn+proceed — failing closed would abort SARIF/Sentry
+   * import loops mid-run; only a rename AND copy double-failure loses data
+   * (disclosed residual).
+   */
+  private preserveCorruptStore(): void {
+    let corrupt = false;
+    try {
+      if (!fs.existsSync(this.risksPath)) return;
+      const data = JSON.parse(fs.readFileSync(this.risksPath, "utf-8"));
+      corrupt = !Array.isArray(data.risks);
+    } catch {
+      corrupt = true;
+    }
+    if (!corrupt) return;
+    const bak = `${this.risksPath}.corrupt-${Date.now()}.bak`;
+    try {
+      fs.renameSync(this.risksPath, bak);
+      console.warn(`[FailSafe] risks.json was unparseable; preserved at ${bak}`);
+    } catch {
+      // Windows EBUSY/EPERM when another process holds the file open: a copy
+      // still succeeds against open read handles.
+      try {
+        fs.copyFileSync(this.risksPath, bak);
+        console.warn(`[FailSafe] risks.json was unparseable; copied to ${bak} (rename blocked)`);
+      } catch {
+        console.warn("[FailSafe] risks.json was unparseable and could not be preserved; overwriting");
+      }
+    }
   }
 
   /**
