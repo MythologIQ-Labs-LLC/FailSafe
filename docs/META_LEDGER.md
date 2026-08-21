@@ -28398,3 +28398,61 @@ SHA256(chain_hash + "SESSION-SEAL")
 ## Decision
 
 Full SHIELD cycle for the operator-reported Audit Log signal defect (a live WARN record rendered as bare identity JSON - not informative, not actionable) plus the operator's severity-triage requirement, under the new standing ruling ui-data-point-value-test (every exposed data point must answer: how is this helping me, and is it succeeding). Plan plan-audit-log-verdict-signal.md; audit iteration 1 VETO (B1: the enriched payload fed none of the summarizer's reason keys - the informative line would have stayed empty; a genuine plan-internal contradiction) remediated via C1.5 and iteration 2 PASS carrying advisories A7-A9, all implemented. Producer: EventSubscriptionManager sentinel.verdict now logs artifactPath->filePath (the field SentinelVerdict actually has; p.filePath was ALWAYS undefined), summary, matchedPatterns, details, id, with origin-timestamp deep-link identity preserved and the live broadcast byte-identical to the stored log. Renderer: summarizer reason slot composes summary · matchedPatterns with A7 subject dedup; legacy thin payloads render byte-identically. Severity chip row (All levels/Issues/Warn/Block) reusing recordLevel, severity clause placed after the deep-link bypass (A1), build-once FX920 parity. TDD: producer+renderer suites red-first OBSERVED (16 passing/9 failing pre-implementation), then 40/40; full npm test 3924 passing; governance-tab 7/7 incl. new T5 e2e with reviewed screenshot (two-row chip bar, pass-noise suppressed, enriched WARN line showing file+summary+pattern); monitor-a11y 3/3. Two of my test defects fixed during green-up (whole-card summary count vs line-scoped; newest-first refilter order) and one e2e fixture trap diagnosed (date-range default hides stale-dated fixtures - the severity assertions would have been vacuous). Collateral: #367 resolution-linkage feature filed (operator's 'was it resolved' gap), #370 CSV export malformation filed, l3Queued verified NOT same-bug. Residuals disclosed: transparency.jsonl uncapped; details may carry an LLM excerpt (local-only, gitignored, 127.0.0.1-bound); live-card category divergence pre-existing. Ops incident logged for the record: a robocopy /MIR cleanup followed a junction into the pinned .vscode-test install and deleted it (repaired by scratch re-download + /E /XJ merge around a file held open by the operator's live editor; lesson recorded - /XJ always, and never accept exit-0 test runs without a passing-count line).
+
+
+---
+
+### Entry #579: GATE TRIBUNAL - PR #371 merge substantiation (external work)
+
+**Timestamp**: 2026-08-21T09:40:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS
+
+**Content Hash**:
+```
+SHA256("pr371|substantiation-audit-PASS|2026-08-21")
+= f17cc4fdc1366c2698c1dd792f672c8a582bafd7a3d0af81e926c4538ec59b95
+```
+
+**Previous Hash**: `c00113581ec5539b92345a0f655ac96fce9457ef55d1ff497b35197458c7fa0a` (Entry #578 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 35983794cfe51f739ff2e55c1e1e08cf1bb37cb382bd5cbec99829e54f6af638
+```
+
+## Decision
+
+Merge substantiation for parallel-session PR #371 (MetaLedgerReader.parseEntries per-instance memoization; #244 performance program, issue #372 closed manually - the PR carried no closing reference, audit A5). Independent adversarial audit PASS: defect confirmed at main by citation (3 redundant read+parse cycles per snapshot build via WorkspaceArtifactBuilder line 81; 2 more via TrackerGenerator line 68); staleness risk verified ABSENT by lifecycle - all three construction sites are call-scoped, repo-wide grep found no long-lived instance, and within-build the memo IMPROVES accuracy (snapshot consistency vs a torn multi-read view). Auditor independently reproduced red (main code + PR tests: memo test fails) and green (22/22) with the repo toolchain. Advisories carried: shared mutable array by reference (consumers verified non-mutating); error-path caches empty-for-instance (acceptable, envelope-gated); freshness property pinned at reader not call sites; COMMIT AUTHOR IDENTITY 'Claude <noreply@anthropic.com>' deviates from the standing git-identity rule across this whole external-relay series - surfaced to operator, settings-level fix in the relay environment is the durable cure (same family as the stripped-footer series, now at eight occurrences). MERGED rollup-green under the CI-green+substantiated delegation.
+
+
+---
+
+### Entry #580: GATE TRIBUNAL - PR #366 merge substantiation (external work)
+
+**Timestamp**: 2026-08-21T09:40:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS
+
+**Content Hash**:
+```
+SHA256("pr366|substantiation-audit-PASS|2026-08-21")
+= 8eb03c6854c1a3fb5a37b217e34dab8014f7579a18ae88dbb4cdca6d4daf5fa8
+```
+
+**Previous Hash**: `35983794cfe51f739ff2e55c1e1e08cf1bb37cb382bd5cbec99829e54f6af638` (Entry #579 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 3007715d646d90a2deaf1630d8e0a629842f440c6d4074b731d640eff31c1a46
+```
+
+## Decision
+
+Merge substantiation for parallel-session PR #366 (PR-linkage audit fail-severity path unreachable; #241 F-7; closes #365). Independent adversarial audit PASS: dead branch confirmed at main by citation (pr-linkage-audit.ts line 100 fail branch guarded by knownIssues that line 204 never passes; only open-state issues were ever fetched); fix fetches state=all, filters PRs, derives openIssues/knownIssues with the subset invariant intact; severity scoping verified not-too-eager (valid-open passes, known-closed warns, only nonexistent references fail). Blast radius verified bounded: no workflow files touched, the Check Run is operator-invoked and advisory-only - both rulesets carry ZERO required_status_checks, so a failure conclusion cannot block merges. Red/green independently reproduced (main + branch tests: exactly the two F-7 cases fail; branch: 20/20). Fixture updates verified necessary (unrealistic stateless fixtures would have degraded clean-PR to neutral). Data-source posture: abstain-visible on API failure, no false success. Advisories A-1 (misleading detail for PR-number/transferred references) and A-2 (state=all truncation past 1000 items -> false fail; demote to warn when truncated) filed as issue #374. MERGED rollup-green under the delegation; #365 auto-closed.
