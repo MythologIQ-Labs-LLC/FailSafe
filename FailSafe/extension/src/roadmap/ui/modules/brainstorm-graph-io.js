@@ -132,17 +132,23 @@ export function saveViewPrefs(prefs, workspacePath) {
 // FX889: strip the operator's brainstorm layer, KEEP the repo seed (source:
 // "codebase"), so source facts survive while the user's edits are cleared.
 export function clearBrainstormLayer(graph) {
-  const before = { nodes: [...graph.nodes], edges: [...graph.edges] };
+  const before = { nodes: [...graph.nodes], edges: [...graph.edges], duplicatesRemoved: graph._duplicatesRemoved };
   const keptIds = new Set(graph.nodes.filter(n => n.source === 'codebase').map(n => n.id));
+  // A pruned layer has fewer (or zero) edges than when the stale
+  // duplicatesRemoved count was accumulated -- carrying it forward would let
+  // the density-status label disclose merges against edges that no longer
+  // exist, so it resets alongside the prune rather than only the counts it's
+  // describing.
   const prune = () => {
     graph.nodes = graph.nodes.filter(n => keptIds.has(n.id));
     graph.edges = graph.edges.filter(e => keptIds.has(e.source) && keptIds.has(e.target));
+    graph._duplicatesRemoved = 0;
   };
   prune();
   graph._pushUndo({
     type: 'clear-layer',
     forward: prune,
-    backward: () => { graph.nodes = [...before.nodes]; graph.edges = [...before.edges]; },
+    backward: () => { graph.nodes = [...before.nodes]; graph.edges = [...before.edges]; graph._duplicatesRemoved = before.duplicatesRemoved; },
   });
   graph.canvas?.setNodes(graph.nodes);
   graph.canvas?.setEdges(graph.edges, graph.nodes);
