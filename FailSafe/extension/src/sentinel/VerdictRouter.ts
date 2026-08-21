@@ -45,7 +45,13 @@ export class VerdictRouter {
                     agentDid: verdict.agentDid,
                     agentTrust: verdict.agentTrustAtVerdict,
                     sentinelSummary: verdict.summary,
-                    flags: verdict.matchedPatterns
+                    flags: verdict.matchedPatterns,
+                    // FailSafe#367: link the L3 request back to the exact
+                    // ledger entry this verdict was already logged under
+                    // (set by VerdictEngine.executeActions before route()
+                    // runs), so the eventual decision can be traced to the
+                    // originating WARN/BLOCK/ESCALATE record by id.
+                    sourceLedgerEntryId: verdict.ledgerEntryId
                 });
             } catch (error) {
                 this.logger.error('Failed to queue L3 approval', {
