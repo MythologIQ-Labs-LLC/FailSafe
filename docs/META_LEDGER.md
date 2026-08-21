@@ -28631,3 +28631,38 @@ SHA256(chain_hash + "SESSION-SEAL")
 ## Decision
 
 Full SHIELD mini-cycle closing #374 (PR-linkage audit signal quality; filed from the PR #366 substantiation audit's A-1/A-2). Audit PASS first-iteration with one mandatory wording fix (F1: my claim that two F-7 tests pinned the old detail sentence was FALSE - exactly one assertion pins a SURVIVING substring; the auditor repo-grepped every surface and prescribed tightening test line 109 to the full new sentence for genuine red-first) and endorsements: warn-on-truncated verified as the right posture for an advisory-only control (rulesets re-checked: zero required_status_checks; the degradation is doubly disclosed vs the status quo of provably false fails), knownPrs discriminator structurally sound (shared number sequence, no overlap), and F3's bonus find - 'Closes #<selfPr>' produced the false does-not-exist fail at main and the knownPrs mechanism fixes it as a side effect, now pinned. Implemented: LinkageAuditInput gains knownPrs/truncated; fail branch three-way - pull-request detail (fail), truncated demotion (warn - never fail on unverifiable existence), three-cause generic detail (fail); publish path collects the filtered-out PR numbers and passes the existing truncated flag; disclosure wording acknowledges PRs count toward the window. known===null pure-caller contract preserved and pinned. TDD: compile red observed (both new input fields), F-7 assertion tightened red, then 19/19 suite; full npm test 3967 passing. Advisory-only blast radius re-verified pre-merge.
+
+
+---
+
+### Entry #586: GATE - workspace housekeeping: anchored branch prune (131 -> 22)
+
+**Timestamp**: 2026-08-21T15:30:00Z
+**Phase**: GATE
+**Author**: Governor
+**Risk Grade**: L3
+**Verdict**: PASS
+
+**Content Hash**:
+```
+SHA256("workspace-housekeeping|3-iteration-audit-PASS|2026-08-21")
+= ce3f4ef640fac95ba2859eb38a2248f692d013f5ff371b25fd088b371aa86f4b
+```
+
+**Previous Hash**: `e6d9d2eddad7466104719183441ccd39d8b3c65abd6ff09cca210de8a23d7e1a` (Entry #585 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= ab5dc6397f763f3af5f14639315867063ec1500b9946aa814027588a699b2f9e
+```
+
+**Session Seal (Merkle)**:
+```
+SHA256(chain_hash + "SESSION-SEAL")
+= 7ca8d9139543dc8f889e2ee06fd71263c49e25bdc0811584a9baa031d94e9886
+```
+
+## Decision
+
+Operator-requested workspace housekeeping, executed as a governed high-risk destructive cycle. THREE audit iterations, two of them VETO, and the first VETO prevented real data loss: iteration 1 found that local pruning OR'd 'gone upstream' without a merged filter while C3 would manufacture 109 NEW gone-upstreams - three local branches carry commits present on no remote (FX897 mind-map work, the #232 consumer-stabilization commit, ledger-seal commits) and would have been destroyed. It also refuted the plan's reversibility claim: a SHA written in a document anchors nothing, and this repo runs stock gc. Iteration 2 VETOed an unscoped fail-closed rule that read literally gave 107/24 against the plan's 109/22 - a tripwire that would have fired AFTER 107 deletions. Iteration 3 PASS. The auditor also caught a phantom in my own dataset: refs/remotes/origin/HEAD renders as bare 'origin' and had inflated my counts to 66/110; a prune script would have attempted --delete origin. Execution in the audited order: (1) anchor tags archive/prune-2026-08-21/{hotfix-v5.2.2,plan-repo-consolidation} pushed for the only 2 delete-set tips held by nothing (the other 107: 65 by main-ancestry, 41 by GitHub's immortal refs/pull/N/head, 1 by tag v4.6.5); (2) restore manifest at docs/archive/branch-prune-manifest-2026-08-21.md with per-row anchor provenance, MERGED TO MAIN before any deletion (PR #383) so the reversal record cannot vanish with a feature branch; (3) T1 gate - 109 rows, 0 unresolvable SHAs, 0 absent from remote, 0 live-parity mismatches - then 109 remote deletions in 6 verified batches; (4) T2 - remote non-main 131 -> 22, retained set exactly the 16 closed-PR + 6 no-PR branches, 0 unexpected extras; (5) T3 reversibility PROVEN end-to-end - hotfix/v5.2.2 restored from its archive tag at the exact manifest SHA a77e3518b, ref confirmed, re-deleted; (6) local prune guarded on zero-unpushed-commits, 145 -> 64 with 46 branches protected (the guard's population grew from the predicted 6 to 46 precisely because C3 removed their upstreams - failing safe, exactly as the auditor forecast); (7) root plan tidy 40 -> 1 (the active plan retained; 5 unmirrored plans mirrored first; 120 mirrors intact). T4 all six locally-unique branches survive with unpushed commits; T5 git fsck clean. Evidence untouched by design: .qor/gates (42 sessions), .failsafe (134M runtime stores). Retained-by-policy: the 6 no-PR branches (two carrying seal commits) are the only refs that could represent unlanded work - surfaced to the operator as a separate decision rather than deleted. Residual: the 46 locally-protected branches are all anchored remotely and could be pruned in a follow-up; not taken here because the conservative guard is what passed audit.
