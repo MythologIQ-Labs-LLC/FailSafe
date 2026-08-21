@@ -1,5 +1,7 @@
 # Plan: collapse WorkspaceArtifactBuilder's redundant META_LEDGER reads (#233 retargeted slice)
 
+**FX ID COLLISION (2026-08-21, post-park)**: PR #413 landed FX929 for the enforce-default upgrade-notice fix (#412). This plan reserved FX929/FX930 while it was in flight. If resumed, renumber to the next free ids and re-verify against docs/FEATURE_INDEX.md before audit -- the id-free check in ledger #594 is stale.
+
 **iteration**: 3 (iter 1 VETOed — ledger #592, V1 evidence-format + V2 versionStatus drop; iter 2 VETOed — ledger #593, V3 half-honored option type + V4 unreachable test states)
 
 **change_class**: feature
