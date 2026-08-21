@@ -17,6 +17,39 @@ const CATEGORY_PATTERNS = {
   Trust: /trust|chain|checkpoint/i,
   Risk: /risk/i,
 };
+// #370: RFC-4180 field quoting + OWASP formula-injection neutralization. The
+// leading-quote prefix ALTERS data that legitimately starts with - = + @ \t \r
+// (disclosed residual): mutate-for-safety is the chosen posture because exports
+// are operator-opened in Excel/Sheets, which evaluate formulas even inside
+// quoted fields, and payload text is partly derived from scanned content.
+function csvField(value) {
+  let str = value == null ? '' : String(value);
+  if (/^[=+\-@\t\r]/.test(str)) str = `'${str}`;
+  return `"${str.replace(/"/g, '""')}"`;
+}
+
+// Pure row builder (#370) — exportCsv wires this to Blob/anchor download. Live
+// entries carry the RAW SentinelVerdict via the 'verdict' wrap (subject on
+// artifactPath, wrap type 'verdict'), and the id-keyed dedupe drops the later
+// enriched history copy — hence the alias chains on File and Type.
+export function buildCsv(events, matches) {
+  const header = 'Timestamp,Type,Decision,Risk,File,Summary,Patterns,Payload';
+  const rows = events.filter(matches).map(e => {
+    const p = e.payload || {};
+    return [
+      e.time,
+      p.type || e.type,
+      p.decision || '',
+      p.riskGrade || '',
+      p.filePath || p.artifactPath || p.path || '',
+      p.summary || e.summary || '',
+      Array.isArray(p.matchedPatterns) ? p.matchedPatterns.join('; ') : '',
+      JSON.stringify(p),
+    ].map(csvField).join(',');
+  });
+  return [header, ...rows].join('\n');
+}
+
 export class TransparencyRenderer {
   constructor(containerId, deps = {}) {
     this.container = document.getElementById(containerId);
@@ -246,14 +279,15 @@ export class TransparencyRenderer {
   }
 
   exportCsv() {
-    const rows = this.events.map(e =>
-      [e.time, e.type, JSON.stringify(e.payload || '')].join(',')
-    );
-    const csv = 'Timestamp,Type,Payload\n' + rows.join('\n');
+    // WYSIWYG export: rows honor the active category/severity/date filters
+    // (arrow form required — matchesFilter dereferences this.container). Note
+    // the date default (From/To = today) makes the default export today-only.
+    const csv = buildCsv(this.events, (e) => this.matchesFilter(e));
     const blob = new Blob([csv], { type: 'text/csv' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `failsafe-audit-${new Date().toISOString().slice(0,10)}.csv`;
+    const level = this.activeLevel !== 'All' ? `-${this.activeLevel.toLowerCase()}` : '';
+    a.download = `failsafe-audit-${new Date().toISOString().slice(0,10)}${level}.csv`;
     a.click();
     URL.revokeObjectURL(a.href);
   }

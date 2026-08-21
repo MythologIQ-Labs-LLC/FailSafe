@@ -440,3 +440,128 @@ suite('Audit Log severity triage filter', () => {
     } finally { restore(); }
   });
 });
+
+// ── Audit Log CSV export (#370, plan-audit-csv-export-370) ────────────────────
+// RFC-4180 quoting + OWASP formula-injection neutralization + informative
+// columns + filter-respecting rows. buildCsv is the pure testable core; the
+// Blob/anchor wire code stays untested (jsdom lacks URL.createObjectURL).
+
+// @ts-expect-error JS module import in TS test context
+import { buildCsv } from '../../../src/roadmap/ui/modules/transparency.js';
+
+// Minimal RFC-4180 parser: quoted fields with doubled quotes, \n row breaks.
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [], field = '', inQuotes = false, i = 0;
+  while (i < text.length) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"' && text[i + 1] === '"') { field += '"'; i += 2; continue; }
+      if (c === '"') { inQuotes = false; i += 1; continue; }
+      field += c; i += 1; continue;
+    }
+    if (c === '"') { inQuotes = true; i += 1; continue; }
+    if (c === ',') { row.push(field); field = ''; i += 1; continue; }
+    if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; i += 1; continue; }
+    field += c; i += 1;
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+function entryOf(payload: Record<string, unknown>, extra: Record<string, unknown> = {}) {
+  return {
+    time: '2026-08-21T10:00:00.000Z',
+    type: (payload.type as string) || 'sentinel.verdict',
+    payload,
+    summary: 'rendered summary line',
+    ...extra,
+  };
+}
+
+suite('Audit Log CSV export (#370)', () => {
+  const HEADER = ['Timestamp', 'Type', 'Decision', 'Risk', 'File', 'Summary', 'Patterns', 'Payload'];
+
+  test('commas, quotes, and newlines in fields round-trip through a real CSV parse', () => {
+    const summary = 'found "creds", key=value,\nsecond line';
+    const csv = buildCsv([entryOf({
+      type: 'sentinel.verdict', decision: 'WARN', riskGrade: 'L1',
+      filePath: 'src/a,b.ts', summary, matchedPatterns: ['p1'],
+    })], () => true);
+    const rows = parseCsv(csv);
+    assert.deepEqual(rows[0], HEADER);
+    assert.equal(rows[1][4], 'src/a,b.ts', 'comma-bearing file cell must survive');
+    assert.equal(rows[1][5], summary, 'quotes+comma+newline summary must survive intact');
+  });
+
+  test('formula-injection: leading = + - @ tab CR cells are neutralized with a quote prefix', () => {
+    for (const hostile of ['=cmd()', '+SUM(A1)', '-2+3', '@import', '\tX', '\rY']) {
+      const csv = buildCsv([entryOf({
+        type: 'sentinel.verdict', decision: 'WARN', riskGrade: 'L1', summary: hostile,
+      })], () => true);
+      const cell = parseCsv(csv)[1][5];
+      assert.equal(cell, `'${hostile}`,
+        `leading ${JSON.stringify(hostile[0])} must be neutralized`);
+    }
+  });
+
+  test('informative columns from an enriched payload; patterns joined', () => {
+    const csv = buildCsv([entryOf({
+      type: 'sentinel.verdict', decision: 'BLOCK', riskGrade: 'L3',
+      filePath: 'src/x.ts', summary: 'bad', matchedPatterns: ['a', 'b'],
+    })], () => true);
+    const r = parseCsv(csv)[1];
+    assert.equal(r[2], 'BLOCK');
+    assert.equal(r[3], 'L3');
+    assert.equal(r[4], 'src/x.ts');
+    assert.equal(r[6], 'a; b');
+    assert.ok(r[7].startsWith("{"), 'raw JSON payload kept as last column');
+  });
+
+  test('F1: live raw-SentinelVerdict shape (artifactPath, no filePath) still names the file', () => {
+    const csv = buildCsv([entryOf({
+      type: 'sentinel.verdict', decision: 'WARN', riskGrade: 'L1',
+      artifactPath: 'src/live.ts', summary: 'live warn', matchedPatterns: [],
+    }, { type: 'verdict' })], () => true);
+    const r = parseCsv(csv)[1];
+    assert.equal(r[4], 'src/live.ts', 'File column must read artifactPath for live entries');
+    assert.equal(r[1], 'sentinel.verdict', 'Type cell normalizes the live verdict wrap to payload.type');
+  });
+
+  test('filter-respect: rows honor the provided predicate (WYSIWYG export)', () => {
+    const pass = entryOf({ type: 'sentinel.verdict', decision: 'PASS', riskGrade: 'L1', filePath: 'src/ok.ts' });
+    const warn = entryOf({ type: 'sentinel.verdict', decision: 'WARN', riskGrade: 'L1', filePath: 'src/warn.ts' });
+    const csv = buildCsv([pass, warn], (e: any) => e.payload.decision !== 'PASS');
+    const rows = parseCsv(csv);
+    assert.equal(rows.length, 2, 'header + one row');
+    assert.equal(rows[1][4], 'src/warn.ts');
+  });
+
+  test('legacy thin payload exports without throwing, empty informative cells', () => {
+    const csv = buildCsv([entryOf({ type: 'transparency.prompt' })], () => true);
+    const r = parseCsv(csv)[1];
+    assert.equal(r[2], '');
+    assert.equal(r[4], '');
+    assert.equal(r[5], 'rendered summary line', 'Summary falls back to the rendered line (F3)');
+  });
+});
+
+suite('summarizer artifactPath subject (C2.5)', () => {
+  test('a live raw-verdict card names the file via artifactPath', () => {
+    const { container, restore } = setupDom();
+    try {
+      const renderer = new TransparencyRenderer('audit-root');
+      renderer.render();
+      renderer.onEvent({ type: 'verdict', payload: {
+        type: 'sentinel.verdict', decision: 'WARN', riskGrade: 'L1',
+        artifactPath: 'src/live.ts', summary: '1 issue(s) detected',
+        timestamp: new Date().toISOString(),
+      } });
+      const card = container.querySelector('.cc-transparency-record')!.cloneNode(true) as HTMLElement;
+      card.querySelector('pre')?.remove();
+      const line = card.textContent || '';
+      assert.match(line, /Sentinel WARN L1 - src\/live\.ts/,
+        'the live card subject must be the file, not the summary');
+    } finally { restore(); }
+  });
+});

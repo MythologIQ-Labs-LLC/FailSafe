@@ -27,7 +27,7 @@ export function summarizeTransparencyEvent(event) {
   if (/sentinel\.verdict|verdict/i.test(type)) {
     const decision = String(payload.decision || payload.verdict || payload.policyVerdict || 'VERDICT');
     const risk = payload.riskGrade ? ` ${payload.riskGrade}` : '';
-    const subject = payload.filePath || payload.path || payload.phase || payload.target || payload.summary || 'workspace';
+    const subject = payload.filePath || payload.artifactPath || payload.path || payload.phase || payload.target || payload.summary || 'workspace';
     const patterns = Array.isArray(payload.matchedPatterns) && payload.matchedPatterns.length
       ? payload.matchedPatterns.join(', ')
       : payload.matchedPattern || '';
