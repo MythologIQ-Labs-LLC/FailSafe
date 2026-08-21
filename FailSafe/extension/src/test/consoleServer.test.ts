@@ -181,4 +181,68 @@ describe("ConsoleServer workspace-root scoped reads", () => {
       fs.rmSync(workspaceRoot, { recursive: true, force: true });
     }
   });
+
+  // Relay Cycle 070 (Myth-Tech-Forge#189): stop() previously only called
+  // lifecycle.stop(), which released the ConsoleLifecycleService's own
+  // ledger watcher but left HubSnapshotService's chain-validity
+  // WorkspaceMutationBus subscription and PlanManager's plans/roadmap
+  // subscriptions open forever — leaked fs.watch handles on every teardown
+  // that doesn't restart the extension host process. stop() must release
+  // both. planManager.dispose() is called defensively (optional chaining +
+  // try/catch) because other tests in this file inject fake planManagers
+  // without a dispose method.
+  it("stop() disposes hub's mutation-bus subscription and planManager", () => {
+    const workspaceRoot = mkTempDir("failsafe-roadmap-stop-dispose-");
+    try {
+      const eventBus = new EventBus();
+      let hubWatcherDisposed = 0;
+      const fakeMutationBus = {
+        registerWatcher: () => ({ dispose: () => { hubWatcherDisposed += 1; } }),
+      };
+      let planManagerDisposed = 0;
+      const fakePlanManager = {
+        getAllSprints: () => [],
+        getCurrentSprint: () => null,
+        getActivePlan: () => null,
+        dispose: () => { planManagerDisposed += 1; },
+      };
+      const fakeQorLogicManager = {
+        getLedgerManager: () => ({ getLedgerPath: () => path.join(workspaceRoot, "ledger.db") }),
+      };
+      const server = new ConsoleServer(
+        fakePlanManager as never,
+        fakeQorLogicManager as never,
+        { getStatus: () => ({ running: false, queueDepth: 0 }) } as never,
+        eventBus,
+        { workspaceRoot, mutationBus: fakeMutationBus as never },
+      );
+
+      server.stop();
+
+      assert.strictEqual(hubWatcherDisposed, 1, "hub's chain-validity watcher should be disposed");
+      assert.strictEqual(planManagerDisposed, 1, "planManager should be disposed");
+      eventBus.dispose();
+    } finally {
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("stop() does not throw when planManager has no dispose method", () => {
+    const workspaceRoot = mkTempDir("failsafe-roadmap-stop-no-dispose-");
+    try {
+      const eventBus = new EventBus();
+      const server = new ConsoleServer(
+        { getAllSprints: () => [], getCurrentSprint: () => null, getActivePlan: () => null } as never,
+        { getLedgerManager: () => null } as never,
+        { getStatus: () => ({ running: false, queueDepth: 0 }) } as never,
+        eventBus,
+        { workspaceRoot },
+      );
+
+      assert.doesNotThrow(() => server.stop());
+      eventBus.dispose();
+    } finally {
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
 });
