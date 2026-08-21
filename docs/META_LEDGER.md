@@ -28933,3 +28933,49 @@ REVIEWER-DECLARED LIMITS, recorded rather than papered over: the independent rev
 ESCALATION POSTURE: two consecutive VETOs with DIFFERING signatures, so the 3-consecutive-same-signature threshold is not met and `/qor-remediate` is not yet the legal next action. Named for the record because it is the same underlying failure in two costumes - a completeness claim (`ConsumerReadOptions` handled; five states covered) asserted without exercising what would falsify it. Iteration 3 is the last before escalation; a third variant of "claimed coverage that isn't" is a process signal, not a plan defect.
 
 Required next action: `/qor-plan` iteration 3 (V3 helper contract - add the stale rung or narrow the parameter type so `maxAgeMs` is unrepresentable, `QorLogicVersionStatus` already imported at consumer-adapter.ts:19; V4 test reachability; plus the seven non-blocking items), then re-run `/qor-audit`. No implementation authorized.
+
+---
+
+### Entry #594: GATE TRIBUNAL - plan-233-read-ledger-once (iteration 3, Option B) -> ESCALATE to /qor-remediate
+
+**Timestamp**: 2026-08-21T23:15:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: VETO (third consecutive) - routed to `/qor-remediate`, NOT to a fourth plan iteration
+
+**Content Hash**:
+```
+SHA256("plan-233-read-ledger-once|audit-VETO-iter3|2026-08-21")
+= 6291b528dfadcb5b56ebfcf4ec7ac9a2ad82565bbd66eb98a2a0e08ed18f0966
+```
+
+**Previous Hash**: `5f8cf20ea32cd28e03d81bbc67dd75308a3554abf67f8df92352f99d69e65e2e` (Entry #593 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 52b2717fd9feae125f7381958a5ac70046bb42715e12cfb295571a4bc524dcc3
+```
+
+## Decision
+
+VETO on iteration 3, and the cycle STOPS here rather than producing a fourth plan. Entry #593 named the condition in advance: "a third variant of 'claimed coverage that isn't' is a process signal, not a plan defect." That condition is now met twice over. Mode: Option B adversarial, operator-authorized `code-reviewer` subagent receiving only the plan and repo. Report at `.agent/staging/AUDIT_REPORT.md`.
+
+BLOCKING FINDINGS.
+
+B2 (`coverage-gap`, reviewer-found, author-missed) - THE FIXTURE SET CANNOT REACH THE STATE THE TEST CLAIMS. Iteration 3 corrected V4 by driving `unsupported` via `{versionStatus}` and `stale` via `{maxAgeMs}` + mtime rewind - both corrections verified right against consumer-adapter.test.ts:109-116 and :118-125 - and then concluded "behavior-preserving across all five states". ALL SIX fixtures ship a `META_LEDGER.md`, verified by direct enumeration: malformed, missing-optional, partial-migration, stale, supported, unsupported-version. `missing-optional` and `partial-migration` are missing FEATURE_INDEX.md, NOT the ledger (consumer-adapter.test.ts:84-90 and :133-137 assert `readMetaLedgerArtifact(root).state === 'ok'` on both). So the six fixtures yield FOUR states - ok, malformed, stale, unsupported - and `unavailable`/absent is unreachable from the fixture set while the assertion passes without ever exercising it. The subsidiary count is wrong too: a bare no-options call reaches TWO states (ok, malformed), not the "three" the plan states. Partial mitigations exist at plan lines 84 and 86 but neither is envelope-equivalence for `readMetaLedgerArtifact`, which is what the test and FX892's descriptor bill.
+
+B-AUTHOR (`test-failure`, author-found, reviewer-missed) - THE EQUIVALENCE BASELINES ARE CIRCULAR. Both load-bearing equivalence tests assert against "the pre-change implementation" / "the pre-change output captured from the same fixture" without specifying that baseline's provenance. The pre-change implementation ceases to exist once the change lands, so the natural implementation is to snapshot the NEW code's output and assert the new code matches it - which passes unconditionally. These two tests ARE the plan's entire "zero behavior change" evidence. The repo's own precedent is the remedy and contradicts the plan: existing consumer-adapter.test.ts assertions use explicit literals (`state === 'ok'`, `data.length === 2`, `data[0].n === 1`, `reason === null`), never a captured snapshot of the implementation's own output. Literals are falsifiable; self-captured baselines are not.
+
+B1 RETRACTED. The reviewer reported the `@ts-expect-error` pin as still carrying an `as never` cast that makes it inert and build-breaking. That defect was real but had ALREADY been self-caught and fixed in commit 01b2253c before the reviewer re-read; the surviving `as never` text appears only inside a parenthetical explaining why that form is wrong. The reviewer's reasoning independently corroborates the fix and is recorded as corroboration, but the finding does not stand as a defect and is not counted. Retracted explicitly rather than left to inflate the count.
+
+SIX NON-BLOCKING, all verified: the Phase 3 import change is unstated (WorkspaceArtifactBuilder.ts:19 imports only `readMetaLedgerArtifact`; the snippet needs three new imports and orphans that one) while the plan calls out the exact analogous gap for diagnostics.ts - its own standard applied asymmetrically; `opts` signature residue in the prose and in DoD D2, which locks the pre-narrowing shape; `readMetaLedgerRaw` return shape still misstated in one test line and one DoD line (the return is `{read, sourcePath}`, so assertions must target `.read`); "on a rewound mtime" is misapplied to `classifyMetaLedgerText`, which takes a caller-supplied `RawArtifactRead.mtimeIso` and has no file to `utimesSync`; the new `ledger?` injection point has no root affinity, so an envelope classified from a different root would be reported under `root`; and two citation line imprecisions (the `maxAgeMs` branch is :128-132 not :127; ConsoleServerHub's bounded read is `readLedgerTail` at :82, not the `path.join` at :79).
+
+WHY THIS ESCALATES RATHER THAN ITERATES. Six instances of ONE signature across three iterations, each a check asserted to prove something without exercising what would falsify it: V1 evidence the lint could not parse (0 citations truth-checked, passing by non-recognition); V2 a dropped option; V3 an option type honored halfway; V4 test states unreachable via `stale`/`unsupported`; the `as never` pin that discriminated nothing; B2 test state unreachable via `unavailable`; and the circular equivalence baselines. The formal `cycle_count_escalator` threshold keys on identical recorded category strings and did not fire - recorded signatures were `specification-drift`, then `specification-drift`+`coverage-gap`, now `coverage-gap`+`test-failure`. THE MECHANICAL CHECK MISSING THE PATTERN IS ITSELF AN INSTANCE OF THE PATTERN: a threshold asserted to catch repetition, keyed on a surface string that varies while the underlying failure does not. Routing on the substance, not the string.
+
+WHAT SURVIVES, VERIFIED TWICE INDEPENDENTLY - the remediation must not relitigate: all 9 LD citations resolve exactly (each pattern matching one line, observed text identical, at WorkspaceArtifactBuilder.ts:78/:79/:103, consumer-adapter.ts:140/:184/:57, diagnostics.ts:40/:19, HubSnapshotService.ts:191), and `_LD_HEADING_RE` now enters every region; `QorLogicVersionStatus` is genuinely imported at consumer-adapter.ts:19 and `installed: string | null` makes `versionStatus?.installed ?? null` type as `string | null`; the NARROWED helper faithfully reproduces `classifyRead` for what it accepts (floor branch field-identical to :102-104; non-floor `{...env, provenance}` identical because `maxAgeMs` is absent on both sides; `versionStatus === undefined` gives `qorVersion: null` both ways; no `exactOptionalPropertyTypes`, so `unsupportedReason({versionStatus})` compiles with undefined); read counts right on BOTH branches, empirically measured by the author against materialized fixtures - supported 5 (envelope `ok`) to 3, malformed 4 (envelope `malformed`) to 2, with `MetaLedgerReader` reading ONCE because `parseEntries` caches and `SystemStateReader` genuinely firing because no fixture ships `ws-docs/SYSTEM_STATE.md`; parse count 2 to 1; FX929/FX930 ids free (highest is FX928); Phase 3 gating unchanged so the B197 render contract at :78 holds; `readGovernanceState(text)` degradation identity holds.
+
+NOT VERIFIED by the reviewer (no execution tool): the wall-clock figures and the on-disk ledger size, already disclosed in-plan as author-measured. The read counts, by contrast, WERE empirically measured this cycle and are no longer author-assertion.
+
+Required next action: `/qor-remediate`. The target is the process defect - a plan-authoring and self-review habit that produces completeness claims whose falsifying case is never exercised - not a fourth patch of this plan. The #233 slice's design survives intact and is recoverable from this plan once the process finding is addressed.
