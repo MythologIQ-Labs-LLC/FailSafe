@@ -35,6 +35,13 @@ export async function bootstrapQorLogic(
   core: CoreSubstrate,
   gov: GovernanceSubstrate,
   logger: Logger,
+  /**
+   * FailSafe#388: publishes the TrustEngine the instant it is constructed, so
+   * main.ts's crash-path teardown can reach it. Assigning from this
+   * function's RETURN value is too late — TrustEngine is built near the top
+   * and there are several throw sites before the return.
+   */
+  publishTrustEngine?: (engine: TrustEngine) => void,
 ): Promise<QorLogicSubstrate> {
   logger.info("Initializing Qor-Logic layer...");
 
@@ -52,6 +59,18 @@ export async function bootstrapQorLogic(
 
   const trustEngine = new TrustEngine(ledgerManager, core.eventBus, core.mutationBus);
   await trustEngine.initialize();
+  // FailSafe#388, narrower same-shape residual: trustEngine is normally
+  // disposed via qorelogicManager.dispose(), but qorelogicManager is built
+  // later in THIS function, so a throw in between (policyEngine.loadPolicies,
+  // shadowGenomeManager.initialize, qorelogicManager.initialize,
+  // setQorLogicManager, breakGlass.reconcile, getDatabase) would leave it
+  // unreachable from main.ts's crash-path teardown. Publishing the handle
+  // HERE — at construction, not from the return value — is what closes that
+  // window. The context.subscriptions push below covers normal unload only
+  // (VS Code disposes that store at unload; a rejected activate() never
+  // unloads). dispose() is idempotent, so both paths are safe together.
+  publishTrustEngine?.(trustEngine);
+  context.subscriptions.push({ dispose: () => trustEngine.dispose() });
 
   const policyEngine = new PolicyEngine(configProvider);
   await policyEngine.loadPolicies();

@@ -185,13 +185,11 @@ describe("ConsoleServer workspace-root scoped reads", () => {
   // Relay Cycle 070 (Myth-Tech-Forge#189): stop() previously only called
   // lifecycle.stop(), which released the ConsoleLifecycleService's own
   // ledger watcher but left HubSnapshotService's chain-validity
-  // WorkspaceMutationBus subscription and PlanManager's plans/roadmap
-  // subscriptions open forever — leaked fs.watch handles on every teardown
-  // that doesn't restart the extension host process. stop() must release
-  // both. planManager.dispose() is called defensively (optional chaining +
-  // try/catch) because other tests in this file inject fake planManagers
-  // without a dispose method.
-  it("stop() disposes hub's mutation-bus subscription and planManager", () => {
+  // WorkspaceMutationBus subscription open forever — a leaked fs.watch
+  // handle on every teardown that doesn't restart the extension host
+  // process. stop() must release it. hub is owned by ConsoleServer, so
+  // stop() is the correct place to dispose it.
+  it("stop() disposes hub's mutation-bus subscription", () => {
     const workspaceRoot = mkTempDir("failsafe-roadmap-stop-dispose-");
     try {
       const eventBus = new EventBus();
@@ -199,12 +197,10 @@ describe("ConsoleServer workspace-root scoped reads", () => {
       const fakeMutationBus = {
         registerWatcher: () => ({ dispose: () => { hubWatcherDisposed += 1; } }),
       };
-      let planManagerDisposed = 0;
       const fakePlanManager = {
         getAllSprints: () => [],
         getCurrentSprint: () => null,
         getActivePlan: () => null,
-        dispose: () => { planManagerDisposed += 1; },
       };
       const fakeQorLogicManager = {
         getLedgerManager: () => ({ getLedgerPath: () => path.join(workspaceRoot, "ledger.db") }),
@@ -220,14 +216,51 @@ describe("ConsoleServer workspace-root scoped reads", () => {
       server.stop();
 
       assert.strictEqual(hubWatcherDisposed, 1, "hub's chain-validity watcher should be disposed");
-      assert.strictEqual(planManagerDisposed, 1, "planManager should be disposed");
       eventBus.dispose();
     } finally {
       fs.rmSync(workspaceRoot, { recursive: true, force: true });
     }
   });
 
-  it("stop() does not throw when planManager has no dispose method", () => {
+  // Relay Cycle 074 (Myth-Tech-Forge#193 / FailSafe#388): planManager is
+  // constructor-injected into ConsoleServer and shared with genesisManager
+  // and governanceRouter — ConsoleServer does not own it. stop() must not
+  // dispose it: a future console restart (stop() then start()) would
+  // otherwise leave those other consumers holding a permanently-dead
+  // planManager with no way to recover their watchers. Disposal now happens
+  // once, at the actual owner (bootstrapCore, via context.subscriptions).
+  it("stop() does not dispose planManager (owned by bootstrap, not ConsoleServer)", () => {
+    const workspaceRoot = mkTempDir("failsafe-roadmap-stop-no-planmanager-dispose-");
+    try {
+      const eventBus = new EventBus();
+      let planManagerDisposed = 0;
+      const fakePlanManager = {
+        getAllSprints: () => [],
+        getCurrentSprint: () => null,
+        getActivePlan: () => null,
+        dispose: () => { planManagerDisposed += 1; },
+      };
+      const fakeQorLogicManager = {
+        getLedgerManager: () => ({ getLedgerPath: () => path.join(workspaceRoot, "ledger.db") }),
+      };
+      const server = new ConsoleServer(
+        fakePlanManager as never,
+        fakeQorLogicManager as never,
+        { getStatus: () => ({ running: false, queueDepth: 0 }) } as never,
+        eventBus,
+        { workspaceRoot },
+      );
+
+      server.stop();
+
+      assert.strictEqual(planManagerDisposed, 0, "ConsoleServer.stop() must not reach outside its blast radius and dispose a shared, constructor-injected planManager");
+      eventBus.dispose();
+    } finally {
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("stop() does not throw with a real hub after the dead catch was removed (#388)", () => {
     const workspaceRoot = mkTempDir("failsafe-roadmap-stop-no-dispose-");
     try {
       const eventBus = new EventBus();
