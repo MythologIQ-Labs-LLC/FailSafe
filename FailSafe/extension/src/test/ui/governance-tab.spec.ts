@@ -113,3 +113,39 @@ test("Governance audit deep link filters by event id and highlights the record",
   await expect(page.locator('#governance [data-event-id="evt-2"]')).toHaveClass(/cc-verdict--highlighted/);
   await expect(page.locator('#governance [data-event-id="evt-2"]')).toContainText('Sentinel BLOCK L3 - src/b.ts');
 });
+
+test("Audit Log severity triage: chips filter to warn/block; enriched record line is informative (T5 visual)", async ({ page }) => {
+  // Timestamps must fall inside the audit date-range default (From = today),
+  // or the refilter's DATE clause silently hides everything and the severity
+  // assertions would be vacuous.
+  const now = new Date().toISOString();
+  controller = await serveConsoleServerUI({
+    timelineEvents: [
+      buildTimelineEvent('evt-p', 'sentinel.verdict', { decision: 'PASS', riskGrade: 'L1', filePath: 'src/ok.ts', timestamp: now }),
+      buildTimelineEvent('evt-w', 'sentinel.verdict', {
+        decision: 'WARN', riskGrade: 'L1', filePath: 'src/auth/session.ts', timestamp: now,
+        summary: '1 issue(s) detected - review recommended', matchedPatterns: ['hardcoded-credential'],
+      }),
+      buildTimelineEvent('evt-b', 'sentinel.verdict', { decision: 'BLOCK', riskGrade: 'L3', filePath: 'src/b.ts', timestamp: now }),
+    ],
+  });
+  await page.goto(`${controller.url}/command-center.html#governance:audit`);
+  await expect(page.locator('#governance .cc-transparency-record')).toHaveCount(3);
+
+  // Enriched line: what, where, why — not just that something happened.
+  await expect(page.locator('#governance [data-event-id="evt-w"]'))
+    .toContainText('Sentinel WARN L1 - src/auth/session.ts (1 issue(s) detected - review recommended · hardcoded-credential)');
+
+  // Severity triage: pass records are noise while triaging concerns.
+  await page.locator('#governance .cc-chip[data-lvl="Issues"]').click();
+  await expect(page.locator('#governance .cc-transparency-record')).toHaveCount(2);
+  await expect(page.locator('#governance [data-event-id="evt-p"]')).toHaveCount(0);
+  await page.screenshot({ path: 'test-results/audit-log-severity-filter.png' });
+
+  await page.locator('#governance .cc-chip[data-lvl="Violation"]').click();
+  await expect(page.locator('#governance .cc-transparency-record')).toHaveCount(1);
+  await expect(page.locator('#governance [data-event-id="evt-b"]')).toBeVisible();
+
+  await page.locator('#governance .cc-chip[data-lvl="All"]').click();
+  await expect(page.locator('#governance .cc-transparency-record')).toHaveCount(3);
+});

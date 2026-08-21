@@ -1,6 +1,15 @@
 // FailSafe Command Center — Transparency Stream Renderer
 import { eventId, eventKey, eventTimestamp, hasAuditHashFilter, highlightRecordFromHash, recordLevel, summarizeTransparencyEvent } from './transparency-records.js';
 const CATEGORIES = ['All', 'Sentinel', 'Prompt', 'Governance', 'Trust', 'Risk'];
+// Severity triage row (operator ruling ui-data-point-value-test): pass records
+// are noise while triaging — warn/block must be isolable. Keys map onto
+// recordLevel()'s classification; 'Issues' = anything that is not a pass.
+const SEVERITIES = [
+  { key: 'All', label: 'All levels' },
+  { key: 'Issues', label: 'Issues' },
+  { key: 'Warn', label: 'Warn' },
+  { key: 'Violation', label: 'Block' },
+];
 const CATEGORY_PATTERNS = {
   Sentinel: /sentinel|verdict/i,
   Prompt: /prompt|chat/i,
@@ -15,6 +24,7 @@ export class TransparencyRenderer {
     this.buffer = [];
     this.paused = false;
     this.activeFilter = 'All';
+    this.activeLevel = 'All';
     this.streamEl = null;
     this.maxItems = 500;
   }
@@ -72,17 +82,24 @@ export class TransparencyRenderer {
     if (!bar.children.length) {
       bar.innerHTML = CATEGORIES.map(c =>
         `<button class="cc-chip" data-cat="${c}">${c}</button>`
-      ).join('');
+      ).join('')
+        + '<span class="cc-chip-row-break" style="flex-basis:100%;height:0"></span>'
+        + SEVERITIES.map(s =>
+          `<button class="cc-chip" data-lvl="${s.key}">${s.label}</button>`
+        ).join('');
       bar.querySelectorAll('.cc-chip').forEach(chip => {
         chip.addEventListener('click', () => {
-          this.activeFilter = chip.dataset.cat;
+          if (chip.dataset.lvl) this.activeLevel = chip.dataset.lvl;
+          else this.activeFilter = chip.dataset.cat;
           this.renderFilterBar();
           this.refilter();
         });
       });
     }
     bar.querySelectorAll('.cc-chip').forEach(chip =>
-      chip.classList.toggle('active', chip.dataset.cat === this.activeFilter));
+      chip.classList.toggle('active', chip.dataset.lvl
+        ? chip.dataset.lvl === this.activeLevel
+        : chip.dataset.cat === this.activeFilter));
   }
 
   bindPause() {
@@ -123,6 +140,13 @@ export class TransparencyRenderer {
       if (pattern && !pattern.test(entry.type)) return false;
     }
     if (hasAuditHashFilter()) return true;
+    // Severity clause sits AFTER the deep-link bypass (audit A1): a shared
+    // record link must render regardless of the active severity chip.
+    if (this.activeLevel !== 'All') {
+      const level = recordLevel(entry);
+      if (this.activeLevel === 'Issues' ? level === 'pass'
+        : level !== this.activeLevel.toLowerCase()) return false;
+    }
     const { from, to } = this.getDateRange();
     // entry.time is a UTC ISO instant (e.g. `2026-05-29T01:24:43.452Z`); the
     // from/to bounds are LOCAL minute-precision wall-clock (`YYYY-MM-DDTHH:mm`,
