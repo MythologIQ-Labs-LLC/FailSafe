@@ -6,60 +6,45 @@
  * CI gates — `.vscode-test.mjs` globs `out/test/**\/*.test.js`, tsconfig has no
  * `allowJs`, and nothing ran `node --test`. Authors believed they had coverage
  * and reviewers credited it; four PRs in one day cited those suites as their
- * evidence. Five of the cases had rotted, and the failures were real: a stale
- * 476-row snapshot, two malformed FEATURE_INDEX rows the parser silently
- * dropped, and two override citations pointing at tests that no longer exist.
+ * evidence. Running them exposed five real defects, including a FEATURE_INDEX
+ * header that had been wrong by 248 entries for three months.
  *
- * Runners in this repo:
- *   *.test.ts  under src/test/  -> compiled to out/ and run by vscode-test
- *   *.test.cjs under src/test/  -> run by `npm run test:node` (node --test)
- *   *.spec.ts  under src/test/ui -> run by playwright
+ * The first version of this guard had the bug it exists to prevent: its
+ * fallthrough returned a non-null value, so `.test.mjs`, `.spec.cjs` and six
+ * other shapes were admitted by the pre-filter and then silently treated as
+ * claimed. It now fails CLOSED — anything `runnerFor()` does not explicitly
+ * claim is an orphan. Runner ownership lives in test-file-discovery.cjs so the
+ * runner and this guard cannot drift apart.
  */
-const fs = require("fs");
-const path = require("path");
-
-const EXT_ROOT = path.resolve(__dirname, "..");
-const TEST_ROOT = path.join(EXT_ROOT, "src", "test");
-
-function walk(dir, out = []) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) walk(full, out);
-    else out.push(full);
-  }
-  return out;
-}
-
-function classify(rel) {
-  if (rel.endsWith(".test.ts")) return "vscode-test";
-  if (rel.endsWith(".test.cjs")) return "node --test (test:node)";
-  if (rel.endsWith(".spec.ts")) return rel.startsWith("ui" + path.sep) ? "playwright" : null;
-  return "not-a-test";
-}
+const { discoverTestFiles } = require("./test-file-discovery.cjs");
 
 function main() {
-  if (!fs.existsSync(TEST_ROOT)) {
-    console.error(`[test-runner-coverage] test root missing: ${TEST_ROOT}`);
+  const files = discoverTestFiles();
+  if (files.length === 0) {
+    console.error("[test-runner-coverage] FAIL — no test files discovered at all; check the test root.");
     process.exit(1);
   }
-  const orphans = [];
-  for (const abs of walk(TEST_ROOT)) {
-    const rel = path.relative(TEST_ROOT, abs);
-    if (!/\.(test|spec)\.[cm]?[jt]s$/.test(rel)) continue;
-    if (classify(rel) === null) orphans.push(rel);
-  }
+  const orphans = files.filter((f) => f.runner === null);
   if (orphans.length) {
     console.error(
-      "[test-runner-coverage] FAIL — these test files match no runner glob, so CI never executes them:",
+      "[test-runner-coverage] FAIL — these test files match no runner, so CI never executes them:",
     );
-    for (const o of orphans) console.error(`  - src/test/${o.split(path.sep).join("/")}`);
+    for (const o of orphans) console.error(`  - src/test/${o.rel.split("\\").join("/")}`);
     console.error(
-      "\nEither move the file where a runner picks it up, or add a runner. A test nothing runs is worse\n" +
-        "than no test: it reads as coverage in review. See #404.",
+      "\nEither move the file where a runner picks it up, or teach a runner about it in\n" +
+        "scripts/test-file-discovery.cjs. A test nothing runs is worse than no test:\n" +
+        "it reads as coverage in review. See #404.",
     );
     process.exit(1);
   }
-  console.log("[test-runner-coverage] PASS — every test file is claimed by a runner.");
+  const byRunner = files.reduce((acc, f) => {
+    acc[f.runner] = (acc[f.runner] || 0) + 1;
+    return acc;
+  }, {});
+  const summary = Object.entries(byRunner)
+    .map(([r, n]) => `${n} ${r}`)
+    .join(", ");
+  console.log(`[test-runner-coverage] PASS — ${files.length} test files, all claimed: ${summary}.`);
 }
 
 main();
