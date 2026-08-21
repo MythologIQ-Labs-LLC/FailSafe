@@ -63,6 +63,21 @@ function gitOutput(cmd, repoRoot) {
   }
 }
 
+// Like gitOutput, but preserves the failure reason instead of collapsing
+// every non-zero exit to an indistinguishable ''. Used only where the
+// caller must tell "ref genuinely does not exist" apart from "the git
+// subprocess itself failed" (#410) so a resolvable-range false negative is
+// diagnosable from CI output rather than presenting as an opaque flake.
+function gitTry(cmd, repoRoot) {
+  try {
+    const stdout = execSync(cmd, { cwd: repoRoot, encoding: 'utf8' }).trim();
+    return { ok: Boolean(stdout), stdout, reason: stdout ? null : 'empty output' };
+  } catch (err) {
+    const stderr = (err && err.stderr ? String(err.stderr) : '').trim();
+    return { ok: false, stdout: '', reason: stderr || (err && err.message) || 'unknown error' };
+  }
+}
+
 function stagedFiles(repoRoot) {
   const out = gitOutput('git diff --cached --name-only --diff-filter=ACMR', repoRoot);
   return out.split('\n').map((l) => l.trim()).filter(Boolean);
@@ -83,12 +98,18 @@ function resolveReleaseRange(repoRoot) {
   const base = (process.env.FAILSAFE_RELEASE_BASE || '').trim();
   const head = (process.env.FAILSAFE_RELEASE_HEAD || 'HEAD').trim();
   const effectiveBase = base || 'origin/main';
-  const baseSha = gitOutput(`git rev-parse --verify --quiet ${effectiveBase}`, repoRoot).trim();
-  const headSha = gitOutput(`git rev-parse --verify --quiet ${head}`, repoRoot).trim();
-  if (!baseSha || !headSha) {
+  // No --quiet: on failure we want git's own stderr, not a suppressed one,
+  // so a transient subprocess/environment failure is distinguishable in CI
+  // output from "this ref genuinely does not exist" (#410).
+  const baseResult = gitTry(`git rev-parse --verify ${effectiveBase}`, repoRoot);
+  const headResult = gitTry(`git rev-parse --verify ${head}`, repoRoot);
+  if (!baseResult.ok || !headResult.ok) {
+    const details = [];
+    if (!baseResult.ok) details.push(`base=${effectiveBase} (${baseResult.reason})`);
+    if (!headResult.ok) details.push(`head=${head} (${headResult.reason})`);
     return {
       ok: false,
-      reason: `cannot resolve release range (base=${effectiveBase}, head=${head})`,
+      reason: `cannot resolve release range: ${details.join('; ')}`,
     };
   }
   return { ok: true, base: effectiveBase, head };
