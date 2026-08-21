@@ -186,23 +186,32 @@ export async function runLinkageAudit(opts: LinkageRunOptions): Promise<LinkageR
     if (prRes.status >= 400) return { ok: false, error: `GitHub PR fetch failed (HTTP ${prRes.status}).` };
     const body = (JSON.parse(prRes.body || '{}') as { body?: string }).body ?? '';
 
-    // #241 Tranche C D-3 (FX914): paginate the open-issue set (per_page=100
+    // #241 Tranche C D-3 (FX914): paginate the issue set (per_page=100
     // returned only page 1, producing FALSE 'already closed' findings for
     // open issues past it). Capped at 10 pages; a full final page appends a
     // truncation disclosure instead of silently asserting completeness.
+    //
+    // #241 F-7: fetch state=all (not just open) so `knownIssues` can be
+    // populated. Without it, `auditPrLinkage`'s fail-severity "closes a
+    // nonexistent issue" branch is unreachable — a closing reference to an
+    // issue number that never existed fell through to the same warn path as
+    // "already closed", understating severity and misstating the reason.
     const openIssues: number[] = [];
+    const knownIssues: number[] = [];
     let truncated = false;
     for (let page = 1; page <= 10; page++) {
-      const issRes = await opts.get(`${base}/issues?state=open&per_page=100&page=${page}`, headers);
+      const issRes = await opts.get(`${base}/issues?state=all&per_page=100&page=${page}`, headers);
       if (issRes.status >= 400) return { ok: false, error: `GitHub issue fetch failed (HTTP ${issRes.status}).` };
-      const issues = JSON.parse(issRes.body || '[]') as Array<{ number: number; pull_request?: unknown }>;
-      openIssues.push(...issues.filter((i) => !i.pull_request).map((i) => i.number));
+      const issues = JSON.parse(issRes.body || '[]') as Array<{ number: number; state?: string; pull_request?: unknown }>;
+      const realIssues = issues.filter((i) => !i.pull_request);
+      openIssues.push(...realIssues.filter((i) => i.state === 'open').map((i) => i.number));
+      knownIssues.push(...realIssues.map((i) => i.number));
       if (issues.length < 100) break;
       if (page === 10) truncated = true;
     }
 
-    const result = auditPrLinkage({ body, openIssues, selfPr: opts.prNumber });
-    // #241C (FX914): a full 10th page means the open-issue set was truncated —
+    const result = auditPrLinkage({ body, openIssues, knownIssues, selfPr: opts.prNumber });
+    // #241C (FX914): a full 10th page means the issue set was truncated —
     // DISCLOSE it in the findings instead of publishing false completeness.
     const findings = truncated
       ? [
@@ -212,7 +221,7 @@ export async function runLinkageAudit(opts: LinkageRunOptions): Promise<LinkageR
             issue: 0,
             severity: 'warn' as const,
             detail:
-              'Open-issue set exceeds 1000 — staleness checks may be incomplete (truncated at 10 pages).',
+              'Issue set exceeds 1000 — staleness/existence checks may be incomplete (truncated at 10 pages).',
           },
         ]
       : result.findings;

@@ -72,12 +72,12 @@ suite('github-checks PR↔issue linkage auditor (#154)', () => {
     assert.equal(calls, 0, 'no network without a token');
   });
 
-  test('runLinkageAudit: with token ⇒ fetches PR body + open issues via injected GET, audits', async () => {
+  test('runLinkageAudit: with token ⇒ fetches PR body + issue set via injected GET, audits', async () => {
     const calls: string[] = [];
     const get: GitHubGetFn = async (url) => {
       calls.push(url);
       if (/\/pulls\/7\b/.test(url)) return { status: 200, body: JSON.stringify({ body: 'Closes #3, #4' }) };
-      if (/\/issues\b/.test(url)) return { status: 200, body: JSON.stringify([{ number: 3 }, { number: 4 }]) };
+      if (/\/issues\b/.test(url)) return { status: 200, body: JSON.stringify([{ number: 3, state: 'open' }, { number: 4, state: 'open' }]) };
       return { status: 404, body: '' };
     };
     const res = await runLinkageAudit({ token: 't', get, owner: 'a', repo: 'b', prNumber: 7, headSha: 's' });
@@ -85,7 +85,48 @@ suite('github-checks PR↔issue linkage auditor (#154)', () => {
     assert.equal(res.localOnly, undefined);
     assert.equal(res.conclusion, 'failure', '#4 is a silent non-close');
     assert.ok((res.findings || []).some((f) => f.kind === 'multi-close-no-keyword' && f.issue === 4));
-    assert.equal(calls.length, 2, 'PR body + open issues');
+    assert.equal(calls.length, 2, 'PR body + issue set');
+  });
+
+  // #241 F-7: the live path never populated `knownIssues`, so a closing
+  // reference to an issue number that never existed silently fell through to
+  // the SAME "not currently open (already closed)" warn as a genuinely
+  // already-closed known issue — understating severity (warn vs fail) and
+  // misstating the reason (nonexistent vs closed).
+  test('runLinkageAudit: closing a NONEXISTENT issue ⇒ fail via live knownIssues, not silently downgraded to warn (F-7)', async () => {
+    const get: GitHubGetFn = async (url) => {
+      if (/\/pulls\/8\b/.test(url)) return { status: 200, body: JSON.stringify({ body: 'Closes #999' }) };
+      if (/\/issues\b/.test(url)) {
+        return { status: 200, body: JSON.stringify([{ number: 1, state: 'open' }, { number: 2, state: 'closed' }]) };
+      }
+      return { status: 404, body: '' };
+    };
+    const res = await runLinkageAudit({ token: 't', get, owner: 'a', repo: 'b', prNumber: 8, headSha: 's' });
+    assert.equal(res.ok, true);
+    const f = (res.findings || []).find((x) => x.kind === 'closes-stale-or-missing' && x.issue === 999);
+    assert.ok(f, '#999 must be flagged');
+    assert.equal(f!.severity, 'fail', 'a nonexistent issue must be fail severity, not downgraded to warn');
+    assert.ok(/does not exist/.test(f!.detail), 'detail must say nonexistent, not "already closed"');
+    assert.equal(res.conclusion, 'failure');
+  });
+
+  // Distinct disposition: a real, known, but CLOSED issue stays a warn — the
+  // fix must not turn every closing reference into a hard failure.
+  test('runLinkageAudit: closing an already-closed KNOWN issue ⇒ warn, distinct from nonexistent (F-7)', async () => {
+    const get: GitHubGetFn = async (url) => {
+      if (/\/pulls\/8\b/.test(url)) return { status: 200, body: JSON.stringify({ body: 'Closes #2' }) };
+      if (/\/issues\b/.test(url)) {
+        return { status: 200, body: JSON.stringify([{ number: 1, state: 'open' }, { number: 2, state: 'closed' }]) };
+      }
+      return { status: 404, body: '' };
+    };
+    const res = await runLinkageAudit({ token: 't', get, owner: 'a', repo: 'b', prNumber: 8, headSha: 's' });
+    assert.equal(res.ok, true);
+    const f = (res.findings || []).find((x) => x.kind === 'closes-stale-or-missing' && x.issue === 2);
+    assert.ok(f, '#2 must be flagged');
+    assert.equal(f!.severity, 'warn', 'a known-but-closed issue stays warn, not fail');
+    assert.ok(/already closed/.test(f!.detail));
+    assert.equal(res.conclusion, 'neutral');
   });
 });
 
@@ -101,8 +142,8 @@ suite('runLinkageAudit pagination (FX914/#241C)', () => {
   }
 
   test('T7: an open issue on page 2 is recognized (no false already-closed finding)', async () => {
-    const page1 = Array.from({ length: 100 }, (_, i) => ({ number: i + 1 }));
-    const page2 = [{ number: 555 }];
+    const page1 = Array.from({ length: 100 }, (_, i) => ({ number: i + 1, state: 'open' }));
+    const page2 = [{ number: 555, state: 'open' }];
     const r = await runLinkageAudit({
       enabled: true, token: 't', owner: 'o', repo: 'r', prNumber: 9,
       get: pagedGet([page1, page2], 'Closes #555'),
@@ -116,7 +157,7 @@ suite('runLinkageAudit pagination (FX914/#241C)', () => {
   });
 
   test('T8: ten full pages -> truncation disclosure finding appended', async () => {
-    const full = (start: number) => Array.from({ length: 100 }, (_, i) => ({ number: start + i }));
+    const full = (start: number) => Array.from({ length: 100 }, (_, i) => ({ number: start + i, state: 'open' }));
     const pages = Array.from({ length: 10 }, (_, p) => full(p * 100 + 1));
     const r = await runLinkageAudit({
       enabled: true, token: 't', owner: 'o', repo: 'r', prNumber: 9,
