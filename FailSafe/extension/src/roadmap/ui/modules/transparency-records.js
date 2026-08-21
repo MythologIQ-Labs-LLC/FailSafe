@@ -28,7 +28,14 @@ export function summarizeTransparencyEvent(event) {
     const decision = String(payload.decision || payload.verdict || payload.policyVerdict || 'VERDICT');
     const risk = payload.riskGrade ? ` ${payload.riskGrade}` : '';
     const subject = payload.filePath || payload.path || payload.phase || payload.target || payload.summary || 'workspace';
-    const reason = payload.reason || payload.message || payload.matchedPattern || '';
+    const patterns = Array.isArray(payload.matchedPatterns) && payload.matchedPatterns.length
+      ? payload.matchedPatterns.join(', ')
+      : payload.matchedPattern || '';
+    // When no filePath exists the summary already serves as the subject —
+    // repeating it in the reason would read as a stutter (audit A7).
+    const summaryPart = payload.summary && subject !== payload.summary ? payload.summary : '';
+    const reason = [payload.reason || payload.message || '', summaryPart, patterns]
+      .filter(Boolean).join(' · ');
     return `Sentinel ${decision}${risk} - ${subject}${reason ? ` (${reason})` : ''}`;
   }
   const summary = payload.message || payload.summary;

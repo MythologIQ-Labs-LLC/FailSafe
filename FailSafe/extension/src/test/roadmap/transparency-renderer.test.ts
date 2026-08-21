@@ -270,3 +270,173 @@ suite('TransparencyRenderer verdict records', () => {
     } finally { restore(); }
   });
 });
+
+// ── Audit Log verdict signal (plan-audit-log-verdict-signal) ──────────────────
+// Enriched summary line + severity triage filter. Operator ruling: every
+// exposed data point must answer "how is this helping me?" — a WARN record
+// must say what, where, and why; triage needs pass-noise suppression.
+
+function emitVerdict(renderer: any, overrides: Record<string, unknown> = {}) {
+  renderer.onEvent({
+    type: 'sentinel.verdict',
+    payload: {
+      type: 'sentinel.verdict', decision: 'WARN', riskGrade: 'L1',
+      timestamp: new Date().toISOString(), ...overrides,
+    },
+  });
+}
+
+suite('Audit Log verdict signal — enriched summary line', () => {
+  test('enriched payload renders file, summary sentence, and matched patterns in the card line', () => {
+    const { container, restore } = setupDom();
+    try {
+      const renderer = new TransparencyRenderer('audit-root');
+      renderer.render();
+      emitVerdict(renderer, {
+        filePath: 'src/auth/session.ts',
+        summary: '1 issue(s) detected - review recommended',
+        matchedPatterns: ['hardcoded-credential', 'weak-hash'],
+      });
+      const line = container.querySelector('.cc-transparency-record')!.textContent || '';
+      assert.match(line, /Sentinel WARN L1 - src\/auth\/session\.ts/);
+      assert.match(line, /1 issue\(s\) detected - review recommended/);
+      assert.match(line, /hardcoded-credential, weak-hash/);
+    } finally { restore(); }
+  });
+
+  test('A7: without a filePath the summary serves as subject and is NOT duplicated into the reason', () => {
+    const { container, restore } = setupDom();
+    try {
+      const renderer = new TransparencyRenderer('audit-root');
+      renderer.render();
+      emitVerdict(renderer, {
+        summary: '1 issue(s) detected - review recommended',
+        matchedPatterns: ['hardcoded-credential'],
+      });
+      // Scope to the summary LINE: the expanded <pre> JSON detail legitimately
+      // repeats every payload field — the dedup contract is about the line.
+      const card = container.querySelector('.cc-transparency-record')!.cloneNode(true) as HTMLElement;
+      card.querySelector('pre')?.remove();
+      const line = card.textContent || '';
+      const occurrences = line.split('1 issue(s) detected - review recommended').length - 1;
+      assert.equal(occurrences, 1, `summary must appear exactly once in the line; got '${line}'`);
+      assert.match(line, /hardcoded-credential/);
+    } finally { restore(); }
+  });
+
+  test('legacy thin payload renders byte-identically to the pre-enrichment line (no throw, no reason)', () => {
+    const { container, restore } = setupDom();
+    try {
+      const renderer = new TransparencyRenderer('audit-root');
+      renderer.render();
+      emitVerdict(renderer, { filePath: 'src/x.ts' });
+      const line = container.querySelector('.cc-transparency-record')!.textContent || '';
+      assert.match(line, /Sentinel WARN L1 - src\/x\.ts/);
+      assert.ok(!line.includes('('), `thin payload must not grow an empty reason; got '${line}'`);
+    } finally { restore(); }
+  });
+});
+
+suite('Audit Log severity triage filter', () => {
+  // Timestamps must be NOW-based: the audit date-range From defaults to today,
+  // and fixed dates go stale at the next UTC midnight (CI caught exactly that).
+  function seedMixed(renderer: any) {
+    const t = (offsetMs: number) => new Date(Date.now() - offsetMs).toISOString();
+    emitVerdict(renderer, { decision: 'PASS', riskGrade: 'L1', filePath: 'src/ok.ts', timestamp: t(3000) });
+    emitVerdict(renderer, { decision: 'WARN', riskGrade: 'L1', filePath: 'src/warn.ts', timestamp: t(2000) });
+    emitVerdict(renderer, { decision: 'BLOCK', riskGrade: 'L3', filePath: 'src/block.ts', timestamp: t(1000) });
+  }
+  function visibleFiles(container: Element): string[] {
+    return Array.from(container.querySelectorAll('.cc-transparency-record'))
+      .map(c => (c.textContent || '').match(/src\/\w+\.ts/)?.[0] || '');
+  }
+  function clickLevel(container: Element, label: string) {
+    const chip = Array.from(container.querySelectorAll('.cc-chip'))
+      .find(c => (c as HTMLElement).dataset.lvl && c.textContent === label) as HTMLElement;
+    assert.ok(chip, `severity chip '${label}' must exist`);
+    chip.click();
+  }
+
+  test('severity chips render as a second chip row (All levels / Issues / Warn / Block)', () => {
+    const { container, restore } = setupDom();
+    try {
+      const renderer = new TransparencyRenderer('audit-root');
+      renderer.render();
+      const labels = Array.from(container.querySelectorAll('.cc-chip[data-lvl]')).map(c => c.textContent);
+      assert.deepEqual(labels, ['All levels', 'Issues', 'Warn', 'Block']);
+    } finally { restore(); }
+  });
+
+  test('Issues hides pass records and keeps warn + violation', () => {
+    const { container, restore } = setupDom();
+    try {
+      const renderer = new TransparencyRenderer('audit-root');
+      renderer.render();
+      seedMixed(renderer);
+      clickLevel(container, 'Issues');
+      // refilter() renders newest-first — assert membership, not order.
+      assert.deepEqual(visibleFiles(container).sort(), ['src/block.ts', 'src/warn.ts']);
+    } finally { restore(); }
+  });
+
+  test('Warn and Block isolate their own levels', () => {
+    const { container, restore } = setupDom();
+    try {
+      const renderer = new TransparencyRenderer('audit-root');
+      renderer.render();
+      seedMixed(renderer);
+      clickLevel(container, 'Warn');
+      assert.deepEqual(visibleFiles(container), ['src/warn.ts']);
+      clickLevel(container, 'Block');
+      assert.deepEqual(visibleFiles(container), ['src/block.ts']);
+      clickLevel(container, 'All levels');
+      assert.equal(visibleFiles(container).length, 3);
+    } finally { restore(); }
+  });
+
+  test('A9: a deep-linked record bypasses the severity filter (real location hash, no stubbing)', () => {
+    const ts = '2026-08-20T10:01:00.000Z';
+    const url = `http://localhost/command-center.html#governance:audit?verdict=${encodeURIComponent(ts)}`;
+    const { container, restore } = setupDom(url);
+    try {
+      resetDeepLinkFocusLatch();
+      const renderer = new TransparencyRenderer('audit-root');
+      renderer.render();
+      renderer.activeLevel = 'Block';
+      seedMixed(renderer);
+      const files = visibleFiles(container);
+      assert.ok(files.includes('src/warn.ts'),
+        'the deep-linked WARN record must render even while the Block severity filter is active');
+    } finally { restore(); }
+  });
+
+  test('A8: live-envelope-shaped entries (type transparency, decision in payload) match severity chips', () => {
+    const { container, restore } = setupDom();
+    try {
+      const renderer = new TransparencyRenderer('audit-root');
+      renderer.render();
+      renderer.onEvent({ type: 'transparency', payload: {
+        type: 'sentinel.verdict', decision: 'WARN', riskGrade: 'L1',
+        filePath: 'src/live.ts', timestamp: new Date().toISOString(),
+      } });
+      clickLevel(container, 'Issues');
+      assert.ok(visibleFiles(container).includes('src/live.ts'),
+        'live-streamed WARN must survive the Issues filter (recordLevel is envelope-agnostic)');
+      clickLevel(container, 'Block');
+      assert.equal(visibleFiles(container).length, 0);
+    } finally { restore(); }
+  });
+
+  test('FX920 parity: severity chip element survives selection (in-place toggle, no rebuild)', () => {
+    const { container, restore } = setupDom();
+    try {
+      const renderer = new TransparencyRenderer('audit-root');
+      renderer.render();
+      const chip = Array.from(container.querySelectorAll('.cc-chip[data-lvl]'))
+        .find(c => c.textContent === 'Issues') as HTMLElement;
+      chip.click();
+      assert.ok(chip.isConnected, 'the clicked chip must survive selection');
+      assert.ok(chip.classList.contains('active'));
+    } finally { restore(); }
+  });
+});

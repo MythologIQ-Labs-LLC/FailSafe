@@ -58,16 +58,21 @@ export class EventSubscriptionManager {
       broadcast({ type: "verdict", payload: event.payload });
       broadcast({ type: "hub.refresh" });
       const p = (event.payload ?? {}) as Record<string, unknown>;
-      logTransparencyEvent({
+      // Operator ruling (ui-data-point-value-test): a logged verdict must say
+      // what, where, and why — not just that something happened. The verdict's
+      // subject lives on `artifactPath` (SentinelVerdict has no `filePath`;
+      // the alias fallback keeps legacy/test producers working).
+      const transparencyPayload = {
         type: "sentinel.verdict", decision: p.decision,
-        riskGrade: p.riskGrade, filePath: p.filePath,
+        riskGrade: p.riskGrade, filePath: p.artifactPath ?? p.filePath,
+        summary: p.summary, matchedPatterns: p.matchedPatterns,
+        details: p.details, id: p.id,
         // Verdict origin time is the deep-link identity the Monitor sends
         // (#governance:audit?verdict=<ts>); a fresh clock here would never match.
         timestamp: typeof p.timestamp === "string" ? p.timestamp : new Date().toISOString(),
-      });
-      broadcast({ type: "transparency", payload: {
-        type: "sentinel.verdict", decision: p.decision, riskGrade: p.riskGrade,
-      } });
+      };
+      logTransparencyEvent(transparencyPayload);
+      broadcast({ type: "transparency", payload: transparencyPayload });
     });
 
     eventBus.on("sentinel.activityObserved" as never, (event: { payload: unknown }) => {

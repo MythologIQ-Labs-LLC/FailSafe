@@ -28363,3 +28363,38 @@ SHA256(content_hash + "|" + previous_hash)
 ## Decision
 
 Merge substantiation for parallel-session PR #364 (RiskRegisterManager BACKLOG.md fallback materialization; closes #363; audit #241 F-6). Independent adversarial audit PASS with the defect CONFIRMED at main by direct citation: upsertRisk/closeRisk read through getRisks(), whose backlog fallback meant the FIRST explicit mutation (one SARIF finding, one Sentry regression, one drift upsert) durably wrote the ENTIRE backlog projection into risks.json while the operator-facing message counted only explicitly-touched records. Precedence-contract claim verified GENUINE (class doc at main: stored-if-non-empty else fallback, never merged) - the disclosed consequence is the documented contract, not a smuggled behavior change. Scope clean (2 files, +134/-5, no protected surfaces). Tests verified strong: real class against real mkdtemp workspaces and a real BacklogReader parse, exact on-disk counts, revert-detection confirmed by inspection. Caller hunt clean: all sinks (sarif/sentry/agent-observe/DriftToRiskMediator) report their own counts; no consumer depended on the materialization side-effect; no UI close-affordance exists for backlog-derived ids. Local verification in an isolated worktree: 9/9 passing in a REAL extension host (the authoring session had no vscode-test environment; first worktree run was a SILENT NO-OP - corrupt fresh archive, exit 0 with zero tests - caught and re-run against the pinned known-good install; lesson: never accept exit-0 without a passing-count line). CI rollup verified 0 non-pass pre-merge. Attribution footer stripped (sixth occurrence). Advisories: corrupt-store silent overwrite filed as #368; non-atomic RMW pre-existing; stale test header cosmetic; merged-view UX future note. MERGED under the CI-green+substantiated delegation; #363 auto-closed.
+
+
+---
+
+### Entry #578: SUBSTANTIATE - Audit Log verdict signal (FX921)
+
+**Timestamp**: 2026-08-21T08:55:00Z
+**Phase**: GATE
+**Author**: Governor
+**Risk Grade**: L2
+**Verdict**: PASS
+
+**Content Hash**:
+```
+SHA256("audit-log-verdict-signal|VETO-PASS-implement-substantiate|2026-08-21")
+= 98b818fee51473c2d0e9898c4aeb46f51f327220143ffe13941fc49ac29ef89c
+```
+
+**Previous Hash**: `0a2a88f7d383f17a5cb8fb9bed1e3336fdcac8acda80b25fc7b5c6609d1a26eb` (Entry #577 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= c00113581ec5539b92345a0f655ac96fce9457ef55d1ff497b35197458c7fa0a
+```
+
+**Session Seal (Merkle)**:
+```
+SHA256(chain_hash + "SESSION-SEAL")
+= e63f412287ef60e33b51db99547f161d63811c98b8ae50214f5b6b2460b795bf
+```
+
+## Decision
+
+Full SHIELD cycle for the operator-reported Audit Log signal defect (a live WARN record rendered as bare identity JSON - not informative, not actionable) plus the operator's severity-triage requirement, under the new standing ruling ui-data-point-value-test (every exposed data point must answer: how is this helping me, and is it succeeding). Plan plan-audit-log-verdict-signal.md; audit iteration 1 VETO (B1: the enriched payload fed none of the summarizer's reason keys - the informative line would have stayed empty; a genuine plan-internal contradiction) remediated via C1.5 and iteration 2 PASS carrying advisories A7-A9, all implemented. Producer: EventSubscriptionManager sentinel.verdict now logs artifactPath->filePath (the field SentinelVerdict actually has; p.filePath was ALWAYS undefined), summary, matchedPatterns, details, id, with origin-timestamp deep-link identity preserved and the live broadcast byte-identical to the stored log. Renderer: summarizer reason slot composes summary · matchedPatterns with A7 subject dedup; legacy thin payloads render byte-identically. Severity chip row (All levels/Issues/Warn/Block) reusing recordLevel, severity clause placed after the deep-link bypass (A1), build-once FX920 parity. TDD: producer+renderer suites red-first OBSERVED (16 passing/9 failing pre-implementation), then 40/40; full npm test 3924 passing; governance-tab 7/7 incl. new T5 e2e with reviewed screenshot (two-row chip bar, pass-noise suppressed, enriched WARN line showing file+summary+pattern); monitor-a11y 3/3. Two of my test defects fixed during green-up (whole-card summary count vs line-scoped; newest-first refilter order) and one e2e fixture trap diagnosed (date-range default hides stale-dated fixtures - the severity assertions would have been vacuous). Collateral: #367 resolution-linkage feature filed (operator's 'was it resolved' gap), #370 CSV export malformation filed, l3Queued verified NOT same-bug. Residuals disclosed: transparency.jsonl uncapped; details may carry an LLM excerpt (local-only, gitignored, 127.0.0.1-bound); live-card category divergence pre-existing. Ops incident logged for the record: a robocopy /MIR cleanup followed a junction into the pinned .vscode-test install and deleted it (repaired by scratch re-download + /E /XJ merge around a file held open by the operator's live editor; lesson recorded - /XJ always, and never accept exit-0 test runs without a passing-count line).
