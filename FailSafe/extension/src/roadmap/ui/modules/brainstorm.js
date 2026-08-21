@@ -184,7 +184,7 @@ export class BrainstormRenderer {
           // paired setEdges() call (always issued synchronously alongside
           // setNodes()) has already landed in this.graph.edges — otherwise
           // the edge count would read one step stale.
-          updateDensityStatus(document, this.graph.getStats());
+          updateDensityStatus(this.container, this.graph.getStats());
         });
       }
     };
