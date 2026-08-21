@@ -54,4 +54,27 @@ suite('integrations/acp/registry DevinRegistryDriftCheck', () => {
   test('an existing-but-empty (0-byte / truncated) file is malformed, not silently "missing"', () => {
     assert.deepEqual(checkInstalledEntryDrift('', AGENT), { status: 'malformed', driftedPlatforms: [] });
   });
+
+  test('syntactically valid but semantically nonsensical JSON is malformed, not "missing" (FX898 advisory)', () => {
+    // `null` and `{"agents": "oops"}` both parse successfully, so the earlier
+    // JSON.parse-only check let them fall through to parseRegistry's
+    // tolerant fallback and read back as a clean "missing" entry.
+    assert.deepEqual(checkInstalledEntryDrift('null', AGENT), { status: 'malformed', driftedPlatforms: [] });
+    assert.deepEqual(checkInstalledEntryDrift('[]', AGENT), { status: 'malformed', driftedPlatforms: [] });
+    assert.deepEqual(
+      checkInstalledEntryDrift(JSON.stringify({ agents: 'oops' }), AGENT),
+      { status: 'malformed', driftedPlatforms: [] },
+    );
+  });
+
+  test('a legitimately empty registry ({} or no agents field) is missing, not malformed', () => {
+    // parseRegistry intentionally treats an absent `agents` field as a valid
+    // degenerate/fresh registry (zero agents), not corruption — the
+    // malformed check must not over-trigger on that supported case.
+    assert.deepEqual(checkInstalledEntryDrift('{}', AGENT), { status: 'missing', driftedPlatforms: [] });
+    assert.deepEqual(
+      checkInstalledEntryDrift(JSON.stringify({ version: '1.0.0' }), AGENT),
+      { status: 'missing', driftedPlatforms: [] },
+    );
+  });
 });

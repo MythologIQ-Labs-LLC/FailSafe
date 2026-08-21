@@ -40,29 +40,57 @@ import { checkInstalledEntryDrift } from '../integrations/acp/registry/DevinRegi
 
 const DEVIN_CHANNELS: DevinChannel[] = ['stable', 'next'];
 
+/**
+ * What FailSafe persists at install time: the twin it wrote, plus the
+ * workspace it was installed from. `buildGovernedTwin` bakes
+ * `--workspace <workspaceRoot>` into the twin's launch args, so an entry that
+ * is byte-for-byte intact can still govern a DIFFERENT workspace than the one
+ * currently activating — recording `workspaceRoot` lets the re-check tell
+ * the two cases apart instead of reporting a blanket "intact".
+ */
+interface InstalledEntry {
+  agent: DevinAgent;
+  workspaceRoot: string;
+}
+
 function expectedEntryStateKey(channel: DevinChannel): string {
   return `failsafe.acp.expectedRegistryEntry.${channel}`;
 }
 
 /**
- * Re-check every channel this workspace previously installed a FailSafe entry
- * for against the live registry, and warn (once, per channel) on drift. Never
+ * Re-check every channel a FailSafe entry was previously installed for
+ * against the live registry, and warn (once, per channel) on drift. Never
  * mutates the registry itself — repair stays an explicit operator action via
  * the existing install command.
  */
 export function verifyGovernedProxyEntries(
   context: vscode.ExtensionContext,
+  activatingWorkspaceRoot: string,
   home: string,
   readFileFn: (p: string) => string | null,
 ): void {
   for (const channel of DEVIN_CHANNELS) {
-    const expected = context.globalState.get<DevinAgent>(expectedEntryStateKey(channel));
-    if (!expected) continue; // never installed on this machine (or explicitly uninstalled) — nothing to drift from.
+    const stored = context.globalState.get<InstalledEntry>(expectedEntryStateKey(channel));
+    if (!stored) continue; // never installed on this machine (or explicitly uninstalled) — nothing to drift from.
+    const { agent: expected, workspaceRoot: installedWorkspaceRoot } = stored;
 
     const result = checkInstalledEntryDrift(readFileFn(devinRegistryPath(channel, home)), expected);
-    if (!result || result.status === 'intact') continue;
+    if (!result) continue;
 
     const label = expected.name;
+    if (result.status === 'intact') {
+      if (installedWorkspaceRoot !== activatingWorkspaceRoot) {
+        // The entry is genuinely correct — just not for this workspace.
+        // Staying silent here would let this workspace's operator select it
+        // in Devin believing it enforces THIS workspace's policy, when it
+        // actually applies installedWorkspaceRoot's governance instead.
+        void vscode.window.showWarningMessage(
+          `FailSafe's ACP registry entry for "${label}" (${channel}) currently targets a different workspace (${installedWorkspaceRoot}), not this one. Selecting it here in Devin would apply that workspace's governance policy, not this workspace's. Run "FailSafe: Install ACP Governed Proxy" from this workspace to point it here instead.`,
+        );
+      }
+      continue;
+    }
+
     if (result.status === 'tampered') {
       void vscode.window.showWarningMessage(
         `FailSafe's ACP registry entry for "${label}" (${channel}) no longer matches what FailSafe installed — the agent may now be running ungoverned. Run "FailSafe: Install ACP Governed Proxy" to restore it, or uninstall if this was intentional.`,
@@ -133,7 +161,8 @@ export function bootstrapAcpProxy(
       });
       try {
         installFailSafeAgent(loc.path, twin);
-        await context.globalState.update(expectedEntryStateKey(loc.channel), twin);
+        const entry: InstalledEntry = { agent: twin, workspaceRoot };
+        await context.globalState.update(expectedEntryStateKey(loc.channel), entry);
         await vscode.window.showInformationMessage(
           `FailSafe governed proxy installed for "${picked.agent.name}". Select "${twin.name}" in Devin to run it under FailSafe governance.`,
         );
@@ -169,6 +198,7 @@ export function bootstrapAcpProxy(
   try {
     verifyGovernedProxyEntries(
       context,
+      workspaceRoot,
       os.homedir(),
       (p) => (fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : null),
     );

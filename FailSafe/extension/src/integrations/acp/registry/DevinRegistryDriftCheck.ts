@@ -28,13 +28,17 @@ export interface DriftCheckResult {
  * was never installed here, or was explicitly uninstalled — there is nothing
  * to drift from, so this returns `null` rather than a false "missing" alarm.
  *
- * `registryText` present but not valid JSON is reported as `malformed`, not
- * `missing` — `DevinRegistryWriter.parseRegistry`'s parse-tolerant fallback
- * (used by the actual install/uninstall writers, where "degrade to an empty
- * skeleton rather than block install" is the right behavior) would otherwise
- * make an unreadable/corrupt registry indistinguishable from a cleanly
- * removed entry, which understates the real risk and points the operator at
- * the wrong remedy.
+ * `registryText` present but not a well-formed registry document is reported
+ * as `malformed`, not `missing` — `DevinRegistryWriter.parseRegistry`'s
+ * parse-tolerant fallback (used by the actual install/uninstall writers,
+ * where "degrade to an empty skeleton rather than block install" is the
+ * right behavior) would otherwise make an unreadable/corrupt registry
+ * indistinguishable from a cleanly removed entry, which understates the real
+ * risk and points the operator at the wrong remedy. This covers both
+ * unparseable JSON and syntactically-valid-but-nonsensical JSON (`null`, a
+ * top-level array, an `agents` field that isn't an array) — but not an
+ * absent `agents` field on its own, since `parseRegistry` intentionally
+ * treats that as a legitimate empty/fresh registry, not corruption.
  */
 export function checkInstalledEntryDrift(
   registryText: string | null | undefined,
@@ -42,11 +46,16 @@ export function checkInstalledEntryDrift(
 ): DriftCheckResult | null {
   if (!expected) return null;
   if (registryText != null) {
+    let parsed: unknown;
     try {
-      JSON.parse(registryText);
+      parsed = JSON.parse(registryText);
     } catch {
       return { status: 'malformed', driftedPlatforms: [] };
     }
+    const agentsField = (parsed as { agents?: unknown } | null)?.agents;
+    const isWellFormed = parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)
+      && (agentsField === undefined || Array.isArray(agentsField));
+    if (!isWellFormed) return { status: 'malformed', driftedPlatforms: [] };
   }
   return checkFailSafeEntry(parseRegistry(registryText), expected);
 }
