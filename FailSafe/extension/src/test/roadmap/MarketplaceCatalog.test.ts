@@ -210,3 +210,33 @@ describe("MarketplaceCatalog — agent-skills category (mattpocock-skills)", () 
     });
   });
 });
+
+// ── #378: corrupt state.json is preserved before persistState overwrites ──────
+suite('#378 MarketplaceCatalog corrupt-state preservation', () => {
+  test('persistState over a corrupt state.json preserves the original bytes aside', () => {
+    withTempHome((home) => {
+      const statePath = statePathFor(home);
+      fs.mkdirSync(path.dirname(statePath), { recursive: true });
+      const corrupt = '{"items": {"voice-pack": {"status": TRUNC';
+      fs.writeFileSync(statePath, corrupt, 'utf-8');
+      const catalog = new MarketplaceCatalog();
+      catalog.persistState();
+      const dir = path.dirname(statePath);
+      const baks = fs.readdirSync(dir).filter((f) => /^state\.json\.corrupt-\d+\.bak$/.test(f));
+      assert.equal(baks.length, 1, 'the corrupt original must be preserved, not destroyed');
+      assert.equal(fs.readFileSync(path.join(dir, baks[0]), 'utf-8'), corrupt);
+      assert.ok(fs.existsSync(statePath), 'the persist itself still writes fresh state');
+    });
+  });
+
+  test('persistState over healthy state: no .bak', () => {
+    withTempHome((home) => {
+      seedState(home, {});
+      const catalog = new MarketplaceCatalog();
+      catalog.persistState();
+      const dir = path.dirname(statePathFor(home));
+      const baks = fs.readdirSync(dir).filter((f) => f.includes('.corrupt-'));
+      assert.equal(baks.length, 0);
+    });
+  });
+});

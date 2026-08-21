@@ -173,3 +173,35 @@ suite('AdapterService (FX389 + FX391)', () => {
     });
   });
 });
+
+// ── #378: corrupt config.json is preserved before saveConfig overwrites ───────
+suite('#378 AdapterService corrupt-config preservation', () => {
+  test('saveConfig on a corrupt config.json preserves the original bytes aside', async () => {
+    await withTempHome(async (home) => {
+      const cfgDir = path.join(home, '.failsafe', 'adapter');
+      fs.mkdirSync(cfgDir, { recursive: true });
+      const cfgPath = path.join(cfgDir, 'config.json');
+      const corrupt = '{"prometheus": {"enabled": true, TRUNC';
+      fs.writeFileSync(cfgPath, corrupt, 'utf-8');
+      const a = new AdapterService(new EventBus());
+      await a.saveConfig({ prometheus: { enabled: false } } as never);
+      const baks = fs.readdirSync(cfgDir).filter((f) => /^config\.json\.corrupt-\d+\.bak$/.test(f));
+      assert.equal(baks.length, 1, 'the corrupt original must be preserved, not destroyed');
+      assert.equal(fs.readFileSync(path.join(cfgDir, baks[0]), 'utf-8'), corrupt);
+      const written = JSON.parse(fs.readFileSync(cfgPath, 'utf-8'));
+      assert.equal(written.prometheus.enabled, false, 'the save itself still proceeds');
+    });
+  });
+
+  test('saveConfig over a healthy config: no .bak (no false preservation)', async () => {
+    await withTempHome(async (home) => {
+      const cfgDir = path.join(home, '.failsafe', 'adapter');
+      fs.mkdirSync(cfgDir, { recursive: true });
+      fs.writeFileSync(path.join(cfgDir, 'config.json'), '{"prometheus":{"enabled":true}}', 'utf-8');
+      const a = new AdapterService(new EventBus());
+      await a.saveConfig({ prometheus: { enabled: false } } as never);
+      const baks = fs.readdirSync(cfgDir).filter((f) => f.includes('.corrupt-'));
+      assert.equal(baks.length, 0);
+    });
+  });
+});

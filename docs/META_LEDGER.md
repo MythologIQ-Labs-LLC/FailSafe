@@ -28561,3 +28561,38 @@ SHA256(chain_hash + "SESSION-SEAL")
 ## Decision
 
 Full SHIELD mini-cycle closing #377 (Console risk CRUD routes durably promoted the BACKLOG.md fallback projection - the #241 F-6 sibling found by the #368 audit's evidence chain). Audit iteration 1 VETO caught two plan-citation defects before implementation: B1 - the deps wiring site was mis-cited at HubSnapshotService payloadSource (display payload) when the routes actually consume the bundle at ConsoleRouteRegistrar:246 (exactly the ghost-cite class the plan-time citation doctrine exists for); B2 - undeclared test churn (the Partial-cast makeDeps defeats compile enforcement; the auditor counted the affected mutation cases precisely: 10). Iteration 2 PASS with the registrar-fake stub carry. Implemented: public RiskRegisterManager.getStoredRisks(); ApiRouteDeps.getStoredRiskRegister wired HubSnapshotService delegate -> ConsoleRouteRegistrar bundle; POST/PUT/DELETE read the durable store only (GET display view untouched); PUT/DELETE on backlog-derived ids 404 with an explanatory body (dead letters for the UI BY DESIGN - rest-api swallows non-OK - serving raw API consumers); risks.js gates Edit/Del off backlog-derived rows (source==='backlog' OR backlog: prefix dual-check) with a read-only 'from BACKLOG.md' note per the ui-data-point-value-test ruling (no Add affordance exists - FX420 pin - so the projection cliff is not UI-reachable). TDD: stage-1 compile red observed (missing type member + method), then REVERT-CHECK for the behavioral layer - handlers swapped back to the display read made exactly the 3 contract cases fail (stored-vs-display pin, real-manager mkdtemp N+1 repro, backlog-404) - then 25/25 targeted, 64 across all deps-touched suites (6 route-test fakes gained the member), full npm test 3951 passing. Disclosed: API-side projection cliff (raw POST on a backlog-only workspace hides the projection on next refresh) extends the documented #364 precedence contract, does not introduce it; reverse cliff pre-existing; merged provenance view remains future work (#364 audit note).
+
+
+---
+
+### Entry #584: SUBSTANTIATE - Shared corrupt-file guard (FX925)
+
+**Timestamp**: 2026-08-21T13:30:00Z
+**Phase**: GATE
+**Author**: Governor
+**Risk Grade**: L2
+**Verdict**: PASS
+
+**Content Hash**:
+```
+SHA256("corrupt-file-guard-378|VETO-PASS-implement-substantiate|2026-08-21")
+= 4b68e84d218ece7d0f1a92697dd4542891bbe06db5f230e74fc71972acb5d8c3
+```
+
+**Previous Hash**: `9b169e7029a38365e13f969beb8f392b6873f11f087a65165294afc6b0fff0db` (Entry #583 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= ac7ef71f131f4c43fbf35252713a667b8ddcf6c0cdcca6977f9e03a535473b77
+```
+
+**Session Seal (Merkle)**:
+```
+SHA256(chain_hash + "SESSION-SEAL")
+= 62b8889e8c0092de7b9f97c1200ddb76590a3f22c5d7ac3af702ecd7d5afe96c
+```
+
+## Decision
+
+Full SHIELD mini-cycle closing #378 (swallow-and-overwrite siblings from the #368 audit's F7 hunt). Audit iteration 1 VETO on B1 - a stale evidence citation caused by coordinate rot from THIS SESSION'S OWN #380 merge (preserveCorruptStore shifted 46->59; the recite-after-prereq-lands rule enforced against me by my own auditor) - plus advisories all folded: warn template pinned to FX923's three verbatim strings (message 3's ' and ' joint taken verbatim per the iteration-2 carry), predicate excludes arrays, never-throws contract with a throwing-predicate pin (a predicate crash fails toward preservation), ServerRegistry disclosed as a low-hazard fourth sibling on issue #378 rather than scope-expanding. Iteration 2 PASS. Implemented: shared src/roadmap/services/corrupt-file-guard.ts preserveCorruptFile(filePath, isHealthyShape, label); call sites AdapterService.saveConfig (sole configPath writer, covers the ensureDefaultConfig corrupt-treated-as-missing overwrite) and MarketplaceCatalog.persistState (inside the existing try - safe per never-throws; corrupt state cannot fire load-time reconciliation so preservation triggers at the first later persist); FX923 retrofit - RiskRegisterManager.preserveCorruptStore now delegates to the shared guard, byte- and message-identical, with the UNCHANGED 7-case #368 suite as the regression net. TDD: stage-1 compile red (module absent), then guard-only implementation isolated the behavioral red (guard suite 6/6 green while both service preservation cases stayed red), then call-site wiring -> 46/46 across the four suites; full npm test 3961 passing. Rule of three satisfied: three stores, one guard, one posture.
