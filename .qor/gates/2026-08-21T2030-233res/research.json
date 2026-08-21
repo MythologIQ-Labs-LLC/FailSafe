@@ -1,0 +1,82 @@
+{
+  "phase": "research",
+  "session_id": "2026-08-21T2030-233res",
+  "ts": "2026-08-21T20:30:00Z",
+  "target": "FailSafe#233 residual META_LEDGER consumers",
+  "brief_path": "docs/research-brief-233-residual-ledger-consumers-2026-08-21.md",
+  "brief_content_hash": "e7c01a53a0cf1387d89b997c3a0d19faacf27e69302748c3caaa529a76d77e9a",
+  "ledger_entry": 591,
+  "risk_grade": "L2",
+  "questions": [
+    "Which src sites actually READ/PARSE docs/META_LEDGER.md (vs merely mention the path)?",
+    "What is each site's current silent-degrade behavior?",
+    "Does the adapter's ok|unavailable|malformed|unsupported|stale ladder map cleanly to each?",
+    "Are any of the named sites watch/path-only rather than parses?"
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "site": "src/roadmap/services/GovernancePhaseTracker.ts",
+      "disposition": "NOT_A_CONSUMER",
+      "evidence": "zero imports (no fs/path); pure text fns; ledger named only in doc comment line 4; sole caller ConsoleServerHub.ts:83"
+    },
+    {
+      "id": "F2",
+      "site": "src/roadmap/services/ConsoleLifecycleService.ts:98",
+      "disposition": "NOT_A_CONSUMER",
+      "evidence": "existsSync + fs.watch/WorkspaceMutationBus target; never reads or parses"
+    },
+    {
+      "id": "F3",
+      "site": "src/roadmap/ConsoleServerHub.ts:79",
+      "disposition": "MUST_NOT_MIGRATE_AS_IS",
+      "evidence": "bounded 4096-byte tail via readLedgerTail with complete flag; measured 0.4ms vs 24.0ms full read (60x); classifyMetaLedgerText non-empty-parses-empty->malformed is exactly the false positive complete suppresses"
+    },
+    {
+      "id": "F4",
+      "site": "src/roadmap/services/SystemStateReader.ts:41",
+      "disposition": "WEAK_CANDIDATE",
+      "evidence": "reads only to regex '## Chain Status:' \u2014 document-level metadata absent from MetaLedgerEntry; real silent degrade (absent and unreadable both -> null)"
+    },
+    {
+      "id": "F5",
+      "site": "src/roadmap/services/MetaLedgerReader.ts",
+      "disposition": "CLEAN_CANDIDATE_WITH_BEHAVIOR_CHANGE",
+      "evidence": "own regex parser; kind = heading keyword scan vs canonical phase = **Phase** field; disagree on #589/#590; summarize() metrics are user-visible"
+    },
+    {
+      "id": "F6",
+      "site": "src/roadmap/services/WorkspaceArtifactBuilder.ts",
+      "disposition": "UNLISTED_DEFECT_MEASURED",
+      "evidence": "5 full reads of 1,751,562-byte ledger per build(): 8,715,735 bytes, 477ms cold, ~120ms warm; reads #1 and #5 are both readMetaLedgerArtifact; read #2 (readGovernanceState:103) is an unlisted raw consumer; no caching; on CommitCheckRoute:33 enforce-blocking path"
+    }
+  ],
+  "drifts": [
+    "Ledger #590 and the operator report claimed 'five raw consumers' \u2014 falsified in both directions (2 non-consumers, 1 must-not-migrate, 1 shape-mismatched, 1 clean; plus 1 missed site)",
+    "#233 remedy was wrong: adapter migration is largely done; the live defect is that nothing SHARES the envelope"
+  ],
+  "recommendation": "Retarget slice to 'read the ledger once per snapshot': thread one ArtifactEnvelope<MetaLedgerEntry[]> through WorkspaceArtifactBuilder.build() into buildConsumerDiagnostics, absorbing readGovernanceState:103. Defer F4/F5 pending taxonomy + document-metadata decisions. Leave F3 bounded, documented in #233 acceptance boundary.",
+  "sources": [
+    "src/qorlogic/consumer/consumer-adapter.ts",
+    "src/qorlogic/consumer/types.ts",
+    "src/qorlogic/consumer/diagnostics.ts:40",
+    "src/qorlogic/meta-ledger-model.ts:15",
+    "src/roadmap/ConsoleServerHub.ts:65-95",
+    "src/roadmap/services/ConsoleLifecycleService.ts:97-120",
+    "src/roadmap/services/MetaLedgerReader.ts:69-90",
+    "src/roadmap/services/SystemStateReader.ts:41-48",
+    "src/roadmap/services/GovernancePhaseTracker.ts",
+    "src/roadmap/services/WorkspaceArtifactBuilder.ts:71-110",
+    "src/roadmap/services/HubSnapshotService.ts:169-195",
+    "src/roadmap/routes/CommitCheckRoute.ts:33"
+  ],
+  "next_phase": "/qor-plan",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.155.0",
+    "host": "claude-code",
+    "model_family": "opus",
+    "human_oversight": "absent",
+    "ts": "2026-08-21T20:30:00Z"
+  }
+}

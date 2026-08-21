@@ -28812,3 +28812,40 @@ POST-MERGE STATE. 0 open PRs. Issues auto-closed: #391 (Mind Map density disclos
 
 RESIDUAL. Six PRs merged without a /qor-substantiate seal of their own; this GATE entry is the only chain record of them and deliberately does not claim to be a substitute for one. If per-PR seals are wanted retroactively, that is a separate cycle.
 
+
+---
+
+### Entry #591: RESEARCH BRIEF - #233 residual META_LEDGER consumers (candidate list falsified; slice retargeted)
+
+**Timestamp**: 2026-08-21T20:30:00Z
+**Phase**: RESEARCH
+**Author**: Analyst
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256(docs/research-brief-233-residual-ledger-consumers-2026-08-21.md)
+= e7c01a53a0cf1387d89b997c3a0d19faacf27e69302748c3caaa529a76d77e9a
+```
+
+**Previous Hash**: `48b20b85d1f864135e0e9e17b3bd0c99f5538ebf0aa5faa8d3fa200c308fb56e` (Entry #590 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 210ef124a80a72e5fc40e4f185272b88527496f55012f20e1fadeb9f164bc9f2
+```
+
+## Decision
+
+CORRECTS ENTRY #590. That entry, and the operator report accompanying it, stated that five raw `docs/META_LEDGER.md` consumers remained outside the #233 consumer adapter: `ConsoleServerHub.ts:79`, `ConsoleLifecycleService.ts:98`, `MetaLedgerReader.ts:90`, `SystemStateReader.ts:41`, `GovernancePhaseTracker.ts`. That list was produced by hand-filtering a `grep -l` for the filename string and was never verified by opening the files. Research falsifies it in both directions and is recorded here rather than allowing a smaller number to be quietly restated later.
+
+PER-SITE DISPOSITION (all verified against source, with measurements). NOT CONSUMERS (2): `GovernancePhaseTracker.ts` has ZERO imports - no fs, no path, no I/O - its exports are pure functions over text and its only mention of the ledger is a doc comment at line 4; sole production caller is `ConsoleServerHub.ts:83`. `ConsoleLifecycleService.ts:98` uses the path solely as an `fs.watch`/WorkspaceMutationBus target and never reads or parses the file - routing it through the adapter would mean a full 1.75MB read to decide whether to install a watcher. MUST NOT MIGRATE AS-IS (1): `ConsoleServerHub.ts:79` reads only the last 4096 bytes via `readLedgerTail` and carries an explicit `complete` flag that deletes `evidenceState` on a partial read, because a tail slice can land between entries and look empty without corruption. Measured: bounded tail 0.4ms/call vs 24.0ms/call for `readMetaLedgerArtifact` - a 60x regression if migrated - and `classifyMetaLedgerText`'s non-empty-parses-empty -> malformed rule is precisely the false positive the `complete` flag exists to suppress, so the adapter ladder would reintroduce the bug the code already guards. WEAK CANDIDATE (1): `SystemStateReader.ts:41` reads the ledger only to run `/^##\s+Chain\s+Status:\s+(.+?)\s*$/m`; `## Chain Status:` is document-level metadata absent from `MetaLedgerEntry`, so the entry-array envelope does not fit - its silent degrade (absent and unreadable both -> null) is real and worth closing, but not by a drop-in. CLEAN CANDIDATE WITH A BEHAVIORAL CATCH (1): `MetaLedgerReader.ts` full-reads and parses with its OWN regex into `{number, kind, title, rawHeading}`, where `kind` comes from a KEYWORD SCAN OF THE HEADING while the canonical `MetaLedgerEntry.phase` comes from the `**Phase**` FIELD. These disagree on live data - entry #590's heading is `GATE - ...` so the reader's literal `GATE TRIBUNAL` scan classifies it OTHER, and #589 is the mirror case (heading SUBSTANTIATE, Phase GATE). `summarize()` derives sessionsCompleted / plansStarted / sessionsInFlight from `kind`, so swapping parsers CHANGES USER-VISIBLE CONSOLE METRICS; which taxonomy is correct is a plan-phase decision, and the disagreement is arguably its own defect.
+
+THE DEFECT THAT WAS NOT ON THE LIST. Instrumenting `fs` and running the real `WorkspaceArtifactBuilder.build()` against this repo measured FIVE full reads of the 1,751,562-byte ledger per single build - 8,715,735 bytes, 477ms cold, ~120ms warm at 24.0ms/read. Attributed by stack: (1) `readMetaLedgerArtifact` <- `build:79` (the adapter gate), (2) `WorkspaceArtifactBuilder.readGovernanceState:103` raw `fs.readFileSync` + `parseMetaLedger` - A RAW CONSUMER THAT WAS NEVER ON THE LIST, missed because that file was assumed already migrated, (3) `MetaLedgerReader.parseEntries` <- `summarize`, (4) `SystemStateReader.readChainStatusFromLedger` <- `readSafe`, (5) `readMetaLedgerArtifact` <- `buildConsumerDiagnostics` (diagnostics.ts:40) - THE SAME ADAPTER CALL AGAIN. Reads #1 and #5 mean adapter adoption ADDED a read rather than reducing coupling cost: the envelope is computed, used for one boolean, discarded, then recomputed. There is no caching - `HubSnapshotService.buildHubSnapshot:191` constructs a fresh builder per call, and its callers include `GET /api/hub`, the WebSocket init, `FeatureStatusRoute`, and `CommitCheckRoute:33`, the enforce-mode commit-BLOCKING path.
+
+SLICE RETARGETED. The remaining #233 work is NOT "migrate the rest onto the adapter" - that is largely done. It is "read the ledger once per snapshot": thread one `ArtifactEnvelope<MetaLedgerEntry[]>` through `build()` into `buildConsumerDiagnostics`, absorbing the unlisted `readGovernanceState` site, which removes reads #1/#2/#5 and serves #244's large-repository objective on the commit-check hot path. `MetaLedgerReader` and `SystemStateReader` follow only after the taxonomy and document-level-metadata decisions are made explicitly. `ConsoleServerHub` stays on its bounded tail with the reason recorded in #233's acceptance boundary so a later sweep cannot "finish the migration" and silently regress it 60x.
+
+SHADOW GENOME. New event recorded: a `grep -l` over a filename string was reported as an enumeration of consumers and sealed into the chain before any file was opened; the mention-set and the consumer-set are different sets, and hand-filtering does not convert one into the other. Corollary for #233: "routes through the adapter" is a coupling test, not an efficiency or intent test.
+
+NO CODE CHANGED IN THIS PHASE. Advisory only; delegation is to `/qor-plan`.
