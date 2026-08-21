@@ -7,22 +7,49 @@
  * historical AUDIT_FAIL entry, what does the rest of the chain say about
  * its current status?
  *
- * Deliberately conservative: an entry is only reported SUPERSEDED when a
- * later PASS verdict for the same artifactPath demonstrably cleared the
- * same finding (no overlapping matched pattern ids). A later non-PASS
- * verdict for the same pattern, or a later verdict this projector cannot
- * confidently compare, never gets silently reported as resolved.
+ * Scope note (post-review correction): this only projects the explicit
+ * L3 escalation/decision path (`sourceLedgerEntryId` back-reference). An
+ * earlier version of this module also inferred SUPERSEDED from a later
+ * PASS verdict for the same artifactPath with non-overlapping matched
+ * patterns. That inference was unsound and has been removed:
+ *
+ * - `VerdictEngine.determineDecision` guarantees a PASS verdict can never
+ *   carry a critical/high/medium matched pattern (any such match forces
+ *   BLOCK/WARN/ESCALATE). Since a WARN/BLOCK's driving pattern is always
+ *   critical/high/medium, it can *never* reappear in a later PASS's
+ *   matchedPatterns by construction — so "no overlap with a later PASS"
+ *   was true for essentially every real WARN/BLOCK, regardless of whether
+ *   the underlying finding was actually re-verified.
+ * - Worse cross-engine case: `VerdictArbiter.validateClaim` (existence/
+ *   claim-fabrication checks, pattern ids like `EXS001`) and
+ *   `evaluateFileEvent` (content heuristics, an entirely disjoint pattern
+ *   registry) can both log entries against the same artifactPath. A
+ *   routine clean content scan can never carry an EXS00x pattern id, so
+ *   it would have been reported as "superseding" a claim-fabrication
+ *   BLOCK it says nothing about. `LedgerEntry.verificationMethod` does
+ *   not currently distinguish which engine produced an entry (it is
+ *   hardcoded to `'sentinel_heuristic'` for both paths in
+ *   `VerdictEngine.executeActions`), so there is no schema-level way to
+ *   scope a same-artifact comparison to "the same kind of check" today.
+ *
+ * Reintroducing content/pattern-based supersession needs a schema change
+ * this tranche does not make: either persisting which matched pattern(s)
+ * were decision-driving (not the full matched set) plus per-engine
+ * provenance on each entry, or populating the already-declared but
+ * currently-unwritten `artifactHash` and anchoring supersession to
+ * verified content identity instead of a path string — either way, also
+ * excluding synthetic non-file identities (`'unknown'`, `'claim_manifest'`)
+ * from any path-based correlation. That is deferred to a follow-up
+ * tranche; `FailSafe#367` stays open for it.
  */
 
 import type { LedgerEntry } from "../../shared/types";
 
 export type ResolutionState =
   | "LIVE"
-  | "SUPERSEDED"
+  | "PENDING_DECISION"
   | "DECIDED_APPROVED"
-  | "DECIDED_REJECTED"
-  | "AMBIGUOUS"
-  | "UNKNOWN";
+  | "DECIDED_REJECTED";
 
 export interface ResolutionProjection {
   /** id of the WARN/BLOCK/ESCALATE ledger entry this projection describes. */
@@ -35,21 +62,9 @@ export interface ResolutionProjection {
 
 const RESOLVABLE_VERDICTS = new Set(["WARN", "BLOCK", "ESCALATE"]);
 
-function matchedPatternsOf(entry: LedgerEntry): string[] | null {
-  const value = entry.payload?.matchedPatterns;
-  if (!Array.isArray(value)) return null;
-  if (!value.every((v) => typeof v === "string")) return null;
-  return value as string[];
-}
-
 function sourceLedgerEntryIdOf(entry: LedgerEntry): number | null {
   const value = entry.payload?.sourceLedgerEntryId;
   return typeof value === "number" ? value : null;
-}
-
-function intersects(a: string[], b: string[]): boolean {
-  const set = new Set(a);
-  return b.some((v) => set.has(v));
 }
 
 /**
@@ -76,8 +91,8 @@ function projectOne(source: LedgerEntry, sorted: LedgerEntry[]): ResolutionProje
   const later = sorted.filter((e) => e.id > source.id);
 
   // 1. Explicit authority: an L3 decision that names this entry as its
-  //    source always wins over any inferred supersession. If more than one
-  //    such decision exists (re-decision), the latest by id is authoritative.
+  //    source always wins. If more than one exists (re-decision), the
+  //    latest by id is authoritative.
   let decision: LedgerEntry | undefined;
   for (const entry of later) {
     if (entry.eventType !== "L3_APPROVED" && entry.eventType !== "L3_REJECTED") continue;
@@ -92,62 +107,27 @@ function projectOne(source: LedgerEntry, sorted: LedgerEntry[]): ResolutionProje
     };
   }
 
-  // 2. No artifact identity to correlate against — cannot even attempt
-  //    supersession matching.
-  if (!source.artifactPath) {
+  // 2. Escalated and queued for human review, but no decision has landed
+  //    yet: distinct from LIVE (no attention at all) — this one is
+  //    already in front of a human.
+  const queued = later.find(
+    (e) => e.eventType === "L3_QUEUED" && sourceLedgerEntryIdOf(e) === source.id,
+  );
+  if (queued) {
     return {
       sourceEntryId: source.id,
-      state: "UNKNOWN",
-      reason: "entry has no artifactPath; no basis for linkage",
+      state: "PENDING_DECISION",
+      resolvedByEntryId: queued.id,
+      reason: "queued for L3 review via explicit source-entry back-reference; no decision yet",
     };
   }
 
-  const sourcePatterns = matchedPatternsOf(source);
-  if (sourcePatterns === null) {
-    return {
-      sourceEntryId: source.id,
-      state: "UNKNOWN",
-      reason: "entry has no readable matchedPatterns; cannot establish finding identity",
-    };
-  }
-
-  const sameArtifact = later.filter((e) => e.artifactPath === source.artifactPath);
-  let sawUncomparable = false;
-
-  for (const candidate of sameArtifact) {
-    if (candidate.eventType !== "AUDIT_PASS" && candidate.eventType !== "AUDIT_FAIL") continue;
-    const candidatePatterns = matchedPatternsOf(candidate);
-    if (candidatePatterns === null) {
-      sawUncomparable = true;
-      continue;
-    }
-    if (candidate.verificationResult === "PASS" && !intersects(sourcePatterns, candidatePatterns)) {
-      return {
-        sourceEntryId: source.id,
-        state: "SUPERSEDED",
-        resolvedByEntryId: candidate.id,
-        reason: "later PASS verdict for the same artifact carries none of this entry's matched patterns",
-      };
-    }
-    // Later verdict for the same artifact that still overlaps this
-    // entry's patterns, or is non-PASS: the concern this entry raised has
-    // not been demonstrated clear. Falls through — stays LIVE unless a
-    // later candidate resolves it.
-  }
-
-  if (sawUncomparable) {
-    return {
-      sourceEntryId: source.id,
-      state: "AMBIGUOUS",
-      reason: "a later entry for the same artifact exists but its matchedPatterns cannot be compared",
-    };
-  }
-
+  // 3. No explicit-authority evidence at all. This tranche does not infer
+  //    resolution from later same-artifact verdicts — see the module
+  //    doc comment for why that inference was removed as unsound.
   return {
     sourceEntryId: source.id,
     state: "LIVE",
-    reason: sameArtifact.length === 0
-      ? "no later entry for this artifact"
-      : "later entries for this artifact exist but none demonstrate this finding cleared",
+    reason: "no explicit L3 escalation/decision evidence found for this entry",
   };
 }

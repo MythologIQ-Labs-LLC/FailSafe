@@ -24,90 +24,66 @@ function reset() { nextId = 1; }
 suite('AuditResolutionProjector (FailSafe#367)', () => {
   setup(() => reset());
 
-  test('WARN with no later entries for its artifact stays LIVE', () => {
-    const warn = entry({
-      eventType: 'AUDIT_FAIL', verificationResult: 'WARN',
-      artifactPath: 'src/a.ts', payload: { matchedPatterns: ['p1'] },
-    });
+  test('WARN with no later evidence stays LIVE', () => {
+    const warn = entry({ eventType: 'AUDIT_FAIL', verificationResult: 'WARN', artifactPath: 'src/a.ts' });
     const [proj] = projectResolution([warn]);
     assert.equal(proj.sourceEntryId, warn.id);
     assert.equal(proj.state, 'LIVE');
   });
 
-  test('WARN superseded by a later PASS with no overlapping patterns', () => {
-    const warn = entry({
-      eventType: 'AUDIT_FAIL', verificationResult: 'WARN',
-      artifactPath: 'src/a.ts', payload: { matchedPatterns: ['p1'] },
-    });
-    const pass = entry({
-      eventType: 'AUDIT_PASS', verificationResult: 'PASS',
-      artifactPath: 'src/a.ts', payload: { matchedPatterns: [] },
-    });
+  test('a later PASS for the same artifactPath does NOT mark the entry resolved', () => {
+    // Regression guard for the reverted inference: VerdictEngine can never
+    // emit a PASS carrying the pattern that drove a WARN/BLOCK, so
+    // "later PASS, no pattern overlap" is true for virtually every real
+    // WARN/BLOCK and must not be treated as evidence of anything.
+    const warn = entry({ eventType: 'AUDIT_FAIL', verificationResult: 'WARN', artifactPath: 'src/a.ts' });
+    const pass = entry({ eventType: 'AUDIT_PASS', verificationResult: 'PASS', artifactPath: 'src/a.ts' });
     const [proj] = projectResolution([warn, pass]);
-    assert.equal(proj.state, 'SUPERSEDED');
-    assert.equal(proj.resolvedByEntryId, pass.id);
+    assert.equal(proj.state, 'LIVE');
   });
 
-  test('WARN NOT superseded when the later PASS still lists the same pattern', () => {
-    // Guards against a caller ever emitting an inconsistent PASS+matchedPatterns
-    // pair; the projector must not trust the verdict label alone.
-    const warn = entry({
-      eventType: 'AUDIT_FAIL', verificationResult: 'WARN',
-      artifactPath: 'src/a.ts', payload: { matchedPatterns: ['p1'] },
+  test('a claim-fabrication BLOCK is not cleared by an unrelated later PASS on the same path (cross-engine case)', () => {
+    // VerdictArbiter.validateClaim keys existence/claim-fabrication
+    // findings (pattern ids like EXS001) to artifacts[0]; a routine
+    // content-heuristic scan on that same path afterward answers a
+    // completely different question and must not read as resolution.
+    const block = entry({
+      eventType: 'AUDIT_FAIL', verificationResult: 'BLOCK',
+      artifactPath: 'src/foo.ts', payload: { matchedPatterns: ['EXS001'] },
     });
-    const stillFlagged = entry({
+    const routineScan = entry({
       eventType: 'AUDIT_PASS', verificationResult: 'PASS',
-      artifactPath: 'src/a.ts', payload: { matchedPatterns: ['p1'] },
+      artifactPath: 'src/foo.ts', payload: { matchedPatterns: [] },
     });
-    const [proj] = projectResolution([warn, stillFlagged]);
+    const [proj] = projectResolution([block, routineScan]);
     assert.equal(proj.state, 'LIVE');
   });
 
-  test('WARN stays LIVE when a later WARN for the same artifact re-flags the same pattern', () => {
-    const warn1 = entry({
-      eventType: 'AUDIT_FAIL', verificationResult: 'WARN',
-      artifactPath: 'src/a.ts', payload: { matchedPatterns: ['p1'] },
+  test('ESCALATE queued for L3 review (no decision yet) reports PENDING_DECISION, not LIVE', () => {
+    const escalate = entry({ eventType: 'AUDIT_FAIL', verificationResult: 'ESCALATE', artifactPath: 'src/a.ts' });
+    const queued = entry({
+      eventType: 'L3_QUEUED', artifactPath: 'src/a.ts',
+      payload: { sourceLedgerEntryId: escalate.id },
     });
-    const warn2 = entry({
-      eventType: 'AUDIT_FAIL', verificationResult: 'WARN',
-      artifactPath: 'src/a.ts', payload: { matchedPatterns: ['p1'] },
-    });
-    const [proj1] = projectResolution([warn1, warn2]);
-    assert.equal(proj1.state, 'LIVE');
-  });
-
-  test('WARN stays LIVE when a later verdict for a different pattern exists but this pattern was never cleared', () => {
-    const warn = entry({
-      eventType: 'AUDIT_FAIL', verificationResult: 'WARN',
-      artifactPath: 'src/a.ts', payload: { matchedPatterns: ['p1'] },
-    });
-    const otherWarn = entry({
-      eventType: 'AUDIT_FAIL', verificationResult: 'WARN',
-      artifactPath: 'src/a.ts', payload: { matchedPatterns: ['p2'] },
-    });
-    const [proj] = projectResolution([warn, otherWarn]);
-    assert.equal(proj.state, 'LIVE');
+    const [proj] = projectResolution([escalate, queued]);
+    assert.equal(proj.state, 'PENDING_DECISION');
+    assert.equal(proj.resolvedByEntryId, queued.id);
   });
 
   test('ESCALATE explicitly decided APPROVED via sourceLedgerEntryId back-reference', () => {
-    const escalate = entry({
-      eventType: 'AUDIT_FAIL', verificationResult: 'ESCALATE',
-      artifactPath: 'src/a.ts', payload: { matchedPatterns: ['p1'] },
-    });
+    const escalate = entry({ eventType: 'AUDIT_FAIL', verificationResult: 'ESCALATE', artifactPath: 'src/a.ts' });
+    const queued = entry({ eventType: 'L3_QUEUED', artifactPath: 'src/a.ts', payload: { sourceLedgerEntryId: escalate.id } });
     const approved = entry({
       eventType: 'L3_APPROVED', overseerDecision: 'APPROVED',
       artifactPath: 'src/a.ts', payload: { sourceLedgerEntryId: escalate.id },
     });
-    const [proj] = projectResolution([escalate, approved]);
+    const [proj] = projectResolution([escalate, queued, approved]);
     assert.equal(proj.state, 'DECIDED_APPROVED');
     assert.equal(proj.resolvedByEntryId, approved.id);
   });
 
   test('ESCALATE explicitly decided REJECTED via sourceLedgerEntryId back-reference', () => {
-    const escalate = entry({
-      eventType: 'AUDIT_FAIL', verificationResult: 'ESCALATE',
-      artifactPath: 'src/a.ts', payload: { matchedPatterns: ['p1'] },
-    });
+    const escalate = entry({ eventType: 'AUDIT_FAIL', verificationResult: 'ESCALATE', artifactPath: 'src/a.ts' });
     const rejected = entry({
       eventType: 'L3_REJECTED', overseerDecision: 'REJECTED',
       artifactPath: 'src/a.ts', payload: { sourceLedgerEntryId: escalate.id },
@@ -116,29 +92,20 @@ suite('AuditResolutionProjector (FailSafe#367)', () => {
     assert.equal(proj.state, 'DECIDED_REJECTED');
   });
 
-  test('explicit decision wins even when an unrelated later PASS could look like supersession', () => {
-    const escalate = entry({
-      eventType: 'AUDIT_FAIL', verificationResult: 'ESCALATE',
-      artifactPath: 'src/a.ts', payload: { matchedPatterns: ['p1'] },
-    });
-    const unrelatedPass = entry({
-      eventType: 'AUDIT_PASS', verificationResult: 'PASS',
-      artifactPath: 'src/a.ts', payload: { matchedPatterns: [] },
-    });
+  test('a decided entry (APPROVED/REJECTED) outranks its own earlier PENDING_DECISION', () => {
+    const escalate = entry({ eventType: 'AUDIT_FAIL', verificationResult: 'ESCALATE', artifactPath: 'src/a.ts' });
+    const queued = entry({ eventType: 'L3_QUEUED', artifactPath: 'src/a.ts', payload: { sourceLedgerEntryId: escalate.id } });
     const rejected = entry({
       eventType: 'L3_REJECTED', overseerDecision: 'REJECTED',
       artifactPath: 'src/a.ts', payload: { sourceLedgerEntryId: escalate.id },
     });
-    const [proj] = projectResolution([escalate, unrelatedPass, rejected]);
+    const [proj] = projectResolution([escalate, queued, rejected]);
     assert.equal(proj.state, 'DECIDED_REJECTED');
     assert.equal(proj.resolvedByEntryId, rejected.id);
   });
 
   test('a decision that references a different source entry does not resolve this one', () => {
-    const warnA = entry({
-      eventType: 'AUDIT_FAIL', verificationResult: 'WARN',
-      artifactPath: 'src/a.ts', payload: { matchedPatterns: ['p1'] },
-    });
+    const warnA = entry({ eventType: 'AUDIT_FAIL', verificationResult: 'WARN', artifactPath: 'src/a.ts' });
     const decisionForSomethingElse = entry({
       eventType: 'L3_APPROVED', overseerDecision: 'APPROVED',
       artifactPath: 'src/a.ts', payload: { sourceLedgerEntryId: 9999 },
@@ -147,35 +114,35 @@ suite('AuditResolutionProjector (FailSafe#367)', () => {
     assert.equal(proj.state, 'LIVE');
   });
 
-  test('BLOCK with no artifactPath is UNKNOWN, not LIVE', () => {
-    const block = entry({
-      eventType: 'AUDIT_FAIL', verificationResult: 'BLOCK',
-      payload: { matchedPatterns: ['p1'] },
+  test('a queued entry that references a different source does not mark this one PENDING_DECISION', () => {
+    const warnA = entry({ eventType: 'AUDIT_FAIL', verificationResult: 'WARN', artifactPath: 'src/a.ts' });
+    const queuedForSomethingElse = entry({
+      eventType: 'L3_QUEUED', artifactPath: 'src/a.ts', payload: { sourceLedgerEntryId: 9999 },
     });
-    const [proj] = projectResolution([block]);
-    assert.equal(proj.state, 'UNKNOWN');
+    const [proj] = projectResolution([warnA, queuedForSomethingElse]);
+    assert.equal(proj.state, 'LIVE');
   });
 
-  test('entry with unreadable matchedPatterns is UNKNOWN', () => {
-    const malformed = entry({
-      eventType: 'AUDIT_FAIL', verificationResult: 'WARN',
-      artifactPath: 'src/a.ts', payload: { matchedPatterns: 'not-an-array' },
-    });
-    const [proj] = projectResolution([malformed]);
-    assert.equal(proj.state, 'UNKNOWN');
+  test('an L3_QUEUED with no sourceLedgerEntryId (e.g. EvaluationRouter tier-3 path) never falsely links', () => {
+    const escalate = entry({ eventType: 'AUDIT_FAIL', verificationResult: 'ESCALATE', artifactPath: 'src/a.ts' });
+    const queuedFromOtherPath = entry({ eventType: 'L3_QUEUED', artifactPath: 'src/a.ts', payload: {} });
+    const [proj] = projectResolution([escalate, queuedFromOtherPath]);
+    assert.equal(proj.state, 'LIVE');
   });
 
-  test('a later same-artifact entry with unreadable matchedPatterns yields AMBIGUOUS, not a silent LIVE/SUPERSEDED guess', () => {
-    const warn = entry({
-      eventType: 'AUDIT_FAIL', verificationResult: 'WARN',
-      artifactPath: 'src/a.ts', payload: { matchedPatterns: ['p1'] },
+  test('re-decision: the latest explicit decision by id wins', () => {
+    const escalate = entry({ eventType: 'AUDIT_FAIL', verificationResult: 'ESCALATE', artifactPath: 'src/a.ts' });
+    const rejected = entry({
+      eventType: 'L3_REJECTED', overseerDecision: 'REJECTED',
+      artifactPath: 'src/a.ts', payload: { sourceLedgerEntryId: escalate.id },
     });
-    const malformedLater = entry({
-      eventType: 'AUDIT_PASS', verificationResult: 'PASS',
-      artifactPath: 'src/a.ts', payload: {},
+    const approvedLater = entry({
+      eventType: 'L3_APPROVED', overseerDecision: 'APPROVED',
+      artifactPath: 'src/a.ts', payload: { sourceLedgerEntryId: escalate.id },
     });
-    const [proj] = projectResolution([warn, malformedLater]);
-    assert.equal(proj.state, 'AMBIGUOUS');
+    const [proj] = projectResolution([escalate, rejected, approvedLater]);
+    assert.equal(proj.state, 'DECIDED_APPROVED');
+    assert.equal(proj.resolvedByEntryId, approvedLater.id);
   });
 
   test('PASS and non-resolvable entries are excluded from the projection output', () => {
@@ -186,42 +153,29 @@ suite('AuditResolutionProjector (FailSafe#367)', () => {
   });
 
   test('QUARANTINE verdicts are not modeled as resolvable findings (out of scope for this projection)', () => {
-    const quarantine = entry({
-      eventType: 'AUDIT_FAIL', verificationResult: 'QUARANTINE',
-      artifactPath: 'src/a.ts', payload: { matchedPatterns: ['p1'] },
-    });
+    const quarantine = entry({ eventType: 'AUDIT_FAIL', verificationResult: 'QUARANTINE', artifactPath: 'src/a.ts' });
     const results = projectResolution([quarantine]);
     assert.equal(results.length, 0);
   });
 
   test('input order does not affect the result (projector sorts by id internally)', () => {
-    const warn = entry({
-      eventType: 'AUDIT_FAIL', verificationResult: 'WARN',
-      artifactPath: 'src/a.ts', payload: { matchedPatterns: ['p1'] },
+    const escalate = entry({ eventType: 'AUDIT_FAIL', verificationResult: 'ESCALATE', artifactPath: 'src/a.ts' });
+    const approved = entry({
+      eventType: 'L3_APPROVED', overseerDecision: 'APPROVED',
+      artifactPath: 'src/a.ts', payload: { sourceLedgerEntryId: escalate.id },
     });
-    const pass = entry({
-      eventType: 'AUDIT_PASS', verificationResult: 'PASS',
-      artifactPath: 'src/a.ts', payload: { matchedPatterns: [] },
-    });
-    const forward = projectResolution([warn, pass]);
-    const reversed = projectResolution([pass, warn]);
+    const forward = projectResolution([escalate, approved]);
+    const reversed = projectResolution([approved, escalate]);
     assert.deepEqual(forward, reversed);
   });
 
-  test('the earliest qualifying clean verdict is reported, not the latest', () => {
-    const warn = entry({
-      eventType: 'AUDIT_FAIL', verificationResult: 'WARN',
-      artifactPath: 'src/a.ts', payload: { matchedPatterns: ['p1'] },
+  test('entries with no artifactPath at all (malformed event payload) still resolve via explicit id linkage', () => {
+    const escalate = entry({ eventType: 'AUDIT_FAIL', verificationResult: 'ESCALATE', artifactPath: 'unknown' });
+    const approved = entry({
+      eventType: 'L3_APPROVED', overseerDecision: 'APPROVED',
+      payload: { sourceLedgerEntryId: escalate.id },
     });
-    const firstClean = entry({
-      eventType: 'AUDIT_PASS', verificationResult: 'PASS',
-      artifactPath: 'src/a.ts', payload: { matchedPatterns: [] },
-    });
-    const secondClean = entry({
-      eventType: 'AUDIT_PASS', verificationResult: 'PASS',
-      artifactPath: 'src/a.ts', payload: { matchedPatterns: [] },
-    });
-    const [proj] = projectResolution([warn, firstClean, secondClean]);
-    assert.equal(proj.resolvedByEntryId, firstClean.id);
+    const [proj] = projectResolution([escalate, approved]);
+    assert.equal(proj.state, 'DECIDED_APPROVED');
   });
 });
