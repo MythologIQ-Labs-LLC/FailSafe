@@ -22,7 +22,9 @@ import * as yaml from 'js-yaml';
 import type { TrackerManifest } from './tracker-model';
 import { projectTrackerManifest } from './governance-projection';
 import { resolveRepoSlug } from './manifest-sources';
-import { classifyMetaLedgerText, type ConsumerReadOptions } from '../../qorlogic/consumer/consumer-adapter';
+import {
+  classifyMetaLedgerText, type ConsumerReadOptions, type RawArtifactRead,
+} from '../../qorlogic/consumer/consumer-adapter';
 import type { ArtifactState } from '../../qorlogic/consumer/types';
 
 // Workspace-relative keys are logical POSIX paths (forward slash); nodeSidecarDeps
@@ -64,10 +66,16 @@ export interface SidecarDeps {
   /** Plan docs from `.failsafe/governance/plans/*.md` (A.1b, #195) → programs/phases.
    *  Empty array when the dir is absent (ungoverned repo). */
   readPlans(): Array<{ slug: string; content: string }>;
-  /** Optional: mtime of a workspace-relative path as ISO-8601, or null when unavailable/not
-   *  backed by a real filesystem (#233 freshness). Omit entirely when the seam cannot supply
-   *  one at all — `emitGovernanceSidecar` then treats freshness as unknown, never guessed. */
-  readFileMtime?(relPath: string): string | null;
+  /**
+   * Optional: a full-fidelity read of the META_LEDGER path for the one read where "absent"
+   * vs "present but unreadable" and mtime change the #233 classification outcome. Omit to
+   * fall back to `readFile()`'s plain absent-or-unreadable=null contract with no mtime —
+   * exact for in-memory test doubles (a missing store entry really IS absent, never a
+   * permission/EISDIR error) but wrong for `nodeSidecarDeps`'s real filesystem, which
+   * implements this to distinguish the two (see its own comment) rather than let a real
+   * read failure masquerade as "no governance" through the coarser `readFile` fallback.
+   */
+  readMetaLedgerRaw?(relPath: string): RawArtifactRead;
 }
 
 export type SidecarStatus =
@@ -86,12 +94,16 @@ export interface SidecarEmitResult {
 /**
  * Project the governance manifest and emit it to the generated sidecar.
  *
- * The META_LEDGER read is classified through the qorlogic consumer adapter's
- * `classifyMetaLedgerText` (#233 migration) instead of a raw truthy/empty check, so a
- * ledger that exists but fails to parse is reported as `skipped-ledger-untrusted` — never
- * silently treated as "ungoverned repo" (which would hide that governance evidence exists
- * but cannot be trusted) and never silently written as an apparently-valid but empty
- * projection. Degrade-safe: a missing OR truly-empty META_LEDGER still yields
+ * The META_LEDGER read is classified through the qorlogic consumer adapter's shared
+ * `classifyRead` ladder (`classifyMetaLedgerText`, #233 migration) instead of a raw
+ * truthy/empty check, so a ledger that exists but fails to parse is reported as
+ * `skipped-ledger-untrusted` — never silently treated as "ungoverned repo" (which would hide
+ * that governance evidence exists but cannot be trusted) and never silently written as an
+ * apparently-valid but empty projection. The read itself goes through `deps.readMetaLedgerRaw`
+ * when available (real `nodeSidecarDeps`) rather than plain `readFile`, because a present-but-
+ * unreadable ledger (EACCES/EISDIR) must classify as `malformed`, not `unavailable` — a
+ * catch-all-to-null read cannot make that distinction and would misreport a real read failure
+ * as "no governance at all". Degrade-safe: a missing OR truly-empty META_LEDGER still yields
  * `skipped-no-governance` (ungoverned repo → the FX857 generator is the fallback path, not
  * this one), matching the pre-#233 contract; any thrown error yields `error` rather than
  * propagating. Idempotent: a re-emit with unchanged governance yields `unchanged` and
@@ -117,9 +129,10 @@ export interface SidecarEmitResult {
 export function emitGovernanceSidecar(deps: SidecarDeps, opts?: ConsumerReadOptions): SidecarEmitResult {
   const outPath = GOVERNANCE_SIDECAR_RELPATH;
   try {
-    const rawMetaLedger = deps.readFile(META_LEDGER_RELPATH);
-    const mtimeIso = deps.readFileMtime?.(META_LEDGER_RELPATH) ?? null;
-    const ledger = classifyMetaLedgerText(rawMetaLedger, META_LEDGER_RELPATH, { ...opts, mtimeIso });
+    const raw: RawArtifactRead = deps.readMetaLedgerRaw
+      ? deps.readMetaLedgerRaw(META_LEDGER_RELPATH)
+      : { text: deps.readFile(META_LEDGER_RELPATH), mtimeIso: null };
+    const ledger = classifyMetaLedgerText(raw, META_LEDGER_RELPATH, opts);
     if (ledger.state === 'unavailable' || (ledger.data !== null && ledger.data.length === 0)) {
       // No file, or a file present but truly empty — both mean "nothing to project yet",
       // same as the pre-#233 `!metaLedger || !metaLedger.trim()` check.
@@ -138,7 +151,7 @@ export function emitGovernanceSidecar(deps: SidecarDeps, opts?: ConsumerReadOpti
         reason: ledger.reason ?? undefined, ledgerState: ledger.state,
       };
     }
-    const metaLedger = rawMetaLedger as string;
+    const metaLedger = raw.text as string;
     const featureIndex = deps.readFile(FEATURE_INDEX_RELPATH) ?? '';
     const slug = deps.repoSlug();
 
@@ -188,11 +201,24 @@ export function nodeSidecarDeps(workspaceRoot: string): SidecarDeps {
         return null;
       }
     },
-    readFileMtime(relPath) {
+    // #233 review finding: readFile()'s catch-all-to-null cannot distinguish "absent" from
+    // "present but unreadable" (EACCES/EISDIR/etc), so a governed repo whose ledger is
+    // locked or a directory would otherwise be silently reported as "no governance" —
+    // exactly the silent-degrade class this whole migration exists to close. stat first (an
+    // EISDIR directory still stats successfully, giving a real mtime) so a subsequent read
+    // failure is correctly attributed to "exists but unreadable", not "doesn't exist".
+    readMetaLedgerRaw(relPath) {
+      const target = abs(relPath);
+      let mtimeIso: string | null;
       try {
-        return fs.statSync(abs(relPath)).mtime.toISOString();
+        mtimeIso = fs.statSync(target).mtime.toISOString();
       } catch {
-        return null;
+        return { text: null, mtimeIso: null };
+      }
+      try {
+        return { text: fs.readFileSync(target, 'utf-8'), mtimeIso };
+      } catch (err) {
+        return { text: null, mtimeIso, readError: err instanceof Error ? err.message : String(err) };
       }
     },
     writeFile(relPath, data) {

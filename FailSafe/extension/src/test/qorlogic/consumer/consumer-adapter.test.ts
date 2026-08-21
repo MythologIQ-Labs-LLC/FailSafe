@@ -188,10 +188,11 @@ suite('#233 route-seam equivalence (FX892 MODIFIED)', () => {
   });
 });
 
-// #233: classifyMetaLedgerText is the text-only sibling of readMetaLedgerArtifact, for
-// callers with an injected file-read seam instead of a workspace root (governance-sidecar.ts
-// / SidecarDeps). No fixture filesystem involved — pure over the text argument.
-suite('classifyMetaLedgerText (#233 text-seam classification)', () => {
+// #233: classifyMetaLedgerText runs META_LEDGER classification through the SAME shared
+// classifyRead ladder readMetaLedgerArtifact uses, for callers with their own injected
+// read seam instead of a workspace root (governance-sidecar.ts / SidecarDeps). No fixture
+// filesystem involved — pure over the RawArtifactRead argument.
+suite('classifyMetaLedgerText (#233 shared-ladder text-seam classification)', () => {
   const OK_LEDGER = [
     '### Entry #1: SESSION SEAL - fixture',
     '',
@@ -200,8 +201,8 @@ suite('classifyMetaLedgerText (#233 text-seam classification)', () => {
     '',
   ].join('\n');
 
-  test('null text -> unavailable, null mtimeIso (no fs stat performed)', () => {
-    const env = classifyMetaLedgerText(null, 'docs/META_LEDGER.md');
+  test('absent (text null, no readError) -> unavailable', () => {
+    const env = classifyMetaLedgerText({ text: null, mtimeIso: null }, 'docs/META_LEDGER.md');
     assert.equal(env.state, 'unavailable');
     assert.equal(env.data, null);
     assert.ok(env.reason?.includes('docs/META_LEDGER.md'));
@@ -209,8 +210,24 @@ suite('classifyMetaLedgerText (#233 text-seam classification)', () => {
     assert.equal(env.provenance.sourcePath, 'docs/META_LEDGER.md');
   });
 
+  // The G1 review finding: a present-but-unreadable ledger (EACCES/EISDIR) must classify
+  // as malformed (untrusted), never as unavailable (silently "no governance") — the exact
+  // distinction a plain try/catch-to-null read seam cannot make, which is why this function
+  // takes a RawArtifactRead with an explicit readError channel instead of a bare string|null.
+  test('present but unreadable (text null, readError set) -> malformed, not unavailable', () => {
+    const env = classifyMetaLedgerText(
+      { text: null, mtimeIso: '2026-01-01T00:00:00.000Z', readError: 'EISDIR: illegal operation on a directory, read' },
+      'docs/META_LEDGER.md',
+    );
+    assert.equal(env.state, 'malformed', 'a read failure after the file is known to exist must never read as "ungoverned"');
+    assert.equal(env.data, null);
+    assert.ok(env.reason?.includes('docs/META_LEDGER.md'), `reason: ${env.reason}`);
+    assert.ok(env.reason?.includes('EISDIR'), `reason should surface the underlying cause: ${env.reason}`);
+    assert.equal(env.provenance.mtimeIso, '2026-01-01T00:00:00.000Z', 'mtime is preserved even though the read itself failed');
+  });
+
   test('non-empty parseable text -> ok with the parsed entries', () => {
-    const env = classifyMetaLedgerText(OK_LEDGER, 'docs/META_LEDGER.md');
+    const env = classifyMetaLedgerText({ text: OK_LEDGER, mtimeIso: null }, 'docs/META_LEDGER.md');
     assert.equal(env.state, 'ok');
     assert.equal(env.data?.length, 1);
     assert.equal(env.reason, null);
@@ -219,20 +236,23 @@ suite('classifyMetaLedgerText (#233 text-seam classification)', () => {
   });
 
   test('whitespace-only text -> ok with an empty entries array (not malformed)', () => {
-    const env = classifyMetaLedgerText('   \n', 'docs/META_LEDGER.md');
+    const env = classifyMetaLedgerText({ text: '   \n', mtimeIso: null }, 'docs/META_LEDGER.md');
     assert.equal(env.state, 'ok');
     assert.deepEqual(env.data, []);
   });
 
   test('non-empty text that parses to zero entries -> malformed, reason names the source', () => {
-    const env = classifyMetaLedgerText('not a governance ledger, no entries here\n', 'docs/META_LEDGER.md');
+    const env = classifyMetaLedgerText(
+      { text: 'not a governance ledger, no entries here\n', mtimeIso: null },
+      'docs/META_LEDGER.md',
+    );
     assert.equal(env.state, 'malformed');
     assert.equal(env.data, null);
     assert.ok(env.reason?.includes('docs/META_LEDGER.md'), `reason: ${env.reason}`);
   });
 
   test('below-floor version -> unsupported, reason names installed and minimum', () => {
-    const env = classifyMetaLedgerText(OK_LEDGER, 'docs/META_LEDGER.md', {
+    const env = classifyMetaLedgerText({ text: OK_LEDGER, mtimeIso: null }, 'docs/META_LEDGER.md', {
       versionStatus: { installed: '0.50.0', minimum: '0.100.0', meetsFloor: false },
     });
     assert.equal(env.state, 'unsupported');
@@ -241,30 +261,32 @@ suite('classifyMetaLedgerText (#233 text-seam classification)', () => {
   });
 
   test('never throws on malformed text, mirrors readMetaLedgerArtifact classification exactly', () => {
-    assert.doesNotThrow(() => classifyMetaLedgerText('garbage', 'docs/META_LEDGER.md'));
+    assert.doesNotThrow(() => classifyMetaLedgerText({ text: 'garbage', mtimeIso: null }, 'docs/META_LEDGER.md'));
   });
 
   test('maxAgeMs exceeded, with a caller-supplied mtimeIso -> stale, data still present', () => {
-    const env = classifyMetaLedgerText(OK_LEDGER, 'docs/META_LEDGER.md', {
-      mtimeIso: '2000-01-01T00:00:00.000Z',
-      maxAgeMs: 1,
-    });
+    const env = classifyMetaLedgerText(
+      { text: OK_LEDGER, mtimeIso: '2000-01-01T00:00:00.000Z' },
+      'docs/META_LEDGER.md',
+      { maxAgeMs: 1 },
+    );
     assert.equal(env.state, 'stale');
     assert.ok((env.data?.length ?? 0) > 0, 'stale keeps the parsed data');
     assert.equal(env.provenance.mtimeIso, '2000-01-01T00:00:00.000Z');
   });
 
   test('maxAgeMs supplied but no mtimeIso -> freshness stays unknown, classifies ok (never guessed stale)', () => {
-    const env = classifyMetaLedgerText(OK_LEDGER, 'docs/META_LEDGER.md', { maxAgeMs: 1 });
+    const env = classifyMetaLedgerText({ text: OK_LEDGER, mtimeIso: null }, 'docs/META_LEDGER.md', { maxAgeMs: 1 });
     assert.equal(env.state, 'ok');
     assert.equal(env.provenance.mtimeIso, null);
   });
 
   test('generous maxAgeMs with a recent mtimeIso -> stays ok', () => {
-    const env = classifyMetaLedgerText(OK_LEDGER, 'docs/META_LEDGER.md', {
-      mtimeIso: new Date().toISOString(),
-      maxAgeMs: 1000 * 60 * 60 * 24 * 365 * 100,
-    });
+    const env = classifyMetaLedgerText(
+      { text: OK_LEDGER, mtimeIso: new Date().toISOString() },
+      'docs/META_LEDGER.md',
+      { maxAgeMs: 1000 * 60 * 60 * 24 * 365 * 100 },
+    );
     assert.equal(env.state, 'ok');
   });
 });
