@@ -5,8 +5,10 @@ import { execFileSync } from 'child_process';
 import * as yaml from 'js-yaml';
 import { buildTrackerModel, validateManifest, discoverReleases, type TrackerManifest } from '../tracker/tracker-model';
 import { discoverMergedPrs, detectCadence } from '../tracker/tracker-pr-discovery';
-import { projectTrackerManifest } from '../tracker/governance-projection';
+import { projectTrackerManifestFromEntries } from '../tracker/governance-projection';
 import { nodeSidecarDeps } from '../tracker/governance-sidecar';
+import { readMetaLedgerArtifact } from '../../qorlogic/consumer/consumer-adapter';
+import type { ArtifactState } from '../../qorlogic/consumer/types';
 
 /**
  * TrackerRoute — serves the Development Tracker (standard:
@@ -43,22 +45,34 @@ const MANIFEST_PATH = (workspaceRoot: string): string =>
 
 /**
  * Project a manifest from the governance ledger (A.2b, #202) — the GOVERNED-repo
- * fallback when the operator has no hand-authored programs.yaml. Reuses the FX865
- * sidecar I/O seam (nodeSidecarDeps) to read META_LEDGER + FEATURE_INDEX + plans.
- * `knownReleaseIds` (the discovered axis) lets plan phases anchor only to real
- * releases. Ungoverned repo (no META_LEDGER) → {} → discovered-only, as before.
+ * fallback when the operator has no hand-authored programs.yaml. The ledger read
+ * goes through the qorlogic consumer adapter (#233 migration:
+ * `readMetaLedgerArtifact`) instead of a raw `fs` read, so a malformed/unsupported
+ * ledger is an explicit, reported state rather than silently parsing to a
+ * verticals-only manifest that looks like a real projection. FEATURE_INDEX + plans
+ * still flow through the FX865 sidecar I/O seam (nodeSidecarDeps) — that reader
+ * already degrade-safes absent files to `null`/`[]`, which is the boundary #233
+ * requires only for the ledger itself. `knownReleaseIds` (the discovered axis) lets
+ * plan phases anchor only to real releases. No ledger (`unavailable`) → {} →
+ * discovered-only, as before.
  */
-function projectGovernanceManifest(workspaceRoot: string, knownReleaseIds: string[]): TrackerManifest {
+function projectGovernanceManifest(
+  workspaceRoot: string,
+  knownReleaseIds: string[],
+): { manifest: TrackerManifest; ledgerState: ArtifactState } {
+  const ledger = readMetaLedgerArtifact(workspaceRoot);
+  if (ledger.data === null) {
+    // unavailable | malformed | unsupported — no trustworthy ledger to project from.
+    return { manifest: {}, ledgerState: ledger.state };
+  }
   const d = nodeSidecarDeps(workspaceRoot);
-  const metaLedger = d.readFile('docs/META_LEDGER.md');
-  if (!metaLedger || !metaLedger.trim()) return {};
-  return projectTrackerManifest({
-    metaLedger,
+  const manifest = projectTrackerManifestFromEntries(ledger.data, {
     featureIndex: d.readFile('docs/FEATURE_INDEX.md') ?? '',
     plans: d.readPlans(),
     repo: d.repoSlug(),
     knownReleaseIds,
   });
+  return { manifest, ledgerState: ledger.state };
 }
 
 /** Best-effort: the git tags present in the repo (corroborate shipped state). */
@@ -129,11 +143,14 @@ export const TrackerRoute = {
       const manifestPresent = fs.existsSync(manifestPath);
       let manifestSource: 'operator' | 'projection' | 'none' = 'none';
       let manifest: TrackerManifest;
+      let ledgerState: ArtifactState | undefined;
       if (manifestPresent) {
         manifest = (yaml.load(fs.readFileSync(manifestPath, 'utf-8')) ?? {}) as TrackerManifest;
         manifestSource = 'operator';
       } else {
-        manifest = projectGovernanceManifest(deps.workspaceRoot, axis.map((r) => r.id));
+        const projected = projectGovernanceManifest(deps.workspaceRoot, axis.map((r) => r.id));
+        manifest = projected.manifest;
+        ledgerState = projected.ledgerState;
         if ((manifest.programs?.length ?? 0) || (manifest.verticals?.length ?? 0) || (manifest.meta?.decisions?.length ?? 0)) {
           manifestSource = 'projection';
         }
@@ -151,18 +168,32 @@ export const TrackerRoute = {
       // Validate phases against the RESOLVED axis (discovered + manifest forecasts).
       const lint = validateManifest(manifest, model.rcs.map((r) => r.id));
       // Surface the manifest source as a non-blocking advisory (never an abort).
+      // A malformed/unsupported ledger is reported explicitly (#233 fail-visible
+      // contract) rather than silently falling through to the generic
+      // "no manifest at all" advisory, which would hide that a ledger exists but
+      // could not be trusted.
       if (!manifestPresent) {
-        lint.push(manifestSource === 'projection'
-          ? {
+        if (manifestSource === 'projection') {
+          lint.push({
             severity: 'warn',
             code: 'manifest-projected',
             detail: 'No docs/roadmap/programs.yaml — projected the tracker from the governance ledger (META_LEDGER + FEATURE_INDEX + plans). Add a programs.yaml to override.',
-          }
-          : {
+          });
+        } else if (ledgerState === 'malformed' || ledgerState === 'unsupported') {
+          lint.push({
+            severity: 'warn',
+            code: ledgerState === 'malformed' ? 'manifest-projection-malformed' : 'manifest-projection-unsupported',
+            detail: ledgerState === 'malformed'
+              ? 'docs/META_LEDGER.md exists but could not be parsed into governance entries — showing discovered releases only. Repair the ledger or add docs/roadmap/programs.yaml.'
+              : 'The installed qor-logic version does not meet the required minimum for governance projection — showing discovered releases only. Add docs/roadmap/programs.yaml to override.',
+          });
+        } else {
+          lint.push({
             severity: 'warn',
             code: 'manifest-absent',
             detail: 'No planning manifest at docs/roadmap/programs.yaml — showing discovered releases only. Add the manifest to plan forecasts.',
           });
+        }
       }
       // The dashboard reads the data fields at the TOP LEVEL (data.rcs, data.meta,
       // …), so spread the model out; lint/ok/manifestPresent/manifestSource ride along.

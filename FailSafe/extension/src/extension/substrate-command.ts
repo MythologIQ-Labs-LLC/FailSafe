@@ -28,7 +28,6 @@
  */
 
 import * as vscode from 'vscode';
-import * as fs from 'fs';
 import * as path from 'path';
 import { SubstrateRunner } from '../qorlogic/substrate/SubstrateRunner';
 import { SecretScannerModule } from '../qorlogic/substrate/SecretScannerModule';
@@ -38,6 +37,7 @@ import { DependencyAdmissionLintModule } from '../qorlogic/substrate/DependencyA
 import { TrackerEvidenceLintModule } from '../qorlogic/substrate/TrackerEvidenceLintModule';
 import { QorScriptInvoker } from '../qorlogic/substrate/QorScriptInvoker';
 import { SealWatchState } from '../qorlogic/substrate/seal-detection';
+import { readMetaLedgerArtifact } from '../qorlogic/consumer/consumer-adapter';
 import {
   PythonInterpreterResolver,
   type ConfigLike,
@@ -114,31 +114,39 @@ export function registerSubstrateCommand(
   );
 
   // B-SUBSTRATE-3: auto-run on each new /qor-substantiate seal.
+  // Ledger reads go through the qorlogic consumer adapter (#233 migration) so
+  // a malformed/unsupported ledger is a visible, logged condition instead of
+  // an indistinguishable silent no-fire; `unavailable` matches the previous
+  // missing-file posture (no watcher wired at all).
   if (mutationBus) {
     const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-    const ledgerPath = ws ? path.join(ws, 'docs', 'META_LEDGER.md') : null;
-    if (ledgerPath && fs.existsSync(ledgerPath)) {
-      const readLedger = (): string => {
-        try {
-          return fs.readFileSync(ledgerPath, 'utf-8');
-        } catch {
-          return '';
-        }
-      };
-      // Seed state from the ledger as it exists now so the pre-existing latest
-      // seal does NOT trigger a run at activation.
-      const state = new SealWatchState(readLedger());
-      const disposable = mutationBus.registerWatcher(
-        ledgerPath,
-        () => {
-          if (state.shouldFire(readLedger())) {
-            channel.appendLine('[FailSafe Substrate] new SESSION SEAL detected — auto-running substrate');
-            void runSubstrate('seal auto-hook');
-          }
-        },
-        1500,
-      );
-      context.subscriptions.push({ dispose: () => disposable.dispose() });
+    if (ws) {
+      const ledgerPath = path.join(ws, 'docs', 'META_LEDGER.md');
+      const initialLedger = readMetaLedgerArtifact(ws);
+      if (initialLedger.state !== 'unavailable') {
+        // Seed state from the ledger as it exists now so the pre-existing latest
+        // seal does NOT trigger a run at activation. A malformed/unsupported
+        // ledger at wiring time seeds from no entries (never guessed compatible).
+        const state = new SealWatchState(initialLedger.data ?? []);
+        const disposable = mutationBus.registerWatcher(
+          ledgerPath,
+          () => {
+            const ledger = readMetaLedgerArtifact(ws);
+            if (ledger.state === 'malformed' || ledger.state === 'unsupported') {
+              channel.appendLine(
+                `[FailSafe Substrate] META_LEDGER.md is ${ledger.state} (${ledger.reason}) — skipping seal auto-hook check`,
+              );
+              return;
+            }
+            if (state.shouldFire(ledger.data ?? [])) {
+              channel.appendLine('[FailSafe Substrate] new SESSION SEAL detected — auto-running substrate');
+              void runSubstrate('seal auto-hook');
+            }
+          },
+          1500,
+        );
+        context.subscriptions.push({ dispose: () => disposable.dispose() });
+      }
     }
   }
 }
