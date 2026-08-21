@@ -22,6 +22,8 @@ import * as yaml from 'js-yaml';
 import type { TrackerManifest } from './tracker-model';
 import { projectTrackerManifest } from './governance-projection';
 import { resolveRepoSlug } from './manifest-sources';
+import { classifyMetaLedgerText } from '../../qorlogic/consumer/consumer-adapter';
+import type { ArtifactState } from '../../qorlogic/consumer/types';
 
 // Workspace-relative keys are logical POSIX paths (forward slash); nodeSidecarDeps
 // normalizes them to OS separators via path.join only at the I/O boundary. This keeps
@@ -57,7 +59,8 @@ export interface SidecarDeps {
   readPlans(): Array<{ slug: string; content: string }>;
 }
 
-export type SidecarStatus = 'written' | 'unchanged' | 'skipped-no-governance' | 'error';
+export type SidecarStatus =
+  | 'written' | 'unchanged' | 'skipped-no-governance' | 'skipped-ledger-untrusted' | 'error';
 
 export interface SidecarEmitResult {
   status: SidecarStatus;
@@ -65,25 +68,50 @@ export interface SidecarEmitResult {
   path: string;
   reason?: string;
   counts?: { rcs: number; programs: number; verticals: number; decisions: number };
+  /** The classified META_LEDGER state behind this result (#233), when a ledger was read at all. */
+  ledgerState?: ArtifactState;
 }
 
 /**
  * Project the governance manifest and emit it to the generated sidecar.
  *
- * Degrade-safe: a missing/empty META_LEDGER yields `skipped-no-governance` (ungoverned
- * repo → the FX857 generator is the fallback path, not this one); any thrown error yields
- * `error` rather than propagating. Idempotent: a re-emit with unchanged governance yields
- * `unchanged` and performs no write (prevents churn + fs.watch feedback loops).
+ * The META_LEDGER read is classified through the qorlogic consumer adapter's
+ * `classifyMetaLedgerText` (#233 migration) instead of a raw truthy/empty check, so a
+ * ledger that exists but fails to parse is reported as `skipped-ledger-untrusted` — never
+ * silently treated as "ungoverned repo" (which would hide that governance evidence exists
+ * but cannot be trusted) and never silently written as an apparently-valid but empty
+ * projection. Degrade-safe: a missing OR truly-empty META_LEDGER still yields
+ * `skipped-no-governance` (ungoverned repo → the FX857 generator is the fallback path, not
+ * this one), matching the pre-#233 contract; any thrown error yields `error` rather than
+ * propagating. Idempotent: a re-emit with unchanged governance yields `unchanged` and
+ * performs no write (prevents churn + fs.watch feedback loops).
  *
  * NEVER reads or writes OPERATOR_MANIFEST_RELPATH.
  */
 export function emitGovernanceSidecar(deps: SidecarDeps): SidecarEmitResult {
   const outPath = GOVERNANCE_SIDECAR_RELPATH;
   try {
-    const metaLedger = deps.readFile(META_LEDGER_RELPATH);
-    if (!metaLedger || !metaLedger.trim()) {
-      return { status: 'skipped-no-governance', path: outPath, reason: 'no docs/META_LEDGER.md' };
+    const rawMetaLedger = deps.readFile(META_LEDGER_RELPATH);
+    const ledger = classifyMetaLedgerText(rawMetaLedger, META_LEDGER_RELPATH);
+    if (ledger.state === 'unavailable' || (ledger.data !== null && ledger.data.length === 0)) {
+      // No file, or a file present but truly empty — both mean "nothing to project yet",
+      // same as the pre-#233 `!metaLedger || !metaLedger.trim()` check.
+      return {
+        status: 'skipped-no-governance', path: outPath,
+        reason: ledger.reason ?? 'no docs/META_LEDGER.md', ledgerState: ledger.state,
+      };
     }
+    if (ledger.data === null) {
+      // malformed | unsupported: a ledger exists but cannot be trusted. Fail-visible per
+      // #233 acceptance boundary #5 — do not fall through to skipped-no-governance (which
+      // would misreport "ungoverned") or to the projector (which would silently emit an
+      // apparently-valid but empty sidecar from unparseable content).
+      return {
+        status: 'skipped-ledger-untrusted', path: outPath,
+        reason: ledger.reason ?? undefined, ledgerState: ledger.state,
+      };
+    }
+    const metaLedger = rawMetaLedger as string;
     const featureIndex = deps.readFile(FEATURE_INDEX_RELPATH) ?? '';
     const slug = deps.repoSlug();
 
@@ -103,11 +131,11 @@ export function emitGovernanceSidecar(deps: SidecarDeps): SidecarEmitResult {
     const next = serializeGovernanceSidecar(manifest);
     const current = deps.readFile(outPath);
     if (current === next) {
-      return { status: 'unchanged', path: outPath, counts };
+      return { status: 'unchanged', path: outPath, counts, ledgerState: ledger.state };
     }
 
     deps.writeFile(outPath, next);
-    return { status: 'written', path: outPath, counts };
+    return { status: 'written', path: outPath, counts, ledgerState: ledger.state };
   } catch (err) {
     return { status: 'error', path: outPath, reason: String(err instanceof Error ? err.message : err) };
   }

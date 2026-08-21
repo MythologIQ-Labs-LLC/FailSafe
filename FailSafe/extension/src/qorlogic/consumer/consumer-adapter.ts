@@ -113,6 +113,58 @@ export function readMetaLedgerArtifact(
   );
 }
 
+/**
+ * Classify already-read META_LEDGER text without an `fs` read, for callers
+ * that own their own file-read seam (e.g. governance-sidecar.ts's injected
+ * `SidecarDeps`, #233 migration) rather than a workspace root. Same
+ * classification rule as `readMetaLedgerArtifact` minus the staleness check:
+ * `text === null` -> `unavailable`; parse throw or non-empty-parses-empty ->
+ * `malformed`; below-floor version -> `unsupported`; else `ok`. Delegates to
+ * the same canonical `parseMetaLedgerEntries` — not a second compatibility
+ * layer. Does NOT call the shared `envelope()` helper: that helper stats
+ * `sourcePath` via `fs` for `mtimeIso`, which would silently resolve a bare
+ * relative path against the wrong cwd instead of the caller's real seam —
+ * `mtimeIso` is always `null` here (truthfully unknown from a text-only seam).
+ */
+export function classifyMetaLedgerText(
+  text: string | null,
+  sourcePath: string,
+  opts?: ConsumerReadOptions,
+): ArtifactEnvelope<MetaLedgerEntry[]> {
+  const provenance: ArtifactProvenance = {
+    sourcePath,
+    mtimeIso: null,
+    qorVersion: opts?.versionStatus?.installed ?? null,
+  };
+  const versionReason = unsupportedReason(opts);
+  if (versionReason) {
+    return { artifact: 'META_LEDGER', state: 'unsupported', data: null, provenance, reason: versionReason };
+  }
+  if (text === null) {
+    return {
+      artifact: 'META_LEDGER', state: 'unavailable', data: null, provenance,
+      reason: `artifact not found: ${sourcePath}`,
+    };
+  }
+  let data: MetaLedgerEntry[];
+  try {
+    data = parseMetaLedgerEntries(text);
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    return {
+      artifact: 'META_LEDGER', state: 'malformed', data: null, provenance,
+      reason: `failed to parse ${sourcePath}: ${detail}`,
+    };
+  }
+  if (text.trim().length > 0 && data.length === 0) {
+    return {
+      artifact: 'META_LEDGER', state: 'malformed', data: null, provenance,
+      reason: `non-empty artifact parsed to empty: ${sourcePath}`,
+    };
+  }
+  return { artifact: 'META_LEDGER', state: 'ok', data, provenance, reason: null };
+}
+
 /** docs/FEATURE_INDEX.md via parseFeatureIndex (tracker-parsers.ts:29). */
 export function readFeatureIndexArtifact(
   root: string,

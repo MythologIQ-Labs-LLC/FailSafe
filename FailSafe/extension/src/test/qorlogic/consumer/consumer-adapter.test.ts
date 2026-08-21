@@ -17,6 +17,7 @@ import {
   readFeatureIndexArtifact,
   readTrackerManifestArtifact,
   readAuditGateArtifact,
+  classifyMetaLedgerText,
 } from '../../../qorlogic/consumer/consumer-adapter';
 import { WorkspaceArtifactBuilder } from '../../../roadmap/services/WorkspaceArtifactBuilder';
 import type { QorLogicVersionStatus } from '../../../qorlogic/qorLogicInstallRecord';
@@ -184,5 +185,62 @@ suite('#233 route-seam equivalence (FX892 MODIFIED)', () => {
     const legacy = parseMetaLedgerEntries(ledgerText);
     assert.deepEqual(envelope.data, legacy,
       'the adapter envelope must carry exactly what the legacy direct-parse path produced');
+  });
+});
+
+// #233: classifyMetaLedgerText is the text-only sibling of readMetaLedgerArtifact, for
+// callers with an injected file-read seam instead of a workspace root (governance-sidecar.ts
+// / SidecarDeps). No fixture filesystem involved — pure over the text argument.
+suite('classifyMetaLedgerText (#233 text-seam classification)', () => {
+  const OK_LEDGER = [
+    '### Entry #1: SESSION SEAL - fixture',
+    '',
+    '**Phase**: SUBSTANTIATE',
+    '**Chain Hash**: `' + 'a'.repeat(64) + '`',
+    '',
+  ].join('\n');
+
+  test('null text -> unavailable, null mtimeIso (no fs stat performed)', () => {
+    const env = classifyMetaLedgerText(null, 'docs/META_LEDGER.md');
+    assert.equal(env.state, 'unavailable');
+    assert.equal(env.data, null);
+    assert.ok(env.reason?.includes('docs/META_LEDGER.md'));
+    assert.equal(env.provenance.mtimeIso, null);
+    assert.equal(env.provenance.sourcePath, 'docs/META_LEDGER.md');
+  });
+
+  test('non-empty parseable text -> ok with the parsed entries', () => {
+    const env = classifyMetaLedgerText(OK_LEDGER, 'docs/META_LEDGER.md');
+    assert.equal(env.state, 'ok');
+    assert.equal(env.data?.length, 1);
+    assert.equal(env.reason, null);
+    assert.deepEqual(env.data, parseMetaLedgerEntries(OK_LEDGER),
+      'must match the canonical parser exactly');
+  });
+
+  test('whitespace-only text -> ok with an empty entries array (not malformed)', () => {
+    const env = classifyMetaLedgerText('   \n', 'docs/META_LEDGER.md');
+    assert.equal(env.state, 'ok');
+    assert.deepEqual(env.data, []);
+  });
+
+  test('non-empty text that parses to zero entries -> malformed, reason names the source', () => {
+    const env = classifyMetaLedgerText('not a governance ledger, no entries here\n', 'docs/META_LEDGER.md');
+    assert.equal(env.state, 'malformed');
+    assert.equal(env.data, null);
+    assert.ok(env.reason?.includes('docs/META_LEDGER.md'), `reason: ${env.reason}`);
+  });
+
+  test('below-floor version -> unsupported, reason names installed and minimum', () => {
+    const env = classifyMetaLedgerText(OK_LEDGER, 'docs/META_LEDGER.md', {
+      versionStatus: { installed: '0.50.0', minimum: '0.100.0', meetsFloor: false },
+    });
+    assert.equal(env.state, 'unsupported');
+    assert.equal(env.data, null);
+    assert.ok(env.reason?.includes('0.50.0') && env.reason?.includes('0.100.0'), `reason: ${env.reason}`);
+  });
+
+  test('never throws on malformed text, mirrors readMetaLedgerArtifact classification exactly', () => {
+    assert.doesNotThrow(() => classifyMetaLedgerText('garbage', 'docs/META_LEDGER.md'));
   });
 });

@@ -112,6 +112,7 @@ suite('roadmap/tracker governance-sidecar (A.2 — #194 sidecar emission)', () =
     });
     const r = emitGovernanceSidecar(deps);
     assert.equal(r.status, 'written');
+    assert.equal(r.ledgerState, 'ok');
     assert.equal(r.path, GOVERNANCE_SIDECAR_RELPATH);
     assert.equal(writes.length, 1);
     assert.equal(writes[0].path, GOVERNANCE_SIDECAR_RELPATH);
@@ -168,7 +169,34 @@ suite('roadmap/tracker governance-sidecar (A.2 — #194 sidecar emission)', () =
     const { deps, writes } = spyDeps({ [`docs/FEATURE_INDEX.md`]: FEATURE_INDEX });
     const r = emitGovernanceSidecar(deps);
     assert.equal(r.status, 'skipped-no-governance');
+    assert.equal(r.ledgerState, 'unavailable');
     assert.equal(writes.length, 0);
+  });
+
+  test('present but truly empty META_LEDGER (whitespace only) → still skipped-no-governance, no write', () => {
+    const { deps, writes } = spyDeps({
+      [`docs/META_LEDGER.md`]: '   \n',
+      [`docs/FEATURE_INDEX.md`]: FEATURE_INDEX,
+    });
+    const r = emitGovernanceSidecar(deps);
+    assert.equal(r.status, 'skipped-no-governance');
+    assert.equal(writes.length, 0);
+  });
+
+  // #233: a META_LEDGER that exists but does not parse to any entries must be reported
+  // explicitly, never silently treated as "ungoverned" nor silently written as an
+  // apparently-valid but empty sidecar (the same silent-degrade problem #233 closed for
+  // TrackerRoute — see Myth-Tech-Forge#199/PR FailSafe#405).
+  test('malformed META_LEDGER (non-empty, no parseable entries) → skipped-ledger-untrusted, no write', () => {
+    const { deps, writes } = spyDeps({
+      [`docs/META_LEDGER.md`]: 'not a valid governance ledger, no entries here\n',
+      [`docs/FEATURE_INDEX.md`]: FEATURE_INDEX,
+    });
+    const r = emitGovernanceSidecar(deps);
+    assert.equal(r.status, 'skipped-ledger-untrusted');
+    assert.equal(r.ledgerState, 'malformed');
+    assert.ok(r.reason?.includes('META_LEDGER.md'), `reason names the source: ${r.reason}`);
+    assert.equal(writes.length, 0, 'never silently writes from unparseable content');
   });
 
   test('degrade-safe: a write failure → error result, never throws', () => {
