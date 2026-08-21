@@ -28765,3 +28765,50 @@ SHA256(chain_hash + "SESSION-SEAL")
 ## Decision
 
 Closes #404: 22 *.test.cjs suites (223 cases) executed in ZERO CI gates and had been rotting silently. .vscode-test.mjs globs out/test/**/*.test.js; tsconfig has no allowJs and rootDir src, so .cjs is never emitted; copy-ui-js mirrors only .js; and no script ran node --test. Four PRs in a single day cited those suites as their verification evidence, which is why this was filed as systemic rather than cosmetic. WIRED: new test:node script (node --test over src/test/**/*.test.cjs) and a new scripts/check-test-runner-coverage.cjs guard, both added to test:all, so a test file matching no runner glob now FAILS the gate. Guard verified in both directions - PASS on the clean tree, exit 1 on a planted orphan. RUNNING THEM IMMEDIATELY EXPOSED FIVE REAL DEFECTS, none of which any other gate would have caught: (1) FEATURE_INDEX's coverage header claimed 494 entries, last updated 2026-05-28, while the table held 742 - three months and 248 entries of drift in a governance doc; recounted from the table itself and corrected to 742 (692 verified / 0 unverified / 43 n-a / 7 other), with the remainder line added so the numbers reconcile. (2) FX212's row was missing its closing pipe, so the classifier's ^|(.+)|\s*$ match skipped it entirely - that feature has been invisible to every coverage audit. (3) FX807's test cell contained an unescaped pipe, shifting every column right so its status parsed as 'L3-gated)' and its real 'verified' landed in the notes column; replaced with a semicolon (a backslash escape does NOT help, since the parser splits on the raw character). (4)+(5) MANUAL_OVERRIDES for FX141 and FX142 cited test paths that do not resolve - VerdictRouter.test.ts no longer exists anywhere, and PromptTransparency.test.ts was cited bare while living under governance/; both re-cited to resolvable paths, so two 'verified' claims stopped resting on fiction. Also de-magicked the rotted snapshots: three assertions hardcoded 476 rows and one hardcoded 411 verified. They now derive from the file. CORRECTION, recorded rather than quietly patched: as first sealed, this entry claimed the header test asserts HEADER == REALITY. It did not. That revision compared only the TOTAL and asserted 'verified > 0', which is unfailable - an independent audit demonstrated that flipping 100 verified rows to partial still passed, i.e. the precise drift class this cycle exists to catch remained undetectable, and the claim in this entry was false. Corrected before merge: the test now parses Verified / Unverified / N-A / Other from the header and asserts each against the table, plus that the header's own numbers sum to its declared total. Proven revert-sensitive - the same 100-row injection now fails with 'header claims 692 verified but the table has 592'. Two further defects in the first revision, both found by that audit and both fixed here: test:node used a shell $(find ...) form that cmd.exe does not expand, so it ran ZERO tests on Windows and broke test:all on the dev platform (replaced with scripts/run-node-tests.cjs, which discovers files in JS and works on Node 20 and 22 alike); and the guard's classify() fallthrough returned a non-null value, so 8 of the 12 test-file shapes its own pre-filter admitted (.test.mjs, .spec.cjs, .test.cts and five more) were silently treated as claimed - the guard failed OPEN for the exact bug class it exists to prevent. It now fails closed, with runner ownership shared with the runner via scripts/test-file-discovery.cjs so the two cannot drift apart. Verified: 4 planted orphan shapes now exit 1; 526 test files all claimed. Stale substrate-command expectation (/starting run/ vs the production 'starting manual run') corrected. Gates: lint 0 errors, runner-coverage PASS, vscode-test 3981 passing, node --test 223/223 passing (was 218/5-failing when first executed). Lesson worth carrying: a test that no runner executes is worse than no test, because it reads as coverage in review - which is exactly how four PRs came to cite these.
+
+---
+
+### Entry #590: GATE - PR #392/#394/#399/#402/#405/#407/#408 batch merge substantiation (parallel-session work)
+
+**Timestamp**: 2026-08-21T19:40:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (merge-readiness only - see SCOPE OF THIS VERDICT)
+
+**Content Hash**:
+```
+SHA256("pr-batch-392-394-399-402-405-407-408|merge-substantiation|2026-08-21")
+= 865db0fbaadadbc105671a0d4d3376d54e8f8714faea83fd8ff35cd9d32bab77
+```
+
+**Previous Hash**: `461c4601c65f8cbf10b0cb612b5b6a0d680746646f4879b020bc7ca92ffba4db` (Entry #589 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 48b20b85d1f864135e0e9e17b3bd0c99f5538ebf0aa5faa8d3fa200c308fb56e
+```
+
+## Decision
+
+Board-clearing merge pass over the seven open PRs, all parallel-session work by the operator, all already through multiple recorded review rounds on their own threads. Merged in a deliberately chosen order, not arrival order.
+
+SCOPE OF THIS VERDICT - stated first because it bounds everything below. This entry substantiates MERGE READINESS ONLY: rollup-green verification, integration-conflict resolution, and post-merge gate execution. It does NOT record an independent adversarial audit of each PR's substance; no /qor-audit was run against these seven diffs in this cycle. Their technical merit rests on the per-PR review rounds already recorded on the PR threads (#392 three rounds, #394 re-audit under direct measurement, #399 two rounds, #402 two rounds, #405 one hold + fix, #407 three rounds incl. a scope-overreach correction), NOT on this entry. Six of the seven carried no SESSION SEAL; only #408 arrived sealed (Entry #589). That gap is disclosed, not closed, by this record.
+
+ORDERING RATIONALE. #408 (the #404 fix wiring 22 orphaned .cjs suites into CI) was landed FIRST, ahead of five PRs that were already green, specifically so the remaining work would be verified by the repaired gate rather than by the broken one. This was load-bearing, not ceremonial: #405 and #407 each ADD a *.test.cjs file that, on their own pre-merge CI, executed in zero runners. Landing #408 first meant those suites genuinely ran before their PRs merged. Order: #392 and #394 (order-independent, no FEATURE_INDEX/.cjs surface) -> #408 -> #399 -> #405 -> #402 -> #407.
+
+WHAT THE REPAIRED GATE CAUGHT, SAME DAY. #408's new header==reality assertion fired immediately against #399 and #402, each of which adds exactly one verified FEATURE_INDEX row without touching the coverage header - the identical drift class #589 had just spent a cycle correcting, recurring within hours. Header reconciled forward across the batch: 742 -> 743 (FX928, #399) -> 744 (FX927, #402), with the component sum line carried each time (694 + 0 + 43 + 7 = 744). Without #408 landing first, both would have merged green and re-staled the header the same day it was fixed.
+
+INTEGRATION CONFLICTS RESOLVED. #394 and #405 both edit TrackerRoute.ts: import-level conflict only (GIT_LOG_MAX_COMMITS vs readMetaLedgerArtifact/ArtifactState), both retained; verified post-merge that BOTH behaviors survived - readGitLog still bounds via --max-count=GIT_LOG_MAX_COMMITS + 1 and discoverMergedPrs still receives maxAnchors, while projectGovernanceManifest still routes through readMetaLedgerArtifact. #402 and #399 collided on adjacent FEATURE_INDEX rows (FX927/FX928); both kept in FX order. #405's remote head advanced mid-resolution (a round-2 review-fix commit landed while the merge was in progress); the merge was discarded and redone against the new head rather than force-pushed over.
+
+COMPOSITION VERIFIED, NOT ASSUMED. #405 and #407 are sibling #233 adapter migrations that were only ever green independently. After #405 landed, #407 was re-merged against it and re-verified: tsc 0 - #407's governance-sidecar.ts still type-checks against #405's extracted projectTrackerManifestFromEntries seam.
+
+FALSE ALARM, RECORDED. An initial local run showed substrate-command.test.cjs failing its 'malformed state is logged' case on the #405 merge. Root cause was a stale out/ tree from running tsc --noEmit (the .cjs suites load compiled artifacts, so they had been executing the previous build); after a real compile, 226/226 passed. #405 had no such defect and none was reported against it.
+
+GUARDRAIL RESPECTED. #407's rollup returned CodeQL=NEUTRAL ('1 configuration not found') while its three Analyze jobs all succeeded, against SUCCESS on every sibling PR. Per the standing rule that the code_scanning ruleset is an intentional human-gate, this was NOT admin-merged past: the branch was re-pushed (re-merging main), CodeQL re-evaluated to 'success - No new alerts', and only then did it merge. Every merge used --admin with a freshly verified 13/13 SUCCESS rollup checked immediately beforehand, since --admin bypasses red silently.
+
+POST-MERGE STATE. 0 open PRs. Issues auto-closed: #391 (Mind Map density disclosure), #393 (tracker git-log bound), #398 (ACP registry drift), #404 (orphaned .cjs suites). Correctly still OPEN by design: #367 (#402 was tranche 1; content-based supersession deferred pending a schema addition) and #233 (five raw docs/META_LEDGER.md consumers remain outside the adapter - ConsoleServerHub.ts:79, ConsoleLifecycleService.ts:98, MetaLedgerReader.ts:90, SystemStateReader.ts:41, GovernancePhaseTracker.ts - verified by direct grep, not inherited from the PR bodies). main re-verified after the final merge: tsc 0, check-test-runner-coverage PASS (533 files, all claimed), node --test green, FEATURE_INDEX header==reality green.
+
+RESIDUAL. Six PRs merged without a /qor-substantiate seal of their own; this GATE entry is the only chain record of them and deliberately does not claim to be a substitute for one. If per-PR seals are wanted retroactively, that is a separate cycle.
+
