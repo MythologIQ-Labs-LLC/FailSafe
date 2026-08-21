@@ -77,6 +77,32 @@ suite('roadmap/tracker tracker-pr-discovery', () => {
     assert.deepEqual(discoverMergedPrs('\n\n  \n'), []);
   });
 
+  // FailSafe#393 (FailSafe#244 large-repo audit): maxAnchors lets a bounded
+  // caller (TrackerRoute) fetch one extra trailing commit purely so the last
+  // in-window merge commit's titleFor lookahead has a real `next` — without
+  // that extra commit becoming an anchor itself.
+  suite('maxAnchors (bounded-window lookahead)', () => {
+    test('a commit beyond maxAnchors is lookahead-only, never its own anchor', () => {
+      const log = [
+        '2026-06-03\tMerge pull request #2 from acme/two', // index 0 — in window
+        '2026-06-02\tfeat: two tip',                        // index 1 — lookahead for #2, excluded from anchors
+        '2026-06-01\tMerge pull request #1 from acme/one',  // index 2 — beyond maxAnchors, must NOT anchor
+      ].join('\n');
+      const prs = discoverMergedPrs(log, 2);
+      assert.deepEqual(prs.map((p) => p.id), ['pr-2'], 'pr-1 (beyond the 2-commit window) is excluded');
+      assert.equal(prs[0].summary, 'feat: two tip', 'the in-window merge still resolves its real next-commit title');
+    });
+
+    test('omitting maxAnchors keeps the unbounded default (every commit is anchor-eligible)', () => {
+      const log = [
+        'Merge pull request #2 from acme/two',
+        'feat: two tip',
+        'Merge pull request #1 from acme/one',
+      ].join('\n');
+      assert.deepEqual(discoverMergedPrs(log).map((p) => p.id), ['pr-1', 'pr-2']);
+    });
+  });
+
   test('detectCadence prefers semver, then PRs, then empty', () => {
     const rel = [{ id: 'v1.0.0', state: 'prod' as const }];
     const pr = [{ id: 'pr-1', state: 'pr' as const }];
