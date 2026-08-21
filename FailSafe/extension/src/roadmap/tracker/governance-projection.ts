@@ -212,8 +212,7 @@ function phasesFromPlans(
   return phases;
 }
 
-export interface GovernanceSources {
-  metaLedger: string;
+export interface GovernanceSourcesBase {
   /** FEATURE_INDEX.md text. Consumed for per-surface ATTRIBUTION (FX869): rows are
    *  attributed to the 7 Console verticals via their governed `Surface` column tag
    *  (NOT used to DERIVE the verticals — that produced an implementation-directory
@@ -230,9 +229,21 @@ export interface GovernanceSources {
   knownReleaseIds?: string[];
 }
 
-/** Project a TrackerManifest from the governance artifacts. */
-export function projectTrackerManifest(sources: GovernanceSources): TrackerManifest {
-  const entries = parseMetaLedgerEntries(sources.metaLedger);
+export interface GovernanceSources extends GovernanceSourcesBase {
+  metaLedger: string;
+}
+
+/**
+ * Project a TrackerManifest from already-parsed META_LEDGER entries plus the
+ * remaining governance sources. Callers that already hold a classified
+ * `ArtifactEnvelope<MetaLedgerEntry[]>` from the qorlogic consumer adapter
+ * (#233) should use this directly instead of re-serializing/re-parsing ledger
+ * text through `projectTrackerManifest`.
+ */
+export function projectTrackerManifestFromEntries(
+  entries: MetaLedgerEntry[],
+  sources: GovernanceSourcesBase,
+): TrackerManifest {
   const rcs = rcsFromLedger(entries);
   const decisions = decisionsFromLedger(entries);
   const verticals = attributeFeatures(verticalsFromConsole(), sources.featureIndex);
@@ -262,4 +273,9 @@ export function projectTrackerManifest(sources: GovernanceSources): TrackerManif
     rcs,
     verticals,
   };
+}
+
+/** Project a TrackerManifest from the governance artifacts (raw ledger text). */
+export function projectTrackerManifest(sources: GovernanceSources): TrackerManifest {
+  return projectTrackerManifestFromEntries(parseMetaLedgerEntries(sources.metaLedger), sources);
 }

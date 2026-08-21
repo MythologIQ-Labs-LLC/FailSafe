@@ -318,3 +318,74 @@ suite('TrackerRoute.api governance projection (A.2b #202)', () => {
     } finally { fs.rmSync(ws, { recursive: true, force: true }); }
   });
 });
+
+// #233: the ledger read is gated by the qorlogic consumer adapter
+// (readMetaLedgerArtifact) so a malformed ledger is a fail-visible condition
+// instead of silently parsing to a verticals-only manifest that looks like a
+// real projection (manifestSource would previously become 'projection' purely
+// from the fixed CONSOLE_VERTICALS list, regardless of ledger content).
+suite('TrackerRoute.api governance projection — malformed ledger (#233)', () => {
+  test('META_LEDGER.md present but unparseable (no entries) → NOT reported as projection', () => {
+    const ws = tmpWorkspace();
+    try {
+      fs.writeFileSync(path.join(ws, 'CHANGELOG.md'), '# Changelog\n\n## Unreleased\n\n- wip\n');
+      fs.mkdirSync(path.join(ws, 'docs'), { recursive: true });
+      // Non-empty, but no `### Entry #N:` headers → parseMetaLedgerEntries → [] → malformed.
+      fs.writeFileSync(path.join(ws, 'docs', 'META_LEDGER.md'), 'not a valid governance ledger, no entries here\n');
+      const { res, captured } = fakeResponse();
+      TrackerRoute.api({} as Request, res, { workspaceRoot: ws, uiDir: '' });
+      assert.equal(captured.status, 200, 'malformed ledger is never a hard failure');
+      assert.equal(captured.body!.manifestPresent, false);
+      assert.notEqual(captured.body!.manifestSource, 'projection', 'malformed ledger must not masquerade as a real projection');
+      assert.equal(captured.body!.ok, true, 'advisory only, never an abort');
+      const lint = captured.body!.lint as Array<{ code: string; severity: string }>;
+      const advisory = lint.find((f) => f.code === 'manifest-projection-malformed');
+      assert.ok(advisory, 'malformed-ledger advisory present');
+      assert.equal(advisory!.severity, 'warn', 'advisory is non-blocking');
+      assert.ok(!lint.some((f) => f.code === 'manifest-projected'), 'no false projected-success advisory');
+    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+  });
+
+  test('no docs/ directory at all (ledger unavailable) → plain manifest-absent advisory, not malformed', () => {
+    const ws = tmpWorkspace();
+    try {
+      fs.writeFileSync(path.join(ws, 'CHANGELOG.md'), '# Changelog\n\n## Unreleased\n\n- wip\n');
+      const { res, captured } = fakeResponse();
+      TrackerRoute.api({} as Request, res, { workspaceRoot: ws, uiDir: '' });
+      assert.equal(captured.status, 200);
+      const lint = captured.body!.lint as Array<{ code: string }>;
+      assert.ok(lint.some((f) => f.code === 'manifest-absent'), 'plain absent advisory for a missing ledger');
+      assert.ok(!lint.some((f) => f.code.startsWith('manifest-projection-')), 'unavailable is not reported as malformed/unsupported');
+    } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+  });
+
+  // Regression pin (review finding on PR #405): the adapter's classifyFile only
+  // runs its malformed check when the raw text is non-blank (classifyFile:
+  // `text.trim().length > 0 && isEmpty(data)`), so an empty/whitespace-only
+  // ledger classifies `ok` with `data: []`, NOT malformed/unavailable. A guard
+  // of `ledger.data === null` alone falls through to
+  // projectTrackerManifestFromEntries([], ...), which still returns the fixed
+  // non-empty CONSOLE_VERTICALS list — reintroducing the exact silent
+  // "manifestSource: projection" masquerade for the empty-ledger case that
+  // #233 exists to close for the malformed case above.
+  test('META_LEDGER.md present but empty/whitespace-only → NOT reported as projection either', () => {
+    for (const blank of ['', '   \n\n  \t\n']) {
+      const ws = tmpWorkspace();
+      try {
+        fs.writeFileSync(path.join(ws, 'CHANGELOG.md'), '# Changelog\n\n## Unreleased\n\n- wip\n');
+        fs.mkdirSync(path.join(ws, 'docs'), { recursive: true });
+        fs.writeFileSync(path.join(ws, 'docs', 'META_LEDGER.md'), blank);
+        const { res, captured } = fakeResponse();
+        TrackerRoute.api({} as Request, res, { workspaceRoot: ws, uiDir: '' });
+        assert.equal(captured.status, 200);
+        assert.notEqual(
+          captured.body!.manifestSource, 'projection',
+          `blank ledger (${JSON.stringify(blank)}) must not masquerade as a real projection`,
+        );
+        assert.deepEqual(captured.body!.verticals, [], 'no fixed-vertical fallback from zero entries');
+        const lint = captured.body!.lint as Array<{ code: string }>;
+        assert.ok(lint.some((f) => f.code === 'manifest-absent'), 'reported the same as a missing ledger');
+      } finally { fs.rmSync(ws, { recursive: true, force: true }); }
+    }
+  });
+});
