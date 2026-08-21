@@ -40,6 +40,26 @@ export interface MigrationResult {
     error?: string;
 }
 
+/**
+ * Thrown by validateOnInit() specifically when the database's recorded
+ * schema version is newer than this runtime's latest known migration
+ * (a forward-written schema from a newer FailSafe version). Distinct from
+ * a generic integrity-check failure so callers can tell "database is from
+ * the future" apart from "database is corrupted."
+ */
+export class UnsupportedShadowGenomeSchemaError extends Error {
+    constructor(
+        public readonly currentVersion: string,
+        public readonly latestVersion: string
+    ) {
+        super(
+            `Shadow Genome schema version ${currentVersion} is newer than ` +
+            `supported version ${latestVersion}. Please upgrade FailSafe extension.`
+        );
+        this.name = 'UnsupportedShadowGenomeSchemaError';
+    }
+}
+
 type SchemaVersionRow = {
     id: number;
     version: string;
@@ -460,6 +480,21 @@ export class SchemaVersionManager {
             return;
         }
         
+        // Check version newness BEFORE the integrity/checksum sweep below.
+        // A forward-written database (applied migrations from a newer
+        // FailSafe release than this runtime knows about) will always fail
+        // verifyMigrationIntegrity(), because that check requires every
+        // applied version to be present in the *local* MIGRATIONS registry
+        // — which by definition it is not yet, for a migration from the
+        // future. Without this ordering, a perfectly honest "please
+        // upgrade" case was being reported as "Database may be corrupted,"
+        // which is both scarier and less actionable than the truth.
+        const latestVersion = MIGRATIONS[MIGRATIONS.length - 1].version;
+
+        if (currentVersion > latestVersion) {
+            throw new UnsupportedShadowGenomeSchemaError(currentVersion, latestVersion);
+        }
+
         // Verify migration integrity
         if (!this.verifyMigrationIntegrity()) {
             throw new Error(
@@ -467,17 +502,7 @@ export class SchemaVersionManager {
                 'Migration checksums do not match. Database may be corrupted.'
             );
         }
-        
-        // Check if version is supported
-        const latestVersion = MIGRATIONS[MIGRATIONS.length - 1].version;
-        
-        if (currentVersion > latestVersion) {
-            throw new Error(
-                `Shadow Genome schema version ${currentVersion} is newer than ` +
-                `supported version ${latestVersion}. Please upgrade FailSafe extension.`
-            );
-        }
-        
+
         console.log(`Shadow Genome: Schema version ${currentVersion} validated`);
     }
     

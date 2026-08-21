@@ -34,9 +34,25 @@ import {
 import {
     SchemaVersionManager,
     SHADOW_GENOME_V1_DDL,
-    MigrationResult
+    MigrationResult,
+    UnsupportedShadowGenomeSchemaError
 } from './SchemaVersionManager';
 import type { EventBus } from '../../shared/EventBus';
+
+/**
+ * Reports whether the Shadow Genome is currently usable and, if not, why.
+ * `reason: 'unsupported-schema'` means the on-disk database was written by
+ * a newer FailSafe version than this runtime supports (forward-written
+ * schema) — distinct from a genuine initialization/IO failure, and never
+ * to be presented to the operator as an ordinary clean/empty archive.
+ */
+export interface ShadowGenomeAvailability {
+    available: boolean;
+    reason?: 'unsupported-schema' | 'initialization-error';
+    currentVersion?: string | null;
+    latestVersion?: string;
+    message?: string;
+}
 
 interface ArchiveRequest {
     verdict: SentinelVerdict;
@@ -83,6 +99,11 @@ export class ShadowGenomeManager {
     private dbPath: string = '';
     private schemaVersionManager: SchemaVersionManager | undefined;
     private enableSecurityHardening: boolean = true;
+    private availability: ShadowGenomeAvailability = {
+        available: false,
+        reason: 'initialization-error',
+        message: 'Shadow Genome has not been initialized yet.'
+    };
 
     constructor(
         configProvider: IConfigProvider,
@@ -147,11 +168,49 @@ export class ShadowGenomeManager {
             console.log(`Shadow Genome: Schema status - Version: ${status.currentVersion || 'none'}, ` +
                        `Latest: ${status.latestVersion}, Pending: ${status.pendingMigrations}, ` +
                        `Integrity: ${status.integrityValid ? 'valid' : 'invalid'}`);
-            
+
+            this.availability = { available: true };
+
         } catch (error) {
             console.error('Failed to initialize ShadowGenome DB - running in stub mode:', error);
-            // Don't throw - allow extension to continue with degraded functionality
+
+            this.availability = error instanceof UnsupportedShadowGenomeSchemaError
+                ? {
+                    available: false,
+                    reason: 'unsupported-schema',
+                    currentVersion: error.currentVersion,
+                    latestVersion: error.latestVersion,
+                    message: error.message
+                }
+                : {
+                    available: false,
+                    reason: 'initialization-error',
+                    message: error instanceof Error ? error.message : String(error)
+                };
+
+            // Actually enter stub mode (the log message above has long
+            // claimed this without doing it): a schema this runtime could
+            // not validate must not remain queryable as if it were a
+            // normal, compatible database. Do not throw — the extension
+            // continues with degraded functionality — but every read/write
+            // path below must see `this.db` as absent rather than silently
+            // operating against unverified state.
+            if (this.db) {
+                try { this.db.close(); } finally { this.db = undefined; }
+            }
+            this.schemaVersionManager = undefined;
         }
+    }
+
+    /**
+     * Report whether the Shadow Genome is currently usable and, if not,
+     * why. Callers (webview/route consumers) must use this to distinguish
+     * "unsupported/forward-written schema" and "initialization error" from
+     * a genuinely empty archive — none of those states are interchangeable
+     * with clean/empty success.
+     */
+    getAvailability(): ShadowGenomeAvailability {
+        return this.availability;
     }
 
     private initSchema(): void {

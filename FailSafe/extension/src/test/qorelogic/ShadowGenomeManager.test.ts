@@ -6,7 +6,9 @@ import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import Database from 'better-sqlite3';
 import { ShadowGenomeManager } from '../../qorelogic/shadow/ShadowGenomeManager';
+import { MIGRATIONS } from '../../qorelogic/shadow/SchemaVersionManager';
 import type { IConfigProvider } from '../../core/interfaces';
 import type { LedgerManager } from '../../qorelogic/ledger/LedgerManager';
 import type { SentinelVerdict } from '../../shared/types';
@@ -215,5 +217,159 @@ suite('init order (B200)', () => {
     assert.ok(names.has('did_hash'), `did_hash column missing on first init; cols: ${[...names].join(',')}`);
     assert.ok(names.has('signature'), `signature column missing on first init; cols: ${[...names].join(',')}`);
     assert.ok(names.has('signature_timestamp'), `signature_timestamp column missing on first init; cols: ${[...names].join(',')}`);
+  });
+
+  test('supported current schema: getAvailability() reports available:true', async () => {
+    const cfg = makeConfigProvider(tmp);
+    const ledger: LedgerManager = {} as LedgerManager;
+    const mgr = new ShadowGenomeManager(cfg, ledger);
+    activeManagers.push(mgr);
+    (mgr as unknown as { enableSecurityHardening: boolean }).enableSecurityHardening = false;
+    await mgr.initialize();
+    assert.deepEqual(mgr.getAvailability(), { available: true });
+  });
+});
+
+suite('forward-written schema (FailSafe#414)', () => {
+  let tmp: string;
+  let activeManagers: ShadowGenomeManager[];
+  const FUTURE_VERSION = '9.9.9';
+  const latestSupported = MIGRATIONS[MIGRATIONS.length - 1].version;
+
+  setup(() => {
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sgm-forward-'));
+    activeManagers = [];
+  });
+
+  teardown(() => {
+    for (const m of activeManagers) {
+      try { m.close(); } catch { /* ignore */ }
+    }
+    fs.rmSync(tmp, { recursive: true, force: true });
+  });
+
+  /**
+   * Initializes a manager once (creating the real schema at the current
+   * supported version), then reaches into the raw sqlite file and records
+   * a schema_version row from "the future" — simulating a database written
+   * by a newer FailSafe release.
+   */
+  async function writeForwardVersion(): Promise<string> {
+    const cfg = makeConfigProvider(tmp);
+    const ledger: LedgerManager = {} as LedgerManager;
+    const seed = new ShadowGenomeManager(cfg, ledger);
+    (seed as unknown as { enableSecurityHardening: boolean }).enableSecurityHardening = false;
+    await seed.initialize();
+    seed.close();
+
+    const dbPath = path.join(tmp, '.failsafe', 'ledger', 'shadow_genome.db');
+    const raw = new Database(dbPath);
+    raw.prepare(`
+      INSERT INTO schema_version (version, checksum, description)
+      VALUES (@version, @checksum, @description)
+    `).run({
+      version: FUTURE_VERSION,
+      checksum: 'future-checksum',
+      description: 'Simulated future migration'
+    });
+    raw.close();
+    return dbPath;
+  }
+
+  test('reproduces: forward schema fails visibly, not as clean/empty success', async () => {
+    await writeForwardVersion();
+
+    const cfg = makeConfigProvider(tmp);
+    const ledger: LedgerManager = {} as LedgerManager;
+    const mgr = new ShadowGenomeManager(cfg, ledger);
+    activeManagers.push(mgr);
+    (mgr as unknown as { enableSecurityHardening: boolean }).enableSecurityHardening = false;
+
+    await mgr.initialize();
+
+    const availability = mgr.getAvailability();
+    assert.equal(availability.available, false, 'forward-written schema must not report available:true');
+    assert.equal(availability.reason, 'unsupported-schema');
+    assert.equal(availability.currentVersion, FUTURE_VERSION);
+    assert.equal(availability.latestVersion, latestSupported);
+    assert.ok(availability.message?.includes(FUTURE_VERSION), 'message should name the offending version');
+  });
+
+  test('unsupported schema cannot be confused with a genuinely empty archive', async () => {
+    await writeForwardVersion();
+
+    const cfg = makeConfigProvider(tmp);
+    const ledger: LedgerManager = {} as LedgerManager;
+    const mgr = new ShadowGenomeManager(cfg, ledger);
+    activeManagers.push(mgr);
+    (mgr as unknown as { enableSecurityHardening: boolean }).enableSecurityHardening = false;
+    await mgr.initialize();
+
+    // The read paths remain fail-safe (no throw, no crash)...
+    assert.deepEqual(await mgr.getUnresolvedEntries(), []);
+    assert.deepEqual(await mgr.analyzeFailurePatterns(), []);
+    assert.equal(mgr.getEntryCount(), 0);
+    // ...but availability is the only honest signal a caller can use to
+    // tell "empty because unsupported" apart from "empty because clean".
+    assert.equal(mgr.getAvailability().available, false);
+  });
+
+  test('remains fail-closed and non-destructive: true stub mode, no live db handle retained', async () => {
+    await writeForwardVersion();
+
+    const cfg = makeConfigProvider(tmp);
+    const ledger: LedgerManager = {} as LedgerManager;
+    const mgr = new ShadowGenomeManager(cfg, ledger);
+    activeManagers.push(mgr);
+    (mgr as unknown as { enableSecurityHardening: boolean }).enableSecurityHardening = false;
+    await mgr.initialize();
+
+    const db = (mgr as unknown as { db?: import('better-sqlite3').Database }).db;
+    assert.equal(db, undefined, 'db handle must be released, not left open against unverified schema');
+  });
+
+  test('non-destructive: the on-disk future schema_version row is untouched', async () => {
+    const dbPath = await writeForwardVersion();
+
+    const cfg = makeConfigProvider(tmp);
+    const ledger: LedgerManager = {} as LedgerManager;
+    const mgr = new ShadowGenomeManager(cfg, ledger);
+    activeManagers.push(mgr);
+    (mgr as unknown as { enableSecurityHardening: boolean }).enableSecurityHardening = false;
+    await mgr.initialize();
+    mgr.close();
+
+    const raw = new Database(dbPath);
+    try {
+      const row = raw.prepare(
+        'SELECT version FROM schema_version ORDER BY id DESC LIMIT 1'
+      ).get() as { version: string } | undefined;
+      assert.equal(row?.version, FUTURE_VERSION, 'future schema_version row must not be rewritten, downgraded, or removed');
+    } finally {
+      raw.close();
+    }
+  });
+
+  test('restart/re-entry: a fresh manager instance re-derives the same honest unsupported state', async () => {
+    await writeForwardVersion();
+
+    const cfg = makeConfigProvider(tmp);
+    const ledger: LedgerManager = {} as LedgerManager;
+
+    const first = new ShadowGenomeManager(cfg, ledger);
+    activeManagers.push(first);
+    (first as unknown as { enableSecurityHardening: boolean }).enableSecurityHardening = false;
+    await first.initialize();
+    first.close();
+
+    // Simulate a restart: a brand new manager instance against the same
+    // on-disk database, as would happen on the next extension activation.
+    const second = new ShadowGenomeManager(cfg, ledger);
+    activeManagers.push(second);
+    (second as unknown as { enableSecurityHardening: boolean }).enableSecurityHardening = false;
+    await second.initialize();
+
+    assert.deepEqual(second.getAvailability(), first.getAvailability());
+    assert.equal(second.getAvailability().reason, 'unsupported-schema');
   });
 });
