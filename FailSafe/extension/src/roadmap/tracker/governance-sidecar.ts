@@ -41,9 +41,16 @@ const BANNER =
   + '# NOT a PR scrape. Do not hand-edit — re-emitted on governance writes. The operator taxonomy\n'
   + '# lives in docs/roadmap/programs.yaml (FX859), which this file never overwrites.\n';
 
-/** Serialize a projected manifest to the sidecar YAML text. Pure. */
-export function serializeGovernanceSidecar(manifest: TrackerManifest): string {
-  return BANNER + yaml.dump(manifest, { lineWidth: 120 });
+/**
+ * Serialize a projected manifest to the sidecar YAML text. Pure. `staleCaveat`, when set,
+ * is baked into the persisted banner itself (#233 fail-visible contract) — a stale source
+ * ledger must not produce a generated file indistinguishable from a fresh one.
+ */
+export function serializeGovernanceSidecar(manifest: TrackerManifest, staleCaveat?: string): string {
+  const banner = staleCaveat
+    ? `${BANNER}# STALE SOURCE EVIDENCE (#233): ${staleCaveat}\n`
+    : BANNER;
+  return banner + yaml.dump(manifest, { lineWidth: 120 });
 }
 
 /** Injected I/O seam so the emit core stays pure + unit-testable. */
@@ -96,9 +103,14 @@ export interface SidecarEmitResult {
  * freshness threshold should exercise; no production call site currently supplies `opts`
  * (matching `WorkspaceArtifactBuilder.ts`'s established precedent of consuming `ok`/`stale`
  * ledger data unconditionally and surfacing version-floor incompatibility only through a
- * separate diagnostics block, not by gating consumption — see its `build()` comment). A
- * caller that supplies `versionStatus`/`maxAgeMs` gets the same `unsupported`/`stale`
- * fail-visible behavior the canonical adapter gives every other consumer.
+ * separate diagnostics block, not by gating consumption — see its `build()` comment). Unlike
+ * that precedent, `stale` here is not just a passive return-value field: the caveat is baked
+ * into the persisted sidecar's own banner (`serializeGovernanceSidecar`'s `staleCaveat`) so
+ * the generated file itself — not only a caller that happens to inspect `ledgerState` — is
+ * fail-visible. A caller that supplies `versionStatus`/`maxAgeMs` gets the same
+ * `unsupported`/`stale` fail-visible classification the canonical adapter gives every other
+ * consumer; `tracker-sidecar-command.ts`'s operator-facing message likewise branches on
+ * `ledgerState` rather than only `status`.
  *
  * NEVER reads or writes OPERATOR_MANIFEST_RELPATH.
  */
@@ -143,7 +155,13 @@ export function emitGovernanceSidecar(deps: SidecarDeps, opts?: ConsumerReadOpti
       decisions: manifest.meta?.decisions?.length ?? 0,
     };
 
-    const next = serializeGovernanceSidecar(manifest);
+    // Stale evidence is still consumed (matching WorkspaceArtifactBuilder's precedent — the
+    // adapter's own `stale` contract keeps data usable), but never indistinguishably from
+    // fresh: the caveat rides in the persisted banner itself, not only the return value.
+    const staleCaveat = ledger.state === 'stale'
+      ? ledger.reason ?? `${META_LEDGER_RELPATH} is older than the configured freshness threshold`
+      : undefined;
+    const next = serializeGovernanceSidecar(manifest, staleCaveat);
     const current = deps.readFile(outPath);
     if (current === next) {
       return { status: 'unchanged', path: outPath, counts, ledgerState: ledger.state };

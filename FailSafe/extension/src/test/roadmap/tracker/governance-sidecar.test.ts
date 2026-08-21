@@ -112,6 +112,16 @@ suite('roadmap/tracker governance-sidecar (A.2 — #194 sidecar emission)', () =
     assert.equal(parsed.meta?.decisions?.length, 1);
   });
 
+  test('serializeGovernanceSidecar: staleCaveat bakes a caveat comment into the banner (#233)', () => {
+    const manifest: TrackerManifest = { rcs: [], programs: [], phases: [], verticals: [] };
+    const fresh = serializeGovernanceSidecar(manifest);
+    const stale = serializeGovernanceSidecar(manifest, 'META_LEDGER.md is older than the freshness threshold');
+    assert.ok(!/STALE SOURCE EVIDENCE/.test(fresh), 'no caveat when none supplied');
+    assert.ok(/STALE SOURCE EVIDENCE/.test(stale));
+    assert.ok(stale.includes('older than the freshness threshold'), 'the actual reason text is preserved');
+    assert.ok(yaml.load(stale.slice(stale.indexOf('rcs:'))), 'still valid YAML after the caveat line');
+  });
+
   test('emit: governed repo → written to the GENERATED path, counts reflect the projection', () => {
     const { deps, writes } = spyDeps({
       [`docs/META_LEDGER.md`]: LEDGER,
@@ -243,6 +253,22 @@ suite('roadmap/tracker governance-sidecar (A.2 — #194 sidecar emission)', () =
       assert.equal(r.status, 'written', 'stale data is still usable data, per the adapter\'s own stale contract');
       assert.equal(r.ledgerState, 'stale');
       assert.equal(writes.length, 1);
+      // #233 review follow-up: the caveat must ride in the PERSISTED file, not only the
+      // return value — a caller that never inspects `ledgerState` still can't mistake this
+      // for a routine fresh emit.
+      assert.ok(/STALE SOURCE EVIDENCE/.test(writes[0].data), 'persisted banner carries the staleness caveat');
+    });
+
+    test('unchanged + stale: re-emit of the same stale content still carries the caveat in its status', () => {
+      const { deps } = spyDeps(
+        { [`docs/META_LEDGER.md`]: LEDGER, [`docs/FEATURE_INDEX.md`]: FEATURE_INDEX },
+        { mtimes: { [`docs/META_LEDGER.md`]: '2000-01-01T00:00:00.000Z' } },
+      );
+      const first = emitGovernanceSidecar(deps, { maxAgeMs: 1 });
+      assert.equal(first.status, 'written');
+      const second = emitGovernanceSidecar(deps, { maxAgeMs: 1 });
+      assert.equal(second.status, 'unchanged');
+      assert.equal(second.ledgerState, 'stale', 'staleness stays visible on re-emit, not lost once written once');
     });
 
     test('maxAgeMs supplied but no readFileMtime on deps (typical test double) → freshness stays unknown, no fabricated staleness', () => {
