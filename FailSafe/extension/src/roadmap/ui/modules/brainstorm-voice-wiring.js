@@ -11,7 +11,7 @@ import { VoiceStatusBadge } from './voice-status-badge.js';
 import { presentVoicePackState, deriveCapabilitySummary } from './voice-capability-presenter.js';
 
 // TTS-class states on the unified stream (tts-engine.js:38/:43/:51 + LD3).
-const TTS_ERROR = /^error:(piper_not_vendored|wrong_mime|init_failed|tts_init_rejected)/;
+const TTS_ERROR = /^error:(piper_not_vendored|wrong_mime|init_failed|tts_init_rejected|tts_timeout)/;
 
 function deriveTtsState(voice, ttsErrorSeen) {
   if (voice.tts?.tts) return 'ready';

@@ -6,6 +6,26 @@ import { isAllowedPiperVoice, isWebSpeechVoice } from './voice-catalog.js';
 const PIPER_MODULE = '../vendor/piper/piper.min.js';
 const DEFAULT_VOICE_ID = 'en_US-hfc_female-medium';
 
+// #244 Tranche D follow-up: unlike WebLlmEngine's tiered extraction, TTS has
+// no lower fallback tier — Piper is the only synthesis path. A stalled
+// `tts.predict(...)` call therefore cannot be allowed to hang indefinitely;
+// TTS_TIMEOUT_MS bounds it so the operator gets an honest error state instead
+// of a silently stuck "nothing is happening" UI. This does not (and cannot)
+// prove the underlying WASM call itself stopped running.
+const TTS_TIMEOUT_MS = 15000;
+
+function withTimeout(promise, ms) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      const err = new Error(`tts predict() timed out after ${ms}ms`);
+      err.isTtsTimeout = true;
+      reject(err);
+    }, ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 export class TtsEngine {
   constructor(store, options = {}) {
     this.store = store || null;
@@ -17,6 +37,13 @@ export class TtsEngine {
       ? stored
       : DEFAULT_VOICE_ID;
     this._blobUrl = null;
+    // #244 Tranche D: per-instance override point for tests; production default is TTS_TIMEOUT_MS.
+    this.timeoutMs = TTS_TIMEOUT_MS;
+    // Generation token: speak()/stop() bump this so a predict() call left
+    // running past a cancel/superseding speak() can't resurrect stale audio
+    // or state when it eventually settles.
+    this._speakToken = 0;
+    this._synthesizing = false;
     // E6 Piper module loader injection seam: production omits options;
     // default loader uses native dynamic import. Tests inject a stub
     // loader returning a minimal PiperTTS surface so the dynamic import
@@ -55,9 +82,23 @@ export class TtsEngine {
   async speak(text) {
     if (!this.tts) return;
     this.stop();
+    const token = ++this._speakToken;
+    this._synthesizing = true;
+
+    let wav;
+    try {
+      wav = await withTimeout(this.tts.predict({ text, voiceId: this.voiceId }), this.timeoutMs);
+    } catch (err) {
+      this._synthesizing = false;
+      if (token !== this._speakToken) return; // superseded by a later stop()/speak(); already handled
+      this._cleanup();
+      this.onStateChange?.(err?.isTtsTimeout ? 'error:tts_timeout' : 'idle');
+      return;
+    }
+    this._synthesizing = false;
+    if (token !== this._speakToken) return; // superseded while predict() was in flight; discard stale audio
 
     try {
-      const wav = await this.tts.predict({ text, voiceId: this.voiceId });
       const blob = new Blob([wav], { type: 'audio/wav' });
       this._blobUrl = URL.createObjectURL(blob);
       this.audio = new Audio(this._blobUrl);
@@ -82,7 +123,16 @@ export class TtsEngine {
   }
 
   stop() {
-    if (!this.audio) return;
+    const wasSynthesizing = this._synthesizing;
+    this._speakToken++; // invalidate any in-flight predict()/timeout race
+    this._synthesizing = false;
+    if (!this.audio) {
+      // A speak() may still be waiting on predict()/the timeout race with no
+      // Audio created yet — surface the cancellation instead of leaving the
+      // operator with no signal that anything happened.
+      if (wasSynthesizing) this.onStateChange?.('idle');
+      return;
+    }
     this.audio.pause();
     this._cleanup();
     this.onStateChange?.('idle');
