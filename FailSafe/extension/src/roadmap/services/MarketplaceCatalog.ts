@@ -7,6 +7,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import { preserveCorruptFile } from "./corrupt-file-guard";
 import type {
   MarketplaceItem,
   MarketplaceState,
@@ -392,6 +393,10 @@ export class MarketplaceCatalog {
       // Atomic temp+rename (matches repository convention, e.g.
       // runtimeMode.ts / breakGlassState.ts) so a crash mid-write cannot
       // leave state.json truncated/malformed.
+      // #378: loadState() swallows parse errors into defaults, so this write
+      // would overwrite a corrupt-but-existing state.json — preserve it aside
+      // first (guard never throws; safe inside this try).
+      preserveCorruptFile(this.statePath, (p) => !!p && typeof p === "object" && !Array.isArray(p), "state.json");
       const tmpPath = `${this.statePath}.${process.pid}.tmp`;
       fs.writeFileSync(tmpPath, JSON.stringify(this.state, null, 2), "utf-8");
       fs.renameSync(tmpPath, this.statePath);

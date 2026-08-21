@@ -9,6 +9,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import type { EventBus } from "../../shared/EventBus";
+import { preserveCorruptFile } from "./corrupt-file-guard";
 import type {
   AdapterState,
   AdapterInstallOptions,
@@ -496,6 +497,10 @@ export class AdapterService {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
+    // #378: getConfig() swallows parse errors into null, so ensureDefaultConfig
+    // treats a corrupt config as missing and this write would destroy the
+    // operator's customizations — preserve the original aside first.
+    preserveCorruptFile(this.configPath, (p) => !!p && typeof p === "object" && !Array.isArray(p), "config.json");
     fs.writeFileSync(this.configPath, JSON.stringify(config, null, 2), "utf-8");
   }
 

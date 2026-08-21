@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { BacklogReader } from "./BacklogReader";
+import { preserveCorruptFile } from "./corrupt-file-guard";
 
 /**
  * Reads and writes the risk register (JSON format).
@@ -57,29 +58,13 @@ export class RiskRegisterManager {
    * (disclosed residual).
    */
   private preserveCorruptStore(): void {
-    let corrupt = false;
-    try {
-      if (!fs.existsSync(this.risksPath)) return;
-      const data = JSON.parse(fs.readFileSync(this.risksPath, "utf-8"));
-      corrupt = !Array.isArray(data.risks);
-    } catch {
-      corrupt = true;
-    }
-    if (!corrupt) return;
-    const bak = `${this.risksPath}.corrupt-${Date.now()}.bak`;
-    try {
-      fs.renameSync(this.risksPath, bak);
-      console.warn(`[FailSafe] risks.json was unparseable; preserved at ${bak}`);
-    } catch {
-      // Windows EBUSY/EPERM when another process holds the file open: a copy
-      // still succeeds against open read handles.
-      try {
-        fs.copyFileSync(this.risksPath, bak);
-        console.warn(`[FailSafe] risks.json was unparseable; copied to ${bak} (rename blocked)`);
-      } catch {
-        console.warn("[FailSafe] risks.json was unparseable and could not be preserved; overwriting");
-      }
-    }
+    // #378: delegates to the shared guard (byte- and message-identical to the
+    // original FX923 implementation; the risks-shape predicate is unchanged).
+    preserveCorruptFile(
+      this.risksPath,
+      (p) => Array.isArray((p as { risks?: unknown })?.risks),
+      "risks.json",
+    );
   }
 
   /**
