@@ -106,7 +106,8 @@ suite('github-checks PR↔issue linkage auditor (#154)', () => {
     const f = (res.findings || []).find((x) => x.kind === 'closes-stale-or-missing' && x.issue === 999);
     assert.ok(f, '#999 must be flagged');
     assert.equal(f!.severity, 'fail', 'a nonexistent issue must be fail severity, not downgraded to warn');
-    assert.ok(/does not exist/.test(f!.detail), 'detail must say nonexistent, not "already closed"');
+    assert.ok(/does not exist in this repo \(never existed, deleted, or transferred away\)/.test(f!.detail),
+      'detail must say nonexistent with the three-cause explanation (#374), not "already closed"');
     assert.equal(res.conclusion, 'failure');
   });
 
@@ -169,5 +170,81 @@ suite('runLinkageAudit pagination (FX914/#241C)', () => {
       findings.some((f: any) => f.kind === 'truncated-issue-list'),
       'a full 10th page must disclose truncation in the findings',
     );
+  });
+});
+
+// ── #374: signal quality — accurate fail details + truncation false-fail guard
+suite('#374 linkage signal quality', () => {
+  test('unit: closing a PR number (in knownPrs) fails with the pull-request detail, not "does not exist"', () => {
+    const r = auditPrLinkage({
+      body: 'Closes #366', openIssues: [1], knownIssues: [1, 2], knownPrs: [366], selfPr: 400,
+    });
+    const f = r.findings.find((x) => x.kind === 'closes-stale-or-missing' && x.issue === 366);
+    assert.ok(f, '#366 must be flagged');
+    assert.equal(f!.severity, 'fail');
+    assert.match(f!.detail, /is a pull request — closing keywords only act on issues/);
+    assert.doesNotMatch(f!.detail, /does not exist/);
+  });
+
+  test('unit: truncated window demotes missing-from-known to WARN (never fail on unverifiable existence)', () => {
+    const r = auditPrLinkage({
+      body: 'Closes #12', openIssues: [1], knownIssues: [1, 2], truncated: true, selfPr: 400,
+    });
+    const f = r.findings.find((x) => x.kind === 'closes-stale-or-missing' && x.issue === 12);
+    assert.ok(f);
+    assert.equal(f!.severity, 'warn', 'outside-the-window references must not produce false fails');
+    assert.match(f!.detail, /outside the fetched issue window/);
+    assert.equal(r.conclusion, 'neutral');
+  });
+
+  test('unit: untruncated missing reference keeps fail with the three-cause detail', () => {
+    const r = auditPrLinkage({
+      body: 'Closes #12', openIssues: [1], knownIssues: [1, 2], truncated: false, selfPr: 400,
+    });
+    const f = r.findings.find((x) => x.issue === 12);
+    assert.equal(f!.severity, 'fail');
+    assert.match(f!.detail, /never existed, deleted, or transferred away/);
+  });
+
+  test('unit: known === null keeps the pure-caller contract (fail branch unreachable)', () => {
+    const r = auditPrLinkage({ body: 'Closes #12', openIssues: [1], knownPrs: [12], selfPr: 400 });
+    const f = r.findings.find((x) => x.kind === 'closes-stale-or-missing' && x.issue === 12);
+    assert.ok(f, 'still flagged via the open-set warn path');
+    assert.equal(f!.severity, 'warn', 'without knownIssues no fail branch may fire (pre-#366 contract)');
+  });
+
+  test('publish path: a pull_request page item populates knownPrs end-to-end', async () => {
+    const get: GitHubGetFn = async (url) => {
+      if (/\/pulls\/8\b/.test(url)) return { status: 200, body: JSON.stringify({ body: 'Closes #5' }) };
+      if (/\/issues\b/.test(url)) {
+        return { status: 200, body: JSON.stringify([
+          { number: 1, state: 'open' },
+          { number: 5, state: 'closed', pull_request: {} },
+        ]) };
+      }
+      return { status: 404, body: '' };
+    };
+    const res = await runLinkageAudit({ token: 't', get, owner: 'a', repo: 'b', prNumber: 8, headSha: 's' });
+    const f = (res.findings || []).find((x) => x.issue === 5);
+    assert.ok(f, '#5 must be flagged');
+    assert.equal(f!.severity, 'fail');
+    assert.match(f!.detail, /is a pull request/);
+  });
+
+  test('publish path: Closes #<selfPr> gets the accurate pull-request detail (audit F3 bonus pin)', async () => {
+    const get: GitHubGetFn = async (url) => {
+      if (/\/pulls\/8\b/.test(url)) return { status: 200, body: JSON.stringify({ body: 'Closes #8' }) };
+      if (/\/issues\b/.test(url)) {
+        return { status: 200, body: JSON.stringify([
+          { number: 1, state: 'open' },
+          { number: 8, state: 'open', pull_request: {} },
+        ]) };
+      }
+      return { status: 404, body: '' };
+    };
+    const res = await runLinkageAudit({ token: 't', get, owner: 'a', repo: 'b', prNumber: 8, headSha: 's' });
+    const f = (res.findings || []).find((x) => x.issue === 8);
+    assert.ok(f, 'a self-close reference must be flagged');
+    assert.match(f!.detail, /is a pull request/, 'not the false "does not exist" of pre-#374');
   });
 });

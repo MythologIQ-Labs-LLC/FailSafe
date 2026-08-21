@@ -66,6 +66,13 @@ export interface LinkageAuditInput {
   knownIssues?: number[];
   /** The PR's own number — never flag a self-reference. */
   selfPr?: number;
+  /** #374: PR numbers seen in the issues listing (filtered out of knownIssues).
+   *  Lets a close-reference to a PR get an accurate detail instead of the
+   *  false "does not exist". Only consulted when knownIssues is provided. */
+  knownPrs?: number[];
+  /** #374: the issues fetch hit its page cap — existence of numbers outside
+   *  the window is unverifiable, so missing-from-known demotes to warn. */
+  truncated?: boolean;
 }
 
 export interface LinkageAuditResult {
@@ -91,9 +98,19 @@ export function auditPrLinkage(input: LinkageAuditInput): LinkageAuditResult {
   }
 
   // A closing keyword pointing at a nonexistent or already-closed issue.
+  const knownPrs = input.knownPrs ? new Set(input.knownPrs) : null;
   for (const n of p.closing) {
     if (known && !known.has(n)) {
-      findings.push({ kind: 'closes-stale-or-missing', issue: n, severity: 'fail', detail: `Closes #${n}, which does not exist in this repo.` });
+      if (knownPrs && knownPrs.has(n)) {
+        // #374: accurate reason — the number exists, but as a pull request.
+        findings.push({ kind: 'closes-stale-or-missing', issue: n, severity: 'fail', detail: `Closes #${n}, which is a pull request — closing keywords only act on issues.` });
+      } else if (input.truncated) {
+        // #374: never fail on unverifiable existence — the fetch window was
+        // capped, so absence from knownIssues proves nothing.
+        findings.push({ kind: 'closes-stale-or-missing', issue: n, severity: 'warn', detail: `Closes #${n}, which is outside the fetched issue window (repo exceeds the 10-page fetch cap) — existence could not be verified.` });
+      } else {
+        findings.push({ kind: 'closes-stale-or-missing', issue: n, severity: 'fail', detail: `Closes #${n}, which does not exist in this repo (never existed, deleted, or transferred away).` });
+      }
     } else if (!open.has(n)) {
       findings.push({ kind: 'closes-stale-or-missing', issue: n, severity: 'warn', detail: `Closes #${n}, which is not currently open (already closed).` });
     }
@@ -198,6 +215,9 @@ export async function runLinkageAudit(opts: LinkageRunOptions): Promise<LinkageR
     // "already closed", understating severity and misstating the reason.
     const openIssues: number[] = [];
     const knownIssues: number[] = [];
+    // #374: keep the PR numbers the filter removes — a close-reference to a
+    // PR deserves an accurate detail, not "does not exist".
+    const knownPrs: number[] = [];
     let truncated = false;
     for (let page = 1; page <= 10; page++) {
       const issRes = await opts.get(`${base}/issues?state=all&per_page=100&page=${page}`, headers);
@@ -206,11 +226,12 @@ export async function runLinkageAudit(opts: LinkageRunOptions): Promise<LinkageR
       const realIssues = issues.filter((i) => !i.pull_request);
       openIssues.push(...realIssues.filter((i) => i.state === 'open').map((i) => i.number));
       knownIssues.push(...realIssues.map((i) => i.number));
+      knownPrs.push(...issues.filter((i) => i.pull_request).map((i) => i.number));
       if (issues.length < 100) break;
       if (page === 10) truncated = true;
     }
 
-    const result = auditPrLinkage({ body, openIssues, knownIssues, selfPr: opts.prNumber });
+    const result = auditPrLinkage({ body, openIssues, knownIssues, knownPrs, truncated, selfPr: opts.prNumber });
     // #241C (FX914): a full 10th page means the issue set was truncated —
     // DISCLOSE it in the findings instead of publishing false completeness.
     const findings = truncated
@@ -221,7 +242,7 @@ export async function runLinkageAudit(opts: LinkageRunOptions): Promise<LinkageR
             issue: 0,
             severity: 'warn' as const,
             detail:
-              'Issue set exceeds 1000 — staleness/existence checks may be incomplete (truncated at 10 pages).',
+              'Issue+PR set exceeds the 10-page fetch window (1000 items; PRs count toward it) — staleness/existence checks may be incomplete; unverifiable references are reported as warns, not fails.',
           },
         ]
       : result.findings;
