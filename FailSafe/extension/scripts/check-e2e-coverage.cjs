@@ -16,7 +16,10 @@
 //   `[no-e2e: <reason>]` (legacy, no ` — `) NO LONGER grants a blanket pass.
 //
 // Exit 0 = coverage satisfied (or gate not applicable).
-// Exit 1 = block; missing E2E coverage for one or more changed files.
+// Exit 1 = block; missing E2E coverage, or release range genuinely unresolvable.
+// Exit 2 = infrastructure error; release range hit a transient subprocess
+//          failure that persisted through retry (#410) -- not a coverage
+//          verdict, and must not be conflated with exit 1.
 
 'use strict';
 
@@ -63,18 +66,42 @@ function gitOutput(cmd, repoRoot) {
   }
 }
 
+// A completed git invocation (ref found or genuinely not found) always
+// carries a numeric exit status. A spawn-level failure -- the subprocess
+// itself never ran to completion (EAGAIN fork exhaustion, ENOENT, ...) --
+// does not. This is the only reliable way to tell "ref doesn't exist" apart
+// from "the subprocess itself failed" (#410): both reach the catch block,
+// but only one of them is a real answer about the ref.
+function isTransientSpawnFailure(err) {
+  return Boolean(err) && typeof err.status !== 'number';
+}
+
+const TRANSIENT_RETRY_LIMIT = 2; // total attempts, i.e. one retry
+
 // Like gitOutput, but preserves the failure reason instead of collapsing
 // every non-zero exit to an indistinguishable ''. Used only where the
 // caller must tell "ref genuinely does not exist" apart from "the git
 // subprocess itself failed" (#410) so a resolvable-range false negative is
 // diagnosable from CI output rather than presenting as an opaque flake.
-function gitTry(cmd, repoRoot) {
+// A transient spawn failure is retried once before being reported, since a
+// single fork glitch under CI resource contention should not fail the gate
+// the way a genuinely missing ref must.
+function gitTry(cmd, repoRoot, attempt) {
+  const attemptNum = attempt || 1;
   try {
     const stdout = execSync(cmd, { cwd: repoRoot, encoding: 'utf8' }).trim();
-    return { ok: Boolean(stdout), stdout, reason: stdout ? null : 'empty output' };
+    return {
+      ok: Boolean(stdout), stdout, reason: stdout ? null : 'empty output', transient: false,
+    };
   } catch (err) {
+    const transient = isTransientSpawnFailure(err);
+    if (transient && attemptNum < TRANSIENT_RETRY_LIMIT) {
+      return gitTry(cmd, repoRoot, attemptNum + 1);
+    }
     const stderr = (err && err.stderr ? String(err.stderr) : '').trim();
-    return { ok: false, stdout: '', reason: stderr || (err && err.message) || 'unknown error' };
+    return {
+      ok: false, stdout: '', reason: stderr || (err && err.message) || 'unknown error', transient,
+    };
   }
 }
 
@@ -104,12 +131,20 @@ function resolveReleaseRange(repoRoot) {
   const baseResult = gitTry(`git rev-parse --verify ${effectiveBase}`, repoRoot);
   const headResult = gitTry(`git rev-parse --verify ${head}`, repoRoot);
   if (!baseResult.ok || !headResult.ok) {
+    const transient = baseResult.transient || headResult.transient;
     const details = [];
     if (!baseResult.ok) details.push(`base=${effectiveBase} (${baseResult.reason})`);
     if (!headResult.ok) details.push(`head=${head} (${headResult.reason})`);
+    // A transient failure (retried and still failing) is reported distinctly
+    // from a genuinely missing ref: it is an infrastructure condition, not
+    // evidence the range doesn't exist, and must not be treated as the same
+    // failure class main() fails CLOSED on (#410).
     return {
       ok: false,
-      reason: `cannot resolve release range: ${details.join('; ')}`,
+      transient,
+      reason: transient
+        ? `release-range resolution hit a transient subprocess failure (not a missing ref), retried and still failing: ${details.join('; ')}`
+        : `cannot resolve release range: ${details.join('; ')}`,
     };
   }
   return { ok: true, base: effectiveBase, head };
@@ -179,7 +214,7 @@ function emitAudit(lines) {
 function resolveInputs(repoRoot, mode) {
   if (mode === 'release') {
     const range = resolveReleaseRange(repoRoot);
-    if (!range.ok) return { ok: false, reason: range.reason };
+    if (!range.ok) return { ok: false, reason: range.reason, transient: range.transient };
     return {
       ok: true,
       files: releaseRangeFiles(repoRoot, range),
@@ -222,6 +257,11 @@ function main(opts) {
   }
   const inputs = resolveInputs(repoRoot, mode);
   if (!inputs.ok) {
+    if (inputs.transient) {
+      console.error(`[e2e-gate] INFRA — ${inputs.reason}`);
+      console.error('this is a retried subprocess failure, not a coverage verdict; re-run the job.');
+      return 2;
+    }
     console.error(`[e2e-gate] BLOCK — ${inputs.reason}`);
     console.error('release mode fails CLOSED when the commit range is unresolvable.');
     return 1;
