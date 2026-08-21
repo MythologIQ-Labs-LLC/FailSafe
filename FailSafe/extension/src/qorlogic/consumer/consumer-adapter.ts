@@ -113,27 +113,37 @@ export function readMetaLedgerArtifact(
   );
 }
 
+export interface ClassifyTextOptions extends ConsumerReadOptions {
+  /** mtime of the source, ISO-8601, when the caller's seam can supply one (e.g.
+   *  nodeSidecarDeps' real fs.stat); omit/null when genuinely unknown (in-memory
+   *  test doubles) — never guessed. Required (with `maxAgeMs`) for the `stale` state. */
+  mtimeIso?: string | null;
+}
+
 /**
  * Classify already-read META_LEDGER text without an `fs` read, for callers
  * that own their own file-read seam (e.g. governance-sidecar.ts's injected
  * `SidecarDeps`, #233 migration) rather than a workspace root. Same
- * classification rule as `readMetaLedgerArtifact` minus the staleness check:
- * `text === null` -> `unavailable`; parse throw or non-empty-parses-empty ->
- * `malformed`; below-floor version -> `unsupported`; else `ok`. Delegates to
+ * classification rule as `readMetaLedgerArtifact`: `text === null` ->
+ * `unavailable`; parse throw or non-empty-parses-empty -> `malformed`;
+ * below-floor version -> `unsupported`; older than `maxAgeMs` (only checked
+ * when the caller supplies `mtimeIso`) -> `stale`; else `ok`. Delegates to
  * the same canonical `parseMetaLedgerEntries` — not a second compatibility
  * layer. Does NOT call the shared `envelope()` helper: that helper stats
  * `sourcePath` via `fs` for `mtimeIso`, which would silently resolve a bare
  * relative path against the wrong cwd instead of the caller's real seam —
- * `mtimeIso` is always `null` here (truthfully unknown from a text-only seam).
+ * `mtimeIso` here is exactly whatever the caller supplies (`null` when
+ * genuinely unknown), never guessed from an unrelated stat.
  */
 export function classifyMetaLedgerText(
   text: string | null,
   sourcePath: string,
-  opts?: ConsumerReadOptions,
+  opts?: ClassifyTextOptions,
 ): ArtifactEnvelope<MetaLedgerEntry[]> {
+  const mtimeIso = opts?.mtimeIso ?? null;
   const provenance: ArtifactProvenance = {
     sourcePath,
-    mtimeIso: null,
+    mtimeIso,
     qorVersion: opts?.versionStatus?.installed ?? null,
   };
   const versionReason = unsupportedReason(opts);
@@ -160,6 +170,13 @@ export function classifyMetaLedgerText(
     return {
       artifact: 'META_LEDGER', state: 'malformed', data: null, provenance,
       reason: `non-empty artifact parsed to empty: ${sourcePath}`,
+    };
+  }
+  const maxAgeMs = opts?.maxAgeMs;
+  if (maxAgeMs !== undefined && mtimeIso !== null && Date.now() - Date.parse(mtimeIso) > maxAgeMs) {
+    return {
+      artifact: 'META_LEDGER', state: 'stale', data, provenance,
+      reason: `artifact is older than maxAgeMs=${maxAgeMs}: ${sourcePath}`,
     };
   }
   return { artifact: 'META_LEDGER', state: 'ok', data, provenance, reason: null };

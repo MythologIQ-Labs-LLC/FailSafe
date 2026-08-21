@@ -62,7 +62,11 @@ const FEATURE_INDEX = `# Feature Index
 /** Spy deps recording every read/write path; seeds files from an in-memory store. */
 function spyDeps(
   initial: Record<string, string> = {},
-  opts: { writeThrows?: boolean; plans?: Array<{ slug: string; content: string }> } = {},
+  opts: {
+    writeThrows?: boolean;
+    plans?: Array<{ slug: string; content: string }>;
+    mtimes?: Record<string, string | null>;
+  } = {},
 ) {
   const store = new Map<string, string>(Object.entries(initial));
   const reads: string[] = [];
@@ -83,6 +87,9 @@ function spyDeps(
     readPlans() {
       return opts.plans ?? [];
     },
+    // Only present when a test opts in — mirrors that SidecarDeps.readFileMtime is
+    // optional, so most doubles (and pre-#233-freshness callers) never define it.
+    ...(opts.mtimes ? { readFileMtime: (relPath: string) => opts.mtimes![relPath] ?? null } : {}),
   };
   return { deps, reads, writes, store };
 }
@@ -197,6 +204,52 @@ suite('roadmap/tracker governance-sidecar (A.2 — #194 sidecar emission)', () =
     assert.equal(r.ledgerState, 'malformed');
     assert.ok(r.reason?.includes('META_LEDGER.md'), `reason names the source: ${r.reason}`);
     assert.equal(writes.length, 0, 'never silently writes from unparseable content');
+  });
+
+  // Production-path regressions (not just classifyMetaLedgerText helper tests): opts is
+  // threaded through the actual emitGovernanceSidecar entry point a real caller invokes.
+  suite('emitGovernanceSidecar(deps, opts) — version floor + freshness threaded through', () => {
+    test('below-floor version, supplied via opts → skipped-ledger-untrusted (unsupported), no write', () => {
+      const { deps, writes } = spyDeps({
+        [`docs/META_LEDGER.md`]: LEDGER,
+        [`docs/FEATURE_INDEX.md`]: FEATURE_INDEX,
+      });
+      const r = emitGovernanceSidecar(deps, {
+        versionStatus: { installed: '0.50.0', minimum: '0.100.0', meetsFloor: false },
+      });
+      assert.equal(r.status, 'skipped-ledger-untrusted');
+      assert.equal(r.ledgerState, 'unsupported');
+      assert.ok(r.reason?.includes('0.50.0') && r.reason?.includes('0.100.0'), `reason: ${r.reason}`);
+      assert.equal(writes.length, 0, 'below-floor evidence is never parsed into a sidecar write');
+    });
+
+    test('no opts supplied (today\'s only production call sites) → version floor is not enforced, unchanged from pre-#233', () => {
+      const { deps, writes } = spyDeps({
+        [`docs/META_LEDGER.md`]: LEDGER,
+        [`docs/FEATURE_INDEX.md`]: FEATURE_INDEX,
+      });
+      const r = emitGovernanceSidecar(deps);
+      assert.equal(r.status, 'written');
+      assert.equal(r.ledgerState, 'ok', 'no versionStatus supplied -> nothing to fail against, same as every other opts-less adapter call site');
+      assert.equal(writes.length, 1);
+    });
+
+    test('stale (old mtime + maxAgeMs) → still written, ledgerState reports stale rather than claiming fresh ok', () => {
+      const { deps, writes } = spyDeps(
+        { [`docs/META_LEDGER.md`]: LEDGER, [`docs/FEATURE_INDEX.md`]: FEATURE_INDEX },
+        { mtimes: { [`docs/META_LEDGER.md`]: '2000-01-01T00:00:00.000Z' } },
+      );
+      const r = emitGovernanceSidecar(deps, { maxAgeMs: 1 });
+      assert.equal(r.status, 'written', 'stale data is still usable data, per the adapter\'s own stale contract');
+      assert.equal(r.ledgerState, 'stale');
+      assert.equal(writes.length, 1);
+    });
+
+    test('maxAgeMs supplied but no readFileMtime on deps (typical test double) → freshness stays unknown, no fabricated staleness', () => {
+      const { deps } = spyDeps({ [`docs/META_LEDGER.md`]: LEDGER, [`docs/FEATURE_INDEX.md`]: FEATURE_INDEX });
+      const r = emitGovernanceSidecar(deps, { maxAgeMs: 1 });
+      assert.equal(r.ledgerState, 'ok', 'no mtime source -> never guessed stale');
+    });
   });
 
   test('degrade-safe: a write failure → error result, never throws', () => {

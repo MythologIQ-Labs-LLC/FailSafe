@@ -243,4 +243,28 @@ suite('classifyMetaLedgerText (#233 text-seam classification)', () => {
   test('never throws on malformed text, mirrors readMetaLedgerArtifact classification exactly', () => {
     assert.doesNotThrow(() => classifyMetaLedgerText('garbage', 'docs/META_LEDGER.md'));
   });
+
+  test('maxAgeMs exceeded, with a caller-supplied mtimeIso -> stale, data still present', () => {
+    const env = classifyMetaLedgerText(OK_LEDGER, 'docs/META_LEDGER.md', {
+      mtimeIso: '2000-01-01T00:00:00.000Z',
+      maxAgeMs: 1,
+    });
+    assert.equal(env.state, 'stale');
+    assert.ok((env.data?.length ?? 0) > 0, 'stale keeps the parsed data');
+    assert.equal(env.provenance.mtimeIso, '2000-01-01T00:00:00.000Z');
+  });
+
+  test('maxAgeMs supplied but no mtimeIso -> freshness stays unknown, classifies ok (never guessed stale)', () => {
+    const env = classifyMetaLedgerText(OK_LEDGER, 'docs/META_LEDGER.md', { maxAgeMs: 1 });
+    assert.equal(env.state, 'ok');
+    assert.equal(env.provenance.mtimeIso, null);
+  });
+
+  test('generous maxAgeMs with a recent mtimeIso -> stays ok', () => {
+    const env = classifyMetaLedgerText(OK_LEDGER, 'docs/META_LEDGER.md', {
+      mtimeIso: new Date().toISOString(),
+      maxAgeMs: 1000 * 60 * 60 * 24 * 365 * 100,
+    });
+    assert.equal(env.state, 'ok');
+  });
 });
