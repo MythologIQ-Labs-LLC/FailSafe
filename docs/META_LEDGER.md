@@ -28849,3 +28849,43 @@ SLICE RETARGETED. The remaining #233 work is NOT "migrate the rest onto the adap
 SHADOW GENOME. New event recorded: a `grep -l` over a filename string was reported as an enumeration of consumers and sealed into the chain before any file was opened; the mention-set and the consumer-set are different sets, and hand-filtering does not convert one into the other. Corollary for #233: "routes through the adapter" is a coupling test, not an efficiency or intent test.
 
 NO CODE CHANGED IN THIS PHASE. Advisory only; delegation is to `/qor-plan`.
+
+---
+
+### Entry #592: GATE TRIBUNAL - plan-233-read-ledger-once (iteration 1)
+
+**Timestamp**: 2026-08-21T21:30:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: VETO
+
+**Content Hash**:
+```
+SHA256("plan-233-read-ledger-once|audit-VETO-iter1|2026-08-21")
+= 4f8adbed6e52bbfc980e4ce0e2ef075e5f2c8f24fcdf237e5f122ee0ad6f8657
+```
+
+**Previous Hash**: `210ef124a80a72e5fc40e4f185272b88527496f55012f20e1fadeb9f164bc9f2` (Entry #591 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 2bb67f935bc489da098f746954b1a27406c9859706b945a810b3ac15128b395e
+```
+
+## Decision
+
+VETO on iteration 1 of the #233 retargeted slice (single META_LEDGER read shared across `WorkspaceArtifactBuilder.build()`, `readGovernanceState`, and `buildConsumerDiagnostics`). Solo mode; `audit_risk_score` returned `option_b_required: false`, so the Option B independent-review mandate did not attach. Two findings, both `specification-drift`, both plan-text grounds. Report at `.agent/staging/AUDIT_REPORT.md`.
+
+V1 - SELF-APPLICATION. The plan declares `originating_remediation` = the grep-list-as-finding SG event (#591), so Step 3.5 applies the remediated discipline to the plan itself: do not present unverified citations as findings. `plan_grep_lint` reported `0 citation(s) truth-checked` against seven Locked Decisions each carrying a grep-evidence line. The evidence used `grep -nE '<pat>' <path>` with the observed text in a SEPARATE backtick span; `plan_evidence.py`'s `_EVIDENCE_STMT_RE` requires the canonical single-span form `git show HEAD:<path> | grep -nE '<pat>' -> NN:<observed text>` with the observed text terminating the span. The lint therefore matched nothing and exited success - a pass by NON-RECOGNITION, not by verification. Every one of the seven coordinates was independently re-verified as factually correct during this audit, and that is exactly why the finding stands: #591 established that hand-verification is the assurance that already failed once this session. A gate that cannot see the evidence has not checked it.
+
+V2 - "ZERO BEHAVIOR CHANGE" IS FALSE. The plan's central claim, restated in its boundaries ("No change to any artifact's classification semantics"), in D1, and in the operator-selected slice depth, is contradicted by its own Phase 3 code block. Today `buildConsumerDiagnostics(root, {versionStatus})` classifies META_LEDGER via `readMetaLedgerArtifact(root, opts)` WITH `versionStatus`. The plan constructs the shared envelope as `classifyMetaLedgerText(read, sourcePath)` with NO opts and injects it. `classifyRead` consumes opts on three paths (consumer-adapter.ts:98-104, :126): `provenance.qorVersion`, `unsupportedReason(opts)` (non-null exactly when `!meetsFloor`, :57-61), and `maxAgeMs`. `versionStatus` is supplied in production (HubSnapshotService.ts:191). On a below-B197-floor install the META_LEDGER diagnostics row therefore degrades from `unsupported` + real `qorVersion` to `ok` + `qorVersion: null`. The three sibling artifacts still receive opts, so aggregate `compatible` stays false and the regression does NOT surface in the headline field - which is worse, not better: the row silently misreports while the block still reads correct. This weakens the B197 version-floor signal on `qorConsumer`, a surface whose entire purpose is making incompatibility legible.
+
+CONSEQUENTIAL DECISION THE REMEDIATION MUST MAKE, not just patch: applying `versionStatus` to the shared envelope newly makes `ledgerReadable` false on a below-floor install (`unsupported` is neither `ok` nor `stale`), where today it derives from an opts-free read and is unaffected - so `ledgerSummary`/`ledgerVerdicts`/`ledgerCompletions` would begin degrading to empty on below-floor installs. Either that gating change is intended and tested, or `build()` needs two envelopes from the SAME single read (opts-free for gating, opts-bearing for diagnostics). Either is defensible; leaving it undecided is not.
+
+PASSES CLEARED: prompt injection (exit 0; three `'<script'` canary WARNs in this ledger at offsets 871161/893749/917102 are code-span quotations of the governance-file XSS guard test, not injection), security L3, OWASP, Razor (build() ~35 lines, no nesting >2), test functionality (all nine described tests invoke the unit and assert on output; none presence-only), feature test coverage (FX929 NEW + FX893/FX892 MODIFIED all carry failing-if-broken descriptors), dependency (zero new), macro-architecture, orphan (no new files; all touched files already reachable from HubSnapshotService.ts:191). N/A: ghost-UI, live-progress, filter-stage, closed-enum inverse coverage, data-API access control.
+
+WHAT SURVIVES, recorded so remediation does not relitigate it: the retarget is correct (adapter migration is largely done; the defect is that nothing shares the envelope); the measurements reproduce (5 reads / 8,715,735 bytes / 477ms cold; 7.7ms IO + 13.9ms parseMetaLedgerEntries + 5.5ms parseMetaLedger warm); defining `readMetaLedgerArtifact` in terms of `readMetaLedgerRaw` is the right shape and is why V2 is a one-line fix rather than a redesign; the F1/F2/F3/F4/F5 exclusions are correctly scoped; rejecting the mtime-keyed memo was correct; and the plan's own correction of its "5 -> 2" preview to "5 -> 3" is accurate.
+
+Required next action: `/qor-plan` to amend (V1 evidence format; V2 versionStatus propagation plus the `ledgerReadable` decision it forces), then re-run `/qor-audit`. No implementation authorized.
