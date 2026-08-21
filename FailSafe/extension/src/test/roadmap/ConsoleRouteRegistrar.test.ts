@@ -54,6 +54,7 @@ function makeFakeHub(): any {
     setCachedChainValid: () => undefined,
     getTransparencyEvents: () => [],
     getRiskRegister: () => [],
+    getStoredRiskRegister: () => [],
     writeRiskRegister: () => undefined,
   };
 }

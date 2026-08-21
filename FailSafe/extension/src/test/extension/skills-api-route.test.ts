@@ -30,6 +30,7 @@ function makeDeps(workspaceRoot: string, dirname: string): ApiRouteDeps {
     setCachedChainValid: () => undefined,
     getTransparencyEvents: () => [],
     getRiskRegister: () => [],
+    getStoredRiskRegister: () => [],
     writeRiskRegister: () => undefined,
     getTimelineEntries: () => [],
     getHealthMetrics: () => null,

@@ -38,6 +38,7 @@ function makeDeps(overrides: Partial<ApiRouteDeps>): ApiRouteDeps {
     setCachedChainValid: () => undefined,
     getTransparencyEvents: () => [],
     getRiskRegister: () => [],
+    getStoredRiskRegister: () => [],
     writeRiskRegister: () => undefined,
     getTimelineEntries: () => [],
     getHealthMetrics: () => null,

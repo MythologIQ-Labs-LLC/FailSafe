@@ -98,3 +98,39 @@ suite('risks.js RisksRenderer source pill (FX420)', () => {
     } finally { restore(); }
   });
 });
+
+// ── #377: backlog-derived rows are read-only in the UI ────────────────────────
+// An Edit/Del affordance on a fallback row can only 404 post-#377 (mutations
+// read the durable store) — remove the affordance, not just the outcome
+// (operator ruling ui-data-point-value-test).
+
+suite('#377 backlog-derived row affordance gating', () => {
+  test('backlog rows render no Edit/Del; a read-only note appears instead', () => {
+    const { container, restore } = setupDom();
+    try {
+      const renderer = new RisksRenderer('risks-root');
+      renderer.render({ risks: [{
+        id: 'backlog:S0', title: 'from backlog', severity: 'medium',
+        status: 'open', source: 'backlog',
+      }] });
+      const row = container.querySelector('[data-rid="backlog:S0"]')!;
+      assert.equal(row.querySelector('.cc-risk-edit'), null, 'no Edit on a backlog row');
+      assert.equal(row.querySelector('.cc-risk-del'), null, 'no Del on a backlog row');
+      assert.match(row.textContent || '', /from BACKLOG\.md/, 'read-only note present');
+    } finally { restore(); }
+  });
+
+  test('durable rows keep Edit/Del', () => {
+    const { container, restore } = setupDom();
+    try {
+      const renderer = new RisksRenderer('risks-root');
+      renderer.render({ risks: [{
+        id: 'risk-123', title: 'durable', severity: 'high', status: 'open', source: 'manual',
+      }] });
+      const row = container.querySelector('[data-rid="risk-123"]')!;
+      assert.ok(row.querySelector('.cc-risk-edit'), 'Edit stays on durable rows');
+      assert.ok(row.querySelector('.cc-risk-del'), 'Del stays on durable rows');
+      assert.doesNotMatch(row.textContent || '', /from BACKLOG\.md/);
+    } finally { restore(); }
+  });
+});

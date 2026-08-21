@@ -28526,3 +28526,38 @@ SHA256(chain_hash + "SESSION-SEAL")
 ## Decision
 
 Full SHIELD mini-cycle closing #368 (corrupt risks.json silently overwritten; filed from the PR #364 substantiation audit). Audit iteration 1 VETO earned its keep twice over: F1 proved the planned flag design missed a LIVE mutation path (Console /api/v1/risks POST/PUT/DELETE -> HubSnapshotService.writeRiskRegister -> writeRisks on the long-lived ConsoleServer instance) and its evidence chain surfaced a pre-existing #241-F-6 sibling on that same route (getRisks-read promotes the BACKLOG fallback into durable state on write - filed #377); F7 found true swallow-and-overwrite siblings (AdapterService config, MarketplaceCatalog state - filed #378). Remedy (a) adopted: preservation lives INSIDE writeRisks() - single funnel covering every mutation path, flag and its ordering invariants deleted. Iteration 2 PASS. Implementation: preserveCorruptStore() - exists+unparseable-or-wrong-shape detection, renameSync to risks.json.corrupt-<epoch-ms>.bak, copyFileSync fallback for Windows EBUSY/EPERM open-handle contention, preserve+warn+proceed posture (fail-closed would abort SARIF/Sentry import loops mid-run). Reads never rename; closeRisk early-return leaves a corrupt file in place. TDD: 3 red observed (byte-identical .bak, wrong-shape, direct-writeRisks route case) + 4 green-at-HEAD pins, then 16/16; full npm test 3945 passing post main-sync. Disclosed residuals: rename+copy double-failure still overwrites; console.warn near-invisible in the extension host (surfacing the .bak path to a vscode.window channel deferred - needs a dep change); non-atomic RMW/locking out of scope (write-time-snapshot boundary comment placed in code for the future locking fix).
+
+
+---
+
+### Entry #583: SUBSTANTIATE - Console risk CRUD durable-store-only mutations (FX924)
+
+**Timestamp**: 2026-08-21T12:40:00Z
+**Phase**: GATE
+**Author**: Governor
+**Risk Grade**: L2
+**Verdict**: PASS
+
+**Content Hash**:
+```
+SHA256("risk-routes-durable-store-377|VETO-PASS-implement-substantiate|2026-08-21")
+= 5f1122693d5309b195ec416b7ed050024b27ceda70fe35b8d902f2f5bfc2db48
+```
+
+**Previous Hash**: `5551d96901960bf6a80f956bfe775ccd3c2857ddcc26d6a28352852425115bb9` (Entry #582 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 9b169e7029a38365e13f969beb8f392b6873f11f087a65165294afc6b0fff0db
+```
+
+**Session Seal (Merkle)**:
+```
+SHA256(chain_hash + "SESSION-SEAL")
+= 58cb93d35e2e7d5183d7b5370d79e35cab8ea542d1be9d1f6336043bbc3a1eb7
+```
+
+## Decision
+
+Full SHIELD mini-cycle closing #377 (Console risk CRUD routes durably promoted the BACKLOG.md fallback projection - the #241 F-6 sibling found by the #368 audit's evidence chain). Audit iteration 1 VETO caught two plan-citation defects before implementation: B1 - the deps wiring site was mis-cited at HubSnapshotService payloadSource (display payload) when the routes actually consume the bundle at ConsoleRouteRegistrar:246 (exactly the ghost-cite class the plan-time citation doctrine exists for); B2 - undeclared test churn (the Partial-cast makeDeps defeats compile enforcement; the auditor counted the affected mutation cases precisely: 10). Iteration 2 PASS with the registrar-fake stub carry. Implemented: public RiskRegisterManager.getStoredRisks(); ApiRouteDeps.getStoredRiskRegister wired HubSnapshotService delegate -> ConsoleRouteRegistrar bundle; POST/PUT/DELETE read the durable store only (GET display view untouched); PUT/DELETE on backlog-derived ids 404 with an explanatory body (dead letters for the UI BY DESIGN - rest-api swallows non-OK - serving raw API consumers); risks.js gates Edit/Del off backlog-derived rows (source==='backlog' OR backlog: prefix dual-check) with a read-only 'from BACKLOG.md' note per the ui-data-point-value-test ruling (no Add affordance exists - FX420 pin - so the projection cliff is not UI-reachable). TDD: stage-1 compile red observed (missing type member + method), then REVERT-CHECK for the behavioral layer - handlers swapped back to the display read made exactly the 3 contract cases fail (stored-vs-display pin, real-manager mkdtemp N+1 repro, backlog-404) - then 25/25 targeted, 64 across all deps-touched suites (6 route-test fakes gained the member), full npm test 3951 passing. Disclosed: API-side projection cliff (raw POST on a backlog-only workspace hides the projection on next refresh) extends the documented #364 precedence contract, does not introduce it; reverse cliff pre-existing; merged provenance view remains future work (#364 audit note).

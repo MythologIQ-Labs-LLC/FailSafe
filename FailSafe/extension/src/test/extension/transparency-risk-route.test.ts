@@ -18,6 +18,10 @@ function makeDeps(initial: Risk[] = [], overrides: Partial<ApiRouteDeps> = {}): 
     rejectIfRemote: () => false,
     broadcast: (data) => { broadcasts.push(data); },
     getRiskRegister: () => store,
+    // #377: mutations read the durable store; in this fake the single array
+    // serves both views unless a case overrides with separate arrays (the
+    // stored-vs-display distinction is the point of the contract-pin case).
+    getStoredRiskRegister: () => store,
     writeRiskRegister: (next: any[]) => {
       const copy = [...next];
       store.length = 0;
@@ -233,5 +237,111 @@ suite('TransparencyRiskRoute (FX110, FX111–FX114)', () => {
     setupTransparencyRiskRoutes(app, deps);
     const captured = await invokeRemote(app, 'DELETE', '/api/v1/risks/r1');
     assert.equal(captured.statusCode, 403);
+  });
+});
+
+// ── #377: mutations read the DURABLE store, never the display fallback ────────
+// (plan-risk-routes-durable-store-377; #241 F-6 sibling on the route path)
+
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { RiskRegisterManager } from '../../roadmap/services/RiskRegisterManager';
+
+suite('#377 durable-store-only route mutations', () => {
+  let harness2: RouteHarness;
+  teardown(async () => { if (harness2) await harness2.stop(); });
+
+  test('contract pin: POST writes stored+1, NOT display+1 (fallback never promoted)', async () => {
+    const stored: Risk[] = [];
+    const fallback: Risk[] = [0, 1, 2].map(i => ({
+      id: `backlog:S${i}`, title: `backlog ${i}`, severity: 'medium',
+      status: 'open', description: '', createdAt: '2026-01-01T00:00:00Z',
+    }));
+    const writes: Risk[][] = [];
+    const { deps } = makeDeps([], {
+      getRiskRegister: () => [...stored, ...fallback],
+      getStoredRiskRegister: () => [...stored],
+      writeRiskRegister: (next: any[]) => { writes.push(next as Risk[]); },
+    });
+    const app = makeApp();
+    setupTransparencyRiskRoutes(app, deps);
+    harness2 = new RouteHarness(app);
+    await harness2.start();
+    const res = await harness2.request({
+      path: '/api/v1/risks', method: 'POST',
+      body: { title: 'real risk', severity: 'high' },
+    });
+    assert.equal(res.status, 200);
+    assert.equal(writes.length, 1);
+    assert.equal(writes[0].length, 1,
+      'the write must contain ONLY the new record — a length of 4 means the display fallback was durably promoted');
+  });
+
+  test('real manager: POST on a backlog-only workspace persists exactly one record', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fx377-routes-'));
+    try {
+      const docsDir = path.join(dir, 'docs');
+      fs.mkdirSync(docsDir, { recursive: true });
+      fs.writeFileSync(path.join(docsDir, 'BACKLOG.md'),
+        ['## Security Blockers', '', '- [ ] [S0] item 0', '- [ ] [S1] item 1', '- [ ] [S2] item 2'].join('\n'), 'utf-8');
+      const mgr = new RiskRegisterManager(dir);
+      const { deps } = makeDeps([], {
+        getRiskRegister: () => mgr.getRisks() as unknown as Risk[],
+        getStoredRiskRegister: () => mgr.getStoredRisks() as unknown as Risk[],
+        writeRiskRegister: (next: any[]) => mgr.writeRisks(next),
+      });
+      const app = makeApp();
+      setupTransparencyRiskRoutes(app, deps);
+      harness2 = new RouteHarness(app);
+      await harness2.start();
+      assert.equal(mgr.getRisks().length, 3, 'precondition: display view shows the fallback');
+      const res = await harness2.request({
+        path: '/api/v1/risks', method: 'POST',
+        body: { title: 'one real risk', severity: 'high' },
+      });
+      assert.equal(res.status, 200);
+      const onDisk = JSON.parse(fs.readFileSync(
+        path.join(dir, '.failsafe', 'risks', 'risks.json'), 'utf-8')).risks;
+      assert.equal(onDisk.length, 1,
+        `exactly ONE record must persist; got ${onDisk.length} (fallback promotion)`);
+    } finally {
+      try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* best effort */ }
+    }
+  });
+
+  test('PUT on a backlog-derived id: 404 with the read-only explanation', async () => {
+    const { deps } = makeDeps([], {
+      getRiskRegister: () => [{
+        id: 'backlog:S0', title: 'b', severity: 'medium', status: 'open',
+        description: '', createdAt: '2026-01-01T00:00:00Z',
+      }],
+      getStoredRiskRegister: () => [],
+    });
+    const app = makeApp();
+    setupTransparencyRiskRoutes(app, deps);
+    harness2 = new RouteHarness(app);
+    await harness2.start();
+    const res = await harness2.request({
+      path: '/api/v1/risks/backlog%3AS0', method: 'PUT', body: { status: 'closed' },
+    });
+    assert.equal(res.status, 404);
+    assert.match(String(res.body.error), /backlog-derived rows are read-only/,
+      'the error body must explain the contract for raw API consumers');
+  });
+
+  test('DELETE on a backlog-derived id: 404, nothing written', async () => {
+    const writes: unknown[] = [];
+    const { deps } = makeDeps([], {
+      getStoredRiskRegister: () => [],
+      writeRiskRegister: (next: any[]) => { writes.push(next); },
+    });
+    const app = makeApp();
+    setupTransparencyRiskRoutes(app, deps);
+    harness2 = new RouteHarness(app);
+    await harness2.start();
+    const res = await harness2.request({ path: '/api/v1/risks/backlog%3AS1', method: 'DELETE' });
+    assert.equal(res.status, 404);
+    assert.equal(writes.length, 0);
   });
 });

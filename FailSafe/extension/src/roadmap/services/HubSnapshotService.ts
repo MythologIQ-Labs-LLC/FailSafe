@@ -147,6 +147,7 @@ export class HubSnapshotService {
   getTransparencyEvents(l: number): Array<Record<string, unknown>> { return this.deps.transparencyLogger.getEvents(l); }
   logTransparencyEvent(e: Record<string, unknown>): void { this.deps.transparencyLogger.log(e); }
   getRiskRegister(): Array<Record<string, unknown>> { return this.deps.riskRegisterManager.getRisks(); }
+  getStoredRiskRegister(): Array<Record<string, unknown>> { return this.deps.riskRegisterManager.getStoredRisks(); }
   writeRiskRegister(r: Array<Record<string, unknown>>): void { this.deps.riskRegisterManager.writeRisks(r); }
 
   recordObservedFileMutation(payload: unknown, broadcast: (d: Record<string, unknown>) => void): void {

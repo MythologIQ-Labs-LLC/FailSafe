@@ -83,8 +83,10 @@ export class RisksRenderer {
             ${this.renderSourcePill(r)}
           </div>
           <div style="display:flex;gap:6px">
-            <button class="cc-btn cc-risk-edit" data-id="${this.esc(r.id)}" style="padding:4px 10px;font-size:0.75rem">Edit</button>
-            <button class="cc-btn cc-btn--danger cc-risk-del" data-id="${this.esc(r.id)}" style="padding:4px 10px;font-size:0.75rem">Del</button>
+            ${this.isBacklogDerived(r)
+              ? `<span style="font-size:0.7rem;color:var(--text-muted);align-self:center">from BACKLOG.md</span>`
+              : `<button class="cc-btn cc-risk-edit" data-id="${this.esc(r.id)}" style="padding:4px 10px;font-size:0.75rem">Edit</button>
+            <button class="cc-btn cc-btn--danger cc-risk-del" data-id="${this.esc(r.id)}" style="padding:4px 10px;font-size:0.75rem">Del</button>`}
           </div>
         </div>
         <div style="color:var(--text-muted);font-size:0.8rem;margin-top:4px">
@@ -93,6 +95,12 @@ export class RisksRenderer {
       </div>`
     ).join('');
     this.bindListActions();
+  }
+
+  // #377: backlog-derived fallback rows are not durable records — a mutation
+  // affordance on them can only 404 (mutations read the durable store).
+  isBacklogDerived(r) {
+    return r.source === 'backlog' || String(r.id || '').startsWith('backlog:');
   }
 
   bindListActions() {

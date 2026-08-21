@@ -39,7 +39,10 @@ export function setupTransparencyRiskRoutes(
       description: String(description || "").slice(0, 2000),
       createdAt: new Date().toISOString(),
     };
-    const risks = deps.getRiskRegister();
+    // #377: mutations read the DURABLE store, never getRiskRegister()'s
+    // display view — reading the BACKLOG.md fallback here durably promoted
+    // the entire projection on the first write (#241 F-6 sibling).
+    const risks = deps.getStoredRiskRegister();
     risks.push(risk);
     deps.writeRiskRegister(risks);
     deps.broadcast({ type: "risk.created", payload: risk });
@@ -50,10 +53,14 @@ export function setupTransparencyRiskRoutes(
   app.put("/api/v1/risks/:id", (req: Request, res: Response) => {
     if (deps.rejectIfRemote(req, res)) return;
     const id = req.params.id;
-    const risks = deps.getRiskRegister();
+    const risks = deps.getStoredRiskRegister();
     const idx = risks.findIndex((r: any) => r.id === id);
     if (idx === -1) {
-      res.status(404).json({ ok: false, error: "risk not found" });
+      // The explanatory body serves raw API consumers; the Console UI no
+      // longer renders mutation affordances on backlog-derived rows.
+      res.status(404).json({ ok: false, error: String(id).startsWith("backlog:")
+        ? "backlog-derived rows are read-only; edit docs/BACKLOG.md"
+        : "risk not found" });
       return;
     }
     const updated = { ...risks[idx], ...req.body, id };
@@ -67,10 +74,12 @@ export function setupTransparencyRiskRoutes(
   app.delete("/api/v1/risks/:id", (req: Request, res: Response) => {
     if (deps.rejectIfRemote(req, res)) return;
     const id = req.params.id;
-    const risks = deps.getRiskRegister();
+    const risks = deps.getStoredRiskRegister();
     const filtered = risks.filter((r: any) => r.id !== id);
     if (filtered.length === risks.length) {
-      res.status(404).json({ ok: false, error: "risk not found" });
+      res.status(404).json({ ok: false, error: String(id).startsWith("backlog:")
+        ? "backlog-derived rows are read-only; edit docs/BACKLOG.md"
+        : "risk not found" });
       return;
     }
     deps.writeRiskRegister(filtered);
