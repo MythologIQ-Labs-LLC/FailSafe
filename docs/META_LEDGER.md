@@ -28596,3 +28596,38 @@ SHA256(chain_hash + "SESSION-SEAL")
 ## Decision
 
 Full SHIELD mini-cycle closing #378 (swallow-and-overwrite siblings from the #368 audit's F7 hunt). Audit iteration 1 VETO on B1 - a stale evidence citation caused by coordinate rot from THIS SESSION'S OWN #380 merge (preserveCorruptStore shifted 46->59; the recite-after-prereq-lands rule enforced against me by my own auditor) - plus advisories all folded: warn template pinned to FX923's three verbatim strings (message 3's ' and ' joint taken verbatim per the iteration-2 carry), predicate excludes arrays, never-throws contract with a throwing-predicate pin (a predicate crash fails toward preservation), ServerRegistry disclosed as a low-hazard fourth sibling on issue #378 rather than scope-expanding. Iteration 2 PASS. Implemented: shared src/roadmap/services/corrupt-file-guard.ts preserveCorruptFile(filePath, isHealthyShape, label); call sites AdapterService.saveConfig (sole configPath writer, covers the ensureDefaultConfig corrupt-treated-as-missing overwrite) and MarketplaceCatalog.persistState (inside the existing try - safe per never-throws; corrupt state cannot fire load-time reconciliation so preservation triggers at the first later persist); FX923 retrofit - RiskRegisterManager.preserveCorruptStore now delegates to the shared guard, byte- and message-identical, with the UNCHANGED 7-case #368 suite as the regression net. TDD: stage-1 compile red (module absent), then guard-only implementation isolated the behavioral red (guard suite 6/6 green while both service preservation cases stayed red), then call-site wiring -> 46/46 across the four suites; full npm test 3961 passing. Rule of three satisfied: three stores, one guard, one posture.
+
+
+---
+
+### Entry #585: SUBSTANTIATE - PR-linkage audit signal quality (FX926)
+
+**Timestamp**: 2026-08-21T14:20:00Z
+**Phase**: GATE
+**Author**: Governor
+**Risk Grade**: L2
+**Verdict**: PASS
+
+**Content Hash**:
+```
+SHA256("linkage-signal-quality-374|PASS-implement-substantiate|2026-08-21")
+= 26e17a0c75f035d7b50cfb0901579e2a1854c33c2ef80dca3a54bac46e4f4c8b
+```
+
+**Previous Hash**: `ac7ef71f131f4c43fbf35252713a667b8ddcf6c0cdcca6977f9e03a535473b77` (Entry #584 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= e6d9d2eddad7466104719183441ccd39d8b3c65abd6ff09cca210de8a23d7e1a
+```
+
+**Session Seal (Merkle)**:
+```
+SHA256(chain_hash + "SESSION-SEAL")
+= 6ce6579d5b5d247c7afd7c9ddf3bdfa1ef782fa5d1b402a201c4d22d9107cc91
+```
+
+## Decision
+
+Full SHIELD mini-cycle closing #374 (PR-linkage audit signal quality; filed from the PR #366 substantiation audit's A-1/A-2). Audit PASS first-iteration with one mandatory wording fix (F1: my claim that two F-7 tests pinned the old detail sentence was FALSE - exactly one assertion pins a SURVIVING substring; the auditor repo-grepped every surface and prescribed tightening test line 109 to the full new sentence for genuine red-first) and endorsements: warn-on-truncated verified as the right posture for an advisory-only control (rulesets re-checked: zero required_status_checks; the degradation is doubly disclosed vs the status quo of provably false fails), knownPrs discriminator structurally sound (shared number sequence, no overlap), and F3's bonus find - 'Closes #<selfPr>' produced the false does-not-exist fail at main and the knownPrs mechanism fixes it as a side effect, now pinned. Implemented: LinkageAuditInput gains knownPrs/truncated; fail branch three-way - pull-request detail (fail), truncated demotion (warn - never fail on unverifiable existence), three-cause generic detail (fail); publish path collects the filtered-out PR numbers and passes the existing truncated flag; disclosure wording acknowledges PRs count toward the window. known===null pure-caller contract preserved and pinned. TDD: compile red observed (both new input fields), F-7 assertion tightened red, then 19/19 suite; full npm test 3967 passing. Advisory-only blast radius re-verified pre-merge.

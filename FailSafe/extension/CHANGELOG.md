@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **The PR-linkage check now says what it means.** Closing a pull-request number is flagged as exactly that (closing keywords only act on issues) instead of the false "does not exist"; on repos past the fetch window, unverifiable references warn instead of failing; and the nonexistent-issue message explains the three possible causes. (#374, FX926)
 - **Corrupt adapter and marketplace files are preserved, not destroyed.** The #368 protection is now a shared guard: a corrupt `adapter/config.json` or marketplace `state.json` is set aside as a `.corrupt-<ts>.bak` before any save overwrites it, instead of being silently replaced with defaults. (#378, FX925)
 - **Adding a risk from the Console no longer swallows the backlog.** The risk CRUD API read the display view (which projects docs/BACKLOG.md when the register is empty) and wrote it back - one POST durably promoted the entire backlog projection as if it were operator-authored records. Mutations now read the durable store only, and backlog-derived rows show a read-only note instead of Edit/Delete buttons that could never work. (#377, FX924)
 - **A corrupt risk register can no longer be silently destroyed.** If `risks.json` exists but is unreadable, any write (imports, closes, Console edits) first preserves the original as `risks.json.corrupt-<ts>.bak` and logs the path - previously the first mutation overwrote the evidence. Reads still degrade gracefully. (#368, FX923)
