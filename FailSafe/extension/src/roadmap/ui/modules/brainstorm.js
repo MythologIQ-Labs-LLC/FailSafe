@@ -16,6 +16,7 @@ import { wireVoiceCallbacks } from './brainstorm-voice-wiring.js';
 import { drawSidebarVisualizer } from './brainstorm-visualizer.js';
 import { wireToolbar, applyViewPrefs } from './brainstorm-toolbar-wiring.js';
 import { loadViewPrefs } from './brainstorm-graph-io.js';
+import { updateDensityStatus } from './brainstorm-density-status.js';
 export class BrainstormRenderer {
   constructor(containerId, deps = {}) {
     this.container = document.getElementById(containerId);
@@ -176,7 +177,15 @@ export class BrainstormRenderer {
       if (prev && nodes.length > prev * 1.3) canvas.fitToView(); // LD6: refit on >30% merge growth
       if (!emptyStateScheduled) {
         emptyStateScheduled = true;
-        queueMicrotask(() => { emptyStateScheduled = false; this._updateEmptyState(); });
+        queueMicrotask(() => {
+          emptyStateScheduled = false;
+          this._updateEmptyState();
+          // Deferred to the same microtask as the empty-state check so a
+          // paired setEdges() call (always issued synchronously alongside
+          // setNodes()) has already landed in this.graph.edges — otherwise
+          // the edge count would read one step stale.
+          updateDensityStatus(document, this.graph.getStats());
+        });
       }
     };
     canvas.setNodes(this.graph.nodes);
