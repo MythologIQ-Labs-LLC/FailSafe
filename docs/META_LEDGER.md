@@ -28491,3 +28491,38 @@ SHA256(chain_hash + "SESSION-SEAL")
 ## Decision
 
 Full SHIELD mini-cycle closing #370 (Audit Log CSV export malformed; filed from the FX921 audit's A4) under the ui-data-point-value-test ruling. Plan plan-audit-csv-export-370.md; independent adversarial audit CONDITIONAL PASS whose mandatory F1 exposed a real cross-cycle fact: live sentinel entries reach the renderer ONLY via the 'verdict' wrap carrying the RAW SentinelVerdict (no client route consumes the FX921-enriched transparency broadcast), and the id-keyed onEvent dedupe drops the later enriched history copy - so the File column and the summarizer subject chain both need the artifactPath alias. All F1-F7 items folded in and implemented: csvField (RFC-4180 unconditional quoting; OWASP leading-char neutralization incl. tab/CR; disclosed mutate-for-safety fidelity residual), exported pure buildCsv (informative columns Decision/Risk/File/Summary/Patterns + quoted raw-JSON tail; File = filePath||artifactPath||path; Type normalizes the live wrap; Summary falls back to the rendered line), WYSIWYG filter-respecting export (arrow-bound matchesFilter per F5; category-still-applies deep-link disclosure and today-only default disclosure per F4), filename carries the active level; summarizer subject chain gains artifactPath (C2.5 - live cards now name the file). TDD: 7 red observed (buildCsv absent + live-subject case) then 29/29; full npm test 3938 passing; Playwright governance-tab + monitor-a11y 10/10. Sibling hunt clean (sole CSV builder). Blob/anchor wire code intentionally untested (jsdom lacks URL.createObjectURL) - declared residual.
+
+
+---
+
+### Entry #582: SUBSTANTIATE - Risk register corrupt-store preservation (FX923)
+
+**Timestamp**: 2026-08-21T11:35:00Z
+**Phase**: GATE
+**Author**: Governor
+**Risk Grade**: L2
+**Verdict**: PASS
+
+**Content Hash**:
+```
+SHA256("risks-corrupt-store-368|VETO-PASS-implement-substantiate|2026-08-21")
+= 57b514f8ff8c496376b7b11db40a5153dc1c81d71397c72e0ee2bcb9d60cd643
+```
+
+**Previous Hash**: `e4462afa49557d8c79c79bd2088e55764609f6935bf7efb88556dd9eb09d99b1` (Entry #581 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 5551d96901960bf6a80f956bfe775ccd3c2857ddcc26d6a28352852425115bb9
+```
+
+**Session Seal (Merkle)**:
+```
+SHA256(chain_hash + "SESSION-SEAL")
+= 2978b0388d857ca24c3a8962a4dfdeaca2a34ea2f86a5f7fdbfed8cca084e8a0
+```
+
+## Decision
+
+Full SHIELD mini-cycle closing #368 (corrupt risks.json silently overwritten; filed from the PR #364 substantiation audit). Audit iteration 1 VETO earned its keep twice over: F1 proved the planned flag design missed a LIVE mutation path (Console /api/v1/risks POST/PUT/DELETE -> HubSnapshotService.writeRiskRegister -> writeRisks on the long-lived ConsoleServer instance) and its evidence chain surfaced a pre-existing #241-F-6 sibling on that same route (getRisks-read promotes the BACKLOG fallback into durable state on write - filed #377); F7 found true swallow-and-overwrite siblings (AdapterService config, MarketplaceCatalog state - filed #378). Remedy (a) adopted: preservation lives INSIDE writeRisks() - single funnel covering every mutation path, flag and its ordering invariants deleted. Iteration 2 PASS. Implementation: preserveCorruptStore() - exists+unparseable-or-wrong-shape detection, renameSync to risks.json.corrupt-<epoch-ms>.bak, copyFileSync fallback for Windows EBUSY/EPERM open-handle contention, preserve+warn+proceed posture (fail-closed would abort SARIF/Sentry import loops mid-run). Reads never rename; closeRisk early-return leaves a corrupt file in place. TDD: 3 red observed (byte-identical .bak, wrong-shape, direct-writeRisks route case) + 4 green-at-HEAD pins, then 16/16; full npm test 3945 passing post main-sync. Disclosed residuals: rename+copy double-failure still overwrites; console.warn near-invisible in the extension host (surfacing the .bak path to a vscode.window channel deferred - needs a dep change); non-atomic RMW/locking out of scope (write-time-snapshot boundary comment placed in code for the future locking fix).
