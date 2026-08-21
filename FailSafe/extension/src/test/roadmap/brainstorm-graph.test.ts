@@ -94,6 +94,26 @@ suite('BrainstormGraph (FX207, FX213)', () => {
     assert.deepEqual(canvas.edges, graph.edges);
   });
 
+  test('FX244 mergeNodes — a duplicate edge is dropped AND counted in duplicatesRemoved', () => {
+    const graph = new BrainstormGraph({ store: makeStore() });
+    graph.mergeNodes(
+      [{ id: 'n1', label: 'A', type: 'Idea' }, { id: 'n2', label: 'B', type: 'Idea' }],
+      [{ source: 'n1', target: 'n2', label: 'rel' }],
+    );
+    // Same edge again, in its own batch — mergeNodes' own dedup (not FX894
+    // dedupeEdges, which only runs on the fetch/seed branch) must reject it.
+    graph.mergeNodes([], [{ source: 'n1', target: 'n2', label: 'rel' }]);
+    assert.equal(graph.edges.length, 1, 'the duplicate must not be double-added');
+    assert.equal(graph.getStats().duplicatesRemoved, 1, 'the manual/voice route must be counted, not only fetch/seed');
+  });
+
+  test('FX244 mergeNodes — a malformed edge is dropped AND counted, matching FX894 dedupeEdges semantics', () => {
+    const graph = new BrainstormGraph({ store: makeStore() });
+    graph.mergeNodes([{ id: 'n1', label: 'A', type: 'Idea' }], [{ source: '', target: 'n1', label: 'bad' }]);
+    assert.equal(graph.edges.length, 0);
+    assert.equal(graph.getStats().duplicatesRemoved, 1);
+  });
+
   test('FX207 undo — reverses a merge', () => {
     const graph = new BrainstormGraph({ store: makeStore() });
     graph.mergeNodes([{ id: 'n1', label: 'A', type: 'Idea' }], []);
@@ -149,6 +169,20 @@ suite('BrainstormGraph (FX207, FX213)', () => {
     assert.equal(graph.edges.length, 1);
   });
 
+  test('FX244 clearAll — resets duplicatesRemoved so the density label cannot disclose a merge against edges that no longer exist', async () => {
+    const graph = new BrainstormGraph({ store: makeStore() });
+    graph.mergeNodes(
+      [{ id: 'n1', label: 'A', type: 'Idea' }, { id: 'n2', label: 'B', type: 'Idea' }],
+      [{ source: 'n1', target: 'n2', label: 'rel' }],
+    );
+    graph.mergeNodes([], [{ source: 'n1', target: 'n2', label: 'rel' }]); // duplicatesRemoved -> 1
+    assert.equal(graph.getStats().duplicatesRemoved, 1);
+    await graph.clearAll();
+    assert.equal(graph.getStats().duplicatesRemoved, 0, 'a graph with 0 edges must not disclose merged duplicates');
+    graph.undo();
+    assert.equal(graph.getStats().duplicatesRemoved, 1, 'undo of clearAll should restore the prior count too');
+  });
+
   test('FX213 onEvent brainstorm.update — merges incoming nodes/edges', () => {
     const graph = new BrainstormGraph({ store: makeStore() });
     graph.onEvent({
@@ -180,6 +214,18 @@ suite('BrainstormGraph (FX207, FX213)', () => {
     graph.onEvent({ type: 'brainstorm.reset' });
     assert.equal(graph.nodes.length, 0);
     assert.equal(graph.edges.length, 0);
+  });
+
+  test('FX244 onEvent brainstorm.reset — also resets duplicatesRemoved', () => {
+    const graph = new BrainstormGraph({ store: makeStore() });
+    graph.mergeNodes(
+      [{ id: 'n1', label: 'A', type: 'Idea' }, { id: 'n2', label: 'B', type: 'Idea' }],
+      [{ source: 'n1', target: 'n2', label: 'rel' }],
+    );
+    graph.mergeNodes([], [{ source: 'n1', target: 'n2', label: 'rel' }]);
+    assert.equal(graph.getStats().duplicatesRemoved, 1);
+    graph.onEvent({ type: 'brainstorm.reset' });
+    assert.equal(graph.getStats().duplicatesRemoved, 0);
   });
 
   test('FX213 submitTranscript — empty transcript returns error without fetch', async () => {
@@ -278,6 +324,21 @@ suite('FX889 BrainstormGraph repository seed', () => {
     graph.clearBrainstormLayer();
     assert.deepEqual(graph.nodes.map((n: { id: string }) => n.id), ['cb-a'], 'codebase node kept, brainstorm node dropped');
     assert.equal(graph.edges.length, 0, 'edge touching the dropped node is pruned');
+  });
+
+  test('FX244 clearBrainstormLayer — resets duplicatesRemoved, undo restores it', async () => {
+    setupStubs(() => ({}));
+    const graph = new BrainstormGraph({ store: makeStore() });
+    graph.mergeNodes(
+      [{ id: 'cb-a', label: 'A', type: 'Architecture', source: 'codebase' }, { id: 'mine', label: 'M', type: 'Idea' }],
+      [{ source: 'cb-a', target: 'mine', label: 'x' }],
+    );
+    graph.mergeNodes([], [{ source: 'cb-a', target: 'mine', label: 'x' }]); // duplicatesRemoved -> 1
+    assert.equal(graph.getStats().duplicatesRemoved, 1);
+    graph.clearBrainstormLayer();
+    assert.equal(graph.getStats().duplicatesRemoved, 0, 'the pruned layer must not disclose a stale merge count');
+    graph.undo();
+    assert.equal(graph.getStats().duplicatesRemoved, 1, 'undo of clearBrainstormLayer should restore the prior count too');
   });
 
   test('fetchGraph: auto-seeds when both server and localStorage are empty', async () => {

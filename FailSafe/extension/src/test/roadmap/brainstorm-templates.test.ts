@@ -63,6 +63,18 @@ suite('brainstorm-templates (FX214)', () => {
     assert.match(html, /class="cc-canvas cc-brainstorm-canvas"/);
   });
 
+  test('FX244 renderShell — includes the density-status disclosure element, starting blank not "0 nodes"', () => {
+    const html = renderShell();
+    assert.match(html, /class="cc-bs-density-status"/);
+    assert.match(html, /role="status"/);
+    assert.match(html, /aria-live="polite"/);
+    // Must not assert a measured "0 nodes" before any measurement has run —
+    // an aria-live reader should never announce a count that was never taken.
+    const tag = html.match(/<span class="cc-bs-density-status"[^>]*>([^<]*)<\/span>/);
+    assert.ok(tag, 'density-status span must exist in renderShell() output');
+    assert.equal(tag?.[1], '');
+  });
+
   test('FX214 renderRightPanel — includes Topology Legend section', () => {
     const html = renderRightPanel();
     assert.match(html, /Topology Legend/);

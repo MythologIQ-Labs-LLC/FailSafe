@@ -69,13 +69,21 @@ function titleFor(subject: string, prNumber: string, next?: ParsedCommit): strin
  * Discover merged PRs from `git log` text as fallback timeline anchors. Returns
  * `pr-<N>` anchors (state `pr`) deduped by PR number, oldest first. Each anchor
  * is a self-valuable record (title + date) even with no program-progress data.
+ *
+ * `maxAnchors` (FailSafe#244 large-repo audit, FailSafe#393): when the caller's
+ * `gitLogText` includes one extra trailing commit beyond its actual window (to
+ * give the last in-window commit a real `next` for `titleFor`'s lookahead — see
+ * TrackerRoute.readGitLog), pass the true window size here so that trailing
+ * commit is used ONLY as lookahead context and never becomes an anchor itself.
+ * Omit for callers passing exactly the commits they want considered (e.g. tests).
  */
-export function discoverMergedPrs(gitLogText: string): TrackerRc[] {
+export function discoverMergedPrs(gitLogText: string, maxAnchors?: number): TrackerRc[] {
   const commits = parseLogLines(gitLogText);
+  const limit = maxAnchors ?? commits.length;
   const byNumber = new Map<number, TrackerRc>();
   // git log is newest-first; iterate so the FIRST (newest) wins the title, but
   // keep the oldest date — we re-sort ascending at the end.
-  for (let i = 0; i < commits.length; i++) {
+  for (let i = 0; i < Math.min(limit, commits.length); i++) {
     const c = commits[i];
     const squash = SQUASH_RE.exec(c.subject);
     const merge = MERGE_RE.exec(c.subject);
@@ -94,7 +102,13 @@ export function discoverMergedPrs(gitLogText: string): TrackerRc[] {
     if (!existing) {
       byNumber.set(n, anchor);
     } else if (c.date && (!existing.note || c.date < existing.note)) {
-      // keep the earlier (merge) date; preserve the already-chosen title
+      // keep the earlier (merge) date; preserve the already-chosen title.
+      // Disclosed limitation (FailSafe#393): "earliest" is earliest AMONG the
+      // commits actually in `gitLogText`. If a bounded caller's window excludes
+      // an even-earlier duplicate of this PR number, this reports a later date
+      // than the true earliest merge — inherent to any windowed read, not
+      // fixable without unbounding it (defeats the window's own purpose).
+      // Covered by the caller's git-log-truncated disclosure when it applies.
       existing.note = c.date;
     }
   }

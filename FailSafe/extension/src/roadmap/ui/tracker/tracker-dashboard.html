@@ -1232,6 +1232,19 @@ function render(data) {
     main.appendChild(note);
   }
 
+  // FailSafe#393 (FailSafe#244 large-repo/deep-history audit) — the API bounds
+  // its git-log read to the most recent commits; a `git-log-truncated` lint
+  // finding means older merged-PR anchors are missing from this timeline. The
+  // `lint` array is otherwise never read by this dashboard, so without this
+  // block the disclosure never reaches the operator.
+  const gitLogTruncated = Array.isArray(d.lint) && d.lint.find((f) => f.code === "git-log-truncated");
+  if (gitLogTruncated) {
+    const note = el("div", "emptycard");
+    note.style.textAlign = "left";
+    note.textContent = gitLogTruncated.detail;
+    main.appendChild(note);
+  }
+
   let secNum = 0;
   const nextIdx = () => pad2(++secNum);
 

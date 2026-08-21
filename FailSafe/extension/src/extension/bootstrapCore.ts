@@ -60,6 +60,16 @@ export async function bootstrapCore(
   // ConsoleLifecycleService watchMetaLedger).
   const mutationBus = new WorkspaceMutationBus();
   const planManager = new PlanManager(workspaceRoot, eventBus, mutationBus);
+  // FailSafe#388 (Relay Cycle 074): planManager is constructor-injected into
+  // ConsoleServer, genesisManager, and governanceRouter, none of which own
+  // it. bootstrapCore constructs it, so bootstrapCore owns its teardown.
+  // This registration covers NORMAL UNLOAD only: VS Code disposes
+  // context.subscriptions when the extension is deactivated, and a rejected
+  // activate() never reaches that point. The activation-failure path is
+  // covered separately by the module-level `planManager` handle in main.ts,
+  // registered in teardownActivatedResources(). Both are safe together
+  // because dispose() is idempotent.
+  context.subscriptions.push({ dispose: () => planManager.dispose() });
 
   // B194: ring buffer subscribes to governance.modeChanged + breakGlass* events.
   const modeTransitionHistory = new ModeTransitionHistory(eventBus);

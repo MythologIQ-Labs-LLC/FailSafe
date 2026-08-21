@@ -130,7 +130,7 @@ describe('failsafe.substrate.run command (FX715)', () => {
       registerSubstrateCommand(mkContext(), bus, fakeConfig(), fakeRun);
       await registeredHandler();
       // Output channel got the start + complete lines + per-module summary.
-      assert.ok(outputChannelLines.some((l) => /starting run/.test(l)), 'starting line missing');
+      assert.ok(outputChannelLines.some((l) => /starting manual run/.test(l)), 'starting line missing');
       assert.ok(outputChannelLines.some((l) => /complete:/.test(l)), 'complete line missing');
       assert.ok(outputChannelLines.some((l) => /secret_scanner/.test(l)), 'secret_scanner line missing');
       assert.ok(outputChannelLines.some((l) => /feature_index_verify/.test(l)), 'feature_index_verify line missing');
