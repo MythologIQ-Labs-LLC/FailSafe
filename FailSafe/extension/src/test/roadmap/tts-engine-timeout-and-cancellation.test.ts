@@ -111,4 +111,35 @@ suite("TtsEngine predict() timeout boundary (#244 Tranche D)", () => {
     assert.strictEqual(tts.audio, currentAudio, 'the stale first speak() must not replace the current audio when it resolves late');
     delete (globalThis as any).Audio;
   });
+
+  test("a superseded attempt settling late must not clobber a newer attempt's synthesizing flag (silent-no-op regression)", async () => {
+    // Reviewer-identified scenario on FailSafe#396: speak('a') -> speak('b')
+    // bumps the token; 'a's stale predict settles and, pre-fix, unconditionally
+    // set _synthesizing = false — clobbering 'b's still-true flag. A stop()
+    // during 'b's pending predict would then see _synthesizing already false
+    // and silently do nothing, reproducing the exact no-op this PR fixes.
+    const piper = new ManualPiper();
+    const tts = await makeReadyEngine(piper, 15000);
+    const events: string[] = [];
+    tts.onStateChange = (s: string) => events.push(s);
+
+    const speakA = tts.speak('a'); // predict() call #1, still pending
+    const speakB = tts.speak('b'); // speak('b') calls stop() first (legitimately supersedes 'a', emitting one idle), then issues predict() call #2
+
+    assert.deepStrictEqual(events, ['idle'], "starting 'b' must supersede 'a' with exactly one idle notification");
+    events.length = 0;
+
+    // 'a's stale predict() finally settles while 'b' is still in flight.
+    piper.resolveFor('a', new Uint8Array([1]));
+    await speakA;
+    assert.deepStrictEqual(events, [], 'the stale settlement of a superseded attempt must not emit any further state change');
+
+    // 'b' is the current attempt and must still be seen as synthesizing —
+    // pre-fix, 'a's late settlement unconditionally cleared _synthesizing here.
+    tts.stop();
+    assert.deepStrictEqual(events, ['idle'], "stop() during b's pending predict() must surface idle, not silently no-op");
+
+    piper.resolveFor('b', new Uint8Array([2])); // let 'b' drain so the test doesn't leave a dangling promise
+    await speakB;
+  });
 });

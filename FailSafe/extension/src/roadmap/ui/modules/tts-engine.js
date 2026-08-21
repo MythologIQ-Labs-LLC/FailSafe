@@ -89,14 +89,16 @@ export class TtsEngine {
     try {
       wav = await withTimeout(this.tts.predict({ text, voiceId: this.voiceId }), this.timeoutMs);
     } catch (err) {
-      this._synthesizing = false;
+      // A superseded attempt must not touch _synthesizing here: a newer
+      // speak() may already be mid-flight and legitimately holds it true.
       if (token !== this._speakToken) return; // superseded by a later stop()/speak(); already handled
+      this._synthesizing = false;
       this._cleanup();
       this.onStateChange?.(err?.isTtsTimeout ? 'error:tts_timeout' : 'idle');
       return;
     }
-    this._synthesizing = false;
     if (token !== this._speakToken) return; // superseded while predict() was in flight; discard stale audio
+    this._synthesizing = false;
 
     try {
       const blob = new Blob([wav], { type: 'audio/wav' });
