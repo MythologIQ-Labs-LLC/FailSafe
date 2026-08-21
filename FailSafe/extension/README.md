@@ -40,9 +40,18 @@ Each integration ships with its own README and its external API names are back-c
 
 ---
 
-**Current Release**: v6.0.2 (2026-08-21)
+**Current Release**: v6.0.3 (2026-08-21)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v6.0.3
+
+- **The Observe-to-Enforce upgrade notice now actually appears.** v6.0.0 changed the governance-mode default and shipped a one-time notice to tell existing installs their behavior had changed. That notice could never fire, so every install predating 6.0.0 that had never explicitly picked a mode moved to Enforce silently. Fixed, and the detection now uses the same technique first-run onboarding already relied on.
+- **The Development Tracker stays responsive on large repositories.** Its PR-cadence read ran an unbounded `git log` on every dashboard load — over a second and past the output buffer on a 150k-commit repository, where it failed silently. It is now bounded, and says so when the window truncates instead of degrading invisibly.
+- **Voice synthesis cannot wedge the Mind Map.** A stalled speech-synthesis call is now bounded and surfaces as an error rather than leaving the voice controls stuck.
+- **Mind Map tells you how dense the graph is.** A live `N nodes · N edges` readout, including when duplicate edges were merged.
+- **The ACP proxy notices if its registry entry is rewritten.** That registry is user-writable, so an outside change could quietly route around governance while still showing the governed name. Activation now distinguishes intact, tampered, missing, and malformed registries — and never blocks activation if the check itself fails.
+- **Audit Log entries link to their resolution.** A warning or block now records the exact ledger row a later decision resolves, by id rather than by guessing from path and timestamp.
 
 ## What's New in v6.0.2
 
