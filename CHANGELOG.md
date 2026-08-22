@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [6.0.3] - 2026-08-21
+## [6.0.3] - 2026-08-22
 
 ### Fixed
 - **The enforce-default upgrade notice now actually appears.** v6.0.0 flipped the governance-mode default from Observe to Enforce and shipped a one-time notice to warn existing installs whose behavior silently changed. That notice could never fire: `EnforcementEngine` inferred "defaulted" from `getConfig()`, which always resolves `governance.mode` to a concrete string because `package.json` declares a schema default — VS Code's `WorkspaceConfiguration.get()` cannot tell "the user chose enforce" from "enforce is the default." Only `.inspect()` can, which `FirstRunModePicker` already used. Every install that predated 6.0.0 and never explicitly set a mode moved from Observe to Enforce with no notification. (#412, FX929)
@@ -15,10 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Watcher handles are released when their owners are.** `planManager` and `trustEngine` were disposed by a component that did not own them; disposal now happens in their bootstrap owner, so teardown releases them correctly. (#388)
 - **The Development Tracker no longer stalls on large repositories.** Its PR-cadence read ran an unbounded, synchronous `git log` on every dashboard load — measured at 1.07s and 8.9MB output on a 150k-commit repository, past the 8MB buffer, where it threw and was silently swallowed. The read is now bounded to the most recent commits, and when the window truncates, the dashboard says so instead of degrading invisibly. (#393)
 - **The ACP registry is checked for drift at activation.** `~/.windsurf/acp/registry.json` is unsigned and user-writable, so an external rewrite could quietly point FailSafe's entry back at the raw agent while Devin still displayed the governed name — a full proxy bypass with no signal. Activation now distinguishes intact, tampered, missing, and malformed registries, and warns when an otherwise-intact entry was installed for a different workspace. Detection failure can never block activation. (#398, FX928)
+- **A single corrupted archived intent no longer aborts activation-time migration.** `migrateIntentSchemaV2()` runs on every activation; one unreadable archived record used to abort the whole sweep, leaving everything after it unmigrated. The bad record is now isolated and the migration completes. (#420)
+- **A forward-written Shadow Genome database now says so.** If the genome store was written by a newer FailSafe than the one running, the integrity sweep ran first and failed - a newer release’s migrations are legitimately absent locally - so the honest "please upgrade" case was masked by a checksum error and the extension fell into silent stub mode. The version check now runs first and reports the real condition. (#414)
 
 ### Added
 - **Mind Map shows how dense the current graph is.** An always-visible `N nodes · N edges` status reports the live graph size, and discloses merged duplicate edges when any occurred. Disclosure only — no cap or threshold is imposed. (#391)
 - **Audit Log records carry an explicit resolution link.** A WARN/BLOCK/ESCALATE entry now records the exact ledger row a later L3 decision resolves, by id rather than by inferring from path and timestamp. Deliberately scoped: no content-based supersession, and an escalation that expired without a decision is reported as undecided rather than as awaiting review, because the ledger cannot evidence the difference. (#367, FX927)
+- **The Audit Log shows whether a warning was ever resolved.** The Governance panel now reads the durable ledger and renders each WARN/BLOCK/ESCALATE record’s resolution state - live, escalated-undecided, approved, or rejected - for the 50 most recent entries. A ledger that is unavailable degrades to an empty list rather than throwing or omitting the field. (#367 tranche 2)
 
 ### Changed
 - **Governance artifact reads go through one versioned boundary.** The remaining `docs/META_LEDGER.md` consumers — the Tracker's governance projection, the substantiate seal watcher, and the governance sidecar — now read through classified adapter envelopes instead of raw text. A ledger that exists but cannot be parsed is reported as malformed rather than silently producing an empty-but-plausible result. (#233, FX892)
