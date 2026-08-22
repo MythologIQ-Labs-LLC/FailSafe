@@ -10,7 +10,7 @@ import { HubSnapshotService } from '../../roadmap/services/HubSnapshotService';
 
 interface CallLog { name: string; t: number; }
 
-function makeFakes(): {
+function makeFakes(opts: { ledgerEntries?: any[] } = {}): {
   calls: CallLog[];
   deps: any;
   hub: HubSnapshotService;
@@ -44,9 +44,20 @@ function makeFakes(): {
     getRecentObservationIds: () => [],
   };
   const trustEngine = { getAllAgents: async () => { stamp('trust.getAllAgents'); return []; } };
-  const ledgerManager = {
-    getDatabase: () => { throw new Error('no-db'); },
-  };
+  // FailSafe#367 tranche 2: when `opts.ledgerEntries` is supplied, the fake
+  // behaves like an initialized LedgerManager so buildAuditResolutionLog()'s
+  // real read path (isAvailable + getRecentEntries) is exercised. Every
+  // pre-existing test omits it and gets the original no-db/unavailable fake
+  // unchanged, so this is additive only.
+  const ledgerManager = opts.ledgerEntries
+    ? {
+        getDatabase: () => { throw new Error('no-db'); },
+        isAvailable: () => true,
+        getRecentEntries: async () => opts.ledgerEntries,
+      }
+    : {
+        getDatabase: () => { throw new Error('no-db'); },
+      };
   const qorelogicManager: any = {
     getL3Queue: () => { stamp('qor.getL3Queue'); return []; },
     getTrustEngine: () => trustEngine,
@@ -288,5 +299,53 @@ suite('HubSnapshotService (Phase 60 §0)', () => {
     const { hub } = makeFakes();
     assert.ok(hub, 'hub constructed without bus');
     assert.doesNotThrow(() => hub.dispose());
+  });
+
+  suite('buildHubSnapshot — auditLog (FailSafe#367 tranche 2)', () => {
+    test('ledger unavailable — auditLog is an empty array, never throws or omits the field', async () => {
+      const { hub } = makeFakes();
+      const snap = await hub.buildHubSnapshot();
+      assert.ok(Array.isArray((snap as any).auditLog), 'auditLog must always be an array');
+      assert.deepEqual((snap as any).auditLog, []);
+    });
+
+    test('projects resolution state per entry and excludes non-resolvable ledger rows', async () => {
+      const entries = [
+        { id: 10, timestamp: 't10', eventType: 'AUDIT_FAIL', verificationResult: 'BLOCK', artifactPath: 'src/a.ts', riskGrade: 'L2', payload: {} },
+        { id: 11, timestamp: 't11', eventType: 'AUDIT_FAIL', verificationResult: 'ESCALATE', artifactPath: 'src/b.ts', riskGrade: 'L3', payload: {} },
+        { id: 12, timestamp: 't12', eventType: 'L3_QUEUED', artifactPath: 'src/b.ts', payload: { sourceLedgerEntryId: 11 } },
+        { id: 13, timestamp: 't13', eventType: 'AUDIT_FAIL', verificationResult: 'WARN', artifactPath: 'src/c.ts', riskGrade: 'L1', payload: {} },
+        { id: 14, timestamp: 't14', eventType: 'L3_QUEUED', artifactPath: 'src/c.ts', payload: { sourceLedgerEntryId: 13 } },
+        { id: 15, timestamp: 't15', eventType: 'L3_APPROVED', artifactPath: 'src/c.ts', payload: { sourceLedgerEntryId: 13 } },
+        { id: 16, timestamp: 't16', eventType: 'SYSTEM_EVENT', payload: {} },
+        { id: 17, timestamp: 't17', eventType: 'AUDIT_FAIL', verificationResult: 'PASS', artifactPath: 'src/d.ts', payload: {} },
+      ];
+      const { hub } = makeFakes({ ledgerEntries: entries });
+      const snap = await hub.buildHubSnapshot();
+      const auditLog = (snap as any).auditLog as Array<Record<string, unknown>>;
+
+      assert.equal(auditLog.length, 3, 'only the three AUDIT_FAIL WARN/BLOCK/ESCALATE rows are resolvable');
+      const byId = new Map(auditLog.map((e) => [e.id, e]));
+      assert.ok(!byId.has(16), 'SYSTEM_EVENT must not appear');
+      assert.ok(!byId.has(17), 'a PASS verdict must not appear');
+
+      assert.equal((byId.get(10) as any).resolution.state, 'LIVE');
+      assert.equal((byId.get(11) as any).resolution.state, 'ESCALATED_UNDECIDED');
+      assert.equal((byId.get(11) as any).resolution.resolvedByEntryId, 12);
+      assert.equal((byId.get(13) as any).resolution.state, 'DECIDED_APPROVED');
+      assert.equal((byId.get(13) as any).resolution.resolvedByEntryId, 15);
+
+      assert.deepEqual(auditLog.map((e) => e.id), [13, 11, 10], 'most-recent ledger id first');
+    });
+
+    test('is deterministic across repeated builds against the same entries', async () => {
+      const entries = [
+        { id: 1, timestamp: 't1', eventType: 'AUDIT_FAIL', verificationResult: 'WARN', artifactPath: 'src/x.ts', payload: {} },
+      ];
+      const { hub } = makeFakes({ ledgerEntries: entries });
+      const first = await hub.buildHubSnapshot();
+      const second = await hub.buildHubSnapshot();
+      assert.deepEqual((first as any).auditLog, (second as any).auditLog);
+    });
   });
 });

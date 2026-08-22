@@ -10,7 +10,10 @@ export class GovernanceRenderer {
     this.container = document.getElementById(containerId);
     this.client = deps.client || null;
     this.verdictLog = [];
-    
+    // FailSafe#367 tranche 2: filter state for the durable, ledger-backed
+    // resolution-status list (separate from the live verdictLog above it).
+    this.resolutionFilter = 'All';
+
     if (this.client) {
       this.client.on('webLlmStatus', () => {
         if (this._lastHub) this.render(this._lastHub);
@@ -38,7 +41,8 @@ export class GovernanceRenderer {
       ${renderIntegrityCard(integrity)}
       ${renderUnattributedCard(unattributed)}
       ${this.renderL3Queue(l3Queue)}
-      ${this.renderAuditLog()}`;
+      ${this.renderAuditLog()}
+      ${this.renderResolutionLog(hubData.auditLog)}`;
     this.bindActions();
     this.bindModeTransitionRows();
     this.highlightDeepLinkedVerdict();
@@ -288,6 +292,70 @@ export class GovernanceRenderer {
     return 'pass';
   }
 
+  /**
+   * FailSafe#367 tranche 2: durable, ledger-backed resolution status for
+   * WARN/BLOCK/ESCALATE findings. Deliberately separate from `renderAuditLog()`
+   * above (which stays live/`verdictLog`-driven and untouched, preserving its
+   * `data-verdict-ts` deep-link contract) because resolution state can only be
+   * computed from `hubData.auditLog` — the durable `soa_ledger` read via
+   * `AuditResolutionProjector`, refreshed on every hub snapshot. A live event
+   * push has no ledger id yet, so it cannot carry a resolution badge.
+   */
+  renderResolutionLog(auditLog) {
+    const entries = Array.isArray(auditLog) ? auditLog : [];
+    const needsAttention = (state) => state === 'LIVE' || state === 'ESCALATED_UNDECIDED';
+    const visible = entries.filter((e) => {
+      if (this.resolutionFilter === 'Needs attention') return needsAttention(e.resolution?.state);
+      if (this.resolutionFilter === 'Resolved') return !needsAttention(e.resolution?.state);
+      return true;
+    });
+    const chips = ['All', 'Needs attention', 'Resolved'].map((key) => `
+      <button class="cc-chip cc-resolution-filter${key === this.resolutionFilter ? ' active' : ''}"
+        data-filter="${key}" style="font-size:0.7rem;padding:2px 8px">${key}</button>`).join('');
+    const rows = visible.map((e) => {
+      const ts = this.esc(String(e.timestamp || ''));
+      const what = this.esc(`${e.eventType || ''}${e.verificationResult ? ` (${e.verificationResult})` : ''}`);
+      const where = this.esc(String(e.artifactPath || 'unknown path'));
+      return `<div class="cc-verdict-resolution" data-resolution-entry-id="${this.esc(String(e.id))}"
+        style="padding:6px 0;border-bottom:1px solid var(--border-rim);font-size:0.8rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <span>${what} — ${where}</span>
+          ${this.resolutionBadge(e.resolution?.state)}
+        </div>
+        <div style="color:var(--text-muted);font-size:0.7rem;margin-top:2px">${ts}</div>
+      </div>`;
+    }).join('');
+    return `
+      <div style="padding:0 10px 8px 10px;margin-top:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;
+            letter-spacing:0.08em">Resolution Status (${entries.length})</div>
+          <div style="display:flex;gap:4px">${chips}</div>
+        </div>
+        <div style="max-height:220px;overflow-y:auto">${rows || `
+          <div style="color:var(--text-muted);font-size:0.82rem;padding:8px 0">
+            ${entries.length ? 'No entries match this filter.' : 'No WARN/BLOCK/ESCALATE findings recorded yet.'}
+          </div>`}</div>
+      </div>`;
+  }
+
+  /**
+   * Maps `AuditResolutionProjector`'s state enum to an operator-facing badge.
+   * `DECIDED_APPROVED` is deliberately styled distinctly from a clean/resolved
+   * color — an accepted-risk override is not the same thing as a verified-
+   * clean re-scan (AuditResolutionProjector.ts authority boundary).
+   */
+  resolutionBadge(state) {
+    const styles = {
+      LIVE: { label: 'Live', bg: 'var(--accent-red)' },
+      ESCALATED_UNDECIDED: { label: 'Escalated · awaiting decision', bg: '#d97706' },
+      DECIDED_APPROVED: { label: 'Approved (override)', bg: '#7c3aed' },
+      DECIDED_REJECTED: { label: 'Rejected', bg: 'var(--text-muted)' },
+    };
+    const cfg = styles[state] || { label: state || 'Unknown', bg: 'var(--text-muted)' };
+    return `<span class="cc-badge" style="background:${cfg.bg};color:#fff;white-space:nowrap">${this.esc(cfg.label)}</span>`;
+  }
+
   bindActions() {
     this.container.querySelector('.cc-gov-verify')?.addEventListener('click', async (e) => {
       if (!this.client) return;
@@ -300,6 +368,16 @@ export class GovernanceRenderer {
       e.target.disabled = true;
       try { await this.client.postAction('/api/actions/approve-l3-batch', { decision: 'APPROVED' }); }
       finally { e.target.disabled = false; }
+    });
+    // FailSafe#367 tranche 2: resolution-status filter chips (All / Needs
+    // attention / Resolved). Re-renders from `this._lastHub` rather than
+    // re-fetching, so the click is instant and never drops the live
+    // verdictLog feed above it.
+    this.container.querySelectorAll('.cc-resolution-filter').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        this.resolutionFilter = chip.dataset.filter || 'All';
+        this.render(this._lastHub || {});
+      });
     });
     // B-OD-8: per-item L3 decide (Open Design create_artifact Approve/Reject).
     this.container.querySelectorAll('.cc-l3-decide').forEach((btn) => {
