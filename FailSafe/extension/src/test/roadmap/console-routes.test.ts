@@ -49,6 +49,7 @@ function makeDeps(overrides: Record<string, unknown> = {}): any {
       getRecentEntries: async () => [],
     },
     shadowGenomeManager: {
+      getAvailability: () => ({ available: true }),
       analyzeFailurePatterns: async () => [],
       getUnresolvedEntries: async () => [],
     },
@@ -158,6 +159,7 @@ suite('Console HTML routes (FX120-FX132)', () => {
     const res = makeRes();
     await GenomeRoute.render(makeReq(), res as any, makeDeps({
       shadowGenomeManager: {
+        getAvailability: () => ({ available: true }),
         analyzeFailurePatterns: async () => [
           { failureMode: 'TEST_ASSERTION_FAILED', count: 7 },
         ],

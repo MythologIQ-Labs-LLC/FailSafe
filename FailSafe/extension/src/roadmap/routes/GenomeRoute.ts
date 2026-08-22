@@ -4,6 +4,12 @@ import { renderEmptyState } from '../../genesis/EmptyStates';
 
 export const GenomeRoute = {
   async render(req: Request, res: Response, deps: RouteDeps): Promise<void> {
+    const availability = deps.shadowGenomeManager.getAvailability();
+    if (!availability.available) {
+      res.send(renderEmptyState('shadow-genome-unavailable', availability.message));
+      return;
+    }
+
     const patterns = await deps.shadowGenomeManager.analyzeFailurePatterns();
     const unresolved = await deps.shadowGenomeManager.getUnresolvedEntries(50);
 

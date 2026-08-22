@@ -7,9 +7,9 @@
 
 import * as vscode from 'vscode';
 import { EventBus } from '../../shared/EventBus';
-import { ShadowGenomeManager, FailurePattern } from '../../qorelogic/shadow/ShadowGenomeManager';
+import { ShadowGenomeManager, FailurePattern, ShadowGenomeAvailability } from '../../qorelogic/shadow/ShadowGenomeManager';
 import { ShadowGenomeEntry, RemediationStatus } from '../../shared/types';
-import { getNonce } from '../../shared/utils/htmlSanitizer';
+import { getNonce, escapeHtml } from '../../shared/utils/htmlSanitizer';
 import {
     renderPatternCards,
     renderEntriesTable,
@@ -102,6 +102,12 @@ export class ShadowGenomePanel {
     }
 
     private async update(): Promise<void> {
+        const availability = this.manager.getAvailability();
+        if (!availability.available) {
+            this.panel.webview.html = this.buildUnavailableHtml(availability);
+            return;
+        }
+
         const [patterns, entries] = await Promise.all([
             this.manager.analyzeFailurePatterns(),
             this.manager.getUnresolvedEntries(50)
@@ -153,6 +159,35 @@ ${body}
     private emptyState(): string {
         return `<div class="empty"><p>No failure patterns recorded.</p>
 <p>Shadow Genome data appears when Sentinel detects and archives agent failures.</p></div>`;
+    }
+
+    /**
+     * Distinct from emptyState(): the Shadow Genome database could not be
+     * read at all (e.g. it was written by a newer FailSafe version than
+     * this runtime supports). This must never render as "no failures" —
+     * that would tell the operator their history is clean when it is
+     * actually unknown.
+     */
+    private buildUnavailableHtml(availability: ShadowGenomeAvailability): string {
+        const nonce = getNonce();
+        const csp = this.panel.webview.cspSource;
+        const reasonLine = availability.reason === 'unsupported-schema'
+            ? `Database schema version ${escapeHtml(availability.currentVersion ?? 'unknown')} is newer than ` +
+              `the ${escapeHtml(availability.latestVersion ?? 'unknown')} this FailSafe version supports. ` +
+              `Upgrade the FailSafe extension to read this Shadow Genome.`
+            : escapeHtml(availability.message ?? 'The Shadow Genome database could not be opened.');
+
+        return `<!DOCTYPE html>
+<html><head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${csp} 'nonce-${nonce}'; script-src 'nonce-${nonce}';">
+<style nonce="${nonce}">${getStyles()}</style>
+</head><body>
+<h1>Shadow Genome</h1>
+<p class="subtitle">Failure patterns and learning constraints</p>
+<button class="refresh" onclick="refresh()">Refresh</button>
+<div class="empty"><p><strong>Unavailable</strong> — not the same as no recorded failures.</p><p>${reasonLine}</p></div>
+<script nonce="${nonce}">${getScript()}</script>
+</body></html>`;
     }
 
     private contentSections(
