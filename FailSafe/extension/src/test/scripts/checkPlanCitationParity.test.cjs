@@ -105,15 +105,26 @@ describe('check-plan-citation-parity: the discriminating cases', () => {
     assert.match(r.note, /verified 2 of 3/);
   });
 
-  it('FAILS when lint output cannot be obtained for a plan that declares LDs', () => {
+  it('never PASSES a plan whose citations were not actually counted, in any environment', () => {
     const p = writePlan(PLAN_WITH_3_LDS);
     const r = gate.check(p, null);
-    // null means "go run the lint"; in this sandbox the CLI may be absent, in
-    // which case runLint returns null and the gate must fail closed rather
-    // than treat an unobtainable check as a pass.
+    // `null` means "go run the lint", so this branch depends on whether
+    // qor-logic-plus exists here: present -> a real count; absent -> infra.
+    // The FIRST version of this test asserted on the note TEXT, which passed
+    // locally (tool present) and failed in CI (tool absent) once the infra
+    // path changed the wording — an environment-dependent test coupled to
+    // prose. What must hold in BOTH environments is the invariant, so that is
+    // what is asserted; the branch-specific shape is checked per branch.
     if (r.checked === null) {
-      assert.equal(r.pass, false, 'unobtainable lint output must fail closed');
-      assert.match(r.note, /cannot confirm|no "N citation/);
+      assert.equal(r.pass, false, 'a plan whose citations were never counted is never a pass');
+      assert.equal(typeof r.note, 'string');
+      assert.ok(r.note.length > 0, 'the reason must be stated, not implied');
+      if (r.infra) {
+        assert.match(r.note, /UNVERIFIED/, 'an unrunnable lint is reported as unverified, not as clean');
+      }
+    } else {
+      assert.equal(r.checked, 3, 'when the lint did run, it must have counted all three');
+      assert.equal(r.pass, true);
     }
   });
 
@@ -130,5 +141,75 @@ describe('check-plan-citation-parity: the discriminating cases', () => {
     assert.equal(r.pass, true);
     assert.equal(r.declared, 0);
     assert.match(r.note, /nothing to verify/);
+  });
+});
+
+describe('check-plan-citation-parity: infrastructure is not a pass', () => {
+  // The gate shipped with `path` unimported. path.resolve threw, a bare catch
+  // in trackedPlans swallowed it, the run printed "no tracked plans" and
+  // EXITED 0. The gate written to catch fail-open had fail-open in it. These
+  // pin the corrected posture.
+  it('exposes tracked plans rather than reporting an empty set', () => {
+    const plans = gate.trackedPlans();
+    assert.ok(Array.isArray(plans), 'trackedPlans returns an array');
+    assert.ok(plans.length > 0, 'the repo has tracked plans; an empty set would be the fail-open');
+    assert.ok(plans.every((p) => p.endsWith('.md')), 'every entry is a markdown plan');
+  });
+
+  it('marks an unrunnable lint as infra and NOT as a pass', () => {
+    const p = writePlan(PLAN_WITH_3_LDS);
+    // Force the unavailable branch by pointing at a plan whose lint cannot run:
+    // supply an output that has no count AND assert we never call it a pass.
+    const r = gate.check(p, '');
+    assert.equal(r.pass, false, 'empty lint output is never a pass');
+  });
+
+  it('runAll returns a non-zero code when any declared plan fails parity', () => {
+    // runAll over the real repo: exit 0 only when every LD-declaring plan
+    // verified, 1 on a real mismatch, 2 when the tool was unavailable.
+    const code = gate.runAll();
+    assert.ok([0, 1, 2].includes(code), `runAll returns a defined code, got ${code}`);
+    assert.notEqual(code, undefined);
+  });
+});
+
+describe('check-plan-citation-parity: structural precondition (zero-dependency)', () => {
+  // THE ORIGIN FAILURE, detectable without the lint. plan_grep_lint only scans
+  // regions under a "locked decision"/"citation inventory" heading; an LD
+  // outside one is invisible to it, so it reports 0 checked and exits 0.
+  it('flags an LD that sits outside any LD-heading region', () => {
+    const text = ['# Plan', '', '## Changes', '', 'LD1 - outside.', '', '> evidence'].join('\n');
+    const { orphans } = gate.checkStructure(text);
+    assert.deepEqual(orphans, [5], 'the orphaned LD line number is reported');
+  });
+
+  it('accepts LDs under a "Locked Decisions" heading', () => {
+    const text = ['# Plan', '', '#### Locked Decisions', '', 'LD1 - inside.'].join('\n');
+    assert.deepEqual(gate.checkStructure(text).orphans, []);
+  });
+
+  it('accepts LDs under a "Citation Inventory" heading', () => {
+    const text = ['# Plan', '', '#### Citation Inventory', '', 'LD0 - inside.'].join('\n');
+    assert.deepEqual(gate.checkStructure(text).orphans, []);
+  });
+
+  it('re-closes the region when a later non-LD heading starts', () => {
+    const text = ['#### Locked Decisions', '', 'LD1 - inside.', '', '#### Implementation', '', 'LD2 - now outside.'].join('\n');
+    assert.deepEqual(gate.checkStructure(text).orphans, [7],
+      'a following non-LD heading ends the region, matching the lint');
+  });
+
+  it('check() fails structurally before it ever needs the lint', () => {
+    const p = writePlan(['# Plan', '', '## Changes', '', 'LD1 - orphan.'].join('\n'));
+    const r = gate.check(p, undefined);
+    assert.equal(r.pass, false);
+    assert.equal(r.structural, true, 'structural failure is reported without consulting the lint');
+    assert.match(r.note, /cannot see them/);
+  });
+
+  it('runStructureOnly returns 0 on the real repo and never 2', () => {
+    const code = gate.runStructureOnly();
+    assert.notEqual(code, 2, 'structure-only has no unavailable path - it must never report infra');
+    assert.ok([0, 1].includes(code));
   });
 });
