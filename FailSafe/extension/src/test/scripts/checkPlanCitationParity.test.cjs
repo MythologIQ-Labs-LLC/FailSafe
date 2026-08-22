@@ -105,15 +105,26 @@ describe('check-plan-citation-parity: the discriminating cases', () => {
     assert.match(r.note, /verified 2 of 3/);
   });
 
-  it('FAILS when lint output cannot be obtained for a plan that declares LDs', () => {
+  it('never PASSES a plan whose citations were not actually counted, in any environment', () => {
     const p = writePlan(PLAN_WITH_3_LDS);
     const r = gate.check(p, null);
-    // null means "go run the lint"; in this sandbox the CLI may be absent, in
-    // which case runLint returns null and the gate must fail closed rather
-    // than treat an unobtainable check as a pass.
+    // `null` means "go run the lint", so this branch depends on whether
+    // qor-logic-plus exists here: present -> a real count; absent -> infra.
+    // The FIRST version of this test asserted on the note TEXT, which passed
+    // locally (tool present) and failed in CI (tool absent) once the infra
+    // path changed the wording — an environment-dependent test coupled to
+    // prose. What must hold in BOTH environments is the invariant, so that is
+    // what is asserted; the branch-specific shape is checked per branch.
     if (r.checked === null) {
-      assert.equal(r.pass, false, 'unobtainable lint output must fail closed');
-      assert.match(r.note, /cannot confirm|no "N citation/);
+      assert.equal(r.pass, false, 'a plan whose citations were never counted is never a pass');
+      assert.equal(typeof r.note, 'string');
+      assert.ok(r.note.length > 0, 'the reason must be stated, not implied');
+      if (r.infra) {
+        assert.match(r.note, /UNVERIFIED/, 'an unrunnable lint is reported as unverified, not as clean');
+      }
+    } else {
+      assert.equal(r.checked, 3, 'when the lint did run, it must have counted all three');
+      assert.equal(r.pass, true);
     }
   });
 
