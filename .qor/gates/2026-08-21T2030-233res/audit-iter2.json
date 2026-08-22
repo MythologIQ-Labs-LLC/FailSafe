@@ -1,0 +1,23 @@
+{
+  "phase": "audit",
+  "session_id": "2026-08-21T2030-233res",
+  "ts": "2026-08-21T22:10:00Z",
+  "target": "plan-233-read-ledger-once.md",
+  "verdict": "VETO",
+  "report_path": ".agent/staging/AUDIT_REPORT.md",
+  "risk_grade": "L2",
+  "target_content_hash": "238f4c2cd4b374be827a7a0bf2ea7cdc07840e17878f3e328f447853b623155e",
+  "findings_categories": [
+    "specification-drift",
+    "coverage-gap"
+  ],
+  "reviews_remediate_gate": null,
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.155.0",
+    "host": "claude-code",
+    "model_family": "opus",
+    "human_oversight": "veto",
+    "ts": "2026-08-21T22:10:00Z"
+  }
+}

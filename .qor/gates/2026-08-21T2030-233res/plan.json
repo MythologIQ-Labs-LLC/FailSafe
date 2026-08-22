@@ -1,0 +1,84 @@
+{
+  "phase": "plan",
+  "ts": "2026-08-21T21:05:00Z",
+  "session_id": "2026-08-21T2030-233res",
+  "plan_path": "plan-233-read-ledger-once.md",
+  "change_class": "feature",
+  "doc_tier": "standard",
+  "required_gate_artifacts": [
+    "plan",
+    "audit",
+    "implement",
+    "substantiate"
+  ],
+  "originating_remediation": "SG grep-list-as-finding (ledger #591) + GH #233 residual tranche",
+  "high_risk_target": false,
+  "phases": [
+    "Phase 1: One raw read, one ladder - export readMetaLedgerRaw + redefine readMetaLedgerArtifact in terms of it",
+    "Phase 2: Diagnostics accepts a pre-read envelope - ConsumerDiagnosticsOptions.ledger",
+    "Phase 3: Builder reads once and shares - build() single raw read; readGovernanceState(text)"
+  ],
+  "ci_commands": [
+    "npx tsc -p ./ --noEmit",
+    "npm run compile",
+    "npm run lint",
+    "npm run test:runner-coverage",
+    "npm test",
+    "npm run test:node",
+    "node --test src/test/scripts/featureIndexClassifier.test.cjs"
+  ],
+  "open_questions": [
+    "None blocking. Slice depth resolved by operator selection: share text + envelope, keep both parsers (zero behavior change).",
+    "Correction carried forward: the selection preview said 'reads: 5 -> 2'; the true post-change count is 3 (MetaLedgerReader + SystemStateReader retain theirs). Savings restated as ~29ms warm."
+  ],
+  "terms": [
+    {
+      "term": "MetaLedgerRead",
+      "home": "FailSafe/extension/src/qorlogic/consumer/consumer-adapter.ts"
+    }
+  ],
+  "boundaries": {
+    "limitations": [
+      "Reduces reads per WorkspaceArtifactBuilder.build() from 5 to 3, not to 1.",
+      "No cross-call caching; HubSnapshotService still builds fresh per call."
+    ],
+    "non_goals": [
+      "No caching/memoization/mtime-keyed state - rejected at plan time as complecting state with time on the CommitCheckRoute enforce path.",
+      "No parser unification; GovernancePhaseTracker.parseMetaLedger stays.",
+      "No change to any artifact's classification semantics."
+    ],
+    "exclusions": [
+      "ConsoleServerHub.ts:79 bounded tail read (#591 F3) - measured 0.4ms vs 24.0ms, must stay bounded.",
+      "GovernancePhaseTracker.ts and ConsoleLifecycleService.ts:98 - not consumers (#591 F1/F2).",
+      "MetaLedgerReader.ts and SystemStateReader.ts - blocked on taxonomy / document-metadata decisions (#591 F4/F5)."
+    ]
+  },
+  "feature_inventory_touches": [
+    {
+      "entry_id": "FX929",
+      "operation": "NEW",
+      "test_path": "src/test/roadmap/WorkspaceArtifactBuilder.test.ts",
+      "test_descriptor": "build() reads docs/META_LEDGER.md exactly 3 times (was 5) while every snapshot field deep-equals the pre-change output on the supported fixture"
+    },
+    {
+      "entry_id": "FX893",
+      "operation": "MODIFIED",
+      "test_path": "src/test/qorlogic/consumer/consumer-diagnostics.test.ts",
+      "test_descriptor": "buildConsumerDiagnostics(root, {ledger}) performs zero ledger reads and reports the injected envelope's state verbatim"
+    },
+    {
+      "entry_id": "FX892",
+      "operation": "MODIFIED",
+      "test_path": "src/test/qorlogic/consumer/consumer-adapter.test.ts",
+      "test_descriptor": "readMetaLedgerArtifact routed through readMetaLedgerRaw yields envelopes equal to the prior path across all six qor-consumer fixtures"
+    }
+  ],
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.155.0",
+    "host": "claude-code",
+    "model_family": "opus",
+    "human_oversight": "pass",
+    "ts": "2026-08-21T21:05:00Z"
+  }
+}
