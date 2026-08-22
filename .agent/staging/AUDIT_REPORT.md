@@ -1,67 +1,59 @@
-# AUDIT REPORT - plan-233-read-ledger-once.md (iteration 3)
+# AUDIT REPORT - plan-233-read-ledger-once.md (iteration 4)
 
-**Session**: 2026-08-21T2030-233res
-**Auditor**: The Qor-logic Judge
-**Mode**: Option B adversarial - `audit_risk_score` returned `option_b_required: true` (flag `high-citation-surface`). Operator-authorized `code-reviewer` subagent receiving only the plan and repo, with no exposure to the author's reasoning.
-**Target**: `plan-233-read-ledger-once.md`
-**Target content hash**: `6291b528dfadcb5b56ebfcf4ec7ac9a2ad82565bbd66eb98a2a0e08ed18f0966`
+**Session**: agent-execution, plan-233-read-ledger-once, iteration 4
+**Auditor**: The Qor-logic Judge (self-adversarial — no Task/Agent tool available in this session to run Option B's isolated `code-reviewer` subagent as iterations 2-3 did; disclosed rather than silently substituted without note)
+**Target**: `.failsafe/governance/plans/plan-233-read-ledger-once.md`
+**Target content hash**: `b7c2199fbbb3b8a26e1ff901b54a5e9c946254ace60d8f05ff16f9d72c232490` (SHA256 of `"plan-233-read-ledger-once|audit-VETO-iter4|2026-08-22"`, genuinely computed via `sha256sum`, not hand-typed)
 **Risk Grade**: L2
 
 ---
 
-# VERDICT: VETO (third consecutive) - routed to `/qor-remediate`, not a fourth plan iteration
+# VERDICT: VETO (fourth consecutive) — do not implement
 
-**Findings categories**: `coverage-gap`, `test-failure`
-
-Ledger: **#594** (verdict + escalation) and **#595** (addendum B3, which arrived from the reviewer after #594 was sealed and is recorded separately rather than folded back).
+**Findings categories**: `coverage-gap` (carried forward unresolved from iteration 3)
 
 ---
 
-## Iteration-2 findings: resolved
+## Scope of this iteration
 
-| # | Finding | Status |
-|---|---|---|
-| V3 | `applyVersionFloor` typed on `ConsumerReadOptions` but honored only `versionStatus` | **RESOLVED** - parameter narrowed to `versionStatus?: QorLogicVersionStatus`, making the wrong call a compile error rather than a documented hazard. Reviewer verified the corrected `@ts-expect-error` pin is sound in BOTH directions: TS2345 (missing required members) under the narrowed type; TS2578 (unused directive) under a widened one. |
-| V4 | Fixture-equivalence test drove no options, so `stale`/`unsupported` were unreachable | **PARTIALLY RESOLVED** - the two named states are now driven correctly, but see B2. |
+Iteration 4 was authorized to make five specific edits and no others: bump `iteration` to 4; add a "Resolution of iteration-3 VETO finding" section for B3 (the parse-count pin); renumber FX929→FX930 and FX930→FX931 throughout; fix LD8's `HubSnapshotService.ts` citation from line 191 to 192; extend the Phase 3 read-count test to spy on `parseMetaLedgerEntries`. All five are made and verified below. The three-phase design itself was declared sound and out of scope for reinterpretation, per the operator's explicit instruction — this audit honors that boundary and does not silently patch B2 to force a PASS.
 
-## B2 - the corrected test still cannot reach `unavailable` (`coverage-gap`) - BLOCKING
+## B3 (`test-failure`, ledger #595) — RESOLVED
 
-The test claims five-state coverage over the six `qor-consumer` fixtures. **All six ship a `META_LEDGER.md`** (verified by enumeration); `missing-optional` and `partial-migration` lack `FEATURE_INDEX.md`, not the ledger. Four states are reachable, not five, and `unavailable` passes without ever being exercised. The subsidiary count is also wrong: a bare no-options call reaches **two** states, not the stated three.
+The plan now spies on `parseMetaLedgerEntries` (imported from `../../qorlogic/meta-ledger-model`, truth-checked as the same module `consumer-adapter.ts:15` imports it from) alongside the existing `fs.readFileSync` spy, in the same Phase 3 test, asserting exactly 1 call on `supported` (was 2) and exactly 0 calls from inside `applyVersionFloor`. This is a falsifying check on the property actually claimed: it fails against the exact regression ledger #595 constructed and empirically verified feasible (substituting `applyVersionFloor(ledgerEnvelope, versionStatus)` with a second `classifyMetaLedgerText(rawLedger.read, rawLedger.sourcePath, {versionStatus})`), which passed every pre-iteration-4 check in the plan while doubling the parse count. FX930 (renumbered from FX929) and DoD Deliverable-1 D4 both now carry the same pin, so it is not test-only prose. **Resolved.**
 
-Sharper rationale than the count alone: the redefinition is **compositionally identical** to what it replaces - old `classifyFile` and new `classifyMetaLedgerText(fsRead(p), p, opts)` reach the same `classifyRead` with the same arguments. So the six-fixture test has exactly ONE real failure mode - a `readMetaLedgerRaw` that botches absent-vs-unreadable discrimination - and no fixture can reach it. FX892's descriptor would lock a test with no failing mode into FEATURE_INDEX.
+## LD8 citation — RESOLVED, independently truth-checked
 
-## B3 - the "parsed once" half of the deliverable has no falsifying check (`test-failure`) - BLOCKING
+`git show HEAD:FailSafe/extension/src/roadmap/services/HubSnapshotService.ts | grep -nE 'const artifacts = new WorkspaceArtifactBuilder'` against `main`@`c7967eb` returns `192:    const artifacts = new WorkspaceArtifactBuilder(d.workspaceRoot, qorLogicVersionStatus).build();` — exact match to the corrected citation. **Resolved.**
 
-The plan asserts the parse reduction in five places. **Every check it declares counts `fs.readFileSync` and nothing else.**
+## FX renumbering — RESOLVED, independently verified
 
-Empirically confirmed against the compiled adapter and a materialized `supported` fixture: replacing the Phase-3 overlay with a second `classifyMetaLedgerText(raw.read, raw.sourcePath, {versionStatus})` yields **2 parses vs 1**, **byte-identical envelopes**, and an **identical read count of 3** - because `classifyMetaLedgerText` consumes an already-attempted `RawArtifactRead` and touches no fs. The substitution passes 100% of the plan's tests while costing +13.9 ms of the 29.3 ms claimed (~47% of the deliverable) on the `CommitCheckRoute:33` commit-blocking path, and deletes the only stated reason `applyVersionFloor` exists.
+`docs/FEATURE_INDEX.md` at `main`@`c7967eb` carries no `FX930` or `FX931` row (`grep -n "^| FX930 \|^| FX931 "` returns no match) — both ids confirmed free. Every FX929/FX930 occurrence in the plan (FX ID COLLISION note, Feature Inventory Touches table, the FX930-descriptor cross-reference in the iteration-2 resolution prose, DoD D3, and the CI Commands line) is renumbered consistently to FX930/FX931. No orphaned reference to the old numbers remains. **Resolved.**
 
-Countermeasure verified feasible: `parseMetaLedgerEntries` is emitted as a plain CommonJS export with `writable=true configurable=true`, so a parse-count spy installs exactly as the read-count spies do.
+## All eight remaining LD citations (LD0-LD7) — independently re-truth-checked this cycle
 
-## B1 - RETRACTED
+Re-run against `main`@`c7967eb` (not merely trusted from iteration 3's record): LD0 (`WorkspaceArtifactBuilder.ts:78`), LD1 (`consumer-adapter.ts:140`), LD2 (`consumer-adapter.ts:184`), LD3 (`consumer-adapter.ts:57`), LD4 (`diagnostics.ts:40`), LD5 (`diagnostics.ts:19`), LD6 (`WorkspaceArtifactBuilder.ts:79`), LD7 (`WorkspaceArtifactBuilder.ts:103`) — all eight `git show HEAD:<path> | grep -nE '<pattern>'` invocations return exactly the plan's cited line number and observed text. **9/9 citations (LD0-LD8) truth-check exactly.**
 
-The reviewer reported the `@ts-expect-error` pin as still carrying an `as never` cast. That defect was real but had already been self-caught and fixed in `01b2253c` before the reviewer re-read; the surviving text is a parenthetical explaining why that form is wrong. Its reasoning corroborates the fix. **Not counted.**
+## B2 (`coverage-gap`, ledger #594/#595) — UNCHANGED, STILL BLOCKING
 
-## Non-blocking (six, all verified)
+This finding was never in scope for iteration 4's authorized edits and remains textually identical to the version that was VETOed. Independently re-verified this cycle, not merely re-read from the ledger record:
 
-Phase 3's import change is unstated while the plan calls out the identical gap for `diagnostics.ts` - its own standard applied asymmetrically; `opts` signature residue in prose and DoD D2; `readMetaLedgerRaw` return shape misstated in one test line and one DoD line (`{read, sourcePath}`, so assertions must target `.read`); "rewound mtime" misapplied to `classifyMetaLedgerText`, which takes a caller-supplied `RawArtifactRead.mtimeIso` and has no file to `utimesSync`; the new `ledger?` injection point has no root affinity; two citation line imprecisions.
+`find src/test/fixtures/qor-consumer -iname "*META_LEDGER*"` against the live fixture tree confirms all six named fixtures (`malformed`, `missing-optional`, `partial-migration`, `stale`, `supported`, `unsupported-version`) ship a `docs/META_LEDGER.md`. None is absent.
 
----
+Phase 1's second test bullet (plan line 95) still reads: *"and `ok`/`malformed`/absent with no options. Confirms the redefinition is behavior-preserving across all five states"* — this claims a no-options call against one of the six named fixtures reaches `absent`. No fixture can produce that state, because none omits the ledger file; `readMetaLedgerArtifact(root)` with no options against any of the six always observes a present `META_LEDGER.md` and therefore never returns `unavailable`. The claim is false against the fixture set named in the same sentence, exactly as ledger #594 found. The FX892 MODIFIED descriptor (plan line 289, unchanged) repeats the same unqualified claim: *"yields envelopes equal to the prior path across all six `qor-consumer` fixtures"* would still lock a "five-state" claim with a demonstrated gap into `FEATURE_INDEX.md`.
 
-## Why this escalated rather than iterated
+Ledger #595's sharper rationale stands independently of the fixture-count issue: `readMetaLedgerRaw` composed with `classifyMetaLedgerText` reaches the identical `classifyRead` call, with identical arguments, that the pre-change `classifyFile` reached — so the six-fixture equivalence test has exactly one real failure mode (a `readMetaLedgerRaw` that botches absent-vs-unreadable discrimination), and no fixture in the named set can reach it.
 
-**Seven instances of one signature across three iterations**, each a check asserted to prove something without exercising what would falsify it: V1 (evidence the lint could not parse - 0 citations truth-checked, passing by non-recognition), V2 (a dropped option), V3 (an option type honored halfway), V4 (test states unreachable), the `as never` pin (discriminated nothing), B2 (a state unreachable from the fixture set), B3 (a deliverable defended by a proxy measurement).
+This is not a cosmetic wording gap. If Phase 1 is implemented literally as written — a TDD-first test asserting "absent" coverage is reached by a no-options call against one of the six named fixtures — the test would either (a) not compile/pass as described because no fixture reaches that branch, forcing an undisclosed deviation from the plan during implementation, or (b) be quietly narrowed to the three states it can actually reach while the prose and the FX892 descriptor keep claiming five/six-fixture coverage — which is the exact "claim asserted without exercising what would falsify it" signature that produced iterations 1-3's VETOs. Neither path is implementable in good faith without either amending this specific bullet (out of this iteration's authorized scope) or accepting a known-false test description into a governance record that exists specifically to prevent that.
 
-`cycle_count_escalator` did not fire: it keys on identical recorded category strings, which varied (`specification-drift` -> `+coverage-gap` -> `coverage-gap`+`test-failure`) while the underlying failure did not. **The mechanical check missing the pattern is itself an instance of the pattern.** Routed on substance.
+## Verified correct — do not relitigate
 
-## Verified correct - do not relitigate
-
-All 9 LD citations resolve exactly. `QorLogicVersionStatus` genuinely imported at `consumer-adapter.ts:19`. The narrowed helper faithfully reproduces `classifyRead` for what it accepts, across every rung including the `undefined` case. Read counts empirically measured on both branches: `supported` 5->3, `malformed` 4->2, with `MetaLedgerReader` reading once (`parseEntries` caches) and `SystemStateReader` genuinely firing (no fixture ships `SYSTEM_STATE.md`). Parse count 2->1. B197 gating preserved. `readGovernanceState(text)` degradation identity holds.
+V1, V2, V3, V4 (iterations 1-2) remain resolved as previously verified: all citations truth-check; `versionStatus` is carried into the shared envelope via `applyVersionFloor`; the helper's parameter is narrowed to `versionStatus?: QorLogicVersionStatus` with a sound `@ts-expect-error` pin (no `as never`); the fixture states `unsupported`/`stale` are now driven by the options that actually reach them. B1 stays retracted (self-caught pre-review). Read-count claims (5→3 `supported`, 4→2 `malformed`) and the underlying B197-gating design remain sound and are not relitigated.
 
 ## Reviewer-declared limits
 
-No execution tool: the wall-clock figures and on-disk ledger size were marked **not verified**. The read counts, by contrast, were empirically measured this cycle and are no longer author-assertion.
+No Task/Agent tool was available in this session to run Option B's isolated adversarial reviewer the way iterations 2-3 did; this audit is a single-author self-review, which is the exact posture that produced the V1/V3/V4 blind spots the operator's own instructions cite. Independent re-verification of every citation and fixture claim against live source (rather than trusting the prior ledger record) is the mitigation applied here, but it does not substitute for a second, differently-biased reader.
 
 ---
 
-_Verdict: VETO. Required next action: `/qor-remediate`. The target is the authoring and self-review habit, not a fourth patch. The #233 slice's design survives intact and is recoverable from this plan._
+_Verdict: VETO. B2 is unresolved and was out of this iteration's authorized scope to fix. Per the operator's explicit instruction for this contingency: STOP, do not implement, do not attempt a fifth plan iteration without checking in._
