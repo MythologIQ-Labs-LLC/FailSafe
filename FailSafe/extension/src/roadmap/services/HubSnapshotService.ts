@@ -30,6 +30,7 @@ import type { IdeActivityTracker } from "./IdeActivityTracker";
 import type { WorkspaceMutationBus, MutationDisposable } from "../../shared/WorkspaceMutationBus";
 import { assembleServiceHubPayload, type HubPayloadSource } from "./hub-payload-assembler";
 import { createHubRevertDeps } from "./hub-revert-deps";
+import { projectResolution } from "../../qorelogic/ledger/AuditResolutionProjector";
 export type UnattributedFileChange = { eventId: string; timestamp: string; type: string; artifactPath?: string; decision?: string; };
 export type RecordCheckpointInput = { checkpointType: string; actor: string; phase: string; status: CheckpointStatus; policyVerdict: string; evidenceRefs: string[]; payload: unknown; };
 export interface HubSnapshotServiceDeps {
@@ -192,10 +193,56 @@ export class HubSnapshotService {
     const phaseTitle = inferActivePhaseTitle(activePlan as unknown as Record<string, unknown>, (l) => this.getRecentCheckpoints(l));
     const runState = d.getIdeTracker()?.getRunState(phaseTitle) ?? { currentPhase: "Plan", activeTasks: [], activeDebugSessions: [] };
     const nodeStatusArr = buildNodeStatus(sentinelStatus as { running?: boolean; filesWatched?: number; queueDepth?: number; [k: string]: unknown }, l3Queue, trust, qorRuntime);
-    return assembleServiceHubPayload(this.payloadSource(), {
-      activePlan, sentinelStatus, l3Queue, trust, qorRuntime, checkpointSummary,
-      governancePhase, artifacts, runState, nodeStatus: nodeStatusArr,
-    });
+    const auditLog = await this.buildAuditResolutionLog();
+    return {
+      ...assembleServiceHubPayload(this.payloadSource(), {
+        activePlan, sentinelStatus, l3Queue, trust, qorRuntime, checkpointSummary,
+        governancePhase, artifacts, runState, nodeStatus: nodeStatusArr,
+      }),
+      auditLog,
+    };
+  }
+
+  /**
+   * FailSafe#367 tranche 2: durable resolution-aware Audit Log read path.
+   * Reads `soa_ledger` directly (never `verdictLog`'s in-memory event tail,
+   * which loses everything on reload) and projects each WARN/BLOCK/ESCALATE
+   * entry's resolution via `AuditResolutionProjector` (append-only; never
+   * mutates the ledger). Bounded to the 50 most recent resolvable entries so
+   * the hub payload stays small; `getRecentEntries(200)` gives the projector
+   * enough trailing history to find L3 decisions that reference older entries.
+   */
+  private async buildAuditResolutionLog(): Promise<Array<Record<string, unknown>>> {
+    const ledgerManager = this.deps.qorelogicManager.getLedgerManager();
+    if (!ledgerManager?.isAvailable?.() || typeof ledgerManager.getRecentEntries !== "function") return [];
+    try {
+      const entries = await ledgerManager.getRecentEntries(200);
+      const resolutions = projectResolution(entries);
+      const byId = new Map(entries.map((e) => [e.id, e]));
+      return resolutions
+        .slice()
+        .sort((a, b) => b.sourceEntryId - a.sourceEntryId)
+        .slice(0, 50)
+        .map((r) => {
+          const entry = byId.get(r.sourceEntryId);
+          return {
+            id: r.sourceEntryId,
+            timestamp: entry?.timestamp ?? null,
+            eventType: entry?.eventType ?? null,
+            verificationResult: entry?.verificationResult ?? null,
+            riskGrade: entry?.riskGrade ?? null,
+            artifactPath: entry?.artifactPath ?? null,
+            payload: entry?.payload ?? {},
+            resolution: {
+              state: r.state,
+              resolvedByEntryId: r.resolvedByEntryId ?? null,
+              reason: r.reason,
+            },
+          };
+        });
+    } catch {
+      return [];
+    }
   }
 
   private payloadSource(): HubPayloadSource {
