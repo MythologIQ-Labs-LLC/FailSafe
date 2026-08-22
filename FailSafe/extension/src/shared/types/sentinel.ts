@@ -62,6 +62,7 @@ export interface SentinelVerdict {
   agentDid: string;
   agentTrustAtVerdict: number;
   artifactPath?: string;
+  artifactHash?: string;
   summary: string;
   details: string;
   matchedPatterns: string[];

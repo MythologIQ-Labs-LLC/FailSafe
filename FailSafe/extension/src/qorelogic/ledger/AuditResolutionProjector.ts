@@ -43,12 +43,23 @@
  * Reintroducing content/pattern-based supersession needs a schema change
  * this tranche does not make: either persisting which matched pattern(s)
  * were decision-driving (not the full matched set) plus per-engine
- * provenance on each entry, or populating the already-declared but
- * currently-unwritten `artifactHash` and anchoring supersession to
- * verified content identity instead of a path string — either way, also
- * excluding synthetic non-file identities (`'unknown'`, `'claim_manifest'`)
- * from any path-based correlation. That is deferred to a follow-up
- * tranche; `FailSafe#367` stays open for it.
+ * provenance on each entry, or anchoring supersession to verified content
+ * identity instead of a path string — either way, also excluding synthetic
+ * non-file identities (`'unknown'`, `'claim_manifest'`) from any
+ * path-based correlation. That is deferred to a follow-up tranche;
+ * `FailSafe#367` stays open for it.
+ *
+ * Half of that second option landed separately (FX930, #367 tranche 3a):
+ * `LedgerEntry.artifactHash` is now populated end-to-end for real file
+ * events (`VerdictEngine.generateVerdict`'s trailing `fileContent` param,
+ * reusing content `VerdictArbiter` already read — never a second disk
+ * read). That makes verified-content identity available on the ledger,
+ * but this projector does not yet consume it: no supersession inference
+ * is reintroduced by that change alone, since the disjoint-pattern-
+ * namespace and decision-driving-pattern problems above are unresolved.
+ * `artifactHash` stays unset for the `'unknown'`/`'claim_manifest'`
+ * synthetic paths and for `FILE_DELETED` events, matching this module's
+ * existing exclusion of those identities.
  *
  * Two further scope notes (also post-review):
  *

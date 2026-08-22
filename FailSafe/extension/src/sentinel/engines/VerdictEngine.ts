@@ -19,12 +19,14 @@ import { TrustEngine } from '../../qorelogic/trust/TrustEngine';
 import { PolicyEngine } from '../../qorelogic/policies/PolicyEngine';
 import { LedgerManager } from '../../qorelogic/ledger/LedgerManager';
 import { ShadowGenomeManager } from '../../qorelogic/shadow/ShadowGenomeManager';
+import { ArtifactHasher } from '../../governance/ArtifactHasher';
 
 export class VerdictEngine {
     private trustEngine: TrustEngine;
     private policyEngine: PolicyEngine;
     private ledgerManager: LedgerManager;
     private shadowGenomeManager?: ShadowGenomeManager;
+    private artifactHasher = new ArtifactHasher();
 
     constructor(
         trustEngine: TrustEngine,
@@ -47,7 +49,15 @@ export class VerdictEngine {
         heuristicResults: HeuristicResult[],
         llmEvaluation?: LLMEvaluation,
         forceDecision?: VerdictDecision,
-        forceSummary?: string
+        forceSummary?: string,
+        // FX930 (FailSafe#367 tranche 3a): the caller's already-read file
+        // content, reused here to populate the previously-unwritten
+        // artifactHash column -- never re-read from disk. Omitted (not
+        // re-derived from filePath) whenever the caller has no content to
+        // offer: FILE_DELETED events, oversized-file skips, malformed-path
+        // fallback ('unknown'), and AGENT_CLAIM existence checks
+        // ('claim_manifest') all correctly leave artifactHash unset.
+        fileContent?: string
     ): Promise<SentinelVerdict> {
         // Determine risk grade
         const riskGrade = this.policyEngine.classifyRisk(filePath);
@@ -84,6 +94,13 @@ export class VerdictEngine {
             : 'did:myth:system:watcher';
         const trustScore = this.trustEngine.getTrustScore(agentDid);
 
+        // FX930: hash whatever content the caller already read -- never a
+        // second disk read here (this repo has been burned by exactly that
+        // class of redundant re-read/re-parse before).
+        const artifactHash = fileContent !== undefined
+            ? this.artifactHasher.hashArtifact(filePath, Buffer.from(fileContent, 'utf8')).hash
+            : undefined;
+
         // Create verdict
         const verdict: SentinelVerdict = {
             id: crypto.randomUUID(),
@@ -97,6 +114,7 @@ export class VerdictEngine {
             agentDid,
             agentTrustAtVerdict: trustScore?.score || 0.35,
             artifactPath: filePath,
+            artifactHash,
             summary,
             details,
             matchedPatterns,
@@ -258,6 +276,7 @@ export class VerdictEngine {
                 agentDid: verdict.agentDid,
                 agentTrustAtAction: verdict.agentTrustAtVerdict,
                 artifactPath: verdict.artifactPath,
+                artifactHash: verdict.artifactHash,
                 riskGrade: verdict.riskGrade,
                 verificationMethod: 'sentinel_heuristic',
                 verificationResult: verdict.decision,
