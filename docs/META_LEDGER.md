@@ -29023,3 +29023,53 @@ Four further non-blocking items, each a smaller instance of the same class: the 
 B2 unchanged and still blocking, with a sharper rationale than #594 recorded: the redefinition is COMPOSITIONALLY IDENTICAL to what it replaces (old `classifyFile` and new `classifyMetaLedgerText(fsRead(p), p, opts)` reach the same `classifyRead` call with the same arguments), so there is no input for which they differ. The six-fixture equivalence test therefore has exactly ONE real failure mode - a `readMetaLedgerRaw` that botches absent-vs-unreadable discrimination - and no fixture can reach it, because all six ship a `META_LEDGER.md`. FX892's MODIFIED descriptor would lock a test with no failing mode into FEATURE_INDEX.
 
 ESCALATION UNCHANGED: `/qor-remediate`, not a fourth plan iteration. B3 sharpens the target rather than moving it. The remediation now has a concrete, verified-feasible countermeasure to generalize: a claim must be tested on the property claimed, not on a proxy that happens to be easy to instrument.
+
+---
+
+### Entry #596: DELIVER - v6.0.3 published to VS Code Marketplace + Open VSX
+
+**Timestamp**: 2026-08-22T00:40:00Z
+**Phase**: DELIVER
+**Author**: Governor
+**Risk Grade**: L2
+**Verdict**: PASS
+
+**Content Hash**:
+```
+SHA256("v6.0.3|deliver-published-both-marketplaces|2026-08-22")
+= 18313e414440345cdc3fcb0a6221633c065115e7a9c60f53f2ef35960b03731d
+```
+
+**Previous Hash**: `70f931b736eb448dcb1e6c36dc8188fe0a26f3bae884d1d75fe1bedb59e2dbdc` (Entry #595 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 5ffb1d60772bd69136a80c9ba92016ab3dda4cd2803129b3f4191400e84949bc
+```
+
+**Session Seal (Merkle)**:
+```
+SHA256(chain_hash + "SESSION-SEAL")
+= SEALED-BY-DELIVERY
+```
+
+## Decision
+
+v6.0.3 PUBLISHED. Tag `v6.0.3` (annotated, `8fced48885fc78ed8fde1eaf3e2e5ea5641f6899`, verified equal to `main` HEAD at tag time). Release Pipeline run 32576176353: SemVer 2.0.0 Gate SUCCESS, Build & Test SUCCESS, Publish to Open VSX SUCCESS, Publish to VS Code Marketplace SUCCESS, Create GitHub Release SUCCESS. The `production` environment gate was approved by the operator's own click; it was NOT API-enacted, and the standing rule that a publish directive authorizes the tag and the push but never the human gate was honored explicitly.
+
+WHY THIS RELEASE EXISTS. `package.json` had sat at 6.0.2 while 58 commits and eventually 18 merged PRs accumulated on `main`. Every fix in it had been merged and individually verified, and none had reached a user. The operator surfaced this directly - "none of the work you just did resulted in a versioned publication" - after a session that repeatedly cleared the PR board without noticing the delivery boundary. Nothing structural was blocking: PUBLISH_BLOCK was `Active: no` and the v6 publish hold was lifted 2026-08-20. The release had simply never been cut. Recorded plainly because the failure mode is durable: merging is not delivering, and a clean PR board reads like completion while users are still running the previous build.
+
+HEADLINE CONTENT - #412. v6.0.0 flipped the governance-mode default from Observe to Enforce and shipped a one-time notice for exactly that case. The notice could never fire: `EnforcementEngine.getGovernanceModeState()` inferred `defaulted` from `configProvider.getConfig()`, which always resolves `governance.mode` to a concrete string because `package.json` declares a schema default, and VS Code's `WorkspaceConfiguration.get()` cannot distinguish an explicit user choice from the schema default - only `.inspect()` can, which `FirstRunModePicker` already used for the identical problem. Every install predating 6.0.0 that had never explicitly set a mode moved to Enforce silently. A user-visible governance change shipped unannounced in 6.0.0, and its fix then sat unshipped until now.
+
+ALSO DELIVERED: #395 TTS `predict()` bounded with a cancel-safe generation token; #388 planManager/trustEngine disposal moved to their bootstrap owner; #391 Mind Map live node/edge density disclosure; #393 Tracker git-log bounded (measured 1.07s and 8.9MB output past the 8MB buffer on a 150k-commit repository, where it threw and was silently swallowed); #398 ACP registry drift detection across intact/tampered/missing/malformed with a cross-workspace warning, never able to block activation; #367 tranches 1 and 2 (resolution-linkage identity, then the durable read path and Audit Log renderer); #233 remaining META_LEDGER consumers onto the versioned adapter; #404 the 22 orphaned .cjs suites (223 cases) now executing under a coverage guard that fails closed; #410 e2e-coverage gate distinguishing a transient subprocess failure from a genuinely missing ref; #420 corrupted-archived-intent isolation in activation-time migration; #414 forward-written Shadow Genome schema reported honestly instead of degrading to silent stub mode.
+
+LATE FOLD, DELIBERATE. Four green PRs (#416, #418, #419, #422) landed after the 6.0.3 notes were written and while the release was being prepared. Because 6.0.3 was not yet tagged, they were folded into this release rather than deferred to a 6.0.4 - the operator had just flagged idle green PRs as unacceptable, and deferring would have recreated the exact backlog this release exists to clear. Release re-dated 2026-08-21 -> 2026-08-22 in both CHANGELOGs and both READMEs after the source release metadata reported the real build date and disagreed with the heading; same treatment v6.0.0 received when its cut slipped a day.
+
+GATES. `release-gate.cjs --preflight` 9/9 PASS, run three times independently - by hand, by the `commit-msg` hook that gates `[RELEASE]` commits, and again against `main` after merge. `tsc -p ./ --noEmit` 0 errors. `check-test-runner-coverage` PASS at 534 files all claimed. `test:node` green. `FEATURE_INDEX` header==reality green. Both release PRs (#417, #423) 13/13 SUCCESS with post-merge state verified on `main` rather than only on the branch.
+
+SKILL DEVIATION, DISCLOSED. `/qor-repo-release` targets Qor-logic-plus itself - `pyproject.toml`, pytest, a private git-tag-only boundary with no package index. FailSafe is a VS Code extension with `release-gate.cjs` and marketplace publish jobs. Its Stage A/B mechanics were not applicable and were not followed; its AUTHORITY BOUNDARY was, and matches the standing operator rules. Following the Python mechanics literally would have been precisely the unverified-assumption failure this session spent its length catching.
+
+PROPAGATION. Marketplace query APIs may lag a successful publish - Open VSX up to roughly 40 minutes for the concrete version, VS Code Marketplace roughly 13. Per the standing rule this is not a failure signal and is never grounds to re-publish or reshape the pipeline; the publish job result is authoritative.
+
+RESIDUAL. 9 issues open at seal: programs #232/#239; audits #242/#243/#244; #233 parked at an escalated plan pending `/qor-remediate` (its FX929 reservation was superseded by #413 and must be renumbered on resume); #367 tranche 2 shipped but the issue remains open for content-based supersession, which needs a schema addition; #326 and #406 are operator/telemetry blocked and cannot be executed autonomously.
