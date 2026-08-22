@@ -29073,3 +29073,43 @@ SKILL DEVIATION, DISCLOSED. `/qor-repo-release` targets Qor-logic-plus itself - 
 PROPAGATION. Marketplace query APIs may lag a successful publish - Open VSX up to roughly 40 minutes for the concrete version, VS Code Marketplace roughly 13. Per the standing rule this is not a failure signal and is never grounds to re-publish or reshape the pipeline; the publish job result is authoritative.
 
 RESIDUAL. 9 issues open at seal: programs #232/#239; audits #242/#243/#244; #233 parked at an escalated plan pending `/qor-remediate` (its FX929 reservation was superseded by #413 and must be renumbered on resume); #367 tranche 2 shipped but the issue remains open for content-based supersession, which needs a schema addition; #326 and #406 are operator/telemetry blocked and cannot be executed autonomously.
+
+---
+
+### Entry #597: GATE TRIBUNAL - plan-233-read-ledger-once (iteration 4) -> VETO (fourth consecutive), B2 still unresolved
+
+**Timestamp**: 2026-08-22T00:00:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: VETO (fourth consecutive) - B3 resolved this cycle; B2 carried forward unresolved and out of this iteration's authorized scope
+
+**Content Hash**:
+```
+SHA256("plan-233-read-ledger-once|audit-VETO-iter4|2026-08-22")
+= b7c2199fbbb3b8a26e1ff901b54a5e9c946254ace60d8f05ff16f9d72c232490
+```
+
+**Previous Hash**: `5ffb1d60772bd69136a80c9ba92016ab3dda4cd2803129b3f4191400e84949bc` (Entry #596 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 594224147b11de45fdae1af139e0461289e4185f5c55c1ce71a234996e96333d
+```
+
+## Decision
+
+VETO. Full report: `.agent/staging/AUDIT_REPORT.md`.
+
+Iteration 4 was authorized to make five specific edits to `plan-233-read-ledger-once.md` and no others: bump `iteration` to 4; add a "Resolution of iteration-3 VETO finding" section for B3 (ledger #595, the unpinned parse count); renumber FX929->FX930 and FX930->FX931 throughout (a second FX929 landed via PR #413/#412 in the interim, confirmed independently: `docs/FEATURE_INDEX.md` carries no FX930/FX931 row at `main`@`c7967eb`); fix LD8's `HubSnapshotService.ts` citation from line 191 to 192 (re-verified: `git show HEAD:...HubSnapshotService.ts | grep -nE 'const artifacts = new WorkspaceArtifactBuilder'` returns `192:...`, exact); extend the Phase 3 read-count test to spy on `parseMetaLedgerEntries`. The design itself — Phase 1/2/3 as specified — was declared sound and explicitly out of scope for reinterpretation.
+
+**B3 RESOLVED.** The Phase 3 test now spies on `parseMetaLedgerEntries` (independently confirmed imported from `../../qorlogic/meta-ledger-model`, the same module `consumer-adapter.ts:15` imports it from) alongside the pre-existing `fs.readFileSync` spy, asserting exactly 1 call on `supported` (was 2) and exactly 0 calls from inside `applyVersionFloor`. This is a falsifying check on the property actually claimed, and it fails against the exact regression #595 constructed and verified feasible (substituting the overlay call for a second `classifyMetaLedgerText`). FX930 (renumbered) and DoD Deliverable-1 D4 both restate the same pin. All 9 LD citations (LD0-LD8) independently re-truth-checked against `main`@`c7967eb` this cycle, not merely trusted from the prior record — all 9 resolve exactly.
+
+**B2 UNCHANGED, STILL BLOCKING.** Independently re-verified against the live fixture tree (`find src/test/fixtures/qor-consumer -iname "*META_LEDGER*"`): all six named fixtures (`malformed`, `missing-optional`, `partial-migration`, `stale`, `supported`, `unsupported-version`) ship a `docs/META_LEDGER.md`; none is absent. Phase 1's second test bullet still reads "and `ok`/`malformed`/absent with no options... behavior-preserving across all five states," which is false against the fixture set named in the same sentence — no no-options call against any of the six can reach `unavailable`, because none of them lacks the ledger file. The FX892 MODIFIED descriptor (unchanged) repeats the same unqualified six-fixture claim. This bullet was not in iteration 4's authorized edit list, and the operator's own instruction was explicit not to weaken or reinterpret any other part of the plan, so it was left as-is rather than silently patched outside scope — which is why B2 remains live rather than resolved.
+
+WHY THIS IS A VETO AND NOT A WAIVED NON-BLOCKER: implementing Phase 1's second test bullet literally, as TDD requires, means writing a test that claims to exercise `unavailable` via a no-options call against one of the six named fixtures. No fixture can satisfy that. Implementing it faithfully would either silently narrow the test's actual coverage below what the bullet and the FX892 descriptor both claim (reproducing the exact "claim asserted without exercising what would falsify it" signature that produced iterations 1-3's VETOs), or require an undisclosed deviation from the plan text during implementation. Neither is acceptable into a governance record whose stated purpose is preventing exactly that failure mode.
+
+MODE DISCLOSURE: no Task/Agent tool was available in this execution session to run Option B's isolated `code-reviewer` subagent the way iterations 2-3 did. This audit is single-author self-review, mitigated by independently re-executing every citation grep and fixture enumeration against live source rather than trusting the prior ledger record, but it is not a substitute for a second, differently-biased reader.
+
+Required next action: none authorized by this cycle. Per the operator's explicit instruction for this exact contingency, execution STOPS here — B2 requires either a plan edit outside this iteration's authorized scope (e.g., a seventh "absent-ledger" fixture, or reframing the Phase 1 bullet's claim to the states the six named fixtures can actually reach) or an explicit owner decision to accept a narrower claim, and no fifth iteration is self-authorized without that check-in. The #233 slice's design remains otherwise sound and is recoverable once B2 is addressed.

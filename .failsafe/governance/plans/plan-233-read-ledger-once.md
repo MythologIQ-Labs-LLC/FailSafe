@@ -1,8 +1,8 @@
 # Plan: collapse WorkspaceArtifactBuilder's redundant META_LEDGER reads (#233 retargeted slice)
 
-**FX ID COLLISION (2026-08-21, post-park)**: PR #413 landed FX929 for the enforce-default upgrade-notice fix (#412). This plan reserved FX929/FX930 while it was in flight. If resumed, renumber to the next free ids and re-verify against docs/FEATURE_INDEX.md before audit -- the id-free check in ledger #594 is stale.
+**FX ID COLLISION (2026-08-21, post-park) — RESOLVED iteration 4**: PR #413 landed FX929 for the enforce-default upgrade-notice fix (#412) after this plan reserved FX929/FX930. Renumbered FX929→FX930 and FX930→FX931 throughout this plan (Feature Inventory Touches table, Definition-of-Done text, and the FX930-descriptor cross-reference in the iteration-2 resolution section below). Both ids re-verified free against `docs/FEATURE_INDEX.md` at `main`@`c7967eb` (2026-08-22) — the stale check in ledger #594 is superseded by this direct re-check, not relied upon.
 
-**iteration**: 3 (iter 1 VETOed — ledger #592, V1 evidence-format + V2 versionStatus drop; iter 2 VETOed — ledger #593, V3 half-honored option type + V4 unreachable test states)
+**iteration**: 4 (iter 1 VETOed — ledger #592, V1 evidence-format + V2 versionStatus drop; iter 2 VETOed — ledger #593, V3 half-honored option type + V4 unreachable test states; iter 3 VETOed — ledger #594/#595, B2 unreachable-fixture-state + B3 unpinned parse count, escalated to `/qor-remediate` per the third-consecutive-VETO rule)
 
 **change_class**: feature
 
@@ -58,9 +58,17 @@ Naively that is two classifications, i.e. two parses — which would give back m
 
 ## Resolution of iteration-2 VETO findings
 
-**V3 (`applyVersionFloor` honored half the type it accepted).** The helper took `ConsumerReadOptions` but consumed only `versionStatus`, so a caller passing `maxAgeMs` would get `ok` where `classifyRead` (line 127) gives `stale`. Fixed by **narrowing the parameter to `versionStatus?: QorLogicVersionStatus`** rather than by adding a stale rung: the overlay exists to reproduce the *floor* short-circuit against an already-classified envelope, and staleness is a property of the read that a derivation cannot honestly recompute. The narrowed type makes the wrong call a compile error instead of a documented hazard, and Phase 1 adds a `@ts-expect-error` pin so widening it back fails the build. `QorLogicVersionStatus` is already imported at `consumer-adapter.ts:19`. FX930's descriptor is restated to the narrowed claim.
+**V3 (`applyVersionFloor` honored half the type it accepted).** The helper took `ConsumerReadOptions` but consumed only `versionStatus`, so a caller passing `maxAgeMs` would get `ok` where `classifyRead` (line 127) gives `stale`. Fixed by **narrowing the parameter to `versionStatus?: QorLogicVersionStatus`** rather than by adding a stale rung: the overlay exists to reproduce the *floor* short-circuit against an already-classified envelope, and staleness is a property of the read that a derivation cannot honestly recompute. The narrowed type makes the wrong call a compile error instead of a documented hazard, and Phase 1 adds a `@ts-expect-error` pin so widening it back fails the build. `QorLogicVersionStatus` is already imported at `consumer-adapter.ts:19`. FX931's descriptor (renumbered from FX930 in iteration 4, see the FX ID COLLISION note above) is restated to the narrowed claim.
 
 **V4 (equivalence test could not reach two of the five states it claimed).** The fixture test called `readMetaLedgerArtifact(root)` with no options while claiming `ok`/`malformed`/`stale`/`unsupported`/absent coverage; the existing suite proves `unsupported` needs `{versionStatus}` and `stale` needs `{maxAgeMs}` plus an mtime rewind. Fixed by driving each state with the options that actually reach it. The read-count test now also names its fixtures and asserts both branches (`supported` 5→3, `malformed` 4→2).
+
+## Resolution of iteration-3 VETO finding (ledger #594/#595)
+
+**B3 (the "parsed once" half of the deliverable had no falsifying check).** Iteration 3 asserted the parse reduction — 2 `parseMetaLedgerEntries` calls to 1 — in five places (the read-once/parse-once rationale for `applyVersionFloor`; the "3 reads, 1 `parseMetaLedgerEntries` (was 2)" baseline below; the Phase-3 code comment "derived, not re-read and not re-parsed"; Deliverable-1 D1; Deliverable-2 D2), but every test in the plan counted only `fs.readFileSync`. Ledger #595 verified this feasible to exploit: replacing the Phase-3 overlay call `applyVersionFloor(ledgerEnvelope, versionStatus)` with the behavior-identical-looking `classifyMetaLedgerText(rawLedger.read, rawLedger.sourcePath, {versionStatus})` passes every read-count and output-equality test in the plan while silently reintroducing a second parse (empirically measured: 2 parses vs. 1, identical `JSON.stringify` output), costing back 13.9 of the 29.3ms this slice claims — roughly 47% of the deliverable — on the `CommitCheckRoute:33` commit-blocking path, and deleting the only stated justification for `applyVersionFloor` existing at all.
+
+Fixed by adding a parse-count assertion alongside the existing read-count assertion in the same Phase 3 test (see the updated bullet below): the test now spies on `parseMetaLedgerEntries` — imported into the test file from `../../qorlogic/meta-ledger-model`, the same module `consumer-adapter.ts` imports it from at line 15 — and asserts it is called exactly once on the `supported` fixture (not twice, which is what the #595-demonstrated substitution would produce) and exactly zero times from inside `applyVersionFloor` itself (which must derive its output from the already-classified envelope, never re-parse). This makes the exact regression #595 constructed and verified feasible fail the test it would otherwise pass, on the property actually claimed rather than a proxy for it.
+
+`parseMetaLedgerEntries` is a plain CommonJS export (`writable=true configurable=true` under this repo's `"module": "commonjs"` `tsconfig.json`), so the parse-count spy installs the same way the existing read-count spies install over `fs.readFileSync` — a direct property-reassignment wrapper on the shared, `require`-cached module object, restored in a `finally`. No new test dependency is introduced.
 
 ## Measured baseline (ledger #591, this repo, 1,751,562-byte ledger)
 
@@ -208,7 +216,7 @@ const artifacts = [
 
 ### Unit Tests (written first)
 
-- `src/test/roadmap/WorkspaceArtifactBuilder.test.ts` — counting `fs.readFileSync` over the **`supported`** fixture, `build()` reads `META_LEDGER.md` exactly **3** times (down from 5), the residual two attributable to `MetaLedgerReader` and `SystemStateReader`; and over the **`malformed`** fixture exactly **2** (down from 4), because `MetaLedgerReader` is skipped when `ledgerReadable` is false. Confirms the reduction empirically on both branches and pins the out-of-scope pair.
+- `src/test/roadmap/WorkspaceArtifactBuilder.test.ts` — counting `fs.readFileSync` over the **`supported`** fixture, `build()` reads `META_LEDGER.md` exactly **3** times (down from 5), the residual two attributable to `MetaLedgerReader` and `SystemStateReader`; and over the **`malformed`** fixture exactly **2** (down from 4), because `MetaLedgerReader` is skipped when `ledgerReadable` is false. Confirms the reduction empirically on both branches and pins the out-of-scope pair. **iteration-3 B3 remediation (ledger #595):** the same test also spies on `parseMetaLedgerEntries` (imported from `../../qorlogic/meta-ledger-model`, the module `consumer-adapter.ts:15` imports it from — a directly-installed property-reassignment spy over the shared CommonJS export, restored in `finally`, mirroring the existing `fs.readFileSync` spy) and asserts it is called **exactly 1 time** on the `supported` fixture (was 2 pre-change) and **exactly 0 times** from a spy scoped around the `applyVersionFloor` call specifically — i.e. the overlay must derive its output from the already-classified envelope without re-parsing. This is the falsifying check B3 found missing: it fails against the #595-demonstrated regression (replacing the `applyVersionFloor` call with a second `classifyMetaLedgerText(rawLedger.read, rawLedger.sourcePath, {versionStatus})`), which passes every other assertion in this bullet while doubling the parse count.
 - `src/test/roadmap/WorkspaceArtifactBuilder.test.ts` — on the `supported` fixture, every field of the returned snapshot (`ledgerSummary`, `ledgerVerdicts`, `ledgerCompletions`, `shieldPhase`, `latestVerdict`, `qorConsumer`) deep-equals the pre-change output captured from the same fixture. Confirms zero behavior change.
 - `src/test/roadmap/WorkspaceArtifactBuilder.test.ts` — with a **below-floor** `versionStatus`, `ledgerSummary` still reports the real entry counts (rendering NOT suppressed) while `qorConsumer`'s `META_LEDGER` row reports `unsupported` and `compatible` is `false`. Confirms both halves of the B197 contract at line 78 simultaneously — the exact pair iteration 1 broke.
 - `src/test/roadmap/WorkspaceArtifactBuilder.test.ts` — on the `malformed` fixture, `ledgerSummary` is the empty summary AND `qorConsumer` reports `META_LEDGER` `malformed` with `compatible === false`. Confirms fail-visible gating still holds when the envelope is shared.
@@ -230,9 +238,9 @@ LD7 — `readGovernanceState` is the unlisted raw consumer (#591 F6, read #2) an
 
 > `git show HEAD:FailSafe/extension/src/roadmap/services/WorkspaceArtifactBuilder.ts | grep -nE 'private readGovernanceState' -> 103:  private readGovernanceState(): { shieldPhase: ShieldPhase; latestVerdict: string | undefined } {`
 
-LD8 — the only production caller is `HubSnapshotService` line 191, and it supplies `versionStatus`, so the floor overlay is live in production rather than test-only.
+LD8 — the only production caller is `HubSnapshotService` line 192, and it supplies `versionStatus`, so the floor overlay is live in production rather than test-only.
 
-> `git show HEAD:FailSafe/extension/src/roadmap/services/HubSnapshotService.ts | grep -nE 'const artifacts = new WorkspaceArtifactBuilder' -> 191:    const artifacts = new WorkspaceArtifactBuilder(d.workspaceRoot, qorLogicVersionStatus).build();`
+> `git show HEAD:FailSafe/extension/src/roadmap/services/HubSnapshotService.ts | grep -nE 'const artifacts = new WorkspaceArtifactBuilder' -> 192:    const artifacts = new WorkspaceArtifactBuilder(d.workspaceRoot, qorLogicVersionStatus).build();`
 
 #### Implementation
 
@@ -275,8 +283,8 @@ private readGovernanceState(text: string | null): { shieldPhase: ShieldPhase; la
 
 | entry_id | operation | test_path | test_descriptor |
 |---|---|---|---|
-| FX929 | NEW | `src/test/roadmap/WorkspaceArtifactBuilder.test.ts` | `build()` reads `docs/META_LEDGER.md` exactly 3 times (was 5) while every snapshot field deep-equals the pre-change output on the `supported` fixture |
-| FX930 | NEW | `src/test/qorlogic/consumer/consumer-adapter.test.ts` | `applyVersionFloor(env, versionStatus)` deep-equals `classifyMetaLedgerText(read, path, {versionStatus})` across {below-floor, meets-floor, undefined} x {ok, malformed, absent}; the narrowed parameter makes a `maxAgeMs` call a compile error, and `stale` stays reachable through the full ladder |
+| FX930 | NEW | `src/test/roadmap/WorkspaceArtifactBuilder.test.ts` | `build()` reads `docs/META_LEDGER.md` exactly 3 times (was 5) and calls `parseMetaLedgerEntries` exactly 1 time (was 2) on the `supported` fixture, zero times inside `applyVersionFloor`, while every snapshot field deep-equals the pre-change output |
+| FX931 | NEW | `src/test/qorlogic/consumer/consumer-adapter.test.ts` | `applyVersionFloor(env, versionStatus)` deep-equals `classifyMetaLedgerText(read, path, {versionStatus})` across {below-floor, meets-floor, undefined} x {ok, malformed, absent}; the narrowed parameter makes a `maxAgeMs` call a compile error, and `stale` stays reachable through the full ladder |
 | FX893 | MODIFIED | `src/test/qorlogic/consumer/consumer-diagnostics.test.ts` | with a below-floor `versionStatus`, the injected-`ledger` path still reports `META_LEDGER` `unsupported` + non-null `qorVersion` and `compatible === false` |
 | FX892 | MODIFIED | `src/test/qorlogic/consumer/consumer-adapter.test.ts` | `readMetaLedgerArtifact` routed through `readMetaLedgerRaw` yields envelopes equal to the prior path across all six `qor-consumer` fixtures |
 
@@ -286,8 +294,8 @@ private readGovernanceState(text: string | null): { shieldPhase: ShieldPhase; la
 
 - **D1**: One `WorkspaceArtifactBuilder.build()` reads `docs/META_LEDGER.md` 3 times instead of 5, collapsing the three seams it owns (the adapter gate, `readGovernanceState`'s raw read, and diagnostics' second adapter call) into one read and one `parseMetaLedgerEntries`, with no change to any reported state.
 - **D2**: `readMetaLedgerRaw(root: string): MetaLedgerRead` and `applyVersionFloor<T>(env, opts)` exported from `src/qorlogic/consumer/consumer-adapter.ts`; `readMetaLedgerArtifact` defined in terms of them; `ConsumerDiagnosticsOptions.ledger?: ArtifactEnvelope<MetaLedgerEntry[]>`; `WorkspaceArtifactBuilder.readGovernanceState(text: string | null)`.
-- **D3**: Ledger entry citing brief `docs/research-brief-233-residual-ledger-consumers-2026-08-21.md` (#591) and the iteration-1 VETO (#592); FEATURE_INDEX FX929 + FX930 added with header counts reconciled (the #408 `header==reality` gate); FX892/FX893 rows updated.
-- **D4**: `WorkspaceArtifactBuilder.test.ts` read-count test observes exactly 3 reads where the pre-change tree observes 5, and the deep-equal snapshot test passes on the `supported` fixture.
+- **D3**: Ledger entry citing brief `docs/research-brief-233-residual-ledger-consumers-2026-08-21.md` (#591) and the iteration-1 VETO (#592); FEATURE_INDEX FX930 + FX931 added with header counts reconciled (the #408 `header==reality` gate); FX892/FX893 rows updated.
+- **D4**: `WorkspaceArtifactBuilder.test.ts` read-count test observes exactly 3 reads where the pre-change tree observes 5, and the deep-equal snapshot test passes on the `supported` fixture. Per the iteration-3 B3 remediation, the same test also observes exactly 1 `parseMetaLedgerEntries` call on `supported` (was 2) and 0 calls from inside `applyVersionFloor` — the falsifying check that fails against the ledger-#595-demonstrated double-parse regression.
 
 ### Deliverable: B197 version-floor semantics preserved on both consumers
 
@@ -311,4 +319,4 @@ private readGovernanceState(text: string | null): { shieldPhase: ShieldPhase; la
 - `npm run test:runner-coverage` — every test file is claimed by a runner (#404 gate).
 - `npm test` — vscode-test suites, including `WorkspaceArtifactBuilder.test.ts` and the consumer suites.
 - `npm run test:node` — the `node --test` `.cjs` suites.
-- `node --test src/test/scripts/featureIndexClassifier.test.cjs` — `FEATURE_INDEX` header==reality after the FX929/FX930 rows.
+- `node --test src/test/scripts/featureIndexClassifier.test.cjs` — `FEATURE_INDEX` header==reality after the FX930/FX931 rows.
