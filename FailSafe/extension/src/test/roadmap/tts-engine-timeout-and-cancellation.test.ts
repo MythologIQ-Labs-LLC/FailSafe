@@ -48,7 +48,7 @@ async function makeReadyEngine(piperInstance: any, timeoutMs = 15000) {
     },
   });
   (globalThis as any).fetch = async () => ({ ok: true, headers: { get: () => 'application/javascript' } });
-  const tts = new TtsEngine(makeStore(), { loadPiperModule: stubLoader });
+  const tts = new TtsEngine(makeStore(), { loadPiperModule: stubLoader, logger: () => {} });
   tts.timeoutMs = timeoutMs;
   await tts.init();
   assert.ok(tts.tts, 'engine must be ready before speak() is exercised');
@@ -188,5 +188,96 @@ suite("TtsEngine predict() timeout boundary (#244 Tranche D)", () => {
 
     piper.resolveFor('b', new Uint8Array([2])); // let 'b' drain so the test doesn't leave a dangling promise
     await speakB;
+  });
+});
+
+// #406: TTS_TIMEOUT_MS (15000ms) was chosen by analogy, not measured against
+// real Piper latency. These pin the measurement that will answer it. The
+// load-bearing case is the TIMEOUT one: an implementation that samples only
+// successful synthesis would omit exactly the slow runs the issue is about,
+// and would pass every other test here.
+suite("TtsEngine synthesis-latency sampling (#406)", () => {
+  test("records duration and text length for a successful synthesis", async () => {
+    const piper = new ManualPiper();
+    const tts = await makeReadyEngine(piper, 5000);
+    let clock = 1000;
+    (tts as any)._now = () => clock;
+
+    const speaking = tts.speak('hello world');
+    clock = 1400;
+    piper.resolveFor('hello world', new Uint8Array([1, 2, 3]));
+    await speaking;
+
+    const samples = tts.getLatencySamples();
+    assert.strictEqual(samples.length, 1, 'one synthesis, one sample');
+    assert.strictEqual(samples[0].ms, 400, 'duration is measured across predict()');
+    assert.strictEqual(samples[0].textLength, 'hello world'.length);
+    assert.strictEqual(samples[0].outcome, 'ok');
+    assert.ok(samples[0].voiceId, 'the voice is recorded — latency is voice-dependent');
+  });
+
+  test("records the TIMEOUT path — the case the issue exists to measure", async () => {
+    const tts = await makeReadyEngine(new NeverResolvingPiper(), 20);
+    const long = 'x'.repeat(800);
+
+    await tts.speak(long);
+
+    const samples = tts.getLatencySamples();
+    assert.strictEqual(samples.length, 1, 'a timed-out synthesis must still be sampled');
+    assert.strictEqual(samples[0].outcome, 'timeout');
+    assert.strictEqual(samples[0].textLength, 800,
+      'text length is what the latency must be correlated against');
+    assert.ok(samples[0].ms >= 20, 'elapsed time is real, not the configured bound');
+  });
+
+  test("tags a superseded attempt distinctly so it can be excluded from the distribution", async () => {
+    const piper = new ManualPiper();
+    const tts = await makeReadyEngine(piper, 5000);
+
+    const first = tts.speak('first');
+    const second = tts.speak('second');           // supersedes the first
+    piper.resolveFor('first', new Uint8Array([1]));
+    piper.resolveFor('second', new Uint8Array([2]));
+    await Promise.all([first, second]);
+
+    const outcomes = tts.getLatencySamples().map((s: any) => s.outcome);
+    assert.ok(outcomes.includes('superseded'),
+      'a discarded attempt is recorded but tagged, not silently dropped nor counted as ok');
+    assert.ok(outcomes.includes('ok'));
+  });
+
+  test("the sample ring is bounded so a long session cannot grow it without limit", async () => {
+    const piper = new ManualPiper();
+    const tts = await makeReadyEngine(piper, 5000);
+    for (let i = 0; i < 55; i++) {
+      const p = tts.speak(`t${i}`);
+      piper.resolveFor(`t${i}`, new Uint8Array([1]));
+      await p;
+    }
+    assert.strictEqual(tts.getLatencySamples().length, 50, 'ring caps at LATENCY_RING_MAX');
+  });
+
+  test("a faulty sample sink cannot break synthesis", async () => {
+    const piper = new ManualPiper();
+    const stubLoader = async () => ({
+      PiperTTS: class {
+        constructor(_o: unknown) { void _o; }
+        init() { return piper.init(); }
+        predict(args: { text: string }) { return piper.predict(args); }
+      },
+    });
+    (globalThis as any).fetch = async () => ({ ok: true, headers: { get: () => 'application/javascript' } });
+    const tts = new TtsEngine(makeStore(), {
+      loadPiperModule: stubLoader,
+      onLatencySample: () => { throw new Error('sink exploded'); },
+    });
+    tts.timeoutMs = 5000;
+    await tts.init();
+
+    const speaking = tts.speak('resilient');
+    piper.resolveFor('resilient', new Uint8Array([1]));
+    await speaking;   // must not reject
+
+    assert.strictEqual(tts.getLatencySamples().length, 1, 'the sample is still retained');
   });
 });
