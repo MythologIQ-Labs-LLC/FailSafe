@@ -23,6 +23,9 @@ import {
 
 class FakeInstaller implements IQorLogicPackageInstaller {
   public installed = true;
+  /** Version reported by verifyInstalledVersion() while `installed` is true. */
+  public installedVersion = '0.31.1';
+  public meetsFloor = true;
   public installResult: QorLogicInstallResult = { ok: true, command: 'python -m pip install qor-logic' };
   public installCalls = 0;
   async isInstalled(): Promise<boolean> { return this.installed; }
@@ -30,9 +33,10 @@ class FakeInstaller implements IQorLogicPackageInstaller {
     this.installCalls += 1;
     return this.installResult;
   }
-  async version(): Promise<string | null> { return '0.31.1'; }
+  async version(): Promise<string | null> { return this.installed ? this.installedVersion : null; }
   async verifyInstalledVersion(): Promise<QorLogicVersionStatus> {
-    return { installed: '0.31.1', minimum: MIN_QOR_LOGIC_VERSION, meetsFloor: true };
+    if (!this.installed) return { installed: null, minimum: MIN_QOR_LOGIC_VERSION, meetsFloor: false };
+    return { installed: this.installedVersion, minimum: MIN_QOR_LOGIC_VERSION, meetsFloor: this.meetsFloor };
   }
 }
 
@@ -306,9 +310,10 @@ suite('QorLogicSkillIngestor: rescan + prerequisites', function () {
     assert.equal(installer.installCalls, 1);
   });
 
-  test('skips install when qor-logic already installed', async () => {
+  test('skips install when qor-logic already installed and meets the version floor', async () => {
     const installer = new FakeInstaller();
     installer.installed = true;
+    installer.meetsFloor = true;
     const resolver = fixedResolver();
     const { run } = makeRun(() => ok());
     const ingestor = new QorLogicSkillIngestor(
@@ -318,6 +323,25 @@ suite('QorLogicSkillIngestor: rescan + prerequisites', function () {
     await ingestor.ingest({ hosts: ['claude'], scope: 'repo' });
 
     assert.equal(installer.installCalls, 0);
+  });
+
+  test('upgrades when qor-logic is present but below the version floor (#243 Tranche D)', async () => {
+    // Regression for a defect where a present-but-stale install was treated as
+    // "already installed" and never upgraded, even though the UI promises
+    // clicking Install/Refresh Skills upgrades to the floor or newer.
+    const installer = new FakeInstaller();
+    installer.installed = true;
+    installer.installedVersion = '0.20.0';
+    installer.meetsFloor = false;
+    const resolver = fixedResolver();
+    const { run } = makeRun(() => ok());
+    const ingestor = new QorLogicSkillIngestor(
+      installer, resolver, withTmpDir(), run, async () => undefined, sinkChannel,
+    );
+
+    await ingestor.ingest({ hosts: ['claude'], scope: 'repo' });
+
+    assert.equal(installer.installCalls, 1, 'a stale-but-present install must trigger an upgrade');
   });
 
   test('aborts with no-python-found when resolver yields nothing', async () => {

@@ -98,8 +98,9 @@ export class QorLogicSkillIngestor {
    * `probePython()` succeeded first.
    */
   async ensurePackageInstalled(): Promise<{ ok: true; command: string } | { ok: false; error: string; stderrTail?: string }> {
-    if (await this.installer.isInstalled()) {
-      return { ok: true, command: 'qor-logic already installed' };
+    const status = await this.installer.verifyInstalledVersion();
+    if (status.meetsFloor) {
+      return { ok: true, command: `qor-logic ${status.installed} already meets floor ${status.minimum}` };
     }
     const result = await this.installer.install();
     if (result.ok) return { ok: true, command: 'python -m pip install --upgrade qor-logic' };
@@ -168,7 +169,8 @@ export class QorLogicSkillIngestor {
   }
 
   private async ensureInstalled(): Promise<{ ok: true } | { ok: false; error: string }> {
-    if (await this.installer.isInstalled()) return { ok: true };
+    const status = await this.installer.verifyInstalledVersion();
+    if (status.meetsFloor) return { ok: true };
     const result = await this.installer.install();
     if (result.ok) return { ok: true };
     return { ok: false, error: result.error ?? 'install-failed' };
