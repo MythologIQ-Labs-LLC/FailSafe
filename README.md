@@ -58,7 +58,7 @@ Under the hood, a **Tier 1 supply-chain CI baseline** (least-privilege workflow 
 
 <div align="center">
 
-**Current Release**: v6.0.3 (2026-08-22)
+**Current Release**: v6.0.4 (2026-08-23)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
 
