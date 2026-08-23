@@ -1,67 +1,73 @@
-# AUDIT REPORT - plan-233-read-ledger-once.md (iteration 3)
+# AUDIT REPORT
 
-**Session**: 2026-08-21T2030-233res
-**Auditor**: The Qor-logic Judge
-**Mode**: Option B adversarial - `audit_risk_score` returned `option_b_required: true` (flag `high-citation-surface`). Operator-authorized `code-reviewer` subagent receiving only the plan and repo, with no exposure to the author's reasoning.
-**Target**: `plan-233-read-ledger-once.md`
-**Target content hash**: `6291b528dfadcb5b56ebfcf4ec7ac9a2ad82565bbd66eb98a2a0e08ed18f0966`
-**Risk Grade**: L2
+**Tribunal Date**: 2026-08-23T13:47:52Z
+**Target**: plan-430-qorlogic-stale-install-upgrade.md
+**Risk Grade**: L1
+**Auditor**: The QoreLogic Judge
 
 ---
 
-# VERDICT: VETO (third consecutive) - routed to `/qor-remediate`, not a fourth plan iteration
-
-**Findings categories**: `coverage-gap`, `test-failure`
-
-Ledger: **#594** (verdict + escalation) and **#595** (addendum B3, which arrived from the reviewer after #594 was sealed and is recorded separately rather than folded back).
+## VERDICT: PASS
 
 ---
 
-## Iteration-2 findings: resolved
+### Executive Summary
 
-| # | Finding | Status |
-|---|---|---|
-| V3 | `applyVersionFloor` typed on `ConsumerReadOptions` but honored only `versionStatus` | **RESOLVED** - parameter narrowed to `versionStatus?: QorLogicVersionStatus`, making the wrong call a compile error rather than a documented hazard. Reviewer verified the corrected `@ts-expect-error` pin is sound in BOTH directions: TS2345 (missing required members) under the narrowed type; TS2578 (unused directive) under a widened one. |
-| V4 | Fixture-equivalence test drove no options, so `stale`/`unsupported` were unreachable | **PARTIALLY RESOLVED** - the two named states are now driven correctly, but see B2. |
+The plan describes a single, minimal, retroactive gate-condition swap in `QorLogicSkillIngestor.ensurePackageInstalled()`/`ensureInstalled()` — replacing a presence-only check (`isInstalled()`) with the already-correct version-floor check (`verifyInstalledVersion().meetsFloor`) that existed but was never consulted. One real violation was found during this tribunal (Section 4 Razor: the modified file's line count) and was remediated before this verdict was rendered, not waived. No other violation across any pass. The diff is exactly the scope the plan describes: two call sites, no new dependency, no new file, no UI surface, no security-sensitive boundary.
 
-## B2 - the corrected test still cannot reach `unavailable` (`coverage-gap`) - BLOCKING
+### Audit Results
 
-The test claims five-state coverage over the six `qor-consumer` fixtures. **All six ship a `META_LEDGER.md`** (verified by enumeration); `missing-optional` and `partial-migration` lack `FEATURE_INDEX.md`, not the ledger. Four states are reachable, not five, and `unavailable` passes without ever being exercised. The subsidiary count is also wrong: a bare no-options call reaches **two** states, not the stated three.
+#### Security Pass
+**Result**: PASS
+No auth logic touched, no credentials read or written, no security check bypassed or disabled, no mock/stubbed authentication. The change concerns package-version comparison for a local pip install, not credential or trust-boundary logic.
 
-Sharper rationale than the count alone: the redefinition is **compositionally identical** to what it replaces - old `classifyFile` and new `classifyMetaLedgerText(fsRead(p), p, opts)` reach the same `classifyRead` with the same arguments. So the six-fixture test has exactly ONE real failure mode - a `readMetaLedgerRaw` that botches absent-vs-unreadable discrimination - and no fixture can reach it. FX892's descriptor would lock a test with no failing mode into FEATURE_INDEX.
+#### Ghost UI Pass
+**Result**: PASS
+No UI element added. `ensurePackageInstalled()`'s `command` string (surfaced by the pre-existing "Install / Refresh Skills" button flow) changes from a generic `'qor-logic already installed'` to `` `qor-logic ${status.installed} already meets floor ${status.minimum}` `` — a more informative string for an existing, already-wired display path (`installSkillsHandler.ts:runPipStep` → `InstallCallbacks`), not a new one.
 
-## B3 - the "parsed once" half of the deliverable has no falsifying check (`test-failure`) - BLOCKING
+#### Section 4 Razor Pass
 
-The plan asserts the parse reduction in five places. **Every check it declares counts `fs.readFileSync` and nothing else.**
+| Check              | Limit | This change                                                                 | Status |
+| ------------------- | ----- | ----------------------------------------------------------------------------- | ------ |
+| Max function lines  | 40    | `ensurePackageInstalled` 11 lines; `ensureInstalled` 6 lines                   | OK     |
+| Max file lines       | 250   | `QorLogicSkillIngestor.ts`: 250 (pre-change) → 252 (initial edit) → **250 (remediated)** | OK, after remediation |
+| Max nesting depth   | 3     | Both changed sites: single `if` inside the method body, depth 1               | OK     |
+| Nested ternaries    | 0     | None introduced                                                               | OK     |
 
-Empirically confirmed against the compiled adapter and a materialized `supported` fixture: replacing the Phase-3 overlay with a second `classifyMetaLedgerText(raw.read, raw.sourcePath, {versionStatus})` yields **2 parses vs 1**, **byte-identical envelopes**, and an **identical read count of 3** - because `classifyMetaLedgerText` consumes an already-attempted `RawArtifactRead` and touches no fs. The substitution passes 100% of the plan's tests while costing +13.9 ms of the 29.3 ms claimed (~47% of the deliverable) on the `CommitCheckRoute:33` commit-blocking path, and deletes the only stated reason `applyVersionFloor` exists.
+**Finding, remediated before verdict (not a pass-time waiver):** the plan's first drafted form of `ensurePackageInstalled()`'s new gate used a 3-line braced `if { return ... }` block. `QorLogicSkillIngestor.ts` was already at exactly 250 lines before this change (verified: `git show c7967eb:.../QorLogicSkillIngestor.ts | wc -l` → 250), so that braced form would have landed the file at 252 — over the 250-line-per-file limit AGENTS.md states with no disclosed exception. The implementation on branch `fix/430-qorlogic-stale-install-upgrade` was corrected to the single-line `if (status.meetsFloor) return {...};` form (matching `ensureInstalled()`'s existing style at the second call site) before this tribunal, restoring the file to exactly 250 lines (verified: `wc -l` on the branch). The plan text was updated to match. This tribunal audits the corrected, single-line form — the one actually present on the PR branch — not the rejected braced draft.
 
-Countermeasure verified feasible: `parseMetaLedgerEntries` is emitted as a plain CommonJS export with `writable=true configurable=true`, so a parse-count spy installs exactly as the read-count spies do.
+#### Dependency Pass
+**Result**: PASS
+No new package, import, or external dependency. Both call sites already depended on `IQorLogicPackageInstaller`; `verifyInstalledVersion()` is an existing method on that same interface (`QorLogicPackageInstaller.ts:58`), already implemented and already unit-tested independently of this change.
 
-## B1 - RETRACTED
+#### Orphan Pass
 
-The reviewer reported the `@ts-expect-error` pin as still carrying an `as never` cast. That defect was real but had already been self-caught and fixed in `01b2253c` before the reviewer re-read; the surviving text is a parenthetical explaining why that form is wrong. Its reasoning corroborates the fix. **Not counted.**
+| File | Entry Point Connection | Status |
+| --- | --- | --- |
+| `extension/src/qorlogic/QorLogicSkillIngestor.ts` | Pre-existing; imported by `extension/installSkillsHandler.ts` (`runPipStep`, `ingest`) and constructed in `bootstrapWorkspace.ts`'s activation path | Connected |
+| `extension/src/test/qorlogic/QorLogicSkillIngestor.test.ts` | Pre-existing; matched by `discoverTestFiles`/the `qorlogic/*.test.js` glob consumed by the direct-mocha CI commands and (transitively, for the `.test.ts` output) `npm test`'s vscode-test suite index | Connected |
 
-## Non-blocking (six, all verified)
+No new file is proposed or added by this plan.
 
-Phase 3's import change is unstated while the plan calls out the identical gap for `diagnostics.ts` - its own standard applied asymmetrically; `opts` signature residue in prose and DoD D2; `readMetaLedgerRaw` return shape misstated in one test line and one DoD line (`{read, sourcePath}`, so assertions must target `.read`); "rewound mtime" misapplied to `classifyMetaLedgerText`, which takes a caller-supplied `RawArtifactRead.mtimeIso` and has no file to `utimesSync`; the new `ledger?` injection point has no root affinity; two citation line imprecisions.
+#### Macro-Level Architecture Pass
+**Result**: PASS
+No new module boundary; both edits stay inside `QorLogicSkillIngestor`'s existing dependency on `IQorLogicPackageInstaller`. No cyclic dependency introduced (`QorLogicSkillIngestor` already depended on `QorLogicPackageInstaller`'s interface; this change consumes one more pre-existing method on the same interface). No reverse-layering: the direction of dependency (ingestor → installer) is unchanged. This change **improves** single-source-of-truth rather than eroding it: it removes a second, presence-only implementation of "is qor-logic usable" (`isInstalled()`, still used correctly and separately by `bootstrapWorkspace.ts` for status display) from the upgrade-decision path, consolidating that decision onto the one method (`verifyInstalledVersion()`) that already encodes the real floor-comparison policy. No cross-cutting concern (logging, auth, config) is duplicated or newly centralized/decentralized.
+
+### Violations Found
+
+| ID | Category | Location | Description |
+| --- | --- | --- | --- |
+| — | — | — | None outstanding. The one Section 4 Razor finding (file-length overage in the plan's first drafted form) was remediated on the implementation branch before this tribunal was convened; the corrected form is what this verdict covers. |
+
+### Required Remediation (if VETO)
+
+N/A — verdict is PASS.
+
+### Verdict Hash
+
+SHA256("plan-430-qorlogic-stale-install-upgrade|audit-PASS|2026-08-23") = 82fd913b69de1c704ce7d5992ec699adc0faa27aea884275ccc739d6f492ad0e
+
+See `docs/META_LEDGER.md` Entry #597 for the chained hash.
 
 ---
-
-## Why this escalated rather than iterated
-
-**Seven instances of one signature across three iterations**, each a check asserted to prove something without exercising what would falsify it: V1 (evidence the lint could not parse - 0 citations truth-checked, passing by non-recognition), V2 (a dropped option), V3 (an option type honored halfway), V4 (test states unreachable), the `as never` pin (discriminated nothing), B2 (a state unreachable from the fixture set), B3 (a deliverable defended by a proxy measurement).
-
-`cycle_count_escalator` did not fire: it keys on identical recorded category strings, which varied (`specification-drift` -> `+coverage-gap` -> `coverage-gap`+`test-failure`) while the underlying failure did not. **The mechanical check missing the pattern is itself an instance of the pattern.** Routed on substance.
-
-## Verified correct - do not relitigate
-
-All 9 LD citations resolve exactly. `QorLogicVersionStatus` genuinely imported at `consumer-adapter.ts:19`. The narrowed helper faithfully reproduces `classifyRead` for what it accepts, across every rung including the `undefined` case. Read counts empirically measured on both branches: `supported` 5->3, `malformed` 4->2, with `MetaLedgerReader` reading once (`parseEntries` caches) and `SystemStateReader` genuinely firing (no fixture ships `SYSTEM_STATE.md`). Parse count 2->1. B197 gating preserved. `readGovernanceState(text)` degradation identity holds.
-
-## Reviewer-declared limits
-
-No execution tool: the wall-clock figures and on-disk ledger size were marked **not verified**. The read counts, by contrast, were empirically measured this cycle and are no longer author-assertion.
-
----
-
-_Verdict: VETO. Required next action: `/qor-remediate`. The target is the authoring and self-review habit, not a fourth patch. The #233 slice's design survives intact and is recoverable from this plan._
+_This verdict is binding._
