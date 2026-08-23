@@ -29259,3 +29259,81 @@ Implemented Phase 1/2/3 of `plan-233-read-ledger-once.md` (iteration 5, PASS at 
 ## Remaining/deferred
 
 Formal `/qor-substantiate` SESSION SEAL (version bump + tag) is **not** performed in this cycle. This repository's own established convention for a slice landing as an open, unmerged PR (observed directly in `docs/GOVERNANCE_INDEX.md`'s record of how PR #405/#407 — earlier #233 slices — were actually sealed) is a GATE-TRIBUNAL merge-substantiation entry recorded **after** merge, individually or in a batch, not a version-bump seal at push time for every commit landing on an open branch. Consistent with that observed convention and with this task's explicit instruction not to merge PR #433, this entry records implementation completion and validation evidence; the merge-time substantiation/seal is left for the operator or a later governed cycle once PR #433 actually merges.
+
+---
+
+### Entry #601: SESSION SEAL - plan-ledger-fork-guard (FX932), RETROSPECTIVE
+
+**Timestamp**: 2026-08-23T21:27:08Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS (sealed with disclosed residuals; see below)
+**Entry ID**: `a68a7fe810ef`
+**Session**: `2026-08-23T1722-ledgerc`
+
+**Content Hash**:
+```
+SHA256(.failsafe/governance/plans/plan-ledger-fork-guard.md)
+= 7123353506b9de11ec17daa28c185d0c34c747a999736bdea3c13a0f3541d49d
+```
+
+**Previous Hash**: `1cebb7573c1b0315911b75580c4be15a6759222a277c0d7bdd8953a420bd5716` (Entry #600 Chain Hash)
+
+**Chain Hash (Merkle seal)**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 7f4fb448aa71fdadd277d3999d27707e30802cab7e22eb4968b05e3e55df5097
+```
+
+## Decision
+
+Seals the FX932 pre-merge ledger fork guard: `check-ledger-fork.cjs`, `checkLedgerFork.test.cjs`, six fixtures, wired into the `standards` CI job. Shipped in PR #436 and released in v6.0.4.
+
+WHAT THE CYCLE FOUND. `verify_post_anchor()` - the surface `governance-health` reports and the one the release gates check - returns exit 0 "post-anchor clean" on a ledger carrying two different Entry #597s, printing `OK Entry #597` twice. The detector that would catch it is disarmed by the condition it detects: `verify()` passes the raw `_duplicate_previous_hash_members` set as the *tolerated* argument to `_report_sequence`, with no attestation requirement and no forward-only cutoff. Emptying the set yields `BREAK Entry #597`. There is no post-merge remedy - `RECONCILED_ENTRIES_RE` is keyed on entry number, so the Entry #447 precedent cannot disambiguate two entries sharing one. Filed upstream as Qor-logic#361.
+
+GOVERNANCE OF THE CYCLE. Five audit iterations under a MANDATED Option B independent reviewer (`audit_risk_score` -> `option_b_required: true`, flags `high-citation-surface`): 5 -> 2 -> 1 -> 1 -> 0 blocking. The solo pass found 2 of the 5 iteration-1 blocking findings; the independent reviewer found B1 (circular baseline), B3 (unrunnable falsifier triple), B5, B9 and N18. Two were unreachable by the author in principle - B9, because the author wrote the `--file` change that created the gap, and N18, because it was a defect in the rule the author had authored.
+
+## Disclosed residuals - this seal is NOT clean
+
+1. **RETROSPECTIVE SEAL; NO VERSION BUMP, NO SEAL TAG.** The governed order is implement -> substantiate -> deliver. This cycle ran implement -> merge -> **release** -> substantiate: the work shipped in v6.0.4 (tag pushed, run 32666694232 at the production gate) before it was sealed. Steps 7.5 / 7.6 / 9.5.5 are therefore deliberately NOT executed - bumping would mint a version for already-shipped code and tagging would duplicate v6.0.4's coverage of this commit range. Recorded as an ordering inversion, not a Phase-75 prerequisite-absent SKIP: the prerequisite (`package.json`) is present, so this is a disclosed deviation the operator can audit, not a sanctioned exit.
+
+2. **FEATURE_INDEX verification gate is structurally vacuous in this repo.** `feature_index_verify` reported `total=0 verified=0 unverified=0 n/a=0` and exited 0 against a 749-row index. Root cause: `parse_index_rows` reads `row.get("verification status")`, and this repo's header names that column `Status`. Every row fails `_normalize_status("")` and is dropped. Falsified directly - renaming only that one header cell yields **742 rows (699 verified, 43 n/a)**. The skill lists this gate as fail-closed on `verified -> unverified` regression; it can never fire here. This is a pass by non-recognition, the same defect class as ledger #592's `0 citation(s) truth-checked`. Verification for this seal was therefore performed manually against the patched parse, NOT taken from the gate.
+
+   **Feature Inventory** (manual, not gate-derived): Total 749 / verified 699 / unverified 0 / n/a 43 / other 7 (`removed` x4, `superseded` x1, `partial` x2 - statuses `_normalize_status` does not recognise). FX932 and FX933 both present and `verified`. Zero unverified: PUBLISH_BLOCK Condition 1 remains satisfied.
+
+3. **`intent_lock verify` reported NO LOCK.** `/qor-implement` Step 5.5 was never executed, so there was no captured intent fingerprint to verify against. Exit 0 here means "nothing to check", not "no drift". Disclosed rather than counted as a passing gate.
+
+4. **A defect survived all five audits and was caught only after merge.** The live-mode coverage pins equality-checked `labels`, `recovered`, `sentinel` and `inspected` - monotonically growing quantities. One legitimate ledger append produced three FORK violations, so the guard would have reddened CI on the very next ledger PR, including the merges this cycle depended on. Every fixture and every live case had used the frozen artifact; nobody asked what happens when the ledger grows correctly. Fixed before merge (commit `78486778`): the counts are reported but never pinned, and the growth-stable degradation check is the `unclassified` entry-number set. Re-verified across the 614 -> 618 growth this session.
+
+5. **`dod_check` WARN**: deliverable "Entry ID enforcement (R4)" declares only `D4.d`, missing D1/D2/D3. Accurate - it is a deferred deliverable carrying a waiver with rationale and a named follow-up phase.
+
+6. **`skill_size_budget_lint` exit 1 (WARN)**: `.claude/skills/qor-substantiate/SKILL.md` at 37.0 KB, over the 25 KB WARN threshold and approaching the 40 KB EXCEEDED boundary.
+
+7. **`data_api_acl_lint` SKIP**: no SQL migrations (Phase 75 disclosed-skip).
+
+8. **Step 7.7 `seal_entry_check` cannot parse this ledger, and its pre-seal pass was coincidental.** It printed `FAIL: no parseable latest entry` while exiting 0 - another exit-code/content mismatch, read as content per this cycle's own rule. Root cause: `ledger_dialect.entry_phase` requires `Phase <N>` in the entry header or a numeric `**Phase**:` line, and this repo does not phase-number its ledger entries. Measured across the tail: #594, #595, #596, #597, #598, #599 and this entry all resolve `phase=None`. **Only #600 resolves, and only because its header text happens to read "Phase 1/2/3 complete"**, matching the header regex by accident. The gate has been inapplicable here throughout, and the single run that appeared to pass did so on a coincidence rather than on a real phase tag. No phase number was invented for this entry to force it green - that would be gaming the check rather than satisfying it.
+
+9. **Step 7.8 `gate_chain_completeness` inspected zero sessions.** It reported `OK: gate-chain complete for 0 sessions (phase >= 52)` and exited 0. Same root cause as residual 8: the walk selects SESSION SEAL entries by phase number, and no entry in this ledger has a resolvable one, so the population is empty. A fail-closed ABORT gate that examines nothing cannot abort. This session's four gate artifacts (`plan`, `audit`, `implement`, `substantiate`) are present under `.qor/gates/2026-08-23T1722-ledgerc/` and were confirmed by direct listing, NOT by this gate.
+
+Residuals 2, 8 and 9 are one family: upstream gates whose selection criteria this repo's conventions do not satisfy, each reporting a state that reads as a pass. Three of the four verification gates this seal depends on were vacuous, and each was caught only by reading the count instead of the exit code - the discipline this cycle exists to install. None is yet filed upstream.
+
+## Gate ladder
+
+intent_lock NO LOCK (residual 3) | skill_admission ADMITTED | gate_skill_matrix 32 skills / 143 handoffs / 0 broken | secret_scanner 0 | procedural_fidelity 0 | dod_check WARN (residual 5) | merge_velocity_check 0 | skill_size_budget_lint WARN (residual 6) | data_api_acl_lint SKIP | instruction_hygiene_lint 0 | doc_integrity strict PASS | governance-index --enforce 0 | hash-integrity gate (Step 6.8) PASS on all four digests.
+
+## Verification
+
+`npm run governance:ledger-fork` exit 0 (inspected 618 entries; labels 599, recovered 532, sentinel 63, unclassified 4). `npm run test:node` 289/289. `npm run lint` 0 errors. Mutation testing: pinning the hex run to 64 reds 6-7 tests, computing the coverage pins without gating the exit code reds 1, grouping on null values reds 3-4, classifying unknown forms as sentinel reds 5.
+
+## Concurrency incidents resolved this session
+
+Entry #597 written independently by PR #432 and PR #433 (#432 merged first; #433's band renumbered #598-#600 and re-chained, verified with `_sequence_breaks(entries, frozenset())` - the raw check, because `verify()`'s tolerated set hides exactly this). FX930 allocated independently by #433 and #434 (#434 renumbered to FX933; a concurrent session first tried FX932, which #436 had just taken). Both are the same structural defect: concurrent branches drawing from a shared sequence with no reservation, each correct in isolation. The ledger half is now guarded pre-merge; the FX-id half is not.
+
+## Upstream filed
+
+Qor-logic **#361** (self-silencing duplicate-previous_hash tolerance), **#362** (`repeated_veto_pattern` emitted but unclassifiable, so it can never close), **#363** (`is_placeholder_pattern` cannot evaluate a non-hex value), **#364** (`closure_enforcer` module form validated on importability alone). Residual 2 above is a fifth, not yet filed.
+
+## Required next action
+
+Operator approves the production gate on run 32666694232 to publish v6.0.4. Outstanding, none of them started: an FX-id collision guard, a governance-root guard, the BACKLOG version-summary substring check, and an upstream report for residual 2.
