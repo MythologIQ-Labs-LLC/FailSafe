@@ -49,7 +49,7 @@
  * path-based correlation. That is deferred to a follow-up tranche;
  * `FailSafe#367` stays open for it.
  *
- * Half of that second option landed separately (FX932, #367 tranche 3a):
+ * Half of that second option landed separately (FX933, #367 tranche 3a):
  * `LedgerEntry.artifactHash` is now populated end-to-end for real file
  * events (`VerdictEngine.generateVerdict`'s trailing `fileContent` param,
  * reusing content `VerdictArbiter` already read — never a second disk

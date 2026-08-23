@@ -1,0 +1,91 @@
+{
+  "phase": "remediate",
+  "session_id": "2026-08-23T1722-ledgerc",
+  "trigger": "ledger #594 escalation, four VETOs overdue; operator-confirmed 2026-08-23",
+  "signature": "a check asserted to prove something without exercising what would falsify it",
+  "mechanical_path_blocked": {
+    "detail": "remediate_pattern_match.classify() returned 0 classifications for all 7 unaddressed groups, so Steps 2-4 could not produce a proposal mechanically. Proposal hand-authored. See U1.",
+    "groups_unaddressed": 7,
+    "classifications_returned": 0
+  },
+  "proposals": [
+    {
+      "id": "R1",
+      "kind": "skill",
+      "title": "Falsifier Declaration required for every completeness claim",
+      "text": "Every completeness claim in a plan ('handles X', 'covers states A-E', 'zero behavior change', 'read once AND parsed once', 'pins Z') MUST carry a paired Falsifier Declaration naming (a) the concrete case that would make the claim FALSE and (b) evidence that the case is REACHABLE by the check as written. Reachability is a separate question from assertion strength and is where V4, V5, V6/B2 and B3 lived: unreachable via missing options, via fixture content, via a cast that neutralised the type, and via a baseline captured from the code under test. /qor-audit VETOes any completeness claim lacking one.",
+      "addresses": [
+        "V2",
+        "V3",
+        "V4",
+        "V5",
+        "V6/B2",
+        "B3"
+      ],
+      "closure_enforcer": "/qor-audit Step 3.5"
+    },
+    {
+      "id": "R2",
+      "kind": "doctrine",
+      "title": "Read the COUNT, never the exit code",
+      "text": "A truth-checking lint that exits 0 has said one of two different things - 'I checked and it holds' or 'I recognised nothing to check' - and a WARN-only ladder renders them identically. Any verifier whose output carries a coverage count MUST have that count read and compared against the number of items that should have been checked. Zero-items-checked is a FAILURE signal, never a pass.",
+      "addresses": [
+        "V1"
+      ],
+      "closure_enforcer": "qor.scripts.plan_grep_lint"
+    },
+    {
+      "id": "R3",
+      "kind": "gate",
+      "title": "A tolerance rule may never be keyed on the raw presence of the irregularity it tolerates",
+      "text": "NEW from research 2026-08-23. A rule of the form 'tolerate X' where X IS the defect makes the defect self-certifying. Every tolerance MUST be gated on an explicit attestation or a historical cutoff. Upstream exhibit (surfaced, not fixed): ledger_hash.verify() passes the raw _duplicate_previous_hash_members set as tolerated to _report_sequence (ledger_hash.py:543-545), so a duplicate exempts itself; one function away the same file shows the correct shape (_attested_reconciled & _duplicate_previous_hash_members, and find_grandfathered_entries(cutoff=207)). Consumer-side countermeasure: a FailSafe pre-merge CI guard on docs/META_LEDGER.md failing on duplicate entry numbers and on duplicate previous_hash without attestation.",
+      "addresses": [
+        "research-F2"
+      ],
+      "closure_enforcer": null,
+      "advisory_pending_enforcer": true,
+      "enforcer_delivered_by": "next /qor-enterprise-auto-dev cycle (operator-selected 2026-08-23)"
+    },
+    {
+      "id": "R4",
+      "kind": "gate",
+      "title": "Every declared MUST needs a checker that can fail",
+      "text": "qor-substantiate/SKILL.md:382 declares the **Entry ID** line MANDATORY on new ledger entries. It is absent from all twelve entries #585-#596 while Entry #447 carries one - a mitigation that was in use silently lapsed because nothing checks it. A 'MUST' with no falsifier is the same shape as the authoring defect, expressed in doctrine instead of in a test.",
+      "addresses": [
+        "research-F5"
+      ],
+      "closure_enforcer": null,
+      "advisory_pending_enforcer": true,
+      "enforcer_delivered_by": "same CI guard cycle as R3"
+    }
+  ],
+  "upstream_surfaced_not_executed": [
+    {
+      "id": "U1",
+      "severity": "high",
+      "repo": "qor-logic",
+      "summary": "remediate_pattern_match.py and remediate_propose.py have NO rule for the repeated_veto_pattern event that veto_pattern.py emits (_EVENT_TYPE at veto_pattern.py:26), so the event can never be classified, never proposed against, and never closed. Reproduced this session: classify() returned 0 classifications across 7 unaddressed groups, including the sev-3 repeated_veto_pattern event ce7c36d8 that IS the subject of ledger #594's escalation. The escalation mechanism has no terminating path."
+    },
+    {
+      "id": "U2",
+      "severity": "critical",
+      "repo": "qor-logic",
+      "summary": "ledger_hash.verify() self-silencing tolerance (see R3). verify_post_anchor() returns exit 0 'post-anchor clean' on a ledger containing two different Entry #597s. No duplicate-entry-number check exists anywhere; _number_gaps() reports holes only."
+    },
+    {
+      "id": "U3",
+      "severity": "medium",
+      "repo": "qor-logic",
+      "summary": "closure_enforcer form (2) validates a module on importability alone (remediate_attestation._validate_closure_enforcer), so a module that enforces nothing satisfies the contract - 'qor.scripts.ledger_hash' validates as an enforcer while carrying U2."
+    }
+  ],
+  "related_event_ids": [
+    "ce7c36d8382c05eb4b152499fcc0a4ba65a9c93b7a16ceda5a1047a83e764242"
+  ],
+  "events_marked_addressed": [],
+  "events_marked_addressed_pending": [],
+  "no_mark_rationale": "ce7c36d8 is ALREADY addressed_pending=true from a prior cycle and must not be self-closed; the addressed:true flip requires /qor-audit with reviews-remediate and a PASS verdict (Step 6). R3/R4 enforcers do not exist yet, so closure would be a claim without a falsifier - the exact defect under remediation.",
+  "research_brief": ".failsafe/governance/RESEARCH_BRIEF_ledger-entry-allocation-concurrency-2026-08-23.md",
+  "next_cycle": "FailSafe pre-merge CI guard on docs/META_LEDGER.md (duplicate entry numbers -> FAIL; duplicate previous_hash without attestation -> FAIL)",
+  "ts": "2026-08-23T17:26:55Z"
+}

@@ -128,7 +128,7 @@ export class VerdictArbiter {
             llmEvaluation = await this.invokeLLM(filePath, content, heuristicResults);
         }
 
-        // Generate verdict. FX932: forward the content already read above so
+        // Generate verdict. FX933: forward the content already read above so
         // VerdictEngine can populate artifactHash without a second disk read;
         // stays undefined for FILE_DELETED / oversized-skip / read_error, same
         // as `content` itself above.

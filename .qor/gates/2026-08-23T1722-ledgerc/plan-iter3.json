@@ -1,0 +1,78 @@
+{
+  "phase": "plan",
+  "session_id": "2026-08-23T1722-ledgerc",
+  "ts": "2026-08-23T18:07:11Z",
+  "plan_path": ".failsafe/governance/plans/plan-ledger-fork-guard.md",
+  "iteration": 3,
+  "change_class": "feature",
+  "doc_tier": "standard",
+  "originating_remediation": ".qor/gates/2026-08-23T1722-ledgerc/remediate.json (R3)",
+  "terms_introduced": [
+    {
+      "term": "Ledger fork",
+      "home": ".failsafe/governance/RESEARCH_BRIEF_ledger-entry-allocation-concurrency-2026-08-23.md"
+    },
+    {
+      "term": "Baseline residual",
+      "home": "FailSafe/extension/scripts/check-ledger-fork.cjs"
+    },
+    {
+      "term": "Field-recovery coverage",
+      "home": "FailSafe/extension/scripts/check-ledger-fork.cjs"
+    }
+  ],
+  "boundaries": {
+    "limitations": [
+      "Structural forks only; extraction owned here, chain math upstream."
+    ],
+    "non_goals": [
+      "Entry-number gaps must not fail this guard."
+    ],
+    "exclusions": [
+      "No edit/vendoring of upstream ledger_hash."
+    ]
+  },
+  "phases": [
+    "Phase 1 - detector + 6 fixtures (NEW)",
+    "Phase 2 - baselines, CLI, anti-widening (3 MODIFIED)"
+  ],
+  "feature_inventory_touches": [
+    {
+      "entry_id": "FX932",
+      "operation": "NEW",
+      "test_path": "FailSafe/extension/src/test/scripts/checkLedgerFork.test.cjs",
+      "test_descriptor": "check-ledger-fork --file <path> exits non-zero on a ledger containing two different '### Entry #597:' headings and exits 0 on the same ledger with one renumbered to #598"
+    }
+  ],
+  "ci_commands": [
+    "npm run governance:ledger-fork",
+    "npm run test:node",
+    "npm run lint",
+    "npm run test:all"
+  ],
+  "iteration2_findings_resolved": [
+    "B6 UNCLASSIFIED_BASELINE scope declared: --repo-root asserts membership pins; --file requires unclassified empty. Closes the contradiction where clean.md would exit non-zero against its declared 0.",
+    "B7 all four failing fixtures now pin their reason (597/2, 204/4, 'inspected 0', 9001-9002 incomplete-attestation); partial-attest.md construction fully specified with out-of-baseline entry numbers and hash.",
+    "N5 identity demoted to consistency check (self-caught before re-audit); four counts pinned independently; degraded-classifier test declared.",
+    "N6 SENTINEL_BASELINE membership pin; three live surface forms enumerated 60 backticked + 2 bare (#322,#323) + 1 GENESIS = 63.",
+    "N7 pinned-64 pseudo-mutation test REMOVED - it would exercise a copy, not the module.",
+    "N8 inspected counts stated: clean 7, repaired 9, forked 9, dup204x4 11, derived from the LD9 boundary not from a guard run.",
+    "N9 blanket 'all derived from the real artifact' corrected; empty.md and partial-attest.md marked synthetic."
+  ],
+  "judge_error_corrected": "The iteration-1 audit report claimed the reviewer's 249/24/21/2 sub-counts did not reproduce. They do - grep -E '[0-9a-f]{N}' matches runs of AT LEAST N, so those are cumulative thresholds decomposing to 225/3/19/2. Verified {64}=249 {65}=24 {66}=21 {67}=2. The Judge was wrong; AUDIT_REPORT.md amended.",
+  "lint_results": {
+    "repo_plan_grep_lint": "OK - 12 tokens",
+    "upstream_plan_grep_lint": "4 citations truth-checked, 0 warnings",
+    "plan_text_consistency_lint": "exit 0"
+  },
+  "loop_position": "3rd plan/audit attempt of max 5; a third consecutive same-signature VETO trips the /qor-remediate escalation cap",
+  "review_boundary": "no push, no PR, no merge",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.15.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5",
+    "human_oversight": "absent",
+    "ts": "2026-08-23T18:07:11Z"
+  }
+}

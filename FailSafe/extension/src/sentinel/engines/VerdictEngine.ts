@@ -50,7 +50,7 @@ export class VerdictEngine {
         llmEvaluation?: LLMEvaluation,
         forceDecision?: VerdictDecision,
         forceSummary?: string,
-        // FX932: caller's already-read content; see computeArtifactHash.
+        // FX933: caller's already-read content; see computeArtifactHash.
         fileContent?: string
     ): Promise<SentinelVerdict> {
         // Determine risk grade
@@ -116,7 +116,7 @@ export class VerdictEngine {
     }
 
     /**
-     * FX932 (FailSafe#367 tranche 3a): hash the caller's already-read file
+     * FX933 (FailSafe#367 tranche 3a): hash the caller's already-read file
      * content -- never a second disk read here (this repo has been burned by
      * exactly that class of redundant re-read/re-parse before, see #233).
      * Stays undefined whenever the caller has no content to offer:
