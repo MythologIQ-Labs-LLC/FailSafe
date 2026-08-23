@@ -50,13 +50,7 @@ export class VerdictEngine {
         llmEvaluation?: LLMEvaluation,
         forceDecision?: VerdictDecision,
         forceSummary?: string,
-        // FX930 (FailSafe#367 tranche 3a): the caller's already-read file
-        // content, reused here to populate the previously-unwritten
-        // artifactHash column -- never re-read from disk. Omitted (not
-        // re-derived from filePath) whenever the caller has no content to
-        // offer: FILE_DELETED events, oversized-file skips, malformed-path
-        // fallback ('unknown'), and AGENT_CLAIM existence checks
-        // ('claim_manifest') all correctly leave artifactHash unset.
+        // FX930: caller's already-read content; see computeArtifactHash.
         fileContent?: string
     ): Promise<SentinelVerdict> {
         // Determine risk grade
@@ -93,13 +87,7 @@ export class VerdictEngine {
             ? payloadAgentDid
             : 'did:myth:system:watcher';
         const trustScore = this.trustEngine.getTrustScore(agentDid);
-
-        // FX930: hash whatever content the caller already read -- never a
-        // second disk read here (this repo has been burned by exactly that
-        // class of redundant re-read/re-parse before).
-        const artifactHash = fileContent !== undefined
-            ? this.artifactHasher.hashArtifact(filePath, Buffer.from(fileContent, 'utf8')).hash
-            : undefined;
+        const artifactHash = this.computeArtifactHash(filePath, fileContent);
 
         // Create verdict
         const verdict: SentinelVerdict = {
@@ -125,6 +113,19 @@ export class VerdictEngine {
         verdict.actions = await this.executeActions(verdict);
 
         return verdict;
+    }
+
+    /**
+     * FX930 (FailSafe#367 tranche 3a): hash the caller's already-read file
+     * content -- never a second disk read here (this repo has been burned by
+     * exactly that class of redundant re-read/re-parse before, see #233).
+     * Stays undefined whenever the caller has no content to offer:
+     * FILE_DELETED events, oversized-file skips, the malformed-path fallback
+     * ('unknown'), and AGENT_CLAIM existence checks ('claim_manifest').
+     */
+    private computeArtifactHash(filePath: string, fileContent?: string): string | undefined {
+        if (fileContent === undefined) return undefined;
+        return this.artifactHasher.hashArtifact(filePath, Buffer.from(fileContent, 'utf8')).hash;
     }
 
     /**
