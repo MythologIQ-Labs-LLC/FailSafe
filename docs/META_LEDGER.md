@@ -29111,3 +29111,151 @@ ALL OTHER PASSES CLEARED CLEANLY, NOT BY NON-APPLICABILITY WAVER. Security: no a
 EVIDENCE INDEPENDENTLY REPRODUCED, NOT TAKEN ON THE PLAN'S WORD. `node --test`-equivalent direct mocha invocation of the full `qorlogic/` suite: 209/209 passing, run twice for determinism, both after the file-length remediation. The specific regression (`upgrades when qor-logic is present but below the version floor`) was independently confirmed red against the pre-fix gate (`git stash` the production-file change, rerun: 13/14 in the single-file suite, the new test failing with 0 install calls instead of 1) and green after restoring it - twice, once before the razor remediation and once after, to confirm the remediation did not silently change behavior. `npx tsc -p ./` clean. `npx eslint` on both touched files: 0 errors.
 
 Required next action: the PR reviewer (repository owner) decides whether this verdict satisfies the review's request; if so, the PR returns to ready-for-review and remains otherwise unchanged (same commit content, only the razor-remediation delta added). No push, tag, build-publish, or marketplace action is authorized by this entry - `/qor-substantiate`'s session-seal boundary is separate and has not been invoked.
+
+---
+
+
+> **Renumber note (2026-08-23)**: this band was authored as #597-#599 while PR #432 independently authored its own Entry #597. #432 merged first and took #597, so this band was renumbered to #598-#600 and re-chained off #597's chain hash. Content hashes are number-independent and are unchanged; only `previous_hash` and `chain_hash` were recomputed.
+
+### Entry #598: GATE TRIBUNAL - plan-233-read-ledger-once (iteration 4) -> VETO (fourth consecutive), B2 still unresolved
+
+**Timestamp**: 2026-08-22T00:00:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: VETO (fourth consecutive) - B3 resolved this cycle; B2 carried forward unresolved and out of this iteration's authorized scope
+
+**Content Hash**:
+```
+SHA256("plan-233-read-ledger-once|audit-VETO-iter4|2026-08-22")
+= b7c2199fbbb3b8a26e1ff901b54a5e9c946254ace60d8f05ff16f9d72c232490
+```
+
+**Previous Hash**: `190c2339c613000eadd9491d7afdff6cc654c2d7956423a1cb2ffd1e9bf6625f` (Entry #598 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 6d20f943779da2e01c152462b013d5bb9dfa05309c553f7c5aa12f8f311da442
+```
+
+## Decision
+
+VETO. Full report: `.agent/staging/AUDIT_REPORT.md`.
+
+Iteration 4 was authorized to make five specific edits to `plan-233-read-ledger-once.md` and no others: bump `iteration` to 4; add a "Resolution of iteration-3 VETO finding" section for B3 (ledger #595, the unpinned parse count); renumber FX929->FX930 and FX930->FX931 throughout (a second FX929 landed via PR #413/#412 in the interim, confirmed independently: `docs/FEATURE_INDEX.md` carries no FX930/FX931 row at `main`@`c7967eb`); fix LD8's `HubSnapshotService.ts` citation from line 191 to 192 (re-verified: `git show HEAD:...HubSnapshotService.ts | grep -nE 'const artifacts = new WorkspaceArtifactBuilder'` returns `192:...`, exact); extend the Phase 3 read-count test to spy on `parseMetaLedgerEntries`. The design itself — Phase 1/2/3 as specified — was declared sound and explicitly out of scope for reinterpretation.
+
+**B3 RESOLVED.** The Phase 3 test now spies on `parseMetaLedgerEntries` (independently confirmed imported from `../../qorlogic/meta-ledger-model`, the same module `consumer-adapter.ts:15` imports it from) alongside the pre-existing `fs.readFileSync` spy, asserting exactly 1 call on `supported` (was 2) and exactly 0 calls from inside `applyVersionFloor`. This is a falsifying check on the property actually claimed, and it fails against the exact regression #595 constructed and verified feasible (substituting the overlay call for a second `classifyMetaLedgerText`). FX930 (renumbered) and DoD Deliverable-1 D4 both restate the same pin. All 9 LD citations (LD0-LD8) independently re-truth-checked against `main`@`c7967eb` this cycle, not merely trusted from the prior record — all 9 resolve exactly.
+
+**B2 UNCHANGED, STILL BLOCKING.** Independently re-verified against the live fixture tree (`find src/test/fixtures/qor-consumer -iname "*META_LEDGER*"`): all six named fixtures (`malformed`, `missing-optional`, `partial-migration`, `stale`, `supported`, `unsupported-version`) ship a `docs/META_LEDGER.md`; none is absent. Phase 1's second test bullet still reads "and `ok`/`malformed`/absent with no options... behavior-preserving across all five states," which is false against the fixture set named in the same sentence — no no-options call against any of the six can reach `unavailable`, because none of them lacks the ledger file. The FX892 MODIFIED descriptor (unchanged) repeats the same unqualified six-fixture claim. This bullet was not in iteration 4's authorized edit list, and the operator's own instruction was explicit not to weaken or reinterpret any other part of the plan, so it was left as-is rather than silently patched outside scope — which is why B2 remains live rather than resolved.
+
+WHY THIS IS A VETO AND NOT A WAIVED NON-BLOCKER: implementing Phase 1's second test bullet literally, as TDD requires, means writing a test that claims to exercise `unavailable` via a no-options call against one of the six named fixtures. No fixture can satisfy that. Implementing it faithfully would either silently narrow the test's actual coverage below what the bullet and the FX892 descriptor both claim (reproducing the exact "claim asserted without exercising what would falsify it" signature that produced iterations 1-3's VETOs), or require an undisclosed deviation from the plan text during implementation. Neither is acceptable into a governance record whose stated purpose is preventing exactly that failure mode.
+
+MODE DISCLOSURE: no Task/Agent tool was available in this execution session to run Option B's isolated `code-reviewer` subagent the way iterations 2-3 did. This audit is single-author self-review, mitigated by independently re-executing every citation grep and fixture enumeration against live source rather than trusting the prior ledger record, but it is not a substitute for a second, differently-biased reader.
+
+Required next action: none authorized by this cycle. Per the operator's explicit instruction for this exact contingency, execution STOPS here — B2 requires either a plan edit outside this iteration's authorized scope (e.g., a seventh "absent-ledger" fixture, or reframing the Phase 1 bullet's claim to the states the six named fixtures can actually reach) or an explicit owner decision to accept a narrower claim, and no fifth iteration is self-authorized without that check-in. The #233 slice's design remains otherwise sound and is recoverable once B2 is addressed.
+
+---
+
+### Entry #599: GATE TRIBUNAL - plan-233-read-ledger-once (iteration 5) -> PASS, B2 resolved
+
+**Timestamp**: 2026-08-23T17:20:00Z
+**Phase**: GATE
+**Author**: Judge
+**Risk Grade**: L2
+**Verdict**: PASS - B2 resolved per explicit owner decision (PR #433); B3 remains resolved from iteration 4; implementation authorized
+
+**Content Hash**:
+```
+SHA256("plan-233-read-ledger-once|audit-PASS-iter5|2026-08-23")
+= 06b7806e0eee5a564b3300924aebea5768b82d74af8516e5d0b4153540557b3f
+```
+
+**Previous Hash**: `6d20f943779da2e01c152462b013d5bb9dfa05309c553f7c5aa12f8f311da442` (Entry #598 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= f2484eb2d37c2410789a11ebe06fe79a10f2e840395906eeadf5badc3753028a
+```
+
+## Decision
+
+PASS. Full report: `.agent/staging/AUDIT_REPORT.md`.
+
+Iteration 5 was authorized by an explicit owner decision recorded live on PR #433 (comment id 5387189371, Knapp-Kevin, 2026-08-23T16:56:25Z — independently fetched and verified via the GitHub API before any plan edit was made): "proceed with iteration 5 by creating a genuine absent-ledger test condition (dedicated fixture or deterministic temp workspace) so the `unavailable` claim remains real and falsifiable. Do not narrow the contract merely to fit the existing fixtures." This resolves the B2 scope hold that stopped iteration 4 (ledger #597).
+
+**B2 RESOLVED.** The plan now chooses a deterministic temp workspace over a seventh fixture, justified by three independently re-verified citations: `WorkspaceArtifactBuilder.test.ts:24`'s own `makeWorkspace()`-based "missing META_LEDGER.md" test (the closest existing analogue), `consumer-adapter.test.ts:168`'s own `#233 route-seam equivalence` suite (already uses a bare `fs.mkdtempSync` temp workspace instead of the six fixtures, in the same file as the disputed bullet), and `qor-consumer/README.md:3`'s explicit "Six fixture workspaces" documentation (a seventh fixture would falsify it for no benefit). Independently re-run: `find src/test/fixtures/qor-consumer -iname META_LEDGER.md` returns exactly 6 hits, none absent — the underlying defect is real. The rewritten Phase 1 bullet asserts `readMetaLedgerArtifact(emptyRoot)` (no options, a temp workspace with no `docs/META_LEDGER.md` ever written) returns `state: 'unavailable'`, `data: null`, and a `reason` naming the source path — traced against the live `fsRead`/`classifyRead` implementation and confirmed to be a real, reachable, falsifiable branch, not a restated fixture claim. The FX892 Feature Inventory Touches row is rewritten to match state-for-state. No claim was narrowed: the `unavailable` coverage is relocated to a mechanism that can actually produce it, not dropped.
+
+**Diff discipline verified.** `git diff` against `e864192` (iteration 4's committed plan state) shows exactly the iteration-line bump, the new B2 resolution section, the Phase 1 bullet rewrite, and the FX892 row rewrite — four hunks. LD0-LD8, `boundaries`/`non_goals`/`exclusions`, the B3 resolution section, Phase 2, Phase 3, the Definition of Done, and the CI Commands list are byte-for-byte unchanged from iteration 4.
+
+**B3 remains resolved, unchanged this cycle** — the Phase 3 `parseMetaLedgerEntries` spy from iteration 4 is untouched and still asserts exactly 1 call on `supported` and 0 from inside `applyVersionFloor`.
+
+**Citation-parity tooling**: `check-plan-citation-parity.cjs --structure-only` exit 0 (15 tracked plans, 1 with LDs, 0 unrecognized). Full mode: `UNVERIFIED — qor-logic-plus not runnable (ENOENT)` — same infrastructure limitation disclosed on PR #433, disclosed here again rather than silently re-attempted and assumed fixed. All 9 LD citations plus the 3 new B2 citations were independently hand-verified against live `HEAD` instead.
+
+MODE DISCLOSURE: no Task/Agent tool is available in this session either (re-checked this cycle, not assumed unchanged from iteration 4) — single-author self-review, mitigated the same way as iteration 4.
+
+Required next action: implement Phase 1 → Phase 2 → Phase 3 via TDD exactly as the plan (iteration 5) specifies, on `fix/233-read-ledger-once`, continuing PR #433.
+
+---
+
+### Entry #600: IMPLEMENTATION - plan-233-read-ledger-once (iteration 5), Phase 1/2/3 complete
+
+**Timestamp**: 2026-08-23T18:10:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Risk Grade**: L2
+
+**Content Hash**:
+```
+SHA256("plan-233-read-ledger-once|implement-iter5-phase123-complete|2026-08-23")
+= 7ba97449dab9eb04aaa2cd9c2b7f9ec62a385f5b2d046529c46bce0bcbf78c57
+```
+
+**Previous Hash**: `f2484eb2d37c2410789a11ebe06fe79a10f2e840395906eeadf5badc3753028a` (Entry #599 Chain Hash)
+
+**Chain Hash**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 1cebb7573c1b0315911b75580c4be15a6759222a277c0d7bdd8953a420bd5716
+```
+
+## Decision
+
+Implemented Phase 1/2/3 of `plan-233-read-ledger-once.md` (iteration 5, PASS at ledger #598) via TDD on branch `fix/233-read-ledger-once`, continuing PR #433. TDD-Light applied throughout: every new test was written and run against pre-change code first, confirmed red (compile failure against the not-yet-existing exports — `readMetaLedgerRaw`, `applyVersionFloor`, `ConsumerDiagnosticsOptions.ledger`), then made green by the implementation below.
+
+**Phase 1** (`src/qorlogic/consumer/consumer-adapter.ts`): exported `MetaLedgerRead`, `readMetaLedgerRaw(root)`, `applyVersionFloor<T>(env, versionStatus?)`; redefined `readMetaLedgerArtifact` in terms of them, exactly per the plan's Implementation block. Also re-exported `MetaLedgerEntry` (`export type { MetaLedgerEntry }`) — a small, necessary, in-scope addition the plan's own Phase 2 text required ("add `type MetaLedgerEntry` to the existing `./consumer-adapter` import") but that consumer-adapter.ts did not yet expose; disclosed here rather than silently deviating to a different import path.
+
+**Phase 2** (`src/qorlogic/consumer/diagnostics.ts`): `ConsumerDiagnosticsOptions` gained `ledger?: ArtifactEnvelope<MetaLedgerEntry[]>`; `buildConsumerDiagnostics` now does `opts?.ledger ?? readMetaLedgerArtifact(root, opts)`, exactly per the plan.
+
+**Phase 3** (`src/roadmap/services/WorkspaceArtifactBuilder.ts`): `build()` now does one `readMetaLedgerRaw` call, derives the floor-blind gating envelope via `classifyMetaLedgerText` and the floor-aware diagnostics envelope via `applyVersionFloor`, and `readGovernanceState` takes the shared read's `text` instead of re-reading — exactly per the plan. `fs`/`path` imports dropped (no other use remained).
+
+**B2's new falsifying test** (the iteration-5 addition): `consumer-adapter.test.ts` now has a dedicated "readMetaLedgerArtifact equivalence across fixtures + absent" suite — the six named fixtures for `ok`/`malformed`/`stale`/`unsupported`, plus a directly-constructed absent-ledger temp workspace (bare `fs.mkdtempSync`, no `docs/` ever created) asserting `readMetaLedgerArtifact(emptyRoot)` returns `unavailable`/`null`/a reason naming the source path — genuinely reachable and falsifiable, traced against the real `fsRead`→`classifyRead` ladder. A companion regression-guard test independently confirms the six fixtures still cannot reach `unavailable` (pins the original B2 defect as a still-true fact about the fixture set, not just an assumption).
+
+**B3's parse-count pin** (carried from iteration 4, re-verified still present and green): `WorkspaceArtifactBuilder.test.ts`'s read/parse-collapse suite spies on both `fs.readFileSync` (scoped to the ledger path) and `parseMetaLedgerEntries`, plus a spy scoped specifically around `applyVersionFloor`, asserting 3 reads (was 5) / 1 parse (was 2) on `supported`, 2 reads (was 4) on `malformed`, and 0 parses from inside `applyVersionFloor`.
+
+**Baselines were measured, not assumed.** Before implementing, the pre-change compiled code was run directly (outside any test framework) against the `supported`/`malformed` fixtures to empirically capture: 5/4 `fs.readFileSync` calls, 2 `parseMetaLedgerEntries` calls, and the exact `ledgerSummary`/`ledgerVerdicts`/`ledgerCompletions`/`shieldPhase`/`qorConsumer` field values now hardcoded as the Phase 3 deep-equal test's expected output (with `provenance.mtimeIso` deliberately excluded from that comparison — it is a real wall-clock timestamp that varies per test run/fixture-copy and is not part of the behavior this refactor claims to preserve; `provenance.sourcePath` shape is still checked). This makes the "pre-change output" claim genuinely falsifiable rather than circular (the concern the iteration-3 addendum raised as a non-blocking observation).
+
+## Validation evidence
+
+- `npx tsc -p ./ --noEmit`: **0 errors** (from `FailSafe/extension/`).
+- `npm run compile`: **PASS** (tsc + copy-ui-js, no errors).
+- `npm run lint`: **PASS**, exit 0, 0 errors, 136 pre-existing warnings unrelated to any file this cycle touched (none of the three touched test files or three touched source files appear in the warning list).
+- `npm run test:runner-coverage`: **PASS** — 536 test files, all claimed (460 vscode-test, 25 node --test, 51 playwright).
+- `npm test` (vscode-test suites): **NOT RUN — environment-blocked, not skipped silently.** `vscode-test` must download a VS Code binary from `update.code.visualstudio.com`; the sandbox's outbound proxy explicitly denies that host (`connect_rejected`, gateway 403 to CONNECT — a policy denial, confirmed via the proxy's own status endpoint, not a transient network blip). No cached VS Code test binary was present to substitute. Mitigation applied instead: the three touched `.test.ts` files (`consumer-adapter.test.ts`, `consumer-diagnostics.test.ts`, `WorkspaceArtifactBuilder.test.ts` — 64 cases total) plus four related downstream-consumer suites (`HubSnapshotService.test.ts`, `seal-detection.test.ts`, `tracker-route.test.ts`, `governance-projection.test.ts` — 58 cases) were compiled and run directly under `mocha --ui tdd` outside the extension host (none of these files or their transitive production dependencies import the `vscode` module). **122/122 passing, 0 failing.** This is real behavioral execution of the compiled implementation against real fixtures, not a type-check-only substitute — but it is not the actual `vscode-test` extension-host run, and exact-head CI remains the authoritative gate for that specific run.
+- `npm run test:node`: **PASS**, 264/264 tests, 77/77 suites, 0 failures.
+- `node --test src/test/scripts/featureIndexClassifier.test.cjs`: **PASS**, 33/33, including the header==reality invariant against the updated FX930/FX931 rows and header counts (747 total, 697 verified).
+- `node scripts/check-plan-citation-parity.cjs --structure-only`: exit 0, 15 tracked plans, 1 with Locked Decisions, 0 unrecognized.
+- `node scripts/check-plan-citation-parity.cjs .failsafe/governance/plans/plan-233-read-ledger-once.md` (full mode): `UNVERIFIED — qor-logic-plus not runnable (ENOENT)` — same disclosed infrastructure limitation as iteration 4 and as recorded on PR #433; not treated as a pass.
+
+## Files changed
+
+`src/qorlogic/consumer/consumer-adapter.ts`, `src/qorlogic/consumer/diagnostics.ts`, `src/roadmap/services/WorkspaceArtifactBuilder.ts`, `src/test/qorlogic/consumer/consumer-adapter.test.ts`, `src/test/qorlogic/consumer/consumer-diagnostics.test.ts`, `src/test/roadmap/WorkspaceArtifactBuilder.test.ts`, `docs/FEATURE_INDEX.md` (FX930 NEW, FX931 NEW, FX892/FX893 notes updated, header counts 745→747 / 695→697), `.failsafe/governance/plans/plan-233-read-ledger-once.md` (iteration 5), `.agent/staging/AUDIT_REPORT.md`, `docs/META_LEDGER.md` (this entry + Entry #598).
+
+## Scope discipline
+
+`ConsoleServerHub.ts`, `SystemStateReader.ts`, and `MetaLedgerReader.ts` were not touched (out of scope per the plan's own exclusions, re-verified untouched via `git diff --stat`). No caching/memoization was added (explicitly rejected in the plan's `non_goals`). `.github/**` and `CLAUDE.md` were not touched. PR #433 was not merged — only new commits are being pushed to its existing branch `fix/233-read-ledger-once`.
+
+## Remaining/deferred
+
+Formal `/qor-substantiate` SESSION SEAL (version bump + tag) is **not** performed in this cycle. This repository's own established convention for a slice landing as an open, unmerged PR (observed directly in `docs/GOVERNANCE_INDEX.md`'s record of how PR #405/#407 — earlier #233 slices — were actually sealed) is a GATE-TRIBUNAL merge-substantiation entry recorded **after** merge, individually or in a batch, not a version-bump seal at push time for every commit landing on an open branch. Consistent with that observed convention and with this task's explicit instruction not to merge PR #433, this entry records implementation completion and validation evidence; the merge-time substantiation/seal is left for the operator or a later governed cycle once PR #433 actually merges.
