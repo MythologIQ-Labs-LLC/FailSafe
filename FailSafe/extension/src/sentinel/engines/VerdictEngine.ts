@@ -19,12 +19,14 @@ import { TrustEngine } from '../../qorelogic/trust/TrustEngine';
 import { PolicyEngine } from '../../qorelogic/policies/PolicyEngine';
 import { LedgerManager } from '../../qorelogic/ledger/LedgerManager';
 import { ShadowGenomeManager } from '../../qorelogic/shadow/ShadowGenomeManager';
+import { ArtifactHasher } from '../../governance/ArtifactHasher';
 
 export class VerdictEngine {
     private trustEngine: TrustEngine;
     private policyEngine: PolicyEngine;
     private ledgerManager: LedgerManager;
     private shadowGenomeManager?: ShadowGenomeManager;
+    private artifactHasher = new ArtifactHasher();
 
     constructor(
         trustEngine: TrustEngine,
@@ -47,7 +49,9 @@ export class VerdictEngine {
         heuristicResults: HeuristicResult[],
         llmEvaluation?: LLMEvaluation,
         forceDecision?: VerdictDecision,
-        forceSummary?: string
+        forceSummary?: string,
+        // FX933: caller's already-read content; see computeArtifactHash.
+        fileContent?: string
     ): Promise<SentinelVerdict> {
         // Determine risk grade
         const riskGrade = this.policyEngine.classifyRisk(filePath);
@@ -83,6 +87,7 @@ export class VerdictEngine {
             ? payloadAgentDid
             : 'did:myth:system:watcher';
         const trustScore = this.trustEngine.getTrustScore(agentDid);
+        const artifactHash = this.computeArtifactHash(filePath, fileContent);
 
         // Create verdict
         const verdict: SentinelVerdict = {
@@ -97,6 +102,7 @@ export class VerdictEngine {
             agentDid,
             agentTrustAtVerdict: trustScore?.score || 0.35,
             artifactPath: filePath,
+            artifactHash,
             summary,
             details,
             matchedPatterns,
@@ -107,6 +113,19 @@ export class VerdictEngine {
         verdict.actions = await this.executeActions(verdict);
 
         return verdict;
+    }
+
+    /**
+     * FX933 (FailSafe#367 tranche 3a): hash the caller's already-read file
+     * content -- never a second disk read here (this repo has been burned by
+     * exactly that class of redundant re-read/re-parse before, see #233).
+     * Stays undefined whenever the caller has no content to offer:
+     * FILE_DELETED events, oversized-file skips, the malformed-path fallback
+     * ('unknown'), and AGENT_CLAIM existence checks ('claim_manifest').
+     */
+    private computeArtifactHash(filePath: string, fileContent?: string): string | undefined {
+        if (fileContent === undefined) return undefined;
+        return this.artifactHasher.hashArtifact(filePath, Buffer.from(fileContent, 'utf8')).hash;
     }
 
     /**
@@ -258,6 +277,7 @@ export class VerdictEngine {
                 agentDid: verdict.agentDid,
                 agentTrustAtAction: verdict.agentTrustAtVerdict,
                 artifactPath: verdict.artifactPath,
+                artifactHash: verdict.artifactHash,
                 riskGrade: verdict.riskGrade,
                 verificationMethod: 'sentinel_heuristic',
                 verificationResult: verdict.decision,

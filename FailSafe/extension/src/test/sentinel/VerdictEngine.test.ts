@@ -1,6 +1,7 @@
 // Functional tests for VerdictEngine (FX346).
 
 import { strict as assert } from 'assert';
+import * as crypto from 'crypto';
 import { VerdictEngine } from '../../sentinel/engines/VerdictEngine';
 import type { HeuristicResult, SentinelEvent } from '../../shared/types';
 
@@ -264,5 +265,65 @@ suite('VerdictEngine (FX346)', () => {
     const v = await e.generateVerdict(EVT(), 'src/foo.ts', []);
     assert.equal(v.decision, 'PASS');
     assert.equal(v.summary, 'File passed verification (L1)');
+  });
+
+  // FX933 (FailSafe#367 tranche 3a): generateVerdict's optional trailing
+  // fileContent param populates the previously-always-unwritten artifactHash
+  // column, reusing content the caller already read (never a second disk read).
+  test('FX933 generateVerdict — fileContent provided: verdict.artifactHash is its sha256', async () => {
+    const s = makeStubs({ riskGrade: 'L1' });
+    const e = new VerdictEngine(s.trust, s.policy, s.ledger, s.shadow);
+    const content = 'const x = 1;\n';
+    const v = await e.generateVerdict(EVT(), 'src/foo.ts', [], undefined, undefined, undefined, content);
+    const expected = crypto.createHash('sha256').update(Buffer.from(content, 'utf8')).digest('hex');
+    assert.equal(v.artifactHash, expected);
+  });
+
+  test('FX933 generateVerdict — no fileContent: verdict.artifactHash stays undefined', async () => {
+    const s = makeStubs({ riskGrade: 'L1' });
+    const e = new VerdictEngine(s.trust, s.policy, s.ledger, s.shadow);
+    const v = await e.generateVerdict(EVT(), 'src/foo.ts', []);
+    assert.equal(v.artifactHash, undefined);
+  });
+
+  test('FX933 generateVerdict — same content hashes identically across two calls (determinism)', async () => {
+    const s = makeStubs({ riskGrade: 'L1' });
+    const e = new VerdictEngine(s.trust, s.policy, s.ledger, s.shadow);
+    const content = 'identical content\n';
+    const v1 = await e.generateVerdict(EVT(), 'src/foo.ts', [], undefined, undefined, undefined, content);
+    const v2 = await e.generateVerdict(EVT(), 'src/bar.ts', [], undefined, undefined, undefined, content);
+    assert.equal(v1.artifactHash, v2.artifactHash);
+  });
+
+  test('FX933 generateVerdict — different content hashes differently', async () => {
+    const s = makeStubs({ riskGrade: 'L1' });
+    const e = new VerdictEngine(s.trust, s.policy, s.ledger, s.shadow);
+    const v1 = await e.generateVerdict(EVT(), 'src/foo.ts', [], undefined, undefined, undefined, 'content A');
+    const v2 = await e.generateVerdict(EVT(), 'src/foo.ts', [], undefined, undefined, undefined, 'content B');
+    assert.notEqual(v1.artifactHash, v2.artifactHash);
+  });
+
+  test('FX933 generateVerdict — empty-string fileContent still hashes (distinct from "no content")', async () => {
+    const s = makeStubs({ riskGrade: 'L1' });
+    const e = new VerdictEngine(s.trust, s.policy, s.ledger, s.shadow);
+    const v = await e.generateVerdict(EVT(), 'src/foo.ts', [], undefined, undefined, undefined, '');
+    assert.notEqual(v.artifactHash, undefined);
+    assert.equal(v.artifactHash, crypto.createHash('sha256').update(Buffer.alloc(0)).digest('hex'));
+  });
+
+  test('FX933 executeActions — ledger entry carries the same artifactHash as the verdict', async () => {
+    const s = makeStubs({ riskGrade: 'L3' });
+    const e = new VerdictEngine(s.trust, s.policy, s.ledger, s.shadow);
+    const content = 'risky content\n';
+    const v = await e.generateVerdict(EVT(), 'src/auth.ts', [], undefined, undefined, undefined, content);
+    assert.equal(s.ledgerCalls[0].artifactHash, v.artifactHash);
+    assert.notEqual(s.ledgerCalls[0].artifactHash, undefined);
+  });
+
+  test('FX933 executeActions — no fileContent: ledger entry artifactHash is undefined', async () => {
+    const s = makeStubs({ riskGrade: 'L1' });
+    const e = new VerdictEngine(s.trust, s.policy, s.ledger, s.shadow);
+    await e.generateVerdict(EVT(), 'src/x.ts', []);
+    assert.equal(s.ledgerCalls[0].artifactHash, undefined);
   });
 });
