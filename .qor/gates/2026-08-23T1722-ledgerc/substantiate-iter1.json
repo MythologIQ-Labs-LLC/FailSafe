@@ -1,0 +1,47 @@
+{
+  "phase": "substantiate",
+  "session_id": "2026-08-23T1722-ledgerc",
+  "ts": "2026-08-23T21:31:44Z",
+  "verdict": "PASS",
+  "plan_path": ".failsafe/governance/plans/plan-ledger-fork-guard.md",
+  "ledger_entry": 601,
+  "entry_id": "a68a7fe810ef",
+  "merkle_seal": "7f4fb448aa71fdadd277d3999d27707e30802cab7e22eb4968b05e3e55df5097",
+  "content_hash": "7123353506b9de11ec17daa28c185d0c34c747a999736bdea3c13a0f3541d49d",
+  "previous_hash": "1cebb7573c1b0315911b75580c4be15a6759222a277c0d7bdd8953a420bd5716",
+  "retrospective": "Work shipped in v6.0.4 before sealing; no version bump, no seal tag. Ordering inversion disclosed as residual 1.",
+  "feature_inventory": "total 749 / verified 699 / unverified 0 / n/a 43 / other 7 - computed MANUALLY, not from feature_index_verify (residual 2)",
+  "vacuous_gates": [
+    "feature_index_verify total=0 (header column named Status, parser wants verification status)",
+    "seal_entry_check no parseable latest entry (no phase number in FailSafe entries)",
+    "gate_chain_completeness 0 sessions inspected (same root cause)"
+  ],
+  "warn_gates": [
+    "dod_check: R4 deliverable declares only D4.d",
+    "skill_size_budget_lint: qor-substantiate SKILL.md 37.0 KB",
+    "intent_lock: NO LOCK - implement Step 5.5 never ran"
+  ],
+  "skipped_gates": [
+    "data_api_acl_lint: no SQL migrations (Phase 75 disclosed-skip)"
+  ],
+  "passed_gates": [
+    "skill_admission",
+    "gate_skill_matrix (0 broken)",
+    "secret_scanner",
+    "procedural_fidelity",
+    "merge_velocity_check",
+    "instruction_hygiene_lint",
+    "doc_integrity strict",
+    "governance-index --enforce",
+    "hash_guard Step 6.8 (4/4 digests)"
+  ],
+  "verification": "governance:ledger-fork exit 0 (619 entries); test:node 289/289; lint 0 errors; mutation testing 4 mutations all caught",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.15.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5",
+    "human_oversight": "pass",
+    "ts": "2026-08-23T21:31:44Z"
+  }
+}
