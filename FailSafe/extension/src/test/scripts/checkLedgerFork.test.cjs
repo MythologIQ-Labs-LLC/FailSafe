@@ -15,6 +15,10 @@ const fixture = (name) => path.join(FIX, `${name}.md`);
 const liveText = () => fs.readFileSync(LEDGER, "utf-8");
 
 const SAFE_HASH = "7f3a9b2e5d8c1a4f6b0e3d7c2a5f8b1e4d6c9a3f7b2e5d8c1a4f6b0e3d7c2a5f";
+// Non-hex on purpose: it must classify as `unclassified`, which is the pin that
+// survives ledger growth. Counts (labels/recovered/sentinel/inspected) all grow
+// with every legitimate append and are therefore reported, never equality-pinned.
+const NON_HEX = "zzzz9b2e5d8c1a4f6b0e3d7c2a5f8b1e4d6c9a3f7b2e5d8c1a4f6b0e3d7c2a5f";
 
 function capture(argv) {
     const out = [];
@@ -39,7 +43,7 @@ function tempRepo(mutateSentinel) {
         const lines = text.split(/\r?\n/);
         const i = lines.findIndex((l) => /^\*\*Previous Hash\*\*:[ \t]*`?(?:pending[-a-z]*|N\/A|none|GENESIS)/i.test(l));
         assert.ok(i >= 0, "fixture precondition: the live artifact must contain a sentinel line");
-        lines[i] = "**Previous Hash**: `" + SAFE_HASH + "`";
+        lines[i] = "**Previous Hash**: " + NON_HEX;
         text = lines.join("\n");
     }
     fs.writeFileSync(path.join(dir, "docs", "META_LEDGER.md"), text, "utf-8");
@@ -75,24 +79,31 @@ test("classifyPreviousHash reports a non-hex value as unclassified", () => {
 
 // ----------------------------------------------------------------- coverage
 
-test("coverage on the live artifact hits all four pins", () => {
-    assert.deepEqual(guard.coverage(liveText()),
-        { labels: 595, recovered: 528, sentinel: 63, unclassified: 4 });
+test("coverage on the live artifact classifies every label into a known form", () => {
+    const cov = guard.coverage(liveText());
+    assert.equal(cov.labels, cov.recovered + cov.sentinel + cov.unclassified);
+    assert.ok(cov.recovered > 0, "a parser recovering nothing is degraded, not a small ledger");
+    assert.ok(cov.sentinel > 0);
+    // Totals grow with every append and are deliberately NOT pinned; the
+    // unclassified SET is the growth-stable degradation check.
+    assert.deepEqual(guard.unclassifiedEntries(liveText()), guard.UNCLASSIFIED_BASELINE);
 });
 
 test("degraded classifier injected into the real coverage satisfies the identity and fails the pins", () => {
+    const real = guard.coverage(liveText());
     const cov = guard.coverage(liveText(), () => ({ form: "sentinel", value: null }));
-    assert.deepEqual(cov, { labels: 595, recovered: 0, sentinel: 595, unclassified: 0 });
+    assert.deepEqual(cov, { labels: real.labels, recovered: 0, sentinel: real.labels, unclassified: 0 });
     assert.equal(cov.labels, cov.recovered + cov.sentinel + cov.unclassified,
         "the partition identity is a tautology - it holds even here");
-    assert.notEqual(cov.recovered, 528, "the pins, not the identity, are the falsifier");
-    assert.notEqual(cov.sentinel, 63);
+    assert.equal(cov.unclassified, 0,
+        "and the unclassified SET check is what catches it: 0 !== UNCLASSIFIED_BASELINE");
 });
 
 test("coverage counts labels independently, so a label-dropping classifier still fails", () => {
+    const real = guard.coverage(liveText());
     const cov = guard.coverage(liveText(), () => ({ form: "unclassified", value: null }));
-    assert.equal(cov.labels, 595, "labels must not be derived from the classifier's return");
-    assert.equal(cov.unclassified, 595);
+    assert.equal(cov.labels, real.labels, "labels must not be derived from the classifier's return");
+    assert.equal(cov.unclassified, real.labels);
 });
 
 // ------------------------------------------------------------------ grouping
@@ -160,19 +171,29 @@ for (const [name, code, reason, inspected] of EXPECTED) {
 
 // ------------------------------------------------ live mode (--repo-root)
 
-test("B9 case 1: --repo-root on a verbatim ledger copy exits 0 and reports inspected 614", () => {
+test("B9 case 1: --repo-root on a verbatim ledger copy exits 0", () => {
     const dir = tempRepo(false);
     const res = capture(["--repo-root", dir]);
     assert.equal(res.code, 0, res.stderr);
-    assert.match(res.stdout, /inspected 614 entries/);
+    assert.match(res.stdout, /inspected \d+ entries/);
 });
 
-test("B9 case 2: one mutated sentinel line makes the coverage pins gate the exit code", () => {
+test("B9 case 1b: live mode still exits 0 after a LEGITIMATE append", () => {
+    const dir = tempRepo(false);
+    const file = path.join(dir, "docs", "META_LEDGER.md");
+    fs.appendFileSync(file,
+        "\n---\n\n### Entry #9999: a legitimate new entry\n\n" +
+        "**Previous Hash**: `" + "b".repeat(64) + "`\n", "utf-8");
+    const res = capture(["--repo-root", dir]);
+    assert.equal(res.code, 0,
+        "counts grow with every append; pinning them would redden CI on normal ledger growth");
+});
+
+test("B9 case 2: one unrecognisable previous_hash makes the coverage pin gate the exit code", () => {
     const dir = tempRepo(true);
     const res = capture(["--repo-root", dir]);
     assert.equal(res.code, 1, "a guard that computes the counts but never wires them would exit 0");
-    assert.match(res.stderr, /coverage pin recovered: expected 528, got 529/);
-    assert.match(res.stderr, /coverage pin sentinel: expected 63, got 62/);
+    assert.match(res.stderr, /coverage pin unclassified/);
 });
 
 test("main requires exactly one of --repo-root / --file", () => {

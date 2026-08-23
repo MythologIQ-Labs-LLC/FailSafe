@@ -74,6 +74,26 @@ Audit report: `.agent/staging/AUDIT_REPORT.md`; verdict artifact `.qor/gates/202
 
 ---
 
+## Post-implementation correction (2026-08-23, after the PASS)
+
+**The live-mode equality pins were growth-hostile and had to be removed.** LD3 as audited pinned `labels == 595`, `recovered == 528`, `sentinel == 63` and `inspected == 614`. Those are **monotonically growing** quantities: appending one legitimate entry (PR #432's #597) produced
+
+```
+FORK coverage pin labels: expected 595, got 596
+FORK coverage pin recovered: expected 528, got 529
+FORK inspected: expected 614, got 615
+```
+
+so the guard would have reddened CI on every normal ledger append, starting with the next merge.
+
+Five audit iterations, an independent reviewer, and mutation testing did not catch it, because every fixture and every live case used the frozen artifact. Nobody asked what happens when the ledger grows correctly — the falsifier that was never exercised, one more time, in the guard built to remediate exactly that.
+
+**Fix**: the four counts are now reported but never equality-pinned. The growth-stable degradation check is the `unclassified` **entry-number set** — a parser that stops recognising a form dumps those lines into `unclassified`, blowing the set — plus a floor (`labels > 0` with `recovered == 0` is a violation). Verified: main passes, a legitimate append passes, the two-#597 fork still fails naming `597` twice. Mutation testing re-run against the new shape, including a new M4 (classify unknown forms as `sentinel` to mask degradation) caught by 5 tests.
+
+LD3 above is left as audited so the record shows what was reviewed; this section records what changed and why.
+
+---
+
 ## Open Questions
 
 **None blocking.**

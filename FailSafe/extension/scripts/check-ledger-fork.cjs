@@ -33,7 +33,10 @@ const PREV_HASH_BASELINE = [
 ];
 
 const UNCLASSIFIED_BASELINE = [122, 123, 124, 125];
-const LIVE = { labels: 595, recovered: 528, sentinel: 63, inspected: 614 };
+// labels / recovered / sentinel / inspected GROW with every legitimate append, so
+// they are reported but never equality-pinned. The growth-stable degradation check
+// is UNCLASSIFIED_BASELINE: any parser that stops recognising a form dumps those
+// lines into `unclassified`, which blows the set.
 
 const FENCE_RE = /```[\s\S]*?```/g;
 const ENTRY_RE = /^### Entry #(\d+):/gm;
@@ -158,13 +161,14 @@ function coveragePins(text, live) {
     if (unc.length) violations.push(`unclassified previous_hash in fixture: ${unc}`);
     return violations;
   }
-  for (const field of ['labels', 'recovered', 'sentinel']) {
-    if (cov[field] !== LIVE[field]) {
-      violations.push(`coverage pin ${field}: expected ${LIVE[field]}, got ${cov[field]}`);
-    }
-  }
   if (key(unc) !== key(UNCLASSIFIED_BASELINE)) {
-    violations.push(`coverage pin unclassified: expected ${UNCLASSIFIED_BASELINE}, got ${unc}`);
+    violations.push(
+      `coverage pin unclassified: expected ${UNCLASSIFIED_BASELINE}, got ${unc} ` +
+      `(a previous_hash line matched no known form - either the artifact gained one, ` +
+      `or the classifier stopped recognising a form it used to)`);
+  }
+  if (cov.recovered === 0 && cov.labels > 0) {
+    violations.push(`coverage: ${cov.labels} previous_hash labels but 0 recovered`);
   }
   return violations;
 }
@@ -174,9 +178,6 @@ function violations(text, live) {
   const found = coveragePins(text, live);
   const state = inspect(text);
   if (state.inspected === 0) found.push('inspected 0 entries');
-  else if (live && state.inspected !== LIVE.inspected) {
-    found.push(`inspected: expected ${LIVE.inspected}, got ${state.inspected}`);
-  }
   for (const [num, n] of Object.entries(state.duplicateNumbers)) {
     if (DUPLICATE_NUMBER_BASELINE[num] !== n) {
       found.push(`duplicate entry number ${num} appears ${n} times`);
@@ -226,7 +227,7 @@ function main(argv) {
 module.exports = {
   stripFences, classifyPreviousHash, coverage, entryBlocks, findDuplicateNumbers,
   groupByPreviousHash, attestedGroups, inspect, unclassifiedEntries, main,
-  DUPLICATE_NUMBER_BASELINE, PREV_HASH_BASELINE, UNCLASSIFIED_BASELINE, LIVE,
+  DUPLICATE_NUMBER_BASELINE, PREV_HASH_BASELINE, UNCLASSIFIED_BASELINE,
 };
 
 if (require.main === module) process.exit(main(process.argv.slice(2)));
