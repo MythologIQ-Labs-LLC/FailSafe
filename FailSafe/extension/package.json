@@ -750,7 +750,8 @@
     "vendor:piper": "node ./scripts/vendor-piper.cjs",
     "test:node": "node ./scripts/run-node-tests.cjs",
     "test:runner-coverage": "node ./scripts/check-test-runner-coverage.cjs",
-    "test:citation-parity": "node ./scripts/check-plan-citation-parity.cjs --structure-only"
+    "test:citation-parity": "node ./scripts/check-plan-citation-parity.cjs --structure-only",
+    "governance:ledger-fork": "node ./scripts/check-ledger-fork.cjs --repo-root ../.."
   },
   "devDependencies": {
     "@playwright/test": "^1.49.1",

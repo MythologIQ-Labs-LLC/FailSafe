@@ -43,6 +43,10 @@ jobs:
         run: |
           pwsh -File tools/reliability/validate-branch-policy.ps1
 
+      - name: Ledger fork guard
+        working-directory: FailSafe/extension
+        run: npm run governance:ledger-fork
+
       - name: Lint
         working-directory: FailSafe/extension
         run: npm run lint
