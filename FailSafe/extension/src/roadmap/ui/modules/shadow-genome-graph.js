@@ -114,7 +114,8 @@ function nodeSvg(n, p, deg, sev, sel, nb) {
     ? `<rect x="${(-r).toFixed(1)}" y="${(-r).toFixed(1)}" width="${(r * 2).toFixed(1)}" height="${(r * 2).toFixed(1)}" transform="rotate(45)" class="sg-node-shape" style="fill:url(#sg-grad-muted);stroke:${stroke}"/>`
     : `<circle r="${r.toFixed(1)}" class="sg-node-shape${dashed}" style="fill:url(#sg-grad-${gradId});stroke:${stroke}"/>`;
   const label = (isGov || n.id === sel) ? `<text class="sg-node-label" y="${(r + 13).toFixed(1)}">${esc(truncateLabel(n.label))}</text>` : '';
-  return `<g class="sg-node${dim}${n.id === sel ? ' sel' : ''}" transform="translate(${p.x.toFixed(1)},${p.y.toFixed(1)})" data-node="${esc(n.id)}" tabindex="0" role="button" aria-label="${esc(n.type)}: ${esc(n.label)}">${ring}${shape}${label}<title>${esc(n.label)} (${esc(n.type)})</title></g>`;
+  const accName = isFail ? `${esc(n.type)}: ${esc(n.label)} (severity: ${esc(sv || 'unclassified')})` : `${esc(n.type)}: ${esc(n.label)}`;
+  return `<g class="sg-node${dim}${n.id === sel ? ' sel' : ''}" transform="translate(${p.x.toFixed(1)},${p.y.toFixed(1)})" data-node="${esc(n.id)}" tabindex="0" role="button" aria-label="${accName}">${ring}${shape}${label}<title>${esc(n.label)} (${esc(n.type)})</title></g>`;
 }
 
 /** Deterministic viewBox for a zoom level (centered on the 800×520 stage). */
