@@ -971,6 +971,11 @@ const pad2 = (n) => String(n).padStart(2, "0");
 
 const STATE_CLASS = { prod: "s-prod", staging: "s-staging", pr: "s-pr", forecast: "s-forecast" };
 const SB_CLASS    = { prod: "sb-prod", staging: "sb-staging", pr: "sb-pr", forecast: "sb-forecast" };
+// #242 Tranche E: single source of truth for the human-readable release-state
+// label. The timeline legend (visible text) and the .chip .st status dot
+// (previously a bare, unnamed span — invisible to assistive tech and to a
+// printed/exported page, conveyed by shape+color alone) both read from this.
+const STATE_LABEL = { "s-prod": "production", "s-staging": "staging", "s-pr": "in PR", "s-forecast": "forecast" };
 
 /* Global runtime state */
 const STATE = {
@@ -1632,8 +1637,19 @@ function buildProgramBarsSection(idx) {
       chip.type = "button";
       chip.setAttribute("aria-haspopup", "dialog");
       chip.dataset.rcidx = String(rcIdx == null ? 999 : rcIdx);
-      chip.appendChild(el("span", "st " + (STATE_CLASS[st] || "s-forecast")));
-      chip.appendChild(document.createTextNode(ph.title || ph.key || ""));
+      const stCls = STATE_CLASS[st] || "s-forecast";
+      const stLabel = STATE_LABEL[stCls] || "forecast";
+      const titleText = ph.title || ph.key || "";
+      // #242 Tranche E: the status dot previously conveyed state by shape/color
+      // alone (no text, no aria-label, no title — invisible to assistive tech
+      // and to a printed/exported page). Fold the state into the button's own
+      // accessible name and mark the now-redundant dot decorative.
+      chip.setAttribute("aria-label", titleText + " — " + stLabel);
+      const stDot = el("span", "st " + stCls);
+      stDot.setAttribute("aria-hidden", "true");
+      stDot.title = stLabel;
+      chip.appendChild(stDot);
+      chip.appendChild(document.createTextNode(titleText));
       chip.addEventListener("click", () => openModal(prog, ph, chip));
       chips.appendChild(chip);
     });
