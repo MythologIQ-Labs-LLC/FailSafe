@@ -1,0 +1,74 @@
+{
+  "phase": "implement",
+  "session_id": "2026-08-23T1722-ledgerc",
+  "ts": "2026-08-23T18:33:19Z",
+  "files_touched": [
+    "FailSafe/extension/scripts/check-ledger-fork.cjs",
+    "FailSafe/extension/src/test/scripts/checkLedgerFork.test.cjs",
+    "FailSafe/extension/src/test/fixtures/ledger-fork/clean.md",
+    "FailSafe/extension/src/test/fixtures/ledger-fork/forked.md",
+    "FailSafe/extension/src/test/fixtures/ledger-fork/repaired.md",
+    "FailSafe/extension/src/test/fixtures/ledger-fork/empty.md",
+    "FailSafe/extension/src/test/fixtures/ledger-fork/dup204x4.md",
+    "FailSafe/extension/src/test/fixtures/ledger-fork/partial-attest.md",
+    "FailSafe/extension/package.json",
+    ".github/workflows/repo-standards-enforcement.yml",
+    "docs/FEATURE_INDEX.md",
+    ".agent/staging/AUDIT_REPORT.md",
+    "docs/SHADOW_GENOME.md"
+  ],
+  "plan_path": ".failsafe/governance/plans/plan-ledger-fork-guard.md",
+  "audit_verdict": "PASS (audit-iter2.json, iteration 5, Option B independent review)",
+  "branch": "feat/ledger-fork-guard-932",
+  "files_created": [
+    "FailSafe/extension/scripts/check-ledger-fork.cjs",
+    "FailSafe/extension/src/test/scripts/checkLedgerFork.test.cjs",
+    "FailSafe/extension/src/test/fixtures/ledger-fork/clean.md",
+    "FailSafe/extension/src/test/fixtures/ledger-fork/forked.md",
+    "FailSafe/extension/src/test/fixtures/ledger-fork/repaired.md",
+    "FailSafe/extension/src/test/fixtures/ledger-fork/empty.md",
+    "FailSafe/extension/src/test/fixtures/ledger-fork/dup204x4.md",
+    "FailSafe/extension/src/test/fixtures/ledger-fork/partial-attest.md"
+  ],
+  "files_modified": [
+    "FailSafe/extension/package.json",
+    ".github/workflows/repo-standards-enforcement.yml",
+    "docs/FEATURE_INDEX.md",
+    ".agent/staging/AUDIT_REPORT.md",
+    "docs/SHADOW_GENOME.md"
+  ],
+  "results": {
+    "guard_live_mode": "exit 0 - inspected 614 entries; labels 595, recovered 528, sentinel 63, unclassified 4",
+    "fixture_falsifier_set": "clean 0 / forked 1 (names 597 x2) / repaired 0 / empty 1 (names inspected 0) / dup204x4 1 (names 204 x4) / partial-attest 1 (names 9001,9002)",
+    "b9_case1": "--repo-root verbatim copy -> exit 0, inspected 614",
+    "b9_case2": "one sentinel mutated -> exit 1; FORK coverage pin recovered expected 528 got 529; FORK coverage pin sentinel expected 63 got 62",
+    "usage_errors": "both args -> 2; neither -> 2",
+    "new_suite": "24/24 pass",
+    "full_node_suite": "288/288 pass (26 .cjs suites)",
+    "lint": "npm run lint exit 0 (0 errors, 136 pre-existing warnings elsewhere)"
+  },
+  "mutation_testing": [
+    "M1 pin hex run to {64} (the B1 defect) -> 7 tests RED",
+    "M2 compute coverage pins but never gate the exit code (the B9 defect) -> B9 case 2 RED",
+    "M3 group on null values -> 3 tests RED",
+    "M1 first reported 24/24 pass because the sed omitted the capture parens so the mutation never applied; re-run with an applied-assertion. Reading that pass count without verifying the harness would have been the exact defect this cycle remediates."
+  ],
+  "razor": {
+    "file_lines": 232,
+    "limit": 250,
+    "longest_function": "main 21 lines",
+    "nesting": "<=3",
+    "nested_ternaries": 0
+  },
+  "ledger_hold": "LD11 honored; Step 11 DELIBERATELY SKIPPED. docs/META_LEDGER.md untouched - 0 Entry #597 headings, highest entry #596.",
+  "review_boundary": "No commit, no push, no PR, no merge. Changes unstaged on feat/ledger-fork-guard-932.",
+  "required_next_action": "/qor-substantiate",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.15.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5",
+    "human_oversight": "absent",
+    "ts": "2026-08-23T18:33:19Z"
+  }
+}

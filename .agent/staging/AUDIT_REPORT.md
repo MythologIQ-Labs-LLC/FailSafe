@@ -1,62 +1,94 @@
-# AUDIT REPORT - plan-233-read-ledger-once.md (iteration 5)
+# AUDIT REPORT — plan-ledger-fork-guard (iteration 5)
 
-**Session**: agent-execution, plan-233-read-ledger-once, iteration 5
-**Auditor**: The Qor-logic Judge (self-adversarial — no Task/Agent tool is available in this session either; same posture as iterations 4, disclosed rather than silently substituted)
-**Target**: `.failsafe/governance/plans/plan-233-read-ledger-once.md`
-**Target content hash**: `06b7806e0eee5a564b3300924aebea5768b82d74af8516e5d0b4153540557b3f` (SHA256 of `"plan-233-read-ledger-once|audit-PASS-iter5|2026-08-23"`, genuinely computed via `sha256sum`, not hand-typed)
+**Target**: `.failsafe/governance/plans/plan-ledger-fork-guard.md`
+**Session**: `2026-08-23T1722-ledgerc`
+**Date**: 2026-08-23
+**Judge**: Qor-logic Judge
 **Risk Grade**: L2
+**Mode**: Option B — independent reviewer (mandated by `audit_risk_score`: `option_b_required: true`, flags `high-citation-surface`)
+
+## VERDICT: **PASS**
+
+0 blocking. 3 non-blocking residuals, none holding up implementation. `findings_categories`: none.
+
+Gate artifact: `.qor/gates/2026-08-23T1722-ledgerc/audit-iter2.json`.
 
 ---
 
-# VERDICT: PASS — implementation authorized
+## Trajectory
 
-**Findings categories**: none blocking. `coverage-gap` (B2, ledger #594/#597) resolved this cycle.
+| iteration | blocking | class |
+|---|---|---|
+| 1 | 5 | doctrine signature (B1/B3/B4/B5) |
+| 2 | 2 | mode-scoping contradiction |
+| 3 | 1 | mode-scoping contradiction |
+| 4 | 1 | doctrine signature (B9) |
+| 5 | **0** | — |
 
----
-
-## Scope of this iteration
-
-Iteration 5 was authorized by an explicit owner decision recorded on PR #433 (comment id 5387189371, Knapp-Kevin, 2026-08-23T16:56:25Z — independently fetched and verified live via the GitHub API before any plan edit was made, not merely trusted from the task description): "proceed with iteration 5 by creating a genuine absent-ledger test condition (dedicated fixture or deterministic temp workspace) ... Do not narrow the contract merely to fit the existing fixtures." This resolves the B2 scope hold that stopped iteration 4 (ledger #597).
-
-Two, and only two, substantive edits were made to the plan, both in service of B2:
-
-1. A new "Resolution of iteration-4 VETO finding (ledger #597)" section, choosing the deterministic-temp-workspace mechanism over a seventh fixture, with three supporting citations.
-2. A rewrite of Phase 1's second test bullet and the FX892 Feature Inventory Touches row so the six-fixture equivalence claim covers only the four states the fixtures can actually reach (`ok`/`malformed`/`stale`/`unsupported`), with a separate, explicitly-named direct-temp-workspace case covering `unavailable`.
-
-The iteration bump (line 5) is the third, purely mechanical, change.
-
-**Diff discipline verified**: `git diff HEAD -- .failsafe/governance/plans/plan-233-read-ledger-once.md` against `e864192` (iteration 4's committed state) shows exactly four hunks: the iteration-line bump, the new B2 resolution section, the Phase 1 bullet rewrite, and the FX892 row rewrite. Locked Decisions LD0-LD8, `boundaries`/`non_goals`/`exclusions`, the B3 resolution section, Phase 2, Phase 3, the Definition of Done, and the CI Commands list are byte-for-byte unchanged from the version iteration 4 committed. Nothing outside B2's authorized scope was touched.
-
-## B2 (`coverage-gap`, ledger #594/#597) — RESOLVED
-
-**Mechanism choice, independently justified, not merely asserted.** The plan cites three pieces of this repo's own precedent for preferring a directly-constructed temp workspace over a seventh fixture, all three independently re-verified this cycle against live `HEAD` (`e864192`), not trusted from the plan's prose:
-
-- `git show HEAD:FailSafe/extension/src/test/roadmap/WorkspaceArtifactBuilder.test.ts | grep -nE 'missing META_LEDGER.md'` → `24:  test("missing META_LEDGER.md → shieldPhase IDLE, derivedShieldPhases all pending", () => {` — exact match. This is the closest existing analogue: a bare `fs.mkdtempSync` workspace with a `docs/` directory that never receives a ledger file, used for precisely the "absent ledger" condition B2 needs, and it is not one of the `qor-consumer` fixtures.
-- `git show HEAD:FailSafe/extension/src/test/qorlogic/consumer/consumer-adapter.test.ts | grep -nE "const ws = fs.mkdtempSync"` → `168:    const ws = fs.mkdtempSync(path.join(os.tmpdir(), 'consumer-233-'));` — exact match. The same test file that contains the disputed bullet already uses this exact technique elsewhere in itself for a state the six fixtures cannot reach.
-- `git show HEAD:FailSafe/extension/src/test/fixtures/qor-consumer/README.md | grep -nE 'Six fixture workspaces'` → `3:Six fixture workspaces for the Qor-logic consumer adapter tests: \`supported\`,` — exact match. The fixture directory's own documentation commits to a count of six; a seventh fixture would falsify that documentation and require touching a file outside this plan's declared `Affected Files`, for no capability the temp-workspace approach lacks.
-
-Independently re-run this cycle: `find src/test/fixtures/qor-consumer -iname META_LEDGER.md` returns exactly 6 hits (`malformed`, `missing-optional`, `partial-migration`, `stale`, `supported`, `unsupported-version`), confirming the underlying B2 defect is real and none of the fixtures has been altered to carry an absent case.
-
-**Claim now falsifiable, checked against the actual classification ladder.** The rewritten bullet asserts `readMetaLedgerArtifact(emptyRoot)` (no options, `emptyRoot` a temp workspace with no `docs/META_LEDGER.md` ever written) returns `state: 'unavailable'`, `data: null`, and a `reason` naming the source path. Traced against the live implementation: `fsRead` (`consumer-adapter.ts:140`) calls `mtimeIsoOf`, which `statSync`s the absent path, catches `ENOENT`, and returns `null`; `fsRead` then returns `{text: null, mtimeIso: null}` with no `readError`; `classifyRead` (`consumer-adapter.ts:90`) maps `text === null` with no `readError` to `state: 'unavailable'`, `reason: \`artifact not found: ${sourcePath}\`` — the source path is included exactly as claimed. This is a real, reachable branch, not a restated fixture claim: the eventual test can genuinely fail if `readMetaLedgerRaw`/the redefined `readMetaLedgerArtifact` botches the absent branch, which is the exact property B2 required be falsifiable.
-
-**FX892 descriptor now consistent with the bullet it describes.** The Feature Inventory Touches row for FX892 was the second half of ledger #597's finding (it repeated the same unqualified six-fixture claim independently of the test bullet). It now reads: "...across all six `qor-consumer` fixtures (`ok`/`malformed`/`stale`/`unsupported`), plus a directly-constructed absent-ledger temp workspace proving `unavailable`" — matching the rewritten bullet exactly, state-for-state.
-
-**No silent narrowing.** The owner's instruction was explicit: do not narrow the contract to fit the fixtures. The rewritten bullet does not drop the `unavailable`/absent claim — it relocates the mechanism that proves it from an impossible fixture call to a real, working one, and the resulting test still, in aggregate, exercises all five `ArtifactState` values the original bullet named.
-
-## Citation-parity tooling — same disclosed limitation as iteration 4, re-run rather than assumed unchanged
-
-`node scripts/check-plan-citation-parity.cjs --structure-only` (from `FailSafe/extension/`): `structure: 15 tracked plan(s), 1 declare Locked Decisions, 0 with LDs the lint cannot see` — exit 0, format recognition intact for all 9 declared LDs (LD0-LD8; the 3 new B2 citations are informal supporting citations in prose, not new numbered Locked Decisions, matching the style iteration 4's B3 section also used, so the declared-LD count is unchanged at 9).
-
-`node scripts/check-plan-citation-parity.cjs .failsafe/governance/plans/plan-233-read-ledger-once.md` (full mode): `UNVERIFIED — declared=9 — qor-logic-plus not runnable (ENOENT)` — same infrastructure-availability limitation disclosed in iteration 4's PR #433 ("Full-mode citation-truth-checking ... returned exit 2/UNVERIFIED in the audit sandbox"). Disclosed as unverified-by-tool, not silently treated as passed; all 9 LD citations plus the 3 new B2 citations were instead independently hand-verified against live `HEAD` via `git show | grep`, above and in the plan itself, exactly matching every cited line and text span.
-
-## Verified correct — do not relitigate
-
-B3 (ledger #595, the parse-count pin) was resolved in iteration 4 and is unchanged this cycle — still spies on `parseMetaLedgerEntries` alongside `fs.readFileSync`, asserting exactly 1 call on `supported` and 0 from inside `applyVersionFloor`. All 9 LD citations (LD0-LD8) — unchanged this cycle, previously re-verified in iteration 4 — remain exact. V1-V4 (iterations 1-2) remain resolved. B1 stays retracted. The three-phase design (Phase 1/2/3) is unchanged from iteration 4 and was never in question.
-
-## Reviewer-declared limits
-
-No Task/Agent subagent tool is available in this session (checked this cycle via tool search; only `TaskStop`, `SendMessage`, `EnterWorktree`, and search/subscribe tools are exposed — no spawn-capable agent tool). This audit is single-author self-review, mitigated by independently re-executing every citation grep and fixture enumeration against live source, and by independently fetching and verifying the owner's PR-433 comment via the GitHub API rather than trusting the task description's quotation of it. This is not a substitute for a second, differently-biased reader, and is disclosed as such rather than silently presented as an isolated review.
+The escalation cap was never reached: the longest consecutive run of the doctrine signature is one. That classification was made by the independent reviewer, on request, and deliberately not by the author.
 
 ---
 
-_Verdict: PASS. B2 is resolved with a real, falsifiable absent-ledger test condition per explicit owner instruction; B3 remains resolved from iteration 4; no other finding is open. Implementation via TDD (Phase 1 → Phase 2 → Phase 3) is authorized on `fix/233-read-ledger-once`._
+## Why the PASS is not a fifth-attempt concession
+
+The reviewer named, in advance, what would still have drawn a VETO and did not occur: if Case 2's mutation had left any coverage pin unfired; if `{form, value}` had broken `groupByPreviousHash`; if the live-mode cases had derived their expected values from a guard run rather than external measurement; or if any of the four coverage pins had failed to reproduce against the artifact. All four were checked and none holds.
+
+---
+
+## B9 — CLOSED (the iteration-4 blocking finding)
+
+`--repo-root` is the mode CI executes (`npm run governance:ledger-fork`), and until iteration 5 no declared test invoked it productively — only the usage-error path, which exits before doing any work. Everything the cycle built to fix B1's circularity was verified as *values returned by `coverage()`* and never as anything that gates an exit code.
+
+Two declared cases close it, and they compose:
+
+- **Case 1 — parser check.** `main(['--repo-root', <tmp with verbatim ledger copy>])` exits 0 and asserts `inspected == 614`. A degraded parser produces a wrong count and fails here.
+- **Case 2 — wiring check.** The same copy with one sentinel line replaced by `7f3a9b2e…` exits non-zero naming the failed pin. Verified empirically by the Judge before it was written into the plan: `labels` 595 (unchanged), `sentinel` 63 → **62**, `recovered` 528 → **529**, `unclassified` unchanged. Two pins fire independently.
+
+Neither case substitutes for the other. An implementation that computes all four counts and never wires them into the exit code passes Case 1 and fails Case 2.
+
+Incidental: the identity still holds across the mutation (595 = 529 + 62 + 4), which is a live demonstration that it is the tautology LD3 says it is.
+
+Case 1 also covers something neither pass had named — nothing previously asserted that null-valued entries are excluded from grouping. Had `groupByPreviousHash` grouped on `value: null`, the 63 sentinels plus 4 unclassified would form one false 67-member group and Case 1's exit 0 would fail.
+
+---
+
+## N15 — CLOSED
+
+`classifyPreviousHash(line) -> {form, value}`, `value` being the full hex run for the two hash forms and `null` otherwise. Every declared consumer traced: `coverage` buckets on `form` (so the matching-shape stub is bucketed as a genuine sentinel); `groupByPreviousHash` needs `value`, and because both hash forms return the *full* run, `#259` (inline, 66-hex) and `#262` (backtick, same 66-hex) group — an assertion that would fail under a prefix-truncating shape. `value: null` for sentinel/unclassified is load-bearing: all 63 sentinels share the literal `pending-runtime-tooling` and would otherwise form one false 63-member group.
+
+## N16, N17 — CLOSED
+
+The pinned-64 removal is re-justified on the ground that still holds. D2 carries both the `coverage` parameter and the classifier return shape as contract; D4 demonstrates RULE S in both columns.
+
+---
+
+## Non-blocking residuals
+
+- **N18** — RULE S's original taxonomy sorted *quantities* when mode-scoping follows the *assertion*. **Reworded in iteration 5** after the reviewer's verdict was authored: assertions are now classified by where the expected value comes from (live artifact / input under test / literal / relation). Zero current consequence either way — all seven rows were correctly scoped as written.
+- **N19** — a corroborating symptom of N18 (the missing symmetric `inspected == 614` live pin). Subsumed by the N18 rewording; the pin is now declared.
+- **N20** — Case 2's mutation value was unspecified as absent from the artifact. **Closed in iteration 5**: it reuses `7f3a9b2e…`, already verified absent and `is_placeholder_pattern`-clean across all five heuristics.
+
+---
+
+## Author errors corrected in this record
+
+- The iteration-1 report claimed the reviewer's dialect sub-counts (249/24/21/2) did not reproduce. They do — `grep -E '[0-9a-f]{N}'` matches runs of **at least** N, so those are cumulative thresholds decomposing to 225/3/19/2. Verified: `{64}`→249, `{65}`→24, `{66}`→21, `{67}`→2. The Judge misread the framing; the reviewer's evidence is sound in full.
+- The Judge quoted 401 as the highest `PREV_HASH_BASELINE` member. It is **330**; 401 sits in `[397,401]`, the attested group LD7 excludes from the baseline.
+
+---
+
+## Independent review — measured value
+
+Solo pass found 2 of the 5 iteration-1 blocking findings. The independent reviewer found B1 (circular baseline), B3 (unrunnable falsifier triple), B5, B9 and N18. Two were unreachable by the author in principle: **B9**, because the author wrote the `--file` fix that created the gap, and **N18**, because it is a defect in the rule the author authored. The reviewer also recorded B9 against itself as a miss carried since iteration 2 rather than letting it read as an iteration-4 regression.
+
+---
+
+## Ledger hold
+
+**No META_LEDGER entry is written for this verdict.** LD11 holds allocation until PR #432 merges and takes `#597`. `docs/META_LEDGER.md` remains at head #596.
+
+---
+
+## Required next action
+
+`/qor-implement`. Implementation is unlocked.

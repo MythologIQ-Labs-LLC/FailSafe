@@ -1,0 +1,77 @@
+{
+  "phase": "plan",
+  "session_id": "2026-08-23T1722-ledgerc",
+  "ts": "2026-08-23T18:19:01Z",
+  "plan_path": ".failsafe/governance/plans/plan-ledger-fork-guard.md",
+  "iteration": 5,
+  "change_class": "feature",
+  "doc_tier": "standard",
+  "originating_remediation": ".qor/gates/2026-08-23T1722-ledgerc/remediate.json (R3)",
+  "terms_introduced": [
+    {
+      "term": "Ledger fork",
+      "home": ".failsafe/governance/RESEARCH_BRIEF_ledger-entry-allocation-concurrency-2026-08-23.md"
+    },
+    {
+      "term": "Baseline residual",
+      "home": "FailSafe/extension/scripts/check-ledger-fork.cjs"
+    },
+    {
+      "term": "Field-recovery coverage",
+      "home": "FailSafe/extension/scripts/check-ledger-fork.cjs"
+    }
+  ],
+  "boundaries": {
+    "limitations": [
+      "Structural forks only; extraction owned here, chain math upstream."
+    ],
+    "non_goals": [
+      "Entry-number gaps must not fail this guard."
+    ],
+    "exclusions": [
+      "No edit/vendoring of upstream ledger_hash."
+    ]
+  },
+  "phases": [
+    "Phase 1 - detector + 6 fixtures (NEW)",
+    "Phase 2 - baselines, CLI, anti-widening, live-mode coverage (3 MODIFIED)"
+  ],
+  "feature_inventory_touches": [
+    {
+      "entry_id": "FX932",
+      "operation": "NEW",
+      "test_path": "FailSafe/extension/src/test/scripts/checkLedgerFork.test.cjs",
+      "test_descriptor": "check-ledger-fork --file <path> exits non-zero on a ledger containing two different '### Entry #597:' headings and exits 0 on the same ledger with one renumbered to #598"
+    }
+  ],
+  "ci_commands": [
+    "npm run governance:ledger-fork",
+    "npm run test:node",
+    "npm run lint",
+    "npm run test:all"
+  ],
+  "iteration4_findings_resolved": [
+    "B9 (doctrine signature) --repo-root, the mode CI runs, had no productive test - only the usage-error case. RULE S live-mode column and the coverage pins ENFORCEMENT were asserted and unfalsified. Two declared cases added: verbatim ledger copy under --repo-root exits 0 reporting inspected 614; a one-sentinel-line mutation exits non-zero naming the failed pin. Falsifier verified empirically: sentinel 63->62 and recovered 528->529, labels/unclassified unchanged, both pins fail.",
+    "N15 classifyPreviousHash return shape stated as {form, value}; the injected stub returns the same shape so coverage buckets it as a genuine sentinel.",
+    "N16 pinned-64 removal kept but re-justified - the copy argument went stale once the classifier became injectable.",
+    "N17 D2 now carries coverage(text, classifier = classifyPreviousHash) and the classifier return shape as export contract."
+  ],
+  "signature_classification_update": "Per the independent reviewer: iteration-4 B9 IS the doctrine signature, a change from its iteration-2 and iteration-3 calls (both mode-scoping contradictions). Longest consecutive run of the signature is ONE (iter1 signature, iter2 not, iter3 not, iter4 signature), so the three-consecutive escalation cap is not reached.",
+  "reviewer_owned_miss": "The reviewer recorded B9 as its own miss: the --file fix in iteration 2 correctly moved fixture testing off --repo-root and left --repo-root uncovered as a side effect; it did not raise this in iteration 2 or 3.",
+  "rule_s_verified_by_reviewer": "RULE S survived interrogation - enumeration exhaustive, no relocated ambiguity, all six fixture exit codes producible. The #590-#596 tail carries seven backtick-wrapped, all-distinct previous_hash values, so clean.md and repaired.md genuinely exit 0.",
+  "lint_results": {
+    "repo_plan_grep_lint": "OK - 12 tokens",
+    "upstream_plan_grep_lint": "4 citations truth-checked, 0 warnings",
+    "plan_text_consistency_lint": "exit 0"
+  },
+  "loop_position": "5th and final plan/audit attempt before the total loop cap routes to /qor-remediate",
+  "review_boundary": "no push, no PR, no merge",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.15.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5",
+    "human_oversight": "absent",
+    "ts": "2026-08-23T18:19:01Z"
+  }
+}

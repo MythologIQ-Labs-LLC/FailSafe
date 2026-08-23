@@ -1,0 +1,41 @@
+{
+  "phase": "audit",
+  "session_id": "2026-08-23T1722-ledgerc",
+  "ts": "2026-08-23T17:53:12Z",
+  "target": ".failsafe/governance/plans/plan-ledger-fork-guard.md",
+  "verdict": "VETO",
+  "report_path": ".agent/staging/AUDIT_REPORT.md",
+  "risk_grade": "L2",
+  "findings_categories": [
+    "specification-drift",
+    "coverage-gap",
+    "infrastructure-mismatch"
+  ],
+  "reviews_remediate_gate": null,
+  "mode": "option-b-independent-reviewer (mandated: option_b_required=true, flags=high-citation-surface)",
+  "blocking_findings": [
+    "B1 previous_hash extraction dialect unspecified; 595 labels span 3 dialects (272 backtick / 260 inline / 63 sentinel); only 225 inline-exactly-64. LAX prefix-64 parser yields 16 groups, EXACT-64 yields 0. PREV_HASH_BASELINE is an artifact of an unstated parser choice, and LD3's equality assertion cannot detect it because both sides share the parser - circular baseline (B2 class, ledger #595).",
+    "B2 LD5 names 15 of 16 groups ([397,401] omitted) while Phase 2 declares PREV_HASH_BASELINE '(16 groups)'; equality assertion specified RED at implementation time.",
+    "B3 falsifier triple not runnable: only declared arg is --repo-root, and the cited sibling resolves it via path.resolve(repoRoot,'docs/META_LEDGER.md'); three sibling fixtures cannot yield three exit codes from one argv. No --file arg declared.",
+    "B4 three normative claims unreachable: LD9 exit-non-zero-on-zero (no empty fixture), LD2's #204-at-count-4 variant (no path/Op/token, absent from Affected Files), LD4 partial attestation at CLI level (no fixture).",
+    "B5 fixture trim start boundary unspecified; baseline subtraction undefined when input holds fewer occurrences than baseline; clean.md carries no inspected-count pin so a parser recognising 2 of 17 entries yields green."
+  ],
+  "non_blocking_findings": [
+    "N1 LD6 cites 'existing test:citation-parity pattern' in the standards job; grep -rn citation-parity .github/ returns no matches - ghost reference.",
+    "N2 LD9's evidence cites run-node-tests.cjs:17 (discovery filter) while the claim concerns lines 20-23 (exit 0 on empty); claim true, evidence attached to wrong line.",
+    "N3 Phase 2 FEATURE_INDEX token greps FX929 for a plan registering FX932.",
+    "N4 LD1's 614-under-both-dialects measurement is verified but has no ongoing declared check."
+  ],
+  "independent_reviewer_value": "Solo pass found 2 of 5 blocking findings. Independent reviewer found B1, B3, B5 including the controlling defect. Reproduces the Entry #594 Option-B result.",
+  "reviewer_claims_corrected": "Reviewer's B1 sub-counts (249/24/21/2) did not reproduce; actual 225/3/19/2 plus six 63-length and four short runs. Structural claim confirmed, arithmetic wrong. Reviewer correctly recorded the fence-stripped 614 count as NOT VERIFIED rather than inferring it; Judge reproduced it independently.",
+  "ledger_hold": "No META_LEDGER entry written. LD8 holds allocation until PR #432 merges and takes #597; writing one now would be a third Entry #597.",
+  "required_next_action": "/qor-plan iteration 2. Implementation barred.",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.15.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5",
+    "human_oversight": "veto",
+    "ts": "2026-08-23T17:53:12Z"
+  }
+}

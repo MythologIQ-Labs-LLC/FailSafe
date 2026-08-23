@@ -1,0 +1,72 @@
+{
+  "phase": "plan",
+  "session_id": "2026-08-23T1722-ledgerc",
+  "ts": "2026-08-23T17:36:51Z",
+  "plan_path": ".failsafe/governance/plans/plan-ledger-fork-guard.md",
+  "change_class": "feature",
+  "doc_tier": "standard",
+  "terms_introduced": [
+    {
+      "term": "Ledger fork",
+      "home": ".failsafe/governance/RESEARCH_BRIEF_ledger-entry-allocation-concurrency-2026-08-23.md"
+    },
+    {
+      "term": "Baseline residual",
+      "home": "FailSafe/extension/scripts/check-ledger-fork.cjs"
+    }
+  ],
+  "boundaries": {
+    "limitations": [
+      "Structural forks only; chain arithmetic stays with the upstream qor-logic ledger_hash module."
+    ],
+    "non_goals": [
+      "Entry-number gaps [158,298] and upstream KNOWN_ENTRY_GAPS {510,532} must not fail this guard."
+    ],
+    "exclusions": [
+      "No edit/monkey-patch/vendoring of the upstream ledger_hash module (different workspace)."
+    ]
+  },
+  "phases": [
+    "Phase 1 - Detector module + falsifier fixtures: check-ledger-fork.cjs (NEW), checkLedgerFork.test.cjs (NEW), fixtures clean.md/forked.md/repaired.md (NEW)",
+    "Phase 2 - Baseline, CLI, anti-widening assertion: package.json, repo-standards-enforcement.yml, docs/FEATURE_INDEX.md (all MODIFIED)"
+  ],
+  "feature_inventory_touches": [
+    {
+      "entry_id": "FX932",
+      "operation": "NEW",
+      "test_path": "FailSafe/extension/src/test/scripts/checkLedgerFork.test.cjs",
+      "test_descriptor": "check-ledger-fork --repo-root <dir> exits non-zero on a ledger containing two different '### Entry #597:' headings and exits 0 on the same ledger with one renumbered to #598"
+    }
+  ],
+  "ci_commands": [
+    "npm run governance:ledger-fork",
+    "npm run test:node",
+    "npm run lint",
+    "npm run test:all"
+  ],
+  "locked_decisions": [
+    "LD1 fence-stripping dialect (measured: both dialects yield 614 headings and an identical duplicate set today)",
+    "LD2 baseline keyed on {number: exact_count}, not a bare set",
+    "LD3 baseline asserted EQUAL to live -> widening the constant goes RED",
+    "LD4 attestation clears a previous_hash group before baseline comparison; partial attestation does not",
+    "LD5 the 16 measured groups enter the baseline in three named classes; [248,258] and [259,262] are above-cutoff AND unattested",
+    "LD6 runs as an npm script in the standards job (fires on branch pushes, before the PR)",
+    "LD7 R4 Entry ID enforcement DEFERRED with rationale, not dropped",
+    "LD8 no ledger entry allocated by this cycle; held until PR #432 merges",
+    "LD9 zero inspected is a failure, not a pass"
+  ],
+  "lint_results": {
+    "repo_plan_grep_lint": "OK - 9 verification tokens checked, all match repo state",
+    "upstream_plan_grep_lint": "3 citation(s) truth-checked, 0 warnings",
+    "plan_text_consistency_lint": "exit 0"
+  },
+  "review_boundary": "no push, no PR, no merge",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.15.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5",
+    "human_oversight": "absent",
+    "ts": "2026-08-23T17:36:51Z"
+  }
+}

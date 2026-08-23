@@ -1,0 +1,72 @@
+{
+  "phase": "research",
+  "session_id": "2026-08-23T1722-ledgerc",
+  "ts": "2026-08-23T17:22:41Z",
+  "questions": [
+    "How are META_LEDGER entry numbers and previous_hash allocated?",
+    "What does the chain validator actually detect for duplicate entry numbers / duplicate previous_hash?",
+    "How were prior occurrences (#447 reconciliation of #397/#401) resolved?",
+    "Does upstream qor-logic expose a reservation/renumber surface for consumers?",
+    "What is the minimal correct resolution for the live Entry #597 collision?"
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "high",
+      "summary": "Allocation is max(N)+1 over the LOCAL ledger (ledger_fragment.py:95-104); no reservation, no lock, no cross-branch check. Both sessions computed 597 correctly."
+    },
+    {
+      "id": "F2",
+      "severity": "critical",
+      "summary": "verify_post_anchor() returns exit 0 'post-anchor clean' on the both-merged forked ledger; _sequence_breaks is disarmed because verify() passes the raw _duplicate_previous_hash_members set as tolerated (ledger_hash.py:543-545). Falsified: emptying the tolerated set produces BREAK Entry #597."
+    },
+    {
+      "id": "F3",
+      "severity": "medium",
+      "summary": "18 pre-existing genuine duplicate entry numbers (#113,#204x3,#205x3,#218,#222-236); confirmed not fence artifacts. ledger_hash.ENTRY_RE and ledger_fragment._ENTRY_NUM_RE use different fence dialects."
+    },
+    {
+      "id": "F4",
+      "severity": "high",
+      "summary": "Entry #447 RECONCILIATION is only a partial precedent: RECONCILED_ENTRIES_RE is number-keyed, so it cannot disambiguate two entries both numbered #597. No post-merge in-chain remedy exists."
+    },
+    {
+      "id": "F5",
+      "severity": "high",
+      "summary": "Upstream ships the fix (ledger_fragment Phase 56 fragments; entry_id Phase 76). FailSafe adopted neither: .qor/ledger absent; 0 of last 12 entries carry the Entry ID line qor-substantiate/SKILL.md:382 declares MUST. Entry #447 has one - a regression."
+    },
+    {
+      "id": "F6",
+      "severity": "high",
+      "summary": "Resolution verified: plan-233 (ts 2026-08-22) keeps #597, plan-430 (ts 2026-08-23) rebases to #598 per ledger_fragment.py:76 (ts,uid) sort. content_hash is number-independent and reproduces; only previous_hash/chain_hash change. Remediated ledger re-validated clean at boundary #598."
+    },
+    {
+      "id": "S1",
+      "severity": "medium",
+      "summary": "PR #434 changes production Sentinel source with NO META_LEDGER GATE entry and creates a new nested governance root FailSafe/.failsafe/ (0 files on main, 15 plans at the canonical repo-root path)."
+    },
+    {
+      "id": "S2",
+      "severity": "high",
+      "summary": "Entry #594 routed plan-233 to /qor-remediate 'NOT to a fourth plan iteration'; PR #433 delivers exactly that. The process defect #594 named is the same defect found in ledger_hash.verify()."
+    }
+  ],
+  "sources": [
+    "docs/META_LEDGER.md (#447, #594, #596)",
+    "qor/scripts/ledger_hash.py:167,224-237,390-401,412-419,491,543-545",
+    "qor/scripts/ledger_fragment.py:1-11,57-62,76,95-104,118-129",
+    "qor/scripts/entry_id.py:1-9",
+    ".claude/skills/qor-substantiate/SKILL.md:382",
+    "origin/fix/430-qorlogic-stale-install-upgrade:docs/META_LEDGER.md",
+    "origin/fix/233-read-ledger-once:docs/META_LEDGER.md"
+  ],
+  "brief_path": ".failsafe/governance/RESEARCH_BRIEF_ledger-entry-allocation-concurrency-2026-08-23.md",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.15.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5",
+    "human_oversight": "absent",
+    "ts": "2026-08-23T17:22:41Z"
+  }
+}

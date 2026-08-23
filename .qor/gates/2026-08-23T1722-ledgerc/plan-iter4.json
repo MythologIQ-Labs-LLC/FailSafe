@@ -1,0 +1,79 @@
+{
+  "phase": "plan",
+  "session_id": "2026-08-23T1722-ledgerc",
+  "ts": "2026-08-23T18:13:23Z",
+  "plan_path": ".failsafe/governance/plans/plan-ledger-fork-guard.md",
+  "iteration": 4,
+  "change_class": "feature",
+  "doc_tier": "standard",
+  "originating_remediation": ".qor/gates/2026-08-23T1722-ledgerc/remediate.json (R3)",
+  "terms_introduced": [
+    {
+      "term": "Ledger fork",
+      "home": ".failsafe/governance/RESEARCH_BRIEF_ledger-entry-allocation-concurrency-2026-08-23.md"
+    },
+    {
+      "term": "Baseline residual",
+      "home": "FailSafe/extension/scripts/check-ledger-fork.cjs"
+    },
+    {
+      "term": "Field-recovery coverage",
+      "home": "FailSafe/extension/scripts/check-ledger-fork.cjs"
+    }
+  ],
+  "boundaries": {
+    "limitations": [
+      "Structural forks only; extraction owned here, chain math upstream."
+    ],
+    "non_goals": [
+      "Entry-number gaps must not fail this guard."
+    ],
+    "exclusions": [
+      "No edit/vendoring of upstream ledger_hash."
+    ]
+  },
+  "phases": [
+    "Phase 1 - detector + 6 fixtures (NEW)",
+    "Phase 2 - baselines, CLI, anti-widening (3 MODIFIED)"
+  ],
+  "feature_inventory_touches": [
+    {
+      "entry_id": "FX932",
+      "operation": "NEW",
+      "test_path": "FailSafe/extension/src/test/scripts/checkLedgerFork.test.cjs",
+      "test_descriptor": "check-ledger-fork --file <path> exits non-zero on a ledger containing two different '### Entry #597:' headings and exits 0 on the same ledger with one renumbered to #598"
+    }
+  ],
+  "ci_commands": [
+    "npm run governance:ledger-fork",
+    "npm run test:node",
+    "npm run lint",
+    "npm run test:all"
+  ],
+  "iteration3_findings_resolved": [
+    "B8 RULE S states the rule (every live-derived constant is live-mode only) and enumerates all six quantities against it, closing the pattern where each iteration scoped only the pins a review had named. RULE R fixes main as accumulating, closing the B7 preemption contingency.",
+    "N10 coverage(text, classifier = classifyPreviousHash) - the degraded stub now drives the module counting path, not a copy.",
+    "N11 D4 and the SG-035 note reworded to name the pins, not the tautological identity.",
+    "N12 D4 rewritten to carry the four coverage pins, SENTINEL_BASELINE, all four reason pins, inspected counts and RULE S.",
+    "N13 forked.md sourced to origin/fix/233-read-ledger-once and origin/fix/430-qorlogic-stale-install-upgrade (one #597 each; main has none); fixtures relabelled verbatim / tail-derived / synthetic.",
+    "N14 resolution-table row corrected."
+  ],
+  "reviewer_meta_finding_accepted": "Each iteration fixed the instances named in review rather than the class. Iteration 2 pinned 2 of 4 fixtures; iteration 3 scoped 2 of 4 pins. Iteration 4 answers by stating RULE S and RULE R and enumerating exhaustively against them.",
+  "signature_classification": "Per the independent reviewer, iteration-2 B6 and iteration-3 B8 are mode-scoping contradictions (a check that FAILS when it should pass, visible immediately as a red test) - NOT the doctrine signature (a check that PASSES while proving nothing). The 3-consecutive-same-signature escalation cap therefore does not trip. Iteration-1 B1/B3/B4/B5 were the signature and none has recurred.",
+  "lint_results": {
+    "repo_plan_grep_lint": "OK - 12 tokens",
+    "upstream_plan_grep_lint": "4 citations truth-checked, 0 warnings",
+    "plan_text_consistency_lint": "exit 0",
+    "plan_iteration_status_lint": "exit 0"
+  },
+  "loop_position": "4th plan/audit attempt of max 5",
+  "review_boundary": "no push, no PR, no merge",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.15.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5",
+    "human_oversight": "absent",
+    "ts": "2026-08-23T18:13:23Z"
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "phase": "plan",
+  "session_id": "2026-08-23T1722-ledgerc",
+  "ts": "2026-08-23T17:58:23Z",
+  "plan_path": ".failsafe/governance/plans/plan-ledger-fork-guard.md",
+  "iteration": 2,
+  "change_class": "feature",
+  "doc_tier": "standard",
+  "originating_remediation": ".qor/gates/2026-08-23T1722-ledgerc/remediate.json (R3)",
+  "terms_introduced": [
+    {
+      "term": "Ledger fork",
+      "home": ".failsafe/governance/RESEARCH_BRIEF_ledger-entry-allocation-concurrency-2026-08-23.md"
+    },
+    {
+      "term": "Baseline residual",
+      "home": "FailSafe/extension/scripts/check-ledger-fork.cjs"
+    },
+    {
+      "term": "Field-recovery coverage",
+      "home": "FailSafe/extension/scripts/check-ledger-fork.cjs"
+    }
+  ],
+  "boundaries": {
+    "limitations": [
+      "Structural forks only; chain arithmetic stays upstream. Field EXTRACTION is owned here - extraction is not math (iter-1 B1)."
+    ],
+    "non_goals": [
+      "Entry-number gaps [158,298] and KNOWN_ENTRY_GAPS {510,532} must not fail this guard."
+    ],
+    "exclusions": [
+      "No edit/monkey-patch/vendoring of the upstream ledger_hash module."
+    ]
+  },
+  "phases": [
+    "Phase 1 - Detector module + falsifier fixtures: check-ledger-fork.cjs (NEW), checkLedgerFork.test.cjs (NEW), 6 fixtures NEW (clean/forked/repaired/empty/dup204x4/partial-attest)",
+    "Phase 2 - Baselines, CLI, anti-widening: package.json, repo-standards-enforcement.yml, docs/FEATURE_INDEX.md (MODIFIED)"
+  ],
+  "feature_inventory_touches": [
+    {
+      "entry_id": "FX932",
+      "operation": "NEW",
+      "test_path": "FailSafe/extension/src/test/scripts/checkLedgerFork.test.cjs",
+      "test_descriptor": "check-ledger-fork --file <path> exits non-zero on a ledger containing two different '### Entry #597:' headings and exits 0 on the same ledger with one renumbered to #598"
+    }
+  ],
+  "ci_commands": [
+    "npm run governance:ledger-fork",
+    "npm run test:node",
+    "npm run lint",
+    "npm run test:all"
+  ],
+  "locked_decisions": [
+    "LD1 heading dialect fence-stripping; declared test asserts both dialects keep agreeing (closes N4)",
+    "LD2 previous_hash dialect LOCKED: 3 forms (272 backtick / 256 inline / 63 sentinel), hex run NOT pinned to 64 - pinning 64 collapses 16 groups to 0 (closes B1a)",
+    "LD3 field-recovery coverage asserted: labels==recovered+sentinel+unclassified (595==528+63+4) and unclassified=={122,123,124,125} - a parser recognising 496/595 goes RED (closes B1b, the circular baseline)",
+    "LD4 number baseline keyed on {number: exact_count}",
+    "LD5 both baselines asserted EQUAL to live against the real artifact; ordinary #597 append analysed as non-triggering",
+    "LD6 attestation clears only on full membership; exactly one **Reconciled Entries** line exists (24264)",
+    "LD7 16 measured groups: 15 enter baseline, [397,401] cleared by attestation (closes B2)",
+    "LD8 two input modes --repo-root and --file, exactly one required (closes B3)",
+    "LD9 fixture trim boundary specified as the tail from '### Entry #590:'; passing fixtures pin inspected counts (closes B5)",
+    "LD10 zero inspected is a failure; empty.md fixture reaches it via main (closes B4)",
+    "LD11 no ledger entry allocated; held until PR #432 merges",
+    "LD12 R4 Entry ID enforcement deferred with rationale"
+  ],
+  "lint_results": {
+    "repo_plan_grep_lint": "OK - 12 verification tokens checked, all match repo state",
+    "upstream_plan_grep_lint": "4 citation(s) truth-checked, 0 warnings",
+    "plan_text_consistency_lint": "exit 0",
+    "plan_test_lint": "clean",
+    "plan_feature_tdd_lint": "clean"
+  },
+  "new_upstream_finding": "U4 - entries #122-#125 carry non-hex previous_hash values (alphabet letters through z); is_placeholder_pattern cannot evaluate a non-hex value so they sit outside its reach.",
+  "review_boundary": "no push, no PR, no merge",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.15.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5",
+    "human_oversight": "absent",
+    "ts": "2026-08-23T17:58:23Z"
+  }
+}
