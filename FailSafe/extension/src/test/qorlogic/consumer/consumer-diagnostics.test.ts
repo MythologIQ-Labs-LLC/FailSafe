@@ -13,6 +13,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { buildConsumerDiagnostics } from '../../../qorlogic/consumer/diagnostics';
+import { readMetaLedgerArtifact, applyVersionFloor } from '../../../qorlogic/consumer/consumer-adapter';
 import type { QorLogicVersionStatus } from '../../../qorlogic/qorLogicInstallRecord';
 
 const FIXTURE_ROOT = path.resolve(
@@ -128,6 +129,95 @@ suite('qor consumer diagnostics (#233 FX893)', () => {
       }
     } finally {
       hub.dispose();
+    }
+  });
+});
+
+// #233 iteration-5, plan-233-read-ledger-once.md Phase 2: buildConsumerDiagnostics accepts a
+// pre-read ledger envelope so the caller's own single read serves both consumers -- injection
+// must change cost (no second read), never output.
+suite('buildConsumerDiagnostics ledger injection (#233 iteration-5 Phase 2, FX893)', () => {
+  const injectRoots: string[] = [];
+
+  suiteTeardown(() => {
+    for (const root of injectRoots) fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  function materializeInject(fixture: string): string {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'qor-consumer-inject-'));
+    fs.cpSync(path.join(FIXTURE_ROOT, fixture), root, { recursive: true });
+    const wsDocs = path.join(root, 'ws-docs');
+    if (fs.existsSync(wsDocs)) fs.renameSync(wsDocs, path.join(root, 'docs'));
+    const gates = path.join(root, 'qor-gates');
+    if (fs.existsSync(gates)) {
+      fs.mkdirSync(path.join(root, '.qor'), { recursive: true });
+      fs.renameSync(gates, path.join(root, '.qor', 'gates'));
+    }
+    injectRoots.push(root);
+    return root;
+  }
+
+  for (const fixture of ['supported', 'malformed']) {
+    test(`${fixture}: injected-ledger call has the same META_LEDGER state/reason/provenance as the no-ledger call`, () => {
+      const root = materializeInject(fixture);
+      const env = readMetaLedgerArtifact(root);
+      const injected = buildConsumerDiagnostics(root, { ledger: env, auditSessionId: 'sess-1' });
+      const direct = buildConsumerDiagnostics(root, { auditSessionId: 'sess-1' });
+      const injectedLedger = injected.artifacts.find((a) => a.artifact === 'META_LEDGER');
+      const directLedger = direct.artifacts.find((a) => a.artifact === 'META_LEDGER');
+      assert.equal(injectedLedger?.state, directLedger?.state);
+      assert.equal(injectedLedger?.reason, directLedger?.reason);
+      assert.deepEqual(injectedLedger?.provenance, directLedger?.provenance);
+    });
+  }
+
+  test('injected envelope is used verbatim: a sentinel reason absent from the fixture appears exactly in the output', () => {
+    const root = materializeInject('supported');
+    const base = readMetaLedgerArtifact(root);
+    const sentinel = { ...base, state: 'malformed' as const, reason: 'SENTINEL-REASON-NOT-IN-FIXTURE-9f3a' };
+    const diag = buildConsumerDiagnostics(root, { ledger: sentinel });
+    const ledger = diag.artifacts.find((a) => a.artifact === 'META_LEDGER');
+    assert.equal(ledger?.reason, 'SENTINEL-REASON-NOT-IN-FIXTURE-9f3a');
+    assert.equal(ledger?.state, 'malformed');
+  });
+
+  test('V2 regression pin: below-floor versionStatus + an applyVersionFloor-produced ledger -> unsupported, non-null qorVersion, compatible false', () => {
+    const root = materializeInject('supported');
+    const versionStatus: QorLogicVersionStatus = { installed: '0.50.0', minimum: '0.100.0', meetsFloor: false };
+    const baseEnv = readMetaLedgerArtifact(root);
+    const floored = applyVersionFloor(baseEnv, versionStatus);
+    const diag = buildConsumerDiagnostics(root, { ledger: floored, versionStatus, auditSessionId: 'sess-1' });
+    const ledger = diag.artifacts.find((a) => a.artifact === 'META_LEDGER');
+    assert.equal(ledger?.state, 'unsupported');
+    assert.equal(ledger?.provenance.qorVersion, '0.50.0');
+    assert.equal(diag.compatible, false);
+  });
+
+  test('injected call performs zero reads of META_LEDGER.md; the no-ledger call performs exactly one', () => {
+    const root = materializeInject('supported');
+    const env = readMetaLedgerArtifact(root);
+    const ledgerPath = path.join(root, 'docs', 'META_LEDGER.md');
+    // Patch the actual require('fs') module object, not the TS namespace-import wrapper
+    // (`import * as fs`) -- under this repo's esModuleInterop/commonjs config that wrapper's
+    // members are getter-only at runtime, but the getters dereference the real module object
+    // live, so a direct patch there is observed by every other file's `import * as fs`.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const trueFs = require('fs') as typeof fs;
+    const original = trueFs.readFileSync;
+    let calls = 0;
+    trueFs.readFileSync = ((...args: Parameters<typeof fs.readFileSync>) => {
+      if (args[0] === ledgerPath) calls++;
+      return original(...(args as Parameters<typeof original>));
+    }) as typeof fs.readFileSync;
+    try {
+      calls = 0;
+      buildConsumerDiagnostics(root, { ledger: env, auditSessionId: 'sess-1' });
+      assert.equal(calls, 0, 'injected call must not re-read the ledger');
+      calls = 0;
+      buildConsumerDiagnostics(root, { auditSessionId: 'sess-1' });
+      assert.equal(calls, 1, 'no-ledger call reads the ledger exactly once');
+    } finally {
+      trueFs.readFileSync = original;
     }
   });
 });

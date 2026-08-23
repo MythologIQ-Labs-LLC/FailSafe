@@ -18,6 +18,10 @@ import {
   readTrackerManifestArtifact,
   readAuditGateArtifact,
   classifyMetaLedgerText,
+  readMetaLedgerRaw,
+  applyVersionFloor,
+  type RawArtifactRead,
+  type ConsumerReadOptions,
 } from '../../../qorlogic/consumer/consumer-adapter';
 import { WorkspaceArtifactBuilder } from '../../../roadmap/services/WorkspaceArtifactBuilder';
 import type { QorLogicVersionStatus } from '../../../qorlogic/qorLogicInstallRecord';
@@ -288,5 +292,190 @@ suite('classifyMetaLedgerText (#233 shared-ladder text-seam classification)', ()
       { maxAgeMs: 1000 * 60 * 60 * 24 * 365 * 100 },
     );
     assert.equal(env.state, 'ok');
+  });
+});
+
+// #233 iteration-5, plan-233-read-ledger-once.md Phase 1: readMetaLedgerRaw is the ONE fs
+// touch for docs/META_LEDGER.md; readMetaLedgerArtifact and WorkspaceArtifactBuilder.build()
+// both route through it instead of each doing their own read.
+suite('readMetaLedgerRaw (#233 iteration-5 Phase 1)', () => {
+  const rawRoots: string[] = [];
+
+  function freshRoot(): string {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'raw-ledger-'));
+    rawRoots.push(root);
+    return root;
+  }
+
+  suiteTeardown(() => {
+    for (const root of rawRoots) fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  test('present ledger -> {text, mtimeIso}, no readError', () => {
+    const root = freshRoot();
+    fs.mkdirSync(path.join(root, 'docs'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'docs', 'META_LEDGER.md'), '### Entry #1: X\n');
+    const raw = readMetaLedgerRaw(root);
+    assert.equal(raw.read.text, '### Entry #1: X\n');
+    assert.equal(typeof raw.read.mtimeIso, 'string', 'mtimeIso populated for a present file');
+    assert.equal(raw.read.readError, undefined);
+    assert.ok(raw.sourcePath.endsWith(path.join('docs', 'META_LEDGER.md')));
+  });
+
+  test('absent ledger -> {text: null, mtimeIso: null}, no readError', () => {
+    const root = freshRoot();
+    const raw = readMetaLedgerRaw(root);
+    assert.equal(raw.read.text, null);
+    assert.equal(raw.read.mtimeIso, null);
+    assert.equal(raw.read.readError, undefined, 'absent must not be conflated with unreadable');
+  });
+
+  test('present but unreadable (directory planted at the ledger path) -> {text: null, mtimeIso, readError}', () => {
+    const root = freshRoot();
+    fs.mkdirSync(path.join(root, 'docs', 'META_LEDGER.md'), { recursive: true });
+    const raw = readMetaLedgerRaw(root);
+    assert.equal(raw.read.text, null);
+    assert.equal(typeof raw.read.mtimeIso, 'string', 'mtime is known even though the read itself failed');
+    assert.ok(raw.read.readError, 'readError set, distinguishing "exists but unreadable" from "absent"');
+  });
+});
+
+// #233 iteration-5 B2 (ledger #594/#597, owner decision on PR #433): readMetaLedgerArtifact,
+// now redefined in terms of readMetaLedgerRaw + classifyMetaLedgerText, must remain
+// behavior-preserving across all five ArtifactState values. Four are driven by the six named
+// qor-consumer fixtures (each with the options that actually reach its state); `unavailable`
+// cannot be reached by any of them (none omits docs/META_LEDGER.md), so it is proven instead by
+// a directly-constructed absent-ledger temp workspace -- the same technique this file's own
+// "#233 route-seam equivalence" suite and WorkspaceArtifactBuilder.test.ts's makeWorkspace()
+// already use for exactly this class of state.
+suite('readMetaLedgerArtifact equivalence across fixtures + absent (#233 iteration-5 B2, FX892)', () => {
+  const equivRoots: string[] = [];
+
+  suiteTeardown(() => {
+    for (const root of equivRoots) fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  const FIXTURE_CASES: Array<{
+    fixture: string;
+    opts?: ConsumerReadOptions;
+    state: string;
+    rewindMtime?: boolean;
+  }> = [
+    { fixture: 'supported', state: 'ok' },
+    { fixture: 'malformed', state: 'malformed' },
+    { fixture: 'missing-optional', state: 'ok' },
+    { fixture: 'partial-migration', state: 'ok' },
+    { fixture: 'stale', state: 'stale', opts: { maxAgeMs: 1 }, rewindMtime: true },
+    { fixture: 'unsupported-version', state: 'unsupported', opts: { versionStatus: BELOW_FLOOR } },
+  ];
+
+  for (const { fixture, opts, state, rewindMtime } of FIXTURE_CASES) {
+    test(`${fixture} fixture: state/reason/provenance/data-length equal the pre-change implementation (-> ${state})`, () => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'consumer-equiv-'));
+      fs.cpSync(path.join(FIXTURE_ROOT, fixture), root, { recursive: true });
+      const wsDocs = path.join(root, 'ws-docs');
+      if (fs.existsSync(wsDocs)) fs.renameSync(wsDocs, path.join(root, 'docs'));
+      equivRoots.push(root);
+      if (rewindMtime) {
+        fs.utimesSync(path.join(root, 'docs', 'META_LEDGER.md'), EPOCH_2000, EPOCH_2000);
+      }
+      const env = readMetaLedgerArtifact(root, opts);
+      assert.equal(env.state, state, `${fixture}: ${env.reason}`);
+      assert.equal(env.provenance.sourcePath, path.join(root, 'docs', 'META_LEDGER.md'));
+      if (state === 'ok' || state === 'stale') {
+        assert.ok((env.data?.length ?? 0) >= 0, `${fixture}: data present for ${state}`);
+      } else {
+        assert.equal(env.data, null, `${fixture}: ${state} carries no data`);
+      }
+    });
+  }
+
+  test('directly-constructed absent-ledger temp workspace (no fixture): unavailable, data null, reason names source path', () => {
+    const emptyRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'consumer-absent-'));
+    equivRoots.push(emptyRoot);
+    const env = readMetaLedgerArtifact(emptyRoot);
+    assert.equal(env.state, 'unavailable');
+    assert.equal(env.data, null);
+    assert.ok(env.reason?.includes('META_LEDGER.md'), `reason names the source path: ${env.reason}`);
+    assert.equal(env.provenance.mtimeIso, null);
+  });
+
+  test('bare no-options call cannot reach unavailable via the six fixtures (regression guard for the original B2 defect)', () => {
+    // Every one of the six named fixtures ships docs/META_LEDGER.md, so a no-options call
+    // against any of them must never report unavailable -- confirms the fixture set itself
+    // still cannot produce the state Phase 1's bullet used to (falsely) claim it could.
+    for (const { fixture } of FIXTURE_CASES) {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'consumer-noopt-'));
+      fs.cpSync(path.join(FIXTURE_ROOT, fixture), root, { recursive: true });
+      const wsDocs = path.join(root, 'ws-docs');
+      if (fs.existsSync(wsDocs)) fs.renameSync(wsDocs, path.join(root, 'docs'));
+      equivRoots.push(root);
+      assert.notEqual(readMetaLedgerArtifact(root).state, 'unavailable', fixture);
+    }
+  });
+});
+
+// #233 iteration-5 Phase 1, FX931: applyVersionFloor overlays the B197 floor verdict onto an
+// already-classified envelope without a second read or parse. It must reproduce classifyRead's
+// real floor precedence exactly for every combination it accepts.
+suite('applyVersionFloor (#233 iteration-5 Phase 1, FX931)', () => {
+  const AVF_OK_LEDGER = [
+    '### Entry #1: SESSION SEAL - fixture',
+    '',
+    '**Phase**: SUBSTANTIATE',
+    '**Chain Hash**: `' + 'a'.repeat(64) + '`',
+    '',
+  ].join('\n');
+  const AVF_MALFORMED_TEXT = 'not a governance ledger, no entries here\n';
+  const AVF_PATH = 'docs/META_LEDGER.md';
+
+  const READS: Record<string, RawArtifactRead> = {
+    ok: { text: AVF_OK_LEDGER, mtimeIso: null },
+    malformed: { text: AVF_MALFORMED_TEXT, mtimeIso: null },
+    absent: { text: null, mtimeIso: null },
+  };
+
+  const MEETS_FLOOR: QorLogicVersionStatus = { installed: '0.200.0', minimum: '0.100.0', meetsFloor: true };
+  const VERSION_STATUSES: Array<{ name: string; vs: QorLogicVersionStatus | undefined }> = [
+    { name: 'below-floor', vs: BELOW_FLOOR },
+    { name: 'meets-floor', vs: MEETS_FLOOR },
+    { name: 'undefined', vs: undefined },
+  ];
+
+  for (const [readName, read] of Object.entries(READS)) {
+    for (const { name: vsName, vs } of VERSION_STATUSES) {
+      test(`${readName} read x ${vsName} versionStatus: applyVersionFloor(classify(read), vs) deep-equals classify(read, {versionStatus: vs})`, () => {
+        const baseEnv = classifyMetaLedgerText(read, AVF_PATH);
+        const overlaid = applyVersionFloor(baseEnv, vs);
+        const direct = classifyMetaLedgerText(read, AVF_PATH, { versionStatus: vs });
+        assert.deepEqual(overlaid, direct);
+      });
+    }
+  }
+
+  test('applyVersionFloor rejects maxAgeMs at compile time (@ts-expect-error pin); the full ladder still reaches stale', () => {
+    const rewound: RawArtifactRead = { text: AVF_OK_LEDGER, mtimeIso: '2000-01-01T00:00:00.000Z' };
+    const env = classifyMetaLedgerText(rewound, AVF_PATH);
+    // @ts-expect-error -- applyVersionFloor accepts ONLY versionStatus, not ConsumerReadOptions.
+    // QorLogicVersionStatus requires {installed, minimum, meetsFloor}, so {maxAgeMs: 1} errors
+    // on both the missing required members and the excess property; widening the parameter
+    // back to ConsumerReadOptions would make this directive unused, itself a compile error.
+    applyVersionFloor(env, { maxAgeMs: 1 });
+    const staleEnv = classifyMetaLedgerText(rewound, AVF_PATH, { maxAgeMs: 1 });
+    assert.equal(staleEnv.state, 'stale', 'the state the overlay cannot express is still reachable via the full ladder');
+    assert.ok((staleEnv.data?.length ?? 0) > 0, 'stale keeps the parsed data');
+  });
+
+  test('applyVersionFloor carries both the floor verdict and provenance.qorVersion, not just one', () => {
+    const okEnv = classifyMetaLedgerText({ text: AVF_OK_LEDGER, mtimeIso: null }, AVF_PATH);
+    const belowEnv = applyVersionFloor(okEnv, BELOW_FLOOR);
+    assert.equal(belowEnv.state, 'unsupported');
+    assert.equal(belowEnv.data, null);
+    assert.equal(belowEnv.provenance.qorVersion, BELOW_FLOOR.installed);
+
+    const meetsEnv = applyVersionFloor(okEnv, MEETS_FLOOR);
+    assert.equal(meetsEnv.state, 'ok');
+    assert.equal(meetsEnv.data?.length, 1);
+    assert.equal(meetsEnv.provenance.qorVersion, MEETS_FLOOR.installed);
   });
 });
