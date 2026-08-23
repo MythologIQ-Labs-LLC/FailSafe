@@ -3,7 +3,7 @@
   "displayName": "FailSafe (feat. Qor-Logic)",
   "description": "Open-source VS Code/Cursor governance and skills surface for AI coding agents.",
   "icon": "media/icon.png",
-  "version": "6.0.3",
+  "version": "6.0.4",
   "publisher": "MythologIQ",
   "license": "Apache-2.0",
   "repository": {
@@ -357,7 +357,7 @@
         "failsafe.tracker.emitGovernanceSidecar": {
           "type": "boolean",
           "default": false,
-          "description": "Auto-emit docs/roadmap/programs.generated.yaml \u2014 a Development Tracker manifest projected from the SHIELD governance ledger (docs/META_LEDGER.md + docs/FEATURE_INDEX.md) \u2014 whenever those files change. The generated sidecar never overwrites your hand-curated docs/roadmap/programs.yaml. Off by default; the manual command 'FailSafe: Emit Governance Tracker Sidecar' always works regardless. Requires extension reload after toggling."
+          "description": "Auto-emit docs/roadmap/programs.generated.yaml — a Development Tracker manifest projected from the SHIELD governance ledger (docs/META_LEDGER.md + docs/FEATURE_INDEX.md) — whenever those files change. The generated sidecar never overwrites your hand-curated docs/roadmap/programs.yaml. Off by default; the manual command 'FailSafe: Emit Governance Tracker Sidecar' always works regardless. Requires extension reload after toggling."
         },
         "failsafe.qorlogic.pythonPath": {
           "type": "string",
@@ -372,12 +372,12 @@
         "failsafe.integrations.slack.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Post FailSafe governance enforcement events (VETO, L3 queued/decided, critical drift) to a Slack incoming webhook. Notify-only and non-blocking \u2014 a Slack outage never affects any FailSafe workflow. Requires a webhook URL below."
+          "description": "Post FailSafe governance enforcement events (VETO, L3 queued/decided, critical drift) to a Slack incoming webhook. Notify-only and non-blocking — a Slack outage never affects any FailSafe workflow. Requires a webhook URL below."
         },
         "failsafe.integrations.slack.webhookUrl": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Slack **incoming webhook URL** to post governance notifications to. Treat as a secret \u2014 it grants posting to the target channel. Messages are notify-only (no interactive approvals; a link back to the local Command Center is included). Leave empty to disable."
+          "markdownDescription": "Slack **incoming webhook URL** to post governance notifications to. Treat as a secret — it grants posting to the target channel. Messages are notify-only (no interactive approvals; a link back to the local Command Center is included). Leave empty to disable."
         },
         "failsafe.integrations.teams.enabled": {
           "type": "boolean",
@@ -387,22 +387,22 @@
         "failsafe.integrations.teams.webhookUrl": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Microsoft Teams **incoming webhook URL**. Treat as a secret \u2014 it grants posting to the target channel. Leave empty to disable."
+          "markdownDescription": "Microsoft Teams **incoming webhook URL**. Treat as a secret — it grants posting to the target channel. Leave empty to disable."
         },
         "failsafe.integrations.linear.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable read-only Linear issue import. The `FailSafe: Import Linear Issue (preview)` command resolves a Linear issue URL/identifier to an UNCOMMITTED intent preview \u2014 nothing is created or synced. Requires an API key below."
+          "description": "Enable read-only Linear issue import. The `FailSafe: Import Linear Issue (preview)` command resolves a Linear issue URL/identifier to an UNCOMMITTED intent preview — nothing is created or synced. Requires an API key below."
         },
         "failsafe.integrations.linear.apiKey": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Linear **personal API key** (or OAuth access token) for read-only issue lookups. Treat as a secret \u2014 the value is sent only in the `Authorization` header and is never logged. Leave empty to disable."
+          "markdownDescription": "Linear **personal API key** (or OAuth access token) for read-only issue lookups. Treat as a secret — the value is sent only in the `Authorization` header and is never logged. Leave empty to disable."
         },
         "failsafe.integrations.jira.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable read-only Jira Cloud issue import. The `FailSafe: Import Jira Issue (preview)` command resolves a Jira issue URL/key to an UNCOMMITTED intent preview \u2014 nothing is created or synced. Requires base URL + email + API token below."
+          "description": "Enable read-only Jira Cloud issue import. The `FailSafe: Import Jira Issue (preview)` command resolves a Jira issue URL/key to an UNCOMMITTED intent preview — nothing is created or synced. Requires base URL + email + API token below."
         },
         "failsafe.integrations.jira.baseUrl": {
           "type": "string",
@@ -417,7 +417,7 @@
         "failsafe.integrations.jira.apiToken": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Jira Cloud **API token** (create at id.atlassian.com \u2192 Security \u2192 API tokens). Treat as a secret \u2014 sent only in the `Authorization` header (Basic email:token) and never logged. Leave empty to disable."
+          "markdownDescription": "Jira Cloud **API token** (create at id.atlassian.com → Security → API tokens). Treat as a secret — sent only in the `Authorization` header (Basic email:token) and never logged. Leave empty to disable."
         },
         "failsafe.integrations.github.enabled": {
           "type": "boolean",
@@ -427,7 +427,7 @@
         "failsafe.integrations.github.token": {
           "type": "string",
           "default": "",
-          "markdownDescription": "GitHub token used to create Check Runs \u2014 a **GitHub App installation token** (recommended; the Checks API is App-oriented and needs `checks: write`) or a PAT where the org permits it. Treat as a secret \u2014 sent only in the `Authorization` header and never logged. Leave empty to disable."
+          "markdownDescription": "GitHub token used to create Check Runs — a **GitHub App installation token** (recommended; the Checks API is App-oriented and needs `checks: write`) or a PAT where the org permits it. Treat as a secret — sent only in the `Authorization` header and never logged. Leave empty to disable."
         },
         "failsafe.integrations.github.apiBaseUrl": {
           "type": "string",
@@ -437,17 +437,17 @@
         "failsafe.integrations.sarif.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable SARIF import. The `FailSafe: Import SARIF Findings` command parses an operator-picked SARIF 2.1.0 file (fully offline \u2014 no network) and upserts findings as risk records in the Risk Register."
+          "description": "Enable SARIF import. The `FailSafe: Import SARIF Findings` command parses an operator-picked SARIF 2.1.0 file (fully offline — no network) and upserts findings as risk records in the Risk Register."
         },
         "failsafe.integrations.sentry.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable read-only Sentry import. The `FailSafe: Import Sentry Regressions` command pulls a project's unresolved issues and upserts them as runtime-regression risk records in the Risk Register. No network call is made unless this is enabled AND token + org + project are set. No raw event payloads are stored \u2014 only canonical fields."
+          "description": "Enable read-only Sentry import. The `FailSafe: Import Sentry Regressions` command pulls a project's unresolved issues and upserts them as runtime-regression risk records in the Risk Register. No network call is made unless this is enabled AND token + org + project are set. No raw event payloads are stored — only canonical fields."
         },
         "failsafe.integrations.sentry.token": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Sentry **auth token** (org-level or internal-integration token with `project:read` / `event:read`). Treat as a secret \u2014 sent only as a Bearer `Authorization` header and never logged. Leave empty to disable."
+          "markdownDescription": "Sentry **auth token** (org-level or internal-integration token with `project:read` / `event:read`). Treat as a secret — sent only as a Bearer `Authorization` header and never logged. Leave empty to disable."
         },
         "failsafe.integrations.sentry.org": {
           "type": "string",
@@ -477,7 +477,7 @@
         "failsafe.integrations.continue.apiKey": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Continue API key (`CONTINUE_API_KEY`). Treat as a secret \u2014 passed to the `cn` child process via the environment only, never in the command line or any receipt, and never logged. Leave empty if `cn` is already authenticated."
+          "markdownDescription": "Continue API key (`CONTINUE_API_KEY`). Treat as a secret — passed to the `cn` child process via the environment only, never in the command line or any receipt, and never logged. Leave empty if `cn` is already authenticated."
         },
         "failsafe.integrations.continue.allow": {
           "type": "array",
@@ -535,7 +535,7 @@
         "failsafe.integrations.openDesign.sseEnabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable per-run SSE attach against the local Open Design daemon (`GET /api/runs/<runId>/events`). When false the SSE client is constructed but never subscribes. Requires the daemon to be reachable at `127.0.0.1:7456`. Forward setting \u2014 v1.1 wires the client; per-run subscribe UX lands in v1.2."
+          "description": "Enable per-run SSE attach against the local Open Design daemon (`GET /api/runs/<runId>/events`). When false the SSE client is constructed but never subscribes. Requires the daemon to be reachable at `127.0.0.1:7456`. Forward setting — v1.1 wires the client; per-run subscribe UX lands in v1.2."
         },
         "failsafe.education.enabled": {
           "type": "boolean",
@@ -550,12 +550,12 @@
             "advanced"
           ],
           "enumDescriptions": [
-            "New to code \u2014 assume near-zero engineering knowledge; explain terms directly.",
-            "AI builder \u2014 can produce code with an agent; needs judgment around scope, verification, maintainability.",
-            "Product/PM background \u2014 connects software judgment to product judgment: scope, risk, acceptance criteria, tradeoffs, release confidence."
+            "New to code — assume near-zero engineering knowledge; explain terms directly.",
+            "AI builder — can produce code with an agent; needs judgment around scope, verification, maintainability.",
+            "Product/PM background — connects software judgment to product judgment: scope, risk, acceptance criteria, tradeoffs, release confidence."
           ],
           "default": "beginner",
-          "description": "Where the FailSafe Learn content meets you \u2014 a starting-point selector, not a skill score. The operator picks; FailSafe never infers."
+          "description": "Where the FailSafe Learn content meets you — a starting-point selector, not a skill score. The operator picks; FailSafe never infers."
         },
         "failsafe.genesis.livingGraph": {
           "type": "boolean",
@@ -700,7 +700,7 @@
         "failsafe.integrations.bicameral.autoConnect": {
           "type": "boolean",
           "default": false,
-          "description": "Automatically connect to Bicameral MCP at activation when the workspace is configured. Default off \u2014 operator clicks Connect."
+          "description": "Automatically connect to Bicameral MCP at activation when the workspace is configured. Default off — operator clicks Connect."
         },
         "failsafe.integrations.bicameral.upstreamPollMs": {
           "type": "number",

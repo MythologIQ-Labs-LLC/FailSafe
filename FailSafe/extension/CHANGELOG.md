@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.4] - 2026-08-23
+
+### Fixed
+- **"Install / Refresh Skills" now upgrades a stale qor-logic install.** The card promised to bring the install up to the required version floor, but `ensurePackageInstalled()`/`ensureInstalled()` gated on `isInstalled()`, which only checks package-name presence. A present-but-below-floor install was treated as satisfied, and the subsequent `qor.cli install` ran against the outdated CLI while reporting success. Both call sites now gate on `verifyInstalledVersion().meetsFloor`, which existed and was correct but was never consulted on that path. (#430)
+- **The pre-commit guard's workspace snapshot reads the ledger once.** `WorkspaceArtifactBuilder.build()` read and parsed `META_LEDGER.md` five times per build - measured at 8.7MB and 477ms cold - on the `CommitCheckRoute` path that blocks a commit. Two of those reads were redundant calls to the consumer adapter itself. (#233)
+- **Development Tracker phase chips carry an accessible name.** Chip status was conveyed by colour alone and was not announced. (#242 Tranche E)
+
+### Added
+- **Audit Log verdicts commit to the content they judged.** A Sentinel WARN/BLOCK/ESCALATE record now carries `artifactHash`, computed from the content the verdict was actually evaluated against rather than re-read from disk, so a later resolution can prove it refers to the same bytes. (#367 tranche 3a, FX933)
+- **A pre-merge guard against governance-ledger forks.** CI now fails when a branch would introduce a duplicate `### Entry #N:` number, or a duplicate `**Previous Hash**` without a covering attestation, beyond an enumerated historical baseline. Detection has to happen before merge: the reconciliation mechanism is keyed on entry number, so it cannot disambiguate two entries that share one. (FX932)
+- **Real Piper synthesis latency is sampled, including the timeout path**, so `TTS_TIMEOUT_MS` can be set against measured behaviour rather than a guess. (#406)
+- **An operator probe for the Agents Window worktree commit-hook row.** (#326 Phase D)
+
+### Changed
+- The plan citation-parity gate now actually executes in CI, and the four defects it found on first run are fixed.
+
 ## [6.0.3] - 2026-08-22
 
 ### Fixed

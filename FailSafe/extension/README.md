@@ -40,9 +40,17 @@ Each integration ships with its own README and its external API names are back-c
 
 ---
 
-**Current Release**: v6.0.3 (2026-08-22)
+**Current Release**: v6.0.4 (2026-08-23)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v6.0.4
+
+- **"Install / Refresh Skills" now actually upgrades a stale install.** The button promised to bring qor-logic up to the required version, but it only checked whether the package was *present* - so an install sitting below the floor was treated as fine, and the next step ran against the outdated CLI while reporting success.
+- **Commit checks are faster on large repositories.** The workspace snapshot behind the pre-commit guard read and parsed the governance ledger five times per build - 8.7MB and 477ms cold, on the path that blocks your commit. It now reads once.
+- **Development Tracker phase chips are readable by screen readers.** Each chip's status is announced rather than conveyed by colour alone.
+- **Audit Log records commit to the content they judged.** A warning or block now carries a hash of the exact content the verdict was made against, so a later decision can prove it refers to the same bytes.
+- **The governance ledger cannot silently fork.** A new pre-merge check fails CI when concurrent work would write conflicting ledger entries.
 
 ## What's New in v6.0.3
 
