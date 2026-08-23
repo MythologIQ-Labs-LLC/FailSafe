@@ -13,12 +13,18 @@ import {
   readMetaLedgerArtifact,
   readTrackerManifestArtifact,
   type ConsumerReadOptions,
+  type MetaLedgerEntry,
 } from './consumer-adapter';
 import type { ArtifactEnvelope, ConsumerArtifactSummary, ConsumerDiagnostics } from './types';
 
 export interface ConsumerDiagnosticsOptions extends ConsumerReadOptions {
   /** Session id for `.qor/gates/<sid>/audit.json`; omitted -> gate reported unavailable. */
   auditSessionId?: string;
+  /** Pre-classified META_LEDGER envelope from the caller's own single read. When supplied,
+   *  diagnostics does NOT re-read the ledger. MUST already carry this call's version-floor
+   *  verdict (see applyVersionFloor) — an envelope classified without `versionStatus` would
+   *  under-report a below-floor install as `ok`. */
+  ledger?: ArtifactEnvelope<MetaLedgerEntry[]>;
 }
 
 const INCOMPATIBLE_STATES: ReadonlySet<string> = new Set(['malformed', 'unsupported']);
@@ -37,7 +43,7 @@ export function buildConsumerDiagnostics(
   opts?: ConsumerDiagnosticsOptions,
 ): ConsumerDiagnostics {
   const artifacts = [
-    readMetaLedgerArtifact(root, opts),
+    opts?.ledger ?? readMetaLedgerArtifact(root, opts),
     readFeatureIndexArtifact(root, opts),
     readTrackerManifestArtifact(root, opts),
     readAuditGateArtifact(root, opts?.auditSessionId, opts),

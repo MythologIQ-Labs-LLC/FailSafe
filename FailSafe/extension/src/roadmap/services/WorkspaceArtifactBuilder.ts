@@ -12,11 +12,12 @@
  * 4-step Phase track without reaching into the in-memory PlanManager.
  */
 
-import * as fs from "fs";
-import * as path from "path";
-
 import { MetaLedgerReader, summarizeEntries, type LedgerSummary } from "./MetaLedgerReader";
-import { readMetaLedgerArtifact } from "../../qorlogic/consumer/consumer-adapter";
+import {
+  readMetaLedgerRaw,
+  classifyMetaLedgerText,
+  applyVersionFloor,
+} from "../../qorlogic/consumer/consumer-adapter";
 import { buildConsumerDiagnostics } from "../../qorlogic/consumer/diagnostics";
 import type { ConsumerDiagnostics } from "../../qorlogic/consumer/types";
 import { PlanFileReader, type ParsedPlan } from "./PlanFileReader";
@@ -76,10 +77,20 @@ export class WorkspaceArtifactBuilder {
     // missing-file posture. Version-floor incompatibility is surfaced in the
     // diagnostics block rather than by suppressing ledger rendering, so
     // below-floor installs keep today's hub behavior (B197 warning UX).
-    const ledgerEnvelope = readMetaLedgerArtifact(this.workspaceRoot);
+    //
+    // #233 iteration-5 Phase 3: ONE raw read serves both the floor-blind
+    // gating envelope and the floor-aware diagnostics envelope, and also
+    // feeds readGovernanceState -- collapsing the three seams this class
+    // owned (5 reads -> 3; MetaLedgerReader/SystemStateReader keep their own).
+    const rawLedger = readMetaLedgerRaw(this.workspaceRoot);
+    // Floor-BLIND view: gates ledger rendering. Opts-free by design — below-floor
+    // installs keep rendering the ledger (B197 warning UX).
+    const ledgerEnvelope = classifyMetaLedgerText(rawLedger.read, rawLedger.sourcePath);
     const ledgerReadable = ledgerEnvelope.state === "ok" || ledgerEnvelope.state === "stale";
+    // Floor-AWARE view: derived, not re-read and not re-parsed.
+    const ledgerForDiagnostics = applyVersionFloor(ledgerEnvelope, this.qorLogicVersionStatus);
     const ledger = new MetaLedgerReader(this.workspaceRoot);
-    const { shieldPhase, latestVerdict } = this.readGovernanceState();
+    const { shieldPhase, latestVerdict } = this.readGovernanceState(rawLedger.read.text);
     const derivedShieldPhases = derivePlanPhaseStatuses(shieldPhase, latestVerdict);
     return {
       ledgerSummary: ledgerReadable ? ledger.summarize() : summarizeEntries([]),
@@ -96,18 +107,17 @@ export class WorkspaceArtifactBuilder {
       derivedShieldPhases,
       qorConsumer: buildConsumerDiagnostics(this.workspaceRoot, {
         versionStatus: this.qorLogicVersionStatus,
+        ledger: ledgerForDiagnostics,
       }),
     };
   }
 
-  private readGovernanceState(): { shieldPhase: ShieldPhase; latestVerdict: string | undefined } {
-    const ledgerPath = path.join(this.workspaceRoot, "docs", "META_LEDGER.md");
-    if (!fs.existsSync(ledgerPath)) {
-      return { shieldPhase: "IDLE", latestVerdict: undefined };
-    }
+  /** Takes the text from build()'s single read; null (absent or unreadable) -> IDLE, matching
+   *  the prior existsSync + catch posture. */
+  private readGovernanceState(text: string | null): { shieldPhase: ShieldPhase; latestVerdict: string | undefined } {
+    if (text === null) return { shieldPhase: "IDLE", latestVerdict: undefined };
     try {
-      const content = fs.readFileSync(ledgerPath, "utf8");
-      const entries = parseMetaLedger(content);
+      const entries = parseMetaLedger(text);
       return {
         shieldPhase: getCurrentPhase(entries),
         latestVerdict: entries[0]?.verdict,
