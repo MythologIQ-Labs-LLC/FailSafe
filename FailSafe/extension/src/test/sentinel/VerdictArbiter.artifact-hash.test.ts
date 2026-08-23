@@ -1,4 +1,4 @@
-// FX930 (FailSafe#367 tranche 3a): VerdictArbiter.evaluateFileEvent already
+// FX932 (FailSafe#367 tranche 3a): VerdictArbiter.evaluateFileEvent already
 // reads file content once (FileReader.readFileContentSafe) to feed the
 // heuristic/LLM engines. This proves that same content reaches the ledger's
 // artifactHash column through VerdictEngine.generateVerdict's new trailing
@@ -83,7 +83,7 @@ function tmpFile(content: string): string {
   return file;
 }
 
-suite('VerdictArbiter.evaluateEvent - artifactHash threading (FailSafe#367 FX930)', () => {
+suite('VerdictArbiter.evaluateEvent - artifactHash threading (FailSafe#367 FX932)', () => {
   test('a real file with content: ledger entry artifactHash is the sha256 of that exact content', async () => {
     const content = 'export const answer = 42;\n';
     const file = tmpFile(content);

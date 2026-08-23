@@ -13,6 +13,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
 import { parseMetaLedgerEntries, type MetaLedgerEntry } from '../meta-ledger-model';
+export type { MetaLedgerEntry };
 import { parseFeatureIndex, type FeatureRow } from '../../roadmap/tracker/tracker-parsers';
 import type { TrackerManifest } from '../../roadmap/tracker/tracker-model';
 import type { AuditGateArtifact } from '../../qorelogic/risk/AuditGateArtifactReader';
@@ -160,15 +161,47 @@ function classifyFile<T>(
   return classifyRead(artifact, sourcePath, fsRead(sourcePath), parse, isEmpty, opts);
 }
 
-/** docs/META_LEDGER.md via the canonical parser (meta-ledger-model.ts:39). */
+export interface MetaLedgerRead {
+  read: RawArtifactRead;
+  sourcePath: string;
+}
+
+/** The single fs touch for docs/META_LEDGER.md. Callers needing both raw text and a
+ *  classified envelope read ONCE through this and pass the result to both consumers. */
+export function readMetaLedgerRaw(root: string): MetaLedgerRead {
+  const sourcePath = path.join(root, 'docs', 'META_LEDGER.md');
+  return { read: fsRead(sourcePath), sourcePath };
+}
+
+/** Overlay the B197 version-floor verdict onto an envelope classified WITHOUT options,
+ *  reproducing `classifyRead`'s floor precedence (the floor short-circuits ahead of content
+ *  state). Lets one read+parse serve both a floor-blind consumer and a floor-aware one.
+ *
+ *  Accepts ONLY `versionStatus`, deliberately NOT `ConsumerReadOptions`. `classifyRead` also
+ *  branches on `maxAgeMs` (:127) to yield `stale`, and this overlay has no stale rung — a
+ *  caller passing `maxAgeMs` would silently get `ok` where the real ladder gives `stale`.
+ *  The narrowed parameter makes that call unrepresentable rather than merely undocumented.
+ *  A consumer needing staleness must classify through `classifyMetaLedgerText` with full
+ *  options instead of deriving. */
+export function applyVersionFloor<T>(
+  env: ArtifactEnvelope<T>,
+  versionStatus?: QorLogicVersionStatus,
+): ArtifactEnvelope<T> {
+  const provenance = { ...env.provenance, qorVersion: versionStatus?.installed ?? null };
+  const reason = unsupportedReason({ versionStatus });
+  if (reason) return { artifact: env.artifact, state: 'unsupported', data: null, provenance, reason };
+  return { ...env, provenance };
+}
+
+/** docs/META_LEDGER.md via the canonical parser (meta-ledger-model.ts:39). Defined in terms of
+ *  `readMetaLedgerRaw` + `classifyMetaLedgerText` so a caller that already has its own raw read
+ *  (e.g. `WorkspaceArtifactBuilder.build()`) can reuse it instead of reading twice (#233). */
 export function readMetaLedgerArtifact(
   root: string,
   opts?: ConsumerReadOptions,
 ): ArtifactEnvelope<MetaLedgerEntry[]> {
-  return classifyFile(
-    root, path.join('docs', 'META_LEDGER.md'), 'META_LEDGER',
-    parseMetaLedgerEntries, (d) => d.length === 0, opts,
-  );
+  const { read, sourcePath } = readMetaLedgerRaw(root);
+  return classifyMetaLedgerText(read, sourcePath, opts);
 }
 
 /**
