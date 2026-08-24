@@ -34,19 +34,27 @@
  *   registry) can both log entries against the same artifactPath. A
  *   routine clean content scan can never carry an EXS00x pattern id, so
  *   it would have been reported as "superseding" a claim-fabrication
- *   BLOCK it says nothing about. `LedgerEntry.verificationMethod` does
- *   not currently distinguish which engine produced an entry (it is
- *   hardcoded to `'sentinel_heuristic'` for both paths in
- *   `VerdictEngine.executeActions`), so there is no schema-level way to
- *   scope a same-artifact comparison to "the same kind of check" today.
+ *   BLOCK it says nothing about.
  *
- * Reintroducing content/pattern-based supersession needs a schema change
+ *   Half of this is now resolved (FX934, #367 tranche 3b):
+ *   `LedgerEntry.verificationMethod` distinguishes `'existence_claim'`
+ *   (AGENT_CLAIM events, routed through `validateClaim`) from
+ *   `'sentinel_heuristic'` (every other event type, routed through
+ *   `evaluateFileEvent`) instead of the single hardcoded literal both
+ *   paths previously shared. This projector does not yet consume that
+ *   field, and per-engine provenance alone does not make same-artifact
+ *   comparison sound: the decision-driving-pattern problem below is
+ *   unresolved, and even within the `'sentinel_heuristic'` engine a later
+ *   PASS still cannot, by `determineDecision`'s own construction, carry
+ *   the specific pattern that drove an earlier WARN/BLOCK.
+ *
+ * Reintroducing content/pattern-based supersession still needs a change
  * this tranche does not make: either persisting which matched pattern(s)
- * were decision-driving (not the full matched set) plus per-engine
- * provenance on each entry, or anchoring supersession to verified content
- * identity instead of a path string — either way, also excluding synthetic
- * non-file identities (`'unknown'`, `'claim_manifest'`) from any
- * path-based correlation. That is deferred to a follow-up tranche;
+ * were decision-driving (not the full matched set — per-engine provenance
+ * alone, landed above, is not sufficient), or anchoring supersession to
+ * verified content identity instead of a path string — either way, also
+ * excluding synthetic non-file identities (`'unknown'`, `'claim_manifest'`)
+ * from any path-based correlation. That is deferred to a follow-up tranche;
  * `FailSafe#367` stays open for it.
  *
  * Half of that second option landed separately (FX933, #367 tranche 3a):
