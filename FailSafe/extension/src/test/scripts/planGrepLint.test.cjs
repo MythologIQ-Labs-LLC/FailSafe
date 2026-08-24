@@ -207,6 +207,100 @@ describe('reverify — ls fallback', () => {
   });
 });
 
+describe('reverify — regex-shaped grep patterns (FailSafe#439)', () => {
+  before(() => {
+    if (!fs.existsSync(path.join(TMP_REPO, 'ledger-regex.md'))) {
+      let body = '';
+      for (let i = 1; i <= 5; i++) body += `### Entry #${i}: something\n`;
+      commitFile(TMP_REPO, 'ledger-regex.md', body);
+    }
+  });
+
+  it('fails NEW-VERIFIED when the cited regex actually matches (exact #439 repro)', () => {
+    // Prior to the fix, `^### Entry #[0-9]+:` was matched with a literal
+    // String.includes() check, never found the regex text verbatim, and so
+    // NEW-VERIFIED incorrectly passed on a file that is not new.
+    const result = lint.reverify({
+      path: 'ledger-regex.md',
+      op: 'NEW',
+      command: "`grep -nE '^### Entry #[0-9]+:' ledger-regex.md` -> 5 matches",
+      token: 'NEW-VERIFIED',
+    }, TMP_REPO);
+    assert.equal(result.ok, false);
+    assert.match(result.observed, /^match: /);
+  });
+
+  it('passes MODIFIED-VERIFIED for the same cited regex match (exact #439 repro)', () => {
+    const result = lint.reverify({
+      path: 'ledger-regex.md',
+      op: 'MODIFIED',
+      command: "`grep -nE '^### Entry #[0-9]+:' ledger-regex.md` -> 5 matches",
+      token: 'MODIFIED-VERIFIED',
+    }, TMP_REPO);
+    assert.equal(result.ok, true);
+  });
+
+  it('passes NEW-VERIFIED when a regex pattern genuinely does not match', () => {
+    const result = lint.reverify({
+      path: 'ledger-regex.md',
+      op: 'NEW',
+      command: "`grep -nE '^### Retired #[0-9]+:' ledger-regex.md` -> 0 matches",
+      token: 'NEW-VERIFIED',
+    }, TMP_REPO);
+    assert.equal(result.ok, true);
+    assert.equal(result.observed, 'no match');
+  });
+
+  it('fails closed (not silently ok) on an invalid regex pattern', () => {
+    const result = lint.reverify({
+      path: 'ledger-regex.md',
+      op: 'MODIFIED',
+      command: "`grep -E '### Entry #[0-9+:' ledger-regex.md`",
+      token: 'MODIFIED-VERIFIED',
+    }, TMP_REPO);
+    assert.equal(result.ok, false);
+    assert.match(result.observed, /not a valid regular expression/);
+  });
+
+  it('honors -F (fixed strings) to force literal matching even with regex-shaped text', () => {
+    // The literal string "[0-9]+" never appears in ledger-regex.md (only the
+    // *interpreted* regex would match digits), so -F must not match.
+    const result = lint.reverify({
+      path: 'ledger-regex.md',
+      op: 'MODIFIED',
+      command: "`grep -F '[0-9]+' ledger-regex.md`",
+      token: 'MODIFIED-VERIFIED',
+    }, TMP_REPO);
+    assert.equal(result.ok, false);
+    assert.equal(result.observed, 'no match');
+  });
+
+  it('leaves plain literal patterns (no metacharacters) unaffected', () => {
+    const result = lint.reverify({
+      path: 'ledger-regex.md',
+      op: 'EXISTING-USE',
+      command: "grep 'Entry #3' ledger-regex.md",
+      token: 'EXISTING-VERIFIED',
+    }, TMP_REPO);
+    assert.equal(result.ok, true);
+  });
+});
+
+describe('isRegexShapedGrep', () => {
+  it('treats -F as always literal, even with metacharacters present', () => {
+    assert.equal(lint.isRegexShapedGrep('foo[0-9]+', '-F '), false);
+  });
+  it('treats -E/-P/-G as always regex, even with no metacharacters', () => {
+    assert.equal(lint.isRegexShapedGrep('foo', '-E '), true);
+    assert.equal(lint.isRegexShapedGrep('foo', '-P '), true);
+    assert.equal(lint.isRegexShapedGrep('foo', '-nG '), true);
+  });
+  it('infers regex from metacharacters when no mode flag is given', () => {
+    assert.equal(lint.isRegexShapedGrep('^### Entry #[0-9]+:', ''), true);
+    assert.equal(lint.isRegexShapedGrep('"/api/skills"', ''), false);
+  });
+});
+
 describe('PLAN_PATH_RE — defensive arg validation', () => {
   it('accepts canonical .failsafe/governance/plans/ path', () => {
     assert.ok(lint.PLAN_PATH_RE.test('.failsafe/governance/plans/plan-foo.md'));
