@@ -128,12 +128,47 @@ function parseAffectedRows(planText) {
 // because the cited shape is absent but because the matcher never recognized
 // it -- silently satisfying an absence claim that was never checked. This
 // must not happen: `-E`/`-P`/`-G` mark grep's own regex modes, and a pattern
-// containing unescaped regex metacharacters is not literal text regardless
-// of flags.
+// containing unescaped POSIX BRE metacharacters is not literal text
+// regardless of flags.
+//
+// Without an explicit mode flag, real grep runs in POSIX/GNU Basic Regular
+// Expression (BRE) mode, where only `. * ^ $ [ ]` are special when
+// unescaped. `( ) { } + ? |` are literal characters in BRE -- they only gain
+// their ERE/regex meaning when backslash-escaped (`\( \) \{ \} \+ \? \|`,
+// the GNU BRE-extension convention, the inverse of ERE/JS escaping). A
+// pattern like `a+b` or `cat|dog` cited under plain `grep` (no `-E`) is a
+// literal citation and must not be regex-interpreted (FailSafe#443
+// adversarial finding: it previously was, and diverged from real grep --
+// e.g. `new RegExp('a+b').test('ab')` is `true` while real `grep 'a+b'`
+// only matches the literal text "a+b").
 function isRegexShapedGrep(pattern, flags) {
   if (/F/.test(flags)) return false; // grep -F: fixed strings, never regex.
   if (/[EPG]/.test(flags)) return true; // grep -E/-P/-G: explicit regex mode.
-  return /[\^$[\]()+*?{}|\\]/.test(pattern);
+  const withoutEscapes = pattern.replace(/\\./g, '');
+  return /[.^$[\]*]/.test(withoutEscapes) || /\\[(){}+?|]/.test(pattern);
+}
+
+// Translates a POSIX/GNU BRE-shaped pattern (as cited under plain `grep`,
+// no `-E`/`-P`/`-G`) into an equivalent JS RegExp source. BRE and JS/ERE
+// escaping conventions for `( ) { } + ? |` are inverted: BRE treats them as
+// literal unless escaped, JS/ERE treats them as special unless escaped. All
+// other characters (including the always-special `. * ^ $ [ ] \d`-style
+// escapes) already mean the same thing in both and pass through unchanged.
+function convertBreToJsRegexSource(pattern) {
+  let out = '';
+  for (let i = 0; i < pattern.length; i++) {
+    const c = pattern[i];
+    if (c === '\\' && i + 1 < pattern.length) {
+      const next = pattern[i + 1];
+      out += '(){}+?|'.includes(next) ? next : c + next; // escaped-in-BRE -> unescape for JS
+      i++;
+    } else if ('(){}+?|'.includes(c)) {
+      out += '\\' + c; // literal-in-BRE -> escape for JS
+    } else {
+      out += c;
+    }
+  }
+  return out;
 }
 
 // Re-runs the verification command shape implied by the token + command text.
@@ -198,9 +233,11 @@ function reverify(row, repoRoot) {
         const lines = text.split(/\r?\n/);
         let matches;
         if (isRegexShapedGrep(pattern, flags)) {
+          const isExplicitRegexFlag = /[EPG]/.test(flags);
+          const regexSource = isExplicitRegexFlag ? pattern : convertBreToJsRegexSource(pattern);
           let re;
           try {
-            re = new RegExp(pattern);
+            re = new RegExp(regexSource);
           } catch (e) {
             return { ok: false, observed: `cited pattern is not a valid regular expression: ${e.message}` };
           }
@@ -281,4 +318,11 @@ if (require.main === module) {
   process.exit(main(process.argv.slice(2)));
 }
 
-module.exports = { parseAffectedRows, reverify, isRegexShapedGrep, TOKEN_VOCAB, PLAN_PATH_RE };
+module.exports = {
+  parseAffectedRows,
+  reverify,
+  isRegexShapedGrep,
+  convertBreToJsRegexSource,
+  TOKEN_VOCAB,
+  PLAN_PATH_RE,
+};

@@ -284,6 +284,43 @@ describe('reverify — regex-shaped grep patterns (FailSafe#439)', () => {
     }, TMP_REPO);
     assert.equal(result.ok, true);
   });
+
+  it('matches BRE-literal + as a literal character under plain grep, not "one or more" (FailSafe#443)', () => {
+    // Real `grep 'a+b' file` (no -E) only matches the literal text "a+b" --
+    // confirmed empirically against real grep. A naive JS-regex
+    // interpretation of unescaped `+` would also match "ab", which this
+    // must not do.
+    commitFile(TMP_REPO, 'plus-literal.txt', 'a+b line\nab line\naab line\n');
+    const matchesLiteral = lint.reverify({
+      path: 'plus-literal.txt',
+      op: 'EXISTING-USE',
+      command: "grep 'a+b' plus-literal.txt",
+      token: 'EXISTING-VERIFIED',
+    }, TMP_REPO);
+    assert.equal(matchesLiteral.ok, true);
+    assert.match(matchesLiteral.observed, /^match: a\+b line$/);
+
+    const doesNotMatchBareAb = lint.reverify({
+      path: 'plus-literal.txt',
+      op: 'NEW',
+      command: "grep 'a+b' plus-literal.txt", // NEW-VERIFIED claims absence
+      token: 'NEW-VERIFIED',
+    }, TMP_REPO);
+    // The literal "a+b" IS present, so NEW-VERIFIED (absence claim) must fail.
+    assert.equal(doesNotMatchBareAb.ok, false);
+  });
+
+  it('honors backslash-escaped grouping under plain grep as real regex intent', () => {
+    commitFile(TMP_REPO, 'escaped-group.txt', 'foobar line\nfoo(bar) line\n');
+    const result = lint.reverify({
+      path: 'escaped-group.txt',
+      op: 'EXISTING-USE',
+      command: "grep 'foo\\(bar\\)' escaped-group.txt",
+      token: 'EXISTING-VERIFIED',
+    }, TMP_REPO);
+    assert.equal(result.ok, true);
+    assert.match(result.observed, /^match: foobar line$/);
+  });
 });
 
 describe('isRegexShapedGrep', () => {
@@ -298,6 +335,39 @@ describe('isRegexShapedGrep', () => {
   it('infers regex from metacharacters when no mode flag is given', () => {
     assert.equal(lint.isRegexShapedGrep('^### Entry #[0-9]+:', ''), true);
     assert.equal(lint.isRegexShapedGrep('"/api/skills"', ''), false);
+  });
+  it('does not treat BRE-literal characters as regex when no mode flag is given (FailSafe#443)', () => {
+    // ( ) { } + ? | are literal in real grep's default POSIX/GNU BRE mode
+    // unless backslash-escaped -- unlike ERE/JS regex, where they are
+    // special unless escaped. Misclassifying these as regex-shaped diverges
+    // from real grep's actual match behavior (verified empirically: real
+    // `grep 'a+b'` matches only the literal text "a+b", never "ab").
+    assert.equal(lint.isRegexShapedGrep('a+b', ''), false);
+    assert.equal(lint.isRegexShapedGrep('colou?r', ''), false);
+    assert.equal(lint.isRegexShapedGrep('cat|dog', ''), false);
+    assert.equal(lint.isRegexShapedGrep('foo(bar)', ''), false);
+    assert.equal(lint.isRegexShapedGrep('a{2,3}', ''), false);
+  });
+  it('treats backslash-escaped BRE extensions as regex intent (GNU \\( \\) \\{ \\} \\+ \\? \\|)', () => {
+    assert.equal(lint.isRegexShapedGrep('foo\\(bar\\)', ''), true);
+    assert.equal(lint.isRegexShapedGrep('a\\+b', ''), true);
+    assert.equal(lint.isRegexShapedGrep('cat\\|dog', ''), true);
+  });
+});
+
+describe('convertBreToJsRegexSource', () => {
+  it('escapes BRE-literal ( ) { } + ? | for JS RegExp', () => {
+    assert.equal(lint.convertBreToJsRegexSource('a+b'), 'a\\+b');
+    assert.equal(lint.convertBreToJsRegexSource('cat|dog'), 'cat\\|dog');
+    assert.equal(lint.convertBreToJsRegexSource('foo(bar)'), 'foo\\(bar\\)');
+  });
+  it('unescapes GNU BRE-extension escapes into JS-special characters', () => {
+    assert.equal(lint.convertBreToJsRegexSource('foo\\(bar\\)'), 'foo(bar)');
+    assert.equal(lint.convertBreToJsRegexSource('a\\+b'), 'a+b');
+  });
+  it('leaves always-special BRE metacharacters and other escapes unchanged', () => {
+    assert.equal(lint.convertBreToJsRegexSource('^### Entry #[0-9]+:'), '^### Entry #[0-9]\\+:');
+    assert.equal(lint.convertBreToJsRegexSource('foo\\.bar'), 'foo\\.bar');
   });
 });
 
