@@ -1,0 +1,86 @@
+{
+  "phase": "plan",
+  "session_id": "2026-09-03T1833-c206a6",
+  "ts": "2026-09-03T18:50:39Z",
+  "plan_path": "plan-qor169-sprint1-seal-unblock.md",
+  "iteration": 2,
+  "change_class": "hotfix",
+  "doc_tier": "standard",
+  "terms": [
+    {
+      "term": "Vacuous pass",
+      "home": ".failsafe/governance/RESEARCH_BRIEF_qor169-alignment-2026-09-03.md"
+    }
+  ],
+  "boundaries": {
+    "limitations": [
+      "Clears two hard ABORTs (seal_artifacts, and skill_size_budget_lint's blindness) plus the attribution policy half of seal_trailer_check. seal_trailer_check itself flips only at substantiate against the seal commit. Does NOT address gate_chain_completeness or secret_scanner."
+    ],
+    "non_goals": [
+      "No push/PR/merge/tag/publish. No ledger repair. No doc-currency work. No closing of PR #440 - visible-side, held at Review Boundary."
+    ],
+    "exclusions": [
+      "No edit or vendoring of upstream qor.scripts.*",
+      "No change to qor-audit/SKILL.md size"
+    ]
+  },
+  "phases": [
+    "Phase 1 - .qorlogic/config.json (NEW) + config test (NEW)",
+    "Phase 2 - TTS timeout assertion clock injection (1 MODIFIED)",
+    "Phase 3 - repo hygiene: gitignore anchoring, VSIX untrack, README path scrub (7 paths)"
+  ],
+  "feature_inventory_touches": [
+    {
+      "entry_id": "FX935",
+      "operation": "NEW",
+      "test_path": "FailSafe/extension/src/test/governance/qorlogic-config.test.cjs",
+      "test_descriptor": "config declares attribution.model_coauthor false and a layout.skills_root resolving to an existing dir containing at least one SKILL.md"
+    },
+    {
+      "entry_id": "FX936",
+      "operation": "NEW",
+      "test_path": "FailSafe/extension/src/test/governance/gitignore-anchoring.test.cjs",
+      "test_descriptor": "git check-ignore ignores a path under FailSafe/extension/test-results/ and does not ignore FailSafe/extension/src/"
+    },
+    {
+      "entry_id": "FX406a",
+      "operation": "MODIFIED",
+      "test_path": "FailSafe/extension/src/test/roadmap/tts-engine-timeout-and-cancellation.test.ts",
+      "test_descriptor": "a timed-out synthesis records elapsed time equal to the injected clock delta (37ms), not the configured 20ms bound"
+    }
+  ],
+  "ci_commands": [
+    "npm run lint",
+    "npm run compile",
+    "npm run test:node",
+    "npm test",
+    "qor-logic scripts seal_artifacts --check --repo-root .",
+    "qor-logic scripts skill_size_budget_lint",
+    "python -c \"from qor.scripts.attribution_policy import resolve_policy; assert resolve_policy(None).model_coauthor is False\"",
+    "qor-logic scripts publication_boundary_lint --repo-root .",
+    "git check-ignore --no-index -v FailSafe/extension/test-results/x"
+  ],
+  "baselines": "main @12bbbd96: seal_artifacts exit 1; skill_size_budget_lint exit 0 with 0 findings; test-results ignore rule never fires. seal_trailer_check exit 1 and is NOT flipped by this phase.",
+  "option_b_required": false,
+  "review_boundary": "no push, no PR, no merge",
+  "audit_findings_closed": [
+    "B1 seal_trailer_check falsifier retracted. attribution.model_coauthor:false drops only the Co-Authored-By half; seal_trailer_check.py:40-53 requires 'Authored via [Qor-logic SDLC]' under both policy values. Replaced with a resolve_policy assertion here, and a two-part substantiate-time falsifier against the seal commit (exits 0 AND carries zero Co-Authored-By lines).",
+    "B2 Phase 2 D4 runner corrected from 'npm run test:node' to 'npm test'. run-node-tests.cjs:17 filters .test.cjs under src/test; the TTS test is .test.ts run by vscode-test. CI Commands now states which runner reaches which test."
+  ],
+  "lint_results": {
+    "plan_text_consistency_lint": "exit 0",
+    "plan_grep_lint": "exit 0",
+    "dod_check": "exit 0",
+    "plan_test_lint": "exit 0",
+    "plan_iteration_status_lint": "exit 0",
+    "plan_feature_tdd_lint": "exit 0"
+  },
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.15.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5",
+    "human_oversight": "absent",
+    "ts": "2026-09-03T18:50:39Z"
+  }
+}

@@ -29337,3 +29337,96 @@ Qor-logic **#361** (self-silencing duplicate-previous_hash tolerance), **#362** 
 ## Required next action
 
 Operator approves the production gate on run 32666694232 to publish v6.0.4. Outstanding, none of them started: an FX-id collision guard, a governance-root guard, the BACKLOG version-summary substring check, and an upstream report for residual 2.
+
+---
+
+### Entry #602: SESSION SEAL — plan-qor169-sprint1-seal-unblock (qor-logic 0.169.0 alignment, Sprint 1)
+
+**Entry ID**: `0db34e551962`
+**Timestamp**: 2026-09-03T19:32:37Z
+**Phase**: SUBSTANTIATE
+**Session**: `2026-09-03T1833-c206a6`
+**Change class**: hotfix
+**Risk grade**: L2
+**Verdict**: PASS
+**SSDF Practices**: PS.2.1, RV.2.1
+
+## Decision
+
+Seals Sprint 1 of the qor-logic 0.169.0 alignment audit. The headline is not the upgrade — it is that **five governance controls in this repo were returning success while inspecting nothing**, and one missing file explained three of them.
+
+`.qorlogic/config.json` did not exist. Its absence hard-ABORTed `seal_artifacts --check`, hard-ABORTed `seal_trailer_check` (whose only sanctioned exemption for this operator's no-AI-co-author policy is a key in that file), and left the ABORT-class 40 KB `skill_size_budget_lint` resolving to `qor/skills`, a path absent here, so it scanned zero files.
+
+**Falsifiers flipped (measured, not asserted):**
+
+- `skill_size_budget_lint`: 0 findings / 0 bytes of output → 3 WARN findings (`qor-audit` 38.3 KB, `qor-plan` 25.6 KB, `qor-substantiate` 36.4 KB). The control had never measured a file in this repo.
+- `resolve_policy(None).model_coauthor`: `AssertionError` (True) → `False`.
+- `git check-ignore --no-index FailSafe/extension/test-results/x`: no match → `.gitignore:75`.
+- `git ls-files "*.vsix"`: 1 → 0.
+- `publication_boundary_lint` findings in `FailSafe/README.md`: 2 → 0 (repo total 384 → 200).
+- `session_id_lint`: WARN → clean. `.qor/session/current` held `2026-08-23T1722-ledgerc`, which fails `SESSION_ID_PATTERN`, so `session.current()` returned `None` and `intent_lock` + `procedural_fidelity` were silently keyed to a session that does not exist.
+
+**TTS timeout assertion (#406) — mutation-proved in both directions.** The prior check was `assert.ok(samples[0].ms >= 20)` against a configured bound of 20, read off the real wall clock. It went red in CI on timer coarseness (run 33751001155), blocking dependabot PR #447 on an unrelated `qs` bump — and it could not falsify its own stated claim, because an implementation echoing the bound back satisfies `20 >= 20`. With `tts-engine.js` mutated to record `this.timeoutMs` instead of elapsed time:
+
+| assertion | result under mutation |
+|---|---|
+| old `ms >= 20` | 10 passing, exit 0 — misses it |
+| new `ms === 37` | 1 failing, exit 1 — catches it |
+
+No production change: `tts-engine.js:64` already exposed `options.now`.
+
+## Deviations and disclosures
+
+- **`seal_artifacts --check` did NOT flip and is not claimed as flipped.** The layout declaration cleared both root-resolution errors it was failing on, but it then bottoms out on a pytest collected-count (this is a TypeScript repo) and, under `--skip-tests`, on README count-badges plus SYSTEM_STATE Snapshot/Phase markers — the upstream Qor-logic repo's own presentation convention. Adopting it is a materially larger change than a hygiene sprint and was not requested. Recorded as prerequisite-absent, surfaced as a new gap.
+- **`layout.agents_root` was added beyond the audited plan text.** It surfaced only after `skills_root` landed and `seal_artifacts` advanced past the first error to a second unresolved root. Same file, same key family, same falsifier; shipped with its own red-then-green assertion rather than left half-done.
+- **`npm test` could not run.** The local VS Code updater held `checkInnoSetupMutex` for 31s and the extension host refused to launch — a machine condition, and NOT the proxy risk the audit anticipated as N2. Mitigated per the FX933 precedent: direct `mocha --ui tdd` against compiled output, 10 passing, plus the two-directional mutation proof. A broad mocha run across `out/test/roadmap` is not possible; several suites require the extension-host `vscode` module.
+- **Step 4.7.5 `governance-index --advance-last-reviewed --enforce` damaged the index and the damage was repaired in-cycle.** `docs/GOVERNANCE_INDEX.md` carries three `**Last Reviewed**:` lines (`:3`, `:6`, `:8`) narrating three different cycles; the gate advanced ALL THREE to the seal date, including two describing months-old work. Lines `:6` and `:8` were restored to `2026-08-23`; `:3`, the current stanza, holds the seal date. This is GAP-DOCS-02 reproduced by the gate itself and is an upstream defect, not repo drift.
+- **`ai_provenance` records `version: "0.15.1"` on every gate artifact in this repo.** Root cause identified: `ai_provenance._PYPROJECT` resolves to `site-packages/pyproject.toml`, a stray file shipped by `bicameral-mcp` 0.15.1. The recorded provenance version is an unrelated package's. Upstream defect; not repaired here.
+- **Two dead `.gitignore` rules removed beyond plan scope.** The new test's fourth assertion found `extension/.vsce-token` and `extension/.ovsx-token` also mis-anchored. These are credential paths, but bare `.vsce-token`/`.ovsx-token` at `:107-108` already match at any depth — redundant config, never an exposure. All five previously-matched paths re-verified ignored.
+- **Step 7.7 `seal_entry_check` remains inapplicable to this ledger, per the Entry #601 precedent.** It reports `FAIL: no parseable latest entry` because `ledger_dialect.entry_phase` requires a numeric `Phase <N>` in the entry header or `**Phase**:` line, and this repo does not phase-number its ledger entries (#601 measured `phase=None` across #594-#601; only #600 resolved, by accident of its header text). No phase number was invented for this entry to force it green. **One change since #601:** that seal recorded the gate printing FAIL while exiting 0 — an exit-code/content mismatch. Under 0.169.0 it now exits 1, matching its own output. The gate is still inapplicable, but it is no longer lying about it.
+- **Chain integrity independently confirmed:** `qor-logic verify-ledger --post-anchor` exits 0 with `post-anchor clean (boundary=#602)`, so this entry's chain math verifies even though the phase-tag parser cannot read it.
+- **No version bump, no seal tag.** Governance and test-harness scope only; follows the FX932 (#601) retrospective-seal precedent. Review Boundary honored: local commit only.
+
+## Audit trajectory
+
+VETO → PASS across two iterations. Iteration 1 was vetoed on two `specification-drift` findings, both in the plan's own verification claims:
+
+1. `seal_trailer_check --commit HEAD` declared as an exit 1 → 0 falsifier. False — `attribution.model_coauthor: false` drops only the `Co-Authored-By:` half; `seal_trailer_check.py:40-53` requires the `Authored via [Qor-logic SDLC]` line under both policy values. Verified: `message_has_full_trailer(m, require_coauthor=False)` is False for HEAD and for `0188f0bc`.
+2. Phase 2's D4 named `npm run test:node` to verify a `.test.ts` file. `run-node-tests.cjs:17` filters `.test.cjs` under `src/test`; the TTS test is TypeScript run by `vscode-test`. The declared verification would have exited 0 without executing the changed test.
+
+The second finding is the notable one: **the plan author had just catalogued five vacuous controls and then wrote two unfalsifiable verification claims into the remediation for them.** `audit_risk_score` returned `option_b_required: false`. The scorer does not model "author has just finished reasoning about this exact defect class," which is precisely when momentum risk peaks. Recorded as an SG-007 instance.
+
+## Feature Inventory
+
+**Feature Inventory**: Total: 752 / verified: 702 / unverified: 0 / n/a: 43
+**New entries**: FX935 (`.qorlogic/config.json` layout + attribution declaration), FX936 (`.gitignore` anchoring), FX937 (TTS timeout assertion determinism + falsifiability)
+**Newly unverified**: none
+
+## Verification
+
+- `npm run lint` exit 0
+- `npm run compile` exit 0
+- `npm run test:node` exit 0 — **298/298 pass**
+- `featureIndexClassifier` parity exit 0 — 33/33 pass
+- `mocha --ui tdd out/test/roadmap/tts-engine-timeout-and-cancellation.test.js` exit 0 — 10 passing
+- Gate ladder 4.6 through 4.6.11: 10/10 exit 0 (`data_api_acl_lint` disclosed-skip, no SQL migrations)
+- 4.7 `doc_integrity` strict: PASS after adding the `Vacuous pass` glossary entry (the fail-closed gate correctly caught a declared term with no glossary home)
+- 6.5 documentation currency: 0 warnings
+
+## Files
+
+`.qorlogic/config.json` (NEW) · `FailSafe/extension/src/test/governance/qorlogic-config.test.cjs` (NEW) · `FailSafe/extension/src/test/governance/gitignore-anchoring.test.cjs` (NEW) · `FailSafe/extension/src/test/roadmap/tts-engine-timeout-and-cancellation.test.ts` · `.gitignore` · `FailSafe/README.md` · `docs/FEATURE_INDEX.md` · `docs/GOVERNANCE_INDEX.md` · `qor/references/glossary.md` · `codex.md` (tracked) · `.github/copilot-instructions.md` (tracked) · deleted: `v6.0.3`, both VSIX, 5 test-results artifacts
+
+**Content Hash**:
+```
+SHA256(plan-qor169-sprint1-seal-unblock.md)
+= 7e20b4492f6c6c20e72c355f0f20efe99acd6948cb9f584f51a79527c816f924
+```
+
+**Previous Hash**: `7f4fb448aa71fdadd277d3999d27707e30802cab7e22eb4968b05e3e55df5097` (Entry #601 Chain Hash)
+
+**Chain Hash (Merkle seal)**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 5dd8d0c3fae23bee250136286f23c217d9bee2f4b511f29de03ae15f2280b9e0
+```

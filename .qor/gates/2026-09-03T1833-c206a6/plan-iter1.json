@@ -1,0 +1,79 @@
+{
+  "phase": "plan",
+  "session_id": "2026-09-03T1833-c206a6",
+  "ts": "2026-09-03T18:35:36Z",
+  "plan_path": "plan-qor169-sprint1-seal-unblock.md",
+  "iteration": 1,
+  "change_class": "hotfix",
+  "doc_tier": "standard",
+  "terms": [
+    {
+      "term": "Vacuous pass",
+      "home": ".failsafe/governance/RESEARCH_BRIEF_qor169-alignment-2026-09-03.md"
+    }
+  ],
+  "boundaries": {
+    "limitations": [
+      "Clears three hard ABORTs and one vacuous control; does NOT address gate_chain_completeness or secret_scanner, vacuous for reasons this sprint does not change."
+    ],
+    "non_goals": [
+      "No push/PR/merge/tag/publish. No ledger repair. No doc-currency work. No closing of PR #440 - visible-side, held at Review Boundary."
+    ],
+    "exclusions": [
+      "No edit or vendoring of upstream qor.scripts.*",
+      "No change to qor-audit/SKILL.md size; 749-byte headroom disclosed not fixed"
+    ]
+  },
+  "phases": [
+    "Phase 1 - .qorlogic/config.json (NEW) + config test (NEW)",
+    "Phase 2 - TTS timeout assertion clock injection (1 MODIFIED)",
+    "Phase 3 - repo hygiene: gitignore anchoring, VSIX untrack, README path scrub (7 paths)"
+  ],
+  "feature_inventory_touches": [
+    {
+      "entry_id": "FX935",
+      "operation": "NEW",
+      "test_path": "FailSafe/extension/src/test/governance/qorlogic-config.test.cjs",
+      "test_descriptor": "config declares attribution.model_coauthor false and a layout.skills_root resolving to an existing dir containing at least one SKILL.md"
+    },
+    {
+      "entry_id": "FX936",
+      "operation": "NEW",
+      "test_path": "FailSafe/extension/src/test/governance/gitignore-anchoring.test.cjs",
+      "test_descriptor": "git check-ignore ignores a path under FailSafe/extension/test-results/ and does not ignore FailSafe/extension/src/"
+    },
+    {
+      "entry_id": "FX406a",
+      "operation": "MODIFIED",
+      "test_path": "FailSafe/extension/src/test/roadmap/tts-engine-timeout-and-cancellation.test.ts",
+      "test_descriptor": "a timed-out synthesis records elapsed time equal to the injected clock delta (37ms), not the configured 20ms bound"
+    }
+  ],
+  "ci_commands": [
+    "npm run lint",
+    "npm run compile",
+    "npm run test:node",
+    "qor-logic scripts seal_trailer_check --commit HEAD",
+    "qor-logic scripts seal_artifacts --check --repo-root .",
+    "qor-logic scripts skill_size_budget_lint",
+    "qor-logic scripts publication_boundary_lint --repo-root .",
+    "git check-ignore --no-index -v FailSafe/extension/test-results/x"
+  ],
+  "baselines": "main @12bbbd96: seal_trailer_check exit 1; seal_artifacts exit 1; skill_size_budget_lint exit 0 with 0 findings; test-results ignore rule never fires. Config keys verified at qorlogic_config.py:19, attribution_policy.py:48, badge_layout.py:30,41.",
+  "option_b_required": false,
+  "review_boundary": "no push, no PR, no merge",
+  "lint_results": {
+    "plan_text_consistency_lint": "exit 0",
+    "plan_grep_lint": "exit 0",
+    "dod_check": "exit 0"
+  },
+  "provenance_defect_noted": "ai_provenance version reads site-packages/pyproject.toml, a stray file from bicameral-mcp 0.15.1; recorded version is not qor-logic's. Upstream defect, filed separately.",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.15.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5",
+    "human_oversight": "absent",
+    "ts": "2026-09-03T18:35:36Z"
+  }
+}

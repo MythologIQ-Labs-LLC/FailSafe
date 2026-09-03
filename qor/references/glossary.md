@@ -92,3 +92,25 @@ introduced_in_plan: plan-qor-phase62-item-b-sweep-followups
 referenced_by:
   - docs/META_LEDGER.md
 ```
+
+```yaml
+term: Vacuous pass
+definition: |
+  A governance control that returns a success exit code while having inspected nothing, so its green result
+  carries no evidence about the property it exists to enforce. The canonical instance is an ABORT-class gate
+  whose target path does not resolve in the consuming repository: qor-logic scripts skill_size_budget_lint
+  defaults to --skills-root qor/skills, which is absent in FailSafe (skills live at .claude/skills), so it
+  scanned zero files and exited 0 for the life of the ladder. Distinct from a disclosed Phase-75 SKIP, which
+  records prerequisite-absence explicitly and emits gate_skipped_prerequisite_absent; a vacuous pass is
+  indistinguishable from a real pass at the exit code. Detected by exercising the control's falsifier: run it
+  once as configured, then again in a configuration where it MUST fail. A control that cannot be made to fail
+  is not measuring anything. Related failures found by the same test in this repo: gate_chain_completeness
+  (inspects 0 sessions and prints "completeness is unverified, not confirmed" before exiting 0), secret_scanner
+  --staged (0 staged bytes), governance-index --cross-check-ledger (0 bytes of output on both pass and fail),
+  and the post-anchor ledger fork guard (only reachable when the forked entry is the ledger's high-water mark).
+home: .failsafe/governance/RESEARCH_BRIEF_qor169-alignment-2026-09-03.md
+introduced_in_plan: plan-qor169-sprint1-seal-unblock
+referenced_by:
+  - docs/FEATURE_INDEX.md
+  - docs/META_LEDGER.md
+```

@@ -51,7 +51,7 @@ FailSafe/                           # APP CONTAINER
 ### Workspace Level (Parent Directory)
 
 ```
-G:\MythologIQ\FailSafe\            # WORKSPACE ROOT
+<workspace-root>/            # WORKSPACE ROOT
 ├── .agent/                         # Active workspace workflows
 ├── .claude/                        # Active workspace commands
 ├── .qorelogic/                     # Workspace configuration
@@ -67,7 +67,7 @@ G:\MythologIQ\FailSafe\            # WORKSPACE ROOT
 ### App Level (This Directory)
 
 ```
-G:\MythologIQ\FailSafe\FailSafe\   # APP CONTAINER
+<workspace-root>/FailSafe/   # APP CONTAINER
 ├── Antigravity/                    # Extension source for Gemini
 ├── Claude/                         # Extension source for Claude
 ├── VSCode/                         # Extension source for VSCode
