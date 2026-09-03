@@ -29,6 +29,21 @@ function readConfig() {
   return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
 }
 
+const INSTALL_MANIFEST = path.join(REPO_ROOT, '.claude', '.qorlogic-installed.json');
+
+/**
+ * True once `qor-logic install --host claude --scope repo` has run here.
+ *
+ * `.claude/` is out-of-tier per docs/GOVERNANCE_INDEX.md — "Tool config +
+ * runtime state", explicitly NOT governance — so its contents are deliberately
+ * untracked and a clean clone has none of them. Assertions about what is ON
+ * DISK under a declared root are therefore only meaningful post-install; the
+ * declaration itself is asserted unconditionally below.
+ */
+function isInstalled() {
+  return fs.existsSync(INSTALL_MANIFEST);
+}
+
 function countSkillManifests(dir) {
   if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return 0;
   return fs
@@ -51,6 +66,7 @@ describe('FX935 .qorlogic/config.json', () => {
     const cfg = readConfig();
     const declared = cfg.layout.skills_root;
     assert.equal(typeof declared, 'string', 'skills_root must be a declared path, not null');
+    if (!isInstalled()) return;   // clean clone: nothing installed yet
 
     const resolved = path.join(REPO_ROOT, declared);
     assert.ok(
@@ -70,6 +86,7 @@ describe('FX935 .qorlogic/config.json', () => {
     const cfg = readConfig();
     const declared = cfg.layout.agents_root;
     assert.equal(typeof declared, 'string', 'agents_root must be a declared path, not null');
+    if (!isInstalled()) return;   // clean clone: nothing installed yet
 
     const resolved = path.join(REPO_ROOT, declared);
     assert.ok(
@@ -87,25 +104,32 @@ describe('FX935 .qorlogic/config.json', () => {
     );
   });
 
-  it('declares roots that are TRACKED, not merely present on this machine', () => {
-    // CI caught what a local run could not: `.gitignore:10` ignores `.claude/`
-    // wholesale, so a declared root can exist on the author's disk and be absent
-    // from a fresh clone. `fs.existsSync` is satisfied either way; `git ls-files`
-    // is not. This assertion is what makes the defect reproducible locally.
-    const { spawnSync } = require('child_process');
+  it('declares roots matching where qor-logic actually installs, per the install manifest', () => {
+    // `.claude/` is out-of-tier per docs/GOVERNANCE_INDEX.md: "Tool config +
+    // runtime state", NOT governance. Its contents are qor-logic-installed
+    // artifacts reproduced by `qor-logic install --host claude --scope repo`,
+    // and are deliberately untracked. So the declared roots must NOT be checked
+    // against the filesystem or against git — a clean clone legitimately has
+    // neither. The manifest is the authority on where the installer puts things,
+    // and it is what this asserts the config agrees with.
+    const manifestPath = path.join(REPO_ROOT, '.claude', '.qorlogic-installed.json');
+    if (!fs.existsSync(manifestPath)) {
+      // Clean clone before `qor-logic install` — nothing to cross-check against.
+      return;
+    }
+    const files = JSON.parse(fs.readFileSync(manifestPath, 'utf8')).files || [];
+    const rel = files.map((f) =>
+      path.relative(REPO_ROOT, f.path).split(path.sep).join('/')
+    );
     const cfg = readConfig();
 
     for (const key of ['skills_root', 'agents_root']) {
       const declared = cfg.layout[key];
-      const res = spawnSync('git', ['ls-files', '--', declared], {
-        cwd: REPO_ROOT,
-        encoding: 'utf8',
-      });
-      const tracked = (res.stdout || '').trim().split('\n').filter(Boolean).length;
+      const installedUnder = rel.filter((p) => p.startsWith(declared + '/')).length;
       assert.ok(
-        tracked > 0,
-        `layout.${key} "${declared}" resolves on disk but git tracks 0 files under it — ` +
-          'a fresh clone would not have it, and the gate that reads it would resolve nothing'
+        installedUnder > 0,
+        `layout.${key} "${declared}" matches no path the installer wrote — ` +
+          'the config points somewhere qor-logic does not install to'
       );
     }
   });
