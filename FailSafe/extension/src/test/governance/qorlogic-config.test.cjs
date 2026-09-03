@@ -87,6 +87,29 @@ describe('FX935 .qorlogic/config.json', () => {
     );
   });
 
+  it('declares roots that are TRACKED, not merely present on this machine', () => {
+    // CI caught what a local run could not: `.gitignore:10` ignores `.claude/`
+    // wholesale, so a declared root can exist on the author's disk and be absent
+    // from a fresh clone. `fs.existsSync` is satisfied either way; `git ls-files`
+    // is not. This assertion is what makes the defect reproducible locally.
+    const { spawnSync } = require('child_process');
+    const cfg = readConfig();
+
+    for (const key of ['skills_root', 'agents_root']) {
+      const declared = cfg.layout[key];
+      const res = spawnSync('git', ['ls-files', '--', declared], {
+        cwd: REPO_ROOT,
+        encoding: 'utf8',
+      });
+      const tracked = (res.stdout || '').trim().split('\n').filter(Boolean).length;
+      assert.ok(
+        tracked > 0,
+        `layout.${key} "${declared}" resolves on disk but git tracks 0 files under it — ` +
+          'a fresh clone would not have it, and the gate that reads it would resolve nothing'
+      );
+    }
+  });
+
   it('does NOT resolve to the upstream qor/skills default, which is absent here', () => {
     const upstreamDefault = path.join(REPO_ROOT, 'qor', 'skills');
     assert.equal(
