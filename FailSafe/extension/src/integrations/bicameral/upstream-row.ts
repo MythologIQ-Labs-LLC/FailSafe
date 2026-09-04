@@ -32,16 +32,27 @@ const escapeHtml = (s: string): string => s
 export function renderUpstreamRow(opts: UpstreamRowOpts): UpstreamRowRender {
   if (!opts.snapshot) return { upstream: '', warning: '' };
   const s = opts.snapshot;
-  const version = s.latestVersion ?? 'unknown';
-  const released = s.latestReleasedAt
-    ? new Date(s.latestReleasedAt).toISOString().slice(0, 10)
-    : 'unknown';
-  const issues = s.openIssueCount ?? 0;
-  const upstream = `<div class="cc-row" data-bicameral-upstream>`
-    + `<span class="cc-label">Upstream</span>`
-    + `<span class="cc-value">v${escapeHtml(version)} (${escapeHtml(released)}) · `
-    + `${issues} open issue${issues === 1 ? '' : 's'}</span>`
-    + `</div>`;
+  let upstream: string;
+  if (s.error) {
+    // Fail-closed poll (offline, invalid config, non-2xx): never present this
+    // as "0 open issues" — that is indistinguishable from a genuinely quiet
+    // upstream repo. Surface the failure instead.
+    upstream = `<div class="cc-row cc-row-error" data-bicameral-upstream-error>`
+      + `<span class="cc-label">Upstream</span>`
+      + `<span class="cc-value">Unavailable: ${escapeHtml(s.error)}</span>`
+      + `</div>`;
+  } else {
+    const version = s.latestVersion ?? 'unknown';
+    const released = s.latestReleasedAt
+      ? new Date(s.latestReleasedAt).toISOString().slice(0, 10)
+      : 'unknown';
+    const issues = s.openIssueCount ?? 0;
+    upstream = `<div class="cc-row" data-bicameral-upstream>`
+      + `<span class="cc-label">Upstream</span>`
+      + `<span class="cc-value">v${escapeHtml(version)} (${escapeHtml(released)}) · `
+      + `${issues} open issue${issues === 1 ? '' : 's'}</span>`
+      + `</div>`;
+  }
   let warning = '';
   if (opts.installedVersion) {
     if (compareSemver(opts.installedVersion, opts.minVersion) < 0) {

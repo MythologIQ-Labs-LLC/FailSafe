@@ -61,4 +61,33 @@ suite('renderUpstreamRow (FX534)', () => {
     const out = renderUpstreamRow(baseOpts(snap, '0.15.0'));
     assert.match(out.upstream, /1 open issue<\/span>/);
   });
+
+  test('surfaces a failed/offline poll as an error, not "0 open issues"', async () => {
+    const errorSnapshot: UpstreamSnapshot = {
+      latestVersion: null,
+      latestReleasedAt: null,
+      openIssueCount: null,
+      openPrCount: null,
+      fetchedAt: '2026-05-20T00:00:00Z',
+      error: 'upstream fetch returned 503/503',
+    };
+    const out = renderUpstreamRow(baseOpts(errorSnapshot, '0.15.0'));
+    assert.match(out.upstream, /data-bicameral-upstream-error/);
+    assert.match(out.upstream, /Unavailable: upstream fetch returned 503\/503/);
+    assert.doesNotMatch(out.upstream, /0 open issues/);
+    assert.doesNotMatch(out.upstream, /vunknown/);
+  });
+
+  test('error snapshot still evaluates floor/ceiling warning against the configured range', async () => {
+    const errorSnapshot: UpstreamSnapshot = {
+      latestVersion: null,
+      latestReleasedAt: null,
+      openIssueCount: null,
+      openPrCount: null,
+      fetchedAt: '2026-05-20T00:00:00Z',
+      error: 'Invalid upstreamRepoUrl: "bad" (expected owner/repo slug)',
+    };
+    const out = renderUpstreamRow(baseOpts(errorSnapshot, '0.13.5'));
+    assert.match(out.warning, /data-bicameral-floor-warning/);
+  });
 });
