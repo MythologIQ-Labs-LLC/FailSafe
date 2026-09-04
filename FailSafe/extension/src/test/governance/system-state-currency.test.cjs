@@ -112,10 +112,12 @@ describe('FX938 SYSTEM_STATE Tier 1 currency', () => {
     const text = systemState();
     const sixDotX = tags().filter((t) => /^v6\.\d+\.\d+$/.test(t));
     if (sixDotX.length === 0) return;        // shallow clone
-    const missing = sixDotX.filter((t) => {
-      const v = t.slice(1);
-      return !new RegExp(`^## .*${v.replace(/\./g, '\\.')}`, 'm').test(text);
-    });
+    // Compare against the extracted headings by plain substring rather than
+    // building a RegExp from the tag name. The previous form escaped `.` but
+    // not `\` (CodeQL js/incomplete-sanitization, high) — and constructing a
+    // pattern from a value was never needed here in the first place.
+    const headings = [...text.matchAll(/^## .*$/gm)].map((m) => m[0]);
+    const missing = sixDotX.filter((t) => !headings.some((h) => h.includes(t.slice(1))));
     assert.deepEqual(
       missing,
       [],

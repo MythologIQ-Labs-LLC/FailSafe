@@ -29516,6 +29516,27 @@ This is the **second consecutive cycle this session** whose iteration-1 VETO was
 
 `FailSafe/extension/src/test/governance/system-state-currency.test.cjs` (NEW) · `docs/SYSTEM_STATE.md` (header restated; six `##` sections added) · `docs/FEATURE_INDEX.md` (FX938) · `docs/GOVERNANCE_INDEX.md` (Last Reviewed) · `qor/references/glossary.md`
 
+## Post-seal amendment (CI, 2026-09-04)
+
+CI on PR #449 rejected the sealed state: 12 checks pass, **CodeQL fails with 1 high-severity alert in code this cycle changed.** Recorded here rather than re-sealed — entry #603's `content_hash` is of the plan file, which is unchanged, so the chain stays valid.
+
+`js/incomplete-sanitization` at `FailSafe/extension/src/test/governance/system-state-currency.test.cjs:117`: *"This does not escape backslash characters in the input."*
+
+```js
+return !new RegExp(`^## .*${v.replace(/\./g, '\.')}`, 'm').test(text);
+```
+
+The assertion escaped `.` in a tag name before interpolating it into a `RegExp`, but not `\`. Low exploitability — the input is `git tag` output — but the finding is correct, and constructing a pattern from a value was never needed here. Replaced with heading extraction plus a plain substring comparison, which removes the class rather than escaping around it and is shorter:
+
+```js
+const headings = [...text.matchAll(/^## .*$/gm)].map((m) => m[0]);
+const missing = sixDotX.filter((t) => !headings.some((h) => h.includes(t.slice(1))));
+```
+
+Falsifier re-verified after the change: deleting the `v6.0.2` body section still fails assertion 4 (3 pass / 1 fail), and the suite returns 4/4 once restored. The fix did not weaken the check.
+
+Worth noting which gate caught this. The three `Analyze` jobs all passed; the aggregate `CodeQL` check is what failed, on a *new alert in changed code*. Every local gate in the seal ladder was green — this class is only visible to the scanner, and the ruleset human-gate is what surfaced it before merge.
+
 **Content Hash**:
 ```
 SHA256(plan-system-state-currency.md)
