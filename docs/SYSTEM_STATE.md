@@ -1,13 +1,11 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-08-20 (Monitor a11y slice + release-gate preflight, FX917)
-**Active local review:** `fix/monitor-a11y-release-gate` (stacked on `chore/deliver-seal-v601`, PR #342 open) — #242 first slice + SG-2026-08-20 countermeasure. The Monitor's three deep-link affordances (sentinel alert, blockers graphic, error-budget gauge) are keyboard/AT-operable (`makeActionable`: setAttribute tabindex/role/aria-label, device-neutral titles, Enter/Space parity; `:focus-visible` rules mirroring the Console convention); deep-link landing focuses the verdict record via a target-keyed one-shot latch with an idle-only re-anchor across destructive re-renders (audit #554 VETO → #555 PASS → #556 amendment PASS — the e2e journey caught the boot-re-render focus loss both audit rounds missed); `release-gate.cjs` preflight now fails a missing README What's-New at the [RELEASE] commit hook. Session `2026-08-20T1440-d69349`: ledger #554-#558. Verification: lint 0; census 444/444; test:ui 193/193; observer SUSPEND→resolved in-pass (extension CHANGELOG copy authored — the Step 6.5 failure class caught in-cycle this time). Staged, uncommitted — **held at the Review Boundary**. v6.0.1 RELEASED earlier today (DELIVER #553, PR #342 carries the seal). Next #242 slice: health-item cards + modal focus-return, .governance-alert rows, filter-chip rebuild focus destruction (N5), per-re-render AT re-announcement (N6).
-**Prior local review:** `fix/monitor-alert-console-deeplink` — post-v6.0.0 operator-requested fix: the Monitor sidebar's sentinel warning banner ("N issue(s) detected…") now opens the Console Audit Log at the triggering verdict. Root cause: `window.open` with a relative URL inside the sandboxed sidebar-webview iframe silently no-ops. Fix: `console-nav.js` relay (iframe → `failsafe.openConsole` postMessage → sidebar chrome, source-guarded to the Monitor iframe → `failsafe.openConsoleRoute` → `vscode.env.openExternal`), with `window.open` retained browser-served; `SentinelVerdict.timestamp` propagated through the `policy.checked` checkpoint payload + verdict-path transparency log as the deep-link identity (`getRecentVerdicts` payload-timestamp precedence); `hasAuditHashFilter` verdict bypass so non-today verdicts render; blockers/error-budget graphics + `data-info-target` buttons use the same relay (`commandCenterUrlFor`→`commandCenterRouteFor`). Session `2026-08-20T0244-4cfa93`: plan iter-1 VETO #549 (independent-reviewer findings: unreachable compliance-subview highlighter, three-clock timestamp drift, coverage overclaim) → iter-2 audit PASS #550 → implementation #551 → SESSION SEAL #552. Verification: red→green at unit + feature level; lint 0 errors; npm test 3832 passing (census 444/444); test:ui 191 passed + monitor-alert-deeplink.spec 2/2 (browser popup + highlighted `[data-event-ts]` record; embedded relay message); observer/devil's-advocate APPROVE. Staged only, no commit — **held at the Review Boundary; the v6.0.0-era publish HOLD posture is unchanged**.
-**Prior local review:** `fix/fail-closed-297-319` — Cycle 1 of the operator-directed issue burndown (release HOLD: v6.0.0 consolidated train is merged to main + tag re-cut, but the pipeline run was cancelled at the production gate on operator ruling — publish blocked until the issue board is clear). This cycle: **GovernanceRouter total fail-closed guard** (#297 completion, FX905 — handleFileOperation never rejects; four previously-unguarded awaits + bounded verdict generation via withTimeout/verdictTimeoutMs + showBlockade notifier totality) and **Mind Map view-prefs identity fallback** (#319, FX897 — last-identity record heals identity-less reload windows; initCanvas post-construction reconcile; spec identity-poll sequencing). Session `2026-08-19T0540-98a3b2`: research #518 → audit PASS #519 → implementation #520 → SESSION SEAL #521. Verification: T1-T10 red-then-green, 22/22 targeted mocha, tsc + eslint 0 errors; full vscode-test run deferred to CI (local VS Code updater mutex — disclosed). One local commit (f440b7b6) held at the Review Boundary; **no push, PR, tag, or release authorized until the operator lifts the HOLD**.
-**Prior local review (superseded by merge):** `feat/qor155-align-enforce-default` — qor-logic 0.155.0 alignment + enforce-by-default flip, SEALED #506-#510, since delivered to main via the v6.0.0 consolidation (PR #318).
-**Prior local review:** `feat/qor-consumer-stabilization-232` — VETO remediation complete (audit PASS Entry #496, implementation #497); substantiation was pending authorization at the prior snapshot.
-**Current Release:** v5.9.0 (DELIVER seal #459; published to VS Code Marketplace + Open VSX + GitHub Release non-draft) — the **Command Center suite** (FX886–FX891) from the 2026-06-11 research brief (Entry #458) + an operator-directed taxonomy editor: Tracker no-reload render + full-bleed + PDF export + taxonomy contract/agents (FX886/887/888); Mind Map repository seed from the governance/genome graph + Seed/Clear-layer (FX889); Shadow Genome "Graph Nodes" label + Observed invariant + table-default + label truncation (FX890); **Workspace › Taxonomy editor → governed `docs/roadmap/tracker-config.yaml` + CLAUDE.md force-discover directive** (FX891). Six governed plan→audit→implement cycles; four highest-risk plans cleared mandatory Option-B independent audit (one VETO→amend→PASS). PR #223 (features) + #224 ([RELEASE] v5.9.0) `--admin`-merged; full `test:all` green on both; tag `v5.9.0` → Release Pipeline → production-gate approved → both marketplaces. Operator-directed publish-first; #459 is the post-ship governance close.
-**Prior releases:** v5.8.0 (Shadow Genome real data + governed Organize, #449 DELIVER), v5.7.0 (Shadow Genome dashboard + theme inheritance), v5.6.3 (DELIVER #431; governance bundle — PR↔issue linkage FX861/FX864, GovernanceProjection FX862, shadow-genome consumer FX863).
+**Last Updated:** 2026-09-04 (SYSTEM_STATE Tier 1 currency restored — FX938, Sprint 2 of the qor-logic 0.169.0 alignment)
+**Active local review:** `fix/system-state-currency-sprint2` — this cycle. Restores the Tier 1 freshness contract and adds `system-state-currency.test.cjs`, the first check that asserts it. Prior to this cycle no test anywhere read this file's content.
+**Prior local review:** `fix/qor169-sprint1-seal-unblock` — MERGED to `main` as `1e1215cc` (PR #448). qor-logic 0.163.1 → 0.169.0; `.qorlogic/config.json` created, which is what allows a seal to complete at all; five vacuously-passing governance controls identified; TTS timeout assertion made deterministic and falsifying. Seal Entry #602.
+**Open PRs:** #442 (Bicameral upstream row error state), #443 (plan-grep-lint regex recognition), #444 (#367 per-engine provenance), #445 (#242 Shadow Genome severity aria — supersedes #440, closed as duplicate), #446 + #447 (dependabot). #447's blocker — a wall-clock TTS assertion — was removed by Entry #602.
+**Current Release:** v6.0.4 (2026-08-23) — published to VS Code Marketplace + Open VSX + GitHub Release. **No `DELIVER` ledger entry exists for this release**; the last DELIVER is #596 (v6.0.3). Entry #601 is a retrospective SESSION SEAL that records the publish but explicitly states "NO VERSION BUMP, NO SEAL TAG". Surfaced as a governance gap owned by `/qor-repo-release`, not repaired here.
+**Prior releases:** v6.0.3 (2026-08-22, #596 DELIVER), v6.0.2 (2026-08-21, #588), v6.0.1 (2026-08-20, #553), v6.0.0 (2026-08-19, #548 — enforce-by-default era). Pre-6.x: v5.9.0 (#460 Command Center suite), v5.8.0 (#449), v5.7.0, v5.6.3 (#431).
 **Prior release detail:** v5.3.3 (published to VS Code Marketplace + Open VSX via tag `v5.3.3` (`d3a0b75`); Open VSX via CI, VS Code Marketplace via local `vsce publish --azure-credential` from the identical CI-built VSIX after the CI marketplace job hit the documented `/_apis/gallery` PAT-auth timeout) — bundles B-OD-8 (#409) + B-INT-6 (#410) + B-INT-7 (#411/#413) + B-INT-12 (#412) + transparency date-filter fix (#414); DELIVER seal #415
 **Sealed baseline:** v5.2.0 → v5.2.2 hotfix line (Entries #392-#396) → v5.3.0 (Entry #400 Open Design v1 + Entry #402 substrate v1) → v5.3.0 release (`08916d9`, dead-on-marketplace) → v5.3.1 hotfix (DELIVER at #406) → v5.3.2 release (refactor bundle #407 B-INT-4 + #408 B-INT-5) → v5.3.3 release (integration beta bundle #409–#414; DELIVER #415)
 **Active integrations:** Bicameral MCP (sealed Entry #372 + earlier cluster) · Open Design v1 (provenance, Entry #400) · Open Design v1.1 (MCP + SSE + probe, Entry #405) · Open Design v1.2 (`create_artifact` L3-gated, Entry #409 — RELEASED v5.3.3; destructive write-tools deferred to B-OD-12)
@@ -15,6 +13,52 @@
 **Doctrine additions since 2026-05-22:** `feedback_no_pipeline_reshape_for_marketplace_issues` (2026-05-27, v5.2.2 hold-pat precedent) · `feedback_verify_external_names_at_plan_time` (2026-05-27, Citation Inventory Pass — broke 4-cycle Plan-Time Hallucination loop at Entry #405)
 
 ---
+
+## 2026-09-04 — SYSTEM_STATE Tier 1 currency restored (FX938, Entry pending)
+
+This file had claimed `Current Release: v5.9.0` while the repository shipped v6.0.4 — five releases of Tier 1 drift, against a contract of "MUST be current at every cycle close". Its header had been restamped as recently as 2026-08-20 while the body below stopped at 2026-05-28: three months of header-only maintenance.
+
+Nothing caught it, because nothing checked. A grep over `FailSafe/extension/scripts/` and `src/test/` for `SYSTEM_STATE` returned only ledger-fork fixtures and an unrelated `HubSnapshotService` test. `/qor-substantiate` Step 6.5 runs `check_documentation_currency`, which asks whether the current cycle's `files_touched` implies a doc update and never reads this file's content — on the 2026-09-03 seal it returned 0 warnings against this document in its stale state.
+
+`FailSafe/extension/src/test/governance/system-state-currency.test.cjs` (FX938) is the missing assertion: `Current Release` must equal `package.json` and the newest tag, a `##` section must exist for the claimed `Last Updated`, and every shipped 6.x release must have a section. All four were verified failing against `main` @ `1e1215cc` before this section was written.
+
+The third assertion was inverted after an empirical check. Written first as "`Last Updated` is not older than the newest `##` section," it is satisfied by a header edited while the body is abandoned — `2026-08-20 >= 2026-05-28` — and so passed on the exact defect it existed to catch. Requiring a section *for* the claimed date is what fails on it.
+
+## 2026-09-03 — qor-logic 0.169.0 alignment, Sprint 1 (Entry #602, MERGED as `1e1215cc`)
+
+Upgraded qor-logic 0.163.1 → 0.169.0 and closed the first sprint of a 22-gap alignment audit (`.failsafe/governance/RESEARCH_BRIEF_qor169-alignment-2026-09-03.md`).
+
+`.qorlogic/config.json` did not exist. Its absence hard-ABORTed `seal_artifacts --check`, hard-ABORTed `seal_trailer_check` — whose only sanctioned exemption for this operator's no-AI-co-author policy is a key in that file — and left the ABORT-class 40 KB `skill_size_budget_lint` resolving to `qor/skills`, absent here, so it scanned zero files and exited 0 for the life of the ladder. Created with `attribution.model_coauthor: false` and `layout.skills_root` / `agents_root`; `seal_trailer_check` then exited 0 for the first time in this repo's history.
+
+Five controls were found returning success while inspecting nothing: `skill_size_budget_lint` (0 files), `gate_chain_completeness` (0 sessions — it prints "completeness is unverified, not confirmed", then exits 0), `secret_scanner --staged` (0 staged bytes), the post-anchor ledger fork guard (only reachable when the forked entry is the ledger's high-water mark), and `governance-index --cross-check-ledger` (0 bytes of output on both pass and fail). A sixth, `session_id_lint`, was silently keying `intent_lock` and `procedural_fidelity` to a `'default'` session that does not exist.
+
+The TTS timeout assertion (#406) was made deterministic and falsifying — the prior `ms >= 20` against a bound of 20 could not distinguish a real measurement from the bound echoed back, and flaked on timer coarseness, blocking dependabot PR #447 on an unrelated `qs` bump.
+
+CI then rejected the sealed state, and the failing assertion was this cycle's own new test: `.gitignore:10` ignores `.claude/` wholesale, so the config declared a layout the repository does not ship. The correct resolution was NOT to ship it — `docs/GOVERNANCE_INDEX.md` already classes `.claude/` as out-of-tier "Tool config + runtime state", reproduced by `qor-logic install`. Recorded as a post-seal amendment on Entry #602 rather than a re-seal.
+
+## 2026-08-23 — v6.0.4 published (NO DELIVER ENTRY; nearest record Entry #601)
+
+Published to VS Code Marketplace, Open VSX, and GitHub Release; tag `v6.0.4` at `0caec27f`.
+
+**This release has no `DELIVER` ledger entry.** The last DELIVER is #596 for v6.0.3. Entry #601 is a retrospective SESSION SEAL for the FX932 ledger fork guard which records the publish in passing and states explicitly: "RETROSPECTIVE SEAL; NO VERSION BUMP, NO SEAL TAG… This cycle ran implement → merge → release → substantiate." A shipped release with no DELIVER record is a governance gap owned by `/qor-repo-release`; it is surfaced here, not repaired.
+
+Shipped the FX932 pre-merge ledger fork guard (`check-ledger-fork.cjs` + fixtures, wired into the `standards` CI job) via PR #436.
+
+## 2026-08-22 — v6.0.3 published (Entry #596 DELIVER)
+
+Published to VS Code Marketplace + Open VSX (run 32576176353, operator clicked the production gate). Shipped 18 merged PRs that had accumulated unreleased on `main` while `package.json` sat at 6.0.2 with nothing blocking. Headline: #412 — v6.0.0 moved pre-existing installs Observe → Enforce silently, because the warning notice could never fire.
+
+## 2026-08-21 — v6.0.2 published (Entry #588 DELIVER)
+
+Published to VS Code Marketplace + Open VSX.
+
+## 2026-08-20 — v6.0.1 published (Entry #553 DELIVER)
+
+Published. Carried FX916, the Monitor alert → Console deep link.
+
+## 2026-08-19 — v6.0.0 published (Entry #548 DELIVER)
+
+Published. The enforce-by-default era: editor-level enforce became the free-tier default, `observe` selectable. qor-logic 0.155.0 alignment landed in the same train.
 
 ## 2026-05-28 — B-INT-12 TabGroup-level inactive-sub-view clobber guard (Entry #412, STAGED)
 

@@ -1,98 +1,81 @@
-# AUDIT REPORT — plan-qor169-sprint1-seal-unblock.md
+# AUDIT REPORT — plan-system-state-currency.md
 
-**Session**: 2026-09-03T1833-c206a6
+**Session**: 2026-09-04T0015-db203a
 **Iteration**: 2
-**Target**: plan-qor169-sprint1-seal-unblock.md
-**Risk grade**: L2
-**Mode**: solo (audit_risk_score → option_b_required: false)
-**Trajectory**: 2 → 0 blocking across iterations 1–2
+**Risk grade**: L2 · **Mode**: solo (`option_b_required: false`)
+**Trajectory**: 1 → 0 blocking across iterations 1–2
 
 ## VERDICT: PASS
 
-Both iteration-1 blocking findings are closed, and each replacement was verified by execution
-rather than by inspection of the amended text.
+## Iteration 1 blocking finding, closed
 
-## Blocking findings closed
+### B1 — `specification-drift` — assertion 3 passed on the state it claimed to catch
 
-### B1 — retracted falsifier replaced with one that falsifies
+Iteration 1 declared assertion 3 as "`Last Updated` is **not older than** the newest `##` body
+section," with the falsifier "the current file has `Last Updated: 2026-08-20` against a newest
+section of `2026-05-28`."
 
-Iteration 1 claimed `seal_trailer_check --commit HEAD` would flip exit 1 → 0. It would not:
-`seal_trailer_check.py:40-53` requires `Authored via [Qor-logic SDLC]` under both policy
-values, and the config drops only the `Co-Authored-By:` half.
-
-The amendment retracts the claim in place (it is not silently deleted — the plan states what
-was wrong and why, at Phase 1 and in the Baselines table), and substitutes:
+The direction was inverted. `2026-08-20 >= 2026-05-28` is **true**, so the assertion as written
+**passes** on exactly the header-edited-body-abandoned state it existed to detect. Measured:
 
 ```
-python -c "from qor.scripts.attribution_policy import resolve_policy; \
-           assert resolve_policy(None).model_coauthor is False"
+A1 Current Release == package.json : 5.9.0 vs 6.0.4      -> FAIL
+A2 Current Release == newest tag   : v5.9.0 vs v6.0.4     -> FAIL
+A3 Last Updated >= newest section  : 2026-08-20 >= 2026-05-28 -> pass  <-- PASSES ON THE BROKEN STATE
+A4 every v6.x tag has a ## section : 5/5 missing          -> FAIL
 ```
 
-**Falsifier verified live at baseline, before the config exists:**
+Three of four falsified; the fourth did not. The plan claimed all four would.
+
+**Closed in iteration 2** by inverting the invariant: *a `##` body section must exist dated
+exactly `Last Updated`* — every header refresh records the event that caused it. Verified:
 
 ```
-$ ls .qorlogic/config.json     → No such file or directory
-model_coauthor = True
-AssertionError    ← the falsifier DOES falsify
+Last Updated: 2026-08-20
+a ## section exists for that date? False
+-> corrected A3: FAIL (correct)
 ```
 
-The seal-commit half is correctly relocated to `/qor-substantiate` and is stated as a
-**two-part** assertion — `seal_trailer_check --commit <seal-sha>` exits 0 **and**
-`git log -1 --format=%B <seal-sha> | grep -c 'Co-Authored-By:'` returns 0. The Judge notes the
-author caught the single-part weakness unprompted: exit 0 alone would also be satisfied by a
-seal commit that carried the forbidden trailer, which is the opposite of the policy's intent.
+The retraction is stated in place in the plan rather than the wrong text being silently deleted,
+and the FX938 `test_descriptor` was corrected to match (it initially carried the retracted wording
+forward — caught on re-read, not by `plan_text_consistency_lint`, which compares repeated
+assertions of the same string and had no second site to compare against).
 
-### B2 — verification runner corrected
+## Judge's note on recurrence
 
-Iteration 1's D4 named `npm run test:node` to verify a `.test.ts` file. Confirmed corrected:
+This is the **second consecutive cycle** whose iteration-1 VETO was an unfalsifiable verification
+claim authored by the same agent, in a session whose entire subject is controls that pass without
+inspecting anything. `audit_risk_score` returned `option_b_required: false` both times.
 
-| Runner | Reaches | Does not reach |
-|---|---|---|
-| `npm run test:node` (`run-node-tests.cjs:17`, filters `.test.cjs` under `src/test`) | FX935, FX936 governance suites | the TTS test |
-| `npm test` (`package.json:733`, `vscode-test --extensionTestsPath ./out/test/suite/index`) | the TTS test (`.test.ts` → `out/`) | the `.cjs` governance suites |
-
-`## CI Commands` now states this mapping explicitly rather than listing both runners
-undifferentiated. The mapping matches the CI evidence for run 33751001155, which reported the
-TTS failure under "Extension host test runner".
-
-## Non-blocking residuals
-
-- N1 `ci_coverage_lint`: `oss-sast.yml::semgrep` uncovered. Unrelated surface; carried forward.
-- N2 **`npm test` execution risk.** Its `pretest` chain runs `build:package`,
-  `patch:better-sqlite3`, and `rebuild:vscode`; this workspace has previously had the VS Code
-  binary download blocked by a proxy. If that recurs during implement, the disclosed mitigation
-  this repo has used before is a direct mocha run against the compiled `out/` test, recorded as
-  such in the seal rather than reported as a clean `npm test`. This is an execution risk on D4,
-  not a defect in the plan.
-- N3 `prompt_injection_canaries` exit 0; three `<script` WARNs in `docs/META_LEDGER.md`
-  code-spans are historical entry text.
+The scorer models authorship momentum but not *topical* momentum — having just reasoned at length
+about a defect class appears to increase, not decrease, the odds of reproducing it. Recorded as an
+SG-007 instance with that qualifier; a standing recommendation for the next cycle in this session
+is to run the empirical falsifier check BEFORE writing the assertion into the plan, not at audit.
 
 ## Passes cleared
 
-Prompt Injection · Security L3 · OWASP Top 10 · Ghost UI · Section 4 Razor · Test Functionality ·
-Dependency · Orphan Detection · Macro Architecture · Feature Test Coverage · Infrastructure
-Alignment · Filter-Stage Ordering — all PASS, unchanged from iteration 1 where already cleared.
+Prompt Injection (exit 0) · Security L3 (no auth/secret surface) · OWASP (no subprocess beyond
+`git tag`, argv-form) · Ghost UI (none) · Section 4 Razor (one test file, no production code) ·
+Test Functionality (all four assertions invoke and compare against real values; none is
+presence-only) · Dependency (none added) · Orphan (`run-node-tests.cjs` walks `src/test`
+recursively; `src/test/governance/` exists and is reached) · Macro Architecture (no boundaries
+touched) · Feature Test Coverage (FX938 carries a specific path and a falsifying descriptor) ·
+Infrastructure Alignment (baselines re-measured this session against `main` @ `1e1215cc`) ·
+Filter-Stage Ordering (no pipeline).
 
-Re-verified for iteration 2:
+**Scope discipline noted favourably**: the absent `DELIVER — v6.0.4` ledger entry is declared a
+non-goal with a named owner (`/qor-repo-release`) rather than folded into a hygiene cycle. Ledger
+writes for an already-shipped release warrant their own governed pass.
 
-- **Infrastructure Alignment**: `attribution_policy.resolve_policy(None)` resolves `repo_root`
-  to `Path.cwd()` via `qorlogic_config.load_section` (`qorlogic_config.py:24`), so the new
-  falsifier is correct when run from the repo root — which every `## CI Commands` entry assumes.
-- **Test Functionality**: the three descriptors are unchanged and were already PASS. The config
-  suite asserts *resolution* to an existing directory containing a `SKILL.md`, which the old
-  implicit `qor/skills` default fails — the assertion would have caught GAP-GATE-01.
+## Non-blocking residuals
 
-## Process Pattern Advisory
-
-<!-- qor:veto-pattern-advisory -->
-No repeated-VETO pattern. One VETO in this session, closed on the next iteration.
-
-The iteration-1 signature is worth carrying into the Shadow Genome regardless of closure:
-the plan author had just catalogued five vacuous controls and then authored two unfalsifiable
-verification claims into the remediation for them, and `audit_risk_score` returned
-`option_b_required: false` — the scorer does not model "author just finished reasoning about
-this exact defect class", which is precisely when momentum risk is highest.
+- N1 `workspace_fragility_check`: `fragility=high action=branch_only`
+  (`active_branch_count=102`, `dirty_gate_artifact_count=43`). Scope is already narrow and
+  branch-isolated; the branch count is itself a housekeeping item for a later sprint.
+- N2 Assertion 4 matches a `##` section per v6.x tag by string. A section naming two releases in
+  one heading would satisfy two tags from one line. Acceptable — Phase 3 authors one section per
+  release, and the looser form still fails the current 5/5-missing state.
 
 ## Required next action
 
-`/qor-implement`. Ledger allocation remains held until seal.
+`/qor-implement`. Ledger allocation held until seal.
