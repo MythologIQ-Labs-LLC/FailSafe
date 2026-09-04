@@ -1,5 +1,8 @@
 /**
- * FX935 — `.qorlogic/config.json` declares the repository layout and attribution policy.
+ * FX940 — `.qorlogic/config.json` declares the repository layout and attribution policy.
+ *
+ * Renumbered from FX935 on 2026-09-04: PR #445 had claimed FX935 first (2026-08-24) and the
+ * older claim wins. See META_LEDGER Entry #605.
  *
  * Why this suite exists (GAP-GATE-01, RESEARCH_BRIEF_qor169-alignment-2026-09-03.md):
  * `skill_size_budget_lint` is an ABORT-class seal control that defaults to
@@ -52,7 +55,7 @@ function countSkillManifests(dir) {
     .filter((e) => fs.existsSync(path.join(dir, e.name, 'SKILL.md'))).length;
 }
 
-describe('FX935 .qorlogic/config.json', () => {
+describe('FX940 .qorlogic/config.json', () => {
   it('declares attribution.model_coauthor false, the sanctioned no-AI-co-author exemption', () => {
     const cfg = readConfig();
     assert.equal(

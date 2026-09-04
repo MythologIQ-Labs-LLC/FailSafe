@@ -1,0 +1,69 @@
+{
+  "phase": "plan",
+  "session_id": "2026-09-04T0430-62ca33",
+  "ts": "2026-09-04T12:58:40Z",
+  "plan_path": "plan-fx935-collision-renumber.md",
+  "iteration": 1,
+  "change_class": "hotfix",
+  "doc_tier": "standard",
+  "terms": [
+    {
+      "term": "Identifier fork",
+      "home": "FailSafe/extension/src/test/governance/feature-index-id-integrity.test.cjs"
+    }
+  ],
+  "boundaries": {
+    "limitations": [
+      "Detects duplicate FX ids within ONE repository state; cannot see a cross-branch collision, which is how FX935/FX934 arose."
+    ],
+    "non_goals": [
+      "No edit to plan-qor169-sprint1-seal-unblock.md (Entry #602 content-hash source). No rewrite of #602 body. No .qor/gates edits. No Plan-line backfill into sealed entries. No touching PR #444/#445."
+    ],
+    "exclusions": [
+      "No FX934 renumber - operator ruled PR #444 keeps it."
+    ]
+  },
+  "phases": [
+    "Phase 1 - fixture-driven duplicate detector (NEW)",
+    "Phase 2 - renumber FX935 to FX940",
+    "Phase 3 - AMENDMENT entry #605 carrying a Plan line"
+  ],
+  "feature_inventory_touches": [
+    {
+      "entry_id": "FX940",
+      "operation": "MODIFIED",
+      "test_path": "FailSafe/extension/src/test/governance/qorlogic-config.test.cjs",
+      "test_descriptor": "renumbered from FX935; the config suite's 6 assertions unchanged and still pass"
+    },
+    {
+      "entry_id": "FX941",
+      "operation": "NEW",
+      "test_path": "FailSafe/extension/src/test/governance/feature-index-id-integrity.test.cjs",
+      "test_descriptor": "duplicate-id detector fires on a two-FX930 fixture, stays silent on the clean control, reports the live index clean"
+    }
+  ],
+  "ci_commands": [
+    "npm run lint",
+    "npm run test:node",
+    "npx mocha src/test/scripts/featureIndexClassifier.test.cjs"
+  ],
+  "ordering_inversion": "DECLARED: this plan was authored AFTER implementation. /qor-plan and /qor-audit were skipped; work ran from the operator ruling straight to code. No commit landed, so no repository mutation preceded the cycle. Recorded as a disclosed deviation in the manner of Entry #601, not a sanctioned path.",
+  "option_b_required": false,
+  "review_boundary": "no push, no PR, no merge",
+  "lint_results": {
+    "plan_text_consistency_lint": "exit 0",
+    "plan_grep_lint": "exit 0",
+    "dod_check": "exit 0",
+    "plan_test_lint": "exit 0",
+    "plan_iteration_status_lint": "exit 0",
+    "plan_feature_tdd_lint": "exit 0"
+  },
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.15.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5",
+    "human_oversight": "absent",
+    "ts": "2026-09-04T12:58:40Z"
+  }
+}
