@@ -64,13 +64,16 @@ Under the hood, a **Tier 1 supply-chain CI baseline** (least-privilege workflow 
 
 ## What's new in v6.0.5
 
-- **A voice glitch that blocked unrelated updates is gone.** A timing check in the speech engine measured itself against a stopwatch that could round the wrong way, so it failed at random and held up routine dependency updates. It now measures deterministically.
-- **Generated test screenshots stop landing in the repository.** An ignore rule pointed at a folder path that does not exist, so it never took effect and a few build artifacts were committed by accident.
-- **The system-state document tells the truth again.** It had been reporting v5.9.0 as the current release while v6.0.4 was shipping, and nothing checked it. It does now.
-- **The governance index distinguishes "deliberately private" from "missing".** Several documents it lists are intentionally unpublished; readers previously had no way to tell those apart from a broken entry — and one entry was genuinely broken, pointing at a file that has never existed in the repository.
-- **A duplicate feature ID has been resolved,** and a check added so the next one is caught rather than discovered.
+- **Screen readers now hear why a Shadow Genome node failed,** not just that it did — failure nodes carry their severity in the accessible name.
+- **A status row that lied when it couldn't reach upstream.** The Bicameral panel reported "0 open issues" whether the upstream was empty or unreachable. Those now look different.
+- **The Audit Log records which engine verified an entry,** so an existence check is no longer indistinguishable from a content check.
+- **A voice glitch that blocked unrelated updates is gone.** A timing check measured itself against a stopwatch that could round the wrong way, so it failed at random and held up routine dependency updates.
+- **Generated test screenshots stop landing in the repository.** An ignore rule pointed at a folder path that does not exist, so it never took effect.
+- **The system-state document tells the truth again.** It reported v5.9.0 as current while v6.0.4 was shipping, and nothing checked it. Something does now.
+- **The governance index distinguishes "deliberately private" from "missing"** — and one entry turned out to point at a file that has never existed in this repository.
+- Security: `qs` and `fast-uri` dependency updates.
 
-Under the hood this release is governance plumbing: five checks were found reporting success while inspecting nothing at all, and each now has a test that proves it can fail. Four issues were filed upstream against Qor-logic.
+Under the hood this is a governance-integrity release. Five checks were found reporting success while inspecting nothing at all; each now has a test that proves it can fail. Four issues were filed upstream against Qor-logic.
 
 ## What's new in v6.0.0
 
