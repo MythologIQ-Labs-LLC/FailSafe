@@ -8,23 +8,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [6.0.5] - 2026-09-04
 
 ### Added
-- Four governance suites that assert what previously nothing checked: `.qorlogic/config.json` layout declaration (FX940), `.gitignore` anchoring with inverse coverage (FX936), `SYSTEM_STATE` Tier 1 currency (FX938), `GOVERNANCE_INDEX` publication status (FX939), and FEATURE_INDEX id integrity with collide/clean fixtures (FX941).
-- `.qorlogic/config.json` — declares `attribution.model_coauthor` and the `layout.skills_root` / `agents_root` this repository actually uses. Its absence had been hard-aborting `seal_artifacts` and `seal_trailer_check`, and leaving the 40 KB skill-size abort resolving to a path that does not exist here.
-- `docs/GOVERNANCE_INDEX.md` gains a `## Publication status` section distinguishing *private by design* from *missing* — `docs/` and `.failsafe/` are private by default per `.gitignore` and published by exception.
+- **Accessibility:** Shadow Genome failure nodes now carry their severity in the accessible name, so a screen-reader user hears *why* a node matters rather than only that it failed (#242, FX935).
+- **Audit Log records which engine verified an entry.** Ledger entries gain per-engine verification provenance, distinguishing an existence claim from a content heuristic (#367 tranche 3b, FX934).
+- Five governance suites that assert what previously nothing checked: `.qorlogic/config.json` layout declaration (FX940), `.gitignore` anchoring with inverse coverage (FX936), `SYSTEM_STATE` Tier 1 currency (FX938), `GOVERNANCE_INDEX` publication status (FX939), and FEATURE_INDEX id integrity with collide/clean fixtures (FX941).
+- `.qorlogic/config.json` — declares `attribution.model_coauthor` and the `layout.skills_root` / `agents_root` this repository actually uses. Its absence had been hard-aborting `seal_artifacts` and `seal_trailer_check`, which meant no seal could complete at all.
+- `docs/GOVERNANCE_INDEX.md` gains a `## Publication status` section distinguishing *private by design* from *missing*.
 
 ### Fixed
-- TTS timeout-path latency assertion is deterministic and falsifying. It read the real wall clock against a 20 ms bound and asserted `ms >= 20`, so it flaked in CI and could not distinguish a real measurement from the bound echoed back. Unblocks dependabot PR #447.
-- `.gitignore` rule for `FailSafe/extension/test-results/` was anchored to a path that does not exist, so it never fired and two Playwright artifacts reached the index.
-- `docs/SYSTEM_STATE.md` claimed `Current Release: v5.9.0` while the repository shipped v6.0.4 — five releases of Tier 1 drift, with the header restamped as recently as 2026-08-20 while the body stopped at 2026-05-28.
-- `confidentiality.md` was registered as a root Tier 2 governance artifact while existing nowhere in the repository; relocated to the out-of-tier section. Its contents were not imported.
+- **The Bicameral upstream row no longer reports "0 open issues" when the poll failed.** An unreachable upstream and a genuinely empty upstream looked identical; they no longer do (#441).
+- **TTS timeout-path latency assertion is deterministic and falsifying.** It read the real wall clock against a 20 ms bound and asserted `ms >= 20`, so it flaked in CI and could not distinguish a real measurement from the bound echoed back.
+- **`plan-grep-lint` recognises regex-shaped grep patterns** instead of literal-matching them. A NEW-VERIFIED plan row citing any regex grep previously passed by non-recognition (#439).
+- `.gitignore` rule for `FailSafe/extension/test-results/` was anchored to a path that does not exist, so it never fired.
+- `docs/SYSTEM_STATE.md` claimed `Current Release: v5.9.0` while the repository shipped v6.0.4 — five releases of Tier 1 drift, its header restamped as recently as 2026-08-20 over a body that stopped in May.
+- `confidentiality.md` was registered as a root Tier 2 governance artifact while existing nowhere in the repository; relocated to the out-of-tier section, contents not imported.
 - `FX935` was allocated twice by cycles with divergent views of the feature index; renumbered per the older claim.
 - Absolute workspace paths removed from the shipped `FailSafe/README.md`.
+
+### Security
+- Dependency bumps: `qs` 6.15.3 → 6.16.0, `fast-uri` 3.1.5 → 3.1.7.
 
 ### Removed
 - A stale 2.66 MB v4.3.1 VSIX that had been tracked in the source tree, and four dead `.gitignore` rules already covered elsewhere.
 
 ### Governance
-- Ledger entries #602-#605. Four upstream issues filed against Qor-logic (#425-#428) covering a ledger-fork guard with a one-entry detection window, a governance-index marker clobber reproduced four times, provenance recording an unrelated package's version, and hash extraction matching a digest quoted in entry prose.
+- Ledger entries #601-#605, including the FX932 pre-merge ledger fork guard seal that had been carried unreleased since v6.0.4.
+- Four issues filed upstream against Qor-logic (#425-#428): a fork guard with a one-entry detection window, a governance-index marker clobber reproduced four times, provenance recording an unrelated package's version, and hash extraction matching a digest quoted in entry prose.
 
 ## [6.0.4] - 2026-08-23
 
