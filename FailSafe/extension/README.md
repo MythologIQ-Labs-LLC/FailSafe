@@ -40,9 +40,19 @@ Each integration ships with its own README and its external API names are back-c
 
 ---
 
-**Current Release**: v6.0.4 (2026-08-23)
+**Current Release**: v6.0.5 (2026-09-04)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v6.0.5
+
+- **A voice glitch that blocked unrelated updates is gone.** A timing check in the speech engine measured itself against a stopwatch that could round the wrong way, so it failed at random and held up routine dependency updates. It now measures deterministically.
+- **Generated test screenshots stop landing in the repository.** An ignore rule pointed at a folder path that does not exist, so it never took effect and a few build artifacts were committed by accident.
+- **The system-state document tells the truth again.** It had been reporting v5.9.0 as the current release while v6.0.4 was shipping, and nothing checked it. It does now.
+- **The governance index distinguishes "deliberately private" from "missing".** Several documents it lists are intentionally unpublished; readers previously had no way to tell those apart from a broken entry — and one entry was genuinely broken, pointing at a file that has never existed in the repository.
+- **A duplicate feature ID has been resolved,** and a check added so the next one is caught rather than discovered.
+
+Under the hood this release is governance plumbing: five checks were found reporting success while inspecting nothing at all, and each now has a test that proves it can fail. Four issues were filed upstream against Qor-logic.
 
 ## What's New in v6.0.4
 

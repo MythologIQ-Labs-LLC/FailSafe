@@ -77,18 +77,31 @@ describe('FX938 SYSTEM_STATE Tier 1 currency', () => {
     );
   });
 
-  it('declares a Current Release matching the newest version tag', () => {
+  it('never declares a Current Release BEHIND the newest version tag', () => {
     const all = tags();
     if (all.length === 0) return;            // shallow clone: no tags to compare against
     const newest = all.find((t) => /^v\d+\.\d+\.\d+$/.test(t));
     if (!newest) return;
     const declared = currentReleaseMarker(systemState());
-    assert.equal(
-      `v${declared}`,
-      newest,
-      `SYSTEM_STATE says v${declared} but the newest tag is ${newest}. This is the ` +
-        'inverse of the package.json check: a version bumped and merged but never tagged ' +
-        'is still not released ("merging is not delivering")'
+
+    // Behind, not unequal. Equality is unsatisfiable during a release: the version
+    // is bumped, the PR is raised and merged, and only then is the tag cut — so
+    // between bump and tag the marker legitimately leads the newest tag by one
+    // patch. Written as equality this assertion would have blocked every release
+    // PR, which is how it was found: it went red on v6.0.5's own bump.
+    //
+    // Behind is the actual defect. SYSTEM_STATE sat at v5.9.0 while v6.0.4 shipped,
+    // and `5.9.0 < 6.0.4` is precisely what this catches.
+    const cmp = (a, b) => {
+      const x = a.split('.').map(Number);
+      const y = b.split('.').map(Number);
+      for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] - y[i];
+      return 0;
+    };
+    assert.ok(
+      cmp(declared, newest.slice(1)) >= 0,
+      `SYSTEM_STATE says v${declared} but ${newest} is already tagged — the living ` +
+        'snapshot is behind a shipped release'
     );
   });
 
