@@ -29550,3 +29550,81 @@ SHA256(plan-system-state-currency.md)
 SHA256(content_hash + "|" + previous_hash)
 = ab058120b4c230770d9cd2ed0cf49d55588d39b88872bdbe2f18d5cccb0a0006
 ```
+
+---
+
+### Entry #604: SESSION SEAL — plan-governance-index-publication-status (Sprint 3)
+
+**Entry ID**: `7970a6ca8356`
+**Timestamp**: 2026-09-04T03:50:38Z
+**Phase**: SUBSTANTIATE
+**Session**: `2026-09-04T0055-551683`
+**Change class**: hotfix · **Risk grade**: L2 · **Verdict**: PASS
+**SSDF Practices**: PS.2.1, RV.2.1
+
+## Decision
+
+`docs/GOVERNANCE_INDEX.md` requires that "Every governance doc MUST be registered here. Drift in this index = governance drift", and gives every tier a drift signal — but it had **no vocabulary for published versus private**. `.gitignore:52-56` heads its stanza *"Private planning docs, transfer files, and governance records (licensing TBD)"* and ignores `docs/` and `.failsafe/` wholesale, so both trees are private by default and published by exception via `git add -f`, a deliberate act performed on 38 of the 68 registered paths.
+
+The consequence: a reader of a clone saw **15 legitimately-private rows and 1 outright broken row as indistinguishable absences.**
+
+The broken one: `confidentiality.md` was registered as a **root Tier 2 artifact** while existing nowhere in the repository — not tracked, not on disk. It is operator memory. Its own Owner cell already read "operator memory + manual", so the row's author knew its nature and still asserted a repo-root path. Corrected by relocating it into the index's existing `## Out-of-tier paths (NOT governance — listed here so they are not confused with governance)` section, which is where `.claude/` is already correctly filed. **Its contents were deliberately NOT imported** — `CLAUDE.md` records that file as holding pricing and tier internals, and "fixing" a broken row by materialising the file would have leaked confidential material into a public repository. The audit called this exclusion out as load-bearing rather than merely permitted.
+
+Also registered `docs/README.md`, which was on disk and in **no tier at all**.
+
+## The standing correction worked, and it changed the design
+
+Entry #603 adopted a standing correction: run the empirical falsifier BEFORE writing an assertion into a plan. This cycle applied it, and it was not ceremony — the measurement changed the design.
+
+Classifying the 68 registered paths first revealed that **14 of them name a shape rather than a file** (`plan-*.md`, `AUDIT_REPORT_<plan>.md`, `entry-<N>-body.md`). An existence check written from reasoning rather than measurement would have reported 14 false positives on its first run. The audit recorded this as the reason for the iteration-1 PASS — **the first of this session.** The two prior cycles were each VETOed on an unfalsifiable verification claim.
+
+## What the suite caught in itself
+
+After Phase 2, assertion 1 still failed on `confidentiality.md` alone — because the extractor was counting the **Out-of-tier table** as registered rows. That is precisely the confusion that section exists to prevent, reproduced inside the check written to detect it. Fixed by cutting the scan at the `## Out-of-tier paths` heading.
+
+## Audit mandate, satisfied
+
+The audit granted PASS but mandated one thing: assertion 2 fails against `main` only because the section it reads does not exist yet — **absence-driven, not dead-prefix-driven** — so its stated falsifier had to be demonstrated by mutation rather than assumed.
+
+Done: adding a bogus `nonexistent-tree/` prefix to the declared list fails assertion 2 with `dead declaration: nonexistent-tree/`; removing it passes. The assertion detects what it claims to, not merely "section missing".
+
+## Deviations and disclosures
+
+- **Step 5.5 intent-lock capture was performed this cycle**, correcting the omission disclosed at Entry #603. `intent_lock verify` exits 0 against a lock captured before implementation, so it attests what it is meant to.
+- **`governance-index --advance-last-reviewed --enforce` clobbered the index a third time**, advancing all three `**Last Reviewed**:` markers including the two narrating months-old cycles. Three runs, three identical clobbers across Entries #602, #603 and #604 — conclusively upstream behaviour. Lines `:6` and `:8` restored each time. This warrants an upstream issue rather than a fourth manual restoration.
+- **No version bump, no seal tag.** Governance-doc and test scope only.
+
+## Limits of the new check
+
+It cannot detect a doc that *should* be published but is not. That is a licensing judgment the operator has explicitly deferred, and the check does not presume it. Recorded as a non-goal rather than mechanised — an assertion that guessed at publication intent would be worse than none.
+
+## Feature Inventory
+
+**Feature Inventory**: Total: 754 / verified: 704 / unverified: 0 / n/a: 43
+**New entries**: FX939 · **Newly unverified**: none
+
+## Verification
+
+- `npm run lint` exit 0 · `npm run test:node` exit 0 — **306/306**
+- `featureIndexClassifier` parity 33/33
+- `governance-index-publication.test.cjs` — 3/3 FAIL pre-fix (16 unexplained paths reported), 3/3 pass post-fix, assertion 2 mutation-proved
+- Gate ladder: `intent_lock verify`, `session_id_lint`, `secret_scanner`, `merge_velocity`, `instruction_hygiene`, `ledger_commitment` — all exit 0
+- `doc_integrity` strict PASS after adding the `Private by design` glossary entry — the fail-closed gate catching a declared term with no glossary home for the third consecutive cycle
+
+## Files
+
+`FailSafe/extension/src/test/governance/governance-index-publication.test.cjs` (NEW) · `docs/GOVERNANCE_INDEX.md` · `docs/FEATURE_INDEX.md` · `qor/references/glossary.md`
+
+**Content Hash**:
+```
+SHA256(plan-governance-index-publication-status.md)
+= e444fb9032573ae01987bb79f747c8bd2fe8b38c462f325f5ae46507d670c92a
+```
+
+**Previous Hash**: `ab058120b4c230770d9cd2ed0cf49d55588d39b88872bdbe2f18d5cccb0a0006` (Entry #603 Chain Hash)
+
+**Chain Hash (Merkle seal)**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= bdf077c3fef6fdcd579ff5f11fddc1a66af3c3fee14e75f1cdb9105736a42244
+```

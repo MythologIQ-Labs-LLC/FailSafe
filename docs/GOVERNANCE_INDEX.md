@@ -63,7 +63,6 @@ Stable rules. Changes are explicit doctrine events recorded in `META_LEDGER` and
 | `CODE_OF_CONDUCT.md` | Community conduct rules | manual (rare) |
 | `CONTRIBUTING.md` | External contributor workflow | manual |
 | `SECURITY.md` | Security vulnerability disclosure process | manual |
-| `confidentiality.md` (root) | What is public / private / Pro-only for this codebase | operator memory + manual; revised 2026-04-25 for v5 reveal |
 | `.failsafe/governance/PUBLISH_BLOCK.md` | Active publish-block flag + lift conditions | `/qor-repo-release` checks; `/qor-substantiate` lifts |
 | `.failsafe/governance/tracker-taxonomy.directive.md` | Emitted record of the operator tracker taxonomy + MUST-CONSULT clause (FX891) — advisory (CLAUDE.md is the binding mechanism; no CI gate yet) | Workspace › Taxonomy editor emits on save; gitignored (local record) |
 | `.failsafe/governance/doctrine-shadow-genome-countermeasures.md` | Shadow Genome pattern doctrine (SG-* IDs) | `/qor-process-review-cycle` |
@@ -161,6 +160,7 @@ Informational. Slow-drift. Reviewed semi-annually unless cited by an active cycl
 | `.failsafe/governance/RESEARCH_BRIEF_agent-failsafe-current-state.md` | Agent-side current-state research |
 | `.failsafe/governance/RESEARCH_BRIEF_agt-sre-architecture.md` | Microsoft AGT SRE adapter target reference |
 | `.failsafe/governance/BROWSER_VERIFICATION.md` | Browser verification procedure reference |
+| `docs/README.md` | Index of the `docs/` tree — what lives where, for a reader arriving cold |
 
 ---
 
@@ -206,6 +206,21 @@ Every cycle that produces governance writes (`/qor-substantiate`, `/qor-repo-rel
 
 ---
 
+## Publication status
+
+Registration in this index and presence in the repository are **different things**, and a reader of a clone cannot tell them apart without this section.
+
+`.gitignore:52-56` heads its stanza *"Private planning docs, transfer files, and governance records (licensing TBD)"* and ignores `docs/` and `.failsafe/` wholesale. Both trees are therefore **private by default and published by exception** — a doc becomes public when someone runs `git add -f` on it, which is a deliberate act. 38 of the 68 paths registered below have had that done; 15 have not.
+
+An unpublished row is not drift. Whether a given governance doc *should* be published is a licensing decision the operator has explicitly deferred, and this index does not presume it.
+
+- private-by-default: `docs/`
+- private-by-default: `.failsafe/`
+
+`FailSafe/extension/src/test/governance/governance-index-publication.test.cjs` (FX939) reads those two prefixes from this section — not from a copy of its own — and fails when a registered path is neither tracked nor covered by one. Rows naming a *shape* rather than a file (`plan-*.md`, `AUDIT_REPORT_<plan>.md`, `entry-<N>-body.md`) are skipped; 14 of the 68 are of that kind.
+
+---
+
 ## Out-of-tier paths (NOT governance — listed here so they are not confused with governance)
 
 | Path | What it is |
@@ -216,6 +231,7 @@ Every cycle that produces governance writes (`/qor-substantiate`, `/qor-repo-rel
 | `node_modules/`, `out/`, `dist/` | Build artifacts (ignored) |
 | `PRIVATE/`, `FailSafe-Pro/` | Confidential per `CLAUDE.md` (Pro repo separate) |
 | `.claude/`, `.qor/`, `.qorlogic/`, `.agent/`, `.failsafe/` | Tool config + runtime state (governance subsets explicitly tiered above; tool state is NOT governance) |
+| `confidentiality.md` | **Operator memory, not a repository file.** Lives in the operator's local Claude memory store and holds pricing and tier internals per `CLAUDE.md`; it is deliberately NOT in this repo and must not be imported. Registered as a root Tier 2 artifact until 2026-09-04, which pointed every reader at a path that has never existed. |
 
 ---
 

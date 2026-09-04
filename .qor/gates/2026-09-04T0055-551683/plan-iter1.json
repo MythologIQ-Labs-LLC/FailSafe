@@ -1,0 +1,61 @@
+{
+  "phase": "plan",
+  "session_id": "2026-09-04T0055-551683",
+  "ts": "2026-09-04T03:46:49Z",
+  "plan_path": "plan-governance-index-publication-status.md",
+  "iteration": 1,
+  "change_class": "hotfix",
+  "doc_tier": "standard",
+  "terms": [
+    {
+      "term": "Private by design",
+      "home": "docs/GOVERNANCE_INDEX.md"
+    }
+  ],
+  "boundaries": {
+    "limitations": [
+      "Distinguishes published / private-by-design / broken row. Cannot judge whether a private doc SHOULD be published - operator licensing decision deferred at .gitignore:56."
+    ],
+    "non_goals": [
+      "No publication of any private doc. No .gitignore change. No DELIVER - v6.0.4 entry."
+    ],
+    "exclusions": [
+      "confidentiality.md contents NOT copied into the repo - operator memory holding pricing/tier internals per CLAUDE.md; only the misrepresenting index row is corrected."
+    ]
+  },
+  "phases": [
+    "Phase 1 - governance-index-publication.test.cjs (NEW), 3 assertions",
+    "Phase 2 - Publication status section; row :66 corrected; docs/README.md registered Tier 5"
+  ],
+  "feature_inventory_touches": [
+    {
+      "entry_id": "FX939",
+      "operation": "NEW",
+      "test_path": "FailSafe/extension/src/test/governance/governance-index-publication.test.cjs",
+      "test_descriptor": "every literal path in a GOVERNANCE_INDEX tier row is git-tracked or under a declared-private prefix; every declared prefix matches at least one row; docs/README.md is registered"
+    }
+  ],
+  "ci_commands": [
+    "npm run lint",
+    "npm run test:node"
+  ],
+  "baselines": "main @d5dada6d, falsifier run BEFORE the plan per the Entry #603 standing correction: 68 tier-row paths = 14 pattern/template + 54 literal (38 tracked, 15 untracked under .failsafe//docs/, 1 UNEXPLAINED = confidentiality.md, absent from disk and index-registered as a repo-root Tier 2 artifact). docs/README.md on disk, registered in no tier.",
+  "option_b_required": false,
+  "review_boundary": "no push, no PR, no merge",
+  "lint_results": {
+    "plan_text_consistency_lint": "exit 0",
+    "plan_grep_lint": "exit 0",
+    "dod_check": "exit 0",
+    "plan_test_lint": "exit 0",
+    "plan_iteration_status_lint": "exit 0",
+    "plan_feature_tdd_lint": "exit 0"
+  },
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.15.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5",
+    "human_oversight": "absent",
+    "ts": "2026-09-04T03:46:49Z"
+  }
+}

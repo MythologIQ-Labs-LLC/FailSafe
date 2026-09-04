@@ -140,3 +140,25 @@ referenced_by:
   - docs/SYSTEM_STATE.md
   - docs/FEATURE_INDEX.md
 ```
+
+```yaml
+term: Private by design
+definition: |
+  A governance artifact that is registered in docs/GOVERNANCE_INDEX.md but deliberately absent from
+  the published repository, as distinct from one that is missing. .gitignore:52-56 heads its stanza
+  "Private planning docs, transfer files, and governance records (licensing TBD)" and ignores docs/
+  and .failsafe/ wholesale, so both trees are private by default and published by exception via
+  git add -f - a deliberate act performed on 38 of the 68 paths the index registers. An unpublished
+  row is therefore not drift, and whether a given doc SHOULD be published is a licensing decision the
+  operator has explicitly deferred. The distinction matters because without it a reader of a clone
+  cannot separate 15 intentionally-private rows from a genuinely broken one: confidentiality.md was
+  registered as a root Tier 2 artifact while existing nowhere in the repository, being operator memory.
+  Distinguished from OUT-OF-TIER (docs/GOVERNANCE_INDEX.md's own section for paths that are not
+  governance at all, such as .claude/ tool state) - out-of-tier means "not a governance artifact",
+  private-by-design means "a governance artifact that has not been published".
+home: docs/GOVERNANCE_INDEX.md
+introduced_in_plan: plan-governance-index-publication-status
+referenced_by:
+  - docs/FEATURE_INDEX.md
+  - docs/META_LEDGER.md
+```
