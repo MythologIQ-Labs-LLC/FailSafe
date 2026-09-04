@@ -109,8 +109,14 @@ export class VerdictEngine {
             actions: []
         };
 
-        // Execute actions
-        verdict.actions = await this.executeActions(verdict);
+        // Execute actions. FX934 (#367 tranche 3b): the caller already routed this
+        // event to exactly one engine before generateVerdict was ever called
+        // (VerdictArbiter.evaluateEvent -- AGENT_CLAIM -> validateClaim's existence
+        // engine, everything else -> evaluateFileEvent's content-heuristic engine),
+        // so that routing is recorded on the ledger entry as verificationMethod
+        // instead of the single hardcoded literal both paths previously shared.
+        const verificationMethod = event.type === 'AGENT_CLAIM' ? 'existence_claim' : 'sentinel_heuristic';
+        verdict.actions = await this.executeActions(verdict, verificationMethod);
 
         return verdict;
     }
@@ -267,7 +273,10 @@ export class VerdictEngine {
     /**
      * Execute actions based on verdict
      */
-    private async executeActions(verdict: SentinelVerdict): Promise<VerdictAction[]> {
+    private async executeActions(
+        verdict: SentinelVerdict,
+        verificationMethod: string
+    ): Promise<VerdictAction[]> {
         const actions: VerdictAction[] = [];
 
         // Always log to ledger
@@ -279,7 +288,7 @@ export class VerdictEngine {
                 artifactPath: verdict.artifactPath,
                 artifactHash: verdict.artifactHash,
                 riskGrade: verdict.riskGrade,
-                verificationMethod: 'sentinel_heuristic',
+                verificationMethod,
                 verificationResult: verdict.decision,
                 sentinelConfidence: verdict.confidence,
                 payload: {

@@ -219,6 +219,30 @@ suite('VerdictEngine (FX346)', () => {
     assert.match(String(log!.details), /Failed to log/);
   });
 
+  // FX934 (#367 tranche 3b): verificationMethod now records which engine
+  // produced the entry instead of the single hardcoded 'sentinel_heuristic'
+  // literal both AGENT_CLAIM and file-event verdicts previously shared.
+  test('FX934 executeActions — AGENT_CLAIM event logs verificationMethod: existence_claim', async () => {
+    const s = makeStubs({ riskGrade: 'L1' });
+    const e = new VerdictEngine(s.trust, s.policy, s.ledger, s.shadow);
+    await e.generateVerdict(EVT({ type: 'AGENT_CLAIM' }), 'claim_manifest', []);
+    assert.equal(s.ledgerCalls[0].verificationMethod, 'existence_claim');
+  });
+
+  test('FX934 executeActions — non-AGENT_CLAIM event logs verificationMethod: sentinel_heuristic', async () => {
+    const s = makeStubs({ riskGrade: 'L1' });
+    const e = new VerdictEngine(s.trust, s.policy, s.ledger, s.shadow);
+    await e.generateVerdict(EVT(), 'src/x.ts', []);
+    assert.equal(s.ledgerCalls[0].verificationMethod, 'sentinel_heuristic');
+  });
+
+  test('FX934 executeActions — FILE_DELETED event logs verificationMethod: sentinel_heuristic', async () => {
+    const s = makeStubs({ riskGrade: 'L1' });
+    const e = new VerdictEngine(s.trust, s.policy, s.ledger, s.shadow);
+    await e.generateVerdict(EVT({ type: 'FILE_DELETED' }), 'src/x.ts', []);
+    assert.equal(s.ledgerCalls[0].verificationMethod, 'sentinel_heuristic');
+  });
+
   // FX297: generateVerdict's optional forceDecision/forceSummary params
   // (FailSafe#297 Slice 2 — VerdictArbiter's malformed-payload fail-open fix).
   test('FX297 generateVerdict — no forceDecision: L1 with zero heuristic results still defaults to PASS', async () => {
