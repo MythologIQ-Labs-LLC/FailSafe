@@ -15,8 +15,6 @@ gate_reads: audit
 gate_writes: implement
 permitted_tools: [Read, Grep, Glob, Bash, Edit, Write]
 permitted_subagents: []
-model_compatibility: [claude-opus-4-7]
-min_model_capability: opus
 ---
 # /qor-implement - Implementation Pass
 
@@ -279,9 +277,25 @@ If ANY violation found:
 
 ```
 PAUSE
-Report: "Section 4 violation detected. Running self-refactor before completion."
-Apply: Automatic splitting/flattening
+Report: "Section 4 violation detected. Routing through the Simplification Test."
+Route: the violation enters Step 9.5's Simplification Test gate -- split or
+  flatten only when the test justifies it; a breach that protects a stronger
+  contract, boundary, or defensive mechanism records NO REFACTOR REQUIRED
+  with the rationale. A violation needing an independently bounded structural
+  pass routes to /qor-refactor per qor/gates/delegation-table.md.
 ```
+
+### Step 9.5: Changeset Simplification Profile (Phase 246 wiring; GH #392)
+
+After behavior is implemented and verified, run one lightweight behavior-preserving refinement pass over the recently modified code only, applying the shared quality protocol as an invariant profile -- NOT a nested `/qor-refactor` ceremony (per `qor/gates/delegation-table.md` shared-protocol reuse and the `/qor-implement` prevention profile in `qor/references/implementation-quality-sweep.md`):
+
+1. Inspect the changeset for unnecessary complexity, redundancy, naming/clarity problems, and unjustified abstraction (`IQ-COMPLEX`, `IQ-CONTEXT`, `IQ-MAINTAIN` lenses).
+2. Gate every proposed refinement through `/qor-refactor`'s seven-question Simplification Test; behavior preservation is the invariant, and a refinement that would weaken a stronger contract, boundary, or defensive mechanism is not applied.
+3. Make only justified behavior-preserving refinements inside the changeset; unrelated legacy defects are reported, not modified.
+4. Re-run the relevant verification after any refinement.
+5. No justified refinement is a successful result; record it and continue.
+
+Delegate to `/qor-refactor` (as a real skill invocation) only when a confirmed finding requires an independently bounded structural pass beyond the changeset.
 
 ### Step 10: Handoff
 

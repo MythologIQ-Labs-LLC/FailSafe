@@ -1,0 +1,9 @@
+{
+  "attribution": {
+    "model_coauthor": false
+  },
+  "layout": {
+    "skills_root": ".claude/skills",
+    "agents_root": ".claude/agents"
+  }
+}

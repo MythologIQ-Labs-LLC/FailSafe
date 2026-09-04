@@ -1,0 +1,34 @@
+{
+  "phase": "audit",
+  "session_id": "2026-09-03T1833-c206a6",
+  "ts": "2026-09-03T18:51:43Z",
+  "target": "plan-qor169-sprint1-seal-unblock.md",
+  "verdict": "PASS",
+  "report_path": ".agent/staging/AUDIT_REPORT.md",
+  "risk_grade": "L2",
+  "findings_categories": [],
+  "reviews_remediate_gate": null,
+  "iteration": 2,
+  "mode": "solo (audit_risk_score option_b_required=false)",
+  "trajectory": "2 -> 0 blocking across iterations 1-2",
+  "blocking_closed": [
+    "B1 retracted falsifier replaced. New falsifier verified live at baseline: with no .qorlogic/config.json, resolve_policy(None).model_coauthor is True and the assertion raises AssertionError. Seal-commit half relocated to substantiate as a TWO-PART assertion (exit 0 AND zero Co-Authored-By lines) - single-part would pass on a commit carrying the forbidden trailer.",
+    "B2 runner mapping corrected and now stated explicitly in CI Commands: test:node reaches the two .cjs governance suites (run-node-tests.cjs:17); npm test reaches the .test.ts TTS test (package.json:733). Matches CI run 33751001155 evidence."
+  ],
+  "non_blocking_residuals": [
+    "N1 ci_coverage_lint: oss-sast.yml::semgrep uncovered; unrelated surface",
+    "N2 npm test pretest chain (build:package, patch:better-sqlite3, rebuild:vscode) has previously been proxy-blocked in this workspace; disclosed mitigation is a direct mocha run against out/, recorded as such in the seal. Execution risk on D4, not a plan defect.",
+    "N3 prompt_injection_canaries exit 0; three <script WARNs in META_LEDGER code-spans are historical entry text"
+  ],
+  "author_momentum_note": "audit_risk_score does not model 'author just finished reasoning about this exact defect class', which is when momentum risk is highest. Iteration 1 produced two unfalsifiable claims immediately after cataloguing five vacuous controls.",
+  "ledger_hold": "No META_LEDGER entry yet; allocation held until seal.",
+  "required_next_action": "/qor-implement",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.15.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5",
+    "human_oversight": "pass",
+    "ts": "2026-09-03T18:51:43Z"
+  }
+}

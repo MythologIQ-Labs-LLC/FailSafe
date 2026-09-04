@@ -15,8 +15,6 @@ gate_reads: implement
 gate_writes: substantiate
 permitted_tools: [Read, Grep, Glob, Bash, Edit, Write]
 permitted_subagents: []
-model_compatibility: [claude-opus-4-7]
-min_model_capability: opus
 ---
 # /qor-substantiate - Session Seal
 
@@ -172,6 +170,7 @@ Template: `references/qor-substantiate-templates.md`.
 - **MISSING**: Planned but not created -> FAIL
 - **UNPLANNED**: Created but not in blueprint -> WARNING (document in ledger)
 - **EXISTS**: Matches -> PASS
+- **STALE COMMITMENT** (#408): `ledger_commitment` || ABORT; see `references/seal-gate-ladder.md`
 
 ### Step 3.5: Blocker Verification
 
@@ -243,7 +242,7 @@ qor-logic scripts substantiate_gates || ABORT
 | 4.6.6 | procedural_fidelity | `qor-logic scripts procedural_fidelity --session "$SESSION_ID" --out dist/procedural-fidelity.findings.json` | WARN | procedural_fidelity | requires `module:qor.scripts.procedural_fidelity` |
 | 4.6.7 | dod_check | `qor-logic scripts dod_check --plan "$PLAN_PATH" \|\| true` | WARN | dod_check | `PLAN_PATH` argv-only (SG-Phase47-A); V1 presence only |
 | 4.6.8 | merge_velocity_check | `qor-logic scripts merge_velocity_check --repo-root . --window-days 7 \|\| ABORT` | ABORT | merge_velocity | 0 on `healthy`/`strained`, 1 on `exceeded`; `--override` logs `gate_override` |
-| 4.6.9 | skill_size_budget_lint | `qor-logic scripts skill_size_budget_lint --skills-root qor/skills \|\| ABORT` | ABORT | skill_size_budget | WARN at 25 KB; EXCEEDED at 40 KB aborts the seal (V2, Phase 234; GH #320) |
+| 4.6.9 | skill_size_budget_lint | `qor-logic scripts skill_size_budget_lint \|\| ABORT` | ABORT | skill_size_budget | WARN at 25 KB; EXCEEDED at 40 KB aborts the seal (V2, Phase 234; GH #320) |
 | 4.6.10 | data_api_acl_lint | `qor-logic scripts data_api_acl_lint --repo-root . \|\| ABORT` | ABORT | data_api_acl | requires `module:qor.scripts.data_api_acl_lint`; blocks on `missing-grant`, `definer-view`; no migrations prints `SKIP:` |
 | 4.6.12 | continuity receipt | `qor-logic scripts continuity_gate --session "$SESSION_ID" \|\| ABORT` | ABORT | continuity_outcome | only when the plan declares `execution_continuity`; receipt binds the EXACT revision; `verified`/`rejected`/`inconclusive` stay distinct |
 | 4.6.13 | install_drift_check | `qor-logic scripts install_drift_check --host claude --scope auto \|\| true` | disclose | skill_corpus | record digest, scope, drift count; disclosure, not ABORT |

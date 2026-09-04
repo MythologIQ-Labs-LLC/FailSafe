@@ -220,6 +220,17 @@ suite("TtsEngine synthesis-latency sampling (#406)", () => {
     const tts = await makeReadyEngine(new NeverResolvingPiper(), 20);
     const long = 'x'.repeat(800);
 
+    // The clock is injected, as in the success-path test above, for two reasons.
+    // 1. Determinism: the previous assertion read the real wall clock against a
+    //    20ms bound and went red in CI on timer coarseness (run 33751001155),
+    //    blocking an unrelated dependency PR.
+    // 2. Falsifiability: the previous assertion was `ms >= 20` where 20 IS the
+    //    configured bound, so an implementation that echoed the bound back
+    //    instead of measuring elapsed time satisfied it. The advance below is
+    //    deliberately NOT 20, so only a real measurement can produce it.
+    let clock = 1000;
+    (tts as any)._now = () => { const t = clock; clock += 37; return t; };
+
     await tts.speak(long);
 
     const samples = tts.getLatencySamples();
@@ -227,7 +238,8 @@ suite("TtsEngine synthesis-latency sampling (#406)", () => {
     assert.strictEqual(samples[0].outcome, 'timeout');
     assert.strictEqual(samples[0].textLength, 800,
       'text length is what the latency must be correlated against');
-    assert.ok(samples[0].ms >= 20, 'elapsed time is real, not the configured bound');
+    assert.strictEqual(samples[0].ms, 37,
+      'elapsed time is measured, not the configured 20ms bound echoed back');
   });
 
   test("tags a superseded attempt distinctly so it can be excluded from the distribution", async () => {

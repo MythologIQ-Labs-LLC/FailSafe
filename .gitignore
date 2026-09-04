@@ -72,11 +72,7 @@ docs/Deep Review/
 # ============================================
 
 node_modules/
-extension/node_modules/
-extension/out/
-extension/.vscode-test/
-extension/test-results/
-extension/*.vsix
+FailSafe/extension/test-results/
 out/
 dist/
 build/
@@ -110,8 +106,6 @@ nul
 *.key
 .vsce-token
 .ovsx-token
-extension/.vsce-token
-extension/.ovsx-token
 
 # ============================================
 # LOGS & TEMPORARY FILES
