@@ -1,0 +1,66 @@
+{
+  "phase": "plan",
+  "session_id": "2026-09-04T0015-db203a",
+  "ts": "2026-09-04T00:11:10Z",
+  "plan_path": "plan-system-state-currency.md",
+  "iteration": 1,
+  "change_class": "hotfix",
+  "doc_tier": "standard",
+  "terms": [
+    {
+      "term": "Tier 1 currency check",
+      "home": "FailSafe/extension/src/test/governance/system-state-currency.test.cjs"
+    }
+  ],
+  "boundaries": {
+    "limitations": [
+      "Asserts the machine-checkable half of Tier 1 currency (Current Release vs package.json and newest tag). Narrative accuracy is authored, not asserted."
+    ],
+    "non_goals": [
+      "No ledger writes. The missing DELIVER - v6.0.4 entry is surfaced, NOT written. No changes to other stale Tier 1/2 docs."
+    ],
+    "exclusions": [
+      "No reconstruction of the 3-month body gap beyond the 6.x releases",
+      "No edit or vendoring of upstream qor.scripts.*"
+    ]
+  },
+  "phases": [
+    "Phase 1 - system-state-currency.test.cjs (NEW), 4 falsifiable assertions",
+    "Phase 2 - SYSTEM_STATE header made true",
+    "Phase 3 - 6.x body sections appended"
+  ],
+  "feature_inventory_touches": [
+    {
+      "entry_id": "FX938",
+      "operation": "NEW",
+      "test_path": "FailSafe/extension/src/test/governance/system-state-currency.test.cjs",
+      "test_descriptor": "SYSTEM_STATE Current Release equals package.json version and newest git tag; Last Updated is not older than the newest body section; every v6.x tag has a body section"
+    }
+  ],
+  "ci_commands": [
+    "npm run lint",
+    "npm run test:node",
+    "git stash list"
+  ],
+  "baselines": "main @1e1215cc: SYSTEM_STATE.md:9 says v5.9.0; package.json 6.0.4; newest tag v6.0.4; newest body section 2026-05-28 vs header Last Updated 2026-08-20; NO existing check asserts SYSTEM_STATE currency (grep over scripts/ and src/test/ returns only ledger-fork fixtures + HubSnapshotService.test.ts).",
+  "option_b_required": false,
+  "review_boundary": "no push, no PR, no merge",
+  "root_cause_note": "Step 6.5 check_documentation_currency asks whether THIS cycle's files_touched implies a doc update; it never reads SYSTEM_STATE content. It returned 0 warnings on the 2026-09-03 seal against a five-release-stale Tier 1 doc.",
+  "surfaced_not_fixed": "No DELIVER entry exists for v6.0.4; last DELIVER is #596 (v6.0.3). Entry #601 is a retrospective SESSION SEAL explicitly recording NO VERSION BUMP, NO SEAL TAG. Owner: /qor-repo-release.",
+  "lint_results": {
+    "plan_text_consistency_lint": "exit 0",
+    "plan_grep_lint": "exit 0",
+    "dod_check": "exit 0",
+    "plan_test_lint": "exit 0",
+    "plan_iteration_status_lint": "exit 0",
+    "plan_feature_tdd_lint": "exit 0"
+  },
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.15.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5",
+    "human_oversight": "absent",
+    "ts": "2026-09-04T00:11:10Z"
+  }
+}

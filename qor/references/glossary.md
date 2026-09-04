@@ -114,3 +114,29 @@ referenced_by:
   - docs/FEATURE_INDEX.md
   - docs/META_LEDGER.md
 ```
+
+```yaml
+term: Tier 1 currency check
+definition: |
+  A machine assertion that a Tier 1 governance document satisfies its own declared freshness contract,
+  rather than merely having been edited recently. docs/GOVERNANCE_INDEX.md assigns Tier 1 the contract
+  "MUST be current at every cycle close" with drift signal "wrong version, wrong state", but until
+  FX938 no check anywhere read docs/SYSTEM_STATE.md's content: a grep over FailSafe/extension/scripts/
+  and src/test/ returned only ledger-fork fixtures and an unrelated HubSnapshotService test. The
+  document consequently claimed Current Release v5.9.0 while the repository shipped v6.0.4 - five
+  releases of drift - and /qor-substantiate Step 6.5's check_documentation_currency returned zero
+  warnings against it, because that check asks whether the current cycle's files_touched implies a doc
+  update and never inspects the document. Distinguished from a doc-currency HEURISTIC by what it reads:
+  a currency check compares the document's own claims against an independent source of truth
+  (package.json, git tags, the ledger), so it fails when the document is wrong rather than when a cycle
+  forgot to touch it. The canonical instance also demonstrates the inversion hazard: the obvious form of
+  a staleness assertion - "Last Updated is not older than the newest body section" - is SATISFIED by a
+  header restamped while the body is abandoned, which is the exact defect; the falsifying form requires
+  a body section FOR the claimed date. See [[Vacuous pass]] for the sibling failure mode where the check
+  runs but inspects nothing.
+home: FailSafe/extension/src/test/governance/system-state-currency.test.cjs
+introduced_in_plan: plan-system-state-currency
+referenced_by:
+  - docs/SYSTEM_STATE.md
+  - docs/FEATURE_INDEX.md
+```

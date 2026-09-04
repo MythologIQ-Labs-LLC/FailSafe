@@ -29447,3 +29447,85 @@ SHA256(plan-qor169-sprint1-seal-unblock.md)
 SHA256(content_hash + "|" + previous_hash)
 = 5dd8d0c3fae23bee250136286f23c217d9bee2f4b511f29de03ae15f2280b9e0
 ```
+
+---
+
+### Entry #603: SESSION SEAL — plan-system-state-currency (Tier 1 currency restored, Sprint 2)
+
+**Entry ID**: `dd00eeff997a`
+**Timestamp**: 2026-09-04T00:22:10Z
+**Phase**: SUBSTANTIATE
+**Session**: `2026-09-04T0015-db203a`
+**Change class**: hotfix
+**Risk grade**: L2
+**Verdict**: PASS
+**SSDF Practices**: PS.2.1, RV.2.1
+
+## Decision
+
+`docs/SYSTEM_STATE.md` is Tier 1 — "MUST be current at every cycle close", drift signal "wrong version, wrong state". It claimed `Current Release: v5.9.0` while the repository shipped v6.0.4. **Five releases of Tier 1 drift.**
+
+Worse than the number: its header had been restamped as recently as 2026-08-20 while its body stopped at 2026-05-28. Three months of header-only maintenance — the document was being touched without being resynced.
+
+**Nothing caught it, because nothing read it.** A grep over `FailSafe/extension/scripts/` and `src/test/` for `SYSTEM_STATE` returns only ledger-fork fixtures and an unrelated `HubSnapshotService` test. `/qor-substantiate` Step 6.5 runs `check_documentation_currency`, which asks whether *this cycle's* `files_touched` implies a doc update and never inspects the document's content. On the 2026-09-03 seal (Entry #602) it returned **0 warnings** against this file in its five-release-stale state — the same shape as the five vacuous controls that seal catalogued, in the gate guarding the document.
+
+`FailSafe/extension/src/test/governance/system-state-currency.test.cjs` (FX938) supplies the missing assertion. All four checks were verified failing against `main` @ `1e1215cc` before the fix was written:
+
+| assertion | pre-fix |
+|---|---|
+| `Current Release` == `package.json` version | `5.9.0` vs `6.0.4` — FAIL |
+| `Current Release` == newest tag | `v5.9.0` vs `v6.0.4` — FAIL |
+| a `##` section exists for `Last Updated` | none for `2026-08-20` — FAIL |
+| every shipped v6.x tag has a `##` section | 5/5 missing — FAIL |
+
+Mutation-proved after: reverting `Current Release` to v5.9.0 fails two assertions; restamping `Last Updated` to a date with no matching section fails the third — which is the precise drift mechanism this file suffered.
+
+## The assertion that had to be inverted
+
+Assertion 3 was first written as *"`Last Updated` is not older than the newest `##` section"*, with the claim that the current file falsified it. It does not: `2026-08-20 >= 2026-05-28` is **true**, so the assertion **passes on exactly the header-restamped-body-abandoned state it existed to catch.** The direction was inverted — the defect is a header claiming recency the body does not support, not a header lagging the body. Caught at audit iteration 1 (VETO, `specification-drift`) by running all four assertions against `main` rather than reasoning about them. Corrected to require a body section *for* the claimed date, which fails correctly.
+
+This is the **second consecutive cycle this session** whose iteration-1 VETO was an unfalsifiable verification claim, in a session whose entire subject is checks that pass without inspecting anything. `audit_risk_score` returned `option_b_required: false` both times. It models authorship momentum but not *topical* momentum: having just reasoned at length about a defect class appears to raise, not lower, the odds of reproducing it. Recorded as an SG-007 instance with that qualifier. Standing correction adopted mid-session: run the empirical falsifier BEFORE writing an assertion into a plan, not at audit.
+
+## Surfaced, not repaired
+
+**v6.0.4 has no `DELIVER` ledger entry.** The last DELIVER is #596 (v6.0.3). Entry #601 is a retrospective SESSION SEAL that mentions the publish and states explicitly *"RETROSPECTIVE SEAL; NO VERSION BUMP, NO SEAL TAG… This cycle ran implement → merge → release → substantiate."* A shipped release with no DELIVER record is a governance gap owned by `/qor-repo-release`. Declared a plan non-goal and recorded verbatim in the new SYSTEM_STATE section for 2026-08-23 and in the FX938 row — a ledger write for an already-shipped release warrants its own governed pass, not absorption into a hygiene cycle.
+
+## Deviations and disclosures
+
+- **Step 5.5 intent-lock capture was SKIPPED during `/qor-implement`.** `intent_lock verify` therefore returned `NO LOCK` (exit 1) at Step 4.6 — an ABORT-class gate failing through operator omission, not drift. The lock was captured at seal time and verifies, but **a lock captured after implementation attests the final state; it does not interdict drift during the cycle, which is its purpose.** Evidence that the bound triple was in fact unchanged: no commits exist on this branch (`git log origin/main..HEAD` empty), and the plan's mtime `20:12:06` predates the PASS audit artifact's `20:12:51`, so plan, audit and HEAD are provably identical to what a Step-5.5 capture would have bound. Disclosed rather than presented as a clean pass.
+- **Step 4.7.5 `governance-index --advance-last-reviewed --enforce` clobbered the index again — second deterministic reproduction.** It advanced all three `**Last Reviewed**:` markers (`:3`, `:6`, `:8`) to the seal date, including the two narrating months-old cycles. Lines `:6` and `:8` restored to `2026-08-23`; `:3`, the current stanza, holds the seal date. Entry #602 recorded this once; two runs, two identical clobbers confirms it is upstream behavior, not a transient.
+- **The `**Prior releases:**` header line was refreshed beyond the audited plan text.** It named v5.8.0/v5.7.0/v5.6.3 and became self-contradictory the moment `Current Release` read v6.0.4. A one-line consequence of Phase 2; recorded rather than folded in silently.
+- **No version bump, no seal tag.** Governance-doc and test scope only.
+
+## Feature Inventory
+
+**Feature Inventory**: Total: 753 / verified: 703 / unverified: 0 / n/a: 43
+**New entries**: FX938
+**Newly unverified**: none
+
+## Verification
+
+- `npm run lint` exit 0
+- `npm run test:node` exit 0 — **303/303 pass**
+- `featureIndexClassifier` parity exit 0 — 33/33, incl. `runAudit summary counts match FEATURE_INDEX header`
+- `system-state-currency.test.cjs` — 4/4 FAIL pre-fix, 4/4 pass post-fix, both mutations caught
+- Gate ladder: `skill_admission`, `gate_skill_matrix`, `session_id_lint`, `secret_scanner`, `merge_velocity` (healthy), `skill_size_budget` (3 WARN), `data_api_acl` (disclosed-skip), `instruction_hygiene`, `ledger_commitment` (3 artifacts) — all exit 0. `intent_lock` per the disclosure above.
+- 4.7 `doc_integrity` strict: PASS after adding the `Tier 1 currency check` glossary entry — the fail-closed gate again correctly caught a declared term with no glossary home.
+
+## Files
+
+`FailSafe/extension/src/test/governance/system-state-currency.test.cjs` (NEW) · `docs/SYSTEM_STATE.md` (header restated; six `##` sections added) · `docs/FEATURE_INDEX.md` (FX938) · `docs/GOVERNANCE_INDEX.md` (Last Reviewed) · `qor/references/glossary.md`
+
+**Content Hash**:
+```
+SHA256(plan-system-state-currency.md)
+= a7e29ca9f3d8d4c8f6927a2de351b50792c14ec5fb9837e0f49072194cf2f7da
+```
+
+**Previous Hash**: `5dd8d0c3fae23bee250136286f23c217d9bee2f4b511f29de03ae15f2280b9e0` (Entry #602 Chain Hash)
+
+**Chain Hash (Merkle seal)**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= ab058120b4c230770d9cd2ed0cf49d55588d39b88872bdbe2f18d5cccb0a0006
+```
