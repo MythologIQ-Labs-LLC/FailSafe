@@ -1,0 +1,57 @@
+{
+  "phase": "substantiate",
+  "session_id": "2026-09-04T0055-551683",
+  "ts": "2026-09-04T03:51:28Z",
+  "plan_path": "plan-governance-index-publication-status.md",
+  "verdict": "PASS",
+  "ledger_entry": 604,
+  "entry_id": "7970a6ca8356",
+  "merkle_seal": "bdf077c3fef6fdcd579ff5f11fddc1a66af3c3fee14e75f1cdb9105736a42244",
+  "content_hash": "e444fb9032573ae01987bb79f747c8bd2fe8b38c462f325f5ae46507d670c92a",
+  "previous_hash": "ab058120b4c230770d9cd2ed0cf49d55588d39b88872bdbe2f18d5cccb0a0006",
+  "change_class": "hotfix",
+  "risk_grade": "L2",
+  "version_bump": "none",
+  "seal_tag": "none",
+  "audit_mandate_satisfied": "Assertion 2 falsifier demonstrated by mutation: bogus 'nonexistent-tree/' prefix -> 'dead declaration' failure; removed -> pass. Not merely absence-driven.",
+  "gates": {
+    "intent_lock": "exit 0 - captured BEFORE implementation this cycle, correcting the #603 omission",
+    "session_id_lint": "exit 0",
+    "secret_scanner": "exit 0",
+    "merge_velocity": "exit 0",
+    "instruction_hygiene": "exit 0",
+    "ledger_commitment": "exit 0",
+    "doc_integrity_strict": "PASS after adding 'Private by design' glossary entry",
+    "governance_index_enforce": "exit 0 - clobbered all three Last Reviewed markers a THIRD time (#602/#603/#604); :6 and :8 restored. Conclusively upstream; warrants an issue rather than a fourth manual restoration.",
+    "verify_ledger_post_anchor": "exit 0"
+  },
+  "tests": {
+    "npm run lint": "exit 0",
+    "npm run test:node": "exit 0 306/306",
+    "parity": "33/33",
+    "governance-index-publication": "3/3 red (16 unexplained), 3/3 green, assertion 2 mutation-proved"
+  },
+  "feature_inventory": {
+    "total": 754,
+    "verified": 704,
+    "unverified": 0,
+    "na": 43,
+    "new": [
+      "FX939"
+    ]
+  },
+  "notable": [
+    "First iteration-1 PASS of this session. The #603 standing correction (run the falsifier before writing the assertion) changed the design: measurement revealed 14 pattern/template rows that a reasoned check would have reported as false positives.",
+    "The suite caught a bug in its own extractor - it counted the Out-of-tier table as registered rows, the exact confusion that section exists to prevent."
+  ],
+  "review_boundary": "local commit only",
+  "required_next_action": "operator review",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.15.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5",
+    "human_oversight": "pass",
+    "ts": "2026-09-04T03:51:28Z"
+  }
+}

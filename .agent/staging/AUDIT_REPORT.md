@@ -1,81 +1,66 @@
-# AUDIT REPORT — plan-system-state-currency.md
+# AUDIT REPORT — plan-governance-index-publication-status.md
 
-**Session**: 2026-09-04T0015-db203a
-**Iteration**: 2
-**Risk grade**: L2 · **Mode**: solo (`option_b_required: false`)
-**Trajectory**: 1 → 0 blocking across iterations 1–2
+**Session**: 2026-09-04T0055-551683 · **Iteration**: 1 · **Risk grade**: L2
+**Mode**: solo (`option_b_required: false`)
 
 ## VERDICT: PASS
 
-## Iteration 1 blocking finding, closed
+No blocking findings. The plan's baselines were measured before the assertions were written —
+the standing correction adopted at Entry #603 was actually applied this cycle, and it changed
+the design: the classification run revealed 14 pattern/template rows (`plan-*.md`,
+`AUDIT_REPORT_<plan>.md`, `entry-<N>-body.md`) that a naive existence check would have flagged
+as missing. Had the assertion been written from reasoning rather than measurement, it would have
+produced 14 false positives on its first run.
 
-### B1 — `specification-drift` — assertion 3 passed on the state it claimed to catch
+## Findings the plan rests on, re-verified by the Judge
 
-Iteration 1 declared assertion 3 as "`Last Updated` is **not older than** the newest `##` body
-section," with the falsifier "the current file has `Last Updated: 2026-08-20` against a newest
-section of `2026-05-28`."
+| class | count |
+|---|---|
+| pattern / template rows (skipped) | 14 |
+| literal, tracked | 38 |
+| literal, untracked, under `.failsafe/` or `docs/` | 15 |
+| literal, untracked, **unexplained** | **1** — `confidentiality.md` |
 
-The direction was inverted. `2026-08-20 >= 2026-05-28` is **true**, so the assertion as written
-**passes** on exactly the header-edited-body-abandoned state it existed to detect. Measured:
+`docs/GOVERNANCE_INDEX.md:66` registers `` `confidentiality.md` (root) `` as Tier 2 while the file
+exists nowhere in the repository — not tracked, not on disk. The row's own Owner cell reads
+"operator memory + manual", so the row's author knew its nature and still asserted a repo-root
+path. Correcting it into the existing `## Out-of-tier paths` section is the right disposition:
+that section already exists for precisely this distinction and already holds `.claude/`.
 
-```
-A1 Current Release == package.json : 5.9.0 vs 6.0.4      -> FAIL
-A2 Current Release == newest tag   : v5.9.0 vs v6.0.4     -> FAIL
-A3 Last Updated >= newest section  : 2026-08-20 >= 2026-05-28 -> pass  <-- PASSES ON THE BROKEN STATE
-A4 every v6.x tag has a ## section : 5/5 missing          -> FAIL
-```
+The exclusion barring import of `confidentiality.md`'s contents is correct and load-bearing —
+`CLAUDE.md` records that file as holding pricing and tier internals. A plan that "fixed" the
+broken row by materialising the file would have leaked confidential material into a public repo.
+Called out favourably rather than merely permitted.
 
-Three of four falsified; the fourth did not. The plan claimed all four would.
+## Honest limit on assertion 2
 
-**Closed in iteration 2** by inverting the invariant: *a `##` body section must exist dated
-exactly `Last Updated`* — every header refresh records the event that caused it. Verified:
+Assertion 2 ("the declared-private prefix list is non-empty and each prefix matches at least one
+registered path") fails against `main` **because the section it reads does not exist yet**, not
+because a dead prefix was detected. That is a legitimate red-then-green, but it is absence-driven,
+and the stated falsifier — a prefix matching nothing — is a *future* condition.
 
-```
-Last Updated: 2026-08-20
-a ## section exists for that date? False
--> corrected A3: FAIL (correct)
-```
-
-The retraction is stated in place in the plan rather than the wrong text being silently deleted,
-and the FX938 `test_descriptor` was corrected to match (it initially carried the retracted wording
-forward — caught on re-read, not by `plan_text_consistency_lint`, which compares repeated
-assertions of the same string and had no second site to compare against).
-
-## Judge's note on recurrence
-
-This is the **second consecutive cycle** whose iteration-1 VETO was an unfalsifiable verification
-claim authored by the same agent, in a session whose entire subject is controls that pass without
-inspecting anything. `audit_risk_score` returned `option_b_required: false` both times.
-
-The scorer models authorship momentum but not *topical* momentum — having just reasoned at length
-about a defect class appears to increase, not decrease, the odds of reproducing it. Recorded as an
-SG-007 instance with that qualifier; a standing recommendation for the next cycle in this session
-is to run the empirical falsifier check BEFORE writing the assertion into the plan, not at audit.
+**Mandated at implement**: demonstrate that falsifier by mutation. Add a bogus prefix to the
+declared list, confirm assertion 2 fails, remove it, confirm it passes. Without that, assertion 2
+is only shown to detect "section missing", which is not what it claims to guard. Recorded here so
+the seal can be checked against it.
 
 ## Passes cleared
 
-Prompt Injection (exit 0) · Security L3 (no auth/secret surface) · OWASP (no subprocess beyond
-`git tag`, argv-form) · Ghost UI (none) · Section 4 Razor (one test file, no production code) ·
-Test Functionality (all four assertions invoke and compare against real values; none is
-presence-only) · Dependency (none added) · Orphan (`run-node-tests.cjs` walks `src/test`
-recursively; `src/test/governance/` exists and is reached) · Macro Architecture (no boundaries
-touched) · Feature Test Coverage (FX938 carries a specific path and a falsifying descriptor) ·
-Infrastructure Alignment (baselines re-measured this session against `main` @ `1e1215cc`) ·
-Filter-Stage Ordering (no pipeline).
-
-**Scope discipline noted favourably**: the absent `DELIVER — v6.0.4` ledger entry is declared a
-non-goal with a named owner (`/qor-repo-release`) rather than folded into a hygiene cycle. Ledger
-writes for an already-shipped release warrant their own governed pass.
+Prompt Injection · Security L3 (no auth/secret surface; the confidentiality exclusion strengthens
+this) · OWASP (no `RegExp` built from extracted values — the plan cites the FX938
+`js/incomplete-sanitization` finding and carries the lesson forward, which is the correct response
+to a CodeQL alert two cycles running) · Ghost UI · Section 4 Razor (one test file, no production
+code) · Test Functionality (all three assertions compare against real values; none presence-only) ·
+Dependency · Orphan (`run-node-tests.cjs` reaches `src/test/governance/`) · Macro Architecture ·
+Feature Test Coverage (FX939 specific and falsifying) · Infrastructure Alignment (baselines
+re-measured this session) · Filter-Stage Ordering.
 
 ## Non-blocking residuals
 
-- N1 `workspace_fragility_check`: `fragility=high action=branch_only`
-  (`active_branch_count=102`, `dirty_gate_artifact_count=43`). Scope is already narrow and
-  branch-isolated; the branch count is itself a housekeeping item for a later sprint.
-- N2 Assertion 4 matches a `##` section per v6.x tag by string. A section naming two releases in
-  one heading would satisfy two tags from one line. Acceptable — Phase 3 authors one section per
-  release, and the looser form still fails the current 5/5-missing state.
+- N1 The check cannot detect a doc that *should* be published but is not. That is a licensing
+  judgment, correctly declared a non-goal rather than mechanised.
+- N2 `workspace_fragility_check` remains `high / branch_only`; scope is narrow and branch-isolated.
 
 ## Required next action
 
-`/qor-implement`. Ledger allocation held until seal.
+`/qor-implement`, with the assertion-2 mutation demonstration mandated above.
