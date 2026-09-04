@@ -1,10 +1,10 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-09-04 (SYSTEM_STATE Tier 1 currency restored — FX938, Sprint 2 of the qor-logic 0.169.0 alignment)
+**Last Updated:** 2026-09-04 (v6.0.5 released — governance-integrity sprint, ledger #602-#605)
 **Active local review:** `fix/system-state-currency-sprint2` — this cycle. Restores the Tier 1 freshness contract and adds `system-state-currency.test.cjs`, the first check that asserts it. Prior to this cycle no test anywhere read this file's content.
 **Prior local review:** `fix/qor169-sprint1-seal-unblock` — MERGED to `main` as `1e1215cc` (PR #448). qor-logic 0.163.1 → 0.169.0; `.qorlogic/config.json` created, which is what allows a seal to complete at all; five vacuously-passing governance controls identified; TTS timeout assertion made deterministic and falsifying. Seal Entry #602.
 **Open PRs:** #442 (Bicameral upstream row error state), #443 (plan-grep-lint regex recognition), #444 (#367 per-engine provenance), #445 (#242 Shadow Genome severity aria — supersedes #440, closed as duplicate), #446 + #447 (dependabot). #447's blocker — a wall-clock TTS assertion — was removed by Entry #602.
-**Current Release:** v6.0.4 (2026-08-23) — published to VS Code Marketplace + Open VSX + GitHub Release. **No `DELIVER` ledger entry exists for this release**; the last DELIVER is #596 (v6.0.3). Entry #601 is a retrospective SESSION SEAL that records the publish but explicitly states "NO VERSION BUMP, NO SEAL TAG". Surfaced as a governance gap owned by `/qor-repo-release`, not repaired here.
+**Current Release:** v6.0.5 (2026-09-04) — governance-integrity release. Five controls were found reporting success while inspecting nothing; each now has a test that proves it can fail. Ledger #602-#605. Four issues filed upstream against Qor-logic (#425-#428). **Note:** v6.0.4 still has no `DELIVER` ledger entry (last DELIVER is #596 for v6.0.3); that gap is unchanged by this release and remains owned by `/qor-repo-release`.
 **Prior releases:** v6.0.3 (2026-08-22, #596 DELIVER), v6.0.2 (2026-08-21, #588), v6.0.1 (2026-08-20, #553), v6.0.0 (2026-08-19, #548 — enforce-by-default era). Pre-6.x: v5.9.0 (#460 Command Center suite), v5.8.0 (#449), v5.7.0, v5.6.3 (#431).
 **Prior release detail:** v5.3.3 (published to VS Code Marketplace + Open VSX via tag `v5.3.3` (`d3a0b75`); Open VSX via CI, VS Code Marketplace via local `vsce publish --azure-credential` from the identical CI-built VSIX after the CI marketplace job hit the documented `/_apis/gallery` PAT-auth timeout) — bundles B-OD-8 (#409) + B-INT-6 (#410) + B-INT-7 (#411/#413) + B-INT-12 (#412) + transparency date-filter fix (#414); DELIVER seal #415
 **Sealed baseline:** v5.2.0 → v5.2.2 hotfix line (Entries #392-#396) → v5.3.0 (Entry #400 Open Design v1 + Entry #402 substrate v1) → v5.3.0 release (`08916d9`, dead-on-marketplace) → v5.3.1 hotfix (DELIVER at #406) → v5.3.2 release (refactor bundle #407 B-INT-4 + #408 B-INT-5) → v5.3.3 release (integration beta bundle #409–#414; DELIVER #415)
@@ -13,6 +13,16 @@
 **Doctrine additions since 2026-05-22:** `feedback_no_pipeline_reshape_for_marketplace_issues` (2026-05-27, v5.2.2 hold-pat precedent) · `feedback_verify_external_names_at_plan_time` (2026-05-27, Citation Inventory Pass — broke 4-cycle Plan-Time Hallucination loop at Entry #405)
 
 ---
+
+## 2026-09-04 — v6.0.5 released (governance-integrity sprint, ledger #602-#605)
+
+Four governed cycles: qor-logic 0.163.1 → 0.169.0 alignment (#602), SYSTEM_STATE Tier 1 currency (#603), GOVERNANCE_INDEX publication status (#604), and the FX935 identifier-fork renumber (#605). Merged as PRs #448-#451.
+
+The through-line: five governance controls were returning success while inspecting nothing — `skill_size_budget_lint` (0 files), `gate_chain_completeness` (0 sessions), `secret_scanner --staged` (0 bytes), the post-anchor ledger fork guard (reachable only at the high-water mark), and `governance-index --cross-check-ledger` (0 bytes of output either way). A sixth, `session_id_lint`, was silently keying two ladder rows to a session that does not exist. Each now has a falsifier that was exercised in both directions.
+
+This very release was caught by one of them: after the version bump, FX938 reported `SYSTEM_STATE says Current Release v6.0.4 but package.json is 6.0.5` — the same drift that had gone unnoticed for five releases, surfaced within minutes.
+
+Upstream: Qor-logic #425 (fork guard's one-entry detection window), #426 (Last Reviewed marker clobber, reproduced four times), #427 (provenance recording an unrelated package's version), #428 (a 64-hex string in entry prose matched as the Content Hash).
 
 ## 2026-09-04 — SYSTEM_STATE Tier 1 currency restored (FX938, Entry pending)
 
