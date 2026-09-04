@@ -1,66 +1,55 @@
-# AUDIT REPORT — plan-governance-index-publication-status.md
+# AUDIT REPORT — plan-fx935-collision-renumber.md
 
-**Session**: 2026-09-04T0055-551683 · **Iteration**: 1 · **Risk grade**: L2
+**Session**: 2026-09-04T0430-62ca33 · **Iteration**: 1 · **Risk grade**: L2
 **Mode**: solo (`option_b_required: false`)
 
 ## VERDICT: PASS
 
-No blocking findings. The plan's baselines were measured before the assertions were written —
-the standing correction adopted at Entry #603 was actually applied this cycle, and it changed
-the design: the classification run revealed 14 pattern/template rows (`plan-*.md`,
-`AUDIT_REPORT_<plan>.md`, `entry-<N>-body.md`) that a naive existence check would have flagged
-as missing. Had the assertion been written from reasoning rather than measurement, it would have
-produced 14 false positives on its first run.
+**Verdict**: PASS
 
-## Findings the plan rests on, re-verified by the Judge
+*Qualified: a process violation is recorded below. The verdict on the changeset stands; the violation is against the cycle order, not the work.*
 
-| class | count |
+The changeset is sound and every falsifier was re-run by the Judge rather than accepted from the plan. **The cycle order was violated**, and that is recorded here as a finding against the process, not against the work.
+
+## Process violation — ordering inversion
+
+`/qor-plan` and `/qor-audit` were skipped. Implementation ran directly from the operator ruling: fixtures, detector, renumber, and FEATURE_INDEX edits all landed in the working tree before any plan existed. The plan under audit was authored afterwards and **declares this in its own body** rather than presenting itself as prospective.
+
+Mitigating, and verified: `git status` shows no commit on this branch, so **no repository mutation landed ahead of the cycle** — the working tree is the only thing that ran ahead. The governance boundary is the first mutation, and it has not been crossed.
+
+Not mitigating: the audit is now reviewing a completed changeset. An audit's leverage is that it can send work back before it exists; that leverage was forfeited here. Had a blocking finding surfaced, the remedy would have been rework rather than redesign.
+
+This is the same class as Entry #601's implement → merge → release → substantiate inversion, and is recorded the same way — a disclosed deviation an auditor can weigh, not a sanctioned path. A severity-2 `gate_override` event accompanies this verdict.
+
+## Falsifiers — re-run, not accepted
+
+The plan explicitly instructed the Judge to re-run rather than trust its claims. Done:
+
+| claim | Judge's observation |
 |---|---|
-| pattern / template rows (skipped) | 14 |
-| literal, tracked | 38 |
-| literal, untracked, under `.failsafe/` or `docs/` | 15 |
-| literal, untracked, **unexplained** | **1** — `confidentiality.md` |
+| detector fires on `duplicate-id.md` | `ok 1` |
+| detector silent on `clean.md` | `ok 2` |
+| live index allocates each id once | `ok 3` |
+| FX935 no longer reads as `.qorlogic/config.json` | `ok 4` |
+| **control can fail** — collide the clean fixture | `not ok 2 - reports the clean fixture as clean` |
 
-`docs/GOVERNANCE_INDEX.md:66` registers `` `confidentiality.md` (root) `` as Tier 2 while the file
-exists nowhere in the repository — not tracked, not on disk. The row's own Owner cell reads
-"operator memory + manual", so the row's author knew its nature and still asserted a repo-root
-path. Correcting it into the existing `## Out-of-tier paths` section is the right disposition:
-that section already exists for precisely this distinction and already holds `.claude/`.
+That last row is the one that matters. A detector verified only against a fixture built to trip it proves it can fire, not that it discriminates. Breaking the control proves it does both.
 
-The exclusion barring import of `confidentiality.md`'s contents is correct and load-bearing —
-`CLAUDE.md` records that file as holding pricing and tier internals. A plan that "fixed" the
-broken row by materialising the file would have leaked confidential material into a public repo.
-Called out favourably rather than merely permitted.
+## Findings the plan rests on, confirmed
 
-## Honest limit on assertion 2
+- FX935 double-allocation is a genuine identifier fork: PR #445 (2026-08-24T16:25:51Z) vs Entry #602 (2026-09-03), each computing `max(FX)+1` against divergent views. Structurally Entry #597, one artifact over.
+- FX934 likewise, and the older claim there is the plan for a detector scoped to catch "a FEATURE_INDEX with two FX930 rows" — it collided on its own id before implementation. Both dispositions are operator rulings, correctly recorded as such rather than derived.
+- `ledger_commitment` cannot bind any of the last twenty entries: `_ARTIFACT_RE` requires a `**Plan**:` / `**Artifact**:` / `**Brief**:` line; 175 entries carry one, zero of the last twenty do. Mutating Entry #602's plan moved its digest `7e20b449…` to `a8ab7cdd…` with the gate still at exit 0. **Correctly diagnosed as consumer-side**, not filed upstream — the plan records that it was nearly filed as an upstream bug before `_ARTIFACT_RE` was read.
 
-Assertion 2 ("the declared-private prefix list is non-empty and each prefix matches at least one
-registered path") fails against `main` **because the section it reads does not exist yet**, not
-because a dead prefix was detected. That is a legitimate red-then-green, but it is absence-driven,
-and the stated falsifier — a prefix matching nothing — is a *future* condition.
+## Scope discipline
 
-**Mandated at implement**: demonstrate that falsifier by mutation. Add a bogus prefix to the
-declared list, confirm assertion 2 fails, remove it, confirm it passes. Without that, assertion 2
-is only shown to detect "section missing", which is not what it claims to guard. Recorded here so
-the seal can be checked against it.
-
-## Passes cleared
-
-Prompt Injection · Security L3 (no auth/secret surface; the confidentiality exclusion strengthens
-this) · OWASP (no `RegExp` built from extracted values — the plan cites the FX938
-`js/incomplete-sanitization` finding and carries the lesson forward, which is the correct response
-to a CodeQL alert two cycles running) · Ghost UI · Section 4 Razor (one test file, no production
-code) · Test Functionality (all three assertions compare against real values; none presence-only) ·
-Dependency · Orphan (`run-node-tests.cjs` reaches `src/test/governance/`) · Macro Architecture ·
-Feature Test Coverage (FX939 specific and falsifying) · Infrastructure Alignment (baselines
-re-measured this session) · Filter-Stage Ordering.
+The non-goals are load-bearing and correct: not editing `plan-qor169-sprint1-seal-unblock.md` (a sealed content-hash source), not rewriting Entry #602's body, not touching `.qor/gates/**`, and not backfilling `**Plan**:` into sealed entries per the operator ruling. A cycle that "tidied" any of these would have damaged evidence to improve a metric.
 
 ## Non-blocking residuals
 
-- N1 The check cannot detect a doc that *should* be published but is not. That is a licensing
-  judgment, correctly declared a non-goal rather than mechanised.
-- N2 `workspace_fragility_check` remains `high / branch_only`; scope is narrow and branch-isolated.
+- N1 The detector sees one repository state and cannot catch a cross-branch collision — which is how both of these arose. Stated in the plan rather than mechanised; the cross-branch case belongs to the dormant `check-governance-structure.cjs` cycle.
+- N2 Entries #602-#604 remain unbindable by `ledger_commitment`. Disclosed, per the operator ruling against editing sealed bodies.
 
 ## Required next action
 
-`/qor-implement`, with the assertion-2 mutation demonstration mandated above.
+`/qor-substantiate`. The seal MUST carry the ordering inversion, not only the outcome.

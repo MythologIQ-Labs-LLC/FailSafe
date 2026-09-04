@@ -162,3 +162,29 @@ referenced_by:
   - docs/FEATURE_INDEX.md
   - docs/META_LEDGER.md
 ```
+
+```yaml
+term: Identifier fork
+definition: |
+  Two cycles independently allocating the same identifier because each computed it as max(N)+1
+  against its own view of a shared registry, and the views had diverged. Neither cycle errs; the
+  defect is structural, and it is invisible to any check that inspects one repository state,
+  because within either branch the allocation is correct and unique. The canonical instance is
+  META_LEDGER Entry #597, where two PRs each appended a different #597 chaining off #596. The same
+  mechanism produced FX935 in docs/FEATURE_INDEX.md on 2026-09-04 - PR #445 allocated it on
+  2026-08-24 when the highest was FX934, and Entry #602 allocated it on 2026-09-03 having seen
+  FX933 as highest on main, because FX934 belonged to an unmerged cycle. FX934 itself was forked
+  the same way, and the older of its two claims is the plan for check-governance-structure.cjs, a
+  detector scoped in its own words to catch "a FEATURE_INDEX with two FX930 rows": it collided on
+  its own identifier before it was implemented. Detection must therefore precede merge - a
+  post-merge check sees only the winner, and renumbering afterwards invalidates every downstream
+  reference. Resolution is by precedence rather than by math; this repository rules that the older
+  claim wins, with shipped work outranking a dormant claim from an unimplemented plan. Distinguished
+  from a [[Vacuous pass]]: a vacuous check inspects nothing, whereas an identifier-fork check can
+  inspect exhaustively and still be blind, because the evidence is not in the state it can see.
+home: FailSafe/extension/src/test/governance/feature-index-id-integrity.test.cjs
+introduced_in_plan: plan-fx935-collision-renumber
+referenced_by:
+  - docs/FEATURE_INDEX.md
+  - docs/META_LEDGER.md
+```

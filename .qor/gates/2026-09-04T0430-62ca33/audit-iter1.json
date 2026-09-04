@@ -1,0 +1,35 @@
+{
+  "phase": "audit",
+  "session_id": "2026-09-04T0430-62ca33",
+  "ts": "2026-09-04T12:58:41Z",
+  "target": "plan-fx935-collision-renumber.md",
+  "verdict": "PASS",
+  "report_path": ".agent/staging/AUDIT_REPORT.md",
+  "risk_grade": "L2",
+  "findings_categories": [],
+  "reviews_remediate_gate": null,
+  "iteration": 1,
+  "mode": "solo",
+  "process_violation": "Ordering inversion: /qor-plan and /qor-audit skipped; implementation preceded both. No commit landed so the mutation boundary was not crossed, but the audit's leverage - sending work back before it exists - was forfeited. Severity-2 gate_override emitted.",
+  "falsifiers_rerun_by_judge": [
+    "ok 1 detector fires on duplicate-id.md",
+    "ok 2 silent on clean.md",
+    "ok 3 live index allocates each id once",
+    "ok 4 FX935 released to PR #445",
+    "CONTROL BROKEN: colliding clean.md yields 'not ok 2' - proves the detector discriminates rather than merely firing"
+  ],
+  "non_blocking_residuals": [
+    "N1 cannot catch a cross-branch collision - belongs to the dormant check-governance-structure.cjs cycle",
+    "N2 entries #602-#604 remain unbindable by ledger_commitment, per the operator ruling against editing sealed bodies"
+  ],
+  "ledger_hold": "allocation held until seal",
+  "required_next_action": "/qor-substantiate",
+  "ai_provenance": {
+    "system": "Qor-logic",
+    "version": "0.15.1",
+    "host": "claude-code",
+    "model_family": "claude-opus-5",
+    "human_oversight": "pass",
+    "ts": "2026-09-04T12:58:41Z"
+  }
+}

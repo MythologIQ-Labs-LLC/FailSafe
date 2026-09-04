@@ -29628,3 +29628,103 @@ SHA256(plan-governance-index-publication-status.md)
 SHA256(content_hash + "|" + previous_hash)
 = bdf077c3fef6fdcd579ff5f11fddc1a66af3c3fee14e75f1cdb9105736a42244
 ```
+
+---
+
+### Entry #605: AMENDMENT — FX935 double-allocation resolved; FX id integrity detector added
+
+**Entry ID**: `e11d8b5cd656`
+**Timestamp**: 2026-09-04T13:02:17Z
+**Phase**: SUBSTANTIATE
+**Session**: `2026-09-04T0430-62ca33`
+**Change class**: hotfix · **Risk grade**: L2 · **Verdict**: PASS
+**Amends**: Entry #602
+**Plan**: `plan-fx935-collision-renumber.md`
+**SSDF Practices**: PS.2.1, RV.2.1
+
+## Decision
+
+`FX935` was allocated twice:
+
+| claim | cycle | when |
+|---|---|---|
+| Shadow Genome graph node accessible name carries severity | PR #445 | 2026-08-24T16:25:51Z |
+| `.qorlogic/config.json` declares the repository layout | Entry #602, merged to `main` | 2026-09-03 |
+
+**Neither cycle erred.** Each computed the next id as `max(FX) + 1` against its own view of `docs/FEATURE_INDEX.md`, and the views had diverged — PR #445 branched when the highest was FX934; Entry #602 branched later and saw FX933 as highest on `main`, because FX934 belongs to an unmerged cycle. This is structurally the **Entry #597 ledger fork**, one artifact over: independent `max+1` allocation against divergent local state, with no pre-merge guard.
+
+**Operator ruling: the older claim wins.** PR #445 keeps FX935. `.qorlogic/config.json` is renumbered to **FX940** on `main`.
+
+`FX934` was double-allocated the same way — by PR #444 (2026-08-24T12:25:08Z) and by the `governance-structure-guard` plan (2026-08-23T21:51:47Z). The older of those two claims is the plan for `check-governance-structure.cjs`, **a detector scoped in its own words to catch "a FEATURE_INDEX with two FX930 rows"**, which collided on its own id before it was ever implemented; that cycle has zero commits and is blocked by the 0.169.0 `terms_introduced` schema change. Operator ruled that shipped, tested work outranks a dormant claim: **PR #444 keeps FX934**, and `governance-structure-guard` renumbers if it resumes — a one-line cost, since it has no code.
+
+## What was renumbered, and what was deliberately not
+
+Renumbered:
+- `docs/FEATURE_INDEX.md` — the FX935 row and the header tally.
+- `FailSafe/extension/src/test/governance/qorlogic-config.test.cjs` — header docblock and `describe()` name.
+
+**Deliberately not touched:**
+- `plan-qor169-sprint1-seal-unblock.md` — it is the `Content Hash` source for Entry #602. Editing it would silently invalidate that entry's commitment (see below).
+- `.qor/gates/2026-09-03T1833-c206a6/*` — sealed evidence of what was decided at the time.
+- Entry #602's body — amended by this entry, not rewritten.
+
+## `ledger_commitment` cannot bind any recent entry
+
+Found while establishing whether editing the plan file was safe. Mutating `plan-qor169-sprint1-seal-unblock.md` moves its digest from `7e20b449…` to `a8ab7cdd…` — diverging from what Entry #602 records — and `qor-logic scripts ledger_commitment` **still exits 0**, reporting `OK (9 touched artifact(s) checked)`.
+
+The gate is behaving correctly. `ledger_commitment._ARTIFACT_RE` binds an entry to its artifact via a `**Plan**:`, `**Artifact**:` or `**Brief**:` line. 175 ledger entries carry one; **zero of the last twenty do**, including #602, #603 and #604. Recent entries name the plan only inside the `Content Hash` code fence, which the regex does not read, so their commitments are unenforced and the 9 artifacts the gate checked are all older entries.
+
+This is a **consumer-side defect, not upstream** — nearly filed as an upstream issue on the strength of the exit-0 observation before reading `_ARTIFACT_RE` and `_COMMITTING_KINDS`.
+
+**This entry is the first to carry both a `**Plan**:` line and an inline `**Content Hash**` line**, adopted for all future seal entries. Both are required; neither alone suffices. An earlier draft claimed the `**Plan**:` line alone made the commitment bindable — testing disproved it, because `ledger_commitment` also needs the digest inline, while the fenced `SHA256(path) = <hex>` block used since #602 is read by `verify-ledger` and not by the commitment parser.
+
+Verified after the change: `verify-ledger --post-anchor` reports `post-anchor clean (boundary=#605)` and `ledger_commitment.latest_commitments()` binds `plan-fx935-collision-renumber.md` to `b4f6cfd4…`. The two forms are compatible; an intermediate conclusion that they were not was wrong, and its cause is worth recording:
+
+**A stray 64-hex string anywhere in an entry body can hijack hash extraction.** This entry first quoted a shadow-event id in full, and `CONTENT_HASH_RE` matched *that* rather than the real digest — `verify-ledger` then reported `post-anchor DIRTY (boundary=#604)` with the arithmetic failing against a value that was never a content hash. Truncating the quoted id to 12 characters restored verification. Ledger prose should never contain a bare 64-hex literal. #602-#604 are left unamended for that purpose: backfilling would mean editing sealed bodies, and the operator ruled against it. Their commitments remain unenforced, disclosed here rather than quietly repaired.
+
+## The detector, and why it is fixture-driven
+
+`FailSafe/extension/src/test/governance/feature-index-id-integrity.test.cjs` (FX941) asserts every FX id is allocated exactly once.
+
+It is exercised against `src/test/fixtures/feature-index/duplicate-id.md` (two FX930 rows) and `clean.md` (the control), **not only against the live index**. The live index is clean and should be — a check observable only in its passing state proves nothing about whether it can fail. Verified in both directions before the renumber: fires on the malformed fixture, silent on the clean one. This is the seventh instance this session of that same lesson.
+
+A fourth assertion guards the specific outcome: `FX935`, once it arrives from PR #445, must read as the Shadow Genome row. Re-taking it on `main` would recreate the collision this entry resolves.
+
+## Limits
+
+The detector sees one repository state. It cannot detect a collision that exists only *across* `main` and an open PR — which is precisely how FX935 and FX934 arose. Catching that requires comparing against open PR heads at merge time, which is `check-governance-structure.cjs`'s territory (the dormant FX934 cycle). Stated rather than mechanised.
+
+## Ordering inversion — recorded, not sanctioned
+
+`/qor-plan` and `/qor-audit` were **skipped**. Work ran from the operator ruling straight to fixtures, detector and renumber; the plan was authored afterwards and declares the inversion in its own body, and the audit therefore reviewed a completed changeset rather than a proposal.
+
+No commit landed before the cycle completed, so the mutation boundary was not crossed. But an audit's leverage is that it can send work back *before* it exists, and that was forfeited: a blocking finding would have meant rework, not redesign. Same class as Entry #601's implement → merge → release → substantiate inversion.
+
+Severity-2 `gate_override` recorded in the Process Shadow Genome: `16ebc98f587f` (12-char form; the full 64-hex id is in `docs/PROCESS_SHADOW_GENOME.md`).
+
+The audit compensated by re-running every falsifier rather than accepting the plan's claims, including **breaking the clean control fixture** to confirm the detector discriminates rather than merely firing (`not ok 2 - reports the clean fixture as clean`). That is the check that a detector verified only against a collide-fixture cannot pass.
+
+## Verification
+
+- `npm run lint` exit 0 · `npm run test:node` exit 0 — **310/310**
+- `featureIndexClassifier` parity 33/33
+- `feature-index-id-integrity.test.cjs` — 3/4 pass pre-renumber with assertion 4 red on the collision; 4/4 after
+- `qorlogic-config.test.cjs` — 6/6 after the rename
+
+## Files
+
+`docs/FEATURE_INDEX.md` · `FailSafe/extension/src/test/governance/qorlogic-config.test.cjs` · `FailSafe/extension/src/test/governance/feature-index-id-integrity.test.cjs` (NEW) · `FailSafe/extension/src/test/fixtures/feature-index/{duplicate-id,clean}.md` (NEW)
+
+**Superseded Content Hash**: `7e20b4492f6c6c20e72c355f0f20efe99acd6948cb9f584f51a79527c816f924` (Entry #602 — unchanged; this amendment records an id reallocation, not an artifact correction)
+
+**Content Hash**: `b4f6cfd4ebeabd648ac74701542b11f3f7ea6943438f7d68db712b1d97d38c6b`
+
+_Hash provenance_: Content Hash = SHA256 of `plan-fx935-collision-renumber.md`.
+
+**Previous Hash**: `bdf077c3fef6fdcd579ff5f11fddc1a66af3c3fee14e75f1cdb9105736a42244` (Entry #604 Chain Hash)
+
+**Chain Hash (Merkle seal)**:
+```
+SHA256(content_hash + "|" + previous_hash)
+= 280b9499193cc16050270242e4855c4962a6c9174a3de046a9e18f39b571bd8e
+```
