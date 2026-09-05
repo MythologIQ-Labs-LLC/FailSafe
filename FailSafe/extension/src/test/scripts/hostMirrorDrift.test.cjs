@@ -92,12 +92,31 @@ function normaliseLocal(layout) {
 const UPSTREAM = readUpstreamHosts();
 const MIRROR = readMirror();
 
-function guard(t) {
-  if (MIRROR.reason) return t.skip(MIRROR.reason);
-  if (UPSTREAM === null) {
-    return t.skip('qor.hosts is not importable — install qor-logic to run the mirror guard');
+/**
+ * Why the prerequisites are unmet, or null when they are met.
+ *
+ * Pure and exported so the SKIP path has its own falsifier. The first version
+ * of this file did `return t.skip(reason)` from the guard — but `t.skip()`
+ * returns undefined, so `if (guard(t)) return;` never returned and every
+ * assertion ran on null state. It passed locally, where the toolkit is present
+ * and the guard never fires, and crashed in CI, where it does. A skip branch
+ * with no test is the same defect this whole suite exists to catch, one level
+ * down. These assertions exercise it directly.
+ */
+function skipReason(mirror, upstream) {
+  if (mirror && mirror.reason) return mirror.reason;
+  if (upstream === null || upstream === undefined) {
+    return 'qor.hosts is not importable — install qor-logic to run the mirror guard';
   }
   return null;
+}
+
+/** Returns TRUE when the caller must stop. `t.skip()` alone does not stop it. */
+function guard(t) {
+  const reason = skipReason(MIRROR, UPSTREAM);
+  if (reason === null) return false;
+  t.skip(reason);
+  return true;
 }
 
 describe('FX945 host install-map mirror vs installed qor-logic', () => {
@@ -148,5 +167,26 @@ describe('FX945 host install-map mirror vs installed qor-logic', () => {
         `UNMIRRORED_HOSTS.${host} needs a real justification, not a placeholder`,
       );
     }
+  });
+
+  it('skips — rather than crashing — when a prerequisite is absent', () => {
+    // THE FALSIFIER FOR THE SKIP PATH. Its absence is precisely why the first
+    // version of this file passed locally and failed CI: the guard returned
+    // undefined, so the assertions ran against null state and threw.
+    assert.equal(
+      skipReason({ reason: 'compiled hostLayouts is stale' }, { claude: {} }),
+      'compiled hostLayouts is stale',
+      'a stale or missing build must be reported as the reason to skip',
+    );
+    assert.match(
+      skipReason({ layouts: {}, unmirrored: {} }, null) || '',
+      /not importable/,
+      'an absent toolkit must be reported as the reason to skip',
+    );
+    assert.equal(
+      skipReason({ layouts: {}, unmirrored: {} }, { claude: {} }), null,
+      'with both prerequisites met the guard must NOT skip — otherwise the ' +
+      'whole suite would silently self-disable',
+    );
   });
 });
