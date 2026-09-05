@@ -24,6 +24,8 @@ const BELOW_FLOOR: QorLogicVersionStatus = {
   installed: '0.50.0',
   minimum: '0.100.0',
   meetsFloor: false,
+  testedAgainst: '0.169.0',
+  matchesTested: false,
 };
 
 const tempRoots: string[] = [];
@@ -183,7 +185,7 @@ suite('buildConsumerDiagnostics ledger injection (#233 iteration-5 Phase 2, FX89
 
   test('V2 regression pin: below-floor versionStatus + an applyVersionFloor-produced ledger -> unsupported, non-null qorVersion, compatible false', () => {
     const root = materializeInject('supported');
-    const versionStatus: QorLogicVersionStatus = { installed: '0.50.0', minimum: '0.100.0', meetsFloor: false };
+    const versionStatus: QorLogicVersionStatus = { installed: '0.50.0', minimum: '0.100.0', meetsFloor: false, testedAgainst: '0.169.0', matchesTested: false };
     const baseEnv = readMetaLedgerArtifact(root);
     const floored = applyVersionFloor(baseEnv, versionStatus);
     const diag = buildConsumerDiagnostics(root, { ledger: floored, versionStatus, auditSessionId: 'sess-1' });
@@ -219,5 +221,45 @@ suite('buildConsumerDiagnostics ledger injection (#233 iteration-5 Phase 2, FX89
     } finally {
       trueFs.readFileSync = original;
     }
+  });
+});
+
+// FX944 (#233 Scope A) — `untested` is ADVISORY and must never gate.
+//
+// THE FALSIFIER for the whole advisory decision. Fail-closing on an unprobed
+// version would have blocked every consumer read the moment 0.169.0 landed,
+// before anyone knew whether anything was broken — and the FX942 probe reports
+// nothing broken on it. If `untested` is ever folded into INCOMPATIBLE_STATES,
+// or `compatible` derived from it, this test fails, which is the point.
+suite('FX944 version boundary in consumer diagnostics', () => {
+  const ABOVE_FLOOR_UNTESTED: QorLogicVersionStatus = {
+    installed: '0.170.0',
+    minimum: '0.100.0',
+    meetsFloor: true,
+    testedAgainst: '0.169.0',
+    matchesTested: false,
+  };
+
+  test('an untested but above-floor version reports untested WITHOUT flipping compatible', () => {
+    const root = materialize('supported');
+    const diag = buildConsumerDiagnostics(root, { versionStatus: ABOVE_FLOOR_UNTESTED });
+
+    assert.equal(diag.untested, true, 'a version that is not the tested-against one is untested');
+    assert.equal(diag.testedAgainst, '0.169.0');
+    assert.equal(diag.compatible, true,
+      'ADVISORY: an unprobed version is a fact to report, never a reason to refuse a read');
+    assert.ok(
+      diag.artifacts.every((a) => a.state !== 'unsupported'),
+      'no artifact may be downgraded to unsupported merely for being untested',
+    );
+  });
+
+  test('the tested-against version reports untested:false', () => {
+    const root = materialize('supported');
+    const diag = buildConsumerDiagnostics(root, {
+      versionStatus: { ...ABOVE_FLOOR_UNTESTED, installed: '0.169.0', matchesTested: true },
+    });
+    assert.equal(diag.untested, false);
+    assert.equal(diag.compatible, true);
   });
 });

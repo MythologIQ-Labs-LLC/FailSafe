@@ -126,7 +126,7 @@ suite("WorkspaceArtifactBuilder", () => {
 // against these same fixtures, not re-derived from the new code, so the equivalence assertions are
 // genuinely falsifiable rather than circular.
 suite("WorkspaceArtifactBuilder read/parse collapse (#233 iteration-5 Phase 3, FX930)", () => {
-  const BELOW_FLOOR: QorLogicVersionStatus = { installed: "0.50.0", minimum: "0.100.0", meetsFloor: false };
+  const BELOW_FLOOR: QorLogicVersionStatus = { installed: "0.50.0", minimum: "0.100.0", meetsFloor: false, testedAgainst: '0.169.0', matchesTested: false };
 
   test("supported fixture: reads META_LEDGER.md exactly 3 times (was 5) and calls parseMetaLedgerEntries exactly 1 time (was 2), 0 from inside applyVersionFloor", () => {
     const root = materializeQorConsumer("supported");

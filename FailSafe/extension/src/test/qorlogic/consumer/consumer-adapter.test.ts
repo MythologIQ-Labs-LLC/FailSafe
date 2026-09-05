@@ -35,6 +35,8 @@ const BELOW_FLOOR: QorLogicVersionStatus = {
   installed: '0.50.0',
   minimum: '0.100.0',
   meetsFloor: false,
+  testedAgainst: '0.169.0',
+  matchesTested: false,
 };
 
 const EPOCH_2000 = new Date('2000-01-01T00:00:00Z');
@@ -257,7 +259,7 @@ suite('classifyMetaLedgerText (#233 shared-ladder text-seam classification)', ()
 
   test('below-floor version -> unsupported, reason names installed and minimum', () => {
     const env = classifyMetaLedgerText({ text: OK_LEDGER, mtimeIso: null }, 'docs/META_LEDGER.md', {
-      versionStatus: { installed: '0.50.0', minimum: '0.100.0', meetsFloor: false },
+      versionStatus: { installed: '0.50.0', minimum: '0.100.0', meetsFloor: false, testedAgainst: '0.169.0', matchesTested: false },
     });
     assert.equal(env.state, 'unsupported');
     assert.equal(env.data, null);
@@ -435,7 +437,7 @@ suite('applyVersionFloor (#233 iteration-5 Phase 1, FX931)', () => {
     absent: { text: null, mtimeIso: null },
   };
 
-  const MEETS_FLOOR: QorLogicVersionStatus = { installed: '0.200.0', minimum: '0.100.0', meetsFloor: true };
+  const MEETS_FLOOR: QorLogicVersionStatus = { installed: '0.200.0', minimum: '0.100.0', meetsFloor: true, testedAgainst: '0.169.0', matchesTested: false };
   const VERSION_STATUSES: Array<{ name: string; vs: QorLogicVersionStatus | undefined }> = [
     { name: 'below-floor', vs: BELOW_FLOOR },
     { name: 'meets-floor', vs: MEETS_FLOOR },

@@ -39,6 +39,10 @@ export interface QorLogicVersionStatus {
   installed: string | null;
   minimum: string;
   meetsFloor: boolean;
+  /** #233 Scope A: the version the FX942 probe last passed against. */
+  testedAgainst: string;
+  /** #233 Scope A: advisory only - never flips compatibility. */
+  matchesTested: boolean;
 }
 
 export interface QorLogicInstallStatus {

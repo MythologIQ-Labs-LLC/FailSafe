@@ -35,8 +35,8 @@ class FakeInstaller implements IQorLogicPackageInstaller {
   }
   async version(): Promise<string | null> { return this.installed ? this.installedVersion : null; }
   async verifyInstalledVersion(): Promise<QorLogicVersionStatus> {
-    if (!this.installed) return { installed: null, minimum: MIN_QOR_LOGIC_VERSION, meetsFloor: false };
-    return { installed: this.installedVersion, minimum: MIN_QOR_LOGIC_VERSION, meetsFloor: this.meetsFloor };
+    if (!this.installed) return { installed: null, minimum: MIN_QOR_LOGIC_VERSION, meetsFloor: false, testedAgainst: '0.169.0', matchesTested: false };
+    return { installed: this.installedVersion, minimum: MIN_QOR_LOGIC_VERSION, meetsFloor: this.meetsFloor, testedAgainst: '0.169.0', matchesTested: false };
   }
 }
 

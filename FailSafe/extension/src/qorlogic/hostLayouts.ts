@@ -69,6 +69,45 @@ export const QOR_LOGIC_HOSTS: QorLogicHost[] = ["claude", "codex", "kilo-code", 
  */
 export const MIN_QOR_LOGIC_VERSION = "0.31.1";
 
+/**
+ * The qor-logic version the FX942 conformance probe last passed against
+ * (#233 Scope A).
+ *
+ * This records a RESULT, not an intention. Advance it only after a passing
+ * probe run on the new version — a value bumped by hand each release would be
+ * a control that reports success while inspecting nothing, which is the exact
+ * defect this whole issue exists to close (ledger #602).
+ *
+ * Deliberately NOT a `maximum` / upper bound. A ceiling has to be guessed
+ * before the breakage is known: set it to the current version and every
+ * upstream release trips it; set it optimistically and it never fires. Every
+ * qor-logic breakage this repository has actually suffered — plan.schema.json
+ * rejecting `terms_introduced`, the ladder dropping `--skills-root`, three
+ * controls turning out structurally inapplicable — happened at versions far
+ * ABOVE `MIN_QOR_LOGIC_VERSION`, with `meetsFloor` true throughout. Version
+ * comparison cannot see a contract change; running the probe can.
+ */
+export const TESTED_AGAINST_QOR_LOGIC_VERSION = "0.169.0";
+
+/**
+ * Hosts upstream qor-logic registers that this extension does NOT mirror
+ * (#233 Scope A).
+ *
+ * Declared, dated and justified so `hostMirrorDrift.test.cjs` fails on the NEXT
+ * upstream host addition instead of accumulating silently — as these two did
+ * for 138 releases, because the only test that looked like a guard asserted the
+ * local list equalled a literal copy of itself.
+ */
+export const UNMIRRORED_HOSTS: Record<string, string> = {
+  cursor:
+    "upstream 0.169.0 installs to .cursor/skills + .cursor/agents; adding it is a " +
+    "user-facing capability change (#233 Scope A) and is the operator's to scope, " +
+    "not this cycle's.",
+  cline:
+    "upstream 0.169.0 installs to .clinerules/workflows — a workflows-only layout " +
+    "unlike any host mirrored here; same operator-scoping note as cursor.",
+};
+
 // --- Dynamic host registry accessor (Phase 2 expansion) -------------------
 // `getQorLogicHosts(workspaceRoot)` returns the merged host list (built-in +
 // operator overlay from `.failsafe/governance/host-registry.json`). Existing

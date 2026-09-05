@@ -154,6 +154,25 @@ describe('FX940 .qorlogic/config.json', () => {
     );
   });
 
+  it('gives every permanent_skips declaration a justification of at least 50 characters', () => {
+    // Upstream `permanent_skips._MIN_JUSTIFICATION` is 50, and a shorter one
+    // RAISES at emission — after the skip event has already been built. Catching
+    // it here means a malformed declaration can never reach a seal.
+    const declared = readConfig().permanent_skips || {};
+    assert.ok(
+      Object.keys(declared).length > 0,
+      'no permanent_skips declared; the emit-declare-close chain has nothing to close'
+    );
+    for (const [gate, justification] of Object.entries(declared)) {
+      assert.equal(typeof justification, 'string', `permanent_skips.${gate} must be a string`);
+      assert.ok(
+        justification.length >= 50,
+        `permanent_skips.${gate} justification is ${justification.length} chars; ` +
+          'upstream requires >= 50 and raises at emission time'
+      );
+    }
+  });
+
   it('omits layout.glossary_path, because the upstream default already resolves', () => {
     const cfg = readConfig();
     assert.equal(
@@ -165,5 +184,22 @@ describe('FX940 .qorlogic/config.json', () => {
       fs.existsSync(path.join(REPO_ROOT, 'qor', 'references', 'glossary.md')),
       'the undeclared default target is gone — declare layout.glossary_path now'
     );
+  });
+
+  it('declares a ledger_anchor with an integer entry and a real justification', () => {
+    // #233 Scope D. The anchor is file-sourced data that reaches a python
+    // invocation, so a non-integer here is both unusable and an injection
+    // surface; and a declaration without a reason is an anchor nobody can
+    // review. Caught at config level, before the runner has to defend itself.
+    const declared = readConfig().ledger_anchor;
+    assert.ok(declared && typeof declared === 'object',
+      'ledger_anchor must be declared; without it the verifier auto-detects a ' +
+      'boundary that tolerates the entire ledger history');
+    assert.ok(Number.isInteger(declared.entry),
+      `ledger_anchor.entry must be an integer, got ${JSON.stringify(declared.entry)}`);
+    assert.equal(typeof declared.reason, 'string');
+    assert.ok(declared.reason.length >= 50,
+      `ledger_anchor.reason is ${declared.reason.length} chars; an anchor that ` +
+      'silently shrinks the verified surface needs a recorded why');
   });
 });

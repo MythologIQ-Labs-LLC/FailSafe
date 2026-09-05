@@ -255,7 +255,7 @@ suite('roadmap/tracker governance-sidecar (A.2 — #194 sidecar emission)', () =
         [`docs/FEATURE_INDEX.md`]: FEATURE_INDEX,
       });
       const r = emitGovernanceSidecar(deps, {
-        versionStatus: { installed: '0.50.0', minimum: '0.100.0', meetsFloor: false },
+        versionStatus: { installed: '0.50.0', minimum: '0.100.0', meetsFloor: false, testedAgainst: '0.169.0', matchesTested: false },
       });
       assert.equal(r.status, 'skipped-ledger-untrusted');
       assert.equal(r.ledgerState, 'unsupported');

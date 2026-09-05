@@ -39,8 +39,19 @@ export interface ConsumerArtifactSummary {
 
 export interface ConsumerDiagnostics {
   artifacts: ConsumerArtifactSummary[];
-  /** false when any artifact is `malformed` or `unsupported`. */
+  /**
+   * false when any artifact is `malformed` or `unsupported`.
+   *
+   * `untested` deliberately does NOT feed this (#233 Scope A). An unprobed
+   * qor-logic version is a fact to surface, not evidence of incompatibility:
+   * fail-closing on it would have blocked every read the moment 0.169.0 landed,
+   * before anyone knew whether anything was actually broken.
+   */
   compatible: boolean;
   /** Installed qor-logic version echoed from the supplied version status. */
   qorVersion: string | null;
+  /** #233 Scope A: the version the FX942 probe last passed against, when known. */
+  testedAgainst: string | null;
+  /** #233 Scope A: installed is not the tested-against version. Advisory. */
+  untested: boolean;
 }

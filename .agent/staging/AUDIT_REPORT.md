@@ -1,55 +1,65 @@
-# AUDIT REPORT — plan-fx935-collision-renumber.md
+# Audit Report — plan-233d-ledger-anchor.md
 
-**Session**: 2026-09-04T0430-62ca33 · **Iteration**: 1 · **Risk grade**: L2
-**Mode**: solo (`option_b_required: false`)
+**Session**: 2026-09-05T0051-e48e6d
+**Iteration**: 2
+**Auditor**: The Qor-logic Judge (solo; `audit_risk_score` reports `option_b_required: false`)
+**Risk Grade**: L2
+**Target content hash**: see `.qor/gates/2026-09-05T0051-e48e6d/audit-iter2.json`
 
 ## VERDICT: PASS
 
-**Verdict**: PASS
+V1 closed. Implementation is unlocked for `plan-233d-ledger-anchor.md` **at iteration 2 only** — this verdict certifies that content hash and no other.
 
-*Qualified: a process violation is recorded below. The verdict on the changeset stands; the violation is against the cycle order, not the work.*
+---
 
-The changeset is sound and every falsifier was re-run by the Judge rather than accepted from the plan. **The cycle order was violated**, and that is recorded here as a finding against the process, not against the work.
+## V1 (iteration 1) — CLOSED
 
-## Process violation — ordering inversion
+The decaying `>= 200` threshold is replaced by two assertions that do not decay:
 
-`/qor-plan` and `/qor-audit` were skipped. Implementation ran directly from the operator ruling: fixtures, detector, renumber, and FEATURE_INDEX edits all landed in the working tree before any plan existed. The plan under audit was authored afterwards and **declares this in its own body** rather than presenting itself as prospective.
+- **assertion 4** pins the declared anchor to the measured value `340`, so any bump fails and must be a deliberate edit carrying fresh justification;
+- **assertion 5** asserts the protected surface is non-empty and reports its count.
 
-Mitigating, and verified: `git status` shows no commit on this branch, so **no repository mutation landed ahead of the cycle** — the working tree is the only thing that ran ahead. The governance boundary is the first mutation, and it has not been crossed.
+Together these keep the anti-ratchet property independent of ledger length, which was the whole of the finding. The audit-bound security constraint is also now written into `### Changes`: the anchor is validated as an integer in JavaScript before it is passed.
 
-Not mitigating: the audit is now reviewing a completed changeset. An audit's leverage is that it can send work back before it exists; that leverage was forfeited here. Had a blocking finding surfaced, the remedy would have been rework rather than redesign.
+## Verification of the closure
 
-This is the same class as Entry #601's implement → merge → release → substantiate inversion, and is recorded the same way — a disclosed deviation an auditor can weigh, not a sanctioned path. A severity-2 `gate_override` event accompanies this verdict.
+Not taken on the plan's word — the runner-reachability trap from Scope A's V3 was re-checked explicitly. All five FX946 assertions live in `ledgerAnchor.test.cjs` and the FX940 assertions in `qorlogic-config.test.cjs`; both are `.test.cjs`, both are discovered by `run-node-tests.cjs`, and `npm run test:node` is in `## CI Commands`. **Every declared assertion has a runner.** No repeat of the Scope A defect.
 
-## Falsifiers — re-run, not accepted
+## Passes
 
-The plan explicitly instructed the Judge to re-run rather than trust its claims. Done:
-
-| claim | Judge's observation |
+| pass | result |
 |---|---|
-| detector fires on `duplicate-id.md` | `ok 1` |
-| detector silent on `clean.md` | `ok 2` |
-| live index allocates each id once | `ok 3` |
-| FX935 no longer reads as `.qorlogic/config.json` | `ok 4` |
-| **control can fail** — collide the clean fixture | `not ok 2 - reports the clean fixture as clean` |
+| Prompt injection | PASS — `prompt_injection_canaries` exit 0 |
+| Security (L3) | PASS — the SG-Phase47-A surface is now closed in plan text: integer validation in JS before the value reaches Python, argv passing, `shell: false`, fixed `-c` script |
+| OWASP Top 10 | PASS — A03 closed by the validation above; A04 closed by assertion 3 (an absent declaration errors rather than falling back to auto-detect); A08 no deserialization beyond `JSON.parse` of a repo-local config |
+| Test functionality | PASS — every assertion invokes the runner and asserts on its exit code; none presence-only |
+| Infrastructure alignment | PASS — the `qor.scripts.ledger_hash` flag is an adjudicated consumer-side false positive (installed, not vendored); import, `site-packages` `__file__`, and the `verify_post_anchor(ledger_md, boundary_entry=None) -> int` signature independently confirmed |
+| Feature test declaration | PASS — FX946 and FX940 declare `test_path` + `test_descriptor`, and the FX946 descriptor was updated to match the amended assertion set |
+| Ghost UI / Live-progress / Filter-stage / Runtime-principal | n/a |
+| Section 4 Razor | PASS |
 
-That last row is the one that matters. A detector verified only against a fixture built to trip it proves it can fire, not that it discriminates. Breaking the control proves it does both.
+## Binding constraints on implementation
 
-## Findings the plan rests on, confirmed
+The seal must show these were honored.
 
-- FX935 double-allocation is a genuine identifier fork: PR #445 (2026-08-24T16:25:51Z) vs Entry #602 (2026-09-03), each computing `max(FX)+1` against divergent views. Structurally Entry #597, one artifact over.
-- FX934 likewise, and the older claim there is the plan for a detector scoped to catch "a FEATURE_INDEX with two FX930 rows" — it collided on its own id before implementation. Both dispositions are operator rulings, correctly recorded as such rather than derived.
-- `ledger_commitment` cannot bind any of the last twenty entries: `_ARTIFACT_RE` requires a `**Plan**:` / `**Artifact**:` / `**Brief**:` line; 175 entries carry one, zero of the last twenty do. Mutating Entry #602's plan moved its digest `7e20b449…` to `a8ab7cdd…` with the gate still at exit 0. **Correctly diagnosed as consumer-side**, not filed upstream — the plan records that it was nearly filed as an upstream bug before `_ARTIFACT_RE` was read.
+1. **Anchor validation** — the declared anchor is validated as an integer in JavaScript before use and rejected otherwise; it reaches Python as an argv value, never interpolated into the `-c` source (SG-Phase47-A). Validation is the mitigation, not argv passing alone.
+2. **No auto-detect fall-back, ever** — an absent, malformed, or non-integer declaration is a non-zero exit. Falling back to `boundary_entry=None` would silently restore the one-entry-deep behaviour while reporting clean.
+3. **No mutation of the live ledger** — every assertion runs against a temp copy. `docs/META_LEDGER.md` must be byte-identical before and after the suite.
+4. **Fail-closed above, tolerant below** — the runner propagates upstream's exit code unchanged; it must not soften a failure into a warning.
+5. **Assertion 1 must be shown red against auto-detect** — the finding rests on it. Demonstrate that the same tamper passes under `boundary_entry=None` and fails under the declared anchor.
 
-## Scope discipline
+## What this plan got right
 
-The non-goals are load-bearing and correct: not editing `plan-qor169-sprint1-seal-unblock.md` (a sealed content-hash source), not rewriting Entry #602's body, not touching `.qor/gates/**`, and not backfilling `**Plan**:` into sealed entries per the operator ruling. A cycle that "tidied" any of these would have damaged evidence to improve a metric.
+- **It proved the defect before proposing a fix.** Every number in `## Baselines` came from running the real verifier, including the decisive pair: `#500` tampered is invisible under auto-detect (`rc=0`) and caught under a declared anchor (`rc=1`).
+- **It chose its central constant by measurement**, not preference — `340` is the lowest anchor at which the live ledger passes, which maximises the protected surface (268 entries, up from 1) without shipping a red gate.
+- **It uses upstream's existing `boundary_entry` parameter** rather than reimplementing chain arithmetic. Third consecutive cycle where the correct answer was "the mechanism exists; enforcement over it does not."
+- **Assertion 3** — an absent declaration must be an error, not a fall-back — is the strongest in the plan, and closes the exact way this fix could silently un-ship itself.
+- **It refuses to adopt `verify()`** and says why: 278 tainted entries and 2 BREAKs would block every seal today. The pre-anchor residue keeps its existing disclosed status rather than being quietly redefined as acceptable.
 
-## Non-blocking residuals
+## Lint ladder (iteration 2)
 
-- N1 The detector sees one repository state and cannot catch a cross-branch collision — which is how both of these arose. Stated in the plan rather than mechanised; the cross-branch case belongs to the dormant `check-governance-structure.cjs` cycle.
-- N2 Entries #602-#604 remain unbindable by `ledger_commitment`. Disclosed, per the operator ruling against editing sealed bodies.
+`plan_iteration_status_lint` 0 · `plan_test_lint` 0 · `plan_text_consistency_lint` 0 · `plan_feature_tdd_lint` 0 · `prompt_injection_canaries` 0 · `audit_risk_score` `option_b_required: false` · `plan_grep_lint` 1 `infrastructure-mismatch`, adjudicated above as a verified false positive.
 
-## Required next action
+---
 
-`/qor-substantiate`. The seal MUST carry the ordering inversion, not only the outcome.
+_Gate unlocked. `/qor-implement` may proceed against iteration 2._
