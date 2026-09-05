@@ -48,9 +48,14 @@ export function buildConsumerDiagnostics(
     readTrackerManifestArtifact(root, opts),
     readAuditGateArtifact(root, opts?.auditSessionId, opts),
   ].map(summarize);
+  const vs = opts?.versionStatus;
   return {
     artifacts,
+    // `untested` is intentionally absent from this expression. See the
+    // `compatible` doc comment on ConsumerDiagnostics (#233 Scope A).
     compatible: artifacts.every((a) => !INCOMPATIBLE_STATES.has(a.state)),
-    qorVersion: opts?.versionStatus?.installed ?? null,
+    qorVersion: vs?.installed ?? null,
+    testedAgainst: vs?.testedAgainst ?? null,
+    untested: vs ? !vs.matchesTested : false,
   };
 }

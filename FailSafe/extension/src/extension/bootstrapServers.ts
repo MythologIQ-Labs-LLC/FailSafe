@@ -76,6 +76,7 @@ async function offerGovernedCommit(
 }
 import { readEducationConfig } from "../education/educationConfig";
 import { catalogConfigKeys } from "../integrations/catalog/integration-catalog";
+import { unknownVersionStatus } from '../qorlogic/QorLogicPackageInstaller';
 
 export interface ServerDeps {
   planManager: PlanManager;
@@ -140,7 +141,7 @@ export async function bootstrapServers(
       getGovernanceMode: deps.getGovernanceMode,
       getQorLogicVerifier: async () => {
         if (!qorLogicPackageInstallerRef) {
-          return { installed: null, minimum: '0.0.0', meetsFloor: false };
+          return unknownVersionStatus('0.0.0');
         }
         return qorLogicPackageInstallerRef.verifyInstalledVersion();
       },

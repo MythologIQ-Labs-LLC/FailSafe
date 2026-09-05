@@ -10,7 +10,7 @@ import {
   type InstallerRunResult,
   type OutputChannelLike,
 } from '../../qorlogic/QorLogicPackageInstaller';
-import { MIN_QOR_LOGIC_VERSION } from '../../qorlogic/hostLayouts';
+import { MIN_QOR_LOGIC_VERSION, TESTED_AGAINST_QOR_LOGIC_VERSION } from '../../qorlogic/hostLayouts';
 
 const PINNED_SPEC = `qor-logic>=${MIN_QOR_LOGIC_VERSION}`;
 
@@ -241,7 +241,7 @@ suite('QorLogicPackageInstaller: verifyInstalledVersion', () => {
 
     const status = await installer.verifyInstalledVersion();
 
-    assert.deepEqual(status, { installed: '0.46.0', minimum: MIN_QOR_LOGIC_VERSION, meetsFloor: true });
+    assert.deepEqual(status, { installed: '0.46.0', minimum: MIN_QOR_LOGIC_VERSION, meetsFloor: true, testedAgainst: TESTED_AGAINST_QOR_LOGIC_VERSION, matchesTested: false });
   });
 
   test('returns meetsFloor:false when installed version is below floor', async () => {
@@ -251,7 +251,48 @@ suite('QorLogicPackageInstaller: verifyInstalledVersion', () => {
 
     const status = await installer.verifyInstalledVersion();
 
-    assert.deepEqual(status, { installed: '0.20.0', minimum: MIN_QOR_LOGIC_VERSION, meetsFloor: false });
+    assert.deepEqual(status, { installed: '0.20.0', minimum: MIN_QOR_LOGIC_VERSION, meetsFloor: false, testedAgainst: TESTED_AGAINST_QOR_LOGIC_VERSION, matchesTested: false });
+  });
+
+
+  // FX944 (#233 Scope A) — the tested-against boundary.
+  //
+  // `matchesTested` is the ONE assertion standing between a real comparison and
+  // a hardcoded true. Scope A ships this field instead of a `maximum` because a
+  // ceiling has to be guessed before the breakage is known, while this records
+  // a result: the version the FX942 probe last passed on.
+  test('FX944 - reports testedAgainst, with matchesTested tracking the comparison', async () => {
+    const differing = await new QorLogicPackageInstaller(
+      fixedResolver('python'),
+      sinkChannel,
+      makeInstallerRun(() => ok(['Name: qor-logic', 'Version: 0.1.0-not-the-tested-one', ''].join('\n'))).run,
+    ).verifyInstalledVersion();
+    assert.equal(differing.testedAgainst, TESTED_AGAINST_QOR_LOGIC_VERSION);
+    assert.equal(differing.matchesTested, false,
+      'a version that is not the tested-against one must not report a match');
+
+    const equal = await new QorLogicPackageInstaller(
+      fixedResolver('python'),
+      sinkChannel,
+      makeInstallerRun(() => ok(`Name: qor-logic
+Version: ${TESTED_AGAINST_QOR_LOGIC_VERSION}
+`)).run,
+    ).verifyInstalledVersion();
+    assert.equal(equal.matchesTested, true,
+      'the exact tested-against version must report a match');
+
+    // Guards the hardcode: the two cases must disagree. If matchesTested were a
+    // constant, this fails regardless of which constant was chosen.
+    assert.notEqual(differing.matchesTested, equal.matchesTested);
+  });
+
+  test('FX944 - an unresolvable version is untested, not silently matched', async () => {
+    const status = await new QorLogicPackageInstaller(
+      fixedResolver('python'), sinkChannel, makeInstallerRun(() => fail(1, 'not found')).run,
+    ).verifyInstalledVersion();
+    assert.equal(status.matchesTested, false,
+      'nothing was verified, so nothing may be reported as tested');
+    assert.equal(status.testedAgainst, TESTED_AGAINST_QOR_LOGIC_VERSION);
   });
 
   test('returns installed:null meetsFloor:false when pip show exits non-zero', async () => {
@@ -261,7 +302,7 @@ suite('QorLogicPackageInstaller: verifyInstalledVersion', () => {
 
     const status = await installer.verifyInstalledVersion();
 
-    assert.deepEqual(status, { installed: null, minimum: MIN_QOR_LOGIC_VERSION, meetsFloor: false });
+    assert.deepEqual(status, { installed: null, minimum: MIN_QOR_LOGIC_VERSION, meetsFloor: false, testedAgainst: TESTED_AGAINST_QOR_LOGIC_VERSION, matchesTested: false });
   });
 
   test('returns installed:null meetsFloor:false when run throws', async () => {
@@ -271,7 +312,7 @@ suite('QorLogicPackageInstaller: verifyInstalledVersion', () => {
 
     const status = await installer.verifyInstalledVersion();
 
-    assert.deepEqual(status, { installed: null, minimum: MIN_QOR_LOGIC_VERSION, meetsFloor: false });
+    assert.deepEqual(status, { installed: null, minimum: MIN_QOR_LOGIC_VERSION, meetsFloor: false, testedAgainst: TESTED_AGAINST_QOR_LOGIC_VERSION, matchesTested: false });
   });
 
   test('returns installed:null meetsFloor:false when no Python is resolved', async () => {
@@ -281,7 +322,7 @@ suite('QorLogicPackageInstaller: verifyInstalledVersion', () => {
 
     const status = await installer.verifyInstalledVersion();
 
-    assert.deepEqual(status, { installed: null, minimum: MIN_QOR_LOGIC_VERSION, meetsFloor: false });
+    assert.deepEqual(status, { installed: null, minimum: MIN_QOR_LOGIC_VERSION, meetsFloor: false, testedAgainst: TESTED_AGAINST_QOR_LOGIC_VERSION, matchesTested: false });
     assert.equal(calls.length, 0);
   });
 

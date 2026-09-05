@@ -4,7 +4,7 @@ import {
   type PythonInterpreterResolver,
   type ResolvedInterpreter,
 } from './PythonInterpreterResolver';
-import { MIN_QOR_LOGIC_VERSION } from './hostLayouts';
+import { MIN_QOR_LOGIC_VERSION, TESTED_AGAINST_QOR_LOGIC_VERSION } from './hostLayouts';
 
 export interface InstallerRunResult {
   stdout: string;
@@ -49,6 +49,14 @@ export interface QorLogicVersionStatus {
   installed: string | null;
   minimum: string;
   meetsFloor: boolean;
+  /** The version the FX942 conformance probe last passed against (#233 Scope A). */
+  testedAgainst: string;
+  /**
+   * Whether `installed` is exactly `testedAgainst`. ADVISORY: an untested
+   * combination is a fact to report, never a reason to refuse a read. The
+   * resolution is to run the probe, not to edit a constant.
+   */
+  matchesTested: boolean;
 }
 
 export interface IQorLogicPackageInstaller {
@@ -102,13 +110,20 @@ export class QorLogicPackageInstaller implements IQorLogicPackageInstaller {
 
   async verifyInstalledVersion(): Promise<QorLogicVersionStatus> {
     const minimum = MIN_QOR_LOGIC_VERSION;
+    const unresolved = unknownVersionStatus(minimum);
     const py = await this.resolver.resolve();
-    if (!py.ok) return { installed: null, minimum, meetsFloor: false };
+    if (!py.ok) return unresolved;
     const result = await this.runSafely(() => this.runPipShow(py));
-    if (!result || result.code !== 0) return { installed: null, minimum, meetsFloor: false };
+    if (!result || result.code !== 0) return unresolved;
     const installed = parseVersionLine(result.stdout);
-    if (!installed) return { installed: null, minimum, meetsFloor: false };
-    return { installed, minimum, meetsFloor: compareVersions(installed, minimum) >= 0 };
+    if (!installed) return unresolved;
+    return {
+      installed,
+      minimum,
+      meetsFloor: compareVersions(installed, minimum) >= 0,
+      testedAgainst: TESTED_AGAINST_QOR_LOGIC_VERSION,
+      matchesTested: installed === TESTED_AGAINST_QOR_LOGIC_VERSION,
+    };
   }
 
   private async runSafely(fn: () => Promise<InstallerRunResult>): Promise<InstallerRunResult | null> {
@@ -119,6 +134,17 @@ export class QorLogicPackageInstaller implements IQorLogicPackageInstaller {
     const args = [...py.args, '-m', 'pip', 'show', PACKAGE];
     return this.run(py.command, args, { timeoutMs: PIP_SHOW_TIMEOUT_MS });
   }
+}
+
+/** No version resolved: below the floor AND untested, since neither was verified. */
+export function unknownVersionStatus(minimum: string = MIN_QOR_LOGIC_VERSION): QorLogicVersionStatus {
+  return {
+    installed: null,
+    minimum,
+    meetsFloor: false,
+    testedAgainst: TESTED_AGAINST_QOR_LOGIC_VERSION,
+    matchesTested: false,
+  };
 }
 
 function parseVersionLine(stdout: string): string | null {

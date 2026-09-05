@@ -188,3 +188,118 @@ referenced_by:
   - docs/FEATURE_INDEX.md
   - docs/META_LEDGER.md
 ```
+
+```yaml
+term: Falsifiability probe
+definition: |
+  A check that reports whether other checks can be made to fail. It runs each target control twice -
+  once against a fixture that must produce no finding, once against a fixture that must produce one -
+  and classifies the result FALSIFIABLE, NOT-FALSIFIABLE, INCONCLUSIVE, or INAPPLICABLE. It answers
+  "can this control fail?", never "does this control check the right thing"; a control can be
+  falsifiable by its fixture and still assert the wrong property.
+  Motivated by ledger #602, where five ABORT-class controls were found returning success while
+  inspecting nothing, none of it visible in any exit code. Distinguished from a [[Vacuous pass]] by
+  direction: a vacuous pass is the defect, a falsifiability probe is the instrument that finds it.
+  Three properties are load-bearing. (1) The probe must carry its own falsifier - a stub exiting 0 on
+  both fixtures that must classify NOT-FALSIFIABLE - because a probe reporting FALSIFIABLE for
+  everything is itself a vacuous control, and worse than none since it manufactures confidence in the
+  opposite direction. (2) A non-zero exit on the defect run is insufficient evidence; the run must
+  also carry the control's own signal, because a usage error or crash otherwise reads as successful
+  falsification. (3) Fixtures cannot be generated generically - each is built against the control's
+  real detection patterns and invocation contract read from source, since a wrong fixture reports a
+  working control as unfalsifiable.
+  A control that is inapplicable to the host archetype is declared with its evidence rather than
+  probed; reporting it as unfalsifiable would be true and misleading.
+home: FailSafe/extension/scripts/qor-conformance-probe.cjs
+introduced_in_plan: plan-233b-conformance-probe
+referenced_by:
+  - docs/FEATURE_INDEX.md
+  - docs/META_LEDGER.md
+```
+
+```yaml
+term: Disclosed-skip emission
+definition: |
+  Writing a machine-readable event when a control skips because it names a property this repository
+  can never satisfy - as distinct from printing a SKIP line and moving on. Phase 75 declarative
+  tolerance assigns the emission to the operator or skill, not to the control: the control prints,
+  the operator emits a severity-1 gate_skipped_prerequisite_absent event, and permanent_skips stamps
+  that event closed when the repository has declared the gate in .qorlogic/config.json.
+  The chain has three links and only the last existed here. A control skipped on every seal; nothing
+  ever emitted the event (this repository's Process Shadow Genome held ZERO of them across every seal
+  it had ever performed); and permanent_skips worked correctly with nothing to close. data_api_acl_lint
+  prints "(Phase 75 disclosed-skip)" but contains no shadow_process reference - the string is prose.
+  So inapplicability lived only in ledger narrative, which nothing can read.
+  Two properties are load-bearing. (1) An UNDECLARED skip must stay open: if emission wrote events
+  closed unconditionally, every skipping gate would look handled and the declaration would do no work
+  at all - the same shape as a [[Vacuous pass]], one layer up. (2) Closure semantics stay upstream's
+  (the cannot-automate: enforcer prefix, the >=50-character justification, the closable-event-type
+  restriction), because a local reimplementation drifts from the toolkit on the next minor.
+  A declaration read by both the toolkit and the [[Falsifiability probe]] gives applicability one
+  source of truth instead of two that can disagree.
+home: FailSafe/extension/scripts/qor-skip-emitter.cjs
+introduced_in_plan: plan-233c-applicability-declaration
+referenced_by:
+  - docs/FEATURE_INDEX.md
+  - docs/META_LEDGER.md
+```
+
+## Tested-against version
+
+```yaml
+term: Tested-against version
+definition: >
+  The qor-logic version the [[Falsifiability probe]] last PASSED against, recorded as a constant
+  and reported wherever the consumer boundary is surfaced. It records a RESULT, not an intention:
+  it may be advanced only after a passing probe run on the new version.
+  It exists because the alternative was an upper bound, and an upper bound cannot work. A maximum
+  has to be chosen before anyone knows which future release breaks you - pin it to the current
+  version and every upstream release trips it, producing a ceiling bumped by hand each cycle that
+  verifies nothing; pin it optimistically and it never fires. Either way it becomes a
+  [[Vacuous pass]]: a declaration reporting success while inspecting nothing.
+  The evidence is that a version FLOOR could not see any real breakage either. Every qor-logic
+  incompatibility this repository actually suffered - a plan schema rejecting a declared key, a
+  ladder dropping a flag, controls turning out structurally inapplicable - happened far above the
+  declared minimum, with the floor check reporting true throughout. Version comparison cannot
+  detect a contract change; running the probe can.
+  So the field is a cache key over a probe result, never a substitute for it. When the installed
+  version is not the tested-against one, the honest report is "this combination is untested" - a
+  state the operator resolves by RUNNING the probe rather than by editing a constant. It is
+  advisory by construction: it never blocks a read, because fail-closing on an unprobed version
+  refuses work before anyone knows whether anything is wrong.
+home: FailSafe/extension/src/qorlogic/hostLayouts.ts
+introduced_in_plan: plan-233a-version-boundary
+referenced_by:
+  - docs/FEATURE_INDEX.md
+  - docs/META_LEDGER.md
+```
+
+## Declared ledger anchor
+
+```yaml
+term: Declared ledger anchor
+definition: >
+  A recorded entry number below which ledger chain failures are tolerated as disclosed historical
+  residue, and above which every entry is re-verified on each run. It replaces an AUTO-DETECTED
+  boundary that is computed as the highest entry currently verifying - which, because each seal
+  appends a valid entry, advances to that entry and absorbs the whole preceding history into the
+  tolerated region.
+  The auto-detected form leaves a protected surface exactly one entry deep while reporting text
+  that reads as a whole-chain attestation, which makes it a [[Vacuous pass]] in the one control
+  whose entire purpose is detecting retroactive alteration. Measured on this repository: corrupting
+  a mid-ledger entry's chain hash was invisible, and the same corruption under a declared anchor is
+  caught by entry number.
+  Two properties are load-bearing. (1) An absent declaration must be an ERROR, never a fall-back to
+  auto-detection - otherwise removing one config key silently restores the one-entry-deep behaviour
+  while every gate still reports clean. (2) The anchor value must be PINNED rather than bounded by
+  a threshold on the protected count, because such a threshold decays as the ledger grows: a guard
+  against a ratchet must not itself be ratchetable.
+  Tolerating residue below the anchor is deliberate, not laxity - fail-closing over a history that
+  already contains disclosed pre-tooling failures would block every seal, so the anchor separates
+  debt that is dated and recorded from alteration that is not.
+home: FailSafe/extension/scripts/check-ledger-anchor.cjs
+introduced_in_plan: plan-233d-ledger-anchor
+referenced_by:
+  - docs/FEATURE_INDEX.md
+  - docs/META_LEDGER.md
+```

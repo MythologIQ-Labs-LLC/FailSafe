@@ -29728,3 +29728,348 @@ _Hash provenance_: Content Hash = SHA256 of `plan-fx935-collision-renumber.md`.
 SHA256(content_hash + "|" + previous_hash)
 = 280b9499193cc16050270242e4855c4962a6c9174a3de046a9e18f39b571bd8e
 ```
+
+---
+
+### Entry #606: SESSION SEAL — plan-233b-conformance-probe (#233 Scope B, first slice)
+
+**Entry ID**: `8f253cd296c8`
+**Timestamp**: 2026-09-04T19:40:55Z
+**Phase**: SUBSTANTIATE
+**Session**: `2026-09-04T1900-31c4b7`
+**Change class**: feature · **Risk grade**: L2 · **Verdict**: PASS
+**Plan**: `plan-233b-conformance-probe.md`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**: `e3a7a5709482a39a040497c0b59fd4d8b2b46e9d4fa7f92fcb17db32d44b2c80`
+
+## Decision
+
+Ledger #602 found five ABORT-class controls returning success while inspecting nothing. Nothing in any exit code revealed it — the only thing that surfaced them was running each control against input that MUST make it fail. `FailSafe/extension/scripts/qor-conformance-probe.cjs` (FX942) automates that for three verified controls and reports the result.
+
+**Real run:** 3 FALSIFIABLE, 3 INAPPLICABLE, 0 NOT-FALSIFIABLE.
+
+| control | signal on the defect fixture |
+|---|---|
+| `publication_boundary_lint` | `absolute local path` |
+| `skill_size_budget_lint` | `EXCEEDED` |
+| `instruction_hygiene_lint` | `instruction-hygiene finding` |
+
+## The probe carries its own falsifier
+
+This is the design constraint everything else follows from. Assertion 2 of the suite feeds the classifier a stub exiting 0 on **both** fixtures and requires `NOT-FALSIFIABLE`. A probe that reported `FALSIFIABLE` for everything would be a vacuous control of exactly the kind it exists to find — and worse than no probe at all, because it manufactures confidence in the opposite direction.
+
+Mutation-proved both ways:
+
+- Classifier hardcoded to return `FALSIFIABLE` → **assertions 2, 3 and 4 fail.**
+- Planted leak neutralised in `publication_boundary_lint`'s defect fixture → that control flips to `NOT-FALSIFIABLE` and the report names it: *"A control that cannot be made to fail is not measuring anything. Review: publication_boundary_lint."*
+
+Both reverted; `git diff --stat` on the probe is empty and the suite returns 7/7.
+
+## Two facts that shaped the design, found by running rather than reading
+
+1. **`expectDefectSignal` is load-bearing.** A non-zero exit on the defect run is not sufficient evidence. During research `instruction_hygiene_lint --repo-root` exited **2 on a usage error**, which exit-code-only logic would have scored as successful falsification — a false `FALSIFIABLE`, the worst output this probe can emit. The defect run must also carry the control's own signal.
+2. **Invocation is per-control data, not a template.** That control *accepts* `--repo-root` but *requires* `--staged`/`--files`, and is **filename-gated**: identical content in `dirty2.md` produced nothing, in `CLAUDE.md` produced two findings. A first fixture attempt planted personal-identity content and stayed silent — the control detects behavioural directives, not identity. The fixture was wrong, not the control.
+
+Consequence recorded for later slices: fixtures cannot be generated generically. A generic harness would report working controls as unfalsifiable when the fixture was simply wrong — a worse failure than no probe, in the opposite direction.
+
+## Scope and operator decisions
+
+Three controls of the twelve accepting `--repo-root`; the narrow slice is justified by per-control fixture cost. Three known-inapplicable controls (`seal_artifacts`, `seal_entry_check`, `qor-repo-release`) are **declared with ledger citations rather than probed** — reporting them as unfalsifiable would be true and misleading. That list is inline so Scope B ships independently of Scope C.
+
+- **`secret_scanner` excluded** — fixturing it writes a credential-shaped string to disk, a standing stop condition. Operator decision, not an oversight.
+- **Report-only, exit 0 regardless** — operator decision. An ABORT whose own falsifier had not been exercised against real upgrades would be this issue's own defect.
+
+The probe assembles its planted absolute path from parts so the probe's source carries no absolute path of its own and does not trip `publication_boundary_lint` against the real repository.
+
+## Limits
+
+Reports whether a control **can** fail, never whether it checks the right thing. A control can be falsifiable by its fixture and still assert the wrong property.
+
+## Disclosures
+
+- `governance-index --advance-last-reviewed` clobbered the `Last Reviewed` markers a **fifth** time; `:6` and `:8` restored. Filed upstream as Qor-logic#426.
+- `doc_integrity` strict ABORTed until the `Falsifiability probe` glossary entry was added — fourth consecutive cycle that gate has caught a declared term with no glossary home.
+- **No commit performed.** `/qor-enterprise-auto-dev` forbids commit, tag, push, PR and merge; this cycle stops at the Review Boundary with a handoff.
+
+## Verification
+
+`npm run lint` 0 · `npm run test:node` **333/333** · `qorConformanceProbe` 7/7 · parity 33/33 · id-integrity 4/4 · probe run exit 0 · gate ladder 7/7 exit 0.
+
+## Files
+
+`FailSafe/extension/scripts/qor-conformance-probe.cjs` (NEW) · `FailSafe/extension/src/test/scripts/qorConformanceProbe.test.cjs` (NEW) · `docs/FEATURE_INDEX.md` · `qor/references/glossary.md` · `docs/GOVERNANCE_INDEX.md`
+
+**Previous Hash**: `280b9499193cc16050270242e4855c4962a6c9174a3de046a9e18f39b571bd8e` (Entry #605 Chain Hash)
+
+**Chain Hash (Merkle seal)**: `1155d002a354cdf6eb85ba99a9e2ad860d948c47fd51f3cdd140bd237b3aadad`
+
+---
+
+### Entry #607: SESSION SEAL — plan-233c-applicability-declaration (#233 Scope C)
+
+**Entry ID**: `7d35a6d72d16`
+**Timestamp**: 2026-09-04T20:14:58Z
+**Phase**: SUBSTANTIATE
+**Session**: `2026-09-04T1955-8c9a19`
+**Change class**: feature · **Risk grade**: L2 · **Verdict**: PASS
+**Plan**: `plan-233c-applicability-declaration.md`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**: `c3c7cedf78cbfb5cf1d31f64224bc983c22375c7de0fe28f8f534b96f3e82bbc`
+
+## Decision
+
+Scope C's stated job was to declare control applicability as data. Upstream already owns that format: `permanent_skips` (Phase 256, shipped 0.169.0) reads `.qorlogic/config.json` and stamps a disclosed-skip event closed as it is written. Building a manifest would have duplicated it.
+
+Research inverted the scope. The declaration format was not missing — **the emission was.** A full event-type census of `docs/PROCESS_SHADOW_GENOME.md` found ZERO `gate_skipped_prerequisite_absent` events across every seal this repository has ever performed. The chain has three links and only the last one existed:
+
+| link | state before this cycle |
+|---|---|
+| a control skips because it can never apply here | happens on every seal |
+| something emits `gate_skipped_prerequisite_absent` | **never happened** |
+| `permanent_skips` closes that event at emission | worked, had nothing to close |
+
+`data_api_acl_lint` prints `SKIP: no SQL migrations found (Phase 75 disclosed-skip)` on every run and contains **no** `shadow_process` or `append_event` reference — the parenthetical is prose. Phase 75 assigns the emission to the operator or skill, and it had never been performed here. So inapplicability lived only in ledger narrative, which nothing can read.
+
+`FailSafe/extension/scripts/qor-skip-emitter.cjs` (FX943) supplies the missing link and routes through upstream `permanent_skips.apply()`. Closure semantics — the `cannot-automate:` enforcer prefix, the >=50-character justification, the closable-event-type restriction — stay upstream's. A local reimplementation would drift from the toolkit on the next minor, which is the exact failure #233 exists to prevent.
+
+**Run in this session, against the real genome:** the first `gate_skipped_prerequisite_absent` event this repository has ever recorded, event `b09af7f07ad8`, `addressed: true`, `closure_enforcer: "cannot-automate: …"`. The chain now closes end to end.
+
+## The falsifier
+
+Assertion 2 of the emitter suite: a skip for an **undeclared** gate must stay `addressed: false`. If `apply()` were bypassed and events written closed unconditionally, every skipping gate would look handled and the declaration would be doing no work at all — a governance surface reporting success while asserting nothing, one layer up from the vacuous controls at #602.
+
+Two more assertions guard the write path rather than the read: a sub-50-character justification raises **before** anything is written (a partial write would leave an unclosed event reading as genuine debt), and an event type outside `{gate_skipped_prerequisite_absent, capability_shortfall}` is refused outright rather than emitted as debt no declaration can ever close.
+
+## One source of truth
+
+The FX942 probe now reads the same `permanent_skips` section, so applicability serves both upstream's event closure and the probe's report from one declaration. A config entry supersedes the inline list for the same id.
+
+Mutation-proved both directions:
+
+- `declaredInapplicable()` forced to return nothing → the new probe assertion fails with **`declared control was RUN`**. The fixture builder throws, so "reported INAPPLICABLE **without being run**" is asserted, not assumed.
+- `permanent_skips` justification shortened to 9 characters → the FX940 length assertion fails by name, catching upstream's `_MIN_JUSTIFICATION` before emission instead of after the event is built.
+
+Both reverted; suites return 8/8 and 6/6.
+
+**Probe run:** 3 FALSIFIABLE, 4 INAPPLICABLE, 0 NOT-FALSIFIABLE — `data_api_acl_lint` now sourced from the config declaration rather than from a hand-maintained list.
+
+## What was deliberately NOT declared
+
+- `seal_artifacts`, `seal_entry_check`, `qor-repo-release` — documented inapplicable across #601/#602/#603/#605, but nothing emits their skip events, so a declaration would close nothing and be dead config. They stay in the probe's inline list with their ledger citations until emission reaches them.
+- `agent-teams` — `qor_platform.FALLBACKS` suppresses that shortfall upstream; declaring it would close nothing.
+
+The inline list is residue, and it shrinks as emission spreads. It is not a parallel format.
+
+## Limits
+
+One control's chain is closed, not every control's. Emission is not yet wired into `/qor-substantiate`'s ladder — it was invoked explicitly this cycle. A declaration says a control can never apply here; it says nothing about whether the control checks the right thing where it does apply.
+
+## Disclosures
+
+- `governance-index --advance-last-reviewed` date-bumped three historical review markers a **sixth** consecutive time. Restored; already filed upstream as Qor-logic#426.
+- `doc_integrity` strict ABORTed twice — once on the `terms` key name, once until the `Disclosed-skip emission` glossary entry existed. Fifth consecutive cycle that gate has caught a declared term with no glossary home, and it worked as designed each time.
+- `secret_scanner --staged` and `gate_chain_completeness` both exited 0 while inspecting nothing (0 staged bytes; 0 sessions). Two of the five vacuous controls from #602, disclosed rather than treated as evidence.
+- `merge_velocity_check`: `strained`, `narrow_scope`, 12 PRs in the 7-day window. Exit 0; scope was held to the audited plan.
+- The implement gate for this session was written after the fact, when `procedural_fidelity` reported it missing. Recorded, not papered over.
+- **No commit performed.** `/qor-enterprise-auto-dev` forbids commit, tag, push, PR and merge; this cycle stops at the Review Boundary.
+
+## Verification
+
+`npm run lint` 0 errors · `npm run test:node` **339/339** · `qorSkipEmitter` 4/4 (0 skipped) · `qorConformanceProbe` 8/8 · `qorlogic-config` 6/6 · FEATURE_INDEX header parity 33/33 · id-integrity 4/4 · intent_lock VERIFIED · skill_admission ADMITTED · gate_skill_matrix 0 broken · doc_integrity strict OK · governance-index enforce exit 0.
+
+## Files
+
+`FailSafe/extension/scripts/qor-skip-emitter.cjs` (NEW) · `FailSafe/extension/src/test/scripts/qorSkipEmitter.test.cjs` (NEW) · `FailSafe/extension/scripts/qor-conformance-probe.cjs` · `FailSafe/extension/src/test/scripts/qorConformanceProbe.test.cjs` · `FailSafe/extension/src/test/governance/qorlogic-config.test.cjs` · `.qorlogic/config.json` · `docs/FEATURE_INDEX.md` · `qor/references/glossary.md` · `docs/GOVERNANCE_INDEX.md`
+
+**Previous Hash**: `1155d002a354cdf6eb85ba99a9e2ad860d948c47fd51f3cdd140bd237b3aadad` (Entry #606 Chain Hash)
+
+**Chain Hash (Merkle seal)**: `6923c0a30b0fcfd40b9a1c4ae768e86a0cc82787370309a4edbc4d7e4d5756d3`
+
+---
+
+### Entry #608: SESSION SEAL — plan-233a-version-boundary (#233 Scope A)
+
+**Entry ID**: `01f8559d3e06`
+**Timestamp**: 2026-09-05T00:14:03Z
+**Phase**: SUBSTANTIATE
+**Session**: `2026-09-04T2337-fe4ba0`
+**Change class**: feature · **Risk grade**: L2 · **Verdict**: PASS (iteration 4, after three VETOs)
+**Plan**: `plan-233a-version-boundary.md`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**: `8a0c9b3cc5db42bd9a7660ce37a1679fbb1249c23e3ca1387d2cd581da99ae2b`
+
+## Decision
+
+Scope A asked for a `{minimum, maximum, testedAgainst}` version boundary. The operator asked whether an upper bound would be "a benefit but not a conclusive solution." **It would not be conclusive, and this cycle ships `testedAgainst` while deliberately rejecting `maximum`.**
+
+A ceiling must be chosen before anyone knows which release breaks you. Pin it to the current version and every upstream release trips it, producing a ceiling bumped by hand each cycle that verifies nothing; pin it optimistically and it never fires. Either way it is a control reporting success while inspecting nothing — the ledger #602 pattern one layer up.
+
+The floor was no better, and the evidence is direct. `MIN_QOR_LOGIC_VERSION` is `0.31.1` against an installed `0.169.0` — 138 releases up — and `meetsFloor` was **true throughout all three** breakages this session actually suffered: `plan.schema.json` rejecting `terms_introduced`, ladder 4.6.9 dropping `--skills-root`, and three controls proving structurally inapplicable. Every one was a contract change above the threshold. A `>=` comparison cannot see those. Running the probe can. `MIN_QOR_LOGIC_VERSION` was therefore left alone: raising it would fix nothing and stay equally blind.
+
+`testedAgainst` records a **fact** — the version FX942 last passed on — and is falsifiable by running FX942. It is a cache key over a probe result, never a substitute for it.
+
+## The floor's own invariant was violated, and the guard could not see it
+
+`hostLayouts.ts:5-7` states the rule: `MIN_QOR_LOGIC_VERSION` must stay aligned with the qor-logic version whose `HostTarget.install_map` this extension mirrors. Enumerated against the installed toolkit, upstream 0.169.0 registers **six** hosts — claude, cline, codex, cursor, gemini, kilo-code — and `HOST_INSTALL_LAYOUTS` mirrors **four**. The four it carries match upstream exactly; the mirror is correct but incomplete.
+
+It went unnoticed for 138 releases because the only test that looked like a guard, `qor-logic-install-record.test.ts:127`, asserts `deepEqual(names, ['claude','codex','gemini','kilo-code'])` — a literal copy of the local constant. It passes identically whether upstream registers four hosts or sixty, and **nothing in this repository ever read `qor.hosts`**. Reachability is not assertion strength.
+
+FX945 reads the installed toolkit instead. `cursor` and `cline` are declared in `UNMIRRORED_HOSTS` with justifications rather than shipped: a Cursor or Cline user currently cannot install skills through FailSafe at all, since no `host-registry.json` overlay exists, and closing that is a user-facing capability change for the operator to scope — not something to ride in on a version-boundary cycle.
+
+## Three VETOs, each load-bearing
+
+The tribunal rejected this plan three times before PASS at iteration 4. Recorded because each finding names a defect that would otherwise have shipped:
+
+- **V1 (`specification-drift`, iteration 1)** — reporting the boundary only into `ConsumerDiagnostics` is serialization, not reporting. `qorConsumer` reaches `hub-payload-assembler.ts:63` and **no UI module reads it**. A fact nobody reads is a control that measures nothing. The fix renders the row in the FX942 probe, the surface an operator actually runs to ask this question, and the assertion was later strengthened to execute the real probe rather than hand `render()` a row — asserting that a renderer prints what it is given would have restated the same mistake one level down.
+- **V2 (`coverage-gap`, iteration 2)** — `INCONCLUSIVE` was claimed for a compiled module *absent OR stale*, with only the absent half falsified. Since `npm run test:node` does not compile, stale is the **ordinary** local condition, so the untested branch was the one most likely to execute.
+- **V3 (`coverage-gap`, iteration 3)** — five assertions were declared against CI commands that ran three: `run-node-tests.cjs` filters discovery to `.test.cjs`, so the two `.ts` suites never executed. A Definition of Done its own CI cannot demonstrate would have forced this seal to choose between an undeclared command and an unobserved claim.
+
+`cycle_count_escalator` returned `None` on both consecutive and session-total modes throughout; four attempts, under the five-attempt cap, no same-signature triple, no `/qor-remediate` route.
+
+## Advisory, not fail-closed
+
+`untested` never flips `compatible`, and the probe still exits 0. Fail-closing would have blocked every consumer read the moment 0.169.0 landed — before anyone knew whether anything was wrong — and the probe reports nothing wrong on it. This matches the operator's 2026-09-04 report-only decision for FX942.
+
+## Falsifiers exercised
+
+Nine mutations, each failing exactly the assertion it should:
+
+| mutation | fails |
+|---|---|
+| drop `versionBoundary` from `probe()` output | the V1 assertion (the defect itself) |
+| `if (true)` for `installed === declared` | UNTESTED |
+| missing build reported as `MATCH` | absent + stale |
+| delete **only** the staleness branch | exactly the V2 assertion |
+| hardcode `matchesTested: true` | installer FX944 |
+| fold `untested` into `compatible` | the advisory invariant |
+| remove `cursor` from `UNMIRRORED_HOSTS` | mirror 1 |
+| `kilo-code` base to `.kilo-code` | mirror 2 (the FX575 defect) |
+| declare a mirrored host as unmirrored | mirror 3 (anti-rot) |
+
+## Limits
+
+The mirror guard covers the host install-map only. The plan schema and ladder flags changed too, and no constant comparison detects those — only the probe does. The declared constant is read by a real `require()` of the compiled module, never grepped out of source, but that means the probe reports `INCONCLUSIVE` rather than a verdict when the build is absent or stale.
+
+## Disclosures
+
+- **FX943 has a real defect, found by using it.** `qor-skip-emitter.cjs` defaults `repoRoot` to `process.cwd()`, so running it from `FailSafe/extension/` silently produced an **OPEN** event instead of the declared closure, and wrote a stray `FailSafe/extension/docs/PROCESS_SHADOW_GENOME.md` containing it. Diagnosed, the stray removed (untracked, one spurious event), and re-emitted correctly from the repo root — `closed at emission (declared)`. **Not fixed here:** FX943 is Scope C code and this cycle holds a verdict scoped to Scope A. Surfaced for the next cycle; it is an evidence-corruption hazard, not cosmetic.
+- `governance-index --advance-last-reviewed` date-bumped three historical review markers a **seventh** consecutive time, and additionally rewrote the whole file LF→CRLF. Both reverted; already filed upstream as Qor-logic#426. `--enforce` cannot be run without `--advance-last-reviewed`, so the clobber is unavoidable through the CLI.
+- **`npm test` (vscode-test) never launched** — the host held a `vscode-updating` mutex, twice, 31s each. The two `.ts` suites were verified by running the **identical compiled files** under `npx mocha --ui tdd`: **35 passing**, and both FX944 assertions mutation-proved through that runner. Same blocker and same mitigation recorded against FX556/FX557 and against the #233 read-once slice.
+- `doc_integrity` strict ABORTed until the `Tested-against version` glossary entry existed — sixth consecutive cycle that gate has caught a declared term with no glossary home, working as designed each time.
+- `secret_scanner --staged` exited 0 while inspecting 0 staged bytes. One of the five vacuous controls from #602; disclosed rather than counted as evidence.
+- `merge_velocity_check`: 12 PRs in the 7-day window, `strained`. Exit 0; scope was held to the audited plan.
+- `sg_closure_lint` cannot run in this repository at all — `qor/references/doctrine-shadow-genome-countermeasures.md` ships only upstream.
+- **No commit performed.** `/qor-enterprise-auto-dev` forbids commit, tag, push, PR and merge; this cycle stops at the Review Boundary.
+
+## Verification
+
+`npm run lint` 0 errors · `tsc --noEmit` 0 errors · `npm run test:node` **347/347, 0 skipped** (339 before this cycle) · `qorConformanceProbe` 13/13 · `hostMirrorDrift` 3/3 **0 skipped** (ran against the real toolkit) · direct-mocha `QorLogicPackageInstaller` + `consumer-diagnostics` **35/35** · probe report `FALSIFIABLE 3 · INAPPLICABLE 4 · MATCH 1` · FEATURE_INDEX header parity 761/711/43 · intent_lock VERIFIED · skill_admission ADMITTED · gate_skill_matrix 0 broken · doc_integrity strict OK · governance-index enforce exit 0.
+
+## Files
+
+`FailSafe/extension/src/qorlogic/hostLayouts.ts` · `FailSafe/extension/scripts/qor-conformance-probe.cjs` · `FailSafe/extension/src/qorlogic/QorLogicPackageInstaller.ts` · `FailSafe/extension/src/qorlogic/qorLogicInstallRecord.ts` · `FailSafe/extension/src/extension/bootstrapServers.ts` · `FailSafe/extension/src/qorlogic/consumer/types.ts` · `FailSafe/extension/src/qorlogic/consumer/diagnostics.ts` · `FailSafe/extension/src/test/scripts/hostMirrorDrift.test.cjs` (NEW) · `FailSafe/extension/src/test/scripts/qorConformanceProbe.test.cjs` · `FailSafe/extension/src/test/qorlogic/QorLogicPackageInstaller.test.ts` · `FailSafe/extension/src/test/qorlogic/consumer/consumer-diagnostics.test.ts` · four version-status fixture suites · `docs/FEATURE_INDEX.md` · `qor/references/glossary.md` · `docs/GOVERNANCE_INDEX.md`
+
+**Previous Hash**: `6923c0a30b0fcfd40b9a1c4ae768e86a0cc82787370309a4edbc4d7e4d5756d3` (Entry #607 Chain Hash)
+
+**Chain Hash (Merkle seal)**: `111ea7ab7d579fc2d83e37bfdc88a283707ab5566b58fb9187de3e1259379631`
+
+---
+
+### Entry #609: SESSION SEAL — plan-233d-ledger-anchor (#233 Scope D)
+
+**Entry ID**: `a1f9b9a48955`
+**Timestamp**: 2026-09-05T01:18:32Z
+**Phase**: SUBSTANTIATE
+**Session**: `2026-09-05T0051-e48e6d`
+**Change class**: feature · **Risk grade**: L2 · **Verdict**: PASS (iteration 2, after one VETO)
+**Plan**: `plan-233d-ledger-anchor.md`
+**SSDF Practices**: PO.1.4, PS.2.1, PW.1.1
+
+**Content Hash**: `baeadbe94b35333a8120500c5601c304f8e3624a4c864388185ec05bbdfdd9ce`
+
+## Decision
+
+Scope D was framed as a markup question. The markup turned out to be the smaller half.
+
+Upstream already owns a versioned dialect — `qor/scripts/ledger_dialect.py` (GH #282), three recognized hash forms, spans bounded at the next bold field marker, `MARKUP_COMPAT_BOUNDARY = 123`. This repository's ledger parses against it well enough that the seal ladder reported clean every cycle. **The control reporting clean was measuring almost nothing.**
+
+`verify_post_anchor()` auto-detects its tolerance boundary as `max(ok_entries)` — the highest entry that currently verifies. Every seal appends a valid entry; that entry becomes the boundary; the entire preceding history falls into the tolerated region. The protected surface was **one entry deep**, printed as `post-anchor clean (boundary=#608)`, which reads as a whole-chain attestation.
+
+Measured, not inferred:
+
+| case | result |
+|---|---|
+| corrupt entry **#500** chain hash, auto-detect | **exit 0, zero failures — invisible** |
+| corrupt entry **#608** (newest), auto-detect | exit 1, caught |
+| corrupt entry **#500**, `boundary_entry=340` | **exit 1, `FAIL Entry #500`** |
+| clean ledger, `boundary_entry=340` | exit 0 |
+
+A Merkle ledger that tolerates silent retroactive edits is not providing the property it exists for.
+
+## Nothing else covered it
+
+Verified three ways rather than assumed:
+
+- **`check-ledger-fork.cjs` (FX932)** emits **byte-identical output** on tampered and clean ledgers. The `--file` mode was isolated by running it on a *clean* copy: the `FORK unclassified previous_hash … 122,123,124,125` line appears in both, so it is a mode artifact, not detection. The guard checks duplicate numbers and duplicate previous-hashes — by design, per its own header, "chain arithmetic stays upstream".
+- **No CI workflow and no `release-gate.cjs` path invokes `ledger_hash` at all.**
+- **`ledger_hash.verify()`** — the full check that would catch it — returns exit 1: entry #331 fails, tainting 278 entries through #608; BREAKs at #340 and #382; FAIL on 18 duplicate entry numbers. Nothing runs it.
+
+## What shipped
+
+`ledger_anchor` declares **#340**, chosen by measurement as the lowest anchor at which the live ledger passes (sweep: 236 gives 94 failures, 331 gives 2, 340 gives 0). That puts **268 entries** back under active verification, up from one. Chain arithmetic stays upstream — `verify_post_anchor` already accepts `boundary_entry`; `check-ledger-anchor.cjs` supplies the declaration, validates it, and propagates the exit code unsoftened.
+
+Two properties are load-bearing. An **absent declaration is a hard error**, never a fall-back to auto-detection — otherwise deleting one config key silently un-ships this while every gate still reports clean. And the anchor value is **pinned**, not bounded by a threshold on the protected count.
+
+## The VETO
+
+Iteration 1 was rejected (`V1`, `coverage-gap`). Its anti-ratchet assertion was "at least 200 entries under active verification", which bites at today's head — 268 at anchor 340, and 158/108/8/0 at anchors 450/500/600/608, all failing — but **decays**: at head #1000 an anchor of #800 leaves exactly 200 and would pass while dropping 460 entries out of verification. A guard against a ratchet must not itself be ratchetable. Replaced by a pinned anchor value plus a non-empty-surface check, neither of which depends on ledger length.
+
+## Falsifiers exercised
+
+Five mutations, each failing its intended assertion:
+
+| mutation | fails |
+|---|---|
+| fall back to auto-detect when the declaration is absent | absent-declaration assertion |
+| accept a non-integer anchor | the injection-surface assertion |
+| soften a post-anchor failure to exit 0 | the finding's own assertion |
+| bump the pinned anchor to the ledger head | **three** — pinned value, non-empty surface, and the finding |
+| make `ledger_anchor.entry` a string | the FX940 config assertion |
+
+Fixture integrity is itself asserted: `ledgerCopy` refuses to build a fixture from an entry with no chain hash, which caught a first attempt at #300 — a `pending-runtime-tooling` placeholder — before it could pass vacuously. The replacement uses #339; only 15 pre-anchor entries carry a real 64-hex chain hash.
+
+Assertion 1 also runs the *same fixture* under auto-detect and requires exit 0 there, so it cannot pass for reasons unrelated to the anchor.
+
+## Limits
+
+Restores verification **above** #340 only. The residue below stays disclosed, dated debt and is not repaired: 94 entries fail at anchor 236, 18 entry numbers are duplicated, and BREAKs remain at #340 and #382. `ledger_hash.verify()` is deliberately **not** wired into any gate — adopting it today would block every seal — so the full-chain failure remains real, disclosed, and unenforced.
+
+Two research findings are surfaced but **not fixed**, both out of this plan's audited scope:
+
+- **The form-3 prose-hex hijack.** A bare 64-hex line inside a hash field's span, ahead of the declared value, causes the parser to read a value different from the one a human reads. Reproduced across four shapes; only that one fires. This is why the Scope C seal truncated a shadow-event id to 12 characters — that workaround was correct, and the trigger is now characterized rather than guessed. Upstream.
+- **30 historical entries carry hash-shaped values that cannot be SHA-256** — fenced `SHA256(...)` forms whose hex length is 66, 65, 63, 62, 40 or 0, never 64. Plus 54 `pending-*` placeholders and 14 entries with no hash label. Pre-tooling authoring, not forgery; the finding is that no gate reports it.
+
+## Disclosures
+
+- **`KNOWN_ENTRY_GAPS` hardcodes another repository's gaps.** It is `{510, 532}`; this ledger's actual gaps are `{158, 298}`. There is no consumer declaration surface, so the WARN is permanent and its own remediation text asks the operator to do something no consumer repository can do. Upstream request, same shape as the `permanent_skips` gap Scope C closed.
+- `governance-index --advance-last-reviewed` date-bumped three historical review markers an **eighth** consecutive time, and again rewrote the file LF to CRLF. Both reverted. Qor-logic#426. `--enforce` cannot run without `--advance-last-reviewed`, so the clobber is unavoidable through the CLI.
+- **FX943's cwd defect, carried from Entry #608, is still unfixed.** `qor-skip-emitter.cjs` defaults `repoRoot` to `process.cwd()`. Invoked from the repository root this cycle, it closed correctly at emission. Still Scope C code and still outside an audited scope here.
+- `secret_scanner --staged` exited 0 while inspecting 0 staged bytes — one of the five vacuous controls from #602, disclosed rather than counted as evidence.
+- `data_api_acl_lint` recorded its disclosed SKIP; the event was emitted through FX943 and **closed at emission** by its `permanent_skips` declaration.
+- `sg_closure_lint` cannot run in this repository at all — its doctrine file ships only upstream.
+- **No commit performed.** `/qor-enterprise-auto-dev` forbids commit, tag, push, PR and merge; this cycle stops at the Review Boundary.
+
+## Verification
+
+`npm run lint` 0 errors · `npm run test:node` **354/354, 0 skipped** (347 before this cycle) · `ledgerAnchor` 6/6 · `qorlogic-config` 8/8 · `node scripts/check-ledger-anchor.cjs` exit 0, reporting declared anchor #340 with 268 entries actively verified · FEATURE_INDEX header parity 762/712/43 · intent_lock VERIFIED · skill_admission ADMITTED · gate_skill_matrix 0 broken · procedural_fidelity exit 0 · dod_check exit 0 · instruction_hygiene exit 0 · doc_integrity strict OK · governance-index enforce exit 0.
+
+## Files
+
+`.qorlogic/config.json` · `FailSafe/extension/scripts/check-ledger-anchor.cjs` (NEW) · `FailSafe/extension/src/test/scripts/ledgerAnchor.test.cjs` (NEW) · `FailSafe/extension/src/test/governance/qorlogic-config.test.cjs` · `docs/FEATURE_INDEX.md` · `qor/references/glossary.md` · `docs/GOVERNANCE_INDEX.md`
+
+**Previous Hash**: `111ea7ab7d579fc2d83e37bfdc88a283707ab5566b58fb9187de3e1259379631` (Entry #608 Chain Hash)
+
+**Chain Hash (Merkle seal)**: `cb66ae836ea7ca60f139f3d9c509c1d60117ac45386b9e531460634e59d768e4`

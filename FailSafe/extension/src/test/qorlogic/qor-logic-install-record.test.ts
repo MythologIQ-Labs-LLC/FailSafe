@@ -140,6 +140,8 @@ suite('qorLogicInstallRecord: getQorLogicInstallStatus', function () {
       installed: '0.30.0',
       minimum: '0.31.1',
       meetsFloor: false,
+      testedAgainst: '0.169.0',
+      matchesTested: false,
     });
     assert.equal(status.installedVersion, '0.30.0');
     assert.equal(status.minimumVersion, '0.31.1');
@@ -151,6 +153,8 @@ suite('qorLogicInstallRecord: getQorLogicInstallStatus', function () {
       installed: '0.31.5',
       minimum: '0.31.1',
       meetsFloor: true,
+      testedAgainst: '0.169.0',
+      matchesTested: false,
     });
     assert.equal(status.installedVersion, '0.31.5');
     assert.equal(status.meetsFloor, true);
