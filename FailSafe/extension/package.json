@@ -785,7 +785,7 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
     "glob": "^10.5.0",
-    "js-yaml": "^4.3.1",
+    "js-yaml": "^4.3.2",
     "proper-lockfile": "^4.1.2",
     "ws": "^8.21.0",
     "zod": "^3.25.76"
