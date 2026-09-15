@@ -350,4 +350,22 @@ suite('VerdictEngine (FX346)', () => {
     await e.generateVerdict(EVT(), 'src/x.ts', []);
     assert.equal(s.ledgerCalls[0].artifactHash, undefined);
   });
+
+  test('FX947 executeActions — payload.heuristicsEvaluated counts every heuristic result, matched or not (#367 tranche 3c)', async () => {
+    const s = makeStubs({ riskGrade: 'L1' });
+    const e = new VerdictEngine(s.trust, s.policy, s.ledger, s.shadow);
+    await e.generateVerdict(EVT(), 'src/x.ts', [
+      HR({ patternId: 'P1', matched: false }),
+      HR({ patternId: 'P2', matched: false }),
+      HR({ patternId: 'P3', matched: true, severity: 'low' }),
+    ]);
+    assert.equal(s.ledgerCalls[0].payload.heuristicsEvaluated, 3);
+  });
+
+  test('FX947 executeActions — zero heuristic results (e.g. FILE_DELETED / unreadable content) log heuristicsEvaluated: 0', async () => {
+    const s = makeStubs({ riskGrade: 'L1' });
+    const e = new VerdictEngine(s.trust, s.policy, s.ledger, s.shadow);
+    await e.generateVerdict(EVT(), 'src/x.ts', []);
+    assert.equal(s.ledgerCalls[0].payload.heuristicsEvaluated, 0);
+  });
 });

@@ -1,13 +1,15 @@
 /**
  * AuditResolutionProjector — FailSafe#367 resolution-linkage projection.
  *
- * NOT YET WIRED: this module has no production consumer. It is tranche 1 —
- * the identity and read-model — and the renderer that surfaces it lands in a
- * later tranche (see the FX927 row in docs/FEATURE_INDEX.md). Shipping a
- * correct, tested, zero-consumer module is itself a defect class this repo has
- * been burned by (the ACP tamper detector in #398 sat uncalled for months), so
- * this banner exists to keep that visible to the next reader rather than only
- * in a PR description.
+ * WIRED (since tranche 2, PR #419): `HubSnapshotService.buildAuditResolutionLog()`
+ * calls `projectResolution` and exposes it as `auditLog` on the hub snapshot;
+ * `governance.js` renders it via `renderResolutionLog()`/`resolutionBadge()`.
+ * This banner previously said "NOT YET WIRED" (true only through tranche 1)
+ * and was left stale for two further tranches before being caught here
+ * (FX947 review) -- the exact defect class it exists to prevent (the ACP
+ * tamper detector in #398 sat uncalled for months). Every `ResolutionState`
+ * added here must also be added to `resolutionBadge()`'s style map, or it
+ * renders as an unstyled fallback instead of a designed label.
  *
  * Pure read-model over soa_ledger entries. Never mutates the ledger: the
  * chain stays append-only, and a WARN/BLOCK/ESCALATE record is never
@@ -38,36 +40,41 @@
  *
  *   Half of this is now resolved (FX934, #367 tranche 3b):
  *   `LedgerEntry.verificationMethod` distinguishes `'existence_claim'`
- *   (AGENT_CLAIM events, routed through `validateClaim`) from
- *   `'sentinel_heuristic'` (every other event type, routed through
- *   `evaluateFileEvent`) instead of the single hardcoded literal both
- *   paths previously shared. This projector does not yet consume that
- *   field, and per-engine provenance alone does not make same-artifact
- *   comparison sound: the decision-driving-pattern problem below is
- *   unresolved, and even within the `'sentinel_heuristic'` engine a later
- *   PASS still cannot, by `determineDecision`'s own construction, carry
- *   the specific pattern that drove an earlier WARN/BLOCK.
+ *   (AGENT_CLAIM events) from `'sentinel_heuristic'` (every other event
+ *   type) instead of the single hardcoded literal both paths previously
+ *   shared -- see below for how this projector now consumes it.
  *
- * Reintroducing content/pattern-based supersession still needs a change
- * this tranche does not make: either persisting which matched pattern(s)
- * were decision-driving (not the full matched set — per-engine provenance
- * alone, landed above, is not sufficient), or anchoring supersession to
- * verified content identity instead of a path string — either way, also
- * excluding synthetic non-file identities (`'unknown'`, `'claim_manifest'`)
- * from any path-based correlation. That is deferred to a follow-up tranche;
- * `FailSafe#367` stays open for it.
+ * Content/pattern-based supersession is now reintroduced (FX947, #367
+ * tranche 3c) -- narrower than either fix floated above, and without
+ * per-pattern persistence. The disjoint-pattern-namespace problem is closed
+ * by requiring the later PASS to share `verificationMethod` (FX934) with
+ * the original entry. The decision-driving-pattern problem turned out not
+ * to need a fix at all: since a PASS can never carry a critical/high/medium
+ * match, "no pattern overlap" was never informative, but a later PASS for
+ * the *exact same artifactPath and engine* is still real evidence nothing
+ * that engine currently flags -- provided the PASS reflects a real check.
  *
- * Half of that second option landed separately (FX933, #367 tranche 3a):
- * `LedgerEntry.artifactHash` is now populated end-to-end for real file
- * events (`VerdictEngine.generateVerdict`'s trailing `fileContent` param,
- * reusing content `VerdictArbiter` already read — never a second disk
- * read). That makes verified-content identity available on the ledger,
- * but this projector does not yet consume it: no supersession inference
- * is reintroduced by that change alone, since the disjoint-pattern-
- * namespace and decision-driving-pattern problems above are unresolved.
- * `artifactHash` stays unset for the `'unknown'`/`'claim_manifest'`
- * synthetic paths and for `FILE_DELETED` events, matching this module's
- * existing exclusion of those identities.
+ * That "real check" condition is the actual blocker this doc previously
+ * missed: `determineDecision` also returns PASS when zero checks ran at
+ * all (`FILE_DELETED`, an oversized/unreadable file, an `AGENT_CLAIM` with
+ * no claimed artifacts), which the old payload could not distinguish from
+ * "ran every check and found nothing" -- a deleted file could have
+ * silently cleared a real BLOCK on that path. FX947 adds
+ * `payload.heuristicsEvaluated` (`heuristicResults.length`, matched or not)
+ * to every ledger entry so the projector can require a genuinely non-empty
+ * scan. `ExistenceEngine.validateClaim` only pushes a result for a
+ * *failing* check, so a clean claim also reads `heuristicsEvaluated: 0` --
+ * a disclosed asymmetry that only ever makes `existence_claim` supersession
+ * unavailable, never unsound, so this tranche's practical effect is scoped
+ * to `sentinel_heuristic`.
+ *
+ * Never applies to `ESCALATE`: that has its own L3 authority path, and an
+ * inferred clean re-scan must not substitute for a pending human decision.
+ * Only `WARN`/`BLOCK` (which never reach L3, see below) are eligible.
+ * Correlation still excludes synthetic paths (`'unknown'`,
+ * `'claim_manifest'`) and still keys on `artifactPath`, not `artifactHash`
+ * (FX933): a real fix changes the file's content and therefore its hash,
+ * so hash equality would almost never fire for the case this targets.
  *
  * Two further scope notes (also post-review):
  *
@@ -97,6 +104,7 @@ import type { LedgerEntry } from "../../shared/types";
 
 export type ResolutionState =
   | "LIVE"
+  | "SUPERSEDED"
   | "ESCALATED_UNDECIDED"
   | "DECIDED_APPROVED"
   | "DECIDED_REJECTED";
@@ -112,9 +120,22 @@ export interface ResolutionProjection {
 
 const RESOLVABLE_VERDICTS = new Set(["WARN", "BLOCK", "ESCALATE"]);
 
+// Synthetic non-file identities that must never participate in path-based
+// correlation -- see the module doc's "Correlation still excludes" note.
+const SYNTHETIC_ARTIFACT_PATHS = new Set(["unknown", "claim_manifest"]);
+
 function sourceLedgerEntryIdOf(entry: LedgerEntry): number | null {
   const value = entry.payload?.sourceLedgerEntryId;
   return typeof value === "number" ? value : null;
+}
+
+function heuristicsEvaluatedOf(entry: LedgerEntry): number {
+  const value = entry.payload?.heuristicsEvaluated;
+  return typeof value === "number" ? value : 0;
+}
+
+function isSyntheticArtifactPath(artifactPath: string | undefined): boolean {
+  return artifactPath === undefined || SYNTHETIC_ARTIFACT_PATHS.has(artifactPath);
 }
 
 /**
@@ -179,12 +200,47 @@ function projectOne(source: LedgerEntry, sorted: LedgerEntry[]): ResolutionProje
     };
   }
 
-  // 3. No explicit-authority evidence at all. This tranche does not infer
-  //    resolution from later same-artifact verdicts — see the module
-  //    doc comment for why that inference was removed as unsound.
+  // 3. Content-based supersession (FX947, #367 tranche 3c) -- see below.
+  const superseded = projectContentSupersession(source, later);
+  if (superseded) return superseded;
+
+  // 4. No explicit-authority or content-based evidence at all. Stays LIVE.
   return {
     sourceEntryId: source.id,
     state: "LIVE",
     reason: "no explicit L3 escalation/decision evidence found for this entry",
+  };
+}
+
+/**
+ * Branch 3 of projectOne, extracted for readability. Eligibility and
+ * matching rules: see the module doc's "Content/pattern-based
+ * supersession" section (WARN/BLOCK only, same path + same engine, later
+ * entry must be a non-vacuous PASS, earliest qualifying match wins).
+ */
+function projectContentSupersession(
+  source: LedgerEntry,
+  later: LedgerEntry[],
+): ResolutionProjection | undefined {
+  const verdict = source.verificationResult || "";
+  if (verdict === "ESCALATE" || isSyntheticArtifactPath(source.artifactPath)) return undefined;
+
+  const supersedingPass = later.find(
+    (e) =>
+      e.eventType === "AUDIT_PASS" &&
+      e.artifactPath === source.artifactPath &&
+      e.verificationMethod === source.verificationMethod &&
+      heuristicsEvaluatedOf(e) > 0,
+  );
+  if (!supersedingPass) return undefined;
+
+  return {
+    sourceEntryId: source.id,
+    state: "SUPERSEDED",
+    resolvedByEntryId: supersedingPass.id,
+    reason:
+      `a later '${source.verificationMethod ?? "unknown"}' scan of the same artifact path ` +
+      `(entry #${supersedingPass.id}) evaluated a real, non-empty check set and returned a ` +
+      "clean PASS, with no explicit L3 decision on record for this entry",
   };
 }

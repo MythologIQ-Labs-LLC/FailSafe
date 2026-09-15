@@ -293,7 +293,14 @@ export class VerdictEngine {
                 sentinelConfidence: verdict.confidence,
                 payload: {
                     matchedPatterns: verdict.matchedPatterns,
-                    summary: verdict.summary
+                    summary: verdict.summary,
+                    // FX947 (#367 tranche 3c): count of checks this verdict actually
+                    // ran (matched or not), not just how many matched. A PASS with
+                    // zero here (FILE_DELETED, oversized-skip, unreadable content, or
+                    // an AGENT_CLAIM with no claimed artifacts) never really checked
+                    // anything and must not be trusted as evidence of resolution --
+                    // see AuditResolutionProjector's vacuous-pass guard.
+                    heuristicsEvaluated: verdict.heuristicResults.length
                 }
             });
 

@@ -33,11 +33,14 @@ suite('AuditResolutionProjector (FailSafe#367)', () => {
     assert.equal(proj.state, 'LIVE');
   });
 
-  test('a later PASS for the same artifactPath does NOT mark the entry resolved', () => {
-    // Regression guard for the reverted inference: VerdictEngine can never
-    // emit a PASS carrying the pattern that drove a WARN/BLOCK, so
-    // "later PASS, no pattern overlap" is true for virtually every real
-    // WARN/BLOCK and must not be treated as evidence of anything.
+  test('a later PASS for the same artifactPath with no evaluated-check evidence does NOT mark the entry resolved', () => {
+    // Regression guard for the originally-reverted inference: "later PASS,
+    // no pattern overlap" was never informative (PASS can never carry a
+    // critical/high/medium pattern by construction). Since FX947, a later
+    // PASS *can* supersede -- but only when it carries heuristicsEvaluated
+    // > 0. This fixture's PASS has no payload.heuristicsEvaluated at all
+    // (absent, same as the pre-FX947 payload shape), so it must still read
+    // as unproven -- not merely "no pattern overlap".
     const warn = entry({ eventType: 'AUDIT_FAIL', verificationResult: 'WARN', artifactPath: 'src/a.ts' });
     const pass = entry({ eventType: 'AUDIT_PASS', verificationResult: 'PASS', artifactPath: 'src/a.ts' });
     const [proj] = projectResolution([warn, pass]);
@@ -51,13 +54,118 @@ suite('AuditResolutionProjector (FailSafe#367)', () => {
     // completely different question and must not read as resolution.
     const block = entry({
       eventType: 'AUDIT_FAIL', verificationResult: 'BLOCK',
-      artifactPath: 'src/foo.ts', payload: { matchedPatterns: ['EXS001'] },
+      artifactPath: 'src/foo.ts', verificationMethod: 'existence_claim',
+      payload: { matchedPatterns: ['EXS001'] },
     });
     const routineScan = entry({
       eventType: 'AUDIT_PASS', verificationResult: 'PASS',
-      artifactPath: 'src/foo.ts', payload: { matchedPatterns: [] },
+      artifactPath: 'src/foo.ts', verificationMethod: 'sentinel_heuristic',
+      payload: { matchedPatterns: [], heuristicsEvaluated: 42 },
     });
     const [proj] = projectResolution([block, routineScan]);
+    assert.equal(proj.state, 'LIVE');
+  });
+
+  test('FX947: a same-path, same-engine, non-vacuous later PASS supersedes a WARN/BLOCK', () => {
+    const block = entry({
+      eventType: 'AUDIT_FAIL', verificationResult: 'BLOCK',
+      artifactPath: 'src/secret.ts', verificationMethod: 'sentinel_heuristic',
+      payload: { matchedPatterns: ['SEC001'] },
+    });
+    const cleanRescan = entry({
+      eventType: 'AUDIT_PASS', verificationResult: 'PASS',
+      artifactPath: 'src/secret.ts', verificationMethod: 'sentinel_heuristic',
+      payload: { matchedPatterns: [], heuristicsEvaluated: 12 },
+    });
+    const [proj] = projectResolution([block, cleanRescan]);
+    assert.equal(proj.state, 'SUPERSEDED');
+    assert.equal(proj.resolvedByEntryId, cleanRescan.id);
+  });
+
+  test('FX947: a same-path, same-engine later PASS with heuristicsEvaluated 0 (vacuous) does NOT supersede', () => {
+    // The defect this test pins: FILE_DELETED / oversized-skip / unreadable
+    // content all produce heuristicResults: [] -- and, pre-FX947, that was
+    // indistinguishable from "scanned and found nothing". A deleted file
+    // must never silently clear a real BLOCK on the same path.
+    const block = entry({
+      eventType: 'AUDIT_FAIL', verificationResult: 'BLOCK',
+      artifactPath: 'src/secret.ts', verificationMethod: 'sentinel_heuristic',
+      payload: { matchedPatterns: ['SEC001'] },
+    });
+    const deletedFileVacuousPass = entry({
+      eventType: 'AUDIT_PASS', verificationResult: 'PASS',
+      artifactPath: 'src/secret.ts', verificationMethod: 'sentinel_heuristic',
+      payload: { matchedPatterns: [], heuristicsEvaluated: 0 },
+    });
+    const [proj] = projectResolution([block, deletedFileVacuousPass]);
+    assert.equal(proj.state, 'LIVE');
+  });
+
+  test('FX947: an earlier vacuous PASS is skipped in favor of a later real PASS', () => {
+    const block = entry({
+      eventType: 'AUDIT_FAIL', verificationResult: 'BLOCK',
+      artifactPath: 'src/secret.ts', verificationMethod: 'sentinel_heuristic',
+      payload: { matchedPatterns: ['SEC001'] },
+    });
+    const vacuousPass = entry({
+      eventType: 'AUDIT_PASS', verificationResult: 'PASS',
+      artifactPath: 'src/secret.ts', verificationMethod: 'sentinel_heuristic',
+      payload: { matchedPatterns: [], heuristicsEvaluated: 0 },
+    });
+    const realPass = entry({
+      eventType: 'AUDIT_PASS', verificationResult: 'PASS',
+      artifactPath: 'src/secret.ts', verificationMethod: 'sentinel_heuristic',
+      payload: { matchedPatterns: [], heuristicsEvaluated: 12 },
+    });
+    const [proj] = projectResolution([block, vacuousPass, realPass]);
+    assert.equal(proj.state, 'SUPERSEDED');
+    assert.equal(proj.resolvedByEntryId, realPass.id);
+  });
+
+  test('FX947: content-based supersession never applies to ESCALATE, even with a matching clean re-scan', () => {
+    // ESCALATE has its own authority path through L3; an inferred clean
+    // re-scan must never silently substitute for a pending human decision.
+    const escalate = entry({
+      eventType: 'AUDIT_FAIL', verificationResult: 'ESCALATE',
+      artifactPath: 'src/secret.ts', verificationMethod: 'sentinel_heuristic',
+      payload: { matchedPatterns: ['SEC001'] },
+    });
+    const cleanRescan = entry({
+      eventType: 'AUDIT_PASS', verificationResult: 'PASS',
+      artifactPath: 'src/secret.ts', verificationMethod: 'sentinel_heuristic',
+      payload: { matchedPatterns: [], heuristicsEvaluated: 12 },
+    });
+    const [proj] = projectResolution([escalate, cleanRescan]);
+    assert.equal(proj.state, 'LIVE');
+  });
+
+  test('FX947: a later PASS on a different artifactPath does not supersede', () => {
+    const block = entry({
+      eventType: 'AUDIT_FAIL', verificationResult: 'BLOCK',
+      artifactPath: 'src/secret.ts', verificationMethod: 'sentinel_heuristic',
+      payload: { matchedPatterns: ['SEC001'] },
+    });
+    const otherFilePass = entry({
+      eventType: 'AUDIT_PASS', verificationResult: 'PASS',
+      artifactPath: 'src/other.ts', verificationMethod: 'sentinel_heuristic',
+      payload: { matchedPatterns: [], heuristicsEvaluated: 12 },
+    });
+    const [proj] = projectResolution([block, otherFilePass]);
+    assert.equal(proj.state, 'LIVE');
+  });
+
+  test('FX947: synthetic artifactPath identities never correlate, even with a matching later PASS', () => {
+    const block = entry({
+      eventType: 'AUDIT_FAIL', verificationResult: 'BLOCK',
+      artifactPath: 'unknown', verificationMethod: 'sentinel_heuristic',
+      payload: { matchedPatterns: ['SEC001'] },
+    });
+    const laterUnknownPass = entry({
+      eventType: 'AUDIT_PASS', verificationResult: 'PASS',
+      artifactPath: 'unknown', verificationMethod: 'sentinel_heuristic',
+      payload: { matchedPatterns: [], heuristicsEvaluated: 12 },
+    });
+    const [proj] = projectResolution([block, laterUnknownPass]);
     assert.equal(proj.state, 'LIVE');
   });
 
@@ -169,6 +277,23 @@ suite('AuditResolutionProjector (FailSafe#367)', () => {
     const forward = projectResolution([escalate, approved]);
     const reversed = projectResolution([approved, escalate]);
     assert.deepEqual(forward, reversed);
+  });
+
+  test('FX947: input order does not affect a SUPERSEDED result either', () => {
+    const block = entry({
+      eventType: 'AUDIT_FAIL', verificationResult: 'BLOCK',
+      artifactPath: 'src/secret.ts', verificationMethod: 'sentinel_heuristic',
+      payload: { matchedPatterns: ['SEC001'] },
+    });
+    const cleanRescan = entry({
+      eventType: 'AUDIT_PASS', verificationResult: 'PASS',
+      artifactPath: 'src/secret.ts', verificationMethod: 'sentinel_heuristic',
+      payload: { matchedPatterns: [], heuristicsEvaluated: 12 },
+    });
+    const forward = projectResolution([block, cleanRescan]);
+    const reversed = projectResolution([cleanRescan, block]);
+    assert.deepEqual(forward, reversed);
+    assert.equal(forward[0].state, 'SUPERSEDED');
   });
 
   test('entries with no artifactPath at all (malformed event payload) still resolve via explicit id linkage', () => {
