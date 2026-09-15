@@ -1,13 +1,15 @@
 /**
  * AuditResolutionProjector — FailSafe#367 resolution-linkage projection.
  *
- * NOT YET WIRED: this module has no production consumer. It is tranche 1 —
- * the identity and read-model — and the renderer that surfaces it lands in a
- * later tranche (see the FX927 row in docs/FEATURE_INDEX.md). Shipping a
- * correct, tested, zero-consumer module is itself a defect class this repo has
- * been burned by (the ACP tamper detector in #398 sat uncalled for months), so
- * this banner exists to keep that visible to the next reader rather than only
- * in a PR description.
+ * WIRED (since tranche 2, PR #419): `HubSnapshotService.buildAuditResolutionLog()`
+ * calls `projectResolution` and exposes it as `auditLog` on the hub snapshot;
+ * `governance.js` renders it via `renderResolutionLog()`/`resolutionBadge()`.
+ * This banner previously said "NOT YET WIRED" (true only through tranche 1)
+ * and was left stale for two further tranches before being caught here
+ * (FX947 review) -- the exact defect class it exists to prevent (the ACP
+ * tamper detector in #398 sat uncalled for months). Every `ResolutionState`
+ * added here must also be added to `resolutionBadge()`'s style map, or it
+ * renders as an unstyled fallback instead of a designed label.
  *
  * Pure read-model over soa_ledger entries. Never mutates the ledger: the
  * chain stays append-only, and a WARN/BLOCK/ESCALATE record is never
@@ -38,15 +40,9 @@
  *
  *   Half of this is now resolved (FX934, #367 tranche 3b):
  *   `LedgerEntry.verificationMethod` distinguishes `'existence_claim'`
- *   (AGENT_CLAIM events, routed through `validateClaim`) from
- *   `'sentinel_heuristic'` (every other event type, routed through
- *   `evaluateFileEvent`) instead of the single hardcoded literal both
- *   paths previously shared. This projector does not yet consume that
- *   field, and per-engine provenance alone does not make same-artifact
- *   comparison sound: the decision-driving-pattern problem below is
- *   unresolved, and even within the `'sentinel_heuristic'` engine a later
- *   PASS still cannot, by `determineDecision`'s own construction, carry
- *   the specific pattern that drove an earlier WARN/BLOCK.
+ *   (AGENT_CLAIM events) from `'sentinel_heuristic'` (every other event
+ *   type) instead of the single hardcoded literal both paths previously
+ *   shared -- see below for how this projector now consumes it.
  *
  * Content/pattern-based supersession is now reintroduced (FX947, #367
  * tranche 3c) -- narrower than either fix floated above, and without
