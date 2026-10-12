@@ -43,7 +43,7 @@ None that block planning the non-destructive target/status/fresh-install tranche
 **LD4a — The existing conformance probe is report-only.** `scripts/qor-conformance-probe.cjs` explicitly exits 0 even when a control is NOT-FALSIFIABLE, UNAVAILABLE, or INCONCLUSIVE. Its `version_boundary` row reports UNTESTED for a new target versus historical `TESTED_AGAINST`. Running that command without inspecting all returned rows is **not** evidence of a PASS. Keep the 0.169.0 tested-against anchor unchanged in this tranche; the separate conformance phase must inspect the machine-readable report, re-exercise all relevant negative fixtures on the real 0.176.1 wheel, and record a verifiable accepted result before changing the historical anchor.
 - Verification: `rg -n 'REPORT ONLY|process.exit\\(0\\)|versionBoundary|NOT.FALSIFIABLE|INCONCLUSIVE' FailSafe/extension/scripts/qor-conformance-probe.cjs` and `src/test/scripts/qorConformanceProbe.test.cjs`.
 
-**LD5 — Keep the scope small.** `QorLogicPackageInstaller.ts` is 250 lines and `QorLogicSkillIngestor.ts` is approximately at the same Section 4 Razor limit. Place pure target classification in a small sibling module; extract existing helpers or reduce complexity rather than exceeding 250 lines/file, 40 lines/function, or nesting depth 3.
+**LD5 — Keep the scope small.** `QorLogicPackageInstaller.ts` is 250 lines and `QorLogicSkillIngestor.ts` is approximately at the same Section 4 Razor limit. Their test suites are also already over length (`QorLogicPackageInstaller.test.ts` ~340 lines; `QorLogicSkillIngestor.test.ts` ~364 lines). Place pure target classification in a sibling module; split over-length test suites rather than adding lines to them. Preserve Section 4 limits: 250 lines/file, 40 lines/function, nesting depth ≤3.
 
 ## Phase 1: Add a tested, pure frozen-target status
 
@@ -53,7 +53,7 @@ None that block planning the non-destructive target/status/fresh-install tranche
 - `FailSafe/extension/src/qorlogic/frozen-target-status.ts` — new pure classifier with typed target states and explicit input/error semantics.
 - `FailSafe/extension/src/qorlogic/QorLogicPackageInstaller.ts` — surface the non-mutating observation without erasing the existing minimum/tested fields.
 - `FailSafe/extension/src/test/qorlogic/frozen-target-status.test.ts` — focused falsifying classifier tests.
-- `FailSafe/extension/src/test/qorlogic/QorLogicPackageInstaller.test.ts` — verify actual interpreter process outcomes map to correct states.
+- `FailSafe/extension/src/test/qorlogic/QorLogicPackageInstaller.test.ts` — preserve assertions but split the already-oversized suite if touched; add process-outcome tests to a focused under-250-line companion.
 
 ### Changes
 
@@ -76,7 +76,7 @@ None that block planning the non-destructive target/status/fresh-install tranche
 - `FailSafe/extension/src/qorlogic/QorLogicSkillIngestor.ts` — do not use `meetsFloor` as permission to install or reuse an untested divergent runtime.
 - `FailSafe/extension/src/extension/bootstrapWorkspace.ts` — replace `isInstalled()` as sole readiness evidence; report deferred mismatch in silent/auto mode.
 - `FailSafe/extension/src/extension/installSkillsHandler.ts` and relevant settings card/report — explain why a divergent environment was not overwritten and give an explicit supported next action.
-- `FailSafe/extension/src/test/qorlogic/{QorLogicPackageInstaller,QorLogicSkillIngestor}.test.ts` — process argument, side-effect and mismatch regression.
+- `FailSafe/extension/src/test/qorlogic/{QorLogicPackageInstaller,QorLogicSkillIngestor}.test.ts` — update existing assertions and split the already-oversized suites; add process argument, side-effect and mismatch cases in focused under-250-line tests.
 - Existing bootstrap test harness or a new narrow injection-test file — test public `runWorkspaceBootstrap()` against stubbed installer and VS Code UI.
 
 ### Changes
@@ -86,7 +86,7 @@ None that block planning the non-destructive target/status/fresh-install tranche
 3. Existing older/newer version: report a visible `version-mismatch` and stop downstream skill ingestion; **do not call** `install()` as a shortcut to downgrade/upgrade. Unknown probe: block mutation with actionable diagnostics.
 4. Preserve auto/silent/interactive differences: silent mode never installs; interactive mode may install only if confirmed absent and explicitly accepted; automatic mode may retain its current absent-package provisioning contract but never replace a known existing package.
 5. Preserve existing read-only artifact visibility as advisory. The frozen target mismatch is not by itself proof of broken ledger contents.
-6. Existing `QorLogicSkillIngestor.test.ts` contains a stale-version auto-upgrade regression for the old floor-only behavior. Update its semantics transparently to the new frozen-target decision; do not merely delete or weaken that test.
+6. Existing `QorLogicSkillIngestor.test.ts` contains a stale-version auto-upgrade regression for the old floor-only behavior. Move or update it transparently, with a stronger falsifier: below-floor installed version yields a visible mismatch and **zero pip mutations**. Do not merely delete or weaken that test.
 
 ### Unit tests (must fail on pre-change behavior)
 
