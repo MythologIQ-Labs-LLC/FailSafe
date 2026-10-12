@@ -40,6 +40,9 @@ None that block planning the non-destructive target/status/fresh-install tranche
 **LD4 — Preserve advisory consumer semantics.** `consumer/diagnostics.ts` already exposes `untested` as advisory and the adapter distinguishes `ok/unavailable/malformed/unsupported/stale`. A frozen-version mismatch must be visible in a distinct target-status field; do not mark otherwise-readable canonical artifacts malformed and do not call an untested version conformance-PASS.
 - Verification: `rg -n 'testedAgainst|matchesTested|untested|unsupported' FailSafe/extension/src/qorlogic/consumer/{types.ts,diagnostics.ts}`.
 
+**LD4a — The existing conformance probe is report-only.** `scripts/qor-conformance-probe.cjs` explicitly exits 0 even when a control is NOT-FALSIFIABLE, UNAVAILABLE, or INCONCLUSIVE. Its `version_boundary` row reports UNTESTED for a new target versus historical `TESTED_AGAINST`. Running that command without inspecting all returned rows is **not** evidence of a PASS. Keep the 0.169.0 tested-against anchor unchanged in this tranche; the separate conformance phase must inspect the machine-readable report, re-exercise all relevant negative fixtures on the real 0.176.1 wheel, and record a verifiable accepted result before changing the historical anchor.
+- Verification: `rg -n 'REPORT ONLY|process.exit\\(0\\)|versionBoundary|NOT.FALSIFIABLE|INCONCLUSIVE' FailSafe/extension/scripts/qor-conformance-probe.cjs` and `src/test/scripts/qorConformanceProbe.test.cjs`.
+
 **LD5 — Keep the scope small.** `QorLogicPackageInstaller.ts` is 250 lines and `QorLogicSkillIngestor.ts` is approximately at the same Section 4 Razor limit. Place pure target classification in a small sibling module; extract existing helpers or reduce complexity rather than exceeding 250 lines/file, 40 lines/function, or nesting depth 3.
 
 ## Phase 1: Add a tested, pure frozen-target status
@@ -115,7 +118,7 @@ npx mocha --ui tdd --timeout 15000 out/test/qorlogic/QorLogicPackageInstaller.te
 node scripts/run-node-tests.cjs
 ```
 
-Additional targeted bootstrap tests should be appended to the local mocha invocation when the test seam is chosen by the auditor. A real PyPI wheel test requires reachable package registry or a previously verified local wheel; otherwise record BLOCKED, not PASS.
+Additional targeted bootstrap tests should be appended to the local mocha invocation when the test seam is chosen by the auditor. A real PyPI wheel test requires reachable package registry or a previously verified local wheel; otherwise record BLOCKED, not PASS. The conformance script is report-only: run `node scripts/qor-conformance-probe.cjs --json` and inspect each row's result plus falsifier evidence; exit code 0 alone never constitutes PASS.
 
 ## Phase order rationale and release boundary
 
