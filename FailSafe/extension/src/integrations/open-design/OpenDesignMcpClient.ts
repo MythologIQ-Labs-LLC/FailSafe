@@ -89,23 +89,14 @@ export class OpenDesignMcpClient extends McpClientHost {
   }
 
   /**
-   * B-OD-8 one-shot approval token. Set ONLY by executeApprovedCreateArtifact
-   * (invoked by OpenDesignL3Executor after an APPROVED L3 decision) and consumed
-   * by the next create_artifact callRaw. Narrowly scoped mutable state — never
-   * exposed; the only way to flip it true is the sanctioned approved-execute path.
-   */
-  private _pendingApprovedWrite = false;
-
-  /**
-   * B-OD-8: the ONLY sanctioned entry for create_artifact. Sets the one-shot
-   * token then performs the call; the token is consumed in callRaw before the
-   * transport call. Called by OpenDesignL3Executor post-APPROVAL.
+   * Issue #481: No client-local boolean can establish an L3 decision.
+   * Artifact creation remains disabled until an independent, subject-bound
+   * approval receipt verifier is connected at this boundary.
    */
   async executeApprovedCreateArtifact(
-    args: Record<string, unknown>,
+    _args: Record<string, unknown>,
   ): Promise<OpenDesignToolCallResult> {
-    this._pendingApprovedWrite = true;
-    return this.callRaw('create_artifact', args);
+    throw new Error('WRITE_TOOL_NOT_APPROVED: verified L3 receipt enforcement is not available');
   }
 
   /**
@@ -121,12 +112,7 @@ export class OpenDesignMcpClient extends McpClientHost {
     args: Record<string, unknown>,
   ): Promise<OpenDesignToolCallResult> {
     if (OpenDesignMcpAllowlist.isL3GatedWrite(name)) {
-      if (!this._pendingApprovedWrite) {
-        throw new Error(
-          `WRITE_TOOL_NOT_APPROVED: open-design ${name} requires L3 approval (B-OD-8) — route via /api/actions/open-design-create-artifact`,
-        );
-      }
-      this._pendingApprovedWrite = false; // consume one-shot token before the call
+      throw new Error('WRITE_TOOL_NOT_APPROVED: verified L3 receipt enforcement is not available');
     }
     return (await super.callRaw(name, args)) as OpenDesignToolCallResult;
   }
