@@ -49,11 +49,12 @@ export function registerJiraImportCommand(context: vscode.ExtensionContext): voi
         p.labels.length && `labels: ${p.labels.join(', ')}`,
         p.sourceUrl && `source: ${p.sourceUrl}`,
       ].filter(Boolean).join(' · ');
-      // Preview only — explicitly NOT committed.
-      vscode.window.showInformationMessage(
-        `Intent preview (not committed) — ${p.intent}${meta ? `\n${meta}` : ''}`,
-        { modal: false },
-      );
+      // #480: inspectable, unsaved preview. No canonical state mutation.
+      const title = `Jira issue preview (uncommitted)`;
+      const markdown = [`# ${title}`, '', '> This is a read-only review. No FailSafe intent or backlog item was created.', '', `## ${p.intent}`, '', meta, ''].join('\\n');
+      const document = await vscode.workspace.openTextDocument({ language: 'markdown', content: markdown });
+      await vscode.window.showTextDocument(document, { preview: true });
+      vscode.window.showInformationMessage(`${title}: opened review document; not imported or saved.`);
     }),
   );
 }
