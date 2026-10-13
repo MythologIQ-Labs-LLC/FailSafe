@@ -9,7 +9,7 @@ import { IntegrationCatalogRenderer } from '../../../src/roadmap/ui/modules/inte
 
 const CATALOG = {
   integrations: [
-    { id: 'continue', label: 'Continue', category: 'Agent CLI', summary: 'Governed Continue runs.', docsId: 'continue', configHint: 'Set API key.', enabled: true, configured: true, state: 'active', missingKeys: [] },
+    { id: 'continue', label: 'Continue', category: 'Agent CLI', summary: 'Governed Continue runs.', docsId: 'continue', configHint: 'Set API key.', enabled: true, configured: true, state: 'configured-unverified', missingKeys: [] },
     { id: 'aider', label: 'Aider', category: 'Agent CLI', summary: 'Governed Aider runs.', docsId: 'aider', configHint: 'Enable Aider.', enabled: false, configured: false, state: 'disabled', missingKeys: [] },
     { id: 'jira', label: 'Jira', category: 'Issue Tracker', summary: 'Imports Jira issues.', docsId: 'jira', configHint: 'Set token.', enabled: true, configured: false, state: 'needs-config', missingKeys: ['failsafe.integrations.jira.apiToken'] },
   ],
@@ -40,7 +40,7 @@ suite('IntegrationCatalogRenderer (GH #167, jsdom structural)', () => {
     try {
       await new IntegrationCatalogRenderer('integrations').render();
       assert.equal(ctx.doc.querySelectorAll('.cc-intcat-card').length, 3);
-      assert.equal(ctx.doc.querySelectorAll('.cc-intcat-pill-active').length, 1, 'continue active');
+      assert.equal(ctx.doc.querySelectorAll('.cc-intcat-pill-configured').length, 1, 'continue configured, not health-proven');
       assert.equal(ctx.doc.querySelectorAll('.cc-intcat-pill-needs').length, 1, 'jira needs-config');
       assert.equal(ctx.doc.querySelectorAll('.cc-intcat-pill-disabled').length, 1, 'aider disabled');
       // two distinct category headers (Agent CLI, Issue Tracker)
