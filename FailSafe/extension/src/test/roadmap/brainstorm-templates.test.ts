@@ -58,6 +58,12 @@ suite('brainstorm-templates (FX214)', () => {
     assert.match(html, /class="cc-btn cc-btn--danger cc-bs-clear"/);
   });
 
+  test('FX305 Mind Map Undo/Redo are disabled until their async listeners bind', () => {
+    const html = renderShell();
+    assert.match(html, /class="cc-btn cc-bs-undo"[^>]*disabled/);
+    assert.match(html, /class="cc-btn cc-bs-redo"[^>]*disabled/);
+  });
+
   test('FX214 renderShell — includes brainstorm canvas mount point', () => {
     const html = renderShell();
     assert.match(html, /class="cc-canvas cc-brainstorm-canvas"/);
