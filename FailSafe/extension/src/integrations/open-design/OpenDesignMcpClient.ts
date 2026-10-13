@@ -72,6 +72,11 @@ export class OpenDesignMcpClient extends McpClientHost {
       // (This closure is passed to super() and cannot reference `this`; the
       //  one-shot approval-token check therefore lives in the callRaw override.)
       preCallGate: (name) => {
+        // Fail closed on capabilities added upstream until reviewed (#474).
+        // A tool returned by listTools is not automatically read-only.
+        if (!OpenDesignMcpAllowlist.isReadOnly(name) && !OpenDesignMcpAllowlist.isKnownWriteTool(name)) {
+          throw new Error(`TOOL_NOT_ALLOWLISTED: open-design ${name} is not verified for this adapter`);
+        }
         if (OpenDesignMcpAllowlist.isDestructive(name)) {
           throw new Error(
             `WRITE_TOOL_NOT_ENABLED: open-design destructive write tools (${name}) deferred beyond v1.2 — see plan-b-od-8-create-artifact-l3.md`,
