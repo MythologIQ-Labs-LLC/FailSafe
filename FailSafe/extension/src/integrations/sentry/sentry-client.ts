@@ -15,7 +15,7 @@ const SENTRY_API = 'https://sentry.io';
 
 export interface SentryGetFn {
   (url: string, headers: Record<string, string>):
-    Promise<{ status: number; body: string }>;
+    Promise<{ status: number; body: string; headers?: Record<string, string | string[] | undefined> }>;
 }
 
 export interface SentryOptions {
@@ -27,6 +27,8 @@ export interface SentryOptions {
   apiBaseUrl?: string;
   /** `is:unresolved` by default — limits import to live regressions. */
   query?: string;
+  /** Bounded multi-page import. Default 10, hard cap 20. */
+  maxPages?: number;
 }
 
 export interface SentryFetchResult {
@@ -39,6 +41,9 @@ export interface SentryFetchResult {
   error?: string;
   /** #241 (FX915): risk-sink writes that threw during import (never loop-aborting). */
   failed?: number;
+  /** Successfully persisted sink rows, distinct from the fetched unique count. */
+  persisted?: number;
+  pagesFetched?: number;
 }
 
 /** Pure builder for the project-issues path + query. The project-issues
@@ -60,6 +65,24 @@ export function buildIssuesPath(org: string, project: string, opts: { environmen
  * when token/org/project are not all configured. The token never appears in
  * the result.
  */
+/** Returns the next page only when Sentry explicitly marks next results true.
+ * Never follow arbitrary off-origin or unrelated-path Link destinations with a Bearer token. */
+export function nextSentryPage(link: string | undefined, currentUrl: string, firstUrl: string): string | null {
+  if (!link) return null;
+  for (const part of link.split(/,(?=\\s*<)/)) {
+    if (!/\\brel="?next"?/i.test(part) || !/\\bresults="?true"?/i.test(part)) continue;
+    const match = part.match(/<([^>]+)>/);
+    if (!match) throw new Error('Malformed Sentry pagination Link');
+    const next = new URL(match[1], currentUrl);
+    const first = new URL(firstUrl);
+    if (next.protocol !== 'https:' || next.origin !== first.origin || next.pathname !== first.pathname) {
+      throw new Error('Untrusted Sentry pagination destination');
+    }
+    return next.toString();
+  }
+  return null;
+}
+
 export async function fetchSentryRisks(
   opts: SentryOptions,
   get: SentryGetFn,
@@ -69,29 +92,66 @@ export async function fetchSentryRisks(
     return { ok: true, localOnly: true, risks: [], count: 0, error: 'token, org, and project must all be configured' };
   }
 
-  const base = (opts.apiBaseUrl || SENTRY_API).replace(/\/$/, '');
-  const url = `${base}${buildIssuesPath(opts.org.trim(), opts.project.trim(), { environment: opts.environment, query: opts.query })}`;
-  try {
-    const res = await get(url, {
-      Accept: 'application/json',
-      Authorization: `Bearer ${opts.token.trim()}`,
-      'User-Agent': 'FailSafe',
-    });
-    if (res.status === 429) return { ok: false, status: 429, risks: [], count: 0, error: 'Sentry rate limit reached (HTTP 429).' };
-    if (res.status === 401 || res.status === 403) {
-      return { ok: false, status: res.status, risks: [], count: 0, error: 'Sentry auth failed — check the token / org / project scope.' };
-    }
-    if (res.status === 404) return { ok: false, status: 404, risks: [], count: 0, error: 'Sentry org/project not found (or no access).' };
-    if (res.status < 200 || res.status >= 300) return { ok: false, status: res.status, risks: [], count: 0, error: `Sentry returned HTTP ${res.status}.` };
-
-    let json: unknown;
-    try { json = JSON.parse(res.body); } catch { return { ok: false, risks: [], count: 0, error: 'Invalid JSON from Sentry.' }; }
-    const issues = parseIssuesResponse(json, opts.environment?.trim());
-    const risks = sentryIssuesToRisks(issues);
-    return { ok: true, risks, count: risks.length, status: res.status };
-  } catch (e) {
-    return { ok: false, risks: [], count: 0, error: e instanceof Error ? e.message : String(e) };
+  const base = (opts.apiBaseUrl || SENTRY_API).replace(/\\/$/, '');
+  const firstUrl = `${base}${buildIssuesPath(opts.org.trim(), opts.project.trim(), { environment: opts.environment, query: opts.query })}`;
+  // Do not transmit credentials over HTTP, including for an operator-defined base URL.
+  if (new URL(firstUrl).protocol !== 'https:') {
+    return { ok: false, risks: [], count: 0, error: 'Sentry API URL must use HTTPS.' };
   }
+  const maxPages = Math.max(1, Math.min(20, Number.isSafeInteger(opts.maxPages) ? opts.maxPages! : 10));
+  const visited = new Set<string>();
+  const issues: unknown[] = [];
+  let currentUrl: string | null = firstUrl;
+  let pagesFetched = 0;
+
+  while (currentUrl) {
+    if (visited.has(currentUrl)) {
+      return { ok: false, risks: [], count: 0, pagesFetched, error: 'Sentry pagination cursor loop; no risks imported.' };
+    }
+    visited.add(currentUrl);
+    let res: Awaited<ReturnType<SentryGetFn>>;
+    try {
+      res = await get(currentUrl, {
+        Accept: 'application/json',
+        Authorization: `Bearer ${opts.token.trim()}`,
+        'User-Agent': 'FailSafe',
+      });
+    } catch {
+      // Transport exceptions sometimes echo request URLs/headers. Do not echo secrets.
+      return { ok: false, risks: [], count: 0, pagesFetched, error: 'Sentry transport failed; no risks imported.' };
+    }
+    if (res.status === 429) return { ok: false, status: 429, risks: [], count: 0, pagesFetched, error: 'Sentry rate limit reached (HTTP 429); no risks imported.' };
+    if (res.status === 401 || res.status === 403) {
+      return { ok: false, status: res.status, risks: [], count: 0, pagesFetched, error: 'Sentry auth failed — check token/project scope; no risks imported.' };
+    }
+    if (res.status === 404) return { ok: false, status: 404, risks: [], count: 0, pagesFetched, error: 'Sentry org/project not found (or no access).' };
+    if (res.status < 200 || res.status >= 300) {
+      return { ok: false, status: res.status, risks: [], count: 0, pagesFetched, error: `Sentry returned HTTP ${res.status}; no risks imported.` };
+    }
+
+    let page: unknown;
+    try { page = JSON.parse(res.body); } catch {
+      return { ok: false, risks: [], count: 0, pagesFetched, error: 'Invalid JSON from Sentry; no risks imported.' };
+    }
+    if (!Array.isArray(page)) {
+      return { ok: false, risks: [], count: 0, pagesFetched, error: 'Unexpected Sentry issue list; no risks imported.' };
+    }
+    issues.push(...page);
+    pagesFetched++;
+    let next: string | null;
+    try {
+      const rawLink = res.headers?.link ?? res.headers?.Link;
+      next = nextSentryPage(Array.isArray(rawLink) ? rawLink.join(',') : rawLink, currentUrl, firstUrl);
+    } catch {
+      return { ok: false, risks: [], count: 0, pagesFetched, error: 'Untrusted or malformed Sentry pagination; no risks imported.' };
+    }
+    if (next && pagesFetched >= maxPages) {
+      return { ok: false, risks: [], count: 0, pagesFetched, error: 'Sentry pagination limit reached; no partial risks imported.' };
+    }
+    currentUrl = next;
+  }
+  const risks = sentryIssuesToRisks(parseIssuesResponse(issues, opts.environment?.trim()));
+  return { ok: true, risks, count: risks.length, pagesFetched, status: 200 };
 }
 
 /**
@@ -116,7 +176,7 @@ export async function importSentryRisks(
         failed++;
       }
     }
-    return { ...result, failed };
+    return { ...result, failed, persisted: result.risks.length - failed };
   }
   return result;
 }
@@ -127,11 +187,15 @@ export const defaultSentryGet: SentryGetFn = (url, headers) =>
     try {
       const u = new URL(url);
       const req = https.request(
-        { hostname: u.hostname, path: u.pathname + u.search, method: 'GET', headers, timeout: 8000 },
+        { hostname: u.hostname, port: u.port ? Number(u.port) : undefined, path: u.pathname + u.search, method: 'GET', headers, timeout: 8000 },
         (res) => {
           const chunks: Buffer[] = [];
           res.on('data', (c) => chunks.push(c as Buffer));
-          res.on('end', () => resolve({ status: res.statusCode ?? 0, body: Buffer.concat(chunks).toString('utf8') }));
+          res.on('end', () => resolve({
+            status: res.statusCode ?? 0,
+            body: Buffer.concat(chunks).toString('utf8'),
+            headers: { link: res.headers.link },
+          }));
         },
       );
       req.on('timeout', () => req.destroy(new Error('timeout')));
