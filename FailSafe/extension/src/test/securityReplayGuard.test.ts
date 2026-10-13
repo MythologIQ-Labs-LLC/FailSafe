@@ -92,3 +92,38 @@ describe('SecurityReplayGuard persistence failure semantics (#472)', () => {
     }
   });
 });
+
+describe('SecurityReplayGuard fail-closed store health (#472)', () => {
+  it('rejects all authorizations when existing store is corrupt', () => {
+    const root = mkTempDir('failsafe-replay-corrupt-');
+    const storeDir = path.join(root, '.failsafe', 'security');
+    fs.mkdirSync(storeDir, { recursive: true });
+    fs.writeFileSync(path.join(storeDir, 'nonces.json'), '{invalid json');
+    const guard = new SecurityReplayGuard(root);
+    try {
+      assert.strictEqual(guard.validateNonce('a'.repeat(64)).reason, 'persistence_error');
+      assert.throws(() => guard.generateNonce(), /fail-closed persistence state/);
+    } finally {
+      guard.dispose();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects new issues and all subsequent consumes following failed consumption persistence', () => {
+    const root = mkTempDir('failsafe-replay-unhealthy-');
+    const guard = new SecurityReplayGuard(root);
+    const nonce = guard.generateNonce();
+    const store = path.join(root, '.failsafe', 'security', 'nonces.json');
+    fs.unlinkSync(store);
+    fs.mkdirSync(store);
+    try {
+      assert.strictEqual(guard.consumeNonce(nonce).reason, 'persistence_error');
+      assert.strictEqual(guard.validateNonce(nonce).reason, 'persistence_error');
+      assert.throws(() => guard.generateNonce(), /fail-closed persistence state/);
+    } finally {
+      fs.rmSync(store, { recursive: true, force: true });
+      guard.dispose();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
