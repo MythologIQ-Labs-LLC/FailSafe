@@ -39,6 +39,8 @@ export interface SentryFetchResult {
   error?: string;
   /** #241 (FX915): risk-sink writes that threw during import (never loop-aborting). */
   failed?: number;
+  /** Number of risk records the sink actually accepted, not fetched count. */
+  persisted?: number;
 }
 
 /** Pure builder for the project-issues path + query. The project-issues
@@ -116,7 +118,7 @@ export async function importSentryRisks(
         failed++;
       }
     }
-    return { ...result, failed };
+    return { ...result, failed, persisted: result.risks.length - failed };
   }
   return result;
 }
