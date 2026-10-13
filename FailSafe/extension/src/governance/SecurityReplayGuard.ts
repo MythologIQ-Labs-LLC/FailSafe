@@ -31,7 +31,7 @@ export interface NonceRecord {
 
 export interface NonceValidationResult {
   valid: boolean;
-  reason?: "not_found" | "expired" | "already_used" | "invalid_format";
+  reason?: "not_found" | "expired" | "already_used" | "invalid_format" | "persistence_error";
   record?: NonceRecord;
 }
 
@@ -86,7 +86,10 @@ export class SecurityReplayGuard {
     };
 
     this.nonces.set(nonce, record);
-    this.saveNonces();
+    try { this.saveNonces(); } catch (error) {
+      this.nonces.delete(nonce);
+      throw error;
+    }
 
     this.logger.debug("Generated nonce", {
       nonce: nonce.substring(0, 8) + "...",
@@ -140,7 +143,10 @@ export class SecurityReplayGuard {
     record.consumedBy = consumedBy;
 
     this.nonces.set(nonce, record);
-    this.saveNonces();
+    try { this.saveNonces(); } catch (error) {
+      this.logger.error("Refusing nonce consumption: durable write failed", error);
+      return { valid: false, reason: "persistence_error" };
+    }
 
     this.logger.debug("Consumed nonce", {
       nonce: nonce.substring(0, 8) + "...",
@@ -241,15 +247,15 @@ export class SecurityReplayGuard {
    * Save nonces to persistent storage
    */
   private saveNonces(): void {
+    const records = Array.from(this.nonces.values());
+    const tempPath = this.nonceStorePath + "." + crypto.randomBytes(8).toString("hex") + ".tmp";
     try {
-      const records = Array.from(this.nonces.values());
-      fs.writeFileSync(
-        this.nonceStorePath,
-        JSON.stringify(records, null, 2),
-        "utf8",
-      );
+      fs.writeFileSync(tempPath, JSON.stringify(records, null, 2), { encoding: "utf8", flag: "wx", mode: 0o600 });
+      fs.renameSync(tempPath, this.nonceStorePath);
     } catch (error) {
+      try { fs.unlinkSync(tempPath); } catch { /* May not have created the temp file. */ }
       this.logger.error("Failed to save nonce store", error);
+      throw error;
     }
   }
 
@@ -260,7 +266,7 @@ export class SecurityReplayGuard {
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
     }
-    this.saveNonces();
+    try { this.saveNonces(); } catch (error) { this.logger.error("Nonce store disposal persistence failed", error); }
     this.nonces.clear();
   }
 }
