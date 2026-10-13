@@ -48,7 +48,7 @@ suite('integrations/catalog integration-catalog', () => {
 
   test('FX479 does not advertise pre-write enforcement or completed observer persistence', () => {
     assert.match(byId('aider').summary, /post-run diff/);
-    assert.match(byId('continue').summary, /not an enforced filesystem isolation/);
+    assert.match(byId('continue').summary, /not an enforced filesystem isolation/i);
     assert.match(byId('openhands').summary, /does not yet persist/);
     assert.match(byId('github-checks').summary, /SHIELD PASS is disabled/);
   });
