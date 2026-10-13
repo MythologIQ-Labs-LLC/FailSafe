@@ -69,8 +69,8 @@ export function buildIssuesPath(org: string, project: string, opts: { environmen
  * Never follow arbitrary off-origin or unrelated-path Link destinations with a Bearer token. */
 export function nextSentryPage(link: string | undefined, currentUrl: string, firstUrl: string): string | null {
   if (!link) return null;
-  for (const part of link.split(/,(?=\\s*<)/)) {
-    if (!/\\brel="?next"?/i.test(part) || !/\\bresults="?true"?/i.test(part)) continue;
+  for (const part of link.split(/,(?=\s*<)/)) {
+    if (!/\brel="?next"?/i.test(part) || !/\bresults="?true"?/i.test(part)) continue;
     const match = part.match(/<([^>]+)>/);
     if (!match) throw new Error('Malformed Sentry pagination Link');
     const next = new URL(match[1], currentUrl);
@@ -92,7 +92,7 @@ export async function fetchSentryRisks(
     return { ok: true, localOnly: true, risks: [], count: 0, error: 'token, org, and project must all be configured' };
   }
 
-  const base = (opts.apiBaseUrl || SENTRY_API).replace(/\\/$/, '');
+  const base = (opts.apiBaseUrl || SENTRY_API).replace(/\/$/, '');
   const firstUrl = `${base}${buildIssuesPath(opts.org.trim(), opts.project.trim(), { environment: opts.environment, query: opts.query })}`;
   // Do not transmit credentials over HTTP, including for an operator-defined base URL.
   if (new URL(firstUrl).protocol !== 'https:') {
