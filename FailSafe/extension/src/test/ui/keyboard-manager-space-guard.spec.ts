@@ -94,6 +94,9 @@ test("FailSafe#305 — Space on the focused Mind Map UNDO button retains native 
   await gotoMindmap(page, controller.url);
   await installSpies(page);
 
+  // The shell appears before fetchGraph resolves and toolbar listeners bind.
+  // Focus only after Undo becomes keyboard-operational.
+  await expect(page.locator("#workspace .cc-bs-undo")).toBeEnabled();
   await page.locator("#workspace .cc-bs-undo").focus();
   await page.keyboard.press("Space");
 
@@ -108,6 +111,7 @@ test("FailSafe#305 — Space push-to-talk still activates when focus is on the M
   await gotoMindmap(page, controller.url);
   await installSpies(page);
 
+  await expect(page.locator("#workspace .cc-bs-undo")).toBeEnabled();
   const canvas = page.locator("#workspace .cc-brainstorm-canvas");
   await canvas.click({ position: { x: 10, y: 10 } });
 
