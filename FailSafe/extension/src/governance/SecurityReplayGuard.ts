@@ -41,6 +41,7 @@ export class SecurityReplayGuard {
   private nonces: Map<string, NonceRecord> = new Map();
   private readonly defaultTtlMs: number;
   private cleanupInterval?: NodeJS.Timeout;
+  private storeHealthy = true;
 
   constructor(
     rootOrSecurityDir: string,
@@ -74,6 +75,7 @@ export class SecurityReplayGuard {
    * Generate a new nonce for a governance request
    */
   generateNonce(metadata?: Record<string, unknown>, ttlMs?: number): string {
+    this.requireHealthyStore();
     const nonce = crypto.randomBytes(32).toString("hex");
     const now = Date.now();
     const ttl = ttlMs || this.defaultTtlMs;
@@ -88,6 +90,7 @@ export class SecurityReplayGuard {
     this.nonces.set(nonce, record);
     try { this.saveNonces(); } catch (error) {
       this.nonces.delete(nonce);
+      this.storeHealthy = false;
       throw error;
     }
 
@@ -103,7 +106,8 @@ export class SecurityReplayGuard {
    * Validate a nonce without consuming it
    */
   validateNonce(nonce: string): NonceValidationResult {
-    if (!nonce || typeof nonce !== "string" || nonce.length !== 64) {
+    if (!this.storeHealthy) return { valid: false, reason: "persistence_error" };
+    if (!nonce || typeof nonce !== "string" || !/^[0-9a-f]{64}$/.test(nonce)) {
       return { valid: false, reason: "invalid_format" };
     }
 
@@ -144,6 +148,7 @@ export class SecurityReplayGuard {
 
     this.nonces.set(nonce, record);
     try { this.saveNonces(); } catch (error) {
+      this.storeHealthy = false;
       this.logger.error("Refusing nonce consumption: durable write failed", error);
       return { valid: false, reason: "persistence_error" };
     }
@@ -215,7 +220,7 @@ export class SecurityReplayGuard {
     }
 
     if (removed > 0) {
-      this.saveNonces();
+      try { this.saveNonces(); } catch (error) { this.storeHealthy = false; throw error; }
       this.logger.debug(`Cleaned up ${removed} nonces`);
     }
 
@@ -238,15 +243,21 @@ export class SecurityReplayGuard {
         this.logger.info(`Loaded ${this.nonces.size} nonces from store`);
       }
     } catch (error) {
-      this.logger.warn("Failed to load nonce store, starting fresh", error);
+      this.logger.error("Nonce store unreadable: refusing replay authorization", error);
       this.nonces.clear();
+      this.storeHealthy = false;
     }
   }
 
   /**
    * Save nonces to persistent storage
    */
+  private requireHealthyStore(): void {
+    if (!this.storeHealthy) throw new Error("Nonce store unavailable: fail-closed persistence state");
+  }
+
   private saveNonces(): void {
+    this.requireHealthyStore();
     const records = Array.from(this.nonces.values());
     const tempPath = this.nonceStorePath + "." + crypto.randomBytes(8).toString("hex") + ".tmp";
     try {
