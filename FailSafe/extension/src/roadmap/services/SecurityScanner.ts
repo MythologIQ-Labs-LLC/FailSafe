@@ -362,7 +362,10 @@ export class SecurityScanner {
       scanner: scannerLabel as "garak" | "promptfoo" | "both",
       timestamp: new Date().toISOString(),
       findings: allFindings,
-      riskGrade: this.calculateRiskGrade(allFindings),
+      // A failed/inconclusive child scanner has L3 risk even if its diagnostic
+      // finding is informational. Never downgrade it to L1 while combining.
+      riskGrade: results.some(r => r.riskGrade === "L3")
+        ? "L3" : this.calculateRiskGrade(allFindings),
       recommendedAction: allPassed
         ? "approve"
         : allFindings.some(f => f.severity === "critical" || f.severity === "high")
