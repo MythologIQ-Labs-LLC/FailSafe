@@ -90,3 +90,21 @@ export function buildCheckRunPayload(input: CheckRunInput): CheckRunPayload {
   if (input.detailsUrl?.trim()) payload.details_url = input.detailsUrl.trim();
   return payload;
 }
+
+/**
+ * Build a deliberately non-authoritative operator advisory. No native Qor
+ * verdict is consulted here, so this must never publish under the required
+ * SHIELD check name or with a GitHub success conclusion (#476).
+ */
+export function buildManualAdvisoryPayload(headSha: string): CheckRunPayload {
+  return {
+    name: 'FailSafe Manual Advisory',
+    head_sha: headSha,
+    status: 'completed',
+    conclusion: 'neutral',
+    output: {
+      title: 'Manual advisory (not a verified SHIELD gate)',
+      summary: 'Operator-published notice only. No independent Qor audit, substantiation, or merge approval is attested.',
+    },
+  };
+}
