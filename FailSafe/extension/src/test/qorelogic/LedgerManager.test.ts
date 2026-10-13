@@ -68,7 +68,7 @@ suite('LedgerManager (FX248) — SOA Ledger append-only chain', () => {
   test('FX248 appendEntry — entryHash is 64-char hex (sha256)', async () => {
     const e = await mgr.appendEntry({ eventType: 'AUDIT_PASS', agentDid: 'did:t:a' });
     assert.match(e.entryHash, /^[0-9a-f]{64}$/);
-    assert.match(e.signature, /^[0-9a-f]+$/);
+    assert.match(e.signature, /^v2:[0-9a-f]{64}$/);
   });
 
   test('FX248 appendEntry — payload preserved through round-trip', async () => {
@@ -130,6 +130,21 @@ suite('LedgerManager (FX248) — SOA Ledger append-only chain', () => {
   test('FX248 verifyChain — clean chain validates true', async () => {
     await mgr.appendEntry({ eventType: 'AUDIT_PASS', agentDid: 'did:t:a' });
     await mgr.appendEntry({ eventType: 'AUDIT_FAIL', agentDid: 'did:t:b' });
+    assert.equal(mgr.verifyChain(), true);
+  });
+
+  test('v2: modifying a verdict, risk, trust, or audit field breaks the HMAC chain', async () => {
+    const db = mgr.getDatabase();
+    const fields = ['verification_result', 'risk_grade', 'agent_trust_at_action', 'overseer_decision', 'gdpr_trigger'];
+    for (const field of fields) {
+      const e = await mgr.appendEntry({ eventType: 'AUDIT_PASS', agentDid: 'did:t:a', verificationResult: 'PASS', riskGrade: 'L2', agentTrustAtAction: 0.8, overseerDecision: 'APPROVED', gdprTrigger: false });
+      assert.equal(mgr.verifyChain(), true);
+      db.prepare(`UPDATE soa_ledger SET ${field} = ? WHERE id = ?`).run(field === 'gdpr_trigger' ? 1 : 'tampered', e.id);
+      assert.equal(mgr.verifyChain(), false, `${field} must be authenticated`);
+      // Restore only in fixture to allow the next tamper case.
+      const original = { verification_result: 'PASS', risk_grade: 'L2', agent_trust_at_action: 0.8, overseer_decision: 'APPROVED', gdpr_trigger: 0 } as Record<string, string | number>;
+      db.prepare(`UPDATE soa_ledger SET ${field} = ? WHERE id = ?`).run(original[field], e.id);
+    }
     assert.equal(mgr.verifyChain(), true);
   });
 
