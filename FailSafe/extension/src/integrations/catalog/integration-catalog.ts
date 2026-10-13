@@ -54,7 +54,8 @@ export interface IntegrationStatus {
   configHint: string;
   enabled: boolean;
   configured: boolean;
-  /** Derived display state: active (on + configured) / needs-config (on + missing
+  /** Derived configuration-only state: configured-unverified (on + keys present) /
+   *  needs-config (on + missing
    *  required keys) / disabled (off). */
   state: IntegrationConfigState;
   /** The required keys that are still empty — names only, never values. Lets the
@@ -224,7 +225,7 @@ export function buildIntegrationStatus(
   const state: IntegrationConfigState = !enabled
     ? 'disabled'
     : configured
-      ? 'active'
+      ? 'configured-unverified'
       : 'needs-config';
   return {
     id: descriptor.id,
