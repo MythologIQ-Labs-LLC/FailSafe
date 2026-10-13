@@ -42,9 +42,6 @@ suite('github-checks map (#96)', () => {
 });
 
 suite('github-checks client (#96)', () => {
-  const okBody = JSON.stringify({ id: 9988 });
-  const ctx = { remoteUrl: 'https://github.com/acme/failsafe.git', headSha: 'deadbeef' };
-
   test('manual PASS is rejected before any network call, even with credentials', async () => {
     let called = false;
     const post: GitHubPostFn = async () => { called = true; return { status: 201, body: okBody }; };
@@ -54,17 +51,20 @@ suite('github-checks client (#96)', () => {
     assert.equal(called, false);
   });
 
+  const okBody = JSON.stringify({ id: 9988 });
+  const ctx = { remoteUrl: 'https://github.com/acme/failsafe.git', headSha: 'deadbeef' };
+
   test('disabled → local-only, NO network', async () => {
     let called = false;
     const post: GitHubPostFn = async () => { called = true; return { status: 201, body: okBody }; };
-    const r = await publishCheckRun('PASS', ctx, { enabled: false, token: 't' }, post);
+    const r = await publishCheckRun('WARN', ctx, { enabled: false, token: 't' }, post);
     assert.equal(r.localOnly, true); assert.equal(called, false);
   });
 
   test('no token → local-only, NO network', async () => {
     let called = false;
     const post: GitHubPostFn = async () => { called = true; return { status: 201, body: okBody }; };
-    const r = await publishCheckRun('PASS', ctx, { enabled: true, token: '' }, post);
+    const r = await publishCheckRun('WARN', ctx, { enabled: true, token: '' }, post);
     assert.equal(r.localOnly, true); assert.equal(called, false);
   });
 
@@ -77,9 +77,9 @@ suite('github-checks client (#96)', () => {
 
   test('missing remote / missing sha → local-only', async () => {
     const post: GitHubPostFn = async () => ({ status: 201, body: okBody });
-    const r1 = await publishCheckRun('PASS', { headSha: 'x' }, { enabled: true, token: 't' }, post);
+    const r1 = await publishCheckRun('WARN', { headSha: 'x' }, { enabled: true, token: 't' }, post);
     assert.equal(r1.localOnly, true);
-    const r2 = await publishCheckRun('PASS', { remoteUrl: 'https://github.com/a/b' }, { enabled: true, token: 't' }, post);
+    const r2 = await publishCheckRun('WARN', { remoteUrl: 'https://github.com/a/b' }, { enabled: true, token: 't' }, post);
     assert.equal(r2.localOnly, true);
   });
 
@@ -102,9 +102,9 @@ suite('github-checks client (#96)', () => {
   });
 
   test('401/403 → auth error; 422 → rejected (non-throwing)', async () => {
-    const r401 = await publishCheckRun('PASS', ctx, { enabled: true, token: 't' }, async () => ({ status: 401, body: '' }));
+    const r401 = await publishCheckRun('WARN', ctx, { enabled: true, token: 't' }, async () => ({ status: 401, body: '' }));
     assert.equal(r401.ok, false); assert.match(r401.error ?? '', /auth/i);
-    const r422 = await publishCheckRun('PASS', ctx, { enabled: true, token: 't' }, async () => ({ status: 422, body: '' }));
+    const r422 = await publishCheckRun('WARN', ctx, { enabled: true, token: 't' }, async () => ({ status: 422, body: '' }));
     assert.equal(r422.ok, false); assert.equal(r422.status, 422);
   });
 
