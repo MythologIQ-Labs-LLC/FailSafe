@@ -45,6 +45,15 @@ suite('github-checks client (#96)', () => {
   const okBody = JSON.stringify({ id: 9988 });
   const ctx = { remoteUrl: 'https://github.com/acme/failsafe.git', headSha: 'deadbeef' };
 
+  test('manual PASS is rejected before any network call, even with credentials', async () => {
+    let called = false;
+    const post: GitHubPostFn = async () => { called = true; return { status: 201, body: okBody }; };
+    const r = await publishCheckRun('PASS', ctx, { enabled: true, token: 't' }, post);
+    assert.equal(r.ok, false);
+    assert.match(r.error ?? '', /verified audit receipt/);
+    assert.equal(called, false);
+  });
+
   test('disabled → local-only, NO network', async () => {
     let called = false;
     const post: GitHubPostFn = async () => { called = true; return { status: 201, body: okBody }; };
@@ -87,7 +96,7 @@ suite('github-checks client (#96)', () => {
   test('SECRET MASKING: token only in the Authorization header, never in the result', async () => {
     let sentAuth: string | undefined;
     const post: GitHubPostFn = async (_u, headers) => { sentAuth = headers.Authorization; return { status: 201, body: okBody }; };
-    const r = await publishCheckRun('PASS', ctx, { enabled: true, token: 'ghs_TOPSECRET' }, post);
+    const r = await publishCheckRun('WARN', ctx, { enabled: true, token: 'ghs_TOPSECRET' }, post);
     assert.equal(sentAuth, 'token ghs_TOPSECRET', 'token is sent in the Authorization header');
     assert.ok(!JSON.stringify(r).includes('TOPSECRET'), 'token never appears anywhere in the returned result');
   });
@@ -102,7 +111,7 @@ suite('github-checks client (#96)', () => {
   test('custom apiBaseUrl is honored (GHES)', async () => {
     let sentUrl = '';
     const post: GitHubPostFn = async (url) => { sentUrl = url; return { status: 201, body: okBody }; };
-    await publishCheckRun('PASS', ctx, { enabled: true, token: 't', apiBaseUrl: 'https://ghe.acme.com/api/v3/' }, post);
+    await publishCheckRun('WARN', ctx, { enabled: true, token: 't', apiBaseUrl: 'https://ghe.acme.com/api/v3/' }, post);
     assert.equal(sentUrl, 'https://ghe.acme.com/api/v3/repos/acme/failsafe/check-runs');
   });
 });
