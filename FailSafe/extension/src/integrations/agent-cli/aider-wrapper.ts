@@ -63,6 +63,15 @@ export async function runAiderGoverned(opts: AiderRunOptions, deps: AiderDeps): 
 
   const argv = buildAiderArgs(opts.prompt, { autoCommit: opts.autoCommit });
 
+  // #475: Aider can modify files before the post-run diff is inspected.
+  // Do not spawn when writes are forbidden or when auto-commit would bypass review.
+  if (!opts.writesAllowed || opts.autoCommit) {
+    const decision: AgentDecision = { verdict: 'BLOCK', reason: !opts.writesAllowed
+      ? 'write authorization is required before running Aider'
+      : 'Aider auto-commit is forbidden before governed diff review', riskGrade: 'L2' };
+    return { available: true, spawned: false, decision, receipt: receiptFor(decision, argv, null, EMPTY_DIFF, deps.issuedAt) };
+  }
+
   // Pre-run gate: dirty worktree refusal.
   if (!opts.allowDirty && (await isWorktreeDirty(deps.run, opts.cwd))) {
     const decision: AgentDecision = { verdict: 'BLOCK', reason: 'worktree has uncommitted changes; refusing to run Aider (set allowDirty to override)', riskGrade: 'L1' };
