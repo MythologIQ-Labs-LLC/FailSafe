@@ -1,5 +1,7 @@
 # Open Design observer integration
 
+> **Compatibility warning (2026-10-13):** This adapter was implemented against upstream `nexu-io/open-design@abe72af` and is **not** certified for current upstream `main@1343f374` or published `open-design-v0.24.1`. Current upstream MCP adds brief, project-creation, skill/plugin, authentication, and run-control tools beyond the historical 10-tool matrix. Treat those as **unverified and unavailable** until schema, authority and runtime tests are completed. The interim #481 containment disables `create_artifact`, including previously approved execution; do not represent it as functioning L3-gated creation. See #474 and #481.
+
 > One-line: attributes agent file-edits to nexu-io Open Design and connects to its local daemon as a read-only MCP + SSE observer — so design-tool activity is governed and provenance-tagged, with the one non-destructive write tool admitted only through L3 approval.
 
 - **Pattern:** mcp / observe
