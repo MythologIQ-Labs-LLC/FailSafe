@@ -1,6 +1,6 @@
 # GitHub Checks integration
 
-> One-line: FailSafe publishes a SHIELD verdict to a commit as a GitHub Check Run, turning the merge gate into a governed PASS/WARN/VETO signal.
+> One-line: FailSafe currently publishes only a neutral manual GitHub advisory. Verified SHIELD PASS checks are blocked until native, subject-bound audit attestation is implemented (#476).
 
 - **Pattern:** notify (merge gate)
 - **Direction:** outbound notify
@@ -10,7 +10,7 @@
 
 ## What it does
 
-Maps a SHIELD verdict onto a single GitHub Check Run for the current HEAD commit, so a pull request can be gated on FailSafe's governance result. `PASS` reports `success` (merge-safe), `WARN` reports `neutral` (advisory), and `VETO` reports `failure` (blocking); any unrecognized verdict fails safe to `neutral`. The integration is off by default and degrades to a local-only notice when disabled, unauthenticated, run from a fork PR context, or when no GitHub remote / HEAD can be resolved — the verdict still stands locally in every case.
+The operator-facing command publishes a non-authoritative, `neutral` Check Run named `FailSafe Manual Advisory`. It does not assert a governance verdict. The low-level SHIELD publisher rejects `success` for the reserved `FailSafe SHIELD` name unless a future authenticated native gate is implemented. Off by default; missing config or fork context publishes nothing, and no local verdict is fabricated.
 
 ## Configuration
 
@@ -26,7 +26,7 @@ The token is a secret: it is read from settings, placed only in the outbound `Au
 
 ## Command / wiring
 
-`FailSafe: Publish SHIELD Verdict to GitHub Check` (`failsafe.github.publishCheck`) — gathers local git context (origin remote + HEAD sha), lets the operator pick the verdict, and posts a single Check Run via the injectable client.
+`FailSafe: Publish Manual GitHub Advisory` (`failsafe.github.publishCheck`) — requests explicit confirmation, then posts a neutral, non-attesting advisory to the current HEAD. The command never offers manually selected SHIELD PASS/WARN/VETO outcomes.
 
 ## Files
 
