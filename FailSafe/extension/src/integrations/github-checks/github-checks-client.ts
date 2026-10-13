@@ -90,6 +90,13 @@ export async function publishCheckRunPayload(
   if (!slug) return { ok: true, localOnly: true, error: 'no GitHub remote resolved' };
   if (!ctx.headSha || !ctx.headSha.trim()) return { ok: true, localOnly: true, error: 'no HEAD sha resolved' };
 
+  // No accepted native, subject-bound verification receipt is available in this
+  // publisher. A caller-supplied PASS is not authority to create a green SHIELD
+  // check. Block at the transport boundary as well as at the command UI (#476).
+  if (payload.conclusion === 'success' && /^failsafe shield(?:\\b|$)/i.test(payload.name)) {
+    return { ok: false, error: 'Verified SHIELD PASS publishing is disabled until native gate attestation is enforced' };
+  }
+
   const base = (opts.apiBaseUrl || GITHUB_API).replace(/\/$/, '');
   const url = `${base}/repos/${slug.owner}/${slug.repo}/check-runs`;
 
