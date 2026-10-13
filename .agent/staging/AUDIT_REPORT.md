@@ -1,65 +1,52 @@
-# Audit Report — plan-233d-ledger-anchor.md
+# AUDIT REPORT — plan-v606-release-markers (iteration 1)
 
-**Session**: 2026-09-05T0051-e48e6d
-**Iteration**: 2
-**Auditor**: The Qor-logic Judge (solo; `audit_risk_score` reports `option_b_required: false`)
-**Risk Grade**: L2
-**Target content hash**: see `.qor/gates/2026-09-05T0051-e48e6d/audit-iter2.json`
-
-## VERDICT: PASS
-
-V1 closed. Implementation is unlocked for `plan-233d-ledger-anchor.md` **at iteration 2 only** — this verdict certifies that content hash and no other.
-
----
-
-## V1 (iteration 1) — CLOSED
-
-The decaying `>= 200` threshold is replaced by two assertions that do not decay:
-
-- **assertion 4** pins the declared anchor to the measured value `340`, so any bump fails and must be a deliberate edit carrying fresh justification;
-- **assertion 5** asserts the protected surface is non-empty and reports its count.
-
-Together these keep the anti-ratchet property independent of ledger length, which was the whole of the finding. The audit-bound security constraint is also now written into `### Changes`: the anchor is validated as an integer in JavaScript before it is passed.
-
-## Verification of the closure
-
-Not taken on the plan's word — the runner-reachability trap from Scope A's V3 was re-checked explicitly. All five FX946 assertions live in `ledgerAnchor.test.cjs` and the FX940 assertions in `qorlogic-config.test.cjs`; both are `.test.cjs`, both are discovered by `run-node-tests.cjs`, and `npm run test:node` is in `## CI Commands`. **Every declared assertion has a runner.** No repeat of the Scope A defect.
+**Verdict**: PASS
+**Risk Grade**: L1
+**Session**: `2026-10-13T2213-4bb316`
+**Target**: `plan-v606-release-markers.md` (state as written in plan gate `plan-iter1.json`)
+**Mode**: Option B (independent fresh-context reviewer, `architect-reviewer`, toolset Read/Grep/Glob) — mandated by `audit_risk_score` (flag: high-citation-surface)
+**Preflight**: governance-health skill-entry reports DAMAGED `docs/META_LEDGER.md` (pre-existing qor-logic 0.176.1 anchor drift owned by the parked `fix/ledger-anchor-qor0176` cycle). Operator-approved per-cycle override, gate_override `1fa06c53` (`docs/PROCESS_SHADOW_GENOME_UPSTREAM.md:19`).
 
 ## Passes
 
-| pass | result |
-|---|---|
-| Prompt injection | PASS — `prompt_injection_canaries` exit 0 |
-| Security (L3) | PASS — the SG-Phase47-A surface is now closed in plan text: integer validation in JS before the value reaches Python, argv passing, `shell: false`, fixed `-c` script |
-| OWASP Top 10 | PASS — A03 closed by the validation above; A04 closed by assertion 3 (an absent declaration errors rather than falling back to auto-detect); A08 no deserialization beyond `JSON.parse` of a repo-local config |
-| Test functionality | PASS — every assertion invokes the runner and asserts on its exit code; none presence-only |
-| Infrastructure alignment | PASS — the `qor.scripts.ledger_hash` flag is an adjudicated consumer-side false positive (installed, not vendored); import, `site-packages` `__file__`, and the `verify_post_anchor(ledger_md, boundary_entry=None) -> int` signature independently confirmed |
-| Feature test declaration | PASS — FX946 and FX940 declare `test_path` + `test_descriptor`, and the FX946 descriptor was updated to match the amended assertion set |
-| Ghost UI / Live-progress / Filter-stage / Runtime-principal | n/a |
-| Section 4 Razor | PASS |
+| Pass | Result |
+| --- | --- |
+| Readiness short-circuit (plan_iteration_status_lint) | PASS (rc 0) |
+| Prompt injection canaries | PASS for the plan; 4 WARN `<script` code-span hits inside historical META_LEDGER prose (pre-existing, not in scope) |
+| Version applicability | SKIP — prerequisite absent (`version_applicability` reads `pyproject.toml`; FailSafe is a Node package). Manual: target 6.0.6 > latest tag v6.0.5 |
+| Security / OWASP | N/A — docs-only, no executable surface |
+| Ghost UI / Live progress | N/A — no UI |
+| Section 4 Razor | N/A — no code |
+| Test functionality | PASS — D4 invokes `release-gate.cjs --preflight` and asserts per-check outcome, plus per-marker mutation re-producing the matching FAIL |
+| Dependency | PASS — none |
+| Macro architecture / Orphan | PASS — no new files beyond the plan itself |
+| Feature test coverage | Exempt — docs/governance only, block declared empty |
+| Infrastructure alignment | PASS — see below |
+| Execution continuity | N/A — not declared |
 
-## Binding constraints on implementation
+## Infrastructure Alignment
 
-The seal must show these were honored.
+All six LD citations verified by direct read (Judge + independent reviewer): release-gate.cjs:87, :96, :118; COMPONENT_HELP.md:3; PROCESS_GUIDE.md:3; BACKLOG.md:567.
 
-1. **Anchor validation** — the declared anchor is validated as an integer in JavaScript before use and rejected otherwise; it reaches Python as an argv value, never interpolated into the `-c` source (SG-Phase47-A). Validation is the mitigation, not argv passing alone.
-2. **No auto-detect fall-back, ever** — an absent, malformed, or non-integer declaration is a non-zero exit. Falling back to `boundary_entry=None` would silently restore the one-entry-deep behaviour while reporting clean.
-3. **No mutation of the live ledger** — every assertion runs against a temp copy. `docs/META_LEDGER.md` must be byte-identical before and after the suite.
-4. **Fail-closed above, tolerant below** — the runner propagates upstream's exit code unchanged; it must not soften a failure into a warning.
-5. **Assertion 1 must be shown red against auto-detect** — the finding rests on it. Demonstrate that the same tamper passes under `boundary_entry=None` and fails under the declared anchor.
+`plan_grep_lint` WARNs on the four citations whose observed line contains backticks. Root cause is upstream, not the plan: `plan_evidence.parse_evidence_statements` strips backticks from the observed text while `reproduces()` compares it with strict equality against the raw line, so any backticked line can never reproduce. The two backtick-free citations (:118, :567) reproduce clean under the same lint.
 
-## What this plan got right
+Check 7's section regex (`/## Version Summary[\s\S]*?(?=\n---)/`, release-gate.cjs:115) terminates at the first line beginning `---`; the table divider at BACKLOG.md:570 begins `|`, so the section runs to ~:646 and a row placed above :642 lands inside it.
 
-- **It proved the defect before proposing a fix.** Every number in `## Baselines` came from running the real verifier, including the decisive pair: `#500` tampered is invisible under auto-detect (`rc=0`) and caught under a declared anchor (`rc=1`).
-- **It chose its central constant by measurement**, not preference — `340` is the lowest anchor at which the live ledger passes, which maximises the protected surface (268 entries, up from 1) without shipping a red gate.
-- **It uses upstream's existing `boundary_entry` parameter** rather than reimplementing chain arithmetic. Third consecutive cycle where the correct answer was "the mechanism exists; enforcement over it does not."
-- **Assertion 3** — an absent declaration must be an error, not a fall-back — is the strongest in the plan, and closes the exact way this fix could silently un-ship itself.
-- **It refuses to adopt `verify()`** and says why: 278 tainted entries and 2 BREAKs would block every seal today. The pre-anchor residue keeps its existing disclosed status rather than being quietly redefined as acceptable.
+## Reviewer advisories (adjudicated non-blocking)
 
-## Lint ladder (iteration 2)
+- A — D2 lists four files while D3 writes the ledger: ledger writes are audit/substantiate-phase artifacts, not implementation edits; precedent `plan-233d-ledger-anchor.md` likewise omits META_LEDGER from Affected Files.
+- B — override approval record: present as gate_override `1fa06c53`.
+- C — "marketplace" in CHANGELOG.md:19 means the in-product Agent Marketplace (4 source hits for "Agent Marketplace"); LD4 draws row text from CHANGELOG, so implement names it "Agent Marketplace" to avoid reading as a VS Code Marketplace publishing restriction.
 
-`plan_iteration_status_lint` 0 · `plan_test_lint` 0 · `plan_text_consistency_lint` 0 · `plan_feature_tdd_lint` 0 · `prompt_injection_canaries` 0 · `audit_risk_score` `option_b_required: false` · `plan_grep_lint` 1 `infrastructure-mismatch`, adjudicated above as a verified false positive.
+## Pre-audit lint ladder
 
----
+ci_coverage_lint WARN (oss-sast.yml semgrep install not in plan CI Commands — workflow-level, not touched by a docs change). workspace_fragility HIGH (ledger_chain_failure_count 333 — the disclosed DAMAGED ledger; 116 branches). All other lints clean.
 
-_Gate unlocked. `/qor-implement` may proceed against iteration 2._
+## Process Pattern Advisory
+
+<!-- qor:veto-pattern-advisory -->
+No repeated-VETO pattern detected for this session (iteration 1, PASS).
+
+## Next action
+
+`/qor-implement`
