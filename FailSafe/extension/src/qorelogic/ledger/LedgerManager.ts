@@ -240,17 +240,28 @@ export class LedgerManager {
         const timestamp = new Date().toISOString();
         const prevHash = this.lastHash;
         
-        // Calculate hash
+        // v2 signs every persisted audit field; legacy signatures remain verifiable.
         const hashPayload = {
             timestamp,
             eventType: request.eventType,
             agentDid: request.agentDid,
-            payload: request.payload,
+            agentTrustAtAction: request.agentTrustAtAction || null,
+            modelVersion: request.modelVersion || null,
+            artifactPath: request.artifactPath || null,
+            artifactHash: request.artifactHash || null,
+            riskGrade: request.riskGrade || null,
+            verificationMethod: request.verificationMethod || null,
+            verificationResult: request.verificationResult || null,
+            sentinelConfidence: request.sentinelConfidence || null,
+            overseerDid: request.overseerDid || null,
+            overseerDecision: request.overseerDecision || null,
+            gdprTrigger: request.gdprTrigger ? 1 : 0,
+            payload: request.payload ?? null,
             prevHash
         };
         
         const entryHash = this.calculateHash(JSON.stringify(hashPayload));
-        const signature = this.sign(entryHash);
+        const signature = `v2:${this.sign(entryHash)}`;
 
         const sql = `
         INSERT INTO soa_ledger (
@@ -409,11 +420,25 @@ export class LedgerManager {
                 }
             }
 
+            const v2 = current.signature.startsWith('v2:');
             const hashPayload = {
                 timestamp: current.timestamp,
                 eventType: current.event_type,
                 agentDid: current.agent_did,
-                payload: payloadValue,
+                ...(v2 ? {
+                    agentTrustAtAction: current.agent_trust_at_action,
+                    modelVersion: current.model_version,
+                    artifactPath: current.artifact_path,
+                    artifactHash: current.artifact_hash,
+                    riskGrade: current.risk_grade,
+                    verificationMethod: current.verification_method,
+                    verificationResult: current.verification_result,
+                    sentinelConfidence: current.sentinel_confidence,
+                    overseerDid: current.overseer_did,
+                    overseerDecision: current.overseer_decision,
+                    gdprTrigger: current.gdpr_trigger,
+                } : {}),
+                payload: v2 ? (payloadValue ?? null) : payloadValue,
                 prevHash: current.prev_hash
             };
 
@@ -424,7 +449,7 @@ export class LedgerManager {
             }
 
             const expectedSignature = crypto.createHmac('sha256', secret).update(expectedHash).digest('hex');
-            if (current.signature !== expectedSignature) {
+            if (current.signature !== (v2 ? `v2:${expectedSignature}` : expectedSignature)) {
                 console.error(`Chain broken at ID ${current.id}: signature mismatch`);
                 return false;
             }
