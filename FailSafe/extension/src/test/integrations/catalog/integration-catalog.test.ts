@@ -67,21 +67,21 @@ suite('integrations/catalog integration-catalog', () => {
     assert.deepEqual(s.missingKeys, ['failsafe.integrations.jira.apiToken']);
   });
 
-  test('active when enabled and all required keys present', () => {
+  test('configured-unverified when enabled and all required keys present', () => {
     const s = buildIntegrationStatus(byId('sentry'), {
       'failsafe.integrations.sentry.enabled': true,
       'failsafe.integrations.sentry.token': true,
       'failsafe.integrations.sentry.org': true,
       'failsafe.integrations.sentry.project': true,
     });
-    assert.equal(s.state, 'active');
+    assert.equal(s.state, 'configured-unverified');
     assert.equal(s.configured, true);
     assert.deepEqual(s.missingKeys, []);
   });
 
-  test('zero-required-key integration is active as soon as it is enabled', () => {
+  test('zero-required-key integration is configured but unverified when enabled', () => {
     const s = buildIntegrationStatus(byId('aider'), { 'failsafe.integrations.aider.enabled': true });
-    assert.equal(s.state, 'active');
+    assert.equal(s.state, 'configured-unverified');
     assert.equal(s.configured, true);
   });
 
