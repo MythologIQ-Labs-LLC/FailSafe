@@ -94,8 +94,13 @@ export async function fetchSentryRisks(
 
   const base = (opts.apiBaseUrl || SENTRY_API).replace(/\/$/, '');
   const firstUrl = `${base}${buildIssuesPath(opts.org.trim(), opts.project.trim(), { environment: opts.environment, query: opts.query })}`;
-  // Do not transmit credentials over HTTP, including for an operator-defined base URL.
-  if (new URL(firstUrl).protocol !== 'https:') {
+  // Do not throw on malformed user-supplied settings or send Bearer secrets
+  // to a non-HTTPS endpoint. The API contract is deliberately nonthrowing.
+  let first: URL;
+  try { first = new URL(firstUrl); } catch {
+    return { ok: false, risks: [], count: 0, error: 'Invalid Sentry API base URL.' };
+  }
+  if (first.protocol !== 'https:') {
     return { ok: false, risks: [], count: 0, error: 'Sentry API URL must use HTTPS.' };
   }
   const maxPages = Math.max(1, Math.min(20, Number.isSafeInteger(opts.maxPages) ? opts.maxPages! : 10));
