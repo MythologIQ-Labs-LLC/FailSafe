@@ -132,6 +132,24 @@ suite('integrations/open-design OpenDesignMcpClient', () => {
     assert.equal(r.isError, false);
   });
 
+  test('released v0.24.1 search and file-window contracts reject malformed input before transport', async () => {
+    const calls: CallRecord[] = [];
+    const c = new OpenDesignMcpClient({
+      command: 'od', cwd: '/tmp', transportFactory: makeFakeTransport({}),
+      clientFactory: () => makeFakeClient({}, calls) as never,
+    });
+    await c.connect();
+    await assert.rejects(c.callRaw('search_files', {}), /INVALID_TOOL_ARGUMENTS/);
+    await assert.rejects(c.callRaw('search_files', { query: '  ' }), /INVALID_TOOL_ARGUMENTS/);
+    await assert.rejects(c.callRaw('get_file', { offset: -1 }), /INVALID_TOOL_ARGUMENTS/);
+    await assert.rejects(c.callRaw('get_file', { limit: 0 }), /INVALID_TOOL_ARGUMENTS/);
+    await assert.rejects(c.callRaw('get_file', { limit: 1.2 }), /INVALID_TOOL_ARGUMENTS/);
+    assert.equal(calls.length, 0);
+    await c.callRaw('search_files', { query: 'button' });
+    await c.callRaw('get_file', { offset: 0, limit: 200 });
+    assert.equal(calls.length, 2);
+  });
+
   test('new upstream MCP tools are unavailable until explicitly classified (#474)', async () => {
     const calls: CallRecord[] = [];
     const c = new OpenDesignMcpClient({
