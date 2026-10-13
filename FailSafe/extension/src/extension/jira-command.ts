@@ -51,7 +51,7 @@ export function registerJiraImportCommand(context: vscode.ExtensionContext): voi
       ].filter(Boolean).join(' · ');
       // #480: inspectable, unsaved preview. No canonical state mutation.
       const title = `Jira issue preview (uncommitted)`;
-      const markdown = [`# ${title}`, '', '> This is a read-only review. No FailSafe intent or backlog item was created.', '', `## ${p.intent}`, '', meta, ''].join('\\n');
+      const markdown = [`# ${title}`, '', '> This is a read-only review. No FailSafe intent or backlog item was created.', '', `## ${p.intent}`, '', meta, ''].join('\n');
       const document = await vscode.workspace.openTextDocument({ language: 'markdown', content: markdown });
       await vscode.window.showTextDocument(document, { preview: true });
       vscode.window.showInformationMessage(`${title}: opened review document; not imported or saved.`);
