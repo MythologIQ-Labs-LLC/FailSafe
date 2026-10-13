@@ -119,6 +119,18 @@ export class OpenDesignMcpClient extends McpClientHost {
     if (OpenDesignMcpAllowlist.isL3GatedWrite(name)) {
       throw new Error('WRITE_TOOL_NOT_APPROVED: verified L3 receipt enforcement is not available');
     }
+    // Mirror the released v0.24.1 required argument contract before any tool call.
+    // The daemon remains authoritative for its full per-tool schema.
+    if (name === 'search_files' && (typeof args.query !== 'string' || args.query.trim().length === 0)) {
+      throw new Error('INVALID_TOOL_ARGUMENTS: search_files requires nonempty query');
+    }
+    if (name === 'get_file') {
+      for (const key of ['offset', 'limit'] as const) {
+        if (args[key] !== undefined && (!Number.isSafeInteger(args[key]) || (args[key] as number) < 0 || (key === 'limit' && args[key] === 0))) {
+          throw new Error(`INVALID_TOOL_ARGUMENTS: get_file ${key} must be a valid nonnegative integer`);
+        }
+      }
+    }
     return (await super.callRaw(name, args)) as OpenDesignToolCallResult;
   }
 }
