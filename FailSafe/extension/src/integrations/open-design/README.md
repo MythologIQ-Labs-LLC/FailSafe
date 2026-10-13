@@ -38,6 +38,24 @@ Off by default; no network/process unless enabled. **Provenance** detection is p
 - `index.ts` — barrel exports.
 - tests: `src/test/integrations/open-design/` (provenance, McpClient, McpAllowlist, L3Executor, DaemonProbe, SseClient, contracts)
 
+## Current upstream released read-tool contract (source inspected 2026-10-13)
+
+**Baseline:** [Open Design v0.24.1 MCP source](https://github.com/nexu-io/open-design/blob/open-design-v0.24.1/apps/daemon/src/mcp.ts). The seven historically permitted names still exist in that release, but source compatibility is **not runtime certification**:
+
+| Tool | Released argument/result behavior to validate locally |
+|---|---|
+| `list_projects` | Optional `pluginWorkflowId`; lists projects; no project argument |
+| `get_active_context` | Optional `pluginWorkflowId`; can return `active:false`, not a hard failure; context expires after roughly 5 minutes |
+| `get_artifact` | `project`, `entry`, `include` (`auto/all/shallow`), `maxBytes`, optional workflow identifier; 200-file cap and truncation must be surfaced |
+| `get_project` | `project` selector; metadata can include `previewUrl`, resolved directory and project kind |
+| `get_file` | `project`, `path`, `offset`, `limit`; text only, windowed output with paging markers |
+| `search_files` | Required `query`, optional `project`, `pattern`, `max`; literal case-insensitive search |
+| `list_files` | Optional `project` and `since` (Unix milliseconds); file metadata can include manifests |
+
+A read-only name is not proof that arbitrary arguments are safe or that the current daemon honors historical response assumptions. Negative-test wrong types, unknown properties, missing required arguments, daemon-down, stale active context, error envelopes, truncated output and large responses. Treat unknown current or future tool names as unavailable until deliberately approved. Verify runtime capability discovery against the *installed* version, not just GitHub `main`.
+
+**Scope note:** Upstream `main@1343f374` and released v0.24.1 both advertise more MCP names than the historical contract. `list_skills`, formerly documented as absent, is now real upstream but remains intentionally blocked in this FailSafe adapter. Source differences beyond the seven historical read operations and complete endpoint/SSE shape still require local contract evidence.
+
 ## Verified surface
 - MCP tools (upstream `nexu-io/open-design@abe72af` `apps/daemon/src/mcp.ts` `TOOL_DEFS`): read-only `list_projects`, `get_active_context`, `get_artifact`, `get_project`, `get_file`, `search_files`, `list_files`; write `create_artifact` (non-destructive), `write_file` / `delete_file` / `delete_project` (destructive). v1-fabricated names (`list_skills`, `get_skill`, `list_design_systems`, `get_design_system`, `update_artifact`, `read_file`, `get_active_project`) are deliberately excluded.
 - Daemon HTTP: `GET http://127.0.0.1:7456/api/version` (liveness), `GET http://127.0.0.1:7456/api/runs/<runId>/events` (per-run SSE).
