@@ -164,50 +164,29 @@ suite('integrations/open-design OpenDesignMcpClient', () => {
     assert.equal(calls.length, 0, 'un-approved create_artifact must not reach the transport');
   });
 
-  test('FX806 executeApprovedCreateArtifact performs exactly one create_artifact transport call', async () => {
+  test('FX806 public approved-create method cannot mint its own approval (#481)', async () => {
     const calls: CallRecord[] = [];
     const c = new OpenDesignMcpClient({
-      command: 'od',
-      cwd: '/tmp',
+      command: 'od', cwd: '/tmp',
       transportFactory: makeFakeTransport({}),
       clientFactory: () => makeFakeClient({ create_artifact: { id: 'a1' } }, calls) as never,
     });
     await c.connect();
-    const r = await c.executeApprovedCreateArtifact({ name: 'hero.svg' });
-    assert.equal(calls.length, 1, 'exactly one transport call');
-    assert.equal(calls[0].name, 'create_artifact');
-    assert.deepEqual(calls[0].args, { name: 'hero.svg' });
-    assert.equal(r.isError, false);
+    await assert.rejects(c.executeApprovedCreateArtifact({ name: 'hero.svg' }), /WRITE_TOOL_NOT_APPROVED/);
+    await assert.rejects(c.callRaw('create_artifact', { name: 'hero.svg' }), /WRITE_TOOL_NOT_APPROVED/);
+    assert.equal(calls.length, 0, 'missing real L3 receipt must never reach transport');
   });
 
-  test('FX806 approval token is one-shot: second direct create_artifact after one approved call throws', async () => {
+  test('FX806 destructive writes remain unavailable regardless of approval claims', async () => {
     const calls: CallRecord[] = [];
     const c = new OpenDesignMcpClient({
-      command: 'od',
-      cwd: '/tmp',
+      command: 'od', cwd: '/tmp',
       transportFactory: makeFakeTransport({}),
-      clientFactory: () => makeFakeClient({ create_artifact: { id: 'a1' } }, calls) as never,
+      clientFactory: () => makeFakeClient({}, calls) as never,
     });
     await c.connect();
-    await c.executeApprovedCreateArtifact({ name: 'a' });
-    await assert.rejects(c.callRaw('create_artifact', { name: 'b' }), /WRITE_TOOL_NOT_APPROVED/);
-    assert.equal(calls.length, 1, 'only the approved call reached the transport');
-  });
-
-  test('FX806 destructive tools still throw WRITE_TOOL_NOT_ENABLED even after a create_artifact token is set', async () => {
-    const calls: CallRecord[] = [];
-    const c = new OpenDesignMcpClient({
-      command: 'od',
-      cwd: '/tmp',
-      transportFactory: makeFakeTransport({}),
-      clientFactory: () => makeFakeClient({ create_artifact: { id: 'a1' } }, calls) as never,
-    });
-    await c.connect();
-    // Set the token via the sanctioned path, then attempt a destructive tool.
-    await c.executeApprovedCreateArtifact({ name: 'a' }); // consumes token
-    c['_pendingApprovedWrite'] = true; // force token set to prove destructive is unaffected
     await assert.rejects(c.callRaw('delete_project', { projectId: 'p1' }), /WRITE_TOOL_NOT_ENABLED/);
-    assert.equal(calls.length, 1, 'destructive tool never reached the transport regardless of token');
+    assert.equal(calls.length, 0);
   });
 
   test('callRaw surfaces isError content via thrown error message', async () => {
