@@ -191,6 +191,21 @@ suite('SecurityScanner (FX380 + FX386)', () => {
     assert.equal(r.recommendedAction, 'approve');
   });
 
+  test('FX469 runFullScan retains L3 when one scanner fails but another passes', async () => {
+    const { runner } = makeRunner({
+      garak: { code: 0, stdout: 'garak', stderr: '' },
+      npx: { code: 0, stdout: 'promptfoo', stderr: '' },
+      'garak --model_type': { code: 1, stdout: '', stderr: 'scanner crashed' },
+      'npx promptfoo': { code: 0, stdout: '{"results":[{"pass":true}]}', stderr: '' },
+    });
+    const s = new SecurityScanner(new EventBus(), runner);
+    await s.checkAvailability();
+    const result = await s.runFullScan('/path', () => {});
+    assert.equal(result.passed, false);
+    assert.equal(result.riskGrade, 'L3', 'one failed scanner cannot be reduced to L1');
+    assert.equal(result.recommendedAction, 'review');
+  });
+
   test('FX386 calculateRiskGrade — critical→L3; high→L2; >=3 medium→L2; otherwise L1', () => {
     const { runner } = makeRunner({});
     const s = new SecurityScanner(new EventBus(), runner);
