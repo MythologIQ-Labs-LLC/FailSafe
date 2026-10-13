@@ -2,8 +2,8 @@
  * aider-wrapper — FailSafe git-gate wrapper for the Aider CLI (#107). Detects
  * `aider`, refuses a dirty worktree unless explicitly allowed, runs argv-form
  * with auto-commit OFF by default (changes stay uncommitted for review),
- * captures the before/after diff robustly even when Aider exits non-zero, and
- * routes a high-risk (L3) diff to escalation.
+ * captures the after-run diff, and escalates detected high-risk edits. Until
+ * isolated execution exists this is not preventive control for surprise L3 edits.
  *
  * Verified surface (issue #107): Aider git integration + `--message` scripting.
  * Flags verified against https://aider.chat/docs/config/options.html + upstream
@@ -61,7 +61,29 @@ export async function runAiderGoverned(opts: AiderRunOptions, deps: AiderDeps): 
   const det = await detectAider(deps.run);
   if (!det.available) return { available: false, spawned: false, error: '`aider` not found on PATH' };
 
-  const argv = buildAiderArgs(opts.prompt, { autoCommit: opts.autoCommit });
+  const argv = buildAiderArgs(opts.prompt, { autoCommit: false });
+
+  // Fail closed before execution: Aider needs a writable worktree. A post-run
+  // diff verdict cannot undo edits already made by a spawned agent (#475).
+  if (!opts.writesAllowed) {
+    const decision: AgentDecision = {
+      verdict: 'BLOCK',
+      reason: 'Aider writes are disabled; refusing to spawn an agent that can edit the worktree',
+      riskGrade: 'L2',
+    };
+    return { available: true, spawned: false, decision, receipt: receiptFor(decision, argv, null, EMPTY_DIFF, deps.issuedAt) };
+  }
+
+  // Aider auto-commits before a post-run diff can be classified. Do not allow
+  // this option until a genuine pre-commit authorization gate exists (#475).
+  if (opts.autoCommit) {
+    const decision: AgentDecision = {
+      verdict: 'BLOCK',
+      reason: 'Aider auto-commit requires a pre-commit governance gate; refusing to spawn',
+      riskGrade: 'L3',
+    };
+    return { available: true, spawned: false, decision, receipt: receiptFor(decision, argv, null, EMPTY_DIFF, deps.issuedAt) };
+  }
 
   // Pre-run gate: dirty worktree refusal.
   if (!opts.allowDirty && (await isWorktreeDirty(deps.run, opts.cwd))) {
