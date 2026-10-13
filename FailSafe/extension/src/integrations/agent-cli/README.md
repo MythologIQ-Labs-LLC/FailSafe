@@ -1,6 +1,6 @@
 # Agent CLI wrappers integration (Continue + Aider)
 
-> One-line: FailSafe spawns headless coding-agent CLIs (Continue `cn`, Aider) in argv form, gates them before they run, classifies the diff they produce against the live PolicyEngine, and escalates any L3-risk change to the human approval queue — so an autonomous agent's writes are governed instead of trusted.
+> One-line: FailSafe wraps Continue `cn` and Aider with partial pre-execution checks and post-run diff classification. This is not yet a filesystem isolation boundary, so surprise L3 writes can occur before human approval (#475).
 
 - **Pattern:** wrapper
 - **Direction:** governed execution
@@ -19,9 +19,9 @@ On demand, FailSafe detects the agent binary, decides whether the requested run 
 | `failsafe.integrations.continue.allow` | `[]` | no | The `--allow <tool>` permission allowlist passed to `cn`; each entry maps to a FailSafe risk tier (shell/exec → L3, file-write → L2, else L1). |
 | `failsafe.integrations.continue.allowWrites` | `false` | no | Whether write-tier (L2) changes may auto-apply. When false, any write is BLOCKED before spawn. |
 | `failsafe.integrations.aider.enabled` | `false` | no | Master on/off for the Aider wrapper. When off, no `aider` process is spawned. |
-| `failsafe.integrations.aider.allowDirty` | `false` | no | Allow running against a worktree with uncommitted changes. When false (default), a dirty worktree is BLOCKED before spawn. |
-| `failsafe.integrations.aider.autoCommit` | `false` | no | Pass `--auto-commits` instead of `--no-auto-commits`. Default false keeps changes uncommitted so the gate can inspect the diff. |
-| `failsafe.integrations.aider.allowWrites` | `false` | no | Whether write-tier (L2) changes may auto-apply. When false, any write is BLOCKED. |
+| `failsafe.integrations.aider.allowDirty` | `false` | no | Allow running against a worktree with uncommitted changes. When false (default), a dirty or unreadable Git worktree is BLOCKED before spawn. |
+| `failsafe.integrations.aider.autoCommit` | `false` | no | Requests for auto-commits are currently BLOCKED before spawn; the feature awaits a true pre-commit gate. |
+| `failsafe.integrations.aider.allowWrites` | `false` | no | When false, Aider is BLOCKED before spawn. When true, Aider runs with auto-commit disabled, but the post-run classifier does not prevent surprise L3 file edits. |
 
 Both wrappers are off by default and degrade to a no-op (no process spawned) when disabled or when the binary is not found on `PATH`.
 
@@ -30,7 +30,7 @@ The only secret in this family is Continue's API key. It is overlaid onto the sp
 
 ## Command / wiring
 - `FailSafe: Run Continue (governed)` (command id `failsafe.continue.run`) — gates the requested `--allow` tier, runs `cn -p <prompt>` argv-form with the API key in the child env, then re-classifies the diff and escalates a surprise L3 change.
-- `FailSafe: Run Aider (governed)` (command id `failsafe.aider.run`) — refuses a dirty worktree unless `allowDirty`, runs `aider --message <prompt>` with auto-commit off, then classifies the resulting diff and escalates L3.
+- `FailSafe: Run Aider (governed)` (command id `failsafe.aider.run`) — refuses to start when writes are disabled, auto-commit is requested, or a clean Git status cannot be verified; otherwise runs without auto-commit, then classifies the resulting diff. Surprise L3 edits still exist before escalation.
 
 Both commands are thin glue defined in `src/extension/agent-cli-command.ts` over the pure wrappers in this folder.
 
