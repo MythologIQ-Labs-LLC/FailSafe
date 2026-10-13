@@ -14,7 +14,7 @@ interface RunCall { cmd: string; args: string[]; opts?: { cwd?: string; env?: Re
 
 interface FakeOpts {
   cnVersionCode?: number; aiderVersionCode?: number;
-  dirty?: boolean; diff?: string; cnCode?: number; aiderCode?: number;
+  dirty?: boolean; diff?: string; cnCode?: number; aiderCode?: number; gitStatusCode?: number;
 }
 
 function makeRunner(o: FakeOpts = {}): { run: AgentRunFn; calls: RunCall[] } {
@@ -25,7 +25,7 @@ function makeRunner(o: FakeOpts = {}): { run: AgentRunFn; calls: RunCall[] } {
     const r = (stdout: string, code: number | null = 0): AgentRunResult => ({ stdout, stderr: '', code });
     if (cmd === 'cn' && a[0] === '--version') return r('cn 1.2.3', o.cnVersionCode ?? 0);
     if (cmd === 'aider' && a[0] === '--version') return r('aider 0.50.1', o.aiderVersionCode ?? 0);
-    if (cmd === 'git' && a[0] === 'status') return r(o.dirty ? ' M src/x.ts\n' : '');
+    if (cmd === 'git' && a[0] === 'status') return r(o.dirty ? ' M src/x.ts\n' : '', o.gitStatusCode ?? 0);
     if (cmd === 'git' && a[0] === 'diff') return r(o.diff ?? '');
     if (cmd === 'cn') return r('{"ok":true}', o.cnCode ?? 0);
     if (cmd === 'aider') return r('applied', o.aiderCode ?? 0);
@@ -193,6 +193,18 @@ suite('aider-wrapper (#107)', () => {
     assert.equal(out.decision?.verdict, 'BLOCK');
     assert.equal(out.receipt?.exitCode, null);
     assert.ok(!calls.some((c) => c.cmd === 'aider' && c.args[0] !== '--version'), 'Aider must not execute');
+  });
+
+  test('FX475 failed Git status cannot pass as clean worktree', async () => {
+    const { run, calls } = makeRunner({ dirty: false, gitStatusCode: 128 });
+    const out = await runAiderGoverned(
+      { prompt: 'write file', cwd: '/repo', writesAllowed: true },
+      { run, classify, issuedAt: 'T' },
+    );
+    assert.equal(out.spawned, false);
+    assert.equal(out.decision?.verdict, 'BLOCK');
+    assert.match(out.decision?.reason ?? '', /cannot verify git worktree/i);
+    assert.ok(!calls.some((c) => c.cmd === 'aider' && c.args[0] !== '--version'));
   });
 
   test('FX475 auto-commit request denies launch until a pre-commit gate exists', async () => {
