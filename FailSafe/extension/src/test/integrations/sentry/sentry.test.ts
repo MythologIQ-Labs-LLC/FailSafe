@@ -116,6 +116,8 @@ suite('sentry-client (#102)', () => {
     const r = await importSentryRisks({ enabled: true, token: 't', org: 'acme', project: 'backend', environment: 'production' }, get, (risk) => upserted.push(risk));
     assert.equal(r.ok, true);
     assert.equal(r.count, 2);
+    assert.equal(r.persisted, 2);
+    assert.equal(r.failed, 0);
     assert.equal(upserted.length, 2);
     assert.deepEqual(upserted.map((u) => u.id).sort(), ['sentry:101', 'sentry:102']);
   });
@@ -163,6 +165,8 @@ suite('sentry upsert resilience (FX915/#241C)', () => {
     );
     assert.equal(r.ok, true);
     assert.equal(calls, 3, 'every risk still offered to the sink');
-    assert.equal((r as any).failed, 1);
+    assert.equal(r.failed, 1);
+    assert.equal(r.persisted, 2, 'only successful writes count as persisted');
+    assert.equal(r.count, 3, 'fetched count remains a separate measure');
   });
 });
