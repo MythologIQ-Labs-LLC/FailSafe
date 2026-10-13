@@ -29,6 +29,56 @@ describe('SecurityReplayGuard storage path handling', () => {
     }
   });
 
+  it('FX472 refuses a consumed nonce when durable storage write fails', () => {
+    const root = mkTempDir('failsafe-guard-failconsume-');
+    const guard = new SecurityReplayGuard(root, { cleanupIntervalMs: 60000 });
+    try {
+      const nonce = guard.generateNonce();
+      const file = path.join(root, '.failsafe', 'security', 'nonces.json');
+      fs.renameSync(file, `${file}.previous`);
+      fs.mkdirSync(file); // atomic rename over a directory must fail on all OSes
+
+      const result = guard.consumeNonce(nonce, 'unit-test');
+      assert.strictEqual(result.valid, false);
+      assert.strictEqual(result.reason, 'storage_unavailable');
+      assert.strictEqual(guard.validateNonce(nonce).reason, 'already_used');
+      const dir = path.dirname(file);
+      assert.deepStrictEqual(fs.readdirSync(dir).filter(n => n.endsWith('.tmp')), []);
+    } finally {
+      guard.dispose();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('FX472 refuses to issue a nonce when it cannot persist issuance', () => {
+    const root = mkTempDir('failsafe-guard-failissue-');
+    const guard = new SecurityReplayGuard(root, { cleanupIntervalMs: 60000 });
+    try {
+      const file = path.join(root, '.failsafe', 'security', 'nonces.json');
+      fs.mkdirSync(file);
+      assert.throws(() => guard.generateNonce(), /durable nonce storage unavailable/);
+      assert.strictEqual(guard.getStats().total, 0, 'failed issuance must not retain a nonce');
+    } finally {
+      guard.dispose();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('FX472 a successfully persisted consumption stays used after restart', () => {
+    const root = mkTempDir('failsafe-guard-restart-');
+    let guard = new SecurityReplayGuard(root, { cleanupIntervalMs: 60000 });
+    try {
+      const nonce = guard.generateNonce();
+      assert.strictEqual(guard.consumeNonce(nonce, 'unit-test').valid, true);
+      guard.dispose();
+      guard = new SecurityReplayGuard(root, { cleanupIntervalMs: 60000 });
+      assert.strictEqual(guard.validateNonce(nonce).reason, 'already_used');
+    } finally {
+      guard.dispose();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('accepts direct .failsafe/security directory without nesting paths', () => {
     const workspaceRoot = mkTempDir('failsafe-guard-security-dir-');
     const securityDir = path.join(workspaceRoot, '.failsafe', 'security');
