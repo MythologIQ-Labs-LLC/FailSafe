@@ -351,6 +351,13 @@ export class GovernanceRenderer {
       ESCALATED_UNDECIDED: { label: 'Escalated · awaiting decision', bg: '#d97706' },
       DECIDED_APPROVED: { label: 'Approved (override)', bg: '#7c3aed' },
       DECIDED_REJECTED: { label: 'Rejected', bg: 'var(--text-muted)' },
+      // FX947 (#367 tranche 3c): a later same-path, same-engine, non-vacuous
+      // clean re-scan -- distinct from DECIDED_REJECTED's muted gray (this is
+      // a verified-clean re-scan, not a decided-and-rejected override) and
+      // from DECIDED_APPROVED's purple (an accepted-risk override is not the
+      // same thing as a re-scan finding nothing -- AuditResolutionProjector.ts
+      // authority boundary).
+      SUPERSEDED: { label: 'Superseded (re-scan clean)', bg: 'var(--accent-green)' },
     };
     const cfg = styles[state] || { label: state || 'Unknown', bg: 'var(--text-muted)' };
     return `<span class="cc-badge" style="background:${cfg.bg};color:#fff;white-space:nowrap">${this.esc(cfg.label)}</span>`;
