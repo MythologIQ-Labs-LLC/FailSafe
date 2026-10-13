@@ -31,7 +31,7 @@ export interface NonceRecord {
 
 export interface NonceValidationResult {
   valid: boolean;
-  reason?: "not_found" | "expired" | "already_used" | "invalid_format";
+  reason?: "not_found" | "expired" | "already_used" | "invalid_format" | "storage_unavailable";
   record?: NonceRecord;
 }
 
@@ -86,7 +86,10 @@ export class SecurityReplayGuard {
     };
 
     this.nonces.set(nonce, record);
-    this.saveNonces();
+    if (!this.saveNonces()) {
+      this.nonces.delete(nonce);
+      throw new Error("Cannot issue replay nonce: durable nonce storage unavailable");
+    }
 
     this.logger.debug("Generated nonce", {
       nonce: nonce.substring(0, 8) + "...",
@@ -140,7 +143,12 @@ export class SecurityReplayGuard {
     record.consumedBy = consumedBy;
 
     this.nonces.set(nonce, record);
-    this.saveNonces();
+    if (!this.saveNonces()) {
+      // Retain the in-memory consumed mark so this process never retries a
+      // failed persistence attempt as an accepted new request (#472).
+      this.logger.error("Nonce consumption cannot be confirmed durably");
+      return { valid: false, reason: "storage_unavailable", record };
+    }
 
     this.logger.debug("Consumed nonce", {
       nonce: nonce.substring(0, 8) + "...",
@@ -240,16 +248,29 @@ export class SecurityReplayGuard {
   /**
    * Save nonces to persistent storage
    */
-  private saveNonces(): void {
+  private saveNonces(): boolean {
+    // Write an entirely new snapshot, fsync it, then rename over the old one
+    // on the same filesystem. A partial JSON write must never corrupt the
+    // previously accepted nonce history. Last-writer races across multiple
+    // independent host processes remain a separate deployment constraint.
+    const tmp = `${this.nonceStorePath}.${crypto.randomBytes(8).toString("hex")}.tmp`;
+    let fd: number | undefined;
     try {
-      const records = Array.from(this.nonces.values());
-      fs.writeFileSync(
-        this.nonceStorePath,
-        JSON.stringify(records, null, 2),
-        "utf8",
-      );
+      fd = fs.openSync(tmp, "wx", 0o600);
+      fs.writeFileSync(fd, JSON.stringify([...this.nonces.values()], null, 2), "utf8");
+      fs.fsyncSync(fd);
+      fs.closeSync(fd);
+      fd = undefined;
+      fs.renameSync(tmp, this.nonceStorePath);
+      return true;
     } catch (error) {
-      this.logger.error("Failed to save nonce store", error);
+      this.logger.error("Failed to persist nonce store", error);
+      return false;
+    } finally {
+      if (fd !== undefined) {
+        try { fs.closeSync(fd); } catch { /* preserve original failure */ }
+      }
+      try { fs.unlinkSync(tmp); } catch { /* temp was renamed or could not be removed */ }
     }
   }
 
