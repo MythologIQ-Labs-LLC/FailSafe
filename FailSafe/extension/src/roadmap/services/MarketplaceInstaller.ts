@@ -82,6 +82,15 @@ export class MarketplaceInstaller {
   ): Promise<{ success: boolean; installPath?: string; error?: string }> {
     const installPath = path.join(this.cachePath, item.id);
 
+    // Fail closed before cloning or deleting a previous installation.
+    // Running pip/npm in the host is NOT an isolated sandbox (#468).
+    if (options.sandboxEnabled) {
+      const error = "Sandboxed setup is unavailable: no enforced process isolation exists. " +
+        "Disable sandbox setup for clone-only staging, or use an external isolated environment.";
+      onProgress({ phase: "failed", progress: 0, message: "Sandbox unavailable", error });
+      return { success: false, error };
+    }
+
     try {
       // Ensure cache directory exists
       await fs.promises.mkdir(this.cachePath, { recursive: true });
@@ -120,21 +129,8 @@ export class MarketplaceInstaller {
         message: "Repository cloned successfully",
       });
 
-      // Run setup if sandbox enabled
-      if (options.sandboxEnabled) {
-        onProgress({
-          phase: "setup",
-          progress: 60,
-          message: "Running sandboxed setup...",
-        });
-        await this.runSandboxedSetup(installPath, item);
-      }
-
-      onProgress({
-        phase: "setup",
-        progress: 80,
-        message: "Setup complete",
-      });
+      // Download-only staging: do not execute third-party package setup.
+      onProgress({ phase: "setup", progress: 80, message: "Cloned for review; no setup executed" });
 
       // Security scan happens separately via SecurityScanner
       // Just mark as ready for scanning
@@ -149,7 +145,7 @@ export class MarketplaceInstaller {
       onProgress({
         phase: "complete",
         progress: 100,
-        message: `${item.name} installed successfully`,
+        message: `${item.name} cloned for review; setup was not executed`,
       });
 
       return { success: true, installPath };
@@ -190,50 +186,6 @@ export class MarketplaceInstaller {
     }
 
     return { success: true };
-  }
-
-  private async runSandboxedSetup(
-    installPath: string,
-    item: MarketplaceItem,
-  ): Promise<void> {
-    // Check for common setup files and run them with restrictions
-    const setupFiles = [
-      { file: "requirements.txt", cmd: "pip", args: ["install", "-r", "requirements.txt", "--user"] },
-      { file: "pyproject.toml", cmd: "pip", args: ["install", ".", "--user"] },
-      { file: "package.json", cmd: "npm", args: ["install", "--ignore-scripts"] },
-    ];
-
-    for (const setup of setupFiles) {
-      const setupPath = path.join(installPath, setup.file);
-      if (fs.existsSync(setupPath)) {
-        // Run with --ignore-scripts or equivalent for safety
-        await this.runner(setup.cmd, setup.args, installPath, 120000);
-        break; // Only run first matching setup
-      }
-    }
-
-    // Write sandbox config file
-    const sandboxConfig = {
-      enabled: true,
-      createdAt: new Date().toISOString(),
-      item: {
-        id: item.id,
-        name: item.name,
-        author: item.author,
-      },
-      restrictions: {
-        networkAfterSetup: false,
-        fileSystemScope: installPath,
-        maxMemoryMB: 512,
-        maxCpuPercent: 25,
-      },
-    };
-
-    await fs.promises.writeFile(
-      path.join(installPath, ".failsafe-sandbox.json"),
-      JSON.stringify(sandboxConfig, null, 2),
-      "utf-8",
-    );
   }
 
   async uninstall(item: MarketplaceItem): Promise<boolean> {
