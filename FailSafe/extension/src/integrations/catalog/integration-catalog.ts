@@ -43,7 +43,7 @@ export interface IntegrationDescriptor {
   configHint: string;
 }
 
-export type IntegrationConfigState = 'active' | 'needs-config' | 'disabled';
+export type IntegrationConfigState = 'configured-unverified' | 'needs-config' | 'disabled';
 
 export interface IntegrationStatus {
   id: string;
@@ -54,7 +54,8 @@ export interface IntegrationStatus {
   configHint: string;
   enabled: boolean;
   configured: boolean;
-  /** Derived display state: active (on + configured) / needs-config (on + missing
+  /** Derived configuration-only state: configured-unverified (on + keys present) /
+   *  needs-config (on + missing
    *  required keys) / disabled (off). */
   state: IntegrationConfigState;
   /** The required keys that are still empty — names only, never values. Lets the
@@ -75,7 +76,7 @@ export const INTEGRATION_CATALOG: readonly IntegrationDescriptor[] = [
     id: 'continue',
     label: 'Continue',
     category: 'Agent CLI',
-    summary: 'Governed Continue CLI runs — writes pass through FailSafe enforcement before they touch disk.',
+    summary: 'Continue CLI wrapper with tool-allowlist prechecks and post-run diff review. Not an enforced filesystem isolation boundary.',
     enabledKey: 'failsafe.integrations.continue.enabled',
     requiredKeys: ['failsafe.integrations.continue.apiKey'],
     docsId: 'continue',
@@ -85,7 +86,7 @@ export const INTEGRATION_CATALOG: readonly IntegrationDescriptor[] = [
     id: 'aider',
     label: 'Aider',
     category: 'Agent CLI',
-    summary: 'Governed Aider runs — edits/commits gated by FailSafe (allow-writes, allow-dirty, auto-commit toggles).',
+    summary: 'Aider CLI wrapper with pre-run write denial and post-run diff review. Surprise high-risk edits are not intercepted.',
     enabledKey: 'failsafe.integrations.aider.enabled',
     requiredKeys: [],
     docsId: 'aider',
@@ -95,7 +96,7 @@ export const INTEGRATION_CATALOG: readonly IntegrationDescriptor[] = [
     id: 'openhands',
     label: 'OpenHands',
     category: 'Agent Observe',
-    summary: 'Read-only OpenHands session observer — surfaces agent actions/observations into the governance timeline.',
+    summary: 'Read-only OpenHands JSON export preview; maps observed actions but does not yet persist timeline records.',
     enabledKey: 'failsafe.integrations.openhands.enabled',
     requiredKeys: [],
     docsId: 'openhands',
@@ -115,7 +116,7 @@ export const INTEGRATION_CATALOG: readonly IntegrationDescriptor[] = [
     id: 'linear',
     label: 'Linear',
     category: 'Issue Tracker',
-    summary: 'Imports Linear issues as governed backlog items with traceable identifiers.',
+    summary: 'Fetches one Linear issue for an uncommitted intent preview; no backlog import or sync.',
     enabledKey: 'failsafe.integrations.linear.enabled',
     requiredKeys: ['failsafe.integrations.linear.apiKey'],
     docsId: 'linear',
@@ -125,7 +126,7 @@ export const INTEGRATION_CATALOG: readonly IntegrationDescriptor[] = [
     id: 'jira',
     label: 'Jira',
     category: 'Issue Tracker',
-    summary: 'Imports Jira issues into the governed backlog with full key + status mapping.',
+    summary: 'Fetches one Jira issue for an uncommitted intent preview; no backlog import or sync.',
     enabledKey: 'failsafe.integrations.jira.enabled',
     requiredKeys: [
       'failsafe.integrations.jira.baseUrl',
@@ -139,7 +140,7 @@ export const INTEGRATION_CATALOG: readonly IntegrationDescriptor[] = [
     id: 'github-checks',
     label: 'GitHub Checks',
     category: 'CI / Checks',
-    summary: 'Publishes FailSafe governance verdicts as GitHub Check runs on commits/PRs.',
+    summary: 'Publishes neutral operator advisories only; verified SHIELD PASS is disabled pending native attestation.',
     enabledKey: 'failsafe.integrations.github.enabled',
     requiredKeys: ['failsafe.integrations.github.token'],
     docsId: 'github-checks',
@@ -224,7 +225,7 @@ export function buildIntegrationStatus(
   const state: IntegrationConfigState = !enabled
     ? 'disabled'
     : configured
-      ? 'active'
+      ? 'configured-unverified'
       : 'needs-config';
   return {
     id: descriptor.id,
