@@ -1,6 +1,7 @@
 /** ConsoleRouteRegistrar — registers all Express routes for ConsoleServer.
  *  Extracted from ConsoleServer.ts (Phase 60 §0). Composes ApiRouteDeps from
  *  the host server + HubSnapshotService and wires every route module. */
+import { summarizePolicyTrust } from './TrustCheckpointMetrics';
 import * as path from "path";
 import * as fs from "fs";
 import express, { Request, Response } from "express";
@@ -368,12 +369,12 @@ export class ConsoleRouteRegistrar {
       const limit = Math.min(Number(_req.query.limit) || 20, 100);
       res.json(hub.getRecentVerdicts(limit));
     });
-    app.get("/api/v1/trust", async (_req, res) => {
-      const snap = await hub.buildHubSnapshot();
-      const cps = Object.values((snap.checkpoints as Record<string, unknown>) || {});
-      const total = cps.length || 1;
-      const passed = cps.filter((c: any) => c.policyVerdict !== "VIOLATION").length;
-      res.json({ overall: Math.round((passed / total) * 100), checkpointCount: total, passCount: passed });
+    app.get("/api/v1/trust", (_req, res) => {
+      // Do not mistake buildHubSnapshot().checkpoints (an aggregate summary) for
+      // actual verified policy records. No affirmative evidence -> no percentage.
+      const sampleLimit = 100;
+      const records = hub.getRecentCheckpoints(sampleLimit);
+      res.json(summarizePolicyTrust(records, sampleLimit));
     });
   }
 
