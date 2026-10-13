@@ -41,11 +41,12 @@ export function registerLinearImportCommand(context: vscode.ExtensionContext): v
       const p = result.preview;
       const meta = [p.state && `state: ${p.state}`, p.assignee && `assignee: ${p.assignee}`, p.labels.length && `labels: ${p.labels.join(', ')}`]
         .filter(Boolean).join(' · ');
-      // Preview only — explicitly NOT committed.
-      vscode.window.showInformationMessage(
-        `Intent preview (not committed) — ${p.intent}${meta ? `\n${meta}` : ''}`,
-        { modal: false },
-      );
+      // #480: inspectable, unsaved preview. No canonical state mutation.
+      const title = `Linear issue preview (uncommitted)`;
+      const markdown = [`# ${title}`, '', '> This is a read-only review. No FailSafe intent or backlog item was created.', '', `## ${p.intent}`, '', meta, ''].join('\\n');
+      const document = await vscode.workspace.openTextDocument({ language: 'markdown', content: markdown });
+      await vscode.window.showTextDocument(document, { preview: true });
+      vscode.window.showInformationMessage(`${title}: opened review document; not imported or saved.`);
     }),
   );
 }
