@@ -37,6 +37,22 @@ suite('integrations/catalog integration-catalog', () => {
     }
   });
 
+  test('FX480 Jira and Linear advertise single-issue previews, not persisted synchronization', () => {
+    for (const id of ['jira', 'linear']) {
+      const summary = byId(id).summary.toLowerCase();
+      assert.match(summary, /preview/);
+      assert.match(summary, /no backlog import or sync/);
+      assert.ok(!summary.startsWith('imports'), `${id} must not claim a persisted import`);
+    }
+  });
+
+  test('FX479 does not advertise pre-write enforcement or completed observer persistence', () => {
+    assert.match(byId('aider').summary, /post-run diff/);
+    assert.match(byId('continue').summary, /not an enforced filesystem isolation/);
+    assert.match(byId('openhands').summary, /does not yet persist/);
+    assert.match(byId('github-checks').summary, /SHIELD PASS is disabled/);
+  });
+
   test('catalogConfigKeys returns every enabled + required key, de-duplicated', () => {
     const keys = catalogConfigKeys();
     // sentry contributes enabled + token + org + project
