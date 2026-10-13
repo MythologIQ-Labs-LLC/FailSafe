@@ -162,7 +162,7 @@
       },
       {
         "command": "failsafe.github.publishCheck",
-        "title": "FailSafe: Publish SHIELD Verdict to GitHub Check",
+        "title": "FailSafe: Publish Manual GitHub Advisory",
         "category": "FailSafe"
       },
       {
@@ -422,7 +422,7 @@
         "failsafe.integrations.github.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Publish FailSafe SHIELD verdicts to GitHub as Check Runs at the merge gate. The `FailSafe: Publish SHIELD Verdict to GitHub Check` command posts a single completed check for the current HEAD. No network call is made unless this is enabled AND a token is set; fork-PR contexts degrade to local-only."
+          "description": "Publish an explicitly NEUTRAL manual GitHub advisory, not a verified SHIELD gate. Verified SHIELD PASS publication is disabled until native audit attestation is available. The manual command posts a neutral Check Run for HEAD. No network call is made unless this is enabled AND a token is set; fork-PR contexts degrade to local-only."
         },
         "failsafe.integrations.github.token": {
           "type": "string",
@@ -505,12 +505,12 @@
         "failsafe.integrations.aider.autoCommit": {
           "type": "boolean",
           "default": false,
-          "description": "Let Aider auto-commit its changes (`--auto-commits`). Off by default (`--no-auto-commits`) so changes stay uncommitted for the diff gate."
+          "description": "Legacy Aider auto-commit request. Currently refused before spawning because there is no pre-commit governance gate; leave disabled until one is approved."
         },
         "failsafe.integrations.aider.allowWrites": {
           "type": "boolean",
           "default": false,
-          "description": "Permit Aider runs whose diff risk tier is below L3 to proceed without escalation. When false, sub-L3 changes are blocked. L3 always escalates regardless."
+          "description": "When false, refuse Aider execution BEFORE spawn since it can edit files. When true, Aider may execute without auto-commit, but surprise L3 edits are detected after execution, not prevented; use on disposable workspaces until isolated execution exists."
         },
         "failsafe.integrations.agentAudit.enabled": {
           "type": "boolean",
