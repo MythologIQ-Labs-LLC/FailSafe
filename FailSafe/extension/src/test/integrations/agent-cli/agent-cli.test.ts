@@ -182,6 +182,31 @@ suite('continue-wrapper (#104)', () => {
 // ---- Aider (#107) -------------------------------------------------------
 
 suite('aider-wrapper (#107)', () => {
+  test('FX475 no-writes denies Aider before spawn on a clean worktree', async () => {
+    const { run, calls } = makeRunner({ dirty: false, diff: L1_DIFF });
+    const out = await runAiderGoverned(
+      { prompt: 'change src/x.ts', cwd: '/repo', writesAllowed: false },
+      { run, classify, issuedAt: 'T' },
+    );
+    assert.equal(out.available, true);
+    assert.equal(out.spawned, false);
+    assert.equal(out.decision?.verdict, 'BLOCK');
+    assert.equal(out.receipt?.exitCode, null);
+    assert.ok(!calls.some((c) => c.cmd === 'aider' && c.args[0] !== '--version'), 'Aider must not execute');
+  });
+
+  test('FX475 auto-commit request denies launch until a pre-commit gate exists', async () => {
+    const { run, calls } = makeRunner({ dirty: false, diff: L1_DIFF });
+    const out = await runAiderGoverned(
+      { prompt: 'change src/x.ts', cwd: '/repo', writesAllowed: true, autoCommit: true },
+      { run, classify, issuedAt: 'T' },
+    );
+    assert.equal(out.spawned, false);
+    assert.equal(out.decision?.verdict, 'BLOCK');
+    assert.match(out.decision?.reason ?? '', /pre-commit governance/i);
+    assert.ok(!calls.some((c) => c.cmd === 'aider' && c.args[0] !== '--version'), 'No auto-commit child may execute');
+  });
+
   test('buildAiderArgs: --message + --yes-always; auto-commit OFF by default', () => {
     assert.deepEqual(buildAiderArgs('fix bug'), ['--message', 'fix bug', '--yes-always', '--no-auto-commits']);
     assert.deepEqual(buildAiderArgs('fix bug', { autoCommit: true }), ['--message', 'fix bug', '--yes-always', '--auto-commits']);
