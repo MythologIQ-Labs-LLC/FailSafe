@@ -255,6 +255,15 @@ suite('Sentry pagination and atomic import (FailSafe #478)', () => {
     assert.ok(!JSON.stringify(r).includes('private-token'));
   });
 
+  test('malformed API base URL does not throw or contact network', async () => {
+    let called = false;
+    const r = await fetchSentryRisks({ ...options, apiBaseUrl: 'not-a-url' },
+      async () => { called = true; return { status: 200, body: one }; });
+    assert.equal(r.ok, false);
+    assert.match(r.error ?? '', /invalid sentry api base url/i);
+    assert.equal(called, false);
+  });
+
   test('rejects insecure API origins before sending authorization', async () => {
     let called = false;
     const r = await fetchSentryRisks({ ...options, apiBaseUrl: 'http://sentry.internal' },
