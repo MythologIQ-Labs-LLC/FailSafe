@@ -110,43 +110,43 @@ suite('MarketplaceInstaller (FX384)', () => {
     });
   });
 
-  test('FX384 install — sandboxEnabled writes .failsafe-sandbox.json', async () => {
+  test('FX468 fake sandbox refuses before clone or removal of prior installation', async () => {
     await withTempHome(async (home) => {
-      const installPath = path.join(home, '.failsafe', 'marketplace', ITEM.id);
-      const { runner } = makeRunner((call) => {
-        if (call.args[0] === 'clone') {
-          fs.mkdirSync(installPath, { recursive: true });
-          return { code: 0, stdout: '', stderr: '' };
-        }
-        return { code: 0, stdout: '', stderr: '' };
-      });
+      const existing = path.join(home, '.failsafe', 'marketplace', ITEM.id);
+      fs.mkdirSync(existing, { recursive: true });
+      fs.writeFileSync(path.join(existing, 'user-state.txt'), 'preserve');
+      const { calls, runner } = makeRunner(() => ({ code: 0, stdout: '', stderr: '' }));
+      const progress: InstallProgress[] = [];
       const ins = new MarketplaceInstaller(new EventBus(), runner);
-      await ins.install(ITEM, { sandboxEnabled: true, runSecurityScan: false }, () => {});
-      const sandboxFile = path.join(installPath, '.failsafe-sandbox.json');
-      assert.ok(fs.existsSync(sandboxFile));
-      const cfg = JSON.parse(fs.readFileSync(sandboxFile, 'utf-8'));
-      assert.equal(cfg.enabled, true);
-      assert.equal(cfg.item.id, ITEM.id);
-      assert.equal(cfg.restrictions.networkAfterSetup, false);
+      const result = await ins.install(ITEM, { sandboxEnabled: true, runSecurityScan: true }, p => progress.push(p));
+      assert.equal(result.success, false);
+      assert.match(result.error ?? '', /process isolation|sandboxed setup/i);
+      assert.equal(calls.length, 0, 'no git/pip/npm process starts');
+      assert.equal(fs.readFileSync(path.join(existing, 'user-state.txt'), 'utf8'), 'preserve');
+      assert.equal(progress.at(-1)?.phase, 'failed');
     });
   });
 
-  test('FX384 install — sandbox runs npm install --ignore-scripts when package.json present', async () => {
+  test('FX468 clone-only staging never executes third-party package setup', async () => {
     await withTempHome(async (home) => {
       const installPath = path.join(home, '.failsafe', 'marketplace', ITEM.id);
       const { calls, runner } = makeRunner((call) => {
-        if (call.args[0] === 'clone') {
+        if (call.command === 'git' && call.args[0] === 'clone') {
           fs.mkdirSync(installPath, { recursive: true });
+          fs.writeFileSync(path.join(installPath, 'requirements.txt'), 'dangerous-package');
+          fs.writeFileSync(path.join(installPath, 'pyproject.toml'), '[build-system]');
           fs.writeFileSync(path.join(installPath, 'package.json'), '{}');
           return { code: 0, stdout: '', stderr: '' };
         }
-        return { code: 0, stdout: '', stderr: '' };
+        return { code: 1, stdout: '', stderr: 'unauthorized subprocess' };
       });
+      const progress: InstallProgress[] = [];
       const ins = new MarketplaceInstaller(new EventBus(), runner);
-      await ins.install(ITEM, { sandboxEnabled: true, runSecurityScan: false }, () => {});
-      const npmCall = calls.find(c => c.command === 'npm');
-      assert.ok(npmCall);
-      assert.deepEqual(npmCall!.args, ['install', '--ignore-scripts']);
+      const result = await ins.install(ITEM, { sandboxEnabled: false, runSecurityScan: true }, p => progress.push(p));
+      assert.equal(result.success, true);
+      assert.deepEqual(calls.map(c => c.command), ['git']);
+      assert.ok(!fs.existsSync(path.join(installPath, '.failsafe-sandbox.json')));
+      assert.ok(progress.some(p => /no setup executed|setup was not executed/i.test(p.message)));
     });
   });
 
