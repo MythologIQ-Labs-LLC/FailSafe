@@ -115,7 +115,14 @@ export function registerMarketplaceInstallRoutes(
         .install(item, { sandboxEnabled, runSecurityScan }, (progress) => {
           deps.broadcast({ type: "marketplace.progress", payload: { itemId: item.id, ...progress } });
         })
-        .then((result) => handleInstallCompletion(deps, item, result, { sandboxEnabled, runSecurityScan }));
+        .then((result) => handleInstallCompletion(deps, item, result, { sandboxEnabled, runSecurityScan }))
+        .catch((err: unknown) => {
+          deps.marketplaceCatalog.updateItemStatus(item.id, { status: "failed" });
+          deps.broadcast({
+            type: "marketplace.failed",
+            payload: { itemId: item.id, error: err instanceof Error ? err.message : String(err) },
+          });
+        });
 
       res.json({
         status: "installing",
@@ -146,10 +153,29 @@ async function handleInstallCompletion(
     installedAt: new Date().toISOString(),
     sandboxEnabled: opts.sandboxEnabled,
   });
-  if (opts.runSecurityScan && result.installPath) {
-    await runPostInstallScan(deps, item, result.installPath);
+  if (opts.runSecurityScan) {
+    if (!result.installPath) {
+      deps.marketplaceCatalog.updateItemStatus(item.id, { status: "quarantined" });
+      deps.broadcast({ type: "marketplace.quarantined", payload: { itemId: item.id, error: "Missing install path for required security scan" } });
+      recordInstallLedger(deps, item, result.installPath, opts, false);
+      return;
+    }
+    let passed = false;
+    try {
+      passed = await runPostInstallScan(deps, item, result.installPath);
+    } catch (err) {
+      deps.marketplaceCatalog.updateItemStatus(item.id, { status: "quarantined" });
+      deps.broadcast({ type: "marketplace.scan.failed", payload: {
+        itemId: item.id, error: err instanceof Error ? err.message : String(err),
+      } });
+    }
+    if (!passed) {
+      recordInstallLedger(deps, item, result.installPath, opts, false);
+      deps.broadcast({ type: "marketplace.quarantined", payload: { itemId: item.id, installPath: result.installPath } });
+      return;
+    }
   }
-  recordInstallLedger(deps, item, result.installPath, opts);
+  recordInstallLedger(deps, item, result.installPath, opts, true);
   deps.broadcast({ type: "marketplace.installed", payload: { itemId: item.id, installPath: result.installPath } });
 }
 
@@ -158,7 +184,7 @@ async function runPostInstallScan(
   deps: MarketplaceRouteDeps,
   item: { id: string },
   installPath: string,
-): Promise<void> {
+ ): Promise<boolean> {
   deps.broadcast({ type: "marketplace.scanning", payload: { itemId: item.id } });
   const scanResult = await deps.securityScanner.runFullScan(installPath, (msg) => {
     deps.broadcast({ type: "marketplace.scan.progress", payload: { itemId: item.id, message: msg } });
@@ -169,6 +195,7 @@ async function runPostInstallScan(
     trustTier: scanResult.passed ? "scanned" : "quarantined",
   });
   deps.broadcast({ type: "marketplace.scanned", payload: { itemId: item.id, result: scanResult } });
+  return scanResult.passed;
 }
 
 /** Anchor a successful marketplace install into the ledger (non-blocking). */
@@ -177,6 +204,7 @@ function recordInstallLedger(
   item: { id: string; name: string },
   installPath: string | undefined,
   opts: InstallOpts,
+  success: boolean,
 ): void {
   if (!deps.ledgerManager) return;
   deps.ledgerManager.appendEntry({
@@ -185,7 +213,7 @@ function recordInstallLedger(
     payload: {
       itemId: item.id,
       itemName: item.name,
-      success: true,
+      success,
       installPath,
       sandboxEnabled: opts.sandboxEnabled,
       securityScanEnabled: opts.runSecurityScan,
