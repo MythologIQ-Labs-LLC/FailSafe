@@ -40,9 +40,17 @@ export function registerSentryImportCommand(context: vscode.ExtensionContext, wo
         vscode.window.showErrorMessage(`Sentry import failed: ${result.error ?? 'unknown error'}`);
         return;
       }
-      vscode.window.showInformationMessage(
-        `Sentry import: ${result.count} runtime-regression risk(s) upserted from ${opts.org}/${opts.project}.`,
-      );
+      const persisted = result.persisted ?? 0;
+      const failed = result.failed ?? 0;
+      if (failed > 0) {
+        vscode.window.showWarningMessage(
+          `Sentry import partial: ${persisted} risk(s) persisted, ${failed} failed from ${opts.org}/${opts.project} (${result.pagesFetched ?? 0} page(s)).`,
+        );
+      } else {
+        vscode.window.showInformationMessage(
+          `Sentry import: ${persisted} risk(s) persisted from ${opts.org}/${opts.project} (${result.pagesFetched ?? 0} page(s)).`,
+        );
+      }
     }),
   );
 }
