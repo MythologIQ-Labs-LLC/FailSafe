@@ -1,10 +1,19 @@
 import { strict as assert } from 'assert';
 import {
-  mapVerdictToConclusion, parseRepoSlug, buildCheckRunPayload,
+  mapVerdictToConclusion, parseRepoSlug, buildCheckRunPayload, buildManualAdvisoryPayload,
 } from '../../../integrations/github-checks/github-checks-map';
 import { publishCheckRun, type GitHubPostFn } from '../../../integrations/github-checks/github-checks-client';
 
 suite('github-checks map (#96)', () => {
+  test('FX476 manual advisory is neutral and not the required SHIELD check', () => {
+    const p = buildManualAdvisoryPayload('sha-123');
+    assert.equal(p.name, 'FailSafe Manual Advisory');
+    assert.equal(p.conclusion, 'neutral');
+    assert.equal(p.status, 'completed');
+    assert.equal(p.head_sha, 'sha-123');
+    assert.match(p.output.summary, /no independent qor audit/i);
+  });
+
   test('verdict → conclusion is deterministic (and fail-safe for unknowns)', () => {
     assert.equal(mapVerdictToConclusion('PASS'), 'success');
     assert.equal(mapVerdictToConclusion('WARN'), 'neutral');
@@ -42,6 +51,15 @@ suite('github-checks map (#96)', () => {
 });
 
 suite('github-checks client (#96)', () => {
+  test('FX476 unverified SHIELD PASS is rejected without an HTTP call', async () => {
+    let called = 0;
+    const post: GitHubPostFn = async () => { called++; return { status: 201, body: '{"id":123}' }; };
+    const r = await publishCheckRun('PASS', { remoteUrl: 'https://github.com/acme/failsafe', headSha: 'sha' }, { enabled: true, token: 't' }, post);
+    assert.equal(r.ok, false);
+    assert.match(r.error ?? '', /verified shield pass/i);
+    assert.equal(called, 0);
+  });
+
   const okBody = JSON.stringify({ id: 9988 });
   const ctx = { remoteUrl: 'https://github.com/acme/failsafe.git', headSha: 'deadbeef' };
 
@@ -87,22 +105,22 @@ suite('github-checks client (#96)', () => {
   test('SECRET MASKING: token only in the Authorization header, never in the result', async () => {
     let sentAuth: string | undefined;
     const post: GitHubPostFn = async (_u, headers) => { sentAuth = headers.Authorization; return { status: 201, body: okBody }; };
-    const r = await publishCheckRun('PASS', ctx, { enabled: true, token: 'ghs_TOPSECRET' }, post);
+    const r = await publishCheckRun('WARN', ctx, { enabled: true, token: 'ghs_TOPSECRET' }, post);
     assert.equal(sentAuth, 'token ghs_TOPSECRET', 'token is sent in the Authorization header');
     assert.ok(!JSON.stringify(r).includes('TOPSECRET'), 'token never appears anywhere in the returned result');
   });
 
   test('401/403 → auth error; 422 → rejected (non-throwing)', async () => {
-    const r401 = await publishCheckRun('PASS', ctx, { enabled: true, token: 't' }, async () => ({ status: 401, body: '' }));
+    const r401 = await publishCheckRun('WARN', ctx, { enabled: true, token: 't' }, async () => ({ status: 401, body: '' }));
     assert.equal(r401.ok, false); assert.match(r401.error ?? '', /auth/i);
-    const r422 = await publishCheckRun('PASS', ctx, { enabled: true, token: 't' }, async () => ({ status: 422, body: '' }));
+    const r422 = await publishCheckRun('WARN', ctx, { enabled: true, token: 't' }, async () => ({ status: 422, body: '' }));
     assert.equal(r422.ok, false); assert.equal(r422.status, 422);
   });
 
   test('custom apiBaseUrl is honored (GHES)', async () => {
     let sentUrl = '';
     const post: GitHubPostFn = async (url) => { sentUrl = url; return { status: 201, body: okBody }; };
-    await publishCheckRun('PASS', ctx, { enabled: true, token: 't', apiBaseUrl: 'https://ghe.acme.com/api/v3/' }, post);
+    await publishCheckRun('WARN', ctx, { enabled: true, token: 't', apiBaseUrl: 'https://ghe.acme.com/api/v3/' }, post);
     assert.equal(sentUrl, 'https://ghe.acme.com/api/v3/repos/acme/failsafe/check-runs');
   });
 });
