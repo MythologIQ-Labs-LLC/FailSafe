@@ -3,7 +3,7 @@ import {
   sentryLevelToSeverity, parseSentryIssue, parseIssuesResponse,
   sentryIssueToRisk, sentryIssuesToRisks,
 } from '../../../integrations/sentry/sentry-to-risk';
-import { buildIssuesPath, fetchSentryRisks, importSentryRisks, type SentryGetFn } from '../../../integrations/sentry/sentry-client';
+import { buildIssuesPath, fetchSentryRisks, importSentryRisks, nextSentryPage, type SentryGetFn } from '../../../integrations/sentry/sentry-client';
 
 // A realistic project-issues list fixture (two issues; one enriched with
 // release + suspect commit, one bare — exercising "missing commit data").
@@ -116,6 +116,9 @@ suite('sentry-client (#102)', () => {
     const r = await importSentryRisks({ enabled: true, token: 't', org: 'acme', project: 'backend', environment: 'production' }, get, (risk) => upserted.push(risk));
     assert.equal(r.ok, true);
     assert.equal(r.count, 2);
+    assert.equal(r.persisted, 2);
+    assert.equal(r.failed, 0);
+    assert.equal(r.pagesFetched, 1);
     assert.equal(upserted.length, 2);
     assert.deepEqual(upserted.map((u) => u.id).sort(), ['sentry:101', 'sentry:102']);
   });
@@ -163,6 +166,109 @@ suite('sentry upsert resilience (FX915/#241C)', () => {
     );
     assert.equal(r.ok, true);
     assert.equal(calls, 3, 'every risk still offered to the sink');
-    assert.equal((r as any).failed, 1);
+    assert.equal(r.failed, 1);
+    assert.equal(r.persisted, 2);
+    assert.equal(r.count, 3);
+  });
+});
+
+suite('Sentry pagination and atomic import (FailSafe #478)', () => {
+  const options = { enabled: true, token: 'private-token', org: 'acme', project: 'backend' };
+  const one = JSON.stringify([{ id: '1', title: 'Issue one', level: 'error' }]);
+  const two = JSON.stringify([{ id: '2', title: 'Issue two', level: 'warning' }]);
+  const makeLink = (url: string, results = true) =>
+    `<${url}>; rel="next"; results="${results}"`;
+
+  test('follows two HTTPS same-path pages and persists exactly two deduped risks', async () => {
+    const requested: string[] = [];
+    const persisted: string[] = [];
+    const get: SentryGetFn = async (url, headers) => {
+      requested.push(url);
+      assert.equal(headers.Authorization, 'Bearer private-token');
+      return requested.length === 1
+        ? { status: 200, body: one, headers: { link: makeLink(url + '&cursor=next') } }
+        : { status: 200, body: two, headers: { link: makeLink(url, false) } };
+    };
+    const r = await importSentryRisks(options, get, risk => persisted.push(String(risk.id)));
+    assert.equal(r.ok, true);
+    assert.equal(r.pagesFetched, 2);
+    assert.equal(r.persisted, 2);
+    assert.equal(r.count, 2);
+    assert.deepEqual(persisted.sort(), ['sentry:1', 'sentry:2']);
+  });
+
+  test('rejects other-origin pagination rather than sending the token to another host', async () => {
+    let calls = 0;
+    const get: SentryGetFn = async () => {
+      calls++;
+      return { status: 200, body: one, headers: { link: makeLink('https://attacker.invalid/steal') } };
+    };
+    const r = await fetchSentryRisks(options, get);
+    assert.equal(r.ok, false);
+    assert.match(r.error ?? '', /pagination/i);
+    assert.equal(calls, 1);
+    assert.equal(r.count, 0);
+  });
+
+  test('rejects unrelated paths and repeated cursors', async () => {
+    const firstUrl = 'https://sentry.io/api/0/projects/acme/backend/issues/?query=is%3Aunresolved';
+    assert.throws(() => nextSentryPage(makeLink('https://sentry.io/api/0/other/'), firstUrl, firstUrl), /Untrusted/);
+    const get: SentryGetFn = async (url) =>
+      ({ status: 200, body: one, headers: { link: makeLink(url) } });
+    const r = await fetchSentryRisks(options, get);
+    assert.equal(r.ok, false);
+    assert.match(r.error ?? '', /cursor loop/i);
+    assert.equal(r.count, 0);
+  });
+
+  test('refuses partial writes on rate limit or malformed second page', async () => {
+    for (const status of [429, 200]) {
+      let calls = 0;
+      let writes = 0;
+      const get: SentryGetFn = async (url) => {
+        calls++;
+        return calls === 1
+          ? { status: 200, body: one, headers: { link: makeLink(url + '&cursor=next') } }
+          : { status, body: status === 200 ? '{"error":"bad shape"}' : '' };
+      };
+      const r = await importSentryRisks(options, get, () => { writes++; });
+      assert.equal(r.ok, false);
+      assert.equal(r.count, 0);
+      assert.equal(writes, 0);
+      assert.equal(r.pagesFetched, 1);
+    }
+  });
+
+  test('exceeding a bounded page limit imports nothing', async () => {
+    let writes = 0;
+    const get: SentryGetFn = async url =>
+      ({ status: 200, body: one, headers: { link: makeLink(url + '&cursor=again') } });
+    const r = await importSentryRisks({ ...options, maxPages: 1 }, get, () => { writes++; });
+    assert.equal(r.ok, false);
+    assert.match(r.error ?? '', /limit reached/i);
+    assert.equal(writes, 0);
+  });
+
+  test('does not echo exception text containing a secret into result diagnostics', async () => {
+    const r = await fetchSentryRisks(options, async () => { throw new Error('private-token leaked'); });
+    assert.equal(r.ok, false);
+    assert.ok(!JSON.stringify(r).includes('private-token'));
+  });
+
+  test('malformed API base URL does not throw or contact network', async () => {
+    let called = false;
+    const r = await fetchSentryRisks({ ...options, apiBaseUrl: 'not-a-url' },
+      async () => { called = true; return { status: 200, body: one }; });
+    assert.equal(r.ok, false);
+    assert.match(r.error ?? '', /invalid sentry api base url/i);
+    assert.equal(called, false);
+  });
+
+  test('rejects insecure API origins before sending authorization', async () => {
+    let called = false;
+    const r = await fetchSentryRisks({ ...options, apiBaseUrl: 'http://sentry.internal' },
+      async () => { called = true; return { status: 200, body: one }; });
+    assert.equal(r.ok, false);
+    assert.equal(called, false);
   });
 });

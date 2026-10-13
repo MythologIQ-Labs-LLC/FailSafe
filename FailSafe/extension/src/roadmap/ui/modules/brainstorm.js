@@ -224,8 +224,19 @@ export class BrainstormRenderer {
     // the operator's brainstorm layer (keeping repo seed nodes).
     this._getEl('.cc-bs-seed')?.addEventListener('click', () => this.graph.seedFromRepo({ force: true }).then(() => canvas.fitToView())); // LD6: fit after re-seed
     this._getEl('.cc-bs-clear-layer')?.addEventListener('click', () => this.graph.clearBrainstormLayer());
-    this._getEl('.cc-bs-undo')?.addEventListener('click', () => this.graph.undo());
-    this._getEl('.cc-bs-redo')?.addEventListener('click', () => this.graph.redo());
+    // Graph fetch is asynchronous. The toolbar is visible before the graph
+    // and handlers exist, so enable keyboard-activatable Undo/Redo only after
+    // binding them. This prevents a false-ready Space press (#305/#486).
+    const undo = this._getEl('.cc-bs-undo');
+    if (undo) {
+      undo.addEventListener('click', () => this.graph.undo());
+      undo.disabled = false;
+    }
+    const redo = this._getEl('.cc-bs-redo');
+    if (redo) {
+      redo.addEventListener('click', () => this.graph.redo());
+      redo.disabled = false;
+    }
     this._getEl('.cc-bs-export')?.addEventListener('click', () => this.graph.exportJSON());
     this._getEl('.cc-bs-clear')?.addEventListener('click', () => {
       if (confirm('Are you sure you want to reset the entire Mind Map? This will clear all extracted ideations.')) {

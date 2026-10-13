@@ -130,6 +130,14 @@ suite('continue-wrapper (#104)', () => {
     assert.equal(calls.some((c) => c.cmd === 'cn' && c.args[0] !== '--version'), false);
   });
 
+  test('empty allowlist cannot bypass a disabled write authorization', async () => {
+    const { run, calls } = makeRunner();
+    const out = await runContinueGoverned({ prompt: 'edit anyway', allow: [], cwd: '/repo', writesAllowed: false }, { run, classify, issuedAt: 'T' });
+    assert.equal(out.spawned, false);
+    assert.equal(out.decision?.verdict, 'BLOCK');
+    assert.equal(calls.some(c => c.cmd === 'cn' && c.args.includes('-p')), false);
+  });
+
   test('no-tool mode (empty allowlist, L1) → ALLOW, spawns, captures diff + receipt', async () => {
     const { run, calls } = makeRunner({ diff: L1_DIFF });
     const out = await runContinueGoverned({ prompt: 'tidy', allow: [], cwd: '/repo', writesAllowed: true }, { run, classify, issuedAt: 'T' });
@@ -185,6 +193,16 @@ suite('aider-wrapper (#107)', () => {
   test('buildAiderArgs: --message + --yes-always; auto-commit OFF by default', () => {
     assert.deepEqual(buildAiderArgs('fix bug'), ['--message', 'fix bug', '--yes-always', '--no-auto-commits']);
     assert.deepEqual(buildAiderArgs('fix bug', { autoCommit: true }), ['--message', 'fix bug', '--yes-always', '--auto-commits']);
+  });
+
+  test('Aider requires pre-run write authorization and cannot auto-commit before review', async () => {
+    for (const options of [{ writesAllowed: false }, { writesAllowed: true, autoCommit: true }]) {
+      const { run, calls } = makeRunner();
+      const out = await runAiderGoverned({ prompt: 'edit', cwd: '/repo', ...options }, { run, classify, issuedAt: 'T' });
+      assert.equal(out.spawned, false);
+      assert.equal(out.decision?.verdict, 'BLOCK');
+      assert.equal(calls.some(c => c.cmd === 'aider' && c.args.includes('--message')), false);
+    }
   });
 
   test('detect → clean run → ALLOW with captured diff', async () => {

@@ -76,6 +76,13 @@ export async function runContinueGoverned(opts: ContinueRunOptions, deps: Contin
   const argv = buildContinueArgs(opts.prompt, opts.allow);
   const allowlistRisk = mapAllowlistToRisk(opts.allow);
 
+  // #475: an L1/empty allowlist cannot prove the CLI is unable to write.
+  // Without write authorization, never spawn an agent into the workspace.
+  if (!opts.writesAllowed) {
+    const decision = { verdict: 'BLOCK' as const, reason: 'write authorization is required before running Continue', riskGrade: 'L2' as const };
+    return { available: true, spawned: false, decision, receipt: buildAgentReceipt({ agent: 'continue', argv, decision, exitCode: null, diff: { files: 0, additions: 0, deletions: 0, paths: [] }, issuedAt: deps.issuedAt }) };
+  }
+
   // Phase 1 — pre-run gate on the requested tool permissions.
   const pre = decideAgentRun(allowlistRisk, { writesAllowed: opts.writesAllowed });
   if (pre.verdict !== 'ALLOW') {

@@ -64,6 +64,10 @@ export async function publishCheckRun(
   opts: PublishOptions,
   post: GitHubPostFn,
 ): Promise<PublishCheckResult> {
+  // #476: unverified operator PASS cannot be published.
+  if (verdict.trim().toUpperCase() === 'PASS') {
+    return { ok: false, error: 'SHIELD PASS publication requires a verified audit receipt; manual PASS is disabled.' };
+  }
   const input: CheckRunInput = {
     verdict, headSha: (ctx.headSha || '').trim(), name: opts.name, summary: opts.summary, detailsUrl: opts.detailsUrl,
   };
@@ -89,6 +93,13 @@ export async function publishCheckRunPayload(
   const slug = ctx.remoteUrl ? parseRepoSlug(ctx.remoteUrl) : null;
   if (!slug) return { ok: true, localOnly: true, error: 'no GitHub remote resolved' };
   if (!ctx.headSha || !ctx.headSha.trim()) return { ok: true, localOnly: true, error: 'no HEAD sha resolved' };
+
+  // No accepted native, subject-bound verification receipt is available in this
+  // publisher. A caller-supplied PASS is not authority to create a green SHIELD
+  // check. Block at the transport boundary as well as at the command UI (#476).
+  if (payload.conclusion === 'success' && payload.name.toLowerCase().startsWith('failsafe shield')) {
+    return { ok: false, error: 'Verified SHIELD PASS publishing is disabled until native gate attestation is enforced' };
+  }
 
   const base = (opts.apiBaseUrl || GITHUB_API).replace(/\/$/, '');
   const url = `${base}/repos/${slug.owner}/${slug.repo}/check-runs`;

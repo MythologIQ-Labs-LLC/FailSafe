@@ -83,6 +83,7 @@ function makeDeps(items: MarketplaceItem[], overrides: Partial<MarketplaceRouteD
 }
 
 suite('MarketplaceRoute (FX091–FX097)', () => {
+  // Four historical positive install route cases are deferred while endpoints intentionally return 503 (#468/#469).
   let harness: RouteHarness;
 
   teardown(async () => { if (harness) await harness.stop(); });
@@ -115,7 +116,7 @@ suite('MarketplaceRoute (FX091–FX097)', () => {
     assert.match(String(miss.body.error), /not found/i);
   });
 
-  test('FX093 POST /api/marketplace/install/:id — local request returns HITL nonce', async () => {
+  test.skip('FX093 POST /api/marketplace/install/:id — local request returns HITL nonce', async () => {
     const app = makeApp();
     const { deps } = makeDeps([buildItem({ id: 'a', name: 'Alpha' })]);
     setupMarketplaceRoutes(app, deps);
@@ -146,7 +147,7 @@ suite('MarketplaceRoute (FX091–FX097)', () => {
     assert.equal(rejectedCount, 1);
   });
 
-  test('FX093 POST /api/marketplace/install/:id — 404 for unknown, 409 when already installing', async () => {
+  test.skip('FX093 POST /api/marketplace/install/:id — 404 for unknown, 409 when already installing', async () => {
     const app = makeApp();
     const { deps } = makeDeps([buildItem({ id: 'busy', status: 'installing' })]);
     setupMarketplaceRoutes(app, deps);
@@ -158,7 +159,7 @@ suite('MarketplaceRoute (FX091–FX097)', () => {
     assert.equal(busy.status, 409);
   });
 
-  test('install/:id/confirm — valid nonce starts install + records HITL nonce as one-time-use', async () => {
+  test.skip('install/:id/confirm — valid nonce starts install + records HITL nonce as one-time-use', async () => {
     const app = makeApp();
     const { deps, broadcasts, installCalls } = makeDeps([buildItem({ id: 'a' })]);
     setupMarketplaceRoutes(app, deps);
@@ -186,7 +187,7 @@ suite('MarketplaceRoute (FX091–FX097)', () => {
     assert.match(String(replay.body.error), /invalid|expired/i);
   });
 
-  test('install/:id/confirm — nonce mismatched to item is rejected', async () => {
+  test.skip('install/:id/confirm — nonce mismatched to item is rejected', async () => {
     const app = makeApp();
     const { deps } = makeDeps([buildItem({ id: 'a' }), buildItem({ id: 'b' })]);
     setupMarketplaceRoutes(app, deps);

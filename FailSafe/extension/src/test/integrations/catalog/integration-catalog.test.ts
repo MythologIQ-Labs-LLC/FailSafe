@@ -37,6 +37,22 @@ suite('integrations/catalog integration-catalog', () => {
     }
   });
 
+  test('FX480 Jira and Linear advertise single-issue previews, not persisted synchronization', () => {
+    for (const id of ['jira', 'linear']) {
+      const summary = byId(id).summary.toLowerCase();
+      assert.match(summary, /preview/);
+      assert.match(summary, /no backlog import or sync/);
+      assert.ok(!summary.startsWith('imports'), `${id} must not claim a persisted import`);
+    }
+  });
+
+  test('FX479 does not advertise pre-write enforcement or completed observer persistence', () => {
+    assert.match(byId('aider').summary, /post-run diff/);
+    assert.match(byId('continue').summary, /not an enforced filesystem isolation/i);
+    assert.match(byId('openhands').summary, /does not yet persist/);
+    assert.match(byId('github-checks').summary, /SHIELD PASS is disabled/);
+  });
+
   test('catalogConfigKeys returns every enabled + required key, de-duplicated', () => {
     const keys = catalogConfigKeys();
     // sentry contributes enabled + token + org + project
@@ -67,21 +83,21 @@ suite('integrations/catalog integration-catalog', () => {
     assert.deepEqual(s.missingKeys, ['failsafe.integrations.jira.apiToken']);
   });
 
-  test('active when enabled and all required keys present', () => {
+  test('configured-unverified when enabled and all required keys present', () => {
     const s = buildIntegrationStatus(byId('sentry'), {
       'failsafe.integrations.sentry.enabled': true,
       'failsafe.integrations.sentry.token': true,
       'failsafe.integrations.sentry.org': true,
       'failsafe.integrations.sentry.project': true,
     });
-    assert.equal(s.state, 'active');
+    assert.equal(s.state, 'configured-unverified');
     assert.equal(s.configured, true);
     assert.deepEqual(s.missingKeys, []);
   });
 
-  test('zero-required-key integration is active as soon as it is enabled', () => {
+  test('zero-required-key integration is configured but unverified when enabled', () => {
     const s = buildIntegrationStatus(byId('aider'), { 'failsafe.integrations.aider.enabled': true });
-    assert.equal(s.state, 'active');
+    assert.equal(s.state, 'configured-unverified');
     assert.equal(s.configured, true);
   });
 

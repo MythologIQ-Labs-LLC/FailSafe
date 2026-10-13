@@ -162,7 +162,7 @@
       },
       {
         "command": "failsafe.github.publishCheck",
-        "title": "FailSafe: Publish SHIELD Verdict to GitHub Check",
+        "title": "FailSafe: Publish Manual GitHub Advisory",
         "category": "FailSafe"
       },
       {
@@ -422,7 +422,7 @@
         "failsafe.integrations.github.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Publish FailSafe SHIELD verdicts to GitHub as Check Runs at the merge gate. The `FailSafe: Publish SHIELD Verdict to GitHub Check` command posts a single completed check for the current HEAD. No network call is made unless this is enabled AND a token is set; fork-PR contexts degrade to local-only."
+          "description": "Publish a neutral, non-authoritative manual GitHub advisory. SHIELD PASS publication is disabled until native subject-bound Qor gate attestation is available. The command posts a neutral Check Run for the current HEAD. No network call is made unless this is enabled AND a token is set; fork-PR contexts degrade to local-only."
         },
         "failsafe.integrations.github.token": {
           "type": "string",

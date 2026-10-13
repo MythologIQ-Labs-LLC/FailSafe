@@ -17,6 +17,8 @@ import type {
   CommandRunnerResult,
 } from "./MarketplaceTypes";
 
+// Temporary release gate: installation cannot safely execute until #468/#469 are closed.
+export const MARKETPLACE_INSTALLS_ENABLED = false;
 const DEFAULT_TIMEOUT = 300000; // 5 minutes
 
 function defaultRunner(
@@ -80,6 +82,11 @@ export class MarketplaceInstaller {
     options: InstallOptions,
     onProgress: (progress: InstallProgress) => void,
   ): Promise<{ success: boolean; installPath?: string; error?: string }> {
+    if (!MARKETPLACE_INSTALLS_ENABLED) {
+      const error = "Marketplace installation disabled pending isolation and scanner remediation (#468/#469)";
+      onProgress({ phase: "failed", progress: 0, message: error, error });
+      return { success: false, error };
+    }
     const installPath = path.join(this.cachePath, item.id);
 
     try {
@@ -254,6 +261,7 @@ export class MarketplaceInstaller {
     item: MarketplaceItem,
     onProgress: (progress: InstallProgress) => void,
   ): Promise<{ success: boolean; error?: string }> {
+    if (!MARKETPLACE_INSTALLS_ENABLED) return { success: false, error: "Marketplace updates disabled pending security remediation (#468/#469)" };
     const installPath = path.join(this.cachePath, item.id);
 
     if (!fs.existsSync(installPath)) {
