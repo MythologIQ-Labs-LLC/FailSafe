@@ -30073,3 +30073,59 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Previous Hash**: `111ea7ab7d579fc2d83e37bfdc88a283707ab5566b58fb9187de3e1259379631` (Entry #608 Chain Hash)
 
 **Chain Hash (Merkle seal)**: `cb66ae836ea7ca60f139f3d9c509c1d60117ac45386b9e531460634e59d768e4`
+
+---
+
+### Entry #610: GATE TRIBUNAL - plan-v606-release-markers (iteration 1) - PASS
+
+**Timestamp**: 2026-10-13T22:40:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-13T2213-4bb316`
+**Risk Grade**: L1
+**Verdict**: PASS
+**Plan**: `plan-v606-release-markers.md`
+**Preflight**: governance-health skill-entry DAMAGED docs/META_LEDGER.md (pre-existing qor-logic 0.176.1 anchor drift, owned by parked cycle fix/ledger-anchor-qor0176); operator-approved per-cycle override, gate_override `1fa06c53`
+
+**Content Hash**: `41f2c222206507e6a30d0bd32292366f172f51e0b80d3bdea9472f5a68272151`
+**Previous Hash**: `cb66ae836ea7ca60f139f3d9c509c1d60117ac45386b9e531460634e59d768e4`
+**Chain Hash (Merkle seal)**: `81c51d6ea8ca397eaaaef38fd750d59f40b00ef5d4c8e4b3d444b94e5965a459`
+
+**Decision**: Docs-only v6.0.6 release-marker currency: COMPONENT_HELP and PROCESS_GUIDE audience markers v6.0.5 -> v6.0.6, BACKLOG Version Summary v6.0.6 row, GOVERNANCE_INDEX Last Reviewed. Option B mandated by audit_risk_score (high-citation-surface) and run as a fresh-context architect-reviewer (Read/Grep/Glob); recommendation PASS. All six LD citations verified by direct read. plan_grep_lint WARNs on the four backticked citations are an upstream parser defect: plan_evidence strips backticks from observed text but reproduces() compares with strict equality, so a backticked line never reproduces; the two backtick-free citations reproduce clean. Version-applicability SKIP (reads pyproject.toml; Node package); manual check 6.0.6 > v6.0.5 holds. Reviewer advisories adjudicated non-blocking: ledger writes are phase artifacts not implementation edits (plan-233d precedent); override record present; row text will say Agent Marketplace, not marketplace, so #468/#469 is not misread as a VS Code Marketplace publishing limit. Next: /qor-implement.
+
+---
+
+### Entry #611: IMPLEMENTATION - plan-v606-release-markers
+
+**Timestamp**: 2026-10-13T22:55:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-13T2213-4bb316`
+**Risk Grade**: L1
+**Plan**: `plan-v606-release-markers.md` (audit PASS Entry #610; intent lock captured)
+**Files**: `FailSafe/extension/docs/COMPONENT_HELP.md`, `FailSafe/extension/docs/PROCESS_GUIDE.md`, `docs/BACKLOG.md`, `docs/GOVERNANCE_INDEX.md`
+
+**Content Hash**: `7eece34baa046131e2f5b5a465a8ccf3a6ac5235763d0a4e954e520800ea3033`
+**Previous Hash**: `81c51d6ea8ca397eaaaef38fd750d59f40b00ef5d4c8e4b3d444b94e5965a459`
+**Chain Hash (Merkle seal)**: `cd86499207ef209060624281a767b2600911ab154f4e167fe071590818b1f245`
+
+**Decision**: Release-marker currency for v6.0.6. COMPONENT_HELP.md:3 and PROCESS_GUIDE.md:3 audience markers v6.0.5 -> v6.0.6. BACKLOG Version Summary gains a v6.0.6 row above v6.0.5, status RELEASING, text drawn from CHANGELOG [6.0.6], naming the Agent Marketplace install/update disablement (#468/#469) and that authorized Continue/Aider runs are not write-isolated before diff review. GOVERNANCE_INDEX Last Reviewed prepended by hand (governance-index --advance-last-reviewed not used; it rewrites historical markers). Red: release-gate --preflight FAIL on checks component-help-version, process-guide-version, backlog-version-summary. Green: rc 0, 9/9 PASS. Mutation: reverting each marker independently re-produces exactly its own FAIL and no other. validate-vsix --source-only PASS; validate-docs-coherence PASS. doc_tier minimal: Step 8.5 doc sync skipped with WARN. No src/ change, no FEATURE_INDEX touch, no test files added (falsifier is the existing gate). Next: /qor-substantiate.
+
+---
+
+### Entry #612: SESSION SEAL - plan-v606-release-markers
+
+**Timestamp**: 2026-10-13T23:20:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-13T2213-4bb316`
+**Entry ID**: `3b035ce630a5`
+**Risk Grade**: L1
+**Verdict**: PASS
+**Plan**: `plan-v606-release-markers.md` (audit #610, implement #611)
+
+**Content Hash**: `65ed4981cbb6f1395ad3ca6b353fcda0edfa4a36cbe18f2bd5a642c83d9e2000`
+**Previous Hash**: `cd86499207ef209060624281a767b2600911ab154f4e167fe071590818b1f245`
+**Chain Hash (Merkle seal)**: `11ee53e378167e2203d0fd6cc95099e59fc06802d05314885ba7771d39db93cb`
+
+**Decision**: Reality = Promise for plan-v606-release-markers. All four Affected Files changed and nothing else (staged: COMPONENT_HELP.md, PROCESS_GUIDE.md, BACKLOG.md, GOVERNANCE_INDEX.md, META_LEDGER.md). release-gate --preflight rc 0, 9/9 PASS (was 3 FAIL); per-marker mutation re-produces exactly its own FAIL; validate-vsix --source-only PASS; validate-docs-coherence PASS; doc_integrity strict OK; documentation currency 0 warnings; governance-index --advance-last-reviewed 2026-10-13 --enforce rc 0 with no collateral rewrite. Gate ladder: intent_lock VERIFIED; skill_admission ADMITTED; gate_skill_matrix 0 broken; secret_scanner --staged 0 findings over the 5 staged files, falsifier exercised (a staged AWS-key canary returned rc 1, then removed); procedural_fidelity rc 0; dod_check rc 0; merge_velocity healthy; skill_size_budget WARN only (qor-audit 38.3 KB, qor-substantiate 37.0 KB, qor-plan 25.6 KB); data_api_acl_lint disclosed SKIP (no SQL migrations); install_drift OK. test:node 350 pass / 2 fail / 3 skipped: both failures are FX946 ledgerAnchor (tampered-entry detection above/below anchor 340) and reproduce identically on clean origin/main 9e0fb281 in a detached worktree (4 pass / 2 fail), so they are pre-existing qor-logic 0.176.1 drift owned by the parked fix/ledger-anchor-qor0176 cycle, not this change. Disclosures: (1) governance-health skill-entry DAMAGED docs/META_LEDGER.md carried through all four phases under the operator-approved per-cycle override gate_override 1fa06c53; no ledger repair attempted. (2) substantiate_gates SKIP, prerequisite absent: it reads qor/skills/.../SKILL.md, which exists only in the upstream qor-logic source tree. (3) version_applicability SKIP: reads pyproject.toml; Node package; manual 6.0.6 > v6.0.5. (4) Step 7.5 version bump NOT run: change_class hotfix would bump package.json to 6.0.7, but the release under preparation is 6.0.6, already set on main by #497; operator instruction is to tag v6.0.6. (5) Step 9.5.5 create_seal_tag NOT used: operator directed the v6.0.6 tag onto merged main HEAD, and the seal commit may not be an ancestor of main after a squash merge. (6) Seal commit carries no Qor/AI attribution trailer per the operator's standing attribution rule, matching prior seals 32e05d2e, d7018559, a079f45b; seal_trailer_check is expected to fail on that basis. (7) ledger_emit.append not used: its tail marker resolves to line 26594, ~3,400 lines above #609, so it would splice entries mid-file; entries #610-#612 rendered with ledger_emit.render and appended at the true end, CRLF preserved. (8) plan_grep_lint WARNs on backticked citations are an upstream parser defect (backticks stripped from observed text, strict-equality compare). (9) Parked WIP from fix/ledger-anchor-qor0176 (its iteration entries numbered #610-#612) is in git stash and will need renumbering after this lands. (10) Step 7.7 seal_entry_check and Step 7.7.5 seal_artifacts inapplicable per the Entry #601 precedent: ledger_dialect.entry_phase needs a numeric phase, which this ledger does not carry, so it prints FAIL: no parseable latest entry. (11) publication_boundary_lint rc 1 with 333 repo-wide structural findings (package-lock sponsor URLs 119, .gemini installer manifest 45, historical plans, issue templates); none in this cycle's files; standing repo debt tracked by count since #605 (384 -> 200), risen to 333 by intervening merges, not by this change. gate_chain_completeness inspected 0 sessions (vacuous); all four gates verified present by direct listing. Feature Inventory: not touched (docs-only). **SSDF Practices**: PS.2.1, RV.2.1
