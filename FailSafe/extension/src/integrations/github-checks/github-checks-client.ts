@@ -64,6 +64,11 @@ export async function publishCheckRun(
   opts: PublishOptions,
   post: GitHubPostFn,
 ): Promise<PublishCheckResult> {
+  // #476: an operator-selected PASS is not an audited governance receipt.
+  // Fail closed until the publisher accepts and verifies a bound audit receipt.
+  if (verdict.trim().toUpperCase() === 'PASS') {
+    return { ok: false, error: 'SHIELD PASS publication requires a verified audit receipt; manual PASS is disabled.' };
+  }
   const input: CheckRunInput = {
     verdict, headSha: (ctx.headSha || '').trim(), name: opts.name, summary: opts.summary, detailsUrl: opts.detailsUrl,
   };
