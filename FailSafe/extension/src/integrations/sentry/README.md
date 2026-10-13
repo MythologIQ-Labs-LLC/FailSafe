@@ -23,6 +23,12 @@ On demand, FailSafe fetches a Sentry project's issues (defaulting to `is:unresol
 
 The import degrades to local-only (no network) when disabled or when token, org, and project are not all configured.
 
+## Pagination and partial results
+
+The importer follows Sentry's `Link` header only when `rel="next"` and `results="true"` are explicitly present. Follow-up URLs must use HTTPS and the same origin and project-issues path as the initial request. It stops at ten pages by default, configurable programmatically up to a hard cap of 20. If a later page fails, the cursor repeats, or the limit is exceeded, **no risks are upserted** and the command reports a failure instead of calling a partial import complete.
+
+For completed fetches, the result distinguishes unique fetched risks, successful persistence writes, failed writes, and number of pages fetched. A successful GET alone is not a completed import. This is still an **on-demand, read-only issue-to-risk import**, not a continuous stream or a Sentry release/commit/PR correlation engine; extra issue details are not fetched.
+
 ## Security
 The auth token is a secret: it is placed only in the outbound `Authorization: Bearer <token>` header by the transport, and is never returned in the result or logged. The pure mapper reads only the canonical fields named below — never the raw event payload. The integration is read-only (no mutation of Sentry) and off by default; with no token/org/project or when disabled it makes no network call.
 
