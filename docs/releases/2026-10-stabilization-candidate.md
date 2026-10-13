@@ -11,7 +11,8 @@ Status: **staging only / NOT RELEASE APPROVED**. Branch: `release/stabilization-
 
 ## Mandatory release blockers
 
-- [ ] Review and settle P0 marketplace execution issues #468/#469: mitigate or disable unsafe execution paths before general publication.
+- [x] Stage a temporary fail-closed marketplace gate for #468/#469: install request/confirmation endpoints return 503, and direct installer install/update methods refuse execution before cloning or setup. Regression test added. **This is not sandbox remediation and must be verified at runtime; marketplace installation is intentionally unavailable in this release.**
+- [ ] Audit remaining marketplace command routes and verify no alternative install or update entry point bypasses the gate. Confirm user-facing UI labels and release notes clearly disclose temporary disablement.
 - [ ] Confirm authorization coverage for #494: preflight hardening is NOT sandboxed execution, and an authorized agent may mutate workspace files before high-risk diff review. Document, isolate, or disable this mode appropriately.
 - [ ] Confirm #495 mixed legacy/v2 ledger histories verify on reopening; legacy rows do not authenticate formerly unsigned fields. Reject corruption rather than treating degraded integrity as PASS.
 - [ ] Verify #493's client-level no-unverified-PASS guard and #490's neutral advisory remain effective in the combined artifact.
@@ -32,4 +33,4 @@ Keep this branch without a main-targeted PR until local and independent review g
 
 ## Acceptance record
 
-No runtime tests or GitHub-hosted validation were executed as part of preparing this integrated branch. Its existence and file count alone do not prove release suitability. Release publication needs explicit approval after the above evidence is attached.
+No runtime tests or GitHub-hosted validation were executed as part of preparing this integrated branch. Marketplace release gate and regression test have been committed but not executed. Its existence and file count alone do not prove release suitability. Release publication needs explicit approval after the above evidence is attached.
