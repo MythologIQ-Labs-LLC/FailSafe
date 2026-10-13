@@ -53,3 +53,42 @@ describe('SecurityReplayGuard storage path handling', () => {
   });
 });
 
+
+describe('SecurityReplayGuard persistence failure semantics (#472)', () => {
+  it('consumed nonce remains rejected after process restart', () => {
+    const root = mkTempDir('failsafe-replay-restart-');
+    let guard: SecurityReplayGuard | undefined;
+    try {
+      guard = new SecurityReplayGuard(root);
+      const nonce = guard.generateNonce();
+      assert.strictEqual(guard.consumeNonce(nonce).valid, true);
+      guard.dispose();
+      guard = new SecurityReplayGuard(root);
+      assert.strictEqual(guard.consumeNonce(nonce).valid, false);
+      assert.strictEqual(guard.validateNonce(nonce).reason, 'already_used');
+    } finally {
+      guard?.dispose();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses consumption when atomic persistence cannot replace the store', () => {
+    const root = mkTempDir('failsafe-replay-writefail-');
+    let guard: SecurityReplayGuard | undefined;
+    let obstruction = '';
+    try {
+      guard = new SecurityReplayGuard(root);
+      const nonce = guard.generateNonce();
+      obstruction = path.join(root, '.failsafe', 'security', 'nonces.json');
+      fs.unlinkSync(obstruction);
+      fs.mkdirSync(obstruction);
+      const result = guard.consumeNonce(nonce);
+      assert.strictEqual(result.valid, false);
+      assert.strictEqual(result.reason, 'persistence_error');
+    } finally {
+      if (obstruction) fs.rmSync(obstruction, { recursive: true, force: true });
+      guard?.dispose();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
