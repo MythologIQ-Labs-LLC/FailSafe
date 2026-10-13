@@ -54,7 +54,9 @@ function withTempHome(action: (home: string) => Promise<void> | void): Promise<v
 }
 
 suite('MarketplaceInstaller (FX384)', () => {
-  test('FX384 install — successful clone reports complete + 100% progress', async () => {
+  // Historical install/update success cases are inapplicable while the release security gate disables execution (#468/#469).
+  // The active marketplace-release-gate tests assert that prohibited commands never spawn.
+  test.skip('FX384 install — successful clone reports complete + 100% progress', async () => {
     await withTempHome(async (home) => {
       const progress: InstallProgress[] = [];
       const installPath = path.join(home, '.failsafe', 'marketplace', ITEM.id);
@@ -77,7 +79,7 @@ suite('MarketplaceInstaller (FX384)', () => {
     });
   });
 
-  test('FX384 install — clone failure reports phase=failed + error', async () => {
+  test.skip('FX384 install — clone failure reports phase=failed + error', async () => {
     await withTempHome(async () => {
       const progress: InstallProgress[] = [];
       const { runner } = makeRunner(() => ({ code: 1, stdout: '', stderr: 'Repository not found' }));
@@ -90,7 +92,7 @@ suite('MarketplaceInstaller (FX384)', () => {
     });
   });
 
-  test('FX384 install — re-install removes existing dir before cloning', async () => {
+  test.skip('FX384 install — re-install removes existing dir before cloning', async () => {
     await withTempHome(async (home) => {
       const installPath = path.join(home, '.failsafe', 'marketplace', ITEM.id);
       // Pre-create existing dir with a marker file
@@ -110,7 +112,7 @@ suite('MarketplaceInstaller (FX384)', () => {
     });
   });
 
-  test('FX384 install — sandboxEnabled writes .failsafe-sandbox.json', async () => {
+  test.skip('FX384 install — sandboxEnabled writes .failsafe-sandbox.json', async () => {
     await withTempHome(async (home) => {
       const installPath = path.join(home, '.failsafe', 'marketplace', ITEM.id);
       const { runner } = makeRunner((call) => {
@@ -131,7 +133,7 @@ suite('MarketplaceInstaller (FX384)', () => {
     });
   });
 
-  test('FX384 install — sandbox runs npm install --ignore-scripts when package.json present', async () => {
+  test.skip('FX384 install — sandbox runs npm install --ignore-scripts when package.json present', async () => {
     await withTempHome(async (home) => {
       const installPath = path.join(home, '.failsafe', 'marketplace', ITEM.id);
       const { calls, runner } = makeRunner((call) => {
@@ -178,7 +180,7 @@ suite('MarketplaceInstaller (FX384)', () => {
     });
   });
 
-  test('FX384 update — not installed → returns failure', async () => {
+  test.skip('FX384 update — not installed → returns failure', async () => {
     await withTempHome(async () => {
       const ins = new MarketplaceInstaller(new EventBus(), makeRunner(() => ({ code: 0, stdout: '', stderr: '' })).runner);
       const r = await ins.update(ITEM, () => {});
@@ -187,7 +189,7 @@ suite('MarketplaceInstaller (FX384)', () => {
     });
   });
 
-  test('FX384 update — successful pull reports complete', async () => {
+  test.skip('FX384 update — successful pull reports complete', async () => {
     await withTempHome(async (home) => {
       const installPath = path.join(home, '.failsafe', 'marketplace', ITEM.id);
       fs.mkdirSync(installPath, { recursive: true });
@@ -202,7 +204,7 @@ suite('MarketplaceInstaller (FX384)', () => {
     });
   });
 
-  test('FX384 update — pull failure reports failed phase', async () => {
+  test.skip('FX384 update — pull failure reports failed phase', async () => {
     await withTempHome(async (home) => {
       fs.mkdirSync(path.join(home, '.failsafe', 'marketplace', ITEM.id), { recursive: true });
       const progress: InstallProgress[] = [];
