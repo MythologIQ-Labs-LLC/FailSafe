@@ -1,17 +1,15 @@
 /**
  * github-checks-command — registers `FailSafe: Publish SHIELD Verdict to GitHub
- * Check` (#96). Gathers local git context (origin remote + HEAD sha), lets the
- * operator pick the verdict to publish, and posts a single Check Run via the
- * injectable client. Off-by-default; requires an opt-in token. The token is
- * read from settings and never logged. Degrades to a local-only notice when
- * disabled / unauthenticated / no GitHub remote.
+ * Check` (#96). Until native gate attestation is available, this command can
+ * publish a NEUTRAL manual advisory only, never an unverified SHIELD PASS (#476).
+ * Off-by-default; requires an opt-in token. No secret is logged.
  */
 
 import * as vscode from 'vscode';
 import { execFileSync } from 'child_process';
-import { publishCheckRun, defaultGitHubPost, defaultGitHubGet, type GitContext } from '../integrations/github-checks/github-checks-client';
+import { publishCheckRunPayload, defaultGitHubPost, defaultGitHubGet, type GitContext } from '../integrations/github-checks/github-checks-client';
 import { publishLinkageCheck } from '../integrations/github-checks/pr-linkage-publish';
-import { parseRepoSlug } from '../integrations/github-checks/github-checks-map';
+import { buildManualAdvisoryPayload, parseRepoSlug } from '../integrations/github-checks/github-checks-map';
 
 function git(args: string[], cwd: string): string | undefined {
   try {
@@ -56,28 +54,33 @@ export function registerGitHubChecksCommand(context: vscode.ExtensionContext): v
         return;
       }
 
-      const pick = await vscode.window.showQuickPick(
-        [
-          { label: 'PASS', description: 'success — merge-safe' },
-          { label: 'WARN', description: 'neutral — advisory' },
-          { label: 'VETO', description: 'failure — blocking' },
-        ],
-        { title: 'Publish SHIELD verdict to GitHub Check', placeHolder: 'Select the verdict to publish for HEAD' },
+      // A human selection is NOT an independently verified Qor gate. Offer a
+      // neutral advisory only; the SHIELD check name remains reserved for a
+      // future publisher that validates an exact native receipt (#476).
+      const consent = await vscode.window.showWarningMessage(
+        'No verified SHIELD audit receipt is available. Only a neutral, non-authoritative manual advisory can be published.',
+        { modal: true },
+        'Publish advisory',
       );
-      if (!pick) return;
+      if (consent !== 'Publish advisory') return;
 
       const apiBaseUrl = cfg.get<string>('integrations.github.apiBaseUrl', '') || undefined;
       const result = await vscode.window.withProgress(
-        { location: vscode.ProgressLocation.Notification, title: 'Publishing GitHub check…' },
-        () => publishCheckRun(pick.label, ctx, { enabled, token, apiBaseUrl }, defaultGitHubPost),
+        { location: vscode.ProgressLocation.Notification, title: 'Publishing manual GitHub advisory…' },
+        () => publishCheckRunPayload(
+          buildManualAdvisoryPayload(ctx.headSha!),
+          ctx,
+          { enabled, token, apiBaseUrl },
+          defaultGitHubPost,
+        ),
       );
 
       if (result.localOnly) {
-        vscode.window.showInformationMessage(`Verdict recorded locally only (${result.error}).`);
+        vscode.window.showWarningMessage(`No GitHub advisory was published (${result.error ?? 'unavailable'}).`);
       } else if (result.ok) {
-        vscode.window.showInformationMessage(`Published SHIELD ${pick.label} check to GitHub${result.checkRunId ? ` (run #${result.checkRunId})` : ''}.`);
+        vscode.window.showInformationMessage(`Published neutral manual advisory (not a verified SHIELD PASS)${result.checkRunId ? ` (run #${result.checkRunId})` : ''}.`);
       } else {
-        vscode.window.showErrorMessage(`GitHub check publish failed: ${result.error ?? 'unknown error'}`);
+        vscode.window.showErrorMessage(`GitHub advisory publish failed: ${result.error ?? 'unknown error'}`);
       }
 
       // #154: also publish the PR↔issue linkage check when HEAD has a PR — the
