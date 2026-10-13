@@ -1,7 +1,7 @@
 /**
  * github-checks-command — registers `FailSafe: Publish SHIELD Verdict to GitHub
  * Check` (#96). Gathers local git context (origin remote + HEAD sha), lets the
- * operator pick the verdict to publish, and posts a single Check Run via the
+ * operator pick a non-PASS verdict to publish, and posts a Check Run via the
  * injectable client. Off-by-default; requires an opt-in token. The token is
  * read from settings and never logged. Degrades to a local-only notice when
  * disabled / unauthenticated / no GitHub remote.
@@ -58,7 +58,6 @@ export function registerGitHubChecksCommand(context: vscode.ExtensionContext): v
 
       const pick = await vscode.window.showQuickPick(
         [
-          { label: 'PASS', description: 'success — merge-safe' },
           { label: 'WARN', description: 'neutral — advisory' },
           { label: 'VETO', description: 'failure — blocking' },
         ],
