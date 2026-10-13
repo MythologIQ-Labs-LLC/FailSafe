@@ -224,12 +224,17 @@ function projectContentSupersession(
 ): ResolutionProjection | undefined {
   const verdict = source.verificationResult || "";
   if (verdict === "ESCALATE" || isSyntheticArtifactPath(source.artifactPath)) return undefined;
+  // A legacy row with missing engine provenance cannot establish that the
+  // later check actually revalidated the same finding family (#367).
+  if (typeof source.verificationMethod !== "string" || !source.verificationMethod) return undefined;
 
   const supersedingPass = later.find(
     (e) =>
       e.eventType === "AUDIT_PASS" &&
+      e.verificationResult === "PASS" &&
       e.artifactPath === source.artifactPath &&
       e.verificationMethod === source.verificationMethod &&
+      Number.isSafeInteger(heuristicsEvaluatedOf(e)) &&
       heuristicsEvaluatedOf(e) > 0,
   );
   if (!supersedingPass) return undefined;
