@@ -85,10 +85,24 @@ export async function runAiderGoverned(opts: AiderRunOptions, deps: AiderDeps): 
     return { available: true, spawned: false, decision, receipt: receiptFor(decision, argv, null, EMPTY_DIFF, deps.issuedAt) };
   }
 
-  // Pre-run gate: dirty worktree refusal.
-  if (!opts.allowDirty && (await isWorktreeDirty(deps.run, opts.cwd))) {
-    const decision: AgentDecision = { verdict: 'BLOCK', reason: 'worktree has uncommitted changes; refusing to run Aider (set allowDirty to override)', riskGrade: 'L1' };
-    return { available: true, spawned: false, decision, receipt: receiptFor(decision, argv, null, EMPTY_DIFF, deps.issuedAt) };
+  // A broken git status is not evidence of a clean tree. Fail closed before
+  // allowing an executable agent to touch operator files (#475).
+  if (!opts.allowDirty) {
+    let dirty: boolean;
+    try {
+      dirty = await isWorktreeDirty(deps.run, opts.cwd);
+    } catch {
+      const decision: AgentDecision = {
+        verdict: 'BLOCK',
+        reason: 'Cannot verify Git worktree state; refusing to run Aider',
+        riskGrade: 'L3',
+      };
+      return { available: true, spawned: false, decision, receipt: receiptFor(decision, argv, null, EMPTY_DIFF, deps.issuedAt) };
+    }
+    if (dirty) {
+      const decision: AgentDecision = { verdict: 'BLOCK', reason: 'worktree has uncommitted changes; refusing to run Aider (set allowDirty to override)', riskGrade: 'L1' };
+      return { available: true, spawned: false, decision, receipt: receiptFor(decision, argv, null, EMPTY_DIFF, deps.issuedAt) };
+    }
   }
 
   // Run argv-form; auto-commit off so changes stay uncommitted for the gate.
