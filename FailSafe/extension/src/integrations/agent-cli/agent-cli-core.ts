@@ -53,6 +53,7 @@ export async function detectBinary(
 /** True if the worktree has uncommitted changes (`git status --porcelain`). */
 export async function isWorktreeDirty(run: AgentRunFn, cwd: string): Promise<boolean> {
   const res = await run('git', ['status', '--porcelain'], { cwd });
+  if (res.code !== 0) throw new Error('Git worktree status unavailable; refusing an unverified agent run');
   return !!res.stdout.trim();
 }
 
