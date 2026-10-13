@@ -61,9 +61,9 @@ suite('github-checks client (#96)', () => {
   test('FX476 unverified SHIELD PASS is rejected without an HTTP call', async () => {
     let called = 0;
     const post: GitHubPostFn = async () => { called++; return { status: 201, body: '{"id":123}' }; };
-    const r = await publishCheckRun('WARN', { remoteUrl: 'https://github.com/acme/failsafe', headSha: 'sha' }, { enabled: true, token: 't' }, post);
+    const r = await publishCheckRun('PASS', { remoteUrl: 'https://github.com/acme/failsafe', headSha: 'sha' }, { enabled: true, token: 't' }, post);
     assert.equal(r.ok, false);
-    assert.match(r.error ?? '', /verified shield pass/i);
+    assert.match(r.error ?? '', /verified.*(shield pass|audit receipt)/i);
     assert.equal(called, 0);
   });
 
