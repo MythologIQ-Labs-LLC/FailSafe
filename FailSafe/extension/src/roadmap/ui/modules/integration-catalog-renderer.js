@@ -3,7 +3,7 @@
  * Gives the command/config integrations that lack a dedicated sub-view
  * (Continue, Aider, OpenHands, Cline/Roo/Kilo, Linear, Jira, GitHub Checks,
  * Sentry, Teams, Slack) a single home: one card each, grouped by category, with
- * a live enabled/configured status pill + a "Configure" affordance that jumps to
+ * an honest enabled/configured-only status pill + a "Configure" affordance that jumps to
  * the matching Settings section. Data comes from /api/v1/integrations/catalog,
  * which is secret-safe (booleans only — no token/key/webhook value crosses the
  * wire).
@@ -20,12 +20,12 @@ const STYLE = `
 .cc-intcat-sub { color:#9aa5b4; margin:0 0 6px; font-size:.9rem; }
 .cc-intcat-group { font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; color:#7f8aa0; margin:6px 0 2px; }
 .cc-intcat-card { background:linear-gradient(180deg,#141a22,#10161e); border:1px solid #202938; border-radius:10px; padding:14px; }
-.cc-intcat-card.cc-intcat-active { border-color:#2f5e44; }
+.cc-intcat-card.cc-intcat-configured { border-color:#425168; }
 .cc-intcat-card.cc-intcat-needs { border-color:#6b4f2a; }
 .cc-intcat-head { display:flex; align-items:center; gap:10px; margin-bottom:6px; flex-wrap:wrap; }
 .cc-intcat-head strong { font-size:1rem; }
 .cc-intcat-pill { font-size:.7rem; padding:2px 8px; border-radius:999px; border:1px solid #273140; color:#9aa5b4; text-transform:uppercase; letter-spacing:.05em; }
-.cc-intcat-pill-active { color:#68d391; border-color:#2f5e44; }
+.cc-intcat-pill-configured { color:#a5b4c7; border-color:#425168; }
 .cc-intcat-pill-needs { color:#f6ad55; border-color:#6b4f2a; }
 .cc-intcat-pill-disabled { color:#7f8aa0; border-color:#273140; }
 .cc-intcat-card p { color:#9aa5b4; margin:0 0 8px; font-size:.88rem; }
@@ -39,7 +39,7 @@ const STYLE = `
 `;
 
 const PILL = {
-  active: { cls: 'cc-intcat-pill-active', label: 'Active' },
+  'configured-unverified': { cls: 'cc-intcat-pill-configured', label: 'Configured · unverified' },
   'needs-config': { cls: 'cc-intcat-pill-needs', label: 'Needs config' },
   disabled: { cls: 'cc-intcat-pill-disabled', label: 'Disabled' },
 };
@@ -70,7 +70,7 @@ function pill(state) {
 }
 
 function card(s) {
-  const cardCls = s.state === 'active' ? ' cc-intcat-active' : s.state === 'needs-config' ? ' cc-intcat-needs' : '';
+  const cardCls = s.state === 'configured-unverified' ? ' cc-intcat-configured' : s.state === 'needs-config' ? ' cc-intcat-needs' : '';
   const missing = (s.state === 'needs-config' && s.missingKeys && s.missingKeys.length)
     ? `<div class="cc-intcat-missing">Missing: ${s.missingKeys.map((k) => esc(k.split('.').pop())).join(', ')}</div>`
     : '';
@@ -78,7 +78,7 @@ function card(s) {
   const docs = docPath
     ? `<a class="cc-intcat-docs" href="${DOCS_BASE}/${docPath}" target="_blank" rel="noopener">Docs →</a>`
     : '';
-  const btnLabel = s.state === 'active' ? 'Settings' : 'Configure';
+  const btnLabel = s.state === 'configured-unverified' ? 'Settings' : 'Configure';
   return `
     <div class="cc-intcat-card${cardCls}" data-id="${esc(s.id)}">
       <div class="cc-intcat-head"><strong>${esc(s.label)}</strong>${pill(s.state)}</div>
@@ -125,9 +125,9 @@ export class IntegrationCatalogRenderer {
       if (!byCat.has(s.category)) { byCat.set(s.category, []); groups.push(s.category); }
       byCat.get(s.category).push(s);
     }
-    const activeCount = integrations.filter((s) => s.state === 'active').length;
+    const configuredCount = integrations.filter((s) => s.state === 'configured-unverified').length;
     const sub = integrations.length
-      ? `${integrations.length} integrations — ${activeCount} active. Enable + configure each under Settings; FailSafe never stores secrets in this view.`
+      ? `${integrations.length} integrations — ${configuredCount} configured (not health-checked). Enable + configure each under Settings; connection and enforcement are not verified by this catalog.`
       : 'No catalog integrations available.';
     const sections = groups
       .map((cat) => `<div class="cc-intcat-group">${esc(cat)}</div>` + byCat.get(cat).map(card).join(''))
