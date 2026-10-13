@@ -41,21 +41,38 @@ export class ConsoleLifecycleService {
   getServer(): HttpServer | null { return this.server; }
 
   async start(): Promise<void> {
+    // Repeated activation must not open another listener or register duplicate
+    // readiness for a server that is already serving this workspace.
+    if (this.server?.listening) return;
     this.actualPort = await this.findAvailablePort(this.deps.port);
-    this.server = this.deps.app.listen(this.actualPort, this.deps.host, () => {
-      console.log(`Roadmap server: http://localhost:${this.actualPort}`);
-    });
-    // Race-handler: findAvailablePort + listen is not atomic. A sibling
-    // process (parallel vscode-test extension host) can grab the same port
-    // between the probe and the actual listen. Surface as a structured
-    // error rather than an uncaught process-fatal exception.
-    this.server.on("error", (err: NodeJS.ErrnoException) => {
-      if (err.code === "EADDRINUSE") {
-        console.warn(`Roadmap server port ${this.actualPort} in use; sibling extension host already bound. Skipping.`);
+
+    // EADDRINUSE can occur between probing and binding. Do not begin the
+    // WebSocket service, ledger watcher, registry, or readiness checkpoint
+    // until the HTTP server has emitted the actual listening event (#471).
+    const server = await new Promise<HttpServer>((resolve, reject) => {
+      let candidate: HttpServer;
+      try {
+        candidate = this.deps.app.listen(this.actualPort, this.deps.host);
+      } catch (error) {
+        reject(error);
         return;
       }
-      console.error("Roadmap server error:", err);
+      const onListening = () => {
+        candidate.removeListener("error", onError);
+        resolve(candidate);
+      };
+      const onError = (error: Error) => {
+        candidate.removeListener("listening", onListening);
+        reject(error);
+      };
+      candidate.once("listening", onListening);
+      candidate.once("error", onError);
     });
+    this.server = server;
+    const address = server.address();
+    if (address && typeof address !== "string") this.actualPort = address.port;
+    console.log(`Roadmap server: http://localhost:${this.actualPort}`);
+
     this.setupWebSocket();
     this.watchMetaLedger();
     registerServer({
@@ -65,24 +82,28 @@ export class ConsoleLifecycleService {
       pid: process.pid,
       startedAt: new Date().toISOString(),
     });
+    // A successful bind is transport readiness, NOT a passing policy audit.
     this.deps.hub.recordCheckpoint({
       checkpointType: "snapshot.created", actor: "system",
       phase: this.deps.hub.inferPhaseKeyFromPlan(this.deps.planManager.getActivePlan()),
-      status: "validated", policyVerdict: "PASS", evidenceRefs: [],
-      payload: { source: "roadmap-server.start" },
+      status: "validated", policyVerdict: "UNKNOWN", evidenceRefs: [],
+      payload: { source: "roadmap-server.start", transport: "listening" },
     });
   }
 
   stop(): void {
-    markDisconnected(this.actualPort);
+    if (this.server) markDisconnected(this.actualPort);
     this.ledgerWatcher?.close();
     this.ledgerWatcher = null;
     if (this.ledgerWatcherDisposable) {
       try { this.ledgerWatcherDisposable.dispose(); } catch { /* already gone */ }
       this.ledgerWatcherDisposable = null;
     }
+    if (this.ledgerDebounceTimer) clearTimeout(this.ledgerDebounceTimer);
+    this.ledgerDebounceTimer = null;
     this.deps.wsManager.close();
     this.server?.close();
+    this.server = null;
   }
 
   private setupWebSocket(): void {
@@ -136,7 +157,7 @@ export class ConsoleLifecycleService {
         return candidate;
       }
     }
-    return preferred;
+    throw new Error(`No available Roadmap server port in range ${preferred}..${preferred + 10}`);
   }
 
   private isPortAvailable(port: number): Promise<boolean> {
