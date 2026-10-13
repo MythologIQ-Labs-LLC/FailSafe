@@ -66,7 +66,7 @@ suite('SecurityScanner (FX380 + FX386)', () => {
       garak: { code: 0, stdout: '', stderr: '' }, // for checkAvailability
       'garak --model_type': {
         code: 0,
-        stdout: '{"results":{}}',
+        stdout: '{"results":{"clean":{"name":"clean","fail_rate":0}}}',
         stderr: '',
       },
     });
@@ -123,6 +123,48 @@ suite('SecurityScanner (FX380 + FX386)', () => {
     assert.match(r.findings[0].description, /jailbreak/);
   });
 
+  test('FX469 Garak empty probes, invalid JSON and nonzero exit fail closed', async () => {
+    for (const scan of [
+      { code: 0, stdout: '{"results":{}}', stderr: '' },
+      { code: 0, stdout: 'not JSON', stderr: '' },
+      { code: 2, stdout: '{"results":{"a":{"fail_rate":0}}}', stderr: 'process failed' },
+      { code: 0, stdout: '{"results":{"a":{"name":"a"}}}', stderr: '' },
+    ]) {
+      const { runner } = makeRunner({
+        garak: { code: 0, stdout: 'garak', stderr: '' },
+        'garak --model_type': scan,
+      });
+      const s = new SecurityScanner(new EventBus(), runner);
+      await s.checkAvailability();
+      const r = await s.scanWithGarak('/path', () => {});
+      assert.equal(r.passed, false);
+      assert.equal(r.recommendedAction, 'review');
+      assert.equal(r.riskGrade, 'L3');
+      assert.match(r.findings[0].description, /Garak/i);
+    }
+  });
+
+  test('FX469 Promptfoo empty tests, malformed test and nonzero exit fail closed', async () => {
+    for (const scan of [
+      { code: 0, stdout: '{"results":[]}', stderr: '' },
+      { code: 0, stdout: 'invalid JSON', stderr: '' },
+      { code: 1, stdout: '{"results":[{"pass":true}]}', stderr: 'process error' },
+      { code: 0, stdout: '{"results":[{}]}', stderr: '' },
+    ]) {
+      const { runner } = makeRunner({
+        npx: { code: 0, stdout: 'promptfoo', stderr: '' },
+        'npx promptfoo': scan,
+      });
+      const s = new SecurityScanner(new EventBus(), runner);
+      await s.checkAvailability();
+      const r = await s.scanWithPromptfoo('/path', () => {});
+      assert.equal(r.passed, false);
+      assert.equal(r.recommendedAction, 'review');
+      assert.equal(r.riskGrade, 'L3');
+      assert.match(r.findings[0].description, /Promptfoo/i);
+    }
+  });
+
   test('FX380 runFullScan — neither scanner available → L3 + manual review finding', async () => {
     const { runner } = makeRunner({});
     const s = new SecurityScanner(new EventBus(), runner);
@@ -138,8 +180,8 @@ suite('SecurityScanner (FX380 + FX386)', () => {
     const { runner } = makeRunner({
       garak: { code: 0, stdout: '', stderr: '' },
       npx: { code: 0, stdout: '', stderr: '' },
-      'garak --model_type': { code: 0, stdout: '{"results":{}}', stderr: '' },
-      'npx promptfoo': { code: 0, stdout: '{"results":[]}', stderr: '' },
+      'garak --model_type': { code: 0, stdout: '{"results":{"clean":{"fail_rate":0}}}', stderr: '' },
+      'npx promptfoo': { code: 0, stdout: '{"results":[{"pass":true}]}', stderr: '' },
     });
     const s = new SecurityScanner(new EventBus(), runner);
     await s.checkAvailability();
