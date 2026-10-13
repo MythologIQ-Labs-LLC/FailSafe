@@ -136,7 +136,7 @@ export function registerMarketplaceInstallRoutes(
 interface InstallOpts { sandboxEnabled: boolean; runSecurityScan: boolean; }
 
 /** B-INT-7 follow-up: terminal-state handler for an install promise. */
-async function handleInstallCompletion(
+export async function handleInstallCompletion(
   deps: MarketplaceRouteDeps,
   item: { id: string; name: string },
   result: { success: boolean; installPath?: string; error?: string },
@@ -184,7 +184,7 @@ async function runPostInstallScan(
   deps: MarketplaceRouteDeps,
   item: { id: string },
   installPath: string,
- ): Promise<boolean> {
+): Promise<boolean> {
   deps.broadcast({ type: "marketplace.scanning", payload: { itemId: item.id } });
   const scanResult = await deps.securityScanner.runFullScan(installPath, (msg) => {
     deps.broadcast({ type: "marketplace.scan.progress", payload: { itemId: item.id, message: msg } });
