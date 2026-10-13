@@ -40,11 +40,11 @@ Each integration ships with its own README and its external API names are back-c
 
 ---
 
-**Current Release**: v6.0.5 (2026-09-04)
+**Current Release**: v6.0.6 (2026-10-13)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
 
-## What's New in v6.0.5
+## What's New in v6.0.6
 
 - **Screen readers now hear why a Shadow Genome node failed,** not just that it did — failure nodes carry their severity in the accessible name.
 - **A status row that lied when it couldn't reach upstream.** The Bicameral panel reported "0 open issues" whether the upstream was empty or unreachable. Those now look different.

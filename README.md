@@ -58,11 +58,11 @@ Under the hood, a **Tier 1 supply-chain CI baseline** (least-privilege workflow 
 
 <div align="center">
 
-**Current Release**: v6.0.5 (2026-09-04)
+**Current Release**: v6.0.6 (2026-10-13)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
 
-## What's new in v6.0.5
+## What's New in v6.0.6
 
 - **Screen readers now hear why a Shadow Genome node failed,** not just that it did — failure nodes carry their severity in the accessible name.
 - **A status row that lied when it couldn't reach upstream.** The Bicameral panel reported "0 open issues" whether the upstream was empty or unreachable. Those now look different.

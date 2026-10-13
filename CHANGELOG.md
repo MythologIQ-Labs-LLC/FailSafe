@@ -5,6 +5,20 @@ All notable changes to FailSafe will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.0.6] - 2026-10-13
+
+### Fixed
+- Console startup readiness and Mind Map keyboard behavior.
+- Sentry import pagination and accurate persisted-versus-failed counts.
+- Integration catalog distinguishes configured from runtime-verified state.
+- GitHub Checks manual advisory is neutral; unaudited SHIELD PASS publication is blocked.
+- Continue and Aider refuse unauthorized write execution; Aider auto-commit is disabled before governed review.
+- New SOA ledger records authenticate complete audit fields with versioned signatures; legacy signatures remain verifiable under their original weaker contract.
+
+### Security / Temporary limitations
+- Marketplace installation and updates are disabled pending genuine sandbox isolation and scanner fail-closed remediation (#468/#469). Browsing the catalog remains available.
+- Authorized external agent CLI runs are not yet isolated against writes before diff review; do not treat the interim preflight gate as full enforcement.
+
 ## [6.0.5] - 2026-09-04
 
 ### Added
