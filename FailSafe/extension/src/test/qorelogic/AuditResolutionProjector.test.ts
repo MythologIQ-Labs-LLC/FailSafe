@@ -26,6 +26,31 @@ function reset() { nextId = 1; }
 suite('AuditResolutionProjector (FailSafe#367)', () => {
   setup(() => reset());
 
+  test('FX947: contradictory AUDIT_PASS event with non-PASS verdict never resolves BLOCK', () => {
+    const source = entry({ eventType: 'AUDIT_FAIL', verificationResult: 'BLOCK',
+      artifactPath: 'src/x.ts', verificationMethod: 'sentinel_heuristic' });
+    const contradicted = entry({ eventType: 'AUDIT_PASS', verificationResult: 'VIOLATION',
+      artifactPath: 'src/x.ts', verificationMethod: 'sentinel_heuristic',
+      payload: { heuristicsEvaluated: 12 } });
+    assert.equal(projectResolution([source, contradicted])[0].state, 'LIVE');
+  });
+
+  test('FX947: absent legacy verification-method provenance cannot resolve BLOCK', () => {
+    const source = entry({ eventType: 'AUDIT_FAIL', verificationResult: 'BLOCK', artifactPath: 'src/x.ts' });
+    const unproven = entry({ eventType: 'AUDIT_PASS', verificationResult: 'PASS', artifactPath: 'src/x.ts',
+      payload: { heuristicsEvaluated: 12 } });
+    assert.equal(projectResolution([source, unproven])[0].state, 'LIVE');
+  });
+
+  test('FX947: invalid/non-finite evaluated count cannot resolve BLOCK', () => {
+    const source = entry({ eventType: 'AUDIT_FAIL', verificationResult: 'BLOCK',
+      artifactPath: 'src/x.ts', verificationMethod: 'sentinel_heuristic' });
+    const corrupt = entry({ eventType: 'AUDIT_PASS', verificationResult: 'PASS',
+      artifactPath: 'src/x.ts', verificationMethod: 'sentinel_heuristic',
+      payload: { heuristicsEvaluated: Infinity } });
+    assert.equal(projectResolution([source, corrupt])[0].state, 'LIVE');
+  });
+
   test('WARN with no later evidence stays LIVE', () => {
     const warn = entry({ eventType: 'AUDIT_FAIL', verificationResult: 'WARN', artifactPath: 'src/a.ts' });
     const [proj] = projectResolution([warn]);
