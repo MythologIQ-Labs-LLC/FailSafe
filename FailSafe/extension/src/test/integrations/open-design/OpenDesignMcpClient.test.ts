@@ -132,6 +132,22 @@ suite('integrations/open-design OpenDesignMcpClient', () => {
     assert.equal(r.isError, false);
   });
 
+  test('new upstream MCP tools are unavailable until explicitly classified (#474)', async () => {
+    const calls: CallRecord[] = [];
+    const c = new OpenDesignMcpClient({
+      command: 'od', cwd: '/tmp',
+      transportFactory: makeFakeTransport({}),
+      clientFactory: () => makeFakeClient({}, calls, {
+        tools: [{ name: 'list_projects' }, { name: 'create_project' }, { name: 'start_run' }, { name: 'list_skills' }],
+      }) as never,
+    });
+    await c.connect();
+    for (const name of ['create_project', 'start_run', 'list_skills', 'unknown_future_tool']) {
+      await assert.rejects(c.callRaw(name, {}), /TOOL_NOT_ALLOWLISTED/);
+    }
+    assert.equal(calls.length, 0, 'unreviewed upstream tools must never reach MCP transport');
+  });
+
   test('callRaw on destructive write tool throws WRITE_TOOL_NOT_ENABLED before reaching transport', async () => {
     const calls: CallRecord[] = [];
     const c = new OpenDesignMcpClient({
