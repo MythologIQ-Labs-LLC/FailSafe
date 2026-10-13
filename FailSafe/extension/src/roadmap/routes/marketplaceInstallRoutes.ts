@@ -4,6 +4,7 @@
 // from marketplaceRouteShared.
 
 import { Request, Response } from "express";
+import { MARKETPLACE_INSTALLS_ENABLED } from "../services/MarketplaceInstaller";
 import type { HITLRequest } from "../services/MarketplaceTypes";
 import {
   type MarketplaceRouteDeps,
@@ -18,6 +19,7 @@ export function registerMarketplaceInstallRoutes(
   // POST /api/marketplace/install/:id - Request install (returns HITL nonce)
   app.post("/api/marketplace/install/:id", (req: Request, res: Response) => {
     if (deps.rejectIfRemote(req, res)) return;
+    if (!MARKETPLACE_INSTALLS_ENABLED) { res.status(503).json({ error: "Marketplace installation temporarily disabled pending security remediation" }); return; }
 
     const itemId = String(req.params.id);
     const item = deps.marketplaceCatalog.getItem(itemId);
@@ -66,6 +68,7 @@ export function registerMarketplaceInstallRoutes(
     "/api/marketplace/install/:id/confirm",
     async (req: Request, res: Response) => {
       if (deps.rejectIfRemote(req, res)) return;
+      if (!MARKETPLACE_INSTALLS_ENABLED) { res.status(503).json({ error: "Marketplace installation temporarily disabled pending security remediation" }); return; }
 
       const itemId = String(req.params.id);
       const { nonce, sandboxEnabled = true, runSecurityScan = true } = req.body;
