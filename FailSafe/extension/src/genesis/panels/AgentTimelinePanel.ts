@@ -51,6 +51,11 @@ export class AgentTimelinePanel {
 
         const unsub = this.eventBus.on('timeline.entryAdded', () => this.update());
         this.disposables.push({ dispose: unsub });
+        this.disposables.push(vscode.workspace.onDidChangeWorkspaceFolders(() => this.update()));
+        this.disposables.push(vscode.workspace.createFileSystemWatcher('**/.failsafe/logs/transparency.jsonl'));
+        const watcher = this.disposables[this.disposables.length - 1] as vscode.FileSystemWatcher;
+        this.disposables.push(watcher.onDidChange(() => this.update()));
+        this.disposables.push(watcher.onDidCreate(() => this.update()));
 
         this.panel.onDidDispose(() => {
             AgentTimelinePanel.currentPanel = undefined;
@@ -114,18 +119,17 @@ export class AgentTimelinePanel {
 
     private update(): void {
         const live = this.timelineService.getEntries(this.currentFilter);
-        const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        const imported: TimelineEntry[] = root
-            ? new TransparencyLogger(root).getEvents(MAX_RENDERED).filter(e => e.type === 'agent.observation.imported' && e.source === 'openhands').map(e => ({
-                id: String(e.importKey ?? ''),
+        const imported: TimelineEntry[] = (vscode.workspace.workspaceFolders ?? []).flatMap(folder =>
+            new TransparencyLogger(folder.uri.fsPath).getEvents(MAX_RENDERED).filter(e => e.type === 'agent.observation.imported' && e.source === 'openhands').map(e => ({
+                id: `${folder.index}-${String(e.importKey ?? '')}`,
                 timestamp: typeof e.timestamp === 'string' && !Number.isNaN(Date.parse(e.timestamp)) ? e.timestamp : new Date(0).toISOString(),
                 category: 'imported' as const,
                 title: 'OpenHands historical import',
-                detail: String(e.summary ?? '') + ' (imported evidence, not live enforcement)',
+                detail: String(e.summary ?? '') + ` (imported evidence in ${folder.name}, not live enforcement)`,
                 icon: 'archive',
                 severity: e.severity === 'high' ? 'warning' as const : 'info' as const,
             }))
-            : [];
+        );
         const matching = imported.filter(e =>
             (!this.currentFilter.categories?.length || this.currentFilter.categories.includes(e.category)) &&
             (!this.currentFilter.severity?.length || this.currentFilter.severity.includes(e.severity)) &&
