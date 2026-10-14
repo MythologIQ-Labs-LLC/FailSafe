@@ -55,7 +55,7 @@ export function persistOpenHandsObservations(
       // never a success; retry scans the log to avoid repeating complete records.
       const fd = fs.openSync(target, 'a', 0o600);
       try {
-        const bytes = Buffer.from(pending.map(e => JSON.stringify(e)).join('\\n') + '\\n', 'utf8');
+        const bytes = Buffer.from(pending.map(e => JSON.stringify(e)).join('\n') + '\n', 'utf8');
         let offset = 0;
         while (offset < bytes.length) {
           const written = fs.writeSync(fd, bytes, offset, bytes.length - offset);
