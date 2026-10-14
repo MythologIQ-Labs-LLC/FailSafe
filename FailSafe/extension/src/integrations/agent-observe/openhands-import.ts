@@ -51,7 +51,21 @@ export function persistOpenHandsObservations(
       });
     }
     if (pending.length) {
-      fs.appendFileSync(target, pending.map(e => JSON.stringify(e)).join('\n') + '\n', { encoding: 'utf8', flag: 'a', mode: 0o600 });
+      // Flush bytes before reporting an import as persisted. A failed flush is an error,
+      // never a success; retry scans the log to avoid repeating complete records.
+      const fd = fs.openSync(target, 'a', 0o600);
+      try {
+        const bytes = Buffer.from(pending.map(e => JSON.stringify(e)).join('\\n') + '\\n', 'utf8');
+        let offset = 0;
+        while (offset < bytes.length) {
+          const written = fs.writeSync(fd, bytes, offset, bytes.length - offset);
+          if (written <= 0) throw new Error('OPENHANDS_IMPORT_WRITE_FAILED: no progress writing log');
+          offset += written;
+        }
+        fs.fsyncSync(fd);
+      } finally {
+        fs.closeSync(fd);
+      }
     }
     return { imported: pending.length, duplicates };
   } finally {
