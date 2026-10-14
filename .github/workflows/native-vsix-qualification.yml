@@ -1,0 +1,53 @@
+name: Native VSIX Platform Qualification
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/native-vsix-qualification.yml'
+      - 'FailSafe/extension/scripts/validate-vsix.cjs'
+      - 'FailSafe/extension/package.json'
+      - 'FailSafe/extension/package-lock.json'
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-x64
+          - os: windows-latest
+            target: win32-x64
+          - os: macos-14
+            target: darwin-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        working-directory: FailSafe/extension
+        run: npm ci
+      - name: Native SQLite smoke test
+        working-directory: FailSafe/extension
+        run: node -e "const Database = require('better-sqlite3'); const db = new Database(':memory:'); if(db.prepare('select 1 as ok').get().ok !== 1) process.exit(1); db.close();"
+      - name: Compile extension
+        working-directory: FailSafe/extension
+        run: npm run compile
+      - name: Package target-specific extension
+        working-directory: FailSafe/extension
+        run: npx @vscode/vsce package --target ${{ matrix.target }}
+      - name: Validate packaged extension
+        working-directory: FailSafe/extension
+        run: npm run validate:vsix
+      - name: Upload qualification artifact (not a release)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: qualification-${{ matrix.target }}
+          path: FailSafe/extension/*.vsix
+          if-no-files-found: error
