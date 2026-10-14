@@ -33,12 +33,10 @@ export async function bootstrapCore(
   if (!workspaceRoot) {
     throw new Error("FailSafe requires an open workspace.");
   }
-  const autoInstallGit = vscode.workspace
-    .getConfiguration("failsafe")
-    .get<boolean>("bootstrap.autoInstallGit", true);
-
   const git = await ensureGitRepositoryReady(workspaceRoot, {
-    autoInstallGit,
+    // Activation is observational: never install system packages or initialize Git.
+    autoInstallGit: false,
+    initializeRepo: false,
     log: (level, message) => {
       if (level === "error") logger.error(message);
       else if (level === "warn") logger.warn(message);
