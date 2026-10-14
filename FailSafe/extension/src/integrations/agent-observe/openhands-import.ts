@@ -12,6 +12,17 @@ export function persistOpenHandsObservations(
   const sourceHash = createHash('sha256').update(fs.readFileSync(sourceFile)).digest('hex');
   const lockPath = target + '.openhands-import.lock';
   fs.mkdirSync(path.dirname(target), { recursive: true });
+  // Do not follow workspace-controlled symlinks into arbitrary files. This
+  // import writes audit evidence and must not become a generic append primitive.
+  for (const candidate of [path.join(workspaceRoot, '.failsafe'), path.dirname(target), target, lockPath]) {
+    try {
+      const stat = fs.lstatSync(candidate);
+      if (stat.isSymbolicLink()) throw new Error('OPENHANDS_IMPORT_SYMLINK: refusing redirected audit path');
+      if (candidate === target && !stat.isFile()) throw new Error('OPENHANDS_IMPORT_INVALID_LOG: target is not a regular file');
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
+  }
   // Serialize cooperating importers: duplicate checks and append share a lock.
   // Never silently steal a stale lock. Operator recovery must inspect it first.
   let lockFd: number;
