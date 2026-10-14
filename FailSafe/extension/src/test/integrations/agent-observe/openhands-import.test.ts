@@ -69,4 +69,28 @@ suite('OpenHands historical persistence #477', () => {
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
   });
 
+  test('refuses a symlinked audit log instead of appending outside workspace', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-openhands-symlink-'));
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-openhands-outside-'));
+    try {
+      const source = path.join(root, 'run.json');
+      fs.writeFileSync(source, '[]');
+      const logDir = path.join(root, '.failsafe', 'logs');
+      fs.mkdirSync(logDir, { recursive: true });
+      const sentinel = path.join(outside, 'sentinel.jsonl');
+      fs.writeFileSync(sentinel, 'untouched');
+      try {
+        fs.symlinkSync(sentinel, path.join(logDir, 'transparency.jsonl'), 'file');
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'EPERM') return;
+        throw error;
+      }
+      assert.throws(() => persistOpenHandsObservations(root, source, []), /OPENHANDS_IMPORT_SYMLINK/);
+      assert.equal(fs.readFileSync(sentinel, 'utf8'), 'untouched');
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
 });
