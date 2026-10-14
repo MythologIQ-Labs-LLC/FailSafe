@@ -10,6 +10,8 @@ export type CommandRunner = (
 
 export interface GitBootstrapOptions {
   autoInstallGit?: boolean;
+  /** Explicit user-authorized operation; never enabled during extension activation. */
+  initializeRepo?: boolean;
   platform?: NodeJS.Platform;
   runner?: CommandRunner;
   existsSync?: (target: string) => boolean;
@@ -31,7 +33,7 @@ export async function ensureGitRepositoryReady(
   const runner = options.runner || defaultRunner;
   const log = options.log || (() => {});
   const platform = options.platform || process.platform;
-  const autoInstallGit = options.autoInstallGit ?? true;
+  const autoInstallGit = options.autoInstallGit === true;
   const gitDir = path.join(workspaceRoot, ".git");
   const repoInitialized = existsSync(gitDir);
 
@@ -55,7 +57,7 @@ export async function ensureGitRepositoryReady(
     };
   }
 
-  if (!repoInitialized) {
+  if (!repoInitialized && options.initializeRepo === true) {
     const initOk = await runCommand(runner, "git", ["init"], workspaceRoot);
     if (initOk) {
       initializedRepo = true;
