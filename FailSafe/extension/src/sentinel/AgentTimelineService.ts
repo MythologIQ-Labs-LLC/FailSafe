@@ -11,7 +11,7 @@ import type { FailSafeEvent, FailSafeEventType } from "../shared/types/events";
 export interface TimelineEntry {
   id: string;
   timestamp: string;
-  category: "verdict" | "trust" | "file" | "plan" | "approval" | "diffguard";
+  category: "verdict" | "trust" | "file" | "plan" | "approval" | "diffguard" | "imported";
   title: string;
   detail: string;
   icon: string;
@@ -40,6 +40,7 @@ const CATEGORY_ICONS: Record<Category, string> = {
   diffguard: "diff",
   file: "file",
   plan: "notebook",
+  imported: "archive",
 };
 
 const MAPPED_EVENT_TYPES: ReadonlySet<FailSafeEventType> = new Set([
