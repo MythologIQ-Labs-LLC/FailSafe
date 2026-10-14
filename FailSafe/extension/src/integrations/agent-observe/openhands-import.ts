@@ -12,9 +12,16 @@ export function persistOpenHandsObservations(
   const sourceHash = createHash('sha256').update(fs.readFileSync(sourceFile)).digest('hex');
   const lockPath = target + '.openhands-import.lock';
   fs.mkdirSync(path.dirname(target), { recursive: true });
-  // Serialize cooperating importers: the dedup read and append must share a lock.
-  // A stale lock fails closed rather than risking a duplicate/partial import.
-  const lockFd = fs.openSync(lockPath, 'wx', 0o600);
+  // Serialize cooperating importers: duplicate checks and append share a lock.
+  // Never silently steal a stale lock. Operator recovery must inspect it first.
+  let lockFd: number;
+  try { lockFd = fs.openSync(lockPath, 'wx', 0o600); }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
+      throw new Error('OPENHANDS_IMPORT_LOCKED: inspect interrupted import before manually removing lock');
+    }
+    throw error;
+  }
   try {
     const existing = new Set<string>();
     if (fs.existsSync(target)) {
