@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { IntentService } from "../governance/IntentService";
 import { EnforcementEngine } from "../governance/EnforcementEngine";
 import { GovernanceRouter } from "../governance/GovernanceRouter";
+import { isGovernedSave } from "../governance/governedDocument";
 import { GovernanceStatusBar } from "../governance/GovernanceStatusBar";
 import { EvaluationRouter } from "../governance/EvaluationRouter";
 import { SessionManager } from "../governance/SessionManager";
@@ -115,6 +116,8 @@ export async function bootstrapGovernance(
   // Wire File Hooks - extract fsPath from vscode.Uri at the boundary
   context.subscriptions.push(
     vscode.workspace.onWillSaveTextDocument((event) => {
+      const isInWorkspace = (uri: vscode.Uri) => vscode.workspace.getWorkspaceFolder(uri) !== undefined;
+      if (!isGovernedSave(event.document.uri, isInWorkspace)) return;
       event.waitUntil(
         governanceRouter
           .handleFileOperation("file_write", event.document.uri.fsPath)

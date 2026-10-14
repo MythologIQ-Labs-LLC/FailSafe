@@ -3,6 +3,7 @@
 
 import { Request, Response } from "express";
 import type { MarketplaceRouteDeps } from "./marketplaceRouteShared";
+import { MARKETPLACE_INSTALLS_ENABLED } from "../services/MarketplaceInstaller";
 
 export function registerMarketplaceScanRoutes(
   app: import("express").Application,
@@ -11,6 +12,9 @@ export function registerMarketplaceScanRoutes(
   // POST /api/marketplace/scan/:id - Run security scan on installed item
   app.post("/api/marketplace/scan/:id", async (req: Request, res: Response) => {
     if (deps.rejectIfRemote(req, res)) return;
+    // #468: scanners run with the untrusted install as cwd, so scanning stays shut
+    // for as long as installation is.
+    if (!MARKETPLACE_INSTALLS_ENABLED) { res.status(503).json({ error: "Marketplace scanning temporarily disabled pending security remediation (#468/#469)" }); return; }
 
     const itemId = String(req.params.id);
     const item = deps.marketplaceCatalog.getItem(itemId);

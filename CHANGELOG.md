@@ -5,6 +5,15 @@ All notable changes to FailSafe will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- Opening a folder no longer runs `git init` on its own. FailSafe asks first, and `failsafe.bootstrap.autoInstallGit` now defaults to off, so Git is never installed system-wide without opting in (#503).
+- Saving your user settings or a file outside the workspace no longer raises a governance blockade; editor-save governance covers workspace files only (#504).
+
+### Security
+- The Agent Marketplace re-scan route is now disabled along with install and update. Scanners ran with the untrusted install as their working directory (#468).
+
 ## [6.0.6] - 2026-10-13
 
 ### Fixed
