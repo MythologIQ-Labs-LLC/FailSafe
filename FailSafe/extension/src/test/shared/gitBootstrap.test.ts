@@ -49,6 +49,7 @@ describe("ensureGitRepositoryReady", () => {
     const result = await ensureGitRepositoryReady(workspace, {
       runner,
       autoInstallGit: true,
+      initializeRepo: true,
       platform: "win32",
     });
 
@@ -94,6 +95,20 @@ describe("ensureGitRepositoryReady", () => {
     assert.equal(result.installedGit, true);
     assert.equal(result.initializedRepo, true);
     assert.ok(calls.some((c) => c.command === "winget"));
+  });
+
+  it("never mutates a folder or installs Git by default", async () => {
+    const workspace = makeTempWorkspace();
+    const calls: string[] = [];
+    const runner: CommandRunner = async (cmd, args) => {
+      calls.push(cmd + " " + args.join(" "));
+      return { code: cmd === "git" && args[0] === "--version" ? 0 : 1, stdout: "", stderr: "" };
+    };
+    const result = await ensureGitRepositoryReady(workspace, { runner });
+    assert.equal(result.initializedRepo, false);
+    assert.equal(result.installedGit, false);
+    assert.deepEqual(calls, ["git --version"]);
+    assert.equal(fs.existsSync(path.join(workspace, ".git")), false);
   });
 
   it("does not initialize when git is unavailable and auto-install is disabled", async () => {
