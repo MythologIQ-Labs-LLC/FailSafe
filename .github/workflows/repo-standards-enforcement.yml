@@ -58,8 +58,9 @@ jobs:
       - name: Package and validate VSIX contents
         working-directory: FailSafe/extension
         run: |
-          npx @vscode/vsce package
-          npm run validate:vsix
+          # #502: a VSIX that depends on better-sqlite3 must be platform-targeted.
+          node scripts/package-target.cjs linux-x64 --out standards-linux-x64.vsix
+          node scripts/validate-vsix.cjs standards-linux-x64.vsix
 
       - name: Repository validation
         shell: pwsh

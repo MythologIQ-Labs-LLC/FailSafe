@@ -1,16 +1,12 @@
 #!/usr/bin/env bash
-# Run full FailSafe test suite (close VS Code first so better-sqlite3 can rebuild)
+# Run full FailSafe test suite. better-sqlite3 13.x is N-API and loads its bundled
+# prebuild, so no native rebuild step is needed (#502).
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
 echo "=== Compile ==="
 npm run compile
-
-echo ""
-echo "=== Rebuild native modules ==="
-npm run patch:better-sqlite3
-npm run rebuild:vscode
 
 echo ""
 echo "=== Full VS Code test runner ==="

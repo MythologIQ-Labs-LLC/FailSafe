@@ -37,20 +37,15 @@ scripts/
 # QorLogicSkillIngestor flow.
 dist/extension/skills/**
 
-# Bundle runtime dependencies aggressively; keep only native sqlite support
+# Bundle runtime dependencies aggressively; keep only native sqlite support.
+# #502 (FX950): better-sqlite3 13.x is N-API and loads prebuilds/<platform>-<arch>.node.
+# No binary ships from this base file: `npm run package:target -- <target>` adds exactly
+# the target's prebuild, and validate-vsix refuses a universal or mismatched package.
+# A locally compiled build/Release binary is host-specific and must never ship.
 node_modules/**
 !node_modules/better-sqlite3/package.json
 !node_modules/better-sqlite3/LICENSE
 !node_modules/better-sqlite3/lib/**
-# FX911: only the built native binary ships — obj/ compile intermediates
-# (tlog, .obj, the 8MB sqlite3.c amalgamation) must not (was Release/**).
-!node_modules/better-sqlite3/build/Release/*.node
-!node_modules/bindings/package.json
-!node_modules/bindings/LICENSE.md
-!node_modules/bindings/bindings.js
-!node_modules/file-uri-to-path/package.json
-!node_modules/file-uri-to-path/LICENSE
-!node_modules/file-uri-to-path/index.js
 
 # Git
 .git/

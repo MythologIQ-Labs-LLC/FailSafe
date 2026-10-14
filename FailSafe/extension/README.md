@@ -395,7 +395,7 @@ FailSafe seeds a `.failsafe/` directory in your workspace for configuration, led
 
 ## Requirements
 
-- VS Code 1.90.0 or later
+- VS Code 1.101.0 or later (the native SQLite module needs the Node 22 runtime VS Code ships from 1.101)
 - Node.js 18+ (for development)
 - `curl` (required only if you install the commit hook)
 - Ollama (optional, for LLM-assisted mode)

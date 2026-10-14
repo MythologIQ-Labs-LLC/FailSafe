@@ -30204,3 +30204,78 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `0e546881cf64bacee964394c17f268adaf668e6f4c48e198c943afe0f294a81e`
 
 **Decision**: Reality = Promise for plan-runtime-hardening-243a: all three phases implemented in their Affected Files; no unplanned files. Verification: full vscode-test suite (VS Code 1.122.1 pinned) 4197 passing / 17 pending / 1 failing - the failure is FX930 WorkspaceArtifactBuilder 'supported fixture' (IDLE vs IMPLEMENT), reproduced identically on a main-equivalent worktree (#501 head, no roadmap or fixture diff) and root-caused to parseMetaLedger returning 0 entries for CRLF text under core.autocrlf (CRLF 0 entries/IDLE vs LF 2 entries/IMPLEMENT); filed #508, not this change. Targeted: mocha 19 passing (gitBootstrap 7, governedDocument 4, marketplace-route 8); mutation of each fix turns its test red (scan gate 1, confirmInit 2, autoInstallGit default 1, scheme check 2), restored green. test:node 353 pass / 2 pre-existing FX946 failures. tsc 0, eslint 0. Runtime: dev VSIX (sha256 prefix 5214529c6ca0148f) in VS Code 1.141.0 isolated profile on a plain folder: activated 809 ms, 0 missing commands, no .git created (released 6.0.6 created one), Global editor.fontSize update logged 0 BLOCKADE (6.0.6 logged 1). Gates: intent_lock VERIFIED; skill_admission ADMITTED; gate_skill_matrix 0 broken; secret_scanner 0 findings over 19 staged files with canary rc 1; procedural_fidelity, dod_check, merge_velocity clean; skill_size_budget WARN only; data_api_acl disclosed SKIP; install_drift OK. Disclosures: governance-health DAMAGED META_LEDGER under the standing operator override (gate_override 5a65a5cf); governance-index --advance-last-reviewed re-dated the prior v6.0.6 Last Reviewed line and was reverted, a new line prepended by hand; substantiate_gates, version_applicability, seal_entry_check and seal_artifacts inapplicable here (#601 precedent, #612); ledger_emit.append not used (interior tail marker); no version bump (hotfix toward the next patch, operator-gated); seal commit carries no attribution trailer per operator rule. Out of scope and filed: #505 (enforce does not block editor saves), #508 (CRLF ledger parse). Feature Inventory: FX053/FX094/FX437 MODIFIED, FX948 NEW (764 total / 714 verified). **SSDF Practices**: PS.2.1, RV.2.1
+
+---
+
+### Entry #622: GATE TRIBUNAL - plan-502-native-sqlite-13 (iteration 1) - VETO
+
+**Timestamp**: 2026-10-14T23:20:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-14T2255-425a6c`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Plan**: `plan-502-native-sqlite-13.md`
+**Preflight**: governance-health DAMAGED META_LEDGER (pre-existing); standing operator override, gate_override `00e0a3e3`
+**Numbering**: #617-#621 are allocated on unmerged PR #513; this branch continues at #622 so no entry number is duplicated; the second of the two PRs to merge re-chains
+
+**Content Hash**: `ec7cf3207a22c69ceff583d54c0747d0c64eda6c2ceacc07fe4bd82999504539`
+**Previous Hash**: `0e546881cf64bacee964394c17f268adaf668e6f4c48e198c943afe0f294a81e`
+**Chain Hash (Merkle seal)**: `ecd732199204398d49d5b25f0bb0200ad9d5b457e861dcbaafec5bb89676452d`
+
+**Decision**: Option B review; Judge verified each ground. V1 coverage-gap: scripts/run-all-tests.sh:12-13 and run-all-tests.ps1:13-14 invoke patch:better-sqlite3 and rebuild:vscode, which LD5 deletes; package.json:793-799 carries a stale prebuild-install 'binary' block (module_path ./build/Release/); pr-full-test.yml:4 comment. V2 test-failure: the PE Machine field sits at e_lfanew+4 and measured e_lfanew is 264 (win32-x64) / 272 (win32-arm64), so 64-byte header prefixes cannot reach it; validate-vsix reads archive entries as utf8 (spawnSync encoding utf8), corrupting binary bytes. V3 infrastructure-mismatch: better-sqlite3 13.0.3 declares engines.node >=22 while CI pins Node 20. Judge measurement beyond the review: the 13.0.3 prebuild SEGFAULTS (exit 139) on Node 20.18.1 and in VS Code 1.90.0, 1.99.0 and 1.100.0 (Node 20 Electron), and loads in VS Code 1.101.0 (Electron 35.5.1, Node 22.15.1, N-API 10); with engines.vscode ^1.90.0 the upgrade would crash the extension host on older VS Code. Clean: LD citations, vsce --target/--ignoreFile support, no 13.x API break in src/, no Node-run test suite loads SQLite, FX950 unused. Next: Governor amends plan.
+
+---
+
+### Entry #623: GATE TRIBUNAL - plan-502-native-sqlite-13 (iteration 2) - PASS
+
+**Timestamp**: 2026-10-14T23:45:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-14T2255-425a6c`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Plan**: `plan-502-native-sqlite-13.md`
+**Preflight**: standing operator override, gate_override `00e0a3e3`
+
+**Content Hash**: `c352e6519ead9c458861ceff976fadb9ca2342a884e73c5c16e60f1dee88ff49`
+**Previous Hash**: `ecd732199204398d49d5b25f0bb0200ad9d5b457e861dcbaafec5bb89676452d`
+**Chain Hash (Merkle seal)**: `48faa781125f277db978ec4d8d4a9e2e4d02ff132511a6aed6ab2e27486b0385`
+
+**Decision**: Full Option B re-walk against PR #512 head edbcd80f. All seven LD citations reproduce (plan_grep_lint 7/7), incl. LD7 engines.vscode ^1.90.0 at package.json:14. Iteration-1 grounds resolved: run-all-tests.sh/.ps1, the prebuild-install binary block and pr-full-test.yml:4 listed; PE Machine read at e_lfanew+4 with a 1024-byte Buffer read (measured e_lfanew 264/272), ELF e_machine at 0x12, Mach-O cputype at 4 with fat rejection, musl by path; Node 22 for the qualification workflow only, justified by run-node-tests.cjs running only *.test.cjs suites that never reach better-sqlite3. Minimum-VS-Code surfaces complete (package.json, README:398, two issue templates, lock); vsce's @types/vscode <= engines check still passes. Cosmetic advisories: LD ordering, duplicate package.json row, run-all-tests.sh:2 comment. Next: /qor-implement.
+
+---
+
+### Entry #624: IMPLEMENTATION - plan-502-native-sqlite-13
+
+**Timestamp**: 2026-10-15T01:00:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-14T2255-425a6c`
+**Risk Grade**: L2
+**Plan**: `plan-502-native-sqlite-13.md` (audit PASS #623; intent lock captured)
+
+**Content Hash**: `dce29a948592e0eb218c2363401324a04b81a3fb1763c5d22f252e3e73eeffda`
+**Previous Hash**: `48faa781125f277db978ec4d8d4a9e2e4d02ff132511a6aed6ab2e27486b0385`
+**Chain Hash (Merkle seal)**: `a5efbf9cffe089051baf68b7d9e1345902c10288475be3f8a7dd23ab93175907`
+
+**Decision**: New scripts/native-targets.cjs (target map, PE/ELF/Mach-O header decoding, findNativeAddons, checkNativeBinary) and scripts/package-target.cjs (vsce --target with a generated ignore file re-including exactly prebuilds/<target>.node). validate-vsix reads entries as Buffers and fails a VSIX that depends on better-sqlite3 (dependencies or optionalDependencies - FailSafe declares it optional) unless targeted with exactly the matching prebuild. better-sqlite3 ^13.0.3; engines.vscode ^1.101.0; prebuild-install binary block removed; pretest and run-all-tests no longer patch/rebuild; patch-better-sqlite3.cjs and rebuild-vscode-electron.cjs deleted; .vscodeignore ships no binary; standards gate packages linux-x64; qualification workflow on Node 22 with linux-arm64, alpine-x64, darwin-x64 added and a smoke test of the binary extracted from the packaged VSIX. Unplanned file disclosed: src/test/fixtures/native-prebuild-headers.json (the plan's checked-in header fixtures), hex-encoded because base64 of the binary headers tripped the AWS-key secret rule. Red: suite failed on the missing module. Green: 10/10. Mutation: newline split, target check, exactly-one count, path, arch, fat Mach-O and truncated-PE guards each turn a test red; restored green. The released universal v6.0.6 VSIX now fails validation (it passed #512's original gate). win32-x64, linux-x64, darwin-arm64 and alpine-x64 all package from Windows and validate; the packaged win32 binary loads in Node 22.
+
+---
+
+### Entry #625: SESSION SEAL - plan-502-native-sqlite-13
+
+**Timestamp**: 2026-10-15T01:10:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-14T2255-425a6c`
+**Entry ID**: `7ef7839797ed`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Plan**: `plan-502-native-sqlite-13.md` (audit #623, implement #624)
+
+**Content Hash**: `95b021a3f9e89b4667ec5a5140bf93711f1e67006672642bc04b6dfe6b62b6c0`
+**Previous Hash**: `a5efbf9cffe089051baf68b7d9e1345902c10288475be3f8a7dd23ab93175907`
+**Chain Hash (Merkle seal)**: `5514ec3e079af72e07a0546b0e7a78ff960a66f6cea2fa6e84eb3cc017c4b153`
+
+**Decision**: Reality = Promise for plan-502-native-sqlite-13 on PR #512 (branch head edbcd80f, unchanged on the remote before push). Verification: vscode-test (pinned 1.122.1, Electron 39, loading the 13.0.3 prebuild with no rebuild step) 4205 passing / 17 pending / 1 failing - FX930, pre-existing Windows CRLF ledger parse (#508); census 466/466. test:node 353/355 (2 pre-existing FX946); lint clean. Validator suite 10/10 with 7 guards mutation-killed. Runtime: branch-built fs-502-win32-x64.vsix (sha256 prefix in the #502 comment) installed in an isolated VS Code 1.141.0 profile (Electron 43, ABI 148): activation 977 ms then 845 ms, 0 missing commands, 29 and 32 FailSafe log lines with 0 stub-mode / JSONL-fallback / ABI errors (the same grep finds 3 stub lines in the released 6.0.6 logs); soa_ledger.db 3 hash-chained rows after a restart and a workspace save, checkpoints 4, sentinel_observations 1, integrity ok. Earlier experimental build additionally survived a forced kill (#502). Measured constraints: 13.0.3 segfaults (exit 139) on Node 20.18.1 and in VS Code 1.90/1.99/1.100; loads in 1.101.0 (Electron 35.5.1, Node 22.15.1), 1.122.1 and 1.141.x - hence engines.vscode ^1.101.0. Disclosures: release.yml is unchanged by design (operator approval required) - after merge a universal release VSIX fails validation, blocking release until per-target publishing is approved; alpine targets are smoke-tested by path and header only (glibc runner cannot load musl); ledger numbering starts at #622 because #617-#621 are held by unmerged PR #513 - the second of the two PRs to merge re-chains; standing DAMAGED-ledger override. Feature Inventory: FX950 NEW (765 / 715). **SSDF Practices**: PS.2.1, RV.2.1

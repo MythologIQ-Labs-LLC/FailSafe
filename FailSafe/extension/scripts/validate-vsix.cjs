@@ -1,6 +1,7 @@
 const { spawnSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
+const { checkNativeBinary, findNativeAddons } = require("./native-targets.cjs");
 
 const root = path.resolve(__dirname, "..");
 
@@ -93,17 +94,28 @@ function extractLatestRelease(changelogText) {
   return { version: releaseMatch[1], date: releaseMatch[2] };
 }
 
+/** Raw bytes of an archive entry (binary-safe: no utf8 decoding). */
+function runCommandBuffer(command, args) {
+  const result = spawnSync(command, args, { maxBuffer: 64 * 1024 * 1024 });
+  if (result.status !== 0) {
+    fail(String(result.stderr || "").trim() || `${command} ${args.join(" ")} failed`);
+  }
+  return result.stdout;
+}
+
 function createArchiveReader(vsixPath) {
   if (canRun("unzip")) {
     return {
       list: () => runCommand("unzip", ["-Z1", vsixPath]),
       read: (entry) => runCommand("unzip", ["-p", vsixPath, entry]),
+      readBuffer: (entry) => runCommandBuffer("unzip", ["-p", vsixPath, entry]),
     };
   }
 
   return {
     list: () => runCommand("tar", ["-tf", vsixPath]),
     read: (entry) => runCommand("tar", ["-xOf", vsixPath, entry]),
+    readBuffer: (entry) => runCommandBuffer("tar", ["-xOf", vsixPath, entry]),
   };
 }
 
@@ -194,12 +206,17 @@ function main() {
   assertIncludes(packagedCommands, `"failsafe.installCommitHook"`, "Packaged command");
   assertIncludes(packagedCommands, `"failsafe.removeCommitHook"`, "Packaged command");
 
-  // #502: a native addon must never be distributed as a universal VSIX.
-  const nativeAddons = list.split(/\\r?\\n/).map(line => line.trim())
-    .filter(entry => entry.startsWith('extension/') && entry.endsWith('.node'));
-  const manifestText = archive.read('extension.vsixmanifest');
-  const nativeTargetError = checkNativeVsixTarget(nativeAddons, manifestText);
-  if (nativeTargetError) fail(nativeTargetError);
+  // #502 (FX950): SQLite needs the platform's own N-API prebuild in a targeted VSIX.
+  const targetMatch = archive.read("extension.vsixmanifest").match(/TargetPlatform="([a-z0-9-]+)"/);
+  const nativeError = checkNativeBinary({
+    target: targetMatch ? targetMatch[1] : null,
+    // FailSafe declares better-sqlite3 as an optional dependency (stub mode when absent).
+    dependsOnSqlite: Boolean(packagedPkg.dependencies?.["better-sqlite3"] || packagedPkg.optionalDependencies?.["better-sqlite3"]),
+    addons: findNativeAddons(list),
+    readEntry: (entry) => archive.readBuffer(entry),
+  });
+  if (nativeError) fail(nativeError);
+  console.log(`[PASS] Native SQLite binary matches target ${targetMatch ? targetMatch[1] : "(none required)"}`);
 
   const manifest = archive.read("extension.vsixmanifest");
   assertIncludes(manifest, `Version="${sourcePkg.version}"`, "VSIX manifest version");
@@ -255,16 +272,7 @@ function assertVsixUnderCeiling(vsixPath, ceilingBytes) {
   }
 }
 
-/** Pure platform contract check for native addons; execution is covered in tests. */
-function checkNativeVsixTarget(nativeAddons, manifest) {
-  if (nativeAddons.length === 0) return null;
-  const targeted = /TargetPlatform="(?:win32|linux|darwin|alpine)-(?:x64|arm64|armhf|ia32)"/.test(manifest);
-  return targeted ? null :
-    'Universal VSIX contains native addons (' + nativeAddons.join(', ') +
-    '). Publish platform-targeted artifacts with correctly rebuilt native dependencies (#502).';
-}
-
-module.exports = { assertVsixUnderCeiling, checkNativeVsixTarget };
+module.exports = { assertVsixUnderCeiling };
 
 if (require.main === module) {
   main();
