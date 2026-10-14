@@ -677,7 +677,7 @@
         "failsafe.bootstrap.autoInstallGit": {
           "type": "boolean",
           "default": false,
-          "description": "Automatically attempt to install Git and initialize a repository at workspace bootstrap if missing."
+          "description": "Legacy option (disabled): FailSafe never installs Git or initializes repositories during activation. Git setup requires a separate explicit user-authorized workflow."
         },
         "failsafe.integrations.bicameral.command": {
           "type": "string",
