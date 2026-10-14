@@ -4,6 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { persistOpenHandsObservations } from '../../../integrations/agent-observe/openhands-import';
 import type { AgentObservationEvent } from '../../../integrations/agent-observe/openhands-observer';
+import { TransparencyLogger } from '../../../roadmap/services/TransparencyLogger';
 
 suite('OpenHands historical persistence #477', () => {
   test('persists redacted observations, deduplicates repeated import and reports counts', () => {
@@ -37,4 +38,35 @@ suite('OpenHands historical persistence #477', () => {
       assert.throws(() => persistOpenHandsObservations(root, source, []), /OPENHANDS_IMPORT_CORRUPT_LOG/);
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
   });
+  test('imported events are returned by the transparency API storage reader', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-openhands-visible-'));
+    try {
+      const source = path.join(root, 'run.json');
+      fs.writeFileSync(source, '[]');
+      const event: AgentObservationEvent = {
+        id: 'e2', source: 'openhands', kind: 'observation', verb: 'read',
+        riskHint: 'info', summary: 'observation:read',
+      };
+      persistOpenHandsObservations(root, source, [event]);
+      const visible = new TransparencyLogger(root).getEvents(50);
+      assert.equal(visible.length, 1);
+      assert.equal(visible[0].sourceEventId, 'e2');
+      assert.equal(visible[0].origin, 'historical-export');
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  });
+
+  test('a concurrent import lock refuses an import rather than duplicating records', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-openhands-locked-'));
+    try {
+      const source = path.join(root, 'run.json');
+      fs.writeFileSync(source, '[]');
+      const logDir = path.join(root, '.failsafe', 'logs');
+      fs.mkdirSync(logDir, { recursive: true });
+      const lock = path.join(logDir, 'transparency.jsonl.openhands-import.lock');
+      fs.writeFileSync(lock, 'held');
+      assert.throws(() => persistOpenHandsObservations(root, source, []), /EEXIST/);
+      assert.equal(fs.existsSync(lock), true);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  });
+
 });
