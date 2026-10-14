@@ -2997,3 +2997,11 @@ The upstream fix already ships and was simply never called: `ledger_fragment` (P
 **Lesson**: When a plan changes a user-visible default, the enumeration grep must cover docs and README surfaces, not only src/ and test/. A default is a documented promise; the docs are callers of it.
 
 **Countermeasure applied**: VETO iteration 1; plan amended to list README.md:488, FailSafe/README.md:247, FailSafe/extension/README.md:377/:443 and the FX437 title before re-audit.
+
+## SG Event 2026-10-14: A launch spec fetched over HTTP was validated by shape but not by key, leaving NODE_OPTIONS as a code-injection channel (plan-od-runtime-compat-481, ledger #617-#618)
+
+**Pattern**: The plan correctly refused to let an HTTP response pick the spawned command, then validated the response's env only as a map of strings. Under ELECTRON_RUN_AS_NODE=1 a single env pair (NODE_OPTIONS=--require ...) loads arbitrary code without touching command or args, and the response's own cliExists/nodeExists flags were treated as evidence. The second iteration then cited a VS Code path (globalStorageUri) whose own documentation says it may not exist.
+
+**Lesson**: When untrusted input describes a process to spawn, every channel that influences execution is a command: argv, cwd, AND each environment key. Allowlist env keys, verify existence locally, and read the platform API's own caveats for every path you depend on.
+
+**Countermeasure applied**: VETO iterations 1 and 2; iteration 3 allowlists env keys to OD_DATA_DIR / ELECTRON_RUN_AS_NODE, checks command and script with local fs.existsSync, shows every env pair in the consent modal, and creates the globalStorageUri directory before connect.

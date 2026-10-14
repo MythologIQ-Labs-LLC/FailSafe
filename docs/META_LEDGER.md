@@ -30204,3 +30204,97 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `0e546881cf64bacee964394c17f268adaf668e6f4c48e198c943afe0f294a81e`
 
 **Decision**: Reality = Promise for plan-runtime-hardening-243a: all three phases implemented in their Affected Files; no unplanned files. Verification: full vscode-test suite (VS Code 1.122.1 pinned) 4197 passing / 17 pending / 1 failing - the failure is FX930 WorkspaceArtifactBuilder 'supported fixture' (IDLE vs IMPLEMENT), reproduced identically on a main-equivalent worktree (#501 head, no roadmap or fixture diff) and root-caused to parseMetaLedger returning 0 entries for CRLF text under core.autocrlf (CRLF 0 entries/IDLE vs LF 2 entries/IMPLEMENT); filed #508, not this change. Targeted: mocha 19 passing (gitBootstrap 7, governedDocument 4, marketplace-route 8); mutation of each fix turns its test red (scan gate 1, confirmInit 2, autoInstallGit default 1, scheme check 2), restored green. test:node 353 pass / 2 pre-existing FX946 failures. tsc 0, eslint 0. Runtime: dev VSIX (sha256 prefix 5214529c6ca0148f) in VS Code 1.141.0 isolated profile on a plain folder: activated 809 ms, 0 missing commands, no .git created (released 6.0.6 created one), Global editor.fontSize update logged 0 BLOCKADE (6.0.6 logged 1). Gates: intent_lock VERIFIED; skill_admission ADMITTED; gate_skill_matrix 0 broken; secret_scanner 0 findings over 19 staged files with canary rc 1; procedural_fidelity, dod_check, merge_velocity clean; skill_size_budget WARN only; data_api_acl disclosed SKIP; install_drift OK. Disclosures: governance-health DAMAGED META_LEDGER under the standing operator override (gate_override 5a65a5cf); governance-index --advance-last-reviewed re-dated the prior v6.0.6 Last Reviewed line and was reverted, a new line prepended by hand; substantiate_gates, version_applicability, seal_entry_check and seal_artifacts inapplicable here (#601 precedent, #612); ledger_emit.append not used (interior tail marker); no version bump (hotfix toward the next patch, operator-gated); seal commit carries no attribution trailer per operator rule. Out of scope and filed: #505 (enforce does not block editor saves), #508 (CRLF ledger parse). Feature Inventory: FX053/FX094/FX437 MODIFIED, FX948 NEW (764 total / 714 verified). **SSDF Practices**: PS.2.1, RV.2.1
+
+---
+
+### Entry #617: GATE TRIBUNAL - plan-od-runtime-compat-481 (iteration 1) - VETO
+
+**Timestamp**: 2026-10-14T15:15:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-14T1419-f1667d`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Plan**: `plan-od-runtime-compat-481.md` (iteration 1)
+**Preflight**: governance-health DAMAGED docs/META_LEDGER.md (pre-existing 0.176.1 drift); standing operator override, gate_override `998633d7`
+
+**Content Hash**: `b5de93898ad343d055af5b0168924f7fda61b9d958debdae8f0f021353a9ef0a`
+**Previous Hash**: `0e546881cf64bacee964394c17f268adaf668e6f4c48e198c943afe0f294a81e`
+**Chain Hash (Merkle seal)**: `c3611ccb6fc13045c11d1c921cec9c82abc9cf880cd6f211bf5206f00231c5b7`
+
+**Decision**: Option B fresh-context review; Judge verified each ground by direct read. V1 coverage-gap: Affected Files omit FailSafe/extension/package.json:533 (mcpEnabled description promises pre-construction at activation) and the README Configuration row :20. V2 security: env values were validated as strings only; under ELECTRON_RUN_AS_NODE=1 an env key such as NODE_OPTIONS=--require <path> preloads code without changing command or args, and the response's own cliExists/nodeExists flags prove nothing. V3 test-failure: the bootstrap test stub has no globalState, showWarningMessage returns undefined (no accept/decline), and no LaunchSpec module stub, yet the plan claimed the existing stub suffices. LD citations accurate; FX949 unused; tests behavioural. Next: Governor amends plan.
+
+---
+
+### Entry #618: GATE TRIBUNAL - plan-od-runtime-compat-481 (iteration 2) - VETO
+
+**Timestamp**: 2026-10-14T15:20:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-14T1419-f1667d`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Plan**: `plan-od-runtime-compat-481.md` (iteration 2)
+**Preflight**: governance-health DAMAGED docs/META_LEDGER.md (pre-existing 0.176.1 drift); standing operator override, gate_override `998633d7`
+
+**Content Hash**: `b64f2b9c75d9cd299424a0f68c2fa51be2933290ca0f2b68f2210a004bb71304`
+**Previous Hash**: `c3611ccb6fc13045c11d1c921cec9c82abc9cf880cd6f211bf5206f00231c5b7`
+**Chain Hash (Merkle seal)**: `79acdc27c41f2c7346504fc6e62a5b70dbe8e7184925bb5b98d5c9340652938e`
+
+**Decision**: Full re-walk. Iteration-1 grounds resolved (env-key allowlist {OD_DATA_DIR, ELECTRON_RUN_AS_NODE} with NODE_OPTIONS rejected, local existsSync on command and args[0], modal shows every env pair, stub extensions listed, re-confirm every run). New grounds: V1 context.globalStorageUri may not exist on disk (@types/vscode index.d.ts: 'The directory might not exist on disk and creation is up to the extension') so spawning with it as cwd can ENOENT; V2 Phase 3 Unit Tests line still said 'existing vscode stub' contradicting the extension list; V3 no test for existsSync false, changed-spec re-run, or cwd/mkdir. Next: Governor amends plan.
+
+---
+
+### Entry #619: GATE TRIBUNAL - plan-od-runtime-compat-481 (iteration 3) - PASS
+
+**Timestamp**: 2026-10-14T15:25:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-14T1419-f1667d`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Plan**: `plan-od-runtime-compat-481.md` (iteration 3)
+**Preflight**: governance-health DAMAGED docs/META_LEDGER.md (pre-existing 0.176.1 drift); standing operator override, gate_override `998633d7`
+
+**Content Hash**: `950916f1c441d969dee33a84cd31596a3f340ba75844bb12858342486b98e4fd`
+**Previous Hash**: `79acdc27c41f2c7346504fc6e62a5b70dbe8e7184925bb5b98d5c9340652938e`
+**Chain Hash (Merkle seal)**: `ea8716e565f8cf4f3f77bea1c7fcfbb36822ae996d518b522e58980ad9445885`
+
+**Decision**: Full re-walk against PR #501 head 9bd437e9: LD1-LD5 citations reproduce; every Affected File maps to a test (probe four shapes; launch spec allowlist incl. explicit NODE_OPTIONS, absolute args[0], env display; bootstrap decline/accept/no-spec/stored-spec/existsSync-false/changed-spec/cwd+mkdir/allowlisted count); doc surfaces package.json:533, README:20, renderer listed; descriptors match LD3; FX949 unused. Advisories carried to implement: test mkdir with a real temp globalStorageUri; package.json:533 text must say activation only builds the client and connect happens in the wizard. Cycle-count escalator not triggered (distinct signatures). Next: /qor-implement.
+
+---
+
+### Entry #620: IMPLEMENTATION - plan-od-runtime-compat-481
+
+**Timestamp**: 2026-10-14T16:20:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-14T1419-f1667d`
+**Risk Grade**: L2
+**Plan**: `plan-od-runtime-compat-481.md` (audit PASS #619; intent lock captured)
+**Files**: `FailSafe/extension/src/integrations/open-design/OpenDesignDaemonProbe.ts`, `FailSafe/extension/src/test/integrations/open-design/OpenDesignDaemonProbe.test.ts`, `FailSafe/extension/src/integrations/open-design/OpenDesignLaunchSpec.ts`, `FailSafe/extension/src/test/integrations/open-design/OpenDesignLaunchSpec.test.ts`, `FailSafe/extension/src/integrations/open-design/index.ts`, `FailSafe/extension/src/extension/bootstrapOpenDesignMcp.ts`, `FailSafe/extension/src/test/extension/bootstrapOpenDesignMcp.test.cjs`, `FailSafe/extension/src/integrations/open-design/README.md`, `FailSafe/extension/src/roadmap/ui/modules/open-design-renderer.js`, `FailSafe/extension/package.json`, `docs/FEATURE_INDEX.md`, `CHANGELOG.md`, `FailSafe/extension/CHANGELOG.md`
+
+**Content Hash**: `33f158d763ec87c89689af311b0fffdcf45de78e7007b3b811f2adfbb15eabc3`
+**Previous Hash**: `ea8716e565f8cf4f3f77bea1c7fcfbb36822ae996d518b522e58980ad9445885`
+**Chain Hash (Merkle seal)**: `56bb951f9d1a86741bd727380d83ada1472d115269f51987def2a73b174423dd`
+
+**Decision**: Phase 1: OpenDesignDaemonProbe reads a top-level or nested version (readVersion). Phase 2: new OpenDesignLaunchSpec (parseLaunchSpec: absolute command and entry script, env keys allowlisted to OD_DATA_DIR / ELECTRON_RUN_AS_NODE; fetchLaunchSpec fails closed; formatCommandLine shows every env pair, quoting values with spaces; sameSpec). Phase 3: bootstrapOpenDesignMcp drops command 'od'; activation builds a client only from a stored, re-validated spec and never connects; the wizard probes, fetches, validates, checks both runtime paths with local existsSync, asks via modal, stores in globalState, rebuilds on a changed spec, creates globalStorageUri before connect, uses it as cwd, and counts allowlisted reads. Docs: package.json mcpEnabled description, integration README (config row, wiring, security, files), Console help text, FX721/FX725 rows, FX949 NEW, header 765/715, CHANGELOG Unreleased. Red: tsc pinned the missing module. Green: Open Design mocha suites 69 passing; bootstrap node:test 12/12. Mutation: 8 guards (probe nested read, env-key allowlist, absolute command, consent, existsSync, mkdir, changed-spec rebuild, no-spec activation) each turn their test red; restored green. Runtime against the live Open Design 0.24.1 daemon: probe alive 0.24.1 (was parse_error), spec fetched and validated, OpenDesignMcpClient connected through its default transport in 313 ms (22 upstream tools, 7 allowlisted reads present), list_projects returned the fixture project. test:node 358 pass / 2 pre-existing FX946.
+
+---
+
+### Entry #621: SESSION SEAL - plan-od-runtime-compat-481
+
+**Timestamp**: 2026-10-14T22:50:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-14T1419-f1667d`
+**Entry ID**: `8c21781e2895`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Plan**: `plan-od-runtime-compat-481.md` (audit #619, implement #620)
+
+**Content Hash**: `c606070feefe74b80ed5d9a5c078d9b23df75b7598a1f82a7798a4dc0d845605`
+**Previous Hash**: `56bb951f9d1a86741bd727380d83ada1472d115269f51987def2a73b174423dd`
+**Chain Hash (Merkle seal)**: `70ea0bd1677e17aeaff8537e07498230f9febbdcaeaaa102dea3e76d85aac279`
+
+**Decision**: Reality = Promise for plan-od-runtime-compat-481 (stacked on PR #501 head 9bd437e9 with main merged at ce366841). Verification: full vscode-test suite (1.122.1 pinned) 4210 passing / 17 pending / 1 failing, census 467/467 - the failure is FX930 (pre-existing Windows CRLF ledger parse, #508). Open Design suites 69 passing; bootstrap node:test 12/12; test:node 358 pass / 2 pre-existing FX946. Mutation: 8 guards each turn their test red (probe nested read, env-key allowlist, absolute command, consent, existsSync, mkdir, changed-spec rebuild, no-spec activation). Runtime vs live Open Design 0.24.1 (official installer sha256 3a544dca, unsigned; headless daemon, scratch OD_DATA_DIR): probe alive 0.24.1 (was parse_error); install-info spec fetched and validated; OpenDesignMcpClient connected via its default transport in 313 ms, 22 upstream tools, 7 allowlisted reads; list_projects returned the fixture project. Extension host (dev VSIX sha256 prefix cfcc1dfe64c78f3f, VS Code 1.141.0 isolated profile, mcpEnabled=true): activated 954 ms, registerMcp registered, no client without a stored spec; the wizard fetched the real spec and raised the consent modal (refused by the test host's DialogService) and zero MCP server processes were spawned. Gates: intent_lock VERIFIED; skill_admission ADMITTED; gate_skill_matrix 0 broken; secret_scanner 0 findings over 16 staged files, canary rc 1; dod_check, merge_velocity clean; data_api_acl SKIP. Disclosures: standing DAMAGED-ledger override; two VETOs before PASS (#617, #618); the disposable VS Code test builds had win32VersionedUpdate removed from their product.json so the operator's parked desktop updater could not block test launches (operator install untouched); worktree relocated to G:/MythologIQ/wt501 because a scratch-path worktree exceeded MAX_PATH (262 chars) and vscode-test then exited 0 with zero tests run - a vacuous pass caught by reading the log, not the exit code; the rebuild-vscode-electron.cjs fresh-download path misses the versioned archive subfolder (reported, not fixed here); a node_modules junction duplicated the mocha instance and was replaced with npm ci. Port 7456 hardcoding and Docker non-loopback SSE 401 remain out of scope per plan boundaries. Feature Inventory: FX721/FX725 MODIFIED, FX949 NEW (765 / 715). **SSDF Practices**: PS.2.1, RV.2.1

@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- Open Design 0.24.1: the daemon probe reported a healthy daemon as unreachable (`parse_error`) because 0.24.1 nests its version. FailSafe now reads both shapes (#481).
+- Open Design MCP no longer launches a bare `od mcp`, which fails on Windows desktop installs (and hits coreutils' octal-dump under Git Bash). The register command fetches the daemon's own launch command, shows it with its environment for your approval, and only then starts the server (#481).
 - Opening a folder no longer runs `git init` on its own. FailSafe asks first, and `failsafe.bootstrap.autoInstallGit` now defaults to off, so Git is never installed system-wide without opting in (#503).
 - Saving your user settings or a file outside the workspace no longer raises a governance blockade; editor-save governance covers workspace files only (#504).
 

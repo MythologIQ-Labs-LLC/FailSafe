@@ -20,6 +20,7 @@ const Module = require('module');
 
 const stub = {
   configValues: {},
+  modalChoice: undefined,
   warnings: [],
   infos: [],
   errors: [],
@@ -35,8 +36,11 @@ const vscodeStub = {
     }),
   },
   window: {
-    showWarningMessage: async (msg) => {
+    showWarningMessage: async (msg, ...rest) => {
       stub.warnings.push(msg);
+      // Modal consent prompts pass {modal:true}; return the scripted choice.
+      if (rest[0] && rest[0].modal) return stub.modalChoice;
+      return undefined;
     },
     showInformationMessage: async (msg) => {
       stub.infos.push(msg);
@@ -81,6 +85,7 @@ const compiled = path.resolve(
 let probeResultToReturn;
 let connectShouldThrow = false;
 let mcpConstructorCalls = 0;
+let lastClientOpts = null;
 let capabilitiesToReturn = new Set();
 let connectCallCount = 0;
 let disconnectCallCount = 0;
@@ -106,6 +111,32 @@ const mcpStubPath = path.resolve(
   'open-design',
   'OpenDesignMcpClient.js',
 );
+const launchSpecPath = path.resolve(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  'out',
+  'integrations',
+  'open-design',
+  'OpenDesignLaunchSpec.js',
+);
+// Real parse/format/sameSpec; only the network fetch is scripted.
+const realLaunchSpec = require(launchSpecPath);
+let fetchedSpecPayload;
+require.cache[launchSpecPath] = {
+  id: launchSpecPath,
+  filename: launchSpecPath,
+  loaded: true,
+  exports: {
+    ...realLaunchSpec,
+    fetchLaunchSpec: async () =>
+      fetchedSpecPayload === 'refused'
+        ? { ok: false, reason: 'refused' }
+        : realLaunchSpec.parseLaunchSpec(fetchedSpecPayload),
+  },
+};
+
 const sseStubPath = path.resolve(
   __dirname,
   '..',
@@ -139,6 +170,7 @@ require.cache[mcpStubPath] = {
       constructor(opts) {
         mcpConstructorCalls++;
         this.opts = opts;
+        lastClientOpts = opts;
       }
       async connect() {
         connectCallCount++;
@@ -172,16 +204,39 @@ require.cache[sseStubPath] = {
 
 const { bootstrapOpenDesignMcp } = require(compiled);
 
+const os = require('os');
+const fs = require('fs');
+
 function makeContext() {
   const subs = [];
+  const state = new Map();
+  const storageDir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'fs-od-')), 'globalStorage');
   return {
     subscriptions: {
       push: (item) => subs.push(item),
       all: () => subs,
     },
+    globalState: {
+      get: (k) => state.get(k),
+      update: async (k, v) => { state.set(k, v); },
+    },
+    globalStorageUri: { fsPath: storageDir },
     _subs: subs,
+    _state: state,
   };
 }
+
+// Recorded Open Design 0.24.1 install-info payload shape (absolute paths).
+function specPayload(port = 7456) {
+  return {
+    command: '/opt/open-design/open-design',
+    args: ['/opt/open-design/resources/app/prebundled/daemon/daemon-cli.mjs', 'mcp', '--daemon-url', `http://127.0.0.1:${port}`],
+    env: { OD_DATA_DIR: '/home/me/.open-design', ELECTRON_RUN_AS_NODE: '1' },
+    cliExists: true,
+    nodeExists: true,
+  };
+}
+const allExist = { existsSync: () => true };
 
 function resetStubState() {
   stub.configValues = {};
@@ -191,6 +246,8 @@ function resetStubState() {
   stub.commands.clear();
   stub.subscriptions.length = 0;
   probeResultToReturn = { alive: false, reason: 'refused' };
+  stub.modalChoice = undefined;
+  fetchedSpecPayload = specPayload();
   connectShouldThrow = false;
   mcpConstructorCalls = 0;
   capabilitiesToReturn = new Set(['list_projects', 'get_file']);
@@ -217,68 +274,120 @@ describe('bootstrapOpenDesignMcp', () => {
     assert.equal(mcpConstructorCalls, 0);
   });
 
-  it('mcpEnabled=true pre-constructs the client at bootstrap', () => {
+  it('mcpEnabled=true with no confirmed launch spec constructs no client (no bare od spawn)', () => {
     stub.configValues['integrations.openDesign.mcpEnabled'] = true;
     const ctx = makeContext();
-    bootstrapOpenDesignMcp(ctx, '/repo');
+    bootstrapOpenDesignMcp(ctx, '/repo', allExist);
+    assert.equal(mcpConstructorCalls, 0);
+  });
+
+  it('mcpEnabled=true with a stored confirmed spec builds the client from it (not connected)', () => {
+    stub.configValues['integrations.openDesign.mcpEnabled'] = true;
+    const ctx = makeContext();
+    ctx._state.set('failsafe.openDesign.mcpLaunchSpec', specPayload());
+    bootstrapOpenDesignMcp(ctx, '/repo', allExist);
     assert.equal(mcpConstructorCalls, 1);
+    assert.equal(connectCallCount, 0);
   });
 
   it('wizard with unreachable daemon shows warning + does not construct client', async () => {
-    stub.configValues['integrations.openDesign.mcpEnabled'] = false;
     probeResultToReturn = { alive: false, reason: 'timeout' };
     const ctx = makeContext();
-    bootstrapOpenDesignMcp(ctx, '/repo');
-    const wizard = stub.commands.get('failsafe.openDesign.registerMcp');
-    await wizard();
-    assert.equal(stub.warnings.length, 1);
+    bootstrapOpenDesignMcp(ctx, '/repo', allExist);
+    await stub.commands.get('failsafe.openDesign.registerMcp')();
     assert.match(stub.warnings[0], /unreachable/);
     assert.match(stub.warnings[0], /timeout/);
     assert.equal(mcpConstructorCalls, 0);
     assert.equal(connectCallCount, 0);
   });
 
-  it('wizard with reachable daemon constructs client + connects + shows info', async () => {
-    stub.configValues['integrations.openDesign.mcpEnabled'] = false;
-    probeResultToReturn = { alive: true, version: '0.9.1' };
+  it('wizard: declined confirmation spawns nothing and stores nothing', async () => {
+    probeResultToReturn = { alive: true, version: '0.24.1' };
+    stub.modalChoice = undefined;
     const ctx = makeContext();
-    bootstrapOpenDesignMcp(ctx, '/repo');
-    const wizard = stub.commands.get('failsafe.openDesign.registerMcp');
-    await wizard();
+    bootstrapOpenDesignMcp(ctx, '/repo', allExist);
+    await stub.commands.get('failsafe.openDesign.registerMcp')();
+    assert.equal(mcpConstructorCalls, 0);
+    assert.equal(connectCallCount, 0);
+    assert.equal(ctx._state.get('failsafe.openDesign.mcpLaunchSpec'), undefined);
+    assert.match(stub.warnings[0], /ELECTRON_RUN_AS_NODE=1/, 'consent prompt shows every env pair');
+  });
+
+  it('wizard: accepted confirmation stores the spec, creates the storage dir, and connects', async () => {
+    probeResultToReturn = { alive: true, version: '0.24.1' };
+    stub.modalChoice = 'Allow';
+    capabilitiesToReturn = new Set(['list_projects', 'get_file', 'start_run', 'delete_project', 'create_project']);
+    const ctx = makeContext();
+    bootstrapOpenDesignMcp(ctx, '/repo', allExist);
+    await stub.commands.get('failsafe.openDesign.registerMcp')();
     assert.equal(mcpConstructorCalls, 1);
     assert.equal(connectCallCount, 1);
-    assert.equal(stub.infos.length, 1);
+    assert.equal(lastClientOpts.command, '/opt/open-design/open-design');
+    assert.equal(lastClientOpts.env.ELECTRON_RUN_AS_NODE, '1');
+    assert.equal(lastClientOpts.cwd, ctx.globalStorageUri.fsPath, 'spawn cwd is extension storage, not the workspace');
+    assert.equal(ctx._state.get('failsafe.openDesign.mcpLaunchSpec').command, '/opt/open-design/open-design');
+    assert.ok(fs.existsSync(ctx.globalStorageUri.fsPath), 'globalStorage dir created before connect');
     assert.match(stub.infos[0], /connected/);
-    assert.match(stub.infos[0], /2 tools/); // capabilitiesToReturn size
+    assert.match(stub.infos[0], /2 read-only tools/, 'counts allowlisted reads, not upstream tools');
+  });
+
+  it('wizard: a missing local runtime path refuses without storing or spawning', async () => {
+    probeResultToReturn = { alive: true, version: '0.24.1' };
+    stub.modalChoice = 'Allow';
+    const ctx = makeContext();
+    bootstrapOpenDesignMcp(ctx, '/repo', { existsSync: (p) => !String(p).endsWith('daemon-cli.mjs') });
+    await stub.commands.get('failsafe.openDesign.registerMcp')();
+    assert.equal(mcpConstructorCalls, 0);
+    assert.equal(ctx._state.get('failsafe.openDesign.mcpLaunchSpec'), undefined);
+    assert.match(stub.errors[0], /not found/);
+  });
+
+  it('wizard: an invalid spec from the daemon (NODE_OPTIONS) is refused before any prompt', async () => {
+    probeResultToReturn = { alive: true, version: '0.24.1' };
+    stub.modalChoice = 'Allow';
+    fetchedSpecPayload = { ...specPayload(), env: { ...specPayload().env, NODE_OPTIONS: '--require /tmp/x.js' } };
+    const ctx = makeContext();
+    bootstrapOpenDesignMcp(ctx, '/repo', allExist);
+    await stub.commands.get('failsafe.openDesign.registerMcp')();
+    assert.equal(mcpConstructorCalls, 0);
+    assert.equal(stub.warnings.length, 0, 'no consent prompt for an invalid spec');
+    assert.match(stub.errors[0], /NODE_OPTIONS/);
+  });
+
+  it('wizard: re-run with a changed spec replaces the stored spec and rebuilds the client', async () => {
+    probeResultToReturn = { alive: true, version: '0.24.1' };
+    stub.modalChoice = 'Allow';
+    const ctx = makeContext();
+    bootstrapOpenDesignMcp(ctx, '/repo', allExist);
+    const wizard = stub.commands.get('failsafe.openDesign.registerMcp');
+    await wizard();
+    fetchedSpecPayload = specPayload(9999);
+    await wizard();
+    assert.equal(mcpConstructorCalls, 2, 'a new client for the new spec');
+    assert.ok(disconnectCallCount >= 1, 'previous client disconnected');
+    assert.ok(ctx._state.get('failsafe.openDesign.mcpLaunchSpec').args.includes('http://127.0.0.1:9999'));
   });
 
   it('wizard with connect failure shows error message', async () => {
-    probeResultToReturn = { alive: true, version: '0.9.1' };
+    probeResultToReturn = { alive: true, version: '0.24.1' };
+    stub.modalChoice = 'Allow';
     connectShouldThrow = true;
     const ctx = makeContext();
-    bootstrapOpenDesignMcp(ctx, '/repo');
-    const wizard = stub.commands.get('failsafe.openDesign.registerMcp');
-    await wizard();
-    assert.equal(stub.errors.length, 1);
+    bootstrapOpenDesignMcp(ctx, '/repo', allExist);
+    await stub.commands.get('failsafe.openDesign.registerMcp')();
     assert.match(stub.errors[0], /connect failed/);
   });
 
   it('dispose subscription tears down active connection', async () => {
-    stub.configValues['integrations.openDesign.mcpEnabled'] = true;
-    probeResultToReturn = { alive: true, version: '0.9.1' };
+    probeResultToReturn = { alive: true, version: '0.24.1' };
+    stub.modalChoice = 'Allow';
     const ctx = makeContext();
-    bootstrapOpenDesignMcp(ctx, '/repo');
-    const wizard = stub.commands.get('failsafe.openDesign.registerMcp');
-    await wizard();
+    bootstrapOpenDesignMcp(ctx, '/repo', allExist);
+    await stub.commands.get('failsafe.openDesign.registerMcp')();
     assert.equal(isConnectedState, true);
-    // Find the dispose subscription.
-    const disposable = ctx._subs.find((s) => s && typeof s.dispose === 'function' && !stub.commands.has(s));
-    // The command-registration result also has dispose; locate the bootstrap's
-    // own non-command dispose by checking which dispose triggers disconnect.
     for (const sub of ctx._subs) {
       if (sub && typeof sub.dispose === 'function') sub.dispose();
     }
-    // Disconnect is fire-and-forget; allow microtask flush.
     await new Promise((r) => setImmediate(r));
     assert.ok(disconnectCallCount >= 1, 'expected dispose to call disconnect');
   });
