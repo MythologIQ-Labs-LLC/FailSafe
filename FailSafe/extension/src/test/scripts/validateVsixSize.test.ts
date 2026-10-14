@@ -7,7 +7,7 @@ import * as os from 'os';
 import * as path from 'path';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { assertVsixUnderCeiling } = require('../../../scripts/validate-vsix.cjs');
+const { assertVsixUnderCeiling, checkNativeVsixTarget } = require('../../../scripts/validate-vsix.cjs');
 
 function mkTempDir(prefix: string): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -38,5 +38,27 @@ suite('validate-vsix-size assertion', () => {
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+suite('native-addon platform packaging #502', () => {
+  test('a universal VSIX with SQLite addon is refused', () => {
+    const error = checkNativeVsixTarget(
+      ['extension/node_modules/better-sqlite3/build/Release/better_sqlite3.node'],
+      '<PackageManifest Version="2.0.0"></PackageManifest>',
+    );
+    assert.match(error, /Universal VSIX contains native addons/);
+  });
+
+  test('a target-labelled package passes the universal-only gate', () => {
+    const error = checkNativeVsixTarget(
+      ['extension/node_modules/better-sqlite3/build/Release/better_sqlite3.node'],
+      '<PackageManifest TargetPlatform="win32-x64"/>',
+    );
+    assert.equal(error, null);
+  });
+
+  test('a universal package without native addons is not rejected', () => {
+    assert.equal(checkNativeVsixTarget([], '<PackageManifest/>'), null);
   });
 });
