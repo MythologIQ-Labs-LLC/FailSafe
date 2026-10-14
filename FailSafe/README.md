@@ -244,7 +244,7 @@ FailSafe tracks more than Git state. It records governance checkpoints as signed
 
 ### Process Reality
 
-1. Git readiness is enforced at bootstrap (`ensureGitRepositoryReady`), including optional auto-install and `git init` when needed.
+1. Git readiness is checked at bootstrap (`ensureGitRepositoryReady`). FailSafe asks before running `git init` in a folder without a repository, and installs Git only when `failsafe.bootstrap.autoInstallGit` is turned on.
 2. Governance events are checkpointed into `failsafe_checkpoints` with run/phase/status context and deterministic hashes.
 3. Each checkpoint carries `git_hash`, `payload_hash`, `entry_hash`, and `prev_hash` so chain integrity can be recomputed.
 4. Hub and API surfaces expose both summary and recent checkpoint records for operational visibility.

@@ -31,7 +31,7 @@ afterEach(function () {
 });
 
 describe("ensureGitRepositoryReady", () => {
-  it("initializes git when available and repo is missing", async () => {
+  it("initializes git when available, repo is missing, and the user confirms", async () => {
     const workspace = makeTempWorkspace();
     const calls: Array<{ command: string; args: string[]; cwd?: string }> = [];
 
@@ -50,6 +50,7 @@ describe("ensureGitRepositoryReady", () => {
       runner,
       autoInstallGit: true,
       platform: "win32",
+      confirmInit: async () => true,
     });
 
     assert.equal(result.gitAvailable, true);
@@ -62,7 +63,7 @@ describe("ensureGitRepositoryReady", () => {
     assert.ok(calls.some((c) => c.command === "git" && c.args[0] === "init"));
   });
 
-  it("attempts install when git is missing and then initializes", async () => {
+  it("attempts install when explicitly enabled, then initializes on confirmation", async () => {
     const workspace = makeTempWorkspace();
     const calls: Array<{ command: string; args: string[]; cwd?: string }> = [];
     let gitInstalled = false;
@@ -88,6 +89,7 @@ describe("ensureGitRepositoryReady", () => {
       runner,
       autoInstallGit: true,
       platform: "win32",
+      confirmInit: async () => true,
     });
 
     assert.equal(result.gitAvailable, true);
@@ -144,5 +146,56 @@ describe("ensureGitRepositoryReady", () => {
     assert.equal(result.repoInitialized, true);
     assert.equal(result.initializedRepo, false);
     assert.equal(calls.some((c) => c.command === "git" && c.args[0] === "init"), false);
+  });
+  it("never runs git init without a confirmInit callback (#503)", async () => {
+    const workspace = makeTempWorkspace();
+    const calls: Array<{ command: string; args: string[] }> = [];
+    const runner: CommandRunner = async (command, args) => {
+      calls.push({ command, args });
+      if (command === "git" && args[0] === "--version") return { code: 0, stdout: "git version 2.45.0", stderr: "" };
+      return { code: 0, stdout: "", stderr: "" };
+    };
+
+    const result = await ensureGitRepositoryReady(workspace, { runner, platform: "win32" });
+
+    assert.equal(result.gitAvailable, true);
+    assert.equal(result.initializedRepo, false);
+    assert.equal(result.repoInitialized, false);
+    assert.equal(calls.some((c) => c.command === "git" && c.args[0] === "init"), false);
+  });
+
+  it("does not run git init when the user declines (#503)", async () => {
+    const workspace = makeTempWorkspace();
+    const calls: Array<{ command: string; args: string[] }> = [];
+    let asked = 0;
+    const runner: CommandRunner = async (command, args) => {
+      calls.push({ command, args });
+      if (command === "git" && args[0] === "--version") return { code: 0, stdout: "git version 2.45.0", stderr: "" };
+      return { code: 0, stdout: "", stderr: "" };
+    };
+
+    const result = await ensureGitRepositoryReady(workspace, {
+      runner, platform: "win32", confirmInit: async () => { asked += 1; return false; },
+    });
+
+    assert.equal(asked, 1);
+    assert.equal(result.initializedRepo, false);
+    assert.equal(calls.some((c) => c.command === "git" && c.args[0] === "init"), false);
+  });
+
+  it("does not install Git when autoInstallGit is omitted (#503)", async () => {
+    const workspace = makeTempWorkspace();
+    const calls: Array<{ command: string; args: string[] }> = [];
+    const runner: CommandRunner = async (command, args) => {
+      calls.push({ command, args });
+      if (command === "git" && args[0] === "--version") return { code: 1, stdout: "", stderr: "git not found" };
+      return { code: 0, stdout: "installed", stderr: "" };
+    };
+
+    const result = await ensureGitRepositoryReady(workspace, { runner, platform: "win32" });
+
+    assert.equal(result.gitAvailable, false);
+    assert.equal(result.installedGit, false);
+    assert.deepEqual(calls.map((c) => c.command), ["git"], "only the git --version probe may run");
   });
 });

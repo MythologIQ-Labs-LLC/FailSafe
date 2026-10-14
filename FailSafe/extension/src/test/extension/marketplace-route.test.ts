@@ -202,23 +202,25 @@ suite('MarketplaceRoute (FX091–FX097)', () => {
     assert.match(String(wrong.body.error), /does not match/i);
   });
 
-  test('FX094 POST /api/marketplace/scan/:id — 400 when not installed, 404 unknown, 200 scanning when installed', async () => {
+  test('FX094 POST /api/marketplace/scan/:id — 503 while installs are disabled; the scanner never runs (#468)', async () => {
     const app = makeApp();
-    const { deps, broadcasts } = makeDeps([
-      buildItem({ id: 'fresh' }),
-      buildItem({ id: 'live', status: 'installed', installPath: '/tmp/x' }),
-    ]);
+    const scanCalls: string[] = [];
+    const { deps, broadcasts } = makeDeps(
+      [buildItem({ id: 'live', status: 'installed', installPath: '/tmp/x' })],
+      { securityScanner: { checkAvailability: async () => SCANNER_AVAIL,
+          runFullScan: async (installPath: string) => { scanCalls.push(installPath); return SCAN_PASS; } } as never },
+    );
     setupMarketplaceRoutes(app, deps);
     harness = new RouteHarness(app);
     await harness.start();
-    const miss = await harness.request({ method: 'POST', path: '/api/marketplace/scan/missing' });
-    assert.equal(miss.status, 404);
-    const notInst = await harness.request({ method: 'POST', path: '/api/marketplace/scan/fresh' });
-    assert.equal(notInst.status, 400);
-    const ok = await harness.request({ method: 'POST', path: '/api/marketplace/scan/live' });
-    assert.equal(ok.status, 200);
-    assert.equal(ok.body.status, 'scanning');
-    assert.ok(broadcasts.some((b) => b.type === 'marketplace.scanning'));
+    const live = await harness.request({ method: 'POST', path: '/api/marketplace/scan/live' });
+    assert.equal(live.status, 503);
+    assert.match(String(live.body.error), /disabled/i);
+    const unknown = await harness.request({ method: 'POST', path: '/api/marketplace/scan/missing' });
+    assert.equal(unknown.status, 503, 'gate precedes item lookup');
+    assert.deepEqual(scanCalls, [], 'scanner must not run on untrusted install paths');
+    assert.ok(!broadcasts.some((b) => b.type === 'marketplace.scanning'));
+    assert.equal(deps.marketplaceCatalog.getItem('live')?.status, 'installed');
   });
 
   test('FX095 GET /api/marketplace/scanners — returns availability', async () => {

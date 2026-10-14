@@ -2989,3 +2989,11 @@ The finding that matters is not the collision but the blindness. `verify_post_an
 The upstream fix already ships and was simply never called: `ledger_fragment` (Phase 56) has workers write `.qor/ledger/fragments/<uid>.json` and explicitly "do NOT guess `Entry #N`", and `entry_id.derive_entry_id` (Phase 76) gives content-addressable identity. `.qor/ledger/` does not exist here; `tools/`, `.github/` and `.claude/` reference neither. Worse, `qor-substantiate/SKILL.md:382` declares the `**Entry ID**` line MANDATORY and it is absent from all twelve entries #585-#596 -- while Entry #447 carries one. A mitigation that was in use was lost, and nothing noticed, because nothing checks.
 
 **Countermeasure applied**: research brief `.failsafe/governance/RESEARCH_BRIEF_ledger-entry-allocation-concurrency-2026-08-23.md`. Resolution ordered by upstream's own canonical rule rather than by preference -- `read_fragments` sorts by `(ts, uid)`, so plan-233 (`2026-08-22`) keeps #597 and plan-430 (`2026-08-23`) is rebased to #598; content hashes are number-independent and reproduce exactly, so only `previous_hash` and `chain_hash` change, and the remediated ledger was built and re-validated (no duplicate, no raw sequence break, clean at boundary #598) rather than asserted. This brief's own ledger entry is WITHHELD -- appending it now would have been the third #597 -- and is disclosed as held rather than silently skipped.
+
+## SG Event 2026-10-13: A behaviour-changing plan listed its code and tests but not the four docs that promise the old behaviour (plan-runtime-hardening-243a, ledger #613)
+
+**Pattern**: The plan flipped two defaults (Git auto-install, git init on activation) and enumerated every code caller and test, yet omitted three READMEs and a FEATURE_INDEX title that state the old default verbatim. The Option B reviewer found them with a plain grep for the setting name.
+
+**Lesson**: When a plan changes a user-visible default, the enumeration grep must cover docs and README surfaces, not only src/ and test/. A default is a documented promise; the docs are callers of it.
+
+**Countermeasure applied**: VETO iteration 1; plan amended to list README.md:488, FailSafe/README.md:247, FailSafe/extension/README.md:377/:443 and the FX437 title before re-audit.

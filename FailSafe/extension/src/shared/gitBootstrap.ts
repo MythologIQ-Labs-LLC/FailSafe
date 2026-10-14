@@ -14,6 +14,8 @@ export interface GitBootstrapOptions {
   runner?: CommandRunner;
   existsSync?: (target: string) => boolean;
   log?: (level: "info" | "warn" | "error", message: string) => void;
+  /** Asked before `git init`. Absent means never initialize (#503). */
+  confirmInit?: () => Promise<boolean>;
 }
 
 export interface GitBootstrapResult {
@@ -31,7 +33,7 @@ export async function ensureGitRepositoryReady(
   const runner = options.runner || defaultRunner;
   const log = options.log || (() => {});
   const platform = options.platform || process.platform;
-  const autoInstallGit = options.autoInstallGit ?? true;
+  const autoInstallGit = options.autoInstallGit ?? false;
   const gitDir = path.join(workspaceRoot, ".git");
   const repoInitialized = existsSync(gitDir);
 
@@ -55,7 +57,7 @@ export async function ensureGitRepositoryReady(
     };
   }
 
-  if (!repoInitialized) {
+  if (!repoInitialized && options.confirmInit && (await options.confirmInit())) {
     const initOk = await runCommand(runner, "git", ["init"], workspaceRoot);
     if (initOk) {
       initializedRepo = true;
