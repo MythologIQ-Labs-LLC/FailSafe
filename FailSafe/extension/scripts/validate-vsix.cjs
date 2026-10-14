@@ -194,14 +194,12 @@ function main() {
   assertIncludes(packagedCommands, `"failsafe.installCommitHook"`, "Packaged command");
   assertIncludes(packagedCommands, `"failsafe.removeCommitHook"`, "Packaged command");
 
-  // #502: A universal VSIX with a platform-specific native .node file is unusable
-  // outside the build runner's OS. Reject it before any marketplace publish.
+  // #502: a native addon must never be distributed as a universal VSIX.
   const nativeAddons = list.split(/\\r?\\n/).map(line => line.trim())
     .filter(entry => entry.startsWith('extension/') && entry.endsWith('.node'));
-  if (nativeAddons.length && !/TargetPlatform=\"(?:win32|linux|darwin|alpine|web)-/.test(archive.read('extension.vsixmanifest'))) {
-    fail('Universal VSIX contains native addons (' + nativeAddons.join(', ') +
-      '). Publish correctly targeted VSIX artifacts with platform-specific native dependencies instead (#502).');
-  }
+  const manifestText = archive.read('extension.vsixmanifest');
+  const nativeTargetError = checkNativeVsixTarget(nativeAddons, manifestText);
+  if (nativeTargetError) fail(nativeTargetError);
 
   const manifest = archive.read("extension.vsixmanifest");
   assertIncludes(manifest, `Version="${sourcePkg.version}"`, "VSIX manifest version");
@@ -257,7 +255,16 @@ function assertVsixUnderCeiling(vsixPath, ceilingBytes) {
   }
 }
 
-module.exports = { assertVsixUnderCeiling };
+/** Pure platform contract check for native addons; execution is covered in tests. */
+function checkNativeVsixTarget(nativeAddons, manifest) {
+  if (nativeAddons.length === 0) return null;
+  const targeted = /TargetPlatform="(?:win32|linux|darwin|alpine)-(?:x64|arm64|armhf|ia32)"/.test(manifest);
+  return targeted ? null :
+    'Universal VSIX contains native addons (' + nativeAddons.join(', ') +
+    '). Publish platform-targeted artifacts with correctly rebuilt native dependencies (#502).';
+}
+
+module.exports = { assertVsixUnderCeiling, checkNativeVsixTarget };
 
 if (require.main === module) {
   main();
