@@ -35,23 +35,24 @@ export async function bootstrapCore(
   }
   const autoInstallGit = vscode.workspace
     .getConfiguration("failsafe")
-    .get<boolean>("bootstrap.autoInstallGit", true);
+    .get<boolean>("bootstrap.autoInstallGit", false);
 
-  const git = await ensureGitRepositoryReady(workspaceRoot, {
-    autoInstallGit,
-    log: (level, message) => {
-      if (level === "error") logger.error(message);
-      else if (level === "warn") logger.warn(message);
-      else logger.info(message);
-    },
-  });
+  const gitLog = (level: "info" | "warn" | "error", message: string) => {
+    if (level === "error") logger.error(message);
+    else if (level === "warn") logger.warn(message);
+    else logger.info(message);
+  };
+  // #503: activation never initializes a repository on its own.
+  const git = await ensureGitRepositoryReady(workspaceRoot, { autoInstallGit, log: gitLog });
 
   if (!git.gitAvailable) {
     logger.warn(
       "Git is unavailable. Checkpoint git hashes will be recorded as unknown until git is installed.",
     );
-  } else if (git.initializedRepo) {
-    logger.info("Initialized workspace git repository via bootstrap.");
+  } else if (!git.repoInitialized) {
+    offerGitInit(workspaceRoot, gitLog).then(undefined, (err) =>
+      logger.warn(`Git initialization offer failed: ${String(err)}`),
+    );
   }
 
   // B192 remediation: workspace-mutation bus. Constructed alongside EventBus
@@ -84,4 +85,19 @@ export async function bootstrapCore(
     modeTransitionHistory,
     logSink,
   };
+}
+
+/** Ask once, without blocking activation, whether to `git init` this folder (#503). */
+async function offerGitInit(
+  workspaceRoot: string,
+  log: (level: "info" | "warn" | "error", message: string) => void,
+): Promise<void> {
+  const choice = await vscode.window.showInformationMessage(
+    "FailSafe records checkpoint hashes with Git. Initialize a Git repository in this folder?",
+    "Initialize",
+    "Not now",
+  );
+  if (choice !== "Initialize") return;
+  const result = await ensureGitRepositoryReady(workspaceRoot, { log, confirmInit: async () => true });
+  if (result.initializedRepo) log("info", "Initialized workspace git repository at the user's request.");
 }

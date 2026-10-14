@@ -30129,3 +30129,78 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `11ee53e378167e2203d0fd6cc95099e59fc06802d05314885ba7771d39db93cb`
 
 **Decision**: Reality = Promise for plan-v606-release-markers. All four Affected Files changed and nothing else (staged: COMPONENT_HELP.md, PROCESS_GUIDE.md, BACKLOG.md, GOVERNANCE_INDEX.md, META_LEDGER.md). release-gate --preflight rc 0, 9/9 PASS (was 3 FAIL); per-marker mutation re-produces exactly its own FAIL; validate-vsix --source-only PASS; validate-docs-coherence PASS; doc_integrity strict OK; documentation currency 0 warnings; governance-index --advance-last-reviewed 2026-10-13 --enforce rc 0 with no collateral rewrite. Gate ladder: intent_lock VERIFIED; skill_admission ADMITTED; gate_skill_matrix 0 broken; secret_scanner --staged 0 findings over the 5 staged files, falsifier exercised (a staged AWS-key canary returned rc 1, then removed); procedural_fidelity rc 0; dod_check rc 0; merge_velocity healthy; skill_size_budget WARN only (qor-audit 38.3 KB, qor-substantiate 37.0 KB, qor-plan 25.6 KB); data_api_acl_lint disclosed SKIP (no SQL migrations); install_drift OK. test:node 350 pass / 2 fail / 3 skipped: both failures are FX946 ledgerAnchor (tampered-entry detection above/below anchor 340) and reproduce identically on clean origin/main 9e0fb281 in a detached worktree (4 pass / 2 fail), so they are pre-existing qor-logic 0.176.1 drift owned by the parked fix/ledger-anchor-qor0176 cycle, not this change. Disclosures: (1) governance-health skill-entry DAMAGED docs/META_LEDGER.md carried through all four phases under the operator-approved per-cycle override gate_override 1fa06c53; no ledger repair attempted. (2) substantiate_gates SKIP, prerequisite absent: it reads qor/skills/.../SKILL.md, which exists only in the upstream qor-logic source tree. (3) version_applicability SKIP: reads pyproject.toml; Node package; manual 6.0.6 > v6.0.5. (4) Step 7.5 version bump NOT run: change_class hotfix would bump package.json to 6.0.7, but the release under preparation is 6.0.6, already set on main by #497; operator instruction is to tag v6.0.6. (5) Step 9.5.5 create_seal_tag NOT used: operator directed the v6.0.6 tag onto merged main HEAD, and the seal commit may not be an ancestor of main after a squash merge. (6) Seal commit carries no Qor/AI attribution trailer per the operator's standing attribution rule, matching prior seals 32e05d2e, d7018559, a079f45b; seal_trailer_check is expected to fail on that basis. (7) ledger_emit.append not used: its tail marker resolves to line 26594, ~3,400 lines above #609, so it would splice entries mid-file; entries #610-#612 rendered with ledger_emit.render and appended at the true end, CRLF preserved. (8) plan_grep_lint WARNs on backticked citations are an upstream parser defect (backticks stripped from observed text, strict-equality compare). (9) Parked WIP from fix/ledger-anchor-qor0176 (its iteration entries numbered #610-#612) is in git stash and will need renumbering after this lands. (10) Step 7.7 seal_entry_check and Step 7.7.5 seal_artifacts inapplicable per the Entry #601 precedent: ledger_dialect.entry_phase needs a numeric phase, which this ledger does not carry, so it prints FAIL: no parseable latest entry. (11) publication_boundary_lint rc 1 with 333 repo-wide structural findings (package-lock sponsor URLs 119, .gemini installer manifest 45, historical plans, issue templates); none in this cycle's files; standing repo debt tracked by count since #605 (384 -> 200), risen to 333 by intervening merges, not by this change. gate_chain_completeness inspected 0 sessions (vacuous); all four gates verified present by direct listing. Feature Inventory: not touched (docs-only). **SSDF Practices**: PS.2.1, RV.2.1
+
+---
+
+### Entry #613: GATE TRIBUNAL - plan-runtime-hardening-243a (iteration 1) - VETO
+
+**Timestamp**: 2026-10-13T23:30:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-13T2232-5c561e`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Plan**: `plan-runtime-hardening-243a.md`
+**Preflight**: governance-health DAMAGED docs/META_LEDGER.md (pre-existing 0.176.1 anchor drift); standing operator override for the 2026-10-13 runtime program, gate_override `5a65a5cf`
+
+**Content Hash**: `2ecbc556822751c5f6d158799bd307b6a0e7471a71dbcbc223ebb4abac637a58`
+**Previous Hash**: `11ee53e378167e2203d0fd6cc95099e59fc06802d05314885ba7771d39db93cb`
+**Chain Hash (Merkle seal)**: `f84adef04c73e07f5ccae0ded5417d3335b2e29d1c5670a61d551aa01cbc8ba9`
+
+**Decision**: Option B fresh-context review recommended VETO; Judge verified each finding by direct read. V1 coverage-gap: Affected Files omit four surfaces asserting the behaviour the plan changes - FailSafe/extension/README.md:377 (autoInstallGit default true, initialize repo), FailSafe/extension/README.md:443, FailSafe/README.md:247, README.md:488 (auto-install and git init when needed) - and the FX437 title at docs/FEATURE_INDEX.md:882. V2 specification-drift: Phase 2 does not state that the two existing init-without-confirmation tests (gitBootstrap.test.ts:34-63, :65-97) are rewritten. V3 specification-drift: the fire-and-forget Git offer has no specified rejection handler and LD3 lacks a call-site citation (bootstrapCore.ts:40). All other passes clean: LD1/LD2/LD4 citations accurate, single caller, no activation dependency on .git, new test collected by the runner. Advisories: CommitGuard.ts:129-130 can fabricate .git/hooks in a non-repo folder; marketplace.js:432 should surface 503. Next: Governor amends plan, re-runs /qor-audit.
+
+---
+
+### Entry #614: GATE TRIBUNAL - plan-runtime-hardening-243a (iteration 2) - PASS
+
+**Timestamp**: 2026-10-13T23:45:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-13T2232-5c561e`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Plan**: `plan-runtime-hardening-243a.md`
+**Preflight**: governance-health DAMAGED docs/META_LEDGER.md (pre-existing); standing operator override, gate_override `5a65a5cf`
+
+**Content Hash**: `d2b2df874c7bde7923a925072680b24bc5a648b492aa2da6626715f6b28698ab`
+**Previous Hash**: `f84adef04c73e07f5ccae0ded5417d3335b2e29d1c5670a61d551aa01cbc8ba9`
+**Chain Hash (Merkle seal)**: `b46a3038c18133ce813d534fb68fc1acd62841722a192fc5c204873e945ee318`
+
+**Decision**: Full re-walk (Option B) against f5188cf4 after VETO #613. LD1-LD4 citations reproduce (plan_grep_lint 10/10, reviewer re-read). V1 resolved: three README surfaces and the FX437 title added; a final grep over docs/, FailSafe/extension/docs/ and CHANGELOG found no further surface. V2 resolved: init tests :34/:65 rewritten with confirmInit. V3 resolved: offer chain carries a logging rejection handler. Feature Inventory Touches match FEATURE_INDEX rows. Advisories adjudicated non-blocking: FEATURE_INDEX header counts bumped within an Affected File (featureIndexClassifier.test.cjs checks them); CHANGELOG is a D3 governance surface per #610; CommitGuard.ts:129-130 fake .git/hooks carried forward. Next: /qor-implement.
+
+---
+
+### Entry #615: IMPLEMENTATION - plan-runtime-hardening-243a
+
+**Timestamp**: 2026-10-14T00:20:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-13T2232-5c561e`
+**Risk Grade**: L2
+**Plan**: `plan-runtime-hardening-243a.md` (audit PASS Entry #614; intent lock captured)
+**Files**: `FailSafe/extension/src/roadmap/routes/marketplaceScanRoutes.ts`, `FailSafe/extension/src/test/extension/marketplace-route.test.ts`, `FailSafe/extension/src/shared/gitBootstrap.ts`, `FailSafe/extension/src/test/shared/gitBootstrap.test.ts`, `FailSafe/extension/src/extension/bootstrapCore.ts`, `FailSafe/extension/package.json`, `FailSafe/extension/src/governance/governedDocument.ts`, `FailSafe/extension/src/test/governance/governedDocument.test.ts`, `FailSafe/extension/src/extension/bootstrapGovernance.ts`, `README.md`, `FailSafe/README.md`, `FailSafe/extension/README.md`, `docs/FEATURE_INDEX.md`, `CHANGELOG.md`, `FailSafe/extension/CHANGELOG.md`
+
+**Content Hash**: `38c8b1de4fff5f5ed99889bd8dbde631bc92189ebddcc87bdd82792cfed60690`
+**Previous Hash**: `b46a3038c18133ce813d534fb68fc1acd62841722a192fc5c204873e945ee318`
+**Chain Hash (Merkle seal)**: `59692c86316c5f6123931ed6b0ef5261634f7d4672b1971e1e92ef017109616e`
+
+**Decision**: Phase 1 (#468): POST /api/marketplace/scan/:id returns 503 while MARKETPLACE_INSTALLS_ENABLED is false, before item lookup; FX094 rewritten with a runFullScan spy. Phase 2 (#503): ensureGitRepositoryReady gains confirmInit and never runs git init without it resolving true; autoInstallGit defaults false in code, config fallback and manifest; activation fire-and-forgets an Initialize / Not now offer whose chain ends in a logging rejection handler; tests :34/:65 rewritten, three cases added. Phase 3 (#504): isGovernedSave predicate (file scheme AND inside a workspace folder) guards the onWillSaveTextDocument hook. Docs: three README surfaces, manifest description, FX053/FX094/FX437 rows, FX948 NEW with header counts 764/714, CHANGELOG Unreleased in both changelogs. Red: tsc reported the four missing-API errors. Green: mocha 19 passing across the three suites (gitBootstrap 7, governedDocument 4, marketplace-route 8 + 2 pending deferred install cases). Mutation: reverting the scan gate, the confirmInit check, the autoInstallGit default, and the scheme check each turns its test red (1/2/1/2 failures); restored green. Runtime: dev VSIX (sha in seal) in VS Code 1.141.0 isolated profile on a plain folder created no .git (released 6.0.6 created one) and a Global editor.fontSize update logged 0 BLOCKADE lines (6.0.6 logged 1). tsc 0, eslint 0 on touched files; test:node 353 pass / 2 pre-existing FX946 failures. Next: /qor-substantiate after the full vscode-test suite.
+
+---
+
+### Entry #616: SESSION SEAL - plan-runtime-hardening-243a
+
+**Timestamp**: 2026-10-14T14:40:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-13T2232-5c561e`
+**Entry ID**: `a6b61a0a9890`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Plan**: `plan-runtime-hardening-243a.md` (audit #614, implement #615)
+
+**Content Hash**: `592e23b2147f342233d842f27c3dd79a4951c7ade53ca2084672ed096db63417`
+**Previous Hash**: `59692c86316c5f6123931ed6b0ef5261634f7d4672b1971e1e92ef017109616e`
+**Chain Hash (Merkle seal)**: `0e546881cf64bacee964394c17f268adaf668e6f4c48e198c943afe0f294a81e`
+
+**Decision**: Reality = Promise for plan-runtime-hardening-243a: all three phases implemented in their Affected Files; no unplanned files. Verification: full vscode-test suite (VS Code 1.122.1 pinned) 4197 passing / 17 pending / 1 failing - the failure is FX930 WorkspaceArtifactBuilder 'supported fixture' (IDLE vs IMPLEMENT), reproduced identically on a main-equivalent worktree (#501 head, no roadmap or fixture diff) and root-caused to parseMetaLedger returning 0 entries for CRLF text under core.autocrlf (CRLF 0 entries/IDLE vs LF 2 entries/IMPLEMENT); filed #508, not this change. Targeted: mocha 19 passing (gitBootstrap 7, governedDocument 4, marketplace-route 8); mutation of each fix turns its test red (scan gate 1, confirmInit 2, autoInstallGit default 1, scheme check 2), restored green. test:node 353 pass / 2 pre-existing FX946 failures. tsc 0, eslint 0. Runtime: dev VSIX (sha256 prefix 5214529c6ca0148f) in VS Code 1.141.0 isolated profile on a plain folder: activated 809 ms, 0 missing commands, no .git created (released 6.0.6 created one), Global editor.fontSize update logged 0 BLOCKADE (6.0.6 logged 1). Gates: intent_lock VERIFIED; skill_admission ADMITTED; gate_skill_matrix 0 broken; secret_scanner 0 findings over 19 staged files with canary rc 1; procedural_fidelity, dod_check, merge_velocity clean; skill_size_budget WARN only; data_api_acl disclosed SKIP; install_drift OK. Disclosures: governance-health DAMAGED META_LEDGER under the standing operator override (gate_override 5a65a5cf); governance-index --advance-last-reviewed re-dated the prior v6.0.6 Last Reviewed line and was reverted, a new line prepended by hand; substantiate_gates, version_applicability, seal_entry_check and seal_artifacts inapplicable here (#601 precedent, #612); ledger_emit.append not used (interior tail marker); no version bump (hotfix toward the next patch, operator-gated); seal commit carries no attribution trailer per operator rule. Out of scope and filed: #505 (enforce does not block editor saves), #508 (CRLF ledger parse). Feature Inventory: FX053/FX094/FX437 MODIFIED, FX948 NEW (764 total / 714 verified). **SSDF Practices**: PS.2.1, RV.2.1
