@@ -676,7 +676,7 @@
         },
         "failsafe.bootstrap.autoInstallGit": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "description": "Automatically attempt to install Git and initialize a repository at workspace bootstrap if missing."
         },
         "failsafe.integrations.bicameral.command": {
