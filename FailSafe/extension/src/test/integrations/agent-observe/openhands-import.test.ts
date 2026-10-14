@@ -64,7 +64,7 @@ suite('OpenHands historical persistence #477', () => {
       fs.mkdirSync(logDir, { recursive: true });
       const lock = path.join(logDir, 'transparency.jsonl.openhands-import.lock');
       fs.writeFileSync(lock, 'held');
-      assert.throws(() => persistOpenHandsObservations(root, source, []), /EEXIST/);
+      assert.throws(() => persistOpenHandsObservations(root, source, []), /OPENHANDS_IMPORT_LOCKED/);
       assert.equal(fs.existsSync(lock), true);
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
   });
