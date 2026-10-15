@@ -13,11 +13,14 @@
  */
 
 import type { RiskGrade } from '../../shared/types/risk';
-import { type AgentRunFn, type AgentRunOutcome, blockedOutcome, detectBinary, isolatedOutcome } from './agent-cli-core';
+import {
+  type AgentRunFn, type AgentRunOutcome, type ResolveAgentFn, blockedOutcome, detectBinary, isolatedOutcome,
+} from './agent-cli-core';
 import { runIsolated, type IsolatedRunDeps } from './isolated-run';
 
-export async function detectAider(run: AgentRunFn): Promise<{ available: boolean; version?: string }> {
-  return detectBinary('aider', ['--version'], run);
+/** Detect `aider` on PATH outside `workspaceRoot`. */
+export async function detectAider(run: AgentRunFn, workspaceRoot: string, resolve?: ResolveAgentFn): Promise<{ available: boolean; version?: string }> {
+  return detectBinary('aider', ['--version'], run, { workspaceRoot, resolve });
 }
 
 /** Pure argv builder. Auto-commit is always off: changes stay in the worktree for capture. */
@@ -36,12 +39,14 @@ export interface AiderRunOptions {
 export interface AiderDeps extends Omit<IsolatedRunDeps, 'timeoutMs'> {
   classify: (path: string) => RiskGrade;
   issuedAt: string;
+  /** Injected in tests; `resolveAgentExecutable` in production. */
+  resolve?: ResolveAgentFn;
 }
 
 /** Govern an Aider run: refuse without authorization, else run isolated and quarantine. */
 export async function runAiderGoverned(opts: AiderRunOptions, deps: AiderDeps): Promise<AgentRunOutcome> {
-  const det = await detectAider(deps.run);
-  if (!det.available) return { available: false, spawned: false, error: '`aider` not found on PATH' };
+  const det = await detectAider(deps.run, opts.cwd, deps.resolve);
+  if (!det.available) return { available: false, spawned: false, error: '`aider` not found on PATH outside the workspace, or `aider --version` failed' };
   const argv = buildAiderArgs(opts.prompt);
   if (!opts.writesAllowed) {
     return blockedOutcome('aider', argv, 'running Aider requires `failsafe.integrations.aider.allowWrites`', 'L2', deps.issuedAt);

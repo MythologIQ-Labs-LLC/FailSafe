@@ -38,9 +38,13 @@ export interface AgentCliDeps {
   apply?: (cs: QuarantinedChangeSet) => Promise<PromotionResult>;
 }
 
-export const BOUNDARY_NOTE = 'Isolation covers what the agent writes through its working directory. '
-  + 'Direct writes to this repository or its git state are detected and never promoted, but have already happened; '
-  + 'writes outside the repository, inside ignored directories, or by processes that detached from the agent are not detected.';
+export const BOUNDARY_NOTE = 'A worktree is not a process sandbox. Writes the agent makes to this repository or its git state '
+  + 'are detected at the post-run check and again before Apply, and never promoted, but they have already happened. '
+  + 'Writes outside the repository or inside ignored directories are not detected, and a process that escapes tracking '
+  + 'can write after those checks undetected. A process escapes on Linux when it clears its environment, leaves the '
+  + "agent's process group (setsid or setpgid) and its parent exits between 250 ms samples; on macOS when it leaves the "
+  + 'process group and its parent exits between samples; on Windows when it leaves the process tree through a short-lived '
+  + 'intermediate between samples; and anywhere when it is started outside the tree (a service, a scheduler or WMI).';
 
 const REVIEW_SCHEME = 'failsafe-agent-run';
 const reviews = new Map<string, string>();

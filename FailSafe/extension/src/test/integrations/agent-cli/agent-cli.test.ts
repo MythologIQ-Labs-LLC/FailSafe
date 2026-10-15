@@ -1,10 +1,11 @@
 import { strict as assert } from 'assert';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import type { RiskGrade } from '../../../shared/types/risk';
 import {
-  type AgentRunFn, type AgentRunOptions, type AgentRunResult,
-  maxRisk, detectBinary, classifyDiffRisk, buildAgentReceipt, EMPTY_DIFF,
+  type AgentRunFn, type AgentRunOptions, type AgentRunResult, type ResolveAgentFn,
+  maxRisk, detectBinary, classifyDiffRisk, buildAgentReceipt, EMPTY_DIFF, defaultAgentRun, resolveAgentExecutable,
 } from '../../../integrations/agent-cli/agent-cli-core';
 import { mapAllowlistToRisk, buildContinueArgs, runContinueGoverned } from '../../../integrations/agent-cli/continue-wrapper';
 import { buildAiderArgs, runAiderGoverned } from '../../../integrations/agent-cli/aider-wrapper';
@@ -33,6 +34,9 @@ function makeRunner(o: { versionCode?: number; agentCode?: number; edit?: Record
 
 const spawnCalls = (calls: RunCall[]): RunCall[] => calls.filter((c) => c.args[0] !== '--version');
 
+/** The fake runners stand in for CLIs that are not installed, so detection resolves to a fixture path. */
+const fixtureExe: ResolveAgentFn = (name) => path.join(os.tmpdir(), 'fixture-bin', name);
+
 // classify: paths under src/security/** are L3, src/** is L2, else L1.
 const classify = (p: string): RiskGrade =>
   /(^|\/)security\//.test(p) ? 'L3' : p.startsWith('src/') ? 'L2' : 'L1';
@@ -45,9 +49,15 @@ suite('agent-cli-core (Group B)', () => {
     assert.equal(maxRisk('L2', 'L1'), 'L2');
   });
 
-  test('detectBinary: available iff exit 0, parses version', async () => {
-    assert.deepEqual(await detectBinary('cn', ['--version'], makeRunner().run), { available: true, version: '1.2.3' });
-    assert.deepEqual(await detectBinary('cn', ['--version'], makeRunner({ versionCode: 127 }).run), { available: false });
+  test('detectBinary: available iff resolved and exit 0, parses version, probes from the OS temp dir', async () => {
+    const opts = { workspaceRoot: os.tmpdir(), resolve: fixtureExe };
+    const ok = makeRunner();
+    assert.deepEqual(await detectBinary('cn', ['--version'], ok.run, opts), { available: true, version: '1.2.3' });
+    assert.deepEqual(ok.calls.map((c) => [c.cmd, c.opts?.cwd]), [['cn', os.tmpdir()]]);
+    assert.deepEqual(await detectBinary('cn', ['--version'], makeRunner({ versionCode: 127 }).run, opts), { available: false });
+    const unresolved = makeRunner();
+    assert.deepEqual(await detectBinary('cn', ['--version'], unresolved.run, { ...opts, resolve: () => undefined }), { available: false });
+    assert.equal(unresolved.calls.length, 0, 'nothing probed when no executable resolves');
   });
 
   test('classifyDiffRisk = max tier across touched paths', () => {
@@ -73,7 +83,7 @@ suite('governed wrappers run isolated (#475 FX831/FX832)', function () {
   setup(() => { cfg = useGitConfig(); root = makeRepo({ 'README.md': 'readme\n' }); });
   teardown(() => { removeRepo(root); cfg.restore(); });
 
-  const deps = (run: AgentRunFn) => ({ run, classify, issuedAt: 'T' });
+  const deps = (run: AgentRunFn) => ({ run, classify, issuedAt: 'T', resolve: fixtureExe });
 
   test('Continue: spawn cwd is a disposable worktree, never the workspace; change quarantined', async () => {
     const { run, calls } = makeRunner();
@@ -180,5 +190,71 @@ suite('continue-wrapper pure helpers (#104)', () => {
 
   test('buildContinueArgs is argv-form with -p + repeated --allow (no shell string)', () => {
     assert.deepEqual(buildContinueArgs('do it', ['read', 'editFile']), ['-p', 'do it', '--allow', 'read', '--allow', 'editFile']);
+  });
+});
+
+// FX951 (#475 LD7): agent executables resolve only to absolute PATH entries
+// outside the workspace, and the production runner spawns nothing else.
+suite('agent executable resolution (#475 LD7)', () => {
+  const win = process.platform === 'win32';
+  const sep = win ? ';' : ':';
+  let tmp = '';
+  setup(() => { tmp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'fsx-'))); });
+  teardown(() => { fs.rmSync(tmp, { recursive: true, force: true }); });
+
+  const place = (dir: string, file: string): string => {
+    fs.mkdirSync(dir, { recursive: true });
+    const full = path.join(dir, file);
+    fs.writeFileSync(full, '#!/bin/sh\nexit 0\n');
+    fs.chmodSync(full, 0o755);
+    return full;
+  };
+
+  test('skips the workspace and relative PATH entries; returns the absolute entry outside the workspace', () => {
+    const exe = win ? 'aider.exe' : 'aider';
+    const ws = path.join(tmp, 'ws');
+    const wsBin = path.join(ws, 'node_modules', '.bin');
+    place(wsBin, exe);
+    place(path.join(tmp, 'relbin'), exe);
+    const outside = place(path.join(tmp, 'tools'), exe);
+    const cwd = process.cwd();
+    process.chdir(tmp); // 'relbin' now resolves to a directory that holds the executable
+    try {
+      const pathEnv = [wsBin, 'relbin', path.join(tmp, 'tools')].join(sep);
+      assert.equal(resolveAgentExecutable('aider', { pathEnv, platform: process.platform, excludeDirs: [ws] }), outside);
+      assert.equal(resolveAgentExecutable('aider', { pathEnv: wsBin, platform: process.platform, excludeDirs: [ws] }), undefined);
+      // Control: without the exclusion the workspace copy is the first match.
+      assert.equal(resolveAgentExecutable('aider', { pathEnv, platform: process.platform, excludeDirs: [] }), path.join(wsBin, exe));
+      if (win) assert.equal(resolveAgentExecutable('aider', { pathEnv: wsBin, platform: 'win32', excludeDirs: [ws.toUpperCase()] }), undefined, 'case-insensitive on win32');
+    } finally { process.chdir(cwd); }
+  });
+
+  test('a .cmd-only Continue install on win32 resolves to nothing', function () {
+    if (!win) this.skip(); // win32 PATH semantics (drive-letter entries, .exe/.com) need a Windows host
+    const bin = path.join(tmp, 'npm');
+    place(bin, 'cn.cmd');
+    assert.equal(resolveAgentExecutable('cn', { pathEnv: bin, platform: 'win32', excludeDirs: [] }), undefined);
+    const exe = place(bin, 'cn.exe'); // control: the same directory is searched
+    assert.equal(resolveAgentExecutable('cn', { pathEnv: bin, platform: 'win32', excludeDirs: [] }), exe);
+  });
+
+  test('the production runner spawns only a recorded path; with none recorded it returns 126 and spawns nothing', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires -- the spy must replace spawn on the real module object
+    const cp = require('child_process') as { spawn: (...a: unknown[]) => unknown };
+    const realSpawn = cp.spawn;
+    const spawned: unknown[] = [];
+    cp.spawn = (...a: unknown[]) => { spawned.push(a[0]); return realSpawn(...a); };
+    try {
+      // Control: a recorded path is what gets spawned (the spy sees it).
+      const ok = await detectBinary('cn', ['--version'], defaultAgentRun, { workspaceRoot: tmp, resolve: () => process.execPath });
+      assert.equal(ok.available, true);
+      assert.deepEqual(spawned, [process.execPath]);
+      // Detection that resolves nothing deletes the record.
+      assert.deepEqual(await detectBinary('cn', ['--version'], defaultAgentRun, { workspaceRoot: tmp, resolve: () => undefined }), { available: false });
+      const res = await defaultAgentRun('cn', ['--version']);
+      assert.equal(res.code, 126);
+      assert.equal((await defaultAgentRun('node', ['--version'])).code, 126, 'names other than aider / cn are refused');
+      assert.deepEqual(spawned, [process.execPath], 'spawn never called after the record was deleted');
+    } finally { cp.spawn = realSpawn; }
   });
 });

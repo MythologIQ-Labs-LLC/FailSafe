@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { runIsolated, type IsolatedRunResult } from '../../../integrations/agent-cli/isolated-run';
+import { startTreeTracker } from '../../../integrations/agent-cli/process-tree';
 import { extraWorktrees, git, isAlive, makeRepo, read, removeRepo, scriptedAgent, useGitConfig } from './git-fixture';
 
 // FX951 (#475): real git, scripted node agent. Every case asserts the outcome AND
@@ -110,6 +111,25 @@ suite('isolated-run (#475 FX951)', function () {
     assert.deepEqual(extraWorktrees(root), []);
   });
 
+  test('each run puts a fresh random FAILSAFE_ISOLATED_RUN marker in the agent env and hands it to the tracker', async () => {
+    const out = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'fsm-')), 'marker');
+    const markers: string[] = [];
+    const seen: string[] = [];
+    for (let i = 0; i < 2; i++) {
+      const agent = scriptedAgent(`require('fs').writeFileSync(${JSON.stringify(out)}, process.env.FAILSAFE_ISOLATED_RUN || '');`);
+      const r = await runIsolated(root, AGENT, {
+        run: agent.run, timeoutMs: 60000,
+        startTracker: (since, marker) => { markers.push(marker); return startTreeTracker(since, process.platform, { marker }); },
+      });
+      assert.equal(r.status, 'NO_CHANGES', r.reason);
+      seen.push(fs.readFileSync(out, 'utf8'));
+    }
+    assert.deepEqual(seen, markers, 'the agent sees the marker the tracker was started with');
+    assert.ok(markers.every((m) => /^[0-9a-f]{32}$/.test(m)), JSON.stringify(markers));
+    assert.notEqual(markers[0], markers[1], 'a new marker per run');
+    removeRepo(path.dirname(out));
+  });
+
   const direct: Array<[string, string, RegExp]> = [
     ['writes a live tracked file by absolute path', `fs.writeFileSync(path.join(live, 'a.txt'), 'pwned\\n');`, /^status:a\.txt$/],
     ['adds a hook', `fs.writeFileSync(path.join(live, '.git', 'hooks', 'pre-commit'), '#!/bin/sh\\n');`, /^git-hooks:pre-commit$/],
@@ -187,15 +207,21 @@ suite('isolated-run (#475 FX951)', function () {
     } finally { removeRepo(control); }
   });
 
+  // LD6: on POSIX the agent makes a real symlink (capture's `git add -A` would
+  // restage a regular file as 100644). Git for Windows runs with
+  // core.symlinks=false, which keeps a 120000 index entry over a regular file.
+  const SYMLINK = process.platform === 'win32' ? `
+        const oid = cp.execFileSync('git', ['hash-object', '-w', '--stdin'], { input: '../../outside' }).toString().trim();
+        fs.writeFileSync('link', '../../outside');
+        cp.execFileSync('git', ['update-index', '--add', '--cacheinfo', '120000,' + oid + ',link']);`
+    : `fs.symlinkSync('../../outside', 'link');`;
   for (const [name, mode] of [['symlink', '120000'], ['submodule', '160000']] as const) {
     test(`${name} entry -> REJECTED_PATCH`, async () => {
-      const target = mode === '160000' ? git(root, 'rev-parse', 'HEAD').trim() : '';
+      const head = git(root, 'rev-parse', 'HEAD').trim();
       const { r } = await runScript(root, `
         const cp = require('child_process'); const fs = require('fs');
-        let oid = ${JSON.stringify(target)};
-        if (!oid) { oid = cp.execFileSync('git', ['hash-object', '-w', '--stdin'], { input: '../../outside' }).toString().trim(); fs.writeFileSync('link', '../../outside'); }
-        else fs.mkdirSync('link');
-        cp.execFileSync('git', ['update-index', '--add', '--cacheinfo', '${mode},' + oid + ',link']);`);
+        ${mode === '120000' ? SYMLINK : `fs.mkdirSync('link');
+        cp.execFileSync('git', ['update-index', '--add', '--cacheinfo', '160000,${head},link']);`}`);
       assert.equal(r.status, 'REJECTED_PATCH', `${r.status}: ${r.reason}`);
       assert.ok(r.details.some((d) => d.includes(name)), JSON.stringify(r.details));
       assert.equal(r.patch, undefined);

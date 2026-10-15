@@ -13,7 +13,7 @@
 
 import type { RiskGrade } from '../../shared/types/risk';
 import {
-  type AgentRunFn, type AgentRunOutcome, blockedOutcome, detectBinary, isolatedOutcome, maxRisk,
+  type AgentRunFn, type AgentRunOutcome, type ResolveAgentFn, blockedOutcome, detectBinary, isolatedOutcome, maxRisk,
 } from './agent-cli-core';
 import { runIsolated, type IsolatedRunDeps } from './isolated-run';
 
@@ -41,8 +41,10 @@ export function buildContinueArgs(prompt: string, allow: ReadonlyArray<string>):
   return args;
 }
 
-export async function detectContinue(run: AgentRunFn): Promise<{ available: boolean; version?: string }> {
-  return detectBinary('cn', ['--version'], run);
+/** Detect `cn` on PATH outside `workspaceRoot`. On Windows only cn.exe / cn.com
+ *  count: the npm shim cn.cmd cannot run without a shell, so it is unavailable. */
+export async function detectContinue(run: AgentRunFn, workspaceRoot: string, resolve?: ResolveAgentFn): Promise<{ available: boolean; version?: string }> {
+  return detectBinary('cn', ['--version'], run, { workspaceRoot, resolve });
 }
 
 export interface ContinueRunOptions {
@@ -60,6 +62,8 @@ export interface ContinueRunOptions {
 export interface ContinueDeps extends Omit<IsolatedRunDeps, 'timeoutMs'> {
   classify: (path: string) => RiskGrade;
   issuedAt: string;
+  /** Injected in tests; `resolveAgentExecutable` in production. */
+  resolve?: ResolveAgentFn;
 }
 
 export type { AgentRunOutcome };
@@ -67,8 +71,8 @@ export type { AgentRunOutcome };
 /** Govern a Continue headless run: pre-spawn gate on authorization and the
  *  allowlist, then an isolated run whose changes are quarantined. */
 export async function runContinueGoverned(opts: ContinueRunOptions, deps: ContinueDeps): Promise<AgentRunOutcome> {
-  const det = await detectContinue(deps.run);
-  if (!det.available) return { available: false, spawned: false, error: '`cn` (Continue CLI) not found on PATH' };
+  const det = await detectContinue(deps.run, opts.cwd, deps.resolve);
+  if (!det.available) return { available: false, spawned: false, error: '`cn` (Continue CLI) not found on PATH outside the workspace, or `cn --version` failed' };
 
   const argv = buildContinueArgs(opts.prompt, opts.allow);
   const allowlistRisk = mapAllowlistToRisk(opts.allow);

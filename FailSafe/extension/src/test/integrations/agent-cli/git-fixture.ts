@@ -5,11 +5,11 @@
  * Electron, so ELECTRON_RUN_AS_NODE=1 is set.
  */
 
-import { execFileSync } from 'child_process';
+import { execFileSync, spawn, type ChildProcess } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { spawnAgentProcess, type AgentRunFn, type AgentRunOptions } from '../../../integrations/agent-cli/agent-cli-core';
+import { collectChild, type AgentRunFn, type AgentRunOptions } from '../../../integrations/agent-cli/agent-cli-core';
 
 export const gitEnv = { GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@t', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@t' };
 
@@ -52,9 +52,16 @@ export function scriptedAgent(script: string, env: Record<string, string> = {}):
   const run: AgentRunFn = (cmd, args, opts?: AgentRunOptions) => {
     calls.push({ cmd, cwd: opts?.cwd });
     if (cmd !== 'agent') return Promise.resolve({ stdout: '', stderr: 'not found', code: 127 });
-    return spawnAgentProcess(process.execPath, [file, ...args], {
-      ...opts, env: { ...process.env, ...gitEnv, ...(opts?.env ?? {}), ...env, ELECTRON_RUN_AS_NODE: '1' },
-    });
+    let child: ChildProcess;
+    try {
+      child = spawn(process.execPath, [file, ...args], {
+        shell: false, windowsHide: true, cwd: opts?.cwd, detached: opts?.detached ?? false,
+        env: { ...process.env, ...gitEnv, ...(opts?.env ?? {}), ...env, ELECTRON_RUN_AS_NODE: '1' },
+      });
+    } catch (err) {
+      return Promise.resolve({ stdout: '', stderr: String(err), code: 127 });
+    }
+    return collectChild(child, opts);
   };
   return { run, calls };
 }

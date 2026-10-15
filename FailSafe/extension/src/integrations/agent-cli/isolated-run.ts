@@ -5,13 +5,15 @@
  * Order is fixed: preconditions -> start process tracking -> worktree add ->
  * agent -> kill the agent's process tree -> post-run snapshot -> worktree
  * admin-dir check -> capture -> validation -> worktree removal (always).
+ * The agent's environment carries FAILSAFE_ISOLATED_RUN=<random per run>, the
+ * marker linux tracking follows (process-tree.ts); POSIX samples every 250 ms.
  *
  * A worktree is not a process sandbox. Direct writes to the repository and its
  * git state are DETECTED (WORKSPACE_CHANGED_DURING_RUN) and never promoted, but
  * they have already happened; writes outside the repository are not detected.
  */
 
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -51,7 +53,8 @@ export interface AgentInvocation { cmd: string; args: string[]; env?: Record<str
 export interface IsolatedRunDeps {
   run: AgentRunFn;
   timeoutMs: number;
-  startTracker?: (sinceMs: number) => Promise<TreeTracker>;
+  /** `marker` is the FAILSAFE_ISOLATED_RUN value placed in the agent's environment. */
+  startTracker?: (sinceMs: number, marker: string) => Promise<TreeTracker>;
   sampleIntervalMs?: number;
   tmpRoot?: string;
 }
@@ -107,14 +110,15 @@ async function addWorktree(git: SafeGit, prep: Prepared, tmpRoot: string): Promi
 
 interface AgentRun { res: AgentRunResult; timedOut: boolean; survivors: number[]; trackingError?: string }
 
-async function runAgent(agent: AgentInvocation, cwd: string, tracker: TreeTracker, deps: IsolatedRunDeps): Promise<AgentRun> {
+async function runAgent(agent: AgentInvocation, cwd: string, tracker: TreeTracker, marker: string, deps: IsolatedRunDeps): Promise<AgentRun> {
   let trackingError: string | undefined;
   let inFlight: Promise<void> = Promise.resolve();
   const timer = setInterval(() => {
     inFlight = inFlight.then(() => tracker.sample()).catch((e) => { trackingError = String(e); });
-  }, deps.sampleIntervalMs ?? 1000);
+  }, deps.sampleIntervalMs ?? (process.platform === 'win32' ? 1000 : 250));
   const runP = deps.run(agent.cmd, agent.args, {
-    cwd, env: agent.env, detached: process.platform !== 'win32', onSpawn: (pid) => tracker.attach(pid),
+    cwd, env: { ...(agent.env ?? process.env), FAILSAFE_ISOLATED_RUN: marker },
+    detached: process.platform !== 'win32', onSpawn: (pid) => tracker.attach(pid),
   });
   let timeout: NodeJS.Timeout | undefined;
   const timedOut = await Promise.race([
@@ -179,13 +183,15 @@ export async function runIsolated(cwd: string, agent: AgentInvocation, deps: Iso
   try {
     const prep = await preconditions(git, cwd);
     Object.assign(out, { root: prep.root, baseHead: prep.baseHead, preSnapshot: prep.pre });
-    try { tracker = await (deps.startTracker ?? startTreeTracker)(Date.now()); } catch (e) {
+    const marker = randomBytes(16).toString('hex');
+    const start = deps.startTracker ?? ((since: number, m: string) => startTreeTracker(since, process.platform, { marker: m }));
+    try { tracker = await start(Date.now(), marker); } catch (e) {
       throw new RunStop('BLOCKED_PRE_EXECUTION', `process tracking is unavailable, so the agent is not started: ${String(e)}`);
     }
     wt = await addWorktree(git, prep, deps.tmpRoot ?? os.tmpdir());
     out.worktreePath = wt.dir;
     out.agentStarted = true;
-    const run = await runAgent(agent, path.join(wt.dir, prep.prefix), tracker, deps);
+    const run = await runAgent(agent, path.join(wt.dir, prep.prefix), tracker, marker, deps);
     Object.assign(out, { exitCode: run.res.code, stdout: run.res.stdout });
     verifyAfterRun(prep.pre, await takeSnapshot(git, prep.root), wt);
     checkAgentExit(run, deps.timeoutMs);
