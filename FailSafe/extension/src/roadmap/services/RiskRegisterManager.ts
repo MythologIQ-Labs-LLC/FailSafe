@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { BacklogReader } from "./BacklogReader";
 import { preserveCorruptFile } from "./corrupt-file-guard";
+import { writeFileAtomicSync } from "../../shared/writeFileAtomic";
 
 export type UpsertOutcome = "created" | "updated" | "unchanged";
 export interface UpsertOptions { ignore?: string[] }
@@ -74,7 +75,7 @@ export class RiskRegisterManager {
     const dir = path.dirname(this.risksPath);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     this.preserveCorruptStore();
-    fs.writeFileSync(this.risksPath, JSON.stringify({ risks }, null, 2), "utf-8");
+    writeFileAtomicSync(this.risksPath, JSON.stringify({ risks }, null, 2));
   }
 
   /**

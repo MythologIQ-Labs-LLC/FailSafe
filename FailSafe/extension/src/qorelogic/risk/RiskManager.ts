@@ -18,6 +18,7 @@ import {
   calculateRiskSummary,
 } from "./types";
 import { Logger } from "../../shared/Logger";
+import { writeFileAtomicSync } from "../../shared/writeFileAtomic";
 
 const RISKS_FILE = "risks.json";
 
@@ -117,11 +118,7 @@ export class RiskManager {
         fs.mkdirSync(dir, { recursive: true });
       }
       this.register.lastUpdated = new Date().toISOString();
-      fs.writeFileSync(
-        this.risksPath,
-        JSON.stringify(this.register, null, 2),
-        "utf8",
-      );
+      writeFileAtomicSync(this.risksPath, JSON.stringify(this.register, null, 2));
       this.logger.info("Risk register saved");
     } catch (error) {
       this.logger.error("Failed to save risk register", error);
