@@ -10,8 +10,9 @@
  * - Asymmetric Accountability: Agents held firmly, users given consent options
  */
 
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import { promisify } from "util";
+import { trustedGitPath } from "../../shared/git/trustedGit";
 import { LedgerManager } from "../ledger/LedgerManager";
 import { ConfigManager } from "../../shared/ConfigManager";
 import {
@@ -26,7 +27,7 @@ import { CheckpointPersistence } from "./CheckpointPersistence";
 import { CheckpointLifecycle } from "./CheckpointLifecycle";
 import type { ICheckpointMetrics } from "../../core/interfaces";
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 // Re-export types for backward compatibility
 export type { Checkpoint, FolderManifold, DriftReport } from "./types";
@@ -180,13 +181,15 @@ export class CheckpointManager {
     let gitStatus: "clean" | "dirty" | "unknown" = "unknown";
 
     try {
-      const { stdout: headOutput } = await execAsync("git rev-parse HEAD", {
+      const git = trustedGitPath(this.workspaceRoot);
+      const { stdout: headOutput } = await execFileAsync(git, ["rev-parse", "HEAD"], {
         cwd: this.workspaceRoot,
       });
       gitHead = headOutput.trim();
 
-      const { stdout: statusOutput } = await execAsync(
-        "git status --porcelain",
+      const { stdout: statusOutput } = await execFileAsync(
+        git,
+        ["status", "--porcelain"],
         { cwd: this.workspaceRoot },
       );
       gitStatus = statusOutput.trim() === "" ? "clean" : "dirty";

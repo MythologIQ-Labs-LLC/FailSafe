@@ -1,4 +1,5 @@
 import { spawn } from "child_process";
+import { trustedGitPath } from "../../shared/git/trustedGit";
 
 const GIT_HASH_RE = /^[0-9a-f]{40}$|^[0-9a-f]{64}$/;
 
@@ -105,7 +106,7 @@ function defaultRunner(
     });
   }
   return new Promise((resolve, reject) => {
-    const child = spawn("git", args, {
+    const child = spawn(trustedGitPath(cwd), args, {
       cwd,
       shell: false,
       windowsHide: true,

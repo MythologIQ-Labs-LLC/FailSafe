@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as https from 'https';
 import { execFileSync } from 'child_process';
+import { trustedGitPath } from '../../shared/git/trustedGit';
 import type { ModuleResult, SubstrateFinding } from './types';
 import {
   parseDirectDeps,
@@ -43,7 +44,7 @@ export interface DepAdmitOptions {
 const DEFAULT_IO: DepAdmitIO = {
   resolveBaseRef(workspaceRoot) {
     try {
-      return execFileSync('git', ['merge-base', 'origin/main', 'HEAD'], {
+      return execFileSync(trustedGitPath(workspaceRoot), ['merge-base', 'origin/main', 'HEAD'], {
         cwd: workspaceRoot,
         encoding: 'utf-8',
       }).trim();
@@ -55,7 +56,7 @@ const DEFAULT_IO: DepAdmitIO = {
     try {
       // git wants forward slashes even on Windows.
       const spec = `${ref}:${relPath.split(path.sep).join('/')}`;
-      return execFileSync('git', ['show', spec], {
+      return execFileSync(trustedGitPath(workspaceRoot), ['show', spec], {
         cwd: workspaceRoot,
         encoding: 'utf-8',
         maxBuffer: 16 * 1024 * 1024,

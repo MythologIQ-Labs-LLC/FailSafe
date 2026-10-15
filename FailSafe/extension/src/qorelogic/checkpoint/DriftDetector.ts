@@ -5,12 +5,16 @@
  * to identify changes made outside governed skill sessions.
  */
 
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import { promisify } from "util";
 import { Checkpoint, DriftReport, FolderManifold } from "./types";
 import { ManifoldCalculator } from "./ManifoldCalculator";
+import { trustedGitPath } from "../../shared/git/trustedGit";
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
+
+/** A commit id as `git rev-parse` prints it; the checkpoint file is workspace content. */
+const HEX_HEAD = /^[0-9a-f]{4,64}$/i;
 
 export class DriftDetector {
   private readonly workspaceRoot: string;
@@ -64,7 +68,7 @@ export class DriftDetector {
     oldHead: string | null,
     newHead: string | null,
   ): Promise<{ filesChanged: string[]; gitCommits: number }> {
-    if (!oldHead || !newHead) {
+    if (!oldHead || !newHead || !HEX_HEAD.test(oldHead)) {
       return { filesChanged: [], gitCommits: 0 };
     }
 
@@ -78,16 +82,18 @@ export class DriftDetector {
   }
 
   private async getGitDiffFiles(oldHead: string): Promise<string[]> {
-    const { stdout } = await execAsync(
-      `git diff --name-only ${oldHead} HEAD`,
+    const { stdout } = await execFileAsync(
+      trustedGitPath(this.workspaceRoot),
+      ["diff", "--name-only", oldHead, "HEAD"],
       { cwd: this.workspaceRoot },
     );
     return stdout.trim().split("\n").filter((f) => f);
   }
 
   private async getGitCommitCount(oldHead: string): Promise<number> {
-    const { stdout } = await execAsync(
-      `git log --oneline ${oldHead}..HEAD`,
+    const { stdout } = await execFileAsync(
+      trustedGitPath(this.workspaceRoot),
+      ["log", "--oneline", `${oldHead}..HEAD`],
       { cwd: this.workspaceRoot },
     );
     return stdout.trim().split("\n").filter((l) => l).length;

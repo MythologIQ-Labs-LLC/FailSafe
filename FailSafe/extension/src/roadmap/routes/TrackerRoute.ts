@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
 import { execFileSync } from 'child_process';
+import { trustedGitPath } from '../../shared/git/trustedGit';
 import * as yaml from 'js-yaml';
 import { buildTrackerModel, validateManifest, discoverReleases, type TrackerManifest } from '../tracker/tracker-model';
 import { discoverMergedPrs, detectCadence } from '../tracker/tracker-pr-discovery';
@@ -88,7 +89,7 @@ function projectGovernanceManifest(
 /** Best-effort: the git tags present in the repo (corroborate shipped state). */
 function shippedReleaseIds(workspaceRoot: string): string[] {
   try {
-    const out = execFileSync('git', ['tag'], { cwd: workspaceRoot, encoding: 'utf-8', timeout: 4000 });
+    const out = execFileSync(trustedGitPath(workspaceRoot), ['tag'], { cwd: workspaceRoot, encoding: 'utf-8', timeout: 4000 });
     return out.split('\n').map((t) => t.trim()).filter(Boolean);
   } catch {
     return [];
@@ -119,7 +120,7 @@ function readChangelog(workspaceRoot: string): string {
  *  (see readGitLogTruncated). */
 function readGitLog(workspaceRoot: string): string {
   try {
-    return execFileSync('git', [
+    return execFileSync(trustedGitPath(workspaceRoot), [
       'log', `--max-count=${GIT_LOG_MAX_COMMITS + 1}`, '--pretty=format:%ad%x09%s', '--date=short',
     ], {
       cwd: workspaceRoot, encoding: 'utf-8', timeout: 4000, maxBuffer: 8 * 1024 * 1024,
