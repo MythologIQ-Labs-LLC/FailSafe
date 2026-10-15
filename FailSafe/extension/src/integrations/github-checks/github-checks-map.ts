@@ -1,40 +1,51 @@
 /**
  * github-checks-map — pure mapping for FailSafe's GitHub Checks integration
- * (#96, v1). Translates a SHIELD verdict into a GitHub Check Run conclusion and
- * builds the Check Runs REST payload. All functions here are pure (no network,
- * no secrets, no fs) so the conclusion mapping is deterministically testable —
- * the core acceptance criterion. The auth token is handled only by the
- * injectable transport (github-checks-client.ts); nothing here ever sees it.
+ * (#96, v1). Builds Check Run payloads and owns the publish contract. All
+ * functions here are pure (no network, no secrets, no fs). The auth token is
+ * handled only by the injectable transport; nothing here ever sees it.
  *
- * First safe slice: a single completed check result for an audit/substantiation
- * verdict. Line-level annotations and PR review comments are deferred.
+ * #476: the generic publisher posts only the (name, conclusion) pairs in
+ * PUBLISHABLE_CHECKS. The SHIELD check name is not publishable through it at
+ * all; only the verified publisher (shield-check-publish.ts) can post it, and
+ * only from a verified, commit-bound receipt.
  */
-
-/** The three SHIELD verdicts FailSafe surfaces at the merge gate. */
-export type ShieldVerdict = 'PASS' | 'WARN' | 'VETO';
 
 /** GitHub Check Run conclusions we map onto (subset of the API's enum). */
 export type CheckConclusion = 'success' | 'neutral' | 'failure';
 
-/**
- * Deterministic verdict → conclusion mapping.
- *   PASS → success   (merge-safe)
- *   WARN → neutral   (advisory; does not block unless required)
- *   VETO → failure   (blocking)
- * Unknown/garbage verdicts map to `neutral` (fail-safe: never silently report
- * success for an unrecognized state).
- */
-export function mapVerdictToConclusion(verdict: string): CheckConclusion {
-  switch ((verdict || '').toUpperCase()) {
-    case 'PASS': return 'success';
-    case 'VETO': return 'failure';
-    case 'WARN': return 'neutral';
-    default: return 'neutral';
-  }
+/** Check names the generic publisher may post. */
+export type PublishableCheckName = 'FailSafe: PR Linkage' | 'FailSafe Manual Advisory';
+
+/** The required-check name, reserved for the verified publisher (#476). */
+export const SHIELD_CHECK_NAME = 'FailSafe SHIELD' as const;
+
+const ALLOWED: ReadonlyMap<string, ReadonlySet<CheckConclusion>> = new Map<string, ReadonlySet<CheckConclusion>>([
+  ['FailSafe: PR Linkage', new Set<CheckConclusion>(['success', 'neutral', 'failure'])],
+  ['FailSafe Manual Advisory', new Set<CheckConclusion>(['neutral'])],
+]);
+
+/** Read-only view of the allowlist. The guard reads a private copy, so mutating
+ *  this view cannot widen what is publishable. */
+export const PUBLISHABLE_CHECKS: ReadonlyMap<PublishableCheckName, ReadonlySet<CheckConclusion>> = Object.freeze(
+  new Map([...ALLOWED].map(([k, v]) => [k as PublishableCheckName, Object.freeze(new Set(v))])),
+);
+
+/** Own-entry lookup only (Map.has / Set.has), so inherited keys never match. */
+export function isPublishable(name: unknown, conclusion: unknown): boolean {
+  if (typeof name !== 'string' || typeof conclusion !== 'string') return false;
+  const allowed = ALLOWED.get(name);
+  return allowed !== undefined && allowed.has(conclusion as CheckConclusion);
+}
+
+/** True for any name that normalizes to contain "shield" (NFKC, lowercased,
+ *  every character outside [a-z0-9] removed). */
+export function isShieldFamilyName(name: unknown): boolean {
+  if (typeof name !== 'string') return false;
+  return name.normalize('NFKC').toLowerCase().replace(/[^a-z0-9]/g, '').includes('shield');
 }
 
 /** Parse `owner/repo` from an https or ssh git remote URL. Returns null on
- *  anything that is not a recognizable GitHub remote. */
+ *  anything that is not a recognizable GitHub remote. The host is ignored. */
 export function parseRepoSlug(remoteUrl: string): { owner: string; repo: string } | null {
   if (typeof remoteUrl !== 'string' || !remoteUrl.trim()) return null;
   const s = remoteUrl.trim();
@@ -48,47 +59,13 @@ export function parseRepoSlug(remoteUrl: string): { owner: string; repo: string 
   return { owner, repo };
 }
 
-export interface CheckRunInput {
-  verdict: string;
-  headSha: string;
-  /** Display name for the check (defaults to "FailSafe SHIELD"). */
-  name?: string;
-  /** Short summary line (no secrets/prompts/content by construction). */
-  summary?: string;
-  /** Optional link back to the local Command Center. */
-  detailsUrl?: string;
-}
-
 export interface CheckRunPayload {
-  name: string;
+  name: PublishableCheckName;
   head_sha: string;
   status: 'completed';
   conclusion: CheckConclusion;
   output: { title: string; summary: string };
   details_url?: string;
-}
-
-const TITLE: Record<CheckConclusion, string> = {
-  success: 'SHIELD: PASS',
-  neutral: 'SHIELD: WARN',
-  failure: 'SHIELD: VETO',
-};
-
-/** Pure builder for the `POST /repos/{owner}/{repo}/check-runs` body. */
-export function buildCheckRunPayload(input: CheckRunInput): CheckRunPayload {
-  const conclusion = mapVerdictToConclusion(input.verdict);
-  const payload: CheckRunPayload = {
-    name: input.name?.trim() || 'FailSafe SHIELD',
-    head_sha: input.headSha,
-    status: 'completed',
-    conclusion,
-    output: {
-      title: TITLE[conclusion],
-      summary: input.summary?.trim() || `FailSafe SHIELD verdict: ${(input.verdict || 'UNKNOWN').toUpperCase()}.`,
-    },
-  };
-  if (input.detailsUrl?.trim()) payload.details_url = input.detailsUrl.trim();
-  return payload;
 }
 
 /**

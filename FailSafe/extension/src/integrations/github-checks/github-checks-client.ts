@@ -1,8 +1,8 @@
 /**
- * github-checks-client — thin, injectable transport for FailSafe's GitHub
- * Checks integration (#96, v1). Publishes a single Check Run to a commit via
- * `POST /repos/{owner}/{repo}/check-runs`. The `post` transport is injected so
- * tests use NO live network. Off-by-default: with no token (or disabled), the
+ * github-checks-client — the generic publisher for FailSafe's GitHub Checks
+ * integration (#96, v1). Publishes a single allowlisted Check Run to a commit
+ * through check-run-transport.ts, the only module that builds the Checks API
+ * URL (#476). The `post` transport is injected so tests use NO live network. Off-by-default: with no token (or disabled), the
  * call short-circuits to a `localOnly` result and makes NO network call —
  * satisfying "no network unless explicitly enabled" + "fork/PR edge cases
  * degrade to local-only". The token is a SECRET: it is placed only in the
@@ -15,7 +15,8 @@
  */
 
 import * as https from 'https';
-import { buildCheckRunPayload, parseRepoSlug, type CheckRunInput, type CheckRunPayload } from './github-checks-map';
+import { isPublishable, parseRepoSlug, type CheckRunPayload } from './github-checks-map';
+import { postCheckRun } from './check-run-transport';
 
 const GITHUB_API = 'https://api.github.com';
 
@@ -35,10 +36,10 @@ export interface GitContext {
 export interface PublishCheckResult {
   ok: boolean;
   /** True when we deliberately did NOT call the network (disabled/no-auth/fork/
-   *  missing context). The verdict still stands locally. */
+   *  missing context). Nothing was published. */
   localOnly?: boolean;
   status?: number;
-  /** The created check-run id, when GitHub returns one. */
+  /** The created check-run id, when GitHub confirms one. */
   checkRunId?: number;
   error?: string;
 }
@@ -47,38 +48,26 @@ export interface PublishOptions {
   enabled: boolean;
   token?: string;
   apiBaseUrl?: string;
-  name?: string;
-  summary?: string;
-  detailsUrl?: string;
 }
 
-/**
- * Publish a SHIELD verdict as a GitHub Check Run. Returns a structured,
- * non-throwing result. Degrades to `localOnly` (no network) when disabled, when
- * no token is configured, on a fork PR context, or when git context is missing.
- * The token never appears in the result.
- */
-export async function publishCheckRun(
-  verdict: string,
-  ctx: GitContext,
-  opts: PublishOptions,
-  post: GitHubPostFn,
-): Promise<PublishCheckResult> {
-  // #476: unverified operator PASS cannot be published.
-  if (verdict.trim().toUpperCase() === 'PASS') {
-    return { ok: false, error: 'SHIELD PASS publication requires a verified audit receipt; manual PASS is disabled.' };
+/** Resolve the API base URL and its hostname; undefined when malformed. */
+export function resolveApiBase(apiBaseUrl: string | undefined): { baseUrl: string; apiHost: string } | undefined {
+  const baseUrl = (apiBaseUrl || GITHUB_API).replace(/\/$/, '');
+  try {
+    const u = new URL(baseUrl);
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return undefined;
+    return { baseUrl, apiHost: u.hostname.toLowerCase() };
+  } catch {
+    return undefined;
   }
-  const input: CheckRunInput = {
-    verdict, headSha: (ctx.headSha || '').trim(), name: opts.name, summary: opts.summary, detailsUrl: opts.detailsUrl,
-  };
-  return publishCheckRunPayload(buildCheckRunPayload(input), ctx, opts, post);
 }
 
 /**
- * Publish a PRE-BUILT Check Run payload. The generic publish path shared by the
- * #96 SHIELD-verdict check and the #154 PR-linkage check. Off-by-default +
- * fork-safe; the token appears only in the Authorization header, never in the
- * result.
+ * Publish a PRE-BUILT Check Run payload: the generic path shared by the manual
+ * advisory and the #154 PR-linkage check. Only (name, conclusion) pairs in
+ * PUBLISHABLE_CHECKS are posted (#476); the SHIELD name is never publishable
+ * here. Off-by-default + fork-safe; the token appears only in the
+ * Authorization header, never in the result.
  */
 export async function publishCheckRunPayload(
   payload: CheckRunPayload,
@@ -86,6 +75,9 @@ export async function publishCheckRunPayload(
   opts: PublishOptions,
   post: GitHubPostFn,
 ): Promise<PublishCheckResult> {
+  if (!isPublishable(payload?.name, payload?.conclusion)) {
+    return { ok: false, error: 'Check run refused: this name and conclusion are not publishable by FailSafe.' };
+  }
   if (!opts.enabled) return { ok: true, localOnly: true, error: 'integration disabled' };
   if (!opts.token || !opts.token.trim()) return { ok: true, localOnly: true, error: 'no token configured' };
   if (ctx.isFork) return { ok: true, localOnly: true, error: 'fork PR context — local-only' };
@@ -94,43 +86,10 @@ export async function publishCheckRunPayload(
   if (!slug) return { ok: true, localOnly: true, error: 'no GitHub remote resolved' };
   if (!ctx.headSha || !ctx.headSha.trim()) return { ok: true, localOnly: true, error: 'no HEAD sha resolved' };
 
-  // No accepted native, subject-bound verification receipt is available in this
-  // publisher. A caller-supplied PASS is not authority to create a green SHIELD
-  // check. Block at the transport boundary as well as at the command UI (#476).
-  if (payload.conclusion === 'success' && payload.name.toLowerCase().startsWith('failsafe shield')) {
-    return { ok: false, error: 'Verified SHIELD PASS publishing is disabled until native gate attestation is enforced' };
-  }
-
-  const base = (opts.apiBaseUrl || GITHUB_API).replace(/\/$/, '');
-  const url = `${base}/repos/${slug.owner}/${slug.repo}/check-runs`;
-
-  try {
-    const res = await post(
-      url,
-      {
-        'Content-Type': 'application/json',
-        Accept: 'application/vnd.github+json',
-        Authorization: `token ${opts.token}`,
-        'User-Agent': 'FailSafe',
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
-      JSON.stringify(payload),
-    );
-    if (res.status === 401 || res.status === 403) {
-      return { ok: false, status: res.status, error: 'GitHub auth failed — check the token / Checks write permission.' };
-    }
-    if (res.status === 422) {
-      return { ok: false, status: 422, error: 'GitHub rejected the check run (422) — head_sha or repo invalid.' };
-    }
-    if (res.status < 200 || res.status >= 300) {
-      return { ok: false, status: res.status, error: `GitHub returned HTTP ${res.status}.` };
-    }
-    let id: number | undefined;
-    try { const j = JSON.parse(res.body); if (j && typeof j.id === 'number') id = j.id; } catch { /* tolerate */ }
-    return { ok: true, status: res.status, checkRunId: id };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
-  }
+  const api = resolveApiBase(opts.apiBaseUrl);
+  if (!api) return { ok: false, error: 'invalid GitHub API base URL' };
+  const res = await postCheckRun(payload, { repo: `${slug.owner}/${slug.repo}`, ...api }, opts.token, post);
+  return { ok: res.ok, status: res.status, checkRunId: res.checkRunId, error: res.error };
 }
 
 export interface CreatePullRequestOptions {
