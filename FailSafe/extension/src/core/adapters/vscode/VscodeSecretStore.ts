@@ -22,4 +22,8 @@ export class VscodeSecretStore implements ISecretStore {
     async delete(key: string): Promise<void> {
         await this.context.secrets.delete(key);
     }
+
+    onDidChange(listener: (key: string) => void): { dispose(): void } {
+        return this.context.secrets.onDidChange((e) => listener(e.key));
+    }
 }

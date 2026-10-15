@@ -16,6 +16,8 @@ import type { RiskGrade } from '../shared/types/risk';
 import { defaultAgentRun, type AgentRunOutcome } from '../integrations/agent-cli/agent-cli-core';
 import { runContinueGoverned } from '../integrations/agent-cli/continue-wrapper';
 import { runAiderGoverned } from '../integrations/agent-cli/aider-wrapper';
+import type { IntegrationCredentials } from '../integrations/credentials/IntegrationCredentials';
+import { optionalCredential, type CredentialUi } from '../integrations/credentials/credentialGates';
 import {
   applyQuarantined, writeAuditCopy, type PromotionResult, type QuarantinedChangeSet,
 } from '../integrations/agent-cli/agent-run-promotion';
@@ -36,6 +38,9 @@ export interface AgentCliDeps {
   auditDir?: string;
   /** Injected in tests; `applyQuarantined` in production. */
   apply?: (cs: QuarantinedChangeSet) => Promise<PromotionResult>;
+  /** Continue's optional API key comes from Secure Storage only (#482). */
+  creds: IntegrationCredentials;
+  credentialUi: CredentialUi;
 }
 
 export const BOUNDARY_NOTE = 'A worktree is not a process sandbox. Writes the agent makes to this repository or its git state '
@@ -139,13 +144,17 @@ export function registerAgentCliCommands(context: vscode.ExtensionContext, deps:
     vscode.commands.registerCommand('failsafe.continue.run', async () => {
       const cfg = settings();
       if (!cfg.get<boolean>('integrations.continue.enabled', false)) { vscode.window.showWarningMessage('Continue integration is disabled. Enable `failsafe.integrations.continue.enabled`.'); return; }
+      // No key at all is fine (Continue may use its own login); a key still
+      // in plain-text settings, or unreadable Secure Storage, is not.
+      const key = optionalCredential(deps.creds, 'continue.apiKey', deps.credentialUi);
+      if (!key.ok) return;
       const prompt = await vscode.window.showInputBox({ title: 'Run Continue (governed)', prompt: 'Prompt for the Continue headless agent', ignoreFocusOut: true });
       if (!prompt) return;
       const out = await run('Running Continue in an isolated worktree…', () => runContinueGoverned(
         {
           prompt, cwd, timeoutMs: timeoutMs(), baseEnv: process.env,
           allow: cfg.get<string[]>('integrations.continue.allow', []) ?? [],
-          apiKey: cfg.get<string>('integrations.continue.apiKey', '') || undefined,
+          apiKey: key.value,
           writesAllowed: cfg.get<boolean>('integrations.continue.allowWrites', false),
         },
         { run: defaultAgentRun, classify, issuedAt: new Date().toISOString() },

@@ -78,9 +78,10 @@ export const INTEGRATION_CATALOG: readonly IntegrationDescriptor[] = [
     category: 'Agent CLI',
     summary: 'Continue CLI run in a disposable git worktree; its changes reach the workspace only when you apply them. Not a process sandbox: direct writes to the repository are detected, not prevented, and writes outside it are not detected.',
     enabledKey: 'failsafe.integrations.continue.enabled',
-    requiredKeys: ['failsafe.integrations.continue.apiKey'],
+    // The API key is optional: Continue can use its own login (#482).
+    requiredKeys: [],
     docsId: 'continue',
-    configHint: 'Enable + set the Continue API key under Settings → Integrations → Continue.',
+    configHint: 'Enable under Settings → Integrations → Continue. An API key is optional; store one with "FailSafe: Set Integration Credential".',
   },
   {
     id: 'aider',
@@ -120,7 +121,7 @@ export const INTEGRATION_CATALOG: readonly IntegrationDescriptor[] = [
     enabledKey: 'failsafe.integrations.linear.enabled',
     requiredKeys: ['failsafe.integrations.linear.apiKey'],
     docsId: 'linear',
-    configHint: 'Enable + set the Linear API key under Settings → Integrations → Linear.',
+    configHint: 'Enable under Settings → Integrations → Linear, then store the Linear API key with "FailSafe: Set Integration Credential".',
   },
   {
     id: 'jira',
@@ -134,7 +135,7 @@ export const INTEGRATION_CATALOG: readonly IntegrationDescriptor[] = [
       'failsafe.integrations.jira.apiToken',
     ],
     docsId: 'jira',
-    configHint: 'Enable + set base URL, email, and API token under Settings → Integrations → Jira.',
+    configHint: 'Enable and set base URL and email under Settings → Integrations → Jira, then store the API token with "FailSafe: Set Integration Credential".',
   },
   {
     id: 'github-checks',
@@ -144,7 +145,7 @@ export const INTEGRATION_CATALOG: readonly IntegrationDescriptor[] = [
     enabledKey: 'failsafe.integrations.github.enabled',
     requiredKeys: ['failsafe.integrations.github.token'],
     docsId: 'github-checks',
-    configHint: 'Enable + set a GitHub token (checks:write) under Settings → Integrations → GitHub.',
+    configHint: 'Enable under Settings → Integrations → GitHub, then store a token (checks:write) with "FailSafe: Set Integration Credential".',
   },
   {
     id: 'sarif',
@@ -168,7 +169,7 @@ export const INTEGRATION_CATALOG: readonly IntegrationDescriptor[] = [
       'failsafe.integrations.sentry.project',
     ],
     docsId: 'sentry',
-    configHint: 'Enable + set token, org, and project under Settings → Integrations → Sentry.',
+    configHint: 'Enable and set org and project under Settings → Integrations → Sentry, then store the auth token with "FailSafe: Set Integration Credential".',
   },
   {
     id: 'teams',
@@ -178,7 +179,7 @@ export const INTEGRATION_CATALOG: readonly IntegrationDescriptor[] = [
     enabledKey: 'failsafe.integrations.teams.enabled',
     requiredKeys: ['failsafe.integrations.teams.webhookUrl'],
     docsId: 'teams',
-    configHint: 'Enable + set the Teams Incoming Webhook URL under Settings → Integrations → Teams.',
+    configHint: 'Enable under Settings → Integrations → Teams, then store the Incoming Webhook URL with "FailSafe: Set Integration Credential".',
   },
   {
     id: 'slack',
@@ -188,7 +189,7 @@ export const INTEGRATION_CATALOG: readonly IntegrationDescriptor[] = [
     enabledKey: 'failsafe.integrations.slack.enabled',
     requiredKeys: ['failsafe.integrations.slack.webhookUrl'],
     docsId: 'slack',
-    configHint: 'Enable + set the Slack Incoming Webhook URL under Settings → Integrations → Slack.',
+    configHint: 'Enable under Settings → Integrations → Slack, then store the Incoming Webhook URL with "FailSafe: Set Integration Credential".',
   },
 ];
 

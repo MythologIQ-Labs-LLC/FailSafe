@@ -52,6 +52,8 @@ import { registerGitHubChecksCommand } from "./github-checks-command";
 import { registerSentryImportCommand } from "./sentry-command";
 import { registerAgentCliCommands } from "./agent-cli-command";
 import { registerAgentObserveCommands } from "./agent-observe-command";
+import { bootstrapCredentials } from "./credentials-command";
+import { notifierConfig, notifyFailureText } from "../integrations/credentials/credentialGates";
 import { SlackNotifier } from "../integrations/slack/SlackNotifier";
 import { TeamsNotifier } from "../integrations/teams/TeamsNotifier";
 import { defaultRun } from "../qorlogic/PythonInterpreterResolver";
@@ -145,6 +147,12 @@ export async function activate(
 
     // 1.5 IDE Activity (task/debug lifecycle → EventBus)
     bootstrapIdeActivity(context, core);
+
+    // 1.6 Integration credentials (#482): Secret Storage only, loaded (with a
+    // bounded wait) before any command, notifier or snapshot can ask for one.
+    const credentials = await bootstrapCredentials(
+      context, { appendLine: (line) => logger.info(line) }, logger,
+    );
 
     // 2. Governance
     const gov = await bootstrapGovernance(context, core, logger);
@@ -243,15 +251,15 @@ export async function activate(
     registerMcpInstallCommand(context, core.workspaceRoot);
 
     // 3.14a Read-only issue → intent-preview imports (Linear #97, Jira #98).
-    registerLinearImportCommand(context);
-    registerJiraImportCommand(context);
+    registerLinearImportCommand(context, credentials.creds);
+    registerJiraImportCommand(context, credentials.creds, credentials.endpoints);
 
     // 3.14b GitHub Checks publish (#96): post SHIELD verdicts as Check Runs.
-    registerGitHubChecksCommand(context);
+    registerGitHubChecksCommand(context, credentials.creds, credentials.endpoints);
 
     // 3.14c Sentry runtime-regression import (#102): pull a project's unresolved
     // issues read-only → upsert as risk records.
-    registerSentryImportCommand(context, core.workspaceRoot);
+    registerSentryImportCommand(context, core.workspaceRoot, credentials.creds, credentials.endpoints);
 
     // 3.14d Governed CLI agent wrappers (Group B — #104 Continue, #107 Aider):
     // run a headless coding-agent CLI in a disposable worktree (#475); its
@@ -262,6 +270,8 @@ export async function activate(
       policyEngine: qor.policyEngine,
       ledger: qor.ledgerManager,
       auditDir: path.join(context.globalStorageUri.fsPath, "agent-runs"),
+      creds: credentials.creds,
+      credentialUi: credentials.ui,
     });
 
     // 3.14e Agent observe/audit (Group C — #106 Cline/Roo/Kilo MCP-policy audit,
@@ -281,32 +291,21 @@ export async function activate(
         if (notifyFailureWarned.has(channel)) return;
         notifyFailureWarned.add(channel);
         const reason = failure.error ?? `HTTP ${failure.status ?? 'unknown'}`;
-        void vscode.window.showWarningMessage(
-          `FailSafe governance alerts are not reaching ${channel} (${reason}). Check the webhook in settings; see the FailSafe output channel for details.`,
-        );
+        void vscode.window.showWarningMessage(notifyFailureText(channel, reason));
       };
+    const notifyCredentialWarned = new Set<string>();
+    const notifierEnabled = (key: string): boolean =>
+      vscode.workspace.getConfiguration('failsafe').get<boolean>(key, false);
 
     new SlackNotifier(
       core.eventBus,
-      () => {
-        const c = vscode.workspace.getConfiguration('failsafe');
-        return {
-          enabled: c.get<boolean>('integrations.slack.enabled', false),
-          webhookUrl: c.get<string>('integrations.slack.webhookUrl', ''),
-        };
-      },
+      () => notifierConfig(credentials.creds, 'Slack', notifierEnabled('integrations.slack.enabled'), credentials.ui, notifyCredentialWarned),
       undefined,
       reportNotifyFailure('Slack'),
     ).register();
     new TeamsNotifier(
       core.eventBus,
-      () => {
-        const c = vscode.workspace.getConfiguration('failsafe');
-        return {
-          enabled: c.get<boolean>('integrations.teams.enabled', false),
-          webhookUrl: c.get<string>('integrations.teams.webhookUrl', ''),
-        };
-      },
+      () => notifierConfig(credentials.creds, 'Teams', notifierEnabled('integrations.teams.enabled'), credentials.ui, notifyCredentialWarned),
       undefined,
       reportNotifyFailure('Teams'),
     ).register();
@@ -358,6 +357,7 @@ export async function activate(
         // #83A: commit-check route token gate + live hook port.
         commitGuard: gov.commitGuard,
         commitGuardPortSource: gov.commitGuardPortSource,
+        credentials,
       },
       logger,
     );
@@ -451,6 +451,9 @@ export async function activate(
     vscode.window.showInformationMessage(
       "FailSafe is now protecting your workspace",
     );
+
+    // #482: plain-text credentials are offered for the move once FailSafe is up.
+    credentials.offerMigration();
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     // Cross-process duplicate-registration race: when vscode-test spawns a

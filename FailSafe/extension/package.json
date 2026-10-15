@@ -171,6 +171,21 @@
         "category": "FailSafe"
       },
       {
+        "command": "failsafe.credentials.set",
+        "title": "FailSafe: Set Integration Credential",
+        "category": "FailSafe"
+      },
+      {
+        "command": "failsafe.credentials.clear",
+        "title": "FailSafe: Clear Integration Credential",
+        "category": "FailSafe"
+      },
+      {
+        "command": "failsafe.credentials.migrate",
+        "title": "FailSafe: Move Plain-Text Credentials to Secure Storage",
+        "category": "FailSafe"
+      },
+      {
         "command": "failsafe.continue.run",
         "title": "FailSafe: Run Continue (governed)",
         "category": "FailSafe"
@@ -376,6 +391,7 @@
         },
         "failsafe.integrations.slack.webhookUrl": {
           "type": "string",
+          "markdownDeprecationMessage": "Plain-text settings are no longer read. Store this credential with **FailSafe: Set Integration Credential** (Secure Storage), or move an existing value with **FailSafe: Move Plain-Text Credentials to Secure Storage**.",
           "default": "",
           "markdownDescription": "Slack **incoming webhook URL** to post governance notifications to. Treat as a secret — it grants posting to the target channel. Messages are notify-only (no interactive approvals; a link back to the local Command Center is included). Leave empty to disable."
         },
@@ -386,6 +402,7 @@
         },
         "failsafe.integrations.teams.webhookUrl": {
           "type": "string",
+          "markdownDeprecationMessage": "Plain-text settings are no longer read. Store this credential with **FailSafe: Set Integration Credential** (Secure Storage), or move an existing value with **FailSafe: Move Plain-Text Credentials to Secure Storage**.",
           "default": "",
           "markdownDescription": "Microsoft Teams **incoming webhook URL**. Treat as a secret — it grants posting to the target channel. Leave empty to disable."
         },
@@ -396,6 +413,7 @@
         },
         "failsafe.integrations.linear.apiKey": {
           "type": "string",
+          "markdownDeprecationMessage": "Plain-text settings are no longer read. Store this credential with **FailSafe: Set Integration Credential** (Secure Storage), or move an existing value with **FailSafe: Move Plain-Text Credentials to Secure Storage**.",
           "default": "",
           "markdownDescription": "Linear **personal API key** (or OAuth access token) for read-only issue lookups. Treat as a secret — the value is sent only in the `Authorization` header and is never logged. Leave empty to disable."
         },
@@ -416,6 +434,7 @@
         },
         "failsafe.integrations.jira.apiToken": {
           "type": "string",
+          "markdownDeprecationMessage": "Plain-text settings are no longer read. Store this credential with **FailSafe: Set Integration Credential** (Secure Storage), or move an existing value with **FailSafe: Move Plain-Text Credentials to Secure Storage**.",
           "default": "",
           "markdownDescription": "Jira Cloud **API token** (create at id.atlassian.com → Security → API tokens). Treat as a secret — sent only in the `Authorization` header (Basic email:token) and never logged. Leave empty to disable."
         },
@@ -426,6 +445,7 @@
         },
         "failsafe.integrations.github.token": {
           "type": "string",
+          "markdownDeprecationMessage": "Plain-text settings are no longer read. Store this credential with **FailSafe: Set Integration Credential** (Secure Storage), or move an existing value with **FailSafe: Move Plain-Text Credentials to Secure Storage**.",
           "default": "",
           "markdownDescription": "GitHub token used to create Check Runs — a **GitHub App installation token** (recommended; the Checks API is App-oriented and needs `checks: write`) or a PAT where the org permits it. Treat as a secret — sent only in the `Authorization` header and never logged. Leave empty to disable."
         },
@@ -446,6 +466,7 @@
         },
         "failsafe.integrations.sentry.token": {
           "type": "string",
+          "markdownDeprecationMessage": "Plain-text settings are no longer read. Store this credential with **FailSafe: Set Integration Credential** (Secure Storage), or move an existing value with **FailSafe: Move Plain-Text Credentials to Secure Storage**.",
           "default": "",
           "markdownDescription": "Sentry **auth token** (org-level or internal-integration token with `project:read` / `event:read`). Treat as a secret — sent only as a Bearer `Authorization` header and never logged. Leave empty to disable."
         },
@@ -488,6 +509,7 @@
         },
         "failsafe.integrations.continue.apiKey": {
           "type": "string",
+          "markdownDeprecationMessage": "Plain-text settings are no longer read. Store this credential with **FailSafe: Set Integration Credential** (Secure Storage), or move an existing value with **FailSafe: Move Plain-Text Credentials to Secure Storage**.",
           "default": "",
           "markdownDescription": "Continue API key (`CONTINUE_API_KEY`). Treat as a secret — passed to the `cn` child process via the environment only, never in the command line or any receipt, and never logged. Leave empty if `cn` is already authenticated."
         },
@@ -667,6 +689,7 @@
         },
         "failsafe.qorelogic.externalRuntime.apiKey": {
           "type": "string",
+          "deprecationMessage": "Not used by FailSafe. Remove this plain-text value.",
           "default": "",
           "description": "Optional API key for Qor runtime. Leave empty to use environment variable fallback."
         },

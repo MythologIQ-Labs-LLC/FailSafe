@@ -188,7 +188,7 @@ suite('readSentrySettings (#478 LD9)', () => {
   const reader = (values: Record<string, unknown>) => (key: string, fallback: unknown) => (key in values ? values[key] : fallback);
 
   test('unset settings give the defaults', () => {
-    const s = readSentrySettings(reader({}));
+    const s = readSentrySettings(reader({}), undefined);
     assert.equal(s.enabled, false);
     assert.equal(s.query, 'is:unresolved');
     assert.equal(s.environment, undefined);
@@ -196,11 +196,11 @@ suite('readSentrySettings (#478 LD9)', () => {
   });
 
   test('blank query and environment fall back; maxReleaseLookups is clamped and validated', () => {
-    assert.equal(readSentrySettings(reader({ 'integrations.sentry.query': '  ' })).query, 'is:unresolved');
-    assert.equal(readSentrySettings(reader({ 'integrations.sentry.query': 'is:unresolved level:error' })).query, 'is:unresolved level:error');
-    assert.equal(readSentrySettings(reader({ 'integrations.sentry.environment': ' ' })).environment, undefined);
+    assert.equal(readSentrySettings(reader({ 'integrations.sentry.query': '  ' }), undefined).query, 'is:unresolved');
+    assert.equal(readSentrySettings(reader({ 'integrations.sentry.query': 'is:unresolved level:error' }), undefined).query, 'is:unresolved level:error');
+    assert.equal(readSentrySettings(reader({ 'integrations.sentry.environment': ' ' }), undefined).environment, undefined);
     for (const [raw, want] of [[-5, 0], [500, 200], ['abc', 50], [2.5, 50], [7, 7]] as const) {
-      assert.equal(readSentrySettings(reader({ 'integrations.sentry.maxReleaseLookups': raw })).maxReleaseLookups, want, String(raw));
+      assert.equal(readSentrySettings(reader({ 'integrations.sentry.maxReleaseLookups': raw }), undefined).maxReleaseLookups, want, String(raw));
     }
   });
 });
