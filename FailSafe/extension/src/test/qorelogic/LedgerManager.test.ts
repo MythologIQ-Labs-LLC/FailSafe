@@ -15,6 +15,13 @@ import {
   Env, GOLDEN, StubSecrets, appendN, configFor, genesisHashOf, isAnchorKey, makeEnv, openLedger, quiet, rawRows, writeGoldenLedger,
 } from './ledgerTestKit';
 
+/** Silence the expected stub-mode warning of LD9 (console.warn cannot be asserted from this runner). */
+async function quietWarn<T>(fn: () => Promise<T>): Promise<T> {
+  const original = console.warn;
+  console.warn = () => undefined;
+  try { return await fn(); } finally { console.warn = original; }
+}
+
 interface Stubs {
   secretStore: any;
   configProvider: any;
@@ -305,11 +312,15 @@ suite('#473 v3 writer', () => {
     again.close();
   });
 
-  test('a rejected ledgerSecret read rejects initialize and creates no database file', async () => {
+  // plan-v607-final-integration LD9 replaces "rejects initialize" with stub mode; the ledger
+  // still creates no database file and never mints a replacement secret.
+  test('a rejected ledgerSecret read runs the ledger in stub mode and creates no database file', async () => {
     env.secrets.throwGet = (k) => k === 'ledgerSecret';
     const mgr = new LedgerManager(env.secrets as any, configFor(env.ledgerPath, env.root));
-    await assert.rejects(mgr.initialize());
+    await assert.doesNotReject(quietWarn(() => mgr.initialize()));
+    assert.equal(mgr.isAvailable(), false);
     assert.equal(fs.existsSync(env.ledgerPath), false);
+    assert.equal(env.secrets.map.has('ledgerSecret'), false);
   });
 
   test('verifyEntry reports the seal version and covered columns', async () => {
@@ -615,7 +626,7 @@ suite('#473 head anchor and workspace binding', () => {
     mgr.close();
   });
 
-  test('a hung ledgerSecret read or store rejects initialize within the bound (review S2)', async function () {
+  test('a hung ledgerSecret read or store degrades to stub mode within the bound (review S2, LD9)', async function () {
     this.timeout(12000);
     for (const hang of ['get', 'store'] as const) {
       const local = makeEnv();
@@ -626,8 +637,10 @@ suite('#473 head anchor and workspace binding', () => {
       }
       const started = Date.now();
       const mgr = new LedgerManager(local.secrets as any, configFor(local.ledgerPath, local.root));
-      await assert.rejects(mgr.initialize());
+      await assert.doesNotReject(quietWarn(() => mgr.initialize()));
       assert.ok(Date.now() - started < 4000, `${hang} bounded`);
+      assert.equal(mgr.isAvailable(), false, `${hang} hang leaves the ledger in stub mode`);
+      assert.match(mgr.getDisabledReason() ?? '', /ledger secret unavailable: SecretStorage timed out/, `${hang} reason recorded`);
       local.cleanup();
     }
   });
