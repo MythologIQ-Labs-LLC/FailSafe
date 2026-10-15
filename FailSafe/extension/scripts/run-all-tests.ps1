@@ -9,11 +9,6 @@ Write-Host "=== Compile ==="
 npm run compile
 
 Write-Host ""
-Write-Host "=== Rebuild native modules ==="
-npm run patch:better-sqlite3
-npm run rebuild:vscode
-
-Write-Host ""
 Write-Host "=== Full VS Code test runner ==="
 npm test
 

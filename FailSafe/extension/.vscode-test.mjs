@@ -20,8 +20,8 @@ const isolatedUserDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-vsco
 // (V8 13.x) whose removed APIs broke the better-sqlite3@12.6.2 native rebuild,
 // turning two otherwise-ready releases (v5.4.0/v5.4.1) into dead tags. Pinning
 // to the last-known-good stable decouples the release gate from editor
-// auto-update. Keep this in lockstep with VSCODE_TEST_VERSION in
-// scripts/rebuild-vscode-electron.cjs (both must target the same Electron).
+// auto-update. Since #502 better-sqlite3 13.x is N-API (no per-Electron rebuild);
+// the pin stays for deterministic test runs.
 const VSCODE_TEST_VERSION = '1.122.1';
 
 export default defineConfig({
