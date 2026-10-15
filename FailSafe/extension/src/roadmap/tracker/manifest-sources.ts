@@ -8,6 +8,7 @@
 // is read, logged, or persisted by FailSafe.
 
 import { execFileSync } from 'child_process';
+import { trustedGitPath } from '../../shared/git/trustedGit';
 import * as fs from 'fs';
 import * as path from 'path';
 import type { ManifestSources, GeneratorPr } from './manifest-generator';
@@ -16,7 +17,7 @@ import type { BicameralMcpClient, BicameralFeatureBrief } from '../../integratio
 /** owner/repo from the origin remote, or '' if not a GitHub repo. */
 export function resolveRepoSlug(workspaceRoot: string): string {
   try {
-    const url = execFileSync('git', ['remote', 'get-url', 'origin'], {
+    const url = execFileSync(trustedGitPath(workspaceRoot), ['remote', 'get-url', 'origin'], {
       cwd: workspaceRoot, encoding: 'utf-8', timeout: 4000,
     }).trim();
     const m = /github\.com[:/]+([^/]+\/[^/]+?)(?:\.git)?\/?$/.exec(url);

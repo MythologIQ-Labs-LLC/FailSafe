@@ -41,7 +41,7 @@ function makeDeps(workspaceRoot: string, overrides: Partial<ApiRouteDeps> = {}):
     getTransparencyEvents: () => [],
     getRiskRegister: () => [],
     getStoredRiskRegister: () => [],
-    writeRiskRegister: () => undefined,
+    mutateRiskRegister: (fn: (risks: any[]) => any) => fn([]),
     getTimelineEntries: () => [],
     getHealthMetrics: () => null,
     getGenomePatterns: async () => [],

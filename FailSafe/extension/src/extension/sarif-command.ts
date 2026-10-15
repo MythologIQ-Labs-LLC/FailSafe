@@ -40,7 +40,8 @@ export function registerSarifImportCommand(context: vscode.ExtensionContext, wor
     }
 
     const riskManager = new RiskRegisterManager(workspaceRoot);
-    const result = importSarifText(text, (risk) => riskManager.upsertRisk(risk));
+    // #517 LD8: a re-import never resets the status the operator triaged.
+    const result = importSarifText(text, (risk) => riskManager.upsertRisk(risk, { keepStored: ['status'] }));
 
     if (result.risks === 0 && result.errors.length) {
       vscode.window.showWarningMessage(`SARIF import: ${result.errors[0]}`);

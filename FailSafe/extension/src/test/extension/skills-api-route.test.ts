@@ -31,7 +31,7 @@ function makeDeps(workspaceRoot: string, dirname: string): ApiRouteDeps {
     getTransparencyEvents: () => [],
     getRiskRegister: () => [],
     getStoredRiskRegister: () => [],
-    writeRiskRegister: () => undefined,
+    mutateRiskRegister: (fn: (risks: any[]) => any) => fn([]),
     getTimelineEntries: () => [],
     getHealthMetrics: () => null,
     getGenomePatterns: async () => [],

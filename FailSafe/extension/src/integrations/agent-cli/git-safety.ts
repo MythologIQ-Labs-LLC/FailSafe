@@ -13,6 +13,7 @@ import { spawn, spawnSync } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { trustedGitPath } from '../../shared/git/trustedGit';
 
 export interface GitResult { code: number | null; stdout: Buffer; stderr: string }
 
@@ -36,12 +37,16 @@ export const PINNED_DIFF = ['--no-ext-diff', '--no-textconv', '--src-prefix=a/',
 const CARRIED_SINGLE = ['core.autocrlf', 'core.eol', 'core.safecrlf', 'core.longpaths'] as const;
 
 function readUserConfig(repo: string, key: string, all = false): string[] {
-  const res = spawnSync('git', ['config', all ? '--get-all' : '--get', key], { cwd: repo, encoding: 'utf8', windowsHide: true });
+  let exe: string;
+  try { exe = trustedGitPath(repo); } catch { return []; }
+  const res = spawnSync(exe, ['config', all ? '--get-all' : '--get', key], { cwd: repo, encoding: 'utf8', windowsHide: true }); // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute git path, argv array, no shell
   return res.status === 0 ? res.stdout.split(/\r?\n/).filter((v) => v.length > 0) : [];
 }
 
 function readLfsFilter(repo: string): Array<[string, string]> {
-  const res = spawnSync('git', ['config', '--get-regexp', '^filter\\.lfs\\.'], { cwd: repo, encoding: 'utf8', windowsHide: true });
+  let exe: string;
+  try { exe = trustedGitPath(repo); } catch { return []; }
+  const res = spawnSync(exe, ['config', '--get-regexp', '^filter\\.lfs\\.'], { cwd: repo, encoding: 'utf8', windowsHide: true }); // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute git path, argv array, no shell
   if (res.status !== 0) return [];
   return res.stdout.split(/\r?\n/).filter(Boolean).map((line) => {
     const i = line.indexOf(' ');
@@ -85,7 +90,9 @@ export function createSafeGit(repo: string): SafeGit {
   const baseEnv: Record<string, string> = { GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: globalCfg, GIT_TERMINAL_PROMPT: '0' };
 
   const tryRun: SafeGit['tryRun'] = (cwd, args, opts) => new Promise((resolve) => {
-    const child = spawn('git', [...baseArgs, ...args], {
+    let exe: string;
+    try { exe = trustedGitPath(cwd); } catch (e) { resolve({ code: 127, stdout: Buffer.alloc(0), stderr: String(e) }); return; }
+    const child = spawn(exe, [...baseArgs, ...args], { // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute git path, argv array, no shell
       cwd, shell: false, windowsHide: true, env: { ...process.env, ...baseEnv, ...(opts?.env ?? {}) },
     });
     const out: Buffer[] = [];

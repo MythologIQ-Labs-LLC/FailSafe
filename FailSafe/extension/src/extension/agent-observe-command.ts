@@ -78,7 +78,8 @@ export function registerAgentObserveCommands(context: vscode.ExtensionContext, w
         return;
       }
       const riskManager = new RiskRegisterManager(workspaceRoot);
-      const r = runMcpPolicyScan(workspaceRoot, (risk) => riskManager.upsertRisk(risk));
+      // #517 LD8: a re-scan never resets the status the operator triaged.
+      const r = runMcpPolicyScan(workspaceRoot, (risk) => riskManager.upsertRisk(risk, { keepStored: ['status'] }));
       if (r.scanned === 0) { vscode.window.showInformationMessage('Agent MCP-policy audit: no Cline/Roo/Kilo/project MCP config found in this workspace.'); return; }
       if (r.failed > 0) {
         vscode.window.showWarningMessage(`Agent MCP-policy audit: ${r.failed} finding(s) could not be written to the Risk Register — findings may be missing. Check FailSafe logs and re-run.`);

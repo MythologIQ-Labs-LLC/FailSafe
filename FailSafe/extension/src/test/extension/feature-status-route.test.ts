@@ -39,7 +39,7 @@ function makeDeps(overrides: Partial<ApiRouteDeps>): ApiRouteDeps {
     getTransparencyEvents: () => [],
     getRiskRegister: () => [],
     getStoredRiskRegister: () => [],
-    writeRiskRegister: () => undefined,
+    mutateRiskRegister: (fn: (risks: any[]) => any) => fn([]),
     getTimelineEntries: () => [],
     getHealthMetrics: () => null,
     getGenomePatterns: async () => [],

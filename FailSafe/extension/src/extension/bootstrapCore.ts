@@ -6,6 +6,7 @@ import { WorkspaceMutationBus } from "../shared/WorkspaceMutationBus";
 import { PlanManager } from "../qorelogic/planning/PlanManager";
 import { ModeTransitionHistory } from "../governance/ModeTransitionHistory";
 import { ensureGitRepositoryReady } from "../shared/gitBootstrap";
+import { trustedGitPath } from "../shared/git/trustedGit";
 import type { ILogSink } from "../core/interfaces";
 
 export interface CoreSubstrate {
@@ -47,7 +48,7 @@ export async function bootstrapCore(
 
   if (!git.gitAvailable) {
     logger.warn(
-      "Git is unavailable. Checkpoint git hashes will be recorded as unknown until git is installed.",
+      `Git is unavailable. Checkpoint git hashes will be recorded as unknown until git is installed.${trustedGitReason()}`,
     );
   } else if (!git.repoInitialized) {
     offerGitInit(workspaceRoot, gitLog).then(undefined, (err) =>
@@ -85,6 +86,16 @@ export async function bootstrapCore(
     modeTransitionHistory,
     logSink,
   };
+}
+
+/** Why the trusted-git resolver found nothing, as a suffix for the warning ('' if it now resolves). */
+function trustedGitReason(): string {
+  try {
+    trustedGitPath();
+    return "";
+  } catch (err) {
+    return ` (${err instanceof Error ? err.message : String(err)})`;
+  }
 }
 
 /** Ask once, without blocking activation, whether to `git init` this folder (#503). */

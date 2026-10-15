@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { spawn } from "child_process";
+import { invalidateTrustedGit, trustedGitPath } from "./git/trustedGit";
 
 export type CommandRunner = (
   command: string,
@@ -44,6 +45,7 @@ export async function ensureGitRepositoryReady(
   if (!gitAvailable && autoInstallGit) {
     installedGit = await tryInstallGit(platform, runner, log);
     if (installedGit) {
+      invalidateTrustedGit();
       gitAvailable = await checkGitAvailable(runner);
     }
   }
@@ -148,7 +150,7 @@ async function defaultRunner(
   return new Promise((resolve, reject) => {
     const options = { cwd, shell: false as const, windowsHide: true };
     const child = command === "git"
-      ? spawn("git", args, options)
+      ? spawn(trustedGitPath(cwd), args, options) // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute git path, argv array, no shell
       : command === "winget"
         ? spawn("winget", args, options)
         : command === "choco"

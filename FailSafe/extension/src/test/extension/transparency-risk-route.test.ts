@@ -22,10 +22,13 @@ function makeDeps(initial: Risk[] = [], overrides: Partial<ApiRouteDeps> = {}): 
     // serves both views unless a case overrides with separate arrays (the
     // stored-vs-display distinction is the point of the contract-pin case).
     getStoredRiskRegister: () => store,
-    writeRiskRegister: (next: any[]) => {
-      const copy = [...next];
+    // #517: the fake runs fn against a copy and commits it, like the store.
+    mutateRiskRegister: <T>(fn: (risks: any[]) => T): T => {
+      const copy = [...store];
+      const result = fn(copy);
       store.length = 0;
       for (const r of copy) store.push(r as Risk);
+      return result;
     },
     getTransparencyEvents: () => [{ id: 'tx-1', kind: 'audit' }] as never,
   };
@@ -77,7 +80,7 @@ suite('TransparencyRiskRoute (FX110, FX111–FX114)', () => {
     assert.equal(res.body.risk.title, 'Test risk');
     assert.equal(res.body.risk.severity, 'medium');
     assert.equal(res.body.risk.status, 'open');
-    assert.match(String(res.body.risk.id), /^risk-\d+$/);
+    assert.match(String(res.body.risk.id), /^risk-\d+-[0-9a-f]{6}$/);
     assert.equal(store.length, 1);
     assert.deepEqual(store[0], res.body.risk);
     assert.equal(broadcasts.length, 1);
@@ -262,7 +265,12 @@ suite('#377 durable-store-only route mutations', () => {
     const { deps } = makeDeps([], {
       getRiskRegister: () => [...stored, ...fallback],
       getStoredRiskRegister: () => [...stored],
-      writeRiskRegister: (next: any[]) => { writes.push(next as Risk[]); },
+      mutateRiskRegister: <T>(fn: (risks: any[]) => T): T => {
+        const copy: Risk[] = [...stored];
+        const result = fn(copy);
+        writes.push(copy);
+        return result;
+      },
     });
     const app = makeApp();
     setupTransparencyRiskRoutes(app, deps);
@@ -289,7 +297,7 @@ suite('#377 durable-store-only route mutations', () => {
       const { deps } = makeDeps([], {
         getRiskRegister: () => mgr.getRisks() as unknown as Risk[],
         getStoredRiskRegister: () => mgr.getStoredRisks() as unknown as Risk[],
-        writeRiskRegister: (next: any[]) => mgr.writeRisks(next),
+        mutateRiskRegister: (fn) => mgr.mutateStoredRisks(fn),
       });
       const app = makeApp();
       setupTransparencyRiskRoutes(app, deps);
@@ -334,7 +342,12 @@ suite('#377 durable-store-only route mutations', () => {
     const writes: unknown[] = [];
     const { deps } = makeDeps([], {
       getStoredRiskRegister: () => [],
-      writeRiskRegister: (next: any[]) => { writes.push(next); },
+      mutateRiskRegister: <T>(fn: (risks: any[]) => T): T => {
+        const copy: unknown[] = [];
+        const result = fn(copy);
+        if (copy.length !== 0) writes.push(copy);
+        return result;
+      },
     });
     const app = makeApp();
     setupTransparencyRiskRoutes(app, deps);
@@ -343,5 +356,172 @@ suite('#377 durable-store-only route mutations', () => {
     const res = await harness2.request({ path: '/api/v1/risks/backlog%3AS1', method: 'DELETE' });
     assert.equal(res.status, 404);
     assert.equal(writes.length, 0);
+  });
+});
+
+// ── #517: Console mutations run under the risk store lock (FX924, FX972) ─────
+
+import { spawn } from 'child_process';
+import { RiskStoreError, RiskStoreErrorCode } from '../../shared/risk-store';
+
+suite('#517 Console risk routes under the risk store lock', function () {
+  this.timeout(60000);
+  let harness3: RouteHarness;
+  let dir = '';
+  setup(() => { dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fx517-routes-')); });
+  teardown(async () => {
+    if (harness3) await harness3.stop();
+    try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* best effort */ }
+  });
+
+  function realDeps(mgr: RiskRegisterManager): ApiRouteDeps {
+    return makeDeps([], {
+      getRiskRegister: () => mgr.getRisks() as unknown as Risk[],
+      getStoredRiskRegister: () => mgr.getStoredRisks() as unknown as Risk[],
+      mutateRiskRegister: (fn) => mgr.mutateStoredRisks(fn),
+    }).deps;
+  }
+
+  test('T16 a child process upserting while the Console creates 50 risks loses nothing', async () => {
+    const mgr = new RiskRegisterManager(dir);
+    const deps = realDeps(mgr);
+    assert.equal('writeRiskRegister' in deps, false);
+    const app = makeApp();
+    setupTransparencyRiskRoutes(app, deps);
+    harness3 = new RouteHarness(app);
+    await harness3.start();
+    const child = spawn(process.execPath,
+      [path.join(__dirname, '..', 'shared', 'risk-store', 'riskStoreChild.js'), 'rrm-upsert', dir, 'C', '100'],
+      { env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, stdio: ['ignore', 'pipe', 'pipe'] });
+    let out = '';
+    const ready = new Promise<void>((resolve) => child.stdout!.on('data', (d) => { out += String(d); if (out.includes('ready\n')) resolve(); }));
+    const exited = new Promise<void>((resolve) => child.on('exit', () => resolve()));
+    await ready;
+    fs.writeFileSync(path.join(dir, 'go'), '');
+    const postedIds: string[] = [];
+    const firstPostAt = Date.now();
+    for (let i = 0; i < 50; i++) {
+      const res = await harness3.request({ method: 'POST', path: '/api/v1/risks', body: { title: `post ${i}`, severity: 'low' } });
+      assert.equal(res.status, 200, JSON.stringify(res.body));
+      postedIds.push(String(res.body.risk.id));
+    }
+    const lastPostAt = Date.now();
+    await exited;
+    const result = JSON.parse(out.split('\n').find((l) => l.startsWith('{')) ?? '{}');
+    assert.equal(result.errors, 0, result.firstError);
+    // Contention precondition (as in RiskStore.multiprocess.test.ts): the child's
+    // write attempts and the Console requests overlapped for at least
+    // max(100 ms, half the shorter window).
+    const overlap = Math.min(lastPostAt, result.lastAt) - Math.max(firstPostAt, result.startedAt);
+    const needed = Math.max(100, Math.min(lastPostAt - firstPostAt, result.lastAt - result.startedAt) / 2);
+    assert.ok(overlap >= needed, `inconclusive: overlap ${overlap} ms; at least ${needed} ms is required`);
+    const ids = new Set(mgr.getStoredRisks().map((r) => String(r.id)));
+    assert.equal(ids.size, 150);
+    for (const id of postedIds) assert.ok(ids.has(id), `${id} lost`);
+    for (let i = 0; i < 100; i++) assert.ok(ids.has(`C-${i}`), `C-${i} lost`);
+  });
+
+  const STORE_CODES: Array<[RiskStoreErrorCode, number]> = [
+    ['UNREADABLE', 503], ['NOT_REGULAR_FILE', 503], ['UNSAFE_PATH', 503], ['LOCK_TIMEOUT', 503],
+    ['LOCK_BLOCKED', 503], ['LOCK_LOST', 503], ['WRITE_FAILED', 503], ['CONFLICT', 409],
+    ['REENTRANT', 500], ['ASYNC_MUTATOR', 500],
+  ];
+  const REQUESTS = [
+    { method: 'POST', path: '/api/v1/risks', body: { title: 't', severity: 'low' } },
+    { method: 'PUT', path: '/api/v1/risks/r1', body: { status: 'closed' } },
+    { method: 'DELETE', path: '/api/v1/risks/r1' },
+  ];
+
+  test('T17 every store refusal maps to its status and message, and nothing is broadcast', async () => {
+    const cases: Array<[Error, number]> = [
+      ...STORE_CODES.map(([code, status]): [Error, number] => [new RiskStoreError(code, `message for ${code}`), status]),
+      [new Error('plain failure'), 500],
+    ];
+    for (const [error, status] of cases) {
+      const { deps, broadcasts } = makeDeps([], { mutateRiskRegister: () => { throw error; } });
+      const app = makeApp();
+      setupTransparencyRiskRoutes(app, deps);
+      const h = new RouteHarness(app);
+      await h.start();
+      try {
+        for (const req of REQUESTS) {
+          const res = await h.request(req);
+          assert.equal(res.status, status, `${req.method} ${error.message}`);
+          assert.deepEqual(res.body, { ok: false, error: error.message });
+        }
+        assert.equal(broadcasts.length, 0);
+      } finally { await h.stop(); }
+    }
+  });
+
+  test('T17 a corrupt register makes POST a 503 and leaves its bytes in place', async () => {
+    const risksDir = path.join(dir, '.failsafe', 'risks');
+    fs.mkdirSync(risksDir, { recursive: true });
+    const torn = '{"risks": [{"id": "old"}, TRUNC';
+    fs.writeFileSync(path.join(risksDir, 'risks.json'), torn);
+    const app = makeApp();
+    setupTransparencyRiskRoutes(app, realDeps(new RiskRegisterManager(dir)));
+    harness3 = new RouteHarness(app);
+    await harness3.start();
+    const res = await harness3.request({ method: 'POST', path: '/api/v1/risks', body: { title: 't', severity: 'low' } });
+    assert.equal(res.status, 503);
+    assert.equal(res.body.ok, false);
+    assert.match(String(res.body.error), /will not modify \.failsafe\/risks\/risks\.json/);
+    assert.equal(fs.readFileSync(path.join(risksDir, 'risks.json'), 'utf8'), torn);
+  });
+
+  test('T17 two POSTs in the same millisecond get distinct ids', async () => {
+    const { deps, store } = makeDeps();
+    const app = makeApp();
+    setupTransparencyRiskRoutes(app, deps);
+    harness3 = new RouteHarness(app);
+    await harness3.start();
+    const realNow = Date.now;
+    Date.now = () => 1792000000000;
+    try {
+      await harness3.request({ method: 'POST', path: '/api/v1/risks', body: { title: 'a', severity: 'low' } });
+      await harness3.request({ method: 'POST', path: '/api/v1/risks', body: { title: 'b', severity: 'low' } });
+    } finally { Date.now = realNow; }
+    assert.equal(store.length, 2);
+    assert.notEqual(store[0].id, store[1].id);
+    assert.ok(store.every((r) => r.id.startsWith('risk-1792000000000-')));
+  });
+
+  test('R1/R3 an unopenable register: GET degrades, POST is a 503 without the absolute path', async () => {
+    const risksDir = path.join(dir, '.failsafe', 'risks');
+    const file = path.join(risksDir, 'risks.json');
+    fs.mkdirSync(risksDir, { recursive: true });
+    fs.writeFileSync(file, JSON.stringify({ risks: [{ id: 'a' }] }));
+    const app = makeApp();
+    setupTransparencyRiskRoutes(app, realDeps(new RiskRegisterManager(dir)));
+    harness3 = new RouteHarness(app);
+    await harness3.start();
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const realFs = require('fs') as Record<string, unknown>;
+    const realOpen = fs.openSync;
+    realFs.openSync = (p: fs.PathLike, flags: number | string, mode?: number) => {
+      if (String(p) === file) throw Object.assign(new Error(`EACCES: permission denied, open '${file}'`), { code: 'EACCES' });
+      return realOpen(p, flags, mode);
+    };
+    try {
+      const get = await harness3.request({ path: '/api/risks' });
+      assert.equal(get.status, 200);
+      const post = await harness3.request({ method: 'POST', path: '/api/v1/risks', body: { title: 't', severity: 'low' } });
+      assert.equal(post.status, 503);
+      assert.ok(!String(post.body.error).includes(dir), String(post.body.error));
+    } finally { realFs.openSync = realOpen; }
+  });
+
+  test('R4 a corrupt register with a secret-looking token never echoes it in a response', async () => {
+    const risksDir = path.join(dir, '.failsafe', 'risks');
+    fs.mkdirSync(risksDir, { recursive: true });
+    fs.writeFileSync(path.join(risksDir, 'risks.json'), '{"k":SECRETx9}');
+    const app = makeApp();
+    setupTransparencyRiskRoutes(app, realDeps(new RiskRegisterManager(dir)));
+    harness3 = new RouteHarness(app);
+    await harness3.start();
+    const post = await harness3.request({ method: 'POST', path: '/api/v1/risks', body: { title: 't', severity: 'low' } });
+    assert.equal(post.status, 503);
+    assert.ok(!JSON.stringify(post.body).includes('SECRETx9'), JSON.stringify(post.body));
   });
 });

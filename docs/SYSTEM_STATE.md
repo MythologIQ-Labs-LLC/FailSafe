@@ -1,6 +1,6 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-10-15 (v6.0.7 final packaging on `release/v6.0.7-rc1`, draft PR #520: the GitHub Release carries the verified eight-package set and SHA256SUMS.txt, with provenance verification and a one-set-per-release guard; ledger #651-#658; not merged, not tagged, not published)
+**Last Updated:** 2026-10-15 (v6.0.7 final integration on `release/v6.0.7-rc2` (PR #525): lanes A-D and the trusted Git resolver on the merged RC, with the review and CI corrections; ledger #659-#704, final seal #704; not tagged, not published)
 **Active local review:** `fix/system-state-currency-sprint2` — this cycle. Restores the Tier 1 freshness contract and adds `system-state-currency.test.cjs`, the first check that asserts it. Prior to this cycle no test anywhere read this file's content.
 **Prior local review:** `fix/qor169-sprint1-seal-unblock` — MERGED to `main` as `1e1215cc` (PR #448). qor-logic 0.163.1 → 0.169.0; `.qorlogic/config.json` created, which is what allows a seal to complete at all; five vacuously-passing governance controls identified; TTS timeout assertion made deterministic and falsifying. Seal Entry #602.
 **Open PRs:** #442 (Bicameral upstream row error state), #443 (plan-grep-lint regex recognition), #444 (#367 per-engine provenance), #445 (#242 Shadow Genome severity aria — supersedes #440, closed as duplicate), #446 + #447 (dependabot). #447's blocker — a wall-clock TTS assertion — was removed by Entry #602.
@@ -11,6 +11,14 @@
 **Active integrations:** Bicameral MCP (sealed Entry #372 + earlier cluster) · Open Design v1 (provenance, Entry #400) · Open Design v1.1 (MCP + SSE + probe, Entry #405) · Open Design v1.2 (`create_artifact` L3-gated, Entry #409 — RELEASED v5.3.3; destructive write-tools deferred to B-OD-12)
 **Governance substrate:** qor.scripts substrate modules v1 WARN-only (Entry #402) — secret_scanner, feature_index_verify, model_pinning_lint
 **Doctrine additions since 2026-05-22:** `feedback_no_pipeline_reshape_for_marketplace_issues` (2026-05-27, v5.2.2 hold-pat precedent) · `feedback_verify_external_names_at_plan_time` (2026-05-27, Citation Inventory Pass — broke 4-cycle Plan-Time Hallucination loop at Entry #405)
+
+---
+
+## 2026-10-15 — v6.0.7 final integration (release/v6.0.7-rc2, not tagged, not published)
+
+CI corrections (Phase 4, ledger #701-#704): on Linux CI the T18 lock-identity test compared inodes alone, which Linux reuses; it now compares (ino, mtime) as the store does. The trusted-resolver spawn sites carry justified Semgrep annotations, and the rv report escapes backslashes (CodeQL). Final candidate C0 2ed25a97, re-qualified with the full gate set; seal #704 supersedes #700.
+
+`plan-v607-final-integration.md` (audit PASS at iteration 10; ledger #659-#700, seal #700) integrates into v6.0.7: the release verification tool `rv` (lane A, FX966/FX967), SOA ledger v3 integrity (#473, FX968/FX969), commit-bound SHIELD check runs (#476, FX970/FX971), the shared risk store (#517, FX972/FX973) and a trusted absolute-path Git for every Git subprocess (FX976/FX977), plus the integration-review fixes (ledger stub mode on a failing keychain, one probe per git file). Qualified on C0 736c74dd: vscode-test 1.122.1 4815 passing / 0 failing / 21 pending, census 494/494; test:node 595/597 (2 = FX946 ledgerAnchor baseline, #467); Playwright 208 passed / 4 skipped; tsc 0; lint 0 errors; runner coverage, citation parity, release-gate --preflight and docs coherence pass; secret_scanner 0 findings over 118 changed files; npm audit: braces GHSA-vfj7-8cjw-p6xm via chokidar 3.6.0 (unreachable, no non-breaking fix, disclosed since the RC); eight 6.0.7 VSIXs packaged from 20aeb03d (product code identical to C0) pass verify-set, the win32-x64 SQLite binary loads in Node 22, and rv inventory plus the disposable VS Code 1.141.1 lifecycle (install, upgrade from published 6.0.6, forced kill, restart, rollback) give rehearsal-pass 62/62; lane E planted-git.exe suite on this host: the old bare forms ran the plant (spawn, execFile and cmd.exe) and every migrated caller ran real git with zero plant markers; 56 lane E and 4 Phase 3 named mutations red. The META_LEDGER stays DAMAGED under qor-logic 0.176.1 (#467); these cycles ran under the owner's bounded per-cycle override; normal governance is not restored.
 
 ---
 

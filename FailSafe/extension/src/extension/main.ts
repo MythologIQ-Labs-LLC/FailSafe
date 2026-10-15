@@ -41,6 +41,7 @@ import { registerCommands, setServerPort } from "./commands";
 import { createVscodeFeatureGate } from "../core/adapters/vscode";
 import { bootstrapStartupChecks } from "./bootstrapStartupChecks";
 import { registerWorkspaceFolderChangeGuard } from "./workspaceFolderChangeGuard";
+import { configureTrustedGitFromVscode } from "./trustedGitActivation";
 import { registerSubstrateCommand } from "./substrate-command";
 import { registerSarifImportCommand } from "./sarif-command";
 import { registerGenerateTrackerManifestCommand } from "./tracker-manifest-command";
@@ -133,6 +134,11 @@ export async function activate(
     // before anything else captures that snapshot so an in-place folder
     // add/remove afterward is surfaced instead of silently ignored.
     registerWorkspaceFolderChangeGuard(context, logger);
+
+    // 0.5. Trusted git (v6.0.7 lane E): every git subprocess resolves an
+    // absolute git outside the workspace folders. Synchronous, and before
+    // bootstrapCore, the first git consumer.
+    configureTrustedGitFromVscode(context);
 
     // 1. Core
     const core = await bootstrapCore(context, logger, logSink);

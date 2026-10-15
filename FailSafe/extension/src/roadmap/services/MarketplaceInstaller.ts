@@ -8,6 +8,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import { spawn } from "child_process";
+import { trustedGitPath } from "../../shared/git/trustedGit";
 import type { EventBus } from "../../shared/EventBus";
 import type {
   MarketplaceItem,
@@ -29,13 +30,19 @@ function defaultRunner(
 ): Promise<CommandRunnerResult> {
   return new Promise((resolve) => {
     const options = { cwd, shell: false as const, timeout };
-    const proc = command === "git"
-      ? spawn("git", args, options)
-      : command === "pip"
-        ? spawn("pip", args, options)
-        : command === "npm"
-          ? spawn("npm", args, options)
-          : null;
+    let proc: ReturnType<typeof spawn> | null;
+    try {
+      proc = command === "git"
+        ? spawn(trustedGitPath(cwd), args, options) // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute git path, argv array, no shell
+        : command === "pip"
+          ? spawn("pip", args, options)
+          : command === "npm"
+            ? spawn("npm", args, options)
+            : null;
+    } catch (err) {
+      resolve({ code: 1, stdout: "", stderr: err instanceof Error ? err.message : String(err) });
+      return;
+    }
     if (!proc) {
       resolve({
         code: 126,

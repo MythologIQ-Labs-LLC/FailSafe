@@ -1,0 +1,53 @@
+{
+  "_captured": "2026-10-15 POST https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery flags 147 (trimmed to 6.0.6)",
+  "results": [
+    {
+      "extensions": [
+        {
+          "publisher": {
+            "publisherName": "MythologIQ"
+          },
+          "extensionName": "mythologiq-failsafe",
+          "versionsTruncated": false,
+          "versions": [
+            {
+              "version": "6.0.6",
+              "assetUri": "https://MythologIQ.gallerycdn.vsassets.io/extensions/mythologiq/mythologiq-failsafe/6.0.6/1791931345969",
+              "files": [
+                {
+                  "assetType": "Microsoft.VisualStudio.Services.VsixManifest",
+                  "source": "https://MythologIQ.gallerycdn.vsassets.io/extensions/mythologiq/mythologiq-failsafe/6.0.6/1791931345969/Microsoft.VisualStudio.Services.VsixManifest"
+                },
+                {
+                  "assetType": "Microsoft.VisualStudio.Services.VSIXPackage",
+                  "source": "https://MythologIQ.gallerycdn.vsassets.io/extensions/mythologiq/mythologiq-failsafe/6.0.6/1791931345969/Microsoft.VisualStudio.Services.VSIXPackage"
+                }
+              ],
+              "properties": [
+                {
+                  "key": "Microsoft.VisualStudio.Code.Engine",
+                  "value": "^1.90.0"
+                },
+                {
+                  "key": "Microsoft.VisualStudio.Services.VsixSha256",
+                  "value": "4a91e2daf643291ee96ff54c970ff14c5c3326244319a1322affa145b35fbac5"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "resultMetadata": [
+        {
+          "metadataType": "ResultCount",
+          "metadataItems": [
+            {
+              "name": "TotalCount",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
