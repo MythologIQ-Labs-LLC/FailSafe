@@ -31778,3 +31778,21 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `a018a4e1672c48dd7573e6fa885fd9aa80f8ef414c82d13388de51b9407fb0cc`
 
 **Decision**: IMPLEMENTATION (Phase 4, iterations 11-12) of plan-v607-final-integration.md (audit PASS #702), program #521. CI corrections from the first Linux and SAST run of PR #525: the T18 lock-identity assertion compares (ino, mtimeNs) as the store does (Linux reuses inodes); justified nosemgrep annotations at the ten trusted-resolver spawn sites; the rv report escapes backslashes before pipes (CodeQL). C0 = 2ed25a971f9cf6ac926494e81e20fa2ac8906d80, superseding the Phase 3 C0 736c74dd for all evidence. Evidence on C0: vscode-test 1.122.1 4815 passing / 0 failing / 21 pending, census 494/494; test:node 596/598 (2 = FX946 ledgerAnchor baseline, #467); Playwright 208 passed / 4 skipped; tsc 0; lint 0 errors; runner coverage, citation parity, release-gate --preflight and docs coherence pass; secret_scanner 0 findings over 121 changed files; npm audit: braces GHSA-vfj7-8cjw-p6xm via chokidar 3.6.0 only (unreachable, disclosed since the RC); eight 6.0.7 VSIXs packaged from C0 pass verify-set; the win32-x64 SQLite binary loads in Node 22 and, through the rv lifecycle, in VS Code 1.141.1 Electron; rv inventory 50/50 and lifecycle (install, upgrade from published 6.0.6, forced kill, restart, rollback): rehearsal-pass 62/62; report.test red before the escaper fix (the backslash-pipe row split into extra cells) and green after; T18 identity assertion holds on Windows (Linux on CI)
+
+---
+
+### Entry #704: SESSION SEAL - plan-v607-final-integration (Phase 4)
+
+**Timestamp**: 2026-10-15T23:26:59Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-15T1934-08df97`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-15T1934-08df97/substantiate.json`
+
+**Content Hash**: `d3433baa6668e9da25ee251079c57f79e17cbe0d7dda229b221d76d7961d8972`
+**Previous Hash**: `a018a4e1672c48dd7573e6fa885fd9aa80f8ef414c82d13388de51b9407fb0cc`
+**Chain Hash (Merkle seal)**: `3f16c76c15532f6f3a35e43e29911ba07341e196a27d4a048541859818ab480e`
+
+**Decision**: SESSION SEAL for plan-v607-final-integration.md (implementation #703, Phase 4), program #521. Reality = Promise, with disclosures. Supersedes seal #700 for the final candidate: release/v6.0.7-rc2 at C0 2ed25a971f9cf6ac926494e81e20fa2ac8906d80 plus this seal commit carries lanes A-E, the integration review fixes and the CI corrections. Disclosures: standing damaged-ledger override applied per cycle (#467 unresolved; normal governance not restored); C0 is the Phase 4 head 2ed25a97, superseding the Phase 3 C0 736c74dd of LD10 and seal #700; the standards, CodeQL and Semgrep checks of LD4 run on the PR; Semgrep's verdict on the ten annotated spawn sites is the PR gate; same-second lock collision residual: a writer outside the lock library recreating the directory within one second on a filesystem without birth times is not detected; vscode-test ran on a disposable test build with win32VersionedUpdate removed (operator install untouched); a first full re-run on C0 was stopped by the host for low memory and resumed sequentially; every gate listed completed on C0. Not merged, not tagged, not published.
