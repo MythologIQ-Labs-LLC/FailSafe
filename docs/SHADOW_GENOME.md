@@ -3012,3 +3012,26 @@ The upstream fix already ships and was simply never called: `ledger_fragment` (P
 **Lesson**: Before naming an approval or isolation mechanism, enumerate who can reach it from inside the thing being isolated. A control the subject can call is not a control over the subject.
 
 **Countermeasure applied**: VETO iteration 1; approval moved to a VS Code-native modal unreachable over HTTP; #514 filed for the loopback-only L3 decision routes; shared git state added to the snapshot with git safety flags on every call.
+## SG Event 2026-10-15: An outcome-accuracy plan designed new counters but not the existing consumers of the old ones, and two of its rules would themselves misreport (plan-478-sentry-import-completion iter 1, ledger #632)
+
+**Pattern**: The plan's purpose was to make the Sentry import report exactly what happened. It verified every external API fact and every grep citation, then (a) enumerated only two of the nine existing test sites that read the result fields it removes and declared others "unchanged", (b) pointed a feature descriptor at a test file that holds none of the falsifiers it names, and (c) introduced a release-lookup priority and a carry-forward rule that would silently starve lookups and record stale release data as fresh — the same class of misleading report the plan was written to remove. A self-audit would have passed: citation truth-checks were clean, and the defects were in what the plan did not say.
+
+**Lesson**: Citation correctness is not consumer completeness. When a plan changes a result shape, enumerate consumers of every removed field by grep over src AND test, not just the call sites of the function. And when a plan's goal is truthful reporting, every new rule that writes or carries data needs the same question the plan asks of the old code: could this record or count something that did not happen?
+
+**Countermeasure applied**: Option B independent review (mandatory under high-citation-surface) caught it; VETO iteration 1, findings re-verified by the Judge before recording. Plan to be amended per V1-V14 before re-audit.
+
+## SG Event 2026-10-15: A fix for a stale overwrite moved the read earlier and widened the race it was fixing (plan-478-sentry-import-completion iter 2, ledger #633)
+
+**Pattern**: Iteration 1 was VETOed because the import replaced whole records and reopened operator-triaged risks. Iteration 2 answered by merging Sentry fields over the stored record, but specified a single store read before the release lookups and a write after them. Lookups can take minutes, and the Console risk route writes the same store in the same process, so a close made during the lookups is overwritten by a merge computed from the earlier read. The amendment also cited a default sort order that the provider does not document, and claimed test coverage for parts of two feature descriptors that no listed test exercises.
+
+**Lesson**: A read-modify-write is only as safe as the distance between its read and its write. When a fix introduces a merge with stored state, the read belongs inside the same synchronous step as the write. Separately, an amendment that answers a finding with a disclosure must verify the fact the disclosure rests on, and every clause of a feature descriptor needs its own failing case.
+
+**Countermeasure applied**: VETO iteration 2. Plan to move the merge into a write-time store call, pin `sort=date`, and add the missing retry, stop-rule and settings tests before re-audit.
+
+## SG Event 2026-10-15: A classification rule was bounded by the wrong denominator, and a test named a transport the code never uses (plan-478-sentry-import-completion iter 3, ledger #634)
+
+**Pattern**: The plan's outcome levels used `eligible` as the bound for a partial import while its own counters define `eligible` to include duplicates, so one input satisfies two contradictory rules. Separately, the plan specified a plain-HTTP stub to test a transport that is hard-wired to HTTPS. Both survived two prior audits because each amendment answered the previous findings without re-deriving the rules it touched against the counters and code it depends on.
+
+**Lesson**: When a rule is a predicate over counters, write the counter identities first (`unique = eligible - duplicates`) and express every rule over the same term. When a test exercises a production I/O function, the plan must name the seam that makes it testable, or the test is aspirational.
+
+**Countermeasure applied**: VETO iteration 3. Amend LD8 over the unique count with an explicit precedence, and give the default transport an injectable request function.

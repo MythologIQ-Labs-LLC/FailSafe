@@ -1,22 +1,25 @@
 /**
- * sentry-client — thin, injectable transport for FailSafe's read-only Sentry
- * import (#102). Fetches a project's issues → maps them to FailSafe risk
- * records. The `get` transport is injected so tests use NO live network.
- * Off-by-default: with no token/org/project (or disabled) the call short-circuits
- * and makes NO network call. The auth token is a SECRET: it is placed only in
- * the outbound Authorization header and is NEVER returned in the result or
- * logged. Read-only; no mutation of Sentry.
+ * sentry-client — read-only listing of a Sentry project's issues (#102, #478).
+ *
+ * Lists `GET {base}/api/0/organizations/{org}/issues/` (the project-issues
+ * endpoint is deprecated) filtered by project, with `sort=date` pinned because
+ * Sentry documents no default order. Every request goes through
+ * `requestWithRetry`, which waits on rate limits, retries transient failures
+ * and refuses anything outside the configured HTTPS base. Off-by-default: with
+ * no token/org/project (or disabled) nothing is requested. The token is sent
+ * only as the Authorization header and never returned or logged.
  */
 
-import * as https from 'https';
-import { parseIssuesResponse, sentryIssuesToRisks } from './sentry-to-risk';
+import {
+  defaultSentryGet, header, normalizeBase, RateLimiter, requestWithRetry,
+  type CancelSignal, type RetryPolicy, type SentryGetFn, type TransportCtx, type TransportResult,
+} from './sentry-transport';
+
+export { defaultSentryGet };
+export type { SentryGetFn };
 
 const SENTRY_API = 'https://sentry.io';
-
-export interface SentryGetFn {
-  (url: string, headers: Record<string, string>):
-    Promise<{ status: number; body: string; headers?: Record<string, string | string[] | undefined> }>;
-}
+const ORG_SLUG = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
 export interface SentryOptions {
   enabled: boolean;
@@ -29,42 +32,39 @@ export interface SentryOptions {
   query?: string;
   /** Bounded multi-page import. Default 10, hard cap 20. */
   maxPages?: number;
+  /** Issue-detail lookups per import (LD5). */
+  maxReleaseLookups?: number;
 }
 
-export interface SentryFetchResult {
+export interface ListDeps { policy: RetryPolicy; cancel: CancelSignal }
+
+export interface ListResult {
   ok: boolean;
-  /** True when we deliberately did NOT call the network (disabled/no-config). */
   localOnly?: boolean;
-  risks: Array<Record<string, unknown>>;
-  count: number;
-  status?: number;
+  cancelled?: boolean;
   error?: string;
-  /** #241 (FX915): risk-sink writes that threw during import (never loop-aborting). */
-  failed?: number;
-  /** Successfully persisted sink rows, distinct from the fetched unique count. */
-  persisted?: number;
-  pagesFetched?: number;
+  status?: number;
+  items: unknown[];
+  pagesFetched: number;
+  /** `cursor` of the first page not fetched, when the listing stopped early. */
+  nextCursor?: string;
+  /** Validated request context, reused for issue-detail lookups. */
+  ctx?: TransportCtx;
+  org?: string;
 }
 
-/** Pure builder for the project-issues path + query. The project-issues
- *  endpoint does NOT accept a standalone `environment` query param (verified
- *  against docs.sentry.io/api/events/list-a-projects-issues/) — environment is
- *  expressed inside the search `query` as `environment:<name>`. */
+/** Organization-issues path + query for one project. */
 export function buildIssuesPath(org: string, project: string, opts: { environment?: string; query?: string } = {}): string {
-  let query = opts.query?.trim() || 'is:unresolved';
-  const env = opts.environment?.trim();
-  if (env) query += ` environment:${env}`;
   const params = new URLSearchParams();
-  params.set('query', query);
-  return `/api/0/projects/${encodeURIComponent(org)}/${encodeURIComponent(project)}/issues/?${params.toString()}`;
+  params.set('project', project);
+  params.set('query', opts.query?.trim() || 'is:unresolved');
+  params.set('sort', 'date');
+  params.set('limit', '100');
+  const env = opts.environment?.trim();
+  if (env) params.set('environment', env);
+  return `/api/0/organizations/${encodeURIComponent(org)}/issues/?${params.toString()}`;
 }
 
-/**
- * Fetch a Sentry project's issues → FailSafe risk records. Returns a structured,
- * non-throwing result. Degrades to `localOnly` (no network) when disabled or
- * when token/org/project are not all configured. The token never appears in
- * the result.
- */
 /** Returns the next page only when Sentry explicitly marks next results true.
  * Never follow arbitrary off-origin or unrelated-path Link destinations with a Bearer token. */
 export function nextSentryPage(link: string | undefined, currentUrl: string, firstUrl: string): string | null {
@@ -83,130 +83,71 @@ export function nextSentryPage(link: string | undefined, currentUrl: string, fir
   return null;
 }
 
-export async function fetchSentryRisks(
-  opts: SentryOptions,
-  get: SentryGetFn,
-): Promise<SentryFetchResult> {
-  if (!opts.enabled) return { ok: true, localOnly: true, risks: [], count: 0, error: 'integration disabled' };
-  if (!opts.token?.trim() || !opts.org?.trim() || !opts.project?.trim()) {
-    return { ok: true, localOnly: true, risks: [], count: 0, error: 'token, org, and project must all be configured' };
-  }
+const empty = (extra: Partial<ListResult>): ListResult => ({ ok: false, items: [], pagesFetched: 0, ...extra });
 
-  const base = (opts.apiBaseUrl || SENTRY_API).replace(/\/$/, '');
-  const firstUrl = `${base}${buildIssuesPath(opts.org.trim(), opts.project.trim(), { environment: opts.environment, query: opts.query })}`;
-  // Do not throw on malformed user-supplied settings or send Bearer secrets
-  // to a non-HTTPS endpoint. The API contract is deliberately nonthrowing.
-  let first: URL;
-  try { first = new URL(firstUrl); } catch {
-    return { ok: false, risks: [], count: 0, error: 'Invalid Sentry API base URL.' };
+const cursorOf = (url: string): string | undefined => new URL(url).searchParams.get('cursor') ?? undefined;
+
+/** Validates settings and builds the request context; nothing is requested here. */
+function prepare(opts: SentryOptions, deps: ListDeps): { firstUrl: string; ctx: TransportCtx; org: string } | ListResult {
+  if (!opts.enabled) return empty({ ok: true, localOnly: true, error: 'integration disabled' });
+  const token = opts.token?.trim(); const org = opts.org?.trim(); const project = opts.project?.trim();
+  if (!token || !org || !project) return empty({ ok: true, localOnly: true, error: 'token, org, and project must all be configured' });
+  if (!ORG_SLUG.test(org)) return empty({ error: 'Sentry org must be an organization slug; nothing was requested.' });
+  let base: string;
+  try { base = normalizeBase(opts.apiBaseUrl || SENTRY_API); } catch { return empty({ error: 'Invalid Sentry API base URL.' }); }
+  if (!base.startsWith('https:')) return empty({ error: 'Sentry API URL must use HTTPS.' });
+  const ctx: TransportCtx = { base, policy: deps.policy, cancel: deps.cancel, limiter: new RateLimiter() };
+  return { firstUrl: `${base}${buildIssuesPath(org, project, { environment: opts.environment, query: opts.query })}`, ctx, org };
+}
+
+function failure(r: Exclude<TransportResult, { kind: 'ok' }>): Partial<ListResult> {
+  switch (r.kind) {
+    case 'cancelled': return { cancelled: true, error: 'Sentry import cancelled.' };
+    case 'refused': return { error: 'Untrusted or insecure Sentry URL; no risks imported.' };
+    case 'rate_limited': return { status: 429, error: 'Sentry rate limit persisted after retries (HTTP 429); no risks imported.' };
+    case 'transport': return { error: 'Sentry transport failed; no risks imported.' };
+    case 'http':
+      if (r.status === 401 || r.status === 403) return { status: r.status, error: 'Sentry auth failed — check token/project scope; no risks imported.' };
+      if (r.status === 404) return { status: 404, error: 'Sentry org/project not found (or no access).' };
+      return { status: r.status, error: `Sentry returned HTTP ${r.status}; no risks imported.` };
   }
-  if (first.protocol !== 'https:') {
-    return { ok: false, risks: [], count: 0, error: 'Sentry API URL must use HTTPS.' };
+}
+
+type Page = { items: unknown[]; next: string | null } | { fail: Partial<ListResult> };
+
+/** One list page: request, status mapping, JSON shape, trusted Link. */
+export async function fetchIssuePage(url: string, firstUrl: string, token: string, get: SentryGetFn, ctx: TransportCtx): Promise<Page> {
+  const r = await requestWithRetry(url, { Accept: 'application/json', Authorization: `Bearer ${token}`, 'User-Agent': 'FailSafe' }, get, ctx);
+  if (r.kind !== 'ok') return { fail: failure(r) };
+  let page: unknown;
+  try { page = JSON.parse(r.res.body); } catch { return { fail: { error: 'Invalid JSON from Sentry; no risks imported.' } }; }
+  if (!Array.isArray(page)) return { fail: { error: 'Unexpected Sentry issue list; no risks imported.' } };
+  try {
+    return { items: page, next: nextSentryPage(header(r.res, 'link'), url, firstUrl) };
+  } catch {
+    return { fail: { error: 'Untrusted or malformed Sentry pagination; no risks imported.' } };
   }
-  const maxPages = Math.max(1, Math.min(20, Number.isSafeInteger(opts.maxPages) ? opts.maxPages! : 10));
+}
+
+/** Every page of the project's issues, or a failure with nothing returned. */
+export async function fetchSentryIssues(opts: SentryOptions, get: SentryGetFn, deps: ListDeps): Promise<ListResult> {
+  const prep = prepare(opts, deps);
+  if (!('firstUrl' in prep)) return prep;
+  const maxPages = Math.max(1, Math.min(20, Number.isSafeInteger(opts.maxPages) ? (opts.maxPages as number) : 10));
   const visited = new Set<string>();
-  const issues: unknown[] = [];
-  let currentUrl: string | null = firstUrl;
+  const items: unknown[] = [];
+  let url: string | null = prep.firstUrl;
   let pagesFetched = 0;
-
-  while (currentUrl) {
-    if (visited.has(currentUrl)) {
-      return { ok: false, risks: [], count: 0, pagesFetched, error: 'Sentry pagination cursor loop; no risks imported.' };
-    }
-    visited.add(currentUrl);
-    let res: Awaited<ReturnType<SentryGetFn>>;
-    try {
-      res = await get(currentUrl, {
-        Accept: 'application/json',
-        Authorization: `Bearer ${opts.token.trim()}`,
-        'User-Agent': 'FailSafe',
-      });
-    } catch {
-      // Transport exceptions sometimes echo request URLs/headers. Do not echo secrets.
-      return { ok: false, risks: [], count: 0, pagesFetched, error: 'Sentry transport failed; no risks imported.' };
-    }
-    if (res.status === 429) return { ok: false, status: 429, risks: [], count: 0, pagesFetched, error: 'Sentry rate limit reached (HTTP 429); no risks imported.' };
-    if (res.status === 401 || res.status === 403) {
-      return { ok: false, status: res.status, risks: [], count: 0, pagesFetched, error: 'Sentry auth failed — check token/project scope; no risks imported.' };
-    }
-    if (res.status === 404) return { ok: false, status: 404, risks: [], count: 0, pagesFetched, error: 'Sentry org/project not found (or no access).' };
-    if (res.status < 200 || res.status >= 300) {
-      return { ok: false, status: res.status, risks: [], count: 0, pagesFetched, error: `Sentry returned HTTP ${res.status}; no risks imported.` };
-    }
-
-    let page: unknown;
-    try { page = JSON.parse(res.body); } catch {
-      return { ok: false, risks: [], count: 0, pagesFetched, error: 'Invalid JSON from Sentry; no risks imported.' };
-    }
-    if (!Array.isArray(page)) {
-      return { ok: false, risks: [], count: 0, pagesFetched, error: 'Unexpected Sentry issue list; no risks imported.' };
-    }
-    issues.push(...page);
+  while (url) {
+    const stop = (extra: Partial<ListResult>): ListResult => empty({ pagesFetched, nextCursor: cursorOf(url as string), ...extra });
+    if (visited.has(url)) return stop({ error: 'Sentry pagination cursor loop; no risks imported.' });
+    visited.add(url);
+    const page = await fetchIssuePage(url, prep.firstUrl, opts.token?.trim() ?? '', get, prep.ctx);
+    if ('fail' in page) return stop(page.fail);
+    items.push(...page.items);
     pagesFetched++;
-    let next: string | null;
-    try {
-      const rawLink = res.headers?.link ?? res.headers?.Link;
-      next = nextSentryPage(Array.isArray(rawLink) ? rawLink.join(',') : rawLink, currentUrl, firstUrl);
-    } catch {
-      return { ok: false, risks: [], count: 0, pagesFetched, error: 'Untrusted or malformed Sentry pagination; no risks imported.' };
-    }
-    if (next && pagesFetched >= maxPages) {
-      return { ok: false, risks: [], count: 0, pagesFetched, error: 'Sentry pagination limit reached; no partial risks imported.' };
-    }
-    currentUrl = next;
+    if (page.next && pagesFetched >= maxPages) return empty({ pagesFetched, nextCursor: cursorOf(page.next), error: 'Sentry pagination limit reached; no partial risks imported.' });
+    url = page.next;
   }
-  const risks = sentryIssuesToRisks(parseIssuesResponse(issues, opts.environment?.trim()));
-  return { ok: true, risks, count: risks.length, pagesFetched, status: 200 };
+  return { ok: true, items, pagesFetched, status: 200, ctx: prep.ctx, org: prep.org };
 }
-
-/**
- * Orchestrate a Sentry import: fetch → upsert each risk via the injected
- * `upsert` (RiskRegisterManager.upsertRisk at runtime). The upsert sink is
- * injected so tests need no RiskRegisterManager. Returns the fetch result.
- */
-export async function importSentryRisks(
-  opts: SentryOptions,
-  get: SentryGetFn,
-  upsert: (risk: Record<string, unknown>) => void,
-): Promise<SentryFetchResult> {
-  const result = await fetchSentryRisks(opts, get);
-  if (result.ok && !result.localOnly) {
-    // #241 Tranche C (FX915): guarded per-item upsert — a failing write is
-    // counted, never loop-aborting (FX910 pattern).
-    let failed = 0;
-    for (const r of result.risks) {
-      try {
-        upsert(r);
-      } catch {
-        failed++;
-      }
-    }
-    return { ...result, failed, persisted: result.risks.length - failed };
-  }
-  return result;
-}
-
-/** Default https transport (used in production; tests inject their own). */
-export const defaultSentryGet: SentryGetFn = (url, headers) =>
-  new Promise((resolve, reject) => {
-    try {
-      const u = new URL(url);
-      const req = https.request(
-        { hostname: u.hostname, port: u.port ? Number(u.port) : undefined, path: u.pathname + u.search, method: 'GET', headers, timeout: 8000 },
-        (res) => {
-          const chunks: Buffer[] = [];
-          res.on('data', (c) => chunks.push(c as Buffer));
-          res.on('end', () => resolve({
-            status: res.statusCode ?? 0,
-            body: Buffer.concat(chunks).toString('utf8'),
-            headers: { link: res.headers.link },
-          }));
-        },
-      );
-      req.on('timeout', () => req.destroy(new Error('timeout')));
-      req.on('error', reject);
-      req.end();
-    } catch (e) {
-      reject(e instanceof Error ? e : new Error(String(e)));
-    }
-  });

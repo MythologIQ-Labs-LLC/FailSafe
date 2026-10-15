@@ -338,4 +338,20 @@ introduced_in_plan: plan-475-isolated-agent-runs
 referenced_by:
   - docs/FEATURE_INDEX.md
   - FailSafe/extension/src/integrations/agent-cli/README.md
+## Sentry import outcome
+
+```yaml
+term: Sentry import outcome
+definition: >
+  The record of what one Sentry import actually did, counted per unique issue: created, updated,
+  unchanged and failed writes, plus fetched, eligible, skipped and duplicate list items, pages
+  fetched, and release lookups (found, none, failed, not attempted, carried, discarded, and what
+  stopped them). It is ok only when every list page arrived and the import was not cancelled;
+  otherwise nothing was written. The operator message is derived from it by a fixed precedence and
+  never reports a failed write as saved.
+home: FailSafe/extension/src/integrations/sentry/sentry-import.ts
+introduced_in_plan: plan-478-sentry-import-completion
+referenced_by:
+  - docs/FEATURE_INDEX.md
+  - FailSafe/extension/src/integrations/sentry/README.md
 ```

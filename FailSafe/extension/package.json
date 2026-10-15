@@ -462,12 +462,24 @@
         "failsafe.integrations.sentry.environment": {
           "type": "string",
           "default": "",
-          "description": "Optional Sentry environment to scope the import to (e.g. `production`); folded into the search query as `environment:<name>`. Leave empty for all environments."
+          "description": "Optional Sentry environment to scope the import to (e.g. `production`), sent as the `environment` filter of the organization issues endpoint. Leave empty for all environments."
         },
         "failsafe.integrations.sentry.apiBaseUrl": {
           "type": "string",
           "default": "",
-          "description": "Optional Sentry API base URL for self-hosted Sentry (e.g. https://sentry.example.com). Leave empty to use https://sentry.io."
+          "description": "Optional Sentry API base URL for self-hosted Sentry (e.g. https://sentry.example.com). Must be HTTPS; requests never leave this base. Leave empty to use https://sentry.io."
+        },
+        "failsafe.integrations.sentry.query": {
+          "type": "string",
+          "default": "is:unresolved",
+          "description": "Sentry search query limiting which issues are imported. A blank value uses `is:unresolved`."
+        },
+        "failsafe.integrations.sentry.maxReleaseLookups": {
+          "type": "integer",
+          "default": 50,
+          "minimum": 0,
+          "maximum": 200,
+          "description": "How many issues per import get an issue-detail lookup for their first and last release, most recently seen first. Issues beyond this keep release data an earlier import verified. Lookups stop early at a Sentry rate limit or after three consecutive failures. 0 turns release lookups off."
         },
         "failsafe.integrations.continue.enabled": {
           "type": "boolean",

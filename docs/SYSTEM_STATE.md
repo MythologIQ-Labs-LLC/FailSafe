@@ -1,6 +1,7 @@
 # SYSTEM STATE
 
 **Last Updated:** 2026-10-15 (#475 isolated agent runs sealed on `fix/475-isolated-agent-runs`; not merged)
+**Last Updated:** 2026-10-15 (#478 Sentry import completion sealed on `fix/478-sentry-import-completion`; not merged)
 **Active local review:** `fix/system-state-currency-sprint2` — this cycle. Restores the Tier 1 freshness contract and adds `system-state-currency.test.cjs`, the first check that asserts it. Prior to this cycle no test anywhere read this file's content.
 **Prior local review:** `fix/qor169-sprint1-seal-unblock` — MERGED to `main` as `1e1215cc` (PR #448). qor-logic 0.163.1 → 0.169.0; `.qorlogic/config.json` created, which is what allows a seal to complete at all; five vacuously-passing governance controls identified; TTS timeout assertion made deterministic and falsifying. Seal Entry #602.
 **Open PRs:** #442 (Bicameral upstream row error state), #443 (plan-grep-lint regex recognition), #444 (#367 per-engine provenance), #445 (#242 Shadow Genome severity aria — supersedes #440, closed as duplicate), #446 + #447 (dependabot). #447's blocker — a wall-clock TTS assertion — was removed by Entry #602.
@@ -17,6 +18,9 @@
 ## 2026-10-15 — #475 isolated Continue / Aider runs (sealed on branch, not merged)
 
 Continue and Aider now run in a disposable git worktree (`src/integrations/agent-cli/isolated-run.ts`); their changes are a quarantined change set that reaches the workspace only through Apply in the same command (`agent-run-promotion.ts`). Direct writes to the repository or its git state during a run are detected (content-based snapshot) and never promoted; writes outside the repository are not detected. Removed settings: `failsafe.integrations.aider.allowDirty`, `failsafe.integrations.aider.autoCommit`; added `failsafe.integrations.agentCli.timeoutMs`. FX951/FX952 NEW, FX831/FX832 MODIFIED (766 / 716). Ledger #626-#631. No version change.
+## 2026-10-15 — #478 Sentry import completion (sealed on branch, not merged)
+
+The Sentry import now lists the organization issues endpoint (`sort=date` pinned), waits on Sentry's documented rate-limit headers with bounded retries, refuses requests outside the configured HTTPS base, and reports an exact outcome (created / updated / unchanged / failed per unique issue, skipped, duplicates). Each issue's first and last release come from the issue detail, capped per import with stop rules; a stored release is carried only in the exact detail shape. Records are merged and written in one synchronous call (`RiskRegisterManager.upsertRiskWith`), so operator triage survives. New settings `failsafe.integrations.sentry.query` and `.maxReleaseLookups`. FX953/FX954 NEW, FX829/FX915 MODIFIED (766 / 716). Ledger #632-#637. Found in review and filed separately: #517 (RiskManager rewrites risks.json from a stale in-memory copy). No version change.
 
 ## 2026-10-13 — v6.0.6 release candidate (not yet published)
 
