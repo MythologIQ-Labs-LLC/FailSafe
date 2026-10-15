@@ -35,6 +35,11 @@ export interface NonceValidationResult {
   record?: NonceRecord;
 }
 
+/** Rename errors worth retrying (antivirus or indexer briefly holding the file on Windows). */
+const TRANSIENT_RENAME_CODES = new Set(["EPERM", "EBUSY", "EACCES"]);
+const RENAME_ATTEMPTS = 3;
+const RENAME_RETRY_MS = 50;
+
 export class SecurityReplayGuard {
   private readonly nonceStorePath: string;
   private readonly logger: Logger;
@@ -42,10 +47,11 @@ export class SecurityReplayGuard {
   private readonly defaultTtlMs: number;
   private cleanupInterval?: NodeJS.Timeout;
   private storeHealthy = true;
+  private readonly renameFile: (from: string, to: string) => void;
 
   constructor(
     rootOrSecurityDir: string,
-    options: { ttlMs?: number; cleanupIntervalMs?: number } = {},
+    options: { ttlMs?: number; cleanupIntervalMs?: number; renameSync?: (from: string, to: string) => void } = {},
   ) {
     const normalizedInput = path.resolve(rootOrSecurityDir);
     const looksLikeSecurityDir =
@@ -57,6 +63,7 @@ export class SecurityReplayGuard {
     this.nonceStorePath = path.join(storeDir, "nonces.json");
     this.defaultTtlMs = options.ttlMs || 5 * 60 * 1000; // 5 minutes default
     this.logger = new Logger("SecurityReplayGuard");
+    this.renameFile = options.renameSync ?? fs.renameSync;
 
     // Ensure directory exists
     if (!fs.existsSync(storeDir)) {
@@ -68,7 +75,7 @@ export class SecurityReplayGuard {
 
     // Start cleanup interval
     const cleanupMs = options.cleanupIntervalMs || 60 * 1000; // 1 minute
-    this.cleanupInterval = setInterval(() => this.cleanup(), cleanupMs);
+    this.cleanupInterval = setInterval(() => this.runScheduledCleanup(), cleanupMs);
   }
 
   /**
@@ -228,6 +235,19 @@ export class SecurityReplayGuard {
   }
 
   /**
+   * Interval entry point: a persistence failure here must not escape the timer
+   * (it would be an uncaught exception in the extension host). cleanup() has
+   * already marked the store unhealthy, so authorization stays fail-closed.
+   */
+  private runScheduledCleanup(): void {
+    try {
+      this.cleanup();
+    } catch (error) {
+      this.logger.error("Nonce cleanup could not persist; replay authorization stays fail-closed", error);
+    }
+  }
+
+  /**
    * Load nonces from persistent storage
    */
   private loadNonces(): void {
@@ -253,7 +273,12 @@ export class SecurityReplayGuard {
    * Save nonces to persistent storage
    */
   private requireHealthyStore(): void {
-    if (!this.storeHealthy) throw new Error("Nonce store unavailable: fail-closed persistence state");
+    if (!this.storeHealthy) {
+      throw new Error(
+        `Nonce store unavailable: fail-closed persistence state (${this.nonceStorePath}). ` +
+        "To recover, move that file aside and reload the window; nonces expire after their TTL, so no replay window opens.",
+      );
+    }
   }
 
   private saveNonces(): void {
@@ -262,11 +287,24 @@ export class SecurityReplayGuard {
     const tempPath = this.nonceStorePath + "." + crypto.randomBytes(8).toString("hex") + ".tmp";
     try {
       fs.writeFileSync(tempPath, JSON.stringify(records, null, 2), { encoding: "utf8", flag: "wx", mode: 0o600 });
-      fs.renameSync(tempPath, this.nonceStorePath);
+      this.renameWithRetry(tempPath, this.nonceStorePath);
     } catch (error) {
       try { fs.unlinkSync(tempPath); } catch { /* May not have created the temp file. */ }
       this.logger.error("Failed to save nonce store", error);
       throw error;
+    }
+  }
+
+  private renameWithRetry(from: string, to: string): void {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        this.renameFile(from, to);
+        return;
+      } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code ?? "";
+        if (attempt >= RENAME_ATTEMPTS || !TRANSIENT_RENAME_CODES.has(code)) throw error;
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, RENAME_RETRY_MS);
+      }
     }
   }
 
