@@ -132,6 +132,26 @@ export function baseScenario(): Scenario {
   return s;
 }
 
+/**
+ * The commit and all its ancestors (LD12: the fake's ancestor-contains model).
+ * It matches real git's ancestor-diff model under --root, --diff-merges=separate
+ * and --full-history: when some commit in the history holds v, take a commit
+ * holding v none of whose parents hold v (a root, an ordinary commit or a
+ * merge). Its diff against each parent, or against the empty tree for a root,
+ * raises the occurrence count of v from 0, so git's -S lists it.
+ */
+export function ancestry(s: Scenario, start: string): string[] {
+  const seen = new Set<string>();
+  const stack = [start];
+  while (stack.length) {
+    const c = stack.pop()!;
+    if (seen.has(c) || !s.commits.has(c)) continue;
+    seen.add(c);
+    stack.push(...s.commits.get(c)!.parents);
+  }
+  return [...seen];
+}
+
 export function sourceOf(s: Scenario): ShieldEvidenceSource {
   const read = <T>(name: string, v: T): T => {
     s.reads += 1;
@@ -147,6 +167,8 @@ export function sourceOf(s: Scenario): ShieldEvidenceSource {
     readGateFile: async (_sid, name) => read('readGateFile', s.gates.get(name)),
     readQorSessionKey: async () => read('readQorSessionKey', s.qorKey),
     readReceipt: async (c) => read('readReceipt', s.receipts.get(c)),
+    ledgerHistoryContains: async (c, v) =>
+      read('ledgerHistoryContains', ancestry(s, c).some((a) => (s.commits.get(a)?.ledger ?? '').includes(v))),
     writeReceipt: async (c, text) => { read('writeReceipt', undefined); s.writes.push([c, text]); s.receipts.set(c, text); },
   };
 }

@@ -10,7 +10,7 @@ import type { ChainState } from '../../../integrations/shield-receipts/shield-ev
 import { DEFAULT_SHIELD_POLICY } from '../../../integrations/shield-receipts/shield-policy';
 import { signShieldReceipt } from '../../../integrations/shield-receipts/shield-receipt';
 import {
-  BASE_LEDGER, CODE, FIXTURE_ROOT, NOW, OTHER, PARENT, QOR_KEY, RECEIPT_KEY, SEAL, SEAL_HASH, SESSION,
+  BASE_LEDGER, CODE, FIXTURE_ROOT, NOW, OTHER, PARENT, QOR_KEY, RECEIPT_KEY, SEAL, SEAL_HASH, SESSION, sha,
   auditArtifact, baseScenario, chainOf, keysOf, putReceipt, receiptBody, sealBlock, setArtifacts,
   sidecarFor, sourceOf, substantiateArtifact, type Scenario,
 } from './fixtures';
@@ -316,6 +316,52 @@ suite('shield-receipt-verifier: seal commit rule (#476)', () => {
   test('an evidence-source method that throws -> Neutral evidence-source-error', async () => {
     const s = baseScenario(); s.throwOn = 'parents';
     await expectResult(s, 'neutral', 'evidence-source-error');
+  });
+});
+
+suite('shield-receipt-verifier: first introduction (#476 N1)', () => {
+  const Y1 = sha('5');
+  const Y2 = sha('6');
+  /** A = SEAL adds #644; Y1 drops it (or deletes the ledger); Y2 restores it with code. */
+  function reintroduced(y1Ledger: string | undefined): Scenario {
+    const s = baseScenario();
+    s.commits.set(Y1, { parents: [SEAL], ledger: y1Ledger });
+    s.commits.set(Y2, { parents: [Y1], ledger: SEAL_LEDGER });
+    s.head = Y2;
+    putReceipt(s, receiptBody(s));
+    return s;
+  }
+
+  test('Y2 restores a seal its history already held -> Rejected seal-reintroduced', async () => {
+    await expectResult(reintroduced(BASE_LEDGER), 'rejected', 'seal-reintroduced');
+  });
+
+  test('Y1 deleting the ledger file entirely does not help -> Rejected seal-reintroduced', async () => {
+    await expectResult(reintroduced(undefined), 'rejected', 'seal-reintroduced');
+  });
+
+  test('issuance at Y2 writes nothing', async () => {
+    const s = reintroduced(BASE_LEDGER); s.receipts.clear();
+    const r = await issueShieldReceipt(sourceOf(s), keysOf(RECEIPT_KEY), chainOf('OK'), DEFAULT_SHIELD_POLICY, 'api.github.com', NOW);
+    assert.equal(r.kind === 'issued' ? 'issued' : `${r.kind}:${r.reason}`, 'rejected:seal-reintroduced');
+    assert.equal(s.writes.length, 0);
+  });
+
+  test('the seal commit itself (first introduction) still verifies', async () => {
+    assert.equal((await run(baseScenario())).kind, 'verified');
+  });
+
+  test('a genuine re-seal of the same entry number with a new chain hash verifies', async () => {
+    const X = 'e'.repeat(64);
+    const R1 = sha('7');
+    const R2 = sha('8');
+    const s = baseScenario();
+    s.commits.set(SEAL, { parents: [PARENT], ledger: BASE_LEDGER + sealBlock(644, SESSION, X) });
+    s.commits.set(R1, { parents: [SEAL], ledger: BASE_LEDGER });
+    s.commits.set(R2, { parents: [R1], ledger: SEAL_LEDGER });
+    s.head = R2;
+    putReceipt(s, receiptBody(s));
+    assert.equal((await run(s)).kind, 'verified');
   });
 });
 

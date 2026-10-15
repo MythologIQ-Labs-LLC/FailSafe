@@ -27,6 +27,10 @@ export interface ShieldEvidenceSource {
   readGateFile(sessionId: string, name: string): Promise<Buffer | undefined>;
   readQorSessionKey(sessionId: string): Promise<Buffer | undefined>;
   readReceipt(sha: string): Promise<string | undefined>;
+  /** True when any commit reachable from sha (inclusive) changed the number of
+   *  occurrences of hex64 in docs/META_LEDGER.md, i.e. some commit in that
+   *  history held the value (#476 N1). Throws when the history cannot be read. */
+  ledgerHistoryContains(sha: string, hex64: string): Promise<boolean>;
   writeReceipt(sha: string, text: string): Promise<void>;
 }
 
@@ -45,7 +49,7 @@ export type ShieldRejectReason =
   | 'stale' | 'malformed-time' | 'qor-sidecar-invalid' | 'qor-payload' | 'qor-hmac' | 'artifact-invalid'
   | 'session-mismatch' | 'audit-verdict' | 'risk-grade' | 'substantiate-verdict' | 'target-mismatch'
   | 'issued-before-substantiate' | 'receipt-artifact-mismatch' | 'merge-commit' | 'seal-not-found'
-  | 'seal-unparseable' | 'seal-mismatch' | 'not-seal-commit';
+  | 'seal-unparseable' | 'seal-mismatch' | 'not-seal-commit' | 'seal-reintroduced';
 
 export type ShieldFailure =
   | { kind: 'neutral'; reason: ShieldNeutralReason; detail: string }
@@ -209,6 +213,14 @@ async function checkSealCommit(i: EvidenceInput): Promise<{ ledger: string } | S
     return rejected('seal-mismatch', `step 17: last seal #${seal.entry} (${short(seal.chainHash)}) differs from the receipt`);
   }
   if (hasEntryHeader(parentLedger, seal.entry)) return rejected('not-seal-commit', `step 17: entry #${seal.entry} already exists at the parent; HEAD is not the Seal commit`);
+  // First introduction (#476 N1): no commit in the parent's history may already
+  // have held this seal's chain hash; a seal removed and re-added is not new.
+  // Usability limit: a seal that is reverted and then re-applied (a cherry-pick,
+  // or a revert of the revert) is therefore Rejected seal-reintroduced and needs
+  // a fresh seal; a genuine re-seal has a new chain hash and is unaffected.
+  if (parents.length && (await i.src.ledgerHistoryContains(parents[0], r.substantiate.merkleSeal))) {
+    return rejected('seal-reintroduced', `step 17: an ancestor already held seal ${short(r.substantiate.merkleSeal)}; HEAD is not its first introduction`);
+  }
   return { ledger };
 }
 

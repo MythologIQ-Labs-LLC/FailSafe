@@ -2,10 +2,11 @@
 
 import { strict as assert } from 'assert';
 import * as cp from 'child_process';
+import cpModule = require('child_process');
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { createWorkspaceEvidenceSource, gitSupportsNoLazyFetch } from '../../../integrations/shield-receipts/workspace-evidence-source';
+import { createWorkspaceEvidenceSource, gitSupportsNoLazyFetch, parseHistoryOutput } from '../../../integrations/shield-receipts/workspace-evidence-source';
 import { verifyShieldReceipt } from '../../../integrations/shield-receipts/shield-receipt-verifier';
 import { DEFAULT_SHIELD_POLICY } from '../../../integrations/shield-receipts/shield-policy';
 import {
@@ -334,5 +335,195 @@ suite('workspace-evidence-source (#476)', function () {
     assert.equal(madeShield.length, 1);
     dispose();
     for (const n of [...madeGit, ...madeShield]) assert.equal(fs.existsSync(path.join(os.tmpdir(), n)), false, n);
+  });
+});
+
+suite('workspace-evidence-source: ledger history search (#476 N1)', function () {
+  // Real git spawns (slow on Windows); same budget as the vscode-test runner.
+  this.timeout(15000);
+  const V = 'ab'.repeat(32);
+  const repos: string[] = [];
+  const mk = (prefix: string): string => { const r = newRepo(prefix); repos.push(r); return r; };
+  suiteTeardown(() => { for (const r of repos) fs.rmSync(r, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 }); });
+
+  async function contains(repo: string, sha: string, v = V): Promise<boolean> {
+    const { source, dispose } = createWorkspaceEvidenceSource(repo);
+    try { return await source.ledgerHistoryContains(sha, v); } finally { dispose(); }
+  }
+
+  /** base -> A (adds V) -> Y1 (removes V); returns Y1. */
+  function addThenRemove(r: string): string {
+    commitLedger(r, 'base\n', 'base');
+    commitLedger(r, `base\n${V}\n`, 'A');
+    return commitLedger(r, 'base\n', 'Y1');
+  }
+
+  /** base; side commit; main commit; merge E whose own tree adds V. Returns E. */
+  function evilMerge(r: string): string {
+    commitLedger(r, 'base\n', 'base');
+    git(r, 'branch', 'side');
+    git(r, 'checkout', '-q', 'side');
+    fs.writeFileSync(path.join(r, 's.txt'), 's\n'); git(r, 'add', 's.txt'); git(r, 'commit', '-q', '-m', 'side');
+    git(r, 'checkout', '-q', '-');
+    fs.writeFileSync(path.join(r, 'm.txt'), 'm\n'); git(r, 'add', 'm.txt'); git(r, 'commit', '-q', '-m', 'main2');
+    git(r, 'merge', '-q', '--no-ff', '--no-commit', 'side');
+    fs.writeFileSync(path.join(r, 'docs', 'META_LEDGER.md'), `base\n${V}\n`);
+    git(r, 'add', 'docs'); git(r, 'commit', '-q', '-m', 'evil');
+    return git(r, 'rev-parse', 'HEAD');
+  }
+
+  test('textconv row: a local diff.<driver>.textconv cannot hide the ledger', async () => {
+    const r = mk('fs-n1-textconv-');
+    const y1 = addThenRemove(r);
+    git(r, 'config', 'diff.hide.textconv', 'true');
+    fs.mkdirSync(path.join(r, '.git', 'info'), { recursive: true });
+    fs.writeFileSync(path.join(r, '.git', 'info', 'attributes'), 'docs/META_LEDGER.md diff=hide\n');
+    assert.equal(await contains(r, y1), true);
+  });
+
+  test('evil-merge row: a merge whose own tree adds the value is seen', async () => {
+    const r = mk('fs-n1-evil-');
+    assert.equal(await contains(r, evilMerge(r)), true);
+  });
+
+  test('log.diffMerges row: log.diffMerges=off in local config cannot hide a merge diff', async () => {
+    const r = mk('fs-n1-diffmerges-');
+    const e = evilMerge(r);
+    git(r, 'config', 'log.diffMerges', 'off');
+    assert.equal(await contains(r, e), true);
+  });
+
+  test('root row: a root commit adding the value is seen even with log.showRoot=false', async () => {
+    const r = mk('fs-n1-root-');
+    git(r, 'config', 'log.showRoot', 'false');
+    assert.equal(await contains(r, commitLedger(r, `${V}\n`, 'root')), true);
+  });
+
+  test('TREESAME-merge row: a side branch behind a merge matching both parents is walked', async () => {
+    const r = mk('fs-n1-treesame-');
+    commitLedger(r, 'base\n', 'base');
+    git(r, 'branch', 'side');
+    git(r, 'checkout', '-q', 'side');
+    commitLedger(r, `base\n${V}\n`, 'A');
+    commitLedger(r, 'base\n', 'Y1p');
+    git(r, 'checkout', '-q', '-');
+    fs.writeFileSync(path.join(r, 'other.txt'), 'x\n'); git(r, 'add', 'other.txt'); git(r, 'commit', '-q', '-m', 'main2');
+    git(r, 'merge', '-q', '--no-ff', '-m', 'M', 'side');
+    assert.equal(await contains(r, git(r, 'rev-parse', 'HEAD')), true);
+  });
+
+  test('attributes regression row: a worktree .gitattributes -diff cannot hide the ledger', async () => {
+    const r = mk('fs-n1-attrs-');
+    const y1 = addThenRemove(r);
+    fs.writeFileSync(path.join(r, '.gitattributes'), 'docs/META_LEDGER.md -diff\n');
+    assert.equal(await contains(r, y1), true);
+  });
+
+  test('no-match row: the parent of the first introduction has no such value', async () => {
+    const r = mk('fs-n1-nomatch-');
+    const base = commitLedger(r, 'base\n', 'base');
+    commitLedger(r, `base\n${V}\n`, 'A');
+    assert.equal(await contains(r, base), false);
+  });
+
+  test('output parsing: duplicates and trailing newline, empty, non-hex, non-zero exit', () => {
+    const h = 'f'.repeat(40);
+    assert.equal(parseHistoryOutput(0, `${h}\n${h}\n`), true);
+    assert.equal(parseHistoryOutput(0, `\n${h}\n\n`), true);
+    assert.equal(parseHistoryOutput(0, ''), false);
+    assert.equal(parseHistoryOutput(0, '\n'), false);
+    assert.throws(() => parseHistoryOutput(0, `${h}\ndiff --git a/x b/x\n`));
+    assert.throws(() => parseHistoryOutput(0, 'F'.repeat(40)));
+    assert.throws(() => parseHistoryOutput(128, ''));
+    assert.throws(() => parseHistoryOutput(null, ''));
+  });
+
+  test('a malformed value or sha is refused before any git spawn', async () => {
+    const r = mk('fs-n1-refuse-');
+    const head = commitLedger(r, 'base\n', 'base');
+    const { source, dispose } = createWorkspaceEvidenceSource(r);
+    const realSpawn = cpModule.spawn;
+    let spawns = 0;
+    (cpModule as { spawn: unknown }).spawn = ((...a: unknown[]) => { spawns += 1; return (realSpawn as (...x: unknown[]) => unknown)(...a); }) as unknown;
+    try {
+      await assert.rejects(source.ledgerHistoryContains(head, 'a'.repeat(63)));
+      await assert.rejects(source.ledgerHistoryContains(head, 'A'.repeat(64)));
+      await assert.rejects(source.ledgerHistoryContains('a'.repeat(39), V));
+      await assert.rejects(source.ledgerHistoryContains(head, `${V} --all`));
+      assert.equal(spawns, 0);
+    } finally {
+      (cpModule as { spawn: unknown }).spawn = realSpawn;
+      dispose();
+    }
+  });
+
+  test('gitTimeoutMs: 1 ms makes every git read throw; invalid values throw at creation', async () => {
+    const r = mk('fs-n1-timeout-');
+    commitLedger(r, 'base\n', 'base');
+    for (const bad of [0, 30001, 1.5, -1, Number.NaN]) {
+      assert.throws(() => createWorkspaceEvidenceSource(r, { gitTimeoutMs: bad }), String(bad));
+    }
+    const { source, dispose } = createWorkspaceEvidenceSource(r, { gitTimeoutMs: 1 });
+    try {
+      await assert.rejects(source.headSha());
+      const v = await verifyShieldReceipt(source, keysOf(RECEIPT_KEY), chainOf('OK'), DEFAULT_SHIELD_POLICY, 'api.github.com', NOW);
+      assert.equal(v.kind === 'verified' ? 'verified' : `${v.kind}:${v.reason}`, 'neutral:evidence-source-error');
+    } finally { dispose(); }
+  });
+
+  test('end to end: A verifies; Y2 restoring the seal is Rejected, also behind a committed .gitattributes -diff', async () => {
+    const r = mk('fs-n1-e2e-');
+    commitLedger(r, BASE_LEDGER, 'base');
+    const a = commitLedger(r, BASE_LEDGER + sealBlock(644), 'A seal');
+    const y1 = commitLedger(r, BASE_LEDGER, 'Y1 drops the seal');
+    const y2 = commitLedger(r, BASE_LEDGER + sealBlock(644), 'Y2 restores it', ['src.txt', 'code\n']);
+    git(r, 'checkout', '-q', y1);
+    fs.writeFileSync(path.join(r, '.gitattributes'), 'docs/META_LEDGER.md -diff\n');
+    git(r, 'add', '.gitattributes');
+    const y2b = commitLedger(r, BASE_LEDGER + sealBlock(644), 'Y2b restores it behind -diff', ['src.txt', 'code\n']);
+    git(r, 'remote', 'add', 'origin', 'https://github.com/acme/failsafe.git');
+    const s = baseScenario();
+    const gates = path.join(r, '.qor', 'gates', SESSION);
+    fs.mkdirSync(gates, { recursive: true });
+    for (const [name, bytes] of s.gates) fs.writeFileSync(path.join(gates, name), bytes);
+    fs.mkdirSync(path.join(r, '.qor', 'session', 'keys'), { recursive: true });
+    fs.writeFileSync(path.join(r, '.qor', 'session', 'keys', `${SESSION}.key`), QOR_KEY);
+    fs.mkdirSync(path.join(r, '.failsafe', 'shield-receipts'), { recursive: true });
+    for (const c of [a, y2, y2b]) {
+      s.head = c;
+      putReceipt(s, receiptBody(s));
+      fs.writeFileSync(path.join(r, '.failsafe', 'shield-receipts', `${c}.json`), s.receipts.get(c)!);
+    }
+    const verifyAt = async (c: string): Promise<string> => {
+      git(r, 'checkout', '-q', c);
+      const { source, dispose } = createWorkspaceEvidenceSource(r);
+      try {
+        const v = await verifyShieldReceipt(source, keysOf(RECEIPT_KEY), chainOf('OK'), DEFAULT_SHIELD_POLICY, 'api.github.com', NOW);
+        return v.kind === 'verified' ? 'verified' : `${v.kind}:${v.reason}`;
+      } finally { dispose(); }
+    };
+    assert.equal(await verifyAt(a), 'verified');
+    assert.equal(await verifyAt(y2), 'rejected:seal-reintroduced');
+    assert.equal(await verifyAt(y2b), 'rejected:seal-reintroduced');
+  });
+
+  test('real-ledger timing row: a no-match walk over the enclosing repository ledger takes under 10 s', async function () {
+    this.timeout(30000);
+    const repoRoot = path.resolve(__dirname, '..', '..', '..', '..', '..', '..');
+    if (!fs.existsSync(path.join(repoRoot, 'docs', 'META_LEDGER.md'))) { this.skip(); return; }
+    let shallow = 'unknown';
+    try { shallow = git(repoRoot, 'rev-parse', '--is-shallow-repository'); } catch { this.skip(); return; }
+    if (shallow !== 'false') { this.skip(); return; }
+    const { source, dispose } = createWorkspaceEvidenceSource(repoRoot);
+    try {
+      const head = await source.headSha();
+      assert.ok(head);
+      const started = Date.now();
+      const found = await source.ledgerHistoryContains(head!, '0123456789abcdef'.repeat(4));
+      const ms = Date.now() - started;
+      console.log(`      [timing] no-match ledger history walk: ${ms} ms`);
+      assert.equal(found, false);
+      assert.ok(ms < 10000, `took ${ms} ms`);
+    } finally { dispose(); }
   });
 });

@@ -74,6 +74,22 @@ suite('shield-check-publish (#476)', () => {
     assert.match((posts[0].body.output as { summary: string }).summary, /not-seal-commit/);
   });
 
+  test('Rejected (seal-reintroduced) -> one SHIELD failure naming the reason', async () => {
+    const s = baseScenario();
+    const y1 = 'b'.repeat(40);
+    const y2 = 'c'.repeat(40);
+    s.commits.set(y1, { parents: [SEAL], ledger: BASE_LEDGER });
+    s.commits.set(y2, { parents: [y1], ledger: BASE_LEDGER + sealBlock(644) });
+    s.head = y2;
+    putReceipt(s, receiptBody(s));
+    const posts: Posted[] = [];
+    const r = await publishVerifiedShieldCheck(args(s, posts));
+    assert.equal(r.published, true);
+    assert.equal(posts.length, 1);
+    assert.equal(posts[0].body.conclusion, 'failure');
+    assert.match((posts[0].body.output as { summary: string }).summary, /seal-reintroduced/);
+  });
+
   test('Neutral (no receipt) -> nothing posted', async () => {
     const s = baseScenario(); s.receipts.clear();
     const posts: Posted[] = [];

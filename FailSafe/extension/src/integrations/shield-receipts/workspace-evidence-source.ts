@@ -21,6 +21,18 @@
  * (extensions.partialClone or a promisor remote); otherwise it throws, which
  * the verifier reports as Neutral evidence-source-error.
  *
+ * ledgerHistoryContains (#476 N1) runs one git log -S over docs/META_LEDGER.md
+ * history. The repository's own .git/config, .gitattributes and
+ * .git/info/attributes are still read (only global and system config are
+ * neutralized), so every option they could change is pinned: --no-textconv,
+ * --diff-merges=separate, --root, --full-history, -c log.follow=false,
+ * --no-renames, --no-ext-diff, --text, --no-color, --no-patch.
+ *
+ * Every git read has a timeout (gitTimeoutMs, default 30 s); a timed-out read
+ * throws, but the git child is not killed (createSafeGit exposes no handle).
+ * The preflight result is cached per source, including a rejection, so a failed
+ * or timed-out preflight leaves that source Neutral; a new source retries.
+ *
  * Known limits: a path component is checked with lstat and then opened, so a
  * swap in between is not detected, and the workspace root itself is not
  * checked; a FIFO at a gate path on POSIX blocks the read; the environment
@@ -49,6 +61,15 @@ const SESSION = /^[A-Za-z0-9_-]+$/;
 const DEVICE = /^(con|prn|aux|nul|com[0-9]|lpt[0-9]|conin\$|conout\$)$/i;
 const GATE_NAME = /^(audit|substantiate)\.(json|provenance)$/;
 const REPO_PATH = /^[A-Za-z0-9_.\-/]+$/;
+const HEX64 = /^[0-9a-f]{64}$/;
+const DEFAULT_GIT_TIMEOUT_MS = 30000;
+const LEDGER = 'docs/META_LEDGER.md';
+/** git log flags for ledgerHistoryContains; not configurable (#476 N1 LD10). */
+const HISTORY_FLAGS = [
+  '-c', 'log.follow=false', 'log', '--text', '--no-textconv', '--no-ext-diff', '--no-renames',
+  '--diff-merges=separate', '--full-history', '--root', '--no-show-signature', '--no-color',
+  '--max-count=1', '--no-patch', '--format=%H',
+];
 const REDIRECTING_ENV = new Set([
   'GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_OBJECT_DIRECTORY', 'GIT_ALTERNATE_OBJECT_DIRECTORIES',
   'GIT_COMMON_DIR', 'GIT_NAMESPACE', 'GIT_REPLACE_REF_BASE', 'GIT_SHALLOW_FILE', 'GIT_CONFIG_PARAMETERS', 'GIT_CONFIG_COUNT',
@@ -97,6 +118,16 @@ async function readInside(root: string, p: string): Promise<Buffer | undefined> 
   }
 }
 
+/** Parse ledgerHistoryContains output: true for one or more 40-hex lines
+ *  (duplicates, blank lines and a trailing newline allowed), false for empty
+ *  output with exit 0; anything else throws. */
+export function parseHistoryOutput(code: number | null, out: string): boolean {
+  if (code !== 0) throw new Error('the ledger history could not be read');
+  const lines = out.split('\n').map((l) => l.trim()).filter(Boolean);
+  if (!lines.every((l) => SHA.test(l))) throw new Error('unexpected ledger history output');
+  return lines.length > 0;
+}
+
 /** True for `git version X.Y...` output with X.Y >= 2.44 (GIT_NO_LAZY_FETCH honoured). */
 export function gitSupportsNoLazyFetch(versionOutput: string): boolean {
   const m = /^git version (\d+)\.(\d+)/.exec((versionOutput || '').trim());
@@ -138,13 +169,32 @@ function scrubbedEnv(ownDir: string): Record<string, string> {
   return env as Record<string, string>;
 }
 
-export function createWorkspaceEvidenceSource(root: string): { source: ShieldEvidenceSource; dispose(): void } {
+export interface WorkspaceEvidenceOptions {
+  /** Per-call git timeout, an integer from 1 to 30000 ms (default 30000). */
+  gitTimeoutMs?: number;
+}
+
+export function createWorkspaceEvidenceSource(
+  root: string, opts: WorkspaceEvidenceOptions = {},
+): { source: ShieldEvidenceSource; dispose(): void } {
+  const timeoutMs = opts.gitTimeoutMs ?? DEFAULT_GIT_TIMEOUT_MS;
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > DEFAULT_GIT_TIMEOUT_MS) {
+    throw new Error('gitTimeoutMs must be an integer from 1 to 30000');
+  }
   const git = createSafeGit(root);
   const ownDir = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-shield-src-'));
   const env = scrubbedEnv(ownDir);
   const rawRun = async (args: string[]): Promise<{ code: number | null; out: Buffer }> => {
-    const r = await git.tryRun(root, ['-c', 'core.commitGraph=false', ...args], { env });
-    return { code: r.code, out: r.stdout };
+    let timer: NodeJS.Timeout | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error('git read timed out')), timeoutMs);
+    });
+    try {
+      const r = await Promise.race([git.tryRun(root, ['-c', 'core.commitGraph=false', ...args], { env }), timeout]);
+      return { code: r.code, out: r.stdout };
+    } finally {
+      clearTimeout(timer);
+    }
   };
   let ready: Promise<void> | undefined;
   const preflight = (): Promise<void> => (ready ??= (async () => {
@@ -201,6 +251,12 @@ export function createWorkspaceEvidenceSource(root: string): { source: ShieldEvi
       const blob = await run(['cat-file', 'blob', m[2]]);
       if (blob.code !== 0) throw new Error('the blob could not be read');
       return blob.out.toString('utf8');
+    },
+    async ledgerHistoryContains(sha, hex64) {
+      requireSha(sha);
+      if (typeof hex64 !== 'string' || !HEX64.test(hex64)) throw new Error('invalid history search value');
+      const r = await run([...HISTORY_FLAGS, '-S', hex64, sha, '--', LEDGER]);
+      return parseHistoryOutput(r.code, r.out.toString('utf8'));
     },
     async readGateFile(sessionId, name) {
       requireSession(sessionId);
