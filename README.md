@@ -58,9 +58,22 @@ Under the hood, a **Tier 1 supply-chain CI baseline** (least-privilege workflow 
 
 <div align="center">
 
-**Current Release**: v6.0.6 (2026-10-13)
+**Current Release**: v6.0.7 (2026-10-15)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
+
+## What's New in v6.0.7
+
+- **The ledger and Shadow Genome now actually store data on Windows and macOS.** v6.0.6 shipped one package with a Linux-only SQLite binary, so both ran in stub mode everywhere else. FailSafe now ships a separate package for each platform (Windows, Linux, Alpine and macOS, each on x64 and arm64), each carrying only its own binary. VS Code 1.101 or later is required.
+- **Decisions you make from the Console are confirmed in VS Code.** Approving or rejecting an L3 item, ratifying a Bicameral decision, rolling back to a checkpoint, panic stop and turning off the agent hooks now ask you to approve a VS Code dialog that shows what will be recorded. Before, any program on your machine could make those calls.
+- **Continue and Aider run in a throwaway copy of your repository.** Their changes wait for your review and reach your workspace only when you choose Apply. Child processes the agent leaves behind are found and stopped before the result is checked.
+- **Deleting or editing a risk no longer wipes out imported risks.** The risk register used to rewrite the file from a copy taken when VS Code started.
+- **Editor-save denials say what they are.** VS Code cannot cancel a save, so FailSafe now reports a denied save as observed, not prevented, instead of claiming it was blocked.
+- **The SHIELD phase reads correctly on Windows checkouts,** where Git stores the ledger with CRLF line endings.
+- **Sentry imports report exactly what happened** and respect Sentry's rate limits; imported risks show the issue's first and last release.
+- Open Design 0.24.1 works again, and the Open Design client can no longer approve its own artifact writes.
+
+Not verified against live services in this release: Sentry, Jira, Linear, OpenHands, Aider and Continue were tested with recorded responses only. See the [6.0.7] changelog for the full list of known limitations.
 
 ## What's New in v6.0.6
 

@@ -7,22 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.7] - 2026-10-15
+
 ### Fixed
+- Native SQLite storage (ledger, Shadow Genome, trust, Sentinel RAG) ran in stub mode on Windows and macOS because the universal VSIX carried a Linux-only `better-sqlite3` binary, and the 12.x binary was tied to one VS Code/Electron version. FailSafe now uses `better-sqlite3` 13 (N-API) and ships one platform-targeted package per OS and architecture, each carrying only its own verified binary (#502).
+- On Windows checkouts, where Git stores `docs/META_LEDGER.md` with CRLF line endings, the SHIELD phase read IDLE and no verdicts appeared. The ledger parser now reads LF, CRLF and CR identically without changing the file (#508).
+- Deleting a risk, updating one, or an auto-derived risk no longer rewrites `risks.json` from a stale in-memory copy, which erased imported Sentry/SARIF risks and Console edits made since activation. An unreadable `risks.json` is never overwritten; the risk view reports the refusal (#517).
+- A persistence failure in the replay-nonce cleanup timer no longer escapes as an uncaught exception in the extension host; the guard stays fail-closed, names its store file and the recovery step, and retries a rename that Windows antivirus briefly blocks (#472).
+- `/api/v1/trust` reports `unverified` instead of a 100% score when checkpoints carry no verified PASS evidence (#470).
 - Open Design 0.24.1: the daemon probe reported a healthy daemon as unreachable (`parse_error`) because 0.24.1 nests its version. FailSafe now reads both shapes (#481).
-- Open Design MCP no longer launches a bare `od mcp`, which fails on Windows desktop installs (and hits coreutils' octal-dump under Git Bash). The register command fetches the daemon's own launch command, shows it with its environment for your approval, and only then starts the server (#481).
-- Native SQLite storage (ledger, Shadow Genome, trust, Sentinel RAG) ran in stub mode on Windows and macOS because the universal VSIX carried a Linux-only `better-sqlite3` binary, and the 12.x binary was tied to one VS Code/Electron version. FailSafe now uses `better-sqlite3` 13 (N-API) and ships one platform-targeted package per OS and architecture, each with its own verified binary (#502).
-- Opening a folder no longer runs `git init` on its own. FailSafe asks first, and `failsafe.bootstrap.autoInstallGit` now defaults to off, so Git is never installed system-wide without opting in (#503).
-- Saving your user settings or a file outside the workspace no longer raises a governance blockade; editor-save governance covers workspace files only (#504).
-- The Sentry import now uses Sentry's organization issues endpoint (the project endpoint is deprecated) and reports exactly what it did: created, updated, unchanged, failed, skipped and duplicate counts, at a warning level when anything failed and an error when every write failed. It waits on Sentry's rate-limit headers, retries transient failures at most three times, and imports nothing when the list fails or you cancel. A risk you closed or edited keeps your status and fields, even when you change it while the import runs (#478).
-- Imported Sentry risks now carry each issue's first and last release, read from the issue detail. At most `failsafe.integrations.sentry.maxReleaseLookups` issues per import (default 50) are looked up, most recently seen first. The `failsafe.integrations.sentry.query` setting the documentation described now exists and works. FailSafe makes no commit correlation (#478).
+- Open Design MCP no longer launches a bare `od mcp`, which fails on Windows desktop installs. The register command fetches the daemon's own launch command, shows it with its environment for your approval, and only then starts the server (#481).
+- Opening a folder no longer runs `git init` on its own. FailSafe asks first, and `failsafe.bootstrap.autoInstallGit` now defaults to off (#503).
+- Saving your user settings or a file outside the workspace no longer raises a governance denial; editor-save governance covers workspace files only (#504).
+- The Sentry import uses Sentry's organization issues endpoint and reports exactly what it did: created, updated, unchanged, failed, skipped and duplicate counts, at a warning level when anything failed and an error when every write failed. It waits on Sentry's rate-limit headers, retries transient failures at most three times, and imports nothing when the list fails or you cancel. A risk you closed keeps your status, and fields Sentry does not own keep your edits; the title and severity follow Sentry on each re-import (#478).
+- Imported Sentry risks carry each issue's first and last release, read from the issue detail. At most `failsafe.integrations.sentry.maxReleaseLookups` issues per import (default 50) are looked up, most recently seen first. The `failsafe.integrations.sentry.query` setting now exists and works. FailSafe makes no commit correlation (#478).
+- The Operations panel's Approve All button never worked (it called an undefined client). It now posts the batch decision like the Governance view.
 
 ### Changed
 - Minimum VS Code is now 1.101.0. The native SQLite module needs the Node 22 runtime VS Code ships from 1.101; on older versions it would crash the extension host (#502).
+- FailSafe is published as eight platform-specific packages: Windows x64 and arm64, Linux x64 and arm64, Alpine Linux x64 and arm64, and macOS x64 and arm64. The marketplaces install the one for your machine. There is no package for 32-bit ARM Linux or for VS Code for the Web (#502).
+- Editor-save governance reports a denial as observed, not prevented. VS Code does not let an extension cancel a save, so a denied save may still be written; messages, logs and the enforce-mode description no longer say the save was blocked (#505).
 
 ### Security
-- The Agent Marketplace re-scan route is now disabled along with install and update. Scanners ran with the untrusted install as their working directory (#468).
-- Continue and Aider now run in a disposable git worktree. Their changes are held for review and reach your workspace only when you choose Apply; Escape or closing the dialog discards them. Before writing, FailSafe re-checks HEAD, the tree and the exact reviewed bytes, then confirms the result. Direct writes to the repository during a run are detected and never applied, but a worktree is not a process sandbox: writes outside the repository are not detected (#475).
-- Removed `failsafe.integrations.aider.allowDirty` and `failsafe.integrations.aider.autoCommit`: the tree must be clean and Aider always runs with `--no-auto-commits`. Added `failsafe.integrations.agentCli.timeoutMs` (default 15 minutes). A Continue allowlist with shell or exec tools is refused instead of being queued for L3 approval (#475).
+- Recording an L3 decision, ratifying a Bicameral decision, rolling back to a checkpoint, stopping the Sentinel (panic stop) or turning off the agent hooks from the Console now requires you to approve a VS Code dialog. Before, any local process could make these calls over the loopback Console API. The dialog shows the queued item's details and every value that will be recorded under your name; the Console shows "Confirm this in the VS Code dialog" while it waits (#514).
+- Continue and Aider run in a disposable git worktree. Their changes are held for review and reach your workspace only when you choose Apply; Escape or closing the dialog discards them. Before writing, FailSafe re-checks HEAD, the tree and the exact reviewed bytes. Descendant processes are tracked (Linux: per-run marker, parent and process group; macOS: parent and process group; Windows: parent chain) and killed before the result is snapshotted. Agent executables resolve only to absolute PATH entries outside the workspace (#475).
+- Removed `failsafe.integrations.aider.allowDirty` and `failsafe.integrations.aider.autoCommit`: the tree must be clean and Aider always runs with `--no-auto-commits`. Added `failsafe.integrations.agentCli.timeoutMs` (default 15 minutes). A Continue allowlist with shell or exec tools is refused (#475).
+- Open Design `create_artifact` is refused before it reaches the daemon on every route; the client can no longer mint its own approval (#481).
+- The Agent Marketplace re-scan route is disabled along with install and update. Scanners ran with the untrusted install as their working directory (#468).
+- `fast-uri` 3.1.8 (GHSA-hrr3-gc8f-f4qj, host case normalization).
+
+### Known limitations
+- Isolated agent runs detect, and never apply, writes made through the repository; they do not prevent them. A worktree is not a process sandbox: writes outside the repository are not detected, and a process that escapes tracking can write after the final checks. Tracking is escaped on Linux by a descendant that clears its environment, leaves the agent's process group and whose parent exits within 250 ms; on macOS by one that leaves the process group and whose parent exits between samples (#475).
+- On Windows, Continue's npm shim `cn.cmd` cannot be run without a shell, so FailSafe reports Continue as unavailable there (#475).
+- The VS Code confirmation proves you clicked the dialog; it does not identify which local process asked. Not covered: Bicameral MCP tool routes (ingest, update, reset, resolveCompliance, linkCommit), which stay policy-checked; `PUT /api/v1/risks` status changes; the adapter uninstall/config routes. Open Design dialogs show the item's kind and path but not its arguments (#514).
+- `risks.json` has no cross-process lock; two VS Code windows on the same folder can still lose an update (#517).
+- Integration tokens are still stored in ordinary settings, not VS Code SecretStorage (#482).
+- Agent Marketplace install, update and scan stay disabled until isolated setup and fail-closed scanning land (#468, #469).
+- SOA ledger rows signed before v6.0.6 still verify against the original five-field signature (#473).
+- The GitHub Checks guard still identifies SHIELD checks by name (#476).
+- The Console startup checkpoint still records `status: "validated"` while its policy verdict is `UNKNOWN` (cosmetic; readiness itself is fixed since v6.0.6) (#471).
+- Not verified against live services: Sentry, Jira, Linear, OpenHands, Aider and Continue were tested against recorded responses and fixtures only. OpenHands import (#477) and Jira/Linear import (#480) are unchanged from v6.0.6.
+- CI tests against VS Code 1.122.1. The 1.101.0 minimum was measured once during development; only the Windows x64 binary was loaded inside a VS Code Electron for this release, the other targets inside Node 22.
 
 ## [6.0.6] - 2026-10-13
 
