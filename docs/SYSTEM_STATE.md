@@ -1,11 +1,10 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-10-15 (#475 isolated agent runs sealed on `fix/475-isolated-agent-runs`; not merged)
-**Last Updated:** 2026-10-15 (#478 Sentry import completion sealed on `fix/478-sentry-import-completion`; not merged)
+**Last Updated:** 2026-10-15 (v6.0.7 RC1 integrated on `release/v6.0.7-rc1`, draft PR #520; not merged, not tagged, not published)
 **Active local review:** `fix/system-state-currency-sprint2` — this cycle. Restores the Tier 1 freshness contract and adds `system-state-currency.test.cjs`, the first check that asserts it. Prior to this cycle no test anywhere read this file's content.
 **Prior local review:** `fix/qor169-sprint1-seal-unblock` — MERGED to `main` as `1e1215cc` (PR #448). qor-logic 0.163.1 → 0.169.0; `.qorlogic/config.json` created, which is what allows a seal to complete at all; five vacuously-passing governance controls identified; TTS timeout assertion made deterministic and falsifying. Seal Entry #602.
 **Open PRs:** #442 (Bicameral upstream row error state), #443 (plan-grep-lint regex recognition), #444 (#367 per-engine provenance), #445 (#242 Shadow Genome severity aria — supersedes #440, closed as duplicate), #446 + #447 (dependabot). #447's blocker — a wall-clock TTS assertion — was removed by Entry #602.
-**Current Release:** v6.0.6 (2026-10-13) — source/package target; publication pending. Stabilization code integrated via #496. Marketplace install/update disabled pending #468/#469.
+**Current Release:** v6.0.7 (2026-10-15) — release candidate 1 (source/package target on `release/v6.0.7-rc1`); not published. Latest published release: v6.0.6 (2026-10-13; VS Code Marketplace + Open VSX + GitHub Release). Marketplace install/update/scan disabled pending #468/#469.
 **Prior releases:** v6.0.3 (2026-08-22, #596 DELIVER), v6.0.2 (2026-08-21, #588), v6.0.1 (2026-08-20, #553), v6.0.0 (2026-08-19, #548 — enforce-by-default era). Pre-6.x: v5.9.0 (#460 Command Center suite), v5.8.0 (#449), v5.7.0, v5.6.3 (#431).
 **Prior release detail:** v5.3.3 (published to VS Code Marketplace + Open VSX via tag `v5.3.3` (`d3a0b75`); Open VSX via CI, VS Code Marketplace via local `vsce publish --azure-credential` from the identical CI-built VSIX after the CI marketplace job hit the documented `/_apis/gallery` PAT-auth timeout) — bundles B-OD-8 (#409) + B-INT-6 (#410) + B-INT-7 (#411/#413) + B-INT-12 (#412) + transparency date-filter fix (#414); DELIVER seal #415
 **Sealed baseline:** v5.2.0 → v5.2.2 hotfix line (Entries #392-#396) → v5.3.0 (Entry #400 Open Design v1 + Entry #402 substrate v1) → v5.3.0 release (`08916d9`, dead-on-marketplace) → v5.3.1 hotfix (DELIVER at #406) → v5.3.2 release (refactor bundle #407 B-INT-4 + #408 B-INT-5) → v5.3.3 release (integration beta bundle #409–#414; DELIVER #415)
@@ -14,6 +13,10 @@
 **Doctrine additions since 2026-05-22:** `feedback_no_pipeline_reshape_for_marketplace_issues` (2026-05-27, v5.2.2 hold-pat precedent) · `feedback_verify_external_names_at_plan_time` (2026-05-27, Citation Inventory Pass — broke 4-cycle Plan-Time Hallucination loop at Entry #405)
 
 ---
+
+## 2026-10-15 — v6.0.7 release candidate 1 (integrated, not merged, not published)
+
+`release/v6.0.7-rc1` (draft PR #520) integrates #515 (#508 CRLF ledger parse), #486 (fast-uri), #498 (#470 trust evidence), #500 (#472 replay nonce, with cleanup-timer and rename-retry fixes), #511 (#505 save denials are observations), #519 (#517 RiskManager, plus the deleteRisk refresh on the RC branch), #513/#501 (#481 Open Design), #512 (#502 better-sqlite3 13 N-API with eight platform-targeted VSIXs; release.yml now publishes that set behind the production gate and native-vsix-qualification.yml rehearses it without publishing), #516 (#475 isolated agent runs, with POSIX marker/process-group tracking and workspace-excluded executable resolution) and #518 (#478 Sentry). New on the RC branch: loopback Console routes that record an operator decision, roll back, stop the Sentinel or disable hooks act only after a modal VS Code confirmation (#514, FX960); editor-save escalations say the write was not prevented (#505). The four independently sealed ledger bands #617-#637 were re-chained into one linear chain (content hashes unchanged, plan-v607-rc1 LD13); the cycle's own entries start at #638. Deferred: #507 (#477 OpenHands), #506 (#480 Jira/Linear). Known limitations are listed in CHANGELOG [6.0.7].
 
 ## 2026-10-15 — #475 isolated Continue / Aider runs (sealed on branch, not merged)
 
