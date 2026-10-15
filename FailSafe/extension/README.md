@@ -56,6 +56,10 @@ Each integration ships with its own README and its external API names are back-c
 - **Integration credentials move to Secure Storage.** Tokens, API keys and webhook URLs for Sentry, Jira, Linear, GitHub, Continue, Slack and Teams are no longer read from settings. Use **FailSafe: Set Integration Credential**; if FailSafe finds one in plain-text settings it offers to move it, checks the stored copy, and removes the plain text only with your consent.
 - **The L3 Approval Queue buttons work.** Approve, Reject and View File were blocked by the panel's own security policy.
 - **An interrupted save no longer corrupts the risk register.** `risks.json` is replaced only by a complete file.
+- **Two VS Code windows can no longer overwrite each other's risk changes.** Every update to `risks.json` takes a short lock and re-reads the file first, and re-imported findings keep the triage status you set.
+- **The SOA ledger notices when it is rolled back or swapped.** Every column of a new row is sealed, and the ledger's head is anchored in VS Code Secure Storage, so emptying, truncating or replacing the ledger is reported.
+- **A SHIELD check on GitHub is tied to the commit that sealed it.** FailSafe publishes it only after confirming, from the governance ledger in Git history, that this exact commit added the seal.
+- **FailSafe runs Git only from a checked location.** On Windows, a `git.exe` placed in an opened folder could run instead of Git; FailSafe now uses a verified Git outside your workspace and never runs Git through a shell.
 - Open Design 0.24.1 works again, and the Open Design client can no longer approve its own artifact writes.
 
 Not verified against live services in this release: Sentry, Jira, Linear, OpenHands, Aider and Continue were tested with recorded responses only. See the [6.0.7] changelog for the full list of known limitations.

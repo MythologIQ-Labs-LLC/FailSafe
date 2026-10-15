@@ -70,8 +70,8 @@ The token is kept in Secure Storage (never read from settings since v6.0.7). If 
 - Live-provider acceptance is pending; the suites drive deterministic fixtures through the injected transport, clock and sleep.
 - The list request sends no `statsPeriod`. Sentry documents no default time window for this endpoint, so whether the server applies one is unverified until live acceptance.
 - Sentry issues that become resolved drop out of the `is:unresolved` list; the import never closes or reopens a risk.
-- Writers in another process (a second VS Code window on the same folder) can still race this store.
-- **#517:** `qorelogic/risk/RiskManager.ts` keeps `risks.json` in memory from activation and rewrites the whole file when it saves, which erases records any other writer, including this import, stored since activation. Imported risks stay exposed to that defect until #517 is fixed.
+- Every write goes through the shared risk store (`src/shared/risk-store/`), the one owner of every read-modify-write of `risks.json`. It takes a cross-process lock, re-reads the file and compares its bytes before writing, and writes atomically, so a second VS Code window or another FailSafe process on the same folder no longer erases records this import stored, and the import no longer erases theirs. An unreadable `risks.json` is refused and left as it is, with one saved copy; that issue counts as failed.
+- **#517:** risk writes are not queued fairly. The import makes one update per issue and usually wins the lock back between its own updates, so while it runs, a risk update from another window or process can wait and, after 6 seconds, fail with a "Try again" message and write nothing. Nothing already stored is lost; retry after the import finishes. Fair queuing and batched imports are planned follow-ups.
 
 ## Command / wiring
 `FailSafe: Import Sentry Regressions` (command id `failsafe.sentry.import`) runs the import behind a cancellable progress notification and shows the outcome at its level.
