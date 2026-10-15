@@ -30596,3 +30596,95 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `30428862126e8725560b22bc23ad99cf468537491271162139965f8ce41e6ab8`
 
 **Decision**: Reality = Promise for plan-478-sentry-import-completion (iteration 4, sha256 prefix 9f527c38c2d4117e): all three phases implemented. Unplanned, documented: src/test/roadmap/RiskRegisterManager.outcome.test.ts (keyed.test.ts already 305 lines), src/test/integrations/sentry/sentry-releases.test.ts and sentry-fixtures.ts (keeps sentry-import.test.ts under 250 lines; FX954 cites both paths), README.md and FailSafe/extension/README.md rows retitled from 'regression correlation' (a declared non-goal), docs/ARCHITECTURE_PLAN.md contract section, docs/SYSTEM_STATE.md, docs/GOVERNANCE_INDEX.md; parseIssuesResponse removed as dead code. Verification: full vscode-test (VS Code 1.122.1 pinned) 4246 passing / 17 pending / 1 failing (FX930 WorkspaceArtifactBuilder, pre-existing CRLF ledger parse, #508), census 470/470, the five new suites executed in the extension host; plain mocha 103 passing (Sentry, store, SARIF, mediator); test:node 353/355 (2 FX946 failures reproduced on base e82f69aa); system-state-currency 4/4; eslint clean; runner-coverage PASS. Tests were written first and red at compile. Mutation: 17 guards; the first run left the extra-key carry check alive, a case was added, and the rerun after the simplification pass killed all 17. Gates: intent_lock VERIFIED (the lock recorded the worktree report by basename, so verify was run against a temporary byte-identical copy at that path, removed afterwards; plan 9f527c38, audit 19b09b53 and HEAD e82f69aa also matched by hand); verdict_reconcile 0 findings after the staging report was reduced to the governing iteration-4 verdict (prior iterations archived); skill_admission ADMITTED; gate_skill_matrix 0 broken; secret_scanner 0 findings over 30 staged files with canary rc 1; procedural_fidelity 0 findings; dod_check rc 0; merge_velocity healthy; skill_size_budget WARN only (qor-substantiate 37.0 KB); data_api_acl disclosed SKIP with gate_skipped_prerequisite_absent emitted and closed at emission; install_drift OK; doc_integrity strict OK (gitignored 'Vacuous pass' home brief supplied locally); governance-index --enforce rc 0 with a hand-prepended Last Reviewed line; doc currency 0 warnings; feature_index_verify rc 0 (759 verified+n/a; 7 other-status rows make the 766 header); surface lint WARN-only (FX922, pre-existing); seal_entry_check and gate_chain_completeness inapplicable/vacuous here as at #616/#631, so entry links and the four session artifacts are verified directly. Disclosures: governance-health DAMAGED META_LEDGER (pre-existing) under the standing operator override, gate_override e68bfe25; research phase overridden (a9ebbc4c) with the docs.sentry.io contract re-verified inline; #517 (RiskManager rewrites risks.json from a stale in-memory copy, erasing records any RiskRegisterManager writer stored since activation) found in review, reproduced and filed, out of scope and disclosed in the README, plan and limitations; live Sentry acceptance pending (no credentials); no statsPeriod sent and no documented default window; no version bump (hotfix toward the next patch, operator-gated); seal commit carries no attribution trailer per operator rule. Feature Inventory: Total: 766 / verified: 716 / unverified: 0 / n/a: 43; FX829/FX915 MODIFIED, FX953/FX954 NEW; newly unverified: none. **SSDF Practices**: PS.2.1, RV.2.1
+
+---
+
+### Entry #638: GATE TRIBUNAL - plan-v607-rc1 (iteration 1) - VETO
+
+**Timestamp**: 2026-10-15T02:44:25Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T0230-8e09f0`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: standing operator per-cycle override (runtime program, 2026-10-13), gate_override `03bb4e3c`
+**Append Note**: held and appended after the RC integration merges so it chains from the integrated tail (#637), not as a fifth sibling of #616
+
+**Content Hash**: `3c4572318d2d711337a9954f39e3693c8abf55e1379c7f7bfed0f9e7d1fe1f8d`
+**Previous Hash**: `30428862126e8725560b22bc23ad99cf468537491271162139965f8ce41e6ab8`
+**Chain Hash (Merkle seal)**: `3fd9983ee7c2f9d44b9f361deef5a375ce92fc4ebe906347e03397fcb2a7bc4c`
+
+**Decision**: VETO on plan-v607-rc1.md iteration 1. Option B mandatory (L3: approval path, release secrets, process isolation, ledger fork guard); a fresh-context architect-reviewer (Read/Grep/Glob) returned VETO and the Judge re-verified the load-bearing findings directly. V1 security-l3: the LD9 L3 modal content and scope were undefined (opaque id rubber stamp, batch snapshot not pinned across the modal, request conditions unvalidated, production confirmer wiring untested, no in-flight limit). V2 security-l3: sibling loopback-only operator-decision routes (/api/actions/bicameral-ratify writes a USER_OVERRIDE ledger entry, /api/hooks/toggle, /api/actions/rollback) unaddressed. V3 owasp-violation: LD5 defeatable by env -i + setsid + early parent exit; D1 and limitations overclaimed; group kill lacks an identity check. V4 owasp-violation: Windows bare-name spawn searches the worktree cwd first. V5 test-failure: named tests that cannot fail pre-fix; case-sensitive Blocked check; one of four blockade call sites covered. V6 coverage-gap: prepush-validate.ps1 and vsix-proprietary-guardrails still package universal VSIXs; package/publish npm scripts. V7 infrastructure-mismatch: partial publish not resumable. V8 owasp-violation: unpinned npx vsce/ovsx in secret-holding steps. V9 specification-drift: PR-branch pushes, seal coverage of new heads, ledger numbering unspecified. V10 specification-drift: an agent-written Reconciled Entries line clears FX932 regardless of pending prose. V11 specification-drift: disclosure list and save-blocking wording incomplete; risk D1 contradicts its limitation. V12 specification-drift: hotfix class disables the E2E gate on a Console flow change; inventory touches incomplete. Next: Governor amends plan, re-run /qor-audit.
+
+---
+
+### Entry #639: GATE TRIBUNAL - plan-v607-rc1 (iteration 2) - VETO
+
+**Timestamp**: 2026-10-15T03:01:49Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T0230-8e09f0`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: standing operator per-cycle override, gate_override `03bb4e3c`
+
+**Content Hash**: `3ab6f0833de1a9f56a3b4186bcf522cb9b872cd4b49c875a6a2f30898290e591`
+**Previous Hash**: `3fd9983ee7c2f9d44b9f361deef5a375ce92fc4ebe906347e03397fcb2a7bc4c`
+**Chain Hash (Merkle seal)**: `8978b6fda7ed530c7e0a81712690e59ffdae025b61115f90d1c8c00af7829d94`
+
+**Decision**: VETO on plan-v607-rc1.md iteration 2. Fresh Option B architect-reviewer; iteration-1 V5-V12 resolved. V1 security-l3: LD9 claimed every operator-decision route was gated, but panic-stop (stops the Sentinel) and the bicameral MCP tool routes (update/reset/resolveCompliance) were neither gated nor scoped out. V2 security-l3: the ratify dialog content was undefined (no server-side decision lookup exists) and the request-body rationale was ledgered as a USER_OVERRIDE by vscode-user without being shown. V3 owasp-violation: the identity-gated process-group kill never fires after the root is reaped, a regression against 8687a5ee, and the POSIX escape conditions were overclaimed. V4 coverage-gap: the production confirmer wiring (bootstrapServers -> ConsoleServer -> ConsoleRouteHost -> lazy deps) was never exercised. Next: Governor amends plan, re-run /qor-audit.
+
+---
+
+### Entry #640: GATE TRIBUNAL - plan-v607-rc1 (iteration 3) - VETO
+
+**Timestamp**: 2026-10-15T03:10:58Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T0230-8e09f0`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: standing operator per-cycle override, gate_override `03bb4e3c`; cycle_count_escalator consecutive=None session_total=None
+
+**Content Hash**: `fd9e7e94330e2c83897770a96abba83bf997ad99e609f27c3d79cd7a910155ba`
+**Previous Hash**: `8978b6fda7ed530c7e0a81712690e59ffdae025b61115f90d1c8c00af7829d94`
+**Chain Hash (Merkle seal)**: `5f0ce6490fc210eb528b8755e3e02ea6a882b09049b4320f4c9838da83bb9fbe`
+
+**Decision**: VETO on plan-v607-rc1.md iteration 3. Fresh Option B architect-reviewer; iteration-2 V1 and V4 resolved, V2 resolved for ratify only, V3 rule corrected but untested. V1 security-l3: the requested L3 decision verb (ActionsRoute.ts:151) and the rollback reason (CheckpointRoute.ts:53) are recorded under the operator's identity without appearing in the confirmation dialog; combined with the busy rule a local requester's approve can be confirmed by an operator who meant reject. V2 specification-drift: connection.js postAction is not the single client path (settings.js:119 and bicameral-renderer.js:186 use raw fetch; SettingsRenderer has no client), so the banner design and the spec need unlisted files and invented error rendering. V3 coverage-gap: no test fails if the post-reap process-group kill regresses, and one listed negative test contradicts the group-membership rule. Next: Governor amends plan, re-run /qor-audit.
+
+---
+
+### Entry #641: GATE TRIBUNAL - plan-v607-rc1 (iteration 4) - VETO
+
+**Timestamp**: 2026-10-15T03:20:23Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T0230-8e09f0`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: standing operator per-cycle override, gate_override `03bb4e3c`; cycle_count_escalator not fired
+
+**Content Hash**: `6b5669c64d26eff9744dfe99c55d5e0112a77efe7df2b54a1bd7da6afb96e264`
+**Previous Hash**: `5f0ce6490fc210eb528b8755e3e02ea6a882b09049b4320f4c9838da83bb9fbe`
+**Chain Hash (Merkle seal)**: `4d02946e3b7aa870c5b921a8d80db49cfaa8055ffac0cd2614c72e224035206f`
+
+**Decision**: VETO on plan-v607-rc1.md iteration 4. Fresh Option B architect-reviewer; iteration-3 V1-V3 resolved (requested verb and rollback reason shown and recorded as shown; all four client call paths listed; post-reap group kill covered by a failing-capable test). V1 test-failure: governance-l3-open-design.test.ts (fake client lacks postGated) and integrations-bicameral.spec.ts (serveConsoleServerUI never wires a confirmer, so ratify answers 503) break under Phase 4 and were not in Affected Files. V2 test-failure: the LD10 required log text could not match the named test's regex, and unreworded router strings (remediation at GovernanceRouter.ts:125/:232, notifier log at :355) would fail its /block/i assertion. Next: Governor amends plan, re-run /qor-audit.
+
+---
+
+### Entry #642: GATE TRIBUNAL - plan-v607-rc1 (iteration 5) - PASS
+
+**Timestamp**: 2026-10-15T03:31:35Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T0230-8e09f0`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Plan SHA256**: `7404a71554eb313f45c8c1649617311a19f49f31988284564e42cd634791a8ce`
+**Preflight**: standing operator per-cycle override, gate_override `03bb4e3c`
+
+**Content Hash**: `146f4262d65255be7eaa322ce629ca02cd3129fcec73d1ace07e71b141fee8cd`
+**Previous Hash**: `4d02946e3b7aa870c5b921a8d80db49cfaa8055ffac0cd2614c72e224035206f`
+**Chain Hash (Merkle seal)**: `93cf311b9553a1297e6d19660866b7173e0dedf0961025444f8f0acf5caa7976`
+
+**Decision**: PASS on plan-v607-rc1.md iteration 5 (gate plan-iter6.json; plan-iter5.json superseded by a plan_grep_lint citation fix to the same text). Fresh Option B architect-reviewer, full re-walk: iteration-4 V1 (tests and harness broken by the gated client path) and V2 (LD10 wording vs its regex) closed; every test touching the six gated endpoints accounted for; new tests fail on current code where claimed. Eleven advisories carried to implementation: checkpoint-route test rewrites; D1 and CHANGELOG say ratify shows requester-supplied values; ratify decisionId changed by sanitizing is rejected; Approve All sends a body; pending banner only for gated requests; empty batch needs no dialog; FX951 cites agent-cli.test.ts; README What's New v6.0.7 and FX vertical values; rehearsal pins mirror release.yml; validate-release-version feature-vs-PATCH noted for the owner; a residual Semgrep finding is surfaced, never suppressed. Next: /qor-implement.

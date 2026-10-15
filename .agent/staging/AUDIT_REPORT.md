@@ -1,32 +1,29 @@
-# AUDIT REPORT
+# AUDIT REPORT — plan-v607-rc1 (iteration 5)
 
-Prior iterations of this plan were VETOed and are archived verbatim: `.failsafe/governance/AUDIT_REPORT_478-iter1.md` (ledger #632), `-iter2.md` (#633), `-iter3.md` (#634). Their findings are closed per the iteration-4 review below.
+**Verdict**: PASS
+**Risk Grade**: L3
+**Session**: `2026-10-15T0230-8e09f0`
+**Target**: `plan-v607-rc1.md` (gate `plan-iter6.json`; `plan-iter5.json` superseded — written before a plan_grep_lint fix to the same iteration-5 text) — plan sha256 `7404a71554eb313f45c8c1649617311a19f49f31988284564e42cd634791a8ce`
+**Mode**: Option B — fresh-context architect-reviewer (Read/Grep/Glob), full re-walk each iteration.
+**History**: VETO it1 (12 findings), VETO it2 (4), VETO it3 (3), VETO it4 (2), PASS it5.
+**Preflight**: governance-health DAMAGED docs/META_LEDGER.md (pre-existing); standing operator per-cycle override, gate_override `03bb4e3c`.
 
-**Tribunal Date**: 2026-10-15T01:20:22Z
-**Target**: `plan-478-sentry-import-completion.md` iteration 4 (sha256 prefix 9f527c38c2d4117e)
-**Risk Grade**: L2
-**Auditor**: The Qor-logic Judge with a fresh Option B reviewer (`architect-reviewer`, Read/Grep/Glob)
-
-## VERDICT: **PASS**
-
-X1 and X2 and every iteration-3 advisory are closed. The full re-walk found no blocking defect: every grep-evidence citation matches; every consumer of a removed export is rewritten in Phase 2; `upsertRisk` sinks, the mediator interface and its test double all return `void`; the level rules are an ordered, non-overlapping precedence over `unique`; every store read happens inside the synchronous write; the token is sent only under the normalized HTTPS base (host-suffix, path-prefix and userinfo tricks are refused); LD10 sizes are credible; every Feature Inventory clause has a failing case at its declared path; Phase 1 is additive and Phase 2 changes every consumer at once. The #517 disclosure is accurate.
-
-## Implementation advisories (apply and disclose; plan text unchanged)
-
-1. Count the lookup that hits `rate_limited` or `cancelled` as `notAttempted`.
-2. When `unique == 0` but `skipped > 0` or `query` is not the default, the text says what was skipped or which query ran, not just "no unresolved issues".
-3. The moved :113-124 case asserts that a list item carrying `lastRelease` yields no `provenance.release` without a detail lookup.
-4. The command passes the raw base; `importSentryRisks` normalizes once and puts the normalized base in `ctx`; the transport also normalizes defensively.
-5. `upsertRisk` passes `String(risk.id)`.
-6. The transport uses `import type` for `SentryGetFn`, or owns the type, to avoid an import cycle.
-7. A carry decision whose write throws counts in `failed`, not `carried`.
-8. CI Commands: the new `.ts` suites run under `npm test` (vscode-test); `test:node` runs only `.test.cjs`.
-9. A non-numeric `Retry-After` (HTTP-date form) falls back to the backoff step.
-10. Test-range wording: :144-151 is rewritten to the organization path; :50-51 sits inside the rewritten :40-60.
-11. The fake request's `destroy(err)` emits `error`, as Node's does.
-12. README What's-New copy is authored with the CHANGELOG (standing rule).
+## Advisories carried to implementation
+- A1 checkpoint-route.test.ts: the 503-with-null-checkpoint case now needs a stored checkpoint (404 precedes 503); the 2000-char reason case is replaced by the 500-char case.
+- A2 D1 wording: ratify's dialog shows requester-supplied values (no server-side lookup) — the seal and CHANGELOG say so.
+- A3 ratify decisionId: if sanitizing changes it, reject 400 so upstream and ledger ids agree.
+- A4 Approve All sends {decision:'APPROVED'}; body validation tolerates an undefined body.
+- A5 pending banner only for gated requests (hooks enabled:true shows none).
+- A6 empty-queue batch: processed 0, no dialog, no broadcast.
+- A7 FX951 row also cites agent-cli.test.ts.
+- A8 README "What's New in v6.0.7" (validate-vsix); FX960/FX961 vertical from tracker-config.yaml.
+- A9 rehearsal tool pins taken from the same values release.yml uses.
+- A10 validate-release-version.ps1 treats diff_category=feature as MINOR; PATCH per the owner's ruling — surface in the RC report.
+- A11 if Semgrep still flags the recorded-path spawn: stop and surface; no suppression.
 
 ## Process Pattern Advisory
-
 <!-- qor:veto-pattern-advisory -->
-No repeated-VETO pattern detected in the last 2 sealed phases.
+Four VETOs then PASS with monotonically shrinking finding sets; escalator did not fire.
+
+## Next action
+`/qor-implement`
