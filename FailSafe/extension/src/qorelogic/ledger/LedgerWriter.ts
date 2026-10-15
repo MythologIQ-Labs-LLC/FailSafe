@@ -181,10 +181,12 @@ export function rotateTable(db: Database.Database, secret: string, input: Rotati
     const first = readFirst(db);
     if (!first) { throw new Error('Cannot rotate an empty ledger'); }
     const createSql = (db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'soa_ledger'").get() as { sql: string }).sql;
+    if (!/^CREATE TABLE ("?)soa_ledger\1\s*\(/.test(createSql)) { throw new Error('Unexpected soa_ledger schema text'); }
     db.prepare('ATTACH DATABASE ? AS retired').run(retiredPath);
     let copy: ReturnType<typeof tableShape>;
     try {
-        db.exec(createSql.replace(/^CREATE TABLE ("?)soa_ledger\1/, 'CREATE TABLE retired.soa_ledger'));
+        // prepare() accepts exactly one statement, so schema text from the file cannot smuggle a second one.
+        db.prepare(createSql.replace(/^CREATE TABLE ("?)soa_ledger\1/, 'CREATE TABLE retired.soa_ledger')).run();
         db.exec('INSERT INTO retired.soa_ledger SELECT * FROM main.soa_ledger');
         copy = tableShape(db, 'retired');
     } finally {

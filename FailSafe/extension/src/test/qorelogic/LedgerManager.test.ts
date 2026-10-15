@@ -604,6 +604,49 @@ suite('#473 head anchor and workspace binding', () => {
     again.close();
   });
 
+  test('a create whose re-read fails stores nothing and reports unanchored (review S3)', async () => {
+    let gGets = 0;
+    env.secrets.throwGet = (k) => k.startsWith('ledgerAnchor:g:') && ++gGets === 1;
+    const mgr = await openLedger(env);                     // empty table: the first g: read is the create re-read
+    const report = await mgr.verifyLedger();
+    assert.equal(report.anchor.status, 'unanchored');
+    assert.equal(env.secrets.record(genesisHashOf(mgr)), null, 'nothing stored after a failed re-read');
+    assert.equal(env.secrets.binding(env.root!), null);
+    mgr.close();
+  });
+
+  test('a hung ledgerSecret read or store rejects initialize within the bound (review S2)', async function () {
+    this.timeout(12000);
+    for (const hang of ['get', 'store'] as const) {
+      const local = makeEnv();
+      if (hang === 'get') {
+        local.secrets.getGate = (k) => k === 'ledgerSecret' ? new Promise<void>(() => { /* hangs */ }) : Promise.resolve();
+      } else {
+        local.secrets.storeGate = (k) => k === 'ledgerSecret' ? new Promise<void>(() => { /* hangs */ }) : Promise.resolve();
+      }
+      const started = Date.now();
+      const mgr = new LedgerManager(local.secrets as any, configFor(local.ledgerPath, local.root));
+      await assert.rejects(mgr.initialize());
+      assert.ok(Date.now() - started < 4000, `${hang} bounded`);
+      local.cleanup();
+    }
+  });
+
+  test('the anchor keeps the ledger secret off its enumerable state (review N3)', async () => {
+    const mgr = await openLedger(env);
+    const secret = env.secrets.map.get('ledgerSecret')!;
+    const anchor = (mgr as any).anchor;
+    const seen = new Set<unknown>();
+    const holds = (value: unknown, depth: number): boolean => {
+      if (value === secret) { return true; }
+      if (!value || typeof value !== 'object' || depth > 3 || seen.has(value)) { return false; }
+      seen.add(value);
+      return Object.values(value as Record<string, unknown>).some((v) => holds(v, depth + 1));
+    };
+    assert.equal(holds(anchor, 0), false);
+    mgr.close();
+  });
+
   test('a store failing mid-session leaves an unanchored tail and the cached head unchanged', async () => {
     const mgr = await anchored(1);           // head 2
     env.secrets.rejectStore = isAnchorKey;
@@ -833,6 +876,93 @@ suite('#473 rotation', () => {
     const again = await openLedger(env);
     assert.equal((await again.verifyLedger()).anchor.status, 'head-missing');
     assert.equal(env.secrets.binding(env.root!)?.genesisHash, oldGenesis, 'no rebind');
+    again.close();
+  });
+
+  // --- security review of b842a2ea/92158b7a -------------------------------------------------
+
+  /** Forge W's ledger as: a fake first row claiming genesis G_S (bogus MAC) + S's genuine rows 2..head. */
+  async function forgeOnto(target: string, sRows: SoaLedgerRow[], payload: Record<string, unknown>, retired?: { file: string; headId: number; headHash: string }) {
+    const db = new Database(target);
+    try {
+      db.prepare('DELETE FROM soa_ledger').run();
+      const columns = Object.keys(sRows[0]);
+      const insert = db.prepare(`INSERT INTO soa_ledger (${columns.join(',')}) VALUES (${columns.map((c) => '@' + c).join(',')})`);
+      insert.run({ ...sRows[0], payload: JSON.stringify(payload), signature: 'v3:' + '0'.repeat(64) });
+      for (const row of sRows.slice(1)) { insert.run(row); }
+    } finally { db.close(); }
+    if (retired) {
+      const r = new Database(path.join(path.dirname(target), retired.file));
+      try {
+        r.exec('CREATE TABLE soa_ledger (id INTEGER PRIMARY KEY, entry_hash TEXT)');
+        r.prepare('INSERT INTO soa_ledger VALUES (?, ?)').run(retired.headId, retired.headHash);
+      } finally { r.close(); }
+    }
+  }
+
+  async function otherAnchoredLedger(): Promise<SoaLedgerRow[]> {
+    const otherRoot = path.join(env.dir, 'workspace-S');
+    fs.mkdirSync(otherRoot);
+    const s = await openLedger(env, { ledgerPath: path.join(env.dir, 'S', 'soa_ledger.db'), root: otherRoot });
+    await appendN(s, 2, 'did:t:S');
+    await s.flushAnchor();
+    const rows = rawRows(s);
+    s.close();
+    return rows;
+  }
+
+  test('a forged rotation genesis with a bogus MAC cannot rebind the workspace (review M1)', async () => {
+    const w = await openLedger(env);
+    const gW = genesisHashOf(w);
+    w.close();
+    const sRows = await otherAnchoredLedger();
+    const sHead = sRows[sRows.length - 1];
+    await forgeOnto(env.ledgerPath, sRows,
+      { message: 'SOA Ledger rotated', retired: { file: 'x.db', headId: sHead.id, headHash: sHead.entry_hash }, supersededBinding: gW },
+      { file: 'x.db', headId: sHead.id, headHash: sHead.entry_hash });
+    const forged = await openLedger(env);
+    assert.equal((await forged.verifyLedger()).anchor.status, 'ledger-mismatch');
+    forged.close();
+    assert.equal(env.secrets.binding(env.root!)?.genesisHash, gW, 'binding unchanged');
+    for (const s of ['', '-wal', '-shm']) { fs.rmSync(env.ledgerPath + s, { force: true }); }
+    fs.copyFileSync(path.join(env.dir, 'S', 'soa_ledger.db'), env.ledgerPath);
+    const swapped = await openLedger(env);
+    const report = await swapped.verifyLedger();
+    assert.equal(report.anchor.status, 'ledger-mismatch');
+    assert.equal(report.ok, false);
+    swapped.close();
+  });
+
+  test('a forged first row reusing another genesis hash is not adopted and binds nothing (review M1)', async () => {
+    const sRows = await otherAnchoredLedger();
+    const freshRoot = path.join(env.dir, 'workspace-fresh');
+    fs.mkdirSync(freshRoot);
+    const target = path.join(env.dir, 'forged', 'soa_ledger.db');
+    (await openLedger(env, { ledgerPath: target, root: null })).close();
+    await forgeOnto(target, sRows, { message: 'SOA Ledger initialized' });
+    const mgr = await openLedger(env, { ledgerPath: target, root: freshRoot });
+    assert.equal(mgr.verifyChain(), false);
+    assert.equal(env.secrets.binding(freshRoot), null);
+    mgr.close();
+  });
+
+  test('a stored CREATE TABLE text carrying a second statement is refused by rotation (review S1)', async () => {
+    const mgr = await openLedger(env);
+    await appendN(mgr, 1);
+    await mgr.flushAnchor();
+    mgr.close();
+    const raw = new Database(env.ledgerPath);
+    try {
+      raw.unsafeMode(true);
+      raw.pragma('writable_schema = ON');
+      const sql = (raw.prepare("SELECT sql FROM sqlite_master WHERE name = 'soa_ledger'").get() as { sql: string }).sql;
+      raw.prepare("UPDATE sqlite_master SET sql = ? WHERE name = 'soa_ledger'").run(`${sql}; DROP TABLE agent_trust`);
+    } finally { raw.close(); }
+    const again = await openLedger(env);
+    await assert.rejects(again.startNewLedger('test'));
+    const tables = (again.getDatabase().prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map((t) => t.name);
+    assert.ok(tables.includes('agent_trust'), 'agent_trust survives');
+    assert.equal(again.getEntryCount(), 2);
     again.close();
   });
 

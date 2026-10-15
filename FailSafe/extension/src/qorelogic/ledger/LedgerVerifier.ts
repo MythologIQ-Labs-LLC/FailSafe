@@ -8,6 +8,7 @@
  * or initialize.
  */
 
+import * as crypto from 'crypto';
 import {
     AUDIT_COLUMNS, COVERED_COLUMNS, GENESIS_DID, GENESIS_PREV_HASH, SEAL_COLUMNS, SEAL_DID,
     SealVersion, SoaLedgerRow, V3_COLUMNS, canonicalV3, legacyEntryHash, legacyMac,
@@ -93,6 +94,12 @@ export interface EntryVerification {
 const ROW_COLUMNS = new Set<string>([...V3_COLUMNS, ...SEAL_COLUMNS]);
 const NULLABLE_AUDIT = AUDIT_COLUMNS.filter((c) => c !== 'gdpr_trigger');
 
+function sameMac(a: string, b: string): boolean {
+    const x = Buffer.from(a, 'hex');
+    const y = Buffer.from(b, 'hex');
+    return x.length === 32 && y.length === 32 && crypto.timingSafeEqual(x, y);
+}
+
 /** Verify one row's seal under its declared version. */
 export function checkRowSeal(row: SoaLedgerRow, secret: string): { version: SealVersion | null; failure: LedgerFailure | null } {
     const parsed = parseSignature(row.signature);
@@ -114,7 +121,7 @@ export function checkRowSeal(row: SoaLedgerRow, secret: string): { version: Seal
         return { version: parsed.version, failure: { id: row.id, code: 'hash-mismatch', detail: `${parsed.version} entry hash does not match the row` } };
     }
     const expectedMac = parsed.version === 'v3' ? v3Mac(secret, expectedHash) : legacyMac(secret, expectedHash);
-    if (parsed.mac !== expectedMac) {
+    if (!sameMac(parsed.mac, expectedMac)) {
         return { version: parsed.version, failure: { id: row.id, code: 'signature-mismatch', detail: `${parsed.version} signature does not match` } };
     }
     return { version: parsed.version, failure: null };

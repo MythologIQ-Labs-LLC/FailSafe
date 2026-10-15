@@ -17,7 +17,7 @@ import { LedgerSchemaManager } from './LedgerSchemaManager';
 import { SoaLedgerRow } from './LedgerSeal';
 import { EntryVerification, LedgerVerification, UNANCHORED_CONTEXT, entryVerification, verifyRows } from './LedgerVerifier';
 import { RESERVED_DIDS, appendV3, readAllRows, rotateTable } from './LedgerWriter';
-import { LedgerAnchor, STORE_TIMEOUT_MS } from './LedgerAnchor';
+import { LedgerAnchor, STORE_TIMEOUT_MS, withTimeout } from './LedgerAnchor';
 
 interface LedgerAppendRequest {
     eventType: LedgerEventType;
@@ -63,7 +63,8 @@ export class LedgerManager {
 
         // Initialize secret from secure storage (M1.5.3 Fix)
         // Note: secrets.get is async, so we must load it here first
-        this.cachedSecret = await this.secretStore.get('ledgerSecret');
+        // #473: bounded like every other SecretStorage call, so a hung keychain rejects initialize.
+        this.cachedSecret = await withTimeout(this.secretStore.get('ledgerSecret'), STORE_TIMEOUT_MS);
         if (!this.cachedSecret) {
             this.cachedSecret = await this.generateSecret();
         }
@@ -88,7 +89,7 @@ export class LedgerManager {
             this.anchor = new LedgerAnchor({
                 store: this.secretStore,
                 db: this.db,
-                secret: this.cachedSecret,
+                secret: () => this.requireSecret(),
                 ledgerPath: this.ledgerPath,
                 workspaceRoot: this.configProvider.getWorkspaceRoot?.(),
             });
@@ -298,7 +299,7 @@ export class LedgerManager {
 
     private async generateSecret(): Promise<string> {
         const secret = crypto.randomBytes(32).toString('hex');
-        await this.secretStore.store('ledgerSecret', secret);
+        await withTimeout(this.secretStore.store('ledgerSecret', secret), STORE_TIMEOUT_MS);
         return secret;
     }
 

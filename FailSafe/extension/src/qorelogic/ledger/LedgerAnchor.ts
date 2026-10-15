@@ -10,8 +10,9 @@
  * Every proof is made against the STORED record, re-read before each store.
  * The writer only advances an existing record; records are created only by
  * initialize (LD12) and rotation (LD13), each create-if-absent, and every
- * SecretStorage call (creates at initialize included) is bounded by
- * STORE_TIMEOUT_MS. The binding is never rewritten by initialize except when
+ * SecretStorage call (creates at initialize and the ledgerSecret read/write in
+ * LedgerManager included) is bounded by STORE_TIMEOUT_MS, so verifyLedger
+ * takes at most about three bounds (flush, then two reads). The binding is never rewritten by initialize except when
  * finishing an interrupted rotation (LD12 row 5). Verification itself is pure
  * and does not latch; a failed pre-store proof latches the writer for the
  * session. Rotation rebinds this window only: another open window keeps the
@@ -49,7 +50,7 @@ export function workspaceKey(root: string): string {
     return WORKSPACE_KEY_PREFIX + sha256(normalizeRoot(root));
 }
 
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
     return new Promise<T>((resolve, reject) => {
         const timer = setTimeout(() => reject(new Error('SecretStorage timed out')), ms);
         promise.then((v) => { clearTimeout(timer); resolve(v); }, (e) => { clearTimeout(timer); reject(e); });
@@ -76,10 +77,15 @@ export function checkAgainstDb(
     if (record.genesisHash !== first.entry_hash || (binding && binding.genesisHash !== first.entry_hash)) {
         return [{ id: first.id, code: 'anchor-ledger-mismatch', detail: 'the ledger does not have the anchored genesis' }];
     }
+    // A matching entry_hash string proves nothing on its own: the row must also carry its seal.
+    const firstSeal = checkRowSeal(first, secret).failure;
+    if (firstSeal) { return [firstSeal]; }
     const head = db.prepare('SELECT * FROM soa_ledger WHERE id = ?').get(record.headId) as SoaLedgerRow | undefined;
     if (!head || head.entry_hash !== record.headHash) {
         return [{ id: record.headId, code: 'anchor-head-missing', detail: 'the anchored head row is missing or replaced' }];
     }
+    const headSeal = checkRowSeal(head, secret).failure;
+    if (headSeal) { return [headSeal]; }
     if (candidateHeadId === undefined || candidateHeadId <= record.headId) { return []; }
     const tail = db.prepare('SELECT * FROM soa_ledger WHERE id > ? AND id <= ? ORDER BY id ASC').all(record.headId, candidateHeadId) as SoaLedgerRow[];
     let prev = head;
@@ -99,7 +105,8 @@ function failureStatus(failures: LedgerFailure[]): AnchorStatus {
 export interface LedgerAnchorDeps {
     store: ISecretStore;
     db: Database.Database;
-    secret: string;
+    /** A getter, so the secret never sits on an enumerable field. */
+    secret: () => string;
     ledgerPath: string;
     workspaceRoot: string | undefined;
     timeoutMs?: number;
@@ -132,7 +139,8 @@ export class LedgerAnchor {
 
     /** LD12: initialize decision table. */
     async initialize(): Promise<void> {
-        const { db, secret, store } = this.deps;
+        const { db, store } = this.deps;
+        const secret = this.deps.secret();
         const first = readFirst(db);
         let record: HeadAnchorRecord | null;
         try {
@@ -151,7 +159,9 @@ export class LedgerAnchor {
         }
         if (checkGenesis(first)) { return; }                                 // row 4: verify reports genesis-invalid
         if (this.binding && this.binding.genesisHash !== first.entry_hash) {
-            const evidence = rotationEvidence(first, this.deps.ledgerPath);
+            // Row 5 trusts the rotation genesis payload only once every row verifies.
+            const sealed = verifyRows(readAllRows(db), secret).ok;
+            const evidence = sealed ? rotationEvidence(first, this.deps.ledgerPath) : null;
             if (evidence && evidence.supersededBinding === this.binding.genesisHash) {
                 await this.finishRotation(first, record);                    // row 5
             } else {
@@ -234,7 +244,7 @@ export class LedgerAnchor {
         try { stored = await readJson<HeadAnchorRecord>(this.deps.store, key, this.ms); } catch { return; }
         if (!stored) { return; }
         // Prove the STORED record, not the cache: another window may have advanced it.
-        const failures = checkAgainstDb(this.deps.db, this.deps.secret, stored, this.binding, candidate.id);
+        const failures = checkAgainstDb(this.deps.db, this.deps.secret(), stored, this.binding, candidate.id);
         if (failures.length > 0) { this.record = stored; this.status = failureStatus(failures); return; }
         if (stored.headId >= candidate.id) { this.record = stored; return; }
         const next: HeadAnchorRecord = { ...stored, headId: candidate.id, headHash: candidate.hash };
@@ -253,7 +263,7 @@ export class LedgerAnchor {
     /** Row 7: prove an existing record; bind only on success. */
     private async adopt(record: HeadAnchorRecord): Promise<void> {
         this.record = record;
-        const failures = checkAgainstDb(this.deps.db, this.deps.secret, record, this.binding);
+        const failures = checkAgainstDb(this.deps.db, this.deps.secret(), record, this.binding);
         if (failures.length > 0) { this.status = failureStatus(failures); return; }
         this.status = record.establishedLate ? 'established-late' : 'verified';
         await this.bind(record.genesisHash, false);
@@ -261,7 +271,7 @@ export class LedgerAnchor {
 
     /** Rows 5 and 9 create late records; refuse when the rows themselves do not verify. */
     private async createLate(first: SoaLedgerRow, rows: SoaLedgerRow[], rebind = false): Promise<boolean> {
-        if (!verifyRows(rows, this.deps.secret).ok) { return false; }
+        if (!verifyRows(rows, this.deps.secret()).ok) { return false; }
         const head = rows[rows.length - 1];
         const firstV3 = rows.find((row) => parseSignature(row.signature)?.version === 'v3');
         const activation = firstV3 && firstV3.agent_did === SEAL_DID ? { receiptId: firstV3.id, receiptHash: firstV3.entry_hash } : null;
@@ -275,7 +285,7 @@ export class LedgerAnchor {
             this.record = record;
             this.superseded = this.binding?.genesisHash ?? null;
             this.binding = null;   // superseded by this rotation; stays stored until the rebind below
-            const failures = checkAgainstDb(this.deps.db, this.deps.secret, record, null);
+            const failures = checkAgainstDb(this.deps.db, this.deps.secret(), record, null);
             if (failures.length > 0) { this.status = 'head-missing'; return; }
             this.status = record.establishedLate ? 'established-late' : 'verified';
             await this.bind(first.entry_hash, true);
@@ -297,8 +307,13 @@ export class LedgerAnchor {
         late: boolean, okStatus: AnchorStatus, rebind = false,
     ): Promise<void> {
         const key = genesisKey(genesis.entry_hash);
-        let existing: HeadAnchorRecord | null = null;
-        try { existing = await readJson<HeadAnchorRecord>(this.deps.store, key, this.ms); } catch { existing = null; }
+        let existing: HeadAnchorRecord | null;
+        try {
+            existing = await readJson<HeadAnchorRecord>(this.deps.store, key, this.ms);
+        } catch {
+            this.status = 'unanchored';   // cannot tell absent from unreadable: create nothing
+            return;
+        }
         if (existing) { await this.adopt(existing); return; }
         const record: HeadAnchorRecord = {
             v: 1, genesisHash: genesis.entry_hash, headId: subject.id, headHash: subject.entry_hash, activation,

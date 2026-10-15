@@ -187,6 +187,13 @@ describe('ReleasePipelineGate ledger scope (#473 LD9)', function () {
     assert.match(result.failures[0].reason, /unknown-version at id 4/);
   });
 
+  it('fails closed when verifyLedger throws (review N2)', async () => {
+    const ledger = { verifyLedger: async () => { throw new Error('disk I/O error'); } };
+    const result = await gateFor(ledger).evaluate('v6.0.7');
+    assert.equal(result.allowed, false);
+    assert.match(result.failures[0].reason, /disk I\/O error/);
+  });
+
   it('blocks when no ledger is wired', async () => {
     const result = await gateFor(null).evaluate('v6.0.7');
     assert.equal(result.allowed, false);

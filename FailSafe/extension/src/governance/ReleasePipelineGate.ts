@@ -60,7 +60,13 @@ export class ReleasePipelineGate {
     if (!this.ledger || typeof this.ledger.verifyLedger !== 'function') {
       return { check: { name, passed: false, reason: 'Ledger not wired.' }, partial: false };
     }
-    const report = await this.ledger.verifyLedger();
+    let report: LedgerVerification;
+    try {
+      report = await this.ledger.verifyLedger();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { check: { name, passed: false, reason: `Ledger verification error: ${message}` }, partial: false };
+    }
     if (!report.ok) {
       const first = report.failures[0];
       const where = first ? `${first.code}${first.id !== null ? ` at id ${first.id}` : ''}` : 'unknown';
