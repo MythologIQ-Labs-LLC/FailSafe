@@ -70,6 +70,8 @@ test("refuseUnsafe: engines floor, updater mutex, known installs, non-empty ROOT
   const nonEmpty = fx.tmpDir("rv-root");
   fs.writeFileSync(path.join(nonEmpty, "keep.txt"), "x");
   assert.throws(() => lc.refuseUnsafe({ ...base, root: nonEmpty, code }), /not empty/);
+  const fileRoot = path.join(nonEmpty, "keep.txt");
+  assert.throws(() => lc.refuseUnsafe({ ...base, root: fileRoot, code }), (err) => err.exitCode === 2 && /not a directory/.test(err.message));
   assert.throws(() => lc.refuseUnsafe({ ...base, code, ownedRunning: 1 }), /already running/);
 });
 
@@ -90,7 +92,7 @@ test("buildSpawn: Code.exe with cli.js for installs, never a .cmd; launches carr
 });
 
 test("buildEnv strips VSCODE_* and ELECTRON_RUN_AS_NODE, redirects the four home variables, sets ELECTRON_RUN_AS_NODE only for installs", () => {
-  const parent = { USERPROFILE: "C:\\Users\\op", HOME: "C:\\Users\\op", APPDATA: "C:\\Users\\op\\AppData\\Roaming", LOCALAPPDATA: "C:\\Users\\op\\AppData\\Local", VSCODE_PID: "1", vscode_ipc_hook: "x", VSCODE_IPC_HOOK: "y", ELECTRON_RUN_AS_NODE: "1", Path: "C:\\Windows" };
+  const parent = { USERPROFILE: "C:\\Users\\op", HOME: "C:\\Users\\op", APPDATA: "C:\\Users\\op\\AppData\\Roaming", LOCALAPPDATA: "C:\\Users\\op\\AppData\\Local", VSCODE_PID: "1", vscode_ipc_hook: "x", VSCODE_IPC_HOOK: "y", ELECTRON_RUN_AS_NODE: "1", NODE_OPTIONS: "--require C:\\evil.js", Path: "C:\\Windows" };
   const root = "C:\\rv\\root";
   const L = lc.layout(root);
   const launch = lc.buildEnv(parent, root, { install: false, outFile: "C:\\rv\\root\\out\\S1.jsonl" });
@@ -103,6 +105,8 @@ test("buildEnv strips VSCODE_* and ELECTRON_RUN_AS_NODE, redirects the four home
   assert.equal(launch.Path, "C:\\Windows");
   const install = lc.buildEnv(parent, root, { install: true });
   assert.equal(install.ELECTRON_RUN_AS_NODE, "1");
+  assert.equal(install.NODE_OPTIONS, undefined, "NODE_OPTIONS never reaches an ELECTRON_RUN_AS_NODE install");
+  assert.equal(launch.NODE_OPTIONS, undefined);
   assert.equal(install.USERPROFILE, L.home);
 });
 

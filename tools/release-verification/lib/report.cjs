@@ -194,6 +194,7 @@ function buildReport(inputs) {
     schema: REPORT_SCHEMA, mode, status, exitCode, version,
     claims: { marketplaceVerified: status === "verified" },
     approvedSums,
+    approvedSumsCheck: merged.get("artifact/approved-sums/-")?.status ?? null,
     inputs: inputs.map((i) => ({ file: i.file, kind: i.evidence.kind, version: i.evidence.version, sha256: sha256(i.text), gitSha: i.evidence.tool.gitSha })),
     required, missing,
     informational: all.filter((c) => !requiredSet.has(c.key) && (c.scope === "informational" || ["operator-registry", "residual-processes"].includes(c.id))),
@@ -206,7 +207,7 @@ function markdown(r) {
   const esc = (s) => String(s).replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
   const lines = [banner, "", `FailSafe ${r.version}: status **${r.status}** (exit ${r.exitCode}); marketplaceVerified: ${r.claims.marketplaceVerified}.`, ""];
   if (r.mode !== "marketplace-verification") lines.push("This report covers local or CI artifacts. It says nothing about what the marketplaces serve.", "");
-  lines.push(r.approvedSums ? `Approved sums: ${r.approvedSums.source.kind}:${r.approvedSums.source.ref} (${r.approvedSums.source.verified}), sha256 ${r.approvedSums.sha256}` : "Approved sums: none in the inputs", "");
+  lines.push(r.approvedSums ? `Approved sums: ${r.approvedSums.source.kind}:${r.approvedSums.source.ref} (${r.approvedSums.source.verified}; approved-sums check: ${r.approvedSumsCheck ?? "absent"}), sha256 ${r.approvedSums.sha256}` : "Approved sums: none in the inputs", "");
   lines.push("## Inputs", "", "| File | Kind | Version | sha256 |", "|---|---|---|---|", ...r.inputs.map((i) => `| ${esc(i.file)} | ${i.kind} | ${i.version} | ${i.sha256} |`), "");
   const failing = r.checks.filter((c) => c.status === "fail");
   lines.push("## Failing checks", "", ...(failing.length ? failing.map((c) => `- ${c.key}: ${esc(c.detail)}`) : ["None."]), "");

@@ -262,7 +262,8 @@ test("the report names the approved-sums source and its verification", async () 
   writeReport(out, rep);
   const md = fs.readFileSync(path.join(out, "report.md"), "utf8");
   assert.match(md.split("\n")[0], /^# MARKETPLACE VERIFICATION/);
-  assert.match(md, /run-artifact:38478430806 \(attested\)/);
+  assert.match(md, /run-artifact:38478430806 \(attested; approved-sums check: pass\)/);
+  assert.equal(rep.approvedSumsCheck, "pass");
 });
 
 test("the required table lists both marketplaces' per-target checks and the lifecycle literally", () => {
@@ -287,4 +288,17 @@ test("evidence.schema.json documents the same enums the validator enforces", () 
   assert.deepEqual(d.approvedSums.properties.source.properties.verified.enum, ev.SUMS_VERIFIED);
   assert.deepEqual(d.download.properties.marketplace.enum, ev.MARKETS);
   assert.equal(schema.additionalProperties, false);
+});
+
+test("a release-asset fetch that differed is labelled with its failing check status, not just fetched-equal", async () => {
+  const set = fx.makeTargetSet(V);
+  const dir = fx.writeTargetSet(V, set);
+  const json = path.join(dir, "inventory.json");
+  const fetch = async () => new Response("different bytes\n", { status: 200 });
+  assert.equal(await main(["inventory", "--dir", dir, "--version", V, "--sums", path.join(dir, "SHA256SUMS.txt"), "--sums-source", "release-asset:v6.0.7", "--json", json], { fetch, ...fx.capture().io }), 1);
+  const rep = buildReport([{ file: "inventory.json", text: fs.readFileSync(json, "utf8"), evidence: JSON.parse(fs.readFileSync(json, "utf8")) }]);
+  assert.equal(rep.approvedSumsCheck, "fail");
+  const out = fx.tmpDir("rv-report");
+  writeReport(out, rep);
+  assert.match(fs.readFileSync(path.join(out, "report.md"), "utf8"), /release-asset:v6\.0\.7 \(fetched-equal; approved-sums check: fail\)/);
 });

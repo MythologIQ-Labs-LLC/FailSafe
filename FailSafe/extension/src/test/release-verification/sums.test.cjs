@@ -105,3 +105,13 @@ test("a missing or unknown --sums-source kind exits 2", async () => {
   assert.equal(await main(base, fx.capture().io), 2);
   assert.equal(await main([...base, "--sums-source", "gh-run:1"], fx.capture().io), 2);
 });
+
+test("the release-asset fetch is streamed with a cap: an oversized body fails without being read to the end", async () => {
+  let pulled = 0;
+  const body = new ReadableStream({ pull(c) { if (pulled >= 100) return c.close(); pulled += 1; c.enqueue(new Uint8Array(4096)); } });
+  const fetch = async () => ({ ok: true, status: 200, url: "x", headers: new Headers(), body, arrayBuffer: async () => { throw new Error("must stream"); } });
+  const r = await verifySumsSource(parseSumsSource("release-asset:v6.0.7"), Buffer.from(good), { fetch });
+  assert.equal(r.status, "fail");
+  assert.match(r.detail, /cap/);
+  assert.ok(pulled < 100, `stopped early (pulled ${pulled})`);
+});

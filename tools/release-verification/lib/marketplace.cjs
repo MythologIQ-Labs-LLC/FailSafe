@@ -19,7 +19,7 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 const { check } = require("./evidence.cjs");
 const { inspectVsix } = require("./inventory.cjs");
-const { sha256 } = require("./sums.cjs");
+const { sha256, readCapped } = require("./sums.cjs");
 
 const SCRIPTS = path.resolve(__dirname, "..", "..", "..", "FailSafe", "extension", "scripts");
 const { NATIVE_TARGETS } = require(path.join(SCRIPTS, "native-targets.cjs"));
@@ -49,7 +49,7 @@ function allowedHost(url) {
 }
 
 /** Download one target VSIX and judge it. Returns { checks, record, file, passed }. */
-async function fetchTarget({ market, target, url, version, approved, downloadDir, fetch }) {
+async function fetchTarget({ market, target, url, version, approved, downloadDir, fetch, maxDownloadBytes = MAX_DOWNLOAD_BYTES }) {
   const checks = [];
   const fail = (id, detail, status = "fail") => { checks.push(check(id, market, target, status, detail)); return { checks, record: null, file: null, passed: false }; };
   if (!url) return fail("download", "no download URL in the marketplace response");
@@ -65,10 +65,8 @@ async function fetchTarget({ market, target, url, version, approved, downloadDir
     return fail("download", `${url}: ${err.message}`, "inconclusive");
   }
   if (!res.ok) return fail("download", `${url}: HTTP ${res.status}`, "inconclusive");
-  const declared = Number(res.headers?.get?.("content-length") ?? 0);
-  if (declared > MAX_DOWNLOAD_BYTES) return fail("download", `${url}: ${declared} bytes declared, over the ${MAX_DOWNLOAD_BYTES}-byte cap`);
-  const bytes = Buffer.from(await res.arrayBuffer());
-  if (bytes.length > MAX_DOWNLOAD_BYTES) return fail("download", `${url}: ${bytes.length} bytes, over the ${MAX_DOWNLOAD_BYTES}-byte cap`);
+  const bytes = await readCapped(res, maxDownloadBytes);
+  if (!bytes) return fail("download", `${url}: body over the ${maxDownloadBytes}-byte cap (reading stopped)`);
   const digest = sha256(bytes);
   const file = path.join(downloadDir, market, vsixName(version, target));
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -102,7 +100,7 @@ async function getJson(fetch, url, init) {
   }
 }
 
-async function vscodeMarketplace({ version, approved, downloadDir, fetch }) {
+async function vscodeMarketplace({ version, approved, downloadDir, fetch, maxDownloadBytes }) {
   const market = "vscode-marketplace";
   const checks = [];
   const downloads = [];
@@ -139,7 +137,7 @@ async function vscodeMarketplace({ version, approved, downloadDir, fetch }) {
     }
     checks.push(check("listed", market, t, "pass", `${version} ${t}`));
     const url = (entry.files ?? []).find((f) => f.assetType === VSIX_PACKAGE)?.source;
-    const r = await fetchTarget({ market, target: t, url, version, approved, downloadDir, fetch });
+    const r = await fetchTarget({ market, target: t, url, version, approved, downloadDir, fetch, maxDownloadBytes });
     checks.push(...r.checks);
     if (!r.record) {
       checks.push(...notRunTarget(market, t, "download did not complete").filter((c) => !r.checks.some((x) => x.id === c.id)));
@@ -154,7 +152,7 @@ async function vscodeMarketplace({ version, approved, downloadDir, fetch }) {
   return { checks, downloads, files };
 }
 
-async function openVsx({ version, approved, downloadDir, fetch }) {
+async function openVsx({ version, approved, downloadDir, fetch, maxDownloadBytes }) {
   const market = "open-vsx";
   const checks = [];
   const downloads = [];
@@ -185,15 +183,17 @@ async function openVsx({ version, approved, downloadDir, fetch }) {
         continue;
       }
       checks.push(check("listed", market, t, "pass", `${version} ${t}`));
-      const d = await fetchTarget({ market, target: t, url, version, approved, downloadDir, fetch });
+      const d = await fetchTarget({ market, target: t, url, version, approved, downloadDir, fetch, maxDownloadBytes });
       checks.push(...d.checks);
       if (d.record) downloads.push(d.record);
       else checks.push(...notRunTarget(market, t, "download did not complete").filter((c) => !d.checks.some((x) => x.id === c.id)));
-    } else if (r.status === 404 && !(rootKeys ?? []).includes(t)) {
+    } else if (r.status === 404 && rootKeys && !rootKeys.includes(t)) {
       checks.push(check("listed", market, t, "fail", `${t} is not published for ${version}`), ...notRunTarget(market, t, "not listed"));
       missingFail.push(t);
     } else {
-      const why = r.status === 404 ? `root lists ${t} but its per-target request 404s (propagation)` : `request error: ${r.error}`;
+      const why = r.status !== 404 ? `request error: ${r.error}`
+        : rootKeys ? `root lists ${t} but its per-target request 404s (propagation)`
+          : `${t} 404s and the root is unavailable, so propagation cannot be ruled out`;
       checks.push(check("listed", market, t, "inconclusive", why), ...notRunTarget(market, t, why));
       missingIncon.push(t);
     }
@@ -218,18 +218,18 @@ function defaultRunSmoke(file) {
 }
 
 /** @returns {Promise<{ checks: object[], downloads: object[] }>} */
-async function runMarketplace({ version, approved, downloadDir, markets, fetch, host, runSmoke = defaultRunSmoke }) {
+async function runMarketplace({ version, approved, downloadDir, markets, fetch, host, runSmoke = defaultRunSmoke, maxDownloadBytes = MAX_DOWNLOAD_BYTES }) {
   const checks = [];
   const downloads = [];
   let vsmFiles = {};
   if (markets.includes("vscode-marketplace")) {
-    const r = await vscodeMarketplace({ version, approved, downloadDir, fetch });
+    const r = await vscodeMarketplace({ version, approved, downloadDir, fetch, maxDownloadBytes });
     checks.push(...r.checks);
     downloads.push(...r.downloads);
     vsmFiles = r.files;
   }
   if (markets.includes("open-vsx")) {
-    const r = await openVsx({ version, approved, downloadDir, fetch });
+    const r = await openVsx({ version, approved, downloadDir, fetch, maxDownloadBytes });
     checks.push(...r.checks);
     downloads.push(...r.downloads);
   }

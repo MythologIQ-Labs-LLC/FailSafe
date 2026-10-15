@@ -121,6 +121,7 @@ function knownInstallLocations(env) {
 
 /** Throws UsageError (exit 2) for any unsafe environment; called before any spawn. */
 function refuseUnsafe({ code, root, env, engines, ownedRunning }) {
+  if (fs.existsSync(root) && !fs.statSync(root).isDirectory()) throw new UsageError(`--root ${root} exists and is not a directory`);
   if (fs.existsSync(root) && fs.readdirSync(root).length > 0) throw new UsageError(`--root ${root} exists and is not empty; rv never reuses or deletes a root`);
   const floor = parseVersion(engines);
   const have = parseVersion(code.product.version);
@@ -139,7 +140,7 @@ function buildEnv(parentEnv, root, { install = false, outFile } = {}) {
   const L = layout(root);
   const env = {};
   for (const [k, v] of Object.entries(parentEnv)) {
-    if (/^vscode_/i.test(k) || /^electron_run_as_node$/i.test(k)) continue;
+    if (/^vscode_/i.test(k) || /^(electron_run_as_node|node_options)$/i.test(k)) continue;
     if (/^(userprofile|home|appdata|localappdata|fs_rv_out)$/i.test(k)) continue;
     env[k] = v;
   }

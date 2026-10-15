@@ -47,6 +47,7 @@ function openArchive(buf, { maxEntryBytes = MAX_ENTRY_BYTES } = {}) {
     const name = buf.toString("utf8", p + 46, p + 46 + nameLen);
     p += 46 + nameLen + extraLen + commentLen;
     if (name.startsWith("/") || name.includes("\\") || name.split("/").includes("..")) throw new ArchiveError(`unsafe entry name ${name}`);
+    if (entries.has(name)) throw new ArchiveError(`duplicate entry ${name}`);
     entries.set(name, { method, compressed, size, local });
   }
   return {

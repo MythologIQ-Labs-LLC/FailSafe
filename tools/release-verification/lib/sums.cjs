@@ -18,9 +18,37 @@ const { vsixName } = require(path.join(SCRIPTS, "package-all-targets.cjs"));
 
 const RELEASE_ASSET_URL = (tag) => `https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/download/${encodeURIComponent(tag)}/SHA256SUMS.txt`;
 const LINE = /^([0-9a-f]{64}) {2}(\S+)$/;
+const MAX_SUMS_BYTES = 64 * 1024;
 const sha256 = (buf) => crypto.createHash("sha256").update(buf).digest("hex");
 
 class SumsError extends UsageError {}
+
+/**
+ * Reads a fetch response body with a running byte cap; returns null (and stops
+ * reading) as soon as the cap is exceeded. Streams when the body is a stream.
+ */
+async function readCapped(res, cap) {
+  const declared = Number(res.headers?.get?.("content-length") ?? 0);
+  if (declared > cap) return null;
+  if (res.body && typeof res.body.getReader === "function") {
+    const reader = res.body.getReader();
+    const chunks = [];
+    let n = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      n += value.length;
+      if (n > cap) {
+        await reader.cancel().catch(() => {});
+        return null;
+      }
+      chunks.push(Buffer.from(value));
+    }
+    return Buffer.concat(chunks);
+  }
+  const buf = Buffer.from(await res.arrayBuffer());
+  return buf.length > cap ? null : buf;
+}
 
 /** @returns {{ entries: Record<string, { sha256: string, file: string }>, sha256: string }} */
 function parseSums(text, version) {
@@ -68,7 +96,8 @@ async function verifySumsSource(source, sumsBytes, { fetch }) {
     return { status: "inconclusive", verified: "fetched-equal", detail: `${url}: ${err.message}` };
   }
   if (!res.ok) return { status: "inconclusive", verified: "fetched-equal", detail: `${url}: HTTP ${res.status}` };
-  const body = Buffer.from(await res.arrayBuffer());
+  const body = await readCapped(res, MAX_SUMS_BYTES);
+  if (!body) return { status: "fail", verified: "fetched-equal", detail: `${url}: body over the ${MAX_SUMS_BYTES}-byte cap` };
   const equal = sha256(body) === sha256(sumsBytes);
   return {
     status: equal ? "pass" : "fail",
@@ -77,4 +106,4 @@ async function verifySumsSource(source, sumsBytes, { fetch }) {
   };
 }
 
-module.exports = { SumsError, parseSums, parseSumsSource, verifySumsSource, RELEASE_ASSET_URL, sha256 };
+module.exports = { SumsError, parseSums, parseSumsSource, verifySumsSource, readCapped, RELEASE_ASSET_URL, MAX_SUMS_BYTES, sha256 };

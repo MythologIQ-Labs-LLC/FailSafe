@@ -150,8 +150,18 @@ function sumsText(version, set) {
   return Object.keys(NATIVE_TARGETS).map((t) => `${sha256(set[t])}  ${vsixName(version, t)}`).join("\n") + "\n";
 }
 
+const created = [];
+process.once("exit", () => {
+  for (const d of created) {
+    try { fs.rmSync(d, { recursive: true, force: true }); } catch { /* a locked file on Windows; the OS cleans temp */ }
+  }
+});
+
+/** A fresh temp directory, removed when the test process exits. */
 function tmpDir(label = "rv") {
-  return fs.mkdtempSync(path.join(os.tmpdir(), `${label}-`));
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), `${label}-`));
+  created.push(d);
+  return d;
 }
 
 /** Write a target set (+ SHA256SUMS.txt) into a fresh directory. */

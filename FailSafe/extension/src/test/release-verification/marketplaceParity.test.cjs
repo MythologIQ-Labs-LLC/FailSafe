@@ -188,3 +188,43 @@ test("rv marketplace writes schema-valid evidence with approved sums and sixteen
   assert.equal(ev.inputs.approvedSums.source.verified, "attested");
   assert.equal(ev.checks.find((c) => c.id === "host-load").status, "not-run");
 });
+
+/** A response whose body is a stream of `chunks` chunks of `size` bytes; counts how many were pulled. */
+function streamingReply(chunks, size, url) {
+  let pulled = 0;
+  const body = new ReadableStream({
+    pull(controller) {
+      if (pulled >= chunks) return controller.close();
+      pulled += 1;
+      controller.enqueue(new Uint8Array(size));
+    },
+  });
+  return { res: { ok: true, status: 200, url, headers: new Headers(), body, arrayBuffer: async () => { throw new Error("must stream, not buffer"); } }, pulled: () => pulled };
+}
+
+test("downloads are streamed with a running byte cap: an oversized body fails without being read to the end", async () => {
+  const m = fakeMarkets();
+  const target = `${OVSX}/linux-x64/${V}/file/MythologIQ.mythologiq-failsafe-${V}@linux-x64.vsix`;
+  let stream;
+  const fetch = async (url, init) => {
+    if (url === target) { stream = streamingReply(50, 600, url); return stream.res; }
+    return m.fetch(url, init);
+  };
+  const approved = parseSums(fx.sumsText(V, m.set), V);
+  const r = await runMarketplace({ version: V, approved, downloadDir: fx.tmpDir("rv-dl"), markets: ["open-vsx"], fetch, host: "linux-x64", maxDownloadBytes: 1000 });
+  const d = r.checks.find((c) => c.scope === "open-vsx" && c.id === "download" && c.target === "linux-x64");
+  assert.equal(d.status, "fail");
+  assert.match(d.detail, /over the 1000-byte cap/);
+  assert.ok(stream.pulled() <= 3, `stopped reading after the cap (pulled ${stream.pulled()} of 50 chunks)`);
+});
+
+test("Open VSX: a per-target 404 while the root is also 404 is inconclusive (propagation window), not fail", async () => {
+  const set = fx.makeTargetSet(V);
+  const ovsxTargets = { ...set };
+  delete ovsxTargets["darwin-x64"];
+  const r = await run(fakeMarkets({ set, ovsx: { targets: ovsxTargets }, ovsxRoot: 404 }));
+  assert.equal(find(r, "open-vsx", "listed", "darwin-x64").status, "inconclusive");
+  assert.match(find(r, "open-vsx", "listed", "darwin-x64").detail, /root/);
+  assert.notEqual(find(r, "open-vsx", "target-set").status, "fail");
+  assert.equal(r.exit, 3);
+});

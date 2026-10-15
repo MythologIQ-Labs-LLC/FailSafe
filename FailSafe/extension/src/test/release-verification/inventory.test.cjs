@@ -132,3 +132,16 @@ test("Node below 22.13 exits 2 before any subcommand runs", async () => {
   const code = await main(["inventory", "--dir", "Z:/does/not/exist", "--version", V, "--json", "Z:/x.json"], { nodeVersion: "22.12.0", ...fx.capture().io });
   assert.equal(code, 2);
 });
+
+test("a zip with two entries of the same name is an archive failure", () => {
+  const manifest = fx.manifestXml({ id: "mythologiq-failsafe", version: V, publisher: "MythologIQ", target: "linux-x64" });
+  const zip = fx.makeZip([
+    { name: "extension.vsixmanifest", data: manifest },
+    { name: "extension/package.json", data: JSON.stringify({ version: V, optionalDependencies: { "better-sqlite3": "^13.0.3" } }) },
+    { name: "extension/package.json", data: JSON.stringify({ version: "9.9.9" }) },
+  ]);
+  const r = inspectVsix(zip, V);
+  assert.equal(r.checks[0].id, "archive");
+  assert.equal(r.checks[0].status, "fail");
+  assert.match(r.checks[0].detail, /duplicate entry extension\/package\.json/);
+});
