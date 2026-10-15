@@ -34,7 +34,7 @@ export class RiskStoreError extends Error {
 export function lockTimeout(lastCode: string, staleMs: number): RiskStoreError {
   return new RiskStoreError(
     "LOCK_TIMEOUT",
-    `The risk register is being updated by another FailSafe process, or its lock is briefly unavailable (lock ${LOCK_REL}, last error ${lastCode}). Try again; a lock left by a crashed process clears after ${Math.ceil(staleMs / 1000)} s.`,
+    `The risk register is being updated by another FailSafe process, or its lock is briefly unavailable (lock ${LOCK_REL}, last error ${lastCode}). Try again; a lock left by a crashed process clears within ${Math.ceil(staleMs / 1000) + 1} s.`,
   );
 }
 

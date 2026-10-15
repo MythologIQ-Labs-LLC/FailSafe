@@ -45,28 +45,36 @@ function exists(p: string): boolean {
   }
 }
 
-/**
- * LD3 step 0. With create, missing directories are made one component at a
- * time. Returns "absent" (check-only, a component is missing) or "ok";
- * throws UNSAFE_PATH when .failsafe/risks resolves anywhere else.
- */
-export function checkRiskDir(workspaceRoot: string, create: boolean): "ok" | "absent" {
-  const failsafe = path.join(workspaceRoot, ".failsafe");
-  const risksDir = path.join(failsafe, "risks");
-  for (const dir of [failsafe, risksDir]) {
-    if (exists(dir)) continue;
-    if (!create) return "absent";
-    try {
-      fs.mkdirSync(dir);
-    } catch (error) {
-      if (errorCode(error) !== "EEXIST") throw unsafePath();
-    }
-  }
+function realpathOrUnsafe(p: string): string {
   try {
-    const expected = path.join(fs.realpathSync.native(workspaceRoot), ".failsafe", "risks");
-    if (!samePath(fs.realpathSync.native(risksDir), expected)) throw unsafePath();
+    return fs.realpathSync.native(p);
   } catch {
     throw unsafePath();
+  }
+}
+
+/**
+ * LD3 step 0. Each component (.failsafe, then .failsafe/risks) must resolve
+ * to its own place under the workspace before the next one is created, so a
+ * link can never make the store create a directory outside it. With create,
+ * a missing component is made with a non-recursive mkdir. Returns "absent"
+ * (check-only, a component is missing) or "ok"; throws UNSAFE_PATH otherwise.
+ */
+export function checkRiskDir(workspaceRoot: string, create: boolean): "ok" | "absent" {
+  const root = realpathOrUnsafe(workspaceRoot);
+  let rel = "";
+  for (const part of [".failsafe", "risks"]) {
+    rel = path.join(rel, part);
+    const dir = path.join(workspaceRoot, rel);
+    if (!exists(dir)) {
+      if (!create) return "absent";
+      try {
+        fs.mkdirSync(dir);
+      } catch (error) {
+        if (errorCode(error) !== "EEXIST") throw unsafePath();
+      }
+    }
+    if (!samePath(realpathOrUnsafe(dir), path.join(root, rel))) throw unsafePath();
   }
   return "ok";
 }
@@ -91,7 +99,8 @@ function readRegularFileOnce(file: string): Buffer | null {
     if (errorCode(error) === "ENOENT") return null;
     throw error;
   }
-  if (!before.isFile()) throw notRegularFile();
+  // A hard link is a link too: its bytes may belong to a file elsewhere.
+  if (!before.isFile() || before.nlink !== 1n) throw notRegularFile();
   let fd: number;
   try {
     fd = fs.openSync(file, READ_FLAGS);
@@ -103,11 +112,20 @@ function readRegularFileOnce(file: string): Buffer | null {
   }
   try {
     const st = fs.fstatSync(fd, { bigint: true });
-    if (!st.isFile() || st.dev !== before.dev || st.ino !== before.ino) throw notRegularFile();
+    if (!st.isFile() || st.nlink !== 1n || st.dev !== before.dev || st.ino !== before.ino) throw notRegularFile();
     return fs.readFileSync(fd);
   } finally {
     fs.closeSync(fd);
   }
+}
+
+/** The parse failure without the excerpt V8 quotes from the file (#517 review). */
+function parseFailureReason(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/Unexpected end of JSON input/.test(message)) return "invalid JSON (unexpected end of input)";
+  const name = error instanceof Error ? error.name : "SyntaxError";
+  const at = /position (\d+)/.exec(message);
+  return at ? `invalid JSON (${name} at position ${at[1]})` : `invalid JSON (${name})`;
 }
 
 export function classify(bytes: Buffer): Classified {
@@ -117,7 +135,7 @@ export function classify(bytes: Buffer): Classified {
   try {
     parsed = JSON.parse(text);
   } catch (error) {
-    return { kind: "bad", reason: error instanceof Error ? error.message : String(error) };
+    return { kind: "bad", reason: parseFailureReason(error) };
   }
   const obj = parsed as { risks?: unknown } | null;
   if (!obj || typeof obj !== "object" || Array.isArray(obj) || !Array.isArray(obj.risks)) {

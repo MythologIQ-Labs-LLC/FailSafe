@@ -46,11 +46,13 @@ async function race(dir: string, children: string[][]): Promise<ChildResult[]> {
  * windows need not overlap: under contention one hot writer can hold the
  * lock for its whole loop while the other waits.)
  */
-function assertOverlap(results: ChildResult[]): void {
-  const firstEnd = Math.min(...results.map((r) => r.lastAt));
-  const lastStart = Math.max(...results.map((r) => r.startedAt));
-  assert.ok(results.every((r) => r.startedAt > 0 && r.lastAt > 0), 'inconclusive: a child never wrote');
-  assert.ok(lastStart < firstEnd, 'inconclusive: the children\'s write attempts did not overlap');
+function assertOverlap(windows: Array<{ startedAt: number; lastAt: number }>): void {
+  assert.ok(windows.every((w) => w.startedAt > 0 && w.lastAt >= w.startedAt), 'inconclusive: a writer never wrote');
+  const overlap = Math.min(...windows.map((w) => w.lastAt)) - Math.max(...windows.map((w) => w.startedAt));
+  const shortest = Math.min(...windows.map((w) => w.lastAt - w.startedAt));
+  const needed = Math.max(100, shortest / 2);
+  assert.ok(overlap >= needed,
+    `inconclusive: the write attempts overlapped ${overlap} ms; at least ${needed} ms is required`);
 }
 
 const risksFile = (dir: string): string => path.join(dir, '.failsafe', 'risks', 'risks.json');

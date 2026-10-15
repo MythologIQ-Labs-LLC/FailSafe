@@ -115,10 +115,12 @@ export class RiskStore {
       this.cache = { key, doc };
       return { state: "ok", doc: structuredClone(doc) };
     } catch (error) {
+      // Display reads never throw: any failure is unreadable, and an fs
+      // error contributes only its code, never a path or file bytes.
       if (error instanceof RiskStoreError) {
         return { state: "unreadable", reason: error.message, code: error.code };
       }
-      throw error;
+      return { state: "unreadable", reason: errorCode(error), code: "UNREADABLE" };
     }
   }
 
@@ -166,16 +168,27 @@ export class RiskStore {
     }
   }
 
+  /** readRaw with every fs failure typed: the code only, no path. */
+  private readTyped(onError: (code: string, error: unknown) => RiskStoreError): Buffer | null {
+    try {
+      return this.readRaw(this.risksPath);
+    } catch (error) {
+      if (error instanceof RiskStoreError) throw error;
+      throw onError(errorCode(error), error);
+    }
+  }
+
   /** LD3 step 4 / LD5: a fresh register, or a refusal with a kept copy. */
   private loadForMutation(): Loaded {
-    let raw = this.readRaw(this.risksPath);
+    const load = (): Buffer | null => this.readTyped((code) => unreadable(code, null));
+    let raw = load();
     if (raw === null) return { doc: { risks: [] }, raw: null };
     const firstHash = sha256(raw);
     if (this.lastUnreadable?.hash === firstHash) throw this.lastUnreadable.error;
     let c = classify(raw);
     for (let attempt = 1; c.kind === "bad" && attempt < READ_ATTEMPTS; attempt++) {
       sleepSync(REREAD_MS);
-      raw = this.readRaw(this.risksPath);
+      raw = load();
       if (raw === null) return { doc: { risks: [] }, raw: null };
       c = classify(raw);
     }
@@ -203,7 +216,7 @@ export class RiskStore {
     for (let attempt = 1; ; attempt++) {
       lock.assertHeld();
       if (checkRiskDir(this.workspaceRoot, false) !== "ok") throw unsafePath();
-      const current = this.readRaw(this.risksPath);
+      const current = this.readTyped((code, error) => writeFailed(code, error));
       const unchanged = current === null ? raw === null : raw !== null && current.equals(raw);
       if (!unchanged) throw conflict();
       try {

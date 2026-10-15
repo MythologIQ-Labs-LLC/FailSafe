@@ -346,4 +346,21 @@ suite('#517 RiskManager on the risk store (FX172)', () => {
     const doc = JSON.parse(fs.readFileSync(file(), 'utf8'));
     assert.deepEqual(Object.keys(doc), ['risks']);
   });
+
+  test('R1 a register that cannot be opened never fails activation', () => {
+    fs.mkdirSync(path.dirname(file()), { recursive: true });
+    fs.writeFileSync(file(), JSON.stringify({ risks: [{ id: 'a', source: 'manual' }] }));
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const realFs = require('fs') as Record<string, unknown>;
+    const realOpen = fs.openSync;
+    realFs.openSync = (p: fs.PathLike, flags: number | string, mode?: number) => {
+      if (String(p) === file()) throw Object.assign(new Error(`EACCES: permission denied, open '${file()}'`), { code: 'EACCES' });
+      return realOpen(p, flags, mode);
+    };
+    let m: RiskManager | undefined;
+    try {
+      assert.doesNotThrow(() => { m = newManager(dir); });
+      assert.deepEqual(m!.getAllRisks(), []);
+    } finally { realFs.openSync = realOpen; }
+  });
 });

@@ -409,8 +409,12 @@ suite('#517 Console risk routes under the risk store lock', function () {
     await exited;
     const result = JSON.parse(out.split('\n').find((l) => l.startsWith('{')) ?? '{}');
     assert.equal(result.errors, 0, result.firstError);
-    assert.ok(result.startedAt < lastPostAt && firstPostAt < result.lastAt,
-      'inconclusive: the child\'s writes did not overlap the Console requests');
+    // Contention precondition (as in RiskStore.multiprocess.test.ts): the child's
+    // write attempts and the Console requests overlapped for at least
+    // max(100 ms, half the shorter window).
+    const overlap = Math.min(lastPostAt, result.lastAt) - Math.max(firstPostAt, result.startedAt);
+    const needed = Math.max(100, Math.min(lastPostAt - firstPostAt, result.lastAt - result.startedAt) / 2);
+    assert.ok(overlap >= needed, `inconclusive: overlap ${overlap} ms; at least ${needed} ms is required`);
     const ids = new Set(mgr.getStoredRisks().map((r) => String(r.id)));
     assert.equal(ids.size, 150);
     for (const id of postedIds) assert.ok(ids.has(id), `${id} lost`);
@@ -481,5 +485,43 @@ suite('#517 Console risk routes under the risk store lock', function () {
     assert.equal(store.length, 2);
     assert.notEqual(store[0].id, store[1].id);
     assert.ok(store.every((r) => r.id.startsWith('risk-1792000000000-')));
+  });
+
+  test('R1/R3 an unopenable register: GET degrades, POST is a 503 without the absolute path', async () => {
+    const risksDir = path.join(dir, '.failsafe', 'risks');
+    const file = path.join(risksDir, 'risks.json');
+    fs.mkdirSync(risksDir, { recursive: true });
+    fs.writeFileSync(file, JSON.stringify({ risks: [{ id: 'a' }] }));
+    const app = makeApp();
+    setupTransparencyRiskRoutes(app, realDeps(new RiskRegisterManager(dir)));
+    harness3 = new RouteHarness(app);
+    await harness3.start();
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const realFs = require('fs') as Record<string, unknown>;
+    const realOpen = fs.openSync;
+    realFs.openSync = (p: fs.PathLike, flags: number | string, mode?: number) => {
+      if (String(p) === file) throw Object.assign(new Error(`EACCES: permission denied, open '${file}'`), { code: 'EACCES' });
+      return realOpen(p, flags, mode);
+    };
+    try {
+      const get = await harness3.request({ path: '/api/risks' });
+      assert.equal(get.status, 200);
+      const post = await harness3.request({ method: 'POST', path: '/api/v1/risks', body: { title: 't', severity: 'low' } });
+      assert.equal(post.status, 503);
+      assert.ok(!String(post.body.error).includes(dir), String(post.body.error));
+    } finally { realFs.openSync = realOpen; }
+  });
+
+  test('R4 a corrupt register with a secret-looking token never echoes it in a response', async () => {
+    const risksDir = path.join(dir, '.failsafe', 'risks');
+    fs.mkdirSync(risksDir, { recursive: true });
+    fs.writeFileSync(path.join(risksDir, 'risks.json'), '{"k":SECRETx9}');
+    const app = makeApp();
+    setupTransparencyRiskRoutes(app, realDeps(new RiskRegisterManager(dir)));
+    harness3 = new RouteHarness(app);
+    await harness3.start();
+    const post = await harness3.request({ method: 'POST', path: '/api/v1/risks', body: { title: 't', severity: 'low' } });
+    assert.equal(post.status, 503);
+    assert.ok(!JSON.stringify(post.body).includes('SECRETx9'), JSON.stringify(post.body));
   });
 });

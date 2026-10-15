@@ -51,21 +51,29 @@ function sleepSync(ms: number): void {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
-/** Same path, same key: case-folded where the filesystem usually is. */
+/** Same file, same key: the real directory path, case-folded where usual. */
 export function reentryKey(file: string): string {
-  const resolved = path.resolve(file);
+  let resolved = path.resolve(file);
+  try {
+    resolved = path.join(fs.realpathSync.native(path.dirname(resolved)), path.basename(resolved));
+  } catch {
+    // An unresolvable directory keeps the resolved path as its key.
+  }
   return process.platform === "win32" || process.platform === "darwin"
     ? resolved.toLowerCase()
     : resolved;
 }
 
 function readIdentity(lockDir: string): LockIdentity | null {
-  try {
-    const st = fs.lstatSync(lockDir, { bigint: true });
-    if (!st.isDirectory() || st.isSymbolicLink()) return null;
-    return { dev: st.dev, ino: st.ino, mtimeNs: st.mtimeNs, birthtimeNs: st.birthtimeNs };
-  } catch {
-    return null;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const st = fs.lstatSync(lockDir, { bigint: true });
+      if (!st.isDirectory() || st.isSymbolicLink()) return null;
+      return { dev: st.dev, ino: st.ino, mtimeNs: st.mtimeNs, birthtimeNs: st.birthtimeNs };
+    } catch (error) {
+      if (attempt >= 3 || !TRANSIENT.has(errorCode(error))) return null;
+      sleepSync(10);
+    }
   }
 }
 
@@ -136,8 +144,12 @@ export function acquireRiskLock(risksPath: string, opts: RiskLockOptions): RiskL
     },
     release(): void {
       held.delete(key);
-      clearLibraryState(file);
-      removeOwnLockDir(lockDir, stillOurs);
+      try {
+        clearLibraryState(file);
+        removeOwnLockDir(lockDir, stillOurs);
+      } catch (error) {
+        logger.warn("Risk register lock release failed", error);
+      }
     },
   };
 }

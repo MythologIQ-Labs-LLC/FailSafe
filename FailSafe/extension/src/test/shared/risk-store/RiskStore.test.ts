@@ -506,5 +506,83 @@ suite('RiskStore (#517 FX972)', () => {
       assert.equal(codeOf(() => store().mutate(add('second'))), 'UNSAFE_PATH');
       assert.deepEqual(fs.readdirSync(path.join(outside, 'risks')), []);
     });
+
+    test('.failsafe linked to a directory with no risks/ creates nothing outside', () => {
+      junction(outside, path.join(ws, '.failsafe'));
+      assert.equal(codeOf(() => store().mutate(add('n'))), 'UNSAFE_PATH');
+      assert.deepEqual(fs.readdirSync(outside), [], 'no risks/ directory may be created in the link target');
+    });
+  });
+
+  suite('review fixes (#517)', () => {
+    const eacces = (): Error => Object.assign(new Error(`EACCES: permission denied, open '${risksFile()}'`), { code: 'EACCES' });
+    const failOpenOf = (target: () => string, from = 1): (() => void) => {
+      const realOpen = fs.openSync;
+      let calls = 0;
+      return patch('openSync', (p: fs.PathLike, flags: number | string, mode?: number) => {
+        if (String(p) === target() && ++calls >= from) throw eacces();
+        return realOpen(p, flags, mode);
+      });
+    };
+
+    test('R1 any read error degrades read() to unreadable with the error code only', () => {
+      seed(JSON.stringify({ risks: [{ id: 'a' }] }));
+      cleanups.push(failOpenOf(risksFile));
+      const r = store().read();
+      assert.equal(r.state, 'unreadable');
+      assert.equal((r as { reason: string }).reason, 'EACCES');
+    });
+
+    test('R3 a read error during mutate is a typed refusal without the absolute path', () => {
+      seed(JSON.stringify({ risks: [{ id: 'a' }] }));
+      const undo = failOpenOf(risksFile);
+      const e = errorOf(() => store().mutate(add('n')));
+      undo();
+      assert.equal(e.code, 'UNREADABLE');
+      assert.ok(!e.message.includes(ws), e.message);
+      assert.deepEqual(copies(), [], 'an I/O error is not corruption: nothing is copied');
+    });
+
+    test('R3 a read error at the byte compare is WRITE_FAILED without the absolute path', () => {
+      seed(JSON.stringify({ risks: [{ id: 'a' }] }));
+      const before = fs.readFileSync(risksFile(), 'utf8');
+      const undo = failOpenOf(risksFile, 2);
+      const e = errorOf(() => store().mutate(add('n')));
+      undo();
+      assert.equal(e.code, 'WRITE_FAILED');
+      assert.ok(!e.message.includes(ws), e.message);
+      assert.equal(fs.readFileSync(risksFile(), 'utf8'), before);
+    });
+
+    test('R4 file bytes never reach a refusal reason, a read reason or a log line', () => {
+      const SECRET = 'SECRETx9';
+      seed(`{"k":${SECRET}}`); // short enough that V8 would quote all of it
+      const logged: string[] = [];
+      const original = { warn: console.warn, info: console.info, log: console.log, error: console.error };
+      for (const k of ['warn', 'info', 'log', 'error'] as const) console[k] = (...a: unknown[]) => { logged.push(a.map(String).join(' ')); };
+      let e: RiskStoreError;
+      let r: ReturnType<RiskStore['read']>;
+      try {
+        e = errorOf(() => store().mutate(add('n')));
+        r = store().read();
+      } finally { Object.assign(console, original); }
+      assert.equal(e.code, 'UNREADABLE');
+      assert.match(e.message, /JSON/);
+      assert.ok(!e.message.includes(SECRET), e.message);
+      assert.equal(r.state, 'unreadable');
+      assert.ok(!JSON.stringify(r).includes(SECRET), JSON.stringify(r));
+      assert.ok(!logged.join('\n').includes(SECRET), 'a log line carried file bytes');
+    });
+
+    test('R4 a hard-linked risks.json is refused before parsing and never copied', () => {
+      const target = path.join(outside, 'elsewhere.json');
+      fs.writeFileSync(target, '{"not": "a register", "secret": "xyz"');
+      fs.mkdirSync(risksDir(), { recursive: true });
+      fs.linkSync(target, risksFile());
+      assert.equal(codeOf(() => store().mutate(add('n'))), 'NOT_REGULAR_FILE');
+      assert.equal(store().read().state, 'unreadable');
+      assert.deepEqual(copies(), []);
+      assert.equal(fs.readFileSync(target, 'utf8'), '{"not": "a register", "secret": "xyz"');
+    });
   });
 });
