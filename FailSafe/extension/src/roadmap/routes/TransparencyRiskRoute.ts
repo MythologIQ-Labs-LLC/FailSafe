@@ -1,10 +1,45 @@
 import { Request, Response } from "express";
+import * as crypto from "crypto";
 import type { ApiRouteDeps } from "./types";
+import { RiskStoreError } from "../../shared/risk-store";
 
 /**
  * Transparency audit stream and risk-register CRUD routes.
  * Extracted from ConsoleServer (lines 494-561).
+ *
+ * #517: create/update/delete run inside mutateRiskRegister, under the risk
+ * store lock against the freshly read durable list, so a write from another
+ * window or importer between a read and a write can never be lost.
  */
+
+/** #517 LD9: store refusals are 503 (retryable or operator-fixable), CONFLICT 409. */
+function statusFor(error: unknown): number {
+  if (!(error instanceof RiskStoreError)) return 500;
+  if (error.code === "CONFLICT") return 409;
+  if (error.code === "REENTRANT" || error.code === "ASYNC_MUTATOR") return 500;
+  return 503;
+}
+
+function sendFailure(res: Response, error: unknown): void {
+  res.status(statusFor(error)).json({ ok: false, error: error instanceof Error ? error.message : String(error) });
+}
+
+function notFound(res: Response, id: unknown): void {
+  // The explanatory body serves raw API consumers; the Console UI no
+  // longer renders mutation affordances on backlog-derived rows.
+  res.status(404).json({ ok: false, error: String(id).startsWith("backlog:")
+    ? "backlog-derived rows are read-only; edit docs/BACKLOG.md"
+    : "risk not found" });
+}
+
+/** risk-MILLIS-6HEX: two windows creating in the same millisecond never collide. */
+function newRiskId(risks: Array<{ id?: unknown }>): string {
+  for (;;) {
+    const id = `risk-${Date.now()}-${crypto.randomBytes(3).toString("hex")}`;
+    if (!risks.some((r) => r.id === id)) return id;
+  }
+}
+
 export function setupTransparencyRiskRoutes(
   app: import("express").Application,
   deps: ApiRouteDeps,
@@ -31,8 +66,7 @@ export function setupTransparencyRiskRoutes(
         .json({ ok: false, error: "title and severity required" });
       return;
     }
-    const risk = {
-      id: `risk-${Date.now()}`,
+    const fields = {
       title: String(title).slice(0, 200),
       severity: String(severity),
       status: String(status || "open"),
@@ -42,9 +76,17 @@ export function setupTransparencyRiskRoutes(
     // #377: mutations read the DURABLE store, never getRiskRegister()'s
     // display view — reading the BACKLOG.md fallback here durably promoted
     // the entire projection on the first write (#241 F-6 sibling).
-    const risks = deps.getStoredRiskRegister();
-    risks.push(risk);
-    deps.writeRiskRegister(risks);
+    let risk: Record<string, unknown>;
+    try {
+      risk = deps.mutateRiskRegister((risks) => {
+        const created = { id: newRiskId(risks), ...fields };
+        risks.push(created);
+        return created;
+      });
+    } catch (error) {
+      sendFailure(res, error);
+      return;
+    }
     deps.broadcast({ type: "risk.created", payload: risk });
     res.json({ ok: true, risk });
   });
@@ -53,19 +95,22 @@ export function setupTransparencyRiskRoutes(
   app.put("/api/v1/risks/:id", (req: Request, res: Response) => {
     if (deps.rejectIfRemote(req, res)) return;
     const id = req.params.id;
-    const risks = deps.getStoredRiskRegister();
-    const idx = risks.findIndex((r: any) => r.id === id);
-    if (idx === -1) {
-      // The explanatory body serves raw API consumers; the Console UI no
-      // longer renders mutation affordances on backlog-derived rows.
-      res.status(404).json({ ok: false, error: String(id).startsWith("backlog:")
-        ? "backlog-derived rows are read-only; edit docs/BACKLOG.md"
-        : "risk not found" });
+    let updated: Record<string, unknown> | null;
+    try {
+      updated = deps.mutateRiskRegister((risks) => {
+        const idx = risks.findIndex((r: any) => r.id === id);
+        if (idx === -1) return null;
+        risks[idx] = { ...risks[idx], ...req.body, id };
+        return risks[idx];
+      });
+    } catch (error) {
+      sendFailure(res, error);
       return;
     }
-    const updated = { ...risks[idx], ...req.body, id };
-    risks[idx] = updated;
-    deps.writeRiskRegister(risks);
+    if (!updated) {
+      notFound(res, id);
+      return;
+    }
     deps.broadcast({ type: "risk.updated", payload: updated });
     res.json({ ok: true, risk: updated });
   });
@@ -74,15 +119,22 @@ export function setupTransparencyRiskRoutes(
   app.delete("/api/v1/risks/:id", (req: Request, res: Response) => {
     if (deps.rejectIfRemote(req, res)) return;
     const id = req.params.id;
-    const risks = deps.getStoredRiskRegister();
-    const filtered = risks.filter((r: any) => r.id !== id);
-    if (filtered.length === risks.length) {
-      res.status(404).json({ ok: false, error: String(id).startsWith("backlog:")
-        ? "backlog-derived rows are read-only; edit docs/BACKLOG.md"
-        : "risk not found" });
+    let deleted: boolean;
+    try {
+      deleted = deps.mutateRiskRegister((risks) => {
+        const idx = risks.findIndex((r: any) => r.id === id);
+        if (idx === -1) return false;
+        risks.splice(idx, 1);
+        return true;
+      });
+    } catch (error) {
+      sendFailure(res, error);
       return;
     }
-    deps.writeRiskRegister(filtered);
+    if (!deleted) {
+      notFound(res, id);
+      return;
+    }
     deps.broadcast({ type: "risk.deleted", payload: { id } });
     res.json({ ok: true });
   });
