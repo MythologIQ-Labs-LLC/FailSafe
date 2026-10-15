@@ -30974,3 +30974,736 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `9b0ec3597ce9522d4629d5556e3a5d42b658876021e00018cbd347d5cc06f61d`
 
 **Decision**: SESSION SEAL for plan-v607-release-assets.md (implementation #657). Reality = Promise, with disclosures. Delivered on release/v6.0.7-rc1 at 873a6c32 plus this seal commit: the GitHub Release carries the verified eight-package set and SHA256SUMS.txt from the one built artifact (FX974); a read-only provenance verifier (FX975); a one-set-per-release guard on Actions history with run- and step-level self-presence; remote tag checks in both publish jobs; serialized runs per tag; docs/RELEASE_RECOVERY.md. Marketplace publish commands and the production environment are unchanged. Evidence is in the implement gate, including CI rehearsal 38767828923 on real Actions data. Ledger #617-#657 verified as one linear chain before this seal. Disclosures: the release write calls (draft, upload, publish), the remote tag check against a real tag and the marketplace poll against published packages are exercised only by unit tests with injected clients and will first run on the real v6.0.7 tag; the GitHub Release job may wait up to 60 minutes for Open VSX propagation; after anything is published a full re-run stops at the build job and recovery is the documented operator-only manual procedure within the artifact's 90-day retention; the build job's release lookup sees published releases only. Override: the owner accepted the bounded damaged-ledger recovery override for this RC; the pre-existing damage (#341, #382, duplicates at or below #236) is not repaired and normal governance is NOT restored (#467). Not merged, not tagged, not published.
+
+---
+
+### Entry #659: GATE TRIBUNAL - plan-wave0-release-verification (iteration 1) - VETO
+
+**Timestamp**: 2026-10-15T13:58:41Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1349-e38e3c`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: owner ruling 2026-10-15: damaged-ledger override extended to each Wave 0/1 lane cycle, disclosed per cycle
+
+**Content Hash**: `ca6697e28ca6802187cdc380105cb55a66940f864c51827abf79de25dcbce164`
+**Previous Hash**: `9b0ec3597ce9522d4629d5556e3a5d42b658876021e00018cbd347d5cc06f61d`
+**Chain Hash (Merkle seal)**: `71248d02a9f41d49d88e5ca84d89a75ab0f921dd2a49b4cb5a0dd0fa5a53d8d4`
+
+**Decision**: VETO on plan-wave0-release-verification.md iteration 1 (Lane A, Wave 0, program #521). Fresh Option B architect-reviewer; test placement under src/test confirmed (tools/ would be undiscovered). V1 specification-drift: report status rules undefined for rehearsal-mode not-run/inconclusive checks and contradicted by the plan's own expected outcomes. V2 specification-drift: verified needs no lifecycle evidence and lifecycle evidence is not bound to the published bytes. V3 coverage-gap: forced-kill persistence comparison passes without any write in the killed session. V4 security-l3: isolation omits the home directory; the extension under test writes the operator's real ~/.failsafe/servers.json. Sixteen advisories recorded. Next: Lane A amends plan. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #660: GATE TRIBUNAL - plan-wave0-release-verification (iteration 2) - VETO
+
+**Timestamp**: 2026-10-15T15:12:38Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1349-e38e3c`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: owner ruling 2026-10-15: damaged-ledger override extended to each Wave 0/1 lane cycle, disclosed per cycle
+
+**Content Hash**: `74527c52495c734fd13ef2855eaadc8f18f336b1b6e12c29f87bc9517c484d87`
+**Previous Hash**: `71248d02a9f41d49d88e5ca84d89a75ab0f921dd2a49b4cb5a0dd0fa5a53d8d4`
+**Chain Hash (Merkle seal)**: `4124cd3ec663c2805bc6f00899c227ff8630dda2e01dcade8678bf31ee681dee`
+
+**Decision**: VETO on plan-wave0-release-verification.md iteration 2 (sha256 8dc567f5, Lane A, Wave 0, program #521). Fresh Option B architect-reviewer; iteration-1 V1-V4 resolved; about 35 citations spot-checked with no ghosts. V5 coverage-gap: the report does not bind evidence across marketplace files - two files may carry different approved checksum sets (realistic after a re-run, since vsce --skip-duplicate keeps old bytes) and no test requires both marketplaces. Fix: exit 2 on more than one distinct approvedSums.sha256, name both marketplaces in the required table, add the two tests. Twelve advisories. Next: Lane A amends plan. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #661: GATE TRIBUNAL - plan-wave0-release-verification (iteration 3) - PASS
+
+**Timestamp**: 2026-10-15T15:23:05Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1349-e38e3c`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: owner ruling 2026-10-15: damaged-ledger override extended to each Wave 0/1 lane cycle, disclosed per cycle
+
+**Content Hash**: `e0bb64dec9482f82c20eecc3beb302c39755dde7ed6307f87100b99555950335`
+**Previous Hash**: `4124cd3ec663c2805bc6f00899c227ff8630dda2e01dcade8678bf31ee681dee`
+**Chain Hash (Merkle seal)**: `d53deb3a25b623e0dd2565f3a91adde3aae6f8a87f83c3c2e69275c00e931781`
+
+**Decision**: PASS on plan-wave0-release-verification.md iteration 3 (sha256 0c32977e, Lane A, Wave 0, program #521). Fresh Option B architect-reviewer. V5 resolved: more than one approved checksum set exits 2 and both marketplaces are required by name, each with a falsifying test and mutation; named rows for a not-run required check and a mismatched lifecycle version present. V1-V4 did not regress; about 45 citations at ba353468 match; lane boundary holds (new files only, excluded from the VSIX). Twelve non-blocking advisories, three to fold into implementation: case-insensitive redaction, drive-letter-insensitive workspace path, and a report test for download hash re-checks. Next: Lane A implements on feat/wave0-release-verification. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #662: IMPLEMENTATION - plan-wave0-release-verification
+
+**Timestamp**: 2026-10-15T21:58:14Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-15T1349-e38e3c`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-15T1349-e38e3c/implement-iter1.json`
+
+**Content Hash**: `220020c2b18b8b9b145a8aabff8ac18759e97742d29c7629ed5cda90ae860c1d`
+**Previous Hash**: `d53deb3a25b623e0dd2565f3a91adde3aae6f8a87f83c3c2e69275c00e931781`
+**Chain Hash (Merkle seal)**: `129ade764a7246be48a47aee8c32efaa353fa2d1eadd4b7e092b5baf3f9b64db`
+
+**Decision**: IMPLEMENTATION of plan-wave0-release-verification.md (audit PASS #661), Lane A of program #521, FX966/FX967. Commits ed0a7a8c..285af6d6 (9) on its lane branch from ba353468, merged into release/v6.0.7-rc2 without rewriting (plan-v607-final-integration LD1): rv, a release verification tool (tools/release-verification): strict approved-checksum inventory, marketplace parity for both marketplaces, a disposable-VS-Code lifecycle (install, upgrade, forced kill, restart, rollback) with SQLite checkpoints and degraded-mode detection, and a report with fixed required checks per mode. Files: 28. Evidence: release-verification suites 100/100; test:node 469/471 (2 = FX946 ledgerAnchor baseline, #467); tsc 0; lint 0 errors; runner coverage pass; red-first for every fix; 13 + 9 named mutations red; live win32-x64 on the RC VSIX c2a08f8d: inventory 50/50, lifecycle 12/12 (checkpoints 0,1,2,3,4,4,5), report rehearsal-pass 62/62, 0 disposable processes left. Verified again in the integrated candidate 736c74dd40ef9f44f6b59ba9f1d6cddca3d15c12 (plan-v607-final-integration LD4).
+
+---
+
+### Entry #663: SESSION SEAL - plan-wave0-release-verification
+
+**Timestamp**: 2026-10-15T21:58:14Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-15T1349-e38e3c`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-15T1349-e38e3c/substantiate.json`
+
+**Content Hash**: `9e1edc2940eb6d141cc00f0f42190afed0d04826505d0600a91ad582c109eac9`
+**Previous Hash**: `129ade764a7246be48a47aee8c32efaa353fa2d1eadd4b7e092b5baf3f9b64db`
+**Chain Hash (Merkle seal)**: `0b1c5c50d83d1a2503e78aab6321787af136e5a0514119640ccbb23b5759f9e6`
+
+**Decision**: SESSION SEAL for plan-wave0-release-verification.md (implementation #662), Lane A of program #521. Reality = Promise, with disclosures. Delivered at lane head 285af6d6 and in the integrated candidate 736c74dd40ef9f44f6b59ba9f1d6cddca3d15c12: rv, a release verification tool (tools/release-verification): strict approved-checksum inventory, marketplace parity for both marketplaces, a disposable-VS-Code lifecycle (install, upgrade, forced kill, restart, rollback) with SQLite checkpoints and degraded-mode detection, and a report with fixed required checks per mode. Disclosures: standing damaged-ledger override applied per lane cycle (#467 unresolved, normal governance not restored); the suites have not run on Linux; CI on the delivery PR runs them; L4: report.cjs excludes the lifecycle file from the same-version exit-2 rule and binds the lifecycle version instead; identity falls back to ExecutablePath alone when both CreationDates are empty. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps. Not tagged, not published.
+
+---
+
+### Entry #664: GATE TRIBUNAL - plan-473-soa-ledger-v3 (iteration 1) - VETO
+
+**Timestamp**: 2026-10-15T13:56:57Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1349-f0d778`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: owner ruling 2026-10-15: damaged-ledger override extended to each Wave 0/1 lane cycle, disclosed per cycle
+
+**Content Hash**: `6d4800c95e43d565cda5c830ec5e8d8be3977815514d9664ec006d57618122b3`
+**Previous Hash**: `0b1c5c50d83d1a2503e78aab6321787af136e5a0514119640ccbb23b5759f9e6`
+**Chain Hash (Merkle seal)**: `a6857f6a51805897f92c6f6ee3a1395f9e8a695e560b6d2b9947ce4e0499cfea`
+
+**Decision**: VETO on the Lane B #473 SOA ledger v3 plan, iteration 1 (program #521). Fresh Option B architect-reviewer; column coverage, prefix parsing and v1 genesis rule confirmed sound. V1 security-l3: appends and anchor advances do not require the anchored head to still exist, so truncation, rollback, activation replay and wipe-restart are re-anchored by the next honest append. V2 specification-drift: an absent anchor is both established-now and anchor-missing, unresolvable for fresh, moved or crash-before-anchor ledgers. V3 security-l3: the anchor key derives from a ledger path the attacker can repoint inside .failsafe, allowing a forged legacy copy to activate as new. Fourteen advisories recorded. Next: Lane B amends plan. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #665: GATE TRIBUNAL - plan-473-soa-ledger-v3 (iteration 2) - VETO
+
+**Timestamp**: 2026-10-15T15:11:50Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1349-f0d778`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: owner ruling 2026-10-15: damaged-ledger override extended to each Wave 0/1 lane cycle, disclosed per cycle
+
+**Content Hash**: `78de4e6aa0509aa5d59b0d86baf844d5dda441469a14e56becc12428e6f1484f`
+**Previous Hash**: `a6857f6a51805897f92c6f6ee3a1395f9e8a695e560b6d2b9947ce4e0499cfea`
+**Chain Hash (Merkle seal)**: `adefa064ffd186676977a2b75fe07e0432d51e508f4d2003ff1c16360519d614`
+
+**Decision**: VETO on plan-473-soa-ledger-v3.md iteration 2 (sha256 99aaae8f, Lane B, #473, program #521). Fresh Option B architect-reviewer. Iteration-1 V1 (anchor advances only over rows the DB still proves) and V2 (deterministic initialize decision table) resolved; V3 partly. B1 security-l3: the path binding is still keyed by the attacker-controllable ledgerPath, so repointing to a fresh or foreign ledger reports intact/verified; fix with a workspace-root binding. B2 specification-drift: established-late decays to intact on the next initialize. B3 specification-drift: startNewLedger swaps the whole DB file, losing agent_trust, agent_rbac and checkpoints and closing shared handles; rotate at table level. Ten advisories. Next: Lane B amends plan. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #666: GATE TRIBUNAL - plan-473-soa-ledger-v3 (iteration 3) - VETO
+
+**Timestamp**: 2026-10-15T15:26:11Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1349-f0d778`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: owner ruling 2026-10-15: damaged-ledger override extended to each Wave 0/1 lane cycle, disclosed per cycle
+
+**Content Hash**: `d41f9850a8cd4dc8f3bba8ef70b70c31c9c858bf9412d84d2bfbb4026ee2f91a`
+**Previous Hash**: `adefa064ffd186676977a2b75fe07e0432d51e508f4d2003ff1c16360519d614`
+**Chain Hash (Merkle seal)**: `c3dc54ee6309547646166624b0623570d7a9342fa259ac6ef408b891095f8bfc`
+
+**Decision**: VETO on plan-473-soa-ledger-v3.md iteration 3 (sha256 9c47e209, Lane B, #473, program #521). Fresh Option B architect-reviewer; iteration-2 B1-B3 resolved in design; citations at ba353468 match. F1 security-l3: the anchor writer re-reads the stored record but checks only headId, so a second window can re-anchor a forged head after rows are deleted (iteration-1 V1 class through a second window). F2: rotation's delete transaction does not re-check the table, so a row committed between copy and delete is lost unretired. F3 coverage-gap: the named activation-precondition mutation is masked by decision-table order. Twelve advisories. Next: Lane B amends plan. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #667: GATE TRIBUNAL - plan-473-soa-ledger-v3 (iteration 4) - VETO
+
+**Timestamp**: 2026-10-15T15:50:23Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1349-f0d778`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: owner ruling 2026-10-15: damaged-ledger override extended to each Wave 0/1 lane cycle, disclosed per cycle
+
+**Content Hash**: `5b277f54e186f8a4a2d731928dc91fed81f1ea22fc12dd3d2fc611f8a56f0161`
+**Previous Hash**: `c3dc54ee6309547646166624b0623570d7a9342fa259ac6ef408b891095f8bfc`
+**Chain Hash (Merkle seal)**: `39116c7c7d5598abdfc763eb9bc57a6549bc2b558e3332244d09f87435b9b450`
+
+**Decision**: VETO on plan-473-soa-ledger-v3.md iteration 4 (sha256 e2354c4b, Lane B, #473, program #521). Fresh Option B architect-reviewer; iteration-3 F1 and F2 resolved; citations at ba353468 match. B-1: whether the verifier itself runs the head-anchor check is unspecified, leaving either in-session deletions undetected or the replay mutation masked. B-2 security-l3: the pending-store rule lets an attacker delete rows back to a genesis, receipt or rotation genesis and clear establishedLate, so the gate reports intact. Nine advisories. Next: Lane B amends plan. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #668: GATE TRIBUNAL - plan-473-soa-ledger-v3 (iteration 5) - PASS
+
+**Timestamp**: 2026-10-15T16:01:17Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1349-f0d778`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: owner ruling 2026-10-15: damaged-ledger override extended to each Wave 0/1 lane cycle, disclosed per cycle
+
+**Content Hash**: `111671210cfd95806ea12a9e8e8f8186936edbd1eddbc34510358de9701192f5`
+**Previous Hash**: `39116c7c7d5598abdfc763eb9bc57a6549bc2b558e3332244d09f87435b9b450`
+**Chain Hash (Merkle seal)**: `f6acf9206f841258c64820ba2ab00e9aed5772c6ee4ec05059bc87e229df1e32`
+
+**Decision**: PASS on plan-473-soa-ledger-v3.md iteration 5 (sha256 5b7256c4, Lane B, #473, program #521). Fresh Option B architect-reviewer. B-1 resolved: the verifier runs the head-anchor check on every call, with a no-append tail-deletion test and a reachable replay mutation. B-2 resolved: the pending-store rule is removed, creates are create-if-absent, rows 5 and 9 always store established-late, and all three falsifier variants catch the reinstated rule. Unanchored is a warning, never intact. Earlier fixes hold; 25 citations at ba353468 resolve. Eleven non-blocking advisories. Next: Lane B implements on fix/473-soa-ledger-v3. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #669: IMPLEMENTATION - plan-473-soa-ledger-v3
+
+**Timestamp**: 2026-10-15T21:58:15Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-15T1349-f0d778`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-15T1349-f0d778/implement-iter1.json`
+
+**Content Hash**: `b312cac0012cd0182dfe38a6cea86996e5b2c3e7a84e9a7c3a04201ab502d3da`
+**Previous Hash**: `f6acf9206f841258c64820ba2ab00e9aed5772c6ee4ec05059bc87e229df1e32`
+**Chain Hash (Merkle seal)**: `26edf2ead33f94f79592becd6bb21782eee003a50729d7fb4d566f14c6ac0dc6`
+
+**Decision**: IMPLEMENTATION of plan-473-soa-ledger-v3.md (audit PASS #668), Lane B of program #521, FX968/FX969. Commits b842a2ea..45828fa2 (3) on its lane branch from ba353468, merged into release/v6.0.7-rc2 without rewriting (plan-v607-final-integration LD1): SOA ledger rows sealed v3 over every column including the row id, a version-aware verifier for v1/v2 rows frozen by an activation receipt, the ledger head anchored in SecretStorage by genesis with a per-workspace binding (truncation, rollback, wipe, substitution and ledgerPath repointing detected), rotation genesis trusted only after every row verifies, and a release gate that reports intact only for a fully sealed, anchored, workspace-bound ledger. Files: 13. Evidence: vscode-test 4529 passing / 0 failing / 19 pending, census 484/484 (host-wiring test with the real ConfigManager ran); lane suites 89; 41 ledger-consumer suites green; tsc 0; lint 0 errors; runner coverage pass; red first on ba353468 (LedgerManager 18/39, gate 0/14) and on 92158b7a for the review fixes (7/7); mutations M1-M8, M9b, M10-M18, A3, R1-R7 red. Verified again in the integrated candidate 736c74dd40ef9f44f6b59ba9f1d6cddca3d15c12 (plan-v607-final-integration LD4).
+
+---
+
+### Entry #670: SESSION SEAL - plan-473-soa-ledger-v3
+
+**Timestamp**: 2026-10-15T21:58:15Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-15T1349-f0d778`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-15T1349-f0d778/substantiate.json`
+
+**Content Hash**: `8c091e265dafe1d9676847663e37d03948394386527fbe1e7fdb8f3a9b049585`
+**Previous Hash**: `26edf2ead33f94f79592becd6bb21782eee003a50729d7fb4d566f14c6ac0dc6`
+**Chain Hash (Merkle seal)**: `3454edb4a512d21bcdc0da88a4e713b439c165b9b6b98a68cf6316fd41a6d66b`
+
+**Decision**: SESSION SEAL for plan-473-soa-ledger-v3.md (implementation #669), Lane B of program #521. Reality = Promise, with disclosures. Delivered at lane head 45828fa2 and in the integrated candidate 736c74dd40ef9f44f6b59ba9f1d6cddca3d15c12: SOA ledger rows sealed v3 over every column including the row id, a version-aware verifier for v1/v2 rows frozen by an activation receipt, the ledger head anchored in SecretStorage by genesis with a per-workspace binding (truncation, rollback, wipe, substitution and ledgerPath repointing detected), rotation genesis trusted only after every row verifies, and a release gate that reports intact only for a fully sealed, anchored, workspace-bound ledger. Disclosures: standing damaged-ledger override applied per lane cycle (#467 unresolved, normal governance not restored); vscode-test ran on the disposable test build (win32VersionedUpdate removed because the operator's parked updater holds the vscode-updating mutex; operator install untouched); equivalent mutants survive: M9 (cache refresh) and R8 (=== instead of timingSafeEqual); the host-wiring test wraps an in-memory vscode.SecretStorage because activate() exports nothing; the real keychain is not exercised; the audit gate artifacts carry iteration values 1, 2, 3, 5, 6 while the tribunal entries count audits 1-5; each entry's plan sha256 matches its gate artifact; the key is symmetric (local evidence only); a never-bound workspace folder binds the ledger it finds; rows written since the last anchor write that landed can be removed undetected. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps. Not tagged, not published.
+
+---
+
+### Entry #671: GATE TRIBUNAL - plan-476-commit-bound-shield-checks (iteration 1) - VETO
+
+**Timestamp**: 2026-10-15T13:54:20Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1348-70efef`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: owner ruling 2026-10-15: damaged-ledger override extended to each Wave 0/1 lane cycle, disclosed per cycle
+
+**Content Hash**: `200b64a3f10dfee6e311811caf11a9c34dee0e799c439fd71d92dacbe3f0d93b`
+**Previous Hash**: `3454edb4a512d21bcdc0da88a4e713b439c165b9b6b98a68cf6316fd41a6d66b`
+**Chain Hash (Merkle seal)**: `d241de0dc7e806e56da5f7277e1797102e20ad252646be870abc42ba550140d6`
+
+**Decision**: VETO on plan-476-commit-bound-shield-checks.md iteration 1 (Lane C, #476, program #521). Fresh Option B architect-reviewer; Affected Files contract and neutral-check handling confirmed. V1 security-l3: the receipt-to-evidence binding (latest SESSION SEAL in the commit's ledger) lets a SHIELD success attach to any later unsealed commit that inherits an old seal; nothing requires the receipt commit to be the seal commit or bounds the changes since it, and no test covers it. Advisories: transport import scope, subject-bound chain status, POST target bound to receipt repo and host, per-reason falsifiers, injectable verifier, check order, baseline count, own-property allowlist, constant-time compare and pinned digest, exact ledger label regexes, session-id validation, clean-tree issuance realism, Qor version pin semantics, detail field hygiene, documentation drift, re-check against the RC command file. Next: Lane C amends plan. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #672: GATE TRIBUNAL - plan-476-commit-bound-shield-checks (iteration 2) - VETO
+
+**Timestamp**: 2026-10-15T15:14:22Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1348-70efef`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: owner ruling 2026-10-15: damaged-ledger override extended to each Wave 0/1 lane cycle, disclosed per cycle
+
+**Content Hash**: `3768a507e0a2669db31d45195ccf7e0c0183223d714ebe642b0fc0144258e5ae`
+**Previous Hash**: `d241de0dc7e806e56da5f7277e1797102e20ad252646be870abc42ba550140d6`
+**Chain Hash (Merkle seal)**: `035b6af72f4587823d76216f47fe867d5a7a99a502f4201a1f51bdf2634c36bb`
+
+**Decision**: VETO on plan-476-commit-bound-shield-checks.md iteration 2 (sha256 6a851c87, Lane C, #476, program #521). Fresh Option B architect-reviewer; iteration-1 V1 resolved by the seal-commit rule with a falsifying test; citations and RC command compatibility at ba353468 confirmed. B1 security-l3: the verifier never requires the receipt's seal fields (merkle_seal, ledger_entry, verdicts, risk grade, target) to equal the verified substantiate artifact, so a new seal header for an already-substantiated session at an unsealed commit verifies. Fix: field equality in step 16, issuance fields from the artifacts, a test row and a named mutation. Nine advisories. Next: Lane C amends plan. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #673: GATE TRIBUNAL - plan-476-commit-bound-shield-checks (iteration 3) - VETO
+
+**Timestamp**: 2026-10-15T15:21:05Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1348-70efef`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: owner ruling 2026-10-15: damaged-ledger override extended to each Wave 0/1 lane cycle, disclosed per cycle
+
+**Content Hash**: `f10d16d65aa0abee662b4455d596610da042e2789bc71d5ff5c9a15238153e65`
+**Previous Hash**: `035b6af72f4587823d76216f47fe867d5a7a99a502f4201a1f51bdf2634c36bb`
+**Chain Hash (Merkle seal)**: `64e41f2dcd6b3f8359abd2a022189dba0489cb74e78bfa6be8190249176d3dd6`
+
+**Decision**: VETO on plan-476-commit-bound-shield-checks.md iteration 3 (sha256 1e75c7c2, Lane C, #476, program #521). Fresh Option B architect-reviewer; the receipt-artifact equality rule is correct and the removed commit-time rule opens nothing. V1 coverage-gap: the named B1 mutation cannot fail the B1 row because that receipt differs in two fields; single-field rows for ledgerEntry and merkleSeal are needed, each with its own mutation. V2 specification-drift: the qorVersion mismatch row can never reach receipt-artifact-mismatch because the version pin returns Neutral first. Eight advisories (shallow clones and replace objects, earlier import source-scan, key-unavailable issuance, single-label parsing, re-substantiation, delete-then-re-add disclosure, host binding statement, FX allocation). Next: Lane C amends plan. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #674: GATE TRIBUNAL - plan-476-commit-bound-shield-checks (iteration 4) - PASS
+
+**Timestamp**: 2026-10-15T15:28:15Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1348-70efef`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: owner ruling 2026-10-15: damaged-ledger override extended to each Wave 0/1 lane cycle, disclosed per cycle
+
+**Content Hash**: `c42604ba04c162f33d0cbc91d6ff7f774dec313ea0498904eeb0fcd793125582`
+**Previous Hash**: `64e41f2dcd6b3f8359abd2a022189dba0489cb74e78bfa6be8190249176d3dd6`
+**Chain Hash (Merkle seal)**: `9b207fe72222356d0c818849cf9d7f1fee7d92a704028e7e57b507192f582f5e`
+
+**Decision**: PASS on plan-476-commit-bound-shield-checks.md iteration 4 (sha256 83b3baf3, Lane C, #476, program #521). Fresh Option B architect-reviewer. Both single-field rows (ledgerEntry only, merkleSeal only) are rejected first at step 16 and turn Verified under exactly their named mutations; the qorVersion row now asserts the reachable Neutral; shallow-clone, replace-object and graft handling and the superseded-evidence Neutral open no hole; earlier fixes hold; citations at wC and ba353468 confirmed; FX970/FX971 unused. Ten non-blocking advisories (raw POST source scan, ceiling sentence and grafts test, temp directory, fixture re-signing, issuedAt parsing, root commits, duplicate-label test, fail-closed errors, transport payload type, cat-file reads). Next: Lane C implements on fix/476-commit-bound-shield-checks. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #675: GATE TRIBUNAL - plan-476-delta-N1-first-introduction (iteration 5) - VETO
+
+**Timestamp**: 2026-10-15T17:10:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1348-70efef`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: owner ruling 2026-10-15: damaged-ledger override extended to each Wave 0/1 lane cycle, disclosed per cycle
+
+**Content Hash**: `44869eb22e718d72505320c441ec2827b97c78e8c8ab832c7bc42b2a0bb7389a`
+**Previous Hash**: `9b207fe72222356d0c818849cf9d7f1fee7d92a704028e7e57b507192f582f5e`
+**Chain Hash (Merkle seal)**: `0def6bedc2b1f846691d7658196f4a53014c1de0400112873917793026b5ecdf`
+
+**Decision**: VETO on plan-476-delta-N1-first-introduction.md (sha256 90504d7b, Lane C, #476, program #521), the plan delta for security re-review N1 (seal removed and re-added around a code change). Fresh Option B architect-reviewer. B1 security: git log -G skips files git treats as binary, so an in-tree .gitattributes 'docs/META_LEDGER.md -diff' in the attacker's commit hides the history search; createSafeGit pins only core.attributesFile. Lead reproduced with git 2.55 (2 matches -> 0; --text restores 2). Fix: --text --no-textconv --no-ext-diff with a falsifier row. B2 coverage-gap: --full-history and -m carry security weight with no falsifier (side-branch merge shape). B3 doc-drift: base D3 CHANGELOG text says the bypass is not detected. Four advisories. Next: Lane C amends the delta. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #676: GATE TRIBUNAL - plan-476-delta-N1-first-introduction (iteration 6) - VETO
+
+**Timestamp**: 2026-10-15T17:20:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1348-70efef`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: owner ruling 2026-10-15: damaged-ledger override extended to each Wave 0/1 lane cycle, disclosed per cycle
+
+**Content Hash**: `c307cc34c4b6da2d46e239849bc98bfe12cbd850babdf4c6cfe7131e9d8cdc6d`
+**Previous Hash**: `0def6bedc2b1f846691d7658196f4a53014c1de0400112873917793026b5ecdf`
+**Chain Hash (Merkle seal)**: `dda96403686a860135390f2e1543c0132cdcb5d4866877d83fbdbf9ca32a95fd`
+
+**Decision**: VETO on plan-476-delta-N1-first-introduction.md iteration 2 (sha256 62c257fa, Lane C, #476, program #521). Fresh Option B architect-reviewer. Iteration-1 B1-B3 resolved with falsifier rows backed by the author's probe (--text, -m, --root, -m/--full-history conjunction); chain-hash search sound (Y2 must carry the receipt's lowercase hash; A's own diff matches regardless of Y1). B1 security/coverage-gap: --no-textconv is load-bearing with no falsifier: git log applies textconv by default and pickaxe matches the converted diff, so a local-config driver plus .git/info/attributes hides the search. Lead reproduced with git 2.55 (2 -> 0; --no-textconv restores 2; -S equally affected). Fix: a textconv row with the mutation. Seven advisories. Next: Lane C amends the delta. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #677: GATE TRIBUNAL - plan-476-delta-N1-first-introduction (iteration 7) - PASS
+
+**Timestamp**: 2026-10-15T17:30:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1348-70efef`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: owner ruling 2026-10-15: damaged-ledger override extended to each Wave 0/1 lane cycle, disclosed per cycle
+
+**Content Hash**: `96c4f88b7030e0cd01ea5cab8e9e31ff81ffeea3b102c38d9a12cfa90de10c4d`
+**Previous Hash**: `dda96403686a860135390f2e1543c0132cdcb5d4866877d83fbdbf9ca32a95fd`
+**Chain Hash (Merkle seal)**: `c257aee0ae680650bc117d611259a2c938f5aef8975713bfd8adb830913d2930`
+
+**Decision**: PASS on plan-476-delta-N1-first-introduction.md iteration 3 (sha256 a4d56be8, Lane C, #476, program #521). Fresh Option B architect-reviewer. Iteration-2 blocker resolved: the --no-textconv falsifier row (local driver plus .git/info/attributes) is measured red without the flag for -G and -S. -S occurrence-count search sound: any commit holding the hash with no parent holding it is listed under --diff-merges=separate, --full-history and --root; delete/rename/symlink in Y1 is itself listed; local config cannot turn a match into no match (%H strict 40-hex parser fails closed; lead checked color.ui=always, log.decorate, format.pretty and a hostile pager on piped output). Earlier fixes intact; citations match. Seven non-blocking advisories (unmeasured --no-patch falsifier, unrecorded timings, timing row timeout and CI-shallow skip, LD12 wording, --no-color, reverted-and-reapplied seal disclosure). Next: Lane C implements N1. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #678: IMPLEMENTATION - plan-476-commit-bound-shield-checks
+
+**Timestamp**: 2026-10-15T21:58:16Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-15T1348-70efef`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-15T1348-70efef/implement-iter1.json`
+
+**Content Hash**: `6246be452cc50ca99f314dd7f15749363e09670fe1db732357767c3acb3b8d04`
+**Previous Hash**: `c257aee0ae680650bc117d611259a2c938f5aef8975713bfd8adb830913d2930`
+**Chain Hash (Merkle seal)**: `3aef8d7ce0c55852c33b307129f6419739a056d557f7d5e8fa38cb5eaf3eeb73`
+
+**Decision**: IMPLEMENTATION of plan-476-commit-bound-shield-checks.md (+ plan-476-delta-N1-first-introduction.md) (audit PASS #677), Lane C of program #521, FX970/FX971. Commits 18a5ee33..56338afd (12) on its lane branch from ba353468, merged into release/v6.0.7-rc2 without rewriting (plan-v607-final-integration LD1): SHIELD GitHub check runs bound to the exact commit: a verifier reads the governance ledger at the commit and its parent through hardened git, requires the receipt's seal to be introduced by that commit and never earlier in its history (seal-reintroduced), mints an HMAC receipt, and only a receipted verdict can be published under the SHIELD name; other check names are a closed allowlist sent as a checked wire copy. Files: 21. Evidence: vscode-test 4687 passing / 0 failing / 19 pending, census 488/488 (with its pretest build); lane suites 268; tsc 0; lint 0 errors on lane files; red first for every review fix (19 rows on a1b3d5ad, 9 on 666c9aae, 16 on 15bc8dcc, 4 on d1b7cd88); every named mutation red with exact edits recorded; the history-search timing row ran in 651 ms. Verified again in the integrated candidate 736c74dd40ef9f44f6b59ba9f1d6cddca3d15c12 (plan-v607-final-integration LD4).
+
+---
+
+### Entry #679: SESSION SEAL - plan-476-commit-bound-shield-checks
+
+**Timestamp**: 2026-10-15T21:58:16Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-15T1348-70efef`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-15T1348-70efef/substantiate.json`
+
+**Content Hash**: `bdadae858ffb1cc88d9f34a51d99e2e67ff17e1f9961cde309a0946b9ae9d050`
+**Previous Hash**: `3aef8d7ce0c55852c33b307129f6419739a056d557f7d5e8fa38cb5eaf3eeb73`
+**Chain Hash (Merkle seal)**: `83e8e4290665d21e1f7e76500a6a4d47e6347ce4df8d4aa9afe9b3569989736b`
+
+**Decision**: SESSION SEAL for plan-476-commit-bound-shield-checks.md (+ plan-476-delta-N1-first-introduction.md) (implementation #678), Lane C of program #521. Reality = Promise, with disclosures. Delivered at lane head 56338afd and in the integrated candidate 736c74dd40ef9f44f6b59ba9f1d6cddca3d15c12: SHIELD GitHub check runs bound to the exact commit: a verifier reads the governance ledger at the commit and its parent through hardened git, requires the receipt's seal to be introduced by that commit and never earlier in its history (seal-reintroduced), mints an HMAC receipt, and only a receipted verdict can be published under the SHIELD name; other check names are a closed allowlist sent as a checked wire copy. Disclosures: standing damaged-ledger override applied per lane cycle (#467 unresolved, normal governance not restored); vscode-test ran on the disposable test build (win32VersionedUpdate removed because the operator's parked updater holds the vscode-updating mutex; operator install untouched); LD10 command carries --no-color, which the frozen delta does not list (hardening, no effect on %H output); the S2 row (history search throws -> Neutral) covers existing behaviour and has no mutation; a seal replayed onto a history that never held the original still verifies; a reverted-then-reapplied seal is Rejected seal-reintroduced and needs a fresh seal; git is spawned by bare name in this lane's code; lane E of plan-v607-final-integration replaces that with the trusted resolver; a timed-out git child is not killed (git-safety exposes no handle); the timing row skips on CI's shallow checkout. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps. Not tagged, not published.
+
+---
+
+### Entry #680: GATE TRIBUNAL - plan-517-risk-store-contract (iteration 1) - VETO
+
+**Timestamp**: 2026-10-15T15:13:56Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1506-9d4765`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: owner ruling 2026-10-15: damaged-ledger override extended to each Wave 0/1 lane cycle, disclosed per cycle
+
+**Content Hash**: `56d54607a7cbd7f2d1a9546619ec4a6ac564aab2a913a3ba16c0ab3efc630c65`
+**Previous Hash**: `83e8e4290665d21e1f7e76500a6a4d47e6347ce4df8d4aa9afe9b3569989736b`
+**Chain Hash (Merkle seal)**: `9a4da201c5f9d555a2892159d5a3a53b47d2812dab2b95ae1904be9f722119a1`
+
+**Decision**: VETO on plan-517-risk-store-contract.md iteration 1 (sha256 cec94be0, Lane D, #517, program #521). Fresh Option B architect-reviewer; lock/CAS/fail-closed design sound, about 25 citations resolved. B1 coverage-gap: T2's mutation cannot turn it red (proper-lockfile clamps stale to 2000 ms). B2 specification-drift: the compare-and-swap check runs once while rename retries add about 1.5 s after it. B3 specification-drift: no lost-lock handling (stale break during a long critical section, release deleting another holder's lock, no onCompromised). B4 security-l3: the copy-to-.bak path follows symlinks (predictable .bak name; risks.json linked to a secret). B5 coverage-gap: affected test-file list incomplete and one wrong entry. Nine advisories. Next: Lane D amends plan. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #681: GATE TRIBUNAL - plan-517-risk-store-contract (iteration 2) - VETO
+
+**Timestamp**: 2026-10-15T15:31:42Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1506-9d4765`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: owner ruling 2026-10-15: damaged-ledger override extended to each Wave 0/1 lane cycle, disclosed per cycle
+
+**Content Hash**: `3dc2d3ec7083ff1e8a94b44e92e34a33be2a9ce39febc1c5a595f200b8e6ae53`
+**Previous Hash**: `9a4da201c5f9d555a2892159d5a3a53b47d2812dab2b95ae1904be9f722119a1`
+**Chain Hash (Merkle seal)**: `9b33388480e094cd9a344822c03408b59d5015db551efd6d81bce5f346868072`
+
+**Decision**: VETO on plan-517-risk-store-contract.md iteration 2 (sha256 099063dd, Lane D, #517, program #521). Fresh Option B architect-reviewer; iteration-1 B1-B3 resolved, B5 mostly. V1 security-l3: on Windows the wx exclusive create follows reparse points, so a planted link at the predictable .bak name may still be followed; lstat first and fstat/lstat identity check, or disclose. V2 security-l3: only the last path component is link-checked; a committed .failsafe/risks directory symlink redirects every write; containment check or narrowed claim. Fifteen advisories. Next: Lane D amends plan. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #682: GATE TRIBUNAL - plan-517-risk-store-contract (iteration 3) - VETO
+
+**Timestamp**: 2026-10-15T15:50:47Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1506-9d4765`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: owner ruling 2026-10-15: damaged-ledger override extended to each Wave 0/1 lane cycle, disclosed per cycle
+
+**Content Hash**: `85f2b0e5bb6bcdd3fad40a0b36e797157c8d0def9af437ad23fad8dd60a6fd07`
+**Previous Hash**: `9b33388480e094cd9a344822c03408b59d5015db551efd6d81bce5f346868072`
+**Chain Hash (Merkle seal)**: `9e95c6da8e913ad2ec9e504e6c7823dabeef21658f8c247b221d446a9d997593`
+
+**Decision**: VETO on plan-517-risk-store-contract.md iteration 3 (sha256 74912a60, Lane D, #517, program #521). Fresh Option B architect-reviewer; iteration-2 V1 and V2 resolved with firing falsifiers. B1 security-l3: a link at risks.json.lock is never checked, so a committed dangling link blocks the extension host for the full lock timeout on every mutation. B2 coverage-gap: the read-cache ctime mutation cannot fire because mtime also changes on the same-size write. Thirteen advisories. Next: Lane D amends plan. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #683: GATE TRIBUNAL - plan-517-risk-store-contract (iteration 4) - VETO
+
+**Timestamp**: 2026-10-15T16:00:36Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1506-9d4765`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: owner ruling 2026-10-15: damaged-ledger override extended to each Wave 0/1 lane cycle, disclosed per cycle
+
+**Content Hash**: `3650d07fcb43536ef644a99037cad472960a0694bb24c42f2be67cbb914de102`
+**Previous Hash**: `9e95c6da8e913ad2ec9e504e6c7823dabeef21658f8c247b221d446a9d997593`
+**Chain Hash (Merkle seal)**: `e64d164a6f35f57f6b0c3e32c74a8256ab7d9473fe3201d6b162d20e4cceca6b`
+
+**Decision**: VETO on plan-517-risk-store-contract.md iteration 4 (sha256 375c84df, Lane D, #517, program #521). Fresh Option B architect-reviewer; iteration-3 B1 and B2 resolved; stale real lock directories still recover; citations match. V1: the lock-path lstat rule turns Windows pending-delete contention (lstat EPERM) into an immediate LOCK_BLOCKED, contradicting LD2, and T21b cannot detect it. Fix: lstat EPERM/EACCES/EBUSY counts as contention; T21b patches lstatSync too, with a firing mutation. Five advisories. Next: Lane D amends plan. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #684: GATE TRIBUNAL - plan-517-risk-store-contract (iteration 5) - VETO
+
+**Timestamp**: 2026-10-15T16:07:08Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1506-9d4765`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: owner ruling 2026-10-15: damaged-ledger override extended to each Wave 0/1 lane cycle, disclosed per cycle
+
+**Content Hash**: `0426f1af2f6c07959ec2c74d8a524bbf72ee48bf1ee1ab8dc9dae6cdfd4a4a69`
+**Previous Hash**: `e64d164a6f35f57f6b0c3e32c74a8256ab7d9473fe3201d6b162d20e4cceca6b`
+**Chain Hash (Merkle seal)**: `b49b408ff0f85a1e909b5c113aa8a1be5c864a7e3f4c8db6d40445cc25474d63`
+
+**Decision**: VETO on plan-517-risk-store-contract.md iteration 5 (sha256 2e0130e0, Lane D, #517, program #521). Fresh Option B architect-reviewer; iteration-4 V1 resolved with a firing mutation; the realpath:false release leaves no exit-handler rmdir; no regressions; about 35 citations match. V1 coverage-gap: the new release retry deletes the lock directory guarded only by identity, with no falsifier for the guard and no elapsed re-check, so a stall that makes the lock stale mid-retry could remove a waiter's lock. Fix: full release condition re-checked before each retry with two falsifiers, or drop the retry. Five advisories. Next: Lane D amends plan. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #685: GATE TRIBUNAL - plan-517-risk-store-contract (iteration 6) - VETO
+
+**Timestamp**: 2026-10-15T16:39:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1506-9d4765`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: owner ruling 2026-10-15: damaged-ledger override extended to each Wave 0/1 lane cycle, disclosed per cycle
+
+**Content Hash**: `49a4ad3ac57c109364526c1324f9552896841a6bbb05625f46a44a0a6f5807f9`
+**Previous Hash**: `b49b408ff0f85a1e909b5c113aa8a1be5c864a7e3f4c8db6d40445cc25474d63`
+**Chain Hash (Merkle seal)**: `23c1d6d9139e58e54650f9c845495da8df14f80c57273f9a4a118e8b3abdc25b`
+
+**Decision**: VETO on plan-517-risk-store-contract.md iteration 6 (sha256 807a0a51, Lane D, #517, program #521). Fresh Option B architect-reviewer. Iteration-5 V1 closed: one lock-directory deletion path, full release condition re-checked before every rmdir attempt, three T21e falsifiers reach the store. A1-A5 correct against proper-lockfile source; 24 citations exact. B1 coverage-gap: T6 (step-8b byte compare) named its mutation 'drop step 8a', which leaves 8b in place and cannot go red, so D4 could not be met (lead verified). Fix: 'drop step 8b'. Six advisories. Next: Lane D amends plan. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #686: GATE TRIBUNAL - plan-517-risk-store-contract (iteration 7) - PASS
+
+**Timestamp**: 2026-10-15T16:55:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1506-9d4765`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: owner ruling 2026-10-15: damaged-ledger override extended to each Wave 0/1 lane cycle, disclosed per cycle
+
+**Content Hash**: `6def92798dc6cf66e996652e4cf4fa62a5cf9816ce931e4bce0865640162b2b8`
+**Previous Hash**: `23c1d6d9139e58e54650f9c845495da8df14f80c57273f9a4a118e8b3abdc25b`
+**Chain Hash (Merkle seal)**: `07018cfa86ad92cfb7c8e594670258669cdca2abb7436ccb93c8882f1d8b706e`
+
+**Decision**: PASS on plan-517-risk-store-contract.md iteration 7 (sha256 445fcedd, Lane D, #517, program #521). Fresh Option B architect-reviewer; seven changed lines against iteration 6. B1 resolved: T6 mutation drops step 8b and goes red; every 8a/8b mutation label checked against its test setup (T6, T9c, T18 i/iii/iv). Six advisories applied; limitation 5 verified against proper-lockfile (Date.now staleness, per-call mtime stamping); test seams now, readRaw, randomSuffix internal only. No regressions. Four non-blocking advisories. Next: Lane D implements on its lane branch. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #687: IMPLEMENTATION - plan-517-risk-store-contract
+
+**Timestamp**: 2026-10-15T21:58:17Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-15T1506-9d4765`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-15T1506-9d4765/implement-iter1.json`
+
+**Content Hash**: `8957aa4624ec75aed276fc960f9f818923302a1e53cd378745ec85c8ce08881d`
+**Previous Hash**: `07018cfa86ad92cfb7c8e594670258669cdca2abb7436ccb93c8882f1d8b706e`
+**Chain Hash (Merkle seal)**: `652817266ba68f902fd0da9fe7137e9c54b81319c0e896706b63c27d0d69c587`
+
+**Decision**: IMPLEMENTATION of plan-517-risk-store-contract.md (audit PASS #686), Lane D of program #521, FX972/FX973. Commits b653dab8..0e2baef9 (5) on its lane branch from 4a1afe68, merged into release/v6.0.7-rc2 without rewriting (plan-v607-final-integration LD1): one shared risk store owns every read-modify-write of .failsafe/risks/risks.json: a cross-process lock with guarded release, a path check refusing links outside the workspace, a byte compare before every write attempt, atomic writes, a corrupt file refused with one saved copy, reads that degrade to unreadable instead of throwing, and re-imports that keep triaged status. Files: 26. Evidence: vscode-test 4462 passing / 0 failing / 21 pending, census 480/480, every #517 case under Electron including multi-process children; Electron repeat 10/10; lost-update harness 400/400 in 7 runs (base 179-344/400); tsc 0; lint 0 errors; runner coverage pass; test:node 369/371 (FX946 baseline); 37/37 mutations red; 9 red-first review tests. Verified again in the integrated candidate 736c74dd40ef9f44f6b59ba9f1d6cddca3d15c12 (plan-v607-final-integration LD4).
+
+---
+
+### Entry #688: SESSION SEAL - plan-517-risk-store-contract
+
+**Timestamp**: 2026-10-15T21:58:17Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-15T1506-9d4765`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-15T1506-9d4765/substantiate.json`
+
+**Content Hash**: `ea5ef9a1990242a943fb88e2f56d88fd2a3fd1695407db96f901bbeb251ed3d9`
+**Previous Hash**: `652817266ba68f902fd0da9fe7137e9c54b81319c0e896706b63c27d0d69c587`
+**Chain Hash (Merkle seal)**: `67f134ab55c84444ac80dcf0f52660dcfca6aea5f43772033edab6315601a0ab`
+
+**Decision**: SESSION SEAL for plan-517-risk-store-contract.md (implementation #687), Lane D of program #521. Reality = Promise, with disclosures. Delivered at lane head 0e2baef9 and in the integrated candidate 736c74dd40ef9f44f6b59ba9f1d6cddca3d15c12: one shared risk store owns every read-modify-write of .failsafe/risks/risks.json: a cross-process lock with guarded release, a path check refusing links outside the workspace, a byte compare before every write attempt, atomic writes, a corrupt file refused with one saved copy, reads that degrade to unreadable instead of throwing, and re-imports that keep triaged status. Disclosures: standing damaged-ledger override applied per lane cycle (#467 unresolved, normal governance not restored); vscode-test ran on the disposable test build (win32VersionedUpdate removed because the operator's parked updater holds the vscode-updating mutex; operator install untouched); LD11 precondition reworded from overlapping write intervals to an overlap of at least max(100 ms, half the shorter window), mutation-tested; risk writes are not queued fairly: a long import can make another window's update fail with LOCK_TIMEOUT after 6 s, nothing written (CHANGELOG known limitation); the plan's limitation text 'only behind a crashed or stalled holder' is superseded by that wording; symlink cases T19b and T20 (and T20's mutation) run only on Linux CI. Tribunal entries for this lane were held by the lead during the parallel wave and appended at integration in their recorded order with their original timestamps. Not tagged, not published.
+
+---
+
+### Entry #689: GATE TRIBUNAL - plan-v607-final-integration (iteration 1) - VETO
+
+**Timestamp**: 2026-10-15T19:48:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1934-08df97`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override (owner ruling 2026-10-15), disclosed per cycle
+
+**Content Hash**: `ee4c7986bf9bf686d01df1888571eca7f1f47bd2f440632986ffbdbbcffe3340`
+**Previous Hash**: `67f134ab55c84444ac80dcf0f52660dcfca6aea5f43772033edab6315601a0ab`
+**Chain Hash (Merkle seal)**: `79fb27c9aebf0e7f1023428b56a4dcd1fa57f15419073e78d64efa36f2177ca7`
+
+**Decision**: VETO on plan-v607-final-integration.md iteration 1 (sha256 88711191, program #521). Fresh Option B architect-reviewer. Verified sound: G1-G14 inventory complete, citations and fallbacks match, absolute-path spawn never searches cwd on Windows, the oldHead hex guard, lane C independent of lane B. Blockers: B1 security - the --version probe could execute a candidate inside a call's cwd before the per-call guard (static checks unordered; callCwd not excluded at resolution); B2 - excluding process.cwd() rejects every candidate when the macOS extension host runs from /; B3 coverage-gap - several mutation rows cannot go red because the probe or another check also rejects the case, and G1/G9/G10/G12 are not in T-a2; B4 - T-a3 lacks the precondition that the attack fires; B5 - step order and the candidate definition are circular, numbering of held entries unstated, lane E entries missing; B6 - DoD omits LD5-LD8 outcomes and the PUBLISH_BLOCK rule. Nine advisories. Next: lane E revises the resolver section, the lead revises sequencing and DoD. Tribunal entries for this plan were held by the lead and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #690: GATE TRIBUNAL - plan-v607-final-integration (iteration 2) - VETO
+
+**Timestamp**: 2026-10-15T20:05:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1934-08df97`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override (owner directive 2026-10-15), disclosed per cycle
+
+**Content Hash**: `3dd336183d5eda0805fcdc61d21456412e986c021ebb7a2d8c3a4e56ac566f7c`
+**Previous Hash**: `79fb27c9aebf0e7f1023428b56a4dcd1fa57f15419073e78d64efa36f2177ca7`
+**Chain Hash (Merkle seal)**: `4422ac74ba2aecbb20e326c34322148030108e313547a9c2859134f5362deb9b`
+
+**Decision**: VETO on plan-v607-final-integration.md iteration 2 (sha256 5bf9536a, program #521). Fresh Option B architect-reviewer. Fixed: B1 (static checks before any probe, callCwd excluded at resolution, zero-probe assertions), B4, B5 (C0, governance-only G and S commits, post-seal re-runs, single push, numbering at append), B6, advisories 1-9. Blockers: V1 - a call with no cwd still excludes process.cwd() without the root/home exemption, so on macOS launched from / every no-cwd call (G14's availability check) reports git unavailable; V2 coverage-gap - six T-b rows (b1-b4, b5, b6, b7, b8, b14) still have a second rejecting check under their mutation. Twelve advisories. Next: lane E revises the resolver section; the lead fixes sequencing text. Tribunal entries for this plan were held by the lead and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #691: GATE TRIBUNAL - plan-v607-final-integration (iteration 3) - VETO
+
+**Timestamp**: 2026-10-15T20:12:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1934-08df97`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override (owner directive 2026-10-15), disclosed per cycle
+
+**Content Hash**: `9c9ea35fc0ce31fabbd2c2087d34de2c4e3c141efaad06d7b5f839e8f92a1860`
+**Previous Hash**: `4422ac74ba2aecbb20e326c34322148030108e313547a9c2859134f5362deb9b`
+**Chain Hash (Merkle seal)**: `f90c0e1763473c3e3044858573d17f4cdac38fc5efbac35ab86eaf5550b08378`
+
+**Decision**: VETO on plan-v607-final-integration.md iteration 3 (sha256 aae54239, program #521). Fresh Option B architect-reviewer. V1 fixed (no-cwd calls use workspace folders plus the process.cwd rule with its root/home exemption); every other T-b row has a single rejecting check; the dropped realpath half of S2 leaves no gap; no-cwd and Windows cwd analysis sound; sequencing consistent. Blockers, both coverage-gap: b3's PATH entry is relative so the drive-letter clause also rejects it under the percent-clause mutation; b13's cache-not-cleared mutation is shadowed by the key change, the static checks and the guard. Eight advisories. Next: lane E fixes the two rows. Tribunal entries for this plan were held by the lead and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #692: GATE TRIBUNAL - plan-v607-final-integration (iteration 4) - VETO
+
+**Timestamp**: 2026-10-15T20:22:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1934-08df97`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override (owner directive 2026-10-15), disclosed per cycle
+
+**Content Hash**: `cd957ce4c2e9ec1310ebc9becca92aa0a9d7fff0ed278261451b50fd9875ccfa`
+**Previous Hash**: `f90c0e1763473c3e3044858573d17f4cdac38fc5efbac35ab86eaf5550b08378`
+**Chain Hash (Merkle seal)**: `1a82795867cd4cec3260cc08f74a24ae6f1852ef0a77449510ac16fddf6298ec`
+
+**Decision**: VETO on plan-v607-final-integration.md iteration 4 (sha256 55f90a84, program #521). Fresh Option B architect-reviewer. b3 and b13 fixed; the 60 s timeout window is security-neutral (it only removes candidates; an expired entry re-enters every static check and the real probe). Blocker coverage-gap: the lead's 60 s timeout window had no falsifier and the declared interface could not express it - the probe seam returned no timedOut flag, configureTrustedGit had no clock seam, and p2 asserted neither expiry nor identity re-admission. Seven advisories (b13b isolation, T-o1 comment and definition matching, hint location and try/catch, workspace-folder union, monotonic clock, cache count). Next: the lead fixes the interface and p2. Tribunal entries for this plan were held by the lead and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #693: GATE TRIBUNAL - plan-v607-final-integration (iteration 5) - VETO
+
+**Timestamp**: 2026-10-15T20:30:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1934-08df97`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override (owner directive 2026-10-15), disclosed per cycle
+
+**Content Hash**: `73f9bb07decc2067cbad69646eb2c8b2ebf59a8f4ba9c34aa7c53c1c7bd344ae`
+**Previous Hash**: `1a82795867cd4cec3260cc08f74a24ae6f1852ef0a77449510ac16fddf6298ec`
+**Chain Hash (Merkle seal)**: `1633c0f2840204630e0644c3824a6dfd0e5619fb3e906d08af159408262aa201`
+
+**Decision**: VETO on plan-v607-final-integration.md iteration 5 (sha256 8df4ae49, program #521). Fresh Option B architect-reviewer. The timeout-window falsifiers are fixed (now seam, expiry at t+60 s, window from the last timeout, invalidate distinct from expiry, identity re-admission, spawn errors uncached); advisories A1-A7 applied. Blocker coverage-gap: the declared defaultGitProbe signature still returned no timedOut flag, contradicting the seam and section 2, and no row exercised the real probe's timeout classification, so a probe that never reported timeouts would pass every row. Six advisories. Next: the lead fixes the signature and adds a real-probe row. Tribunal entries for this plan were held by the lead and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #694: GATE TRIBUNAL - plan-v607-final-integration (iteration 6) - VETO
+
+**Timestamp**: 2026-10-15T20:38:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1934-08df97`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override (owner directive 2026-10-15), disclosed per cycle
+
+**Content Hash**: `35abe47c0b86c40c08f9c2bf59605a224a9b3b28591ccda376175b93dae70a22`
+**Previous Hash**: `1633c0f2840204630e0644c3824a6dfd0e5619fb3e906d08af159408262aa201`
+**Chain Hash (Merkle seal)**: `231cec37e8bb2b99b4ef6cdd4060def3cf5091bae379e694eb87b3fac948219b`
+
+**Decision**: VETO on plan-v607-final-integration.md iteration 6 (sha256 ff67ddfb, program #521). Fresh Option B architect-reviewer. The probe signature and classifyProbe agree with section 2, T-p5 mutations isolate, and a real spawnSync timeout of node has the same result shape as a hung git (measured on this host: ETIMEDOUT, SIGTERM, status null). Blocker coverage-gap: T-o2 claimed a vscode-test falsifier for the workspace-folder union rule, but onDidChangeWorkspaceFolders does not fire when the first folder changes (VS Code restarts the extension host), so the row could not run. Next: the lead moves the rule into a pure, node-tested workspaceDirsFor. Tribunal entries for this plan were held by the lead and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #695: GATE TRIBUNAL - plan-v607-final-integration (iteration 7) - VETO
+
+**Timestamp**: 2026-10-15T20:45:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1934-08df97`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override (owner directive 2026-10-15), disclosed per cycle
+
+**Content Hash**: `856ac13d041a00de75ae6a2a1a118409fdcff2a7d95822db7882b2cc4413ee11`
+**Previous Hash**: `231cec37e8bb2b99b4ef6cdd4060def3cf5091bae379e694eb87b3fac948219b`
+**Chain Hash (Merkle seal)**: `6a8a91c5a618ef6e8f360962be6da4da43118caadb5ef6eb8467ddf1529d5aa0`
+
+**Decision**: VETO on plan-v607-final-integration.md iteration 7 (sha256 78866642, program #521). Fresh Option B architect-reviewer. The workspaceDirsFor set rows catch the replace-instead-of-union mutation and the untested-event statement is accurate in scope. Blocker coverage-gap: the T-o2 resolver row used a probe-passing plant, which on win32 is a junction to the real install, so its realpath equals the next real candidate and the row cannot distinguish the mutation; process.cwd and a control were unspecified. Next: the lead reuses the inert-plant fixture with a control and a probe counter. Tribunal entries for this plan were held by the lead and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #696: GATE TRIBUNAL - plan-v607-final-integration (iteration 8) - PASS
+
+**Timestamp**: 2026-10-15T20:52:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1934-08df97`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override (owner directive 2026-10-15), disclosed per cycle
+
+**Content Hash**: `45ee2b849200e61c3de577e0f682f407140c846d2edad58c3585c378d8a687b1`
+**Previous Hash**: `6a8a91c5a618ef6e8f360962be6da4da43118caadb5ef6eb8467ddf1529d5aa0`
+**Chain Hash (Merkle seal)**: `542b25d1aee8b41d28ed7fa2b1c2150513aabbc4049d3824216c23ef8d183163`
+
+**Decision**: PASS on plan-v607-final-integration.md iteration 8 (sha256 b7dbc664, program #521). Fresh Option B architect-reviewer. The T-o2 resolver row now isolates the union rule (inert plant inside the activation root, control K outside every root, no callCwd, cwd unrelated): with union S2 rejects the plant with zero probes and K wins; with replace-instead-of-union the plant passes S1-S7 and the accept-all probe on both platforms. Advisories applied (public surface, platform seam, T-o1 wiring assertion, untested event path stated plainly). Earlier iterations' fixes stand: static checks before any probe, callCwd and process.cwd roots with the root/home exemption, single-check T-b rows, the 60 s timeout window with classifyProbe and real spawnSync results, sequencing C0/G/S. Five non-blocking advisories carried to implementation. Next: integration branch, lane merges, lane E implementation. Tribunal entries for this plan were held by the lead and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #697: GATE TRIBUNAL - plan-v607-final-integration (iteration 9) - VETO
+
+**Timestamp**: 2026-10-15T21:35:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1934-08df97`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override (owner directive 2026-10-15), disclosed per cycle
+
+**Content Hash**: `78377ec870e155e1016d76b64f3a803a5baa78412678d683b0a6da8c59e4f04d`
+**Previous Hash**: `542b25d1aee8b41d28ed7fa2b1c2150513aabbc4049d3824216c23ef8d183163`
+**Chain Hash (Merkle seal)**: `9575eb8be1e8823b093d0753eb5560b4af1b251ce3c7d7645babfc0b04f04c7b`
+
+**Decision**: VETO on plan-v607-final-integration.md iteration 9 (sha256 78f3200c, program #521), the delta for the independent integration review of C0 (ACCEPT WITH FIXES). LD9 (stub mode on a failing or slow keychain, no secret generated on a failed get) judged correct and race-safe; LD10 de-duplication correct; LD11 disclosures match the code; deferring the gh and autoInstallGit findings fits the owner's Git scope. Blockers: V1 coverage-gap - the second T-p6 row tests a re-check that cannot change the outcome after de-duplication, so its mutation cannot go red; V2 specification-drift - Phase 3 changes code after the LD4 gates ran on C0 without redefining C0 or re-running them. Next: the lead revises to iteration 10. Tribunal entries for this plan were held by the lead and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #698: GATE TRIBUNAL - plan-v607-final-integration (iteration 10) - PASS
+
+**Timestamp**: 2026-10-15T21:45:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1934-08df97`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override (owner directive 2026-10-15), disclosed per cycle
+
+**Content Hash**: `51f7748fd3e0824bd57cc1c616f7d8357249db5c13aacd55145e5873e42688a0`
+**Previous Hash**: `9575eb8be1e8823b093d0753eb5560b4af1b251ce3c7d7645babfc0b04f04c7b`
+**Chain Hash (Merkle seal)**: `19cd8e8e740cb810b2c6191d61eb9af76a4a07acb7deee0b8b2d09a2e3495da9`
+
+**Decision**: PASS on plan-v607-final-integration.md iteration 10 (sha256 b50a7e43, program #521). Fresh Option B architect-reviewer. Iteration-9 blockers fixed: T-p6 keeps only the de-duplication row; C0 is redefined as the Phase 3 head with the full LD4 gate re-run and G/S following it. Advisories applied (cached secret cleared on a store failure; rollback disclosure says every v6.0.7 row is v3). C0 usage consistent across LD2, LD4, D3, D9 and LD8; the seal and evidence must name the Phase 3 head and that it replaces 0403cef4. Next: the lead implements Phase 3. Tribunal entries for this plan were held by the lead and appended at integration in their recorded order with their original timestamps.
+
+---
+
+### Entry #699: IMPLEMENTATION - plan-v607-final-integration
+
+**Timestamp**: 2026-10-15T21:58:18Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-15T1934-08df97`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-15T1934-08df97/implement-iter1.json`
+
+**Content Hash**: `2955eae1039d1f7ba3c8f4dfbb47ed2744229ac124c95afe49b239be59f72b40`
+**Previous Hash**: `19cd8e8e740cb810b2c6191d61eb9af76a4a07acb7deee0b8b2d09a2e3495da9`
+**Chain Hash (Merkle seal)**: `e9273e522f1116fdd68f0959269ddebc478857ec97ae6d14503a169f6d9aaf9d`
+
+**Decision**: IMPLEMENTATION of plan-v607-final-integration.md (audit PASS #698, iteration 10), program #521. release/v6.0.7-rc2 from main 577cad77: lanes A-D merged as merge commits without rewriting (LD1); lane E trusted Git resolver (FX976/FX977) merged; LD7 documentation; Phase 3 fixes from the independent integration review (LD9 ledger stub mode on a failing or slow keychain, LD10 one probe per git file, LD11 disclosures). C0 = 736c74dd40ef9f44f6b59ba9f1d6cddca3d15c12 (replaces 0403cef4 under iteration 10). Evidence on C0: vscode-test 1.122.1 4815 passing / 0 failing / 21 pending, census 494/494; test:node 595/597 (2 = FX946 ledgerAnchor baseline, #467); Playwright 208 passed / 4 skipped; tsc 0; lint 0 errors; runner coverage, citation parity, release-gate --preflight and docs coherence pass; secret_scanner 0 findings over 118 changed files; npm audit: braces GHSA-vfj7-8cjw-p6xm via chokidar 3.6.0 (unreachable, no non-breaking fix, disclosed since the RC); eight 6.0.7 VSIXs packaged from 20aeb03d (product code identical to C0) pass verify-set, the win32-x64 SQLite binary loads in Node 22, and rv inventory plus the disposable VS Code 1.141.1 lifecycle (install, upgrade from published 6.0.6, forced kill, restart, rollback) give rehearsal-pass 62/62; lane E planted-git.exe suite on this host: the old bare forms ran the plant (spawn, execFile and cmd.exe) and every migrated caller ran real git with zero plant markers; 56 lane E and 4 Phase 3 named mutations red
