@@ -124,6 +124,19 @@ export interface ConsoleRouteHost {
    *  exists, setupAllRoutes mounts it at /vendor (takes priority over the
    *  default uiDir-served vendor assets). Phase 2 of voice-substrate-extraction. */
   getVoicePackPath: () => string | null;
+  /** #514: modal operator confirmer set by ConsoleServer.setOperatorConfirmer.
+   *  Optional so older route-host fixtures stay valid; absent/null -> gated
+   *  routes answer 503. */
+  getOperatorConfirmer?: () => import("../../extension/operatorConfirmation").ConfirmOperatorAction | null | undefined;
+}
+
+/** #514: expose the host's operator confirmer as a request-time getter, since
+ *  routes register before bootstrapServers calls setOperatorConfirmer. */
+function defineLazyConfirmer(target: object, host: ConsoleRouteHost): void {
+  Object.defineProperty(target, "confirmOperatorAction", {
+    get: () => host.getOperatorConfirmer?.() ?? undefined,
+    enumerable: true, configurable: true,
+  });
 }
 
 export class ConsoleRouteRegistrar {
@@ -287,6 +300,7 @@ export class ConsoleRouteRegistrar {
       },
       enumerable: true, configurable: true,
     });
+    defineLazyConfirmer(deps, h);
     return deps;
   }
 
@@ -300,7 +314,37 @@ export class ConsoleRouteRegistrar {
     setupTrackerConfigRoutes(app, apiDeps);
     setupCheckpointRoutes(app, apiDeps);
     setupActionsRoutes(app, apiDeps);
-    setupBicameralRoutes(app, {
+    setupBicameralRoutes(app, this.buildBicameralRouteDeps());
+    // B-OD-8: governed Open Design create_artifact route. Enqueues an L3 item;
+    // execution happens in OpenDesignL3Executor on APPROVED.
+    setupOpenDesignRoutes(app, {
+      rejectIfRemote: (req, res) => this.host.rejectIfRemote(req, res),
+      broadcast: (d) => this.host.broadcast(d),
+      getOpenDesignClient: () => this.host.getOpenDesignClient?.() ?? null,
+      queueL3Approval: (request) =>
+        (this.host.qorelogicManager as unknown as {
+          queueL3Approval: (r: typeof request) => Promise<string>;
+        }).queueL3Approval(request),
+    });
+    setupMarketplaceRoutes(app, {
+      rejectIfRemote: (req, res) => this.host.rejectIfRemote(req, res),
+      broadcast: (data) => this.host.broadcast(data),
+      marketplaceCatalog: this.host.marketplaceCatalog as any,
+      marketplaceInstaller: this.host.marketplaceInstaller as any,
+      securityScanner: this.host.securityScanner as any,
+      ledgerManager: this.host.qorelogicManager.getLedgerManager() as any,
+    });
+    setupAdapterRoutes(app, {
+      rejectIfRemote: (req, res) => this.host.rejectIfRemote(req, res),
+      broadcast: (data) => this.host.broadcast(data),
+      adapterService: this.host.adapterService as any,
+    });
+  }
+
+  /** Bicameral route deps. A method (not an inline literal) so the wiring
+   *  test can read the bag registerApiRoutes passes to setupBicameralRoutes. */
+  buildBicameralRouteDeps(): import("../routes/bicameralRouteShared").BicameralRouteDeps {
+    const deps: import("../routes/bicameralRouteShared").BicameralRouteDeps = {
       rejectIfRemote: (req, res) => this.host.rejectIfRemote(req, res),
       broadcast: (d) => this.host.broadcast(d),
       workspaceRoot: this.host.workspaceRoot,
@@ -334,31 +378,10 @@ export class ConsoleRouteRegistrar {
       // B-BIC-17/18 (Batch 4): pass the shared event bus so the drift/ratify
       // handlers emit `bicameral.verdict` events.
       eventBus: this.host.eventBus,
-    });
-    // B-OD-8: governed Open Design create_artifact route. Enqueues an L3 item;
-    // execution happens in OpenDesignL3Executor on APPROVED.
-    setupOpenDesignRoutes(app, {
-      rejectIfRemote: (req, res) => this.host.rejectIfRemote(req, res),
-      broadcast: (d) => this.host.broadcast(d),
-      getOpenDesignClient: () => this.host.getOpenDesignClient?.() ?? null,
-      queueL3Approval: (request) =>
-        (this.host.qorelogicManager as unknown as {
-          queueL3Approval: (r: typeof request) => Promise<string>;
-        }).queueL3Approval(request),
-    });
-    setupMarketplaceRoutes(app, {
-      rejectIfRemote: (req, res) => this.host.rejectIfRemote(req, res),
-      broadcast: (data) => this.host.broadcast(data),
-      marketplaceCatalog: this.host.marketplaceCatalog as any,
-      marketplaceInstaller: this.host.marketplaceInstaller as any,
-      securityScanner: this.host.securityScanner as any,
-      ledgerManager: this.host.qorelogicManager.getLedgerManager() as any,
-    });
-    setupAdapterRoutes(app, {
-      rejectIfRemote: (req, res) => this.host.rejectIfRemote(req, res),
-      broadcast: (data) => this.host.broadcast(data),
-      adapterService: this.host.adapterService as any,
-    });
+    };
+    // #514: ratify confirmer, read at request time like the API deps' one.
+    defineLazyConfirmer(deps, this.host);
+    return deps;
   }
 
   private registerVerdictAndTrustRoutes(): void {

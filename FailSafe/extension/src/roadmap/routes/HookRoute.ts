@@ -10,6 +10,7 @@
 import type { Application, Request, Response } from "express";
 import { syncHookSentinel, isHookEnabled } from "../../shared/hookSentinel";
 import type { ApiRouteDeps } from "./types";
+import { requireOperatorConfirmation, hooksDisableRequest } from "../../extension/operatorConfirmation";
 
 export function registerHookRoute(
   app: Application,
@@ -20,10 +21,18 @@ export function registerHookRoute(
     res.json({ enabled: isHookEnabled(deps.workspaceRoot) });
   });
 
-  app.post("/api/hooks/toggle", (req: Request, res: Response) => {
+  app.post("/api/hooks/toggle", async (req: Request, res: Response) => {
     if (deps.rejectIfRemote(req, res)) return;
     if (typeof req.body?.enabled !== "boolean") {
       res.status(400).json({ error: "enabled must be a boolean" });
+      return;
+    }
+    // #514: disabling governance needs a modal VS Code confirmation;
+    // re-enabling does not.
+    if (
+      req.body.enabled === false
+      && !(await requireOperatorConfirmation(deps.confirmOperatorAction, hooksDisableRequest(), res))
+    ) {
       return;
     }
     syncHookSentinel(deps.workspaceRoot, req.body.enabled);

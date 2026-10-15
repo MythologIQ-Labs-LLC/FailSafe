@@ -13,6 +13,7 @@ import type { McpInterceptor, McpEnvelope } from "../../governance/interceptor";
 import type { ReceiptContract } from "../../contracts";
 import type { BicameralDriftStatus } from "../../integrations/bicameral/types";
 import type { BicameralVerdictEventPayload } from "../../shared/types/events";
+import type { ConfirmOperatorAction } from "../../extension/operatorConfirmation";
 
 export interface BicameralRouteDeps {
   rejectIfRemote: (req: Request, res: Response) => boolean;
@@ -94,6 +95,11 @@ export interface BicameralRouteDeps {
    * the install handler errors with operator guidance instead of hanging.
    */
   getRunInTerminal?: () => ((name: string, command: string) => void) | null;
+  /**
+   * #514: modal VS Code confirmation for the ratify route, which records a
+   * USER_OVERRIDE as the operator. Absent -> ratify answers 503.
+   */
+  confirmOperatorAction?: ConfirmOperatorAction;
 }
 
 /**

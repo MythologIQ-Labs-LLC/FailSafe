@@ -1089,6 +1089,24 @@ select option {
   font-size: 16px;
 }
 
+/* #514: operator-confirmation status line */
+.cc-operator-banner {
+  padding: 8px 16px;
+  font-size: 13px;
+  background: rgba(59, 130, 246, 0.12);
+  border-bottom: 1px solid rgba(59, 130, 246, 0.4);
+  color: var(--text-main);
+}
+
+.cc-operator-banner[data-tone="error"] {
+  background: rgba(239, 68, 68, 0.12);
+  border-bottom-color: rgba(239, 68, 68, 0.4);
+}
+
+.cc-operator-banner[hidden] {
+  display: none;
+}
+
 .workspace-dropdown {
   margin-left: auto;
   background: var(--bg-deep, rgba(0, 0, 0, 0.4));

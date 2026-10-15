@@ -146,7 +146,7 @@ export class OperationsRenderer {
     return `
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="cc-btn cc-btn--primary" data-action="/api/actions/resume-monitoring">Resume</button>
-        <button class="cc-btn cc-btn--danger" data-action="/api/actions/panic-stop">Panic Stop</button>
+        <button class="cc-btn cc-btn--danger cc-panic-stop-btn" data-action="/api/actions/panic-stop">Panic Stop</button>
         <button class="cc-btn" data-action="/api/actions/verify-integrity">Verify Chain</button>
         <button class="cc-btn cc-rollback-btn">Rollback</button>
       </div>`;
@@ -154,7 +154,7 @@ export class OperationsRenderer {
 
   bindActions() {
     if (!this.client) return;
-    this.container.querySelectorAll('[data-action]').forEach(btn => {
+    this.container.querySelectorAll('[data-action]:not(.cc-panic-stop-btn)').forEach(btn => {
       btn.addEventListener('click', async () => {
         btn.disabled = true;
         try {
@@ -163,16 +163,32 @@ export class OperationsRenderer {
         finally { btn.disabled = false; }
       });
     });
+    // #514: panic-stop, rollback and Approve All are operator-gated — the
+    // server holds them open for a VS Code dialog; postGated shows the banner.
+    this.container.querySelector('.cc-panic-stop-btn')?.addEventListener('click', async (e) => {
+      e.target.disabled = true;
+      try { await this.client.postGated('/api/actions/panic-stop'); }
+      finally { e.target.disabled = false; }
+    });
     this.container.querySelector('.cc-rollback-btn')?.addEventListener('click', async (e) => {
       const checkpoints = this.hubData?.recentCheckpoints;
       const latest = Array.isArray(checkpoints) ? checkpoints[0] : null;
       const id = latest?.id || prompt('Enter checkpoint ID to rollback to:');
       if (!id) return;
       e.target.disabled = true;
-      try {
-        await this.client.postAction('/api/actions/rollback', { checkpointId: id });
-      } catch (_) { /* logged by postAction */ }
+      try { await this.client.postGated('/api/actions/rollback', { checkpointId: id }); }
       finally { e.target.disabled = false; }
+    });
+  }
+
+  /** Right-panel controls (bound by command-center after renderRightPanel). */
+  bindToolbar() {
+    if (!this.client) return;
+    document.querySelector('#context-hub .cc-ops-l3-batch')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      try { await this.client.postGated('/api/actions/approve-l3-batch', { decision: 'APPROVED' }); }
+      finally { btn.disabled = false; }
     });
   }
 
@@ -194,7 +210,7 @@ export class OperationsRenderer {
           <div style="font-size: 11px; color: var(--text-muted); line-height: 1.5;">
             Sentinel is operating in <strong>${sentinelModeValue(sentinelStatus?.mode)}</strong> mode. System integrity is checked against the last verified block.
           </div>
-          <button class="cc-btn cc-btn--primary" style="font-size: 11px; padding: 6px;" onclick="window._failsafe_client.postAction('/api/actions/approve-l3-batch').then(() => window.location.reload())">
+          <button class="cc-btn cc-btn--primary cc-ops-l3-batch" style="font-size: 11px; padding: 6px;">
             Approve All
           </button>
         </div>

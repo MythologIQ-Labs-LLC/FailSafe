@@ -8,6 +8,7 @@
  *    .cc-l3-opendesign block showing the tool + an args summary
  *  - the row carries Approve + Reject buttons with data-id/data-decision
  *  - clicking Approve POSTs /api/actions/decide-l3 with {id, decision:'APPROVED'}
+ *    through client.postGated (#514 operator confirmation)
  *  - a non-OD kind renders no .cc-l3-opendesign block
  *  - args containing <script> is HTML-escaped
  */
@@ -26,9 +27,13 @@ function makeContainer(): { dom: JSDOM; renderer: any; posts: PostCall[] } {
   (global as any).window = dom.window;
   (global as any).CSS = dom.window.CSS;
   const posts: PostCall[] = [];
+  // #514: decide-l3 is operator-gated, so the renderer posts through postGated.
   const client = {
     on: () => {},
-    postAction: async (path: string, body: unknown) => { posts.push({ path, body }); },
+    postGated: async (path: string, body: unknown) => {
+      posts.push({ path, body });
+      return { ok: true, status: 200, data: {}, error: undefined };
+    },
   };
   const renderer = new GovernanceRenderer("gov", { client });
   return { dom, renderer, posts };

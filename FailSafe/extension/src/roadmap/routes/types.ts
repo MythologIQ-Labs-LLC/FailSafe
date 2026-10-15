@@ -3,6 +3,7 @@ import type { QorRuntimeService } from '../services/QorRuntimeService';
 import type { IFeatureGate } from '../../core/interfaces/IFeatureGate';
 import type { QorLogicHost } from '../../qorlogic/hostLayouts';
 import type { ShadowGenomeResult } from '../../qorlogic/shadow-genome-client';
+import type { ConfirmOperatorAction } from '../../extension/operatorConfirmation';
 
 /**
  * Dependency injection interface for API route modules extracted
@@ -52,6 +53,9 @@ export interface ApiRouteDeps {
     skillFilter: Record<string, string[]> | undefined,
   ) => Promise<QorLogicInstallReport>;
   showOutput?: () => void;
+  /** #514: modal VS Code confirmation for gated operator routes (L3 decisions,
+   *  panic-stop, rollback, hooks disable). Absent -> those routes answer 503. */
+  confirmOperatorAction?: ConfirmOperatorAction;
   // Agent API route delegates (Phase 2: B142/B143/B144)
   getTimelineEntries: (filter?: any) => any[];
   getHealthMetrics: () => any | null;

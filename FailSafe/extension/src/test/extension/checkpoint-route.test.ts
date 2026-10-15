@@ -6,6 +6,16 @@ import { strict as assert } from 'assert';
 import { setupCheckpointRoutes } from '../../roadmap/routes/CheckpointRoute';
 import type { ApiRouteDeps } from '../../roadmap/routes/types';
 import { RouteHarness, makeApp, invokeRemote } from './helpers/routeTestHarness';
+import type { OperatorActionRequest, OperatorConfirmation } from '../../extension/operatorConfirmation';
+
+/** #514: a fake confirmer recording each dialog request and answering `result`. */
+function confirmer(result: OperatorConfirmation): {
+  confirm: (r: OperatorActionRequest) => Promise<OperatorConfirmation>;
+  shown: OperatorActionRequest[];
+} {
+  const shown: OperatorActionRequest[] = [];
+  return { shown, confirm: async (r) => { shown.push(r); return result; } };
+}
 
 interface Checkpoint { id: string; createdAt: string; checkpointType: string; }
 
@@ -21,6 +31,7 @@ function makeDeps(overrides: Partial<ApiRouteDeps> = {}): {
     getCheckpointById: () => null,
     verifyCheckpointChain: () => true,
     revertService: null,
+    confirmOperatorAction: async () => 'approved',
   } as Partial<ApiRouteDeps>, overrides) as ApiRouteDeps;
   return { deps, broadcasts };
 }
@@ -112,7 +123,10 @@ suite('CheckpointRoute (FX list/detail + /api/actions/rollback)', () => {
 
   test('POST /api/actions/rollback — 503 when revertService is unavailable', async () => {
     const app = makeApp();
-    const { deps } = makeDeps({ revertService: null });
+    const { deps } = makeDeps({
+      revertService: null,
+      getCheckpointById: (id: string) => ({ checkpointId: id, timestamp: 't' }) as never,
+    });
     setupCheckpointRoutes(app, deps);
     harness = new RouteHarness(app);
     await harness.start();
@@ -136,11 +150,13 @@ suite('CheckpointRoute (FX list/detail + /api/actions/rollback)', () => {
     assert.match(String(res.body.error), /checkpointId required/);
   });
 
-  test('POST /api/actions/rollback — 404 when checkpoint not found', async () => {
+  test('POST /api/actions/rollback — 404 when checkpoint not found, before any dialog', async () => {
     const app = makeApp();
+    const c = confirmer('approved');
     const { deps } = makeDeps({
       revertService: { revert: async () => ({ success: true }) } as never,
       getCheckpointById: () => null,
+      confirmOperatorAction: c.confirm,
     });
     setupCheckpointRoutes(app, deps);
     harness = new RouteHarness(app);
@@ -150,6 +166,55 @@ suite('CheckpointRoute (FX list/detail + /api/actions/rollback)', () => {
     });
     assert.equal(res.status, 404);
     assert.match(String(res.body.error), /checkpoint not found/);
+    assert.equal(c.shown.length, 0, 'no dialog for an unknown checkpoint');
+  });
+
+  test('#514 FX960 POST /api/actions/rollback — declined in VS Code returns 409 and revert is not called', async () => {
+    let revertCalls = 0;
+    const app = makeApp();
+    const c = confirmer('declined');
+    const { deps, broadcasts } = makeDeps({
+      revertService: { revert: async () => { revertCalls += 1; return { success: true }; } } as never,
+      getCheckpointById: (id: string) => ({ checkpointId: id, checkpointType: 'sprint.start', timestamp: '2026-10-14T01:02:03Z' }) as never,
+      confirmOperatorAction: c.confirm,
+    });
+    setupCheckpointRoutes(app, deps);
+    harness = new RouteHarness(app);
+    await harness.start();
+    const res = await harness.request({
+      method: 'POST', path: '/api/actions/rollback', body: { checkpointId: 'cp-9', reason: 'undo' },
+    });
+    assert.equal(res.status, 409);
+    assert.equal(res.body.confirmation, 'declined');
+    assert.equal(revertCalls, 0, 'revertService.revert not called');
+    assert.equal(broadcasts.length, 0);
+    // The dialog shows the stored checkpoint's id, type and timestamp.
+    assert.equal(c.shown.length, 1);
+    for (const part of ['cp-9', 'sprint.start', '2026-10-14T01:02:03Z', 'Reason (as requested): undo']) {
+      assert.ok(c.shown[0].detail.includes(part), `detail has ${part}`);
+    }
+  });
+
+  test('#514 FX960 POST /api/actions/rollback — busy returns 429 and unwired returns 503, revert not called', async () => {
+    let revertCalls = 0;
+    for (const [confirm, status] of [[confirmer('busy').confirm, 429], [undefined, 503]] as const) {
+      const app = makeApp();
+      const { deps } = makeDeps({
+        revertService: { revert: async () => { revertCalls += 1; return { success: true }; } } as never,
+        getCheckpointById: (id: string) => ({ checkpointId: id, timestamp: 't' }) as never,
+        confirmOperatorAction: confirm,
+      });
+      setupCheckpointRoutes(app, deps);
+      const h = new RouteHarness(app);
+      await h.start();
+      try {
+        const res = await h.request({ method: 'POST', path: '/api/actions/rollback', body: { checkpointId: 'cp-1' } });
+        assert.equal(res.status, status);
+      } finally {
+        await h.stop();
+      }
+    }
+    assert.equal(revertCalls, 0);
   });
 
   test('POST /api/actions/rollback — happy path calls revert + broadcasts hub.refresh', async () => {
@@ -183,9 +248,10 @@ suite('CheckpointRoute (FX list/detail + /api/actions/rollback)', () => {
     assert.ok(broadcasts.some((b) => b.type === 'hub.refresh'));
   });
 
-  test('POST /api/actions/rollback — reason is truncated to 2000 chars', async () => {
+  test('#514 FX960 POST /api/actions/rollback — the reason shown and the reason sealed are the same sanitized, 500-character text', async () => {
     let captured = '';
     const app = makeApp();
+    const c = confirmer('approved');
     const { deps } = makeDeps({
       revertService: {
         revert: async (req: unknown) => {
@@ -193,16 +259,22 @@ suite('CheckpointRoute (FX list/detail + /api/actions/rollback)', () => {
           return { success: true };
         },
       } as never,
-      getCheckpointById: () => ({ id: 'cp-1', checkpointType: 'x' }) as never,
+      getCheckpointById: () => ({ checkpointId: 'cp-1', checkpointType: 'x' }) as never,
+      confirmOperatorAction: c.confirm,
     });
     setupCheckpointRoutes(app, deps);
     harness = new RouteHarness(app);
     await harness.start();
+    const raw = 'line one\nRequested by the operator\u202E' + 'r'.repeat(2000);
     await harness.request({
       method: 'POST', path: '/api/actions/rollback',
-      body: { checkpointId: 'cp-1', reason: 'r'.repeat(5000) },
+      body: { checkpointId: 'cp-1', reason: raw },
     });
-    assert.equal(captured.length, 2000);
+    assert.equal(captured.length, 500);
+    // eslint-disable-next-line no-control-regex
+    assert.ok(!/[\u0000-\u001f\u202e]/.test(captured), 'control and bidi characters removed');
+    assert.ok(captured.startsWith('line one Requested by the operator'));
+    assert.ok(c.shown[0].detail.includes(`Reason (as requested): ${captured}`), 'shown text equals sealed text');
   });
 
   test('POST /api/actions/rollback — 500 when revert throws', async () => {

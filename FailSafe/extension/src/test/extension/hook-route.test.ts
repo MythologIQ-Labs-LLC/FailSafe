@@ -5,6 +5,16 @@ import * as path from 'path';
 import { registerHookRoute } from '../../roadmap/routes/HookRoute';
 import type { ApiRouteDeps } from '../../roadmap/routes/types';
 import { RouteHarness, makeApp } from './helpers/routeTestHarness';
+import type { OperatorActionRequest, OperatorConfirmation } from '../../extension/operatorConfirmation';
+
+/** #514: a fake confirmer recording each dialog request and answering `result`. */
+function confirmer(result: OperatorConfirmation): {
+  confirm: (r: OperatorActionRequest) => Promise<OperatorConfirmation>;
+  shown: OperatorActionRequest[];
+} {
+  const shown: OperatorActionRequest[] = [];
+  return { shown, confirm: async (r) => { shown.push(r); return result; } };
+}
 
 function makeDeps(workspaceRoot: string, overrides: Partial<ApiRouteDeps> = {}): ApiRouteDeps {
   return Object.assign({
@@ -42,6 +52,7 @@ function makeDeps(workspaceRoot: string, overrides: Partial<ApiRouteDeps> = {}):
     getRun: () => undefined,
     loadRun: () => null,
     getRunSteps: () => [],
+    confirmOperatorAction: async () => 'approved',
   } as ApiRouteDeps, overrides);
 }
 
@@ -106,11 +117,48 @@ suite('registerHookRoute', () => {
     );
   });
 
+  test('#514 FX090 POST /api/hooks/toggle with enabled=false declined in VS Code returns 409 and leaves the sentinel unchanged', async () => {
+    const c = confirmer('declined');
+    const app = makeApp();
+    registerHookRoute(app, makeDeps(tmpRoot, { confirmOperatorAction: c.confirm }));
+    harness = new RouteHarness(app);
+    await harness.start();
+
+    const res = await harness.request({
+      method: 'POST',
+      path: '/api/hooks/toggle',
+      body: { enabled: false },
+    });
+
+    assert.equal(res.status, 409);
+    assert.equal(res.body.confirmation, 'declined');
+    assert.equal(c.shown.length, 1);
+    assert.match(c.shown[0].title, /Turn off FailSafe agent hooks/);
+    assert.ok(
+      !fs.existsSync(path.join(tmpRoot, '.claude', 'hooks', 'disabled')),
+      'disabled sentinel must NOT be written when declined',
+    );
+  });
+
+  test('#514 FX090 POST /api/hooks/toggle with enabled=false and no confirmer wired returns 503 and leaves the sentinel unchanged', async () => {
+    const app = makeApp();
+    registerHookRoute(app, makeDeps(tmpRoot, { confirmOperatorAction: undefined }));
+    harness = new RouteHarness(app);
+    await harness.start();
+
+    const res = await harness.request({ method: 'POST', path: '/api/hooks/toggle', body: { enabled: false } });
+
+    assert.equal(res.status, 503);
+    assert.equal(res.body.confirmation, 'unwired');
+    assert.ok(!fs.existsSync(path.join(tmpRoot, '.claude', 'hooks', 'disabled')));
+  });
+
   test('POST /api/hooks/toggle with enabled=true removes sentinel and returns {enabled:true}', async () => {
     fs.mkdirSync(path.join(tmpRoot, '.claude', 'hooks'), { recursive: true });
     fs.writeFileSync(path.join(tmpRoot, '.claude', 'hooks', 'disabled'), 'x');
+    // #514: re-enabling needs no confirmation — no confirmer is wired here.
     const app = makeApp();
-    registerHookRoute(app, makeDeps(tmpRoot));
+    registerHookRoute(app, makeDeps(tmpRoot, { confirmOperatorAction: undefined }));
     harness = new RouteHarness(app);
     await harness.start();
 

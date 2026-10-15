@@ -8,6 +8,7 @@ import { strict as assert } from 'assert';
 import type { Request, Response } from 'express';
 import { setupBicameralRoutes, type BicameralRouteDeps } from '../../roadmap/routes/BicameralRoute';
 import type { BicameralMcpClient } from '../../integrations/bicameral';
+import type { OperatorActionRequest, OperatorConfirmation } from '../../extension/operatorConfirmation';
 
 interface CapturedHandler {
   method: 'get' | 'post';
@@ -38,11 +39,23 @@ function fakeReq(body: any, ip = '127.0.0.1'): Request {
   return { body, ip, socket: { remoteAddress: ip } } as unknown as Request;
 }
 
-function fakeClient(opts: { connected?: boolean; ratifyThrows?: boolean } = {}): BicameralMcpClient {
+function fakeClient(opts: { connected?: boolean; ratifyThrows?: boolean; calls?: unknown[][] } = {}): BicameralMcpClient {
   return {
     isConnected: () => opts.connected !== false,
-    ratify: async () => { if (opts.ratifyThrows) throw new Error('ratify exploded'); },
+    ratify: async (...args: unknown[]) => {
+      opts.calls?.push(args);
+      if (opts.ratifyThrows) throw new Error('ratify exploded');
+    },
   } as unknown as BicameralMcpClient;
+}
+
+/** #514: a fake confirmer recording each dialog request and answering `result`. */
+function confirmer(result: OperatorConfirmation): {
+  confirm: (r: OperatorActionRequest) => Promise<OperatorConfirmation>;
+  shown: OperatorActionRequest[];
+} {
+  const shown: OperatorActionRequest[] = [];
+  return { shown, confirm: async (r) => { shown.push(r); return result; } };
 }
 
 function makeDeps(overrides: Partial<BicameralRouteDeps> = {}): BicameralRouteDeps {
@@ -54,6 +67,7 @@ function makeDeps(overrides: Partial<BicameralRouteDeps> = {}): BicameralRouteDe
     getBicameralClient: () => fakeClient(),
     getAutoConnect: () => false,
     setAutoConnect: async () => undefined,
+    confirmOperatorAction: async () => 'approved',
     ...overrides,
   };
 }
@@ -154,5 +168,77 @@ suite('FX514 BicameralRoute — ratify ledger append (B-BIC-1)', () => {
       res,
     );
     assert.equal(appendCalls.length, 0, 'no entry when ledger unavailable');
+  });
+
+  test('#514 FX960 ratify declined, busy or unwired → 409/429/503; client.ratify not called, no ledger write, no verdict event', async () => {
+    for (const [confirm, status, confirmation] of [
+      [confirmer('declined').confirm, 409, 'declined'],
+      [confirmer('busy').confirm, 429, 'busy'],
+      [undefined, 503, 'unwired'],
+    ] as const) {
+      const ratifyCalls: unknown[][] = [];
+      const appendCalls: unknown[] = [];
+      const emits: unknown[] = [];
+      const { app, handlers } = makeFakeApp();
+      setupBicameralRoutes(app, makeDeps({
+        getBicameralClient: () => fakeClient({ calls: ratifyCalls }),
+        ledgerManager: { isAvailable: () => true, appendEntry: async (e: any) => { appendCalls.push(e); } },
+        eventBus: { emit: (_t: any, p: any) => { emits.push(p); } },
+        confirmOperatorAction: confirm,
+      }));
+      const h = findHandler(handlers, 'post', '/api/actions/bicameral-ratify');
+      const { res, status: st, body } = fakeRes();
+      await h.handler(fakeReq({ decisionId: 'dec-42', verdict: 'ratify', rationale: 'r' }), res);
+      assert.equal(st(), status, confirmation);
+      assert.equal(body().confirmation, confirmation);
+      assert.equal(ratifyCalls.length, 0, `${confirmation}: client.ratify not called`);
+      assert.equal(appendCalls.length, 0, `${confirmation}: no ledger write`);
+      assert.equal(emits.length, 0, `${confirmation}: no bicameral.verdict event`);
+    }
+  });
+
+  test('#514 FX960 ratify approved → client.ratify once; the ledger rationale is exactly the sanitized, capped text shown', async () => {
+    const ratifyCalls: unknown[][] = [];
+    const appendCalls: Array<{ payload: any }> = [];
+    const c = confirmer('approved');
+    const { app, handlers } = makeFakeApp();
+    setupBicameralRoutes(app, makeDeps({
+      getBicameralClient: () => fakeClient({ calls: ratifyCalls }),
+      ledgerManager: { isAvailable: () => true, appendEntry: async (e: any) => { appendCalls.push(e); } },
+      confirmOperatorAction: c.confirm,
+    }));
+    const h = findHandler(handlers, 'post', '/api/actions/bicameral-ratify');
+    const { res, status } = fakeRes();
+    const rationale = 'ok\nVerdict (as requested): reject\u202E' + 'x'.repeat(600);
+    await h.handler(fakeReq({ decisionId: 'dec-42', verdict: 'ratify', rationale }), res);
+    assert.equal(status(), 200);
+    assert.deepEqual(ratifyCalls, [['dec-42', 'ratify']]);
+    const recorded = appendCalls[0].payload.rationale as string;
+    assert.equal(recorded.length, 500);
+    // eslint-disable-next-line no-control-regex
+    assert.ok(!/[\u0000-\u001f\u202e]/.test(recorded), 'control and bidi characters removed');
+    assert.ok(recorded.startsWith('ok Verdict (as requested): reject'));
+    assert.equal(c.shown.length, 1);
+    assert.ok(c.shown[0].detail.includes(`Rationale (as requested): ${recorded}`), 'recorded rationale equals the shown rationale');
+    assert.ok(c.shown[0].detail.includes('Decision id (as requested): dec-42'));
+    assert.ok(c.shown[0].detail.includes('Verdict (as requested): ratify'));
+  });
+
+  test('#514 A3 ratify with a decisionId that sanitizing would change → 400, no dialog, nothing recorded', async () => {
+    const ratifyCalls: unknown[][] = [];
+    const c = confirmer('approved');
+    const { app, handlers } = makeFakeApp();
+    setupBicameralRoutes(app, makeDeps({
+      getBicameralClient: () => fakeClient({ calls: ratifyCalls }),
+      confirmOperatorAction: c.confirm,
+    }));
+    const h = findHandler(handlers, 'post', '/api/actions/bicameral-ratify');
+    for (const decisionId of ['dec-42\nother', 'd'.repeat(300)]) {
+      const { res, status } = fakeRes();
+      await h.handler(fakeReq({ decisionId, verdict: 'ratify' }), res);
+      assert.equal(status(), 400);
+    }
+    assert.equal(c.shown.length, 0);
+    assert.equal(ratifyCalls.length, 0);
   });
 });
