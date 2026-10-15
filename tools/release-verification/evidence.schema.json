@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MythologIQ-Labs-LLC/FailSafe/tools/release-verification/evidence.schema.json",
+  "title": "FailSafe release verification evidence (failsafe.release-verification/v1)",
+  "description": "Written by every rv subcommand (--json). lib/evidence.cjs enforces the same shape strictly; a test keeps the enums here in step with it. Unknown fields are rejected at every level except inside a check's evidence object.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "kind", "version", "generatedAt", "tool", "inputs", "checks", "downloads", "processes"],
+  "properties": {
+    "schema": { "const": "failsafe.release-verification/v1" },
+    "kind": { "enum": ["inventory", "marketplace", "lifecycle"] },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$", "description": "For kind lifecycle, equal to inputs.vsix.to.version." },
+    "generatedAt": { "type": "string" },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gitSha", "node", "platform", "arch"],
+      "properties": { "gitSha": { "type": "string" }, "node": { "type": "string" }, "platform": { "type": "string" }, "arch": { "type": "string" } }
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifactSource", "approvedSums", "vsix"],
+      "properties": {
+        "artifactSource": { "$ref": "#/$defs/artifactSource" },
+        "approvedSums": { "description": "Mandatory (non-null) for kind marketplace.", "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/approvedSums" }] },
+        "vsix": { "description": "Mandatory (non-null) for kind lifecycle.", "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/vsixPair" }] }
+      }
+    },
+    "checks": { "type": "array", "items": { "$ref": "#/$defs/check" } },
+    "downloads": { "type": "array", "items": { "$ref": "#/$defs/download" } },
+    "processes": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/processes" }] }
+  },
+  "$defs": {
+    "hex64": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "artifactSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref"],
+      "properties": { "kind": { "enum": ["local-dir", "ci-artifact", "marketplace"] }, "ref": { "type": "string" } }
+    },
+    "approvedSums": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "source"],
+      "properties": {
+        "path": { "type": "string" },
+        "sha256": { "$ref": "#/$defs/hex64" },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "ref", "verified"],
+          "properties": {
+            "kind": { "enum": ["release-asset", "run-artifact", "local"] },
+            "ref": { "type": "string" },
+            "verified": { "enum": ["fetched-equal", "attested", "local"] }
+          }
+        }
+      }
+    },
+    "vsixInfo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "version", "targetPlatform"],
+      "properties": {
+        "path": { "type": "string" },
+        "sha256": { "$ref": "#/$defs/hex64" },
+        "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+        "targetPlatform": { "type": ["string", "null"] }
+      }
+    },
+    "vsixPair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to"],
+      "properties": { "from": { "$ref": "#/$defs/vsixInfo" }, "to": { "$ref": "#/$defs/vsixInfo" } }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "scope", "target", "status", "detail", "evidence"],
+      "properties": {
+        "id": { "type": "string" },
+        "scope": { "enum": ["artifact", "vscode-marketplace", "open-vsx", "lifecycle", "isolation"] },
+        "target": { "type": ["string", "null"] },
+        "status": { "enum": ["pass", "fail", "not-run", "inconclusive"] },
+        "detail": { "type": "string" },
+        "evidence": { "type": ["object", "null"], "description": "Free-form supporting data." }
+      }
+    },
+    "download": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["marketplace", "target", "apiUrl", "finalUrl", "sha256", "bytes"],
+      "properties": {
+        "marketplace": { "enum": ["vscode-marketplace", "open-vsx"] },
+        "target": { "type": "string" },
+        "apiUrl": { "type": "string", "description": "The URL the marketplace API returned; the only one allowlisted." },
+        "finalUrl": { "type": "string", "description": "After redirects; recorded, not allowlisted." },
+        "sha256": { "$ref": "#/$defs/hex64" },
+        "bytes": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "processes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owned", "residual"],
+      "properties": {
+        "owned": { "type": "array", "items": { "$ref": "#/$defs/process" } },
+        "residual": { "type": "array", "items": { "$ref": "#/$defs/process" } }
+      }
+    },
+    "process": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pid", "exe"],
+      "properties": { "pid": { "type": "integer", "minimum": 0 }, "exe": { "type": "string" } }
+    }
+  }
+}
