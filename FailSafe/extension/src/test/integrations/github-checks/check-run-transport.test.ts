@@ -8,6 +8,8 @@ import * as path from 'path';
 import { postCheckRun, type CheckRunTarget, type TransportPayload } from '../../../integrations/github-checks/check-run-transport';
 import type { GitHubPostFn } from '../../../integrations/github-checks/github-checks-client';
 import { SRC_ROOT, moduleReferences, productionSources, referencesTo } from './source-scan';
+import { verifyShieldReceipt, type VerifiedShieldReceipt } from '../../../integrations/shield-receipts/shield-receipt-verifier';
+import { NOW, RECEIPT_KEY, SEAL, baseScenario, chainOf, keysOf, sourceOf } from '../shield-receipts/fixtures';
 
 const SHA = 'a'.repeat(40);
 const TARGET: CheckRunTarget = { repo: 'acme/x', apiHost: 'api.github.com', baseUrl: 'https://api.github.com' };
@@ -57,6 +59,48 @@ suite('check-run-transport SHIELD guard (#476)', () => {
     const r = await postCheckRun(shieldPayload('failure'), { ...TARGET, apiHost: 'ghe.acme.com' }, 't', c.post);
     assert.equal(r.ok, false);
     assert.equal(c.calls(), 0);
+  });
+});
+
+suite('check-run-transport verified authority (#476)', () => {
+  let receipt: VerifiedShieldReceipt;
+  const acme: CheckRunTarget = { repo: 'acme/failsafe', apiHost: 'api.github.com', baseUrl: 'https://api.github.com' };
+
+  suiteSetup(async () => {
+    const v = await verifyShieldReceipt(sourceOf(baseScenario()), keysOf(RECEIPT_KEY), chainOf('OK'), undefined, 'api.github.com', NOW);
+    assert.equal(v.kind, 'verified');
+    if (v.kind === 'verified') receipt = v.receipt;
+  });
+
+  test('a real receipt for commit A with success on head_sha A -> 1 POST', async () => {
+    const c = counting();
+    const r = await postCheckRun(shieldPayload('success', SEAL), acme, 't', c.post, receipt);
+    assert.equal(r.ok, true);
+    assert.equal(c.calls(), 1);
+  });
+
+  test('a real receipt for commit A with head_sha B -> 0 POSTs', async () => {
+    const c = counting();
+    assert.equal((await postCheckRun(shieldPayload('success', SHA), acme, 't', c.post, receipt)).ok, false);
+    assert.equal(c.calls(), 0);
+  });
+
+  test('a JSON clone of the receipt as authority -> 0 POSTs', async () => {
+    const c = counting();
+    const clone = JSON.parse(JSON.stringify(receipt));
+    assert.equal((await postCheckRun(shieldPayload('success', SEAL), acme, 't', c.post, clone)).ok, false);
+    assert.equal(c.calls(), 0);
+  });
+
+  test('a real receipt posted to another repo or another API host -> 0 POSTs', async () => {
+    const c = counting();
+    const otherRepo = { ...acme, repo: 'acme/y' };
+    const otherHost = { repo: 'acme/failsafe', apiHost: 'ghe.acme.com', baseUrl: 'https://ghe.acme.com/api/v3' };
+    const upper = { ...acme, repo: 'ACME/FailSafe' };
+    assert.equal((await postCheckRun(shieldPayload('success', SEAL), otherRepo, 't', c.post, receipt)).ok, false);
+    assert.equal((await postCheckRun(shieldPayload('success', SEAL), otherHost, 't', c.post, receipt)).ok, false);
+    assert.equal(c.calls(), 0);
+    assert.equal((await postCheckRun(shieldPayload('success', SEAL), upper, 't', c.post, receipt)).ok, true, 'repo compare is case-insensitive');
   });
 });
 

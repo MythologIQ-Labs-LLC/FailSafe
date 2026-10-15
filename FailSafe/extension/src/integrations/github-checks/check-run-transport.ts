@@ -3,13 +3,16 @@
  *
  * Not re-exported by github-checks-client; a source-scan test pins its
  * importers. Every SHIELD-family name is refused here unless the conclusion is
- * `failure` (which can only block). Responses count as published only for a
+ * `failure` (which can only block), or the conclusion is `success` and the
+ * authority is a verifier-minted VerifiedShieldReceipt for exactly this
+ * head_sha, repo and API host. Responses count as published only for a
  * 201 whose JSON body carries a positive integer id. Results never contain the
  * token or the response body.
  */
 
 import { isShieldFamilyName, type CheckConclusion, type CheckRunPayload, SHIELD_CHECK_NAME } from './github-checks-map';
 import type { GitHubPostFn } from './github-checks-client';
+import { isVerifiedShieldReceipt } from '../shield-receipts/shield-receipt-verifier';
 
 /** A payload carrying the reserved SHIELD name; only the verified publisher builds one. */
 export interface ShieldCheckRunPayload {
@@ -35,10 +38,15 @@ export interface TransportResult {
   echo?: { head_sha?: string; name?: string; conclusion?: string };
 }
 
-function shieldRefusal(payload: TransportPayload): string | undefined {
+function shieldRefusal(payload: TransportPayload, target: CheckRunTarget, authority: unknown): string | undefined {
   if (!isShieldFamilyName(payload.name)) return undefined;
   if (payload.conclusion === 'failure') return undefined;
-  return 'SHIELD check refused: no verified receipt authority';
+  if (payload.conclusion !== 'success' || !isVerifiedShieldReceipt(authority)) return 'SHIELD check refused: no verified receipt authority';
+  if (payload.head_sha !== authority.commitSha) return 'SHIELD check refused: head_sha is not the verified commit';
+  if (target.repo.toLowerCase() !== authority.repo || target.apiHost.toLowerCase() !== authority.apiHost) {
+    return 'SHIELD check refused: target is not the verified repository and API host';
+  }
+  return undefined;
 }
 
 function targetError(target: CheckRunTarget): string | undefined {
@@ -76,14 +84,16 @@ function interpret(res: { status: number; body: string }): TransportResult {
   return { ok: true, status: res.status, checkRunId: id, echo };
 }
 
-/** POST one Check Run. Non-throwing; the token rides only the Authorization header. */
+/** POST one Check Run. Non-throwing; the token rides only the Authorization
+ *  header. `authority` is consulted only for a SHIELD-family success. */
 export async function postCheckRun(
   payload: TransportPayload,
   target: CheckRunTarget,
   token: string,
   post: GitHubPostFn,
+  authority?: unknown,
 ): Promise<TransportResult> {
-  const refused = shieldRefusal(payload) ?? targetError(target);
+  const refused = targetError(target) ?? shieldRefusal(payload, target, authority);
   if (refused) return { ok: false, error: refused };
   const url = `${target.baseUrl.replace(/\/$/, '')}/repos/${target.repo}/check-runs`;
   try {
