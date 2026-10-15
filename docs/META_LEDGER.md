@@ -30204,3 +30204,116 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `0e546881cf64bacee964394c17f268adaf668e6f4c48e198c943afe0f294a81e`
 
 **Decision**: Reality = Promise for plan-runtime-hardening-243a: all three phases implemented in their Affected Files; no unplanned files. Verification: full vscode-test suite (VS Code 1.122.1 pinned) 4197 passing / 17 pending / 1 failing - the failure is FX930 WorkspaceArtifactBuilder 'supported fixture' (IDLE vs IMPLEMENT), reproduced identically on a main-equivalent worktree (#501 head, no roadmap or fixture diff) and root-caused to parseMetaLedger returning 0 entries for CRLF text under core.autocrlf (CRLF 0 entries/IDLE vs LF 2 entries/IMPLEMENT); filed #508, not this change. Targeted: mocha 19 passing (gitBootstrap 7, governedDocument 4, marketplace-route 8); mutation of each fix turns its test red (scan gate 1, confirmInit 2, autoInstallGit default 1, scheme check 2), restored green. test:node 353 pass / 2 pre-existing FX946 failures. tsc 0, eslint 0. Runtime: dev VSIX (sha256 prefix 5214529c6ca0148f) in VS Code 1.141.0 isolated profile on a plain folder: activated 809 ms, 0 missing commands, no .git created (released 6.0.6 created one), Global editor.fontSize update logged 0 BLOCKADE (6.0.6 logged 1). Gates: intent_lock VERIFIED; skill_admission ADMITTED; gate_skill_matrix 0 broken; secret_scanner 0 findings over 19 staged files with canary rc 1; procedural_fidelity, dod_check, merge_velocity clean; skill_size_budget WARN only; data_api_acl disclosed SKIP; install_drift OK. Disclosures: governance-health DAMAGED META_LEDGER under the standing operator override (gate_override 5a65a5cf); governance-index --advance-last-reviewed re-dated the prior v6.0.6 Last Reviewed line and was reverted, a new line prepended by hand; substantiate_gates, version_applicability, seal_entry_check and seal_artifacts inapplicable here (#601 precedent, #612); ledger_emit.append not used (interior tail marker); no version bump (hotfix toward the next patch, operator-gated); seal commit carries no attribution trailer per operator rule. Out of scope and filed: #505 (enforce does not block editor saves), #508 (CRLF ledger parse). Feature Inventory: FX053/FX094/FX437 MODIFIED, FX948 NEW (764 total / 714 verified). **SSDF Practices**: PS.2.1, RV.2.1
+
+---
+
+### Entry #626: GATE TRIBUNAL - plan-475-isolated-agent-runs (iteration 1) - VETO
+
+**Timestamp**: 2026-10-14T23:21:21Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-14T2317-80dc4f`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Plan**: `plan-475-isolated-agent-runs.md`
+**Preflight**: standing operator override, gate_override `bc8241b8`
+
+**Content Hash**: `6fd15c243e47f6e02e3bc6a3502c6796b4cd3d39205724feec48695274cb7f01`
+**Previous Hash**: `0e546881cf64bacee964394c17f268adaf668e6f4c48e198c943afe0f294a81e`
+**Chain Hash (Merkle seal)**: `07bcf5e4cc9ac17f751a3bab89bf080742ec49d65eff093f5d5897178cdc4c41`
+
+**Decision**: Option B adversarial review; Judge verified the blocking ground directly. V1 security-l3: routing every change set through the L3 approval queue lets an escaped agent approve its own patch - POST /api/actions/decide-l3 (ActionsRoute.ts:140-160) and the batch approve route authorize on loopback only (ConsoleServer.ts rejectIfRemote), and the agent is a local process; filed as #514. V2 coverage-gap: the LD3 snapshot misses shared git state (skip-worktree/assume-unchanged, info/exclude, core.fsmonitor which runs inside FailSafe's own git status, hooks/hooksPath, refs other than HEAD, stash) and every gitignored path. V3 specification-drift: escape detection is post-hoc, so D1's 'cannot modify before approval' overclaims for direct workspace writes. V4 security-l3: TOCTOU between hashing the patch file and git apply re-reading it. V5 test-failure: defaultAgentRun only spawns git/aider/cn so a scripted agent cannot go through it; no tree-kill on Windows; cn.cmd shim not spawnable with shell:false. V6: LD4 path validation must be per-component and case-insensitive (.GIT, git~1, trailing dot/space, ':', device names) and taken from git apply --numstat -z --summary. V7: quarantining under .failsafe/ dirties an unignored workspace and blocks later runs. V8 coverage-gap: catalog test, agent-cli README, extension and root READMEs, allowDirty/autoCommit settings, buildL3EscalationRequest, agent-cli.test.ts:79-88. Numbering: #617-#625 are held by unmerged PRs #513 and #512; this branch continues at #626.
+
+---
+
+### Entry #627: GATE TRIBUNAL - plan-475-isolated-agent-runs (iteration 2) - VETO
+
+**Timestamp**: 2026-10-14T23:25:37Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-14T2317-80dc4f`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Plan**: `plan-475-isolated-agent-runs.md` (iteration 2)
+**Preflight**: standing operator override, gate_override `bc8241b8`
+
+**Content Hash**: `1e66d95a1080fefe048e5b84d9852a410aa671562d76c9219d08872554b59ed0`
+**Previous Hash**: `07bcf5e4cc9ac17f751a3bab89bf080742ec49d65eff093f5d5897178cdc4c41`
+**Chain Hash (Merkle seal)**: `804ae5f222e6760af4d83c9dea21e19760f6bf0e32dee4689f5b3e652a277b52`
+
+**Decision**: Full Option B re-walk. Iteration-1 grounds resolved (VS Code-native approval, no HTTP route reaches promotion - confirmed by the reviewer; git -c hardening; stdin piping; numstat validator; globalStorage quarantine; surfaces listed). New grounds: V1 security-l3 review/apply divergence - the stored patch and its sha256 sit together in writable globalStorage, so a lingering agent process can swap reviewed bytes back before Apply with a matching hash. V2 security-l3 - user/system git config is not neutralized: ~/.gitconfig core.excludesFile can hide new files from the snapshot, and attributesFile + filter.* smudge can alter bytes during git apply. V3 security-l3 - capture runs git add -A inside a worktree whose .git file the agent can repoint at the real repository, so FailSafe itself could stage into the real index; .git/worktrees/<id>/ is not validated. V4 test-failure - taskkill /T cannot reach a child once the agent has exited, so the planned surviving-child timeout case fails and post-snapshot writes are undisclosed; kill/snapshot/capture ordering unspecified. V5 coverage-gap - FX831/FX832 rows describe the removed behaviour. V6 specification-drift - D1 still claims git-state writes are detected. Minor: hash ignored files rather than size/mtime; config.worktree; CONIN$/CONOUT$; Apply must not be the default button. Cycle-count: two VETOs, distinct signatures.
+
+---
+
+### Entry #628: GATE TRIBUNAL - plan-475-isolated-agent-runs (iteration 3) - VETO
+
+**Timestamp**: 2026-10-14T23:28:46Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-14T2317-80dc4f`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Plan**: `plan-475-isolated-agent-runs.md` (iteration 3)
+**Preflight**: standing operator override, gate_override `bc8241b8`
+
+**Content Hash**: `a214cb77ac07e6c7e12ba6f685f4fe81d2899b66eb05566ed8dac3fd20f9cb34`
+**Previous Hash**: `804ae5f222e6760af4d83c9dea21e19760f6bf0e32dee4689f5b3e652a277b52`
+**Chain Hash (Merkle seal)**: `8d8e28f792092d4bc8452a5dc6100d9153d113cc0a4d17758721557c6c598202`
+
+**Decision**: Full Option B re-walk; iteration-2 security grounds resolved (single-invocation in-memory promotion closes review/apply divergence; global config neutralized; explicit git-dir capture; ordered kill/snapshot/capture). New grounds, implementation-shaped: V1 test-failure - the post-apply equality check uses git diff HEAD, which never shows untracked files, so any patch creating a file reports APPLY_MISMATCH; compare through a temporary index. V2 infrastructure-mismatch - GIT_CONFIG_NOSYSTEM/GLOBAL drop Git for Windows core.autocrlf and safe.directory, so apply --check fails on CRLF checkouts and dubious-ownership repos block; carry the user's eol/safe.directory/longpaths values explicitly. V3 infrastructure-mismatch - 500 ms Win32_Process sampling via cold PowerShell is infeasible, no exit-time sample, intermediate-parent chain break undisclosed, PID reuse not re-checked before kill. V4 specification-drift - ESCAPED_ISOLATION attributes concurrent operator/background writes to the agent. V5 - diff format not pinned (--no-ext-diff --no-textconv, prefixes, diff.noprefix). V6 - APPLY_MISMATCH missing from the outcome list. Confirmed: probe-1 influence closed; razor feasible with isolated-run as orchestrator; Affected Files complete.
+
+---
+
+### Entry #629: GATE TRIBUNAL - plan-475-isolated-agent-runs (iteration 4) - PASS
+
+**Timestamp**: 2026-10-14T23:30:51Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-14T2317-80dc4f`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Plan**: `plan-475-isolated-agent-runs.md` (iteration 4, sha256 prefix f53b6be81a09b2b8; gate plan-iter5.json - plan-iter4.json is a stray gate written against the unamended iteration-3 text and is superseded)
+**Preflight**: standing operator override, gate_override `bc8241b8`
+
+**Content Hash**: `70f9ce6965b9db6120ddcad8d2298ced4bd48a87caa60bc5dcd4de39291296d0`
+**Previous Hash**: `8d8e28f792092d4bc8452a5dc6100d9153d113cc0a4d17758721557c6c598202`
+**Chain Hash (Merkle seal)**: `f6af74a22adaa79d59338e70bf1ad830bc65e600bc53e9f3dd7d51f89b8579d2`
+
+**Decision**: Full Option B re-walk after three VETOs (#626 self-approval and shared git state, #627 review/apply divergence and global config, #628 temp-index equality, CRLF carry, sampler feasibility, outcome naming). Reviewer found no remaining path where reviewed bytes differ from applied bytes or where a change reaches the workspace without the in-process Apply; every constructed failure mode fails closed. Advisories carried to implementation and to be disclosed there: limitations text to list LD4's additional undetectable classes; a sampler that fails to start (AppLocker / Constrained Language) must end BLOCKED_PRE_EXECUTION with a test; carry safe.directory and eol values through the temporary GIT_CONFIG_GLOBAL file rather than -c; LFS filter config is neutralized with the global config - pass filter.lfs.* through or disclose; VS Code untitled documents are editable, so review uses a content-provider document.
+
+---
+
+### Entry #630: IMPLEMENTATION - plan-475-isolated-agent-runs
+
+**Timestamp**: 2026-10-15T00:31:06Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-14T2317-80dc4f`
+**Risk Grade**: L3
+**Plan**: `plan-475-isolated-agent-runs.md` (audit PASS Entry #629; intent lock captured)
+**Files**: `FailSafe/extension/src/integrations/agent-cli/` (isolated-run, git-safety, workspace-snapshot, process-tree, patch-paths, agent-run-promotion NEW; agent-cli-core, aider-wrapper, continue-wrapper, README), `FailSafe/extension/src/extension/agent-cli-command.ts`, `FailSafe/extension/src/extension/main.ts`, `FailSafe/extension/package.json`, `FailSafe/extension/src/integrations/catalog/integration-catalog.ts`, tests under `src/test/integrations/agent-cli/`, `src/test/extension/agent-cli-command.test.cjs`, `src/test/integrations/catalog/integration-catalog.test.ts`, `README.md`, `FailSafe/extension/README.md`, `docs/FEATURE_INDEX.md`, `docs/ARCHITECTURE_PLAN.md`, `docs/integrations/INTEGRATION_DOCS_INDEX.md`, `CHANGELOG.md`, `FailSafe/extension/CHANGELOG.md`
+
+**Content Hash**: `b10eb537b2668903e2f11236ed2791ce61facddd40e964605c5c790d3196d181`
+**Previous Hash**: `f6af74a22adaa79d59338e70bf1ad830bc65e600bc53e9f3dd7d51f89b8579d2`
+**Chain Hash (Merkle seal)**: `1d33579d7eaee504c522f13c318e3eeac741a7edfb5cb60542bf71987a69e482`
+
+**Decision**: Phase 1 (isolation boundary): git-safety.ts (system/global config neutralized, hooks/fsmonitor/excludes/attributes disabled, autocrlf/eol/safecrlf/longpaths/safe.directory/LFS carried), workspace-snapshot.ts, process-tree.ts (win32 PowerShell sampler with CreationDate-checked kills; POSIX process group), patch-paths.ts, isolated-run.ts (preconditions -> tracker -> worktree -> agent -> kill tree -> snapshot -> link check -> capture via explicit --git-dir/--work-tree -> validation -> removal). agent-cli-core.ts: AgentRunFn gains input/detached/onSpawn; captureGitDiff, isWorktreeDirty, decideAgentRun, summarizeDiff and buildL3EscalationRequest removed. Phase 2: both wrappers run through runIsolated; Aider always --no-auto-commits; Continue shell/exec allowlist refused before spawn. Phase 3: agent-run-promotion.ts (hash, validation, HEAD, snapshot, apply --check, apply, throwaway-index equality, write-only audit copy newest 20); agent-cli-command.ts modal Discard / Review diff / Apply with Escape = discard, read-only content-provider review, QUARANTINE_START/QUARANTINE_END/EXTERNAL_DRIFT ledger entries, failed QUARANTINE_START discards before asking; main.ts passes ledgerManager and globalStorage audit dir; settings per LD9; catalog, both READMEs, agent-cli README, INTEGRATION_DOCS_INDEX, ARCHITECTURE_PLAN contract section, FX831/FX832 MODIFIED, FX951/FX952 NEW (766/716), CHANGELOG in both changelogs. Hardening beyond the plan text, disclosed: LD3 snapshot made content-based for tracked files (throwaway index from HEAD) after a red test showed a same-size in-place rewrite with mtime restored was invisible to stat-based status and returned QUARANTINED; a clean-filter test (agent-defined filter in the global config never runs during capture, with a positive control) gives the GIT_CONFIG_GLOBAL neutralization its own falsifier. Unplanned files: docs/ARCHITECTURE_PLAN.md (Step 8.5), docs/integrations/INTEGRATION_DOCS_INDEX.md (stale text), src/test/integrations/agent-cli/git-fixture.ts (shared test helper). Tests written after the modules (not red-first) except the content check; load-bearing guards mutation-tested instead: 16 mutations of compiled guards, 16 killed (post-run snapshot, worktree link, dirty and index-flag preconditions, tracker failure, tree kill, patch validation, exit code, hash, promotion validation, promotion snapshot, post-apply equality, apply --check, global-config neutralization via the filter test, Escape-applies, ledger-failure-ignored). Verification: plain mocha 103 passing (agent-cli 15, isolated-run 26, promotion 12, patch-paths 39, catalog 11); node --test agent-cli-command 17/17; full vscode-test 4266 passing / 17 pending / 1 failing (FX930 WorkspaceArtifactBuilder CRLF, pre-existing, #508), census 469/469, new suites executed inside the extension host; test:node 364/366 with the 2 FX946 failures reproduced on base e82f69aa; eslint 0 errors (1 pre-existing main.ts:79 warning); runner-coverage PASS; citation-parity clean. Real aider/cn acceptance pending (not installed; model key required). Next: /qor-substantiate.
+
+---
+
+### Entry #631: SESSION SEAL - plan-475-isolated-agent-runs
+
+**Timestamp**: 2026-10-15T00:37:10Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-14T2317-80dc4f`
+**Entry ID**: `8e6f43626fe2`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Plan**: `plan-475-isolated-agent-runs.md` (audit #629, implement #630)
+
+**Content Hash**: `7a071c0e3824deaf5938d5c2d09c2ac25ace9e7d4a805d7913517a9723ecdce1`
+**Previous Hash**: `1d33579d7eaee504c522f13c318e3eeac741a7edfb5cb60542bf71987a69e482`
+**Chain Hash (Merkle seal)**: `39c8633286b97769e03804277c757e74b1449086c8f53bbe05e7248ce8ddfced`
+
+**Decision**: Reality = Promise for plan-475-isolated-agent-runs: all three phases implemented in their Affected Files. Unplanned, documented: docs/ARCHITECTURE_PLAN.md (implement Step 8.5 contract section), docs/integrations/INTEGRATION_DOCS_INDEX.md (stale wrapper text), src/test/integrations/agent-cli/git-fixture.ts (shared test helper), qor/references/glossary.md (the plan's two declared terms, required by strict doc_integrity), docs/SYSTEM_STATE.md (dated section + Last Updated), docs/GOVERNANCE_INDEX.md. Beyond the plan text, disclosed: LD3 snapshot made content-based for tracked files after a red test showed a same-size in-place rewrite with mtime restored returned QUARANTINED; GIT_CONFIG_GLOBAL neutralization given its own falsifier (agent-defined clean filter never runs during capture; positive control runs it under ordinary git). Verification: full vscode-test (VS Code 1.122.1 pinned) 4266 passing / 17 pending / 1 failing - FX930 WorkspaceArtifactBuilder IDLE vs IMPLEMENT, pre-existing CRLF ledger parse (#508, other lane); census 469/469; isolated-run, promotion, patch-paths and wrapper suites executed inside the extension host. Plain mocha 103 passing; node --test agent-cli-command 17/17; test:node 364/366 with the 2 FX946 ledger-anchor failures reproduced on base e82f69aa; system-state-currency 4/4; eslint 0 errors (1 pre-existing main.ts:79 warning); runner-coverage PASS; citation-parity clean. Mutation: 16 compiled-guard mutations, 16 killed (the excludesFile case is double-guarded by -c core.excludesFile and is not the falsifier for the global-config neutralization; the clean-filter test is). Tests were written after the modules except the content check (red then green); the mutation pass is the substitute evidence and is disclosed as such. Gates: intent_lock VERIFIED; skill_admission ADMITTED; gate_skill_matrix 0 broken; secret_scanner 0 findings over 34 staged files with canary rc 1; procedural_fidelity 0 findings; dod_check rc 0; merge_velocity healthy; skill_size_budget WARN only (qor-substantiate 37.0 KB); data_api_acl disclosed SKIP (no migrations); install_drift OK; doc_integrity strict OK after adding the two glossary terms, with the gitignored 'Vacuous pass' home brief supplied locally in the worktree (pre-existing orphan in fresh checkouts); governance-index --enforce rc 0 (--advance-last-reviewed would re-date the prior line, so a new line was prepended by hand, as at #616); doc currency 0 warnings; feature_index_verify rc 0 (759 verified+n/a rows; 7 other-status rows make the 766 header), surface lint WARN-only (FX922 untagged, pre-existing; degradation event c35e704d logged); seal_entry_check FAIL on the non-phase-tagged plan filename and ledger dialect, inapplicable here as at #601/#612/#616, so #626-#631 were verified directly (content hash, chain hash and previous-hash link all hold; #626 links to #616); gate_chain_completeness rc 0 but inspected 0 sessions (no phase-numbered seals in this ledger), a vacuous pass, so the four session artifacts plan/audit/implement/substantiate were confirmed present directly; dist_compile rc 0 (writes installed variants only, no repo change); data_api_acl gate_skipped_prerequisite_absent event 1cd5e121 emitted via FX943 and closed at emission by the permanent_skips declaration. Disclosures: governance-health DAMAGED META_LEDGER (pre-existing #340/#382 breaks and duplicate-number band) under the standing operator override, gate_override bc8241b8; Timestamp fields of #626-#630 corrected to the gate-artifact times (they had been written as future UTC estimates; timestamps are outside the content hash, so no chain value changed); the plan-243a seal (#616) declared the term 'Governed save' but it is absent from the glossary, so strict doc_integrity evidently did not run for that seal; no version bump (hotfix toward the next patch, operator-gated); real aider/cn acceptance pending (not installed, model key required); #514 (loopback-only L3 decide routes) is not depended on; gate artifacts stay in the main checkout's session directory as at #616/#625; seal commit carries no attribution trailer per operator rule. Feature Inventory: Total: 766 / verified: 716 / unverified: 0 / n/a: 43; FX831/FX832 MODIFIED, FX951/FX952 NEW; newly unverified: none. **SSDF Practices**: PS.2.1, RV.2.1

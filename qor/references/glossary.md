@@ -303,3 +303,39 @@ referenced_by:
   - docs/FEATURE_INDEX.md
   - docs/META_LEDGER.md
 ```
+
+## Isolated agent run
+
+```yaml
+term: Isolated agent run
+definition: >
+  A run of a coding-agent CLI (Continue, Aider) in a disposable git worktree of the workspace's HEAD,
+  so nothing the agent writes through its working directory lands in the workspace. The run is
+  bracketed by a repository snapshot and a kill of the agent's whole process tree; any change to the
+  workspace or its git state outside the worktree makes the run WORKSPACE_CHANGED_DURING_RUN and
+  nothing is promotable. A worktree is not a process sandbox: such direct writes are detected, not
+  prevented, and writes outside the repository are not detected.
+home: FailSafe/extension/src/integrations/agent-cli/isolated-run.ts
+introduced_in_plan: plan-475-isolated-agent-runs
+referenced_by:
+  - docs/FEATURE_INDEX.md
+  - docs/ARCHITECTURE_PLAN.md
+  - FailSafe/extension/src/integrations/agent-cli/README.md
+```
+
+## Quarantined change set
+
+```yaml
+term: Quarantined change set
+definition: >
+  The exact bytes an isolated agent run produced, held in memory with their sha256 for the one
+  command invocation that ran the agent. It reaches the workspace only when the operator chooses
+  Apply, after the bytes are re-validated, HEAD and the repository are confirmed unchanged since the
+  run, and git apply succeeds; the applied tree is then re-derived and compared to the bytes. The
+  on-disk audit copy is never read back, so it cannot change what is applied.
+home: FailSafe/extension/src/integrations/agent-cli/agent-run-promotion.ts
+introduced_in_plan: plan-475-isolated-agent-runs
+referenced_by:
+  - docs/FEATURE_INDEX.md
+  - FailSafe/extension/src/integrations/agent-cli/README.md
+```

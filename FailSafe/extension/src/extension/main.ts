@@ -5,6 +5,7 @@
  * Decomposed into bootstrap modules for Section 4 Simplicity.
  */
 
+import * as path from "path";
 import * as vscode from "vscode";
 import { Logger } from "../shared/Logger";
 import { VscodeLogSink } from "../core/adapters/vscode/VscodeLogSink";
@@ -253,12 +254,14 @@ export async function activate(
     registerSentryImportCommand(context, core.workspaceRoot);
 
     // 3.14d Governed CLI agent wrappers (Group B — #104 Continue, #107 Aider):
-    // run a headless coding-agent CLI argv-form, classify the produced diff with
-    // the live PolicyEngine, and route L3-risk changes to the L3 queue.
+    // run a headless coding-agent CLI in a disposable worktree (#475); its
+    // changes are quarantined until the operator applies them in the same
+    // invocation. Risk is classified with the live PolicyEngine.
     registerAgentCliCommands(context, {
       workspaceRoot: core.workspaceRoot,
       policyEngine: qor.policyEngine,
-      qorelogicManager: qor.qorelogicManager,
+      ledger: qor.ledgerManager,
+      auditDir: path.join(context.globalStorageUri.fsPath, "agent-runs"),
     });
 
     // 3.14e Agent observe/audit (Group C — #106 Cline/Roo/Kilo MCP-policy audit,

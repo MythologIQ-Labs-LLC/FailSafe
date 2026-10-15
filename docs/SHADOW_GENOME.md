@@ -2997,3 +2997,11 @@ The upstream fix already ships and was simply never called: `ledger_fragment` (P
 **Lesson**: When a plan changes a user-visible default, the enumeration grep must cover docs and README surfaces, not only src/ and test/. A default is a documented promise; the docs are callers of it.
 
 **Countermeasure applied**: VETO iteration 1; plan amended to list README.md:488, FailSafe/README.md:247, FailSafe/extension/README.md:377/:443 and the FX437 title before re-audit.
+
+## SG Event 2026-10-15: An isolation design routed approval through a control the isolated process can reach (plan-475-isolated-agent-runs, ledger #626)
+
+**Pattern**: The plan isolated a coding agent in a git worktree and sent its change set to the L3 approval queue. The queue's decision endpoint authorizes any loopback caller, and the agent is a loopback process, so the isolated party could approve its own change. The same plan treated a git worktree as isolation while the worktree shares hooks, config, refs and the index flags with the protected repository.
+
+**Lesson**: Before naming an approval or isolation mechanism, enumerate who can reach it from inside the thing being isolated. A control the subject can call is not a control over the subject.
+
+**Countermeasure applied**: VETO iteration 1; approval moved to a VS Code-native modal unreachable over HTTP; #514 filed for the loopback-only L3 decision routes; shared git state added to the snapshot with git safety flags on every call.

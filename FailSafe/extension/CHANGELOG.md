@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 - The Agent Marketplace re-scan route is now disabled along with install and update. Scanners ran with the untrusted install as their working directory (#468).
+- Continue and Aider now run in a disposable git worktree. Their changes are held for review and reach your workspace only when you choose Apply; Escape or closing the dialog discards them. Before writing, FailSafe re-checks HEAD, the tree and the exact reviewed bytes, then confirms the result. Direct writes to the repository during a run are detected and never applied, but a worktree is not a process sandbox: writes outside the repository are not detected (#475).
+- Removed `failsafe.integrations.aider.allowDirty` and `failsafe.integrations.aider.autoCommit`: the tree must be clean and Aider always runs with `--no-auto-commits`. Added `failsafe.integrations.agentCli.timeoutMs` (default 15 minutes). A Continue allowlist with shell or exec tools is refused instead of being queued for L3 approval (#475).
 
 ## [6.0.6] - 2026-10-13
 
