@@ -119,12 +119,16 @@ suite('shield-check-publish (#476)', () => {
     ['another name', (b: Record<string, unknown>) => ({ ...b, name: 'FailSafe Manual Advisory' })],
     ['another conclusion', (b: Record<string, unknown>) => ({ ...b, conclusion: 'neutral' })],
   ] as Array<[string, (b: Record<string, unknown>) => Record<string, unknown>]>) {
-    test(`a 201 echoing ${label} is unconfirmed`, async () => {
+    test(`a confirmed 201 echoing ${label} is published with an echo mismatch flag (a retry would duplicate)`, async () => {
       const posts: Posted[] = [];
       const recorded: ShieldPublication[] = [];
       const r = await publishVerifiedShieldCheck(args(baseScenario(), posts, { post: echoPost(posts, over), recordPublication: (p) => { recorded.push(p); } }));
-      assert.deepEqual([r.published, r.published ? '' : r.reason], [false, 'unconfirmed-response']);
-      assert.equal(recorded.length, 0);
+      assert.equal(r.published, true);
+      if (r.published) {
+        assert.equal(r.checkRunId, 77);
+        assert.match(r.echoMismatch ?? '', /echo/i);
+      }
+      assert.equal(recorded.length, 1, 'the check run exists, so it is recorded');
     });
   }
 

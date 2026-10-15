@@ -31,7 +31,7 @@ export interface ShieldPublication {
 }
 
 export type ShieldPublishResult =
-  | ({ published: true; recordError?: string } & ShieldPublication)
+  | ({ published: true; recordError?: string; echoMismatch?: string } & ShieldPublication)
   | { published: false; reason: string; detail?: string; status?: number };
 
 export interface ShieldPublishArgs {
@@ -127,22 +127,26 @@ export async function publishVerifiedShieldCheck(a: ShieldPublishArgs): Promise<
       const reason = res.status === undefined ? 'transport-refused' : res.status === 201 ? 'unconfirmed-response' : 'github-error';
       return notPublished(reason, res.error, res.status);
     }
+    // GitHub confirmed a create (201 + id), so the check run exists even when its
+    // echo differs from what was sent: report it as published and flag the
+    // mismatch, because "not published" would invite a duplicate on retry.
     const e = res.echo ?? {};
-    if (e.head_sha !== d.payload.head_sha || e.name !== d.payload.name || e.conclusion !== d.payload.conclusion) {
-      return notPublished('unconfirmed-response', 'GitHub did not echo the head_sha, name and conclusion sent', res.status);
-    }
+    const echoMismatch = e.head_sha !== d.payload.head_sha || e.name !== d.payload.name || e.conclusion !== d.payload.conclusion
+      ? 'GitHub echoed a different head_sha, name or conclusion than was sent'
+      : undefined;
     const pub: ShieldPublication = {
       checkRunId: res.checkRunId, commitSha: d.payload.head_sha,
       conclusion: d.payload.conclusion as 'success' | 'failure', receiptDigest: d.authority?.receiptDigest,
     };
     // The check run exists once GitHub confirmed it; a failed local record must
     // not report "not published" (a retry would post a duplicate).
+    const flags = echoMismatch ? { echoMismatch } : {};
     try {
       await a.recordPublication?.(pub);
     } catch {
-      return { published: true, ...pub, recordError: 'the publication record could not be written' };
+      return { published: true, ...pub, ...flags, recordError: 'the publication record could not be written' };
     }
-    return { published: true, ...pub };
+    return { published: true, ...pub, ...flags };
   } catch {
     return notPublished('evidence-source-error', 'an evidence read or the publication record failed');
   }
