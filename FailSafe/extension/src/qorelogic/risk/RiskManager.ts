@@ -125,6 +125,9 @@ export class RiskManager {
       this.logger.info("Risk register saved");
     } catch (error) {
       this.logger.error("Failed to save risk register", error);
+      // A caller must not report successful persistence when the disk write
+      // failed. This is particularly important for agent-created risks.
+      throw error;
     }
   }
 
