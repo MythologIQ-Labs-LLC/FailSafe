@@ -27,6 +27,11 @@ jobs:
   package-all:
     name: Package and validate the target VSIX set
     runs-on: ubuntu-latest
+    # actions: read lets the rehearsal prove the release guard's history lookup
+    # works with a job token before any tag exists.
+    permissions:
+      contents: read
+      actions: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -48,6 +53,34 @@ jobs:
           test "$(node -p "require('./targets.json').targets.length")" -eq 8
           sha256sum -c SHA256SUMS.txt
           cat targets.json
+      # FX974/FX975 rehearsal, no GitHub writes: the release jobs' set check, the
+      # GitHub Release sequence against an in-memory client (a new release, then
+      # a draft holding an interrupted upload), and the local provenance check.
+      - name: Rehearse the release artifact steps
+        working-directory: FailSafe/extension
+        run: |
+          set -euo pipefail
+          version=$(node -p "require('./dist-vsix/targets.json').version")
+          node scripts/release-artifacts.cjs verify-set dist-vsix --version "${version}"
+          node scripts/release-artifacts.cjs rehearse dist-vsix --tag "v${version}"
+          node scripts/verify-release-provenance.cjs --version "${version}" --sums dist-vsix/SHA256SUMS.txt --local dist-vsix
+      # The release guard's live lookups, read-only, with a job token: the
+      # history lookup on this workflow's own runs (both self-presence checks),
+      # and the marketplace and release lookups for this candidate's version,
+      # which must find nothing published. This step fails by design once the
+      # version has been published.
+      - name: Rehearse the release guard history lookup
+        working-directory: FailSafe/extension
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/release-artifacts.cjs history-check --workflow "native-vsix-qualification.yml" --ref "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --self-step "Rehearse the release guard history lookup"
+      - name: Rehearse the release guard published lookups
+        working-directory: FailSafe/extension
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(node -p "require('./dist-vsix/targets.json').version")
+          node scripts/release-artifacts.cjs already-published --version "${version}" --tag "v${version}" --repo "${GITHUB_REPOSITORY}" --checks "vscode,openvsx,release"
       # The same pinned publisher versions release.yml publishes with; a pin that
       # does not resolve fails here, before the production environment.
       - name: Resolve the pinned publish tools

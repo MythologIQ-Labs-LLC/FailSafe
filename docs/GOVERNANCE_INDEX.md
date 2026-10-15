@@ -161,6 +161,7 @@ Informational. Slow-drift. Reviewed semi-annually unless cited by an active cycl
 | `docs/ecosystem-position.md` | #232 workstream 7: FailSafe's seat in the AI-assisted SDLC (governance stack, Pro sibling, agent seams, trust posture). Public-sources-only; confidentiality-bounded per the v5-reveal policy. Drift signals: Pro positioning/link changes (B208), adapter-boundary contract changes, new agent-protocol seam ships |
 | `docs/agents/issue-tracker.md` | Issue-tracker contract for the vendored mattpocock/skills engineering pack (Wayfinding operations: `wayfinder:map`, sub-issues, native dependencies) + FailSafe-notes footer keeping qor doc-topology + SHIELD precedence. Vendored source pinned in `.claude/skills/MATTPOCOCK-SKILLS-LICENSE` (local-only). Registered 2026-08-19 (META_LEDGER #514-#515) |
 | `docs/release-runbook-v5-1-0.md` | Historical release runbook (kept as template for future runbooks) |
+| `docs/RELEASE_RECOVERY.md` | Finishing an interrupted release from the one built set (Re-run failed jobs; the operator-only manual path when the build refuses to rebuild) and checking a finished release's provenance (FX974/FX975) |
 | `.failsafe/governance/FEATURE_INVENTORY_CODE.md` + `FEATURE_INVENTORY_DOCS.md` | Inventory snapshots (slow-drift) |
 | `.failsafe/governance/DEPLOYMENT_TELEMETRY_ROADMAP.md` | Forward roadmap for runtime telemetry |
 | `.failsafe/governance/PROPRIETARY_SKILLS_MIGRATION_STATUS.md` | Migration status reference |
