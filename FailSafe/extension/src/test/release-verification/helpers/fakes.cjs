@@ -118,7 +118,7 @@ function vsixFiles({ toPath } = {}) {
  * the spawned USERPROFILE. A healthy launch (the to VSIX installed) adds one
  * snapshot.created row.
  */
-function fakeWorld({ code, root, v, registry = true, triggerWrites = true, git = true, onList, operatorRegistryPath, leakToOperator = false, stubborn = [], restartOnExthostKill = false }) {
+function fakeWorld({ code, root, v, registry = true, triggerWrites = true, git = true, onList, operatorRegistryPath, leakToOperator = false, stubborn = [], restartOnExthostKill = false, renderer = false }) {
   const w = { calls: [], kills: [], alive: [OPERATOR], clock: Date.parse("2026-10-15T10:00:00Z"), launchNo: 0, listInLaunch: 0, listCount: 0, installed: null, snap: 0, copyDirs: [], aliveInDirAtDbCheck: [], current: null };
   const inDir = (p) => p.exe.toLowerCase().startsWith(`${deps.code.dir.toLowerCase()}${path.sep}`);
   const deps = {
@@ -141,6 +141,7 @@ function fakeWorld({ code, root, v, registry = true, triggerWrites = true, git =
       const mainP = { pid: base, ppid: 1, exe: path.join(deps.code.dir, "Code.exe"), created: `m${w.launchNo}` };
       const ext = { pid: base + 1, ppid: base, exe: path.join(deps.code.dir, "Code.exe"), created: `e${w.launchNo}` };
       w.alive.push(mainP, ext);
+      if (renderer) w.alive.push({ pid: base + 3, ppid: base, exe: path.join(deps.code.dir, "Code.exe"), created: `r${w.launchNo}`, diesWithMain: true });
       if (git) w.alive.push({ pid: base + 2, ppid: base + 1, exe: "C:\\Program Files\\Git\\cmd\\git.exe", created: `g${w.launchNo}` });
       w.current = { quitFile: `${env.FS_RV_OUT}.quit`, owned: [mainP.pid, ext.pid], ext: ext.pid, main: mainP.pid, out: env.FS_RV_OUT };
       if (triggerWrites) {
@@ -166,8 +167,11 @@ function fakeWorld({ code, root, v, registry = true, triggerWrites = true, git =
     async kill(pid) {
       const victim = w.alive.find((p) => p.pid === pid);
       w.kills.push({ pid, launch: w.launchNo, created: victim?.created ?? null, list: w.listCount });
+      if (!victim) return { ok: false, detail: `ERROR: The process "${pid}" not found.` };
       if (stubborn.includes(pid)) return { ok: false, detail: "Access is denied." };
       w.alive = w.alive.filter((p) => p.pid !== pid);
+      // Children of a killed main (renderer, GPU) exit on their own before taskkill reaches them.
+      if (w.current && pid === w.current.main) w.alive = w.alive.filter((p) => !(p.diesWithMain && p.ppid === pid));
       // A main process that is still alive restarts a killed extension host, whose trigger reports again.
       const mainAlive = w.current && w.alive.some((p) => p.pid === w.current.main);
       if (restartOnExthostKill && w.current && pid === w.current.ext && mainAlive) {

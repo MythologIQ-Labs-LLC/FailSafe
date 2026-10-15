@@ -100,6 +100,14 @@ test("a process from DIR that appears after the snapshot is stopped before the d
   assert.equal(step(r, "S4").status, "pass", step(r, "S4").detail);
 });
 
+test("a child that exited with main before taskkill reached it is not reported as a taskkill failure", async () => {
+  const { w, deps } = setup({ renderer: true });
+  const r = await lc.runLifecycle(deps);
+  assert.ok(w.kills.some((k) => k.launch === 4 && k.pid === 1043), "the renderer was in the kill round");
+  assert.equal(step(r, "S4").status, "pass", step(r, "S4").detail);
+  assert.doesNotMatch(step(r, "S4").detail, /taskkill/);
+});
+
 test("when the owned set never empties (taskkill fails) the step fails and its databases are not copied", async () => {
   const { w, deps } = setup({ stubborn: [1040] });
   const r = await lc.runLifecycle(deps);

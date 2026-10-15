@@ -294,6 +294,7 @@ async function waitFor(deps, timeout, probe) {
  */
 async function killRound(deps, expected, firstPid) {
   const notes = [];
+  const failed = [];
   const fresh = await deps.listProcesses();
   const ordered = [...expected].sort((a, b) => (a.pid === firstPid ? -1 : b.pid === firstPid ? 1 : 0));
   const targets = [];
@@ -306,23 +307,27 @@ async function killRound(deps, expected, firstPid) {
   }
   for (const pid of targets) {
     const r = await deps.kill(pid);
-    if (r && r.ok === false) notes.push(`taskkill ${pid} failed: ${r.detail}`);
+    if (r && r.ok === false) failed.push({ pid, detail: r.detail });
   }
-  return notes;
+  return { notes, failed };
 }
 
 /**
  * Force-stops until no process from DIR is left, re-listing between rounds so a
  * process started after the snapshot is stopped too. Returns what is still
- * running when the quit timeout expires (the step then fails).
+ * running when the quit timeout expires (the step then fails). A failed
+ * taskkill is reported only when that PID is still listed afterwards: VS Code's
+ * children exit with main, often before taskkill reaches them.
  */
 async function stopUntilEmpty(deps, initial, firstPid) {
   const notes = [];
   const start = deps.now();
   let owned = initial;
   for (;;) {
-    if (owned.length) notes.push(...(await killRound(deps, owned, firstPid)));
+    const round = owned.length ? await killRound(deps, owned, firstPid) : { notes: [], failed: [] };
+    notes.push(...round.notes);
     owned = selectOwnedProcesses(await deps.listProcesses(), deps.code.dir).owned;
+    for (const x of round.failed) if (owned.some((p) => p.pid === x.pid)) notes.push(`taskkill ${x.pid} failed: ${x.detail}`);
     if (owned.length === 0 || deps.now() - start >= deps.timeouts.quit) break;
     await deps.sleep(deps.timeouts.poll);
   }
