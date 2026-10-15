@@ -142,6 +142,22 @@ suite('shield-check-publish (#476)', () => {
     });
   }
 
+  test('a recordPublication failure after a confirmed POST still reports published (no duplicate on retry)', async () => {
+    const posts: Posted[] = [];
+    const r = await publishVerifiedShieldCheck(args(baseScenario(), posts, { recordPublication: () => { throw new Error('disk full'); } }));
+    assert.equal(posts.length, 1);
+    assert.equal(r.published, true);
+    if (r.published) {
+      assert.equal(r.checkRunId, 77);
+      assert.match(r.recordError ?? '', /record/i);
+    }
+  });
+
+  test('an unconfirmed 201 is labelled unconfirmed-response, not transport-refused', async () => {
+    const r = await publishVerifiedShieldCheck(args(baseScenario(), [], { post: async () => ({ status: 201, body: 'not json' }) }));
+    assert.deepEqual([r.published, r.published ? '' : r.reason], [false, 'unconfirmed-response']);
+  });
+
   test('disabled, no token, fork or malformed apiBaseUrl -> nothing posted and no evidence read', async () => {
     const cases: Array<Partial<ShieldPublishArgs>> = [
       { opts: { enabled: false, token: 't' } },
@@ -167,6 +183,15 @@ suite('shield-check-publish production importer pin (#476)', () => {
     const bad = refs.filter((r) => !allowed.includes(r.file) && !(r.file === 'integrations/shield-receipts/workspace-evidence-source.ts' && r.typeOnly));
     assert.deepEqual(bad, []);
     assert.ok(refs.some((r) => r.file === 'integrations/github-checks/shield-check-publish.ts'), 'scan found the known importer');
+  });
+
+  test('only the verifier imports shield-evidence at runtime; others may import types only', () => {
+    const refs = referencesTo('shield-evidence');
+    const runtimeOk = ['integrations/shield-receipts/shield-receipt-verifier.ts'];
+    const typeOk = ['integrations/shield-receipts/workspace-evidence-source.ts', 'integrations/github-checks/shield-check-publish.ts'];
+    const bad = refs.filter((r) => !runtimeOk.includes(r.file) && !(r.typeOnly && typeOk.includes(r.file)));
+    assert.deepEqual(bad, []);
+    assert.ok(refs.some((r) => r.file === runtimeOk[0] && !r.typeOnly), 'scan found the verifier import');
   });
 
   test('no production file references the publisher yet (F1 wires it)', () => {
