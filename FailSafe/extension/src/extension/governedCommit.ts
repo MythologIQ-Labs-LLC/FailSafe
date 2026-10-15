@@ -15,6 +15,7 @@
  */
 
 import { spawn } from 'child_process';
+import { trustedGitPath } from '../shared/git/trustedGit';
 import { parseRepoSlug } from '../integrations/github-checks/github-checks-map';
 import { createPullRequest, type GitHubPostFn } from '../integrations/github-checks/github-checks-client';
 
@@ -125,10 +126,12 @@ export async function commitPushOpenPr(
   return { step: 'pushed', branch: req.branch, commit, remoteUrl: safeRemoteUrl, compareUrl: cmp, warning: pr.error || 'PR not created — open it manually' };
 }
 
-/** Production git runner — `spawn` (shell:false), never throws (non-zero → {code}). */
+/** Production git runner — trusted absolute git, `spawn` (shell:false), never throws (non-zero → {code}). */
 export const defaultGitRunner: GitRunner = (args, cwd) =>
   new Promise((resolve) => {
-    const child = spawn('git', args, { cwd, shell: false, windowsHide: true });
+    let exe: string;
+    try { exe = trustedGitPath(cwd); } catch (e) { resolve({ code: 1, stdout: '', stderr: String(e) }); return; }
+    const child = spawn(exe, args, { cwd, shell: false, windowsHide: true });
     let stdout = '';
     let stderr = '';
     child.stdout.on('data', (c) => { stdout += String(c); });

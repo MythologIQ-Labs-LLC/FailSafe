@@ -17,10 +17,11 @@ import {
   disabledMessage, providerConnection, setCommandHint, type CredentialUi, type EndpointReader,
 } from '../integrations/credentials/credentialGates';
 import { credentialUi } from './credentials-command';
+import { trustedGitPath } from '../shared/git/trustedGit';
 
 function git(args: string[], cwd: string): string | undefined {
   try {
-    return execFileSync('git', args, { cwd, encoding: 'utf8', timeout: 5000 }).trim() || undefined;
+    return execFileSync(trustedGitPath(cwd), args, { cwd, encoding: 'utf8', timeout: 5000 }).trim() || undefined;
   } catch { return undefined; }
 }
 

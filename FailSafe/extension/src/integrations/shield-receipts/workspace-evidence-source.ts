@@ -36,8 +36,9 @@
  * Known limits: a path component is checked with lstat and then opened, so a
  * swap in between is not detected, and the workspace root itself is not
  * checked; a FIFO at a gate path on POSIX blocks the read; the environment
- * scrub is computed once, when the source is created; git is spawned by bare
- * name at the workspace cwd (the repository-wide git.exe resolution question).
+ * scrub is computed once, when the source is created; git itself is the
+ * trusted absolute path from src/shared/git/trustedGit.ts (never a git found
+ * in the workspace), but it still runs with the workspace as its cwd.
  *
  * Ceiling: the .git object store and refs are inside the workspace, so a
  * workspace writer can still rewrite history itself; these settings stop git

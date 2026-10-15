@@ -6,6 +6,7 @@
 // treats `.git` as a directory breaks there (the CommitGuard ENOTDIR class).
 import { spawnSync } from "child_process";
 import * as path from "path";
+import { trustedGitPath } from "../shared/git/trustedGit";
 
 export interface GitDirs {
   /** Per-checkout git dir — where `git rev-parse --git-dir` points. */
@@ -23,7 +24,7 @@ export function resolveGitDirs(workspaceRoot: string): GitDirs {
   const fallback = path.join(workspaceRoot, ".git");
   try {
     const r = spawnSync(
-      "git",
+      trustedGitPath(workspaceRoot),
       ["rev-parse", "--path-format=absolute", "--git-dir", "--git-common-dir"],
       { cwd: workspaceRoot, encoding: "utf8", timeout: 5000 },
     );

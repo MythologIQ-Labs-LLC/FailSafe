@@ -5,6 +5,7 @@
  * parses output into standardized SecurityScanResult format.
  */
 import { spawn } from "child_process";
+import { trustedGitPath } from "../../shared/git/trustedGit";
 import type { EventBus } from "../../shared/EventBus";
 import type {
   SecurityScanResult,
@@ -25,13 +26,19 @@ function defaultRunner(
 ): Promise<CommandRunnerResult> {
   return new Promise((resolve) => {
     const options = { cwd, shell: false as const, timeout };
-    const proc = command === "garak"
-      ? spawn("garak", args, options)
-      : command === "npx"
-        ? spawn("npx", args, options)
-        : command === "git"
-          ? spawn("git", args, options)
-          : null;
+    let proc: ReturnType<typeof spawn> | null;
+    try {
+      proc = command === "garak"
+        ? spawn("garak", args, options)
+        : command === "npx"
+          ? spawn("npx", args, options)
+          : command === "git"
+            ? spawn(trustedGitPath(cwd), args, options)
+            : null;
+    } catch (err) {
+      resolve({ code: 1, stdout: "", stderr: err instanceof Error ? err.message : String(err) });
+      return;
+    }
     if (!proc) {
       resolve({
         code: 126,
