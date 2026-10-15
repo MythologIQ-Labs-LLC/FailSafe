@@ -4,6 +4,7 @@
  * better-sqlite3 N-API prebuild.
  *
  *   node scripts/package-target.cjs <vsce-target> [--out <file.vsix>]
+ *   node scripts/package-target.cjs --host [--out <file.vsix>]   (this machine's target)
  *
  * The base .vscodeignore ships no native binary. This writes a temporary ignore
  * file that re-includes only `prebuilds/<prebuild>.node` for the target and runs
@@ -26,12 +27,22 @@ function die(message) {
   process.exit(1);
 }
 
+/** This machine's vsce target; linux without a glibc runtime is musl (alpine-*). */
+function hostTarget() {
+  const arch = process.arch;
+  if (process.platform === "linux") {
+    const glibc = process.report?.getReport?.()?.header?.glibcVersionRuntime;
+    return `${glibc ? "linux" : "alpine"}-${arch}`;
+  }
+  return `${process.platform}-${arch}`;
+}
+
 function parseArgs(argv) {
-  const target = argv[0];
+  const target = argv[0] === "--host" ? hostTarget() : argv[0];
   const outIndex = argv.indexOf("--out");
   const out = outIndex >= 0 ? argv[outIndex + 1] : undefined;
   if (!target || !NATIVE_TARGETS[target]) {
-    die(`usage: package-target.cjs <target> [--out file.vsix]; target is one of ${Object.keys(NATIVE_TARGETS).join(", ")}`);
+    die(`usage: package-target.cjs <target>|--host [--out file.vsix]; got ${target}; target is one of ${Object.keys(NATIVE_TARGETS).join(", ")}`);
   }
   return { target, out };
 }

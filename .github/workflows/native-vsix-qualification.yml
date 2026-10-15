@@ -1,65 +1,109 @@
 name: Native VSIX Platform Qualification
 
-# #502: qualifies platform-targeted VSIXs. better-sqlite3 13.x is N-API and ships one
-# prebuild per platform, so each target packages exactly its own binary
-# (scripts/package-target.cjs) and validate-vsix checks the binary's header against
-# the target. Node 22: the 13.x prebuilds require it (they segfault on Node 20).
-# Manual dispatch only, to preserve the Actions budget. Not a release.
+# #502: non-publishing rehearsal of the release packaging path. One job runs the
+# exact script release.yml uses (scripts/package-all-targets.cjs), which packages
+# every platform-targeted VSIX and validates each binary header against its
+# target. Native runners then load the better-sqlite3 binary taken FROM their
+# target's VSIX (scripts/smoke-packaged-sqlite.cjs) with Node 22, which the 13.x
+# N-API prebuilds require. No secrets, no environment, no publish step.
+#
+# Triggers: manual dispatch, and a push to a release candidate branch
+# (release/v*-rc*), so each RC is qualified without a tag (any v* tag starts
+# release.yml).
 
 on:
   workflow_dispatch:
+  push:
+    branches: ["release/v*-rc*"]
+
+concurrency:
+  group: native-vsix-qualification-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  qualify:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: linux-x64
-          - os: ubuntu-24.04-arm
-            target: linux-arm64
-          - os: ubuntu-latest
-            target: alpine-x64
-            smoke: none
-          - os: windows-latest
-            target: win32-x64
-          - os: macos-13
-            target: darwin-x64
-          - os: macos-14
-            target: darwin-arm64
-    runs-on: ${{ matrix.os }}
+  package-all:
+    name: Package and validate the target VSIX set
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '22'
+          node-version: "22"
       - name: Install dependencies
         working-directory: FailSafe/extension
         run: npm ci
       - name: Compile extension
         working-directory: FailSafe/extension
         run: npm run compile
-      - name: Package target-specific extension
+      - name: Package and validate every target (release path)
         working-directory: FailSafe/extension
-        run: node scripts/package-target.cjs ${{ matrix.target }} --out qualification-${{ matrix.target }}.vsix
-      - name: Validate packaged extension (binary header must match the target)
-        working-directory: FailSafe/extension
-        run: node scripts/validate-vsix.cjs qualification-${{ matrix.target }}.vsix
-      - name: Load the packaged binary (not node_modules) on its native runner
-        if: matrix.smoke != 'none'
-        working-directory: FailSafe/extension
-        shell: bash
+        run: node scripts/package-all-targets.cjs --out dist-vsix
+      - name: Assert the complete target set
+        working-directory: FailSafe/extension/dist-vsix
         run: |
-          rm -rf vsix-extract && mkdir vsix-extract
-          unzip -q qualification-${{ matrix.target }}.vsix -d vsix-extract
-          node -e "const D=require('./vsix-extract/extension/node_modules/better-sqlite3'); const db=new D(':memory:'); db.exec('create table t(x)'); db.prepare('insert into t values (?)').run(1); if (db.prepare('select x from t').get().x !== 1) process.exit(1); db.close(); console.log('packaged binary loads on', process.platform, process.arch);"
-      - name: Upload qualification artifact (not a release)
+          set -euo pipefail
+          test "$(node -p "require('./targets.json').targets.length")" -eq 8
+          sha256sum -c SHA256SUMS.txt
+          cat targets.json
+      # The same pinned publisher versions release.yml publishes with; a pin that
+      # does not resolve fails here, before the production environment.
+      - name: Resolve the pinned publish tools
+        run: |
+          set -euo pipefail
+          VSCE=$(grep -oE '@vscode/vsce@[0-9.]+' .github/workflows/release.yml | sort -u)
+          OVSX=$(grep -oE 'ovsx@[0-9.]+' .github/workflows/release.yml | sort -u)
+          test "$(echo "${VSCE}" | wc -l)" -eq 1 && test "$(echo "${OVSX}" | wc -l)" -eq 1
+          npx --yes "${VSCE}" --version
+          npx --yes "${OVSX}" --version
+      - name: Upload the target VSIX set (rehearsal artifact, not a release)
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: qualification-${{ matrix.target }}
-          path: FailSafe/extension/qualification-${{ matrix.target }}.vsix
+          name: qualification-vsix-targets
+          path: FailSafe/extension/dist-vsix/
           if-no-files-found: error
+          retention-days: 14
+
+  smoke:
+    name: Load packaged binary (${{ matrix.target }})
+    needs: package-all
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, target: linux-x64 }
+          - { os: ubuntu-24.04-arm, target: linux-arm64 }
+          - { os: ubuntu-latest, target: alpine-x64, docker: "node:22-alpine" }
+          - { os: windows-latest, target: win32-x64 }
+          - { os: windows-11-arm, target: win32-arm64 }
+          - { os: macos-15-intel, target: darwin-x64 }
+          - { os: macos-14, target: darwin-arm64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: FailSafe/extension/scripts
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        if: ${{ !matrix.docker }}
+        with:
+          node-version: "22"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: qualification-vsix-targets
+          path: vsix
+      - name: Load the packaged binary on this runner
+        if: ${{ !matrix.docker }}
+        shell: bash
+        run: node FailSafe/extension/scripts/smoke-packaged-sqlite.cjs "vsix/mythologiq-failsafe-$(node -p "require('./vsix/targets.json').version")-${{ matrix.target }}.vsix"
+      # JavaScript actions cannot run inside an Alpine container, so the runner
+      # does checkout/download and the smoke test runs in a musl container.
+      - name: Load the packaged binary in ${{ matrix.docker }}
+        if: ${{ matrix.docker }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(jq -r .version vsix/targets.json)
+          docker run --rm -v "$PWD:/w" -w /w "${{ matrix.docker }}" \
+            node FailSafe/extension/scripts/smoke-packaged-sqlite.cjs "vsix/mythologiq-failsafe-${version}-${{ matrix.target }}.vsix"
