@@ -1012,3 +1012,60 @@ suite('#473 rotation', () => {
     assert.equal(verifyRows(before, env.secrets.map.get('ledgerSecret'), { record: oldRecord, binding: null, workspaceBound: false, sessionStatus: 'verified' }).ok, false);
   });
 });
+
+// plan-v607-final-integration LD9 (T-k1, T-k2): a failing or slow keychain degrades the
+// ledger to stub mode instead of aborting activation, and never mints a replacement secret.
+suite('v6.0.7 LD9 ledger secret failures degrade to stub mode', () => {
+  // console.warn cannot be observed reliably from this runner (see IntentMigration.test.ts),
+  // so the cause is asserted through getDisabledReason(); the warning is still emitted.
+  async function initCapturing(mgr: LedgerManager): Promise<string[]> {
+    const original = console.warn;
+    console.warn = () => undefined;
+    try { await mgr.initialize(); } finally { console.warn = original; }
+    const reason = mgr.getDisabledReason();
+    return reason ? [reason] : [];
+  }
+
+  test('T-k1a: a rejecting secret read leaves the ledger unavailable and generates no secret', async () => {
+    const env = makeEnv();
+    try {
+      env.secrets.throwGet = (k) => k === 'ledgerSecret';
+      const mgr = new LedgerManager(env.secrets as any, configFor(env.ledgerPath, env.root));
+      const warnings = await initCapturing(mgr);
+      assert.equal(mgr.isAvailable(), false);
+      assert.deepEqual(env.secrets.storeCalls.filter((k) => k === 'ledgerSecret'), [], 'no replacement secret is stored');
+      assert.equal(env.secrets.map.has('ledgerSecret'), false);
+      assert.ok(warnings.some((w) => /ledger secret/i.test(w) && /keychain locked/.test(w)), `warning names the cause: ${warnings.join(' | ')}`);
+      const stub = await mgr.appendEntry({ eventType: 'AUDIT_PASS', agentDid: 'did:t:k1' });
+      assert.ok(stub, 'appendEntry still answers (stub entry)');
+      assert.equal(fs.existsSync(env.ledgerPath), false, 'no ledger file is created without a secret');
+    } finally { env.cleanup(); }
+  });
+
+  test('T-k1b: a secret read that never settles is bounded and degrades the same way', async function () {
+    this.timeout(10000);
+    const env = makeEnv();
+    try {
+      env.secrets.getGate = (k) => (k === 'ledgerSecret' ? new Promise<void>(() => { /* never settles */ }) : Promise.resolve());
+      const mgr = new LedgerManager(env.secrets as any, configFor(env.ledgerPath, env.root));
+      const warnings = await initCapturing(mgr);
+      assert.equal(mgr.isAvailable(), false);
+      assert.deepEqual(env.secrets.storeCalls.filter((k) => k === 'ledgerSecret'), []);
+      assert.ok(warnings.some((w) => /ledger secret/i.test(w)), `warning logged: ${warnings.join(' | ')}`);
+    } finally { env.cleanup(); }
+  });
+
+  test('T-k2: a fresh secret that cannot be stored is not used', async () => {
+    const env = makeEnv();
+    try {
+      env.secrets.rejectStore = (k) => k === 'ledgerSecret';
+      const mgr = new LedgerManager(env.secrets as any, configFor(env.ledgerPath, env.root));
+      const warnings = await initCapturing(mgr);
+      assert.equal(mgr.isAvailable(), false, 'the unpersisted secret does not make the ledger available');
+      assert.deepEqual(env.secrets.storeCalls.filter((k) => k === 'ledgerSecret'), ['ledgerSecret'], 'one store attempt');
+      assert.equal(env.secrets.map.has('ledgerSecret'), false);
+      assert.ok(warnings.some((w) => /ledger secret/i.test(w)), `warning logged: ${warnings.join(' | ')}`);
+      assert.equal(fs.existsSync(env.ledgerPath), false, 'no row is sealed with the unpersisted secret');
+    } finally { env.cleanup(); }
+  });
+});

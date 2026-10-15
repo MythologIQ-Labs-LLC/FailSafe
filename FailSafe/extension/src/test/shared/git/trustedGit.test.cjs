@@ -540,3 +540,23 @@ test('T-c: after an install the re-check resolves again (negative results are no
   assert.equal(r.installedGit, true);
   assert.equal(r.gitAvailable, true, 'the fresh install at a known location is found');
 });
+
+// T-p6 (plan-v607-final-integration LD10): duplicates matter only when the probe does not
+// accept, so the shared file times out (and, separately, answers with non-git output).
+for (const [label, result] of [
+  ['times out', { completed: false, timedOut: true, stdout: '' }],
+  ['is not git', { completed: true, timedOut: false, stdout: 'v22.22.3' }],
+]) {
+  test(`T-p6: one git named by the hint, PATH and a known location is probed once when it ${label}`, () => {
+    const fx = fixture();
+    clock.t += 120000;
+    const g = inert(dir(fx.base, 'Shared', 'cmd'));
+    const probe = counter((real) => (real === realOr(g) ? result : GIT));
+    const spellings = [path.dirname(g)];
+    if (WIN) spellings.push(path.dirname(g).toUpperCase());
+    configureTrustedGit(cfg(fx, { hint: g, pathEnv: pathOf(...spellings, fx.Kdir), knownLocations: [g], probe }));
+    assert.equal(trustedGitPath(fx.E), realOr(fx.K), 'the next candidate wins');
+    assert.equal(probe.count(g), 1, 'the shared file is probed once per resolution');
+    assert.equal(probe.count(fx.K), 1);
+  });
+}

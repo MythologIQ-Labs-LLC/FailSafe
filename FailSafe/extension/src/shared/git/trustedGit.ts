@@ -236,7 +236,11 @@ function resolve(roots: Root[], platform: NodeJS.Platform): Survivor {
     else survivors.push(r);
   }
   const probe = config.probe ?? defaultGitProbe;
+  // One probe per file per resolution: the hint, PATH and a known location often name the same git.
+  const seen = new Set<string>();
   for (const s of survivors) {
+    if (seen.has(s.idKey)) continue;
+    seen.add(s.idKey);
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-gitprobe-'));
     let r: ProbeResult;
     try { r = probe(s.real, dir); } finally { fs.rmSync(dir, { recursive: true, force: true }); }

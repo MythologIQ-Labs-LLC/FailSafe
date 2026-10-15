@@ -44,6 +44,7 @@ export class LedgerManager {
     private lastHash: string = 'GENESIS_HASH_PLACEHOLDER';
     private cachedSecret: string | undefined;
     private isDisabled: boolean = false;
+    private disabledReason: string | undefined;
     private anchor: LedgerAnchor | undefined;
 
     constructor(secretStore: ISecretStore, configProvider: IConfigProvider) {
@@ -63,10 +64,22 @@ export class LedgerManager {
 
         // Initialize secret from secure storage (M1.5.3 Fix)
         // Note: secrets.get is async, so we must load it here first
-        // #473: bounded like every other SecretStorage call, so a hung keychain rejects initialize.
-        this.cachedSecret = await withTimeout(this.secretStore.get('ledgerSecret'), STORE_TIMEOUT_MS);
-        if (!this.cachedSecret) {
-            this.cachedSecret = await this.generateSecret();
+        // #473: bounded like every other SecretStorage call. A failed or timed-out read or store
+        // runs the ledger in stub mode instead of failing activation (plan-v607-final-integration
+        // LD9). A secret is generated only when the read answered with none: minting one after a
+        // failed read would make every existing row fail verification.
+        try {
+            this.cachedSecret = await withTimeout(this.secretStore.get('ledgerSecret'), STORE_TIMEOUT_MS);
+            if (!this.cachedSecret) {
+                this.cachedSecret = await this.generateSecret();
+            }
+        } catch (error) {
+            this.cachedSecret = undefined;
+            this.isDisabled = true;
+            const reason = error instanceof Error ? error.message : String(error);
+            this.disabledReason = `ledger secret unavailable: ${reason}`;
+            console.warn(`FailSafe: the ledger secret could not be read or stored (${reason}); running the ledger in stub mode.`);
+            return;
         }
 
         this.ledgerPath = this.configProvider.getLedgerPath();
@@ -98,6 +111,7 @@ export class LedgerManager {
         } catch (error) {
             console.error('Failed to initialize Ledger DB - running in stub mode:', error);
             this.isDisabled = true;
+            this.disabledReason = `ledger database unavailable: ${error instanceof Error ? error.message : String(error)}`;
             try { this.db?.close(); } catch { /* already closed */ }
             this.db = undefined;
             this.anchor = undefined;
@@ -388,5 +402,10 @@ export class LedgerManager {
 
     isAvailable(): boolean {
         return !this.isDisabled && !!this.db;
+    }
+
+    /** Why the ledger runs in stub mode, or undefined when it is available or not yet initialized. */
+    getDisabledReason(): string | undefined {
+        return this.isDisabled ? this.disabledReason : undefined;
     }
 }
