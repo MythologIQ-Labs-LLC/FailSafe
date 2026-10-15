@@ -1,11 +1,12 @@
-import * as fs from "fs";
-import * as path from "path";
 import { BacklogReader } from "./BacklogReader";
-import { preserveCorruptFile } from "./corrupt-file-guard";
-import { writeFileAtomicSync } from "../../shared/writeFileAtomic";
+import { RiskStore } from "../../shared/risk-store";
 
 export type UpsertOutcome = "created" | "updated" | "unchanged";
-export interface UpsertOptions { ignore?: string[] }
+export interface UpsertOptions {
+  ignore?: string[];
+  /** #517 LD8: keys whose stored value wins when one exists (operator triage). */
+  keepStored?: string[];
+}
 
 /** Key-sorted JSON, so property order never makes equal records differ. */
 function canonical(value: unknown): string {
@@ -37,6 +38,18 @@ function sameRecord(a: Record<string, unknown>, b: Record<string, unknown>, igno
   return canonical(withoutPaths(a, ignore)) === canonical(withoutPaths(b, ignore));
 }
 
+/** #517 LD8: the incoming record over the stored one; keepStored keys stay. */
+function mergeOver(
+  stored: Record<string, unknown> | undefined,
+  incoming: Record<string, unknown>,
+  keepStored: string[],
+): Record<string, unknown> {
+  if (!stored) return incoming;
+  const next: Record<string, unknown> = { ...stored, ...incoming };
+  for (const key of keepStored) if (stored[key] !== undefined) next[key] = stored[key];
+  return next;
+}
+
 /**
  * Reads and writes the risk register (JSON format).
  *
@@ -45,14 +58,17 @@ function sameRecord(a: Record<string, unknown>, b: Record<string, unknown>, igno
  * instead of showing "No risks recorded yet" while the backlog has 20+
  * open items. User-created risks (via the UI) are still persisted to
  * `risks.json` and take precedence.
+ *
+ * #517: every mutation goes through RiskStore.mutate (cross-process lock,
+ * fresh read, atomic write, refusal of an unreadable register).
  */
 export class RiskRegisterManager {
-  private readonly risksPath: string;
   private readonly workspaceRoot: string;
+  private readonly store: RiskStore;
 
   constructor(workspaceRoot: string) {
     this.workspaceRoot = workspaceRoot;
-    this.risksPath = path.join(workspaceRoot, ".failsafe", "risks", "risks.json");
+    this.store = new RiskStore(workspaceRoot);
   }
 
   getRisks(): Array<Record<string, unknown>> {
@@ -71,40 +87,24 @@ export class RiskRegisterManager {
     return this.readStoredRisks();
   }
 
-  writeRisks(risks: Array<Record<string, unknown>>): void {
-    const dir = path.dirname(this.risksPath);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    this.preserveCorruptStore();
-    writeFileAtomicSync(this.risksPath, JSON.stringify({ risks }, null, 2));
+  /**
+   * #517: read-modify-write the durable list under the risk store lock. fn
+   * runs once against the fresh list and must change it in place.
+   */
+  mutateStoredRisks<T>(fn: (risks: Array<Record<string, unknown>>) => T): T {
+    return this.store.mutate((doc) => fn(doc.risks));
   }
 
-  /**
-   * #368: an existing-but-unparseable (or wrong-shape) risks.json must be
-   * preserved aside before ANY write overwrites it — readStoredRisks() swallows
-   * parse errors into [], so without this a single upsert would destroy the
-   * operator's prior durable risks. The check lives here so every mutation
-   * path is covered (upsertRisk, closeRisk, the Console /api/v1/risks routes
-   * via HubSnapshotService.writeRiskRegister, and future callers). Reads never
-   * preserve/rename. Preservation reflects on-disk state at write time;
-   * concurrent-writer lost-updates are the declared out-of-scope RMW hazard.
-   * Posture is preserve+warn+proceed — failing closed would abort SARIF/Sentry
-   * import loops mid-run; only a rename AND copy double-failure loses data
-   * (disclosed residual).
-   */
-  private preserveCorruptStore(): void {
-    // #378: delegates to the shared guard (byte- and message-identical to the
-    // original FX923 implementation; the risks-shape predicate is unchanged).
-    preserveCorruptFile(
-      this.risksPath,
-      (p) => Array.isArray((p as { risks?: unknown })?.risks),
-      "risks.json",
-    );
+  /** @deprecated Whole-list replacement; use mutateStoredRisks. */
+  writeRisks(risks: Array<Record<string, unknown>>): void {
+    this.store.mutate((doc) => { doc.risks = risks; });
   }
 
   /**
    * B-BIC-18 (Batch 4): keyed idempotent create. Finds an existing risk by
-   * the `id` key and replaces it in place; otherwise appends. Built on
-   * readStoredRisks/writeRisks — no storage-format change to risks.json.
+   * the `id` key and merges the incoming record over it, so fields the
+   * importer does not send survive and `keepStored` keys keep their stored
+   * value (#517 LD8); otherwise appends.
    *
    * #241 F-6: mutates the durable store only, never `getRisks()`. Reading
    * through `getRisks()` here previously meant that if `risks.json` was
@@ -114,8 +114,8 @@ export class RiskRegisterManager {
    * durable authoritative state while callers (SARIF/Sentry import, MCP
    * policy scan) reported only the count of records they explicitly upserted.
    */
-  upsertRisk(risk: Record<string, unknown>, opts?: UpsertOptions): UpsertOutcome {
-    return this.upsertRiskWith(String(risk.id), () => risk, opts);
+  upsertRisk(risk: Record<string, unknown>, opts: UpsertOptions = {}): UpsertOutcome {
+    return this.upsertRiskWith(String(risk.id), (stored) => mergeOver(stored, risk, opts.keepStored ?? []), opts);
   }
 
   /**
@@ -130,40 +130,36 @@ export class RiskRegisterManager {
     build: (stored: Record<string, unknown> | undefined) => Record<string, unknown>,
     opts: UpsertOptions = {},
   ): UpsertOutcome {
-    const risks = this.readStoredRisks();
-    const index = risks.findIndex((r) => r.id === id);
-    const stored = index >= 0 ? risks[index] : undefined;
-    const next = build(stored);
-    if (stored && sameRecord(stored, next, opts.ignore ?? [])) return "unchanged";
-    if (index >= 0) risks[index] = next;
-    else risks.push(next);
-    this.writeRisks(risks);
-    return stored ? "updated" : "created";
+    return this.store.mutate((doc) => {
+      const index = doc.risks.findIndex((r) => r.id === id);
+      const stored = index >= 0 ? doc.risks[index] : undefined;
+      const next = build(stored);
+      if (stored && sameRecord(stored, next, opts.ignore ?? [])) return "unchanged";
+      if (index >= 0) doc.risks[index] = next;
+      else doc.risks.push(next);
+      return stored ? "updated" : "created";
+    });
   }
 
   /**
    * B-BIC-18 (Batch 4): close a risk by its `id` key — sets `status:'closed'`
    * and persists. A no-op (no throw, register unchanged) when the id is
-   * absent. #241 F-6: operates on the durable store only, matching
+   * absent; an unreadable register is refused (#517). #241 F-6: operates on
+   * the durable store only, matching
    * `upsertRisk` — closing a BACKLOG-fallback-only id (never explicitly
    * upserted) remains a no-op rather than materializing the fallback.
    */
   closeRisk(id: string): void {
-    const risks = this.readStoredRisks();
-    const index = risks.findIndex((r) => r.id === id);
-    if (index < 0) return;
-    risks[index] = { ...risks[index], status: "closed" };
-    this.writeRisks(risks);
+    this.store.mutate((doc) => {
+      const index = doc.risks.findIndex((r) => r.id === id);
+      if (index >= 0) doc.risks[index] = { ...doc.risks[index], status: "closed" };
+    });
   }
 
+  /** Display read: an absent or unreadable register is an empty list here. */
   private readStoredRisks(): Array<Record<string, unknown>> {
-    try {
-      if (fs.existsSync(this.risksPath)) {
-        const data = JSON.parse(fs.readFileSync(this.risksPath, "utf-8"));
-        return Array.isArray(data.risks) ? data.risks : [];
-      }
-    } catch { /* swallow; fall through to backlog */ }
-    return [];
+    const result = this.store.read();
+    return result.state === "ok" ? result.doc.risks : [];
   }
 
   private readBacklogFallback(): Array<Record<string, unknown>> {

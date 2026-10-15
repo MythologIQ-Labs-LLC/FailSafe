@@ -286,3 +286,64 @@ suite('RiskManager (FX328 + FX250)', () => {
     assert.equal(m.getAllRisks().length, 1, 'no duplicate inserted');
   });
 });
+
+// ── #517: RiskManager on the shared risk store ───────────────────────────────
+
+import { RiskRegisterManager } from '../../roadmap/services/RiskRegisterManager';
+import { RiskStore } from '../../shared/risk-store';
+
+suite('#517 RiskManager on the risk store (FX172)', () => {
+  let dir: string;
+  const file = (): string => path.join(dir, '.failsafe/risks/risks.json');
+  setup(() => { dir = makeWorkspace(); });
+  teardown(() => { fs.rmSync(dir, { recursive: true, force: true }); });
+
+  test('T12 a long-lived manager sees records written by another writer', () => {
+    const m = newManager(dir);
+    new RiskRegisterManager(dir).upsertRisk({ id: 'sarif:x', title: 'external', severity: 'high', status: 'open' });
+    assert.ok(m.getAllRisks().some((r) => r.id === 'sarif:x'));
+    assert.equal(m.getSummary().total, 1);
+  });
+
+  test('T22 activation never throws or stalls on a blocked lock, and skips the backfill when not needed', () => {
+    fs.mkdirSync(path.dirname(file()), { recursive: true });
+    fs.writeFileSync(file(), JSON.stringify({ risks: [{ id: 'legacy-1', title: 't', severity: 'high', status: 'open' }] }));
+    const lockDir = `${file()}.lock`;
+    fs.mkdirSync(lockDir);
+    fs.writeFileSync(path.join(lockDir, 'committed.txt'), 'x');
+    const old = new Date(Date.now() - 60000);
+    fs.utimesSync(lockDir, old, old);
+    const t0 = Date.now();
+    const m = newManager(dir);
+    assert.ok(Date.now() - t0 < 1000, `constructor took ${Date.now() - t0} ms`);
+    assert.deepEqual(m.getAllRisks().map((r) => r.id), ['legacy-1']);
+    assert.equal(m.getAllRisks()[0].source, 'manual', 'the in-memory view is still backfilled');
+    fs.rmSync(lockDir, { recursive: true, force: true });
+
+    fs.writeFileSync(file(), JSON.stringify({ risks: [{ id: 'modern', source: 'mcp' }] }));
+    const original = RiskStore.prototype.mutate;
+    let calls = 0;
+    RiskStore.prototype.mutate = function (this: RiskStore, ...args: Parameters<RiskStore['mutate']>) {
+      calls++;
+      return original.apply(this, args);
+    } as RiskStore['mutate'];
+    try { newManager(dir); } finally { RiskStore.prototype.mutate = original; }
+    assert.equal(calls, 0, 'no record lacks source, so the constructor does not lock or write');
+  });
+
+  test('T24 no-op RiskManager mutations write nothing and add no header keys', () => {
+    fs.mkdirSync(path.dirname(file()), { recursive: true });
+    fs.writeFileSync(file(), JSON.stringify({ risks: [{ id: 'kept', source: 'manual' }] }));
+    const pinned = new Date('2026-01-01T00:00:00Z');
+    fs.utimesSync(file(), pinned, pinned);
+    const before = fs.readFileSync(file(), 'utf8');
+    const mtime = fs.statSync(file(), { bigint: true }).mtimeNs;
+    const m = newManager(dir);
+    assert.equal(m.deleteRisk('absent'), false);
+    assert.equal(m.updateRisk('absent', { status: 'resolved' }), undefined);
+    assert.equal(fs.readFileSync(file(), 'utf8'), before);
+    assert.equal(fs.statSync(file(), { bigint: true }).mtimeNs, mtime);
+    const doc = JSON.parse(fs.readFileSync(file(), 'utf8'));
+    assert.deepEqual(Object.keys(doc), ['risks']);
+  });
+});
