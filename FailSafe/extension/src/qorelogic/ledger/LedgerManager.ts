@@ -2,7 +2,9 @@
  * LedgerManager - SOA Ledger (Merkle-Chained Audit Trail)
  *
  * Manages the append-only, cryptographically-signed audit log
- * backed by SQLite.
+ * backed by SQLite. New rows are sealed v3 over every column (LedgerSeal);
+ * legacy v1/v2 rows are verified under their own version and never re-signed
+ * (LedgerVerifier); the head is anchored in SecretStorage (LedgerAnchor).
  */
 
 import * as path from 'path';
@@ -12,28 +14,10 @@ import Database from 'better-sqlite3';
 import { ISecretStore, IConfigProvider } from '../../core/interfaces';
 import { LedgerEntry, LedgerEventType, RiskGrade } from '../../shared/types';
 import { LedgerSchemaManager } from './LedgerSchemaManager';
-
-type LedgerRow = {
-    id: number;
-    timestamp: string;
-    event_type: LedgerEventType;
-    agent_did: string;
-    agent_trust_at_action: number | null;
-    model_version: string | null;
-    artifact_path: string | null;
-    artifact_hash: string | null;
-    risk_grade: RiskGrade | null;
-    verification_method: string | null;
-    verification_result: string | null;
-    sentinel_confidence: number | null;
-    overseer_did: string | null;
-    overseer_decision: string | null;
-    gdpr_trigger: number;
-    payload: string | null;
-    entry_hash: string;
-    prev_hash: string;
-    signature: string;
-};
+import { SoaLedgerRow } from './LedgerSeal';
+import { EntryVerification, LedgerVerification, UNANCHORED_CONTEXT, entryVerification, verifyRows } from './LedgerVerifier';
+import { RESERVED_DIDS, appendV3, readAllRows, rotateTable } from './LedgerWriter';
+import { LedgerAnchor, STORE_TIMEOUT_MS, withTimeout } from './LedgerAnchor';
 
 interface LedgerAppendRequest {
     eventType: LedgerEventType;
@@ -60,6 +44,7 @@ export class LedgerManager {
     private lastHash: string = 'GENESIS_HASH_PLACEHOLDER';
     private cachedSecret: string | undefined;
     private isDisabled: boolean = false;
+    private anchor: LedgerAnchor | undefined;
 
     constructor(secretStore: ISecretStore, configProvider: IConfigProvider) {
         this.secretStore = secretStore;
@@ -72,12 +57,14 @@ export class LedgerManager {
                 this.db.close();
             } finally {
                 this.db = undefined;
+                this.anchor = undefined;
             }
         }
 
         // Initialize secret from secure storage (M1.5.3 Fix)
         // Note: secrets.get is async, so we must load it here first
-        this.cachedSecret = await this.secretStore.get('ledgerSecret');
+        // #473: bounded like every other SecretStorage call, so a hung keychain rejects initialize.
+        this.cachedSecret = await withTimeout(this.secretStore.get('ledgerSecret'), STORE_TIMEOUT_MS);
         if (!this.cachedSecret) {
             this.cachedSecret = await this.generateSecret();
         }
@@ -92,15 +79,28 @@ export class LedgerManager {
         try {
             this.db = new Database(this.ledgerPath);
             this.db.pragma('journal_mode = WAL');
+            // A second window's IMMEDIATE append blocks this thread for up to 5 s.
+            this.db.pragma('busy_timeout = 5000');
             this.initSchema();
             // B77: Run schema migrations after base schema init
             const schemaManager = new LedgerSchemaManager(this.db);
             schemaManager.migrate();
+            // #473 LD12: the genesis is written by the anchor, after migrate()
+            this.anchor = new LedgerAnchor({
+                store: this.secretStore,
+                db: this.db,
+                secret: () => this.requireSecret(),
+                ledgerPath: this.ledgerPath,
+                workspaceRoot: this.configProvider.getWorkspaceRoot?.(),
+            });
+            await this.anchor.initialize();
             this.loadLastHash();
         } catch (error) {
             console.error('Failed to initialize Ledger DB - running in stub mode:', error);
             this.isDisabled = true;
+            try { this.db?.close(); } catch { /* already closed */ }
             this.db = undefined;
+            this.anchor = undefined;
             // Don't throw - allow extension to continue with degraded functionality
         }
     }
@@ -152,12 +152,6 @@ export class LedgerManager {
 
         this.db.exec(schema);
         this.ensureAgentTrustVersionColumn();
-
-        // Check if genesis block is needed
-        const count = this.db.prepare('SELECT count(*) as c FROM soa_ledger').get() as { c: number };
-        if (count.c === 0) {
-            this.createGenesisEntry();
-        }
     }
 
     private ensureAgentTrustVersionColumn(): void {
@@ -167,46 +161,6 @@ export class LedgerManager {
         if (!hasVersion) {
             this.db.exec("ALTER TABLE agent_trust ADD COLUMN version INTEGER NOT NULL DEFAULT 0");
         }
-    }
-
-    private createGenesisEntry(): void {
-        if (!this.db) { return; }
-
-        const genesisSql = `
-        INSERT INTO soa_ledger (
-            timestamp, event_type, agent_did, payload,
-            entry_hash, prev_hash, signature
-        ) VALUES (
-            ?, ?, ?, ?, ?, ?, ?
-        )`;
-
-        const timestamp = new Date().toISOString();
-        const payloadObject = { message: 'SOA Ledger initialized' };
-        const payload = JSON.stringify(payloadObject);
-        const prevHash = this.calculateHash('GENESIS');
-
-        const hashPayload = {
-            timestamp,
-            eventType: 'SYSTEM_EVENT',
-            agentDid: 'did:myth:system:genesis',
-            payload: payloadObject,
-            prevHash
-        };
-
-        const entryHash = this.calculateHash(JSON.stringify(hashPayload));
-        const signature = this.sign(entryHash);
-
-        this.db.prepare(genesisSql).run(
-            timestamp,
-            'SYSTEM_EVENT',
-            'did:myth:system:genesis',
-            payload,
-            entryHash,
-            prevHash,
-            signature
-        );
-
-        this.lastHash = entryHash;
     }
 
     private loadLastHash(): void {
@@ -236,80 +190,41 @@ export class LedgerManager {
                 signature: 'STUB_DISABLED'
             };
         }
+        if (RESERVED_DIDS.includes(request.agentDid)) {
+            throw new TypeError(`agentDid ${request.agentDid} is reserved for the ledger itself`);
+        }
 
-        const timestamp = new Date().toISOString();
-        const prevHash = this.lastHash;
-        
-        // v2 signs every persisted audit field; legacy signatures remain verifiable.
-        const hashPayload = {
-            timestamp,
+        // #473 v3: one IMMEDIATE transaction, prev from the DB head, every column sealed.
+        const row = appendV3(this.db, this.requireSecret(), {
+            timestamp: new Date().toISOString(),
             eventType: request.eventType,
             agentDid: request.agentDid,
-            agentTrustAtAction: request.agentTrustAtAction || null,
-            modelVersion: request.modelVersion || null,
-            artifactPath: request.artifactPath || null,
-            artifactHash: request.artifactHash || null,
-            riskGrade: request.riskGrade || null,
-            verificationMethod: request.verificationMethod || null,
-            verificationResult: request.verificationResult || null,
-            sentinelConfidence: request.sentinelConfidence || null,
-            overseerDid: request.overseerDid || null,
-            overseerDecision: request.overseerDecision || null,
-            gdprTrigger: request.gdprTrigger ? 1 : 0,
-            payload: request.payload ?? null,
-            prevHash
-        };
-        
-        const entryHash = this.calculateHash(JSON.stringify(hashPayload));
-        const signature = `v2:${this.sign(entryHash)}`;
-
-        const sql = `
-        INSERT INTO soa_ledger (
-            timestamp, event_type, agent_did, agent_trust_at_action,
-            model_version, artifact_path, artifact_hash, risk_grade,
-            verification_method, verification_result, sentinel_confidence,
-            overseer_did, overseer_decision, gdpr_trigger, payload,
-            entry_hash, prev_hash, signature
-        ) VALUES (
-            @timestamp, @eventType, @agentDid, @agentTrustAtAction,
-            @modelVersion, @artifactPath, @artifactHash, @riskGrade,
-            @verificationMethod, @verificationResult, @sentinelConfidence,
-            @overseerDid, @overseerDecision, @gdprTrigger, @payload,
-            @entryHash, @prevHash, @signature
-        )`;
-
-        const info = this.db.prepare(sql).run({
-            timestamp,
-            eventType: request.eventType,
-            agentDid: request.agentDid,
-            agentTrustAtAction: request.agentTrustAtAction || null,
-            modelVersion: request.modelVersion || null,
-            artifactPath: request.artifactPath || null,
-            artifactHash: request.artifactHash || null,
-            riskGrade: request.riskGrade || null,
-            verificationMethod: request.verificationMethod || null,
-            verificationResult: request.verificationResult || null,
-            sentinelConfidence: request.sentinelConfidence || null,
-            overseerDid: request.overseerDid || null,
-            overseerDecision: request.overseerDecision || null,
-            gdprTrigger: request.gdprTrigger ? 1 : 0,
-            payload: request.payload ? JSON.stringify(request.payload) : null,
-            entryHash,
-            prevHash,
-            signature
+            agentTrustAtAction: request.agentTrustAtAction,
+            modelVersion: request.modelVersion,
+            artifactPath: request.artifactPath,
+            artifactHash: request.artifactHash,
+            riskGrade: request.riskGrade,
+            verificationMethod: request.verificationMethod,
+            verificationResult: request.verificationResult,
+            sentinelConfidence: request.sentinelConfidence,
+            overseerDid: request.overseerDid,
+            overseerDecision: request.overseerDecision,
+            gdprTrigger: request.gdprTrigger,
+            payload: request.payload,
         });
 
-        this.lastHash = entryHash;
+        this.lastHash = row.entry_hash;
+        this.anchor?.onAppended(row);
 
         return {
-            id: Number(info.lastInsertRowid),
-            timestamp,
+            id: row.id,
+            timestamp: row.timestamp,
             eventType: request.eventType,
             agentDid: request.agentDid,
             agentTrustAtAction: request.agentTrustAtAction || 0,
-            entryHash,
-            prevHash,
-            signature,
+            entryHash: row.entry_hash,
+            prevHash: row.prev_hash,
+            signature: row.signature,
             payload: request.payload || {},
             gdprTrigger: !!request.gdprTrigger
         } as LedgerEntry;
@@ -320,7 +235,7 @@ export class LedgerManager {
      */
     async getRecentEntries(limit: number = 50): Promise<LedgerEntry[]> {
         if (!this.db) { return []; }
-        const rows = this.db.prepare('SELECT * FROM soa_ledger ORDER BY id DESC LIMIT ?').all(limit) as LedgerRow[];
+        const rows = this.db.prepare('SELECT * FROM soa_ledger ORDER BY id DESC LIMIT ?').all(limit) as SoaLedgerRow[];
         return rows.map(this.mapRowToEntry);
     }
 
@@ -329,7 +244,7 @@ export class LedgerManager {
      */
     async getEntriesByType(eventType: LedgerEventType, limit: number = 50): Promise<LedgerEntry[]> {
         if (!this.db) { return []; }
-        const rows = this.db.prepare('SELECT * FROM soa_ledger WHERE event_type = ? ORDER BY id DESC LIMIT ?').all(eventType, limit) as LedgerRow[];
+        const rows = this.db.prepare('SELECT * FROM soa_ledger WHERE event_type = ? ORDER BY id DESC LIMIT ?').all(eventType, limit) as SoaLedgerRow[];
         return rows.map(this.mapRowToEntry);
     }
 
@@ -338,7 +253,7 @@ export class LedgerManager {
      */
     async getEntriesByAgent(agentDid: string, limit: number = 50): Promise<LedgerEntry[]> {
         if (!this.db) { return []; }
-        const rows = this.db.prepare('SELECT * FROM soa_ledger WHERE agent_did = ? ORDER BY id DESC LIMIT ?').all(agentDid, limit) as LedgerRow[];
+        const rows = this.db.prepare('SELECT * FROM soa_ledger WHERE agent_did = ? ORDER BY id DESC LIMIT ?').all(agentDid, limit) as SoaLedgerRow[];
         return rows.map(this.mapRowToEntry);
     }
 
@@ -347,11 +262,11 @@ export class LedgerManager {
      */
     async getEntryById(entryId: number): Promise<LedgerEntry | null> {
         if (!this.db) { return null; }
-        const row = this.db.prepare('SELECT * FROM soa_ledger WHERE id = ?').get(entryId) as LedgerRow | undefined;
+        const row = this.db.prepare('SELECT * FROM soa_ledger WHERE id = ?').get(entryId) as SoaLedgerRow | undefined;
         return row ? this.mapRowToEntry(row) : null;
     }
 
-    private mapRowToEntry(row: LedgerRow): LedgerEntry {
+    private mapRowToEntry(row: SoaLedgerRow): LedgerEntry {
         return {
             id: row.id,
             timestamp: row.timestamp,
@@ -361,7 +276,7 @@ export class LedgerManager {
             modelVersion: row.model_version ?? undefined,
             artifactPath: row.artifact_path ?? undefined,
             artifactHash: row.artifact_hash ?? undefined,
-            riskGrade: row.risk_grade ?? undefined,
+            riskGrade: (row.risk_grade ?? undefined) as RiskGrade | undefined,
             verificationMethod: row.verification_method ?? undefined,
             verificationResult: row.verification_result ?? undefined,
             sentinelConfidence: row.sentinel_confidence ?? undefined,
@@ -375,95 +290,71 @@ export class LedgerManager {
         };
     }
 
-    private calculateHash(data: string): string {
-        return crypto.createHash('sha256').update(data).digest('hex');
-    }
-
-    private sign(hash: string): string {
+    private requireSecret(): string {
         if (!this.cachedSecret) {
             throw new Error('Ledger secret not initialized');
         }
-        return crypto.createHmac('sha256', this.cachedSecret).update(hash).digest('hex');
+        return this.cachedSecret;
     }
 
     private async generateSecret(): Promise<string> {
         const secret = crypto.randomBytes(32).toString('hex');
-        await this.secretStore.store('ledgerSecret', secret);
+        await withTimeout(this.secretStore.store('ledgerSecret', secret), STORE_TIMEOUT_MS);
         return secret;
     }
 
     /**
-     * Verify the integrity of the hash chain
+     * Verify every row under its own seal version, the chain links, the
+     * activation receipt and the cached anchor records. True only when nothing
+     * failed; partial (legacy) coverage is reported by verifyLedger.
      */
     verifyChain(): boolean {
         if (!this.db) { return false; }
+        return verifyRows(readAllRows(this.db), this.cachedSecret, this.anchor?.context() ?? UNANCHORED_CONTEXT).ok;
+    }
 
-        const rows = this.db.prepare('SELECT * FROM soa_ledger ORDER BY id ASC').all() as LedgerRow[];
-        if (rows.length === 0) { return true; }
-
-        if (!this.cachedSecret) {
-            console.error('Ledger secret missing; cannot verify signatures');
-            return false;
+    /** Full report against freshly re-read anchor records (#473 LD8). */
+    async verifyLedger(timeoutMs: number = STORE_TIMEOUT_MS): Promise<LedgerVerification> {
+        if (!this.db || !this.anchor) {
+            const empty = verifyRows([], this.cachedSecret);
+            return { ...empty, ok: false, sealScope: 'none', failures: [{ id: null, code: 'no-database', detail: 'Ledger DB not initialized' }] };
         }
-        const secret = this.cachedSecret;
+        await this.anchor.flush(timeoutMs);
+        const context = await this.anchor.reload();
+        return verifyRows(readAllRows(this.db), this.cachedSecret, context);
+    }
 
-        for (let i = 0; i < rows.length; i++) {
-            const current = rows[i];
+    async verifyEntry(entryId: number): Promise<EntryVerification> {
+        const report = await this.verifyLedger();
+        return entryVerification(report, this.db ? readAllRows(this.db) : [], entryId);
+    }
 
-            let payloadValue: unknown = undefined;
-            if (current.payload) {
-                try {
-                    payloadValue = JSON.parse(current.payload);
-                } catch (error) {
-                    console.error(`Invalid payload JSON at ID ${current.id}`, error);
-                    return false;
-                }
-            }
+    /** Resolves true once queued anchor stores have landed (false on timeout). */
+    async flushAnchor(timeoutMs: number = STORE_TIMEOUT_MS): Promise<boolean> {
+        return this.anchor ? this.anchor.flush(timeoutMs) : true;
+    }
 
-            const v2 = current.signature.startsWith('v2:');
-            const hashPayload = {
-                timestamp: current.timestamp,
-                eventType: current.event_type,
-                agentDid: current.agent_did,
-                ...(v2 ? {
-                    agentTrustAtAction: current.agent_trust_at_action,
-                    modelVersion: current.model_version,
-                    artifactPath: current.artifact_path,
-                    artifactHash: current.artifact_hash,
-                    riskGrade: current.risk_grade,
-                    verificationMethod: current.verification_method,
-                    verificationResult: current.verification_result,
-                    sentinelConfidence: current.sentinel_confidence,
-                    overseerDid: current.overseer_did,
-                    overseerDecision: current.overseer_decision,
-                    gdprTrigger: current.gdpr_trigger,
-                } : {}),
-                payload: v2 ? (payloadValue ?? null) : payloadValue,
-                prevHash: current.prev_hash
-            };
-
-            const expectedHash = this.calculateHash(JSON.stringify(hashPayload));
-            if (current.entry_hash !== expectedHash) {
-                console.error(`Chain broken at ID ${current.id}: entryHash mismatch`);
-                return false;
-            }
-
-            const expectedSignature = crypto.createHmac('sha256', secret).update(expectedHash).digest('hex');
-            if (current.signature !== (v2 ? `v2:${expectedSignature}` : expectedSignature)) {
-                console.error(`Chain broken at ID ${current.id}: signature mismatch`);
-                return false;
-            }
-
-            if (i > 0) {
-                const previous = rows[i - 1];
-                if (current.prev_hash !== previous.entry_hash) {
-                    console.error(`Chain broken at ID ${current.id}: prevHash mismatch`);
-                    return false;
-                }
-            }
+    /**
+     * #473 LD13: retire the current soa_ledger rows into a file beside the
+     * ledger and start a new ledger on the same open handle. Never repairs.
+     */
+    async startNewLedger(reason: string, options: { beforeSwap?: () => void; now?: Date } = {}): Promise<{ retiredFile: string; genesisId: number }> {
+        if (!this.db || !this.anchor) {
+            throw new Error('Ledger DB not initialized');
         }
-
-        return true;
+        await this.anchor.flush();
+        const report = await this.verifyLedger();
+        const { genesis, retiredFile } = rotateTable(this.db, this.requireSecret(), {
+            ledgerPath: this.ledgerPath,
+            reason,
+            supersededBinding: this.anchor.boundGenesis(),
+            retiredVerification: { ok: report.ok, failureCount: report.failures.length },
+            beforeSwap: options.beforeSwap,
+            now: options.now,
+        });
+        this.lastHash = genesis.entry_hash;
+        await this.anchor.completeRotation(genesis);
+        return { retiredFile, genesisId: genesis.id };
     }
 
     getEntryCount(): number {
@@ -471,10 +362,11 @@ export class LedgerManager {
         const res = this.db.prepare('SELECT count(*) as c FROM soa_ledger').get() as { c: number };
         return res.c;
     }
-    
+
     close(): void {
         this.db?.close();
         this.db = undefined;
+        this.anchor = undefined;
     }
 
     getDatabase(): Database.Database {
