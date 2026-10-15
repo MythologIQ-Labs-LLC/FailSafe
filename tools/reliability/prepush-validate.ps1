@@ -128,7 +128,9 @@ if (-not $SkipVsixPackaging) {
   Invoke-Step "Package VSIX" {
     Push-Location $ExtensionRoot
     try {
-      & npx @vscode/vsce package
+      # #502: the VSIX depends on a native SQLite binary, so package this
+      # machine's platform target; a universal VSIX fails validate-vsix.
+      & node scripts/package-target.cjs --host --out prepush-host.vsix
     } finally {
       Pop-Location
     }
@@ -137,7 +139,7 @@ if (-not $SkipVsixPackaging) {
   Invoke-Step "Validate packaged VSIX" {
     Push-Location $ExtensionRoot
     try {
-      & $NpmCmd run validate:vsix
+      & node scripts/validate-vsix.cjs prepush-host.vsix
     } finally {
       Pop-Location
     }

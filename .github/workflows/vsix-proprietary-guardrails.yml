@@ -27,7 +27,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
           cache-dependency-path: FailSafe/extension/package-lock.json
 
@@ -35,14 +35,17 @@ jobs:
         run: npm ci
         working-directory: FailSafe/extension
 
+      # #502: the shipped VSIXs are platform-targeted (better-sqlite3 13 N-API
+      # prebuild per target); scan one built the same way, not a universal VSIX
+      # that is never published.
       - name: Package VSIX
-        run: npx @vscode/vsce package
+        run: node scripts/package-target.cjs linux-x64 --out guardrails-linux-x64.vsix
         working-directory: FailSafe/extension
 
       - name: Scan VSIX for prohibited content
         working-directory: FailSafe/extension
         run: |
-          VSIX_FILE=$(ls -t *.vsix | head -1)
+          VSIX_FILE=guardrails-linux-x64.vsix
           if [ -z "$VSIX_FILE" ]; then
             echo "::error::No VSIX file found"
             exit 1

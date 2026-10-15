@@ -3,7 +3,7 @@
   "displayName": "FailSafe (feat. Qor-Logic)",
   "description": "Open-source VS Code/Cursor governance and skills surface for AI coding agents.",
   "icon": "media/icon.png",
-  "version": "6.0.6",
+  "version": "6.0.7",
   "publisher": "MythologIQ",
   "license": "Apache-2.0",
   "repository": {
@@ -11,7 +11,7 @@
     "url": "https://github.com/MythologIQ/failsafe"
   },
   "engines": {
-    "vscode": "^1.90.0"
+    "vscode": "^1.101.0"
   },
   "categories": [
     "Machine Learning",
@@ -168,6 +168,21 @@
       {
         "command": "failsafe.sentry.import",
         "title": "FailSafe: Import Sentry Regressions",
+        "category": "FailSafe"
+      },
+      {
+        "command": "failsafe.credentials.set",
+        "title": "FailSafe: Set Integration Credential",
+        "category": "FailSafe"
+      },
+      {
+        "command": "failsafe.credentials.clear",
+        "title": "FailSafe: Clear Integration Credential",
+        "category": "FailSafe"
+      },
+      {
+        "command": "failsafe.credentials.migrate",
+        "title": "FailSafe: Move Plain-Text Credentials to Secure Storage",
         "category": "FailSafe"
       },
       {
@@ -376,6 +391,7 @@
         },
         "failsafe.integrations.slack.webhookUrl": {
           "type": "string",
+          "markdownDeprecationMessage": "Plain-text settings are no longer read. Store this credential with **FailSafe: Set Integration Credential** (Secure Storage), or move an existing value with **FailSafe: Move Plain-Text Credentials to Secure Storage**.",
           "default": "",
           "markdownDescription": "Slack **incoming webhook URL** to post governance notifications to. Treat as a secret — it grants posting to the target channel. Messages are notify-only (no interactive approvals; a link back to the local Command Center is included). Leave empty to disable."
         },
@@ -386,6 +402,7 @@
         },
         "failsafe.integrations.teams.webhookUrl": {
           "type": "string",
+          "markdownDeprecationMessage": "Plain-text settings are no longer read. Store this credential with **FailSafe: Set Integration Credential** (Secure Storage), or move an existing value with **FailSafe: Move Plain-Text Credentials to Secure Storage**.",
           "default": "",
           "markdownDescription": "Microsoft Teams **incoming webhook URL**. Treat as a secret — it grants posting to the target channel. Leave empty to disable."
         },
@@ -396,6 +413,7 @@
         },
         "failsafe.integrations.linear.apiKey": {
           "type": "string",
+          "markdownDeprecationMessage": "Plain-text settings are no longer read. Store this credential with **FailSafe: Set Integration Credential** (Secure Storage), or move an existing value with **FailSafe: Move Plain-Text Credentials to Secure Storage**.",
           "default": "",
           "markdownDescription": "Linear **personal API key** (or OAuth access token) for read-only issue lookups. Treat as a secret — the value is sent only in the `Authorization` header and is never logged. Leave empty to disable."
         },
@@ -416,6 +434,7 @@
         },
         "failsafe.integrations.jira.apiToken": {
           "type": "string",
+          "markdownDeprecationMessage": "Plain-text settings are no longer read. Store this credential with **FailSafe: Set Integration Credential** (Secure Storage), or move an existing value with **FailSafe: Move Plain-Text Credentials to Secure Storage**.",
           "default": "",
           "markdownDescription": "Jira Cloud **API token** (create at id.atlassian.com → Security → API tokens). Treat as a secret — sent only in the `Authorization` header (Basic email:token) and never logged. Leave empty to disable."
         },
@@ -426,6 +445,7 @@
         },
         "failsafe.integrations.github.token": {
           "type": "string",
+          "markdownDeprecationMessage": "Plain-text settings are no longer read. Store this credential with **FailSafe: Set Integration Credential** (Secure Storage), or move an existing value with **FailSafe: Move Plain-Text Credentials to Secure Storage**.",
           "default": "",
           "markdownDescription": "GitHub token used to create Check Runs — a **GitHub App installation token** (recommended; the Checks API is App-oriented and needs `checks: write`) or a PAT where the org permits it. Treat as a secret — sent only in the `Authorization` header and never logged. Leave empty to disable."
         },
@@ -446,6 +466,7 @@
         },
         "failsafe.integrations.sentry.token": {
           "type": "string",
+          "markdownDeprecationMessage": "Plain-text settings are no longer read. Store this credential with **FailSafe: Set Integration Credential** (Secure Storage), or move an existing value with **FailSafe: Move Plain-Text Credentials to Secure Storage**.",
           "default": "",
           "markdownDescription": "Sentry **auth token** (org-level or internal-integration token with `project:read` / `event:read`). Treat as a secret — sent only as a Bearer `Authorization` header and never logged. Leave empty to disable."
         },
@@ -462,20 +483,33 @@
         "failsafe.integrations.sentry.environment": {
           "type": "string",
           "default": "",
-          "description": "Optional Sentry environment to scope the import to (e.g. `production`); folded into the search query as `environment:<name>`. Leave empty for all environments."
+          "description": "Optional Sentry environment to scope the import to (e.g. `production`), sent as the `environment` filter of the organization issues endpoint. Leave empty for all environments."
         },
         "failsafe.integrations.sentry.apiBaseUrl": {
           "type": "string",
           "default": "",
-          "description": "Optional Sentry API base URL for self-hosted Sentry (e.g. https://sentry.example.com). Leave empty to use https://sentry.io."
+          "description": "Optional Sentry API base URL for self-hosted Sentry (e.g. https://sentry.example.com). Must be HTTPS; requests never leave this base. Leave empty to use https://sentry.io."
+        },
+        "failsafe.integrations.sentry.query": {
+          "type": "string",
+          "default": "is:unresolved",
+          "description": "Sentry search query limiting which issues are imported. A blank value uses `is:unresolved`."
+        },
+        "failsafe.integrations.sentry.maxReleaseLookups": {
+          "type": "integer",
+          "default": 50,
+          "minimum": 0,
+          "maximum": 200,
+          "description": "How many issues per import get an issue-detail lookup for their first and last release, most recently seen first. Issues beyond this keep release data an earlier import verified. Lookups stop early at a Sentry rate limit or after three consecutive failures. 0 turns release lookups off."
         },
         "failsafe.integrations.continue.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable the governed Continue (`cn`) headless wrapper. The `FailSafe: Run Continue (governed)` command runs a prompt through Continue with a restricted tool allowlist, classifies the produced diff, and routes L3-risk changes to the L3 approval queue. Spawns argv-form (no shell). No network unless you run the command."
+          "description": "Enable the governed Continue (`cn`) headless wrapper. `FailSafe: Run Continue (governed)` runs Continue in a disposable git worktree and holds its changes for review (Discard / Review diff / Apply). Isolation covers what the agent writes through its working directory: changes are captured from a disposable git worktree and reach the workspace only when you choose Apply. A worktree is not a process sandbox: direct writes to this repository or its git state are detected and never promoted, but have already happened; writes outside the repository, inside ignored directories, or by processes that detached from the agent are not detected. Spawns argv-form (no shell). The npm `cn.cmd` shim on Windows cannot be spawned without a shell and is reported unavailable."
         },
         "failsafe.integrations.continue.apiKey": {
           "type": "string",
+          "markdownDeprecationMessage": "Plain-text settings are no longer read. Store this credential with **FailSafe: Set Integration Credential** (Secure Storage), or move an existing value with **FailSafe: Move Plain-Text Credentials to Secure Storage**.",
           "default": "",
           "markdownDescription": "Continue API key (`CONTINUE_API_KEY`). Treat as a secret — passed to the `cn` child process via the environment only, never in the command line or any receipt, and never logged. Leave empty if `cn` is already authenticated."
         },
@@ -485,32 +519,28 @@
             "type": "string"
           },
           "default": [],
-          "description": "Explicit Continue tool allowlist (passed as repeated `--allow <tool>`). Shell/exec tools map to risk tier L3, file-write tools to L2, read-only to L1. An L3 allowlist is escalated to L3 approval BEFORE the agent runs."
+          "description": "Explicit Continue tool allowlist (passed as repeated `--allow <tool>`). Shell/exec tools map to risk tier L3, file-write tools to L2, read-only to L1. An allowlist that grants shell/exec tools is refused before the agent runs, because a shell can write outside the isolated worktree."
         },
         "failsafe.integrations.continue.allowWrites": {
           "type": "boolean",
           "default": false,
-          "description": "Permit Continue runs whose risk tier is below L3 to proceed without escalation. When false, any write-tier request is blocked. L3 always escalates regardless."
+          "description": "Permit Continue to run in an isolated worktree whose changes you can review and apply. When false, Continue is never started."
         },
         "failsafe.integrations.aider.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable the governed Aider wrapper. The `FailSafe: Run Aider (governed)` command runs Aider with auto-commit OFF, captures the resulting (uncommitted) diff, and routes L3-risk changes to the L3 approval queue. Spawns argv-form (no shell)."
-        },
-        "failsafe.integrations.aider.allowDirty": {
-          "type": "boolean",
-          "default": false,
-          "description": "Allow running Aider against a worktree that already has uncommitted changes. When false (default), a dirty worktree is refused so the captured diff is unambiguously Aider's."
-        },
-        "failsafe.integrations.aider.autoCommit": {
-          "type": "boolean",
-          "default": false,
-          "description": "Let Aider auto-commit its changes (`--auto-commits`). Off by default (`--no-auto-commits`) so changes stay uncommitted for the diff gate."
+          "description": "Enable the governed Aider wrapper. `FailSafe: Run Aider (governed)` runs Aider (always `--no-auto-commits`) in a disposable git worktree and holds its changes for review (Discard / Review diff / Apply). Isolation covers what the agent writes through its working directory: changes are captured from a disposable git worktree and reach the workspace only when you choose Apply. A worktree is not a process sandbox: direct writes to this repository or its git state are detected and never promoted, but have already happened; writes outside the repository, inside ignored directories, or by processes that detached from the agent are not detected. Spawns argv-form (no shell)."
         },
         "failsafe.integrations.aider.allowWrites": {
           "type": "boolean",
           "default": false,
-          "description": "Permit Aider runs whose diff risk tier is below L3 to proceed without escalation. When false, sub-L3 changes are blocked. L3 always escalates regardless."
+          "description": "Permit Aider to run in an isolated worktree whose changes you can review and apply. When false, Aider is never started."
+        },
+        "failsafe.integrations.agentCli.timeoutMs": {
+          "type": "number",
+          "default": 900000,
+          "minimum": 10000,
+          "description": "Maximum run time for a governed Continue / Aider run. When it is exceeded FailSafe stops the agent and every process it started, and nothing from the run is promotable."
         },
         "failsafe.integrations.agentAudit.enabled": {
           "type": "boolean",
@@ -530,7 +560,7 @@
         "failsafe.integrations.openDesign.mcpEnabled": {
           "type": "boolean",
           "default": false,
-          "description": "Pre-construct the Open Design MCP client at activation time (vs. lazy construction on first wizard invocation). The daemon is still NOT auto-probed at activation; the `FailSafe: Register Open Design MCP Connection` command runs the probe + connect. v1.1 exposes read-only tools only; write tools deferred to v1.2 with explicit L3 approval (B-OD-8)."
+          "description": "At activation, build (but do not start or connect) the Open Design MCP client from a launch command you previously confirmed in `FailSafe: Register Open Design MCP Connection`. With no confirmed command nothing is built. The server is only ever started and connected by that command, which probes the daemon, shows the exact launch command and environment for your approval, and then connects. v1.1 exposes read-only tools only; create_artifact stays disabled until a verified L3 authorization exists."
         },
         "failsafe.integrations.openDesign.sseEnabled": {
           "type": "boolean",
@@ -627,7 +657,7 @@
           "enumDescriptions": [
             "Observe only - No blocking, just visibility and logging. Zero friction.",
             "Assist - Smart defaults, auto-intent creation, gentle prompts.",
-            "Enforce - Default. Full control, intent-gated saves, L3 approvals."
+            "Enforce - Default. Full control, intent-checked saves (a denied editor save is reported, not prevented), L3 approvals."
           ],
           "default": "enforce",
           "description": "Governance mode determines how FailSafe interacts with your workflow. Enforce is the default; switch to 'assist' or 'observe' for lighter-touch governance."
@@ -659,6 +689,7 @@
         },
         "failsafe.qorelogic.externalRuntime.apiKey": {
           "type": "string",
+          "deprecationMessage": "Not used by FailSafe. Remove this plain-text value.",
           "default": "",
           "description": "Optional API key for Qor runtime. Leave empty to use environment variable fallback."
         },
@@ -727,9 +758,7 @@
     "package:voice-pack": "node ./scripts/package-voice-pack.cjs",
     "compile": "tsc -p ./ && node ./scripts/copy-ui-js.cjs",
     "watch": "tsc -watch -p ./",
-    "pretest": "npm run build:package && npm run patch:better-sqlite3 && npm run rebuild:vscode",
-    "patch:better-sqlite3": "node ./scripts/patch-better-sqlite3.cjs",
-    "rebuild:vscode": "node ./scripts/rebuild-vscode-electron.cjs",
+    "pretest": "npm run build:package",
     "test": "vscode-test --extensionDevelopmentPath . --extensionTestsPath ./out/test/suite/index .",
     "test:ui": "playwright test",
     "test:e2e": "playwright test",
@@ -745,8 +774,9 @@
     "release:bump": "node ./scripts/release-gate.cjs --bump",
     "release:tag": "node ./scripts/release-gate.cjs --tag",
     "verify:publish-block": "node ./scripts/check-publish-block.cjs",
-    "package": "vsce package",
-    "publish": "vsce publish",
+    "package": "node ./scripts/package-target.cjs --host",
+    "package:target": "node ./scripts/package-target.cjs",
+    "package:all-targets": "node ./scripts/package-all-targets.cjs --out dist-vsix",
     "vendor:piper": "node ./scripts/vendor-piper.cjs",
     "test:node": "node ./scripts/run-node-tests.cjs",
     "test:runner-coverage": "node ./scripts/check-test-runner-coverage.cjs",
@@ -790,15 +820,8 @@
     "ws": "^8.21.0",
     "zod": "^3.25.76"
   },
-  "binary": {
-    "module_name": "better_sqlite3",
-    "module_path": "./build/Release/",
-    "host": "https://github.com/WiseLibs/better-sqlite3/releases/download/",
-    "remote_path": "v{version}/",
-    "package_name": "{module_name}-v{version}-{node_abi}-{platform}-{arch}.tar.gz"
-  },
   "optionalDependencies": {
-    "better-sqlite3": "^12.6.2"
+    "better-sqlite3": "^13.0.3"
   },
   "overrides": {
     "protobufjs": "^8.0.0",

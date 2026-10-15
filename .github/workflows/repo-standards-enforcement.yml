@@ -32,7 +32,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Install dependencies
         working-directory: FailSafe/extension
@@ -58,8 +58,9 @@ jobs:
       - name: Package and validate VSIX contents
         working-directory: FailSafe/extension
         run: |
-          npx @vscode/vsce package
-          npm run validate:vsix
+          # #502: a VSIX that depends on better-sqlite3 must be platform-targeted.
+          node scripts/package-target.cjs linux-x64 --out standards-linux-x64.vsix
+          node scripts/validate-vsix.cjs standards-linux-x64.vsix
 
       - name: Repository validation
         shell: pwsh

@@ -263,6 +263,62 @@ export class ConnectionClient {
     }
   }
 
+  /**
+   * #514: POST to a route the server gates behind a modal VS Code
+   * confirmation. While the request is pending (the dialog is open) the
+   * Console status banner says so; afterwards it reports why nothing
+   * happened, or hides on success. Never throws.
+   * `expectConfirmation: false` skips the pending banner for a request the
+   * server does not gate (re-enabling hooks).
+   * @returns {Promise<{ ok: boolean, status: number, data: object, error: string|undefined }>}
+   */
+  async postGated(endpoint, payload = {}, { expectConfirmation = true } = {}) {
+    if (expectConfirmation) this._showOperatorBanner('Confirm this in the VS Code dialog', 'pending');
+    let res;
+    let data = {};
+    try {
+      res = await fetch(`${this.baseUrl}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: Object.keys(payload).length > 0 ? JSON.stringify(payload) : undefined
+      });
+      data = await res.json().catch(() => ({}));
+    } catch (e) {
+      const error = String(e);
+      this._showOperatorBanner(error, 'error');
+      return { ok: false, status: 0, data, error };
+    }
+    const error = data?.error;
+    if (!res.ok || data?.ok === false) {
+      const c = data?.confirmation;
+      const message = c === 'declined' || c === 'busy'
+        ? 'Not confirmed in VS Code'
+        : c === 'unwired'
+          ? 'Operator confirmation unavailable'
+          : (error || `Action ${endpoint} failed (${res.status})`);
+      this._showOperatorBanner(message, 'error');
+      return { ok: false, status: res.status, data, error };
+    }
+    this._showOperatorBanner(null);
+    // Same as postAction: server state changed, refresh the hub.
+    await this.fetchHub();
+    return { ok: true, status: res.status, data, error };
+  }
+
+  /** One Console-wide status line for operator confirmations (#514). */
+  _showOperatorBanner(message, tone) {
+    const el = typeof document !== 'undefined' ? document.getElementById('cc-operator-banner') : null;
+    if (!el) return;
+    clearTimeout(this._operatorBannerTimer);
+    if (!message) { el.hidden = true; el.textContent = ''; return; }
+    el.textContent = message;
+    el.dataset.tone = tone;
+    el.hidden = false;
+    if (tone !== 'pending') {
+      this._operatorBannerTimer = setTimeout(() => { el.hidden = true; }, 8000);
+    }
+  }
+
   setWebLlmStatus(status) {
     this.webLlmState = { ...this.webLlmState, ...status };
     this.notify('webLlmStatus', this.webLlmState);

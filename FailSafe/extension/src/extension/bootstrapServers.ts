@@ -29,7 +29,10 @@ import * as fs from "fs";
 import * as path from "path";
 import { defaultGitRunner, statusPaths } from "./governedCommit";
 import { runGovernedCommitFlow } from "./governedCommitFlow";
+import { createOperatorConfirmer } from "./operatorConfirmation";
 import { defaultGitHubPost } from "../integrations/github-checks/github-checks-client";
+import type { CredentialsBootstrap } from "./credentials-command";
+import { buildCredentialSnapshot, governedCommitToken } from "../integrations/credentials/credentialGates";
 
 /**
  * After Organize/Initialize applies edits, offer to commit+push+open a PR for them
@@ -44,12 +47,15 @@ async function offerGovernedCommit(
   labels: string[],
   workspaceRoot: string,
   outputChannel: vscode.OutputChannel,
+  credentials: CredentialsBootstrap,
 ): Promise<void> {
   try {
     const after = await statusPaths(defaultGitRunner, workspaceRoot);
     const changed = after.filter((p) => !before.includes(p));
     if (changed.length === 0) return;
-    const token = vscode.workspace.getConfiguration("failsafe").get<string>("integrations.github.token", "") || undefined;
+    // #482: Secure Storage only; without a usable token the commit is still
+    // made and only the optional PR step is skipped.
+    const token = governedCommitToken(credentials.creds, credentials.ui);
     const result = await runGovernedCommitFlow(action, changed, labels.length ? labels : changed, {
       workspaceRoot,
       git: defaultGitRunner,
@@ -100,6 +106,8 @@ export interface ServerDeps {
   commitGuard?: import("../governance/CommitGuard").CommitGuard;
   /** #83A: late-bound hook-port ref — repointed at the live ConsoleServer port. */
   commitGuardPortSource?: { current: () => number };
+  /** #482: integration credentials (Secret Storage) for the snapshot and the governed-commit PR step. */
+  credentials: CredentialsBootstrap;
 }
 
 export interface ServerResult {
@@ -168,24 +176,16 @@ export async function bootstrapServers(
     terminal.sendText(command, false);
     terminal.show();
   });
-  // GH #167: boolean-only config snapshot for the Integrations Catalog. Reads
-  // each catalog `failsafe.*` key from vscode settings and emits whether it is
-  // ON (enabled flag) / NON-EMPTY (required/secret key) — NEVER the value. This
-  // is the secret boundary: tokens, API keys, and webhook URLs never leave the
-  // extension host; only the derived booleans reach the route/wire/browser.
-  consoleServer.setIntegrationConfigSnapshotProvider(() => {
-    const cfg = vscode.workspace.getConfiguration();
-    const snapshot: Record<string, boolean> = {};
-    for (const key of catalogConfigKeys()) {
-      const value = cfg.get(key);
-      snapshot[key] = value === true
-        ? true
-        : typeof value === "string"
-          ? value.trim().length > 0
-          : false;
-    }
-    return snapshot;
-  });
+  // GH #167: boolean-only config snapshot for the Integrations Catalog — whether
+  // each catalog key is ON / NON-EMPTY, NEVER the value. This is the secret
+  // boundary: only the derived booleans reach the route/wire/browser. #482:
+  // credential keys come from Secure Storage and count as configured only when
+  // the command would use them (never a plain-text copy, never a user token
+  // bound for a workspace-set endpoint).
+  consoleServer.setIntegrationConfigSnapshotProvider(() => buildCredentialSnapshot(
+    deps.credentials.creds, deps.credentials.endpoints,
+    (key) => vscode.workspace.getConfiguration().get(key), catalogConfigKeys(),
+  ));
   wireBicameralIntegration(context, consoleServer, deps.workspaceRoot, {
     l3Service: {
       queueL3Approval: (req) => deps.qorelogicManager.queueL3Approval(req),
@@ -242,6 +242,9 @@ export async function bootstrapServers(
   const outputChannel = vscode.window.createOutputChannel("FailSafe (Qor-Logic)");
   context.subscriptions.push(outputChannel);
   consoleServer.setOutputChannel(outputChannel);
+  // #514: gated loopback operator routes (L3 decisions, ratify, rollback,
+  // panic-stop, hooks disable) act only after a modal VS Code confirmation.
+  consoleServer.setOperatorConfirmer(createOperatorConfirmer(vscode.window));
 
   // Risk Auto-Derivation pipeline (plan-qor-model-sourced-risks Phase 3).
   const { wireRiskAutoDerivation } = await import("../qorelogic/risk/wireAutoDerivation");
@@ -387,7 +390,7 @@ export async function bootstrapServers(
       const before = await statusPaths(defaultGitRunner, bootstrapDeps.workspaceRoot);
       const report = await runWorkspaceBootstrap(bootstrapDeps, "interactive");
       reportBootstrapToUser(report, outputChannel);
-      await offerGovernedCommit("initialize", before, [], bootstrapDeps.workspaceRoot, outputChannel);
+      await offerGovernedCommit("initialize", before, [], bootstrapDeps.workspaceRoot, outputChannel, deps.credentials);
     }),
   );
 
@@ -407,7 +410,7 @@ export async function bootstrapServers(
           }
         },
       });
-      await offerGovernedCommit("organize", before, report?.executed ?? [], deps.workspaceRoot, outputChannel);
+      await offerGovernedCommit("organize", before, report?.executed ?? [], deps.workspaceRoot, outputChannel, deps.credentials);
     }),
   );
 

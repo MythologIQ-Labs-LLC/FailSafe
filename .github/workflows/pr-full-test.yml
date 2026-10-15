@@ -1,7 +1,7 @@
 name: PR Full Test
 
 # Runs the complete test suite (lint + extension-host mocha + Playwright UI,
-# including the better-sqlite3 native rebuild against the PINNED VS Code version)
+# against the PINNED VS Code version)
 # on every PR targeting main. Before this gate, `test:all` ran ONLY on the
 # Release Pipeline (tag push), so native-build and UI-test regressions were
 # invisible until a tag fired — the exact gap that dead-tagged v5.4.0 (a stale
@@ -31,7 +31,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: "20"
+          node-version: "22"
       - run: npm ci
         working-directory: FailSafe/extension
       - run: npx playwright install --with-deps chromium

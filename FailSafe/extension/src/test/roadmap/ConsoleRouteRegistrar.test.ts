@@ -137,6 +137,28 @@ suite('ConsoleRouteRegistrar (Phase 60 §0)', () => {
     assert.ok(gets.includes('/api/v1/trust'));
   });
 
+  test('trust v1 refuses unsupported green scores for empty, unknown, and unverified checkpoints (#470)', async () => {
+    for (const checkpoints of [
+      {},
+      { a: { policyVerdict: 'UNKNOWN' } },
+      { a: { policyVerdict: 'PASS' } },
+      { a: { policyVerdict: 'PASS', evidenceRefs: [] } },
+      { a: { policyVerdict: 'PASS', evidenceRefs: ['unverified-claim'] } },
+    ]) {
+      const handlers: Record<string, (_req: any, res: any) => Promise<void>> = {};
+      const { app } = makeFakeApp();
+      app.get = (p: string, handler: any) => { handlers[p] = handler; };
+      const hub = makeFakeHub();
+      hub.buildHubSnapshot = async () => ({ checkpoints });
+      new ConsoleRouteRegistrar(makeHost(app, hub)).setupAllRoutes();
+      let body: any;
+      await handlers['/api/v1/trust']({}, { json: (value: any) => { body = value; } });
+      assert.equal(body.overall, null);
+      assert.equal(body.status, 'unverified');
+      assert.equal(body.checkpointCount, Object.keys(checkpoints).length);
+    }
+  });
+
   test('setupAllRoutes — console HTML routes registered', () => {
     const { routes } = setupRegistrar();
     const gets = pathsByMethod(routes, 'GET');
@@ -247,5 +269,35 @@ suite('ConsoleRouteRegistrar (Phase 60 §0)', () => {
     new ConsoleRouteRegistrar(host).setupAllRoutes();
     const vendorMount = uses.find((u: any) => u.path === '/vendor');
     assert.strictEqual(vendorMount, undefined, 'no /vendor mount when path does not exist');
+  });
+
+  // #514 (FX960): the operator confirmer reaches both route dep bags lazily
+  // from the host getter, so a confirmer set after route registration is used.
+  test('#514 buildApiRouteDeps + buildBicameralRouteDeps — confirmOperatorAction invokes the host confirmer', async () => {
+    const { app } = makeFakeApp();
+    const host = makeHost(app, makeFakeHub());
+    const seen: string[] = [];
+    const wired: { confirm?: (r: { title: string }) => Promise<string> } = {};
+    (host as any).getOperatorConfirmer = () => wired.confirm;
+    const reg = new ConsoleRouteRegistrar(host);
+    const apiDeps = reg.buildApiRouteDeps();
+    const bicameralDeps = reg.buildBicameralRouteDeps();
+    // Wired after the deps were built, as bootstrapServers does.
+    wired.confirm = async (r) => { seen.push(r.title); return 'approved'; };
+    const request = { title: 't', detail: 'd', approveLabel: 'a' };
+    assert.equal(await apiDeps.confirmOperatorAction!(request), 'approved');
+    assert.equal(await bicameralDeps.confirmOperatorAction!({ ...request, title: 'b' }), 'approved');
+    assert.deepEqual(seen, ['t', 'b']);
+  });
+
+  test('#514 a host with no confirmer leaves confirmOperatorAction undefined on both dep bags', () => {
+    for (const getter of [undefined, () => undefined, () => null]) {
+      const { app } = makeFakeApp();
+      const host = makeHost(app, makeFakeHub());
+      if (getter) (host as any).getOperatorConfirmer = getter;
+      const reg = new ConsoleRouteRegistrar(host);
+      assert.strictEqual(reg.buildApiRouteDeps().confirmOperatorAction, undefined);
+      assert.strictEqual(reg.buildBicameralRouteDeps().confirmOperatorAction, undefined);
+    }
   });
 });

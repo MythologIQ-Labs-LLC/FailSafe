@@ -82,6 +82,7 @@ FailSafe/extension/.vscode-test/
 FailSafe/extension/node_modules/
 FailSafe/extension/out/
 FailSafe/extension/*.vsix
+FailSafe/extension/dist-vsix/
 FailSafe/artifacts/
 FailSafe/_*_OLD/
 

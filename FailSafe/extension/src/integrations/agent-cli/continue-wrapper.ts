@@ -1,9 +1,10 @@
 /**
- * continue-wrapper — FailSafe governance wrapper for the Continue headless CLI
- * (`cn`, #104). Detects `cn`, maps the requested `--allow` tool allowlist to a
- * FailSafe risk tier, gates BEFORE spawning (a write/shell allowlist never runs
- * un-approved), runs argv-form with the API key in the child ENV only, then
- * classifies the produced diff and routes any surprise L3 change to escalation.
+ * continue-wrapper — FailSafe wrapper for the Continue headless CLI (`cn`, #104,
+ * #475). Detects `cn`, maps the requested `--allow` tool allowlist to a risk
+ * tier, refuses before spawning when writes are not authorized or the allowlist
+ * grants shell/exec tools (a shell can write outside the isolated worktree), and
+ * otherwise runs `cn` in a disposable worktree. Its changes are quarantined and
+ * reach the workspace only through the operator's Apply.
  *
  * Verified surface (issue #104): `cn -p <prompt>` headless, `CONTINUE_API_KEY`
  * env, explicit `--allow <tool>` permissions. The API key is NEVER placed in
@@ -12,10 +13,9 @@
 
 import type { RiskGrade } from '../../shared/types/risk';
 import {
-  type AgentRunFn, type AgentRunOutcome,
-  detectBinary, captureGitDiff, summarizeDiff, classifyDiffRisk, decideAgentRun,
-  buildAgentReceipt, maxRisk,
+  type AgentRunFn, type AgentRunOutcome, type ResolveAgentFn, blockedOutcome, detectBinary, isolatedOutcome, maxRisk,
 } from './agent-cli-core';
+import { runIsolated, type IsolatedRunDeps } from './isolated-run';
 
 /** Tool-name fragments that imply shell/exec power (highest tier). */
 const SHELL_TOOLS = ['shell', 'exec', 'bash', 'command', 'run', 'terminal', 'process'];
@@ -41,8 +41,10 @@ export function buildContinueArgs(prompt: string, allow: ReadonlyArray<string>):
   return args;
 }
 
-export async function detectContinue(run: AgentRunFn): Promise<{ available: boolean; version?: string }> {
-  return detectBinary('cn', ['--version'], run);
+/** Detect `cn` on PATH outside `workspaceRoot`. On Windows only cn.exe / cn.com
+ *  count: the npm shim cn.cmd cannot run without a shell, so it is unavailable. */
+export async function detectContinue(run: AgentRunFn, workspaceRoot: string, resolve?: ResolveAgentFn): Promise<{ available: boolean; version?: string }> {
+  return detectBinary('cn', ['--version'], run, { workspaceRoot, resolve });
 }
 
 export interface ContinueRunOptions {
@@ -50,53 +52,39 @@ export interface ContinueRunOptions {
   allow: ReadonlyArray<string>;
   apiKey?: string;
   cwd: string;
+  /** Permit an isolated run whose output can be reviewed for promotion. */
   writesAllowed: boolean;
+  timeoutMs: number;
   /** Base environment to inherit (the API key is overlaid onto this). */
   baseEnv?: Record<string, string | undefined>;
 }
 
-export interface ContinueDeps {
-  run: AgentRunFn;
+export interface ContinueDeps extends Omit<IsolatedRunDeps, 'timeoutMs'> {
   classify: (path: string) => RiskGrade;
   issuedAt: string;
+  /** Injected in tests; `resolveAgentExecutable` in production. */
+  resolve?: ResolveAgentFn;
 }
 
 export type { AgentRunOutcome };
 
-/**
- * Govern a Continue headless run. Two-phase gate: the allowlist tier is checked
- * BEFORE spawning (a write/shell allowlist that is L3, or any write when writes
- * are disallowed, never spawns); only an auto-approve allowlist runs, after
- * which the actual diff is re-classified and a surprise L3 change escalates.
- */
+/** Govern a Continue headless run: pre-spawn gate on authorization and the
+ *  allowlist, then an isolated run whose changes are quarantined. */
 export async function runContinueGoverned(opts: ContinueRunOptions, deps: ContinueDeps): Promise<AgentRunOutcome> {
-  const det = await detectContinue(deps.run);
-  if (!det.available) return { available: false, spawned: false, error: '`cn` (Continue CLI) not found on PATH' };
+  const det = await detectContinue(deps.run, opts.cwd, deps.resolve);
+  if (!det.available) return { available: false, spawned: false, error: '`cn` (Continue CLI) not found on PATH outside the workspace, or `cn --version` failed' };
 
   const argv = buildContinueArgs(opts.prompt, opts.allow);
   const allowlistRisk = mapAllowlistToRisk(opts.allow);
-
-  // #475: an L1/empty allowlist cannot prove the CLI is unable to write.
-  // Without write authorization, never spawn an agent into the workspace.
   if (!opts.writesAllowed) {
-    const decision = { verdict: 'BLOCK' as const, reason: 'write authorization is required before running Continue', riskGrade: 'L2' as const };
-    return { available: true, spawned: false, decision, receipt: buildAgentReceipt({ agent: 'continue', argv, decision, exitCode: null, diff: { files: 0, additions: 0, deletions: 0, paths: [] }, issuedAt: deps.issuedAt }) };
+    return blockedOutcome('continue', argv, 'running Continue requires `failsafe.integrations.continue.allowWrites`', maxRisk(allowlistRisk, 'L2'), deps.issuedAt);
+  }
+  if (allowlistRisk === 'L3') {
+    return blockedOutcome('continue', argv, 'the allowlist grants shell/exec tools, which can write outside the isolated worktree; FailSafe does not run them', 'L3', deps.issuedAt);
   }
 
-  // Phase 1 — pre-run gate on the requested tool permissions.
-  const pre = decideAgentRun(allowlistRisk, { writesAllowed: opts.writesAllowed });
-  if (pre.verdict !== 'ALLOW') {
-    const receipt = buildAgentReceipt({ agent: 'continue', argv, decision: pre, exitCode: null, diff: { files: 0, additions: 0, deletions: 0, paths: [] }, issuedAt: deps.issuedAt });
-    return { available: true, spawned: false, decision: pre, receipt };
-  }
-
-  // Phase 2 — run argv-form; API key in the child ENV only (never argv/receipt).
+  // API key in the child ENV only (never argv/receipt).
   const env = { ...(opts.baseEnv ?? {}), ...(opts.apiKey ? { CONTINUE_API_KEY: opts.apiKey } : {}) };
-  const res = await deps.run('cn', argv, { cwd: opts.cwd, env });
-
-  const diff = summarizeDiff(await captureGitDiff(deps.run, opts.cwd));
-  const finalRisk = maxRisk(allowlistRisk, classifyDiffRisk(diff, deps.classify));
-  const decision = decideAgentRun(finalRisk, { writesAllowed: opts.writesAllowed });
-  const receipt = buildAgentReceipt({ agent: 'continue', argv, decision, exitCode: res.code, diff, issuedAt: deps.issuedAt });
-  return { available: true, spawned: true, decision, diff, receipt, stdout: res.stdout };
+  const r = await runIsolated(opts.cwd, { cmd: 'cn', args: argv, env }, { ...deps, timeoutMs: opts.timeoutMs });
+  return isolatedOutcome('continue', argv, r, { ...deps, riskFloor: allowlistRisk });
 }

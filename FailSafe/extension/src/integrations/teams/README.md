@@ -15,10 +15,10 @@ FailSafe subscribes to its verified governance enforcement events, normalizes ea
 | Setting | Default | Secret | Purpose |
 |---|---|---|---|
 | `failsafe.integrations.teams.enabled` | `false` | no | Master on/off. When off, no event is posted. |
-| `failsafe.integrations.teams.webhookUrl` | — | yes | Teams Workflows incoming-webhook URL the Adaptive Card is POSTed to. |
+| `failsafe.integrations.teams.webhookUrl` | — | yes | Teams Workflows incoming-webhook URL the Adaptive Card is POSTed to. Stored in VS Code Secure Storage with `FailSafe: Set Integration Credential` (User or Workspace scope). The setting is deprecated and no longer read; `FailSafe: Move Plain-Text Credentials to Secure Storage` moves an existing value. |
 
 ## Security
-The webhook URL is a secret: it is read from config and never logged or returned by the notifier or sender. The mapper carries only a sanitized one-line summary (a path or concise detail) — never raw prompts, content, or secrets. The card is clamped and the sender enforces a conservative byte budget under the Workflows size limit. Off by default; no network unless enabled, and a missing URL is skipped silently.
+The webhook URL is a secret: it is kept in Secure Storage (never read from settings since v6.0.7) and never logged or returned by the notifier or sender. The mapper carries only a sanitized one-line summary (a path or concise detail) — never raw prompts, content, or secrets. The card is clamped and the sender enforces a conservative byte budget under the Workflows size limit. Off by default; no network unless enabled, and an enabled channel with no stored URL, or with the URL still in plain-text settings, skips delivery and warns once.
 
 ## Command / wiring
 No command. Wired as `TeamsNotifier` in `main.ts`, which subscribes to the governance EventBus and posts on each enforcement event.

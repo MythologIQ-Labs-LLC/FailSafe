@@ -29,6 +29,15 @@ export interface DaemonProbeOptions {
   fetchImpl?: typeof fetch;
 }
 
+/** #481: Open Design 0.24.1 nests the version (`{version:{version:"0.24.1",...}}`);
+ *  a top-level string is also accepted. Anything else is a parse error. */
+function readVersion(data: unknown): string | null {
+  const v = (data as { version?: unknown } | null)?.version;
+  if (typeof v === 'string') return v.length > 0 ? v : null;
+  const nested = (v as { version?: unknown } | null)?.version;
+  return typeof nested === 'string' && nested.length > 0 ? nested : null;
+}
+
 export class OpenDesignDaemonProbe {
   private cache: { at: number; result: DaemonProbeResult } | null = null;
   private readonly opts: DaemonProbeOptions;
@@ -55,11 +64,8 @@ export class OpenDesignDaemonProbe {
         result = { alive: false, reason: 'non_200' };
       } else {
         try {
-          const data = (await res.json()) as { version?: unknown };
-          result =
-            typeof data.version === 'string' && data.version.length > 0
-              ? { alive: true, version: data.version }
-              : { alive: false, reason: 'parse_error' };
+          const version = readVersion(await res.json());
+          result = version ? { alive: true, version } : { alive: false, reason: 'parse_error' };
         } catch {
           result = { alive: false, reason: 'parse_error' };
         }

@@ -94,7 +94,7 @@ export class GovernanceRouter {
 
   /**
    * Handle file operations (Save, Rename, Delete)
-   * Returns FALSE if blocked, TRUE if allowed.
+   * Returns FALSE if policy denies, TRUE if allowed. This editor hook cannot cancel disk writes.
    *
    * Accepts a plain filesystem path string instead of vscode.Uri.
    * The bootstrap layer is responsible for extracting uri.fsPath
@@ -116,13 +116,13 @@ export class GovernanceRouter {
       return await this.handleFileOperationInner(type, fsPath);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.logger.error("Governance routing failed; failing closed", {
+      this.logger.error("Editor-save governance evaluation failed; disk write NOT prevented", {
         error: message,
         targetFile: fsPath,
       });
       await this.showBlockade(
         "Governance routing failed",
-        "The action was blocked because FailSafe could not safely evaluate it against governance policy. Retry the save, or check FailSafe logs.",
+        "Policy evaluation failed; VS Code may still write this file. Check FailSafe logs.",
         { message },
         fsPath,
       );
@@ -223,13 +223,13 @@ export class GovernanceRouter {
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.logger.error("Verdict generation failed; failing closed", {
+      this.logger.error("Editor-save verdict failed; disk write NOT prevented", {
         error: message,
         targetFile: action.targetPath,
       });
       await this.showBlockade(
         "Governance verdict generation failed",
-        "The action was blocked because FailSafe could not safely evaluate it against governance policy. Retry the save, or check FailSafe logs.",
+        "Policy evaluation failed; VS Code may still write this file. Check FailSafe logs.",
         { message },
         action.targetPath,
       );
@@ -280,17 +280,17 @@ export class GovernanceRouter {
         diagnostics,
         action.targetPath,
       );
-      return false; // CANCEL OPERATION
+      return false; // POLICY DENIAL; save may still proceed
     }
 
     if (verdict.status === "ESCALATE") {
-      this.logger.warn("Governance Escalation", {
+      this.logger.warn("Editor-save governance escalation; write not prevented", {
         reason: verdict.reason,
         intentId: verdict.intentId,
         targetFile: action.targetPath,
       });
       this.notifications.showWarning(
-        `Governance Escalation: ${verdict.reason}`,
+        `FailSafe governance escalation (write not prevented): ${verdict.reason}`,
       );
       return false;
     }
@@ -310,7 +310,7 @@ export class GovernanceRouter {
     targetPath?: string,
   ): Promise<void> {
     // Log detailed diagnostics for user visibility
-    this.logger.error("BLOCKADE TRIGGERED", {
+    this.logger.error("EDITOR SAVE POLICY DENIED; WRITE NOT PREVENTED", {
       violation,
       remediation,
       diagnostics,
@@ -321,7 +321,7 @@ export class GovernanceRouter {
     this.logger.show();
 
     // Build a detailed error message
-    let errorMessage = `FailSafe Blocked: ${violation}`;
+    let errorMessage = `FailSafe policy denied editor save (write not prevented): ${violation}`;
 
     if (diagnostics?.message) {
       errorMessage += `\n\nDetails: ${diagnostics.message}`;
@@ -352,7 +352,7 @@ export class GovernanceRouter {
     } catch (notifyError) {
       const message =
         notifyError instanceof Error ? notifyError.message : String(notifyError);
-      this.logger.error("Blockade notification failed", { error: message });
+      this.logger.error("Editor-save policy notification failed", { error: message });
       return;
     }
 

@@ -2,6 +2,40 @@ import * as fs from "fs";
 import * as path from "path";
 import { BacklogReader } from "./BacklogReader";
 import { preserveCorruptFile } from "./corrupt-file-guard";
+import { writeFileAtomicSync } from "../../shared/writeFileAtomic";
+
+export type UpsertOutcome = "created" | "updated" | "unchanged";
+export interface UpsertOptions { ignore?: string[] }
+
+/** Key-sorted JSON, so property order never makes equal records differ. */
+function canonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+  if (value && typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    return `{${Object.keys(obj).sort().filter((k) => obj[k] !== undefined)
+      .map((k) => `${JSON.stringify(k)}:${canonical(obj[k])}`).join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "null";
+}
+
+/** Copy of `record` without the dotted paths in `ignore`. */
+function withoutPaths(record: Record<string, unknown>, ignore: string[]): Record<string, unknown> {
+  const copy = JSON.parse(JSON.stringify(record)) as Record<string, unknown>;
+  for (const dotted of ignore) {
+    const keys = dotted.split(".");
+    let node: Record<string, unknown> | undefined = copy;
+    for (const k of keys.slice(0, -1)) {
+      const child: unknown = node?.[k];
+      node = child && typeof child === "object" ? (child as Record<string, unknown>) : undefined;
+    }
+    if (node) delete node[keys[keys.length - 1]];
+  }
+  return copy;
+}
+
+function sameRecord(a: Record<string, unknown>, b: Record<string, unknown>, ignore: string[]): boolean {
+  return canonical(withoutPaths(a, ignore)) === canonical(withoutPaths(b, ignore));
+}
 
 /**
  * Reads and writes the risk register (JSON format).
@@ -41,7 +75,7 @@ export class RiskRegisterManager {
     const dir = path.dirname(this.risksPath);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     this.preserveCorruptStore();
-    fs.writeFileSync(this.risksPath, JSON.stringify({ risks }, null, 2), "utf-8");
+    writeFileAtomicSync(this.risksPath, JSON.stringify({ risks }, null, 2));
   }
 
   /**
@@ -80,16 +114,31 @@ export class RiskRegisterManager {
    * durable authoritative state while callers (SARIF/Sentry import, MCP
    * policy scan) reported only the count of records they explicitly upserted.
    */
-  upsertRisk(risk: Record<string, unknown>): void {
+  upsertRisk(risk: Record<string, unknown>, opts?: UpsertOptions): UpsertOutcome {
+    return this.upsertRiskWith(String(risk.id), () => risk, opts);
+  }
+
+  /**
+   * #478: read the stored record for `id`, build its replacement, and write it
+   * only when it differs — all in one synchronous call, so an in-process writer
+   * (the Console risk routes) can never be overwritten by a record built from
+   * an older read. `ignore` lists dotted paths left out of the comparison; an
+   * unchanged record keeps its stored values, including those paths.
+   */
+  upsertRiskWith(
+    id: string,
+    build: (stored: Record<string, unknown> | undefined) => Record<string, unknown>,
+    opts: UpsertOptions = {},
+  ): UpsertOutcome {
     const risks = this.readStoredRisks();
-    const id = risk.id;
     const index = risks.findIndex((r) => r.id === id);
-    if (index >= 0) {
-      risks[index] = risk;
-    } else {
-      risks.push(risk);
-    }
+    const stored = index >= 0 ? risks[index] : undefined;
+    const next = build(stored);
+    if (stored && sameRecord(stored, next, opts.ignore ?? [])) return "unchanged";
+    if (index >= 0) risks[index] = next;
+    else risks.push(next);
     this.writeRisks(risks);
+    return stored ? "updated" : "created";
   }
 
   /**

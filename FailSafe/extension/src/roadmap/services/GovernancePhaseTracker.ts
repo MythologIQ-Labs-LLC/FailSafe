@@ -51,7 +51,9 @@ const PLAN_PATTERN = /\*\*Plan\*\*:?\s*`?([^`\n]+)`?/i;
 
 export function parseMetaLedger(content: string): LedgerEntry[] {
   const entryMap = new Map<number, LedgerEntry>();
-  const blocks = content.split(/(?=### Entry #\d+)/);
+  // Git for Windows may check out tracked Markdown with CRLF. Parse the same
+  // logical ledger on every platform without altering the source on disk.
+  const blocks = content.replace(/\r\n?/g, "\n").split(/(?=### Entry #\d+)/);
 
   for (const block of blocks) {
     const headerMatch = block.match(/### Entry #(\d+):?\s*(.*)(?:\n|$)/);

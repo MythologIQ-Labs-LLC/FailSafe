@@ -25,6 +25,7 @@ import { EventBus } from "../../../shared/EventBus";
 import type { WebSocketManager } from "../../../roadmap/services/WebSocketManager";
 import type { CheckpointDb, CheckpointRecord } from "../../../roadmap/services/CheckpointStore";
 import type { BicameralMcpClient } from "../../../integrations/bicameral";
+import type { ConfirmOperatorAction } from "../../../extension/operatorConfirmation";
 import type {
   CatalogItem,
   RiskEntry,
@@ -56,6 +57,10 @@ export interface ConsoleServerFixtures {
   /** Pin the version surfaced by the status route's requiredMinVersion field.
    *  Defaults to "5.2.0". */
   voicePackVersion?: string;
+  /** #514: confirmer for the operator-gated routes (decide-l3, approve-l3-batch,
+   *  bicameral-ratify, rollback, panic-stop, hooks disable). Defaults to one that
+   *  approves, so specs exercising those routes reach the route body. */
+  operatorConfirmer?: ConfirmOperatorAction;
 }
 
 export interface ConsoleServerController {
@@ -255,6 +260,7 @@ export async function serveConsoleServerUI(
     server.setBicameralClient(fixtures.bicameralClient);
   }
   server.setBicameralCommand(fixtures.bicameralCommand ?? "node");
+  server.setOperatorConfirmer(fixtures.operatorConfirmer ?? (async () => "approved"));
 
   const voicePackVersion = fixtures.voicePackVersion ?? '5.2.0';
   const voicePackGlobalStorage = setupVoicePackFixture(workspaceRoot, fixtures, voicePackVersion);

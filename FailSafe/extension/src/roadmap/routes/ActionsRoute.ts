@@ -1,6 +1,13 @@
 import { Request, Response } from "express";
 import type { QorLogicHost } from "../../qorlogic/hostLayouts";
+import type { L3ApprovalRequest } from "../../shared/types/l3-approval";
 import type { ApiRouteDeps } from "./types";
+import {
+  requireOperatorConfirmation,
+  l3DecisionRequest,
+  l3BatchRequest,
+  panicStopRequest,
+} from "../../extension/operatorConfirmation";
 
 /**
  * Hub action-button routes: resume monitoring, panic stop,
@@ -38,8 +45,12 @@ export function setupActionsRoutes(
     },
   );
 
-  app.post("/api/actions/panic-stop", (req: Request, res: Response) => {
+  // #514: stopping the Sentinel needs a modal VS Code confirmation.
+  app.post("/api/actions/panic-stop", async (req: Request, res: Response) => {
     if (deps.rejectIfRemote(req, res)) {
+      return;
+    }
+    if (!(await requireOperatorConfirmation(deps.confirmOperatorAction, panicStopRequest(), res))) {
       return;
     }
     try {
@@ -108,27 +119,27 @@ export function setupActionsRoutes(
     res.status(204).end();
   });
 
-  // Process all pending L3 approvals in batch
+  // Process all pending L3 approvals in batch. #514: the operator confirms a
+  // snapshot of the queue; only the ids in that snapshot are decided, with the
+  // confirmed verb. Items queued while the dialog is open stay queued.
   app.post(
     "/api/actions/approve-l3-batch",
     async (req: Request, res: Response) => {
       if (deps.rejectIfRemote(req, res)) return;
+      if (rejectBodyConditions(req, res)) return;
       const decision: "APPROVED" | "REJECTED" =
-        req.body.decision === "REJECTED" ? "REJECTED" : "APPROVED";
-      const conditions: string[] = Array.isArray(req.body.conditions)
-        ? req.body.conditions
-        : [];
-      const queue = deps.qorelogicManager.getL3Queue();
-      if (!queue.length) {
+        req.body?.decision === "REJECTED" ? "REJECTED" : "APPROVED";
+      const snapshot: L3ApprovalRequest[] = [...deps.qorelogicManager.getL3Queue()];
+      if (!snapshot.length) {
         res.json({ ok: true, processed: 0 });
         return;
       }
-      const results = await processL3Queue(
-        queue,
-        deps,
-        decision,
-        conditions,
-      );
+      if (!(await requireOperatorConfirmation(
+        deps.confirmOperatorAction, l3BatchRequest(snapshot, decision), res,
+      ))) {
+        return;
+      }
+      const results = await processL3Queue(snapshot, deps, decision);
       deps.broadcast({ type: "l3.batch_processed", payload: { results } });
       res.json({ ok: true, processed: results.length, results });
     },
@@ -147,13 +158,24 @@ export function setupActionsRoutes(
         res.status(400).json({ ok: false, error: "id (string) required" });
         return;
       }
+      if (rejectBodyConditions(req, res)) return;
       const decision: "APPROVED" | "REJECTED" =
         req.body?.decision === "REJECTED" ? "REJECTED" : "APPROVED";
-      const conditions: string[] = Array.isArray(req.body?.conditions)
-        ? req.body.conditions
-        : [];
+      // #514: unknown ids answer 404 before any dialog; the dialog shows the
+      // queue entry's server-side fields and the requested verb.
+      const item = (deps.qorelogicManager.getL3Queue() as L3ApprovalRequest[])
+        .find((q) => q.id === id);
+      if (!item) {
+        res.status(404).json({ ok: false, error: `L3 request not found: ${id}` });
+        return;
+      }
+      if (!(await requireOperatorConfirmation(
+        deps.confirmOperatorAction, l3DecisionRequest(item, decision), res,
+      ))) {
+        return;
+      }
       try {
-        await deps.qorelogicManager.processL3Decision(id, decision, conditions);
+        await deps.qorelogicManager.processL3Decision(id, decision);
       } catch (e: unknown) {
         res.status(404).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
         return;
@@ -167,6 +189,19 @@ export function setupActionsRoutes(
 /* ------------------------------------------------------------------ */
 /*  Internal helpers                                                   */
 /* ------------------------------------------------------------------ */
+
+/**
+ * #514: conditions recorded with an L3 decision would come only from the
+ * request, so loopback L3 routes refuse them (400) rather than record them.
+ */
+function rejectBodyConditions(req: Request, res: Response): boolean {
+  if (req.body?.conditions === undefined) return false;
+  res.status(400).json({
+    ok: false,
+    error: "conditions are not accepted on this route; decide conditional approvals in the VS Code L3 panel",
+  });
+  return true;
+}
 
 function isSkillFilterMap(raw: unknown): raw is Record<string, string[]> {
   if (!raw || typeof raw !== "object") return false;
@@ -196,19 +231,14 @@ async function runScaffold(
 }
 
 async function processL3Queue(
-  queue: any[],
+  queue: L3ApprovalRequest[],
   deps: ApiRouteDeps,
   decision: "APPROVED" | "REJECTED",
-  conditions: string[],
 ): Promise<Array<{ id: string; ok: boolean; error?: string }>> {
   const results: Array<{ id: string; ok: boolean; error?: string }> = [];
   for (const item of queue) {
     try {
-      await deps.qorelogicManager.processL3Decision(
-        item.id,
-        decision,
-        conditions,
-      );
+      await deps.qorelogicManager.processL3Decision(item.id, decision);
       results.push({ id: item.id, ok: true });
     } catch (e: any) {
       results.push({ id: item.id, ok: false, error: e.message });

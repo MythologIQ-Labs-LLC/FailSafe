@@ -119,7 +119,7 @@ suite("GovernanceRouter.handleFileOperation - total fail-closed guard (FX905/#29
     return { rejected, allowed };
   }
 
-  test("T1: intentService.getActiveIntent rejecting fails CLOSED (returns false, notifies)", async () => {
+  test("T1: intentService.getActiveIntent rejecting returns policy denial (false), notifies", async () => {
     const capture: NotifyCapture = { errors: [] };
     const notifications = makeNotifications(capture);
     const router = new GovernanceRouter(
@@ -135,11 +135,13 @@ suite("GovernanceRouter.handleFileOperation - total fail-closed guard (FX905/#29
     );
     const r = await callNeverRejects(router);
     assert.equal(r.rejected, false, "must not reject on intent-service fault");
-    assert.equal(r.allowed, false, "intent-service fault must block the save");
+    assert.equal(r.allowed, false, "intent-service fault must return policy denial");
     assert.ok(capture.errors.length >= 1, "operator must be notified");
+    assert.match(capture.errors[0], /write not prevented/i);
+    assert.doesNotMatch(capture.errors[0], /FailSafe Blocked|action was blocked/i);
   });
 
-  test("T2: evaluationRouter.route rejecting fails CLOSED (returns false)", async () => {
+  test("T2: evaluationRouter.route rejecting returns policy denial (false)", async () => {
     const capture: NotifyCapture = { errors: [] };
     const notifications = makeNotifications(capture);
     const router = new GovernanceRouter(
@@ -155,10 +157,10 @@ suite("GovernanceRouter.handleFileOperation - total fail-closed guard (FX905/#29
     );
     const r = await callNeverRejects(router);
     assert.equal(r.rejected, false, "must not reject on routing fault");
-    assert.equal(r.allowed, false, "routing fault must block the save");
+    assert.equal(r.allowed, false, "routing fault must return policy denial");
   });
 
-  test("T3: governanceAdapter.evaluate rejecting fails CLOSED (returns false)", async () => {
+  test("T3: governanceAdapter.evaluate rejecting returns policy denial (false)", async () => {
     const capture: NotifyCapture = { errors: [] };
     const notifications = makeNotifications(capture);
     const router = new GovernanceRouter(
@@ -175,10 +177,10 @@ suite("GovernanceRouter.handleFileOperation - total fail-closed guard (FX905/#29
     } as unknown as import("../../governance/GovernanceAdapter").GovernanceAdapter);
     const r = await callNeverRejects(router);
     assert.equal(r.rejected, false, "must not reject on adapter fault");
-    assert.equal(r.allowed, false, "adapter fault must block the save");
+    assert.equal(r.allowed, false, "adapter fault must return policy denial");
   });
 
-  test("T4: qorLogicManager.processEvaluationDecision rejecting fails CLOSED (returns false)", async () => {
+  test("T4: qorLogicManager.processEvaluationDecision rejecting returns policy denial (false)", async () => {
     const capture: NotifyCapture = { errors: [] };
     const notifications = makeNotifications(capture);
     const invokingRouter = {
@@ -207,10 +209,10 @@ suite("GovernanceRouter.handleFileOperation - total fail-closed guard (FX905/#29
     );
     const r = await callNeverRejects(router);
     assert.equal(r.rejected, false, "must not reject on qorlogic pipeline fault");
-    assert.equal(r.allowed, false, "qorlogic pipeline fault must block the save");
+    assert.equal(r.allowed, false, "qorlogic pipeline fault must return policy denial");
   });
 
-  test("T5: evaluateAction never settling times out and fails CLOSED (returns false)", async () => {
+  test("T5: evaluateAction never settling times out and returns policy denial (false)", async () => {
     const capture: NotifyCapture = { errors: [] };
     const notifications = makeNotifications(capture);
     const hangingEngine = {
@@ -228,8 +230,8 @@ suite("GovernanceRouter.handleFileOperation - total fail-closed guard (FX905/#29
     );
     const r = await callNeverRejects(router);
     assert.equal(r.rejected, false, "timeout must not surface as a rejection");
-    assert.equal(r.allowed, false, "a hung verdict generation must block the save");
-    assert.ok(capture.errors.length >= 1, "operator must be told the save was blocked");
+    assert.equal(r.allowed, false, "a hung verdict generation must return policy denial");
+    assert.ok(capture.errors.length >= 1, "operator must be notified of policy denial without false prevention claims");
   });
 
   test("T6: a throwing notifier during blockade still resolves false (showBlockade total)", async () => {
@@ -301,11 +303,76 @@ suite("GovernanceRouter.handleFileOperation - verdict-generation fault path", ()
     assert.equal(
       allowed,
       false,
-      "a verdict-generation fault must block the save (fail-closed), not allow it",
+      "a verdict-generation fault must return policy denial (fail-closed), not allow it",
     );
     assert.ok(
       capture.errors.length >= 1,
-      "the operator must be told the save was blocked, not left silent",
+      "the operator must be notified of policy denial without false prevention claims, not left silent",
     );
   });
+});
+
+// #505 / LD10: handleFileOperation's only caller is the editor-save hook, which
+// cannot cancel the write. Every path that returns false must say so and must
+// never claim the save was blocked — in the shown message or in the log.
+suite("GovernanceRouter.handleFileOperation - observed, not prevented (FX948/#505)", () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { Logger } = require("../../shared/Logger");
+  const methods = ["error", "warn", "info", "debug"] as const;
+  let logged: string[] = [];
+  const originals: Record<string, unknown> = {};
+  setup(() => {
+    logged = [];
+    for (const m of methods) {
+      originals[m] = Logger.prototype[m];
+      Logger.prototype[m] = function (message: unknown) { logged.push(String(message)); };
+    }
+  });
+  teardown(() => { for (const m of methods) Logger.prototype[m] = originals[m]; });
+
+  function capture(): { notifications: INotificationService; shown: string[] } {
+    const shown: string[] = [];
+    return {
+      shown,
+      notifications: {
+        showInfo: async (m: string) => { shown.push(m); return undefined; },
+        showWarning: async (m: string) => { shown.push(m); return undefined; },
+        showError: async (m: string) => { shown.push(m); return undefined; },
+        showProgress: async <T>(_t: string, task: (r: (m: string) => void) => Promise<T>) => task(() => {}),
+      },
+    };
+  }
+  const intents = { getActiveIntent: async () => null } as unknown as IntentService;
+  const statusBar = {} as unknown as GovernanceStatusBar;
+  const engineReturning = (verdict: unknown) => ({ evaluateAction: async () => verdict }) as unknown as EnforcementEngine;
+
+  const scenarios: Array<[string, (n: INotificationService) => GovernanceRouter]> = [
+    ["intent-service fault", (n) => new GovernanceRouter(
+      { getActiveIntent: async () => { throw new Error("store unreadable"); } } as unknown as IntentService,
+      engineReturning({ status: "ALLOW" }), statusBar, makeEvaluationRouter(), n)],
+    ["adapter denial", (n) => {
+      const r = new GovernanceRouter(intents, engineReturning({ status: "ALLOW" }), statusBar, makeEvaluationRouter(), n);
+      r.setGovernanceAdapter({ evaluate: async () => ({ allowed: false, reason: "policy says no", riskGrade: "L3" }) } as unknown as import("../../governance/GovernanceAdapter").GovernanceAdapter);
+      return r;
+    }],
+    ["verdict-generation fault", (n) => new GovernanceRouter(intents,
+      new EnforcementEngine(throwingIntentProvider, "/workspace", makeConfigProvider(), n), statusBar, makeEvaluationRouter(), n)],
+    ["BLOCK verdict", (n) => new GovernanceRouter(intents,
+      engineReturning({ status: "BLOCK", violation: "AXIOM 1 VIOLATION: No active Intent exists.", remediation: "Create an Intent first." }),
+      statusBar, makeEvaluationRouter(), n)],
+    ["ESCALATE verdict", (n) => new GovernanceRouter(intents,
+      engineReturning({ status: "ESCALATE", reason: "needs overseer review", intentId: "i-1" }), statusBar, makeEvaluationRouter(), n)],
+  ];
+
+  for (const [name, build] of scenarios) {
+    test(`${name}: returns false, says the write was not prevented, never claims a block`, async () => {
+      const { notifications, shown } = capture();
+      const allowed = await build(notifications).handleFileOperation("file_write", "/workspace/src/x.ts");
+      assert.equal(allowed, false);
+      assert.ok(shown.length >= 1, "the operator is told");
+      assert.ok(shown.some((m) => /not prevented/i.test(m)), `shown: ${JSON.stringify(shown)}`);
+      assert.ok(logged.some((m) => /not prevented/i.test(m)), `logged: ${JSON.stringify(logged)}`);
+      for (const text of [...shown, ...logged]) assert.doesNotMatch(text, /block/i);
+    });
+  }
 });

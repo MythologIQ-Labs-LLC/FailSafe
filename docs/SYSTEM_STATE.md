@@ -1,10 +1,10 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-10-13 (v6.0.6 release candidate prepared; publication pending)
+**Last Updated:** 2026-10-15 (v6.0.7 final packaging on `release/v6.0.7-rc1`, draft PR #520: the GitHub Release carries the verified eight-package set and SHA256SUMS.txt, with provenance verification and a one-set-per-release guard; ledger #651-#658; not merged, not tagged, not published)
 **Active local review:** `fix/system-state-currency-sprint2` — this cycle. Restores the Tier 1 freshness contract and adds `system-state-currency.test.cjs`, the first check that asserts it. Prior to this cycle no test anywhere read this file's content.
 **Prior local review:** `fix/qor169-sprint1-seal-unblock` — MERGED to `main` as `1e1215cc` (PR #448). qor-logic 0.163.1 → 0.169.0; `.qorlogic/config.json` created, which is what allows a seal to complete at all; five vacuously-passing governance controls identified; TTS timeout assertion made deterministic and falsifying. Seal Entry #602.
 **Open PRs:** #442 (Bicameral upstream row error state), #443 (plan-grep-lint regex recognition), #444 (#367 per-engine provenance), #445 (#242 Shadow Genome severity aria — supersedes #440, closed as duplicate), #446 + #447 (dependabot). #447's blocker — a wall-clock TTS assertion — was removed by Entry #602.
-**Current Release:** v6.0.6 (2026-10-13) — source/package target; publication pending. Stabilization code integrated via #496. Marketplace install/update disabled pending #468/#469.
+**Current Release:** v6.0.7 (2026-10-15) — release candidate 1 (source/package target on `release/v6.0.7-rc1`); not published. Latest published release: v6.0.6 (2026-10-13; VS Code Marketplace + Open VSX + GitHub Release). Marketplace install/update/scan disabled pending #468/#469.
 **Prior releases:** v6.0.3 (2026-08-22, #596 DELIVER), v6.0.2 (2026-08-21, #588), v6.0.1 (2026-08-20, #553), v6.0.0 (2026-08-19, #548 — enforce-by-default era). Pre-6.x: v5.9.0 (#460 Command Center suite), v5.8.0 (#449), v5.7.0, v5.6.3 (#431).
 **Prior release detail:** v5.3.3 (published to VS Code Marketplace + Open VSX via tag `v5.3.3` (`d3a0b75`); Open VSX via CI, VS Code Marketplace via local `vsce publish --azure-credential` from the identical CI-built VSIX after the CI marketplace job hit the documented `/_apis/gallery` PAT-auth timeout) — bundles B-OD-8 (#409) + B-INT-6 (#410) + B-INT-7 (#411/#413) + B-INT-12 (#412) + transparency date-filter fix (#414); DELIVER seal #415
 **Sealed baseline:** v5.2.0 → v5.2.2 hotfix line (Entries #392-#396) → v5.3.0 (Entry #400 Open Design v1 + Entry #402 substrate v1) → v5.3.0 release (`08916d9`, dead-on-marketplace) → v5.3.1 hotfix (DELIVER at #406) → v5.3.2 release (refactor bundle #407 B-INT-4 + #408 B-INT-5) → v5.3.3 release (integration beta bundle #409–#414; DELIVER #415)
@@ -13,6 +13,29 @@
 **Doctrine additions since 2026-05-22:** `feedback_no_pipeline_reshape_for_marketplace_issues` (2026-05-27, v5.2.2 hold-pat precedent) · `feedback_verify_external_names_at_plan_time` (2026-05-27, Citation Inventory Pass — broke 4-cycle Plan-Time Hallucination loop at Entry #405)
 
 ---
+
+## 2026-10-15 — v6.0.7 final packaging (on the RC branch, not merged, not published)
+
+`plan-v607-release-assets.md` (audit PASS at iteration 6, ledger #651-#656; implementation #657; seal #658) changes only the release path: the GitHub Release now carries the same eight platform packages and `SHA256SUMS.txt` the marketplaces receive, drafted, uploaded only where missing, never replaced, and published only when complete and byte-equal to both marketplaces (FX974); `scripts/verify-release-provenance.cjs` checks a finished release (FX975). The build job refuses a second set once any attempt for the tag started publishing (Actions history with run- and step-level self-presence), both publish jobs re-check the remote tag, and runs for a tag are serialized. Marketplace publish commands and the `production` environment are unchanged. The CI rehearsal proved the guard's lookups on real Actions data. Recovery: `docs/RELEASE_RECOVERY.md`. The META_LEDGER stays DAMAGED under qor-logic 0.176.1 (#467); normal governance is not restored.
+
+---
+
+## 2026-10-15 — v6.0.7 final acceptance (on the RC branch, not merged, not published)
+
+`plan-v607-acceptance.md` (audit PASS at iteration 4, ledger #645-#648; implementation #649; seal #650) adds to `release/v6.0.7-rc1`: integration credentials in VS Code Secure Storage with consented, read-back-verified migration and no plain-text fallback (#482, FX962/FX965); a user credential is never sent to a workspace-set GitHub/Sentry/Jira endpoint; atomic `risks.json` writes (FX963 — torn writes only, the cross-process lost update of #517 stays open); working L3 Approval Queue buttons under the panel CSP (FX964). Requalified locally on Windows 10 x64: vscode-test 4459/0/19 (census 481/481), test:node 369/371 (FX946 ledgerAnchor baseline, #467), Playwright 208/0/4, eight inspected platform VSIXs, packaged-binary smoke in Node 22 and two VS Code Electrons, isolated install/upgrade/restart/forced-kill/rollback/re-upgrade with the home directory isolated, and a live credential migration through the installed package. The META_LEDGER stays DAMAGED under qor-logic 0.176.1 (#341/#382, duplicate band <=#236; #467); the owner's damaged-ledger override covered this cycle and the Wave 0/1 lane cycles (#521) only.
+
+---
+
+## 2026-10-15 — v6.0.7 release candidate 1 (integrated, not merged, not published)
+
+`release/v6.0.7-rc1` (draft PR #520) integrates #515 (#508 CRLF ledger parse), #486 (fast-uri), #498 (#470 trust evidence), #500 (#472 replay nonce, with cleanup-timer and rename-retry fixes), #511 (#505 save denials are observations), #519 (#517 RiskManager, plus the deleteRisk refresh on the RC branch), #513/#501 (#481 Open Design), #512 (#502 better-sqlite3 13 N-API with eight platform-targeted VSIXs; release.yml now publishes that set behind the production gate and native-vsix-qualification.yml rehearses it without publishing), #516 (#475 isolated agent runs, with POSIX marker/process-group tracking and workspace-excluded executable resolution) and #518 (#478 Sentry). New on the RC branch: loopback Console routes that record an operator decision, roll back, stop the Sentinel or disable hooks act only after a modal VS Code confirmation (#514, FX960); editor-save escalations say the write was not prevented (#505). The four independently sealed ledger bands #617-#637 were re-chained into one linear chain (content hashes unchanged, plan-v607-rc1 LD13); the cycle's own entries start at #638. Deferred: #507 (#477 OpenHands), #506 (#480 Jira/Linear). Known limitations are listed in CHANGELOG [6.0.7].
+
+## 2026-10-15 — #475 isolated Continue / Aider runs (sealed on branch, not merged)
+
+Continue and Aider now run in a disposable git worktree (`src/integrations/agent-cli/isolated-run.ts`); their changes are a quarantined change set that reaches the workspace only through Apply in the same command (`agent-run-promotion.ts`). Direct writes to the repository or its git state during a run are detected (content-based snapshot) and never promoted; writes outside the repository are not detected. Removed settings: `failsafe.integrations.aider.allowDirty`, `failsafe.integrations.aider.autoCommit`; added `failsafe.integrations.agentCli.timeoutMs`. FX951/FX952 NEW, FX831/FX832 MODIFIED (766 / 716). Ledger #626-#631. No version change.
+## 2026-10-15 — #478 Sentry import completion (sealed on branch, not merged)
+
+The Sentry import now lists the organization issues endpoint (`sort=date` pinned), waits on Sentry's documented rate-limit headers with bounded retries, refuses requests outside the configured HTTPS base, and reports an exact outcome (created / updated / unchanged / failed per unique issue, skipped, duplicates). Each issue's first and last release come from the issue detail, capped per import with stop rules; a stored release is carried only in the exact detail shape. Records are merged and written in one synchronous call (`RiskRegisterManager.upsertRiskWith`), so operator triage survives. New settings `failsafe.integrations.sentry.query` and `.maxReleaseLookups`. FX953/FX954 NEW, FX829/FX915 MODIFIED (766 / 716). Ledger #632-#637. Found in review and filed separately: #517 (RiskManager rewrites risks.json from a stale in-memory copy). No version change.
 
 ## 2026-10-13 — v6.0.6 release candidate (not yet published)
 

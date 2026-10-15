@@ -207,6 +207,8 @@ Marketplace surface confirmation: VS Code Marketplace listing for `mythologiq.fa
 
 ## Rollback hooks
 
+An interrupted v6.0.7-or-later release (a publish or GitHub Release job that failed part-way, or a build that refused to rebuild a version already published) is finished with the procedure in [`docs/RELEASE_RECOVERY.md`](RELEASE_RECOVERY.md).
+
 If anything fails after step 11 (PUBLISH_BLOCK lifted) but before step 13 (push), the lift is recoverable by reverting the lift commit. If failure happens after step 13's `git push origin v5.1.0`, the marketplace publish has already started; coordinate a v5.1.1 hotfix per `feedback_no_v4_10_x_version.md` analogous flow rather than attempting to unpublish.
 
 ---

@@ -30,8 +30,8 @@ FailSafe turns the editor into a **governance hub** for the tools your AI agents
 
 | Integration | What it does | Why it matters |
 |---|---|---|
-| 🤖 **Continue (`cn`) governed wrapper** | Run a Continue headless prompt through FailSafe with a tool allowlist; the produced diff is risk-classified and L3-risk changes route to human approval (`FailSafe: Run Continue (governed)`). | The agent runs argv-form (no shell), the API key never leaves the child env, and a shell/write allowlist is escalated **before** it can act. |
-| 🔧 **Aider git-gate wrapper** | Run Aider with auto-commit off, capture the uncommitted diff, and route high-risk changes to L3 (`FailSafe: Run Aider (governed)`). | A dirty worktree is refused so the captured diff is unambiguously the agent's — your commit gate, not the agent's. |
+| 🤖 **Continue (`cn`) governed wrapper** | Run a Continue headless prompt in a disposable git worktree; its changes are held for review and reach your workspace only when you choose Apply (`FailSafe: Run Continue (governed)`). | The agent never edits your checkout through its working directory, a shell/exec allowlist is refused before it runs, and the API key never leaves the child env. Not a process sandbox: direct writes to the repository are detected, not prevented, and writes outside it are not detected. |
+| 🔧 **Aider governed wrapper** | Run Aider (auto-commit off) in a disposable git worktree; its changes are held for review and reach your workspace only when you choose Apply (`FailSafe: Run Aider (governed)`). | Apply re-checks HEAD, the tree and the exact reviewed bytes before writing. Not a process sandbox: direct writes to the repository are detected, not prevented, and writes outside it are not detected. |
 | 👁️ **OpenHands run observer** | Map an exported OpenHands run into FailSafe transparency records, version-gated and read-only (`FailSafe: Import OpenHands Run (observe)`). | See what a full agent-loop runtime actually did, scored by risk — without ever mutating a live run. |
 | 🔎 **Cline / Roo / Kilo policy audit** | Scan workspace MCP/tool config and flag risky posture — remote MCP servers, wildcard auto-approval, shell-capable tools (`FailSafe: Audit Agent MCP Policy`). | Catch an over-permissioned agent before it bites; secrets in the config are redacted before any finding is recorded. |
 
@@ -41,7 +41,7 @@ FailSafe turns the editor into a **governance hub** for the tools your AI agents
 |---|---|---|
 | 📥 **Linear / Jira issue import** | Resolve a Linear or Jira issue URL/key to an **uncommitted intent preview** — read-only (`FailSafe: Import Linear/Jira Issue (preview)`). | Your tracker is the intent source; FailSafe pulls the ticket context so you never retype it — and nothing is created or synced without you. |
 | ✅ **GitHub PR checks** | Publish FailSafe SHIELD verdicts (PASS/WARN/VETO) as GitHub Check Runs at the merge gate (`FailSafe: Publish SHIELD Verdict to GitHub Check`). | Your governance verdict shows up **where the merge happens**, not just in the local console; fork PRs degrade to local-only. |
-| 🐞 **Sentry regression correlation** | Pull a Sentry project's unresolved issues into the risk register as runtime-regression risks (`FailSafe: Import Sentry Regressions`). | Production failures become governed risk records tied to project / environment / release — no raw event payloads stored. |
+| 🐞 **Sentry regression import** | Pull a Sentry project's unresolved issues into the risk register as runtime-regression risks (`FailSafe: Import Sentry Regressions`), with first and last release from each issue's detail. | Production failures become governed risk records tied to project / environment / release, with an exact count of what was created, updated, unchanged or failed; your triage survives re-imports. No raw event payloads, and no commit correlation. |
 | 🛡️ **SARIF security ingestion** | Import Semgrep / CodeQL / any SARIF 2.1.0 scanner output into the risk register (`FailSafe: Import SARIF Findings`). | Your security scanner stops being a separate silo — every finding becomes a *governed* risk in the same audit trail as agent decisions. |
 | 📣 **Slack / Microsoft Teams notifications** | Post VETO / L3-approval / drift events to a Slack or Teams webhook. Notify-only, off by default. | Governance becomes a **team** signal: when FailSafe blocks a risky action or queues a human approval, the right people see it in their channel. |
 | 🧮 **MCP Registry risk scoring** | Score any MCP server locally — read-only, with field sanitization — before you trust it. | The MCP ecosystem is exploding and anything can claim to be a tool server. Adopt servers on **evidence, not vibes**. |
@@ -58,9 +58,25 @@ Under the hood, a **Tier 1 supply-chain CI baseline** (least-privilege workflow 
 
 <div align="center">
 
-**Current Release**: v6.0.6 (2026-10-13)
+**Current Release**: v6.0.7 (2026-10-15)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
+
+## What's New in v6.0.7
+
+- **The ledger and Shadow Genome now actually store data on Windows and macOS.** v6.0.6 shipped one package with a Linux-only SQLite binary, so both ran in stub mode everywhere else. FailSafe now ships a separate package for each platform (Windows, Linux, Alpine and macOS, each on x64 and arm64), each carrying only its own binary. VS Code 1.101 or later is required.
+- **Decisions you make from the Console are confirmed in VS Code.** Approving or rejecting an L3 item, ratifying a Bicameral decision, rolling back to a checkpoint, panic stop and turning off the agent hooks now ask you to approve a VS Code dialog that shows what will be recorded. Before, any program on your machine could make those calls.
+- **Continue and Aider run in a throwaway copy of your repository.** Their changes wait for your review and reach your workspace only when you choose Apply. Child processes the agent leaves behind are found and stopped before the result is checked.
+- **Deleting or editing a risk no longer wipes out imported risks.** The risk register used to rewrite the file from a copy taken when VS Code started.
+- **Editor-save denials say what they are.** VS Code cannot cancel a save, so FailSafe now reports a denied save as observed, not prevented, instead of claiming it was blocked.
+- **The SHIELD phase reads correctly on Windows checkouts,** where Git stores the ledger with CRLF line endings.
+- **Sentry imports report exactly what happened** and respect Sentry's rate limits; imported risks show the issue's first and last release.
+- **Integration credentials move to Secure Storage.** Tokens, API keys and webhook URLs for Sentry, Jira, Linear, GitHub, Continue, Slack and Teams are no longer read from settings. Use **FailSafe: Set Integration Credential**; if FailSafe finds one in plain-text settings it offers to move it, checks the stored copy, and removes the plain text only with your consent.
+- **The L3 Approval Queue buttons work.** Approve, Reject and View File were blocked by the panel's own security policy.
+- **An interrupted save no longer corrupts the risk register.** `risks.json` is replaced only by a complete file.
+- Open Design 0.24.1 works again, and the Open Design client can no longer approve its own artifact writes.
+
+Not verified against live services in this release: Sentry, Jira, Linear, OpenHands, Aider and Continue were tested with recorded responses only. See the [6.0.7] changelog for the full list of known limitations.
 
 ## What's New in v6.0.6
 
@@ -149,7 +165,7 @@ Create or edit `.failsafe/config/policies/risk_grading.json` to tune risk classi
 
 ## What Is FailSafe?
 
-FailSafe is an open-source VS Code extension and stability monitoring framework for AI-assisted development. It adds intent-gated saves, Sentinel audits, and a ledgered audit trail so risky changes are surfaced and controlled.
+FailSafe is an open-source VS Code extension and stability monitoring framework for AI-assisted development. It adds intent-checked saves (a denied editor save is reported, not prevented: VS Code cannot cancel a save), Sentinel audits, and a ledgered audit trail so risky changes are surfaced and controlled.
 
 FailSafe separates system awareness from system control.
 
@@ -252,7 +268,7 @@ FailSafe supports three governance modes to match your workflow needs:
 
 | Mode        | Behavior                                                           | Best For                         |
 | ----------- | ------------------------------------------------------------------ | -------------------------------- |
-| **Enforce** | Default. Full control, intent-gated saves, L3 approvals.           | Governed development, compliance |
+| **Enforce** | Default. Full control, intent-checked saves (denials reported, not prevented), L3 approvals. | Governed development, compliance |
 | **Assist**  | Smart defaults, auto-intent creation, gentle prompts.              | Lighter-touch workflows          |
 | **Observe** | No blocking, just visibility and logging. Zero friction.           | Exploration, learning            |
 

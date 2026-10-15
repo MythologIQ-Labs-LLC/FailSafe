@@ -118,11 +118,25 @@ export async function bootstrapGovernance(
     vscode.workspace.onWillSaveTextDocument((event) => {
       const isInWorkspace = (uri: vscode.Uri) => vscode.workspace.getWorkspaceFolder(uri) !== undefined;
       if (!isGovernedSave(event.document.uri, isInWorkspace)) return;
+      // VS Code does not expose a cancellable save transaction. Rejecting
+      // waitUntil only logs a listener error; the write may still reach disk.
+      // Treat this path as policy observation until a real write gate exists.
       event.waitUntil(
-        governanceRouter
-          .handleFileOperation("file_write", event.document.uri.fsPath)
+        governanceRouter.handleFileOperation("file_write", event.document.uri.fsPath)
           .then((allowed) => {
-            if (!allowed) throw new Error("Action Blocked by FailSafe");
+            if (!allowed) {
+              logger.warn("Editor save DENIED BY POLICY but NOT prevented by VS Code save hook", {
+                file: event.document.uri.fsPath,
+              });
+              void vscode.window.showWarningMessage(
+                "FailSafe policy denied this edit, but VS Code may still save it. This editor hook is observational, not an enforced write boundary.",
+              );
+            }
+            return [];
+          })
+          .catch((error) => {
+            logger.error("Editor-save policy evaluation failed; save prevention is not guaranteed", error);
+            return [];
           }),
       );
     }),

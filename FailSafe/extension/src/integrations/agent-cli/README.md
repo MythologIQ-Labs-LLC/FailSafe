@@ -1,45 +1,63 @@
 # Agent CLI wrappers integration (Continue + Aider)
 
-> One-line: FailSafe spawns headless coding-agent CLIs (Continue `cn`, Aider) in argv form, gates them before they run, classifies the diff they produce against the live PolicyEngine, and escalates any L3-risk change to the human approval queue — so an autonomous agent's writes are governed instead of trusted.
+> One-line: FailSafe runs headless coding-agent CLIs (Continue `cn`, Aider) in a disposable git worktree, holds whatever they change as a quarantined change set, and writes it to your workspace only when you choose Apply in the same command.
 
 - **Pattern:** wrapper
 - **Direction:** governed execution
-- **Status:** in review (#151)
+- **Status:** worktree isolation with operator-approved promotion (#475)
 - **Official docs:** Continue — https://docs.continue.dev/ · Continue headless — https://docs.continue.dev/cli/headless-mode · Aider — https://aider.chat/docs/ · Aider scripting — https://aider.chat/docs/scripting.html
-- **Backlog:** #104 (Continue) · #107 (Aider)
+- **Backlog:** #104 (Continue) · #107 (Aider) · #475 (isolation)
 
 ## What it does
-On demand, FailSafe detects the agent binary, decides whether the requested run is permitted, and only then spawns it — argv-form with `shell: false`, so there is no shell-injection surface and no command string is ever assembled. The gate is two-phase: a dangerous requested permission (a shell/exec allowlist for Continue) or an unsafe precondition (a dirty worktree for Aider) is refused **before** any process starts; runs are configured so their changes stay uncommitted, and after the run the produced `git diff` is re-classified with the injected PolicyEngine. A change that lands at L3 ESCALATES to the real L3 approval queue rather than auto-applying. Every run — spawned or refused — emits a FailSafe receipt recording argv, verdict, risk grade, exit code, and a diff summary. Secrets (Continue's `CONTINUE_API_KEY`) travel only in the child process environment; they are never placed in argv and never recorded in the receipt.
+1. **Preconditions (fail closed, agent never started).** `aider` / `cn` must resolve to an executable in an absolute `PATH` entry outside the workspace (relative entries and anything inside the workspace are skipped; on Windows only `.exe` / `.com` count) and answer `--version`, run from the OS temp directory. The workspace must be a git work tree whose `HEAD` resolves, with no uncommitted or untracked files and no skip-worktree / assume-unchanged entries. Process tracking must start. Write authorization (`allowWrites`) must be on, and a Continue allowlist that grants shell/exec tools is refused.
+2. **Isolated run.** FailSafe snapshots the repository, adds a detached worktree of `HEAD` under the OS temp directory, and starts the agent there by the absolute path detection recorded (argv-form, `shell: false`). The agent's processes are tracked: on Windows the parent-process closure (sampled every second); on Linux every process carrying the per-run `FAILSAFE_ISOLATED_RUN` marker in its environment, the parent closure and the agent's process group; on macOS the parent closure and the process group (sampled every 250 ms on both). When the agent exits or times out (`failsafe.integrations.agentCli.timeoutMs`, default 15 min) the agent's process group and every tracked process are killed; a process that survives makes the run `FAILED_INCONCLUSIVE`.
+3. **Checks.** The repository is snapshotted again and compared: tracked and untracked files (by content, independent of file timestamps), `HEAD`, every ref, the index flags, `.git/config`, `config.worktree`, `packed-refs`, `.git/hooks/`, `.git/info/`, top-level ignored files, and the worktree's own link files. Any difference is `WORKSPACE_CHANGED_DURING_RUN` and nothing is promotable.
+4. **Capture.** FailSafe's own git calls ignore the system and global git config (an agent can rewrite `~/.gitconfig`) and disable hooks, fsmonitor, excludes and attribute files; the user's EOL, `safe.directory`, long-path and LFS settings are read before the run and carried explicitly. The change set is captured byte-for-byte (`--binary --full-index`) and validated: symlinks, submodules, `.git` / `.gitmodules` paths, traversal, drive letters, alternate data streams and Windows device names are rejected (`REJECTED_PATCH`).
+5. **Promotion.** The operator chooses **Discard**, **Review diff** (a read-only document built from the in-memory bytes) or **Apply**; Escape or closing the dialog discards. Apply re-checks the bytes' hash, the validation, that `HEAD` has not moved and that the repository still matches the pre-run snapshot, then runs `git apply --check` and `git apply` on the same bytes and re-derives the result through a throwaway index. A difference is `APPLY_MISMATCH` (changes are left uncommitted for you; no automatic revert). Every quarantine, apply, refusal, mismatch and discard is written to the ledger; an audit copy goes to the extension's global storage (newest 20 kept) and is never read back.
+
+Run outcomes: `BLOCKED_PRE_EXECUTION`, `NO_CHANGES`, `QUARANTINED_PENDING_APPROVAL`, `REJECTED_PATCH`, `WORKSPACE_CHANGED_DURING_RUN`, `FAILED_INCONCLUSIVE` (git or worktree failure, non-zero exit, timeout, surviving process). Only `QUARANTINED_PENDING_APPROVAL` can be applied, and only in the command invocation that produced it.
+
+## Boundary — what this does not cover
+A git worktree is not a process sandbox. The agent runs with your user account. The guarantee is **detected and never promoted**, not prevented.
+- Isolated runs detect only the writes visible at the post-run snapshot and the pre-Apply re-check. Direct writes to this repository and its git state are **detected and never promoted, but they have already happened.**
+- **Not detected:** writes outside the repository (including your global git config), writes inside ignored directories, and writes made after those checks by a process that escaped tracking.
+- **How a process escapes tracking:**
+  - Linux (marker, parent closure, process group): a descendant that clears its environment, leaves the agent's process group (`setsid` or `setpgid`), and whose parent exits between 250 ms samples.
+  - macOS (parent closure and process group, no marker): a descendant that leaves the process group and whose parent exits between samples.
+  - Windows (parent closure): a process that leaves the tree through a short-lived intermediate between samples.
+  - Any platform: a process started outside the agent's tree (a service, a scheduler or WMI).
+- On Windows, Continue's npm shim `cn.cmd` cannot be run without a shell; `cn` detection reports unavailable there.
+- Real `aider` / `cn` acceptance needs the CLIs and a model API key; the test suites drive a scripted agent through the same isolated run.
 
 ## Configuration
 | Setting | Default | Secret | Purpose |
 |---|---|---|---|
-| `failsafe.integrations.continue.enabled` | `false` | no | Master on/off for the Continue wrapper. When off, no `cn` process is spawned. |
-| `failsafe.integrations.continue.apiKey` | — | yes | Continue API key; overlaid onto the child env as `CONTINUE_API_KEY` only — never argv, never the receipt. |
-| `failsafe.integrations.continue.allow` | `[]` | no | The `--allow <tool>` permission allowlist passed to `cn`; each entry maps to a FailSafe risk tier (shell/exec → L3, file-write → L2, else L1). |
-| `failsafe.integrations.continue.allowWrites` | `false` | no | Whether write-tier (L2) changes may auto-apply. When false, any write is BLOCKED before spawn. |
-| `failsafe.integrations.aider.enabled` | `false` | no | Master on/off for the Aider wrapper. When off, no `aider` process is spawned. |
-| `failsafe.integrations.aider.allowDirty` | `false` | no | Allow running against a worktree with uncommitted changes. When false (default), a dirty worktree is BLOCKED before spawn. |
-| `failsafe.integrations.aider.autoCommit` | `false` | no | Pass `--auto-commits` instead of `--no-auto-commits`. Default false keeps changes uncommitted so the gate can inspect the diff. |
-| `failsafe.integrations.aider.allowWrites` | `false` | no | Whether write-tier (L2) changes may auto-apply. When false, any write is BLOCKED. |
+| `failsafe.integrations.continue.enabled` | `false` | no | Master on/off for the Continue wrapper. |
+| `failsafe.integrations.continue.apiKey` | — | yes | Optional Continue API key; overlaid onto the child env as `CONTINUE_API_KEY` only — never argv, never the receipt. Stored in VS Code Secure Storage with `FailSafe: Set Integration Credential` (User or Workspace scope). The setting is deprecated and no longer read; `FailSafe: Move Plain-Text Credentials to Secure Storage` moves an existing value. With no key at all, Continue runs on its own login; a key still in plain-text settings stops the run until it is moved. |
+| `failsafe.integrations.continue.allow` | `[]` | no | The `--allow <tool>` allowlist passed to `cn`; shell/exec → L3 (refused before running), file-write → L2, else L1. The tier is a pre-run signal, not an isolation control. |
+| `failsafe.integrations.continue.allowWrites` | `false` | no | Permit an isolated Continue run whose changes can be reviewed for promotion. When false, `cn` is never started. |
+| `failsafe.integrations.aider.enabled` | `false` | no | Master on/off for the Aider wrapper. |
+| `failsafe.integrations.aider.allowWrites` | `false` | no | Permit an isolated Aider run whose changes can be reviewed for promotion. When false, `aider` is never started. |
+| `failsafe.integrations.agentCli.timeoutMs` | `900000` | no | Maximum run time; on expiry the agent's process tree is killed and nothing is promotable. |
 
-Both wrappers are off by default and degrade to a no-op (no process spawned) when disabled or when the binary is not found on `PATH`.
+`failsafe.integrations.aider.allowDirty` and `failsafe.integrations.aider.autoCommit` were removed in #475: the tree must be clean, and Aider always runs with `--no-auto-commits`.
 
 ## Security
-The only secret in this family is Continue's API key. It is overlaid onto the spawned child's environment (`CONTINUE_API_KEY`) by the runner and nowhere else — it is never an argv element and is never written into the receipt (a masking test asserts argv/receipt carry no key). All spawns are argv-form with `shell: false`; command strings are never constructed. The gate runs before the process: a shell/exec allowlist, a write when writes are disallowed, or (for Aider) a dirty worktree never reaches a live spawn. The PolicyEngine classifier is injected, so the pure decision logic is deterministically testable with no live process. The receipt records argv (safe by construction), verdict, risk grade, exit code, and a diff summary — never raw secrets.
+The only secret is Continue's API key, overlaid onto the child environment and nowhere else (tests assert argv and receipt carry no key). Where Continue sends that key is decided by Continue's own configuration, which FailSafe does not inspect. Spawns are argv-form with `shell: false`, and the production runner spawns only the absolute path detection recorded for the literal name `aider` or `cn`; with none recorded it refuses (exit 126) and starts nothing. Risk is classified with the live PolicyEngine over every touched path (max with the allowlist tier) and shown in the review dialog; the L3 HTTP approval routes are not used (see #514).
 
 ## Command / wiring
-- `FailSafe: Run Continue (governed)` (command id `failsafe.continue.run`) — gates the requested `--allow` tier, runs `cn -p <prompt>` argv-form with the API key in the child env, then re-classifies the diff and escalates a surprise L3 change.
-- `FailSafe: Run Aider (governed)` (command id `failsafe.aider.run`) — refuses a dirty worktree unless `allowDirty`, runs `aider --message <prompt>` with auto-commit off, then classifies the resulting diff and escalates L3.
-
-Both commands are thin glue defined in `src/extension/agent-cli-command.ts` over the pure wrappers in this folder.
+- `FailSafe: Run Continue (governed)` (`failsafe.continue.run`) and `FailSafe: Run Aider (governed)` (`failsafe.aider.run`), defined in `src/extension/agent-cli-command.ts`.
 
 ## Files
-- `agent-cli-core.ts` — pure shared substrate: binary detection, dirty-worktree check, diff capture + summary, risk classification, the deterministic ALLOW/BLOCK/ESCALATE decision, and receipt construction. Holds the production argv-form runner (`defaultAgentRun`, `shell: false`); the runner is injected as `AgentRunFn` in tests so no live process spawns.
-- `continue-wrapper.ts` — pure Continue logic: maps the `--allow` allowlist to a risk tier, builds argv (`-p <prompt>` + repeatable `--allow <tool>`), and orchestrates the two-phase governed run with `CONTINUE_API_KEY` in the child env only.
-- `aider-wrapper.ts` — pure Aider logic: builds argv (`--message <prompt>`, `--yes-always`, `--no-auto-commits`/`--auto-commits`), enforces the dirty-worktree pre-run gate, and governs the run.
-- command: `src/extension/agent-cli-command.ts` — VS Code command wiring for `failsafe.continue.run` + `failsafe.aider.run`
-- test: `src/test/integrations/agent-cli/agent-cli.test.ts`
+- `agent-cli-core.ts` — executable resolution and detection (LD7), risk classification, receipts, run outcomes, the argv-form runner.
+- `isolated-run.ts` — preconditions, worktree, agent run, checks, capture (LD5).
+- `git-safety.ts` — hardened git for every FailSafe git call (LD2).
+- `workspace-snapshot.ts` — repository snapshot and comparison (LD3).
+- `process-tree.ts` — process-tree tracking and kill (LD4; POSIX marker and process-group tracking, LD5).
+- `patch-paths.ts` — change-set validation (LD6).
+- `agent-run-promotion.ts` — Apply, checks, post-apply equality, audit copy (LD8).
+- `continue-wrapper.ts`, `aider-wrapper.ts` — per-agent argv and pre-run gates.
+- tests: `src/test/integrations/agent-cli/{isolated-run,agent-run-promotion,patch-paths,agent-cli,process-tree}.test.ts`, `src/test/extension/agent-cli-command.test.cjs`
 
 ## Verified surface
 Continue (issue #104, https://docs.continue.dev/cli/headless-mode):
@@ -50,7 +68,7 @@ Continue (issue #104, https://docs.continue.dev/cli/headless-mode):
 
 Aider (issue #107, https://aider.chat/docs/scripting.html + https://aider.chat/docs/config/options.html, cross-checked against upstream `aider/args.py`):
 - `--message` / `-m` — one-shot scripting message
-- `--no-auto-commits` / `--auto-commits` — commit behaviour toggle
+- `--no-auto-commits` — commit behaviour (always passed)
 - `--yes-always` — non-interactive confirmation (NOTE: it is `--yes-always`, not `--yes`; no `--yes` flag exists)
 - `--version` — used for binary detection
 

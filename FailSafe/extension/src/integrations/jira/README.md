@@ -19,11 +19,11 @@ Resolves a Jira issue URL or bare key (e.g. `PROJ-123`) to its canonical key, fe
 | `failsafe.integrations.jira.enabled` | `false` | no | Master switch; no network call unless `true`. |
 | `failsafe.integrations.jira.baseUrl` | `` (empty) | no | Jira site base, e.g. `https://your-site.atlassian.net`. |
 | `failsafe.integrations.jira.email` | `` (empty) | no | Account email; the Basic-auth username half. |
-| `failsafe.integrations.jira.apiToken` | `` (empty) | yes | API token; encoded only into the outbound `Authorization` header. |
+| `failsafe.integrations.jira.apiToken` | `` (empty) | yes | API token; encoded only into the outbound `Authorization` header. Stored in VS Code Secure Storage with `FailSafe: Set Integration Credential` (User or Workspace scope). The setting is deprecated and no longer read; `FailSafe: Move Plain-Text Credentials to Secure Storage` moves an existing value. |
 
 ## Security
 
-Auth is Jira Cloud Basic auth: the email and API token are combined as `base64(email:token)` and placed only in the outbound `Authorization` header. The API token is a secret — it is never carried by the pure logic, never returned in the result, and never logged (a masking test proves this). The integration is strictly read-only: it issues a single `GET` for the issue and parses only the canonical fields, so no secret could leak through the response. Off by default — disabled unless base URL, email, and API token are all configured; no network call otherwise.
+Auth is Jira Cloud Basic auth: the email and API token are combined as `base64(email:token)` and placed only in the outbound `Authorization` header. The API token is a secret — it is never carried by the pure logic, never returned in the result, and never logged (a masking test proves this). The integration is strictly read-only: it issues a single `GET` for the issue and parses only the canonical fields, so no secret could leak through the response. Off by default — disabled unless base URL and email are set and an API token is stored in Secure Storage; no network call otherwise. If `baseUrl` comes from workspace settings, only a Workspace-scope token is sent there: a User-scope token is refused, so a workspace cannot redirect your personal token.
 
 ## Command / wiring
 

@@ -21,5 +21,12 @@ export type {
 export { OpenDesignSseClient } from './OpenDesignSseClient';
 export type { SseSubscribeOptions, SseEmittedEvent } from './OpenDesignSseClient';
 export { OpenDesignMcpAllowlist } from './OpenDesignMcpAllowlist';
+export {
+  parseLaunchSpec,
+  fetchLaunchSpec,
+  formatCommandLine,
+  LAUNCH_SPEC_STATE_KEY,
+} from './OpenDesignLaunchSpec';
+export type { OpenDesignLaunchSpec, LaunchSpecResult } from './OpenDesignLaunchSpec';
 export type { ChatSseEvent } from './contracts/sse-chat';
 export { isChatSseEvent } from './contracts/sse-chat';

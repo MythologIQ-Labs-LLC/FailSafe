@@ -17,11 +17,11 @@ Resolves a Linear issue URL or bare identifier (e.g. `ENG-123`) to its canonical
 | Setting | Default | Secret | Purpose |
 |---|---|---|---|
 | `failsafe.integrations.linear.enabled` | `false` | no | Master switch; no network call unless `true`. |
-| `failsafe.integrations.linear.apiKey` | `` (empty) | yes | Personal API key; sent only in the outbound `Authorization` header. |
+| `failsafe.integrations.linear.apiKey` | `` (empty) | yes | Personal API key; sent only in the outbound `Authorization` header. Stored in VS Code Secure Storage with `FailSafe: Set Integration Credential` (User or Workspace scope). The setting is deprecated and no longer read; `FailSafe: Move Plain-Text Credentials to Secure Storage` moves an existing value. |
 
 ## Security
 
-Auth is a Linear personal API key, sent as a RAW `Authorization` header value (no `Bearer` prefix). The key is a secret — it is never carried by the pure logic, never returned in the result, and never logged (a masking test proves this). The integration is strictly read-only: it issues a single GraphQL query for the issue and parses only the canonical fields. Rate-limit response headers are surfaced but no fixed ceiling is hardcoded (the docs are internally inconsistent). Off by default — disabled unless an API key is configured; no network call otherwise.
+Auth is a Linear personal API key, sent as a RAW `Authorization` header value (no `Bearer` prefix). The key is a secret — it is never carried by the pure logic, never returned in the result, and never logged (a masking test proves this). The integration is strictly read-only: it issues a single GraphQL query for the issue and parses only the canonical fields. Rate-limit response headers are surfaced but no fixed ceiling is hardcoded (the docs are internally inconsistent). Off by default — disabled unless an API key is stored in Secure Storage; no network call otherwise, and a key left in plain-text settings is not used.
 
 ## Command / wiring
 

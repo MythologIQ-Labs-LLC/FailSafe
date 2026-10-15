@@ -63,6 +63,19 @@ Command Center browser surface
 - `SttEngine` uses a lifecycle generation to dispose late `getUserMedia()` results after destruction, before recorder or audio-context allocation.
 - Voice-pack progress remains incremental; completion refetches the authoritative status endpoint and non-2xx actions render retryable errors.
 
+### Governed agent CLI runs (Continue, Aider)
+
+- `src/integrations/agent-cli/isolated-run.ts` runs the agent in a disposable git worktree; nothing it writes through its working directory reaches the workspace except through `agent-run-promotion.ts`, called from the same command invocation after the operator chooses Apply.
+- Every FailSafe git call goes through `git-safety.ts` (system and global config neutralized, hooks / fsmonitor / excludes / attributes disabled, carried EOL / safe.directory / LFS settings).
+- `workspace-snapshot.ts` compares the repository before and after the run (content-based for tracked files); any difference is `WORKSPACE_CHANGED_DURING_RUN` and nothing is promotable. `process-tree.ts` kills everything the agent started before that comparison.
+- A worktree is not a process sandbox: writes outside the repository, inside ignored directories, or by processes that left the tree are not detected, and every surface says so.
+### Sentry import
+
+- `src/integrations/sentry/sentry-transport.ts` carries every Sentry request: it refuses URLs outside the configured HTTPS base, waits on the documented rate-limit headers and bounds retries.
+- `sentry-import.ts` runs list -> parse/dedupe -> issue-detail release lookups -> write. Each record is merged and written through `RiskRegisterManager.upsertRiskWith`, one synchronous read-merge-write, so in-process writers such as the Console risk routes are never overwritten by stale data.
+- `sentry-report.ts` turns the outcome into the operator message by a fixed precedence.
+- Known residual #517: `RiskManager` rewrites the same `risks.json` from a stale in-memory copy.
+
 ### Governance documents
 
 - `docs/META_LEDGER.md` is append-only, Merkle-linked evidence.

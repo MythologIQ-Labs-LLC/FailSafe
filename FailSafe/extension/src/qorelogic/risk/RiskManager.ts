@@ -18,6 +18,7 @@ import {
   calculateRiskSummary,
 } from "./types";
 import { Logger } from "../../shared/Logger";
+import { writeFileAtomicSync } from "../../shared/writeFileAtomic";
 
 const RISKS_FILE = "risks.json";
 
@@ -92,6 +93,24 @@ export class RiskManager {
     return undefined;
   }
 
+  /**
+   * Multiple subsystems own writes to risks.json. Refresh at every mutation
+   * boundary rather than persisting the constructor's stale snapshot (#517).
+   * An unreadable existing store must never be replaced with an empty one.
+   */
+  private refreshBeforeMutation(): void {
+    if (!fs.existsSync(this.risksPath)) {
+      this.register = this.loadOrCreate();
+      return;
+    }
+    const data: unknown = JSON.parse(fs.readFileSync(this.risksPath, "utf8"));
+    if (!data || typeof data !== "object" ||
+        !Array.isArray((data as RiskRegister).risks)) {
+      throw new Error("Risk register is malformed; refusing destructive mutation");
+    }
+    this.register = data as RiskRegister;
+  }
+
   private save(): void {
     try {
       const dir = path.dirname(this.risksPath);
@@ -99,14 +118,13 @@ export class RiskManager {
         fs.mkdirSync(dir, { recursive: true });
       }
       this.register.lastUpdated = new Date().toISOString();
-      fs.writeFileSync(
-        this.risksPath,
-        JSON.stringify(this.register, null, 2),
-        "utf8",
-      );
+      writeFileAtomicSync(this.risksPath, JSON.stringify(this.register, null, 2));
       this.logger.info("Risk register saved");
     } catch (error) {
       this.logger.error("Failed to save risk register", error);
+      // A caller must not report successful persistence when the disk write
+      // failed. This is particularly important for agent-created risks.
+      throw error;
     }
   }
 
@@ -144,6 +162,8 @@ export class RiskManager {
       );
     }
 
+    this.refreshBeforeMutation();
+
     // De-dup: an auto-derived risk with a matching derivedFrom key bumps
     // updatedAt on the existing risk instead of inserting a duplicate.
     const key = this.dedupKey(input.derivedFrom);
@@ -176,6 +196,7 @@ export class RiskManager {
     id: string,
     updates: Partial<Omit<Risk, "id" | "createdAt">>,
   ): Risk | undefined {
+    this.refreshBeforeMutation();
     const index = this.register.risks.findIndex((r) => r.id === id);
     if (index === -1) {
       this.logger.warn(`Risk not found: ${id}`);
@@ -199,6 +220,7 @@ export class RiskManager {
   }
 
   deleteRisk(id: string): boolean {
+    this.refreshBeforeMutation();
     const index = this.register.risks.findIndex((r) => r.id === id);
     if (index === -1) {
       return false;
@@ -231,6 +253,7 @@ export class RiskManager {
   }
 
   dispose(): void {
-    this.save();
+    // No write: dispose never changed the register and a late flush could
+    // erase external imports made after this manager was constructed.
   }
 }

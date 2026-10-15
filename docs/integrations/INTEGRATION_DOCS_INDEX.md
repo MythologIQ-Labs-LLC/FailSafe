@@ -67,7 +67,7 @@ _Last reviewed: 2026-06-04._
 ## Integration families (grouping by similarity)
 
 - **A — Read-only data ingest** (pure parse + injectable transport + secret-masked config → FailSafe risk/intent record): SARIF, Linear, Jira, **Sentry**.
-- **B — CLI agent wrappers** (argv-form spawn, capture diff/exit/receipt, gate writes through L3): Continue, Aider.
+- **B — CLI agent wrappers** (argv-form spawn in a disposable git worktree, changes quarantined until the operator applies them in the same command; #475): Continue, Aider.
 - **C — Agent detect / observe / config-audit** (read-only detection + policy/config inspection + risk-flagging, no spawning): OpenHands, Cline/Roo/Kilo.
 - **Notify** (outbound governance signal): Slack, Teams, GitHub Checks.
 - **MCP / installer** (governed install or MCP client/host): MCP Registry, MCP Catalog (Context7 / Mermaid Chart / Playwright), Open Design, Bicameral, AGT.

@@ -1,12 +1,13 @@
 import { strict as assert } from 'assert';
-import {
-  sentryLevelToSeverity, parseSentryIssue, parseIssuesResponse,
-  sentryIssueToRisk, sentryIssuesToRisks,
-} from '../../../integrations/sentry/sentry-to-risk';
-import { buildIssuesPath, fetchSentryRisks, importSentryRisks, nextSentryPage, type SentryGetFn } from '../../../integrations/sentry/sentry-client';
+import { sentryLevelToSeverity, parseSentryIssue, sentryIssueToRisk } from '../../../integrations/sentry/sentry-to-risk';
+import { buildIssuesPath, fetchSentryIssues, nextSentryPage, type ListDeps, type SentryGetFn } from '../../../integrations/sentry/sentry-client';
+import { readSentrySettings } from '../../../integrations/sentry/sentry-settings';
 
-// A realistic project-issues list fixture (two issues; one enriched with
-// release + suspect commit, one bare — exercising "missing commit data").
+// FX829 (#102, #478): list requests, pagination trust, token handling, settings.
+// Import-level counts live in sentry-import.test.ts.
+
+// One issue carries list-level release and suspect-commit fields that the
+// import must ignore: release data comes only from issue-detail responses.
 const ISSUES_FIXTURE = JSON.stringify([
   {
     id: '101', shortId: 'PROJ-101', title: 'TypeError: undefined is not a function',
@@ -15,6 +16,7 @@ const ISSUES_FIXTURE = JSON.stringify([
     firstSeen: '2026-05-01T00:00:00Z', lastSeen: '2026-06-01T00:00:00Z',
     project: { slug: 'backend' },
     lastRelease: { version: 'backend@5.4.2' },
+    suspectCommit: 'feedface',
     suspectCommits: [{ id: 'deadbeefcafe', message: 'refactor handler' }],
   },
   {
@@ -22,11 +24,21 @@ const ISSUES_FIXTURE = JSON.stringify([
     permalink: 'https://sentry.io/organizations/acme/issues/102/',
     firstSeen: '2026-05-20T00:00:00Z', lastSeen: '2026-06-02T00:00:00Z',
     project: { slug: 'backend' },
-    // no release, no suspect commit
   },
 ]);
 
-suite('sentry-to-risk map (#102)', () => {
+/** Recording sleep on an advancing clock; never waits for real. */
+function deps(): ListDeps & { sleeps: number[] } {
+  let now = 1_700_000_000_000;
+  const sleeps: number[] = [];
+  return {
+    sleeps,
+    cancel: { cancelled: false, onCancel: () => () => undefined },
+    policy: { now: () => now, sleep: async (ms) => { sleeps.push(ms); now += ms; } },
+  };
+}
+
+suite('sentry-to-risk map (#102, #478)', () => {
   test('level → severity is deterministic + fail-safe', () => {
     assert.equal(sentryLevelToSeverity('fatal'), 'high');
     assert.equal(sentryLevelToSeverity('error'), 'high');
@@ -37,228 +49,128 @@ suite('sentry-to-risk map (#102)', () => {
     assert.equal(sentryLevelToSeverity(undefined), 'warn');
   });
 
-  test('parseSentryIssue reads canonical fields incl. release + suspect commit; null when no id', () => {
+  test('parseSentryIssue reads canonical fields and shortId, never a release or suspect commit; null when no id', () => {
     const issues = JSON.parse(ISSUES_FIXTURE);
-    const a = parseSentryIssue(issues[0], 'production');
-    assert.equal(a?.id, '101');
-    assert.equal(a?.sourceUrl, 'https://sentry.io/organizations/acme/issues/101/');
-    assert.equal(a?.project, 'backend');
-    assert.equal(a?.environment, 'production'); // threaded from the scoped query
-    assert.equal(a?.release, 'backend@5.4.2');
-    assert.equal(a?.suspectCommit, 'deadbeefcafe');
-    assert.equal(a?.firstSeen, '2026-05-01T00:00:00Z');
+    const a = parseSentryIssue(issues[0], 'production') as unknown as Record<string, unknown>;
+    assert.equal(a.id, '101');
+    assert.equal(a.shortId, 'PROJ-101');
+    assert.equal(a.sourceUrl, 'https://sentry.io/organizations/acme/issues/101/');
+    assert.equal(a.project, 'backend');
+    assert.equal(a.environment, 'production');
+    assert.equal(a.firstSeen, '2026-05-01T00:00:00Z');
+    for (const k of ['release', 'suspectCommit', 'suspectCommits']) assert.equal(k in a, false, k);
     assert.equal(parseSentryIssue({ title: 'x' }), null);
     assert.equal(parseSentryIssue(null), null);
   });
 
-  test('missing commit/release data is tolerated (no ghost fields)', () => {
-    const issues = JSON.parse(ISSUES_FIXTURE);
-    const b = parseSentryIssue(issues[1]);
-    assert.equal(b?.id, '102');
-    assert.equal(b?.release, undefined);
-    assert.equal(b?.suspectCommit, undefined);
-  });
-
-  test('sentryIssueToRisk builds a keyed, WARN-only risk record with provenance', () => {
-    const issues = parseIssuesResponse(JSON.parse(ISSUES_FIXTURE), 'production');
-    const risk = sentryIssueToRisk(issues[0]);
-    assert.equal(risk.id, 'sentry:101');
-    assert.equal(risk.source, 'sentry');
-    assert.equal(risk.status, 'open');
-    assert.equal(risk.severity, 'high');
-    assert.deepEqual(risk.location, { url: 'https://sentry.io/organizations/acme/issues/101/' });
-    const prov = risk.provenance as Record<string, unknown>;
-    assert.equal(prov.release, 'backend@5.4.2');
-    assert.equal(prov.suspectCommit, 'deadbeefcafe');
+  test('sentryIssueToRisk takes release only from its argument and never writes suspectCommit or status', () => {
+    const issue = parseSentryIssue(JSON.parse(ISSUES_FIXTURE)[0], 'production');
+    assert.ok(issue);
+    const bare = sentryIssueToRisk(issue, { importedAt: '2026-10-15T00:00:00.000Z' });
+    assert.equal(bare.id, 'sentry:101');
+    assert.equal(bare.source, 'sentry');
+    assert.equal(bare.severity, 'high');
+    assert.equal(bare.updatedAt, '2026-10-15T00:00:00.000Z');
+    assert.equal('status' in bare, false, 'status is the store owner\'s, not Sentry\'s');
+    assert.deepEqual(bare.location, { url: 'https://sentry.io/organizations/acme/issues/101/' });
+    const prov = bare.provenance as Record<string, unknown>;
+    assert.equal(prov.shortId, 'PROJ-101');
     assert.equal(prov.environment, 'production');
-    // The bare issue must not carry release/suspectCommit keys.
-    const prov2 = sentryIssueToRisk(issues[1]).provenance as Record<string, unknown>;
-    assert.equal('release' in prov2, false);
-    assert.equal('suspectCommit' in prov2, false);
-  });
-
-  test('sentryIssuesToRisks dedups by id (re-import upserts same key)', () => {
-    const issues = parseIssuesResponse(JSON.parse(ISSUES_FIXTURE));
-    const dup = [...issues, ...issues];
-    const risks = sentryIssuesToRisks(dup);
-    assert.equal(risks.length, 2);
-    assert.deepEqual(risks.map((r) => r.id).sort(), ['sentry:101', 'sentry:102']);
+    assert.equal('release' in prov, false, 'the list item lastRelease is ignored');
+    assert.equal('suspectCommit' in prov, false);
+    const release = { source: 'sentry-issue-detail' as const, first: 'b@1', verifiedAt: '2026-10-15T00:00:00.000Z' };
+    assert.deepEqual((sentryIssueToRisk(issue, { release, importedAt: 't' }).provenance as Record<string, unknown>).release, release);
   });
 });
 
-suite('sentry-client (#102)', () => {
-  test('buildIssuesPath defaults query to is:unresolved + folds environment INTO the query (not a standalone param)', () => {
-    assert.match(buildIssuesPath('acme', 'backend'), /^\/api\/0\/projects\/acme\/backend\/issues\/\?query=is%3Aunresolved$/);
-    const withEnv = buildIssuesPath('acme', 'backend', { environment: 'production' });
-    // environment is expressed inside the search query (`environment:production`),
-    // URL-encoded as part of the single `query` param — never a separate `environment=` param.
-    assert.match(withEnv, /query=is%3Aunresolved\+environment%3Aproduction/);
-    assert.ok(!/[?&]environment=/.test(withEnv), 'must NOT use a standalone environment query param (the endpoint ignores it)');
+suite('sentry-client list requests (#102, #478)', () => {
+  test('buildIssuesPath uses the organization endpoint with project, sort=date, limit=100 and environment as its own parameter', () => {
+    assert.equal(buildIssuesPath('acme', 'backend'),
+      '/api/0/organizations/acme/issues/?project=backend&query=is%3Aunresolved&sort=date&limit=100');
+    const withEnv = buildIssuesPath('acme', 'backend', { environment: 'production', query: 'is:unresolved level:error' });
+    assert.match(withEnv, /[?&]environment=production(&|$)/);
+    assert.match(withEnv, /query=is%3Aunresolved\+level%3Aerror/);
+    assert.ok(!/environment%3A/.test(withEnv), 'environment is no longer folded into the query');
   });
 
-  test('disabled → local-only, NO network', async () => {
-    let called = false;
-    const get: SentryGetFn = async () => { called = true; return { status: 200, body: ISSUES_FIXTURE }; };
-    const r = await fetchSentryRisks({ enabled: false, token: 't', org: 'a', project: 'b' }, get);
-    assert.equal(r.localOnly, true); assert.equal(called, false); assert.equal(r.count, 0);
-  });
-
-  test('missing token/org/project → local-only, NO network', async () => {
-    let called = false;
-    const get: SentryGetFn = async () => { called = true; return { status: 200, body: ISSUES_FIXTURE }; };
-    const r = await fetchSentryRisks({ enabled: true, token: '', org: 'a', project: 'b' }, get);
-    assert.equal(r.localOnly, true); assert.equal(called, false);
-  });
-
-  test('happy path → maps issues to risks; upsert sink receives each', async () => {
-    const get: SentryGetFn = async (url) => { assert.match(url, /\/api\/0\/projects\/acme\/backend\/issues\//); return { status: 200, body: ISSUES_FIXTURE }; };
-    const upserted: Array<Record<string, unknown>> = [];
-    const r = await importSentryRisks({ enabled: true, token: 't', org: 'acme', project: 'backend', environment: 'production' }, get, (risk) => upserted.push(risk));
-    assert.equal(r.ok, true);
-    assert.equal(r.count, 2);
-    assert.equal(r.persisted, 2);
-    assert.equal(r.failed, 0);
-    assert.equal(r.pagesFetched, 1);
-    assert.equal(upserted.length, 2);
-    assert.deepEqual(upserted.map((u) => u.id).sort(), ['sentry:101', 'sentry:102']);
+  test('disabled or unconfigured → local-only, NO network', async () => {
+    for (const opts of [{ enabled: false, token: 't', org: 'a', project: 'b' }, { enabled: true, token: '', org: 'a', project: 'b' }]) {
+      let called = false;
+      const r = await fetchSentryIssues(opts, async () => { called = true; return { status: 200, body: ISSUES_FIXTURE }; }, deps());
+      assert.equal(r.localOnly, true);
+      assert.equal(called, false);
+      assert.deepEqual(r.items, []);
+    }
   });
 
   test('SECRET MASKING: the token goes only in the Authorization header, never in the result', async () => {
     let sentAuth: string | undefined;
     const get: SentryGetFn = async (_u, headers) => { sentAuth = headers.Authorization; return { status: 200, body: ISSUES_FIXTURE }; };
-    const r = await fetchSentryRisks({ enabled: true, token: 'sntrys_TOPSECRET', org: 'acme', project: 'backend' }, get);
-    assert.equal(sentAuth, 'Bearer sntrys_TOPSECRET', 'token is sent as a Bearer header');
-    assert.ok(!JSON.stringify(r).includes('TOPSECRET'), 'token never appears anywhere in the returned result');
+    const r = await fetchSentryIssues({ enabled: true, token: 'sntrys_TOPSECRET', org: 'acme', project: 'backend' }, get, deps());
+    assert.equal(sentAuth, 'Bearer sntrys_TOPSECRET');
+    assert.equal(r.items.length, 2);
+    assert.ok(!JSON.stringify(r).includes('TOPSECRET'));
   });
 
-  test('401/403 → auth error; 404 → not found; 429 → rate limit (non-throwing, no upsert)', async () => {
-    const upserted: unknown[] = [];
-    const r401 = await importSentryRisks({ enabled: true, token: 't', org: 'a', project: 'b' }, async () => ({ status: 401, body: '' }), (x) => upserted.push(x));
-    assert.equal(r401.ok, false); assert.match(r401.error ?? '', /auth/i); assert.equal(upserted.length, 0);
-    const r404 = await fetchSentryRisks({ enabled: true, token: 't', org: 'a', project: 'b' }, async () => ({ status: 404, body: '' }));
-    assert.equal(r404.status, 404);
-    const r429 = await fetchSentryRisks({ enabled: true, token: 't', org: 'a', project: 'b' }, async () => ({ status: 429, body: '' }));
-    assert.equal(r429.status, 429);
-  });
-
-  test('custom apiBaseUrl honored (self-hosted Sentry)', async () => {
-    let sentUrl = '';
-    const get: SentryGetFn = async (url) => { sentUrl = url; return { status: 200, body: '[]' }; };
-    await fetchSentryRisks({ enabled: true, token: 't', org: 'acme', project: 'backend', apiBaseUrl: 'https://sentry.acme.com/' }, get);
-    assert.match(sentUrl, /^https:\/\/sentry\.acme\.com\/api\/0\/projects\/acme\/backend\/issues\//);
-  });
-});
-
-// #241 Tranche C D-2 shared class (FX915): guarded upsert loop.
-suite('sentry upsert resilience (FX915/#241C)', () => {
-  test('T6: throwing upsert mid-stream -> loop completes, failed counted on the result', async () => {
-    const issues = [
-      { id: '1', title: 'a', level: 'error', permalink: 'https://x/1' },
-      { id: '2', title: 'b', level: 'error', permalink: 'https://x/2' },
-      { id: '3', title: 'c', level: 'error', permalink: 'https://x/3' },
-    ];
-    const get: SentryGetFn = async () => ({ status: 200, body: JSON.stringify(issues) });
+  test('401/403 → auth error; 404 → not found (one request each); 429 → rate_limited after 4 requests', async () => {
+    const o = { enabled: true, token: 't', org: 'a', project: 'b' };
+    for (const [status, re] of [[401, /auth/i], [403, /auth/i], [404, /not found/i]] as const) {
+      let calls = 0;
+      const r = await fetchSentryIssues(o, async () => { calls++; return { status, body: '' }; }, deps());
+      assert.equal(r.ok, false); assert.equal(r.status, status); assert.match(r.error ?? '', re); assert.equal(calls, 1);
+    }
     let calls = 0;
-    const r = await importSentryRisks(
-      { enabled: true, token: 't', org: 'o', project: 'p' },
-      get,
-      () => { calls++; if (calls === 2) throw new Error('write refused'); },
-    );
-    assert.equal(r.ok, true);
-    assert.equal(calls, 3, 'every risk still offered to the sink');
-    assert.equal(r.failed, 1);
-    assert.equal(r.persisted, 2);
-    assert.equal(r.count, 3);
+    const d = deps();
+    const r429 = await fetchSentryIssues(o, async () => { calls++; return { status: 429, body: '' }; }, d);
+    assert.equal(r429.status, 429);
+    assert.equal(calls, 4);
+    assert.deepEqual(d.sleeps, [1000, 2000, 4000]);
+  });
+
+  test('a custom apiBaseUrl keeps its host and subpath', async () => {
+    const sent: string[] = [];
+    const get: SentryGetFn = async (url) => { sent.push(url); return { status: 200, body: '[]' }; };
+    await fetchSentryIssues({ enabled: true, token: 't', org: 'acme', project: 'backend', apiBaseUrl: 'https://sentry.acme.com/' }, get, deps());
+    await fetchSentryIssues({ enabled: true, token: 't', org: 'acme', project: 'backend', apiBaseUrl: 'https://host.example/sentry' }, get, deps());
+    assert.match(sent[0], /^https:\/\/sentry\.acme\.com\/api\/0\/organizations\/acme\/issues\/\?project=backend/);
+    assert.match(sent[1], /^https:\/\/host\.example\/sentry\/api\/0\/organizations\/acme\/issues\//);
   });
 });
 
-suite('Sentry pagination and atomic import (FailSafe #478)', () => {
+suite('Sentry pagination trust (FailSafe #478)', () => {
   const options = { enabled: true, token: 'private-token', org: 'acme', project: 'backend' };
   const one = JSON.stringify([{ id: '1', title: 'Issue one', level: 'error' }]);
-  const two = JSON.stringify([{ id: '2', title: 'Issue two', level: 'warning' }]);
-  const makeLink = (url: string, results = true) =>
-    `<${url}>; rel="next"; results="${results}"`;
-
-  test('follows two HTTPS same-path pages and persists exactly two deduped risks', async () => {
-    const requested: string[] = [];
-    const persisted: string[] = [];
-    const get: SentryGetFn = async (url, headers) => {
-      requested.push(url);
-      assert.equal(headers.Authorization, 'Bearer private-token');
-      return requested.length === 1
-        ? { status: 200, body: one, headers: { link: makeLink(url + '&cursor=next') } }
-        : { status: 200, body: two, headers: { link: makeLink(url, false) } };
-    };
-    const r = await importSentryRisks(options, get, risk => persisted.push(String(risk.id)));
-    assert.equal(r.ok, true);
-    assert.equal(r.pagesFetched, 2);
-    assert.equal(r.persisted, 2);
-    assert.equal(r.count, 2);
-    assert.deepEqual(persisted.sort(), ['sentry:1', 'sentry:2']);
-  });
+  const makeLink = (url: string, results = true) => `<${url}>; rel="next"; results="${results}"`;
 
   test('rejects other-origin pagination rather than sending the token to another host', async () => {
     let calls = 0;
-    const get: SentryGetFn = async () => {
-      calls++;
-      return { status: 200, body: one, headers: { link: makeLink('https://attacker.invalid/steal') } };
-    };
-    const r = await fetchSentryRisks(options, get);
+    const get: SentryGetFn = async () => { calls++; return { status: 200, body: one, headers: { link: makeLink('https://attacker.invalid/steal') } }; };
+    const r = await fetchSentryIssues(options, get, deps());
     assert.equal(r.ok, false);
     assert.match(r.error ?? '', /pagination/i);
     assert.equal(calls, 1);
-    assert.equal(r.count, 0);
+    assert.deepEqual(r.items, []);
   });
 
   test('rejects unrelated paths and repeated cursors', async () => {
-    const firstUrl = 'https://sentry.io/api/0/projects/acme/backend/issues/?query=is%3Aunresolved';
+    const firstUrl = 'https://sentry.io/api/0/organizations/acme/issues/?project=backend';
     assert.throws(() => nextSentryPage(makeLink('https://sentry.io/api/0/other/'), firstUrl, firstUrl), /Untrusted/);
-    const get: SentryGetFn = async (url) =>
-      ({ status: 200, body: one, headers: { link: makeLink(url) } });
-    const r = await fetchSentryRisks(options, get);
+    const get: SentryGetFn = async (url) => ({ status: 200, body: one, headers: { link: makeLink(url) } });
+    const r = await fetchSentryIssues(options, get, deps());
     assert.equal(r.ok, false);
     assert.match(r.error ?? '', /cursor loop/i);
-    assert.equal(r.count, 0);
-  });
-
-  test('refuses partial writes on rate limit or malformed second page', async () => {
-    for (const status of [429, 200]) {
-      let calls = 0;
-      let writes = 0;
-      const get: SentryGetFn = async (url) => {
-        calls++;
-        return calls === 1
-          ? { status: 200, body: one, headers: { link: makeLink(url + '&cursor=next') } }
-          : { status, body: status === 200 ? '{"error":"bad shape"}' : '' };
-      };
-      const r = await importSentryRisks(options, get, () => { writes++; });
-      assert.equal(r.ok, false);
-      assert.equal(r.count, 0);
-      assert.equal(writes, 0);
-      assert.equal(r.pagesFetched, 1);
-    }
-  });
-
-  test('exceeding a bounded page limit imports nothing', async () => {
-    let writes = 0;
-    const get: SentryGetFn = async url =>
-      ({ status: 200, body: one, headers: { link: makeLink(url + '&cursor=again') } });
-    const r = await importSentryRisks({ ...options, maxPages: 1 }, get, () => { writes++; });
-    assert.equal(r.ok, false);
-    assert.match(r.error ?? '', /limit reached/i);
-    assert.equal(writes, 0);
+    assert.deepEqual(r.items, []);
   });
 
   test('does not echo exception text containing a secret into result diagnostics', async () => {
-    const r = await fetchSentryRisks(options, async () => { throw new Error('private-token leaked'); });
+    const r = await fetchSentryIssues(options, async () => { throw new Error('private-token leaked'); }, deps());
     assert.equal(r.ok, false);
     assert.ok(!JSON.stringify(r).includes('private-token'));
   });
 
   test('malformed API base URL does not throw or contact network', async () => {
     let called = false;
-    const r = await fetchSentryRisks({ ...options, apiBaseUrl: 'not-a-url' },
-      async () => { called = true; return { status: 200, body: one }; });
+    const r = await fetchSentryIssues({ ...options, apiBaseUrl: 'not-a-url' }, async () => { called = true; return { status: 200, body: one }; }, deps());
     assert.equal(r.ok, false);
     assert.match(r.error ?? '', /invalid sentry api base url/i);
     assert.equal(called, false);
@@ -266,9 +178,29 @@ suite('Sentry pagination and atomic import (FailSafe #478)', () => {
 
   test('rejects insecure API origins before sending authorization', async () => {
     let called = false;
-    const r = await fetchSentryRisks({ ...options, apiBaseUrl: 'http://sentry.internal' },
-      async () => { called = true; return { status: 200, body: one }; });
+    const r = await fetchSentryIssues({ ...options, apiBaseUrl: 'http://sentry.internal' }, async () => { called = true; return { status: 200, body: one }; }, deps());
     assert.equal(r.ok, false);
     assert.equal(called, false);
+  });
+});
+
+suite('readSentrySettings (#478 LD9)', () => {
+  const reader = (values: Record<string, unknown>) => (key: string, fallback: unknown) => (key in values ? values[key] : fallback);
+
+  test('unset settings give the defaults', () => {
+    const s = readSentrySettings(reader({}), undefined);
+    assert.equal(s.enabled, false);
+    assert.equal(s.query, 'is:unresolved');
+    assert.equal(s.environment, undefined);
+    assert.equal(s.maxReleaseLookups, 50);
+  });
+
+  test('blank query and environment fall back; maxReleaseLookups is clamped and validated', () => {
+    assert.equal(readSentrySettings(reader({ 'integrations.sentry.query': '  ' }), undefined).query, 'is:unresolved');
+    assert.equal(readSentrySettings(reader({ 'integrations.sentry.query': 'is:unresolved level:error' }), undefined).query, 'is:unresolved level:error');
+    assert.equal(readSentrySettings(reader({ 'integrations.sentry.environment': ' ' }), undefined).environment, undefined);
+    for (const [raw, want] of [[-5, 0], [500, 200], ['abc', 50], [2.5, 50], [7, 7]] as const) {
+      assert.equal(readSentrySettings(reader({ 'integrations.sentry.maxReleaseLookups': raw }), undefined).maxReleaseLookups, want, String(raw));
+    }
   });
 });

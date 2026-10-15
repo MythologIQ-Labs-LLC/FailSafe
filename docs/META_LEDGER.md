@@ -30204,3 +30204,773 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `0e546881cf64bacee964394c17f268adaf668e6f4c48e198c943afe0f294a81e`
 
 **Decision**: Reality = Promise for plan-runtime-hardening-243a: all three phases implemented in their Affected Files; no unplanned files. Verification: full vscode-test suite (VS Code 1.122.1 pinned) 4197 passing / 17 pending / 1 failing - the failure is FX930 WorkspaceArtifactBuilder 'supported fixture' (IDLE vs IMPLEMENT), reproduced identically on a main-equivalent worktree (#501 head, no roadmap or fixture diff) and root-caused to parseMetaLedger returning 0 entries for CRLF text under core.autocrlf (CRLF 0 entries/IDLE vs LF 2 entries/IMPLEMENT); filed #508, not this change. Targeted: mocha 19 passing (gitBootstrap 7, governedDocument 4, marketplace-route 8); mutation of each fix turns its test red (scan gate 1, confirmInit 2, autoInstallGit default 1, scheme check 2), restored green. test:node 353 pass / 2 pre-existing FX946 failures. tsc 0, eslint 0. Runtime: dev VSIX (sha256 prefix 5214529c6ca0148f) in VS Code 1.141.0 isolated profile on a plain folder: activated 809 ms, 0 missing commands, no .git created (released 6.0.6 created one), Global editor.fontSize update logged 0 BLOCKADE (6.0.6 logged 1). Gates: intent_lock VERIFIED; skill_admission ADMITTED; gate_skill_matrix 0 broken; secret_scanner 0 findings over 19 staged files with canary rc 1; procedural_fidelity, dod_check, merge_velocity clean; skill_size_budget WARN only; data_api_acl disclosed SKIP; install_drift OK. Disclosures: governance-health DAMAGED META_LEDGER under the standing operator override (gate_override 5a65a5cf); governance-index --advance-last-reviewed re-dated the prior v6.0.6 Last Reviewed line and was reverted, a new line prepended by hand; substantiate_gates, version_applicability, seal_entry_check and seal_artifacts inapplicable here (#601 precedent, #612); ledger_emit.append not used (interior tail marker); no version bump (hotfix toward the next patch, operator-gated); seal commit carries no attribution trailer per operator rule. Out of scope and filed: #505 (enforce does not block editor saves), #508 (CRLF ledger parse). Feature Inventory: FX053/FX094/FX437 MODIFIED, FX948 NEW (764 total / 714 verified). **SSDF Practices**: PS.2.1, RV.2.1
+
+---
+
+### Entry #617: GATE TRIBUNAL - plan-od-runtime-compat-481 (iteration 1) - VETO
+
+**Timestamp**: 2026-10-14T15:15:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-14T1419-f1667d`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Plan**: `plan-od-runtime-compat-481.md` (iteration 1)
+**Preflight**: governance-health DAMAGED docs/META_LEDGER.md (pre-existing 0.176.1 drift); standing operator override, gate_override `998633d7`
+
+**Content Hash**: `b5de93898ad343d055af5b0168924f7fda61b9d958debdae8f0f021353a9ef0a`
+**Previous Hash**: `0e546881cf64bacee964394c17f268adaf668e6f4c48e198c943afe0f294a81e`
+**Chain Hash (Merkle seal)**: `c3611ccb6fc13045c11d1c921cec9c82abc9cf880cd6f211bf5206f00231c5b7`
+
+**Decision**: Option B fresh-context review; Judge verified each ground by direct read. V1 coverage-gap: Affected Files omit FailSafe/extension/package.json:533 (mcpEnabled description promises pre-construction at activation) and the README Configuration row :20. V2 security: env values were validated as strings only; under ELECTRON_RUN_AS_NODE=1 an env key such as NODE_OPTIONS=--require <path> preloads code without changing command or args, and the response's own cliExists/nodeExists flags prove nothing. V3 test-failure: the bootstrap test stub has no globalState, showWarningMessage returns undefined (no accept/decline), and no LaunchSpec module stub, yet the plan claimed the existing stub suffices. LD citations accurate; FX949 unused; tests behavioural. Next: Governor amends plan.
+
+---
+
+### Entry #618: GATE TRIBUNAL - plan-od-runtime-compat-481 (iteration 2) - VETO
+
+**Timestamp**: 2026-10-14T15:20:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-14T1419-f1667d`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Plan**: `plan-od-runtime-compat-481.md` (iteration 2)
+**Preflight**: governance-health DAMAGED docs/META_LEDGER.md (pre-existing 0.176.1 drift); standing operator override, gate_override `998633d7`
+
+**Content Hash**: `b64f2b9c75d9cd299424a0f68c2fa51be2933290ca0f2b68f2210a004bb71304`
+**Previous Hash**: `c3611ccb6fc13045c11d1c921cec9c82abc9cf880cd6f211bf5206f00231c5b7`
+**Chain Hash (Merkle seal)**: `79acdc27c41f2c7346504fc6e62a5b70dbe8e7184925bb5b98d5c9340652938e`
+
+**Decision**: Full re-walk. Iteration-1 grounds resolved (env-key allowlist {OD_DATA_DIR, ELECTRON_RUN_AS_NODE} with NODE_OPTIONS rejected, local existsSync on command and args[0], modal shows every env pair, stub extensions listed, re-confirm every run). New grounds: V1 context.globalStorageUri may not exist on disk (@types/vscode index.d.ts: 'The directory might not exist on disk and creation is up to the extension') so spawning with it as cwd can ENOENT; V2 Phase 3 Unit Tests line still said 'existing vscode stub' contradicting the extension list; V3 no test for existsSync false, changed-spec re-run, or cwd/mkdir. Next: Governor amends plan.
+
+---
+
+### Entry #619: GATE TRIBUNAL - plan-od-runtime-compat-481 (iteration 3) - PASS
+
+**Timestamp**: 2026-10-14T15:25:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-14T1419-f1667d`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Plan**: `plan-od-runtime-compat-481.md` (iteration 3)
+**Preflight**: governance-health DAMAGED docs/META_LEDGER.md (pre-existing 0.176.1 drift); standing operator override, gate_override `998633d7`
+
+**Content Hash**: `950916f1c441d969dee33a84cd31596a3f340ba75844bb12858342486b98e4fd`
+**Previous Hash**: `79acdc27c41f2c7346504fc6e62a5b70dbe8e7184925bb5b98d5c9340652938e`
+**Chain Hash (Merkle seal)**: `ea8716e565f8cf4f3f77bea1c7fcfbb36822ae996d518b522e58980ad9445885`
+
+**Decision**: Full re-walk against PR #501 head 9bd437e9: LD1-LD5 citations reproduce; every Affected File maps to a test (probe four shapes; launch spec allowlist incl. explicit NODE_OPTIONS, absolute args[0], env display; bootstrap decline/accept/no-spec/stored-spec/existsSync-false/changed-spec/cwd+mkdir/allowlisted count); doc surfaces package.json:533, README:20, renderer listed; descriptors match LD3; FX949 unused. Advisories carried to implement: test mkdir with a real temp globalStorageUri; package.json:533 text must say activation only builds the client and connect happens in the wizard. Cycle-count escalator not triggered (distinct signatures). Next: /qor-implement.
+
+---
+
+### Entry #620: IMPLEMENTATION - plan-od-runtime-compat-481
+
+**Timestamp**: 2026-10-14T16:20:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-14T1419-f1667d`
+**Risk Grade**: L2
+**Plan**: `plan-od-runtime-compat-481.md` (audit PASS #619; intent lock captured)
+**Files**: `FailSafe/extension/src/integrations/open-design/OpenDesignDaemonProbe.ts`, `FailSafe/extension/src/test/integrations/open-design/OpenDesignDaemonProbe.test.ts`, `FailSafe/extension/src/integrations/open-design/OpenDesignLaunchSpec.ts`, `FailSafe/extension/src/test/integrations/open-design/OpenDesignLaunchSpec.test.ts`, `FailSafe/extension/src/integrations/open-design/index.ts`, `FailSafe/extension/src/extension/bootstrapOpenDesignMcp.ts`, `FailSafe/extension/src/test/extension/bootstrapOpenDesignMcp.test.cjs`, `FailSafe/extension/src/integrations/open-design/README.md`, `FailSafe/extension/src/roadmap/ui/modules/open-design-renderer.js`, `FailSafe/extension/package.json`, `docs/FEATURE_INDEX.md`, `CHANGELOG.md`, `FailSafe/extension/CHANGELOG.md`
+
+**Content Hash**: `33f158d763ec87c89689af311b0fffdcf45de78e7007b3b811f2adfbb15eabc3`
+**Previous Hash**: `ea8716e565f8cf4f3f77bea1c7fcfbb36822ae996d518b522e58980ad9445885`
+**Chain Hash (Merkle seal)**: `56bb951f9d1a86741bd727380d83ada1472d115269f51987def2a73b174423dd`
+
+**Decision**: Phase 1: OpenDesignDaemonProbe reads a top-level or nested version (readVersion). Phase 2: new OpenDesignLaunchSpec (parseLaunchSpec: absolute command and entry script, env keys allowlisted to OD_DATA_DIR / ELECTRON_RUN_AS_NODE; fetchLaunchSpec fails closed; formatCommandLine shows every env pair, quoting values with spaces; sameSpec). Phase 3: bootstrapOpenDesignMcp drops command 'od'; activation builds a client only from a stored, re-validated spec and never connects; the wizard probes, fetches, validates, checks both runtime paths with local existsSync, asks via modal, stores in globalState, rebuilds on a changed spec, creates globalStorageUri before connect, uses it as cwd, and counts allowlisted reads. Docs: package.json mcpEnabled description, integration README (config row, wiring, security, files), Console help text, FX721/FX725 rows, FX949 NEW, header 765/715, CHANGELOG Unreleased. Red: tsc pinned the missing module. Green: Open Design mocha suites 69 passing; bootstrap node:test 12/12. Mutation: 8 guards (probe nested read, env-key allowlist, absolute command, consent, existsSync, mkdir, changed-spec rebuild, no-spec activation) each turn their test red; restored green. Runtime against the live Open Design 0.24.1 daemon: probe alive 0.24.1 (was parse_error), spec fetched and validated, OpenDesignMcpClient connected through its default transport in 313 ms (22 upstream tools, 7 allowlisted reads present), list_projects returned the fixture project. test:node 358 pass / 2 pre-existing FX946.
+
+---
+
+### Entry #621: SESSION SEAL - plan-od-runtime-compat-481
+
+**Timestamp**: 2026-10-14T22:50:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-14T1419-f1667d`
+**Entry ID**: `8c21781e2895`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Plan**: `plan-od-runtime-compat-481.md` (audit #619, implement #620)
+
+**Content Hash**: `c606070feefe74b80ed5d9a5c078d9b23df75b7598a1f82a7798a4dc0d845605`
+**Previous Hash**: `56bb951f9d1a86741bd727380d83ada1472d115269f51987def2a73b174423dd`
+**Chain Hash (Merkle seal)**: `70ea0bd1677e17aeaff8537e07498230f9febbdcaeaaa102dea3e76d85aac279`
+
+**Decision**: Reality = Promise for plan-od-runtime-compat-481 (stacked on PR #501 head 9bd437e9 with main merged at ce366841). Verification: full vscode-test suite (1.122.1 pinned) 4210 passing / 17 pending / 1 failing, census 467/467 - the failure is FX930 (pre-existing Windows CRLF ledger parse, #508). Open Design suites 69 passing; bootstrap node:test 12/12; test:node 358 pass / 2 pre-existing FX946. Mutation: 8 guards each turn their test red (probe nested read, env-key allowlist, absolute command, consent, existsSync, mkdir, changed-spec rebuild, no-spec activation). Runtime vs live Open Design 0.24.1 (official installer sha256 3a544dca, unsigned; headless daemon, scratch OD_DATA_DIR): probe alive 0.24.1 (was parse_error); install-info spec fetched and validated; OpenDesignMcpClient connected via its default transport in 313 ms, 22 upstream tools, 7 allowlisted reads; list_projects returned the fixture project. Extension host (dev VSIX sha256 prefix cfcc1dfe64c78f3f, VS Code 1.141.0 isolated profile, mcpEnabled=true): activated 954 ms, registerMcp registered, no client without a stored spec; the wizard fetched the real spec and raised the consent modal (refused by the test host's DialogService) and zero MCP server processes were spawned. Gates: intent_lock VERIFIED; skill_admission ADMITTED; gate_skill_matrix 0 broken; secret_scanner 0 findings over 16 staged files, canary rc 1; dod_check, merge_velocity clean; data_api_acl SKIP. Disclosures: standing DAMAGED-ledger override; two VETOs before PASS (#617, #618); the disposable VS Code test builds had win32VersionedUpdate removed from their product.json so the operator's parked desktop updater could not block test launches (operator install untouched); worktree relocated to G:/MythologIQ/wt501 because a scratch-path worktree exceeded MAX_PATH (262 chars) and vscode-test then exited 0 with zero tests run - a vacuous pass caught by reading the log, not the exit code; the rebuild-vscode-electron.cjs fresh-download path misses the versioned archive subfolder (reported, not fixed here); a node_modules junction duplicated the mocha instance and was replaced with npm ci. Port 7456 hardcoding and Docker non-loopback SSE 401 remain out of scope per plan boundaries. Feature Inventory: FX721/FX725 MODIFIED, FX949 NEW (765 / 715). **SSDF Practices**: PS.2.1, RV.2.1
+
+---
+
+### Entry #622: GATE TRIBUNAL - plan-502-native-sqlite-13 (iteration 1) - VETO
+
+**Timestamp**: 2026-10-14T23:20:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-14T2255-425a6c`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Plan**: `plan-502-native-sqlite-13.md`
+**Preflight**: governance-health DAMAGED META_LEDGER (pre-existing); standing operator override, gate_override `00e0a3e3`
+**Numbering**: #617-#621 are allocated on unmerged PR #513; this branch continues at #622 so no entry number is duplicated; the second of the two PRs to merge re-chains
+
+**Content Hash**: `ec7cf3207a22c69ceff583d54c0747d0c64eda6c2ceacc07fe4bd82999504539`
+**Previous Hash**: `70ea0bd1677e17aeaff8537e07498230f9febbdcaeaaa102dea3e76d85aac279`
+**Chain Hash (Merkle seal)**: `b357ed08f2e038da88c238e880b104776c76fe45b95ea5b9bc63e3c6384322f9`
+
+**Decision**: Option B review; Judge verified each ground. V1 coverage-gap: scripts/run-all-tests.sh:12-13 and run-all-tests.ps1:13-14 invoke patch:better-sqlite3 and rebuild:vscode, which LD5 deletes; package.json:793-799 carries a stale prebuild-install 'binary' block (module_path ./build/Release/); pr-full-test.yml:4 comment. V2 test-failure: the PE Machine field sits at e_lfanew+4 and measured e_lfanew is 264 (win32-x64) / 272 (win32-arm64), so 64-byte header prefixes cannot reach it; validate-vsix reads archive entries as utf8 (spawnSync encoding utf8), corrupting binary bytes. V3 infrastructure-mismatch: better-sqlite3 13.0.3 declares engines.node >=22 while CI pins Node 20. Judge measurement beyond the review: the 13.0.3 prebuild SEGFAULTS (exit 139) on Node 20.18.1 and in VS Code 1.90.0, 1.99.0 and 1.100.0 (Node 20 Electron), and loads in VS Code 1.101.0 (Electron 35.5.1, Node 22.15.1, N-API 10); with engines.vscode ^1.90.0 the upgrade would crash the extension host on older VS Code. Clean: LD citations, vsce --target/--ignoreFile support, no 13.x API break in src/, no Node-run test suite loads SQLite, FX950 unused. Next: Governor amends plan.
+
+---
+
+### Entry #623: GATE TRIBUNAL - plan-502-native-sqlite-13 (iteration 2) - PASS
+
+**Timestamp**: 2026-10-14T23:45:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-14T2255-425a6c`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Plan**: `plan-502-native-sqlite-13.md`
+**Preflight**: standing operator override, gate_override `00e0a3e3`
+
+**Content Hash**: `c352e6519ead9c458861ceff976fadb9ca2342a884e73c5c16e60f1dee88ff49`
+**Previous Hash**: `b357ed08f2e038da88c238e880b104776c76fe45b95ea5b9bc63e3c6384322f9`
+**Chain Hash (Merkle seal)**: `4b20c7940a5675a383f340482f6cf6296deccccf3587db40aceb6a7e505c4960`
+
+**Decision**: Full Option B re-walk against PR #512 head edbcd80f. All seven LD citations reproduce (plan_grep_lint 7/7), incl. LD7 engines.vscode ^1.90.0 at package.json:14. Iteration-1 grounds resolved: run-all-tests.sh/.ps1, the prebuild-install binary block and pr-full-test.yml:4 listed; PE Machine read at e_lfanew+4 with a 1024-byte Buffer read (measured e_lfanew 264/272), ELF e_machine at 0x12, Mach-O cputype at 4 with fat rejection, musl by path; Node 22 for the qualification workflow only, justified by run-node-tests.cjs running only *.test.cjs suites that never reach better-sqlite3. Minimum-VS-Code surfaces complete (package.json, README:398, two issue templates, lock); vsce's @types/vscode <= engines check still passes. Cosmetic advisories: LD ordering, duplicate package.json row, run-all-tests.sh:2 comment. Next: /qor-implement.
+
+---
+
+### Entry #624: IMPLEMENTATION - plan-502-native-sqlite-13
+
+**Timestamp**: 2026-10-15T01:00:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-14T2255-425a6c`
+**Risk Grade**: L2
+**Plan**: `plan-502-native-sqlite-13.md` (audit PASS #623; intent lock captured)
+
+**Content Hash**: `dce29a948592e0eb218c2363401324a04b81a3fb1763c5d22f252e3e73eeffda`
+**Previous Hash**: `4b20c7940a5675a383f340482f6cf6296deccccf3587db40aceb6a7e505c4960`
+**Chain Hash (Merkle seal)**: `0824031e38d7145b0a8026260e0583b0fa8a559ad9782ce60b4b0e5760a9ea2a`
+
+**Decision**: New scripts/native-targets.cjs (target map, PE/ELF/Mach-O header decoding, findNativeAddons, checkNativeBinary) and scripts/package-target.cjs (vsce --target with a generated ignore file re-including exactly prebuilds/<target>.node). validate-vsix reads entries as Buffers and fails a VSIX that depends on better-sqlite3 (dependencies or optionalDependencies - FailSafe declares it optional) unless targeted with exactly the matching prebuild. better-sqlite3 ^13.0.3; engines.vscode ^1.101.0; prebuild-install binary block removed; pretest and run-all-tests no longer patch/rebuild; patch-better-sqlite3.cjs and rebuild-vscode-electron.cjs deleted; .vscodeignore ships no binary; standards gate packages linux-x64; qualification workflow on Node 22 with linux-arm64, alpine-x64, darwin-x64 added and a smoke test of the binary extracted from the packaged VSIX. Unplanned file disclosed: src/test/fixtures/native-prebuild-headers.json (the plan's checked-in header fixtures), hex-encoded because base64 of the binary headers tripped the AWS-key secret rule. Red: suite failed on the missing module. Green: 10/10. Mutation: newline split, target check, exactly-one count, path, arch, fat Mach-O and truncated-PE guards each turn a test red; restored green. The released universal v6.0.6 VSIX now fails validation (it passed #512's original gate). win32-x64, linux-x64, darwin-arm64 and alpine-x64 all package from Windows and validate; the packaged win32 binary loads in Node 22.
+
+---
+
+### Entry #625: SESSION SEAL - plan-502-native-sqlite-13
+
+**Timestamp**: 2026-10-15T01:10:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-14T2255-425a6c`
+**Entry ID**: `7ef7839797ed`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Plan**: `plan-502-native-sqlite-13.md` (audit #623, implement #624)
+
+**Content Hash**: `95b021a3f9e89b4667ec5a5140bf93711f1e67006672642bc04b6dfe6b62b6c0`
+**Previous Hash**: `0824031e38d7145b0a8026260e0583b0fa8a559ad9782ce60b4b0e5760a9ea2a`
+**Chain Hash (Merkle seal)**: `6600a80034010333b54ff9d30320c2709da159da61a67e39412afa45eda6d184`
+
+**Decision**: Reality = Promise for plan-502-native-sqlite-13 on PR #512 (branch head edbcd80f, unchanged on the remote before push). Verification: vscode-test (pinned 1.122.1, Electron 39, loading the 13.0.3 prebuild with no rebuild step) 4205 passing / 17 pending / 1 failing - FX930, pre-existing Windows CRLF ledger parse (#508); census 466/466. test:node 353/355 (2 pre-existing FX946); lint clean. Validator suite 10/10 with 7 guards mutation-killed. Runtime: branch-built fs-502-win32-x64.vsix (sha256 prefix in the #502 comment) installed in an isolated VS Code 1.141.0 profile (Electron 43, ABI 148): activation 977 ms then 845 ms, 0 missing commands, 29 and 32 FailSafe log lines with 0 stub-mode / JSONL-fallback / ABI errors (the same grep finds 3 stub lines in the released 6.0.6 logs); soa_ledger.db 3 hash-chained rows after a restart and a workspace save, checkpoints 4, sentinel_observations 1, integrity ok. Earlier experimental build additionally survived a forced kill (#502). Measured constraints: 13.0.3 segfaults (exit 139) on Node 20.18.1 and in VS Code 1.90/1.99/1.100; loads in 1.101.0 (Electron 35.5.1, Node 22.15.1), 1.122.1 and 1.141.x - hence engines.vscode ^1.101.0. Disclosures: release.yml is unchanged by design (operator approval required) - after merge a universal release VSIX fails validation, blocking release until per-target publishing is approved; alpine targets are smoke-tested by path and header only (glibc runner cannot load musl); ledger numbering starts at #622 because #617-#621 are held by unmerged PR #513 - the second of the two PRs to merge re-chains; standing DAMAGED-ledger override. Feature Inventory: FX950 NEW (765 / 715). **SSDF Practices**: PS.2.1, RV.2.1
+
+---
+
+### Entry #626: GATE TRIBUNAL - plan-475-isolated-agent-runs (iteration 1) - VETO
+
+**Timestamp**: 2026-10-14T23:21:21Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-14T2317-80dc4f`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Plan**: `plan-475-isolated-agent-runs.md`
+**Preflight**: standing operator override, gate_override `bc8241b8`
+
+**Content Hash**: `6fd15c243e47f6e02e3bc6a3502c6796b4cd3d39205724feec48695274cb7f01`
+**Previous Hash**: `6600a80034010333b54ff9d30320c2709da159da61a67e39412afa45eda6d184`
+**Chain Hash (Merkle seal)**: `248452db6c137333607e42fc2a82b5f0667aeb1efdf5075cf6814f6fbcf33744`
+
+**Decision**: Option B adversarial review; Judge verified the blocking ground directly. V1 security-l3: routing every change set through the L3 approval queue lets an escaped agent approve its own patch - POST /api/actions/decide-l3 (ActionsRoute.ts:140-160) and the batch approve route authorize on loopback only (ConsoleServer.ts rejectIfRemote), and the agent is a local process; filed as #514. V2 coverage-gap: the LD3 snapshot misses shared git state (skip-worktree/assume-unchanged, info/exclude, core.fsmonitor which runs inside FailSafe's own git status, hooks/hooksPath, refs other than HEAD, stash) and every gitignored path. V3 specification-drift: escape detection is post-hoc, so D1's 'cannot modify before approval' overclaims for direct workspace writes. V4 security-l3: TOCTOU between hashing the patch file and git apply re-reading it. V5 test-failure: defaultAgentRun only spawns git/aider/cn so a scripted agent cannot go through it; no tree-kill on Windows; cn.cmd shim not spawnable with shell:false. V6: LD4 path validation must be per-component and case-insensitive (.GIT, git~1, trailing dot/space, ':', device names) and taken from git apply --numstat -z --summary. V7: quarantining under .failsafe/ dirties an unignored workspace and blocks later runs. V8 coverage-gap: catalog test, agent-cli README, extension and root READMEs, allowDirty/autoCommit settings, buildL3EscalationRequest, agent-cli.test.ts:79-88. Numbering: #617-#625 are held by unmerged PRs #513 and #512; this branch continues at #626.
+
+---
+
+### Entry #627: GATE TRIBUNAL - plan-475-isolated-agent-runs (iteration 2) - VETO
+
+**Timestamp**: 2026-10-14T23:25:37Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-14T2317-80dc4f`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Plan**: `plan-475-isolated-agent-runs.md` (iteration 2)
+**Preflight**: standing operator override, gate_override `bc8241b8`
+
+**Content Hash**: `1e66d95a1080fefe048e5b84d9852a410aa671562d76c9219d08872554b59ed0`
+**Previous Hash**: `248452db6c137333607e42fc2a82b5f0667aeb1efdf5075cf6814f6fbcf33744`
+**Chain Hash (Merkle seal)**: `40f482d767caaafd0f473add907431935838b3e2a103c0fb666eaedaa8c1f451`
+
+**Decision**: Full Option B re-walk. Iteration-1 grounds resolved (VS Code-native approval, no HTTP route reaches promotion - confirmed by the reviewer; git -c hardening; stdin piping; numstat validator; globalStorage quarantine; surfaces listed). New grounds: V1 security-l3 review/apply divergence - the stored patch and its sha256 sit together in writable globalStorage, so a lingering agent process can swap reviewed bytes back before Apply with a matching hash. V2 security-l3 - user/system git config is not neutralized: ~/.gitconfig core.excludesFile can hide new files from the snapshot, and attributesFile + filter.* smudge can alter bytes during git apply. V3 security-l3 - capture runs git add -A inside a worktree whose .git file the agent can repoint at the real repository, so FailSafe itself could stage into the real index; .git/worktrees/<id>/ is not validated. V4 test-failure - taskkill /T cannot reach a child once the agent has exited, so the planned surviving-child timeout case fails and post-snapshot writes are undisclosed; kill/snapshot/capture ordering unspecified. V5 coverage-gap - FX831/FX832 rows describe the removed behaviour. V6 specification-drift - D1 still claims git-state writes are detected. Minor: hash ignored files rather than size/mtime; config.worktree; CONIN$/CONOUT$; Apply must not be the default button. Cycle-count: two VETOs, distinct signatures.
+
+---
+
+### Entry #628: GATE TRIBUNAL - plan-475-isolated-agent-runs (iteration 3) - VETO
+
+**Timestamp**: 2026-10-14T23:28:46Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-14T2317-80dc4f`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Plan**: `plan-475-isolated-agent-runs.md` (iteration 3)
+**Preflight**: standing operator override, gate_override `bc8241b8`
+
+**Content Hash**: `a214cb77ac07e6c7e12ba6f685f4fe81d2899b66eb05566ed8dac3fd20f9cb34`
+**Previous Hash**: `40f482d767caaafd0f473add907431935838b3e2a103c0fb666eaedaa8c1f451`
+**Chain Hash (Merkle seal)**: `4980a0e921b1aee17fdeeba40a556070d7093b1328aad0e51d0207829d1602ee`
+
+**Decision**: Full Option B re-walk; iteration-2 security grounds resolved (single-invocation in-memory promotion closes review/apply divergence; global config neutralized; explicit git-dir capture; ordered kill/snapshot/capture). New grounds, implementation-shaped: V1 test-failure - the post-apply equality check uses git diff HEAD, which never shows untracked files, so any patch creating a file reports APPLY_MISMATCH; compare through a temporary index. V2 infrastructure-mismatch - GIT_CONFIG_NOSYSTEM/GLOBAL drop Git for Windows core.autocrlf and safe.directory, so apply --check fails on CRLF checkouts and dubious-ownership repos block; carry the user's eol/safe.directory/longpaths values explicitly. V3 infrastructure-mismatch - 500 ms Win32_Process sampling via cold PowerShell is infeasible, no exit-time sample, intermediate-parent chain break undisclosed, PID reuse not re-checked before kill. V4 specification-drift - ESCAPED_ISOLATION attributes concurrent operator/background writes to the agent. V5 - diff format not pinned (--no-ext-diff --no-textconv, prefixes, diff.noprefix). V6 - APPLY_MISMATCH missing from the outcome list. Confirmed: probe-1 influence closed; razor feasible with isolated-run as orchestrator; Affected Files complete.
+
+---
+
+### Entry #629: GATE TRIBUNAL - plan-475-isolated-agent-runs (iteration 4) - PASS
+
+**Timestamp**: 2026-10-14T23:30:51Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-14T2317-80dc4f`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Plan**: `plan-475-isolated-agent-runs.md` (iteration 4, sha256 prefix f53b6be81a09b2b8; gate plan-iter5.json - plan-iter4.json is a stray gate written against the unamended iteration-3 text and is superseded)
+**Preflight**: standing operator override, gate_override `bc8241b8`
+
+**Content Hash**: `70f9ce6965b9db6120ddcad8d2298ced4bd48a87caa60bc5dcd4de39291296d0`
+**Previous Hash**: `4980a0e921b1aee17fdeeba40a556070d7093b1328aad0e51d0207829d1602ee`
+**Chain Hash (Merkle seal)**: `790c503699fadc452128048e95f8911cbd93ee4e044eba4c10581f9bdbfb581b`
+
+**Decision**: Full Option B re-walk after three VETOs (#626 self-approval and shared git state, #627 review/apply divergence and global config, #628 temp-index equality, CRLF carry, sampler feasibility, outcome naming). Reviewer found no remaining path where reviewed bytes differ from applied bytes or where a change reaches the workspace without the in-process Apply; every constructed failure mode fails closed. Advisories carried to implementation and to be disclosed there: limitations text to list LD4's additional undetectable classes; a sampler that fails to start (AppLocker / Constrained Language) must end BLOCKED_PRE_EXECUTION with a test; carry safe.directory and eol values through the temporary GIT_CONFIG_GLOBAL file rather than -c; LFS filter config is neutralized with the global config - pass filter.lfs.* through or disclose; VS Code untitled documents are editable, so review uses a content-provider document.
+
+---
+
+### Entry #630: IMPLEMENTATION - plan-475-isolated-agent-runs
+
+**Timestamp**: 2026-10-15T00:31:06Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-14T2317-80dc4f`
+**Risk Grade**: L3
+**Plan**: `plan-475-isolated-agent-runs.md` (audit PASS Entry #629; intent lock captured)
+**Files**: `FailSafe/extension/src/integrations/agent-cli/` (isolated-run, git-safety, workspace-snapshot, process-tree, patch-paths, agent-run-promotion NEW; agent-cli-core, aider-wrapper, continue-wrapper, README), `FailSafe/extension/src/extension/agent-cli-command.ts`, `FailSafe/extension/src/extension/main.ts`, `FailSafe/extension/package.json`, `FailSafe/extension/src/integrations/catalog/integration-catalog.ts`, tests under `src/test/integrations/agent-cli/`, `src/test/extension/agent-cli-command.test.cjs`, `src/test/integrations/catalog/integration-catalog.test.ts`, `README.md`, `FailSafe/extension/README.md`, `docs/FEATURE_INDEX.md`, `docs/ARCHITECTURE_PLAN.md`, `docs/integrations/INTEGRATION_DOCS_INDEX.md`, `CHANGELOG.md`, `FailSafe/extension/CHANGELOG.md`
+
+**Content Hash**: `b10eb537b2668903e2f11236ed2791ce61facddd40e964605c5c790d3196d181`
+**Previous Hash**: `790c503699fadc452128048e95f8911cbd93ee4e044eba4c10581f9bdbfb581b`
+**Chain Hash (Merkle seal)**: `d27936dd34908f1b5201cd0d0b91916e73dd994314f0d6f78db6071568fc77de`
+
+**Decision**: Phase 1 (isolation boundary): git-safety.ts (system/global config neutralized, hooks/fsmonitor/excludes/attributes disabled, autocrlf/eol/safecrlf/longpaths/safe.directory/LFS carried), workspace-snapshot.ts, process-tree.ts (win32 PowerShell sampler with CreationDate-checked kills; POSIX process group), patch-paths.ts, isolated-run.ts (preconditions -> tracker -> worktree -> agent -> kill tree -> snapshot -> link check -> capture via explicit --git-dir/--work-tree -> validation -> removal). agent-cli-core.ts: AgentRunFn gains input/detached/onSpawn; captureGitDiff, isWorktreeDirty, decideAgentRun, summarizeDiff and buildL3EscalationRequest removed. Phase 2: both wrappers run through runIsolated; Aider always --no-auto-commits; Continue shell/exec allowlist refused before spawn. Phase 3: agent-run-promotion.ts (hash, validation, HEAD, snapshot, apply --check, apply, throwaway-index equality, write-only audit copy newest 20); agent-cli-command.ts modal Discard / Review diff / Apply with Escape = discard, read-only content-provider review, QUARANTINE_START/QUARANTINE_END/EXTERNAL_DRIFT ledger entries, failed QUARANTINE_START discards before asking; main.ts passes ledgerManager and globalStorage audit dir; settings per LD9; catalog, both READMEs, agent-cli README, INTEGRATION_DOCS_INDEX, ARCHITECTURE_PLAN contract section, FX831/FX832 MODIFIED, FX951/FX952 NEW (766/716), CHANGELOG in both changelogs. Hardening beyond the plan text, disclosed: LD3 snapshot made content-based for tracked files (throwaway index from HEAD) after a red test showed a same-size in-place rewrite with mtime restored was invisible to stat-based status and returned QUARANTINED; a clean-filter test (agent-defined filter in the global config never runs during capture, with a positive control) gives the GIT_CONFIG_GLOBAL neutralization its own falsifier. Unplanned files: docs/ARCHITECTURE_PLAN.md (Step 8.5), docs/integrations/INTEGRATION_DOCS_INDEX.md (stale text), src/test/integrations/agent-cli/git-fixture.ts (shared test helper). Tests written after the modules (not red-first) except the content check; load-bearing guards mutation-tested instead: 16 mutations of compiled guards, 16 killed (post-run snapshot, worktree link, dirty and index-flag preconditions, tracker failure, tree kill, patch validation, exit code, hash, promotion validation, promotion snapshot, post-apply equality, apply --check, global-config neutralization via the filter test, Escape-applies, ledger-failure-ignored). Verification: plain mocha 103 passing (agent-cli 15, isolated-run 26, promotion 12, patch-paths 39, catalog 11); node --test agent-cli-command 17/17; full vscode-test 4266 passing / 17 pending / 1 failing (FX930 WorkspaceArtifactBuilder CRLF, pre-existing, #508), census 469/469, new suites executed inside the extension host; test:node 364/366 with the 2 FX946 failures reproduced on base e82f69aa; eslint 0 errors (1 pre-existing main.ts:79 warning); runner-coverage PASS; citation-parity clean. Real aider/cn acceptance pending (not installed; model key required). Next: /qor-substantiate.
+
+---
+
+### Entry #631: SESSION SEAL - plan-475-isolated-agent-runs
+
+**Timestamp**: 2026-10-15T00:37:10Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-14T2317-80dc4f`
+**Entry ID**: `8e6f43626fe2`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Plan**: `plan-475-isolated-agent-runs.md` (audit #629, implement #630)
+
+**Content Hash**: `7a071c0e3824deaf5938d5c2d09c2ac25ace9e7d4a805d7913517a9723ecdce1`
+**Previous Hash**: `d27936dd34908f1b5201cd0d0b91916e73dd994314f0d6f78db6071568fc77de`
+**Chain Hash (Merkle seal)**: `c311a6214b0eb5b9f191389d71828710b5bec1680c39eb0a6b1753da375f0767`
+
+**Decision**: Reality = Promise for plan-475-isolated-agent-runs: all three phases implemented in their Affected Files. Unplanned, documented: docs/ARCHITECTURE_PLAN.md (implement Step 8.5 contract section), docs/integrations/INTEGRATION_DOCS_INDEX.md (stale wrapper text), src/test/integrations/agent-cli/git-fixture.ts (shared test helper), qor/references/glossary.md (the plan's two declared terms, required by strict doc_integrity), docs/SYSTEM_STATE.md (dated section + Last Updated), docs/GOVERNANCE_INDEX.md. Beyond the plan text, disclosed: LD3 snapshot made content-based for tracked files after a red test showed a same-size in-place rewrite with mtime restored returned QUARANTINED; GIT_CONFIG_GLOBAL neutralization given its own falsifier (agent-defined clean filter never runs during capture; positive control runs it under ordinary git). Verification: full vscode-test (VS Code 1.122.1 pinned) 4266 passing / 17 pending / 1 failing - FX930 WorkspaceArtifactBuilder IDLE vs IMPLEMENT, pre-existing CRLF ledger parse (#508, other lane); census 469/469; isolated-run, promotion, patch-paths and wrapper suites executed inside the extension host. Plain mocha 103 passing; node --test agent-cli-command 17/17; test:node 364/366 with the 2 FX946 ledger-anchor failures reproduced on base e82f69aa; system-state-currency 4/4; eslint 0 errors (1 pre-existing main.ts:79 warning); runner-coverage PASS; citation-parity clean. Mutation: 16 compiled-guard mutations, 16 killed (the excludesFile case is double-guarded by -c core.excludesFile and is not the falsifier for the global-config neutralization; the clean-filter test is). Tests were written after the modules except the content check (red then green); the mutation pass is the substitute evidence and is disclosed as such. Gates: intent_lock VERIFIED; skill_admission ADMITTED; gate_skill_matrix 0 broken; secret_scanner 0 findings over 34 staged files with canary rc 1; procedural_fidelity 0 findings; dod_check rc 0; merge_velocity healthy; skill_size_budget WARN only (qor-substantiate 37.0 KB); data_api_acl disclosed SKIP (no migrations); install_drift OK; doc_integrity strict OK after adding the two glossary terms, with the gitignored 'Vacuous pass' home brief supplied locally in the worktree (pre-existing orphan in fresh checkouts); governance-index --enforce rc 0 (--advance-last-reviewed would re-date the prior line, so a new line was prepended by hand, as at #616); doc currency 0 warnings; feature_index_verify rc 0 (759 verified+n/a rows; 7 other-status rows make the 766 header), surface lint WARN-only (FX922 untagged, pre-existing; degradation event c35e704d logged); seal_entry_check FAIL on the non-phase-tagged plan filename and ledger dialect, inapplicable here as at #601/#612/#616, so #626-#631 were verified directly (content hash, chain hash and previous-hash link all hold; #626 links to #616); gate_chain_completeness rc 0 but inspected 0 sessions (no phase-numbered seals in this ledger), a vacuous pass, so the four session artifacts plan/audit/implement/substantiate were confirmed present directly; dist_compile rc 0 (writes installed variants only, no repo change); data_api_acl gate_skipped_prerequisite_absent event 1cd5e121 emitted via FX943 and closed at emission by the permanent_skips declaration. Disclosures: governance-health DAMAGED META_LEDGER (pre-existing #340/#382 breaks and duplicate-number band) under the standing operator override, gate_override bc8241b8; Timestamp fields of #626-#630 corrected to the gate-artifact times (they had been written as future UTC estimates; timestamps are outside the content hash, so no chain value changed); the plan-243a seal (#616) declared the term 'Governed save' but it is absent from the glossary, so strict doc_integrity evidently did not run for that seal; no version bump (hotfix toward the next patch, operator-gated); real aider/cn acceptance pending (not installed, model key required); #514 (loopback-only L3 decide routes) is not depended on; gate artifacts stay in the main checkout's session directory as at #616/#625; seal commit carries no attribution trailer per operator rule. Feature Inventory: Total: 766 / verified: 716 / unverified: 0 / n/a: 43; FX831/FX832 MODIFIED, FX951/FX952 NEW; newly unverified: none. **SSDF Practices**: PS.2.1, RV.2.1
+
+---
+
+### Entry #632: GATE TRIBUNAL - plan-478-sentry-import-completion (iteration 1) - VETO
+
+**Timestamp**: 2026-10-15T00:52:44Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T0038-5b1f28`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: standing operator override, gate_override `e68bfe25`; research override `a9ebbc4c`
+**Entry Gap**: #617-#631 are allocated on other open branches (#501/#513 lane, #512, #475)
+
+**Content Hash**: `8f4c4ebe2b9a915e667027919707cb5aabce8d5acd243402c549c78097923440`
+**Previous Hash**: `c311a6214b0eb5b9f191389d71828710b5bec1680c39eb0a6b1753da375f0767`
+**Chain Hash (Merkle seal)**: `34857879981e5cb4dba05700779233283cc6f173e2f1cf8b935844e83d44e5b5`
+
+**Decision**: VETO on plan-478-sentry-import-completion.md iteration 1. Option B was mandatory (audit_risk_score: high-citation-surface); a fresh-context architect-reviewer (Read/Grep/Glob) returned VETO and every finding was re-verified by the Judge. The Sentry contract and all 13 grep-evidence citations hold (plan_grep_lint clean). Findings: V1 existing sentry.test.ts consumers of count/persisted/failed (:103, :118-120, :169-171, :195), provenance.release/suspectCommit (:71-72), the 3-arg importSentryRisks (:136) and sentryIssuesToRisks (:80-86) not enumerated, some declared unchanged; V2 FX953 descriptor claims rate-limit waits and retries at a test path holding no such case; V3 FX915 MODIFIED drops the SARIF test link from a SARIF+Sentry row (FEATURE_INDEX.md:657); V4 release-lookup priority starves (a none result records nothing, so release-less issues consume the budget every run); V5 no breaker after a rate_limited lookup; V6 carry-forward has no shape/source check or verification time, making D1 unfalsifiable; V7 dedupe-before-lookup and stored-read-before-lookup ordering unstated; V8 razor: fetchSentryRisks already 75 lines (sentry-client.ts:86-160) and grows with no split; V9 package.json:465 environment description becomes false; V10 detail-URL construction and token-origin test unspecified; V11 suspectCommit-absence test vacuous without a seeded fixture; V12 ok undefined for partial/all-failed/cancelled, and the list fetch has no injected sleep so existing 429 tests would sleep for real under the 15 s mocha timeout; V13 build broken between Phase 1 and Phase 3; V14 mapper status open plus whole-record replace silently reopens operator-triaged risks and reports a plain updated. Categories: infrastructure-mismatch, coverage-gap, specification-drift, razor-overage, test-failure. Next: Governor amends plan text per V1-V14, re-run /qor-audit.
+
+---
+
+### Entry #633: GATE TRIBUNAL - plan-478-sentry-import-completion (iteration 2) - VETO
+
+**Timestamp**: 2026-10-15T01:02:02Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T0038-5b1f28`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: standing operator override, gate_override `e68bfe25`
+
+**Content Hash**: `eb66bfba1548b12ab7a80a31b37ee42dd4c7e1ccfbf00989f7f3883221c53bb9`
+**Previous Hash**: `34857879981e5cb4dba05700779233283cc6f173e2f1cf8b935844e83d44e5b5`
+**Chain Hash (Merkle seal)**: `5868c386e479710f2d3161a9d6cd3161bd6abf7bc47edaa2566cb34f5e9cba77`
+
+**Decision**: VETO on plan-478-sentry-import-completion.md iteration 2 (sha256 prefix d5e3f266c949a4fd). A fresh Option B architect-reviewer (Read/Grep/Glob) confirmed V1, V3 and V5-V13 closed; the Judge re-verified each open finding. W1 the single pre-lookup store read lets a Console close (TransparencyRiskRoute.ts:66-68 -> HubSnapshotService.ts:152 -> writeRisks, same process) be reopened by a merge made minutes later, so V14 persists with a wider window; W2 FX953/FX954 descriptors still overclaim: no test bounds 5xx/timeout retries or checks the 2 s / 4 s steps, 4xx no-retry is tested only on 401, and the 3-consecutive-failure lookup stop and cancellation during lookups are untested; W3 Phase 3 relies on a settings test in sentry-import.test.ts that no listed case contains, and the reader has no seam; W4 the disclosed lookup priority assumes a most-recently-seen default sort, but docs.sentry.io lists sort values with no documented default and the request sends none. Advisories folded into the amendment: 403 case absent at :134-142 and 401 no-write assertion lost; ok/level for localOnly and stopped lookups; origin-only URLs would drop an apiBaseUrl subpath; merge of missing owned fields and legacy suspectCommit; refusal tag and past Reset; defaultSentryGet phase; carried-release shape; releases counter partition. Categories: specification-drift, coverage-gap, test-failure, infrastructure-mismatch. Next: Governor amends plan, re-run /qor-audit.
+
+---
+
+### Entry #634: GATE TRIBUNAL - plan-478-sentry-import-completion (iteration 3) - VETO
+
+**Timestamp**: 2026-10-15T01:11:49Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T0038-5b1f28`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: standing operator override, gate_override `e68bfe25`
+
+**Content Hash**: `3aba3bb65c2003a2c84ae4ed98b6362b988946a767da70da23744015fd40581b`
+**Previous Hash**: `5868c386e479710f2d3161a9d6cd3161bd6abf7bc47edaa2566cb34f5e9cba77`
+**Chain Hash (Merkle seal)**: `0fb94409df6a04cd29e8fc1e1b7547e4af89648190dcf0bfd8f56d73f3961013`
+
+**Decision**: VETO on plan-478-sentry-import-completion.md iteration 3 (sha256 prefix 7d48067aa7ed674d). A fresh Option B architect-reviewer (Read/Grep/Glob) confirmed W1-W4 and every iteration-2 advisory closed, all 14 citations matching and every sentry.test.ts line accounted for; the Judge re-verified both blocking findings. X1 LD8 bounds partial by eligible, which counts duplicates, so an all-failed import with a duplicate matches both the warning and error rules and no planned test pins the precedence; X2 the only test of the default HTTPS transport targets a plain HTTP stub, but defaultSentryGet always calls https.request (sentry-client.ts:194) and no TLS fixture or request seam exists, so the test cannot be built as specified. Advisories folded into the amendment: case-insensitive rate-limit header reads (Node lowercases names), base normalized once via new URL, malformed 200 detail counts as failed, recording sleep advances the clock, unbacked package.json parity claim removed, wording fixes, org slug validation. Pre-existing defect found in review, outside #478 and disclosed: qorelogic/risk/RiskManager.ts holds risks.json in memory from activation (bootstrapServers.ts:117) and save() rewrites the whole file (RiskManager.ts:95-111), erasing records written since activation by RiskRegisterManager callers; to be filed separately. Categories: specification-drift, test-failure. cycle_count_escalator: no escalation (differing signatures). Next: Governor amends plan, re-run /qor-audit.
+
+---
+
+### Entry #635: GATE TRIBUNAL - plan-478-sentry-import-completion (iteration 4) - PASS
+
+**Timestamp**: 2026-10-15T01:20:32Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T0038-5b1f28`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: standing operator override, gate_override `e68bfe25`
+
+**Content Hash**: `cf3e44ab94d13f2920e97b7a4a4cf548d2c2f596a7bc2b21bf32835e3faabaaf`
+**Previous Hash**: `0fb94409df6a04cd29e8fc1e1b7547e4af89648190dcf0bfd8f56d73f3961013`
+**Chain Hash (Merkle seal)**: `147659cd23f93b3c543023bf84c07d9532fb1ff411c5b6a9ca7a39232c88b8ed`
+
+**Decision**: PASS on plan-478-sentry-import-completion.md iteration 4 (sha256 prefix 9f527c38c2d4117e). A fresh Option B architect-reviewer (Read/Grep/Glob) confirmed X1 (level precedence over unique = eligible - duplicates) and X2 (makeHttpsGet request seam) closed with every iteration-3 advisory, and its full re-walk found no blocking defect: all grep-evidence citations match; every consumer of removed exports is rewritten in Phase 2; upsertRisk sinks, interface and test double return void; levels are an ordered non-overlapping precedence; store reads occur only inside the synchronous write; the token goes only under the normalized HTTPS base; LD10 sizes credible; every Feature Inventory clause has a failing case at its declared path; Phase 1 additive. Twelve implementation advisories (rate-limited lookup counted notAttempted, zero-unique message with skipped or custom query, list-item lastRelease ignored, single base normalization in importSentryRisks, String(risk.id), import type to avoid a cycle, carry decision on a throwing write counts failed, new .ts suites run under npm test, HTTP-date Retry-After falls back to backoff, test-range wording, fake destroy emits error, README What's-New copy) are carried into implementation and will be disclosed. Pre-existing #517 (RiskManager stale whole-file rewrite) filed during review and disclosed in limitations. Next: /qor-implement.
+
+---
+
+### Entry #636: IMPLEMENTATION - plan-478-sentry-import-completion
+
+**Timestamp**: 2026-10-15T01:36:58Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-15T0038-5b1f28`
+**Risk Grade**: L2
+**Plan**: `plan-478-sentry-import-completion.md` (audit PASS Entry #635; intent lock captured)
+**Files**: `FailSafe/extension/src/integrations/sentry/` (sentry-transport, sentry-import, sentry-releases, sentry-report, sentry-settings NEW; sentry-client, sentry-to-risk, README), `FailSafe/extension/src/extension/sentry-command.ts`, `FailSafe/extension/src/roadmap/services/RiskRegisterManager.ts`, tests under `src/test/integrations/sentry/` and `src/test/roadmap/RiskRegisterManager.outcome.test.ts`, `FailSafe/extension/package.json`, `README.md`, `FailSafe/extension/README.md`, `qor/references/glossary.md`, `docs/ARCHITECTURE_PLAN.md`, `docs/FEATURE_INDEX.md`, `CHANGELOG.md`, `FailSafe/extension/CHANGELOG.md`
+
+**Content Hash**: `9de8d8779e2fdf13521b19567f768be57bd4ed33114e92a0e97545e6d6c76017`
+**Previous Hash**: `147659cd23f93b3c543023bf84c07d9532fb1ff411c5b6a9ca7a39232c88b8ed`
+**Chain Hash (Merkle seal)**: `2c7aa9f521eb4fc4b037efe441f5f51fd7d0fa4e1695265d68ab362c97ec5f18`
+
+**Decision**: Phase 1 (additive, existing suites green): RiskRegisterManager.upsertRiskWith (one synchronous read-build-compare-write, key-sorted comparison with dotted ignore paths, no rewrite when unchanged) and upsertRisk returning the outcome; sentry-transport.ts (base refusal incl. credentials and out-of-base paths, case-insensitive headers, Reset / Retry-After / 1-2-4 s backoff with 60 s cap, 4-request bound, Remaining: 0 throttle, cancellation, makeHttpsGet request seam, realTimePolicy); client re-exports the transport. Phase 2: sentry-client.ts organization endpoint with sort=date, limit=100, environment parameter, normalized subpath-keeping base, org slug check, fetchSentryIssues + fetchIssuePage, nextCursor; sentry-releases.ts (cap, list order, stop on rate limit / cancel / 3 failures, strict detail parse, exact-shape carry-forward); sentry-import.ts (collect, dedupe, lookups, write-time merge preserving operator fields and status, outcome counters); sentry-report.ts (ordered level precedence over unique writes); sentry-settings.ts; sentry-to-risk.ts drops readRelease, readSuspectCommit, sentryIssuesToRisks and parseIssuesResponse (no consumer left), adds shortId; sentry-command.ts cancellable progress and level-routed message. Phase 3: package.json query and maxReleaseLookups settings, environment and apiBaseUrl descriptions corrected; Sentry README rewritten; both README rows retitled from 'regression correlation' (a declared non-goal) to 'regression import'; glossary term; ARCHITECTURE_PLAN contract section; FX829/FX915 MODIFIED, FX953/FX954 NEW (766/716); CHANGELOG in both changelogs. Audit advisories applied: rate-limited/cancelled lookup counted notAttempted; zero-unique text names skips and a custom query; list-item lastRelease ignored (tested); base normalized once in prepare; upsertRisk passes String(risk.id); transport owns SentryGetFn; a carry decision on a throwing write counts failed; HTTP-date Retry-After falls back to backoff (tested); fake destroy emits error. Deviations, disclosed: new test files RiskRegisterManager.outcome.test.ts (keyed.test.ts already 305 lines, over the razor), sentry-releases.test.ts and sentry-fixtures.ts (sentry-import.test.ts would exceed 250 lines; FX954 cites both paths); README rows and ARCHITECTURE_PLAN outside the plan's Phase 3 list; parseIssuesResponse removed as dead code. Verification: tests written first and red at compile; plain mocha 103 passing across Sentry, store, SARIF and mediator suites; full vscode-test 4246 passing / 17 pending / 1 failing (FX930, pre-existing #508), census 470/470, new suites executed in the extension host; test:node 353/355 (2 pre-existing FX946); eslint clean; runner-coverage PASS. Mutation: 17 guards, first run killed 16 and the survivor (extra-key carry check) exposed a missing case that was added; rerun after refinements killed all 17. Razor: largest source file 191 lines; function scanner verified against a known-long block. Next: /qor-substantiate.
+
+---
+
+### Entry #637: SESSION SEAL - plan-478-sentry-import-completion
+
+**Timestamp**: 2026-10-15T01:39:02Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-15T0038-5b1f28`
+**Entry ID**: `d945c6ddb212`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Plan**: `plan-478-sentry-import-completion.md` (audit #635, implement #636)
+
+**Content Hash**: `7aedfa676468675f3dafa5402814632a4e495a458f08c7feebef80cc4913ebf5`
+**Previous Hash**: `2c7aa9f521eb4fc4b037efe441f5f51fd7d0fa4e1695265d68ab362c97ec5f18`
+**Chain Hash (Merkle seal)**: `30428862126e8725560b22bc23ad99cf468537491271162139965f8ce41e6ab8`
+
+**Decision**: Reality = Promise for plan-478-sentry-import-completion (iteration 4, sha256 prefix 9f527c38c2d4117e): all three phases implemented. Unplanned, documented: src/test/roadmap/RiskRegisterManager.outcome.test.ts (keyed.test.ts already 305 lines), src/test/integrations/sentry/sentry-releases.test.ts and sentry-fixtures.ts (keeps sentry-import.test.ts under 250 lines; FX954 cites both paths), README.md and FailSafe/extension/README.md rows retitled from 'regression correlation' (a declared non-goal), docs/ARCHITECTURE_PLAN.md contract section, docs/SYSTEM_STATE.md, docs/GOVERNANCE_INDEX.md; parseIssuesResponse removed as dead code. Verification: full vscode-test (VS Code 1.122.1 pinned) 4246 passing / 17 pending / 1 failing (FX930 WorkspaceArtifactBuilder, pre-existing CRLF ledger parse, #508), census 470/470, the five new suites executed in the extension host; plain mocha 103 passing (Sentry, store, SARIF, mediator); test:node 353/355 (2 FX946 failures reproduced on base e82f69aa); system-state-currency 4/4; eslint clean; runner-coverage PASS. Tests were written first and red at compile. Mutation: 17 guards; the first run left the extra-key carry check alive, a case was added, and the rerun after the simplification pass killed all 17. Gates: intent_lock VERIFIED (the lock recorded the worktree report by basename, so verify was run against a temporary byte-identical copy at that path, removed afterwards; plan 9f527c38, audit 19b09b53 and HEAD e82f69aa also matched by hand); verdict_reconcile 0 findings after the staging report was reduced to the governing iteration-4 verdict (prior iterations archived); skill_admission ADMITTED; gate_skill_matrix 0 broken; secret_scanner 0 findings over 30 staged files with canary rc 1; procedural_fidelity 0 findings; dod_check rc 0; merge_velocity healthy; skill_size_budget WARN only (qor-substantiate 37.0 KB); data_api_acl disclosed SKIP with gate_skipped_prerequisite_absent emitted and closed at emission; install_drift OK; doc_integrity strict OK (gitignored 'Vacuous pass' home brief supplied locally); governance-index --enforce rc 0 with a hand-prepended Last Reviewed line; doc currency 0 warnings; feature_index_verify rc 0 (759 verified+n/a; 7 other-status rows make the 766 header); surface lint WARN-only (FX922, pre-existing); seal_entry_check and gate_chain_completeness inapplicable/vacuous here as at #616/#631, so entry links and the four session artifacts are verified directly. Disclosures: governance-health DAMAGED META_LEDGER (pre-existing) under the standing operator override, gate_override e68bfe25; research phase overridden (a9ebbc4c) with the docs.sentry.io contract re-verified inline; #517 (RiskManager rewrites risks.json from a stale in-memory copy, erasing records any RiskRegisterManager writer stored since activation) found in review, reproduced and filed, out of scope and disclosed in the README, plan and limitations; live Sentry acceptance pending (no credentials); no statsPeriod sent and no documented default window; no version bump (hotfix toward the next patch, operator-gated); seal commit carries no attribution trailer per operator rule. Feature Inventory: Total: 766 / verified: 716 / unverified: 0 / n/a: 43; FX829/FX915 MODIFIED, FX953/FX954 NEW; newly unverified: none. **SSDF Practices**: PS.2.1, RV.2.1
+
+---
+
+### Entry #638: GATE TRIBUNAL - plan-v607-rc1 (iteration 1) - VETO
+
+**Timestamp**: 2026-10-15T02:44:25Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T0230-8e09f0`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: standing operator per-cycle override (runtime program, 2026-10-13), gate_override `03bb4e3c`
+**Append Note**: held and appended after the RC integration merges so it chains from the integrated tail (#637), not as a fifth sibling of #616
+
+**Content Hash**: `3c4572318d2d711337a9954f39e3693c8abf55e1379c7f7bfed0f9e7d1fe1f8d`
+**Previous Hash**: `30428862126e8725560b22bc23ad99cf468537491271162139965f8ce41e6ab8`
+**Chain Hash (Merkle seal)**: `3fd9983ee7c2f9d44b9f361deef5a375ce92fc4ebe906347e03397fcb2a7bc4c`
+
+**Decision**: VETO on plan-v607-rc1.md iteration 1. Option B mandatory (L3: approval path, release secrets, process isolation, ledger fork guard); a fresh-context architect-reviewer (Read/Grep/Glob) returned VETO and the Judge re-verified the load-bearing findings directly. V1 security-l3: the LD9 L3 modal content and scope were undefined (opaque id rubber stamp, batch snapshot not pinned across the modal, request conditions unvalidated, production confirmer wiring untested, no in-flight limit). V2 security-l3: sibling loopback-only operator-decision routes (/api/actions/bicameral-ratify writes a USER_OVERRIDE ledger entry, /api/hooks/toggle, /api/actions/rollback) unaddressed. V3 owasp-violation: LD5 defeatable by env -i + setsid + early parent exit; D1 and limitations overclaimed; group kill lacks an identity check. V4 owasp-violation: Windows bare-name spawn searches the worktree cwd first. V5 test-failure: named tests that cannot fail pre-fix; case-sensitive Blocked check; one of four blockade call sites covered. V6 coverage-gap: prepush-validate.ps1 and vsix-proprietary-guardrails still package universal VSIXs; package/publish npm scripts. V7 infrastructure-mismatch: partial publish not resumable. V8 owasp-violation: unpinned npx vsce/ovsx in secret-holding steps. V9 specification-drift: PR-branch pushes, seal coverage of new heads, ledger numbering unspecified. V10 specification-drift: an agent-written Reconciled Entries line clears FX932 regardless of pending prose. V11 specification-drift: disclosure list and save-blocking wording incomplete; risk D1 contradicts its limitation. V12 specification-drift: hotfix class disables the E2E gate on a Console flow change; inventory touches incomplete. Next: Governor amends plan, re-run /qor-audit.
+
+---
+
+### Entry #639: GATE TRIBUNAL - plan-v607-rc1 (iteration 2) - VETO
+
+**Timestamp**: 2026-10-15T03:01:49Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T0230-8e09f0`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: standing operator per-cycle override, gate_override `03bb4e3c`
+
+**Content Hash**: `3ab6f0833de1a9f56a3b4186bcf522cb9b872cd4b49c875a6a2f30898290e591`
+**Previous Hash**: `3fd9983ee7c2f9d44b9f361deef5a375ce92fc4ebe906347e03397fcb2a7bc4c`
+**Chain Hash (Merkle seal)**: `8978b6fda7ed530c7e0a81712690e59ffdae025b61115f90d1c8c00af7829d94`
+
+**Decision**: VETO on plan-v607-rc1.md iteration 2. Fresh Option B architect-reviewer; iteration-1 V5-V12 resolved. V1 security-l3: LD9 claimed every operator-decision route was gated, but panic-stop (stops the Sentinel) and the bicameral MCP tool routes (update/reset/resolveCompliance) were neither gated nor scoped out. V2 security-l3: the ratify dialog content was undefined (no server-side decision lookup exists) and the request-body rationale was ledgered as a USER_OVERRIDE by vscode-user without being shown. V3 owasp-violation: the identity-gated process-group kill never fires after the root is reaped, a regression against 8687a5ee, and the POSIX escape conditions were overclaimed. V4 coverage-gap: the production confirmer wiring (bootstrapServers -> ConsoleServer -> ConsoleRouteHost -> lazy deps) was never exercised. Next: Governor amends plan, re-run /qor-audit.
+
+---
+
+### Entry #640: GATE TRIBUNAL - plan-v607-rc1 (iteration 3) - VETO
+
+**Timestamp**: 2026-10-15T03:10:58Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T0230-8e09f0`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: standing operator per-cycle override, gate_override `03bb4e3c`; cycle_count_escalator consecutive=None session_total=None
+
+**Content Hash**: `fd9e7e94330e2c83897770a96abba83bf997ad99e609f27c3d79cd7a910155ba`
+**Previous Hash**: `8978b6fda7ed530c7e0a81712690e59ffdae025b61115f90d1c8c00af7829d94`
+**Chain Hash (Merkle seal)**: `5f0ce6490fc210eb528b8755e3e02ea6a882b09049b4320f4c9838da83bb9fbe`
+
+**Decision**: VETO on plan-v607-rc1.md iteration 3. Fresh Option B architect-reviewer; iteration-2 V1 and V4 resolved, V2 resolved for ratify only, V3 rule corrected but untested. V1 security-l3: the requested L3 decision verb (ActionsRoute.ts:151) and the rollback reason (CheckpointRoute.ts:53) are recorded under the operator's identity without appearing in the confirmation dialog; combined with the busy rule a local requester's approve can be confirmed by an operator who meant reject. V2 specification-drift: connection.js postAction is not the single client path (settings.js:119 and bicameral-renderer.js:186 use raw fetch; SettingsRenderer has no client), so the banner design and the spec need unlisted files and invented error rendering. V3 coverage-gap: no test fails if the post-reap process-group kill regresses, and one listed negative test contradicts the group-membership rule. Next: Governor amends plan, re-run /qor-audit.
+
+---
+
+### Entry #641: GATE TRIBUNAL - plan-v607-rc1 (iteration 4) - VETO
+
+**Timestamp**: 2026-10-15T03:20:23Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T0230-8e09f0`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: standing operator per-cycle override, gate_override `03bb4e3c`; cycle_count_escalator not fired
+
+**Content Hash**: `6b5669c64d26eff9744dfe99c55d5e0112a77efe7df2b54a1bd7da6afb96e264`
+**Previous Hash**: `5f0ce6490fc210eb528b8755e3e02ea6a882b09049b4320f4c9838da83bb9fbe`
+**Chain Hash (Merkle seal)**: `4d02946e3b7aa870c5b921a8d80db49cfaa8055ffac0cd2614c72e224035206f`
+
+**Decision**: VETO on plan-v607-rc1.md iteration 4. Fresh Option B architect-reviewer; iteration-3 V1-V3 resolved (requested verb and rollback reason shown and recorded as shown; all four client call paths listed; post-reap group kill covered by a failing-capable test). V1 test-failure: governance-l3-open-design.test.ts (fake client lacks postGated) and integrations-bicameral.spec.ts (serveConsoleServerUI never wires a confirmer, so ratify answers 503) break under Phase 4 and were not in Affected Files. V2 test-failure: the LD10 required log text could not match the named test's regex, and unreworded router strings (remediation at GovernanceRouter.ts:125/:232, notifier log at :355) would fail its /block/i assertion. Next: Governor amends plan, re-run /qor-audit.
+
+---
+
+### Entry #642: GATE TRIBUNAL - plan-v607-rc1 (iteration 5) - PASS
+
+**Timestamp**: 2026-10-15T03:31:35Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T0230-8e09f0`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Plan SHA256**: `7404a71554eb313f45c8c1649617311a19f49f31988284564e42cd634791a8ce`
+**Preflight**: standing operator per-cycle override, gate_override `03bb4e3c`
+
+**Content Hash**: `146f4262d65255be7eaa322ce629ca02cd3129fcec73d1ace07e71b141fee8cd`
+**Previous Hash**: `4d02946e3b7aa870c5b921a8d80db49cfaa8055ffac0cd2614c72e224035206f`
+**Chain Hash (Merkle seal)**: `93cf311b9553a1297e6d19660866b7173e0dedf0961025444f8f0acf5caa7976`
+
+**Decision**: PASS on plan-v607-rc1.md iteration 5 (gate plan-iter6.json; plan-iter5.json superseded by a plan_grep_lint citation fix to the same text). Fresh Option B architect-reviewer, full re-walk: iteration-4 V1 (tests and harness broken by the gated client path) and V2 (LD10 wording vs its regex) closed; every test touching the six gated endpoints accounted for; new tests fail on current code where claimed. Eleven advisories carried to implementation: checkpoint-route test rewrites; D1 and CHANGELOG say ratify shows requester-supplied values; ratify decisionId changed by sanitizing is rejected; Approve All sends a body; pending banner only for gated requests; empty batch needs no dialog; FX951 cites agent-cli.test.ts; README What's New v6.0.7 and FX vertical values; rehearsal pins mirror release.yml; validate-release-version feature-vs-PATCH noted for the owner; a residual Semgrep finding is surfaced, never suppressed. Next: /qor-implement.
+
+---
+
+### Entry #643: IMPLEMENTATION - plan-v607-rc1
+
+**Timestamp**: 2026-10-15T04:55:02Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-15T0230-8e09f0`
+**Risk Grade**: L3
+**RC Head**: `de52a855`
+
+**Content Hash**: `30ed7b33a468a9dffba3ac9beb588da6ea2ba0cd585a402d884849b2cdf53255`
+**Previous Hash**: `93cf311b9553a1297e6d19660866b7173e0dedf0961025444f8f0acf5caa7976`
+**Chain Hash (Merkle seal)**: `9af45af6ceb729681c3f4b6a31893e374bdcadf32231351623fa0b8b75f444ac`
+
+**Decision**: IMPLEMENTATION of plan-v607-rc1.md (audit PASS #642). Phase 1 on fix/502-native-vsix-gate 6c74e845: package-all-targets.cjs (8-target set, SHA256SUMS, targets.json, no manifest on failure), smoke-packaged-sqlite.cjs (dependency-free zip reader, file-backed round trip), package-target.cjs --host, release.yml publishing the targeted set behind environment: production with pinned @vscode/vsce@3.9.2 and ovsx@1.2.0 and --skip-duplicate, native-vsix-qualification.yml rehearsal, Node 22 in five workflows, guardrails and pre-push package a target; 7 tests, 4 mutants killed. Phase 2 on fix/475-isolated-agent-runs c7d02d68 (Option-B-reviewed subagent, re-verified): POSIX tracker by run marker, parent and process group with identity checks and zombie exclusion, group kill surviving root reap; resolveAgentExecutable with workspace exclusion and literal-branch runner (Semgrep detect-child-process cleared without suppression); 103 agent-cli tests on Windows, Linux live cases green in CI; 15 mutants killed. Phase 3 on fix/472-durable-nonce 6009a452: cleanup timer cannot throw, recovery message, 3-attempt rename retry; 4 tests, 3 mutants killed. Phase 4 on release/v6.0.7-rc1: merges #515 #486 #498 #500 #511(6bf9b19f) #519 #513 #512 #516 #518 plus #514 operator confirmation b5a689f4 (29 files; 13 mutants killed; 205 Playwright), deleteRisk refresh 5344af7e (2 tests red at f05784ba), escalation and docs wording 2394acbd (ESCALATE red; old prefix mutant fails 5), LD13 re-chain acbd778d, v6.0.7 metadata aaaeff27, gate entries 2b653fb6, SYSTEM_STATE de52a855. Re-chain old -> new Chain Hash prefixes: #622 ecd73219->b357ed08, #623 48faa781->4b20c794, #624 a5efbf9c->0824031e, #625 5514ec3e->6600a800, #626 07bcf5e4->248452db, #627 804ae5f2->40f482d7, #628 8d8e28f7->4980a0e9, #629 f6af74a2->790c5036, #630 1d33579d->d27936dd, #631 39c86332->c311a621, #632 dabe2859->34857879, #633 66b62abb->5868c386, #634 88d9a5bf->0fb94409, #635 331547aa->147659cd, #636 8c8eafa3->2c7aa9f5, #637 fd1e2fee->30428862; #617-#621 unchanged; content hashes unchanged; FX932 passes. Deviations: LD10 adopts the #511 lane's 'write not prevented' wording (pushed after plan PASS) instead of the plan's literal text, test asserts /not prevented/i; #511 integrated at 6bf9b19f not d220b1ca; LD9 rollback dialog shows checkpointType or phase/status (no type field exists), ratify dialog runs before the interceptor, Operations Approve All rebound (it called an undefined client), banner auto-hides, postGated expectConfirmation; resolver also rejects a workspace-real-path symlink; plan-iter5.json and implement-iter1.json superseded.
+
+---
+
+### Entry #644: SESSION SEAL - plan-v607-rc1
+
+**Timestamp**: 2026-10-15T04:55:32Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-15T0230-8e09f0`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Plan**: `plan-v607-rc1.md` (audit #642, implement #643)
+
+**Content Hash**: `3919e153cf0cd04831236412d5ae13960cb81bf1513017e3e6f9a6a6bbc86416`
+**Previous Hash**: `9af45af6ceb729681c3f4b6a31893e374bdcadf32231351623fa0b8b75f444ac`
+**Chain Hash (Merkle seal)**: `5663eea1488b3b192dd0705e3f72bd91f9cbb882c22cf055c64bc1d0a9fc27f2`
+
+**Decision**: Reality = Promise for plan-v607-rc1 (v6.0.7 release candidate 1) on release/v6.0.7-rc1, draft PR #520, built from 2b653fb6 (later commits are governance documents only, not packaged). Verification, Windows 10 x64, Node 22.22.3: lint 0 errors; vscode-test (pinned 1.122.1) 4403 passing / 0 failing / 19 pending, census 477/477 on rerun (the first full run lost its extension host, exit code 0, after 4209 passing; not reproduced in a targeted run or the full rerun; Linux CI completed the suite: disclosed as an unexplained intermittent Windows host exit); test:node 369/371 (2 = FX946 ledgerAnchor, Windows-only baseline, same on main; pass in Linux CI); Playwright 205 passed / 4 skipped; release-gate --preflight 9/9; validate-docs-coherence PASS; FX932 fork guard PASS; FEATURE_INDEX header test 33/33; secret_scanner 0 findings over 131 changed files; plan_grep_lint 54/54. CI on the RC: CodeQL, OSS SAST (Semgrep), standards, guardrails, cross-platform compile, Dependency Review all pass; test:all failed only FX938 (SYSTEM_STATE still v6.0.6 after the bump), fixed in de52a855 (4/4) and to be re-run on the final head. #516 alone: test:all 4279 passing incl. the Linux live tracker cases, OSS SAST pass; #512 and #500 fully green. Rehearsal native-vsix-qualification run 38681458519 at 2b653fb6: release-path packaging of all 8 targets validated; packaged binary SQLite round trip PASS on linux-x64, linux-arm64, alpine-x64 (node:22-alpine), win32-x64, win32-arm64, darwin-x64 (macos-15-intel), darwin-arm64, all Node 22 N-API 10; pinned vsce 3.9.2 and ovsx 1.2.0 resolve; nothing published. Local artifacts mythologiq-failsafe-6.0.7-<target>.vsix sha256 prefixes: win32-x64 15a0eff5, win32-arm64 39a96fea, linux-x64 1823be53, linux-arm64 2d7cafa1, alpine-x64 f79bb159, alpine-arm64 798dd6ee, darwin-x64 695b5eff, darwin-arm64 5cb9b96f; each carries exactly its own prebuild; packaged win32-x64 binary loads in Node 22.22.3 and in VS Code 1.141.1 Electron 43.7.7. Isolated VS Code 1.141.1 profile (disposable build, win32VersionedUpdate removed because the operator's parked updater holds the vscode-updating mutex; operator install untouched): published v6.0.6 (sha256 4a91e2da) runs Ledger and ShadowGenome in stub mode with no database; upgrade to RC win32-x64 activates with no stub mode and creates soa_ledger.db, shadow_genome.db, sentinel-rag.db (integrity ok); rows persist across graceful restart and a forced kill of all 11 processes (checkpoints 1->6 across runs); live Console check: POST /api/hooks/toggle {enabled:false} held pending by the modal, a concurrent POST answered 429 busy, closing VS Code answered 409 declined, hook sentinel unchanged; rollback to v6.0.6 activates and leaves the databases unchanged; re-upgrade resumes them. Disclosures: standing per-cycle DAMAGED-ledger override applied to this RC cycle as the delivery of the runtime program (gate_override 03bb4e3c), operator to confirm that scope; LD13 re-chained #622-#637 (owner review requested); four VETOs before PASS; deviations listed in #643; live provider credentials unavailable (Sentry, Jira, Linear, OpenHands, Aider, Continue unverified live); FEATURE_INDEX uses an undeclared 'platform' vertical (264 rows) versus docs/roadmap/tracker-config.yaml - drift surfaced, not reconciled; Socket badge left at its stale universal pin. Not merged, not tagged, not published. **SSDF Practices**: PS.2.1, PW.7.2, PW.8.2, RV.2.1
+
+---
+
+### Entry #645: GATE TRIBUNAL - plan-v607-acceptance (iteration 1) - VETO
+
+**Timestamp**: 2026-10-15T13:20:13Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1307-afb616`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: owner-approved damaged-ledger override within the v6.0.7 remediation cycle, gate_override `2838180e`
+
+**Content Hash**: `fc3df540285b304fe5a55fb70a9804bb7630bae8306bf17fa942242b33398096`
+**Previous Hash**: `5663eea1488b3b192dd0705e3f72bd91f9cbb882c22cf055c64bc1d0a9fc27f2`
+**Chain Hash (Merkle seal)**: `77b25048d7c78b376f4b4a686c2f409089646108dab0d82d4f37712805e83c99`
+
+**Decision**: VETO on plan-v607-acceptance.md iteration 1 (v6.0.7 final acceptance: #482 credentials, RC gaps, requalification). Fresh Option B architect-reviewer; reader inventory, migration ordering, CSP red claim and ledger claims confirmed. V1 specification-drift: a folder credential scope conflicts with the window scope of the credential settings (VS Code ignores folder values and rejects WorkspaceFolder writes) and no consumer has a folder argument. V2 security-l3: migration would overwrite a newer secret set with failsafe.credentials.set while the plain-text copy remained. V3 infrastructure-mismatch: ISecretStore exposes no change event, so cross-window revocation was unspecified. V4 coverage-gap: only one consumer and no redaction path had a falsifier. V5 test-failure: the RiskManager red claim did not exercise a torn write. Advisories: ledgerAnchor.test fails wherever qor-logic is installed (dirty ledger), workspace trust, activation ordering, Settings Sync, re-read before clear, synchronous atomic write, plain-text documentation, governed-commit behaviour, Linux basic-store fallback, preflight re-export. Next: Governor amends plan.
+
+---
+
+### Entry #646: GATE TRIBUNAL - plan-v607-acceptance (iteration 2) - VETO
+
+**Timestamp**: 2026-10-15T13:28:46Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1307-afb616`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: owner-approved damaged-ledger override within the v6.0.7 remediation cycle, gate_override `2838180e`
+
+**Content Hash**: `ced04a8b5269e33f1e5153ff61d623ecb647faa37643894117511e192917c4e5`
+**Previous Hash**: `77b25048d7c78b376f4b4a686c2f409089646108dab0d82d4f37712805e83c99`
+**Chain Hash (Merkle seal)**: `7df81f9fee1a473b0b9c2d13ef57651721b4e90cabd807d3c807d5f4dd24bb61`
+
+**Decision**: VETO on plan-v607-acceptance.md iteration 2. Fresh Option B architect-reviewer; iteration-1 V1, V3 and V5 resolved (two window-scoped credential scopes, optional ISecretStore change event, torn-write falsifier reaches both writers through the live fs binding). V1 coverage-gap: the endpoint-trust rule and the Sentry and snapshot reads were tested only at helper level and the source-scan red count was misstated (11 reads, not eight). V2 specification-drift: a stale plain-text copy, possibly the operator's newly rotated credential, was included in the generic bulk removal. Advisories: verify clears by re-inspection, avoid single-folder double counting, init timeout, pin the temp-write mechanism, Sentinel deletion events, name workspace-sourced values, snapshot honours the endpoint rule, notifier enabled check, vscode-free import for agent-cli, documentation files, keep FX172 test evidence, explicit Playwright red method, restore test settings, untitled workspace identity. Next: Governor amends plan.
+
+---
+
+### Entry #647: GATE TRIBUNAL - plan-v607-acceptance (iteration 3) - VETO
+
+**Timestamp**: 2026-10-15T13:45:44Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1307-afb616`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: owner-approved damaged-ledger override within the v6.0.7 remediation cycle, gate_override `2838180e`
+
+**Content Hash**: `7ce26d6efaad7221171ec7c04d1f3991bbc9a69e218f87d381263b1734997c05`
+**Previous Hash**: `7df81f9fee1a473b0b9c2d13ef57651721b4e90cabd807d3c807d5f4dd24bb61`
+**Chain Hash (Merkle seal)**: `0bed6aa6f6c945f3885ef895f8ce6cf25adbf263f22b09280a5aeff34fd0eb67`
+
+**Decision**: VETO on plan-v607-acceptance.md iteration 3. Fresh Option B architect-reviewer; iteration-2 V2 resolved (stale copies get their own three-answer modal, never in the bulk removal) and V1 partly resolved (consumer-level endpoint tests, corrected 11-read scan). V1 coverage-gap remains: (a) the catalog snapshot's dynamic cfg.get(key) loop at bootstrapServers.ts:180-181 was tested only through a new pure helper, so the old plain-text loop could stay; (b) the production endpoint-scope adapter over real inspect() results had no test. Advisories: folder copies may be unreachable and are not removable, precedence of a workspace plain-text copy over a user secret, Continue's optional key, sentry.test signature, homes of providerConnection and buildCredentialSnapshot, notifier and modal-text tests, endpoint-unset case, injected init timeout, governance documents in Affected Files, a termination run on the final head. Next: Governor amends plan.
+
+---
+
+### Entry #648: GATE TRIBUNAL - plan-v607-acceptance (iteration 4) - PASS
+
+**Timestamp**: 2026-10-15T13:53:56Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1307-afb616`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Plan SHA256**: `651c2163f47e7da86e42b9cdab2e78eb91399484ba24f7f6370e48d62f1b1637`
+**Preflight**: owner-approved damaged-ledger override within the v6.0.7 remediation cycle, gate_override `2838180e`
+
+**Content Hash**: `8d9676ca5f9f259c4694cad05d29af2d591b3e88ced7e9354998c7d4397a5dc3`
+**Previous Hash**: `0bed6aa6f6c945f3885ef895f8ce6cf25adbf263f22b09280a5aeff34fd0eb67`
+**Chain Hash (Merkle seal)**: `37232bddf251e059cfe2b140c69229c7551a27f6d6eec720be6493168d11a194`
+
+**Decision**: PASS on plan-v607-acceptance.md iteration 4. Fresh Option B architect-reviewer: iteration-3 V1 resolved (the bootstrapServers catalog loop is now covered by a failing-capable source-scan rule plus a behavioural helper test; the real vscodeCredentialAdapters endpoint reader is exercised in the extension host). Fourteen advisories carried to implementation: split the credential module, packaged README text, Escape on the stale modal, named seams for the governed-commit PR step and Continue, scan accepts notifierConfig and widens to bare credential keys, failure text home, snapshot precedence and optional Continue key, workspace re-keying, r+ fsync handle on Windows, termination recorded not gating, #482 comment only, minor items, Linux basic-store limitation. Next: /qor-implement.
+
+---
+
+### Entry #649: IMPLEMENTATION - plan-v607-acceptance
+
+**Timestamp**: 2026-10-15T15:10:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-15T1307-afb616`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-15T1307-afb616/implement-iter1.json`
+
+**Content Hash**: `06303b4097d13f63dcd9c052a3bb84285e0d405c812d584858266dc0bda54ace`
+**Previous Hash**: `37232bddf251e059cfe2b140c69229c7551a27f6d6eec720be6493168d11a194`
+**Chain Hash (Merkle seal)**: `25ab3a599e32b409657832bf4fe5f7713f682531a079424209e42add54a7e9cc`
+
+**Decision**: IMPLEMENTATION of plan-v607-acceptance.md (audit PASS #648) on release/v6.0.7-rc1: 4a1afe68 atomic risks.json writes (FX963, #517 torn-write only), fba13b38 L3 Approval Queue buttons under the panel CSP (FX964), 608a3bff integration credentials in Secure Storage with consented verified migration, endpoint trust and redaction (FX962/FX965, #482), 87358b55 documentation. Red: torn-write tests failed before wiring; CSP spec failed against the extracted-unchanged markup; the credential source scan reports 20 violations on 1fe80c8d and none after. Mutations of the retry set, temp cleanup, stale-value check, re-read before removal, re-inspect after removal, restore on failed write, precedence refusal and endpoint refusal each fail tests. Local Windows 10 x64: vscode-test 1.122.1 4459 passing 0 failing 19 pending, census 481/481, host exit 0; test:node 369/371 with the 2 FX946 ledgerAnchor baseline failures (post-anchor DIRTY, #467); Playwright 208 passed 4 skipped. Eight platform VSIXs packaged and independently inspected; win32-x64 binary loads in Node 22 and VS Code 1.141.1 and 1.122.1 Electron. Isolated 1.141.1 lifecycle with the home directory isolated: 6.0.6 stub mode, upgrade, restart, forced kill, rollback without data loss, re-upgrade. Live credential check through the installed package and the real Secure Storage passed. npm audit: braces GHSA-vfj7-8cjw-p6xm via chokidar 3, pre-existing, unpatched, unreachable (constant patterns), disclosed. Damaged-ledger override in force for this cycle per the owner's 2026-10-15 ruling.
+
+---
+
+### Entry #650: SESSION SEAL - plan-v607-acceptance
+
+**Timestamp**: 2026-10-15T15:20:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-15T1307-afb616`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-15T1307-afb616/substantiate-iter1.json`
+
+**Content Hash**: `986157933d67af79d261fa5558d96b2957f99090b3e69e15bcce12a4a49b49f8`
+**Previous Hash**: `25ab3a599e32b409657832bf4fe5f7713f682531a079424209e42add54a7e9cc`
+**Chain Hash (Merkle seal)**: `3f93ed0de3987297bd2b893188f44338cb8b9ba9c6252638570e4c43e60cb7a9`
+
+**Decision**: SESSION SEAL for plan-v607-acceptance.md (implementation #649). Reality = Promise, with disclosures. Delivered on release/v6.0.7-rc1 at 4a1afe68 fba13b38 608a3bff 87358b55 plus this seal commit: integration credentials in VS Code Secure Storage with consented, read-back-verified migration and no plain-text fallback (#482, FX962/FX965); endpoint trust for GitHub, Sentry and Jira; redaction of provider errors; atomic risks.json writes (FX963); L3 Approval Queue buttons under the panel CSP (FX964). Requalification evidence is in the implement gate. Ledger: #617-#649 verified as one linear chain by the independent Node verifier; FX932 fork guard clean. Override disposition (LD11): the META_LEDGER is DAMAGED under qor-logic 0.176.1 (#341 markup, #382 linkage, the duplicate band at or below #236), so qor-logic preflight blocks new plans. The owner approved a damaged-ledger recovery override for the v6.0.7 remediation cycle on 2026-10-15 and extended it, disclosed per cycle, to the Wave 0/1 lane cycles of #521. It covered RC1 (#638-#644) and this acceptance cycle (#645-#650). Evidence was preserved by appending only, verifying every new band independently, and keeping HMAC gate artifacts for each phase. The damage is NOT resolved: check-ledger-anchor reports post-anchor DIRTY at #341/#382, native verify fails only at or below #382, and ledgerAnchor.test.cjs fails wherever qor-logic is installed and is skipped in CI. check-ledger-anchor is not wired to CI. Normal governance is NOT restored; #467 stays P0, blocked on an owner risk-acceptance decision. The override ends for v6.0.7 with this seal and for the lanes when #467 resolves. Open after this seal: the #517 cross-process lost update (Lane D), #473 (Lane B), #476 (Lane C), #506, #507, live provider validation, braces GHSA-vfj7-8cjw-p6xm (unreachable, unpatched upstream). Not merged, not tagged, not published.
+
+---
+
+### Entry #651: GATE TRIBUNAL - plan-v607-release-assets (iteration 1) - VETO
+
+**Timestamp**: 2026-10-15T15:40:36Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1535-bea836`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: owner accepted the bounded damaged-ledger recovery override for the v6.0.7 RC (2026-10-15)
+
+**Content Hash**: `5b5fe74814d0a936516c18e9a01c6e4c0355eff4e673838570714b551a94be17`
+**Previous Hash**: `3f93ed0de3987297bd2b893188f44338cb8b9ba9c6252638570e4c43e60cb7a9`
+**Chain Hash (Merkle seal)**: `cc88d43ab18725798200825e4895b9103441b3973290275a14f60d269eacda33`
+
+**Decision**: VETO on plan-v607-release-assets.md iteration 1 (sha256 35df6a29). Fresh Option B architect-reviewer; one built set, draft first, upload only missing, never clobber and order after both marketplaces confirmed sound; ten citations match ba353468. B1: the tag lookup endpoint excludes drafts, so a rerun would create a second draft; no concurrency group. B2: a hand-made public release missing files would be filled in while public. B3: actions/checkout forces the local tag to GITHUB_SHA, so a local tag-commit check always passes; untested. B4: re-running all jobs rebuilds the set and can split release and marketplace bytes or mix marketplace sets. B5: the stateful release sequence has no failing test. Ten advisories. Next: amend plan.
+
+---
+
+### Entry #652: GATE TRIBUNAL - plan-v607-release-assets (iteration 2) - VETO
+
+**Timestamp**: 2026-10-15T15:47:14Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1535-bea836`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: owner accepted the bounded damaged-ledger recovery override for the v6.0.7 RC (2026-10-15)
+
+**Content Hash**: `6ee0d1c4a15fbfea2f2249c9615791c681461385d1718f55f813b3b284266756`
+**Previous Hash**: `cc88d43ab18725798200825e4895b9103441b3973290275a14f60d269eacda33`
+**Chain Hash (Merkle seal)**: `64986c763ed98ee8b6be0ed14d0d2d145ddd8b67f887055af7832bc20f5c1ce5`
+
+**Decision**: VETO on plan-v607-release-assets.md iteration 2 (sha256 68e7b9fc). Fresh Option B architect-reviewer; iteration-1 B1, B2, B3 and B5 resolved; the marketplace parity gate is sound. V1: the one-set guard treats a marketplace 404 as absence, which is wrong during propagation, and runs only on re-run attempts, so a new run for the same tag skips it; mixed marketplace sets remain possible. V2: the stated recovery after Re-run all jobs loops and strands the GitHub Release; artifact retention unstated. Seven advisories (gh argument contract test, poll details, FEATURE_INDEX test paths, Identity-element parsing, persist-credentials on the release job, rehearsal coverage statement, starter asset on a published release). Next: amend plan.
+
+---
+
+### Entry #653: GATE TRIBUNAL - plan-v607-release-assets (iteration 3) - VETO
+
+**Timestamp**: 2026-10-15T15:52:15Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1535-bea836`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: owner accepted the bounded damaged-ledger recovery override for the v6.0.7 RC (2026-10-15)
+
+**Content Hash**: `975275c350c602e6bce2a4b92d5526c8215ccddd16e609d317fc6c0243145c54`
+**Previous Hash**: `64986c763ed98ee8b6be0ed14d0d2d145ddd8b67f887055af7832bc20f5c1ce5`
+**Chain Hash (Merkle seal)**: `f37a22ef7ad43ea85a448a88c60360311fc6ec087f6df868a2832ccdfcb82f1b`
+
+**Decision**: VETO on plan-v607-release-assets.md iteration 3 (sha256 6df6b65e). Fresh Option B architect-reviewer; iteration-2 V1 and V2 resolved on paper; citations match. B1: the build job has no actions read permission, so the fail-closed history lookup would stop every release. B2: no workflow-level concurrency, so a second run for the tag can build while the first awaits approval, mixing marketplace sets. Also the step-started predicate wording counts skipped steps, and the manual recovery skips the marketplace parity check. Five advisories. Next: amend plan.
+
+---
+
+### Entry #654: GATE TRIBUNAL - plan-v607-release-assets (iteration 4) - VETO
+
+**Timestamp**: 2026-10-15T15:58:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1535-bea836`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: owner accepted the bounded damaged-ledger recovery override for the v6.0.7 RC (2026-10-15)
+
+**Content Hash**: `33703b0c22f2a876892f271fe0e343794ae29df2a14a42136e7731854f119622`
+**Previous Hash**: `f37a22ef7ad43ea85a448a88c60360311fc6ec087f6df868a2832ccdfcb82f1b`
+**Chain Hash (Merkle seal)**: `dbfecf07ac86ee7839d5442bd2401032880fb33fe4c78b77750622fa73c569df`
+
+**Decision**: VETO on plan-v607-release-assets.md iteration 4 (sha256 5f06a155). Fresh Option B architect-reviewer; iteration-3 B1, B2, predicate, unconditional-guard and recovery items resolved; concurrency replacement is not a hole. V1 coverage-gap: nothing proves the guard's live lookups see real data before a tag exists; an empty history list passes as no publish, and the rehearsal's branch has no release.yml runs. Fix: the history lookup must find the current run in its filtered list or stop; workflow file parameterized; rehearsal exercises the same rule on its own workflow and runs the marketplace and release lookups for the unpublished version. Seven advisories. Next: amend plan.
+
+---
+
+### Entry #655: GATE TRIBUNAL - plan-v607-release-assets (iteration 5) - VETO
+
+**Timestamp**: 2026-10-15T16:03:57Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1535-bea836`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: owner accepted the bounded damaged-ledger recovery override for the v6.0.7 RC (2026-10-15)
+
+**Content Hash**: `730109787e1de43f5b02da16f1b3175aea3491ee26d527d8121fdee319c80913`
+**Previous Hash**: `dbfecf07ac86ee7839d5442bd2401032880fb33fe4c78b77750622fa73c569df`
+**Chain Hash (Merkle seal)**: `483dd586eba7e836d358eff374acba1b9ffa1ef6fe7f9b8f661d24e85c6f2faa`
+
+**Decision**: VETO on plan-v607-release-assets.md iteration 5 (sha256 68ed2833). Fresh Option B architect-reviewer; runs-level self-presence resolved; publish-job tag check and requirements confirmed; citations match. B1 coverage-gap: the step predicate can never answer true on real data, so an empty or misparsed jobs list still passes; require step-level self-presence (the running step reported in progress through the same predicate). B2 specification-drift: LD5 contradicts the LD7 rehearsal and nothing pins the rehearsal workflow. Six advisories. Next: amend plan.
+
+---
+
+### Entry #656: GATE TRIBUNAL - plan-v607-release-assets (iteration 6) - PASS
+
+**Timestamp**: 2026-10-15T16:09:31Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1535-bea836`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: owner accepted the bounded damaged-ledger recovery override for the v6.0.7 RC (2026-10-15)
+
+**Content Hash**: `bbf1936478e387589bbd01c1234e3a99b2733e80ecf27350a904e7f9bf71d30b`
+**Previous Hash**: `483dd586eba7e836d358eff374acba1b9ffa1ef6fe7f9b8f661d24e85c6f2faa`
+**Chain Hash (Merkle seal)**: `d245dc860d42ce0e28143beb1eae9560e080e6121f5f1214fe5c8c7882c9d37d`
+
+**Decision**: PASS on plan-v607-release-assets.md iteration 6 (sha256 9679bea0). Fresh Option B architect-reviewer. Step-level self-presence resolves iteration-5 B1 with both self-presence mutations firing; LD5 and LD7 agree and the rehearsal workflow is pinned; all iteration-5 advisories applied. No path to a public partial or unverified set, replaced bytes, a release from another commit, or mixed marketplace sets; marketplace publish commands and the production gate unchanged. Eleven citations match ba353468. Ten advisories for implementation, one required (pin the guard step's literal name as its self-presence name). Next: implement.
+
+---
+
+### Entry #657: IMPLEMENTATION - plan-v607-release-assets
+
+**Timestamp**: 2026-10-15T16:40:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-15T1535-bea836`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-15T1535-bea836/implement-iter1.json`
+
+**Content Hash**: `9f2dec5b8d9a772c2f8875688ea39d2951ccf22b9f4c347bda146845d9ed0fdc`
+**Previous Hash**: `d245dc860d42ce0e28143beb1eae9560e080e6121f5f1214fe5c8c7882c9d37d`
+**Chain Hash (Merkle seal)**: `3cac71057757eaaa358f9eed8651802e4f173deb4c865d6d6bbdd6512f6e9ae4`
+
+**Decision**: IMPLEMENTATION of plan-v607-release-assets.md (audit PASS #656) on release/v6.0.7-rc1 at 873a6c32: the GitHub Release now carries the verified eight-package set and SHA256SUMS.txt from the one built vsix-targets artifact (FX974), with a read-only provenance verifier (FX975), a one-set-per-release guard that reads Actions history and requires its own run and running step, a remote tag check in both publish jobs, a draft-first, upload-missing-only, never-clobber release sequence published only when complete and byte-equal to both marketplaces, workflow-level serialization per tag, actions read on the build job, 90-day artifact retention and docs/RELEASE_RECOVERY.md. Marketplace publish commands and the production environment are unchanged. Red: the three new suites failed on missing modules; the workflow test fails 7 of 8 against the ba353468 workflows. Ten named mutations each fail tests. Local: test:node 438/440 (FX946 ledgerAnchor baseline, #467), vscode-test 4459/0/19 census 481/481, tsc 0, runner coverage, docs coherence and release-gate preflight pass, actionlint clean. CI rehearsal run 38767828923 exercised the guard's live lookups on real Actions data and the unpublished-version lookups. Measured: v6.0.6 bytes identical across the CI artifact, both marketplaces and Open VSX's sha256. Bounded damaged-ledger override in force for this RC.
+
+---
+
+### Entry #658: SESSION SEAL - plan-v607-release-assets
+
+**Timestamp**: 2026-10-15T16:45:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-15T1535-bea836`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-15T1535-bea836/substantiate-iter1.json`
+
+**Content Hash**: `93e62b7cb5ba80f4c13b9ffb98ab618b5c55325be4c0542daf89f8ab667be9e0`
+**Previous Hash**: `3cac71057757eaaa358f9eed8651802e4f173deb4c865d6d6bbdd6512f6e9ae4`
+**Chain Hash (Merkle seal)**: `9b0ec3597ce9522d4629d5556e3a5d42b658876021e00018cbd347d5cc06f61d`
+
+**Decision**: SESSION SEAL for plan-v607-release-assets.md (implementation #657). Reality = Promise, with disclosures. Delivered on release/v6.0.7-rc1 at 873a6c32 plus this seal commit: the GitHub Release carries the verified eight-package set and SHA256SUMS.txt from the one built artifact (FX974); a read-only provenance verifier (FX975); a one-set-per-release guard on Actions history with run- and step-level self-presence; remote tag checks in both publish jobs; serialized runs per tag; docs/RELEASE_RECOVERY.md. Marketplace publish commands and the production environment are unchanged. Evidence is in the implement gate, including CI rehearsal 38767828923 on real Actions data. Ledger #617-#657 verified as one linear chain before this seal. Disclosures: the release write calls (draft, upload, publish), the remote tag check against a real tag and the marketplace poll against published packages are exercised only by unit tests with injected clients and will first run on the real v6.0.7 tag; the GitHub Release job may wait up to 60 minutes for Open VSX propagation; after anything is published a full re-run stops at the build job and recovery is the documented operator-only manual procedure within the artifact's 90-day retention; the build job's release lookup sees published releases only. Override: the owner accepted the bounded damaged-ledger recovery override for this RC; the pre-existing damage (#341, #382, duplicates at or below #236) is not repaired and normal governance is NOT restored (#467). Not merged, not tagged, not published.

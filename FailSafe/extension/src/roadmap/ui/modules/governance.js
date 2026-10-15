@@ -373,7 +373,8 @@ export class GovernanceRenderer {
     this.container.querySelector('.cc-gov-l3-batch')?.addEventListener('click', async (e) => {
       if (!this.client) return;
       e.target.disabled = true;
-      try { await this.client.postAction('/api/actions/approve-l3-batch', { decision: 'APPROVED' }); }
+      // #514: operator-gated — the server holds this open for a VS Code dialog.
+      try { await this.client.postGated('/api/actions/approve-l3-batch', { decision: 'APPROVED' }); }
       finally { e.target.disabled = false; }
     });
     // FailSafe#367 tranche 2: resolution-status filter chips (All / Needs
@@ -395,7 +396,7 @@ export class GovernanceRenderer {
         const decision = el.dataset.decision === 'REJECTED' ? 'REJECTED' : 'APPROVED';
         if (!id) return;
         el.disabled = true;
-        try { await this.client.postAction('/api/actions/decide-l3', { id, decision }); }
+        try { await this.client.postGated('/api/actions/decide-l3', { id, decision }); }
         finally { el.disabled = false; }
       });
     });
