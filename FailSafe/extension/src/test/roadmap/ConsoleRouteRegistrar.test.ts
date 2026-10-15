@@ -137,6 +137,28 @@ suite('ConsoleRouteRegistrar (Phase 60 §0)', () => {
     assert.ok(gets.includes('/api/v1/trust'));
   });
 
+  test('trust v1 refuses unsupported green scores for empty, unknown, and unverified checkpoints (#470)', async () => {
+    for (const checkpoints of [
+      {},
+      { a: { policyVerdict: 'UNKNOWN' } },
+      { a: { policyVerdict: 'PASS' } },
+      { a: { policyVerdict: 'PASS', evidenceRefs: [] } },
+      { a: { policyVerdict: 'PASS', evidenceRefs: ['unverified-claim'] } },
+    ]) {
+      const handlers: Record<string, (_req: any, res: any) => Promise<void>> = {};
+      const { app } = makeFakeApp();
+      app.get = (p: string, handler: any) => { handlers[p] = handler; };
+      const hub = makeFakeHub();
+      hub.buildHubSnapshot = async () => ({ checkpoints });
+      new ConsoleRouteRegistrar(makeHost(app, hub)).setupAllRoutes();
+      let body: any;
+      await handlers['/api/v1/trust']({}, { json: (value: any) => { body = value; } });
+      assert.equal(body.overall, null);
+      assert.equal(body.status, 'unverified');
+      assert.equal(body.checkpointCount, Object.keys(checkpoints).length);
+    }
+  });
+
   test('setupAllRoutes — console HTML routes registered', () => {
     const { routes } = setupRegistrar();
     const gets = pathsByMethod(routes, 'GET');

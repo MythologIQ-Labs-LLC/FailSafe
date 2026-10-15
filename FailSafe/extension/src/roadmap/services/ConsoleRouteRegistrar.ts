@@ -371,9 +371,15 @@ export class ConsoleRouteRegistrar {
     app.get("/api/v1/trust", async (_req, res) => {
       const snap = await hub.buildHubSnapshot();
       const cps = Object.values((snap.checkpoints as Record<string, unknown>) || {});
-      const total = cps.length || 1;
-      const passed = cps.filter((c: any) => c.policyVerdict !== "VIOLATION").length;
-      res.json({ overall: Math.round((passed / total) * 100), checkpointCount: total, passCount: passed });
+      // A missing/unknown verdict is not affirmative trust evidence (#470).
+      // Until the route can verify provenance/recency, never advertise a green trust score.
+      const passed = cps.filter((c) =>
+        typeof c === "object" && c !== null &&
+        (c as Record<string, unknown>).policyVerdict === "PASS" &&
+        Array.isArray((c as Record<string, unknown>).evidenceRefs) &&
+        ((c as Record<string, unknown>).evidenceRefs as unknown[]).length > 0
+      ).length;
+      res.json({ overall: null, status: "unverified", checkpointCount: cps.length, passCount: passed });
     });
   }
 
