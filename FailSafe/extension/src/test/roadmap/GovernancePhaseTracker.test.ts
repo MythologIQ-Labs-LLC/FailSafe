@@ -77,6 +77,30 @@ describe("GovernancePhaseTracker", () => {
       assert.ok(entries[0].verdict?.includes("VETO"));
     });
 
+    it("parses the same governance entries and verdict across LF, CRLF and CR", () => {
+      const lf = [
+        "# META_LEDGER",
+        "### Entry #1: GATE",
+        "**Timestamp**: 2026-10-14T12:00:00Z",
+        "**Phase**: GATE",
+        "**Verdict**: PASS",
+        "### Entry #2: IMPLEMENT",
+        "**Timestamp**: 2026-10-14T12:30:00Z",
+        "**Phase**: IMPLEMENT",
+      ].join("\n");
+      const expected = parseMetaLedger(lf);
+      assert.strictEqual(expected.length, 2);
+      for (const separator of ["\r\n", "\r"]) {
+        const variant = lf.replace(/\n/g, separator);
+        assert.deepStrictEqual(parseMetaLedger(variant), expected);
+        const state = buildGovernanceState(variant);
+        assert.strictEqual(state.current, "IMPLEMENT");
+        assert.strictEqual(state.evidenceState, undefined);
+        assert.strictEqual(state.recentCompletions.length, 2);
+        assert.strictEqual(state.recentCompletions[1].verdict, "PASS");
+      }
+    });
+
     it("handles empty content", () => {
       const entries = parseMetaLedger("");
       assert.deepStrictEqual(entries, []);
