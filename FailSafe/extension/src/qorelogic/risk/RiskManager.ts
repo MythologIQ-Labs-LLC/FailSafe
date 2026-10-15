@@ -223,6 +223,7 @@ export class RiskManager {
   }
 
   deleteRisk(id: string): boolean {
+    this.refreshBeforeMutation();
     const index = this.register.risks.findIndex((r) => r.id === id);
     if (index === -1) {
       return false;

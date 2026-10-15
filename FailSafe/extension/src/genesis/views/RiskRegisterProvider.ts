@@ -68,18 +68,18 @@ export class RiskRegisterProvider implements vscode.WebviewViewProvider {
   private handleMessage(message: RiskMessage): void {
     const p = message.payload as Record<string, unknown>;
     switch (message.command) {
+      // #517: mutations re-read risks.json and refuse an unreadable store rather
+      // than overwrite it, so a refusal is reported instead of thrown here.
       case "updateStatus":
         if (p?.id && p?.status) {
-          this.riskManager.updateRisk(p.id as string, {
+          this.applyMutation(() => this.riskManager.updateRisk(p.id as string, {
             status: p.status as RiskStatus,
-          });
-          this.refresh();
+          }));
         }
         break;
       case "deleteRisk":
         if (p?.id) {
-          this.riskManager.deleteRisk(p.id as string);
-          this.refresh();
+          this.applyMutation(() => this.riskManager.deleteRisk(p.id as string));
         }
         break;
       case "viewRisk":
@@ -88,6 +88,16 @@ export class RiskRegisterProvider implements vscode.WebviewViewProvider {
         }
         break;
     }
+  }
+
+  private applyMutation(mutate: () => unknown): void {
+    try {
+      mutate();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      void vscode.window.showErrorMessage(`FailSafe could not update the risk register: ${message}`);
+    }
+    this.refresh();
   }
 
   // showCreateRiskDialog removed in v5.1.0. Risks are now sourced via the

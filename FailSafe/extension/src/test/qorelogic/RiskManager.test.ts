@@ -94,6 +94,27 @@ suite('RiskManager (FX328 + FX250)', () => {
     assert.deepEqual(stored, [{ id: 'sarif:2', status: 'closed', customField: 'retain' }]);
   });
 
+  test('#517 deleteRisk keeps a record another writer added since the last mutation', () => {
+    const manager = newManager(dir);
+    const own = manager.createRisk(STD_INPUT);
+    const risksPath = path.join(dir, '.failsafe/risks/risks.json');
+    const data = JSON.parse(fs.readFileSync(risksPath, 'utf8'));
+    data.risks.push({ id: 'sentry:7', status: 'open', customField: 'imported' });
+    fs.writeFileSync(risksPath, JSON.stringify(data), 'utf8');
+    assert.equal(manager.deleteRisk(own.id), true);
+    const stored = JSON.parse(fs.readFileSync(risksPath, 'utf8')).risks;
+    assert.deepEqual(stored, [{ id: 'sentry:7', status: 'open', customField: 'imported' }]);
+  });
+
+  test('#517 deleteRisk over an unreadable store throws and leaves its bytes unchanged', () => {
+    const manager = newManager(dir);
+    const own = manager.createRisk(STD_INPUT);
+    const risksPath = path.join(dir, '.failsafe/risks/risks.json');
+    fs.writeFileSync(risksPath, '{broken-json', 'utf8');
+    assert.throws(() => manager.deleteRisk(own.id));
+    assert.equal(fs.readFileSync(risksPath, 'utf8'), '{broken-json');
+  });
+
   test('#517 refuses mutation and preserves an unreadable existing risk file', () => {
     const manager = newManager(dir);
     const risksPath = path.join(dir, '.failsafe/risks/risks.json');
