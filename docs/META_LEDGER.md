@@ -31725,3 +31725,56 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `d99e0fdd2b42600135662b47707047154cc4af7f1233cf9a803b6fa19e1737f0`
 
 **Decision**: SESSION SEAL for plan-v607-final-integration.md (implementation #699), program #521. Reality = Promise, with disclosures. Delivered on release/v6.0.7-rc2 at C0 736c74dd40ef9f44f6b59ba9f1d6cddca3d15c12 plus the governance commits: lanes A (release verification), B (#473 SOA ledger v3), C (#476 commit-bound SHIELD checks), D (#517 shared risk store) and E (trusted Git executable), each lane sealed in its own session (ledger #659 onward), and the integration review fixes. Disclosures: standing damaged-ledger override applied per cycle (#467 unresolved; normal governance not restored); vscode-test ran on a disposable test build with win32VersionedUpdate removed (the operator's parked updater holds the vscode-updating mutex; operator install untouched); C0 is the Phase 3 head 736c74dd, replacing 0403cef4 (plan iteration 10); LD9's cause is asserted through getDisabledReason() because console.warn cannot be observed from the vscode-test runner (IntentMigration.test.ts); two lane B tests that asserted the old rejecting contract now assert stub mode; the trusted Git resolver covers Git only; gh, PowerShell, npm and Python are still started by name (B211), and failsafe.bootstrap.autoInstallGit has no scope (B214); Linux-only symlink cases of lane D and POSIX resolver rows run on CI, not on this Windows host; the v6.0.7 packaging seal #658 recorded seal_entry instead of the schema's ledger_entry; this plan's seals use ledger_entry; rollback to v6.0.6 reports the v3 ledger as broken (CHANGELOG known limitation). Not merged, not tagged, not published.
+
+---
+
+### Entry #701: GATE TRIBUNAL - plan-v607-final-integration (iteration 11) - VETO
+
+**Timestamp**: 2026-10-15T22:40:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1934-08df97`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override (owner directive 2026-10-15), disclosed per cycle
+
+**Content Hash**: `e223a67fab1ea9b074729470dd0adadf0810310b82888dc0d1604054ca77b778`
+**Previous Hash**: `d99e0fdd2b42600135662b47707047154cc4af7f1233cf9a803b6fa19e1737f0`
+**Chain Hash (Merkle seal)**: `3115c892cc9f42938508317f5bc8bf8f0168fe5d1379dfb054972609dd06aebc`
+
+**Decision**: VETO on plan-v607-final-integration.md iteration 11 (sha256 42ac1cea, program #521), the delta for CI on PR #525 (Linux T18 inode reuse, Semgrep detect-child-process at the resolver spawn sites, CodeQL js/incomplete-sanitization in the rv report). The lock identity is sound in production (the library rounds a new lock's mtime up to the second and a stale takeover is at least 2 s later); the justified nosemgrep annotations are acceptable and match precedent; backslash-first escaping is correct with a real falsifier. Blocker specification-drift: Phase 4 re-ran only a subset of the LD4 gates on the new C0 without amending D3 or LD4, although the rv report it changes feeds the lifecycle evidence. Next: full LD4 re-run. Held by the lead and appended at the Phase 4 seal in recorded order with the original timestamp.
+
+---
+
+### Entry #702: GATE TRIBUNAL - plan-v607-final-integration (iteration 12) - PASS
+
+**Timestamp**: 2026-10-15T22:50:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1934-08df97`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override (owner directive 2026-10-15), disclosed per cycle
+
+**Content Hash**: `cd09aaa1933b613ed2e7e98b82cd62d04296bd9c5880beef0522dd66515a9e60`
+**Previous Hash**: `3115c892cc9f42938508317f5bc8bf8f0168fe5d1379dfb054972609dd06aebc`
+**Chain Hash (Merkle seal)**: `11933818a1573097a2a3b9e7b4129507ff78f402403af872035d2cd722ced492`
+
+**Decision**: PASS on plan-v607-final-integration.md iteration 12 (sha256 f26c2ee7, program #521). Fresh Option B architect-reviewer. Phase 4 re-runs the full LD4 gate set on its head and the new IMPLEMENTATION and SESSION SEAL name that head for all evidence; the mtime reasoning is precise and the same-second residual disclosed; annotations go on the reported line. Advisories carried to the seal: the Phase 4 head supersedes the Phase 3 C0 of LD10; the standards, CodeQL and Semgrep checks run on the PR; the native load is recorded for Node and VS Code Electron. Next: the lead implements Phase 4. Held by the lead and appended at the Phase 4 seal in recorded order with the original timestamp.
+
+---
+
+### Entry #703: IMPLEMENTATION - plan-v607-final-integration (Phase 4)
+
+**Timestamp**: 2026-10-15T23:26:49Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-15T1934-08df97`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-15T1934-08df97/implement-iter2.json`
+
+**Content Hash**: `3a55213760a0915343a47802b565a7a3ecd0c2d8c01649a24f572cfd8cced35d`
+**Previous Hash**: `11933818a1573097a2a3b9e7b4129507ff78f402403af872035d2cd722ced492`
+**Chain Hash (Merkle seal)**: `a018a4e1672c48dd7573e6fa885fd9aa80f8ef414c82d13388de51b9407fb0cc`
+
+**Decision**: IMPLEMENTATION (Phase 4, iterations 11-12) of plan-v607-final-integration.md (audit PASS #702), program #521. CI corrections from the first Linux and SAST run of PR #525: the T18 lock-identity assertion compares (ino, mtimeNs) as the store does (Linux reuses inodes); justified nosemgrep annotations at the ten trusted-resolver spawn sites; the rv report escapes backslashes before pipes (CodeQL). C0 = 2ed25a971f9cf6ac926494e81e20fa2ac8906d80, superseding the Phase 3 C0 736c74dd for all evidence. Evidence on C0: vscode-test 1.122.1 4815 passing / 0 failing / 21 pending, census 494/494; test:node 596/598 (2 = FX946 ledgerAnchor baseline, #467); Playwright 208 passed / 4 skipped; tsc 0; lint 0 errors; runner coverage, citation parity, release-gate --preflight and docs coherence pass; secret_scanner 0 findings over 121 changed files; npm audit: braces GHSA-vfj7-8cjw-p6xm via chokidar 3.6.0 only (unreachable, disclosed since the RC); eight 6.0.7 VSIXs packaged from C0 pass verify-set; the win32-x64 SQLite binary loads in Node 22 and, through the rv lifecycle, in VS Code 1.141.1 Electron; rv inventory 50/50 and lifecycle (install, upgrade from published 6.0.6, forced kill, restart, rollback): rehearsal-pass 62/62; report.test red before the escaper fix (the backslash-pipe row split into extra cells) and green after; T18 identity assertion holds on Windows (Linux on CI)
