@@ -162,6 +162,18 @@ suite('check-run-transport wire copy and closed name set (#476 M2)', () => {
     assert.equal(c.calls(), 0);
   });
 
+  test('a thrown transport error never carries the token back', async () => {
+    const token = 'ghs_LEAKY_TOKEN_123';
+    const post: GitHubPostFn = async (_u, headers) => { throw new Error(`proxy refused: ${headers.Authorization} (${token})`); };
+    const p = { name: ADVISORY, head_sha: SHA, status: 'completed', conclusion: 'neutral', output: { title: 't', summary: 's' } } as unknown as TransportPayload;
+    const r = await postCheckRun(p, TARGET, token, post);
+    assert.equal(r.ok, false);
+    assert.ok(r.error && r.error.length > 0);
+    assert.ok(!r.error.includes(token), r.error);
+    const viaClient = await publishCheckRunPayload(p as unknown as CheckRunPayload, { remoteUrl: 'https://github.com/acme/x', headSha: SHA }, { enabled: true, token }, post);
+    assert.ok(!JSON.stringify(viaClient).includes(token), JSON.stringify(viaClient));
+  });
+
   test('extra payload fields are never posted', async () => {
     const c = counting();
     const p = {

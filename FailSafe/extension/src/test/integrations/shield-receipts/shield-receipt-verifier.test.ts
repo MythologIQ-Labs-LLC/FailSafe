@@ -351,6 +351,13 @@ suite('shield-receipt-verifier: first introduction (#476 N1)', () => {
     assert.equal((await run(baseScenario())).kind, 'verified');
   });
 
+  test('a ledger history search that throws -> Neutral evidence-source-error (never Verified)', async () => {
+    const s = reintroduced(BASE_LEDGER); s.throwOn = 'ledgerHistoryContains';
+    await expectResult(s, 'neutral', 'evidence-source-error');
+    const t = baseScenario(); t.throwOn = 'ledgerHistoryContains';
+    await expectResult(t, 'neutral', 'evidence-source-error');
+  });
+
   test('a genuine re-seal of the same entry number with a new chain hash verifies', async () => {
     const X = 'e'.repeat(64);
     const R1 = sha('7');

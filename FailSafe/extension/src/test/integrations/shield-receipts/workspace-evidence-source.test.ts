@@ -249,6 +249,31 @@ suite('workspace-evidence-source (#476)', function () {
     } finally { fs.rmSync(r, { recursive: true, force: true }); }
   });
 
+  test('a promisor remote (remote.<name>.promisor) is refused for every git read', async () => {
+    const r = newRepo('fs-shield-promisor-');
+    try {
+      const c1 = commitLedger(r, '### Entry #1: x\n', 'one');
+      git(r, 'remote', 'add', 'origin', 'https://github.com/acme/failsafe.git');
+      git(r, 'config', 'remote.origin.promisor', 'true');
+      const { source, dispose } = createWorkspaceEvidenceSource(r);
+      try {
+        await assert.rejects(source.headSha());
+        await assert.rejects(source.showAtCommit(c1, 'docs/META_LEDGER.md'));
+        const v = await verifyShieldReceipt(source, keysOf(RECEIPT_KEY), chainOf('OK'), DEFAULT_SHIELD_POLICY, 'api.github.com', NOW);
+        assert.equal(v.kind === 'verified' ? 'verified' : `${v.kind}:${v.reason}`, 'neutral:evidence-source-error');
+      } finally { dispose(); }
+    } finally { fs.rmSync(r, { recursive: true, force: true }); }
+  });
+
+  test('gitTimeoutMs: null is refused at creation, not silently defaulted', () => {
+    const r = newRepo('fs-shield-null-timeout-');
+    try {
+      assert.throws(() => createWorkspaceEvidenceSource(r, { gitTimeoutMs: null as unknown as number }));
+      const ok = createWorkspaceEvidenceSource(r, {});
+      ok.dispose();
+    } finally { fs.rmSync(r, { recursive: true, force: true }); }
+  });
+
   test('git older than 2.44 (GIT_NO_LAZY_FETCH ignored) is unsupported', () => {
     assert.equal(gitSupportsNoLazyFetch('git version 2.43.5'), false);
     assert.equal(gitSupportsNoLazyFetch('git version 1.99.0'), false);
@@ -320,6 +345,43 @@ suite('workspace-evidence-source (#476)', function () {
       assert.deepEqual(fs.readdirSync(dir), [], 'no temp file left behind');
     } finally {
       (fs.promises as { rename: unknown }).rename = realRename;
+      dispose();
+      fs.rmSync(r, { recursive: true, force: true });
+    }
+  });
+
+  test('a failing temp cleanup never replaces the rename error', async () => {
+    const r = newRepo('fs-shield-cleanup-');
+    const sha = 'd'.repeat(40);
+    const realRename = fs.promises.rename;
+    const realRm = fs.promises.rm;
+    (fs.promises as { rename: unknown }).rename = (async () => { throw Object.assign(new Error('rename failed: target locked'), { code: 'EPERM' }); }) as unknown;
+    (fs.promises as { rm: unknown }).rm = (async () => { throw Object.assign(new Error('cleanup failed'), { code: 'EBUSY' }); }) as unknown;
+    const { source, dispose } = createWorkspaceEvidenceSource(r);
+    try {
+      await assert.rejects(source.writeReceipt(sha, '{}\n'), /rename failed: target locked/);
+    } finally {
+      (fs.promises as { rename: unknown }).rename = realRename;
+      (fs.promises as { rm: unknown }).rm = realRm;
+      dispose();
+      fs.rmSync(r, { recursive: true, force: true });
+    }
+  });
+
+  test('a writeFile that fails after creating the temp file leaves no temp file and rethrows', async () => {
+    const r = newRepo('fs-shield-writefail-');
+    const sha = 'e'.repeat(40);
+    const realWrite = fs.promises.writeFile;
+    (fs.promises as { writeFile: unknown }).writeFile = (async (p: string, ...rest: unknown[]) => {
+      await (realWrite as (...x: unknown[]) => Promise<void>)(p, 'partial', ...rest.slice(1));
+      throw Object.assign(new Error('disk full'), { code: 'ENOSPC' });
+    }) as unknown;
+    const { source, dispose } = createWorkspaceEvidenceSource(r);
+    try {
+      await assert.rejects(source.writeReceipt(sha, '{}\n'), /disk full/);
+      assert.deepEqual(fs.readdirSync(path.join(r, '.failsafe', 'shield-receipts')), [], 'no temp file left');
+    } finally {
+      (fs.promises as { writeFile: unknown }).writeFile = realWrite;
       dispose();
       fs.rmSync(r, { recursive: true, force: true });
     }

@@ -173,6 +173,8 @@ export async function postCheckRun(
     );
     return interpret(res);
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    // A transport error may echo request headers; the token never leaves here.
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: token ? msg.split(token).join('[redacted]') : msg };
   }
 }

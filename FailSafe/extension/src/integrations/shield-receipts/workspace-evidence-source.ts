@@ -139,8 +139,18 @@ export function gitSupportsNoLazyFetch(versionOutput: string): boolean {
 
 const TRANSIENT_RENAME = new Set(['EPERM', 'EBUSY', 'EACCES']);
 
+/** Best-effort temp-file removal; a cleanup failure never masks the caller's error. */
+async function removeQuietly(p: string): Promise<void> {
+  try {
+    await fs.promises.rm(p, { force: true });
+  } catch {
+    /* the original error is what the caller reports */
+  }
+}
+
 /** Rename with up to 3 attempts 50 ms apart on Windows-style transient errors;
- *  the temp file is removed when the rename finally fails. */
+ *  the temp file is removed when the rename finally fails, and the rename
+ *  error (not a cleanup error) is rethrown. */
 async function renameWithRetry(from: string, to: string): Promise<void> {
   for (let attempt = 1; ; attempt++) {
     try {
@@ -149,7 +159,7 @@ async function renameWithRetry(from: string, to: string): Promise<void> {
     } catch (e) {
       const code = (e as NodeJS.ErrnoException).code ?? '';
       if (attempt >= 3 || !TRANSIENT_RENAME.has(code)) {
-        await fs.promises.rm(from, { force: true });
+        await removeQuietly(from);
         throw e;
       }
       await new Promise((r) => setTimeout(r, 50));
@@ -177,7 +187,8 @@ export interface WorkspaceEvidenceOptions {
 export function createWorkspaceEvidenceSource(
   root: string, opts: WorkspaceEvidenceOptions = {},
 ): { source: ShieldEvidenceSource; dispose(): void } {
-  const timeoutMs = opts.gitTimeoutMs ?? DEFAULT_GIT_TIMEOUT_MS;
+  // Only an absent option takes the default; null or any other non-integer throws.
+  const timeoutMs = opts.gitTimeoutMs === undefined ? DEFAULT_GIT_TIMEOUT_MS : opts.gitTimeoutMs;
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > DEFAULT_GIT_TIMEOUT_MS) {
     throw new Error('gitTimeoutMs must be an integer from 1 to 30000');
   }
@@ -279,7 +290,12 @@ export function createWorkspaceEvidenceSource(
       await fs.promises.mkdir(receipts, { recursive: true });
       if (!(await noLinksBelow(root, receipts))) throw new Error('receipt directory missing after create');
       const tmp = within(receipts, `.${sha}.${crypto.randomBytes(8).toString('hex')}.tmp`);
-      await fs.promises.writeFile(tmp, text, { encoding: 'utf8', flag: 'wx' });
+      try {
+        await fs.promises.writeFile(tmp, text, { encoding: 'utf8', flag: 'wx' });
+      } catch (e) {
+        await removeQuietly(tmp);
+        throw e;
+      }
       await renameWithRetry(tmp, target);
     },
   };
