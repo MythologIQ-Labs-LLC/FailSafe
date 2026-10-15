@@ -119,7 +119,7 @@ suite("GovernanceRouter.handleFileOperation - total fail-closed guard (FX905/#29
     return { rejected, allowed };
   }
 
-  test("T1: intentService.getActiveIntent rejecting fails CLOSED (returns false, notifies)", async () => {
+  test("T1: intentService.getActiveIntent rejecting returns policy denial (false), notifies", async () => {
     const capture: NotifyCapture = { errors: [] };
     const notifications = makeNotifications(capture);
     const router = new GovernanceRouter(
@@ -135,11 +135,13 @@ suite("GovernanceRouter.handleFileOperation - total fail-closed guard (FX905/#29
     );
     const r = await callNeverRejects(router);
     assert.equal(r.rejected, false, "must not reject on intent-service fault");
-    assert.equal(r.allowed, false, "intent-service fault must block the save");
+    assert.equal(r.allowed, false, "intent-service fault must return policy denial");
     assert.ok(capture.errors.length >= 1, "operator must be notified");
+    assert.match(capture.errors[0], /write not prevented/i);
+    assert.doesNotMatch(capture.errors[0], /FailSafe Blocked|action was blocked/i);
   });
 
-  test("T2: evaluationRouter.route rejecting fails CLOSED (returns false)", async () => {
+  test("T2: evaluationRouter.route rejecting returns policy denial (false)", async () => {
     const capture: NotifyCapture = { errors: [] };
     const notifications = makeNotifications(capture);
     const router = new GovernanceRouter(
@@ -155,10 +157,10 @@ suite("GovernanceRouter.handleFileOperation - total fail-closed guard (FX905/#29
     );
     const r = await callNeverRejects(router);
     assert.equal(r.rejected, false, "must not reject on routing fault");
-    assert.equal(r.allowed, false, "routing fault must block the save");
+    assert.equal(r.allowed, false, "routing fault must return policy denial");
   });
 
-  test("T3: governanceAdapter.evaluate rejecting fails CLOSED (returns false)", async () => {
+  test("T3: governanceAdapter.evaluate rejecting returns policy denial (false)", async () => {
     const capture: NotifyCapture = { errors: [] };
     const notifications = makeNotifications(capture);
     const router = new GovernanceRouter(
@@ -175,10 +177,10 @@ suite("GovernanceRouter.handleFileOperation - total fail-closed guard (FX905/#29
     } as unknown as import("../../governance/GovernanceAdapter").GovernanceAdapter);
     const r = await callNeverRejects(router);
     assert.equal(r.rejected, false, "must not reject on adapter fault");
-    assert.equal(r.allowed, false, "adapter fault must block the save");
+    assert.equal(r.allowed, false, "adapter fault must return policy denial");
   });
 
-  test("T4: qorLogicManager.processEvaluationDecision rejecting fails CLOSED (returns false)", async () => {
+  test("T4: qorLogicManager.processEvaluationDecision rejecting returns policy denial (false)", async () => {
     const capture: NotifyCapture = { errors: [] };
     const notifications = makeNotifications(capture);
     const invokingRouter = {
@@ -207,10 +209,10 @@ suite("GovernanceRouter.handleFileOperation - total fail-closed guard (FX905/#29
     );
     const r = await callNeverRejects(router);
     assert.equal(r.rejected, false, "must not reject on qorlogic pipeline fault");
-    assert.equal(r.allowed, false, "qorlogic pipeline fault must block the save");
+    assert.equal(r.allowed, false, "qorlogic pipeline fault must return policy denial");
   });
 
-  test("T5: evaluateAction never settling times out and fails CLOSED (returns false)", async () => {
+  test("T5: evaluateAction never settling times out and returns policy denial (false)", async () => {
     const capture: NotifyCapture = { errors: [] };
     const notifications = makeNotifications(capture);
     const hangingEngine = {
@@ -228,7 +230,7 @@ suite("GovernanceRouter.handleFileOperation - total fail-closed guard (FX905/#29
     );
     const r = await callNeverRejects(router);
     assert.equal(r.rejected, false, "timeout must not surface as a rejection");
-    assert.equal(r.allowed, false, "a hung verdict generation must block the save");
+    assert.equal(r.allowed, false, "a hung verdict generation must return policy denial");
     assert.ok(capture.errors.length >= 1, "operator must be notified of policy denial without false prevention claims");
   });
 
@@ -301,7 +303,7 @@ suite("GovernanceRouter.handleFileOperation - verdict-generation fault path", ()
     assert.equal(
       allowed,
       false,
-      "a verdict-generation fault must block the save (fail-closed), not allow it",
+      "a verdict-generation fault must return policy denial (fail-closed), not allow it",
     );
     assert.ok(
       capture.errors.length >= 1,
