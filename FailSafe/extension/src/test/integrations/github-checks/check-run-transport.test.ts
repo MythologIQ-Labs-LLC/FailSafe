@@ -5,7 +5,7 @@
 import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
-import { postCheckRun, type CheckRunTarget, type TransportPayload } from '../../../integrations/github-checks/check-run-transport';
+import { postCheckRun, toWirePayload, type CheckRunTarget, type TransportPayload } from '../../../integrations/github-checks/check-run-transport';
 import { publishCheckRunPayload, type GitHubPostFn } from '../../../integrations/github-checks/github-checks-client';
 import type { CheckRunPayload } from '../../../integrations/github-checks/github-checks-map';
 import { SRC_ROOT, dynamicReferences, moduleReferences, productionSources, referencesTo, specifierNames } from './source-scan';
@@ -132,6 +132,35 @@ suite('check-run-transport wire copy and closed name set (#476 M2)', () => {
       assert.equal(c.calls(), 0);
     });
   }
+
+  test('the wire copy has a null prototype at every level', () => {
+    const w = toWirePayload({ name: ADVISORY, head_sha: SHA, status: 'completed', conclusion: 'neutral', output: { title: 't', summary: 's' } });
+    assert.ok(w);
+    assert.equal(Object.getPrototypeOf(w), null);
+    assert.equal(Object.getPrototypeOf((w as { output: object }).output), null);
+  });
+
+  test('a target whose fields change between reads posts to the checked repo or not at all', async () => {
+    const urls: string[] = [];
+    const post: GitHubPostFn = async (u) => { urls.push(u); return { status: 201, body: JSON.stringify({ id: 3 }) }; };
+    let reads = 0;
+    const target = {
+      get repo() { return reads++ < 2 ? 'acme/x' : 'evil/repo'; },
+      apiHost: 'api.github.com', baseUrl: 'https://api.github.com',
+    } as unknown as CheckRunTarget;
+    const p = { name: ADVISORY, head_sha: SHA, status: 'completed', conclusion: 'neutral', output: { title: 't', summary: 's' } } as unknown as TransportPayload;
+    await postCheckRun(p, target, 't', post);
+    assert.equal(reads, 1, 'repo read exactly once');
+    for (const u of urls) assert.ok(!u.includes('evil'), u);
+  });
+
+  test('a non-string target field is refused', async () => {
+    const c = counting();
+    const p = { name: ADVISORY, head_sha: SHA, status: 'completed', conclusion: 'neutral', output: { title: 't', summary: 's' } } as unknown as TransportPayload;
+    const bad = { repo: new String('acme/x'), apiHost: 'api.github.com', baseUrl: 'https://api.github.com' } as unknown as CheckRunTarget;
+    assert.equal((await postCheckRun(p, bad, 't', c.post)).ok, false);
+    assert.equal(c.calls(), 0);
+  });
 
   test('extra payload fields are never posted', async () => {
     const c = counting();

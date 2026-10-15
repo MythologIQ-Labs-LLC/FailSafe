@@ -67,10 +67,10 @@ export function toWirePayload(payload: unknown): TransportPayload | undefined {
     const summary = (output as Record<string, unknown>).summary;
     if (typeof title !== 'string' || typeof summary !== 'string') return undefined;
     if (detailsUrl !== undefined && typeof detailsUrl !== 'string') return undefined;
-    const wire = {
-      name, head_sha: headSha, status: 'completed', conclusion, output: { title, summary },
-      ...(detailsUrl !== undefined ? { details_url: detailsUrl } : {}),
-    };
+    // Null prototype at every level: nothing inherited can affect serialization.
+    const out = Object.assign(Object.create(null), { title, summary });
+    const wire = Object.assign(Object.create(null), { name, head_sha: headSha, status: 'completed', conclusion, output: out });
+    if (detailsUrl !== undefined) wire.details_url = detailsUrl;
     return wire as TransportPayload;
   } catch {
     return undefined;
@@ -89,6 +89,21 @@ function nameRefusal(wire: TransportPayload, target: CheckRunTarget, authority: 
     return 'SHIELD check refused: target is not the verified repository and API host';
   }
   return undefined;
+}
+
+/** A fresh null-prototype copy of the target, each field read once as a primitive string. */
+function toTarget(target: unknown): CheckRunTarget | undefined {
+  try {
+    if (!target || typeof target !== 'object') return undefined;
+    const t = target as Record<string, unknown>;
+    const repo = t.repo;
+    const apiHost = t.apiHost;
+    const baseUrl = t.baseUrl;
+    if (typeof repo !== 'string' || typeof apiHost !== 'string' || typeof baseUrl !== 'string') return undefined;
+    return Object.assign(Object.create(null), { repo, apiHost, baseUrl }) as CheckRunTarget;
+  } catch {
+    return undefined;
+  }
 }
 
 function targetError(target: CheckRunTarget): string | undefined {
@@ -138,9 +153,12 @@ export async function postCheckRun(
 ): Promise<TransportResult> {
   const wire = toWirePayload(payload);
   if (!wire) return { ok: false, error: 'check run refused: malformed payload' };
-  const refused = targetError(target) ?? nameRefusal(wire, target, authority);
+  // Guard and address the POST from one copy of the target (#476 N4).
+  const t = toTarget(target);
+  if (!t) return { ok: false, error: 'check run refused: malformed target' };
+  const refused = targetError(t) ?? nameRefusal(wire, t, authority);
   if (refused) return { ok: false, error: refused };
-  const url = `${target.baseUrl.replace(/\/$/, '')}/repos/${target.repo}/check-runs`;
+  const url = `${t.baseUrl.replace(/\/$/, '')}/repos/${t.repo}/check-runs`;
   try {
     const res = await post(
       url,
