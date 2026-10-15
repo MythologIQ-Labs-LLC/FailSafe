@@ -209,19 +209,31 @@ suite("FX241-F6 RiskRegisterManager BACKLOG-fallback materialization boundary", 
   });
 });
 
-// ── #368: corrupt risks.json preservation (plan-risks-corrupt-store-368) ──────
-// A mutation against an existing-but-unparseable store must preserve the
-// original bytes aside (.corrupt-<ts>.bak) before overwriting — the check
-// lives in writeRisks() so EVERY mutation path is covered (upsert, close,
-// the Console CRUD routes, future callers). Reads never preserve/rename.
+// ── #368 → #517: an unreadable risks.json is refused, never replaced ─────────
+// FX923's preserve+warn+proceed (move aside, write fresh) is intentionally
+// superseded (#517 OQ1): a mutation against an unreadable register keeps the
+// file in place, saves one byte-identical copy under an unpredictable name
+// (risks.json.corrupt-HASH12-RAND12.bak), and throws. Reads never copy.
 
 function corruptBaks(dir: string): string[] {
   const risksDir = path.join(dir, ".failsafe", "risks");
   if (!fs.existsSync(risksDir)) return [];
-  return fs.readdirSync(risksDir).filter((f) => /^risks\.json\.corrupt-\d+\.bak$/.test(f));
+  return fs.readdirSync(risksDir).filter((f) => /^risks\.json\.corrupt-[0-9a-f]{12}-[0-9a-f]{12}\.bak$/.test(f));
 }
 
-suite("#368 corrupt-store preservation", () => {
+/** Every .corrupt- entry, so a renamed copy cannot make a zero count vacuous. */
+function anyCorruptEntries(dir: string): string[] {
+  const risksDir = path.join(dir, ".failsafe", "risks");
+  if (!fs.existsSync(risksDir)) return [];
+  return fs.readdirSync(risksDir).filter((f) => f.includes(".corrupt-"));
+}
+
+function refusalCode(fn: () => unknown): string {
+  try { fn(); } catch (e) { return (e as { code?: string }).code ?? String(e); }
+  return "none";
+}
+
+suite("#368/#517 unreadable register is refused", () => {
   const CORRUPT = '{"risks": [{"id": "old-1"}, TRUNCATED';
 
   function makeCorruptWorkspace(content: string = CORRUPT): string {
@@ -232,74 +244,128 @@ suite("#368 corrupt-store preservation", () => {
     return dir;
   }
 
-  test("corrupt JSON + upsertRisk: original bytes preserved in exactly one .bak; store holds only the new record", () => {
+  test("corrupt JSON + upsertRisk: refused, the file is unchanged, one byte-identical copy", () => {
     const dir = makeCorruptWorkspace();
     try {
-      new RiskRegisterManager(dir).upsertRisk({ id: "new-1", status: "open" });
+      assert.equal(refusalCode(() => new RiskRegisterManager(dir).upsertRisk({ id: "new-1", status: "open" })), "UNREADABLE");
+      assert.equal(fs.readFileSync(risksJsonPath(dir), "utf-8"), CORRUPT, "the register stays in place");
       const baks = corruptBaks(dir);
-      assert.equal(baks.length, 1, "exactly one .corrupt-*.bak must exist");
+      assert.equal(baks.length, 1, "exactly one copy");
+      assert.equal(anyCorruptEntries(dir).length, 1);
       const preserved = fs.readFileSync(path.join(dir, ".failsafe", "risks", baks[0]), "utf-8");
-      assert.equal(preserved, CORRUPT, "the .bak must hold the ORIGINAL corrupt bytes");
-      assert.deepEqual(readRisksJson(dir).map((r) => r.id), ["new-1"]);
+      assert.equal(preserved, CORRUPT, "the copy holds the ORIGINAL bytes");
     } finally { cleanup(dir); }
   });
 
-  test("wrong-shape JSON ({\"foo\":1}) gets the same preservation", () => {
+  test("wrong-shape JSON ({\"foo\":1}) is refused the same way", () => {
     const dir = makeCorruptWorkspace('{"foo": 1}');
     try {
-      new RiskRegisterManager(dir).upsertRisk({ id: "new-1", status: "open" });
+      assert.equal(refusalCode(() => new RiskRegisterManager(dir).upsertRisk({ id: "new-1", status: "open" })), "UNREADABLE");
+      assert.equal(fs.readFileSync(risksJsonPath(dir), "utf-8"), '{"foo": 1}');
       assert.equal(corruptBaks(dir).length, 1);
     } finally { cleanup(dir); }
   });
 
-  test("healthy store: no false preservation", () => {
+  test("healthy store: no copy", () => {
     const dir = makeWorkspace();
     try {
       new RiskRegisterManager(dir).upsertRisk({ id: "new-1", status: "open" });
-      assert.equal(corruptBaks(dir).length, 0, "a parseable store must never be renamed aside");
+      assert.equal(anyCorruptEntries(dir).length, 0, "a parseable store is never copied");
     } finally { cleanup(dir); }
   });
 
-  test("absent file: no .bak, store created (existing behavior pinned)", () => {
+  test("absent file: no copy, store created (existing behavior pinned)", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fx368-absent-"));
     try {
       new RiskRegisterManager(dir).upsertRisk({ id: "new-1", status: "open" });
-      assert.equal(corruptBaks(dir).length, 0);
+      assert.equal(anyCorruptEntries(dir).length, 0);
       assert.deepEqual(readRisksJson(dir).map((r) => r.id), ["new-1"]);
     } finally { cleanup(dir); }
   });
 
-  test("corrupt store + closeRisk: early return, corrupt file left in place untouched", () => {
+  test("corrupt store + closeRisk: refused, the file untouched", () => {
     const dir = makeCorruptWorkspace();
     try {
-      new RiskRegisterManager(dir).closeRisk("any-id");
-      assert.equal(corruptBaks(dir).length, 0, "a no-op close must not preserve/rename");
-      assert.equal(fs.readFileSync(risksJsonPath(dir), "utf-8"), CORRUPT,
-        "the corrupt file must be untouched");
+      assert.equal(refusalCode(() => new RiskRegisterManager(dir).closeRisk("any-id")), "UNREADABLE");
+      assert.equal(fs.readFileSync(risksJsonPath(dir), "utf-8"), CORRUPT, "the corrupt file must be untouched");
     } finally { cleanup(dir); }
   });
 
-  test("getRisks() with a corrupt store still degrades to the backlog fallback (reads never rename)", () => {
+  test("getRisks() with a corrupt store still degrades to the backlog fallback (reads never copy)", () => {
     const dir = makeWorkspaceWithBacklog(3);
     try {
       fs.mkdirSync(path.join(dir, ".failsafe", "risks"), { recursive: true });
       fs.writeFileSync(risksJsonPath(dir), CORRUPT, "utf-8");
       const risks = new RiskRegisterManager(dir).getRisks();
       assert.equal(risks.length, 3, "display path keeps the fallback contract");
-      assert.equal(corruptBaks(dir).length, 0, "reads must never preserve/rename");
+      assert.equal(anyCorruptEntries(dir).length, 0, "reads must never copy or rename");
       assert.equal(fs.readFileSync(risksJsonPath(dir), "utf-8"), CORRUPT);
     } finally { cleanup(dir); }
   });
 
-  test("writeRisks() called directly on a corrupt store (the Console route path) preserves too", () => {
+  test("writeRisks() called directly on a corrupt store is refused too", () => {
     const dir = makeCorruptWorkspace();
     try {
-      new RiskRegisterManager(dir).writeRisks([{ id: "route-1", status: "open" }]);
-      const baks = corruptBaks(dir);
-      assert.equal(baks.length, 1, "route-path writes must get the same preservation (audit F1)");
-      assert.equal(
-        fs.readFileSync(path.join(dir, ".failsafe", "risks", baks[0]), "utf-8"), CORRUPT);
-      assert.deepEqual(readRisksJson(dir).map((r) => r.id), ["route-1"]);
+      assert.equal(refusalCode(() => new RiskRegisterManager(dir).writeRisks([{ id: "route-1", status: "open" }])), "UNREADABLE");
+      assert.equal(fs.readFileSync(risksJsonPath(dir), "utf-8"), CORRUPT, "the original bytes stay in place");
+      assert.equal(corruptBaks(dir).length, 1);
+    } finally { cleanup(dir); }
+  });
+});
+
+// ── #517 LD8: re-imports keep operator triage; drift still reopens ───────────
+
+import { importSarifText } from "../../integrations/sarif/sarif-to-risk";
+
+suite("#517 FX973 triage survives re-import", () => {
+  const SARIF = JSON.stringify({ version: "2.1.0", runs: [{ tool: { driver: { name: "codeql" } }, results: [{
+    ruleId: "js/xss", level: "error", message: { text: "XSS" },
+    locations: [{ physicalLocation: { artifactLocation: { uri: "a.ts" }, region: { startLine: 3 } } }],
+  }] }] });
+
+  test("T14 SARIF re-import with keepStored ['status'] keeps status, owner and note", () => {
+    const dir = makeWorkspace();
+    try {
+      const mgr = new RiskRegisterManager(dir);
+      const outcomes: string[] = [];
+      importSarifText(SARIF, (r) => { outcomes.push(mgr.upsertRisk(r, { keepStored: ["status"] })); });
+      const id = mgr.getStoredRisks()[0].id;
+      mgr.mutateStoredRisks((risks) => { Object.assign(risks[0], { status: "accepted", owner: "kevin", note: "false positive" }); });
+      importSarifText(SARIF, (r) => { outcomes.push(mgr.upsertRisk(r, { keepStored: ["status"] })); });
+      const after = mgr.getStoredRisks().find((r) => r.id === id)!;
+      assert.equal(after.status, "accepted");
+      assert.equal(after.owner, "kevin");
+      assert.equal(after.note, "false positive");
+      assert.deepEqual(outcomes, ["created", "unchanged"]);
+      importSarifText(SARIF, (r) => { mgr.upsertRisk(r); });
+      const reset = mgr.getStoredRisks().find((r) => r.id === id)!;
+      assert.equal(reset.status, "open", "without keepStored the importer owns status");
+      assert.equal(reset.owner, "kevin", "fields the importer does not send survive either way");
+      assert.equal(reset.note, "false positive");
+    } finally { cleanup(dir); }
+  });
+
+  test("T15 FX583 pin: a drift after ratification still reopens", () => {
+    const dir = makeWorkspace();
+    try {
+      const mgr = new RiskRegisterManager(dir);
+      mgr.upsertRisk({ id: "bicameral:d1", status: "open", title: "drift" });
+      mgr.closeRisk("bicameral:d1");
+      mgr.upsertRisk({ id: "bicameral:d1", status: "open", title: "drift" });
+      assert.equal(mgr.getStoredRisks()[0].status, "open");
+    } finally { cleanup(dir); }
+  });
+
+  test("T24 closeRisk on an absent id writes nothing", () => {
+    const dir = makeWorkspace();
+    try {
+      const pinned = new Date("2026-01-01T00:00:00Z");
+      fs.utimesSync(risksJsonPath(dir), pinned, pinned);
+      const before = fs.readFileSync(risksJsonPath(dir), "utf-8");
+      const mtime = fs.statSync(risksJsonPath(dir), { bigint: true }).mtimeNs;
+      new RiskRegisterManager(dir).closeRisk("absent");
+      assert.equal(fs.readFileSync(risksJsonPath(dir), "utf-8"), before);
+      assert.equal(fs.statSync(risksJsonPath(dir), { bigint: true }).mtimeNs, mtime);
     } finally { cleanup(dir); }
   });
 });

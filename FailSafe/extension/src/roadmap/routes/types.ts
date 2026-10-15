@@ -45,7 +45,8 @@ export interface ApiRouteDeps {
   getRiskRegister: () => any[];
   /** #377: durable-store-only view for mutation reads (no backlog fallback). */
   getStoredRiskRegister: () => any[];
-  writeRiskRegister: (risks: any[]) => void;
+  /** #517: read-modify-write the durable list under the risk store lock; fn runs once and changes the list in place. */
+  mutateRiskRegister: <T>(fn: (risks: any[]) => T) => T;
   scaffoldSkills?: () => Promise<QorLogicInstallReport | null>;
   scaffoldWithWebOptions?: (
     hosts: QorLogicHost[],

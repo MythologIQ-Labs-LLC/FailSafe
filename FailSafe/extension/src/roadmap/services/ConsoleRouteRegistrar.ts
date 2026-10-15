@@ -258,7 +258,7 @@ export class ConsoleRouteRegistrar {
       getTransparencyEvents: (l) => hub.getTransparencyEvents(l),
       getRiskRegister: () => hub.getRiskRegister(),
       getStoredRiskRegister: () => hub.getStoredRiskRegister(),
-      writeRiskRegister: (r) => hub.writeRiskRegister(r),
+      mutateRiskRegister: (fn) => hub.mutateRiskRegister(fn),
       getTimelineEntries: (f) => h.getAgentTimelineService()?.getEntries(f) || [],
       getHealthMetrics: () => h.getAgentHealthIndicator()?.buildMetrics() || null,
       getGenomePatterns: () => sg().analyzeFailurePatterns(),

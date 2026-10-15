@@ -18,7 +18,7 @@ function makeDeps(overrides: Partial<ApiRouteDeps>): ApiRouteDeps {
     recordCheckpoint: () => undefined, inferPhaseKeyFromPlan: () => 'plan',
     chainValidAt: null, cachedChainValid: true, setCachedChainValid: () => undefined,
     getTransparencyEvents: () => [], getRiskRegister: () => [],
-    getStoredRiskRegister: () => [], writeRiskRegister: () => undefined,
+    getStoredRiskRegister: () => [], mutateRiskRegister: (fn: (risks: any[]) => any) => fn([]),
     getTimelineEntries: () => [], getHealthMetrics: () => null,
     getGenomePatterns: async () => [], getGenomeAllPatterns: async () => [], getGenomeUnresolved: async () => [],
     getActiveRuns: () => [], getCompletedRuns: () => [], getRun: () => undefined, loadRun: () => null, getRunSteps: () => [],

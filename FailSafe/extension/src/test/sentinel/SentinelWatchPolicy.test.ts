@@ -280,3 +280,23 @@ suite('SentinelWatchPolicy (Phase 60)', () => {
         assert.equal(policy.determinePriority('docs/plan-qor-foo.md'), 'high');
     });
 });
+
+// #517 LD10: the risk store's side files raise no create/modify events; the
+// temp file's deletion after each rename is observed, as for every deletion.
+suite('SentinelWatchPolicy and the risk store side files (#517)', () => {
+    const policy = new SentinelWatchPolicy();
+    const sideFiles = [
+        '.failsafe/risks/risks.json.lock',
+        '.failsafe/risks/.risks.json.ab12cd34ef56.tmp',
+        '.failsafe/risks/risks.json.corrupt-0123456789ab-0123456789ab.bak',
+    ];
+
+    test('T13 create/modify on lock, temp and copy paths are dropped; risks.json is watched', () => {
+        for (const p of sideFiles) {
+            assert.equal(policy.shouldWatch(p, 'FILE_CREATED'), false, p);
+            assert.equal(policy.shouldWatch(p, 'FILE_MODIFIED'), false, p);
+        }
+        assert.equal(policy.shouldWatch('.failsafe/risks/risks.json', 'FILE_MODIFIED'), true);
+        assert.equal(policy.shouldWatch('.failsafe/risks/.risks.json.ab12cd34ef56.tmp', 'FILE_DELETED'), true);
+    });
+});

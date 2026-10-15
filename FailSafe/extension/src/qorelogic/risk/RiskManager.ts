@@ -1,10 +1,12 @@
 /**
  * RiskManager - Risk Register persistence and operations
  *
- * Manages project-level risk tracking with JSON persistence.
+ * Manages project-level risk tracking with JSON persistence. #517: every
+ * read and write of risks.json goes through RiskStore, so records written by
+ * other writers (imports, the Console, other windows) are seen and never
+ * overwritten, and an unreadable register is refused rather than replaced.
  */
 
-import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
 import {
@@ -18,47 +20,71 @@ import {
   calculateRiskSummary,
 } from "./types";
 import { Logger } from "../../shared/Logger";
-import { writeFileAtomicSync } from "../../shared/writeFileAtomic";
+import { RiskDocument, RiskStore } from "../../shared/risk-store";
 
-const RISKS_FILE = "risks.json";
+/** Activation must never wait long on another window's lock (#517 LD7). */
+const BACKFILL_LOCK_TIMEOUT_MS = 500;
 
 export class RiskManager {
   private readonly risksPath: string;
   private readonly logger: Logger;
+  private readonly store: RiskStore;
   private register: RiskRegister;
+  private warnedUnreadable = false;
 
   constructor(
-    workspaceRoot: string,
+    private readonly workspaceRoot: string,
     private projectId: string,
   ) {
-    this.risksPath = path.join(workspaceRoot, ".failsafe", "risks", RISKS_FILE);
     this.logger = new Logger("RiskManager");
-    this.register = this.loadOrCreate();
+    this.store = new RiskStore(workspaceRoot);
+    this.risksPath = this.store.risksPath;
+    this.register = this.emptyRegister();
+    this.backfillLegacySources();
+    this.refresh();
+    this.logger.info(`Loaded ${this.register.risks.length} risks from register`);
   }
 
-  private loadOrCreate(): RiskRegister {
-    try {
-      if (fs.existsSync(this.risksPath)) {
-        const content = fs.readFileSync(this.risksPath, "utf8");
-        const data = JSON.parse(content) as RiskRegister;
-        const migrated = this.backfillManualSource(data.risks);
-        this.logger.info(`Loaded ${data.risks.length} risks from register`);
-        if (migrated) {
-          this.register = data;
-          this.save();
-        }
-        return data;
-      }
-    } catch (error) {
-      this.logger.warn("Failed to load risk register, creating new", error);
-    }
-
+  private emptyRegister(): RiskRegister {
     return {
       projectId: this.projectId,
       projectName: path.basename(path.dirname(this.risksPath)),
       risks: [],
       lastUpdated: new Date().toISOString(),
     };
+  }
+
+  /**
+   * Persist source='manual' on legacy risks, only when one lacks it. A lock,
+   * read or write failure is logged and never escapes activation.
+   */
+  private backfillLegacySources(): void {
+    const current = this.store.read();
+    if (current.state !== "ok" || current.doc.risks.every((r) => r.source)) return;
+    try {
+      new RiskStore(this.workspaceRoot, { lockTimeoutMs: BACKFILL_LOCK_TIMEOUT_MS }).mutate((doc) => {
+        if (this.backfillManualSource(doc.risks as unknown as Risk[])) this.stampProject(doc);
+      });
+    } catch (error) {
+      this.logger.warn("Could not persist the risk source backfill; continuing with the register as read", error);
+    }
+  }
+
+  /** The register as it is on disk now; the last snapshot if it is unreadable. */
+  private refresh(): RiskRegister {
+    const current = this.store.read();
+    if (current.state === "ok") {
+      this.warnedUnreadable = false;
+      const register = current.doc as unknown as RiskRegister;
+      this.backfillManualSource(register.risks);
+      this.register = register;
+    } else if (current.state === "absent") {
+      this.register = this.emptyRegister();
+    } else if (!this.warnedUnreadable) {
+      this.warnedUnreadable = true;
+      this.logger.warn(`Failed to load risk register (${current.reason}); showing the last snapshot`);
+    }
+    return this.register;
   }
 
   /** Backfill source='manual' on any pre-existing risk lacking the field.
@@ -74,6 +100,12 @@ export class RiskManager {
     return migrated;
   }
 
+  /** Fill RiskManager's header keys only when a mutation changed something. */
+  private stampProject(doc: RiskDocument): void {
+    if (doc.projectId === undefined) doc.projectId = this.projectId;
+    if (doc.projectName === undefined) doc.projectName = path.basename(path.dirname(this.risksPath));
+  }
+
   /** Compute the de-dup key for a derivedFrom payload.
    *  Returns null when no slot is set (no de-dup). */
   private dedupKey(d: RiskDerivedFrom | undefined): string | null {
@@ -85,59 +117,20 @@ export class RiskManager {
   }
 
   /** Look up an existing risk by de-dup key. */
-  private findByDedupKey(key: string): Risk | undefined {
-    for (const r of this.register.risks) {
-      const existing = this.dedupKey(r.derivedFrom);
-      if (existing === key) return r;
-    }
-    return undefined;
-  }
-
-  /**
-   * Multiple subsystems own writes to risks.json. Refresh at every mutation
-   * boundary rather than persisting the constructor's stale snapshot (#517).
-   * An unreadable existing store must never be replaced with an empty one.
-   */
-  private refreshBeforeMutation(): void {
-    if (!fs.existsSync(this.risksPath)) {
-      this.register = this.loadOrCreate();
-      return;
-    }
-    const data: unknown = JSON.parse(fs.readFileSync(this.risksPath, "utf8"));
-    if (!data || typeof data !== "object" ||
-        !Array.isArray((data as RiskRegister).risks)) {
-      throw new Error("Risk register is malformed; refusing destructive mutation");
-    }
-    this.register = data as RiskRegister;
-  }
-
-  private save(): void {
-    try {
-      const dir = path.dirname(this.risksPath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      this.register.lastUpdated = new Date().toISOString();
-      writeFileAtomicSync(this.risksPath, JSON.stringify(this.register, null, 2));
-      this.logger.info("Risk register saved");
-    } catch (error) {
-      this.logger.error("Failed to save risk register", error);
-      // A caller must not report successful persistence when the disk write
-      // failed. This is particularly important for agent-created risks.
-      throw error;
-    }
+  private findByDedupKey(risks: Risk[], key: string): Risk | undefined {
+    return risks.find((r) => this.dedupKey(r.derivedFrom) === key);
   }
 
   getAllRisks(): Risk[] {
-    return [...this.register.risks];
+    return [...this.refresh().risks];
   }
 
   getRisk(id: string): Risk | undefined {
-    return this.register.risks.find((r) => r.id === id);
+    return this.refresh().risks.find((r) => r.id === id);
   }
 
   getSummary() {
-    return calculateRiskSummary(this.register.risks);
+    return calculateRiskSummary(this.refresh().risks);
   }
 
   createRisk(input: {
@@ -162,33 +155,31 @@ export class RiskManager {
       );
     }
 
-    this.refreshBeforeMutation();
-
-    // De-dup: an auto-derived risk with a matching derivedFrom key bumps
-    // updatedAt on the existing risk instead of inserting a duplicate.
     const key = this.dedupKey(input.derivedFrom);
-    if (key) {
-      const existing = this.findByDedupKey(key);
+    const { risk, deduped } = this.store.mutate((doc) => {
+      const risks = doc.risks as unknown as Risk[];
+      const now = new Date().toISOString();
+      // De-dup: an auto-derived risk with a matching derivedFrom key bumps
+      // updatedAt on the existing risk instead of inserting a duplicate.
+      const existing = key ? this.findByDedupKey(risks, key) : undefined;
+      this.stampProject(doc);
       if (existing) {
-        existing.updatedAt = new Date().toISOString();
-        this.save();
-        this.logger.info(`Updated existing risk via dedup key ${key}: ${existing.id}`);
-        return existing;
+        existing.updatedAt = now;
+        return { risk: existing, deduped: true };
       }
-    }
-
-    const now = new Date().toISOString();
-    const risk: Risk = {
-      id: crypto.randomUUID(),
-      ...input,
-      status: "open",
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    this.register.risks.push(risk);
-    this.save();
-    this.logger.info(`Created risk: ${risk.id}`);
+      const created: Risk = {
+        id: crypto.randomUUID(),
+        ...input,
+        status: "open",
+        createdAt: now,
+        updatedAt: now,
+      };
+      risks.push(created);
+      return { risk: created, deduped: false };
+    });
+    this.logger.info(deduped
+      ? `Updated existing risk via dedup key ${key}: ${risk.id}`
+      : `Created risk: ${risk.id}`);
     return risk;
   }
 
@@ -196,56 +187,53 @@ export class RiskManager {
     id: string,
     updates: Partial<Omit<Risk, "id" | "createdAt">>,
   ): Risk | undefined {
-    this.refreshBeforeMutation();
-    const index = this.register.risks.findIndex((r) => r.id === id);
-    if (index === -1) {
+    const updated = this.store.mutate((doc) => {
+      const risks = doc.risks as unknown as Risk[];
+      const index = risks.findIndex((r) => r.id === id);
+      if (index === -1) return undefined;
+      const risk = risks[index];
+      const now = new Date().toISOString();
+      risks[index] = { ...risk, ...updates, updatedAt: now };
+      if (updates.status === "resolved" && !risk.resolvedAt) {
+        risks[index].resolvedAt = now;
+      }
+      this.stampProject(doc);
+      return risks[index];
+    });
+    if (!updated) {
       this.logger.warn(`Risk not found: ${id}`);
       return undefined;
     }
-
-    const risk = this.register.risks[index];
-    this.register.risks[index] = {
-      ...risk,
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    };
-
-    if (updates.status === "resolved" && !risk.resolvedAt) {
-      this.register.risks[index].resolvedAt = new Date().toISOString();
-    }
-
-    this.save();
     this.logger.info(`Updated risk: ${id}`);
-    return this.register.risks[index];
+    return updated;
   }
 
   deleteRisk(id: string): boolean {
-    this.refreshBeforeMutation();
-    const index = this.register.risks.findIndex((r) => r.id === id);
-    if (index === -1) {
-      return false;
-    }
-
-    this.register.risks.splice(index, 1);
-    this.save();
-    this.logger.info(`Deleted risk: ${id}`);
-    return true;
+    const deleted = this.store.mutate((doc) => {
+      const index = doc.risks.findIndex((r) => r.id === id);
+      if (index === -1) return false;
+      doc.risks.splice(index, 1);
+      this.stampProject(doc);
+      return true;
+    });
+    if (deleted) this.logger.info(`Deleted risk: ${id}`);
+    return deleted;
   }
 
   getRisksByStatus(status: RiskStatus): Risk[] {
-    return this.register.risks.filter((r) => r.status === status);
+    return this.refresh().risks.filter((r) => r.status === status);
   }
 
   getRisksBySeverity(severity: RiskSeverity): Risk[] {
-    return this.register.risks.filter((r) => r.severity === severity);
+    return this.refresh().risks.filter((r) => r.severity === severity);
   }
 
   getRisksByCategory(category: RiskCategory): Risk[] {
-    return this.register.risks.filter((r) => r.category === category);
+    return this.refresh().risks.filter((r) => r.category === category);
   }
 
   getOpenCriticalAndHigh(): Risk[] {
-    return this.register.risks.filter(
+    return this.refresh().risks.filter(
       (r) =>
         r.status === "open" &&
         (r.severity === "critical" || r.severity === "high"),

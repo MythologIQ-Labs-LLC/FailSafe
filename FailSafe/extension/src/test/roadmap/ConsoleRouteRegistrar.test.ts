@@ -55,7 +55,7 @@ function makeFakeHub(): any {
     getTransparencyEvents: () => [],
     getRiskRegister: () => [],
     getStoredRiskRegister: () => [],
-    writeRiskRegister: () => undefined,
+    mutateRiskRegister: (fn: (risks: any[]) => any) => fn([]),
   };
 }
 
