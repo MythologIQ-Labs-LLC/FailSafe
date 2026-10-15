@@ -183,14 +183,12 @@ export class BicameralRenderer {
     if (!decisionId) return;
     this._setState({ requesting: true, error: null });
     try {
-      const res = await fetch('/api/actions/bicameral-ratify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ decisionId, verdict: verdict || 'ratify' }),
+      // #514: operator-gated — the server holds this open for a VS Code dialog.
+      const r = await this.client.postGated('/api/actions/bicameral-ratify', {
+        decisionId, verdict: verdict || 'ratify',
       });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || json?.ok === false) {
-        this._setState({ requesting: false, error: json?.error || 'ratify failed' });
+      if (!r.ok) {
+        this._setState({ requesting: false, error: r.error || 'ratify failed' });
         return;
       }
       // Refresh history to surface the new status. _refreshHistory clears

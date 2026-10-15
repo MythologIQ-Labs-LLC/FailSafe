@@ -10,6 +10,12 @@ import {
   emitDriftVerdicts,
   parseVerdict,
 } from "./bicameralRouteShared";
+import {
+  requireOperatorConfirmation,
+  ratifyRequest,
+  sanitizeDialogText,
+  REASON_LIMIT,
+} from "../../extension/operatorConfirmation";
 
 export function registerBicameralDecisionRoutes(
   app: import("express").Application,
@@ -83,8 +89,31 @@ export function registerBicameralDecisionRoutes(
   });
 
   // POST /api/actions/bicameral-ratify — ratify or reject a decision.
+  // #514: records a USER_OVERRIDE as the operator, so it acts only after a
+  // modal VS Code confirmation. There is no server-side decision lookup: the
+  // dialog shows exactly the requester-supplied decisionId, verdict and
+  // sanitized rationale that are then recorded.
   app.post("/api/actions/bicameral-ratify", async (req: Request, res: Response) => {
     if (deps.rejectIfRemote(req, res)) return;
+    const decisionId = typeof req.body?.decisionId === "string" ? req.body.decisionId : "";
+    const verdict = parseVerdict(req.body?.verdict);
+    if (!decisionId) {
+      res.status(400).json({ ok: false, error: "decisionId required (string)" });
+      return;
+    }
+    if (!verdict) {
+      res.status(400).json({ ok: false, error: 'verdict must be "ratify" or "reject"' });
+      return;
+    }
+    // Upstream and the ledger must record the id the dialog showed.
+    if (sanitizeDialogText(decisionId) !== decisionId) {
+      res.status(400).json({ ok: false, error: "decisionId contains control characters or is too long" });
+      return;
+    }
+    const rationale = sanitizeDialogText(
+      typeof req.body?.rationale === "string" ? req.body.rationale : "",
+      REASON_LIMIT,
+    );
     const client = deps.getBicameralClient();
     if (!client) {
       res.status(503).json({ ok: false, error: "Bicameral client not wired" });
@@ -94,14 +123,9 @@ export function registerBicameralDecisionRoutes(
       res.status(409).json({ ok: false, error: "Bicameral not connected" });
       return;
     }
-    const decisionId = typeof req.body?.decisionId === "string" ? req.body.decisionId : "";
-    const verdict = parseVerdict(req.body?.verdict);
-    if (!decisionId) {
-      res.status(400).json({ ok: false, error: "decisionId required (string)" });
-      return;
-    }
-    if (!verdict) {
-      res.status(400).json({ ok: false, error: 'verdict must be "ratify" or "reject"' });
+    if (!(await requireOperatorConfirmation(
+      deps.confirmOperatorAction, ratifyRequest(decisionId, verdict, rationale), res,
+    ))) {
       return;
     }
     try {
@@ -119,8 +143,6 @@ export function registerBicameralDecisionRoutes(
       // accepted X" event. Non-blocking — a ledger write failure must not
       // break the ratify response (the bicameral side has already accepted).
       if (deps.ledgerManager?.isAvailable()) {
-        const rationale =
-          typeof req.body?.rationale === "string" ? req.body.rationale : "";
         try {
           await deps.ledgerManager.appendEntry({
             eventType: "USER_OVERRIDE",

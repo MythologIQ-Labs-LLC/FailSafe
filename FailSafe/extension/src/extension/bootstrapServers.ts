@@ -29,6 +29,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { defaultGitRunner, statusPaths } from "./governedCommit";
 import { runGovernedCommitFlow } from "./governedCommitFlow";
+import { createOperatorConfirmer } from "./operatorConfirmation";
 import { defaultGitHubPost } from "../integrations/github-checks/github-checks-client";
 
 /**
@@ -242,6 +243,9 @@ export async function bootstrapServers(
   const outputChannel = vscode.window.createOutputChannel("FailSafe (Qor-Logic)");
   context.subscriptions.push(outputChannel);
   consoleServer.setOutputChannel(outputChannel);
+  // #514: gated loopback operator routes (L3 decisions, ratify, rollback,
+  // panic-stop, hooks disable) act only after a modal VS Code confirmation.
+  consoleServer.setOperatorConfirmer(createOperatorConfirmer(vscode.window));
 
   // Risk Auto-Derivation pipeline (plan-qor-model-sourced-risks Phase 3).
   const { wireRiskAutoDerivation } = await import("../qorelogic/risk/wireAutoDerivation");

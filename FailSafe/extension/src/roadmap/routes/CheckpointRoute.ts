@@ -1,5 +1,11 @@
 import { Request, Response } from "express";
 import type { ApiRouteDeps } from "./types";
+import {
+  requireOperatorConfirmation,
+  rollbackRequest,
+  sanitizeDialogText,
+  REASON_LIMIT,
+} from "../../extension/operatorConfirmation";
 
 /** Shape passed to RevertService.revert() */
 interface RevertRequest {
@@ -39,18 +45,14 @@ export function setupCheckpointRoutes(
     res.json({ ok: true, checkpoint });
   });
 
-  // API: Rollback to a checkpoint
+  // API: Rollback to a checkpoint. #514: order is body validation (400),
+  // checkpoint lookup (404), revert availability (503), then a modal VS Code
+  // confirmation; the reason sealed is exactly the sanitized reason shown.
   app.post(
     "/api/actions/rollback",
     async (req: Request, res: Response) => {
       if (deps.rejectIfRemote(req, res)) return;
-      if (!deps.revertService) {
-        res
-          .status(503)
-          .json({ ok: false, error: "revert service unavailable" });
-        return;
-      }
-      const { checkpointId, reason: rawReason } = req.body as {
+      const { checkpointId, reason: rawReason } = (req.body ?? {}) as {
         checkpointId?: string;
         reason?: string;
       };
@@ -59,10 +61,21 @@ export function setupCheckpointRoutes(
         return;
       }
       const actor = "user.local";
-      const reason = String(rawReason || "").slice(0, 2000);
+      const reason = sanitizeDialogText(rawReason ?? "", REASON_LIMIT);
       const checkpoint = deps.getCheckpointById(checkpointId);
       if (!checkpoint) {
         res.status(404).json({ ok: false, error: "checkpoint not found" });
+        return;
+      }
+      if (!deps.revertService) {
+        res
+          .status(503)
+          .json({ ok: false, error: "revert service unavailable" });
+        return;
+      }
+      if (!(await requireOperatorConfirmation(
+        deps.confirmOperatorAction, rollbackRequest(checkpointId, checkpoint, reason), res,
+      ))) {
         return;
       }
       try {

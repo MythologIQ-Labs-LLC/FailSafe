@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
       { key: 'mcp',        label: 'MCP Catalog', renderer: new McpCatalogRenderer('integrations') },
       { key: 'agt',        label: 'Agent Governance', renderer: new AgtRenderer('integrations') },
     ]),
-    settings:   new SettingsRenderer('settings', { store }),
+    settings:   new SettingsRenderer('settings', { store, client }),
   };
 
   // Connection status indicator + disconnection banner

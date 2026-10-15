@@ -71,6 +71,8 @@ function makeDeps(
     getBicameralClient: () => client,
     getAutoConnect: () => false,
     setAutoConnect: async () => undefined,
+    // #514: ratify is operator-confirmed; these suites run with an approving confirmer.
+    confirmOperatorAction: async () => "approved",
     eventBus,
   };
 }

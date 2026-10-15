@@ -97,6 +97,8 @@ export class ConsoleServer {
   private scaffoldCallback: (() => Promise<import("../extension/installSkillsReport").QorLogicInstallReport | null>) | null = null;
   private scaffoldWebCallback: ((hosts: import("../qorlogic/hostLayouts").QorLogicHost[], scope: import("../qorlogic/QorLogicSkillIngestor").QorLogicScope) => Promise<import("../extension/installSkillsReport").QorLogicInstallReport>) | null = null;
   private outputChannel: { show(preserveFocus?: boolean): void } | null = null;
+  /** #514: modal VS Code confirmer for gated loopback operator routes. */
+  private operatorConfirmer: import("../extension/operatorConfirmation").ConfirmOperatorAction | null = null;
   private marketplaceCatalog = new MarketplaceCatalog();
   private marketplaceInstaller: MarketplaceInstaller;
   private securityScanner: SecurityScanner;
@@ -211,6 +213,7 @@ export class ConsoleServer {
     this.scaffoldWebCallback = cb;
   }
   setOutputChannel(channel: { show(preserveFocus?: boolean): void }): void { this.outputChannel = channel; }
+  setOperatorConfirmer(confirm: import("../extension/operatorConfirmation").ConfirmOperatorAction): void { this.operatorConfirmer = confirm; }
   /** Expose Express app for post-start route registration (Phase 3 V3 Path A). */
   getExpressApp(): express.Application { return this.app; }
   setAgentTimelineService(s: AgentTimelineService): void { this.agentTimelineService = s; }
@@ -333,6 +336,7 @@ export class ConsoleServer {
       getScaffoldCallback: () => this.scaffoldCallback as any,
       getScaffoldWebCallback: () => this.scaffoldWebCallback as any,
       getOutputChannel: () => this.outputChannel,
+      getOperatorConfirmer: () => this.operatorConfirmer,
       getAgentTimelineService: () => this.agentTimelineService as any,
       getAgentHealthIndicator: () => this.agentHealthIndicator as any,
       getAgentRunRecorder: () => this.agentRunRecorder as any,

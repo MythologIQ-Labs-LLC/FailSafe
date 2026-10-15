@@ -31,6 +31,7 @@ export class SettingsRenderer {
   constructor(containerId, deps = {}) {
     this.container = document.getElementById(containerId);
     this.store = deps.store || null;
+    this.client = deps.client || null;
     this._lastHub = {};
     this._installState = { running: false, steps: [], lastReport: null };
   }
@@ -115,16 +116,13 @@ export class SettingsRenderer {
   }
 
   async _toggleHook(checkbox) {
-    try {
-      const r = await fetch('/api/hooks/toggle', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: checkbox.checked }),
-      });
-      if (!r.ok) throw new Error(`${r.status}`);
-    } catch {
-      checkbox.checked = !checkbox.checked;
-    }
+    // #514: turning hooks off is operator-gated (VS Code dialog); turning
+    // them back on is not, so it shows no pending banner.
+    const enabled = checkbox.checked;
+    const r = this.client
+      ? await this.client.postGated('/api/hooks/toggle', { enabled }, { expectConfirmation: !enabled })
+      : { ok: false };
+    if (!r.ok) checkbox.checked = !enabled;
   }
 
   renderChip(theme, current) {
