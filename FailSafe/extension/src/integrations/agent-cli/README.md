@@ -33,7 +33,7 @@ A git worktree is not a process sandbox. The agent runs with your user account. 
 | Setting | Default | Secret | Purpose |
 |---|---|---|---|
 | `failsafe.integrations.continue.enabled` | `false` | no | Master on/off for the Continue wrapper. |
-| `failsafe.integrations.continue.apiKey` | — | yes | Continue API key; overlaid onto the child env as `CONTINUE_API_KEY` only — never argv, never the receipt. |
+| `failsafe.integrations.continue.apiKey` | — | yes | Optional Continue API key; overlaid onto the child env as `CONTINUE_API_KEY` only — never argv, never the receipt. Stored in VS Code Secure Storage with `FailSafe: Set Integration Credential` (User or Workspace scope). The setting is deprecated and no longer read; `FailSafe: Move Plain-Text Credentials to Secure Storage` moves an existing value. With no key at all, Continue runs on its own login; a key still in plain-text settings stops the run until it is moved. |
 | `failsafe.integrations.continue.allow` | `[]` | no | The `--allow <tool>` allowlist passed to `cn`; shell/exec → L3 (refused before running), file-write → L2, else L1. The tier is a pre-run signal, not an isolation control. |
 | `failsafe.integrations.continue.allowWrites` | `false` | no | Permit an isolated Continue run whose changes can be reviewed for promotion. When false, `cn` is never started. |
 | `failsafe.integrations.aider.enabled` | `false` | no | Master on/off for the Aider wrapper. |
@@ -43,7 +43,7 @@ A git worktree is not a process sandbox. The agent runs with your user account. 
 `failsafe.integrations.aider.allowDirty` and `failsafe.integrations.aider.autoCommit` were removed in #475: the tree must be clean, and Aider always runs with `--no-auto-commits`.
 
 ## Security
-The only secret is Continue's API key, overlaid onto the child environment and nowhere else (tests assert argv and receipt carry no key). Spawns are argv-form with `shell: false`, and the production runner spawns only the absolute path detection recorded for the literal name `aider` or `cn`; with none recorded it refuses (exit 126) and starts nothing. Risk is classified with the live PolicyEngine over every touched path (max with the allowlist tier) and shown in the review dialog; the L3 HTTP approval routes are not used (see #514).
+The only secret is Continue's API key, overlaid onto the child environment and nowhere else (tests assert argv and receipt carry no key). Where Continue sends that key is decided by Continue's own configuration, which FailSafe does not inspect. Spawns are argv-form with `shell: false`, and the production runner spawns only the absolute path detection recorded for the literal name `aider` or `cn`; with none recorded it refuses (exit 126) and starts nothing. Risk is classified with the live PolicyEngine over every touched path (max with the allowlist tier) and shown in the review dialog; the L3 HTTP approval routes are not used (see #514).
 
 ## Command / wiring
 - `FailSafe: Run Continue (governed)` (`failsafe.continue.run`) and `FailSafe: Run Aider (governed)` (`failsafe.aider.run`), defined in `src/extension/agent-cli-command.ts`.

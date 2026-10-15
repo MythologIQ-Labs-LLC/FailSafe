@@ -53,6 +53,9 @@ Each integration ships with its own README and its external API names are back-c
 - **Editor-save denials say what they are.** VS Code cannot cancel a save, so FailSafe now reports a denied save as observed, not prevented, instead of claiming it was blocked.
 - **The SHIELD phase reads correctly on Windows checkouts,** where Git stores the ledger with CRLF line endings.
 - **Sentry imports report exactly what happened** and respect Sentry's rate limits; imported risks show the issue's first and last release.
+- **Integration credentials move to Secure Storage.** Tokens, API keys and webhook URLs for Sentry, Jira, Linear, GitHub, Continue, Slack and Teams are no longer read from settings. Use **FailSafe: Set Integration Credential**; if FailSafe finds one in plain-text settings it offers to move it, checks the stored copy, and removes the plain text only with your consent.
+- **The L3 Approval Queue buttons work.** Approve, Reject and View File were blocked by the panel's own security policy.
+- **An interrupted save no longer corrupts the risk register.** `risks.json` is replaced only by a complete file.
 - Open Design 0.24.1 works again, and the Open Design client can no longer approve its own artifact writes.
 
 Not verified against live services in this release: Sentry, Jira, Linear, OpenHands, Aider and Continue were tested with recorded responses only. See the [6.0.7] changelog for the full list of known limitations.
@@ -384,7 +387,7 @@ Open Settings and search for `FailSafe`:
 | `failsafe.qorelogic.l3SLA`                        | `120`                            | L3 response SLA (seconds)                                          |
 | `failsafe.qorelogic.externalRuntime.enabled`      | `false`                          | Enable external FailSafe-Qore runtime integration in monitor       |
 | `failsafe.qorelogic.externalRuntime.baseUrl`      | `http://127.0.0.1:7777`          | Base URL for external FailSafe-Qore runtime API                    |
-| `failsafe.qorelogic.externalRuntime.apiKey`       | ``                               | Optional API key used for runtime calls                            |
+| `failsafe.qorelogic.externalRuntime.apiKey`       | ``                               | Deprecated: not used by FailSafe. Remove any plain-text value.     |
 | `failsafe.qorelogic.externalRuntime.apiKeyEnvVar` | `QORE_API_KEY`                   | Environment variable fallback for runtime API key                  |
 | `failsafe.qorelogic.externalRuntime.timeoutMs`    | `4000`                           | Timeout for runtime API calls in milliseconds                      |
 | `failsafe.bootstrap.autoInstallGit`               | `false`                          | Install Git system-wide if missing (asks before `git init`)         |

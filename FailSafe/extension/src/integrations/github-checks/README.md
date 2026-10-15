@@ -17,12 +17,12 @@ The operator-facing command publishes a non-authoritative, `neutral` Check Run n
 | Setting | Default | Secret | Purpose |
 |---|---|---|---|
 | `failsafe.integrations.github.enabled` | `false` | no | Master switch; no network call unless `true`. |
-| `failsafe.integrations.github.token` | `` (empty) | yes | App installation token or a PAT with `checks:write`; sent only in the outbound `Authorization` header. |
+| `failsafe.integrations.github.token` | `` (empty) | yes | App installation token or a PAT with `checks:write`; sent only in the outbound `Authorization` header. Stored in VS Code Secure Storage with `FailSafe: Set Integration Credential` (User or Workspace scope). The setting is deprecated and no longer read; `FailSafe: Move Plain-Text Credentials to Secure Storage` moves an existing value. |
 | `failsafe.integrations.github.apiBaseUrl` | `` (empty) | no | Optional GitHub Enterprise API base; defaults to `https://api.github.com`. |
 
 ## Security
 
-The token is a secret: it is read from settings, placed only in the outbound `Authorization: token <token>` header, and is never returned in the result object or logged (a masking test proves this). The transport short-circuits to a `localOnly` result with no network call when the integration is disabled, no token is set, the context is a fork PR, or the git remote/HEAD is missing. The integration only writes one Check Run (status `completed`); it reads no repository content. Off by default — no network or process runs unless explicitly enabled.
+The token is a secret: it is kept in Secure Storage (never read from settings since v6.0.7), placed only in the outbound `Authorization: token <token>` header, and is never returned in the result object or logged (a masking test proves this). The transport short-circuits to a `localOnly` result with no network call when the integration is disabled, no token is set, the context is a fork PR, or the git remote/HEAD is missing. The integration only writes one Check Run (status `completed`); it reads no repository content. Off by default — no network or process runs unless explicitly enabled. If `apiBaseUrl` comes from workspace settings, only a Workspace-scope token is sent there; a User-scope token is refused.
 
 ## Command / wiring
 

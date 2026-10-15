@@ -55,7 +55,7 @@ Sentry documents the rate-limit headers but neither the limited status code nor 
 | Setting | Default | Secret | Purpose |
 |---|---|---|---|
 | `failsafe.integrations.sentry.enabled` | `false` | no | Master on/off. When off, the import makes no request. |
-| `failsafe.integrations.sentry.token` | — | yes | Sentry auth token, sent only as the `Authorization: Bearer` header. |
+| `failsafe.integrations.sentry.token` | — | yes | Sentry auth token, sent only as the `Authorization: Bearer` header. Stored in VS Code Secure Storage with `FailSafe: Set Integration Credential` (User or Workspace scope). The setting is deprecated and no longer read; `FailSafe: Move Plain-Text Credentials to Secure Storage` moves an existing value. |
 | `failsafe.integrations.sentry.org` | — | no | Sentry organization slug (letters, digits, `.`, `_`, `-`; must not start with `.`). |
 | `failsafe.integrations.sentry.project` | — | no | Sentry project slug or ID. |
 | `failsafe.integrations.sentry.environment` | — | no | Optional environment, sent as the `environment` filter. |
@@ -64,7 +64,7 @@ Sentry documents the rate-limit headers but neither the limited status code nor 
 | `failsafe.integrations.sentry.maxReleaseLookups` | `50` | no | Issue-detail lookups per import, 0-200; 0 turns release lookups off. |
 
 ## Security
-The token is placed only in the outbound `Authorization` header and is never returned in an outcome, a message or a log. Before any request, the transport refuses a URL that is not HTTPS, carries credentials, or does not lie under the configured base (host case and default port normalized). Pagination links that leave the origin or path are refused, and the import fails closed. The org must be a slug and issue ids must be numeric before they enter a path.
+The token is kept in Secure Storage (never read from settings since v6.0.7). If `apiBaseUrl` comes from workspace settings, only a Workspace-scope token is sent there; a User-scope token is refused. The token is placed only in the outbound `Authorization` header and is never returned in an outcome, a message or a log. Before any request, the transport refuses a URL that is not HTTPS, carries credentials, or does not lie under the configured base (host case and default port normalized). Pagination links that leave the origin or path are refused, and the import fails closed. The org must be a slug and issue ids must be numeric before they enter a path.
 
 ## Limitations
 - Live-provider acceptance is pending; the suites drive deterministic fixtures through the injected transport, clock and sleep.

@@ -1,5 +1,3 @@
-[![Socket Badge](https://badge.socket.dev/openvsx/package/mythologiq.mythologiq-failsafe/4.9.0?platform=universal)](https://badge.socket.dev/openvsx/package/mythologiq.mythologiq-failsafe/4.9.0?platform=universal)
-
 # FailSafe - AI Governance Extension
 
 **Current Release**: v4.9.0
