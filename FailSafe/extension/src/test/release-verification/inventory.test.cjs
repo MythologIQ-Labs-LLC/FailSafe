@@ -145,3 +145,15 @@ test("a zip with two entries of the same name is an archive failure", () => {
   assert.equal(r.checks[0].status, "fail");
   assert.match(r.checks[0].detail, /duplicate entry extension\/package\.json/);
 });
+
+test("duplicate zip entry names are detected case-insensitively", () => {
+  const manifest = fx.manifestXml({ id: "mythologiq-failsafe", version: V, publisher: "MythologIQ", target: "linux-x64" });
+  const zip = fx.makeZip([
+    { name: "extension.vsixmanifest", data: manifest },
+    { name: "extension/package.json", data: JSON.stringify({ version: V, optionalDependencies: { "better-sqlite3": "^13.0.3" } }) },
+    { name: "EXTENSION/package.json", data: JSON.stringify({ version: "9.9.9" }) },
+  ]);
+  const r = inspectVsix(zip, V);
+  assert.equal(r.checks[0].status, "fail");
+  assert.match(r.checks[0].detail, /duplicate entry/i);
+});

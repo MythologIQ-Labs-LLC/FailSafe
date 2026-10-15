@@ -35,6 +35,7 @@ function openArchive(buf, { maxEntryBytes = MAX_ENTRY_BYTES } = {}) {
   if (count === 0xffff || cdSize === 0xffffffff || p === 0xffffffff) throw new ArchiveError("ZIP64 archives are not supported");
   if (p + cdSize > eocd) throw new ArchiveError("central directory lies outside the archive");
   const entries = new Map();
+  const seen = new Set();
   for (let i = 0; i < count; i++) {
     if (p + 46 > buf.length || buf.readUInt32LE(p) !== 0x02014b50) throw new ArchiveError(`bad central directory entry ${i}`);
     const method = buf.readUInt16LE(p + 10);
@@ -47,7 +48,8 @@ function openArchive(buf, { maxEntryBytes = MAX_ENTRY_BYTES } = {}) {
     const name = buf.toString("utf8", p + 46, p + 46 + nameLen);
     p += 46 + nameLen + extraLen + commentLen;
     if (name.startsWith("/") || name.includes("\\") || name.split("/").includes("..")) throw new ArchiveError(`unsafe entry name ${name}`);
-    if (entries.has(name)) throw new ArchiveError(`duplicate entry ${name}`);
+    if (seen.has(name.toLowerCase())) throw new ArchiveError(`duplicate entry ${name} (names compared case-insensitively)`);
+    seen.add(name.toLowerCase());
     entries.set(name, { method, compressed, size, local });
   }
   return {

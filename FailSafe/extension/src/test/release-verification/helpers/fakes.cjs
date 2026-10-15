@@ -118,7 +118,7 @@ function vsixFiles({ toPath } = {}) {
  * the spawned USERPROFILE. A healthy launch (the to VSIX installed) adds one
  * snapshot.created row.
  */
-function fakeWorld({ code, root, v, registry = true, triggerWrites = true, git = true, onList, operatorRegistryPath, leakToOperator = false, stubborn = [], restartOnExthostKill = false, renderer = false }) {
+function fakeWorld({ code, root, v, registry = true, triggerWrites = true, git = true, onList, operatorRegistryPath, leakToOperator = false, stubborn = [], restartOnExthostKill = false, renderer = false, ignoreQuitAt = [], listFailAt = null }) {
   const w = { calls: [], kills: [], alive: [OPERATOR], clock: Date.parse("2026-10-15T10:00:00Z"), launchNo: 0, listInLaunch: 0, listCount: 0, installed: null, snap: 0, copyDirs: [], aliveInDirAtDbCheck: [], current: null };
   const inDir = (p) => p.exe.toLowerCase().startsWith(`${deps.code.dir.toLowerCase()}${path.sep}`);
   const deps = {
@@ -160,7 +160,8 @@ function fakeWorld({ code, root, v, registry = true, triggerWrites = true, git =
     async listProcesses() {
       w.listInLaunch += 1;
       w.listCount += 1;
-      if (w.current && fs.existsSync(w.current.quitFile)) w.alive = w.alive.filter((p) => !w.current.owned.includes(p.pid));
+      if (listFailAt && w.launchNo === listFailAt.launch && w.listInLaunch === listFailAt.n) throw new Error("process listing does not contain this process (pid 4242)");
+      if (w.current && fs.existsSync(w.current.quitFile) && !ignoreQuitAt.includes(w.launchNo)) w.alive = w.alive.filter((p) => !w.current.owned.includes(p.pid));
       onList?.(w);
       return w.alive.map((p) => ({ ...p }));
     },

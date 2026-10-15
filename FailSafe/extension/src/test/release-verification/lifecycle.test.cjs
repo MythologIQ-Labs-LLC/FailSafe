@@ -207,11 +207,31 @@ test("assessPersistence: each healthy session adds a snapshot.created row, inclu
 
 test("winproc pins powershell.exe and taskkill.exe under %SystemRoot%\\System32 and reports taskkill's result", () => {
   const winproc = require(fx.rv("lib/winproc.cjs"));
-  const tools = winproc.systemTools({ SystemRoot: "D:\\Win" });
+  const exists = () => true;
+  const tools = winproc.systemTools({ SystemRoot: "D:\\Win" }, { exists });
   assert.equal(tools.powershell, "D:\\Win\\System32\\WindowsPowerShell\\v1.0\\powershell.exe");
   assert.equal(tools.taskkill, "D:\\Win\\System32\\taskkill.exe");
-  assert.equal(winproc.systemTools({}).taskkill, "C:\\Windows\\System32\\taskkill.exe");
+  assert.equal(winproc.systemTools({}, { exists }).taskkill, "C:\\Windows\\System32\\taskkill.exe");
   assert.deepEqual(winproc.killResult({ status: 0, stderr: "" }), { ok: true, detail: "" });
   assert.deepEqual(winproc.killResult({ status: 128, stderr: "ERROR: The process \"1040\" not found.\r\n" }), { ok: false, detail: "ERROR: The process \"1040\" not found." });
   assert.equal(winproc.killResult({ status: null, error: new Error("spawn EPERM") }).ok, false);
+});
+
+test("winproc refuses a relative SystemRoot or one without powershell.exe and taskkill.exe", () => {
+  const winproc = require(fx.rv("lib/winproc.cjs"));
+  assert.throws(() => winproc.systemTools({ SystemRoot: "Windows" }, { exists: () => true }), /absolute/);
+  assert.throws(() => winproc.systemTools({ SystemRoot: "D:\\Win" }, { exists: (p) => !/taskkill/.test(p) }), /taskkill\.exe not found/);
+  assert.throws(() => winproc.systemTools({ SystemRoot: "D:\\Win" }, { exists: (p) => !/powershell/.test(p) }), /powershell\.exe not found/);
+});
+
+test("winproc rejects an empty or partial process listing and reports a spawn error", async () => {
+  const winproc = require(fx.rv("lib/winproc.cjs"));
+  const self = 4242;
+  assert.throws(() => winproc.parseListing("", self), /empty/);
+  assert.throws(() => winproc.parseListing(JSON.stringify([{ ProcessId: 1, ParentProcessId: 0, ExecutablePath: "C:\\x.exe", CreationDate: "a" }]), self), /does not contain this process/);
+  const one = winproc.parseListing(JSON.stringify({ ProcessId: self, ParentProcessId: 1, ExecutablePath: "C:\\node.exe", CreationDate: "b" }), self);
+  assert.deepEqual(one, [{ pid: self, ppid: 1, exe: "C:\\node.exe", created: "b" }]);
+  const env = { SystemRoot: "C:\\Windows" };
+  await assert.rejects(winproc.listProcesses({ env, exists: () => true, run: () => ({ status: null, error: new Error("spawn EACCES"), stdout: "", stderr: "" }) }), /spawn EACCES/);
+  await assert.rejects(winproc.listProcesses({ env, exists: () => true, run: () => ({ status: 0, stdout: "", stderr: "" }) }), /empty/);
 });

@@ -108,6 +108,47 @@ test("a child that exited with main before taskkill reached it is not reported a
   assert.doesNotMatch(step(r, "S4").detail, /taskkill/);
 });
 
+test("a quit timeout force-stops the step's processes, extension host first, and fails the step", async () => {
+  const { w, deps } = setup({ ignoreQuitAt: [3] });
+  const r = await lc.runLifecycle(deps);
+  assert.equal(step(r, "S3").status, "fail");
+  assert.match(step(r, "S3").detail, /quit timed out/);
+  assert.deepEqual(w.kills.filter((k) => k.launch === 3).map((k) => k.pid), [1031, 1030], "exthost first on the quit-timeout path too");
+  assert.equal(step(r, "S4").status, "pass", "the run continues once everything stopped");
+});
+
+test("a quit timeout whose processes never stop fails the step, skips its database copy and aborts the run", async () => {
+  const { w, deps } = setup({ ignoreQuitAt: [3], stubborn: [1030] });
+  const r = await lc.runLifecycle(deps);
+  assert.equal(step(r, "S3").status, "fail");
+  assert.match(step(r, "S3").detail, /still running.*1030/);
+  assert.ok(!w.copyDirs.some((d) => d.endsWith(`${path.sep}S3`)), "S3's databases are not copied");
+  assert.ok(["S4", "S5", "S6", "S7"].every((s) => step(r, s).status === "not-run"));
+});
+
+test("a launch failure signals every owned process, including one that appeared after the snapshot", async () => {
+  const { w, deps } = setup({
+    triggerWrites: false,
+    onList: (world) => {
+      if (world.launchNo === 1 && world.listInLaunch === 2) world.alive.push({ pid: 1019, ppid: 1010, exe: path.join(deps.code.dir, "Code.exe"), created: "late" });
+    },
+  });
+  const r = await lc.runLifecycle(deps);
+  const killed = w.kills.filter((k) => k.launch === 1).map((k) => k.pid);
+  for (const pid of [1010, 1011, 1019]) assert.ok(killed.includes(pid), `${pid} signalled (got ${killed.join(", ")})`);
+  assert.equal(step(r, "S1").status, "inconclusive");
+});
+
+test("a process listing that fails mid-run is inconclusive: the step is not judged, its databases are not copied, the run aborts", async () => {
+  const { w, deps } = setup({ listFailAt: { launch: 4, n: 1 } });
+  const r = await lc.runLifecycle(deps);
+  assert.equal(step(r, "S4").status, "inconclusive");
+  assert.match(step(r, "S4").detail, /process listing failed/);
+  assert.ok(!w.copyDirs.some((d) => d.endsWith(`${path.sep}S4`)));
+  assert.ok(["S5", "S6", "S7"].every((s) => step(r, s).status === "not-run"));
+  assert.equal(exitFor(r.checks), 3);
+});
+
 test("when the owned set never empties (taskkill fails) the step fails and its databases are not copied", async () => {
   const { w, deps } = setup({ stubborn: [1040] });
   const r = await lc.runLifecycle(deps);
@@ -185,5 +226,16 @@ test("preflight refusals: non-empty ROOT exits 2; --to failing inventory exits 1
   assert.equal(await main(lifecycleArgs({ code, root: root2, from: v.fromPath, to: badTo, extra: ["--to-sha256", "0".repeat(64)] }), io), 2, "a hash mismatch outranks a failing inventory");
 
   assert.equal(await main(lifecycleArgs({ code, root: root2, from: v.fromPath, to: v.toPath }), { ...io, platform: "linux" }), 2, "win32-x64 only");
+  assert.deepEqual(calls, []);
+});
+
+test("an invalid SystemRoot makes the real process listing fail before any spawn: exit 3", async () => {
+  const winproc = require(fx.rv("lib/winproc.cjs"));
+  const code = fakeCodeDir();
+  const v = vsixFiles();
+  const calls = [];
+  const lifecycleDeps = { spawn: () => { calls.push("spawn"); throw new Error("must not spawn"); }, listProcesses: () => winproc.listProcesses({ env: { SystemRoot: "Windows" } }), kill: async () => { calls.push("kill"); } };
+  const root = path.join(fx.tmpDir("rv-root-parent"), "root");
+  assert.equal(await main(lifecycleArgs({ code, root, from: v.fromPath, to: v.toPath }), { platform: "win32", arch: "x64", lifecycleDeps, ...fx.capture().io }), 3);
   assert.deepEqual(calls, []);
 });

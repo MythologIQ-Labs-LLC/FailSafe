@@ -286,6 +286,17 @@ async function waitFor(deps, timeout, probe) {
   }
 }
 
+/** A process listing that failed or was incomplete; the step cannot be judged. */
+class ListingError extends Error {}
+
+async function list(deps) {
+  try {
+    return await deps.listProcesses();
+  } catch (err) {
+    throw new ListingError(err.message);
+  }
+}
+
 /**
  * One kill round: a single fresh listing re-checks every expected process (same
  * PID, ExecutablePath and CreationDate, still inside DIR), then the survivors are
@@ -295,7 +306,7 @@ async function waitFor(deps, timeout, probe) {
 async function killRound(deps, expected, firstPid) {
   const notes = [];
   const failed = [];
-  const fresh = await deps.listProcesses();
+  const fresh = await list(deps);
   const ordered = [...expected].sort((a, b) => (a.pid === firstPid ? -1 : b.pid === firstPid ? 1 : 0));
   const targets = [];
   for (const p of ordered) {
@@ -326,7 +337,7 @@ async function stopUntilEmpty(deps, initial, firstPid) {
   for (;;) {
     const round = owned.length ? await killRound(deps, owned, firstPid) : { notes: [], failed: [] };
     notes.push(...round.notes);
-    owned = selectOwnedProcesses(await deps.listProcesses(), deps.code.dir).owned;
+    owned = selectOwnedProcesses(await list(deps), deps.code.dir).owned;
     for (const x of round.failed) if (owned.some((p) => p.pid === x.pid)) notes.push(`taskkill ${x.pid} failed: ${x.detail}`);
     if (owned.length === 0 || deps.now() - start >= deps.timeouts.quit) break;
     await deps.sleep(deps.timeouts.poll);
@@ -357,92 +368,100 @@ async function runLifecycle(depsIn) {
       checks.push(check(step.id, "lifecycle", HOST_TARGET, "not-run", `not run: ${aborted}`));
       continue;
     }
-    const vsix = deps[step.vsix];
-    const degraded = expectDegraded(vsix.inspection, deps.host);
-    const expected = { version: vsix.version, targetPlatform: vsix.inspection.target ?? null };
-    if (step.install) {
-      const s = buildSpawn("install", { code: deps.code, root: deps.root, vsix: deps[step.install].path });
-      const code = await deps.spawn(s.file, s.args, { env: buildEnv(deps.env, deps.root, { install: true }) }).exited;
-      if (code !== 0) {
-        checks.push(assessStep({ step: step.id, launch: "install-failure", detail: `install of ${path.basename(deps[step.install].path)} exited ${code}`, events: [], findings: [] }));
-        aborted = `${step.id} install failed`;
-        continue;
+    try {
+      const vsix = deps[step.vsix];
+      const degraded = expectDegraded(vsix.inspection, deps.host);
+      const expected = { version: vsix.version, targetPlatform: vsix.inspection.target ?? null };
+      if (step.install) {
+        const s = buildSpawn("install", { code: deps.code, root: deps.root, vsix: deps[step.install].path });
+        const code = await deps.spawn(s.file, s.args, { env: buildEnv(deps.env, deps.root, { install: true }) }).exited;
+        if (code !== 0) {
+          checks.push(assessStep({ step: step.id, launch: "install-failure", detail: `install of ${path.basename(deps[step.install].path)} exited ${code}`, events: [], findings: [] }));
+          aborted = `${step.id} install failed`;
+          continue;
+        }
       }
-    }
-    const outFile = path.join(L.out, `${step.id}.jsonl`);
-    const launchTime = deps.now();
-    const s = buildSpawn("launch", { code: deps.code, root: deps.root, trigger: deps.trigger });
-    deps.spawn(s.file, s.args, { env: buildEnv(deps.env, deps.root, { outFile }) });
+      const outFile = path.join(L.out, `${step.id}.jsonl`);
+      const launchTime = deps.now();
+      const s = buildSpawn("launch", { code: deps.code, root: deps.root, trigger: deps.trigger });
+      deps.spawn(s.file, s.args, { env: buildEnv(deps.env, deps.root, { outFile }) });
 
-    let launch = "ok";
-    const found = await waitFor(deps, deps.timeouts.found, async () => readEvents(outFile).find((e) => e.event === "found"));
-    if (!found) launch = "launch-failure";
-    else if (!(await waitFor(deps, deps.timeouts.activated, async () => readEvents(outFile).find((e) => e.event === "activated" || e.event === "error")))) launch = "activation-timeout";
+      let launch = "ok";
+      const found = await waitFor(deps, deps.timeouts.found, async () => readEvents(outFile).find((e) => e.event === "found"));
+      if (!found) launch = "launch-failure";
+      else if (!(await waitFor(deps, deps.timeouts.activated, async () => readEvents(outFile).find((e) => e.event === "activated" || e.event === "error")))) launch = "activation-timeout";
 
-    let commit = { ok: false, reason: "not evaluated" };
-    if (launch === "ok") {
-      if (degraded) {
-        await waitFor(deps, deps.timeouts.commit, async () => deps.scanLogs(L.userData, launchTime).some((f) => f.kind === "degraded"));
-      } else {
-        await waitFor(deps, deps.timeouts.commit, async () => {
-          commit = commitObserved({ root: deps.root, launchTime, events: readEvents(outFile), registryPath, registry: deps.readJson(registryPath), findings: deps.scanLogs(L.userData, launchTime) });
-          return commit.ok;
-        });
+      let commit = { ok: false, reason: "not evaluated" };
+      if (launch === "ok") {
+        if (degraded) {
+          await waitFor(deps, deps.timeouts.commit, async () => deps.scanLogs(L.userData, launchTime).some((f) => f.kind === "degraded"));
+        } else {
+          await waitFor(deps, deps.timeouts.commit, async () => {
+            commit = commitObserved({ root: deps.root, launchTime, events: readEvents(outFile), registryPath, registry: deps.readJson(registryPath), findings: deps.scanLogs(L.userData, launchTime) });
+            return commit.ok;
+          });
+        }
+        if (deps.timeouts.settle) await deps.sleep(deps.timeouts.settle);
       }
-      if (deps.timeouts.settle) await deps.sleep(deps.timeouts.settle);
-    }
 
-    const snapshot = selectOwnedProcesses(await deps.listProcesses(), deps.code.dir);
-    for (const p of snapshot.owned) ownedSeen.set(`${p.pid}:${p.created}`, { pid: p.pid, exe: p.exe });
-    const notes = [];
-    let remaining = [];
-    if (step.kill && launch === "ok" && commit.ok) {
-      const r = await stopUntilEmpty(deps, snapshot.owned, found.pid);
-      notes.push("force-killed after commit-observed", ...r.notes);
-      remaining = r.remaining;
-    } else if (launch === "launch-failure") {
-      const r = await stopUntilEmpty(deps, snapshot.owned, null);
-      notes.push(...r.notes);
-      remaining = r.remaining;
-    } else {
-      fs.writeFileSync(`${outFile}.quit`, "");
-      const gone = await waitFor(deps, deps.timeouts.quit, async () => selectOwnedProcesses(await deps.listProcesses(), deps.code.dir).owned.length === 0);
-      if (!gone) {
-        if (launch === "ok") launch = "quit-timeout";
-        const r = await stopUntilEmpty(deps, selectOwnedProcesses(await deps.listProcesses(), deps.code.dir).owned, null);
+      const snapshot = selectOwnedProcesses(await list(deps), deps.code.dir);
+      for (const p of snapshot.owned) ownedSeen.set(`${p.pid}:${p.created}`, { pid: p.pid, exe: p.exe });
+      const notes = [];
+      let remaining = [];
+      if (step.kill && launch === "ok" && commit.ok) {
+        const r = await stopUntilEmpty(deps, snapshot.owned, found.pid);
+        notes.push("force-killed after commit-observed", ...r.notes);
+        remaining = r.remaining;
+      } else if (launch === "launch-failure") {
+        const r = await stopUntilEmpty(deps, snapshot.owned, null);
         notes.push(...r.notes);
         remaining = r.remaining;
+      } else {
+        fs.writeFileSync(`${outFile}.quit`, "");
+        const gone = await waitFor(deps, deps.timeouts.quit, async () => selectOwnedProcesses(await list(deps), deps.code.dir).owned.length === 0);
+        if (!gone) {
+          if (launch === "ok") launch = "quit-timeout";
+          const r = await stopUntilEmpty(deps, selectOwnedProcesses(await list(deps), deps.code.dir).owned, found?.pid ?? null);
+          notes.push(...r.notes);
+          remaining = r.remaining;
+        }
       }
-    }
-    for (const p of remaining) ownedSeen.set(`${p.pid}:${p.created}`, { pid: p.pid, exe: p.exe });
-    const after = await deps.listProcesses();
-    for (const r of snapshot.residual) {
-      if (after.some((p) => p.pid === r.pid && p.created === r.created)) residualSeen.set(`${r.pid}:${r.created}`, { pid: r.pid, exe: r.exe });
-    }
+      for (const p of remaining) ownedSeen.set(`${p.pid}:${p.created}`, { pid: p.pid, exe: p.exe });
+      const after = await list(deps);
+      for (const r of snapshot.residual) {
+        if (after.some((p) => p.pid === r.pid && p.created === r.created)) residualSeen.set(`${r.pid}:${r.created}`, { pid: r.pid, exe: r.exe });
+      }
 
-    if (remaining.length) {
-      // Never copy databases a live process may still be writing; nothing after this step can be trusted.
-      checks.push(check(step.id, "lifecycle", HOST_TARGET, "fail", `processes from the disposable VS Code still running after stop: ${remaining.map((p) => p.pid).join(", ")}; ${notes.join("; ")}`));
-      aborted = `${step.id} could not stop the disposable VS Code`;
-      continue;
+      if (remaining.length) {
+        // Never copy databases a live process may still be writing; nothing after this step can be trusted.
+        checks.push(check(step.id, "lifecycle", HOST_TARGET, "fail", `processes from the disposable VS Code still running after stop: ${remaining.map((p) => p.pid).join(", ")}; ${notes.join("; ")}`));
+        aborted = `${step.id} could not stop the disposable VS Code`;
+        continue;
+      }
+      if (launch === "launch-failure") {
+        checks.push(assessStep({ step: step.id, launch, events: [], findings: [] }));
+        aborted = `${step.id} launch failure`;
+        continue;
+      }
+      const findings = deps.scanLogs(L.userData, launchTime);
+      const dbs = deps.checkDbs(L.ws, path.join(L.out, "db-copies", step.id));
+      const events = readEvents(outFile);
+      if (!degraded) healthyCommits.push({ step: step.id, ok: commit.ok });
+      checks.push(assessStep({
+        step: step.id, launch, expectDegraded: degraded, expected, installed: deps.readInstalled(L.extensions),
+        events, findings, dbs, commit: degraded ? { ok: true, reason: "degraded step" } : commit, note: notes.join("; "),
+      }));
+      persistenceRows.push({
+        step: step.id, expectDegraded: degraded,
+        counts: { snapshotCreated: dbs.soa_ledger?.snapshotCreated ?? 0, tables: Object.fromEntries(Object.entries(dbs).map(([n, r]) => [n, r.tables ?? {}])) },
+      });
+    } catch (err) {
+      if (!(err instanceof ListingError)) throw err;
+      // An empty, partial or failed listing cannot show that the disposable VS Code stopped:
+      // the step is not judged and its databases are not copied.
+      checks.push(check(step.id, "lifecycle", HOST_TARGET, "inconclusive", `process listing failed: ${err.message}; the step is not judged and its databases are not copied`));
+      aborted = `${step.id} process listing failed`;
     }
-    if (launch === "launch-failure") {
-      checks.push(assessStep({ step: step.id, launch, events: [], findings: [] }));
-      aborted = `${step.id} launch failure`;
-      continue;
-    }
-    const findings = deps.scanLogs(L.userData, launchTime);
-    const dbs = deps.checkDbs(L.ws, path.join(L.out, "db-copies", step.id));
-    const events = readEvents(outFile);
-    if (!degraded) healthyCommits.push({ step: step.id, ok: commit.ok });
-    checks.push(assessStep({
-      step: step.id, launch, expectDegraded: degraded, expected, installed: deps.readInstalled(L.extensions),
-      events, findings, dbs, commit: degraded ? { ok: true, reason: "degraded step" } : commit, note: notes.join("; "),
-    }));
-    persistenceRows.push({
-      step: step.id, expectDegraded: degraded,
-      counts: { snapshotCreated: dbs.soa_ledger?.snapshotCreated ?? 0, tables: Object.fromEntries(Object.entries(dbs).map(([n, r]) => [n, r.tables ?? {}])) },
-    });
   }
 
   if (aborted) {
@@ -531,5 +550,5 @@ module.exports = {
   STEPS, DEFAULT_TIMEOUTS, SEEDED_SETTINGS, HOST_TARGET,
   layout, prepareRoot, validateCodeDir, knownInstallLocations, refuseUnsafe, buildEnv, buildSpawn,
   selectOwnedProcesses, commitObserved, expectDegraded, assessStep, assessPersistence,
-  readInstalledExtension, runLifecycle, runLifecycleCli, norm, samePath, isInside,
+  readInstalledExtension, runLifecycle, runLifecycleCli, norm, samePath, isInside, ListingError,
 };
