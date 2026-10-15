@@ -15,75 +15,12 @@ const { runMarketplace, allowedHost, VSM_QUERY_URL } = require(fx.rv("lib/market
 const { parseSums } = require(fx.rv("lib/sums.cjs"));
 const { exitFor } = require(fx.rv("lib/evidence.cjs"));
 const { main } = require(fx.rv("rv.cjs"));
+const { OVSX, reply, fakeMarkets } = require("./helpers/fakes.cjs");
 
 const V = "6.0.7";
 const TARGETS = Object.keys(fx.NATIVE_TARGETS);
-const OVSX = "https://open-vsx.org/api/MythologIQ/mythologiq-failsafe";
 const ovsx606 = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "openvsx-6.0.6.json"), "utf8"));
 const vsm606 = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "vsmarketplace-6.0.6.json"), "utf8"));
-
-function reply(status, body, { url = "", headers = {} } = {}) {
-  const buf = Buffer.isBuffer(body) ? body : Buffer.from(typeof body === "string" ? body : JSON.stringify(body));
-  return {
-    ok: status >= 200 && status < 300, status, url, headers: new Headers(headers),
-    arrayBuffer: async () => buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.length),
-    json: async () => JSON.parse(buf.toString("utf8")),
-  };
-}
-
-/**
- * A fake pair of marketplaces in the captured shapes.
- * opts.vsm / opts.ovsx: { targets: { t: Buffer }, universal, extra: [t], truncated, shaProp: { t: hex } }
- * opts.ovsxRoot: "list" (default) | 404 | "no-downloads" | string[] keys
- */
-function fakeMarkets(opts = {}) {
-  const set = opts.set ?? fx.makeTargetSet(V);
-  const vsmTargets = opts.vsm?.targets ?? set;
-  const ovsxTargets = opts.ovsx?.targets ?? set;
-  const blobs = new Map();
-  const calls = [];
-  const vsmUrl = (t) => `https://mythologiq.gallerycdn.vsassets.io/extensions/mythologiq/mythologiq-failsafe/${V}/1792/${t}/Microsoft.VisualStudio.Services.VSIXPackage`;
-  const ovsxUrl = (t) => `${OVSX}/${t}/${V}/file/MythologIQ.mythologiq-failsafe-${V}@${t}.vsix`;
-  for (const [t, buf] of Object.entries(vsmTargets)) blobs.set(opts.vsmUrlFor?.(t) ?? vsmUrl(t), buf);
-  for (const [t, buf] of Object.entries(ovsxTargets)) blobs.set(ovsxUrl(t), buf);
-  const vsmVersions = Object.entries(vsmTargets).map(([t, buf]) => ({
-    version: V, targetPlatform: t,
-    files: [{ assetType: "Microsoft.VisualStudio.Services.VSIXPackage", source: opts.vsmUrlFor?.(t) ?? vsmUrl(t) }],
-    properties: [{ key: "Microsoft.VisualStudio.Services.VsixSha256", value: opts.vsm?.shaProp?.[t] ?? fx.sha256(buf) }],
-  }));
-  if (opts.vsm?.universal) {
-    const u = fx.makeVsix(null);
-    blobs.set(vsmUrl("universal"), u);
-    vsmVersions.push({ version: V, files: [{ assetType: "Microsoft.VisualStudio.Services.VSIXPackage", source: vsmUrl("universal") }], properties: [] });
-  }
-  const fetch = async (url, init = {}) => {
-    calls.push({ url, init });
-    if (url === VSM_QUERY_URL) {
-      if (opts.vsmResponse) return reply(200, opts.vsmResponse);
-      return reply(200, { results: [{ extensions: [{ extensionName: "mythologiq-failsafe", versionsTruncated: Boolean(opts.vsm?.truncated), versions: vsmVersions }] }] });
-    }
-    if (opts.redirect?.[url]) return reply(200, blobs.get(url), { url: opts.redirect[url], headers: { "content-disposition": 'attachment; filename="evil.vsix"' } });
-    if (blobs.has(url)) return reply(200, blobs.get(url), { url });
-    if (url.startsWith(`${OVSX}/`)) {
-      const rest = url.slice(OVSX.length + 1);
-      if (rest === V) {
-        const root = opts.ovsxRoot ?? "list";
-        if (root === 404) return reply(404, { error: "not found" });
-        if (root === "no-downloads") return reply(200, { version: V });
-        const keys = Array.isArray(root) ? root : Object.keys(ovsxTargets).concat(opts.ovsx?.universal ? ["universal"] : []);
-        return reply(200, { version: V, targetPlatform: keys[0], downloads: Object.fromEntries(keys.map((k) => [k, ovsxUrl(k)])) });
-      }
-      const [t, ver] = rest.split("/");
-      if (ver === V && (ovsxTargets[t] || (t === "universal" && opts.ovsx?.universal))) {
-        if (t === "universal") blobs.set(ovsxUrl("universal"), fx.makeVsix(null));
-        return reply(200, { version: V, targetPlatform: t, files: { download: ovsxUrl(t) } });
-      }
-      return reply(404, { error: `Extension not found: MythologIQ.mythologiq-failsafe ${V} (${t})` });
-    }
-    throw new Error(`unexpected request ${url}`);
-  };
-  return { fetch, calls, set };
-}
 
 async function run(markets, extra = {}) {
   const set = markets.set;

@@ -233,15 +233,18 @@ async function runMarketplace({ version, approved, downloadDir, markets, fetch, 
     checks.push(...r.checks);
     downloads.push(...r.downloads);
   }
-  const hostLoad = (status, detail) => checks.push(check("host-load", "vscode-marketplace", HOST_TARGET, status, detail));
-  if (!markets.includes("vscode-marketplace")) hostLoad("not-run", "vscode-marketplace not queried");
-  else if (host !== HOST_TARGET) hostLoad("not-run", `host is ${host}; Wave 0 runs the packaged-binary load on ${HOST_TARGET} only`);
-  else if (!vsmFiles[HOST_TARGET]) hostLoad("not-run", `the ${HOST_TARGET} download did not pass sha256 and inventory; it is not loaded`);
-  else {
-    const r = await runSmoke(vsmFiles[HOST_TARGET]);
-    hostLoad(r.status === 0 ? "pass" : "fail", r.output || `smoke exit ${r.status}`);
-  }
+  // The host load belongs to the vscode-marketplace run; an Open-VSX-only run emits nothing for it,
+  // so a separate vscode-marketplace file's result is not masked when the report merges them.
+  if (markets.includes("vscode-marketplace")) checks.push(await hostLoad({ host, file: vsmFiles[HOST_TARGET], runSmoke }));
   return { checks, downloads };
+}
+
+async function hostLoad({ host, file, runSmoke }) {
+  const result = (status, detail) => check("host-load", "vscode-marketplace", HOST_TARGET, status, detail);
+  if (host !== HOST_TARGET) return result("not-run", `host is ${host}; Wave 0 runs the packaged-binary load on ${HOST_TARGET} only`);
+  if (!file) return result("not-run", `the ${HOST_TARGET} download did not pass sha256 and inventory; it is not loaded`);
+  const r = await runSmoke(file);
+  return result(r.status === 0 ? "pass" : "fail", r.output || `smoke exit ${r.status}`);
 }
 
 module.exports = { runMarketplace, allowedHost, VSM_QUERY_URL, VSM_HEADERS, VSM_BODY, OVSX_API, MAX_DOWNLOAD_BYTES };
