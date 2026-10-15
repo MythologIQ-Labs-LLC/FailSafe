@@ -627,7 +627,7 @@
           "enumDescriptions": [
             "Observe only - No blocking, just visibility and logging. Zero friction.",
             "Assist - Smart defaults, auto-intent creation, gentle prompts.",
-            "Enforce - Default. Full control, intent-gated saves, L3 approvals."
+            "Enforce - Default. Full control, intent-checked saves (a denied editor save is reported, not prevented), L3 approvals."
           ],
           "default": "enforce",
           "description": "Governance mode determines how FailSafe interacts with your workflow. Enforce is the default; switch to 'assist' or 'observe' for lighter-touch governance."

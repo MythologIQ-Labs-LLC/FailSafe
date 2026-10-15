@@ -149,7 +149,7 @@ Create or edit `.failsafe/config/policies/risk_grading.json` to tune risk classi
 
 ## What Is FailSafe?
 
-FailSafe is an open-source VS Code extension and stability monitoring framework for AI-assisted development. It adds intent-gated saves, Sentinel audits, and a ledgered audit trail so risky changes are surfaced and controlled.
+FailSafe is an open-source VS Code extension and stability monitoring framework for AI-assisted development. It adds intent-checked saves (a denied editor save is reported, not prevented: VS Code cannot cancel a save), Sentinel audits, and a ledgered audit trail so risky changes are surfaced and controlled.
 
 FailSafe separates system awareness from system control.
 
@@ -252,7 +252,7 @@ FailSafe supports three governance modes to match your workflow needs:
 
 | Mode        | Behavior                                                           | Best For                         |
 | ----------- | ------------------------------------------------------------------ | -------------------------------- |
-| **Enforce** | Default. Full control, intent-gated saves, L3 approvals.           | Governed development, compliance |
+| **Enforce** | Default. Full control, intent-checked saves (denials reported, not prevented), L3 approvals. | Governed development, compliance |
 | **Assist**  | Smart defaults, auto-intent creation, gentle prompts.              | Lighter-touch workflows          |
 | **Observe** | No blocking, just visibility and logging. Zero friction.           | Exploration, learning            |
 

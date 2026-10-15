@@ -147,7 +147,7 @@ FailSafe separates system awareness from system control.
 
 The Monitor provides real-time visibility into system health, governance posture, and operational risk. The Command Center is the primary control surface for planning, audits, checkpoints, and agent governance.
 
-- Save-time intent gate that can block writes outside an active intent
+- Save-time intent check that reports writes outside an active intent (VS Code cannot cancel an editor save, so a denied save is observed, not prevented)
 - Sentinel daemon for file-change audits in `heuristic`, `llm-assisted`, and `hybrid` modes
 - SOA ledger with local audit history and checkpoint summaries
 - MCP server support for external tools that need audit and ledger hooks
@@ -217,7 +217,7 @@ FailSafe now supports three governance modes to match your workflow needs:
 
 | Mode        | Behavior                                                           | Best For                         |
 | ----------- | ------------------------------------------------------------------ | -------------------------------- |
-| **Enforce** | Default. Full control, intent-gated saves, L3 approvals.           | Governed development, compliance |
+| **Enforce** | Default. Full control, intent-checked saves (denials reported, not prevented), L3 approvals. | Governed development, compliance |
 | **Assist**  | Smart defaults, auto-intent creation, gentle prompts.              | Lighter-touch workflows          |
 | **Observe** | No blocking, just visibility and logging. Zero friction.           | Exploration, learning            |
 
@@ -228,7 +228,7 @@ Switch modes via:
 
 ### 2. Save-Time Governance Gate
 
-FailSafe evaluates save operations against the active Intent and can block writes when no active Intent exists or when a file is out of scope.
+FailSafe evaluates save operations against the active Intent and reports a policy denial when no active Intent exists or when a file is out of scope. VS Code does not let an extension cancel an editor save, so the denial is observed, not prevented: the file may still be written.
 
 ### 3. Sentinel Monitoring and Audits
 

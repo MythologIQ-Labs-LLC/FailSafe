@@ -284,13 +284,13 @@ export class GovernanceRouter {
     }
 
     if (verdict.status === "ESCALATE") {
-      this.logger.warn("Governance Escalation", {
+      this.logger.warn("Editor-save governance escalation; write not prevented", {
         reason: verdict.reason,
         intentId: verdict.intentId,
         targetFile: action.targetPath,
       });
       this.notifications.showWarning(
-        `Governance Escalation: ${verdict.reason}`,
+        `FailSafe governance escalation (write not prevented): ${verdict.reason}`,
       );
       return false;
     }
