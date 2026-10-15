@@ -1,0 +1,15 @@
+{
+  "_captured": "2026-10-15 GET https://open-vsx.org/api/MythologIQ/mythologiq-failsafe/6.0.6 (trimmed)",
+  "namespace": "MythologIQ",
+  "name": "mythologiq-failsafe",
+  "version": "6.0.6",
+  "targetPlatform": "universal",
+  "timestamp": "2026-10-13T22:42:26.063821Z",
+  "downloads": {
+    "universal": "https://open-vsx.org/api/MythologIQ/mythologiq-failsafe/6.0.6/file/MythologIQ.mythologiq-failsafe-6.0.6.vsix"
+  },
+  "files": {
+    "download": "https://open-vsx.org/api/MythologIQ/mythologiq-failsafe/6.0.6/file/MythologIQ.mythologiq-failsafe-6.0.6.vsix",
+    "sha256": "https://open-vsx.org/api/MythologIQ/mythologiq-failsafe/6.0.6/file/MythologIQ.mythologiq-failsafe-6.0.6.sha256"
+  }
+}
