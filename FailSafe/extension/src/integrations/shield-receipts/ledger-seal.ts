@@ -10,7 +10,8 @@
 
 export interface SessionSeal { entry: number; sessionId: string; chainHash: string }
 
-const SEAL_HEADER = /^### Entry #(\d+): SESSION SEAL\b/gm;
+// No leading zeros: '#0644' is never read as entry 644 (hasEntryHeader treats it as present).
+const SEAL_HEADER = /^### Entry #([1-9]\d*): SESSION SEAL\b/gm;
 const ANY_HEADER = /^### Entry #/m;
 const SESSION_STRICT = /^\*\*Session\*\*: `([A-Za-z0-9_-]+)`[ \t]*$/gm;
 const SESSION_LOOSE = /^\*\*Session\*\*:/gm;
@@ -41,8 +42,9 @@ export function lastSessionSeal(text: string): SessionSeal | 'unparseable' | nul
   return { entry, sessionId, chainHash };
 }
 
-/** True when the text has the header for exactly this entry number. */
+/** True when the text has a header for this entry number, zero-padded or not
+ *  (conservative: a padded header in the parent still counts as present). */
 export function hasEntryHeader(text: string, entry: number): boolean {
   if (!Number.isSafeInteger(entry) || entry <= 0) return false;
-  return new RegExp(`^### Entry #${entry}:`, 'm').test(lf(text || ''));
+  return new RegExp(`^### Entry #0*${entry}:`, 'm').test(lf(text || ''));
 }

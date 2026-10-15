@@ -44,6 +44,13 @@ suite('ledger-seal (#476)', () => {
     assert.equal(lastSessionSeal(BASE_LEDGER + sealBlock(644, SESSION, SEAL_HASH.toUpperCase())), 'unparseable');
   });
 
+  test('a zero-padded entry number is never read as that entry', () => {
+    const padded = BASE_LEDGER + sealBlock(644).replace('### Entry #644:', '### Entry #0644:');
+    assert.equal(lastSessionSeal(padded), null);
+    assert.equal(hasEntryHeader('### Entry #0644: SESSION SEAL - x\n', 644), true, 'a padded header in the parent still counts as present');
+    assert.equal(hasEntryHeader('### Entry #00644: x\n', 644), true);
+  });
+
   test('a ledger with no SESSION SEAL returns null', () => {
     assert.equal(lastSessionSeal(BASE_LEDGER), null);
     assert.equal(lastSessionSeal(''), null);
