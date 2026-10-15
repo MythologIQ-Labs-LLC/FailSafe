@@ -83,7 +83,7 @@ function inspectVsix(buf, version, { label = "vsix", approved = null } = {}) {
     if (!line) checks.push(check("sha256", "artifact", t, "fail", `no approved line for ${t}`, { sha256: digest }));
     else checks.push(check("sha256", "artifact", t, line.sha256 === digest ? "pass" : "fail", line.sha256 === digest ? `equals approved line ${line.file}` : `sha256 ${digest} differs from approved ${line.sha256}`, { sha256: digest, approved: line.sha256 }));
   }
-  return { target, label, sha256: digest, identity, nativeError, checks };
+  return { target, label, sha256: digest, identity, nativeError, engines: pkg.engines?.vscode ?? null, checks };
 }
 
 /** The set check over inspected VSIXs: the targets must equal NATIVE_TARGETS exactly. */

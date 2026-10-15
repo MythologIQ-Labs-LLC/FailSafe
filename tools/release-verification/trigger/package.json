@@ -1,0 +1,11 @@
+{
+  "name": "fs-rv-trigger",
+  "displayName": "FailSafe release-verification trigger (qualification only)",
+  "description": "Loaded with --extensionDevelopmentPath by rv lifecycle; activates FailSafe and reports to FS_RV_OUT. Never published.",
+  "publisher": "failsafe-release-verification",
+  "version": "0.0.1",
+  "private": true,
+  "engines": { "vscode": "^1.90.0" },
+  "activationEvents": ["onStartupFinished"],
+  "main": "./extension.js"
+}

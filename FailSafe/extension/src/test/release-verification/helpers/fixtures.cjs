@@ -114,7 +114,7 @@ function makeVsix(target, opts = {}) {
   const version = opts.version ?? "6.0.7";
   const spec = target ? NATIVE_TARGETS[target] : null;
   const addons = opts.addons ?? (spec ? [{ name: `extension/node_modules/better-sqlite3/prebuilds/${spec.prebuild}.node`, format: spec.format, arch: spec.arch }] : []);
-  const pkg = { name: "mythologiq-failsafe", publisher: "MythologIQ", version: opts.pkgVersion ?? version, main: "./dist/extension/main.js" };
+  const pkg = { name: "mythologiq-failsafe", publisher: "MythologIQ", version: opts.pkgVersion ?? version, engines: { vscode: opts.engines ?? "^1.101.0" }, main: "./dist/extension/main.js" };
   if (opts.sqlite !== false) pkg.optionalDependencies = { "better-sqlite3": "^13.0.3" };
   const entries = [
     { name: "extension.vsixmanifest", data: manifestXml({ id: opts.id ?? "mythologiq-failsafe", version: opts.manifestIdentityVersion ?? version, publisher: opts.publisher ?? "MythologIQ", target, manifestVersion: opts.manifestVersionAttr }) },
