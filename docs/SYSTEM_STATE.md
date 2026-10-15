@@ -1,6 +1,6 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-10-13 (v6.0.6 release candidate prepared; publication pending)
+**Last Updated:** 2026-10-15 (#478 Sentry import completion sealed on `fix/478-sentry-import-completion`; not merged)
 **Active local review:** `fix/system-state-currency-sprint2` — this cycle. Restores the Tier 1 freshness contract and adds `system-state-currency.test.cjs`, the first check that asserts it. Prior to this cycle no test anywhere read this file's content.
 **Prior local review:** `fix/qor169-sprint1-seal-unblock` — MERGED to `main` as `1e1215cc` (PR #448). qor-logic 0.163.1 → 0.169.0; `.qorlogic/config.json` created, which is what allows a seal to complete at all; five vacuously-passing governance controls identified; TTS timeout assertion made deterministic and falsifying. Seal Entry #602.
 **Open PRs:** #442 (Bicameral upstream row error state), #443 (plan-grep-lint regex recognition), #444 (#367 per-engine provenance), #445 (#242 Shadow Genome severity aria — supersedes #440, closed as duplicate), #446 + #447 (dependabot). #447's blocker — a wall-clock TTS assertion — was removed by Entry #602.
@@ -13,6 +13,10 @@
 **Doctrine additions since 2026-05-22:** `feedback_no_pipeline_reshape_for_marketplace_issues` (2026-05-27, v5.2.2 hold-pat precedent) · `feedback_verify_external_names_at_plan_time` (2026-05-27, Citation Inventory Pass — broke 4-cycle Plan-Time Hallucination loop at Entry #405)
 
 ---
+
+## 2026-10-15 — #478 Sentry import completion (sealed on branch, not merged)
+
+The Sentry import now lists the organization issues endpoint (`sort=date` pinned), waits on Sentry's documented rate-limit headers with bounded retries, refuses requests outside the configured HTTPS base, and reports an exact outcome (created / updated / unchanged / failed per unique issue, skipped, duplicates). Each issue's first and last release come from the issue detail, capped per import with stop rules; a stored release is carried only in the exact detail shape. Records are merged and written in one synchronous call (`RiskRegisterManager.upsertRiskWith`), so operator triage survives. New settings `failsafe.integrations.sentry.query` and `.maxReleaseLookups`. FX953/FX954 NEW, FX829/FX915 MODIFIED (766 / 716). Ledger #632-#637. Found in review and filed separately: #517 (RiskManager rewrites risks.json from a stale in-memory copy). No version change.
 
 ## 2026-10-13 — v6.0.6 release candidate (not yet published)
 

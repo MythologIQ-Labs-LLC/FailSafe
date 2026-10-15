@@ -1,28 +1,32 @@
-# AUDIT REPORT — plan-runtime-hardening-243a (iteration 2)
+# AUDIT REPORT
 
-**Verdict**: PASS
+Prior iterations of this plan were VETOed and are archived verbatim: `.failsafe/governance/AUDIT_REPORT_478-iter1.md` (ledger #632), `-iter2.md` (#633), `-iter3.md` (#634). Their findings are closed per the iteration-4 review below.
+
+**Tribunal Date**: 2026-10-15T01:20:22Z
+**Target**: `plan-478-sentry-import-completion.md` iteration 4 (sha256 prefix 9f527c38c2d4117e)
 **Risk Grade**: L2
-**Session**: `2026-10-13T2232-5c561e`
-**Target**: `plan-runtime-hardening-243a.md` (plan gate `plan-iter2.json`)
-**Mode**: Option B, full re-walk against f5188cf4 (fresh-context architect-reviewer, Read/Grep/Glob)
-**Prior**: VETO iteration 1 (ledger #613) — V1 coverage-gap, V2/V3 specification-drift.
-**Preflight**: governance-health DAMAGED docs/META_LEDGER.md (pre-existing); standing operator override, gate_override `5a65a5cf`.
+**Auditor**: The Qor-logic Judge with a fresh Option B reviewer (`architect-reviewer`, Read/Grep/Glob)
 
-## Re-walk
-- LD1-LD4 citations all reproduce (plan_grep_lint 10/10; reviewer re-read each, incl. new LD3 `bootstrapCore.ts:40`).
-- V1 resolved: `FailSafe/extension/README.md:377,:443`, `FailSafe/README.md:247`, `README.md:488`, FX437 title in Affected Files; final grep over docs/, FailSafe/extension/docs/, CHANGELOG finds no further surface (package.json:680 description already covered).
-- V2 resolved: tests :34 and :65 rewritten with `confirmInit`, :99/:124 unchanged; counts consistent.
-- V3 resolved: offer chain ends in a logging rejection handler.
-- Feature Inventory Touches match FEATURE_INDEX rows (FX053/FX094/FX437 MODIFIED, FX948 NEW, unused).
+## VERDICT: **PASS**
 
-## Advisories (adjudicated non-blocking)
-1. FEATURE_INDEX header counts (`docs/FEATURE_INDEX.md:11-12`) must be bumped with FX948; checked by `featureIndexClassifier.test.cjs:56-75`. Within an Affected File; implement will bump them.
-2. CHANGELOG named in D3 but not in Affected Files: D3 governance/doc surface, same adjudication as ledger #610.
-3. `CommitGuard.ts:129-130` can fabricate `.git/hooks` in a non-repo folder — out of scope, carried forward.
+X1 and X2 and every iteration-3 advisory are closed. The full re-walk found no blocking defect: every grep-evidence citation matches; every consumer of a removed export is rewritten in Phase 2; `upsertRisk` sinks, the mediator interface and its test double all return `void`; the level rules are an ordered, non-overlapping precedence over `unique`; every store read happens inside the synchronous write; the token is sent only under the normalized HTTPS base (host-suffix, path-prefix and userinfo tricks are refused); LD10 sizes are credible; every Feature Inventory clause has a failing case at its declared path; Phase 1 is additive and Phase 2 changes every consumer at once. The #517 disclosure is accurate.
+
+## Implementation advisories (apply and disclose; plan text unchanged)
+
+1. Count the lookup that hits `rate_limited` or `cancelled` as `notAttempted`.
+2. When `unique == 0` but `skipped > 0` or `query` is not the default, the text says what was skipped or which query ran, not just "no unresolved issues".
+3. The moved :113-124 case asserts that a list item carrying `lastRelease` yields no `provenance.release` without a detail lookup.
+4. The command passes the raw base; `importSentryRisks` normalizes once and puts the normalized base in `ctx`; the transport also normalizes defensively.
+5. `upsertRisk` passes `String(risk.id)`.
+6. The transport uses `import type` for `SentryGetFn`, or owns the type, to avoid an import cycle.
+7. A carry decision whose write throws counts in `failed`, not `carried`.
+8. CI Commands: the new `.ts` suites run under `npm test` (vscode-test); `test:node` runs only `.test.cjs`.
+9. A non-numeric `Retry-After` (HTTP-date form) falls back to the backoff step.
+10. Test-range wording: :144-151 is rewritten to the organization path; :50-51 sits inside the rewritten :40-60.
+11. The fake request's `destroy(err)` emits `error`, as Node's does.
+12. README What's-New copy is authored with the CHANGELOG (standing rule).
 
 ## Process Pattern Advisory
-<!-- qor:veto-pattern-advisory -->
-One VETO then PASS; no repeated-VETO pattern.
 
-## Next action
-`/qor-implement`
+<!-- qor:veto-pattern-advisory -->
+No repeated-VETO pattern detected in the last 2 sealed phases.

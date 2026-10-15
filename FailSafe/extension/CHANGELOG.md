@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Opening a folder no longer runs `git init` on its own. FailSafe asks first, and `failsafe.bootstrap.autoInstallGit` now defaults to off, so Git is never installed system-wide without opting in (#503).
 - Saving your user settings or a file outside the workspace no longer raises a governance blockade; editor-save governance covers workspace files only (#504).
+- The Sentry import now uses Sentry's organization issues endpoint (the project endpoint is deprecated) and reports exactly what it did: created, updated, unchanged, failed, skipped and duplicate counts, at a warning level when anything failed and an error when every write failed. It waits on Sentry's rate-limit headers, retries transient failures at most three times, and imports nothing when the list fails or you cancel. A risk you closed or edited keeps your status and fields, even when you change it while the import runs (#478).
+- Imported Sentry risks now carry each issue's first and last release, read from the issue detail. At most `failsafe.integrations.sentry.maxReleaseLookups` issues per import (default 50) are looked up, most recently seen first. The `failsafe.integrations.sentry.query` setting the documentation described now exists and works. FailSafe makes no commit correlation (#478).
 
 ### Security
 - The Agent Marketplace re-scan route is now disabled along with install and update. Scanners ran with the untrusted install as their working directory (#468).

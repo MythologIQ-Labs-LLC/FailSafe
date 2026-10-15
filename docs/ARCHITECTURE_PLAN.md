@@ -63,6 +63,13 @@ Command Center browser surface
 - `SttEngine` uses a lifecycle generation to dispose late `getUserMedia()` results after destruction, before recorder or audio-context allocation.
 - Voice-pack progress remains incremental; completion refetches the authoritative status endpoint and non-2xx actions render retryable errors.
 
+### Sentry import
+
+- `src/integrations/sentry/sentry-transport.ts` carries every Sentry request: it refuses URLs outside the configured HTTPS base, waits on the documented rate-limit headers and bounds retries.
+- `sentry-import.ts` runs list -> parse/dedupe -> issue-detail release lookups -> write. Each record is merged and written through `RiskRegisterManager.upsertRiskWith`, one synchronous read-merge-write, so in-process writers such as the Console risk routes are never overwritten by stale data.
+- `sentry-report.ts` turns the outcome into the operator message by a fixed precedence.
+- Known residual #517: `RiskManager` rewrites the same `risks.json` from a stale in-memory copy.
+
 ### Governance documents
 
 - `docs/META_LEDGER.md` is append-only, Merkle-linked evidence.

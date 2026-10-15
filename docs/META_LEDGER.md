@@ -30204,3 +30204,113 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `0e546881cf64bacee964394c17f268adaf668e6f4c48e198c943afe0f294a81e`
 
 **Decision**: Reality = Promise for plan-runtime-hardening-243a: all three phases implemented in their Affected Files; no unplanned files. Verification: full vscode-test suite (VS Code 1.122.1 pinned) 4197 passing / 17 pending / 1 failing - the failure is FX930 WorkspaceArtifactBuilder 'supported fixture' (IDLE vs IMPLEMENT), reproduced identically on a main-equivalent worktree (#501 head, no roadmap or fixture diff) and root-caused to parseMetaLedger returning 0 entries for CRLF text under core.autocrlf (CRLF 0 entries/IDLE vs LF 2 entries/IMPLEMENT); filed #508, not this change. Targeted: mocha 19 passing (gitBootstrap 7, governedDocument 4, marketplace-route 8); mutation of each fix turns its test red (scan gate 1, confirmInit 2, autoInstallGit default 1, scheme check 2), restored green. test:node 353 pass / 2 pre-existing FX946 failures. tsc 0, eslint 0. Runtime: dev VSIX (sha256 prefix 5214529c6ca0148f) in VS Code 1.141.0 isolated profile on a plain folder: activated 809 ms, 0 missing commands, no .git created (released 6.0.6 created one), Global editor.fontSize update logged 0 BLOCKADE (6.0.6 logged 1). Gates: intent_lock VERIFIED; skill_admission ADMITTED; gate_skill_matrix 0 broken; secret_scanner 0 findings over 19 staged files with canary rc 1; procedural_fidelity, dod_check, merge_velocity clean; skill_size_budget WARN only; data_api_acl disclosed SKIP; install_drift OK. Disclosures: governance-health DAMAGED META_LEDGER under the standing operator override (gate_override 5a65a5cf); governance-index --advance-last-reviewed re-dated the prior v6.0.6 Last Reviewed line and was reverted, a new line prepended by hand; substantiate_gates, version_applicability, seal_entry_check and seal_artifacts inapplicable here (#601 precedent, #612); ledger_emit.append not used (interior tail marker); no version bump (hotfix toward the next patch, operator-gated); seal commit carries no attribution trailer per operator rule. Out of scope and filed: #505 (enforce does not block editor saves), #508 (CRLF ledger parse). Feature Inventory: FX053/FX094/FX437 MODIFIED, FX948 NEW (764 total / 714 verified). **SSDF Practices**: PS.2.1, RV.2.1
+
+---
+
+### Entry #632: GATE TRIBUNAL - plan-478-sentry-import-completion (iteration 1) - VETO
+
+**Timestamp**: 2026-10-15T00:52:44Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T0038-5b1f28`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: standing operator override, gate_override `e68bfe25`; research override `a9ebbc4c`
+**Entry Gap**: #617-#631 are allocated on other open branches (#501/#513 lane, #512, #475)
+
+**Content Hash**: `8f4c4ebe2b9a915e667027919707cb5aabce8d5acd243402c549c78097923440`
+**Previous Hash**: `0e546881cf64bacee964394c17f268adaf668e6f4c48e198c943afe0f294a81e`
+**Chain Hash (Merkle seal)**: `dabe285997127992b505dc212f7ffe56534f4f7f468ec523e1cfc91800e7b4ed`
+
+**Decision**: VETO on plan-478-sentry-import-completion.md iteration 1. Option B was mandatory (audit_risk_score: high-citation-surface); a fresh-context architect-reviewer (Read/Grep/Glob) returned VETO and every finding was re-verified by the Judge. The Sentry contract and all 13 grep-evidence citations hold (plan_grep_lint clean). Findings: V1 existing sentry.test.ts consumers of count/persisted/failed (:103, :118-120, :169-171, :195), provenance.release/suspectCommit (:71-72), the 3-arg importSentryRisks (:136) and sentryIssuesToRisks (:80-86) not enumerated, some declared unchanged; V2 FX953 descriptor claims rate-limit waits and retries at a test path holding no such case; V3 FX915 MODIFIED drops the SARIF test link from a SARIF+Sentry row (FEATURE_INDEX.md:657); V4 release-lookup priority starves (a none result records nothing, so release-less issues consume the budget every run); V5 no breaker after a rate_limited lookup; V6 carry-forward has no shape/source check or verification time, making D1 unfalsifiable; V7 dedupe-before-lookup and stored-read-before-lookup ordering unstated; V8 razor: fetchSentryRisks already 75 lines (sentry-client.ts:86-160) and grows with no split; V9 package.json:465 environment description becomes false; V10 detail-URL construction and token-origin test unspecified; V11 suspectCommit-absence test vacuous without a seeded fixture; V12 ok undefined for partial/all-failed/cancelled, and the list fetch has no injected sleep so existing 429 tests would sleep for real under the 15 s mocha timeout; V13 build broken between Phase 1 and Phase 3; V14 mapper status open plus whole-record replace silently reopens operator-triaged risks and reports a plain updated. Categories: infrastructure-mismatch, coverage-gap, specification-drift, razor-overage, test-failure. Next: Governor amends plan text per V1-V14, re-run /qor-audit.
+
+---
+
+### Entry #633: GATE TRIBUNAL - plan-478-sentry-import-completion (iteration 2) - VETO
+
+**Timestamp**: 2026-10-15T01:02:02Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T0038-5b1f28`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: standing operator override, gate_override `e68bfe25`
+
+**Content Hash**: `eb66bfba1548b12ab7a80a31b37ee42dd4c7e1ccfbf00989f7f3883221c53bb9`
+**Previous Hash**: `dabe285997127992b505dc212f7ffe56534f4f7f468ec523e1cfc91800e7b4ed`
+**Chain Hash (Merkle seal)**: `66b62abbba1bc0fcce3e94dee5264962957ca9c282bf96c625dd7d0e96c5ba8f`
+
+**Decision**: VETO on plan-478-sentry-import-completion.md iteration 2 (sha256 prefix d5e3f266c949a4fd). A fresh Option B architect-reviewer (Read/Grep/Glob) confirmed V1, V3 and V5-V13 closed; the Judge re-verified each open finding. W1 the single pre-lookup store read lets a Console close (TransparencyRiskRoute.ts:66-68 -> HubSnapshotService.ts:152 -> writeRisks, same process) be reopened by a merge made minutes later, so V14 persists with a wider window; W2 FX953/FX954 descriptors still overclaim: no test bounds 5xx/timeout retries or checks the 2 s / 4 s steps, 4xx no-retry is tested only on 401, and the 3-consecutive-failure lookup stop and cancellation during lookups are untested; W3 Phase 3 relies on a settings test in sentry-import.test.ts that no listed case contains, and the reader has no seam; W4 the disclosed lookup priority assumes a most-recently-seen default sort, but docs.sentry.io lists sort values with no documented default and the request sends none. Advisories folded into the amendment: 403 case absent at :134-142 and 401 no-write assertion lost; ok/level for localOnly and stopped lookups; origin-only URLs would drop an apiBaseUrl subpath; merge of missing owned fields and legacy suspectCommit; refusal tag and past Reset; defaultSentryGet phase; carried-release shape; releases counter partition. Categories: specification-drift, coverage-gap, test-failure, infrastructure-mismatch. Next: Governor amends plan, re-run /qor-audit.
+
+---
+
+### Entry #634: GATE TRIBUNAL - plan-478-sentry-import-completion (iteration 3) - VETO
+
+**Timestamp**: 2026-10-15T01:11:49Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T0038-5b1f28`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: standing operator override, gate_override `e68bfe25`
+
+**Content Hash**: `3aba3bb65c2003a2c84ae4ed98b6362b988946a767da70da23744015fd40581b`
+**Previous Hash**: `66b62abbba1bc0fcce3e94dee5264962957ca9c282bf96c625dd7d0e96c5ba8f`
+**Chain Hash (Merkle seal)**: `88d9a5bf9cf365825468416538d8ed6b4e8d3c78b7682f775820d39ffcc1cd11`
+
+**Decision**: VETO on plan-478-sentry-import-completion.md iteration 3 (sha256 prefix 7d48067aa7ed674d). A fresh Option B architect-reviewer (Read/Grep/Glob) confirmed W1-W4 and every iteration-2 advisory closed, all 14 citations matching and every sentry.test.ts line accounted for; the Judge re-verified both blocking findings. X1 LD8 bounds partial by eligible, which counts duplicates, so an all-failed import with a duplicate matches both the warning and error rules and no planned test pins the precedence; X2 the only test of the default HTTPS transport targets a plain HTTP stub, but defaultSentryGet always calls https.request (sentry-client.ts:194) and no TLS fixture or request seam exists, so the test cannot be built as specified. Advisories folded into the amendment: case-insensitive rate-limit header reads (Node lowercases names), base normalized once via new URL, malformed 200 detail counts as failed, recording sleep advances the clock, unbacked package.json parity claim removed, wording fixes, org slug validation. Pre-existing defect found in review, outside #478 and disclosed: qorelogic/risk/RiskManager.ts holds risks.json in memory from activation (bootstrapServers.ts:117) and save() rewrites the whole file (RiskManager.ts:95-111), erasing records written since activation by RiskRegisterManager callers; to be filed separately. Categories: specification-drift, test-failure. cycle_count_escalator: no escalation (differing signatures). Next: Governor amends plan, re-run /qor-audit.
+
+---
+
+### Entry #635: GATE TRIBUNAL - plan-478-sentry-import-completion (iteration 4) - PASS
+
+**Timestamp**: 2026-10-15T01:20:32Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T0038-5b1f28`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: standing operator override, gate_override `e68bfe25`
+
+**Content Hash**: `cf3e44ab94d13f2920e97b7a4a4cf548d2c2f596a7bc2b21bf32835e3faabaaf`
+**Previous Hash**: `88d9a5bf9cf365825468416538d8ed6b4e8d3c78b7682f775820d39ffcc1cd11`
+**Chain Hash (Merkle seal)**: `331547aa3b7a5ad42fbc58fa81e58a7854de18bdabf371a4f510fe6d2bb892c4`
+
+**Decision**: PASS on plan-478-sentry-import-completion.md iteration 4 (sha256 prefix 9f527c38c2d4117e). A fresh Option B architect-reviewer (Read/Grep/Glob) confirmed X1 (level precedence over unique = eligible - duplicates) and X2 (makeHttpsGet request seam) closed with every iteration-3 advisory, and its full re-walk found no blocking defect: all grep-evidence citations match; every consumer of removed exports is rewritten in Phase 2; upsertRisk sinks, interface and test double return void; levels are an ordered non-overlapping precedence; store reads occur only inside the synchronous write; the token goes only under the normalized HTTPS base; LD10 sizes credible; every Feature Inventory clause has a failing case at its declared path; Phase 1 additive. Twelve implementation advisories (rate-limited lookup counted notAttempted, zero-unique message with skipped or custom query, list-item lastRelease ignored, single base normalization in importSentryRisks, String(risk.id), import type to avoid a cycle, carry decision on a throwing write counts failed, new .ts suites run under npm test, HTTP-date Retry-After falls back to backoff, test-range wording, fake destroy emits error, README What's-New copy) are carried into implementation and will be disclosed. Pre-existing #517 (RiskManager stale whole-file rewrite) filed during review and disclosed in limitations. Next: /qor-implement.
+
+---
+
+### Entry #636: IMPLEMENTATION - plan-478-sentry-import-completion
+
+**Timestamp**: 2026-10-15T01:36:58Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-15T0038-5b1f28`
+**Risk Grade**: L2
+**Plan**: `plan-478-sentry-import-completion.md` (audit PASS Entry #635; intent lock captured)
+**Files**: `FailSafe/extension/src/integrations/sentry/` (sentry-transport, sentry-import, sentry-releases, sentry-report, sentry-settings NEW; sentry-client, sentry-to-risk, README), `FailSafe/extension/src/extension/sentry-command.ts`, `FailSafe/extension/src/roadmap/services/RiskRegisterManager.ts`, tests under `src/test/integrations/sentry/` and `src/test/roadmap/RiskRegisterManager.outcome.test.ts`, `FailSafe/extension/package.json`, `README.md`, `FailSafe/extension/README.md`, `qor/references/glossary.md`, `docs/ARCHITECTURE_PLAN.md`, `docs/FEATURE_INDEX.md`, `CHANGELOG.md`, `FailSafe/extension/CHANGELOG.md`
+
+**Content Hash**: `9de8d8779e2fdf13521b19567f768be57bd4ed33114e92a0e97545e6d6c76017`
+**Previous Hash**: `331547aa3b7a5ad42fbc58fa81e58a7854de18bdabf371a4f510fe6d2bb892c4`
+**Chain Hash (Merkle seal)**: `8c8eafa3dcfafc98a39e8b01f24a93c0a116ce496abb14062ceea53b2e42465f`
+
+**Decision**: Phase 1 (additive, existing suites green): RiskRegisterManager.upsertRiskWith (one synchronous read-build-compare-write, key-sorted comparison with dotted ignore paths, no rewrite when unchanged) and upsertRisk returning the outcome; sentry-transport.ts (base refusal incl. credentials and out-of-base paths, case-insensitive headers, Reset / Retry-After / 1-2-4 s backoff with 60 s cap, 4-request bound, Remaining: 0 throttle, cancellation, makeHttpsGet request seam, realTimePolicy); client re-exports the transport. Phase 2: sentry-client.ts organization endpoint with sort=date, limit=100, environment parameter, normalized subpath-keeping base, org slug check, fetchSentryIssues + fetchIssuePage, nextCursor; sentry-releases.ts (cap, list order, stop on rate limit / cancel / 3 failures, strict detail parse, exact-shape carry-forward); sentry-import.ts (collect, dedupe, lookups, write-time merge preserving operator fields and status, outcome counters); sentry-report.ts (ordered level precedence over unique writes); sentry-settings.ts; sentry-to-risk.ts drops readRelease, readSuspectCommit, sentryIssuesToRisks and parseIssuesResponse (no consumer left), adds shortId; sentry-command.ts cancellable progress and level-routed message. Phase 3: package.json query and maxReleaseLookups settings, environment and apiBaseUrl descriptions corrected; Sentry README rewritten; both README rows retitled from 'regression correlation' (a declared non-goal) to 'regression import'; glossary term; ARCHITECTURE_PLAN contract section; FX829/FX915 MODIFIED, FX953/FX954 NEW (766/716); CHANGELOG in both changelogs. Audit advisories applied: rate-limited/cancelled lookup counted notAttempted; zero-unique text names skips and a custom query; list-item lastRelease ignored (tested); base normalized once in prepare; upsertRisk passes String(risk.id); transport owns SentryGetFn; a carry decision on a throwing write counts failed; HTTP-date Retry-After falls back to backoff (tested); fake destroy emits error. Deviations, disclosed: new test files RiskRegisterManager.outcome.test.ts (keyed.test.ts already 305 lines, over the razor), sentry-releases.test.ts and sentry-fixtures.ts (sentry-import.test.ts would exceed 250 lines; FX954 cites both paths); README rows and ARCHITECTURE_PLAN outside the plan's Phase 3 list; parseIssuesResponse removed as dead code. Verification: tests written first and red at compile; plain mocha 103 passing across Sentry, store, SARIF and mediator suites; full vscode-test 4246 passing / 17 pending / 1 failing (FX930, pre-existing #508), census 470/470, new suites executed in the extension host; test:node 353/355 (2 pre-existing FX946); eslint clean; runner-coverage PASS. Mutation: 17 guards, first run killed 16 and the survivor (extra-key carry check) exposed a missing case that was added; rerun after refinements killed all 17. Razor: largest source file 191 lines; function scanner verified against a known-long block. Next: /qor-substantiate.
+
+---
+
+### Entry #637: SESSION SEAL - plan-478-sentry-import-completion
+
+**Timestamp**: 2026-10-15T01:39:02Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-15T0038-5b1f28`
+**Entry ID**: `d945c6ddb212`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Plan**: `plan-478-sentry-import-completion.md` (audit #635, implement #636)
+
+**Content Hash**: `7aedfa676468675f3dafa5402814632a4e495a458f08c7feebef80cc4913ebf5`
+**Previous Hash**: `8c8eafa3dcfafc98a39e8b01f24a93c0a116ce496abb14062ceea53b2e42465f`
+**Chain Hash (Merkle seal)**: `fd1e2fee303e51138546d724dbd6ca8918eba9180831fb454e76d9c31c14ee69`
+
+**Decision**: Reality = Promise for plan-478-sentry-import-completion (iteration 4, sha256 prefix 9f527c38c2d4117e): all three phases implemented. Unplanned, documented: src/test/roadmap/RiskRegisterManager.outcome.test.ts (keyed.test.ts already 305 lines), src/test/integrations/sentry/sentry-releases.test.ts and sentry-fixtures.ts (keeps sentry-import.test.ts under 250 lines; FX954 cites both paths), README.md and FailSafe/extension/README.md rows retitled from 'regression correlation' (a declared non-goal), docs/ARCHITECTURE_PLAN.md contract section, docs/SYSTEM_STATE.md, docs/GOVERNANCE_INDEX.md; parseIssuesResponse removed as dead code. Verification: full vscode-test (VS Code 1.122.1 pinned) 4246 passing / 17 pending / 1 failing (FX930 WorkspaceArtifactBuilder, pre-existing CRLF ledger parse, #508), census 470/470, the five new suites executed in the extension host; plain mocha 103 passing (Sentry, store, SARIF, mediator); test:node 353/355 (2 FX946 failures reproduced on base e82f69aa); system-state-currency 4/4; eslint clean; runner-coverage PASS. Tests were written first and red at compile. Mutation: 17 guards; the first run left the extra-key carry check alive, a case was added, and the rerun after the simplification pass killed all 17. Gates: intent_lock VERIFIED (the lock recorded the worktree report by basename, so verify was run against a temporary byte-identical copy at that path, removed afterwards; plan 9f527c38, audit 19b09b53 and HEAD e82f69aa also matched by hand); verdict_reconcile 0 findings after the staging report was reduced to the governing iteration-4 verdict (prior iterations archived); skill_admission ADMITTED; gate_skill_matrix 0 broken; secret_scanner 0 findings over 30 staged files with canary rc 1; procedural_fidelity 0 findings; dod_check rc 0; merge_velocity healthy; skill_size_budget WARN only (qor-substantiate 37.0 KB); data_api_acl disclosed SKIP with gate_skipped_prerequisite_absent emitted and closed at emission; install_drift OK; doc_integrity strict OK (gitignored 'Vacuous pass' home brief supplied locally); governance-index --enforce rc 0 with a hand-prepended Last Reviewed line; doc currency 0 warnings; feature_index_verify rc 0 (759 verified+n/a; 7 other-status rows make the 766 header); surface lint WARN-only (FX922, pre-existing); seal_entry_check and gate_chain_completeness inapplicable/vacuous here as at #616/#631, so entry links and the four session artifacts are verified directly. Disclosures: governance-health DAMAGED META_LEDGER (pre-existing) under the standing operator override, gate_override e68bfe25; research phase overridden (a9ebbc4c) with the docs.sentry.io contract re-verified inline; #517 (RiskManager rewrites risks.json from a stale in-memory copy, erasing records any RiskRegisterManager writer stored since activation) found in review, reproduced and filed, out of scope and disclosed in the README, plan and limitations; live Sentry acceptance pending (no credentials); no statsPeriod sent and no documented default window; no version bump (hotfix toward the next patch, operator-gated); seal commit carries no attribution trailer per operator rule. Feature Inventory: Total: 766 / verified: 716 / unverified: 0 / n/a: 43; FX829/FX915 MODIFIED, FX953/FX954 NEW; newly unverified: none. **SSDF Practices**: PS.2.1, RV.2.1
