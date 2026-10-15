@@ -1,6 +1,6 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-10-15 (v6.0.7 RC1 integrated on `release/v6.0.7-rc1`, draft PR #520; not merged, not tagged, not published)
+**Last Updated:** 2026-10-15 (v6.0.7 final acceptance on `release/v6.0.7-rc1`, draft PR #520: Secure Storage credentials #482, atomic risks.json writes, L3 panel CSP, requalification; ledger #645-#650; not merged, not tagged, not published)
 **Active local review:** `fix/system-state-currency-sprint2` — this cycle. Restores the Tier 1 freshness contract and adds `system-state-currency.test.cjs`, the first check that asserts it. Prior to this cycle no test anywhere read this file's content.
 **Prior local review:** `fix/qor169-sprint1-seal-unblock` — MERGED to `main` as `1e1215cc` (PR #448). qor-logic 0.163.1 → 0.169.0; `.qorlogic/config.json` created, which is what allows a seal to complete at all; five vacuously-passing governance controls identified; TTS timeout assertion made deterministic and falsifying. Seal Entry #602.
 **Open PRs:** #442 (Bicameral upstream row error state), #443 (plan-grep-lint regex recognition), #444 (#367 per-engine provenance), #445 (#242 Shadow Genome severity aria — supersedes #440, closed as duplicate), #446 + #447 (dependabot). #447's blocker — a wall-clock TTS assertion — was removed by Entry #602.
@@ -11,6 +11,12 @@
 **Active integrations:** Bicameral MCP (sealed Entry #372 + earlier cluster) · Open Design v1 (provenance, Entry #400) · Open Design v1.1 (MCP + SSE + probe, Entry #405) · Open Design v1.2 (`create_artifact` L3-gated, Entry #409 — RELEASED v5.3.3; destructive write-tools deferred to B-OD-12)
 **Governance substrate:** qor.scripts substrate modules v1 WARN-only (Entry #402) — secret_scanner, feature_index_verify, model_pinning_lint
 **Doctrine additions since 2026-05-22:** `feedback_no_pipeline_reshape_for_marketplace_issues` (2026-05-27, v5.2.2 hold-pat precedent) · `feedback_verify_external_names_at_plan_time` (2026-05-27, Citation Inventory Pass — broke 4-cycle Plan-Time Hallucination loop at Entry #405)
+
+---
+
+## 2026-10-15 — v6.0.7 final acceptance (on the RC branch, not merged, not published)
+
+`plan-v607-acceptance.md` (audit PASS at iteration 4, ledger #645-#648; implementation #649; seal #650) adds to `release/v6.0.7-rc1`: integration credentials in VS Code Secure Storage with consented, read-back-verified migration and no plain-text fallback (#482, FX962/FX965); a user credential is never sent to a workspace-set GitHub/Sentry/Jira endpoint; atomic `risks.json` writes (FX963 — torn writes only, the cross-process lost update of #517 stays open); working L3 Approval Queue buttons under the panel CSP (FX964). Requalified locally on Windows 10 x64: vscode-test 4459/0/19 (census 481/481), test:node 369/371 (FX946 ledgerAnchor baseline, #467), Playwright 208/0/4, eight inspected platform VSIXs, packaged-binary smoke in Node 22 and two VS Code Electrons, isolated install/upgrade/restart/forced-kill/rollback/re-upgrade with the home directory isolated, and a live credential migration through the installed package. The META_LEDGER stays DAMAGED under qor-logic 0.176.1 (#341/#382, duplicate band <=#236; #467); the owner's damaged-ledger override covered this cycle and the Wave 0/1 lane cycles (#521) only.
 
 ---
 

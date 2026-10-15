@@ -30723,3 +30723,111 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `5663eea1488b3b192dd0705e3f72bd91f9cbb882c22cf055c64bc1d0a9fc27f2`
 
 **Decision**: Reality = Promise for plan-v607-rc1 (v6.0.7 release candidate 1) on release/v6.0.7-rc1, draft PR #520, built from 2b653fb6 (later commits are governance documents only, not packaged). Verification, Windows 10 x64, Node 22.22.3: lint 0 errors; vscode-test (pinned 1.122.1) 4403 passing / 0 failing / 19 pending, census 477/477 on rerun (the first full run lost its extension host, exit code 0, after 4209 passing; not reproduced in a targeted run or the full rerun; Linux CI completed the suite: disclosed as an unexplained intermittent Windows host exit); test:node 369/371 (2 = FX946 ledgerAnchor, Windows-only baseline, same on main; pass in Linux CI); Playwright 205 passed / 4 skipped; release-gate --preflight 9/9; validate-docs-coherence PASS; FX932 fork guard PASS; FEATURE_INDEX header test 33/33; secret_scanner 0 findings over 131 changed files; plan_grep_lint 54/54. CI on the RC: CodeQL, OSS SAST (Semgrep), standards, guardrails, cross-platform compile, Dependency Review all pass; test:all failed only FX938 (SYSTEM_STATE still v6.0.6 after the bump), fixed in de52a855 (4/4) and to be re-run on the final head. #516 alone: test:all 4279 passing incl. the Linux live tracker cases, OSS SAST pass; #512 and #500 fully green. Rehearsal native-vsix-qualification run 38681458519 at 2b653fb6: release-path packaging of all 8 targets validated; packaged binary SQLite round trip PASS on linux-x64, linux-arm64, alpine-x64 (node:22-alpine), win32-x64, win32-arm64, darwin-x64 (macos-15-intel), darwin-arm64, all Node 22 N-API 10; pinned vsce 3.9.2 and ovsx 1.2.0 resolve; nothing published. Local artifacts mythologiq-failsafe-6.0.7-<target>.vsix sha256 prefixes: win32-x64 15a0eff5, win32-arm64 39a96fea, linux-x64 1823be53, linux-arm64 2d7cafa1, alpine-x64 f79bb159, alpine-arm64 798dd6ee, darwin-x64 695b5eff, darwin-arm64 5cb9b96f; each carries exactly its own prebuild; packaged win32-x64 binary loads in Node 22.22.3 and in VS Code 1.141.1 Electron 43.7.7. Isolated VS Code 1.141.1 profile (disposable build, win32VersionedUpdate removed because the operator's parked updater holds the vscode-updating mutex; operator install untouched): published v6.0.6 (sha256 4a91e2da) runs Ledger and ShadowGenome in stub mode with no database; upgrade to RC win32-x64 activates with no stub mode and creates soa_ledger.db, shadow_genome.db, sentinel-rag.db (integrity ok); rows persist across graceful restart and a forced kill of all 11 processes (checkpoints 1->6 across runs); live Console check: POST /api/hooks/toggle {enabled:false} held pending by the modal, a concurrent POST answered 429 busy, closing VS Code answered 409 declined, hook sentinel unchanged; rollback to v6.0.6 activates and leaves the databases unchanged; re-upgrade resumes them. Disclosures: standing per-cycle DAMAGED-ledger override applied to this RC cycle as the delivery of the runtime program (gate_override 03bb4e3c), operator to confirm that scope; LD13 re-chained #622-#637 (owner review requested); four VETOs before PASS; deviations listed in #643; live provider credentials unavailable (Sentry, Jira, Linear, OpenHands, Aider, Continue unverified live); FEATURE_INDEX uses an undeclared 'platform' vertical (264 rows) versus docs/roadmap/tracker-config.yaml - drift surfaced, not reconciled; Socket badge left at its stale universal pin. Not merged, not tagged, not published. **SSDF Practices**: PS.2.1, PW.7.2, PW.8.2, RV.2.1
+
+---
+
+### Entry #645: GATE TRIBUNAL - plan-v607-acceptance (iteration 1) - VETO
+
+**Timestamp**: 2026-10-15T13:20:13Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1307-afb616`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: owner-approved damaged-ledger override within the v6.0.7 remediation cycle, gate_override `2838180e`
+
+**Content Hash**: `fc3df540285b304fe5a55fb70a9804bb7630bae8306bf17fa942242b33398096`
+**Previous Hash**: `5663eea1488b3b192dd0705e3f72bd91f9cbb882c22cf055c64bc1d0a9fc27f2`
+**Chain Hash (Merkle seal)**: `77b25048d7c78b376f4b4a686c2f409089646108dab0d82d4f37712805e83c99`
+
+**Decision**: VETO on plan-v607-acceptance.md iteration 1 (v6.0.7 final acceptance: #482 credentials, RC gaps, requalification). Fresh Option B architect-reviewer; reader inventory, migration ordering, CSP red claim and ledger claims confirmed. V1 specification-drift: a folder credential scope conflicts with the window scope of the credential settings (VS Code ignores folder values and rejects WorkspaceFolder writes) and no consumer has a folder argument. V2 security-l3: migration would overwrite a newer secret set with failsafe.credentials.set while the plain-text copy remained. V3 infrastructure-mismatch: ISecretStore exposes no change event, so cross-window revocation was unspecified. V4 coverage-gap: only one consumer and no redaction path had a falsifier. V5 test-failure: the RiskManager red claim did not exercise a torn write. Advisories: ledgerAnchor.test fails wherever qor-logic is installed (dirty ledger), workspace trust, activation ordering, Settings Sync, re-read before clear, synchronous atomic write, plain-text documentation, governed-commit behaviour, Linux basic-store fallback, preflight re-export. Next: Governor amends plan.
+
+---
+
+### Entry #646: GATE TRIBUNAL - plan-v607-acceptance (iteration 2) - VETO
+
+**Timestamp**: 2026-10-15T13:28:46Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1307-afb616`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: owner-approved damaged-ledger override within the v6.0.7 remediation cycle, gate_override `2838180e`
+
+**Content Hash**: `ced04a8b5269e33f1e5153ff61d623ecb647faa37643894117511e192917c4e5`
+**Previous Hash**: `77b25048d7c78b376f4b4a686c2f409089646108dab0d82d4f37712805e83c99`
+**Chain Hash (Merkle seal)**: `7df81f9fee1a473b0b9c2d13ef57651721b4e90cabd807d3c807d5f4dd24bb61`
+
+**Decision**: VETO on plan-v607-acceptance.md iteration 2. Fresh Option B architect-reviewer; iteration-1 V1, V3 and V5 resolved (two window-scoped credential scopes, optional ISecretStore change event, torn-write falsifier reaches both writers through the live fs binding). V1 coverage-gap: the endpoint-trust rule and the Sentry and snapshot reads were tested only at helper level and the source-scan red count was misstated (11 reads, not eight). V2 specification-drift: a stale plain-text copy, possibly the operator's newly rotated credential, was included in the generic bulk removal. Advisories: verify clears by re-inspection, avoid single-folder double counting, init timeout, pin the temp-write mechanism, Sentinel deletion events, name workspace-sourced values, snapshot honours the endpoint rule, notifier enabled check, vscode-free import for agent-cli, documentation files, keep FX172 test evidence, explicit Playwright red method, restore test settings, untitled workspace identity. Next: Governor amends plan.
+
+---
+
+### Entry #647: GATE TRIBUNAL - plan-v607-acceptance (iteration 3) - VETO
+
+**Timestamp**: 2026-10-15T13:45:44Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1307-afb616`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: owner-approved damaged-ledger override within the v6.0.7 remediation cycle, gate_override `2838180e`
+
+**Content Hash**: `7ce26d6efaad7221171ec7c04d1f3991bbc9a69e218f87d381263b1734997c05`
+**Previous Hash**: `7df81f9fee1a473b0b9c2d13ef57651721b4e90cabd807d3c807d5f4dd24bb61`
+**Chain Hash (Merkle seal)**: `0bed6aa6f6c945f3885ef895f8ce6cf25adbf263f22b09280a5aeff34fd0eb67`
+
+**Decision**: VETO on plan-v607-acceptance.md iteration 3. Fresh Option B architect-reviewer; iteration-2 V2 resolved (stale copies get their own three-answer modal, never in the bulk removal) and V1 partly resolved (consumer-level endpoint tests, corrected 11-read scan). V1 coverage-gap remains: (a) the catalog snapshot's dynamic cfg.get(key) loop at bootstrapServers.ts:180-181 was tested only through a new pure helper, so the old plain-text loop could stay; (b) the production endpoint-scope adapter over real inspect() results had no test. Advisories: folder copies may be unreachable and are not removable, precedence of a workspace plain-text copy over a user secret, Continue's optional key, sentry.test signature, homes of providerConnection and buildCredentialSnapshot, notifier and modal-text tests, endpoint-unset case, injected init timeout, governance documents in Affected Files, a termination run on the final head. Next: Governor amends plan.
+
+---
+
+### Entry #648: GATE TRIBUNAL - plan-v607-acceptance (iteration 4) - PASS
+
+**Timestamp**: 2026-10-15T13:53:56Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1307-afb616`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Plan SHA256**: `651c2163f47e7da86e42b9cdab2e78eb91399484ba24f7f6370e48d62f1b1637`
+**Preflight**: owner-approved damaged-ledger override within the v6.0.7 remediation cycle, gate_override `2838180e`
+
+**Content Hash**: `8d9676ca5f9f259c4694cad05d29af2d591b3e88ced7e9354998c7d4397a5dc3`
+**Previous Hash**: `0bed6aa6f6c945f3885ef895f8ce6cf25adbf263f22b09280a5aeff34fd0eb67`
+**Chain Hash (Merkle seal)**: `37232bddf251e059cfe2b140c69229c7551a27f6d6eec720be6493168d11a194`
+
+**Decision**: PASS on plan-v607-acceptance.md iteration 4. Fresh Option B architect-reviewer: iteration-3 V1 resolved (the bootstrapServers catalog loop is now covered by a failing-capable source-scan rule plus a behavioural helper test; the real vscodeCredentialAdapters endpoint reader is exercised in the extension host). Fourteen advisories carried to implementation: split the credential module, packaged README text, Escape on the stale modal, named seams for the governed-commit PR step and Continue, scan accepts notifierConfig and widens to bare credential keys, failure text home, snapshot precedence and optional Continue key, workspace re-keying, r+ fsync handle on Windows, termination recorded not gating, #482 comment only, minor items, Linux basic-store limitation. Next: /qor-implement.
+
+---
+
+### Entry #649: IMPLEMENTATION - plan-v607-acceptance
+
+**Timestamp**: 2026-10-15T15:10:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-15T1307-afb616`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-15T1307-afb616/implement-iter1.json`
+
+**Content Hash**: `06303b4097d13f63dcd9c052a3bb84285e0d405c812d584858266dc0bda54ace`
+**Previous Hash**: `37232bddf251e059cfe2b140c69229c7551a27f6d6eec720be6493168d11a194`
+**Chain Hash (Merkle seal)**: `25ab3a599e32b409657832bf4fe5f7713f682531a079424209e42add54a7e9cc`
+
+**Decision**: IMPLEMENTATION of plan-v607-acceptance.md (audit PASS #648) on release/v6.0.7-rc1: 4a1afe68 atomic risks.json writes (FX963, #517 torn-write only), fba13b38 L3 Approval Queue buttons under the panel CSP (FX964), 608a3bff integration credentials in Secure Storage with consented verified migration, endpoint trust and redaction (FX962/FX965, #482), 87358b55 documentation. Red: torn-write tests failed before wiring; CSP spec failed against the extracted-unchanged markup; the credential source scan reports 20 violations on 1fe80c8d and none after. Mutations of the retry set, temp cleanup, stale-value check, re-read before removal, re-inspect after removal, restore on failed write, precedence refusal and endpoint refusal each fail tests. Local Windows 10 x64: vscode-test 1.122.1 4459 passing 0 failing 19 pending, census 481/481, host exit 0; test:node 369/371 with the 2 FX946 ledgerAnchor baseline failures (post-anchor DIRTY, #467); Playwright 208 passed 4 skipped. Eight platform VSIXs packaged and independently inspected; win32-x64 binary loads in Node 22 and VS Code 1.141.1 and 1.122.1 Electron. Isolated 1.141.1 lifecycle with the home directory isolated: 6.0.6 stub mode, upgrade, restart, forced kill, rollback without data loss, re-upgrade. Live credential check through the installed package and the real Secure Storage passed. npm audit: braces GHSA-vfj7-8cjw-p6xm via chokidar 3, pre-existing, unpatched, unreachable (constant patterns), disclosed. Damaged-ledger override in force for this cycle per the owner's 2026-10-15 ruling.
+
+---
+
+### Entry #650: SESSION SEAL - plan-v607-acceptance
+
+**Timestamp**: 2026-10-15T15:20:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-15T1307-afb616`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-15T1307-afb616/substantiate-iter1.json`
+
+**Content Hash**: `986157933d67af79d261fa5558d96b2957f99090b3e69e15bcce12a4a49b49f8`
+**Previous Hash**: `25ab3a599e32b409657832bf4fe5f7713f682531a079424209e42add54a7e9cc`
+**Chain Hash (Merkle seal)**: `3f93ed0de3987297bd2b893188f44338cb8b9ba9c6252638570e4c43e60cb7a9`
+
+**Decision**: SESSION SEAL for plan-v607-acceptance.md (implementation #649). Reality = Promise, with disclosures. Delivered on release/v6.0.7-rc1 at 4a1afe68 fba13b38 608a3bff 87358b55 plus this seal commit: integration credentials in VS Code Secure Storage with consented, read-back-verified migration and no plain-text fallback (#482, FX962/FX965); endpoint trust for GitHub, Sentry and Jira; redaction of provider errors; atomic risks.json writes (FX963); L3 Approval Queue buttons under the panel CSP (FX964). Requalification evidence is in the implement gate. Ledger: #617-#649 verified as one linear chain by the independent Node verifier; FX932 fork guard clean. Override disposition (LD11): the META_LEDGER is DAMAGED under qor-logic 0.176.1 (#341 markup, #382 linkage, the duplicate band at or below #236), so qor-logic preflight blocks new plans. The owner approved a damaged-ledger recovery override for the v6.0.7 remediation cycle on 2026-10-15 and extended it, disclosed per cycle, to the Wave 0/1 lane cycles of #521. It covered RC1 (#638-#644) and this acceptance cycle (#645-#650). Evidence was preserved by appending only, verifying every new band independently, and keeping HMAC gate artifacts for each phase. The damage is NOT resolved: check-ledger-anchor reports post-anchor DIRTY at #341/#382, native verify fails only at or below #382, and ledgerAnchor.test.cjs fails wherever qor-logic is installed and is skipped in CI. check-ledger-anchor is not wired to CI. Normal governance is NOT restored; #467 stays P0, blocked on an owner risk-acceptance decision. The override ends for v6.0.7 with this seal and for the lanes when #467 resolves. Open after this seal: the #517 cross-process lost update (Lane D), #473 (Lane B), #476 (Lane C), #506, #507, live provider validation, braces GHSA-vfj7-8cjw-p6xm (unreachable, unpatched upstream). Not merged, not tagged, not published.
