@@ -57,6 +57,54 @@ suite('RiskManager (FX328 + FX250)', () => {
     assert.equal(all[0].id, r1.id);
   });
 
+  test('#517 retains independently imported risks when a long-lived manager creates a risk', () => {
+    const manager = newManager(dir);
+    const risksPath = path.join(dir, '.failsafe/risks/risks.json');
+    fs.mkdirSync(path.dirname(risksPath), { recursive: true });
+    const imported = {
+      id: 'sentry:1', title: 'Provider risk', description: 'external',
+      category: 'security', severity: 'high', status: 'closed',
+      source: 'sentry', customProvenance: { provider: 'sentry' },
+      createdAt: '2026-10-14T00:00:00Z', updatedAt: '2026-10-14T00:00:00Z',
+    };
+    fs.writeFileSync(risksPath, JSON.stringify({ risks: [imported] }), 'utf8');
+    const created = manager.createRisk(STD_INPUT);
+    const stored = JSON.parse(fs.readFileSync(risksPath, 'utf8')).risks;
+    assert.equal(stored.length, 2);
+    assert.deepEqual(stored.find((r: { id: string }) => r.id === 'sentry:1'), imported);
+    assert.ok(stored.some((r: { id: string }) => r.id === created.id));
+    manager.dispose();
+    assert.equal(JSON.parse(fs.readFileSync(risksPath, 'utf8')).risks.length, 2);
+  });
+
+  test('#517 refreshes before update and delete, preserving external concurrent edits', () => {
+    const manager = newManager(dir);
+    const own = manager.createRisk(STD_INPUT);
+    const risksPath = path.join(dir, '.failsafe/risks/risks.json');
+    const data = JSON.parse(fs.readFileSync(risksPath, 'utf8'));
+    data.risks[0].status = 'accepted';
+    data.risks.push({ id: 'sarif:2', status: 'closed', customField: 'retain' });
+    fs.writeFileSync(risksPath, JSON.stringify(data), 'utf8');
+    manager.updateRisk(own.id, { owner: 'alice' });
+    let stored = JSON.parse(fs.readFileSync(risksPath, 'utf8')).risks;
+    assert.equal(stored.find((r: { id: string }) => r.id === own.id).status, 'accepted');
+    assert.equal(stored.find((r: { id: string }) => r.id === 'sarif:2').customField, 'retain');
+    manager.deleteRisk(own.id);
+    stored = JSON.parse(fs.readFileSync(risksPath, 'utf8')).risks;
+    assert.deepEqual(stored, [{ id: 'sarif:2', status: 'closed', customField: 'retain' }]);
+  });
+
+  test('#517 refuses mutation and preserves an unreadable existing risk file', () => {
+    const manager = newManager(dir);
+    const risksPath = path.join(dir, '.failsafe/risks/risks.json');
+    fs.mkdirSync(path.dirname(risksPath), { recursive: true });
+    fs.writeFileSync(risksPath, '{broken-json', 'utf8');
+    assert.throws(() => manager.createRisk(STD_INPUT), /JSON|Unexpected|Expected/);
+    assert.equal(fs.readFileSync(risksPath, 'utf8'), '{broken-json');
+    manager.dispose();
+    assert.equal(fs.readFileSync(risksPath, 'utf8'), '{broken-json');
+  });
+
   test('FX328 getRisk — known id returns risk; unknown returns undefined', () => {
     const m = newManager(dir);
     const r = m.createRisk(STD_INPUT);
