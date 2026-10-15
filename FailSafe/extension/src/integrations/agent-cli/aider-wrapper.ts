@@ -1,89 +1,56 @@
 /**
- * aider-wrapper — FailSafe git-gate wrapper for the Aider CLI (#107). Detects
- * `aider`, refuses a dirty worktree unless explicitly allowed, runs argv-form
- * with auto-commit OFF by default (changes stay uncommitted for review),
- * captures the before/after diff robustly even when Aider exits non-zero, and
- * routes a high-risk (L3) diff to escalation.
+ * aider-wrapper — FailSafe wrapper for the Aider CLI (#107, #475). Detects
+ * `aider`, refuses to start without write authorization, and runs it in a
+ * disposable worktree (isolated-run.ts) with auto-commit always off. Whatever
+ * Aider changes is held as a quarantined change set; it reaches the workspace
+ * only through the operator's Apply (agent-run-promotion.ts).
  *
  * Verified surface (issue #107): Aider git integration + `--message` scripting.
  * Flags verified against https://aider.chat/docs/config/options.html + upstream
- * aider/args.py: `--message`/`-m`, `--no-auto-commits`/`--auto-commits`,
- * `--yes-always` (NOT `--yes` — no such flag exists), `--version`. See
+ * aider/args.py: `--message`/`-m`, `--no-auto-commits`, `--yes-always` (NOT
+ * `--yes` — no such flag exists), `--version`. See
  * docs/integrations/INTEGRATION_DOCS_INDEX.md.
  */
 
 import type { RiskGrade } from '../../shared/types/risk';
 import {
-  type AgentRunFn, type DiffSummary, type AgentReceipt, type AgentDecision, type AgentRunOutcome,
-  detectBinary, captureGitDiff, summarizeDiff, classifyDiffRisk, decideAgentRun,
-  buildAgentReceipt, isWorktreeDirty,
+  type AgentRunFn, type AgentRunOutcome, type ResolveAgentFn, blockedOutcome, detectBinary, isolatedOutcome,
 } from './agent-cli-core';
+import { runIsolated, type IsolatedRunDeps } from './isolated-run';
 
-export async function detectAider(run: AgentRunFn): Promise<{ available: boolean; version?: string }> {
-  return detectBinary('aider', ['--version'], run);
+/** Detect `aider` on PATH outside `workspaceRoot`. */
+export async function detectAider(run: AgentRunFn, workspaceRoot: string, resolve?: ResolveAgentFn): Promise<{ available: boolean; version?: string }> {
+  return detectBinary('aider', ['--version'], run, { workspaceRoot, resolve });
 }
 
-/** Pure argv builder. Auto-commit is OFF unless `autoCommit` is explicitly set. */
-export function buildAiderArgs(prompt: string, opts: { autoCommit?: boolean } = {}): string[] {
-  const args = ['--message', prompt, '--yes-always'];
-  args.push(opts.autoCommit ? '--auto-commits' : '--no-auto-commits');
-  return args;
+/** Pure argv builder. Auto-commit is always off: changes stay in the worktree for capture. */
+export function buildAiderArgs(prompt: string): string[] {
+  return ['--message', prompt, '--yes-always', '--no-auto-commits'];
 }
 
 export interface AiderRunOptions {
   prompt: string;
   cwd: string;
-  /** Allow running against a dirty worktree (default false → refuse). */
-  allowDirty?: boolean;
-  /** Enable Aider auto-commit (default false). */
-  autoCommit?: boolean;
+  /** Permit an isolated run whose output can be reviewed for promotion. */
   writesAllowed: boolean;
+  timeoutMs: number;
 }
 
-export interface AiderDeps {
-  run: AgentRunFn;
+export interface AiderDeps extends Omit<IsolatedRunDeps, 'timeoutMs'> {
   classify: (path: string) => RiskGrade;
   issuedAt: string;
+  /** Injected in tests; `resolveAgentExecutable` in production. */
+  resolve?: ResolveAgentFn;
 }
 
-const EMPTY_DIFF: DiffSummary = { files: 0, additions: 0, deletions: 0, paths: [] };
-
-function receiptFor(decision: AgentDecision, argv: string[], exitCode: number | null, diff: DiffSummary, issuedAt: string): AgentReceipt {
-  return buildAgentReceipt({ agent: 'aider', argv, decision, exitCode, diff, issuedAt });
-}
-
-/**
- * Govern an Aider run. Pre-run gate: refuse a dirty worktree unless allowed
- * (BLOCK, no spawn). Then run argv-form (auto-commit off), capture the resulting
- * diff robustly, classify it, and decide ALLOW / BLOCK / ESCALATE-to-L3.
- */
+/** Govern an Aider run: refuse without authorization, else run isolated and quarantine. */
 export async function runAiderGoverned(opts: AiderRunOptions, deps: AiderDeps): Promise<AgentRunOutcome> {
-  const det = await detectAider(deps.run);
-  if (!det.available) return { available: false, spawned: false, error: '`aider` not found on PATH' };
-
-  const argv = buildAiderArgs(opts.prompt, { autoCommit: opts.autoCommit });
-
-  // #475: Aider can modify files before the post-run diff is inspected.
-  // Do not spawn when writes are forbidden or when auto-commit would bypass review.
-  if (!opts.writesAllowed || opts.autoCommit) {
-    const decision: AgentDecision = { verdict: 'BLOCK', reason: !opts.writesAllowed
-      ? 'write authorization is required before running Aider'
-      : 'Aider auto-commit is forbidden before governed diff review', riskGrade: 'L2' };
-    return { available: true, spawned: false, decision, receipt: receiptFor(decision, argv, null, EMPTY_DIFF, deps.issuedAt) };
+  const det = await detectAider(deps.run, opts.cwd, deps.resolve);
+  if (!det.available) return { available: false, spawned: false, error: '`aider` not found on PATH outside the workspace, or `aider --version` failed' };
+  const argv = buildAiderArgs(opts.prompt);
+  if (!opts.writesAllowed) {
+    return blockedOutcome('aider', argv, 'running Aider requires `failsafe.integrations.aider.allowWrites`', 'L2', deps.issuedAt);
   }
-
-  // Pre-run gate: dirty worktree refusal.
-  if (!opts.allowDirty && (await isWorktreeDirty(deps.run, opts.cwd))) {
-    const decision: AgentDecision = { verdict: 'BLOCK', reason: 'worktree has uncommitted changes; refusing to run Aider (set allowDirty to override)', riskGrade: 'L1' };
-    return { available: true, spawned: false, decision, receipt: receiptFor(decision, argv, null, EMPTY_DIFF, deps.issuedAt) };
-  }
-
-  // Run argv-form; auto-commit off so changes stay uncommitted for the gate.
-  const res = await deps.run('aider', argv, { cwd: opts.cwd });
-
-  // Capture the diff robustly even if Aider exited non-zero.
-  const diff = summarizeDiff(await captureGitDiff(deps.run, opts.cwd));
-  const risk = classifyDiffRisk(diff, deps.classify);
-  const decision = decideAgentRun(risk, { writesAllowed: opts.writesAllowed });
-  return { available: true, spawned: true, decision, diff, receipt: receiptFor(decision, argv, res.code, diff, deps.issuedAt), stdout: res.stdout };
+  const r = await runIsolated(opts.cwd, { cmd: 'aider', args: argv }, { ...deps, timeoutMs: opts.timeoutMs });
+  return isolatedOutcome('aider', argv, r, deps);
 }

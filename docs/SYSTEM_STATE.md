@@ -1,6 +1,6 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-10-13 (v6.0.6 release candidate prepared; publication pending)
+**Last Updated:** 2026-10-15 (#475 isolated agent runs sealed on `fix/475-isolated-agent-runs`; not merged)
 **Active local review:** `fix/system-state-currency-sprint2` — this cycle. Restores the Tier 1 freshness contract and adds `system-state-currency.test.cjs`, the first check that asserts it. Prior to this cycle no test anywhere read this file's content.
 **Prior local review:** `fix/qor169-sprint1-seal-unblock` — MERGED to `main` as `1e1215cc` (PR #448). qor-logic 0.163.1 → 0.169.0; `.qorlogic/config.json` created, which is what allows a seal to complete at all; five vacuously-passing governance controls identified; TTS timeout assertion made deterministic and falsifying. Seal Entry #602.
 **Open PRs:** #442 (Bicameral upstream row error state), #443 (plan-grep-lint regex recognition), #444 (#367 per-engine provenance), #445 (#242 Shadow Genome severity aria — supersedes #440, closed as duplicate), #446 + #447 (dependabot). #447's blocker — a wall-clock TTS assertion — was removed by Entry #602.
@@ -13,6 +13,10 @@
 **Doctrine additions since 2026-05-22:** `feedback_no_pipeline_reshape_for_marketplace_issues` (2026-05-27, v5.2.2 hold-pat precedent) · `feedback_verify_external_names_at_plan_time` (2026-05-27, Citation Inventory Pass — broke 4-cycle Plan-Time Hallucination loop at Entry #405)
 
 ---
+
+## 2026-10-15 — #475 isolated Continue / Aider runs (sealed on branch, not merged)
+
+Continue and Aider now run in a disposable git worktree (`src/integrations/agent-cli/isolated-run.ts`); their changes are a quarantined change set that reaches the workspace only through Apply in the same command (`agent-run-promotion.ts`). Direct writes to the repository or its git state during a run are detected (content-based snapshot) and never promoted; writes outside the repository are not detected. Removed settings: `failsafe.integrations.aider.allowDirty`, `failsafe.integrations.aider.autoCommit`; added `failsafe.integrations.agentCli.timeoutMs`. FX951/FX952 NEW, FX831/FX832 MODIFIED (766 / 716). Ledger #626-#631. No version change.
 
 ## 2026-10-13 — v6.0.6 release candidate (not yet published)
 

@@ -47,8 +47,13 @@ suite('integrations/catalog integration-catalog', () => {
   });
 
   test('FX479 does not advertise pre-write enforcement or completed observer persistence', () => {
-    assert.match(byId('aider').summary, /post-run diff/);
-    assert.match(byId('continue').summary, /not an enforced filesystem isolation/i);
+    // #475: worktree isolation with operator Apply, never claimed as a sandbox.
+    for (const id of ['aider', 'continue']) {
+      assert.match(byId(id).summary, /disposable git worktree/);
+      assert.match(byId(id).summary, /only when you apply them/);
+      assert.match(byId(id).summary, /Not a process sandbox/);
+      assert.match(byId(id).summary, /writes outside it are not detected/);
+    }
     assert.match(byId('openhands').summary, /does not yet persist/);
     assert.match(byId('github-checks').summary, /SHIELD PASS is disabled/);
   });

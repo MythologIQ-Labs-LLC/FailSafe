@@ -3005,3 +3005,10 @@ The upstream fix already ships and was simply never called: `ledger_fragment` (P
 **Lesson**: When untrusted input describes a process to spawn, every channel that influences execution is a command: argv, cwd, AND each environment key. Allowlist env keys, verify existence locally, and read the platform API's own caveats for every path you depend on.
 
 **Countermeasure applied**: VETO iterations 1 and 2; iteration 3 allowlists env keys to OD_DATA_DIR / ELECTRON_RUN_AS_NODE, checks command and script with local fs.existsSync, shows every env pair in the consent modal, and creates the globalStorageUri directory before connect.
+## SG Event 2026-10-15: An isolation design routed approval through a control the isolated process can reach (plan-475-isolated-agent-runs, ledger #626)
+
+**Pattern**: The plan isolated a coding agent in a git worktree and sent its change set to the L3 approval queue. The queue's decision endpoint authorizes any loopback caller, and the agent is a loopback process, so the isolated party could approve its own change. The same plan treated a git worktree as isolation while the worktree shares hooks, config, refs and the index flags with the protected repository.
+
+**Lesson**: Before naming an approval or isolation mechanism, enumerate who can reach it from inside the thing being isolated. A control the subject can call is not a control over the subject.
+
+**Countermeasure applied**: VETO iteration 1; approval moved to a VS Code-native modal unreachable over HTTP; #514 filed for the loopback-only L3 decision routes; shared git state added to the snapshot with git safety flags on every call.

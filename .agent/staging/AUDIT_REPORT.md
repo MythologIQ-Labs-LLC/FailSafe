@@ -1,15 +1,14 @@
-# AUDIT REPORT — plan-502-native-sqlite-13 (iteration 2)
+# AUDIT REPORT — plan-475-isolated-agent-runs (iteration 4)
 
 **Verdict**: PASS
-**Risk Grade**: L2
-**Session**: `2026-10-14T2255-425a6c`
-**Target**: `plan-502-native-sqlite-13.md` (plan gate `plan-iter2.json`)
-**Mode**: Option B full re-walk against PR #512 head `edbcd80f`
-**History**: iteration 1 VETO (#622: run-all-tests scripts + binary block unlisted; PE header beyond 64 bytes and utf8 entry reads; Node >=22 — 13.0.3 segfaults on Node 20 and VS Code <=1.100); iteration 2 PASS (#623).
-**Preflight**: governance-health DAMAGED META_LEDGER (pre-existing); standing operator override `00e0a3e3`.
+**Risk Grade**: L3
+**Session**: `2026-10-14T2317-80dc4f`
+**Target**: `plan-475-isolated-agent-runs.md` (gate `plan-iter5.json`; `plan-iter4.json` superseded)
+**Mode**: Option B full adversarial re-walk each iteration
+**History**: VETO #626 (self-approval via loopback L3 routes -> #514; shared git state), VETO #627 (review/apply divergence; global config; worktree repointing; tree-kill), VETO #628 (temp-index equality; CRLF carry; sampler; naming), PASS #629.
 
-## Advisories
-Cosmetic: LD7 precedes LD6; package.json listed twice in Phase 2; run-all-tests.sh:2 comment to update with the file.
+## Advisories carried to implementation
+Limitations text sync with LD4; sampler start failure -> BLOCKED_PRE_EXECUTION (+test); safe.directory/eol via temp GIT_CONFIG_GLOBAL; filter.lfs pass-through or disclosure; content-provider review document.
 
 ## Next action
 `/qor-implement`
