@@ -98,7 +98,8 @@ export async function loadVerifiedArtifacts(src: ShieldEvidenceSource, sessionId
     }
   }
   const key = await src.readQorSessionKey(sessionId);
-  if (!key) return neutral('qor-key-absent', 'step 13: Qor session key absent');
+  // qor-logic keys are 32 random bytes; an empty or short file is no key at all.
+  if (!key || key.length < 32) return neutral('qor-key-absent', 'step 13: Qor session key absent or shorter than 32 bytes');
   for (const phase of PHASES) {
     if (!hex64Equal(qorSign(phase, sessionId, raw[`${phase}.json`], key), side[phase].hmac_tag)) {
       return rejected('qor-hmac', `step 14: ${phase}.json HMAC differs from its sidecar`);

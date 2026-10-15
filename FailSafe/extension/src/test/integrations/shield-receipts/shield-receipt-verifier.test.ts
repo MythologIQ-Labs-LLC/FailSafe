@@ -154,6 +154,13 @@ suite('shield-receipt-verifier: Qor artifacts (#476)', () => {
     await expectResult(noKey, 'neutral', 'qor-key-absent');
   });
 
+  test('an empty or short Qor session key -> Neutral qor-key-absent (never an HMAC with a weak key)', async () => {
+    for (const k of [Buffer.alloc(0), Buffer.alloc(16, 7)]) {
+      const s = baseScenario(); s.qorKey = k;
+      await expectResult(s, 'neutral', 'qor-key-absent');
+    }
+  });
+
   test('re-substantiated artifact (valid, newer) -> Neutral receipt-evidence-superseded', async () => {
     const s = baseScenario();
     setArtifacts(s, auditArtifact(), substantiateArtifact({ ts: '2026-10-15T05:30:00Z', disclosures: ['re-run'] }));
@@ -294,6 +301,16 @@ suite('shield-receipt-verifier: seal commit rule (#476)', () => {
 
   test('the default unavailableChainStatus -> Neutral chain-not-ok (success unreachable until F5)', async () => {
     await expectResult(baseScenario(), 'neutral', 'chain-not-ok', { chain: 'default' });
+  });
+
+  test('parent ledger unreadable (the read throws) -> anything but Verified', async () => {
+    const s = onTopOfSeal(SEAL_LEDGER + '### Entry #645: GATE TRIBUNAL - later\n\n**Session**: `x`\n');
+    putReceipt(s, receiptBody(s));
+    const src = sourceOf(s);
+    const failing = { ...src, showAtCommit: async (c: string, p: string) => { if (c === SEAL) throw new Error('object missing'); return src.showAtCommit(c, p); } };
+    const v = await verifyShieldReceipt(failing, keysOf(RECEIPT_KEY), chainOf('OK'), DEFAULT_SHIELD_POLICY, 'api.github.com', NOW);
+    assert.notEqual(v.kind, 'verified');
+    assert.equal(v.kind === 'verified' ? '' : v.reason, 'evidence-source-error');
   });
 
   test('an evidence-source method that throws -> Neutral evidence-source-error', async () => {

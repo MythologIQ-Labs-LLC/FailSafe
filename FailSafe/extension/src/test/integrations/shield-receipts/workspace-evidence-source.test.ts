@@ -6,6 +6,11 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { createWorkspaceEvidenceSource } from '../../../integrations/shield-receipts/workspace-evidence-source';
+import { verifyShieldReceipt } from '../../../integrations/shield-receipts/shield-receipt-verifier';
+import { DEFAULT_SHIELD_POLICY } from '../../../integrations/shield-receipts/shield-policy';
+import {
+  BASE_LEDGER, NOW, QOR_KEY, RECEIPT_KEY, SESSION, baseScenario, chainOf, keysOf, putReceipt, receiptBody, sealBlock,
+} from './fixtures';
 
 const CLEAN_ENV: NodeJS.ProcessEnv = { ...process.env };
 for (const k of Object.keys(CLEAN_ENV)) if (k.startsWith('GIT_')) delete CLEAN_ENV[k];
@@ -14,6 +19,29 @@ function git(cwd: string, ...args: string[]): string {
   return cp.execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@example.com', '-c', 'commit.gpgsign=false', ...args], {
     cwd, encoding: 'utf8', env: CLEAN_ENV,
   }).trim();
+}
+
+/** Delete the loose object for a blob (simulates a missing or corrupt object). */
+function deleteLooseObject(repo: string, oid: string): void {
+  const p = path.join(repo, '.git', 'objects', oid.slice(0, 2), oid.slice(2));
+  fs.chmodSync(p, 0o666);
+  fs.rmSync(p);
+}
+
+function newRepo(prefix: string): string {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+  git(dir, 'init', '-q');
+  return dir;
+}
+
+function commitLedger(repo: string, text: string, msg: string, extra?: [string, string]): string {
+  fs.mkdirSync(path.join(repo, 'docs'), { recursive: true });
+  fs.writeFileSync(path.join(repo, 'docs', 'META_LEDGER.md'), text);
+  if (extra) fs.writeFileSync(path.join(repo, extra[0]), extra[1]);
+  git(repo, 'add', 'docs');
+  if (extra) git(repo, 'add', extra[0]);
+  git(repo, 'commit', '-q', '-m', msg);
+  return git(repo, 'rev-parse', 'HEAD');
 }
 
 function tmpDirs(prefix: string): Set<string> {
@@ -125,6 +153,10 @@ suite('workspace-evidence-source (#476)', () => {
       await assert.rejects(source.readGateFile('..', 'audit.json'));
       await assert.rejects(source.readQorSessionKey('../k'));
       await assert.rejects(source.readQorSessionKey(''));
+      for (const dev of ['NUL', 'nul', 'CON', 'aux', 'COM1', 'lpt9', 'CONIN$']) {
+        await assert.rejects(source.readQorSessionKey(dev), dev);
+        await assert.rejects(source.readGateFile(dev, 'audit.json'), dev);
+      }
       await assert.rejects(source.readReceipt('not-a-sha'));
       assert.equal(reads, 0);
       assert.equal(await source.readGateFile('s1', 'audit.json'), undefined, 'ENOENT is undefined');
@@ -142,6 +174,84 @@ suite('workspace-evidence-source (#476)', () => {
       assert.ok(fs.existsSync(path.join(repo, '.failsafe', 'shield-receipts', `${merge}.json`)));
       assert.deepEqual(fs.readdirSync(path.join(repo, '.failsafe', 'shield-receipts')), [`${merge}.json`], 'no temp file left');
     } finally { dispose(); fs.rmSync(path.join(repo, '.failsafe'), { recursive: true, force: true }); }
+  });
+
+  test('a missing or corrupt object is an error, never an absent file', async () => {
+    const r = newRepo('fs-shield-corrupt-');
+    try {
+      const c1 = commitLedger(r, '### Entry #1: x\n', 'one');
+      deleteLooseObject(r, git(r, 'rev-parse', `${c1}:docs/META_LEDGER.md`));
+      const { source, dispose } = createWorkspaceEvidenceSource(r);
+      try {
+        await assert.rejects(source.showAtCommit(c1, 'docs/META_LEDGER.md'));
+        assert.equal(await source.showAtCommit(c1, 'docs/NOPE.md'), undefined, 'a path absent from the tree is still undefined');
+      } finally { dispose(); }
+    } finally { fs.rmSync(r, { recursive: true, force: true }); }
+  });
+
+  test('end to end: parent ledger unreadable -> anything but Verified (not-seal-commit is not skipped)', async () => {
+    const r = newRepo('fs-shield-e2e-');
+    try {
+      const sealSha = commitLedger(r, BASE_LEDGER + sealBlock(644), 'seal');
+      const codeSha = commitLedger(r, `${BASE_LEDGER}${sealBlock(644)}### Entry #645: GATE TRIBUNAL - later\n\n**Session**: \`x\`\n`, 'code', ['src.txt', 'code\n']);
+      git(r, 'remote', 'add', 'origin', 'https://github.com/acme/failsafe.git');
+      const s = baseScenario(); s.head = codeSha;
+      const gates = path.join(r, '.qor', 'gates', SESSION);
+      fs.mkdirSync(gates, { recursive: true });
+      for (const [name, bytes] of s.gates) fs.writeFileSync(path.join(gates, name), bytes);
+      fs.mkdirSync(path.join(r, '.qor', 'session', 'keys'), { recursive: true });
+      fs.writeFileSync(path.join(r, '.qor', 'session', 'keys', `${SESSION}.key`), QOR_KEY);
+      putReceipt(s, receiptBody(s));
+      fs.mkdirSync(path.join(r, '.failsafe', 'shield-receipts'), { recursive: true });
+      fs.writeFileSync(path.join(r, '.failsafe', 'shield-receipts', `${codeSha}.json`), s.receipts.get(codeSha)!);
+      const verify = async (): Promise<string> => {
+        const { source, dispose } = createWorkspaceEvidenceSource(r);
+        try {
+          const v = await verifyShieldReceipt(source, keysOf(RECEIPT_KEY), chainOf('OK'), DEFAULT_SHIELD_POLICY, 'api.github.com', NOW);
+          return v.kind === 'verified' ? 'verified' : `${v.kind}:${v.reason}`;
+        } finally { dispose(); }
+      };
+      assert.equal(await verify(), 'rejected:not-seal-commit', 'intact parent ledger: the code commit is not the Seal commit');
+      deleteLooseObject(r, git(r, 'rev-parse', `${sealSha}:docs/META_LEDGER.md`));
+      assert.equal(await verify(), 'neutral:evidence-source-error');
+    } finally { fs.rmSync(r, { recursive: true, force: true }); }
+  });
+
+  test('a base directory that is a link to outside the workspace is refused', async () => {
+    const r = newRepo('fs-shield-link-');
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'fs-shield-outside-'));
+    const sha = 'a'.repeat(40);
+    try {
+      fs.writeFileSync(path.join(outside, `${sha}.json`), '{"planted":true}');
+      fs.writeFileSync(path.join(outside, 'audit.json'), '{"planted":true}');
+      fs.mkdirSync(path.join(r, '.failsafe'), { recursive: true });
+      fs.symlinkSync(outside, path.join(r, '.failsafe', 'shield-receipts'), 'junction');
+      fs.mkdirSync(path.join(r, '.qor', 'gates'), { recursive: true });
+      fs.symlinkSync(outside, path.join(r, '.qor', 'gates', 's1'), 'junction');
+      const { source, dispose } = createWorkspaceEvidenceSource(r);
+      try {
+        await assert.rejects(source.readReceipt(sha));
+        await assert.rejects(source.writeReceipt(sha, '{}'));
+        await assert.rejects(source.readGateFile('s1', 'audit.json'));
+        assert.equal(fs.readFileSync(path.join(outside, `${sha}.json`), 'utf8'), '{"planted":true}', 'nothing written outside');
+      } finally { dispose(); }
+    } finally {
+      fs.rmSync(r, { recursive: true, force: true });
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  test('concurrent writeReceipt calls leave exactly one receipt and no temp files', async () => {
+    const r = newRepo('fs-shield-write-');
+    const sha = 'b'.repeat(40);
+    try {
+      const { source, dispose } = createWorkspaceEvidenceSource(r);
+      try {
+        await Promise.all([source.writeReceipt(sha, '{"n":1}\n'), source.writeReceipt(sha, '{"n":2}\n')]);
+        assert.deepEqual(fs.readdirSync(path.join(r, '.failsafe', 'shield-receipts')), [`${sha}.json`]);
+        assert.match((await source.readReceipt(sha)) ?? '', /^\{"n":[12]\}\n$/);
+      } finally { dispose(); }
+    } finally { fs.rmSync(r, { recursive: true, force: true }); }
   });
 
   test('dispose removes the safe-git and graft temporary directories', () => {
