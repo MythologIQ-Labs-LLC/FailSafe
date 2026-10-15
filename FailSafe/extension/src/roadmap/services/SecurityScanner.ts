@@ -33,7 +33,7 @@ function defaultRunner(
         : command === "npx"
           ? spawn("npx", args, options)
           : command === "git"
-            ? spawn(trustedGitPath(cwd), args, options)
+            ? spawn(trustedGitPath(cwd), args, options) // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute git path, argv array, no shell
             : null;
     } catch (err) {
       resolve({ code: 1, stdout: "", stderr: err instanceof Error ? err.message : String(err) });

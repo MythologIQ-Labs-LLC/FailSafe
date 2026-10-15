@@ -149,17 +149,21 @@ suite('RiskStore across processes (#517 FX972)', function () {
       const lockDir = `${risksFile(dir)}.lock`;
       const child = startChild([mode, dir, 'S', '0', '2000']);
       live.push(child.proc);
-      let parentIno = '';
-      let stolen: { ino: string } = { ino: '' };
+      let parentId = '';
+      let stolen: { ino: string; mtimeNs: string } = { ino: '', mtimeNs: '' };
       const code = codeOf(() => new RiskStore(dir, { staleMs: 2000 }).mutate((doc) => {
-        parentIno = String(fs.lstatSync(lockDir, { bigint: true }).ino);
+        const own = fs.lstatSync(lockDir, { bigint: true });
+        parentId = `${own.ino}:${own.mtimeNs}`;
         doc.risks.push({ id: 'P' });
         stolen = JSON.parse(waitForFile(path.join(dir, 'stolen.signal'), 10000));
       }));
       assert.equal(code, 'LOCK_LOST');
       assert.ok(fs.existsSync(lockDir), 'the thief\'s lock directory must survive the release');
-      assert.equal(String(fs.lstatSync(lockDir, { bigint: true }).ino), stolen.ino);
-      assert.notEqual(stolen.ino, parentIno);
+      // The store's own identity is dev, ino, mtime and birthtime; Linux reuses a freed inode at once,
+      // so the thief's directory is told apart by (ino, mtime), as the store tells it apart.
+      const now = fs.lstatSync(lockDir, { bigint: true });
+      assert.equal(`${now.ino}:${now.mtimeNs}`, `${stolen.ino}:${stolen.mtimeNs}`);
+      assert.notEqual(`${stolen.ino}:${stolen.mtimeNs}`, parentId);
       const ids = readRisks(dir).map((r) => r.id);
       if (mode === 'steal-and-hold') assert.equal(fs.readFileSync(risksFile(dir), 'utf8'), before);
       else assert.deepEqual(ids, ['X']);

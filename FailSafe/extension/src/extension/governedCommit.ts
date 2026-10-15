@@ -131,7 +131,7 @@ export const defaultGitRunner: GitRunner = (args, cwd) =>
   new Promise((resolve) => {
     let exe: string;
     try { exe = trustedGitPath(cwd); } catch (e) { resolve({ code: 1, stdout: '', stderr: String(e) }); return; }
-    const child = spawn(exe, args, { cwd, shell: false, windowsHide: true });
+    const child = spawn(exe, args, { cwd, shell: false, windowsHide: true }); // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute git path, argv array, no shell
     let stdout = '';
     let stderr = '';
     child.stdout.on('data', (c) => { stdout += String(c); });

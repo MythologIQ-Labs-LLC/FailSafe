@@ -150,7 +150,7 @@ async function defaultRunner(
   return new Promise((resolve, reject) => {
     const options = { cwd, shell: false as const, windowsHide: true };
     const child = command === "git"
-      ? spawn(trustedGitPath(cwd), args, options)
+      ? spawn(trustedGitPath(cwd), args, options) // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute git path, argv array, no shell
       : command === "winget"
         ? spawn("winget", args, options)
         : command === "choco"

@@ -131,7 +131,7 @@ function probeEnv(): NodeJS.ProcessEnv {
 }
 
 export function defaultGitProbe(realPath: string, cwd: string): ProbeResult {
-  return classifyProbe(spawnSync(realPath, ['--version'], { cwd, shell: false, windowsHide: true, timeout: PROBE_TIMEOUT_MS, encoding: 'utf8', env: probeEnv() }));
+  return classifyProbe(spawnSync(realPath, ['--version'], { cwd, shell: false, windowsHide: true, timeout: PROBE_TIMEOUT_MS, encoding: 'utf8', env: probeEnv() })); // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- probes only a candidate that passed every static check (absolute, outside every root, regular .exe/X_OK file)
 }
 
 const within = (p: string, dir: string): boolean =>

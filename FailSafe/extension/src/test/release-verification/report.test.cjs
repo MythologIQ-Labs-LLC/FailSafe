@@ -302,3 +302,19 @@ test("a release-asset fetch that differed is labelled with its failing check sta
   writeReport(out, rep);
   assert.match(fs.readFileSync(path.join(out, "report.md"), "utf8"), /release-asset:v6\.0\.7 \(fetched-equal; approved-sums check: fail\)/);
 });
+
+// plan-v607-final-integration LD12 (c), CodeQL js/incomplete-sanitization: a value with a
+// backslash before a pipe must stay one Markdown table cell.
+test("a backslash before a pipe in a report value stays inside one table cell", async () => {
+  const inv = await inventoryEvidence();
+  const file = String.raw`C:\evidence\a\|b.json`;
+  const rep = buildReport([{ file, text: JSON.stringify(inv.evidence), evidence: inv.evidence }]);
+  const out = fx.tmpDir("rv-report-esc");
+  writeReport(out, rep);
+  const md = fs.readFileSync(path.join(out, "report.md"), "utf8");
+  const row = md.split("\n").find((l) => l.includes("evidence") && l.includes("| inventory |"));
+  assert.ok(row, "the inputs row is present");
+  // GFM: a pipe is a cell delimiter unless an odd number of backslashes precedes it.
+  const cells = row.slice(1, -1).split(/(?<!(?:^|[^\\])(?:\\\\)*\\)\|/);
+  assert.equal(cells.length, 4, `four cells in ${JSON.stringify(row)}`);
+});

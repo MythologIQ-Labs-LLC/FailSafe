@@ -33,7 +33,7 @@ function defaultRunner(
     let proc: ReturnType<typeof spawn> | null;
     try {
       proc = command === "git"
-        ? spawn(trustedGitPath(cwd), args, options)
+        ? spawn(trustedGitPath(cwd), args, options) // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute git path, argv array, no shell
         : command === "pip"
           ? spawn("pip", args, options)
           : command === "npm"

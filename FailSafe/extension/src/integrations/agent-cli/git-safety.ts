@@ -39,14 +39,14 @@ const CARRIED_SINGLE = ['core.autocrlf', 'core.eol', 'core.safecrlf', 'core.long
 function readUserConfig(repo: string, key: string, all = false): string[] {
   let exe: string;
   try { exe = trustedGitPath(repo); } catch { return []; }
-  const res = spawnSync(exe, ['config', all ? '--get-all' : '--get', key], { cwd: repo, encoding: 'utf8', windowsHide: true });
+  const res = spawnSync(exe, ['config', all ? '--get-all' : '--get', key], { cwd: repo, encoding: 'utf8', windowsHide: true }); // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute git path, argv array, no shell
   return res.status === 0 ? res.stdout.split(/\r?\n/).filter((v) => v.length > 0) : [];
 }
 
 function readLfsFilter(repo: string): Array<[string, string]> {
   let exe: string;
   try { exe = trustedGitPath(repo); } catch { return []; }
-  const res = spawnSync(exe, ['config', '--get-regexp', '^filter\\.lfs\\.'], { cwd: repo, encoding: 'utf8', windowsHide: true });
+  const res = spawnSync(exe, ['config', '--get-regexp', '^filter\\.lfs\\.'], { cwd: repo, encoding: 'utf8', windowsHide: true }); // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute git path, argv array, no shell
   if (res.status !== 0) return [];
   return res.stdout.split(/\r?\n/).filter(Boolean).map((line) => {
     const i = line.indexOf(' ');
@@ -92,7 +92,7 @@ export function createSafeGit(repo: string): SafeGit {
   const tryRun: SafeGit['tryRun'] = (cwd, args, opts) => new Promise((resolve) => {
     let exe: string;
     try { exe = trustedGitPath(cwd); } catch (e) { resolve({ code: 127, stdout: Buffer.alloc(0), stderr: String(e) }); return; }
-    const child = spawn(exe, [...baseArgs, ...args], {
+    const child = spawn(exe, [...baseArgs, ...args], { // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute git path, argv array, no shell
       cwd, shell: false, windowsHide: true, env: { ...process.env, ...baseEnv, ...(opts?.env ?? {}) },
     });
     const out: Buffer[] = [];

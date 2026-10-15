@@ -24,7 +24,7 @@ export function resolveGitDirs(workspaceRoot: string): GitDirs {
   const fallback = path.join(workspaceRoot, ".git");
   try {
     const r = spawnSync(
-      trustedGitPath(workspaceRoot),
+      trustedGitPath(workspaceRoot), // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute git path, argv array, no shell
       ["rev-parse", "--path-format=absolute", "--git-dir", "--git-common-dir"],
       { cwd: workspaceRoot, encoding: "utf8", timeout: 5000 },
     );

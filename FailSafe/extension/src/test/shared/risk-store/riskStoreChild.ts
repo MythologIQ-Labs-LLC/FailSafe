@@ -62,6 +62,11 @@ function lockIno(): string {
   return String(fs.lstatSync(`${risksPath}.lock`, { bigint: true }).ino);
 }
 
+/** The lock directory identity the store compares: ino and mtime (Linux reuses inodes). */
+function lockMtime(): string {
+  return String(fs.lstatSync(`${risksPath}.lock`, { bigint: true }).mtimeNs);
+}
+
 function main(): void {
   console.log = console.info = console.warn = (): void => undefined;
   switch (mode) {
@@ -108,7 +113,7 @@ function main(): void {
       if (mode === "steal-write-and-hold") {
         writeFileAtomicSync(risksPath, JSON.stringify({ risks: [{ id: "X" }] }, null, 2));
       }
-      signal("stolen", { ino: lockIno() });
+      signal("stolen", { ino: lockIno(), mtimeNs: lockMtime() });
       keepAlive();
       return;
     }

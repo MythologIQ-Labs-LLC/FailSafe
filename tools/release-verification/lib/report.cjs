@@ -204,7 +204,8 @@ function buildReport(inputs) {
 
 function markdown(r) {
   const banner = r.mode === "marketplace-verification" ? "# MARKETPLACE VERIFICATION" : "# PRE-RELEASE REHEARSAL - NOT A MARKETPLACE VERIFICATION";
-  const esc = (s) => String(s).replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
+  // Backslashes first, so an input ending in a backslash cannot cancel the pipe escape.
+  const esc = (s) => String(s).replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
   const lines = [banner, "", `FailSafe ${r.version}: status **${r.status}** (exit ${r.exitCode}); marketplaceVerified: ${r.claims.marketplaceVerified}.`, ""];
   if (r.mode !== "marketplace-verification") lines.push("This report covers local or CI artifacts. It says nothing about what the marketplaces serve.", "");
   lines.push(r.approvedSums ? `Approved sums: ${r.approvedSums.source.kind}:${r.approvedSums.source.ref} (${r.approvedSums.source.verified}; approved-sums check: ${r.approvedSumsCheck ?? "absent"}), sha256 ${r.approvedSums.sha256}` : "Approved sums: none in the inputs", "");

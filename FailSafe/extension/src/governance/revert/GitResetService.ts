@@ -106,7 +106,7 @@ function defaultRunner(
     });
   }
   return new Promise((resolve, reject) => {
-    const child = spawn(trustedGitPath(cwd), args, {
+    const child = spawn(trustedGitPath(cwd), args, { // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute git path, argv array, no shell
       cwd,
       shell: false,
       windowsHide: true,
