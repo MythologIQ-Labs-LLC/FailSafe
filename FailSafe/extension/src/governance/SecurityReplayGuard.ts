@@ -31,9 +31,14 @@ export interface NonceRecord {
 
 export interface NonceValidationResult {
   valid: boolean;
-  reason?: "not_found" | "expired" | "already_used" | "invalid_format";
+  reason?: "not_found" | "expired" | "already_used" | "invalid_format" | "persistence_error";
   record?: NonceRecord;
 }
+
+/** Rename errors worth retrying (antivirus or indexer briefly holding the file on Windows). */
+const TRANSIENT_RENAME_CODES = new Set(["EPERM", "EBUSY", "EACCES"]);
+const RENAME_ATTEMPTS = 3;
+const RENAME_RETRY_MS = 50;
 
 export class SecurityReplayGuard {
   private readonly nonceStorePath: string;
@@ -41,10 +46,12 @@ export class SecurityReplayGuard {
   private nonces: Map<string, NonceRecord> = new Map();
   private readonly defaultTtlMs: number;
   private cleanupInterval?: NodeJS.Timeout;
+  private storeHealthy = true;
+  private readonly renameFile: (from: string, to: string) => void;
 
   constructor(
     rootOrSecurityDir: string,
-    options: { ttlMs?: number; cleanupIntervalMs?: number } = {},
+    options: { ttlMs?: number; cleanupIntervalMs?: number; renameSync?: (from: string, to: string) => void } = {},
   ) {
     const normalizedInput = path.resolve(rootOrSecurityDir);
     const looksLikeSecurityDir =
@@ -56,6 +63,7 @@ export class SecurityReplayGuard {
     this.nonceStorePath = path.join(storeDir, "nonces.json");
     this.defaultTtlMs = options.ttlMs || 5 * 60 * 1000; // 5 minutes default
     this.logger = new Logger("SecurityReplayGuard");
+    this.renameFile = options.renameSync ?? fs.renameSync;
 
     // Ensure directory exists
     if (!fs.existsSync(storeDir)) {
@@ -67,13 +75,14 @@ export class SecurityReplayGuard {
 
     // Start cleanup interval
     const cleanupMs = options.cleanupIntervalMs || 60 * 1000; // 1 minute
-    this.cleanupInterval = setInterval(() => this.cleanup(), cleanupMs);
+    this.cleanupInterval = setInterval(() => this.runScheduledCleanup(), cleanupMs);
   }
 
   /**
    * Generate a new nonce for a governance request
    */
   generateNonce(metadata?: Record<string, unknown>, ttlMs?: number): string {
+    this.requireHealthyStore();
     const nonce = crypto.randomBytes(32).toString("hex");
     const now = Date.now();
     const ttl = ttlMs || this.defaultTtlMs;
@@ -86,7 +95,11 @@ export class SecurityReplayGuard {
     };
 
     this.nonces.set(nonce, record);
-    this.saveNonces();
+    try { this.saveNonces(); } catch (error) {
+      this.nonces.delete(nonce);
+      this.storeHealthy = false;
+      throw error;
+    }
 
     this.logger.debug("Generated nonce", {
       nonce: nonce.substring(0, 8) + "...",
@@ -100,7 +113,8 @@ export class SecurityReplayGuard {
    * Validate a nonce without consuming it
    */
   validateNonce(nonce: string): NonceValidationResult {
-    if (!nonce || typeof nonce !== "string" || nonce.length !== 64) {
+    if (!this.storeHealthy) return { valid: false, reason: "persistence_error" };
+    if (!nonce || typeof nonce !== "string" || !/^[0-9a-f]{64}$/.test(nonce)) {
       return { valid: false, reason: "invalid_format" };
     }
 
@@ -140,7 +154,11 @@ export class SecurityReplayGuard {
     record.consumedBy = consumedBy;
 
     this.nonces.set(nonce, record);
-    this.saveNonces();
+    try { this.saveNonces(); } catch (error) {
+      this.storeHealthy = false;
+      this.logger.error("Refusing nonce consumption: durable write failed", error);
+      return { valid: false, reason: "persistence_error" };
+    }
 
     this.logger.debug("Consumed nonce", {
       nonce: nonce.substring(0, 8) + "...",
@@ -209,11 +227,24 @@ export class SecurityReplayGuard {
     }
 
     if (removed > 0) {
-      this.saveNonces();
+      try { this.saveNonces(); } catch (error) { this.storeHealthy = false; throw error; }
       this.logger.debug(`Cleaned up ${removed} nonces`);
     }
 
     return removed;
+  }
+
+  /**
+   * Interval entry point: a persistence failure here must not escape the timer
+   * (it would be an uncaught exception in the extension host). cleanup() has
+   * already marked the store unhealthy, so authorization stays fail-closed.
+   */
+  private runScheduledCleanup(): void {
+    try {
+      this.cleanup();
+    } catch (error) {
+      this.logger.error("Nonce cleanup could not persist; replay authorization stays fail-closed", error);
+    }
   }
 
   /**
@@ -232,24 +263,48 @@ export class SecurityReplayGuard {
         this.logger.info(`Loaded ${this.nonces.size} nonces from store`);
       }
     } catch (error) {
-      this.logger.warn("Failed to load nonce store, starting fresh", error);
+      this.logger.error("Nonce store unreadable: refusing replay authorization", error);
       this.nonces.clear();
+      this.storeHealthy = false;
     }
   }
 
   /**
    * Save nonces to persistent storage
    */
-  private saveNonces(): void {
-    try {
-      const records = Array.from(this.nonces.values());
-      fs.writeFileSync(
-        this.nonceStorePath,
-        JSON.stringify(records, null, 2),
-        "utf8",
+  private requireHealthyStore(): void {
+    if (!this.storeHealthy) {
+      throw new Error(
+        `Nonce store unavailable: fail-closed persistence state (${this.nonceStorePath}). ` +
+        "To recover, move that file aside and reload the window; nonces expire after their TTL, so no replay window opens.",
       );
+    }
+  }
+
+  private saveNonces(): void {
+    this.requireHealthyStore();
+    const records = Array.from(this.nonces.values());
+    const tempPath = this.nonceStorePath + "." + crypto.randomBytes(8).toString("hex") + ".tmp";
+    try {
+      fs.writeFileSync(tempPath, JSON.stringify(records, null, 2), { encoding: "utf8", flag: "wx", mode: 0o600 });
+      this.renameWithRetry(tempPath, this.nonceStorePath);
     } catch (error) {
+      try { fs.unlinkSync(tempPath); } catch { /* May not have created the temp file. */ }
       this.logger.error("Failed to save nonce store", error);
+      throw error;
+    }
+  }
+
+  private renameWithRetry(from: string, to: string): void {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        this.renameFile(from, to);
+        return;
+      } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code ?? "";
+        if (attempt >= RENAME_ATTEMPTS || !TRANSIENT_RENAME_CODES.has(code)) throw error;
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, RENAME_RETRY_MS);
+      }
     }
   }
 
@@ -260,7 +315,7 @@ export class SecurityReplayGuard {
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
     }
-    this.saveNonces();
+    try { this.saveNonces(); } catch (error) { this.logger.error("Nonce store disposal persistence failed", error); }
     this.nonces.clear();
   }
 }
