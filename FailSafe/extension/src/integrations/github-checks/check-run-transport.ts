@@ -2,15 +2,20 @@
  * check-run-transport — the single place FailSafe POSTs a Check Run (#476).
  *
  * Not re-exported by github-checks-client; a source-scan test pins its
- * importers. Every SHIELD-family name is refused here unless the conclusion is
- * `failure` (which can only block), or the conclusion is `success` and the
- * authority is a verifier-minted VerifiedShieldReceipt for exactly this
- * head_sha, repo and API host. Responses count as published only for a
- * 201 whose JSON body carries a positive integer id. Results never contain the
- * token or the response body.
+ * importers. The caller's payload object is never serialized: toWirePayload
+ * reads each field once, accepts only primitive strings of the expected shape,
+ * and every guard runs on that fresh copy, which is what gets stringified (so
+ * toJSON, getters and Proxies cannot change what is posted).
+ *
+ * The name set is closed: the publishable names (PUBLISHABLE_CHECKS) with their
+ * allowed conclusions, and SHIELD_CHECK_NAME. The SHIELD name may carry
+ * `failure` (which can only block), or `success` when the authority is a
+ * verifier-minted VerifiedShieldReceipt for exactly this head_sha, repo and API
+ * host. Responses count as published only for a 201 whose JSON body carries a
+ * positive integer id. Results never contain the token or the response body.
  */
 
-import { isShieldFamilyName, type CheckConclusion, type CheckRunPayload, SHIELD_CHECK_NAME } from './github-checks-map';
+import { isPublishable, isShieldFamilyName, type CheckConclusion, type CheckRunPayload, SHIELD_CHECK_NAME } from './github-checks-map';
 import type { GitHubPostFn } from './github-checks-client';
 import { isVerifiedShieldReceipt } from '../shield-receipts/shield-receipt-verifier';
 
@@ -38,11 +43,48 @@ export interface TransportResult {
   echo?: { head_sha?: string; name?: string; conclusion?: string };
 }
 
-function shieldRefusal(payload: TransportPayload, target: CheckRunTarget, authority: unknown): string | undefined {
-  if (!isShieldFamilyName(payload.name)) return undefined;
-  if (payload.conclusion === 'failure') return undefined;
-  if (payload.conclusion !== 'success' || !isVerifiedShieldReceipt(authority)) return 'SHIELD check refused: no verified receipt authority';
-  if (payload.head_sha !== authority.commitSha) return 'SHIELD check refused: head_sha is not the verified commit';
+const CONCLUSIONS: ReadonlySet<string> = new Set(['success', 'neutral', 'failure']);
+
+/**
+ * A fresh plain copy of a payload with every field read once and checked as a
+ * primitive string; undefined when any field is missing, non-string or of the
+ * wrong shape (including a getter that throws).
+ */
+export function toWirePayload(payload: unknown): TransportPayload | undefined {
+  try {
+    if (!payload || typeof payload !== 'object') return undefined;
+    const p = payload as Record<string, unknown>;
+    const name = p.name;
+    const headSha = p.head_sha;
+    const status = p.status;
+    const conclusion = p.conclusion;
+    const output = p.output;
+    const detailsUrl = p.details_url;
+    if (typeof name !== 'string' || typeof headSha !== 'string' || status !== 'completed') return undefined;
+    if (typeof conclusion !== 'string' || !CONCLUSIONS.has(conclusion)) return undefined;
+    if (!output || typeof output !== 'object') return undefined;
+    const title = (output as Record<string, unknown>).title;
+    const summary = (output as Record<string, unknown>).summary;
+    if (typeof title !== 'string' || typeof summary !== 'string') return undefined;
+    if (detailsUrl !== undefined && typeof detailsUrl !== 'string') return undefined;
+    const wire = {
+      name, head_sha: headSha, status: 'completed', conclusion, output: { title, summary },
+      ...(detailsUrl !== undefined ? { details_url: detailsUrl } : {}),
+    };
+    return wire as TransportPayload;
+  } catch {
+    return undefined;
+  }
+}
+
+function nameRefusal(wire: TransportPayload, target: CheckRunTarget, authority: unknown): string | undefined {
+  if (wire.name !== SHIELD_CHECK_NAME) {
+    if (isShieldFamilyName(wire.name) || !isPublishable(wire.name, wire.conclusion)) return 'check run refused: name and conclusion are not publishable';
+    return undefined;
+  }
+  if (wire.conclusion === 'failure') return undefined;
+  if (wire.conclusion !== 'success' || !isVerifiedShieldReceipt(authority)) return 'SHIELD check refused: no verified receipt authority';
+  if (wire.head_sha !== authority.commitSha) return 'SHIELD check refused: head_sha is not the verified commit';
   if (target.repo.toLowerCase() !== authority.repo || target.apiHost.toLowerCase() !== authority.apiHost) {
     return 'SHIELD check refused: target is not the verified repository and API host';
   }
@@ -85,7 +127,8 @@ function interpret(res: { status: number; body: string }): TransportResult {
 }
 
 /** POST one Check Run. Non-throwing; the token rides only the Authorization
- *  header. `authority` is consulted only for a SHIELD-family success. */
+ *  header. Only the checked wire copy is serialized. `authority` is consulted
+ *  only for a SHIELD success. */
 export async function postCheckRun(
   payload: TransportPayload,
   target: CheckRunTarget,
@@ -93,7 +136,9 @@ export async function postCheckRun(
   post: GitHubPostFn,
   authority?: unknown,
 ): Promise<TransportResult> {
-  const refused = targetError(target) ?? shieldRefusal(payload, target, authority);
+  const wire = toWirePayload(payload);
+  if (!wire) return { ok: false, error: 'check run refused: malformed payload' };
+  const refused = targetError(target) ?? nameRefusal(wire, target, authority);
   if (refused) return { ok: false, error: refused };
   const url = `${target.baseUrl.replace(/\/$/, '')}/repos/${target.repo}/check-runs`;
   try {
@@ -106,7 +151,7 @@ export async function postCheckRun(
         'User-Agent': 'FailSafe',
         'X-GitHub-Api-Version': '2022-11-28',
       },
-      JSON.stringify(payload),
+      JSON.stringify(wire),
     );
     return interpret(res);
   } catch (e) {

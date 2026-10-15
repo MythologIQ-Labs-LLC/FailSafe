@@ -76,6 +76,29 @@ suite('github-checks allowlist (#476)', () => {
     });
   }
 
+  test('the allowlist runs before every other guard (refused, not a local-only no-op)', async () => {
+    const c = countingPost();
+    for (const opts of [{ enabled: false, token: 't' }, { enabled: true, token: '' }]) {
+      const r = await publishCheckRunPayload(payload('FailSafe SHIELD', 'success'), CTX, opts, c.post);
+      assert.equal(r.ok, false);
+      assert.equal(r.localOnly, undefined);
+      assert.match(r.error ?? '', /not publishable/);
+    }
+    assert.equal(c.calls(), 0);
+  });
+
+  test('mutating the exported PUBLISHABLE_CHECKS view cannot widen publishing', async () => {
+    const view = mapModule.PUBLISHABLE_CHECKS as unknown as Map<string, Set<string>>;
+    try { view.set('FailSafe SHIELD', new Set(['success', 'neutral'])); } catch { /* frozen is fine too */ }
+    try { (view.get('FailSafe Manual Advisory') as Set<string> | undefined)?.add('success'); } catch { /* frozen is fine too */ }
+    assert.equal(mapModule.isPublishable('FailSafe SHIELD', 'success'), false);
+    assert.equal(mapModule.isPublishable('FailSafe Manual Advisory', 'success'), false);
+    const c = countingPost();
+    assert.equal((await publishCheckRunPayload(payload('FailSafe Manual Advisory', 'success'), CTX, OPTS, c.post)).ok, false);
+    assert.equal((await publishCheckRunPayload(payload('FailSafe SHIELD', 'neutral'), CTX, OPTS, c.post)).ok, false);
+    assert.equal(c.calls(), 0);
+  });
+
   test('neutral under the SHIELD name is refused (neutral passes required checks)', async () => {
     const c = countingPost();
     const r = await publishCheckRunPayload(payload('FailSafe SHIELD', 'neutral'), CTX, OPTS, c.post);
