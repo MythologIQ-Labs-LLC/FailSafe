@@ -118,8 +118,9 @@ function vsixFiles({ toPath } = {}) {
  * the spawned USERPROFILE. A healthy launch (the to VSIX installed) adds one
  * snapshot.created row.
  */
-function fakeWorld({ code, root, v, registry = true, triggerWrites = true, git = true, onList, operatorRegistryPath, leakToOperator = false }) {
-  const w = { calls: [], kills: [], alive: [OPERATOR], clock: Date.parse("2026-10-15T10:00:00Z"), launchNo: 0, listInLaunch: 0, installed: null, snap: 0, copyDirs: [], current: null };
+function fakeWorld({ code, root, v, registry = true, triggerWrites = true, git = true, onList, operatorRegistryPath, leakToOperator = false, stubborn = [], restartOnExthostKill = false }) {
+  const w = { calls: [], kills: [], alive: [OPERATOR], clock: Date.parse("2026-10-15T10:00:00Z"), launchNo: 0, listInLaunch: 0, listCount: 0, installed: null, snap: 0, copyDirs: [], aliveInDirAtDbCheck: [], current: null };
+  const inDir = (p) => p.exe.toLowerCase().startsWith(`${deps.code.dir.toLowerCase()}${path.sep}`);
   const deps = {
     root, code: lc.validateCodeDir(code), from: v.from, to: v.to, trigger: "C:\\rv\\trigger", env: { USERPROFILE: "C:\\Users\\op", VSCODE_PID: "1" }, host: "win32-x64",
     operatorRegistryPath,
@@ -141,7 +142,7 @@ function fakeWorld({ code, root, v, registry = true, triggerWrites = true, git =
       const ext = { pid: base + 1, ppid: base, exe: path.join(deps.code.dir, "Code.exe"), created: `e${w.launchNo}` };
       w.alive.push(mainP, ext);
       if (git) w.alive.push({ pid: base + 2, ppid: base + 1, exe: "C:\\Program Files\\Git\\cmd\\git.exe", created: `g${w.launchNo}` });
-      w.current = { quitFile: `${env.FS_RV_OUT}.quit`, owned: [mainP.pid, ext.pid], ext: ext.pid, main: mainP.pid };
+      w.current = { quitFile: `${env.FS_RV_OUT}.quit`, owned: [mainP.pid, ext.pid], ext: ext.pid, main: mainP.pid, out: env.FS_RV_OUT };
       if (triggerWrites) {
         fs.mkdirSync(path.dirname(env.FS_RV_OUT), { recursive: true });
         fs.appendFileSync(env.FS_RV_OUT, `${JSON.stringify({ event: "found", version: "x", extensionPath: "x", pid: ext.pid })}\n${JSON.stringify({ event: "activated", isActive: true, ms: 5 })}\n`);
@@ -157,18 +158,33 @@ function fakeWorld({ code, root, v, registry = true, triggerWrites = true, git =
     },
     async listProcesses() {
       w.listInLaunch += 1;
+      w.listCount += 1;
       if (w.current && fs.existsSync(w.current.quitFile)) w.alive = w.alive.filter((p) => !w.current.owned.includes(p.pid));
       onList?.(w);
       return w.alive.map((p) => ({ ...p }));
     },
     async kill(pid) {
-      w.kills.push({ pid, launch: w.launchNo });
+      const victim = w.alive.find((p) => p.pid === pid);
+      w.kills.push({ pid, launch: w.launchNo, created: victim?.created ?? null, list: w.listCount });
+      if (stubborn.includes(pid)) return { ok: false, detail: "Access is denied." };
       w.alive = w.alive.filter((p) => p.pid !== pid);
+      // A main process that is still alive restarts a killed extension host, whose trigger reports again.
+      const mainAlive = w.current && w.alive.some((p) => p.pid === w.current.main);
+      if (restartOnExthostKill && w.current && pid === w.current.ext && mainAlive) {
+        const again = { pid: pid + 4, ppid: w.current.main, exe: path.join(deps.code.dir, "Code.exe"), created: `r${w.launchNo}` };
+        w.alive.push(again);
+        w.current.owned.push(again.pid);
+        fs.appendFileSync(w.current.out, `${JSON.stringify({ event: "found", version: "x", extensionPath: "x", pid: again.pid })}
+`);
+        w.snap += 1;
+      }
+      return { ok: true, detail: "" };
     },
     readInstalled: () => (w.installed === v.to.path ? { version: "6.0.7", targetPlatform: "win32-x64" } : { version: "6.0.6", targetPlatform: null }),
     scanLogs: () => (w.installed === v.from.path ? [{ kind: "degraded", id: "stub-mode", line: "Failed to initialize Ledger DB - running in stub mode", file: "exthost.log" }] : []),
     checkDbs: (ws, copyDir) => {
       w.copyDirs.push(copyDir);
+      w.aliveInDirAtDbCheck.push(w.alive.filter(inDir).map((p) => p.pid));
       const r = (tables, snap = null) => ({ status: "pass", detail: "", exists: true, integrity: "ok", tables, snapshotCreated: snap });
       return { soa_ledger: r({ soa_ledger: 1, failsafe_checkpoints: w.snap }, w.snap), shadow_genome: r({ shadow_genome: 0 }), "sentinel-rag": r({ sentinel_observations: 0 }) };
     },

@@ -52,6 +52,8 @@ test("a full run issues exactly install, launch x7 in the S1-S7 order and kills 
   assert.deepEqual(w.calls, ["install(from)", "launch", "install(to)", "launch", "launch", "launch", "launch", "install(from)", "launch", "install(to)", "launch"]);
   assert.deepEqual(w.kills.map((k) => k.launch), [4, 4]);
   assert.deepEqual(w.kills.map((k) => k.pid), [1041, 1040], "exthost first, then main");
+  assert.equal(w.kills[0].list, w.kills[1].list, "main is killed right after the exthost, with no process listing in between");
+  assert.ok(w.aliveInDirAtDbCheck.every((pids) => pids.length === 0), "no process from DIR is alive when the databases are copied");
   for (const s of ["S1", "S2", "S3", "S4", "S5", "S6", "S7"]) assert.equal(step(r, s).status, "pass", `${s}: ${step(r, s).detail}`);
   assert.equal(step(r, "persistence").status, "pass", step(r, "persistence").detail);
   assert.equal(iso(r, "home-registry").status, "pass");
@@ -68,19 +70,51 @@ test("without the registry entry S4 never calls the killer and fails at the comm
   assert.match(step(r, "S4").detail, /commit/i);
 });
 
-test("a PID whose CreationDate changed between listing and kill is not signalled; the operator's Code.exe never is", async () => {
+test("a PID whose CreationDate changed between listing and kill is not signalled on the stale identity; the operator's Code.exe never is", async () => {
   const { w, deps } = setup({
     onList: (world) => {
-      // Launch 4: listing 1 is the snapshot; listing 2 is the exthost re-check.
+      // Launch 4: listing 1 is the snapshot; listing 2 is the kill round's re-check. Only CreationDate changes:
+      // the ExecutablePath stays inside DIR, so only the CreationDate comparison can refuse it.
       if (world.launchNo === 4 && world.listInLaunch === 2) {
-        world.alive = world.alive.map((p) => (p.pid === 1041 ? { pid: 1041, ppid: 1, exe: "C:\\Windows\\System32\\notepad.exe", created: "reused" } : p));
+        world.alive = world.alive.map((p) => (p.pid === 1041 ? { ...p, created: "reused" } : p));
       }
     },
   });
   const r = await lc.runLifecycle(deps);
-  assert.deepEqual(w.kills.filter((k) => k.launch === 4).map((k) => k.pid), [1040]);
-  assert.match(step(r, "S4").detail, /1041/);
-  assert.ok(w.kills.every((k) => k.pid !== OPERATOR.pid && k.pid !== 1041));
+  const s4 = w.kills.filter((k) => k.launch === 4);
+  assert.equal(s4[0].pid, 1040, "the stale exthost identity is skipped, so main is the first kill");
+  assert.ok(s4.filter((k) => k.pid === 1041).every((k) => k.created === "reused" && k.list > s4[0].list), "1041 is only signalled after it was listed again under its new identity");
+  assert.match(step(r, "S4").detail, /1041 not signalled/);
+  assert.ok(w.kills.every((k) => k.pid !== OPERATOR.pid));
+});
+
+test("a process from DIR that appears after the snapshot is stopped before the databases are copied", async () => {
+  const { w, deps } = setup({
+    onList: (world) => {
+      if (world.launchNo === 4 && world.listInLaunch === 2) world.alive.push({ pid: 1049, ppid: 1040, exe: path.join(deps.code.dir, "Code.exe"), created: "late" });
+    },
+  });
+  const r = await lc.runLifecycle(deps);
+  assert.ok(w.kills.some((k) => k.pid === 1049), "the late process is stopped");
+  assert.ok(w.aliveInDirAtDbCheck.every((pids) => pids.length === 0), JSON.stringify(w.aliveInDirAtDbCheck));
+  assert.equal(step(r, "S4").status, "pass", step(r, "S4").detail);
+});
+
+test("when the owned set never empties (taskkill fails) the step fails and its databases are not copied", async () => {
+  const { w, deps } = setup({ stubborn: [1040] });
+  const r = await lc.runLifecycle(deps);
+  assert.equal(step(r, "S4").status, "fail");
+  assert.match(step(r, "S4").detail, /still running.*1040/);
+  assert.match(step(r, "S4").detail, /taskkill 1040 failed/);
+  assert.ok(!w.copyDirs.some((d) => d.endsWith(`${path.sep}S4`)), "S4's databases are not copied while a process from DIR is alive");
+});
+
+test("an extension host restarted during the S4 kill fails S4 even though the restarted session added a row", async () => {
+  const { w, deps } = setup({ restartOnExthostKill: true });
+  const r = await lc.runLifecycle(deps);
+  assert.ok(w.kills.some((k) => k.pid === 1045), "the restarted extension host is stopped too");
+  assert.equal(step(r, "S4").status, "fail");
+  assert.match(step(r, "S4").detail, /2 found lines/);
 });
 
 test("the trigger never writing found is a launch failure: inconclusive (exit 3), not a pass", async () => {

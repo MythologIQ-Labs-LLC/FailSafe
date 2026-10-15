@@ -200,3 +200,14 @@ test("assessPersistence: each healthy session adds a snapshot.created row, inclu
   assert.equal(lc.assessPersistence(rows([0, 1, 2, 3, 4, 4, 5], { ledger: [0, 1, 1, 1, 0, 1, 1] })).status, "fail", "soa_ledger rows decreased");
   assert.equal(lc.assessPersistence(rows([0, 0, 1, 2, 3, 3, 4], { degraded: ["S1", "S2", "S6"] })).status, "fail", "C(S2) = 0");
 });
+
+test("winproc pins powershell.exe and taskkill.exe under %SystemRoot%\\System32 and reports taskkill's result", () => {
+  const winproc = require(fx.rv("lib/winproc.cjs"));
+  const tools = winproc.systemTools({ SystemRoot: "D:\\Win" });
+  assert.equal(tools.powershell, "D:\\Win\\System32\\WindowsPowerShell\\v1.0\\powershell.exe");
+  assert.equal(tools.taskkill, "D:\\Win\\System32\\taskkill.exe");
+  assert.equal(winproc.systemTools({}).taskkill, "C:\\Windows\\System32\\taskkill.exe");
+  assert.deepEqual(winproc.killResult({ status: 0, stderr: "" }), { ok: true, detail: "" });
+  assert.deepEqual(winproc.killResult({ status: 128, stderr: "ERROR: The process \"1040\" not found.\r\n" }), { ok: false, detail: "ERROR: The process \"1040\" not found." });
+  assert.equal(winproc.killResult({ status: null, error: new Error("spawn EPERM") }).ok, false);
+});

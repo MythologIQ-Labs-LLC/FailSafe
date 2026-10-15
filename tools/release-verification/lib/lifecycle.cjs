@@ -204,6 +204,8 @@ function assessStep(s) {
   if (s.launch === "activation-timeout") return fail("FailSafe never reported activated or error (activation timeout)");
   const err = s.events.find((e) => e.event === "error");
   if (err) return fail(`trigger error: ${err.message}`);
+  const founds = s.events.filter((e) => e.event === "found").length;
+  if (founds !== 1) return fail(`${founds} found lines: the extension host restarted during the step, so this session's rows cannot be told apart from the restarted one's`);
   if (!s.installed || s.installed.version !== s.expected.version || (s.installed.targetPlatform ?? null) !== (s.expected.targetPlatform ?? null)) {
     return fail(`installed ${JSON.stringify(s.installed)} is not the VSIX installed (${s.expected.version} ${s.expected.targetPlatform ?? "universal"})`);
   }
@@ -283,25 +285,47 @@ async function waitFor(deps, timeout, probe) {
   }
 }
 
-/** taskkill one process only if it is still the same process (ExecutablePath and CreationDate). */
-async function safeKill(deps, expected) {
-  const now = await deps.listProcesses();
-  const p = now.find((x) => x.pid === expected.pid);
-  if (!p) return { killed: false, why: `${expected.pid} already exited` };
-  if (!p.exe || !samePath(p.exe, expected.exe) || p.created !== expected.created) return { killed: false, why: `${expected.pid} not signalled (ExecutablePath or CreationDate changed)` };
-  if (!isInside(p.exe, deps.code.dir)) return { killed: false, why: `${expected.pid} not signalled (outside the disposable VS Code)` };
-  await deps.kill(expected.pid);
-  return { killed: true, why: "" };
-}
-
-async function stopOwned(deps, owned, firstPid) {
+/**
+ * One kill round: a single fresh listing re-checks every expected process (same
+ * PID, ExecutablePath and CreationDate, still inside DIR), then the survivors are
+ * signalled back-to-back, firstPid first. No listing between kills, so a main
+ * process has no time to restart a killed extension host.
+ */
+async function killRound(deps, expected, firstPid) {
   const notes = [];
-  const ordered = [...owned].sort((a, b) => (a.pid === firstPid ? -1 : b.pid === firstPid ? 1 : 0));
+  const fresh = await deps.listProcesses();
+  const ordered = [...expected].sort((a, b) => (a.pid === firstPid ? -1 : b.pid === firstPid ? 1 : 0));
+  const targets = [];
   for (const p of ordered) {
-    const r = await safeKill(deps, p);
-    if (!r.killed && !/already exited/.test(r.why)) notes.push(r.why);
+    const now = fresh.find((x) => x.pid === p.pid);
+    if (!now) continue;
+    if (!now.exe || !samePath(now.exe, p.exe) || now.created !== p.created) notes.push(`${p.pid} not signalled (ExecutablePath or CreationDate changed)`);
+    else if (!isInside(now.exe, deps.code.dir)) notes.push(`${p.pid} not signalled (outside the disposable VS Code)`);
+    else targets.push(p.pid);
+  }
+  for (const pid of targets) {
+    const r = await deps.kill(pid);
+    if (r && r.ok === false) notes.push(`taskkill ${pid} failed: ${r.detail}`);
   }
   return notes;
+}
+
+/**
+ * Force-stops until no process from DIR is left, re-listing between rounds so a
+ * process started after the snapshot is stopped too. Returns what is still
+ * running when the quit timeout expires (the step then fails).
+ */
+async function stopUntilEmpty(deps, initial, firstPid) {
+  const notes = [];
+  const start = deps.now();
+  let owned = initial;
+  for (;;) {
+    if (owned.length) notes.push(...(await killRound(deps, owned, firstPid)));
+    owned = selectOwnedProcesses(await deps.listProcesses(), deps.code.dir).owned;
+    if (owned.length === 0 || deps.now() - start >= deps.timeouts.quit) break;
+    await deps.sleep(deps.timeouts.poll);
+  }
+  return { notes: [...new Set(notes)], remaining: owned };
 }
 
 /**
@@ -365,24 +389,37 @@ async function runLifecycle(depsIn) {
     const snapshot = selectOwnedProcesses(await deps.listProcesses(), deps.code.dir);
     for (const p of snapshot.owned) ownedSeen.set(`${p.pid}:${p.created}`, { pid: p.pid, exe: p.exe });
     const notes = [];
+    let remaining = [];
     if (step.kill && launch === "ok" && commit.ok) {
-      notes.push(...(await stopOwned(deps, snapshot.owned, found.pid)));
-      notes.unshift("force-killed after commit-observed");
+      const r = await stopUntilEmpty(deps, snapshot.owned, found.pid);
+      notes.push("force-killed after commit-observed", ...r.notes);
+      remaining = r.remaining;
     } else if (launch === "launch-failure") {
-      notes.push(...(await stopOwned(deps, snapshot.owned, null)));
+      const r = await stopUntilEmpty(deps, snapshot.owned, null);
+      notes.push(...r.notes);
+      remaining = r.remaining;
     } else {
       fs.writeFileSync(`${outFile}.quit`, "");
       const gone = await waitFor(deps, deps.timeouts.quit, async () => selectOwnedProcesses(await deps.listProcesses(), deps.code.dir).owned.length === 0);
       if (!gone) {
         if (launch === "ok") launch = "quit-timeout";
-        notes.push(...(await stopOwned(deps, selectOwnedProcesses(await deps.listProcesses(), deps.code.dir).owned, null)));
+        const r = await stopUntilEmpty(deps, selectOwnedProcesses(await deps.listProcesses(), deps.code.dir).owned, null);
+        notes.push(...r.notes);
+        remaining = r.remaining;
       }
     }
+    for (const p of remaining) ownedSeen.set(`${p.pid}:${p.created}`, { pid: p.pid, exe: p.exe });
     const after = await deps.listProcesses();
     for (const r of snapshot.residual) {
       if (after.some((p) => p.pid === r.pid && p.created === r.created)) residualSeen.set(`${r.pid}:${r.created}`, { pid: r.pid, exe: r.exe });
     }
 
+    if (remaining.length) {
+      // Never copy databases a live process may still be writing; nothing after this step can be trusted.
+      checks.push(check(step.id, "lifecycle", HOST_TARGET, "fail", `processes from the disposable VS Code still running after stop: ${remaining.map((p) => p.pid).join(", ")}; ${notes.join("; ")}`));
+      aborted = `${step.id} could not stop the disposable VS Code`;
+      continue;
+    }
     if (launch === "launch-failure") {
       checks.push(assessStep({ step: step.id, launch, events: [], findings: [] }));
       aborted = `${step.id} launch failure`;
