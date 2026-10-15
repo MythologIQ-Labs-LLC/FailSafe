@@ -229,7 +229,7 @@ suite("GovernanceRouter.handleFileOperation - total fail-closed guard (FX905/#29
     const r = await callNeverRejects(router);
     assert.equal(r.rejected, false, "timeout must not surface as a rejection");
     assert.equal(r.allowed, false, "a hung verdict generation must block the save");
-    assert.ok(capture.errors.length >= 1, "operator must be told the save was blocked");
+    assert.ok(capture.errors.length >= 1, "operator must be notified of policy denial without false prevention claims");
   });
 
   test("T6: a throwing notifier during blockade still resolves false (showBlockade total)", async () => {
@@ -305,7 +305,7 @@ suite("GovernanceRouter.handleFileOperation - verdict-generation fault path", ()
     );
     assert.ok(
       capture.errors.length >= 1,
-      "the operator must be told the save was blocked, not left silent",
+      "the operator must be notified of policy denial without false prevention claims, not left silent",
     );
   });
 });
