@@ -1,28 +1,23 @@
-# AUDIT REPORT — plan-runtime-hardening-243a (iteration 2)
+# AUDIT REPORT — plan-od-runtime-compat-481 (iteration 3)
 
 **Verdict**: PASS
 **Risk Grade**: L2
-**Session**: `2026-10-13T2232-5c561e`
-**Target**: `plan-runtime-hardening-243a.md` (plan gate `plan-iter2.json`)
-**Mode**: Option B, full re-walk against f5188cf4 (fresh-context architect-reviewer, Read/Grep/Glob)
-**Prior**: VETO iteration 1 (ledger #613) — V1 coverage-gap, V2/V3 specification-drift.
-**Preflight**: governance-health DAMAGED docs/META_LEDGER.md (pre-existing); standing operator override, gate_override `5a65a5cf`.
+**Session**: `2026-10-14T1419-f1667d`
+**Target**: `plan-od-runtime-compat-481.md` (plan gate `plan-iter3.json`)
+**Mode**: Option B, full re-walk each iteration (fresh-context architect-reviewer, Read/Grep/Glob) against PR #501 head `9bd437e9`
+**History**: iteration 1 VETO (#617: doc surfaces, env-key injection via NODE_OPTIONS, test stub claims); iteration 2 VETO (#618: globalStorageUri may not exist, stub contradiction, untested LD3 rules); iteration 3 PASS (#619).
+**Preflight**: governance-health DAMAGED docs/META_LEDGER.md (pre-existing); standing operator override, gate_override `998633d7`.
 
-## Re-walk
-- LD1-LD4 citations all reproduce (plan_grep_lint 10/10; reviewer re-read each, incl. new LD3 `bootstrapCore.ts:40`).
-- V1 resolved: `FailSafe/extension/README.md:377,:443`, `FailSafe/README.md:247`, `README.md:488`, FX437 title in Affected Files; final grep over docs/, FailSafe/extension/docs/, CHANGELOG finds no further surface (package.json:680 description already covered).
-- V2 resolved: tests :34 and :65 rewritten with `confirmInit`, :99/:124 unchanged; counts consistent.
-- V3 resolved: offer chain ends in a logging rejection handler.
-- Feature Inventory Touches match FEATURE_INDEX rows (FX053/FX094/FX437 MODIFIED, FX948 NEW, unused).
+## Passes
+LD1-LD5 citations reproduce (one plan_grep_lint WARN is the known backtick parser defect on a template literal). Every Affected File maps to a behavioural test. Security: spawn requires operator modal consent; env keys allowlisted to OD_DATA_DIR / ELECTRON_RUN_AS_NODE; local existsSync on command and script; spec stored user-scoped (globalState), never from workspace settings. FX949 unused.
 
-## Advisories (adjudicated non-blocking)
-1. FEATURE_INDEX header counts (`docs/FEATURE_INDEX.md:11-12`) must be bumped with FX948; checked by `featureIndexClassifier.test.cjs:56-75`. Within an Affected File; implement will bump them.
-2. CHANGELOG named in D3 but not in Affected Files: D3 governance/doc surface, same adjudication as ledger #610.
-3. `CommitGuard.ts:129-130` can fabricate `.git/hooks` in a non-repo folder — out of scope, carried forward.
+## Advisories (carried to implement)
+- Test directory creation with a real temp globalStorageUri.
+- package.json:533 text must state that activation only builds the client; connect happens in the wizard.
 
 ## Process Pattern Advisory
 <!-- qor:veto-pattern-advisory -->
-One VETO then PASS; no repeated-VETO pattern.
+Two VETOs with distinct signatures, then PASS; cycle-count escalator not triggered.
 
 ## Next action
 `/qor-implement`

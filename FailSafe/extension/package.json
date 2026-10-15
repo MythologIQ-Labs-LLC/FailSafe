@@ -530,7 +530,7 @@
         "failsafe.integrations.openDesign.mcpEnabled": {
           "type": "boolean",
           "default": false,
-          "description": "Pre-construct the Open Design MCP client at activation time (vs. lazy construction on first wizard invocation). The daemon is still NOT auto-probed at activation; the `FailSafe: Register Open Design MCP Connection` command runs the probe + connect. v1.1 exposes read-only tools only; write tools deferred to v1.2 with explicit L3 approval (B-OD-8)."
+          "description": "At activation, build (but do not start or connect) the Open Design MCP client from a launch command you previously confirmed in `FailSafe: Register Open Design MCP Connection`. With no confirmed command nothing is built. The server is only ever started and connected by that command, which probes the daemon, shows the exact launch command and environment for your approval, and then connects. v1.1 exposes read-only tools only; create_artifact stays disabled until a verified L3 authorization exists."
         },
         "failsafe.integrations.openDesign.sseEnabled": {
           "type": "boolean",

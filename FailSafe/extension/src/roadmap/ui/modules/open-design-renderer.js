@@ -65,7 +65,7 @@ export class OpenDesignRenderer {
         </div>
         <div class="cc-od-create-status" style="margin-top:4px;font-size:0.72rem;color:var(--text-muted)"></div>
         <div style="margin-top:8px;font-size:0.7rem;color:var(--text-muted)">
-          Run <code>FailSafe: Register Open Design MCP Connection</code> from the command palette to probe the daemon at <code>127.0.0.1:7456</code> and connect the MCP client. <code>create_artifact</code> requires L3 approval (request above → approve in the Governance L3 queue). The destructive write tools (<code>write_file</code>, <code>delete_file</code>, <code>delete_project</code>) remain rejected at runtime; broader exposure deferred (B-OD-8).
+          Run <code>FailSafe: Register Open Design MCP Connection</code> from the command palette to probe the daemon at <code>127.0.0.1:7456</code>, confirm the exact MCP launch command, and connect the client. <code>create_artifact</code> requires L3 approval (request above → approve in the Governance L3 queue). The destructive write tools (<code>write_file</code>, <code>delete_file</code>, <code>delete_project</code>) remain rejected at runtime; broader exposure deferred (B-OD-8).
         </div>
       </div>
     `;

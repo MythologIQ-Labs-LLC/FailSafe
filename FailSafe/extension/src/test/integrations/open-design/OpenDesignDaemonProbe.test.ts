@@ -29,6 +29,24 @@ suite('integrations/open-design OpenDesignDaemonProbe', () => {
     assert.deepEqual(r, { alive: true, version: '0.9.1' });
   });
 
+  test('Open Design 0.24.1 nested version payload probes alive (#481)', async () => {
+    // Recorded from the live 0.24.1 daemon: GET /api/version.
+    const fetchImpl = makeFetch(() => ({
+      ok: true,
+      json: async () => ({ version: { version: '0.24.1', channel: 'stable', packaged: true, platform: 'win32', arch: 'x64' } }),
+    }));
+    const r = await new OpenDesignDaemonProbe({ fetchImpl }).probe();
+    assert.deepEqual(r, { alive: true, version: '0.24.1' });
+  });
+
+  test('nested version object without a string version is parse_error', async () => {
+    for (const body of [{ version: {} }, { version: { version: '' } }, { version: 7 }]) {
+      const fetchImpl = makeFetch(() => ({ ok: true, json: async () => body }));
+      const r = await new OpenDesignDaemonProbe({ fetchImpl }).probe();
+      assert.deepEqual(r, { alive: false, reason: 'parse_error' }, JSON.stringify(body));
+    }
+  });
+
   test('refused (network error) returns alive:false reason refused', async () => {
     const fetchImpl = makeFetch(() => {
       const err = new Error('ECONNREFUSED');
