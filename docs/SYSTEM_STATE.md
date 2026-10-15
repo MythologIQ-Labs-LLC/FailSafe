@@ -1,6 +1,6 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-10-15 (v6.0.7 final acceptance on `release/v6.0.7-rc1`, draft PR #520: Secure Storage credentials #482, atomic risks.json writes, L3 panel CSP, requalification; ledger #645-#650; not merged, not tagged, not published)
+**Last Updated:** 2026-10-15 (v6.0.7 final packaging on `release/v6.0.7-rc1`, draft PR #520: the GitHub Release carries the verified eight-package set and SHA256SUMS.txt, with provenance verification and a one-set-per-release guard; ledger #651-#658; not merged, not tagged, not published)
 **Active local review:** `fix/system-state-currency-sprint2` — this cycle. Restores the Tier 1 freshness contract and adds `system-state-currency.test.cjs`, the first check that asserts it. Prior to this cycle no test anywhere read this file's content.
 **Prior local review:** `fix/qor169-sprint1-seal-unblock` — MERGED to `main` as `1e1215cc` (PR #448). qor-logic 0.163.1 → 0.169.0; `.qorlogic/config.json` created, which is what allows a seal to complete at all; five vacuously-passing governance controls identified; TTS timeout assertion made deterministic and falsifying. Seal Entry #602.
 **Open PRs:** #442 (Bicameral upstream row error state), #443 (plan-grep-lint regex recognition), #444 (#367 per-engine provenance), #445 (#242 Shadow Genome severity aria — supersedes #440, closed as duplicate), #446 + #447 (dependabot). #447's blocker — a wall-clock TTS assertion — was removed by Entry #602.
@@ -11,6 +11,12 @@
 **Active integrations:** Bicameral MCP (sealed Entry #372 + earlier cluster) · Open Design v1 (provenance, Entry #400) · Open Design v1.1 (MCP + SSE + probe, Entry #405) · Open Design v1.2 (`create_artifact` L3-gated, Entry #409 — RELEASED v5.3.3; destructive write-tools deferred to B-OD-12)
 **Governance substrate:** qor.scripts substrate modules v1 WARN-only (Entry #402) — secret_scanner, feature_index_verify, model_pinning_lint
 **Doctrine additions since 2026-05-22:** `feedback_no_pipeline_reshape_for_marketplace_issues` (2026-05-27, v5.2.2 hold-pat precedent) · `feedback_verify_external_names_at_plan_time` (2026-05-27, Citation Inventory Pass — broke 4-cycle Plan-Time Hallucination loop at Entry #405)
+
+---
+
+## 2026-10-15 — v6.0.7 final packaging (on the RC branch, not merged, not published)
+
+`plan-v607-release-assets.md` (audit PASS at iteration 6, ledger #651-#656; implementation #657; seal #658) changes only the release path: the GitHub Release now carries the same eight platform packages and `SHA256SUMS.txt` the marketplaces receive, drafted, uploaded only where missing, never replaced, and published only when complete and byte-equal to both marketplaces (FX974); `scripts/verify-release-provenance.cjs` checks a finished release (FX975). The build job refuses a second set once any attempt for the tag started publishing (Actions history with run- and step-level self-presence), both publish jobs re-check the remote tag, and runs for a tag are serialized. Marketplace publish commands and the `production` environment are unchanged. The CI rehearsal proved the guard's lookups on real Actions data. Recovery: `docs/RELEASE_RECOVERY.md`. The META_LEDGER stays DAMAGED under qor-logic 0.176.1 (#467); normal governance is not restored.
 
 ---
 

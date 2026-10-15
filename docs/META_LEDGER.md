@@ -30831,3 +30831,146 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `3f93ed0de3987297bd2b893188f44338cb8b9ba9c6252638570e4c43e60cb7a9`
 
 **Decision**: SESSION SEAL for plan-v607-acceptance.md (implementation #649). Reality = Promise, with disclosures. Delivered on release/v6.0.7-rc1 at 4a1afe68 fba13b38 608a3bff 87358b55 plus this seal commit: integration credentials in VS Code Secure Storage with consented, read-back-verified migration and no plain-text fallback (#482, FX962/FX965); endpoint trust for GitHub, Sentry and Jira; redaction of provider errors; atomic risks.json writes (FX963); L3 Approval Queue buttons under the panel CSP (FX964). Requalification evidence is in the implement gate. Ledger: #617-#649 verified as one linear chain by the independent Node verifier; FX932 fork guard clean. Override disposition (LD11): the META_LEDGER is DAMAGED under qor-logic 0.176.1 (#341 markup, #382 linkage, the duplicate band at or below #236), so qor-logic preflight blocks new plans. The owner approved a damaged-ledger recovery override for the v6.0.7 remediation cycle on 2026-10-15 and extended it, disclosed per cycle, to the Wave 0/1 lane cycles of #521. It covered RC1 (#638-#644) and this acceptance cycle (#645-#650). Evidence was preserved by appending only, verifying every new band independently, and keeping HMAC gate artifacts for each phase. The damage is NOT resolved: check-ledger-anchor reports post-anchor DIRTY at #341/#382, native verify fails only at or below #382, and ledgerAnchor.test.cjs fails wherever qor-logic is installed and is skipped in CI. check-ledger-anchor is not wired to CI. Normal governance is NOT restored; #467 stays P0, blocked on an owner risk-acceptance decision. The override ends for v6.0.7 with this seal and for the lanes when #467 resolves. Open after this seal: the #517 cross-process lost update (Lane D), #473 (Lane B), #476 (Lane C), #506, #507, live provider validation, braces GHSA-vfj7-8cjw-p6xm (unreachable, unpatched upstream). Not merged, not tagged, not published.
+
+---
+
+### Entry #651: GATE TRIBUNAL - plan-v607-release-assets (iteration 1) - VETO
+
+**Timestamp**: 2026-10-15T15:40:36Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1535-bea836`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: owner accepted the bounded damaged-ledger recovery override for the v6.0.7 RC (2026-10-15)
+
+**Content Hash**: `5b5fe74814d0a936516c18e9a01c6e4c0355eff4e673838570714b551a94be17`
+**Previous Hash**: `3f93ed0de3987297bd2b893188f44338cb8b9ba9c6252638570e4c43e60cb7a9`
+**Chain Hash (Merkle seal)**: `cc88d43ab18725798200825e4895b9103441b3973290275a14f60d269eacda33`
+
+**Decision**: VETO on plan-v607-release-assets.md iteration 1 (sha256 35df6a29). Fresh Option B architect-reviewer; one built set, draft first, upload only missing, never clobber and order after both marketplaces confirmed sound; ten citations match ba353468. B1: the tag lookup endpoint excludes drafts, so a rerun would create a second draft; no concurrency group. B2: a hand-made public release missing files would be filled in while public. B3: actions/checkout forces the local tag to GITHUB_SHA, so a local tag-commit check always passes; untested. B4: re-running all jobs rebuilds the set and can split release and marketplace bytes or mix marketplace sets. B5: the stateful release sequence has no failing test. Ten advisories. Next: amend plan.
+
+---
+
+### Entry #652: GATE TRIBUNAL - plan-v607-release-assets (iteration 2) - VETO
+
+**Timestamp**: 2026-10-15T15:47:14Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1535-bea836`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: owner accepted the bounded damaged-ledger recovery override for the v6.0.7 RC (2026-10-15)
+
+**Content Hash**: `6ee0d1c4a15fbfea2f2249c9615791c681461385d1718f55f813b3b284266756`
+**Previous Hash**: `cc88d43ab18725798200825e4895b9103441b3973290275a14f60d269eacda33`
+**Chain Hash (Merkle seal)**: `64986c763ed98ee8b6be0ed14d0d2d145ddd8b67f887055af7832bc20f5c1ce5`
+
+**Decision**: VETO on plan-v607-release-assets.md iteration 2 (sha256 68e7b9fc). Fresh Option B architect-reviewer; iteration-1 B1, B2, B3 and B5 resolved; the marketplace parity gate is sound. V1: the one-set guard treats a marketplace 404 as absence, which is wrong during propagation, and runs only on re-run attempts, so a new run for the same tag skips it; mixed marketplace sets remain possible. V2: the stated recovery after Re-run all jobs loops and strands the GitHub Release; artifact retention unstated. Seven advisories (gh argument contract test, poll details, FEATURE_INDEX test paths, Identity-element parsing, persist-credentials on the release job, rehearsal coverage statement, starter asset on a published release). Next: amend plan.
+
+---
+
+### Entry #653: GATE TRIBUNAL - plan-v607-release-assets (iteration 3) - VETO
+
+**Timestamp**: 2026-10-15T15:52:15Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1535-bea836`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: owner accepted the bounded damaged-ledger recovery override for the v6.0.7 RC (2026-10-15)
+
+**Content Hash**: `975275c350c602e6bce2a4b92d5526c8215ccddd16e609d317fc6c0243145c54`
+**Previous Hash**: `64986c763ed98ee8b6be0ed14d0d2d145ddd8b67f887055af7832bc20f5c1ce5`
+**Chain Hash (Merkle seal)**: `f37a22ef7ad43ea85a448a88c60360311fc6ec087f6df868a2832ccdfcb82f1b`
+
+**Decision**: VETO on plan-v607-release-assets.md iteration 3 (sha256 6df6b65e). Fresh Option B architect-reviewer; iteration-2 V1 and V2 resolved on paper; citations match. B1: the build job has no actions read permission, so the fail-closed history lookup would stop every release. B2: no workflow-level concurrency, so a second run for the tag can build while the first awaits approval, mixing marketplace sets. Also the step-started predicate wording counts skipped steps, and the manual recovery skips the marketplace parity check. Five advisories. Next: amend plan.
+
+---
+
+### Entry #654: GATE TRIBUNAL - plan-v607-release-assets (iteration 4) - VETO
+
+**Timestamp**: 2026-10-15T15:58:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1535-bea836`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: owner accepted the bounded damaged-ledger recovery override for the v6.0.7 RC (2026-10-15)
+
+**Content Hash**: `33703b0c22f2a876892f271fe0e343794ae29df2a14a42136e7731854f119622`
+**Previous Hash**: `f37a22ef7ad43ea85a448a88c60360311fc6ec087f6df868a2832ccdfcb82f1b`
+**Chain Hash (Merkle seal)**: `dbfecf07ac86ee7839d5442bd2401032880fb33fe4c78b77750622fa73c569df`
+
+**Decision**: VETO on plan-v607-release-assets.md iteration 4 (sha256 5f06a155). Fresh Option B architect-reviewer; iteration-3 B1, B2, predicate, unconditional-guard and recovery items resolved; concurrency replacement is not a hole. V1 coverage-gap: nothing proves the guard's live lookups see real data before a tag exists; an empty history list passes as no publish, and the rehearsal's branch has no release.yml runs. Fix: the history lookup must find the current run in its filtered list or stop; workflow file parameterized; rehearsal exercises the same rule on its own workflow and runs the marketplace and release lookups for the unpublished version. Seven advisories. Next: amend plan.
+
+---
+
+### Entry #655: GATE TRIBUNAL - plan-v607-release-assets (iteration 5) - VETO
+
+**Timestamp**: 2026-10-15T16:03:57Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1535-bea836`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: owner accepted the bounded damaged-ledger recovery override for the v6.0.7 RC (2026-10-15)
+
+**Content Hash**: `730109787e1de43f5b02da16f1b3175aea3491ee26d527d8121fdee319c80913`
+**Previous Hash**: `dbfecf07ac86ee7839d5442bd2401032880fb33fe4c78b77750622fa73c569df`
+**Chain Hash (Merkle seal)**: `483dd586eba7e836d358eff374acba1b9ffa1ef6fe7f9b8f661d24e85c6f2faa`
+
+**Decision**: VETO on plan-v607-release-assets.md iteration 5 (sha256 68ed2833). Fresh Option B architect-reviewer; runs-level self-presence resolved; publish-job tag check and requirements confirmed; citations match. B1 coverage-gap: the step predicate can never answer true on real data, so an empty or misparsed jobs list still passes; require step-level self-presence (the running step reported in progress through the same predicate). B2 specification-drift: LD5 contradicts the LD7 rehearsal and nothing pins the rehearsal workflow. Six advisories. Next: amend plan.
+
+---
+
+### Entry #656: GATE TRIBUNAL - plan-v607-release-assets (iteration 6) - PASS
+
+**Timestamp**: 2026-10-15T16:09:31Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-15T1535-bea836`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: owner accepted the bounded damaged-ledger recovery override for the v6.0.7 RC (2026-10-15)
+
+**Content Hash**: `bbf1936478e387589bbd01c1234e3a99b2733e80ecf27350a904e7f9bf71d30b`
+**Previous Hash**: `483dd586eba7e836d358eff374acba1b9ffa1ef6fe7f9b8f661d24e85c6f2faa`
+**Chain Hash (Merkle seal)**: `d245dc860d42ce0e28143beb1eae9560e080e6121f5f1214fe5c8c7882c9d37d`
+
+**Decision**: PASS on plan-v607-release-assets.md iteration 6 (sha256 9679bea0). Fresh Option B architect-reviewer. Step-level self-presence resolves iteration-5 B1 with both self-presence mutations firing; LD5 and LD7 agree and the rehearsal workflow is pinned; all iteration-5 advisories applied. No path to a public partial or unverified set, replaced bytes, a release from another commit, or mixed marketplace sets; marketplace publish commands and the production gate unchanged. Eleven citations match ba353468. Ten advisories for implementation, one required (pin the guard step's literal name as its self-presence name). Next: implement.
+
+---
+
+### Entry #657: IMPLEMENTATION - plan-v607-release-assets
+
+**Timestamp**: 2026-10-15T16:40:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-15T1535-bea836`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-15T1535-bea836/implement-iter1.json`
+
+**Content Hash**: `9f2dec5b8d9a772c2f8875688ea39d2951ccf22b9f4c347bda146845d9ed0fdc`
+**Previous Hash**: `d245dc860d42ce0e28143beb1eae9560e080e6121f5f1214fe5c8c7882c9d37d`
+**Chain Hash (Merkle seal)**: `3cac71057757eaaa358f9eed8651802e4f173deb4c865d6d6bbdd6512f6e9ae4`
+
+**Decision**: IMPLEMENTATION of plan-v607-release-assets.md (audit PASS #656) on release/v6.0.7-rc1 at 873a6c32: the GitHub Release now carries the verified eight-package set and SHA256SUMS.txt from the one built vsix-targets artifact (FX974), with a read-only provenance verifier (FX975), a one-set-per-release guard that reads Actions history and requires its own run and running step, a remote tag check in both publish jobs, a draft-first, upload-missing-only, never-clobber release sequence published only when complete and byte-equal to both marketplaces, workflow-level serialization per tag, actions read on the build job, 90-day artifact retention and docs/RELEASE_RECOVERY.md. Marketplace publish commands and the production environment are unchanged. Red: the three new suites failed on missing modules; the workflow test fails 7 of 8 against the ba353468 workflows. Ten named mutations each fail tests. Local: test:node 438/440 (FX946 ledgerAnchor baseline, #467), vscode-test 4459/0/19 census 481/481, tsc 0, runner coverage, docs coherence and release-gate preflight pass, actionlint clean. CI rehearsal run 38767828923 exercised the guard's live lookups on real Actions data and the unpublished-version lookups. Measured: v6.0.6 bytes identical across the CI artifact, both marketplaces and Open VSX's sha256. Bounded damaged-ledger override in force for this RC.
+
+---
+
+### Entry #658: SESSION SEAL - plan-v607-release-assets
+
+**Timestamp**: 2026-10-15T16:45:00Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-15T1535-bea836`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-15T1535-bea836/substantiate-iter1.json`
+
+**Content Hash**: `93e62b7cb5ba80f4c13b9ffb98ab618b5c55325be4c0542daf89f8ab667be9e0`
+**Previous Hash**: `3cac71057757eaaa358f9eed8651802e4f173deb4c865d6d6bbdd6512f6e9ae4`
+**Chain Hash (Merkle seal)**: `9b0ec3597ce9522d4629d5556e3a5d42b658876021e00018cbd347d5cc06f61d`
+
+**Decision**: SESSION SEAL for plan-v607-release-assets.md (implementation #657). Reality = Promise, with disclosures. Delivered on release/v6.0.7-rc1 at 873a6c32 plus this seal commit: the GitHub Release carries the verified eight-package set and SHA256SUMS.txt from the one built artifact (FX974); a read-only provenance verifier (FX975); a one-set-per-release guard on Actions history with run- and step-level self-presence; remote tag checks in both publish jobs; serialized runs per tag; docs/RELEASE_RECOVERY.md. Marketplace publish commands and the production environment are unchanged. Evidence is in the implement gate, including CI rehearsal 38767828923 on real Actions data. Ledger #617-#657 verified as one linear chain before this seal. Disclosures: the release write calls (draft, upload, publish), the remote tag check against a real tag and the marketplace poll against published packages are exercised only by unit tests with injected clients and will first run on the real v6.0.7 tag; the GitHub Release job may wait up to 60 minutes for Open VSX propagation; after anything is published a full re-run stops at the build job and recovery is the documented operator-only manual procedure within the artifact's 90-day retention; the build job's release lookup sees published releases only. Override: the owner accepted the bounded damaged-ledger recovery override for this RC; the pre-existing damage (#341, #382, duplicates at or below #236) is not repaired and normal governance is NOT restored (#467). Not merged, not tagged, not published.
