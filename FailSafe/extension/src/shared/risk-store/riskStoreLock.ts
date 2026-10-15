@@ -7,6 +7,12 @@
  * library, removes the lock directory: only while the directory is still the
  * one this holder created and the lock budget has not run out, so a holder
  * that stalled never deletes a lock another process has since taken.
+ *
+ * Waiters are not queued. A healthy writer making back-to-back updates (an
+ * import does one per finding) usually re-takes the lock before a sleeping
+ * waiter wakes, so another window's update can wait for the whole run and
+ * fail with LOCK_TIMEOUT after timeoutMs, writing nothing. The same wait
+ * occurs behind a crashed or stalled holder until stale recovery (#517).
  */
 
 import * as fs from "fs";
