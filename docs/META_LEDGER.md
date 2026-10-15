@@ -31707,3 +31707,21 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `e9273e522f1116fdd68f0959269ddebc478857ec97ae6d14503a169f6d9aaf9d`
 
 **Decision**: IMPLEMENTATION of plan-v607-final-integration.md (audit PASS #698, iteration 10), program #521. release/v6.0.7-rc2 from main 577cad77: lanes A-D merged as merge commits without rewriting (LD1); lane E trusted Git resolver (FX976/FX977) merged; LD7 documentation; Phase 3 fixes from the independent integration review (LD9 ledger stub mode on a failing or slow keychain, LD10 one probe per git file, LD11 disclosures). C0 = 736c74dd40ef9f44f6b59ba9f1d6cddca3d15c12 (replaces 0403cef4 under iteration 10). Evidence on C0: vscode-test 1.122.1 4815 passing / 0 failing / 21 pending, census 494/494; test:node 595/597 (2 = FX946 ledgerAnchor baseline, #467); Playwright 208 passed / 4 skipped; tsc 0; lint 0 errors; runner coverage, citation parity, release-gate --preflight and docs coherence pass; secret_scanner 0 findings over 118 changed files; npm audit: braces GHSA-vfj7-8cjw-p6xm via chokidar 3.6.0 (unreachable, no non-breaking fix, disclosed since the RC); eight 6.0.7 VSIXs packaged from 20aeb03d (product code identical to C0) pass verify-set, the win32-x64 SQLite binary loads in Node 22, and rv inventory plus the disposable VS Code 1.141.1 lifecycle (install, upgrade from published 6.0.6, forced kill, restart, rollback) give rehearsal-pass 62/62; lane E planted-git.exe suite on this host: the old bare forms ran the plant (spawn, execFile and cmd.exe) and every migrated caller ran real git with zero plant markers; 56 lane E and 4 Phase 3 named mutations red
+
+---
+
+### Entry #700: SESSION SEAL - plan-v607-final-integration
+
+**Timestamp**: 2026-10-15T21:58:39Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-15T1934-08df97`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-15T1934-08df97/substantiate.json`
+
+**Content Hash**: `632e963ef25788ee3fe7489f035d7da9f142145fb807d948d58fd41ec29f05ab`
+**Previous Hash**: `e9273e522f1116fdd68f0959269ddebc478857ec97ae6d14503a169f6d9aaf9d`
+**Chain Hash (Merkle seal)**: `d99e0fdd2b42600135662b47707047154cc4af7f1233cf9a803b6fa19e1737f0`
+
+**Decision**: SESSION SEAL for plan-v607-final-integration.md (implementation #699), program #521. Reality = Promise, with disclosures. Delivered on release/v6.0.7-rc2 at C0 736c74dd40ef9f44f6b59ba9f1d6cddca3d15c12 plus the governance commits: lanes A (release verification), B (#473 SOA ledger v3), C (#476 commit-bound SHIELD checks), D (#517 shared risk store) and E (trusted Git executable), each lane sealed in its own session (ledger #659 onward), and the integration review fixes. Disclosures: standing damaged-ledger override applied per cycle (#467 unresolved; normal governance not restored); vscode-test ran on a disposable test build with win32VersionedUpdate removed (the operator's parked updater holds the vscode-updating mutex; operator install untouched); C0 is the Phase 3 head 736c74dd, replacing 0403cef4 (plan iteration 10); LD9's cause is asserted through getDisabledReason() because console.warn cannot be observed from the vscode-test runner (IntentMigration.test.ts); two lane B tests that asserted the old rejecting contract now assert stub mode; the trusted Git resolver covers Git only; gh, PowerShell, npm and Python are still started by name (B211), and failsafe.bootstrap.autoInstallGit has no scope (B214); Linux-only symlink cases of lane D and POSIX resolver rows run on CI, not on this Windows host; the v6.0.7 packaging seal #658 recorded seal_entry instead of the schema's ledger_entry; this plan's seals use ledger_entry; rollback to v6.0.6 reports the v3 ledger as broken (CHANGELOG known limitation). Not merged, not tagged, not published.
