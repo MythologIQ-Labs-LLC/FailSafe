@@ -13,7 +13,19 @@
  *
  * showAtCommit distinguishes an absent path (undefined) from an unreadable one
  * (a throw): a missing or corrupt object must never read as "no ledger", which
- * would make the Seal-commit parent check vacuous.
+ * would make the Seal-commit parent check vacuous. Only a regular-file blob
+ * (mode 100644 or 100755) is read; a symlink or submodule entry throws.
+ *
+ * Every git read first requires git 2.44 or later (older git ignores
+ * GIT_NO_LAZY_FETCH) and a repository that is not a partial clone
+ * (extensions.partialClone or a promisor remote); otherwise it throws, which
+ * the verifier reports as Neutral evidence-source-error.
+ *
+ * Known limits: a path component is checked with lstat and then opened, so a
+ * swap in between is not detected, and the workspace root itself is not
+ * checked; a FIFO at a gate path on POSIX blocks the read; the environment
+ * scrub is computed once, when the source is created; git is spawned by bare
+ * name at the workspace cwd (the repository-wide git.exe resolution question).
  *
  * Ceiling: the .git object store and refs are inside the workspace, so a
  * workspace writer can still rewrite history itself; these settings stop git
@@ -85,6 +97,35 @@ async function readInside(root: string, p: string): Promise<Buffer | undefined> 
   }
 }
 
+/** True for `git version X.Y...` output with X.Y >= 2.44 (GIT_NO_LAZY_FETCH honoured). */
+export function gitSupportsNoLazyFetch(versionOutput: string): boolean {
+  const m = /^git version (\d+)\.(\d+)/.exec((versionOutput || '').trim());
+  if (!m) return false;
+  const major = Number(m[1]);
+  const minor = Number(m[2]);
+  return major > 2 || (major === 2 && minor >= 44);
+}
+
+const TRANSIENT_RENAME = new Set(['EPERM', 'EBUSY', 'EACCES']);
+
+/** Rename with up to 3 attempts 50 ms apart on Windows-style transient errors;
+ *  the temp file is removed when the rename finally fails. */
+async function renameWithRetry(from: string, to: string): Promise<void> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await fs.promises.rename(from, to);
+      return;
+    } catch (e) {
+      const code = (e as NodeJS.ErrnoException).code ?? '';
+      if (attempt >= 3 || !TRANSIENT_RENAME.has(code)) {
+        await fs.promises.rm(from, { force: true });
+        throw e;
+      }
+      await new Promise((r) => setTimeout(r, 50));
+    }
+  }
+}
+
 function scrubbedEnv(ownDir: string): Record<string, string> {
   const env: Record<string, string | undefined> = {
     GIT_NO_REPLACE_OBJECTS: '1', GIT_NO_LAZY_FETCH: '1', GIT_GRAFT_FILE: path.join(ownDir, 'no-grafts'),
@@ -101,9 +142,22 @@ export function createWorkspaceEvidenceSource(root: string): { source: ShieldEvi
   const git = createSafeGit(root);
   const ownDir = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-shield-src-'));
   const env = scrubbedEnv(ownDir);
-  const run = async (args: string[]): Promise<{ code: number | null; out: Buffer }> => {
+  const rawRun = async (args: string[]): Promise<{ code: number | null; out: Buffer }> => {
     const r = await git.tryRun(root, ['-c', 'core.commitGraph=false', ...args], { env });
     return { code: r.code, out: r.stdout };
+  };
+  let ready: Promise<void> | undefined;
+  const preflight = (): Promise<void> => (ready ??= (async () => {
+    const v = await rawRun(['version']);
+    if (v.code !== 0 || !gitSupportsNoLazyFetch(v.out.toString('utf8'))) throw new Error('git 2.44 or later is required');
+    const partial = await rawRun(['config', '--get', 'extensions.partialClone']);
+    if (partial.code === 0 && partial.out.toString('utf8').trim()) throw new Error('partial clones are not supported');
+    const promisor = await rawRun(['config', '--get-regexp', '^remote\\..*\\.promisor$']);
+    if (promisor.code === 0 && promisor.out.toString('utf8').trim()) throw new Error('promisor remotes are not supported');
+  })());
+  const run = async (args: string[]): Promise<{ code: number | null; out: Buffer }> => {
+    await preflight();
+    return rawRun(args);
   };
   const gates = path.join(root, '.qor', 'gates');
   const keys = path.join(root, '.qor', 'session', 'keys');
@@ -141,8 +195,9 @@ export function createWorkspaceEvidenceSource(root: string): { source: ShieldEvi
       if (tree.code !== 0) throw new Error('could not list the commit tree');
       const entry = tree.out.toString('utf8').split('\0').filter(Boolean);
       if (entry.length === 0) return undefined;
-      const m = /^\d{6} (\w+) ([0-9a-f]{40})\t(.+)$/.exec(entry[0]);
-      if (entry.length !== 1 || !m || m[3] !== rel || m[1] !== 'blob') throw new Error('unexpected tree entry');
+      // Regular files only: a symlink (120000) or submodule (160000) entry throws.
+      const m = /^(100644|100755) blob ([0-9a-f]{40})\t(.+)$/.exec(entry[0]);
+      if (entry.length !== 1 || !m || m[3] !== rel) throw new Error('unexpected tree entry');
       const blob = await run(['cat-file', 'blob', m[2]]);
       if (blob.code !== 0) throw new Error('the blob could not be read');
       return blob.out.toString('utf8');
@@ -169,7 +224,7 @@ export function createWorkspaceEvidenceSource(root: string): { source: ShieldEvi
       if (!(await noLinksBelow(root, receipts))) throw new Error('receipt directory missing after create');
       const tmp = within(receipts, `.${sha}.${crypto.randomBytes(8).toString('hex')}.tmp`);
       await fs.promises.writeFile(tmp, text, { encoding: 'utf8', flag: 'wx' });
-      await fs.promises.rename(tmp, target);
+      await renameWithRetry(tmp, target);
     },
   };
   return {

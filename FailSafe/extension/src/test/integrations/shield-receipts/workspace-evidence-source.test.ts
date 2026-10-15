@@ -5,7 +5,7 @@ import * as cp from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { createWorkspaceEvidenceSource } from '../../../integrations/shield-receipts/workspace-evidence-source';
+import { createWorkspaceEvidenceSource, gitSupportsNoLazyFetch } from '../../../integrations/shield-receipts/workspace-evidence-source';
 import { verifyShieldReceipt } from '../../../integrations/shield-receipts/shield-receipt-verifier';
 import { DEFAULT_SHIELD_POLICY } from '../../../integrations/shield-receipts/shield-policy';
 import {
@@ -48,7 +48,9 @@ function tmpDirs(prefix: string): Set<string> {
   return new Set(fs.readdirSync(os.tmpdir()).filter((n) => n.startsWith(prefix)));
 }
 
-suite('workspace-evidence-source (#476)', () => {
+suite('workspace-evidence-source (#476)', function () {
+  // Real git spawns (slow on Windows); same budget as the vscode-test runner.
+  this.timeout(15000);
   let repo = '';
   let first = '';
   let second = '';
@@ -217,6 +219,45 @@ suite('workspace-evidence-source (#476)', () => {
     } finally { fs.rmSync(r, { recursive: true, force: true }); }
   });
 
+  test('a ledger committed as a symlink (mode 120000) is an error, not a file', async () => {
+    const r = newRepo('fs-shield-symlink-');
+    try {
+      commitLedger(r, '### Entry #1: x\n', 'one');
+      const target = git(r, 'hash-object', '-w', '--stdin');
+      git(r, 'update-index', '--cacheinfo', `120000,${target},docs/META_LEDGER.md`);
+      git(r, 'commit', '-q', '-m', 'ledger becomes a symlink');
+      const head = git(r, 'rev-parse', 'HEAD');
+      const { source, dispose } = createWorkspaceEvidenceSource(r);
+      try {
+        await assert.rejects(source.showAtCommit(head, 'docs/META_LEDGER.md'));
+      } finally { dispose(); }
+    } finally { fs.rmSync(r, { recursive: true, force: true }); }
+  });
+
+  test('a partial clone (extensions.partialClone) is refused for every git read', async () => {
+    const r = newRepo('fs-shield-partial-');
+    try {
+      const c1 = commitLedger(r, '### Entry #1: x\n', 'one');
+      git(r, 'config', 'extensions.partialClone', 'origin');
+      const { source, dispose } = createWorkspaceEvidenceSource(r);
+      try {
+        await assert.rejects(source.headSha());
+        await assert.rejects(source.showAtCommit(c1, 'docs/META_LEDGER.md'));
+        await assert.rejects(source.parents(c1));
+      } finally { dispose(); }
+    } finally { fs.rmSync(r, { recursive: true, force: true }); }
+  });
+
+  test('git older than 2.44 (GIT_NO_LAZY_FETCH ignored) is unsupported', () => {
+    assert.equal(gitSupportsNoLazyFetch('git version 2.43.5'), false);
+    assert.equal(gitSupportsNoLazyFetch('git version 1.99.0'), false);
+    assert.equal(gitSupportsNoLazyFetch('git version 2.44.0'), true);
+    assert.equal(gitSupportsNoLazyFetch('git version 2.55.0.windows.4'), true);
+    assert.equal(gitSupportsNoLazyFetch('git version 3.0.0'), true);
+    assert.equal(gitSupportsNoLazyFetch('not git'), false);
+    assert.equal(gitSupportsNoLazyFetch(''), false);
+  });
+
   test('a base directory that is a link to outside the workspace is refused', async () => {
     const r = newRepo('fs-shield-link-');
     const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'fs-shield-outside-'));
@@ -252,6 +293,35 @@ suite('workspace-evidence-source (#476)', () => {
         assert.match((await source.readReceipt(sha)) ?? '', /^\{"n":[12]\}\n$/);
       } finally { dispose(); }
     } finally { fs.rmSync(r, { recursive: true, force: true }); }
+  });
+
+  test('a transient rename failure (EPERM/EBUSY) is retried; a persistent one leaves no temp file', async () => {
+    const r = newRepo('fs-shield-rename-');
+    const sha = 'c'.repeat(40);
+    const realRename = fs.promises.rename;
+    const failing = (n: number) => {
+      let calls = 0;
+      (fs.promises as { rename: unknown }).rename = (async (a: string, b: string) => {
+        if (calls++ < n) throw Object.assign(new Error('busy'), { code: calls % 2 ? 'EPERM' : 'EBUSY' });
+        return realRename(a, b);
+      }) as unknown;
+    };
+    const { source, dispose } = createWorkspaceEvidenceSource(r);
+    const dir = path.join(r, '.failsafe', 'shield-receipts');
+    try {
+      failing(2);
+      await source.writeReceipt(sha, '{"n":1}\n');
+      assert.equal(await source.readReceipt(sha), '{"n":1}\n');
+      assert.deepEqual(fs.readdirSync(dir), [sha + '.json']);
+      fs.rmSync(path.join(dir, sha + '.json'));
+      failing(100);
+      await assert.rejects(source.writeReceipt(sha, '{"n":2}\n'));
+      assert.deepEqual(fs.readdirSync(dir), [], 'no temp file left behind');
+    } finally {
+      (fs.promises as { rename: unknown }).rename = realRename;
+      dispose();
+      fs.rmSync(r, { recursive: true, force: true });
+    }
   });
 
   test('dispose removes the safe-git and graft temporary directories', () => {
