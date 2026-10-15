@@ -85,11 +85,25 @@ The best possible outcome is `rehearsal-pass`, which says nothing about what the
 
 ## Marketplace verification (after publication)
 
-The approved checksum set is the `SHA256SUMS.txt` that the release run wrote into its `vsix-targets` artifact. Get it from that run, then verify and run the lifecycle on the bytes the VS Code Marketplace actually serves:
+The approved checksum set is the `SHA256SUMS.txt` that the release run wrote into its `vsix-targets` artifact. That is the same set the production-gated publish jobs uploaded. There are two ways to supply it.
+
+**v6.0.7 and later: from the GitHub Release (`release-asset:TAG`).** The release workflow attaches the eight target VSIXs and `SHA256SUMS.txt` to the GitHub Release. It does this only once both marketplaces serve those exact bytes, and the Release stays a draft until all nine files are attached. Download the public asset and pass the tag. `rv` fetches `https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/download/<tag>/SHA256SUMS.txt` itself and requires it to be byte-identical to `--sums`. While the Release is still a draft that URL returns 404, so `rv` reports inconclusive (exit 3).
+
+```
+curl -fsSLO https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/download/v6.0.7/SHA256SUMS.txt
+node tools/release-verification/rv.cjs marketplace --version 6.0.7 --sums SHA256SUMS.txt --sums-source release-asset:v6.0.7 --download-dir rv/downloads --json rv/marketplace.json
+```
+
+**Any version, including v6.0.6 and earlier, which have no Release assets: from the release run (`run-artifact:RUN_ID`).**
 
 ```
 gh run download <release-run-id> -n vsix-targets -D approved
 node tools/release-verification/rv.cjs marketplace --version 6.0.7 --sums approved/SHA256SUMS.txt --sums-source run-artifact:<release-run-id> --download-dir rv/downloads --json rv/marketplace.json
+```
+
+Then, whichever source you used, run the lifecycle on the bytes the VS Code Marketplace actually serves, and build the report:
+
+```
 node tools/release-verification/rv.cjs lifecycle --code <disposable-vscode> --root <new-empty-dir> --from <previous.vsix> --to rv/downloads/vscode-marketplace/mythologiq-failsafe-6.0.7-win32-x64.vsix --to-sha256 <approved win32-x64 hash> --json rv/lifecycle.json
 node tools/release-verification/rv.cjs report --in rv/marketplace.json rv/lifecycle.json --out rv/report
 ```
