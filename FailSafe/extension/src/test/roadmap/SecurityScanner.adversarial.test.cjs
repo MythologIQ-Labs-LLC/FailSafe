@@ -21,6 +21,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { removeTempTree } = require('../shared/removeTempTree.cjs');
 const { spawn, spawnSync } = require('child_process');
 
 const OUT = path.resolve(__dirname, '..', '..', '..', 'out');
@@ -42,6 +43,7 @@ after(() => {
   if (saved.user === undefined) delete process.env.USERPROFILE; else process.env.USERPROFILE = saved.user;
   delete process.env.NODE_OPTIONS;
   delete process.env.FSG_MARKER;
+  removeTempTree(base); // LD20
 });
 
 const base = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'fsscan-adv-')));
@@ -106,19 +108,21 @@ test('T4b: a scanner under the marketplace root on an absolute PATH entry is rej
   else { fs.writeFileSync(path.join(bin, name), '#!/bin/sh\necho garak v9\n'); fs.chmodSync(path.join(bin, name), 0o755); }
   const prev = process.env.PATH;
   process.env.PATH = `${bin}${DELIM}${prev}`;
+  const scanCwd = fs.mkdtempSync(path.join(os.tmpdir(), 'fsscan-cwd-'));
   try {
     configureTrustedExecutables({ workspaceDirs: [] });
     const s = new SecurityScanner(new EventBus());
-    const r = await s.runner('garak', ['--version'], fs.mkdtempSync(path.join(os.tmpdir(), 'fsscan-cwd-')), 5000);
+    const r = await s.runner('garak', ['--version'], scanCwd, 5000);
     assert.equal(r.code, 127, 'not started');
     const needle = `${path.join(bin, name)} (inside an excluded folder)`;
     assert.ok(r.stderr.includes(needle), `the reason names the marketplace root: ${r.stderr}`);
-  } finally { process.env.PATH = prev; }
+  } finally { process.env.PATH = prev; removeTempTree(scanCwd); }
 });
 
 test('T4b: a scanner child still holding its temp folder does not break the scan (EBUSY tolerated)', { skip: !WIN && 'win32: a running cwd blocks removal only on Windows' }, async () => {
   let holder;
   let held;
+  let probeDir;
   const runner = async (command, args, cwd) => {
     if (args[0] === '--version') return { code: 0, stdout: 'ok', stderr: '' };
     held = cwd;
@@ -129,7 +133,7 @@ test('T4b: a scanner child still holding its temp folder does not break the scan
   };
   try {
     // Precondition: removing a folder that is a live process's cwd fails on this host.
-    const probeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'fsscan-hold-'));
+    probeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'fsscan-hold-'));
     const p = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 20000)'], { cwd: probeDir, stdio: 'ignore', env: { ...process.env, NODE_OPTIONS: '' } });
     await new Promise((r) => setTimeout(r, 500));
     assert.throws(() => fs.rmSync(probeDir, { recursive: true, force: true, maxRetries: 3 }), 'precondition: a live cwd blocks removal');
@@ -142,5 +146,6 @@ test('T4b: a scanner child still holding its temp folder does not break the scan
     if (holder) holder.kill();
     await new Promise((r) => setTimeout(r, 300));
     if (held) fs.rmSync(held, { recursive: true, force: true, maxRetries: 5 });
+    if (probeDir) removeTempTree(probeDir); // LD20
   }
 });

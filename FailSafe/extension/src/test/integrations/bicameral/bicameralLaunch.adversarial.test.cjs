@@ -19,6 +19,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { removeTempTree } = require('../../shared/removeTempTree.cjs');
 const { spawnSync } = require('child_process');
 
 const OUT = path.resolve(__dirname, '..', '..', '..', '..', 'out');
@@ -40,6 +41,7 @@ after(() => {
   if (saved.noDefault !== undefined) process.env.NoDefaultCurrentDirectoryInExePath = saved.noDefault;
   process.env.PATH = saved.path;
   configure({});
+  removeTempTree(base); // LD20
 });
 
 const base = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'fsbic-')));
@@ -96,7 +98,7 @@ test('T14 (a): the status probe never runs a planted bicameral-mcp, from the cwd
     assert.equal(r.state, 'not-installed', `the plant was refused: ${JSON.stringify(r)}`);
     assert.notEqual(r.version, process.version.slice(1), 'the plant never answered');
     assert.ok(Date.now() - t0 < 2500, 'refused before any version probe could time out');
-  } finally { process.chdir(saved.cwd); process.env.PATH = prev; configure({ workspaceDirs: [ws] }); }
+  } finally { process.chdir(saved.cwd); process.env.PATH = prev; configure({ workspaceDirs: [ws] }); removeTempTree(empty); }
 });
 
 function recordingSpawn(onCall) {

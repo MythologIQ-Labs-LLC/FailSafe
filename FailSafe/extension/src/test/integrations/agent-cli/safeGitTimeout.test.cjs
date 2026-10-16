@@ -18,6 +18,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { removeTempTree } = require('../../shared/removeTempTree.cjs');
 const { spawn, execFileSync } = require('child_process');
 
 const OUT = path.resolve(__dirname, '..', '..', '..', '..', 'out');
@@ -60,6 +61,7 @@ function killCarrying(m) {
 after(() => {
   for (const m of markers) killCarrying(m);
   if (saved.ceiling === undefined) delete process.env.GIT_CEILING_DIRECTORIES; else process.env.GIT_CEILING_DIRECTORIES = saved.ceiling;
+  removeTempTree(base); // LD20
 });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const within = (p, ms) => Promise.race([p.then((v) => ({ settled: true, v })), sleep(ms).then(() => ({ settled: false }))]);

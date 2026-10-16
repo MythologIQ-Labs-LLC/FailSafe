@@ -16,6 +16,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { removeTempTree } = require('../../shared/removeTempTree.cjs');
 const { spawnSync } = require('child_process');
 const { EventEmitter } = require('events');
 const { PassThrough } = require('stream');
@@ -37,6 +38,8 @@ after(() => {
   process.env.PATH = saved.path;
   delete process.env.NODE_OPTIONS;
   configure({});
+  // LD20: base/nodelink links to the real Node folder; removeTempTree unlinks links before deleting.
+  removeTempTree(base);
 });
 
 const base = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'fsacp-')));
