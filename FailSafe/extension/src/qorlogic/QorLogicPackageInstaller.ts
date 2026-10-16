@@ -1,6 +1,7 @@
 import { spawn } from 'child_process';
 import {
   isSafePythonCommand,
+  trustedPythonPath,
   type PythonInterpreterResolver,
   type ResolvedInterpreter,
 } from './PythonInterpreterResolver';
@@ -92,7 +93,8 @@ export class QorLogicPackageInstaller implements IQorLogicPackageInstaller {
       return { ok: false, command: '', error: 'no-python-found' };
     }
     const spec = `${PACKAGE}>=${MIN_QOR_LOGIC_VERSION}`;
-    const args = [...py.args, '-m', 'pip', 'install', '--upgrade', spec];
+    // -P: never import pip from the process cwd (LD11).
+    const args = [...py.args, '-P', '-m', 'pip', 'install', '--upgrade', spec];
     const cmdString = formatCommand(py.command, args);
     this.output.appendLine(`[qor-logic] ${cmdString}`);
     const result = await this.run(py.command, args, { timeoutMs: this.timeoutMs });
@@ -131,7 +133,7 @@ export class QorLogicPackageInstaller implements IQorLogicPackageInstaller {
   }
 
   private runPipShow(py: ResolvedInterpreter): Promise<InstallerRunResult> {
-    const args = [...py.args, '-m', 'pip', 'show', PACKAGE];
+    const args = [...py.args, '-P', '-m', 'pip', 'show', PACKAGE];
     return this.run(py.command, args, { timeoutMs: PIP_SHOW_TIMEOUT_MS });
   }
 }
@@ -218,14 +220,14 @@ export const defaultInstallerRun: InstallerRun = (cmd, args, options) => new Pro
     cwd: options.cwd,
     env: spawnEnv as NodeJS.ProcessEnv,
   };
+  // LD12: re-checked against this run's cwd (the workspace for skill installs).
+  let exe: string;
+  try { exe = trustedPythonPath(cmd, options.cwd); } catch (err) {
+    resolve({ stdout, stderr, code: null, timedOut: false, spawnError: err instanceof Error ? err.message : String(err) });
+    return;
+  }
   const argv = [...args];
-  const child = cmd === 'python3'
-    ? spawn('python3', argv, spawnOptions)
-    : cmd === 'python'
-      ? spawn('python', argv, spawnOptions)
-      : cmd === 'py'
-        ? spawn('py', argv, spawnOptions)
-        : spawn(cmd, argv, spawnOptions); // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- resolver-approved absolute interpreter path
+  const child = spawn(exe, argv, spawnOptions); // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute interpreter path, argv array, no shell
   const timer = setTimeout(() => {
     if (settled) return;
     settled = true;

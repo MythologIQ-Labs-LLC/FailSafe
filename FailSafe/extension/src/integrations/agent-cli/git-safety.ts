@@ -14,14 +14,18 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { trustedGitPath } from '../../shared/git/trustedGit';
+import { killProcessTree } from '../../shared/exec/killTree';
 
-export interface GitResult { code: number | null; stdout: Buffer; stderr: string }
+export interface GitResult { code: number | null; stdout: Buffer; stderr: string; timedOut?: boolean }
+
+/** `timeoutMs`: on expiry the git tree is killed (if git is still running) and the read settles timed out (B213). */
+export interface GitRunOptions { input?: Buffer; env?: Record<string, string>; timeoutMs?: number }
 
 export interface SafeGit {
   /** Run git with the hardened config; throws GitCommandError on a non-zero exit. */
-  run(cwd: string, args: ReadonlyArray<string>, opts?: { input?: Buffer; env?: Record<string, string> }): Promise<Buffer>;
+  run(cwd: string, args: ReadonlyArray<string>, opts?: GitRunOptions): Promise<Buffer>;
   /** Same, but returns the result instead of throwing. */
-  tryRun(cwd: string, args: ReadonlyArray<string>, opts?: { input?: Buffer; env?: Record<string, string> }): Promise<GitResult>;
+  tryRun(cwd: string, args: ReadonlyArray<string>, opts?: GitRunOptions): Promise<GitResult>;
   dispose(): void;
 }
 
@@ -92,15 +96,36 @@ export function createSafeGit(repo: string): SafeGit {
   const tryRun: SafeGit['tryRun'] = (cwd, args, opts) => new Promise((resolve) => {
     let exe: string;
     try { exe = trustedGitPath(cwd); } catch (e) { resolve({ code: 127, stdout: Buffer.alloc(0), stderr: String(e) }); return; }
+    const timeoutMs = opts?.timeoutMs;
     const child = spawn(exe, [...baseArgs, ...args], { // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute git path, argv array, no shell
       cwd, shell: false, windowsHide: true, env: { ...process.env, ...baseEnv, ...(opts?.env ?? {}) },
+      // POSIX: its own process group, so a timeout can kill git and what it started.
+      detached: timeoutMs !== undefined && process.platform !== 'win32',
     });
     const out: Buffer[] = [];
     let err = '';
+    let settled = false;
+    let timer: NodeJS.Timeout | undefined;
+    const settle = (r: GitResult): void => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      resolve(r);
+    };
     child.stdout.on('data', (c: Buffer) => out.push(c));
     child.stderr.on('data', (c: Buffer) => { err += c.toString(); });
-    child.on('error', (e) => resolve({ code: 127, stdout: Buffer.alloc(0), stderr: String(e) }));
-    child.on('close', (code) => resolve({ code, stdout: Buffer.concat(out), stderr: err }));
+    child.on('error', (e) => settle({ code: 127, stdout: Buffer.alloc(0), stderr: String(e) }));
+    child.on('close', (code) => settle({ code, stdout: Buffer.concat(out), stderr: err }));
+    if (timeoutMs !== undefined) {
+      timer = setTimeout(() => {
+        // killProcessTree kills only a live git; one that exited while a descendant holds its pipes is left.
+        killProcessTree(child);
+        settle({ code: null, stdout: Buffer.concat(out), stderr: err, timedOut: true });
+        child.stdout.destroy();
+        child.stderr.destroy();
+        child.stdin.destroy();
+      }, timeoutMs);
+    }
     if (opts?.input) child.stdin.end(opts.input); else child.stdin.end();
   });
 

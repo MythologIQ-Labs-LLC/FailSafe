@@ -68,13 +68,13 @@ Each `bicameral.drift` and `bicameral.ratify` call also emits a `bicameral.verdi
 
 ### Settings
 
-Three VS Code settings control the integration:
+These VS Code settings control the integration. They are machine-scoped: FailSafe reads them only from your user settings, so a workspace cannot set them.
 
-- `failsafe.integrations.bicameral.command` (string, default `"bicameral-mcp"`) — executable to spawn for `--version` probe and MCP stdio session. Must satisfy the spawn-boundary validator described above.
-- `failsafe.integrations.bicameral.pipCommand` (string, default `"pip"`) — pip invocation used by the install bridge. Accepts `"pip"`, `"pip3"`, or `"python -m pip"`.
+- `failsafe.integrations.bicameral.command` (string, default `"bicameral-mcp"`) — executable to spawn for `--version` probe and MCP stdio session. Must satisfy the spawn-boundary validator described above, and is then resolved to a trusted absolute file: never one inside the workspace or the repository that contains it, and on Windows only an `.exe`. The install bridge resolves `pip` the same way and runs it from an empty temporary folder.
+- `failsafe.integrations.bicameral.extraCommandRoots` (array, default `[]`) — extra anchored absolute roots accepted for the command path.
 - `failsafe.integrations.bicameral.autoConnect` (boolean, default `false`) — when enabled, FailSafe runs the install-state probe at activation and opens an MCP session in the background if the workspace is already configured. Default off; the operator explicitly clicks **Connect** when ready.
 
-The Settings tab surfaces a Bicameral MCP card with the current install state, version, autoConnect toggle, and a "Re-install / Re-setup…" shortcut that switches to the Integrations tab. The autoConnect flag is also writable from the card (HTTP `POST /api/integrations/bicameral/auto-connect` updates the workspace-scoped setting).
+The Settings tab surfaces a Bicameral MCP card with the current install state, version, autoConnect toggle, and a "Re-install / Re-setup…" shortcut that switches to the Integrations tab. The autoConnect flag is also writable from the card (HTTP `POST /api/integrations/bicameral/auto-connect` updates your user settings). Before v6.0.8 the card wrote the workspace settings; a value stored there is now ignored, so turn auto-connect on again if you had used the card.
 
 ### Route surface
 

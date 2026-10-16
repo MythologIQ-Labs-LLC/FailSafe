@@ -27,6 +27,7 @@
 
 import { execFile, spawn, type ChildProcessWithoutNullStreams } from 'child_process';
 import * as fs from 'fs';
+import { trustedExecutablePath, WINDOWS_POWERSHELL } from '../../shared/exec/trustedExecutable';
 
 export interface TreeTracker {
   /** Record the agent's root process. */
@@ -100,7 +101,8 @@ class WinSampler {
 async function startWin(sinceMs: number): Promise<TreeTracker> {
   // The script goes in -EncodedCommand so stdin stays free for the line protocol.
   const encoded = Buffer.from(PS_SCRIPT, 'utf16le').toString('base64');
-  const ps = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encoded], { windowsHide: true, shell: false });
+  // B211: the trusted Windows PowerShell, never one found in the process cwd.
+  const ps = spawn(trustedExecutablePath(WINDOWS_POWERSHELL), ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encoded], { windowsHide: true, shell: false }); // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute PowerShell path, argv array, no shell
   const sampler = new WinSampler(ps);
   const ready = sampler.next(20000);
   ps.on('error', () => { /* surfaced as a startup timeout */ });

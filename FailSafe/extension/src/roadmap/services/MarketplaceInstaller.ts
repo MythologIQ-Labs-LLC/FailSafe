@@ -1,8 +1,9 @@
 /**
- * MarketplaceInstaller - Git clone and sandbox setup for marketplace items
+ * MarketplaceInstaller - Git clone staging for marketplace items
  *
- * Handles cloning repositories to ~/.failsafe/marketplace/, running setup
- * scripts in sandboxed environments, and reporting progress via EventBus.
+ * Clones repositories to ~/.failsafe/marketplace/ for review and reports
+ * progress via EventBus. It never runs an item's package setup (#468): there
+ * is no enforced sandbox, and pip or npm on the host is not isolation.
  */
 import * as fs from "fs";
 import * as path from "path";
@@ -18,7 +19,21 @@ import type {
   CommandRunnerResult,
 } from "./MarketplaceTypes";
 
-// Temporary release gate: installation cannot safely execute until #468/#469 are closed.
+// Release gate (#468/#469). It stays false until every condition below holds;
+// the cycle that sets it to true must show each one:
+//  1. an isolation provider that enforces filesystem, network, process and
+//     credential limits for setup, with OS-level negative tests on every
+//     supported platform;
+//  2. staged installation: clone into a staging folder, scan, then promote,
+//     keeping the previous installation until promotion and restoring it on
+//     failure;
+//  3. a repository scanner whose PASS is evidence about the item's files
+//     (garak and promptfoo run from an empty folder and never read them);
+//  4. the v6.0.7 G12 obligation: a planted-git row for the clone and pull, and
+//     planted-executable rows for every scanner;
+//  5. an end-to-end test of install, quarantine and re-scan through the Console;
+//  6. the item's URL and ref are validated before any clone (cloneRepo already
+//     ends options with `--`).
 export const MARKETPLACE_INSTALLS_ENABLED = false;
 const DEFAULT_TIMEOUT = 300000; // 5 minutes
 
@@ -32,13 +47,10 @@ function defaultRunner(
     const options = { cwd, shell: false as const, timeout };
     let proc: ReturnType<typeof spawn> | null;
     try {
+      // Only git: an item's setup (pip, npm) is never run on the host (#468).
       proc = command === "git"
         ? spawn(trustedGitPath(cwd), args, options) // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute git path, argv array, no shell
-        : command === "pip"
-          ? spawn("pip", args, options)
-          : command === "npm"
-            ? spawn("npm", args, options)
-            : null;
+        : null;
     } catch (err) {
       resolve({ code: 1, stdout: "", stderr: err instanceof Error ? err.message : String(err) });
       return;
@@ -94,6 +106,25 @@ export class MarketplaceInstaller {
       onProgress({ phase: "failed", progress: 0, message: error, error });
       return { success: false, error };
     }
+    return this.stage(item, options, onProgress);
+  }
+
+  /**
+   * Clone an item for review. Nothing else runs: a request for setup is
+   * refused before any folder is created or removed. Only install() calls this,
+   * after the release gate.
+   */
+  async stage(
+    item: MarketplaceItem,
+    options: InstallOptions,
+    onProgress: (progress: InstallProgress) => void,
+  ): Promise<{ success: boolean; installPath?: string; error?: string }> {
+    if (options.sandboxEnabled) {
+      const error = "Isolated setup is not available. FailSafe has no enforced sandbox, so it will not run this item's setup. "
+        + "Install without setup to clone the item for review, or set it up yourself in an isolated environment.";
+      onProgress({ phase: "failed", progress: 0, message: "Isolated setup is not available", error });
+      return { success: false, error };
+    }
     const installPath = path.join(this.cachePath, item.id);
 
     try {
@@ -134,20 +165,11 @@ export class MarketplaceInstaller {
         message: "Repository cloned successfully",
       });
 
-      // Run setup if sandbox enabled
-      if (options.sandboxEnabled) {
-        onProgress({
-          phase: "setup",
-          progress: 60,
-          message: "Running sandboxed setup...",
-        });
-        await this.runSandboxedSetup(installPath, item);
-      }
-
+      // Clone-only staging: the item's setup is never run (#468).
       onProgress({
         phase: "setup",
         progress: 80,
-        message: "Setup complete",
+        message: "Cloned for review. No setup was run.",
       });
 
       // Security scan happens separately via SecurityScanner
@@ -163,7 +185,7 @@ export class MarketplaceInstaller {
       onProgress({
         phase: "complete",
         progress: 100,
-        message: `${item.name} installed successfully`,
+        message: `${item.name} cloned for review. Its setup was not run.`,
       });
 
       return { success: true, installPath };
@@ -190,6 +212,7 @@ export class MarketplaceInstaller {
       "--single-branch",
       "--branch",
       item.repoRef || "main",
+      "--",
       item.repoUrl,
       targetPath,
     ];
@@ -204,50 +227,6 @@ export class MarketplaceInstaller {
     }
 
     return { success: true };
-  }
-
-  private async runSandboxedSetup(
-    installPath: string,
-    item: MarketplaceItem,
-  ): Promise<void> {
-    // Check for common setup files and run them with restrictions
-    const setupFiles = [
-      { file: "requirements.txt", cmd: "pip", args: ["install", "-r", "requirements.txt", "--user"] },
-      { file: "pyproject.toml", cmd: "pip", args: ["install", ".", "--user"] },
-      { file: "package.json", cmd: "npm", args: ["install", "--ignore-scripts"] },
-    ];
-
-    for (const setup of setupFiles) {
-      const setupPath = path.join(installPath, setup.file);
-      if (fs.existsSync(setupPath)) {
-        // Run with --ignore-scripts or equivalent for safety
-        await this.runner(setup.cmd, setup.args, installPath, 120000);
-        break; // Only run first matching setup
-      }
-    }
-
-    // Write sandbox config file
-    const sandboxConfig = {
-      enabled: true,
-      createdAt: new Date().toISOString(),
-      item: {
-        id: item.id,
-        name: item.name,
-        author: item.author,
-      },
-      restrictions: {
-        networkAfterSetup: false,
-        fileSystemScope: installPath,
-        maxMemoryMB: 512,
-        maxCpuPercent: 25,
-      },
-    };
-
-    await fs.promises.writeFile(
-      path.join(installPath, ".failsafe-sandbox.json"),
-      JSON.stringify(sandboxConfig, null, 2),
-      "utf-8",
-    );
   }
 
   async uninstall(item: MarketplaceItem): Promise<boolean> {

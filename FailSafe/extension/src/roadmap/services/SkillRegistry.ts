@@ -6,6 +6,7 @@ import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { spawnSync } from "child_process";
+import { powershellFor, trustedExecutablePath } from "../../shared/exec/trustedExecutable";
 import {
   type InstalledSkill, type SkillRoot,
   collectSkillMarkdownFiles, toComparablePath,
@@ -119,14 +120,20 @@ export function admitSkill(
   if (!fs.existsSync(scriptPath)) {
     return { ok: false, error: `admission script not found: ${scriptPath}` };
   }
-  const shell = process.platform === "win32" ? "powershell.exe" : "pwsh";
+  // B211: never a PowerShell found in the workspace (the cwd of this run).
+  let shell: string;
+  try {
+    shell = trustedExecutablePath(powershellFor(process.platform), ws);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
   const args = [
     "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", scriptPath,
     "-SkillPath", skillFile, "-Source", source,
     "-Owner", "FailSafe", "-VersionPin", "local-main",
     "-RegistryPath", getPersonalSkillManifestPath(ws),
   ];
-  const result = spawnSync(shell, args, { cwd: ws, encoding: "utf8" });
+  const result = spawnSync(shell, args, { cwd: ws, encoding: "utf8" }); // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute PowerShell path, argv array, no shell
   const ok = result.status === 0;
   const errMsg = String(result.stderr || "").trim() ||
     String(result.stdout || "").trim() ||
