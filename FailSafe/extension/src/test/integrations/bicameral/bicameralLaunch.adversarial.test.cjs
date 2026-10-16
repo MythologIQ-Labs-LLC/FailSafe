@@ -80,13 +80,17 @@ test('T14 (p2) precondition: the MCP SDK transport runs a .cmd planted in its cw
   try { await t.close(); } catch { /* closed */ }
 });
 
-test('T14 (a): the status probe never runs a planted bicameral-mcp', async () => {
+test('T14 (a): the status probe never runs a planted bicameral-mcp, from the cwd or from a PATH entry inside the workspace', async () => {
   configure({ workspaceDirs: [ws] });
+  // The plant is reachable both ways: as the process cwd and through an absolute
+  // PATH entry inside ws, so only the resolver (not the probe's temp cwd) stops it.
+  const prev = process.env.PATH;
+  process.env.PATH = `${WIN ? ws : path.join(ws, 'bin')}${DELIM}${prev}`;
   process.chdir(ws);
   try {
     const r = await probeInstallState({ command: 'bicameral-mcp', workspaceRoot: ws });
     assert.equal(r.state, 'not-installed', `no trusted bicameral-mcp here: ${JSON.stringify(r)}`);
-  } finally { process.chdir(saved.cwd); }
+  } finally { process.chdir(saved.cwd); process.env.PATH = prev; }
 });
 
 function recordingSpawn(onCall) {
@@ -140,10 +144,17 @@ test('T14 (c): a fresh install with no trusted bicameral-mcp afterwards stops af
 
 test('T14 (d): the MCP client refuses a bare, .cmd, rooted-relative, UNC or missing command and runs nothing', async () => {
   try { fs.unlinkSync(MARK); } catch { /* none */ }
-  const bad = ['bicameral-mcp', path.join(ws2, 'bicameral-mcp.cmd'), '\\x.exe', '\\\\host\\share\\x.exe', path.join(L, 'missing.exe')];
-  for (const command of bad) {
+  // Each refusal names its own reason, so a weaker check cannot hide behind a later one.
+  const bad = [
+    ['bicameral-mcp', /not an absolute path/],
+    ['\\x.exe', /not an absolute path/],
+    ['\\\\host\\share\\x.exe', /not an absolute path/],
+    ...(WIN ? [[path.join(ws2, 'bicameral-mcp.cmd'), /not an \.exe/]] : []),
+    [path.join(L, WIN ? 'missing.exe' : 'missing'), /not an existing regular file/],
+  ];
+  for (const [command, why] of bad) {
     const c = new BicameralMcpClient({ command, cwd: ws2 });
-    await assert.rejects(() => c.connect(), /refus/i, command);
+    await assert.rejects(() => c.connect(), (e) => /refus/i.test(e.message) && why.test(e.message), command);
   }
   assert.equal(await waitMarked(2000), false, 'the planted .cmd never ran');
 });

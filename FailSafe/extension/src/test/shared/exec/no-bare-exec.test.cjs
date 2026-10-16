@@ -175,6 +175,7 @@ test('T12 R3 self-test: the replaced 869bab00 sites and synthetic bypasses are f
     'bootstrapBicameral lines 160-161 (multi-line)': '  const command = cfg.get<string>("command", "bicameral-mcp");\n  const client = new BicameralMcpClient({\n    command,\n    cwd: workspaceRoot,\n  });',
     'synthetic member': 'spawn(opts.command, a);',
     'synthetic call': 'spawn(getCmd(), a);',
+    'synthetic resolved member': 'const o = {};\no.cmd = trustedCommandPath(c);\nspawn(o.cmd, a);',
     'synthetic runStep raw bin': "const x = (opts.resolve ?? trustedCommandPath)(pip, d);\nawait runStep(o, m, s, { bin: rawSetting });\n child = spawnFn(req.bin, req.args, {});",
   };
   for (const [name, text] of Object.entries(bad)) assert.ok(r3Violations(text).length > 0, `${name} must be flagged`);
