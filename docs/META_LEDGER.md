@@ -32547,3 +32547,128 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `ba61609d63b8e59cb91f1d38a94ff5c8e3916a79476ec28e5c103c3f521b8db5`
 
 **Decision**: SESSION SEAL for plan-v608-integration.md (implementation #745), the lead's v6.0.8 integration for program #521. Reality = Promise, with disclosures. release/v6.0.8-rc carries lanes A-D (sealed in their own sessions, #705-#736), the LD11 nonce-store folder containment, the LD12-LD16 fixes from the combined review and the first full run, version 6.0.8 and its documentation; the code candidate C0 is 76641298 and every LD6 gate listed in #745 ran on it. Disclosures: bounded damaged-ledger override applied to this integration cycle (#467 unresolved, normal governance not restored); vscode-test and the rv lifecycle ran on disposable test builds (1.122.1 and 1.141.1) with win32VersionedUpdate removed; the operator install was untouched; the first full vscode-test run on 56291b07 had 10 failures in pre-existing suites no lane's targeted run selected; LD14-LD16 fixed them and the re-run on C0 76641298 is 5000/0/18; test:ui on C0 had one 45 s timeout in brainstorm-tab-roundtrip #263 that passes 3/3 alone (timing under full-suite load); npm audit reports 2 high (braces via chokidar 3.6.0, GHSA-vfj7-8cjw-p6xm), present unchanged in main and in published v6.0.7; the fix is a breaking chokidar 5 upgrade left to the owner; the secret scanner's 4 matches are fake test fixtures; the released [6.0.7] CHANGELOG section was left as it shipped rather than removing its two superseded limitations (LD5); the 6.0.8 Fixed lines record their resolution; SYSTEM_STATE's Current Release moved to 6.0.8 in the C0 docs commit a998ca01, not in S, because FX938 requires it to match package.json in the same commit; a misdirected re-run script overwrote the first C0 run's tsc, lint and steps logs (all had passed); that run's npm-test and test-node logs are intact; the macOS and Linux test rows, the LD19 POSIX folder rows and the FIFO and symlink rows run only on CI; lane A ran four vscode-test runs before the one-at-a-time rule reached it; nothing was killed; gate artifact iteration numbers differ from payload iterations in this session (plan-iter9 holds iteration 8); each tribunal entry's plan sha256 matches its gate artifact; the risk-store stale-takeover residual (B224) and the Bicameral deactivate-during-auto-connect race (B235) remain open. Next: the LD7 post-seal re-runs, one push of release/v6.0.8-rc, the LD8 PR. Not merged, not tagged, not published.
+
+---
+
+### Entry #747: GATE TRIBUNAL - plan-v608-integration (iteration 9) - PASS
+
+**Timestamp**: 2026-10-16T17:25:30Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T1356-298603`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `90a19813ca3a12886b811b9f0dd1f10fac1b5bd9b12b930a519dc9ca9f42fc26`
+**Previous Hash**: `ba61609d63b8e59cb91f1d38a94ff5c8e3916a79476ec28e5c103c3f521b8db5`
+**Chain Hash (Merkle seal)**: `611306c0d1ab06a7ebe19e426b94f23d3426f6f6b8dd2f5a136f7ec91747cc09`
+
+**Decision**: PASS on plan-v608-integration.md iteration 9 (sha256 40dea63e), which adds LD18 and LD19 after the PR #529 Linux Full Test Suite failed one row on the sealed fcf2d700. Fresh Option B architect-reviewer. A timed-out read can never resolve (settle is once-only and the timer path throws), so the #476 N1 row relied on host timing after lane A's B213 change armed the timer after spawn; the queueMicrotask scheduler fires before any libuv callback, so the row becomes deterministic, and its three falsifiers go red. LD19 re-seals after #746 without editing it. Three implementation notes: name no-bare-exec.test.cjs as a covering suite, make the fires-after-close row count killProcessTree calls and run the guard-removal mutation, and append this iteration's tribunal entry before the new IMPLEMENTATION. Next: lane A implements LD18; the lead re-runs LD6 and re-seals under LD19. Tribunal entry held by the lead during the post-seal LD19 iterations and appended after seal #746 in its recorded order; its timestamp is the gate artifact's (audit-iter9.json), which replaces the estimate the held copy carried.
+
+---
+
+### Entry #748: GATE TRIBUNAL - plan-v608-integration (iteration 10) - VETO
+
+**Timestamp**: 2026-10-16T18:07:09Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T1356-298603`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `2808d86a6a80fa7d3d1019a56153a3aeff123ac61b2856293234fc7d414c4f7a`
+**Previous Hash**: `611306c0d1ab06a7ebe19e426b94f23d3426f6f6b8dd2f5a136f7ec91747cc09`
+**Chain Hash (Merkle seal)**: `fe684332a8d1510a937729b5f503a36939fd37f95a1d1e626750e7b5b81ac999`
+
+**Decision**: VETO on plan-v608-integration.md iteration 10 (sha256 66e556d4), which adds LD20 (the Python-resolution adversarial suite leaks a large temp folder per run and filled C:) and LD21 (a full LD6 re-run after the fix; the e9e64010 run is void past compile). B1: the fixture holds two junctions to the real Python install folder, so the recursive delete must remove them first and the falsifier must check the host Python still exists. B2: a child that dies before creating anything leaves the folder empty, so the falsifier must require exit 0 and a full pass count. B3: the check of the other v6.0.8 test files names nothing that can fail; run test:node and npm test with a fresh TEMP and map every leftover entry to a pre-existing suite. Advisories: writes the falsifier cannot see, the falsifier cleaning its own folder, naming who implements, and attributing the size to the node.exe plants. Tribunal entry held by the lead during the post-seal LD19 iterations and appended after seal #746 in its recorded order; its timestamp is the gate artifact's (audit-iter10.json), which replaces the estimate the held copy carried.
+
+---
+
+### Entry #749: GATE TRIBUNAL - plan-v608-integration (iteration 11) - VETO
+
+**Timestamp**: 2026-10-16T18:09:25Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T1356-298603`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `cf1816ba2e1eaf963e4d560ca2adbe23e999c3dabebe4b9f2ca04bdf26477f9d`
+**Previous Hash**: `fe684332a8d1510a937729b5f503a36939fd37f95a1d1e626750e7b5b81ac999`
+**Chain Hash (Merkle seal)**: `5bd7351c59a8224bcf82a8525190a6b969dc9774cb5db1961c4096b8223ee518`
+
+**Decision**: VETO on plan-v608-integration.md iteration 11 (sha256 ee23783c). The junction order, the exit-and-count requirement, the falsifier's own cleanup, the implementer and the size attribution are applied. Blocker: the 'drop the junction removal' mutation cannot go red usefully, because rmSync treats a Windows junction as a link and removes it without following it, and the only alternative red would be deleting the host Python; replace it with a source-order row requiring after() to unlink both junctions before any rmSync, and keep the Python-exists assertion as a safety net only. B3 is feasible but needs mechanical classes: an explicit host and tool allow-list, a prefix map built from test files that existed at b66a32d8, and a failure for any unclassified entry or any prefix reused by an FX978-FX999 test file. Advisory: pin the expected test count. Tribunal entry held by the lead during the post-seal LD19 iterations and appended after seal #746 in its recorded order; its timestamp is the gate artifact's (audit-iter11.json), which replaces the estimate the held copy carried.
+
+---
+
+### Entry #750: GATE TRIBUNAL - plan-v608-integration (iteration 12) - VETO
+
+**Timestamp**: 2026-10-16T18:10:52Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T1356-298603`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `4f08974d0d84855061315fcc5454cb19da44b760027b377f49b0949f0f53a070`
+**Previous Hash**: `5bd7351c59a8224bcf82a8525190a6b969dc9774cb5db1961c4096b8223ee518`
+**Chain Hash (Merkle seal)**: `1bcba3fda74b5629760fa60a7045bcc7aae5bb72f0e9884db72f1d1d174979a4`
+
+**Decision**: VETO on plan-v608-integration.md iteration 12 (sha256 c47551c3). The source-order row, the mechanical B3 classes and the count of 14 (exactly 14 top-level test() calls) are applied, and the drop-rmSync mutation is safe to run. Blocker: the drop-junction-unlink mutation would also run the child row, whose after() then deletes recursively over a folder whose junctions to the real Python install are still in place, so the plan's promise that no mutation can follow a junction is not enforced. Fix: run that mutation against the source-order row alone, from a separate file or a name pattern, and record the command. Tribunal entry held by the lead during the post-seal LD19 iterations and appended after seal #746 in its recorded order; its timestamp is the gate artifact's (audit-iter12.json), which replaces the estimate the held copy carried.
+
+---
+
+### Entry #751: GATE TRIBUNAL - plan-v608-integration (iteration 13) - PASS
+
+**Timestamp**: 2026-10-16T18:12:07Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T1356-298603`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `906aa05fee192a5d92b50b2bd666962e2997a1819e7a6665913b19c043778df6`
+**Previous Hash**: `1bcba3fda74b5629760fa60a7045bcc7aae5bb72f0e9884db72f1d1d174979a4`
+**Chain Hash (Merkle seal)**: `b12f7590b1a28e23665bf14116d4f7efd9a8fcb4f823e5283b7ab37f5f86f65f`
+
+**Decision**: PASS on plan-v608-integration.md iteration 13 (sha256 57fcd74b), which completes LD20 (the Python-resolution adversarial suite removes its junctions and temp folders, with a child-row falsifier that pins 14 passing tests and an empty fresh temp folder, a separate junction-order source row, and a mechanical classification of every temp entry left by the LD21 runs) and LD21 (a full LD6 re-run with free space checked first). Fresh Option B architect-reviewer. The drop-junction-unlink mutation runs only the source-order file, so no recursive delete can reach a junction into the real Python folder, and both mutations can fail. Two implementation notes: D14's wording covers two mutations, and the child row unlinks any surviving junctions before deleting its own fresh folder. Next: lane A implements LD20; the lead runs LD21 and re-seals under LD19. Tribunal entry held by the lead during the post-seal LD19 iterations and appended after seal #746 in its recorded order; its timestamp is the gate artifact's (audit-iter13.json), which replaces the estimate the held copy carried.
+
+---
+
+### Entry #752: IMPLEMENTATION - plan-v608-integration (iteration 13)
+
+**Timestamp**: 2026-10-16T19:21:22Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-16T1356-298603`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-16T1356-298603/implement.json`
+
+**Content Hash**: `4912a766832a23d51c37c7be3345d3e1259a171b54f86621308b3a9b9fe8aa7c`
+**Previous Hash**: `b12f7590b1a28e23665bf14116d4f7efd9a8fcb4f823e5283b7ab37f5f86f65f`
+**Chain Hash (Merkle seal)**: `c5ede901486d8b7a97d8dd79235993f9a23f0566ef7ff9e6c322eab39f1590e4`
+
+**Decision**: IMPLEMENTATION of plan-v608-integration.md iteration 13 (audit PASS #751, sha256 57fcd74b), the post-seal LD18-LD21 work after seal #746 on fcf2d700. LD18: PR #529's Linux CI failed one row, workspace-evidence-source #476 N1, which assumed git can never finish within 1 ms; on a fast Linux host git's exit can settle the read first. Lane A cf909766 adds a scheduleTimeout seam to SafeGit's GitRunOptions (default setTimeout and clearTimeout, no production caller passes it): the row fires its timeout in a microtask and asserts the read times out, and a second row fires after git finished and asserts no kill; merged as e9e64010. A genuinely stalled git is covered by safeGitTimeout.test.cjs T9 (a) and (b): a real git tree hung on a 30 s alias with a 1.5 s deadline settles timed out within 5 s and leaves no process carrying its marker; on fcf2d700 CI's test:all stopped at npm test, so test:node and T9 did not run on Linux. LD20: the e9e64010 re-run hit ENOSPC on C:, from about 0.8 GB per run that pythonResolution.adversarial.test.cjs left in an fspyadv- temp folder holding two junctions to the real Python install. Lane A eaec61a5 (merged as cc0c8def) unlinks both junctions before deleting, adds a child row that runs the suite in a fresh TEMP and requires 14 of 14 passing and an empty folder, and a source-order row; both red first, and both mutations killed, each checked on its own file; seven more lane A suites now delete through src/test/shared/removeTempTree.cjs, which unlinks links first. The LD21 run on cc0c8def then found 16 temp folders from v6.0.8 rows in two older files (SecurityScanner.test.ts, and consoleServer.test.ts, where an unawaited AudioVaultService.init recreated .failsafe/audio after the delete); lane A 0162cc44 (merged as 717d8254) removes them, red then green on the same 33 tests in the extension host. Docs commit cb22fde1 files B236 (older suites' temp leftovers, one holding a junction to the real Git install), B237 and B238. LD21 full re-run on the code candidate 717d8254, local, C: free checked first (30 GB), TEMP, TMP and TMPDIR at fresh folders for test:node and npm test, counts read from logs: tsc 0; lint 0 errors (134 warnings); runner coverage pass; citation parity pass; test:node 715/723 (2 = FX946 ledgerAnchor baseline, 6 skipped); npm test 5001 passing / 0 failing / 18 pending, census 509/509, on the disposable 1.122.1 build; test:ui 208 passed / 1 failed / 4 skipped, the failure FX589 bicameral-advanced-tools.spec.ts:67 timing out on the Advanced-tools section after Connect, which passes 3 of 3 alone and 12 of 12 across 6 workers, its code path unchanged since b66a32d8 (B238); release-gate --preflight pass; validate-docs-coherence pass; eight 6.0.8 VSIXs with verify-set pass (win32-x64 ed78fea6); the packaged win32-x64 better-sqlite3 loads in Node 22.22.3 and in Electron 39.8.8 and 43.7.7, napi 10; rv inventory 50/50; rv lifecycle 12/12 from the published 6.0.7 win32-x64; npm audit --omit=dev 2 high (braces via chokidar 3.6.0), unchanged from main and published v6.0.7. D14 temp classification: test:node 118 entries (2 allow-list, 116 pre-existing suites), npm test 94 entries (3 allow-list, 91 pre-existing), none unclassified and none with a prefix from a v6.0.8 test or added line.
+
+---
+
+### Entry #753: SESSION SEAL - plan-v608-integration (iteration 13)
+
+**Timestamp**: 2026-10-16T19:22:20Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-16T1356-298603`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-16T1356-298603/substantiate.json`
+
+**Content Hash**: `ad14480af298f0a9f55b30ba2bc5ce43a13335953eb24e04f35af6126a322ca9`
+**Previous Hash**: `c5ede901486d8b7a97d8dd79235993f9a23f0566ef7ff9e6c322eab39f1590e4`
+**Chain Hash (Merkle seal)**: `7cb1e62dce79fa1293a33015fac2dd2e2eaf6d1d0d10911361c74450e7510b20`
+
+**Decision**: SESSION SEAL for plan-v608-integration.md iteration 13 (implementation #752), the lead's v6.0.8 integration for program #521, after seal #746. Reality = Promise, with disclosures. release/v6.0.8-rc now carries, on top of fcf2d700, the LD18 timer seam (e9e64010), the LD20 temp hygiene (cc0c8def, 717d8254) and docs commit cb22fde1; the code candidate is 717d8254 and every LD6 gate listed in #752 ran on it, from the start, with the D14 temp classification passing. Disclosures: bounded damaged-ledger override applied to this integration cycle (#467 unresolved, normal governance not restored); seal #746 named fcf2d700, whose Linux CI failed the #476 N1 row; this seal supersedes it for the candidate and #746 is left unedited; the e9e64010 LD19 re-run is void past compile (ENOSPC on C: from the fspyadv- leak) and is not evidence; the lead removed the 36 leftover folders with Git Bash rm -rf before LD20 existed, the junctions were removed as links and the host Python was verified intact afterwards; the first LD21 run on cc0c8def passed every gate but D14, which found 16 temp folders from v6.0.8 rows in two older test files that lane A's added-files sweep missed; 0162cc44 fixed them and LD21 re-ran in full on 717d8254; the D14 classifier was revised twice after the cc0c8def results were read (template-literal prefixes; temp-helper calls and added lines in older files counted as v6.0.8), each revision stricter and re-checked against planted entries; the allow-list was written before each run; the held tribunal entries #747-#751 carried estimated timestamps, one later than its append; each was replaced by its gate artifact's timestamp; test:ui on 717d8254 had one timeout in FX589 bicameral-advanced-tools that passes 3/3 alone and 12/12 across 6 workers, code path unchanged since b66a32d8 (B238); test:ui on cc0c8def was 209/0/4; docs commit cb22fde1 (BACKLOG only, B236-B238) follows the code candidate 717d8254; coherence, preflight and the backlog docs tests ran on it, and CI's test:all runs on the pushed head; vscode-test and the rv lifecycle ran on disposable test builds (1.122.1 and 1.141.1) with win32VersionedUpdate removed; the operator install was untouched; npm audit reports 2 high (braces via chokidar 3.6.0), present unchanged in main and in published v6.0.7; the fix is a breaking chokidar upgrade left to the owner; the macOS and Linux rows, including safeGitTimeout T9 and trustedExecutable T17 (b) on POSIX, run only on CI and did not run on fcf2d700 because test:all stopped at npm test; D14 does not see Python __pycache__ in the real Lib, pip's cache, writes relative to a child's cwd or under ~/.failsafe; older suites still leave temp folders (B236), one holding a junction to the real Git install; gate artifact iteration numbers differ from payload iterations in this session; each tribunal entry's plan sha256 matches its gate artifact; the risk-store stale-takeover residual (B224), the Bicameral deactivate-during-auto-connect race (B235) and the unawaited AudioVaultService.init (B237) remain open. Next: the LD7 post-seal checks, one push of release/v6.0.8-rc moving PR #529's head, CI on that head with the Linux N1, T9 and T17 (b) rows read from its log, then the LD8 merge. Not merged, not tagged, not published.
