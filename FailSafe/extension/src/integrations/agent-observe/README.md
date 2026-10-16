@@ -1,6 +1,6 @@
 # Agent observe integration (OpenHands + Cline/Roo/Kilo)
 
-> One-line: FailSafe reads agent runs and agent MCP/tool configuration read-only — auditing Cline/Roo/Kilo permission posture for risky settings and mapping OpenHands run events into normalized transparency records — without ever spawning or mutating a live agent.
+> One-line: FailSafe reads agent runs and agent MCP/tool configuration read-only — auditing Cline/Roo/Kilo permission posture for risky settings and, after you confirm, importing an exported OpenHands run as historical timeline evidence — without ever spawning, mutating or intercepting a live agent.
 
 - **Pattern:** observe
 - **Direction:** read-only
@@ -25,11 +25,23 @@ Neither observer mutates anything and neither spawns a process. The MCP policy a
 
 ## Command / wiring
 - `FailSafe: Audit Agent MCP Policy` (command id `failsafe.agentAudit.run`) — reads the Cline/Roo/Kilo MCP settings document(s), parses + redacts, and upserts the flagged posture risks into the risk register.
-- `FailSafe: Observe OpenHands Run` (command id `failsafe.openhands.observe`) — maps an exported OpenHands run's events into normalized transparency records, version-gated.
+- `FailSafe: Import OpenHands Run (observe)` (command id `failsafe.openhands.observe`) — maps an exported OpenHands run's events, version-gated, and asks before saving anything. On approval the events are saved as historical evidence (see below) and shown in the VS Code Agent Timeline and the Console Timeline under "Imported".
+
+## OpenHands historical import (#477)
+
+- **Store.** One record per event in `.failsafe/logs/openhands-imports.jsonl`, written only by the importer under its lock, one write per line plus fsync. The transparency log gets one summary line per import, so a large import does not push live verdicts out of the recent views.
+- **What is kept.** Kind, tool name, risk hint, time and the event id, each only when it is a short token (a flattened `action` can be a whole command line and is replaced by `unrecognized`). Nothing is executed.
+- **Duplicates.** An event with its own export id is keyed by that id, so re-importing the same run, or a longer re-export of it, adds only new events.
+- **Signed for this install.** Every line carries an HMAC-SHA256 under a key kept in VS Code Secret Storage, bound to the workspace folder's path. A line that does not verify (forged, edited, torn, copied from another folder or written under a lost key) is ignored and counted, and is never used to skip a real event. This stops a cloned or copied workspace from supplying evidence; it is not tamper-proofing against the person using this install. Moving the folder, or opening it through a different drive mapping, UNC path or WSL route, leaves earlier records unverified until they are re-imported.
+- **Limits.** Exports over 20 MB or with more than 10,000 events are refused before anything is written. Links under `.failsafe` are refused.
+- **Not live enforcement.** This is a record of a past run; FailSafe does not intercept OpenHands.
 
 ## Files
 - `mcp-policy-audit.ts` — pure Cline/Roo/Kilo MCP config auditor: defensive parse of the shared `mcpServers` shape, reads both `autoApprove` and `alwaysAllow`, redacts env values + URL tokens + command args, and flags remote / wildcard-auto-approve / shell-capable posture as keyed risk records (no fs / no network / no secrets).
 - `openhands-observer.ts` — pure OpenHands run observer: maps SDK `ActionEvent`/`ObservationEvent` (object `action`/`observation` + string `tool_name`) into normalized records with a risk hint, version-gates observation, and encodes the tool-policy-change-forks-a-new-conversation contract.
+- `openhands-import.ts` — the signed, deduplicated evidence store; `openhands-signing.ts` — the Secret Storage key and per-record HMAC; `openhands-evidence.ts` — the verified, sanitized timeline reader
+- command logic: `src/extension/openhands-import-command.ts`
+- tests: `src/test/integrations/agent-observe/openhands-import.test.ts`, `openhands-import.extensionHost.test.ts`
 - command: `src/extension/agent-observe-command.ts` — VS Code command wiring for `failsafe.agentAudit.run` + `failsafe.openhands.observe`
 - test: `src/test/integrations/agent-observe/agent-observe.test.ts`
 

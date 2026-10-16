@@ -38,10 +38,17 @@ _Last reviewed: 2026-06-04._
 > **Integrations-tab "Catalog" sub-view** (#167) — the command/config integrations
 > without a dedicated sub-view (Continue, Aider, OpenHands, Cline/Roo/Kilo, Linear,
 > Jira, GitHub Checks, Sentry, Teams, Slack) are surfaced as a registry-driven card
-> grid with live enabled/configured state. Source of truth:
-> `src/integrations/catalog/integration-catalog.ts` (pure, secret-safe) →
-> `GET /api/v1/integrations/catalog`. Adding/removing an integration here MUST keep
-> this index and the per-integration READMEs in sync.
+> grid. A card's status comes from the result of that integration's last real
+> call (#479): configuration alone shows "Configured · unverified"; only a recorded
+> call can make it Verified (a parsed response), Connected (reached, no response
+> contract), Failing (with a category) or Stale (older than 7 days). Evidence is
+> kept in VS Code workspace state, holds no free text, and is cleared when the
+> integration's settings or credential change. Each card also lists the
+> capabilities the adapter claims; `src/test/integrations/conformance/` holds every
+> adapter to them (#474). Source of truth:
+> `src/integrations/catalog/integration-catalog.ts` (pure, secret-safe) +
+> `integration-health.ts` → `GET /api/v1/integrations/catalog`. Adding/removing an
+> integration here MUST keep this index and the per-integration READMEs in sync.
 
 ## In review (PR open, merge-blocked by `main` ruleset)
 
