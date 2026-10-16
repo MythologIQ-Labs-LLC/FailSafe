@@ -86,4 +86,4 @@ You will have practiced all five disciplines on a task too small to break anythi
 
 ## What this isn't
 
-FailSafe Learn does **not** score you, grade you, or infer your skill level. It does **not** quiz you. It does **not** block your work. It is a small, opt-in surface that surfaces a relevant short essay when the project's state suggests one would help. Full curriculum / certification / learning-progression systems belong in FailSafe Pro or a separate extension — explicitly out of scope for this open extension.
+FailSafe Learn does **not** score you, grade you, or infer your skill level. It does **not** quiz you. It does **not** block your work. It is a small, opt-in surface that surfaces a relevant short essay when the project's state suggests one would help. Full curriculum / certification / learning-progression systems belong in a separate product or extension — explicitly out of scope for this open extension.

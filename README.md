@@ -24,35 +24,37 @@ _Local-first safety for AI coding assistants._
 
 ## 🔌 Integrations — govern your entire AI toolchain, not just the editor
 
-FailSafe turns the editor into a **governance hub** for the tools your AI agents actually use. Every integration is **local-first, opt-in, and routed through the same deterministic policy engine** that guards your edits — so connecting a tool never widens your attack surface or sends data anywhere by default. Each integration ships with its own README (`src/integrations/<name>/README.md`) and the external API names it depends on are back-cited to official docs in [`docs/integrations/INTEGRATION_DOCS_INDEX.md`](docs/integrations/INTEGRATION_DOCS_INDEX.md).
+FailSafe connects to the tools your AI agents use. Every integration is opt-in. Integrations that call an outside service stay off until you enable them in settings and store a credential with **FailSafe: Set Integration Credential**; the installers and the risk scorer do nothing until you run them. Each integration ships with its own README (`src/integrations/<name>/README.md`) and the external API names it depends on are back-cited to official docs in [`docs/integrations/INTEGRATION_DOCS_INDEX.md`](docs/integrations/INTEGRATION_DOCS_INDEX.md).
 
 **Govern the agents themselves** — run a headless coding agent through FailSafe and gate what it does:
 
 | Integration | What it does | Why it matters |
 |---|---|---|
-| 🤖 **Continue (`cn`) governed wrapper** | Run a Continue headless prompt in a disposable git worktree; its changes are held for review and reach your workspace only when you choose Apply (`FailSafe: Run Continue (governed)`). | The agent never edits your checkout through its working directory, a shell/exec allowlist is refused before it runs, and the API key never leaves the child env. Not a process sandbox: direct writes to the repository are detected, not prevented, and writes outside it are not detected. |
+| 🤖 **Continue (`cn`) governed wrapper** | Run a Continue headless prompt in a disposable git worktree; its changes are held for review and reach your workspace only when you choose Apply (`FailSafe: Run Continue (governed)`). | The agent never edits your checkout through its working directory, a shell/exec allowlist is refused before it runs, and the API key never leaves the child env. Not a process sandbox: direct writes to the repository are detected, not prevented, and writes outside it are not detected. On Windows, only a `cn.exe` or `cn.com` on PATH counts: Continue's npm shim `cn.cmd` cannot run without a shell, so an npm install is reported unavailable. |
 | 🔧 **Aider governed wrapper** | Run Aider (auto-commit off) in a disposable git worktree; its changes are held for review and reach your workspace only when you choose Apply (`FailSafe: Run Aider (governed)`). | Apply re-checks HEAD, the tree and the exact reviewed bytes before writing. Not a process sandbox: direct writes to the repository are detected, not prevented, and writes outside it are not detected. |
-| 👁️ **OpenHands run observer** | Map an exported OpenHands run into FailSafe transparency records, version-gated and read-only (`FailSafe: Import OpenHands Run (observe)`). | See what a full agent-loop runtime actually did, scored by risk — without ever mutating a live run. |
-| 🔎 **Cline / Roo / Kilo policy audit** | Scan workspace MCP/tool config and flag risky posture — remote MCP servers, wildcard auto-approval, shell-capable tools (`FailSafe: Audit Agent MCP Policy`). | Catch an over-permissioned agent before it bites; secrets in the config are redacted before any finding is recorded. |
+| 👁️ **OpenHands run preview** | Read an exported OpenHands run and report how many events it holds and how many look high-risk (`FailSafe: Import OpenHands Run (observe)`). Read-only and version-gated. | A quick look at what an agent run did. Nothing is saved yet: the events are not recorded in the FailSafe timeline (#477). |
+| 🔎 **Cline / Roo / Kilo policy audit** | Scan workspace MCP/tool config and flag risky posture — remote MCP servers, wildcard auto-approval, shell-capable tools (`FailSafe: Audit Agent MCP Policy (Cline/Roo/Kilo)`). | Catch an over-permissioned agent before it bites; secrets in the config are redacted before any finding is recorded. |
 
 **Connect your issue tracker, security, and team tooling** — govern the whole toolchain:
 
 | Integration | What it does | Why it matters |
 |---|---|---|
-| 📥 **Linear / Jira issue import** | Resolve a Linear or Jira issue URL/key to an **uncommitted intent preview** — read-only (`FailSafe: Import Linear/Jira Issue (preview)`). | Your tracker is the intent source; FailSafe pulls the ticket context so you never retype it — and nothing is created or synced without you. |
-| ✅ **GitHub PR checks** | Publish FailSafe SHIELD verdicts (PASS/WARN/VETO) as GitHub Check Runs at the merge gate (`FailSafe: Publish SHIELD Verdict to GitHub Check`). | Your governance verdict shows up **where the merge happens**, not just in the local console; fork PRs degrade to local-only. |
+| 📥 **Linear / Jira issue preview** | Fetch one Linear or Jira issue and show it as an intent preview (`FailSafe: Import Linear Issue (preview)`, `FailSafe: Import Jira Issue (preview)`). Read-only. | See the ticket's context without leaving the editor. Nothing is created, saved or synced; it is not a backlog import (#480). |
+| ✅ **GitHub advisory checks** | Publish a neutral, manual advisory Check Run on the current commit (`FailSafe: Publish Manual GitHub Advisory`). It is not a SHIELD verdict. | FailSafe can verify that a commit added a SHIELD seal, and only a verified receipt may use the SHIELD check name. No command publishes a verified SHIELD check yet. Fork PRs degrade to local-only. |
 | 🐞 **Sentry regression import** | Pull a Sentry project's unresolved issues into the risk register as runtime-regression risks (`FailSafe: Import Sentry Regressions`), with first and last release from each issue's detail. | Production failures become governed risk records tied to project / environment / release, with an exact count of what was created, updated, unchanged or failed; your triage survives re-imports. No raw event payloads, and no commit correlation. |
 | 🛡️ **SARIF security ingestion** | Import Semgrep / CodeQL / any SARIF 2.1.0 scanner output into the risk register (`FailSafe: Import SARIF Findings`). | Your security scanner stops being a separate silo — every finding becomes a *governed* risk in the same audit trail as agent decisions. |
 | 📣 **Slack / Microsoft Teams notifications** | Post VETO / L3-approval / drift events to a Slack or Teams webhook. Notify-only, off by default. | Governance becomes a **team** signal: when FailSafe blocks a risky action or queues a human approval, the right people see it in their channel. |
 | 🧮 **MCP Registry risk scoring** | Score any MCP server locally — read-only, with field sanitization — before you trust it. | The MCP ecosystem is exploding and anything can claim to be a tool server. Adopt servers on **evidence, not vibes**. |
-| 📦 **MCP Catalog installers** | One-click, risk-scored installs of **Context7**, **Mermaid Chart**, and **Playwright MCP** into your `.mcp.json` (`FailSafe: Install MCP Integration (governed)`). | Governed installs of tools that make your agents measurably better, with the trust check built in. |
+| 📦 **MCP Catalog installers** | Risk-scored installs of **Context7**, **Mermaid Chart**, and **Playwright MCP** into your `.mcp.json`, written only after you confirm (`FailSafe: Install MCP Integration (governed)`). | Governed installs of tools that make your agents measurably better, with the trust check built in. |
 | 🧠 **Bicameral MCP** | Detect, connect, and ratify architecture *decision* records and their drift inline. | Every Bicameral tool call passes through FailSafe's universal interceptor — the reasoning behind your system stays as governed as the code. |
-| 🎨 **Open Design** | Observe Open Design agent runs and act on them via the L3-gated `create_artifact`. | Design tooling gets the same human-in-the-loop guarantee as everything else FailSafe touches. |
-| 🧰 **Agent Governance Toolkit installer** | Auto-detect your workspace environment and serve the matching, registry-verified AGT installer. | One governed entry point to instrument whatever stack you actually run. |
+| 🎨 **Open Design** | Observe Open Design agent runs and read its projects through a read-only MCP connection. | Artifact creation (`create_artifact`) is refused in this release, even after an L3 approval, until approvals can be verified where the call is made (#481). |
+| 🧰 **Agent Governance Toolkit installer** | Detect your workspace environment and pre-fill the matching AGT install command in a terminal; you run it. | One entry point to the right per-language or per-host package. |
 
 Under the hood, a **Tier 1 supply-chain CI baseline** (least-privilege workflow tokens, SHA-pinned Actions, dependency review, CODEOWNERS) hardens the repository itself against Shai-Hulud-class attacks.
 
-**Everything above is disabled by default and runs locally — no network call until you turn one on.** Open the **Integrations** tab to connect.
+**Agent Marketplace:** install, update and scan are disabled until isolated setup and fail-closed scanning land (#468, #469).
+
+Open the **Integrations** tab to configure an integration. The tab shows whether each one is enabled and configured; it does not test the connection.
 
 ---
 
@@ -76,7 +78,7 @@ Under the hood, a **Tier 1 supply-chain CI baseline** (least-privilege workflow 
 - **An interrupted save no longer corrupts the risk register.** `risks.json` is replaced only by a complete file.
 - **Two VS Code windows can no longer overwrite each other's risk changes.** Every update to `risks.json` takes a short lock and re-reads the file first, and re-imported findings keep the triage status you set.
 - **The SOA ledger notices when it is rolled back or swapped.** Every column of a new row is sealed, and the ledger's head is anchored in VS Code Secure Storage, so emptying, truncating or replacing the ledger is reported.
-- **A SHIELD check on GitHub is tied to the commit that sealed it.** FailSafe publishes it only after confirming, from the governance ledger in Git history, that this exact commit added the seal.
+- **Only a commit-bound receipt may use the SHIELD check name on GitHub.** FailSafe can confirm, from the governance ledger in Git history, that an exact commit added a seal. No command publishes a verified SHIELD check yet. **FailSafe: Publish Manual GitHub Advisory** posts a neutral advisory.
 - **FailSafe runs Git only from a checked location.** On Windows, a `git.exe` placed in an opened folder could run instead of Git; FailSafe now uses a verified Git outside your workspace and never runs Git through a shell.
 - Open Design 0.24.1 works again, and the Open Design client can no longer approve its own artifact writes.
 

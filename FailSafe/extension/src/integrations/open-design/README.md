@@ -2,11 +2,11 @@
 
 > **Compatibility warning (2026-10-13):** This adapter was implemented against upstream `nexu-io/open-design@abe72af` and is **not** certified for current upstream `main@1343f374` or published `open-design-v0.24.1`. Current upstream MCP adds brief, project-creation, skill/plugin, authentication, and run-control tools beyond the historical 10-tool matrix. Treat those as **unverified and unavailable** until schema, authority and runtime tests are completed. The interim #481 containment disables `create_artifact`, including previously approved execution; do not represent it as functioning L3-gated creation. See #474 and #481.
 
-> One-line: attributes agent file-edits to nexu-io Open Design and connects to its local daemon as a read-only MCP + SSE observer — so design-tool activity is governed and provenance-tagged, with the one non-destructive write tool admitted only through L3 approval.
+> One-line: attributes agent file-edits to nexu-io Open Design and connects to its local daemon as a read-only MCP + SSE observer — so design-tool activity is governed and provenance-tagged, with every write tool refused. `create_artifact` is refused in this release, even after an L3 approval (#481).
 
 - **Pattern:** mcp / observe
-- **Direction:** read-only (provenance detection, read-only MCP tools, per-run SSE) + a single L3-gated write
-- **Status:** shipped v5.x (v1 file-path provenance; v1.1 MCP + SSE + daemon probe; v1.2 L3-gated `create_artifact`, B-OD-8)
+- **Direction:** read-only (provenance detection, read-only MCP tools, per-run SSE)
+- **Status:** shipped v5.x (v1 file-path provenance; v1.1 MCP + SSE + daemon probe). The v1.2 L3-gated `create_artifact` path (B-OD-8) is refused by the client until a verified approval receipt can be checked where the call is made (#481).
 - **Official docs:** https://github.com/nexu-io/open-design
 - **Backlog:** B-OD-8, B-INT-4
 
@@ -31,7 +31,7 @@ Off by default; no network/process unless enabled. **Provenance** detection is p
 - `OpenDesignProvenanceDetector.ts` — `IAgentProvenanceDetector` wrapper over the pure extractor.
 - `OpenDesignMcpClient.ts` — `extends McpClientHost`; read-only `preCallGate` allowlist, runtime guard, and the B-OD-8 one-shot-token `create_artifact` gate.
 - `OpenDesignMcpAllowlist.ts` — static tool classification (read-only / write / destructive / L3-gated), back-cited to upstream `mcp.ts` lines; `OPEN_DESIGN_CREATE_ARTIFACT_KIND`.
-- `OpenDesignL3Executor.ts` — buffers create_artifact, executes on APPROVED L3, anchors a `USER_OVERRIDE` ledger entry.
+- `OpenDesignL3Executor.ts` — buffers create_artifact and, on an APPROVED L3 decision, calls the client, which refuses the write (#481); the executor records the failure in the ledger.
 - `OpenDesignDaemonProbe.ts` — TTL-cached `GET /api/version` liveness probe (discriminated failures; accepts top-level or nested version).
 - `OpenDesignLaunchSpec.ts` — parses and validates the daemon's `GET /api/mcp/install-info` launch spec; renders the consent command line.
 - `OpenDesignSseClient.ts` — per-run SSE subscribe (`GET /api/runs/<runId>/events`) with typed events + backoff reconnect.
