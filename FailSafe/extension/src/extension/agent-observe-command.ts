@@ -16,6 +16,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { auditMcpConfig } from '../integrations/agent-observe/mcp-policy-audit';
 import { observeOpenHandsRun } from '../integrations/agent-observe/openhands-observer';
+import { persistOpenHandsObservations } from '../integrations/agent-observe/openhands-import';
 import { RiskRegisterManager } from '../roadmap/services/RiskRegisterManager';
 
 /** Best-effort known MCP/tool config locations (workspace-relative). `.mcp.json`
@@ -107,7 +108,12 @@ export function registerAgentObserveCommands(context: vscode.ExtensionContext, w
       const result = observeOpenHandsRun(events, version);
       if (!result.supported) { vscode.window.showWarningMessage(`OpenHands observe: ${result.degraded}`); return; }
       const high = result.records.filter((r) => r.riskHint === 'high').length;
-      vscode.window.showInformationMessage(`OpenHands observe: mapped ${result.records.length} event(s) (${high} high-risk) from ${vscode.workspace.asRelativePath(picked[0].fsPath)}.`);
+      try {
+        const saved = persistOpenHandsObservations(workspaceRoot, picked[0].fsPath, result.records);
+        vscode.window.showInformationMessage(`OpenHands historical import: persisted ${saved.imported} event(s), skipped ${saved.duplicates} duplicate(s) (${high} high-risk observed). Not live interception.`);
+      } catch (error) {
+        vscode.window.showErrorMessage(`OpenHands import NOT saved: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }),
   );
 }
