@@ -7,6 +7,7 @@
 
 import * as vscode from 'vscode';
 import { configureTrustedGit, workspaceDirsFor } from '../shared/git/trustedGit';
+import { configureTrustedExecutables } from '../shared/exec/trustedExecutable';
 
 /** The subset of the vscode.git extension API read here (extensions/git/src/api/git.d.ts). */
 interface GitExtensionExports {
@@ -34,7 +35,10 @@ export function configureTrustedGitFromVscode(context: vscode.ExtensionContext):
   // a folder change adds to the excluded set and never replaces it.
   const activationRoot = folderPaths()[0];
   configureTrustedGit({ workspaceDirs: workspaceDirsFor(activationRoot, folderPaths()), hint: readGitExtensionPath() });
+  // B211: gh, PowerShell, Python, the scanners and the installers exclude the same folders.
+  configureTrustedExecutables({ workspaceDirs: workspaceDirsFor(activationRoot, folderPaths()) });
   context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(() => {
     configureTrustedGit({ workspaceDirs: workspaceDirsFor(activationRoot, folderPaths()), hint: readGitExtensionPath() });
+    configureTrustedExecutables({ workspaceDirs: workspaceDirsFor(activationRoot, folderPaths()) });
   }));
 }
