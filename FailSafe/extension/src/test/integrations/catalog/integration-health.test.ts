@@ -172,6 +172,24 @@ suite('health from real adapter outcomes (#479 H4)', () => {
     assert.deepEqual(healthFromSarifImport(importSarifText(sarif(one), () => undefined)), ['contract-verified']);
     const ok = importSarifText(sarif(one), () => undefined);
     assert.deepEqual(healthFromSarifImport({ ...ok, write: { failed: 0, chunksFailed: 1 } }), ['failing', 'storage']);
+    // Lane C's real ImportWriteOutcome: a batch whose register update throws
+    // fails its chunk; the import reports it in `write` and maps to storage.
+    const chunkLost = importSarifText(sarif(one), () => undefined, () => { throw new Error('lock timeout'); });
+    assert.equal(chunkLost.write.chunksFailed, 1);
+    assert.deepEqual(healthFromSarifImport(chunkLost), ['failing', 'storage']);
+  });
+
+  test('Lane C write outcome: a failed Sentry or MCP chunk maps to storage through the real importers', async () => {
+    const lost = await importSentryRisks(SENTRY_OPTS, server([[issue('31'), issue('32')]]).get,
+      { upsertWith: () => 'created', batch: () => { throw new Error('lock timeout'); } }, sentryContext());
+    assert.equal(lost.ok, true);
+    assert.equal(lost.write?.chunksFailed, 1);
+    assert.deepEqual(healthFromSentryImport(lost), ['failing', 'storage']);
+    const files: Record<string, string> = { [path.join('/ws', '.mcp.json')]: JSON.stringify({ mcpServers: { s: { command: 'bash' } } }) };
+    const read = (f: string) => { if (files[f] === undefined) throw new Error('ENOENT'); return files[f]; };
+    const scan = runMcpPolicyScan('/ws', () => undefined, read, () => { throw new Error('lock timeout'); });
+    assert.equal(scan.write.chunksFailed, 1);
+    assert.deepEqual(healthFromMcpScan(scan), ['failing', 'storage']);
   });
 
   test('GitHub: created run is verified; refusal, bad base URL, auth and transport map', async () => {

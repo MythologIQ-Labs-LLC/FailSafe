@@ -56,21 +56,27 @@ function sourceFiles(dir, out = []) {
   return out;
 }
 
-test("F1 OpenHands: an import that saves nothing is documented as saving nothing", () => {
+test("F1 OpenHands: the docs say whether the import saves anything", () => {
   const text = read(path.join(SRC, "extension", "agent-observe-command.ts"));
   const start = text.indexOf("registerCommand('failsafe.openhands.observe'");
   assert.ok(start >= 0, "anchor: the failsafe.openhands.observe command is gone");
   const next = text.indexOf("registerCommand(", start + 1);
   const body = text.slice(start, next < 0 ? text.length : next);
-  assert.ok(body.includes("observeOpenHandsRun("), "anchor: the command no longer calls observeOpenHandsRun");
-  // Lane B (#507) extends this marker set when the import starts persisting.
-  const persists = /\b(AgentTimelineService|importOpenHandsRun)\b|openhands-import/.test(body);
-  assertParity({
-    holds: !persists,
-    phrase: "Nothing is saved yet",
-    overclaim: "into FailSafe transparency records",
-    targets: [...READMES.map((f) => rowOf(f, /OpenHands/)), whole(integrationReadme("agent-observe"))],
-  });
+  // Since #477 the handler delegates to openhands-import-command.ts; follow it.
+  let logic = body;
+  if (body.includes("openHandsImportFromVscode(")) {
+    const cmd = read(path.join(SRC, "extension", "openhands-import-command.ts"));
+    const s0 = cmd.indexOf("export async function runOpenHandsImport(");
+    assert.ok(s0 >= 0, "anchor: runOpenHandsImport is gone");
+    const s1 = cmd.indexOf("\nfunction ", s0);
+    logic = cmd.slice(s0, s1 < 0 ? cmd.length : s1);
+  }
+  assert.ok(logic.includes("observeOpenHandsRun("), "anchor: the import no longer calls observeOpenHandsRun");
+  // Lane B (#477): the import persists when it calls persistOpenHandsObservations.
+  const persists = /\bpersistOpenHandsObservations\(/.test(logic) || /\b(AgentTimelineService|importOpenHandsRun)\b/.test(logic);
+  const targets = [...READMES.map((f) => rowOf(f, /OpenHands/)), whole(integrationReadme("agent-observe"))];
+  assertParity({ holds: !persists, phrase: "Nothing is saved yet", overclaim: "into FailSafe transparency records", targets });
+  assertParity({ holds: persists, phrase: "after you confirm", overclaim: "live interception of", targets });
 });
 
 test("F2 GitHub: with no verified SHIELD publisher wired, no doc claims one", () => {
