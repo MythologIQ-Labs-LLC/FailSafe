@@ -9,6 +9,7 @@
 
 import { execFileSync } from 'child_process';
 import { trustedGitPath } from '../../shared/git/trustedGit';
+import { GH, trustedExecutablePath } from '../../shared/exec/trustedExecutable';
 import * as fs from 'fs';
 import * as path from 'path';
 import type { ManifestSources, GeneratorPr } from './manifest-generator';
@@ -30,7 +31,8 @@ export function resolveRepoSlug(workspaceRoot: string): string {
 /** Merged PRs via `gh pr list` (read-only metadata). Empty on any failure. */
 export function fetchMergedPrs(repo: string): GeneratorPr[] {
   try {
-    const out = execFileSync('gh', [
+    // B211: the child inherits the process cwd, so the resolver excludes it.
+    const out = execFileSync(trustedExecutablePath(GH), [ // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute gh path, argv array, no shell
       'pr', 'list', '-R', repo, '--state', 'merged', '--limit', '300',
       '--json', 'number,title,mergedAt',
     ], { encoding: 'utf-8', timeout: 20000, maxBuffer: 16 * 1024 * 1024 });

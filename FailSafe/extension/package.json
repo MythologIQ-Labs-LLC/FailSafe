@@ -377,7 +377,8 @@
         "failsafe.qorlogic.pythonPath": {
           "type": "string",
           "default": "",
-          "description": "Override the Python interpreter used to install qor-logic. Leave empty to auto-detect (VS Code Python extension, then python3/python/py -3 probe)."
+          "scope": "machine",
+          "description": "Override the Python interpreter used to install qor-logic. Leave empty to auto-detect (VS Code Python extension, then python3/python/py -3 probe). Read only from user settings, and an interpreter inside a workspace folder is never used: set an interpreter outside the workspace here."
         },
         "failsafe.integrations.openDesign.enabled": {
           "type": "boolean",
@@ -708,7 +709,8 @@
         "failsafe.bootstrap.autoInstallGit": {
           "type": "boolean",
           "default": false,
-          "description": "Attempt a system-wide Git install at activation when Git is missing. Off by default. FailSafe never initializes a repository without asking first."
+          "scope": "machine",
+          "description": "Attempt a system-wide Git install at activation when Git is missing. Off by default. FailSafe never initializes a repository without asking first. Read only from user settings; a workspace cannot turn it on."
         },
         "failsafe.integrations.bicameral.command": {
           "type": "string",
