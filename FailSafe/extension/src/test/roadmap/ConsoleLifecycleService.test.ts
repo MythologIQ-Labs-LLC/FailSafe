@@ -59,7 +59,7 @@ async function occupyRange(): Promise<{ base: number; held: net.Server[] }> {
   throw new Error('could not occupy eleven consecutive ports');
 }
 
-function fixture(port = 0) {
+function fixture(port = 0, host = '127.0.0.1') {
   const observations: string[] = [];
   const checkpoints: Array<{ status: string; policyVerdict: string; payload: any }> = [];
   const app = {
@@ -77,7 +77,7 @@ function fixture(port = 0) {
     recordCheckpoint: (cp: { status: string; policyVerdict: string; payload: any }) => { checkpoints.push(cp); },
   };
   const deps = {
-    app, port, host: '127.0.0.1', workspaceRoot: path.join(os.tmpdir(), 'failsafe-no-ledger'),
+    app, port, host, workspaceRoot: path.join(os.tmpdir(), 'failsafe-no-ledger'),
     wsManager, hub, planManager: { getActivePlan: () => null },
     broadcast: () => {},
   };
@@ -150,7 +150,7 @@ suite('ConsoleLifecycleService listener evidence (FailSafe #471)', () => {
 
   test('C1 the startup checkpoint is proposed, not validated, and names the bound listener (v6.0.8 LD1)', async () => {
     await withTempHome(async (home) => {
-      const { service, checkpoints } = fixture();
+      const { service, checkpoints } = fixture(0, 'localhost');
       try {
         await service.start();
         const address = service.getServer()!.address() as net.AddressInfo;
@@ -161,7 +161,9 @@ suite('ConsoleLifecycleService listener evidence (FailSafe #471)', () => {
         assert.equal(cp.payload.transport, 'listening');
         assert.equal(cp.payload.port, address.port);
         assert.equal(cp.payload.port, service.getPort());
+        // Configured as 'localhost': the record names the address actually bound.
         assert.equal(cp.payload.host, address.address);
+        assert.notEqual(cp.payload.host, 'localhost');
         const active = registryEntries(home).filter((e) => e.status === 'active');
         assert.deepEqual(active.map((e) => e.port), [address.port]);
       } finally { service.stop(); }
