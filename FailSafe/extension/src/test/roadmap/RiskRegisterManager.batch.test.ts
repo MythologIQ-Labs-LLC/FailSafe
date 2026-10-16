@@ -47,6 +47,7 @@ suite('Risk register batched imports (v6.0.8 #528 LD-5)', function () {
   let dir = '';
   let renames = 0;
   // Patch the fs module object itself: compiled modules read fs.renameSync through it at call time.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const fsModule = require('fs') as { renameSync: typeof fs.renameSync };
   const realRename = fsModule.renameSync;
   const file = () => path.join(dir, '.failsafe', 'risks', 'risks.json');
