@@ -24,6 +24,26 @@ const ghExec = (args, opts = {}) => execFileSync("gh", args, { encoding: opts.bi
 const DRAFT_LIST_DELAYS_MS = [1000, 2000, 4000, 8000, 15000];
 const realSleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+const stop = (message) => Object.assign(new Error(message), { stop: true });
+
+/**
+ * The draft this run creates. The tag must exist on the remote (the API has
+ * no --verify-tag); the response must be a draft for this tag with an id.
+ */
+function createDraftRelease(repo, exec, tag, notes) {
+  try {
+    exec(["api", `repos/${repo}/git/ref/tags/${tag}`]);
+  } catch (error) {
+    throw stop(`tag ${tag} does not exist on the remote (${error.message}); no release was created`);
+  }
+  const body = notes && fs.existsSync(notes) && fs.statSync(notes).size > 0 ? ["-F", `body=@${notes}`] : ["-F", "generate_release_notes=true"];
+  const made = JSON.parse(exec(["api", "-X", "POST", `repos/${repo}/releases`, "-f", `tag_name=${tag}`, "-f", `name=${tag} — FailSafe`, "-F", "draft=true", ...body]));
+  if (!made || made.draft !== true || made.tag_name !== tag || made.id === undefined) {
+    throw stop(`creating the draft for ${tag} returned ${JSON.stringify({ id: made?.id, tag: made?.tag_name, draft: made?.draft })}, not a draft for ${tag}`);
+  }
+  return made;
+}
+
 /**
  * gh-backed release client. `exec` and `sleep` are injectable so the argument
  * contract and the draft-listing wait are testable.
@@ -35,28 +55,30 @@ function ghClient(repo, exec = ghExec, { sleep = realSleep, draftListDelaysMs = 
     listReleases: async () => pages(`repos/${repo}/releases?per_page=100`),
     listAssets: async (id) => pages(`repos/${repo}/releases/${id}/assets?per_page=100`),
     createDraft: async (tag, notes) => {
-      const notesArgs = notes && fs.existsSync(notes) && fs.statSync(notes).size > 0 ? ["--notes-file", notes] : ["--generate-notes"];
-      exec(["release", "create", tag, "--repo", repo, "--draft", "--verify-tag", "--title", `${tag} — FailSafe`, ...notesArgs]);
-      // Zero matches may be listing lag, so list again; more than one is never retried.
-      let created = await draftsFor(tag);
+      const made = createDraftRelease(repo, exec, tag, notes);
+      // Not listed yet may be listing lag, so list again; any other release for the tag stops at once.
       let waited = 0;
-      for (const delay of draftListDelaysMs) {
-        if (created.length !== 0) break;
-        await sleep(delay);
-        waited += delay;
-        created = await draftsFor(tag);
+      for (let listing = 0; ; listing++) {
+        const forTag = await draftsFor(tag);
+        const others = forTag.filter((r) => r.id !== made.id);
+        if (others.length) {
+          throw stop(`expected one release for ${tag} after creating the draft, found ${others.length + 1} (draft ${made.id}, also ${others.map((r) => r.id).join(", ")})`);
+        }
+        const mine = forTag.find((r) => r.id === made.id);
+        if (mine) return mine;
+        if (listing >= draftListDelaysMs.length) {
+          throw stop(`expected one release for ${tag} after creating the draft, found 0 (${listing + 1} listings over ${waited / 1000} s)`);
+        }
+        await sleep(draftListDelaysMs[listing]);
+        waited += draftListDelaysMs[listing];
       }
-      if (created.length !== 1) {
-        const lag = created.length === 0 ? ` (${draftListDelaysMs.length + 1} listings over ${waited / 1000} s)` : "";
-        throw Object.assign(new Error(`expected one release for ${tag} after creating the draft, found ${created.length}${lag}`), { stop: true });
-      }
-      return created[0];
     },
     deleteAsset: async (id) => exec(["api", "-X", "DELETE", `repos/${repo}/releases/assets/${id}`]),
     // No --clobber: an existing name is never replaced (planRelease stopped on any conflict).
     uploadAsset: async (_id, file, tag) => exec(["release", "upload", tag, file, "--repo", repo]),
     downloadAsset: async (asset) => exec(["api", "-H", "Accept: application/octet-stream", `repos/${repo}/releases/assets/${asset.id}`], { binary: true }),
-    publish: async (_id, tag) => exec(["release", "edit", tag, "--repo", repo, "--draft=false", "--latest"]),
+    // Published by id, so only the release this run created and checked is published.
+    publish: async (id) => exec(["api", "-X", "PATCH", `repos/${repo}/releases/${id}`, "-F", "draft=false", "-f", "make_latest=true"]),
   };
 }
 

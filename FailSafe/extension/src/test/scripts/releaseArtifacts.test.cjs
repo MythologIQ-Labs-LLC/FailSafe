@@ -307,20 +307,62 @@ test("publish history: a step cancelled part-way counts, and a renamed job still
   assert.equal(publishStepStarted([job("Publish (renamed)", [step("in_progress", null)])]), true);
 });
 
-test("gh argument contract: upload never clobbers, the draft is created with --verify-tag, publish undrafts", async () => {
+test("gh argument contract: the tag is checked, the draft is created through the API, upload never clobbers, publish updates the id (v6.0.8 LD-4)", async () => {
   const seen = [];
-  const exec = (args) => { seen.push(args); return args[0] === "api" ? JSON.stringify([[{ id: 5, tag_name: TAG, draft: true }]]) : ""; };
+  const verb = (a) => (a.includes("-X") ? a[a.indexOf("-X") + 1] : "GET");
+  const exec = (args) => {
+    seen.push(args);
+    if (args[0] !== "api") return "";
+    if (verb(args) === "POST") return JSON.stringify({ id: 5, tag_name: TAG, draft: true });
+    if (verb(args) === "PATCH" || String(args[1]).includes("/git/ref/tags/")) return "{}";
+    return JSON.stringify([[{ id: 5, tag_name: TAG, draft: true }]]);
+  };
   const c = ghClient("o/r", exec);
   await c.createDraft(TAG, undefined);
   await c.uploadAsset(5, "/x/a.vsix", TAG);
   await c.publish(5, TAG);
-  const create = seen.find((a) => a[0] === "release" && a[1] === "create");
+  const ref = seen.findIndex((a) => a[0] === "api" && a[1] === `repos/o/r/git/ref/tags/${TAG}`);
+  const post = seen.findIndex((a) => a[0] === "api" && verb(a) === "POST" && a.includes("repos/o/r/releases"));
+  assert.ok(ref >= 0 && post > ref, "the tag ref is checked before the draft is created");
+  assert.ok(seen[post].includes("draft=true") && seen[post].includes("generate_release_notes=true") && seen[post].includes(`tag_name=${TAG}`));
   const upload = seen.find((a) => a[0] === "release" && a[1] === "upload");
-  const edit = seen.find((a) => a[0] === "release" && a[1] === "edit");
-  assert.ok(create.includes("--draft") && create.includes("--verify-tag") && create.includes("--generate-notes"));
   assert.ok(!upload.includes("--clobber"));
-  assert.ok(edit.includes("--draft=false") && edit.includes("--latest"));
-  assert.ok(seen.filter((a) => a[0] === "api").every((a) => a.includes("--paginate")));
+  const patch = seen.find((a) => a[0] === "api" && verb(a) === "PATCH");
+  assert.ok(patch.includes("repos/o/r/releases/5") && patch.includes("draft=false") && patch.includes("make_latest=true"));
+  assert.equal(seen.filter((a) => a[0] === "release" && a[1] !== "upload").length, 0, "no tag-addressed create or edit");
+  assert.ok(seen.filter((a) => a[0] === "api" && String(a.find((x) => String(x).includes("/releases?")) ?? "")).every((a) => a.includes("--paginate")));
+});
+
+// v6.0.8 LD-4.5: the tag's releases are re-listed before each upload.
+function relistingClient({ addAfterFirstUpload = false, failSecondListing = false } = {}) {
+  const client = memoryClient();
+  let listings = 0;
+  const listReleases = client.listReleases;
+  client.listReleases = async () => {
+    listings++;
+    if (failSecondListing && listings === 2) throw new Error("HTTP 502 listing releases");
+    return listReleases();
+  };
+  const uploadAsset = client.uploadAsset;
+  let uploads = 0;
+  client.uploadAsset = async (...args) => {
+    await uploadAsset(...args);
+    uploads++;
+    if (addAfterFirstUpload && uploads === 1) (await listReleases()).push({ id: 99, tag_name: TAG, draft: false, assets: [] });
+  };
+  return client;
+}
+
+test("G8 a second release for the tag that appears during the uploads stops the run before the next upload", async () => {
+  const client = relistingClient({ addAfterFirstUpload: true });
+  await assert.rejects(publishRelease({ dir: makeSet(), tag: TAG }, client), /another release for v6\.0\.7 \(99\)/);
+  assert.deepEqual(writes(client), ["createDraft", "uploadAsset"]);
+});
+
+test("G8b a re-listing that fails stops the run with nothing more uploaded", async () => {
+  const client = relistingClient({ failSecondListing: true });
+  await assert.rejects(publishRelease({ dir: makeSet(), tag: TAG }, client), /HTTP 502/);
+  assert.deepEqual(writes(client), ["createDraft"]);
 });
 
 test("a published release holding an incomplete upload stops with zero writes", async () => {
