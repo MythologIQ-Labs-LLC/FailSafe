@@ -35,14 +35,15 @@ suite('TimelineRenderer (FX399 + FX400 + FX401 + FX402)', () => {
   setup(() => { cleanup = setupDom().cleanup; });
   teardown(() => cleanup());
 
-  test('FX399 render — emits all 5 category filter buttons (All/Verdict/Trust/Approval/DiffGuard)', async () => {
+  test('FX399 render — emits all 6 category filter buttons (All/Verdict/Trust/Approval/DiffGuard/Imported)', async () => {
     stubFetch([]);
     const r = new TimelineRenderer('tl-root');
     await r.render();
     const cats = document.querySelectorAll('.cc-tl-cat');
-    assert.equal(cats.length, 5);
+    assert.equal(cats.length, 6);
     const labels = Array.from(cats).map(b => b.textContent);
-    assert.deepEqual(labels, ['All', 'Verdict', 'Trust', 'Approval', 'DiffGuard']);
+    // #477: Imported (evidence from exported agent runs) is the last filter.
+    assert.deepEqual(labels, ['All', 'Verdict', 'Trust', 'Approval', 'DiffGuard', 'Imported']);
   });
 
   test('FX400 render — emits 3 severity toggles (info/warning/error)', async () => {

@@ -16,10 +16,8 @@
 
 import * as https from 'https';
 import { isPublishable, parseRepoSlug, type CheckRunPayload } from './github-checks-map';
-import { INVALID_API_BASE_ERROR, postCheckRun, toWirePayload } from './check-run-transport';
-
-/** The refusal publishCheckRunPayload returns for a name and conclusion FailSafe never publishes. */
-export const NOT_PUBLISHABLE_ERROR = 'Check run refused: this name and conclusion are not publishable by FailSafe.';
+import { postCheckRun, toWirePayload } from './check-run-transport';
+import { INVALID_API_BASE_ERROR, NOT_PUBLISHABLE_ERROR } from './check-run-errors';
 
 const GITHUB_API = 'https://api.github.com';
 
