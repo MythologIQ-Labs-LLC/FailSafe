@@ -18,8 +18,19 @@ import { killProcessTree } from '../../shared/exec/killTree';
 
 export interface GitResult { code: number | null; stdout: Buffer; stderr: string; timedOut?: boolean }
 
-/** `timeoutMs`: on expiry the git tree is killed (if git is still running) and the read settles timed out (B213). */
-export interface GitRunOptions { input?: Buffer; env?: Record<string, string>; timeoutMs?: number }
+/** Arms `fire` after `ms`; returns a cancel. */
+export type ScheduleTimeout = (fire: () => void, ms: number) => () => void;
+
+const scheduleWithTimer: ScheduleTimeout = (fire, ms) => {
+  const t = setTimeout(fire, ms);
+  return () => clearTimeout(t);
+};
+
+/**
+ * `timeoutMs`: on expiry the git tree is killed (if git is still running) and the read settles timed out (B213).
+ * `scheduleTimeout`: test seam for arming that expiry (default setTimeout); no production caller passes it.
+ */
+export interface GitRunOptions { input?: Buffer; env?: Record<string, string>; timeoutMs?: number; scheduleTimeout?: ScheduleTimeout }
 
 export interface SafeGit {
   /** Run git with the hardened config; throws GitCommandError on a non-zero exit. */
@@ -105,11 +116,11 @@ export function createSafeGit(repo: string): SafeGit {
     const out: Buffer[] = [];
     let err = '';
     let settled = false;
-    let timer: NodeJS.Timeout | undefined;
+    let cancelTimeout: (() => void) | undefined;
     const settle = (r: GitResult): void => {
       if (settled) return;
       settled = true;
-      if (timer) clearTimeout(timer);
+      if (cancelTimeout) cancelTimeout();
       resolve(r);
     };
     child.stdout.on('data', (c: Buffer) => out.push(c));
@@ -117,7 +128,9 @@ export function createSafeGit(repo: string): SafeGit {
     child.on('error', (e) => settle({ code: 127, stdout: Buffer.alloc(0), stderr: String(e) }));
     child.on('close', (code) => settle({ code, stdout: Buffer.concat(out), stderr: err }));
     if (timeoutMs !== undefined) {
-      timer = setTimeout(() => {
+      cancelTimeout = (opts?.scheduleTimeout ?? scheduleWithTimer)(() => {
+        // A fire that could not be cancelled in time finds the read settled and does nothing.
+        if (settled) return;
         // killProcessTree kills only a live git; one that exited while a descendant holds its pipes is left.
         killProcessTree(child);
         settle({ code: null, stdout: Buffer.concat(out), stderr: err, timedOut: true });

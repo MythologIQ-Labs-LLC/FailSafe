@@ -53,7 +53,7 @@ import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { createSafeGit } from '../agent-cli/git-safety';
+import { createSafeGit, type ScheduleTimeout } from '../agent-cli/git-safety';
 import type { ShieldEvidenceSource } from './shield-evidence';
 
 const SHA = /^[0-9a-f]{40}$/;
@@ -183,6 +183,8 @@ function scrubbedEnv(ownDir: string): Record<string, string> {
 export interface WorkspaceEvidenceOptions {
   /** Per-call git timeout, an integer from 1 to 30000 ms (default 30000). */
   gitTimeoutMs?: number;
+  /** Test seam: arms each read's timeout (default setTimeout); no production caller passes it. */
+  scheduleGitTimeout?: ScheduleTimeout;
 }
 
 export function createWorkspaceEvidenceSource(
@@ -197,7 +199,7 @@ export function createWorkspaceEvidenceSource(
   const ownDir = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-shield-src-'));
   const env = scrubbedEnv(ownDir);
   const rawRun = async (args: string[]): Promise<{ code: number | null; out: Buffer }> => {
-    const r = await git.tryRun(root, ['-c', 'core.commitGraph=false', ...args], { env, timeoutMs });
+    const r = await git.tryRun(root, ['-c', 'core.commitGraph=false', ...args], { env, timeoutMs, scheduleTimeout: opts.scheduleGitTimeout });
     if (r.timedOut) throw new Error('git read timed out');
     return { code: r.code, out: r.stdout };
   };

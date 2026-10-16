@@ -3,6 +3,7 @@
 import { strict as assert } from 'assert';
 import * as cp from 'child_process';
 import cpModule = require('child_process');
+import killTreeModule = require('../../../shared/exec/killTree');
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -525,12 +526,51 @@ suite('workspace-evidence-source: ledger history search (#476 N1)', function () 
     for (const bad of [0, 30001, 1.5, -1, Number.NaN]) {
       assert.throws(() => createWorkspaceEvidenceSource(r, { gitTimeoutMs: bad }), String(bad));
     }
-    const { source, dispose } = createWorkspaceEvidenceSource(r, { gitTimeoutMs: 1 });
+    // LD18: the timeout fires in a microtask, which Node always runs before any I/O
+    // callback, so git's exit can never settle first; a real 1 ms timer can lose to a
+    // fast git on Linux.
+    const armed: number[] = [];
+    const { source, dispose } = createWorkspaceEvidenceSource(r, {
+      gitTimeoutMs: 1,
+      scheduleGitTimeout: (fire, ms) => {
+        armed.push(ms);
+        let live = true;
+        queueMicrotask(() => { if (live) fire(); });
+        return () => { live = false; };
+      },
+    });
     try {
-      await assert.rejects(source.headSha());
+      await assert.rejects(source.headSha(), /git read timed out/);
+      assert.deepEqual(armed, [1], 'the first read armed one 1 ms timeout; the failed preflight starts no other git');
       const v = await verifyShieldReceipt(source, keysOf(RECEIPT_KEY), chainOf('OK'), DEFAULT_SHIELD_POLICY, 'api.github.com', NOW);
       assert.equal(v.kind === 'verified' ? 'verified' : `${v.kind}:${v.reason}`, 'neutral:evidence-source-error');
     } finally { dispose(); }
+  });
+
+  test('a timeout that fires after git has finished kills nothing and leaves the result', async () => {
+    const r = mk('fs-n1-late-');
+    const head = commitLedger(r, 'base\n', 'base');
+    const fires: Array<() => void> = [];
+    let arms = 0;
+    let cancels = 0;
+    let kills = 0;
+    const killTree = killTreeModule as { killProcessTree: (...a: unknown[]) => boolean };
+    const realKill = killTree.killProcessTree;
+    killTree.killProcessTree = (...a: unknown[]) => { kills += 1; return realKill(...a); };
+    const { source, dispose } = createWorkspaceEvidenceSource(r, {
+      gitTimeoutMs: 1,
+      scheduleGitTimeout: (fire) => { arms += 1; fires.push(fire); return () => { cancels += 1; }; },
+    });
+    try {
+      assert.equal(await source.headSha(), head);
+      assert.ok(arms >= 1, 'every read armed a timeout');
+      assert.equal(cancels, arms, 'each settled read cancelled its timeout');
+      for (const fire of fires) fire(); // a timer that could not be cancelled in time
+      assert.equal(kills, 0, 'a late fire finds the read settled and kills nothing');
+    } finally {
+      killTree.killProcessTree = realKill;
+      dispose();
+    }
   });
 
   test('end to end: A verifies; Y2 restoring the seal is Rejected, also behind a committed .gitattributes -diff', async () => {
