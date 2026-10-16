@@ -88,7 +88,7 @@ FailSafe ships with 19 governance skills:
 ### Via Command Palette
 
 ```
-FailSafe: Install QorLogic Skills (defaults)
+FailSafe: Install Qor-Logic Skills (defaults)
 ```
 
 Installs `claude` and `codex` hosts at `repo` scope without prompting.
@@ -104,7 +104,7 @@ Settings tab → **Install QorLogic Skills** button:
 ### Via Bootstrap
 
 ```
-FailSafe: Bootstrap Workspace
+FailSafe: Bootstrap Workspace (install qor-logic + scaffold)
 ```
 
 Runs skill installation as part of workspace initialization.

@@ -33,15 +33,16 @@ function userFacingDocs() {
   ];
 }
 
-/** `FailSafe: X` in backticks, in bold, or as the first cell of a table row. */
-const REFERENCE = /`(FailSafe: [^`\n]+)`|\*\*(FailSafe: [^*\n]+)\*\*|^\|\s*(FailSafe: [^|\n]+?)\s*\|/gm;
+/** `FailSafe: X` in backticks, in bold, as the first cell of a table row, or
+ *  alone on a line (how a fenced code block shows a command to run). */
+const REFERENCE = /`(FailSafe: [^`\n]+)`|\*\*(FailSafe: [^*\n]+)\*\*|^\|\s*(FailSafe: [^|\n]+?)\s*\||^[ \t]*(FailSafe: [^\n`|*]+?)[ \t\r]*$/gm;
 
 function references(file) {
   const text = fs.readFileSync(file, "utf8");
   const found = [];
   for (const m of text.matchAll(REFERENCE)) {
     const line = text.slice(0, m.index).split("\n").length;
-    found.push({ where: `${path.relative(REPO, file).split(path.sep).join("/")}:${line}`, title: (m[1] ?? m[2] ?? m[3]).trim() });
+    found.push({ where: `${path.relative(REPO, file).split(path.sep).join("/")}:${line}`, title: (m[1] ?? m[2] ?? m[3] ?? m[4]).trim() });
   }
   return found;
 }

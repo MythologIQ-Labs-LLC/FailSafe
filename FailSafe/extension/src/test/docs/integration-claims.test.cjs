@@ -30,15 +30,17 @@ const whole = (file) => ({ name: rel(file), text: () => read(file) });
 const rowOf = (file, label) => ({ name: `${rel(file)} ${label}`, text: () => row(file, label) });
 
 /**
- * While `holds`, `phrase` is in every target and `overclaim` in none; once the
- * fact changes, `phrase` is in no target. Matching ignores case.
+ * While `holds`, `phrase` is in every target and no `overclaim` string (one or
+ * a list) is in any; once the fact changes, `phrase` is in no target. Matching
+ * ignores case.
  */
-function assertParity({ holds, phrase, targets, overclaim }) {
+function assertParity({ holds, phrase, targets, overclaim = [] }) {
   const has = (t, s) => t.text().toLowerCase().includes(s.toLowerCase());
   if (holds) {
     const missing = targets.filter((t) => !has(t, phrase)).map((t) => t.name);
     assert.deepEqual(missing, [], `"${phrase}" is missing`);
-    if (overclaim) assert.deepEqual(targets.filter((t) => has(t, overclaim)).map((t) => t.name), [], `"${overclaim}" overclaims`);
+    const over = [].concat(overclaim).flatMap((o) => targets.filter((t) => has(t, o)).map((t) => `${t.name}: "${o}"`));
+    assert.deepEqual(over, [], "the docs overclaim");
   } else {
     const stale = targets.filter((t) => has(t, phrase)).map((t) => t.name);
     assert.deepEqual(stale, [], `the code changed, but "${phrase}" still claims the old behaviour`);
@@ -103,7 +105,7 @@ test("F4 Open Design: a refused create_artifact is documented as refused", () =>
   assertParity({
     holds: m[1] === "throw",
     phrase: "is refused in this release",
-    overclaim: "via the L3-gated",
+    overclaim: ["via the L3-gated", "L3-approved", "one-shot token"],
     targets: [...READMES.map((f) => rowOf(f, /Open Design/)), whole(integrationReadme("open-design"))],
   });
 });

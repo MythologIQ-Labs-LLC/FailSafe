@@ -76,7 +76,7 @@ The Monitor shows real-time governance state, SHIELD phase, and trust scores.
 ### 2. Open the Command Center
 
 ```
-FailSafe: Open Command Center (Editor Tab)
+FailSafe: Open Console (Editor Tab)
 ```
 
 Or press `Ctrl+Alt+F` to open in a browser popout.
@@ -100,7 +100,7 @@ This command:
 In the Command Center Settings tab, click **Install QorLogic Skills**, or run:
 
 ```
-FailSafe: Install QorLogic Skills (defaults)
+FailSafe: Install Qor-Logic Skills (defaults)
 ```
 
 This installs skills for Claude Code and Codex CLI. Supports hosts: `claude`, `codex`, `kilo-code`, `gemini`.

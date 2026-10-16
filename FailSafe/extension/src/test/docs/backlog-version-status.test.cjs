@@ -1,7 +1,8 @@
 "use strict";
 // The BACKLOG Version Summary must not keep calling a shipped release a
 // candidate. A version that has a dated CHANGELOG entry and is older than the
-// version being built is done, so its row may not say RC or RELEASING.
+// version being built is done, so its row may not say RC, RELEASING or IN
+// PROGRESS.
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -11,7 +12,7 @@ const path = require("node:path");
 const EXT = path.resolve(__dirname, "..", "..", "..");
 const REPO = path.resolve(EXT, "..", "..");
 const read = (rel) => fs.readFileSync(path.join(REPO, rel), "utf8");
-const UNFINISHED = /\bRC\d*\b|RELEASING|🧪|🚀/;
+const UNFINISHED = /\bRC\d*\b|RELEASING|IN PROGRESS|🧪|🚀|🚧/;
 
 const parse = (v) => v.split(".").map(Number);
 const older = (a, b) => {
