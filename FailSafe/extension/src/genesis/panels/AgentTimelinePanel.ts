@@ -8,7 +8,6 @@
 import * as vscode from 'vscode';
 import { EventBus } from '../../shared/EventBus';
 import { AgentTimelineService, TimelineEntry, TimelineFilter } from '../../sentinel/AgentTimelineService';
-import { TransparencyLogger } from '../../roadmap/services/TransparencyLogger';
 import { escapeHtml, escapeJsString, getNonce } from '../../shared/utils/htmlSanitizer';
 
 const MAX_RENDERED = 200;
@@ -52,7 +51,9 @@ export class AgentTimelinePanel {
         const unsub = this.eventBus.on('timeline.entryAdded', () => this.update());
         this.disposables.push({ dispose: unsub });
         this.disposables.push(vscode.workspace.onDidChangeWorkspaceFolders(() => this.update()));
-        this.disposables.push(vscode.workspace.createFileSystemWatcher('**/.failsafe/logs/transparency.jsonl'));
+        // #477: imported OpenHands evidence comes through the timeline service;
+        // refresh when the evidence file changes.
+        this.disposables.push(vscode.workspace.createFileSystemWatcher('**/.failsafe/logs/openhands-imports.jsonl'));
         const watcher = this.disposables[this.disposables.length - 1] as vscode.FileSystemWatcher;
         this.disposables.push(watcher.onDidChange(() => this.update()));
         this.disposables.push(watcher.onDidCreate(() => this.update()));
@@ -118,23 +119,7 @@ export class AgentTimelinePanel {
     }
 
     private update(): void {
-        const live = this.timelineService.getEntries(this.currentFilter);
-        const imported: TimelineEntry[] = (vscode.workspace.workspaceFolders ?? []).flatMap(folder =>
-            new TransparencyLogger(folder.uri.fsPath).getEvents(MAX_RENDERED).filter(e => e.type === 'agent.observation.imported' && e.source === 'openhands').map(e => ({
-                id: `${folder.index}-${String(e.importKey ?? '')}`,
-                timestamp: typeof e.timestamp === 'string' && !Number.isNaN(Date.parse(e.timestamp)) ? e.timestamp : new Date(0).toISOString(),
-                category: 'imported' as const,
-                title: 'OpenHands historical import',
-                detail: String(e.summary ?? '') + ` (imported evidence in ${folder.name}, not live enforcement)`,
-                icon: 'archive',
-                severity: e.severity === 'high' ? 'warning' as const : 'info' as const,
-            }))
-        );
-        const matching = imported.filter(e =>
-            (!this.currentFilter.categories?.length || this.currentFilter.categories.includes(e.category)) &&
-            (!this.currentFilter.severity?.length || this.currentFilter.severity.includes(e.severity)) &&
-            (!this.currentFilter.since || e.timestamp >= this.currentFilter.since));
-        const entries = [...live, ...matching].sort((a, b) => b.timestamp.localeCompare(a.timestamp)).slice(0, MAX_RENDERED);
+        const entries = this.timelineService.getEntries(this.currentFilter).slice(0, MAX_RENDERED);
         this.panel.webview.html = this.getHtmlContent(entries);
     }
 
@@ -156,7 +141,7 @@ export class AgentTimelinePanel {
         const fileBtn = entry.artifactPath
             ? `<button class="file-link" onclick="viewFile(event, '${escapeJsString(entry.artifactPath)}')">Open file</button>`
             : '';
-        return `<div class="timeline-item severity-${entry.severity}" data-id="${escapeHtml(entry.id)}" onclick="toggleDetail('${id}')">
+        return `<div class="timeline-item severity-${escapeHtml(entry.severity)}" data-id="${escapeHtml(entry.id)}" onclick="toggleDetail('${id}')">
         <span class="icon codicon codicon-${escapeHtml(entry.icon)}"></span>
         <span class="timestamp" title="${escapeHtml(entry.timestamp)}">${escapeHtml(formatRelativeTime(entry.timestamp))}</span>
         <span class="title">${escapeHtml(entry.title)}</span>

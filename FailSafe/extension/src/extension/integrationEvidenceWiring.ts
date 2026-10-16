@@ -16,6 +16,8 @@ import type { PlanManager } from '../qorelogic/planning/PlanManager';
 import type { AgentTimelineService } from '../sentinel/AgentTimelineService';
 import { setTrackerIntentDeps } from '../integrations/tracker-import/tracker-intent-import';
 import { pickPlanIdForEnforce } from './commands';
+import { EvidenceKeyHolder, setOpenHandsEvidenceKeys } from '../integrations/agent-observe/openhands-signing';
+import { OpenHandsEvidenceReader } from '../integrations/agent-observe/openhands-evidence';
 
 /** `failsafe.integrations.jira.enabled` → `failsafe.integrations.jira`. */
 function sectionOf(settingKey: string): string {
@@ -84,4 +86,23 @@ export function wireIntegrationEvidence(context: vscode.ExtensionContext, deps: 
     pickPlanId: () => pickPlanIdForEnforce(deps.planManager),
   });
   context.subscriptions.push({ dispose: () => setTrackerIntentDeps(null) });
+
+  // #477: the OpenHands evidence key (read only at activation; created by the
+  // first import) and the timeline provider for imported evidence. The degraded
+  // Sentinel stub has no provider slot, so imported entries are not shown there.
+  const keys = new EvidenceKeyHolder(context.secrets);
+  setOpenHandsEvidenceKeys(keys);
+  void keys.loadKey();
+  const reader = new OpenHandsEvidenceReader(keys, () =>
+    (vscode.workspace.workspaceFolders ?? []).map((f) => ({ fsPath: f.uri.fsPath, name: f.name })));
+  const timeline = deps.timeline as Partial<Pick<AgentTimelineService, 'setImportedEntriesProvider'>>;
+  timeline.setImportedEntriesProvider?.(() => reader.read().entries);
+  context.subscriptions.push({
+    dispose: () => {
+      timeline.setImportedEntriesProvider?.(null);
+      setOpenHandsEvidenceKeys(null);
+      reader.dispose();
+      keys.dispose();
+    },
+  });
 }
