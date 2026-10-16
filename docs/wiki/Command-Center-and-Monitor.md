@@ -47,9 +47,9 @@ The Command Center is the primary control surface where teams plan, execute, and
 
 | Command | Behavior |
 |---------|----------|
-| `FailSafe: Open Command Center (Editor Tab)` | Opens in an editor tab |
-| `FailSafe: Open Command Center (Browser)` | Opens in embedded browser |
-| `FailSafe: Open Command Center (Browser Popout)` | Opens in external browser |
+| `FailSafe: Open Console (Editor Tab)` | Opens in an editor tab |
+| `FailSafe: Open Console (Browser)` | Opens in embedded browser |
+| `FailSafe: Open Console (Browser Popout)` | Opens in external browser |
 | `Ctrl+Alt+F` | Opens in external browser |
 
 ### Tabs
@@ -108,7 +108,6 @@ Cards on the Home tab:
 - **Install QorLogic Skills**: Host/scope picker with install report
 - **Bootstrap Workspace**: Initialize governance directories and Q-DNA
 - **Governance mode selector**: Quick mode switch
-- **About FailSafe Pro**: Product information and download link
 - **Notifications configuration**: Severity gating for toasts
 - **Voice settings**: Whisper model picker, language selector, TTS voice
 - **Brainstorm settings**: History limit, export

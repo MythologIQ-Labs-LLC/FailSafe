@@ -41,14 +41,21 @@ export function registerSarifImportCommand(context: vscode.ExtensionContext, wor
       return;
     }
 
-    const riskManager = new RiskRegisterManager(workspaceRoot);
+    const sink = new RiskRegisterManager(workspaceRoot).importSink();
     // #517 LD8: a re-import never resets the status the operator triaged.
-    const result = importSarifText(text, (risk) => riskManager.upsertRisk(risk, { keepStored: ['status'] }));
+    // v6.0.8 #528: one register update per 500 findings.
+    const result = importSarifText(text, (risk) => sink.upsertRisk(risk, { keepStored: ['status'] }), sink.batch);
     recordIntegrationHealth('sarif', ...healthFromSarifImport(result));
 
-    if (result.risks === 0 && result.errors.length) {
+    if (result.risks === 0 && result.failed === 0 && result.errors.length) {
       vscode.window.showWarningMessage(`SARIF import: ${result.errors[0]}`);
       return;
+    }
+    if (result.failed > 0) {
+      const reason = result.write.writeError ? ` (${result.write.writeError})` : '';
+      vscode.window.showWarningMessage(
+        `SARIF import: ${result.failed} risk(s) could not be written to the Risk Register${reason}. Check the FailSafe logs and import again.`,
+      );
     }
     const warnSuffix = result.errors.length ? ` (${result.errors.length} parse warning(s))` : '';
     vscode.window.showInformationMessage(
