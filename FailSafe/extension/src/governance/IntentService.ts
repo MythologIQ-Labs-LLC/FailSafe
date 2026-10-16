@@ -8,6 +8,18 @@ import type { GovernanceMode } from './EnforcementEngine';
 
 export type GovernanceModeGetter = () => GovernanceMode;
 
+/** #480: an earlier CREATED entry whose provenance names an external reference. */
+export interface ExternalRefImport {
+  intentId: string;
+  timestamp: string;
+  provenance: Record<string, unknown>;
+}
+
+/** The intent history failed its chain check (or could not be read); nothing can be trusted. */
+export type ExternalRefLookup =
+  | { integrity: 'valid'; entries: ExternalRefImport[] }
+  | { integrity: 'invalid' };
+
 export class IntentService {
   private store: IntentStore;
   private history: IntentHistoryLog;
@@ -35,6 +47,8 @@ export class IntentService {
   async createIntent(params: {
     type: IntentType; purpose: string; scope: IntentScope;
     blueprint?: string; planId?: string; metadata: IntentMetadata;
+    /** #480: written into the CREATED history entry's details (covered by the entry hash). */
+    provenance?: Record<string, unknown>;
   }): Promise<Intent> {
     const active = await this.getActiveIntent();
     if (active && active.status !== 'SEALED') throw new Error(`Active Intent "${active.id}" must be SEALED.`);
@@ -58,9 +72,35 @@ export class IntentService {
     };
 
     await this.store.saveActiveIntent(intent);
-    await this.history.appendEntry({ intentId: intent.id, timestamp: now, event: 'CREATED', newStatus: 'PULSE', actor: params.metadata.author });
+    await this.history.appendEntry({
+      intentId: intent.id, timestamp: now, event: 'CREATED', newStatus: 'PULSE', actor: params.metadata.author,
+      ...(params.provenance ? { details: { provenance: params.provenance } } : {}),
+    });
     await this.session.setActiveIntent(intent.id);
     return intent;
+  }
+
+  /**
+   * #480: CREATED entries whose provenance names `externalRef`. The history
+   * chain is checked first; a broken chain, or a history that cannot be read
+   * (a torn line makes loadAllEntries throw), is reported as invalid so the
+   * caller refuses rather than trusting it. The chain is plain unkeyed SHA-256:
+   * it detects edits that do not recompute it, not a writer that does.
+   */
+  async findCreatedByExternalRef(externalRef: string): Promise<ExternalRefLookup> {
+    try {
+      const chain = await this.history.verifyChainIntegrity();
+      if (!chain.valid) return { integrity: 'invalid' };
+      const entries = (await this.history.loadAllEntries()).flatMap((e): ExternalRefImport[] => {
+        const provenance = e.details && typeof e.details === 'object' ? (e.details as Record<string, unknown>).provenance : undefined;
+        if (e.event !== 'CREATED' || !provenance || typeof provenance !== 'object') return [];
+        const p = provenance as Record<string, unknown>;
+        return p.externalRef === externalRef ? [{ intentId: e.intentId, timestamp: e.timestamp, provenance: p }] : [];
+      });
+      return { integrity: 'valid', entries };
+    } catch {
+      return { integrity: 'invalid' };
+    }
   }
 
   async updateStatus(newStatus: IntentStatus, actor: string, auditVerified?: boolean): Promise<void> {

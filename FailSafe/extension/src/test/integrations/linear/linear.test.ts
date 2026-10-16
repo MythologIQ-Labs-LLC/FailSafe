@@ -96,3 +96,12 @@ suite('linear-client (B-INT-11 #97)', () => {
     assert.equal(readRateLimit({}), undefined);
   });
 });
+
+suite('linear-import provenance fields (#480)', () => {
+  test('the query asks for updatedAt and the preview carries it', () => {
+    assert.match(buildIssueQuery('ENG-1').query, /\burl updatedAt\b/);
+    const issue = parseIssueResponse({ data: { issue: { identifier: 'ENG-1', title: 'T', updatedAt: '2026-10-13T16:20:00.000Z' } } });
+    assert.equal(issue?.updatedAt, '2026-10-13T16:20:00.000Z');
+    assert.equal(toIntentPreview(issue!).updatedAt, '2026-10-13T16:20:00.000Z');
+  });
+});

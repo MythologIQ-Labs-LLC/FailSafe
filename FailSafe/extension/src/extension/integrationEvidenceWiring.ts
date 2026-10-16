@@ -14,6 +14,8 @@ import { workspaceIdentity } from '../integrations/credentials/vscodeCredentialA
 import type { IntentService } from '../governance/IntentService';
 import type { PlanManager } from '../qorelogic/planning/PlanManager';
 import type { AgentTimelineService } from '../sentinel/AgentTimelineService';
+import { setTrackerIntentDeps } from '../integrations/tracker-import/tracker-intent-import';
+import { pickPlanIdForEnforce } from './commands';
 
 /** `failsafe.integrations.jira.enabled` → `failsafe.integrations.jira`. */
 function sectionOf(settingKey: string): string {
@@ -62,7 +64,7 @@ export interface IntegrationEvidenceDeps {
   timeline: AgentTimelineService;
 }
 
-export function wireIntegrationEvidence(context: vscode.ExtensionContext, _deps: IntegrationEvidenceDeps): void {
+export function wireIntegrationEvidence(context: vscode.ExtensionContext, deps: IntegrationEvidenceDeps): void {
   const store = new IntegrationHealthStore(context.workspaceState);
   setIntegrationHealthStore(store);
   context.subscriptions.push(
@@ -73,4 +75,13 @@ export function wireIntegrationEvidence(context: vscode.ExtensionContext, _deps:
       workspaceIdentity,
     }),
   );
+
+  // #480: the Jira/Linear commands create intent drafts through the canonical
+  // IntentService; until this runs they stay preview-only.
+  setTrackerIntentDeps({
+    intents: deps.intentService,
+    governanceMode: () => vscode.workspace.getConfiguration('failsafe').get<string>('governance.mode', 'enforce'),
+    pickPlanId: () => pickPlanIdForEnforce(deps.planManager),
+  });
+  context.subscriptions.push({ dispose: () => setTrackerIntentDeps(null) });
 }

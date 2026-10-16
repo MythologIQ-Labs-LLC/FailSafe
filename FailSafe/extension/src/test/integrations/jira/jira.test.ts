@@ -112,3 +112,15 @@ suite('jira-client (#98)', () => {
     assert.equal(r429.ok, false); assert.equal(r429.status, 429);
   });
 });
+
+suite('jira-import provenance fields (#480)', () => {
+  test('the issue path asks for updated and issuetype, and the preview carries them', () => {
+    assert.match(buildIssuePath('PROJ-7'), /,updated,issuetype$/);
+    const issue = parseIssueResponse({ key: 'PROJ-7', fields: { summary: 'S', updated: '2026-10-14T09:30:12.000+0000', issuetype: { name: 'Bug' } } });
+    assert.equal(issue?.updated, '2026-10-14T09:30:12.000+0000');
+    assert.equal(issue?.issueType, 'Bug');
+    const p = toIntentPreview(issue!, 'https://acme.atlassian.net');
+    assert.equal(p.updated, '2026-10-14T09:30:12.000+0000');
+    assert.equal(p.issueType, 'Bug');
+  });
+});

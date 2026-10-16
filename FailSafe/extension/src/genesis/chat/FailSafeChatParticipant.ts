@@ -88,7 +88,8 @@ export class FailSafeChatParticipant {
     }
 
     stream.markdown(`## Active Intent\n\n`);
-    stream.markdown(`**Purpose**: ${active.purpose}\n\n`);
+    // #480: purposes can come from Jira/Linear titles; render them as text.
+    stream.markdown(new vscode.MarkdownString('**Purpose**: ').appendText(active.purpose).appendMarkdown('\n\n'));
     stream.markdown(`**Type**: ${active.type}\n\n`);
     stream.markdown(`**Status**: ${active.status}\n\n`);
     stream.markdown(`**Risk Grade**: ${active.scope.riskGrade}\n\n`);
@@ -181,7 +182,7 @@ export class FailSafeChatParticipant {
     // Governance
     stream.markdown(`### Governance\n`);
     if (active) {
-      stream.markdown(`- **Active Intent**: ${active.purpose}\n`);
+      stream.markdown(new vscode.MarkdownString('- **Active Intent**: ').appendText(active.purpose).appendMarkdown('\n'));
       stream.markdown(`- **Status**: ${active.status}\n`);
       stream.markdown(`- **Risk Grade**: ${active.scope.riskGrade}\n`);
     } else {
@@ -208,7 +209,7 @@ export class FailSafeChatParticipant {
 
     try {
       await this.intentService.sealIntent('chat-participant');
-      stream.markdown(`✅ **Intent Sealed**: "${active.purpose}" has been sealed and archived.`);
+      stream.markdown(new vscode.MarkdownString('✅ **Intent Sealed**: "').appendText(active.purpose).appendMarkdown('" has been sealed and archived.'));
     } catch (error) {
       stream.markdown(`**Failed to seal**: ${error instanceof Error ? error.message : String(error)}`);
     }
