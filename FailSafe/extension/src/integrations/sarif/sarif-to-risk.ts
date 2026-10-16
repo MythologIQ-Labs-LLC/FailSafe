@@ -7,6 +7,7 @@
  */
 
 import { parseSarif, type SarifFinding } from './sarif-parser';
+import { writeInChunks, type ImportBatch, type ImportWriteOutcome } from '../../roadmap/services/riskImportBatch';
 
 export function sarifFindingToRisk(f: SarifFinding): Record<string, unknown> {
   const risk: Record<string, unknown> = {
@@ -39,24 +40,18 @@ export function sarifFindingsToRisks(findings: SarifFinding[]): Array<Record<str
  * Orchestrate a SARIF text import: parse → map+dedup → upsert each risk via the
  * injected `upsert` (RiskRegisterManager.upsertRisk at runtime). Pure-testable —
  * the upsert sink is injected, so no fs/RiskRegisterManager is needed in tests.
+ * With `batch` (v6.0.8 #528) the records are written in 500-record chunks,
+ * each one register update; parsing and mapping happen before any lock.
  */
 export function importSarifText(
   text: string,
-  upsert: (risk: Record<string, unknown>) => void,
-): { findings: number; risks: number; failed: number; errors: string[] } {
+  upsert: (risk: Record<string, unknown>) => unknown,
+  batch?: ImportBatch,
+): { findings: number; risks: number; failed: number; errors: string[]; write: ImportWriteOutcome } {
   const { findings, errors } = parseSarif(text);
   const riskRecords = sarifFindingsToRisks(findings);
   // #241 Tranche C (FX915): a failing register write must not abort the
   // remaining findings mid-stream — count it and continue (FX910 pattern).
-  let risks = 0;
-  let failed = 0;
-  for (const r of riskRecords) {
-    try {
-      upsert(r);
-      risks++;
-    } catch {
-      failed++;
-    }
-  }
-  return { findings: findings.length, risks, failed, errors };
+  const write = writeInChunks(riskRecords, { write: (r) => upsert(r), newSide: () => null, keep: () => undefined }, batch);
+  return { findings: findings.length, risks: write.written, failed: write.failed, errors, write };
 }

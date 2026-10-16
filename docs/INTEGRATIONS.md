@@ -265,7 +265,7 @@ Building on v1's file-path provenance, v1.1 adds three observation surfaces agai
 
 ### MCP allowlist
 
-Every tool name in `OpenDesignMcpAllowlist` is back-cited to the upstream `nexu-io/open-design@abe72af apps/daemon/src/mcp.ts` TOOL_DEFS by line number — no paraphrasing, no inference. The 7 read tools (`list_projects`, `get_active_context`, `get_artifact`, `get_project`, `get_file`, `search_files`, `list_files`) are admitted in v1.1; the 4 write tools (`create_artifact`, `write_file`, `delete_file`, `delete_project` — 3 of the 4 destructive) are REJECTED at runtime. Write-tool exposure is deferred to v1.2 (B-OD-8) with explicit L3 approval per call.
+Every tool name in `OpenDesignMcpAllowlist` is back-cited to the upstream `nexu-io/open-design@abe72af apps/daemon/src/mcp.ts` TOOL_DEFS by line number — no paraphrasing, no inference. The 7 read tools (`list_projects`, `get_active_context`, `get_artifact`, `get_project`, `get_file`, `search_files`, `list_files`) are admitted in v1.1; the 4 write tools (`create_artifact`, `write_file`, `delete_file`, `delete_project` — 3 of the 4 destructive) are REJECTED at runtime. `create_artifact` is refused even after an L3 approval (B-OD-8, #481); the other three stay rejected.
 
 ### Operator wizard
 
@@ -278,8 +278,8 @@ The `FailSafe: Register Open Design MCP Connection` command palette entry (`fail
 
 ### v1.1 limitations
 
-- **Read-only only.** All 4 write tools rejected at runtime — L3-gated exposure ships in v1.2 (B-OD-8).
-- **Single daemon URL** (`127.0.0.1:7456`). Multi-daemon discovery (OD + FailSafe Pro coexistence) ships in v1.2 (B-OD-10).
+- **Read-only only.** All 4 write tools rejected at runtime. `create_artifact` is refused even after an L3 approval (#481).
+- **Single daemon URL** (`127.0.0.1:7456`). Multi-daemon discovery (several Open Design daemons) is planned (B-OD-10).
 - **No AG-UI stream** (`/api/runs/:id/agui`) — deferred to v1.2 (B-OD-9).
 - **No auto-register of FailSafe-as-MCP-server** in OD's registry. Manual wizard only (matches `feedback_no_ship_without_approval`).
 - **Daemon lifecycle not managed.** FailSafe does NOT spawn or kill the OD daemon; only consumes when reachable.
@@ -293,7 +293,7 @@ The `FailSafe: Register Open Design MCP Connection` command palette entry (`fail
 - `OpenDesignMcpAllowlist` (incl. 4-cycle Plan-Time Hallucination regression guard): 7 cases in `src/test/integrations/open-design/OpenDesignMcpAllowlist.test.ts` (FX724).
 - `bootstrapOpenDesignMcp` (node:test using the require.cache vscode-stub pattern): 7 cases in `src/test/extension/bootstrapOpenDesignMcp.test.cjs` (FX725).
 
-## Mermaid Chart MCP — candidate (B-INT-13, not yet built)
+## Mermaid Chart MCP — installable via the governed installer (B-INT-13)
 
 **Status:** **installable** via the governed installer — `FailSafe: Install MCP Integration (governed)` (`failsafe.mcp.installCatalog`). Picking it shows the #108 local risk score, then on modal confirm writes `{ "mcpServers": { "mermaid": { "command": "npx", "args": ["-y", "mcp-mermaid"] } } }` to `.mcp.json`. Verified install command (`mcp-mermaid`, hustcc). A discoverable Integrations-tab UI surface is the next slice (design-reference + visual verification per `feedback_design_reference_required`).
 
@@ -305,7 +305,7 @@ The `FailSafe: Register Open Design MCP Connection` command palette entry (`fail
 
 **Open before build:** confirm transport (stdio vs remote), pin a version, decide render target (inline SVG in the console vs. a docs build step).
 
-## Context7 MCP — candidate (B-INT-14, not yet built)
+## Context7 MCP — installable via the governed installer (B-INT-14)
 
 **Status:** **installable** via the governed installer — `FailSafe: Install MCP Integration (governed)` (`failsafe.mcp.installCatalog`). Picking it shows the #108 local risk score, then on modal confirm writes `{ "mcpServers": { "context7": { "command": "npx", "args": ["-y", "@upstash/context7-mcp"] } } }` to `.mcp.json`. Verified install command (`@upstash/context7-mcp`, Upstash). Read-only doc queries; the data-minimization redaction guard (queries carry only library id + topic) remains a build item before FailSafe routes any query through it.
 
@@ -327,7 +327,7 @@ The `FailSafe: Register Open Design MCP Connection` command palette entry (`fail
 
 **Config (disabled by default):**
 - `failsafe.integrations.slack.enabled` — boolean.
-- `failsafe.integrations.slack.webhookUrl` — the incoming-webhook URL (**secret** — grants posting to the channel; leave empty to disable).
+- The incoming-webhook URL (**secret** — grants posting to the channel) is stored in VS Code Secure Storage with **FailSafe: Set Integration Credential**. Since v6.0.7 the `failsafe.integrations.slack.webhookUrl` setting is no longer read.
 
 **Code:** `src/integrations/slack/` — `slack-notify.ts` (Block Kit builder), `slack-sender.ts` (injectable, non-blocking POST), `slack-notify-map.ts` (EventBus→notify mapping), `SlackNotifier.ts` (event subscription). FX825.
 

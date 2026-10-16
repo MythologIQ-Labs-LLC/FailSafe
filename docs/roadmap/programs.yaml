@@ -58,7 +58,7 @@ meta:
     - decision: Governed, risk-scored MCP/AGT installs — no silent install
       drivenBy: High-capability tools (browser automation, agent governance) need admission control
       evidence: "MCP Catalog #108 scoring; AGT installer run-in-terminal (operator presses enter)"
-    - decision: v5 publicly reveals the FailSafe / FailSafe Pro product split
+    - decision: v5 publicly reveals the FailSafe / FailSafe Pro product split (FailSafe Pro was later canceled)
       drivenBy: The open-extension vs desktop-daemon boundary needed a public framing
       evidence: "PRIVATE/docs/LICENSING_POSTURE.md; v5 README reveal"
 
@@ -113,7 +113,7 @@ phases:
   - { prog: integrations, key: AGT,       rc: v5.4.3, w: 30, title: Agent Governance Toolkit installer, what: Auto-detect the workspace environment + serve the matching verified AGT installer., benefit: Governed admission of Microsoft's AGT modules per environment., links: [ { t: url, href: "https://github.com/microsoft/agent-governance-toolkit", label: AGT upstream }, { t: issue, n: 140, label: "PR #140" } ] }
 
   # Config — system settings
-  - { prog: config, key: CARDS,     rc: v5.0.0, w: 40, title: Settings card suite, what: Theme · Voice & Audio · Notifications · Brainstorm · Skills · FailSafe Pro cards compose the Settings tab., benefit: Presentation + substrate configuration in one place. }
+  - { prog: config, key: CARDS,     rc: v5.0.0, w: 40, title: Settings card suite, what: Theme · Voice & Audio · Notifications · Brainstorm · Skills cards compose the Settings tab (the FailSafe Pro card was removed in v6.0.0; the product was canceled)., benefit: Presentation + substrate configuration in one place. }
   - { prog: config, key: INSTALL,   rc: v5.0.0, w: 30, title: Install transparency, what: Per-phase skills-install report (python-probe/pip/qorlogic/provenance) + host/scope QuickPick., benefit: No silent installs — every step is shown. }
   - { prog: config, key: VOICE_CFG, rc: v5.0.0, w: 30, title: Voice & Audio settings, what: Whisper model picker, 12-language BCP-47 selector, auto-match voice, allowlist-hardened., benefit: Multilingual voice, configured safely. }
 
@@ -201,10 +201,6 @@ verticals:
 # §03 Convergence — where FailSafe meets adjacent systems at NAMED contracts
 # (not vibes). Each bridge faces a governing contract in the middle.
 convergence:
-  - left:  { title: FailSafe (open extension), body: Editor-boundary governance — audits, skills, checkpoints, MCP/integration admission. }
-    mid:   { glyph: "⟷", contract: Pro feature boundary }
-    right: { title: FailSafe Pro (desktop daemon), body: OS-level enforcement, team workflows, runtime operations beyond the editor. }
-    status: "**Public split revealed in v5** — Pro is now named in the marketplace + Settings."
   - left:  { title: FailSafe, body: Consumes the SHIELD skill corpus + a version floor. }
     mid:   { glyph: "→", contract: "qor-logic (PyPI)" }
     right: { title: qor-logic, body: Deterministic governance engine + SHIELD lifecycle skills. }

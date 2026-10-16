@@ -1,15 +1,15 @@
 # Agent observe integration (OpenHands + Cline/Roo/Kilo)
 
-> One-line: FailSafe reads agent runs and agent MCP/tool configuration read-only — auditing Cline/Roo/Kilo permission posture for risky settings and mapping OpenHands run events into normalized transparency records — without ever spawning or mutating a live agent.
+> One-line: FailSafe reads agent runs and agent MCP/tool configuration read-only — auditing Cline/Roo/Kilo permission posture for risky settings and previewing an exported OpenHands run by mapping its events in memory — without ever spawning or mutating a live agent. Nothing is saved yet: the OpenHands records are not written to the FailSafe timeline (#477).
 
 - **Pattern:** observe
 - **Direction:** read-only
-- **Status:** in review (#152)
+- **Status:** shipped (#152); the OpenHands import is a preview only (#477)
 - **Official docs:** OpenHands Cloud API — https://docs.openhands.dev/openhands/usage/cloud/cloud-api · OpenHands SDK — https://docs.openhands.dev/sdk/api-reference/openhands.sdk.agent · Cline — https://docs.cline.bot/api/overview · Cline MCP — https://docs.cline.bot/mcp/mcp-overview · Kilo — https://kilo.ai/docs/automate/mcp/using-in-kilo-code · Roo — https://roocodeinc.github.io/Roo-Code/providers/
 - **Backlog:** #105 (OpenHands) · #106 (Cline/Roo/Kilo)
 
 ## What it does
-This family inspects agents without driving them. The MCP policy auditor parses a Cline/Roo/Kilo MCP settings document defensively and flags risky posture — remote MCP servers, wildcard auto-approval, and shell/exec-capable servers — emitting keyed-idempotent risk records that re-audit upserts rather than duplicates. It reads both auto-approve field names the agent variants use (`autoApprove` for Cline, `alwaysAllow` for Roo/Kilo) and redacts all secret material: env values are dropped (only KEYS are kept), URLs are reduced to host, and local commands to basename. The OpenHands observer maps run events — actions and observations — into normalized FailSafe transparency records keyed off the SDK `tool_name`, with a per-event risk hint. It is version-gated and degrades gracefully on an unsupported major. By the OpenHands contract, tools are fixed in the system prompt, so a tool-policy change must start a NEW conversation/fork rather than mutate a live run — this adapter only observes and honors that by construction.
+This family inspects agents without driving them. The MCP policy auditor parses a Cline/Roo/Kilo MCP settings document defensively and flags risky posture — remote MCP servers, wildcard auto-approval, and shell/exec-capable servers — emitting keyed-idempotent risk records that re-audit upserts rather than duplicates. It reads both auto-approve field names the agent variants use (`autoApprove` for Cline, `alwaysAllow` for Roo/Kilo) and redacts all secret material: env values are dropped (only KEYS are kept), URLs are reduced to host, and local commands to basename. The OpenHands observer maps run events — actions and observations — in memory, keyed off the SDK `tool_name`, with a per-event risk hint; the command reports how many it mapped and how many look high-risk. It is version-gated and degrades gracefully on an unsupported major. By the OpenHands contract, tools are fixed in the system prompt, so a tool-policy change must start a NEW conversation/fork rather than mutate a live run — this adapter only observes and honors that by construction.
 
 ## Configuration
 | Setting | Default | Secret | Purpose |
@@ -24,8 +24,8 @@ Both observers are off by default and read-only; neither holds a secret of its o
 Neither observer mutates anything and neither spawns a process. The MCP policy auditor is built to leak nothing: env-variable VALUES are dropped (only keys are surfaced), a server `url` is reduced to its host (so URL-embedded tokens never travel), and a local stdio `command` is reduced to its basename (no args). The OpenHands observer reads only the documented event envelope fields and a tool-name verb; it never executes a tool, never mutates an active run, and a tool-policy change is modeled as starting a new conversation (asserted by tests), never an in-place change. The pure logic in this folder takes config/events as text in — the command layer does the file read — so no fs or network lives here.
 
 ## Command / wiring
-- `FailSafe: Audit Agent MCP Policy` (command id `failsafe.agentAudit.run`) — reads the Cline/Roo/Kilo MCP settings document(s), parses + redacts, and upserts the flagged posture risks into the risk register.
-- `FailSafe: Observe OpenHands Run` (command id `failsafe.openhands.observe`) — maps an exported OpenHands run's events into normalized transparency records, version-gated.
+- `FailSafe: Audit Agent MCP Policy (Cline/Roo/Kilo)` (command id `failsafe.agentAudit.run`) — reads the Cline/Roo/Kilo MCP settings document(s), parses + redacts, and upserts the flagged posture risks into the risk register.
+- `FailSafe: Import OpenHands Run (observe)` (command id `failsafe.openhands.observe`) — maps an exported OpenHands run's events in memory, version-gated, and shows how many it mapped and how many look high-risk.
 
 ## Files
 - `mcp-policy-audit.ts` — pure Cline/Roo/Kilo MCP config auditor: defensive parse of the shared `mcpServers` shape, reads both `autoApprove` and `alwaysAllow`, redacts env values + URL tokens + command args, and flags remote / wildcard-auto-approve / shell-capable posture as keyed risk records (no fs / no network / no secrets).
