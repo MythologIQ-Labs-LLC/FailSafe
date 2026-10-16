@@ -20,6 +20,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { removeTempTree } = require('../shared/removeTempTree.cjs');
 const { spawnSync } = require('child_process');
 
 const EXT = path.resolve(__dirname, '..', '..', '..');
@@ -38,18 +39,23 @@ try { configure = req('shared', 'exec', 'trustedExecutable.js').configureTrusted
 function findPython() {
   const probes = process.env.FAILSAFE_TEST_PYTHON ? [[process.env.FAILSAFE_TEST_PYTHON, []]] : [['py', ['-3']], ['python3', []], ['python', []]];
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'fspyfind-'));
-  for (const [cmd, pre] of probes) {
-    const r = spawnSync(cmd, [...pre, '-c', 'import sys;print(sys.executable);print(sys.version_info[0]*100+sys.version_info[1])'], { cwd, encoding: 'utf8' });
-    const [exe, ver] = (r.stdout || '').trim().split(/\r?\n/);
-    if (r.status === 0 && path.isAbsolute(exe || '') && Number(ver) >= 311) return exe;
-  }
-  return undefined;
+  try {
+    for (const [cmd, pre] of probes) {
+      const r = spawnSync(cmd, [...pre, '-c', 'import sys;print(sys.executable);print(sys.version_info[0]*100+sys.version_info[1])'], { cwd, encoding: 'utf8' });
+      const [exe, ver] = (r.stdout || '').trim().split(/\r?\n/);
+      if (r.status === 0 && path.isAbsolute(exe || '') && Number(ver) >= 311) return exe;
+    }
+    return undefined;
+  } finally { removeTempTree(cwd); } // LD20
 }
 const PY = findPython();
 const saved = { cwd: process.cwd(), marker: process.env.FSG_MARKER };
-after(() => { process.chdir(saved.cwd); if (saved.marker === undefined) delete process.env.FSG_MARKER; else process.env.FSG_MARKER = saved.marker; });
-
 const base = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'fspysafe-')));
+after(() => {
+  process.chdir(saved.cwd);
+  if (saved.marker === undefined) delete process.env.FSG_MARKER; else process.env.FSG_MARKER = saved.marker;
+  removeTempTree(base); // LD20
+});
 const ws = path.join(base, 'ws');
 const MARK = path.join(base, 'marker.log');
 process.env.FSG_MARKER = MARK;

@@ -21,6 +21,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { removeTempTree } = require('../removeTempTree.cjs');
 const { spawnSync, execFileSync } = require('child_process');
 const Module = require('module');
 
@@ -52,6 +53,8 @@ after(() => {
   process.env.PATH = saved.path;
   delete process.env.NODE_OPTIONS;
   delete process.env.FSG_MARKER;
+  removeTempTree(base); // LD20
+  removeTempTree(ghConfigDir);
 });
 
 const base = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'fsexec-adv-')));
@@ -65,7 +68,8 @@ fs.writeFileSync(markerJs, "require('fs').appendFileSync(process.env.FSG_MARKER,
 const marks = () => (fs.existsSync(MARK) ? fs.readFileSync(MARK, 'utf8').split(/\r?\n/).filter(Boolean) : []);
 const clearMarks = () => { try { fs.unlinkSync(MARK); } catch { /* none */ } };
 process.env.FSG_MARKER = MARK;
-process.env.GH_CONFIG_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'fsexec-ghcfg-'));
+const ghConfigDir = fs.mkdtempSync(path.join(os.tmpdir(), 'fsexec-ghcfg-'));
+process.env.GH_CONFIG_DIR = ghConfigDir;
 delete process.env.GH_TOKEN;
 delete process.env.GITHUB_TOKEN;
 

@@ -39,17 +39,34 @@ const WIN = process.platform === 'win32';
 const DELIM = WIN ? ';' : ':';
 const saved = { noDefault: process.env.NoDefaultCurrentDirectoryInExePath, path: process.env.PATH, cwd: process.cwd() };
 delete process.env.NoDefaultCurrentDirectoryInExePath;
+
+const base = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'fspyadv-')));
+const ws = path.join(base, 'ws');
+const plantDir = path.join(base, 'plant');
+// Both are junctions (POSIX: symlinks) to the real Python install folder.
+const pyhome = path.join(ws, 'pyhome');
+const kVenv = path.join(base, 'k-repo', '.venv');
+const findDirs = [];
+
+/** Remove a link as a link; anything that is not a link is refused, never deleted through. */
+function unlinkJunction(p) {
+  let st;
+  try { st = fs.lstatSync(p); } catch { return; }
+  if (!st.isSymbolicLink()) throw new Error(`${p} is not a link; the temp folders are left in place`);
+  fs.unlinkSync(p);
+}
+
 after(() => {
   process.chdir(saved.cwd);
   if (saved.noDefault !== undefined) process.env.NoDefaultCurrentDirectoryInExePath = saved.noDefault;
   process.env.PATH = saved.path;
   delete process.env.NODE_OPTIONS;
   delete process.env.FSG_MARKER;
+  // LD20: unlink the junctions first, so the recursive delete below never walks into the host Python.
+  unlinkJunction(pyhome);
+  unlinkJunction(kVenv);
+  for (const d of [base, ...findDirs]) fs.rmSync(d, { recursive: true, force: true, maxRetries: 5 });
 });
-
-const base = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'fspyadv-')));
-const ws = path.join(base, 'ws');
-const plantDir = path.join(base, 'plant');
 for (const d of [ws, plantDir]) fs.mkdirSync(d, { recursive: true });
 const MARK = path.join(base, 'marker.log');
 const markerJs = path.join(base, 'marker.cjs');
@@ -76,6 +93,7 @@ if (WIN) process.env.NODE_OPTIONS = `--require ${markerJs.replace(/\\/g, '/')}`;
 /** The base interpreter (not a venv shim), found from a clean temp folder. */
 function baseInterpreter() {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'fspyfind-'));
+  findDirs.push(cwd);
   const prevPath = process.env.PATH;
   process.env.PATH = saved.path;
   try {
@@ -88,7 +106,6 @@ function baseInterpreter() {
   throw new Error('a real Python is required');
 }
 const BASE_PY = baseInterpreter();
-const pyhome = path.join(ws, 'pyhome');
 fs.symlinkSync(path.dirname(BASE_PY), pyhome, WIN ? 'junction' : 'dir');
 const insideWs = path.join(pyhome, path.basename(BASE_PY));
 const lc = (p) => (WIN ? p.toLowerCase() : p);
@@ -274,8 +291,8 @@ test('T13 (k): a Python-extension interpreter in the repository that contains th
   const sub = path.join(repo, 'sub');
   fs.mkdirSync(path.join(repo, '.git'), { recursive: true });
   fs.mkdirSync(sub, { recursive: true });
-  fs.symlinkSync(path.dirname(BASE_PY), path.join(repo, '.venv'), WIN ? 'junction' : 'dir');
-  const venvPy = path.join(repo, '.venv', path.basename(BASE_PY));
+  fs.symlinkSync(path.dirname(BASE_PY), kVenv, WIN ? 'junction' : 'dir');
+  const venvPy = path.join(kVenv, path.basename(BASE_PY));
   const roots = te.repoRootsFor ? te.repoRootsFor([sub], os.homedir()) : [];
   configure({ workspaceDirs: [sub, ...roots] });
   const vscode = { extensions: { getExtension: () => ({ isActive: true, activate: async () => {}, exports: { settings: { getExecutionDetails: () => ({ execCommand: [venvPy] }) } } }) } };

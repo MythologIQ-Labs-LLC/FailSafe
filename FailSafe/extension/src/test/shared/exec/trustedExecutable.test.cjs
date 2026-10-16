@@ -10,11 +10,12 @@
 
 'use strict';
 
-const { test } = require('node:test');
+const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { removeTempTree } = require('../removeTempTree.cjs');
 
 const OUT = path.resolve(__dirname, '..', '..', '..', '..', 'out');
 const te = require(path.join(OUT, 'shared', 'exec', 'trustedExecutable.js'));
@@ -28,7 +29,9 @@ const WIN = process.platform === 'win32';
 const DELIM = WIN ? ';' : ':';
 const exe = (n) => (WIN ? `${n}.exe` : n);
 const realOr = (p) => { try { return fs.realpathSync.native(p); } catch { return p; } };
-const mkbase = () => fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'fsexec-')));
+const bases = [];
+const mkbase = () => { const b = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'fsexec-'))); bases.push(b); return b; };
+after(() => { for (const b of bases) removeTempTree(b); }); // LD20
 const dir = (...p) => { const d = path.join(...p); fs.mkdirSync(d, { recursive: true }); return d; };
 function inert(d, name) {
   dir(d);
