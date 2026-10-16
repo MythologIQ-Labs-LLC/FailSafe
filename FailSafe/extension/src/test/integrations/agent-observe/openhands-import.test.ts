@@ -451,30 +451,43 @@ suite('OpenHands evidence key lifecycle (#477 O16)', () => {
   });
 
   test('O16g an import waits for a pending activation read; a hung or emptied under-lock read refuses and releases the lock', async () => {
-    const S = new PinnedSecrets();
-    const F = workspace();
-    const t = manualTimer();
-    const A = new EvidenceKeyHolder(S.context('A'), { timer: t.timer });
-    void A.loadKey();                                       // activation read still pending
-    const ia = importInto(F, [SDK('g1')], A);
-    await S.get('A'); await S.get('A');                     // activation, then ensureKey: none
-    await S.store('A'); await S.deliver('A'); await S.get('A'); await S.get('A');
-    assert.equal((await ia).imported, 1);
+    // Every refusal must be handled when it happens: a rejection Node reports as
+    // unhandled (even if a handler attaches later) fails the test.
+    const unhandled: string[] = [];
+    const onUnhandled = (reason: unknown) => { unhandled.push(String(reason)); };
+    process.on('unhandledRejection', onUnhandled);
+    try {
+      const S = new PinnedSecrets();
+      const F = workspace();
+      const t = manualTimer();
+      const A = new EvidenceKeyHolder(S.context('A'), { timer: t.timer });
+      void A.loadKey();                                       // activation read still pending
+      const ia = importInto(F, [SDK('g1')], A);
+      await S.get('A'); await S.get('A');                     // activation, then ensureKey: none
+      await S.store('A'); await S.deliver('A'); await S.get('A'); await S.get('A');
+      assert.equal((await ia).imported, 1);
 
-    const hung = importInto(F, [SDK('g2')], A);
-    await S.get('A');                                       // ensureKey: key exists
-    await S.hang('A');                                      // under-lock read never answers
-    t.fire();
-    await assert.rejects(hung, new RegExp(SECRET_STORAGE_REFUSAL));
-    assert.equal(fs.existsSync(`${evidencePath(F)}.lock`), false);
+      const hung = importInto(F, [SDK('g2')], A);
+      const hungRefused = assert.rejects(hung, new RegExp(SECRET_STORAGE_REFUSAL)); // handled before it can reject
+      await S.get('A');                                       // ensureKey: key exists
+      await S.hang('A');                                      // under-lock read never answers
+      t.fire();
+      await hungRefused;
+      assert.equal(fs.existsSync(`${evidencePath(F)}.lock`), false);
 
-    const emptied = importInto(F, [SDK('g3')], A);
-    await S.get('A');                                       // ensureKey: key exists
-    await S.get('A', { value: undefined });                 // the entry was deleted in between
-    await assert.rejects(emptied, new RegExp(SECRET_STORAGE_REFUSAL));
-    assert.equal(fs.existsSync(`${evidencePath(F)}.lock`), false);
-    assert.equal(lines(F).length, 1, 'only g1 was ever written');
-    S.assertDrained({ A: 8 });
+      const emptied = importInto(F, [SDK('g3')], A);
+      const emptiedRefused = assert.rejects(emptied, new RegExp(SECRET_STORAGE_REFUSAL));
+      await S.get('A');                                       // ensureKey: key exists
+      await S.get('A', { value: undefined });                 // the entry was deleted in between
+      await emptiedRefused;
+      assert.equal(fs.existsSync(`${evidencePath(F)}.lock`), false);
+      assert.equal(lines(F).length, 1, 'only g1 was ever written');
+      S.assertDrained({ A: 8 });
+      await settle();
+      assert.deepEqual(unhandled, [], 'no refusal went unhandled');
+    } finally {
+      process.off('unhandledRejection', onUnhandled);
+    }
   });
 });
 
@@ -529,6 +542,14 @@ suite('OpenHands run-scoped deduplication (#477 delta D1)', () => {
     const ints = [{ ...EV('x'), id: 0 }, { ...EV('x'), id: 1 }];
     assert.equal((await importEnvelope(root, { conversation_id, events: ints }, keys)).imported, 2);
     assert.equal((await importEnvelope(root, { conversation_id, events: [...ints, { ...EV('x'), id: 2 }] }, keys)).imported, 3);
+  });
+
+  test('a run id containing ":id:" cannot collide with another run\'s key: the key is an encoded tuple', async () => {
+    const root = workspace();
+    const { keys } = autoKeys();
+    // Old text form: run "abcdefgh:id:y" + event "z" and run "abcdefgh" + event "y:id:z" gave the same key text.
+    assert.equal((await importEnvelope(root, { conversation_id: 'abcdefgh:id:y', events: [EV('z')] }, keys)).imported, 1);
+    assert.equal((await importEnvelope(root, { conversation_id: 'abcdefgh', events: [EV('y:id:z')] }, keys)).imported, 1);
   });
 
   test('a named field below the 8-character floor ("1", "default") is not a run identity', async () => {
@@ -590,6 +611,20 @@ suite('OpenHands link refusal on every write path (#477 delta D2)', () => {
     assert.equal(r.imported, 1);
     assert.equal(r.summaryWritten, false);
     assert.equal(fs.readFileSync(outside, 'utf8'), 'untouched\n');
+  });
+
+  test('a hard-linked openhands-imports.jsonl is refused; the outside file is unchanged and the lock is released', async () => {
+    const root = workspace();
+    const { keys } = autoKeys();
+    fs.mkdirSync(path.join(root, '.failsafe', 'logs'), { recursive: true });
+    // Same volume as the workspace (both under os.tmpdir()): a cross-volume hard link fails with EXDEV.
+    const outside = path.join(workspace(), 'victim.jsonl');
+    fs.writeFileSync(outside, 'untouched\n');
+    fs.linkSync(outside, evidencePath(root));
+    assert.equal(fs.statSync(outside).nlink, 2, 'the hard link exists');
+    await assert.rejects(importInto(root, [SDK('h2')], keys), /OPENHANDS_IMPORT_HARDLINK/);
+    assert.equal(fs.readFileSync(outside, 'utf8'), 'untouched\n');
+    assert.equal(fs.existsSync(`${evidencePath(root)}.lock`), false, 'the lock was released');
   });
 
   test('a symlinked transparency.jsonl refuses the summary (POSIX)', async function () {

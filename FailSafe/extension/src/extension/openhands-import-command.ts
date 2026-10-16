@@ -70,10 +70,12 @@ export async function runOpenHandsImport(deps: OpenHandsImportDeps): Promise<Ope
   const fsx: ExportFs = deps.fsx ?? fs;
   const tooLarge = `OpenHands import refused: the export is larger than ${MAX_EXPORT_BYTES / 1024 / 1024} MB. Nothing was written.`;
   const notAFile = 'OpenHands import refused: the export is not a regular file. Nothing was written.';
+  const changed = 'OpenHands import refused: the export changed while it was being read. Nothing was written.';
 
   // One descriptor for the whole read: opened non-blocking so a FIFO cannot
-  // block the open, checked with fstat, read up to the cap plus one byte (a file
-  // that grew past the cap is refused), and closed on every path.
+  // block the open, checked with fstat, read into a buffer of the fstat size
+  // plus one byte (a file that grew after the fstat is refused), and closed on
+  // every path.
   let bytes: Buffer;
   let fd: number;
   try {
@@ -87,14 +89,14 @@ export async function runOpenHandsImport(deps: OpenHandsImportDeps): Promise<Ope
     const st = fsx.fstatSync(fd);
     if (!st.isFile()) { ui.warn(notAFile); return { kind: 'refused' }; }
     if (st.size > MAX_EXPORT_BYTES) { ui.warn(tooLarge); return { kind: 'refused' }; }
-    const buf = Buffer.alloc(MAX_EXPORT_BYTES + 1);
+    const buf = Buffer.alloc(Math.min(st.size, MAX_EXPORT_BYTES) + 1);
     let total = 0;
     while (total < buf.length) {
       const n = fsx.readSync(fd, buf, total, buf.length - total, null);
       if (n <= 0) break;
       total += n;
     }
-    if (total > MAX_EXPORT_BYTES) { ui.warn(tooLarge); return { kind: 'refused' }; }
+    if (total > st.size) { ui.warn(changed); return { kind: 'refused' }; }
     bytes = buf.subarray(0, total);
   } catch (e) {
     ui.error(`OpenHands import: cannot read the file: ${e instanceof Error ? e.message : String(e)}`);

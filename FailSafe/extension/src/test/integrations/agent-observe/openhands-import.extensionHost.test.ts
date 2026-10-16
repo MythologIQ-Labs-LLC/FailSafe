@@ -42,16 +42,18 @@ class ScriptedUi implements OpenHandsImportUi {
 
 /** An injected descriptor reader: fstat answers `size`/`isFile`, reads serve `bytes` and then `extra` (a growing file). */
 function fdProbe(o: { size: number; bytes: Buffer; isFile?: boolean; extra?: number }) {
-  let opened = 0; let reads = 0; let served = 0;
+  let opened = 0; let reads = 0; let served = 0; let maxBuffer = 0;
   const total = o.bytes.length + (o.extra ?? 0);
   return {
     open: () => opened,
     reads: () => reads,
+    maxBuffer: () => maxBuffer,
     fsx: {
       openSync: () => { opened++; return 99; },
       fstatSync: () => ({ size: o.size, isFile: () => o.isFile !== false }),
       readSync: (_fd: number, buf: Buffer, off: number, len: number) => {
         reads++;
+        maxBuffer = Math.max(maxBuffer, buf.length);
         const n = Math.min(len, total - served);
         for (let i = 0; i < n; i++) buf[off + i] = served + i < o.bytes.length ? o.bytes[served + i] : 0x20;
         served += n;
@@ -229,6 +231,15 @@ suite('OpenHands import command and timelines in the extension host (#477)', fun
     assert.equal(out?.kind, 'refused');
     assert.equal(probe.open(), 0);
     assert.equal(fs.existsSync(evidencePath(root)), false);
+  });
+
+  test('the export buffer is sized from fstat (size + 1), not from the 20 MB cap', async () => {
+    const root = ws();
+    const probe = fdProbe({ size: 2, bytes: Buffer.from('[]') });
+    await runOpenHandsImport({ workspaceRoot: root, enabled: true, ui: new ScriptedUi(path.join(root, 'small.json')), keys: new EvidenceKeyHolder(new Secrets().context()), fsx: probe.fsx });
+    assert.ok(probe.reads() > 0, 'the export was read');
+    assert.ok(probe.maxBuffer() <= 3, `the read buffer is ${probe.maxBuffer()} bytes`);
+    assert.equal(probe.open(), 0, 'the descriptor was closed');
   });
 
   test('D6a the 10,000-event cap is applied before any event is mapped', async () => {

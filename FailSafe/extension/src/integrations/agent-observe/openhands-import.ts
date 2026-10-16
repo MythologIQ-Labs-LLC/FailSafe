@@ -14,14 +14,18 @@
  * of that run imports only the new events. Otherwise (integer ids, which
  * OpenHands 0.x numbers 0..N in every conversation, no id, or no run identity)
  * the event is keyed by the export file's hash and position, so a different
- * file re-imports its events. Keys are read only from lines whose signature
- * verifies, by streaming the file, never by reading it whole.
+ * file re-imports its events. The key hashes a JSON-encoded tuple, so a run id
+ * or event id containing the separator cannot collide with another key. Keys
+ * are read only from lines whose signature verifies, by streaming the file,
+ * never by reading it whole.
  *
  * Writes: one write per record line (a concurrent append can only fall between
  * lines), then fsync, before the import is reported as saved. Links under
- * `.failsafe` are refused before any folder is created, and the transparency
- * summary target is refused when it is a link, not a regular file, or a file
- * with more than one hard link, so the import never becomes an append
+ * `.failsafe` are refused before any folder is created. Both append targets
+ * (the evidence file and the transparency log) are refused when they are a
+ * link, and are then opened once (O_NOFOLLOW where the platform defines it),
+ * checked on the open descriptor (a regular file with exactly one hard link)
+ * and written through that descriptor, so the import never becomes an append
  * primitive into a file outside the workspace.
  */
 
@@ -75,9 +79,41 @@ export function runIdentityOf(envelope: unknown): string | undefined {
 /** The deduplication key of one event (see the module comment). */
 export function importKeyFor(event: AgentObservationEvent, sourceSha256: string, runId?: string): string {
   const basis = runId && event.idSource === 'export'
-    ? `openhands:run:${runId}:id:${event.id}:${event.kind}`
-    : `openhands:file:${sourceSha256}:${event.index}:${event.kind}`;
-  return createHash('sha256').update(basis).digest('hex');
+    ? ['openhands', 'run', runId, event.id, event.kind]
+    : ['openhands', 'file', sourceSha256, event.index, event.kind];
+  return createHash('sha256').update(JSON.stringify(basis)).digest('hex');
+}
+
+/**
+ * Open an append target once and check the descriptor itself, so a swap between
+ * the path checks and the open cannot redirect the write: it must be a regular
+ * file with exactly one hard link (a second link means the same bytes also live
+ * outside this path). O_NOFOLLOW refuses a final symlink where it is defined;
+ * on Windows it is not, and the lstat checks before the open are what refuse one.
+ */
+function openAppendTarget(file: string, what: string): number {
+  const flags = fs.constants.O_RDWR | fs.constants.O_APPEND | fs.constants.O_CREAT | (fs.constants.O_NOFOLLOW ?? 0);
+  const fd = fs.openSync(file, flags, 0o600);
+  try {
+    const st = fs.fstatSync(fd);
+    if (!st.isFile()) throw new Error(`OPENHANDS_IMPORT_INVALID_LOG: the ${what} is not a regular file`);
+    if (st.nlink !== 1) throw new Error(`OPENHANDS_IMPORT_HARDLINK: refusing a hard-linked ${what}`);
+    return fd;
+  } catch (error) {
+    fs.closeSync(fd);
+    throw error;
+  }
+}
+
+/** Write every byte through the descriptor. */
+function writeAll(fd: number, text: string): void {
+  const bytes = Buffer.from(text, 'utf8');
+  let offset = 0;
+  while (offset < bytes.length) {
+    const written = fs.writeSync(fd, bytes, offset, bytes.length - offset);
+    if (written <= 0) throw new Error('OPENHANDS_IMPORT_WRITE_FAILED: no progress writing the evidence file');
+    offset += written;
+  }
 }
 
 /** Refuse a link at `.failsafe` or `.failsafe/logs` before anything is created there. */
@@ -137,37 +173,20 @@ function existingKeys(target: string, key: string, folder: string): { keys: Set<
   return { keys, unverified };
 }
 
-/** True when the file ends inside a line (a torn last write); the next line must start fresh. */
-function endsMidLine(target: string): boolean {
-  let fd: number | undefined;
-  try {
-    const size = fs.statSync(target).size;
-    if (size === 0) return false;
-    fd = fs.openSync(target, 'r');
-    const last = Buffer.alloc(1);
-    fs.readSync(fd, last, 0, 1, size - 1);
-    return last[0] !== 0x0a;
-  } catch {
-    return false;
-  } finally {
-    if (fd !== undefined) fs.closeSync(fd);
-  }
+/** True when the open file ends inside a line (a torn last write); the next line must start fresh. */
+function endsMidLine(fd: number): boolean {
+  const size = fs.fstatSync(fd).size;
+  if (size === 0) return false;
+  const last = Buffer.alloc(1);
+  fs.readSync(fd, last, 0, 1, size - 1);
+  return last[0] !== 0x0a;
 }
 
 function writeLines(target: string, lines: string[]): void {
-  const torn = endsMidLine(target);
-  const fd = fs.openSync(target, 'a', 0o600);
+  const fd = openAppendTarget(target, 'evidence file');
   try {
-    if (torn) fs.writeSync(fd, '\n');
-    for (const line of lines) {
-      const bytes = Buffer.from(line + '\n', 'utf8');
-      let offset = 0;
-      while (offset < bytes.length) {
-        const written = fs.writeSync(fd, bytes, offset, bytes.length - offset);
-        if (written <= 0) throw new Error('OPENHANDS_IMPORT_WRITE_FAILED: no progress writing the evidence file');
-        offset += written;
-      }
-    }
+    if (endsMidLine(fd)) writeAll(fd, '\n');
+    for (const line of lines) writeAll(fd, line + '\n');
     fs.fsyncSync(fd);
   } finally {
     fs.closeSync(fd);
@@ -191,13 +210,13 @@ function defaultAppendSummary(workspaceRoot: string): (record: Record<string, un
     try { stat = fs.lstatSync(log); } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
-    if (stat) {
-      if (stat.isSymbolicLink()) throw new Error('OPENHANDS_IMPORT_SYMLINK: refusing a redirected transparency log');
-      if (!stat.isFile()) throw new Error('OPENHANDS_IMPORT_INVALID_LOG: the transparency log is not a regular file');
-      // A second hard link means the same bytes live outside this path too.
-      if (stat.nlink > 1) throw new Error('OPENHANDS_IMPORT_HARDLINK: refusing a hard-linked transparency log');
+    if (stat?.isSymbolicLink()) throw new Error('OPENHANDS_IMPORT_SYMLINK: refusing a redirected transparency log');
+    const fd = openAppendTarget(log, 'transparency log');
+    try {
+      writeAll(fd, JSON.stringify(record) + '\n');
+    } finally {
+      fs.closeSync(fd);
     }
-    fs.appendFileSync(log, JSON.stringify(record) + '\n', 'utf8');
   };
 }
 
