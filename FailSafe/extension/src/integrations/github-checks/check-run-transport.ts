@@ -18,12 +18,9 @@
 import { isPublishable, isShieldFamilyName, type CheckConclusion, type CheckRunPayload, SHIELD_CHECK_NAME } from './github-checks-map';
 import type { GitHubPostFn } from './github-checks-client';
 import { isVerifiedShieldReceipt } from '../shield-receipts/shield-receipt-verifier';
-
-/** Error texts the transport returns for its own refusals (github-checks-health maps them). */
-export const INVALID_API_BASE_ERROR = 'invalid GitHub API base URL';
-export const TARGET_HOST_MISMATCH_ERROR = 'check run target host mismatch';
-export const INVALID_TARGET_REPO_ERROR = 'invalid check run target repo';
-export const UNCONFIRMED_RESPONSE_ERROR = 'unconfirmed GitHub response';
+import {
+  INVALID_API_BASE_ERROR, INVALID_TARGET_REPO_ERROR, TARGET_HOST_MISMATCH_ERROR, UNCONFIRMED_RESPONSE_ERROR,
+} from './check-run-errors';
 
 /** A payload carrying the reserved SHIELD name; only the verified publisher builds one. */
 export interface ShieldCheckRunPayload {
