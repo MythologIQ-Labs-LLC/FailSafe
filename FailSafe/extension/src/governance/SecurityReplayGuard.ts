@@ -13,21 +13,24 @@
  *     -> validateNonce() -> check one-time use
  *     -> consumeNonce() -> mark as used
  * ```
+ *
+ * v6.0.8 (#472): nonces.json is the authority, shared by every FailSafe
+ * process on the workspace. Issuing, consuming and cleanup are each one
+ * transaction under the cross-process lock on a fresh read (nonceStore.ts),
+ * so of several processes consuming one nonce exactly one is accepted, and no
+ * process's write erases another's nonces. Every failure fails closed: a busy
+ * store refuses this call; a store that cannot be read or written refuses
+ * every call until reload.
  */
 
 import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { Logger } from "../shared/Logger";
+import { NonceChange, NonceFile, NonceRecord, NonceStoreBusyError, NonceStoreSeams } from "./nonceStore";
 
-export interface NonceRecord {
-  nonce: string;
-  createdAt: number;
-  expiresAt: number;
-  consumedAt?: number;
-  consumedBy?: string;
-  metadata?: Record<string, unknown>;
-}
+export type { NonceRecord } from "./nonceStore";
+export { createSignedRequest, processSignedRequest } from "./signedRequest";
 
 export interface NonceValidationResult {
   valid: boolean;
@@ -35,24 +38,30 @@ export interface NonceValidationResult {
   record?: NonceRecord;
 }
 
-/** Rename errors worth retrying (antivirus or indexer briefly holding the file on Windows). */
-const TRANSIENT_RENAME_CODES = new Set(["EPERM", "EBUSY", "EACCES"]);
-const RENAME_ATTEMPTS = 3;
-const RENAME_RETRY_MS = 50;
+export interface ReplayGuardOptions extends NonceStoreSeams {
+  ttlMs?: number;
+  cleanupIntervalMs?: number;
+  /** How long a change waits for the store lock (default 3000 ms). */
+  lockTimeoutMs?: number;
+  /** Internal test seam: the lock's monotonic clock. */
+  now?: () => number;
+}
+
+const LOCK_TIMEOUT_MS = 3000;
+const LOCK_STALE_MS = 5000;
+const NONCE_FORMAT = /^[0-9a-f]{64}$/;
+const isNonce = (nonce: unknown): nonce is string => typeof nonce === "string" && NONCE_FORMAT.test(nonce);
+const short = (nonce: unknown): string => String(nonce).substring(0, 8) + "...";
 
 export class SecurityReplayGuard {
-  private readonly nonceStorePath: string;
-  private readonly logger: Logger;
+  private readonly file: NonceFile;
+  private readonly logger = new Logger("SecurityReplayGuard");
   private nonces: Map<string, NonceRecord> = new Map();
   private readonly defaultTtlMs: number;
   private cleanupInterval?: NodeJS.Timeout;
   private storeHealthy = true;
-  private readonly renameFile: (from: string, to: string) => void;
 
-  constructor(
-    rootOrSecurityDir: string,
-    options: { ttlMs?: number; cleanupIntervalMs?: number; renameSync?: (from: string, to: string) => void } = {},
-  ) {
+  constructor(rootOrSecurityDir: string, options: ReplayGuardOptions = {}) {
     const normalizedInput = path.resolve(rootOrSecurityDir);
     const looksLikeSecurityDir =
       path.basename(normalizedInput) === "security" &&
@@ -60,18 +69,21 @@ export class SecurityReplayGuard {
     const storeDir = looksLikeSecurityDir
       ? normalizedInput
       : path.join(normalizedInput, ".failsafe", "security");
-    this.nonceStorePath = path.join(storeDir, "nonces.json");
+    this.file = new NonceFile(
+      path.join(storeDir, "nonces.json"),
+      { timeoutMs: options.lockTimeoutMs ?? LOCK_TIMEOUT_MS, staleMs: LOCK_STALE_MS, now: options.now },
+      { renameSync: options.renameSync, writeSync: options.writeSync, fsyncSync: options.fsyncSync },
+    );
     this.defaultTtlMs = options.ttlMs || 5 * 60 * 1000; // 5 minutes default
-    this.logger = new Logger("SecurityReplayGuard");
-    this.renameFile = options.renameSync ?? fs.renameSync;
 
-    // Ensure directory exists
-    if (!fs.existsSync(storeDir)) {
-      fs.mkdirSync(storeDir, { recursive: true });
+    if (!fs.existsSync(storeDir)) fs.mkdirSync(storeDir, { recursive: true });
+
+    try { // Load existing nonces
+      this.readStore();
+      this.logger.info(`Loaded ${this.nonces.size} nonces from store`);
+    } catch (error) {
+      this.logger.error("Nonce store unreadable: refusing replay authorization", error);
     }
-
-    // Load existing nonces
-    this.loadNonces();
 
     // Start cleanup interval
     const cleanupMs = options.cleanupIntervalMs || 60 * 1000; // 1 minute
@@ -79,287 +91,159 @@ export class SecurityReplayGuard {
   }
 
   /**
-   * Generate a new nonce for a governance request
+   * Generate a new nonce for a governance request. Throws, issuing nothing,
+   * when the nonce cannot be stored durably.
    */
   generateNonce(metadata?: Record<string, unknown>, ttlMs?: number): string {
     this.requireHealthyStore();
     const nonce = crypto.randomBytes(32).toString("hex");
     const now = Date.now();
     const ttl = ttlMs || this.defaultTtlMs;
-
-    const record: NonceRecord = {
-      nonce,
-      createdAt: now,
-      expiresAt: now + ttl,
-      metadata,
-    };
-
-    this.nonces.set(nonce, record);
-    try { this.saveNonces(); } catch (error) {
-      this.nonces.delete(nonce);
-      this.storeHealthy = false;
-      throw error;
-    }
-
-    this.logger.debug("Generated nonce", {
-      nonce: nonce.substring(0, 8) + "...",
-      ttl,
+    const record: NonceRecord = { nonce, createdAt: now, expiresAt: now + ttl, metadata };
+    this.transact((records) => {
+      records.set(nonce, record);
+      return { changed: true, result: undefined };
     });
-
+    this.logger.debug("Generated nonce", { nonce: short(nonce), ttl });
     return nonce;
   }
 
-  /**
-   * Validate a nonce without consuming it
-   */
+  /** Validate a nonce without consuming it, against a fresh read of the store. */
   validateNonce(nonce: string): NonceValidationResult {
     if (!this.storeHealthy) return { valid: false, reason: "persistence_error" };
-    if (!nonce || typeof nonce !== "string" || !/^[0-9a-f]{64}$/.test(nonce)) {
-      return { valid: false, reason: "invalid_format" };
-    }
-
-    const record = this.nonces.get(nonce);
-
-    if (!record) {
-      return { valid: false, reason: "not_found" };
-    }
-
-    if (Date.now() > record.expiresAt) {
-      return { valid: false, reason: "expired", record };
-    }
-
-    if (record.consumedAt) {
-      return { valid: false, reason: "already_used", record };
-    }
-
-    return { valid: true, record };
+    if (!isNonce(nonce)) return { valid: false, reason: "invalid_format" };
+    try { this.readStore(); } catch { return { valid: false, reason: "persistence_error" }; }
+    return this.check(this.nonces.get(nonce));
   }
 
   /**
-   * Validate and consume a nonce in one operation
+   * Validate and consume a nonce in one locked transaction. The decision is
+   * made only from the store as read under the lock.
    */
   consumeNonce(nonce: string, consumedBy?: string): NonceValidationResult {
-    const validation = this.validateNonce(nonce);
-
-    if (!validation.valid) {
-      this.logger.warn("Nonce validation failed", {
-        nonce: nonce.substring(0, 8) + "...",
-        reason: validation.reason,
-      });
-      return validation;
+    let outcome: NonceValidationResult = { valid: false, reason: "persistence_error" };
+    if (this.storeHealthy && !isNonce(nonce)) outcome = { valid: false, reason: "invalid_format" };
+    else if (this.storeHealthy) {
+      try {
+        outcome = this.transact((records) => {
+          const found = this.check(records.get(nonce));
+          if (!found.valid) return { changed: false, result: found };
+          const record: NonceRecord = { ...found.record!, consumedAt: Date.now(), consumedBy };
+          records.set(nonce, record);
+          return { changed: true, result: { valid: true, record } };
+        });
+      } catch (error) {
+        this.logger.error("Refusing nonce consumption: the store could not be updated", error);
+      }
     }
-
-    const record = validation.record!;
-    record.consumedAt = Date.now();
-    record.consumedBy = consumedBy;
-
-    this.nonces.set(nonce, record);
-    try { this.saveNonces(); } catch (error) {
-      this.storeHealthy = false;
-      this.logger.error("Refusing nonce consumption: durable write failed", error);
-      return { valid: false, reason: "persistence_error" };
-    }
-
-    this.logger.debug("Consumed nonce", {
-      nonce: nonce.substring(0, 8) + "...",
-      consumedBy,
-    });
-
-    return { valid: true, record };
+    if (outcome.valid) this.logger.debug("Consumed nonce", { nonce: short(nonce), consumedBy });
+    else this.logger.warn("Nonce validation failed", { nonce: short(nonce), reason: outcome.reason });
+    return outcome;
   }
 
-  /**
-   * Check if a nonce exists (regardless of state)
-   */
+  /** Check if a nonce exists (regardless of state) */
   hasNonce(nonce: string): boolean {
+    this.refreshQuietly();
     return this.nonces.has(nonce);
   }
 
-  /**
-   * Get statistics about the nonce store
-   */
-  getStats(): {
-    total: number;
-    active: number;
-    expired: number;
-    consumed: number;
-  } {
+  /** Get statistics about the nonce store */
+  getStats(): { total: number; active: number; expired: number; consumed: number } {
+    this.refreshQuietly();
     const now = Date.now();
-    let active = 0;
-    let expired = 0;
-    let consumed = 0;
-
+    const stats = { total: this.nonces.size, active: 0, expired: 0, consumed: 0 };
     for (const record of this.nonces.values()) {
-      if (record.consumedAt) {
-        consumed++;
-      } else if (now > record.expiresAt) {
-        expired++;
-      } else {
-        active++;
-      }
+      if (record.consumedAt) stats.consumed++;
+      else if (now > record.expiresAt) stats.expired++;
+      else stats.active++;
     }
-
-    return {
-      total: this.nonces.size,
-      active,
-      expired,
-      consumed,
-    };
+    return stats;
   }
 
-  /**
-   * Remove expired and consumed nonces
-   */
+  /** Remove expired and consumed nonces */
   cleanup(): number {
     const now = Date.now();
-    let removed = 0;
-
-    for (const [nonce, record] of this.nonces.entries()) {
-      // Remove if expired or consumed more than 1 hour ago
-      const shouldRemove =
-        now > record.expiresAt ||
-        (record.consumedAt && now - record.consumedAt > 60 * 60 * 1000);
-
-      if (shouldRemove) {
-        this.nonces.delete(nonce);
-        removed++;
+    const removed = this.transact((records) => {
+      let count = 0;
+      for (const [nonce, record] of records.entries()) {
+        // Remove if expired or consumed more than 1 hour ago
+        if (now > record.expiresAt || (record.consumedAt && now - record.consumedAt > 60 * 60 * 1000)) {
+          records.delete(nonce);
+          count++;
+        }
       }
-    }
-
-    if (removed > 0) {
-      try { this.saveNonces(); } catch (error) { this.storeHealthy = false; throw error; }
-      this.logger.debug(`Cleaned up ${removed} nonces`);
-    }
-
+      return { changed: count > 0, result: count };
+    });
+    if (removed > 0) this.logger.debug(`Cleaned up ${removed} nonces`);
     return removed;
   }
 
   /**
    * Interval entry point: a persistence failure here must not escape the timer
-   * (it would be an uncaught exception in the extension host). cleanup() has
-   * already marked the store unhealthy, so authorization stays fail-closed.
+   * (it would be an uncaught exception in the extension host). A failed write
+   * has already marked the store unhealthy, so authorization stays fail-closed.
    */
   private runScheduledCleanup(): void {
-    try {
-      this.cleanup();
-    } catch (error) {
+    try { this.cleanup(); } catch (error) {
       this.logger.error("Nonce cleanup could not persist; replay authorization stays fail-closed", error);
     }
   }
 
-  /**
-   * Load nonces from persistent storage
-   */
-  private loadNonces(): void {
+  private check(record: NonceRecord | undefined): NonceValidationResult {
+    if (!record) return { valid: false, reason: "not_found" };
+    if (Date.now() > record.expiresAt) return { valid: false, reason: "expired", record };
+    if (record.consumedAt) return { valid: false, reason: "already_used", record };
+    return { valid: true, record };
+  }
+
+  /** A fresh lock-free read. A store that cannot be read or parsed disables it (fail closed). */
+  private readStore(): void {
     try {
-      if (fs.existsSync(this.nonceStorePath)) {
-        const content = fs.readFileSync(this.nonceStorePath, "utf8");
-        const records = JSON.parse(content) as NonceRecord[];
-
-        for (const record of records) {
-          this.nonces.set(record.nonce, record);
-        }
-
-        this.logger.info(`Loaded ${this.nonces.size} nonces from store`);
-      }
+      this.nonces = this.file.read();
     } catch (error) {
-      this.logger.error("Nonce store unreadable: refusing replay authorization", error);
-      this.nonces.clear();
       this.storeHealthy = false;
+      throw error;
     }
+  }
+
+  private refreshQuietly(): void {
+    if (!this.storeHealthy) return;
+    try { this.readStore(); } catch { /* stats keep the last known store */ }
   }
 
   /**
-   * Save nonces to persistent storage
+   * One change in a locked transaction (NonceFile.transact). A busy or
+   * taken-over store throws without disabling it; a failed read or write
+   * disables it.
    */
-  private requireHealthyStore(): void {
-    if (!this.storeHealthy) {
-      throw new Error(
-        `Nonce store unavailable: fail-closed persistence state (${this.nonceStorePath}). ` +
-        "To recover, move that file aside and reload the window; nonces expire after their TTL, so no replay window opens.",
-      );
-    }
-  }
-
-  private saveNonces(): void {
+  private transact<T>(change: NonceChange<T>): T {
     this.requireHealthyStore();
-    const records = Array.from(this.nonces.values());
-    const tempPath = this.nonceStorePath + "." + crypto.randomBytes(8).toString("hex") + ".tmp";
     try {
-      fs.writeFileSync(tempPath, JSON.stringify(records, null, 2), { encoding: "utf8", flag: "wx", mode: 0o600 });
-      this.renameWithRetry(tempPath, this.nonceStorePath);
+      const { result, records } = this.file.transact(change);
+      this.nonces = records;
+      return result;
     } catch (error) {
-      try { fs.unlinkSync(tempPath); } catch { /* May not have created the temp file. */ }
+      if (!(error instanceof NonceStoreBusyError)) this.storeHealthy = false;
       this.logger.error("Failed to save nonce store", error);
       throw error;
     }
   }
 
-  private renameWithRetry(from: string, to: string): void {
-    for (let attempt = 1; ; attempt++) {
-      try {
-        this.renameFile(from, to);
-        return;
-      } catch (error) {
-        const code = (error as NodeJS.ErrnoException).code ?? "";
-        if (attempt >= RENAME_ATTEMPTS || !TRANSIENT_RENAME_CODES.has(code)) throw error;
-        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, RENAME_RETRY_MS);
-      }
+  private requireHealthyStore(): void {
+    if (!this.storeHealthy) {
+      throw new Error(
+        `Nonce store unavailable: fail-closed persistence state (${this.file.path}). ` +
+        "To recover, move that file aside and reload the window; nonces expire after their TTL, so no replay window opens.",
+      );
     }
   }
 
   /**
-   * Dispose of resources
+   * Dispose of resources. Nothing is written: every change is already on
+   * disk, and writing this process's view would erase other processes' nonces.
    */
   dispose(): void {
-    if (this.cleanupInterval) {
-      clearInterval(this.cleanupInterval);
-    }
-    try { this.saveNonces(); } catch (error) { this.logger.error("Nonce store disposal persistence failed", error); }
+    if (this.cleanupInterval) clearInterval(this.cleanupInterval);
     this.nonces.clear();
   }
-}
-
-/**
- * Helper function to create a signed request with nonce
- */
-export function createSignedRequest(
-  guard: SecurityReplayGuard,
-  action: string,
-  payload: Record<string, unknown>,
-): {
-  nonce: string;
-  action: string;
-  payload: Record<string, unknown>;
-  timestamp: string;
-} {
-  const nonce = guard.generateNonce({ action });
-  return {
-    nonce,
-    action,
-    payload,
-    timestamp: new Date().toISOString(),
-  };
-}
-
-/**
- * Helper function to validate and process a signed request
- */
-export function processSignedRequest(
-  guard: SecurityReplayGuard,
-  request: { nonce: string; action: string; timestamp: string },
-): NonceValidationResult {
-  // Check timestamp is recent (within 5 minutes)
-  const requestTime = new Date(request.timestamp).getTime();
-  const now = Date.now();
-  const maxAge = 5 * 60 * 1000;
-
-  if (isNaN(requestTime) || now - requestTime > maxAge) {
-    return {
-      valid: false,
-      reason: "expired",
-    };
-  }
-
-  return guard.consumeNonce(request.nonce, request.action);
 }
