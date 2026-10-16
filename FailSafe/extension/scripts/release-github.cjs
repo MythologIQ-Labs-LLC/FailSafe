@@ -17,17 +17,39 @@ const sha256 = (bytes) => crypto.createHash("sha256").update(bytes).digest("hex"
 
 const ghExec = (args, opts = {}) => execFileSync("gh", args, { encoding: opts.binary ? "buffer" : "utf8", maxBuffer: 1 << 28 });
 
-/** gh-backed release client. `exec` is injectable so the argument contract is testable. */
-function ghClient(repo, exec = ghExec) {
+/**
+ * Waits between release listings after creating a draft. GitHub can take a
+ * few seconds to list a new draft (the v6.0.7 publish stopped on "found 0").
+ */
+const DRAFT_LIST_DELAYS_MS = [1000, 2000, 4000, 8000, 15000];
+const realSleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * gh-backed release client. `exec` and `sleep` are injectable so the argument
+ * contract and the draft-listing wait are testable.
+ */
+function ghClient(repo, exec = ghExec, { sleep = realSleep, draftListDelaysMs = DRAFT_LIST_DELAYS_MS } = {}) {
   const pages = (route) => JSON.parse(exec(["api", "--paginate", "--slurp", route])).flat();
+  const draftsFor = async (tag) => (await pages(`repos/${repo}/releases?per_page=100`)).filter((r) => r.tag_name === tag);
   return {
     listReleases: async () => pages(`repos/${repo}/releases?per_page=100`),
     listAssets: async (id) => pages(`repos/${repo}/releases/${id}/assets?per_page=100`),
     createDraft: async (tag, notes) => {
       const notesArgs = notes && fs.existsSync(notes) && fs.statSync(notes).size > 0 ? ["--notes-file", notes] : ["--generate-notes"];
       exec(["release", "create", tag, "--repo", repo, "--draft", "--verify-tag", "--title", `${tag} — FailSafe`, ...notesArgs]);
-      const created = (await pages(`repos/${repo}/releases?per_page=100`)).filter((r) => r.tag_name === tag);
-      if (created.length !== 1) throw Object.assign(new Error(`expected one release for ${tag} after creating the draft, found ${created.length}`), { stop: true });
+      // Zero matches may be listing lag, so list again; more than one is never retried.
+      let created = await draftsFor(tag);
+      let waited = 0;
+      for (const delay of draftListDelaysMs) {
+        if (created.length !== 0) break;
+        await sleep(delay);
+        waited += delay;
+        created = await draftsFor(tag);
+      }
+      if (created.length !== 1) {
+        const lag = created.length === 0 ? ` (${draftListDelaysMs.length + 1} listings over ${waited / 1000} s)` : "";
+        throw Object.assign(new Error(`expected one release for ${tag} after creating the draft, found ${created.length}${lag}`), { stop: true });
+      }
       return created[0];
     },
     deleteAsset: async (id) => exec(["api", "-X", "DELETE", `repos/${repo}/releases/assets/${id}`]),
