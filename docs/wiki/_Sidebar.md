@@ -24,7 +24,6 @@
 ## Reference
 - [[Configuration Reference]]
 - [[API Reference]]
-- [[FailSafe Pro]]
 
 ## Community
 - [[Troubleshooting & FAQ]]
