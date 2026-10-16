@@ -9,20 +9,26 @@
  * out of the recent-transparency views, and a torn line written by another
  * transparency writer can never block an import.
  *
- * Deduplication: an event that carries its own export id is keyed by that id
- * (a re-export of the same run with more events imports only the new ones);
- * only an event without one is keyed by the export file's hash and position.
- * Keys are read only from lines whose signature verifies.
+ * Deduplication: when the export names its run (runIdentityOf) and an event
+ * carries a string id, the event is keyed by run and id, so a longer re-export
+ * of that run imports only the new events. Otherwise (integer ids, which
+ * OpenHands 0.x numbers 0..N in every conversation, no id, or no run identity)
+ * the event is keyed by the export file's hash and position, so a different
+ * file re-imports its events. Keys are read only from lines whose signature
+ * verifies, by streaming the file, never by reading it whole.
  *
  * Writes: one write per record line (a concurrent append can only fall between
  * lines), then fsync, before the import is reported as saved. Links under
- * `.failsafe` are refused, so the import never becomes an append primitive
- * into a file outside the workspace.
+ * `.failsafe` are refused before any folder is created, and the transparency
+ * summary target is refused when it is a link, not a regular file, or a file
+ * with more than one hard link, so the import never becomes an append
+ * primitive into a file outside the workspace.
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
 import { createHash } from 'crypto';
+import { StringDecoder } from 'string_decoder';
 import type { AgentObservationEvent } from './openhands-observer';
 import { normalizeFolder, signRecord, verifyRecord, type EvidenceKeyHolder } from './openhands-signing';
 
@@ -42,12 +48,48 @@ export function evidencePath(workspaceRoot: string): string {
   return path.join(workspaceRoot, '.failsafe', 'logs', EVIDENCE_FILE);
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const TOKEN_RE = /^[A-Za-z0-9_.:-]{1,64}$/;
+const NAMED_RUN_FIELDS = ['conversation_id', 'conversationId', 'session_id'] as const;
+
+/**
+ * The run an export belongs to, or undefined. Only strings count. A named
+ * field (conversation_id, conversationId, session_id) counts when it is a UUID
+ * or a token of at least 8 characters; the generic `id` field only when it is a
+ * UUID or at least 16 hex characters. Qualifying fields that disagree mean no
+ * run identity.
+ */
+export function runIdentityOf(envelope: unknown): string | undefined {
+  if (!envelope || typeof envelope !== 'object' || Array.isArray(envelope)) return undefined;
+  const env = envelope as Record<string, unknown>;
+  const found = new Set<string>();
+  for (const f of NAMED_RUN_FIELDS) {
+    const v = env[f];
+    if (typeof v === 'string' && (UUID_RE.test(v) || (TOKEN_RE.test(v) && v.length >= 8))) found.add(v);
+  }
+  const g = env.id;
+  if (typeof g === 'string' && (UUID_RE.test(g) || /^[0-9a-f]{16,64}$/i.test(g))) found.add(g);
+  return found.size === 1 ? [...found][0] : undefined;
+}
+
 /** The deduplication key of one event (see the module comment). */
-export function importKeyFor(event: AgentObservationEvent, sourceSha256: string): string {
-  const basis = event.idSource === 'export'
-    ? `openhands:id:${event.id}:${event.kind}`
+export function importKeyFor(event: AgentObservationEvent, sourceSha256: string, runId?: string): string {
+  const basis = runId && event.idSource === 'export'
+    ? `openhands:run:${runId}:id:${event.id}:${event.kind}`
     : `openhands:file:${sourceSha256}:${event.index}:${event.kind}`;
   return createHash('sha256').update(basis).digest('hex');
+}
+
+/** Refuse a link at `.failsafe` or `.failsafe/logs` before anything is created there. */
+function refuseLinkedFolders(workspaceRoot: string): void {
+  for (const dir of [path.join(workspaceRoot, '.failsafe'), path.join(workspaceRoot, '.failsafe', 'logs')]) {
+    let stat: fs.Stats;
+    try { stat = fs.lstatSync(dir); } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
+      throw error;
+    }
+    if (stat.isSymbolicLink()) throw new Error('OPENHANDS_IMPORT_SYMLINK: refusing a redirected evidence path');
+  }
 }
 
 function refuseLinks(workspaceRoot: string, target: string, lockPath: string): void {
@@ -62,18 +104,35 @@ function refuseLinks(workspaceRoot: string, target: string, lockPath: string): v
   }
 }
 
-/** Verified import keys already in the evidence file, and the count of lines that did not verify. */
+/** Verified import keys already in the evidence file, and the count of lines that did not verify.
+ *  Streams the file in 64 KiB chunks through a StringDecoder instead of reading it whole. */
 function existingKeys(target: string, key: string, folder: string): { keys: Set<string>; unverified: number } {
   const keys = new Set<string>();
   let unverified = 0;
   if (!fs.existsSync(target)) return { keys, unverified };
-  for (const line of fs.readFileSync(target, 'utf8').split('\n')) {
-    if (!line.trim()) continue;
+  const take = (line: string): void => {
+    if (!line.trim()) return;
     let rec: unknown;
-    try { rec = JSON.parse(line); } catch { unverified++; continue; }
-    if (!rec || typeof rec !== 'object' || !verifyRecord(key, folder, rec as Record<string, unknown>)) { unverified++; continue; }
+    try { rec = JSON.parse(line); } catch { unverified++; return; }
+    if (!rec || typeof rec !== 'object' || !verifyRecord(key, folder, rec as Record<string, unknown>)) { unverified++; return; }
     const k = (rec as Record<string, unknown>).importKey;
     if (typeof k === 'string') keys.add(k);
+  };
+  const fd = fs.openSync(target, 'r');
+  try {
+    const decoder = new StringDecoder('utf8');
+    const buf = Buffer.alloc(64 * 1024);
+    let rest = '';
+    for (;;) {
+      const n = fs.readSync(fd, buf, 0, buf.length, null);
+      if (n <= 0) break;
+      const parts = (rest + decoder.write(buf.subarray(0, n))).split('\n');
+      rest = parts.pop() ?? '';
+      parts.forEach(take);
+    }
+    take(rest + decoder.end());
+  } finally {
+    fs.closeSync(fd);
   }
   return { keys, unverified };
 }
@@ -120,11 +179,24 @@ export interface PersistDeps {
   now?: () => Date;
   /** Appends the transparency summary line; defaults to the workspace transparency log. */
   appendSummary?: (record: Record<string, unknown>) => void;
+  /** The export's run identity (runIdentityOf), when it has one. */
+  runId?: string;
 }
 
 function defaultAppendSummary(workspaceRoot: string): (record: Record<string, unknown>) => void {
   return (record) => {
+    refuseLinkedFolders(workspaceRoot);
     const log = path.join(workspaceRoot, '.failsafe', 'logs', 'transparency.jsonl');
+    let stat: fs.Stats | undefined;
+    try { stat = fs.lstatSync(log); } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
+    if (stat) {
+      if (stat.isSymbolicLink()) throw new Error('OPENHANDS_IMPORT_SYMLINK: refusing a redirected transparency log');
+      if (!stat.isFile()) throw new Error('OPENHANDS_IMPORT_INVALID_LOG: the transparency log is not a regular file');
+      // A second hard link means the same bytes live outside this path too.
+      if (stat.nlink > 1) throw new Error('OPENHANDS_IMPORT_HARDLINK: refusing a hard-linked transparency log');
+    }
     fs.appendFileSync(log, JSON.stringify(record) + '\n', 'utf8');
   };
 }
@@ -141,6 +213,7 @@ export async function persistOpenHandsObservations(
   // Create the key, if none exists yet, before the lock: a keychain prompt must not hold it.
   await deps.keys.ensureKey();
 
+  refuseLinkedFolders(workspaceRoot);
   fs.mkdirSync(path.dirname(target), { recursive: true });
   refuseLinks(workspaceRoot, target, lockPath);
   let lockFd: number;
@@ -158,12 +231,12 @@ export async function persistOpenHandsObservations(
     let duplicates = 0;
     const lines: string[] = [];
     for (const event of events) {
-      const importKey = importKeyFor(event, sourceSha256);
+      const importKey = importKeyFor(event, sourceSha256, deps.runId);
       if (keys.has(importKey)) { duplicates++; continue; }
       keys.add(importKey);
       const record: Record<string, unknown> = {
-        v: 1, type: RECORD_TYPE, source: 'openhands', origin: 'historical-export',
-        importKey, sourceSha256, idSource: event.idSource, sourceEventId: event.id,
+        v: 2, type: RECORD_TYPE, source: 'openhands', origin: 'historical-export',
+        importKey, sourceSha256, ...(deps.runId ? { runId: deps.runId } : {}), idSource: event.idSource, sourceEventId: event.id,
         kind: event.kind, verb: event.verb, tool: event.tool, severity: event.riskHint,
         sourceTimestamp: event.timestamp, importedAt, summary: event.summary,
       };

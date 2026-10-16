@@ -58,10 +58,10 @@ export interface AgentObservationEvent {
 const TOKEN_RE = /^[A-Za-z0-9_.:-]{1,64}$/;
 const isToken = (v: string | undefined): v is string => !!v && TOKEN_RE.test(v);
 
-function exportId(e: Record<string, unknown>): string | undefined {
+function exportId(e: Record<string, unknown>): { value: string; numeric: boolean } | undefined {
   for (const v of [e.id, e.message_id]) {
-    if (typeof v === 'string' && v.trim()) return v;
-    if (typeof v === 'number' && Number.isSafeInteger(v)) return String(v);
+    if (typeof v === 'string' && v.trim()) return { value: v, numeric: false };
+    if (typeof v === 'number' && Number.isSafeInteger(v)) return { value: String(v), numeric: true };
   }
   return undefined;
 }
@@ -124,11 +124,14 @@ export function mapOpenHandsEvent(raw: unknown, index = 0): AgentObservationEven
   const verb = toolName ?? str(discrim) ?? objLabel(discrim) ?? kind;
 
   const riskBasis = `${verb} ${objLabel(discrim) ?? ''}`;
-  const rawId = exportId(e);
+  const exported = exportId(e);
+  const rawId = exported?.value;
   const safeVerb = isToken(verb) ? verb : 'unrecognized';
   // An id that is not a short token is replaced by its hash and keyed by position.
-  const idSource: 'export' | 'index' = isToken(rawId) ? 'export' : 'index';
-  const id = idSource === 'export' ? rawId! : rawId ? createHash('sha256').update(rawId).digest('hex') : `openhands:${index}`;
+  // #477 delta: an integer id (OpenHands 0.x numbers events 0..N in every
+  // conversation) is kept as the event id but keyed by position, like no id.
+  const idSource: 'export' | 'index' = isToken(rawId) && !exported?.numeric ? 'export' : 'index';
+  const id = isToken(rawId) ? rawId : rawId ? createHash('sha256').update(rawId).digest('hex') : `openhands:${index}`;
 
   return {
     id,

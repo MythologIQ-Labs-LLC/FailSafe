@@ -24,7 +24,11 @@ import {
 } from '../../../integrations/tracker-import/tracker-intent-import';
 import { runJiraImport } from '../../../extension/jira-command';
 import { runLinearImport } from '../../../extension/linear-command';
-import { vscodeReviewUi } from '../../../extension/trackerReviewUi';
+import { reviewTrackerIssue, vscodeReviewUi } from '../../../extension/trackerReviewUi';
+import { wireIntegrationEvidence } from '../../../extension/integrationEvidenceWiring';
+import { getTrackerIntentDeps, setTrackerIntentDeps } from '../../../integrations/tracker-import/tracker-intent-import';
+import { AgentTimelineService } from '../../../sentinel/AgentTimelineService';
+import { EventBus } from '../../../shared/EventBus';
 import { FakeInspector, FakeSecretStore, RecordingLogger } from '../credentials/fakes';
 import { jiraReplay, linearReplay } from './replay';
 
@@ -330,5 +334,68 @@ suite('tracker governed intent drafts in the extension host (#480)', function ()
     for (const secret of [JIRA_TOKEN, BASIC, LINEAR_KEY]) {
       assert.ok(!haystacks.some((h) => h.includes(secret)), `${secret.slice(0, 8)}… must not be stored or shown`);
     }
+  });
+
+  // ---- review delta (plan-v608-laneB-delta-review) ----------------------------------
+
+  test('D3 with no intent deps wired the import reports integration evidence as unavailable', async () => {
+    setTrackerIntentDeps(null);
+    const ui = new ScriptedReviewUi({ approve: true, plan: 'plan-1' });
+    const issue: TrackerIssue = { source: 'jira', key: 'PROJ-9', title: 'T', labels: [], components: [] };
+    const r = await reviewTrackerIssue(issue, ui);
+    assert.deepEqual(r, { outcome: 'previewed' });
+    assert.ok(ui.messages.some((m) => m === 'Previewed PROJ-9. Integration evidence is unavailable, so intent drafts cannot be created; FailSafe saved nothing.'), ui.messages.join(' | '));
+  });
+
+  test('D4 the wiring hands the engine getter to the tracker flow, not the raw setting', async () => {
+    const secretsEmitter = new vscode.EventEmitter<vscode.SecretStorageChangeEvent>();
+    const context = {
+      subscriptions: [] as vscode.Disposable[],
+      workspaceState: memento(),
+      secrets: { get: async () => undefined, store: async () => undefined, delete: async () => undefined, onDidChange: secretsEmitter.event },
+    } as unknown as vscode.ExtensionContext;
+    const svc = new IntentService(root, new SessionManager(root));
+    svc.setGovernanceModeGetter(() => 'observe');
+    // The raw setting in the test host is the default, enforce; the getter says observe.
+    wireIntegrationEvidence(context, { intentService: svc, planManager: undefined, timeline: new AgentTimelineService(new EventBus()), governanceMode: () => 'observe' });
+    try {
+      const deps = getTrackerIntentDeps();
+      assert.ok(deps);
+      assert.equal(deps!.governanceMode(), 'observe');
+      let picks = 0;
+      const ui = new ScriptedReviewUi({ approve: true });
+      ui.pickPlanId = async () => { picks++; return 'plan-x'; };
+      const issue: TrackerIssue = { source: 'jira', key: 'PROJ-44', title: 'T', labels: [], components: [] };
+      const r = await reviewAndImport(issue, { ...deps!, ui });
+      assert.equal(r.outcome, 'draft_created');
+      assert.equal(picks, 0, 'no plan picker in observe mode');
+      assert.equal((await svc.getActiveIntent())?.planId, undefined);
+    } finally {
+      for (const d of context.subscriptions) d.dispose();
+      secretsEmitter.dispose();
+    }
+  });
+
+  test('D6e an active SEALED intent, even this issue\'s, does not block a new draft', async () => {
+    const svc = service(root);
+    await svc.createIntent({ type: 'feature', purpose: 'Old draft', scope: { files: [], modules: [], riskGrade: 'L1' }, planId: 'p', metadata: { author: 'user', tags: [], externalRef: 'jira:PROJ-123' } });
+    await svc.updateStatus('PASS', 'user', true);
+    await svc.updateStatus('SEALED', 'user');
+    assert.equal((await svc.getActiveIntent())?.status, 'SEALED');
+    const { result } = await jira(['jira-PROJ-123'], new ScriptedReviewUi({ approve: true, plan: 'plan-1' }), { svc });
+    assert.equal(result?.outcome, 'draft_created');
+  });
+
+  test('D6e the active draft of this issue with no content hash reports unknown, not already_imported', async () => {
+    const svc = service(root);
+    await svc.createIntent({
+      type: 'feature', purpose: 'Draft without hash', scope: { files: [], modules: [], riskGrade: 'L1' }, planId: 'p',
+      metadata: { author: 'user', tags: [], externalRef: 'jira:PROJ-123' }, provenance: { externalRef: 'jira:PROJ-123' },
+    });
+    const ui = new ScriptedReviewUi({ approve: true, plan: 'plan-1' });
+    const { result } = await jira(['jira-PROJ-123'], ui, { svc });
+    assert.equal(result?.outcome, 'unknown');
+    assert.ok(ui.messages.some((m) => /cannot tell whether the issue changed/.test(m)), ui.messages.join(' | '));
+    assert.equal(await created(root), 1);
   });
 });

@@ -93,7 +93,8 @@ export function parseIssueResponse(json: unknown): CanonicalJiraIssue | null {
   const root = (json && typeof json === 'object') ? (json as Record<string, unknown>) : null;
   if (!root) return null;
   const key = str(root.key);
-  if (!key) return null;
+  // #480 delta: the returned key must itself be a Jira key (anchored).
+  if (!key || !/^[A-Z][A-Z0-9]+-\d+$/.test(key)) return null;
   const fields = root.fields && typeof root.fields === 'object' ? (root.fields as Record<string, unknown>) : {};
 
   const status = fields.status && typeof fields.status === 'object' ? (fields.status as Record<string, unknown>) : null;

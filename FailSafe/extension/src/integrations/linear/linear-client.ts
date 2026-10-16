@@ -16,6 +16,7 @@ import {
   type LinearIntentPreview,
 } from './linear-import';
 import type { FailureCategory } from '../catalog/integration-health';
+import { collectCapped, requireHttps } from '../shared/https-transport';
 
 const LINEAR_GRAPHQL = 'https://api.linear.app/graphql';
 
@@ -92,18 +93,15 @@ export async function fetchLinearIssue(
 export const defaultLinearPost: LinearPostFn = (url, headers, body) =>
   new Promise((resolve, reject) => {
     try {
-      const u = new URL(url);
+      const u = requireHttps(url);
       const req = https.request(
-        { hostname: u.hostname, path: u.pathname + u.search, method: 'POST',
+        { hostname: u.hostname, port: u.port || undefined, path: u.pathname + u.search, method: 'POST',
           headers: { ...headers, 'Content-Length': Buffer.byteLength(body) }, timeout: 8000 },
         (res) => {
-          const chunks: Buffer[] = [];
-          res.on('data', (c) => chunks.push(c as Buffer));
-          res.on('end', () => resolve({
-            status: res.statusCode ?? 0,
-            body: Buffer.concat(chunks).toString('utf8'),
-            headers: res.headers as Record<string, string>,
-          }));
+          collectCapped(res).then(
+            (buf) => resolve({ status: res.statusCode ?? 0, body: buf.toString('utf8'), headers: res.headers as Record<string, string> }),
+            reject,
+          );
         },
       );
       req.on('timeout', () => req.destroy(new Error('timeout')));

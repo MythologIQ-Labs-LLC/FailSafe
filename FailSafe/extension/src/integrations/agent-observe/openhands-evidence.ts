@@ -57,16 +57,20 @@ function tailLines(file: string, size: number, max: number, fsx: FsOps): string[
   const fd = fsx.openSync(file, 'r');
   try {
     let pos = size;
-    let text = '';
+    // Chunks are kept as bytes and decoded once, so a character split across a
+    // chunk boundary is not corrupted; newlines are counted on the bytes.
+    const chunks: Buffer[] = [];
+    let newlines = 0;
     while (pos > 0 && size - pos < MAX_TAIL) {
       const len = Math.min(CHUNK, pos);
       pos -= len;
       const buf = Buffer.alloc(len);
       fsx.readSync(fd, buf, 0, len, pos);
-      text = buf.toString('utf8') + text;
-      if (text.split('\n').length > max + 1) break;
+      chunks.unshift(buf);
+      for (const b of buf) if (b === 0x0a) newlines++;
+      if (newlines + 1 > max + 1) break;
     }
-    const lines = text.split('\n');
+    const lines = Buffer.concat(chunks).toString('utf8').split('\n');
     if (pos > 0) lines.shift(); // the first line may be cut
     return lines.filter((l) => l.trim()).slice(-max);
   } finally {
@@ -88,7 +92,7 @@ export function toTimelineEntry(rec: Record<string, unknown>, folder: FolderRef,
   if (typeof rec.sourceSha256 !== 'string' || !HEX64.test(rec.sourceSha256)) return undefined;
   const kind = rec.kind;
   const verb = typeof rec.verb === 'string' && TOKEN_RE.test(rec.verb) ? rec.verb : 'unrecognized';
-  const severity = rec.severity === 'high' ? 'warning' : 'info';
+  const severity = rec.severity === 'high' ? 'error' : rec.severity === 'warn' ? 'warning' : 'info';
   const at = isoOrUndefined(rec.sourceTimestamp) ?? isoOrUndefined(rec.importedAt) ?? new Date(0).toISOString();
   return {
     id: `openhands-${folderIndex}-${rec.importKey.slice(0, 24)}`,

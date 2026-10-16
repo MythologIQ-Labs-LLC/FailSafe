@@ -17,13 +17,13 @@ Resolves a Jira issue URL or bare key (e.g. `PROJ-123`) to its canonical key, fe
 | Setting | Default | Secret | Purpose |
 |---|---|---|---|
 | `failsafe.integrations.jira.enabled` | `false` | no | Master switch; no network call unless `true`. |
-| `failsafe.integrations.jira.baseUrl` | `` (empty) | no | Jira site base, e.g. `https://your-site.atlassian.net`. |
+| `failsafe.integrations.jira.baseUrl` | `` (empty) | no | Jira site base, e.g. `https://your-site.atlassian.net`. It must use https; any other scheme is refused before anything is sent. |
 | `failsafe.integrations.jira.email` | `` (empty) | no | Account email; the Basic-auth username half. |
 | `failsafe.integrations.jira.apiToken` | `` (empty) | yes | API token; encoded only into the outbound `Authorization` header. Stored in VS Code Secure Storage with `FailSafe: Set Integration Credential` (User or Workspace scope). The setting is deprecated and no longer read; `FailSafe: Move Plain-Text Credentials to Secure Storage` moves an existing value. |
 
 ## Security
 
-Auth is Jira Cloud Basic auth: the email and API token are combined as `base64(email:token)` and placed only in the outbound `Authorization` header. The API token is a secret — it is never carried by the pure logic, never returned in the result, and never logged (a masking test proves this). The integration is strictly read-only: it issues a single `GET` for the issue and parses only the canonical fields, so no secret could leak through the response. Off by default — disabled unless base URL and email are set and an API token is stored in Secure Storage; no network call otherwise. If `baseUrl` comes from workspace settings, only a Workspace-scope token is sent there: a User-scope token is refused, so a workspace cannot redirect your personal token.
+Auth is Jira Cloud Basic auth: the email and API token are combined as `base64(email:token)` and placed only in the outbound `Authorization` header. The API token is a secret — it is never carried by the pure logic, never returned in the result, and never logged (a masking test proves this). The integration is strictly read-only: it issues a single `GET` for the issue and parses only the canonical fields, so no secret could leak through the response. A response larger than 5 MB is cut off and refused, and a returned key that is not a Jira key is rejected. Off by default — disabled unless base URL and email are set and an API token is stored in Secure Storage; no network call otherwise. If `baseUrl` comes from workspace settings, only a Workspace-scope token is sent there: a User-scope token is refused, so a workspace cannot redirect your personal token.
 
 ## Command / wiring
 
@@ -39,6 +39,7 @@ The command ends with one of these outcomes; the same words are used in the code
 | `draft_created` | After your approval, an intent draft (status PULSE) was created in this workspace's intent store. In v1 this is what "imported" means; there is no further import state. |
 | `already_imported` | The active intent is this issue's draft and the issue has not changed. Nothing was written. |
 | `stale` | The active intent is this issue's draft but the issue changed since it was imported. FailSafe does not update intents from Jira; nothing was written. |
+| `unknown` | The active intent is this issue's draft but its import record has no content hash, so FailSafe cannot tell whether the issue changed. Nothing was written. |
 | `blocked` | Another intent is active (seal it first), the intent history failed its integrity check, or the write was refused. Nothing was written. |
 | `not_authorized` | The integration is disabled, no credential is stored, or Jira answered 401/403. |
 | `synced` | Not offered: there is no webhook and no two-way sync. |

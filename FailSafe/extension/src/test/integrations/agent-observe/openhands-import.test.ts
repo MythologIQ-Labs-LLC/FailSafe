@@ -8,7 +8,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { observeOpenHandsRun, type AgentObservationEvent } from '../../../integrations/agent-observe/openhands-observer';
-import { evidencePath, persistOpenHandsObservations, RECORD_TYPE } from '../../../integrations/agent-observe/openhands-import';
+import { evidencePath, importKeyFor, persistOpenHandsObservations, RECORD_TYPE, runIdentityOf } from '../../../integrations/agent-observe/openhands-import';
+import { createHash, randomUUID } from 'crypto';
 import {
   canonicalJson, EVIDENCE_KEY_ID, EvidenceKeyHolder, normalizeFolder, signRecord, SECRET_STORAGE_REFUSAL,
   type SecretsLike, type Timer,
@@ -157,14 +158,17 @@ suite('OpenHands historical import: store, keys, redaction (#477)', () => {
     assert.deepEqual(await importInto(root, two, keys), { imported: 2, duplicates: 0, unverified: 0, summaryWritten: true });
     const again = await importInto(root, two, keys);
     assert.equal(again.imported, 0); assert.equal(again.duplicates, 2);
+    // #477 delta LD1 cost: with no run identity a longer re-export is a new
+    // file, so it is keyed by that file and re-imports every event.
     const reexport = await importInto(root, [...two, SDK('evt-3')], keys);
-    assert.equal(reexport.imported, 1); assert.equal(reexport.duplicates, 2);
+    assert.equal(reexport.imported, 3); assert.equal(reexport.duplicates, 0);
     assert.equal((await importInto(root, [SDK(41), SDK(42)], keys)).imported, 2);
     assert.equal((await importInto(root, [SDK(41), SDK(42)], keys)).imported, 0);
-    assert.equal(lines(root).length, 5);
+    assert.equal(lines(root).length, 7);
     assert.ok(lines(root).every((r) => r.type === RECORD_TYPE && r.origin === 'historical-export' && /^[0-9a-f]{64}$/.test(r.sig)));
     const summary = fs.readFileSync(path.join(root, '.failsafe', 'logs', 'transparency.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
     assert.equal(summary.length, 5, 'one transparency summary line per import, never one per event');
+    assert.ok(lines(root).every((r) => r.v === 2), 'records are v2');
     assert.ok(summary.every((s) => s.type === 'agent.import.summary'));
   });
 
@@ -241,10 +245,11 @@ suite('OpenHands evidence is verified and sanitized on read (#477 O12)', () => {
     await keys.ensureKey();
     await keys.loadKey();
     const realEvents = records([SDK('real-1')]);
-    const { importKeyFor } = await import('../../../integrations/agent-observe/openhands-import');
+    const realExport = writeExport(root, [SDK('real-1')]);
+    const realSha = createHash('sha256').update(realExport.bytes).digest('hex');
     const forged = {
-      v: 1, type: RECORD_TYPE, source: 'openhands', origin: 'historical-export',
-      importKey: importKeyFor(realEvents[0], 'f'.repeat(64)), sourceSha256: 'f'.repeat(64), idSource: 'export', sourceEventId: 'real-1',
+      v: 2, type: RECORD_TYPE, source: 'openhands', origin: 'historical-export',
+      importKey: importKeyFor(realEvents[0], realSha), sourceSha256: realSha, idSource: 'export', sourceEventId: 'real-1',
       kind: 'action', verb: 'execute_bash', severity: 'x" onclick="alert(1)', artifactPath: 'C:/Windows/notepad.exe',
       sourceTimestamp: '<script>', importedAt: '2026-01-01T00:00:00.000Z', summary: 'forged', sig: 'a'.repeat(64),
     };
@@ -253,7 +258,7 @@ suite('OpenHands evidence is verified and sanitized on read (#477 O12)', () => {
     const reader = new OpenHandsEvidenceReader(keys, () => [folderRef(root)]);
     const before = reader.read();
     assert.deepEqual([before.entries.length, before.unverified], [0, 1]);
-    const r = await importInto(root, [SDK('real-1')], keys);
+    const r = await importInto(root, [SDK('real-1')], keys, realExport);
     assert.equal(r.imported, 1, 'the forged key did not suppress the real event');
     assert.equal(lines(root)[0].sig, 'a'.repeat(64), 'the forged line stays in the file untouched');
     const after = reader.read();
@@ -291,7 +296,7 @@ suite('OpenHands evidence is verified and sanitized on read (#477 O12)', () => {
     const read = new OpenHandsEvidenceReader(keys, () => [folderRef(root)]).read();
     assert.equal(read.entries.length, 2);
     assert.equal(read.skipped, 2);
-    assert.deepEqual(read.entries.map((e) => e.severity).sort(), ['info', 'warning']);
+    assert.deepEqual(read.entries.map((e) => e.severity).sort(), ['error', 'info']);
     assert.ok(read.entries.every((e) => e.artifactPath === undefined && e.category === 'imported'));
   });
 
@@ -470,5 +475,192 @@ suite('OpenHands evidence key lifecycle (#477 O16)', () => {
     assert.equal(fs.existsSync(`${evidencePath(F)}.lock`), false);
     assert.equal(lines(F).length, 1, 'only g1 was ever written');
     S.assertDrained({ A: 8 });
+  });
+});
+
+// ---- review delta (plan-v608-laneB-delta-review) ------------------------------------
+
+const EV = (id: string, tool = 'execute_bash') => ({ id, timestamp: '2026-10-10T10:00:00Z', action: { kind: 'ExecuteBashAction' }, tool_name: tool });
+
+async function importEnvelope(root: string, env: Record<string, unknown>, keys: EvidenceKeyHolder) {
+  const bytes = Buffer.from(JSON.stringify(env));
+  const file = path.join(root, `run-${Math.random().toString(36).slice(2)}.json`);
+  fs.writeFileSync(file, bytes);
+  const recs = observeOpenHandsRun(env.events, '1.0.0').records;
+  return persistOpenHandsObservations(root, file, bytes, recs, { keys, runId: runIdentityOf(env) });
+}
+
+suite('OpenHands run-scoped deduplication (#477 delta D1)', () => {
+  const pair = async (a: Record<string, unknown>, b: Record<string, unknown>) => {
+    const root = workspace();
+    const { keys } = autoKeys();
+    const events = [EV('e0'), EV('e1')];
+    const first = await importEnvelope(root, { ...a, events }, keys);
+    const second = await importEnvelope(root, { ...b, events, note: 'second file' }, keys);
+    return { first: first.imported, second: second.imported, root };
+  };
+
+  test('two different runs (UUID conversation ids) with the same string ids both import', async () => {
+    const r = await pair({ conversation_id: randomUUID() }, { conversation_id: randomUUID() });
+    assert.deepEqual([r.first, r.second], [2, 2]);
+    assert.ok(lines(r.root).every((l) => l.v === 2 && typeof l.runId === 'string'));
+  });
+
+  test('the same run re-exported with one more event imports only the new one', async () => {
+    const root = workspace();
+    const { keys } = autoKeys();
+    const conversation_id = randomUUID();
+    await importEnvelope(root, { conversation_id, events: [EV('e0'), EV('e1')] }, keys);
+    assert.equal((await importEnvelope(root, { conversation_id, events: [EV('e0'), EV('e1'), EV('e2')] }, keys)).imported, 1);
+  });
+
+  test('integer ids with no run identity are file-scoped: two runs both import', async () => {
+    const root = workspace();
+    const { keys } = autoKeys();
+    const ints = [{ ...EV('x'), id: 0 }, { ...EV('x'), id: 1 }];
+    assert.equal((await importEnvelope(root, { events: ints }, keys)).imported, 2);
+    assert.equal((await importEnvelope(root, { events: ints, note: 'other run' }, keys)).imported, 2);
+  });
+
+  test('a named field below the 8-character floor ("1", "default") is not a run identity', async () => {
+    const one = await pair({ conversation_id: '1' }, { conversation_id: '1' });
+    assert.deepEqual([one.first, one.second], [2, 2]);
+    const dflt = await pair({ conversation_id: 'default' }, { conversation_id: 'default' });
+    assert.deepEqual([dflt.first, dflt.second], [2, 2]);
+  });
+
+  test('a named field of exactly 8 characters is a run identity (the second export of that run imports 0)', async () => {
+    const r = await pair({ conversation_id: 'abcdefgh' }, { conversation_id: 'abcdefgh' });
+    assert.deepEqual([r.first, r.second], [2, 0]);
+  });
+
+  test('the generic id field needs a UUID or 16+ hex: "untitled-run" is not a run identity', async () => {
+    const r = await pair({ id: 'untitled-run' }, { id: 'untitled-run' });
+    assert.deepEqual([r.first, r.second], [2, 2]);
+    assert.equal(runIdentityOf({ id: 'a1b2c3d4e5f60718' }), 'a1b2c3d4e5f60718');
+    assert.equal(runIdentityOf({ id: 42 }), undefined, 'numbers never count');
+  });
+
+  test('disagreeing qualified fields mean no run identity: the import is file-scoped', async () => {
+    const env = { conversation_id: randomUUID(), session_id: randomUUID() };
+    assert.equal(runIdentityOf(env), undefined);
+    const r = await pair(env, env);
+    assert.deepEqual([r.first, r.second], [2, 2]);
+  });
+
+  test('a crafted export without a run identity cannot pre-claim a real run\'s string ids', async () => {
+    const root = workspace();
+    const { keys } = autoKeys();
+    await importEnvelope(root, { events: [EV('e0'), EV('e1')] }, keys);
+    assert.equal((await importEnvelope(root, { conversation_id: randomUUID(), events: [EV('e0'), EV('e1')] }, keys)).imported, 2);
+  });
+});
+
+suite('OpenHands link refusal on every write path (#477 delta D2)', () => {
+  test('a linked .failsafe is refused before mkdir, so no logs folder appears at the link target', async () => {
+    const root = workspace();
+    const outside = workspace();
+    const { keys } = autoKeys();
+    fs.symlinkSync(outside, path.join(root, '.failsafe'), process.platform === 'win32' ? 'junction' : 'dir');
+    assert.equal(fs.lstatSync(path.join(root, '.failsafe')).isSymbolicLink(), true, 'the link exists');
+    await assert.rejects(importInto(root, [SDK('m')], keys), /OPENHANDS_IMPORT_SYMLINK/);
+    assert.equal(fs.existsSync(path.join(outside, 'logs')), false);
+  });
+
+  test('a hard-linked transparency.jsonl refuses the summary; the events are saved and the outside file is unchanged', async () => {
+    const root = workspace();
+    const { keys } = autoKeys();
+    fs.mkdirSync(path.join(root, '.failsafe', 'logs'), { recursive: true });
+    // Same volume as the workspace (both under os.tmpdir()): a cross-volume hard link fails with EXDEV.
+    const outsideDir = workspace();
+    const outside = path.join(outsideDir, 'victim.jsonl');
+    fs.writeFileSync(outside, 'untouched\n');
+    fs.linkSync(outside, path.join(root, '.failsafe', 'logs', 'transparency.jsonl'));
+    assert.equal(fs.statSync(outside).nlink, 2, 'the hard link exists');
+    const r = await importInto(root, [SDK('h1')], keys);
+    assert.equal(r.imported, 1);
+    assert.equal(r.summaryWritten, false);
+    assert.equal(fs.readFileSync(outside, 'utf8'), 'untouched\n');
+  });
+
+  test('a symlinked transparency.jsonl refuses the summary (POSIX)', async function () {
+    if (process.platform === 'win32') { this.skip(); return; } // a file symlink needs Developer Mode on win32
+    const root = workspace();
+    const { keys } = autoKeys();
+    fs.mkdirSync(path.join(root, '.failsafe', 'logs'), { recursive: true });
+    const outside = path.join(workspace(), 'victim.jsonl');
+    fs.writeFileSync(outside, 'untouched\n');
+    fs.symlinkSync(outside, path.join(root, '.failsafe', 'logs', 'transparency.jsonl'), 'file');
+    const r = await importInto(root, [SDK('s1')], keys);
+    assert.equal(r.summaryWritten, false);
+    assert.equal(fs.readFileSync(outside, 'utf8'), 'untouched\n');
+  });
+});
+
+suite('OpenHands evidence reads (#477 delta D6b, D6f)', () => {
+  test('D6b deduplication over 30,000 records never reads the evidence file whole', async function () {
+    this.timeout(120000);
+    const root = workspace();
+    const { keys } = autoKeys();
+    const raw = Array.from({ length: 30000 }, (_, i) => SDK(`b${i}`));
+    const exp = writeExport(root, raw);
+    assert.equal((await importInto(root, raw, keys, exp)).imported, 30000);
+    // Patched on the real module object: the TS namespace import is getter-only,
+    // and the importer's own namespace import reads through to this object.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const realFs = require('fs') as { readFileSync: unknown };
+    const realRead = fs.readFileSync;
+    const target = evidencePath(root);
+    let blocked = 0;
+    realFs.readFileSync = ((p: fs.PathOrFileDescriptor, ...rest: unknown[]) => {
+      if (String(p) === target) blocked++;
+      if (String(p) === target) throw new Error('the evidence file was read whole');
+      return (realRead as (...a: unknown[]) => unknown)(p, ...rest);
+    }) as unknown;
+    try {
+      const again = await importInto(root, raw, keys, exp);
+      assert.deepEqual([again.imported, again.duplicates, blocked], [0, 30000, 0]);
+    } finally {
+      realFs.readFileSync = realRead;
+    }
+  });
+
+  test('D6f a multi-byte character across the 64 KiB tail-chunk boundary reads back verified', async () => {
+    const root = workspace();
+    const { keys } = autoKeys();
+    await keys.ensureKey(); await keys.loadKey();
+    const key = keys.current()!;
+    const folder = normalizeFolder(root);
+    let m = 65000;
+    let line = '';
+    for (let i = 0; i < 6; i++) {
+      const rec: Record<string, unknown> = {
+        v: 2, type: RECORD_TYPE, source: 'openhands', origin: 'historical-export', importKey: 'c'.repeat(64), sourceSha256: 'd'.repeat(64),
+        idSource: 'export', kind: 'observation', verb: 'read', severity: 'info', importedAt: '2026-01-01T00:00:00.000Z',
+        summary: 'a'.repeat(70000) + '\u00e9' + 'b'.repeat(m),
+      };
+      rec.sig = signRecord(key, folder, rec);
+      line = JSON.stringify(rec) + '\n';
+      const buf = Buffer.from(line, 'utf8');
+      const tail = buf.length - (buf.indexOf(Buffer.from('\u00e9', 'utf8')) + 1); // bytes after the first byte of the character
+      if (tail === 65536) break;
+      m += 65536 - tail;
+    }
+    const buf = Buffer.from(line, 'utf8');
+    assert.equal(buf.length - (buf.indexOf(Buffer.from('\u00e9', 'utf8')) + 1), 65536, 'the character straddles the boundary');
+    fs.mkdirSync(path.dirname(evidencePath(root)), { recursive: true });
+    fs.writeFileSync(evidencePath(root), buf);
+    const read = new OpenHandsEvidenceReader(keys, () => [folderRef(root)]).read();
+    assert.deepEqual([read.entries.length, read.unverified], [1, 0]);
+  });
+
+  test('D6f severity keeps three tiers: high is error, warn is warning', async () => {
+    const root = workspace();
+    const { keys } = autoKeys();
+    const warn = { id: 't-warn', timestamp: '2026-10-10T10:00:00Z', source: 'agent', action: { kind: 'FileEditAction' }, tool_name: 'str_replace_editor' };
+    await importInto(root, [SDK('t-high'), warn], keys);
+    await keys.loadKey();
+    const read = new OpenHandsEvidenceReader(keys, () => [folderRef(root)]).read();
+    assert.deepEqual(read.entries.map((e) => e.severity).sort(), ['error', 'warning']);
   });
 });

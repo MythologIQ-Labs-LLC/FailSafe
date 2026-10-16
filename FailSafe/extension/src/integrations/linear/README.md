@@ -37,6 +37,7 @@ The command ends with one of these outcomes; the same words are used in the code
 | `draft_created` | After your approval, an intent draft (status PULSE) was created in this workspace's intent store. In v1 this is what "imported" means; there is no further import state. |
 | `already_imported` | The active intent is this issue's draft and the issue has not changed. Nothing was written. |
 | `stale` | The active intent is this issue's draft but the issue changed since it was imported. FailSafe does not update intents from Linear; nothing was written. |
+| `unknown` | The active intent is this issue's draft but its import record has no content hash, so FailSafe cannot tell whether the issue changed. Nothing was written. |
 | `blocked` | Another intent is active (seal it first), the intent history failed its integrity check, or the write was refused. Nothing was written. |
 | `not_authorized` | The integration is disabled, no credential is stored, or Linear answered 401/403. |
 | `synced` | Not offered: there is no webhook and no two-way sync. |

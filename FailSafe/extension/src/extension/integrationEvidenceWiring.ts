@@ -64,6 +64,8 @@ export interface IntegrationEvidenceDeps {
   intentService: IntentService;
   planManager: PlanManager | undefined;
   timeline: AgentTimelineService;
+  /** The enforcement engine's mode, the same source IntentService uses. */
+  governanceMode: () => string;
 }
 
 export function wireIntegrationEvidence(context: vscode.ExtensionContext, deps: IntegrationEvidenceDeps): void {
@@ -82,7 +84,7 @@ export function wireIntegrationEvidence(context: vscode.ExtensionContext, deps: 
   // IntentService; until this runs they stay preview-only.
   setTrackerIntentDeps({
     intents: deps.intentService,
-    governanceMode: () => vscode.workspace.getConfiguration('failsafe').get<string>('governance.mode', 'enforce'),
+    governanceMode: deps.governanceMode,
     pickPlanId: () => pickPlanIdForEnforce(deps.planManager),
   });
   context.subscriptions.push({ dispose: () => setTrackerIntentDeps(null) });

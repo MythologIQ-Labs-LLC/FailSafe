@@ -125,3 +125,11 @@ test("F5 Continue on Windows: the npm cn.cmd shim is documented as unusable", ()
     targets: READMES.map((f) => rowOf(f, /Continue/)),
   });
 });
+
+test("F6 OpenHands: while the import holds a Secret Storage key, its README says so", () => {
+  const signing = path.join(SRC, "integrations", "agent-observe", "openhands-signing.ts");
+  assert.ok(fs.existsSync(signing), "anchor: openhands-signing.ts is gone");
+  const holdsKey = /secrets\.get\(EVIDENCE_KEY_ID\)/.test(read(signing));
+  const target = [whole(integrationReadme("agent-observe"))];
+  assertParity({ holds: holdsKey, phrase: "Secret Storage", overclaim: "neither holds a secret", targets: target });
+});

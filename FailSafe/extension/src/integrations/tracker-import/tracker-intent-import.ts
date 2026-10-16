@@ -15,6 +15,8 @@
  *   draft_created    an intent in PULSE was created from the issue
  *   already_imported the active intent is this issue's draft and it is unchanged
  *   stale            the active intent is this issue's draft but the issue changed
+ *   unknown          the active intent is this issue's draft but its import record
+ *                    has no content hash, so FailSafe cannot tell whether it changed
  *   blocked          another intent is active, the history failed its integrity
  *                    check, or the write was refused
  *   not_authorized   integration disabled, no credential, or 401/403 (decided
@@ -35,7 +37,7 @@ import type { LinearIntentPreview } from '../linear/linear-import';
 export type TrackerSource = 'jira' | 'linear';
 
 export type TrackerImportOutcome =
-  | 'previewed' | 'draft_created' | 'already_imported' | 'stale' | 'blocked' | 'not_authorized';
+  | 'previewed' | 'draft_created' | 'already_imported' | 'stale' | 'unknown' | 'blocked' | 'not_authorized';
 
 export interface TrackerIssue {
   source: TrackerSource;
@@ -223,10 +225,17 @@ export async function reviewAndImport(issue: TrackerIssue, deps: TrackerImportDe
     return { outcome: 'blocked' };
   }
 
-  const active = await intents.getActiveIntent();
+  // A SEALED intent no longer blocks a new one (createIntent allows it), and it
+  // is never this issue's live draft, so it is set aside before either check.
+  const current = await intents.getActiveIntent();
+  const active = current && current.status !== 'SEALED' ? current : null;
   if (active && active.metadata.externalRef === ref) {
     const importedHash = last && typeof last.provenance.contentSha256 === 'string' ? last.provenance.contentSha256 : undefined;
-    if (importedHash && importedHash !== hash) {
+    if (!importedHash) {
+      ui.warn(`${issue.key} is already the active intent (${active.id}), but its import record has no content hash, so FailSafe cannot tell whether the issue changed. ${saidNothing}`);
+      return { outcome: 'unknown', intentId: active.id };
+    }
+    if (importedHash !== hash) {
       ui.warn(`${issue.key} changed in ${name} since it was imported on ${dateOf(last!.timestamp)}. FailSafe does not update intents from ${name}; review the preview. ${saidNothing}`);
       return { outcome: 'stale', intentId: active.id };
     }
@@ -321,4 +330,4 @@ export function getTrackerIntentDeps(): TrackerIntentDeps | null {
   return trackerDeps;
 }
 
-export const DRAFTS_UNAVAILABLE = 'Intent drafts are not available yet; FailSafe saved nothing.';
+export const DRAFTS_UNAVAILABLE = 'Integration evidence is unavailable, so intent drafts cannot be created; FailSafe saved nothing.';

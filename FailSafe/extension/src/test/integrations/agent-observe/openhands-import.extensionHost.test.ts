@@ -40,6 +40,28 @@ class ScriptedUi implements OpenHandsImportUi {
   error(m: string) { this.errors.push(m); }
 }
 
+/** An injected descriptor reader: fstat answers `size`/`isFile`, reads serve `bytes` and then `extra` (a growing file). */
+function fdProbe(o: { size: number; bytes: Buffer; isFile?: boolean; extra?: number }) {
+  let opened = 0; let reads = 0; let served = 0;
+  const total = o.bytes.length + (o.extra ?? 0);
+  return {
+    open: () => opened,
+    reads: () => reads,
+    fsx: {
+      openSync: () => { opened++; return 99; },
+      fstatSync: () => ({ size: o.size, isFile: () => o.isFile !== false }),
+      readSync: (_fd: number, buf: Buffer, off: number, len: number) => {
+        reads++;
+        const n = Math.min(len, total - served);
+        for (let i = 0; i < n; i++) buf[off + i] = served + i < o.bytes.length ? o.bytes[served + i] : 0x20;
+        served += n;
+        return n;
+      },
+      closeSync: () => { opened--; },
+    },
+  };
+}
+
 const SDK = (id: string, tool = 'execute_bash') => ({ id, timestamp: '2026-10-10T10:00:00Z', source: 'agent', action: { kind: 'ExecuteBashAction' }, tool_name: tool });
 
 suite('OpenHands import command and timelines in the extension host (#477)', function () {
@@ -127,13 +149,13 @@ suite('OpenHands import command and timelines in the extension host (#477)', fun
     const r = await run(root, many);
     assert.equal(r.outcome?.kind, 'refused');
     assert.match(r.ui.warns[0], /10001 events; the limit is 10000/);
-    let reads = 0;
+    const probe = fdProbe({ size: MAX_EXPORT_BYTES + 1, bytes: Buffer.from('[]') });
     const big = await runOpenHandsImport({
-      workspaceRoot: root, enabled: true, ui: new ScriptedUi(path.join(root, 'huge.json')), keys: r.keys,
-      fsx: { statSync: () => ({ size: MAX_EXPORT_BYTES + 1 }), readFileSync: () => { reads++; return Buffer.from('[]'); } },
+      workspaceRoot: root, enabled: true, ui: new ScriptedUi(path.join(root, 'huge.json')), keys: r.keys, fsx: probe.fsx,
     });
     assert.equal(big?.kind, 'refused');
-    assert.equal(reads, 0, 'the file was never read');
+    assert.equal(probe.reads(), 0, 'the file was never read');
+    assert.equal(probe.open(), 0, 'the descriptor was closed');
     assert.equal(fs.existsSync(evidencePath(root)), false);
   });
 
@@ -162,5 +184,61 @@ suite('OpenHands import command and timelines in the extension host (#477)', fun
     assert.ok(!html.includes('class="file-link"'), 'no Open file action for an imported entry');
     (panel as unknown as { panel: vscode.WebviewPanel }).panel.dispose();
     service.dispose();
+  });
+
+  // ---- review delta (plan-v608-laneB-delta-review) ----------------------------------
+
+  test('D3 with no evidence key wired the import reports integration evidence as unavailable', async () => {
+    const root = ws();
+    const ui = new ScriptedUi(exportFile(root, { version: '1.0.0', events: [SDK('u1')] }));
+    const out = await runOpenHandsImport({ workspaceRoot: root, enabled: true, ui, keys: null });
+    assert.equal(out?.kind, 'storage');
+    assert.match(ui.errors[0], /Integration evidence is unavailable, so FailSafe cannot sign the import; nothing was written/);
+    assert.ok(!/Secret Storage/.test(ui.errors[0]), ui.errors[0]);
+  });
+
+  test('D6a a directory picked as the export is refused before any read', async () => {
+    const root = ws();
+    const dir = path.join(root, 'not-a-file.json');
+    fs.mkdirSync(dir);
+    const r = await run(root, dir);
+    assert.equal(r.outcome?.kind, 'refused');
+    assert.match(r.ui.warns[0], /not a regular file/);
+    const probe = fdProbe({ size: 10, bytes: Buffer.from('[]'), isFile: false });
+    const viaFd = await runOpenHandsImport({ workspaceRoot: root, enabled: true, ui: new ScriptedUi(dir), keys: r.keys, fsx: probe.fsx });
+    assert.equal(viaFd?.kind, 'refused');
+    assert.deepEqual([probe.reads(), probe.open()], [0, 0]);
+  });
+
+  test('D6a a file that grows past 20 MB between fstat and read is refused, and the descriptor is closed', async () => {
+    const root = ws();
+    const probe = fdProbe({ size: 10, bytes: Buffer.from('[]'), extra: MAX_EXPORT_BYTES + 10 });
+    const out = await runOpenHandsImport({ workspaceRoot: root, enabled: true, ui: new ScriptedUi(path.join(root, 'grows.json')), keys: new EvidenceKeyHolder(new Secrets().context()), fsx: probe.fsx });
+    assert.equal(out?.kind, 'refused');
+    assert.equal(probe.open(), 0);
+    assert.equal(fs.existsSync(evidencePath(root)), false);
+  });
+
+  test('D6a the 10,000-event cap is applied before any event is mapped', async () => {
+    const root = ws();
+    const file = exportFile(root, { version: '1.0.0', events: Array.from({ length: 10_001 }, (_, i) => SDK(`c${i}`)) });
+    let mapped = 0;
+    const out = await runOpenHandsImport({
+      workspaceRoot: root, enabled: true, ui: new ScriptedUi(file), keys: new EvidenceKeyHolder(new Secrets().context()),
+      observe: (events) => { mapped += Array.isArray(events) ? events.length : 0; return { supported: true, records: [] }; },
+    });
+    assert.equal(out?.kind, 'refused');
+    assert.equal(mapped, 0, 'nothing was mapped');
+  });
+
+  test('D6a a FIFO picked as the export is refused without blocking (POSIX; runs in Linux CI)', async function () {
+    if (process.platform === 'win32') { this.skip(); return; } // no FIFOs on win32; executed by "PR Full Test / Full Test Suite (test:all)"
+    const root = ws();
+    const fifo = path.join(root, 'pipe.json');
+    // On Linux this must not skip: a missing mkfifo is a failure.
+    require('child_process').execFileSync('mkfifo', [fifo]);
+    const r = await run(root, fifo);
+    assert.equal(r.outcome?.kind, 'refused');
+    assert.match(r.ui.warns[0], /not a regular file/);
   });
 });

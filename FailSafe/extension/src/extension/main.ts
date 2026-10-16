@@ -321,6 +321,21 @@ export async function activate(
     const sentinel = await bootstrapSentinel(context, core, qor, logger);
     sentinelDaemon = sentinel.sentinelDaemon;
 
+    // 4.1. v6.0.8 integration evidence (#479 health store, #480 tracker intent
+    //      drafts, #477 OpenHands evidence key + timeline provider). Its own
+    //      try/catch: a failure here is logged and never stops activation; the
+    //      commands then report the evidence as unavailable.
+    try {
+      wireIntegrationEvidence(context, {
+        intentService: gov.intentService,
+        planManager: core.planManager,
+        timeline: sentinel.agentTimelineService,
+        governanceMode: () => gov.enforcementEngine.getGovernanceMode(),
+      });
+    } catch (err) {
+      logger.error("Integration evidence wiring failed", err);
+    }
+
     // 4.5. Checkpoint (bridges qor + sentinel substrates)
     const checkpointMetrics: ICheckpointMetrics = {
       getLedgerEntryCount: () => qor.ledgerManager.getEntryCount(),
@@ -369,14 +384,6 @@ export async function activate(
       logger,
     );
     consoleServer = servers.consoleServer;
-
-    // 8.0b. v6.0.8 integration evidence (#479 health store, #480 tracker intent
-    //       drafts, #477 OpenHands evidence key + timeline provider).
-    wireIntegrationEvidence(context, {
-      intentService: gov.intentService,
-      planManager: core.planManager,
-      timeline: sentinel.agentTimelineService,
-    });
 
     // 8.1. MCP Server (deferred from step 5 to step 8.1 so RiskManager
     //      constructed by bootstrapServers can be wired into the

@@ -2,7 +2,7 @@ import { strict as assert } from 'assert';
 import {
   parseLinearIssueId, buildIssueQuery, parseIssueResponse, toIntentPreview,
 } from '../../../integrations/linear/linear-import';
-import { fetchLinearIssue, readRateLimit, type LinearPostFn } from '../../../integrations/linear/linear-client';
+import { fetchLinearIssue, readRateLimit, defaultLinearPost, type LinearPostFn } from '../../../integrations/linear/linear-client';
 
 suite('linear-import parse (B-INT-11 #97)', () => {
   test('resolves a Linear issue URL (with + without slug) to the identifier', () => {
@@ -103,5 +103,12 @@ suite('linear-import provenance fields (#480)', () => {
     const issue = parseIssueResponse({ data: { issue: { identifier: 'ENG-1', title: 'T', updatedAt: '2026-10-13T16:20:00.000Z' } } });
     assert.equal(issue?.updatedAt, '2026-10-13T16:20:00.000Z');
     assert.equal(toIntentPreview(issue!).updatedAt, '2026-10-13T16:20:00.000Z');
+  });
+});
+
+suite('linear transport hardening (#480 delta D6c)', () => {
+  test('D6c the default Linear transport refuses a non-https URL and keeps the port', async () => {
+    await assert.rejects(defaultLinearPost('http://127.0.0.1:1/graphql', {}, '{}'), /https/);
+    await assert.rejects(defaultLinearPost('https://127.0.0.1:1/graphql', {}, '{}'), /127\.0\.0\.1:1\b/);
   });
 });

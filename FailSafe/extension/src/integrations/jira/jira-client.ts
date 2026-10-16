@@ -13,6 +13,7 @@ import {
   type JiraIntentPreview,
 } from './jira-import';
 import type { FailureCategory } from '../catalog/integration-health';
+import { collectCapped, requireHttps } from '../shared/https-transport';
 
 export interface JiraGetFn {
   (url: string, headers: Record<string, string>):
@@ -30,7 +31,8 @@ export interface JiraFetchResult {
   preview?: JiraIntentPreview;
   status?: number;
   error?: string;
-  /** Health category of a failed fetch (#479); absent when nothing was sent. */
+  /** Health category of a failed fetch (#479): set by every failed request, and
+   *  by the `config` refusal of a non-https base URL, which sends nothing. */
   failure?: FailureCategory;
 }
 
@@ -52,6 +54,7 @@ export async function fetchJiraIssue(
   if (!key) return { ok: false, error: 'Not a Jira issue URL or key (expected e.g. PROJ-123).' };
   const baseUrl = auth.baseUrl?.trim().replace(/\/$/, '');
   if (!baseUrl) return { ok: false, error: 'No Jira base URL configured (e.g. https://your-site.atlassian.net).' };
+  if (!/^https:\/\//i.test(baseUrl)) return { ok: false, failure: 'config', error: 'The Jira base URL must use https; nothing was sent.' };
   if (!auth.email?.trim() || !auth.apiToken?.trim()) {
     return { ok: false, error: 'No Jira credentials configured (email + API token).' };
   }
@@ -84,13 +87,14 @@ export async function fetchJiraIssue(
 export const defaultJiraGet: JiraGetFn = (url, headers) =>
   new Promise((resolve, reject) => {
     try {
-      const u = new URL(url);
+      const u = requireHttps(url);
       const req = https.request(
-        { hostname: u.hostname, path: u.pathname + u.search, method: 'GET', headers, timeout: 8000 },
+        { hostname: u.hostname, port: u.port || undefined, path: u.pathname + u.search, method: 'GET', headers, timeout: 8000 },
         (res) => {
-          const chunks: Buffer[] = [];
-          res.on('data', (c) => chunks.push(c as Buffer));
-          res.on('end', () => resolve({ status: res.statusCode ?? 0, body: Buffer.concat(chunks).toString('utf8') }));
+          collectCapped(res).then(
+            (body) => resolve({ status: res.statusCode ?? 0, body: body.toString('utf8') }),
+            reject,
+          );
         },
       );
       req.on('timeout', () => req.destroy(new Error('timeout')));
