@@ -31796,3 +31796,736 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `3f16c76c15532f6f3a35e43e29911ba07341e196a27d4a048541859818ab480e`
 
 **Decision**: SESSION SEAL for plan-v607-final-integration.md (implementation #703, Phase 4), program #521. Reality = Promise, with disclosures. Supersedes seal #700 for the final candidate: release/v6.0.7-rc2 at C0 2ed25a971f9cf6ac926494e81e20fa2ac8906d80 plus this seal commit carries lanes A-E, the integration review fixes and the CI corrections. Disclosures: standing damaged-ledger override applied per cycle (#467 unresolved; normal governance not restored); C0 is the Phase 4 head 2ed25a97, superseding the Phase 3 C0 736c74dd of LD10 and seal #700; the standards, CodeQL and Semgrep checks of LD4 run on the PR; Semgrep's verdict on the ten annotated spawn sites is the PR gate; same-second lock collision residual: a writer outside the lock library recreating the directory within one second on a filesystem without birth times is not detected; vscode-test ran on a disposable test build with win32VersionedUpdate removed (operator install untouched); a first full re-run on C0 was stopped by the host for low memory and resumed sequentially; every gate listed completed on C0. Not merged, not tagged, not published.
+
+---
+
+### Entry #705: GATE TRIBUNAL - plan-v608-laneD-hygiene (iteration 1) - VETO
+
+**Timestamp**: 2026-10-16T01:33:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T0116-532132`
+**Risk Grade**: L1
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `ac6180825cd7ad9e5c1a06089ec9def839844610bc39a5c44c0f0813852ab1bc`
+**Previous Hash**: `3f16c76c15532f6f3a35e43e29911ba07341e196a27d4a048541859818ab480e`
+**Chain Hash (Merkle seal)**: `310ebe5c6b6cefeee9d9cc8b431543a2d583691d612f7462430a4568a32865ae`
+
+**Decision**: VETO on plan-v608-laneD-hygiene.md iteration 1 (sha256 6b3ff448, program #521, v6.0.8 lane D: FailSafe Pro retirement, docs truthfulness, BACKLOG, PR dispositions). Fresh Option B architect-reviewer. Verified: the unregistered command titles, the code facts (OpenHands not persisted, SHIELD publisher without a production caller, Open Design create refused), the Dependabot pin counts and the #466 analysis. Blockers: B1 coverage-gap - T3 facts F2 and F4 lack the when-false direction, so their mutations cannot turn red; B2 - T3 F2 would fail on the plan's own new bullet (case); B3 - two active Pro surfaces (EDUCATION.md:129, VIBE_CODER_PLAYBOOK.md:89) and the governance-cache-invalidation diagram label are missing from the list. Six advisories; proposed integration order #527, #522-#524, D, C, A, B. Next: lane D revises. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #706: GATE TRIBUNAL - plan-v608-laneD-hygiene (iteration 2) - VETO
+
+**Timestamp**: 2026-10-16T01:41:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T0116-532132`
+**Risk Grade**: L1
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `0fbabe9a85622d11c5f3a2ddfa6cdd599e1b5611f125879ce6697c5ce49de5a7`
+**Previous Hash**: `310ebe5c6b6cefeee9d9cc8b431543a2d583691d612f7462430a4568a32865ae`
+**Chain Hash (Merkle seal)**: `1cdf2b44f055240cb810040d4d8435eac9ec5124da300295c3e31b6d816dd0bc`
+
+**Decision**: VETO on plan-v608-laneD-hygiene.md iteration 2 (sha256 96bf4706, program #521). Fresh Option B architect-reviewer. Iteration-1 blockers fixed: T3 F2 and F4 checked both ways, case-insensitive phrases, the three missed Pro surfaces added; the dormant tier code confirmed user-invisible. Blockers: N1 specification-drift - T1a prints the pattern without LD2's word anchors, so it matches 'FailSafe provides' and similar prose and could never pass; N2 - T1b would fail on the plan's own new BACKLOG items B215 and B220. Next: lane D revises. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #707: GATE TRIBUNAL - plan-v608-laneD-hygiene (iteration 3) - PASS
+
+**Timestamp**: 2026-10-16T02:20:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T0116-532132`
+**Risk Grade**: L1
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `3c7e87c7c059fbae755f4ae45c6b3ba36f53e7a7180d6fad2a7d3995be112e14`
+**Previous Hash**: `1cdf2b44f055240cb810040d4d8435eac9ec5124da300295c3e31b6d816dd0bc`
+**Chain Hash (Merkle seal)**: `8aedf6b31f3b7f2d375a7cd8b95926a6bbff21c131c4f11266a1b71f7a7006da`
+
+**Decision**: PASS on plan-v608-laneD-hygiene.md iteration 3 (sha256 153d0b2b, program #521, v6.0.8 lane D: FailSafe Pro retirement on active surfaces with historical evidence preserved, docs correctness, PRs #527 and #522-#524). Fresh Option B architect-reviewer. N1: the control-byte search finds the r2 defect and none in r3; T1a's pattern equals LD2's and every measured hit is allowlisted or on the red list. N2: the B215 mutation is real. One advisory: T1a over docs/wiki/FailSafe-Pro.md depends on #527's retired page; re-check after the lane merges main. Next: the lead merges #527 then #522-#524; lane D merges main and implements. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #708: IMPLEMENTATION - plan-v608-laneD-hygiene
+
+**Timestamp**: 2026-10-16T17:07:54Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-16T0116-532132`
+**Risk Grade**: L1
+**Gate**: `.qor/gates/2026-10-16T0116-532132/implement-iter1.json`
+
+**Content Hash**: `2ba67b2a0d3b147b5964d3ee0dabf80596200e51de56f2b0dbf8d9fca2e4a9dc`
+**Previous Hash**: `8aedf6b31f3b7f2d375a7cd8b95926a6bbff21c131c4f11266a1b71f7a7006da`
+**Chain Hash (Merkle seal)**: `0e0b7c0c98e975c615dfbaacb6a308eb2c9b4ac7b02b899dd11d91c15d801112`
+
+**Decision**: IMPLEMENTATION of plan-v608-laneD-hygiene.md (audit PASS #707), lane D of program #521 (v6.0.8), FX978-FX981. 2 own commits (first-parent, merges excluded) from 8f70401a to f3f7d6e0 on the lane branch from b66a32d8, merged into release/v6.0.8-rc without rewriting (plan-v608-integration LD1): FailSafe Pro retired from every active surface with historical records kept (issue template, Component Help, wiki, integration READMEs, roadmap, tracker manifest, B-OD-10); the docs say what v6.0.7 does (OpenHands, GitHub advisory, Open Design, Agent Marketplace, Windows Continue) and 24 dead command titles fixed; BACKLOG release status made current; four docs suites guard each claim. Files: 27. Evidence: docs suites 11/11 at the lane head, red 11/11 on b66a32d8 first; 42/42 mutations red; v5 documentation coherence 9/9; test:node 607/612 (2 = FX946 ledgerAnchor baseline, 3 skipped); runner coverage pass. Verified again in the integrated candidate 76641298 (plan-v608-integration LD6).
+
+---
+
+### Entry #709: SESSION SEAL - plan-v608-laneD-hygiene
+
+**Timestamp**: 2026-10-16T17:07:54Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-16T0116-532132`
+**Risk Grade**: L1
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-16T0116-532132/substantiate.json`
+
+**Content Hash**: `ad0430bb5f12acc86c8631855fd0ef2f0a644a2f521d2f9b088fe1f8df50013c`
+**Previous Hash**: `0e0b7c0c98e975c615dfbaacb6a308eb2c9b4ac7b02b899dd11d91c15d801112`
+**Chain Hash (Merkle seal)**: `94be68dc0c79c4e61491654b15c9a5863031e55e67c360171b63764bc4cf04a5`
+
+**Decision**: SESSION SEAL for plan-v608-laneD-hygiene.md (implementation #708), lane D of program #521 (v6.0.8). Reality = Promise, with disclosures. Delivered at lane head f3f7d6e0 and in the integrated candidate 76641298: FailSafe Pro retired from every active surface with historical records kept (issue template, Component Help, wiki, integration READMEs, roadmap, tracker manifest, B-OD-10); the docs say what v6.0.7 does (OpenHands, GitHub advisory, Open Design, Agent Marketplace, Windows Continue) and 24 dead command titles fixed; BACKLOG release status made current; four docs suites guard each claim. Disclosures: bounded damaged-ledger override applied per lane cycle (#467 unresolved, normal governance not restored); vscode-test ran on a disposable test build with win32VersionedUpdate removed (the operator's parked updater holds the vscode-updating mutex); the operator install was untouched; #527's five commits are authored 'Kevin Knapp <krknapp@gmail.com>' (the owner's) and were not rewritten; the claim-parity check tests the docs against code facts, not live services; the backlog-status rule only catches a stale row once package.json moves past that version. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp. Not tagged, not published.
+
+---
+
+### Entry #710: GATE TRIBUNAL - plan-v608-laneC-runtime (iteration 1) - VETO
+
+**Timestamp**: 2026-10-16T01:30:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T0114-83a1ba`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `bf853c47475961881e73c1d54b489cd68c0a7a2d4ded10fb2fdf6b20bbd23ffb`
+**Previous Hash**: `94be68dc0c79c4e61491654b15c9a5863031e55e67c360171b63764bc4cf04a5`
+**Chain Hash (Merkle seal)**: `127e79e04110a73b439140938c3121d5e35978161e2e4d2750b4d7574bfe621b`
+
+**Decision**: VETO on plan-v608-laneC-runtime.md iteration 1 (sha256 39e5642f, program #521, v6.0.8 lane C: #471 #472 #528 release listing race). Fresh Option B architect-reviewer. Sound: the lock refactor keeps mutual exclusion, guarded release, identity and CAS; #471 'proposed' is truthful and nothing depends on 'validated'; LD-8 keeps the one-set guarantee; the red-first guard-test exceptions are accepted with mutation falsifiers. Blockers: B1 the FIFO queue can block the lock entirely (own ticket not live to itself, future-dated tickets never expire, no clock-jump fallback, deleted own ticket unspecified); B2 R1's precondition can never hold on a correct implementation; B3 coverage-gap - the nonce transaction lacks assertHeld and a byte re-read before rename, so a stale takeover can accept one nonce twice; B4 batching has no lock-hold bound, so a large import exceeds the 4 s budget and always fails. Ten advisories. Next: lane C revises. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #711: GATE TRIBUNAL - plan-v608-laneC-runtime (iteration 2) - VETO
+
+**Timestamp**: 2026-10-16T01:45:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T0114-83a1ba`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `39800213a0e1d83e2882ac18a58d1696cf0100d27ef4309191cf512d6dd58e87`
+**Previous Hash**: `127e79e04110a73b439140938c3121d5e35978161e2e4d2750b4d7574bfe621b`
+**Chain Hash (Merkle seal)**: `f9df82c3fd4b2b35005f0a9fa911258e36acd0e3b8cdf446dfb3da9088028d09`
+
+**Decision**: VETO on plan-v608-laneC-runtime.md iteration 2 (sha256 5aef316b, program #521). Fresh Option B architect-reviewer. Iteration-1 B1-B4 fixed (queue never worse than v6.0.7 apart from the disclosed mixed-version case; nonce order temp-fsync-assertHeld-reread-rename closes stale takeover; 500-record chunks measured at 184-227 ms on a 20,000-record register). Blocker coverage-gap: R9 case (iv) backdates the caller's own ticket once, which the next refresh repairs within ~10 ms, so the M-R9b mutation cannot turn it red. Advisories: calibrate R1's threshold, correct the residual-window wording, R7b must be contended, N7(i) lock timeout above staleMs, cross-process ticket edits in R9. Next: lane C revises. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #712: GATE TRIBUNAL - plan-v608-laneC-runtime (iteration 3) - PASS
+
+**Timestamp**: 2026-10-16T01:50:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T0114-83a1ba`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `308a71686ad27629d01bcc790ac3d5245304a88b39a64ff28bd8aae960ba50e3`
+**Previous Hash**: `f9df82c3fd4b2b35005f0a9fa911258e36acd0e3b8cdf446dfb3da9088028d09`
+**Chain Hash (Merkle seal)**: `5d589ad762a28a18cf7b06852cee6fd436124881808f960ff21abf3a90ea9edd`
+
+**Decision**: PASS on plan-v608-laneC-runtime.md iteration 3 (sha256 1f12c718, program #521, v6.0.8 lane C: #471 console startup truthfulness, #472 multi-process nonce store, #528 queued lock and chunked import batching, release draft listing retry). Fresh Option B architect-reviewer. The queueSeams.mtimeMs seam makes M-R9b fail R9(iv) while correct code passes; all seven advisories applied; R1 threshold backed by a 45-54 records per window measurement. Five implementation notes: seam value bounded between 1500 ms and staleMs, R9 timeoutMs stated, R9(iii) deletion-before-release precondition, seams not forwarded by production options, N7 mocha timeout. Next: lane C implements. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #713: GATE TRIBUNAL - plan-v608-laneC-delta-review (iteration 1) - VETO
+
+**Timestamp**: 2026-10-16T03:40:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T0114-83a1ba`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `348e3a6abd39e27d24219aeff31b67b6c18ff05809f0ff253b413b275666207a`
+**Previous Hash**: `5d589ad762a28a18cf7b06852cee6fd436124881808f960ff21abf3a90ea9edd`
+**Chain Hash (Merkle seal)**: `4177be5717b05bcd167de86b06d9625b81da338b32c371841321d41e150a29f3`
+
+**Decision**: VETO on plan-v608-laneC-delta-review.md iteration 1 (sha256 ed5d7814), the post-implementation review delta for lane C (#472 stale-takeover double acceptance, compare-to-rename window, transient read handling, release draft identity, four nits). The exclusive per-nonce marker makes consumption at-most-once whatever the lock says, and N8 fails today for the stated reason. B1: the marker is created before the record write, so a stall or busy outcome burns the nonce, contradicting N7:198 and the busy error's 'nothing was written' contract, undisclosed; create it after the byte compare, immediately before the first ownership check and rename. B2: the link and non-directory check on nonces.consumed has no test or mutation and does not cover the lock-free validate path. Advisories: pin marker expiresAt to the record's with a grace period, fsync the parent on first create, disclose NFSv2, fail closed on non-EEXIST marker errors without existsSync, assert the marker before cleanup in N8b, and bind release upload and publish to the created id or disclose the tag binding. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #714: GATE TRIBUNAL - plan-v608-laneC-delta-review (iteration 2) - VETO
+
+**Timestamp**: 2026-10-16T03:55:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T0114-83a1ba`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `d7294ea2b990a227d58a0161ad9c7c8c8898b7b9c2dce1524dc162ba7ac4ffd9`
+**Previous Hash**: `4177be5717b05bcd167de86b06d9625b81da338b32c371841321d41e150a29f3`
+**Chain Hash (Merkle seal)**: `3223c4c1f966bfb10129251c4f1a6bb53a9be01c2a42b2715653249c862153a8`
+
+**Decision**: VETO on plan-v608-laneC-delta-review.md iteration 2 (sha256 ffe5cbb6). Both iteration-1 blockers are fixed in substance: no busy outcome before the marker step writes anything, N8 is red at 505f9065 and exactly one consumer is valid under the fix, the junction check is constructible without admin and M-D9 goes red, and the two clocks cannot disagree. V1: the releaseArtifacts contract-test description still names release edit --draft=false --latest, contradicting LD-4's PATCH by id. V2: no mutation proves the reorder can fail; add M-D11 (marker before the temp write, N7:198 red) and correct M-D10's 'old order' label. Advisories: A8 must reject the extends clause, a distinct LOCK_LOST-after-marker message, fsync nonces.consumed after each marker, classify transient lstat errors on the lock-free read, drive N8b issuance from the clock seam, name the link path in the recovery message, consider re-listing before upload. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #715: GATE TRIBUNAL - plan-v608-laneC-delta-review (iteration 3) - PASS
+
+**Timestamp**: 2026-10-16T04:05:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T0114-83a1ba`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `06a04aa191b70332391fb6a87542b4eefa9df6a7f404c8e97864c4ce35ed24e3`
+**Previous Hash**: `3223c4c1f966bfb10129251c4f1a6bb53a9be01c2a42b2715653249c862153a8`
+**Chain Hash (Merkle seal)**: `b1768e3b697772cfc11dd35b83152dd9162c7f4eb2a50109c37ffbb8f1466b0b`
+
+**Decision**: PASS on plan-v608-laneC-delta-review.md iteration 3 (sha256 f3d73d01), the post-implementation review delta for lane C. Fresh Option B architect-reviewer. Per-nonce exclusive markers make consumption at-most-once whatever the lock says, created after the byte compare and ownership check so no busy outcome burns a nonce (M-D11 turns N7:198 red); the marker folder refuses links on every read and create; transient reads are busy, never disabling; release publish is bound to the created id with a re-list before each upload (G8 red at 505f9065), and the re-list cannot falsely stop on the run's own lagging draft. Risk-store stale-takeover residual disclosed and deferred to a #528 follow-up. Three implementation notes: correct the NonceStoreBusyError comment for LOST_AFTER_MARK, state ENOENT on the marker directory as no markers, and state that a failed re-list stops with nothing more uploaded. Next: lane C implements the delta. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #716: IMPLEMENTATION - plan-v608-laneC-runtime
+
+**Timestamp**: 2026-10-16T17:07:55Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-16T0114-83a1ba`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-16T0114-83a1ba/implement-iter1.json`
+
+**Content Hash**: `7ebc12eadf4bea88abcb5c3c137c27df50cefd1f476ec889344af6d1eb65ccbb`
+**Previous Hash**: `b1768e3b697772cfc11dd35b83152dd9162c7f4eb2a50109c37ffbb8f1466b0b`
+**Chain Hash (Merkle seal)**: `58465f6cfe350ae037b10896f8c427a79c5d3f799a2e0b069277d5bea822a747`
+
+**Decision**: IMPLEMENTATION of plan-v608-laneC-runtime.md (+ plan-v608-laneC-delta-review.md) (audit PASS #715), lane C of program #521 (v6.0.8), FX982-FX986. 10 own commits (first-parent, merges excluded) from 25bb26f8 to 12d09690 on the lane branch from b66a32d8, merged into release/v6.0.8-rc without rewriting (plan-v608-integration LD1): the Console startup checkpoint is proposed with UNKNOWN verdict and the bound address (#471); a fair FIFO cross-process lock queue and 500-record chunked risk imports with per-chunk accounting (#528); a cross-process replay-nonce store, one locked fsynced transaction per change, with an exclusive per-nonce marker making consumption at-most-once (#472); the release draft created through the API, re-listed before each upload and published by id. Files: 25. Evidence: targeted mocha 264 passing / 2 pending (Windows symlink skips), node 64/64, docs 11/11; red first on b66a32d8 and on 505f9065 for the review delta; 22 named review-delta mutations and the base plan's mutations red; M-N2 red 5/5. Verified again in the integrated candidate 76641298 (plan-v608-integration LD6).
+
+---
+
+### Entry #717: SESSION SEAL - plan-v608-laneC-runtime
+
+**Timestamp**: 2026-10-16T17:07:56Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-16T0114-83a1ba`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-16T0114-83a1ba/substantiate.json`
+
+**Content Hash**: `98e482116819739462fc161759c27eada973955c19644d6d4a40e2a75623bfdd`
+**Previous Hash**: `58465f6cfe350ae037b10896f8c427a79c5d3f799a2e0b069277d5bea822a747`
+**Chain Hash (Merkle seal)**: `9046dadfa0849162ec1c4c6d4c40888bc89395229f110c6bc87a39de692aadc9`
+
+**Decision**: SESSION SEAL for plan-v608-laneC-runtime.md (+ plan-v608-laneC-delta-review.md) (implementation #716), lane C of program #521 (v6.0.8). Reality = Promise, with disclosures. Delivered at lane head 12d09690 and in the integrated candidate 76641298: the Console startup checkpoint is proposed with UNKNOWN verdict and the bound address (#471); a fair FIFO cross-process lock queue and 500-record chunked risk imports with per-chunk accounting (#528); a cross-process replay-nonce store, one locked fsynced transaction per change, with an exclusive per-nonce marker making consumption at-most-once (#472); the release draft created through the API, re-listed before each upload and published by id. Disclosures: bounded damaged-ledger override applied per lane cycle (#467 unresolved, normal governance not restored); vscode-test ran on a disposable test build with win32VersionedUpdate removed (the operator's parked updater holds the vscode-updating mutex); the operator install was untouched; the lane's pre-existing covering suites failed in the first full vscode-test run on the integrated candidate and were fixed under plan-v608-integration LD14-LD16 (lane fix commits merged separately) (R7 captured console.warn, a no-op inside the extension host); a risk-register update can still be lost when two processes recover a crashed holder's lock at once (B224, #528 follow-up); a v6.0.7 window on the same workspace still writes the nonce store without the lock; release uploads still go by tag; an existing draft for the tag is resumed and published only once its files match; a nonce whose lock is lost after its marker exists is burned (fails closed); wx exclusive create is assumed atomic (NTFS, ext4, APFS, SMB2+; not NFSv2); the POSIX read-only and directory-fsync cases run on Linux CI only; one review-delta mutation (E10-class descriptor isFile backup) is equivalent and disclosed. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp. Not tagged, not published.
+
+---
+
+### Entry #718: GATE TRIBUNAL - plan-v608-laneA-security (iteration 1) - VETO
+
+**Timestamp**: 2026-10-16T02:40:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T0132-25359d`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `aff06ddfe74ebedf96fa5ddf751045cc1cfea6a9754c1509ba48a2d30f58b0aa`
+**Previous Hash**: `9046dadfa0849162ec1c4c6d4c40888bc89395229f110c6bc87a39de692aadc9`
+**Chain Hash (Merkle seal)**: `28fc06a3a15b480dcad782898efb9a8c4b408251f550d443e9522ee2d7cbc378`
+
+**Decision**: VETO on plan-v608-laneA-security.md iteration 1 (sha256 4b05026f). B1: LD11 misses the sixth python -m site, bootstrapServers.ts:302 runCli (python -m qor.cli with cwd = workspace root, serving the Console skill-enumeration route), so a planted qor/cli.py runs; fix with -P, a T11 row and a source scan that fails on any production -m or -c argv without -P. B2: AdapterService.ts:426-431 runs python3 -c 'import agent_failsafe' from the process cwd; fix with a fresh mkdtemp cwd (works on 3.10) and a T13 row with a fired-plant precondition. B3: T9's marker is absent from the leaf sleep, so leaf termination is unfalsified; put the marker in the leaf argv. Both B1 and B2 confirmed by the lead against b66a32d8. Eight advisories (kill only while live, shadow-genome -c site in the scan, T4b reason assertion, Store-Python path disclosure, EBUSY temp cleanup, empty-folder PASS tier, Remote globalValue, git-safety non-global reads surfaced). #467 research spot-checks accurate. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #719: GATE TRIBUNAL - plan-v608-laneA-security (iteration 2) - VETO
+
+**Timestamp**: 2026-10-16T03:05:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T0132-25359d`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `d5e0e799633e2f75497c8454ca5af2571973db0c1905512e3c0b06a9e25889e1`
+**Previous Hash**: `28fc06a3a15b480dcad782898efb9a8c4b408251f550d443e9522ee2d7cbc378`
+**Chain Hash (Merkle seal)**: `eed453fdc400d90d34d37a20d22023a7ef2d65a22e7dade646129c812b3c2221`
+
+**Decision**: VETO on plan-v608-laneA-security.md iteration 2 (sha256 ffe627ea). B1 resolved: an independent grep finds exactly 7 python -m/-c sites and 10 non-python allowlisted sites at b66a32d8, no shell-string python spawns. B2 resolved: fresh mkdtemp cwd per AdapterService child is sound and row (j) cannot pass vacuously. B3 resolved: the leaf sleep carries the marker. New blocker V1: T9 row (d) cannot go red under its named mutation, because the timer is cleared on close so the timeout never fires, and removing the clear leaves the live check blocking the kill; each guard masks the other. Fix: make git exit while a background child holds its output open so exit arrives without close, or drive the handler with a fake exited child, or drop the claim and disclose. Advisories: disclose that R2 misses combined or built flag strings, list T1 (l) and T9 (d) in D4, note /proc on macOS, note the shadow-genome -P needs 3.11 from opts.python while its route stays disabled. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #720: GATE TRIBUNAL - plan-v608-laneA-security (iteration 3) - PASS
+
+**Timestamp**: 2026-10-16T03:20:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T0132-25359d`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `9753cae0cbef8e9537297cb5d57adebbf21f811a72cc3316b839d8e896c3803a`
+**Previous Hash**: `eed453fdc400d90d34d37a20d22023a7ef2d65a22e7dade646129c812b3c2221`
+**Chain Hash (Merkle seal)**: `7e72c4070cdeb7531d598c5245f4e7a6332a76e4fd5fa9d0c483161efe2534e5`
+
+**Decision**: PASS on plan-v608-laneA-security.md iteration 3 (sha256 e7d8f8ba, program #521, v6.0.8 lane A: #468/#469 fail-closed marketplace scanning and isolated setup, python -P across all seven interpreter sites plus a fresh-cwd AdapterService runner, machine-scoped interpreter resolution, git subprocess tree termination, #467 boundary research). Fresh Option B architect-reviewer. T9 row (d) now has git exit while a background sleep holds its output, so the live-check mutation gives one kill call; the module-object swap is reachable under commonjs; the LD9 expiry change is not a regression (only the evidence source passes timeoutMs, and it already rejected on a missing close). Four implementation notes: assert code null in row (d), take the exit-without-close precondition in a separate untimed run, pin that killProcessTree is read at call time, and scope D1 to processes while git is still running. Next: lane A implements. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #721: GATE TRIBUNAL - plan-v608-laneA-delta-review (iteration 1) - VETO
+
+**Timestamp**: 2026-10-16T05:30:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T0132-25359d`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `2bd14d083cd7311f75127d35606a8eaabb22e90c7d6a1533cd3c4596aaa2d10e`
+**Previous Hash**: `7e72c4070cdeb7531d598c5245f4e7a6332a76e4fd5fa9d0c483161efe2534e5`
+**Chain Hash (Merkle seal)**: `bf936a56c91a2f578fb516d120b08b94972a28cc9ba587350eeae11eea91f750`
+
+**Decision**: VETO on plan-v608-laneA-delta-review.md iteration 1 (sha256 ad71c5c3), the post-implementation review delta for lane A (Bicameral, MCP and ACP launches through the trusted resolver, machine-scoped Bicameral settings, Store alias, POSIX venv lexical spawn, repository-root exclusion, nits). An absolute backslash path makes which skip the cwd search, so the McpClientHost guard neutralises the planted-.cmd launch. B1: resolving bicameral-mcp before pip refuses every first install, and the fixture cannot see it. B2: deleting runStaticAnalysis breaks sealed v6.0.7 G13 rows in trustedGit.test.cjs and trustedGit.adversarial.test.cjs without naming them or restating counts. B3: rule R3 rejects the seam-resolved identifiers, member expressions and forwarding wrappers the plan itself introduces. B4: the lexical Python spawn is not containment-checked on cache hits or through symlinked folders; spawn realpath(dirname) + basename and check it both ways. Advisories: isTrustedAbsolute in the guard, re-check on idle reconnect, disclose DLL search order, the Open Design .exe refusal, the silent loss of workspace-level auto-connect, POSIX relative ACP paths, exclude every .git ancestor below home, negative R3 self-tests. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #722: GATE TRIBUNAL - plan-v608-laneA-delta-review (iteration 2) - PASS
+
+**Timestamp**: 2026-10-16T05:45:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T0132-25359d`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `21dec7af92f779b1c3681bc342788ea7e04e87039158d09ddb0de5ebec029423`
+**Previous Hash**: `bf936a56c91a2f578fb516d120b08b94972a28cc9ba587350eeae11eea91f750`
+**Chain Hash (Merkle seal)**: `b89f919b37e08470f3443b6962dfae59acfdad483b064a6ed1bc3adae2383806`
+
+**Decision**: PASS on plan-v608-laneA-delta-review.md iteration 2 (sha256 2e0fe8e0), the post-implementation review delta for lane A: Bicameral pip and bicameral-mcp, the MCP transport and the ACP proxy start only from trusted absolute paths (bicameral-mcp resolved after pip installs it), Bicameral settings machine-scoped, rule R3 over the resolver-only launch sites with its wrappers' callers checked, Python launched from its folder's realpath checked on every lookup, every repository root below home excluded, nits. Fresh Option B architect-reviewer. Sealed v6.0.7 git tests unchanged (runStaticAnalysis kept). Six implementation notes: R3 tolerates multi-line client construction, disclose same-name parameters passing R3, verify with the raw command, add a behaviour row and disclosure for the folder-change re-wire, disclose the Store pip alias, note machine scope in docs/INTEGRATIONS.md:73. Next: lane A implements the delta. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #723: IMPLEMENTATION - plan-v608-laneA-security
+
+**Timestamp**: 2026-10-16T17:07:57Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-16T0132-25359d`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-16T0132-25359d/implement-iter1.json`
+
+**Content Hash**: `76d175befd74b515a90102a65832c311ad5e7674ff3061a16ed912f8e25145ce`
+**Previous Hash**: `b89f919b37e08470f3443b6962dfae59acfdad483b064a6ed1bc3adae2383806`
+**Chain Hash (Merkle seal)**: `a2dbee8d751ae36299fad8ef63ff5bc9d84ee39e8acea5b08c8a3315b94cc3f8`
+
+**Decision**: IMPLEMENTATION of plan-v608-laneA-security.md (+ plan-v608-laneA-delta-review.md) (audit PASS #722), lane A of program #521 (v6.0.8), FX987-FX994. 10 own commits (first-parent, merges excluded) from 81c3b8ef to 51d45435 on the lane branch from b66a32d8, merged into release/v6.0.8-rc without rewriting (plan-v608-integration LD1): Agent Marketplace scanner verdicts and install outcomes fail closed with no host setup and no npx (#469, #468); one trusted executable resolver for gh, PowerShell, Python, pip, the Git installers, Bicameral MCP, the MCP transport and the ACP agent, with repository roots excluded (B211, B214); python -P at every -m/-c site and AdapterService children in a fresh folder; a timed-out SHIELD history read kills its git tree (B213); machine-scoped launch settings read from user settings only. Files: 56. Evidence: lane node suites 84/87 (3 POSIX skips), targeted vscode-test 368 passing / 0 failing, mocha regression 693 passing; sealed v6.0.7 git suites 57/54/3 unchanged; 56 + 27 + 17 mutations red; red first on b66a32d8 and on 869bab00 for the review delta. Verified again in the integrated candidate 76641298 (plan-v608-integration LD6).
+
+---
+
+### Entry #724: SESSION SEAL - plan-v608-laneA-security
+
+**Timestamp**: 2026-10-16T17:07:57Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-16T0132-25359d`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-16T0132-25359d/substantiate.json`
+
+**Content Hash**: `47121c62bc9378c973f613ec4085c04240820c93fb3c69eedbbde5e0971581de`
+**Previous Hash**: `a2dbee8d751ae36299fad8ef63ff5bc9d84ee39e8acea5b08c8a3315b94cc3f8`
+**Chain Hash (Merkle seal)**: `46b9ed313184403c784a3fd1ada4ce4565dc8c7d7d4360b740bfc06b8f1bbb30`
+
+**Decision**: SESSION SEAL for plan-v608-laneA-security.md (+ plan-v608-laneA-delta-review.md) (implementation #723), lane A of program #521 (v6.0.8). Reality = Promise, with disclosures. Delivered at lane head 51d45435 and in the integrated candidate 76641298: Agent Marketplace scanner verdicts and install outcomes fail closed with no host setup and no npx (#469, #468); one trusted executable resolver for gh, PowerShell, Python, pip, the Git installers, Bicameral MCP, the MCP transport and the ACP agent, with repository roots excluded (B211, B214); python -P at every -m/-c site and AdapterService children in a fresh folder; a timed-out SHIELD history read kills its git tree (B213); machine-scoped launch settings read from user settings only. Disclosures: bounded damaged-ledger override applied per lane cycle (#467 unresolved, normal governance not restored); vscode-test ran on a disposable test build with win32VersionedUpdate removed (the operator's parked updater holds the vscode-updating mutex); the operator install was untouched; the lane's pre-existing covering suites failed in the first full vscode-test run on the integrated candidate and were fixed under plan-v608-integration LD14-LD16 (lane fix commits merged separately) (bootstrapBicameral's fake configuration lacked inspect; two real defects found there were fixed under LD16); tar and ps are still started by name (B221); the Windows DLL search order can reach the workspace for Bicameral setup and the MCP server; a Microsoft Store pip.exe alias is not resolved; repository bounds are walked lexically (a workspace opened through a junction misses repositories above its target); the LD19 folder checks are isolated only on POSIX; their two rows and mutations run on Linux CI; garak, promptfoo and pwsh probe formats and Remote-window user-level reads are unverified. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp. Not tagged, not published.
+
+---
+
+### Entry #725: GATE TRIBUNAL - plan-v608-laneB-integrations (iteration 1) - VETO
+
+**Timestamp**: 2026-10-16T01:25:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T0113-934871`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `6b7c0e435a634789dc5698e2f16cb9ae4b1efece91fcb90234b7bede9eff254b`
+**Previous Hash**: `46b9ed313184403c784a3fd1ada4ce4565dc8c7d7d4360b740bfc06b8f1bbb30`
+**Chain Hash (Merkle seal)**: `2bd277c761b2e182c5e586a0f6257bb9cbf95900cd3ec7cc750bd1e25d3bf728`
+
+**Decision**: VETO on plan-v608-laneB-integrations.md iteration 1 (sha256 d6456801, program #521, v6.0.8 lane B: #479 #480 #477 #474). Fresh Option B architect-reviewer; 40+ citations match. Blockers: B1 security - the OpenHands imports file lives in the workspace, so a cloned repo can forge timeline evidence, pre-load dedup keys to hide real events, and feed unescaped severity and artifactPath into the panel; B2 - the intent history chain is unkeyed SHA-256 that anyone with workspace write access can recompute, and the externalRef lookup trusts it unchecked; B3 - Sentry and SARIF status can read contract-verified when every write failed. Fifteen advisories. Next: lane B revises. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #726: GATE TRIBUNAL - plan-v608-laneB-integrations (iteration 2) - VETO
+
+**Timestamp**: 2026-10-16T01:40:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T0113-934871`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `8d47be484f863a59a98dea5bde15d8a21ae3c484d6af4302a93a5e012bf6c3a7`
+**Previous Hash**: `2bd277c761b2e182c5e586a0f6257bb9cbf95900cd3ec7cc750bd1e25d3bf728`
+**Chain Hash (Merkle seal)**: `b0ab856b47dd4731fb7caaf22da52895f11d9d3e7182108ae7e55168e39473d6`
+
+**Decision**: VETO on plan-v608-laneB-integrations.md iteration 2 (sha256 5d27425d, program #521). Fresh Option B architect-reviewer. Iteration-1 B1 (forged OpenHands evidence) and B2 (unkeyed history chain) fixed in design; the B3 mappings are fixed. Blocker V1 coverage-gap: the SARIF recorder call sits after sarif-command's early return for risks 0 with errors, so a malformed file or a batch failure with parse warnings records nothing and the card keeps its earlier status; the source-only C4 check would still pass. Ten advisories, including the anchor being per workspace identity rather than per install, torn-line handling, purpose escaping at two more chat sites. Next: lane B revises. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #727: GATE TRIBUNAL - plan-v608-laneB-integrations (iteration 3) - VETO
+
+**Timestamp**: 2026-10-16T02:20:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T0113-934871`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `ba78fdd8157057e7a9f754ed466e1d4e5483ae4e19b9808c0104aa0025d37790`
+**Previous Hash**: `b0ab856b47dd4731fb7caaf22da52895f11d9d3e7182108ae7e55168e39473d6`
+**Chain Hash (Merkle seal)**: `befaf4841c5a782c94ab17f46ba767d84154d2191d55b3fcb83e3d2c9165ce5c`
+
+**Decision**: VETO on plan-v608-laneB-integrations.md iteration 3 (sha256 b5b64a7d). V1 fixed in all five handlers and C4 can fail. Per-line HMAC closes cloned-workspace forgery and dedup suppression. Blocker B1: the evidence key is loaded once at activation, so two windows open before the first import each create a key, the second overwrites the first, and each window hides the other's records; after reload the first key's records are unverifiable and re-import as duplicates. Fix: re-read before create, read back after store, reload on secrets.onDidChange, disclose the residual race, add a two-context O-row. Advisories: timingSafeEqual, named canonical JSON, same-install cross-workspace replay disclosure, duplicate/deleted line handling, remote-host Secret Storage sentence, load-window behaviour, handleOutcome anchor for C4, SARIF read-failure mapping, 'one appended call' wording. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #728: GATE TRIBUNAL - plan-v608-laneB-integrations (iteration 4) - VETO
+
+**Timestamp**: 2026-10-16T02:45:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T0113-934871`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `27033cdd6e17d5211530764dfe03e8bf7d042cbee586a1853d27754e33e97a96`
+**Previous Hash**: `befaf4841c5a782c94ab17f46ba767d84154d2191d55b3fcb83e3d2c9165ce5c`
+**Chain Hash (Merkle seal)**: `e12c2174963e6152c82636a6d455c339cf5c810a665a03e7be10cabe24f8d228`
+
+**Decision**: VETO on plan-v608-laneB-integrations.md iteration 4 (sha256 79f9d07a). The key lifecycle design converges in every non-simultaneous ordering and signs under the current stored key; folder binding is sound. Blocker: O16's 'no onDidChange reload' and 'generated key instead of read-back' mutations are not guaranteed red, because the row's ordering lets B read A's key or lets the under-lock re-read mask the reload. Fix: pin the interleaving with deferred promises (A.get, B.get empty; A.store; A read-back; B.store), add a reader-only row for onDidChange and a no-event row for read-back. Advisories: create the key lazily at import, invalidate the tail cache on key change, time-limit the under-lock key read, name the folder as the one holding .failsafe/logs, disclose darwin case-folding and win32 UNC/WSL path changes, align the field name with Lane C's chunksFailed. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #729: GATE TRIBUNAL - plan-v608-laneB-integrations (iteration 5) - VETO
+
+**Timestamp**: 2026-10-16T02:55:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T0113-934871`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `c4efa94fd4eee8a1030e7763cc8f08bcce96e24550715975bbe3f4eecacc688a`
+**Previous Hash**: `e12c2174963e6152c82636a6d455c339cf5c810a665a03e7be10cabe24f8d228`
+**Chain Hash (Merkle seal)**: `dc2dd967beae46f20972e9a19388453749eb39d27e78a31edcce7efae67a0d5d`
+
+**Decision**: VETO on plan-v608-laneB-integrations.md iteration 5 (sha256 403c304a). O16b, O16c, O16d (reload), O16e, O16f and O16g are sound under their pinned orders; the Lane C ImportWriteOutcome shape matches by name, nesting and optionality. Blocker: O16d's cache mutation stays green, because the event reaches A before B writes, so A's second read sees a new (size, mtimeMs) and misses the cache regardless of invalidation. Fix: deliver A's onDidChange after B's write and lock release, read between the write and the event, and assert with a read spy that the first read filled the cache. Advisories: pin onDidChange delivery in O16b, count unpinned secrets.get calls, and define an empty under-lock get as a refusal that releases the lock, with an O16g row. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #730: GATE TRIBUNAL - plan-v608-laneB-integrations (iteration 6) - PASS
+
+**Timestamp**: 2026-10-16T03:10:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T0113-934871`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `1ee01d6a86d2bb1add0eaa08e716abe3c3212e6ea5eb3213e0c39b2a968b464d`
+**Previous Hash**: `dc2dd967beae46f20972e9a19388453749eb39d27e78a31edcce7efae67a0d5d`
+**Chain Hash (Merkle seal)**: `d9b1fa8621cca92add596ed6f417d4e86327adc68d727ab7a24bfe46b3966c97`
+
+**Decision**: PASS on plan-v608-laneB-integrations.md iteration 6 (sha256 2878cd52, program #521, v6.0.8 lane B: #480/#506 Jira and Linear, #477/#507 OpenHands with per-line HMAC evidence bound to the workspace folder, integration status evidence across five handlers, chat participant escaping). Fresh Option B architect-reviewer. O16d now orders B's write and lock release before A's first read, so both the no-reload and keep-cache mutations go red; NTFS mtime precision and close-time updates cannot mask it. Get-count lists match LD11 k in O16b-d; O16g's empty-get row is falsifiable. Three implementation notes: each import contributes an ensureKey get and an under-lock get to the count, clear the cache after the new key is in memory (or key the cache by a key fingerprint), and assert exactly two reads on the correct O16d path. Next: lane B implements. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #731: GATE TRIBUNAL - plan-v608-laneB-delta-review (iteration 1) - VETO
+
+**Timestamp**: 2026-10-16T04:30:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T0113-934871`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `f25a310db649f955e581d2554cef23e478d678b4e32352de2fe695b2eb34fa5f`
+**Previous Hash**: `d9b1fa8621cca92add596ed6f417d4e86327adc68d727ab7a24bfe46b3966c97`
+**Chain Hash (Merkle seal)**: `0057556903df62ce52ab99ff43d9ffed7d10901ce10774170fe223f7dcb996ee`
+
+**Decision**: VETO on plan-v608-laneB-delta-review.md iteration 1 (sha256 a9e37082), the post-implementation review delta for lane B (OpenHands run-scoped dedup, summary link check, isolated evidence wiring, governance-mode source, README, bounded reads, https-only trackers). The run id is MAC-covered, the wiring dependencies exist after bootstrapSentinel, and both 'unavailable' rows fail today. B1: opening a FIFO for reading blocks the extension host before fstat can refuse it; open with O_NONBLOCK and name the CI job for the POSIX row. B2: the generic envelope id accepts values like '1' or 'default' as a run id, recreating the cross-run collision; accept strings only with a minimum length or UUID/hex pattern, and fall back to the file-scoped key when candidate fields disagree. Advisories: rewrite O2 for re-imports, use the default appender in D2 with a win32 fallback, assert no throw in the wiring catch, enforce the event cap after Array.isArray, pass port || undefined, assert the body cap rejects mid-stream, add a main.ts source row for the mode getter, add an anchoring case to D6d, hand-sign D6f, put the SEALED check first, update the jira-client comment. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #732: GATE TRIBUNAL - plan-v608-laneB-delta-review (iteration 2) - VETO
+
+**Timestamp**: 2026-10-16T04:45:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T0113-934871`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `32c8e1273139da400c72d8bb342927da08370bba0946495b906a182bcbd7c246`
+**Previous Hash**: `0057556903df62ce52ab99ff43d9ffed7d10901ce10774170fe223f7dcb996ee`
+**Chain Hash (Merkle seal)**: `b6ebb4331662e8f1607b3f70fe47e72bab3bc38ab38c56870863caf171d8374c`
+
+**Decision**: VETO on plan-v608-laneB-delta-review.md iteration 2 (sha256 230a3a4e). Both iteration-1 blockers are fixed in design: the non-blocking open makes fstat refuse a FIFO before any read, the Linux row runs in PR Full Test / Full Test Suite (test:all), and run ids are strings that are UUIDs or 8+ character tokens with a file-scoped fallback on disagreement. Two mutations cannot fail: D1's 'accept any short token' row uses '1' and 'default' in different runs, so their keys differ under the mutation; use two pairs of runs sharing the same short id. D2's summary-link mutation survives on win32 because appendFileSync on a directory throws EISDIR and is caught; use a hard link to an outside file and refuse nlink > 1. Advisories: close the descriptor on every refusal, fail rather than skip without mkfifo plus a drop-O_NONBLOCK mutation, two qualifying UUIDs with differing bytes in the disagreement row, and disclose or tighten placeholder ids of 8+ characters for the generic id field. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #733: GATE TRIBUNAL - plan-v608-laneB-delta-review (iteration 3) - VETO
+
+**Timestamp**: 2026-10-16T05:00:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T0113-934871`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `4cd9220cc52609cb8589819aad9569cd91e62259aa896135c83e32318367ab88`
+**Previous Hash**: `b6ebb4331662e8f1607b3f70fe47e72bab3bc38ab38c56870863caf171d8374c`
+**Chain Hash (Merkle seal)**: `570941cf1ed65e2bf71f40a1e83d712c5c4b56fb4b5ee4a6b28e42038175e724`
+
+**Decision**: VETO on plan-v608-laneB-delta-review.md iteration 3 (sha256 4633a64e). D2 is closed: the hard link and its outside file share os.tmpdir(), and both the no-check and nlink-only mutations go red on win32. The untitled-run pair isolates the stricter generic-id rule. Blocker: D1's short-token pairs put '1' and 'default' in the generic id field, which the new generic rule rejects before the 8-character floor is reached, so the short-token mutation survives and the floor has no falsifier. Fix: move those pairs to conversation_id or session_id. Advisories: run the hard-link row on POSIX too, state that the outside file stays under os.tmpdir(), and update the limitations text for the generic-id rule. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #734: GATE TRIBUNAL - plan-v608-laneB-delta-review (iteration 4) - PASS
+
+**Timestamp**: 2026-10-16T05:10:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T0113-934871`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `f36ece4d339fa1ef55f7714225206ab3eb332b602656fbd5bb0bfd30fe4745fd`
+**Previous Hash**: `570941cf1ed65e2bf71f40a1e83d712c5c4b56fb4b5ee4a6b28e42038175e724`
+**Chain Hash (Merkle seal)**: `ebd58286905da2f75db5aadffc9a24e1324db4732902020d61abd8295fee86b8`
+
+**Decision**: PASS on plan-v608-laneB-delta-review.md iteration 4 (sha256 3229d90b), the post-implementation review delta for lane B: OpenHands run-scoped deduplication (named fields need a UUID or an 8+ character token, the generic id a UUID or 16+ hex, file-scoped fallback otherwise, runId signed), link and hard-link refusal for the summary write, a non-blocking export open with bounded reads, integration evidence wired after bootstrapSentinel with a logging catch, the enforcement engine's governance mode, https-only capped tracker transports, and README truthfulness. Fresh Option B architect-reviewer. The short-token and generic-id mutations are isolated and each turns only its own row red; the hard-link row runs on every platform. #507's head is not an ancestor of b66a32d8 or main, so no shipped records need migration. One implementation note: add an exactly-8-character conversation_id row to pin the floor from the accepting side. Next: lane B implements the delta. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #735: IMPLEMENTATION - plan-v608-laneB-integrations
+
+**Timestamp**: 2026-10-16T17:07:58Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-16T0113-934871`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-16T0113-934871/implement-iter1.json`
+
+**Content Hash**: `ce52fabebb4ac19ae5eeeda46eafe1b24952ea3ec3fcfaf2f7616dff81dadc14`
+**Previous Hash**: `ebd58286905da2f75db5aadffc9a24e1324db4732902020d61abd8295fee86b8`
+**Chain Hash (Merkle seal)**: `76dc499f9cfeddc2ee1ad74484867ed2b1c3fcb64b8afe90561367c476b5fd95`
+
+**Decision**: IMPLEMENTATION of plan-v608-laneB-integrations.md (+ plan-v608-laneB-delta-review.md) (audit PASS #734), lane B of program #521 (v6.0.8), FX995-FX999. 11 own commits (first-parent, merges excluded) from b6360dce to 72dce942 on the lane branch from b66a32d8, merged into release/v6.0.8-rc without rewriting (plan-v608-integration LD1): integration catalog status from recorded evidence (#479); Jira and Linear governed intent drafts created only on approval over an https-only capped transport (#480); OpenHands signed historical import with run-scoped deduplication, per-line HMAC bound to the folder, link and hard-link refusal and bounded reads, shown in both timelines (#477, #507 merged); a capability conformance suite (#474); integration evidence wired after Sentinel in its own catch. Files: 86. Evidence: lane vscode-test 155 passing / 2 pending (POSIX rows), v5 documentation coherence 9/9, catalog Playwright 5/5, docs 12/12; red first on b66a32d8 and on 3e85af8a for the review delta; 65 + 32 + E1-E9 mutations red, E10 equivalent. Verified again in the integrated candidate 76641298 (plan-v608-integration LD6).
+
+---
+
+### Entry #736: SESSION SEAL - plan-v608-laneB-integrations
+
+**Timestamp**: 2026-10-16T17:07:58Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-16T0113-934871`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-16T0113-934871/substantiate.json`
+
+**Content Hash**: `b4ead77a5109b2c53f89b834a090a42e04e5a31f1a7907a473f421c8d367ec08`
+**Previous Hash**: `76dc499f9cfeddc2ee1ad74484867ed2b1c3fcb64b8afe90561367c476b5fd95`
+**Chain Hash (Merkle seal)**: `3b076269916fec2f793535f8699a5f74776f5fe0fcc62997c3ec69d19a850519`
+
+**Decision**: SESSION SEAL for plan-v608-laneB-integrations.md (+ plan-v608-laneB-delta-review.md) (implementation #735), lane B of program #521 (v6.0.8). Reality = Promise, with disclosures. Delivered at lane head 67e15b49 and in the integrated candidate 76641298: integration catalog status from recorded evidence (#479); Jira and Linear governed intent drafts created only on approval over an https-only capped transport (#480); OpenHands signed historical import with run-scoped deduplication, per-line HMAC bound to the folder, link and hard-link refusal and bounded reads, shown in both timelines (#477, #507 merged); a capability conformance suite (#474); integration evidence wired after Sentinel in its own catch. Disclosures: bounded damaged-ledger override applied per lane cycle (#467 unresolved, normal governance not restored); vscode-test ran on a disposable test build with win32VersionedUpdate removed (the operator's parked updater holds the vscode-updating mutex); the operator install was untouched; the lane's pre-existing covering suites failed in the first full vscode-test run on the integrated candidate and were fixed under plan-v608-integration LD14-LD16 (lane fix commits merged separately) (TimelineRenderer, FailSafeChatParticipant and the #476 importer pin; the pin regression came from the audited delta itself); #507's 14 commits keep their 'Kevin Knapp' author; provider behaviour is tested against recorded responses only; the OpenHands export layout and run-identity fields are unconfirmed; a crafted export that declares a real run's identity and event ids can pre-claim those keys; the timelines show the most recent 500 imported events per folder; the FIFO and symlinked-transparency rows and the O_NONBLOCK mutation run on Linux CI only; D6c3 goes red by timeout. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp. Not tagged, not published.
+
+---
+
+### Entry #737: GATE TRIBUNAL - plan-v608-integration (iteration 1) - VETO
+
+**Timestamp**: 2026-10-16T14:10:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T1356-298603`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `2a65809b53af22528988b9429b77eb3dad4d2d5901a803853797ac0cdfd583e7`
+**Previous Hash**: `3b076269916fec2f793535f8699a5f74776f5fe0fcc62997c3ec69d19a850519`
+**Chain Hash (Merkle seal)**: `432990df61cf46f3b3fc5920053e07b529509c62f4091498e0a8778a1c9462c2`
+
+**Decision**: VETO on plan-v608-integration.md iteration 1 (sha256 04735298). Coverage of the directive's integration, regression, eight-package, native-load, lifecycle, governance and no-tag items is present, and the push publishes nothing. V1: LD8 has no path for main moving past 7297aa1b; --match-head-commit pins the head, not the base, so the tree-equality check could fail only after the merge landed. V2: no adversarial review of the integrated candidate, although the github-checks-command.ts conflict between lanes A and B is resolved after both lane audits. Advisories: the push runs qualification, standards and skills-governance, not the PR gate; seven smoke jobs with alpine-arm64 header-only; the RC manifest is evidence, not the published manifest; name the What's New heading release-gate requires and drop the nonexistent Socket badge; the Phase 1 backlog-status claim cannot fail; state review-delta ordering and when ledger_entry is known; file tar/ps before closing B211; check #507's body for closing keywords; make the tag command conditional on the version decision. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #738: GATE TRIBUNAL - plan-v608-integration (iteration 2) - PASS
+
+**Timestamp**: 2026-10-16T14:25:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T1356-298603`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `4236f855ae21a9adc0eab3cec5526fdee30ea21e2ccff5fe73e34adb2ded87a5`
+**Previous Hash**: `432990df61cf46f3b3fc5920053e07b529509c62f4091498e0a8778a1c9462c2`
+**Chain Hash (Merkle seal)**: `9fac1ef3ddb7c2ad63c1ab9f621f90636a36793f3f6f70bfd6ea912525f73319`
+
+**Decision**: PASS on plan-v608-integration.md iteration 2 (sha256 a23c15d1), the lead's v6.0.8 integration: lanes A-D merged into release/v6.0.8-rc without rewriting, lane governance bands appended in merge order, version 6.0.8 with the markers the release checks read, an adversarial review of the integrated candidate before any ledger entry, sequential local qualification including eight packages, native loads and the install/upgrade/rollback lifecycle, a pre-merge base check with the merged-candidate path, and no tag, publish or production approval. Fresh Option B architect-reviewer. Five implementation notes: skills-governance may not run on push because of its path filter, name the second PR that would carry a post-merge entry, note LD10's redefinition of C0 in the terms, align D6 with the conditional tag command, and use the exact construction-sign IN PROGRESS status in the backlog-status scratch mutation. Next: the lead integrates lanes A and B as they complete. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #739: GATE TRIBUNAL - plan-v608-integration (iteration 3) - VETO
+
+**Timestamp**: 2026-10-16T16:05:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T1356-298603`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `aaadd775b26b1c0461b7a75db33814edca0468c7ce61535b470427fa3e9c5f73`
+**Previous Hash**: `9fac1ef3ddb7c2ad63c1ab9f621f90636a36793f3f6f70bfd6ea912525f73319`
+**Chain Hash (Merkle seal)**: `f0a846539e595a89446ec94bb3e9dc48bb72c4b935dd968b6f77b2c53e855aab`
+
+**Decision**: VETO on plan-v608-integration.md iteration 3 (sha256 4f7c76ad), which adds the LD10 review fixes (LD11 nonce-store folder containment, LD12 documentation corrections, LD13 backlog items). Path coverage at construction, the fail-closed disabled state, real-path comparison and the LD11 test are sound, and LD12 matches the code. Blocker: LD11 checks only at construction while claiming parity with the risk store; withNonceLock's recursive ensureParent (nonceStore.ts:126) and an existing security folder at a link target still let transactions and the marker sweep write outside the workspace after a link is swapped in. Fix: run the walk as ensureParent and before each transaction and marker create, add nonceStore.ts to the affected files and add a swap-after-construction row, or disclose the construction-only limit. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #740: GATE TRIBUNAL - plan-v608-integration (iteration 4) - VETO
+
+**Timestamp**: 2026-10-16T16:30:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T1356-298603`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `3ec6d6922cd112ce3fe2ef98cb1edbedf1c3eeca4fa7248e9890325016897acf`
+**Previous Hash**: `f0a846539e595a89446ec94bb3e9dc48bb72c4b935dd968b6f77b2c53e855aab`
+**Chain Hash (Merkle seal)**: `7123f29baedeec6bcd7973b0a62559848d0ba8aed4851e6b355d957d54ac5eb0`
+
+**Decision**: VETO on plan-v608-integration.md iteration 4 (sha256 409116cc). Every write and delete under the nonce store folder now shares a call with the containment walk, reads keep LD-3's busy rule if transient codes map to NonceStoreBusyError, and the cost is acceptable. Blockers: the 'remove the construction walk' mutation stays green because the constructor's read walk disables the guard first, and the 'drop the walk before marker sweep' mutation stays green because cleanup's transaction refuses before the sweep runs; each needs its own falsifier. Should-fix: a NonceMarkerDirError from the sweep is only logged and never disables the guard, and the walk must also run after the lock is taken, before the temp write and rename, as the risk store does; disclose that the lock folder and queue tickets are created before the check. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #741: GATE TRIBUNAL - plan-v608-integration (iteration 5) - VETO
+
+**Timestamp**: 2026-10-16T16:55:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T1356-298603`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `905ee295d7f08f78786ce6a793231c082a946b39bcba858beebe55493a1d7874`
+**Previous Hash**: `7123f29baedeec6bcd7973b0a62559848d0ba8aed4851e6b355d957d54ac5eb0`
+**Chain Hash (Merkle seal)**: `0c3800e1b6f1b0231a1927cdeee76e347873235f64a436d25a4c8a90e021d766`
+
+**Decision**: VETO on plan-v608-integration.md iteration 5 (sha256 ec3abd55). M1, M2 and M3 each go red on their named rows, correct code stays green, and the new walk leaves Lane C's pinned in-lock ordering untouched. B1: row (vii) does not say how 'disabled' is observed, and a validate, consume or generate call while the link is present runs its own walk and masks M4; restore the real folder first and assert the requireHealthyStore recovery message, using the existing clock seam to swap the link between the transaction and the sweep. B2: the in-lock walk and the ensureParent walk have no isolating test; add one or disclose them as defence in depth with no mutation claimed. Advisories: name M1-M4 in D10, list the in-lock and sweep-catch sites in Phase 1b, and catch the construction walk into failed() so activation never throws. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #742: GATE TRIBUNAL - plan-v608-integration (iteration 6) - PASS
+
+**Timestamp**: 2026-10-16T17:10:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T1356-298603`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `0998433d2bbae16323f966d48bffe4b544e3b2f5830a83b60ddc8137c584341b`
+**Previous Hash**: `0c3800e1b6f1b0231a1927cdeee76e347873235f64a436d25a4c8a90e021d766`
+**Chain Hash (Merkle seal)**: `6459a4a0cdaea3c5d033bd1435a2a948cd927436a767bad5d4b44ed8c529374d`
+
+**Decision**: PASS on plan-v608-integration.md iteration 6 (sha256 21c9751f), the lead's v6.0.8 integration with the LD10 combined-review fixes: LD11 nonce-store folder containment checked at construction, on every read and transaction, inside the lock and before every marker operation, with the sweep catch now disabling the guard; LD12 documentation corrections; LD13 findings filed as backlog items. Fresh Option B architect-reviewer. Row (vii) swaps the link on cleanup's second clock call, after every transaction walk and before the sweep, and the guard has no re-enable path, so the recovery-message assertion falsifies M4; the in-lock and ensureParent walks are accurately disclosed as defence in depth. Two implementation notes: count clock calls from the start of cleanup, and record M4's real failure mode (a lock timeout, or success if the folder is deleted) while keeping the message assertion strict. Next: the lead implements LD11-LD13 and re-runs LD6 on the redefined C0. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #743: GATE TRIBUNAL - plan-v608-integration (iteration 7) - VETO
+
+**Timestamp**: 2026-10-16T16:45:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T1356-298603`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `2e43281daf2aa348b633203457b1437e34227b68a3eb35fd4aac52bcde653bf3`
+**Previous Hash**: `6459a4a0cdaea3c5d033bd1435a2a948cd927436a767bad5d4b44ed8c529374d`
+**Chain Hash (Merkle seal)**: `39564359ce65f9d1f557b7436e13c914ef94e7d7727fabc4b9985d6b1d2f53a2`
+
+**Decision**: VETO on plan-v608-integration.md iteration 7 (sha256 d39fbdfa), which adds LD14-LD17 for the ten failures of the first full vscode-test run on the integrated candidate. LD14's items are genuinely stale tests (the chat escaping renders correctly without supportHtml), the Bicameral generation token removes the orphan in every ordering, and the install rewire hook sits behind rejectIfRemote. Blocker: LD15 names the H4 health rows and C1 pairs as the falsifier for byte-identical error texts, but both sides read the same constants and no test holds a literal, so a changed text stays green; replace it with a check that the five texts equal 56291b07's literals and that no other production file defines them. Advisories: pin the passing and pending counts in D11, catch and log a throwing install hook, restore the executable configuration after the Bicameral tests and use a platform-correct executable on POSIX, say where the LD16 disclosure goes, and record the deactivate-during-auto-connect race. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #744: GATE TRIBUNAL - plan-v608-integration (iteration 8) - PASS
+
+**Timestamp**: 2026-10-16T17:00:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T1356-298603`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `f6b508ffea34f92f9e1242985b6da1a9d8de0f12a87e4f6d482ce6e7355be5be`
+**Previous Hash**: `39564359ce65f9d1f557b7436e13c914ef94e7d7727fabc4b9985d6b1d2f53a2`
+**Chain Hash (Merkle seal)**: `99997d1b74610524df4a4e817da23810faa30b5ff0325163d582ead923094fb0`
+
+**Decision**: PASS on plan-v608-integration.md iteration 8 (sha256 09cf1f11), which adds LD14-LD17 for the ten failures of the first full vscode-test run on the integrated candidate: seven stale tests fixed in the tests only, the sealed #476 importer pin restored through check-run-errors.ts with a source check that holds the five texts and scans production source, a Bicameral rewire generation token with a late prior read, a post-install rewire hook, and covering-suite runs with a full re-run whose pass and pending floors cannot be met by skipping. Fresh Option B architect-reviewer. Three implementation notes: align LD14 (d)'s executable wording with LD16's platform-correct form, read .ts source rather than out/ in the source check, and match the texts as substrings. Next: lanes A, B and C implement LD14-LD16 on their branches and the lead merges them and re-runs LD6. Tribunal entry held by the lead during the parallel v6.0.8 wave and appended at integration in its recorded order with its original timestamp.
+
+---
+
+### Entry #745: IMPLEMENTATION - plan-v608-integration
+
+**Timestamp**: 2026-10-16T17:08:59Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-16T1356-298603`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-16T1356-298603/implement.json`
+
+**Content Hash**: `e8100ab00d5e58b25a6818bffd07830b37a39329f669f43edf18b9b15416b793`
+**Previous Hash**: `99997d1b74610524df4a4e817da23810faa30b5ff0325163d582ead923094fb0`
+**Chain Hash (Merkle seal)**: `8417db669257593366d7b7a8ece076fc53695badb7c6ece686b9d6888c3ed97c`
+
+**Decision**: IMPLEMENTATION of plan-v608-integration.md (audit PASS #744, iteration 8), the lead's v6.0.8 integration for program #521. release/v6.0.8-rc from main 7297aa1b (main carries #527 and the #522-#524 action bumps) holds the four lane merges in order: D d4ca1a29, C 98653fea, A ebfea1c5, B e3257ea8, every lane commit reachable unchanged. LD3-LD5 docs commit 09397310 and a998ca01: version 6.0.8 with the release markers the coherence and preflight checks read, CHANGELOG [6.0.8], What's New in v6.0.8, FEATURE_INDEX FX978-FX999 each naming a test, BACKLOG B211-B214 closed and B221-B230 filed. LD10's combined security and correctness review of the integrated candidate found one cross-lane defect and documentation drift: LD11 commit 5fad755a makes the replay-nonce store refuse a linked or escaping .failsafe/security folder at construction, on every read and transaction, inside the lock and before every marker operation (SecurityReplayGuard.storeDir.test.cjs rows (i)-(iii), (vi), (vii) red at a998ca01; M1-M4 each red on its named row); LD12-LD13 docs commit 56291b07 corrects the OpenHands timeline bound, the Integrations sentence, the limitations and two FEATURE_INDEX paths and files B231-B234. The first full vscode-test run on 56291b07 (4983 passing, 18 pending, 10 failing) found ten failures in pre-existing suites no lane's targeted run selected; LD14-LD16 fixed them in the lanes' branches, each red first: B c989c31f (TimelineRenderer six filters, chat appendText decoding, #476 importer pin restored through check-run-errors.ts with a byte-for-byte source check), C 1249bd91 (lock-queue R7 captures through Logger), A 75285389 (bootstrapBicameral fixture, a rewire generation token closing an orphaned-client race, a post-install rewire hook), merged as 48e73719, 81436d98 and 2e9ed5ad; docs commit 76641298 adds the Bicameral limitations and B235. LD6 qualification on C0 76641298, local, counts read from logs: tsc 0; lint 0 errors; runner coverage pass; citation parity pass; test:node 713/721 (2 = FX946 ledgerAnchor, reproduced on 7297aa1b; 6 skipped); npm test 5000 passing / 0 failing / 18 pending, census 509/509, on the disposable 1.122.1 build; test:ui 208 passed / 1 failed / 4 skipped, the failure a 45 s timeout in brainstorm-tab-roundtrip #263 that passes 3/3 alone; release-gate --preflight pass; validate-docs-coherence pass; eight 6.0.8 VSIXs with verify-set pass and sha256sum -c OK (win32-x64 8319bd22); the packaged win32-x64 better-sqlite3 loads in Node 22.22.3 and in Electron 39.8.8 (1.122.1) and 43.7.7 (1.141.1), napi 10; rv inventory 50/50; rv lifecycle 12/12 from the published 6.0.7 win32-x64 (534e52c4) to the 6.0.8 candidate on a disposable 1.141.1 with SQLite snapshots 1-7 across S1-S7 and no residual process; npm audit --omit=dev reports 2 high (braces via chokidar 3.6.0, GHSA-vfj7-8cjw-p6xm), unchanged from main and from published v6.0.7; the repository secret scanner over the 203 changed files reports 4 matches, all fake test fixtures (xoxb-SUPER-SECRET-TOKEN, sk-mcp-SECRET-424242, jira_tok_SECRET_9876, lin_api_SECRET_5555).
