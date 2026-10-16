@@ -21,7 +21,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { spawnSync } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 
 const OUT = path.resolve(__dirname, '..', '..', '..', 'out');
 const { SecurityScanner } = require(path.join(OUT, 'roadmap', 'services', 'SecurityScanner.js'));
@@ -116,19 +116,31 @@ test('T4b: a scanner under the marketplace root on an absolute PATH entry is rej
   } finally { process.env.PATH = prev; }
 });
 
-test('T4b: a scanner child still holding its temp folder does not break the scan (EBUSY tolerated)', async () => {
-  let fd;
+test('T4b: a scanner child still holding its temp folder does not break the scan (EBUSY tolerated)', { skip: !WIN && 'win32: a running cwd blocks removal only on Windows' }, async () => {
+  let holder;
   let held;
   const runner = async (command, args, cwd) => {
     if (args[0] === '--version') return { code: 0, stdout: 'ok', stderr: '' };
     held = cwd;
-    fd = fs.openSync(path.join(cwd, 'held.txt'), 'w');
+    // A surviving descendant: a live process whose cwd is the scan folder.
+    holder = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 20000)'], { cwd, stdio: 'ignore', env: { ...process.env, NODE_OPTIONS: '' } });
+    await new Promise((r) => setTimeout(r, 500));
     return { code: 0, stdout: '{"results":{"p1":{"name":"x","fail_rate":0}}}', stderr: '' };
   };
-  const s = new SecurityScanner(new EventBus(), runner);
-  await s.checkAvailability();
-  const r = await s.scanWithGarak(install, () => {});
-  assert.equal(r.scanner, 'garak', 'the scan returned a result');
-  fs.closeSync(fd);
-  fs.rmSync(held, { recursive: true, force: true });
+  try {
+    // Precondition: removing a folder that is a live process's cwd fails on this host.
+    const probeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'fsscan-hold-'));
+    const p = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 20000)'], { cwd: probeDir, stdio: 'ignore', env: { ...process.env, NODE_OPTIONS: '' } });
+    await new Promise((r) => setTimeout(r, 500));
+    assert.throws(() => fs.rmSync(probeDir, { recursive: true, force: true, maxRetries: 3 }), 'precondition: a live cwd blocks removal');
+    p.kill();
+    const s = new SecurityScanner(new EventBus(), runner);
+    await s.checkAvailability();
+    const r = await s.scanWithGarak(install, () => {});
+    assert.equal(r.scanner, 'garak', 'the scan returned a result');
+  } finally {
+    if (holder) holder.kill();
+    await new Promise((r) => setTimeout(r, 300));
+    if (held) fs.rmSync(held, { recursive: true, force: true, maxRetries: 5 });
+  }
 });

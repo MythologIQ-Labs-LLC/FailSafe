@@ -158,7 +158,10 @@ test('T13 (c): the py launcher resolves to the trusted py.exe, never the plant',
 test('T13 (d): a user-level pythonPath inside the workspace is rejected as user-path-invalid', async () => {
   reset();
   const cfg = { get: () => insideWs, inspect: () => ({ globalValue: insideWs }) };
-  const r = await new PythonInterpreterResolver(cfg, null, defaultRun).resolve();
+  const handed = [];
+  const run = (cmd, args) => { handed.push(cmd); return defaultRun(cmd, args); };
+  const r = await new PythonInterpreterResolver(cfg, null, run).resolve();
+  assert.deepEqual(handed.filter((c) => isInside(c, ws)), [], 'the workspace interpreter was never handed to a runner');
   assert.equal(r.ok, false, `rejected: ${JSON.stringify(r)}`);
   assert.equal(r.reason, 'user-path-invalid');
   assert.match(String(r.detail), /inside an excluded folder/);
@@ -176,10 +179,13 @@ test('T13 (d2): a workspace-level pythonPath is ignored; the PATH source is used
 test('T13 (e): a Python-extension interpreter inside the workspace falls through to the PATH source', async () => {
   reset();
   const vscode = { extensions: { getExtension: () => ({ isActive: true, activate: async () => {}, exports: { settings: { getExecutionDetails: () => ({ execCommand: [insideWs] }) } } }) } };
-  const r = await new PythonInterpreterResolver(emptyConfig, vscode, defaultRun).resolve();
+  const handed = [];
+  const run = (cmd, args) => { handed.push(cmd); return defaultRun(cmd, args); };
+  const r = await new PythonInterpreterResolver(emptyConfig, vscode, run).resolve();
   assert.equal(r.ok, true);
   assert.equal(r.source, 'probe');
   assert.ok(!isInside(r.command, ws), `outside ws: ${r.command}`);
+  assert.deepEqual(handed.filter((c) => isInside(c, ws)), [], 'the workspace interpreter was never handed to a runner');
 });
 
 test('T13 (f): a planted process cwd does not stop resolution, and pip runs from a trusted interpreter', async () => {
