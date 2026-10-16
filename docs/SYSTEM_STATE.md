@@ -1,6 +1,6 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-10-15 (v6.0.7 final integration on `release/v6.0.7-rc2` (PR #525): lanes A-D and the trusted Git resolver on the merged RC, with the review and CI corrections; ledger #659-#704, final seal #704; not tagged, not published)
+**Last Updated:** 2026-10-16 (v6.0.8 integration on `release/v6.0.8-rc`: lanes A-D, the combined-review and full-run fixes, version 6.0.8; ledger #705-#746, seal #746; code candidate C0 `76641298`; not merged, not tagged, not published)
 **Active local review:** `fix/system-state-currency-sprint2` — this cycle. Restores the Tier 1 freshness contract and adds `system-state-currency.test.cjs`, the first check that asserts it. Prior to this cycle no test anywhere read this file's content.
 **Prior local review:** `fix/qor169-sprint1-seal-unblock` — MERGED to `main` as `1e1215cc` (PR #448). qor-logic 0.163.1 → 0.169.0; `.qorlogic/config.json` created, which is what allows a seal to complete at all; five vacuously-passing governance controls identified; TTS timeout assertion made deterministic and falsifying. Seal Entry #602.
 **Open PRs:** #442 (Bicameral upstream row error state), #443 (plan-grep-lint regex recognition), #444 (#367 per-engine provenance), #445 (#242 Shadow Genome severity aria — supersedes #440, closed as duplicate), #446 + #447 (dependabot). #447's blocker — a wall-clock TTS assertion — was removed by Entry #602.
@@ -13,6 +13,13 @@
 **Doctrine additions since 2026-05-22:** `feedback_no_pipeline_reshape_for_marketplace_issues` (2026-05-27, v5.2.2 hold-pat precedent) · `feedback_verify_external_names_at_plan_time` (2026-05-27, Citation Inventory Pass — broke 4-cycle Plan-Time Hallucination loop at Entry #405)
 
 ---
+
+## 2026-10-16 — v6.0.8 integration (release/v6.0.8-rc, not tagged, not published)
+
+- Program #521, v6.0.8: lanes D (repository hygiene, FailSafe Pro retired), C (runtime and reliability: #471, #472, #528, release draft identity), A (governance and security: #468, #469, B211, B213, B214) and B (integrations: #474, #477, #479, #480) merged without rewriting, each sealed in its own session (#705-#736).
+- Integration fixes: the replay-nonce store refuses a linked or escaping store folder (LD11); documentation corrections (LD12-LD13); the ten failures of the first full vscode-test run fixed in the lanes (LD14-LD16), including the restored #476 importer pin and two Bicameral defects.
+- C0 `76641298`: npm test 5000 passing / 0 failing / 18 pending; test:node 713/721 (FX946 baseline); eight 6.0.8 VSIXs verified; packaged SQLite loads in Node and Electron; rv lifecycle 12/12 from published 6.0.7.
+- Ledger #705-#746 (integration seal #746); the ledger stays DAMAGED (#467) under the bounded per-cycle override.
 
 ## 2026-10-15 — v6.0.7 final integration (release/v6.0.7-rc2, not tagged, not published)
 

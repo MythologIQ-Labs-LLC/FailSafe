@@ -588,6 +588,7 @@ The v1 consumer adapter (`FailSafe/extension/src/qorlogic/consumer/`, FX892/FX89
 - [ ] [B232] The integration catalog GET route (`ConsoleRouteRegistrar.ts`) does not call `rejectIfRemote`, while `/api/v1/timeline` does. The data is read-only and from closed sets; align the routes. | low
 - [ ] [B233] After auto-connect, `maybeAutoConnectBicameral` (`bootstrapBicameral.ts`) replaces the client without rewiring the interceptor, so governed routes still wrap the client `wireFromConfig` created. Pre-existing. | post-v6.0.8
 - [ ] [B234] Lane B's health mapping types the import outcome as `write?: Partial<WriteCounts>`, so a rename in `ImportWriteOutcome` (`riskImportBatch.ts`) would compile silently. Use `Pick<ImportWriteOutcome, ...>`. | low
+- [ ] [B235] A deactivate that lands while activation's Bicameral auto-connect is still in `connect()` can orphan that bicameral-mcp session; the disposer now cancels pending rewires but not an in-flight connect. Pre-existing. | low
 
 ## Wishlist (Nice to Have)
 
