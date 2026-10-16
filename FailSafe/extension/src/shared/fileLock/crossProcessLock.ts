@@ -23,7 +23,8 @@ import { LockQueue, QueueSeams } from "./lockQueue";
 
 /** The store-specific failures; each store words them for its own file. */
 export interface LockErrors {
-  timeout(lastCode: string, staleMs: number): Error;
+  /** `lockPresent`: whether a lock directory existed when the wait ran out. */
+  timeout(lastCode: string, staleMs: number, lockPresent: boolean): Error;
   blocked(code: string): Error;
   lost(): Error;
   reentrant(): Error;
@@ -111,6 +112,15 @@ function isContention(lockDir: string): boolean {
   }
 }
 
+function lockPresent(lockDir: string): boolean {
+  try {
+    fs.lstatSync(lockDir);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function tryLock(file: string, opts: FileLockOptions): (() => void) | string {
   try {
     return lockfile.lockSync(file, {
@@ -148,7 +158,7 @@ function waitForLock(file: string, opts: FileLockOptions, now: () => number): vo
         lastCode = outcome;
         queue.join();
       }
-      if (now() >= deadline) throw opts.errors.timeout(lastCode, opts.staleMs);
+      if (now() >= deadline) throw opts.errors.timeout(lastCode, opts.staleMs, lockPresent(lockDir));
       queue.refresh();
       if (queue.isHead()) {
         sleepSync(HEAD_POLL_MS + Math.random() * HEAD_POLL_MS);

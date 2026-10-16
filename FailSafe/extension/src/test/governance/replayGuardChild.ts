@@ -4,6 +4,7 @@
  * Usage: node replayGuardChild.js <mode> <root> <arg>
  *   consume <root> <nonce>  validate before the start signal, then consume
  *   issue   <root> <count>  issue <count> nonces after the start signal
+ *   consume-now <root> <nonce>  consume at once (no start signal; for spawnSync)
  * Prints "ready" (after an optional JSON "pre" line), waits for <root>/go,
  * does its work, then prints one JSON result line and exits.
  */
@@ -30,6 +31,9 @@ function main(): void {
   if (mode === "consume") {
     process.stdout.write(JSON.stringify({ pre: guard.validateNonce(arg).valid }) + "\n");
     waitForGo();
+    const result = guard.consumeNonce(arg, `child-${process.pid}`);
+    process.stdout.write(JSON.stringify({ valid: result.valid, reason: result.reason ?? null }) + "\n");
+  } else if (mode === "consume-now") {
     const result = guard.consumeNonce(arg, `child-${process.pid}`);
     process.stdout.write(JSON.stringify({ valid: result.valid, reason: result.reason ?? null }) + "\n");
   } else if (mode === "issue") {
