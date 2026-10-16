@@ -75,7 +75,8 @@ process.env.FSG_MARKER = MARK;
 const marks = () => (fs.existsSync(MARK) ? fs.readFileSync(MARK, 'utf8').split(/\r?\n/).filter(Boolean) : []);
 const clearMarks = () => { try { fs.unlinkSync(MARK); } catch { /* none */ } };
 const NAMES = WIN ? ['python', 'python3', 'py', 'pip', 'pip3'] : ['python', 'python3', 'pip', 'pip3'];
-function plantAll(dir) {
+/** POSIX: only the workspace plants go on the global PATH; plant/bin is added per row (LD22). */
+function plantAll(dir, onPath) {
   if (WIN) { for (const n of NAMES) fs.copyFileSync(process.execPath, path.join(dir, `${n}.exe`)); return; }
   const bin = path.join(dir, 'bin');
   fs.mkdirSync(bin, { recursive: true });
@@ -84,10 +85,18 @@ function plantAll(dir) {
     fs.writeFileSync(path.join(bin, n), `#!/bin/sh\nif [ "$1" = "--version" ]; then echo "${ver}"; exit 0; fi\necho "$*" >> "$FSG_MARKER"\nexit 1\n`);
     fs.chmodSync(path.join(bin, n), 0o755);
   }
-  process.env.PATH = `${bin}${DELIM}${process.env.PATH}`;
+  if (onPath) process.env.PATH = `${bin}${DELIM}${process.env.PATH}`;
 }
-plantAll(ws);
-plantAll(plantDir);
+plantAll(ws, true);
+plantAll(plantDir, false);
+const plantBin = path.join(plantDir, 'bin');
+/** POSIX rows with plantDir as the process cwd put plant/bin first on PATH for their own duration. */
+const withPlantPath = async (fn) => {
+  if (WIN) return fn();
+  const prev = process.env.PATH;
+  process.env.PATH = `${plantBin}${DELIM}${prev}`;
+  try { return await fn(); } finally { process.env.PATH = prev; }
+};
 if (WIN) process.env.NODE_OPTIONS = `--require ${markerJs.replace(/\\/g, '/')}`;
 
 /** The base interpreter (not a venv shim), found from a clean temp folder. */
@@ -138,8 +147,33 @@ test('T13 preconditions: bare python and py with the workspace as cwd run the pl
     const q = spawnSync('py', ['-3', '-m', 'qor.cli'], { cwd: ws, windowsHide: true, encoding: 'utf8' });
     assert.ok(nodeAnswered(q), `the planted py ran: ${q.stderr}`);
   }
-  const v = spawnSync('pip3', ['--version'], { cwd: plantDir, encoding: 'utf8', windowsHide: true });
+  const v = spawnSync('pip3', ['--version'], { cwd: plantDir, encoding: 'utf8', windowsHide: true, ...(WIN ? {} : { env: { ...process.env, PATH: `${plantBin}${DELIM}${process.env.PATH}` } }) });
   assert.ok(WIN ? (v.stdout || '').trim() === process.version : /planted/.test(v.stdout || ''), `the planted pip3 answered: ${v.stdout}`);
+});
+
+test('T13 POSIX positive control', { skip: WIN && 'POSIX PATH plant' }, async () => {
+  // A workspace folder first on PATH is the real POSIX hijack; only the workspace exclusion stops it.
+  assert.equal(process.cwd(), saved.cwd, 'runs with the original cwd');
+  try {
+    clearMarks();
+    spawnSync('python', ['-m', 'qor.cli'], { cwd: saved.cwd, encoding: 'utf8' });
+    assert.deepEqual(marks(), ['-m qor.cli'], 'precondition: a bare python runs the ws/bin plant');
+    clearMarks();
+    configure({ workspaceDirs: [] });
+    const r = await new PythonInterpreterResolver(emptyConfig, null, defaultRun).resolve();
+    assert.equal(r.ok, true, JSON.stringify(r));
+    assert.equal(r.source, 'probe');
+    assert.ok(isInside(r.command, path.join(ws, 'bin')), `with no workspace configured the plant is taken: ${r.command}`);
+    configure({ workspaceDirs: [ws] });
+    // A new resolver: each instance caches its first result.
+    const r2 = await new PythonInterpreterResolver(emptyConfig, null, defaultRun).resolve();
+    assert.equal(r2.ok, true, JSON.stringify(r2));
+    assert.equal(r2.source, 'probe');
+    assert.ok(!isInside(r2.command, ws), `with the workspace excluded the plant is refused: ${r2.command}`);
+  } finally {
+    configure({ workspaceDirs: [ws] });
+    clearMarks();
+  }
 });
 
 test('T13 (a): PATH source through the skill ingestor never runs a planted interpreter', async () => {
@@ -207,13 +241,15 @@ test('T13 (e): a Python-extension interpreter inside the workspace falls through
 
 test('T13 (f): a planted process cwd does not stop resolution, and pip runs from a trusted interpreter', async () => {
   reset();
-  process.chdir(plantDir);
-  try {
-    const resolver = new PythonInterpreterResolver(emptyConfig, null, defaultRun);
-    const py = await resolver.resolve();
-    assert.equal(py.ok, true, `resolved despite the plants: ${JSON.stringify(py)}`);
-    await new QorLogicPackageInstaller(resolver, output, recRun).isInstalled();
-  } finally { process.chdir(saved.cwd); }
+  await withPlantPath(async () => {
+    process.chdir(plantDir);
+    try {
+      const resolver = new PythonInterpreterResolver(emptyConfig, null, defaultRun);
+      const py = await resolver.resolve();
+      assert.equal(py.ok, true, `resolved despite the plants: ${JSON.stringify(py)}`);
+      await new QorLogicPackageInstaller(resolver, output, recRun).isInstalled();
+    } finally { process.chdir(saved.cwd); }
+  });
   noPlant();
   assert.equal(recorded.length, 1);
   assert.ok(path.isAbsolute(recorded[0].cmd) && !isInside(recorded[0].cmd, plantDir), recorded[0].cmd);
@@ -222,9 +258,11 @@ test('T13 (f): a planted process cwd does not stop resolution, and pip runs from
 
 test('T13 (g): AdapterService.checkState never reports the planted interpreter', async () => {
   reset();
-  process.chdir(plantDir);
   let state;
-  try { state = await new AdapterService(new EventBus()).checkState(); } finally { process.chdir(saved.cwd); }
+  await withPlantPath(async () => {
+    process.chdir(plantDir);
+    try { state = await new AdapterService(new EventBus()).checkState(); } finally { process.chdir(saved.cwd); }
+  });
   assert.notEqual(state.pythonVersion, process.version, 'not the Node version of the plant');
   assert.match(String(state.pythonVersion), /^3\.\d+/);
   assert.equal(state.pipAvailable, true);
