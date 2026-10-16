@@ -58,7 +58,7 @@ export function registerBicameralLifecycleRoutes(
       return;
     }
     try {
-      const result = await runBicameralInstall(
+      const result = await (deps.runInstall ?? runBicameralInstall)(
         {
           workspaceRoot: deps.workspaceRoot,
           // GH #165: team-mode setup needs an interactive TTY for the Google
@@ -75,6 +75,9 @@ export function registerBicameralLifecycleRoutes(
         },
         mode,
       );
+      // LD16 (b): a client is wired only for a command that resolves, so a
+      // successful install re-wires it; Connect then works without a reload.
+      if (result.ok === true) await deps.rewireBicameral?.();
       res.json({ ok: result.ok === true, report: result });
     } catch (e) {
       res.status(500).json({ ok: false, error: String(e) });

@@ -5,10 +5,14 @@
 // observe the wiring decisions without booting a real extension host.
 
 import { strict as assert } from 'assert';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import * as vscode from 'vscode';
 
 import { wireBicameralIntegration, maybeAutoConnectBicameral } from '../../extension/bootstrapBicameral';
-import type { BicameralMcpClient } from '../../integrations/bicameral';
+import { BicameralMcpClient } from '../../integrations/bicameral';
+import { configureTrustedExecutables, repoRootsFor, workspaceDirsFor } from '../../shared/exec/trustedExecutable';
 
 interface ServerCalls {
   setCommand: string[];
@@ -16,6 +20,7 @@ interface ServerCalls {
   setAutoConnect: boolean[];
   setAutoConnectWriter: number;
   broadcasts: Array<Record<string, unknown>>;
+  rewire?: () => Promise<void>;
 }
 
 function fakeServer(): { server: any; calls: ServerCalls } {
@@ -35,6 +40,7 @@ function fakeServer(): { server: any; calls: ServerCalls } {
     setBicameralAutoConnect(v: boolean) { calls.setAutoConnect.push(v); },
     setBicameralAutoConnectWriter() { calls.setAutoConnectWriter += 1; },
     broadcastEvent(d: Record<string, unknown>) { calls.broadcasts.push(d); },
+    setBicameralRewire(fn: () => Promise<void>) { calls.rewire = fn; },
   };
   return { server, calls };
 }
@@ -47,10 +53,52 @@ function patchConfig(values: Record<string, unknown>): () => void {
   const original = vscode.workspace.getConfiguration;
   (vscode.workspace as unknown as { getConfiguration: any }).getConfiguration = (_section?: string) => ({
     get: <T>(key: string, defaultValue?: T) => (key in values ? values[key] as T : defaultValue),
+    // LD15 reads the command and auto-connect from the user level only.
+    inspect: <T>(key: string) => ({ key, globalValue: key in values ? values[key] as T : undefined }),
     update: async () => {},
   });
   return () => { (vscode.workspace as unknown as { getConfiguration: any }).getConfiguration = original; };
 }
+
+/** The resolver configuration activation sets, rebuilt from the open folders. */
+function restoreActivationConfig(): void {
+  const folders = (vscode.workspace.workspaceFolders ?? []).map((f) => f.uri.fsPath);
+  const dirs = workspaceDirsFor(folders[0], folders);
+  configureTrustedExecutables({ workspaceDirs: [...dirs, ...repoRootsFor(dirs, os.homedir())] });
+}
+
+/**
+ * LD14 (d): a real workspace folder and an explicit PATH seam, so the result
+ * never depends on what this host has installed. "Installed" is an inert file
+ * outside the workspace; the client is lazy, so it is never started.
+ */
+function bicameralFixture(installed: boolean): { ws: string; bin?: string; install: () => string; restore: () => void } {
+  const ws = fs.mkdtempSync(path.join(os.tmpdir(), 'fsbic-act-ws-'));
+  const binDir = fs.mkdtempSync(path.join(os.tmpdir(), 'fsbic-act-bin-'));
+  const install = (): string => {
+    const bin = path.join(binDir, process.platform === 'win32' ? 'bicameral-mcp.exe' : 'bicameral-mcp');
+    fs.writeFileSync(bin, 'inert\n');
+    fs.chmodSync(bin, 0o755);
+    configureTrustedExecutables({ workspaceDirs: [ws], pathEnv: binDir, knownLocations: [] });
+    return fs.realpathSync.native(bin);
+  };
+  configureTrustedExecutables({ workspaceDirs: [ws], pathEnv: '', knownLocations: [] });
+  const bin = installed ? install() : undefined;
+  return {
+    ws, bin, install,
+    restore: () => {
+      restoreActivationConfig();
+      for (const d of [ws, binDir]) fs.rmSync(d, { recursive: true, force: true });
+    },
+  };
+}
+
+async function until(done: () => boolean, ms = 3000): Promise<void> {
+  const end = Date.now() + ms;
+  while (!done() && Date.now() < end) await new Promise((r) => setTimeout(r, 10));
+}
+
+const commandOf = (c: unknown): string => (c as { opts: { command: string } }).opts.command;
 
 function patchOnDidChangeConfig(): () => void {
   const original = vscode.workspace.onDidChangeConfiguration;
@@ -65,19 +113,20 @@ suite('bootstrapBicameral — wireBicameralIntegration', () => {
   test('extension wires without throwing when bicameral-mcp is not installed (default command)', async () => {
     const restoreConfig = patchConfig({});
     const restoreWatch = patchOnDidChangeConfig();
+    const fx = bicameralFixture(false);
     try {
       const { server, calls } = fakeServer();
-      assert.doesNotThrow(() => wireBicameralIntegration(fakeContext(), server, '/tmp/ws'));
+      assert.doesNotThrow(() => wireBicameralIntegration(fakeContext(), server, fx.ws));
       // wireFromConfig validates the command via the async symlink-resolving
       // validator (B-BIC-6) — let that fire-and-forget microtask settle.
-      await new Promise((r) => setTimeout(r, 25));
-      // Default command set + a client constructed (lazy — no connect).
+      await until(() => calls.setClient.length > 0);
+      // LD14 (c): an unresolved command gives no client and the default command.
       assert.strictEqual(calls.setCommand[0], 'bicameral-mcp');
-      assert.strictEqual(calls.setClient.length, 1);
-      assert.ok(calls.setClient[0], 'BicameralMcpClient constructed but not connected');
+      assert.deepStrictEqual(calls.setClient, [null], 'no client for a command that does not resolve');
       assert.strictEqual(calls.setAutoConnect[0], false);
       assert.strictEqual(calls.setAutoConnectWriter, 1, 'writer registered exactly once');
     } finally {
+      fx.restore();
       restoreWatch();
       restoreConfig();
     }
@@ -86,14 +135,18 @@ suite('bootstrapBicameral — wireBicameralIntegration', () => {
   test('wireBicameralIntegration is lazy — does NOT call client.connect at activation', async () => {
     const restoreConfig = patchConfig({});
     const restoreWatch = patchOnDidChangeConfig();
+    const fx = bicameralFixture(true);
     try {
       const { server, calls } = fakeServer();
-      wireBicameralIntegration(fakeContext(), server, '/tmp/ws');
+      wireBicameralIntegration(fakeContext(), server, fx.ws);
       // Async command validation (B-BIC-6) — settle before reading setClient.
-      await new Promise((r) => setTimeout(r, 25));
-      const client = calls.setClient[0]! as { isConnected: () => boolean };
+      await until(() => calls.setClient.length > 0);
+      const client = calls.setClient[0];
+      assert.ok(client, 'a resolved command gives a client');
+      assert.strictEqual(commandOf(client), fx.bin, 'built with the resolved absolute path');
       assert.strictEqual(client.isConnected(), false, 'must not auto-connect at activate time');
     } finally {
+      fx.restore();
       restoreWatch();
       restoreConfig();
     }
@@ -188,6 +241,86 @@ suite('bootstrapBicameral — wireBicameralIntegration', () => {
       await new Promise((r) => setTimeout(r, 10));
       assert.equal(disconnectCalls.length, 1, 'prior client should have been disconnected during rewire');
     } finally {
+      restoreOnChange();
+      restoreConfig();
+    }
+  });
+
+  // ────────────────────────────────────────────────────────────────────
+  // LD16: overlapping rewires, and the rewire hook the install route uses.
+  // ────────────────────────────────────────────────────────────────────
+
+  test('LD16 (a) two overlapping rewires leave exactly one client not disconnected', async () => {
+    const restoreConfig = patchConfig({});
+    const restoreOnChange = patchOnDidChangeConfig();
+    const fx = bicameralFixture(true);
+    const proto = BicameralMcpClient.prototype as unknown as { disconnect: () => Promise<void> };
+    const own = Object.prototype.hasOwnProperty.call(proto, 'disconnect');
+    const original = proto.disconnect;
+    const disconnected = new Set<unknown>();
+    proto.disconnect = async function (this: unknown) { disconnected.add(this); };
+    try {
+      const { server, calls } = fakeServer();
+      const context = fakeContext();
+      // The second rewire starts while the first is still awaiting its validation.
+      wireBicameralIntegration(context, server, fx.ws);
+      wireBicameralIntegration(context, server, fx.ws);
+      await until(() => calls.setClient.length >= 2, 500);
+      const clients = calls.setClient.filter((c): c is BicameralMcpClient => c !== null);
+      assert.ok(clients.length >= 1, 'a client was wired');
+      const live = clients.filter((c) => !disconnected.has(c));
+      assert.equal(live.length, 1, `exactly one client left running, saw ${live.length} of ${clients.length}`);
+      assert.strictEqual(live[0], server.getBicameralClient(), 'and it is the current one');
+    } finally {
+      if (own) proto.disconnect = original; else delete (proto as { disconnect?: unknown }).disconnect;
+      fx.restore();
+      restoreOnChange();
+      restoreConfig();
+    }
+  });
+
+  test('LD16 (a) a client assigned while a rewire awaits is the one that rewire disconnects', async () => {
+    const restoreConfig = patchConfig({});
+    const restoreOnChange = patchOnDidChangeConfig();
+    const fx = bicameralFixture(true);
+    try {
+      const { server, calls } = fakeServer();
+      wireBicameralIntegration(fakeContext(), server, fx.ws);
+      // As auto-connect does, assign a client while the rewire is still awaiting its validation.
+      let disconnects = 0;
+      server.setBicameralClient({ disconnect: async () => { disconnects++; } } as unknown as BicameralMcpClient);
+      await until(() => calls.setClient.length >= 2);
+      assert.strictEqual(commandOf(server.getBicameralClient()), fx.bin, 'the rewire assigned its client');
+      assert.equal(disconnects, 1, 'and disconnected the client it replaced');
+    } finally {
+      fx.restore();
+      restoreOnChange();
+      restoreConfig();
+    }
+  });
+
+  test('LD16 (b) the rewire hook picks up an install made after activation and catches its own error', async () => {
+    const restoreConfig = patchConfig({});
+    const restoreOnChange = patchOnDidChangeConfig();
+    const fx = bicameralFixture(false);
+    try {
+      const { server, calls } = fakeServer();
+      wireBicameralIntegration(fakeContext(), server, fx.ws);
+      await until(() => calls.setClient.length > 0);
+      assert.deepStrictEqual(calls.setClient, [null], 'not installed at activation');
+      assert.equal(typeof calls.rewire, 'function', 'the server holds a rewire hook');
+      const bin = fx.install();
+      await calls.rewire!();
+      assert.strictEqual(commandOf(server.getBicameralClient()), bin, 'the hook wires the newly installed command');
+      const broken = vscode.workspace.getConfiguration;
+      (vscode.workspace as unknown as { getConfiguration: any }).getConfiguration = () => { throw new Error('config unavailable'); };
+      try {
+        await calls.rewire!(); // must resolve: the install route never answers 500 because of it
+      } finally {
+        (vscode.workspace as unknown as { getConfiguration: any }).getConfiguration = broken;
+      }
+    } finally {
+      fx.restore();
       restoreOnChange();
       restoreConfig();
     }

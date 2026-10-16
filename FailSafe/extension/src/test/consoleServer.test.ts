@@ -278,4 +278,28 @@ describe("ConsoleServer workspace-root scoped reads", () => {
       fs.rmSync(workspaceRoot, { recursive: true, force: true });
     }
   });
+
+  // LD16 (b): the install route's rewire reaches the hook bootstrapBicameral sets on the server.
+  it("LD16 (b) the Bicameral route deps run the rewire hook set on the server", async () => {
+    const workspaceRoot = mkTempDir("failsafe-roadmap-bicameral-rewire-");
+    try {
+      const eventBus = new EventBus();
+      const server = new ConsoleServer(
+        { getAllSprints: () => [], getCurrentSprint: () => null, getActivePlan: () => null } as never,
+        { getLedgerManager: () => null } as never,
+        { getStatus: () => ({ running: false, queueDepth: 0 }) } as never,
+        eventBus,
+        { workspaceRoot },
+      );
+      let rewires = 0;
+      server.setBicameralRewire(async () => { rewires += 1; });
+      const registrar = (server as unknown as { registrar: { buildBicameralRouteDeps(): { rewireBicameral?: () => Promise<void> } } }).registrar;
+      await registrar.buildBicameralRouteDeps().rewireBicameral!();
+      assert.strictEqual(rewires, 1);
+      server.stop();
+      eventBus.dispose();
+    } finally {
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
 });

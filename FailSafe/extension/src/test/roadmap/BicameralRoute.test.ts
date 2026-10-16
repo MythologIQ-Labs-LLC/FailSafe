@@ -5,10 +5,13 @@
  */
 
 import { strict as assert } from 'assert';
+import * as os from 'os';
 import type { Request, Response } from 'express';
 import { setupBicameralRoutes, type BicameralRouteDeps } from '../../roadmap/routes/BicameralRoute';
 import type { BicameralMcpClient } from '../../integrations/bicameral';
 import type { OperatorActionRequest, OperatorConfirmation } from '../../extension/operatorConfirmation';
+import * as vscode from 'vscode';
+import { configureTrustedExecutables, repoRootsFor, workspaceDirsFor } from '../../shared/exec/trustedExecutable';
 
 interface CapturedHandler {
   method: 'get' | 'post';
@@ -241,4 +244,33 @@ suite('FX514 BicameralRoute — ratify ledger append (B-BIC-1)', () => {
     assert.equal(c.shown.length, 0);
     assert.equal(ratifyCalls.length, 0);
   });
+});
+
+suite('LD16 (b) BicameralRoute — a successful install re-wires the client', () => {
+  // Nothing resolves here, so even an install that ignored the seam spawns nothing.
+  setup(() => configureTrustedExecutables({ workspaceDirs: [os.tmpdir()], pathEnv: '', knownLocations: [] }));
+  // Restore the configuration activation sets, rebuilt from the open folders.
+  teardown(() => {
+    const folders = (vscode.workspace?.workspaceFolders ?? []).map((f) => f.uri.fsPath);
+    const dirs = workspaceDirsFor(folders[0], folders);
+    configureTrustedExecutables({ workspaceDirs: [...dirs, ...repoRootsFor(dirs, os.homedir())] });
+  });
+
+  for (const ok of [true, false]) {
+    test(`install ${ok ? 'succeeded: the rewire hook runs once' : 'failed: the rewire hook does not run'}`, async () => {
+      let installs = 0;
+      let rewires = 0;
+      const { app, handlers } = makeFakeApp();
+      setupBicameralRoutes(app, makeDeps({
+        runInstall: async (_opts: unknown, mode: string) => { installs++; return { steps: [], mode, done: true, ok }; },
+        rewireBicameral: async () => { rewires++; },
+      } as unknown as Partial<BicameralRouteDeps>));
+      const r = fakeRes();
+      await findHandler(handlers, 'post', '/api/actions/bicameral-install').handler(fakeReq({ mode: 'solo' }), r.res);
+      assert.equal(installs, 1, 'the install ran through the seam');
+      assert.equal(r.status(), 200);
+      assert.equal(r.body().ok, ok);
+      assert.equal(rewires, ok ? 1 : 0);
+    });
+  }
 });
