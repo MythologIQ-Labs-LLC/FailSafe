@@ -8,6 +8,17 @@ import { SecurityScanner } from '../../roadmap/services/SecurityScanner';
 import { EventBus } from '../../shared/EventBus';
 import type { CommandRunnerResult } from '../../roadmap/services/MarketplaceTypes';
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { removeTempTree } = require('../../../src/test/shared/removeTempTree.cjs') as { removeTempTree: (dir: string) => void };
+/** LD20: every temp folder the #468/#469 rows create, removed when their suite ends. */
+const made: string[] = [];
+function tmpFolder(prefix: string): string {
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+  made.push(d);
+  return d;
+}
+const removeMade = (): void => { for (const d of made.splice(0)) removeTempTree(d); };
+
 interface RunnerCall { command: string; args: string[]; cwd?: string; cwdExisted: boolean; cwdEntries: number; }
 
 type Reply = CommandRunnerResult | undefined;
@@ -42,13 +53,13 @@ async function scanG(code: number, stdout: string) {
   const { runner } = garak(code, stdout);
   const s = new SecurityScanner(new EventBus(), runner);
   await s.checkAvailability();
-  return s.scanWithGarak(fs.mkdtempSync(path.join(os.tmpdir(), 'fs-t1-')), () => {});
+  return s.scanWithGarak(tmpFolder('fs-t1-'), () => {});
 }
 async function scanP(code: number, stdout: string) {
   const { runner } = promptfoo(code, stdout);
   const s = new SecurityScanner(new EventBus(), runner);
   await s.checkAvailability();
-  return s.scanWithPromptfoo(fs.mkdtempSync(path.join(os.tmpdir(), 'fs-t1-')), () => {});
+  return s.scanWithPromptfoo(tmpFolder('fs-t1-'), () => {});
 }
 function expectInconclusive(r: { passed: boolean; riskGrade: string; recommendedAction: string; findings: Array<{ category: string; description: string }> }, cause: RegExp) {
   assert.equal(r.passed, false, 'not a PASS');
@@ -143,6 +154,7 @@ suite('SecurityScanner (FX380 + FX386)', () => {
 });
 
 suite('SecurityScanner verdicts fail closed (#469, T1)', () => {
+  suiteTeardown(removeMade);
   test('T1 (a) Garak exit 0 with {"results":{}} is inconclusive, not PASS', async () => {
     expectInconclusive(await scanG(0, '{"results":{}}'), /no completed probes|no parseable/i);
   });
@@ -196,7 +208,7 @@ suite('SecurityScanner verdicts fail closed (#469, T1)', () => {
     });
     const s = new SecurityScanner(new EventBus(), runner);
     await s.checkAvailability();
-    const r = await s.runFullScan(fs.mkdtempSync(path.join(os.tmpdir(), 'fs-t1-')), () => {});
+    const r = await s.runFullScan(tmpFolder('fs-t1-'), () => {});
     assert.equal(r.passed, false);
     assert.equal(r.riskGrade, 'L3');
     assert.equal(r.recommendedAction, 'review');
@@ -209,7 +221,7 @@ suite('SecurityScanner verdicts fail closed (#469, T1)', () => {
     });
     const s = new SecurityScanner(new EventBus(), runner);
     await s.checkAvailability();
-    const r = await s.runFullScan(fs.mkdtempSync(path.join(os.tmpdir(), 'fs-t1-')), () => {});
+    const r = await s.runFullScan(tmpFolder('fs-t1-'), () => {});
     expectInconclusive(r, /did not read the item/i);
     assert.equal(r.scanner, 'both');
     assert.ok(r.garakOutput && r.promptfooOutput, 'both children\'s raw output is kept');
@@ -217,8 +229,9 @@ suite('SecurityScanner verdicts fail closed (#469, T1)', () => {
 });
 
 suite('SecurityScanner isolation (#468, T4a)', () => {
+  suiteTeardown(removeMade);
   test('T4a (a) every scan runs from an existing empty temp folder that is not the install path and is removed after', async () => {
-    const install = fs.mkdtempSync(path.join(os.tmpdir(), 'fs-t4a-install-'));
+    const install = tmpFolder('fs-t4a-install-');
     fs.writeFileSync(path.join(install, 'promptfooconfig.yaml'), 'x: 1\n');
     const { calls, runner } = scanStub({
       garakVersion: OK, pfVersion: OK,
@@ -247,7 +260,7 @@ suite('SecurityScanner isolation (#468, T4a)', () => {
     const { calls, runner } = scanStub({ pfVersion: OK, pfScan: { code: 0, stdout: '{"results":[{"pass":true}]}', stderr: '' } });
     const s = new SecurityScanner(new EventBus(), runner);
     await s.checkAvailability();
-    await s.scanWithPromptfoo(fs.mkdtempSync(path.join(os.tmpdir(), 'fs-t4a-')), () => {});
+    await s.scanWithPromptfoo(tmpFolder('fs-t4a-'), () => {});
     assert.equal(calls.filter((c) => c.command === 'npx').length, 0, 'npx is never used');
     const scan = calls.find((c) => c.command === 'promptfoo' && c.args[0] !== '--version');
     assert.ok(scan, 'promptfoo was started');
