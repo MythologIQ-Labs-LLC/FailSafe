@@ -224,7 +224,11 @@ export async function handleInstallCompletion(
 
 /** #469: re-scan an installed item; a rejected scan quarantines it. Called by the scan route after its gate check. */
 export async function startRescan(deps: MarketplaceRouteDeps, item: { id: string; installPath?: string }): Promise<void> {
-  applyVerdict(deps, item, await scanOrInconclusive(deps, item, item.installPath));
+  try {
+    applyVerdict(deps, item, await scanOrInconclusive(deps, item, item.installPath));
+  } catch (err) {
+    deps.broadcast({ type: "marketplace.failed", payload: { itemId: item.id, error: err instanceof Error ? err.message : String(err) } });
+  }
 }
 
 /** Anchor a marketplace install outcome into the ledger (non-blocking). */

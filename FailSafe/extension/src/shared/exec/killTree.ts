@@ -21,10 +21,15 @@ function fallback(child: ChildProcess, signal?: NodeJS.Signals): void {
   try { child.kill(signal); } catch { /* already gone */ }
 }
 
-/** Kill `child` and its descendants. Never throws. */
-export function killProcessTree(child: ChildProcess): void {
+/**
+ * Kill `child` and its descendants if it is still running. Returns true only
+ * when a kill was attempted: a child that has already exited (its descendants
+ * may still hold its pipes) is not killed again. Never throws.
+ */
+export function killProcessTree(child: ChildProcess): boolean {
+  if (child.exitCode !== null || child.signalCode !== null) return false;
   const pid = child.pid;
-  if (pid === undefined) return;
+  if (pid === undefined) return false;
   if (process.platform === 'win32') {
     const root = process.env.SystemRoot || process.env.SYSTEMROOT || 'C:\\Windows';
     const taskkill = path.win32.join(root, 'System32', 'taskkill.exe');
@@ -35,7 +40,8 @@ export function killProcessTree(child: ChildProcess): void {
     } catch {
       fallback(child);
     }
-    return;
+    return true;
   }
   try { process.kill(-pid, 'SIGKILL'); } catch { fallback(child, 'SIGKILL'); }
+  return true;
 }

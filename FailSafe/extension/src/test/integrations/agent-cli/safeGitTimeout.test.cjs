@@ -138,7 +138,8 @@ test('T9 (d): the live check: an exited git is not killed, and the read still se
   const M = newMarker();
   let calls = 0;
   const orig = killTree && killTree.killProcessTree;
-  if (killTree) killTree.killProcessTree = (...a) => { calls++; return orig(...a); };
+  // Count kills actually attempted: killProcessTree returns true only then (LD21 (a)).
+  if (killTree) killTree.killProcessTree = (...a) => { const r = orig(...a); if (r === true) calls++; return r; };
   const git = gitSafety.createSafeGit(repo);
   try {
     const r = await within(git.tryRun(repo, ['-c', `alias.bg=!sleep 30.${M} & exit 0`, 'bg'], { timeoutMs: 1500 }), 3000);
@@ -147,4 +148,11 @@ test('T9 (d): the live check: an exited git is not killed, and the read still se
     assert.equal(r.v.code, null, 'settled by the timeout, not by close');
     assert.equal(calls, 0, 'no kill: git had already exited');
   } finally { if (killTree) killTree.killProcessTree = orig; killCarrying(M); git.dispose(); }
+});
+
+test('T9 (d2): killProcessTree on a child that has already exited attempts nothing and returns false', async () => {
+  assert.ok(killTree, 'the kill module exists');
+  const child = spawn(process.execPath, ['-e', ''], { stdio: 'ignore' });
+  await new Promise((r) => child.on('exit', r));
+  assert.equal(killTree.killProcessTree(child), false);
 });

@@ -113,6 +113,18 @@ suite('Marketplace install completion (#469, T2)', () => {
     assert.equal(ev?.payload.result.riskGrade, 'L3');
   });
 
+  test('T2 (i) startRescan: a failure while applying the verdict is reported, not left unhandled', async () => {
+    const f = fakeDeps(async () => verdict(false));
+    f.deps.marketplaceCatalog.updateItemStatus = (_id: string, s: Status) => {
+      if (s.status === 'quarantined') throw new Error('catalog write failed');
+      f.statuses.push(s);
+    };
+    await startRescan(f.deps, { ...ITEM, installPath: '/x' });
+    const failed = f.events.find((e) => e.type === 'marketplace.failed');
+    assert.ok(failed, 'marketplace.failed broadcast');
+    assert.match(String(failed?.payload.error), /catalog write failed/);
+  });
+
   test('T2 source: the confirm route calls startInstall and the scan route calls startRescan, each after its gate check', () => {
     const dir = path.resolve(__dirname, '..', '..', '..', 'src', 'roadmap', 'routes');
     const install = fs.readFileSync(path.join(dir, 'marketplaceInstallRoutes.ts'), 'utf8');

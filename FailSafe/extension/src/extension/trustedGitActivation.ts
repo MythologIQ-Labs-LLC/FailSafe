@@ -7,7 +7,11 @@
 
 import * as vscode from 'vscode';
 import { configureTrustedGit, workspaceDirsFor } from '../shared/git/trustedGit';
-import { configureTrustedExecutables } from '../shared/exec/trustedExecutable';
+import * as os from 'os';
+import { configureTrustedExecutables, repoRootsFor } from '../shared/exec/trustedExecutable';
+
+/** LD20: the open folders plus every repository root above them, below home. */
+const withRepoRoots = (dirs: string[]): string[] => [...dirs, ...repoRootsFor(dirs, os.homedir())];
 
 /** The subset of the vscode.git extension API read here (extensions/git/src/api/git.d.ts). */
 interface GitExtensionExports {
@@ -34,11 +38,11 @@ export function configureTrustedGitFromVscode(context: vscode.ExtensionContext):
   // FailSafe stays bound to the activation-time first folder until reload, so
   // a folder change adds to the excluded set and never replaces it.
   const activationRoot = folderPaths()[0];
-  configureTrustedGit({ workspaceDirs: workspaceDirsFor(activationRoot, folderPaths()), hint: readGitExtensionPath() });
+  configureTrustedGit({ workspaceDirs: withRepoRoots(workspaceDirsFor(activationRoot, folderPaths())), hint: readGitExtensionPath() });
   // B211: gh, PowerShell, Python, the scanners and the installers exclude the same folders.
-  configureTrustedExecutables({ workspaceDirs: workspaceDirsFor(activationRoot, folderPaths()) });
+  configureTrustedExecutables({ workspaceDirs: withRepoRoots(workspaceDirsFor(activationRoot, folderPaths())) });
   context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(() => {
-    configureTrustedGit({ workspaceDirs: workspaceDirsFor(activationRoot, folderPaths()), hint: readGitExtensionPath() });
-    configureTrustedExecutables({ workspaceDirs: workspaceDirsFor(activationRoot, folderPaths()) });
+    configureTrustedGit({ workspaceDirs: withRepoRoots(workspaceDirsFor(activationRoot, folderPaths())), hint: readGitExtensionPath() });
+    configureTrustedExecutables({ workspaceDirs: withRepoRoots(workspaceDirsFor(activationRoot, folderPaths())) });
   }));
 }

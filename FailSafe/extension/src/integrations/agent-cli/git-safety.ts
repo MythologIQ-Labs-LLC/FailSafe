@@ -118,8 +118,8 @@ export function createSafeGit(repo: string): SafeGit {
     child.on('close', (code) => settle({ code, stdout: Buffer.concat(out), stderr: err }));
     if (timeoutMs !== undefined) {
       timer = setTimeout(() => {
-        // Kill only a live git; one that exited while a descendant holds its pipes is not killed again.
-        if (child.exitCode === null && child.signalCode === null) killProcessTree(child);
+        // killProcessTree kills only a live git; one that exited while a descendant holds its pipes is left.
+        killProcessTree(child);
         settle({ code: null, stdout: Buffer.concat(out), stderr: err, timedOut: true });
         child.stdout.destroy();
         child.stderr.destroy();

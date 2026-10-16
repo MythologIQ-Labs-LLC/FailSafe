@@ -69,7 +69,15 @@ function defaultRunner(
       resolve({ code: 127, stdout: "", stderr: err instanceof Error ? err.message : String(err) });
       return;
     }
-    const proc = spawn(exe, args, { cwd: runCwd, shell: false, timeout }); // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute interpreter path, argv array, no shell
+    let proc: ReturnType<typeof spawn>;
+    try {
+      proc = spawn(exe, args, { cwd: runCwd, shell: false, timeout }); // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute interpreter path, argv array, no shell
+    } catch (err) {
+      // A synchronous spawn failure (for example an argument with a NUL byte) settles here.
+      if (ownDir) removeQuietly(ownDir);
+      resolve({ code: 1, stdout: "", stderr: err instanceof Error ? err.message : String(err) });
+      return;
+    }
     if (ownDir) proc.on("close", () => removeQuietly(ownDir)).on("error", () => removeQuietly(ownDir));
 
     let stdout = "";

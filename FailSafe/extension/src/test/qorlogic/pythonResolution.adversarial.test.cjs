@@ -268,3 +268,37 @@ test('T13 (j): the adapter import check never imports agent_failsafe from the pr
     assert.ok(health.details.some((d) => /not importable/.test(d)), JSON.stringify(health.details));
   } finally { process.env.PATH = prevPath; }
 });
+
+test('T13 (k): a Python-extension interpreter in the repository that contains the workspace folder is refused', async () => {
+  const repo = path.join(base, 'k-repo');
+  const sub = path.join(repo, 'sub');
+  fs.mkdirSync(path.join(repo, '.git'), { recursive: true });
+  fs.mkdirSync(sub, { recursive: true });
+  fs.symlinkSync(path.dirname(BASE_PY), path.join(repo, '.venv'), WIN ? 'junction' : 'dir');
+  const venvPy = path.join(repo, '.venv', path.basename(BASE_PY));
+  const roots = te.repoRootsFor ? te.repoRootsFor([sub], os.homedir()) : [];
+  configure({ workspaceDirs: [sub, ...roots] });
+  const vscode = { extensions: { getExtension: () => ({ isActive: true, activate: async () => {}, exports: { settings: { getExecutionDetails: () => ({ execCommand: [venvPy] }) } } }) } };
+  const handed = [];
+  const run = (cmd, args) => { handed.push(cmd); return defaultRun(cmd, args); };
+  const r = await new PythonInterpreterResolver(emptyConfig, vscode, run).resolve();
+  assert.equal(r.ok, true);
+  assert.equal(r.source, 'probe', `the extension interpreter is not used: ${JSON.stringify(r)}`);
+  assert.deepEqual(handed.filter((c) => isInside(c, repo)), [], 'the repository interpreter was never handed to a runner');
+  configure({ workspaceDirs: [ws] });
+});
+
+test('T13 (l): a synchronous spawn failure in the adapter runner settles with code 1 and leaves no temp folder', async () => {
+  configure({ workspaceDirs: [ws] });
+  const list = () => fs.readdirSync(os.tmpdir()).filter((n) => n.startsWith('failsafe-adapter-'));
+  const before = new Set(list());
+  const svc = new AdapterService(new EventBus());
+  const r = await Promise.race([
+    svc.runner('python', ['-c', 'pass\0x'], undefined, 5000).then((v) => ({ settled: true, v }), (e) => ({ settled: true, rejected: e })),
+    new Promise((res) => setTimeout(() => res({ settled: false }), 2000)),
+  ]);
+  assert.equal(r.settled, true, 'settled within 2 s');
+  assert.equal(r.rejected, undefined, `resolved, not rejected: ${r.rejected}`);
+  assert.equal(r.v.code, 1);
+  assert.deepEqual(list().filter((n) => !before.has(n)), [], 'no failsafe-adapter- folder left behind');
+});

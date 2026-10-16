@@ -118,6 +118,18 @@ suite('MarketplaceInstaller (FX384)', () => {
     });
   });
 
+  test('T3 (f) the clone argv ends options with -- before the URL', async () => {
+    await withTempHome(async () => {
+      const { calls, runner } = makeRunner(() => ({ code: 1, stdout: '', stderr: 'x' }));
+      const ins = new MarketplaceInstaller(new EventBus(), runner);
+      await (ins as any).stage(ITEM, { sandboxEnabled: false, runSecurityScan: false }, () => {});
+      const args = calls[0].args;
+      const i = args.indexOf('--');
+      assert.ok(i > 0, `-- present: ${JSON.stringify(args)}`);
+      assert.equal(args[i + 1], ITEM.repoUrl);
+    });
+  });
+
   test("T3 (d) the installer's own runner supports only git: pip and npm return 126", async () => {
     const ins = new MarketplaceInstaller(new EventBus());
     for (const cmd of ['pip', 'npm']) {

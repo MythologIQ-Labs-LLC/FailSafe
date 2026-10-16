@@ -31,7 +31,9 @@ import type {
 //     (garak and promptfoo run from an empty folder and never read them);
 //  4. the v6.0.7 G12 obligation: a planted-git row for the clone and pull, and
 //     planted-executable rows for every scanner;
-//  5. an end-to-end test of install, quarantine and re-scan through the Console.
+//  5. an end-to-end test of install, quarantine and re-scan through the Console;
+//  6. the item's URL and ref are validated before any clone (cloneRepo already
+//     ends options with `--`).
 export const MARKETPLACE_INSTALLS_ENABLED = false;
 const DEFAULT_TIMEOUT = 300000; // 5 minutes
 
@@ -210,6 +212,7 @@ export class MarketplaceInstaller {
       "--single-branch",
       "--branch",
       item.repoRef || "main",
+      "--",
       item.repoUrl,
       targetPath,
     ];
