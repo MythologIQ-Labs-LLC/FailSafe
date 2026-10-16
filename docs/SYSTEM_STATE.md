@@ -1,6 +1,6 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-10-16 (v6.0.8 integration on `release/v6.0.8-rc`: lanes A-D, the combined-review and full-run fixes, version 6.0.8; ledger #705-#746, seal #746; code candidate C0 `76641298`; not merged, not tagged, not published)
+**Last Updated:** 2026-10-16 (v6.0.8 integration on `release/v6.0.8-rc`: lanes A-D, the combined-review, full-run, CI timer and temp-hygiene fixes, version 6.0.8; ledger #705-#753, seal #753; code candidate `717d8254`; not merged, not tagged, not published)
 **Active local review:** `fix/system-state-currency-sprint2` — this cycle. Restores the Tier 1 freshness contract and adds `system-state-currency.test.cjs`, the first check that asserts it. Prior to this cycle no test anywhere read this file's content.
 **Prior local review:** `fix/qor169-sprint1-seal-unblock` — MERGED to `main` as `1e1215cc` (PR #448). qor-logic 0.163.1 → 0.169.0; `.qorlogic/config.json` created, which is what allows a seal to complete at all; five vacuously-passing governance controls identified; TTS timeout assertion made deterministic and falsifying. Seal Entry #602.
 **Open PRs:** #442 (Bicameral upstream row error state), #443 (plan-grep-lint regex recognition), #444 (#367 per-engine provenance), #445 (#242 Shadow Genome severity aria — supersedes #440, closed as duplicate), #446 + #447 (dependabot). #447's blocker — a wall-clock TTS assertion — was removed by Entry #602.
@@ -19,7 +19,9 @@
 - Program #521, v6.0.8: lanes D (repository hygiene, FailSafe Pro retired), C (runtime and reliability: #471, #472, #528, release draft identity), A (governance and security: #468, #469, B211, B213, B214) and B (integrations: #474, #477, #479, #480) merged without rewriting, each sealed in its own session (#705-#736).
 - Integration fixes: the replay-nonce store refuses a linked or escaping store folder (LD11); documentation corrections (LD12-LD13); the ten failures of the first full vscode-test run fixed in the lanes (LD14-LD16), including the restored #476 importer pin and two Bicameral defects.
 - C0 `76641298`: npm test 5000 passing / 0 failing / 18 pending; test:node 713/721 (FX946 baseline); eight 6.0.8 VSIXs verified; packaged SQLite loads in Node and Electron; rv lifecycle 12/12 from published 6.0.7.
-- Ledger #705-#746 (integration seal #746); the ledger stays DAMAGED (#467) under the bounded per-cycle override.
+- After seal #746: PR #529's Linux CI failed the #476 N1 row (a 1 ms timeout git could beat); a timer seam makes it deterministic (LD18). The re-run then filled C: from a test that left 0.8 GB and two junctions to the host Python per run; v6.0.8 tests now unlink links and remove their temp folders (LD20), checked by a temp-entry classification (B236 files the older suites).
+- Candidate `717d8254`: npm test 5001 passing / 0 failing / 18 pending; test:node 715/723 (FX946 baseline); test:ui 208/1/4 (FX589 timing, B238); eight 6.0.8 VSIXs verified; packaged SQLite loads in Node and Electron; rv lifecycle 12/12 from published 6.0.7.
+- Ledger #705-#753 (integration seal #753, after #746); the ledger stays DAMAGED (#467) under the bounded per-cycle override.
 
 ## 2026-10-15 — v6.0.7 final integration (release/v6.0.7-rc2, not tagged, not published)
 
