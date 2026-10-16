@@ -116,6 +116,7 @@ export function withNonceLock<T>(
   file: string,
   opts: { timeoutMs: number; staleMs: number; now?: () => number },
   fn: (lock: FileLock) => T,
+  ensureParent: () => void = () => fs.mkdirSync(path.dirname(file), { recursive: true }),
 ): T {
   const lock = acquireFileLock(file, {
     timeoutMs: opts.timeoutMs,
@@ -123,7 +124,7 @@ export function withNonceLock<T>(
     now: opts.now,
     errors: NONCE_LOCK_ERRORS,
     label: "Nonce store",
-    ensureParent: () => fs.mkdirSync(path.dirname(file), { recursive: true }),
+    ensureParent,
   });
   try {
     return fn(lock);
@@ -203,10 +204,13 @@ export class NonceFile {
     readonly path: string,
     private readonly lock: { timeoutMs: number; staleMs: number; now?: () => number },
     private readonly seams: NonceStoreSeams = {},
+    /** The store-folder containment walk (checkNonceStoreDir, LD11); throws on a link. */
+    private readonly dirCheck?: (create: boolean) => boolean,
   ) {}
 
   /** A lock-free read: an atomic rename means a reader sees the old file or the new one. */
   read(): Map<string, NonceRecord> {
+    if (this.dirCheck && !this.dirCheck(false)) return new Map();
     return parseNonces(readNonceBytes(this.path));
   }
 
@@ -219,7 +223,11 @@ export class NonceFile {
    * write failure (or the commit step's own error).
    */
   transact<T>(change: NonceChange<T>): { result: T; records: Map<string, NonceRecord> } {
+    const dirCheck = this.dirCheck;
+    dirCheck?.(true);
+    const ensureParent = dirCheck ? () => { dirCheck(true); } : undefined;
     return withNonceLock(this.path, this.lock, (lock) => {
+      dirCheck?.(true); // again after the lock wait, before anything is written (LD11)
       const raw = readNonceBytes(this.path);
       const records = parseNonces(raw);
       const { changed, result, commit } = change(records);
@@ -230,6 +238,7 @@ export class NonceFile {
           const now = readNonceBytes(this.path);
           const same = now === null ? raw === null : raw !== null && now.equals(raw);
           if (!same) throw new NonceStoreBusyError("CHANGED", "The nonce store changed during this update; nothing was written.");
+          dirCheck?.(false);
           lock.assertHeld();
         },
         commit: commit ? () => { commit(); committed = true; } : undefined,
@@ -242,6 +251,6 @@ export class NonceFile {
         },
       }, this.seams);
       return { result, records };
-    });
+    }, ensureParent);
   }
 }
