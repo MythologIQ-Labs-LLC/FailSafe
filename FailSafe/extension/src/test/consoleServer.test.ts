@@ -6,6 +6,9 @@ import * as path from "path";
 import { EventBus } from "../shared/EventBus";
 import { ConsoleServer } from "../roadmap/ConsoleServer";
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { removeTempTree } = require("../../src/test/shared/removeTempTree.cjs") as { removeTempTree: (dir: string) => void };
+
 function mkTempDir(prefix: string): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
 }
@@ -292,6 +295,10 @@ describe("ConsoleServer workspace-root scoped reads", () => {
         { workspaceRoot },
       );
       let rewires = 0;
+      // LD20: the constructor creates .failsafe/audio without awaiting it; wait for it, or a
+      // late mkdir recreates the folder after the delete below.
+      const audio = path.join(workspaceRoot, ".failsafe", "audio");
+      for (const end = Date.now() + 5000; !fs.existsSync(audio) && Date.now() < end;) await new Promise((r) => setTimeout(r, 10));
       server.setBicameralRewire(async () => { rewires += 1; });
       const registrar = (server as unknown as { registrar: { buildBicameralRouteDeps(): { rewireBicameral?: () => Promise<void> } } }).registrar;
       await registrar.buildBicameralRouteDeps().rewireBicameral!();
@@ -299,7 +306,7 @@ describe("ConsoleServer workspace-root scoped reads", () => {
       server.stop();
       eventBus.dispose();
     } finally {
-      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+      removeTempTree(workspaceRoot);
     }
   });
 });
