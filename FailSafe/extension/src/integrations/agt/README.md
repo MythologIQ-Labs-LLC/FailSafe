@@ -1,10 +1,10 @@
 # Agent Governance Toolkit (AGT) installer integration
 
-> One-line: auto-detects the workspace environment and serves the matching, upstream-verified Microsoft AGT governance module installer — so the operator installs the right per-language / per-agent-host package from a one-click card instead of triaging a flat list.
+> One-line: auto-detects the workspace environment and pre-fills the matching Microsoft AGT governance module install command in a terminal — so the operator runs the right per-language / per-agent-host package instead of triaging a flat list.
 
 - **Pattern:** installer
 - **Direction:** governed install (operator-confirmed; pre-fills a terminal, never auto-runs)
-- **Status:** built — PR #140, held unmerged (publish gated on the in-repo SRE dashboards)
+- **Status:** shipped in the Integrations tab (install guidance: the command is pre-filled in a terminal, never run for you)
 - **Official docs:** https://github.com/microsoft/agent-governance-toolkit
 - **Backlog:** B-INT-16
 

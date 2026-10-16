@@ -30,7 +30,6 @@ This wiki is the comprehensive reference for FailSafe's architecture, configurat
 | [[Configuration Reference]] | Complete settings and configuration file reference |
 | [[API Reference]] | REST API endpoints for the ConsoleServer |
 | [[Security Model]] | Cryptographic operations, attack surface, and hardening |
-| [[FailSafe Pro]] | Comparison with FailSafe Pro desktop application |
 | [[Troubleshooting & FAQ]] | Common issues and frequently asked questions |
 | [[Contributing Guide]] | Development setup, branch policy, and PR process |
 | [[Changelog & Releases]] | Release history and versioning policy |
@@ -60,5 +59,4 @@ Governance decisions in FailSafe are made by deterministic TypeScript code, not 
 - **GitHub**: https://github.com/MythologIQ-Labs-LLC/FailSafe
 - **VS Code Marketplace**: https://marketplace.visualstudio.com/items?itemName=MythologIQ.mythologiq-failsafe
 - **Open VSX**: https://open-vsx.org/extension/MythologIQ/mythologiq-failsafe
-- **FailSafe Pro**: https://mythologiq.studio/products/failsafe-pro
 - **Specification**: `docs/FAILSAFE_SPECIFICATION.md`
