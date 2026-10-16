@@ -139,8 +139,8 @@ const R3_SCOPE = (rel) => rel.startsWith(path.join('integrations', 'bicameral') 
   || rel === path.join('extension', 'bootstrapBicameral.ts');
 const ACCEPTED = ['trustedCommandPath(', 'trustedExecutablePath(', 'checkTrustedPath(', 'resolveAgentCommand(',
   '(opts.resolve ?? trustedCommandPath)(', '(opts.resolveCommand ?? resolveAgentCommand)('];
-const R3_CALL = /(?:^|[^\w$.])((?:[\w$]+\.)*(?:spawn|spawnSync|execFile|execFileSync|spawnFn))\s*\(\s*([^,)]*)/g;
-const R3_CLIENT = /new\s+BicameralMcpClient\(\s*\{\s*command\s*(?::\s*([^,}\s]+))?/g;
+const R3_CALL = /(?:^|[^\w$.])((?:[\w$]+\.)*(?:spawn|spawnSync|execFile|execFileSync|exec|execSync|fork|spawnFn))\s*\(\s*([^,)]*)/g;
+const R3_CLIENT = /new\s+BicameralMcpClient\(([\s\S]*?)\)/g;
 const IDENT = /^[A-Za-z_$][\w$]*$/;
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 function assignedAccepted(text, ident) {
@@ -161,7 +161,12 @@ function r3Violations(text) {
     if (callee === 'spawn' && arg === 'c' && /\(c, a\) =>\s*$/.test(before)) continue;
     check(arg, callee);
   }
-  for (const m of text.matchAll(R3_CLIENT)) check(m[1] || 'command', 'BicameralMcpClient');
+  for (const m of text.matchAll(R3_CLIENT)) {
+    const body = m[1];
+    if (!/^\s*\{/.test(body)) { out.push(`BicameralMcpClient(${body.trim()})`); continue; }
+    const prop = /\bcommand\s*:\s*([^,}\s]+)/.exec(body);
+    check(prop ? prop[1] : 'command', 'BicameralMcpClient');
+  }
   if (/spawnFn\(req\.bin,/.test(text)) for (const m of text.matchAll(/\bbin:\s*([^,;}\n]+?)\s*[,\n}]/g)) check(m[1], 'runStep bin'); // a `bin: string;` type annotation ends in ';' and is skipped
   return out;
 }
@@ -175,6 +180,11 @@ test('T12 R3 self-test: the replaced 869bab00 sites and synthetic bypasses are f
     'bootstrapBicameral lines 160-161 (multi-line)': '  const command = cfg.get<string>("command", "bicameral-mcp");\n  const client = new BicameralMcpClient({\n    command,\n    cwd: workspaceRoot,\n  });',
     'synthetic member': 'spawn(opts.command, a);',
     'synthetic call': 'spawn(getCmd(), a);',
+    // A resolved `command` sits beside each bypass, so only the rule under test can flag it.
+    'synthetic options passed through': 'const command = trustedCommandPath(c, ws);\nconst client = new BicameralMcpClient(opts);',
+    'synthetic command not first': 'const command = trustedCommandPath(c, ws);\nconst raw = cfg.get("command");\nconst client = new BicameralMcpClient({ cwd: ws, command: raw });',
+    'synthetic exec': "exec(rawCommand, () => {});",
+    'synthetic fork': "fork(rawModule, []);",
     'synthetic resolved member': 'const o = {};\no.cmd = trustedCommandPath(c);\nspawn(o.cmd, a);',
     'synthetic runStep raw bin': "const x = (opts.resolve ?? trustedCommandPath)(pip, d);\nawait runStep(o, m, s, { bin: rawSetting });\n child = spawnFn(req.bin, req.args, {});",
   };

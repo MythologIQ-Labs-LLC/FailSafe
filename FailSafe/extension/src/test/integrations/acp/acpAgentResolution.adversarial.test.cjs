@@ -122,3 +122,28 @@ test('T16 source: main reports an unresolved agent on stderr and returns 1 witho
   assert.match(src, /configureTrustedExecutables\(/);
   assert.match(src, /repoRootsFor\(/);
 });
+
+test('T16: a failure after the agent is spawned kills it and is reported', () => {
+  configure({ workspaceDirs: [] });
+  let kills = 0;
+  const child = new EventEmitter();
+  child.stdout = new PassThrough(); child.stdin = new PassThrough(); child.killed = false;
+  child.kill = () => { kills++; child.killed = true; return true; };
+  const incoming = new PassThrough();
+  const outgoing = new PassThrough();
+  const backing = { governanceInterceptor: { evaluate: async () => ({ verdict: 'ALLOW' }) } };
+  Object.defineProperty(backing, 'effectiveMode', { get() { throw new Error('backing broke'); } });
+  try {
+    assert.throws(() => main.runAcpProxy({
+      incoming, outgoing, agentCommand: process.execPath, agentArgs: [], backing,
+      spawnFn: () => child, signals: new EventEmitter(),
+    }), /backing broke/);
+  } finally { for (const s of [incoming, outgoing, child.stdout, child.stdin]) s.destroy(); }
+  assert.equal(kills, 1, 'the spawned agent is killed');
+});
+
+test('T16 source: main tells a resolution failure from any other start failure', () => {
+  const src = fs.readFileSync(path.join(EXT, 'src', 'integrations', 'acp', 'proxy', 'AcpProxyEntry.ts'), 'utf8');
+  assert.match(src, /TRUSTED_EXECUTABLE_UNAVAILABLE/);
+  assert.match(src, /acp-proxy: failed to start the agent:/);
+});

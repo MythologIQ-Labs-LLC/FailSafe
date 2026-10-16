@@ -99,6 +99,17 @@ export function runAcpProxy(opts: RunAcpProxyOptions): AcpProxyRun {
     opts.incoming.removeListener('close', killChild);
   });
 
+  try {
+    return connectAgent(opts, child);
+  } catch (err) {
+    // A failure after the spawn must not leave the agent running unsupervised.
+    killChild();
+    throw err;
+  }
+}
+
+/** Build the governed connections around a spawned agent. */
+function connectAgent(opts: RunAcpProxyOptions, child: ChildProcessWithoutNullStreams): AcpProxyRun {
   const governor = new AcpProxyGovernor(
     new AcpInterceptor(opts.backing.governanceInterceptor),
     { effectiveMode: opts.backing.effectiveMode, ledger: opts.backing.ledger },

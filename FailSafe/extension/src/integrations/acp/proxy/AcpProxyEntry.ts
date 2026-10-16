@@ -33,7 +33,11 @@ export async function main(argv: string[], cwd: string): Promise<number> {
       backing,
     });
   } catch (err) {
-    process.stderr.write(`acp-proxy: no trusted agent executable: ${err instanceof Error ? err.message : String(err)}\n`);
+    const message = err instanceof Error ? err.message : String(err);
+    const unresolved = (err as { code?: unknown } | null)?.code === 'TRUSTED_EXECUTABLE_UNAVAILABLE';
+    process.stderr.write(unresolved
+      ? `acp-proxy: no trusted agent executable: ${message}\n`
+      : `acp-proxy: failed to start the agent: ${message}\n`);
     return 1;
   }
   const { child } = run;

@@ -81,16 +81,22 @@ test('T14 (p2) precondition: the MCP SDK transport runs a .cmd planted in its cw
 });
 
 test('T14 (a): the status probe never runs a planted bicameral-mcp, from the cwd or from a PATH entry inside the workspace', async () => {
-  configure({ workspaceDirs: [ws] });
+  // This host has a real bicameral-mcp on PATH, so the resolver only searches the
+  // ws entry and an empty folder: "not-installed" then means the plant was refused.
+  const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'fsbic-empty-'));
+  configure({ workspaceDirs: [ws], pathEnv: [WIN ? ws : path.join(ws, 'bin'), empty].join(DELIM), knownLocations: [] });
   // The plant is reachable both ways: as the process cwd and through an absolute
   // PATH entry inside ws, so only the resolver (not the probe's temp cwd) stops it.
   const prev = process.env.PATH;
   process.env.PATH = `${WIN ? ws : path.join(ws, 'bin')}${DELIM}${prev}`;
   process.chdir(ws);
   try {
+    const t0 = Date.now();
     const r = await probeInstallState({ command: 'bicameral-mcp', workspaceRoot: ws });
-    assert.equal(r.state, 'not-installed', `no trusted bicameral-mcp here: ${JSON.stringify(r)}`);
-  } finally { process.chdir(saved.cwd); process.env.PATH = prev; }
+    assert.equal(r.state, 'not-installed', `the plant was refused: ${JSON.stringify(r)}`);
+    assert.notEqual(r.version, process.version.slice(1), 'the plant never answered');
+    assert.ok(Date.now() - t0 < 2500, 'refused before any version probe could time out');
+  } finally { process.chdir(saved.cwd); process.env.PATH = prev; configure({ workspaceDirs: [ws] }); }
 });
 
 function recordingSpawn(onCall) {
@@ -161,8 +167,22 @@ test('T14 (d): the MCP client refuses a bare, .cmd, rooted-relative, UNC or miss
 
 test('T14 (e) source: the client is built only from a resolved command, and folder changes re-wire', () => {
   const src = fs.readFileSync(path.join(EXT, 'src', 'extension', 'bootstrapBicameral.ts'), 'utf8');
-  const sites = [...src.matchAll(/new BicameralMcpClient\(\{\s*command:\s*([A-Za-z_$][\w$]*)/g)];
-  assert.equal(sites.length, 2, 'two construction sites, each with an explicit command identifier');
-  for (const m of sites) assert.match(src, new RegExp(`\\b${m[1]}\\s*=\\s*trustedCommandPath\\(`), `${m[1]} comes from trustedCommandPath`);
+  const sites = [...src.matchAll(/new BicameralMcpClient\(([\s\S]*?)\)/g)];
+  assert.equal(sites.length, 2, 'two construction sites');
+  for (const m of sites) {
+    assert.match(m[1], /^\s*\{/, 'an object literal, not a passed-through options object');
+    const cmd = /\bcommand\s*:\s*([A-Za-z_$][\w$]*)/.exec(m[1]);
+    assert.ok(cmd, `an explicit command property: ${m[1]}`);
+    assert.match(src, new RegExp(`\\b${cmd[1]}\\s*=\\s*trustedCommandPath\\(`), `${cmd[1]} comes from trustedCommandPath`);
+  }
   assert.match(src, /onDidChangeWorkspaceFolders\(/);
+});
+
+test('T14 (f): the status probe never throws, even when its temp folder cannot be made', async () => {
+  const orig = fs.mkdtempSync;
+  fs.mkdtempSync = () => { throw Object.assign(new Error('no space'), { code: 'ENOSPC' }); };
+  try {
+    const r = await probeInstallState({ command: process.execPath, workspaceRoot: ws, extraRoots: [path.dirname(process.execPath), path.dirname(fs.realpathSync.native(process.execPath))] });
+    assert.equal(r.state, 'not-installed');
+  } finally { fs.mkdtempSync = orig; }
 });

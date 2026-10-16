@@ -175,14 +175,18 @@ export async function probeInstallState(opts: ProbeOptions): Promise<BicameralIn
 
   // B211 (review delta LD14 (b)): never a bare name, never the workspace or the
   // process cwd; the probe runs from a fresh empty folder.
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-bicameral-probe-'));
+  let dir: string | undefined;
   let versionInfo: { state: 'installed' | 'not-installed'; version?: string };
   try {
+    // Inside the try: probeInstallState never throws, even if no temp folder can be made.
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-bicameral-probe-'));
     let exe: string;
     try { exe = trustedCommandPath(command, dir); } catch { return { state: 'not-installed' }; }
     versionInfo = await runVersionProbe(exe, timeoutMs, dir);
+  } catch {
+    return { state: 'not-installed' };
   } finally {
-    try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 3 }); } catch { /* left for OS cleanup */ }
+    if (dir) try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 3 }); } catch { /* left for OS cleanup */ }
   }
   if (versionInfo.state === 'not-installed') {
     return { state: 'not-installed' };

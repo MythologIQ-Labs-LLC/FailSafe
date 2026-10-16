@@ -258,3 +258,26 @@ test('T17 (c): repoRootsFor returns every .git ancestor below home, and nothing 
   assert.deepEqual(repoRootsFor([proj], home), [], 'home and its ancestors are never returned');
   assert.deepEqual(repoRootsFor([path.parse(base).root], home), [], 'a filesystem root is never returned');
 });
+
+test('T17 (b) POSIX: the folder check alone refuses a folder that resolves into a workspace', { skip: WIN && 'needs a file symlink: EPERM without Developer Mode on win32' }, () => {
+  const fx = fixture('python');
+  const realPy = inert(dir(fx.base, 'base-python'), 'python3.12');
+  const wsBin = dir(fx.W, 'bin');
+  fs.symlinkSync(realPy, path.join(wsBin, 'python'));
+  const J = path.join(fx.base, 'J');
+  fs.symlinkSync(wsBin, J);
+  // Lexical folder J is outside W, the file resolves outside W, only J's realpath is inside W.
+  configureTrustedExecutables(cfg(fx, { pathEnv: pathOf(J), probe: counter('Python 3.12.0') }));
+  assert.throws(() => trustedExecutablePath(PYTHON, fx.E), (e) => e instanceof TrustedExecutableUnavailable && /resolves inside an excluded folder/.test(e.message));
+});
+
+test('T17 (b) POSIX: on a cache hit the spawn folder alone is checked against the call cwd', { skip: WIN && 'needs a file symlink: EPERM without Developer Mode on win32' }, () => {
+  const fx = fixture('python');
+  const realPy = inert(dir(fx.base, 'base-python2'), 'python3.12');
+  const R2 = dir(fx.base, 'R2');
+  fs.symlinkSync(realPy, path.join(R2, 'python'));
+  configureTrustedExecutables(cfg(fx, { pathEnv: pathOf(R2), probe: counter('Python 3.12.0') }));
+  assert.equal(trustedExecutablePath(PYTHON, fx.E), path.join(fs.realpathSync.native(R2), 'python'));
+  // The cached file lives outside R2; only its spawn folder is R2.
+  assert.throws(() => trustedExecutablePath(PYTHON, R2), (e) => e instanceof TrustedExecutableUnavailable);
+});
