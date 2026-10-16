@@ -314,7 +314,8 @@ test("gh argument contract: the tag is checked, the draft is created through the
     seen.push(args);
     if (args[0] !== "api") return "";
     if (verb(args) === "POST") return JSON.stringify({ id: 5, tag_name: TAG, draft: true });
-    if (verb(args) === "PATCH" || String(args[1]).includes("/git/ref/tags/")) return "{}";
+    if (verb(args) === "PATCH") return JSON.stringify({ id: 5, tag_name: TAG, draft: false });
+    if (String(args[1]).includes("/git/ref/tags/")) return "{}";
     return JSON.stringify([[{ id: 5, tag_name: TAG, draft: true }]]);
   };
   const c = ghClient("o/r", exec);

@@ -20,14 +20,17 @@ const method = (args) => (args.includes("-X") ? args[args.indexOf("-X") + 1] : "
  * in the i-th release listing (the last one repeats); `others` are extra
  * releases listed every time.
  */
-function fakeGh(listings, { created = { id: 40, draft: true, tag_name: TAG }, refFails = false, others = [] } = {}) {
+function fakeGh(listings, { created = { id: 40, draft: true, tag_name: TAG }, refFails = false, others = [], patched } = {}) {
   const calls = [];
   let listed = 0;
   const exec = (args) => {
     calls.push(args);
     if (args[0] !== "api") return "";
     if (method(args) === "POST") return JSON.stringify(created);
-    if (method(args) === "PATCH") return "{}";
+    if (method(args) === "PATCH") {
+      const id = Number(String(args[args.indexOf("PATCH") + 1]).split("/").pop());
+      return JSON.stringify(patched ?? { id, draft: false, tag_name: TAG });
+    }
     if (String(args[1]).includes("/git/ref/tags/")) {
       if (refFails) throw new Error("gh: Not Found (HTTP 404)");
       return JSON.stringify({ ref: `refs/tags/${TAG}` });
@@ -87,7 +90,7 @@ test("G4 another release for the tag in the listing stops at once and is never r
 });
 
 test("G5 a create response that is not a draft for this tag stops before any listing", async () => {
-  for (const created of [{ id: 40, draft: false, tag_name: TAG }, { id: 40, draft: true, tag_name: "v6.0.7" }, { draft: true, tag_name: TAG }]) {
+  for (const created of [{ id: 40, draft: false, tag_name: TAG }, { id: 40, draft: true, tag_name: "v6.0.7" }, { draft: true, tag_name: TAG }, { id: "40", draft: true, tag_name: TAG }]) {
     const gh = fakeGh([1], { created });
     await assert.rejects(ghClient("o/r", gh.exec, { sleep: async () => undefined }).createDraft(TAG, undefined),
       (err) => err.stop === true, JSON.stringify(created));
@@ -111,4 +114,11 @@ test("G7 publish updates the release by its id: draft=false and make_latest=true
   assert.ok(patch[0].includes("repos/o/r/releases/41"), JSON.stringify(patch[0]));
   assert.ok(patch[0].includes("draft=false") && patch[0].includes("make_latest=true"), JSON.stringify(patch[0]));
   assert.equal(gh.calls.filter((a) => a[0] === "release").length, 0, "no tag-addressed release edit");
+});
+
+test("G7b a publish response that is not the published release stops the run", async () => {
+  for (const patched of [{ id: 41, draft: true }, { id: 42, draft: false }, {}]) {
+    const gh = fakeGh([1], { patched });
+    await assert.rejects(ghClient("o/r", gh.exec).publish(41, TAG), (err) => err.stop === true, JSON.stringify(patched));
+  }
 });

@@ -38,7 +38,7 @@ function createDraftRelease(repo, exec, tag, notes) {
   }
   const body = notes && fs.existsSync(notes) && fs.statSync(notes).size > 0 ? ["-F", `body=@${notes}`] : ["-F", "generate_release_notes=true"];
   const made = JSON.parse(exec(["api", "-X", "POST", `repos/${repo}/releases`, "-f", `tag_name=${tag}`, "-f", `name=${tag} — FailSafe`, "-F", "draft=true", ...body]));
-  if (!made || made.draft !== true || made.tag_name !== tag || made.id === undefined) {
+  if (!made || made.draft !== true || made.tag_name !== tag || typeof made.id !== "number") {
     throw stop(`creating the draft for ${tag} returned ${JSON.stringify({ id: made?.id, tag: made?.tag_name, draft: made?.draft })}, not a draft for ${tag}`);
   }
   return made;
@@ -78,7 +78,13 @@ function ghClient(repo, exec = ghExec, { sleep = realSleep, draftListDelaysMs = 
     uploadAsset: async (_id, file, tag) => exec(["release", "upload", tag, file, "--repo", repo]),
     downloadAsset: async (asset) => exec(["api", "-H", "Accept: application/octet-stream", `repos/${repo}/releases/assets/${asset.id}`], { binary: true }),
     // Published by id, so only the release this run created and checked is published.
-    publish: async (id) => exec(["api", "-X", "PATCH", `repos/${repo}/releases/${id}`, "-F", "draft=false", "-f", "make_latest=true"]),
+    publish: async (id) => {
+      const done = JSON.parse(exec(["api", "-X", "PATCH", `repos/${repo}/releases/${id}`, "-F", "draft=false", "-f", "make_latest=true"]));
+      if (!done || done.id !== id || done.draft !== false) {
+        throw stop(`publishing release ${id} returned ${JSON.stringify({ id: done?.id, draft: done?.draft })}, not release ${id} published`);
+      }
+      return done;
+    },
   };
 }
 

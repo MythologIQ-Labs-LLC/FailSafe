@@ -398,10 +398,29 @@ suite('SecurityReplayGuard review delta (v6.0.8 #472)', function () {
     fs.mkdirSync(target);
     fs.symlinkSync(target, markerDir(root), process.platform === 'win32' ? 'junction' : 'dir');
     assert.ok(fs.lstatSync(markerDir(root)).isSymbolicLink(), 'precondition: nonces.consumed is a link');
-    assert.equal(g.validateNonce(nonce).reason, 'persistence_error');
-    assert.equal(g.consumeNonce(nonce).reason, 'persistence_error');
-    assert.throws(() => g.generateNonce(), /nonces\.consumed/);
+    // The consume runs on a fresh guard over the planted link, so it fails on the link
+    // itself, not on a guard that an earlier call already disabled.
+    const fresh = guard();
+    const before = fs.readFileSync(storeFile(root));
+    const consumed = fresh.consumeNonce(nonce);
     assert.deepEqual(fs.readdirSync(target), [], 'nothing was created through the link');
+    assert.equal(consumed.reason, 'persistence_error');
+    assert.ok(fs.readFileSync(storeFile(root)).equals(before), 'the store is unchanged');
+    assert.equal(g.validateNonce(nonce).reason, 'persistence_error');
+    assert.throws(() => g.generateNonce(), /nonces\.consumed/);
+  });
+
+  test('N14 a marker that another holder created first (EEXIST on the exclusive create) refuses the consume', () => {
+    // The seam plants the marker after the earlier marker check, then lets the real wx open run.
+    const openMarker = (p: string) => { fs.writeFileSync(p, JSON.stringify({ expiresAt: Date.now() + HOUR })); return fs.openSync(p, 'wx', 0o600); };
+    const g = guard({ seams: { openMarker } });
+    const nonce = g.generateNonce();
+    const before = fs.readFileSync(storeFile(root));
+    const result = g.consumeNonce(nonce);
+    assert.deepEqual([result.valid, result.reason], [false, 'already_used']);
+    assert.ok(fs.readFileSync(storeFile(root)).equals(before), 'no record written');
+    assert.deepEqual(tempFiles(root), []);
+    assert.doesNotThrow(() => g.generateNonce(), 'losing the marker race does not disable the guard');
   });
 
   test('N13 a marker that cannot be created writes no record; busy is retried, a hard error disables', () => {
