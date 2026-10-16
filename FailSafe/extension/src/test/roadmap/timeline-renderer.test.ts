@@ -28,9 +28,11 @@ suite('Console TimelineRenderer (#477 O14, jsdom structural)', () => {
     try {
       const r = new TimelineRenderer('tl');
       await r.render();
-      const text = dom.window.document.body.textContent ?? '';
-      assert.ok(text.includes('OpenHands (historical import): action execute_bash'), text);
-      assert.ok(text.includes('Verdict: PASS (a.ts)'));
+      // The heading line of each row must be the title itself; the raw JSON in
+      // the collapsed detail also contains it, so match a whole element.
+      const lines = Array.from(dom.window.document.querySelectorAll('.cc-timeline-entry div')).map((d) => d.textContent?.trim());
+      assert.ok(lines.includes('OpenHands (historical import): action execute_bash'), lines.join(' | '));
+      assert.ok(lines.includes('Verdict: PASS (a.ts)'), lines.join(' | '));
       const btn = dom.window.document.querySelector('.cc-tl-cat[data-cat="Imported"]') as HTMLButtonElement;
       assert.ok(btn, 'Imported filter button');
       btn.click();
