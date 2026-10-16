@@ -11,6 +11,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { RiskStore } from '../../../shared/risk-store';
 import { acquireFileLock, LockErrors } from '../../../shared/fileLock/crossProcessLock';
+import { Logger } from '../../../shared/Logger';
 
 const CHILD = path.join(__dirname, '..', 'risk-store', 'riskStoreChild.js');
 
@@ -31,6 +32,8 @@ function startChild(args: string[]): Running {
   const readyOrDied = Promise.race([ready, exited.then(() => {
     if (!out.includes('ready\n')) throw new Error(`child ${args[0]} exited before ready: ${err.slice(0, 500)}`);
   })]);
+  // Children that signal through files never print "ready"; callers that await this still see the rejection.
+  readyOrDied.catch(() => undefined);
   return { proc, ready: readyOrDied, exited, output: () => out };
 }
 
@@ -76,11 +79,19 @@ function plantTicket(queueDir: string, name: string, offsetMs: number): string {
   return file;
 }
 
+/**
+ * Record warnings through the Logger, not the console: the VS Code extension
+ * host makes console.warn an accessor whose setter does nothing, so assigning
+ * to it would silently capture nothing there (integration LD14).
+ */
 function captureWarnings(): { lines: string[]; restore: () => void } {
   const lines: string[] = [];
-  const original = console.warn;
-  console.warn = (...args: unknown[]) => { lines.push(args.map(String).join(' ')); };
-  return { lines, restore: () => { console.warn = original; } };
+  const original = Logger.prototype.warn;
+  Logger.prototype.warn = function (this: Logger, message: string, data?: unknown): void {
+    lines.push(message);
+    original.call(this, message, data);
+  };
+  return { lines, restore: () => { Logger.prototype.warn = original; } };
 }
 
 function seed(dir: string, n: number): void {
