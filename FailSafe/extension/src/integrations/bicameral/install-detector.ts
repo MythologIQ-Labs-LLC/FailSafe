@@ -6,6 +6,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { BicameralInstallProbe, BicameralInstallState } from './types';
+import { trustedCommandPath } from '../../shared/exec/trustedExecutable';
 
 const VERSION_TIMEOUT_MS = 3000;
 const SAFE_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
@@ -172,7 +173,17 @@ export async function probeInstallState(opts: ProbeOptions): Promise<BicameralIn
     return { state: 'not-installed' };
   }
 
-  const versionInfo = await runVersionProbe(command, timeoutMs);
+  // B211 (review delta LD14 (b)): never a bare name, never the workspace or the
+  // process cwd; the probe runs from a fresh empty folder.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-bicameral-probe-'));
+  let versionInfo: { state: 'installed' | 'not-installed'; version?: string };
+  try {
+    let exe: string;
+    try { exe = trustedCommandPath(command, dir); } catch { return { state: 'not-installed' }; }
+    versionInfo = await runVersionProbe(exe, timeoutMs, dir);
+  } finally {
+    try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 3 }); } catch { /* left for OS cleanup */ }
+  }
   if (versionInfo.state === 'not-installed') {
     return { state: 'not-installed' };
   }
@@ -182,7 +193,7 @@ export async function probeInstallState(opts: ProbeOptions): Promise<BicameralIn
   return { state, version: versionInfo.version, configPath };
 }
 
-function runVersionProbe(command: string, timeoutMs: number): Promise<{ state: 'installed' | 'not-installed'; version?: string }> {
+function runVersionProbe(exe: string, timeoutMs: number, cwd: string): Promise<{ state: 'installed' | 'not-installed'; version?: string }> {
   return new Promise((resolve) => {
     let settled = false;
     const settle = (v: { state: 'installed' | 'not-installed'; version?: string }) => {
@@ -192,9 +203,9 @@ function runVersionProbe(command: string, timeoutMs: number): Promise<{ state: '
     };
     let child;
     try {
-      // The operator-supplied executable passed lexical validation, anchored-root
-      // containment, realpath resolution, and symlink-containment verification.
-      child = spawn(command, ['--version'], { shell: false }); // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process
+      // The operator-supplied command passed lexical validation and anchored-root
+      // containment, then the trusted resolver chose this absolute file.
+      child = spawn(exe, ['--version'], { shell: false, cwd }); // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute path, argv array, no shell
     } catch {
       settle({ state: 'not-installed' });
       return;

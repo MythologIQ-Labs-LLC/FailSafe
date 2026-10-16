@@ -14,10 +14,9 @@ FailSafe spawns the Bicameral MCP server over stdio and wraps its tool surface i
 ## Configuration
 | Setting | Default | Secret | Purpose |
 |---|---|---|---|
-| `failsafe.integrations.bicameral.command` | `bicameral-mcp` | no | Executable launched for the MCP server. Bare name (PATH) or absolute path under home / an extra root; validated at the spawn boundary. |
-| `failsafe.integrations.bicameral.extraCommandRoots` | `[]` | no | Extra anchored absolute roots accepted for the command path. Windows chocolatey/scoop roots under `%ProgramData%` are accepted automatically. Relative entries ignored. |
-| `failsafe.integrations.bicameral.pipCommand` | `pip` | no | Pip command used by the Integrations-tab installer (e.g. `pip3`, `python -m pip`). |
-| `failsafe.integrations.bicameral.autoConnect` | `false` | no | Auto-connect at activation when the workspace is configured. Default off — operator clicks Connect. |
+| `failsafe.integrations.bicameral.command` | `bicameral-mcp` | no | Executable launched for the MCP server. Bare name (PATH) or absolute path under home / an extra root; validated at the spawn boundary, then resolved to a trusted absolute `.exe` (Windows) or executable file outside the workspace and its repository. User settings only (machine scope). |
+| `failsafe.integrations.bicameral.extraCommandRoots` | `[]` | no | Extra anchored absolute roots accepted for the command path. Windows chocolatey/scoop roots under `%ProgramData%` are accepted automatically. Relative entries ignored. User settings only (machine scope). |
+| `failsafe.integrations.bicameral.autoConnect` | `false` | no | Auto-connect at activation when the workspace is configured. Default off — operator clicks Connect. User settings only (machine scope); the Console toggle writes your user settings. If you turned it on with the toggle before v6.0.8, it was stored in the workspace and is now ignored: turn it on again. |
 | `failsafe.integrations.bicameral.upstreamPollMs` | `86400000` (24h) | no | Poll interval for the upstream release + open-issue snapshot. |
 | `failsafe.integrations.bicameral.upstreamRepoUrl` | `BicameralAI/bicameral-mcp` | no | Owner/repo slug; validated against a strict `owner/repo` pattern (URL injection blocked). |
 | `failsafe.integrations.bicameral.idleDisconnectMs` | `900000` (15 min) | no | Idle TTL before the stdio subprocess is gracefully disconnected; next call lazily reconnects. `0` keeps it resident. |

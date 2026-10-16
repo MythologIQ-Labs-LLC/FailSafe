@@ -126,3 +126,75 @@ test('T12: no production bare start outside the two deferred sites, and every py
   assert.deepEqual(r2a, R2_ALLOW, 'the non-python -m/-c sites, by file and count');
   assert.equal(r2g, 7, 'exactly 7 python sites carry -P');
 });
+
+// ---------------------------------------------------------------- R3 (review delta LD17)
+// In the Bicameral, ACP-proxy and bootstrapBicameral sources, every spawn-family
+// call and every `new BicameralMcpClient({ command` takes a plain identifier that
+// the same file assigns from an accepted resolver form. Two forwarding wrappers
+// are allowed by exact text, and their callers are checked instead. Disclosed
+// gaps: identifiers are matched by name file-wide, so a later reassignment to a
+// raw value, or a parameter that shares a resolved variable's name, is not caught.
+const R3_SCOPE = (rel) => rel.startsWith(path.join('integrations', 'bicameral') + path.sep)
+  || rel.startsWith(path.join('integrations', 'acp', 'proxy') + path.sep)
+  || rel === path.join('extension', 'bootstrapBicameral.ts');
+const ACCEPTED = ['trustedCommandPath(', 'trustedExecutablePath(', 'checkTrustedPath(', 'resolveAgentCommand(',
+  '(opts.resolve ?? trustedCommandPath)(', '(opts.resolveCommand ?? resolveAgentCommand)('];
+const R3_CALL = /(?:^|[^\w$.])((?:[\w$]+\.)*(?:spawn|spawnSync|execFile|execFileSync|spawnFn))\s*\(\s*([^,)]*)/g;
+const R3_CLIENT = /new\s+BicameralMcpClient\(\s*\{\s*command\s*(?::\s*([^,}\s]+))?/g;
+const IDENT = /^[A-Za-z_$][\w$]*$/;
+const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function assignedAccepted(text, ident) {
+  return ACCEPTED.some((f) => new RegExp(`\\b${esc(ident)}\\s*=\\s*${esc(f)}`).test(text));
+}
+function r3Violations(text) {
+  const out = [];
+  const check = (arg, what) => {
+    const a = (arg || '').trim();
+    if (!IDENT.test(a) || !assignedAccepted(text, a)) out.push(`${what}(${a})`);
+  };
+  for (const m of text.matchAll(R3_CALL)) {
+    const callee = m[1];
+    const arg = (m[2] || '').trim();
+    const before = text.slice(Math.max(0, m.index - 12), m.index + 1);
+    // The two forwarding wrappers, by exact form; their callers are checked below.
+    if (callee === 'spawnFn' && arg === 'req.bin') continue;
+    if (callee === 'spawn' && arg === 'c' && /\(c, a\) =>\s*$/.test(before)) continue;
+    check(arg, callee);
+  }
+  for (const m of text.matchAll(R3_CLIENT)) check(m[1] || 'command', 'BicameralMcpClient');
+  if (/spawnFn\(req\.bin,/.test(text)) for (const m of text.matchAll(/\bbin:\s*([^,;}\n]+?)\s*[,\n}]/g)) check(m[1], 'runStep bin'); // a `bin: string;` type annotation ends in ';' and is skipped
+  return out;
+}
+
+test('T12 R3 self-test: the replaced 869bab00 sites and synthetic bypasses are flagged; resolved forms are not', () => {
+  const bad = {
+    'install-handler (bin: pip)': "const pip = opts.pythonCommand ?? 'pip';\nconst r = await runStep(opts, mode, steps, {\n    bin: pip,\n    args: ['install'] });\n      child = spawnFn(req.bin, req.args, { shell: false, cwd: opts.workspaceRoot });",
+    'install-detector line 197': "function runVersionProbe(command, t) {\n      child = spawn(command, ['--version'], { shell: false });\n}",
+    'AcpProxyMain line 70': "  const spawnFn = opts.spawnFn ?? ((c, a) => spawn(c, a, { stdio: 'pipe' }));\n  const child = spawnFn(opts.agentCommand, opts.agentArgs);",
+    'bootstrapBicameral line 241': '  const command = cfg.get<string>("command", "bicameral-mcp");\n      const client = new BicameralMcpClient({ command, cwd: workspaceRoot });',
+    'bootstrapBicameral lines 160-161 (multi-line)': '  const command = cfg.get<string>("command", "bicameral-mcp");\n  const client = new BicameralMcpClient({\n    command,\n    cwd: workspaceRoot,\n  });',
+    'synthetic member': 'spawn(opts.command, a);',
+    'synthetic call': 'spawn(getCmd(), a);',
+    'synthetic runStep raw bin': "const x = (opts.resolve ?? trustedCommandPath)(pip, d);\nawait runStep(o, m, s, { bin: rawSetting });\n child = spawnFn(req.bin, req.args, {});",
+  };
+  for (const [name, text] of Object.entries(bad)) assert.ok(r3Violations(text).length > 0, `${name} must be flagged`);
+  const good = [
+    "let exe;\nexe = trustedCommandPath(command, dir);\nchild = spawn(exe, ['--version'], { shell: false, cwd: dir });",
+    "const pipBin = (opts.resolve ?? trustedCommandPath)(pip, d);\nawait runStep(o, m, s, { bin: pipBin });\n child = spawnFn(req.bin, req.args, {});",
+    "const spawnFn = opts.spawnFn ?? ((c, a) => spawn(c, a, { stdio: 'pipe' }));\nconst agentCommand = (opts.resolveCommand ?? resolveAgentCommand)(opts.agentCommand);\nconst child = spawnFn(agentCommand, opts.agentArgs);",
+    "const resolved = trustedCommandPath(command, ws);\nconst client = new BicameralMcpClient({\n    command: resolved,\n    cwd: ws,\n  });",
+  ];
+  for (const text of good) assert.deepEqual(r3Violations(text), [], text);
+});
+
+test('T12 R3: the Bicameral, ACP-proxy and bootstrapBicameral sources start only resolved commands', () => {
+  const files = walk(SRC).map((abs) => [path.relative(SRC, abs), abs]).filter(([rel]) => R3_SCOPE(rel));
+  assert.ok(files.length >= 10, `scanned ${files.length} R3 files`);
+  const found = [];
+  for (const [rel, abs] of files) for (const v of r3Violations(strip(fs.readFileSync(abs, 'utf8')))) found.push(`${rel}: ${v}`);
+  assert.deepEqual(found, []);
+  const host = strip(fs.readFileSync(path.join(SRC, 'integrations', 'mcp', 'McpClientHost.ts'), 'utf8'));
+  const guardAt = host.search(/assertLaunchableCommand\(/);
+  const transportAt = host.search(/new StdioClientTransport\(/);
+  assert.ok(guardAt >= 0 && guardAt < transportAt, 'McpClientHost checks the command before creating the real transport');
+});

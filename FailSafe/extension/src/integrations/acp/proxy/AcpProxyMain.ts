@@ -29,6 +29,16 @@ import { AcpProxyAgentHandler } from './AcpProxyAgentHandler';
 import { AcpProxyForwarder, type AcpAgentSideConnLike } from './AcpProxyForwarder';
 import { nodeStdioToAcpStream } from './AcpStreamFactory';
 import { parseProxyArgs, type ParsedProxyArgs } from './AcpProxyArgs';
+import { trustedCommandPath } from '../../../shared/exec/trustedExecutable';
+
+/**
+ * B211 (review delta LD16): the trusted file for the agent command. No call cwd:
+ * the agent inherits the proxy's cwd, which the resolver excludes unless it is a
+ * filesystem root or home. A relative path such as ./agent is refused.
+ */
+export function resolveAgentCommand(command: string): string {
+  return trustedCommandPath(command);
+}
 
 export { parseProxyArgs, type ParsedProxyArgs };
 
@@ -48,6 +58,8 @@ export interface RunAcpProxyOptions {
   backing: AcpGovernanceBacking;
   /** Injectable for tests; defaults to node:child_process spawn. */
   spawnFn?: (cmd: string, args: string[]) => ChildProcessWithoutNullStreams;
+  /** Test seam: the trusted resolution (default `resolveAgentCommand`). Suites with a fake agent pass identity. */
+  resolveCommand?: (command: string) => string;
   /** Source of SIGTERM/SIGINT for interruption teardown. Defaults to the real
    *  `process`; injectable so tests can simulate a host-issued signal without
    *  emitting on the real process object (which would also reach every other
@@ -67,7 +79,8 @@ export interface AcpProxyRun {
  */
 export function runAcpProxy(opts: RunAcpProxyOptions): AcpProxyRun {
   const spawnFn = opts.spawnFn ?? ((c, a) => spawn(c, a, { stdio: 'pipe' }) as ChildProcessWithoutNullStreams);
-  const child = spawnFn(opts.agentCommand, opts.agentArgs);
+  const agentCommand = (opts.resolveCommand ?? resolveAgentCommand)(opts.agentCommand);
+  const child = spawnFn(agentCommand, opts.agentArgs);
 
   // Interruption teardown (GH #240 — integration child process interrupted by
   // close/reload): this proxy runs as a standalone process the host (e.g. Devin)

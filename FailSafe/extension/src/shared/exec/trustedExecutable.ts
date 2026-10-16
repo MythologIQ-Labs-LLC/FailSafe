@@ -43,6 +43,12 @@ export interface ExecutableSpec {
   readonly defaultProbe?: (realPath: string, cwd: string) => ProbeResult;
   /** win32: admit an App Execution Alias found at a known location. */
   readonly appExecutionAlias?: boolean;
+  /**
+   * Spawn the folder's realpath plus the file name as written, instead of the
+   * file's realpath, so a POSIX venv's `bin/python` link keeps its venv. The
+   * folder realpath and the file realpath are both containment-checked.
+   */
+  readonly spawnLexical?: boolean;
 }
 
 export interface TrustedExecConfig {
@@ -79,11 +85,11 @@ export const foldFor = (platform: NodeJS.Platform): Fold =>
   platform === 'win32' || platform === 'darwin' ? (s) => s.toLowerCase() : (s) => s;
 
 interface Root { lex: string; real: string }
-interface Survivor { real: string; idKey: string }
+interface Survivor { real: string; idKey: string; spawn: string }
 interface Candidate { source: string; file: string; known: boolean }
 
 interface SpecState {
-  cache?: { key: string; real: string; idKey: string; alias: boolean };
+  cache?: { key: string; real: string; spawn: string; idKey: string; alias: boolean };
   /** Identities whose completed probe printed something else. */
   probeFailures: Set<string>;
   /** Identity → time of its last probe timeout; survives invalidate and configure. */
@@ -243,7 +249,15 @@ function aliasSurvivor(spec: ExecutableSpec, c: Candidate, platform: NodeJS.Plat
   if (!lst.isSymbolicLink()) return undefined;
   const lex = path.resolve(c.file);
   if (path.extname(lex).toLowerCase() !== '.exe') return undefined;
-  return { real: lex, idKey: `alias|${identityKey(lex, lst)}` };
+  return { real: lex, spawn: lex, idKey: `alias|${identityKey(lex, lst)}` };
+}
+
+/** The per-user folder that holds App Execution Aliases (LD18). */
+function insideWindowsApps(p: string): boolean {
+  const base = process.env.LOCALAPPDATA;
+  if (!base) return false;
+  const root = path.win32.join(base, 'Microsoft', 'WindowsApps').toLowerCase();
+  return within(path.win32.resolve(p).toLowerCase(), root);
 }
 
 /** Phase S for one candidate: a survivor, or the reason it was rejected. Nothing is executed. */
@@ -270,7 +284,12 @@ function staticCheck(
   }
   const idKey = identityKey(real, stat);
   if (!admitted(st, config, idKey)) return 'probe failed earlier';
-  return { real, idKey };
+  if (!spec.spawnLexical) return { real, idKey, spawn: real };
+  // LD19: every folder link is resolved; only the file name stays as written.
+  let dirReal: string;
+  try { dirReal = fs.realpathSync.native(path.dirname(c.file)); } catch { return 'not found'; }
+  if (insideAny(fold(dirReal), roots)) return 'resolves inside an excluded folder';
+  return { real, idKey, spawn: path.join(dirReal, path.basename(c.file)) };
 }
 
 function resolveUncached(
@@ -301,14 +320,19 @@ function resolveUncached(
   throw new TrustedExecutableUnavailable(spec.id, rejected);
 }
 
-function stillSame(real: string, idKey: string, alias: boolean): boolean {
+function stillSame(cache: NonNullable<SpecState['cache']>): boolean {
   try {
-    if (alias) {
-      const lst = fs.lstatSync(real);
-      return lst.isSymbolicLink() && `alias|${identityKey(real, lst)}` === idKey;
+    if (cache.alias) {
+      const lst = fs.lstatSync(cache.real);
+      return lst.isSymbolicLink() && `alias|${identityKey(cache.real, lst)}` === cache.idKey;
     }
-    const s = fs.statSync(real);
-    return s.isFile() && identityKey(real, s) === idKey;
+    const s = fs.statSync(cache.real);
+    if (!s.isFile() || identityKey(cache.real, s) !== cache.idKey) return false;
+    if (cache.spawn === cache.real) return true;
+    // A lexical spawn path: its folder must still be its own realpath and its
+    // file must still resolve to the cached file (a retargeted link re-resolves).
+    const dir = path.dirname(cache.spawn);
+    return fs.realpathSync.native(dir) === dir && fs.realpathSync.native(cache.spawn) === cache.real;
   } catch { return false; }
 }
 
@@ -333,21 +357,22 @@ export function trustedExecutablePath(
     [...extraExcluded].map((d) => fold(path.resolve(d))).sort(),
   ]);
   if (st.cache && st.cache.key === key) {
-    if (insideAny(fold(st.cache.real), roots)) {
-      throw new TrustedExecutableUnavailable(spec.id, [{ candidate: st.cache.real, reason: 'inside an excluded folder' }]);
+    if (insideAny(fold(st.cache.real), roots) || insideAny(fold(path.dirname(st.cache.spawn)), roots)) {
+      throw new TrustedExecutableUnavailable(spec.id, [{ candidate: st.cache.spawn, reason: 'inside an excluded folder' }]);
     }
-    if (stillSame(st.cache.real, st.cache.idKey, st.cache.alias)) return st.cache.real;
+    if (stillSame(st.cache)) return st.cache.spawn;
     invalidateTrustedExecutable(spec);
   }
   const found = resolveUncached(spec, st, config, roots, platform, name);
-  st.cache = { key, real: found.real, idKey: found.idKey, alias: found.idKey.startsWith('alias|') };
-  return found.real;
+  st.cache = { key, real: found.real, spawn: found.spawn, idKey: found.idKey, alias: found.idKey.startsWith('alias|') };
+  return found.spawn;
 }
 
 /**
  * Phase S for one given absolute file against the same excluded roots: returns
- * its realpath, or throws. No probe, no alias rule; for re-checking a path a
- * caller already holds before each spawn.
+ * the path to spawn, or throws. No probe; for re-checking a path a caller
+ * already holds before each spawn. An alias-capable spec admits an App
+ * Execution Alias inside the WindowsApps folder (LD18).
  */
 export function checkTrustedPath(
   spec: ExecutableSpec, absPath: string, callCwd?: string, extraExcluded: ReadonlyArray<string> = [],
@@ -355,9 +380,73 @@ export function checkTrustedPath(
   const config = configOf(spec);
   const platform = config.platform ?? process.platform;
   const roots = excludedRoots(spec, config, callCwd, extraExcluded, platform);
-  const r = staticCheck(spec, stateOf(spec), config, { source: absPath, file: absPath, known: false }, roots, platform);
+  const known = !!spec.appExecutionAlias && platform === 'win32' && insideWindowsApps(absPath);
+  const r = staticCheck(spec, stateOf(spec), config, { source: absPath, file: absPath, known }, roots, platform);
   if (typeof r === 'string') throw new TrustedExecutableUnavailable(spec.id, [{ candidate: absPath, reason: r }]);
-  return r.real;
+  return r.spawn;
+}
+
+const SAFE_COMMAND_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+const namedSpecs = new Map<string, ExecutableSpec>();
+/** Spec for an operator-named command: PATH search, `.exe` on win32, static checks only. */
+function namedSpec(name: string): ExecutableSpec {
+  let spec = namedSpecs.get(name);
+  if (!spec) {
+    spec = {
+      id: `command:${name}`,
+      fileName: (p) => (p === 'win32' && !name.toLowerCase().endsWith('.exe') ? `${name}.exe` : name),
+      searchPath: true,
+      knownLocations: () => [],
+    };
+    namedSpecs.set(name, spec);
+  }
+  return spec;
+}
+const ABSOLUTE_COMMAND: ExecutableSpec = { id: 'command', fileName: () => undefined, searchPath: false, knownLocations: () => [] };
+
+/**
+ * B211 (review delta LD14): the trusted file for an operator-style command.
+ * A name with an engine spec (python, pip, gh and the others) resolves through
+ * it; any other safe bare name through a spec made for that name; an absolute
+ * path through `checkTrustedPath`. Anything else (a relative path, a name with
+ * shell or path characters) is refused. Throws TrustedExecutableUnavailable.
+ */
+export function trustedCommandPath(
+  command: string, callCwd?: string, extraExcluded: ReadonlyArray<string> = [],
+): string {
+  const platform = configOf(ABSOLUTE_COMMAND).platform ?? process.platform;
+  if (typeof command === 'string' && SAFE_COMMAND_NAME.test(command)) {
+    return trustedExecutablePath(KNOWN_COMMANDS[command] ?? namedSpec(command), callCwd, extraExcluded);
+  }
+  if (typeof command === 'string' && isTrustedAbsolute(command, platform)) {
+    return checkTrustedPath(ABSOLUTE_COMMAND, command, callCwd, extraExcluded);
+  }
+  throw new TrustedExecutableUnavailable(String(command), [{ candidate: String(command), reason: 'not a safe command name or an absolute path' }]);
+}
+
+/**
+ * LD20: every ancestor of each folder that holds a `.git` entry (a folder, or a
+ * worktree's file), stopping before the home folder, any ancestor of it and a
+ * filesystem root, none of which is ever returned.
+ */
+export function repoRootsFor(dirs: ReadonlyArray<string>, homeDir: string, platform: NodeJS.Platform = process.platform): string[] {
+  const fold = foldFor(platform);
+  const home = fold(path.resolve(homeDir));
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const d of dirs) {
+    let cur = path.resolve(d);
+    for (;;) {
+      const f = fold(cur);
+      const isRoot = f === fold(path.parse(cur).root);
+      if (isRoot || f === home || within(home, f)) break;
+      if (!seen.has(f) && fs.existsSync(path.join(cur, '.git'))) { seen.add(f); out.push(cur); }
+      const parent = path.dirname(cur);
+      if (parent === cur) break;
+      cur = parent;
+    }
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------- specs
@@ -419,13 +508,13 @@ export const DNF = linuxPm('dnf');
 export const YUM = linuxPm('yum');
 export const PACMAN = linuxPm('pacman');
 export const PYTHON: ExecutableSpec = {
-  id: 'python', fileName: both('python'), searchPath: true, appExecutionAlias: true,
+  id: 'python', fileName: both('python'), searchPath: true, appExecutionAlias: true, spawnLexical: true,
   knownLocations: (p) => (p === 'win32' ? winJoin(env('LOCALAPPDATA'), 'Microsoft', 'WindowsApps', 'python.exe')
     : ['/usr/bin/python', '/usr/local/bin/python']),
   probe: PY_PROBE,
 };
 export const PYTHON3: ExecutableSpec = {
-  id: 'python3', fileName: both('python3'), searchPath: true, appExecutionAlias: true,
+  id: 'python3', fileName: both('python3'), searchPath: true, appExecutionAlias: true, spawnLexical: true,
   knownLocations: (p) => (p === 'win32' ? winJoin(env('LOCALAPPDATA'), 'Microsoft', 'WindowsApps', 'python3.exe')
     : p === 'darwin' ? ['/usr/bin/python3', '/usr/local/bin/python3', '/opt/homebrew/bin/python3']
       : ['/usr/bin/python3', '/usr/local/bin/python3']),
@@ -438,11 +527,11 @@ export const PY: ExecutableSpec = {
   probe: PY_PROBE,
 };
 export const PIP: ExecutableSpec = {
-  id: 'pip', fileName: both('pip'), searchPath: true, knownLocations: () => [],
+  id: 'pip', fileName: both('pip'), searchPath: true, spawnLexical: true, knownLocations: () => [],
   probe: { args: ['--version'], accept: /^pip \d+(\.\d+)* from / },
 };
 export const PIP3: ExecutableSpec = {
-  id: 'pip3', fileName: both('pip3'), searchPath: true, knownLocations: () => [],
+  id: 'pip3', fileName: both('pip3'), searchPath: true, spawnLexical: true, knownLocations: () => [],
   probe: { args: ['--version'], accept: /^pip \d+(\.\d+)* from / },
 };
 
@@ -450,3 +539,8 @@ export const PIP3: ExecutableSpec = {
 export function pythonFamilySpec(name: string): ExecutableSpec | undefined {
   return ({ python: PYTHON, python3: PYTHON3, py: PY, pip: PIP, pip3: PIP3 } as Record<string, ExecutableSpec>)[name];
 }
+
+/** Names `trustedCommandPath` resolves through their engine spec. */
+const KNOWN_COMMANDS: Record<string, ExecutableSpec> = {
+  gh: GH, garak: GARAK, promptfoo: PROMPTFOO, python: PYTHON, python3: PYTHON3, py: PY, pip: PIP, pip3: PIP3,
+};

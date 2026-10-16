@@ -715,7 +715,8 @@
         "failsafe.integrations.bicameral.command": {
           "type": "string",
           "default": "bicameral-mcp",
-          "description": "Executable used to launch the Bicameral MCP server. Must be on PATH or an absolute path under your home directory (or a configured extra command root)."
+          "scope": "machine",
+          "description": "Executable used to launch the Bicameral MCP server. Must be on PATH or an absolute path under your home directory (or a configured extra command root). Read only from user settings, and never a file inside the workspace."
         },
         "failsafe.integrations.bicameral.extraCommandRoots": {
           "type": "array",
@@ -723,17 +724,14 @@
             "type": "string"
           },
           "default": [],
-          "description": "Additional anchored absolute directory roots accepted for the Bicameral command path, alongside your home directory. Windows chocolatey/scoop roots under %ProgramData% are already accepted automatically; use this only for non-default install locations. Relative entries are ignored."
-        },
-        "failsafe.integrations.bicameral.pipCommand": {
-          "type": "string",
-          "default": "pip",
-          "description": "Pip command used by the Integrations tab installer (e.g., 'pip', 'pip3', or 'python -m pip')."
+          "scope": "machine",
+          "description": "Additional anchored absolute directory roots accepted for the Bicameral command path, alongside your home directory. Windows chocolatey/scoop roots under %ProgramData% are already accepted automatically; use this only for non-default install locations. Relative entries are ignored. Read only from user settings."
         },
         "failsafe.integrations.bicameral.autoConnect": {
           "type": "boolean",
           "default": false,
-          "description": "Automatically connect to Bicameral MCP at activation when the workspace is configured. Default off — operator clicks Connect."
+          "scope": "machine",
+          "description": "Automatically connect to Bicameral MCP at activation when the workspace is configured. Default off — operator clicks Connect. Read only from user settings."
         },
         "failsafe.integrations.bicameral.upstreamPollMs": {
           "type": "number",

