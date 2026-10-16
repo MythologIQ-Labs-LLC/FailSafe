@@ -188,6 +188,18 @@ suite('OpenHands import command and timelines in the extension host (#477)', fun
 
   // ---- review delta (plan-v608-laneB-delta-review) ----------------------------------
 
+  test('D1 the command passes the export\'s run identity: a longer re-export of the same run saves only the new event', async () => {
+    const root = ws();
+    const conversation_id = '6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b';
+    const first = await run(root, exportFile(root, { version: '1.0.0', conversation_id, events: [SDK('r1'), SDK('r2')] }));
+    assert.equal(first.outcome?.kind, 'imported');
+    const second = await run(root, exportFile(root, { version: '1.0.0', conversation_id, events: [SDK('r1'), SDK('r2'), SDK('r3')] }), { keys: first.keys });
+    assert.equal(second.outcome?.kind, 'imported');
+    assert.match(second.ui.infos[0], /saved 1 event\(s\), skipped 2 duplicate\(s\)/);
+    const recs = fs.readFileSync(evidencePath(root), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+    assert.deepEqual([recs.length, recs.every((r) => r.runId === conversation_id)], [3, true]);
+  });
+
   test('D3 with no evidence key wired the import reports integration evidence as unavailable', async () => {
     const root = ws();
     const ui = new ScriptedUi(exportFile(root, { version: '1.0.0', events: [SDK('u1')] }));

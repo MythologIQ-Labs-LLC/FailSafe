@@ -522,6 +522,15 @@ suite('OpenHands run-scoped deduplication (#477 delta D1)', () => {
     assert.equal((await importEnvelope(root, { events: ints, note: 'other run' }, keys)).imported, 2);
   });
 
+  test('integer ids under a run identity are still file-scoped: a re-export of that run imports every event again', async () => {
+    const root = workspace();
+    const { keys } = autoKeys();
+    const conversation_id = randomUUID();
+    const ints = [{ ...EV('x'), id: 0 }, { ...EV('x'), id: 1 }];
+    assert.equal((await importEnvelope(root, { conversation_id, events: ints }, keys)).imported, 2);
+    assert.equal((await importEnvelope(root, { conversation_id, events: [...ints, { ...EV('x'), id: 2 }] }, keys)).imported, 3);
+  });
+
   test('a named field below the 8-character floor ("1", "default") is not a run identity', async () => {
     const one = await pair({ conversation_id: '1' }, { conversation_id: '1' });
     assert.deepEqual([one.first, one.second], [2, 2]);
