@@ -1,0 +1,47 @@
+{
+  "provenance": "Built from the Linear GraphQL API issue query shape (POST https://api.linear.app/graphql, https://linear.app/developers/graphql). Not captured from a live workspace: no live credentials were available.",
+  "request": {
+    "method": "POST",
+    "url": "https://api.linear.app/graphql",
+    "headers": [
+      "Content-Type",
+      "Authorization"
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-ratelimit-requests-remaining": "1499"
+    },
+    "body": {
+      "data": {
+        "issue": {
+          "identifier": "ENG-42",
+          "title": "Crash on save",
+          "description": "Saving a large file crashes.",
+          "priority": 2,
+          "url": "https://linear.app/acme/issue/ENG-42/crash-on-save",
+          "updatedAt": "2026-10-13T16:20:00.000Z",
+          "state": {
+            "name": "Todo",
+            "type": "unstarted"
+          },
+          "assignee": {
+            "name": "Grace Hopper"
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "Bug"
+              },
+              {
+                "name": "editor"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

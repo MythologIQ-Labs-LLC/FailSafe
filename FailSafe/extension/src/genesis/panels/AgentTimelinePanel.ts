@@ -25,6 +25,7 @@ const CATEGORY_LABELS: Record<string, string> = {
     trust: 'Trust',
     approval: 'Approvals',
     diffguard: 'DiffGuard',
+    imported: 'Imported',
 };
 
 export class AgentTimelinePanel {
@@ -49,6 +50,13 @@ export class AgentTimelinePanel {
 
         const unsub = this.eventBus.on('timeline.entryAdded', () => this.update());
         this.disposables.push({ dispose: unsub });
+        this.disposables.push(vscode.workspace.onDidChangeWorkspaceFolders(() => this.update()));
+        // #477: imported OpenHands evidence comes through the timeline service;
+        // refresh when the evidence file changes.
+        this.disposables.push(vscode.workspace.createFileSystemWatcher('**/.failsafe/logs/openhands-imports.jsonl'));
+        const watcher = this.disposables[this.disposables.length - 1] as vscode.FileSystemWatcher;
+        this.disposables.push(watcher.onDidChange(() => this.update()));
+        this.disposables.push(watcher.onDidCreate(() => this.update()));
 
         this.panel.onDidDispose(() => {
             AgentTimelinePanel.currentPanel = undefined;
@@ -133,7 +141,7 @@ export class AgentTimelinePanel {
         const fileBtn = entry.artifactPath
             ? `<button class="file-link" onclick="viewFile(event, '${escapeJsString(entry.artifactPath)}')">Open file</button>`
             : '';
-        return `<div class="timeline-item severity-${entry.severity}" data-id="${escapeHtml(entry.id)}" onclick="toggleDetail('${id}')">
+        return `<div class="timeline-item severity-${escapeHtml(entry.severity)}" data-id="${escapeHtml(entry.id)}" onclick="toggleDetail('${id}')">
         <span class="icon codicon codicon-${escapeHtml(entry.icon)}"></span>
         <span class="timestamp" title="${escapeHtml(entry.timestamp)}">${escapeHtml(formatRelativeTime(entry.timestamp))}</span>
         <span class="title">${escapeHtml(entry.title)}</span>

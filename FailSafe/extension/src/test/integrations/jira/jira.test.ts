@@ -2,7 +2,9 @@ import { strict as assert } from 'assert';
 import {
   parseJiraIssueKey, buildIssuePath, parseIssueResponse, toIntentPreview,
 } from '../../../integrations/jira/jira-import';
-import { fetchJiraIssue, type JiraGetFn } from '../../../integrations/jira/jira-client';
+import { fetchJiraIssue, defaultJiraGet, type JiraGetFn } from '../../../integrations/jira/jira-client';
+import { collectCapped, requireHttps } from '../../../integrations/shared/https-transport';
+import { PassThrough } from 'stream';
 
 suite('jira-import parse (#98)', () => {
   test('resolves a Jira issue URL (with + without query) and a bare key, case-normalized', () => {
@@ -110,5 +112,54 @@ suite('jira-client (#98)', () => {
     assert.equal(r404.ok, false); assert.equal(r404.status, 404);
     const r429 = await fetchJiraIssue('PROJ-1', auth, async () => ({ status: 429, body: '' }));
     assert.equal(r429.ok, false); assert.equal(r429.status, 429);
+  });
+});
+
+suite('jira-import provenance fields (#480)', () => {
+  test('the issue path asks for updated and issuetype, and the preview carries them', () => {
+    assert.match(buildIssuePath('PROJ-7'), /,updated,issuetype$/);
+    const issue = parseIssueResponse({ key: 'PROJ-7', fields: { summary: 'S', updated: '2026-10-14T09:30:12.000+0000', issuetype: { name: 'Bug' } } });
+    assert.equal(issue?.updated, '2026-10-14T09:30:12.000+0000');
+    assert.equal(issue?.issueType, 'Bug');
+    const p = toIntentPreview(issue!, 'https://acme.atlassian.net');
+    assert.equal(p.updated, '2026-10-14T09:30:12.000+0000');
+    assert.equal(p.issueType, 'Bug');
+  });
+});
+
+suite('jira transport hardening (#480 delta D6c, D6d)', () => {
+  test('D6c an http:// base URL is refused before any request, with failure config', async () => {
+    let calls = 0;
+    const r = await fetchJiraIssue('PROJ-1', { baseUrl: 'http://jira.example', email: 'a@b.c', apiToken: 't' }, async () => { calls++; return { status: 200, body: '{}' }; });
+    assert.equal(r.ok, false);
+    assert.equal(r.failure, 'config');
+    assert.equal(calls, 0);
+  });
+
+  test('D6c requireHttps rejects a non-https URL; the default transport keeps the port', async () => {
+    assert.throws(() => requireHttps('http://jira.example/x'), /https/);
+    assert.equal(requireHttps('https://jira.example:8443/x').port, '8443');
+    // Port 1 on loopback refuses at once; the error names the port only if it was passed through.
+    await assert.rejects(defaultJiraGet('https://127.0.0.1:1/rest', {}), /127\.0\.0\.1:1\b/);
+    await assert.rejects(defaultJiraGet('http://127.0.0.1:1/rest', {}), /https/);
+  });
+
+  test('D6c collectCapped rejects while the stream is still open once the cap is passed, and resolves under it', async () => {
+    const big = new PassThrough();
+    const p = collectCapped(big, 1024);
+    big.write(Buffer.alloc(1025));
+    await assert.rejects(p, /too large/);
+    assert.equal(big.writableEnded, false, 'rejected before the stream ended');
+    assert.equal(big.destroyed, true);
+    const small = new PassThrough();
+    const q = collectCapped(small, 1024);
+    small.end(Buffer.from('ok'));
+    assert.equal((await q).toString(), 'ok');
+  });
+
+  test('D6d a returned key that is not a Jira key is rejected', () => {
+    assert.equal(parseIssueResponse({ key: 'proj 1; DROP', fields: { summary: 'S' } }), null);
+    assert.equal(parseIssueResponse({ key: 'PROJ-1; DROP', fields: { summary: 'S' } }), null);
+    assert.equal(parseIssueResponse({ key: 'PROJ-1', fields: { summary: 'S' } })?.key, 'PROJ-1');
   });
 });

@@ -19,6 +19,12 @@ import { isPublishable, isShieldFamilyName, type CheckConclusion, type CheckRunP
 import type { GitHubPostFn } from './github-checks-client';
 import { isVerifiedShieldReceipt } from '../shield-receipts/shield-receipt-verifier';
 
+/** Error texts the transport returns for its own refusals (github-checks-health maps them). */
+export const INVALID_API_BASE_ERROR = 'invalid GitHub API base URL';
+export const TARGET_HOST_MISMATCH_ERROR = 'check run target host mismatch';
+export const INVALID_TARGET_REPO_ERROR = 'invalid check run target repo';
+export const UNCONFIRMED_RESPONSE_ERROR = 'unconfirmed GitHub response';
+
 /** A payload carrying the reserved SHIELD name; only the verified publisher builds one. */
 export interface ShieldCheckRunPayload {
   name: typeof SHIELD_CHECK_NAME;
@@ -108,11 +114,11 @@ function toTarget(target: unknown): CheckRunTarget | undefined {
 
 function targetError(target: CheckRunTarget): string | undefined {
   try {
-    if (new URL(target.baseUrl).hostname.toLowerCase() !== target.apiHost.toLowerCase()) return 'check run target host mismatch';
+    if (new URL(target.baseUrl).hostname.toLowerCase() !== target.apiHost.toLowerCase()) return TARGET_HOST_MISMATCH_ERROR;
   } catch {
-    return 'invalid GitHub API base URL';
+    return INVALID_API_BASE_ERROR;
   }
-  return /^[^/\s]+\/[^/\s]+$/.test(target.repo) ? undefined : 'invalid check run target repo';
+  return /^[^/\s]+\/[^/\s]+$/.test(target.repo) ? undefined : INVALID_TARGET_REPO_ERROR;
 }
 
 function readConfirmed(body: string): TransportResult['echo'] & { id: number } | undefined {
@@ -136,7 +142,7 @@ function interpret(res: { status: number; body: string }): TransportResult {
     return { ok: false, status: res.status, error: `GitHub returned HTTP ${res.status}.` };
   }
   const confirmed = res.status === 201 ? readConfirmed(res.body) : undefined;
-  if (!confirmed) return { ok: false, status: res.status, error: 'unconfirmed GitHub response' };
+  if (!confirmed) return { ok: false, status: res.status, error: UNCONFIRMED_RESPONSE_ERROR };
   const { id, ...echo } = confirmed;
   return { ok: true, status: res.status, checkRunId: id, echo };
 }

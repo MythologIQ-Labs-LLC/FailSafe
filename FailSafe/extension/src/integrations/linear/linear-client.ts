@@ -15,6 +15,8 @@ import {
   parseLinearIssueId, buildIssueQuery, parseIssueResponse, toIntentPreview,
   type LinearIntentPreview,
 } from './linear-import';
+import type { FailureCategory } from '../catalog/integration-health';
+import { collectCapped, requireHttps } from '../shared/https-transport';
 
 const LINEAR_GRAPHQL = 'https://api.linear.app/graphql';
 
@@ -31,6 +33,8 @@ export interface LinearFetchResult {
   status?: number;
   rateLimit?: LinearRateLimit;
   error?: string;
+  /** Health category of a failed fetch (#479); absent when nothing was sent. */
+  failure?: FailureCategory;
 }
 
 /** Read Linear's rate-limit headers if present (never hardcode a ceiling). */
@@ -69,17 +73,19 @@ export async function fetchLinearIssue(
       JSON.stringify(req),
     );
     const rateLimit = readRateLimit(res.headers);
-    if (res.status === 429) return { ok: false, status: 429, error: 'Linear rate limit reached (HTTP 429).', rateLimit };
-    if (res.status === 401 || res.status === 403) return { ok: false, status: res.status, error: 'Linear auth failed — check the API key / token scope.', rateLimit };
-    if (res.status < 200 || res.status >= 300) return { ok: false, status: res.status, error: `Linear returned HTTP ${res.status}.`, rateLimit };
+    if (res.status === 429) return { ok: false, status: 429, failure: 'rate_limited', error: 'Linear rate limit reached (HTTP 429).', rateLimit };
+    if (res.status === 401 || res.status === 403) return { ok: false, status: res.status, failure: 'auth', error: 'Linear auth failed — check the API key / token scope.', rateLimit };
+    if (res.status < 200 || res.status >= 300) return { ok: false, status: res.status, failure: 'http', error: `Linear returned HTTP ${res.status}.`, rateLimit };
 
     let json: unknown;
-    try { json = JSON.parse(res.body); } catch { return { ok: false, error: 'Invalid JSON from Linear.', rateLimit }; }
+    try { json = JSON.parse(res.body); } catch { return { ok: false, failure: 'contract', error: 'Invalid JSON from Linear.', rateLimit }; }
+    // A 200 with no issue node (Linear reports a missing issue as a GraphQL
+    // `errors` array) did not meet the response contract (#479).
     const issue = parseIssueResponse(json);
-    if (!issue) return { ok: false, error: `Issue ${id} not found (or no access).`, rateLimit };
+    if (!issue) return { ok: false, failure: 'contract', error: `Issue ${id} not found (or no access).`, rateLimit };
     return { ok: true, preview: toIntentPreview(issue), rateLimit };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    return { ok: false, failure: 'network', error: e instanceof Error ? e.message : String(e) };
   }
 }
 
@@ -87,18 +93,15 @@ export async function fetchLinearIssue(
 export const defaultLinearPost: LinearPostFn = (url, headers, body) =>
   new Promise((resolve, reject) => {
     try {
-      const u = new URL(url);
+      const u = requireHttps(url);
       const req = https.request(
-        { hostname: u.hostname, path: u.pathname + u.search, method: 'POST',
+        { hostname: u.hostname, port: u.port || undefined, path: u.pathname + u.search, method: 'POST',
           headers: { ...headers, 'Content-Length': Buffer.byteLength(body) }, timeout: 8000 },
         (res) => {
-          const chunks: Buffer[] = [];
-          res.on('data', (c) => chunks.push(c as Buffer));
-          res.on('end', () => resolve({
-            status: res.statusCode ?? 0,
-            body: Buffer.concat(chunks).toString('utf8'),
-            headers: res.headers as Record<string, string>,
-          }));
+          collectCapped(res).then(
+            (buf) => resolve({ status: res.statusCode ?? 0, body: buf.toString('utf8'), headers: res.headers as Record<string, string> }),
+            reject,
+          );
         },
       );
       req.on('timeout', () => req.destroy(new Error('timeout')));
