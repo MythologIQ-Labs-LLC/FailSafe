@@ -42,9 +42,19 @@ Open the **Integrations** tab to configure an integration. The tab shows whether
 
 ---
 
-**Current Release**: v6.0.7 (2026-10-15)
+**Current Release**: v6.0.8 (2026-10-16)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v6.0.8
+
+Integrations now report what they actually did, and FailSafe starts only programs it has validated.
+
+- **Integrations tell the truth.** Catalog cards show each integration's last real result (Verified, Connected, Failing with a reason, or Stale) instead of guessing from settings. Jira and Linear issues become governed intent drafts only when you approve. OpenHands runs can be imported as signed historical evidence into the Agent Timeline and the Console Timeline.
+- **Nothing planted in a workspace runs.** gh, PowerShell, Python, pip, the Git installers, Bicameral MCP and the ACP agent are started from validated absolute paths, Python no longer imports modules from the workspace, and the settings that choose what FailSafe launches are read from user settings only.
+- **Agent Marketplace fails closed.** A scan that failed, timed out or gave no verdict is never a pass, an install whose scan did not pass is quarantined, and FailSafe never runs an item's package setup on your machine. Installs stay disabled.
+- **Concurrent windows are safe.** Two FailSafe processes can no longer both accept one replay nonce, risk updates queue in arrival order, and imports write in chunks so other windows are not starved.
+- **Behaviour changes.** A Python interpreter inside the workspace or its repository is no longer used; set `failsafe.qorlogic.pythonPath` in user settings to choose one. Bicameral auto-connect turned on from the Console before this release must be turned on again. See the CHANGELOG for the full list and the known limitations.
 
 ## What's New in v6.0.7
 
