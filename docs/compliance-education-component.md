@@ -57,7 +57,7 @@ The v1 micro-lesson `<details>` expander pattern (keyboard-accessible via Enter/
 
 If **any** later phase or future revision introduces — adaptive assessment, user scoring, learning-outcome evaluation, access/level determination, behaviour monitoring, or inferred proficiency — the component **leaves** this determination's scope. In that event: **STOP**, re-open ideation (`/qor-ideate`) to re-frame scope, and obtain a fresh compliance determination before implementation continues.
 
-A separate binding trigger: any expansion to a **full structured curriculum within the open extension** (LMS-style modules with required progression, gating, or assessment) → **STOP**, escalate to a FailSafe Pro / separate-extension scope decision. Curriculum is explicitly out of scope for this open editor extension per the sealed ideation.
+A separate binding trigger: any expansion to a **full structured curriculum within the open extension** (LMS-style modules with required progression, gating, or assessment) → **STOP**, escalate to a separate-product scope decision. Curriculum is explicitly out of scope for this open editor extension per the sealed ideation.
 
 Both triggers are recorded in:
 - the sealed ideation artifact (`.failsafe/governance/IDEATION_failsafe-learn-swe-craft.md`) failure_remediation classes 2 + 5;
