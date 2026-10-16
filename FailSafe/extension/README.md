@@ -38,7 +38,7 @@ Each integration ships with its own README and its external API names are back-c
 
 **Agent Marketplace:** install, update and scan are disabled until isolated setup and fail-closed scanning land (#468, #469).
 
-Open the **Integrations** tab to configure an integration. The tab shows whether each one is enabled and configured; it does not test the connection.
+Open the **Integrations** tab to configure an integration. Each card shows the result of that integration's last real call (Verified, Connected, Failing with a reason, or Stale after 7 days); an integration that is only configured shows Configured · unverified.
 
 ---
 
@@ -53,7 +53,7 @@ Integrations now report what they actually did, and FailSafe starts only program
 - **Integrations tell the truth.** Catalog cards show each integration's last real result (Verified, Connected, Failing with a reason, or Stale) instead of guessing from settings. Jira and Linear issues become governed intent drafts only when you approve. OpenHands runs can be imported as signed historical evidence into the Agent Timeline and the Console Timeline.
 - **Nothing planted in a workspace runs.** gh, PowerShell, Python, pip, the Git installers, Bicameral MCP and the ACP agent are started from validated absolute paths, Python no longer imports modules from the workspace, and the settings that choose what FailSafe launches are read from user settings only.
 - **Agent Marketplace fails closed.** A scan that failed, timed out or gave no verdict is never a pass, an install whose scan did not pass is quarantined, and FailSafe never runs an item's package setup on your machine. Installs stay disabled.
-- **Concurrent windows are safe.** Two FailSafe processes can no longer both accept one replay nonce, risk updates queue in arrival order, and imports write in chunks so other windows are not starved.
+- **Concurrent windows are safer.** Two FailSafe processes can no longer both accept one replay nonce, risk updates queue in arrival order, and imports write in chunks so other windows are not starved. Two limits remain: a risk update can still be lost if two windows recover a crashed window's lock at the same moment, and a v6.0.7 window left open on the same workspace still updates the nonce store without the lock.
 - **Behaviour changes.** A Python interpreter inside the workspace or its repository is no longer used; set `failsafe.qorlogic.pythonPath` in user settings to choose one. Bicameral auto-connect turned on from the Console before this release must be turned on again. See the CHANGELOG for the full list and the known limitations.
 
 ## What's New in v6.0.7

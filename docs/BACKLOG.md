@@ -574,7 +574,7 @@ The v1 consumer adapter (`FailSafe/extension/src/qorlogic/consumer/`, FX892/FX89
 
 ## v6.0.8 integration follow-ups (filed 2026-10-16)
 
-- [ ] [B221] tar and ps still started by name — voice-pack tar (cwd = a fresh staging folder) and the POSIX ps sampler; resolve through `src/shared/exec/trustedExecutable.ts`. Bicameral team-mode setup is typed into the operator's terminal, which resolves bicameral-mcp itself. Closing B211 left these. | post-v6.0.8
+- [ ] [B221] tar and ps still started by name — voice-pack tar (cwd = a fresh staging folder) and the POSIX ps sampler; resolve through `src/shared/exec/trustedExecutable.ts`. Bicameral team-mode setup is typed into the operator's terminal, which resolves bicameral-mcp itself. The release script `scripts/release-github.cjs` also starts `gh` by name; it runs only in the operator's checkout. Closing B211 left these. | post-v6.0.8
 - [ ] [B222] Agent Marketplace gate lift conditions — (1) enforced setup isolation with OS negative tests; (2) staged install with promotion and rollback; (3) a repository scanner whose PASS is evidence about the item; (4) the G12 row (B210) and planted-scanner rows; (5) Console end-to-end install, quarantine and re-scan; (6) a validated repository URL and ref (`cloneRepo` passes `--`). Listed beside `MARKETPLACE_INSTALLS_ENABLED` in `MarketplaceInstaller.ts`. | post-v6.0.8
 - [ ] [B223] Substrate command reads `failsafe.failsafe.qorlogic.pythonPath` — `substrate-command.ts` passes the `failsafe` section to a resolver that looks up the full key, so the setting is never seen there. | post-v6.0.8
 - [ ] [B224] Verifiable risk-store lock ownership (#528) — `proper-lockfile` removes a stale lock with no ownership check, so two processes recovering a crashed holder's lock at once can both hold it and one risk update can be lost. The nonce store is protected by its per-nonce marker; the risk store is not. Needs an owner token the stale path can verify, or a lock-independent final check. | post-v6.0.8
@@ -584,6 +584,10 @@ The v1 consumer adapter (`FailSafe/extension/src/qorlogic/consumer/`, FX892/FX89
 - [ ] [B228] Extend the #474 capability conformance suite to Bicameral, Open Design, MCP Catalog, AGT and ACP. | post-v6.0.8
 - [ ] [B229] Sentry: distinguish a refused (untrusted) base URL from a network failure in `SentryImportOutcome`, so catalog health can say config instead of network. | post-v6.0.8
 - [ ] [B230] Validate Jira, Linear, Sentry and OpenHands against live disposable accounts and real exports (the OpenHands export layout and its run-identity fields are unconfirmed). | post-v6.0.8
+- [ ] [B231] The OpenHands import takes its own `wx` lock file (`openhands-import.ts`), so after a crash, or when a cloned repository ships `.failsafe/logs/openhands-imports.jsonl.lock`, imports are refused until the file is deleted by hand. Move it to the shared cross-process lock. | post-v6.0.8
+- [ ] [B232] The integration catalog GET route (`ConsoleRouteRegistrar.ts`) does not call `rejectIfRemote`, while `/api/v1/timeline` does. The data is read-only and from closed sets; align the routes. | low
+- [ ] [B233] After auto-connect, `maybeAutoConnectBicameral` (`bootstrapBicameral.ts`) replaces the client without rewiring the interceptor, so governed routes still wrap the client `wireFromConfig` created. Pre-existing. | post-v6.0.8
+- [ ] [B234] Lane B's health mapping types the import outcome as `write?: Partial<WriteCounts>`, so a rename in `ImportWriteOutcome` (`riskImportBatch.ts`) would compile silently. Use `Pick<ImportWriteOutcome, ...>`. | low
 
 ## Wishlist (Nice to Have)
 
