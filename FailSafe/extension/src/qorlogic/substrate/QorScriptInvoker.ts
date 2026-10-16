@@ -60,7 +60,8 @@ export class QorScriptInvoker {
     }
 
     const timeoutMs = opts.timeoutMs ?? 60_000;
-    const args = [...py.args, '-m', `qor.scripts.${opts.module}`, ...opts.args];
+    // -P: never import qor.scripts from the caller's cwd, the workspace (LD11).
+    const args = [...py.args, '-P', '-m', `qor.scripts.${opts.module}`, ...opts.args];
     const result = await this.run(py.command, args, {
       timeoutMs,
       cwd: opts.cwd,

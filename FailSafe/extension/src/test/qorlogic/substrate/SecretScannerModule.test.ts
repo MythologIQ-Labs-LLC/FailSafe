@@ -16,9 +16,9 @@ import {
  */
 
 function fakeInvoker(result: InvokeResult): { invoker: QorScriptInvoker; calls: { module: string; args: string[]; cwd?: string }[] } {
-  const cfg = { get: () => undefined };
+  const cfg = { get: () => undefined, inspect: () => undefined };
   const run: RunCommand = async () => ({ stdout: '', stderr: '', code: 0 });
-  const resolver = new PythonInterpreterResolver(cfg, null, run);
+  const resolver = new PythonInterpreterResolver(cfg, null, run, (c) => c);
   (resolver as unknown as { cached: unknown }).cached = {
     ok: true, command: 'python3', args: [], version: '3.12.0', source: 'user-setting',
   };

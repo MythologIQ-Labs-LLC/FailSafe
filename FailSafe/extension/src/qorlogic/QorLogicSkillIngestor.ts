@@ -135,9 +135,10 @@ export class QorLogicSkillIngestor {
     if (!py.ok) {
       return { ok: false, host, scope, error: 'no-python-found', command: '' };
     }
+    // -P: never import qor from the workspace, which is this run's cwd (LD11).
     const args = [
       ...py.args,
-      '-m', 'qor.cli', 'install',
+      '-P', '-m', 'qor.cli', 'install',
       '--host', host,
       '--scope', scope,
       ...((skillFilter || []).flatMap((s) => ['--include', s])),
@@ -221,7 +222,7 @@ export class QorLogicSkillIngestor {
   ): Promise<{ ok: true } | { ok: false; error: string }> {
     const args = [
       ...py.args,
-      '-m', 'qor.cli', 'install',
+      '-P', '-m', 'qor.cli', 'install',
       '--host', host,
       '--scope', scope,
     ];

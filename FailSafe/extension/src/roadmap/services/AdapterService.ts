@@ -10,6 +10,7 @@ import * as path from "path";
 import * as os from "os";
 import type { EventBus } from "../../shared/EventBus";
 import { preserveCorruptFile } from "./corrupt-file-guard";
+import { pythonFamilySpec, trustedExecutablePath } from "../../shared/exec/trustedExecutable";
 import type {
   AdapterState,
   AdapterInstallOptions,
@@ -31,6 +32,17 @@ const TOOLKIT_PACKAGES: ToolkitPackage[] = [
   "agent-sre",
 ];
 
+/** Remove a child's private folder; one still held (EBUSY/EPERM) is left in the OS temp area. */
+function removeQuietly(dir: string): void {
+  try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 3 }); } catch { /* left for OS cleanup */ }
+}
+
+/**
+ * LD12: python3, python, pip3 and pip are started only through the trusted
+ * resolver. LD13: with no cwd from the caller, each child runs from a fresh
+ * empty folder, never the process cwd: `python -c "import agent_failsafe"`
+ * would otherwise import an agent_failsafe.py found there.
+ */
 function defaultRunner(
   command: string,
   args: string[],
@@ -38,17 +50,8 @@ function defaultRunner(
   timeout = DEFAULT_TIMEOUT,
 ): Promise<AdapterCommandResult> {
   return new Promise((resolve) => {
-    const options = { cwd, shell: false as const, timeout };
-    const proc = command === "python3"
-      ? spawn("python3", args, options)
-      : command === "python"
-        ? spawn("python", args, options)
-        : command === "pip3"
-          ? spawn("pip3", args, options)
-          : command === "pip"
-            ? spawn("pip", args, options)
-            : null;
-    if (!proc) {
+    const spec = ["python3", "python", "pip3", "pip"].includes(command) ? pythonFamilySpec(command) : undefined;
+    if (!spec) {
       resolve({
         code: 126,
         stdout: "",
@@ -56,6 +59,18 @@ function defaultRunner(
       });
       return;
     }
+    const ownDir = cwd === undefined ? fs.mkdtempSync(path.join(os.tmpdir(), "failsafe-adapter-")) : undefined;
+    const runCwd = cwd ?? ownDir;
+    let exe: string;
+    try {
+      exe = trustedExecutablePath(spec, runCwd);
+    } catch (err) {
+      if (ownDir) removeQuietly(ownDir);
+      resolve({ code: 127, stdout: "", stderr: err instanceof Error ? err.message : String(err) });
+      return;
+    }
+    const proc = spawn(exe, args, { cwd: runCwd, shell: false, timeout }); // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute interpreter path, argv array, no shell
+    if (ownDir) proc.on("close", () => removeQuietly(ownDir)).on("error", () => removeQuietly(ownDir));
 
     let stdout = "";
     let stderr = "";

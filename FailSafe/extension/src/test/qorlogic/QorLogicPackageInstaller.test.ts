@@ -15,9 +15,9 @@ import { MIN_QOR_LOGIC_VERSION, TESTED_AGAINST_QOR_LOGIC_VERSION } from '../../q
 const PINNED_SPEC = `qor-logic>=${MIN_QOR_LOGIC_VERSION}`;
 
 function fixedResolver(command: string, args: string[] = []): PythonInterpreterResolver {
-  const config = { get: () => undefined };
+  const config = { get: () => undefined, inspect: () => undefined };
   const run: RunCommand = async () => ({ stdout: 'Python 3.12.0\n', stderr: '', code: 0 });
-  const resolver = new PythonInterpreterResolver(config, null, run);
+  const resolver = new PythonInterpreterResolver(config, null, run, (c) => c);
   // Override resolve for tests that need a known interpreter without probing.
   (resolver as unknown as { cached: unknown }).cached = {
     ok: true,
@@ -30,9 +30,9 @@ function fixedResolver(command: string, args: string[] = []): PythonInterpreterR
 }
 
 function noPythonResolver(): PythonInterpreterResolver {
-  const config = { get: () => undefined };
+  const config = { get: () => undefined, inspect: () => undefined };
   const run: RunCommand = async () => ({ stdout: '', stderr: 'not found', code: 127 });
-  return new PythonInterpreterResolver(config, null, run);
+  return new PythonInterpreterResolver(config, null, run, (c) => c);
 }
 
 interface RecordedCall {
@@ -79,7 +79,7 @@ suite('QorLogicPackageInstaller: isInstalled', () => {
     const installer = new QorLogicPackageInstaller(resolver, sinkChannel, run);
 
     assert.equal(await installer.isInstalled(), true);
-    assert.deepEqual(calls[0].args, ['-m', 'pip', 'show', 'qor-logic']);
+    assert.deepEqual(calls[0].args, ['-P', '-m', 'pip', 'show', 'qor-logic']);
   });
 
   test('returns false when resolver yields no-python-found', async () => {
@@ -103,7 +103,7 @@ suite('QorLogicPackageInstaller: install', () => {
     assert.equal(result.ok, true);
     assert.equal(calls.length, 1);
     assert.equal(calls[0].cmd, '/opt/py/python');
-    assert.deepEqual(calls[0].args, ['-m', 'pip', 'install', '--upgrade', PINNED_SPEC]);
+    assert.deepEqual(calls[0].args, ['-P', '-m', 'pip', 'install', '--upgrade', PINNED_SPEC]);
     // Verify args are list-form (no shell concatenation): no single arg contains a space joining flags.
     for (const arg of calls[0].args) {
       assert.equal(arg.includes(' '), false, `arg "${arg}" must not contain spaces (list-form check)`);
@@ -118,7 +118,7 @@ suite('QorLogicPackageInstaller: install', () => {
     await installer.install();
 
     assert.equal(calls[0].cmd, 'py');
-    assert.deepEqual(calls[0].args, ['-3', '-m', 'pip', 'install', '--upgrade', PINNED_SPEC]);
+    assert.deepEqual(calls[0].args, ['-3', '-P', '-m', 'pip', 'install', '--upgrade', PINNED_SPEC]);
   });
 
   test('returns ok:false error:timeout when run times out', async () => {
@@ -188,7 +188,7 @@ suite('QorLogicPackageInstaller: install', () => {
 
     await installer.install();
 
-    assert.ok(lines.some((l) => l.includes(`/usr/bin/python3.12 -m pip install --upgrade ${PINNED_SPEC}`)));
+    assert.ok(lines.some((l) => l.includes(`/usr/bin/python3.12 -P -m pip install --upgrade ${PINNED_SPEC}`)));
   });
 
   test('pins minimum version (>=MIN_QOR_LOGIC_VERSION) and uses --upgrade in argv', async () => {
@@ -334,6 +334,6 @@ Version: ${TESTED_AGAINST_QOR_LOGIC_VERSION}
     await installer.verifyInstalledVersion();
 
     assert.equal(calls.length, 1);
-    assert.deepEqual(calls[0].args, ['-m', 'pip', 'show', 'qor-logic']);
+    assert.deepEqual(calls[0].args, ['-P', '-m', 'pip', 'show', 'qor-logic']);
   });
 });
