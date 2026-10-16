@@ -11,7 +11,9 @@
 
 import * as https from 'https';
 import type { EventBus } from '../../shared/EventBus';
-import { sendSlackNotification, type SlackPostFn } from './slack-sender';
+import { sendSlackNotification, type SlackPostFn, type SlackSendResult } from './slack-sender';
+import { recordIntegrationHealth } from '../catalog/integration-health';
+import { healthFromSlackDelivery } from './slack-health';
 import { mapGovernanceEvent, SLACK_NOTIFY_EVENTS } from './slack-notify-map';
 import type { SlackNotifyKind } from './slack-notify';
 import { readEventBusEvent, redactWebhookUrl } from '../notify-event';
@@ -59,6 +61,8 @@ export class SlackNotifier {
     private readonly getConfig: () => SlackNotifierConfig,
     private readonly post: SlackPostFn = defaultPost,
     private readonly onFailure: SlackFailureSink = defaultOnFailure,
+    /** Receives every attempted delivery's result (#479 health evidence). Must never throw. */
+    private readonly onDelivered: (result: SlackSendResult) => void = (r) => recordIntegrationHealth('slack', ...healthFromSlackDelivery(r)),
   ) {}
 
   register(): void {
@@ -75,6 +79,7 @@ export class SlackNotifier {
     if (!notice) return;
     if (!notice.ts) notice.ts = timestamp;
     const result = await sendSlackNotification(cfg.webhookUrl, notice, this.post); // non-blocking by contract
+    try { this.onDelivered(result); } catch { /* evidence is advisory; never block delivery */ }
     // Notify-only never blocks a workflow, but a dropped governance alert must
     // still leave a trace — silence would read as "no veto happened".
     if (!result.ok && !result.skipped) {

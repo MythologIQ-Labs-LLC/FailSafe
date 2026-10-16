@@ -53,6 +53,7 @@ import { registerGitHubChecksCommand } from "./github-checks-command";
 import { registerSentryImportCommand } from "./sentry-command";
 import { registerAgentCliCommands } from "./agent-cli-command";
 import { registerAgentObserveCommands } from "./agent-observe-command";
+import { wireIntegrationEvidence } from "./integrationEvidenceWiring";
 import { bootstrapCredentials } from "./credentials-command";
 import { notifierConfig, notifyFailureText } from "../integrations/credentials/credentialGates";
 import { SlackNotifier } from "../integrations/slack/SlackNotifier";
@@ -368,6 +369,14 @@ export async function activate(
       logger,
     );
     consoleServer = servers.consoleServer;
+
+    // 8.0b. v6.0.8 integration evidence (#479 health store, #480 tracker intent
+    //       drafts, #477 OpenHands evidence key + timeline provider).
+    wireIntegrationEvidence(context, {
+      intentService: gov.intentService,
+      planManager: core.planManager,
+      timeline: sentinel.agentTimelineService,
+    });
 
     // 8.1. MCP Server (deferred from step 5 to step 8.1 so RiskManager
     //      constructed by bootstrapServers can be wired into the

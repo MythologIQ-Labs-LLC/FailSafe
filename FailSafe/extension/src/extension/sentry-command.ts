@@ -15,6 +15,7 @@ import type { IntegrationCredentials } from '../integrations/credentials/Integra
 import type { EndpointReader } from '../integrations/credentials/credentialGates';
 import { credentialUi } from './credentials-command';
 import { RiskRegisterManager } from '../roadmap/services/RiskRegisterManager';
+import { healthFromSentryImport, recordIntegrationHealth } from '../integrations/sentry/sentry-health';
 
 function cancelSignal(token: vscode.CancellationToken): CancelSignal {
   return {
@@ -48,6 +49,7 @@ export function registerSentryImportCommand(
           { policy: realTimePolicy, cancel: cancelSignal(token) },
         ),
       );
+      recordIntegrationHealth('sentry', ...healthFromSentryImport(outcome));
       showSentryOutcome(outcome, { org: opts.org, project: opts.project, query: opts.query });
     }),
   );

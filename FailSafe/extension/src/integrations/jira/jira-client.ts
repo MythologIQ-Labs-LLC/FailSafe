@@ -12,6 +12,7 @@ import {
   parseJiraIssueKey, buildIssuePath, parseIssueResponse, toIntentPreview,
   type JiraIntentPreview,
 } from './jira-import';
+import type { FailureCategory } from '../catalog/integration-health';
 
 export interface JiraGetFn {
   (url: string, headers: Record<string, string>):
@@ -29,6 +30,8 @@ export interface JiraFetchResult {
   preview?: JiraIntentPreview;
   status?: number;
   error?: string;
+  /** Health category of a failed fetch (#479); absent when nothing was sent. */
+  failure?: FailureCategory;
 }
 
 /** Base64 Basic-auth value for Jira Cloud (email:apiToken). */
@@ -60,20 +63,20 @@ export async function fetchJiraIssue(
       Authorization: basicAuth(auth.email.trim(), auth.apiToken.trim()),
       'User-Agent': 'FailSafe',
     });
-    if (res.status === 429) return { ok: false, status: 429, error: 'Jira rate limit reached (HTTP 429).' };
+    if (res.status === 429) return { ok: false, status: 429, failure: 'rate_limited', error: 'Jira rate limit reached (HTTP 429).' };
     if (res.status === 401 || res.status === 403) {
-      return { ok: false, status: res.status, error: 'Jira auth failed — check the email / API token / permissions.' };
+      return { ok: false, status: res.status, failure: 'auth', error: 'Jira auth failed — check the email / API token / permissions.' };
     }
-    if (res.status === 404) return { ok: false, status: 404, error: `Issue ${key} not found (or no access).` };
-    if (res.status < 200 || res.status >= 300) return { ok: false, status: res.status, error: `Jira returned HTTP ${res.status}.` };
+    if (res.status === 404) return { ok: false, status: 404, failure: 'not_found', error: `Issue ${key} not found (or no access).` };
+    if (res.status < 200 || res.status >= 300) return { ok: false, status: res.status, failure: 'http', error: `Jira returned HTTP ${res.status}.` };
 
     let json: unknown;
-    try { json = JSON.parse(res.body); } catch { return { ok: false, error: 'Invalid JSON from Jira.' }; }
+    try { json = JSON.parse(res.body); } catch { return { ok: false, failure: 'contract', error: 'Invalid JSON from Jira.' }; }
     const issue = parseIssueResponse(json);
-    if (!issue) return { ok: false, error: `Issue ${key} not found (or no access).` };
+    if (!issue) return { ok: false, failure: 'contract', error: `Issue ${key} not found (or no access).` };
     return { ok: true, preview: toIntentPreview(issue, baseUrl) };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    return { ok: false, failure: 'network', error: e instanceof Error ? e.message : String(e) };
   }
 }
 

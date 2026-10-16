@@ -18,6 +18,7 @@ import { auditMcpConfig } from '../integrations/agent-observe/mcp-policy-audit';
 import { observeOpenHandsRun } from '../integrations/agent-observe/openhands-observer';
 import { persistOpenHandsObservations } from '../integrations/agent-observe/openhands-import';
 import { RiskRegisterManager } from '../roadmap/services/RiskRegisterManager';
+import { healthFromMcpScan, recordIntegrationHealth } from '../integrations/agent-observe/agent-observe-health';
 
 /** Best-effort known MCP/tool config locations (workspace-relative). `.mcp.json`
  *  is the shared project MCP config Cline/Roo/Kilo all read. */
@@ -81,6 +82,7 @@ export function registerAgentObserveCommands(context: vscode.ExtensionContext, w
       const riskManager = new RiskRegisterManager(workspaceRoot);
       // #517 LD8: a re-scan never resets the status the operator triaged.
       const r = runMcpPolicyScan(workspaceRoot, (risk) => riskManager.upsertRisk(risk, { keepStored: ['status'] }));
+      recordIntegrationHealth('agent-audit', ...healthFromMcpScan(r));
       if (r.scanned === 0) { vscode.window.showInformationMessage('Agent MCP-policy audit: no Cline/Roo/Kilo/project MCP config found in this workspace.'); return; }
       if (r.failed > 0) {
         vscode.window.showWarningMessage(`Agent MCP-policy audit: ${r.failed} finding(s) could not be written to the Risk Register — findings may be missing. Check FailSafe logs and re-run.`);

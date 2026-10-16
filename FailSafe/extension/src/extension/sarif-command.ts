@@ -11,6 +11,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { importSarifText } from '../integrations/sarif/sarif-to-risk';
 import { RiskRegisterManager } from '../roadmap/services/RiskRegisterManager';
+import { healthFromSarifImport, recordIntegrationHealth } from '../integrations/sarif/sarif-health';
 
 export function registerSarifImportCommand(context: vscode.ExtensionContext, workspaceRoot: string): void {
   const disposable = vscode.commands.registerCommand('failsafe.sarif.import', async () => {
@@ -35,6 +36,7 @@ export function registerSarifImportCommand(context: vscode.ExtensionContext, wor
     try {
       text = fs.readFileSync(file, 'utf-8');
     } catch (e) {
+      recordIntegrationHealth('sarif', ...healthFromSarifImport({ unreadable: true }));
       vscode.window.showErrorMessage(`SARIF import: cannot read ${file}: ${e instanceof Error ? e.message : String(e)}`);
       return;
     }
@@ -42,6 +44,7 @@ export function registerSarifImportCommand(context: vscode.ExtensionContext, wor
     const riskManager = new RiskRegisterManager(workspaceRoot);
     // #517 LD8: a re-import never resets the status the operator triaged.
     const result = importSarifText(text, (risk) => riskManager.upsertRisk(risk, { keepStored: ['status'] }));
+    recordIntegrationHealth('sarif', ...healthFromSarifImport(result));
 
     if (result.risks === 0 && result.errors.length) {
       vscode.window.showWarningMessage(`SARIF import: ${result.errors[0]}`);

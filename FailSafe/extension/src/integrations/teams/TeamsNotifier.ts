@@ -12,7 +12,9 @@
 
 import * as https from 'https';
 import type { EventBus } from '../../shared/EventBus';
-import { sendTeamsNotification, type TeamsPostFn } from './teams-sender';
+import { sendTeamsNotification, type TeamsPostFn, type TeamsSendResult } from './teams-sender';
+import { recordIntegrationHealth } from '../catalog/integration-health';
+import { healthFromTeamsDelivery } from './teams-health';
 import { mapGovernanceEvent, TEAMS_NOTIFY_EVENTS } from './teams-notify-map';
 import type { TeamsNotifyKind } from './teams-notify';
 import { readEventBusEvent, redactWebhookUrl } from '../notify-event';
@@ -60,6 +62,8 @@ export class TeamsNotifier {
     private readonly getConfig: () => TeamsNotifierConfig,
     private readonly post: TeamsPostFn = defaultPost,
     private readonly onFailure: TeamsFailureSink = defaultOnFailure,
+    /** Receives every attempted delivery's result (#479 health evidence). Must never throw. */
+    private readonly onDelivered: (result: TeamsSendResult) => void = (r) => recordIntegrationHealth('teams', ...healthFromTeamsDelivery(r)),
   ) {}
 
   register(): void {
@@ -76,6 +80,7 @@ export class TeamsNotifier {
     if (!notice) return;
     if (!notice.ts) notice.ts = timestamp;
     const result = await sendTeamsNotification(cfg.webhookUrl, notice, this.post); // non-blocking by contract
+    try { this.onDelivered(result); } catch { /* evidence is advisory; never block delivery */ }
     // Notify-only never blocks a workflow, but a dropped governance alert must
     // still leave a trace — silence would read as "no veto happened".
     if (!result.ok && !result.skipped) {
