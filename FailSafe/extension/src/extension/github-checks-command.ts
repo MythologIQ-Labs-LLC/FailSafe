@@ -18,6 +18,7 @@ import {
 } from '../integrations/credentials/credentialGates';
 import { credentialUi } from './credentials-command';
 import { trustedGitPath } from '../shared/git/trustedGit';
+import { healthFromGitHubPublish, recordIntegrationHealth } from '../integrations/github-checks/github-checks-health';
 import { GH, trustedExecutablePath } from '../shared/exec/trustedExecutable';
 
 function git(args: string[], cwd: string): string | undefined {
@@ -89,6 +90,7 @@ async function publishAdvisory(opts: GitHubAdvisoryOptions, creds: IntegrationCr
     { location: vscode.ProgressLocation.Notification, title: 'Publishing manual GitHub advisory…' },
     () => publishCheckRunPayload(buildManualAdvisoryPayload(ctx.headSha!), ctx, opts, defaultGitHubPost),
   );
+  recordIntegrationHealth('github-checks', ...healthFromGitHubPublish(result));
   const error = (e: string | undefined): string => providerMessage(e ?? 'unknown error', creds);
 
   if (result.localOnly) {

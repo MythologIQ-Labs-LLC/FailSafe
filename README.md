@@ -32,14 +32,14 @@ FailSafe connects to the tools your AI agents use. Every integration is opt-in. 
 |---|---|---|
 | 🤖 **Continue (`cn`) governed wrapper** | Run a Continue headless prompt in a disposable git worktree; its changes are held for review and reach your workspace only when you choose Apply (`FailSafe: Run Continue (governed)`). | The agent never edits your checkout through its working directory, a shell/exec allowlist is refused before it runs, and the API key never leaves the child env. Not a process sandbox: direct writes to the repository are detected, not prevented, and writes outside it are not detected. On Windows, only a `cn.exe` or `cn.com` on PATH counts: Continue's npm shim `cn.cmd` cannot run without a shell, so an npm install is reported unavailable. |
 | 🔧 **Aider governed wrapper** | Run Aider (auto-commit off) in a disposable git worktree; its changes are held for review and reach your workspace only when you choose Apply (`FailSafe: Run Aider (governed)`). | Apply re-checks HEAD, the tree and the exact reviewed bytes before writing. Not a process sandbox: direct writes to the repository are detected, not prevented, and writes outside it are not detected. |
-| 👁️ **OpenHands run preview** | Read an exported OpenHands run and report how many events it holds and how many look high-risk (`FailSafe: Import OpenHands Run (observe)`). Read-only and version-gated. | A quick look at what an agent run did. Nothing is saved yet: the events are not recorded in the FailSafe timeline (#477). |
+| 👁️ **OpenHands run import** | Import an exported OpenHands run, after you confirm, as historical evidence in the FailSafe timeline (`FailSafe: Import OpenHands Run (observe)`). Version-gated, deduplicated and signed for this install; the transparency log gets one summary line. | See what an agent run did next to your own governance events. It is a record of a past run, not live enforcement (#477). |
 | 🔎 **Cline / Roo / Kilo policy audit** | Scan workspace MCP/tool config and flag risky posture — remote MCP servers, wildcard auto-approval, shell-capable tools (`FailSafe: Audit Agent MCP Policy (Cline/Roo/Kilo)`). | Catch an over-permissioned agent before it bites; secrets in the config are redacted before any finding is recorded. |
 
 **Connect your issue tracker, security, and team tooling** — govern the whole toolchain:
 
 | Integration | What it does | Why it matters |
 |---|---|---|
-| 📥 **Linear / Jira issue preview** | Fetch one Linear or Jira issue and show it as an intent preview (`FailSafe: Import Linear Issue (preview)`, `FailSafe: Import Jira Issue (preview)`). Read-only. | See the ticket's context without leaving the editor. Nothing is created, saved or synced; it is not a backlog import (#480). |
+| 📥 **Linear / Jira intent drafts** | Fetch one Linear or Jira issue, review it in an unsaved preview, and create a governed intent draft only when you approve (`FailSafe: Import Linear Issue as Intent Draft`, `FailSafe: Import Jira Issue as Intent Draft`). Read-only toward the tracker. | The ticket becomes reviewed intent without retyping it. Nothing is written to Linear or Jira and nothing is synced (#480). |
 | ✅ **GitHub advisory checks** | Publish a neutral, manual advisory Check Run on the current commit (`FailSafe: Publish Manual GitHub Advisory`). When the commit has a pull request, the same command also posts a PR-linkage Check Run. It is not a SHIELD verdict. | The SHIELD check name is reserved for a verified, commit-bound receipt. No command publishes a verified SHIELD check yet. Fork PRs degrade to local-only. |
 | 🐞 **Sentry regression import** | Pull a Sentry project's unresolved issues into the risk register as runtime-regression risks (`FailSafe: Import Sentry Regressions`), with first and last release from each issue's detail. | Production failures become governed risk records tied to project / environment / release, with an exact count of what was created, updated, unchanged or failed; your triage survives re-imports. No raw event payloads, and no commit correlation. |
 | 🛡️ **SARIF security ingestion** | Import Semgrep / CodeQL / any SARIF 2.1.0 scanner output into the risk register (`FailSafe: Import SARIF Findings`). | Your security scanner stops being a separate silo — every finding becomes a *governed* risk in the same audit trail as agent decisions. |
@@ -54,15 +54,25 @@ Under the hood, a **Tier 1 supply-chain CI baseline** (least-privilege workflow 
 
 **Agent Marketplace:** install, update and scan are disabled until isolated setup and fail-closed scanning land (#468, #469).
 
-Open the **Integrations** tab to configure an integration. The tab shows whether each one is enabled and configured; it does not test the connection.
+Open the **Integrations** tab to configure an integration. Each card shows the result of that integration's last real call (Verified, Connected, Failing with a reason, or Stale after 7 days); an integration that is only configured shows Configured · unverified.
 
 ---
 
 <div align="center">
 
-**Current Release**: v6.0.7 (2026-10-15)
+**Current Release**: v6.0.8 (2026-10-16)
 
 > **If this project helps you, please star it!** It helps others discover FailSafe.
+
+## What's New in v6.0.8
+
+Integrations now report what they actually did, and FailSafe starts only programs it has validated.
+
+- **Integrations tell the truth.** Catalog cards show each integration's last real result (Verified, Connected, Failing with a reason, or Stale) instead of guessing from settings. Jira and Linear issues become governed intent drafts only when you approve. OpenHands runs can be imported as signed historical evidence into the Agent Timeline and the Console Timeline.
+- **Nothing planted in a workspace runs.** gh, PowerShell, Python, pip, the Git installers, Bicameral MCP and the ACP agent are started from validated absolute paths, Python no longer imports modules from the workspace, and the settings that choose what FailSafe launches are read from user settings only.
+- **Agent Marketplace fails closed.** A scan that failed, timed out or gave no verdict is never a pass, an install whose scan did not pass is quarantined, and FailSafe never runs an item's package setup on your machine. Installs stay disabled.
+- **Concurrent windows are safer.** Two FailSafe processes can no longer both accept one replay nonce, risk updates queue in arrival order, and imports write in chunks so other windows are not starved. Two limits remain: a risk update can still be lost if two windows recover a crashed window's lock at the same moment, and a v6.0.7 window left open on the same workspace still updates the nonce store without the lock.
+- **Behaviour changes.** A Python interpreter inside the workspace or its repository is no longer used; set `failsafe.qorlogic.pythonPath` in user settings to choose one. Bicameral auto-connect turned on from the Console before this release must be turned on again. See the CHANGELOG for the full list and the known limitations.
 
 ## What's New in v6.0.7
 

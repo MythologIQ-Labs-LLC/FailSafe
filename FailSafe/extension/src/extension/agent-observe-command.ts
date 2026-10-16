@@ -15,9 +15,10 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { auditMcpConfig } from '../integrations/agent-observe/mcp-policy-audit';
-import { observeOpenHandsRun } from '../integrations/agent-observe/openhands-observer';
+import { openHandsImportFromVscode } from './openhands-import-command';
 import { RiskRegisterManager } from '../roadmap/services/RiskRegisterManager';
 import { writeInChunks, type ImportBatch, type ImportWriteOutcome } from '../roadmap/services/riskImportBatch';
+import { healthFromMcpScan, recordIntegrationHealth } from '../integrations/agent-observe/agent-observe-health';
 
 /** Best-effort known MCP/tool config locations (workspace-relative). `.mcp.json`
  *  is the shared project MCP config Cline/Roo/Kilo all read. */
@@ -86,6 +87,7 @@ export function registerAgentObserveCommands(context: vscode.ExtensionContext, w
       // #517 LD8: a re-scan never resets the status the operator triaged.
       // v6.0.8 #528: one register update per 500 findings.
       const r = runMcpPolicyScan(workspaceRoot, (risk) => sink.upsertRisk(risk, { keepStored: ['status'] }), undefined, sink.batch);
+      recordIntegrationHealth('agent-audit', ...healthFromMcpScan(r));
       if (r.scanned === 0) { vscode.window.showInformationMessage('Agent MCP-policy audit: no Cline/Roo/Kilo/project MCP config found in this workspace.'); return; }
       if (r.failed > 0) {
         const reason = r.write.writeError ? ` (${r.write.writeError})` : '';
@@ -94,27 +96,7 @@ export function registerAgentObserveCommands(context: vscode.ExtensionContext, w
       vscode.window.showInformationMessage(`Agent MCP-policy audit: scanned ${r.scanned} config(s) → ${r.total} risk(s) upserted (${r.high} high-severity).`);
     }),
 
-    vscode.commands.registerCommand('failsafe.openhands.observe', async () => {
-      const cfg = vscode.workspace.getConfiguration('failsafe');
-      if (!cfg.get<boolean>('integrations.openhands.enabled', false)) {
-        vscode.window.showWarningMessage('OpenHands observer is disabled. Enable `failsafe.integrations.openhands.enabled`.');
-        return;
-      }
-      const picked = await vscode.window.showOpenDialog({ canSelectMany: false, openLabel: 'Observe OpenHands run', filters: { 'OpenHands run (JSON)': ['json'] } });
-      if (!picked || picked.length === 0) return;
-      let parsed: unknown;
-      try { parsed = JSON.parse(fs.readFileSync(picked[0].fsPath, 'utf-8')); } catch (e) {
-        vscode.window.showErrorMessage(`OpenHands observe: cannot read/parse file: ${e instanceof Error ? e.message : String(e)}`); return;
-      }
-      // Accept either a bare events array or a { version, events } envelope.
-      const env = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : null;
-      const events = env && Array.isArray(env.events) ? env.events : parsed;
-      const version = (env && typeof env.version === 'string' ? env.version : undefined) ?? (cfg.get<string>('integrations.openhands.version', '') || undefined);
-
-      const result = observeOpenHandsRun(events, version);
-      if (!result.supported) { vscode.window.showWarningMessage(`OpenHands observe: ${result.degraded}`); return; }
-      const high = result.records.filter((r) => r.riskHint === 'high').length;
-      vscode.window.showInformationMessage(`OpenHands observe: mapped ${result.records.length} event(s) (${high} high-risk) from ${vscode.workspace.asRelativePath(picked[0].fsPath)}.`);
-    }),
+    // #477: the import logic lives in openhands-import-command.ts.
+    vscode.commands.registerCommand('failsafe.openhands.observe', () => openHandsImportFromVscode(workspaceRoot)),
   );
 }

@@ -1,0 +1,24 @@
+{
+  "provenance": "Built from the Atlassian Jira Cloud REST API v2 \"Get issue\" response shape (GET /rest/api/2/issue/{issueIdOrKey}, https://developer.atlassian.com/cloud/jira/platform/rest/v2/api-group-issues/#api-rest-api-2-issue-issueidorkey-get). Not captured from a live tenant: no live credentials were available. Error response: 401 Unauthorized.",
+  "request": {
+    "method": "GET",
+    "url": "https://acme.atlassian.net/rest/api/2/issue/PROJ-123?fields=summary,description,status,priority,assignee,labels,components,updated,issuetype",
+    "headers": [
+      "Accept",
+      "Authorization",
+      "User-Agent"
+    ]
+  },
+  "response": {
+    "status": 401,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "errorMessages": [
+        "You do not have permission to see the specified issue."
+      ],
+      "errors": {}
+    }
+  }
+}

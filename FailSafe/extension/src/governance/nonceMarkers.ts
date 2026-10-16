@@ -43,7 +43,12 @@ export class NonceMarkerDirError extends Error {
 }
 
 export class NonceMarkers {
-  constructor(readonly dir: string, private readonly seams: MarkerSeams = {}) {}
+  constructor(
+    readonly dir: string,
+    private readonly seams: MarkerSeams = {},
+    /** The store-folder containment walk (checkNonceStoreDir, LD11), run before every marker operation. */
+    private readonly parentCheck?: (create: boolean) => boolean,
+  ) {}
 
   /** True when the nonce has a marker. Never existsSync: it reads EPERM as absent. */
   has(nonce: string): boolean {
@@ -105,6 +110,7 @@ export class NonceMarkers {
    * folder is made with a non-recursive mkdir and the store folder is fsynced.
    */
   private checkDir(create: boolean): boolean {
+    if (this.parentCheck && !this.parentCheck(create)) return false; // no store folder yet: no markers
     let st: fs.Stats;
     try {
       st = fs.lstatSync(this.dir);

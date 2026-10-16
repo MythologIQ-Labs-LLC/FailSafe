@@ -1,0 +1,22 @@
+{
+  "provenance": "Built from the Linear GraphQL API issue query shape (POST https://api.linear.app/graphql, https://linear.app/developers/graphql). Not captured from a live workspace: no live credentials were available. Error response: 401.",
+  "request": {
+    "method": "POST",
+    "url": "https://api.linear.app/graphql",
+    "headers": [
+      "Content-Type",
+      "Authorization"
+    ]
+  },
+  "response": {
+    "status": 401,
+    "headers": {},
+    "body": {
+      "errors": [
+        {
+          "message": "Authentication required, not authenticated"
+        }
+      ]
+    }
+  }
+}

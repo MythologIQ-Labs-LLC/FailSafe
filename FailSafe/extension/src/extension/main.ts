@@ -53,6 +53,7 @@ import { registerGitHubChecksCommand } from "./github-checks-command";
 import { registerSentryImportCommand } from "./sentry-command";
 import { registerAgentCliCommands } from "./agent-cli-command";
 import { registerAgentObserveCommands } from "./agent-observe-command";
+import { wireIntegrationEvidence } from "./integrationEvidenceWiring";
 import { bootstrapCredentials } from "./credentials-command";
 import { notifierConfig, notifyFailureText } from "../integrations/credentials/credentialGates";
 import { SlackNotifier } from "../integrations/slack/SlackNotifier";
@@ -319,6 +320,21 @@ export async function activate(
     // 4. Sentinel
     const sentinel = await bootstrapSentinel(context, core, qor, logger);
     sentinelDaemon = sentinel.sentinelDaemon;
+
+    // 4.1. v6.0.8 integration evidence (#479 health store, #480 tracker intent
+    //      drafts, #477 OpenHands evidence key + timeline provider). Its own
+    //      try/catch: a failure here is logged and never stops activation; the
+    //      commands then report the evidence as unavailable.
+    try {
+      wireIntegrationEvidence(context, {
+        intentService: gov.intentService,
+        planManager: core.planManager,
+        timeline: sentinel.agentTimelineService,
+        governanceMode: () => gov.enforcementEngine.getGovernanceMode(),
+      });
+    } catch (err) {
+      logger.error("Integration evidence wiring failed", err);
+    }
 
     // 4.5. Checkpoint (bridges qor + sentinel substrates)
     const checkpointMetrics: ICheckpointMetrics = {

@@ -159,7 +159,7 @@ suite('integrations/bicameral install-handler', () => {
     assert.equal(setupStep?.status, 'error');
   });
 
-  test('rejects unsafe pipCommand without spawning', async () => {
+  test('rejects an unsafe pip command without spawning', async () => {
     const events: InstallProgressEvent[] = [];
     const spawnFake = makeSpawnFake([]);
     const result = await runBicameralInstall({

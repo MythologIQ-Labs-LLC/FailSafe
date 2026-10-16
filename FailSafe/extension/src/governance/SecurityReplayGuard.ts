@@ -14,11 +14,11 @@
  */
 
 import * as crypto from "crypto";
-import * as fs from "fs";
 import * as path from "path";
 import { Logger } from "../shared/Logger";
 import { NonceChange, NonceFile, NonceRecord, NonceStoreBusyError, NonceStoreSeams } from "./nonceStore";
 import { MARKER_GRACE_MS, MarkerSeams, NonceMarkerDirError, NonceMarkers, NonceMarkerTakenError } from "./nonceMarkers";
+import { checkNonceStoreDir } from "./nonceStoreDir";
 
 export type { NonceRecord } from "./nonceStore";
 export { createSignedRequest, processSignedRequest } from "./signedRequest";
@@ -75,18 +75,23 @@ export class SecurityReplayGuard {
       ? normalizedInput
       : path.join(normalizedInput, ".failsafe", "security");
     const seams = options.seams ?? {};
+    const dirCheck = (create: boolean): boolean => checkNonceStoreDir(storeDir, create);
     this.file = new NonceFile(
       path.join(storeDir, "nonces.json"),
       { timeoutMs: options.lockTimeoutMs ?? LOCK_TIMEOUT_MS, staleMs: LOCK_STALE_MS, now: seams.now },
       { renameSync: options.renameSync, writeSync: seams.writeSync, fsyncSync: seams.fsyncSync, openTemp: seams.openTemp },
+      dirCheck,
     );
-    this.markers = new NonceMarkers(path.join(storeDir, "nonces.consumed"), { openMarker: seams.openMarker });
+    this.markers = new NonceMarkers(path.join(storeDir, "nonces.consumed"), { openMarker: seams.openMarker }, dirCheck);
     this.clock = seams.clock ?? Date.now;
     this.defaultTtlMs = options.ttlMs || 5 * 60 * 1000; // 5 minutes default
 
-    if (!fs.existsSync(storeDir)) fs.mkdirSync(storeDir, { recursive: true });
+    try { dirCheck(true); } catch (error) { // a linked store folder disables the guard; activation goes on (LD11)
+      this.failed(error);
+      this.logger.error("Nonce store folder refused: refusing replay authorization", error);
+    }
 
-    try { // Load existing nonces
+    if (this.storeHealthy) try { // Load existing nonces
       this.readStore();
       this.logger.info(`Loaded ${this.nonces.size} nonces from store`);
     } catch (error) {
@@ -176,7 +181,10 @@ export class SecurityReplayGuard {
       }
       return { changed: count > 0, result: count };
     });
-    try { this.markers.sweep(now); } catch (error) { this.logger.warn("Nonce marker cleanup failed", error); }
+    try { this.markers.sweep(now); } catch (error) {
+      if (error instanceof NonceMarkerDirError) this.failed(error); // a linked folder disables the guard (LD11)
+      this.logger.warn("Nonce marker cleanup failed", error);
+    }
     if (removed > 0) this.logger.debug(`Cleaned up ${removed} nonces`);
     return removed;
   }

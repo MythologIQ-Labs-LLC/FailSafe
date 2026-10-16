@@ -1,0 +1,28 @@
+{
+  "provenance": "Built from the Linear GraphQL API issue query shape (POST https://api.linear.app/graphql, https://linear.app/developers/graphql). Not captured from a live workspace: no live credentials were available. HTTP 200 with a GraphQL errors array and no issue (the documented way an unknown issue is reported).",
+  "request": {
+    "method": "POST",
+    "url": "https://api.linear.app/graphql",
+    "headers": [
+      "Content-Type",
+      "Authorization"
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "data": null,
+      "errors": [
+        {
+          "message": "Entity not found",
+          "extensions": {
+            "code": "INVALID_INPUT"
+          }
+        }
+      ]
+    }
+  }
+}
