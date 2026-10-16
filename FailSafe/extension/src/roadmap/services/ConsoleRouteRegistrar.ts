@@ -115,6 +115,9 @@ export interface ConsoleRouteHost {
   getUpstreamMonitor: () => import("../../integrations/bicameral/UpstreamMonitor").UpstreamMonitor | null;
   getBicameralCommand: () => string;
   getBicameralAutoConnect: () => boolean;
+  /** LD16 (b): the client rewire bootstrapBicameral sets; null until wired.
+   *  Optional so older route-host fixtures stay valid. */
+  getBicameralRewire?: () => (() => Promise<void>) | null;
   setBicameralAutoConnect: (value: boolean) => Promise<void>;
   /** B-BIC-17/18 (Batch 4): shared event bus. Threaded into the bicameral
    *  route deps so the drift/ratify handlers can emit `bicameral.verdict`. */
@@ -364,6 +367,8 @@ export class ConsoleRouteRegistrar {
       },
       getAutoConnect: () => this.host.getBicameralAutoConnect(),
       setAutoConnect: (v) => this.host.setBicameralAutoConnect(v),
+      // LD16 (b): read at request time, since bootstrap wires it after the routes register.
+      rewireBicameral: async () => { await this.host.getBicameralRewire?.()?.(); },
       // GH #165: reuse the shared integrated-terminal runner (same one the AGT
       // installer uses) so team-mode setup's interactive Google Drive OAuth runs
       // in a real TTY. Lazy-resolved at request time (wired by bootstrap).
