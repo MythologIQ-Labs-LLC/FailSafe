@@ -5,13 +5,12 @@
  */
 
 import type { HealthMapping } from '../catalog/integration-health';
-import { NOT_PUBLISHABLE_ERROR } from './github-checks-client';
 import {
-  INVALID_API_BASE_ERROR, INVALID_TARGET_REPO_ERROR, TARGET_HOST_MISMATCH_ERROR, UNCONFIRMED_RESPONSE_ERROR,
-} from './check-run-transport';
+  INVALID_API_BASE_ERROR, INVALID_TARGET_REPO_ERROR, NOT_PUBLISHABLE_ERROR, TARGET_HOST_MISMATCH_ERROR, UNCONFIRMED_RESPONSE_ERROR,
+} from './check-run-errors';
 
 /** The exact error texts publishCheckRunPayload returns for its own refusals,
- *  imported from where they are returned so a changed text cannot drift. */
+ *  from the one module the transport and the client also return them from. */
 export { NOT_PUBLISHABLE_ERROR, INVALID_API_BASE_ERROR, UNCONFIRMED_RESPONSE_ERROR };
 const CONFIG_ERRORS = [INVALID_API_BASE_ERROR, TARGET_HOST_MISMATCH_ERROR, INVALID_TARGET_REPO_ERROR];
 
