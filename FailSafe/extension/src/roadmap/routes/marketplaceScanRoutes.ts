@@ -4,6 +4,7 @@
 import { Request, Response } from "express";
 import type { MarketplaceRouteDeps } from "./marketplaceRouteShared";
 import { MARKETPLACE_INSTALLS_ENABLED } from "../services/MarketplaceInstaller";
+import { startRescan } from "./marketplaceInstallRoutes";
 
 export function registerMarketplaceScanRoutes(
   app: import("express").Application,
@@ -31,31 +32,8 @@ export function registerMarketplaceScanRoutes(
     // Update status
     deps.marketplaceCatalog.updateItemStatus(item.id, { status: "scanning" });
 
-    deps.broadcast({
-      type: "marketplace.scanning",
-      payload: { itemId: item.id },
-    });
-
-    // Run scan asynchronously
-    deps.securityScanner
-      .runFullScan(item.installPath, (msg) => {
-        deps.broadcast({
-          type: "marketplace.scan.progress",
-          payload: { itemId: item.id, message: msg },
-        });
-      })
-      .then((scanResult) => {
-        deps.marketplaceCatalog.updateItemStatus(item.id, {
-          status: scanResult.passed ? "installed" : "quarantined",
-          securityScan: scanResult,
-          trustTier: scanResult.passed ? "scanned" : "quarantined",
-        });
-
-        deps.broadcast({
-          type: "marketplace.scanned",
-          payload: { itemId: item.id, result: scanResult },
-        });
-      });
+    // Run scan asynchronously (#469: a rejected scan quarantines, never leaves the item scanning)
+    void startRescan(deps, item);
 
     res.json({
       status: "scanning",
