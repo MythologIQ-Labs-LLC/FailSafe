@@ -5,7 +5,11 @@
 // argv cannot be poisoned by upstream string input.
 
 import * as child_process from 'child_process';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { isSafeBicameralCommandResolved, probeInstallState } from './install-detector';
+import { trustedCommandPath } from '../../shared/exec/trustedExecutable';
 import { InstallMode, InstallProgressEvent, InstallStep, BicameralInstallState } from './types';
 
 const STDOUT_TAIL_BYTES = 2048;
@@ -57,6 +61,9 @@ export interface InstallHandlerOptions {
    *  never responds (e.g. a process blocked on an interactive prompt) so the
    *  install cannot hang indefinitely. Default 120000 (2 min). */
   stepTimeoutMs?: number;
+  /** Test seam: the trusted resolution (default `trustedCommandPath`). Suites
+   *  that drive a fake `spawn` pass identity. */
+  resolve?: (command: string, callCwd?: string) => string;
 }
 
 const VALID_MODES: ReadonlySet<InstallMode> = new Set(['solo', 'team']);
@@ -88,12 +95,25 @@ export async function runBicameralInstall(
   // B-INT-3: pin version floor + ceiling. Upstream Bicameral tool schemas are
   // Beta-classified; a hard ceiling avoids silent breakage when the schema
   // changes outside our supported range.
-  const pipResult = await runStep(opts, mode, steps, {
-    phase: 'pip-install',
-    command: `${pip} install '${BICAMERAL_PIP_SPEC}'`,
-    bin: pip,
-    args: ['install', BICAMERAL_PIP_SPEC],
-  });
+  // B211 (review delta LD14 (a)): pip is resolved before its step and runs from
+  // a fresh empty folder, never the workspace.
+  const pipDir = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-bicameral-pip-'));
+  let pipResult: { ok: boolean; error?: string };
+  try {
+    let pipBin: string;
+    try { pipBin = (opts.resolve ?? trustedCommandPath)(pip, pipDir); } catch (err) {
+      return finish(opts, mode, steps, `pip was not found on a trusted path: ${String(err)}`);
+    }
+    pipResult = await runStep(opts, mode, steps, {
+      phase: 'pip-install',
+      command: `${pip} install '${BICAMERAL_PIP_SPEC}'`,
+      bin: pipBin,
+      args: ['install', BICAMERAL_PIP_SPEC],
+      cwd: pipDir,
+    });
+  } finally {
+    try { fs.rmSync(pipDir, { recursive: true, force: true, maxRetries: 3 }); } catch { /* left for OS cleanup */ }
+  }
   if (!pipResult.ok) return finish(opts, mode, steps, pipResult.error || 'pip install failed');
 
   const setupCommand = `${bicameral} setup --mode ${mode}`;
@@ -120,11 +140,18 @@ export async function runBicameralInstall(
     return finish(opts, mode, steps);
   }
 
+  // bicameral-mcp exists only once pip has installed it, so it is resolved now.
+  // Setup keeps the workspace as cwd: it writes .bicameral/config.yaml there.
+  let bicameralBin: string;
+  try { bicameralBin = (opts.resolve ?? trustedCommandPath)(bicameral, opts.workspaceRoot); } catch (err) {
+    return finish(opts, mode, steps, `bicameral-mcp was not found on a trusted path after the install: ${String(err)}`);
+  }
   const setupResult = await runStep(opts, mode, steps, {
     phase: 'setup',
     command: setupCommand,
-    bin: bicameral,
+    bin: bicameralBin,
     args: ['setup', '--mode', mode],
+    cwd: opts.workspaceRoot,
   });
   if (!setupResult.ok) return finish(opts, mode, steps, setupResult.error || 'bicameral-mcp setup failed');
 
@@ -158,7 +185,7 @@ async function runVerifyStep(
   }
 }
 
-interface StepRequest { phase: InstallStep['phase']; command: string; bin: string; args: string[]; }
+interface StepRequest { phase: InstallStep['phase']; command: string; bin: string; args: string[]; cwd: string; }
 
 async function runStep(
   opts: InstallHandlerOptions,
@@ -173,7 +200,7 @@ async function runStep(
     const spawnFn = opts.spawn ?? child_process.spawn;
     let child;
     try {
-      child = spawnFn(req.bin, req.args, { shell: false, cwd: opts.workspaceRoot });
+      child = spawnFn(req.bin, req.args, { shell: false, cwd: req.cwd }); // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- bin is a trusted-resolver result chosen by the caller, argv array, no shell
     } catch (err) {
       step.status = 'error';
       step.error = String(err);

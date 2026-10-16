@@ -2,6 +2,9 @@ import * as fs from "fs";
 import * as path from "path";
 import { spawn } from "child_process";
 import { invalidateTrustedGit, trustedGitPath } from "./git/trustedGit";
+import {
+  APT_GET, BREW, CHOCO, DNF, PACMAN, trustedExecutablePath, WINGET, YUM, type ExecutableSpec,
+} from "./exec/trustedExecutable";
 
 export type CommandRunner = (
   command: string,
@@ -26,12 +29,22 @@ export interface GitBootstrapResult {
   initializedRepo: boolean;
 }
 
+/** B214: true only for a user-level `true`; workspace and folder values are ignored. */
+export function autoInstallGitEnabled(inspected: { globalValue?: boolean } | undefined): boolean {
+  return inspected?.globalValue === true;
+}
+
+/** The installers, each resolved from its known locations only (B214). */
+const INSTALLERS: Record<string, ExecutableSpec> = {
+  winget: WINGET, choco: CHOCO, brew: BREW, "apt-get": APT_GET, dnf: DNF, yum: YUM, pacman: PACMAN,
+};
+
 export async function ensureGitRepositoryReady(
   workspaceRoot: string,
   options: GitBootstrapOptions = {},
 ): Promise<GitBootstrapResult> {
   const existsSync = options.existsSync || fs.existsSync;
-  const runner = options.runner || defaultRunner;
+  const runner = options.runner || defaultBootstrapRunner;
   const log = options.log || (() => {});
   const platform = options.platform || process.platform;
   const autoInstallGit = options.autoInstallGit ?? false;
@@ -142,30 +155,20 @@ async function runCommand(
   }
 }
 
-async function defaultRunner(
+/** The bootstrap's own runner: git through the trusted resolver, installers from their known locations. */
+export async function defaultBootstrapRunner(
   command: string,
   args: string[],
   cwd?: string,
 ): Promise<{ code: number; stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
     const options = { cwd, shell: false as const, windowsHide: true };
+    const installer = INSTALLERS[command];
     const child = command === "git"
       ? spawn(trustedGitPath(cwd), args, options) // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute git path, argv array, no shell
-      : command === "winget"
-        ? spawn("winget", args, options)
-        : command === "choco"
-          ? spawn("choco", args, options)
-          : command === "brew"
-            ? spawn("brew", args, options)
-            : command === "apt-get"
-              ? spawn("apt-get", args, options)
-              : command === "dnf"
-                ? spawn("dnf", args, options)
-                : command === "yum"
-                  ? spawn("yum", args, options)
-                  : command === "pacman"
-                    ? spawn("pacman", args, options)
-                    : null;
+      : installer
+        ? spawn(trustedExecutablePath(installer, cwd), args, options) // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute installer path, argv array, no shell
+        : null;
     if (!child) {
       resolve({
         code: 126,

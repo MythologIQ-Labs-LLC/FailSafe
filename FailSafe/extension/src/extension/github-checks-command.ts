@@ -19,6 +19,7 @@ import {
 import { credentialUi } from './credentials-command';
 import { trustedGitPath } from '../shared/git/trustedGit';
 import { healthFromGitHubPublish, recordIntegrationHealth } from '../integrations/github-checks/github-checks-health';
+import { GH, trustedExecutablePath } from '../shared/exec/trustedExecutable';
 
 function git(args: string[], cwd: string): string | undefined {
   try {
@@ -26,10 +27,10 @@ function git(args: string[], cwd: string): string | undefined {
   } catch { return undefined; }
 }
 
-/** Best-effort PR number for HEAD via the gh CLI (read-only). Undefined if no PR. */
-function resolvePrNumber(cwd: string): number | undefined {
+/** Best-effort PR number for HEAD via the gh CLI (read-only). Undefined if no PR or no trusted gh (B211). */
+export function resolvePrNumber(cwd: string): number | undefined {
   try {
-    const out = execFileSync('gh', ['pr', 'view', '--json', 'number', '-q', '.number'], { cwd, encoding: 'utf8', timeout: 8000 }).trim();
+    const out = execFileSync(trustedExecutablePath(GH, cwd), ['pr', 'view', '--json', 'number', '-q', '.number'], { cwd, encoding: 'utf8', timeout: 8000 }).trim(); // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute gh path, argv array, no shell
     const n = parseInt(out, 10);
     return Number.isFinite(n) ? n : undefined;
   } catch { return undefined; }

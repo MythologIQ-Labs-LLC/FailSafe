@@ -22,6 +22,8 @@ import type { EventBus } from "../shared/EventBus";
 import type { Logger } from "../shared/Logger";
 import type { L3ApprovalRequest } from "../shared/types/l3-approval";
 import { wireMediators, wireUpstreamMonitor } from "./bootstrapBicameralWiring";
+import { trustedCommandPath } from "../shared/exec/trustedExecutable";
+import { userLevelValue } from "../shared/userSetting";
 
 /** B151: DID stamped onto receipts issued by this extension's interceptor. */
 const INTERCEPTOR_ISSUED_BY = "did:failsafe:instance:extension";
@@ -33,9 +35,15 @@ const INTERCEPTOR_ISSUED_BY = "did:failsafe:instance:extension";
 function readBicameralExtraRoots(
   cfg: vscode.WorkspaceConfiguration,
 ): string[] {
-  const raw = cfg.get<string[]>("extraCommandRoots", []);
+  const raw = userLevelValue<string[]>(cfg.inspect<string[]>("extraCommandRoots"), []);
   return Array.isArray(raw) ? raw.filter((r) => typeof r === "string") : [];
 }
+
+/** LD15: the command and auto-connect are read only from user settings (machine scope). */
+const readCommand = (cfg: vscode.WorkspaceConfiguration): string =>
+  userLevelValue<string>(cfg.inspect<string>("command"), "bicameral-mcp") || "bicameral-mcp";
+const readAutoConnect = (cfg: vscode.WorkspaceConfiguration): boolean =>
+  userLevelValue<boolean>(cfg.inspect<boolean>("autoConnect"), false) === true;
 
 export interface ConsoleServerSurface {
   setBicameralAutoConnect(value: boolean): void;
@@ -143,13 +151,18 @@ async function wireFromConfig(
   deps: BicameralIntegrationDeps,
 ): Promise<void> {
   const cfg = vscode.workspace.getConfiguration("failsafe.integrations.bicameral");
-  const command = cfg.get<string>("command", "bicameral-mcp") || "bicameral-mcp";
-  consoleServer.setBicameralAutoConnect(cfg.get<boolean>("autoConnect", false));
+  const command = readCommand(cfg);
+  consoleServer.setBicameralAutoConnect(readAutoConnect(cfg));
   const prior = consoleServer.getBicameralClient();
   const safe = await isSafeBicameralCommandResolved(command, {
     extraRoots: readBicameralExtraRoots(cfg),
   });
-  if (!safe) {
+  // B211 (review delta LD14 (c)): the client only ever gets the trusted absolute file.
+  let resolved: string | undefined;
+  if (safe) {
+    try { resolved = trustedCommandPath(command, workspaceRoot); } catch { resolved = undefined; }
+  }
+  if (!safe || !resolved) {
     consoleServer.setBicameralCommand("bicameral-mcp");
     consoleServer.setBicameralClient(null);
     wireInterceptor(consoleServer, deps, null);
@@ -158,7 +171,7 @@ async function wireFromConfig(
   }
   consoleServer.setBicameralCommand(command);
   const client = new BicameralMcpClient({
-    command,
+    command: resolved,
     cwd: workspaceRoot,
     idleDisconnectMs: cfg.get<number>("idleDisconnectMs", 900_000),
   });
@@ -193,7 +206,7 @@ function wireBicameralClient(
   consoleServer.setBicameralAutoConnectWriter(async (value) => {
     await vscode.workspace
       .getConfiguration("failsafe.integrations.bicameral")
-      .update("autoConnect", value, vscode.ConfigurationTarget.Workspace);
+      .update("autoConnect", value, vscode.ConfigurationTarget.Global);
   });
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
@@ -204,6 +217,10 @@ function wireBicameralClient(
       ) {
         void wireFromConfig(consoleServer, workspaceRoot, deps);
       }
+    }),
+    // The excluded folders follow the open folders, so the command is resolved again.
+    vscode.workspace.onDidChangeWorkspaceFolders(() => {
+      void wireFromConfig(consoleServer, workspaceRoot, deps);
     }),
   );
   // B-BIC-2: deactivate disposer — terminates the stdio subprocess so it does
@@ -227,8 +244,8 @@ export function maybeAutoConnectBicameral(
 ): void {
   void (async () => {
     const cfg = vscode.workspace.getConfiguration("failsafe.integrations.bicameral");
-    if (!cfg.get<boolean>("autoConnect", false)) return;
-    const command = cfg.get<string>("command", "bicameral-mcp") || "bicameral-mcp";
+    if (!readAutoConnect(cfg)) return;
+    const command = readCommand(cfg);
     // B-BIC-7 (audit Finding A): thread extraCommandRoots through the probe so
     // auto-connect honours custom roots, not just the auto-applied defaults.
     try {
@@ -238,7 +255,8 @@ export function maybeAutoConnectBicameral(
         extraRoots: readBicameralExtraRoots(cfg),
       });
       if (probe.state !== "configured-not-running") return;
-      const client = new BicameralMcpClient({ command, cwd: workspaceRoot });
+      const resolvedCommand = trustedCommandPath(command, workspaceRoot);
+      const client = new BicameralMcpClient({ command: resolvedCommand, cwd: workspaceRoot });
       await client.connect();
       consoleServer.setBicameralClient(client);
       consoleServer.broadcastEvent({ type: "bicameral.connected" });

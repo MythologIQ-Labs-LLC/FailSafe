@@ -41,9 +41,9 @@ class FakeInstaller implements IQorLogicPackageInstaller {
 }
 
 function fixedResolver(command = 'python', args: string[] = []): PythonInterpreterResolver {
-  const config = { get: () => undefined };
+  const config = { get: () => undefined, inspect: () => undefined };
   const run: RunCommand = async () => ({ stdout: 'Python 3.12.0\n', stderr: '', code: 0 });
-  const resolver = new PythonInterpreterResolver(config, null, run);
+  const resolver = new PythonInterpreterResolver(config, null, run, (c) => c);
   const cached: ResolvedInterpreter = {
     ok: true, command, args, version: '3.12.0', source: 'user-setting',
   };
@@ -110,7 +110,7 @@ suite('QorLogicSkillIngestor: command dispatch', function () {
 
     assert.equal(calls.length, 1);
     assert.equal(calls[0].cmd, '/opt/py/python');
-    assert.deepEqual(calls[0].args, ['-m', 'qor.cli', 'install', '--host', 'claude', '--scope', 'repo']);
+    assert.deepEqual(calls[0].args, ['-P', '-m', 'qor.cli', 'install', '--host', 'claude', '--scope', 'repo']);
   });
 
   test('runs both hosts sequentially', async () => {
@@ -346,9 +346,9 @@ suite('QorLogicSkillIngestor: rescan + prerequisites', function () {
 
   test('aborts with no-python-found when resolver yields nothing', async () => {
     const installer = new FakeInstaller();
-    const config = { get: () => undefined };
+    const config = { get: () => undefined, inspect: () => undefined };
     const run: RunCommand = async () => ({ stdout: '', stderr: '', code: 127 });
-    const resolver = new PythonInterpreterResolver(config, null, run);
+    const resolver = new PythonInterpreterResolver(config, null, run, (c) => c);
     const { run: instRun, calls } = makeRun(() => ok());
     const ingestor = new QorLogicSkillIngestor(
       installer, resolver, withTmpDir(), instRun, async () => undefined, sinkChannel,
