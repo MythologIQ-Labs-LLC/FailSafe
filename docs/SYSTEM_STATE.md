@@ -1,6 +1,6 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-10-17 (v6.0.8 integration on `release/v6.0.8-rc`: lanes A-D, the combined-review, full-run, CI timer, temp-hygiene and POSIX executable-trust fixes, version 6.0.8; ledger #705-#761, seal #761; code candidate `ec793f02`; not merged, not tagged, not published)
+**Last Updated:** 2026-10-17 (v6.0.8 integration on `release/v6.0.8-rc`: lanes A-D, the combined-review, full-run, CI timer, temp-hygiene and POSIX executable-trust fixes, version 6.0.8; ledger #705-#763, seal #763; code candidate `d0555a7f`; not merged, not tagged, not published)
 **Active local review:** `fix/system-state-currency-sprint2` — this cycle. Restores the Tier 1 freshness contract and adds `system-state-currency.test.cjs`, the first check that asserts it. Prior to this cycle no test anywhere read this file's content.
 **Prior local review:** `fix/qor169-sprint1-seal-unblock` — MERGED to `main` as `1e1215cc` (PR #448). qor-logic 0.163.1 → 0.169.0; `.qorlogic/config.json` created, which is what allows a seal to complete at all; five vacuously-passing governance controls identified; TTS timeout assertion made deterministic and falsifying. Seal Entry #602.
 **Open PRs:** #442 (Bicameral upstream row error state), #443 (plan-grep-lint regex recognition), #444 (#367 per-engine provenance), #445 (#242 Shadow Genome severity aria — supersedes #440, closed as duplicate), #446 + #447 (dependabot). #447's blocker — a wall-clock TTS assertion — was removed by Entry #602.
@@ -20,6 +20,7 @@
 - Candidate `f1d15ea3`: npm test 5001 passing / 0 failing / 18 pending on the re-run (the first run hit the RiskStore rename stub, B243); test:node 727/716 (FX946 baseline, 9 POSIX rows skipped); test:ui 209/0/4; eight 6.0.8 VSIXs verified; packaged SQLite loads in Node and Electron; rv lifecycle 12/12 from published 6.0.7. The POSIX trust rows run on Linux CI.
 - Ledger #705-#759 (integration seal #759, after #746 and #753); the ledger stays DAMAGED (#467) under the bounded per-cycle override.
 - Follow-up after seal #759: PR #529's Linux CI refused the runner's world-writable tool-cache node in two install-detector rows, which now use a private node (`ec793f02`); ledger #705-#761, seal #761.
+- Second follow-up after seal #761: the install-detector rows' private node was a copy of the extension host's Electron binary; privateNode now copies a real node (`d0555a7f`); B244 files the #473 ledger timing row; ledger #705-#763, seal #763.
 
 ## 2026-10-16 — v6.0.8 integration (release/v6.0.8-rc, not tagged, not published)
 
