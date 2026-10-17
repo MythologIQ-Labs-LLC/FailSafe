@@ -719,6 +719,12 @@ function validate(inputs) {
   const pf = parsePortfolio(inputs.portfolioText);
   problems.push(...pf.problems);
   for (const ct of pf.citations) for (const p of citationProblems(ct, read)) add('citation', `${PORTFOLIO}:${ct.no}: ${p}`);
+  // The scenarios document claims nothing as built without a citation that resolves.
+  (inputs.scenariosText || '').split(/\r?\n/).forEach((line, i) => {
+    const { cites, bad } = citationsOn(line);
+    for (const b of bad) add('citation-grammar', `${SCENARIOS}:${i + 1}: ${b} is citation-shaped but not \`path:L\` (\`anchor\`)`);
+    for (const ct of cites) for (const p of citationProblems(ct, read)) add('citation', `${SCENARIOS}:${i + 1}: ${p}`);
+  });
   const recon = new Map();
   for (const r of pf.recon) {
     const k = reconKind(r.kind);
@@ -886,7 +892,7 @@ function repoInputs() {
     integrationEntries: fs.readdirSync(path.join(REPO_ROOT, INTEGRATIONS_DIR), { withFileTypes: true })
       .filter((e) => e.isDirectory() || /\.ts$/.test(e.name)).map((e) => e.name).sort(),
     reviews: fs.readdirSync(path.join(REPO_ROOT, REVIEW_DIR)).filter((n) => /_CONTRACT_REVIEW\.md$/.test(n)).map((n) => `${REVIEW_DIR}${n}`).sort(),
-    portfolioText: read(PORTFOLIO) || '', backlogText: read('docs/BACKLOG.md') || '',
+    portfolioText: read(PORTFOLIO) || '', scenariosText: read(SCENARIOS) || '', backlogText: read('docs/BACKLOG.md') || '',
     archIndexText: read('docs/ARCHITECTURE_INDEX.md') || '', govIndexText: read('docs/GOVERNANCE_INDEX.md') || '',
     requiredIds: LD1_OTHER_IDS,
   };
@@ -1224,6 +1230,12 @@ describe('FX1003 integration contracts: portfolio, facts, legacy map, registrati
     assertOnly(world({ archIndexText: FX_ARCH([FX_ARCH_ROWS[0].replace('; moving cited code by more than 3 lines requires updating the citation', ''), ...FX_ARCH_ROWS.slice(1)]) }), 'registry', /more than 3 lines/);
     assertOnly(world({ govIndexText: FX_GOV.replace(`| \`${SCENARIOS}\` | s | o |\n`, '').replace(`| \`${PORTFOLIO}\` | p |`, `| \`${PORTFOLIO}\` | p |\n| \`${SCENARIOS}\` | s |`) }), 'governance-index', /Tier 5; expected Tier 2/);
   });
+  it('a scenarios citation that does not resolve is red', () => {
+    const input = world();
+    input.scenariosText = `Step one exists \`${FX_IMPL}:2\` (\`export function sendAlpha\`).\nStep two exists \`${FX_IMPL}:2\` (\`a line that is not there\`).\n`;
+    assertOnly(input, 'citation', /INTEGRATION_SCENARIOS\.md:2/);
+  });
+
   it('a reconciliation row naming an unknown contract is red', () => {
     const recon = [`| \`${INTEGRATIONS_DIR}catalog/\` | shared by alpha, omega | none | \`${CATALOG_FILE}:1\` (\`INTEGRATION_CATALOG\`) |`,
       `| \`${SRC}/roadmap/ui/\` | ${SAME_ORIGIN} | none | \`${CATALOG_FILE}:1\` (\`INTEGRATION_CATALOG\`) |`,

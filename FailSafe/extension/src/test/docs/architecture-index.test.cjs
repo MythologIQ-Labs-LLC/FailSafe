@@ -28,8 +28,10 @@ const checker = require(SCRIPT);
 
 // Recorded at implementation (2026-10-17), from the real index and `git ls-files`; #531 added
 // docs/architecture/MANAGED_ARCHITECTURE_INDEX.md (matches docs/architecture/**/*.md), 9 -> 10.
+// #532 part A added docs/architecture/INTEGRATION_PORTFOLIO.md, INTEGRATION_SCENARIOS.md and 30
+// contracts under docs/architecture/integrations/ (same glob), 10 -> 42.
 const EXPECTED_GLOB_COUNT = 12;
-const EXPECTED_NORMATIVE_COUNT = 10;
+const EXPECTED_NORMATIVE_COUNT = 42;
 const TAIL = 'existing: docs/ARCHITECTURE_INDEX.md#registry';
 
 const HEADER =
