@@ -260,6 +260,55 @@ function insideWindowsApps(p: string): boolean {
   return within(path.win32.resolve(p).toLowerCase(), root);
 }
 
+/** One stat'ed path of an ownership walk (LD23). `lexical`: a link-preserving spawn folder or its parent. */
+export interface OwnershipEntry { uid: number; mode: number; isDirectory: boolean; lexical?: boolean }
+
+/**
+ * LD23: why a file is not trusted on macOS and Linux, or undefined. `entries`
+ * runs from the file, then each folder up to the root. Refused when another
+ * user can write it: an other-writable file, an other-writable folder without
+ * the sticky bit, or, for a link-preserving spawn, an other-writable spawn
+ * folder or its parent even when sticky (Python reads pyvenv.cfg there). Also
+ * refused when any entry is owned by neither root nor `processUid`.
+ * Group-writable is allowed.
+ */
+export function ownershipRefusal(entries: ReadonlyArray<OwnershipEntry>, processUid: number): string | undefined {
+  for (const e of entries) {
+    if ((e.mode & 0o002) === 0) continue;
+    if (!e.isDirectory || e.lexical || (e.mode & 0o1000) === 0) return 'writable by other users';
+  }
+  for (const e of entries) {
+    if (e.uid !== 0 && e.uid !== processUid) return 'owned by another user';
+  }
+  return undefined;
+}
+
+/** `start` and every folder above it, stat'ed; the first `lexicalCount` entries are flagged lexical. */
+function ownershipChain(start: string, lexicalCount: number): OwnershipEntry[] {
+  const out: OwnershipEntry[] = [];
+  for (let p = start; ; p = path.dirname(p)) {
+    const s = fs.statSync(p);
+    out.push({ uid: s.uid, mode: s.mode, isDirectory: s.isDirectory(), lexical: out.length < lexicalCount });
+    if (path.dirname(p) === p) return out;
+  }
+}
+
+/**
+ * LD23, on a POSIX host simulating no other platform: the refusal for `real`
+ * and its folders and, for a link-preserving spawn, `spawnDir` and its folders.
+ * A stat failure refuses (fail closed).
+ */
+function ownershipCheck(platform: NodeJS.Platform, real: string, spawnDir: string | undefined): string | undefined {
+  if (process.platform === 'win32' || platform === 'win32') return undefined;
+  try {
+    const uid = typeof process.getuid === 'function' ? process.getuid() : -1;
+    return ownershipRefusal(ownershipChain(real, 0), uid)
+      ?? (spawnDir === undefined ? undefined : ownershipRefusal(ownershipChain(spawnDir, 2), uid));
+  } catch {
+    return 'ownership could not be checked';
+  }
+}
+
 /** Phase S for one candidate: a survivor, or the reason it was rejected. Nothing is executed. */
 function staticCheck(
   spec: ExecutableSpec, st: SpecState, config: TrustedExecConfig, c: Candidate, roots: Root[], platform: NodeJS.Platform,
@@ -284,12 +333,12 @@ function staticCheck(
   }
   const idKey = identityKey(real, stat);
   if (!admitted(st, config, idKey)) return 'probe failed earlier';
-  if (!spec.spawnLexical) return { real, idKey, spawn: real };
+  if (!spec.spawnLexical) return ownershipCheck(platform, real, undefined) ?? { real, idKey, spawn: real };
   // LD19: every folder link is resolved; only the file name stays as written.
   let dirReal: string;
   try { dirReal = fs.realpathSync.native(path.dirname(c.file)); } catch { return 'not found'; }
   if (insideAny(fold(dirReal), roots)) return 'resolves inside an excluded folder';
-  return { real, idKey, spawn: path.join(dirReal, path.basename(c.file)) };
+  return ownershipCheck(platform, real, dirReal) ?? { real, idKey, spawn: path.join(dirReal, path.basename(c.file)) };
 }
 
 function resolveUncached(
@@ -360,7 +409,9 @@ export function trustedExecutablePath(
     if (insideAny(fold(st.cache.real), roots) || insideAny(fold(path.dirname(st.cache.spawn)), roots)) {
       throw new TrustedExecutableUnavailable(spec.id, [{ candidate: st.cache.spawn, reason: 'inside an excluded folder' }]);
     }
-    if (stillSame(st.cache)) return st.cache.spawn;
+    // LD23: a cached file whose file or folders another user can now write re-resolves.
+    const spawnDir = spec.spawnLexical ? path.dirname(st.cache.spawn) : undefined;
+    if (stillSame(st.cache) && !ownershipCheck(platform, st.cache.real, spawnDir)) return st.cache.spawn;
     invalidateTrustedExecutable(spec);
   }
   const found = resolveUncached(spec, st, config, roots, platform, name);

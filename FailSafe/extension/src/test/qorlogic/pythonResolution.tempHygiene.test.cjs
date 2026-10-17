@@ -4,7 +4,7 @@
  * pythonResolution.adversarial.test.cjs creates about 0.8 GB under the temp
  * folder on every run, including two junctions into the real Python install.
  * This row runs that suite in a child whose TEMP, TMP and TMPDIR point at a
- * fresh empty folder, requires all 15 tests to run, and then requires the
+ * fresh empty folder, requires all 16 tests to run, and then requires the
  * folder to be empty again.
  *
  * Runs after `npm run compile`: node --test src/test/qorlogic/pythonResolution.tempHygiene.test.cjs
@@ -46,7 +46,7 @@ function unlinkLinks(dir) {
   }
 }
 
-test('LD20: the planted-Python suite runs all 15 tests and leaves its temp folder empty', () => {
+test('LD20: the planted-Python suite runs all 16 tests and leaves its temp folder empty', () => {
   const basePy = baseInterpreter();
   const fresh = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'fspyhyg-')));
   try {
@@ -56,19 +56,18 @@ test('LD20: the planted-Python suite runs all 15 tests and leaves its temp folde
     const out = `${r.stdout}\n${r.stderr}`;
     const count = (k) => Number((new RegExp(`^# ${k} (\\d+)$`, 'm').exec(out) || [])[1]);
     assert.equal(r.status, 0, `the suite passed: ${out.slice(-2000)}`);
-    assert.equal(count('tests'), 15, 'all 15 tests ran');
+    assert.equal(count('tests'), 16, 'all 16 tests ran');
     assert.equal(count('fail'), 0);
-    // LD22: exact counts per platform; the POSIX positive control must really run on POSIX.
+    // LD22/LD23: exact counts per platform; both POSIX rows must really run on POSIX.
     const control = (/^ok \d+ - T13 POSIX positive control(.*)$/m.exec(out) || [])[1];
+    const writable = (/^ok \d+ - T13 POSIX attacker-writable PATH folder(.*)$/m.exec(out) || [])[1];
     assert.notEqual(control, undefined, 'the positive-control row reported ok');
-    if (WIN) {
-      assert.equal(count('pass'), 14, '14 passed on win32');
-      assert.equal(count('skipped'), 1, 'only the POSIX positive control skipped on win32');
-      assert.match(control, /# SKIP/, 'skipped on win32');
-    } else {
-      assert.equal(count('pass'), 13, '13 passed on POSIX');
-      assert.equal(count('skipped'), 2, 'only (c) and (h) skipped on POSIX');
-      assert.doesNotMatch(control, /# SKIP/, 'the positive control ran on POSIX');
+    assert.notEqual(writable, undefined, 'the attacker-writable row reported ok');
+    assert.equal(count('pass'), 14, '14 passed');
+    assert.equal(count('skipped'), 2, WIN ? 'only the two POSIX rows skipped on win32' : 'only (c) and (h) skipped on POSIX');
+    for (const line of [control, writable]) {
+      if (WIN) assert.match(line, /# SKIP/, 'skipped on win32');
+      else assert.doesNotMatch(line, /# SKIP/, 'ran on POSIX');
     }
     assert.deepEqual(fs.readdirSync(fresh), [], 'the suite left nothing in its temp folder');
   } finally {

@@ -4,8 +4,10 @@
  * win32: node.exe copied as python.exe, python3.exe, py.exe, pip.exe and
  * pip3.exe. A planted node answers `--version` with the Node version and
  * records every other argv through NODE_OPTIONS=--require <marker>. POSIX: sh
- * plants on an absolute PATH entry inside the workspace that answer
- * `--version` with "Python 3.12.0" and record anything else.
+ * plants that answer `--version` with "Python 3.12.0" and record anything
+ * else, on two absolute PATH entries: plant/bin first, a folder every user can
+ * write (mode 0o777), refused as writable by other users (LD23); then ws/bin,
+ * inside the workspace, refused by the workspace exclusion.
  *
  * Every precondition proves the attack is real on this host; a precondition
  * that does not fire FAILS. One row per interpreter source.
@@ -75,8 +77,7 @@ process.env.FSG_MARKER = MARK;
 const marks = () => (fs.existsSync(MARK) ? fs.readFileSync(MARK, 'utf8').split(/\r?\n/).filter(Boolean) : []);
 const clearMarks = () => { try { fs.unlinkSync(MARK); } catch { /* none */ } };
 const NAMES = WIN ? ['python', 'python3', 'py', 'pip', 'pip3'] : ['python', 'python3', 'pip', 'pip3'];
-/** POSIX: only the workspace plants go on the global PATH; plant/bin is added per row (LD22). */
-function plantAll(dir, onPath) {
+function plantAll(dir) {
   if (WIN) { for (const n of NAMES) fs.copyFileSync(process.execPath, path.join(dir, `${n}.exe`)); return; }
   const bin = path.join(dir, 'bin');
   fs.mkdirSync(bin, { recursive: true });
@@ -85,18 +86,13 @@ function plantAll(dir, onPath) {
     fs.writeFileSync(path.join(bin, n), `#!/bin/sh\nif [ "$1" = "--version" ]; then echo "${ver}"; exit 0; fi\necho "$*" >> "$FSG_MARKER"\nexit 1\n`);
     fs.chmodSync(path.join(bin, n), 0o755);
   }
-  if (onPath) process.env.PATH = `${bin}${DELIM}${process.env.PATH}`;
+  process.env.PATH = `${bin}${DELIM}${process.env.PATH}`;
 }
-plantAll(ws, true);
-plantAll(plantDir, false);
+plantAll(ws);
+plantAll(plantDir);
 const plantBin = path.join(plantDir, 'bin');
-/** POSIX rows with plantDir as the process cwd put plant/bin first on PATH for their own duration. */
-const withPlantPath = async (fn) => {
-  if (WIN) return fn();
-  const prev = process.env.PATH;
-  process.env.PATH = `${plantBin}${DELIM}${prev}`;
-  try { return await fn(); } finally { process.env.PATH = prev; }
-};
+// LD23: plant/bin is the attacker's folder, writable by every user.
+if (!WIN) fs.chmodSync(plantBin, 0o777);
 if (WIN) process.env.NODE_OPTIONS = `--require ${markerJs.replace(/\\/g, '/')}`;
 
 /** The base interpreter (not a venv shim), found from a clean temp folder. */
@@ -147,30 +143,57 @@ test('T13 preconditions: bare python and py with the workspace as cwd run the pl
     const q = spawnSync('py', ['-3', '-m', 'qor.cli'], { cwd: ws, windowsHide: true, encoding: 'utf8' });
     assert.ok(nodeAnswered(q), `the planted py ran: ${q.stderr}`);
   }
-  const v = spawnSync('pip3', ['--version'], { cwd: plantDir, encoding: 'utf8', windowsHide: true, ...(WIN ? {} : { env: { ...process.env, PATH: `${plantBin}${DELIM}${process.env.PATH}` } }) });
+  const v = spawnSync('pip3', ['--version'], { cwd: plantDir, encoding: 'utf8', windowsHide: true });
   assert.ok(WIN ? (v.stdout || '').trim() === process.version : /planted/.test(v.stdout || ''), `the planted pip3 answered: ${v.stdout}`);
 });
 
 test('T13 POSIX positive control', { skip: WIN && 'POSIX PATH plant' }, async () => {
-  // A workspace folder first on PATH is the real POSIX hijack; only the workspace exclusion stops it.
+  // PATH is plant/bin, then ws/bin. plant/bin is refused as writable by other users;
+  // ws/bin only by the workspace exclusion, which this row switches off and on.
   assert.equal(process.cwd(), saved.cwd, 'runs with the original cwd');
   try {
     clearMarks();
     spawnSync('python', ['-m', 'qor.cli'], { cwd: saved.cwd, encoding: 'utf8' });
-    assert.deepEqual(marks(), ['-m qor.cli'], 'precondition: a bare python runs the ws/bin plant');
+    assert.deepEqual(marks(), ['-m qor.cli'], 'precondition: a bare python runs a plant');
     clearMarks();
     configure({ workspaceDirs: [] });
     const r = await new PythonInterpreterResolver(emptyConfig, null, defaultRun).resolve();
     assert.equal(r.ok, true, JSON.stringify(r));
     assert.equal(r.source, 'probe');
-    assert.ok(isInside(r.command, path.join(ws, 'bin')), `with no workspace configured the plant is taken: ${r.command}`);
+    assert.ok(isInside(r.command, path.join(ws, 'bin')), `with no workspace configured, plant/bin is refused and the ws/bin plant is taken: ${r.command}`);
     configure({ workspaceDirs: [ws] });
     // A new resolver: each instance caches its first result.
     const r2 = await new PythonInterpreterResolver(emptyConfig, null, defaultRun).resolve();
     assert.equal(r2.ok, true, JSON.stringify(r2));
     assert.equal(r2.source, 'probe');
-    assert.ok(!isInside(r2.command, ws), `with the workspace excluded the plant is refused: ${r2.command}`);
+    assert.ok(!isInside(r2.command, ws), `with the workspace excluded, the ws/bin plant is refused: ${r2.command}`);
+    assert.ok(!isInside(r2.command, plantBin), `plant/bin stays refused as writable by other users: ${r2.command}`);
   } finally {
+    configure({ workspaceDirs: [ws] });
+    clearMarks();
+  }
+});
+
+test('T13 POSIX attacker-writable PATH folder', { skip: WIN && 'POSIX modes' }, async () => {
+  assert.equal(process.cwd(), saved.cwd, 'runs with the original cwd');
+  const planted = path.join(plantBin, 'python3');
+  try {
+    clearMarks();
+    configure({ workspaceDirs: [ws] });
+    const r = await new PythonInterpreterResolver(emptyConfig, null, defaultRun).resolve();
+    assert.equal(r.ok, true, JSON.stringify(r));
+    assert.equal(r.source, 'probe');
+    assert.ok(!isInside(r.command, plantBin) && !isInside(r.command, ws), `neither plant: ${r.command}`);
+    assert.deepEqual(marks(), [], 'no plant ran');
+    assert.throws(() => te.checkTrustedPath(te.PYTHON3, planted), (e) => /writable by other users/.test(e.message), 'refused for the right reason');
+    // Positive control: a folder only this user can write is the user's own PATH.
+    fs.chmodSync(plantBin, 0o755);
+    configure({ workspaceDirs: [ws] }); // drop the cached result
+    const own = await new PythonInterpreterResolver(emptyConfig, null, defaultRun).resolve();
+    assert.equal(own.ok, true, JSON.stringify(own));
+    assert.equal(own.command, planted, 'taken once only the user can write plant/bin');
+  } finally {
+    fs.chmodSync(plantBin, 0o777);
     configure({ workspaceDirs: [ws] });
     clearMarks();
   }
@@ -241,15 +264,13 @@ test('T13 (e): a Python-extension interpreter inside the workspace falls through
 
 test('T13 (f): a planted process cwd does not stop resolution, and pip runs from a trusted interpreter', async () => {
   reset();
-  await withPlantPath(async () => {
-    process.chdir(plantDir);
-    try {
-      const resolver = new PythonInterpreterResolver(emptyConfig, null, defaultRun);
-      const py = await resolver.resolve();
-      assert.equal(py.ok, true, `resolved despite the plants: ${JSON.stringify(py)}`);
-      await new QorLogicPackageInstaller(resolver, output, recRun).isInstalled();
-    } finally { process.chdir(saved.cwd); }
-  });
+  process.chdir(plantDir);
+  try {
+    const resolver = new PythonInterpreterResolver(emptyConfig, null, defaultRun);
+    const py = await resolver.resolve();
+    assert.equal(py.ok, true, `resolved despite the plants: ${JSON.stringify(py)}`);
+    await new QorLogicPackageInstaller(resolver, output, recRun).isInstalled();
+  } finally { process.chdir(saved.cwd); }
   noPlant();
   assert.equal(recorded.length, 1);
   assert.ok(path.isAbsolute(recorded[0].cmd) && !isInside(recorded[0].cmd, plantDir), recorded[0].cmd);
@@ -258,11 +279,9 @@ test('T13 (f): a planted process cwd does not stop resolution, and pip runs from
 
 test('T13 (g): AdapterService.checkState never reports the planted interpreter', async () => {
   reset();
+  process.chdir(plantDir);
   let state;
-  await withPlantPath(async () => {
-    process.chdir(plantDir);
-    try { state = await new AdapterService(new EventBus()).checkState(); } finally { process.chdir(saved.cwd); }
-  });
+  try { state = await new AdapterService(new EventBus()).checkState(); } finally { process.chdir(saved.cwd); }
   assert.notEqual(state.pythonVersion, process.version, 'not the Node version of the plant');
   assert.match(String(state.pythonVersion), /^3\.\d+/);
   assert.equal(state.pipAvailable, true);

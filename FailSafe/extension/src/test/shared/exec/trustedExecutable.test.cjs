@@ -284,3 +284,55 @@ test('T17 (b) POSIX: on a cache hit the spawn folder alone is checked against th
   // The cached file lives outside R2; only its spawn folder is R2.
   assert.throws(() => trustedExecutablePath(PYTHON, R2), (e) => e instanceof TrustedExecutableUnavailable);
 });
+
+// LD23: who can write a file and its folders. Modes are octal; uid 1000 runs FailSafe, 2000 is another user.
+test('LD23 (i): ownershipRefusal refuses what another user can write or owns, and allows the rest', () => {
+  assert.equal(typeof te.ownershipRefusal, 'function', 'ownershipRefusal is exported');
+  const ME = 1000;
+  const file = (mode, uid = ME) => ({ uid, mode, isDirectory: false });
+  const folder = (mode, uid = ME, lexical = false) => ({ uid, mode, isDirectory: true, lexical });
+  const root = folder(0o40755, 0);
+  const refused = {
+    'an other-writable file': [[file(0o100757), folder(0o40755), root], 'writable by other users'],
+    'an other-writable folder without the sticky bit': [[file(0o100755), folder(0o40777), root], 'writable by other users'],
+    'an other-writable ancestor': [[file(0o100755), folder(0o40755), folder(0o40777), root], 'writable by other users'],
+    'a folder owned by another uid': [[file(0o100755), folder(0o40755, 2000), root], 'owned by another user'],
+    'a sticky other-writable lexical spawn folder (pyvenv.cfg)': [[folder(0o41777, ME, true), folder(0o40755, ME, true), root], 'writable by other users'],
+    'a sticky other-writable lexical parent': [[folder(0o40755, ME, true), folder(0o41777, ME, true), root], 'writable by other users'],
+  };
+  for (const [name, [entries, why]] of Object.entries(refused)) assert.equal(te.ownershipRefusal(entries, ME), why, name);
+  const allowed = {
+    'a sticky other-writable ancestor (non-lexical)': [file(0o100755), folder(0o40755), folder(0o41777, 0), root],
+    'a group-writable folder': [file(0o100775), folder(0o40775), root],
+    'a root-owned chain': [file(0o100755, 0), folder(0o40755, 0), root],
+    "the process uid's chain": [file(0o100700), folder(0o40700), folder(0o40755), root],
+  };
+  for (const [name, entries] of Object.entries(allowed)) assert.equal(te.ownershipRefusal(entries, ME), undefined, name);
+});
+
+test('LD23 (iii) POSIX: an other-writable folder is refused, also on a cache hit, and a lexical Python link into one is refused', { skip: WIN && 'POSIX modes' }, () => {
+  const fx = fixture('gh');
+  const probe = counter((real) => (path.basename(real) === 'gh' ? 'gh version 9.9.9' : 'Python 3.12.0'));
+  fs.chmodSync(fx.Kdir, 0o777);
+  configureTrustedExecutables(cfg(fx, { pathEnv: pathOf(fx.Kdir), probe }));
+  assert.throws(() => trustedExecutablePath(GH, fx.E), (e) => e instanceof TrustedExecutableUnavailable && /writable by other users/.test(e.message));
+  fs.chmodSync(fx.Kdir, 0o755);
+  configureTrustedExecutables(cfg(fx, { pathEnv: pathOf(fx.Kdir), probe }));
+  assert.equal(trustedExecutablePath(GH, fx.E), realOr(fx.K), 'accepted once only the user can write the folder');
+  fs.chmodSync(fx.Kdir, 0o777);
+  assert.throws(() => trustedExecutablePath(GH, fx.E), (e) => e instanceof TrustedExecutableUnavailable && /writable by other users/.test(e.message), 'the cache hit checks again');
+  fs.chmodSync(fx.Kdir, 0o755);
+
+  // A 0o777 folder holding links to files in a 0o755 folder.
+  const R = dir(fx.base, 'R');
+  const realPy = inert(R, 'python3.12');
+  const realGh = inert(R, 'gh');
+  const L = dir(fx.base, 'L');
+  fs.symlinkSync(realPy, path.join(L, 'python'));
+  fs.symlinkSync(realGh, path.join(L, 'gh'));
+  fs.chmodSync(L, 0o777);
+  configureTrustedExecutables(cfg(fx, { pathEnv: pathOf(L), probe }));
+  assert.throws(() => trustedExecutablePath(PYTHON, fx.E), (e) => e instanceof TrustedExecutableUnavailable && /writable by other users/.test(e.message), 'Python spawns through L, which others can write');
+  assert.equal(trustedExecutablePath(GH, fx.E), realOr(realGh), 'gh spawns its realpath, in a folder only the user can write');
+  fs.chmodSync(L, 0o755);
+});
