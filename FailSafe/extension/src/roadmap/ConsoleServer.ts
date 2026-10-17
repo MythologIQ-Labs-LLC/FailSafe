@@ -101,6 +101,8 @@ export class ConsoleServer {
   private operatorConfirmer: import("../extension/operatorConfirmation").ConfirmOperatorAction | null = null;
   /** #531: `failsafe.architecture.indexPath` reader, set by bootstrapServers; null -> the default path. */
   private architectureIndexPath: (() => string | undefined) | null = null;
+  /** #532 part B: set by bootstrapServers after construction; read at request time. */
+  private intentService: import("../governance/delivery/deliveryService").DeliveryIntents | null = null;
   private marketplaceCatalog = new MarketplaceCatalog();
   private marketplaceInstaller: MarketplaceInstaller;
   private securityScanner: SecurityScanner;
@@ -216,6 +218,8 @@ export class ConsoleServer {
   }
   setOutputChannel(channel: { show(preserveFocus?: boolean): void }): void { this.outputChannel = channel; }
   setOperatorConfirmer(confirm: import("../extension/operatorConfirmation").ConfirmOperatorAction): void { this.operatorConfirmer = confirm; }
+  /** #532 part B: the IntentService behind the delivery routes and the commit-check route's active-intent read. */
+  setIntentService(service: import("../governance/delivery/deliveryService").DeliveryIntents | null): void { this.intentService = service; }
   /** #531: reader for the managed architecture index path setting. */
   setArchitectureIndexPathProvider(fn: (() => string | undefined) | null): void { this.architectureIndexPath = fn; }
   /** Expose Express app for post-start route registration (Phase 3 V3 Path A). */
