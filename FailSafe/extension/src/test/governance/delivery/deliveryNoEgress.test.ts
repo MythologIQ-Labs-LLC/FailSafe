@@ -32,17 +32,29 @@ const allowed = (a: string[]): boolean => DELIVERY_GIT_SUBCOMMANDS.has(a[0]) || 
 
 const CP_FUNCTIONS = ['spawn', 'spawnSync', 'exec', 'execSync', 'execFile', 'execFileSync', 'fork'];
 
-interface Stubs { counts: Record<string, number>; restore: () => void; inRunner: { value: boolean } }
+// The extension host is shared with VS Code's own extensions (the built-in git extension spawns git
+// while it scans workspace folders), so a call is counted only when FailSafe code is on its stack:
+// a frame under this extension's out/ other than this stub. Foreign calls are tallied separately.
+const OUT_DIR = path.resolve(__dirname, '..', '..', '..').toLowerCase();
+const fromFailSafe = (stack: string): boolean =>
+  stack.split('\n').slice(2).some((frame) => frame.toLowerCase().includes(OUT_DIR));
+
+interface Stubs {
+  counts: Record<string, number>; stacks: Record<string, string[]>; foreign: number;
+  restore: () => void; inRunner: { value: boolean };
+}
 
 function installStubs(): Stubs {
-  const counts: Record<string, number> = {};
+  const stubs: Stubs = { counts: {}, stacks: {}, foreign: 0, inRunner: { value: false }, restore: () => undefined };
   const restores: Array<() => void> = [];
-  const inRunner = { value: false };
   const patch = (obj: Record<string, unknown>, key: string, label: string, countWhen: () => boolean = () => true): void => {
     const original = obj[key] as (...a: unknown[]) => unknown;
-    counts[label] = 0;
+    stubs.counts[label] = 0;
+    stubs.stacks[label] = [];
     obj[key] = function (this: unknown, ...a: unknown[]) {
-      if (countWhen()) counts[label] += 1;
+      const stack = String(new Error('call').stack);
+      if (!fromFailSafe(stack)) stubs.foreign += 1;
+      else if (countWhen()) { stubs.counts[label] += 1; stubs.stacks[label].push(stack); }
       return original.apply(this, a);
     };
     restores.push(() => { obj[key] = original; });
@@ -51,8 +63,9 @@ function installStubs(): Stubs {
   patch(http, 'request', 'http.request'); patch(http, 'get', 'http.get');
   patch(https, 'request', 'https.request'); patch(https, 'get', 'https.get');
   patch(net, 'connect', 'net.connect'); patch(net, 'createConnection', 'net.createConnection');
-  for (const fn of CP_FUNCTIONS) patch(childProcess, fn, `child_process.${fn}`, () => !inRunner.value);
-  return { counts, inRunner, restore: () => { for (const r of restores.reverse()) r(); } };
+  for (const fn of CP_FUNCTIONS) patch(childProcess, fn, `child_process.${fn}`, () => !stubs.inRunner.value);
+  stubs.restore = () => { for (const r of restores.reverse()) r(); };
+  return stubs;
 }
 
 suite('delivery: no egress (#532 LD1)', () => {
@@ -92,12 +105,26 @@ suite('delivery: no egress (#532 LD1)', () => {
       assert.equal(unlink.ok, true, JSON.stringify(unlink));
       await writeDeliveryEdge(ctx, unlink as Extract<typeof unlink, { ok: true }>, 'user');
       await assessIntentDelivery(ctx, intent.id);
+    } catch (e) {
+      stubs.restore();
+      throw e;
+    }
+    const flow = { ...stubs.counts };
+    // Falsifier: the stubs do count a call FailSafe code makes outside the runner.
+    try {
+      makeArchitectureGit()(ws.root, ['rev-parse', '--verify', '--quiet', 'HEAD']);
+      await (globalThis.fetch as (u: string) => Promise<unknown>)('x-invalid://probe').catch(() => undefined);
     } finally {
       stubs.restore();
     }
+    assert.equal(stubs.counts['child_process.spawnSync'] - flow['child_process.spawnSync'], 1, 'the stub counts a FailSafe spawnSync');
+    assert.equal(stubs.counts.fetch - flow.fetch, 1, 'the stub counts a FailSafe fetch');
     assert.equal(view.integrity, 'valid');
     assert.equal((view as { found: boolean }).found, true);
-    for (const [label, n] of Object.entries(stubs.counts)) assert.equal(n, 0, `${label} was called ${n} time(s)`);
+    for (const [label, n] of Object.entries(flow)) {
+      assert.equal(n, 0, `${label} was called ${n} time(s):\n${stubs.stacks[label].join('\n---\n')}`);
+    }
+    console.log(`  no-egress: ${subcommands.length} git call(s) through the runner; ${stubs.foreign} foreign call(s) from other extensions ignored`);
     assert.ok(subcommands.length > 0, 'git ran through the injected runner');
     for (const a of subcommands) assert.ok(allowed(a), `git ${a.join(' ')} is not in the LD4 allowlist`);
     assert.ok(subcommands.some((a) => a[0] === 'cat-file'), 'the commit edge was re-checked through the runner');

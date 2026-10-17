@@ -2,7 +2,7 @@
 import { randomUUID } from 'node:crypto';
 import {
   Intent, IntentType, IntentScope, IntentMetadata, IntentStatus, IntentEvidence, IntentSchema,
-  IntentEdgeKind, IntentHistoryEntry,
+  IntentEdgeKind, IntentHistoryEntry, IntentEdgeDetailsSchema,
 } from './types/IntentTypes';
 import { IntentStore } from './IntentStore';
 import { IntentHistoryLog } from './IntentHistoryLog';
@@ -65,8 +65,34 @@ export interface LinkEdgeParams {
   actor: string;
 }
 
-export function replayIntentEdges(_entries: IntentHistoryEntry[], _intentId: string): IntentEdge[] {
-  throw new Error('not implemented');
+const edgeKey = (edge: string, target: string): string => `${edge}\u0000${target}`;
+const isSealEntry = (e: IntentHistoryEntry): boolean =>
+  e.event === 'SEALED' || (e.event === 'STATUS_CHANGED' && e.newStatus === 'SEALED');
+
+/**
+ * #532: the edges of one intent, replayed from its history: LINKED adds an edge, a later
+ * UNLINKED for the same edge and target removes it. Edges are a set, so concurrent duplicate
+ * LINKED entries collapse to the first one. Replay stops at the intent's seal; entries after it
+ * are ignored. Entries whose details fail the schema are skipped.
+ */
+export function replayIntentEdges(entries: IntentHistoryEntry[], intentId: string): IntentEdge[] {
+  const edges = new Map<string, IntentEdge>();
+  for (const e of entries) {
+    if (e.intentId !== intentId) continue;
+    if (isSealEntry(e)) break;
+    if (e.event !== 'LINKED' && e.event !== 'UNLINKED') continue;
+    const parsed = IntentEdgeDetailsSchema.safeParse(e.details);
+    if (!parsed.success) continue;
+    const key = edgeKey(parsed.data.edge, parsed.data.target);
+    if (e.event === 'UNLINKED') { edges.delete(key); continue; }
+    if (!edges.has(key)) {
+      edges.set(key, {
+        edge: parsed.data.edge, target: parsed.data.target, provenance: parsed.data.provenance,
+        linkedAt: e.timestamp, actor: e.actor, entryHash: e.entryHash ?? null,
+      });
+    }
+  }
+  return [...edges.values()];
 }
 
 export class IntentService {
@@ -152,11 +178,119 @@ export class IntentService {
     }
   }
 
-  async listIntents(): Promise<IntentListing> { throw new Error('not implemented'); }
-  async getIntentRecord(_intentId: string): Promise<IntentRecordLookup> { throw new Error('not implemented'); }
-  async getEdges(_intentId: string): Promise<IntentEdgeLookup> { throw new Error('not implemented'); }
-  async linkEdge(_params: LinkEdgeParams): Promise<EdgeWriteResult> { throw new Error('not implemented'); }
-  async unlinkEdge(_params: Omit<LinkEdgeParams, 'provenance'>): Promise<EdgeWriteResult> { throw new Error('not implemented'); }
+  /** #532: every history entry, or null when the chain fails its check or cannot be read. */
+  private async verifiedEntries(): Promise<IntentHistoryEntry[] | null> {
+    try {
+      const chain = await this.history.verifyChainIntegrity();
+      return chain.valid ? await this.history.loadAllEntries() : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** #532: an archived intent, or null when absent or unreadable. */
+  private archivedIntent(intentId: string): Intent | null {
+    try {
+      const parsed = IntentSchema.safeParse(this.store.getArchivedIntent(intentId));
+      return parsed.success ? parsed.data : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * #532: the active intent plus every archived SEALED intent named by a CREATED history entry
+   * (looked up with IntentStore.getArchivedIntent). A broken chain lists nothing.
+   */
+  async listIntents(): Promise<IntentListing> {
+    const entries = await this.verifiedEntries();
+    if (!entries) return { integrity: 'invalid' };
+    const active = await this.getActiveIntent();
+    const summary = (i: Intent, isActive: boolean): IntentSummary => ({
+      id: i.id, purpose: i.purpose, type: i.type, status: i.status, createdAt: i.createdAt, active: isActive,
+    });
+    const intents: IntentSummary[] = [];
+    const seen = new Set<string>();
+    for (const e of entries) {
+      if (e.event !== 'CREATED' || seen.has(e.intentId)) continue;
+      seen.add(e.intentId);
+      if (active && active.id === e.intentId) { intents.push(summary(active, true)); continue; }
+      const archived = this.archivedIntent(e.intentId);
+      if (archived && archived.status === 'SEALED') intents.push(summary(archived, false));
+    }
+    if (active && !seen.has(active.id)) intents.push(summary(active, true));
+    return { integrity: 'valid', intents };
+  }
+
+  /** #532: one intent (active or archived) with its CREATED entry and replayed edges. */
+  async getIntentRecord(intentId: string): Promise<IntentRecordLookup> {
+    const entries = await this.verifiedEntries();
+    if (!entries) return { integrity: 'invalid' };
+    const active = await this.getActiveIntent();
+    const isActive = !!active && active.id === intentId;
+    const intent = isActive ? active : this.archivedIntent(intentId);
+    if (!intent) return { integrity: 'valid', record: null };
+    const created = entries.find((e) => e.intentId === intentId && e.event === 'CREATED') ?? null;
+    return {
+      integrity: 'valid',
+      record: { intent, active: isActive, sealed: intent.status === 'SEALED', created, edges: replayIntentEdges(entries, intentId) },
+    };
+  }
+
+  async getEdges(intentId: string): Promise<IntentEdgeLookup> {
+    const entries = await this.verifiedEntries();
+    return entries ? { integrity: 'valid', edges: replayIntentEdges(entries, intentId) } : { integrity: 'invalid' };
+  }
+
+  /** #532: the checks every edge write shares; the verified entries and the CREATED hash, or a refusal. */
+  private async edgeWriteContext(intentId: string): Promise<
+    { ok: true; entries: IntentHistoryEntry[]; createdHash: string | null } | { ok: false; reason: EdgeWriteRefusal }
+  > {
+    const entries = await this.verifiedEntries();
+    if (!entries) return { ok: false, reason: 'integrity' };
+    const active = await this.getActiveIntent();
+    if (!active) return { ok: false, reason: 'no-active-intent' };
+    if (active.id !== intentId) return { ok: false, reason: 'not-active' };
+    if (active.status === 'SEALED') return { ok: false, reason: 'sealed' };
+    const created = entries.find((e) => e.intentId === intentId && e.event === 'CREATED');
+    return { ok: true, entries, createdHash: created?.entryHash ?? null };
+  }
+
+  /**
+   * #532: record an edge for the active, unsealed intent. The provenance gains the CREATED
+   * entry's hash as the intent endpoint's source hash. Refused while the chain is broken, for a
+   * duplicate, and for anything the edge schema rejects. Callers confirm with the operator first.
+   */
+  async linkEdge(params: LinkEdgeParams): Promise<EdgeWriteResult> {
+    const ctx = await this.edgeWriteContext(params.intentId);
+    if (!ctx.ok) return ctx;
+    const details = IntentEdgeDetailsSchema.safeParse({
+      edge: params.edge, target: params.target, provenance: { ...params.provenance, intentSourceHash: ctx.createdHash },
+    });
+    if (!details.success) return { ok: false, reason: 'invalid' };
+    const present = replayIntentEdges(ctx.entries, params.intentId);
+    if (present.some((e) => e.edge === params.edge && e.target === params.target)) return { ok: false, reason: 'duplicate' };
+    await this.history.appendEntry({
+      intentId: params.intentId, timestamp: new Date().toISOString(), event: 'LINKED', actor: params.actor, details: details.data,
+    });
+    return { ok: true };
+  }
+
+  /** #532: remove a present edge of the active, unsealed intent (an UNLINKED entry). */
+  async unlinkEdge(params: Omit<LinkEdgeParams, 'provenance'>): Promise<EdgeWriteResult> {
+    const ctx = await this.edgeWriteContext(params.intentId);
+    if (!ctx.ok) return ctx;
+    const present = replayIntentEdges(ctx.entries, params.intentId);
+    if (!present.some((e) => e.edge === params.edge && e.target === params.target)) return { ok: false, reason: 'absent' };
+    const details = IntentEdgeDetailsSchema.safeParse({
+      edge: params.edge, target: params.target, provenance: { intentSourceHash: ctx.createdHash },
+    });
+    if (!details.success) return { ok: false, reason: 'invalid' };
+    await this.history.appendEntry({
+      intentId: params.intentId, timestamp: new Date().toISOString(), event: 'UNLINKED', actor: params.actor, details: details.data,
+    });
+    return { ok: true };
+  }
 
   async updateStatus(newStatus: IntentStatus, actor: string, auditVerified?: boolean): Promise<void> {
     const active = await this.getActiveIntent();

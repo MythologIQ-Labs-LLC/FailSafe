@@ -280,6 +280,16 @@ export class LedgerManager {
         return row ? this.mapRowToEntry(row) : null;
     }
 
+    /**
+     * #532 part B: newest-first entries whose JSON payload text contains `value`. A prefilter
+     * only: callers match the parsed payload exactly. A full page (`limit` rows) may hide more.
+     */
+    async findEntriesContaining(value: string, limit: number = 200): Promise<LedgerEntry[]> {
+        if (!this.db || !value) { return []; }
+        const rows = this.db.prepare('SELECT * FROM soa_ledger WHERE instr(payload, ?) > 0 ORDER BY id DESC LIMIT ?').all(value, limit) as SoaLedgerRow[];
+        return rows.map(this.mapRowToEntry);
+    }
+
     private mapRowToEntry(row: SoaLedgerRow): LedgerEntry {
         return {
             id: row.id,
