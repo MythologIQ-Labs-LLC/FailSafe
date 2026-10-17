@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- For contributors: the README now links an Architecture Index that names the one canonical document for each design area, and a repository check fails when a new architecture document is added without registering it, pointing to the existing documents to amend instead (#530).
+
 ## [6.0.8] - 2026-10-16
 
 ### Added

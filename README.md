@@ -488,7 +488,7 @@ FailSafe is provided "as is" without warranties of any kind, express or implied.
 ```bash
 git clone https://github.com/MythologIQ/FailSafe.git
 cd FailSafe
-npm install
+cd FailSafe/extension && npm install
 ```
 
 ---
