@@ -1,5 +1,7 @@
 # Governance Index
 
+**Last Reviewed**: 2026-10-17 (SUBSTANTIATE — **#530 architecture index foundation** (`plan-530-architecture-index.md`): docs/ARCHITECTURE_INDEX.md registered in Tier 1 with its validator; four normative docs registered; seal #771.)
+**Last Reviewed**: 2026-10-17 (IMPLEMENT — **#530 architecture index** (`plan-530-architecture-index.md`, Tier 4 plans glob): registered `docs/ARCHITECTURE_INDEX.md` in Tier 1; registered the four canonical design documents that had no tier row (`docs/integrations/INTEGRATION_STRUCTURE_STANDARD.md` and `docs/design/DEVELOPMENT_TRACKER_STANDARD.md` in Tier 2, `docs/design/SHADOW_GENOME_UI.md` and `docs/specs/VOICE_BRAINSTORM_SPEC.md` in Tier 5); Publication status counts re-counted (46 of 77 published, 15 unpublished, 16 shapes). META_LEDGER DAMAGED carried under the owner's bounded per-cycle override; normal governance NOT restored (#467).)
 **Last Reviewed**: 2026-10-17 (SUBSTANTIATE — **v6.0.8 integration, LD23 fourth follow-up** (`plan-v608-integration.md`): T8 private PowerShell copy; seal #767 on ac66f10c.)
 **Last Reviewed**: 2026-10-17 (SUBSTANTIATE — **v6.0.8 integration, LD23 third follow-up** (`plan-v608-integration.md`): #473 refill rows and T8 diagnostics; seal #765 on 7f4b88c2.)
 **Last Reviewed**: 2026-10-17 (SUBSTANTIATE — **v6.0.8 integration, LD23 second follow-up** (`plan-v608-integration.md`): privateNode copies a real node under Electron; seal #763 on d0555a7f.)
@@ -63,6 +65,7 @@ Always-current. A stale Tier 1 doc IS a P0 governance bug.
 | `CHANGELOG.md` (root + extension copy) | Release notes per version | `/qor-document` RELEASE_METADATA | DELIVER entry in `META_LEDGER` without matching CHANGELOG section |
 | `docs/CONCEPT.md` | Genesis intent — what FailSafe is and is not | `/qor-bootstrap`; mutations require `/qor-ideate` + audit | drift from public framing in README/CHANGELOG |
 | `docs/ARCHITECTURE_PLAN.md` | Current architecture baseline + Risk Grade | `/qor-plan` updates; `/qor-audit` reviews | components shipped but not described, or vice versa |
+| `docs/ARCHITECTURE_INDEX.md` | Architecture Index: which document owns which design decision (registry, normative scope, legacy prefixes); navigation for design intent, not a second governance index (#530, FX1001) | `/qor-plan`, `/qor-audit` | a normative architecture doc exists without a registry row, or `node FailSafe/extension/scripts/check-architecture-index.cjs --repo-root .` fails |
 | `docs/META_LEDGER.md` | Merkle-chained decision ledger; **chain integrity is load-bearing** | `/qor-substantiate` (appends) + `/qor-validate` (verifies) | chain hash mismatch, missing entries, gaps in numbering |
 | `docs/SYSTEM_STATE.md` | Living snapshot of seal-state, current release, active integrations | `/qor-document` SESSION_DOCS + `/qor-substantiate` (post-seal update) | "Last Updated" older than latest sealed entry |
 | `docs/BACKLOG.md` | All backlog items + version summary table | every cycle that ships, audits, or closes an item | row status diverges from `META_LEDGER` DELIVER |
@@ -88,6 +91,8 @@ Stable rules. Changes are explicit doctrine events recorded in `META_LEDGER` and
 | `docs/AUTONOMOUS_RELIABILITY_MANIFEST.md` | Reliability gate posture across phases | `/qor-audit` references |
 | `docs/CORE_AXIOMS_AND_RULES_COMPILED.md` | Compiled axioms + rules from doctrine | manual sync |
 | `docs/FILE_STRUCTURE_STANDARD.md` | Where each kind of file belongs | manual; `/qor-organize` enforces |
+| `docs/integrations/INTEGRATION_STRUCTURE_STANDARD.md` | Uniform folder layout every integration under `FailSafe/extension/src/integrations/<name>/` follows; a deviating folder is a structure bug (Architecture Index row `integration-folder-structure`) | `/qor-plan` |
+| `docs/design/DEVELOPMENT_TRACKER_STANDARD.md` | Development Tracker design standard: engine and data decoupling, hosting, required design-source citation (Architecture Index row `development-tracker-ui`) | `/qor-plan` |
 | `docs/governance-cache-invalidation.md` | Cache invalidation discipline doctrine | manual |
 | `docs/governance-mode-transitions.md` | Mode-transition state machine doctrine | manual |
 | `docs/PROCESS_SHADOW_GENOME.md` + `PROCESS_SHADOW_GENOME_UPSTREAM.md` | Process-level failure pattern catalogue | `/qor-shadow-process` |
@@ -161,6 +166,8 @@ Informational. Slow-drift. Reviewed semi-annually unless cited by an active cycl
 | `docs/INTEGRATIONS.md` | Integration surface documentation (Bicameral + Open Design) |
 | `docs/integrations/INTEGRATION_DOCS_INDEX.md` | Maintained registry of official docs for every integration; canonical source for verify-external-names; per-cycle refresh required |
 | `docs/LEARN_TAB.md` | Learn tab design reference |
+| `docs/design/SHADOW_GENOME_UI.md` | Shadow Genome UI design reference for the Command Center view (#196; Architecture Index row `shadow-genome-ui`) |
+| `docs/specs/VOICE_BRAINSTORM_SPEC.md` | Brainstorm voice architecture: what shipped versus later enhancements (Architecture Index row `voice-brainstorm`) |
 | `docs/ROADMAP.md` | Forward-looking roadmap (not authoritative for current state — that's `SYSTEM_STATE`) |
 | `docs/UI_MANIFEST.md` | UI module manifest |
 | `docs/SUBSTRATE_MODULES.md` | qor.scripts substrate v1 reference (added v5.3.0) |
@@ -231,14 +238,14 @@ Every cycle that produces governance writes (`/qor-substantiate`, `/qor-repo-rel
 
 Registration in this index and presence in the repository are **different things**, and a reader of a clone cannot tell them apart without this section.
 
-`.gitignore:52-56` heads its stanza *"Private planning docs, transfer files, and governance records (licensing TBD)"* and ignores `docs/` and `.failsafe/` wholesale. Both trees are therefore **private by default and published by exception** — a doc becomes public when someone runs `git add -f` on it, which is a deliberate act. 38 of the 68 paths registered below have had that done; 15 have not.
+`.gitignore:52-56` heads its stanza *"Private planning docs, transfer files, and governance records (licensing TBD)"* and ignores `docs/` and `.failsafe/` wholesale. Both trees are therefore **private by default and published by exception** — a doc becomes public when someone runs `git add -f` on it, which is a deliberate act. 46 of the 77 paths registered below have had that done; 15 have not (counted 2026-10-17 by the FX939 rule: the first backticked `.md` path of each tier-table row, so `plan-*.md` counts once per row).
 
 An unpublished row is not drift. Whether a given governance doc *should* be published is a licensing decision the operator has explicitly deferred, and this index does not presume it.
 
 - private-by-default: `docs/`
 - private-by-default: `.failsafe/`
 
-`FailSafe/extension/src/test/governance/governance-index-publication.test.cjs` (FX939) reads those two prefixes from this section — not from a copy of its own — and fails when a registered path is neither tracked nor covered by one. Rows naming a *shape* rather than a file (`plan-*.md`, `AUDIT_REPORT_<plan>.md`, `entry-<N>-body.md`) are skipped; 14 of the 68 are of that kind.
+`FailSafe/extension/src/test/governance/governance-index-publication.test.cjs` (FX939) reads those two prefixes from this section — not from a copy of its own — and fails when a registered path is neither tracked nor covered by one. Rows naming a *shape* rather than a file (`plan-*.md`, `AUDIT_REPORT_<plan>.md`, `entry-<N>-body.md`) are skipped; 16 of the 77 are of that kind.
 
 ---
 
