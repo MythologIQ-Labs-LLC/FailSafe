@@ -33061,3 +33061,128 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `e3e6f5ea661354bdcbf063c1029e26d4bb67cffc934b6b2a8b7b5613ecdda722`
 
 **Decision**: SESSION SEAL for plan-531-architecture-governance.md (implementation #774). Reality = Promise, with disclosures. The branch carries the first #531 slice: discovery, approved exclusive-create bootstrap with reuse, L3 proposals with PROPOSAL ledger evidence, use-existing, the Workspace Architecture view, and tests in a real extension host on a temp git repository. Disclosures: bounded damaged-ledger override applied to this cycle (#467 unresolved, normal governance not restored); enforceable: only the writes FailSafe makes here (operator confirmation, containment-checked exclusive create) and the L3 decision record; discovery of documents written by editors, agents or other tools is advisory, after the fact, and cannot block them; ignored directories are invisible; overlap is a string match; an L3 decision updates the named agent DID trust; an undecided proposal expires after the L3 SLA with no ledger entry; every l3Decided event writes an override.approved PASS checkpoint, including rejected and expired ones (B257); a PROPOSAL entry can be left without an L3 item if queueing fails (B258); unavailable Qor is mapped to FailSafe's ledger being unavailable; the Qor-logic install state residual is B254; the second vscode-test configuration seeds its temp repository with a plain git in the fresh folder it created, because the trusted resolver is compiled code not yet built when the config loads; the visual check was on the installed VS Code build through screenshots reviewed by the lead, not in Chrome; npm test and test:ui were not run in full locally; the PR Full Test Suite runs them; earlier seals are unedited. Next: push, open the PR, the PR checks, then a merge with --match-head-commit. Not tagged.
+
+---
+
+### Entry #776: GATE TRIBUNAL - plan-532a-integration-contracts (iteration 1) - VETO
+
+**Timestamp**: 2026-10-17T20:53:38Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-17T2047-6a699f`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `c184e670b6dedbb8750db3cea7e1798b85b66de3416746604b8f416276cc12ff`
+**Previous Hash**: `e3e6f5ea661354bdcbf063c1029e26d4bb67cffc934b6b2a8b7b5613ecdda722`
+**Chain Hash (Merkle seal)**: `a2e8b3b80bc397fd27d0089cad401602fee1238f4863040dde02f275bc305b79`
+
+**Decision**: VETO on plan-532a-integration-contracts.md iteration 1 (sha256 430402fe), the #532 integration contracts and portfolio. Fresh Option B architect-reviewer. Blocking: three feature states cannot describe shipped-but-switched-off or shipped-but-untested capabilities and a test file's existence does not prove wiring; the accuracy checks only check that citations point somewhere and compare the integration list with itself. Should-fix: measurable value, API documentation, privileges, installed UI tests and a test-depth vocabulary in each contract; the Jira and Linear truth; a verified-facts table; exact-path registration; the decision path and legacy reviews; ownership boundaries; confidentiality screening; the override disclosure. Next: revise and re-audit. Tribunal entry held by the lead and appended at implementation in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #777: GATE TRIBUNAL - plan-532a-integration-contracts (iteration 2) - VETO
+
+**Timestamp**: 2026-10-17T20:59:32Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-17T2047-6a699f`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `8a032b4072a28f29c9d1b20dc552fc228311b007a825837d7651ce6e85a0b5c4`
+**Previous Hash**: `a2e8b3b80bc397fd27d0089cad401602fee1238f4863040dde02f275bc305b79`
+**Chain Hash (Merkle seal)**: `748191b737777edeccc7264abbaef5fe43f3b5b4fb252eafa41b872919f001dd`
+
+**Decision**: VETO on plan-532a-integration-contracts.md iteration 2 (sha256 4797805d). Fresh Option B architect-reviewer. Blocking: the coverage check could not find integrations outside src/integrations/, and main has three with network egress (the Sentinel LLM client, the governance webhook, the npm-registry dependency lint); the verified-shipped state overlapped shipped-inert and still did not prove wiring. Should-fix: a visible skip and a stronger anchor check at the tag, a pinned citation grammar, runner-matched test depth, catalog capability coverage, shared ownership, legacy review citations, registration details, stable fact ids. Next: revise and re-audit. Tribunal entry held by the lead and appended at implementation in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #778: GATE TRIBUNAL - plan-532a-integration-contracts (iteration 3) - VETO
+
+**Timestamp**: 2026-10-17T21:05:05Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-17T2047-6a699f`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `15c0fd76cf9390484a5c6533f2ff41f07539826c6cc0622eebfa2e5ea20ea261`
+**Previous Hash**: `748191b737777edeccc7264abbaef5fe43f3b5b4fb252eafa41b872919f001dd`
+**Chain Hash (Merkle seal)**: `40d0441f028e297d2e5c000b43b72a3f4abb167f446ef5c6593ed1ff2b66045e`
+
+**Decision**: VETO on plan-532a-integration-contracts.md iteration 3 (sha256 e5d7da8e). Fresh Option B architect-reviewer. Blocking: the browser-module literal rule fails on main in about ten same-origin or loopback files and accepts protocol-relative URLs; egress through child processes and indirect fetch (pip, package managers, git clone and push, a configurable fetchImpl) is outside the scan, so a completeness claim would be inflated. Should-fix: SRE files and a loopback definition, catalog id parsing, a fixed legacy-review map, fixed fact ids, a checkable precedence rule. Next: revise; the check certifies scan-hit ownership with stated blind spots rather than completeness. Tribunal entry held by the lead and appended at implementation in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #779: GATE TRIBUNAL - plan-532a-integration-contracts (iteration 4) - VETO
+
+**Timestamp**: 2026-10-17T21:09:46Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-17T2047-6a699f`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `d6973afb52234277ba9f84b32df947b22ed6cdb0956c9c2f4084d73136630561`
+**Previous Hash**: `40d0441f028e297d2e5c000b43b72a3f4abb167f446ef5c6593ed1ff2b66045e`
+**Chain Hash (Merkle seal)**: `34b7af1c8b575d15a226b93f5390e8aa4b48b1633933e62dc3aace9a157426b3`
+
+**Decision**: VETO on plan-532a-integration-contracts.md iteration 4 (sha256 2fc288d3). Fresh Option B architect-reviewer. Narrowing the claim to scan-hit ownership with stated blind spots was accepted in principle. Blocking: two same-origin WebSockets on main fit no accept rule, and the process scan as written misses all five files it names, because their network words sit on other lines or behind runner calls. Should-fix: method definitions in the fetch pattern, the meaning of relative, override call sites, the QorRuntimeService citation, named loopback rows, a stated blind-spot example. Next: revise, with the rules' final precision developed in the test under binding criteria. Tribunal entry held by the lead and appended at implementation in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #780: GATE TRIBUNAL - plan-532a-integration-contracts (iteration 5) - PASS
+
+**Timestamp**: 2026-10-17T21:14:56Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-17T2047-6a699f`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `c215b79ab59feead97bfc0f22804f013a94130aed5d32466c0d8ce45b806e0ae`
+**Previous Hash**: `34b7af1c8b575d15a226b93f5390e8aa4b48b1633933e62dc3aace9a157426b3`
+**Chain Hash (Merkle seal)**: `278d4f413fa060c748c0b34756b1a53bb206ad693395aea8ce2c3258a7e8d3bd`
+
+**Decision**: PASS on plan-532a-integration-contracts.md iteration 5 (sha256 50020fe6): one indexed contract per integration with five feature states and a reach citation, anchored citations, two code scans whose every hit must be owned (the claim is scan-hit ownership with stated blind spots, not completeness), a portfolio with reconciliation and verified-facts tables, three vertical scenarios and a relationship-graph specification. Fresh Option B architect-reviewer; every named hit confirmed on main c36b9ee2. Should-fix findings folded into implementation: relative paths in rule (a), templates with a leading slash, all quote styles, the trailing-segment blind spot, the Ollama row, the cross-port loopback note, zero-caller assertions, fixtures for added rules, reported counts checked, and openExternal as a blind spot. Tribunal entry held by the lead and appended at implementation in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #781: IMPLEMENTATION - plan-532a-integration-contracts
+
+**Timestamp**: 2026-10-17T22:01:19Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-17T2047-6a699f`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-17T2047-6a699f/implement.json`
+
+**Content Hash**: `ecf3bf58e4aff6171ee8bcaa19930acd90d83cbd93d86b73bed7721f4d1157cf`
+**Previous Hash**: `278d4f413fa060c748c0b34756b1a53bb206ad693395aea8ce2c3258a7e8d3bd`
+**Chain Hash (Merkle seal)**: `4378a75752cff01dfddebbb41729a032b88f1d4dda81819fb07eae7537fc90ba`
+
+**Decision**: IMPLEMENTATION of plan-532a-integration-contracts.md iteration 5 (audit PASS #780, sha256 50020fe6), #532 part A: one customer-value contract per integration, an integration portfolio, three vertical scenarios and a relationship-graph specification, all documentation plus one node test; no product code changed. Branch feat/532-integration-contracts from main c36b9ee2. 0ecfe47b: src/test/docs/integration-contracts.test.cjs (coverage from two code scans, section order, the anchored citation grammar, five feature states with precedence and Reached from citations, test-depth labels matched to runners, catalog capabilities, the legacy-review map, verified facts and B-numbers, browser accept rules (a)-(e), mutation fixtures), red first: 38 tests, 35 passed, 3 failed before any contract existed. e07806eb: 30 contracts under docs/architecture/integrations/. 84ff8966: docs/architecture/INTEGRATION_PORTFOLIO.md (matrix, priority order, scans with hit counts and blind spots, inventory reconciliation, verified facts F01-F20, legacy-review map, other findings), docs/architecture/INTEGRATION_SCENARIOS.md, the docs/INTEGRATIONS.md auto-connect correction (F20, B272), B259-B271. a74ccfbf: scenario citation checks; architecture index golden normative count 10 to 42. d5ff8a37: registrations in ARCHITECTURE_INDEX (49 rows) and GOVERNANCE_INDEX, FX1003, CHANGELOG [Unreleased]. ee324950: the ten other findings filed as B273-B282 (lead). Evidence, counts from logs: integration-contracts 39/39 with the tag check covering 355 claims against v6.0.8, and 1 visible skip with the tag absent; a repository mutation (a renamed verified-shipped anchor) turned 2 rows red; the architecture CLI passes (49 rows, 42 normative); docs and governance suites 94/94; test:runner-coverage pass (641 files); tsc 0; test:node 816 tests, 805 passed, 2 failed (FX946 baseline), 9 skipped; preflight pass; docs coherence pass; 33 of 33 new files tracked. Recommended dispositions, pending the owner: 15 COMPLETE, 13 MAINTAIN, 2 RETIRE (governance-webhook, qor-runtime); none INVEST.
+
+---
+
+### Entry #782: SESSION SEAL - plan-532a-integration-contracts
+
+**Timestamp**: 2026-10-17T22:01:36Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-17T2047-6a699f`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-17T2047-6a699f/substantiate.json`
+
+**Content Hash**: `49d2557cfda2d3d4852afb17c8d943a8db3bcbfc11af5b503a24db537a568583`
+**Previous Hash**: `4378a75752cff01dfddebbb41729a032b88f1d4dda81819fb07eae7537fc90ba`
+**Chain Hash (Merkle seal)**: `10a09ddba895254b10fa6960a241eefcdb8904f81eb855414e82c76c9c84c1f4`
+
+**Decision**: SESSION SEAL for plan-532a-integration-contracts.md (implementation #781). Reality = Promise, with disclosures. The branch carries #532 part A: 30 integration contracts, the portfolio, the scenarios and the graph specification, registered and checked by integration-contracts.test.cjs. Disclosures: bounded damaged-ledger override applied to this cycle (#467 unresolved, normal governance not restored); five audit iterations (four VETOs) before PASS; the final claim is scan-hit ownership with stated blind spots, not a complete inventory, and the final rule precision was developed in the test under the plan's binding criteria; the tag check ran locally against v6.0.8 and covered 355 claims; PR CI checks out without tags, so there it is a visible skip; the architecture index golden normative count moved from 10 to 42 because the 32 new documents are normative; ten findings outside the LD3 list were filed by the lead at seal as B273-B282, a deviation from the implementer's not-filed note; B273 (a trusted workspace sentinel.yaml can point the Sentinel LLM endpoint at a public host and file content is then posted there) has a security edge and needs a trusted workspace because the extension declares no untrustedWorkspaces capability; git-bootstrap is ask-first and owned by its own contract; dispositions are recommendations pending the owner; npm test and test:ui were not run in full locally because no product code changed; the PR Full Test Suite runs them; earlier seals are unedited. Next: push, open the PR, the PR checks, then a merge with --match-head-commit. #532 stays open for part B. Not tagged.
