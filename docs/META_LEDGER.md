@@ -32884,3 +32884,20 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `42ebf670e774b56bb5f65620b3ab1aa44e6d0273402b16f7279f8ee885faf755`
 
 **Decision**: SESSION SEAL for the third LD23 follow-up (implementation #764) after seal #763. Reality = Promise, with disclosures. release/v6.0.8-rc carries e0043f43 (merge 7f4b88c2). Disclosures: bounded damaged-ledger override applied to this integration cycle (#467 unresolved); a test-only follow-up after seal #763; the full LD6 run was not repeated, the focused local checks and PR #529's Linux test:all on the pushed head cover it; my first #473 diagnosis (a SecretStorage timeout) was wrong; a debugger traced and reproduced the same-millisecond identical refill; the c96bf67a Full Test Suite needed one re-run of the failed job to reach test:node; the first attempt failed on the #473 row; T8 still needs a trusted pwsh on the runner; its cause is not yet known and is read from the next Linux log; D16 is not met until T8 passes or is explained, and Linux test:ui has not yet run; seals #746, #753, #759, #761 and #763 are left unedited. Next: one push moving PR #529's head, Linux CI read against D16, then the LD8 merge. Not merged, not tagged, not published.
+
+---
+
+### Entry #766: IMPLEMENTATION - plan-v608-integration (LD23 fourth follow-up)
+
+**Timestamp**: 2026-10-17T07:56:40Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-16T1356-298603`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-16T1356-298603/implement.json`
+
+**Content Hash**: `f412d4d7f5a7f552c9b881f9de51ed5732c6228206c27063c4130c975d92ddbe`
+**Previous Hash**: `42ebf670e774b56bb5f65620b3ab1aa44e6d0273402b16f7279f8ee885faf755`
+**Chain Hash (Merkle seal)**: `205b45b51cbdce55e85d1a691dd44fad23fb123b38d59a9a2601635d30fc6378`
+
+**Decision**: IMPLEMENTATION of the fourth LD23 follow-up (plan-v608-integration.md iteration 17, audit PASS #757), after seal #765 on 7f4b88c2. PR #529's Linux Full Test Suite on 928b71d7: npm test 5003 passing, 17 pending, 0 failing over 510/510 files (the #473 refill fix held); test:node 727 tests, 698 passed, 1 failed, 0 cancelled, 28 skipped, every LD23 row ok again. The one failure, T8 admitSkill, was explained by its new diagnostics: on the GitHub-hosted runner /opt/microsoft/powershell/7/pwsh and the folders /opt/microsoft/powershell/7, /opt/microsoft/powershell and /opt/microsoft are uid 0 with mode 777, so /usr/bin/pwsh, /bin/pwsh and the known location are refused as writable by other users. That refusal is LD23 working (any account on the runner can replace pwsh; before LD23 FailSafe would have run it) and is the B241 class. The security half of T8 (the planted PowerShell never runs) passed. Lane A c67c95fe (merged as ac66f10c), test only: on POSIX T8 copies the real PowerShell install folder into a private folder, removes group and other write from every entry, requires every link leading out of the copy to reach a place other users cannot write, puts the copy after the workspace plant and before the rest of PATH for the row, and asserts the resolver trusts that copy; assertions unchanged, nothing skipped, PATH and configuration restored and the copy removed in a finally. A new row checks the walker (0o777 tree to 0o755, links left as links). Lane A win32 evidence: trustedExecutable.adversarial 9/9; test:node 728 tests, 717 passed, 2 failed (FX946 baseline), 9 skipped; lint clean. Expected Linux test:node: 728 tests, 700 passed, 0 failed, 28 skipped.
