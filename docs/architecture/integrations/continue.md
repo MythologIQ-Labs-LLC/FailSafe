@@ -31,7 +31,7 @@ The wrapper uses `cn -p <prompt>` and repeated `--allow <tool>` `FailSafe/extens
 
 Credential: an optional Continue API key from VS Code Secret Storage; with none, Continue's own login is used `FailSafe/extension/src/extension/agent-cli-command.ts:149-152` (`No key at all is fine (Continue may use its own login)`).
 The key is placed only in the child environment as `CONTINUE_API_KEY`, never in argv or the receipt `FailSafe/extension/src/integrations/agent-cli/continue-wrapper.ts:86-87` (`API key in the child ENV only (never argv/receipt).`).
-The plain-text key setting is deprecated and not read `FailSafe/extension/package.json:516-518` (`Plain-text settings are no longer read`).
+The plain-text key setting is deprecated and not read `FailSafe/extension/package.json:521-523` (`Plain-text settings are no longer read`).
 Process privileges: the child inherits the extension host's environment and user account `FailSafe/extension/src/extension/agent-cli-command.ts:157` (`baseEnv: process.env`).
 Tool scope: whatever `failsafe.integrations.continue.allow` grants, except shell or exec tools, which are refused `FailSafe/extension/src/integrations/agent-cli/continue-wrapper.ts:82-83` (`the allowlist grants shell/exec tools`).
 Executable: only an absolute PATH entry outside the workspace; on Windows only `.exe` or `.com` `FailSafe/extension/src/integrations/agent-cli/agent-cli-core.ts:84-86` (`for (const file of win ? [`).
@@ -89,7 +89,7 @@ Proposed (not built): run-to-intent and run-to-receipt edges in the relationship
 
 ## Customer UI and actions
 
-Command palette: "FailSafe: Run Continue (governed)" `FailSafe/extension/package.json:190-191` (`"title": "FailSafe: Run Continue (governed)"`).
+Command palette: "FailSafe: Run Continue (governed)" `FailSafe/extension/package.json:191-192` (`"title": "FailSafe: Run Continue (governed)"`).
 Progress: a notification while the run is in progress `FailSafe/extension/src/extension/agent-cli-command.ts:155` (`Running Continue in an isolated worktree`).
 Decision: a modal with Discard, Review diff and Apply, stating the isolation boundary `FailSafe/extension/src/extension/agent-cli-command.ts:74-75` (`detail: BOUNDARY_NOTE`).
 Review: a read-only diff document served from memory `FailSafe/extension/src/extension/agent-cli-command.ts:66-69` (`setTextDocumentLanguage(doc, 'diff')`).

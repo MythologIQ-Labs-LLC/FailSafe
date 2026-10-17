@@ -30,7 +30,7 @@ No network API is called: the file text is parsed in process `FailSafe/extension
 
 ## Privileges and scopes
 
-Credential: none; the setting describes the import as fully offline `FailSafe/extension/package.json:463-466` (`fully offline — no network`).
+Credential: none; the setting describes the import as fully offline `FailSafe/extension/package.json:468-471` (`fully offline — no network`).
 File access: the operator picks one `.sarif` or `.json` file in a VS Code open dialog `FailSafe/extension/src/extension/sarif-command.ts:27-31` (`filters: { 'SARIF / JSON': ['sarif', 'json'] },`).
 A local Semgrep runner or GitHub SARIF upload would need process or repository write access and is marked requires separate approval (unverified: neither is implemented).
 
@@ -38,7 +38,7 @@ A local Semgrep runner or GitHub SARIF upload would need process or repository w
 
 | Capability | State | Symbol | Reached from | Test (depth) | Notes |
 |---|---|---|---|---|---|
-| risk-ingest | verified-shipped | `importSarifText` `FailSafe/extension/src/integrations/sarif/sarif-to-risk.ts:46` (`export function importSarifText(`) | `FailSafe/extension/src/extension/main.ts:238` (`registerSarifImportCommand(context, core.workspaceRoot)`) | `FailSafe/extension/src/test/integrations/sarif/sarif-parser.test.ts` (unit) | Command `FailSafe/extension/package.json:145` (`"command": "failsafe.sarif.import"`) |
+| risk-ingest | verified-shipped | `importSarifText` `FailSafe/extension/src/integrations/sarif/sarif-to-risk.ts:46` (`export function importSarifText(`) | `FailSafe/extension/src/extension/main.ts:238` (`registerSarifImportCommand(context, core.workspaceRoot)`) | `FailSafe/extension/src/test/integrations/sarif/sarif-parser.test.ts` (unit) | Command `FailSafe/extension/package.json:146` (`"command": "failsafe.sarif.import"`) |
 | local-semgrep-run | proposed | none | none | none | Not implemented; the parser takes text only `FailSafe/extension/src/integrations/sarif/sarif-parser.ts:6-7` (`callers pass the file text`) |
 | github-sarif-upload | proposed | none | none | none | Not implemented (unverified beyond the absence of any network call in the owned files) |
 
@@ -81,7 +81,7 @@ Proposed (not built): finding-to-fix and fix-to-receipt edges (unverified: no co
 
 ## Customer UI and actions
 
-Command palette: "FailSafe: Import SARIF Findings" `FailSafe/extension/package.json:145-146` (`"title": "FailSafe: Import SARIF Findings"`).
+Command palette: "FailSafe: Import SARIF Findings" `FailSafe/extension/package.json:146-147` (`"title": "FailSafe: Import SARIF Findings"`).
 The command is refused with a warning while the setting is off `FailSafe/extension/src/extension/sarif-command.ts:21-25` (`SARIF import is disabled.`).
 A summary names the findings, the risks upserted and any parse warnings `FailSafe/extension/src/extension/sarif-command.ts:60-63` (`finding(s) → `).
 Status: a Console Integrations catalog card `FailSafe/extension/src/roadmap/ui/modules/integration-catalog-renderer.js:196` (`fetch('/api/v1/integrations/catalog')`).

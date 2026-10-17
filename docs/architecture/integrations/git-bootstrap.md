@@ -31,7 +31,7 @@ The install commands are fixed argv lists per platform `FailSafe/extension/src/s
 
 Credential: none passed by FailSafe; the package manager runs with the user's own rights (unverified: `apt-get`, `dnf`, `yum` and `pacman` normally need root and fail without it) `FailSafe/extension/src/shared/gitBootstrap.ts:136-141` (`{ command: "apt-get", args: ["install", "-y", "git"] },`).
 Scope: a system-wide Git install, enabled only by a user-level `true`; workspace and folder values are ignored `FailSafe/extension/src/shared/gitBootstrap.ts:32-35` (`return inspected?.globalValue === true;`).
-The setting is machine-scoped and off by default `FailSafe/extension/package.json:720-724` (`"failsafe.bootstrap.autoInstallGit": {`).
+The setting is machine-scoped and off by default `FailSafe/extension/package.json:725-729` (`"failsafe.bootstrap.autoInstallGit": {`).
 Each installer and Git are spawned from the trusted resolver's absolute path, argv only, no shell `FailSafe/extension/src/shared/gitBootstrap.ts:165-171` (`spawn(trustedExecutablePath(installer, cwd), args, options)`).
 A per-install confirmation prompt would be a new consent surface and requires separate approval (unverified: none exists on main).
 
@@ -40,7 +40,7 @@ A per-install confirmation prompt would be a new consent surface and requires se
 | Capability | State | Symbol | Reached from | Test (depth) | Notes |
 |---|---|---|---|---|---|
 | git-detection | verified-shipped | `ensureGitRepositoryReady` `FailSafe/extension/src/shared/gitBootstrap.ts:42` (`export async function ensureGitRepositoryReady(`) | `FailSafe/extension/src/extension/bootstrapCore.ts:48` (`const git = await ensureGitRepositoryReady(workspaceRoot, { autoInstallGit, log: gitLog });`) | `FailSafe/extension/src/test/shared/gitBootstrap.test.ts` (unit) | Probe is `git --version` `FailSafe/extension/src/shared/gitBootstrap.ts:90-91` (`return runCommand(runner, "git", ["--version"]);`) |
-| package-manager-git-install | verified-shipped | `ensureGitRepositoryReady` `FailSafe/extension/src/shared/gitBootstrap.ts:58-59` (`installedGit = await tryInstallGit(platform, runner, log);`) | `FailSafe/extension/src/extension/bootstrapCore.ts:38-48` (`const autoInstallGit = autoInstallGitEnabled(`) | `FailSafe/extension/src/test/shared/gitBootstrap.test.ts` (unit) | Off by default; opt-in only through user settings `FailSafe/extension/package.json:722-724` (`Off by default.`) |
+| package-manager-git-install | verified-shipped | `ensureGitRepositoryReady` `FailSafe/extension/src/shared/gitBootstrap.ts:58-59` (`installedGit = await tryInstallGit(platform, runner, log);`) | `FailSafe/extension/src/extension/bootstrapCore.ts:38-48` (`const autoInstallGit = autoInstallGitEnabled(`) | `FailSafe/extension/src/test/shared/gitBootstrap.test.ts` (unit) | Off by default; opt-in only through user settings `FailSafe/extension/package.json:727-729` (`Off by default.`) |
 | user-scope-gate | verified-shipped | `autoInstallGitEnabled` `FailSafe/extension/src/shared/gitBootstrap.ts:33` (`export function autoInstallGitEnabled(`) | `FailSafe/extension/src/extension/bootstrapCore.ts:37-39` (`only a user-level value counts`) | `FailSafe/extension/src/test/shared/exec/autoInstallGitScope.test.cjs` (unit) | Runs against the compiled output `FailSafe/extension/src/test/shared/exec/autoInstallGitScope.test.cjs:5` (`Runs standalone after `) |
 | init-requires-confirmation | verified-shipped | `ensureGitRepositoryReady` `FailSafe/extension/src/shared/gitBootstrap.ts:75-76` (`if (!repoInitialized && options.confirmInit && (await options.confirmInit()))`) | `FailSafe/extension/src/extension/bootstrapCore.ts:113` (`const result = await ensureGitRepositoryReady(workspaceRoot, { log, confirmInit: async () => true });`) | `FailSafe/extension/src/test/shared/gitBootstrap.test.ts` (unit) | Activation passes no callback `FailSafe/extension/src/extension/bootstrapCore.ts:47-48` (`activation never initializes a repository on its own.`) |
 | ask-first-git-init-prompt | shipped-unverified | `offerGitInit` `FailSafe/extension/src/extension/bootstrapCore.ts:105-109` (`Initialize a Git repository in this folder?`) | `FailSafe/extension/src/extension/main.ts:145` (`const core = await bootstrapCore(context, logger, logSink);`) | none | No test contains `offerGitInit` (unverified: searched `src/test` at c36b9ee2) |
@@ -78,7 +78,7 @@ Proposed (not built): none planned for this integration (unverified).
 
 ## Customer UI and actions
 
-Setting: "failsafe.bootstrap.autoInstallGit", user settings only `FailSafe/extension/package.json:720-724` (`Read only from user settings; a workspace cannot turn it on.`).
+Setting: "failsafe.bootstrap.autoInstallGit", user settings only `FailSafe/extension/package.json:725-729` (`Read only from user settings; a workspace cannot turn it on.`).
 Prompt: "Initialize a Git repository in this folder?" with Initialize and Not now `FailSafe/extension/src/extension/bootstrapCore.ts:101-105` (`FailSafe records checkpoint hashes with Git.`).
 Warning: when Git stays unavailable, a log warning says hashes are recorded as unknown `FailSafe/extension/src/extension/bootstrapCore.ts:50-53` (`Checkpoint git hashes will be recorded as unknown`).
 

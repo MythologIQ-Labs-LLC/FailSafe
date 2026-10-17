@@ -655,6 +655,15 @@ Outside the Verified facts list, from the portfolio's Other findings (filed 2026
 - [ ] [B281] The Console's Open Design create_artifact request queues an L3 approval that always fails once approved (`OpenDesignRoute.ts:75`), because the client gate is off in code. Hide the action while the gate is off, or wire it (contract `open-design`). | low
 - [ ] [B282] The FailSafe MCP server's activation notice says the server is listening (`FailSafeServer.ts:177-179`), although no MCP client can reach it (B209). Drop the notice until B209 is fixed (contract `failsafe-mcp-server`). | low
 
+## #532 part B delivery assessment (filed 2026-10-17)
+
+The first vertical slice of scenario 1 (FX1004, `plan-532b-delivery-assessment.md`) links an intent to the architecture documents and commits it delivered and assesses five steps in Workspace › Delivery. Main only until the next release.
+
+- [x] [B283] The commit-check route read `hub.activeIntent`, a key no hub builder sets (`CommitCheckRoute.ts:40` on main 75c26fc5; the hub payload ends at `hub-payload-assembler.ts:94`), so with the FailSafe pre-commit hook installed in enforce mode every commit was refused. Fixed in #532 part B: the route reads the active intent from the IntentService at request time (`getActiveIntent` in `ApiRouteDeps`, set in `ConsoleRouteRegistrar.buildApiRouteDeps`); an absent or failing read blocks with "FailSafe could not read the active intent" (HTTP 200, per the hook contract). Evidence: `CommitCheckRoute.test.ts` T11 failed on the old route and passes now; T15 proves an IntentService set after the ConsoleServer is constructed is used. | done
+- [ ] [B284] Hub checkpoints record a `gitHash` read from the extension process's working folder, not the workspace (`CheckpointUtils.ts:30`, `process.cwd()`), so they can name another repository's HEAD. The delivery assessment therefore ignores hub checkpoints as evidence. Read HEAD from the workspace root through the trusted git runner. | medium
+- [ ] [B285] `CheckpointManager.seal()` has no production caller (`main.ts:345` constructs the manager and never calls it), so no `CHECKPOINT_CREATED` entry with a `git_head` is written and the delivery assessment's commit-SHA evidence is normally empty. Call it at a governed seal, or retire the SHA match. | low
+- [ ] [B286] The governed commit (`governedCommit.ts`) does not link the commit it makes to the active intent; the operator links it afterwards in Workspace › Delivery. Offer a `committed-under` link from the governed commit itself, after the same confirmation. | medium
+
 ## Wishlist (Nice to Have)
 
 - [ ] [B90] CLI Overseer Lite Feasibility Extraction: Explore creating a lightweight, CLI-compatible version of FailSafe for direct website integration | v5.4.x+ _(re-tagged 2026-06-02 from stale v5.0.0 — shipped without this exploratory item)_

@@ -81,7 +81,7 @@ Proposed (not built): risk-to-config-file and risk-to-MCP-install edges in the r
 
 ## Customer UI and actions
 
-Command palette: "FailSafe: Audit Agent MCP Policy (Cline/Roo/Kilo)" `FailSafe/extension/package.json:200-201` (`"title": "FailSafe: Audit Agent MCP Policy (Cline/Roo/Kilo)"`).
+Command palette: "FailSafe: Audit Agent MCP Policy (Cline/Roo/Kilo)" `FailSafe/extension/package.json:201-202` (`"title": "FailSafe: Audit Agent MCP Policy (Cline/Roo/Kilo)"`).
 Result: an information message with configs scanned, risks upserted and the high-severity count `FailSafe/extension/src/extension/agent-observe-command.ts:96` (`risk(s) upserted (`).
 Findings: the Console risk view reads the register `FailSafe/extension/src/roadmap/ui/modules/rest-api.js:19` (`/api/risks`).
 Status: the Console Integrations catalog card `FailSafe/extension/src/roadmap/ui/modules/integration-catalog-renderer.js:196` (`fetch('/api/v1/integrations/catalog')`).

@@ -32,7 +32,7 @@ The linkage audit reads `GET /repos/{owner}/{repo}/pulls/{n}` and `GET /repos/{o
 
 ## Privileges and scopes
 
-Credential: a GitHub token (App installation token or a PAT that the org permits with checks:write) in VS Code Secret Storage `FailSafe/extension/package.json:452-456` (`GitHub token used to create Check Runs`).
+Credential: a GitHub token (App installation token or a PAT that the org permits with checks:write) in VS Code Secret Storage `FailSafe/extension/package.json:457-461` (`GitHub token used to create Check Runs`).
 The token rides only the Authorization header `FailSafe/extension/src/integrations/github-checks/check-run-transport.ts:171` (`Authorization: `).
 The linkage audit additionally needs read access to the repository's pull requests and issues with the same token `FailSafe/extension/src/integrations/github-checks/pr-linkage-audit.ts:195-197` (`Authorization: `).
 A user-level token is never sent to an API base URL that workspace settings chose `FailSafe/extension/src/integrations/credentials/credentialGates.ts:125` (`ep.scope === 'workspace' && e.scope === 'user'`).
@@ -87,7 +87,7 @@ Proposed (not built): receipt-to-check edges in the local relationship graph, sp
 
 ## Customer UI and actions
 
-Command palette: "FailSafe: Publish Manual GitHub Advisory" `FailSafe/extension/package.json:165-166` (`"title": "FailSafe: Publish Manual GitHub Advisory"`).
+Command palette: "FailSafe: Publish Manual GitHub Advisory" `FailSafe/extension/package.json:166-167` (`"title": "FailSafe: Publish Manual GitHub Advisory"`).
 A modal warning says no verified receipt exists and offers only "Publish advisory" `FailSafe/extension/src/extension/github-checks-command.ts:82-86` (`No verified SHIELD audit receipt is available.`).
 The same command also publishes the PR-linkage check when HEAD has a PR `FailSafe/extension/src/extension/github-checks-command.ts:104-108` (`also publish the PR↔issue linkage check when HEAD has a PR`).
 Status: a Console Integrations catalog card `FailSafe/extension/src/roadmap/ui/modules/integration-catalog-renderer.js:196` (`fetch('/api/v1/integrations/catalog')`).
@@ -127,6 +127,6 @@ Recommendation for the owner: **COMPLETE**. The advisory and linkage checks work
 ## Open defects
 
 [B265] The PR-linkage audit sends the GitHub token to api.github.com even when a GitHub Enterprise API base URL is configured (F11) `FailSafe/extension/src/integrations/github-checks/pr-linkage-audit.ts:164-174` (`export interface LinkageRunOptions {`).
-Observed outside the LD3 list, filed as B278 (see Other findings in the portfolio): The fork guard `isFork` is never set by the command, although the setting text says fork-PR contexts degrade to local-only `FailSafe/extension/package.json:447-450` (`fork-PR contexts degrade to local-only`).
+Observed outside the LD3 list, filed as B278 (see Other findings in the portfolio): The fork guard `isFork` is never set by the command, although the setting text says fork-PR contexts degrade to local-only `FailSafe/extension/package.json:452-455` (`fork-PR contexts degrade to local-only`).
 Observed outside the LD3 list, filed as B279 (see Other findings in the portfolio): The default GitHub transports drop the base URL's port `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:198-200` (`{ hostname: u.hostname, path: u.pathname + u.search, method: 'GET', headers, timeout: 8000 },`).
 The documentation index row is stale (still "In review", PR #147) `docs/integrations/INTEGRATION_DOCS_INDEX.md:59` (`**GitHub Checks** (#96)`).
