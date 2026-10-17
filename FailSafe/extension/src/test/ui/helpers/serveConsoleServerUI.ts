@@ -36,6 +36,40 @@ import type {
 } from "./consoleServerFixtures";
 import type { HubFixture, ShieldEntry } from "./ledgerFixtures";
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { privateNode } = require("../../../../src/test/shared/privateNode.cjs") as { privateNode: (base: string) => string };
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { removeTempTree } = require("../../../../src/test/shared/removeTempTree.cjs") as { removeTempTree: (dir: string) => void };
+
+/**
+ * LD23: the default Bicameral command is the bare name "node". On POSIX a
+ * GitHub-hosted runner's PATH node sits in a tool cache every user can write,
+ * which the trusted resolver refuses, so while a server that uses the default
+ * is open a private copy's folder goes first on PATH. One copy per process,
+ * counted, so overlapping servers restore PATH only when the last one closes.
+ */
+let posixNode: { base: string; prevPath: string | undefined; refs: number } | undefined;
+function acquirePosixNode(): () => void {
+  if (process.platform === "win32") return () => undefined;
+  if (!posixNode) {
+    const base = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), "failsafe-ui-node-")));
+    const dir = path.dirname(privateNode(base));
+    posixNode = { base, prevPath: process.env.PATH, refs: 0 };
+    process.env.PATH = `${dir}${path.delimiter}${process.env.PATH ?? ""}`;
+  }
+  posixNode.refs += 1;
+  let released = false;
+  return () => {
+    if (released || !posixNode) return;
+    released = true;
+    posixNode.refs -= 1;
+    if (posixNode.refs > 0) return;
+    if (posixNode.prevPath === undefined) delete process.env.PATH; else process.env.PATH = posixNode.prevPath;
+    removeTempTree(posixNode.base);
+    posixNode = undefined;
+  };
+}
+
 export interface ConsoleServerFixtures {
   workspaceRoot?: string;
   ledgerEntries?: ShieldEntry[];
@@ -266,6 +300,7 @@ export async function serveConsoleServerUI(
   if (fixtures.bicameralClient) {
     server.setBicameralClient(fixtures.bicameralClient);
   }
+  const releaseNode = fixtures.bicameralCommand === undefined ? acquirePosixNode() : () => undefined;
   server.setBicameralCommand(fixtures.bicameralCommand ?? "node");
   server.setOperatorConfirmer(fixtures.operatorConfirmer ?? (async () => "approved"));
   if (fixtures.integrationConfig) {
@@ -316,7 +351,7 @@ export async function serveConsoleServerUI(
   attachWebSocket(server, harness, sockets, fakes.hubRef);
 
   const url = await listenAndResolveUrl(harness);
-  return buildController(url, harness, sockets, checkpointRef, fakes.hubRef, () => { server.stop(); setIntegrationHealthStore(null); });
+  return buildController(url, harness, sockets, checkpointRef, fakes.hubRef, () => { server.stop(); setIntegrationHealthStore(null); releaseNode(); });
 }
 
 function setupVoicePackFixture(
