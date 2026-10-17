@@ -381,4 +381,20 @@ suite('#531 ArchitectureIndexRoute', () => {
     assert.equal(statuses.filter((x) => x === 200).length, 60);
     assert.equal(statuses[60], 429);
   });
+
+  test('each POST route has its own rate limit: bootstrap 5, propose 10, open 30 per minute', async function () {
+    this.timeout(60000);
+    const s = await start(repo({}));
+    const hit = async (p: string, n: number): Promise<number[]> => {
+      const out: number[] = [];
+      for (let i = 0; i < n; i += 1) out.push((await s.harness.request({ method: 'POST', path: p, body: {} })).status);
+      return out;
+    };
+    const boot = await hit('/api/actions/architecture-index/bootstrap', 6);
+    assert.deepEqual([boot.slice(0, 5).every((x) => x === 400), boot[5]], [true, 429]);
+    const prop = await hit('/api/actions/architecture-index/propose', 11);
+    assert.deepEqual([prop.slice(0, 10).every((x) => x === 400), prop[10]], [true, 429], 'not starved by bootstrap');
+    const open = await hit('/api/actions/architecture-index/open', 31);
+    assert.deepEqual([open.slice(0, 30).every((x) => x === 400), open[30]], [true, 429]);
+  });
 });

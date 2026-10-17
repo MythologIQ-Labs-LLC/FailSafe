@@ -136,9 +136,10 @@ async function open(req: Request, res: Response, deps: ArchitectureIndexRouteDep
 }
 
 export function setupArchitectureIndexRoutes(app: Application, deps: ArchitectureIndexRouteDeps): void {
-  // CodeQL js/missing-rate-limiting: the read lists repository paths and runs git; the actions write or queue.
-  const readLimiter = rateLimit({ windowMs: 60_000, limit: 60, standardHeaders: false, legacyHeaders: false });
-  const actionLimiter = rateLimit({ windowMs: 60_000, limit: 10, standardHeaders: false, legacyHeaders: false });
+  // CodeQL js/missing-rate-limiting: the read lists repository paths and runs git; the actions write,
+  // queue or open. One limiter per route, so opening documents cannot starve a proposal.
+  const limiter = (limit: number) => rateLimit({ windowMs: 60_000, limit, standardHeaders: false, legacyHeaders: false });
+  const readLimiter = limiter(60);
 
   app.get("/api/v1/architecture/index", readLimiter, (req, res) => {
     if (deps.rejectIfRemote(req, res)) return;
@@ -146,7 +147,7 @@ export function setupArchitectureIndexRoutes(app: Application, deps: Architectur
     res.json({ ...snap, ledger: usableLedger(deps.getLedgerManager()) ? "available" : "unavailable" });
   });
 
-  app.post("/api/actions/architecture-index/bootstrap", actionLimiter, async (req, res) => {
+  app.post("/api/actions/architecture-index/bootstrap", limiter(5), async (req, res) => {
     if (deps.rejectIfRemote(req, res)) return;
     if ((req.body ?? {}).mode !== "create") { badRequest(res, "mode must be create"); return; }
     const result = await runArchitectureIndexBootstrap({
@@ -158,14 +159,14 @@ export function setupArchitectureIndexRoutes(app: Application, deps: Architectur
     res.status(status).json(body);
   });
 
-  app.post("/api/actions/architecture-index/propose", actionLimiter, async (req, res) => {
+  app.post("/api/actions/architecture-index/propose", limiter(10), async (req, res) => {
     if (deps.rejectIfRemote(req, res)) return;
     try { await propose(req, res, deps); } catch {
       if (!res.headersSent) res.status(500).json({ ok: false, error: "The proposal could not be queued." });
     }
   });
 
-  app.post("/api/actions/architecture-index/open", actionLimiter, async (req, res) => {
+  app.post("/api/actions/architecture-index/open", limiter(30), async (req, res) => {
     if (deps.rejectIfRemote(req, res)) return;
     await open(req, res, deps);
   });

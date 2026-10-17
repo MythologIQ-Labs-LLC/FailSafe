@@ -58,10 +58,10 @@ The snapshot carries the index path, parsed rows, problems (user-repo profile), 
 
 | Route | Guard | Effect |
 |---|---|---|
-| `GET /api/v1/architecture/index` | `rejectIfRemote`, rate limit | the snapshot plus the ledger state; read-only |
-| `POST /api/actions/architecture-index/bootstrap` `{mode:'create'}` | `rejectIfRemote`, rate limit, modal confirmation | creates the index once, never overwriting |
-| `POST /api/actions/architecture-index/propose` `{path, action, supersededBy?}` | `rejectIfRemote`, rate limit | a `PROPOSAL` ledger entry, then one L3 queue item; writes no file |
-| `POST /api/actions/architecture-index/open` `{path}` | `rejectIfRemote`, rate limit, snapshot and containment check | opens the document in the editor ("Use existing"); writes nothing |
+| `GET /api/v1/architecture/index` | `rejectIfRemote`, rate limit (60 a minute) | the snapshot plus the ledger state; read-only |
+| `POST /api/actions/architecture-index/bootstrap` `{mode:'create'}` | `rejectIfRemote`, rate limit (5 a minute), modal confirmation | creates the index once, never overwriting |
+| `POST /api/actions/architecture-index/propose` `{path, action, supersededBy?}` | `rejectIfRemote`, rate limit (10 a minute) | a `PROPOSAL` ledger entry, then one L3 queue item; writes no file |
+| `POST /api/actions/architecture-index/open` `{path}` | `rejectIfRemote`, rate limit (30 a minute), snapshot and containment check | opens the document in the editor ("Use existing"); writes nothing |
 
 Bootstrap runs only from state `absent`:
 
@@ -75,7 +75,9 @@ The skeleton holds the registry header, a self-row for the index (`canonical`, d
 
 After a successful create, a `PROPOSAL` ledger entry (agentDid `did:failsafe:agent:architecture-index`, `agentTrust` 0, payload `{kind:'architecture-index-bootstrap', path, sourceSha, docSha256}`) is appended only when the ledger is available. `docSha256` is the hash of the written buffer. `sourceSha` is `git rev-parse --verify --quiet HEAD` through the trusted resolver; on an unborn repository it is `null` with reason `unborn`. When the ledger is unavailable (no manager, disabled, or a stub entry) the file is still written and the result says `ledger:'unavailable'`.
 
-Propose validates `path` against the server-side snapshot (an unregistered candidate for `register`; a candidate or a registered row for `supersede`) and `supersededBy` as a registered row id. `sourceSha`, `docSha256` and `suggestions` are computed server-side, never taken from the body. When the ledger is unavailable, propose answers `503 {ledger:'unavailable'}` and **queues nothing**: an L3 item without a ledger could never be decided, because `processL3Decision` writes the decision to the ledger. Otherwise it appends the `PROPOSAL` entry and queues an L3 item of kind `architecture-doc-proposal` or `architecture-doc-supersede` with that entry's id as `sourceLedgerEntryId`, so the `L3_QUEUED` and later `L3_APPROVED`/`L3_REJECTED` entries link back by id. A `PROPOSAL`-sourced id is not projected as an audit resolution (`AuditResolutionProjector` projects `AUDIT_FAIL` sources only).
+Propose answers `409 {state}` unless the index is `present` or `present-with-problems`. It validates `path` against the server-side snapshot (an unregistered candidate for `register`; a candidate or a registered row for `supersede`) and `supersededBy` as a registered row id. `sourceSha`, `docSha256` and `suggestions` are computed server-side, never taken from the body. When the ledger is unavailable, propose answers `503 {ledger:'unavailable'}` and **queues nothing**: an L3 item without a ledger could never be decided, because `processL3Decision` writes the decision to the ledger. Otherwise it appends the `PROPOSAL` entry and queues an L3 item of kind `architecture-doc-proposal` or `architecture-doc-supersede` with that entry's id as `sourceLedgerEntryId`, so the `L3_QUEUED` and later `L3_APPROVED`/`L3_REJECTED` entries link back by id. A `PROPOSAL`-sourced id is not projected as an audit resolution (`AuditResolutionProjector` projects `AUDIT_FAIL` sources only).
+
+Open accepts a path the snapshot names (a candidate, a registered document or a suggestion) that resolves inside the workspace, and passes the absolute path to the editor-open dependency bootstrapBicameral already wires (`vscode.open`); nothing is written.
 
 **"Unavailable Qor" in #531 is mapped to FailSafe's ledger being unavailable.** Discovery and the view work without it. Showing the Qor-logic package install state in this view is a BACKLOG residual.
 
@@ -110,6 +112,7 @@ Nothing in this slice sends repository content off the machine.
 - **`l3Decided` checkpoint.** Every `qorelogic.l3Decided` event writes an `override.approved` checkpoint with `policyVerdict: "PASS"` (`EventSubscriptionManager.ts`), including REJECTED and EXPIRED decisions. A rejected or expired architecture proposal therefore leaves that checkpoint. Filed in BACKLOG.
 - **Ignored directories are invisible** (LD2).
 - **Overlap is string-only** (LD2, LD3).
+- **Orphaned proposal entry.** If queueing the L3 item fails after the `PROPOSAL` entry is appended, the route answers 500 and that entry has no L3 item; the document stays unregistered and can be proposed again. Filed in BACKLOG.
 
 ## Scenario map (#531 acceptance)
 
