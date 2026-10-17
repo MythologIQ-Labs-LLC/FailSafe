@@ -11,8 +11,11 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const Module = require('module');
+const { removeTempTree } = require('../../shared/removeTempTree.cjs');
+const { privateNode } = require('../../shared/privateNode.cjs');
 
 const EXT = path.resolve(__dirname, '..', '..', '..', '..');
 const OUT = path.join(EXT, 'out');
@@ -46,7 +49,10 @@ test('T15 source: bootstrapBicameral reads the three keys through inspect and wr
 
 test('T15 (A4): a workspace-folder change disconnects the prior client once and wires exactly one new client', async () => {
   const listeners = { folders: [] };
-  const settings = { command: process.execPath, extraCommandRoots: [path.dirname(process.execPath), path.dirname(fs.realpathSync.native(process.execPath))], autoConnect: false };
+  // LD23: a trusted absolute node (a private copy on POSIX; a runner's tool cache is world-writable).
+  const nodeBase = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'fsbicnode-')));
+  const node = privateNode(nodeBase);
+  const settings = { command: node, extraCommandRoots: [path.dirname(node), path.dirname(fs.realpathSync.native(node))], autoConnect: false };
   const vscodeStub = {
     workspace: {
       getConfiguration: () => ({
@@ -93,5 +99,6 @@ test('T15 (A4): a workspace-folder change disconnects the prior client once and 
   } finally {
     Module._resolveFilename = orig;
     delete require.cache.vscode;
+    removeTempTree(nodeBase);
   }
 });

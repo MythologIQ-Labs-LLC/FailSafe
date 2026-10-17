@@ -48,6 +48,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Integration evidence is wired right after Sentinel and can no longer stop activation. If it is unavailable, the OpenHands and Jira/Linear commands say so and save nothing. Tracker drafts follow the enforcement engine's governance mode.
 - The v6.0.7 release notes said FailSafe publishes commit-bound SHIELD checks. It can verify a seal, but no command publishes one yet; the check name is reserved for a verified receipt.
 
+### Security
+
+- On macOS and Linux, FailSafe no longer runs an executable whose file or folders other users can write to, or that another user owns.
+
 ### Known limitations
 
 - Agent Marketplace install, update and scan stay disabled. The scanners run from an empty folder and do not read an item's files, so every scanned install is quarantined until a repository scanner exists.
@@ -71,6 +75,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - OpenHands: the run identity comes only from the export's conversation_id, conversationId, session_id or id fields, and the export layout has not been confirmed against a live export. Exports with integer ids, no ids or no run identity fall back to keys by file and position, so a different file of the same run imports again. A crafted export that declares a real run's identity and event ids can still pre-claim those keys. Evidence signed under a lost Secret Storage key, or in a moved folder, shows as unverified until it is re-imported. The signing binds evidence to this install; it does not protect against its own user.
 - Provider behaviour for Jira, Linear, Sentry and OpenHands is tested with recorded responses only.
 - Unverified: reading user-level settings in a Remote window, and the garak, promptfoo and pwsh probe formats.
+- The macOS and Linux ownership check allows group-writable files and folders, and does not read POSIX ACLs (including macOS chmod +a). On Windows, folder ACLs are not checked.
+- On macOS and Linux, programs under a folder every user can write are refused, such as the tool cache on GitHub-hosted runners (/opt/hostedtoolcache) and WSL drvfs paths (/mnt/c), which appear writable by everyone. So is a Homebrew or Linuxbrew installed by another account. FailSafe running as root in a container refuses files other users own, and a user-namespace sandbox such as Flatpak can show files as owned by another user and refuse them.
+- Folders a link passes through on the way to a program are not checked when it starts; its real folders are, and for Python and pip also the folder they are started from.
 
 ## [6.0.7] - 2026-10-15
 

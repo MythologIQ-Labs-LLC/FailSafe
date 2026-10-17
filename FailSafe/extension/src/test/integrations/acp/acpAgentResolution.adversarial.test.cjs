@@ -17,6 +17,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { removeTempTree } = require('../../shared/removeTempTree.cjs');
+const { privateNode } = require('../../shared/privateNode.cjs');
 const { spawnSync } = require('child_process');
 const { EventEmitter } = require('events');
 const { PassThrough } = require('stream');
@@ -43,6 +44,8 @@ after(() => {
 });
 
 const base = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'fsacp-')));
+// LD23: a trusted absolute node (a private copy on POSIX; a runner's tool cache is world-writable).
+const NODE = privateNode(base);
 const plant = path.join(base, 'plant');
 fs.mkdirSync(plant);
 const MARK = path.join(base, 'marker.log');
@@ -77,7 +80,7 @@ test('T16: resolveAgentCommand refuses the planted agent and accepts a trusted a
   process.chdir(plant);
   try {
     assert.throws(() => main.resolveAgentCommand('fsagent'), (e) => e.code === 'TRUSTED_EXECUTABLE_UNAVAILABLE');
-    assert.equal(main.resolveAgentCommand(process.execPath), fs.realpathSync.native(process.execPath));
+    assert.equal(main.resolveAgentCommand(NODE), fs.realpathSync.native(NODE));
   } finally { process.chdir(saved.cwd); }
   assert.equal(ran(), false, 'nothing ran');
 });
@@ -105,8 +108,8 @@ test('T16: runAcpProxy hands spawnFn the resolved path, never the raw name', () 
   const outgoing = new PassThrough();
   // A linked folder makes the raw path differ from its resolved form.
   const J = path.join(base, 'nodelink');
-  if (!fs.existsSync(J)) fs.symlinkSync(path.dirname(process.execPath), J, WIN ? 'junction' : 'dir');
-  const viaLink = path.join(J, path.basename(process.execPath));
+  if (!fs.existsSync(J)) fs.symlinkSync(path.dirname(NODE), J, WIN ? 'junction' : 'dir');
+  const viaLink = path.join(J, path.basename(NODE));
   try {
     main.runAcpProxy({
       incoming, outgoing, agentCommand: viaLink, agentArgs: [],
@@ -115,7 +118,7 @@ test('T16: runAcpProxy hands spawnFn the resolved path, never the raw name', () 
       signals: new EventEmitter(),
     });
   } finally { for (const s of [incoming, outgoing, child.stdout, child.stdin]) s.destroy(); }
-  assert.deepEqual(seen, [fs.realpathSync.native(process.execPath)]);
+  assert.deepEqual(seen, [fs.realpathSync.native(NODE)]);
 });
 
 test('T16 source: main reports an unresolved agent on stderr and returns 1 without spawning', () => {
@@ -138,7 +141,7 @@ test('T16: a failure after the agent is spawned kills it and is reported', () =>
   Object.defineProperty(backing, 'effectiveMode', { get() { throw new Error('backing broke'); } });
   try {
     assert.throws(() => main.runAcpProxy({
-      incoming, outgoing, agentCommand: process.execPath, agentArgs: [], backing,
+      incoming, outgoing, agentCommand: NODE, agentArgs: [], backing,
       spawnFn: () => child, signals: new EventEmitter(),
     }), /backing broke/);
   } finally { for (const s of [incoming, outgoing, child.stdout, child.stdin]) s.destroy(); }
