@@ -170,11 +170,93 @@ function powerShellDiagnostics() {
   return `\n  every rejection, then the /usr/bin/pwsh chain:\n  ${lines.join('\n  ')}`;
 }
 
+const within = (p, dir) => p === dir || p.startsWith(dir.endsWith(path.sep) ? dir : dir + path.sep);
+
+/** LD23f: remove group and other write from every file and folder under dir; links are left as they are and returned. */
+function closeToOthers(dir) {
+  const links = [];
+  const walk = (p) => {
+    const st = fs.lstatSync(p);
+    if (st.isSymbolicLink()) { links.push(p); return; }
+    fs.chmodSync(p, st.mode & 0o7777 & ~0o022);
+    if (st.isDirectory()) for (const n of fs.readdirSync(p)) walk(path.join(p, n));
+  };
+  walk(dir);
+  return links;
+}
+
+/** True when another user can write `p` or a folder above it, by LD23's rule. */
+function writableByOthers(p) {
+  const entries = [];
+  for (let q = p; ; q = path.dirname(q)) {
+    const st = fs.statSync(q);
+    entries.push({ uid: st.uid, mode: st.mode, isDirectory: st.isDirectory() });
+    if (path.dirname(q) === q) break;
+  }
+  return te.ownershipRefusal(entries, process.getuid()) === 'writable by other users';
+}
+
+/**
+ * LD23f, POSIX: GitHub-hosted runners install PowerShell world-writable
+ * (/opt/microsoft/powershell/7 is 0o777), which LD23 correctly refuses. The
+ * row copies the real install folder into a private folder only this user can
+ * write. Undefined when no PowerShell is installed, so the row fails loudly.
+ */
+function privatePowerShell() {
+  const known = te.PWSH.knownLocations(process.platform).find((f) => fs.existsSync(f));
+  if (!known) return undefined;
+  const real = fs.realpathSync.native(known);
+  const root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'fsexec-pwsh-')));
+  const dir = path.join(root, 'pwsh');
+  fs.cpSync(path.dirname(real), dir, { recursive: true, verbatimSymlinks: true });
+  for (const link of closeToOthers(dir)) {
+    const target = path.resolve(path.dirname(link), fs.readlinkSync(link));
+    if (within(target, dir) || !fs.existsSync(target)) continue;
+    assert.equal(writableByOthers(fs.realpathSync.native(target)), false, `${link} leads out of the copy to ${target}, which other users can write`);
+  }
+  return { root, dir };
+}
+
+test('T8 closeToOthers removes group and other write and leaves links alone', () => {
+  const root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'fsexec-close-')));
+  try {
+    const sub = path.join(root, 'sub');
+    fs.mkdirSync(sub);
+    const file = path.join(sub, 'tool');
+    fs.writeFileSync(file, '');
+    let link;
+    if (!WIN) {
+      for (const f of [root, sub, file]) fs.chmodSync(f, 0o777);
+      link = path.join(root, 'link');
+      fs.symlinkSync(file, link);
+    }
+    const links = closeToOthers(root);
+    assert.deepEqual(links, WIN ? [] : [link]);
+    if (!WIN) {
+      for (const f of [root, sub, file]) assert.equal(fs.statSync(f).mode & 0o777, 0o755, `${f} is 0o755`);
+      assert.equal(fs.lstatSync(link).isSymbolicLink(), true, 'the link is left as a link');
+    }
+  } finally { removeTempTree(root); }
+});
+
 test('T8: admitSkill runs the real PowerShell, never the plant', () => {
+  const prevPath = process.env.PATH;
+  let priv;
+  if (!WIN) {
+    priv = privatePowerShell();
+    if (priv) {
+      // ws's plant stays first, refused as inside the workspace; the private copy is the first trusted candidate.
+      const wsBin = path.join(ws, 'bin');
+      process.env.PATH = prevPath.startsWith(wsBin + DELIM)
+        ? `${wsBin}${DELIM}${priv.dir}${DELIM}${prevPath.slice(wsBin.length + 1)}`
+        : `${priv.dir}${DELIM}${prevPath}`;
+    }
+  }
   configure({ workspaceDirs: [ws] });
   process.env.NODE_OPTIONS = childEnv().NODE_OPTIONS || '';
   clearMarks();
   try {
+    if (priv) assert.ok(within(te.trustedExecutablePath(te.PWSH, ws), priv.dir), 'the private copy is the PowerShell trusted');
     const { admitSkill } = req('roadmap', 'services', 'SkillRegistry.js');
     const skill = path.join(base, 'SKILL.md');
     fs.writeFileSync(skill, '# skill\n');
@@ -183,7 +265,12 @@ test('T8: admitSkill runs the real PowerShell, never the plant', () => {
     assert.doesNotMatch(String(r.error), /bad option/, 'the planted node did not answer');
     assert.equal(r.ok, true, `admitted: ${r.error}${r.ok ? '' : powerShellDiagnostics()}`);
     assert.ok(fs.existsSync(path.join(path.dirname(script), 'admitted.txt')), 'only a real PowerShell running the script writes admitted.txt');
-  } finally { delete process.env.NODE_OPTIONS; }
+  } finally {
+    delete process.env.NODE_OPTIONS;
+    process.env.PATH = prevPath;
+    configure({ workspaceDirs: [ws] });
+    if (priv) removeTempTree(priv.root);
+  }
 });
 
 test('T8: the Windows process sampler starts the real PowerShell from a planted process cwd', { skip: !WIN && 'win32 sampler' }, async () => {
