@@ -33186,3 +33186,38 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `10a09ddba895254b10fa6960a241eefcdb8904f81eb855414e82c76c9c84c1f4`
 
 **Decision**: SESSION SEAL for plan-532a-integration-contracts.md (implementation #781). Reality = Promise, with disclosures. The branch carries #532 part A: 30 integration contracts, the portfolio, the scenarios and the graph specification, registered and checked by integration-contracts.test.cjs. Disclosures: bounded damaged-ledger override applied to this cycle (#467 unresolved, normal governance not restored); five audit iterations (four VETOs) before PASS; the final claim is scan-hit ownership with stated blind spots, not a complete inventory, and the final rule precision was developed in the test under the plan's binding criteria; the tag check ran locally against v6.0.8 and covered 355 claims; PR CI checks out without tags, so there it is a visible skip; the architecture index golden normative count moved from 10 to 42 because the 32 new documents are normative; ten findings outside the LD3 list were filed by the lead at seal as B273-B282, a deviation from the implementer's not-filed note; B273 (a trusted workspace sentinel.yaml can point the Sentinel LLM endpoint at a public host and file content is then posted there) has a security edge and needs a trusted workspace because the extension declares no untrustedWorkspaces capability; git-bootstrap is ask-first and owned by its own contract; dispositions are recommendations pending the owner; npm test and test:ui were not run in full locally because no product code changed; the PR Full Test Suite runs them; earlier seals are unedited. Next: push, open the PR, the PR checks, then a merge with --match-head-commit. #532 stays open for part B. Not tagged.
+
+---
+
+### Entry #783: GATE TRIBUNAL - plan-532b-delivery-assessment (iteration 1) - PASS
+
+**Timestamp**: 2026-10-17T22:38:55Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-17T2211-f41932`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `8287a3791157eba4ebef9941c00aa67c288b31484ec7e5dd68a81077d7d14bbc`
+**Previous Hash**: `10a09ddba895254b10fa6960a241eefcdb8904f81eb855414e82c76c9c84c1f4`
+**Chain Hash (Merkle seal)**: `29dba623a418762b9fe5aee62b3cc6f93b2e25ee5b452a951be22a2eeb3d21e0`
+
+**Decision**: PASS on plan-532b-delivery-assessment.md iteration 1 (sha256 b7e99119): #532 part B, one local vertical slice from an imported tracker intent to a delivery assessment. LINKED and UNLINKED intent-history edges (implements, committed-under) from operator-confirmed picks, server-side hashes, trusted local git only, evidence by exact intent id or full commit SHA, a pure five-step assessment with the receipt step unavailable until #467, a Workspace Delivery view, a read-only assessment command, and the CommitCheckRoute fix (B283). Fresh Option B architect-reviewer; 86 citations checked, none failed; B283 confirmed real. Should-fix notes bound into implementation: package.json citation moves in contracts, existing CommitCheckRoute rows move to getActiveIntent, request-time intent getter, stored-SHA revalidation before git, unborn versus not-a-repo, governance evidence shown with event type and ledger chain status and 'recorded means present, not passed', link refused on a broken chain and set-replay of edges, injected git runner in the no-egress test, archived listing from CREATED entries, sourceSha described as HEAD at link time. Tribunal entry held by the lead and appended at implementation in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #784: IMPLEMENTATION - plan-532b-delivery-assessment
+
+**Timestamp**: 2026-10-17T23:42:57Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-17T2211-f41932`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-17T2211-f41932/implement.json`
+
+**Content Hash**: `adfe5cac98d1c4529d206232803b6fb988e09b431090bc16b09d90c84c5beac0`
+**Previous Hash**: `29dba623a418762b9fe5aee62b3cc6f93b2e25ee5b452a951be22a2eeb3d21e0`
+**Chain Hash (Merkle seal)**: `5cf1e44ec3bd7d79925fa4f01af1393416992bfe81cff252c4a9c24c3ef94386`
+
+**Decision**: IMPLEMENTATION of plan-532b-delivery-assessment.md iteration 1 (audit PASS #783, sha256 b7e99119), #532 part B: the first vertical slice from an imported tracker intent to an evidence-backed delivery assessment, local only. Branch feat/532b-delivery-assessment from main 75c26fc5. deaf29cd and 5a56b1d4: red suites first. e2dc67a6: LINKED and UNLINKED intent-history events (implements, committed-under) appended through the hash-chained history, refused on a broken chain, with no active intent or a SEALED one, replayed as a set; delivery git reads through the trusted resolver (log, cat-file, rev-parse tree, symbolic-ref, diff-tree --root, end-of-options, stored SHAs revalidated); LedgerManager.findEntriesContaining with exact intentId or full git_head equality; the pure assessDelivery rule with the receipt step unavailable (#467, B216). 274a23d4: DeliveryRoute (GET intents, intent, candidates; POST link and unlink behind rejectIfRemote, rate limits and the VS Code operator confirmation, hashes computed server-side), the read-only failsafe.delivery.assessActiveIntent command, the Workspace Delivery view, and the CommitCheckRoute fix (B283): the active intent is read from the IntentService at request time instead of a hub key no builder set. e9fd7d4f: scenarios and the jira, linear and governed-commit-pr contracts updated, moved contract anchors re-cited, FX1004, B283 fixed, B284-B286, CHANGELOG [Unreleased] What's New copy and Fixed. bb2bce5d: the extension-host suite restores the shared workspace. 5168e6a6: archived intents are read only by a valid uuid. Evidence, counts from logs, red then green: IntentService.links 0/7 then 8/8 with the traversal row; deliveryAssessment 14 failing then 14 passing; deliveryGit 10 then 10; deliveryNoEgress 2 then 2; DeliveryRoute 10 then 10; renderer 6 then 6; CommitCheckRoute 3 passing and 6 failing (the LD9 row among them) then 9 passing; extension host 0/1 then 3 in the architecture-index configuration (both suites 5 passing); Playwright 7 passing with the workspace specs. tsc 0; lint 0 errors; runner coverage pass (649 files); e2e coverage release mode pass; test:node 816 tests, 805 passed, 2 failed (FX946 baseline), 9 skipped; targeted vscode-test 405 passing, 0 failing; the architecture CLI passes; integration-contracts 39/39 with the tag check covering 355 claims; preflight pass; docs coherence pass. Installed package: the win32-x64 VSIX from bb2bce5d in a clean profile of a disposable VS Code; Delivery showed issue recorded and the other gaps, each link raised the VS Code dialog with server-computed values, a document byte change showed stale, and the command summary appeared. The lead reviewed the screenshots; the dialog was driven with window.dialogStyle custom in that profile.
