@@ -32849,3 +32849,20 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `3506b0dad96d2056a2c2be9fb0a98a1c18cc1f5be34a3faad45509d091a7c321`
 
 **Decision**: SESSION SEAL for the second LD23 follow-up (implementation #762) after seal #761. Reality = Promise, with disclosures. release/v6.0.8-rc carries 8549d138 (merge d0555a7f) and docs commit 4b7f75b7 (B244). Disclosures: bounded damaged-ledger override applied to this integration cycle (#467 unresolved); a test-only follow-up after seal #761; the full LD6 run was not repeated, the focused local checks and PR #529's Linux test:all on the pushed head cover it; my first diagnosis (an Electron binary cannot answer --version) was wrong; lane A measured that it can in place and that the copy is what fails, and the row tests the copy; the extension-host census becomes 510 files with privateNode.test.ts; the LD23 POSIX rows and Linux test:ui have not yet run on Linux; D16 is read from the next CI log before the LD8 merge; seals #746, #753, #759 and #761 are left unedited. Next: one push moving PR #529's head, Linux CI read against D16, then the LD8 merge. Not merged, not tagged, not published.
+
+---
+
+### Entry #764: IMPLEMENTATION - plan-v608-integration (LD23 third follow-up)
+
+**Timestamp**: 2026-10-17T07:44:16Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-16T1356-298603`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-16T1356-298603/implement.json`
+
+**Content Hash**: `1de2d1178591fdec99b621a447920cbf6a451fc4f726c14338bf122110ac9a76`
+**Previous Hash**: `3506b0dad96d2056a2c2be9fb0a98a1c18cc1f5be34a3faad45509d091a7c321`
+**Chain Hash (Merkle seal)**: `9f84ca680a79c4549ba19335fe50df4b67f08e8faa864842e4e21f625751af3c`
+
+**Decision**: IMPLEMENTATION of the third LD23 follow-up (plan-v608-integration.md iteration 17, audit PASS #757), after seal #763 on d0555a7f. PR #529's Linux Full Test Suite on c96bf67a: the first attempt had npm test 5002 passing and 1 failing (the #473 ledger row again, 2 of 4 Linux runs); a re-run of only that job passed npm test 5003/0/17 over 510/510 files and so ran test:node on Linux for the first time: 727 tests, 698 passed, 1 failed, 0 cancelled, 28 skipped, with T13 (a), T13 (b), the T13 POSIX positive control, the T13 POSIX attacker-writable PATH folder, LD23 (i), LD23 (iii) and the LD20 child row (16 tests) each ok and not skipped. The #473 root cause was found and reproduced: the tail-truncation and rollback rows re-append with the same tag, rows carry nothing random but a millisecond timestamp, so appends within one millisecond rebuild the deleted rows byte for byte and the anchored head really is back; verification correctly passes. A test defect, not a fail-open. The remaining Linux failure is T8 admitSkill: the marker stayed empty and no planted node answered, but r.ok was false because every real pwsh candidate was refused statically (the error shows only 5 rejections). Lane A e0043f43 (merged as 7f4b88c2), test only: both #473 rows refill with their own tag and assert the refilled head differs from the deleted one (red under a frozen clock before, green after; the same-tag mutant trips the new precondition); T8 reports every PowerShell rejection and the uid and mode chain of the real pwsh when it fails, assertions unchanged. Lane A win32 evidence: vscode-test LedgerManager|#473 90 passing, 0 failing; trustedExecutable.adversarial 8/8; test:node 727 tests, 716 passed, 2 failed (FX946 baseline), 9 skipped; tsc and lint clean.
