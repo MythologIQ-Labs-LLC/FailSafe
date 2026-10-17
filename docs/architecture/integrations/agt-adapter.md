@@ -121,5 +121,5 @@ Recommendation for the owner: **COMPLETE**. The read side (state, health, SRE pa
 ## Open defects
 
 [B271] adapter base URL not validated (F19) `FailSafe/extension/src/roadmap/routes/SreApiRoute.ts:22` (`const baseUrl = adapterBaseUrl`).
-Observed, not filed in this cycle (see Other findings in the portfolio): adapter install runs pip without a server-side confirmation (observed; not one of the LD3 facts) `FailSafe/extension/src/roadmap/routes/AdapterRoute.ts:53-66` (`deps.adapterService.install(`).
+Observed outside the LD3 list, filed as B276 (see Other findings in the portfolio): adapter install runs pip without a server-side confirmation (observed; not one of the LD3 facts) `FailSafe/extension/src/roadmap/routes/AdapterRoute.ts:53-66` (`deps.adapterService.install(`).
 Health check reads `.failsafe` under `process.cwd()` instead of the workspace root (observed; impact depends on the host's working directory, unverified) `FailSafe/extension/src/roadmap/services/AdapterService.ts:465` (`path.join(process.cwd(), ".failsafe", "ledger", "ledger.db")`).

@@ -109,4 +109,4 @@ Recommendation for the owner: **COMPLETE**. The check is useful and well tested 
 
 ## Open defects
 
-Observed, not filed in this cycle (see Other findings in the portfolio): the registry query runs on each new seal with no setting or prompt, and without a merge base it sends every direct dependency name `FailSafe/extension/src/extension/substrate-command.ts:121-143` (`void runSubstrate('seal auto-hook');`).
+Observed outside the LD3 list, filed as B275 (see Other findings in the portfolio): the registry query runs on each new seal with no setting or prompt, and without a merge base it sends every direct dependency name `FailSafe/extension/src/extension/substrate-command.ts:121-143` (`void runSubstrate('seal auto-hook');`).

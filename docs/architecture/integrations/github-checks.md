@@ -127,6 +127,6 @@ Recommendation for the owner: **COMPLETE**. The advisory and linkage checks work
 ## Open defects
 
 [B265] The PR-linkage audit sends the GitHub token to api.github.com even when a GitHub Enterprise API base URL is configured (F11) `FailSafe/extension/src/integrations/github-checks/pr-linkage-audit.ts:164-174` (`export interface LinkageRunOptions {`).
-Observed, not filed in this cycle (see Other findings in the portfolio): The fork guard `isFork` is never set by the command, although the setting text says fork-PR contexts degrade to local-only `FailSafe/extension/package.json:447-450` (`fork-PR contexts degrade to local-only`).
-Observed, not filed in this cycle (see Other findings in the portfolio): The default GitHub transports drop the base URL's port `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:198-200` (`{ hostname: u.hostname, path: u.pathname + u.search, method: 'GET', headers, timeout: 8000 },`).
+Observed outside the LD3 list, filed as B278 (see Other findings in the portfolio): The fork guard `isFork` is never set by the command, although the setting text says fork-PR contexts degrade to local-only `FailSafe/extension/package.json:447-450` (`fork-PR contexts degrade to local-only`).
+Observed outside the LD3 list, filed as B279 (see Other findings in the portfolio): The default GitHub transports drop the base URL's port `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:198-200` (`{ hostname: u.hostname, path: u.pathname + u.search, method: 'GET', headers, timeout: 8000 },`).
 The documentation index row is stale (still "In review", PR #147) `docs/integrations/INTEGRATION_DOCS_INDEX.md:59` (`**GitHub Checks** (#96)`).

@@ -121,6 +121,6 @@ Recommendation for the owner: **MAINTAIN**. The single-issue preview and the app
 
 ## Open defects
 
-Observed, not filed in this cycle (see Other findings in the portfolio): The earlier-import note never fires for Linear because a missing issue is reported as a contract failure `FailSafe/extension/src/integrations/linear/linear-client.ts:85` (`Issue ${id} not found (or no access).`).
+Observed outside the LD3 list, filed as B280 (see Other findings in the portfolio): The earlier-import note never fires for Linear because a missing issue is reported as a contract failure `FailSafe/extension/src/integrations/linear/linear-client.ts:85` (`Issue ${id} not found (or no access).`).
 Live-account validation of Linear is open as `[B230]` `docs/BACKLOG.md:586` (`Validate Jira, Linear, Sentry and OpenHands against live disposable accounts`).
 The documentation index row is stale (still "In review", PR #145) `docs/integrations/INTEGRATION_DOCS_INDEX.md:57` (`**Linear** (#97)`).

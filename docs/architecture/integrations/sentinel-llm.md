@@ -114,4 +114,4 @@ Recommendation for the owner: **COMPLETE**. The local-model path is reasonable a
 
 ## Open defects
 
-Observed, not filed in this cycle (see Other findings in the portfolio): A workspace `.failsafe/config/sentinel.yaml` can set the LLM endpoint to any public http host, and in an LLM mode file content is posted there without a prompt `FailSafe/extension/src/shared/ConfigManager.ts:57-60` (`ollamaEndpoint: sentinelYaml?.sentinel?.ollamaEndpoint ??`) (outside the plan's LD3 list; filing is the lead's call).
+Observed outside the LD3 list, filed as B273 (see Other findings in the portfolio): A workspace `.failsafe/config/sentinel.yaml` can set the LLM endpoint to any public http host, and in an LLM mode file content is posted there without a prompt `FailSafe/extension/src/shared/ConfigManager.ts:57-60` (`ollamaEndpoint: sentinelYaml?.sentinel?.ollamaEndpoint ??`).

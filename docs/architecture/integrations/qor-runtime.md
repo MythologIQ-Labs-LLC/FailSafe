@@ -102,5 +102,5 @@ Recommendation for the owner: **RETIRE**. The client cannot be turned on: the on
 
 ## Open defects
 
-Observed, not filed in this cycle (see Other findings in the portfolio): the `failsafe.qorelogic.externalRuntime.*` settings are contributed but never read, so enabling them does nothing `FailSafe/extension/package.json:692-718` (`"failsafe.qorelogic.externalRuntime.timeoutMs": {`).
+Observed outside the LD3 list, filed as B277 (see Other findings in the portfolio): the `failsafe.qorelogic.externalRuntime.*` settings are contributed but never read, so enabling them does nothing `FailSafe/extension/package.json:692-718` (`"failsafe.qorelogic.externalRuntime.timeoutMs": {`).
 The only construction passes no runtime options `FailSafe/extension/src/extension/bootstrapServers.ts:140-146` (`const consoleServer = new ConsoleServer(`).

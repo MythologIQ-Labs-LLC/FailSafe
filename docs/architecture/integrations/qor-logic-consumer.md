@@ -114,5 +114,5 @@ Recommendation for the owner: **MAINTAIN**. The installer is hardened (trusted i
 
 ## Open defects
 
-Observed, not filed in this cycle (see Other findings in the portfolio): the scaffold route installs the package without a server-side VS Code confirmation and without a remote-request check `FailSafe/extension/src/roadmap/routes/ActionsRoute.ts:94-103` (`const report = await runScaffold(deps, bodyHosts as QorLogicHost[]`).
+Observed outside the LD3 list, filed as B274 (see Other findings in the portfolio): the scaffold route installs the package without a server-side VS Code confirmation and without a remote-request check `FailSafe/extension/src/roadmap/routes/ActionsRoute.ts:94-103` (`const report = await runScaffold(deps, bodyHosts as QorLogicHost[]`).
 The web path reaches pip through `ensurePackageInstalled` `FailSafe/extension/src/extension/installSkillsHandler.ts:152-153` (`const pip = await runPipStep(ingestor, callbacks.onProgress);`).
