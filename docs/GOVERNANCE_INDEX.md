@@ -1,5 +1,6 @@
 # Governance Index
 
+**Last Reviewed**: 2026-10-17 (SUBSTANTIATE — **v6.0.8 integration, iteration 17** (`plan-v608-integration.md`, Tier 4 plans glob): LD22 and the LD23 POSIX executable-trust check after seal #753; integration seal #759 on candidate f1d15ea3.)
 **Last Reviewed**: 2026-10-16 (SUBSTANTIATE — **v6.0.8 integration, iteration 13** (`plan-v608-integration.md`, Tier 4 plans glob): the LD18 CI timer seam and the LD20-LD21 temp hygiene and full re-run after seal #746; integration seal #753 on candidate 717d8254.)
 **Last Reviewed**: 2026-10-16 (SUBSTANTIATE — **v6.0.8 integration** (`plan-v608-integration.md`, Tier 4 plans glob): lanes A-D, each sealed in its own session (#705-#736), the LD11 nonce-store containment and LD12-LD16 fixes, version 6.0.8; integration seal #746.)
 **Last Reviewed**: 2026-10-15 (SUBSTANTIATE — **v6.0.7 final integration, Phase 4 CI corrections** (`plan-v607-final-integration.md`): T18 lock identity, resolver spawn annotations, rv report escaping; tribunal iterations 11-12 (PASS at 12); seal #704 supersedes #700. No new governance artifacts. META_LEDGER DAMAGED under qor-logic 0.176.1 carried under the owner's bounded override; normal governance NOT restored (#467).)
