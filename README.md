@@ -22,6 +22,8 @@ _Local-first safety for AI coding assistants._
 
 ---
 
+**Developing FailSafe?** Start with the [Architecture Index](docs/ARCHITECTURE_INDEX.md) to find the canonical design contracts and existing documents before proposing architectural changes. The [Governance Index](docs/GOVERNANCE_INDEX.md) remains the authority for Qor artifact tiers and history.
+
 ## 🔌 Integrations — govern your entire AI toolchain, not just the editor
 
 FailSafe turns the editor into a **governance hub** for the tools your AI agents actually use. Every integration is **local-first, opt-in, and routed through the same deterministic policy engine** that guards your edits — so connecting a tool never widens your attack surface or sends data anywhere by default. Each integration ships with its own README (`src/integrations/<name>/README.md`) and the external API names it depends on are back-cited to official docs in [`docs/integrations/INTEGRATION_DOCS_INDEX.md`](docs/integrations/INTEGRATION_DOCS_INDEX.md).
