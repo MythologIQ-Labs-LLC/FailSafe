@@ -1,6 +1,6 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-10-17 (v6.0.8 published from main `b5d490fd` and verified 108/108; #530 architecture index foundation sealed on PR #533's branch; ledger #705-#771, seal #771; not yet merged)
+**Last Updated:** 2026-10-17 (v6.0.8 published and verified; #530 merged to main 6aedb7b6; #531 managed architecture index sealed on feat/531-managed-architecture-index; ledger #705-#775, seal #775; not yet merged)
 **Active local review:** `fix/system-state-currency-sprint2` — this cycle. Restores the Tier 1 freshness contract and adds `system-state-currency.test.cjs`, the first check that asserts it. Prior to this cycle no test anywhere read this file's content.
 **Prior local review:** `fix/qor169-sprint1-seal-unblock` — MERGED to `main` as `1e1215cc` (PR #448). qor-logic 0.163.1 → 0.169.0; `.qorlogic/config.json` created, which is what allows a seal to complete at all; five vacuously-passing governance controls identified; TTS timeout assertion made deterministic and falsifying. Seal Entry #602.
 **Open PRs:** #442 (Bicameral upstream row error state), #443 (plan-grep-lint regex recognition), #444 (#367 per-engine provenance), #445 (#242 Shadow Genome severity aria — supersedes #440, closed as duplicate), #446 + #447 (dependabot). #447's blocker — a wall-clock TTS assertion — was removed by Entry #602.
@@ -16,6 +16,7 @@
 
 ## 2026-10-17 — v6.0.8 integration, POSIX executable-trust fix (release/v6.0.8-rc, not tagged, not published)
 
+- #531 first slice (plan-531, audit PASS #773, seal #775): FailSafe discovers, bootstraps (approved, never overwriting) and governs an architecture index in the workspace; Workspace Architecture view; L3 proposals with ledger evidence.
 - v6.0.8 published 2026-10-17: tag `v6.0.8` on `b5d490fd`, release run 39052325218; GitHub Release, VS Code Marketplace and Open VSX verified (rv 108/108, lifecycle on the Marketplace download).
 - #530 architecture index foundation (plan-530, audit PASS #769, seal #771): docs/ARCHITECTURE_INDEX.md registry and `check-architecture-index.cjs`, run by test:node.
 - After seal #753: the first Linux test:node run showed a planted interpreter on PATH outside the workspace was run. On macOS and Linux the trusted executable resolver now refuses a file or folder other users can write or another user owns (LD23); group-writable stays allowed and Windows ACLs are not checked (B239-B242).

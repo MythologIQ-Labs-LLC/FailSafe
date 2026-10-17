@@ -102,6 +102,10 @@ export interface ConsoleServerFixtures {
   integrationConfig?: Record<string, boolean>;
   /** #479: health evidence (integration id -> { result, category?, checkedAt }) seeded into the store. */
   integrationHealth?: Record<string, unknown>;
+  /** #531: ledger handle the fake qorelogicManager returns (default null: ledger unavailable). */
+  ledgerManager?: unknown;
+  /** #531: the fake qorelogicManager's L3 queue (default: a stub that records nothing). */
+  queueL3Approval?: (request: Record<string, unknown>) => Promise<string>;
 }
 
 export interface ConsoleServerController {
@@ -143,7 +147,7 @@ function writeWorkspaceFixtures(
   }
 }
 
-function buildFakeManagers(initialHub: HubFixture | null): FakeManagers {
+function buildFakeManagers(initialHub: HubFixture | null, fixtures: ConsoleServerFixtures = {}): FakeManagers {
   const hubRef: { current: HubFixture | null } = { current: initialHub };
   const planManager = {
     getAllSprints: () => [],
@@ -151,8 +155,10 @@ function buildFakeManagers(initialHub: HubFixture | null): FakeManagers {
     getActivePlan: () => null,
   };
   const qorelogicManager = {
-    getLedgerManager: () => null,
+    getLedgerManager: () => fixtures.ledgerManager ?? null,
     getL3Queue: () => [],
+    // #531: the architecture propose route queues through this.
+    queueL3Approval: fixtures.queueL3Approval ?? (async () => "stub-l3"),
     getTrustEngine: () => ({ getAllAgents: async () => [] }),
     getShadowGenomeManager: () => ({
       analyzeFailurePatterns: () => [],
@@ -284,7 +290,7 @@ export async function serveConsoleServerUI(
     || fs.mkdtempSync(path.join(os.tmpdir(), "failsafe-console-server-fixture-"));
   writeWorkspaceFixtures(workspaceRoot, fixtures);
 
-  const fakes = buildFakeManagers(fixtures.initialHub ?? null);
+  const fakes = buildFakeManagers(fixtures.initialHub ?? null, fixtures);
   const eventBus = new EventBus();
   const checkpointRef: CheckpointRecord[] = [...(fixtures.initialVerdicts ?? [])];
 

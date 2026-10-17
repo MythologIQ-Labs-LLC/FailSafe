@@ -1,5 +1,7 @@
 # Governance Index
 
+**Last Reviewed**: 2026-10-17 (SUBSTANTIATE — **#531 managed architecture index, first slice** (`plan-531-architecture-governance.md`): the ADR registered in Tier 2; seal #775.)
+**Last Reviewed**: 2026-10-17 (IMPLEMENT — **#531 managed architecture index** (`plan-531-architecture-governance.md`, Tier 4 plans glob): registered `docs/architecture/MANAGED_ARCHITECTURE_INDEX.md` in Tier 2 (Architecture Index row `managed-architecture-index`); Publication status re-counted. META_LEDGER DAMAGED carried under the owner's bounded per-cycle override; normal governance NOT restored (#467).)
 **Last Reviewed**: 2026-10-17 (SUBSTANTIATE — **#530 architecture index foundation** (`plan-530-architecture-index.md`): docs/ARCHITECTURE_INDEX.md registered in Tier 1 with its validator; four normative docs registered; seal #771.)
 **Last Reviewed**: 2026-10-17 (IMPLEMENT — **#530 architecture index** (`plan-530-architecture-index.md`, Tier 4 plans glob): registered `docs/ARCHITECTURE_INDEX.md` in Tier 1; registered the four canonical design documents that had no tier row (`docs/integrations/INTEGRATION_STRUCTURE_STANDARD.md` and `docs/design/DEVELOPMENT_TRACKER_STANDARD.md` in Tier 2, `docs/design/SHADOW_GENOME_UI.md` and `docs/specs/VOICE_BRAINSTORM_SPEC.md` in Tier 5); Publication status counts re-counted (46 of 77 published, 15 unpublished, 16 shapes). META_LEDGER DAMAGED carried under the owner's bounded per-cycle override; normal governance NOT restored (#467).)
 **Last Reviewed**: 2026-10-17 (SUBSTANTIATE — **v6.0.8 integration, LD23 fourth follow-up** (`plan-v608-integration.md`): T8 private PowerShell copy; seal #767 on ac66f10c.)
@@ -92,6 +94,7 @@ Stable rules. Changes are explicit doctrine events recorded in `META_LEDGER` and
 | `docs/CORE_AXIOMS_AND_RULES_COMPILED.md` | Compiled axioms + rules from doctrine | manual sync |
 | `docs/FILE_STRUCTURE_STANDARD.md` | Where each kind of file belongs | manual; `/qor-organize` enforces |
 | `docs/integrations/INTEGRATION_STRUCTURE_STANDARD.md` | Uniform folder layout every integration under `FailSafe/extension/src/integrations/<name>/` follows; a deviating folder is a structure bug (Architecture Index row `integration-folder-structure`) | `/qor-plan` |
+| `docs/architecture/MANAGED_ARCHITECTURE_INDEX.md` | Managed architecture index ADR (#531): discovery, safe bootstrap, proposal routes, the Workspace Architecture view, the enforceable-vs-advisory table and the scenario map (Architecture Index row `managed-architecture-index`) | `/qor-plan` |
 | `docs/design/DEVELOPMENT_TRACKER_STANDARD.md` | Development Tracker design standard: engine and data decoupling, hosting, required design-source citation (Architecture Index row `development-tracker-ui`) | `/qor-plan` |
 | `docs/governance-cache-invalidation.md` | Cache invalidation discipline doctrine | manual |
 | `docs/governance-mode-transitions.md` | Mode-transition state machine doctrine | manual |
@@ -238,14 +241,14 @@ Every cycle that produces governance writes (`/qor-substantiate`, `/qor-repo-rel
 
 Registration in this index and presence in the repository are **different things**, and a reader of a clone cannot tell them apart without this section.
 
-`.gitignore:52-56` heads its stanza *"Private planning docs, transfer files, and governance records (licensing TBD)"* and ignores `docs/` and `.failsafe/` wholesale. Both trees are therefore **private by default and published by exception** — a doc becomes public when someone runs `git add -f` on it, which is a deliberate act. 46 of the 77 paths registered below have had that done; 15 have not (counted 2026-10-17 by the FX939 rule: the first backticked `.md` path of each tier-table row, so `plan-*.md` counts once per row).
+`.gitignore:52-56` heads its stanza *"Private planning docs, transfer files, and governance records (licensing TBD)"* and ignores `docs/` and `.failsafe/` wholesale. Both trees are therefore **private by default and published by exception** — a doc becomes public when someone runs `git add -f` on it, which is a deliberate act. 47 of the 78 paths registered below have had that done; 15 have not (counted 2026-10-17 by the FX939 rule: the first backticked `.md` path of each tier-table row, so `plan-*.md` counts once per row).
 
 An unpublished row is not drift. Whether a given governance doc *should* be published is a licensing decision the operator has explicitly deferred, and this index does not presume it.
 
 - private-by-default: `docs/`
 - private-by-default: `.failsafe/`
 
-`FailSafe/extension/src/test/governance/governance-index-publication.test.cjs` (FX939) reads those two prefixes from this section — not from a copy of its own — and fails when a registered path is neither tracked nor covered by one. Rows naming a *shape* rather than a file (`plan-*.md`, `AUDIT_REPORT_<plan>.md`, `entry-<N>-body.md`) are skipped; 16 of the 77 are of that kind.
+`FailSafe/extension/src/test/governance/governance-index-publication.test.cjs` (FX939) reads those two prefixes from this section — not from a copy of its own — and fails when a registered path is neither tracked nor covered by one. Rows naming a *shape* rather than a file (`plan-*.md`, `AUDIT_REPORT_<plan>.md`, `entry-<N>-body.md`) are skipped; 16 of the 78 are of that kind.
 
 ---
 

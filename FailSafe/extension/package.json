@@ -75,7 +75,8 @@
     "onCommand:failsafe.continue.run",
     "onCommand:failsafe.aider.run",
     "onCommand:failsafe.agentAudit.run",
-    "onCommand:failsafe.openhands.observe"
+    "onCommand:failsafe.openhands.observe",
+    "onCommand:failsafe.architecture.bootstrapIndex"
   ],
   "main": "./dist/extension/main.js",
   "contributes": {
@@ -212,6 +213,10 @@
       {
         "command": "failsafe.installQorLogicSkillsDefaults",
         "title": "FailSafe: Install Qor-Logic Skills (defaults)"
+      },
+      {
+        "command": "failsafe.architecture.bootstrapIndex",
+        "title": "FailSafe: Bootstrap Architecture Index"
       },
       {
         "command": "failsafe.installVoicePack",
@@ -677,6 +682,12 @@
           "type": "number",
           "default": 120,
           "description": "L3 first response SLA in seconds"
+        },
+        "failsafe.architecture.indexPath": {
+          "type": "string",
+          "default": "docs/ARCHITECTURE_INDEX.md",
+          "scope": "resource",
+          "markdownDescription": "Workspace-relative path of the architecture index FailSafe discovers, validates and (on request, after your confirmation) creates. Absolute paths and paths that leave the workspace are refused. FailSafe never moves or overwrites an existing index."
         },
         "failsafe.qorelogic.externalRuntime.enabled": {
           "type": "boolean",

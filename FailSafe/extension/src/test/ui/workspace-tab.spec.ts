@@ -1,10 +1,12 @@
 /**
  * FX521 — B199 Phase 5: Workspace tab Playwright coverage.
  *
- * The Workspace top-level tab hosts 3 sub-views via TabGroup:
+ * The Workspace top-level tab hosts 5 sub-views via TabGroup:
  *   - Skills (SkillsRenderer) — QorLogic skill catalog
  *   - Mindmap (BrainstormRenderer) — Brainstorm canvas
  *   - Tracker (TrackerEmbedRenderer) — embedded Development Tracker dashboard
+ *   - Taxonomy (TrackerTaxonomyRenderer) — tracker taxonomy editor (FX891)
+ *   - Architecture (ArchitectureIndexRenderer) — managed architecture index (#531)
  *
  * Phase 5 verifies the tab loads, sub-pills render and switch, content area
  * renders. Deep per-sub-view behavioral coverage (skills install flow,
@@ -29,7 +31,7 @@ async function gotoWorkspace(page: import("@playwright/test").Page, url: string)
   await expect(page.locator('#workspace')).toBeVisible({ timeout: 10000 });
 }
 
-test("FX521 Workspace tab — 4 sub-pills render (Skills / Mindmap / Tracker / Taxonomy)", async ({ page }) => {
+test("FX521 Workspace tab — 5 sub-pills render (Skills / Mindmap / Tracker / Taxonomy / Architecture)", async ({ page }) => {
   controller = await serveConsoleServerUI({
     initialHub: { version: 'test', bootstrapState: {} } as any,
   });
@@ -39,7 +41,8 @@ test("FX521 Workspace tab — 4 sub-pills render (Skills / Mindmap / Tracker / T
   await expect(page.locator('#workspace .cc-pill[data-key="brainstorm"]')).toBeVisible();
   await expect(page.locator('#workspace .cc-pill[data-key="tracker"]')).toBeVisible();
   await expect(page.locator('#workspace .cc-pill[data-key="taxonomy"]')).toBeVisible(); // FX891
-  await expect(page.locator('#workspace .cc-pill')).toHaveCount(4);
+  await expect(page.locator('#workspace .cc-pill[data-key="architecture"]')).toBeVisible(); // #531
+  await expect(page.locator('#workspace .cc-pill')).toHaveCount(5);
 });
 
 test("FX521 Workspace tab — Skills active by default", async ({ page }) => {

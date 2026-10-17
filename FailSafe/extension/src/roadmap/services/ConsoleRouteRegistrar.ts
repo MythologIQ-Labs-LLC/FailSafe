@@ -13,6 +13,7 @@ import { TrackerRoute, type TrackerRouteDeps } from "../routes/TrackerRoute";
 import { McpRoute } from "../routes/McpRoute";
 import { AgtRoute } from "../routes/AgtRoute";
 import { IntegrationCatalogRoute } from "../routes/IntegrationCatalogRoute";
+import { setupArchitectureIndexRoutes } from "../routes/ArchitectureIndexRoute";
 import type { RouteDeps } from "../routes";
 import type { ApiRouteDeps } from "../routes/types";
 import { readMetaLedgerArtifact } from "../../qorlogic/consumer/consumer-adapter";
@@ -131,6 +132,9 @@ export interface ConsoleRouteHost {
    *  Optional so older route-host fixtures stay valid; absent/null -> gated
    *  routes answer 503. */
   getOperatorConfirmer?: () => import("../../extension/operatorConfirmation").ConfirmOperatorAction | null | undefined;
+  /** #531: `failsafe.architecture.indexPath`, read at request time. Optional so
+   *  older route-host fixtures stay valid; absent -> the default path. */
+  getArchitectureIndexPath?: () => string | undefined;
 }
 
 /** #514: expose the host's operator confirmer as a request-time getter, since
@@ -489,7 +493,33 @@ export class ConsoleRouteRegistrar {
       IntegrationCatalogRoute.catalog(req, res, {
         getIntegrationConfigSnapshot: () => this.host.getIntegrationConfigSnapshot?.() ?? {},
       }));
+    this.registerArchitectureIndexRoutes();
     this.registerConsoleExtras();
+  }
+
+  /** #531 LD4: managed architecture index routes (snapshot, bootstrap, propose, open).
+   *  Ledger, L3 queue, confirmer and editor-open dep are all read at request time,
+   *  since bootstrapServers wires them after the routes register. */
+  private registerArchitectureIndexRoutes(): void {
+    const h = this.host;
+    const deps = {
+      rejectIfRemote: (req: Request, res: Response) => h.rejectIfRemote(req, res),
+      workspaceRoot: h.workspaceRoot,
+      getIndexPathSetting: () => h.getArchitectureIndexPath?.(),
+      getLedgerManager: () => h.qorelogicManager.getLedgerManager(),
+      queueL3Approval: (request: Parameters<import("../routes/ArchitectureIndexRoute").ArchitectureIndexRouteDeps["queueL3Approval"]>[0]) =>
+        (h.qorelogicManager as unknown as { queueL3Approval: (r: typeof request) => Promise<string> }).queueL3Approval(request),
+      // "Use existing" reuses the editor-open dep bootstrapBicameral wires (vscode.open on an
+      // absolute path); the route passes only a path that passed the snapshot and containment checks.
+      openFileInEditor: (absPath: string) => {
+        const fn = h.getBicameralOpenFileInEditor?.();
+        if (!fn) return Promise.reject(new Error("openFileInEditor not wired"));
+        return fn(absPath, 1);
+      },
+      broadcast: (d: Record<string, unknown>) => h.broadcast(d),
+    } as import("../routes/ArchitectureIndexRoute").ArchitectureIndexRouteDeps;
+    defineLazyConfirmer(deps, h);
+    setupArchitectureIndexRoutes(this.host.app, deps);
   }
 
   private registerConsoleExtras(): void {

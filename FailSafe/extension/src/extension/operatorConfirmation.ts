@@ -180,6 +180,39 @@ export function panicStopRequest(): OperatorActionRequest {
   };
 }
 
+/** #531: title of the bootstrap dialog (the extension-host test answers only this one). */
+export const ARCHITECTURE_BOOTSTRAP_TITLE = "Create the architecture index?";
+
+/**
+ * #531 LD4/LD5: create the managed architecture index. Every value shown comes
+ * from server-side discovery; the list of proposed rows is capped like the L3
+ * batch dialog. The loopback footer is shown only for Console requests.
+ */
+export function architectureIndexBootstrapRequest(
+  indexPath: string,
+  candidates: string[],
+  source: "console" | "command",
+): OperatorActionRequest {
+  const rows = candidates.slice(0, BATCH_LIST_LIMIT).map((c) => `- ${sanitizeDialogText(c, 160)}`);
+  if (candidates.length > BATCH_LIST_LIMIT) rows.push(`- and ${candidates.length - BATCH_LIST_LIMIT} more`);
+  const lines = [
+    `File: ${sanitizeDialogText(indexPath)}`,
+    "FailSafe writes this one new file. It never overwrites an existing file.",
+    "",
+    candidates.length
+      ? `Rows: the index itself, plus ${candidates.length} existing document(s) as proposed:`
+      : "Rows: the index itself; no existing architecture documents were found.",
+    ...rows,
+    "",
+    "The creation is recorded in the FailSafe ledger when the ledger is available.",
+  ];
+  return {
+    title: ARCHITECTURE_BOOTSTRAP_TITLE,
+    approveLabel: "Create index",
+    detail: source === "console" ? withFooter(lines) : lines.join("\n"),
+  };
+}
+
 export type ConfirmationFailure = "unwired" | "busy" | "declined";
 
 /** HTTP status + body for a non-approved confirmation; nothing was recorded. */

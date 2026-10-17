@@ -32990,3 +32990,74 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `9c20ea30b588f67e656fdb0794c715f4d065d1f58a7dc09b577b1724e749c213`
 
 **Decision**: SESSION SEAL for plan-530-architecture-index.md (implementation #770). Reality = Promise, with disclosures. PR #533's branch carries the #530 architecture index foundation: the registry, normative and legacy scope, the validator wired into test:node and so into the PR and release gates, the README developer off-ramp and install path, and the governance registrations. Disclosures: bounded damaged-ledger override applied to this cycle (#467 unresolved, normal governance not restored); the validator compares strings only and does not prove semantic uniqueness; git ls-files does not see untracked docs under the gitignored docs/ tree; a 19th failure code (missing-section) was added beyond the audited 18, with its own fixture and mutant; the first test:node run had one extra failure (the LD20 child row) that passed alone and on the re-run; npm test and test:ui were not run locally; the PR Full Test Suite runs them; docs/FAILSAFE_SPECIFICATION.md stays unpublished pending the owner (B246); the stray remote branch is the owner's (B248); earlier seals are unedited. Next: one push moving PR #533's head, the PR checks, then a merge with --match-head-commit. Not tagged.
+
+---
+
+### Entry #772: GATE TRIBUNAL - plan-531-architecture-governance (iteration 1) - VETO
+
+**Timestamp**: 2026-10-17T19:19:15Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-17T1908-d8cb32`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `1c3fffd335dd5ea56fa336abf1fad7f9a142bb43e2eabe7fdf24adb1ac3536bc`
+**Previous Hash**: `9c20ea30b588f67e656fdb0794c715f4d065d1f58a7dc09b577b1724e749c213`
+**Chain Hash (Merkle seal)**: `d6303668fb1f3f9b3b274cacc4d0ef9a56f535559ff3f7c517a3392fb49bae7b`
+
+**Decision**: VETO on plan-531-architecture-governance.md iteration 1 (sha256 b3f27c7b), the first #531 vertical slice (managed architecture index). Fresh Option B architect-reviewer. Blocking: the extension-host test cannot target a temp git repository, because FailSafe binds to workspaceFolders[0] at activation and the default test workspace's docs/ is gitignored. Fifteen should-fix findings: proposal evidence in the ledger, degraded-ledger reporting, the L3 SLA expiry, the trust side effect, server-side validation and rate limits, a self-validating skeleton, a complete profile, the golden count, an open route for use-existing, the mutation-bus claim, present-elsewhere detection, scenario coverage including the installed UI, pinned pill counts, and the shared bootstrap contract. Next: revise and re-audit. Tribunal entry held by the lead and appended at implementation in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #773: GATE TRIBUNAL - plan-531-architecture-governance (iteration 2) - PASS
+
+**Timestamp**: 2026-10-17T19:29:09Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-17T1908-d8cb32`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `21b0544b8fd0d028c3bc065e62838e92e09b1cdb172cc162a8dd60f984bea3fc`
+**Previous Hash**: `d6303668fb1f3f9b3b274cacc4d0ef9a56f535559ff3f7c517a3392fb49bae7b`
+**Chain Hash (Merkle seal)**: `7f736a919df41eb02d5d72f0b8706c9c892095f94f404049fd7a9dc168ffbbfc`
+
+**Decision**: PASS on plan-531-architecture-governance.md iteration 2 (sha256 717369f0), the first #531 slice: discovery, operator-confirmed exclusive-create bootstrap with reuse, L3 proposals with PROPOSAL ledger evidence, a Command Center Architecture view, and a second vscode-test configuration on a temp git repository. Fresh Option B architect-reviewer; the iteration 1 blocker is resolved (test-cli runs every labelled configuration with its own workspaceFolder and files). Should-fix findings folded into implementation: per-label census files, an explicit file list and repeated mocha block for each configuration, a user-data-dir per configuration, a CI-safe seed commit and cleanup, propose refusing with 503 when the ledger is unavailable (a queued item could not be decided), rate limits on the GET route, a falsifiable extension-host ledger assertion, disclosure of the l3Decided checkpoint side effect, precise skeleton rows, bootstrap only from the absent state, containment before mkdir, and the named open and confirmer wiring. Tribunal entry held by the lead and appended at implementation in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #774: IMPLEMENTATION - plan-531-architecture-governance
+
+**Timestamp**: 2026-10-17T20:30:56Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-17T1908-d8cb32`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-17T1908-d8cb32/implement.json`
+
+**Content Hash**: `9f6ad0fb88749a755d833e41496784a16cafd8ffe45dcf3e2ec6876aa494325a`
+**Previous Hash**: `7f736a919df41eb02d5d72f0b8706c9c892095f94f404049fd7a9dc168ffbbfc`
+**Chain Hash (Merkle seal)**: `8e0947e3e38095d648ede382203370faa325c349acd923f2defdffbc72774e25`
+
+**Decision**: IMPLEMENTATION of plan-531-architecture-governance.md iteration 2 (audit PASS #773, sha256 717369f0), the first #531 slice: FailSafe discovers, bootstraps and governs an architecture index in the operator's workspace. Branch feat/531-managed-architecture-index from main 6aedb7b6. c10340ba: ADR docs/architecture/MANAGED_ARCHITECTURE_INDEX.md (enforceable vs advisory table, scenario map, disclosed side effects), registered canonical in the architecture index and Tier 2 in GOVERNANCE_INDEX; golden count 9 to 10. 350239f1: one validator core (scripts/lib/architecture-index-core.cjs) with FailSafe-repo and user-repo profiles; the CLI is unchanged in behaviour; parity rows. 2e187947: discovery through trusted git ls-files -co (states present, present-with-problems, invalid, absent, present-elsewhere, no-git, not-a-repo, no-workspace, bad-index-path); bootstrap only from absent, behind operator confirmation, with containment-checked exclusive create and a self-validating skeleton; a PROPOSAL ledger entry with sourceSha and docSha256; propose refuses 503 when the ledger is unavailable and otherwise links the L3 item to its PROPOSAL entry; an open route for use-existing; a rate limit per route; the failsafe.architecture.bootstrapIndex command. 04115926: the Workspace Architecture sub-view with the fixed scope line. 5f3dae2e: tests and a second labelled vscode-test configuration on a temp git repository, with per-label census files. d9695f83, 07aef558, 7ae858ae: FX1002, CHANGELOG [Unreleased], B251-B258, per-route rate limits. Evidence, counts from logs, each test red before its code: architecture-index 32/32 (golden count 10); discovery 13/13; census 4/4; route 16/16 (vscode-test); extension host 2/2 in the architecture-index configuration with the ledger available and an entry id above 0, reuse on the second run and a byte-identical file; Playwright 10/10 (the new spec, workspace-tab, integrations-catalog); 18 covering vscode-test suites 181 passing, 0 failing; tsc 0; lint 0 errors; test:runner-coverage pass (640 files); check-e2e-coverage pass; test:node 777 tests, 766 passed, 2 failed (FX946 baseline), 9 skipped; preflight pass; docs coherence pass; the architecture CLI passes (17 rows, 10 normative). Installed package: the win32-x64 VSIX built from the branch installed into a clean profile of a disposable VS Code 1.141.1. In the installed UI an index with an untracked duplicate showed the problem and suggestions, use-existing opened the document, propose queued an L3 item recorded as a ledger entry with the index unchanged, and bootstrap on a repository without an index created it after the dialog and then showed Valid. The lead reviewed the screenshots; the visual check was on the installed build, not in Chrome.
+
+---
+
+### Entry #775: SESSION SEAL - plan-531-architecture-governance
+
+**Timestamp**: 2026-10-17T20:30:59Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-17T1908-d8cb32`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-17T1908-d8cb32/substantiate.json`
+
+**Content Hash**: `a36254828989f7eec3d6e09027c6504cc6e98a1d5178ff5d27254e0cb8f86483`
+**Previous Hash**: `8e0947e3e38095d648ede382203370faa325c349acd923f2defdffbc72774e25`
+**Chain Hash (Merkle seal)**: `e3e6f5ea661354bdcbf063c1029e26d4bb67cffc934b6b2a8b7b5613ecdda722`
+
+**Decision**: SESSION SEAL for plan-531-architecture-governance.md (implementation #774). Reality = Promise, with disclosures. The branch carries the first #531 slice: discovery, approved exclusive-create bootstrap with reuse, L3 proposals with PROPOSAL ledger evidence, use-existing, the Workspace Architecture view, and tests in a real extension host on a temp git repository. Disclosures: bounded damaged-ledger override applied to this cycle (#467 unresolved, normal governance not restored); enforceable: only the writes FailSafe makes here (operator confirmation, containment-checked exclusive create) and the L3 decision record; discovery of documents written by editors, agents or other tools is advisory, after the fact, and cannot block them; ignored directories are invisible; overlap is a string match; an L3 decision updates the named agent DID trust; an undecided proposal expires after the L3 SLA with no ledger entry; every l3Decided event writes an override.approved PASS checkpoint, including rejected and expired ones (B257); a PROPOSAL entry can be left without an L3 item if queueing fails (B258); unavailable Qor is mapped to FailSafe's ledger being unavailable; the Qor-logic install state residual is B254; the second vscode-test configuration seeds its temp repository with a plain git in the fresh folder it created, because the trusted resolver is compiled code not yet built when the config loads; the visual check was on the installed VS Code build through screenshots reviewed by the lead, not in Chrome; npm test and test:ui were not run in full locally; the PR Full Test Suite runs them; earlier seals are unedited. Next: push, open the PR, the PR checks, then a merge with --match-head-commit. Not tagged.

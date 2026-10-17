@@ -30,6 +30,7 @@ import * as path from "path";
 import { defaultGitRunner, statusPaths } from "./governedCommit";
 import { runGovernedCommitFlow } from "./governedCommitFlow";
 import { createOperatorConfirmer } from "./operatorConfirmation";
+import { readArchitectureIndexPath, registerArchitectureIndexCommand } from "./architectureIndexCommand";
 import { defaultGitHubPost } from "../integrations/github-checks/github-checks-client";
 import type { CredentialsBootstrap } from "./credentials-command";
 import { buildCredentialSnapshot, governedCommitToken } from "../integrations/credentials/credentialGates";
@@ -244,7 +245,17 @@ export async function bootstrapServers(
   consoleServer.setOutputChannel(outputChannel);
   // #514: gated loopback operator routes (L3 decisions, ratify, rollback,
   // panic-stop, hooks disable) act only after a modal VS Code confirmation.
-  consoleServer.setOperatorConfirmer(createOperatorConfirmer(vscode.window));
+  const confirmOperatorAction = createOperatorConfirmer(vscode.window);
+  consoleServer.setOperatorConfirmer(confirmOperatorAction);
+  // #531 LD5: the bootstrap command shares this confirmer (one busy guard with the
+  // Console routes) and the route's index-path setting reader.
+  consoleServer.setArchitectureIndexPathProvider(readArchitectureIndexPath);
+  registerArchitectureIndexCommand(context, {
+    workspaceRoot: deps.workspaceRoot,
+    confirm: confirmOperatorAction,
+    getLedger: () => deps.qorelogicManager.getLedgerManager(),
+    broadcast: (data) => consoleServer.broadcastEvent(data),
+  });
 
   // Risk Auto-Derivation pipeline (plan-qor-model-sourced-risks Phase 3).
   const { wireRiskAutoDerivation } = await import("../qorelogic/risk/wireAutoDerivation");
