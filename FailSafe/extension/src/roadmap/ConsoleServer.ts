@@ -99,6 +99,8 @@ export class ConsoleServer {
   private outputChannel: { show(preserveFocus?: boolean): void } | null = null;
   /** #514: modal VS Code confirmer for gated loopback operator routes. */
   private operatorConfirmer: import("../extension/operatorConfirmation").ConfirmOperatorAction | null = null;
+  /** #531: `failsafe.architecture.indexPath` reader, set by bootstrapServers; null -> the default path. */
+  private architectureIndexPath: (() => string | undefined) | null = null;
   private marketplaceCatalog = new MarketplaceCatalog();
   private marketplaceInstaller: MarketplaceInstaller;
   private securityScanner: SecurityScanner;
@@ -214,6 +216,8 @@ export class ConsoleServer {
   }
   setOutputChannel(channel: { show(preserveFocus?: boolean): void }): void { this.outputChannel = channel; }
   setOperatorConfirmer(confirm: import("../extension/operatorConfirmation").ConfirmOperatorAction): void { this.operatorConfirmer = confirm; }
+  /** #531: reader for the managed architecture index path setting. */
+  setArchitectureIndexPathProvider(fn: (() => string | undefined) | null): void { this.architectureIndexPath = fn; }
   /** Expose Express app for post-start route registration (Phase 3 V3 Path A). */
   getExpressApp(): express.Application { return this.app; }
   setAgentTimelineService(s: AgentTimelineService): void { this.agentTimelineService = s; }
@@ -340,6 +344,7 @@ export class ConsoleServer {
       getScaffoldWebCallback: () => this.scaffoldWebCallback as any,
       getOutputChannel: () => this.outputChannel,
       getOperatorConfirmer: () => this.operatorConfirmer,
+      getArchitectureIndexPath: () => this.architectureIndexPath?.(),
       getAgentTimelineService: () => this.agentTimelineService as any,
       getAgentHealthIndicator: () => this.agentHealthIndicator as any,
       getAgentRunRecorder: () => this.agentRunRecorder as any,
