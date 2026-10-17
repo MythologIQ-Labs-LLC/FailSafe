@@ -32672,3 +32672,92 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `7cb1e62dce79fa1293a33015fac2dd2e2eaf6d1d0d10911361c74450e7510b20`
 
 **Decision**: SESSION SEAL for plan-v608-integration.md iteration 13 (implementation #752), the lead's v6.0.8 integration for program #521, after seal #746. Reality = Promise, with disclosures. release/v6.0.8-rc now carries, on top of fcf2d700, the LD18 timer seam (e9e64010), the LD20 temp hygiene (cc0c8def, 717d8254) and docs commit cb22fde1; the code candidate is 717d8254 and every LD6 gate listed in #752 ran on it, from the start, with the D14 temp classification passing. Disclosures: bounded damaged-ledger override applied to this integration cycle (#467 unresolved, normal governance not restored); seal #746 named fcf2d700, whose Linux CI failed the #476 N1 row; this seal supersedes it for the candidate and #746 is left unedited; the e9e64010 LD19 re-run is void past compile (ENOSPC on C: from the fspyadv- leak) and is not evidence; the lead removed the 36 leftover folders with Git Bash rm -rf before LD20 existed, the junctions were removed as links and the host Python was verified intact afterwards; the first LD21 run on cc0c8def passed every gate but D14, which found 16 temp folders from v6.0.8 rows in two older test files that lane A's added-files sweep missed; 0162cc44 fixed them and LD21 re-ran in full on 717d8254; the D14 classifier was revised twice after the cc0c8def results were read (template-literal prefixes; temp-helper calls and added lines in older files counted as v6.0.8), each revision stricter and re-checked against planted entries; the allow-list was written before each run; the held tribunal entries #747-#751 carried estimated timestamps, one later than its append; each was replaced by its gate artifact's timestamp; test:ui on 717d8254 had one timeout in FX589 bicameral-advanced-tools that passes 3/3 alone and 12/12 across 6 workers, code path unchanged since b66a32d8 (B238); test:ui on cc0c8def was 209/0/4; docs commit cb22fde1 (BACKLOG only, B236-B238) follows the code candidate 717d8254; coherence, preflight and the backlog docs tests ran on it, and CI's test:all runs on the pushed head; vscode-test and the rv lifecycle ran on disposable test builds (1.122.1 and 1.141.1) with win32VersionedUpdate removed; the operator install was untouched; npm audit reports 2 high (braces via chokidar 3.6.0), present unchanged in main and in published v6.0.7; the fix is a breaking chokidar upgrade left to the owner; the macOS and Linux rows, including safeGitTimeout T9 and trustedExecutable T17 (b) on POSIX, run only on CI and did not run on fcf2d700 because test:all stopped at npm test; D14 does not see Python __pycache__ in the real Lib, pip's cache, writes relative to a child's cwd or under ~/.failsafe; older suites still leave temp folders (B236), one holding a junction to the real Git install; gate artifact iteration numbers differ from payload iterations in this session; each tribunal entry's plan sha256 matches its gate artifact; the risk-store stale-takeover residual (B224), the Bicameral deactivate-during-auto-connect race (B235) and the unawaited AudioVaultService.init (B237) remain open. Next: the LD7 post-seal checks, one push of release/v6.0.8-rc moving PR #529's head, CI on that head with the Linux N1, T9 and T17 (b) rows read from its log, then the LD8 merge. Not merged, not tagged, not published.
+
+---
+
+### Entry #754: GATE TRIBUNAL - plan-v608-integration (iteration 14) - VETO
+
+**Timestamp**: 2026-10-16T19:39:52Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T1356-298603`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `4ab474498bcab9ce216565e991a606e90259da1254bda44005807e0b3fe6641e`
+**Previous Hash**: `7cb1e62dce79fa1293a33015fac2dd2e2eaf6d1d0d10911361c74450e7510b20`
+**Chain Hash (Merkle seal)**: `fdb33eb0df68a070a502bd78076fc8cbe3e16a254ae132260b19fdec22917269`
+
+**Decision**: VETO on plan-v608-integration.md iteration 14 (sha256 eda17c07), which adds LD22 for the Linux test:node failure of T13 (a) and (b) on the sealed 178fc753. Fresh Option B architect-reviewer. The POSIX root cause is right (plant/bin first on PATH outside every excluded root, and rows (d2) and (e) passing on Linux rule out the workspace plant), and the fix is test only, but the win32 falsifier cannot go red: the win32 plant is a copy of node.exe, and both Python version checks reject it before the workspace exclusion matters, so an excludedRoots mutation leaves (a) and (b) green. Should-fix: a POSIX positive control through the real resolver with no workspace folders configured, pinned child-row counts per platform, D15 counts read from the log with ok and not SKIP, the (k) side effect, and where this iteration's tribunal entries go. Next: revise LD22 and D15 and re-audit. Tribunal entry held by the lead during LD22 and appended after seal #753 in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #755: GATE TRIBUNAL - plan-v608-integration (iteration 15) - VETO
+
+**Timestamp**: 2026-10-16T19:46:35Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T1356-298603`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `f5274b33f47163d8cb5a996f2b98ebc46d8df0e135a4a726fdeae605876c1e78`
+**Previous Hash**: `fdb33eb0df68a070a502bd78076fc8cbe3e16a254ae132260b19fdec22917269`
+**Chain Hash (Merkle seal)**: `a68413a06c8d6fc193cde4dec57b94fa1bcae11ea163d86fb8c0cf14f9c68e35`
+
+**Decision**: VETO on plan-v608-integration.md iteration 15 (sha256 4753a937), which revises LD22 with win32 left unchanged and a POSIX positive control through the real resolver. Fresh Option B architect-reviewer. Blocking: the positive control's two steps used the same PythonInterpreterResolver, whose per-instance cache would return the ws/bin plant in the second step, a failure visible only on Linux CI; each step needs a new resolver. Should-fix: the call-cwd wording (the run step re-checks with the workspace as cwd, already a root) and D15 pinning all six test:node counts (724 tests, 696 passed, 0 failed, 0 cancelled, 28 skipped, 0 todo). The root cause, the per-platform child-row counts and the in-contract test-only fix were confirmed. Next: revise LD22 and D15 and re-audit. Tribunal entry held by the lead during LD22 and appended after seal #753 in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #756: GATE TRIBUNAL - plan-v608-integration (iteration 16) - PASS
+
+**Timestamp**: 2026-10-16T19:51:42Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T1356-298603`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `00f07644a6d334bbfcf221bb52919987b21bddb8f5d90a435c0531f195b418f6`
+**Previous Hash**: `a68413a06c8d6fc193cde4dec57b94fa1bcae11ea163d86fb8c0cf14f9c68e35`
+**Chain Hash (Merkle seal)**: `94641b41a8a2aca34ddbaead0083fd175611980d8551bf2e6d02058326b2ac7d`
+
+**Decision**: PASS on plan-v608-integration.md iteration 16 (sha256 f421bf86), which completes LD22: the POSIX T13 setup puts only the workspace plant on PATH so T13 (a) and (b) test a workspace folder on PATH, the rows run with a planted cwd keep their PATH for their own duration on POSIX only, a POSIX positive control through new PythonInterpreterResolver instances shows the workspace exclusion is the only barrier, the child row pins per-platform counts, and D15 pins all six Linux test:node counts (724, 696, 0, 0, 28, 0). Fresh Option B architect-reviewer. Implementation notes: clear the marker before the positive control's bare spawn and assert its exact argv, and assert the process cwd is the extension folder up front. Next: lane A implements LD22; the lead re-runs LD6 and re-seals under LD19. Tribunal entry held by the lead during LD22 and appended after seal #753 in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #757: GATE TRIBUNAL - plan-v608-integration (iteration 17) - PASS
+
+**Timestamp**: 2026-10-17T01:32:52Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-16T1356-298603`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `c3cbd6c9b802be4fc700594b208671bbafefea621496ff7282a266efb8953e2c`
+**Previous Hash**: `94641b41a8a2aca34ddbaead0083fd175611980d8551bf2e6d02058326b2ac7d`
+**Chain Hash (Merkle seal)**: `5f4cc9f5ca0ab46e0adb13f0bf9854676957acdf2d3a9e6565a91a383cc90c94`
+
+**Decision**: PASS on plan-v608-integration.md iteration 17 (sha256 f4fe14a4), the owner-approved single audit pass for LD23: on POSIX hosts the trusted executable resolver refuses a candidate whose file or any ancestor folder is writable by other users (sticky folders excepted) or owned by a user other than root and the process user, and the T13 attack fixture goes back on PATH as an attacker-writable folder. Fresh Option B architect-reviewer; no blocking finding. Should-fix findings folded into the implementation without a further audit, per the owner's decision: test fixtures on GitHub runners use a private copy of node because the runner's tool cache is world-writable; no sticky exemption for the spawn folder or its parent of a link-preserving Python spec (pyvenv.cfg); cache invalidation in the positive control; the ownership walk re-run on a cache hit, fail closed on a stat error; a second owner mutation and a lexical-folder row; exact D16 counts superseding D15's Linux clause; and the extra residuals disclosed. Next: lane A implements LD23. Tribunal entry held by the lead during LD22 and appended after seal #753 in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #758: IMPLEMENTATION - plan-v608-integration (iteration 17)
+
+**Timestamp**: 2026-10-17T06:13:57Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-16T1356-298603`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-16T1356-298603/implement.json`
+
+**Content Hash**: `e2fa719ba5807aa75ba6ad27a1a00524b3f51ef7a8a17608a6107d2cc106a4ce`
+**Previous Hash**: `5f4cc9f5ca0ab46e0adb13f0bf9854676957acdf2d3a9e6565a91a383cc90c94`
+**Chain Hash (Merkle seal)**: `f06505ce6e1788cd4c0072e869dd0665caec50e26405f2b00ee246799e5e1965`
+
+**Decision**: IMPLEMENTATION of plan-v608-integration.md iteration 17 (audit PASS #757, sha256 f4fe14a4), LD22 and LD23 after seal #753 on 178fc753. PR #529's Linux Full Test Suite on 178fc753 passed npm test (5002 passing, 17 pending, 0 failing; both #476 N1 rows and safeGitTimeout T9 (a) and (b) pass on Linux, as do the T17 (b) POSIX rows), then ran test:node on Linux for the first time: 723 tests, 692 passed, 3 failed, 28 skipped. T13 (a) and (b) wrote the planted interpreter's marker and the LD20 child row failed because it runs that suite. The plant that ran was plant/bin, first on PATH and outside every excluded root; T13 (d2) and (e) passing on Linux ruled out the workspace plant. LD22 (lane A 4c7fc765, merged as 2906fa47) first read this as a test-design defect and took plant/bin off the global PATH, with a POSIX positive control for the workspace exclusion; an independent security review on PR #529 then made it release-blocking: the trust predicate never checked who can write a candidate, so on macOS and Linux a PATH folder another user can write or owns was trusted, and taking the fixture off PATH removed the attack instead of refusing it. LD23 closes the gap. Lane A ff98b5d5 (merged as 40e5bd82): trustedExecutable.ts gains an exported pure ownershipRefusal over { uid, mode, isDirectory, lexical } entries, applied in staticCheck on a POSIX host only (the host and the configured platform are not win32): the realpath file and every ancestor folder, and for link-preserving Python specs the resolved spawn folder and its ancestors, are refused as writable by other users (an other-writable file, an other-writable folder without the sticky bit, or an other-writable lexical spawn folder or its parent even when sticky, because CPython reads pyvenv.cfg there) or owned by another user (a uid other than 0 and the process uid); group-writable is allowed; a stat error refuses; a cache hit re-runs the check. The T13 fixture is back to its 178fc753 form with plant/bin first on PATH and, on POSIX, mode 0o777; a new T13 POSIX attacker-writable PATH folder row requires plant/bin refused with that reason and accepted once chmod 0o755 (a folder only the user can write is the user's own PATH); LD23 (i) on every platform covers six refused and four allowed cases of the pure function; LD23 (iii) on POSIX covers refuse, accept after chmod, refuse again on a cache hit, and the lexical link case (python refused, gh accepted with its realpath); the LD20 child row pins 16 tests per platform; acpAgentResolution and bicameralSettingsScope use a private copy of node on POSIX because GitHub-hosted runners make /opt/hostedtoolcache world-writable; CHANGELOG [6.0.8] Security and Known limitations and FEATURE_INDEX FX1000 are added. Red first: row (i) fails against the pre-LD23 file (22 tests, 17 passed, 1 failed); mutation M1 (other-write bit ignored) and M2 (owner comparison ignored) each turn row (i) red, with the .ts and out/ restored by hash. Lane A win32 evidence: test:node 727 tests, 716 passed, 2 failed (FX946 baseline), 9 skipped; vscode-test covering grep 460 passing, 0 failing, 2 pending; the suite 16 tests, 14 passed, 2 skipped. LD6 full re-run on the code candidate f1d15ea3, local, under LD21's conditions, counts read from logs: tsc 0; lint 0 errors (134 warnings); runner coverage pass; citation parity pass; test:node 727 tests, 716 passed, 2 failed (FX946 ledgerAnchor baseline), 9 skipped (the POSIX rows), 0 cancelled; npm test first run 3560 passing, 1 failing, census 386/509: RiskStore T9 (b) (v6.0.7, #517) stubs the global fs.renameSync to always throw EPERM, a TokenAggregatorService flush in the shared extension host hit the stub, and the host stopped; the re-run on the same candidate with a fresh TEMP passed 5001 passing / 0 failing / 18 pending, census 509/509, on the disposable 1.122.1 build (B243); test:ui 209 passed / 0 failed / 4 skipped; release-gate --preflight pass; validate-docs-coherence pass; eight 6.0.8 VSIXs with verify-set pass (win32-x64 7650eb0b); the packaged win32-x64 better-sqlite3 loads in Node 22.22.3 and in Electron 39.8.8 and 43.7.7, napi 10; rv inventory 50/50; rv lifecycle 12/12 from the published 6.0.7 win32-x64; npm audit --omit=dev 2 high (braces via chokidar 3.6.0), unchanged; D14 temp classification: test:node 118 entries (2 allow-list, 116 pre-existing), npm test re-run 94 entries (3 allow-list, 91 pre-existing), none unclassified. Docs commits f1d15ea3 (B239-B242) and c3daf5b3 (B243) follow the code merge 40e5bd82; the run is on f1d15ea3 and c3daf5b3 changes only BACKLOG.
