@@ -144,6 +144,32 @@ test('T8 precondition: a bare PowerShell with the workspace as cwd runs the plan
   assert.ok(plantRan(r), `the planted PowerShell ran: ${r.stderr}`);
 });
 
+/**
+ * Diagnostics for a failed T8 (LD23e): every rejection (the error message shows
+ * only the first 5) and, on POSIX, the owner and mode of /usr/bin/pwsh's
+ * realpath and each folder above it.
+ */
+function powerShellDiagnostics() {
+  const lines = [];
+  try {
+    lines.push(`resolves now: ${te.trustedExecutablePath(te.powershellFor(process.platform), ws)}`);
+  } catch (e) {
+    if (Array.isArray(e && e.rejected)) for (const x of e.rejected) lines.push(`${x.candidate} (${x.reason})`);
+    else lines.push(String(e));
+  }
+  if (!WIN && fs.existsSync('/usr/bin/pwsh')) {
+    lines.push(`process uid ${typeof process.getuid === 'function' ? process.getuid() : 'n/a'}`);
+    let p;
+    try { p = fs.realpathSync.native('/usr/bin/pwsh'); } catch (e) { lines.push(`/usr/bin/pwsh realpath: ${e.code}`); }
+    while (p) {
+      try { const s = fs.statSync(p); lines.push(`${p} uid ${s.uid} mode ${(s.mode & 0o7777).toString(8)}`); } catch (e) { lines.push(`${p} stat: ${e.code}`); }
+      const up = path.dirname(p);
+      p = up === p ? undefined : up;
+    }
+  }
+  return `\n  every rejection, then the /usr/bin/pwsh chain:\n  ${lines.join('\n  ')}`;
+}
+
 test('T8: admitSkill runs the real PowerShell, never the plant', () => {
   configure({ workspaceDirs: [ws] });
   process.env.NODE_OPTIONS = childEnv().NODE_OPTIONS || '';
@@ -155,7 +181,7 @@ test('T8: admitSkill runs the real PowerShell, never the plant', () => {
     const r = admitSkill(skill, 'test', ws);
     assert.deepEqual(marks(), [], 'the marker is empty');
     assert.doesNotMatch(String(r.error), /bad option/, 'the planted node did not answer');
-    assert.equal(r.ok, true, `admitted: ${r.error}`);
+    assert.equal(r.ok, true, `admitted: ${r.error}${r.ok ? '' : powerShellDiagnostics()}`);
     assert.ok(fs.existsSync(path.join(path.dirname(script), 'admitted.txt')), 'only a real PowerShell running the script writes admitted.txt');
   } finally { delete process.env.NODE_OPTIONS; }
 });

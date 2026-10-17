@@ -353,8 +353,11 @@ suite('#473 head anchor and workspace binding', () => {
   test('tail truncation followed by more appends is still detected, in session and after re-initialize', async () => {
     const mgr = await anchored(4);           // ids 1..5, anchored head 5
     const genesis = genesisHashOf(mgr);
+    const deletedHead = rawRows(mgr)[4].entry_hash;
     mgr.getDatabase().prepare('DELETE FROM soa_ledger WHERE id > 3').run();
-    await appendN(mgr, 5);                   // honest writer re-fills ids 4..8
+    // Its own tag: appends in one millisecond with the old tag rebuild the deleted rows byte for byte.
+    await appendN(mgr, 5, 'did:t:refill');   // honest writer re-fills ids 4..8
+    assert.notEqual(rawRows(mgr)[4].entry_hash, deletedHead, 'precondition: the refilled row 5 differs from the deleted head');
     await mgr.flushAnchor();
     assert.equal(quiet(() => mgr.verifyChain()), false);
     mgr.close();
@@ -410,11 +413,14 @@ suite('#473 head anchor and workspace binding', () => {
     const second = await openLedger(env);
     await appendN(second, 3);
     await second.flushAnchor();
+    const rolledBackHead = rawRows(second)[5].entry_hash;
     second.close();
     for (const suffix of ['', '-wal', '-shm']) { fs.rmSync(env.ledgerPath + suffix, { force: true }); }
     fs.copyFileSync(snapshot, env.ledgerPath);
     const third = await openLedger(env);
-    await appendN(third, 5);
+    // Its own tag: appends in one millisecond with the old tag rebuild the rolled-back rows byte for byte.
+    await appendN(third, 5, 'did:t:refill');
+    assert.notEqual(rawRows(third)[5].entry_hash, rolledBackHead, 'precondition: the re-appended row 6 differs from the rolled-back head');
     await third.flushAnchor();
     third.close();
     const again = await openLedger(env);
