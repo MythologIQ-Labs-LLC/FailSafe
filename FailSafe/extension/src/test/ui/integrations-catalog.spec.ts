@@ -60,6 +60,64 @@ test.describe('FX839 — Integrations Catalog sub-view (#167)', () => {
   });
 });
 
+// #479 H6: evidence-backed states, rendered by the real ConsoleServer route
+// and the real renderer in Chromium. The screenshot is the visual check
+// against the existing card design (plan v608 lane B, LD4).
+test.describe('#479 — catalog status from recorded evidence', () => {
+  let controller: ConsoleServerController;
+
+  test.afterEach(async () => {
+    if (controller) {
+      await controller.close();
+      await new Promise((r) => setTimeout(r, 50));
+    }
+  });
+
+  test('verified, failing, connected, stale, parsed and unverified cards show their own pills and last results', async ({ page }) => {
+    const now = new Date().toISOString();
+    const old = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
+    const on = (id: string) => `failsafe.integrations.${id}.enabled`;
+    controller = await serveConsoleServerUI({
+      integrationConfig: {
+        [on('jira')]: true, 'failsafe.integrations.jira.baseUrl': true, 'failsafe.integrations.jira.email': true, 'failsafe.integrations.jira.apiToken': true,
+        [on('sentry')]: true, 'failsafe.integrations.sentry.token': true, 'failsafe.integrations.sentry.org': true, 'failsafe.integrations.sentry.project': true,
+        [on('slack')]: true, 'failsafe.integrations.slack.webhookUrl': true,
+        [on('linear')]: true, 'failsafe.integrations.linear.apiKey': true,
+        [on('sarif')]: true,
+        [on('aider')]: true,
+      },
+      integrationHealth: {
+        jira: { result: 'contract-verified', checkedAt: now },
+        sentry: { result: 'failing', category: 'auth', checkedAt: now },
+        slack: { result: 'connected', checkedAt: now },
+        linear: { result: 'contract-verified', checkedAt: old },
+        sarif: { result: 'contract-verified', checkedAt: now },
+      },
+    });
+    await page.goto(`${controller.url}/command-center.html`);
+    await page.locator('.tab-btn[data-target="integrations"]').click();
+    const card = (id: string) => page.locator(`.cc-intcat-card[data-id="${id}"]`);
+    await expect(card('jira')).toBeVisible({ timeout: 5000 });
+    await expect(card('jira').locator('.cc-intcat-pill-verified')).toHaveText('Verified');
+    await expect(card('sentry').locator('.cc-intcat-pill-failing')).toHaveText('Failing');
+    await expect(card('sentry').locator('.cc-intcat-last')).toContainText('authentication was refused');
+    await expect(card('slack').locator('.cc-intcat-pill-connected')).toHaveText('Connected');
+    await expect(card('linear').locator('.cc-intcat-pill-stale')).toHaveText('Stale');
+    await expect(card('sarif').locator('.cc-intcat-pill-verified')).toHaveText('Last import parsed');
+    await expect(card('aider').locator('.cc-intcat-pill-configured')).toHaveText('Configured · unverified');
+    await expect(card('sentry').locator('.cc-intcat-pill-verified')).toHaveCount(0);
+    await expect(card('jira').locator('.cc-intcat-caps')).toHaveText('Can: preview issues, create intent drafts');
+    await expect(page.locator('.cc-intcat-sub')).toContainText('1 failing');
+    const shot = process.env.FAILSAFE_SCREENSHOT_DIR;
+    if (shot) {
+      for (const id of ['jira', 'sentry', 'slack', 'linear', 'sarif', 'aider']) {
+        await card(id).scrollIntoViewIfNeeded();
+        await card(id).screenshot({ path: `${shot}/catalog-card-${id}.png` });
+      }
+    }
+  });
+});
+
 test.describe('FX841 — Open Design live state (#166)', () => {
   let controller: ConsoleServerController;
 

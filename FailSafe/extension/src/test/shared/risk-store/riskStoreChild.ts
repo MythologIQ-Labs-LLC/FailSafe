@@ -5,6 +5,11 @@
  * Prints "ready", waits for <workspace>/go, does its work, then prints one
  * JSON result line. Lock-holding modes keep the process alive with their own
  * timer, because proper-lockfile's refresh timer is unref'd.
+ *
+ * v6.0.8 lock-queue modes (#528): `hold-for` takes the lock at once, holds it
+ * for <count> ms and signals held/released with wall-clock times;
+ * `delete-foreign-ticket` deletes the first queue ticket another process
+ * takes and signals when it did.
  */
 
 import * as fs from "fs";
@@ -115,6 +120,33 @@ function main(): void {
       }
       signal("stolen", { ino: lockIno(), mtimeNs: lockMtime() });
       keepAlive();
+      return;
+    }
+    case "hold-for": {
+      const lock = acquireRiskLock(risksPath, { timeoutMs: 5000, staleMs });
+      signal("held", { at: Date.now() });
+      sleepSync(count);
+      const at = Date.now();
+      lock.release();
+      signal("released", { at });
+      return;
+    }
+    case "delete-foreign-ticket": {
+      const queueDir = `${risksPath}.queue`;
+      process.stdout.write("ready\n");
+      const deadline = Date.now() + 15000;
+      while (Date.now() < deadline) {
+        let names: string[] = [];
+        try { names = fs.readdirSync(queueDir); } catch { /* not created yet */ }
+        const foreign = names.find((n) => !n.includes(`-${process.pid}-`));
+        if (foreign) {
+          fs.unlinkSync(path.join(queueDir, foreign));
+          signal("deleted", { at: Date.now(), name: foreign });
+          return;
+        }
+        sleepSync(1);
+      }
+      signal("deleted", { at: 0, name: "" });
       return;
     }
     default:

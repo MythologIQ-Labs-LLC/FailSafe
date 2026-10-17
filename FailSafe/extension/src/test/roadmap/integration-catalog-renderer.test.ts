@@ -92,3 +92,58 @@ suite('IntegrationCatalogRenderer (GH #167, jsdom structural)', () => {
     } finally { ctx.cleanup(); }
   });
 });
+
+// #479 H5 (structure only; the visual check is the Playwright spec):
+// evidence-derived pills, labels by evidence kind, the last-result line and the
+// separate verified/failing/unverified counts.
+suite('IntegrationCatalogRenderer evidence states (#479 H5, jsdom structural)', () => {
+  const at = '2026-10-15T12:00:00.000Z';
+  const base = { summary: 's', configHint: 'h', enabled: true, configured: true, missingKeys: [] };
+  const EVIDENCE = {
+    integrations: [
+      { ...base, id: 'jira', label: 'Jira', category: 'Issue Tracker', docsId: 'jira', state: 'contract-verified', evidenceKind: 'service', capabilities: ['issue-preview', 'intent-draft'], lastResult: { result: 'contract-verified', checkedAt: at } },
+      { ...base, id: 'sarif', label: 'SARIF Import', category: 'Security Scanning', docsId: 'sarif', state: 'contract-verified', evidenceKind: 'file', capabilities: ['risk-ingest'], lastResult: { result: 'contract-verified', checkedAt: at } },
+      { ...base, id: 'aider', label: 'Aider', category: 'Agent CLI', docsId: 'aider', state: 'connected', evidenceKind: 'process', capabilities: ['isolated-run'], lastResult: { result: 'connected', checkedAt: at } },
+      { ...base, id: 'sentry', label: 'Sentry', category: 'Error Monitoring', docsId: 'sentry', state: 'failing', evidenceKind: 'service', capabilities: ['risk-ingest'], lastResult: { result: 'failing', category: 'auth', checkedAt: at } },
+      { ...base, id: 'linear', label: 'Linear', category: 'Issue Tracker', docsId: 'linear', state: 'stale', evidenceKind: 'service', capabilities: ['issue-preview'], lastResult: { result: 'contract-verified', checkedAt: at } },
+      { ...base, id: 'slack', label: 'Slack', category: 'Notifications', docsId: 'slack', state: 'configured-unverified', evidenceKind: 'service', capabilities: ['notify'] },
+    ],
+  };
+  const card = (doc: Document, id: string) => doc.querySelector(`.cc-intcat-card[data-id="${id}"]`)!;
+
+  test('pills and labels follow the state and the evidence kind', async () => {
+    const ctx = setupDom(async () => ({ ok: true, json: async () => EVIDENCE }));
+    try {
+      await new IntegrationCatalogRenderer('integrations').render();
+      const d = ctx.doc;
+      assert.equal(card(d, 'jira').querySelector('.cc-intcat-pill-verified')?.textContent, 'Verified');
+      assert.equal(card(d, 'sarif').querySelector('.cc-intcat-pill-verified')?.textContent, 'Last import parsed');
+      assert.equal(card(d, 'aider').querySelector('.cc-intcat-pill-connected')?.textContent, 'Started');
+      assert.equal(card(d, 'sentry').querySelector('.cc-intcat-pill-failing')?.textContent, 'Failing');
+      assert.equal(card(d, 'linear').querySelector('.cc-intcat-pill-stale')?.textContent, 'Stale');
+      assert.equal(card(d, 'slack').querySelector('.cc-intcat-pill-configured')?.textContent, 'Configured · unverified');
+      assert.equal(card(d, 'sentry').querySelector('.cc-intcat-pill-verified'), null, 'a failing card never shows the verified pill');
+    } finally { ctx.cleanup(); }
+  });
+
+  test('last-result line names the failure in words; capabilities and the SARIF docs link render', async () => {
+    const ctx = setupDom(async () => ({ ok: true, json: async () => EVIDENCE }));
+    try {
+      await new IntegrationCatalogRenderer('integrations').render();
+      const d = ctx.doc;
+      assert.match(card(d, 'sentry').querySelector('.cc-intcat-last')?.textContent ?? '', /Last result: Failing: authentication was refused/);
+      assert.match(card(d, 'linear').querySelector('.cc-intcat-last')?.textContent ?? '', /stale: older than 7 days/);
+      assert.equal(card(d, 'slack').querySelector('.cc-intcat-last'), null, 'no evidence, no last-result line');
+      assert.equal(card(d, 'jira').querySelector('.cc-intcat-caps')?.textContent, 'Can: preview issues, create intent drafts');
+      assert.match(card(d, 'sarif').querySelector('.cc-intcat-docs')?.getAttribute('href') ?? '', /sarif\/README\.md$/);
+    } finally { ctx.cleanup(); }
+  });
+
+  test('the header counts verified, failing and unverified separately', async () => {
+    const ctx = setupDom(async () => ({ ok: true, json: async () => EVIDENCE }));
+    try {
+      await new IntegrationCatalogRenderer('integrations').render();
+      assert.match(ctx.doc.querySelector('.cc-intcat-sub')?.textContent ?? '', /6 integrations — 3 verified by their last call, 1 failing, 2 configured but unverified or stale\./);
+    } finally { ctx.cleanup(); }
+  });
+});

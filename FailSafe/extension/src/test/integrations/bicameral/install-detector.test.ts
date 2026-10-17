@@ -13,6 +13,24 @@ import {
   probeInstallState,
 } from '../../../integrations/bicameral/install-detector';
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { privateNode } = require('../../../../src/test/shared/privateNode.cjs') as { privateNode: (base: string) => string };
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { removeTempTree } = require('../../../../src/test/shared/removeTempTree.cjs') as { removeTempTree: (dir: string) => void };
+
+/**
+ * LD23: a node the trusted resolver accepts. On POSIX a GitHub-hosted runner's
+ * PATH node is in a tool cache every user can write, which is refused, so the
+ * rows use a private copy (an absolute path, so its folder is passed as an
+ * extra root); on win32 they keep the bare name.
+ */
+function stubCli(): { command: string; extraRoots?: string[]; base?: string } {
+  if (process.platform === 'win32') return { command: 'node' };
+  const base = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'fs-bic-node-')));
+  const command = privateNode(base);
+  return { command, extraRoots: [path.dirname(command)], base };
+}
+
 suite('integrations/bicameral install-detector', () => {
   suite('isSafeBicameralCommand', () => {
     test('accepts bare executable name "bicameral-mcp"', () => {
@@ -106,32 +124,38 @@ suite('integrations/bicameral install-detector', () => {
 
     test('returns installed-not-configured when CLI runs but .bicameral/config.yaml absent', async () => {
       const ws = mkTempWs('fs-bic-3-');
+      const cli = stubCli();
       try {
         // Use node --version as a stand-in CLI that we know exits 0 and emits a version string.
         const result = await probeInstallState({
-          command: 'node',
+          command: cli.command,
           workspaceRoot: ws,
+          extraRoots: cli.extraRoots,
         });
         assert.equal(result.state, 'installed-not-configured');
         assert.match(result.version || '', /^\d+\.\d+\.\d+/);
       } finally {
         fs.rmSync(ws, { recursive: true, force: true });
+        if (cli.base) removeTempTree(cli.base);
       }
     });
 
     test('returns configured-not-running when config.yaml exists', async () => {
       const ws = mkTempWs('fs-bic-4-');
+      const cli = stubCli();
       try {
         fs.mkdirSync(path.join(ws, '.bicameral'), { recursive: true });
         fs.writeFileSync(path.join(ws, '.bicameral', 'config.yaml'), 'mode: solo\n', 'utf8');
         const result = await probeInstallState({
-          command: 'node',
+          command: cli.command,
           workspaceRoot: ws,
+          extraRoots: cli.extraRoots,
         });
         assert.equal(result.state, 'configured-not-running');
         assert.equal(result.configPath, path.join(ws, '.bicameral', 'config.yaml'));
       } finally {
         fs.rmSync(ws, { recursive: true, force: true });
+        if (cli.base) removeTempTree(cli.base);
       }
     });
   });

@@ -35,7 +35,7 @@ export function parseJiraIssueKey(input: string): string | null {
 }
 
 /** Canonical fields v1 reads, requested explicitly to keep the payload small. */
-export const JIRA_ISSUE_FIELDS = ['summary', 'description', 'status', 'priority', 'assignee', 'labels', 'components'] as const;
+export const JIRA_ISSUE_FIELDS = ['summary', 'description', 'status', 'priority', 'assignee', 'labels', 'components', 'updated', 'issuetype'] as const;
 
 /** Pure builder for the issue REST path (v2 → string description). */
 export function buildIssuePath(key: string): string {
@@ -51,6 +51,10 @@ export interface CanonicalJiraIssue {
   assignee?: string;
   labels: string[];
   components: string[];
+  /** Jira `updated` (the source revision time, #480 provenance). */
+  updated?: string;
+  /** Jira issue type name, e.g. Bug, Story. */
+  issueType?: string;
 }
 
 function str(v: unknown): string | undefined {
@@ -89,12 +93,14 @@ export function parseIssueResponse(json: unknown): CanonicalJiraIssue | null {
   const root = (json && typeof json === 'object') ? (json as Record<string, unknown>) : null;
   if (!root) return null;
   const key = str(root.key);
-  if (!key) return null;
+  // #480 delta: the returned key must itself be a Jira key (anchored).
+  if (!key || !/^[A-Z][A-Z0-9]+-\d+$/.test(key)) return null;
   const fields = root.fields && typeof root.fields === 'object' ? (root.fields as Record<string, unknown>) : {};
 
   const status = fields.status && typeof fields.status === 'object' ? (fields.status as Record<string, unknown>) : null;
   const priority = fields.priority && typeof fields.priority === 'object' ? (fields.priority as Record<string, unknown>) : null;
   const assignee = fields.assignee && typeof fields.assignee === 'object' ? (fields.assignee as Record<string, unknown>) : null;
+  const issuetype = fields.issuetype && typeof fields.issuetype === 'object' ? (fields.issuetype as Record<string, unknown>) : null;
 
   const labels = Array.isArray(fields.labels)
     ? (fields.labels as unknown[]).map(str).filter((l): l is string => !!l)
@@ -114,6 +120,8 @@ export function parseIssueResponse(json: unknown): CanonicalJiraIssue | null {
     assignee: assignee ? (str(assignee.displayName) ?? str(assignee.name)) : undefined,
     labels,
     components,
+    updated: str(fields.updated),
+    issueType: issuetype ? str(issuetype.name) : undefined,
   };
 }
 
@@ -133,6 +141,8 @@ export interface JiraIntentPreview {
   assignee?: string;
   labels: string[];
   components: string[];
+  updated?: string;
+  issueType?: string;
 }
 
 /** Pure mapper: canonical issue → an UNCOMMITTED FailSafe intent preview. */
@@ -151,5 +161,7 @@ export function toIntentPreview(issue: CanonicalJiraIssue, baseUrl?: string): Ji
     assignee: issue.assignee,
     labels: issue.labels,
     components: issue.components,
+    updated: issue.updated,
+    issueType: issue.issueType,
   };
 }

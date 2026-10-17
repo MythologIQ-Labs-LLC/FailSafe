@@ -3,7 +3,7 @@
   "displayName": "FailSafe (feat. Qor-Logic)",
   "description": "Open-source VS Code/Cursor governance and skills surface for AI coding agents.",
   "icon": "media/icon.png",
-  "version": "6.0.7",
+  "version": "6.0.8",
   "publisher": "MythologIQ",
   "license": "Apache-2.0",
   "repository": {
@@ -152,12 +152,12 @@
       },
       {
         "command": "failsafe.linear.import",
-        "title": "FailSafe: Import Linear Issue (preview)",
+        "title": "FailSafe: Import Linear Issue as Intent Draft",
         "category": "FailSafe"
       },
       {
         "command": "failsafe.jira.import",
-        "title": "FailSafe: Import Jira Issue (preview)",
+        "title": "FailSafe: Import Jira Issue as Intent Draft",
         "category": "FailSafe"
       },
       {
@@ -377,7 +377,8 @@
         "failsafe.qorlogic.pythonPath": {
           "type": "string",
           "default": "",
-          "description": "Override the Python interpreter used to install qor-logic. Leave empty to auto-detect (VS Code Python extension, then python3/python/py -3 probe)."
+          "scope": "machine",
+          "description": "Override the Python interpreter used to install qor-logic. Leave empty to auto-detect (VS Code Python extension, then python3/python/py -3 probe). Read only from user settings, and an interpreter inside a workspace folder is never used: set an interpreter outside the workspace here."
         },
         "failsafe.integrations.openDesign.enabled": {
           "type": "boolean",
@@ -409,7 +410,7 @@
         "failsafe.integrations.linear.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable read-only Linear issue import. The `FailSafe: Import Linear Issue (preview)` command resolves a Linear issue URL/identifier to an UNCOMMITTED intent preview — nothing is created or synced. Requires an API key below."
+          "description": "Enable read-only Linear issue import. The `FailSafe: Import Linear Issue as Intent Draft` command fetches one Linear issue and opens it as an unsaved preview; a governed intent draft is created only when you approve it. Nothing is written to Linear and nothing is synced. Requires an API key stored with `FailSafe: Set Integration Credential`."
         },
         "failsafe.integrations.linear.apiKey": {
           "type": "string",
@@ -420,7 +421,7 @@
         "failsafe.integrations.jira.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable read-only Jira Cloud issue import. The `FailSafe: Import Jira Issue (preview)` command resolves a Jira issue URL/key to an UNCOMMITTED intent preview — nothing is created or synced. Requires base URL + email + API token below."
+          "description": "Enable read-only Jira Cloud issue import. The `FailSafe: Import Jira Issue as Intent Draft` command fetches one Jira issue and opens it as an unsaved preview; a governed intent draft is created only when you approve it. Nothing is written to Jira and nothing is synced. Requires base URL + email below and an API token stored with `FailSafe: Set Integration Credential`."
         },
         "failsafe.integrations.jira.baseUrl": {
           "type": "string",
@@ -550,7 +551,7 @@
         "failsafe.integrations.openhands.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable the read-only OpenHands run observer. The `FailSafe: Import OpenHands Run (observe)` command maps an exported run's events into FailSafe transparency records and degrades on an unsupported version. Read-only; never mutates an active run."
+          "description": "Enable the OpenHands run import. The `FailSafe: Import OpenHands Run (observe)` command maps an exported run's events and, after you confirm, saves them as historical timeline evidence (deduplicated, signed for this install) with one summary line in the transparency log. It degrades on an unsupported version and never mutates or intercepts a live run."
         },
         "failsafe.integrations.openhands.version": {
           "type": "string",
@@ -708,12 +709,14 @@
         "failsafe.bootstrap.autoInstallGit": {
           "type": "boolean",
           "default": false,
-          "description": "Attempt a system-wide Git install at activation when Git is missing. Off by default. FailSafe never initializes a repository without asking first."
+          "scope": "machine",
+          "description": "Attempt a system-wide Git install at activation when Git is missing. Off by default. FailSafe never initializes a repository without asking first. Read only from user settings; a workspace cannot turn it on."
         },
         "failsafe.integrations.bicameral.command": {
           "type": "string",
           "default": "bicameral-mcp",
-          "description": "Executable used to launch the Bicameral MCP server. Must be on PATH or an absolute path under your home directory (or a configured extra command root)."
+          "scope": "machine",
+          "description": "Executable used to launch the Bicameral MCP server. Must be on PATH or an absolute path under your home directory (or a configured extra command root). Read only from user settings, and never a file inside the workspace."
         },
         "failsafe.integrations.bicameral.extraCommandRoots": {
           "type": "array",
@@ -721,17 +724,14 @@
             "type": "string"
           },
           "default": [],
-          "description": "Additional anchored absolute directory roots accepted for the Bicameral command path, alongside your home directory. Windows chocolatey/scoop roots under %ProgramData% are already accepted automatically; use this only for non-default install locations. Relative entries are ignored."
-        },
-        "failsafe.integrations.bicameral.pipCommand": {
-          "type": "string",
-          "default": "pip",
-          "description": "Pip command used by the Integrations tab installer (e.g., 'pip', 'pip3', or 'python -m pip')."
+          "scope": "machine",
+          "description": "Additional anchored absolute directory roots accepted for the Bicameral command path, alongside your home directory. Windows chocolatey/scoop roots under %ProgramData% are already accepted automatically; use this only for non-default install locations. Relative entries are ignored. Read only from user settings."
         },
         "failsafe.integrations.bicameral.autoConnect": {
           "type": "boolean",
           "default": false,
-          "description": "Automatically connect to Bicameral MCP at activation when the workspace is configured. Default off — operator clicks Connect."
+          "scope": "machine",
+          "description": "Automatically connect to Bicameral MCP at activation when the workspace is configured. Default off — operator clicks Connect. Read only from user settings."
         },
         "failsafe.integrations.bicameral.upstreamPollMs": {
           "type": "number",

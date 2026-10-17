@@ -18,7 +18,7 @@ This integration has no settings. It runs only when the operator explicitly invo
 No auth and no secrets — the source is a local file the operator selects, read once via `fs.readFileSync` in the command layer. The pure logic (`sarif-parser.ts`, `sarif-to-risk.ts`) performs no fs, network, or process work, so it is deterministically fixture-tested. Malformed JSON, a non-2.1.0 version, or a missing `runs[]` array returns structured `errors` rather than throwing; individual malformed results are skipped, not fatal. Imported risks are read-only WARN records (`status: 'open'`); FailSafe writes nothing back to the scanned code.
 
 ## Command / wiring
-`FailSafe: Import SARIF Findings` (`failsafe.sarif.import`) — opens a file picker (`.sarif` / `.json`), parses the file offline, and upserts each finding as a risk via `RiskRegisterManager.upsertRisk`, reporting `N finding(s) → M risk(s) upserted` plus any parse-warning count. Registered by `registerSarifImportCommand` in `src/extension/sarif-command.ts`.
+`FailSafe: Import SARIF Findings` (`failsafe.sarif.import`) — opens a file picker (`.sarif` / `.json`), parses the file offline, and upserts each finding as a risk via `RiskRegisterManager.upsertRisk`, reporting `N finding(s) → M risk(s) upserted` plus any parse-warning count. Registered by `registerSarifImportCommand` in `src/extension/sarif-command.ts`. Each import records its result as the card's health evidence: "Last import parsed" for a valid file (including one with no results), failing `contract` for an unreadable file or parse warnings, and failing `storage` when a risk could not be written.
 
 ## Files
 - `sarif-parser.ts` — pure logic: `parseSarif(text)` → normalized `SarifFinding[]` + `errors[]`

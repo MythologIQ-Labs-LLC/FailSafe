@@ -1,6 +1,6 @@
 # Governance Cache Invalidation
 
-FailSafe's governance services hold cached state in memory (plans, L3 queue, trust agents, checkpoint chain validity). When workspace files backing this state are mutated externally — by a parallel tool, the operator's editor, or a future FailSafe Pro daemon — the in-process cache becomes stale without notice. This doc describes the `WorkspaceMutationBus` substrate that closes the gap.
+FailSafe's governance services hold cached state in memory (plans, L3 queue, trust agents, checkpoint chain validity). When workspace files backing this state are mutated externally — by a parallel tool, the operator's editor, or another process — the in-process cache becomes stale without notice. This doc describes the `WorkspaceMutationBus` substrate that closes the gap.
 
 ## Architecture
 
@@ -23,7 +23,7 @@ FailSafe's governance services hold cached state in memory (plans, L3 queue, tru
        │ subscribes:      │         │ subscribes:        │           │ subscribes:         │
        │  .failsafe/      │         │  <ledger db path>  │           │  <ledger db path>   │
        │  plans.yaml      │         │  → clears          │           │  → refreshFromDb()  │
-       │  .qorelogic/     │         │  cachedChainValid  │           │  (Pro coexistence)  │
+       │  .qorelogic/     │         │  cachedChainValid  │           │  (external writes)  │
        │  roadmap.yaml    │         │  + chainValidAt    │           │                     │
        └──────────────────┘         └────────────────────┘           └─────────────────────┘
 
@@ -39,7 +39,7 @@ FailSafe's governance services hold cached state in memory (plans, L3 queue, tru
 ## Why a separate bus (vs reusing EventBus)
 
 - **EventBus** carries SHIELD lifecycle events (`plan.created`, `blocker.added`, `sentinel.verdict`, `qorelogic.trustUpdated`). It is in-process semantic event distribution — no fs-watch backing.
-- **WorkspaceMutationBus** carries filesystem-level events (a path mutated). External writers (Pro daemon, manual file edits) produce events here that EventBus never sees.
+- **WorkspaceMutationBus** carries filesystem-level events (a path mutated). External writers (another process, manual file edits) produce events here that EventBus never sees.
 - Keeping them separate avoids complecting: a service that wants both in-process semantic events AND fs-coexistence subscribes to both buses with different concerns per subscription.
 
 ## Why targeted-path watching (vs workspace-root recursive)
@@ -69,9 +69,9 @@ L3ApprovalService is **intentionally not subscribed** — its backing `VscodeSta
 - **fs.watch throws** (unsupported platform, EACCES, ENFILE): same no-op fallback. Logged.
 - **Windows fs.watch unreliability**: known to miss some events under load. Mitigation: `HubSnapshotService.buildHubSnapshot()` retains its existing defensive pull-calls (`planManager.refreshFromWorkspace?.()` + `qorelogicManager.refreshL3Queue?.()`). Belt-and-suspenders: event-driven invalidation is the primary mechanism; pull-on-build catches missed events on the next hub rebuild. No periodic poll in v1 (BACKLOG B-SC-1).
 
-## FailSafe-Pro coexistence
+## Coexistence with other writers
 
-When FailSafe Pro ships, it can write to the same workspace files (`.failsafe/plans.yaml`, the SQLite db, `docs/META_LEDGER.md`) without IPC handshake. fs.watch in the extension picks up the mutation events naturally; subscribers refresh; UI re-renders. The trust posture is **shared filesystem**, not cross-process events. Pro-side writes go through standard `fs.writeFileSync` / SQLite transactions; the extension's bus subscribers don't need to know anything about Pro.
+Another process can write to the same workspace files (`.failsafe/plans.yaml`, the SQLite db, `docs/META_LEDGER.md`) without IPC handshake. fs.watch in the extension picks up the mutation events naturally; subscribers refresh; UI re-renders. The trust posture is **shared filesystem**, not cross-process events. Writes from other processes go through standard `fs.writeFileSync` / SQLite transactions; the extension's bus subscribers don't need to know who wrote.
 
 ## Bootstrap wiring
 

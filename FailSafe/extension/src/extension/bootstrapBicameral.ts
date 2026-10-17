@@ -22,6 +22,8 @@ import type { EventBus } from "../shared/EventBus";
 import type { Logger } from "../shared/Logger";
 import type { L3ApprovalRequest } from "../shared/types/l3-approval";
 import { wireMediators, wireUpstreamMonitor } from "./bootstrapBicameralWiring";
+import { trustedCommandPath } from "../shared/exec/trustedExecutable";
+import { userLevelValue } from "../shared/userSetting";
 
 /** B151: DID stamped onto receipts issued by this extension's interceptor. */
 const INTERCEPTOR_ISSUED_BY = "did:failsafe:instance:extension";
@@ -33,9 +35,15 @@ const INTERCEPTOR_ISSUED_BY = "did:failsafe:instance:extension";
 function readBicameralExtraRoots(
   cfg: vscode.WorkspaceConfiguration,
 ): string[] {
-  const raw = cfg.get<string[]>("extraCommandRoots", []);
+  const raw = userLevelValue<string[]>(cfg.inspect<string[]>("extraCommandRoots"), []);
   return Array.isArray(raw) ? raw.filter((r) => typeof r === "string") : [];
 }
+
+/** LD15: the command and auto-connect are read only from user settings (machine scope). */
+const readCommand = (cfg: vscode.WorkspaceConfiguration): string =>
+  userLevelValue<string>(cfg.inspect<string>("command"), "bicameral-mcp") || "bicameral-mcp";
+const readAutoConnect = (cfg: vscode.WorkspaceConfiguration): boolean =>
+  userLevelValue<boolean>(cfg.inspect<boolean>("autoConnect"), false) === true;
 
 export interface ConsoleServerSurface {
   setBicameralAutoConnect(value: boolean): void;
@@ -45,6 +53,9 @@ export interface ConsoleServerSurface {
   broadcastEvent(data: Record<string, unknown>): void;
   /** B-BIC-2: typed accessor for the lazily-wired MCP client. */
   getBicameralClient(): BicameralMcpClient | null;
+  /** LD16 (b): the rewire the install route runs after a successful install.
+   *  Optional on the surface so older test fixtures are tolerated. */
+  setBicameralRewire?(fn: (() => Promise<void>) | null): void;
   /** B151: register the universal governance interceptor that the bicameral
    *  tool routes govern through. Null when no enforcement engine is wired. */
   setMcpInterceptor?(i: McpInterceptor | null): void;
@@ -134,6 +145,14 @@ function wireInterceptor(
   consoleServer.setMcpInterceptor(new McpInterceptor(client, backing));
 }
 
+/** LD16 (a): the latest rewire per server; only that one assigns a client. */
+const wireGenerations = new WeakMap<ConsoleServerSurface, number>();
+
+function logBicameral(deps: BicameralIntegrationDeps, what: string, err: unknown): void {
+  if (deps.logger) deps.logger.warn(`[bicameral] ${what}`, err);
+  else console.warn(`[bicameral] ${what}: ${String(err)}`);
+}
+
 /** B-BIC-6/7/9: validate the configured command through the symlink-resolving
  *  validator, then (re)construct the BicameralMcpClient + interceptor. The
  *  prior client is disconnected so its stdio subprocess is not orphaned. */
@@ -142,14 +161,24 @@ async function wireFromConfig(
   workspaceRoot: string,
   deps: BicameralIntegrationDeps,
 ): Promise<void> {
+  const token = (wireGenerations.get(consoleServer) ?? 0) + 1;
+  wireGenerations.set(consoleServer, token);
   const cfg = vscode.workspace.getConfiguration("failsafe.integrations.bicameral");
-  const command = cfg.get<string>("command", "bicameral-mcp") || "bicameral-mcp";
-  consoleServer.setBicameralAutoConnect(cfg.get<boolean>("autoConnect", false));
-  const prior = consoleServer.getBicameralClient();
+  const command = readCommand(cfg);
+  consoleServer.setBicameralAutoConnect(readAutoConnect(cfg));
   const safe = await isSafeBicameralCommandResolved(command, {
     extraRoots: readBicameralExtraRoots(cfg),
   });
-  if (!safe) {
+  // A rewire that started during the await assigns instead of this one.
+  if (wireGenerations.get(consoleServer) !== token) return;
+  // Read after the await, so the client being replaced is the one disconnected.
+  const prior = consoleServer.getBicameralClient();
+  // B211 (review delta LD14 (c)): the client only ever gets the trusted absolute file.
+  let resolved: string | undefined;
+  if (safe) {
+    try { resolved = trustedCommandPath(command, workspaceRoot); } catch { resolved = undefined; }
+  }
+  if (!safe || !resolved) {
     consoleServer.setBicameralCommand("bicameral-mcp");
     consoleServer.setBicameralClient(null);
     wireInterceptor(consoleServer, deps, null);
@@ -158,7 +187,7 @@ async function wireFromConfig(
   }
   consoleServer.setBicameralCommand(command);
   const client = new BicameralMcpClient({
-    command,
+    command: resolved,
     cwd: workspaceRoot,
     idleDisconnectMs: cfg.get<number>("idleDisconnectMs", 900_000),
   });
@@ -188,12 +217,17 @@ function wireBicameralClient(
   workspaceRoot: string,
   deps: BicameralIntegrationDeps,
 ): void {
-  void wireFromConfig(consoleServer, workspaceRoot, deps);
+  // LD16: every rewire logs a failure instead of leaving an unhandled rejection;
+  // the install route awaits this one, so it never rejects.
+  const rewire = (): Promise<void> =>
+    wireFromConfig(consoleServer, workspaceRoot, deps).catch((err) => logBicameral(deps, "rewire failed", err));
+  void rewire();
+  consoleServer.setBicameralRewire?.(rewire);
   consoleServer.setBicameralOpenFileInEditor?.(openBicameralBinding);
   consoleServer.setBicameralAutoConnectWriter(async (value) => {
     await vscode.workspace
       .getConfiguration("failsafe.integrations.bicameral")
-      .update("autoConnect", value, vscode.ConfigurationTarget.Workspace);
+      .update("autoConnect", value, vscode.ConfigurationTarget.Global);
   });
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
@@ -202,14 +236,20 @@ function wireBicameralClient(
         || e.affectsConfiguration("failsafe.integrations.bicameral.autoConnect")
         || e.affectsConfiguration("failsafe.integrations.bicameral.extraCommandRoots")
       ) {
-        void wireFromConfig(consoleServer, workspaceRoot, deps);
+        void rewire();
       }
+    }),
+    // The excluded folders follow the open folders, so the command is resolved again.
+    vscode.workspace.onDidChangeWorkspaceFolders(() => {
+      void rewire();
     }),
   );
   // B-BIC-2: deactivate disposer — terminates the stdio subprocess so it does
   // not outlive its parent. .catch() swallows any disconnect error.
   context.subscriptions.push({
     dispose: () => {
+      // LD16 (a): a rewire still awaiting is superseded, so nothing is wired after deactivate.
+      wireGenerations.set(consoleServer, (wireGenerations.get(consoleServer) ?? 0) + 1);
       void consoleServer.getBicameralClient()?.disconnect().catch(() => undefined);
     },
   });
@@ -226,21 +266,25 @@ export function maybeAutoConnectBicameral(
   output: { appendLine: (msg: string) => void },
 ): void {
   void (async () => {
-    const cfg = vscode.workspace.getConfiguration("failsafe.integrations.bicameral");
-    if (!cfg.get<boolean>("autoConnect", false)) return;
-    const command = cfg.get<string>("command", "bicameral-mcp") || "bicameral-mcp";
-    // B-BIC-7 (audit Finding A): thread extraCommandRoots through the probe so
-    // auto-connect honours custom roots, not just the auto-applied defaults.
     try {
+      const cfg = vscode.workspace.getConfiguration("failsafe.integrations.bicameral");
+      if (!readAutoConnect(cfg)) return;
+      const command = readCommand(cfg);
+      // B-BIC-7 (audit Finding A): thread extraCommandRoots through the probe so
+      // auto-connect honours custom roots, not just the auto-applied defaults.
       const probe = await probeInstallState({
         command,
         workspaceRoot,
         extraRoots: readBicameralExtraRoots(cfg),
       });
       if (probe.state !== "configured-not-running") return;
-      const client = new BicameralMcpClient({ command, cwd: workspaceRoot });
+      const resolvedCommand = trustedCommandPath(command, workspaceRoot);
+      const client = new BicameralMcpClient({ command: resolvedCommand, cwd: workspaceRoot });
       await client.connect();
+      // LD16 (a): the lazy client this replaces is disconnected, not orphaned.
+      const replaced = consoleServer.getBicameralClient();
       consoleServer.setBicameralClient(client);
+      if (replaced && replaced !== client) void replaced.disconnect().catch(() => undefined);
       consoleServer.broadcastEvent({ type: "bicameral.connected" });
     } catch (err) {
       output.appendLine(`[bicameral] auto-connect failed: ${String(err)}`);

@@ -296,12 +296,8 @@ export async function bootstrapServers(
   const { registerQorlogicRoutes } = await import("../roadmap/routes/QorlogicRoute");
   const { enumerateSkillsForHost } = await import("../qorlogic/skillEnumeration");
   const { previewInstall } = await import("../qorlogic/installDryRun");
-  const runCli = async (_ing: unknown, extra: ReadonlyArray<string>) => {
-    const py = await interpreterResolver.resolve();
-    if (!py.ok) return { stdout: "", stderr: "no-python-found", code: -1 };
-    const r = await defaultInstallerRun(py.command, [...py.args, "-m", "qor.cli", ...extra], { timeoutMs: 180_000, cwd: deps.workspaceRoot, env: { QORLOGIC_PROJECT_DIR: deps.workspaceRoot } });
-    return { stdout: r.stdout, stderr: r.stderr, code: r.code };
-  };
+  const { runQorlogicCli } = await import("../qorlogic/qorCliRun");
+  const runCli = (_ing: unknown, extra: ReadonlyArray<string>) => runQorlogicCli(interpreterResolver, deps.workspaceRoot, extra, defaultInstallerRun);
   const skillEnumDeps = { runQorlogicCommand: runCli, warn: (m: string) => outputChannel.appendLine(`[skill-enum] ${m}`) };
   registerQorlogicRoutes(consoleServer.getExpressApp(), {
     enumerateSkillsForHost: (host, scope) => enumerateSkillsForHost(skillIngestor, host, scope, skillEnumDeps),

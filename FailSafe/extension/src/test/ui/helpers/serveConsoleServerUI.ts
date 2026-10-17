@@ -26,12 +26,49 @@ import type { WebSocketManager } from "../../../roadmap/services/WebSocketManage
 import type { CheckpointDb, CheckpointRecord } from "../../../roadmap/services/CheckpointStore";
 import type { BicameralMcpClient } from "../../../integrations/bicameral";
 import type { ConfirmOperatorAction } from "../../../extension/operatorConfirmation";
+import {
+  HEALTH_STATE_KEY, IntegrationHealthStore, setIntegrationHealthStore,
+} from "../../../integrations/catalog/integration-health";
 import type {
   CatalogItem,
   RiskEntry,
   TimelineEvent,
 } from "./consoleServerFixtures";
 import type { HubFixture, ShieldEntry } from "./ledgerFixtures";
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { privateNode } = require("../../../../src/test/shared/privateNode.cjs") as { privateNode: (base: string) => string };
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { removeTempTree } = require("../../../../src/test/shared/removeTempTree.cjs") as { removeTempTree: (dir: string) => void };
+
+/**
+ * LD23: the default Bicameral command is the bare name "node". On POSIX a
+ * GitHub-hosted runner's PATH node sits in a tool cache every user can write,
+ * which the trusted resolver refuses, so while a server that uses the default
+ * is open a private copy's folder goes first on PATH. One copy per process,
+ * counted, so overlapping servers restore PATH only when the last one closes.
+ */
+let posixNode: { base: string; prevPath: string | undefined; refs: number } | undefined;
+function acquirePosixNode(): () => void {
+  if (process.platform === "win32") return () => undefined;
+  if (!posixNode) {
+    const base = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), "failsafe-ui-node-")));
+    const dir = path.dirname(privateNode(base));
+    posixNode = { base, prevPath: process.env.PATH, refs: 0 };
+    process.env.PATH = `${dir}${path.delimiter}${process.env.PATH ?? ""}`;
+  }
+  posixNode.refs += 1;
+  let released = false;
+  return () => {
+    if (released || !posixNode) return;
+    released = true;
+    posixNode.refs -= 1;
+    if (posixNode.refs > 0) return;
+    if (posixNode.prevPath === undefined) delete process.env.PATH; else process.env.PATH = posixNode.prevPath;
+    removeTempTree(posixNode.base);
+    posixNode = undefined;
+  };
+}
 
 export interface ConsoleServerFixtures {
   workspaceRoot?: string;
@@ -61,6 +98,10 @@ export interface ConsoleServerFixtures {
    *  bicameral-ratify, rollback, panic-stop, hooks disable). Defaults to one that
    *  approves, so specs exercising those routes reach the route body. */
   operatorConfirmer?: ConfirmOperatorAction;
+  /** #479: boolean-only config snapshot for the Integrations catalog route. */
+  integrationConfig?: Record<string, boolean>;
+  /** #479: health evidence (integration id -> { result, category?, checkedAt }) seeded into the store. */
+  integrationHealth?: Record<string, unknown>;
 }
 
 export interface ConsoleServerController {
@@ -259,8 +300,20 @@ export async function serveConsoleServerUI(
   if (fixtures.bicameralClient) {
     server.setBicameralClient(fixtures.bicameralClient);
   }
+  const releaseNode = fixtures.bicameralCommand === undefined ? acquirePosixNode() : () => undefined;
   server.setBicameralCommand(fixtures.bicameralCommand ?? "node");
   server.setOperatorConfirmer(fixtures.operatorConfirmer ?? (async () => "approved"));
+  if (fixtures.integrationConfig) {
+    const snapshot = fixtures.integrationConfig;
+    server.setIntegrationConfigSnapshotProvider(() => snapshot);
+  }
+  if (fixtures.integrationHealth) {
+    const data = new Map<string, unknown>([[HEALTH_STATE_KEY, fixtures.integrationHealth]]);
+    setIntegrationHealthStore(new IntegrationHealthStore({
+      get: <T>(k: string) => data.get(k) as T | undefined,
+      update: (k: string, v: unknown) => { data.set(k, v); return Promise.resolve(); },
+    }));
+  }
 
   const voicePackVersion = fixtures.voicePackVersion ?? '5.2.0';
   const voicePackGlobalStorage = setupVoicePackFixture(workspaceRoot, fixtures, voicePackVersion);
@@ -298,7 +351,7 @@ export async function serveConsoleServerUI(
   attachWebSocket(server, harness, sockets, fakes.hubRef);
 
   const url = await listenAndResolveUrl(harness);
-  return buildController(url, harness, sockets, checkpointRef, fakes.hubRef, () => server.stop());
+  return buildController(url, harness, sockets, checkpointRef, fakes.hubRef, () => { server.stop(); setIntegrationHealthStore(null); releaseNode(); });
 }
 
 function setupVoicePackFixture(

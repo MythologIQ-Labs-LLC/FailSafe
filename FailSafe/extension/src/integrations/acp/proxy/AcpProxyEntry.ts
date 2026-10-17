@@ -11,20 +11,36 @@
 
 import { createWorkspaceAcpBacking } from './backing/createWorkspaceAcpBacking';
 import { parseProxyArgs, parseWorkspaceArg } from './AcpProxyArgs';
+import * as os from 'os';
 import { runAcpProxy } from './AcpProxyMain';
+import { configureTrustedExecutables, repoRootsFor } from '../../../shared/exec/trustedExecutable';
 
 export async function main(argv: string[], cwd: string): Promise<number> {
   const { agentCommand, agentArgs } = parseProxyArgs(argv);
   const workspaceRoot = parseWorkspaceArg(argv, cwd);
   const backing = createWorkspaceAcpBacking(workspaceRoot);
+  // B211 (review delta LD16): nothing inside the governed workspace, or the
+  // repository that contains it, is started as the agent.
+  configureTrustedExecutables({ workspaceDirs: [workspaceRoot, ...repoRootsFor([workspaceRoot], os.homedir())] });
 
-  const { child } = runAcpProxy({
-    incoming: process.stdin,
-    outgoing: process.stdout,
-    agentCommand,
-    agentArgs,
-    backing,
-  });
+  let run: ReturnType<typeof runAcpProxy>;
+  try {
+    run = runAcpProxy({
+      incoming: process.stdin,
+      outgoing: process.stdout,
+      agentCommand,
+      agentArgs,
+      backing,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    const unresolved = (err as { code?: unknown } | null)?.code === 'TRUSTED_EXECUTABLE_UNAVAILABLE';
+    process.stderr.write(unresolved
+      ? `acp-proxy: no trusted agent executable: ${message}\n`
+      : `acp-proxy: failed to start the agent: ${message}\n`);
+    return 1;
+  }
+  const { child } = run;
 
   // Surface the real agent's diagnostics without polluting the governed stdout
   // JSON-RPC stream.

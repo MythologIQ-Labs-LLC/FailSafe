@@ -1,6 +1,6 @@
 # FailSafe Component Help
 
-Audience: operators using the packaged VS Code extension (`v6.0.7`).
+Audience: operators using the packaged VS Code extension (`v6.0.8`).
 
 Scope: shipped UI surfaces, governance components, and Voice + Mindmap Status in the current release.
 
@@ -40,8 +40,8 @@ The Console is the control surface. Use it for actions, state transitions, gover
 
 Open paths:
 
-- `FailSafe: Open Command Center (Browser Popout)`
-- `FailSafe: Open Command Center (Editor Tab)`
+- `FailSafe: Open Console (Browser Popout)`
+- `FailSafe: Open Console (Editor Tab)`
 
 ## Console Tabs
 
@@ -117,7 +117,6 @@ Console-level preferences organized into cards:
 - **Notifications** — independent toggles for info-tier and error-tier toasts.
 - **Brainstorm** — ideation history limit (1-100; default 10).
 - **QorLogic Skills** — install / refresh / show output.
-- **FailSafe Pro** — discovery card linking to <https://mythologiq.studio/products/failsafe-pro>.
 
 Use this for UI preference and substrate configuration; governance policy configuration remains code/config based.
 

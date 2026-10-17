@@ -7,7 +7,8 @@ function esc(value) {
   return d.innerHTML;
 }
 
-const CATEGORIES = ['All', 'Verdict', 'Trust', 'Approval', 'DiffGuard'];
+// #477: 'Imported' shows evidence imported from exported agent runs.
+const CATEGORIES = ['All', 'Verdict', 'Trust', 'Approval', 'DiffGuard', 'Imported'];
 const SEVERITY_LEVELS = ['info', 'warning', 'error'];
 
 export class TimelineRenderer {
@@ -79,7 +80,7 @@ export class TimelineRenderer {
           <div style="display:flex;align-items:center;gap:10px">
             <span class="cc-badge" style="background:${color};color:#fff;font-size:0.65rem;min-width:50px;text-align:center">${esc(e.category || 'event')}</span>
             <div style="flex:1">
-              <div style="font-size:0.83rem;color:var(--text-main)">${esc(e.summary || e.type || 'Event')}</div>
+              <div style="font-size:0.83rem;color:var(--text-main)">${esc(e.title || e.summary || e.type || 'Event')}</div>
               ${e.agentDid ? `<div style="font-size:0.7rem;color:var(--text-muted)">Agent: ${esc(e.agentDid.slice(0, 12))}...</div>` : ''}
             </div>
             <span style="font-size:0.7rem;color:var(--text-muted);font-family:var(--font-mono)">${esc(time)}</span>

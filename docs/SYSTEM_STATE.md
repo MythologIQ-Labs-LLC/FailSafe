@@ -1,10 +1,10 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-10-15 (v6.0.7 final integration on `release/v6.0.7-rc2` (PR #525): lanes A-D and the trusted Git resolver on the merged RC, with the review and CI corrections; ledger #659-#704, final seal #704; not tagged, not published)
+**Last Updated:** 2026-10-17 (v6.0.8 integration on `release/v6.0.8-rc`: lanes A-D, the combined-review, full-run, CI timer, temp-hygiene and POSIX executable-trust fixes, version 6.0.8; ledger #705-#767, seal #767; code candidate `ac66f10c`; not merged, not tagged, not published)
 **Active local review:** `fix/system-state-currency-sprint2` — this cycle. Restores the Tier 1 freshness contract and adds `system-state-currency.test.cjs`, the first check that asserts it. Prior to this cycle no test anywhere read this file's content.
 **Prior local review:** `fix/qor169-sprint1-seal-unblock` — MERGED to `main` as `1e1215cc` (PR #448). qor-logic 0.163.1 → 0.169.0; `.qorlogic/config.json` created, which is what allows a seal to complete at all; five vacuously-passing governance controls identified; TTS timeout assertion made deterministic and falsifying. Seal Entry #602.
 **Open PRs:** #442 (Bicameral upstream row error state), #443 (plan-grep-lint regex recognition), #444 (#367 per-engine provenance), #445 (#242 Shadow Genome severity aria — supersedes #440, closed as duplicate), #446 + #447 (dependabot). #447's blocker — a wall-clock TTS assertion — was removed by Entry #602.
-**Current Release:** v6.0.7 (2026-10-15) — release candidate 1 (source/package target on `release/v6.0.7-rc1`); not published. Latest published release: v6.0.6 (2026-10-13; VS Code Marketplace + Open VSX + GitHub Release). Marketplace install/update/scan disabled pending #468/#469.
+**Current Release:** v6.0.8 (2026-10-16) — release candidate (source on `release/v6.0.8-rc`); not published. Latest published release: v6.0.7 (2026-10-15; VS Code Marketplace + Open VSX + GitHub Release). Marketplace install/update/scan stay disabled until the B222 gate lift conditions hold.
 **Prior releases:** v6.0.3 (2026-08-22, #596 DELIVER), v6.0.2 (2026-08-21, #588), v6.0.1 (2026-08-20, #553), v6.0.0 (2026-08-19, #548 — enforce-by-default era). Pre-6.x: v5.9.0 (#460 Command Center suite), v5.8.0 (#449), v5.7.0, v5.6.3 (#431).
 **Prior release detail:** v5.3.3 (published to VS Code Marketplace + Open VSX via tag `v5.3.3` (`d3a0b75`); Open VSX via CI, VS Code Marketplace via local `vsce publish --azure-credential` from the identical CI-built VSIX after the CI marketplace job hit the documented `/_apis/gallery` PAT-auth timeout) — bundles B-OD-8 (#409) + B-INT-6 (#410) + B-INT-7 (#411/#413) + B-INT-12 (#412) + transparency date-filter fix (#414); DELIVER seal #415
 **Sealed baseline:** v5.2.0 → v5.2.2 hotfix line (Entries #392-#396) → v5.3.0 (Entry #400 Open Design v1 + Entry #402 substrate v1) → v5.3.0 release (`08916d9`, dead-on-marketplace) → v5.3.1 hotfix (DELIVER at #406) → v5.3.2 release (refactor bundle #407 B-INT-4 + #408 B-INT-5) → v5.3.3 release (integration beta bundle #409–#414; DELIVER #415)
@@ -13,6 +13,25 @@
 **Doctrine additions since 2026-05-22:** `feedback_no_pipeline_reshape_for_marketplace_issues` (2026-05-27, v5.2.2 hold-pat precedent) · `feedback_verify_external_names_at_plan_time` (2026-05-27, Citation Inventory Pass — broke 4-cycle Plan-Time Hallucination loop at Entry #405)
 
 ---
+
+## 2026-10-17 — v6.0.8 integration, POSIX executable-trust fix (release/v6.0.8-rc, not tagged, not published)
+
+- After seal #753: the first Linux test:node run showed a planted interpreter on PATH outside the workspace was run. On macOS and Linux the trusted executable resolver now refuses a file or folder other users can write or another user owns (LD23); group-writable stays allowed and Windows ACLs are not checked (B239-B242).
+- Candidate `f1d15ea3`: npm test 5001 passing / 0 failing / 18 pending on the re-run (the first run hit the RiskStore rename stub, B243); test:node 727/716 (FX946 baseline, 9 POSIX rows skipped); test:ui 209/0/4; eight 6.0.8 VSIXs verified; packaged SQLite loads in Node and Electron; rv lifecycle 12/12 from published 6.0.7. The POSIX trust rows run on Linux CI.
+- Ledger #705-#759 (integration seal #759, after #746 and #753); the ledger stays DAMAGED (#467) under the bounded per-cycle override.
+- Follow-up after seal #759: PR #529's Linux CI refused the runner's world-writable tool-cache node in two install-detector rows, which now use a private node (`ec793f02`); ledger #705-#761, seal #761.
+- Second follow-up after seal #761: the install-detector rows' private node was a copy of the extension host's Electron binary; privateNode now copies a real node (`d0555a7f`); B244 files the #473 ledger timing row; ledger #705-#763, seal #763.
+- Third follow-up after seal #763: Linux test:node ran for the first time and every LD23 security row passed; the #473 refill rows use their own tag (identical same-millisecond rows); T8 reports every PowerShell rejection (`7f4b88c2`); ledger #705-#765, seal #765.
+- Fourth follow-up after seal #765: the hosted runner's PowerShell is world-writable (0777) and LD23 refuses it; T8 runs a private user-only copy on POSIX (`ac66f10c`); ledger #705-#767, seal #767.
+
+## 2026-10-16 — v6.0.8 integration (release/v6.0.8-rc, not tagged, not published)
+
+- Program #521, v6.0.8: lanes D (repository hygiene, FailSafe Pro retired), C (runtime and reliability: #471, #472, #528, release draft identity), A (governance and security: #468, #469, B211, B213, B214) and B (integrations: #474, #477, #479, #480) merged without rewriting, each sealed in its own session (#705-#736).
+- Integration fixes: the replay-nonce store refuses a linked or escaping store folder (LD11); documentation corrections (LD12-LD13); the ten failures of the first full vscode-test run fixed in the lanes (LD14-LD16), including the restored #476 importer pin and two Bicameral defects.
+- C0 `76641298`: npm test 5000 passing / 0 failing / 18 pending; test:node 713/721 (FX946 baseline); eight 6.0.8 VSIXs verified; packaged SQLite loads in Node and Electron; rv lifecycle 12/12 from published 6.0.7.
+- After seal #746: PR #529's Linux CI failed the #476 N1 row (a 1 ms timeout git could beat); a timer seam makes it deterministic (LD18). The re-run then filled C: from a test that left 0.8 GB and two junctions to the host Python per run; v6.0.8 tests now unlink links and remove their temp folders (LD20), checked by a temp-entry classification (B236 files the older suites).
+- Candidate `717d8254`: npm test 5001 passing / 0 failing / 18 pending; test:node 715/723 (FX946 baseline); test:ui 208/1/4 (FX589 timing, B238); eight 6.0.8 VSIXs verified; packaged SQLite loads in Node and Electron; rv lifecycle 12/12 from published 6.0.7.
+- Ledger #705-#753 (integration seal #753, after #746); superseded for the candidate by seal #759 (see 2026-10-17).
 
 ## 2026-10-15 — v6.0.7 final integration (release/v6.0.7-rc2, not tagged, not published)
 

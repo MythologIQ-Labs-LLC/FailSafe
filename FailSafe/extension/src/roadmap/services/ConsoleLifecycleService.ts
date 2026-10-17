@@ -70,7 +70,11 @@ export class ConsoleLifecycleService {
     });
     this.server = server;
     const address = server.address();
-    if (address && typeof address !== "string") this.actualPort = address.port;
+    let boundHost = this.deps.host;
+    if (address && typeof address !== "string") {
+      this.actualPort = address.port;
+      boundHost = address.address;
+    }
     console.log(`Roadmap server: http://localhost:${this.actualPort}`);
 
     this.setupWebSocket();
@@ -82,12 +86,14 @@ export class ConsoleLifecycleService {
       pid: process.pid,
       startedAt: new Date().toISOString(),
     });
-    // A successful bind is transport readiness, NOT a passing policy audit.
+    // A successful bind is transport readiness, NOT a passing policy audit:
+    // nothing was validated, so the record is "proposed" with an UNKNOWN
+    // verdict, and it names the listener that is actually bound (v6.0.8, #471).
     this.deps.hub.recordCheckpoint({
       checkpointType: "snapshot.created", actor: "system",
       phase: this.deps.hub.inferPhaseKeyFromPlan(this.deps.planManager.getActivePlan()),
-      status: "validated", policyVerdict: "UNKNOWN", evidenceRefs: [],
-      payload: { source: "roadmap-server.start", transport: "listening" },
+      status: "proposed", policyVerdict: "UNKNOWN", evidenceRefs: [],
+      payload: { source: "roadmap-server.start", transport: "listening", host: boundHost, port: this.actualPort },
     });
   }
 

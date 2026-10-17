@@ -17,6 +17,7 @@
 import * as https from 'https';
 import { isPublishable, parseRepoSlug, type CheckRunPayload } from './github-checks-map';
 import { postCheckRun, toWirePayload } from './check-run-transport';
+import { INVALID_API_BASE_ERROR, NOT_PUBLISHABLE_ERROR } from './check-run-errors';
 
 const GITHUB_API = 'https://api.github.com';
 
@@ -79,7 +80,7 @@ export async function publishCheckRunPayload(
   // getters or a Proxy must not change what is checked versus what is posted.
   const wire = toWirePayload(payload);
   if (!wire || !isPublishable(wire.name, wire.conclusion)) {
-    return { ok: false, error: 'Check run refused: this name and conclusion are not publishable by FailSafe.' };
+    return { ok: false, error: NOT_PUBLISHABLE_ERROR };
   }
   if (!opts.enabled) return { ok: true, localOnly: true, error: 'integration disabled' };
   if (!opts.token || !opts.token.trim()) return { ok: true, localOnly: true, error: 'no token configured' };
@@ -90,7 +91,7 @@ export async function publishCheckRunPayload(
   if (!ctx.headSha || !ctx.headSha.trim()) return { ok: true, localOnly: true, error: 'no HEAD sha resolved' };
 
   const api = resolveApiBase(opts.apiBaseUrl);
-  if (!api) return { ok: false, error: 'invalid GitHub API base URL' };
+  if (!api) return { ok: false, error: INVALID_API_BASE_ERROR };
   const res = await postCheckRun(wire, { repo: `${slug.owner}/${slug.repo}`, ...api }, opts.token, post);
   return { ok: res.ok, status: res.status, checkRunId: res.checkRunId, error: res.error };
 }

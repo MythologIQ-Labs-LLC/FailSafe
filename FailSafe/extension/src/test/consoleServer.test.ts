@@ -6,6 +6,9 @@ import * as path from "path";
 import { EventBus } from "../shared/EventBus";
 import { ConsoleServer } from "../roadmap/ConsoleServer";
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { removeTempTree } = require("../../src/test/shared/removeTempTree.cjs") as { removeTempTree: (dir: string) => void };
+
 function mkTempDir(prefix: string): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
 }
@@ -276,6 +279,34 @@ describe("ConsoleServer workspace-root scoped reads", () => {
       eventBus.dispose();
     } finally {
       fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
+
+  // LD16 (b): the install route's rewire reaches the hook bootstrapBicameral sets on the server.
+  it("LD16 (b) the Bicameral route deps run the rewire hook set on the server", async () => {
+    const workspaceRoot = mkTempDir("failsafe-roadmap-bicameral-rewire-");
+    try {
+      const eventBus = new EventBus();
+      const server = new ConsoleServer(
+        { getAllSprints: () => [], getCurrentSprint: () => null, getActivePlan: () => null } as never,
+        { getLedgerManager: () => null } as never,
+        { getStatus: () => ({ running: false, queueDepth: 0 }) } as never,
+        eventBus,
+        { workspaceRoot },
+      );
+      let rewires = 0;
+      // LD20: the constructor creates .failsafe/audio without awaiting it; wait for it, or a
+      // late mkdir recreates the folder after the delete below.
+      const audio = path.join(workspaceRoot, ".failsafe", "audio");
+      for (const end = Date.now() + 5000; !fs.existsSync(audio) && Date.now() < end;) await new Promise((r) => setTimeout(r, 10));
+      server.setBicameralRewire(async () => { rewires += 1; });
+      const registrar = (server as unknown as { registrar: { buildBicameralRouteDeps(): { rewireBicameral?: () => Promise<void> } } }).registrar;
+      await registrar.buildBicameralRouteDeps().rewireBicameral!();
+      assert.strictEqual(rewires, 1);
+      server.stop();
+      eventBus.dispose();
+    } finally {
+      removeTempTree(workspaceRoot);
     }
   });
 });

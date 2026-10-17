@@ -155,7 +155,12 @@ async function publishRelease({ dir, tag, notes }, client) {
   for (const a of await client.listAssets(release.id)) if (a.state !== "uploaded") await client.deleteAsset(a.id);
   let plan = await planRelease(expected, await client.listAssets(release.id), hashOf);
   if (plan.conflicts.length || plan.unexpected.length) throw stop(`release ${tag} holds files that are not the verified set (${JSON.stringify(plan)}); nothing was uploaded`);
-  for (const name of plan.upload) await client.uploadAsset(release.id, path.join(dir, name), tag);
+  for (const name of plan.upload) {
+    // Uploads go by tag (gh has no upload by id): re-list first, so no other release for the tag can receive one.
+    const others = (await client.listReleases()).filter((r) => r.tag_name === tag && r.id !== release.id);
+    if (others.length) throw stop(`another release for ${tag} (${others.map((r) => r.id).join(", ")}) appeared beside draft ${release.id}; nothing more was uploaded`);
+    await client.uploadAsset(release.id, path.join(dir, name), tag);
+  }
   plan = await planRelease(expected, await client.listAssets(release.id), hashOf);
   if (!plan.complete) throw stop(`release ${tag} is incomplete after upload (${JSON.stringify(plan)}); it stays a draft`);
   await client.publish(release.id, tag);

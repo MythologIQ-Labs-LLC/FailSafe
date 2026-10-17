@@ -19,6 +19,9 @@ import { buildTeamsMessage, type TeamsNotifyEvent } from './teams-notify';
 /** Conservative budget below the contract's 28 KB Workflows limit. */
 export const TEAMS_MAX_BYTES = 26_000;
 
+/** Error text for a message refused before sending because it exceeds TEAMS_MAX_BYTES. */
+export const TEAMS_PAYLOAD_TOO_LARGE = 'payload exceeds Teams Workflows size budget';
+
 export interface TeamsPostFn {
   (url: string, body: string): Promise<{ status: number }>;
 }
@@ -48,7 +51,7 @@ export async function sendTeamsNotification(
   }
   const body = JSON.stringify(buildTeamsMessage(event));
   if (Buffer.byteLength(body, 'utf8') > TEAMS_MAX_BYTES) {
-    return { ok: false, error: 'payload exceeds Teams Workflows size budget' };
+    return { ok: false, error: TEAMS_PAYLOAD_TOO_LARGE };
   }
   try {
     const res = await post(webhookUrl, body);

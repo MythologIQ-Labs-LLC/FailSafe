@@ -11,6 +11,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { importSarifText } from '../integrations/sarif/sarif-to-risk';
 import { RiskRegisterManager } from '../roadmap/services/RiskRegisterManager';
+import { healthFromSarifImport, recordIntegrationHealth } from '../integrations/sarif/sarif-health';
 
 export function registerSarifImportCommand(context: vscode.ExtensionContext, workspaceRoot: string): void {
   const disposable = vscode.commands.registerCommand('failsafe.sarif.import', async () => {
@@ -35,17 +36,26 @@ export function registerSarifImportCommand(context: vscode.ExtensionContext, wor
     try {
       text = fs.readFileSync(file, 'utf-8');
     } catch (e) {
+      recordIntegrationHealth('sarif', ...healthFromSarifImport({ unreadable: true }));
       vscode.window.showErrorMessage(`SARIF import: cannot read ${file}: ${e instanceof Error ? e.message : String(e)}`);
       return;
     }
 
-    const riskManager = new RiskRegisterManager(workspaceRoot);
+    const sink = new RiskRegisterManager(workspaceRoot).importSink();
     // #517 LD8: a re-import never resets the status the operator triaged.
-    const result = importSarifText(text, (risk) => riskManager.upsertRisk(risk, { keepStored: ['status'] }));
+    // v6.0.8 #528: one register update per 500 findings.
+    const result = importSarifText(text, (risk) => sink.upsertRisk(risk, { keepStored: ['status'] }), sink.batch);
+    recordIntegrationHealth('sarif', ...healthFromSarifImport(result));
 
-    if (result.risks === 0 && result.errors.length) {
+    if (result.risks === 0 && result.failed === 0 && result.errors.length) {
       vscode.window.showWarningMessage(`SARIF import: ${result.errors[0]}`);
       return;
+    }
+    if (result.failed > 0) {
+      const reason = result.write.writeError ? ` (${result.write.writeError})` : '';
+      vscode.window.showWarningMessage(
+        `SARIF import: ${result.failed} risk(s) could not be written to the Risk Register${reason}. Check the FailSafe logs and import again.`,
+      );
     }
     const warnSuffix = result.errors.length ? ` (${result.errors.length} parse warning(s))` : '';
     vscode.window.showInformationMessage(

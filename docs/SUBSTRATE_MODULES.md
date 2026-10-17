@@ -99,7 +99,7 @@ Tracked in `docs/BACKLOG.md` as `B-SUBSTRATE-2` through `B-SUBSTRATE-6`:
 
 - **EU AI Act Annex III**: Substrate is observability/transparency tooling. No scoring, grading, or inference is performed on operator behavior; findings cite source artifacts (file/line) and rule ids only.
 - **GDPR**: Findings are session-ephemeral in the transparency stream + Output channel. The only persistent disk write is `dist/secrets.findings.json`, which is gitignored.
-- **FailSafe Pro repo boundary**: Substrate is an extension-side observer + WARN-emitter only. No Pro-daemon work is involved.
+- **Scope boundary**: Substrate is an extension-side observer + WARN-emitter only. No daemon work is involved.
 
 ## Terms
 

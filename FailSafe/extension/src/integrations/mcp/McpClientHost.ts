@@ -30,7 +30,25 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
+import * as fs from 'fs';
+import * as path from 'path';
+import { isTrustedAbsolute } from '../../shared/exec/trustedExecutable';
 import { IdleScheduler, DEFAULT_IDLE_DISCONNECT_MS } from './idle-scheduler';
+
+/**
+ * B211 (review delta LD14 (d)): the real transport starts its command through
+ * cross-spawn, which on Windows searches the cwd for a bare name and runs a
+ * .cmd/.bat through cmd.exe. Only a drive-absolute, existing regular file (and
+ * on win32 an .exe) is launched; checked on every connect, idle reconnects too.
+ */
+export function assertLaunchableCommand(command: string, errorPrefix: string): void {
+  const refuse = (why: string): never => { throw new Error(`${errorPrefix}: refusing to launch ${command}: ${why}`); };
+  if (typeof command !== 'string' || !isTrustedAbsolute(command)) refuse('not an absolute path');
+  if (process.platform === 'win32' && path.extname(command).toLowerCase() !== '.exe') refuse('not an .exe');
+  let isFile = false;
+  try { isFile = fs.statSync(command).isFile(); } catch { /* missing */ }
+  if (!isFile) refuse('not an existing regular file');
+}
 
 export interface McpClientHostOptions {
   /** Passed to `new Client({ name, version })`. */
@@ -103,6 +121,7 @@ export class McpClientHost {
   }
 
   private async doConnect(): Promise<void> {
+    if (!this.opts.transportFactory) assertLaunchableCommand(this.opts.command, this.opts.errorPrefix);
     const transport = this.opts.transportFactory
       ? this.opts.transportFactory(this.opts.command, this.opts.args ?? [], this.opts.cwd)
       : new StdioClientTransport({
