@@ -35,6 +35,32 @@ This is the developer entry point for **where design authority lives**, how to f
 - No source-code or repository content is sent to third-party services merely to maintain this index.
 - Historic plans and governance artifacts remain discoverable even when superseded.
 
+
+
+## Architecture ownership record (proposed contract for #530)
+
+Each new **normative** architecture entry will declare the fields below. This is a contract proposal, not an already enforced repository gate.
+
+| Field | Required interpretation |
+| --- | --- |
+| `domain` and `decision_id` | Stable logical responsibility and a unique scoped decision or contract identity |
+| `canonical_path` | One indexed authoritative document for that scoped responsibility |
+| `status` | `proposed`, `active`, `superseded`, or `historical` |
+| `owner` | Maintainer/reviewing role, not necessarily an individual person's identity |
+| `related` and `supersedes` | Resolved links to overlapping, upstream and replaced decisions |
+| `implementation` and `verification` | Code boundary and representative executable tests; unknown is explicit |
+| `governance_ref` | Existing Qor plan/decision/seal evidence when available; never manufacture one |
+
+**Pre-create collision check:** find existing entries with the same `domain`/`decision_id`, identical paths, explicit `supersedes` links, or overlapping responsibilities. Exact collisions block registration until reconciled; possible semantic overlaps request human review. A missing link or unindexed proposed normative doc must not silently become an active authority.
+
+**Authority transitions:** Register proposed entries before documentation PR review; activate only after the existing Qor governance decision and accepted code/document review. Superseding preserves the old entry and explains the replacement. No destructive deletion or rehashing of Qor evidence.
+
+**Enforcement boundaries:** First-stage repository CI can verify explicit metadata, links, uniqueness and scope. A future FailSafe extension can preflight its governed writes and warn on unobserved files. Neither method proves full semantic uniqueness or blocks arbitrary external writes. See [#531](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/531).
+
+## Integration contracts as architecture dependencies
+
+The customer-value contract tracked in [#532](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/532) is distinct from the existing [Integration Documentation Index](integrations/INTEGRATION_DOCS_INDEX.md), which tracks external API sources. Each value contract should link its API documentation, trust/data boundary, normalized local artifacts, product UI, governance seam, graph relations and end-to-end tests. Existing connector descriptions are not evidence of a working customer journey.
+
 ## Next implementation steps
 
 - [#530](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/530): validate this seed against existing tier rules, reconcile stale architecture pages, add structural index validation and required registration metadata.
