@@ -11,6 +11,10 @@
 // editor saves; this test writes with fs), so the expected outcome is `incomplete` with one gap,
 // governance `missing` — not `unavailable`, because the live ledger is wired. A byte change to the
 // document then gives `stale`, and an unlink gives `missing`.
+//
+// The two suites of this configuration share one workspace and run in either order, so when this
+// suite created the index it puts the repository back as it found it (HEAD, the index file and the
+// document bytes); after a reuse it leaves the other suite's index alone.
 
 import { strict as assert } from 'assert';
 import * as fs from 'fs';
@@ -45,6 +49,9 @@ suite('#532 delivery assessment (extension host, temp git workspace)', () => {
   let ctx: DeliveryContext;
   let intentId = '';
   let rowId = '';
+  let createdIndex = false;
+  let headBefore = '';
+  let docBefore: Buffer | null = null;
 
   suiteSetup(async function () {
     this.timeout(120000);
@@ -64,8 +71,11 @@ suite('#532 delivery assessment (extension host, temp git workspace)', () => {
       if (message !== ARCHITECTURE_BOOTSTRAP_TITLE) return undefined;
       return rest.filter((x): x is string => typeof x === 'string')[0];
     };
+    headBefore = git(root, 'rev-parse', 'HEAD');
+    docBefore = fs.readFileSync(path.join(root, ...DOC.split('/')));
     const boot = await vscode.commands.executeCommand(BOOTSTRAP) as { status?: string };
     assert.ok(boot.status === 'created' || boot.status === 'reuse', JSON.stringify(boot));
+    createdIndex = boot.status === 'created';
     const row = discoverArchitectureIndex({ workspaceRoot: root }).rows.find((r) => r.docPath === DOC);
     assert.ok(row, `the bootstrapped index registers ${DOC}`);
     rowId = row!.id;
@@ -82,6 +92,10 @@ suite('#532 delivery assessment (extension host, temp git workspace)', () => {
 
   suiteTeardown(() => {
     (vscode.window as { showWarningMessage: unknown }).showWarningMessage = original;
+    if (!root) return;
+    if (docBefore) fs.writeFileSync(path.join(root, ...DOC.split('/')), docBefore);
+    if (headBefore) git(root, 'reset', '-q', '--mixed', headBefore);
+    if (createdIndex) fs.rmSync(path.join(root, ...INDEX.split('/')), { force: true });
   });
 
   async function edge(action: 'link' | 'unlink', kind: 'implements' | 'committed-under', target: string): Promise<void> {
