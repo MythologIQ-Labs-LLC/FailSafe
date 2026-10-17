@@ -61,7 +61,7 @@ Each new **normative** architecture entry will declare the fields below. This is
 
 The customer-value contract tracked in [#532](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/532) is distinct from the existing [Integration Documentation Index](integrations/INTEGRATION_DOCS_INDEX.md), which tracks external API sources. Each value contract should link its API documentation, trust/data boundary, normalized local artifacts, product UI, governance seam, graph relations and end-to-end tests. Existing connector descriptions are not evidence of a working customer journey.
 
-## Next implementation steps
+## Structural verification (initial implementation)\n\nRun `node tools/validate-architecture-index.cjs` from repository root to check local index references and mandatory governance pointers; run `node --test tools/validate-architecture-index.test.cjs` for negative fixtures. These checks are structural only and are not proof of semantic deduplication, native Qor approval, or comprehensive documentation coverage. CI wiring and new normative-document registration remain acceptance work in #530.\n\n## Next implementation steps
 
 - [#530](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/530): validate this seed against existing tier rules, reconcile stale architecture pages, add structural index validation and required registration metadata.
 - [#531](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/531): make index discovery, bootstrap, duplicate review and native Qor integration a customer-facing FailSafe feature.
