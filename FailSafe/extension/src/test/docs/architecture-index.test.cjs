@@ -26,9 +26,10 @@ const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..', '..');
 const SCRIPT = path.join(REPO_ROOT, 'FailSafe', 'extension', 'scripts', 'check-architecture-index.cjs');
 const checker = require(SCRIPT);
 
-// Recorded at implementation (2026-10-17), from the real index and `git ls-files`.
+// Recorded at implementation (2026-10-17), from the real index and `git ls-files`; #531 added
+// docs/architecture/MANAGED_ARCHITECTURE_INDEX.md (matches docs/architecture/**/*.md), 9 -> 10.
 const EXPECTED_GLOB_COUNT = 12;
-const EXPECTED_NORMATIVE_COUNT = 9;
+const EXPECTED_NORMATIVE_COUNT = 10;
 const TAIL = 'existing: docs/ARCHITECTURE_INDEX.md#registry';
 
 const HEADER =
