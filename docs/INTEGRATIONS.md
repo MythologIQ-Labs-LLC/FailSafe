@@ -2,6 +2,8 @@
 
 FailSafe v5.x ships a small, opinionated set of third-party integrations behind a single Command Center tab (**Integrations**). Each integration is **opt-in**, installed on the operator's own machine, and exposes a typed surface that FailSafe drives — nothing is bundled inside the VSIX.
 
+What each integration does for the customer, what leaves the machine and which of its capabilities are real is recorded per integration in the [Integration portfolio](architecture/INTEGRATION_PORTFOLIO.md).
+
 ## Bicameral MCP (v1)
 
 [Bicameral MCP](https://github.com/BicameralAI/bicameral-mcp) maintains a per-workspace ledger of design decisions plus drift detection between those decisions and the code that bound them. When connected, FailSafe surfaces decision history, drifted bindings, and a one-click ratify/reject affordance for each open decision.
@@ -89,7 +91,7 @@ All routes are local-only (gated by `rejectIfRemote`); the Console Server refuse
 | `POST` | `/api/actions/bicameral-history` | Returns `{ ok, features: BicameralFeatureBrief[] }`. |
 | `POST` | `/api/actions/bicameral-drift` | Body `{ filePath: string }`. Returns `{ ok, drift: BicameralDriftStatus[] }`. |
 | `POST` | `/api/actions/bicameral-ratify` | Body `{ decisionId: string, verdict: "ratify" \| "reject" }`. |
-| `POST` | `/api/integrations/bicameral/auto-connect` | Body `{ enabled: boolean }`. Persists to workspace VS Code settings. |
+| `POST` | `/api/integrations/bicameral/auto-connect` | Body `{ enabled: boolean }`. Persists to your user VS Code settings (`FailSafe/extension/src/extension/bootstrapBicameral.ts:230` (`vscode.ConfigurationTarget.Global`)); a value in workspace settings is ignored. |
 
 ### License credit
 
