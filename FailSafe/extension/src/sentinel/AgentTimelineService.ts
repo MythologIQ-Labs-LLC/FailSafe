@@ -11,7 +11,8 @@ import type { FailSafeEvent, FailSafeEventType } from "../shared/types/events";
 export interface TimelineEntry {
   id: string;
   timestamp: string;
-  category: "verdict" | "trust" | "file" | "plan" | "approval" | "diffguard";
+  /** `imported`: historical evidence imported from an exported agent run (#477). */
+  category: "verdict" | "trust" | "file" | "plan" | "approval" | "diffguard" | "imported";
   title: string;
   detail: string;
   icon: string;
@@ -40,6 +41,7 @@ const CATEGORY_ICONS: Record<Category, string> = {
   diffguard: "diff",
   file: "file",
   plan: "notebook",
+  imported: "archive",
 };
 
 const MAPPED_EVENT_TYPES: ReadonlySet<FailSafeEventType> = new Set([
@@ -160,6 +162,7 @@ function mapEvent(event: FailSafeEvent): TimelineEntry | null {
 export class AgentTimelineService {
   private entries: TimelineEntry[] = [];
   private unsubscribe: (() => void) | null = null;
+  private importedProvider: (() => TimelineEntry[]) | null = null;
 
   constructor(private readonly eventBus: EventBus) {
     this.unsubscribe = this.eventBus.onAll((event: FailSafeEvent) => {
@@ -181,8 +184,23 @@ export class AgentTimelineService {
     this.eventBus.emit("timeline.entryAdded", mapped);
   }
 
+  /** #477: entries imported from exported agent runs, merged into getEntries. */
+  setImportedEntriesProvider(provider: (() => TimelineEntry[]) | null): void {
+    this.importedProvider = provider;
+  }
+
   getEntries(filter?: TimelineFilter): TimelineEntry[] {
-    let result = this.entries;
+    const live = this.filterEntries(this.entries, filter).reverse();
+    let imported: TimelineEntry[] = [];
+    try { imported = this.importedProvider ? this.filterEntries(this.importedProvider(), filter) : []; } catch { imported = []; }
+    if (imported.length === 0) return live;
+    // Newest first across live and imported entries (a stable sort keeps the
+    // live order for equal timestamps).
+    return [...live, ...imported].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  }
+
+  private filterEntries(source: TimelineEntry[], filter?: TimelineFilter): TimelineEntry[] {
+    let result = source;
 
     if (filter?.categories?.length) {
       result = result.filter((e) => filter.categories!.includes(e.category));
@@ -197,9 +215,11 @@ export class AgentTimelineService {
       result = result.filter((e) => e.timestamp >= filter.since!);
     }
 
-    return [...result].reverse();
+    return [...result];
   }
 
+  /** Live entries only: this is the sequence-numbered live increment, and
+   *  imported entries have no sequence (#477). */
   getEntriesSince(seq: number): TimelineEntry[] {
     if (seq < 0 || seq >= this.entries.length) return [];
     return this.entries.slice(seq).reverse();

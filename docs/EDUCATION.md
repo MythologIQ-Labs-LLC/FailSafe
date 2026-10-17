@@ -126,7 +126,7 @@ Session-duration timing (`fs-learn-session-start`), per-anchor counts (`fs-learn
 
 ## Compliance posture (Annex III(3) exclusion)
 
-The Learn tab is static contextual help + a state-aware UI surface — **no assessment, no scoring, no learning-outcome evaluation, no access determination, no inferred proficiency.** It is therefore **outside** EU AI Act Annex III high-risk education/training classification while strongly supporting the Article 4 AI-literacy goal. See `docs/compliance-education-component.md` for the full determination and the two binding escalation triggers (any scoring/inference → re-ideate; any expansion to full structured curriculum within the open extension → escalate to FailSafe Pro / separate-extension scope decision).
+The Learn tab is static contextual help + a state-aware UI surface — **no assessment, no scoring, no learning-outcome evaluation, no access determination, no inferred proficiency.** It is therefore **outside** EU AI Act Annex III high-risk education/training classification while strongly supporting the Article 4 AI-literacy goal. See `docs/compliance-education-component.md` for the full determination and the two binding escalation triggers (any scoring/inference → re-ideate; any expansion to full structured curriculum within the open extension → escalate to a separate-product scope decision).
 
 The visual rebuild explicitly does not violate these bindings:
 - The read-time chip (`~Nm read`) is structural metadata, not progress measurement.

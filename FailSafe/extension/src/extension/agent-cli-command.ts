@@ -21,6 +21,7 @@ import { optionalCredential, type CredentialUi } from '../integrations/credentia
 import {
   applyQuarantined, writeAuditCopy, type PromotionResult, type QuarantinedChangeSet,
 } from '../integrations/agent-cli/agent-run-promotion';
+import { healthFromAgentRun, recordIntegrationHealth } from '../integrations/agent-cli/agent-cli-health';
 
 interface PolicyClassifier { classifyRisk(filePath: string, content?: string): RiskGrade }
 interface LedgerSink {
@@ -106,6 +107,7 @@ async function promote(deps: AgentCliDeps, agent: string, out: AgentRunOutcome, 
 
 /** Act on a governed-run outcome. Exported for direct unit testing (agent-cli-command.test.cjs). */
 export async function handleOutcome(deps: AgentCliDeps, agent: string, out: AgentRunOutcome): Promise<void> {
+  recordIntegrationHealth(agent, ...healthFromAgentRun(out));
   if (!out.available) { vscode.window.showWarningMessage(`${out.error ?? `${agent} not available`}.`); return; }
   const cleanup = out.cleanupError ? ` (${out.cleanupError})` : '';
   const text = `${agent}: ${out.status} — ${out.reason}.${listed(out.details)}${cleanup}`;

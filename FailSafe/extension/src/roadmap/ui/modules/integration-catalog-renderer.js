@@ -3,8 +3,10 @@
  * Gives the command/config integrations that lack a dedicated sub-view
  * (Continue, Aider, OpenHands, Cline/Roo/Kilo, Linear, Jira, GitHub Checks,
  * Sentry, Teams, Slack) a single home: one card each, grouped by category, with
- * an honest enabled/configured-only status pill + a "Configure" affordance that jumps to
- * the matching Settings section. Data comes from /api/v1/integrations/catalog,
+ * a status pill + a "Configure" affordance that jumps to the matching Settings
+ * section. #479: the pill says what the last real call showed (Verified,
+ * Connected, Failing, Stale), and never more than "Configured · unverified"
+ * from configuration alone. Data comes from /api/v1/integrations/catalog,
  * which is secret-safe (booleans only — no token/key/webhook value crosses the
  * wire).
  *
@@ -28,6 +30,14 @@ const STYLE = `
 .cc-intcat-pill-configured { color:#a5b4c7; border-color:#425168; }
 .cc-intcat-pill-needs { color:#f6ad55; border-color:#6b4f2a; }
 .cc-intcat-pill-disabled { color:#7f8aa0; border-color:#273140; }
+.cc-intcat-pill-verified { color:#68d391; border-color:#2f5e44; }
+.cc-intcat-pill-connected { color:#5fb0d8; border-color:#2b4a5c; }
+.cc-intcat-pill-failing { color:#fc8181; border-color:#6b2f2f; }
+.cc-intcat-pill-stale { color:#f6ad55; border-color:#6b4f2a; }
+.cc-intcat-card.cc-intcat-failing { border-color:#6b2f2f; }
+.cc-intcat-last { color:#9aa5b4; font-size:.8rem; margin:0 0 6px; }
+.cc-intcat-last-failing { color:#fc8181; }
+.cc-intcat-caps { color:#7f8aa0; font-size:.78rem; margin:0 0 8px; }
 .cc-intcat-card p { color:#9aa5b4; margin:0 0 8px; font-size:.88rem; }
 .cc-intcat-hint { color:#7f8aa0; font-size:.8rem; margin:0 0 10px; }
 .cc-intcat-missing { color:#f6ad55; font-size:.78rem; margin:0 0 8px; }
@@ -42,7 +52,60 @@ const PILL = {
   'configured-unverified': { cls: 'cc-intcat-pill-configured', label: 'Configured · unverified' },
   'needs-config': { cls: 'cc-intcat-pill-needs', label: 'Needs config' },
   disabled: { cls: 'cc-intcat-pill-disabled', label: 'Disabled' },
+  'contract-verified': { cls: 'cc-intcat-pill-verified', label: 'Verified' },
+  connected: { cls: 'cc-intcat-pill-connected', label: 'Connected' },
+  failing: { cls: 'cc-intcat-pill-failing', label: 'Failing' },
+  stale: { cls: 'cc-intcat-pill-stale', label: 'Stale' },
 };
+
+// Evidence labels depend on what the adapter talks to: a file import "parsed"
+// rather than "verified"; a CLI "started" rather than "connected".
+const RESULT_LABEL = {
+  service: { 'contract-verified': 'Verified', connected: 'Connected' },
+  file: { 'contract-verified': 'Last import parsed', connected: 'Last import read (format version not declared)' },
+  process: { 'contract-verified': 'Verified', connected: 'Started' },
+};
+
+const CATEGORY_TEXT = {
+  auth: 'authentication was refused',
+  rate_limited: 'rate limited by the service',
+  network: 'the service could not be reached',
+  not_found: 'the requested item was not found',
+  http: 'the service returned an error',
+  contract: 'the response or file was not in the expected format',
+  unsupported_version: 'the version is not supported',
+  not_installed: 'the tool is not installed',
+  storage: 'FailSafe could not save the result',
+  refused: 'FailSafe refused to send it',
+  config: 'the configuration is invalid',
+};
+
+const CAPABILITY_TEXT = {
+  'issue-preview': 'preview issues',
+  'intent-draft': 'create intent drafts',
+  'timeline-evidence': 'import timeline evidence',
+  'policy-audit': 'audit MCP policy',
+  'risk-ingest': 'add risks to the register',
+  'check-publish': 'publish advisory checks',
+  notify: 'send notifications',
+  'isolated-run': 'run in an isolated worktree',
+};
+
+function resultLabel(s) {
+  const r = s.lastResult;
+  if (!r) return '';
+  if (r.result === 'failing') return `Failing: ${CATEGORY_TEXT[r.category] || 'unknown error'}`;
+  const byKind = RESULT_LABEL[s.evidenceKind] || RESULT_LABEL.service;
+  return byKind[r.result] || r.result;
+}
+
+function pillFor(s) {
+  if (s.state === 'contract-verified' || s.state === 'connected') {
+    const p = PILL[s.state];
+    return `<span class="cc-intcat-pill ${p.cls}">${esc(resultLabel(s))}</span>`;
+  }
+  return pill(s.state);
+}
 
 // Per-integration documentation anchor (per-integration READMEs live under
 // src/integrations/<docsId>/README.md; INTEGRATION_DOCS_INDEX.md is the index).
@@ -58,6 +121,7 @@ const DOCS_PATH = {
   sentry: 'sentry/README.md',
   teams: 'teams/README.md',
   slack: 'slack/README.md',
+  sarif: 'sarif/README.md',
 };
 
 function esc(s) {
@@ -69,8 +133,24 @@ function pill(state) {
   return `<span class="cc-intcat-pill ${p.cls}">${p.label}</span>`;
 }
 
+function lastLine(s) {
+  if (!s.lastResult || s.state === 'disabled' || s.state === 'needs-config') return '';
+  const when = new Date(s.lastResult.checkedAt);
+  const time = Number.isNaN(when.getTime()) ? '' : when.toLocaleString();
+  const failing = s.lastResult.result === 'failing' ? ' cc-intcat-last-failing' : '';
+  const stale = s.state === 'stale' ? ' (stale: older than 7 days)' : '';
+  return `<div class="cc-intcat-last${failing}">Last result: ${esc(resultLabel(s))} · ${esc(time)}${stale}</div>`;
+}
+
+function capsLine(s) {
+  const caps = (s.capabilities || []).map((c) => CAPABILITY_TEXT[c]).filter(Boolean);
+  return caps.length ? `<div class="cc-intcat-caps">Can: ${esc(caps.join(', '))}</div>` : '';
+}
+
 function card(s) {
-  const cardCls = s.state === 'configured-unverified' ? ' cc-intcat-configured' : s.state === 'needs-config' ? ' cc-intcat-needs' : '';
+  const cardCls = s.state === 'needs-config' ? ' cc-intcat-needs'
+    : s.state === 'failing' ? ' cc-intcat-failing'
+      : s.state === 'disabled' ? '' : ' cc-intcat-configured';
   const missing = (s.state === 'needs-config' && s.missingKeys && s.missingKeys.length)
     ? `<div class="cc-intcat-missing">Missing: ${s.missingKeys.map((k) => esc(k.split('.').pop())).join(', ')}</div>`
     : '';
@@ -78,11 +158,13 @@ function card(s) {
   const docs = docPath
     ? `<a class="cc-intcat-docs" href="${DOCS_BASE}/${docPath}" target="_blank" rel="noopener">Docs →</a>`
     : '';
-  const btnLabel = s.state === 'configured-unverified' ? 'Settings' : 'Configure';
+  const btnLabel = s.state === 'disabled' || s.state === 'needs-config' ? 'Configure' : 'Settings';
   return `
     <div class="cc-intcat-card${cardCls}" data-id="${esc(s.id)}">
-      <div class="cc-intcat-head"><strong>${esc(s.label)}</strong>${pill(s.state)}</div>
+      <div class="cc-intcat-head"><strong>${esc(s.label)}</strong>${pillFor(s)}</div>
       <p>${esc(s.summary)}</p>
+      ${lastLine(s)}
+      ${capsLine(s)}
       <div class="cc-intcat-hint">${esc(s.configHint)}</div>
       ${missing}
       <div class="cc-intcat-actions">
@@ -125,9 +207,12 @@ export class IntegrationCatalogRenderer {
       if (!byCat.has(s.category)) { byCat.set(s.category, []); groups.push(s.category); }
       byCat.get(s.category).push(s);
     }
-    const configuredCount = integrations.filter((s) => s.state === 'configured-unverified').length;
+    const count = (states) => integrations.filter((s) => states.includes(s.state)).length;
+    const verified = count(['contract-verified', 'connected']);
+    const failing = count(['failing']);
+    const unverified = count(['configured-unverified', 'stale']);
     const sub = integrations.length
-      ? `${integrations.length} integrations — ${configuredCount} configured (not health-checked). Enable + configure each under Settings; connection and enforcement are not verified by this catalog.`
+      ? `${integrations.length} integrations — ${verified} verified by their last call, ${failing} failing, ${unverified} configured but unverified or stale. Status comes from each integration's last real call; this catalog does not probe.`
       : 'No catalog integrations available.';
     const sections = groups
       .map((cat) => `<div class="cc-intcat-group">${esc(cat)}</div>` + byCat.get(cat).map(card).join(''))

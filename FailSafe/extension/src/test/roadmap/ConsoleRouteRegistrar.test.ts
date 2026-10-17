@@ -300,4 +300,19 @@ suite('ConsoleRouteRegistrar (Phase 60 §0)', () => {
       assert.strictEqual(reg.buildBicameralRouteDeps().confirmOperatorAction, undefined);
     }
   });
+
+  // LD16 (b): the install route reaches the hook bootstrapBicameral sets, read at request time.
+  test('LD16 (b) buildBicameralRouteDeps — rewireBicameral runs the host hook, or resolves when none is wired', async () => {
+    const { app } = makeFakeApp();
+    const host = makeHost(app, makeFakeHub());
+    const wired: { fn: (() => Promise<void>) | null } = { fn: null };
+    (host as any).getBicameralRewire = () => wired.fn;
+    const deps = new ConsoleRouteRegistrar(host).buildBicameralRouteDeps() as { rewireBicameral?: () => Promise<void> };
+    assert.equal(typeof deps.rewireBicameral, 'function');
+    await deps.rewireBicameral!();
+    let calls = 0;
+    wired.fn = async () => { calls++; };
+    await deps.rewireBicameral!();
+    assert.equal(calls, 1);
+  });
 });

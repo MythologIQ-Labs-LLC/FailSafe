@@ -50,6 +50,44 @@ function mergeOver(
   return next;
 }
 
+type RiskBuild = (stored: Record<string, unknown> | undefined) => Record<string, unknown>;
+/** id -> position of its first occurrence, as findIndex would find it. */
+type RiskIndex = Map<unknown, number>;
+
+function indexRisks(risks: Array<Record<string, unknown>>): RiskIndex {
+  const index: RiskIndex = new Map();
+  risks.forEach((r, i) => { if (!index.has(r.id)) index.set(r.id, i); });
+  return index;
+}
+
+/**
+ * #478 keyed upsert against an in-memory register. With an index (a batch),
+ * an appended record is indexed at once, so a repeated id in the same batch
+ * updates it instead of being appended twice (v6.0.8 LD-5.1).
+ */
+function applyUpsert(
+  risks: Array<Record<string, unknown>>, id: string, build: RiskBuild, opts: UpsertOptions, index?: RiskIndex,
+): UpsertOutcome {
+  const position = index ? (index.get(id) ?? -1) : risks.findIndex((r) => r.id === id);
+  const stored = position >= 0 ? risks[position] : undefined;
+  const next = build(stored);
+  if (stored && sameRecord(stored, next, opts.ignore ?? [])) return "unchanged";
+  if (position >= 0) {
+    risks[position] = next;
+  } else {
+    risks.push(next);
+    index?.set(id, risks.length - 1);
+  }
+  return stored ? "updated" : "created";
+}
+
+/** v6.0.8 #528: an import's writer; see RiskRegisterManager.importSink. */
+export interface RiskImportSink {
+  upsertRisk(risk: Record<string, unknown>, opts?: UpsertOptions): UpsertOutcome;
+  upsertRiskWith(id: string, build: RiskBuild, opts?: UpsertOptions): UpsertOutcome;
+  batch(write: () => void): void;
+}
+
 /**
  * Reads and writes the risk register (JSON format).
  *
@@ -125,20 +163,31 @@ export class RiskRegisterManager {
    * an older read. `ignore` lists dotted paths left out of the comparison; an
    * unchanged record keeps its stored values, including those paths.
    */
-  upsertRiskWith(
-    id: string,
-    build: (stored: Record<string, unknown> | undefined) => Record<string, unknown>,
-    opts: UpsertOptions = {},
-  ): UpsertOutcome {
-    return this.store.mutate((doc) => {
-      const index = doc.risks.findIndex((r) => r.id === id);
-      const stored = index >= 0 ? doc.risks[index] : undefined;
-      const next = build(stored);
-      if (stored && sameRecord(stored, next, opts.ignore ?? [])) return "unchanged";
-      if (index >= 0) doc.risks[index] = next;
-      else doc.risks.push(next);
-      return stored ? "updated" : "created";
-    });
+  upsertRiskWith(id: string, build: RiskBuild, opts: UpsertOptions = {}): UpsertOutcome {
+    return this.store.mutate((doc) => applyUpsert(doc.risks, id, build, opts));
+  }
+
+  /**
+   * v6.0.8 #528: a writer for imports. Inside `batch(write)`, every upsert
+   * applies to one fresh in-memory register, and the whole batch is one
+   * RiskStore.mutate (one lock, one read, one write, with every #517 check).
+   * Outside a batch the upserts are this manager's own per-record writes.
+   * The methods are closures, so they can be passed around unbound.
+   */
+  importSink(): RiskImportSink {
+    let open: { risks: Array<Record<string, unknown>>; index: RiskIndex } | null = null;
+    const upsertRiskWith = (id: string, build: RiskBuild, opts: UpsertOptions = {}): UpsertOutcome =>
+      open ? applyUpsert(open.risks, id, build, opts, open.index) : this.upsertRiskWith(id, build, opts);
+    const upsertRisk = (risk: Record<string, unknown>, opts: UpsertOptions = {}): UpsertOutcome =>
+      upsertRiskWith(String(risk.id), (stored) => mergeOver(stored, risk, opts.keepStored ?? []), opts);
+    const batch = (write: () => void): void => {
+      if (open) throw new Error("RiskRegisterManager.importSink: batches do not nest");
+      this.store.mutate((doc) => {
+        open = { risks: doc.risks, index: indexRisks(doc.risks) };
+        try { write(); } finally { open = null; }
+      });
+    };
+    return { upsertRisk, upsertRiskWith, batch };
   }
 
   /**

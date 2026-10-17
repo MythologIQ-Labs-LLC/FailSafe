@@ -8,8 +8,12 @@ import {
 } from '../../qorlogic/PythonInterpreterResolver';
 
 function makeConfig(values: Record<string, string | undefined>): ConfigLike {
-  return { get: (k: string) => values[k] };
+  // LD12: the resolver reads the user level through inspect().
+  return { get: (k: string) => values[k], inspect: <T>(k: string) => ({ globalValue: values[k] as unknown as T }) };
 }
+
+/** These rows drive a fake `run`, so the file a command names is taken as given. */
+const asGiven = (c: string): string => c;
 
 interface ProbeCall {
   cmd: string;
@@ -42,7 +46,7 @@ suite('PythonInterpreterResolver: user setting precedence', () => {
   test('honors valid user setting and returns source=user-setting', async () => {
     const config = makeConfig({ 'failsafe.qorlogic.pythonPath': '/opt/py/python' });
     const { run } = makeRun(() => versionResponse(3, 12, 1));
-    const resolver = new PythonInterpreterResolver(config, noVscode, run);
+    const resolver = new PythonInterpreterResolver(config, noVscode, run, asGiven);
 
     const result = await resolver.resolve();
 
@@ -57,7 +61,7 @@ suite('PythonInterpreterResolver: user setting precedence', () => {
   test('returns user-path-invalid when setting points to non-executable', async () => {
     const config = makeConfig({ 'failsafe.qorlogic.pythonPath': '/nonexistent/python' });
     const { run } = makeRun(() => failedResponse());
-    const resolver = new PythonInterpreterResolver(config, noVscode, run);
+    const resolver = new PythonInterpreterResolver(config, noVscode, run, asGiven);
 
     const result = await resolver.resolve();
 
@@ -70,7 +74,7 @@ suite('PythonInterpreterResolver: user setting precedence', () => {
   test('returns version-too-old for Python < 3.11 from user setting', async () => {
     const config = makeConfig({ 'failsafe.qorlogic.pythonPath': '/opt/py3.10' });
     const { run } = makeRun(() => versionResponse(3, 10, 5));
-    const resolver = new PythonInterpreterResolver(config, noVscode, run);
+    const resolver = new PythonInterpreterResolver(config, noVscode, run, asGiven);
 
     const result = await resolver.resolve();
 
@@ -86,7 +90,7 @@ suite('PythonInterpreterResolver: user setting precedence', () => {
       if (call.cmd === 'python3') return versionResponse(3, 11, 4);
       return failedResponse();
     });
-    const resolver = new PythonInterpreterResolver(config, noVscode, run);
+    const resolver = new PythonInterpreterResolver(config, noVscode, run, asGiven);
 
     const result = await resolver.resolve();
 
@@ -103,7 +107,7 @@ suite('PythonInterpreterResolver: probe order', () => {
       if (call.cmd === 'python') return versionResponse(3, 12, 0);
       return failedResponse();
     });
-    const resolver = new PythonInterpreterResolver(config, noVscode, run);
+    const resolver = new PythonInterpreterResolver(config, noVscode, run, asGiven);
 
     const result = await resolver.resolve();
 
@@ -122,7 +126,7 @@ suite('PythonInterpreterResolver: probe order', () => {
       if (call.cmd === 'py' && call.args[0] === '-3') return versionResponse(3, 11, 9);
       return failedResponse();
     });
-    const resolver = new PythonInterpreterResolver(config, noVscode, run);
+    const resolver = new PythonInterpreterResolver(config, noVscode, run, asGiven);
 
     const result = await resolver.resolve();
 
@@ -141,7 +145,7 @@ suite('PythonInterpreterResolver: probe order', () => {
   test('returns no-python-found when every candidate fails', async () => {
     const config = makeConfig({});
     const { run } = makeRun(() => failedResponse());
-    const resolver = new PythonInterpreterResolver(config, noVscode, run);
+    const resolver = new PythonInterpreterResolver(config, noVscode, run, asGiven);
 
     const result = await resolver.resolve();
 
@@ -156,7 +160,7 @@ suite('PythonInterpreterResolver: probe order', () => {
       if (call.cmd === 'python') return versionResponse(3, 11, 0);
       return failedResponse();
     });
-    const resolver = new PythonInterpreterResolver(config, noVscode, run);
+    const resolver = new PythonInterpreterResolver(config, noVscode, run, asGiven);
 
     const result = await resolver.resolve();
 
@@ -169,7 +173,7 @@ suite('PythonInterpreterResolver: caching', () => {
   test('caches result across calls', async () => {
     const config = makeConfig({});
     const { run, calls } = makeRun(() => versionResponse(3, 12, 0));
-    const resolver = new PythonInterpreterResolver(config, noVscode, run);
+    const resolver = new PythonInterpreterResolver(config, noVscode, run, asGiven);
 
     await resolver.resolve();
     await resolver.resolve();
@@ -180,7 +184,7 @@ suite('PythonInterpreterResolver: caching', () => {
   test('invalidate() clears cache', async () => {
     const config = makeConfig({});
     const { run, calls } = makeRun(() => versionResponse(3, 12, 0));
-    const resolver = new PythonInterpreterResolver(config, noVscode, run);
+    const resolver = new PythonInterpreterResolver(config, noVscode, run, asGiven);
 
     await resolver.resolve();
     resolver.invalidate();
@@ -217,7 +221,7 @@ suite('PythonInterpreterResolver: ms-python integration', () => {
       if (call.cmd === '/usr/bin/python3.12') return versionResponse(3, 12, 2);
       return failedResponse();
     });
-    const resolver = new PythonInterpreterResolver(config, vscode, run);
+    const resolver = new PythonInterpreterResolver(config, vscode, run, asGiven);
 
     const result = await resolver.resolve();
 
@@ -235,7 +239,7 @@ suite('PythonInterpreterResolver: ms-python integration', () => {
       if (call.cmd === 'python3') return versionResponse(3, 11, 0);
       return failedResponse();
     });
-    const resolver = new PythonInterpreterResolver(config, vscode, run);
+    const resolver = new PythonInterpreterResolver(config, vscode, run, asGiven);
 
     const result = await resolver.resolve();
 
@@ -252,7 +256,7 @@ suite('PythonInterpreterResolver: ms-python integration', () => {
       if (call.cmd === 'python3') return versionResponse(3, 11, 0);
       return failedResponse();
     });
-    const resolver = new PythonInterpreterResolver(config, vscode, run);
+    const resolver = new PythonInterpreterResolver(config, vscode, run, asGiven);
 
     const result = await resolver.resolve();
 

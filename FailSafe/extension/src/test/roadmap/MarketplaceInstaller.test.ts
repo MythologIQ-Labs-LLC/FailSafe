@@ -54,102 +54,108 @@ function withTempHome(action: (home: string) => Promise<void> | void): Promise<v
 }
 
 suite('MarketplaceInstaller (FX384)', () => {
-  // Historical install/update success cases are inapplicable while the release security gate disables execution (#468/#469).
-  // The active marketplace-release-gate tests assert that prohibited commands never spawn.
-  test.skip('FX384 install — successful clone reports complete + 100% progress', async () => {
+  // v6.0.8 lane A (#468, plan T3): the clone-and-stage flow is `stage`, which
+  // `install()` calls only after the release gate. These rows call `stage`
+  // directly; the gate itself is pinned by marketplace-release-gate.test.ts.
+  const REFUSAL = /Isolated setup is not available/;
+
+  test('T3 (a) sandboxEnabled true is refused before any command, removal or folder creation', async () => {
     await withTempHome(async (home) => {
+      const cache = path.join(home, '.failsafe', 'marketplace');
+      const { calls, runner } = makeRunner(() => ({ code: 0, stdout: '', stderr: '' }));
+      const ins = new MarketplaceInstaller(new EventBus(), runner);
       const progress: InstallProgress[] = [];
+      const fresh = await (ins as any).stage(ITEM, { sandboxEnabled: true, runSecurityScan: true }, (p: InstallProgress) => progress.push(p));
+      assert.equal(fresh.success, false);
+      assert.match(String(fresh.error), REFUSAL);
+      assert.equal(fs.existsSync(cache), false, 'the cache folder was not created');
+      const installPath = path.join(cache, ITEM.id);
+      fs.mkdirSync(installPath, { recursive: true });
+      fs.writeFileSync(path.join(installPath, 'old-marker.txt'), 'old');
+      const again = await (ins as any).stage(ITEM, { sandboxEnabled: true, runSecurityScan: false }, () => {});
+      assert.equal(again.success, false);
+      assert.equal(fs.existsSync(path.join(installPath, 'old-marker.txt')), true, 'the previous installation is untouched');
+      assert.equal(calls.length, 0, 'no command ran');
+      assert.ok(progress.some((p) => p.phase === 'failed' && REFUSAL.test(String(p.error))));
+    });
+  });
+
+  test('T3 (b) sandboxEnabled false clones and runs nothing else, even with setup files present', async () => {
+    await withTempHome(async (home) => {
       const installPath = path.join(home, '.failsafe', 'marketplace', ITEM.id);
+      const progress: InstallProgress[] = [];
       const { calls, runner } = makeRunner((call) => {
         if (call.args[0] === 'clone') {
-          // Simulate clone success: create the install dir
           fs.mkdirSync(installPath, { recursive: true });
-          return { code: 0, stdout: '', stderr: '' };
+          for (const f of ['requirements.txt', 'pyproject.toml', 'package.json']) fs.writeFileSync(path.join(installPath, f), '{}');
         }
         return { code: 0, stdout: '', stderr: '' };
       });
       const ins = new MarketplaceInstaller(new EventBus(), runner);
-      const r = await ins.install(ITEM, { sandboxEnabled: false, runSecurityScan: false }, p => progress.push(p));
+      const r = await (ins as any).stage(ITEM, { sandboxEnabled: false, runSecurityScan: false }, (p: InstallProgress) => progress.push(p));
       assert.equal(r.success, true);
       assert.match(String(r.installPath), /test-item$/);
+      assert.equal(calls.length, 1, 'exactly one command');
+      assert.equal(calls[0].command, 'git');
+      assert.equal(calls[0].args[0], 'clone');
+      assert.equal(fs.existsSync(path.join(installPath, '.failsafe-sandbox.json')), false);
       const last = progress[progress.length - 1];
       assert.equal(last.phase, 'complete');
-      assert.equal(last.progress, 100);
-      assert.ok(calls.some(c => c.command === 'git' && c.args[0] === 'clone'));
+      assert.match(last.message, /setup was not run/i);
+      assert.ok(progress.some((p) => /No setup was run/.test(p.message)));
     });
   });
 
-  test.skip('FX384 install — clone failure reports phase=failed + error', async () => {
+  test('T3 (c) clone failure reports phase=failed + error', async () => {
     await withTempHome(async () => {
       const progress: InstallProgress[] = [];
       const { runner } = makeRunner(() => ({ code: 1, stdout: '', stderr: 'Repository not found' }));
       const ins = new MarketplaceInstaller(new EventBus(), runner);
-      const r = await ins.install(ITEM, { sandboxEnabled: false, runSecurityScan: false }, p => progress.push(p));
+      const r = await (ins as any).stage(ITEM, { sandboxEnabled: false, runSecurityScan: false }, (p: InstallProgress) => progress.push(p));
       assert.equal(r.success, false);
       assert.match(String(r.error), /Repository not found/);
-      const failedFrame = progress.find(p => p.phase === 'failed');
-      assert.ok(failedFrame);
+      assert.ok(progress.find((p) => p.phase === 'failed'));
     });
   });
 
-  test.skip('FX384 install — re-install removes existing dir before cloning', async () => {
-    await withTempHome(async (home) => {
-      const installPath = path.join(home, '.failsafe', 'marketplace', ITEM.id);
-      // Pre-create existing dir with a marker file
-      fs.mkdirSync(installPath, { recursive: true });
-      fs.writeFileSync(path.join(installPath, 'old-marker.txt'), 'old');
-      const { runner } = makeRunner((call) => {
-        if (call.args[0] === 'clone') {
-          // Re-create dir minus marker
-          fs.mkdirSync(installPath, { recursive: true });
-          return { code: 0, stdout: '', stderr: '' };
-        }
-        return { code: 0, stdout: '', stderr: '' };
-      });
+  test('T3 (f) the clone argv ends options with -- before the URL', async () => {
+    await withTempHome(async () => {
+      const { calls, runner } = makeRunner(() => ({ code: 1, stdout: '', stderr: 'x' }));
       const ins = new MarketplaceInstaller(new EventBus(), runner);
-      await ins.install(ITEM, { sandboxEnabled: false, runSecurityScan: false }, () => {});
-      assert.equal(fs.existsSync(path.join(installPath, 'old-marker.txt')), false);
+      await (ins as any).stage(ITEM, { sandboxEnabled: false, runSecurityScan: false }, () => {});
+      const args = calls[0].args;
+      const i = args.indexOf('--');
+      assert.ok(i > 0, `-- present: ${JSON.stringify(args)}`);
+      assert.equal(args[i + 1], ITEM.repoUrl);
     });
   });
 
-  test.skip('FX384 install — sandboxEnabled writes .failsafe-sandbox.json', async () => {
-    await withTempHome(async (home) => {
-      const installPath = path.join(home, '.failsafe', 'marketplace', ITEM.id);
-      const { runner } = makeRunner((call) => {
-        if (call.args[0] === 'clone') {
-          fs.mkdirSync(installPath, { recursive: true });
-          return { code: 0, stdout: '', stderr: '' };
-        }
-        return { code: 0, stdout: '', stderr: '' };
-      });
-      const ins = new MarketplaceInstaller(new EventBus(), runner);
-      await ins.install(ITEM, { sandboxEnabled: true, runSecurityScan: false }, () => {});
-      const sandboxFile = path.join(installPath, '.failsafe-sandbox.json');
-      assert.ok(fs.existsSync(sandboxFile));
-      const cfg = JSON.parse(fs.readFileSync(sandboxFile, 'utf-8'));
-      assert.equal(cfg.enabled, true);
-      assert.equal(cfg.item.id, ITEM.id);
-      assert.equal(cfg.restrictions.networkAfterSetup, false);
-    });
+  test("T3 (d) the installer's own runner supports only git: pip and npm return 126", async () => {
+    const ins = new MarketplaceInstaller(new EventBus());
+    for (const cmd of ['pip', 'npm']) {
+      const r = await (ins as any).runner(cmd, ['--version'], os.tmpdir(), 5000);
+      assert.equal(r.code, 126, `${cmd} is not started`);
+      assert.match(r.stderr, /Unsupported marketplace executable/);
+    }
   });
 
-  test.skip('FX384 install — sandbox runs npm install --ignore-scripts when package.json present', async () => {
-    await withTempHome(async (home) => {
-      const installPath = path.join(home, '.failsafe', 'marketplace', ITEM.id);
-      const { calls, runner } = makeRunner((call) => {
-        if (call.args[0] === 'clone') {
-          fs.mkdirSync(installPath, { recursive: true });
-          fs.writeFileSync(path.join(installPath, 'package.json'), '{}');
-          return { code: 0, stdout: '', stderr: '' };
-        }
-        return { code: 0, stdout: '', stderr: '' };
-      });
-      const ins = new MarketplaceInstaller(new EventBus(), runner);
-      await ins.install(ITEM, { sandboxEnabled: true, runSecurityScan: false }, () => {});
-      const npmCall = calls.find(c => c.command === 'npm');
-      assert.ok(npmCall);
-      assert.deepEqual(npmCall!.args, ['install', '--ignore-scripts']);
-    });
+  test('T3 (e) install() is the only production caller of stage', () => {
+    const src = path.resolve(__dirname, '..', '..', '..', 'src');
+    const hits: string[] = [];
+    const walk = (d: string): void => {
+      for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+        const full = path.join(d, e.name);
+        if (e.isDirectory()) { if (path.relative(src, full) !== 'test' && e.name !== 'vendor') walk(full); continue; }
+        if (!/\.(ts|js)$/.test(e.name)) continue;
+        const text = fs.readFileSync(full, 'utf8');
+        for (const m of text.matchAll(/\.stage\(/g)) hits.push(`${path.relative(src, full)}@${m.index}`);
+      }
+    };
+    walk(src);
+    assert.equal(hits.length, 1, `exactly one call: ${hits.join(', ')}`);
+    const installer = fs.readFileSync(path.join(src, 'roadmap', 'services', 'MarketplaceInstaller.ts'), 'utf8');
+    const body = installer.slice(installer.indexOf('async install('), installer.indexOf('async stage('));
+    assert.ok(body.indexOf('MARKETPLACE_INSTALLS_ENABLED') >= 0 && body.indexOf('MARKETPLACE_INSTALLS_ENABLED') < body.indexOf('this.stage('), 'the gate is checked before stage');
   });
 
   test('FX384 isInstalled — returns false when path missing, true when present', async () => {

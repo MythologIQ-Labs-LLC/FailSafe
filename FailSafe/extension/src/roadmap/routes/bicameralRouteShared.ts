@@ -8,6 +8,7 @@ import type {
   InstallMode,
   BicameralRatifyVerdict,
   BicameralMcpClient,
+  runBicameralInstall,
 } from "../../integrations/bicameral";
 import type { McpInterceptor, McpEnvelope } from "../../governance/interceptor";
 import type { ReceiptContract } from "../../contracts";
@@ -100,6 +101,13 @@ export interface BicameralRouteDeps {
    * USER_OVERRIDE as the operator. Absent -> ratify answers 503.
    */
   confirmOperatorAction?: ConfirmOperatorAction;
+  /**
+   * LD16 (b): re-wire the MCP client after a successful install, so Connect
+   * works without a reload. The bootstrap hook catches and logs its own error.
+   */
+  rewireBicameral?: () => Promise<void>;
+  /** Test seam for the install route; defaults to runBicameralInstall. */
+  runInstall?: typeof runBicameralInstall;
 }
 
 /**

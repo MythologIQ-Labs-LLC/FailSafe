@@ -76,7 +76,7 @@ The Monitor shows real-time governance state, SHIELD phase, and trust scores.
 ### 2. Open the Command Center
 
 ```
-FailSafe: Open Command Center (Editor Tab)
+FailSafe: Open Console (Editor Tab)
 ```
 
 Or press `Ctrl+Alt+F` to open in a browser popout.
@@ -100,7 +100,7 @@ This command:
 In the Command Center Settings tab, click **Install QorLogic Skills**, or run:
 
 ```
-FailSafe: Install QorLogic Skills (defaults)
+FailSafe: Install Qor-Logic Skills (defaults)
 ```
 
 This installs skills for Claude Code and Codex CLI. Supports hosts: `claude`, `codex`, `kilo-code`, `gemini`.
@@ -142,14 +142,14 @@ New installations default to `observe`. See [[Governance Modes]] for detailed mo
 
 | Command | Description |
 |---------|-------------|
-| `FailSafe: Open Command Center (Editor Tab)` | Full governance UI in editor |
+| `FailSafe: Open Console (Editor Tab)` | Full governance UI in editor |
 | `FailSafe: Open Sidebar` | Compact Monitor sidebar |
 | `FailSafe: Audit Current File` | Run Sentinel audit on active file |
 | `FailSafe: Set Governance Mode` | Switch Observe/Assist/Enforce |
 | `FailSafe: Secure Workspace` | Full workspace security scan |
 | `FailSafe: Panic Stop` | Emergency halt all monitoring |
 | `FailSafe: Token Economics Dashboard` | Token usage and cost metrics |
-| `FailSafe: Revert to Checkpoint` | Time-travel rollback |
+| `FailSafe: Revert to Checkpoint (Time-Travel)` | Time-travel rollback |
 | `FailSafe: Agent Health Status` | Agent health and stability indicators |
 | `FailSafe: Agent Run Replay` | Step-by-step agent execution replay |
 

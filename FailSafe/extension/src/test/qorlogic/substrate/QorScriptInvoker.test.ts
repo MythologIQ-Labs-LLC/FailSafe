@@ -22,9 +22,9 @@ import type {
  */
 
 function resolvedResolver(command: string, args: string[] = []): PythonInterpreterResolver {
-  const cfg = { get: () => undefined };
+  const cfg = { get: () => undefined, inspect: () => undefined };
   const run: RunCommand = async () => ({ stdout: 'Python 3.12.0\n', stderr: '', code: 0 });
-  const resolver = new PythonInterpreterResolver(cfg, null, run);
+  const resolver = new PythonInterpreterResolver(cfg, null, run, (c) => c);
   (resolver as unknown as { cached: unknown }).cached = {
     ok: true, command, args, version: '3.12.0', source: 'user-setting',
   };
@@ -32,9 +32,9 @@ function resolvedResolver(command: string, args: string[] = []): PythonInterpret
 }
 
 function unresolvedResolver(): PythonInterpreterResolver {
-  const cfg = { get: () => undefined };
+  const cfg = { get: () => undefined, inspect: () => undefined };
   const run: RunCommand = async () => ({ stdout: '', stderr: 'not found', code: 127 });
-  const resolver = new PythonInterpreterResolver(cfg, null, run);
+  const resolver = new PythonInterpreterResolver(cfg, null, run, (c) => c);
   (resolver as unknown as { cached: unknown }).cached = {
     ok: false, reason: 'no-python-found', detail: 'no candidate matched',
   };
@@ -71,7 +71,7 @@ suite('QorScriptInvoker (FX710)', () => {
     assert.equal(result.stdout, 'OK');
     assert.equal(calls.length, 1);
     assert.equal(calls[0].cmd, 'py');
-    assert.deepEqual(calls[0].args, ['-3', '-m', 'qor.scripts.secret_scanner', '--staged', '--out', '/tmp/x.json']);
+    assert.deepEqual(calls[0].args, ['-3', '-P', '-m', 'qor.scripts.secret_scanner', '--staged', '--out', '/tmp/x.json']);
     assert.equal(calls[0].cwd, '/ws');
   });
 

@@ -8,41 +8,53 @@ FailSafe runs locally inside VS Code and Cursor. It monitors what AI agents do, 
 
 ## 🔌 Integrations — govern your entire AI toolchain, not just the editor
 
-FailSafe turns the editor into a **governance hub** for the tools your AI agents actually use. Every integration is **local-first, opt-in, and routed through the same deterministic policy engine** that guards your edits — so connecting a tool never widens your attack surface or sends data anywhere by default.
+FailSafe connects to the tools your AI agents use. Every integration is opt-in. Integrations that call an outside service stay off until you enable them in settings and store a credential with **FailSafe: Set Integration Credential**; the installers and the risk scorer do nothing until you run them.
 
 **Govern the agents themselves** — run a headless coding agent through FailSafe and gate what it does:
 
 | Integration | What it does | Why it matters |
 |---|---|---|
-| 🤖 **Continue (`cn`) governed wrapper** | Run a Continue headless prompt in a disposable git worktree; its changes are held for review and reach your workspace only when you choose Apply (`FailSafe: Run Continue (governed)`). | The agent never edits your checkout through its working directory, a shell/exec allowlist is refused before it runs, and the API key never leaves the child env. Not a process sandbox: direct writes to the repository are detected, not prevented, and writes outside it are not detected. |
+| 🤖 **Continue (`cn`) governed wrapper** | Run a Continue headless prompt in a disposable git worktree; its changes are held for review and reach your workspace only when you choose Apply (`FailSafe: Run Continue (governed)`). | The agent never edits your checkout through its working directory, a shell/exec allowlist is refused before it runs, and the API key never leaves the child env. Not a process sandbox: direct writes to the repository are detected, not prevented, and writes outside it are not detected. On Windows, only a `cn.exe` or `cn.com` on PATH counts: Continue's npm shim `cn.cmd` cannot run without a shell, so an npm install is reported unavailable. |
 | 🔧 **Aider governed wrapper** | Run Aider (auto-commit off) in a disposable git worktree; its changes are held for review and reach your workspace only when you choose Apply (`FailSafe: Run Aider (governed)`). | Apply re-checks HEAD, the tree and the exact reviewed bytes before writing. Not a process sandbox: direct writes to the repository are detected, not prevented, and writes outside it are not detected. |
-| 👁️ **OpenHands run observer** | Map an exported OpenHands run into FailSafe transparency records, version-gated and read-only (`FailSafe: Import OpenHands Run (observe)`). | See what a full agent-loop runtime did, scored by risk — without ever mutating a live run. |
-| 🔎 **Cline / Roo / Kilo policy audit** | Scan workspace MCP/tool config and flag risky posture — remote MCP, wildcard auto-approval, shell-capable tools (`FailSafe: Audit Agent MCP Policy`). | Catch an over-permissioned agent before it bites; secrets in the config are redacted before any finding is recorded. |
+| 👁️ **OpenHands run import** | Import an exported OpenHands run, after you confirm, as historical evidence in the FailSafe timeline (`FailSafe: Import OpenHands Run (observe)`). Version-gated, deduplicated and signed for this install; the transparency log gets one summary line. | See what an agent run did next to your own governance events. It is a record of a past run, not live enforcement (#477). |
+| 🔎 **Cline / Roo / Kilo policy audit** | Scan workspace MCP/tool config and flag risky posture — remote MCP, wildcard auto-approval, shell-capable tools (`FailSafe: Audit Agent MCP Policy (Cline/Roo/Kilo)`). | Catch an over-permissioned agent before it bites; secrets in the config are redacted before any finding is recorded. |
 
 **Connect your issue tracker, security, and team tooling:**
 
 | Integration | What it does | Why it matters |
 |---|---|---|
-| 📥 **Linear / Jira issue import** | Resolve a Linear or Jira issue URL/key to an **uncommitted intent preview** — read-only (`FailSafe: Import Linear/Jira Issue (preview)`). | Your tracker is the intent source; FailSafe pulls the ticket context so you never retype it — nothing is created or synced without you. |
-| ✅ **GitHub PR checks** | Publish FailSafe SHIELD verdicts (PASS/WARN/VETO) as GitHub Check Runs at the merge gate (`FailSafe: Publish SHIELD Verdict to GitHub Check`). | Your governance verdict shows up **where the merge happens**; fork PRs degrade to local-only. |
+| 📥 **Linear / Jira intent drafts** | Fetch one Linear or Jira issue, review it in an unsaved preview, and create a governed intent draft only when you approve (`FailSafe: Import Linear Issue as Intent Draft`, `FailSafe: Import Jira Issue as Intent Draft`). Read-only toward the tracker. | The ticket becomes reviewed intent without retyping it. Nothing is written to Linear or Jira and nothing is synced (#480). |
+| ✅ **GitHub advisory checks** | Publish a neutral, manual advisory Check Run on the current commit (`FailSafe: Publish Manual GitHub Advisory`). When the commit has a pull request, the same command also posts a PR-linkage Check Run. It is not a SHIELD verdict. | The SHIELD check name is reserved for a verified, commit-bound receipt. No command publishes a verified SHIELD check yet. Fork PRs degrade to local-only. |
 | 🐞 **Sentry regression import** | Pull a Sentry project's unresolved issues into the risk register as runtime-regression risks (`FailSafe: Import Sentry Regressions`), with first and last release from each issue's detail. | Production failures become governed risk records tied to project / environment / release, with an exact count of what was created, updated, unchanged or failed; your triage survives re-imports. No raw event payloads, and no commit correlation. |
 | 🛡️ **SARIF security ingestion** | Import Semgrep / CodeQL / any SARIF 2.1.0 scanner output into the risk register (`FailSafe: Import SARIF Findings`). | Your security scanner stops being a separate silo — every finding becomes a *governed* risk in the same audit trail as agent decisions. |
 | 📣 **Slack / Microsoft Teams notifications** | Post VETO / L3-approval / drift events to a Slack or Teams webhook. Notify-only, off by default. | Governance becomes a **team** signal — the right people see a blocked action or a queued approval in their channel. |
 | 🧮 **MCP Registry risk scoring** | Score any MCP server locally — read-only, with field sanitization — before you trust it. | Adopt MCP servers on **evidence, not vibes** — a supply-chain admission check at the door. |
-| 📦 **MCP Catalog installers** | One-click, risk-scored installs of **Context7**, **Mermaid Chart**, and **Playwright MCP** into your `.mcp.json` (`FailSafe: Install MCP Integration (governed)`). | Governed installs of tools that make your agents measurably better, with the trust check built in. |
+| 📦 **MCP Catalog installers** | Risk-scored installs of **Context7**, **Mermaid Chart**, and **Playwright MCP** into your `.mcp.json`, written only after you confirm (`FailSafe: Install MCP Integration (governed)`). | Governed installs of tools that make your agents measurably better, with the trust check built in. |
 | 🧠 **Bicameral MCP** | Detect, connect, and ratify architecture *decision* records and their drift inline. | Every Bicameral tool call passes through FailSafe's universal interceptor. |
-| 🎨 **Open Design** | Observe Open Design agent runs and act on them via the L3-gated `create_artifact`. | Design tooling gets the same human-in-the-loop guarantee as everything else FailSafe touches. |
-| 🧰 **Agent Governance Toolkit installer** | Auto-detect your workspace environment and serve the matching, registry-verified AGT installer. | One governed entry point to instrument whatever stack you actually run. |
+| 🎨 **Open Design** | Observe Open Design agent runs and read its projects through a read-only MCP connection. | Artifact creation (`create_artifact`) is refused in this release, even after an L3 approval, until approvals can be verified where the call is made (#481). |
+| 🧰 **Agent Governance Toolkit installer** | Detect your workspace environment and pre-fill the matching AGT install command in a terminal; you run it. | One entry point to the right per-language or per-host package. |
 
 Each integration ships with its own README and its external API names are back-cited to official docs. A **Tier 1 supply-chain CI baseline** (least-privilege tokens, SHA-pinned Actions, dependency review, CODEOWNERS) hardens the repository itself.
 
-**Everything above is disabled by default and runs locally — no network call until you turn one on.** Open the **Integrations** tab to connect.
+**Agent Marketplace:** install, update and scan are disabled until isolated setup and fail-closed scanning land (#468, #469).
+
+Open the **Integrations** tab to configure an integration. Each card shows the result of that integration's last real call (Verified, Connected, Failing with a reason, or Stale after 7 days); an integration that is only configured shows Configured · unverified.
 
 ---
 
-**Current Release**: v6.0.7 (2026-10-15)
+**Current Release**: v6.0.8 (2026-10-16)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
+
+## What's New in v6.0.8
+
+Integrations now report what they actually did, and FailSafe starts only programs it has validated.
+
+- **Integrations tell the truth.** Catalog cards show each integration's last real result (Verified, Connected, Failing with a reason, or Stale) instead of guessing from settings. Jira and Linear issues become governed intent drafts only when you approve. OpenHands runs can be imported as signed historical evidence into the Agent Timeline and the Console Timeline.
+- **Nothing planted in a workspace runs.** gh, PowerShell, Python, pip, the Git installers, Bicameral MCP and the ACP agent are started from validated absolute paths, Python no longer imports modules from the workspace, and the settings that choose what FailSafe launches are read from user settings only.
+- **Agent Marketplace fails closed.** A scan that failed, timed out or gave no verdict is never a pass, an install whose scan did not pass is quarantined, and FailSafe never runs an item's package setup on your machine. Installs stay disabled.
+- **Concurrent windows are safer.** Two FailSafe processes can no longer both accept one replay nonce, risk updates queue in arrival order, and imports write in chunks so other windows are not starved. Two limits remain: a risk update can still be lost if two windows recover a crashed window's lock at the same moment, and a v6.0.7 window left open on the same workspace still updates the nonce store without the lock.
+- **Behaviour changes.** A Python interpreter inside the workspace or its repository is no longer used; set `failsafe.qorlogic.pythonPath` in user settings to choose one. Bicameral auto-connect turned on from the Console before this release must be turned on again. See the CHANGELOG for the full list and the known limitations.
 
 ## What's New in v6.0.7
 
@@ -58,7 +70,7 @@ Each integration ships with its own README and its external API names are back-c
 - **An interrupted save no longer corrupts the risk register.** `risks.json` is replaced only by a complete file.
 - **Two VS Code windows can no longer overwrite each other's risk changes.** Every update to `risks.json` takes a short lock and re-reads the file first, and re-imported findings keep the triage status you set.
 - **The SOA ledger notices when it is rolled back or swapped.** Every column of a new row is sealed, and the ledger's head is anchored in VS Code Secure Storage, so emptying, truncating or replacing the ledger is reported.
-- **A SHIELD check on GitHub is tied to the commit that sealed it.** FailSafe publishes it only after confirming, from the governance ledger in Git history, that this exact commit added the seal.
+- **The SHIELD check name on GitHub is reserved for a verified, commit-bound receipt.** A receipt is verified against the governance ledger in Git history. No command publishes a verified SHIELD check yet. **FailSafe: Publish Manual GitHub Advisory** posts a neutral advisory.
 - **FailSafe runs Git only from a checked location.** On Windows, a `git.exe` placed in an opened folder could run instead of Git; FailSafe now uses a verified Git outside your workspace and never runs Git through a shell.
 - Open Design 0.24.1 works again, and the Open Design client can no longer approve its own artifact writes.
 
@@ -136,7 +148,7 @@ The full release-by-release history (v5.x and earlier) lives in [CHANGELOG.md](.
 
 1. Install FailSafe from the VS Code Marketplace or Open VSX.
 2. Open a workspace in VS Code or Cursor.
-3. Run `FailSafe: Open Command Center (Browser Popout)` or press `Ctrl+Alt+F`.
+3. Run `FailSafe: Open Console (Browser Popout)` or press `Ctrl+Alt+F`.
 4. Run `FailSafe: Set Up Agent Governance` to inject governance rules into detected agents.
 5. Run `FailSafe: Audit Current File` to generate a governance verdict for the active editor.
 6. If you want commit-time guardrails, run `FailSafe: Install Commit Hook` inside a git workspace with `curl` available on the path.
@@ -150,8 +162,8 @@ The full release-by-release history (v5.x and earlier) lives in [CHANGELOG.md](.
 
 | Command                                          | Purpose                                                                    |
 | ------------------------------------------------ | -------------------------------------------------------------------------- |
-| `FailSafe: Open Command Center (Browser Popout)` | Open the main governance console in a browser window                       |
-| `FailSafe: Open Command Center (Editor Tab)`     | Open the governance console in an editor tab                               |
+| `FailSafe: Open Console (Browser Popout)`        | Open the main governance console in a browser window                       |
+| `FailSafe: Open Console (Editor Tab)`            | Open the governance console in an editor tab                               |
 | `FailSafe: Audit Current File`                   | Run a manual audit on the active file                                      |
 | `FailSafe: Set Governance Mode`                  | Switch between `observe`, `assist`, and `enforce`                          |
 | `FailSafe: Set Up Agent Governance`              | Detect supported agents and inject governance rules                        |
@@ -223,10 +235,11 @@ QorLogic avoids these risks by executing deterministic TypeScript code at the go
 ## Safety Alert
 
 ```
-FailSafe Blocked: AXIOM 1 VIOLATION: No active Intent exists.
-Remediation: Create an Intent before modifying files.
+FailSafe policy denied editor save (write not prevented): AXIOM 1 VIOLATION: No active Intent exists.
 
-[Create Intent] [View Active Intent]
+Remediation: Create an Intent before modifying files. Run: failsafe.createIntent
+
+[Create Intent] [View Active Intent] [Show Logs]
 ```
 
 ## Features
@@ -346,9 +359,9 @@ Intents now carry `schemaVersion`, `agentIdentity` (which agent created the inte
 
 | Command                                        | Description                                    |
 | ---------------------------------------------- | ---------------------------------------------- |
-| FailSafe: Open Command Center (Browser Popout) | Main governance popout                         |
-| FailSafe: Open Command Center (Browser)        | Browser launch alias                           |
-| FailSafe: Open Command Center (Editor Tab)     | Compact monitor in editor                      |
+| FailSafe: Open Console (Browser Popout)        | Main governance popout                         |
+| FailSafe: Open Console (Browser)               | Browser launch alias                           |
+| FailSafe: Open Console (Editor Tab)            | Compact monitor in editor                      |
 | FailSafe: Token Economics Dashboard            | Open token economics and ROI dashboard         |
 | FailSafe: Audit Current File                   | Manual file audit                              |
 | FailSafe: Secure Workspace                     | Apply workspace hardening baseline             |
@@ -357,7 +370,6 @@ Intents now carry `schemaVersion`, `agentIdentity` (which agent created the inte
 | FailSafe: Set Governance Mode                  | Switch between Observe/Assist/Enforce          |
 | FailSafe: Open Project Overview                | Project-level governance summary               |
 | FailSafe: Open Risk Register                   | Open the risk tracking panel                   |
-| FailSafe: Add Risk                             | Add a new risk entry                           |
 | FailSafe: Revert to Checkpoint (Time-Travel)   | Revert workspace to a governance checkpoint    |
 | FailSafe: Activate Break-Glass Override        | Emergency time-limited governance bypass       |
 | FailSafe: Revoke Break-Glass Override          | Manually revoke an active break-glass session  |

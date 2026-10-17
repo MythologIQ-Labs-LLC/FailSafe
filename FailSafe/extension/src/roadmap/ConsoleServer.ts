@@ -260,6 +260,9 @@ export class ConsoleServer {
   setBicameralCommand(cmd: string): void { this.bicameralCommand = cmd; }
   setBicameralAutoConnect(value: boolean): void { this.bicameralAutoConnect = value; }
   setBicameralAutoConnectWriter(fn: (value: boolean) => Promise<void>): void { this.bicameralAutoConnectWriter = fn; }
+  /** LD16 (b): the client rewire set by bootstrapBicameral; the install route runs it after a successful install. */
+  private bicameralRewire: (() => Promise<void>) | null = null;
+  setBicameralRewire(fn: (() => Promise<void>) | null): void { this.bicameralRewire = fn; }
   setVoicePackPath(p: string | null): void { this.voicePackPath = p; }
   getVoicePackPath(): string | null { return this.voicePackPath; }
   setAutoDerivationHook(fn: HubSnapshotService["autoDerivationHook"]): void { this.hub.autoDerivationHook = fn; }
@@ -353,6 +356,7 @@ export class ConsoleServer {
       getUpstreamMonitor: () => this.upstreamMonitor,
       getBicameralCommand: () => this.bicameralCommand,
       getBicameralAutoConnect: () => this.bicameralAutoConnect,
+      getBicameralRewire: () => this.bicameralRewire,
       setBicameralAutoConnect: (v) => this.bicameralAutoConnectWriter(v),
       // B-BIC-17/18 (Batch 4): expose the shared event bus so the bicameral
       // route deps can emit `bicameral.verdict` events.

@@ -4,6 +4,7 @@ import {
   buildIntegrationCatalog,
   catalogConfigKeys,
 } from '../../integrations/catalog/integration-catalog';
+import { integrationHealthSnapshot } from '../../integrations/catalog/integration-health';
 
 /**
  * IntegrationCatalogRoute — backs the Integrations-tab "Catalog" sub-view (GH
@@ -18,6 +19,10 @@ import {
  * or the browser — only the derived booleans. When the dep is unwired the route
  * returns every integration as `disabled` rather than 503, so the tab still
  * renders the catalog (the operator sees what exists + how to enable it).
+ *
+ * #479: status comes from recorded evidence (integration-health.ts), read from
+ * the module-level store, never from configuration alone. With no store
+ * installed every configured card stays `configured-unverified`.
  */
 export interface IntegrationCatalogRouteDeps {
   /**
@@ -39,7 +44,7 @@ export const IntegrationCatalogRoute = {
       snapshot = {};
     }
     res.json({
-      integrations: buildIntegrationCatalog(snapshot, INTEGRATION_CATALOG),
+      integrations: buildIntegrationCatalog(snapshot, INTEGRATION_CATALOG, integrationHealthSnapshot(), Date.now()),
     });
   },
 

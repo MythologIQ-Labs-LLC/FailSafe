@@ -7,6 +7,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.8] - 2026-10-16
+
+### Added
+
+- Jira and Linear issues open as an unsaved preview and become a governed intent draft only when you approve. You can edit the purpose, and in enforce mode you pick the plan. The draft's history entry records the source, key, URL, fetch and update times, and a content hash. Repeats are reported as already imported, stale, or unknown when no content hash was stored. Nothing is written to the tracker and nothing is synced (#480).
+- Importing an exported OpenHands run now saves its events, after you confirm, as historical evidence. Events are deduplicated within their run, signed for this install and folder, and shown under "Imported" in the Agent Timeline and the Console Timeline (the most recent 500 imported events per folder). The transparency log gets one summary line. Exports over 20 MB or 10,000 events are refused (#477).
+- Integration catalog cards show the result of each integration's last real call: Verified, Connected, Failing with a reason, or Stale after 7 days, plus the capabilities the adapter claims. Configuration alone shows "Configured · unverified" (#479).
+- A conformance suite holds every catalog adapter to the capabilities it claims (#474).
+
+### Changed
+
+- FailSafe Pro is canceled. It is no longer promoted anywhere in the repository: issue templates, the bundled Component Help, the wiki, the integration READMEs, the roadmap and the Development Tracker manifest. Historical records keep their text.
+- The Integrations documentation now says what the extension does. 24 documentation references to renamed or removed commands now use the registered titles (for example, **FailSafe: Open Console**).
+- FailSafe no longer uses a Python interpreter inside a workspace folder or inside the repository that contains it, such as a workspace .venv chosen in the Python extension, or a failsafe.qorlogic.pythonPath that points into the workspace. To use a specific interpreter, set failsafe.qorlogic.pythonPath in your user settings to an interpreter outside the workspace. The setting is now read only from user settings.
+- If you turned on Bicameral auto-connect with the Console toggle before this release, it was saved in the workspace settings and is now ignored. Turn it on again; the toggle now writes your user settings.
+- The unused failsafe.integrations.bicameral.pipCommand setting is removed.
+- On Windows, an Open Design launch command that is not an .exe is refused.
+- The ACP proxy no longer accepts a relative agent path such as ./agent. Give the agent's name or an absolute path.
+- SARIF import warns when findings could not be written to the Risk Register, and the MCP-policy audit warning gives the reason.
+
+### Fixed
+
+- A security scanner result that failed, timed out, produced no results, or gave no verdict for an entry no longer counts as a pass. It is an inconclusive result that needs review (#469).
+- An Agent Marketplace install whose security scan did not pass is quarantined and is never reported as installed or recorded as a successful install (#469).
+- FailSafe never runs an Agent Marketplace item's package setup (pip or npm) on your machine. A request for setup is refused before anything is cloned or removed; installs stay disabled (#468).
+- The Agent Marketplace no longer starts promptfoo through npx, which downloaded and ran promptfoo from the npm registry when it was missing, and no longer runs a scanner from an item's folder (#468).
+- gh, PowerShell, Python, py, pip, the Git installers (winget, choco, brew, apt-get, dnf, yum, pacman), Bicameral MCP, its installer's pip and the ACP proxy's agent are started from validated absolute paths, so a program with the same name planted in the workspace, its repository or the current folder never runs. The MCP connection refuses any command that is not an absolute, existing executable (.exe on Windows), so a planted .cmd is never run through cmd.exe.
+- Python started by FailSafe (python -m and python -c) no longer imports modules from the workspace or the current folder. A Microsoft Store Python can be used, and on macOS and Linux a Python virtual environment runs as itself instead of as its base interpreter.
+- failsafe.bootstrap.autoInstallGit and the Bicameral command, extra command roots and auto-connect settings are read only from user settings, so a workspace can no longer turn on a system-wide Git install or choose what FailSafe launches.
+- A SHIELD history read that times out now stops git and the processes it started.
+- The Console startup checkpoint records status `proposed`, not `validated`: a bound listener is transport readiness and no policy was evaluated. Its verdict stays UNKNOWN, and it now names the host and port the server actually bound (#471).
+- Two FailSafe processes on one workspace could both accept the same replay nonce, and each process could erase nonces the other issued. The nonce store is now one shared file updated under a cross-process lock. A nonce is accepted only by the process that first records it as used, so even two processes that both believe they hold the lock cannot both accept it. Writes are fsynced, the lock is re-checked before every rename, and a process that stalls past its lock writes nothing (#472).
+- A brief read error on the nonce store (a scan or another program holding the file) no longer turns off governance checks until reload. Only that call is refused. A read-only `.failsafe/security` folder is reported as such.
+- The replay-nonce store refuses a `.failsafe` or `.failsafe/security` folder that is a link or resolves outside the workspace, before it creates or writes any file there, as the risk register already does. A repository can no longer send the nonce store, its lock and queue files or its markers to another folder.
+- A risk update from another window no longer waits out a whole SARIF, Sentry or MCP-policy import. Updates to the risk register queue in arrival order (best effort: a waiter that has waited long enough, or whose queue entry cannot be written, tries the lock unqueued), and imports write 500 findings per update instead of one (#528).
+- Publishing a release no longer stops with "expected one release … found 0" when GitHub is slow to list a new draft, and it never publishes a release this run did not create. The draft is created through the API, checked, waited for (up to 30 s), and published by its id; the tag's releases are listed again before each upload.
+- OpenHands import (#477): the export is read through one non-blocking read into a buffer sized from the file, so directories, FIFOs, files over 20 MB and files that change while they are read are refused. The evidence file and the transparency log are refused when they are links, not regular files, or hard-linked, and both are checked on the open file and written through it. Duplicate keys are built from an encoded tuple, so run or event ids that contain separators cannot collide. Multi-byte text across read chunks is no longer corrupted, and imported events keep three severity tiers.
+- Jira and Linear requests go only to https, keep a configured port, and cut off responses over 5 MB. A Jira response whose key is not a Jira key is rejected. A sealed active intent no longer blocks importing an issue (#480).
+- Integration evidence is wired right after Sentinel and can no longer stop activation. If it is unavailable, the OpenHands and Jira/Linear commands say so and save nothing. Tracker drafts follow the enforcement engine's governance mode.
+- The v6.0.7 release notes said FailSafe publishes commit-bound SHIELD checks. It can verify a seal, but no command publishes one yet; the check name is reserved for a verified receipt.
+
+### Security
+
+- On macOS and Linux, FailSafe no longer runs an executable whose file or folders other users can write to, or that another user owns.
+
+### Known limitations
+
+- Agent Marketplace install, update and scan stay disabled. The scanners run from an empty folder and do not read an item's files, so every scanned install is quarantined until a repository scanner exists.
+- tar (voice-pack install) and ps (the macOS/Linux process sampler) are still started by name.
+- Bicameral team-mode setup is typed into your own terminal, which resolves bicameral-mcp itself.
+- The Bicameral setup step and the MCP server run with the workspace as their working folder, so Windows can still load a DLL from the workspace that is not found next to the program or in the system folders.
+- A workspace-folder change drops a connected Bicameral session until you connect again.
+- FailSafe now starts bicameral-mcp only from a resolved absolute path outside the workspace. If bicameral-mcp cannot be found when FailSafe wires its client (at startup, or after a Bicameral setting or a workspace folder changes), there is no Bicameral client until the next rewire. The Console's Install button rewires automatically after a successful install. If you install bicameral-mcp another way, for example from a terminal, reload the window or change a Bicameral setting before you connect.
+- If the window closes or reloads while Bicameral auto-connect is still connecting, that one bicameral-mcp session can keep running after FailSafe stops (B235, pre-existing).
+- Repository bounds are found by folder names as written, so a workspace opened through a junction misses repositories above the junction's target.
+- A risk-register update can still be lost if two FailSafe processes recover a crashed process's lock at the same moment: both can come to hold the lock, and the later write can replace the earlier one. The register is never left corrupt, but one of the two updates may be missing; repeat it (#528).
+- The timelines show the most recent 500 imported OpenHands events per folder, read from at most the last 1 MiB of the evidence file, while one import can save up to 10,000. Older imported events stay in the evidence file but are not shown.
+- The Substrate command does not read `failsafe.qorlogic.pythonPath` (B223), so there the user-level setting does not choose the interpreter.
+- A git process that has already exited while a process it started still holds its output is not killed when a SHIELD history read times out.
+- A `.failsafe` or `.failsafe/security` folder that is a link, or that resolves outside the workspace, turns replay-nonce protection off: governance checks that need a nonce are refused until it is replaced with a real folder and the window is reloaded. The lock folder and queue ticket are created a moment before that check, so a link swapped in at that instant can receive an empty lock folder or a ticket file, never nonce data.
+- If FailSafe loses its nonce-store lock in the moment after it marked a nonce as used, that nonce is refused for good. The request fails safely; send it again with a new nonce.
+- When a v6.0.7 window and a v6.0.8 window are open on the same workspace, the v6.0.7 window still updates the nonce store without the lock. Update every window.
+- If .failsafe/security is read-only, each governance check that needs a nonce waits up to 3 s and then refuses.
+- A .failsafe folder that is a link still makes risk updates refuse (UNSAFE_PATH) while the ledger follows the link.
+- Release uploads still go by tag. A release created for the same tag at the moment of an upload could receive that file, but it is never published by this run. An existing draft for the tag is resumed and published only once its files match the verified set.
+- OpenHands: the run identity comes only from the export's conversation_id, conversationId, session_id or id fields, and the export layout has not been confirmed against a live export. Exports with integer ids, no ids or no run identity fall back to keys by file and position, so a different file of the same run imports again. A crafted export that declares a real run's identity and event ids can still pre-claim those keys. Evidence signed under a lost Secret Storage key, or in a moved folder, shows as unverified until it is re-imported. The signing binds evidence to this install; it does not protect against its own user.
+- Provider behaviour for Jira, Linear, Sentry and OpenHands is tested with recorded responses only.
+- Unverified: reading user-level settings in a Remote window, and the garak, promptfoo and pwsh probe formats.
+- The macOS and Linux ownership check allows group-writable files and folders, and does not read POSIX ACLs (including macOS chmod +a). On Windows, folder ACLs are not checked.
+- On macOS and Linux, programs under a folder every user can write are refused, such as the tool cache on GitHub-hosted runners (/opt/hostedtoolcache) and WSL drvfs paths (/mnt/c), which appear writable by everyone. So is a Homebrew or Linuxbrew installed by another account. FailSafe running as root in a container refuses files other users own, and a user-namespace sandbox such as Flatpak can show files as owned by another user and refuse them.
+- Folders a link passes through on the way to a program are not checked when it starts; its real folders are, and for Python and pip also the folder they are started from.
+
 ## [6.0.7] - 2026-10-15
 
 ### Fixed

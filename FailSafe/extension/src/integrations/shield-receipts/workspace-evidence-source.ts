@@ -29,7 +29,7 @@
  * --no-renames, --no-ext-diff, --text, --no-color, --no-patch.
  *
  * Every git read has a timeout (gitTimeoutMs, default 30 s); a timed-out read
- * throws, but the git child is not killed (createSafeGit exposes no handle).
+ * throws, and SafeGit kills the git child and what it started (B213).
  * The preflight result is cached per source, including a rejection, so a failed
  * or timed-out preflight leaves that source Neutral; a new source retries.
  *
@@ -53,7 +53,7 @@ import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { createSafeGit } from '../agent-cli/git-safety';
+import { createSafeGit, type ScheduleTimeout } from '../agent-cli/git-safety';
 import type { ShieldEvidenceSource } from './shield-evidence';
 
 const SHA = /^[0-9a-f]{40}$/;
@@ -183,6 +183,8 @@ function scrubbedEnv(ownDir: string): Record<string, string> {
 export interface WorkspaceEvidenceOptions {
   /** Per-call git timeout, an integer from 1 to 30000 ms (default 30000). */
   gitTimeoutMs?: number;
+  /** Test seam: arms each read's timeout (default setTimeout); no production caller passes it. */
+  scheduleGitTimeout?: ScheduleTimeout;
 }
 
 export function createWorkspaceEvidenceSource(
@@ -197,16 +199,9 @@ export function createWorkspaceEvidenceSource(
   const ownDir = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-shield-src-'));
   const env = scrubbedEnv(ownDir);
   const rawRun = async (args: string[]): Promise<{ code: number | null; out: Buffer }> => {
-    let timer: NodeJS.Timeout | undefined;
-    const timeout = new Promise<never>((_, reject) => {
-      timer = setTimeout(() => reject(new Error('git read timed out')), timeoutMs);
-    });
-    try {
-      const r = await Promise.race([git.tryRun(root, ['-c', 'core.commitGraph=false', ...args], { env }), timeout]);
-      return { code: r.code, out: r.stdout };
-    } finally {
-      clearTimeout(timer);
-    }
+    const r = await git.tryRun(root, ['-c', 'core.commitGraph=false', ...args], { env, timeoutMs, scheduleTimeout: opts.scheduleGitTimeout });
+    if (r.timedOut) throw new Error('git read timed out');
+    return { code: r.code, out: r.stdout };
   };
   let ready: Promise<void> | undefined;
   const preflight = (): Promise<void> => (ready ??= (async () => {

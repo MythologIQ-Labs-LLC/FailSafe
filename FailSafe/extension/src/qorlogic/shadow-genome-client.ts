@@ -155,7 +155,10 @@ export async function loadShadowGenome(opts: ShadowGenomeOptions): Promise<Shado
   if (opts.enabled !== true) return { ok: true, localOnly: true };
   const genomePath = opts.genomePath || '.qor/genome.jsonl';
   try {
-    const res = await opts.run(opts.python, ['-c', EXPORT_SNIPPET, genomePath]);
+    // -P (LD11): never import qor from the cwd. -P needs Python 3.11, and opts.python does not come from
+    // the resolver that enforces it; harmless while the route passes enabled: false. Enabling it must
+    // take the interpreter from the resolver.
+    const res = await opts.run(opts.python, ['-P', '-c', EXPORT_SNIPPET, genomePath]);
     if (res.code !== 0) {
       return { ok: false, error: 'shadow_genome_graph unavailable (non-zero exit — is qor-logic installed and a genome present?).' };
     }

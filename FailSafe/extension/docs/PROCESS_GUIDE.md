@@ -1,12 +1,12 @@
 # FailSafe Process Guide
 
-Audience: operators who need fast, accurate workflows for the shipped `v6.0.7` UI and governance stack.
+Audience: operators who need fast, accurate workflows for the shipped `v6.0.8` UI and governance stack.
 
 ## First Run (Recommended Path)
 
 1. Install the extension.
 2. Open a git-backed workspace.
-3. Run `FailSafe: Open Command Center (Browser Popout)` or `FailSafe: Open Command Center (Editor Tab)`.
+3. Run `FailSafe: Open Console (Browser Popout)` or `FailSafe: Open Console (Editor Tab)`.
 4. Run `FailSafe: Set Up Agent Governance`.
 5. FailSafe starts in `enforce` mode (the default). Use `FailSafe: Set Governance Mode` to switch to `assist` or `observe` if you want lighter-touch governance while onboarding.
 

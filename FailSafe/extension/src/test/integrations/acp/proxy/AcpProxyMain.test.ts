@@ -55,6 +55,7 @@ function setup(child: FakeChild): { incoming: PassThrough; outgoing: PassThrough
     agentArgs: [],
     backing: fakeBacking(),
     spawnFn: () => child as unknown as ChildProcessWithoutNullStreams,
+    resolveCommand: (c: string) => c, // a fake agent: the file named is taken as given
     signals,
   };
   runAcpProxy(opts);

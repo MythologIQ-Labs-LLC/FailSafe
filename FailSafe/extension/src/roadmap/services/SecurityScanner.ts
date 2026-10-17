@@ -3,9 +3,21 @@
  *
  * Checks availability of security tools, runs scans on installed repositories,
  * parses output into standardized SecurityScanResult format.
+ *
+ * v6.0.8 (#469): a verdict is PASS only with exit 0, parseable non-empty
+ * results and an explicit verdict on every entry; anything else is an
+ * inconclusive L3 review. (#468): garak and promptfoo are started only through
+ * the trusted resolver (never npx, which installs a missing package from the
+ * registry when stdin is not a terminal), each from a fresh empty folder, never
+ * from the item's folder. From an empty folder neither tool reads the item, so
+ * runFullScan never reports PASS until a repository scanner exists.
  */
 import { spawn } from "child_process";
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
 import { trustedGitPath } from "../../shared/git/trustedGit";
+import { GARAK, PROMPTFOO, trustedExecutablePath } from "../../shared/exec/trustedExecutable";
 import type { EventBus } from "../../shared/EventBus";
 import type {
   SecurityScanResult,
@@ -18,6 +30,23 @@ import type {
 
 const SCAN_TIMEOUT = 300000; // 5 minutes
 
+/** Nothing an item ships may be chosen as a scanner. */
+const marketplaceRoot = (): string => path.join(os.homedir(), ".failsafe", "marketplace");
+
+/** Fresh empty folder for one scanner run. */
+function freshScanDir(): string {
+  return fs.mkdtempSync(path.join(os.tmpdir(), "failsafe-scan-"));
+}
+
+/** Remove a scan folder; a descendant still holding it (EBUSY/EPERM) leaves it in the OS temp area. */
+export function removeScanDir(dir: string): void {
+  try {
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 3 });
+  } catch {
+    // Left for the OS temp cleanup; the scan result does not depend on it.
+  }
+}
+
 function defaultRunner(
   command: string,
   args: string[],
@@ -27,14 +56,23 @@ function defaultRunner(
   return new Promise((resolve) => {
     const options = { cwd, shell: false as const, timeout };
     let proc: ReturnType<typeof spawn> | null;
+    let exe: string | undefined;
     try {
-      proc = command === "garak"
-        ? spawn("garak", args, options)
-        : command === "npx"
-          ? spawn("npx", args, options)
-          : command === "git"
-            ? spawn(trustedGitPath(cwd), args, options) // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute git path, argv array, no shell
-            : null;
+      exe = command === "garak"
+        ? trustedExecutablePath(GARAK, cwd, [marketplaceRoot()])
+        : command === "promptfoo"
+          ? trustedExecutablePath(PROMPTFOO, cwd, [marketplaceRoot()])
+          : undefined;
+    } catch (err) {
+      resolve({ code: 127, stdout: "", stderr: err instanceof Error ? err.message : String(err) });
+      return;
+    }
+    try {
+      proc = exe
+        ? spawn(exe, args, options) // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute scanner path, argv array, no shell
+        : command === "git"
+          ? spawn(trustedGitPath(cwd), args, options) // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- the trusted resolver's validated absolute git path, argv array, no shell
+          : null;
     } catch (err) {
       resolve({ code: 1, stdout: "", stderr: err instanceof Error ? err.message : String(err) });
       return;
@@ -81,18 +119,28 @@ export class SecurityScanner {
     this.eventBus = eventBus;
   }
 
+  /** Run one scanner command from a fresh empty folder, never the item's folder. */
+  private async runIsolated(command: "garak" | "promptfoo", args: string[], timeout: number): Promise<CommandRunnerResult> {
+    const dir = freshScanDir();
+    try {
+      return await this.runner(command, args, dir, timeout);
+    } finally {
+      removeScanDir(dir);
+    }
+  }
+
   async checkAvailability(): Promise<ScannerAvailability> {
     // Check Garak
     try {
-      const garakResult = await this.runner("garak", ["--version"], undefined, 10000);
+      const garakResult = await this.runIsolated("garak", ["--version"], 10000);
       this.garakAvailable = garakResult.code === 0;
     } catch {
       this.garakAvailable = false;
     }
 
-    // Check Promptfoo
+    // Check Promptfoo (started directly: npx would install a missing package and run it)
     try {
-      const promptfooResult = await this.runner("npx", ["promptfoo", "--version"], undefined, 15000);
+      const promptfooResult = await this.runIsolated("promptfoo", ["--version"], 15000);
       this.promptfooAvailable = promptfooResult.code === 0;
     } catch {
       this.promptfooAvailable = false;
@@ -117,15 +165,15 @@ export class SecurityScanner {
 
     onProgress("Running Garak security analysis...");
 
-    // Garak probes for common LLM vulnerabilities
-    const result = await this.runner(
+    // Garak probes for common LLM vulnerabilities. It runs from an empty folder:
+    // the item's folder is untrusted content (#468).
+    const result = await this.runIsolated(
       "garak",
       [
         "--model_type", "local",
         "--probes", "promptinject,encoding,knownbadsignatures",
         "--report", "json",
       ],
-      installPath,
       SCAN_TIMEOUT,
     );
 
@@ -142,11 +190,10 @@ export class SecurityScanner {
 
     onProgress("Running Promptfoo red team evaluation...");
 
-    // Initialize redteam config if not exists
-    const result = await this.runner(
-      "npx",
-      ["promptfoo", "redteam", "run", "--output", "json"],
-      installPath,
+    // From an empty folder: the item's promptfoo config could name providers that run code (#468).
+    const result = await this.runIsolated(
+      "promptfoo",
+      ["redteam", "run", "--output", "json"],
       SCAN_TIMEOUT,
     );
 
@@ -187,7 +234,20 @@ export class SecurityScanner {
       };
     }
 
-    return this.combineResults(results);
+    const combined = this.combineResults(results);
+    if (!combined.passed) return combined;
+    // Both tools ran from an empty folder, so a pass says nothing about the item (#468, lift condition 3).
+    return {
+      ...combined,
+      passed: false,
+      riskGrade: "L3",
+      recommendedAction: "review",
+      findings: [...combined.findings, {
+        severity: "info",
+        category: "scanner",
+        description: "The scanners did not read the item's files, so their pass is not evidence about it. Manual review required.",
+      }],
+    };
   }
 
   async runStaticAnalysis(
@@ -258,42 +318,60 @@ export class SecurityScanner {
     };
   }
 
-  private parseGarakOutput(result: CommandRunnerResult): SecurityScanResult {
-    const findings: SecurityFinding[] = [];
-    let passed = true;
+  /** A failed or ambiguous scanner run is never a clean scan: L3 review naming the cause. */
+  private inconclusiveScan(scanner: "garak" | "promptfoo", cause: string, output: string): SecurityScanResult {
+    const name = scanner === "garak" ? "Garak" : "Promptfoo";
+    return {
+      passed: false,
+      scanner,
+      timestamp: new Date().toISOString(),
+      findings: [{ severity: "info", category: "scanner", description: `${name} result is inconclusive: ${cause}` }],
+      riskGrade: "L3",
+      recommendedAction: "review",
+      ...(scanner === "garak" ? { garakOutput: output.slice(0, 5000) } : { promptfooOutput: output.slice(0, 5000) }),
+    };
+  }
 
-    // Parse Garak JSON output
+  /** The single JSON object in stdout, or undefined. */
+  private parseJsonObject(stdout: string): Record<string, unknown> | undefined {
+    const start = stdout.indexOf("{");
+    const end = stdout.lastIndexOf("}") + 1;
+    if (start < 0 || end <= start) return undefined;
     try {
-      if (result.stdout.includes("{")) {
-        const jsonStart = result.stdout.indexOf("{");
-        const jsonEnd = result.stdout.lastIndexOf("}") + 1;
-        const json = JSON.parse(result.stdout.slice(jsonStart, jsonEnd));
-
-        if (json.results) {
-          for (const probe of Object.values(json.results) as any[]) {
-            if (probe.fail_rate > 0) {
-              passed = false;
-              findings.push({
-                severity: probe.fail_rate > 0.5 ? "high" : "medium",
-                category: "vulnerability",
-                description: `Probe ${probe.name}: ${Math.round(probe.fail_rate * 100)}% fail rate`,
-              });
-            }
-          }
-        }
-      }
+      const json: unknown = JSON.parse(stdout.slice(start, end));
+      return json && typeof json === "object" && !Array.isArray(json) ? json as Record<string, unknown> : undefined;
     } catch {
-      // JSON parsing failed - extract from text
-      if (result.stderr.includes("FAIL") || result.stdout.includes("vulnerability")) {
-        passed = false;
+      return undefined;
+    }
+  }
+
+  /** PASS only with exit 0, at least one probe, and a numeric fail_rate from 0 to 1 on every probe, all 0. */
+  private parseGarakOutput(result: CommandRunnerResult): SecurityScanResult {
+    if (result.code !== 0) return this.inconclusiveScan("garak", `exited with code ${result.code}`, result.stdout);
+    const json = this.parseJsonObject(result.stdout);
+    if (!json) return this.inconclusiveScan("garak", "no parseable JSON result", result.stdout);
+    const results = json.results;
+    if (!results || typeof results !== "object" || Array.isArray(results)) {
+      return this.inconclusiveScan("garak", "no parseable results object", result.stdout);
+    }
+    const probes = Object.values(results as Record<string, unknown>);
+    if (probes.length === 0) return this.inconclusiveScan("garak", "no completed probes", result.stdout);
+    const findings: SecurityFinding[] = [];
+    for (const probe of probes) {
+      const p = probe as { name?: unknown; fail_rate?: unknown } | null;
+      const rate = p?.fail_rate;
+      if (typeof rate !== "number" || !Number.isFinite(rate) || rate < 0 || rate > 1) {
+        return this.inconclusiveScan("garak", "a probe has no valid fail_rate", result.stdout);
+      }
+      if (rate > 0) {
         findings.push({
-          severity: "medium",
+          severity: rate > 0.5 ? "high" : "medium",
           category: "vulnerability",
-          description: "Garak detected potential vulnerabilities (see raw output)",
+          description: `Probe ${String(p?.name ?? "unnamed")}: ${Math.round(rate * 100)}% fail rate`,
         });
       }
     }
-
+    const passed = findings.length === 0;
     return {
       passed,
       scanner: "garak",
@@ -305,41 +383,28 @@ export class SecurityScanner {
     };
   }
 
+  /** PASS only with exit 0, at least one test, and a boolean pass on every test, all true. */
   private parsePromptfooOutput(result: CommandRunnerResult): SecurityScanResult {
+    if (result.code !== 0) return this.inconclusiveScan("promptfoo", `exited with code ${result.code}`, result.stdout);
+    const json = this.parseJsonObject(result.stdout);
+    if (!json) return this.inconclusiveScan("promptfoo", "no parseable JSON result", result.stdout);
+    const tests = json.results;
+    if (!Array.isArray(tests) || tests.length === 0) return this.inconclusiveScan("promptfoo", "no completed tests", result.stdout);
     const findings: SecurityFinding[] = [];
-    let passed = true;
-
-    // Parse Promptfoo JSON output
-    try {
-      if (result.stdout.includes("{")) {
-        const jsonStart = result.stdout.indexOf("{");
-        const jsonEnd = result.stdout.lastIndexOf("}") + 1;
-        const json = JSON.parse(result.stdout.slice(jsonStart, jsonEnd));
-
-        if (json.results) {
-          for (const test of json.results) {
-            if (!test.pass) {
-              passed = false;
-              findings.push({
-                severity: test.severity || "medium",
-                category: test.category || "redteam",
-                description: test.description || test.error || "Test failed",
-              });
-            }
-          }
-        }
+    for (const test of tests) {
+      const t = test as { pass?: unknown; severity?: SecurityFinding["severity"]; category?: string; description?: string; error?: string } | null;
+      if (!t || typeof t.pass !== "boolean") {
+        return this.inconclusiveScan("promptfoo", "a test has no explicit verdict", result.stdout);
       }
-    } catch {
-      // JSON parsing failed
-      if (result.code !== 0) {
+      if (!t.pass) {
         findings.push({
-          severity: "info",
-          category: "scanner",
-          description: "Promptfoo evaluation completed with non-zero exit code",
+          severity: t.severity || "medium",
+          category: t.category || "redteam",
+          description: t.description || t.error || "Test failed",
         });
       }
     }
-
+    const passed = findings.length === 0;
     return {
       passed,
       scanner: "promptfoo",
@@ -368,7 +433,8 @@ export class SecurityScanner {
       scanner: scannerLabel as "garak" | "promptfoo" | "both",
       timestamp: new Date().toISOString(),
       findings: allFindings,
-      riskGrade: this.calculateRiskGrade(allFindings),
+      // An inconclusive child is L3 even though its finding is only informational.
+      riskGrade: results.some(r => r.riskGrade === "L3") ? "L3" : this.calculateRiskGrade(allFindings),
       recommendedAction: allPassed
         ? "approve"
         : allFindings.some(f => f.severity === "critical" || f.severity === "high")

@@ -5,7 +5,7 @@
 
 import { Request, Response } from "express";
 import { MARKETPLACE_INSTALLS_ENABLED } from "../services/MarketplaceInstaller";
-import type { HITLRequest } from "../services/MarketplaceTypes";
+import type { HITLRequest, MarketplaceItem, SecurityScanResult } from "../services/MarketplaceTypes";
 import {
   type MarketplaceRouteDeps,
   pendingApprovals,
@@ -114,11 +114,7 @@ export function registerMarketplaceInstallRoutes(
       // (progress + terminal state broadcast over WebSocket). B-INT-7 follow-up:
       // the completion logic is decomposed into named helpers below to keep this
       // handler + each helper under the Section-4 40-line function razor.
-      void deps.marketplaceInstaller
-        .install(item, { sandboxEnabled, runSecurityScan }, (progress) => {
-          deps.broadcast({ type: "marketplace.progress", payload: { itemId: item.id, ...progress } });
-        })
-        .then((result) => handleInstallCompletion(deps, item, result, { sandboxEnabled, runSecurityScan }));
+      void startInstall(deps, item, { sandboxEnabled, runSecurityScan });
 
       res.json({
         status: "installing",
@@ -131,8 +127,72 @@ export function registerMarketplaceInstallRoutes(
 
 interface InstallOpts { sandboxEnabled: boolean; runSecurityScan: boolean; }
 
-/** B-INT-7 follow-up: terminal-state handler for an install promise. */
-async function handleInstallCompletion(
+/**
+ * #469: install, then the completion handler; a rejected install is a failed
+ * terminal state, never an item stuck installing. Called by the confirm route
+ * after its gate check.
+ */
+export async function startInstall(
+  deps: MarketplaceRouteDeps,
+  item: MarketplaceItem,
+  opts: InstallOpts,
+): Promise<void> {
+  try {
+    const result = await deps.marketplaceInstaller.install(item, opts, (progress) => {
+      deps.broadcast({ type: "marketplace.progress", payload: { itemId: item.id, ...progress } });
+    });
+    await handleInstallCompletion(deps, item, result, opts);
+  } catch (err) {
+    deps.marketplaceCatalog.updateItemStatus(item.id, { status: "failed" });
+    deps.broadcast({ type: "marketplace.failed", payload: { itemId: item.id, error: err instanceof Error ? err.message : String(err) } });
+  }
+}
+
+/** A scan that could not run is an inconclusive L3 verdict naming the cause (#469). */
+export function inconclusiveVerdict(cause: string): SecurityScanResult {
+  return {
+    passed: false,
+    scanner: "none",
+    timestamp: new Date().toISOString(),
+    findings: [{ severity: "info", category: "scanner", description: `Security scan did not complete: ${cause}` }],
+    riskGrade: "L3",
+    recommendedAction: "review",
+  };
+}
+
+/** Run the scan; a missing path or a throw becomes an inconclusive verdict. */
+async function scanOrInconclusive(
+  deps: MarketplaceRouteDeps,
+  item: { id: string },
+  installPath: string | undefined,
+): Promise<SecurityScanResult> {
+  if (!installPath) return inconclusiveVerdict("the install path is missing");
+  deps.broadcast({ type: "marketplace.scanning", payload: { itemId: item.id } });
+  try {
+    return await deps.securityScanner.runFullScan(installPath, (msg) => {
+      deps.broadcast({ type: "marketplace.scan.progress", payload: { itemId: item.id, message: msg } });
+    });
+  } catch (err) {
+    return inconclusiveVerdict(err instanceof Error ? err.message : String(err));
+  }
+}
+
+/** Reflect a verdict into the catalog and the Console (quarantined unless PASS). */
+function applyVerdict(deps: MarketplaceRouteDeps, item: { id: string }, scanResult: SecurityScanResult): void {
+  deps.marketplaceCatalog.updateItemStatus(item.id, {
+    status: scanResult.passed ? "installed" : "quarantined",
+    securityScan: scanResult,
+    trustTier: scanResult.passed ? "scanned" : "quarantined",
+  });
+  deps.broadcast({ type: "marketplace.scanned", payload: { itemId: item.id, result: scanResult } });
+}
+
+/**
+ * #469: terminal-state handler for an install promise. marketplace.installed
+ * and a success ledger entry happen only for an install that completed and,
+ * when a scan was asked for, passed it; anything else is quarantined.
+ */
+export async function handleInstallCompletion(
   deps: MarketplaceRouteDeps,
   item: { id: string; name: string },
   result: { success: boolean; installPath?: string; error?: string },
@@ -148,38 +208,36 @@ async function handleInstallCompletion(
     installPath: result.installPath,
     installedAt: new Date().toISOString(),
     sandboxEnabled: opts.sandboxEnabled,
+    ...(opts.runSecurityScan ? {} : { trustTier: "unverified" as const }),
   });
-  if (opts.runSecurityScan && result.installPath) {
-    await runPostInstallScan(deps, item, result.installPath);
+  if (opts.runSecurityScan) {
+    const verdict = await scanOrInconclusive(deps, item, result.installPath);
+    applyVerdict(deps, item, verdict);
+    if (!verdict.passed) {
+      recordInstallLedger(deps, item, result.installPath, opts, "quarantined");
+      return;
+    }
   }
-  recordInstallLedger(deps, item, result.installPath, opts);
+  recordInstallLedger(deps, item, result.installPath, opts, "installed");
   deps.broadcast({ type: "marketplace.installed", payload: { itemId: item.id, installPath: result.installPath } });
 }
 
-/** Run the post-install security scan + reflect its verdict into catalog status. */
-async function runPostInstallScan(
-  deps: MarketplaceRouteDeps,
-  item: { id: string },
-  installPath: string,
-): Promise<void> {
-  deps.broadcast({ type: "marketplace.scanning", payload: { itemId: item.id } });
-  const scanResult = await deps.securityScanner.runFullScan(installPath, (msg) => {
-    deps.broadcast({ type: "marketplace.scan.progress", payload: { itemId: item.id, message: msg } });
-  });
-  deps.marketplaceCatalog.updateItemStatus(item.id, {
-    status: scanResult.passed ? "installed" : "quarantined",
-    securityScan: scanResult,
-    trustTier: scanResult.passed ? "scanned" : "quarantined",
-  });
-  deps.broadcast({ type: "marketplace.scanned", payload: { itemId: item.id, result: scanResult } });
+/** #469: re-scan an installed item; a rejected scan quarantines it. Called by the scan route after its gate check. */
+export async function startRescan(deps: MarketplaceRouteDeps, item: { id: string; installPath?: string }): Promise<void> {
+  try {
+    applyVerdict(deps, item, await scanOrInconclusive(deps, item, item.installPath));
+  } catch (err) {
+    deps.broadcast({ type: "marketplace.failed", payload: { itemId: item.id, error: err instanceof Error ? err.message : String(err) } });
+  }
 }
 
-/** Anchor a successful marketplace install into the ledger (non-blocking). */
+/** Anchor a marketplace install outcome into the ledger (non-blocking). */
 function recordInstallLedger(
   deps: MarketplaceRouteDeps,
   item: { id: string; name: string },
   installPath: string | undefined,
   opts: InstallOpts,
+  outcome: "installed" | "quarantined",
 ): void {
   if (!deps.ledgerManager) return;
   deps.ledgerManager.appendEntry({
@@ -188,7 +246,9 @@ function recordInstallLedger(
     payload: {
       itemId: item.id,
       itemName: item.name,
-      success: true,
+      success: outcome === "installed",
+      outcome,
+      scanned: opts.runSecurityScan,
       installPath,
       sandboxEnabled: opts.sandboxEnabled,
       securityScanEnabled: opts.runSecurityScan,

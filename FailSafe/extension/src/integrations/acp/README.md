@@ -44,7 +44,7 @@ Devin ⇄ [AgentSideConnection]  acp-proxy  [ClientSideConnection] ⇄ real agen
 - **Secret hygiene (ACP-AGENTIC-03):** `fs/write_text_file` content is reduced to a **sha256 digest + byte length** — the file body is never carried in the governance payload.
 - **Deny-by-default outcomes:** deny verdicts map to `reject_once`; an ALLOW verdict selects **only** `allow_once` (never auto-`allow_always`, ACP-ADV-07); when an option kind is unavailable → `cancelled` (never falls through to allow).
 - **HONEST SCOPE — two limits, stated plainly:**
-  1. **Cooperative-path only.** A non-cooperative agent MAY skip `session/request_permission` and act off-channel. Closing that gap requires **FailSafe Pro's** OS-level enforcement.
+  1. **Cooperative-path only.** A non-cooperative agent MAY skip `session/request_permission` and act off-channel. Closing that gap needs OS-level enforcement, which FailSafe does not provide.
   2. **Mode-dependent enforcement (ACP-ADV-02 / B3).** Enforcement is gated on the engine's governance mode: in **enforce** the proxy withholds a denied effect; in **observe/assist** it does not block, and the governor records `enforcing=false` on every decision so a non-enforcing grant is **never** silently presented as enforced.
   3. **Effect-existence, not content policy (B2 pending).** Today the engine governs the action's *existence + path/scope/intent* (e.g. an fs-write with no active intent is blocked). Deep *content/argv* policy for `fs/terminal` awaits the engine `ProposedAction` widening — until then payload is recorded for provenance, not policy-matched.
 

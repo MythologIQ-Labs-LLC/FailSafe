@@ -72,7 +72,7 @@ The Command Center reads workspace truth from:
 If these don't exist, bootstrap the workspace first:
 
 ```
-FailSafe: Bootstrap Workspace
+FailSafe: Bootstrap Workspace (install qor-logic + scaffold)
 ```
 
 #### "ConsoleServer 404 on static assets"

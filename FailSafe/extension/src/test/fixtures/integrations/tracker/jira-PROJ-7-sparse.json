@@ -1,0 +1,47 @@
+{
+  "provenance": "Built from the Atlassian Jira Cloud REST API v2 \"Get issue\" response shape (GET /rest/api/2/issue/{issueIdOrKey}, https://developer.atlassian.com/cloud/jira/platform/rest/v2/api-group-issues/#api-rest-api-2-issue-issueidorkey-get). Not captured from a live tenant: no live credentials were available.",
+  "request": {
+    "method": "GET",
+    "url": "https://acme.atlassian.net/rest/api/2/issue/PROJ-7?fields=summary,description,status,priority,assignee,labels,components,updated,issuetype",
+    "headers": [
+      "Accept",
+      "Authorization",
+      "User-Agent"
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "expand": "renderedFields",
+      "id": "10042",
+      "self": "https://acme.atlassian.net/rest/api/2/issue/10042",
+      "key": "PROJ-7",
+      "fields": {
+        "summary": "Add audit export",
+        "description": null,
+        "status": {
+          "name": "To Do"
+        },
+        "priority": null,
+        "assignee": null,
+        "labels": null,
+        "components": null,
+        "updated": "2026-10-01T10:00:00.000+0000",
+        "issuetype": {
+          "name": "Story"
+        },
+        "customfield_10010": {
+          "value": "CUSTOM-FIELD-SENTINEL"
+        },
+        "customfield_10020": [
+          {
+            "name": "Sprint 9 CUSTOM-FIELD-SENTINEL"
+          }
+        ]
+      }
+    }
+  }
+}

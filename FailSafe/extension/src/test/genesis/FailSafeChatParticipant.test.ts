@@ -12,6 +12,11 @@ interface CapturedStream {
   buttons: Array<{ command: string; title: string }>;
 }
 
+/** The chunks as shown: MarkdownString.appendText (#480) writes spaces as &nbsp;. */
+function shown(s: CapturedStream): string {
+  return s.markdownChunks.join('').replace(/&nbsp;/g, ' ');
+}
+
 function makeStream(): CapturedStream & vscode.ChatResponseStream {
   const captured: CapturedStream = { markdownChunks: [], buttons: [] };
   const stream = {
@@ -99,7 +104,10 @@ suite('FailSafeChatParticipant (FX054-FX059)', () => {
     await (participant as unknown as { handleRequest: any }).handleRequest(
       mkRequest('status'), FAKE_CTX, stream, FAKE_TOK,
     );
-    const all = (stream as unknown as CapturedStream).markdownChunks.join('');
+    const raw = (stream as unknown as CapturedStream).markdownChunks.join('');
+    // The purpose went through appendText, which escapes it (#480 T11).
+    assert.match(raw, /Test&nbsp;refactor/);
+    const all = shown(stream as unknown as CapturedStream);
     assert.match(all, /Test refactor/);
     assert.match(all, /PULSE/);
     assert.match(all, /L1/);
@@ -130,7 +138,7 @@ suite('FailSafeChatParticipant (FX054-FX059)', () => {
     await (participant as unknown as { handleRequest: any }).handleRequest(
       mkRequest('intent'), FAKE_CTX, stream, FAKE_TOK,
     );
-    const all = (stream as unknown as CapturedStream).markdownChunks.join('');
+    const all = shown(stream as unknown as CapturedStream);
     assert.match(all, /Refactor cache layer/);
     assert.match(all, /refactor/);
     assert.match(all, /PASS/);
@@ -197,7 +205,7 @@ suite('FailSafeChatParticipant (FX054-FX059)', () => {
     await (participant as unknown as { handleRequest: any }).handleRequest(
       mkRequest('seal'), FAKE_CTX, stream, FAKE_TOK,
     );
-    const all = (stream as unknown as CapturedStream).markdownChunks.join('');
+    const all = shown(stream as unknown as CapturedStream);
     assert.equal(sealActor, 'chat-participant');
     assert.match(all, /Intent Sealed.*Done refactor/);
   });

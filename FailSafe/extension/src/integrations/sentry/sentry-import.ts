@@ -7,18 +7,23 @@
  * operator closed or edited — even during the lookups — keeps its status and
  * fields; only the Sentry-owned fields are replaced. Nothing is written when
  * the list fails or the import is cancelled. The outcome counts what actually
- * happened: created / updated / unchanged / failed per unique issue.
+ * happened: created / updated / unchanged / failed per unique issue. With
+ * `sink.batch` (#528) the writes are one register update per 500 issues; a
+ * failed update counts its issues failed.
  */
 
 import { fetchSentryIssues, type ListDeps, type SentryGetFn, type SentryOptions } from './sentry-client';
 import { carriedRelease, lookupReleases, type LookupResult, type ReleaseProvenance } from './sentry-releases';
 import { parseSentryIssue, sentryIssueToRisk, type CanonicalSentryIssue } from './sentry-to-risk';
 import type { UpsertOptions, UpsertOutcome } from '../../roadmap/services/RiskRegisterManager';
+import { emptyWriteOutcome, writeInChunks, type ImportWriteOutcome } from '../../roadmap/services/riskImportBatch';
 
 export type ImportCtx = ListDeps;
 
 export interface RiskSink {
   upsertWith(id: string, build: (stored: Record<string, unknown> | undefined) => Record<string, unknown>, opts: UpsertOptions): UpsertOutcome;
+  /** v6.0.8 #528: runs `write` as one register update; without it each record is its own. */
+  batch?(write: () => void): void;
 }
 
 export interface ReleaseCounts {
@@ -45,6 +50,8 @@ export interface SentryImportOutcome {
   unchanged: number;
   failed: number;
   releases: ReleaseCounts;
+  /** v6.0.8 #528: what the register write did, per chunk (its counts equal the fields above). */
+  write: ImportWriteOutcome;
 }
 
 const SENTRY_OWNED = ['id', 'title', 'severity', 'source', 'location', 'provenance', 'updatedAt'];
@@ -56,6 +63,7 @@ function blankOutcome(): SentryImportOutcome {
     ok: false, pagesFetched: 0, fetched: 0, eligible: 0, skipped: 0, skippedReasons: [], duplicates: 0, unique: 0,
     created: 0, updated: 0, unchanged: 0, failed: 0,
     releases: { enriched: 0, none: 0, failed: 0, notAttempted: 0, carried: 0, discarded: 0 },
+    write: emptyWriteOutcome(),
   };
 }
 
@@ -105,16 +113,22 @@ export function buildRecord(issue: CanonicalSentryIssue, lookup: LookupResult | 
 }
 
 function writeRecords(issues: CanonicalSentryIssue[], lookups: Map<string, LookupResult>, sink: RiskSink, importedAt: string, out: SentryImportOutcome): void {
-  for (const issue of issues) {
-    let choice: ReleaseChoice = {};
-    try {
+  // A chunk's carried/discarded tallies count only if the chunk was written (#528).
+  const write = writeInChunks(issues, {
+    write: (issue, side: { carried: number; discarded: number }) => {
+      let choice: ReleaseChoice = {};
       const result = sink.upsertWith(`sentry:${issue.id}`, buildRecord(issue, lookups.get(issue.id), importedAt, (c) => { choice = c; }), { ignore: IGNORE });
-      out[result]++;
-      if (choice.tally) out.releases[choice.tally]++;
-    } catch {
-      out.failed++;
-    }
-  }
+      if (choice.tally) side[choice.tally]++;
+      return result;
+    },
+    newSide: () => ({ carried: 0, discarded: 0 }),
+    keep: (side) => { out.releases.carried += side.carried; out.releases.discarded += side.discarded; },
+  }, sink.batch ? (w) => sink.batch!(w) : undefined);
+  out.created += write.created;
+  out.updated += write.updated;
+  out.unchanged += write.unchanged;
+  out.failed += write.failed;
+  out.write = write;
 }
 
 function countLookups(byId: Map<string, LookupResult>, out: SentryImportOutcome): void {

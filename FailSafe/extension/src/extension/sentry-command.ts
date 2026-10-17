@@ -2,8 +2,8 @@
  * sentry-command — registers `FailSafe: Import Sentry Regressions` (#102, #478).
  * Reads settings, runs the import with a cancellable progress notification, and
  * shows the outcome at the level `describeSentryImport` assigns. Each risk is
- * written through `RiskRegisterManager.upsertRiskWith`, so operator triage
- * survives. The token comes from Secure Storage (#482) and is never logged.
+ * written through `RiskRegisterManager.importSink().upsertRiskWith`, so operator
+ * triage survives, in one register update per 500 issues (#528). The token comes from Secure Storage (#482) and is never logged.
  */
 
 import * as vscode from 'vscode';
@@ -15,6 +15,7 @@ import type { IntegrationCredentials } from '../integrations/credentials/Integra
 import type { EndpointReader } from '../integrations/credentials/credentialGates';
 import { credentialUi } from './credentials-command';
 import { RiskRegisterManager } from '../roadmap/services/RiskRegisterManager';
+import { healthFromSentryImport, recordIntegrationHealth } from '../integrations/sentry/sentry-health';
 
 function cancelSignal(token: vscode.CancellationToken): CancelSignal {
   return {
@@ -38,16 +39,18 @@ export function registerSentryImportCommand(
       const cfg = vscode.workspace.getConfiguration('failsafe');
       const opts = resolveSentryOptions((key, fallback) => cfg.get(key, fallback), creds, endpoints, credentialUi());
       if (!opts) return;
-      const store = new RiskRegisterManager(workspaceRoot);
+      // v6.0.8 #528: one register update per 500 issues.
+      const sink = new RiskRegisterManager(workspaceRoot).importSink();
       const outcome = await vscode.window.withProgress(
         { location: vscode.ProgressLocation.Notification, title: 'Importing Sentry regressions…', cancellable: true },
         (_progress, token) => importSentryRisks(
           opts,
           defaultSentryGet,
-          { upsertWith: (id, build, o) => store.upsertRiskWith(id, build, o) },
+          { upsertWith: sink.upsertRiskWith, batch: sink.batch },
           { policy: realTimePolicy, cancel: cancelSignal(token) },
         ),
       );
+      recordIntegrationHealth('sentry', ...healthFromSentryImport(outcome));
       showSentryOutcome(outcome, { org: opts.org, project: opts.project, query: opts.query });
     }),
   );

@@ -38,7 +38,7 @@ export function parseLinearIssueId(input: string): string | null {
  *  human identifier (ENG-123) per Linear's documented behavior. */
 export const LINEAR_ISSUE_QUERY =
   'query FailSafeIssue($id: String!) { issue(id: $id) { ' +
-  'identifier title description priority url ' +
+  'identifier title description priority url updatedAt ' +
   'state { name type } assignee { name } labels { nodes { name } } } }';
 
 export interface LinearGraphQLRequest { query: string; variables: { id: string } }
@@ -57,6 +57,8 @@ export interface CanonicalIssue {
   url?: string;
   assignee?: string;
   labels: string[];
+  /** Linear `updatedAt` (the source revision time, #480 provenance). */
+  updatedAt?: string;
 }
 
 function str(v: unknown): string | undefined {
@@ -94,6 +96,7 @@ export function parseIssueResponse(json: unknown): CanonicalIssue | null {
     url: str(issue.url),
     assignee: assignee ? str(assignee.name) : undefined,
     labels,
+    updatedAt: str(issue.updatedAt),
   };
 }
 
@@ -111,6 +114,7 @@ export interface LinearIntentPreview {
   assignee?: string;
   labels: string[];
   url?: string;
+  updatedAt?: string;
 }
 
 const PRIORITY_LABEL = ['No priority', 'Urgent', 'High', 'Medium', 'Low'];
@@ -131,6 +135,7 @@ export function toIntentPreview(issue: CanonicalIssue): LinearIntentPreview {
     assignee: issue.assignee,
     labels: issue.labels,
     url: issue.url,
+    updatedAt: issue.updatedAt,
     ...(prio ? { priorityLabel: prio } : {}),
   } as LinearIntentPreview;
 }

@@ -5,7 +5,7 @@ import { Logger } from "../shared/Logger";
 import { WorkspaceMutationBus } from "../shared/WorkspaceMutationBus";
 import { PlanManager } from "../qorelogic/planning/PlanManager";
 import { ModeTransitionHistory } from "../governance/ModeTransitionHistory";
-import { ensureGitRepositoryReady } from "../shared/gitBootstrap";
+import { autoInstallGitEnabled, ensureGitRepositoryReady } from "../shared/gitBootstrap";
 import { trustedGitPath } from "../shared/git/trustedGit";
 import type { ILogSink } from "../core/interfaces";
 
@@ -34,9 +34,10 @@ export async function bootstrapCore(
   if (!workspaceRoot) {
     throw new Error("FailSafe requires an open workspace.");
   }
-  const autoInstallGit = vscode.workspace
-    .getConfiguration("failsafe")
-    .get<boolean>("bootstrap.autoInstallGit", false);
+  // B214: only a user-level value counts; a workspace cannot turn on a system-wide install.
+  const autoInstallGit = autoInstallGitEnabled(
+    vscode.workspace.getConfiguration("failsafe").inspect<boolean>("bootstrap.autoInstallGit"),
+  );
 
   const gitLog = (level: "info" | "warn" | "error", message: string) => {
     if (level === "error") logger.error(message);

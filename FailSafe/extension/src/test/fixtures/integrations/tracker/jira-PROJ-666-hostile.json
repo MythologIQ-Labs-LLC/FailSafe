@@ -1,0 +1,61 @@
+{
+  "provenance": "Built from the Atlassian Jira Cloud REST API v2 \"Get issue\" response shape (GET /rest/api/2/issue/{issueIdOrKey}, https://developer.atlassian.com/cloud/jira/platform/rest/v2/api-group-issues/#api-rest-api-2-issue-issueidorkey-get). Not captured from a live tenant: no live credentials were available. Hostile text injected to test escaping.",
+  "request": {
+    "method": "GET",
+    "url": "https://acme.atlassian.net/rest/api/2/issue/PROJ-666?fields=summary,description,status,priority,assignee,labels,components,updated,issuetype",
+    "headers": [
+      "Accept",
+      "Authorization",
+      "User-Agent"
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "expand": "renderedFields",
+      "id": "10042",
+      "self": "https://acme.atlassian.net/rest/api/2/issue/10042",
+      "key": "PROJ-666",
+      "fields": {
+        "summary": "![x](https://evil.example/p.png) <img src=x onerror=alert(1)> [link](http://evil.example)",
+        "description": "Close the fence: ````\n![pixel](https://evil.example/track.png)\n<script>alert(1)</script>",
+        "status": {
+          "self": "x",
+          "name": "In Progress",
+          "id": "3"
+        },
+        "priority": {
+          "self": "x",
+          "name": "High",
+          "id": "2"
+        },
+        "assignee": {
+          "accountId": "5b10a2844c20165700ede21g",
+          "displayName": "Ada Lovelace",
+          "active": true
+        },
+        "labels": [
+          "<b>bold</b>",
+          "ok-label"
+        ],
+        "components": [
+          {
+            "self": "x",
+            "id": "10000",
+            "name": "auth"
+          }
+        ],
+        "updated": "2026-10-14T09:30:12.000+0000",
+        "issuetype": {
+          "self": "x",
+          "id": "10004",
+          "name": "Bug",
+          "subtask": false
+        }
+      }
+    }
+  }
+}

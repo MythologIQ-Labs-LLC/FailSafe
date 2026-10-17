@@ -11,6 +11,13 @@
 // each `requiredKey` → whether that setting is non-empty). Tokens, API keys, and
 // webhook URLs never leave the extension host — only the booleans derived from
 // them. Pure (no vscode/fs/network) so it is unit-tested deterministically.
+//
+// #479: configuration alone never makes a card look healthy. A configured
+// integration stays `configured-unverified` until a real call records health
+// evidence (integration-health.ts); only that evidence can make it `connected`,
+// `contract-verified`, `failing` or `stale`.
+
+import { HEALTH_STALE_MS, sanitizeEvidence, type HealthEvidence } from './integration-health';
 
 export type IntegrationCategory =
   | 'Agent CLI'
@@ -41,9 +48,22 @@ export interface IntegrationDescriptor {
   docsId: string;
   /** Settings-tab hint: what the operator edits to configure this. */
   configHint: string;
+  /** What this adapter claims to do (#474); the conformance suite holds it to each claim. */
+  capabilities: readonly IntegrationCapability[];
+  /** How its evidence reads: a remote service, an imported file or a local process. */
+  evidenceKind: EvidenceKind;
 }
 
-export type IntegrationConfigState = 'configured-unverified' | 'needs-config' | 'disabled';
+/** Closed capability vocabulary (#474). */
+export type IntegrationCapability =
+  | 'issue-preview' | 'intent-draft' | 'timeline-evidence' | 'policy-audit'
+  | 'risk-ingest' | 'check-publish' | 'notify' | 'isolated-run';
+
+export type EvidenceKind = 'service' | 'file' | 'process';
+
+export type IntegrationConfigState =
+  | 'disabled' | 'needs-config' | 'configured-unverified'
+  | 'connected' | 'contract-verified' | 'failing' | 'stale';
 
 export interface IntegrationStatus {
   id: string;
@@ -54,10 +74,14 @@ export interface IntegrationStatus {
   configHint: string;
   enabled: boolean;
   configured: boolean;
-  /** Derived configuration-only state: configured-unverified (on + keys present) /
-   *  needs-config (on + missing
-   *  required keys) / disabled (off). */
+  /** disabled / needs-config come from configuration and win; with configuration
+   *  complete, the last recorded evidence decides (none → configured-unverified,
+   *  older than HEALTH_STALE_MS → stale). */
   state: IntegrationConfigState;
+  /** The last real call's result, when one was recorded. */
+  lastResult?: HealthEvidence;
+  capabilities: readonly IntegrationCapability[];
+  evidenceKind: EvidenceKind;
   /** The required keys that are still empty — names only, never values. Lets the
    *  card tell the operator exactly what is missing without leaking secrets. */
   missingKeys: string[];
@@ -82,6 +106,8 @@ export const INTEGRATION_CATALOG: readonly IntegrationDescriptor[] = [
     requiredKeys: [],
     docsId: 'continue',
     configHint: 'Enable under Settings → Integrations → Continue. An API key is optional; store one with "FailSafe: Set Integration Credential".',
+    capabilities: ['isolated-run'],
+    evidenceKind: 'process',
   },
   {
     id: 'aider',
@@ -92,16 +118,20 @@ export const INTEGRATION_CATALOG: readonly IntegrationDescriptor[] = [
     requiredKeys: [],
     docsId: 'aider',
     configHint: 'Enable under Settings → Integrations → Aider; uses your ambient model credentials.',
+    capabilities: ['isolated-run'],
+    evidenceKind: 'process',
   },
   {
     id: 'openhands',
     label: 'OpenHands',
     category: 'Agent Observe',
-    summary: 'Read-only OpenHands JSON export preview; maps observed actions but does not yet persist timeline records.',
+    summary: 'Imports an exported OpenHands run, after you confirm, as historical timeline evidence (deduplicated). Observe-only: not live interception.',
     enabledKey: 'failsafe.integrations.openhands.enabled',
     requiredKeys: [],
     docsId: 'openhands',
     configHint: 'Enable under Settings → Integrations → OpenHands (observe-only; pin a version if needed).',
+    capabilities: ['timeline-evidence'],
+    evidenceKind: 'file',
   },
   {
     id: 'agent-audit',
@@ -112,22 +142,26 @@ export const INTEGRATION_CATALOG: readonly IntegrationDescriptor[] = [
     requiredKeys: [],
     docsId: 'agent-observe',
     configHint: 'Enable under Settings → Integrations → Agent Audit (reads the agent MCP config, no writes).',
+    capabilities: ['policy-audit', 'risk-ingest'],
+    evidenceKind: 'file',
   },
   {
     id: 'linear',
     label: 'Linear',
     category: 'Issue Tracker',
-    summary: 'Fetches one Linear issue for an uncommitted intent preview; no backlog import or sync.',
+    summary: 'Fetches one Linear issue for review; creates a governed intent draft only when you approve. No sync.',
     enabledKey: 'failsafe.integrations.linear.enabled',
     requiredKeys: ['failsafe.integrations.linear.apiKey'],
     docsId: 'linear',
     configHint: 'Enable under Settings → Integrations → Linear, then store the Linear API key with "FailSafe: Set Integration Credential".',
+    capabilities: ['issue-preview', 'intent-draft'],
+    evidenceKind: 'service',
   },
   {
     id: 'jira',
     label: 'Jira',
     category: 'Issue Tracker',
-    summary: 'Fetches one Jira issue for an uncommitted intent preview; no backlog import or sync.',
+    summary: 'Fetches one Jira issue for review; creates a governed intent draft only when you approve. No sync.',
     enabledKey: 'failsafe.integrations.jira.enabled',
     requiredKeys: [
       'failsafe.integrations.jira.baseUrl',
@@ -136,6 +170,8 @@ export const INTEGRATION_CATALOG: readonly IntegrationDescriptor[] = [
     ],
     docsId: 'jira',
     configHint: 'Enable and set base URL and email under Settings → Integrations → Jira, then store the API token with "FailSafe: Set Integration Credential".',
+    capabilities: ['issue-preview', 'intent-draft'],
+    evidenceKind: 'service',
   },
   {
     id: 'github-checks',
@@ -146,6 +182,8 @@ export const INTEGRATION_CATALOG: readonly IntegrationDescriptor[] = [
     requiredKeys: ['failsafe.integrations.github.token'],
     docsId: 'github-checks',
     configHint: 'Enable under Settings → Integrations → GitHub, then store a token (checks:write) with "FailSafe: Set Integration Credential".',
+    capabilities: ['check-publish'],
+    evidenceKind: 'service',
   },
   {
     id: 'sarif',
@@ -156,6 +194,8 @@ export const INTEGRATION_CATALOG: readonly IntegrationDescriptor[] = [
     requiredKeys: [],
     docsId: 'sarif',
     configHint: 'Enable, then run `FailSafe: Import SARIF Findings` and pick a .sarif/.json file.',
+    capabilities: ['risk-ingest'],
+    evidenceKind: 'file',
   },
   {
     id: 'sentry',
@@ -170,6 +210,8 @@ export const INTEGRATION_CATALOG: readonly IntegrationDescriptor[] = [
     ],
     docsId: 'sentry',
     configHint: 'Enable and set org and project under Settings → Integrations → Sentry, then store the auth token with "FailSafe: Set Integration Credential".',
+    capabilities: ['risk-ingest'],
+    evidenceKind: 'service',
   },
   {
     id: 'teams',
@@ -180,6 +222,8 @@ export const INTEGRATION_CATALOG: readonly IntegrationDescriptor[] = [
     requiredKeys: ['failsafe.integrations.teams.webhookUrl'],
     docsId: 'teams',
     configHint: 'Enable under Settings → Integrations → Teams, then store the Incoming Webhook URL with "FailSafe: Set Integration Credential".',
+    capabilities: ['notify'],
+    evidenceKind: 'service',
   },
   {
     id: 'slack',
@@ -190,6 +234,8 @@ export const INTEGRATION_CATALOG: readonly IntegrationDescriptor[] = [
     requiredKeys: ['failsafe.integrations.slack.webhookUrl'],
     docsId: 'slack',
     configHint: 'Enable under Settings → Integrations → Slack, then store the Incoming Webhook URL with "FailSafe: Set Integration Credential".',
+    capabilities: ['notify'],
+    evidenceKind: 'service',
   },
 ];
 
@@ -219,15 +265,22 @@ export function catalogConfigKeys(
 export function buildIntegrationStatus(
   descriptor: IntegrationDescriptor,
   snapshot: Readonly<Record<string, boolean>>,
+  health: Readonly<Record<string, unknown>> = {},
+  now: number = Date.now(),
 ): IntegrationStatus {
   const enabled = snapshot[descriptor.enabledKey] === true;
   const missingKeys = descriptor.requiredKeys.filter((k) => snapshot[k] !== true);
   const configured = enabled && missingKeys.length === 0;
+  const lastResult = sanitizeEvidence(health[descriptor.id]);
   const state: IntegrationConfigState = !enabled
     ? 'disabled'
-    : configured
-      ? 'configured-unverified'
-      : 'needs-config';
+    : !configured
+      ? 'needs-config'
+      : !lastResult
+        ? 'configured-unverified'
+        : now - Date.parse(lastResult.checkedAt) > HEALTH_STALE_MS
+          ? 'stale'
+          : lastResult.result;
   return {
     id: descriptor.id,
     label: descriptor.label,
@@ -238,7 +291,10 @@ export function buildIntegrationStatus(
     enabled,
     configured,
     state,
+    ...(lastResult ? { lastResult } : {}),
     missingKeys,
+    capabilities: descriptor.capabilities,
+    evidenceKind: descriptor.evidenceKind,
   };
 }
 
@@ -246,6 +302,8 @@ export function buildIntegrationStatus(
 export function buildIntegrationCatalog(
   snapshot: Readonly<Record<string, boolean>>,
   catalog: readonly IntegrationDescriptor[] = INTEGRATION_CATALOG,
+  health: Readonly<Record<string, unknown>> = {},
+  now: number = Date.now(),
 ): IntegrationStatus[] {
-  return catalog.map((d) => buildIntegrationStatus(d, snapshot));
+  return catalog.map((d) => buildIntegrationStatus(d, snapshot, health, now));
 }
