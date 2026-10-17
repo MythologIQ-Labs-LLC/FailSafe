@@ -32814,3 +32814,20 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `e76e7d5b6a1f96b81f40bc9ce6f533c394ff4d8b4bf3cd9fb551288721e28f90`
 
 **Decision**: SESSION SEAL for the LD23 follow-up (implementation #760) after seal #759. Reality = Promise, with disclosures. release/v6.0.8-rc carries a8b98a3c (merge 61b58989) and 3b39d4c4 (merge ec793f02), both test only. Disclosures: bounded damaged-ledger override applied to this integration cycle (#467 unresolved); this follow-up changes two test files after seal #759; LD19's full LD6 re-run was not repeated: the change is test-only, does not alter win32 behaviour (the rows and the UI helper keep the bare name there), and the focused local checks plus PR #529's full Linux test:all on the pushed head cover it; the LD23 POSIX rows and Linux test:ui have not yet run on Linux; D16 is read from the next CI log before the LD8 merge; the #473 ledger row's Linux failure on ab3e8ca1 is treated as timing pending the next Linux run (B244); seals #746, #753 and #759 are left unedited. Next: one push moving PR #529's head, Linux CI read against D16, then the LD8 merge. Not merged, not tagged, not published.
+
+---
+
+### Entry #762: IMPLEMENTATION - plan-v608-integration (LD23 second follow-up)
+
+**Timestamp**: 2026-10-17T07:21:33Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-16T1356-298603`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-16T1356-298603/implement.json`
+
+**Content Hash**: `8836ff69904968b45dde1a67dce92952beab0b5fd157643afaa451cbb85c38d5`
+**Previous Hash**: `e76e7d5b6a1f96b81f40bc9ce6f533c394ff4d8b4bf3cd9fb551288721e28f90`
+**Chain Hash (Merkle seal)**: `3238f992146f5d2e9e2cb8abc5cb61a064643e8e36e4b418da120ce4606f27cb`
+
+**Decision**: IMPLEMENTATION of the second LD23 follow-up (plan-v608-integration.md iteration 17, audit PASS #757), after seal #761 on ec793f02. PR #529's Linux Full Test Suite on d0ea7d5c ran npm test: 5000 passing, 17 pending, 2 failing, census 509/509; the #473 ledger row passed this time, so its earlier failure is a timing defect, filed as B244 (docs commit 4b7f75b7). The two failures were again the install-detector rows: they run in the VS Code extension host, where process.execPath is the Electron binary, and privateNode copied that binary without its resources, so the copy could not start and the probe reported not-installed. Lane A 8549d138 (merged as d0555a7f), test only: privateNode.cjs exports nodeSource(), the real node on PATH when running under Electron and process.execPath otherwise, and copies that; a new extension-host row privateNode.test.ts requires nodeSource() to answer --version as node both in place and copied into a fresh folder, on every platform. Red first on win32: with nodeSource returning process.execPath the row fails (a copied Code.exe answered nothing, status 2147483651), vscode-test --grep install-detector|privateNode 28 passing, 1 failing; green 29 passing, 0 failing. Lane A win32 evidence: acpAgentResolution and bicameralSettingsScope 11/11; test:runner-coverage pass with 634 files claimed (510 vscode-test); test:node 727 tests, 716 passed, 2 failed (FX946 baseline), 9 skipped; tsc and lint clean. test:node has still not run on Linux, because test:all stopped at npm test on every PR run since 178fc753.
