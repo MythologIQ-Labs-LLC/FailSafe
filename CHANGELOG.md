@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - For contributors: the README now links an Architecture Index that names the one canonical document for each design area, and a repository check fails when a new architecture document is added without registering it, pointing to the existing documents to amend instead (#530).
+- A new Architecture view under Workspace in the Console finds your repository's architecture index (docs/ARCHITECTURE_INDEX.md by default, or the failsafe.architecture.indexPath setting), validates it, and lists architecture documents that have no registry row, with similarly named documents to use instead. You can open a suggested document, or propose registering a new one for an L3 decision, which is recorded in the FailSafe ledger and edits no file. If there is no index, Bootstrap index (also **FailSafe: Bootstrap Architecture Index**) creates one after you confirm in VS Code and never overwrites an existing file. Documents written by editors, agents or other tools are found when the view refreshes; FailSafe cannot block them (#531).
 
 ## [6.0.8] - 2026-10-16
 

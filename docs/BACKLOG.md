@@ -610,6 +610,19 @@ The four canonical design documents that had no Governance Index tier row (`docs
 - [ ] [B249] #531 follow-on: make the Architecture Index a FailSafe product feature (discovery, bootstrap for a user's repository, duplicate review before a governed write, native Qor registration), reusing `FailSafe/extension/scripts/check-architecture-index.cjs` semantics rather than a second validator. | post-v6.0.8
 - [ ] [B250] Architecture index check: `unregistered-normative` suggestions put canonical rows in the same folder before token matches, so a new `docs/VOICE_DESIGN.md` is pointed at five root-level documents ahead of `docs/specs/VOICE_BRAINSTORM_SPEC.md`. Rank by shared tokens first, then same folder, then path. | low
 
+## #531 managed architecture index follow-ups (filed 2026-10-17)
+
+The first vertical slice (FX1002, `plan-531-architecture-governance.md`, design `docs/architecture/MANAGED_ARCHITECTURE_INDEX.md`) ships discovery, bootstrap, the proposal routes and the Workspace › Architecture view. B249 stays open for the rest of the product feature; B250 (suggestion ranking) is carried unchanged.
+
+- [ ] [B251] #531 opt-in migration: when the index is `present-elsewhere`, the view only points at the `failsafe.architecture.indexPath` setting. Offer a governed, opt-in move or copy that never overwrites and records the source and target hashes. | medium
+- [ ] [B252] #531 `update-doc` events: record an architecture document's later edits (path, source SHA, document hash) as governance events, not only its first proposal. | low
+- [ ] [B253] #531 architecture decision links beyond the registry's `governance_ref` cell (for example from an ADR to the ledger entry or plan that accepted it). | low
+- [ ] [B254] #531 stale-document display: show registered documents whose last change is older than the code they describe, or older than a configured age. | low
+- [ ] [B255] #531 "Unavailable Qor" is mapped to the FailSafe ledger being unavailable. The Architecture view does not show the Qor-logic package install state; show it when it is known. | low
+- [ ] [B256] `AgentConfigInjector.ts:63` writes "All writes are subject to EnforcementEngine (FailSafe Extension)." into agent instruction files. That overstates enforcement: FailSafe governs the writes it makes and the seams it observes; edits by editors, agents and other tools are found after the fact. Correct the text. | medium
+- [ ] [B257] Every `qorelogic.l3Decided` event writes an `override.approved` checkpoint with `policyVerdict: "PASS"` (`EventSubscriptionManager.ts`), including REJECTED and EXPIRED decisions, so a rejected or expired L3 item (an architecture proposal among them) leaves a PASS override checkpoint. Record the decision as it was. | medium
+- [ ] [B258] #531 propose route: if `queueL3Approval` throws after the `PROPOSAL` entry is appended, the route answers 500 and that entry has no L3 item. The document stays unregistered and can be proposed again; link or mark the orphaned entry. | low
+
 ## Wishlist (Nice to Have)
 
 - [ ] [B90] CLI Overseer Lite Feasibility Extraction: Explore creating a lightweight, CLI-compatible version of FailSafe for direct website integration | v5.4.x+ _(re-tagged 2026-06-02 from stale v5.0.0 — shipped without this exploratory item)_
