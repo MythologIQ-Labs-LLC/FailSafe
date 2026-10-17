@@ -8,13 +8,22 @@
  *   POST /api/actions/delivery/unlink      {intentId, edge, target}: remove an edge after the modal
  *
  * Every route is loopback-only and rate limited. Writes act only after the operator approves a
- * modal VS Code dialog built from server-side values. Nothing leaves the machine.
+ * modal VS Code dialog built from server-side values; a declined, busy or unwired confirmation
+ * records nothing. Nothing leaves the machine.
  */
 
 import type { Application, Request, Response } from "express";
-import type { ConfirmOperatorAction } from "../../extension/operatorConfirmation";
+import { rateLimit } from "express-rate-limit";
+import {
+  deliveryLinkRequest, requireOperatorConfirmation, type ConfirmOperatorAction,
+} from "../../extension/operatorConfirmation";
 import type { ArchitectureGit } from "../../governance/architecture/ArchitectureIndexDiscovery";
-import type { DeliveryIntents } from "../../governance/delivery/deliveryService";
+import type { EdgeWriteRefusal } from "../../governance/IntentService";
+import { IntentIdSchema } from "../../governance/types/IntentTypes";
+import {
+  assessIntentDelivery, deliveryCandidates, parseDeliveryRequest, prepareDeliveryEdge, writeDeliveryEdge,
+  type DeliveryContext, type DeliveryIntents, type EdgeAction,
+} from "../../governance/delivery/deliveryService";
 
 export interface DeliveryRouteDeps {
   rejectIfRemote(req: Request, res: Response): boolean;
@@ -31,6 +40,79 @@ export interface DeliveryRouteDeps {
   git?: ArchitectureGit;
 }
 
-export function setupDeliveryRoutes(_app: Application, _deps: DeliveryRouteDeps): void {
-  // Red-first stub (#532): routes are registered by the implementation.
+const NO_SERVICE = { ok: false, error: "The FailSafe intent service is not available." };
+
+/** Why a confirmed write was still refused (the state changed between the check and the write). */
+const WRITE_REFUSAL: Record<EdgeWriteRefusal, string> = {
+  integrity: "The intent history failed its chain check; nothing was recorded.",
+  "no-active-intent": "There is no active intent; nothing was recorded.",
+  "not-active": "This intent is no longer the active intent; nothing was recorded.",
+  sealed: "This intent is sealed; nothing was recorded.",
+  duplicate: "That link is already recorded.",
+  absent: "That link is not recorded.",
+  invalid: "The link could not be recorded.",
+};
+
+function contextOf(deps: DeliveryRouteDeps, res: Response): DeliveryContext | null {
+  const intents = deps.getIntentService();
+  if (!intents) { res.status(503).json(NO_SERVICE); return null; }
+  return {
+    workspaceRoot: deps.workspaceRoot, intents, ledger: deps.getLedgerManager(), git: deps.git,
+    indexPathSetting: deps.getIndexPathSetting?.(),
+  };
+}
+
+async function writeEdge(req: Request, res: Response, deps: DeliveryRouteDeps, action: EdgeAction): Promise<void> {
+  const parsed = parseDeliveryRequest(req.body);
+  if (typeof parsed === "string") { res.status(400).json({ ok: false, error: parsed }); return; }
+  const ctx = contextOf(deps, res);
+  if (!ctx) return;
+  const prepared = await prepareDeliveryEdge(ctx, action, parsed);
+  if (!prepared.ok) { res.status(prepared.status).json({ ok: false, error: prepared.error }); return; }
+  const request = deliveryLinkRequest(action, prepared.edge, prepared.intent, prepared.facts, "console");
+  if (!(await requireOperatorConfirmation(deps.confirmOperatorAction, request, res))) return;
+  const written = await writeDeliveryEdge(ctx, prepared, "user");
+  if (!written.ok) { res.status(409).json({ ok: false, refused: written.reason, error: WRITE_REFUSAL[written.reason] }); return; }
+  deps.broadcast?.({ type: "delivery.changed", intentId: prepared.intent.id });
+  res.json({ ok: true, action, intentId: prepared.intent.id, edge: prepared.edge, target: prepared.target });
+}
+
+export function setupDeliveryRoutes(app: Application, deps: DeliveryRouteDeps): void {
+  // CodeQL js/missing-rate-limiting: the reads run git and read the ledger; the writes append to
+  // the intent history. One limiter per route, so reads cannot starve a write.
+  const limiter = (limit: number) => rateLimit({ windowMs: 60_000, limit, standardHeaders: false, legacyHeaders: false });
+
+  app.get("/api/v1/delivery/intents", limiter(60), async (req, res) => {
+    if (deps.rejectIfRemote(req, res)) return;
+    const intents = deps.getIntentService();
+    if (!intents) { res.status(503).json(NO_SERVICE); return; }
+    res.json(await intents.listIntents());
+  });
+
+  app.get("/api/v1/delivery/intents/:id", limiter(60), async (req, res) => {
+    if (deps.rejectIfRemote(req, res)) return;
+    const id = IntentIdSchema.safeParse(req.params.id);
+    if (!id.success) { res.status(400).json({ ok: false, error: "id must be an intent id" }); return; }
+    const ctx = contextOf(deps, res);
+    if (!ctx) return;
+    const view = await assessIntentDelivery(ctx, id.data);
+    if (view.integrity === "valid" && !view.found) { res.status(404).json({ ok: false, error: "No such intent in this workspace." }); return; }
+    res.json(view);
+  });
+
+  app.get("/api/v1/delivery/candidates", limiter(60), (req, res) => {
+    if (deps.rejectIfRemote(req, res)) return;
+    const ctx = contextOf(deps, res);
+    if (!ctx) return;
+    res.json(deliveryCandidates(ctx));
+  });
+
+  for (const action of ["link", "unlink"] as const) {
+    app.post(`/api/actions/delivery/${action}`, limiter(20), async (req, res) => {
+      if (deps.rejectIfRemote(req, res)) return;
+      try { await writeEdge(req, res, deps, action); } catch {
+        if (!res.headersSent) res.status(500).json({ ok: false, error: "The link could not be recorded." });
+      }
+    });
+  }
 }

@@ -213,6 +213,40 @@ export function architectureIndexBootstrapRequest(
   };
 }
 
+/** #532 part B: dialog titles for the delivery link routes (by action and edge). */
+export const DELIVERY_LINK_TITLES = {
+  implements: "Link this architecture document to the active intent?",
+  "committed-under": "Link this commit to the active intent?",
+  unlink: "Remove this link from the active intent?",
+} as const;
+
+/**
+ * #532 part B (plan-532b LD7): record or remove a delivery edge. `facts` are server-side values
+ * (document path and hash, HEAD at link time, commit, tree, branch), recorded exactly as shown.
+ */
+export function deliveryLinkRequest(
+  action: "link" | "unlink",
+  edge: "implements" | "committed-under",
+  intent: { id: string; purpose: string },
+  facts: string[],
+  source: "console" | "command" = "console",
+): OperatorActionRequest {
+  const lines = [
+    `Intent: ${sanitizeDialogText(intent.purpose)} (${sanitizeDialogText(intent.id, 60)})`,
+    `Relationship: ${edge === "implements" ? "implements an architecture document" : "committed under a commit"}`,
+    ...facts.map((f) => sanitizeDialogText(f)),
+    "",
+    action === "link"
+      ? "FailSafe records this link in the intent history. Nothing leaves this machine."
+      : "FailSafe records the removal in the intent history; the original link entry stays in the history.",
+  ];
+  return {
+    title: action === "unlink" ? DELIVERY_LINK_TITLES.unlink : DELIVERY_LINK_TITLES[edge],
+    approveLabel: action === "unlink" ? "Remove link" : "Link",
+    detail: source === "console" ? withFooter(lines) : lines.join("\n"),
+  };
+}
+
 export type ConfirmationFailure = "unwired" | "busy" | "declined";
 
 /** HTTP status + body for a non-approved confirmation; nothing was recorded. */

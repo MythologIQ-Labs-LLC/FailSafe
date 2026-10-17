@@ -14,6 +14,8 @@
 import type { Application, Request, Response } from "express";
 import type { ApiRouteDeps } from "./types";
 
+export const COULD_NOT_READ = "FailSafe could not read the active intent";
+
 export function registerCommitCheckRoute(
   app: Application,
   deps: ApiRouteDeps,
@@ -37,7 +39,18 @@ export function registerCommitCheckRoute(
         res.status(200).json({ allow: true });
         return;
       }
-      if (hub.activeIntent) {
+      // #532 part B (B283): the active intent comes from the IntentService, read at
+      // request time. The hub payload has no activeIntent key, so reading it refused
+      // every commit in enforce mode. Absent or failing reads block (HTTP 200).
+      let active: unknown;
+      try {
+        if (!deps.getActiveIntent) throw new Error("intent service not wired");
+        active = await deps.getActiveIntent();
+      } catch {
+        res.status(200).json({ allow: false, reason: COULD_NOT_READ });
+        return;
+      }
+      if (active) {
         res.status(200).json({ allow: true });
         return;
       }

@@ -349,6 +349,7 @@ export class ConsoleServer {
       getOutputChannel: () => this.outputChannel,
       getOperatorConfirmer: () => this.operatorConfirmer,
       getArchitectureIndexPath: () => this.architectureIndexPath?.(),
+      getIntentService: () => this.intentService,
       getAgentTimelineService: () => this.agentTimelineService as any,
       getAgentHealthIndicator: () => this.agentHealthIndicator as any,
       getAgentRunRecorder: () => this.agentRunRecorder as any,

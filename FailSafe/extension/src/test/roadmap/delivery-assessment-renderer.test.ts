@@ -18,6 +18,7 @@ const ACTIVE = '11111111-1111-4111-8111-111111111111';
 const SEALED = '22222222-2222-4222-8222-222222222222';
 const SHA = 'a'.repeat(40);
 const TREE = 'b'.repeat(40);
+const SHA2 = '9'.repeat(40);
 
 function view(id: string, linkable: boolean, purpose: string) {
   return {
@@ -48,8 +49,13 @@ const INTENTS = {
   ],
 };
 const CANDIDATES = {
-  architecture: { state: 'present', rows: [{ id: 'runtime', domain: 'runtime', docPath: 'docs/architecture/RUNTIME.md', status: 'canonical' }] },
-  commits: { state: 'ok', head: SHA, branch: 'main', commits: [{ sha: SHA, subject: 'seed <script>alert(1)</script>' }] },
+  architecture: { state: 'present', rows: [
+    { id: 'runtime', domain: 'runtime', docPath: 'docs/architecture/RUNTIME.md', status: 'canonical' },
+    { id: 'storage', domain: 'storage', docPath: 'docs/architecture/STORAGE.md', status: 'proposed' },
+  ] },
+  commits: { state: 'ok', head: SHA2, branch: 'main', commits: [
+    { sha: SHA2, subject: 'seed <script>alert(1)</script>' }, { sha: SHA, subject: 'older' },
+  ] },
 };
 
 interface G { window?: unknown; document?: unknown; fetch?: unknown }
@@ -133,20 +139,24 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
     } finally { ctx.cleanup(); }
   });
 
-  test('the active intent offers Link architecture, Link commit and Unlink; each posts once with the picked target', async () => {
+  test('the active intent offers Link architecture, Link commit and Unlink; already-linked targets are not offered; each posts once', async () => {
     const ctx = setupDom();
     try {
       const r = new DeliveryAssessmentRenderer('workspace');
       await r.refresh();
       const d = ctx.doc;
       assert.equal(d.querySelectorAll('.cc-dlv-unlink').length, 2);
+      const archOptions = [...d.querySelectorAll('.cc-dlv-arch-pick option')].map((o) => (o as HTMLOptionElement).value);
+      assert.deepEqual(archOptions, ['storage'], 'the linked row is not offered again');
+      const commitOptions = [...d.querySelectorAll('.cc-dlv-commit-pick option')].map((o) => (o as HTMLOptionElement).value);
+      assert.deepEqual(commitOptions, [SHA2], 'the linked commit is not offered again');
       (d.querySelector('.cc-dlv-link-arch') as HTMLButtonElement).click();
       await new Promise((res) => setTimeout(res, 20));
       (d.querySelector('.cc-dlv-link-commit') as HTMLButtonElement).click();
       await new Promise((res) => setTimeout(res, 20));
       assert.deepEqual(ctx.posted, [
-        { url: '/api/actions/delivery/link', body: { intentId: ACTIVE, edge: 'implements', target: 'runtime' } },
-        { url: '/api/actions/delivery/link', body: { intentId: ACTIVE, edge: 'committed-under', target: SHA } },
+        { url: '/api/actions/delivery/link', body: { intentId: ACTIVE, edge: 'implements', target: 'storage' } },
+        { url: '/api/actions/delivery/link', body: { intentId: ACTIVE, edge: 'committed-under', target: SHA2 } },
       ]);
       assert.ok(ctx.fetched.every((u) => u.startsWith('/api/')), 'every fetch target is relative');
     } finally { ctx.cleanup(); }

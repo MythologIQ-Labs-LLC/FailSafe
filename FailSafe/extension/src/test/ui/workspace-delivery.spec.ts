@@ -107,6 +107,7 @@ test.describe('#532 Workspace › Delivery sub-view', () => {
     await expect(view.locator('.cc-dlv-step[data-key="governance"]')).toHaveAttribute('data-status', 'recorded');
     await expect(view.locator('.cc-dlv-step[data-key="receipt"]')).toHaveAttribute('data-status', 'unavailable');
 
+    await view.locator('.cc-dlv-arch-pick').selectOption('runtime');
     await view.locator('.cc-dlv-link-arch').click();
     await expect(view.locator('.cc-dlv-step[data-key="architecture"]')).toHaveAttribute('data-status', 'recorded');
     await page.locator('#workspace .cc-dlv-link-commit').click();

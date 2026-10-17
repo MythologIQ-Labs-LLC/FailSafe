@@ -23,6 +23,7 @@ import { TabGroup } from './modules/tab-group.js';
 import { TrackerEmbedRenderer } from './modules/tracker-embed-renderer.js';
 import { TrackerTaxonomyRenderer } from './modules/tracker-taxonomy-renderer.js';
 import { ArchitectureIndexRenderer } from './modules/architecture-index-renderer.js';
+import { DeliveryAssessmentRenderer } from './modules/delivery-assessment-renderer.js';
 import { updateTickers, updateBootstrapBanner } from './modules/tickers.js';
 import { setWorkspaceRegistryClient, loadWorkspaceRegistry, initWorkspaceSelector } from './modules/workspace-registry.js';
 import { governanceSubviewForRoute, parseCommandCenterHash } from './modules/command-center-deeplink.js';
@@ -52,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
       { key: 'tracker',    label: 'Tracker',    renderer: new TrackerEmbedRenderer('workspace') },
       { key: 'taxonomy',   label: 'Taxonomy',   renderer: new TrackerTaxonomyRenderer('workspace') },
       { key: 'architecture', label: 'Architecture', renderer: new ArchitectureIndexRenderer('workspace') },
+      { key: 'delivery',   label: 'Delivery',   renderer: new DeliveryAssessmentRenderer('workspace') },
     ]),
     integrations: new TabGroup('integrations', [
       { key: 'catalog',    label: 'Catalog',     renderer: new IntegrationCatalogRenderer('integrations') },
