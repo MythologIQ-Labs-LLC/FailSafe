@@ -1,5 +1,6 @@
 # Governance Index
 
+**Last Reviewed**: 2026-10-17 (SUBSTANTIATE — **#530 architecture index foundation** (`plan-530-architecture-index.md`): docs/ARCHITECTURE_INDEX.md registered in Tier 1 with its validator; four normative docs registered; seal #771.)
 **Last Reviewed**: 2026-10-17 (IMPLEMENT — **#530 architecture index** (`plan-530-architecture-index.md`, Tier 4 plans glob): registered `docs/ARCHITECTURE_INDEX.md` in Tier 1; registered the four canonical design documents that had no tier row (`docs/integrations/INTEGRATION_STRUCTURE_STANDARD.md` and `docs/design/DEVELOPMENT_TRACKER_STANDARD.md` in Tier 2, `docs/design/SHADOW_GENOME_UI.md` and `docs/specs/VOICE_BRAINSTORM_SPEC.md` in Tier 5); Publication status counts re-counted (46 of 77 published, 15 unpublished, 16 shapes). META_LEDGER DAMAGED carried under the owner's bounded per-cycle override; normal governance NOT restored (#467).)
 **Last Reviewed**: 2026-10-17 (SUBSTANTIATE — **v6.0.8 integration, LD23 fourth follow-up** (`plan-v608-integration.md`): T8 private PowerShell copy; seal #767 on ac66f10c.)
 **Last Reviewed**: 2026-10-17 (SUBSTANTIATE — **v6.0.8 integration, LD23 third follow-up** (`plan-v608-integration.md`): #473 refill rows and T8 diagnostics; seal #765 on 7f4b88c2.)

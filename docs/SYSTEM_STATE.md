@@ -1,6 +1,6 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-10-17 (v6.0.8 integration on `release/v6.0.8-rc`: lanes A-D, the combined-review, full-run, CI timer, temp-hygiene and POSIX executable-trust fixes, version 6.0.8; ledger #705-#767, seal #767; code candidate `ac66f10c`; not merged, not tagged, not published)
+**Last Updated:** 2026-10-17 (v6.0.8 published from main `b5d490fd` and verified 108/108; #530 architecture index foundation sealed on PR #533's branch; ledger #705-#771, seal #771; not yet merged)
 **Active local review:** `fix/system-state-currency-sprint2` — this cycle. Restores the Tier 1 freshness contract and adds `system-state-currency.test.cjs`, the first check that asserts it. Prior to this cycle no test anywhere read this file's content.
 **Prior local review:** `fix/qor169-sprint1-seal-unblock` — MERGED to `main` as `1e1215cc` (PR #448). qor-logic 0.163.1 → 0.169.0; `.qorlogic/config.json` created, which is what allows a seal to complete at all; five vacuously-passing governance controls identified; TTS timeout assertion made deterministic and falsifying. Seal Entry #602.
 **Open PRs:** #442 (Bicameral upstream row error state), #443 (plan-grep-lint regex recognition), #444 (#367 per-engine provenance), #445 (#242 Shadow Genome severity aria — supersedes #440, closed as duplicate), #446 + #447 (dependabot). #447's blocker — a wall-clock TTS assertion — was removed by Entry #602.
@@ -16,6 +16,8 @@
 
 ## 2026-10-17 — v6.0.8 integration, POSIX executable-trust fix (release/v6.0.8-rc, not tagged, not published)
 
+- v6.0.8 published 2026-10-17: tag `v6.0.8` on `b5d490fd`, release run 39052325218; GitHub Release, VS Code Marketplace and Open VSX verified (rv 108/108, lifecycle on the Marketplace download).
+- #530 architecture index foundation (plan-530, audit PASS #769, seal #771): docs/ARCHITECTURE_INDEX.md registry and `check-architecture-index.cjs`, run by test:node.
 - After seal #753: the first Linux test:node run showed a planted interpreter on PATH outside the workspace was run. On macOS and Linux the trusted executable resolver now refuses a file or folder other users can write or another user owns (LD23); group-writable stays allowed and Windows ACLs are not checked (B239-B242).
 - Candidate `f1d15ea3`: npm test 5001 passing / 0 failing / 18 pending on the re-run (the first run hit the RiskStore rename stub, B243); test:node 727/716 (FX946 baseline, 9 POSIX rows skipped); test:ui 209/0/4; eight 6.0.8 VSIXs verified; packaged SQLite loads in Node and Electron; rv lifecycle 12/12 from published 6.0.7. The POSIX trust rows run on Linux CI.
 - Ledger #705-#759 (integration seal #759, after #746 and #753); the ledger stays DAMAGED (#467) under the bounded per-cycle override.
