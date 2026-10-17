@@ -148,7 +148,7 @@ definition: |
   the published repository, as distinct from one that is missing. .gitignore:52-56 heads its stanza
   "Private planning docs, transfer files, and governance records (licensing TBD)" and ignores docs/
   and .failsafe/ wholesale, so both trees are private by default and published by exception via
-  git add -f - a deliberate act performed on 38 of the 68 paths the index registers. An unpublished
+  git add -f - a deliberate act performed on 46 of the 77 paths the index registers. An unpublished
   row is therefore not drift, and whether a given doc SHOULD be published is a licensing decision the
   operator has explicitly deferred. The distinction matters because without it a reader of a clone
   cannot separate 15 intentionally-private rows from a genuinely broken one: confidentiality.md was
