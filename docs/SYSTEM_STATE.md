@@ -1,6 +1,6 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-10-17 (v6.0.8 published and verified; #530 and the first #531 slice merged to main c36b9ee2; #532 part A integration contracts sealed on feat/532-integration-contracts; ledger #705-#782, seal #782; not yet merged)
+**Last Updated:** 2026-10-17 (v6.0.8 published and verified; #532 part A merged to main 75c26fc5; #532 part B delivery assessment sealed on feat/532b-delivery-assessment; ledger #705-#785, seal #785; not yet merged)
 **Active local review:** `fix/system-state-currency-sprint2` — this cycle. Restores the Tier 1 freshness contract and adds `system-state-currency.test.cjs`, the first check that asserts it. Prior to this cycle no test anywhere read this file's content.
 **Prior local review:** `fix/qor169-sprint1-seal-unblock` — MERGED to `main` as `1e1215cc` (PR #448). qor-logic 0.163.1 → 0.169.0; `.qorlogic/config.json` created, which is what allows a seal to complete at all; five vacuously-passing governance controls identified; TTS timeout assertion made deterministic and falsifying. Seal Entry #602.
 **Open PRs:** #442 (Bicameral upstream row error state), #443 (plan-grep-lint regex recognition), #444 (#367 per-engine provenance), #445 (#242 Shadow Genome severity aria — supersedes #440, closed as duplicate), #446 + #447 (dependabot). #447's blocker — a wall-clock TTS assertion — was removed by Entry #602.
@@ -16,6 +16,7 @@
 
 ## 2026-10-17 — v6.0.8 integration, POSIX executable-trust fix (release/v6.0.8-rc, not tagged, not published)
 
+- #532 part B (plan-532b, audit PASS #783, seal #785): Workspace > Delivery links an imported intent to an architecture document and commits and shows an evidence-backed five-step assessment, local only; commit-check reads the real active intent (B283).
 - #532 part A (plan-532a, audit PASS #780, seal #782): 30 integration customer-value contracts, the integration portfolio (recommended dispositions pending the owner), three vertical scenarios and a graph specification; findings filed as B259-B282.
 - #531 first slice (plan-531, audit PASS #773, seal #775): FailSafe discovers, bootstraps (approved, never overwriting) and governs an architecture index in the workspace; Workspace Architecture view; L3 proposals with ledger evidence.
 - v6.0.8 published 2026-10-17: tag `v6.0.8` on `b5d490fd`, release run 39052325218; GitHub Release, VS Code Marketplace and Open VSX verified (rv 108/108, lifecycle on the Marketplace download).
