@@ -14,6 +14,12 @@
 
 ---
 
+## 2026-10-17 — v6.0.8 integration, POSIX executable-trust fix (release/v6.0.8-rc, not tagged, not published)
+
+- After seal #753: the first Linux test:node run showed a planted interpreter on PATH outside the workspace was run. On macOS and Linux the trusted executable resolver now refuses a file or folder other users can write or another user owns (LD23); group-writable stays allowed and Windows ACLs are not checked (B239-B242).
+- Candidate `f1d15ea3`: npm test 5001 passing / 0 failing / 18 pending on the re-run (the first run hit the RiskStore rename stub, B243); test:node 727/716 (FX946 baseline, 9 POSIX rows skipped); test:ui 209/0/4; eight 6.0.8 VSIXs verified; packaged SQLite loads in Node and Electron; rv lifecycle 12/12 from published 6.0.7. The POSIX trust rows run on Linux CI.
+- Ledger #705-#759 (integration seal #759, after #746 and #753); the ledger stays DAMAGED (#467) under the bounded per-cycle override.
+
 ## 2026-10-16 — v6.0.8 integration (release/v6.0.8-rc, not tagged, not published)
 
 - Program #521, v6.0.8: lanes D (repository hygiene, FailSafe Pro retired), C (runtime and reliability: #471, #472, #528, release draft identity), A (governance and security: #468, #469, B211, B213, B214) and B (integrations: #474, #477, #479, #480) merged without rewriting, each sealed in its own session (#705-#736).
@@ -21,9 +27,7 @@
 - C0 `76641298`: npm test 5000 passing / 0 failing / 18 pending; test:node 713/721 (FX946 baseline); eight 6.0.8 VSIXs verified; packaged SQLite loads in Node and Electron; rv lifecycle 12/12 from published 6.0.7.
 - After seal #746: PR #529's Linux CI failed the #476 N1 row (a 1 ms timeout git could beat); a timer seam makes it deterministic (LD18). The re-run then filled C: from a test that left 0.8 GB and two junctions to the host Python per run; v6.0.8 tests now unlink links and remove their temp folders (LD20), checked by a temp-entry classification (B236 files the older suites).
 - Candidate `717d8254`: npm test 5001 passing / 0 failing / 18 pending; test:node 715/723 (FX946 baseline); test:ui 208/1/4 (FX589 timing, B238); eight 6.0.8 VSIXs verified; packaged SQLite loads in Node and Electron; rv lifecycle 12/12 from published 6.0.7.
-- After seal #753: the first Linux test:node run showed a planted interpreter on PATH outside the workspace was run. On macOS and Linux the trusted executable resolver now refuses a file or folder other users can write or another user owns (LD23); group-writable stays allowed and Windows ACLs are not checked (B239-B242).
-- Candidate `f1d15ea3`: npm test 5001 passing / 0 failing / 18 pending on the re-run (the first run hit the RiskStore rename stub, B243); test:node 727/716 (FX946 baseline, 9 POSIX rows skipped); test:ui 209/0/4; eight 6.0.8 VSIXs verified; packaged SQLite loads in Node and Electron; rv lifecycle 12/12 from published 6.0.7. The POSIX trust rows run on Linux CI.
-- Ledger #705-#759 (integration seal #759, after #746 and #753); the ledger stays DAMAGED (#467) under the bounded per-cycle override.
+- Ledger #705-#753 (integration seal #753, after #746); superseded for the candidate by seal #759 (see 2026-10-17).
 
 ## 2026-10-15 — v6.0.7 final integration (release/v6.0.7-rc2, not tagged, not published)
 
