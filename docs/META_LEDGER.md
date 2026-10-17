@@ -32919,3 +32919,56 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `976b9bd04ce0edd607524b2973e46ad5676e9e0ca4b27d53e90cb5de2756c991`
 
 **Decision**: SESSION SEAL for the fourth LD23 follow-up (implementation #766) after seal #765. Reality = Promise, with disclosures. release/v6.0.8-rc carries c67c95fe (merge ac66f10c). Disclosures: bounded damaged-ledger override applied to this integration cycle (#467 unresolved); a test-only follow-up after seal #765; the full LD6 run was not repeated, the focused local checks and PR #529's Linux test:all on the pushed head cover it; the GitHub-hosted runner installs PowerShell world-writable; LD23 refuses it (B241) and T8 runs a private user-only copy on POSIX; test:node gains one row (the walker check): 728 tests; D16 is read from the next Linux log (728 tests, 700 passed, 0 failed, 28 skipped); Linux test:ui has not yet run; seals #746, #753, #759, #761, #763 and #765 are left unedited. Next: one push moving PR #529's head, Linux CI read against D16, then the LD8 merge. Not merged, not tagged, not published.
+
+---
+
+### Entry #768: GATE TRIBUNAL - plan-530-architecture-index (iteration 1) - VETO
+
+**Timestamp**: 2026-10-17T17:26:59Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-17T1719-5eb9bc`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `39eefc03f4c8453e9aec33679200244ac562ff579aaafce0404d031372abd2ed`
+**Previous Hash**: `976b9bd04ce0edd607524b2973e46ad5676e9e0ca4b27d53e90cb5de2756c991`
+**Chain Hash (Merkle seal)**: `17679894e0efaf5a68d56888caee8a8c6b9d3b5620c04cb1dab83837dc980ed3`
+
+**Decision**: VETO on plan-530-architecture-index.md iteration 1 (sha256 82cc253d), the #530 architecture index foundation on PR #533's branch. Fresh Option B architect-reviewer. Blocking: the locked registry columns omit plan, ADR, contract and update-event relationships (#530 items 1, 3, 4); legacy and migration notes (#530 item 6) are not planned and the authority-map conversion contradicts the listed rows; the duplicate check's existing-doc link is undefined for a realistic duplicate in a folder with no canonical row. Fourteen should-fix findings include the new test file being gitignored (docs/ at any depth), a wrong README install path, a vacuous-pass risk in the golden row, and the off-ramp itself being unchecked. Next: revise and re-audit. Tribunal entry held by the lead and appended at implementation in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #769: GATE TRIBUNAL - plan-530-architecture-index (iteration 2) - PASS
+
+**Timestamp**: 2026-10-17T17:34:27Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-17T1719-5eb9bc`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override, disclosed per cycle (#467)
+
+**Content Hash**: `4408065c6f84ede60372990c0536ab2bc9551b22a66e05c951e1d4d184605e77`
+**Previous Hash**: `17679894e0efaf5a68d56888caee8a8c6b9d3b5620c04cb1dab83837dc980ed3`
+**Chain Hash (Merkle seal)**: `05326ecb0d51d3fe36ecc9ce55a336e8c94c0854b3f322388bbe8617cbe913e5`
+
+**Decision**: PASS on plan-530-architecture-index.md iteration 2 (sha256 d8651fa4), the #530 architecture index foundation: a machine-readable registry with governance, contract, verification and update-event relationships, legacy and historical prefixes, and one validator with 18 failure codes wired into test:node. Fresh Option B architect-reviewer; all three iteration 1 blockers resolved. Should-fix findings folded into implementation: a hand-rolled glob matcher (minimatch is not resolvable from scripts), the index row cites a ledger entry not the gitignored plan, four (not five) normative docs lack a GOVERNANCE_INDEX tier row and are registered now with code 18 as a hard failure, path-shaped values and link bases defined, external links skipped, unpublished docs as code spans, a machine-readable legacy block, required updated_by, Publication-status counts, Tier 1 Last Updated marker, ranked suggestions, and golden-row falsifiers. Next: implement on PR #533's branch. Tribunal entry held by the lead and appended at implementation in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #770: IMPLEMENTATION - plan-530-architecture-index
+
+**Timestamp**: 2026-10-17T18:53:25Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-17T1719-5eb9bc`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-17T1719-5eb9bc/implement.json`
+
+**Content Hash**: `186ff5ec5ddb3fa8a8b0f5c40b037b006575a61f4f17699ca3f4915ee80f59aa`
+**Previous Hash**: `05326ecb0d51d3fe36ecc9ce55a336e8c94c0854b3f322388bbe8617cbe913e5`
+**Chain Hash (Merkle seal)**: `82d205a78d4240178527f42c85bebe8d79f323da7bda254a9041e8703b453b82`
+
+**Decision**: IMPLEMENTATION of plan-530-architecture-index.md iteration 2 (audit PASS #769, sha256 d8651fa4), the #530 architecture index foundation on PR #533's branch fix/architecture-index-spine-530. The branch merges main b5d490fd (v6.0.8, published 2026-10-17) as 86333c0b; PR #533's six commits are unchanged. 67e2bb11: docs/ARCHITECTURE_INDEX.md becomes a machine-readable registry (16 rows: 9 normative documents, 7 non-design sources routed by domain), a fenced architecture-normative block (12 globs), a fenced architecture-legacy block (7 prefixes), a decision path with five statuses and a Tier 1 Last Updated marker; GOVERNANCE_INDEX registers the index (Tier 1) and the four canonical docs that lacked a tier row (INTEGRATION_STRUCTURE_STANDARD and DEVELOPMENT_TRACKER_STANDARD in Tier 2, SHADOW_GENOME_UI and VOICE_BRAINSTORM_SPEC in Tier 5), with Publication status recounted (46 of 77). 019f2704: FailSafe/extension/scripts/check-architecture-index.cjs (hand-rolled case-insensitive glob matcher, git ls-files -z, 19 failure codes including unregistered-normative with ranked existing-doc suggestions ending in the registry link, missing-off-ramp, legacy exclusion and dual registration as a hard failure) and src/test/docs/architecture-index.test.cjs (26 rows, run by test:node); the PR's tools/validate-architecture-index.* are removed. 73bb756a: README Contributing install path, FX1001, B245-B249, CHANGELOG [Unreleased]. 48c17caf: BACKLOG marks v6.0.8 released and files B250. Evidence, counts from logs: red first (module missing, 0/1); the test 26/26; all 31 mutants of the script red on their target rows with the unmutated control 26/26; the golden row red with a normative row removed, an empty tracked list and a changed glob count; docs and governance suites 49/49 then 31/31 after the backlog commit; tsc 0; lint 0 errors; test:runner-coverage claims the test (635 files, 72 under test:node); test:node 754 tests, 743 passed, 2 failed (FX946 baseline), 9 skipped (a first run had one more failure, the LD20 child row whose T13 (h) child failed, which passed alone and on the re-run); release-gate --preflight pass; docs coherence pass; the CLI passes on the repository (16 rows, 9 normative, 2024 tracked); a simulated duplicate docs/architecture/RUNTIME_COMPOSITION.md fails unregistered-normative with docs/ARCHITECTURE_PLAN.md as its first suggestion. Deviations: a 19th code missing-section; docs/wiki/FailSafe-Pro.md named in prose only (pro-retirement allows the name only in listed files); suggestion order is as audited (same folder first), filed as B250.
