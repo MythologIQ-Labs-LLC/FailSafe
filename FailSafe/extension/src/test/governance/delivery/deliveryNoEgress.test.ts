@@ -48,16 +48,24 @@ function installStubs(): Stubs {
   const stubs: Stubs = { counts: {}, stacks: {}, foreign: 0, inRunner: { value: false }, restore: () => undefined };
   const restores: Array<() => void> = [];
   const patch = (obj: Record<string, unknown>, key: string, label: string, countWhen: () => boolean = () => true): void => {
-    const original = obj[key] as (...a: unknown[]) => unknown;
+    // Another suite may have removed the global (the voice-pack helpers delete globalThis.fetch on
+    // restore), so a missing original is still stubbed: the call is counted, then fails as it would.
+    const had = Object.prototype.hasOwnProperty.call(obj, key);
+    const original = obj[key] as ((...a: unknown[]) => unknown) | undefined;
     stubs.counts[label] = 0;
     stubs.stacks[label] = [];
     obj[key] = function (this: unknown, ...a: unknown[]) {
       const stack = String(new Error('call').stack);
       if (!fromFailSafe(stack)) stubs.foreign += 1;
       else if (countWhen()) { stubs.counts[label] += 1; stubs.stacks[label].push(stack); }
+      if (typeof original !== 'function') {
+        const missing = new TypeError(`${label} is not defined`);
+        if (label === 'fetch') return Promise.reject(missing);
+        throw missing;
+      }
       return original.apply(this, a);
     };
-    restores.push(() => { obj[key] = original; });
+    restores.push(() => { if (had) obj[key] = original; else delete obj[key]; });
   };
   patch(globalThis as unknown as Record<string, unknown>, 'fetch', 'fetch');
   patch(http, 'request', 'http.request'); patch(http, 'get', 'http.get');
