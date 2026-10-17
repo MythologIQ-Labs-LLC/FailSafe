@@ -139,6 +139,20 @@ suite('IntentService delivery edges (#532 LD2)', () => {
     assert.deepEqual(replayIntentEdges(lines(), intent.id), []);
   });
 
+  test('a CREATED entry whose intent id is not a uuid (chain recomputed) is never used as an archive path', async () => {
+    const s = svc();
+    // A sealed-looking intent file outside the archive folder that a traversal id would reach.
+    const outside = path.join(root, '.failsafe', 'manifest', 'outside.json');
+    const intent = await s.createIntent(params());
+    fs.writeFileSync(outside, JSON.stringify({ ...JSON.parse(fs.readFileSync(path.join(manifest, 'active_intent.json'), 'utf8')), status: 'SEALED' }));
+    await history().appendEntry({ intentId: '../outside', timestamp: new Date().toISOString(), event: 'CREATED', actor: 'agent' } as never);
+    assert.deepEqual(await history().verifyChainIntegrity(), { valid: true });
+    const listing = await s.listIntents();
+    assert.equal(listing.integrity, 'valid');
+    assert.deepEqual((listing as { intents: Array<{ id: string }> }).intents.map((i) => i.id), [intent.id]);
+    assert.deepEqual(await s.getIntentRecord('../outside'), { integrity: 'valid', record: null });
+  });
+
   test('listIntents lists the active intent and archived sealed intents from CREATED entries', async () => {
     const s = svc();
     const first = await s.createIntent(params());

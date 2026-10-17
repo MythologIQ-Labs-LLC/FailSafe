@@ -2,7 +2,7 @@
 import { randomUUID } from 'node:crypto';
 import {
   Intent, IntentType, IntentScope, IntentMetadata, IntentStatus, IntentEvidence, IntentSchema,
-  IntentEdgeKind, IntentHistoryEntry, IntentEdgeDetailsSchema,
+  IntentEdgeKind, IntentHistoryEntry, IntentEdgeDetailsSchema, IntentIdSchema,
 } from './types/IntentTypes';
 import { IntentStore } from './IntentStore';
 import { IntentHistoryLog } from './IntentHistoryLog';
@@ -188,8 +188,9 @@ export class IntentService {
     }
   }
 
-  /** #532: an archived intent, or null when absent or unreadable. */
+  /** #532: an archived intent, or null when absent or unreadable. Only a uuid is ever used as a file name. */
   private archivedIntent(intentId: string): Intent | null {
+    if (!IntentIdSchema.safeParse(intentId).success) return null;
     try {
       const parsed = IntentSchema.safeParse(this.store.getArchivedIntent(intentId));
       return parsed.success ? parsed.data : null;
