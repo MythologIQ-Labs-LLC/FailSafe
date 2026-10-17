@@ -1,5 +1,6 @@
 # Governance Index
 
+**Last Reviewed**: 2026-10-17 (SUBSTANTIATE — **v6.0.8 integration, LD23 fourth follow-up** (`plan-v608-integration.md`): T8 private PowerShell copy; seal #767 on ac66f10c.)
 **Last Reviewed**: 2026-10-17 (SUBSTANTIATE — **v6.0.8 integration, LD23 third follow-up** (`plan-v608-integration.md`): #473 refill rows and T8 diagnostics; seal #765 on 7f4b88c2.)
 **Last Reviewed**: 2026-10-17 (SUBSTANTIATE — **v6.0.8 integration, LD23 second follow-up** (`plan-v608-integration.md`): privateNode copies a real node under Electron; seal #763 on d0555a7f.)
 **Last Reviewed**: 2026-10-17 (SUBSTANTIATE — **v6.0.8 integration, LD23 follow-up** (`plan-v608-integration.md`): install-detector rows use a private node on POSIX; seal #761 on ec793f02.)

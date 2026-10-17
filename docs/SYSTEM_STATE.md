@@ -1,6 +1,6 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-10-17 (v6.0.8 integration on `release/v6.0.8-rc`: lanes A-D, the combined-review, full-run, CI timer, temp-hygiene and POSIX executable-trust fixes, version 6.0.8; ledger #705-#765, seal #765; code candidate `7f4b88c2`; not merged, not tagged, not published)
+**Last Updated:** 2026-10-17 (v6.0.8 integration on `release/v6.0.8-rc`: lanes A-D, the combined-review, full-run, CI timer, temp-hygiene and POSIX executable-trust fixes, version 6.0.8; ledger #705-#767, seal #767; code candidate `ac66f10c`; not merged, not tagged, not published)
 **Active local review:** `fix/system-state-currency-sprint2` — this cycle. Restores the Tier 1 freshness contract and adds `system-state-currency.test.cjs`, the first check that asserts it. Prior to this cycle no test anywhere read this file's content.
 **Prior local review:** `fix/qor169-sprint1-seal-unblock` — MERGED to `main` as `1e1215cc` (PR #448). qor-logic 0.163.1 → 0.169.0; `.qorlogic/config.json` created, which is what allows a seal to complete at all; five vacuously-passing governance controls identified; TTS timeout assertion made deterministic and falsifying. Seal Entry #602.
 **Open PRs:** #442 (Bicameral upstream row error state), #443 (plan-grep-lint regex recognition), #444 (#367 per-engine provenance), #445 (#242 Shadow Genome severity aria — supersedes #440, closed as duplicate), #446 + #447 (dependabot). #447's blocker — a wall-clock TTS assertion — was removed by Entry #602.
@@ -22,6 +22,7 @@
 - Follow-up after seal #759: PR #529's Linux CI refused the runner's world-writable tool-cache node in two install-detector rows, which now use a private node (`ec793f02`); ledger #705-#761, seal #761.
 - Second follow-up after seal #761: the install-detector rows' private node was a copy of the extension host's Electron binary; privateNode now copies a real node (`d0555a7f`); B244 files the #473 ledger timing row; ledger #705-#763, seal #763.
 - Third follow-up after seal #763: Linux test:node ran for the first time and every LD23 security row passed; the #473 refill rows use their own tag (identical same-millisecond rows); T8 reports every PowerShell rejection (`7f4b88c2`); ledger #705-#765, seal #765.
+- Fourth follow-up after seal #765: the hosted runner's PowerShell is world-writable (0777) and LD23 refuses it; T8 runs a private user-only copy on POSIX (`ac66f10c`); ledger #705-#767, seal #767.
 
 ## 2026-10-16 — v6.0.8 integration (release/v6.0.8-rc, not tagged, not published)
 
