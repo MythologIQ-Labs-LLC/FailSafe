@@ -1,6 +1,9 @@
 // File: extension/src/governance/IntentService.ts
 import { randomUUID } from 'node:crypto';
-import { Intent, IntentType, IntentScope, IntentMetadata, IntentStatus, IntentEvidence, IntentSchema } from './types/IntentTypes';
+import {
+  Intent, IntentType, IntentScope, IntentMetadata, IntentStatus, IntentEvidence, IntentSchema,
+  IntentEdgeKind, IntentHistoryEntry,
+} from './types/IntentTypes';
 import { IntentStore } from './IntentStore';
 import { IntentHistoryLog } from './IntentHistoryLog';
 import { SessionManager } from './SessionManager';
@@ -19,6 +22,52 @@ export interface ExternalRefImport {
 export type ExternalRefLookup =
   | { integrity: 'valid'; entries: ExternalRefImport[] }
   | { integrity: 'invalid' };
+
+/** #532: one edge from the replay of LINKED / UNLINKED entries. */
+export interface IntentEdge {
+  edge: IntentEdgeKind;
+  target: string;
+  provenance: Record<string, unknown>;
+  linkedAt: string;
+  actor: string;
+  entryHash: string | null;
+}
+
+export interface IntentSummary {
+  id: string;
+  purpose: string;
+  type: string;
+  status: IntentStatus;
+  createdAt: string;
+  /** The intent in active_intent.json; every other listed intent is archived and SEALED. */
+  active: boolean;
+}
+
+export interface IntentRecord {
+  intent: Intent;
+  active: boolean;
+  sealed: boolean;
+  created: IntentHistoryEntry | null;
+  edges: IntentEdge[];
+}
+
+export type IntentListing = { integrity: 'valid'; intents: IntentSummary[] } | { integrity: 'invalid' };
+export type IntentRecordLookup = { integrity: 'valid'; record: IntentRecord | null } | { integrity: 'invalid' };
+export type IntentEdgeLookup = { integrity: 'valid'; edges: IntentEdge[] } | { integrity: 'invalid' };
+export type EdgeWriteRefusal = 'integrity' | 'no-active-intent' | 'not-active' | 'sealed' | 'duplicate' | 'absent' | 'invalid';
+export type EdgeWriteResult = { ok: true } | { ok: false; reason: EdgeWriteRefusal };
+
+export interface LinkEdgeParams {
+  intentId: string;
+  edge: IntentEdgeKind;
+  target: string;
+  provenance: Record<string, unknown>;
+  actor: string;
+}
+
+export function replayIntentEdges(_entries: IntentHistoryEntry[], _intentId: string): IntentEdge[] {
+  throw new Error('not implemented');
+}
 
 export class IntentService {
   private store: IntentStore;
@@ -102,6 +151,12 @@ export class IntentService {
       return { integrity: 'invalid' };
     }
   }
+
+  async listIntents(): Promise<IntentListing> { throw new Error('not implemented'); }
+  async getIntentRecord(_intentId: string): Promise<IntentRecordLookup> { throw new Error('not implemented'); }
+  async getEdges(_intentId: string): Promise<IntentEdgeLookup> { throw new Error('not implemented'); }
+  async linkEdge(_params: LinkEdgeParams): Promise<EdgeWriteResult> { throw new Error('not implemented'); }
+  async unlinkEdge(_params: Omit<LinkEdgeParams, 'provenance'>): Promise<EdgeWriteResult> { throw new Error('not implemented'); }
 
   async updateStatus(newStatus: IntentStatus, actor: string, auditVerified?: boolean): Promise<void> {
     const active = await this.getActiveIntent();

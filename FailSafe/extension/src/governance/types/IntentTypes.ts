@@ -65,8 +65,24 @@ export const IntentSchema = z.object({
 });
 
 export const IntentHistoryEventSchema = z.enum([
-  'CREATED', 'STATUS_CHANGED', 'EVIDENCE_UPDATED', 'SEALED'
+  'CREATED', 'STATUS_CHANGED', 'EVIDENCE_UPDATED', 'SEALED', 'LINKED', 'UNLINKED'
 ]);
+
+/**
+ * #532: an edge from an intent to a registered architecture document (`implements`)
+ * or to a commit (`committed-under`). Written only after the operator confirms in
+ * VS Code, as the `details` of a LINKED or UNLINKED intent-history entry, so the
+ * history hash chain covers it. `target` is the registry row id or the full commit
+ * name; it is re-validated before any use (a history line is data, not a command).
+ */
+export const IntentEdgeKindSchema = z.enum(['implements', 'committed-under']);
+export const IntentEdgeDetailsSchema = z.object({
+  edge: IntentEdgeKindSchema,
+  target: z.string().min(1).max(256),
+  provenance: z.record(z.string(), z.unknown()),
+}).strict();
+export type IntentEdgeKind = z.infer<typeof IntentEdgeKindSchema>;
+export type IntentEdgeDetails = z.infer<typeof IntentEdgeDetailsSchema>;
 
 export const IntentHistoryEntrySchema = z.object({
   intentId: IntentIdSchema,
@@ -362,7 +378,7 @@ export interface EscalateVerdict {
 export interface IntentHistoryEntry {
   intentId: IntentId;
   timestamp: string; // ISO 8601
-  event: "CREATED" | "STATUS_CHANGED" | "EVIDENCE_UPDATED" | "SEALED";
+  event: "CREATED" | "STATUS_CHANGED" | "EVIDENCE_UPDATED" | "SEALED" | "LINKED" | "UNLINKED";
   previousStatus?: IntentStatus;
   newStatus?: IntentStatus;
   actor: string; // Agent or user who triggered the event
