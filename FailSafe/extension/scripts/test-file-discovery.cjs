@@ -24,6 +24,8 @@ const TEST_FILE_RE = /\.(test|spec)\.[cm]?[jt]s$/;
  */
 function runnerFor(relPath) {
   const rel = relPath.split(path.sep).join("/");
+  // #531: its own vscode-test configuration (a temp git workspace); see src/test/vscodeTestConfigs.cjs.
+  if (rel.startsWith("extension-arch/") && rel.endsWith(".test.ts")) return "vscode-test (architecture-index configuration)";
   if (rel.endsWith(".test.ts")) return "vscode-test";
   if (rel.endsWith(".test.cjs")) return "node --test (test:node)";
   if (rel.endsWith(".test.js")) return "vscode-test (mirrored by copy-ui-js)";

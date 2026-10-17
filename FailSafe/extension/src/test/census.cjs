@@ -6,55 +6,40 @@
 // (fires on failing runs too — runner.cjs:33-35 rejects on failures, so
 // teardown alone would miss exactly the diagnostic runs) AND
 // mochaGlobalTeardown (completeness backstop); the write is idempotent.
+//
+// #531 LD7: one census per vscode-test configuration. Each configuration sets
+// FAILSAFE_TEST_CENSUS_LABEL (vscodeTestConfigs.cjs LABEL_ENV) through its
+// `env`; the census enumerates that label's files from disk with the label's
+// own patterns and writes out/test-run-census.<label>.json. It reports
+// executed-of-enumerated and lists the missing files; it does not change the
+// exit status (mocha's failures do that).
 'use strict';
 
 const fs = require('fs');
-const path = require('path');
 const Mocha = require('mocha');
+const { LABEL_ENV, censusPathFor } = require('./vscodeTestConfigs.cjs');
+const { normalizeCase, enumerateFor, writeCensus } = require('./censusCore.cjs');
 
-const EXTENSION_ROOT = path.resolve(__dirname, '..', '..');
-const OUT_TEST_DIR = path.join(EXTENSION_ROOT, 'out', 'test');
-const CENSUS_PATH = path.join(EXTENSION_ROOT, 'out', 'test-run-census.json');
+const LABEL = process.env[LABEL_ENV] || 'unlabelled';
+const CENSUS_PATH = censusPathFor(LABEL);
 
 // R4: delete any stale census at require-time. This module is require()d before
 // the run starts (runner.cjs:19-22). If a load-phase crash means run() never
-// returns, writeCensus never fires; without this, a PRIOR run's census would
+// returns, write never fires; without this, a PRIOR run's census would
 // masquerade as fresh. Removing it up front keeps absence-of-file a loud signal.
 try { fs.rmSync(CENSUS_PATH, { force: true }); } catch { /* best-effort */ }
 
 const executedFiles = new Set();
 let summaryPrinted = false;
 
-// Match runner.cjs normalizeCasing: lower-case Windows drive letters so the
-// enumerated paths compare equal to the suite.file paths mocha reports.
-function normalizeCase(p) {
-  if (process.platform === 'win32' && /^[A-Z]:/.test(p)) {
-    return p[0].toLowerCase() + p.slice(1);
-  }
-  return p;
-}
-
-// Fresh enumeration of the SAME pattern .vscode-test.mjs:29 declares
-// (files: 'out/test/**/*.test.js'), resolved against the extension root.
-function enumerateTestFiles() {
-  if (!fs.existsSync(OUT_TEST_DIR)) return [];
-  return fs.readdirSync(OUT_TEST_DIR, { recursive: true })
-    .map((rel) => path.join(OUT_TEST_DIR, String(rel)))
-    .filter((abs) => abs.endsWith('.test.js'))
-    .map(normalizeCase)
-    .sort();
-}
-
-function writeCensus() {
-  const enumerated = enumerateTestFiles();
-  const executed = Array.from(executedFiles).sort();
-  const missing = enumerated.filter((f) => !executedFiles.has(f));
-  fs.mkdirSync(path.dirname(CENSUS_PATH), { recursive: true });
-  fs.writeFileSync(CENSUS_PATH, JSON.stringify({ enumerated, executed, missing }, null, 2));
+function write() {
+  // An unknown or missing label enumerates nothing (censusCore), so the summary
+  // reads executed N/0 and the label in the file name says why.
+  const summary = writeCensus({ label: LABEL, enumerated: enumerateFor(LABEL), executed: executedFiles, censusPath: CENSUS_PATH });
   if (!summaryPrinted) {
     summaryPrinted = true;
-    const ranOfEnumerated = enumerated.length - missing.length;
-    process.stdout.write(`census: executed ${ranOfEnumerated}/${enumerated.length} (missing ${missing.length})\n`);
+    process.stdout.write(`${summary}
+`);
   }
 }
 
@@ -64,8 +49,8 @@ Mocha.prototype.run = function censusRun(fn) {
   runner.on(Mocha.Runner.constants.EVENT_SUITE_BEGIN, (suite) => {
     if (suite.file) executedFiles.add(normalizeCase(suite.file));
   });
-  runner.on(Mocha.Runner.constants.EVENT_RUN_END, writeCensus);
+  runner.on(Mocha.Runner.constants.EVENT_RUN_END, write);
   return runner;
 };
 
-exports.mochaGlobalTeardown = writeCensus;
+exports.mochaGlobalTeardown = write;
