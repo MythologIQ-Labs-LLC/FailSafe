@@ -1,5 +1,6 @@
 # Governance Index
 
+**Last Reviewed**: 2026-10-17 (SUBSTANTIATE — **v6.0.8 integration, LD23 follow-up** (`plan-v608-integration.md`): install-detector rows use a private node on POSIX; seal #761 on ec793f02.)
 **Last Reviewed**: 2026-10-17 (SUBSTANTIATE — **v6.0.8 integration, iteration 17** (`plan-v608-integration.md`, Tier 4 plans glob): LD22 and the LD23 POSIX executable-trust check after seal #753; integration seal #759 on candidate f1d15ea3.)
 **Last Reviewed**: 2026-10-16 (SUBSTANTIATE — **v6.0.8 integration, iteration 13** (`plan-v608-integration.md`, Tier 4 plans glob): the LD18 CI timer seam and the LD20-LD21 temp hygiene and full re-run after seal #746; integration seal #753 on candidate 717d8254.)
 **Last Reviewed**: 2026-10-16 (SUBSTANTIATE — **v6.0.8 integration** (`plan-v608-integration.md`, Tier 4 plans glob): lanes A-D, each sealed in its own session (#705-#736), the LD11 nonce-store containment and LD12-LD16 fixes, version 6.0.8; integration seal #746.)

@@ -32796,3 +32796,21 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `ffd7fa74257a62b6e9286154f90b06c55a5f945471523dccf2d3edd9e79e97dd`
 
 **Decision**: IMPLEMENTATION of the LD23 follow-up (plan-v608-integration.md iteration 17, audit PASS #757), after seal #759 on candidate f1d15ea3. PR #529's Linux Full Test Suite on ab3e8ca1 ran npm test: 4999 passing, 17 pending, 3 failing, census 509/509. Two failures were install-detector rows that pass command 'node' by name: on the GitHub runner the PATH node is in /opt/hostedtoolcache, which the runner image makes world-writable, so LD23 correctly refuses it; this is LD23 audit finding 1 (an assumption about the runner image that did not hold). Lane A a8b98a3c (merged as 61b58989), test only: on POSIX the two rows use a private copy of node through the existing extraRoots parameter; win32 keeps the bare name. The third failure was the v6.0.7 #473 ledger row 'tail truncation followed by more appends', whose in-session verifyChain returned true; it passed on Linux at 178fc753, its code path (LedgerManager, LedgerAnchor) is unchanged in v6.0.8 and uses no executable resolution, and its anchor store is bounded at 2 s with the test helper ignoring flushAnchor's result, so a runner stall can leave head 5 unanchored; it is re-read on the next Linux run and filed if it recurs or passes (B244). test:node did not run on that CI job because test:all stopped at npm test, so the LD23 POSIX rows have still not run on Linux. Focused checks, local, counts read from logs: on 61b58989 (a8b98a3c): tsc 0; lint 0 errors; runner coverage pass; compile pass; test:node 727 tests, 716 passed, 2 failed (FX946 baseline), 9 skipped; vscode-test --grep install-detector|bootstrapBicameral|BicameralRoute|BicameralMcpClient 128 passing, 0 failing; lane A vscode-test install-detector 28 passing, 0 failing. Lane A then found that the Playwright helper serveConsoleServerUI.ts defaults the Bicameral command to node, which the same runner refusal would fail on Linux test:ui (not yet run there); lane A 3b39d4c4 (merged as ec793f02), test only, puts a private node copy's folder first on PATH on POSIX while a test server with the default command is open, restoring PATH and removing the copy on the last close, win32 unchanged; lane A win32 evidence: the 9 Bicameral and Console specs 52 passed, 1 skipped; the full test:ui 209 passed, 0 failed, 4 skipped.
+
+---
+
+### Entry #761: SESSION SEAL - plan-v608-integration (LD23 follow-up)
+
+**Timestamp**: 2026-10-17T07:08:07Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-16T1356-298603`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-16T1356-298603/substantiate.json`
+
+**Content Hash**: `8ce15dbdd6411f3fc7cecd600e02eaca877726f5d7b3affd359dae471d1147fd`
+**Previous Hash**: `ffd7fa74257a62b6e9286154f90b06c55a5f945471523dccf2d3edd9e79e97dd`
+**Chain Hash (Merkle seal)**: `e76e7d5b6a1f96b81f40bc9ce6f533c394ff4d8b4bf3cd9fb551288721e28f90`
+
+**Decision**: SESSION SEAL for the LD23 follow-up (implementation #760) after seal #759. Reality = Promise, with disclosures. release/v6.0.8-rc carries a8b98a3c (merge 61b58989) and 3b39d4c4 (merge ec793f02), both test only. Disclosures: bounded damaged-ledger override applied to this integration cycle (#467 unresolved); this follow-up changes two test files after seal #759; LD19's full LD6 re-run was not repeated: the change is test-only, does not alter win32 behaviour (the rows and the UI helper keep the bare name there), and the focused local checks plus PR #529's full Linux test:all on the pushed head cover it; the LD23 POSIX rows and Linux test:ui have not yet run on Linux; D16 is read from the next CI log before the LD8 merge; the #473 ledger row's Linux failure on ab3e8ca1 is treated as timing pending the next Linux run (B244); seals #746, #753 and #759 are left unedited. Next: one push moving PR #529's head, Linux CI read against D16, then the LD8 merge. Not merged, not tagged, not published.
