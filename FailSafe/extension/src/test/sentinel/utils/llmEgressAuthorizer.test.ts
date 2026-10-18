@@ -5,7 +5,7 @@
 
 import { strict as assert } from 'assert';
 import {
-  createLlmEgressAuthorizer, FORGET_LLM_APPROVALS_TITLE, LLM_APPROVALS_KEY,
+  refusedAddressMessage, createLlmEgressAuthorizer, FORGET_LLM_APPROVALS_TITLE, LLM_APPROVALS_KEY,
 } from '../../../sentinel/utils/llmEgressAuthorizer';
 
 interface Shown { message: string; detail?: string; modal: boolean; items: string[] }
@@ -184,8 +184,7 @@ suite('#538 Sentinel LLM authorizer (B273 LD6, LD14)', () => {
     assert.equal(window.shown.length, 2, 'one warning per origin');
     const first = window.shown[0];
     assert.equal(first.modal, false);
-    const words = first.message.split(/\s+/).map((w) => w.replace(/[.,;:()]+$/, ''));
-    assert.ok(words.includes(ORIGIN), 'the warning names the exact origin');
+    assert.equal(first.message, refusedAddressMessage(ORIGIN), 'the warning names exactly this origin');
     assert.match(first.message, /private|non-public|local network/i);
     assert.deepEqual(first.items, []);
   });
