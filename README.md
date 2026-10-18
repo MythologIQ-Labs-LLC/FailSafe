@@ -11,6 +11,8 @@ Local-first governance, workspace monitoring, and evidence for AI-assisted softw
 [![Latest Release](https://img.shields.io/github/v/release/MythologIQ-Labs-LLC/FailSafe)](https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/latest)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue)](LICENSE)
 
+Developing FailSafe? Start with the [Architecture Index](docs/ARCHITECTURE_INDEX.md).
+
 </div>
 
 ## Understand and govern AI-assisted development
@@ -51,7 +53,7 @@ FailSafe's core monitoring and governance run locally. External integrations are
 
 ## Current release and what's coming
 
-**Latest published release: [v6.0.8](https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/tag/v6.0.8).** See the [release history](CHANGELOG.md) for fixes, security corrections, and packaged platform support.
+**Current Release**: v6.0.8, the latest published release ([release notes](https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/tag/v6.0.8)). See the [release history](CHANGELOG.md) for fixes, security corrections, and packaged platform support.
 
 Newer work on `main`, including Workspace Architecture and Delivery views, may not yet be available in the marketplace release. Check [GitHub Releases](https://github.com/MythologIQ-Labs-LLC/FailSafe/releases) before assuming a repository feature is installed.
 
