@@ -72,7 +72,7 @@ suite('#538 GitHub token host affinity (B265, B279)', () => {
       'GET https://ghe.example', 'GET https://ghe.example', 'POST https://ghe.example',
     ]);
     assert.ok(r.sent.every((s) => s.auth === `token ${TOKEN}`), 'the token rides every request');
-    assert.equal(r.sent.filter((s) => s.url.includes('api.github.com')).length, 0);
+    assert.equal(r.sent.filter((s) => new URL(s.url).hostname === 'api.github.com').length, 0);
   });
 
   test('G2 runLinkageAudit takes the API base', async () => {
