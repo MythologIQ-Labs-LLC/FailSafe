@@ -484,6 +484,33 @@ function citationProblems(c, read) {
   return out;
 }
 
+/**
+ * #538 whole-file citations, `path` (`anchor`) with no line: accepted only inside a Retirement review, for
+ * documents that grow at the top (indexes, changelogs, READMEs), where a line number would rot. The anchor
+ * must occur somewhere in the file. Source and test files are always cited by line.
+ */
+const FILE_CITATION_RE = /`([A-Za-z0-9_.\/-]+\.[A-Za-z0-9]+)` \(`([^`]*)`\)/g;
+function fileCitationsOn(line) {
+  const out = [];
+  FILE_CITATION_RE.lastIndex = 0;
+  let m;
+  while ((m = FILE_CITATION_RE.exec(line))) out.push({ path: m[1], anchor: m[2] });
+  return out;
+}
+function fileCitationProblems(c, read) {
+  if (c.path.startsWith('/') || c.path.includes('\\') || /^[A-Za-z]:/.test(c.path) || c.path.split('/').includes('..')) {
+    return [`${c.path}: not a repository-root-relative POSIX path`];
+  }
+  const out = [];
+  if (c.path.startsWith(`${SRC}/`)) out.push(`${c.path}: a source or test file is cited by line, \`path:L\` (\`anchor\`)`);
+  if (c.anchor.length < 8) out.push(`${c.path}: anchor "${c.anchor}" is shorter than 8 characters`);
+  if (c.anchor.includes('|')) out.push(`${c.path}: anchor contains |`);
+  const text = read(c.path);
+  if (text === null) return [...out, `${c.path} does not exist`];
+  if (!text.includes(c.anchor)) out.push(`${c.path}: anchor "${c.anchor}" is not in the file`);
+  return out;
+}
+
 // ------------------------------------------------------------------ markdown helpers
 
 const cellsOf = (line) => line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
@@ -552,13 +579,22 @@ function parseContract(c) {
     for (const b of bad) problems.push({ code: 'citation-grammar', detail: `${where(i + 1)}: ${b} is citation-shaped but not \`path:L\` (\`anchor\`)` });
     for (const ct of cites) citations.push({ ...ct, no: i + 1 });
   });
+  // A Retirement review (#538) is factual too; only there a document may be cited by whole file.
+  const fileCitations = [];
   for (const s of sections) {
-    if (NON_FACTUAL.has(s.name) || !SECTIONS.includes(s.name)) continue;
+    const review = s.name === RETIREMENT_SECTION;
+    if (NON_FACTUAL.has(s.name) || (!SECTIONS.includes(s.name) && !review)) continue;
     s.lines.forEach((l, i) => {
       const t = l.text.trim();
       if (!t || t.startsWith('#') || isSeparator(t)) return;
+      if (review && t.startsWith('```')) {
+        problems.push({ code: 'retirement', detail: `${where(l.no)}: fenced blocks are not allowed in a ${RETIREMENT_SECTION}; write each line as a cited sentence` });
+        return;
+      }
       if (t.startsWith('|') && s.lines[i + 1] && isSeparator(s.lines[i + 1].text)) return;
-      if (citationsOn(t).cites.length === 0 && !/\bunverified\b/i.test(t)) {
+      const files = review ? fileCitationsOn(t) : [];
+      for (const fc of files) fileCitations.push({ ...fc, no: l.no });
+      if (citationsOn(t).cites.length === 0 && !files.length && !/\bunverified\b/i.test(t)) {
         problems.push({ code: 'uncited-line', detail: `${where(l.no)} (${s.name}): a factual line carries no citation and does not say unverified` });
       }
     });
@@ -579,8 +615,11 @@ function parseContract(c) {
   const dispText = disp ? disp.lines.map((l) => l.text).join('\n') : '';
   const bold = DISPOSITIONS.filter((d) => dispText.includes(`**${d}**`));
   if (bold.length !== 1) problems.push({ code: 'disposition', detail: `${c.path}: Recommended disposition must name exactly one of ${DISPOSITIONS.map((d) => `**${d}**`).join(', ')}` });
-  if (disp && !/recommendation/i.test(dispText)) problems.push({ code: 'disposition', detail: `${c.path}: the disposition is not labelled as a recommendation` });
-  return { ...c, sections, owned, citations, rows, disposition: bold[0], problems };
+  if (disp && !(/owner decision/i.test(dispText) && dispText.includes(OWNER_DECISION.date) && dispText.includes(OWNER_DECISION.ref))) {
+    problems.push({ code: 'disposition', detail: `${c.path}: the disposition does not record the owner decision of ${OWNER_DECISION.date} (${OWNER_DECISION.ref})` });
+  }
+  const reviews = sections.filter((s) => s.name === RETIREMENT_SECTION);
+  return { ...c, sections, owned, citations, fileCitations, reviews, rows, disposition: bold[0], problems };
 }
 
 /** Feature-state rules (LD7) for one contract's rows. */
@@ -653,7 +692,26 @@ function parsePortfolio(text, file = PORTFOLIO) {
   const reviews = need('Legacy review map', 'Review').map((r) => ({ review: backticked(r.cells[0] || '')[0], contract: (r.cells[1] || '').replace(/`/g, '').trim(), no: r.no }));
   const counts = {};
   for (const r of need('Scan counts', 'Measure')) counts[backticked(r.cells[0] || '')[0] || r.cells[0]] = Number((r.cells[1] || '').trim());
-  if (!/recommendation/i.test(text || '') || !/owner/i.test(text || '')) problems.push({ code: 'portfolio', detail: `${file}: must state that dispositions are recommendations pending the owner` });
+  // #538: the dispositions are the owner's recorded decision, and COMPLETE is defined as finishing the named gaps.
+  const decision = sec(`Owner decision (${OWNER_DECISION.ref})`);
+  const decisionText = decision ? decision.lines.map((l) => l.text).join('\n') : '';
+  if (!decision) problems.push({ code: 'portfolio', detail: `${file}: has no "## Owner decision (${OWNER_DECISION.ref})" section` });
+  else if (!decisionText.includes(OWNER_DECISION.date) || !decisionText.includes(OWNER_DECISION.ref)) problems.push({ code: 'portfolio', detail: `${file}: the owner decision section does not record ${OWNER_DECISION.date} and ${OWNER_DECISION.ref}` });
+  else if (!decisionText.includes('COMPLETE means finish the named gaps')) problems.push({ code: 'portfolio', detail: `${file}: the owner decision section must say "COMPLETE means finish the named gaps"` });
+  if (/decision is recorded later/i.test(text || '')) problems.push({ code: 'portfolio', detail: `${file}: still says the owner's decision is recorded later` });
+  // The stated Totals line agrees with the matrix rows.
+  const totals = ((sec('Portfolio matrix') || { lines: [] }).lines.find((l) => /^Totals:/.test(l.text.trim())) || {}).text;
+  const tm = totals && /^Totals: (\d+) contracts; [^;]*?(\d+) COMPLETE, (\d+) MAINTAIN, (\d+) RETIRE, (\d+) INVEST; priorities (\d+) at 1, (\d+) at 2, (\d+) at 3\.?$/.exec(totals.trim());
+  if (!tm) problems.push({ code: 'totals', detail: `${file}: Portfolio matrix has no Totals line of the form "Totals: N contracts; ... N COMPLETE, N MAINTAIN, N RETIRE, N INVEST; priorities N at 1, N at 2, N at 3."` });
+  else {
+    const n = (f) => matrix.filter(f).length;
+    const want = [['contracts', matrix.length],
+      ...['COMPLETE', 'MAINTAIN', 'RETIRE', 'INVEST'].map((d) => [d, n((m) => m.disposition === d)]),
+      ...['1', '2', '3'].map((p) => [`priority ${p}`, n((m) => m.priority === p)])];
+    want.forEach(([label, count], i) => {
+      if (Number(tm[i + 1]) !== count) problems.push({ code: 'totals', detail: `${file}: Totals states ${tm[i + 1]} for ${label}; the matrix has ${count}` });
+    });
+  }
   // Every citation in the portfolio uses the grammar (resolution is checked by the caller).
   const citations = [];
   (text || '').split(/\r?\n/).forEach((line, i) => {
@@ -806,6 +864,22 @@ function validate(inputs) {
     for (const b of bs) if (!backlogIds.has(b)) add('facts', `${PORTFOLIO}:${f.no}: ${b} is not a [${b}] item in docs/BACKLOG.md`);
   }
   for (const f of pf.facts) if (!FACT_IDS.includes(f.id)) add('facts', `${PORTFOLIO}:${f.no}: unknown fact id ${f.id}`);
+
+  // Retirement reviews (#538): exactly one per RETIRE contract, none elsewhere; each names a backlog item,
+  // is linked from the portfolio, and its whole-file citations resolve.
+  for (const c of parsed) {
+    for (const fc of c.fileCitations) for (const p of fileCitationProblems(fc, read)) add('citation', `${c.path}:${fc.no}: ${p}`);
+    if (c.disposition !== 'RETIRE') {
+      if (c.reviews.length) add('retirement', `${c.path}: only a RETIRE contract has a "## ${RETIREMENT_SECTION}" section`);
+      continue;
+    }
+    if (c.reviews.length !== 1) { add('retirement', `${c.path}: a RETIRE contract must have exactly one "## ${RETIREMENT_SECTION}" section (has ${c.reviews.length})`); continue; }
+    const text = c.reviews[0].lines.map((l) => l.text).join('\n');
+    const bs = [...text.matchAll(/\[(B\d+)\]/g)].map((m) => m[1]);
+    if (!bs.length) add('retirement', `${c.path}: the ${RETIREMENT_SECTION} names no [Bnnn] backlog item`);
+    for (const b of new Set(bs)) if (!backlogIds.has(b)) add('retirement', `${c.path}: ${b} is not a [${b}] item in docs/BACKLOG.md`);
+    if (!(inputs.portfolioText || '').includes(`integrations/${c.id}.md#retirement-review-538`)) add('retirement', `${PORTFOLIO} does not link integrations/${c.id}.md#retirement-review-538`);
+  }
 
   // Legacy reviews: one review to one contract, by the portfolio's map, cited in the contract body.
   const map = new Map(pf.reviews.map((r) => [r.review, r.contract]));
