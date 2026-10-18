@@ -487,8 +487,11 @@ function citationProblems(c, read) {
 /**
  * #538 whole-file citations, `path` (`anchor`) with no line: accepted only inside a Retirement review, for
  * documents that grow at the top (indexes, changelogs, READMEs), where a line number would rot. The anchor
- * must occur somewhere in the file. Source and test files are always cited by line.
+ * must occur somewhere in the file. Only a path under docs/ or a root or extension CHANGELOG.md or README.md
+ * qualifies; source and test files are always cited by line, and a contract never cites itself this way.
  */
+const GROWING_DOCUMENT = (p) => p.startsWith('docs/')
+  || ['CHANGELOG.md', 'README.md', 'FailSafe/extension/CHANGELOG.md', 'FailSafe/extension/README.md'].includes(p);
 const FILE_CITATION_RE = /`([A-Za-z0-9_.\/-]+\.[A-Za-z0-9]+)` \(`([^`]*)`\)/g;
 function fileCitationsOn(line) {
   const out = [];
@@ -497,12 +500,14 @@ function fileCitationsOn(line) {
   while ((m = FILE_CITATION_RE.exec(line))) out.push({ path: m[1], anchor: m[2] });
   return out;
 }
-function fileCitationProblems(c, read) {
+function fileCitationProblems(c, read, from) {
   if (c.path.startsWith('/') || c.path.includes('\\') || /^[A-Za-z]:/.test(c.path) || c.path.split('/').includes('..')) {
     return [`${c.path}: not a repository-root-relative POSIX path`];
   }
+  if (c.path === from) return [`${c.path}: a contract cites itself by whole file; say "this contract" instead`];
   const out = [];
   if (c.path.startsWith(`${SRC}/`)) out.push(`${c.path}: a source or test file is cited by line, \`path:L\` (\`anchor\`)`);
+  else if (!GROWING_DOCUMENT(c.path)) out.push(`${c.path}: the whole-file form is only for a growing document (docs/, CHANGELOG.md, README.md); cite this file by line`);
   if (c.anchor.length < 8) out.push(`${c.path}: anchor "${c.anchor}" is shorter than 8 characters`);
   if (c.anchor.includes('|')) out.push(`${c.path}: anchor contains |`);
   const text = read(c.path);
@@ -615,8 +620,8 @@ function parseContract(c) {
   const dispText = disp ? disp.lines.map((l) => l.text).join('\n') : '';
   const bold = DISPOSITIONS.filter((d) => dispText.includes(`**${d}**`));
   if (bold.length !== 1) problems.push({ code: 'disposition', detail: `${c.path}: Recommended disposition must name exactly one of ${DISPOSITIONS.map((d) => `**${d}**`).join(', ')}` });
-  if (disp && !(/owner decision/i.test(dispText) && dispText.includes(OWNER_DECISION.date) && dispText.includes(OWNER_DECISION.ref))) {
-    problems.push({ code: 'disposition', detail: `${c.path}: the disposition does not record the owner decision of ${OWNER_DECISION.date} (${OWNER_DECISION.ref})` });
+  if (disp && !dispText.includes(`Owner decision ${OWNER_DECISION.date} (${OWNER_DECISION.ref})`)) {
+    problems.push({ code: 'disposition', detail: `${c.path}: the disposition does not record the owner decision as "Owner decision ${OWNER_DECISION.date} (${OWNER_DECISION.ref})"` });
   }
   const reviews = sections.filter((s) => s.name === RETIREMENT_SECTION);
   return { ...c, sections, owned, citations, fileCitations, reviews, rows, disposition: bold[0], problems };
@@ -698,7 +703,10 @@ function parsePortfolio(text, file = PORTFOLIO) {
   if (!decision) problems.push({ code: 'portfolio', detail: `${file}: has no "## Owner decision (${OWNER_DECISION.ref})" section` });
   else if (!decisionText.includes(OWNER_DECISION.date) || !decisionText.includes(OWNER_DECISION.ref)) problems.push({ code: 'portfolio', detail: `${file}: the owner decision section does not record ${OWNER_DECISION.date} and ${OWNER_DECISION.ref}` });
   else if (!decisionText.includes('COMPLETE means finish the named gaps')) problems.push({ code: 'portfolio', detail: `${file}: the owner decision section must say "COMPLETE means finish the named gaps"` });
-  if (/decision is recorded later/i.test(text || '')) problems.push({ code: 'portfolio', detail: `${file}: still says the owner's decision is recorded later` });
+  // The stale framing is looked for where framing lives, the preamble and the decision section; a later
+  // section may quote it as history.
+  const preamble = (text || '').split(/\r?\n/).slice(0, secs.length ? secs[0].no - 1 : undefined).join('\n');
+  if (/decision is recorded later/i.test(`${preamble}\n${decisionText}`)) problems.push({ code: 'portfolio', detail: `${file}: still says the owner's decision is recorded later` });
   // The stated Totals line agrees with the matrix rows.
   const totals = ((sec('Portfolio matrix') || { lines: [] }).lines.find((l) => /^Totals:/.test(l.text.trim())) || {}).text;
   const tm = totals && /^Totals: (\d+) contracts; [^;]*?(\d+) COMPLETE, (\d+) MAINTAIN, (\d+) RETIRE, (\d+) INVEST; priorities (\d+) at 1, (\d+) at 2, (\d+) at 3\.?$/.exec(totals.trim());
@@ -868,7 +876,7 @@ function validate(inputs) {
   // Retirement reviews (#538): exactly one per RETIRE contract, none elsewhere; each names a backlog item,
   // is linked from the portfolio, and its whole-file citations resolve.
   for (const c of parsed) {
-    for (const fc of c.fileCitations) for (const p of fileCitationProblems(fc, read)) add('citation', `${c.path}:${fc.no}: ${p}`);
+    for (const fc of c.fileCitations) for (const p of fileCitationProblems(fc, read, c.path)) add('citation', `${c.path}:${fc.no}: ${p}`);
     if (c.disposition !== 'RETIRE') {
       if (c.reviews.length) add('retirement', `${c.path}: only a RETIRE contract has a "## ${RETIREMENT_SECTION}" section`);
       continue;
@@ -878,7 +886,8 @@ function validate(inputs) {
     const bs = [...text.matchAll(/\[(B\d+)\]/g)].map((m) => m[1]);
     if (!bs.length) add('retirement', `${c.path}: the ${RETIREMENT_SECTION} names no [Bnnn] backlog item`);
     for (const b of new Set(bs)) if (!backlogIds.has(b)) add('retirement', `${c.path}: ${b} is not a [${b}] item in docs/BACKLOG.md`);
-    if (!(inputs.portfolioText || '').includes(`integrations/${c.id}.md#retirement-review-538`)) add('retirement', `${PORTFOLIO} does not link integrations/${c.id}.md#retirement-review-538`);
+    const reviewLink = new RegExp(`\\]\\([^)\\s]*integrations/${escapeRe(c.id)}\\.md#retirement-review-538\\)`);
+    if (!reviewLink.test(inputs.portfolioText || '')) add('retirement', `${PORTFOLIO} does not link integrations/${c.id}.md#retirement-review-538`);
   }
 
   // Legacy reviews: one review to one contract, by the portfolio's map, cited in the contract body.
