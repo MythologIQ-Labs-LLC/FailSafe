@@ -31,7 +31,7 @@ The Mermaid row links Mermaid Chart's own MCP server, but the catalog installs t
 ## Privileges and scopes
 
 Credential: none; Context7's optional API key is only mentioned in the install note and is not stored `FailSafe/extension/src/integrations/mcp-catalog/mcp-catalog.ts:34` (`Optional --api-key raises rate limits.`).
-Write scope: the workspace `.mcp.json` file only `FailSafe/extension/src/roadmap/routes/McpRoute.ts:39` (`const cfgPath = path.join(deps.workspaceRoot, '.mcp.json');`).
+Write scope: the workspace `.mcp.json` file only `FailSafe/extension/src/roadmap/routes/McpRoute.ts:46-48` (`configFile: '.mcp.json'`).
 The installed servers run later under whatever agent reads `.mcp.json`, with that agent's privileges (unverified: FailSafe does not start them).
 A dynamic registry install path would need its own approval and is marked requires separate approval (unverified: not built).
 
@@ -39,9 +39,10 @@ A dynamic registry install path would need its own approval and is marked requir
 
 | Capability | State | Symbol | Reached from | Test (depth) | Notes |
 |---|---|---|---|---|---|
-| risk-assessed-catalog | verified-shipped | `assessCatalog` `FailSafe/extension/src/integrations/mcp-catalog/mcp-catalog.ts:67` (`export function assessCatalog(now?: Date)`) | `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:474` (`app.get("/api/v1/mcp/catalog"`) | `FailSafe/extension/src/test/integrations/mcp-catalog/mcp-catalog.test.ts` (unit) | Three static entries `FailSafe/extension/src/integrations/mcp-catalog/mcp-catalog.ts:25` (`export const MCP_CATALOG: McpCatalogEntry[] = [`) |
-| local-risk-score | verified-shipped | `scoreMcpServer` `FailSafe/extension/src/integrations/mcp-registry/mcp-risk-score.ts:37` (`export function scoreMcpServer(`) | `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:474` (`app.get("/api/v1/mcp/catalog"`) | `FailSafe/extension/src/test/integrations/mcp-registry/mcp-risk-score.test.ts` (unit) | Offline, metadata only `FailSafe/extension/src/integrations/mcp-registry/mcp-risk-score.ts:4-7` (`No network, no install.`) |
-| console-install-route | verified-shipped | `McpRoute` `FailSafe/extension/src/roadmap/routes/McpRoute.ts:32` (`install(req: Request, res: Response, deps: McpRouteDeps): void {`) | `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:479` (`app.post("/api/actions/mcp-install", installLimiter`) | `FailSafe/extension/src/test/roadmap/routes/McpRoute.test.ts` (route) | No server-side confirmation (F15) |
+| risk-assessed-catalog | verified-shipped | `assessCatalog` `FailSafe/extension/src/integrations/mcp-catalog/mcp-catalog.ts:67` (`export function assessCatalog(now?: Date)`) | `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:478` (`app.get("/api/v1/mcp/catalog"`) | `FailSafe/extension/src/test/integrations/mcp-catalog/mcp-catalog.test.ts` (unit) | Three static entries `FailSafe/extension/src/integrations/mcp-catalog/mcp-catalog.ts:25` (`export const MCP_CATALOG: McpCatalogEntry[] = [`) |
+| local-risk-score | verified-shipped | `scoreMcpServer` `FailSafe/extension/src/integrations/mcp-registry/mcp-risk-score.ts:37` (`export function scoreMcpServer(`) | `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:478` (`app.get("/api/v1/mcp/catalog"`) | `FailSafe/extension/src/test/integrations/mcp-registry/mcp-risk-score.test.ts` (unit) | Offline, metadata only `FailSafe/extension/src/integrations/mcp-registry/mcp-risk-score.ts:4-7` (`No network, no install.`) |
+| console-install-route | verified-shipped | `McpRoute` `FailSafe/extension/src/roadmap/routes/McpRoute.ts:39` (`install(req: Request, res: Response, deps: McpRouteDeps)`) | `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:483` (`const installLimiter = rateLimit({ windowMs: 60_000, limit: 5`) | `FailSafe/extension/src/test/roadmap/routes/McpRoute.test.ts` (route) | As released in v6.0.8 the route wrote without a server-side confirmation (F15); on main it confirms first (console-install-confirmation) |
+| console-install-confirmation | main-unreleased | `authorizeOperatorAction` `FailSafe/extension/src/roadmap/routes/installAuthorization.ts:181` (`export async function authorizeOperatorAction<T extends InstallOperation>(`) | `FailSafe/extension/src/roadmap/routes/McpRoute.ts:75` (`app.post(MCP_INSTALL_PATH, consoleRequestGuard(`) | `FailSafe/extension/src/test/roadmap/installAuthorization.routes.test.ts` (route) | #538: the server-built entry is shown in a modal VS Code dialog and only that entry is written; Host, Origin and JSON are checked before the rate limit; an approval after 2 minutes or after the browser has gone runs nothing; the approval is recorded in the ledger when it is available |
 | governed-install-command | shipped-unverified | `registerMcpInstallCommand` `FailSafe/extension/src/extension/mcp-install-command.ts:16` (`export function registerMcpInstallCommand(`) | `FailSafe/extension/src/extension/main.ts:258` (`registerMcpInstallCommand(context, core.workspaceRoot);`) | none | Modal confirm before the write `FailSafe/extension/src/extension/mcp-install-command.ts:35-40` (`{ modal: true },`); no test file contains the command's symbol (unverified beyond a search of `src/test/`) |
 | metadata-sanitizer | shipped-inert | `sanitizeField` `FailSafe/extension/src/integrations/mcp-registry/mcp-risk-score.ts:81` (`export function sanitizeField(value: string): string {`) | none | none | Absent call site: `FailSafe/extension/src/integrations/mcp-registry/mcp-risk-score.ts:74-75` (`NOT CURRENTLY A CONTROL IN EFFECT: no production caller exists.`) |
 | registry-discovery | proposed | none | none | none | The legacy review's read-only registry query is not built; the scorer reads only the static catalog `FailSafe/extension/src/integrations/mcp-catalog/mcp-catalog.ts:12` (`Pure — no fs/network`) |
@@ -49,15 +50,15 @@ A dynamic registry install path would need its own approval and is marked requir
 ## Inbound fields
 
 None from a network; the catalog entries and their metadata are compiled into the extension `FailSafe/extension/src/integrations/mcp-catalog/mcp-catalog.ts:25-35` (`publisher: 'Upstash'`).
-From the workspace: the existing `.mcp.json` text `FailSafe/extension/src/roadmap/routes/McpRoute.ts:40-41` (`existing = fs.readFileSync(cfgPath, 'utf-8');`).
-From the Console: the catalog id only `FailSafe/extension/src/roadmap/routes/McpRoute.ts:33-34` (`MCP_CATALOG.find((e) => e.id === id)`).
+From the workspace: the existing `.mcp.json` text `FailSafe/extension/src/roadmap/routes/McpRoute.ts:50-51` (`existing = fs.readFileSync(cfgPath, 'utf-8');`).
+From the Console: the catalog id only `FailSafe/extension/src/roadmap/routes/McpRoute.ts:41-42` (`MCP_CATALOG.find((e) => e.id === id)`).
 
 ## Outbound fields and egress
 
 Repository content: no; FailSafe sends nothing off the machine for this integration `FailSafe/extension/src/integrations/mcp-registry/mcp-risk-score.ts:4-7` (`No network, no install.`).
 Metadata: no (unverified beyond the absence of any network call in the owned files).
 Graph relationships: no `FailSafe/extension/src/integrations/mcp-catalog/mcp-catalog.ts:12` (`Pure — no fs/network`).
-Governance evidence: no; the install writes no ledger entry `FailSafe/extension/src/roadmap/routes/McpRoute.ts:51-52` (`fs.writeFileSync(cfgPath, merged.text);`).
+Governance evidence: a Console install appends one `SYSTEM_EVENT` (`operator-action-authorized`, with the operation id, the entry and how it was confirmed) before writing, when the FailSafe ledger is available `FailSafe/extension/src/roadmap/routes/installAuthorization.ts:153` (`kind: "operator-action-authorized", operationId, operation,`); the command path writes none `FailSafe/extension/src/extension/mcp-install-command.ts:35-40` (`{ modal: true },`).
 Indirect egress: the written entries run `npx -y <package>` when an agent starts them, which downloads from npm outside FailSafe `FailSafe/extension/src/integrations/mcp-catalog/mcp-catalog.ts:60` (`args: ['-y', '@playwright/mcp@latest']`).
 
 ## Transformations
@@ -80,36 +81,38 @@ Proposed (not built): server-to-agent-run edges for scenario 3 in `docs/architec
 ## Customer UI and actions
 
 Console Integrations tab: an MCP Catalog sub-view `FailSafe/extension/src/roadmap/ui/command-center.js:62` (`label: 'MCP Catalog', renderer: new McpCatalogRenderer('integrations')`).
-The Install button needs a second click ("Confirm install") in the page before it POSTs `FailSafe/extension/src/roadmap/ui/modules/mcp-catalog-renderer.js:95-99` (`click again to confirm.`).
+The Install button needs a second click ("Confirm install") in the page before it POSTs `FailSafe/extension/src/roadmap/ui/modules/mcp-catalog-renderer.js:95-99` (`click again to confirm.`). On main the card then says to confirm in the VS Code dialog `FailSafe/extension/src/roadmap/ui/modules/mcp-catalog-renderer.js:105` (`status.textContent = CONFIRM_PENDING_TEXT;`).
 Command palette: "FailSafe: Install MCP Integration (governed)" with a modal VS Code confirmation `FailSafe/extension/package.json:151-152` (`"title": "FailSafe: Install MCP Integration (governed)"`).
 
 ## Governance policy and enforceability limits
 
 Enforced (command path): the write happens only after the modal "Install" answer `FailSafe/extension/src/extension/mcp-install-command.ts:35-40` (`if (confirm !== 'Install') return;`).
-Advisory (Console path): the second click lives in the browser page; the server route writes on any loopback POST with a known id `FailSafe/extension/src/roadmap/routes/McpRoute.ts:13-14` (`requires a confirm click before POSTing`).
-Enforced: non-loopback callers are refused and the route is limited to 5 requests a minute `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:478-480` (`const installLimiter = rateLimit({ windowMs: 60_000, limit: 5`).
-Advisory: the risk level is shown, never enforced; a high-risk server installs like a low-risk one `FailSafe/extension/src/roadmap/routes/McpRoute.ts:42-52` (`const merged = mergeMcpConfig(existing, entry);`).
+Enforced (Console path, #538): the route writes only after the operator approves, in a modal VS Code dialog, the entry the server looked up by id; it writes exactly that entry, and an approval after 2 minutes or after the browser has gone runs nothing `FailSafe/extension/src/roadmap/routes/McpRoute.ts:46-52` (`const merged = mergeMcpConfig(existing, approved.operation.entry);`). The modal proves a person clicked in VS Code, not which local process asked.
+Enforced: non-loopback callers, a non-loopback `Host`, a foreign `Origin` and non-JSON bodies are refused before the limit of 5 requests a minute, so a web page cannot spend it `FailSafe/extension/src/roadmap/routes/McpRoute.ts:75` (`app.post(MCP_INSTALL_PATH, consoleRequestGuard(`). A Console reached through a browser-based remote (Codespaces, vscode.dev, code-server behind https) or the cross-port workspace switcher is refused too; **FailSafe: Install MCP Integration (governed)** remains the path there.
+Advisory: the risk level is shown, never enforced; a high-risk server installs like a low-risk one `FailSafe/extension/src/roadmap/routes/McpRoute.ts:52` (`const merged = mergeMcpConfig(existing, approved.operation.entry);`).
 
 ## Failure, offline, stale and permission semantics
 
-Unknown id: 404 and nothing written `FailSafe/extension/src/roadmap/routes/McpRoute.ts:35-37` (`unknown MCP catalog id`).
-Unparseable `.mcp.json`: 409 and nothing written `FailSafe/extension/src/roadmap/routes/McpRoute.ts:44-49` (`existing .mcp.json is unparseable — nothing was written`).
-Write failure: 500 with the error text `FailSafe/extension/src/roadmap/routes/McpRoute.ts:53-54` (`res.status(500).json({ error: e instanceof Error ? e.message : String(e) });`).
+Unknown id: 404 before any dialog, nothing written `FailSafe/extension/src/roadmap/routes/McpRoute.ts:42-44` (`unknown MCP catalog id`).
+Not confirmed: no confirmer 503, declined 409, another dialog open 429, approved after the 2-minute deadline 410, browser gone before approval: nothing written in each case `FailSafe/extension/src/extension/operatorConfirmation.ts:306` (`export async function confirmBoundOperation<T>(`).
+Ledger available but the record cannot be written: 500 and nothing written `FailSafe/extension/src/roadmap/routes/installAuthorization.ts:189` (`if (record === "failed") {`).
+Unparseable `.mcp.json`: 409 after approval and nothing written `FailSafe/extension/src/roadmap/routes/McpRoute.ts:57` (`existing .mcp.json is unparseable — nothing was written`).
+Write failure: 500 with the error text `FailSafe/extension/src/roadmap/routes/McpRoute.ts:64` (`res.status(500).json({ error: e instanceof Error ? e.message : String(e)`).
 Offline: unaffected, no network is used `FailSafe/extension/src/integrations/mcp-registry/mcp-risk-score.ts:10` (`Pure (no fs/network)`).
 Stale: the static entries carry no publish date, so every entry gets the low "unknown-recency" signal `FailSafe/extension/src/integrations/mcp-registry/mcp-risk-score.ts:62-63` (`no publish date to assess version recency`).
 
 ## End-to-end scenario and measurable acceptance
 
-Scenario: open Integrations › MCP Catalog, read Playwright's high rating, click Install and Confirm install, and find `mcpServers.playwright` added to `.mcp.json` with existing servers kept `FailSafe/extension/src/test/roadmap/routes/McpRoute.test.ts:31` (`install writes the server entry to .mcp.json (added=true), idempotent on re-install`).
+Scenario: open Integrations › MCP Catalog, read Playwright's high rating, click Install and Confirm install, approve the VS Code dialog that shows the entry, and find `mcpServers.playwright` added to `.mcp.json` with existing servers kept `FailSafe/extension/src/test/roadmap/routes/McpRoute.test.ts:41` (`install writes the server entry to .mcp.json (added=true), idempotent on re-install`).
 Metric: re-installing leaves one entry per id and an unparseable file is never overwritten (threshold: exact) `FailSafe/extension/src/test/integrations/mcp-catalog/mcp-catalog.test.ts:85` (`malformed existing text → ok:false (refuses, never replaces)`).
-Existing tests: the route (route), the catalog and merge (unit) and the renderer `FailSafe/extension/src/test/roadmap/mcp-catalog-renderer.test.ts:1-3` (`Structural (jsdom) tests for McpCatalogRenderer`) (jsdom).
+Existing tests: the route (route), the confirmation, request-guard and ledger rows `FailSafe/extension/src/test/roadmap/installAuthorization.routes.test.ts:1-3` (`Console install routes act only after a modal VS Code`) (route), the Console page against the real route `FailSafe/extension/src/test/ui/install-authorization.spec.ts:1-3` (`the MCP Catalog install goes through the real`) (Playwright), the catalog and merge (unit) and the renderer `FailSafe/extension/src/test/roadmap/mcp-catalog-renderer.test.ts:1-3` (`Structural (jsdom) tests for McpCatalogRenderer`) (jsdom).
 Installed-extension test: none exercises the command or the route in an installed VSIX (unverified).
 
 ## Recommended disposition
 
-Recommendation for the owner: **MAINTAIN**. The catalog, scorer and merge are small, pure and tested. The one gap worth closing is the Console route writing `.mcp.json` without the server-side confirmation the command path already has; the live registry discovery from the legacy review is not worth building until there is demand.
+Recommendation for the owner: **MAINTAIN**. The catalog, scorer and merge are small, pure and tested. The Console route now asks for the same VS Code confirmation as the command path (#538); the live registry discovery from the legacy review is not worth building until there is demand.
 
 ## Open defects
 
-[B267] mcp-install route writes `.mcp.json` without a server-side confirmation (F15) `FailSafe/extension/src/roadmap/routes/McpRoute.ts:32-52` (`fs.writeFileSync(cfgPath, merged.text);`).
+Fixed in #538: [B267] the mcp-install route wrote `.mcp.json` without a server-side confirmation (F15); it now writes only after the VS Code dialog `FailSafe/extension/src/roadmap/routes/McpRoute.ts:46-47` (`if (!approved) return;`).
 The documentation index's Mermaid row names a different package from the one installed `docs/integrations/INTEGRATION_DOCS_INDEX.md:31` (`mermaid-chart-mcp`).

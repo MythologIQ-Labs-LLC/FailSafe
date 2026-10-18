@@ -6,9 +6,11 @@
  * FailSafe to Microsoft's Agent Governance Toolkit.
  */
 import { Request, Response } from "express";
-import type { AdapterService } from "../services/AdapterService";
+import { ADAPTER_UNINSTALL_ARGS, adapterInstallPlan, type AdapterService } from "../services/AdapterService";
+import { consoleRequestGuard } from "./consoleRequestGuard";
+import { authorizeOperatorAction, authorizationFields, newInstallLimiter, type OperatorActionDeps } from "./installAuthorization";
 
-export type AdapterRouteDeps = {
+export type AdapterRouteDeps = OperatorActionDeps & {
   rejectIfRemote: (req: Request, res: Response) => boolean;
   broadcast: (data: Record<string, unknown>) => void;
   adapterService: AdapterService;
@@ -50,23 +52,35 @@ export function setupAdapterRoutes(
   // ═══════════════════════════════════════════════════════════════════════════
   // POST /api/adapter/install - Install the adapter (and optionally toolkit)
   // ═══════════════════════════════════════════════════════════════════════════
-  app.post("/api/adapter/install", async (req: Request, res: Response) => {
-    if (deps.rejectIfRemote(req, res)) return;
-
-    const { installToolkit = false, upgradeIfExists = false } = req.body || {};
+  // #538: the Console request guard runs before the limiter; both routes act only after a
+  // modal VS Code confirmation of the pip3 argv they run. Flags are strict booleans.
+  const guard = consoleRequestGuard((req, res) => deps.rejectIfRemote(req, res));
+  const installLimiter = newInstallLimiter();
+  app.post("/api/adapter/install", guard, installLimiter, async (req: Request, res: Response) => {
+    const installToolkit = req.body?.installToolkit === true;
+    const upgradeIfExists = req.body?.upgradeIfExists === true;
+    const plan = adapterInstallPlan({ installToolkit, upgradeIfExists });
+    const approved = await authorizeOperatorAction(deps, res, {
+      kind: "adapter-install", upgrade: upgradeIfExists, installToolkit, commands: [plan.adapter, ...plan.toolkit],
+    }, "/api/adapter/install");
+    if (!approved) return;
+    const op = approved.operation;
+    const operationId = approved.operationId;
 
     // Broadcast installation started
     deps.broadcast({
       type: "adapter.installing",
-      payload: { installToolkit, upgradeIfExists },
+      operationId,
+      payload: { installToolkit: op.installToolkit, upgradeIfExists: op.upgrade },
     });
 
     try {
       const result = await deps.adapterService.install(
-        { installToolkit, upgradeIfExists },
+        { installToolkit: op.installToolkit, upgradeIfExists: op.upgrade },
         (progress) => {
           deps.broadcast({
             type: "adapter.progress",
+            operationId,
             payload: progress,
           });
         },
@@ -75,34 +89,42 @@ export function setupAdapterRoutes(
       if (result.success) {
         deps.broadcast({
           type: "adapter.installed",
+          operationId,
           payload: { success: true },
         });
-        res.json({ status: "ok", success: true });
+        res.json({ status: "ok", success: true, ...authorizationFields(approved) });
       } else {
         deps.broadcast({
           type: "adapter.failed",
+          operationId,
           payload: { error: result.error },
         });
-        res.status(500).json({ status: "error", error: result.error });
+        res.status(500).json({ status: "error", error: result.error, ...authorizationFields(approved) });
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       deps.broadcast({
         type: "adapter.failed",
+        operationId,
         payload: { error: errorMsg },
       });
-      res.status(500).json({ status: "error", error: errorMsg });
+      res.status(500).json({ status: "error", error: errorMsg, ...authorizationFields(approved) });
     }
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
   // POST /api/adapter/uninstall - Uninstall the adapter
   // ═══════════════════════════════════════════════════════════════════════════
-  app.post("/api/adapter/uninstall", async (req: Request, res: Response) => {
-    if (deps.rejectIfRemote(req, res)) return;
+  app.post("/api/adapter/uninstall", guard, installLimiter, async (req: Request, res: Response) => {
+    const approved = await authorizeOperatorAction(deps, res, {
+      kind: "adapter-uninstall", commands: [[...ADAPTER_UNINSTALL_ARGS]],
+    }, "/api/adapter/uninstall");
+    if (!approved) return;
+    const operationId = approved.operationId;
 
     deps.broadcast({
       type: "adapter.uninstalling",
+      operationId,
       payload: {},
     });
 
@@ -110,6 +132,7 @@ export function setupAdapterRoutes(
       const result = await deps.adapterService.uninstall((progress) => {
         deps.broadcast({
           type: "adapter.progress",
+          operationId,
           payload: progress,
         });
       });
@@ -117,23 +140,26 @@ export function setupAdapterRoutes(
       if (result.success) {
         deps.broadcast({
           type: "adapter.uninstalled",
+          operationId,
           payload: { success: true },
         });
-        res.json({ status: "ok", success: true });
+        res.json({ status: "ok", success: true, ...authorizationFields(approved) });
       } else {
         deps.broadcast({
           type: "adapter.failed",
+          operationId,
           payload: { error: result.error },
         });
-        res.status(500).json({ status: "error", error: result.error });
+        res.status(500).json({ status: "error", error: result.error, ...authorizationFields(approved) });
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       deps.broadcast({
         type: "adapter.failed",
+        operationId,
         payload: { error: errorMsg },
       });
-      res.status(500).json({ status: "error", error: errorMsg });
+      res.status(500).json({ status: "error", error: errorMsg, ...authorizationFields(approved) });
     }
   });
 

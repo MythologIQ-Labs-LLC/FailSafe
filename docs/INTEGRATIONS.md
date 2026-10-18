@@ -144,10 +144,10 @@ When the pack is absent:
 Pack is distributed as a **GitHub Releases asset** alongside the matching extension version tag. The asset URL is constructed deterministically:
 
 ```
-https://github.com/MythologIQ/FailSafe/releases/download/v<X.Y.Z>-voice/failsafe-voice-pack-<X.Y.Z>.tar.gz
+https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/download/v<X.Y.Z>-voice/failsafe-voice-pack-<X.Y.Z>.tar.gz
 ```
 
-Plus a companion `.sha256` file. Both download via Node 20+ built-in `fetch({ redirect: 'follow' })`. The redirect chain is **bounded** to GitHub-hosted destinations (`github.com` / `objects.githubusercontent.com` / `codeload.github.com`); any other final-URL host rejects the download before any bytes hit disk. Tarball SHA-256 is verified before extraction; extraction failure leaves the prior pack intact (atomic-rename semantics).
+Plus a companion `.sha256` file. Both download through `fetchAllowlisted` (`src/voice-pack/allowlisted-fetch.ts`), which follows redirects by hand, one hop at a time (#538): every hop, including the first, must be HTTPS on a GitHub download host (`github.com` / `objects.githubusercontent.com` / `codeload.github.com` / `release-assets.githubusercontent.com`, where GitHub now sends release assets) with no userinfo and the default port, and it is checked before it is requested. At most five redirects are followed. A response that the fetch redirected by itself (a wrapper that ignores manual mode) is refused before its body is read. Errors name only the requested URL's origin and path, never a signed asset link. The install report and the output log record the requested URL, the final URL (origin and path) and the tarball SHA-256. Tarball SHA-256 is verified before extraction; extraction failure leaves the prior pack intact (atomic-rename semantics). The `.sha256` file is published in the same release, so it detects a damaged download, not a replaced release. No `-voice` release is published yet (B287), so Install currently fails with HTTP 404.
 
 This is a supply-chain trust decision consistent with other operator-installed integrations: the operator trusts GitHub Releases under MythologIQ's organization namespace, the same trust posture used for the extension itself.
 
@@ -167,7 +167,7 @@ All routes are local-only (gated by `rejectIfRemote`).
 
 ### VS Code settings
 
-No new operator-visible settings in v1. The pack version is derived from the extension's `package.json`; redirect-allowlist is hardcoded; the download path is hardcoded to `MythologIQ/FailSafe` GitHub Releases. Future flexibility (custom GitHub repo, mirror URLs, signature verification) tracked in the Out of Scope section of the plan.
+No new operator-visible settings in v1. The pack version is derived from the extension's `package.json`; redirect-allowlist is hardcoded; the download path is hardcoded to `MythologIQ-Labs-LLC/FailSafe` GitHub Releases. Future flexibility (custom GitHub repo, mirror URLs, signature verification) tracked in the Out of Scope section of the plan.
 
 ### Out of scope (v1)
 

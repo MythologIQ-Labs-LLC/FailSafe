@@ -8,7 +8,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/MythologIQ/failsafe"
+    "url": "https://github.com/MythologIQ-Labs-LLC/FailSafe"
   },
   "engines": {
     "vscode": "^1.101.0"

@@ -1,7 +1,9 @@
 // Voice-pack install-handler — operator-triggered download + verify + extract.
 // Plan: docs/plan-qor-voice-substrate-extraction.md Phase 1.
-// F3 remediation (audit cycle 1): Node 20+ built-in fetch with redirect:follow
-// plus bounded post-fetch host allowlist (no body to disk from non-GitHub).
+// #538 (B261): redirects are followed one hop at a time by fetchAllowlisted —
+// each hop checked against the GitHub host allowlist before it is requested,
+// each response checked for a redirect the fetch followed by itself — so no
+// body reaches disk from a non-GitHub host.
 
 import * as fs from 'fs';
 import * as os from 'os';
@@ -10,17 +12,18 @@ import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 import { createHash } from 'crypto';
 import { spawn } from 'child_process';
+import { fetchAllowlisted } from './allowlisted-fetch';
 import {
-  ALLOWED_REDIRECT_HOSTS,
   InstallReport,
   InstallVoicePackOptions,
   InstallProgressEvent,
+  VoicePackDownloadProvenance,
   VoicePackManifest,
 } from './types';
 
 const SEMVER_RE = /^\d+\.\d+\.\d+$/;
 const PACK_FILENAME = (version: string) => `failsafe-voice-pack-${version}.tar.gz`;
-const RELEASE_BASE = 'https://github.com/MythologIQ/FailSafe/releases/download';
+const RELEASE_BASE = 'https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/download';
 
 /** Resolve the canonical GitHub Releases asset URL for a given extension version. */
 export function resolveVoicePackUrl(version: string): string {
@@ -46,16 +49,18 @@ export async function installVoicePack(opts: InstallVoicePackOptions): Promise<I
 
   try {
     emit(opts, { phase: 'download', status: 'running' });
-    await downloadToFile(tarballUrl, stagingTarball);
+    const tarball = await downloadToFile(tarballUrl, stagingTarball);
     emit(opts, { phase: 'download', status: 'success' });
 
     emit(opts, { phase: 'verify', status: 'running' });
-    const expected = await fetchChecksum(checksumUrl);
+    const { expected, provenance: checksum } = await fetchChecksum(checksumUrl);
     const actual = sha256OfFile(stagingTarball);
     if (actual !== expected) {
       throw new Error(`sha256 mismatch: expected ${expected}, got ${actual}`);
     }
     emit(opts, { phase: 'verify', status: 'success' });
+    logProvenance(opts, 'tarball', tarball, actual);
+    logProvenance(opts, 'checksum', checksum, expected);
 
     emit(opts, { phase: 'extract', status: 'running' });
     await runTarExtract(stagingTarball, stagingDir);
@@ -68,7 +73,7 @@ export async function installVoicePack(opts: InstallVoicePackOptions): Promise<I
     const finalDir = path.join(globalStoragePath, 'voice-pack');
     atomicSwap(stagingDir, finalDir, stagingTarball);
 
-    return { ok: true, version: manifest.version, finalPath: finalDir };
+    return { ok: true, version: manifest.version, finalPath: finalDir, provenance: { tarball, checksum, sha256: actual } };
   } catch (err) {
     cleanup(stagingDir);
     const msg = err instanceof Error ? err.message : String(err);
@@ -92,41 +97,26 @@ function emit(opts: InstallVoicePackOptions, evt: InstallProgressEvent): void {
   }
 }
 
-async function downloadToFile(url: string, destPath: string): Promise<void> {
-  const res = await fetch(url, { redirect: 'follow' });
-  if (!res.ok) {
-    throw new Error(`download failed: HTTP ${res.status} for ${url}`);
-  }
-  assertGitHubHost(res.url);
-  if (!res.body) throw new Error('download failed: empty response body');
-  await pipeline(Readable.fromWeb(res.body as unknown as import('stream/web').ReadableStream), fs.createWriteStream(destPath));
+function logProvenance(opts: InstallVoicePackOptions, what: string, p: VoicePackDownloadProvenance, sha256: string): void {
+  opts.output?.appendLine(`[voice-pack] provenance ${what} ${p.requestedUrl} -> ${p.finalUrl} sha256 ${sha256}`);
 }
 
-async function fetchChecksum(url: string): Promise<string> {
-  const res = await fetch(url, { redirect: 'follow' });
-  if (!res.ok) {
-    throw new Error(`checksum fetch failed: HTTP ${res.status} for ${url}`);
-  }
-  assertGitHubHost(res.url);
+async function downloadToFile(url: string, destPath: string): Promise<VoicePackDownloadProvenance> {
+  const { response: res, requestedUrl, finalUrl } = await fetchAllowlisted(url, 'download failed');
+  if (!res.body) throw new Error('download failed: empty response body');
+  await pipeline(Readable.fromWeb(res.body as unknown as import('stream/web').ReadableStream), fs.createWriteStream(destPath));
+  return { requestedUrl, finalUrl };
+}
+
+async function fetchChecksum(url: string): Promise<{ expected: string; provenance: VoicePackDownloadProvenance }> {
+  const { response: res, requestedUrl, finalUrl } = await fetchAllowlisted(url, 'checksum fetch failed');
   const text = await res.text();
   // sha256 file format: "<64-char-hex>  <filename>\n"
   const match = /^([a-f0-9]{64})\b/i.exec(text.trim());
   if (!match) {
     throw new Error('checksum fetch failed: malformed sha256 file');
   }
-  return match[1].toLowerCase();
-}
-
-function assertGitHubHost(finalUrl: string): void {
-  let host: string;
-  try {
-    host = new URL(finalUrl).hostname;
-  } catch {
-    throw new Error(`redirect target rejected: malformed final URL ${finalUrl}`);
-  }
-  if (!ALLOWED_REDIRECT_HOSTS.includes(host)) {
-    throw new Error(`redirect target rejected: host ${host} not in allowlist`);
-  }
+  return { expected: match[1].toLowerCase(), provenance: { requestedUrl, finalUrl } };
 }
 
 function sha256OfFile(p: string): string {
@@ -218,9 +208,11 @@ function cleanup(stagingDir: string): void {
   fs.rmSync(stagingDir, { recursive: true, force: true });
 }
 
+/** Classify by the failure prefix only; a message can quote a hostname (#538). */
 function currentPhaseFromError(msg: string): InstallProgressEvent['phase'] {
-  if (/sha256|checksum/i.test(msg)) return 'verify';
-  if (/tar extract/i.test(msg)) return 'extract';
-  if (/manifest/i.test(msg)) return 'manifest-verify';
+  if (msg.startsWith('download failed')) return 'download';
+  if (msg.startsWith('checksum fetch failed') || msg.startsWith('sha256 mismatch')) return 'verify';
+  if (msg.startsWith('tar extract')) return 'extract';
+  if (/^(extracted |manifest )/.test(msg)) return 'manifest-verify';
   return 'download';
 }

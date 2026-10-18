@@ -279,3 +279,74 @@ suite('SecurityScanner isolation (#468, T4a)', () => {
     }
   });
 });
+
+// #538 lane C (plan LD2, LD3): a scanner that hangs, crashes or exits nonzero is
+// named as such and is never a pass. New surface (the third constructor
+// argument, scanStatus, scannerVersions) is reached through `any` so these rows
+// compile against the code before the change.
+suite('#538 scanner timeout and failure are explicit', () => {
+  suiteTeardown(removeMade);
+  const never = (): Promise<CommandRunnerResult> => new Promise<CommandRunnerResult>(() => { /* never settles */ });
+  const scannerWith = (runner: (command: string, args: string[], cwd?: string) => Promise<CommandRunnerResult>, scanTimeoutMs?: number): SecurityScanner =>
+    new (SecurityScanner as any)(new EventBus(), runner, scanTimeoutMs === undefined ? undefined : { scanTimeoutMs });
+  const versionsThen = (scan: () => Promise<CommandRunnerResult>, versionOut = 'ok') =>
+    async (_c: string, args: string[]): Promise<CommandRunnerResult> => (args[0] === '--version' ? { code: 0, stdout: versionOut, stderr: '' } : scan());
+  const status = (r: unknown) => (r as { scanStatus?: string }).scanStatus;
+
+  test('S1 a garak scan that never settles times out at the scan bound: timeout, L3 review, never a pass', async () => {
+    const s = scannerWith(versionsThen(never), 50);
+    await s.checkAvailability();
+    const started = Date.now();
+    const r = await s.scanWithGarak(tmpFolder('fs-s1-'), () => {});
+    assert.ok(Date.now() - started < 2000, `settled in ${Date.now() - started} ms`);
+    assert.equal(status(r), 'timeout');
+    expectInconclusive(r, /timed out after 50 ms/);
+  });
+  test('S2 a promptfoo scan that never settles times out the same way', async () => {
+    const s = scannerWith(versionsThen(never), 50);
+    await s.checkAvailability();
+    const r = await s.scanWithPromptfoo(tmpFolder('fs-s2-'), () => {});
+    assert.equal(status(r), 'timeout');
+    expectInconclusive(r, /timed out after 50 ms/);
+  });
+  test('S3 a runner that throws on the scan is a scanner-error naming the message', async () => {
+    const s = scannerWith(versionsThen(async () => { throw new Error('spawn exploded'); }));
+    await s.checkAvailability();
+    const r = await s.scanWithGarak(tmpFolder('fs-s3-'), () => {});
+    assert.equal(status(r), 'scanner-error');
+    expectInconclusive(r, /spawn exploded/);
+  });
+  test('S4 a scanner that exits 1 is a scanner-error, not a generic inconclusive', async () => {
+    const r = await scanG(1, '{"results":{"p1":{"name":"x","fail_rate":0}}}');
+    assert.equal(status(r), 'scanner-error');
+    expectInconclusive(r, /exited with code 1/);
+  });
+  test('S5 exit 0 with no JSON is inconclusive; a parsed clean result is completed', async () => {
+    assert.equal(status(await scanG(0, 'no json here')), 'inconclusive');
+    assert.equal(status(await scanG(0, '{"results":{"p1":{"name":"x","fail_rate":0}}}')), 'completed');
+  });
+  test('S6 runFullScan with a garak timeout and a promptfoo pass is a timeout, not a pass', async () => {
+    const runner = async (command: string, args: string[]): Promise<CommandRunnerResult> => {
+      if (args[0] === '--version') return { code: 0, stdout: 'ok', stderr: '' };
+      return command === 'garak' ? never() : { code: 0, stdout: '{"results":[{"pass":true}]}', stderr: '' };
+    };
+    const s = scannerWith(runner, 50);
+    await s.checkAvailability();
+    const r = await s.runFullScan(tmpFolder('fs-s6-'), () => {});
+    assert.equal(r.passed, false);
+    assert.equal(status(r), 'timeout');
+    assert.equal(r.riskGrade, 'L3');
+  });
+  test('S8 runFullScan records the scanner versions from --version', async () => {
+    const runner = async (command: string, args: string[]): Promise<CommandRunnerResult> => {
+      if (args[0] === '--version') return { code: 0, stdout: command === 'garak' ? 'garak LLM vulnerability scanner v0.9.0.16\nmore' : '0.112.7\n', stderr: '' };
+      return command === 'garak'
+        ? { code: 0, stdout: '{"results":{"p1":{"name":"x","fail_rate":0}}}', stderr: '' }
+        : { code: 0, stdout: '{"results":[{"pass":true}]}', stderr: '' };
+    };
+    const s = scannerWith(runner);
+    await s.checkAvailability();
+    const r = await s.runFullScan(tmpFolder('fs-s8-'), () => {});
+    assert.deepEqual((r as { scannerVersions?: unknown }).scannerVersions, { garak: 'garak LLM vulnerability scanner v0.9.0.16', promptfoo: '0.112.7' });
+  });
+});

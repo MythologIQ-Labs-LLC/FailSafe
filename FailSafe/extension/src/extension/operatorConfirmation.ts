@@ -13,6 +13,7 @@
  * vscode.window) so routes and tests can use this module directly.
  */
 
+import { randomUUID } from "crypto";
 import type { Response } from "express";
 import type { L3ApprovalRequest } from "../shared/types/l3-approval";
 
@@ -42,7 +43,7 @@ export const LOOPBACK_FOOTER =
 export const FIELD_LIMIT = 200;
 /** Cap for free-text values the operator records (rollback reason, ratify rationale). */
 export const REASON_LIMIT = 500;
-const BATCH_LIST_LIMIT = 20;
+export const BATCH_LIST_LIMIT = 20;
 
 // C0 + C1 controls, LS/PS line and paragraph separators, ALM, LRM/RLM, LRE..RLO embeddings/overrides, LRI..PDI isolates.
 // eslint-disable-next-line no-control-regex
@@ -75,7 +76,7 @@ export function createOperatorConfirmer(window: ConfirmationWindow): ConfirmOper
   };
 }
 
-function withFooter(lines: string[]): string {
+export function withFooter(lines: string[]): string {
   return [...lines, "", LOOPBACK_FOOTER].join("\n");
 }
 
@@ -247,7 +248,8 @@ export function deliveryLinkRequest(
   };
 }
 
-export type ConfirmationFailure = "unwired" | "busy" | "declined";
+/** #538: `expired` (approval after the deadline) and `cancelled` (client gone) come from confirmBoundOperation. */
+export type ConfirmationFailure = "unwired" | "busy" | "declined" | "expired" | "cancelled";
 
 /** HTTP status + body for a non-approved confirmation; nothing was recorded. */
 export function confirmationFailure(result: ConfirmationFailure): {
@@ -260,7 +262,88 @@ export function confirmationFailure(result: ConfirmationFailure): {
   if (result === "busy") {
     return { status: 429, body: { ok: false, confirmation: result, error: "Another confirmation is open in VS Code; nothing was recorded." } };
   }
-  return { status: 409, body: { ok: false, confirmation: result, error: "Not confirmed in VS Code; nothing was recorded." } };
+  if (result === "expired") {
+    return { status: 410, body: { ok: false, confirmation: result, error: "The VS Code confirmation expired; nothing was run. Send the request again to be asked again." } };
+  }
+  if (result === "cancelled") {
+    // 499 (client closed request) is written only if the socket is still open, which it normally is not.
+    return { status: 499, body: { ok: false, confirmation: result, error: "The request was closed before it was confirmed; nothing was run." } };
+  }
+  return { status: 409, body: { ok: false, confirmation: "declined", error: "Not confirmed in VS Code; nothing was recorded." } };
+}
+
+/** #538: how long a bound confirmation waits for the operator. */
+export const CONFIRMATION_DEADLINE_MS = 120_000;
+
+/** #538: a fresh id per request, shown in the dialog and recorded with the action. */
+export function newOperationId(): string {
+  return `op_${randomUUID()}`;
+}
+
+function deepFreeze<T>(value: T): T {
+  if (value && typeof value === "object" && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const v of Object.values(value as Record<string, unknown>)) deepFreeze(v);
+  }
+  return value;
+}
+
+export interface BoundOperation<T> {
+  operationId: string;
+  /** The deep-frozen copy the dialog showed; the caller executes only this. */
+  operation: T;
+}
+
+/**
+ * #538 (plan-538b LD2/LD3): confirm one server-built operation and bind the approval to it.
+ * The operation is copied and deep-frozen before the dialog is built, `confirm` is called
+ * exactly once, and the frozen copy is returned only for an approval that arrives before
+ * the deadline while the client is still connected. Every other outcome is answered here
+ * (once) and returns null; nothing is cached, so each request needs its own approval.
+ * A modal cannot be closed from the extension: an expired dialog stays open (and keeps the
+ * single-open guard) until the operator dismisses it, and approving it then does nothing.
+ */
+export async function confirmBoundOperation<T>(
+  confirm: ConfirmOperatorAction | undefined,
+  operation: T,
+  describe: (operation: T, operationId: string) => OperatorActionRequest,
+  res: Response,
+  options: { deadlineMs?: number } = {},
+): Promise<BoundOperation<T> | null> {
+  if (!confirm) {
+    const failure = confirmationFailure("unwired");
+    res.status(failure.status).json(failure.body);
+    return null;
+  }
+  const operationId = newOperationId();
+  const frozen = deepFreeze(structuredClone(operation));
+  const request = describe(frozen, operationId);
+  const socketGone = () => !res.socket || res.socket.destroyed;
+  return new Promise((resolve) => {
+    let settled = false;
+    const timer = setTimeout(() => settle("expired"), options.deadlineMs ?? CONFIRMATION_DEADLINE_MS);
+    const onClose = () => { if (!res.writableEnded) settle("cancelled"); };
+    function settle(result: OperatorConfirmation | "expired" | "cancelled"): void {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      res.off("close", onClose);
+      if (result === "approved") { resolve({ operationId, operation: frozen }); return; }
+      if (result !== "cancelled" && !socketGone() && !res.headersSent) {
+        const failure = confirmationFailure(result);
+        res.status(failure.status).json({ ...failure.body, operationId });
+      }
+      resolve(null);
+    }
+    if (socketGone()) { settle("cancelled"); return; }
+    res.once("close", onClose);
+    Promise.resolve()
+      .then(() => confirm(request))
+      .then(
+        (result) => settle(result === "approved" && socketGone() ? "cancelled" : result),
+        () => settle("declined"),
+      );
+  });
 }
 
 /**

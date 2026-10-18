@@ -308,13 +308,13 @@ export async function activate(
       core.eventBus,
       () => notifierConfig(credentials.creds, 'Slack', notifierEnabled('integrations.slack.enabled'), credentials.ui, notifyCredentialWarned),
       undefined,
-      reportNotifyFailure('Slack'),
+      reportNotifyFailure('Slack'), undefined, core.workspaceRoot,
     ).register();
     new TeamsNotifier(
       core.eventBus,
       () => notifierConfig(credentials.creds, 'Teams', notifierEnabled('integrations.teams.enabled'), credentials.ui, notifyCredentialWarned),
       undefined,
-      reportNotifyFailure('Teams'),
+      reportNotifyFailure('Teams'), undefined, core.workspaceRoot,
     ).register();
 
     // 4. Sentinel

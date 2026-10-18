@@ -1,6 +1,7 @@
 import { IntentService } from './IntentService';
 import { LedgerManager } from '../qorelogic/ledger/LedgerManager';
 import type { LedgerVerification } from '../qorelogic/ledger/LedgerVerifier';
+import { weakerProperties } from '../qorelogic/ledger/LedgerIntegritySummary';
 
 export interface ReleaseGateCheck {
   name: string;
@@ -96,30 +97,4 @@ export class ReleasePipelineGate {
     }
     return { name: 'version-coherence', passed: true, reason: 'Version format valid.' };
   }
-}
-
-function weakerProperties(report: LedgerVerification): string[] {
-  const weaker: string[] = [];
-  const { v1Rows, v2Rows, unfrozenLegacyRows } = report.coverage;
-  if (v1Rows + v2Rows > 0) {
-    weaker.push(`${v1Rows} v1 and ${v2Rows} v2 legacy row(s) authenticate only part of each row; their integrity before activation is INCONCLUSIVE`);
-  }
-  if (unfrozenLegacyRows > 0) {
-    weaker.push(`${unfrozenLegacyRows} legacy row(s) are not covered by an activation receipt`);
-  }
-  if (report.anchor.status === 'unanchored') {
-    weaker.push('anchor never established');
-  } else if (report.anchor.status === 'established-late') {
-    weaker.push(`anchor established late at id ${report.anchor.establishedAtId}; earlier rows are INCONCLUSIVE for truncation`);
-  }
-  if (report.anchor.unanchoredTail > 0) {
-    weaker.push(`${report.anchor.unanchoredTail} row(s) not yet anchored`);
-  }
-  if (!report.anchor.workspaceBound) {
-    weaker.push('ledger not bound to a workspace');
-  }
-  if (report.rotation && !report.rotation.retiredVerificationOk) {
-    weaker.push(`ROTATED FROM FAILED LEDGER (${report.rotation.retiredFile})`);
-  }
-  return weaker;
 }

@@ -55,11 +55,15 @@ export interface ApiRouteDeps {
     hosts: QorLogicHost[],
     scope: "repo" | "global",
     skillFilter: Record<string, string[]> | undefined,
+    /** #538: names the approved operation on the install's progress events. */
+    context?: { operationId: string },
   ) => Promise<QorLogicInstallReport>;
   showOutput?: () => void;
   /** #514: modal VS Code confirmation for gated operator routes (L3 decisions,
    *  panic-stop, rollback, hooks disable). Absent -> those routes answer 503. */
   confirmOperatorAction?: ConfirmOperatorAction;
+  /** #538: test seam for the scaffold route's confirmation deadline. */
+  confirmationDeadlineMs?: number;
   // Agent API route delegates (Phase 2: B142/B143/B144)
   getTimelineEntries: (filter?: any) => any[];
   getHealthMetrics: () => any | null;

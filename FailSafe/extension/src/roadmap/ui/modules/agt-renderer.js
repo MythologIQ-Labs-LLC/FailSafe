@@ -11,6 +11,8 @@
  * verified in Chrome per feedback_design_reference_required.
  */
 
+import { CONFIRM_PENDING_TEXT, gatedFailureMessage, jsonPost, settleGated } from './operator-confirmation-copy.js';
+
 const STYLE_ID = 'cc-agt-style';
 const STYLE = `
 .cc-agt { display:flex; flex-direction:column; gap:12px; }
@@ -112,16 +114,11 @@ export class AgtRenderer {
         const status = btn.closest('.cc-agt-card').querySelector('.cc-agt-status');
         const id = btn.getAttribute('data-id');
         btn.disabled = true;
-        if (status) status.textContent = 'Opening terminal…';
+        // #538: the terminal opens only after the operator confirms in a VS Code dialog.
+        if (status) status.textContent = CONFIRM_PENDING_TEXT;
         try {
-          const res = await fetch('/api/actions/agt-install', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id }),
-          });
-          const json = await res.json().catch(() => ({}));
-          if (status) status.textContent = res.ok ? 'Command pre-filled in the terminal — press enter to install.' : (json.error || `Error ${res.status}`);
-        } catch (err) {
-          if (status) status.textContent = String(err);
+          const r = await settleGated(fetch('/api/actions/agt-install', jsonPost({ id })));
+          if (status) status.textContent = r.ok ? 'Command pre-filled in the terminal — press enter to install.' : gatedFailureMessage(r.status, r.body, 'opened');
         } finally {
           btn.disabled = false;
         }

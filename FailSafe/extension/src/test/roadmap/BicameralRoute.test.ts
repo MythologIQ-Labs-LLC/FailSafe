@@ -12,6 +12,7 @@ import type { BicameralMcpClient } from '../../integrations/bicameral';
 import type { OperatorActionRequest, OperatorConfirmation } from '../../extension/operatorConfirmation';
 import * as vscode from 'vscode';
 import { configureTrustedExecutables, repoRootsFor, workspaceDirsFor } from '../../shared/exec/trustedExecutable';
+import { RouteHarness, makeApp } from '../extension/helpers/routeTestHarness';
 
 interface CapturedHandler {
   method: 'get' | 'post';
@@ -260,16 +261,19 @@ suite('LD16 (b) BicameralRoute — a successful install re-wires the client', ()
     test(`install ${ok ? 'succeeded: the rewire hook runs once' : 'failed: the rewire hook does not run'}`, async () => {
       let installs = 0;
       let rewires = 0;
-      const { app, handlers } = makeFakeApp();
+      // #538: the install route now runs the request guard, a limiter and a bound VS Code
+      // confirmation, so it is driven through a real Express app.
+      const app = makeApp();
       setupBicameralRoutes(app, makeDeps({
         runInstall: async (_opts: unknown, mode: string) => { installs++; return { steps: [], mode, done: true, ok }; },
         rewireBicameral: async () => { rewires++; },
       } as unknown as Partial<BicameralRouteDeps>));
-      const r = fakeRes();
-      await findHandler(handlers, 'post', '/api/actions/bicameral-install').handler(fakeReq({ mode: 'solo' }), r.res);
+      const h = new RouteHarness(app);
+      await h.start();
+      const r = await h.request({ method: 'POST', path: '/api/actions/bicameral-install', body: { mode: 'solo' } }).finally(() => h.stop());
       assert.equal(installs, 1, 'the install ran through the seam');
-      assert.equal(r.status(), 200);
-      assert.equal(r.body().ok, ok);
+      assert.equal(r.status, 200);
+      assert.equal(r.body.ok, ok);
       assert.equal(rewires, ok ? 1 : 0);
     });
   }
