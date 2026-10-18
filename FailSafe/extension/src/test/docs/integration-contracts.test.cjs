@@ -1049,6 +1049,7 @@ function fixturePortfolio(over = {}) {
     '## Inventory reconciliation', '', '| Entry | Reconciliation | LD1 difference | Evidence |', '|---|---|---|---|', ...recon, '',
     '## Verified facts', '', '| Id | Fact | Kind | Status | Evidence | Backlog |', '|---|---|---|---|---|---|', ...(over.facts || facts), '',
     '## Legacy review map', '', '| Review | Contract |', '|---|---|', ...(over.reviews || [`| \`${REVIEW_DIR}ALPHA_CONTRACT_REVIEW.md\` | alpha |`]), '',
+    ...(over.tail || []),
   ].join('\n');
 }
 
@@ -1346,10 +1347,10 @@ describe('FX1003 #538 owner dispositions', () => {
     `Removal is tracked as [B300] \`${FX_IMPL}:2\` (\`export function sendAlpha\`).`,
     `The registering file changes \`${FX_REG}:3\` (\`registerCommand('failsafe.alpha.send'\`).`];
   /** A world whose alpha contract has disposition `disp` and the given review lines (null: no review). */
-  const decided = ({ disp = 'RETIRE', review = REVIEW_OK, links = [LINK] } = {}) => world({
+  const decided = ({ disp = 'RETIRE', review = REVIEW_OK, links = [LINK], files = {} } = {}) => world({
     contractText: fixtureContract({ 'Recommended disposition': [DECIDED(disp), '', ...(review || [])].join('\n') }, undefined, legacy),
     portfolio: { matrix: [row(disp)], links },
-    files: { [GROW]: growText },
+    files: { [GROW]: growText, ...files },
   });
   const reviewWith = (...lines) => [...REVIEW_OK, ...lines];
 
@@ -1358,12 +1359,26 @@ describe('FX1003 #538 owner dispositions', () => {
     assertOnly(world({ contractText: text }), 'disposition', /owner decision/);
   });
 
+  it('T1b a disposition that mentions an owner decision without the recorded prefix is red', () => {
+    const text = fixtureContract({ 'Recommended disposition': 'Recommendation for the owner: **MAINTAIN**. The owner decision is due 2026-10-18 (#538).' }, undefined, legacy);
+    assertOnly(world({ contractText: text }), 'disposition', /Owner decision 2026-10-18 \(#538\)/);
+  });
+
   it('T2a a portfolio without the owner decision section is red', () => {
     assertOnly(world({ portfolio: { decision: ['Dispositions are recommendations; the owner decides.'] } }), 'portfolio', /Owner decision \(#538\)/);
   });
   it('T2b a portfolio that keeps the stale "recorded later" framing is red', () => {
     const decision = [...FX_DECISION, '', 'Every disposition here is a recommendation for the owner; the owner decides, and that decision is recorded later.'];
     assertOnly(world({ portfolio: { decision } }), 'portfolio', /recorded later/);
+  });
+  it('T2d preservation: the stale framing in the preamble is red', () => {
+    const decision = ['Every disposition here is a recommendation for the owner; the owner decides, and that decision is recorded later.', '', ...FX_DECISION];
+    assertOnly(world({ portfolio: { decision } }), 'portfolio', /recorded later/);
+  });
+  it('T2e the stale phrase quoted as history in a later section is not the framing', () => {
+    const tail = ['## History', '', 'Part A said that the decision is recorded later; #538 recorded it.', ''];
+    const r = validate(world({ portfolio: { tail } }));
+    assert.deepEqual(r.problems, [], report(r));
   });
   it('T2c an owner decision section that does not say what COMPLETE means is red', () => {
     const decision = ['## Owner decision (#538)', '', 'Owner decision of 2026-10-18 (#538): the recommendations are accepted.'];
@@ -1399,6 +1414,9 @@ describe('FX1003 #538 owner dispositions', () => {
   it('T4e a portfolio that does not link the review is red', () => {
     assertOnly(decided({ links: [] }), 'retirement', /does not link/);
   });
+  it('T4i the review anchor named in plain text, not as a link, is red', () => {
+    assertOnly(decided({ links: ['See integrations/alpha.md#retirement-review-538 for the review.'] }), 'retirement', /does not link/);
+  });
   it('T4f a review on a contract that is not RETIRE is red', () => {
     assertOnly(decided({ disp: 'MAINTAIN' }), 'retirement', /only a RETIRE contract/);
   });
@@ -1422,6 +1440,14 @@ describe('FX1003 #538 owner dispositions', () => {
   });
   it('T5d a source file is cited by line, never by the whole-file form', () => {
     assertOnly(decided({ review: reviewWith(`The client changes \`${FX_IMPL}\` (\`export function sendAlpha\`).`) }), 'citation', /cited by line/);
+  });
+  it('T5f the whole-file form is refused for a file that is not a growing document', () => {
+    const PKG = 'FailSafe/extension/package.json';
+    const files = { [PKG]: '{\n  "name": "failsafe-fixture"\n}\n' };
+    assertOnly(decided({ review: reviewWith(`The manifest changes \`${PKG}\` (\`"name": "failsafe-fixture"\`).`), files }), 'citation', /growing document/);
+  });
+  it('T5g a contract citing itself by whole file is red', () => {
+    assertOnly(decided({ review: reviewWith(`This contract counts itself \`${CONTRACT_DIR}alpha.md\` (\`Alpha integration contract\`).`) }), 'citation', /cites itself/);
   });
   it('T5e a whole-file anchor that is short or contains a pipe is red', () => {
     assertOnly(decided({ review: reviewWith(`Short \`${GROW}\` (\`tail\`).`) }), 'citation', /shorter than 8/);
