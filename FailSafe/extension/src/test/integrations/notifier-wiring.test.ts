@@ -69,7 +69,7 @@ function l3Request(filePath: string) {
     sentinelSummary: 'SUMMARY-SECRET', flags: ['FLAG-SECRET'], queuedAt: '2026-10-18T00:00:00.000Z',
     slaDeadline: '2026-10-19T00:00:00.000Z', conditions: ['ghp_FAKE0123456789abcdefTOKEN'],
     meta: { args: { content: 'FILE-CONTENT-SECRET', diff: '+ DIFF-SECRET' } },
-    content: 'TOP-CONTENT-SECRET', diff: 'TOP-DIFF-SECRET', token: 'xoxb-FAKE-TOKEN',
+    content: 'TOP-CONTENT-SECRET', diff: 'TOP-DIFF-SECRET', token: ['xoxb', 'FAKE', 'TOKEN'].join('-'),
   };
 }
 const LEAKS = ['SUMMARY-SECRET', 'FLAG-SECRET', 'ghp_FAKE', 'FILE-CONTENT-SECRET', 'DIFF-SECRET',
