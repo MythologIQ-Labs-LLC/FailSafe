@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - With the FailSafe pre-commit hook installed in enforce mode, every commit was refused, even with an active intent, because the check looked for the intent in the wrong place. Commits are now allowed when an intent is active (#532).
 
+### Security
+
+- Installing from the Console now asks you to confirm in VS Code first, and shows exactly what will run: an MCP Catalog server written to `.mcp.json`, Bicameral MCP (its pip package and setup command), the Qor-logic skills (the hosts, scope and skills you chose), the agent-failsafe adapter and its removal (the pip3 commands), and an Agent Governance command pre-filled in a terminal. Only what the dialog showed is run. A request you do not confirm within 2 minutes, or one whose page has gone, runs nothing; every request asks again. Each confirmed install is recorded in the FailSafe ledger when it is available, and the Console tells you while it waits and why nothing ran (#538).
+- The Console refuses these requests, and the voice-pack install and Bicameral connect and auto-connect actions, when they come from another web page or are not addressed to this machine. A Console opened through a browser-based remote (Codespaces, vscode.dev, code-server behind https) or through the workspace switcher on another port is refused too; use the FailSafe commands in VS Code there (#538).
+- L3 approvals and rejections now record in the FailSafe ledger how they were confirmed: a VS Code dialog for Console decisions, a click in the L3 approval panel, or unverified. The record says that a dialog proves a person clicked in VS Code, not which local program asked (#538).
+
 ## [6.0.8] - 2026-10-16
 
 ### Added
