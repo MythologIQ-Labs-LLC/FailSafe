@@ -33753,3 +33753,74 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `f09ffb2354dc12eee6ae4803e0789da3a4e2339018798d49bc1a0898ea1e1db1`
 
 **Decision**: SESSION SEAL for plan-538e-portfolio-dispositions.md (implementation #813; content hash is the audited plan, sha256 8e273dc2). Reality = Promise, with disclosures. The branch records the owner's 2026-10-18 integration dispositions as owner-approved work-queue decisions, not claims that requirements are implemented, and carries the compatibility and dependency review for retiring governance-webhook and qor-runtime; no historic contract or evidence is deleted, and no code is removed. Independent bounded code review: fix first on an inventory count that did not match its list and validator false greens, fixed with red rows in baaa667a, 8a7db9db and 9996ab28. Disclosures: bounded damaged-ledger override for #538 lane cycles (owner ruling 2026-10-18; #467 unresolved, normal governance not restored); the lane agent was lost when the previous session ended, and the lead did the last merge, resolved its five conflicts and re-anchored six package.json citations; whole-file citations prove an anchor occurs somewhere in the file, not where; the per-file grep counts are a snapshot at 243a34a1 that the test does not re-run; the priorities and their order stay recommendations, since the owner decision covers the dispositions only; the retirement removals (B288, B289) are separate bounded changes; the FEATURE_INDEX ghost test paths and the README's unusable Qor runtime claim are recorded under B289, not fixed; the taxonomy drift between docs/roadmap/tracker-config.yaml (3 Workspace and 3 Governance functions) and the Console's 6 Workspace and 4 Governance sub-views is surfaced, not reconciled; FX946 is the known ledger-anchor baseline; documentation currency check not applicable (change_class governance); earlier seals are unedited. Next: push, open the PR, the PR checks, then a merge with --match-head-commit. Not tagged.
+
+---
+
+### Entry #815: GATE TRIBUNAL - plan-538g-release-prep (iteration 1) - VETO
+
+**Timestamp**: 2026-10-18T20:56:41Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-18T2050-c80815`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for #538 lane cycles, owner ruling 2026-10-18, disclosed per cycle (#467)
+
+**Content Hash**: `ffc824f0a0e649a674253e4c0cfab703a9a41d547b4acecceeff0a1422e62707`
+**Previous Hash**: `f09ffb2354dc12eee6ae4803e0789da3a4e2339018798d49bc1a0898ea1e1db1`
+**Chain Hash (Merkle seal)**: `3d9922b4842ba7f33491f6f0d58fbcda5d37ad66a4c87df52c23be5e1e55c012`
+
+**Decision**: VETO on plan-538g-release-prep.md iteration 1 (sha256 99b79cc7), #538 lane G: prepare the v6.0.9 patch release candidate and stop at the owner's tag and publication boundary. Fresh Option B architect-reviewer. Blocking: the plan treated locally built VSIXs as the release set, although the tag run re-packages on Linux, a second build produces different bytes, and only that run's vsix-targets set is published; nothing bound the qualified commit to the tagged commit; and the packaging command would ignore its output directory, while rv inventory and the SQLite smoke lacked their arguments and the workflow's own release gates and the Electron SQLite load were missing. Should-fix: v5-coherence under npm test, the SYSTEM_STATE marker format, the lockfile edited by hand and release:tag forbidden, known limitations in the root changelog, exact smoke checks with controls, the from-VSIX hash, released-state claims held until the marketplace check. Next: revise and re-audit. Tribunal entry held by the lead and appended at integration in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #816: GATE TRIBUNAL - plan-538g-release-prep (iteration 2) - PASS
+
+**Timestamp**: 2026-10-18T20:59:35Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-18T2050-c80815`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for #538 lane cycles, owner ruling 2026-10-18, disclosed per cycle (#467)
+
+**Content Hash**: `efe47447ffa6637b653d38fb4d6b69cd3232d5db655cea1d3e3fc55b431a583d`
+**Previous Hash**: `3d9922b4842ba7f33491f6f0d58fbcda5d37ad66a4c87df52c23be5e1e55c012`
+**Chain Hash (Merkle seal)**: `b94eb57d1b9a9004de45242919d0b5cdea3b479dcd3e0ae27cdaa091ce4d8215`
+
+**Decision**: PASS on plan-538g-release-prep.md iteration 2 (sha256 a64bda5b). A fresh Option B architect-reviewer; every iteration 1 item resolved; 31 citations checked, one harmless failure (validate.ps1 declares no -Version parameter, as in the workflow). Local artifacts are rehearsal only and the release run's set is authoritative; the qualified head is bound to the tag target by a pinned merge commit and a tree check; every command resolves. Should-fix folded into implementation: the RC-branch native qualification run on Linux cited as evidence, a pre-click lifecycle on the release run's win32-x64 bytes recommended, the dated extension README marker, rv report arguments, candidate wording in BACKLOG and SYSTEM_STATE, and the changelog date policy. Next: implement on release/v6.0.9-rc. Tribunal entry held by the lead and appended at integration in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #817: IMPLEMENTATION - plan-538g-release-prep
+
+**Timestamp**: 2026-10-18T21:27:29Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-18T2050-c80815`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-18T2050-c80815/implement.json`
+
+**Content Hash**: `0aa4ec61583f94dce160d43ba5a9ae00de3bc9cb6eddd9adaa887356164a32a6`
+**Previous Hash**: `b94eb57d1b9a9004de45242919d0b5cdea3b479dcd3e0ae27cdaa091ce4d8215`
+**Chain Hash (Merkle seal)**: `b078cbb9e3ed32cbeb44b9c6eae2cb899ef408a890858034c6b1dd9beb12b7bd`
+
+**Decision**: IMPLEMENTATION of plan-538g-release-prep.md iteration 2 (audit PASS, sha256 a64bda5b), the v6.0.9 release candidate. Branch release/v6.0.9-rc from main de71858e; qualified head c0ba9ebe. 4883991a: version 6.0.9 in package.json and the two package-lock.json version fields; at that commit release preflight reported 7 FAIL. c0ba9ebe: both changelogs carry [6.0.9] - 2026-10-18 with Added, Security, Fixed and Known limitations (the root section is the GitHub Release body), the extension README carries What's New in v6.0.9 and the dated Current Release marker, the root README, COMPONENT_HELP and PROCESS_GUIDE markers, a CANDIDATE row in the BACKLOG version summary, and SYSTEM_STATE names v6.0.9 a release candidate, not published. Evidence: release preflight 9 PASS; docs:validate passes; validate-release-version.ps1 approves 6.0.9; validate.ps1 passes; validate-vsix --source-only passes; publish block inactive; PR #547 CI 21 of 21 green on c0ba9ebe including the Linux test:all; the Native VSIX Platform Qualification run 39166063507 on the RC branch packaged all eight targets on Linux and loaded the packaged SQLite on seven native runners. Rehearsal set (local, never shipped): eight VSIXs, verify-set passes, rv inventory pass=50, the win32-x64 packaged SQLite loads under node 22.22.3 and under Electron 43.7.7, rv lifecycle from the published v6.0.8 Marketplace win32-x64 VSIX (sha256 matching the v6.0.8 release SHA256SUMS) to 6.0.9 passes 12 of 12, rv report reads rehearsal-pass. Installed smoke on the rehearsal win32-x64 VSIX (sha256 3e69e70e) in an isolated profile: FailSafe activates in 1.2 s; the architecture index and delivery routes answer 200; a cross-site install POST is refused 403 and a text/plain one 415; a same-origin JSON install waits on the VS Code confirmation and writes no .mcp.json; a workspace sentinel.yaml naming a LAN listener gave it 0 requests while a loopback control listener received 1. The local test:all was stopped by the host for low memory; the owner chose to rely on the Linux CI test:all instead.
+
+---
+
+### Entry #818: SESSION SEAL - plan-538g-release-prep
+
+**Timestamp**: 2026-10-18T21:28:16Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-18T2050-c80815`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-18T2050-c80815/substantiate.json`
+
+**Content Hash**: `a64bda5bfcebc23024d0838edb243562dd4ebc961d6ac2ab2210f294228ea739`
+**Previous Hash**: `b078cbb9e3ed32cbeb44b9c6eae2cb899ef408a890858034c6b1dd9beb12b7bd`
+**Chain Hash (Merkle seal)**: `fbfd22c16881d1ccb12bf0a41921af4ce13ee7037035280c931612b2128d100e`
+
+**Decision**: SESSION SEAL for plan-538g-release-prep.md (implementation #817; content hash is the audited plan, sha256 a64bda5b). Reality = Promise, with disclosures. The branch carries the v6.0.9 release candidate: version 6.0.9, release notes that separate shipped behaviour from known limitations, and every release marker the gates read; the candidate source passes the workflow's own gates and its Linux CI, and its rehearsal set passes packaging, inventory, the packaged-SQLite loads, the upgrade lifecycle from v6.0.8 and an installed smoke. Disclosures: bounded damaged-ledger override for #538 lane cycles (owner ruling 2026-10-18; #467 unresolved, normal governance not restored); the rehearsal VSIXs and their SHA256SUMS never ship, because the tag's release run re-packages on Linux and a second build produces different bytes, so the release run's vsix-targets set is the only authoritative one and should be inventoried, lifecycle-tested on its win32-x64 VSIX and SQLite-smoked before the production click; the local test:all was stopped by the host for low memory and, by the owner's choice, the Linux CI test:all on the same head is the full-suite evidence; this seal commit adds only governance documents after the qualified head c0ba9ebe, and the merge is checked for an identical FailSafe/extension subtree rather than an identical tree; the same-origin install check shows the request waiting and nothing written, not a captured dialog; the lifecycle and SQLite loads ran on win32-x64 only, and the RC-branch native run covered seven runners; version 6.0.9 follows the standing patch ruling and the owner may choose 6.1.0 before tagging; the changelog date stays 2026-10-18 unless the owner re-dates it at tag time, which would need the release gates re-run; scripts/validate.ps1 ignores -Version, as in the workflow; earlier seals are unedited. Next: push, the PR checks, a merge pinned to the head, the subtree check, the evidence posted to #538, and a stop at the tag and publication boundary. Not tagged.

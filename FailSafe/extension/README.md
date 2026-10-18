@@ -23,15 +23,17 @@ FailSafe runs locally in VS Code and Cursor. It monitors agent and workspace act
 5. Run `FailSafe: Audit Current File` to generate a governance verdict for the active editor.
 6. If you want commit-time guardrails, run `FailSafe: Install Commit Hook` inside a git workspace with `curl` available on the path.
 
-## What's New in v6.0.8
+## What's New in v6.0.9
 
-Integrations now report what they actually did, and FailSafe starts only programs it has validated.
+A security and reliability patch: what leaves your machine, what runs from the Console and what FailSafe records are now held to explicit operator approval.
 
-- **Integrations tell the truth.** Catalog cards show each integration's last real result (Verified, Connected, Failing with a reason, or Stale) instead of guessing from settings. Jira and Linear issues become governed intent drafts only when you approve. OpenHands runs can be imported as signed historical evidence into the Agent Timeline and the Console Timeline.
-- **Nothing planted in a workspace runs.** gh, PowerShell, Python, pip, the Git installers, Bicameral MCP and the ACP agent are started from validated absolute paths, Python no longer imports modules from the workspace, and the settings that choose what FailSafe launches are read from user settings only.
-- **Agent Marketplace fails closed.** A scan that failed, timed out or gave no verdict is never a pass, an install whose scan did not pass is quarantined, and FailSafe never runs an item's package setup on your machine. Installs stay disabled.
-- **Concurrent windows are safer.** Two FailSafe processes can no longer both accept one replay nonce, risk updates queue in arrival order, and imports write in chunks so other windows are not starved. Two limits remain: a risk update can still be lost if two windows recover a crashed window's lock at the same moment, and a v6.0.7 window left open on the same workspace still updates the nonce store without the lock.
-- **Behaviour changes.** A Python interpreter inside the workspace or its repository is no longer used; set `failsafe.qorlogic.pythonPath` in user settings to choose one. Bicameral auto-connect turned on from the Console before this release must be turned on again. See the CHANGELOG for the full list and the known limitations.
+- **Your code stays local unless you approve otherwise.** A workspace can point Sentinel and Brainstorm only at a model server on this machine. A remote server from your user settings is used only after you approve that exact server for that exact use, and **FailSafe: Forget Sentinel LLM Approvals** withdraws every approval. Requests check each address at connect time and never follow a redirect.
+- **Your GitHub Enterprise token goes only to your Enterprise host.** The PR-linkage check reads from the configured host, the token is attached only to that host and port, and a redirect is a failure. An `http://` API base for another machine is refused; use `https://`.
+- **Console installs ask you first.** MCP Catalog, Bicameral MCP, Qor-logic skills, the agent-failsafe adapter and the Agent Governance terminal pre-fill run only after you confirm the exact action in VS Code, and requests from another web page are refused before any dialog. L3 decisions record how they were confirmed.
+- **Truthful records.** Compliance exports state ledger integrity as intact, partial seal, failed or unavailable instead of true or false. Voice Pack downloads check every redirect hop. Slack and Teams L3 notices show the file path and nothing else from the request.
+- **New in the Console Workspace:** an Architecture view for your repository's architecture index and a Delivery view that shows what an intent delivered, with the receipt step unavailable until the governance ledger is repaired.
+
+See the [changelog](https://github.com/MythologIQ-Labs-LLC/FailSafe/blob/main/CHANGELOG.md) for compatibility changes and known limitations.
 
 ## Optional Integrations
 
@@ -69,7 +71,7 @@ Open the **Integrations** tab to configure an integration. Each card shows the r
 
 ---
 
-**Current Release**: v6.0.8 (2026-10-16)
+**Current Release**: v6.0.9 (2026-10-18)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
 
