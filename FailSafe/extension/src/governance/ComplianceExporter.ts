@@ -5,6 +5,7 @@ import * as crypto from 'crypto';
 import { LedgerManager } from '../qorelogic/ledger/LedgerManager';
 import { ShadowGenomeManager } from '../qorelogic/shadow/ShadowGenomeManager';
 import { PatternLoader } from '../sentinel/PatternLoader';
+import { summarizeLedgerIntegrity } from '../qorelogic/ledger/LedgerIntegritySummary';
 
 type ComplianceFramework = 'SOC2' | 'ISO27001' | 'EU_AI_ACT';
 
@@ -82,14 +83,34 @@ export class ComplianceExporter {
     this.shadowGenomeManager = shadow;
   }
 
+  /** The newest entries; a ledger that cannot be read gives none and the reason. */
+  private async readLedgerEntries(): Promise<{ entries: unknown[]; error?: string }> {
+    if (!this.ledgerManager) return { entries: [], error: 'Ledger not wired.' };
+    try {
+      return { entries: await this.ledgerManager.getRecentEntries(10000) };
+    } catch (error) {
+      return { entries: [], error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  /**
+   * #538 (#473 residual): the bundle states the ledger's integrity as intact,
+   * partial-seal, failed or unavailable (`ledgerIntegrity`); the boolean
+   * `chainVerification` is gone, so an old reader sees it missing, not true.
+   * Entries are read first and capped at 10000; the integrity covers every row.
+   */
   async exportBundle(framework: ComplianceFramework, outputDir: string): Promise<string> {
+    const read = await this.readLedgerEntries();
+    const ledgerIntegrity = await summarizeLedgerIntegrity(this.ledgerManager);
     const bundle = {
+      schemaVersion: 2,
       framework,
       exportedAt: new Date().toISOString(),
-      ledger: this.redact(await this.ledgerManager.getRecentEntries(10000)),
+      ledger: this.redact(read.entries),
+      ...(read.error !== undefined ? { ledgerReadError: read.error } : {}),
       shadowGenome: this.redact(await this.shadowGenomeManager.analyzeFailurePatterns()),
       unresolvedFailures: this.redact(await this.shadowGenomeManager.getUnresolvedEntries()),
-      chainVerification: this.ledgerManager.verifyChain(),
+      ledgerIntegrity,
       controlMapping: this.mapToFramework(framework),
     };
 

@@ -9,6 +9,7 @@ import {
   uninstallVoicePack,
 } from "../../voice-pack";
 import type { InstallProgressEvent } from "../../voice-pack";
+import { consoleRequestGuard } from "./consoleRequestGuard";
 
 export interface VoicePackRouteDeps {
   rejectIfRemote: (req: Request, res: Response) => boolean;
@@ -26,6 +27,9 @@ export function setupVoicePackRoutes(
   app: import("express").Application,
   deps: VoicePackRouteDeps,
 ): void {
+  // #538: Host and Origin are checked on the two POSTs; the Settings card sends them
+  // body-less, so the content type is not.
+  const guard = consoleRequestGuard((req, res) => deps.rejectIfRemote(req, res), { requireJson: false });
   // GET /api/integrations/voice-pack/status — install probe (state + version
   // + manifestPath + missingFiles when corrupt + requiredMinVersion). Safe
   // to poll; pure-fs read, no spawn, no network.
@@ -53,8 +57,7 @@ export function setupVoicePackRoutes(
   // POST /api/actions/install-voice-pack — operator-triggered install bridge.
   // Browser cannot fetch + spawn; this route is the boundary. Final report
   // returns in the response body; per-step progress broadcast over WebSocket.
-  app.post("/api/actions/install-voice-pack", async (req: Request, res: Response) => {
-    if (deps.rejectIfRemote(req, res)) return;
+  app.post("/api/actions/install-voice-pack", guard, async (_req: Request, res: Response) => {
     try {
       const report = await installVoicePack({
         globalStoragePath: deps.globalStoragePath,
@@ -79,8 +82,7 @@ export function setupVoicePackRoutes(
   // POST /api/actions/uninstall-voice-pack — operator-triggered uninstall.
   // Synchronous fs rmSync; broadcasts so the Settings card + Integrations
   // tab re-probe immediately.
-  app.post("/api/actions/uninstall-voice-pack", async (req: Request, res: Response) => {
-    if (deps.rejectIfRemote(req, res)) return;
+  app.post("/api/actions/uninstall-voice-pack", guard, async (_req: Request, res: Response) => {
     try {
       uninstallVoicePack(deps.globalStoragePath);
       await deps.onPackStateChanged();

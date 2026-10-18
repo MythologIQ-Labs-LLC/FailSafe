@@ -33239,3 +33239,286 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `fa7007e7b60c6274f7c1cfeab4d8bf85967f2e1db15654aac0d6856e6abd4248`
 
 **Decision**: SESSION SEAL for plan-532b-delivery-assessment.md (implementation #784). Reality = Promise, with disclosures. The branch carries #532 part B: an operator links an imported intent to a registered architecture document and to commits after confirming in VS Code, and Workspace > Delivery shows five steps with their records and named gaps; the pre-commit guard no longer refuses every commit in enforce mode (B283). Disclosures: bounded damaged-ledger override applied to this cycle (#467 unresolved, normal governance not restored); governance evidence is presence, not a pass: entries are matched by exact intent id or full commit SHA and shown with their event type; ledger chain status is reported as unknown because re-verifying every row per assessment is not cheap; commit evidence is normally empty because CheckpointManager.seal has no production caller (B285), and hub checkpoints read HEAD from the process directory (B284); the governed commit does not yet link under the active intent (B286); the receipt step is always unavailable until #467 and B216; the no-egress test counts a child_process, fetch, http or net call only when FailSafe compiled code is on its stack, because VS Code's built-in git extension spawns git in the same host; a falsifier probe shows FailSafe-originated calls are counted; the git allowlist also admits the architecture discovery's exact ls-files call, which the linking path reuses; missing git and a non-repository folder both read as unavailable; an added module deliveryService.ts holds the functions the routes, command and extension-host test share; the installed VSIX predates 5168e6a6, which only hardens archived-intent lookup; a local commit briefly force-added ignored test-workspace files including .claude; it was reset before any push and the branch contains none; found, not fixed: IntentStore.getArchivedIntent takes an unvalidated id (callers in this slice pass only uuids), IntentHistoryLog.loadAllEntries does not schema-check entries, check-e2e-coverage prepush mode checks nothing without an upstream, and extension-host tests need a bundle, not only a compile; documentation currency check run mechanically with two warnings, verbatim: Release-path change (change_class=feature) without updating README.md; Release-path change (change_class=feature) without updating CHANGELOG.md. Lead judgment, not the owner's: the CHANGELOG warning is a payload omission (CHANGELOG.md changed in e9fd7d4f but the implement payload did not list it); the README warning stands by design, because the What's New copy is authored as the CHANGELOG [Unreleased] entry and stamped into a versioned README section at release; earlier seals are unedited. Next: push, open the PR, the PR checks, then a merge with --match-head-commit. #532 stays open for the owner's dispositions and the receipt step. Not tagged.
+
+---
+
+### Entry #786: GATE TRIBUNAL - plan-538d-voice-notify (iteration 1) - VETO
+
+**Timestamp**: 2026-10-18T16:04:19Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-18T1601-8b7e2d`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for #538 lane cycles, owner ruling 2026-10-18, disclosed per cycle (#467)
+
+**Content Hash**: `9bebdcfad105b9b19bb35a8dafba6be8a4d1981b96f8298e747227855dc21aa3`
+**Previous Hash**: `fa7007e7b60c6274f7c1cfeab4d8bf85967f2e1db15654aac0d6856e6abd4248`
+**Chain Hash (Merkle seal)**: `d4dce79095f9d3c8eba8fc1b81d957eeca9970ad4c88189adcdcb979abca5ac5`
+
+**Decision**: VETO on plan-538d-voice-notify.md iteration 1 (sha256 828e7157), #538 lane D: B261 Voice Pack download (organization slug, per-hop redirect validation) and B263 Slack and Teams L3-decided path. Fresh Option B architect-reviewer; 70 citations checked, none failed. Blocking: the plan replaced the only final-response host check (assertGitHubHost on res.url) with checks made before each hop, so a fetch that follows redirects itself despite redirect manual (the extension-host fetch wrapper, Electron fetch) would hand back an off-allowlist body unchecked; the plan also deleted the test that guarded it. Should-fix: no signed query in error text, Slack entity escaping of the path label (the Open Design path is agent-supplied), platform-aware fixtures and a file URI row, the original fetch captured once, stale header comments, the checksum phase label, stated residuals. Next: revise and re-audit. Tribunal entry held by the lead and appended at integration in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #787: GATE TRIBUNAL - plan-538d-voice-notify (iteration 2) - PASS
+
+**Timestamp**: 2026-10-18T16:12:12Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-18T1601-8b7e2d`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for #538 lane cycles, owner ruling 2026-10-18, disclosed per cycle (#467)
+
+**Content Hash**: `191664b281d89f2c4c1ef0f475b8816550b686f7c533e3779899e7176a25eb02`
+**Previous Hash**: `d4dce79095f9d3c8eba8fc1b81d957eeca9970ad4c88189adcdcb979abca5ac5`
+**Chain Hash (Merkle seal)**: `07f8906edb33caf58fcc148465f90f43a017c77544cf1eec06cc7bf7c0d0bd36`
+
+**Decision**: PASS on plan-538d-voice-notify.md iteration 2 (sha256 d36c7c62). A fresh Option B architect-reviewer, not the iteration 1 judge; 76 citations checked, none failed. The iteration 1 blocker is resolved: every response is refused when it is redirected, names a URL other than the requested hop, or is an opaque redirect, and the green-on-main final-URL row is kept beside a red row whose fetch ignores manual mode. Should-fix folded into implementation: the portfolio scan count, the notify-event citation re-walk, V1 to V11 in the red commit, refusal of an empty response URL, prefixed fetch and URL-parse errors, wider control-character stripping and drive-letter paths treated as absolute on every platform, and the repository URL change listed in the changelog. Next: implement on fix/538-lane-D. Tribunal entry held by the lead and appended at integration in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #788: IMPLEMENTATION - plan-538d-voice-notify
+
+**Timestamp**: 2026-10-18T17:22:36Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-18T1601-8b7e2d`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-18T1601-8b7e2d/implement.json`
+
+**Content Hash**: `ca8b33f357e2be7237c96dcb71f15151833c664c43e7d0a6fac67524b5af6e34`
+**Previous Hash**: `07f8906edb33caf58fcc148465f90f43a017c77544cf1eec06cc7bf7c0d0bd36`
+**Chain Hash (Merkle seal)**: `74fab9a400def13b5ef4a38593a371427a12cd5f7f9a56e410f432acb70b269c`
+
+**Decision**: IMPLEMENTATION of plan-538d-voice-notify.md iteration 2 (audit PASS, sha256 d36c7c62), #538 lane D. Branch fix/538-lane-D from main 243a34a1. 84f441e6 and a3c4d9a4: red rows first (36 failing on main's code, then 6 for the review rows). 99b9269d and 4673cdf4: the Voice Pack download names MythologIQ-Labs-LLC/FailSafe and goes through allowlisted-fetch.ts, which checks every hop before requesting it (https only, an exact allowlisted host now including release-assets.githubusercontent.com, no userinfo, default port, at most five redirects) and every response after it (refused when redirected, when its URL is empty or differs from the hop, or opaque); errors carry only the requested origin and path and a code-shaped cause; the phase is classified by failure prefix; provenance records the requested URL, the final URL without its signed query and the sha256. Slack and Teams notices read request.filePath with a flat fallback and show a sanitized label: control and bidi characters stripped before and after URI decoding, workspace-relative inside the workspace, the basename otherwise (absolute, drive-relative, UNC, file URI or a .. escape), capped at 200 characters, Slack entity-escaped; no other request field is read. d1b89305: the repository URL in package.json. 3832aed7 and 2496c205: contracts, portfolio scan counts, INTEGRATIONS.md, BACKLOG B261 and B263 done, B287 and B300 filed, CHANGELOG, FEATURE_INDEX notes. f91ebca6 (lead): the leak fixture builds its fake Slack token at runtime so the secret scanner passes. Evidence from logs: focused vscode-test 97 passing, 0 failing (re-run by the lead, 97/0); npm test default 5115 passing, 18 pending, 1 failing (the lock-queue R1 timing row, outside this lane, inconclusive under host load); architecture configuration 5/0; test:node 816 tests, 805 passed, 2 failed (FX946 ledger anchor, #467), 9 skipped; test:ui 213 passed, 4 skipped; integration contracts 39/39 with the tag check over 355 claims; tsc 0; lint 0 errors; release preflight pass; secret scan clean after f91ebca6; mutations M1 to M20 each killed by a named row.
+
+---
+
+### Entry #789: SESSION SEAL - plan-538d-voice-notify
+
+**Timestamp**: 2026-10-18T17:24:02Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-18T1601-8b7e2d`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-18T1601-8b7e2d/substantiate.json`
+
+**Content Hash**: `d36c7c62ae54c98e2e60f7d2c4ede0dbe70b3321e8ecb746cbb921c243749664`
+**Previous Hash**: `74fab9a400def13b5ef4a38593a371427a12cd5f7f9a56e410f432acb70b269c`
+**Chain Hash (Merkle seal)**: `025c268c5aaca248aae077d48e52784fe7473ea7d0fddc018f7776a0dffd6f4d`
+
+**Decision**: SESSION SEAL for plan-538d-voice-notify.md (implementation #788; content hash is the audited plan, sha256 d36c7c62). Reality = Promise, with disclosures. The branch carries #538 lane D: B261 (the Voice Pack download names MythologIQ-Labs-LLC/FailSafe and accepts a body only after every hop and every response passed the https allowlist) and B263 (Slack and Teams L3-decided notices show a sanitized path label read from request.filePath, and nothing else from the request). Independent bounded code review: fix first on one medium finding (percent-decoded control characters in a file URI label), fixed with red rows in a3c4d9a4 and 4673cdf4 together with three low findings; the lead re-ran the focused suites at 97 passing, 0 failing. Disclosures: bounded damaged-ledger override for #538 lane cycles (owner ruling 2026-10-18; #467 unresolved, normal governance not restored); no v*-voice release exists, so a real install still answers 404 until B287 publishes one; the checksum comes from the same release, so it detects a damaged download, not a replaced release; a fetch that ignores manual mode has already requested the hops it followed (the guard keeps the body out, not the request); the real extension-host fetch (Electron and VS Code's proxy patch) was not exercised, so a fail-closed functional risk remains; the empty response URL refusal goes beyond the audited LD2 text and is stricter; Teams markdown in the label is not escaped (B300); an agent can still put up to 200 characters of text in a label; tar and manifest traversal handling is unchanged; the mapper rows moved to notify-path-label.test.ts; the lead changed the leak fixture's fake Slack token to be built at runtime (f91ebca6) after the secret scanner blocked it; the lock-queue R1 timing row failed in the full run under host load and is outside this lane; FX946 is the known ledger-anchor baseline; documentation currency check run mechanically with no warnings (change_class hotfix); earlier seals are unedited. Next: push, open the PR, the PR checks, then a merge with --match-head-commit. Not tagged.
+
+---
+
+### Entry #790: GATE TRIBUNAL - plan-538c-evidence-integrity (iteration 1) - VETO
+
+**Timestamp**: 2026-10-18T16:08:08Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-18T1602-84548b`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for #538 lane cycles, owner ruling 2026-10-18, disclosed per cycle (#467)
+
+**Content Hash**: `cbffc2ca0652170a6b86040b99251143b79fc0bb4b66cb3dbfc5c99ca5023ab4`
+**Previous Hash**: `025c268c5aaca248aae077d48e52784fe7473ea7d0fddc018f7776a0dffd6f4d`
+**Chain Hash (Merkle seal)**: `3494ccbe08c8749423fec5c3379d4c6e5cd8d96cf84cdb512da6a012ae498151`
+
+**Decision**: VETO on plan-538c-evidence-integrity.md iteration 1 (sha256 669e7647), #538 lane C: #469 residual (awaited install receipts with the scan verdict and provenance, scanner timeout and failure fail closed) and #473 residual (the compliance export carries the full verifyLedger status). Fresh Option B architect-reviewer; about 90 citations checked, none failed. Blocking: a ledger-unrecorded item kept its installPath, so a re-scan through applyVerdict could set installed with no receipt; and no test proved the scanner process tree dies on timeout (Windows taskkill is asynchronous). Should-fix: fold in the uninstall receipt await, validate malformed verifier reports, keep receipt work inside one try, exact counts, clear the timer, re-check marketplace.md citations, disclosures. Next: revise and re-audit. Tribunal entry held by the lead and appended at integration in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #791: GATE TRIBUNAL - plan-538c-evidence-integrity (iteration 2) - VETO
+
+**Timestamp**: 2026-10-18T16:16:15Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-18T1602-84548b`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for #538 lane cycles, owner ruling 2026-10-18, disclosed per cycle (#467)
+
+**Content Hash**: `a62673c3cc35604a918fa88da3b8782a312dbabe3fd9498b17f805bcbb6c567b`
+**Previous Hash**: `3494ccbe08c8749423fec5c3379d4c6e5cd8d96cf84cdb512da6a012ae498151`
+**Chain Hash (Merkle seal)**: `5eef635f63cd3a346b1e7ae94f6c04f7f7e87da3adcb3cfaceb491a34dd34efd`
+
+**Decision**: VETO on plan-538c-evidence-integrity.md iteration 2 (sha256 944be379). A fresh Option B architect-reviewer; both iteration 1 blockers resolved; about 100 citations checked, none failed. New blocking: a quarantined item whose receipt failed kept its installPath and passed the new re-scan precondition, so it could still be re-scanned into installed without a receipt; and the re-scan's own precondition check would see the route's earlier scanning write on the live catalog object and leave every legitimate re-scan scanning, which the planned fakes could not see because they never mutate the item. Should-fix: a no-database falsifier, the Windows S7 proof scope, combineResults keeping reject, the SCAN_PASS fixture, the uninstall race disclosure, the race bound. Next: revise and re-audit. Tribunal entry held by the lead and appended at integration in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #792: GATE TRIBUNAL - plan-538c-evidence-integrity (iteration 3) - PASS
+
+**Timestamp**: 2026-10-18T16:24:28Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-18T1602-84548b`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for #538 lane cycles, owner ruling 2026-10-18, disclosed per cycle (#467)
+
+**Content Hash**: `9c85d3c62f5af379d391552983aa4bcedc6e125de418e4c01d6e38aea97613b7`
+**Previous Hash**: `5eef635f63cd3a346b1e7ae94f6c04f7f7e87da3adcb3cfaceb491a34dd34efd`
+**Chain Hash (Merkle seal)**: `0453f1a5a065b7e0ce365c7ffbd8fb54006ad7c77c0aca99cb44296ecbdc5b58`
+
+**Decision**: PASS on plan-538c-evidence-integrity.md iteration 3 (sha256 1457ca9e). A fresh Option B architect-reviewer; every iteration 1 and 2 item resolved; 96 citations checked, none failed. Every unrecorded outcome clears installPath, and the re-scan function owns the check and the scanning transition. Should-fix folded into implementation: an exported route body so RS3 sees a route-side regression, a POSIX leaf-pid poll so dropping detached is caught, a macrotask before reading unhandled-rejection counts, the race timer cleared, entries read before verification, a missing isAvailable exported as unavailable, the release gate's ok-only test disclosed, a terminal status in the re-scan catch, and pre-existing races disclosed. Next: implement on fix/538-lane-C. Tribunal entry held by the lead and appended at integration in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #793: IMPLEMENTATION - plan-538c-evidence-integrity
+
+**Timestamp**: 2026-10-18T17:35:38Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-18T1602-84548b`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-18T1602-84548b/implement.json`
+
+**Content Hash**: `a29e65b8523ab94d814870feee741ed95b23dacdb47970a36abdbccf01acc6f7`
+**Previous Hash**: `0453f1a5a065b7e0ce365c7ffbd8fb54006ad7c77c0aca99cb44296ecbdc5b58`
+**Chain Hash (Merkle seal)**: `4d2612c98df6188f8fc2a08f5f8b03030be0e35b8c5dc455b918b570c141bbe3`
+
+**Decision**: IMPLEMENTATION of plan-538c-evidence-integrity.md iteration 3 (audit PASS, sha256 1457ca9e), #538 lane C. Branch fix/538-lane-C from main 243a34a1, merged with main 3a72e235 (lane D) at e2b19921. f1bfc755 and abb31578: red rows first (47 vscode-test rows and 2 node rows failing on main's code; R14 and C7 red against 40abaa4e). 40abaa4e and a34eaf2b: a scan result carries scanStatus (completed, inconclusive, timeout, scanner-error, unavailable) and scanner versions, and anything but completed quarantines; the scanner has its own deadline that kills the process tree, destroys the pipes and settles as timeout; an item reads installed, and marketplace.installed is broadcast, only after an awaited durable receipt (marketplaceInstallReceipt.ts) that records the verdict, the scanner and the source repository, ref and commit; a failed, stubbed or unwired ledger leaves the item failed with installPath cleared, so it cannot be re-scanned into installed; the re-scan function owns its precondition and the scanning transition; uninstall awaits its receipt; startInstall's failure-path status write is guarded; the compliance export replaces the chainVerification boolean with ledgerIntegrity (intact, partial-seal, failed with bounded failures, or unavailable with the reason) from LedgerIntegritySummary.ts, which validates the report shape and allowlists anchor statuses; weakerProperties moved unchanged and the release gate behaves as before. f323868f: RS3 strengthened after a surviving mutation. ac0edc73, bc0be552, d69ce5fa: marketplace.md citations re-pointed, B296 and B297 done with counts, B298 and B299 open, FEATURE_INDEX FX308, FX386, FX988, CHANGELOG. Evidence from logs: focused vscode-test 106 passing, 4 pending, 0 failing (re-run by the lead, 106/0); the S7 and contracts node files 41/0 (lead); node covering files 94 passed, 3 skipped; npm test default 5107 passing, 18 pending, 1 failing (the lock-queue R1 timing row under host load, outside this lane); architecture configuration 5/0; test:node 818 tests, 807 passed, 2 failed (FX946, #467), 9 skipped; integration contracts 39/39; tsc 0; lint 0 errors; secret scan clean; mutations 20 of 21 killed, the survivor (typeof isAvailable removed alone) equivalent because the throw lands in the same try.
+
+---
+
+### Entry #794: SESSION SEAL - plan-538c-evidence-integrity
+
+**Timestamp**: 2026-10-18T17:36:30Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-18T1602-84548b`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-18T1602-84548b/substantiate.json`
+
+**Content Hash**: `1457ca9ef1f30ce8b0afaaaaecb1496309f5f9fd4d943066aa3ed98c72c6fc4c`
+**Previous Hash**: `4d2612c98df6188f8fc2a08f5f8b03030be0e35b8c5dc455b918b570c141bbe3`
+**Chain Hash (Merkle seal)**: `8c18db590caedb56a27d7c18755bd1443b5f8352b0b393a992ba40be59a9da4b`
+
+**Decision**: SESSION SEAL for plan-538c-evidence-integrity.md (implementation #793; content hash is the audited plan, sha256 1457ca9e). Reality = Promise, with disclosures. The branch carries #538 lane C: the #469 residual (install receipts awaited and durable with verdict and provenance, scanner timeout and failure fail closed, no receipt-less path to installed) and the #473 residual (the compliance export carries ledgerIntegrity, not a boolean). Independent bounded code review: fix first on documentation and disclosure plus two small hardenings, done with red rows in abb31578 and a34eaf2b; the reviewer found no path to installed without a recorded receipt and no consumer of chainVerification. Disclosures: bounded damaged-ledger override for #538 lane cycles (owner ruling 2026-10-18; #467 unresolved, normal governance not restored); marketplace installs stay switched off, so every install path here is tested below the gate and unreachable in the product; recorded means the SQLite row is committed and the head anchor follows asynchronously; on Windows the S7 timeout test probes the sleep leaf through CIM instead of removing the working folder as LD10 planned, because a live MSYS sleep does not hold its folder; the POSIX drop-detached mutation was not run locally (no WSL) and is left to the Linux CI run; the release gate still tests only report.ok; a throw on the installed status write after a recorded receipt leaves the item failed while the ledger says installed; re-scan verdicts are not ledgered, uninstall is not serialized against an in-flight scan, two confirm nonces can race, legacy installed items have no receipt and an exited parent's descendants escape the tree kill (all B299); a NULL trust value is still read back as 0 (B298, needs a contract change); one mutation survived as equivalent; the lock-queue R1 timing row failed in the full run under host load and is outside this lane; FX946 is the known ledger-anchor baseline; the BACKLOG conflict with lane D was resolved by keeping both sections; documentation currency check run mechanically with no warnings (change_class hotfix); earlier seals are unedited. Next: push, open the PR, the PR checks, then a merge with --match-head-commit. Not tagged.
+
+---
+
+### Entry #795: IMPLEMENTATION - plan-538c-evidence-integrity (B243 follow-up)
+
+**Timestamp**: 2026-10-18T17:52:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-18T1602-84548b`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-18T1602-84548b/implement.json`
+
+**Content Hash**: `7a5e37ea5bc52481caccca10b840aebd4483121431d3e6c846cc50f037e5296d`
+**Previous Hash**: `8c18db590caedb56a27d7c18755bd1443b5f8352b0b393a992ba40be59a9da4b`
+**Chain Hash (Merkle seal)**: `79601cb315f33c29635b8119fc8430dc9f27c3ce39ca78792ccfb38fcdf10a46`
+
+**Decision**: IMPLEMENTATION follow-up after seal #794, test-only, by the lead. Both Full Test Suite runs of PR #540 stopped on RiskStore T9 (b) (B243): the test replaced the global fs.renameSync with an always-EPERM stub, a TokenAggregatorService flush (EconomicsPersistence.save) in the shared extension host hit it, and the host exited with 392 and 393 of 519 files executed. Lane C does not touch RiskStore; the row is a known flake (B243) and not a security test, but a stopped host is not coverage, so the cause was fixed instead of re-running again. 845f47b8: the T9 stubs fail only renames into the store's own folder, and T9 (b) renames a file in a temporary folder while the stub is active and asserts it succeeds. Evidence: RiskStore suite 39 passing, 0 failing; with the global stub restored the T9 (b) row fails (1 failing), restored after; B243 marked done.
+
+---
+
+### Entry #796: SESSION SEAL - plan-538c-evidence-integrity (B243 follow-up)
+
+**Timestamp**: 2026-10-18T17:52:01Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-18T1602-84548b`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-18T1602-84548b/substantiate.json`
+
+**Content Hash**: `1457ca9ef1f30ce8b0afaaaaecb1496309f5f9fd4d943066aa3ed98c72c6fc4c`
+**Previous Hash**: `79601cb315f33c29635b8119fc8430dc9f27c3ce39ca78792ccfb38fcdf10a46`
+**Chain Hash (Merkle seal)**: `bb913fdce5ba0be114f56c9ba4bea9838f76008f289a69895f425666b2cdae1c`
+
+**Decision**: SESSION SEAL for the B243 follow-up (implementation #795) after seal #794. Reality = Promise, with disclosures. The follow-up is test-only and outside the audited plan's scope: it scopes the RiskStore T9 rename stubs to the store's folder so PR #540's Full Test Suite can run every file. Disclosures: bounded damaged-ledger override for #538 lane cycles (#467 unresolved); the scope addition is the lead's, made because the flake stopped two CI runs; the full suite result on the pushed head is read from PR #540's next run; seal #794 is unedited. Next: push, the PR checks, then a merge with --match-head-commit. Not tagged.
+
+---
+
+### Entry #797: GATE TRIBUNAL - plan-538b-install-authorization (iteration 1) - PASS
+
+**Timestamp**: 2026-10-18T16:11:42Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-18T1603-a6fafd`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for #538 lane cycles, owner ruling 2026-10-18, disclosed per cycle (#467)
+
+**Content Hash**: `700c7988287b7d564bd34cd56f12c1094d1ecc18b3a7542bb5541070b92c6aad`
+**Previous Hash**: `bb913fdce5ba0be114f56c9ba4bea9838f76008f289a69895f425666b2cdae1c`
+**Chain Hash (Merkle seal)**: `da8110ca308691f6d46a4519994f8d4fedb2d5d5606c29dfccb75c30ea57ab4c`
+
+**Decision**: PASS on plan-538b-install-authorization.md iteration 1 (sha256 8e153b2a), #538 lane B: B267, B269, B274, B276 (and B268) Console install routes behind a server-built, frozen operation confirmed in a modal VS Code dialog, with expiry, disconnect cancellation, a Console request guard and install ledger records, plus the #514 residual (L3 decisions record how they were authenticated). Fresh Option B architect-reviewer; 104 citations checked, none failed. Rulings: the Host port is not pinned because Origin must equal Host; scaffold without hosts may prompt twice; B268 included; install outcome not ledgered (residual). Binding should-fix: the request guard runs before the limiter (cross-site budget exhaustion), exact media-type parsing, a remote-socket row that can fail, socket-destroyed cancellation and one settle guard, clones for real callees, operation ids on completion broadcasts, suite corrections, and disclosure of browser-remote and cross-port refusals. The reviewer enumerated the remaining side-effect routes; the lead folded the Host and Origin check onto the voice-pack and Bicameral connect routes. Next: implement on fix/538-lane-B. Tribunal entry held by the lead and appended at integration in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #798: IMPLEMENTATION - plan-538b-install-authorization
+
+**Timestamp**: 2026-10-18T18:03:34Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-18T1603-a6fafd`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-18T1603-a6fafd/implement.json`
+
+**Content Hash**: `f79545cd99ac245107c6d0aa78eae7abb7c78404d6c1647cb864184326eb1cf2`
+**Previous Hash**: `da8110ca308691f6d46a4519994f8d4fedb2d5d5606c29dfccb75c30ea57ab4c`
+**Chain Hash (Merkle seal)**: `5d836f96bc881b2ad53eedb3a9457dcccafdc8b144c5a211cb8c3fc0ead5e109`
+
+**Decision**: IMPLEMENTATION of plan-538b-install-authorization.md iteration 1 (audit PASS, sha256 8e153b2a), #538 lane B. Branch fix/538-lane-B from main 243a34a1, merged with main 3a72e235 (lane D, 10b9ace5) and e0217925 (lane C). c8f7bc1e, d66f681a and e0bdecfe: red rows first (217 failing on main's code for the #538 rows, the Playwright spec failing, then 3 for B293 and 3 for the review rows). 78e2fa86, 9de36d5d and d959b02b: authorizeOperatorAction mints an operation id, deep-freezes the server-resolved operation, shows it in the existing modal confirmer once, and returns it only when approved within 120 s and before the client disconnects (one settle guard; a throwing confirmer is declined; expired 410, cancelled 499); mcp-install, bicameral-install, scaffold-skills, adapter install and uninstall and agt-install run only the frozen operation, write an operator-action-authorized ledger entry first when a ledger is available (a failed append runs nothing), carry the operation id on their completion broadcasts, and resolve their ledger and terminal at request time; consoleRequestGuard (loopback socket, loopback Host, Origin equal to Host, exact application/json media type) runs before every limiter on those routes and on tracker/config (B293); the voice-pack install and uninstall and Bicameral connect and auto-connect routes get the Host and Origin checks; processL3Decision records an authentication descriptor (vscode-modal-confirmation, vscode-webview, unverified-loopback) and what it proves; the Console callers show confirm, declined, busy, expired and unavailable states. 451b7feb, 30a28325 and 89ffbac2: the mcp-catalog, bicameral, qor-logic-consumer, agt-adapter and agt contracts (main-unreleased rows), portfolio facts, BACKLOG B267, B268, B269, B274, B276 and B293 done, B294 and B295 open, CHANGELOG Security with the compatibility changes for browser remotes, the cross-port workspace switcher and scripted clients, FX1006. Evidence from logs: #538 rows 252 passing, 0 failing; covering suites 710/0; lead re-runs 249/0 and 320/0; npm test default 5306 passing, 18 pending, 2 failing (the lock-queue R1 timing row and workspace-evidence-source, both under host load and passing alone); architecture configuration 5/0; test:node 816 tests, 805 passed, 2 failed (FX946, #467), 9 skipped; Playwright 34 passed, 3 skipped, plus 15 on the taxonomy and dashboard specs; integration contracts 39/39 with the tag check over 359 claims; tsc 0; lint 0 errors; secret scan clean; mutations M1 to M18 each killed.
+
+---
+
+### Entry #799: SESSION SEAL - plan-538b-install-authorization
+
+**Timestamp**: 2026-10-18T18:04:53Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-18T1603-a6fafd`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-18T1603-a6fafd/substantiate.json`
+
+**Content Hash**: `8e153b2a295c9a35bd65dee591ceb33ac73de7b81455c85bac59397fcdacc67e`
+**Previous Hash**: `5d836f96bc881b2ad53eedb3a9457dcccafdc8b144c5a211cb8c3fc0ead5e109`
+**Chain Hash (Merkle seal)**: `03771a640129793ff422501436431c907b1c6075a87da30116761f16f41e8f12`
+
+**Decision**: SESSION SEAL for plan-538b-install-authorization.md (implementation #798; content hash is the audited plan, sha256 8e153b2a). Reality = Promise, with disclosures. The branch carries #538 lane B: Console install side effects need a server-verified, operation-scoped, one-time VS Code confirmation that expires and is cancelled by a disconnect, recorded in the ledger before anything runs, behind a Console request guard; L3 decisions record their authentication method. Independent bounded code review: ready to seal, no high findings; the reviewer found no side effect reachable without approval, no TOCTOU between dialog and execution, and no guard bypass among the header forms tried; five low items folded in with red rows (e0bdecfe, d959b02b, 89ffbac2). After merging main with lanes D and C the lead re-ran the lane B, marketplace and export suites: 492 passing, 0 failing. Disclosures: bounded damaged-ledger override for #538 lane cycles (owner ruling 2026-10-18; #467 unresolved, normal governance not restored); a modal approval proves a person clicked in VS Code, not which local process asked; any local process can still raise a dialog, and an expired dialog stays open and holds the busy guard until dismissed; only the authorization is ledgered, not the install outcome (operation ids on broadcasts tie them together); a ledger whose isAvailable fails lets the install run and the response says it was not recorded; browser-based remotes (Codespaces, vscode.dev, code-server behind https) and the cross-port workspace switcher are refused, the VS Code commands remain the path; scripted clients now need application/json and get 400 for unknown scaffold input; on the voice-pack and Bicameral connect routes a request with no Origin and no JSON still passes, which only a local process can send; preflight grant and deny (B294) and the marketplace nonce (B295) are open, B271 and B257 untouched; the lane's red commit c8f7bc1e was made with git hooks bypassed (core.hooksPath set to an empty path); the only installed hook gates release commits and was run by hand on that message with exit 0, and the reviewer saw no effect on the code; the lock-queue R1 timing row and workspace-evidence-source failed in a full run under host load and pass alone; FX946 is the known ledger-anchor baseline; documentation currency check run mechanically with no warnings (change_class hotfix); earlier seals are unedited. Next: push, open the PR, the PR checks, then a merge with --match-head-commit. Not tagged.
+
+---
+
+### Entry #800: IMPLEMENTATION - plan-538b-install-authorization (CodeQL follow-up)
+
+**Timestamp**: 2026-10-18T18:11:35Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-18T1603-a6fafd`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-18T1603-a6fafd/implement.json`
+
+**Content Hash**: `b947fad2f7367949a801b5af937c5132a8b8703436c075c33540a889a198db74`
+**Previous Hash**: `03771a640129793ff422501436431c907b1c6075a87da30116761f16f41e8f12`
+**Chain Hash (Merkle seal)**: `6af250d166481077de5c39027056abe98bdc60f50bb59fe641251c1520368e48`
+
+**Decision**: IMPLEMENTATION follow-up after seal #799. PR #541's CodeQL check reported three new high js/missing-rate-limiting alerts: the tracker/config POST (the B293 guard was added without a limiter) and two limiter-less fallback route registrations in installAuthorization.routes.test.ts left from the red run. Fixed, not dismissed. f2d3cd6f: the tracker/config POST chain is guard, then a 20-per-minute limiter, then the handler, as on the install routes; refused cross-site requests do not spend the limit; the test registers only through the production setup functions. Evidence: the #538 rows 340 passing, 0 failing (the grep now also matches other lanes' merged suites); integration contracts 39/39; tsc clean; with the limiter removed the 429 row fails.
+
+---
+
+### Entry #801: SESSION SEAL - plan-538b-install-authorization (CodeQL follow-up)
+
+**Timestamp**: 2026-10-18T18:11:35Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-18T1603-a6fafd`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-18T1603-a6fafd/substantiate.json`
+
+**Content Hash**: `8e153b2a295c9a35bd65dee591ceb33ac73de7b81455c85bac59397fcdacc67e`
+**Previous Hash**: `6af250d166481077de5c39027056abe98bdc60f50bb59fe641251c1520368e48`
+**Chain Hash (Merkle seal)**: `61540cf3ce00b2257eb3adefb5b98e7f081bf75c35acb2d499d8d62bc5ed53f5`
+
+**Decision**: SESSION SEAL for the CodeQL follow-up (implementation #800) after seal #799. Reality = Promise, with disclosures. The tracker/config POST is now rate-limited after the request guard, and the test file no longer registers limiter-less routes. Disclosures: bounded damaged-ledger override for #538 lane cycles (#467 unresolved); the tracker limit is 20 per minute, looser than the install routes' 5, because the Taxonomy editor saves interactively; the CodeQL result is read from PR #541's next run; the test-only route in operatorConfirmation.bound.test.ts has no limiter and was not flagged; seal #799 is unedited. Next: the PR checks, then a merge with --match-head-commit. Not tagged.

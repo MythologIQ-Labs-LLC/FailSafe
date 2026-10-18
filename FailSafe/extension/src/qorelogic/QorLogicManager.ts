@@ -25,6 +25,7 @@ import { PolicyEngine } from './policies/PolicyEngine';
 import { ShadowGenomeManager } from './shadow/ShadowGenomeManager';
 import { CortexEvent, RoutingDecision } from '../governance/EvaluationRouter';
 import { L3ApprovalService, PreflightMediatorLike } from './L3ApprovalService';
+import type { OperatorAuthentication } from '../shared/types/operatorAuthentication';
 
 export class QorLogicManager {
     private stateStore: IStateStore;
@@ -141,9 +142,10 @@ export class QorLogicManager {
     async processL3Decision(
         requestId: string,
         decision: 'APPROVED' | 'REJECTED',
+        authentication: OperatorAuthentication,
         conditions?: string[]
     ): Promise<void> {
-        return this.l3ApprovalService.processL3Decision(requestId, decision, conditions);
+        return this.l3ApprovalService.processL3Decision(requestId, decision, authentication, conditions);
     }
 
     /**

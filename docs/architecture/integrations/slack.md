@@ -15,7 +15,7 @@ A team lead wants the people who are not watching the editor to see, in a shared
 
 ## Measurable value
 
-Metric: the share of enforcement events (blocking verdict, L3 queued, L3 decided) that produce a Slack post; the notifier subscribes to exactly four event names `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:13-18` (`export const SLACK_NOTIFY_EVENTS = [`).
+Metric: the share of enforcement events (blocking verdict, L3 queued, L3 decided) that produce a Slack post; the notifier subscribes to exactly four event names `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:14-19` (`export const SLACK_NOTIFY_EVENTS = [`).
 Baseline: no delivery counts are collected; only the last delivery's health is kept, so delivery rate in the field is unverified.
 
 ## Why not simply ask an agent
@@ -32,7 +32,7 @@ The message is built as Block Kit header, section and context blocks `FailSafe/e
 Credential: one Slack incoming-webhook URL held in VS Code Secret Storage; the plain-text setting is deprecated and not read `FailSafe/extension/package.json:403-405` (`Plain-text settings are no longer read`).
 The webhook URL grants posting to its one channel and nothing else `FailSafe/extension/package.json:406` (`it grants posting to the target channel`).
 A disabled channel never consults the credential store `FailSafe/extension/src/integrations/credentials/credentialGates.ts:186-190` (`if (!enabled) return { enabled: false };`).
-The URL is redacted from any failure diagnostic `FailSafe/extension/src/integrations/notify-event.ts:36-38` (`return text.split(webhookUrl).join('[webhook]');`).
+The URL is redacted from any failure diagnostic `FailSafe/extension/src/integrations/notify-event.ts:39-41` (`return text.split(webhookUrl).join('[webhook]');`).
 Interactive approval from Slack would need a full Slack app with signed callbacks and is marked requires separate approval `FailSafe/extension/src/integrations/slack/slack-notify.ts:5-8` (`Approval decisions are NOT actioned in Slack`).
 
 ## Feature state
@@ -40,33 +40,34 @@ Interactive approval from Slack would need a full Slack app with signed callback
 | Capability | State | Symbol | Reached from | Test (depth) | Notes |
 |---|---|---|---|---|---|
 | notify | verified-shipped | `SlackNotifier` `FailSafe/extension/src/integrations/slack/SlackNotifier.ts:58` (`export class SlackNotifier {`) | `FailSafe/extension/src/extension/main.ts:307-312` (`new SlackNotifier(`) | `FailSafe/extension/src/test/integrations/notifier-wiring.test.ts` (unit) | Catalog capability `FailSafe/extension/src/integrations/catalog/integration-catalog.ts:237` (`capabilities: ['notify'],`) |
-| veto-notice | verified-shipped | `mapGovernanceEvent` `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:35-38` (`case 'sentinel.verdict': {`) | `FailSafe/extension/src/sentinel/VerdictRouter.ts:35` (`this.eventBus.emit('sentinel.verdict', verdict);`) | `FailSafe/extension/src/test/integrations/slack/slack-notify.test.ts` (unit) | Only BLOCK of the emitted decisions matches; QUARANTINE does not `FailSafe/extension/src/shared/types/sentinel.ts:15-20` (`"QUARANTINE";`) |
-| l3-queued-notice | verified-shipped | `mapGovernanceEvent` `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:46-52` (`case 'qorelogic.l3Queued':`) | `FailSafe/extension/src/qorelogic/L3ApprovalService.ts:125` (`this.eventBus.emit('qorelogic.l3Queued', fullRequest);`) | `FailSafe/extension/src/test/integrations/slack/slack-notify.test.ts` (unit) | The queued request carries `filePath`, so the path detail is filled `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:50` (`detail: str(p.filePath) ? `) |
-| l3-decided-notice | verified-shipped | `mapGovernanceEvent` `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:53-58` (`case 'qorelogic.l3Decided':`) | `FailSafe/extension/src/qorelogic/L3ApprovalService.ts:156` (`this.eventBus.emit('qorelogic.l3Decided', { request, decision });`) | `FailSafe/extension/src/test/integrations/notifier-wiring.test.ts` (unit) | The decision reaches the title; the path detail never does, because the path is under `request` (F09, [B263]) `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:57` (`detail: str(p.filePath) ? `) |
-| critical-drift-notice | shipped-inert | `mapGovernanceEvent` `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:60-65` (`case 'governance.driftDetected':`) | none | none | Absent call site: the only emitter is `FailSafe/extension/src/governance/CheckpointReconciler.ts:112` (`this.eventBus.emit("governance.driftDetected", drift);`) and no non-test file constructs `CheckpointReconciler` (unverified beyond a repository search at c36b9ee2); its payload has no summary (F10, [B264]) |
-| release-seal-notice | shipped-inert | `KIND_META` `FailSafe/extension/src/integrations/slack/slack-notify.ts:38` (`'release-seal': { emoji: ':lock:', label: 'Release sealed' },`) | none | none | Absent call site: no subscribed event maps to `release-seal` `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:67-68` (`default:`) (F08, [B262]) |
+| veto-notice | verified-shipped | `mapGovernanceEvent` `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:58-61` (`case 'sentinel.verdict': {`) | `FailSafe/extension/src/sentinel/VerdictRouter.ts:35` (`this.eventBus.emit('sentinel.verdict', verdict);`) | `FailSafe/extension/src/test/integrations/slack/slack-notify.test.ts` (unit) | Only BLOCK of the emitted decisions matches; QUARANTINE does not `FailSafe/extension/src/shared/types/sentinel.ts:15-20` (`"QUARANTINE";`) |
+| l3-queued-notice | verified-shipped | `mapGovernanceEvent` `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:69-75` (`case 'qorelogic.l3Queued':`) | `FailSafe/extension/src/qorelogic/L3ApprovalService.ts:125` (`this.eventBus.emit('qorelogic.l3Queued', fullRequest);`) | `FailSafe/extension/src/test/integrations/slack/slack-notify.test.ts` (unit) | The queued request carries `filePath` `FailSafe/extension/src/shared/types/l3-approval.ts:21` (`filePath: string;`); on main (unreleased) it is shown as a path label (see Transformations) |
+| l3-decided-notice | verified-shipped | `mapGovernanceEvent` `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:76-81` (`case 'qorelogic.l3Decided':`) | `FailSafe/extension/src/qorelogic/L3ApprovalService.ts:156` (`this.eventBus.emit('qorelogic.l3Decided', { request, decision });`) | `FailSafe/extension/src/test/integrations/notifier-wiring.test.ts` (unit) | The decision reaches the title. In v6.0.8 the path detail is missing because the path is under `request` (F09) `FailSafe/extension/src/qorelogic/L3ApprovalService.ts:156` (`{ request, decision }`); fixed on main, unreleased ([B263], see Transformations) |
+| critical-drift-notice | shipped-inert | `mapGovernanceEvent` `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:83-88` (`case 'governance.driftDetected':`) | none | none | Absent call site: the only emitter is `FailSafe/extension/src/governance/CheckpointReconciler.ts:112` (`this.eventBus.emit("governance.driftDetected", drift);`) and no non-test file constructs `CheckpointReconciler` (unverified beyond a repository search at c36b9ee2); its payload has no summary (F10, [B264]) |
+| release-seal-notice | shipped-inert | `KIND_META` `FailSafe/extension/src/integrations/slack/slack-notify.ts:38` (`'release-seal': { emoji: ':lock:', label: 'Release sealed' },`) | none | none | Absent call site: no subscribed event maps to `release-seal` `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:90-91` (`default:`) (F08, [B262]) |
 | interactive-approval | proposed | none | none | none | Not built; the review blocks it in v1 `FailSafe/extension/src/integrations/slack/slack-notify.ts:6-8` (`Approval decisions are NOT actioned in Slack`) |
 
 ## Inbound fields
 
-From each event payload only: `decision` and `artifactPath` (verdict), `filePath` or `title` (L3 queued), `decision` or `status` and `filePath` (L3 decided), `summary` or `detail` (drift), and `timestamp` or `ts` `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:31-32` (`const ts = str(p.timestamp) ?? str(p.ts);`).
-The event bus envelope is unwrapped before mapping `FailSafe/extension/src/integrations/notify-event.ts:20-28` (`export function readEventBusEvent(event: unknown): EventBusEnvelope {`).
+From each event payload only: `decision` and `artifactPath` (verdict), `filePath` or `title` (L3 queued), `decision` or `status` and `request.filePath`, or a flat `filePath` (L3 decided), `summary` or `detail` (drift), and `timestamp` or `ts` `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:53-54` (`const ts = str(p.timestamp) ?? str(p.ts);`).
+The event bus envelope is unwrapped before mapping `FailSafe/extension/src/integrations/notify-event.ts:23-31` (`export function readEventBusEvent(event: unknown): EventBusEnvelope {`).
 Nothing is read back from Slack; the response body is discarded `FailSafe/extension/src/integrations/slack/SlackNotifier.ts:33-35` (`res.resume();`).
 
 ## Outbound fields and egress
 
 Repository content: no; the card carries a title, an optional one-line detail (an artifact path or file path), a timestamp and a Console link `FailSafe/extension/src/integrations/slack/slack-notify.ts:43-55` (`const contextBits: string[] = ['FailSafe governance'];`).
-Metadata: yes, a workspace-relative or absolute file path when the event names one, gated by `failsafe.integrations.slack.enabled` and a stored webhook `FailSafe/extension/src/integrations/slack/SlackNotifier.ts:75-76` (`const cfg = this.getConfig();`).
+Metadata: yes, a file path when the event names one, shown relative to the workspace when it is inside it and as the file name only otherwise (an absolute path elsewhere, a `..` escape or a URI), with control and invisible characters removed and capped at 200 characters, and with `&`, `<` and `>` escaped for mrkdwn `FailSafe/extension/src/integrations/notify-event.ts:93` (`export function notifyPathLabel(`) `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:28` (`function escapeMrkdwn(text: string): string {`); gated by `failsafe.integrations.slack.enabled` and a stored webhook `FailSafe/extension/src/integrations/slack/SlackNotifier.ts:77-78` (`const cfg = this.getConfig();`).
 Graph relationships: no `FailSafe/extension/src/integrations/slack/slack-notify.ts:12-14` (`it only ever`).
-Governance evidence: yes, the fact of a block or an L3 decision and its decision word, under the same gate `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:56` (`L3 decision: `).
+Governance evidence: yes, the fact of a block or an L3 decision and its decision word, under the same gate `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:79` (`L3 decision: `).
 Destination: the webhook URL's host and path over TLS; the URL's scheme and port are not used `FailSafe/extension/src/integrations/slack/SlackNotifier.ts:24-31` (`hostname: u.hostname,`).
 
 ## Transformations
 
-A blocking verdict becomes a `veto` notice titled with its decision `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:36-44` (`Notify only on enforcement (a blocking decision)`).
+A blocking verdict becomes a `veto` notice titled with its decision `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:59-67` (`Notify only on enforcement (a blocking decision)`).
 Each kind gets a fixed emoji and label `FailSafe/extension/src/integrations/slack/slack-notify.ts:34-40` (`const KIND_META: Record<SlackNotifyKind`).
-The Console link is always the default local address on port 9376, because the notifier never passes the live Console URL `FailSafe/extension/src/integrations/slack/SlackNotifier.ts:78` (`const notice = mapGovernanceEvent(eventType, payload);`).
-The envelope's emit time is used when the payload carries no timestamp `FailSafe/extension/src/integrations/slack/SlackNotifier.ts:80` (`if (!notice.ts) notice.ts = timestamp;`).
+The Console link is always the default local address on port 9376, because the notifier never passes the live Console URL `FailSafe/extension/src/integrations/slack/SlackNotifier.ts:80` (`const notice = mapGovernanceEvent(eventType, payload, undefined, this.workspaceRoot);`).
+The envelope's emit time is used when the payload carries no timestamp `FailSafe/extension/src/integrations/slack/SlackNotifier.ts:82` (`if (!notice.ts) notice.ts = timestamp;`).
+On main (unreleased, #538): every path line uses the shared path label `FailSafe/extension/src/integrations/notify-event.ts:93` (`export function notifyPathLabel(`), and the L3-decided path is read from `request.filePath`, falling back to a flat `filePath` `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:42` (`return (request as Record<string, unknown>).filePath;`).
 
 ## Persisted artifacts
 
@@ -90,7 +91,7 @@ In Slack: a read-only card with a text link back to the Console; no buttons act 
 
 Observed: the notifier reports governance events after they happen; it never blocks or changes a workflow `FailSafe/extension/src/integrations/slack/slack-sender.ts:6-9` (`Non-blocking by contract`).
 Enforced: the payload carries only typed fields, never raw prompts or content `FailSafe/extension/src/integrations/slack/slack-notify.ts:12-15` (`and this builder adds nothing beyond`).
-Advisory: delivery is best effort; a lost post is reported locally, not retried `FailSafe/extension/src/integrations/slack/SlackNotifier.ts:85-91` (`if (!result.ok && !result.skipped) {`).
+Advisory: delivery is best effort; a lost post is reported locally, not retried `FailSafe/extension/src/integrations/slack/SlackNotifier.ts:87-93` (`if (!result.ok && !result.skipped) {`).
 
 ## Failure, offline, stale and permission semantics
 
@@ -103,18 +104,17 @@ A revoked webhook yields a non-2xx and is reported, not retried `FailSafe/extens
 
 ## End-to-end scenario and measurable acceptance
 
-Scenario: enable Slack, store a webhook, trigger a blocking verdict, and see one card in the channel titled "Action blocked (BLOCK)" with the artifact path `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:39-42` (`Action blocked (`).
-Metric: one emitted blocking verdict produces exactly one post, a PASS verdict produces none, and a disabled channel neither sends nor reports (threshold: exact counts) `FailSafe/extension/src/test/integrations/notifier-wiring.test.ts:84-88` (`PASS must not notify`).
-Existing test: `FailSafe/extension/src/test/integrations/notifier-wiring.test.ts:61-62` (`Slack: a real emitted VETO verdict is delivered`) (unit, real event bus, injected transport).
+Scenario: enable Slack, store a webhook, trigger a blocking verdict, and see one card in the channel titled "Action blocked (BLOCK)" with the artifact path `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:62-65` (`Action blocked (`).
+Metric: one emitted blocking verdict produces exactly one post, a PASS verdict produces none, and a disabled channel neither sends nor reports (threshold: exact counts) `FailSafe/extension/src/test/integrations/notifier-wiring.test.ts:107-111` (`PASS must not notify`).
+Existing test: `FailSafe/extension/src/test/integrations/notifier-wiring.test.ts:84-85` (`Slack: a real emitted VETO verdict is delivered`) (unit, real event bus, injected transport).
 Installed-extension test: no test installs the packaged VSIX and posts to a Slack endpoint (unverified).
 
 ## Recommended disposition
 
-Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE**. Blocking-verdict and L3 notices work and are tested, but two of the five kinds the design promised cannot fire (drift has no live emitter, release-seal has no event), the L3-decided card loses its path, and the Console link is fixed to the default port. Finishing those is small and keeps the contract honest; until then the settings text overstates the event set.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE**. Blocking-verdict and L3 notices work and are tested, but two of the five kinds the design promised cannot fire (drift has no live emitter, release-seal has no event), and the Console link is fixed to the default port. Finishing those is small and keeps the contract honest; until then the settings text overstates the event set.
 
 ## Open defects
 
-[B263] L3-decided notices never carry the file path (F09) `FailSafe/extension/src/qorelogic/L3ApprovalService.ts:156` (`{ request, decision }`).
 [B264] Drift notices cannot fire on main and would carry no detail (F10) `FailSafe/extension/src/governance/CheckpointReconciler.ts:112` (`governance.driftDetected`).
-[B262] The release-seal notice kind is never produced (F08) `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:13-18` (`'governance.driftDetected',`).
+[B262] The release-seal notice kind is never produced (F08) `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:14-19` (`'governance.driftDetected',`).
 The enable setting's description promises critical drift notices `FailSafe/extension/package.json:401` (`VETO, L3 queued/decided, critical drift`).

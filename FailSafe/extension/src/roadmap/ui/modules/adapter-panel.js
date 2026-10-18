@@ -2,6 +2,7 @@
 // Manages installation and configuration of the agent-failsafe Python adapter
 // for Microsoft Agent Governance Toolkit integration.
 import { escHtml } from './skill-utils.js';
+import { CONFIRM_PENDING_TEXT, gatedFailureMessage, jsonPost, settleGated } from './operator-confirmation-copy.js';
 
 const TOOLKIT_PACKAGES = [
   { name: 'agent-os', description: 'Policy engine & tool call interceptors', required: true },
@@ -80,6 +81,7 @@ export class AdapterPanel {
             }
           </div>
         </div>
+        <div class="cc-adapter-action-status" role="status" aria-live="polite" style="font-size:0.8rem;color:var(--text-muted);margin-top:8px"></div>
       </div>`;
   }
 
@@ -385,37 +387,32 @@ export class AdapterPanel {
 
     if (progressDiv) progressDiv.style.display = 'block';
     if (confirmBtn) confirmBtn.disabled = true;
+    // #538: pip runs only after the operator confirms in a VS Code dialog. The Upgrade
+    // button calls this without the modal open, so the panel status line says it too.
+    if (progressMsg) { progressMsg.textContent = CONFIRM_PENDING_TEXT; progressMsg.style.color = ''; }
+    this.setActionStatus(CONFIRM_PENDING_TEXT);
 
     try {
-      const res = await fetch(`${this.client.baseUrl}/api/adapter/install`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          installToolkit,
-          upgradeIfExists: upgrade,
-        }),
-      });
+      const r = await settleGated(fetch(`${this.client.baseUrl}/api/adapter/install`, jsonPost({
+        installToolkit,
+        upgradeIfExists: upgrade,
+      })));
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Installation failed');
+      if (!r.ok) {
+        const message = gatedFailureMessage(r.status, r.body, 'installed');
+        if (progressMsg) { progressMsg.textContent = message; progressMsg.style.color = 'var(--accent-red)'; }
+        this.setActionStatus(message);
+        return;
       }
 
-      // Poll for progress (simplified - in production use WebSocket)
-      const data = await res.json();
       if (progressBar) progressBar.style.width = '100%';
-      if (progressMsg) progressMsg.textContent = data.message || 'Installation complete';
+      if (progressMsg) progressMsg.textContent = r.body.message || 'Installation complete';
+      this.setActionStatus('');
 
       setTimeout(() => {
         this.hideInstallModal();
         this.render();
       }, 1500);
-
-    } catch (e) {
-      if (progressMsg) {
-        progressMsg.textContent = `Error: ${e.message}`;
-        progressMsg.style.color = 'var(--accent-red)';
-      }
     } finally {
       this.installing = false;
       if (confirmBtn) confirmBtn.disabled = false;
@@ -423,16 +420,19 @@ export class AdapterPanel {
   }
 
   async performUninstall() {
-    try {
-      const res = await fetch(`${this.client.baseUrl}/api/adapter/uninstall`, {
-        method: 'POST',
-      });
-      if (res.ok) {
-        await this.render();
-      }
-    } catch (e) {
-      console.error('Uninstall failed:', e);
+    // #538: sent as JSON (the server refuses other content types) and confirmed in VS Code.
+    this.setActionStatus(CONFIRM_PENDING_TEXT);
+    const r = await settleGated(fetch(`${this.client.baseUrl}/api/adapter/uninstall`, jsonPost({})));
+    if (r.ok) {
+      await this.render();
+      return;
     }
+    this.setActionStatus(gatedFailureMessage(r.status, r.body, 'uninstalled'));
+  }
+
+  setActionStatus(message) {
+    const el = this.container?.querySelector('.cc-adapter-action-status');
+    if (el) el.textContent = message;
   }
 
   async saveConfig() {

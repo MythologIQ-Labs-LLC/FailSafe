@@ -82,7 +82,8 @@ export class L3ApprovalPanel {
 
     private async handleApproval(id: string, decision: 'APPROVED' | 'REJECTED'): Promise<void> {
         try {
-            await this.qorelogic.processL3Decision(id, decision);
+            // #538 (#514 residual): a click in this webview panel, inside VS Code.
+            await this.qorelogic.processL3Decision(id, decision, { method: 'vscode-webview', channel: 'vscode:l3-approval-panel' });
             vscode.window.showInformationMessage(`L3 request ${decision.toLowerCase()}`);
             this.update();
         } catch (error) {
