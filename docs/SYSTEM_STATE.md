@@ -1,6 +1,6 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-10-17 (v6.0.8 published and verified; #532 part A merged to main 75c26fc5; #532 part B delivery assessment sealed on feat/532b-delivery-assessment; ledger #705-#785, seal #785; not yet merged)
+**Last Updated:** 2026-10-18 (#538 post-v6.0.8 security patch in progress on main, unreleased; lane D voice pack and notice path sealed on fix/538-lane-D; ledger #786-#789, seal #789; not yet merged)
 **Active local review:** `fix/system-state-currency-sprint2` — this cycle. Restores the Tier 1 freshness contract and adds `system-state-currency.test.cjs`, the first check that asserts it. Prior to this cycle no test anywhere read this file's content.
 **Prior local review:** `fix/qor169-sprint1-seal-unblock` — MERGED to `main` as `1e1215cc` (PR #448). qor-logic 0.163.1 → 0.169.0; `.qorlogic/config.json` created, which is what allows a seal to complete at all; five vacuously-passing governance controls identified; TTS timeout assertion made deterministic and falsifying. Seal Entry #602.
 **Open PRs:** #442 (Bicameral upstream row error state), #443 (plan-grep-lint regex recognition), #444 (#367 per-engine provenance), #445 (#242 Shadow Genome severity aria — supersedes #440, closed as duplicate), #446 + #447 (dependabot). #447's blocker — a wall-clock TTS assertion — was removed by Entry #602.
@@ -11,6 +11,13 @@
 **Active integrations:** Bicameral MCP (sealed Entry #372 + earlier cluster) · Open Design v1 (provenance, Entry #400) · Open Design v1.1 (MCP + SSE + probe, Entry #405) · Open Design v1.2 (`create_artifact` L3-gated, Entry #409 — RELEASED v5.3.3; destructive write-tools deferred to B-OD-12)
 **Governance substrate:** qor.scripts substrate modules v1 WARN-only (Entry #402) — secret_scanner, feature_index_verify, model_pinning_lint
 **Doctrine additions since 2026-05-22:** `feedback_no_pipeline_reshape_for_marketplace_issues` (2026-05-27, v5.2.2 hold-pat precedent) · `feedback_verify_external_names_at_plan_time` (2026-05-27, Citation Inventory Pass — broke 4-cycle Plan-Time Hallucination loop at Entry #405)
+
+---
+
+## 2026-10-18 — #538 post-v6.0.8 security patch (main, unreleased)
+
+- #538 lane D (plan-538d, audit PASS iteration 2, seal #789): the Voice Pack download names MythologIQ-Labs-LLC and checks every redirect hop and every response against an https allowlist (B261); Slack and Teams L3-decided notices show a sanitized, workspace-relative path and nothing else from the request (B263). No voice-pack release is published yet (B287).
+- Governance: the owner approved a bounded damaged-ledger override for #538 lane cycles on 2026-10-18; the META_LEDGER stays DAMAGED (#467), not repaired.
 
 ---
 

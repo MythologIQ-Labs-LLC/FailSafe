@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Voice Pack install downloads from the current repository (MythologIQ-Labs-LLC/FailSafe) and follows redirects one hop at a time: a hop that is not HTTPS on a GitHub download host (including the host GitHub now uses for release files) is refused before it is requested, a download stops after five redirects, and a response the network layer redirected on its own is refused. The install result and the FailSafe output log record the requested address, the final address without its signed query, and the archive's SHA-256, and error messages never include a signed download link. The checksum is published in the same release as the archive, so it detects a damaged download, not a replaced release. No Voice Pack release has been published yet, so Install still reports that the download was not found (#538).
+- Slack and Teams L3-decision notices now show the file path. Paths in all Slack and Teams notices are shown relative to the workspace; a path outside it shows only the file name, control and invisible characters are removed, long paths are shortened, and Slack formatting characters in a path are escaped. No file content, diff, approval conditions or token is sent (#538).
+- The extension's repository link (shown on the marketplace listing) names the current repository, MythologIQ-Labs-LLC/FailSafe (#538).
 - With the FailSafe pre-commit hook installed in enforce mode, every commit was refused, even with an active intent, because the check looked for the intent in the wrong place. Commits are now allowed when an intent is active (#532).
 
 ## [6.0.8] - 2026-10-16

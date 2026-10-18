@@ -64,6 +64,8 @@ export class TeamsNotifier {
     private readonly onFailure: TeamsFailureSink = defaultOnFailure,
     /** Receives every attempted delivery's result (#479 health evidence). Must never throw. */
     private readonly onDelivered: (result: TeamsSendResult) => void = (r) => recordIntegrationHealth('teams', ...healthFromTeamsDelivery(r)),
+    /** The bound workspace root, so notice paths can be shown workspace-relative (#538). */
+    private readonly workspaceRoot?: string,
   ) {}
 
   register(): void {
@@ -76,7 +78,7 @@ export class TeamsNotifier {
     const cfg = this.getConfig();
     if (!cfg.enabled || !cfg.webhookUrl) return;
     const { payload, timestamp } = readEventBusEvent(event);
-    const notice = mapGovernanceEvent(eventType, payload);
+    const notice = mapGovernanceEvent(eventType, payload, undefined, this.workspaceRoot);
     if (!notice) return;
     if (!notice.ts) notice.ts = timestamp;
     const result = await sendTeamsNotification(cfg.webhookUrl, notice, this.post); // non-blocking by contract
