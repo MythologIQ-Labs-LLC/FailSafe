@@ -33522,3 +33522,74 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `61540cf3ce00b2257eb3adefb5b98e7f081bf75c35acb2d499d8d62bc5ed53f5`
 
 **Decision**: SESSION SEAL for the CodeQL follow-up (implementation #800) after seal #799. Reality = Promise, with disclosures. The tracker/config POST is now rate-limited after the request guard, and the test file no longer registers limiter-less routes. Disclosures: bounded damaged-ledger override for #538 lane cycles (#467 unresolved); the tracker limit is 20 per minute, looser than the install routes' 5, because the Taxonomy editor saves interactively; the CodeQL result is read from PR #541's next run; the test-only route in operatorConfirmation.bound.test.ts has no limiter and was not flagged; seal #799 is unedited. Next: the PR checks, then a merge with --match-head-commit. Not tagged.
+
+---
+
+### Entry #802: GATE TRIBUNAL - plan-538a-outbound-egress (iteration 1) - VETO
+
+**Timestamp**: 2026-10-18T16:11:01Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-18T1602-662302`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for #538 lane cycles, owner ruling 2026-10-18, disclosed per cycle (#467)
+
+**Content Hash**: `64e81c16c6bdb5bf2185a24dde3204f03df19f42e5a96f02243906abb9cf6a90`
+**Previous Hash**: `61540cf3ce00b2257eb3adefb5b98e7f081bf75c35acb2d499d8d62bc5ed53f5`
+**Chain Hash (Merkle seal)**: `13d36d8dbbf7d9d380ac94a4d5c54a0d631992fbb9d727e3ce3331296b0a97b8`
+
+**Decision**: VETO on plan-538a-outbound-egress.md iteration 1 (sha256 475178ba), #538 lane A: B273 (a workspace-controlled Sentinel LLM endpoint must not receive source code or transcripts; loopback-only by default, operator authorization bound to the exact origin and operation, no redirects, connect-time address checks, fail closed) and B265/B279 (GitHub Enterprise token host affinity and port). Fresh Option B architect-reviewer; 98 citations checked, none failed; every LLM and token call site covered. Blocking: the two production wiring points the claim rests on had no falsifier (ConfigManager labelling a sentinel.yaml endpoint as workspace-controlled; offerGovernedCommit passing the paired endpoint). Should-fix: an activation hang from a startup prompt, ask defaults, dev-container settings reading as user settings, the proxy caveat, the GitHub loopback lookup, NAT64 and 6to4 ranges, the http GHE break in the changelog, exact counts, an overall deadline, the full origin in the dialog, one shared authorizer. Ruling: revocation is required. Next: revise and re-audit. Tribunal entry held by the lead and appended at integration in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #803: GATE TRIBUNAL - plan-538a-outbound-egress (iteration 2) - VETO
+
+**Timestamp**: 2026-10-18T16:26:28Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-18T1602-662302`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for #538 lane cycles, owner ruling 2026-10-18, disclosed per cycle (#467)
+
+**Content Hash**: `992079e7c97d301ab7a14d7c6e77602fb862aa46ba07c04af00fca90d11d9d75`
+**Previous Hash**: `13d36d8dbbf7d9d380ac94a4d5c54a0d631992fbb9d727e3ce3331296b0a97b8`
+**Chain Hash (Merkle seal)**: `eb215c63de15276f188404d4f25413653a5c53b4bf2cac1454aa6214d9c3a2b2`
+
+**Decision**: VETO on plan-538a-outbound-egress.md iteration 2 (sha256 53b1a18f). A fresh Option B architect-reviewer; iteration 1 items resolved and the security design judged sound and complete; 107 citations checked, none failed. Blocking, plan text only: a single-line package.json command entry would be expanded by release:bump (JSON.stringify) and break contract citations on the release PR; and new capabilities were marked verified-shipped instead of main-unreleased. Should-fix: literal request calls for the scan, the default proxy override stated, exact counts, mode restored after Allow, a null yaml endpoint treated as absent, the model name capped and quoted, a shared address module, the resolved base in the header guard, a localhost-remap row, silence without a token, and the dev-container GitHub base filed as B290. Next: revise and re-audit. Tribunal entry held by the lead and appended at integration in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #804: GATE TRIBUNAL - plan-538a-outbound-egress (iteration 3) - PASS
+
+**Timestamp**: 2026-10-18T16:39:32Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-18T1602-662302`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for #538 lane cycles, owner ruling 2026-10-18, disclosed per cycle (#467)
+
+**Content Hash**: `e6f3a743f27ca0f91d228a0f6ff422aa89a8765a8f9bb664b974325711b8dba8`
+**Previous Hash**: `eb215c63de15276f188404d4f25413653a5c53b4bf2cac1454aa6214d9c3a2b2`
+**Chain Hash (Merkle seal)**: `a5a3453cd152cffacef1d200ec90f36b78457c4d70220bd5305e8832c6f51d70`
+
+**Decision**: PASS on plan-538a-outbound-egress.md iteration 3 (sha256 761db41c). A fresh Option B architect-reviewer; every iteration 1 and 2 item resolved; 124 citations checked, none failed; no bypass found among URL forms, DNS changes, redirects or fail-open paths, and every outbound call site covered. Should-fix folded into implementation: post-fix rows that make a mutated source label inside LLMClient fail (S1), a non-vacuous localhost-remap row (S2), the SHIELD transport base through apiBaseFor (S3), FEATURE_INDEX header counts (S4), first-server counts on redirect rows (S5), a public IPv6 case (S6), a catch on the unawaited authorization (S7), main-differs notes on shipped rows (S8), the refused-base result stated (S9), and the hostname-reachability CI risk noted (S10). Next: implement on fix/538-lane-A. Tribunal entry held by the lead and appended at integration in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #805: IMPLEMENTATION - plan-538a-outbound-egress
+
+**Timestamp**: 2026-10-18T19:04:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-18T1602-662302`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-18T1602-662302/implement.json`
+
+**Content Hash**: `89096c17f92a327ae8fe59f81dbaf3b3825a9c2ab35d8d20a4219ccc9715adf5`
+**Previous Hash**: `a5a3453cd152cffacef1d200ec90f36b78457c4d70220bd5305e8832c6f51d70`
+**Chain Hash (Merkle seal)**: `d7ee72126b3d9893c4bed0406b40c0cc3837bdda1404625b5e5a0dbd6bf52bd9`
+
+**Decision**: IMPLEMENTATION of plan-538a-outbound-egress.md iteration 3 (audit PASS, sha256 761db41c), #538 lane A. Branch fix/538-lane-A from main 243a34a1, merged with main f5a54299 (lanes B, C, D) at fc8a9a83. c0e28215, c6e93abb and 736bc43b: red rows first (20 failing on main's code for the #538 rows, citing the defects: the workspace-chosen host received requests, a redirect target received requests, the linkage audit read api.github.com, the port was dropped; then 10 review rows red on 85fcda79). 6e319fdb and d6ae5ec8: llmDestinationPolicy classifies the endpoint and its source; a workspace sentinel.yaml (or a workspace setting, which machine scope now ignores) may name only a loopback server; a user-scope remote server needs a modal approval bound to its exact canonical origin and operation (sentinel-file-analysis or brainstorm-transcript), stored in globalState and cleared by FailSafe: Forget Sentinel LLM Approvals, with a generation that discards an answer given after Forget; llmTransport sends through http or https with agent false, a guarded lookup on every connect (loopback only for loopback destinations; never loopback, private, link-local, CGNAT, ULA, NAT64 or 6to4 for remote ones), no redirects, a response cap and an overall deadline, re-evaluated on every probe and generate; the start probe never prompts; a refused approved address shows one warning naming only the origin; Brainstorm falls back to the VS Code language model when refused. github-host-affinity attaches the Authorization header only when the request origin equals the resolved API base origin; the linkage audit uses that base and treats any non-2xx as failure; transports keep the port, settle once, cap the response, apply one deadline and never pool sockets; a non-loopback http base is refused with an https hint; the governed-commit PR step uses the endpoint paired with the token. 4e21e929: the GitHub overall-deadline row added after a surviving mutation. c06896f1: an Open Design bootstrap test stub gains registerCommand. 85fcda79 and 0ca63e9c: the sentinel-llm, github-checks and governed-commit-pr contracts (main-unreleased rows, main-differs notes), 21 package.json citations re-cited across 14 contracts, portfolio rows, BACKLOG B273, B265 and B279 done, B290 and B291 filed, CHANGELOG with the compatibility breaks, FX1005. Evidence from logs: #538 rows 68 passing, 0 failing; covering suites 382/0; lead re-run 351/0; after the merge the lead ran the full npm test: 5470 passing, 18 pending, 0 failing, census 536/536; architecture configuration 5/0; test:node 821 tests, 810 passed, 2 failed (FX946, #467), 9 skipped; integration contracts 0 problems with the tag check over 359 claims; tsc 0; lint 0 errors; mutations 24 in round 1 and 11 in round 2, each killed by a named row.
