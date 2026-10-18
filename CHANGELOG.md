@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - With the FailSafe pre-commit hook installed in enforce mode, every commit was refused, even with an active intent, because the check looked for the intent in the wrong place. Commits are now allowed when an intent is active (#532).
+- Compliance exports now state the FailSafe ledger's integrity as intact, partial seal (naming each weaker property), failed (with the failing rows and reasons) or unavailable (with the reason), instead of a single true/false value that read true for a partially sealed ledger. A ledger that cannot be read still exports, with no entries and the read error (#473).
+- For when Agent Marketplace installs return (they remain switched off): an item is reported installed only after its install is recorded in the FailSafe ledger, and an install that cannot be recorded is shown as failed. The record names the scan result, the scanner and its version, and the source repository, ref and commit. A scanner that runs past its time limit is stopped along with everything it started and reported as timed out; one that fails to run is reported as a scanner error; neither counts as a pass, so the item is quarantined. Uninstalls are recorded the same way (#469).
 
 ## [6.0.8] - 2026-10-16
 

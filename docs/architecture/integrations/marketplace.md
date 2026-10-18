@@ -47,37 +47,39 @@ Running an item's setup in an isolation provider would need new filesystem, netw
 | Capability | State | Symbol | Reached from | Test (depth) | Notes |
 |---|---|---|---|---|---|
 | catalog-browse | verified-shipped | `setupMarketplaceRoutes` `FailSafe/extension/src/roadmap/routes/MarketplaceRoute.ts:19` (`export function setupMarketplaceRoutes(`) | `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:348` (`setupMarketplaceRoutes(app, {`) | `FailSafe/extension/src/test/extension/marketplace-route.test.ts` (route) | Catalog, item, scanners, featured and installed reads `FailSafe/extension/src/roadmap/routes/marketplaceReadRoutes.ts:11` (`app.get("/api/marketplace/catalog"`) |
-| clone-for-review-install | shipped-inert | `MarketplaceInstaller` `FailSafe/extension/src/roadmap/services/MarketplaceInstaller.ts:104-108` (`if (!MARKETPLACE_INSTALLS_ENABLED) {`) | `FailSafe/extension/src/roadmap/ConsoleServer.ts:156` (`this.marketplaceInstaller = new MarketplaceInstaller(eventBus);`) | none | Switch: `FailSafe/extension/src/roadmap/services/MarketplaceInstaller.ts:37` (`export const MARKETPLACE_INSTALLS_ENABLED = false;`); the install routes answer 503 `FailSafe/extension/src/roadmap/routes/marketplaceInstallRoutes.ts:22` (`Marketplace installation temporarily disabled`) |
+| clone-for-review-install | shipped-inert | `MarketplaceInstaller` `FailSafe/extension/src/roadmap/services/MarketplaceInstaller.ts:104-108` (`if (!MARKETPLACE_INSTALLS_ENABLED) {`) | `FailSafe/extension/src/roadmap/ConsoleServer.ts:156` (`this.marketplaceInstaller = new MarketplaceInstaller(eventBus);`) | none | Switch: `FailSafe/extension/src/roadmap/services/MarketplaceInstaller.ts:37` (`export const MARKETPLACE_INSTALLS_ENABLED = false;`); the install routes answer 503 `FailSafe/extension/src/roadmap/routes/marketplaceInstallRoutes.ts:23` (`Marketplace installation temporarily disabled`) |
 | update-pull | shipped-inert | `MarketplaceInstaller` `FailSafe/extension/src/roadmap/services/MarketplaceInstaller.ts:250` (`Marketplace updates disabled pending security remediation`) | none | none | Switch: `FailSafe/extension/src/roadmap/services/MarketplaceInstaller.ts:37` (`export const MARKETPLACE_INSTALLS_ENABLED = false;`); no route calls `update` (unverified beyond a search of the owned routes) |
-| security-scan-quarantine | shipped-inert | `handleInstallCompletion` `FailSafe/extension/src/roadmap/routes/marketplaceInstallRoutes.ts:195` (`export async function handleInstallCompletion(`) | none | none | Switch: `FailSafe/extension/src/roadmap/routes/marketplaceScanRoutes.ts:18` (`Marketplace scanning temporarily disabled pending security remediation`); reached only after the install gate |
-| uninstall-local-copy | verified-shipped | `uninstall` `FailSafe/extension/src/roadmap/services/MarketplaceInstaller.ts:232` (`async uninstall(item: MarketplaceItem): Promise<boolean> {`) | `FailSafe/extension/src/roadmap/routes/marketplaceScanRoutes.ts:46-47` (`"/api/marketplace/uninstall/:id",`) | `FailSafe/extension/src/test/roadmap/MarketplaceInstaller.test.ts` (unit) | Not gated by the switch; it removes `~/.failsafe/marketplace/<id>` when present |
+| security-scan-quarantine | shipped-inert | `handleInstallCompletion` `FailSafe/extension/src/roadmap/routes/marketplaceInstallRoutes.ts:199` (`export async function handleInstallCompletion(`) | none | `FailSafe/extension/src/test/roadmap/MarketplaceInstallCompletion.test.ts` (unit) | Switch: `FailSafe/extension/src/roadmap/routes/marketplaceScanRoutes.ts:19` (`Marketplace scanning temporarily disabled pending security remediation`); reached only after the install gate |
+| uninstall-local-copy | verified-shipped | `uninstall` `FailSafe/extension/src/roadmap/services/MarketplaceInstaller.ts:232` (`async uninstall(item: MarketplaceItem): Promise<boolean> {`) | `FailSafe/extension/src/roadmap/routes/marketplaceScanRoutes.ts:26-27` (`"/api/marketplace/uninstall/:id",`) | `FailSafe/extension/src/test/roadmap/MarketplaceInstaller.test.ts` (unit) | Not gated by the switch; it removes `~/.failsafe/marketplace/<id>` when present |
 
 ## Inbound fields
 
 The catalog entries are compiled into the extension: id, name, description, category, author, repository URL and ref, permissions, tags and licence `FailSafe/extension/src/roadmap/services/MarketplaceCatalog.ts:22-30` (`repoUrl: "https://github.com/mattpocock/skills",`).
 Install state is read back from `~/.failsafe/marketplace/state.json` and merged into the catalog `FailSafe/extension/src/roadmap/services/MarketplaceCatalog.ts:320-330` (`Merge persisted state into catalog items`).
-Scanner availability comes from running `garak --version` and `promptfoo --version` `FailSafe/extension/src/roadmap/services/SecurityScanner.ts:135` (`this.runIsolated("garak", ["--version"], 10000)`).
+Scanner availability comes from running `garak --version` and `promptfoo --version` `FailSafe/extension/src/roadmap/services/SecurityScanner.ts:205` (`this.runIsolated("garak", ["--version"], 10000)`). The first line of each answer is kept as the scanner version and recorded with the install receipt.
 
 ## Outbound fields and egress
 
 Repository content: no; nothing from the workspace is sent `FailSafe/extension/src/roadmap/services/MarketplaceInstaller.ts:208-218` (`item.repoRef`).
 Metadata: when the gate is open, a `git clone --depth 1` of the item's URL and ref, or a `git pull --rebase`; on main neither runs because of the switch `FailSafe/extension/src/roadmap/services/MarketplaceInstaller.ts:104-109` (`return this.stage(item, options, onProgress);`).
 Graph relationships: no (unverified: no graph code exists).
-Governance evidence: no; ledger entries stay local `FailSafe/extension/src/roadmap/routes/marketplaceInstallRoutes.ts:242-244` (`eventType: "MARKETPLACE_INSTALL",`).
-Network egress on main: none from this integration, since every network path sits behind the switch `FailSafe/extension/src/roadmap/routes/marketplaceInstallRoutes.ts:71` (`if (!MARKETPLACE_INSTALLS_ENABLED) { res.status(503)`).
+Governance evidence: no; ledger entries stay local `FailSafe/extension/src/roadmap/routes/marketplaceInstallReceipt.ts:142-143` (`eventType: "MARKETPLACE_INSTALL",`).
+Network egress on main: none from this integration, since every network path sits behind the switch `FailSafe/extension/src/roadmap/routes/marketplaceInstallRoutes.ts:72` (`if (!MARKETPLACE_INSTALLS_ENABLED) { res.status(503)`).
 
 ## Transformations
 
 A confirm request with `sandboxEnabled` true is refused before any folder is touched, because no enforced sandbox exists `FailSafe/extension/src/roadmap/services/MarketplaceInstaller.ts:122-126` (`Isolated setup is not available.`).
-A scan that could not run becomes an inconclusive L3 verdict with recommended action review `FailSafe/extension/src/roadmap/routes/marketplaceInstallRoutes.ts:152-159` (`Security scan did not complete: ${cause}`).
-An install whose scan did not pass is marked quarantined, never installed `FailSafe/extension/src/roadmap/routes/marketplaceInstallRoutes.ts:181-186` (`status: scanResult.passed ? "installed" : "quarantined",`).
+A scan that could not run becomes an L3 verdict with recommended action review: `inconclusive` for a missing install path, `scanner-error` when the scan threw `FailSafe/extension/src/roadmap/routes/marketplaceInstallRoutes.ts:153-160` (`Security scan did not complete: ${cause}`).
+Every scan result names how it ended (`completed`, `inconclusive`, `timeout`, `scanner-error`, `unavailable`); only `completed` can pass. A scanner that hits its bound is killed with its process tree and reported `timeout`; one that cannot start, throws or exits nonzero is `scanner-error` `FailSafe/extension/src/roadmap/services/SecurityScanner.ts:150-151` (`if (result.timedOut) return { status: "timeout"`).
+An install is reported installed only after its receipt is written: the receipt is awaited before any status or broadcast `FailSafe/extension/src/roadmap/routes/marketplaceInstallRoutes.ts:217` (`const receipt = await recordInstallReceipt(`).
+An install whose scan did not pass is marked quarantined, never installed, and `marketplace.quarantined` names whether its receipt was written `FailSafe/extension/src/roadmap/routes/marketplaceInstallRoutes.ts:235-238` (`status: "quarantined",`).
 
 ## Persisted artifacts
 
 Install state in `~/.failsafe/marketplace/state.json`, written atomically through a temporary file `FailSafe/extension/src/roadmap/services/MarketplaceCatalog.ts:400-401` (`fs.renameSync(tmpPath, this.statePath);`).
 A corrupt state file is preserved aside before it would be overwritten `FailSafe/extension/src/roadmap/services/MarketplaceCatalog.ts:398` (`preserveCorruptFile(this.statePath`).
 Cloned items under `~/.failsafe/marketplace/<id>` (only once the gate opens) `FailSafe/extension/src/roadmap/services/MarketplaceInstaller.ts:95` (`path.join(os.homedir(), ".failsafe", "marketplace")`).
-`MARKETPLACE_INSTALL` and `MARKETPLACE_UNINSTALL` ledger entries `FailSafe/extension/src/roadmap/routes/marketplaceScanRoutes.ts:70-75` (`eventType: "MARKETPLACE_UNINSTALL",`).
+`MARKETPLACE_INSTALL` and `MARKETPLACE_UNINSTALL` ledger entries, both awaited `FailSafe/extension/src/roadmap/routes/marketplaceScanRoutes.ts:50-51` (`eventType: "MARKETPLACE_UNINSTALL",`). The install receipt records the outcome, the verdict (status, risk grade, recommended action, finding count and at most 20 findings), the scanner name and versions, and the source repository URL, ref, version and the cloned commit read from the clone's `.git` without running git `FailSafe/extension/src/roadmap/routes/marketplaceInstallReceipt.ts:127` (`source: { repoUrl: item.repoUrl,`).
 Approval nonces live only in memory for five minutes `FailSafe/extension/src/roadmap/routes/marketplaceRouteShared.ts:22-24` (`export const pendingApprovals = new Map<string, HITLRequest>();`).
 
 ## Graph links
@@ -95,16 +97,18 @@ The README tells users that install, update and scan are disabled `README.md:57`
 
 Enforced: the release switch blocks install, confirm, update and scan in code `FailSafe/extension/src/test/roadmap/marketplace-release-gate.test.ts:5-6` (`assert.equal(MARKETPLACE_INSTALLS_ENABLED, false);`).
 Enforced: an item's setup is never run; the runner supports only git `FailSafe/extension/src/roadmap/services/MarketplaceInstaller.ts:5-6` (`It never runs an item's package setup`).
-Observed: the "human in the loop" step is an HTTP nonce returned to the Console, not a VS Code modal, so any local caller holding the nonce can confirm `FailSafe/extension/src/roadmap/routes/marketplaceInstallRoutes.ts:36-48` (`pendingApprovals.set(nonce, hitlRequest);`).
+Observed: the "human in the loop" step is an HTTP nonce returned to the Console, not a VS Code modal, so any local caller holding the nonce can confirm `FailSafe/extension/src/roadmap/routes/marketplaceInstallRoutes.ts:37-49` (`pendingApprovals.set(nonce, hitlRequest);`).
 Advisory: the six conditions for opening the gate are a comment, not a check `FailSafe/extension/src/roadmap/services/MarketplaceInstaller.ts:22-23` (`It stays false until every condition below holds`).
-Advisory: uninstall is not behind the switch and asks for no confirmation server-side `FailSafe/extension/src/roadmap/routes/marketplaceScanRoutes.ts:47-52` (`if (deps.rejectIfRemote(req, res)) return;`).
+Advisory: uninstall is not behind the switch and asks for no confirmation server-side `FailSafe/extension/src/roadmap/routes/marketplaceScanRoutes.ts:27-29` (`if (deps.rejectIfRemote(req, res)) return;`).
 
 ## Failure, offline, stale and permission semantics
 
-Gate closed: install and confirm answer 503 and nothing is cloned `FailSafe/extension/src/roadmap/routes/marketplaceInstallRoutes.ts:22` (`res.status(503).json`).
+Gate closed: install and confirm answer 503 and nothing is cloned `FailSafe/extension/src/roadmap/routes/marketplaceInstallRoutes.ts:23` (`res.status(503).json`).
 Remote origin: 403 local access only `FailSafe/extension/src/roadmap/ConsoleServer.ts:287-288` (`res.status(403).json({ error: "Forbidden: local access only" });`).
-Expired or mismatched nonce: 403 `FailSafe/extension/src/roadmap/routes/marketplaceInstallRoutes.ts:77-92` (`Invalid or expired approval nonce`).
-A rejected install is a failed terminal state, never left installing `FailSafe/extension/src/roadmap/routes/marketplaceInstallRoutes.ts:145-147` (`status: "failed"`).
+Expired or mismatched nonce: 403 `FailSafe/extension/src/roadmap/routes/marketplaceInstallRoutes.ts:78-93` (`Invalid or expired approval nonce`).
+A rejected install is a failed terminal state, never left installing `FailSafe/extension/src/roadmap/routes/marketplaceInstallRoutes.ts:146-148` (`status: "failed"`).
+Receipt not written (the ledger rejected the write, is unavailable or not wired, or returned a stub): the item is failed with reason `ledger-unrecorded` and no install path, never installed; the clone stays on disk until the next install or an uninstall `FailSafe/extension/src/roadmap/routes/marketplaceInstallRoutes.ts:257-263` (`reason: "ledger-unrecorded",`).
+Re-scan: refused (400) unless the item is installed or quarantined with an install path, so an item without a receipt cannot be re-scanned into installed `FailSafe/extension/src/roadmap/routes/marketplaceInstallRoutes.ts:270-271` (`export function rescanAllowed(`). A re-scan verdict is not itself ledgered (B299).
 Stale transient states from an earlier session are reconciled on load `FailSafe/extension/src/roadmap/services/MarketplaceCatalog.ts:337-339` (`this.reconcileStaleTransientState()`).
 Offline: a failed clone reports phase failed with git's error (unverified on main, the clone path is gated).
 
