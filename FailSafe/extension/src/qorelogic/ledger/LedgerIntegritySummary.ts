@@ -9,7 +9,7 @@
  * never a guess. The release gate reads the same weaker properties.
  */
 
-import type { LedgerFailure, LedgerVerification } from './LedgerVerifier';
+import type { AnchorStatus, LedgerFailure, LedgerVerification } from './LedgerVerifier';
 
 export type LedgerIntegrityStatus = 'intact' | 'partial-seal' | 'failed' | 'unavailable';
 
@@ -39,6 +39,10 @@ export const MAX_REPORTED_FAILURES = 50;
 const MAX_CODE = 64;
 const MAX_DETAIL = 500;
 const COVERAGE_KEYS = ['v1Rows', 'v2Rows', 'v3Rows', 'frozenLegacyRows', 'unfrozenLegacyRows'] as const;
+/** Every AnchorStatus; anything else is a malformed report, never a pass. */
+const ANCHOR_STATUSES: ReadonlySet<string> = new Set<AnchorStatus>([
+    'verified', 'established-now', 'established-late', 'unanchored', 'ledger-mismatch', 'head-missing', 'unavailable',
+]);
 
 /** Every property weaker than "fully v3-sealed, anchored, bound" (#473 LD9). */
 export function weakerProperties(report: LedgerVerification): string[] {
@@ -83,7 +87,7 @@ function wellShaped(report: Record<string, unknown>): boolean {
     const coverage = report.coverage;
     const anchor = report.anchor;
     return isObject(coverage) && COVERAGE_KEYS.every((k) => typeof coverage[k] === 'number' && Number.isFinite(coverage[k]))
-        && isObject(anchor) && typeof anchor.status === 'string' && typeof anchor.workspaceBound === 'boolean'
+        && isObject(anchor) && typeof anchor.status === 'string' && ANCHOR_STATUSES.has(anchor.status) && typeof anchor.workspaceBound === 'boolean'
         && typeof anchor.unanchoredTail === 'number'
         && (report.rotation === undefined || report.rotation === null || isObject(report.rotation));
 }

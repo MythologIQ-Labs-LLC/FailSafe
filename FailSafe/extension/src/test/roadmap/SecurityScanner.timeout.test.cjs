@@ -65,7 +65,8 @@ test('S7: a timed-out scanner run settles at once, and the whole process tree is
   made.push(cwd);
   const marker = `31.${String(process.pid).slice(-4)}${Date.now() % 100000}`;
   const alias = WIN ? `!sleep ${marker}` : `!echo $$; exec sleep ${marker}`;
-  const timeoutMs = WIN ? 4000 : 1500;
+  // win32: the CIM probe (about 1-2 s after the 1.5 s start wait) must finish before the kill.
+  const timeoutMs = WIN ? 10000 : 1500;
   const started = Date.now();
   const run = scanner.runScannerCommand('git', ['-c', `alias.fshang=${alias}`, 'fshang'], cwd, timeoutMs);
   let leaves = [];
@@ -84,7 +85,8 @@ test('S7: a timed-out scanner run settles at once, and the whole process tree is
     leaves = [leaf];
   }
   const gone = await goneWithin(leaves, 5000);
-  for (const p of leaves) { try { process.kill(p, 'SIGKILL'); } catch { /* gone */ } }
+  // Clean up only a leaf the run failed to kill; a gone pid may already be reused.
+  if (!gone) for (const p of leaves) { try { process.kill(p, 'SIGKILL'); } catch { /* gone */ } }
   assert.equal(gone, true, `the leaf ${leaves.join(',')} is gone within 5 s of the timeout`);
 });
 

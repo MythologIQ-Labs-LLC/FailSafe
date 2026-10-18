@@ -144,7 +144,11 @@ export async function startInstall(
     });
     await handleInstallCompletion(deps, item, result, opts);
   } catch (err) {
-    deps.marketplaceCatalog.updateItemStatus(item.id, { status: "failed" });
+    try {
+      deps.marketplaceCatalog.updateItemStatus(item.id, { status: "failed" });
+    } catch {
+      // The failure below is still reported; the route does not await this promise.
+    }
     deps.broadcast({ type: "marketplace.failed", payload: { itemId: item.id, error: err instanceof Error ? err.message : String(err) } });
   }
 }
