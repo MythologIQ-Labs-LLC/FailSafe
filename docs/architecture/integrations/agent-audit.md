@@ -1,6 +1,6 @@
 # Cline / Roo / Kilo MCP policy audit contract
 
-Contract id: `agent-audit` (registry row `integration-contract-agent-audit`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `agent-audit` (registry row `integration-contract-agent-audit`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 Legacy review (historical input, never edited): `docs/research/integrations/INTEGRATION_CLINE_ROO_KILO_CONTRACT_REVIEW.md`. It asked for read-only parsers of the Cline, Roo (global and project) and Kilo configs, including Kilo's namespaced allow/ask/deny permissions; the shipped audit reads five workspace-relative files only, reads no user-level or global config, and does not parse Kilo's namespaced permissions.
 
@@ -111,7 +111,7 @@ Installed-extension test: no test installs the packaged VSIX and runs this comma
 
 ## Recommended disposition
 
-Recommendation for the owner: **COMPLETE**. The audit is honest and redacts well, but it misses where these agents usually keep their MCP settings (user-level and global files) and Kilo's permission model, so a clean result says little; reading those files (with separate approval for the wider file access) and closing findings that a re-scan no longer sees would make the card mean what its summary says.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE**. The audit is honest and redacts well, but it misses where these agents usually keep their MCP settings (user-level and global files) and Kilo's permission model, so a clean result says little; reading those files (with separate approval for the wider file access) and closing findings that a re-scan no longer sees would make the card mean what its summary says.
 
 ## Open defects
 

@@ -1,6 +1,6 @@
 # Governance webhook integration contract
 
-Contract id: `governance-webhook` (registry row `integration-contract-governance-webhook`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `governance-webhook` (registry row `integration-contract-governance-webhook`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 There is no legacy contract review for this integration.
 
@@ -102,9 +102,62 @@ Installed-extension test: missing; no product path reaches the sender `FailSafe/
 
 ## Recommended disposition
 
-Recommendation for the owner: **RETIRE** unless a customer asks for a generic signed webhook. The sender is well built and tested, but nothing configures or calls it, so it delivers no value and keeps an SSRF residual and a DNS-name gap in shipped code. If kept, it needs a governed configuration surface, an event subscription and a separate egress approval before it can be marked anything but inert.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **RETIRE**. The recommendation was to retire unless a customer asked for a generic signed webhook; the owner decided to retire. The sender is well built and tested, but nothing configures or calls it, so it delivers no value and keeps an SSRF residual and a DNS-name gap in shipped code. If kept, it needs a governed configuration surface, an event subscription and a separate egress approval before it can be marked anything but inert.
+
+## Retirement review (#538)
+
+The owner decided RETIRE on 2026-10-18 (#538); this review lists what a removal touches and removes nothing. The removal is backlog item [B288], a separate small PR `docs/BACKLOG.md` (`[B288] Retire the governance webhook sender`).
+
+### Inventory
+
+Scope: every file hit by the command below at main 243a34a1, with its hit count; it is a search, not a proof that nothing else refers to the sender (unverified beyond this search).
+Command: `git grep -c -I -i -E "GovernanceWebhook|signWebhookBody|buildWebhookRequest|governance-webhook|governance webhook|DEFAULT_MAX_PAYLOAD_BYTES|x-failsafe-signature" 243a34a1 --` reports 17 files (unverified beyond this search).
+Blind spots: a dynamic lookup or a caller outside this repository would not be found (unverified beyond this search).
+- 9 hits, the owned sender `FailSafe/extension/src/governance/GovernanceWebhook.ts:138` (`export class GovernanceWebhook {`).
+- 4 hits, the only product importer `FailSafe/extension/src/extension/bootstrapGovernance.ts:18` (`import { GovernanceWebhook } from "../governance/GovernanceWebhook";`).
+- 37 hits `FailSafe/extension/src/test/governance/GovernanceWebhookIntegrity.test.ts:33` (`authenticated integrity (F-4)`).
+- 4 hits `FailSafe/extension/src/test/governance/GovernanceWebhook.test.ts:5` (`describe('GovernanceWebhook', () => {`).
+- 2 hits, the FX1003 constants `FailSafe/extension/src/test/docs/integration-contracts.test.cjs:60` (`'governance-webhook', 'dependency-admission-lint', 'git-bootstrap',`) and `FailSafe/extension/src/test/docs/integration-contracts.test.cjs:72` (`${SRC}/governance/GovernanceWebhook.ts`).
+- 38 hits, this contract (unverified beyond this search).
+- 2 hits, the portfolio `docs/architecture/INTEGRATION_PORTFOLIO.md` (`[governance-webhook](integrations/governance-webhook.md)`).
+- 1 hit, the registry row `docs/ARCHITECTURE_INDEX.md` (`integration-contract-governance-webhook`).
+- 1 hit, the tier row `docs/GOVERNANCE_INDEX.md` (`docs/architecture/integrations/governance-webhook.md`).
+- 2 hits, FX300 and FX919 `docs/FEATURE_INDEX.md` (`GovernanceWebhook bounded`).
+- 1 hit, the security model page `docs/wiki/Security-Model.md` (`src/governance/GovernanceWebhook.ts`).
+- 2 hits, historic, kept `CHANGELOG.md` (`The governance webhook's outbound contract is provably wired and bounded.`).
+- 2 hits, historic, kept `FailSafe/extension/CHANGELOG.md` (`IPv6 SSRF coverage in `).
+- 1 hit, a released What's New entry, kept `FailSafe/extension/README.md` (`the governance webhook's payload is provably what was signed`).
+- 5 hits, historic, kept `docs/SYSTEM_STATE.md` (`IPv6 private range detection in isPrivateIp()`).
+- 1 hit, historic, kept `docs/SHADOW_GENOME.md` (`GovernanceWebhook (B81)`).
+- 13 hits, Merkle-chained, never edited `docs/META_LEDGER.md` (`GovernanceWebhook SSRF`).
+The historic CHANGELOG line says the outbound contract is "provably wired"; that meant the transport seam, not a caller, and no caller exists `FailSafe/extension/src/extension/bootstrapGovernance.ts:177` (`const governanceWebhook = new GovernanceWebhook();`).
+
+### What breaks on removal
+
+No setting, command, route, UI module or event subscription reaches the sender; the instance is built and returned only `FailSafe/extension/src/extension/bootstrapGovernance.ts:220` (`governanceWebhook,`).
+The substrate field is declared `FailSafe/extension/src/extension/bootstrapGovernance.ts:44` (`governanceWebhook: GovernanceWebhook;`), and its consumers never read it `FailSafe/extension/src/extension/bootstrapMCP.ts:13` (`gov: GovernanceSubstrate,`) `FailSafe/extension/src/extension/bootstrapQorLogic.ts:36` (`gov: GovernanceSubstrate,`) (a search for ".governanceWebhook" has no hit; unverified beyond this search).
+Two test files go with it `FailSafe/extension/src/test/governance/GovernanceWebhook.test.ts:5` (`describe('GovernanceWebhook', () => {`).
+FX1003 names the file as a scan hit `FailSafe/extension/src/test/docs/integration-contracts.test.cjs:72` (`${SRC}/governance/GovernanceWebhook.ts`), and requires every owned path of this contract to exist, so the removal must also teach FX1003 how a retired contract is held; this contract stays as history.
+FX300 and FX919 lose their implementation `docs/FEATURE_INDEX.md` (`governance/GovernanceWebhook.test.ts`).
+
+### Bounded removal proposal (B288)
+
+- Delete the sender `FailSafe/extension/src/governance/GovernanceWebhook.ts:138` (`export class GovernanceWebhook {`).
+- Delete its tests `FailSafe/extension/src/test/governance/GovernanceWebhook.test.ts:5` (`describe('GovernanceWebhook', () => {`) and `FailSafe/extension/src/test/governance/GovernanceWebhookIntegrity.test.ts:33` (`authenticated integrity (F-4)`).
+- Remove the import, field, construction and return `FailSafe/extension/src/extension/bootstrapGovernance.ts:177` (`const governanceWebhook = new GovernanceWebhook();`).
+- Drop the named scan hit and add a retired-contract rule `FailSafe/extension/src/test/docs/integration-contracts.test.cjs:72` (`${SRC}/governance/GovernanceWebhook.ts`).
+- Mark FX300 and FX919 retired, keeping the rows `docs/FEATURE_INDEX.md` (`GovernanceWebhook bounded`).
+- Remove the security model row `docs/wiki/Security-Model.md` (`src/governance/GovernanceWebhook.ts`).
+- Update this contract and its portfolio row `docs/architecture/INTEGRATION_PORTFOLIO.md` (`[governance-webhook](integrations/governance-webhook.md)`).
+- Add a CHANGELOG line under Unreleased `CHANGELOG.md` (`## [Unreleased]`).
+- Operator action, not a file: comment on #347 that the code carrying the residual is gone `FailSafe/extension/src/governance/GovernanceWebhook.ts:106-109` (`#347 bracketed-private-IPv6 SSRF residual`).
+
+### Settings strategy and migration
+
+Settings: none is contributed for the sender (a search of package.json for "webhook" outside Slack and Teams; unverified beyond this search).
+Migration note: none is needed, because no user surface reaches the sender `FailSafe/extension/src/extension/bootstrapGovernance.ts:220` (`governanceWebhook,`).
 
 ## Open defects
 
 The bracketed private IPv6 residual is tracked as #347 in the code comment `FailSafe/extension/src/governance/GovernanceWebhook.ts:106-109` (`deliberately-unfixed`).
-No BACKLOG item records that the sender has no caller (unverified: searched `docs/BACKLOG.md` for "webhook" and "#347" at c36b9ee2).
+No BACKLOG item recorded that the sender has no caller at c36b9ee2 (unverified: searched `docs/BACKLOG.md` for "webhook" and "#347"); the bounded removal is now B288 (see the Retirement review above).

@@ -1,6 +1,6 @@
 # Agent Marketplace integration contract
 
-Contract id: `marketplace` (registry row `integration-contract-marketplace`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `marketplace` (registry row `integration-contract-marketplace`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 No legacy review in `docs/research/integrations/` covers the Agent Marketplace.
 
@@ -121,7 +121,7 @@ Installed-extension test: no test installs the packaged VSIX and drives the mark
 
 ## Recommended disposition
 
-Recommendation for the owner: **COMPLETE**. The read side works, and the install path is deliberately shut behind a release gate whose six conditions are written down. Either finish those conditions (isolation, staged install, a scanner that reads the item, the planted-executable rows, an end-to-end test, URL validation) or decide to retire the install path; leaving it inert indefinitely keeps code that cannot be exercised.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE**. The read side works, and the install path is deliberately shut behind a release gate whose six conditions are written down. Either finish those conditions (isolation, staged install, a scanner that reads the item, the planted-executable rows, an end-to-end test, URL validation) or decide to retire the install path; leaving it inert indefinitely keeps code that cannot be exercised.
 
 ## Open defects
 

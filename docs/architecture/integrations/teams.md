@@ -1,6 +1,6 @@
 # Microsoft Teams integration contract
 
-Contract id: `teams` (registry row `integration-contract-teams`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `teams` (registry row `integration-contract-teams`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 Legacy review (historical input, never edited): `docs/research/integrations/INTEGRATION_MICROSOFT_TEAMS_CONTRACT_REVIEW.md`. It required a Workflows webhook with Adaptive Cards under 28 KB, link-back only, exponential backoff on throttling and a documented workflow owner and co-owner before enablement; the code has the first three, surfaces throttling without retrying it, and has no owner check.
 
@@ -114,7 +114,7 @@ Installed-extension test: no test installs the packaged VSIX and posts to a Team
 
 ## Recommended disposition
 
-Recommendation for the owner: **COMPLETE**. The Teams notifier mirrors Slack and has the same gaps (drift and release-seal cards cannot fire, a fixed Console port), plus the review's throttle backoff and owner checklist. Fix them together with Slack; the shared mapper shape makes this one change.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE**. The Teams notifier mirrors Slack and has the same gaps (drift and release-seal cards cannot fire, a fixed Console port), plus the review's throttle backoff and owner checklist. Fix them together with Slack; the shared mapper shape makes this one change.
 
 ## Open defects
 

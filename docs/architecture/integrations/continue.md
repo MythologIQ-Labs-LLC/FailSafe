@@ -1,6 +1,6 @@
 # Continue integration contract
 
-Contract id: `continue` (registry row `integration-contract-continue`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `continue` (registry row `integration-contract-continue`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 Legacy review (historical input, never edited): `docs/research/integrations/INTEGRATION_CONTINUE_CONTRACT_REVIEW.md`. It planned a read-only or no-tool profile first, a pinned CLI version and parsing of `--format json` output; the shipped wrapper runs write-capable tool sets in a disposable worktree, pins no version and does not request or parse JSON output.
 
@@ -127,7 +127,7 @@ Installed-extension test: none runs the real `cn` binary or installs the package
 
 ## Recommended disposition
 
-Recommendation for the owner: **MAINTAIN**. The worktree isolation, pre-spawn refusals and exact-bytes promotion are built and unit-tested with honest boundary text; what is missing is evidence against the real `cn` binary on a pinned version and an L3 route for high-risk change sets, both of which are completion work rather than repair. It is not a sandbox and should not be presented as one.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **MAINTAIN**. The worktree isolation, pre-spawn refusals and exact-bytes promotion are built and unit-tested with honest boundary text; what is missing is evidence against the real `cn` binary on a pinned version and an L3 route for high-risk change sets, both of which are completion work rather than repair. It is not a sandbox and should not be presented as one.
 
 ## Open defects
 

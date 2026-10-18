@@ -1,6 +1,6 @@
 # Open Design integration contract
 
-Contract id: `open-design` (registry row `integration-contract-open-design`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `open-design` (registry row `integration-contract-open-design`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 Legacy review (historical input, never edited): `docs/research/integrations/INTEGRATION_OPEN_DESIGN_CONTRACT_REVIEW.md`. It records the dual-path decision and the L3-gated `create_artifact` write path as shipped; on main that write path is refused at the client, and the SSE observer it lists as done has no subscriber.
 
@@ -119,7 +119,7 @@ Installed-extension test: no test installs the packaged VSIX and connects a real
 
 ## Recommended disposition
 
-Recommendation for the owner: **COMPLETE**. Provenance tagging, consented launch and the fail-closed tool gate are built and tested, but the customer-visible create_artifact path and the SSE observer are switched off while the UI and settings still present them. Either finish the receipt verifier that would let create_artifact run, or remove the request button and the SSE setting until it exists.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE**. Provenance tagging, consented launch and the fail-closed tool gate are built and tested, but the customer-visible create_artifact path and the SSE observer are switched off while the UI and settings still present them. Either finish the receipt verifier that would let create_artifact run, or remove the request button and the SSE setting until it exists.
 
 ## Open defects
 

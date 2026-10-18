@@ -1,6 +1,6 @@
 # Dependency admission lint integration contract
 
-Contract id: `dependency-admission-lint` (registry row `integration-contract-dependency-admission-lint`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `dependency-admission-lint` (registry row `integration-contract-dependency-admission-lint`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 No legacy contract review exists for this integration.
 
@@ -105,7 +105,7 @@ Installed-extension test: none exercises a live registry lookup (unverified).
 
 ## Recommended disposition
 
-Recommendation for the owner: **COMPLETE**. The check is useful and well tested with injected I/O, but it sends dependency names to a third-party registry on every seal with no setting to turn that off and no notice, and with no merge base it sends every name; give the egress a switch and a stated consent before relying on it.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE**. The check is useful and well tested with injected I/O, but it sends dependency names to a third-party registry on every seal with no setting to turn that off and no notice, and with no merge base it sends every name; give the egress a switch and a stated consent before relying on it.
 
 ## Open defects
 

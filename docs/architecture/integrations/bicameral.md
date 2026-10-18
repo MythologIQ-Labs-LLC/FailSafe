@@ -1,6 +1,6 @@
 # Bicameral MCP integration contract
 
-Contract id: `bicameral` (registry row `integration-contract-bicameral`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `bicameral` (registry row `integration-contract-bicameral`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 Legacy review: none; `docs/research/integrations/` has no Bicameral review.
 
@@ -130,7 +130,7 @@ Installed-extension test: no test installs the packaged VSIX and exercises Bicam
 
 ## Recommended disposition
 
-Recommendation for the owner: **COMPLETE**. The client, install, governed tool routes, confirmed ratify and the preflight and risk mediators are real and tested, and on main the install route runs only after a VS Code confirmation (#538). Two advertised paths are still inert on main (drift-to-L3 and the upstream snapshot route) because of wiring order, and the upstream poll calls GitHub with no enable switch. Fix those two before investing in new Bicameral surface.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE**. The client, install, governed tool routes, confirmed ratify and the preflight and risk mediators are real and tested, and on main the install route runs only after a VS Code confirmation (#538). Two advertised paths are still inert on main (drift-to-L3 and the upstream snapshot route) because of wiring order, and the upstream poll calls GitHub with no enable switch. Fix those two before investing in new Bicameral surface.
 
 ## Open defects
 

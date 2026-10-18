@@ -33682,3 +33682,74 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `30b3e0a746ff4544a78321b0f996a8db8b0c8fab517f75ea56036e2a4eb89be9`
 
 **Decision**: SESSION SEAL for plan-538a-outbound-egress.md (implementation #809; content hash is the audited plan, sha256 761db41c). Reality = Promise, with disclosures. The branch carries #538 lane A: repository-controlled configuration can no longer send source code or transcripts to an external LLM endpoint (B273), and a GitHub Enterprise token is sent only to its own API origin and port (B265, B279). Independent bounded code review: fix first on one medium revocation race (an Allow clicked after Forget re-stored the approval) and disclosure gaps, fixed with red rows in 736bc43b, 4e21e929 and d6ae5ec8; the reviewer found no remaining content egress to an unapproved host, no path sending the token to api.github.com when an Enterprise base is set, and no DNS-rebinding window. After merging main with lanes B, C and D the lead ran the full extension-host suite: 5470 passing, 0 failing, every file executed. Disclosures: bounded damaged-ledger override for #538 lane cycles (owner ruling 2026-10-18; #467 unresolved, normal governance not restored); compatibility breaks named in the changelog: an http GitHub API base that is not on this machine is refused (main sent it over TLS on 443), an approved model server that resolves to a private, VPN, CGNAT, link-local or loopback address is refused with one warning (whether to allow it is the owner's decision, B291), and workspace values of failsafe.sentinel.ollamaEndpoint are ignored (machine scope; the per-workspace override is sentinel.yaml, loopback only); with VS Code's proxy support (default override) a resolved proxy may bypass the address check, while the destination policy still applies and the tests prove the direct path; dev-container and remote-machine settings read as user settings (the model server still needs approval; the GitHub half is B290); SHIELD receipts bind the host without the port; the Console still says data stays on the machine after a remote approval; Forget does not close an open dialog (its answer is discarded); the generated sentinel.yaml pins localhost and hybrid mode; the [R-main] rows fail rather than skip when the machine name does not reach a local listener (a CI risk); the secret scanner flags a fake token in credentialConsumers.test.ts:25 that is unchanged from main; the merge with main reverted two package.json citations (bicameral.md:52, slack.md:120), re-applied by the lead; FX946 is the known ledger-anchor baseline; documentation currency check run mechanically with no warnings (change_class hotfix); these five entries were first written on this branch as #802-#806 before lane F merged and were re-appended after seal #805 as #806-#810 with the same content (never merged in the old numbering); after lane F, PR #544 also changed two test assertions so CodeQL accepts them (49c44d4b, 80920926); earlier seals are unedited. Next: push, open the PR, the PR checks, then a merge with --match-head-commit. Not tagged.
+
+---
+
+### Entry #811: GATE TRIBUNAL - plan-538e-portfolio-dispositions (iteration 1) - VETO
+
+**Timestamp**: 2026-10-18T16:07:30Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-18T1601-38a6ea`
+**Risk Grade**: L1
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for #538 lane cycles, owner ruling 2026-10-18, disclosed per cycle (#467)
+
+**Content Hash**: `32aa8eaec28350c2a8e7cb913e5a6df53c3b02ad7723122793a2dbf11007af9a`
+**Previous Hash**: `30b3e0a746ff4544a78321b0f996a8db8b0c8fab517f75ea56036e2a4eb89be9`
+**Chain Hash (Merkle seal)**: `1a423d1072406355c6f74979cad5ebceabe8d7ce1921101de31bc01fa31d1619`
+
+**Decision**: VETO on plan-538e-portfolio-dispositions.md iteration 1 (sha256 22961c6e), #538 lane E: record the owner's 2026-10-18 decision accepting 15 COMPLETE, 13 MAINTAIN, 2 RETIRE and 0 INVEST as work-queue dispositions (not implementation claims) in the canonical portfolio and the 30 contracts, and review the retirement of governance-webhook and qor-runtime without removing code. Fresh Option B architect-reviewer; 64 citations checked, none failed. Blocking: the qor-runtime removal list would delete the only test of two routes that stay (qor-route.test.ts, FX101 and FX102); the reviews line-cited documents that grow at the top, so the new rule would break once the lanes integrate; and the reference inventory claimed completeness without the hits to show it. Should-fix: totals built from the fixture matrix, the review section covered by the uncited-line rule, the FX1003 limitations cell rewritten, accurate FEATURE_INDEX claims, the hub node-status claim corrected, all 30 GOVERNANCE_INDEX purpose cells. Next: revise and re-audit. Tribunal entry held by the lead and appended at integration in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #812: GATE TRIBUNAL - plan-538e-portfolio-dispositions (iteration 2) - PASS
+
+**Timestamp**: 2026-10-18T16:22:24Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-18T1601-38a6ea`
+**Risk Grade**: L1
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for #538 lane cycles, owner ruling 2026-10-18, disclosed per cycle (#467)
+
+**Content Hash**: `ad62feef6b980eb57670e7487fc34ec4a8b4b58e13f7680b016f245f0022a0a5`
+**Previous Hash**: `1a423d1072406355c6f74979cad5ebceabe8d7ce1921101de31bc01fa31d1619`
+**Chain Hash (Merkle seal)**: `4bb6c054f05760fa07ebcb0e852c287726fb1490b4161faa910d32d1c43207c0`
+
+**Decision**: PASS on plan-538e-portfolio-dispositions.md iteration 2 (sha256 8e273dc2). A fresh Option B architect-reviewer; the three iteration 1 blockers resolved and both inventories re-counted against their recorded grep commands; 140 citations checked, none failed. Growing documents are cited by path and anchor and checked over the whole file (R5); the qor-route test file is kept. Should-fix folded into implementation: whole-file anchors without pipes and at least 8 characters, stated line forms in the review section, the lane D disposition conflict resolved by prefixing, merge last with re-anchoring, no new GOVERNANCE_INDEX Last Reviewed line, extra mutations, the complete B289 removal list, and the FEATURE_INDEX ghost test paths recorded under B289. Next: implement on fix/538-lane-E. Tribunal entry held by the lead and appended at integration in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #813: IMPLEMENTATION - plan-538e-portfolio-dispositions
+
+**Timestamp**: 2026-10-18T20:48:18Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-18T1601-38a6ea`
+**Risk Grade**: L1
+**Gate**: `.qor/gates/2026-10-18T1601-38a6ea/implement.json`
+
+**Content Hash**: `6393cf709f602509ae08bed2c796ec197870c44bc10926d78c0729a251d09623`
+**Previous Hash**: `4bb6c054f05760fa07ebcb0e852c287726fb1490b4161faa910d32d1c43207c0`
+**Chain Hash (Merkle seal)**: `32e7d436666fa70dcc85b91d90a81b2ea659ae686e1f021f1ae680ce7b7a7b0f`
+
+**Decision**: IMPLEMENTATION of plan-538e-portfolio-dispositions.md iteration 2 (audit PASS, sha256 8e273dc2), #538 lane E. Branch fix/538-lane-E from main 243a34a1, merged with main 21e7abab at 903da7e1 and with main e6b0cb03 (lanes A to D and F) at 22e7c0c4. 98d29581 and baaa667a: red rows first (18 new negative rows failed on the old validator; then 5 review rows). 2e29bce3 and 8a7db9db: integration-contracts.test.cjs gains R1 (each contract's disposition starts with the literal owner decision of 2026-10-18, #538), R2 (the portfolio has the owner-decision section and drops the recorded-later framing in its preamble), R3 (the Totals line matches the matrix), R4 (each RETIRE contract has exactly one cited retirement review linked from the portfolio by a markdown link) and R5 (growing documents cited by path and anchor inside a review, checked over the whole file, never a self-citation). 480c7dc7 and 9996ab28: the portfolio records the owner decision (COMPLETE means finish the named gaps), all 30 contracts carry the decision, governance-webhook and qor-runtime gain retirement reviews with recorded grep commands and per-file counts (17 and 41 files), B288 and B289 file the bounded removals (B289 closes B277), FX1003 and 30 GOVERNANCE_INDEX purpose cells reworded, the hub node-status claim corrected. 2077e6c3 and the merges: README-caused citations left to lane F; at the last merge the lead prefixed the owner decision onto the lane A dispositions of github-checks, governed-commit-pr and sentinel-llm, combined their preambles, kept both backlog sections and re-anchored six qor-runtime package.json citations that lane A moved. No code was removed. Evidence: contracts, architecture-index, claims and feature-index 139/139; test:node 850 tests, 839 passed, 2 failed (FX946, #467), 9 skipped; docs:validate passes; release preflight passes; secret scan clean; mutations 19 then 5, each killed by a named row.
+
+---
+
+### Entry #814: SESSION SEAL - plan-538e-portfolio-dispositions
+
+**Timestamp**: 2026-10-18T20:49:11Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-18T1601-38a6ea`
+**Risk Grade**: L1
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-18T1601-38a6ea/substantiate.json`
+
+**Content Hash**: `8e273dc288e8c49e9fcf702419f5ea2b5bce519631acd97da17c2fdb68f0e863`
+**Previous Hash**: `32e7d436666fa70dcc85b91d90a81b2ea659ae686e1f021f1ae680ce7b7a7b0f`
+**Chain Hash (Merkle seal)**: `f09ffb2354dc12eee6ae4803e0789da3a4e2339018798d49bc1a0898ea1e1db1`
+
+**Decision**: SESSION SEAL for plan-538e-portfolio-dispositions.md (implementation #813; content hash is the audited plan, sha256 8e273dc2). Reality = Promise, with disclosures. The branch records the owner's 2026-10-18 integration dispositions as owner-approved work-queue decisions, not claims that requirements are implemented, and carries the compatibility and dependency review for retiring governance-webhook and qor-runtime; no historic contract or evidence is deleted, and no code is removed. Independent bounded code review: fix first on an inventory count that did not match its list and validator false greens, fixed with red rows in baaa667a, 8a7db9db and 9996ab28. Disclosures: bounded damaged-ledger override for #538 lane cycles (owner ruling 2026-10-18; #467 unresolved, normal governance not restored); the lane agent was lost when the previous session ended, and the lead did the last merge, resolved its five conflicts and re-anchored six package.json citations; whole-file citations prove an anchor occurs somewhere in the file, not where; the per-file grep counts are a snapshot at 243a34a1 that the test does not re-run; the priorities and their order stay recommendations, since the owner decision covers the dispositions only; the retirement removals (B288, B289) are separate bounded changes; the FEATURE_INDEX ghost test paths and the README's unusable Qor runtime claim are recorded under B289, not fixed; the taxonomy drift between docs/roadmap/tracker-config.yaml (3 Workspace and 3 Governance functions) and the Console's 6 Workspace and 4 Governance sub-views is surfaced, not reconciled; FX946 is the known ledger-anchor baseline; documentation currency check not applicable (change_class governance); earlier seals are unedited. Next: push, open the PR, the PR checks, then a merge with --match-head-commit. Not tagged.

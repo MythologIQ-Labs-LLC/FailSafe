@@ -1,6 +1,6 @@
 # Sentry integration contract
 
-Contract id: `sentry` (registry row `integration-contract-sentry`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `sentry` (registry row `integration-contract-sentry`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 Legacy review (historical input, never edited): `docs/research/integrations/INTEGRATION_SENTRY_CONTRACT_REVIEW.md`. It scoped a v1 that imports issues with release, suspect-commit and changed-file evidence and surfaces "correlation incomplete" states; the shipped code imports issues and issue-detail release versions only, with no commit or file correlation.
 
@@ -121,7 +121,7 @@ Live-service test: none; live validation is open as B230 `docs/BACKLOG.md:586` (
 
 ## Recommended disposition
 
-Recommendation for the owner: **COMPLETE**. The issue import with release versions is built, bounded and tested, but the customer value the legacy review named (an error tied to the change that caused it) needs commit and file correlation, which does not exist. It is also the source of the portfolio's scenario 2 (production error to fix to receipt), so finishing that correlation is the shortest path to a demonstrable journey.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE**. The issue import with release versions is built, bounded and tested, but the customer value the legacy review named (an error tied to the change that caused it) needs commit and file correlation, which does not exist. It is also the source of the portfolio's scenario 2 (production error to fix to receipt), so finishing that correlation is the shortest path to a demonstrable journey.
 
 ## Open defects
 

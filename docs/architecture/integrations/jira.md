@@ -1,6 +1,6 @@
 # Jira integration contract
 
-Contract id: `jira` (registry row `integration-contract-jira`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `jira` (registry row `integration-contract-jira`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 Legacy review (historical input, never edited): `docs/research/integrations/INTEGRATION_JIRA_CONTRACT_REVIEW.md`. It planned OAuth 2.0 with `read:jira-work` and a later webhook phase; the shipped code uses Basic authentication with an API token and has no webhook.
 
@@ -115,7 +115,7 @@ Installed-extension test: no test installs the packaged VSIX and runs this comma
 
 ## Recommended disposition
 
-Recommendation for the owner: **MAINTAIN**. The single-issue preview and the approval-gated, provenance-carrying draft are built and tested in the extension host; the open work is product reach (the part B slice in `INTEGRATION_SCENARIOS.md` uses Jira as its issue source), not repair. Sync and write-back stay out of scope until a separate approval for write scopes.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **MAINTAIN**. The single-issue preview and the approval-gated, provenance-carrying draft are built and tested in the extension host; the open work is product reach (the part B slice in `INTEGRATION_SCENARIOS.md` uses Jira as its issue source), not repair. Sync and write-back stay out of scope until a separate approval for write scopes.
 
 ## Open defects
 

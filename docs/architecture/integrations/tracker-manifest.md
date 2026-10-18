@@ -1,6 +1,6 @@
 # Tracker manifest generator integration contract
 
-Contract id: `tracker-manifest` (registry row `integration-contract-tracker-manifest`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `tracker-manifest` (registry row `integration-contract-tracker-manifest`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 No legacy review in `docs/research/integrations/` covers the tracker manifest generator.
 
@@ -110,7 +110,7 @@ Installed-extension test: no test runs the command with a real `gh` (unverified)
 
 ## Recommended disposition
 
-Recommendation for the owner: **MAINTAIN**. The pure generator, categorizer and enrichment are tested; the command shell and the `gh` parse are not. Add one recorded-output test for `fetchMergedPrs` and decide whether the Bicameral ingest should wait for the developer's confirmation.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **MAINTAIN**. The pure generator, categorizer and enrichment are tested; the command shell and the `gh` parse are not. Add one recorded-output test for `fetchMergedPrs` and decide whether the Bicameral ingest should wait for the developer's confirmation.
 
 ## Open defects
 

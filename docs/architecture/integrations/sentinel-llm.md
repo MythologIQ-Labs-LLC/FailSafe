@@ -1,6 +1,6 @@
 # Sentinel LLM integration contract
 
-Contract id: `sentinel-llm` (registry row `integration-contract-sentinel-llm`). Recorded against main `c36b9ee2`; the destination policy, the operator approval and the guarded transport were added on main after v6.0.8 (#538, B273) and are not released. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `sentinel-llm` (registry row `integration-contract-sentinel-llm`). Recorded against main `c36b9ee2`; the destination policy, the operator approval and the guarded transport were added on main after v6.0.8 (#538, B273) and are not released. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 There is no legacy contract review for this integration. By the plan it also covers the Console's Ollama reachability probe in `FailSafe/extension/src/roadmap/ui/modules/connection.js`, which the portfolio reconciles as `folded into sentinel-llm`; that browser module is not owned here.
 
@@ -125,7 +125,7 @@ Installed-extension test: the forget command is registered and runs in the exten
 
 ## Recommended disposition
 
-Recommendation for the owner: **COMPLETE**. On main the boundary is now enforced: a workspace can no longer point content off the machine, a user-chosen remote model needs an explicit approval per destination and use, and redirects and remapped names are refused. What remains: the Console still says data stays local even after a remote approval, availability is checked only at start, the proxy path is not covered, and an approval can be revoked only all at once.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE**. On main the boundary is now enforced: a workspace can no longer point content off the machine, a user-chosen remote model needs an explicit approval per destination and use, and redirects and remapped names are refused. What remains: the Console still says data stays local even after a remote approval, availability is checked only at start, the proxy path is not covered, and an approval can be revoked only all at once.
 
 ## Open defects
 

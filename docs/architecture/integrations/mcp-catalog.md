@@ -1,6 +1,6 @@
 # MCP Catalog integration contract
 
-Contract id: `mcp-catalog` (registry row `integration-contract-mcp-catalog`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `mcp-catalog` (registry row `integration-contract-mcp-catalog`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 Legacy review (historical input, never edited): `docs/research/integrations/INTEGRATION_MCP_REGISTRY_CONTRACT_REVIEW.md`. It recommended read-only registry discovery plus local risk scoring and no install surface in v1; main ships the local scorer over a static, in-repo catalog and an install that writes `.mcp.json`, and never queries the registry.
 
@@ -110,7 +110,7 @@ Installed-extension test: none exercises the command or the route in an installe
 
 ## Recommended disposition
 
-Recommendation for the owner: **MAINTAIN**. The catalog, scorer and merge are small, pure and tested. The Console route now asks for the same VS Code confirmation as the command path (#538); the live registry discovery from the legacy review is not worth building until there is demand.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **MAINTAIN**. The catalog, scorer and merge are small, pure and tested. The Console route now asks for the same VS Code confirmation as the command path (#538); the live registry discovery from the legacy review is not worth building until there is demand.
 
 ## Open defects
 

@@ -1,6 +1,6 @@
 # Governed commit and pull request integration contract
 
-Contract id: `governed-commit-pr` (registry row `integration-contract-governed-commit-pr`). Recorded against main `c36b9ee2`; the PR step's endpoint pairing was added on main after v6.0.8 (#538) and is not released. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `governed-commit-pr` (registry row `integration-contract-governed-commit-pr`). Recorded against main `c36b9ee2`; the PR step's endpoint pairing was added on main after v6.0.8 (#538) and is not released. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 No legacy review in `docs/research/integrations/` covers this flow; the GitHub review belongs to the github-checks contract.
 
@@ -111,7 +111,7 @@ Installed-extension test: no test runs the real git, a real remote or GitHub for
 
 ## Recommended disposition
 
-Recommendation for the owner: **COMPLETE**. The ladder is careful and tested, but its PR step is gated only by token presence, not by the GitHub integration's enable setting, and the confirmation is a non-modal message. Gate the PR step on the enable setting and make the prompt modal, then maintain.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE**. The ladder is careful and tested, but its PR step is gated only by token presence, not by the GitHub integration's enable setting, and the confirmation is a non-modal message. Gate the PR step on the enable setting and make the prompt modal, then maintain.
 
 ## Open defects
 

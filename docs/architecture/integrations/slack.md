@@ -1,6 +1,6 @@
 # Slack integration contract
 
-Contract id: `slack` (registry row `integration-contract-slack`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `slack` (registry row `integration-contract-slack`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 Legacy review (historical input, never edited): `docs/research/integrations/INTEGRATION_SLACK_CONTRACT_REVIEW.md`. It scoped v1 to five notice kinds (VETO, L3 queued/decided, release-seal, critical-drift) over an incoming webhook with link-back only; on main two of those kinds never reach Slack (see Feature state).
 
@@ -111,7 +111,7 @@ Installed-extension test: no test installs the packaged VSIX and posts to a Slac
 
 ## Recommended disposition
 
-Recommendation for the owner: **COMPLETE**. Blocking-verdict and L3 notices work and are tested, but two of the five kinds the design promised cannot fire (drift has no live emitter, release-seal has no event), and the Console link is fixed to the default port. Finishing those is small and keeps the contract honest; until then the settings text overstates the event set.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE**. Blocking-verdict and L3 notices work and are tested, but two of the five kinds the design promised cannot fire (drift has no live emitter, release-seal has no event), and the Console link is fixed to the default port. Finishing those is small and keeps the contract honest; until then the settings text overstates the event set.
 
 ## Open defects
 

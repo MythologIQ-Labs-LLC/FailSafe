@@ -1,6 +1,6 @@
 # Aider integration contract
 
-Contract id: `aider` (registry row `integration-contract-aider`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `aider` (registry row `integration-contract-aider`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 Legacy review (historical input, never edited): `docs/research/integrations/INTEGRATION_AIDER_CONTRACT_REVIEW.md`. It made auto-commit suppression on a pinned version the gating item and asked for high-risk diffs to route to L3 before commit; the shipped wrapper passes `--no-auto-commits` and runs in a disposable worktree, pins no version, and has no L3 route.
 
@@ -120,7 +120,7 @@ Installed-extension test: none runs the real `aider` binary or installs the pack
 
 ## Recommended disposition
 
-Recommendation for the owner: **MAINTAIN**. Auto-commit suppression and worktree isolation are built and unit-tested; the legacy review's gating item is handled in argv. The remaining gaps (a pinned-version test against the real CLI, an L3 route, and the absence of any pre-run tool restriction because Aider has no allowlist) are completion items, and the boundary text already says it is not a sandbox.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **MAINTAIN**. Auto-commit suppression and worktree isolation are built and unit-tested; the legacy review's gating item is handled in argv. The remaining gaps (a pinned-version test against the real CLI, an L3 route, and the absence of any pre-run tool restriction because Aider has no allowlist) are completion items, and the boundary text already says it is not a sandbox.
 
 ## Open defects
 
