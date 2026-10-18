@@ -35,10 +35,10 @@ function buildItem(overrides: Partial<MarketplaceItem> = {}): MarketplaceItem {
 const SCANNER_AVAIL: ScannerAvailability = {
   garak: true, promptfoo: true, lastChecked: '2026-05-06T00:00:00Z',
 };
-const SCAN_PASS: SecurityScanResult = {
+const SCAN_PASS = {
   passed: true, scanner: 'both', timestamp: '2026-05-06T00:00:00Z',
-  findings: [], riskGrade: 'L1', recommendedAction: 'approve',
-};
+  findings: [], riskGrade: 'L1', recommendedAction: 'approve', scanStatus: 'completed',
+} as SecurityScanResult;
 
 function makeDeps(items: MarketplaceItem[], overrides: Partial<MarketplaceRouteDeps> = {}): {
   deps: MarketplaceRouteDeps;
@@ -275,5 +275,60 @@ suite('MarketplaceRoute (FX091–FX097)', () => {
     setupMarketplaceRoutes(app, deps);
     const captured = await invokeRemote(app, 'DELETE', '/api/marketplace/uninstall/a');
     assert.equal(captured.statusCode, 403);
+  });
+});
+
+// #538 lane C (plan LD13): the uninstall receipt is awaited and caught. A
+// receipt that cannot be written is reported on the event, never left as an
+// unhandled rejection; the item is still not-installed because its files are gone.
+suite('#538 uninstall receipt', () => {
+  let harness: RouteHarness;
+  teardown(async () => { if (harness) await harness.stop(); });
+
+  async function uninstallWith(ledgerManager: unknown) {
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => { unhandled.push(reason); };
+    process.on('unhandledRejection', onUnhandled);
+    try {
+      const app = makeApp();
+      const { deps, broadcasts } = makeDeps([buildItem({ id: 'a', status: 'installed', installPath: '/tmp/a' })], { ledgerManager: ledgerManager as never });
+      setupMarketplaceRoutes(app, deps);
+      harness = new RouteHarness(app);
+      await harness.start();
+      const res = await harness.request({ method: 'DELETE', path: '/api/marketplace/uninstall/a' });
+      await new Promise((r) => setImmediate(r));
+      await new Promise((r) => setImmediate(r));
+      return { res, broadcasts, status: deps.marketplaceCatalog.getItem('a')?.status, unhandled };
+    } finally {
+      process.removeListener('unhandledRejection', onUnhandled);
+    }
+  }
+
+  test('U1 a rejecting ledger: 200, one append, no unhandled rejection, not-installed, and the event says recorded false', async () => {
+    const appends: unknown[] = [];
+    const out = await uninstallWith({
+      isAvailable: () => true,
+      appendEntry: async (e: unknown) => { appends.push(e); throw new Error('disk full'); },
+    });
+    assert.equal(out.res.status, 200);
+    assert.equal(appends.length, 1, 'exactly one appendEntry call');
+    assert.equal(out.unhandled.length, 0, 'no unhandled rejection');
+    assert.equal(out.status, 'not-installed');
+    const ev = out.broadcasts.find((b) => b.type === 'marketplace.uninstalled') as { payload: Record<string, unknown> } | undefined;
+    assert.ok(ev, 'marketplace.uninstalled broadcast');
+    assert.equal(ev!.payload.recorded, false);
+    assert.match(String(ev!.payload.ledgerError), /disk full/);
+  });
+
+  test('U2 a recording ledger: the event says recorded true with the entry id', async () => {
+    const out = await uninstallWith({
+      isAvailable: () => true,
+      appendEntry: async () => ({ id: 42, entryHash: 'h42' }),
+    });
+    assert.equal(out.res.status, 200);
+    const ev = out.broadcasts.find((b) => b.type === 'marketplace.uninstalled') as { payload: Record<string, unknown> } | undefined;
+    assert.equal(ev?.payload.recorded, true);
+    assert.equal(ev?.payload.ledgerEntryId, 42);
+    assert.equal(out.unhandled.length, 0);
   });
 });
