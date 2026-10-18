@@ -118,14 +118,17 @@ export interface AuthorizeCall { request: { origin: string; operation: string; m
 /** An authorizer fake: `decide` answers each call; every call is recorded. */
 export function fakeAuthorizer(decide: (call: AuthorizeCall) => boolean | Promise<boolean>) {
   const calls: AuthorizeCall[] = [];
+  const notified: string[] = [];
   return {
     calls,
+    notified,
     async authorize(request: AuthorizeCall['request'], options: AuthorizeCall['options'] = { ask: false }) {
       const call = { request, options };
       calls.push(call);
       return decide(call);
     },
     async forget() { return 0; },
+    notifyRefusedAddress(origin: string) { notified.push(origin); },
   };
 }
 

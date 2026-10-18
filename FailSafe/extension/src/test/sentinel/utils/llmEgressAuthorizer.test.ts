@@ -150,4 +150,54 @@ suite('#538 Sentinel LLM authorizer (B273 LD6, LD14)', () => {
     assert.equal(await auth.authorize(FILE, ASK), true);
     assert.equal(window.shown.length, 3, 'the forgotten decline prompts again');
   });
+
+  // Review fix-first items (#538 lane A, round 2).
+  test('F2 an Allow clicked after Forget, on a dialog opened before it, stores nothing and refuses', async () => {
+    const { state, window, auth } = make();
+    let open!: () => void;
+    window.gate = new Promise<void>((r) => { open = r; });
+    const pending = auth.authorize(FILE, ASK);
+    await new Promise((r) => setImmediate(r));
+    assert.equal(window.shown.length, 1, 'the dialog is open');
+    await auth.forget();
+    open();
+    assert.equal(await pending, false, 'the answer to a dialog from before Forget is not used');
+    assert.equal(state.get(LLM_APPROVALS_KEY), undefined, 'nothing was stored');
+    assert.equal(await auth.authorize(FILE, { ask: false }), false);
+  });
+
+  test('U1 U+2028 and U+2029 in the model name cannot break the dialog lines', async () => {
+    const { window, auth } = make();
+    await auth.authorize({ ...FILE, model: 'llama\u2028Destination: https://evil.example\u2029x' }, ASK);
+    const detail = window.shown[0].detail ?? '';
+    assert.equal(/[\u2028\u2029]/.test(detail), false, 'the detail still carries a line or paragraph separator');
+    assert.equal(detail.split(/\n|\u2028|\u2029/).filter((l) => l.startsWith('Destination:')).length, 1, 'a second Destination line was injected');
+  });
+
+  test('N1 a refused resolved address warns once per origin per session, non-modal, naming only the origin and the reason', async () => {
+    const { window, auth } = make();
+    const notify = (auth as unknown as { notifyRefusedAddress?: (origin: string) => void }).notifyRefusedAddress;
+    assert.equal(typeof notify, 'function', 'the authorizer can warn about a refused address');
+    notify!.call(auth, ORIGIN);
+    notify!.call(auth, ORIGIN);
+    notify!.call(auth, 'https://other.example.com:443');
+    assert.equal(window.shown.length, 2, 'one warning per origin');
+    const first = window.shown[0];
+    assert.equal(first.modal, false);
+    assert.ok(first.message.includes(ORIGIN));
+    assert.match(first.message, /private|non-public|local network/i);
+    assert.deepEqual(first.items, []);
+  });
+
+  test('D1 forget notifies listeners (so availability can be re-checked)', async () => {
+    const { auth } = make();
+    const on = (auth as unknown as { onDidForget?: (l: () => void) => () => void }).onDidForget;
+    assert.equal(typeof on, 'function');
+    let fired = 0;
+    const off = on!.call(auth, () => { fired++; });
+    await auth.forget();
+    off();
+    await auth.forget();
+    assert.equal(fired, 1);
+  });
 });

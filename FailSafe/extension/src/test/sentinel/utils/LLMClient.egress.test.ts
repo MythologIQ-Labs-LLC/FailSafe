@@ -247,6 +247,25 @@ suite('#538 LLMClient egress: the policy alone decides (B273 S1)', () => {
     assert.equal(rec2.calls.length, 0);
   });
 
+  test('N2 an approved remote whose name resolves to a refused address tells the authorizer the origin (and nothing else); other errors do not', async () => {
+    const refused = Object.assign(new Error('Destination refused'), { code: 'EFAILSAFEADDRESS' });
+    const auth = fakeAuthorizer(() => true);
+    const client = newClient(configProvider({ endpoint: REMOTE, source: 'user-setting' }), {
+      authorizer: auth, http: async () => { throw refused; },
+    });
+    assert.equal(await probe(client, { ask: true }), false);
+    assert.equal((await generate(client)).ok, false);
+    assert.deepEqual(auth.notified, ['https://llm.example.test:8443', 'https://llm.example.test:8443']);
+
+    const other = fakeAuthorizer(() => true);
+    const offline = newClient(configProvider({ endpoint: REMOTE, source: 'user-setting' }), {
+      authorizer: other, http: async () => { throw Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' }); },
+    });
+    await probe(offline, { ask: true });
+    await generate(offline);
+    assert.deepEqual(other.notified, []);
+  });
+
   test('E12 workspace-file http://localhost whose name resolves to a non-loopback address: nothing is sent', async () => {
     const server = await startCountingServer('::');
     try {

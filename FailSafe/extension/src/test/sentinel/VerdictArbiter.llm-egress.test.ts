@@ -74,6 +74,22 @@ suite('#538 VerdictArbiter LLM egress (B273)', () => {
     assert.equal(rec.calls[0].path, '/api/tags');
     assert.equal(arbiter.getMode(), 'llm-assisted');
   });
+
+  test('A4 Forget makes an approved remote unavailable again, without a new prompt', async () => {
+    const window = new GatedWindow();
+    const authorizer = createLlmEgressAuthorizer(new MemoryState(), window);
+    const rec = recordingHttp();
+    const arbiter = makeArbiter(configProvider({ endpoint: 'https://llm.example.test', source: 'user-setting', mode: 'llm-assisted' }), { authorizer, http: rec.fn });
+    await arbiter.checkLLMAvailability();
+    await waitFor(() => window.shown === 1);
+    window.answer('Allow');
+    await waitFor(() => arbiter.isLlmAvailable());
+    await authorizer.forget();
+    await waitFor(() => !arbiter.isLlmAvailable());
+    await new Promise((r) => setTimeout(r, 50));
+    assert.equal(window.shown, 1, 'Forget does not raise a new dialog');
+    assert.equal(arbiter.getMode(), 'heuristic');
+  });
 });
 
 class MemoryState {

@@ -209,6 +209,35 @@ suite('#538 GitHub token host affinity: new seams (B265, B279)', () => {
     assert.equal(githubRequestOptions('ftp://ghe.example/x', 'GET', {}), undefined);
   });
 
+  test('G10 a connection reset mid-body settles the promise (rejects) and raises no unhandled error', async () => {
+    const server = await localServer((_q, res) => {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': '1000' });
+      res.write('{"partial":');
+      setTimeout(() => res.socket?.destroy(), 50);
+    });
+    try {
+      const settled = defaultGitHubGet(`http://127.0.0.1:${server.port}/api/v3/repos/acme/widgets`, {}).then(() => 'resolved', () => 'rejected');
+      const timeout = new Promise((r) => setTimeout(() => r('hung'), 3000));
+      assert.equal(await Promise.race([settled, timeout]), 'rejected');
+    } finally {
+      await server.close();
+    }
+  });
+
+  test('G11 the transports never use a pooled agent', () => {
+    assert.equal(githubRequestOptions('http://127.0.0.1:9443/x', 'GET', {})?.options.agent, false);
+    assert.equal(githubRequestOptions('https://ghe.example/x', 'GET', {})?.options.agent, false);
+  });
+
+  test('G12 a response over the cap is aborted', async () => {
+    const server = await localServer((_q, res) => { res.end(Buffer.alloc(17 * 1024 * 1024, 0x61)); });
+    try {
+      await assert.rejects(defaultGitHubGet(`http://127.0.0.1:${server.port}/x`, {}), /too large/);
+    } finally {
+      await server.close();
+    }
+  });
+
   test('G6 the Authorization header is attached only for the base origin (host, scheme and port)', () => {
     const api = apiBaseFor('https://ghe.example/api/v3');
     assert.ok(api.ok);
