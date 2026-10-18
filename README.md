@@ -33,7 +33,7 @@ FailSafe is a VS Code extension with a Monitor and a broader Console. It **does 
 
 ![FailSafe Monitor sidebar](FailSafe/extension/media/FailSafe-Sidebar.PNG)
 
-For more screens, see the [UI and technical reference](docs/README_LEGACY_REFERENCE.md).
+For more screens, see the [UI and technical reference](docs/archive/README_LEGACY_REFERENCE.md).
 
 ## Get started
 
@@ -63,6 +63,6 @@ Newer work on `main`, including Workspace Architecture and Delivery views, may n
 - [Governance Index](docs/GOVERNANCE_INDEX.md): Qor-logic governance artifact authority, tiers, and history.
 - [Contributing](CONTRIBUTING.md): how to make and review contributions.
 - [Integration portfolio](docs/architecture/INTEGRATION_PORTFOLIO.md): value contracts and current integration assessments.
-- [Historical technical README](docs/README_LEGACY_REFERENCE.md): detailed material previously carried in this landing page; not canonical authority.
+- [Historical technical README](docs/archive/README_LEGACY_REFERENCE.md): detailed material previously carried in this landing page; not canonical authority.
 
 FailSafe is open source under the [Apache 2.0 license](LICENSE).
