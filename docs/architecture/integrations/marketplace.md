@@ -91,7 +91,7 @@ Proposed: item to scan result to ledger entry, specified in `docs/architecture/I
 
 Console Skills view hosts the marketplace renderer `FailSafe/extension/src/roadmap/ui/modules/skills.js:82` (`new MarketplaceRenderer('cc-marketplace-container', { client: this.client })`).
 Install, Uninstall and a confirm modal are rendered `FailSafe/extension/src/roadmap/ui/modules/marketplace.js:234` (`cc-marketplace-modal-confirm`).
-The marketplace README tells users that install, update and scan are disabled `FailSafe/extension/README.md:66` (`install, update and scan are disabled until isolated setup and fail-closed scanning land`).
+The README tells users that install, update and scan are disabled `README.md:57` (`install, update and scan are disabled until isolated setup and fail-closed scanning land`).
 
 ## Governance policy and enforceability limits
 

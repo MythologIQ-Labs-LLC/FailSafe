@@ -75,7 +75,7 @@ Proposed: receipt to intent, plan and PR edges, specified in `docs/architecture/
 ## Customer UI and actions
 
 None on main: no command, route or Console view issues or verifies a receipt (unverified beyond a search of `FailSafe/extension/src` for the exported functions).
-The marketplace README states that no command publishes a verified SHIELD check yet `FailSafe/extension/README.md:90` (`No command publishes a verified SHIELD check yet.`).
+The README states that no command publishes a verified SHIELD check yet `README.md:45` (`No command publishes a verified SHIELD check yet.`).
 
 ## Governance policy and enforceability limits
 
