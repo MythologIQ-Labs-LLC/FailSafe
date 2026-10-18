@@ -11,6 +11,8 @@
  */
 
 import { strict as assert } from 'assert';
+import * as os from 'os';
+import * as path from 'path';
 import { EventBus } from '../../shared/EventBus';
 import type { FailSafeEventType } from '../../shared/types/events';
 import { SlackNotifier, type SlackDeliveryFailure } from '../../integrations/slack/SlackNotifier';
@@ -27,15 +29,21 @@ async function flush(): Promise<void> {
 
 interface Sent { url: string; body: string }
 
+/** #538: the notifiers take the bound workspace root as a sixth argument. */
+const ROOT = path.resolve(os.tmpdir(), 'ws538d');
+type NotifierCtor<T> = new (...args: unknown[]) => T;
+
 function slackHarness(status = 200) {
   const sent: Sent[] = [];
   const failures: SlackDeliveryFailure[] = [];
   const bus = new EventBus();
-  new SlackNotifier(
+  new (SlackNotifier as unknown as NotifierCtor<SlackNotifier>)(
     bus,
     () => ({ enabled: true, webhookUrl: SLACK_HOOK }),
-    async (url, body) => { sent.push({ url, body }); return { status }; },
-    (f) => { failures.push(f); },
+    async (url: string, body: string) => { sent.push({ url, body }); return { status }; },
+    (f: SlackDeliveryFailure) => { failures.push(f); },
+    undefined,
+    ROOT,
   ).register();
   return { bus, sent, failures };
 }
@@ -44,14 +52,30 @@ function teamsHarness(status = 200) {
   const sent: Sent[] = [];
   const failures: TeamsDeliveryFailure[] = [];
   const bus = new EventBus();
-  new TeamsNotifier(
+  new (TeamsNotifier as unknown as NotifierCtor<TeamsNotifier>)(
     bus,
     () => ({ enabled: true, webhookUrl: TEAMS_HOOK }),
-    async (url, body) => { sent.push({ url, body }); return { status }; },
-    (f) => { failures.push(f); },
+    async (url: string, body: string) => { sent.push({ url, body }); return { status }; },
+    (f: TeamsDeliveryFailure) => { failures.push(f); },
+    undefined,
+    ROOT,
   ).register();
   return { bus, sent, failures };
 }
+
+/** An L3ApprovalRequest as L3ApprovalService emits it, plus fields that must never leave. */
+function l3Request(filePath: string) {
+  return {
+    id: 'r1', state: 'APPROVED', filePath, riskGrade: 'L3', agentDid: 'did:failsafe:agent:x', agentTrust: 0.5,
+    sentinelSummary: 'SUMMARY-SECRET', flags: ['FLAG-SECRET'], queuedAt: '2026-10-18T00:00:00.000Z',
+    slaDeadline: '2026-10-19T00:00:00.000Z', conditions: ['ghp_FAKE0123456789abcdefTOKEN'],
+    meta: { args: { content: 'FILE-CONTENT-SECRET', diff: '+ DIFF-SECRET' } },
+    content: 'TOP-CONTENT-SECRET', diff: 'TOP-DIFF-SECRET', token: 'xoxb-FAKE-TOKEN',
+  };
+}
+const LEAKS = ['SUMMARY-SECRET', 'FLAG-SECRET', 'ghp_FAKE', 'FILE-CONTENT-SECRET', 'DIFF-SECRET',
+  'TOP-CONTENT-SECRET', 'TOP-DIFF-SECRET', 'xoxb-FAKE'];
+const IN_ROOT = path.resolve(ROOT, 'src', 'a.ts');
 
 const VERDICT = {
   id: 'v1', eventId: 'e1', timestamp: '2026-08-20T20:00:00.000Z',
@@ -90,12 +114,42 @@ suite('notifier wiring: EventBus envelope → governance notification (#241 F-2)
 
   test('l3Decided carries the real decision, not the "recorded" fallback', async () => {
     const { bus, sent } = slackHarness();
-    bus.emit('qorelogic.l3Decided' as FailSafeEventType, { request: { filePath: 'a.ts' }, decision: 'APPROVED' });
+    bus.emit('qorelogic.l3Decided' as FailSafeEventType, { request: l3Request(IN_ROOT), decision: 'APPROVED' });
     await flush();
     assert.equal(sent.length, 1);
     assert.match(sent[0].body, /APPROVED/);
     assert.ok(!/recorded/.test(sent[0].body), 'the envelope defect degraded this to "L3 decision: recorded"');
+    assert.match(sent[0].body, /Path: src\/a\.ts/, 'the path is under request (#538 B263)');
   });
+
+  test('Teams: l3Decided with the real { request, decision } shape shows the decision and path (#538)', async () => {
+    const { bus, sent } = teamsHarness();
+    bus.emit('qorelogic.l3Decided' as FailSafeEventType, { request: l3Request(IN_ROOT), decision: 'REJECTED' });
+    await flush();
+    assert.equal(sent.length, 1);
+    assert.match(sent[0].body, /REJECTED/);
+    assert.match(sent[0].body, /Path: src\/a\.ts/);
+  });
+
+  test('Slack: an EXPIRED request carries the decision and path (#538)', async () => {
+    const { bus, sent } = slackHarness();
+    bus.emit('qorelogic.l3Decided' as FailSafeEventType, { request: l3Request(IN_ROOT), decision: 'EXPIRED' });
+    await flush();
+    assert.equal(sent.length, 1);
+    assert.match(sent[0].body, /EXPIRED/);
+    assert.match(sent[0].body, /Path: src\/a\.ts/);
+  });
+
+  for (const [channel, harness] of [['Slack', slackHarness], ['Teams', teamsHarness]] as const) {
+    test(`${channel}: no request field other than the path reaches the payload (#538)`, async () => {
+      const { bus, sent } = harness();
+      bus.emit('qorelogic.l3Decided' as FailSafeEventType, { request: l3Request(IN_ROOT), decision: 'APPROVED' });
+      bus.emit('qorelogic.l3Queued' as FailSafeEventType, l3Request(IN_ROOT));
+      await flush();
+      assert.equal(sent.length, 2);
+      for (const s of sent) for (const leak of LEAKS) assert.ok(!s.body.includes(leak), `${leak} leaked into ${channel}`);
+    });
+  }
 
   test('driftDetected carries its summary detail', async () => {
     const { bus, sent } = slackHarness();
