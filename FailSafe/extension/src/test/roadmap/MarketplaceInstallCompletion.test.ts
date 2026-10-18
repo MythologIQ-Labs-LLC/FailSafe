@@ -461,6 +461,7 @@ suite('#538 install receipts', () => {
       f.setScan(async () => verdict(pass));
       const r = requestRescan(f.deps, ITEM.id);
       assert.equal(r.status, 200);
+      assert.equal(f.item.status, 'scanning', 'scanning is set before requestRescan returns');
       await r.done;
       assert.equal(f.scans.length, 1, 'exactly one scan');
       assert.equal(f.updates.filter((u) => u.status === 'scanning').length, 1, 'scanning written once');
