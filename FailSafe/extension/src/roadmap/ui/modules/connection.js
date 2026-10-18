@@ -291,8 +291,8 @@ export class ConnectionClient {
     const error = data?.error;
     if (!res.ok || data?.ok === false) {
       const c = data?.confirmation;
-      const message = c === 'declined' || c === 'busy'
-        ? 'Not confirmed in VS Code'
+      const message = c === 'declined' || c === 'busy' ? 'Not confirmed in VS Code'
+        : c === 'expired' ? 'The VS Code confirmation expired' // #538: approved after the deadline
         : c === 'unwired'
           ? 'Operator confirmation unavailable'
           : (error || `Action ${endpoint} failed (${res.status})`);

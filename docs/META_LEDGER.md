@@ -33434,3 +33434,91 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `bb913fdce5ba0be114f56c9ba4bea9838f76008f289a69895f425666b2cdae1c`
 
 **Decision**: SESSION SEAL for the B243 follow-up (implementation #795) after seal #794. Reality = Promise, with disclosures. The follow-up is test-only and outside the audited plan's scope: it scopes the RiskStore T9 rename stubs to the store's folder so PR #540's Full Test Suite can run every file. Disclosures: bounded damaged-ledger override for #538 lane cycles (#467 unresolved); the scope addition is the lead's, made because the flake stopped two CI runs; the full suite result on the pushed head is read from PR #540's next run; seal #794 is unedited. Next: push, the PR checks, then a merge with --match-head-commit. Not tagged.
+
+---
+
+### Entry #797: GATE TRIBUNAL - plan-538b-install-authorization (iteration 1) - PASS
+
+**Timestamp**: 2026-10-18T16:11:42Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-18T1603-a6fafd`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for #538 lane cycles, owner ruling 2026-10-18, disclosed per cycle (#467)
+
+**Content Hash**: `700c7988287b7d564bd34cd56f12c1094d1ecc18b3a7542bb5541070b92c6aad`
+**Previous Hash**: `bb913fdce5ba0be114f56c9ba4bea9838f76008f289a69895f425666b2cdae1c`
+**Chain Hash (Merkle seal)**: `da8110ca308691f6d46a4519994f8d4fedb2d5d5606c29dfccb75c30ea57ab4c`
+
+**Decision**: PASS on plan-538b-install-authorization.md iteration 1 (sha256 8e153b2a), #538 lane B: B267, B269, B274, B276 (and B268) Console install routes behind a server-built, frozen operation confirmed in a modal VS Code dialog, with expiry, disconnect cancellation, a Console request guard and install ledger records, plus the #514 residual (L3 decisions record how they were authenticated). Fresh Option B architect-reviewer; 104 citations checked, none failed. Rulings: the Host port is not pinned because Origin must equal Host; scaffold without hosts may prompt twice; B268 included; install outcome not ledgered (residual). Binding should-fix: the request guard runs before the limiter (cross-site budget exhaustion), exact media-type parsing, a remote-socket row that can fail, socket-destroyed cancellation and one settle guard, clones for real callees, operation ids on completion broadcasts, suite corrections, and disclosure of browser-remote and cross-port refusals. The reviewer enumerated the remaining side-effect routes; the lead folded the Host and Origin check onto the voice-pack and Bicameral connect routes. Next: implement on fix/538-lane-B. Tribunal entry held by the lead and appended at integration in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #798: IMPLEMENTATION - plan-538b-install-authorization
+
+**Timestamp**: 2026-10-18T18:03:34Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-18T1603-a6fafd`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-18T1603-a6fafd/implement.json`
+
+**Content Hash**: `f79545cd99ac245107c6d0aa78eae7abb7c78404d6c1647cb864184326eb1cf2`
+**Previous Hash**: `da8110ca308691f6d46a4519994f8d4fedb2d5d5606c29dfccb75c30ea57ab4c`
+**Chain Hash (Merkle seal)**: `5d836f96bc881b2ad53eedb3a9457dcccafdc8b144c5a211cb8c3fc0ead5e109`
+
+**Decision**: IMPLEMENTATION of plan-538b-install-authorization.md iteration 1 (audit PASS, sha256 8e153b2a), #538 lane B. Branch fix/538-lane-B from main 243a34a1, merged with main 3a72e235 (lane D, 10b9ace5) and e0217925 (lane C). c8f7bc1e, d66f681a and e0bdecfe: red rows first (217 failing on main's code for the #538 rows, the Playwright spec failing, then 3 for B293 and 3 for the review rows). 78e2fa86, 9de36d5d and d959b02b: authorizeOperatorAction mints an operation id, deep-freezes the server-resolved operation, shows it in the existing modal confirmer once, and returns it only when approved within 120 s and before the client disconnects (one settle guard; a throwing confirmer is declined; expired 410, cancelled 499); mcp-install, bicameral-install, scaffold-skills, adapter install and uninstall and agt-install run only the frozen operation, write an operator-action-authorized ledger entry first when a ledger is available (a failed append runs nothing), carry the operation id on their completion broadcasts, and resolve their ledger and terminal at request time; consoleRequestGuard (loopback socket, loopback Host, Origin equal to Host, exact application/json media type) runs before every limiter on those routes and on tracker/config (B293); the voice-pack install and uninstall and Bicameral connect and auto-connect routes get the Host and Origin checks; processL3Decision records an authentication descriptor (vscode-modal-confirmation, vscode-webview, unverified-loopback) and what it proves; the Console callers show confirm, declined, busy, expired and unavailable states. 451b7feb, 30a28325 and 89ffbac2: the mcp-catalog, bicameral, qor-logic-consumer, agt-adapter and agt contracts (main-unreleased rows), portfolio facts, BACKLOG B267, B268, B269, B274, B276 and B293 done, B294 and B295 open, CHANGELOG Security with the compatibility changes for browser remotes, the cross-port workspace switcher and scripted clients, FX1006. Evidence from logs: #538 rows 252 passing, 0 failing; covering suites 710/0; lead re-runs 249/0 and 320/0; npm test default 5306 passing, 18 pending, 2 failing (the lock-queue R1 timing row and workspace-evidence-source, both under host load and passing alone); architecture configuration 5/0; test:node 816 tests, 805 passed, 2 failed (FX946, #467), 9 skipped; Playwright 34 passed, 3 skipped, plus 15 on the taxonomy and dashboard specs; integration contracts 39/39 with the tag check over 359 claims; tsc 0; lint 0 errors; secret scan clean; mutations M1 to M18 each killed.
+
+---
+
+### Entry #799: SESSION SEAL - plan-538b-install-authorization
+
+**Timestamp**: 2026-10-18T18:04:53Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-18T1603-a6fafd`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-18T1603-a6fafd/substantiate.json`
+
+**Content Hash**: `8e153b2a295c9a35bd65dee591ceb33ac73de7b81455c85bac59397fcdacc67e`
+**Previous Hash**: `5d836f96bc881b2ad53eedb3a9457dcccafdc8b144c5a211cb8c3fc0ead5e109`
+**Chain Hash (Merkle seal)**: `03771a640129793ff422501436431c907b1c6075a87da30116761f16f41e8f12`
+
+**Decision**: SESSION SEAL for plan-538b-install-authorization.md (implementation #798; content hash is the audited plan, sha256 8e153b2a). Reality = Promise, with disclosures. The branch carries #538 lane B: Console install side effects need a server-verified, operation-scoped, one-time VS Code confirmation that expires and is cancelled by a disconnect, recorded in the ledger before anything runs, behind a Console request guard; L3 decisions record their authentication method. Independent bounded code review: ready to seal, no high findings; the reviewer found no side effect reachable without approval, no TOCTOU between dialog and execution, and no guard bypass among the header forms tried; five low items folded in with red rows (e0bdecfe, d959b02b, 89ffbac2). After merging main with lanes D and C the lead re-ran the lane B, marketplace and export suites: 492 passing, 0 failing. Disclosures: bounded damaged-ledger override for #538 lane cycles (owner ruling 2026-10-18; #467 unresolved, normal governance not restored); a modal approval proves a person clicked in VS Code, not which local process asked; any local process can still raise a dialog, and an expired dialog stays open and holds the busy guard until dismissed; only the authorization is ledgered, not the install outcome (operation ids on broadcasts tie them together); a ledger whose isAvailable fails lets the install run and the response says it was not recorded; browser-based remotes (Codespaces, vscode.dev, code-server behind https) and the cross-port workspace switcher are refused, the VS Code commands remain the path; scripted clients now need application/json and get 400 for unknown scaffold input; on the voice-pack and Bicameral connect routes a request with no Origin and no JSON still passes, which only a local process can send; preflight grant and deny (B294) and the marketplace nonce (B295) are open, B271 and B257 untouched; the lane's red commit c8f7bc1e was made with git hooks bypassed (core.hooksPath set to an empty path); the only installed hook gates release commits and was run by hand on that message with exit 0, and the reviewer saw no effect on the code; the lock-queue R1 timing row and workspace-evidence-source failed in a full run under host load and pass alone; FX946 is the known ledger-anchor baseline; documentation currency check run mechanically with no warnings (change_class hotfix); earlier seals are unedited. Next: push, open the PR, the PR checks, then a merge with --match-head-commit. Not tagged.
+
+---
+
+### Entry #800: IMPLEMENTATION - plan-538b-install-authorization (CodeQL follow-up)
+
+**Timestamp**: 2026-10-18T18:11:35Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-18T1603-a6fafd`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-18T1603-a6fafd/implement.json`
+
+**Content Hash**: `b947fad2f7367949a801b5af937c5132a8b8703436c075c33540a889a198db74`
+**Previous Hash**: `03771a640129793ff422501436431c907b1c6075a87da30116761f16f41e8f12`
+**Chain Hash (Merkle seal)**: `6af250d166481077de5c39027056abe98bdc60f50bb59fe641251c1520368e48`
+
+**Decision**: IMPLEMENTATION follow-up after seal #799. PR #541's CodeQL check reported three new high js/missing-rate-limiting alerts: the tracker/config POST (the B293 guard was added without a limiter) and two limiter-less fallback route registrations in installAuthorization.routes.test.ts left from the red run. Fixed, not dismissed. f2d3cd6f: the tracker/config POST chain is guard, then a 20-per-minute limiter, then the handler, as on the install routes; refused cross-site requests do not spend the limit; the test registers only through the production setup functions. Evidence: the #538 rows 340 passing, 0 failing (the grep now also matches other lanes' merged suites); integration contracts 39/39; tsc clean; with the limiter removed the 429 row fails.
+
+---
+
+### Entry #801: SESSION SEAL - plan-538b-install-authorization (CodeQL follow-up)
+
+**Timestamp**: 2026-10-18T18:11:35Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-18T1603-a6fafd`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-18T1603-a6fafd/substantiate.json`
+
+**Content Hash**: `8e153b2a295c9a35bd65dee591ceb33ac73de7b81455c85bac59397fcdacc67e`
+**Previous Hash**: `6af250d166481077de5c39027056abe98bdc60f50bb59fe641251c1520368e48`
+**Chain Hash (Merkle seal)**: `61540cf3ce00b2257eb3adefb5b98e7f081bf75c35acb2d499d8d62bc5ed53f5`
+
+**Decision**: SESSION SEAL for the CodeQL follow-up (implementation #800) after seal #799. Reality = Promise, with disclosures. The tracker/config POST is now rate-limited after the request guard, and the test file no longer registers limiter-less routes. Disclosures: bounded damaged-ledger override for #538 lane cycles (#467 unresolved); the tracker limit is 20 per minute, looser than the install routes' 5, because the Taxonomy editor saves interactively; the CodeQL result is read from PR #541's next run; the test-only route in operatorConfirmation.bound.test.ts has no limiter and was not flagged; seal #799 is unedited. Next: the PR checks, then a merge with --match-head-commit. Not tagged.

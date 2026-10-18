@@ -6,6 +6,7 @@
 import { applyProgressUpdate, applyCompletion, applyError } from './install-skills-progress.js';
 import { renderPickerSection, collectSkillFilter } from './install-skills-picker.js';
 import { renderPreviewButton, bindPreviewEvents } from './install-skills-preview.js';
+import { CONFIRM_PENDING_TEXT, gatedFailureMessage, jsonPost, settleGated } from './operator-confirmation-copy.js';
 
 const HOST_LABELS = { claude: 'Claude', codex: 'Codex', 'kilo-code': 'Kilo', gemini: 'Gemini' };
 const PHASE_LABELS = {
@@ -223,21 +224,16 @@ export async function performWebInstall(container, hosts, scope, options, setSta
   if (confirmBtn) confirmBtn.disabled = true;
   options.onStart?.();
   const body = skillFilter ? { hosts, scope, skillFilter } : { hosts, scope };
-  try {
-    const res = await fetch('/api/actions/scaffold-skills', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-    });
-    const json = await res.json();
-    if (!res.ok || json.ok === false) {
-      setState(container, applyError(getState(container), { error: json.error || res.statusText }));
-      options.onError?.(json);
-      return;
-    }
-    options.onFinishFetch?.(json);
-  } catch (err) {
-    setState(container, applyError(getState(container), { error: String(err) }));
-    options.onError?.(err);
-  } finally {
-    if (confirmBtn) confirmBtn.disabled = false;
+  // #538: nothing installs until the operator confirms in a VS Code dialog.
+  setStatus?.(CONFIRM_PENDING_TEXT);
+  // A body that is not JSON (a text 429 or 500) reads as {}, so the status is shown.
+  const r = await settleGated(fetch('/api/actions/scaffold-skills', jsonPost(body)));
+  setStatus?.('');
+  if (confirmBtn) confirmBtn.disabled = false;
+  if (!r.ok) {
+    setState(container, applyError(getState(container), { error: gatedFailureMessage(r.status, r.body, 'installed') }));
+    options.onError?.(r.status === 0 ? new Error(r.body.error) : r.body);
+    return;
   }
+  options.onFinishFetch?.(r.body);
 }

@@ -22,6 +22,8 @@ export interface QorLogicInstallInvocation {
   summary?: { hostsVerified: number; totalFiles: number; destinations: string[] };
   error?: string;
   stderrTail?: string;
+  /** #538: the approved Console operation this step belongs to. */
+  operationId?: string;
 }
 
 export interface QorLogicInstallReport {
@@ -30,6 +32,8 @@ export interface QorLogicInstallReport {
   totalInstalled: number;
   destinations: string[];
   failures: Array<{ host: QorLogicHost; error: string }>;
+  /** #538: the approved Console operation this report belongs to. */
+  operationId?: string;
 }
 
 export interface InstallCallbacks {

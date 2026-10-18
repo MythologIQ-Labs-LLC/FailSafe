@@ -7,8 +7,13 @@
 // component. `cc-bicameral-install-progress` is preserved as a wrapper class so
 // existing CSS/test hooks keep matching.
 import { renderInstallProgress as renderSharedInstallProgress } from './install-progress.js';
+import { CONFIRM_PENDING_TEXT } from './operator-confirmation-copy.js';
 
 function renderInstallProgress(progress) {
+  // #538: until VS Code confirms, say so instead of an empty step list.
+  if (progress?.awaitingConfirmation) {
+    return `<div class="cc-bicameral-confirm-pending" style="color:var(--text-muted)">${esc(CONFIRM_PENDING_TEXT)}</div>`;
+  }
   return renderSharedInstallProgress(progress, { className: 'cc-bicameral-install-progress' });
 }
 

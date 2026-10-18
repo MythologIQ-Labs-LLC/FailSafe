@@ -143,22 +143,35 @@ export function createInstallSkillsHandler(
 export function createScaffoldWithWebOptions(
   ingestor: QorLogicSkillIngestor,
   callbacks: InstallCallbacks = {},
-): (hosts: QorLogicHost[], scope: QorLogicScope, skillFilter?: Record<string, string[]>) => Promise<QorLogicInstallReport> {
-  return async (hosts, scope, skillFilter) => {
+): (
+  hosts: QorLogicHost[], scope: QorLogicScope, skillFilter?: Record<string, string[]>, context?: { operationId: string },
+) => Promise<QorLogicInstallReport> {
+  return async (hosts, scope, skillFilter, context) => {
+    // #538: the Console route passes the approved operation's id; every progress event and
+    // the final report carry it.
+    const cb = withOperationId(callbacks, context?.operationId);
     const invs: QorLogicInstallInvocation[] = [];
-    const probe = await runProbeStep(ingestor, callbacks.onProgress);
+    const probe = await runProbeStep(ingestor, cb.onProgress);
     invs.push(probe);
-    if (probe.status === 'error') return finalize(invs, callbacks);
-    const pip = await runPipStep(ingestor, callbacks.onProgress);
+    if (probe.status === 'error') return finalize(invs, cb);
+    const pip = await runPipStep(ingestor, cb.onProgress);
     invs.push(pip);
-    if (pip.status === 'error') return finalize(invs, callbacks);
+    if (pip.status === 'error') return finalize(invs, cb);
     for (const host of hosts) {
       const filter = skillFilter ? skillFilter[host] : undefined;
-      invs.push(await runHostInstallStep(ingestor, host, scope, callbacks.onProgress, filter));
+      invs.push(await runHostInstallStep(ingestor, host, scope, cb.onProgress, filter));
     }
-    invs.push(await runProvenanceStep(ingestor.getWorkspaceRoot(), callbacks.onProgress));
-    invs.push(await runRefreshStep(ingestor, callbacks.onProgress));
-    return finalize(invs, callbacks);
+    invs.push(await runProvenanceStep(ingestor.getWorkspaceRoot(), cb.onProgress));
+    invs.push(await runRefreshStep(ingestor, cb.onProgress));
+    return finalize(invs, cb);
+  };
+}
+
+function withOperationId(callbacks: InstallCallbacks, operationId: string | undefined): InstallCallbacks {
+  if (!operationId) return callbacks;
+  return {
+    onProgress: (i) => callbacks.onProgress?.({ ...i, operationId }),
+    onComplete: (r) => callbacks.onComplete?.({ ...r, operationId }),
   };
 }
 

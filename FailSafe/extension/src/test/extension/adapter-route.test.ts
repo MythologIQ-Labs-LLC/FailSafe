@@ -35,6 +35,8 @@ function makeDeps(adapter: Partial<AdapterServiceStub> = {}, overrides: Partial<
     rejectIfRemote: () => false,
     broadcast: (data) => { broadcasts.push(data); },
     adapterService: stub as never,
+    // #538: install and uninstall need an approving VS Code confirmer.
+    confirmOperatorAction: async () => 'approved',
     ...overrides,
   };
   return { deps, broadcasts };

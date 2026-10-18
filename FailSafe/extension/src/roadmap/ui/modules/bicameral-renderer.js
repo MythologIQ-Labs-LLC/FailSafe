@@ -5,6 +5,7 @@
 // renders into the container assigned by its parent TabGroup.
 
 import { renderBicameralCard, bindBicameralCard, INITIAL_BICAMERAL_STATE } from './bicameral-card.js';
+import { gatedFailureMessage, jsonPost, settleGated } from './operator-confirmation-copy.js';
 
 export class BicameralRenderer {
   constructor(containerId, { client } = {}) {
@@ -201,38 +202,24 @@ export class BicameralRenderer {
   }
 
   async _beginInstall(mode) {
-    this._setState({ installProgress: { mode, steps: [], done: false, ok: false } });
-    try {
-      const res = await fetch('/api/actions/bicameral-install', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || json?.ok === false) {
-        this._setState({
-          installProgress: {
-            ...(this.state.installProgress || { mode, steps: [] }),
-            done: true,
-            ok: false,
-            error: json?.error || res.statusText || 'install failed',
-          },
-        });
-        return;
-      }
-      // Final report comes back in res.body but the WS broadcasts have
-      // likely already advanced state. Trust the body for terminal state.
-      if (json?.report) this.setInstallProgress(json.report);
-    } catch (err) {
+    // #538: pip and setup run only after the operator confirms in a VS Code dialog.
+    this._setState({ installProgress: { mode, steps: [], done: false, ok: false, awaitingConfirmation: true } });
+    const r = await settleGated(fetch('/api/actions/bicameral-install', jsonPost({ mode })));
+    if (!r.ok) {
       this._setState({
         installProgress: {
           ...(this.state.installProgress || { mode, steps: [] }),
+          awaitingConfirmation: false,
           done: true,
           ok: false,
-          error: String(err),
+          error: r.body?.report?.error || gatedFailureMessage(r.status, r.body, 'installed'),
         },
       });
+      return;
     }
+    // Final report comes back in res.body but the WS broadcasts have
+    // likely already advanced state. Trust the body for terminal state.
+    if (r.body?.report) this.setInstallProgress(r.body.report);
   }
 
   /** Host-side wiring point: called from the extension's install bridge with

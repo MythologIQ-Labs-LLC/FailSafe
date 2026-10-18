@@ -2,7 +2,8 @@ import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { AgtRoute } from '../../../roadmap/routes/AgtRoute';
+import { AgtRoute, AGT_INSTALL_PATH, setupAgtInstallRoute } from '../../../roadmap/routes/AgtRoute';
+import { RouteHarness, makeApp } from '../../extension/helpers/routeTestHarness';
 
 function res() {
   const r: { code: number; body: unknown; status: (c: number) => typeof r; json: (b: unknown) => void } = {
@@ -36,37 +37,44 @@ suite('AgtRoute (B-INT-16)', () => {
     assert.deepEqual(body.detected, []);
   });
 
-  test('install runs a runnable module command in the terminal via the injected dep', () => {
+  test('install runs a runnable module command in the terminal via the injected dep', async () => {
     const calls: Array<[string, string]> = [];
-    const r = res();
-    AgtRoute.install({ body: { id: 'python' } } as never, r as never, {
-      workspaceRoot: '/tmp', runInTerminal: (n, c) => calls.push([n, c]),
+    // #538: through the real route chain, with an approving VS Code confirmer.
+    const app = makeApp();
+    setupAgtInstallRoute(app, {
+      workspaceRoot: '/tmp', rejectIfRemote: () => false, confirmOperatorAction: async () => 'approved',
+      runInTerminal: (n, c) => { calls.push([n, c]); },
     });
-    assert.deepEqual(r.body, { ok: true, id: 'python', ran: 'pip install agent-governance-toolkit[full]' });
+    const h = new RouteHarness(app);
+    await h.start();
+    const r = await h.request({ method: 'POST', path: AGT_INSTALL_PATH, body: { id: 'python' } }).finally(() => h.stop());
+    assert.equal(r.body.ok, true);
+    assert.equal(r.body.id, 'python');
+    assert.equal(r.body.ran, 'pip install agent-governance-toolkit[full]');
     assert.equal(calls.length, 1);
     assert.equal(calls[0][0], 'AGT: Python');
     assert.equal(calls[0][1], 'pip install agent-governance-toolkit[full]');
   });
 
-  test('install of a copy-only module (claude-code) → 400 and never touches the terminal', () => {
+  test('install of a copy-only module (claude-code) → 400 and never touches the terminal', async () => {
     const calls: number[] = [];
     const r = res();
-    AgtRoute.install({ body: { id: 'claude-code' } } as never, r as never, {
+    await AgtRoute.install({ body: { id: 'claude-code' } } as never, r as never, {
       workspaceRoot: '/tmp', runInTerminal: () => calls.push(1),
     });
     assert.equal(r.code, 400);
     assert.equal(calls.length, 0);
   });
 
-  test('install with unknown id → 404', () => {
+  test('install with unknown id → 404', async () => {
     const r = res();
-    AgtRoute.install({ body: { id: 'nope' } } as never, r as never, { workspaceRoot: '/tmp' });
+    await AgtRoute.install({ body: { id: 'nope' } } as never, r as never, { workspaceRoot: '/tmp' });
     assert.equal(r.code, 404);
   });
 
-  test('install when runInTerminal is unwired → 503', () => {
+  test('install when runInTerminal is unwired → 503', async () => {
     const r = res();
-    AgtRoute.install({ body: { id: 'python' } } as never, r as never, { workspaceRoot: '/tmp' });
+    await AgtRoute.install({ body: { id: 'python' } } as never, r as never, { workspaceRoot: '/tmp' });
     assert.equal(r.code, 503);
   });
 });

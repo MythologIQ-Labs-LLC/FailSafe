@@ -101,6 +101,10 @@ export interface BicameralRouteDeps {
    * USER_OVERRIDE as the operator. Absent -> ratify answers 503.
    */
   confirmOperatorAction?: ConfirmOperatorAction;
+  /** #538: test seam for the install route's confirmation deadline. */
+  confirmationDeadlineMs?: number;
+  /** #538: the install route's ledger, read at request time (falls back to `ledgerManager`). */
+  getLedgerManager?: () => unknown;
   /**
    * LD16 (b): re-wire the MCP client after a successful install, so Connect
    * works without a reload. The bootstrap hook catches and logs its own error.

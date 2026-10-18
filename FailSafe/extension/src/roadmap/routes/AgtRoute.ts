@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import * as fs from 'fs';
 import { AGT_MODULES, detectEnvironment, agtPreviewNotice } from '../../integrations/agt/agt-catalog';
+import { consoleRequestGuard } from './consoleRequestGuard';
+import { authorizeOperatorAction, authorizationFields, newInstallLimiter, type OperatorActionDeps } from './installAuthorization';
 
 /**
  * AgtRoute — backs the Integrations-tab Agent Governance Toolkit surface (B-INT-16).
@@ -13,10 +15,11 @@ import { AGT_MODULES, detectEnvironment, agtPreviewNotice } from '../../integrat
  * The terminal bridge is an injected dep (`runInTerminal`) wired by the host to
  * vscode.window.createTerminal(...).sendText(cmd, /*addNewLine*\/ false); 503
  * when unwired. Copy-only modules (Claude Code slash commands) are 400 here —
- * the UI copies them instead of running them.
+ * the UI copies them instead of running them. #538: the terminal opens only after the
+ * operator approves the server-side command in a modal VS Code dialog.
  */
 
-export interface AgtRouteDeps {
+export interface AgtRouteDeps extends OperatorActionDeps {
   workspaceRoot: string;
   /** Pre-fill an integrated terminal with `command` (NOT auto-executed). */
   runInTerminal?: (name: string, command: string) => void;
@@ -54,7 +57,7 @@ export const AgtRoute = {
     });
   },
 
-  install(req: Request, res: Response, deps: AgtRouteDeps): void {
+  async install(req: Request, res: Response, deps: AgtRouteDeps): Promise<void> {
     const id = (req.body && (req.body as { id?: string }).id) || '';
     const mod = AGT_MODULES.find((m) => m.id === id);
     if (!mod) {
@@ -69,11 +72,27 @@ export const AgtRoute = {
       res.status(503).json({ ok: false, error: 'runInTerminal not wired' });
       return;
     }
+    const approved = await authorizeOperatorAction(deps, res, {
+      kind: 'agt-terminal-prefill', moduleId: mod.id, label: mod.label, command: mod.command,
+    }, AGT_INSTALL_PATH);
+    if (!approved) return;
+    const op = approved.operation;
     try {
-      deps.runInTerminal(`AGT: ${mod.label}`, mod.command);
-      res.json({ ok: true, id, ran: mod.command });
+      deps.runInTerminal(`AGT: ${op.label}`, op.command);
+      res.json({ ok: true, id: op.moduleId, ran: op.command, ...authorizationFields(approved) });
     } catch (e) {
-      res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+      res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e), ...authorizationFields(approved) });
     }
   },
 };
+
+export const AGT_INSTALL_PATH = '/api/actions/agt-install';
+
+/** #538: guard (loopback, Host, Origin, JSON) before the limiter, then the gated pre-fill. */
+export function setupAgtInstallRoute(
+  app: import('express').Application,
+  deps: AgtRouteDeps & { rejectIfRemote: (req: Request, res: Response) => boolean },
+  limiter = newInstallLimiter(),
+): void {
+  app.post(AGT_INSTALL_PATH, consoleRequestGuard((req, res) => deps.rejectIfRemote(req, res)), limiter, (req, res) => AgtRoute.install(req, res, deps));
+}
