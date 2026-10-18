@@ -1,23 +1,50 @@
-# FailSafe — Safety layer for AI coding agents
+# FailSafe: Governance for AI Coding Agents
 
-Prevent runaway AI edits, hallucinated dependencies, and destructive refactors before they break your codebase.
+**Understand agent activity, check risky changes, and keep evidence of what happened.**
 
-FailSafe runs locally inside VS Code and Cursor. It monitors what AI agents do, applies deterministic policy checks at the editor boundary, and gives you full visibility into every decision — before code ships.
+FailSafe runs locally in VS Code and Cursor. It monitors agent and workspace activity, evaluates deterministic policies, and presents risks, decisions, and checkpoints in one Console. Some controls can stop a governed action; editor-save denials are reported but cannot prevent VS Code from saving a file.
 
----
+## What FailSafe Does
 
-## 🔌 Integrations — govern your entire AI toolchain, not just the editor
+- **Understand changes and risks.** Monitor file activity, inspect Sentinel findings, and review workspace risk and governance state.
+- **Establish intent before execution.** Associate work with a defined intent and inspect policy decisions before approving higher-risk actions.
+- **Review agent changes.** Govern supported agent workflows and inspect changes before applying them. Some integrations observe activity rather than prevent all writes.
+- **Preserve an audit trail.** Record decisions, checkpoints, and provenance so operators can investigate what happened and what remains unverified.
+- **Navigate architecture and delivery evidence.** On newer source builds, Workspace Architecture and Delivery connect human-reviewed architecture and implementation evidence. These additions are not part of the published v6.0.8 VSIX.
+
+**Where to start:** Open the FailSafe Console for workspace status and risks. Use the Governance views for decisions, and the Audit Log for evidence. [Full feature reference](../../docs/COMPONENT_HELP.md).
+
+## Quick Start
+
+1. Install FailSafe from the VS Code Marketplace or Open VSX.
+2. Open a workspace in VS Code or Cursor.
+3. Run `FailSafe: Open Console (Browser Popout)` or press `Ctrl+Alt+F`.
+4. Run `FailSafe: Set Up Agent Governance` to inject governance rules into detected agents.
+5. Run `FailSafe: Audit Current File` to generate a governance verdict for the active editor.
+6. If you want commit-time guardrails, run `FailSafe: Install Commit Hook` inside a git workspace with `curl` available on the path.
+
+## What's New in v6.0.8
+
+Integrations now report what they actually did, and FailSafe starts only programs it has validated.
+
+- **Integrations tell the truth.** Catalog cards show each integration's last real result (Verified, Connected, Failing with a reason, or Stale) instead of guessing from settings. Jira and Linear issues become governed intent drafts only when you approve. OpenHands runs can be imported as signed historical evidence into the Agent Timeline and the Console Timeline.
+- **Nothing planted in a workspace runs.** gh, PowerShell, Python, pip, the Git installers, Bicameral MCP and the ACP agent are started from validated absolute paths, Python no longer imports modules from the workspace, and the settings that choose what FailSafe launches are read from user settings only.
+- **Agent Marketplace fails closed.** A scan that failed, timed out or gave no verdict is never a pass, an install whose scan did not pass is quarantined, and FailSafe never runs an item's package setup on your machine. Installs stay disabled.
+- **Concurrent windows are safer.** Two FailSafe processes can no longer both accept one replay nonce, risk updates queue in arrival order, and imports write in chunks so other windows are not starved. Two limits remain: a risk update can still be lost if two windows recover a crashed window's lock at the same moment, and a v6.0.7 window left open on the same workspace still updates the nonce store without the lock.
+- **Behaviour changes.** A Python interpreter inside the workspace or its repository is no longer used; set `failsafe.qorlogic.pythonPath` in user settings to choose one. Bicameral auto-connect turned on from the Console before this release must be turned on again. See the CHANGELOG for the full list and the known limitations.
+
+## Optional Integrations
 
 FailSafe connects to the tools your AI agents use. Every integration is opt-in. Integrations that call an outside service stay off until you enable them in settings and store a credential with **FailSafe: Set Integration Credential**; the installers and the risk scorer do nothing until you run them.
 
-**Govern the agents themselves** — run a headless coding agent through FailSafe and gate what it does:
+Supported agent integrations can add controlled workflows and evidence:
 
 | Integration | What it does | Why it matters |
 |---|---|---|
 | 🤖 **Continue (`cn`) governed wrapper** | Run a Continue headless prompt in a disposable git worktree; its changes are held for review and reach your workspace only when you choose Apply (`FailSafe: Run Continue (governed)`). | The agent never edits your checkout through its working directory, a shell/exec allowlist is refused before it runs, and the API key never leaves the child env. Not a process sandbox: direct writes to the repository are detected, not prevented, and writes outside it are not detected. On Windows, only a `cn.exe` or `cn.com` on PATH counts: Continue's npm shim `cn.cmd` cannot run without a shell, so an npm install is reported unavailable. |
 | 🔧 **Aider governed wrapper** | Run Aider (auto-commit off) in a disposable git worktree; its changes are held for review and reach your workspace only when you choose Apply (`FailSafe: Run Aider (governed)`). | Apply re-checks HEAD, the tree and the exact reviewed bytes before writing. Not a process sandbox: direct writes to the repository are detected, not prevented, and writes outside it are not detected. |
 | 👁️ **OpenHands run import** | Import an exported OpenHands run, after you confirm, as historical evidence in the FailSafe timeline (`FailSafe: Import OpenHands Run (observe)`). Version-gated, deduplicated and signed for this install; the transparency log gets one summary line. | See what an agent run did next to your own governance events. It is a record of a past run, not live enforcement (#477). |
-| 🔎 **Cline / Roo / Kilo policy audit** | Scan workspace MCP/tool config and flag risky posture — remote MCP, wildcard auto-approval, shell-capable tools (`FailSafe: Audit Agent MCP Policy (Cline/Roo/Kilo)`). | Catch an over-permissioned agent before it bites; secrets in the config are redacted before any finding is recorded. |
+| 🔎 **Cline / Roo / Kilo policy audit** | Scan workspace MCP/tool config and flag risky posture: remote MCP, wildcard auto-approval, shell-capable tools (`FailSafe: Audit Agent MCP Policy (Cline/Roo/Kilo)`). | Catch an over-permissioned agent before it bites; secrets in the config are redacted before any finding is recorded. |
 
 **Connect your issue tracker, security, and team tooling:**
 
@@ -26,9 +53,9 @@ FailSafe connects to the tools your AI agents use. Every integration is opt-in. 
 | 📥 **Linear / Jira intent drafts** | Fetch one Linear or Jira issue, review it in an unsaved preview, and create a governed intent draft only when you approve (`FailSafe: Import Linear Issue as Intent Draft`, `FailSafe: Import Jira Issue as Intent Draft`). Read-only toward the tracker. | The ticket becomes reviewed intent without retyping it. Nothing is written to Linear or Jira and nothing is synced (#480). |
 | ✅ **GitHub advisory checks** | Publish a neutral, manual advisory Check Run on the current commit (`FailSafe: Publish Manual GitHub Advisory`). When the commit has a pull request, the same command also posts a PR-linkage Check Run. It is not a SHIELD verdict. | The SHIELD check name is reserved for a verified, commit-bound receipt. No command publishes a verified SHIELD check yet. Fork PRs degrade to local-only. |
 | 🐞 **Sentry regression import** | Pull a Sentry project's unresolved issues into the risk register as runtime-regression risks (`FailSafe: Import Sentry Regressions`), with first and last release from each issue's detail. | Production failures become governed risk records tied to project / environment / release, with an exact count of what was created, updated, unchanged or failed; your triage survives re-imports. No raw event payloads, and no commit correlation. |
-| 🛡️ **SARIF security ingestion** | Import Semgrep / CodeQL / any SARIF 2.1.0 scanner output into the risk register (`FailSafe: Import SARIF Findings`). | Your security scanner stops being a separate silo — every finding becomes a *governed* risk in the same audit trail as agent decisions. |
-| 📣 **Slack / Microsoft Teams notifications** | Post VETO / L3-approval / drift events to a Slack or Teams webhook. Notify-only, off by default. | Governance becomes a **team** signal — the right people see a blocked action or a queued approval in their channel. |
-| 🧮 **MCP Registry risk scoring** | Score any MCP server locally — read-only, with field sanitization — before you trust it. | Adopt MCP servers on **evidence, not vibes** — a supply-chain admission check at the door. |
+| 🛡️ **SARIF security ingestion** | Import Semgrep / CodeQL / any SARIF 2.1.0 scanner output into the risk register (`FailSafe: Import SARIF Findings`). | Your security scanner stops being a separate silo: every finding becomes a *governed* risk in the same audit trail as agent decisions. |
+| 📣 **Slack / Microsoft Teams notifications** | Post VETO / L3-approval / drift events to a Slack or Teams webhook. Notify-only, off by default. | Governance becomes a **team** signal: the right people see a blocked action or a queued approval in their channel. |
+| 🧮 **MCP Registry risk scoring** | Score any MCP server locally: read-only, with field sanitization: before you trust it. | Adopt MCP servers on **evidence, not vibes**: a supply-chain admission check at the door. |
 | 📦 **MCP Catalog installers** | Risk-scored installs of **Context7**, **Mermaid Chart**, and **Playwright MCP** into your `.mcp.json`, written only after you confirm (`FailSafe: Install MCP Integration (governed)`). | Governed installs of tools that make your agents measurably better, with the trust check built in. |
 | 🧠 **Bicameral MCP** | Detect, connect, and ratify architecture *decision* records and their drift inline. | Every Bicameral tool call passes through FailSafe's universal interceptor. |
 | 🎨 **Open Design** | Observe Open Design agent runs and read its projects through a read-only MCP connection. | Artifact creation (`create_artifact`) is refused in this release, even after an L3 approval, until approvals can be verified where the call is made (#481). |
@@ -45,16 +72,6 @@ Open the **Integrations** tab to configure an integration. Each card shows the r
 **Current Release**: v6.0.8 (2026-10-16)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
-
-## What's New in v6.0.8
-
-Integrations now report what they actually did, and FailSafe starts only programs it has validated.
-
-- **Integrations tell the truth.** Catalog cards show each integration's last real result (Verified, Connected, Failing with a reason, or Stale) instead of guessing from settings. Jira and Linear issues become governed intent drafts only when you approve. OpenHands runs can be imported as signed historical evidence into the Agent Timeline and the Console Timeline.
-- **Nothing planted in a workspace runs.** gh, PowerShell, Python, pip, the Git installers, Bicameral MCP and the ACP agent are started from validated absolute paths, Python no longer imports modules from the workspace, and the settings that choose what FailSafe launches are read from user settings only.
-- **Agent Marketplace fails closed.** A scan that failed, timed out or gave no verdict is never a pass, an install whose scan did not pass is quarantined, and FailSafe never runs an item's package setup on your machine. Installs stay disabled.
-- **Concurrent windows are safer.** Two FailSafe processes can no longer both accept one replay nonce, risk updates queue in arrival order, and imports write in chunks so other windows are not starved. Two limits remain: a risk update can still be lost if two windows recover a crashed window's lock at the same moment, and a v6.0.7 window left open on the same workspace still updates the nonce store without the lock.
-- **Behaviour changes.** A Python interpreter inside the workspace or its repository is no longer used; set `failsafe.qorlogic.pythonPath` in user settings to choose one. Bicameral auto-connect turned on from the Console before this release must be turned on again. See the CHANGELOG for the full list and the known limitations.
 
 ## What's New in v6.0.7
 
@@ -78,13 +95,13 @@ Not verified against live services in this release: Sentry, Jira, Linear, OpenHa
 
 ## What's New in v6.0.6
 
-- **Screen readers now hear why a Shadow Genome node failed,** not just that it did — failure nodes carry their severity in the accessible name.
+- **Screen readers now hear why a Shadow Genome node failed,** not just that it did: failure nodes carry their severity in the accessible name.
 - **A status row that lied when it couldn't reach upstream.** The Bicameral panel reported "0 open issues" whether the upstream was empty or unreachable. Those now look different.
 - **The Audit Log records which engine verified an entry,** so an existence check is no longer indistinguishable from a content check.
 - **A voice glitch that blocked unrelated updates is gone.** A timing check measured itself against a stopwatch that could round the wrong way, so it failed at random and held up routine dependency updates.
 - **Generated test screenshots stop landing in the repository.** An ignore rule pointed at a folder path that does not exist, so it never took effect.
 - **The system-state document tells the truth again.** It reported v5.9.0 as current while v6.0.4 was shipping, and nothing checked it. Something does now.
-- **The governance index distinguishes "deliberately private" from "missing"** — and one entry turned out to point at a file that has never existed in this repository.
+- **The governance index distinguishes "deliberately private" from "missing"**: and one entry turned out to point at a file that has never existed in this repository.
 - Security: `qs` and `fast-uri` dependency updates.
 
 Under the hood this is a governance-integrity release. Five checks were found reporting success while inspecting nothing at all; each now has a test that proves it can fail. Four issues were filed upstream against Qor-logic.
@@ -100,30 +117,30 @@ Under the hood this is a governance-integrity release. Five checks were found re
 ## What's New in v6.0.3
 
 - **The Observe-to-Enforce upgrade notice now actually appears.** v6.0.0 changed the governance-mode default and shipped a one-time notice to tell existing installs their behavior had changed. That notice could never fire, so every install predating 6.0.0 that had never explicitly picked a mode moved to Enforce silently. Fixed, and the detection now uses the same technique first-run onboarding already relied on.
-- **The Development Tracker stays responsive on large repositories.** Its PR-cadence read ran an unbounded `git log` on every dashboard load — over a second and past the output buffer on a 150k-commit repository, where it failed silently. It is now bounded, and says so when the window truncates instead of degrading invisibly.
+- **The Development Tracker stays responsive on large repositories.** Its PR-cadence read ran an unbounded `git log` on every dashboard load: over a second and past the output buffer on a 150k-commit repository, where it failed silently. It is now bounded, and says so when the window truncates instead of degrading invisibly.
 - **Voice synthesis cannot wedge the Mind Map.** A stalled speech-synthesis call is now bounded and surfaces as an error rather than leaving the voice controls stuck.
 - **Mind Map tells you how dense the graph is.** A live `N nodes · N edges` readout, including when duplicate edges were merged.
-- **The ACP proxy notices if its registry entry is rewritten.** That registry is user-writable, so an outside change could quietly route around governance while still showing the governed name. Activation now distinguishes intact, tampered, missing, and malformed registries — and never blocks activation if the check itself fails.
+- **The ACP proxy notices if its registry entry is rewritten.** That registry is user-writable, so an outside change could quietly route around governance while still showing the governed name. Activation now distinguishes intact, tampered, missing, and malformed registries: and never blocks activation if the check itself fails.
 - **Audit Log entries link to their resolution.** A warning or block now records the exact ledger row a later decision resolves, by id rather than by guessing from path and timestamp.
 
 ## What's New in v6.0.2
 
-- **The Monitor works without a mouse.** The sentinel warning banner, critical-blockers graphic, error-budget readout, the five workspace-health metric cards, and governance-alert rows are all keyboard-reachable with visible focus rings and screen-reader names; Enter opens the explanation or details modal, and Escape returns focus to where you were — even when a live refresh rebuilt the list underneath the modal.
-- **Audit Log records now say what, where, and why.** A sentinel verdict used to render as bare identity JSON; records now name the triggering file, the human summary, and which heuristics fired. A severity chip row — All levels · Issues · Warn · Block — isolates what needs attention, and the CSV export is a real RFC-4180 CSV with the columns you triage by (it was previously unparseable).
+- **The Monitor works without a mouse.** The sentinel warning banner, critical-blockers graphic, error-budget readout, the five workspace-health metric cards, and governance-alert rows are all keyboard-reachable with visible focus rings and screen-reader names; Enter opens the explanation or details modal, and Escape returns focus to where you were: even when a live refresh rebuilt the list underneath the modal.
+- **Audit Log records now say what, where, and why.** A sentinel verdict used to render as bare identity JSON; records now name the triggering file, the human summary, and which heuristics fired. A severity chip row: All levels · Issues · Warn · Block: isolates what needs attention, and the CSV export is a real RFC-4180 CSV with the columns you triage by (it was previously unparseable).
 - **Corrupt files are preserved instead of destroyed.** If the risk register, adapter config, or marketplace state exists but is unreadable, the original is set aside as a `.corrupt-<timestamp>.bak` before anything overwrites it. Previously the first write replaced the file and the data was gone.
 - **The risk register no longer absorbs your backlog.** Adding or importing a risk on a fresh workspace used to durably persist the entire `BACKLOG.md` projection as if you had authored every row; mutations now touch only the durable store, and backlog-derived rows are shown read-only.
 - **Sharper governance signals.** The PR-linkage check reports accurate reasons (a pull-request number is named as one, and unverifiable references warn instead of falsely failing), the governance webhook's payload is provably what was signed and fails closed when oversized, credential redaction covers passwords containing `@`, and sidebar Monitor modals draw their proper overlay chrome.
 
 ## What's New in v6.0.1
 
-- **The Monitor's warning banner is now a working link.** Clicking "N issue(s) detected" opens the Console's governance Audit Log focused on the triggering verdict — from the embedded sidebar (a webview-safe relay replaces the sandboxed `window.open`, which used to silently do nothing) and from browser-served Monitors alike. Verdict events carry their own timestamp through the checkpoint and transparency logs so the deep link lands on the exact record, and verdict deep links bypass the Audit Log's default same-day date filter. The blockers and error-budget click-throughs use the same relay.
+- **The Monitor's warning banner is now a working link.** Clicking "N issue(s) detected" opens the Console's governance Audit Log focused on the triggering verdict: from the embedded sidebar (a webview-safe relay replaces the sandboxed `window.open`, which used to silently do nothing) and from browser-served Monitors alike. Verdict events carry their own timestamp through the checkpoint and transparency logs so the deep link lands on the exact record, and verdict deep links bypass the Audit Log's default same-day date filter. The blockers and error-budget click-throughs use the same relay.
 
 ## What's New in v6.0.0
 
 - **The pre-commit guard is real.** The commit-check endpoint ships (it was documented but never implemented), the hook's port tracks the live Console server, and installing from a git worktree governs every worktree of the repo.
 - **Guided Agents-window setup.** `FailSafe: Configure VS Code Agents Window Governance` walks the opt-in, worktree commit-hook install, and governed MCP integration installs.
 - **Repository-scoped first-run.** Each repository gets its own governance-mode decision; an explicitly configured mode anywhere suppresses re-prompting.
-- **Accessible Mind Map.** The graph carries an accessible name and a LIST VIEW toggle renders real node/edge tables — same pattern as the Shadow Genome table view.
+- **Accessible Mind Map.** The graph carries an accessible name and a LIST VIEW toggle renders real node/edge tables: same pattern as the Shadow Genome table view.
 - **Integration hardening + a 69% smaller package.** MCP installs can no longer destroy an unparseable `.mcp.json`; SARIF/Sentry imports are malformed-proof and never silently drop findings; the PR-linkage check paginates (no more false findings); build intermediates and governance scan outputs can never ship in the VSIX.
 - **Enforce is now the default governance mode.** New and never-configured installs gate writes out of the box (intent-gated saves, L3 approvals). Observe and Assist are unchanged and one command away (`FailSafe: Set Governance Mode`); a one-time notice on upgrade offers the mode picker. Unresolvable mode values and a missing ACP mode mirror now fail closed to enforce.
 - **Enforcement works on every tier.** The editor enforcement path no longer consults any feature gate.
@@ -135,23 +152,14 @@ Under the hood this is a governance-integrity release. Five checks were found re
 
 ## What's New in v5.9.0
 
-- 📌 **The Development Tracker stays put** — no more reloads when live data refreshes, it fills the available space, and you can export it as a clean PDF.
-- 🌱 **The Mind Map starts from your repo** — an empty map preloads a knowledge graph projected from your governance history, kept distinct from your own brainstorm work.
-- 🗂️ **Workspace › Taxonomy editor** — review and edit the tracker's programs, verticals, and agent mappings; Save writes a governed `tracker-config.yaml` the assistant is directed to consult on its next cycle.
-- 🧬 **Shadow Genome tells the truth** — the summary card now reads "Graph Nodes" (not "Failure Nodes"), "Observed" can no longer contradict the failure count, and dense graphs open in a readable table.
+- 📌 **The Development Tracker stays put**: no more reloads when live data refreshes, it fills the available space, and you can export it as a clean PDF.
+- 🌱 **The Mind Map starts from your repo**: an empty map preloads a knowledge graph projected from your governance history, kept distinct from your own brainstorm work.
+- 🗂️ **Workspace › Taxonomy editor**: review and edit the tracker's programs, verticals, and agent mappings; Save writes a governed `tracker-config.yaml` the assistant is directed to consult on its next cycle.
+- 🧬 **Shadow Genome tells the truth**: the summary card now reads "Graph Nodes" (not "Failure Nodes"), "Observed" can no longer contradict the failure count, and dense graphs open in a readable table.
 
 ## Previous releases
 
 The full release-by-release history (v5.x and earlier) lives in [CHANGELOG.md](../../CHANGELOG.md). Skills are sourced from the [`qor-logic`](https://pypi.org/project/qor-logic/) PyPI package.
-
-## Quick Start
-
-1. Install FailSafe from the VS Code Marketplace or Open VSX.
-2. Open a workspace in VS Code or Cursor.
-3. Run `FailSafe: Open Console (Browser Popout)` or press `Ctrl+Alt+F`.
-4. Run `FailSafe: Set Up Agent Governance` to inject governance rules into detected agents.
-5. Run `FailSafe: Audit Current File` to generate a governance verdict for the active editor.
-6. If you want commit-time guardrails, run `FailSafe: Install Commit Hook` inside a git workspace with `curl` available on the path.
 
 ## Bundled Documentation
 
@@ -173,17 +181,6 @@ The full release-by-release history (v5.x and earlier) lives in [CHANGELOG.md](.
 | `FailSafe: Replay Verdict (Audit)`               | Re-run a prior governance decision for comparison                          |
 | `FailSafe: Revert to Checkpoint (Time-Travel)`   | Restore a recorded governance checkpoint                                   |
 
-## What FailSafe Does
-
-FailSafe separates system awareness from system control.
-
-The Monitor provides real-time visibility into system health, governance posture, and operational risk. The Command Center is the primary control surface for planning, audits, checkpoints, and agent governance.
-
-- Save-time intent check that reports writes outside an active intent (VS Code cannot cancel an editor save, so a denied save is observed, not prevented)
-- Sentinel daemon for file-change audits in `heuristic`, `llm-assisted`, and `hybrid` modes
-- SOA ledger with local audit history and checkpoint summaries
-- MCP server support for external tools that need audit and ledger hooks
-
 ## QorLogic: The Governance Layer
 
 QorLogic is the deterministic governance engine that enforces safety policies at the editor boundary. It operates on a fundamental principle: **governance decisions are made by code, not by asking an LLM to follow rules.**
@@ -200,22 +197,22 @@ QorLogic is the deterministic governance engine that enforces safety policies at
 
 ### How QorLogic Works
 
-1. **Risk Classification** — Files are classified as L1 (low), L2 (medium), or L3 (high) risk based on:
+1. **Risk Classification**: Files are classified as L1 (low), L2 (medium), or L3 (high) risk based on:
    - File path triggers (e.g., `auth/`, `payment/`, `credential` → L3)
    - Content triggers (e.g., `DROP TABLE`, `api_key`, `private_key` → L3)
    - Configurable via `.failsafe/config/policies/risk_grading.json`
 
-2. **Policy Evaluation** — Each risk grade has deterministic requirements:
+2. **Policy Evaluation**: Each risk grade has deterministic requirements:
    - **L1**: Heuristic check, 10% sampling, auto-approve
    - **L2**: Full Sentinel pass, no auto-approve
    - **L3**: Formal verification + human approval required
 
-3. **Ledger Recording** — Every governance decision is recorded to an append-only SOA ledger with:
+3. **Ledger Recording**: Every governance decision is recorded to an append-only SOA ledger with:
    - Agent identity and trust score
    - Artifact path and risk grade
    - Timestamp and decision rationale
 
-4. **Trust Dynamics** — Agent trust scores evolve based on outcomes:
+4. **Trust Dynamics**: Agent trust scores evolve based on outcomes:
    - Approved L3 actions → trust increase
    - Rejected or failed actions → trust decrease
    - Trust scores influence future routing decisions
@@ -228,7 +225,7 @@ When an LLM is asked to enforce safety rules, it can:
 - Produce inconsistent decisions across similar inputs
 - Be influenced by prompt engineering attacks
 
-QorLogic avoids these risks by executing deterministic TypeScript code at the governance boundary. The policy engine uses simple string matching and path analysis—no LLM inference required for governance decisions.
+QorLogic avoids these risks by executing deterministic TypeScript code at the governance boundary. The policy engine uses simple string matching and path analysis,no LLM inference required for governance decisions.
 
 **Example**: A file containing `api_key` will always trigger L3 classification. No prompt can persuade the code to ignore this trigger.
 
@@ -345,11 +342,11 @@ Re-execute past governance decisions for audit verification via `FailSafe: Repla
 
 FailSafe detects and governs multiple AI coding assistants in your workspace:
 
-- **Runtime Detection** — Identifies Claude CLI, Copilot, Codex CLI, and Agent Teams via terminal and config scanning.
-- **Per-Agent Config Injection** — Writes governance rules into each agent's native format (`.github/copilot-instructions.md`, `.kilocode/rules/`, `codex.md`, `.claude/agents/`).
-- **Governance Ceremony** — Single command (`FailSafe: Set Up Agent Governance`) to inject or remove governance across all detected agents.
-- **Coverage Dashboard** — Console view showing which agents are detected, governed, and compliant.
-- **First-Run Onboarding** — Guides new users through multi-agent governance setup on first activation.
+- **Runtime Detection**: Identifies Claude CLI, Copilot, Codex CLI, and Agent Teams via terminal and config scanning.
+- **Per-Agent Config Injection**: Writes governance rules into each agent's native format (`.github/copilot-instructions.md`, `.kilocode/rules/`, `codex.md`, `.claude/agents/`).
+- **Governance Ceremony**: Single command (`FailSafe: Set Up Agent Governance`) to inject or remove governance across all detected agents.
+- **Coverage Dashboard**: Console view showing which agents are detected, governed, and compliant.
+- **First-Run Onboarding**: Guides new users through multi-agent governance setup on first activation.
 
 ### 16. Intent Schema v2 (v4.2.0)
 
