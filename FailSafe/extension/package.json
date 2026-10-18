@@ -224,6 +224,10 @@
         "title": "FailSafe: Assess Delivery of the Active Intent"
       },
       {
+        "command": "failsafe.sentinel.forgetLlmApprovals",
+        "title": "FailSafe: Forget Sentinel LLM Approvals"
+      },
+      {
         "command": "failsafe.installVoicePack",
         "title": "FailSafe: Install Voice Pack"
       },
@@ -641,7 +645,8 @@
         "failsafe.sentinel.ollamaEndpoint": {
           "type": "string",
           "default": "http://localhost:11434",
-          "description": "Ollama API endpoint"
+          "scope": "machine",
+          "description": "Ollama API endpoint. Read from user settings only; workspace settings and .failsafe/config/sentinel.yaml may name only an endpoint on this machine. Any other host is used only after you allow it in VS Code, per destination and per use; FailSafe: Forget Sentinel LLM Approvals clears those choices."
         },
         "failsafe.sentinel.ragEnabled": {
           "type": "boolean",

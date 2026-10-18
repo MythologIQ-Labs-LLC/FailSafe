@@ -87,11 +87,12 @@ export function optionalCredential(
   return { ok: false };
 }
 
-/** The governed-commit PR step's token. Without one the commit is still made; only the PR step is skipped. */
-export function governedCommitToken(creds: IntegrationCredentials, ui: CredentialUi): string | undefined {
-  const e = evaluate(creds, 'github.token');
-  if (e.kind === 'value') return e.value;
-  explain(e, 'github.token', ui, undefined);
+/** #538: the governed-commit PR step's token and endpoint, paired as in providerConnection. Without one the commit is still made; only the PR step is skipped. */
+export function governedCommitConnection(creds: IntegrationCredentials, endpoints: EndpointReader, ui: CredentialUi): Connection | undefined {
+  const c = checkConnection(creds, endpoints, 'github');
+  if (c.ok) return c.connection;
+  if (c.refusedEndpoint) tell(ui, endpointRefusalMessage(descriptor('github.token').provider), false);
+  else explain(c.e, 'github.token', ui, undefined);
   return undefined;
 }
 

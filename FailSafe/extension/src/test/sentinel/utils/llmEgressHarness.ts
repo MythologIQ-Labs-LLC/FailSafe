@@ -131,7 +131,7 @@ export function fakeAuthorizer(decide: (call: AuthorizeCall) => boolean | Promis
 
 export const allowAll = () => fakeAuthorizer(() => true);
 
-export interface HttpCall { target: { origin: string; hostname: string; port: number }; path: string; method: string; body?: string; addresses: string }
+export interface HttpCall { target: { origin: string; hostname: string; port: number; basePath: string }; path: string; method: string; body?: string; addresses: string }
 
 /** A recording LlmHttpFn: never touches the network. */
 export function recordingHttp(respond: (call: HttpCall) => { status: number; body: string } = defaultRecordedResponse) {

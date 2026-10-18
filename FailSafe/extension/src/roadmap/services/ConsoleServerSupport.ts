@@ -6,6 +6,7 @@ import * as path from "path";
 import * as fs from "fs";
 import { BrainstormService } from "./BrainstormService";
 import { LLMClient } from "../../sentinel/utils/LLMClient";
+import type { LlmEgressAuthorizer } from "../../sentinel/utils/llmEgressAuthorizer";
 import type { IConfigProvider } from "../../core/interfaces/IConfigProvider";
 import type { LedgerSummary } from "./MetaLedgerReader";
 import type { ParsedPlan } from "./PlanFileReader";
@@ -91,8 +92,13 @@ export function mergePlanBlockers(
   };
 }
 
-/** Build BrainstormService with LLM dispatch (Ollama → VS Code LM API). */
-export function createBrainstormService(configProvider: IConfigProvider | undefined): BrainstormService {
+/** Build BrainstormService with LLM dispatch (Ollama → VS Code LM API). #538: the
+ *  transcript goes only to a destination the policy allows; asking is fine here
+ *  because a Brainstorm request is a user action. */
+export function createBrainstormService(
+  configProvider: IConfigProvider | undefined,
+  authorizer?: LlmEgressAuthorizer,
+): BrainstormService {
   return new BrainstormService(async (prompt, payload) => {
     const fullPrompt = `${prompt}\n\nTranscript:\n${payload}`;
     const clean = (raw: string): string => {
@@ -102,8 +108,8 @@ export function createBrainstormService(configProvider: IConfigProvider | undefi
       return c;
     };
     if (configProvider) {
-      const llm = new LLMClient(configProvider);
-      if (await llm.checkAvailability()) {
+      const llm = new LLMClient(configProvider, { operation: "brainstorm-transcript", authorizer });
+      if (await llm.checkAvailability({ ask: true })) {
         try {
           const r = await llm.callEndpoint(fullPrompt, 60000);
           return clean(r.response);

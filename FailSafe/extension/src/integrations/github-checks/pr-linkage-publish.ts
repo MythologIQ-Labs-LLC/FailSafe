@@ -35,7 +35,7 @@ export async function publishLinkageCheck(args: LinkagePublishArgs): Promise<Pub
   const headSha = (args.ctx.headSha || '').trim();
   const audit = await runLinkageAudit({
     get: args.get, owner: args.owner, repo: args.repo, prNumber: args.prNumber,
-    headSha, token: args.opts.token, enabled: true,
+    headSha, token: args.opts.token, enabled: true, apiBaseUrl: args.opts.apiBaseUrl,
   });
   if (!audit.ok) return { ok: false, error: audit.error || 'PR linkage audit failed' };
   const payload = buildLinkageCheckRunPayload(headSha, {

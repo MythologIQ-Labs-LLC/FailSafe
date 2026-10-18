@@ -213,7 +213,7 @@ suite('#538 LLMClient egress: the policy alone decides (B273 S1)', () => {
     const r = await generate(client);
     assert.equal(r.ok, false);
     assert.match(r.error ?? '', /LLM destination refused/);
-    assert.deepEqual(rec.calls.map((c) => `${c.target.origin}${c.path}`), ['https://llm.example.test:8443/ollama/api/tags']);
+    assert.deepEqual(rec.calls.map((c) => `${c.target.origin}${c.target.basePath}${c.path}`), ['https://llm.example.test:8443/ollama/api/tags']);
   });
 
   test('S1-E8 an authorizer that throws: no request', async () => {
@@ -231,7 +231,7 @@ suite('#538 LLMClient egress: the policy alone decides (B273 S1)', () => {
     const client = newClient(configProvider({ endpoint: REMOTE, source: 'user-setting' }), { authorizer: auth, http: rec.fn });
     assert.equal(await probe(client, { ask: true }), true);
     assert.deepEqual(await client.callEndpoint(PROMPT, 3000), { response: 'ok', totalDuration: 3 });
-    assert.deepEqual(rec.calls.map((c) => [c.method, `${c.target.origin}${c.path}`, c.addresses]), [
+    assert.deepEqual(rec.calls.map((c) => [c.method, `${c.target.origin}${c.target.basePath}${c.path}`, c.addresses]), [
       ['GET', 'https://llm.example.test:8443/ollama/api/tags', 'public'],
       ['POST', 'https://llm.example.test:8443/ollama/api/generate', 'public'],
     ]);

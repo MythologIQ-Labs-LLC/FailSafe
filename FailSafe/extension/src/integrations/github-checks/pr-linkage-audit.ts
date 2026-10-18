@@ -12,6 +12,7 @@
  *   https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/using-keywords-in-issues-and-pull-requests
  */
 
+import { apiBaseFor, githubAuthHeaders } from './github-host-affinity';
 import type { CheckConclusion, CheckRunPayload } from './github-checks-map';
 
 /** The nine documented GitHub closing keywords (case-insensitive). */
@@ -171,6 +172,8 @@ export interface LinkageRunOptions {
   token?: string;
   /** Off-by-default. `false` (or no token) ⇒ localOnly, no network. */
   enabled?: boolean;
+  /** #538 (B265): the resolved GitHub API base; empty ⇒ api.github.com. The token goes only to its origin. */
+  apiBaseUrl?: string;
 }
 
 export interface LinkageRunResult {
@@ -192,15 +195,20 @@ export async function runLinkageAudit(opts: LinkageRunOptions): Promise<LinkageR
   if (opts.enabled === false || !opts.token || !opts.token.trim()) {
     return { ok: true, localOnly: true };
   }
-  const headers = {
-    Authorization: `token ${opts.token}`,
-    Accept: 'application/vnd.github+json',
-    'User-Agent': 'FailSafe',
+  const api = apiBaseFor(opts.apiBaseUrl);
+  if (!api.ok) return { ok: false, error: api.error };
+  const token = opts.token;
+  const base = `${api.base.baseUrl}/repos/${opts.owner}/${opts.repo}`;
+  const get = (url: string) => {
+    const headers = githubAuthHeaders(api.base, url, token, { Accept: 'application/vnd.github+json', 'User-Agent': 'FailSafe' });
+    if (!headers) throw new Error('token host mismatch');
+    return opts.get(url, headers);
   };
-  const base = `https://api.github.com/repos/${opts.owner}/${opts.repo}`;
+  // #538: anything outside 2xx (a 3xx included) is a failure, never data.
+  const failed = (status: number) => status < 200 || status >= 300;
   try {
-    const prRes = await opts.get(`${base}/pulls/${opts.prNumber}`, headers);
-    if (prRes.status >= 400) return { ok: false, error: `GitHub PR fetch failed (HTTP ${prRes.status}).` };
+    const prRes = await get(`${base}/pulls/${opts.prNumber}`);
+    if (failed(prRes.status)) return { ok: false, error: `GitHub PR fetch failed (HTTP ${prRes.status}).` };
     const body = (JSON.parse(prRes.body || '{}') as { body?: string }).body ?? '';
 
     // #241 Tranche C D-3 (FX914): paginate the issue set (per_page=100
@@ -220,8 +228,8 @@ export async function runLinkageAudit(opts: LinkageRunOptions): Promise<LinkageR
     const knownPrs: number[] = [];
     let truncated = false;
     for (let page = 1; page <= 10; page++) {
-      const issRes = await opts.get(`${base}/issues?state=all&per_page=100&page=${page}`, headers);
-      if (issRes.status >= 400) return { ok: false, error: `GitHub issue fetch failed (HTTP ${issRes.status}).` };
+      const issRes = await get(`${base}/issues?state=all&per_page=100&page=${page}`);
+      if (failed(issRes.status)) return { ok: false, error: `GitHub issue fetch failed (HTTP ${issRes.status}).` };
       const issues = JSON.parse(issRes.body || '[]') as Array<{ number: number; state?: string; pull_request?: unknown }>;
       const realIssues = issues.filter((i) => !i.pull_request);
       openIssues.push(...realIssues.filter((i) => i.state === 'open').map((i) => i.number));

@@ -16,66 +16,8 @@ describe('LLMClient', () => {
 
     const client = new LLMClient(mockConfigProvider);
 
-    describe('isValidEndpoint', () => {
-        it('should allow localhost', () => {
-            const result = client.isValidEndpoint('http://localhost:11434');
-            assert.strictEqual(result, true);
-        });
-
-        it('should allow 127.0.0.1', () => {
-            const result = client.isValidEndpoint('http://127.0.0.1:11434');
-            assert.strictEqual(result, true);
-        });
-
-        it('should block 10.x private range', () => {
-            const result = client.isValidEndpoint('http://10.0.0.1:8080');
-            assert.strictEqual(result, false);
-        });
-
-        it('should block 192.168.x private range', () => {
-            const result = client.isValidEndpoint('http://192.168.1.1:8080');
-            assert.strictEqual(result, false);
-        });
-
-        it('should block 172.16-31.x private range', () => {
-            const result1 = client.isValidEndpoint('http://172.16.0.1:8080');
-            const result2 = client.isValidEndpoint('http://172.31.255.255:8080');
-            assert.strictEqual(result1, false);
-            assert.strictEqual(result2, false);
-        });
-
-        it('should block 169.254.x link-local range', () => {
-            const result = client.isValidEndpoint('http://169.254.1.1:8080');
-            assert.strictEqual(result, false);
-        });
-
-        it('should block non-http protocols', () => {
-            const ftp = client.isValidEndpoint('ftp://example.com:21');
-            const file = client.isValidEndpoint('file:///etc/passwd');
-            assert.strictEqual(ftp, false);
-            assert.strictEqual(file, false);
-        });
-
-        it('should allow https protocol', () => {
-            const result = client.isValidEndpoint('https://example.com:443');
-            assert.strictEqual(result, true);
-        });
-
-        it('should allow public URLs', () => {
-            const result = client.isValidEndpoint('https://api.openai.com/v1');
-            assert.strictEqual(result, true);
-        });
-
-        it('should return false for invalid URLs', () => {
-            const result = client.isValidEndpoint('not a valid url');
-            assert.strictEqual(result, false);
-        });
-
-        it('should return false for malformed URLs', () => {
-            const result = client.isValidEndpoint('ht!tp://example.com');
-            assert.strictEqual(result, false);
-        });
-    });
+    // #538: endpoint validation moved to the destination policy
+    // (llmDestinationPolicy.test.ts); the old "public URLs are allowed" case encoded B273.
 
     describe('buildPrompt', () => {
         it('should include file path in output', () => {
