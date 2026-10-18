@@ -8,6 +8,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as yaml from "js-yaml";
 import type { ApiRouteDeps } from "./types";
+import { consoleRequestGuard } from "./consoleRequestGuard";
 import type { TrackerManifest } from "../tracker/tracker-model";
 import {
   parseTrackerConfig, serializeTrackerConfig, deriveConfigFromManifest,
@@ -44,8 +45,9 @@ export function setupTrackerConfigRoutes(
   });
 
   // POST — governed write: persist tracker-config.yaml + emit the directive record.
-  app.post("/api/v1/tracker/config", (req: Request, res: Response) => {
-    if (deps.rejectIfRemote(req, res)) return;
+  // #538 (B293): loopback socket, loopback Host, same-origin Origin and a JSON body are
+  // required; a body-less cross-site POST used to overwrite the taxonomy with an empty one.
+  app.post("/api/v1/tracker/config", consoleRequestGuard((req, res) => deps.rejectIfRemote(req, res)), (req: Request, res: Response) => {
     const body = (req.body || {}) as Partial<TrackerConfig>;
     const config: TrackerConfig = {
       programs: Array.isArray(body.programs) ? body.programs : [],
