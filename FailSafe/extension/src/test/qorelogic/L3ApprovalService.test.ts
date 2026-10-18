@@ -4,6 +4,9 @@ import { strict as assert } from 'assert';
 import { L3ApprovalService } from '../../qorelogic/L3ApprovalService';
 import { EventBus } from '../../shared/EventBus';
 
+/** #538: how these test decisions were authenticated (recorded in the decision payload). */
+const TEST_AUTH = { method: 'vscode-modal-confirmation' as const, channel: 'test' };
+
 interface Stubs {
   state: any;
   stateStore: any;
@@ -87,7 +90,7 @@ suite('L3ApprovalService (FX249)', () => {
     const s = makeStubs();
     const svc = new L3ApprovalService(s.stateStore, s.config, s.ledger, s.trust, s.bus);
     const id = await svc.queueL3Approval(REQ);
-    await svc.processL3Decision(id, 'APPROVED');
+    await svc.processL3Decision(id, 'APPROVED', TEST_AUTH);
     assert.equal(svc.getQueue().length, 0);
     const approval = s.ledgerCalls.find(c => c.eventType === 'L3_APPROVED');
     assert.ok(approval);
@@ -98,7 +101,7 @@ suite('L3ApprovalService (FX249)', () => {
     const s = makeStubs();
     const svc = new L3ApprovalService(s.stateStore, s.config, s.ledger, s.trust, s.bus);
     const id = await svc.queueL3Approval(REQ);
-    await svc.processL3Decision(id, 'REJECTED');
+    await svc.processL3Decision(id, 'REJECTED', TEST_AUTH);
     const reject = s.ledgerCalls.find(c => c.eventType === 'L3_REJECTED');
     assert.ok(reject);
   });
@@ -109,7 +112,7 @@ suite('L3ApprovalService (FX249)', () => {
     s.bus.on('qorelogic.l3Decided' as never, (w: any) => decisions.push(w.payload));
     const svc = new L3ApprovalService(s.stateStore, s.config, s.ledger, s.trust, s.bus);
     const id = await svc.queueL3Approval(REQ);
-    await svc.processL3Decision(id, 'APPROVED', ['must-add-tests', 'must-update-docs']);
+    await svc.processL3Decision(id, 'APPROVED', TEST_AUTH, ['must-add-tests', 'must-update-docs']);
     assert.equal(decisions[0].request.state, 'APPROVED_WITH_CONDITIONS');
     assert.deepEqual(decisions[0].request.conditions, ['must-add-tests', 'must-update-docs']);
   });
@@ -119,8 +122,8 @@ suite('L3ApprovalService (FX249)', () => {
     const svc = new L3ApprovalService(s.stateStore, s.config, s.ledger, s.trust, s.bus);
     const id1 = await svc.queueL3Approval(REQ);
     const id2 = await svc.queueL3Approval(REQ);
-    await svc.processL3Decision(id1, 'APPROVED');
-    await svc.processL3Decision(id2, 'REJECTED');
+    await svc.processL3Decision(id1, 'APPROVED', TEST_AUTH);
+    await svc.processL3Decision(id2, 'REJECTED', TEST_AUTH);
     assert.equal(s.trustUpdates[0].outcome, 'success');
     assert.equal(s.trustUpdates[1].outcome, 'failure');
   });
@@ -128,7 +131,7 @@ suite('L3ApprovalService (FX249)', () => {
   test('FX249 processL3Decision — unknown id throws', async () => {
     const s = makeStubs();
     const svc = new L3ApprovalService(s.stateStore, s.config, s.ledger, s.trust, s.bus);
-    await assert.rejects(svc.processL3Decision('does-not-exist', 'APPROVED'), /not found/);
+    await assert.rejects(svc.processL3Decision('does-not-exist', 'APPROVED', TEST_AUTH), /not found/);
   });
 
   test('FailSafe#367 queueL3Approval — sourceLedgerEntryId is carried into the L3_QUEUED ledger payload', async () => {
@@ -143,7 +146,7 @@ suite('L3ApprovalService (FX249)', () => {
     const s = makeStubs();
     const svc = new L3ApprovalService(s.stateStore, s.config, s.ledger, s.trust, s.bus);
     const id = await svc.queueL3Approval({ ...REQ, sourceLedgerEntryId: 7 });
-    await svc.processL3Decision(id, 'APPROVED');
+    await svc.processL3Decision(id, 'APPROVED', TEST_AUTH);
     const approval = s.ledgerCalls.find(c => c.eventType === 'L3_APPROVED');
     assert.equal(approval.payload.sourceLedgerEntryId, 7);
   });

@@ -57,7 +57,7 @@ const plain = (v: unknown) => JSON.parse(JSON.stringify(v ?? null));
 
 /** Record `.mcp.json` writes made through the shared fs module (the route reads it at call time). */
 function spyMcpWrites(effects: unknown[]): () => void {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const realFs = require('fs') as typeof fs;
   const original = realFs.writeFileSync;
   realFs.writeFileSync = ((file: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView, ...rest: unknown[]) => {
@@ -103,7 +103,10 @@ function bicameralBuild(o: BuildOptions): Built {
     confirmOperatorAction: o.confirm, ledgerManager: o.ledger ?? undefined, confirmationDeadlineMs: o.deadlineMs,
     runInstall: async (opts: Record<string, unknown>, mode: string) => {
       effects.push({ mode, opts: plain(opts) });
-      return { mode, steps: [], done: true, ok: true };
+      // Like runBicameralInstall, the final progress event is emitted with done=true.
+      const done = { mode, steps: [], done: true, ok: true };
+      (opts.onProgress as ((e: unknown) => void) | undefined)?.(done);
+      return done;
     },
   } as never);
   return { app, effects, broadcasts, cleanup: () => rm(ws) };

@@ -8,6 +8,8 @@
  * surface verified in Chrome per feedback_design_reference_required.
  */
 
+import { CONFIRM_PENDING_TEXT, gatedFailureMessage, jsonPost, settleGated } from './operator-confirmation-copy.js';
+
 const STYLE_ID = 'cc-mcp-style';
 const STYLE = `
 .cc-mcp { display:flex; flex-direction:column; gap:12px; }
@@ -99,17 +101,11 @@ export class McpCatalogRenderer {
           return;
         }
         btn.disabled = true;
-        if (status) status.textContent = 'Installing…';
+        // #538: the server writes only after the operator confirms in a VS Code dialog.
+        if (status) status.textContent = CONFIRM_PENDING_TEXT;
         try {
-          const res = await fetch('/api/actions/mcp-install', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id }),
-          });
-          const json = await res.json().catch(() => ({}));
-          if (status) status.textContent = res.ok ? `${json.added ? 'Installed' : 'Updated'} in .mcp.json (governed).` : (json.error || `Error ${res.status}`);
-        } catch (err) {
-          if (status) status.textContent = String(err);
+          const r = await settleGated(fetch('/api/actions/mcp-install', jsonPost({ id })));
+          if (status) status.textContent = r.ok ? `${r.body.added ? 'Installed' : 'Updated'} in .mcp.json (governed).` : gatedFailureMessage(r.status, r.body, 'installed');
         } finally {
           btn.disabled = false;
           btn.textContent = 'Install';

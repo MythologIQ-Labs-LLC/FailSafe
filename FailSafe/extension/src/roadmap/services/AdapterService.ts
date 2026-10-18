@@ -24,8 +24,8 @@ import type {
 } from "./AdapterTypes";
 
 const DEFAULT_TIMEOUT = 60000; // 1 minute
-const ADAPTER_PACKAGE = "agent-failsafe";
-const TOOLKIT_PACKAGES: ToolkitPackage[] = [
+export const ADAPTER_PACKAGE = "agent-failsafe";
+export const TOOLKIT_PACKAGES: ToolkitPackage[] = [
   "agent-os",
   "agent-mesh",
   "agent-hypervisor",
@@ -297,9 +297,9 @@ export class AdapterService {
       message: `Installing ${ADAPTER_PACKAGE}...`,
     });
 
-    const installArgs = options.upgradeIfExists
-      ? ["install", "--upgrade", ADAPTER_PACKAGE]
-      : ["install", ADAPTER_PACKAGE];
+    // #538: the same argv the Console confirmation dialog shows.
+    const plan = adapterInstallPlan(options);
+    const installArgs = plan.adapter;
 
     try {
       const installResult = await this.runner("pip3", installArgs, undefined, 120000);
@@ -348,7 +348,7 @@ export class AdapterService {
         try {
           const result = await this.runner(
             "pip3",
-            ["install", pkg],
+            plan.toolkit[i],
             undefined,
             120000,
           );
@@ -404,7 +404,7 @@ export class AdapterService {
     try {
       const result = await this.runner(
         "pip3",
-        ["uninstall", "-y", ADAPTER_PACKAGE],
+        [...ADAPTER_UNINSTALL_ARGS],
         undefined,
         60000,
       );
@@ -546,3 +546,14 @@ export class AdapterService {
     return this.cachedState;
   }
 }
+
+/** #538 (plan-538b LD5): pip3 argv lists for an install; the dialog and install() both use them. */
+export function adapterInstallPlan(options: AdapterInstallOptions): { adapter: string[]; toolkit: string[][] } {
+  return {
+    adapter: options.upgradeIfExists ? ["install", "--upgrade", ADAPTER_PACKAGE] : ["install", ADAPTER_PACKAGE],
+    toolkit: options.installToolkit ? TOOLKIT_PACKAGES.map((pkg) => ["install", pkg]) : [],
+  };
+}
+
+/** #538: pip3 argv for uninstall(), shown in the Console dialog. */
+export const ADAPTER_UNINSTALL_ARGS: readonly string[] = ["uninstall", "-y", ADAPTER_PACKAGE];

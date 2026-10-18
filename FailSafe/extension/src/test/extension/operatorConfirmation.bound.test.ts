@@ -110,9 +110,48 @@ suite('#538 confirmBoundOperation', () => {
     await openedP;
     req.destroy();
     await delay(80);
+    assert.deepEqual(m.got, [null], 'the close itself settles the request, before any approval');
     approve('approved');
     await delay(50);
     assert.deepEqual(m.got, [null]);
+  });
+
+  /** A response double whose socket can be destroyed without a close event. */
+  function fakeRes(destroyed = false) {
+    const written: Array<{ status: number; body: unknown }> = [];
+    let status = 200;
+    const res = {
+      socket: { destroyed }, writableEnded: false, headersSent: false,
+      once() { return res; }, off() { return res; },
+      status(s: number) { status = s; return res; },
+      json(body: unknown) { written.push({ status, body }); return res; },
+    };
+    return { res, written };
+  }
+
+  test('a socket already destroyed when the request arrives: no dialog, nothing returned', async () => {
+    let asked = 0;
+    const f = fakeRes(true);
+    const r = await bound()(async () => { asked += 1; return 'approved'; }, { kind: 'demo' }, describe, f.res as unknown as Response);
+    assert.equal(r, null);
+    assert.equal(asked, 0);
+    assert.deepEqual(f.written, []);
+  });
+
+  test('a socket destroyed while the dialog is open (no close event): the approval is not used', async () => {
+    const f = fakeRes(false);
+    const r = await bound()(async () => { f.res.socket.destroyed = true; return 'approved'; }, { kind: 'demo' }, describe, f.res as unknown as Response);
+    assert.equal(r, null);
+    assert.deepEqual(f.written, [], 'nothing is written to a gone socket');
+  });
+
+  test('exactly one response is written when the deadline and a decline race', async () => {
+    const f = fakeRes(false);
+    const r = await bound()(async () => { await delay(40); return 'declined'; }, { kind: 'demo' }, describe, f.res as unknown as Response, { deadlineMs: 10 });
+    assert.equal(r, null);
+    await delay(60); // let the late decline arrive
+    assert.equal(f.written.length, 1);
+    assert.equal(f.written[0].status, 410);
   });
 
   test('failure map: expired 410, cancelled 499, existing statuses unchanged', () => {

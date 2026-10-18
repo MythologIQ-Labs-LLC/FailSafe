@@ -4,6 +4,9 @@ import { strict as assert } from 'assert';
 import { QorLogicManager } from '../../qorelogic/QorLogicManager';
 import { EventBus } from '../../shared/EventBus';
 
+/** #538: how these test decisions were authenticated (recorded in the decision payload). */
+const TEST_AUTH = { method: 'vscode-modal-confirmation' as const, channel: 'test' };
+
 interface CapturedCalls {
   ledger: any[];
   trustRegister: any[];
@@ -96,7 +99,7 @@ suite('QorLogicManager (FX333)', () => {
       agentDid: 'did:t:a', agentTrust: 0.8, filePath: 'src/x.ts',
       riskGrade: 'L3', sentinelSummary: '', flags: [],
     });
-    await mgr.processL3Decision(id, 'APPROVED');
+    await mgr.processL3Decision(id, 'APPROVED', TEST_AUTH);
     assert.ok(calls.ledger.some(c => c.eventType === 'L3_APPROVED'));
     assert.equal(mgr.getL3Queue().length, 0);
   });

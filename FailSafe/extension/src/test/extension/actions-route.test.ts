@@ -231,7 +231,7 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
     setupActionsRoutes(app, deps);
     harness = new RouteHarness(app);
     await harness.start();
-    const res = await harness.request({ method: 'POST', path: '/api/actions/scaffold-skills' });
+    const res = await harness.request({ method: 'POST', path: '/api/actions/scaffold-skills', body: {} });
     assert.equal(res.status, 200);
     assert.equal(res.body.ok, true);
     assert.equal(res.body.report.message, 'done');
@@ -243,7 +243,7 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
     setupActionsRoutes(app, deps);
     harness = new RouteHarness(app);
     await harness.start();
-    const res = await harness.request({ method: 'POST', path: '/api/actions/scaffold-skills' });
+    const res = await harness.request({ method: 'POST', path: '/api/actions/scaffold-skills', body: {} });
     assert.equal(res.status, 200);
     assert.equal(res.body.cancelled, true);
   });
@@ -254,7 +254,7 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
     setupActionsRoutes(app, deps);
     harness = new RouteHarness(app);
     await harness.start();
-    const res = await harness.request({ method: 'POST', path: '/api/actions/scaffold-skills' });
+    const res = await harness.request({ method: 'POST', path: '/api/actions/scaffold-skills', body: {} });
     assert.equal(res.status, 501);
   });
 

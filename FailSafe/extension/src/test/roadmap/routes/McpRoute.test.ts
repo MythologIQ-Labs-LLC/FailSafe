@@ -2,7 +2,8 @@ import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { McpRoute } from '../../../roadmap/routes/McpRoute';
+import { McpRoute, MCP_INSTALL_PATH, setupMcpInstallRoute } from '../../../roadmap/routes/McpRoute';
+import { RouteHarness, makeApp } from '../../extension/helpers/routeTestHarness';
 
 /** Minimal express req/res doubles. */
 function res() {
@@ -28,24 +29,39 @@ suite('McpRoute (B-INT-13/14 UI backing)', () => {
     assert.equal(body.entries.find((e) => e.id === 'playwright')!.risk.level, 'high');
   });
 
-  test('install writes the server entry to .mcp.json (added=true), idempotent on re-install', () => {
-    const ws = mkWs();
-    const r1 = res();
-    McpRoute.install({ body: { id: 'context7' } } as never, r1 as never, { workspaceRoot: ws });
-    assert.deepEqual(r1.body, { ok: true, added: true, id: 'context7' });
-    const cfg = JSON.parse(fs.readFileSync(path.join(ws, '.mcp.json'), 'utf-8'));
-    assert.deepEqual(cfg.mcpServers.context7, { command: 'npx', args: ['-y', '@upstash/context7-mcp'] });
+  // #538: the install runs through the real route chain (guard, limiter, VS Code confirmation).
+  async function serve(ws: string): Promise<RouteHarness> {
+    const app = makeApp();
+    setupMcpInstallRoute(app, { workspaceRoot: ws, rejectIfRemote: () => false, confirmOperatorAction: async () => 'approved' });
+    const h = new RouteHarness(app);
+    await h.start();
+    return h;
+  }
 
-    const r2 = res();
-    McpRoute.install({ body: { id: 'context7' } } as never, r2 as never, { workspaceRoot: ws });
-    assert.deepEqual(r2.body, { ok: true, added: false, id: 'context7' }); // update, not duplicate
+  test('install writes the server entry to .mcp.json (added=true), idempotent on re-install', async () => {
+    const ws = mkWs();
+    const h = await serve(ws);
+    try {
+      const r1 = await h.request({ method: 'POST', path: MCP_INSTALL_PATH, body: { id: 'context7' } });
+      assert.equal(r1.body.ok, true);
+      assert.equal(r1.body.added, true);
+      assert.equal(r1.body.id, 'context7');
+      assert.equal(r1.body.ledger, 'unavailable');
+      const cfg = JSON.parse(fs.readFileSync(path.join(ws, '.mcp.json'), 'utf-8'));
+      assert.deepEqual(cfg.mcpServers.context7, { command: 'npx', args: ['-y', '@upstash/context7-mcp'] });
+
+      const r2 = await h.request({ method: 'POST', path: MCP_INSTALL_PATH, body: { id: 'context7' } });
+      assert.equal(r2.body.added, false); // update, not duplicate
+    } finally { await h.stop(); fs.rmSync(ws, { recursive: true, force: true }); }
   });
 
-  test('install with unknown id → 404', () => {
+  test('install with unknown id → 404', async () => {
     const ws = mkWs();
-    const r = res();
-    McpRoute.install({ body: { id: 'nope' } } as never, r as never, { workspaceRoot: ws });
-    assert.equal(r.code, 404);
-    assert.match((r.body as { error: string }).error, /unknown MCP catalog id/);
+    const h = await serve(ws);
+    try {
+      const r = await h.request({ method: 'POST', path: MCP_INSTALL_PATH, body: { id: 'nope' } });
+      assert.equal(r.status, 404);
+      assert.match((r.body as { error: string }).error, /unknown MCP catalog id/);
+    } finally { await h.stop(); fs.rmSync(ws, { recursive: true, force: true }); }
   });
 });

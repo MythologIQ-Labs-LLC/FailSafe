@@ -11,7 +11,7 @@ type GuardModule = {
 };
 
 function load(): GuardModule | null {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   try { return require('../../roadmap/routes/consoleRequestGuard') as GuardModule; } catch { return null; }
 }
 

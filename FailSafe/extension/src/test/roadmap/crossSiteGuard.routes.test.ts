@@ -31,7 +31,7 @@ suite('#538 cross-site POSTs are refused on the voice-pack and Bicameral connect
   let harness: RouteHarness | null = null;
   let storage = '';
   const calls: string[] = [];
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const handler = require('../../voice-pack/install-handler') as Record<string, unknown>;
   const originals = { install: handler.installVoicePack, uninstall: handler.uninstallVoicePack };
 

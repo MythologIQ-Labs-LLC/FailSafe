@@ -1,7 +1,11 @@
 import { Request, Response } from "express";
-import type { QorLogicHost } from "../../qorlogic/hostLayouts";
 import type { L3ApprovalRequest } from "../../shared/types/l3-approval";
 import type { ApiRouteDeps } from "./types";
+import { consoleRequestGuard } from "./consoleRequestGuard";
+import {
+  authorizeOperatorAction, authorizationFields, newInstallLimiter, resolveScaffoldOperation, thaw,
+  type InstallOperation,
+} from "./installAuthorization";
 import {
   requireOperatorConfirmation,
   l3DecisionRequest,
@@ -90,21 +94,28 @@ export function setupActionsRoutes(
     },
   );
 
-  // Scaffold governance skills into workspace
-  app.post("/api/actions/scaffold-skills", async (req: Request, res: Response) => {
+  // Scaffold governance skills into workspace. #538: Console request guard before the
+  // limiter; validated hosts/scope/skills are confirmed in a modal VS Code dialog first.
+  app.post("/api/actions/scaffold-skills", consoleRequestGuard((req, res) => deps.rejectIfRemote(req, res)), newInstallLimiter(), async (req: Request, res: Response) => {
     if (!deps.scaffoldSkills && !deps.scaffoldWithWebOptions) {
       res.status(501).json({ error: "Scaffold not available" });
       return;
     }
+    const resolved = resolveScaffoldOperation(req.body);
+    if (!resolved.ok) { res.status(resolved.status).json({ ok: false, error: resolved.error }); return; }
+    const needs = resolved.operation.kind === "qorlogic-skills-install" ? deps.scaffoldWithWebOptions : deps.scaffoldSkills;
+    if (!needs) { res.status(501).json({ error: "Scaffold not available" }); return; }
+    const approved = await authorizeOperatorAction(
+      { ...deps, getLedgerManager: () => deps.qorelogicManager.getLedgerManager?.() },
+      res, resolved.operation, "/api/actions/scaffold-skills",
+    );
+    if (!approved) return;
     try {
-      const bodyHosts = Array.isArray(req.body?.hosts) ? req.body.hosts : [];
-      const bodyScope = req.body?.scope === "global" ? "global" as const : "repo" as const;
-      const skillFilter = isSkillFilterMap(req.body?.skillFilter) ? req.body.skillFilter : undefined;
-      const report = await runScaffold(deps, bodyHosts as QorLogicHost[], bodyScope, skillFilter, res);
+      const report = await runScaffold(deps, approved.operation, approved.operationId, res);
       if (!report) return;
-      res.json({ ok: report.ok, report });
+      res.json({ ok: report.ok, report, ...authorizationFields(approved) });
     } catch (e) {
-      res.status(500).json({ ok: false, error: String(e) });
+      res.status(500).json({ ok: false, error: String(e), ...authorizationFields(approved) });
     }
   });
 
@@ -175,7 +186,9 @@ export function setupActionsRoutes(
         return;
       }
       try {
-        await deps.qorelogicManager.processL3Decision(id, decision);
+        await deps.qorelogicManager.processL3Decision(id, decision, {
+          method: "vscode-modal-confirmation", channel: "console:/api/actions/decide-l3",
+        });
       } catch (e: unknown) {
         res.status(404).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
         return;
@@ -203,27 +216,19 @@ function rejectBodyConditions(req: Request, res: Response): boolean {
   return true;
 }
 
-function isSkillFilterMap(raw: unknown): raw is Record<string, string[]> {
-  if (!raw || typeof raw !== "object") return false;
-  for (const v of Object.values(raw as Record<string, unknown>)) {
-    if (!Array.isArray(v) || v.some((s) => typeof s !== "string")) return false;
-  }
-  return true;
-}
-
+/** Run the approved scaffold operation; callees get mutable copies of the frozen values (#538). */
 async function runScaffold(
   deps: ApiRouteDeps,
-  hosts: QorLogicHost[],
-  scope: "repo" | "global",
-  skillFilter: Record<string, string[]> | undefined,
+  operation: Extract<InstallOperation, { kind: "qorlogic-skills-install" | "qorlogic-skills-prompt" }>,
+  operationId: string,
   res: Response,
 ): Promise<import("../../extension/installSkillsReport").QorLogicInstallReport | null> {
-  if (hosts.length > 0 && deps.scaffoldWithWebOptions) {
-    return deps.scaffoldWithWebOptions(hosts, scope, skillFilter);
+  if (operation.kind === "qorlogic-skills-install" && deps.scaffoldWithWebOptions) {
+    return deps.scaffoldWithWebOptions(thaw(operation.hosts), operation.scope, thaw(operation.skillFilter), { operationId });
   }
-  if (deps.scaffoldSkills) {
+  if (operation.kind === "qorlogic-skills-prompt" && deps.scaffoldSkills) {
     const report = await deps.scaffoldSkills();
-    if (report === null) { res.json({ ok: true, cancelled: true }); return null; }
+    if (report === null) { res.json({ ok: true, cancelled: true, operationId }); return null; }
     return report;
   }
   res.status(501).json({ error: "Scaffold not available" });
@@ -238,7 +243,9 @@ async function processL3Queue(
   const results: Array<{ id: string; ok: boolean; error?: string }> = [];
   for (const item of queue) {
     try {
-      await deps.qorelogicManager.processL3Decision(item.id, decision);
+      await deps.qorelogicManager.processL3Decision(item.id, decision, {
+        method: "vscode-modal-confirmation", channel: "console:/api/actions/approve-l3-batch",
+      });
       results.push({ id: item.id, ok: true });
     } catch (e: any) {
       results.push({ id: item.id, ok: false, error: e.message });

@@ -10,8 +10,8 @@ import {
   AgentCoverageRoute, SreRoute,
 } from "../routes";
 import { TrackerRoute, type TrackerRouteDeps } from "../routes/TrackerRoute";
-import { McpRoute } from "../routes/McpRoute";
-import { AgtRoute } from "../routes/AgtRoute";
+import { McpRoute, setupMcpInstallRoute, type McpRouteDeps } from "../routes/McpRoute";
+import { AgtRoute, setupAgtInstallRoute, type AgtRouteDeps } from "../routes/AgtRoute";
 import { IntegrationCatalogRoute } from "../routes/IntegrationCatalogRoute";
 import { setupArchitectureIndexRoutes } from "../routes/ArchitectureIndexRoute";
 import { setupDeliveryRoutes, type DeliveryRouteDeps } from "../routes/DeliveryRoute";
@@ -353,11 +353,15 @@ export class ConsoleRouteRegistrar {
       securityScanner: this.host.securityScanner as any,
       ledgerManager: this.host.qorelogicManager.getLedgerManager() as any,
     });
-    setupAdapterRoutes(app, {
+    // #538: the install/uninstall confirmer and ledger are read at request time.
+    const adapterDeps: import("../routes/AdapterRoute").AdapterRouteDeps = {
       rejectIfRemote: (req, res) => this.host.rejectIfRemote(req, res),
       broadcast: (data) => this.host.broadcast(data),
       adapterService: this.host.adapterService as any,
-    });
+      getLedgerManager: () => this.host.qorelogicManager.getLedgerManager(),
+    };
+    defineLazyConfirmer(adapterDeps, this.host);
+    setupAdapterRoutes(app, adapterDeps);
   }
 
   /** Bicameral route deps. A method (not an inline literal) so the wiring
@@ -473,13 +477,17 @@ export class ConsoleRouteRegistrar {
     // MCP catalog surface (B-INT-13/14): list + governed install into .mcp.json.
     app.get("/api/v1/mcp/catalog", (req, res) => McpRoute.catalog(req, res));
     // #241C F-1 (CodeQL js/missing-rate-limiting): the two filesystem-mutating
-    // install routes get the loopback guard every other mutating family has,
-    // plus a rate limit (they write .mcp.json / pre-fill a terminal).
+    // install routes share one rate limit (they write .mcp.json / pre-fill a terminal).
+    // #538: each runs the Console request guard before the limiter and acts only after
+    // a modal VS Code confirmation (confirmer and ledger read at request time).
     const installLimiter = rateLimit({ windowMs: 60_000, limit: 5, standardHeaders: false, legacyHeaders: false });
-    app.post("/api/actions/mcp-install", installLimiter, (req, res) => {
-      if (this.host.rejectIfRemote(req, res)) return;
-      McpRoute.install(req, res, { workspaceRoot: this.host.workspaceRoot });
-    });
+    const mcpDeps = {
+      workspaceRoot: this.host.workspaceRoot,
+      rejectIfRemote: (req: Request, res: Response) => this.host.rejectIfRemote(req, res),
+      getLedgerManager: () => this.host.qorelogicManager.getLedgerManager(),
+    } as McpRouteDeps;
+    defineLazyConfirmer(mcpDeps, this.host);
+    setupMcpInstallRoute(app, mcpDeps, installLimiter);
 
     // Agent Governance Toolkit surface (B-INT-16): env-detected installer. The
     // modules route auto-detects the workspace language; the install route
@@ -487,17 +495,16 @@ export class ConsoleRouteRegistrar {
     // presses enter — no silent run). runInTerminal is resolved lazily because
     // routes register before bootstrapServers wires the vscode dep.
     app.get("/api/v1/agt/modules", (req, res) => AgtRoute.modules(req, res, { workspaceRoot: this.host.workspaceRoot }));
-    app.post("/api/actions/agt-install", installLimiter, (req, res) => {
-      if (this.host.rejectIfRemote(req, res)) return;
-      AgtRoute.install(req, res, {
-        workspaceRoot: this.host.workspaceRoot,
-        runInTerminal: (name, command) => {
-          const fn = this.host.getAgtRunInTerminal?.();
-          if (!fn) throw new Error("runInTerminal not wired");
-          fn(name, command);
-        },
-      });
-    });
+    const agtDeps = {
+      ...mcpDeps,
+      runInTerminal: (name: string, command: string) => {
+        const fn = this.host.getAgtRunInTerminal?.();
+        if (!fn) throw new Error("runInTerminal not wired");
+        fn(name, command);
+      },
+    } as AgtRouteDeps & { rejectIfRemote: (req: Request, res: Response) => boolean };
+    defineLazyConfirmer(agtDeps, this.host);
+    setupAgtInstallRoute(app, agtDeps, installLimiter);
     // GH #167: Integrations Catalog — surfaces the command/config integrations
     // that lack a dedicated sub-view. Secret-safe: the snapshot getter returns
     // booleans only. Absent getter → all-disabled (still renders the list).

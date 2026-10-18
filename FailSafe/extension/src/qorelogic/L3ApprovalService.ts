@@ -11,6 +11,7 @@ import { L3ApprovalRequest, RiskGrade } from '../shared/types';
 import { LedgerManager } from './ledger/LedgerManager';
 import { TrustEngine } from './trust/TrustEngine';
 import { CortexEvent, RoutingDecision } from '../governance/EvaluationRouter';
+import { describeOperatorAuthentication, type OperatorAuthentication } from '../shared/types/operatorAuthentication';
 
 /** B-INT-2: minimal preflight-mediator surface injected into the service.
  *  Declared locally (not a hard import of PreflightToL3Mediator) so the
@@ -129,11 +130,13 @@ export class L3ApprovalService {
     }
 
     /**
-     * Process an L3 decision (approve/reject).
+     * Process an L3 decision (approve/reject). #538 (#514 residual): `authentication`
+     * says how the decision was confirmed; it is recorded with the decision.
      */
     async processL3Decision(
         requestId: string,
         decision: 'APPROVED' | 'REJECTED',
+        authentication: OperatorAuthentication,
         conditions?: string[]
     ): Promise<void> {
         const index = this.l3Queue.findIndex(r => r.id === requestId);
@@ -146,7 +149,7 @@ export class L3ApprovalService {
 
         this.applyDecisionToRequest(request, decision, overseerDid, conditions);
 
-        await this.recordDecisionLedgerEntry(request, decision, overseerDid, conditions);
+        await this.recordDecisionLedgerEntry(request, decision, overseerDid, authentication, conditions);
 
         await this.updateTrustForDecision(request.agentDid, decision);
 
@@ -278,6 +281,7 @@ export class L3ApprovalService {
         request: L3ApprovalRequest,
         decision: 'APPROVED' | 'REJECTED',
         overseerDid: string,
+        authentication: OperatorAuthentication,
         conditions?: string[]
     ): Promise<void> {
         await this.ledgerManager.appendEntry({
@@ -288,7 +292,12 @@ export class L3ApprovalService {
             riskGrade: request.riskGrade,
             overseerDid,
             overseerDecision: decision,
-            payload: { conditions, sourceLedgerEntryId: request.sourceLedgerEntryId }
+            // overseerDid is a local constant; `authentication.proves` says what the confirmation shows.
+            payload: {
+                conditions,
+                sourceLedgerEntryId: request.sourceLedgerEntryId,
+                authentication: describeOperatorAuthentication(authentication),
+            }
         });
     }
 
