@@ -208,9 +208,11 @@ function cleanup(stagingDir: string): void {
   fs.rmSync(stagingDir, { recursive: true, force: true });
 }
 
+/** Classify by the failure prefix only; a message can quote a hostname (#538). */
 function currentPhaseFromError(msg: string): InstallProgressEvent['phase'] {
-  if (/sha256|checksum/i.test(msg)) return 'verify';
-  if (/tar extract/i.test(msg)) return 'extract';
-  if (/manifest/i.test(msg)) return 'manifest-verify';
+  if (msg.startsWith('download failed')) return 'download';
+  if (msg.startsWith('checksum fetch failed') || msg.startsWith('sha256 mismatch')) return 'verify';
+  if (msg.startsWith('tar extract')) return 'extract';
+  if (/^(extracted |manifest )/.test(msg)) return 'manifest-verify';
   return 'download';
 }

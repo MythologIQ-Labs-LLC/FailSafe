@@ -31,7 +31,7 @@ none: `docs/integrations/INTEGRATION_DOCS_INDEX.md` has no Voice Pack row; the d
 ## Privileges and scopes
 
 No credential is used; each download is an anonymous HTTPS GET made one hop at a time in manual redirect mode `FailSafe/extension/src/voice-pack/allowlisted-fetch.ts:77` (`return await fetch(hop, { redirect: 'manual' });`).
-Every hop, including the first, must be HTTPS on `github.com`, `objects.githubusercontent.com`, `codeload.github.com` or `release-assets.githubusercontent.com`, with no userinfo and the default port, and is checked before it is requested `FailSafe/extension/src/voice-pack/allowlisted-fetch.ts:100` (`assertAllowedUrl(current, prefix);`) against `FailSafe/extension/src/voice-pack/types.ts:63-68` (`'release-assets.githubusercontent.com',`); at most five redirects are followed `FailSafe/extension/src/voice-pack/types.ts:71` (`export const MAX_VOICE_PACK_REDIRECTS = 5;`).
+Every hop, including the first, must be HTTPS on `github.com`, `objects.githubusercontent.com`, `codeload.github.com` or `release-assets.githubusercontent.com`, with no userinfo and the default port, and is checked before it is requested `FailSafe/extension/src/voice-pack/allowlisted-fetch.ts:103` (`assertAllowedUrl(current, prefix);`) against `FailSafe/extension/src/voice-pack/types.ts:63-68` (`'release-assets.githubusercontent.com',`); at most five redirects are followed `FailSafe/extension/src/voice-pack/types.ts:71` (`export const MAX_VOICE_PACK_REDIRECTS = 5;`).
 The pack is extracted by spawning `tar` without a shell `FailSafe/extension/src/voice-pack/install-handler.ts:136-139` (`const child = spawn('tar', ['-xzf', path.basename(tarballPath), '-C', destDir], {`).
 Files are written only under the extension's global storage directory `FailSafe/extension/src/voice-pack/install-handler.ts:73` (`const finalDir = path.join(globalStoragePath, 'voice-pack');`).
 
@@ -62,7 +62,7 @@ Destination: GitHub Releases of `MythologIQ-Labs-LLC/FailSafe` `FailSafe/extensi
 
 The extension version selects the release tag `v<version>-voice` and asset name `FailSafe/extension/src/voice-pack/install-handler.ts:25-33` (`failsafe-voice-pack-${version}.tar.gz`).
 The tarball's SHA-256 is compared with the published checksum before extraction `FailSafe/extension/src/voice-pack/install-handler.ts:58-59` (`sha256 mismatch: expected`).
-A redirect's `Location` is resolved against the current hop, and the final URL is kept as origin plus path only `FailSafe/extension/src/voice-pack/allowlisted-fetch.ts:105` (`finalUrl: originAndPath(current)`).
+A redirect's `Location` is resolved against the current hop, and the final URL is kept as origin plus path only `FailSafe/extension/src/voice-pack/allowlisted-fetch.ts:108` (`finalUrl: originAndPath(current)`).
 The new pack replaces the old one by rename on the same file system `FailSafe/extension/src/voice-pack/install-handler.ts:173-188` (`fs.renameSync(newDir, finalDir);`).
 
 ## Persisted artifacts
@@ -87,7 +87,7 @@ Progress events are broadcast over the Console WebSocket `FailSafe/extension/src
 
 Enforced: a hop that is not HTTPS, not on an allowlisted host, carries userinfo or names a port is refused before it is requested `FailSafe/extension/src/voice-pack/allowlisted-fetch.ts:45-56` (`redirect target rejected: host ${u.hostname} not in allowlist`).
 Enforced: a response the fetch redirected by itself (`redirected`, or a response URL that is empty or differs from the requested hop) or an opaque redirect is refused before its body is read, so a fetch that ignores manual mode cannot deliver a body from another host `FailSafe/extension/src/voice-pack/allowlisted-fetch.ts:60-72` (`the fetch followed a redirect itself`).
-Enforced: error text names only the requested URL's origin and path or a refused hop's host, so a signed asset query never reaches an error, a progress event or the log `FailSafe/extension/src/voice-pack/allowlisted-fetch.ts:104` (`HTTP ${res.status} for ${originAndPath(url)}`).
+Enforced: error text names only the requested URL's origin and path or a refused hop's host, so a signed asset query never reaches an error, a progress event or the log `FailSafe/extension/src/voice-pack/allowlisted-fetch.ts:107` (`HTTP ${res.status} for ${originAndPath(url)}`).
 Enforced: a checksum or manifest-hash mismatch aborts and leaves the old pack in place `FailSafe/extension/src/voice-pack/install-handler.ts:77-81` (`throw err;`).
 Enforced: the Console routes refuse non-loopback callers `FailSafe/extension/src/extension/bootstrapServers.ts:340-344` (`Forbidden: local access only`).
 Limit: the checksum comes from the same release as the tarball, so it detects a damaged download, not a replaced release; no hash is pinned in the extension and no signature is checked ([B287]) `FailSafe/extension/src/voice-pack/install-handler.ts:37` (`function resolveVoicePackChecksumUrl(version: string): string {`).
@@ -96,7 +96,7 @@ Limit: the Console install route starts the download with no VS Code confirmatio
 
 ## Failure, offline, stale and permission semantics
 
-Offline or HTTP error: install fails with "download failed: HTTP <status> for <URL>" ("checksum fetch failed: ..." for the checksum) and nothing changes `FailSafe/extension/src/voice-pack/allowlisted-fetch.ts:104` (`HTTP ${res.status} for`).
+Offline or HTTP error: install fails with "download failed: HTTP <status> for <URL>" ("checksum fetch failed: ..." for the checksum) and nothing changes `FailSafe/extension/src/voice-pack/allowlisted-fetch.ts:107` (`HTTP ${res.status} for`).
 A pack older than the extension is reported stale and is not mounted `FailSafe/extension/src/extension/bootstrapVoicePack.ts:49-58` (`Only set the path when fully installed.`).
 A missing or hash-mismatched file reports corrupt with the missing files `FailSafe/extension/src/voice-pack/voice-pack-detector.ts:25-27` (`{ state: 'corrupt', missingFiles }`).
 No global storage: the command reports an error `FailSafe/extension/src/extension/bootstrapServers.ts:355` (`Voice Pack: globalStorage unavailable.`).

@@ -52,19 +52,24 @@ function flavourOf(p: string): typeof path.posix | null {
   return null;
 }
 
+/** A `file:` URI (with or without `//`) or any other `scheme://` URI. */
 function fromUri(p: string): string | null {
-  if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(p)) return null;
+  const isFile = /^file:/i.test(p);
+  if (!isFile && !/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(p)) return null;
   try {
-    if (/^file:/i.test(p)) return fileURLToPath(p);
+    if (isFile) return fileURLToPath(p);
   } catch { /* fall through to the URL path's basename */ }
   try {
-    return path.posix.basename(new URL(p).pathname) || '';
+    const base = path.posix.basename(new URL(p).pathname);
+    try { return decodeURIComponent(base); } catch { return base; }
   } catch {
     return '';
   }
 }
 
 function shortLabel(p: string, workspaceRoot?: string): string {
+  // Drive-relative (`C:dir\file`) resolves against a per-drive cwd: never relativize it.
+  if (/^[a-zA-Z]:(?![\\/])/.test(p)) return path.win32.basename(p);
   const mod = flavourOf(p);
   if (mod) {
     if (workspaceRoot && flavourOf(workspaceRoot) === mod) {
@@ -90,7 +95,9 @@ export function notifyPathLabel(raw: unknown, workspaceRoot?: string): string | 
   const cleaned = raw.replace(UNSAFE_CHARS, '').trim();
   if (!cleaned) return undefined;
   const uri = fromUri(cleaned);
-  const label = uri === null ? shortLabel(cleaned, workspaceRoot) : (uri && flavourOf(uri) ? shortLabel(uri, workspaceRoot) : uri);
+  const shortened = uri === null ? shortLabel(cleaned, workspaceRoot) : (uri && flavourOf(uri) ? shortLabel(uri, workspaceRoot) : uri);
+  // A URI is percent-decoded above, so strip again: the final label is what is sent.
+  const label = shortened.replace(UNSAFE_CHARS, '').trim();
   if (!label) return undefined;
   return label.length > LABEL_MAX ? `…${label.slice(label.length - (LABEL_MAX - 1))}` : label;
 }

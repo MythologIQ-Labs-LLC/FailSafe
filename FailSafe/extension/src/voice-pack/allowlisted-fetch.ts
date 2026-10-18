@@ -75,8 +75,11 @@ function assertNotFollowed(res: Response, hop: string, prefix: string): void {
 async function requestHop(hop: string, prefix: string, requestedUrl: string): Promise<Response> {
   try {
     return await fetch(hop, { redirect: 'manual' });
-  } catch {
-    throw new Error(`${prefix}: network error for ${originAndPath(requestedUrl)}`);
+  } catch (err) {
+    // Only a code-shaped cause (ENOTFOUND, ECONNRESET) is quoted; never its message.
+    const code = (err as { cause?: { code?: unknown } } | undefined)?.cause?.code;
+    const tag = typeof code === 'string' && /^[A-Z0-9_]{2,40}$/.test(code) ? ` (${code})` : '';
+    throw new Error(`${prefix}: network error${tag} for ${originAndPath(requestedUrl)}`);
   }
 }
 

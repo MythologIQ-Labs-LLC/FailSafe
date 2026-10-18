@@ -58,7 +58,7 @@ Nothing is read back from Teams; the response body is discarded `FailSafe/extens
 ## Outbound fields and egress
 
 Repository content: no; the card carries a label, a title (clamped to 300 characters), an optional detail (clamped to 600), a timestamp and a Console text link `FailSafe/extension/src/integrations/teams/teams-notify.ts:55-66` (`clamp(event.title, 300)`).
-Metadata: yes, a file path when the event names one, shown relative to the workspace when it is inside it and as the file name only otherwise (an absolute path elsewhere, a `..` escape or a URI), with control and invisible characters removed and capped at 200 characters `FailSafe/extension/src/integrations/notify-event.ts:88` (`export function notifyPathLabel(`); Teams markdown in the label is not escaped ([B300]); gated by `failsafe.integrations.teams.enabled` and a stored webhook `FailSafe/extension/src/integrations/teams/TeamsNotifier.ts:78-79` (`const cfg = this.getConfig();`).
+Metadata: yes, a file path when the event names one, shown relative to the workspace when it is inside it and as the file name only otherwise (an absolute path elsewhere, a `..` escape or a URI), with control and invisible characters removed and capped at 200 characters `FailSafe/extension/src/integrations/notify-event.ts:93` (`export function notifyPathLabel(`); Teams markdown in the label is not escaped ([B300]); gated by `failsafe.integrations.teams.enabled` and a stored webhook `FailSafe/extension/src/integrations/teams/TeamsNotifier.ts:78-79` (`const cfg = this.getConfig();`).
 Graph relationships: no `FailSafe/extension/src/integrations/teams/teams-notify.ts:12-14` (`emits only the typed fields below`).
 Governance evidence: yes, the fact of a block or an L3 decision and its decision word, under the same gate `FailSafe/extension/src/integrations/teams/teams-notify-map.ts:73` (`L3 decision: `).
 Destination: the webhook URL's host and path over TLS; the URL's scheme and port are not used `FailSafe/extension/src/integrations/teams/TeamsNotifier.ts:25-32` (`hostname: u.hostname,`).
@@ -69,7 +69,7 @@ A blocking verdict becomes a `veto` card titled with its decision `FailSafe/exte
 Each kind gets a fixed icon, label and Adaptive Card color `FailSafe/extension/src/integrations/teams/teams-notify.ts:38-44` (`const KIND_META: Record<TeamsNotifyKind`).
 The Console link is a markdown text link, never an action button `FailSafe/extension/src/integrations/teams/teams-notify.ts:62-65` (`link-back is a markdown TEXT link`).
 The Console link is always the default local address on port 9376, because the notifier never passes the live Console URL `FailSafe/extension/src/integrations/teams/TeamsNotifier.ts:81` (`const notice = mapGovernanceEvent(eventType, payload, undefined, this.workspaceRoot);`).
-On main (unreleased, #538): every path line uses the shared path label `FailSafe/extension/src/integrations/notify-event.ts:88` (`export function notifyPathLabel(`), and the L3-decided path is read from `request.filePath`, falling back to a flat `filePath` `FailSafe/extension/src/integrations/teams/teams-notify-map.ts:36` (`return (request as Record<string, unknown>).filePath;`).
+On main (unreleased, #538): every path line uses the shared path label `FailSafe/extension/src/integrations/notify-event.ts:93` (`export function notifyPathLabel(`), and the L3-decided path is read from `request.filePath`, falling back to a flat `filePath` `FailSafe/extension/src/integrations/teams/teams-notify-map.ts:36` (`return (request as Record<string, unknown>).filePath;`).
 
 ## Persisted artifacts
 
