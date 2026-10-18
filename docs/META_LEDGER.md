@@ -33310,3 +33310,74 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `025c268c5aaca248aae077d48e52784fe7473ea7d0fddc018f7776a0dffd6f4d`
 
 **Decision**: SESSION SEAL for plan-538d-voice-notify.md (implementation #788; content hash is the audited plan, sha256 d36c7c62). Reality = Promise, with disclosures. The branch carries #538 lane D: B261 (the Voice Pack download names MythologIQ-Labs-LLC/FailSafe and accepts a body only after every hop and every response passed the https allowlist) and B263 (Slack and Teams L3-decided notices show a sanitized path label read from request.filePath, and nothing else from the request). Independent bounded code review: fix first on one medium finding (percent-decoded control characters in a file URI label), fixed with red rows in a3c4d9a4 and 4673cdf4 together with three low findings; the lead re-ran the focused suites at 97 passing, 0 failing. Disclosures: bounded damaged-ledger override for #538 lane cycles (owner ruling 2026-10-18; #467 unresolved, normal governance not restored); no v*-voice release exists, so a real install still answers 404 until B287 publishes one; the checksum comes from the same release, so it detects a damaged download, not a replaced release; a fetch that ignores manual mode has already requested the hops it followed (the guard keeps the body out, not the request); the real extension-host fetch (Electron and VS Code's proxy patch) was not exercised, so a fail-closed functional risk remains; the empty response URL refusal goes beyond the audited LD2 text and is stricter; Teams markdown in the label is not escaped (B300); an agent can still put up to 200 characters of text in a label; tar and manifest traversal handling is unchanged; the mapper rows moved to notify-path-label.test.ts; the lead changed the leak fixture's fake Slack token to be built at runtime (f91ebca6) after the secret scanner blocked it; the lock-queue R1 timing row failed in the full run under host load and is outside this lane; FX946 is the known ledger-anchor baseline; documentation currency check run mechanically with no warnings (change_class hotfix); earlier seals are unedited. Next: push, open the PR, the PR checks, then a merge with --match-head-commit. Not tagged.
+
+---
+
+### Entry #790: GATE TRIBUNAL - plan-538c-evidence-integrity (iteration 1) - VETO
+
+**Timestamp**: 2026-10-18T16:08:08Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-18T1602-84548b`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for #538 lane cycles, owner ruling 2026-10-18, disclosed per cycle (#467)
+
+**Content Hash**: `cbffc2ca0652170a6b86040b99251143b79fc0bb4b66cb3dbfc5c99ca5023ab4`
+**Previous Hash**: `025c268c5aaca248aae077d48e52784fe7473ea7d0fddc018f7776a0dffd6f4d`
+**Chain Hash (Merkle seal)**: `3494ccbe08c8749423fec5c3379d4c6e5cd8d96cf84cdb512da6a012ae498151`
+
+**Decision**: VETO on plan-538c-evidence-integrity.md iteration 1 (sha256 669e7647), #538 lane C: #469 residual (awaited install receipts with the scan verdict and provenance, scanner timeout and failure fail closed) and #473 residual (the compliance export carries the full verifyLedger status). Fresh Option B architect-reviewer; about 90 citations checked, none failed. Blocking: a ledger-unrecorded item kept its installPath, so a re-scan through applyVerdict could set installed with no receipt; and no test proved the scanner process tree dies on timeout (Windows taskkill is asynchronous). Should-fix: fold in the uninstall receipt await, validate malformed verifier reports, keep receipt work inside one try, exact counts, clear the timer, re-check marketplace.md citations, disclosures. Next: revise and re-audit. Tribunal entry held by the lead and appended at integration in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #791: GATE TRIBUNAL - plan-538c-evidence-integrity (iteration 2) - VETO
+
+**Timestamp**: 2026-10-18T16:16:15Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-18T1602-84548b`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for #538 lane cycles, owner ruling 2026-10-18, disclosed per cycle (#467)
+
+**Content Hash**: `a62673c3cc35604a918fa88da3b8782a312dbabe3fd9498b17f805bcbb6c567b`
+**Previous Hash**: `3494ccbe08c8749423fec5c3379d4c6e5cd8d96cf84cdb512da6a012ae498151`
+**Chain Hash (Merkle seal)**: `5eef635f63cd3a346b1e7ae94f6c04f7f7e87da3adcb3cfaceb491a34dd34efd`
+
+**Decision**: VETO on plan-538c-evidence-integrity.md iteration 2 (sha256 944be379). A fresh Option B architect-reviewer; both iteration 1 blockers resolved; about 100 citations checked, none failed. New blocking: a quarantined item whose receipt failed kept its installPath and passed the new re-scan precondition, so it could still be re-scanned into installed without a receipt; and the re-scan's own precondition check would see the route's earlier scanning write on the live catalog object and leave every legitimate re-scan scanning, which the planned fakes could not see because they never mutate the item. Should-fix: a no-database falsifier, the Windows S7 proof scope, combineResults keeping reject, the SCAN_PASS fixture, the uninstall race disclosure, the race bound. Next: revise and re-audit. Tribunal entry held by the lead and appended at integration in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #792: GATE TRIBUNAL - plan-538c-evidence-integrity (iteration 3) - PASS
+
+**Timestamp**: 2026-10-18T16:24:28Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-18T1602-84548b`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for #538 lane cycles, owner ruling 2026-10-18, disclosed per cycle (#467)
+
+**Content Hash**: `9c85d3c62f5af379d391552983aa4bcedc6e125de418e4c01d6e38aea97613b7`
+**Previous Hash**: `5eef635f63cd3a346b1e7ae94f6c04f7f7e87da3adcb3cfaceb491a34dd34efd`
+**Chain Hash (Merkle seal)**: `0453f1a5a065b7e0ce365c7ffbd8fb54006ad7c77c0aca99cb44296ecbdc5b58`
+
+**Decision**: PASS on plan-538c-evidence-integrity.md iteration 3 (sha256 1457ca9e). A fresh Option B architect-reviewer; every iteration 1 and 2 item resolved; 96 citations checked, none failed. Every unrecorded outcome clears installPath, and the re-scan function owns the check and the scanning transition. Should-fix folded into implementation: an exported route body so RS3 sees a route-side regression, a POSIX leaf-pid poll so dropping detached is caught, a macrotask before reading unhandled-rejection counts, the race timer cleared, entries read before verification, a missing isAvailable exported as unavailable, the release gate's ok-only test disclosed, a terminal status in the re-scan catch, and pre-existing races disclosed. Next: implement on fix/538-lane-C. Tribunal entry held by the lead and appended at integration in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #793: IMPLEMENTATION - plan-538c-evidence-integrity
+
+**Timestamp**: 2026-10-18T17:35:38Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-18T1602-84548b`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-18T1602-84548b/implement.json`
+
+**Content Hash**: `a29e65b8523ab94d814870feee741ed95b23dacdb47970a36abdbccf01acc6f7`
+**Previous Hash**: `0453f1a5a065b7e0ce365c7ffbd8fb54006ad7c77c0aca99cb44296ecbdc5b58`
+**Chain Hash (Merkle seal)**: `4d2612c98df6188f8fc2a08f5f8b03030be0e35b8c5dc455b918b570c141bbe3`
+
+**Decision**: IMPLEMENTATION of plan-538c-evidence-integrity.md iteration 3 (audit PASS, sha256 1457ca9e), #538 lane C. Branch fix/538-lane-C from main 243a34a1, merged with main 3a72e235 (lane D) at e2b19921. f1bfc755 and abb31578: red rows first (47 vscode-test rows and 2 node rows failing on main's code; R14 and C7 red against 40abaa4e). 40abaa4e and a34eaf2b: a scan result carries scanStatus (completed, inconclusive, timeout, scanner-error, unavailable) and scanner versions, and anything but completed quarantines; the scanner has its own deadline that kills the process tree, destroys the pipes and settles as timeout; an item reads installed, and marketplace.installed is broadcast, only after an awaited durable receipt (marketplaceInstallReceipt.ts) that records the verdict, the scanner and the source repository, ref and commit; a failed, stubbed or unwired ledger leaves the item failed with installPath cleared, so it cannot be re-scanned into installed; the re-scan function owns its precondition and the scanning transition; uninstall awaits its receipt; startInstall's failure-path status write is guarded; the compliance export replaces the chainVerification boolean with ledgerIntegrity (intact, partial-seal, failed with bounded failures, or unavailable with the reason) from LedgerIntegritySummary.ts, which validates the report shape and allowlists anchor statuses; weakerProperties moved unchanged and the release gate behaves as before. f323868f: RS3 strengthened after a surviving mutation. ac0edc73, bc0be552, d69ce5fa: marketplace.md citations re-pointed, B296 and B297 done with counts, B298 and B299 open, FEATURE_INDEX FX308, FX386, FX988, CHANGELOG. Evidence from logs: focused vscode-test 106 passing, 4 pending, 0 failing (re-run by the lead, 106/0); the S7 and contracts node files 41/0 (lead); node covering files 94 passed, 3 skipped; npm test default 5107 passing, 18 pending, 1 failing (the lock-queue R1 timing row under host load, outside this lane); architecture configuration 5/0; test:node 818 tests, 807 passed, 2 failed (FX946, #467), 9 skipped; integration contracts 39/39; tsc 0; lint 0 errors; secret scan clean; mutations 20 of 21 killed, the survivor (typeof isAvailable removed alone) equivalent because the throw lands in the same try.
