@@ -35,9 +35,9 @@ Running a module's command uses the operator's own package-manager credentials i
 
 | Capability | State | Symbol | Reached from | Test (depth) | Notes |
 |---|---|---|---|---|---|
-| environment-detection | verified-shipped | `detectEnvironment` `FailSafe/extension/src/integrations/agt/agt-catalog.ts:111` (`export function detectEnvironment(rootEntries: string[]): string[] {`) | `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:477` (`app.get("/api/v1/agt/modules"`) | `FailSafe/extension/src/test/integrations/agt/agt-catalog.test.ts` (unit) | Language modules only `FailSafe/extension/src/integrations/agt/agt-catalog.ts:115` (`if (m.kind !== 'language'`) |
-| verified-module-catalog | verified-shipped | `AGT_MODULES` `FailSafe/extension/src/integrations/agt/agt-catalog.ts:45` (`export const AGT_MODULES: AgtModule[] = [`) | `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:477` (`app.get("/api/v1/agt/modules"`) | `FailSafe/extension/src/test/integrations/agt/agt-catalog.test.ts` (unit) | Nine modules, verified on a stated date `FailSafe/extension/src/integrations/agt/agt-catalog.ts:9-10` (`microsoft/agent-governance-toolkit, 2026-06-03`) |
-| terminal-prefill-install | verified-shipped | `AgtRoute` `FailSafe/extension/src/roadmap/routes/AgtRoute.ts:57` (`install(req: Request, res: Response, deps: AgtRouteDeps): void {`) | `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:478` (`app.post("/api/actions/agt-install", installLimiter`) | `FailSafe/extension/src/test/roadmap/routes/AgtRoute.test.ts` (route) | Pre-filled, not executed `FailSafe/extension/src/extension/bootstrapServers.ts:175-177` (`terminal.sendText(command, false);`); no server-side confirmation (F16) |
+| environment-detection | verified-shipped | `detectEnvironment` `FailSafe/extension/src/integrations/agt/agt-catalog.ts:111` (`export function detectEnvironment(rootEntries: string[]): string[] {`) | `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:489` (`app.get("/api/v1/agt/modules"`) | `FailSafe/extension/src/test/integrations/agt/agt-catalog.test.ts` (unit) | Language modules only `FailSafe/extension/src/integrations/agt/agt-catalog.ts:115` (`if (m.kind !== 'language'`) |
+| verified-module-catalog | verified-shipped | `AGT_MODULES` `FailSafe/extension/src/integrations/agt/agt-catalog.ts:45` (`export const AGT_MODULES: AgtModule[] = [`) | `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:489` (`app.get("/api/v1/agt/modules"`) | `FailSafe/extension/src/test/integrations/agt/agt-catalog.test.ts` (unit) | Nine modules, verified on a stated date `FailSafe/extension/src/integrations/agt/agt-catalog.ts:9-10` (`microsoft/agent-governance-toolkit, 2026-06-03`) |
+| terminal-prefill-install | verified-shipped | `AgtRoute` `FailSafe/extension/src/roadmap/routes/AgtRoute.ts:57` (`install(req: Request, res: Response, deps: AgtRouteDeps): void {`) | `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:490` (`app.post("/api/actions/agt-install", installLimiter`) | `FailSafe/extension/src/test/roadmap/routes/AgtRoute.test.ts` (route) | Pre-filled, not executed `FailSafe/extension/src/extension/bootstrapServers.ts:179-181` (`terminal.sendText(command, false);`); no server-side confirmation (F16) |
 
 ## Inbound fields
 
@@ -59,7 +59,7 @@ Detected modules are flagged `recommended` in the list `FailSafe/extension/src/r
 
 ## Persisted artifacts
 
-None written by FailSafe; the terminal holds the pre-filled command `FailSafe/extension/src/extension/bootstrapServers.ts:176-178` (`const terminal = vscode.window.createTerminal(name);`).
+None written by FailSafe; the terminal holds the pre-filled command `FailSafe/extension/src/extension/bootstrapServers.ts:180-182` (`const terminal = vscode.window.createTerminal(name);`).
 
 ## Graph links
 
@@ -68,15 +68,15 @@ Proposed (not built): none specific to AGT in `docs/architecture/INTEGRATION_SCE
 
 ## Customer UI and actions
 
-Console Integrations tab: an "Agent Governance" sub-view `FailSafe/extension/src/roadmap/ui/command-center.js:61` (`label: 'Agent Governance', renderer: new AgtRenderer('integrations')`).
+Console Integrations tab: an "Agent Governance" sub-view `FailSafe/extension/src/roadmap/ui/command-center.js:63` (`label: 'Agent Governance', renderer: new AgtRenderer('integrations')`).
 Run opens a terminal with the command typed in; Claude Code modules are copy-only `FailSafe/extension/src/roadmap/ui/modules/agt-renderer.js:7` (`copy-only modules (Claude Code slash`).
 A Public Preview notice is shown `FailSafe/extension/src/integrations/agt/agt-catalog.ts:100` (`is Public Preview — APIs may change before GA.`).
 
 ## Governance policy and enforceability limits
 
-Enforced: the command is never executed by FailSafe; the operator presses enter `FailSafe/extension/src/extension/bootstrapServers.ts:172-174` (`pre-fills the command but does NOT execute it`).
+Enforced: the command is never executed by FailSafe; the operator presses enter `FailSafe/extension/src/extension/bootstrapServers.ts:176-178` (`pre-fills the command but does NOT execute it`).
 Enforced: only catalog ids are accepted, so a request cannot inject a command `FailSafe/extension/src/roadmap/routes/AgtRoute.ts:59-63` (`unknown AGT module id`).
-Enforced: non-loopback callers are refused and the route is rate limited `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:478-479` (`if (this.host.rejectIfRemote(req, res)) return;`).
+Enforced: non-loopback callers are refused and the route is rate limited `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:490-491` (`if (this.host.rejectIfRemote(req, res)) return;`).
 Not enforced: any loopback caller can open and pre-fill a terminal without a VS Code dialog (F16) `FailSafe/extension/src/roadmap/routes/AgtRoute.ts:68-74` (`deps.runInTerminal(`).
 
 ## Failure, offline, stale and permission semantics

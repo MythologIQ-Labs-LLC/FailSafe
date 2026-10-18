@@ -31,6 +31,7 @@ import { defaultGitRunner, statusPaths } from "./governedCommit";
 import { runGovernedCommitFlow } from "./governedCommitFlow";
 import { createOperatorConfirmer } from "./operatorConfirmation";
 import { readArchitectureIndexPath, registerArchitectureIndexCommand } from "./architectureIndexCommand";
+import { registerDeliveryAssessmentCommand } from "./deliveryAssessmentCommand";
 import { defaultGitHubPost } from "../integrations/github-checks/github-checks-client";
 import type { CredentialsBootstrap } from "./credentials-command";
 import { buildCredentialSnapshot, governedCommitToken } from "../integrations/credentials/credentialGates";
@@ -109,6 +110,9 @@ export interface ServerDeps {
   commitGuardPortSource?: { current: () => number };
   /** #482: integration credentials (Secret Storage) for the snapshot and the governed-commit PR step. */
   credentials: CredentialsBootstrap;
+  /** #532 part B: the governance IntentService behind the delivery routes, the commit-check
+   *  route's active-intent read and the delivery assessment command. */
+  intentService?: import("../governance/IntentService").IntentService;
 }
 
 export interface ServerResult {
@@ -247,6 +251,8 @@ export async function bootstrapServers(
   // panic-stop, hooks disable) act only after a modal VS Code confirmation.
   const confirmOperatorAction = createOperatorConfirmer(vscode.window);
   consoleServer.setOperatorConfirmer(confirmOperatorAction);
+  // #532 part B: delivery routes and the commit-check route read the IntentService at request time.
+  if (deps.intentService) consoleServer.setIntentService(deps.intentService);
   // #531 LD5: the bootstrap command shares this confirmer (one busy guard with the
   // Console routes) and the route's index-path setting reader.
   consoleServer.setArchitectureIndexPathProvider(readArchitectureIndexPath);
@@ -256,6 +262,15 @@ export async function bootstrapServers(
     getLedger: () => deps.qorelogicManager.getLedgerManager(),
     broadcast: (data) => consoleServer.broadcastEvent(data),
   });
+  // #532 part B LD7: read-only delivery assessment of the active intent (same functions as the routes).
+  if (deps.intentService) {
+    registerDeliveryAssessmentCommand(context, {
+      workspaceRoot: deps.workspaceRoot,
+      intents: deps.intentService,
+      getLedger: () => deps.qorelogicManager.getLedgerManager(),
+      getIndexPathSetting: readArchitectureIndexPath,
+    });
+  }
 
   // Risk Auto-Derivation pipeline (plan-qor-model-sourced-risks Phase 3).
   const { wireRiskAutoDerivation } = await import("../qorelogic/risk/wireAutoDerivation");

@@ -2,7 +2,7 @@
 
 Status: canonical for the integration scenario and relationship-graph specification (registry row `integration-scenarios`, #532 part A). Recorded against main `c36b9ee2`.
 
-This document specifies three vertical product scenarios and the local-first relationship graph they need. **Nothing in it is claimed as built.** Where a step already exists on main it carries a citation in the grammar of `docs/architecture/INTEGRATION_PORTFOLIO.md`; every other step is proposed. Part B of #532 (a separate plan) builds the first scenario as a vertical slice. The per-integration contracts in `docs/architecture/integrations/` are the authority for what each integration does today.
+This document specifies three vertical product scenarios and the local-first relationship graph they need. **Nothing in it is claimed as built without a citation.** Where a step already exists on main it carries a citation in the grammar of `docs/architecture/INTEGRATION_PORTFOLIO.md`; every other step is proposed. Part B of #532 builds the first scenario as a vertical slice, on main only and not in v6.0.8: in Workspace > Delivery the operator links an intent to the architecture documents and commits it delivered, each after a VS Code confirmation, and sees all five steps assessed, with the receipt unavailable until the ledger repair (#467) `FailSafe/extension/src/roadmap/routes/DeliveryRoute.ts:110` (`for (const action of ["link", "unlink"] as const) {`). The per-integration contracts in `docs/architecture/integrations/` are the authority for what each integration does today.
 
 ## Scenario 1: issue to architecture to code to policy to receipt (the part B slice)
 
@@ -11,10 +11,10 @@ A developer picks up a tracker issue, does the work under governance and ends wi
 | Step | User action | Artifact at this step | On main | Measurable acceptance |
 |---|---|---|---|---|
 | 1 | Import a Jira or Linear issue, review the preview, approve | One intent draft with provenance (source, key, URL, fetch time, content hash) | Exists: `FailSafe/extension/src/integrations/tracker-import/tracker-intent-import.ts:208` (`export async function reviewAndImport(`) | After one approval exactly one intent exists with `externalRef` `<source>:<key>` and a `contentSha256` |
-| 2 | Link the intent to the architecture document it implements | An `implements` edge from the intent to a registered architecture document | Proposed. The managed index can propose and register documents `FailSafe/extension/src/roadmap/routes/ArchitectureIndexRoute.ts:162` (`/api/actions/architecture-index/propose`), but nothing links an intent to one (main only, not in v6.0.8) | The edge exists only after the user picks the document; zero edges are created without a user action |
-| 3 | Make the change (editor, or an agent run in a disposable worktree) and commit through the governed commit | A commit on a branch, optionally a pull request | Exists in part: the governed commit `FailSafe/extension/src/extension/governedCommit.ts:75` (`export async function commitPushOpenPr(`); the commit is not linked to the intent (proposed) | The commit SHA is recorded on the intent's edge set, with the commit's tree hash as the source hash |
-| 4 | Governance evaluates the change | A policy verdict (PASS, WARN, VETO) or an L3 approval | Exists as FailSafe's governance engine; which verdict applies to which commit is not linked (proposed) | Every verdict edge names the commit SHA it evaluated; a verdict for another SHA is never attached |
-| 5 | Seal and issue a receipt for the Seal commit | A signed SHIELD receipt for HEAD | The issuer exists `FailSafe/extension/src/integrations/shield-receipts/shield-receipt-verifier.ts:157` (`export async function issueShieldReceipt(`); no command or route calls it outside tests (see the shield-receipts contract) | The receipt's commit SHA equals the sealed HEAD, and the graph path issue -> intent -> commit -> verdict -> receipt resolves with no inferred edge |
+| 2 | Link the intent to the architecture document it implements | An `implements` edge from the intent to a registered architecture document | Main only, not in v6.0.8: the operator picks a registered document (one with a path) in Workspace > Delivery and confirms in VS Code; the edge records the document's SHA-256 and HEAD at link time `FailSafe/extension/src/governance/delivery/deliveryService.ts:162` (`function prepareImplements(ctx: DeliveryContext, target: string)`). The managed index registers the documents `FailSafe/extension/src/roadmap/routes/ArchitectureIndexRoute.ts:162` (`/api/actions/architecture-index/propose`) | The edge exists only after the user picks the document; zero edges are created without a user action |
+| 3 | Make the change (editor, or an agent run in a disposable worktree) and commit through the governed commit | A commit on a branch, optionally a pull request | Exists in part: the governed commit `FailSafe/extension/src/extension/governedCommit.ts:75` (`export async function commitPushOpenPr(`). Main only, not in v6.0.8: the operator links HEAD or one of its 50 most recent commits to the active intent in Workspace > Delivery, recording its tree and branch `FailSafe/extension/src/governance/delivery/deliveryService.ts:180` (`function prepareCommit(ctx: DeliveryContext, target: string)`); the governed commit does not create the link itself (proposed, B286) | The commit SHA is recorded on the intent's edge set, with the commit's tree hash as the source hash |
+| 4 | Governance evaluates the change | A policy verdict (PASS, WARN, VETO) or an L3 approval | Exists as FailSafe's governance engine. Main only, not in v6.0.8: the assessment lists ledger entries whose payload names the intent id, or a checkpoint whose `git_head` equals a linked full commit SHA `FailSafe/extension/src/governance/delivery/deliveryEvidence.ts:45` (`function matchOf(entry: LedgerEntry, intentId: string, shas: Set<string>)`); there is no per-commit verdict edge (proposed) | Every verdict edge names the commit SHA it evaluated; a verdict for another SHA is never attached |
+| 5 | Seal and issue a receipt for the Seal commit | A signed SHIELD receipt for HEAD | The issuer exists `FailSafe/extension/src/integrations/shield-receipts/shield-receipt-verifier.ts:157` (`export async function issueShieldReceipt(`); no command or route calls it outside tests (see the shield-receipts contract); the delivery assessment shows this step as unavailable until the ledger repair (#467, B216) | The receipt's commit SHA equals the sealed HEAD, and the graph path issue -> intent -> commit -> verdict -> receipt resolves with no inferred edge |
 
 ## Scenario 2: production Sentry error to risk to fix to receipt
 
@@ -39,7 +39,7 @@ An agent's run becomes reviewable evidence, and governance decisions about it ar
 
 ## Local-first relationship graph (specification, not built)
 
-The graph is a local store in the workspace. It is never synchronized to a third party, and building it sends no repository content anywhere.
+The graph is a local store in the workspace. It is never synchronized to a third party, and building it sends no repository content anywhere. In the part B slice (main only, not in v6.0.8) the `implements` and `committed-under` edges are LINKED and UNLINKED entries in the hash-chained intent history, not a separate store `FailSafe/extension/src/governance/IntentService.ts:265` (`async linkEdge(params: LinkEdgeParams): Promise<EdgeWriteResult> {`).
 
 ### Nodes
 
@@ -63,7 +63,7 @@ Each node has a type, a stable local id and the provenance of the record it came
 | `drafted-from` | intent -> issue | the approved import (step 1 of scenario 1) |
 | `implements` | intent -> architecture-doc | a user pick |
 | `addresses` | intent -> risk | a user starting the intent from the risk |
-| `committed-under` | commit -> intent | the governed commit, when the user commits under the active intent |
+| `committed-under` | commit -> intent | a user pick in Workspace > Delivery (part B); the governed commit, when the user commits under the active intent (proposed, B286) |
 | `evaluated` | verdict -> commit | a recorded governance event naming the SHA |
 | `covers` | receipt -> commit | receipt issuance |
 | `produced-by` | change set -> agent-run | the run recorder |

@@ -14,6 +14,7 @@ import { McpRoute } from "../routes/McpRoute";
 import { AgtRoute } from "../routes/AgtRoute";
 import { IntegrationCatalogRoute } from "../routes/IntegrationCatalogRoute";
 import { setupArchitectureIndexRoutes } from "../routes/ArchitectureIndexRoute";
+import { setupDeliveryRoutes, type DeliveryRouteDeps } from "../routes/DeliveryRoute";
 import type { RouteDeps } from "../routes";
 import type { ApiRouteDeps } from "../routes/types";
 import { readMetaLedgerArtifact } from "../../qorlogic/consumer/consumer-adapter";
@@ -135,6 +136,10 @@ export interface ConsoleRouteHost {
   /** #531: `failsafe.architecture.indexPath`, read at request time. Optional so
    *  older route-host fixtures stay valid; absent -> the default path. */
   getArchitectureIndexPath?: () => string | undefined;
+  /** #532 part B: the IntentService set by ConsoleServer.setIntentService, read at request
+   *  time. Optional so older route-host fixtures stay valid; absent/null -> the delivery
+   *  routes answer 503 and the commit-check route blocks. */
+  getIntentService?: () => import("../../governance/delivery/deliveryService").DeliveryIntents | null | undefined;
 }
 
 /** #514: expose the host's operator confirmer as a request-time getter, since
@@ -246,6 +251,13 @@ export class ConsoleRouteRegistrar {
       rejectIfRemote: (req, res) => h.rejectIfRemote(req, res),
       broadcast: (d) => h.broadcast(d),
       validateCommitToken: (tok: string) => h.validateCommitToken?.(tok) ?? false,
+      // #532 part B (B283): read the host's IntentService at request time; the deps are built in
+      // the ConsoleServer constructor, before bootstrapServers calls setIntentService.
+      getActiveIntent: async () => {
+        const service = h.getIntentService?.();
+        if (!service) throw new Error("intent service not wired");
+        return service.getActiveIntent();
+      },
       qorRuntimeService: h.qorRuntimeService as any,
       buildHubSnapshot: () => hub.buildHubSnapshot(),
       featureGate: h.featureGate as any,
@@ -494,6 +506,7 @@ export class ConsoleRouteRegistrar {
         getIntegrationConfigSnapshot: () => this.host.getIntegrationConfigSnapshot?.() ?? {},
       }));
     this.registerArchitectureIndexRoutes();
+    this.registerDeliveryRoutes();
     this.registerConsoleExtras();
   }
 
@@ -520,6 +533,22 @@ export class ConsoleRouteRegistrar {
     } as import("../routes/ArchitectureIndexRoute").ArchitectureIndexRouteDeps;
     defineLazyConfirmer(deps, h);
     setupArchitectureIndexRoutes(this.host.app, deps);
+  }
+
+  /** #532 part B LD7: delivery assessment routes. The intent service, ledger, index-path
+   *  setting and confirmer are read at request time (bootstrapServers wires them later). */
+  private registerDeliveryRoutes(): void {
+    const h = this.host;
+    const deps = {
+      rejectIfRemote: (req: Request, res: Response) => h.rejectIfRemote(req, res),
+      workspaceRoot: h.workspaceRoot,
+      getIntentService: () => h.getIntentService?.() ?? null,
+      getLedgerManager: () => h.qorelogicManager.getLedgerManager(),
+      getIndexPathSetting: () => h.getArchitectureIndexPath?.(),
+      broadcast: (d: Record<string, unknown>) => h.broadcast(d),
+    } as DeliveryRouteDeps;
+    defineLazyConfirmer(deps, h);
+    setupDeliveryRoutes(this.host.app, deps);
   }
 
   private registerConsoleExtras(): void {

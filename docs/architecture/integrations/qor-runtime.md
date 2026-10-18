@@ -30,7 +30,7 @@ The client calls `/health`, `/policy/version` and `/evaluate` on its base URL `F
 ## Privileges and scopes
 
 Credential: an optional API key sent as the `x-qor-api-key` header when one is supplied `FailSafe/extension/src/roadmap/services/QorRuntimeService.ts:150-155` (`headers["x-qor-api-key"] = this.options.apiKey;`).
-On main no key is ever supplied: the only `ConsoleServer` is constructed without `qorRuntime` options `FailSafe/extension/src/extension/bootstrapServers.ts:140-146` (`const consoleServer = new ConsoleServer(`).
+On main no key is ever supplied: the only `ConsoleServer` is constructed without `qorRuntime` options `FailSafe/extension/src/extension/bootstrapServers.ts:144-150` (`const consoleServer = new ConsoleServer(`).
 The plain-text key setting is marked unused and is offered only for removal `FailSafe/extension/src/integrations/credentials/credentialRegistry.ts:38` (`ORPHANED_SECRET_SETTINGS`).
 The Console routes refuse non-loopback callers `FailSafe/extension/src/roadmap/routes/QorRoute.ts:45-47` (`if (deps.rejectIfRemote(req, res)) return;`).
 
@@ -38,10 +38,10 @@ The Console routes refuse non-loopback callers `FailSafe/extension/src/roadmap/r
 
 | Capability | State | Symbol | Reached from | Test (depth) | Notes |
 |---|---|---|---|---|---|
-| runtime-status-snapshot | shipped-inert | `fetchSnapshot` `FailSafe/extension/src/roadmap/services/QorRuntimeService.ts:70-78` (`async fetchSnapshot(): Promise<QorRuntimeSnapshot>`) | `FailSafe/extension/src/roadmap/services/HubSnapshotService.ts:179` (`const qorRuntime = await d.qorRuntimeService.fetchSnapshot();`) | `FailSafe/extension/src/test/extension/qor-runtime-service.test.ts` (unit) | Switch: `FailSafe/extension/src/roadmap/services/ConsoleServerSupport.ts:15-18` (`enabled: Boolean(options?.enabled), baseUrl,`); constructed at `FailSafe/extension/src/roadmap/ConsoleServer.ts:147` (`this.qorRuntimeService = new QorRuntimeService(resolveQorRuntimeOptions(options.qorRuntime));`) |
+| runtime-status-snapshot | shipped-inert | `fetchSnapshot` `FailSafe/extension/src/roadmap/services/QorRuntimeService.ts:70-78` (`async fetchSnapshot(): Promise<QorRuntimeSnapshot>`) | `FailSafe/extension/src/roadmap/services/HubSnapshotService.ts:179` (`const qorRuntime = await d.qorRuntimeService.fetchSnapshot();`) | `FailSafe/extension/src/test/extension/qor-runtime-service.test.ts` (unit) | Switch: `FailSafe/extension/src/roadmap/services/ConsoleServerSupport.ts:15-18` (`enabled: Boolean(options?.enabled), baseUrl,`); constructed at `FailSafe/extension/src/roadmap/ConsoleServer.ts:149` (`this.qorRuntimeService = new QorRuntimeService(resolveQorRuntimeOptions(options.qorRuntime));`) |
 | runtime-health-proxy | shipped-inert | `proxy` `FailSafe/extension/src/roadmap/services/QorRuntimeService.ts:130-139` (`Qor runtime integration is disabled`) | `FailSafe/extension/src/roadmap/routes/QorRoute.ts:45-48` (`await deps.qorRuntimeService.proxy(req, res, "/health");`) | `FailSafe/extension/src/test/extension/qor-route.test.ts` (route) | Switch: `FailSafe/extension/src/roadmap/services/QorRuntimeService.ts:136-138` (`if (!this.options.enabled) {`) |
 | runtime-evaluate-proxy | shipped-inert | `proxy` `FailSafe/extension/src/roadmap/services/QorRuntimeService.ts:140-143` (`const response = await this.fetchJson(endpoint, opts);`) | `FailSafe/extension/src/roadmap/routes/QorRoute.ts:50-53` (`"/evaluate", "POST"`) | `FailSafe/extension/src/test/extension/qor-route.test.ts` (route) | Switch: `FailSafe/extension/src/roadmap/services/QorRuntimeService.ts:136-138` (`if (!this.options.enabled) {`) |
-| settings-driven-enable | proposed | none | none | none | Contributed settings exist but no code reads them `FailSafe/extension/package.json:692-695` (`"failsafe.qorelogic.externalRuntime.enabled": {`) |
+| settings-driven-enable | proposed | none | none | none | Contributed settings exist but no code reads them `FailSafe/extension/package.json:697-700` (`"failsafe.qorelogic.externalRuntime.enabled": {`) |
 
 ## Inbound fields
 
@@ -75,7 +75,7 @@ Proposed (not built): none planned (unverified).
 
 Console monitor: a "Qor Runtime" node that reads "integration disabled" and is paused on main `FailSafe/extension/src/roadmap/ConsoleServerHub.ts:213-216` (`id: "qor-runtime", label: "Qor Runtime",`).
 Routes: `GET /api/qor/runtime`, `GET /api/qor/health` and `POST /api/qor/evaluate` `FailSafe/extension/src/roadmap/routes/QorRoute.ts:20-22` (`app.get("/api/qor/runtime"`).
-Settings: "failsafe.qorelogic.externalRuntime.enabled", baseUrl and timeoutMs are listed in Settings but change nothing `FailSafe/extension/package.json:692-700` (`"description": "Enable Qor runtime integration in Console monitor."`).
+Settings: "failsafe.qorelogic.externalRuntime.enabled", baseUrl and timeoutMs are listed in Settings but change nothing `FailSafe/extension/package.json:697-705` (`"description": "Enable Qor runtime integration in Console monitor."`).
 
 ## Governance policy and enforceability limits
 
@@ -102,5 +102,5 @@ Recommendation for the owner: **RETIRE**. The client cannot be turned on: the on
 
 ## Open defects
 
-Observed outside the LD3 list, filed as B277 (see Other findings in the portfolio): the `failsafe.qorelogic.externalRuntime.*` settings are contributed but never read, so enabling them does nothing `FailSafe/extension/package.json:692-718` (`"failsafe.qorelogic.externalRuntime.timeoutMs": {`).
-The only construction passes no runtime options `FailSafe/extension/src/extension/bootstrapServers.ts:140-146` (`const consoleServer = new ConsoleServer(`).
+Observed outside the LD3 list, filed as B277 (see Other findings in the portfolio): the `failsafe.qorelogic.externalRuntime.*` settings are contributed but never read, so enabling them does nothing `FailSafe/extension/package.json:697-723` (`"failsafe.qorelogic.externalRuntime.timeoutMs": {`).
+The only construction passes no runtime options `FailSafe/extension/src/extension/bootstrapServers.ts:144-150` (`const consoleServer = new ConsoleServer(`).

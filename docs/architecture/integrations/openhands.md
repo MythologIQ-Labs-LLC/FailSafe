@@ -53,7 +53,7 @@ No OpenHands API scope is used; a live connection to an OpenHands server would n
 From the export: a bare events array or a `{ version, events }` envelope `FailSafe/extension/src/extension/openhands-import-command.ts:112-116` (`A bare events array or a { version, events } envelope.`).
 Per event, only kind, verb (from `tool_name`), tool, a risk hint and a parsable time are kept `FailSafe/extension/src/integrations/agent-observe/openhands-observer.ts:136-147` (`riskHint: riskHintFor(riskBasis),`).
 Run identity: a conversation or session id when it is a UUID or a long token `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:66-76` (`export function runIdentityOf(envelope: unknown)`).
-From settings: an optional version used only when the export declares none `FailSafe/extension/package.json:561-564` (`used for the supported-version gate when the run export does not declare one`).
+From settings: an optional version used only when the export declares none `FailSafe/extension/package.json:566-569` (`used for the supported-version gate when the run export does not declare one`).
 
 ## Outbound fields and egress
 
@@ -86,7 +86,7 @@ Proposed (not built): run-to-evidence-to-governance edges in the relationship gr
 
 ## Customer UI and actions
 
-Command palette: "FailSafe: Import OpenHands Run (observe)" `FailSafe/extension/package.json:205-206` (`"title": "FailSafe: Import OpenHands Run (observe)"`).
+Command palette: "FailSafe: Import OpenHands Run (observe)" `FailSafe/extension/package.json:206-207` (`"title": "FailSafe: Import OpenHands Run (observe)"`).
 A file picker filtered to JSON `FailSafe/extension/src/extension/openhands-import-command.ts:159` (`'OpenHands run (JSON)': ['json']`).
 A modal naming the event count, the high-risk count, what is kept and where it is saved, with one Import button `FailSafe/extension/src/extension/openhands-import-command.ts:129-133` (`as historical evidence?`).
 Imported entries appear in the VS Code Agent Timeline panel and the Console Timeline `FailSafe/extension/src/integrations/agent-observe/openhands-evidence.ts:2-3` (`for both the VS Code Agent Timeline panel and the Console Timeline`).

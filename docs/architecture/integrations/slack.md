@@ -29,8 +29,8 @@ The message is built as Block Kit header, section and context blocks `FailSafe/e
 
 ## Privileges and scopes
 
-Credential: one Slack incoming-webhook URL held in VS Code Secret Storage; the plain-text setting is deprecated and not read `FailSafe/extension/package.json:398-400` (`Plain-text settings are no longer read`).
-The webhook URL grants posting to its one channel and nothing else `FailSafe/extension/package.json:401` (`it grants posting to the target channel`).
+Credential: one Slack incoming-webhook URL held in VS Code Secret Storage; the plain-text setting is deprecated and not read `FailSafe/extension/package.json:403-405` (`Plain-text settings are no longer read`).
+The webhook URL grants posting to its one channel and nothing else `FailSafe/extension/package.json:406` (`it grants posting to the target channel`).
 A disabled channel never consults the credential store `FailSafe/extension/src/integrations/credentials/credentialGates.ts:186-190` (`if (!enabled) return { enabled: false };`).
 The URL is redacted from any failure diagnostic `FailSafe/extension/src/integrations/notify-event.ts:36-38` (`return text.split(webhookUrl).join('[webhook]');`).
 Interactive approval from Slack would need a full Slack app with signed callbacks and is marked requires separate approval `FailSafe/extension/src/integrations/slack/slack-notify.ts:5-8` (`Approval decisions are NOT actioned in Slack`).
@@ -117,4 +117,4 @@ Recommendation for the owner: **COMPLETE**. Blocking-verdict and L3 notices work
 [B263] L3-decided notices never carry the file path (F09) `FailSafe/extension/src/qorelogic/L3ApprovalService.ts:156` (`{ request, decision }`).
 [B264] Drift notices cannot fire on main and would carry no detail (F10) `FailSafe/extension/src/governance/CheckpointReconciler.ts:112` (`governance.driftDetected`).
 [B262] The release-seal notice kind is never produced (F08) `FailSafe/extension/src/integrations/slack/slack-notify-map.ts:13-18` (`'governance.driftDetected',`).
-The enable setting's description promises critical drift notices `FailSafe/extension/package.json:396` (`VETO, L3 queued/decided, critical drift`).
+The enable setting's description promises critical drift notices `FailSafe/extension/package.json:401` (`VETO, L3 queued/decided, critical drift`).

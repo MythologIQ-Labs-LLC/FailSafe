@@ -30,7 +30,7 @@ The code calls the REST v2 issue resource `FailSafe/extension/src/integrations/j
 
 ## Privileges and scopes
 
-Credential: an Atlassian account email in settings and an API token in VS Code Secret Storage, sent as Basic authentication `FailSafe/extension/src/integrations/jira/jira-client.ts:40-41` (`Buffer.from(`); the token setting is deprecated and plain-text values are not read `FailSafe/extension/package.json:441-443` (`Plain-text settings are no longer read`).
+Credential: an Atlassian account email in settings and an API token in VS Code Secret Storage, sent as Basic authentication `FailSafe/extension/src/integrations/jira/jira-client.ts:40-41` (`Buffer.from(`); the token setting is deprecated and plain-text values are not read `FailSafe/extension/package.json:446-448` (`Plain-text settings are no longer read`).
 Scope: the token carries the Atlassian account's own permissions; FailSafe only issues one GET `FailSafe/extension/src/integrations/jira/jira-client.ts:92` (`method: 'GET'`).
 A user-level token is never sent to a base URL that workspace settings chose `FailSafe/extension/src/integrations/credentials/credentialGates.ts:125` (`ep.scope === 'workspace' && e.scope === 'user'`).
 The base URL must be https or nothing is sent `FailSafe/extension/src/integrations/jira/jira-client.ts:57` (`The Jira base URL must use https; nothing was sent.`).
@@ -40,7 +40,7 @@ Any webhook, sync or write-back capability would need write or admin scopes and 
 
 | Capability | State | Symbol | Reached from | Test (depth) | Notes |
 |---|---|---|---|---|---|
-| issue-preview | verified-shipped | `fetchJiraIssue` `FailSafe/extension/src/integrations/jira/jira-client.ts:48` (`export async function fetchJiraIssue(`) | `FailSafe/extension/src/extension/main.ts:262` (`registerJiraImportCommand(context, credentials.creds, credentials.endpoints)`) | `FailSafe/extension/src/test/integrations/jira/jira.test.ts` (unit) | Command `FailSafe/extension/package.json:160` (`"command": "failsafe.jira.import"`) |
+| issue-preview | verified-shipped | `fetchJiraIssue` `FailSafe/extension/src/integrations/jira/jira-client.ts:48` (`export async function fetchJiraIssue(`) | `FailSafe/extension/src/extension/main.ts:262` (`registerJiraImportCommand(context, credentials.creds, credentials.endpoints)`) | `FailSafe/extension/src/test/integrations/jira/jira.test.ts` (unit) | Command `FailSafe/extension/package.json:161` (`"command": "failsafe.jira.import"`) |
 | intent-draft | verified-shipped | `reviewAndImport` `FailSafe/extension/src/integrations/tracker-import/tracker-intent-import.ts:208` (`export async function reviewAndImport(`) | `FailSafe/extension/src/extension/jira-command.ts:92` (`review: (issue) => reviewTrackerIssue(issue, vscodeReviewUi())`) | `FailSafe/extension/src/test/integrations/tracker-import/tracker-import.extensionHost.test.ts` (installed-vscode) | Drafts need governance to install the intent deps first `FailSafe/extension/src/extension/integrationEvidenceWiring.ts:85` (`setTrackerIntentDeps({`) |
 | backlog-sync | proposed | none | none | none | Not implemented; the module says nothing is synced `FailSafe/extension/src/integrations/tracker-import/tracker-intent-import.ts:24` (`is not offered.`) |
 | two-way-status-sync | proposed | none | none | none | Nothing is written to Jira `FailSafe/extension/src/extension/jira-command.ts:6` (`nothing is ever written to Jira and nothing is synced`) |
@@ -79,11 +79,12 @@ The preview is an unsaved, untitled document `FailSafe/extension/src/extension/t
 
 Implemented: the intent's `externalRef` is `jira:<KEY>`, which links a draft to its issue `FailSafe/extension/src/integrations/tracker-import/tracker-intent-import.ts:78-79` (`export function externalRefFor(issue: TrackerIssue)`).
 Implemented: a re-import of a key whose earlier intent is sealed records `reimportOf` `FailSafe/extension/src/integrations/tracker-import/tracker-intent-import.ts:290` (`reimportOf: last.intentId`).
-Proposed (not built): issue-to-architecture, issue-to-code and issue-to-receipt edges, specified in `docs/architecture/INTEGRATION_SCENARIOS.md` (unverified: no code exists).
+Delivery (main only, not in v6.0.8): in Workspace > Delivery the issue step of an imported Jira intent is `recorded` from the content hash in its CREATED entry, never re-fetched `FailSafe/extension/src/governance/delivery/deliveryAssessment.ts:75` (`function issueStep(issue: DeliveryInputs['issue']): DeliveryStep {`), and the operator links the architecture documents and commits it delivered, each after a VS Code confirmation `FailSafe/extension/src/roadmap/routes/DeliveryRoute.ts:110` (`for (const action of ["link", "unlink"] as const) {`).
+Proposed (not built): the issue-to-receipt edge, specified in `docs/architecture/INTEGRATION_SCENARIOS.md` (unverified: no code exists).
 
 ## Customer UI and actions
 
-Command palette: "FailSafe: Import Jira Issue as Intent Draft" `FailSafe/extension/package.json:160-161` (`"title": "FailSafe: Import Jira Issue as Intent Draft"`).
+Command palette: "FailSafe: Import Jira Issue as Intent Draft" `FailSafe/extension/package.json:161-162` (`"title": "FailSafe: Import Jira Issue as Intent Draft"`).
 Input: an issue URL or key in an input box `FailSafe/extension/src/extension/jira-command.ts:81-84` (`Paste a Jira issue URL or key`).
 Approval: a modal "Create intent draft" button, then an editable purpose, then a plan picker in enforce mode `FailSafe/extension/src/extension/trackerReviewUi.ts:32-33` (`{ modal: true, detail }, APPROVE`).
 Status: a Console Integrations catalog card, read from `/api/v1/integrations/catalog` `FailSafe/extension/src/roadmap/ui/modules/integration-catalog-renderer.js:196` (`fetch('/api/v1/integrations/catalog')`).

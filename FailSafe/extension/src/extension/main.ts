@@ -380,6 +380,8 @@ export async function activate(
         commitGuard: gov.commitGuard,
         commitGuardPortSource: gov.commitGuardPortSource,
         credentials,
+        // #532 part B: delivery routes, commit-check active-intent read, assessment command.
+        intentService: gov.intentService,
       },
       logger,
     );

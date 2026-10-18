@@ -39,11 +39,11 @@ Files are written only under the extension's global storage directory `FailSafe/
 
 | Capability | State | Symbol | Reached from | Test (depth) | Notes |
 |---|---|---|---|---|---|
-| pack-install | verified-shipped | `installVoicePack` `FailSafe/extension/src/voice-pack/install-handler.ts:39` (`export async function installVoicePack(opts: InstallVoicePackOptions)`) | `FailSafe/extension/src/extension/bootstrapServers.ts:338` (`registerCommand("failsafe.installVoicePack"`) | `FailSafe/extension/src/test/extension/voice-pack-install.test.ts` (unit) | The test stubs fetch; no live download `FailSafe/extension/src/test/extension/voice-pack-install.test.ts:6` (`installFetchStub`) |
-| pack-uninstall | verified-shipped | `uninstallVoicePack` `FailSafe/extension/src/voice-pack/install-handler.ts:81` (`export function uninstallVoicePack(globalStoragePath: string): void {`) | `FailSafe/extension/src/extension/bootstrapServers.ts:362` (`registerCommand("failsafe.uninstallVoicePack"`) | `FailSafe/extension/src/test/extension/voice-pack-install-guards.test.ts` (unit) | - |
+| pack-install | verified-shipped | `installVoicePack` `FailSafe/extension/src/voice-pack/install-handler.ts:39` (`export async function installVoicePack(opts: InstallVoicePackOptions)`) | `FailSafe/extension/src/extension/bootstrapServers.ts:353` (`registerCommand("failsafe.installVoicePack"`) | `FailSafe/extension/src/test/extension/voice-pack-install.test.ts` (unit) | The test stubs fetch; no live download `FailSafe/extension/src/test/extension/voice-pack-install.test.ts:6` (`installFetchStub`) |
+| pack-uninstall | verified-shipped | `uninstallVoicePack` `FailSafe/extension/src/voice-pack/install-handler.ts:81` (`export function uninstallVoicePack(globalStoragePath: string): void {`) | `FailSafe/extension/src/extension/bootstrapServers.ts:377` (`registerCommand("failsafe.uninstallVoicePack"`) | `FailSafe/extension/src/test/extension/voice-pack-install-guards.test.ts` (unit) | - |
 | install-state-probe | verified-shipped | `probeVoicePackState` `FailSafe/extension/src/voice-pack/voice-pack-detector.ts:30` (`export async function probeVoicePackState(`) | `FailSafe/extension/src/extension/bootstrapVoicePack.ts:48` (`await probeVoicePackState(globalStoragePath, requiredMinVersion)`) | `FailSafe/extension/src/test/voice-pack/voice-pack-detector.test.ts` (unit) | - |
-| activation-wiring | verified-shipped | `wireVoicePack` `FailSafe/extension/src/extension/bootstrapVoicePack.ts:20` (`export async function wireVoicePack(`) | `FailSafe/extension/src/extension/bootstrapServers.ts:236` (`await wireVoicePack(context, consoleServer, extensionVersion);`) | `FailSafe/extension/src/test/extension/voice-pack-activation.test.ts` (unit) | Never downloads at activation `FailSafe/extension/src/extension/bootstrapVoicePack.ts:9` (`never downloads at activation`) |
-| console-install-routes | shipped-unverified | `setupVoicePackRoutes` `FailSafe/extension/src/roadmap/routes/VoicePackRoute.ts:25` (`export function setupVoicePackRoutes(`) | `FailSafe/extension/src/extension/bootstrapServers.ts:324` (`setupVoicePackRoutes(consoleServer.getExpressApp(), {`) | none | No CI test file contains the route function; the Playwright spec reaches it through a harness and stubs the install POST `FailSafe/extension/src/test/ui/voice-pack.spec.ts:3-4` (`Stubs the actual install/uninstall POSTs via page.route()`) |
+| activation-wiring | verified-shipped | `wireVoicePack` `FailSafe/extension/src/extension/bootstrapVoicePack.ts:20` (`export async function wireVoicePack(`) | `FailSafe/extension/src/extension/bootstrapServers.ts:240` (`await wireVoicePack(context, consoleServer, extensionVersion);`) | `FailSafe/extension/src/test/extension/voice-pack-activation.test.ts` (unit) | Never downloads at activation `FailSafe/extension/src/extension/bootstrapVoicePack.ts:9` (`never downloads at activation`) |
+| console-install-routes | shipped-unverified | `setupVoicePackRoutes` `FailSafe/extension/src/roadmap/routes/VoicePackRoute.ts:25` (`export function setupVoicePackRoutes(`) | `FailSafe/extension/src/extension/bootstrapServers.ts:339` (`setupVoicePackRoutes(consoleServer.getExpressApp(), {`) | none | No CI test file contains the route function; the Playwright spec reaches it through a harness and stubs the install POST `FailSafe/extension/src/test/ui/voice-pack.spec.ts:3-4` (`Stubs the actual install/uninstall POSTs via page.route()`) |
 
 ## Inbound fields
 
@@ -77,7 +77,7 @@ Proposed: none; the pack holds no governance data (unverified: no proposal exist
 
 ## Customer UI and actions
 
-Command palette: "FailSafe: Install Voice Pack" and "FailSafe: Uninstall Voice Pack" `FailSafe/extension/package.json:222-227` (`"title": "FailSafe: Install Voice Pack"`).
+Command palette: "FailSafe: Install Voice Pack" and "FailSafe: Uninstall Voice Pack" `FailSafe/extension/package.json:227-232` (`"title": "FailSafe: Install Voice Pack"`).
 Console Settings card with Install, Update and Uninstall buttons that POST `/api/actions/install-voice-pack` or `uninstall-voice-pack` `FailSafe/extension/src/roadmap/ui/modules/voice-pack-settings-card.js:191` (`/api/actions/${action}`).
 Status from `/api/integrations/voice-pack/status` (state, version, missing files, disk use) `FailSafe/extension/src/roadmap/routes/VoicePackRoute.ts:39-47` (`diskUsageBytes,`).
 Progress events are broadcast over the Console WebSocket `FailSafe/extension/src/roadmap/routes/VoicePackRoute.ts:62-66` (`"voicePack.install.progress"`).
@@ -86,7 +86,7 @@ Progress events are broadcast over the Console WebSocket `FailSafe/extension/src
 
 Enforced: a final host outside the allowlist is rejected before any body is written `FailSafe/extension/src/voice-pack/install-handler.ts:100` (`assertGitHubHost(res.url);`).
 Enforced: a checksum or manifest-hash mismatch aborts and leaves the old pack in place `FailSafe/extension/src/voice-pack/install-handler.ts:72-76` (`throw err;`).
-Enforced: the Console routes refuse non-loopback callers `FailSafe/extension/src/extension/bootstrapServers.ts:325-329` (`Forbidden: local access only`).
+Enforced: the Console routes refuse non-loopback callers `FailSafe/extension/src/extension/bootstrapServers.ts:340-344` (`Forbidden: local access only`).
 Limit: the checksum comes from the same release as the tarball, so it detects corruption, not a replaced release (unverified: no signature check exists in `install-handler.ts`).
 Limit: the Console install route starts the download with no VS Code confirmation `FailSafe/extension/src/roadmap/routes/VoicePackRoute.ts:56-59` (`const report = await installVoicePack({`).
 
@@ -95,7 +95,7 @@ Limit: the Console install route starts the download with no VS Code confirmatio
 Offline or HTTP error: install fails with "download failed: HTTP <status>" and nothing changes `FailSafe/extension/src/voice-pack/install-handler.ts:97-99` (`download failed: HTTP`).
 A pack older than the extension is reported stale and is not mounted `FailSafe/extension/src/extension/bootstrapVoicePack.ts:49-58` (`Only set the path when fully installed.`).
 A missing or hash-mismatched file reports corrupt with the missing files `FailSafe/extension/src/voice-pack/voice-pack-detector.ts:25-27` (`{ state: 'corrupt', missingFiles }`).
-No global storage: the command reports an error `FailSafe/extension/src/extension/bootstrapServers.ts:340` (`Voice Pack: globalStorage unavailable.`).
+No global storage: the command reports an error `FailSafe/extension/src/extension/bootstrapServers.ts:355` (`Voice Pack: globalStorage unavailable.`).
 No CI workflow was found that publishes the `-voice` release asset, so availability for a given version is unverified.
 
 ## End-to-end scenario and measurable acceptance

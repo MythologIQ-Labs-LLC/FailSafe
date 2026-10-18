@@ -31,7 +31,7 @@ async function gotoWorkspace(page: import("@playwright/test").Page, url: string)
   await expect(page.locator('#workspace')).toBeVisible({ timeout: 10000 });
 }
 
-test("FX521 Workspace tab — 5 sub-pills render (Skills / Mindmap / Tracker / Taxonomy / Architecture)", async ({ page }) => {
+test("FX521 Workspace tab — 6 sub-pills render (Skills / Mindmap / Tracker / Taxonomy / Architecture / Delivery)", async ({ page }) => {
   controller = await serveConsoleServerUI({
     initialHub: { version: 'test', bootstrapState: {} } as any,
   });
@@ -42,7 +42,8 @@ test("FX521 Workspace tab — 5 sub-pills render (Skills / Mindmap / Tracker / T
   await expect(page.locator('#workspace .cc-pill[data-key="tracker"]')).toBeVisible();
   await expect(page.locator('#workspace .cc-pill[data-key="taxonomy"]')).toBeVisible(); // FX891
   await expect(page.locator('#workspace .cc-pill[data-key="architecture"]')).toBeVisible(); // #531
-  await expect(page.locator('#workspace .cc-pill')).toHaveCount(5);
+  await expect(page.locator('#workspace .cc-pill[data-key="delivery"]')).toBeVisible(); // #532
+  await expect(page.locator('#workspace .cc-pill')).toHaveCount(6);
 });
 
 test("FX521 Workspace tab — Skills active by default", async ({ page }) => {

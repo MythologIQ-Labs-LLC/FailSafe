@@ -85,7 +85,7 @@ Proposed (not built): run-to-intent and run-to-receipt edges in the relationship
 
 ## Customer UI and actions
 
-Command palette: "FailSafe: Run Aider (governed)" `FailSafe/extension/package.json:195-196` (`"title": "FailSafe: Run Aider (governed)"`).
+Command palette: "FailSafe: Run Aider (governed)" `FailSafe/extension/package.json:196-197` (`"title": "FailSafe: Run Aider (governed)"`).
 Progress: a notification while the run is in progress `FailSafe/extension/src/extension/agent-cli-command.ts:172` (`Running Aider in an isolated worktree`).
 Decision: a modal with Discard, Review diff and Apply, stating the isolation boundary `FailSafe/extension/src/extension/agent-cli-command.ts:74-75` (`detail: BOUNDARY_NOTE`).
 Review: a read-only diff document served from memory `FailSafe/extension/src/extension/agent-cli-command.ts:66-69` (`setTextDocumentLanguage(doc, 'diff')`).

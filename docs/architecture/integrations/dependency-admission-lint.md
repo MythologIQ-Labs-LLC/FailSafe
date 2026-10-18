@@ -39,7 +39,7 @@ No setting enables or disables the registry query (unverified: no configuration 
 
 | Capability | State | Symbol | Reached from | Test (depth) | Notes |
 |---|---|---|---|---|---|
-| cooling-window-lint | verified-shipped | `DependencyAdmissionLintModule` `FailSafe/extension/src/qorlogic/substrate/DependencyAdmissionLintModule.ts:115` (`export class DependencyAdmissionLintModule {`) | `FailSafe/extension/src/extension/substrate-command.ts:65` (`new DependencyAdmissionLintModule(ws),`) | `FailSafe/extension/src/test/qorlogic/substrate/DependencyAdmissionLintModule.test.ts` (unit) | Command `FailSafe/extension/package.json:140-141` (`"title": "FailSafe: Run Governance Substrate Checks"`); injected I/O, no live registry |
+| cooling-window-lint | verified-shipped | `DependencyAdmissionLintModule` `FailSafe/extension/src/qorlogic/substrate/DependencyAdmissionLintModule.ts:115` (`export class DependencyAdmissionLintModule {`) | `FailSafe/extension/src/extension/substrate-command.ts:65` (`new DependencyAdmissionLintModule(ws),`) | `FailSafe/extension/src/test/qorlogic/substrate/DependencyAdmissionLintModule.test.ts` (unit) | Command `FailSafe/extension/package.json:141-142` (`"title": "FailSafe: Run Governance Substrate Checks"`); injected I/O, no live registry |
 | ledger-override | verified-shipped | `evaluateBumps` `FailSafe/extension/src/qorlogic/substrate/dependency-admission-core.ts:138` (`export function evaluateBumps(`) | `FailSafe/extension/src/qorlogic/substrate/DependencyAdmissionLintModule.ts:193` (`const result = evaluateBumps(`) | `FailSafe/extension/src/test/qorlogic/substrate/dependency-admission-core.test.ts` (unit) | Override line format `FailSafe/extension/src/qorlogic/substrate/dependency-admission-core.ts:17-18` (`**Dependency admission override**: <pkg>@<version>`) |
 | seal-auto-run | verified-shipped | `registerSubstrateCommand` `FailSafe/extension/src/extension/substrate-command.ts:83` (`export function registerSubstrateCommand(`) | `FailSafe/extension/src/extension/main.ts:228-233` (`core.mutationBus, // B-SUBSTRATE-3: enables the seal auto-hook`) | `FailSafe/extension/src/test/extension/substrate-command.test.cjs` (unit) | Runs on each new SESSION SEAL in the ledger `FailSafe/extension/src/extension/substrate-command.ts:141-143` (`new SESSION SEAL detected`) |
 | lockfile-transitive-coverage | proposed | none | none | none | Deferred in the core's boundary note `FailSafe/extension/src/qorlogic/substrate/dependency-admission-core.ts:20-24` (`Lockfile-resolved transitive coverage is deferred`) |
@@ -79,7 +79,7 @@ Proposed (not built): dependency-change-to-seal edges, specified in `docs/archit
 
 ## Customer UI and actions
 
-Command palette: "FailSafe: Run Governance Substrate Checks" `FailSafe/extension/package.json:140-141` (`"command": "failsafe.substrate.run"`).
+Command palette: "FailSafe: Run Governance Substrate Checks" `FailSafe/extension/package.json:141-142` (`"command": "failsafe.substrate.run"`).
 A manual run ends with an information message giving the finding count `FailSafe/extension/src/extension/substrate-command.ts:102-105` (`finding(s). See "FailSafe Substrate" output channel.`).
 The seal-time run shows no popup `FailSafe/extension/src/extension/substrate-command.ts:20-23` (`runs the substrate (WARN-only, no popup)`).
 

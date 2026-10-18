@@ -15,6 +15,9 @@ export interface ApiRouteDeps {
   broadcast: (data: Record<string, unknown>) => void;
   /** #83A: commit-hook token validator (CommitGuard.validateToken). */
   validateCommitToken?: (token: string) => boolean;
+  /** #532 part B (B283): the active intent for the commit-check route, read from the host's
+   *  IntentService at request time; throws when no service is wired. Absent -> the route blocks. */
+  getActiveIntent?: () => Promise<unknown>;
   // Phase 2 (B166) deps for QorRoute / FeatureStatusRoute / SkillsApiRoute / HookRoute
   qorRuntimeService: QorRuntimeService;
   buildHubSnapshot: () => Promise<Record<string, unknown>>;

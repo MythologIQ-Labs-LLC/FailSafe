@@ -106,6 +106,8 @@ export interface ConsoleServerFixtures {
   ledgerManager?: unknown;
   /** #531: the fake qorelogicManager's L3 queue (default: a stub that records nothing). */
   queueL3Approval?: (request: Record<string, unknown>) => Promise<string>;
+  /** #532 part B: the IntentService behind the delivery routes (default: none, so they answer 503). */
+  intentService?: unknown;
 }
 
 export interface ConsoleServerController {
@@ -309,6 +311,7 @@ export async function serveConsoleServerUI(
   const releaseNode = fixtures.bicameralCommand === undefined ? acquirePosixNode() : () => undefined;
   server.setBicameralCommand(fixtures.bicameralCommand ?? "node");
   server.setOperatorConfirmer(fixtures.operatorConfirmer ?? (async () => "approved"));
+  if (fixtures.intentService) server.setIntentService(fixtures.intentService as never);
   if (fixtures.integrationConfig) {
     const snapshot = fixtures.integrationConfig;
     server.setIntegrationConfigSnapshotProvider(() => snapshot);
