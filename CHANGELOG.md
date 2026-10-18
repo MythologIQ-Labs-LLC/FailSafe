@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.9] - 2026-10-18
+
 ### Added
 
 - For contributors: the README now links an Architecture Index that names the one canonical document for each design area, and a repository check fails when a new architecture document is added without registering it, pointing to the existing documents to amend instead (#530).
@@ -21,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Compatibility: `failsafe.sentinel.ollamaEndpoint` is now read from user settings only, and a value in workspace settings is ignored. To use a different endpoint for one workspace, set it in `.failsafe/config/sentinel.yaml`, which may name only an endpoint on this machine (#538).
 - With a GitHub Enterprise API base URL, the PR-linkage check now reads from that host instead of api.github.com, the GitHub token is sent only to the configured host and port, and a redirect is treated as a failure. The governed commit's pull request uses the same host as its token. If the API base URL is set in workspace settings while your token is a user-level one, the pull request step is skipped with an explanation, as the other GitHub commands already do (#538).
 - Compatibility: an `http://` GitHub API base URL for a host that is not this machine is now refused. It used to work because FailSafe sent it over TLS on port 443 anyway; change `failsafe.integrations.github.apiBaseUrl` to `https://`, as the error message says (#538).
+- Installing from the Console now asks you to confirm in VS Code first, and shows exactly what will run: an MCP Catalog server written to `.mcp.json`, Bicameral MCP (its pip package and setup command), the Qor-logic skills (the hosts, scope and skills you chose), the agent-failsafe adapter and its removal (the pip3 commands), and an Agent Governance command pre-filled in a terminal. Only what the dialog showed is run. A request you do not confirm within 2 minutes, or one whose page has gone, runs nothing; every request asks again. Each confirmed install is recorded in the FailSafe ledger when it is available, and the Console tells you while it waits and why nothing ran (#538).
+- The Console refuses these requests, the voice-pack install, the Bicameral connect and auto-connect actions, and the Workspace › Taxonomy save (which a web page could otherwise have emptied), when they come from another web page or are not addressed to this machine. A Console opened through a browser-based remote (Codespaces, vscode.dev, code-server behind https) or through the workspace switcher on another port is refused too; use the FailSafe commands in VS Code there (#538).
+- For scripts and other local clients of these Console routes: the six install routes (MCP Catalog install, Bicameral install, Qor-logic skills install, adapter install and uninstall, Agent Governance terminal pre-fill) answer 415 unless the request has `Content-Type: application/json`, the adapter uninstall included; the skills install answers 400 for an unknown host, scope or skill name; and every install now waits for the VS Code dialog for up to 2 minutes before it answers (#538).
+- L3 approvals and rejections now record in the FailSafe ledger how they were confirmed: a VS Code dialog for Console decisions, a click in the L3 approval panel, or unverified. The record says that a dialog proves a person clicked in VS Code, not which local program asked (#538).
 
 ### Fixed
 
@@ -31,12 +37,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Compliance exports now state the FailSafe ledger's integrity as intact, partial seal (naming each weaker property), failed (with the failing rows and reasons) or unavailable (with the reason), instead of a single true/false value that read true for a partially sealed ledger. A ledger that cannot be read still exports, with no entries and the read error (#473).
 - For when Agent Marketplace installs return (they remain switched off): an item is reported installed only after its install is recorded in the FailSafe ledger, and an install that cannot be recorded is shown as failed. The record names the scan result, the scanner and its version, and the source repository, ref and commit. A scanner that runs past its time limit is stopped along with everything it started and reported as timed out; one that fails to run is reported as a scanner error; neither counts as a pass, so the item is quarantined. Uninstalls are recorded the same way (#469).
 
-### Security
+### Known limitations
 
-- Installing from the Console now asks you to confirm in VS Code first, and shows exactly what will run: an MCP Catalog server written to `.mcp.json`, Bicameral MCP (its pip package and setup command), the Qor-logic skills (the hosts, scope and skills you chose), the agent-failsafe adapter and its removal (the pip3 commands), and an Agent Governance command pre-filled in a terminal. Only what the dialog showed is run. A request you do not confirm within 2 minutes, or one whose page has gone, runs nothing; every request asks again. Each confirmed install is recorded in the FailSafe ledger when it is available, and the Console tells you while it waits and why nothing ran (#538).
-- The Console refuses these requests, the voice-pack install, the Bicameral connect and auto-connect actions, and the Workspace › Taxonomy save (which a web page could otherwise have emptied), when they come from another web page or are not addressed to this machine. A Console opened through a browser-based remote (Codespaces, vscode.dev, code-server behind https) or through the workspace switcher on another port is refused too; use the FailSafe commands in VS Code there (#538).
-- For scripts and other local clients of these Console routes: the six install routes (MCP Catalog install, Bicameral install, Qor-logic skills install, adapter install and uninstall, Agent Governance terminal pre-fill) answer 415 unless the request has `Content-Type: application/json`, the adapter uninstall included; the skills install answers 400 for an unknown host, scope or skill name; and every install now waits for the VS Code dialog for up to 2 minutes before it answers (#538).
-- L3 approvals and rejections now record in the FailSafe ledger how they were confirmed: a VS Code dialog for Console decisions, a click in the L3 approval panel, or unverified. The record says that a dialog proves a person clicked in VS Code, not which local program asked (#538).
+- The Voice Pack is not published yet, so **Install Voice Pack** still answers "not found"; the checksum it verifies comes from the same release, so it detects a damaged download, not a replaced release.
+- With VS Code's proxy support (on by default) a proxied Sentinel request may bypass the connect-time address check; the endpoint rules and approvals still apply. Dev Container and remote-machine settings count as user settings, so the approval dialog is what stands between such a setting and a remote model server, and a GitHub API base URL set there is paired with your user token. An approved model server on a private or local-network address is refused.
+- A Console install confirmation proves that a person clicked in VS Code, not which local program asked; any local program can still raise the dialog, and an expired dialog stays open until dismissed. Only the approval is recorded in the ledger, not whether the install succeeded.
+- Agent Marketplace install, update and scan remain switched off.
+- Workspace › Delivery cannot issue a receipt until the FailSafe governance ledger is repaired, and its commit evidence is usually empty.
+- No command publishes a verified SHIELD check yet. Teams notices do not escape markdown in a file name.
 
 ## [6.0.8] - 2026-10-16
 
