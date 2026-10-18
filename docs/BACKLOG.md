@@ -667,6 +667,7 @@ The first vertical slice of scenario 1 (FX1004, `plan-532b-delivery-assessment.m
 ## #538 lane A outbound data and credential protection (filed 2026-10-18)
 
 - [ ] [B290] A Dev Container or remote-machine `failsafe.integrations.github.apiBaseUrl` reads as user scope (`vscodeCredentialAdapters.ts:59`, `globalValue`), so a repository that ships a dev container can choose the GitHub API base that the operator's user-level token is paired with and sent to. Treat a dev-container or remote-machine endpoint like a workspace one, or confirm it before the first send (contract `github-checks`). | medium
+- [ ] [B291] Allowing approved LAN or private model-server destinations is an owner decision. Since #538 an approved user-setting Sentinel endpoint whose name resolves to a private, VPN, CGNAT, link-local or loopback address is refused (`addressPolicy.ts`, `FORBIDDEN_REMOTE`), which breaks a LAN Ollama such as `gpu-box.lan` that worked in v6.0.8; the operator sees one warning per origin per session. Decide whether to offer a separate, explicit private-network approval (contract `sentinel-llm`). | medium
 
 ## Wishlist (Nice to Have)
 
