@@ -82,7 +82,7 @@ Proposed (not built): ledger-entry-to-receipt and plan-to-intent edges, specifie
 ## Customer UI and actions
 
 Command palette: "FailSafe: Bootstrap Workspace (install qor-logic + scaffold)" `FailSafe/extension/package.json:211-212` (`"title": "FailSafe: Bootstrap Workspace (install qor-logic + scaffold)"`).
-Console: the Install Skills modal posts to the scaffold route, which probes Python, ensures the package and installs skills per host `FailSafe/extension/src/roadmap/ui/modules/install-skills-modal.js:227-228` (`const res = await fetch('/api/actions/scaffold-skills', {`).
+Console: the Install Skills modal posts to the scaffold route, which probes Python, ensures the package and installs skills per host after you confirm in the VS Code dialog `FailSafe/extension/src/roadmap/ui/modules/install-skills-modal.js:230` (`settleGated(fetch('/api/actions/scaffold-skills', jsonPost(body)))`).
 The hub payload carries the consumer diagnostics; no Console renderer reads `qorConsumer` (unverified: searched `roadmap/ui` for `qorConsumer` at c36b9ee2).
 
 ## Governance policy and enforceability limits
