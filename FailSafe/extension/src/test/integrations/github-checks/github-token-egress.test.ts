@@ -5,15 +5,26 @@
 // a 3xx was parsed as data, and an http or query-carrying base was accepted.
 
 import { strict as assert } from 'assert';
+import * as fs from 'fs';
 import * as http from 'http';
+import * as path from 'path';
 import type { AddressInfo } from 'net';
 import {
-  createPullRequest, defaultGitHubGet, defaultGitHubPost, publishCheckRunPayload,
+  createPullRequest, defaultGitHubGet, defaultGitHubPost, githubRequestOptions, publishCheckRunPayload,
   type GitHubGetFn, type GitHubPostFn, type GitContext,
 } from '../../../integrations/github-checks/github-checks-client';
+import { apiBaseFor, githubAuthHeaders } from '../../../integrations/github-checks/github-host-affinity';
 import { runLinkageAudit } from '../../../integrations/github-checks/pr-linkage-audit';
 import { publishLinkageCheck } from '../../../integrations/github-checks/pr-linkage-publish';
 import { buildManualAdvisoryPayload } from '../../../integrations/github-checks/github-checks-map';
+import { IntegrationCredentials } from '../../../integrations/credentials/IntegrationCredentials';
+import {
+  endpointRefusalMessage, governedCommitConnection, type EndpointReader, type EndpointScope,
+} from '../../../integrations/credentials/credentialGates';
+import { governedCommitPrStep, runGovernedCommitFlow } from '../../../extension/governedCommitFlow';
+import type { GitRunner } from '../../../extension/governedCommit';
+import { FakeInspector, FakeSecretStore, RecordingLogger } from '../credentials/fakes';
+import { productionSources, SRC_ROOT } from './source-scan';
 
 const TOKEN = 'ghs_LANE_A_TOKEN';
 const GHE = 'https://ghe.example/api/v3';
@@ -151,5 +162,114 @@ suite('#538 GitHub token host affinity (B265, B279)', () => {
       assert.equal(pr.ok, false, base);
     }
     assert.equal(r.sent.length, 0);
+  });
+});
+
+class FakeEndpoints implements EndpointReader {
+  readonly values = new Map<string, { value?: string; scope: EndpointScope }>();
+  endpoint(settingKey: string) { return this.values.get(settingKey) ?? { scope: 'default' as EndpointScope }; }
+}
+
+class RecordingUi {
+  readonly warnings: string[] = [];
+  warn(message: string): PromiseLike<string | undefined> { this.warnings.push(message); return Promise.resolve(undefined); }
+}
+
+async function credentials(token?: string, endpoint?: { value: string; scope: EndpointScope }) {
+  const creds = new IntegrationCredentials(new FakeSecretStore(), new FakeInspector(), new RecordingLogger());
+  await creds.init();
+  if (token) await creds.set('github.token', 'user', token);
+  const endpoints = new FakeEndpoints();
+  if (endpoint) endpoints.values.set('failsafe.integrations.github.apiBaseUrl', endpoint);
+  return { creds, endpoints, ui: new RecordingUi() };
+}
+
+const fakeGit: GitRunner = async (a) => {
+  if (a[0] === 'rev-parse' && a.includes('--is-inside-work-tree')) return { code: 0, stdout: 'true', stderr: '' };
+  if (a[0] === 'rev-parse') return { code: 0, stdout: 'abc1234', stderr: '' };
+  if (a[0] === 'status') return { code: 0, stdout: ' M .gitignore\n', stderr: '' };
+  if (a[0] === 'remote') return { code: 0, stdout: 'https://ghe.example/o/r.git', stderr: '' };
+  return { code: 0, stdout: '', stderr: '' };
+};
+
+suite('#538 GitHub token host affinity: new seams (B265, B279)', () => {
+  test('G3b request options keep the port, strip IPv6 brackets, guard loopback http and refuse network http', () => {
+    const https443 = githubRequestOptions('https://ghe.example:8443/api/v3/x', 'GET', {});
+    assert.ok(https443);
+    assert.equal(https443.protocol, 'https:');
+    assert.equal(https443.options.port, 8443);
+    assert.equal(https443.options.hostname, 'ghe.example');
+    assert.equal(https443.options.path, '/api/v3/x');
+    const v6 = githubRequestOptions('http://[::1]:9443/x', 'POST', {});
+    assert.ok(v6);
+    assert.equal(v6.protocol, 'http:');
+    assert.equal(v6.options.hostname, '::1');
+    assert.equal(typeof v6.options.lookup, 'function', 'loopback http resolves through the loopback guard');
+    assert.equal(githubRequestOptions('http://ghe.example/x', 'GET', {}), undefined);
+    assert.equal(githubRequestOptions('ftp://ghe.example/x', 'GET', {}), undefined);
+  });
+
+  test('G6 the Authorization header is attached only for the base origin (host, scheme and port)', () => {
+    const api = apiBaseFor('https://ghe.example/api/v3');
+    assert.ok(api.ok);
+    const extra = { Accept: 'application/vnd.github+json' };
+    assert.deepEqual(githubAuthHeaders(api.base, 'https://ghe.example/api/v3/repos/o/r/pulls', TOKEN, extra), { ...extra, Authorization: `token ${TOKEN}` });
+    assert.deepEqual(githubAuthHeaders(api.base, 'https://GHE.example:443/x', TOKEN, extra)?.Authorization, `token ${TOKEN}`);
+    for (const other of ['https://api.github.com/repos/o/r', 'http://ghe.example/api/v3/x', 'https://ghe.example:8443/api/v3/x', 'https://ghe.example.evil/x', 'not a url']) {
+      assert.equal(githubAuthHeaders(api.base, other, TOKEN, extra), undefined, other);
+    }
+    const dflt = apiBaseFor(undefined);
+    assert.ok(dflt.ok);
+    assert.equal(dflt.base.origin, 'https://api.github.com');
+  });
+
+  test('G7 governedCommitConnection keeps the workspace-endpoint refusal and stays silent without a token', async () => {
+    const refused = await credentials(TOKEN, { value: 'https://ghe.evil/api/v3', scope: 'workspace' });
+    assert.equal(governedCommitConnection(refused.creds, refused.endpoints, refused.ui), undefined);
+    assert.deepEqual(refused.ui.warnings, [endpointRefusalMessage('GitHub')]);
+
+    const none = await credentials();
+    assert.equal(governedCommitConnection(none.creds, none.endpoints, none.ui), undefined);
+    assert.deepEqual(none.ui.warnings, [], 'no token: no warning');
+
+    const paired = await credentials(TOKEN, { value: GHE, scope: 'user' });
+    assert.deepEqual(governedCommitConnection(paired.creds, paired.endpoints, paired.ui), { credential: TOKEN, endpoint: GHE });
+  });
+
+  test('G8 only github-host-affinity.ts builds a GitHub token Authorization header (tests excluded)', () => {
+    const files = productionSources();
+    assert.ok(files.length > 100, 'scan saw the production tree');
+    const builders = files
+      .filter((f) => /Authorization['"]?\s*:\s*`token \$\{/.test(fs.readFileSync(f, 'utf8')))
+      .map((f) => path.relative(SRC_ROOT, f).split(path.sep).join('/'));
+    assert.deepEqual(builders, ['integrations/github-checks/github-host-affinity.ts']);
+  });
+
+  test('G9 the production option helper sends the governed-commit PR to the endpoint paired with the token', async () => {
+    const run = async (endpoint?: { value: string; scope: EndpointScope }) => {
+      const x = await credentials(TOKEN, endpoint);
+      const r = recorder();
+      const result = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], {
+        workspaceRoot: '/ws', git: fakeGit, confirm: async () => true, recordDeclined: async () => {}, now: () => '2026-10-18T00:00:00Z',
+        ...governedCommitPrStep(governedCommitConnection(x.creds, x.endpoints, x.ui), r.post),
+      });
+      return { step: (result as { step: string }).step, sent: r.sent };
+    };
+    const ghe = await run({ value: GHE, scope: 'user' });
+    assert.equal(ghe.step, 'pr');
+    assert.deepEqual(ghe.sent.map((s) => [s.method, s.url, s.auth]), [['POST', `${GHE}/repos/o/r/pulls`, `token ${TOKEN}`]]);
+    const dflt = await run();
+    assert.deepEqual(dflt.sent.map((s) => s.url), ['https://api.github.com/repos/o/r/pulls']);
+  });
+
+  test('S9 a refused base is an error result, and the governed commit reports it as a pushed branch with that warning', async () => {
+    const r = recorder();
+    const result = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], {
+      workspaceRoot: '/ws', git: fakeGit, confirm: async () => true, recordDeclined: async () => {}, now: () => '2026-10-18T00:00:00Z',
+      post: r.post, token: TOKEN, apiBaseUrl: 'http://ghe.example/api/v3',
+    }) as { step: string; warning?: string };
+    assert.equal(r.sent.length, 0);
+    assert.equal(result.step, 'pushed');
+    assert.match(result.warning ?? '', /https:\/\//);
   });
 });

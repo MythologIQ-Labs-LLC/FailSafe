@@ -13,7 +13,7 @@ import * as path from 'path';
 import { ConfigManager } from '../../shared/ConfigManager';
 import type * as vscode from 'vscode';
 import {
-  allowAll, newClient, probe, reachableHostNameEndpoint, startCountingServer, type CountingServer,
+  allowAll, newClient, probe, reachableHostNameEndpoint, recordingHttp, startCountingServer, type CountingServer,
 } from './utils/llmEgressHarness';
 import { fileEvent, makeArbiter } from './arbiterHarness';
 
@@ -73,5 +73,29 @@ suite('#538 ConfigManager labels a sentinel.yaml endpoint (B273 C1)', () => {
     assert.equal(server.count(), 0, `the yaml-chosen host received ${server.count()} request(s)`);
     const sentinel = cm.getConfig().sentinel as { ollamaEndpointSource?: string };
     assert.equal(sentinel.ollamaEndpointSource, 'workspace-file');
+  });
+
+  // Post-fix (audit S1): the host-name server above is also refused by the
+  // address guard, so this variant removes that guard from the picture with a
+  // recording transport; only the label can refuse.
+  test('C1b a real ConfigManager, a recording transport, an allow-all authorizer: no request and no authorization asked', async () => {
+    writeSentinelYaml(root, 'sentinel:\n  mode: llm-assisted\n  ollamaEndpoint: "https://llm.example.test:8443"\n');
+    const cm = configManagerAt(root);
+    const auth = allowAll();
+    const rec = recordingHttp();
+    const client = newClient(cm, { authorizer: auth, http: rec.fn });
+    assert.equal(await probe(client, { ask: true }), false);
+    await assert.rejects(client.callEndpoint('SECRET_FILE_CONTENT_MARKER', 3000), /LLM destination refused/);
+    const arbiter = makeArbiter(cm, { authorizer: auth, http: rec.fn });
+    await arbiter.checkLLMAvailability();
+    await new Promise((r) => setTimeout(r, 50));
+    assert.equal(rec.calls.length, 0);
+    assert.equal(auth.calls.length, 0);
+  });
+
+  test('C1c a yaml ollamaEndpoint: null is absent, as `??` treats it', () => {
+    writeSentinelYaml(root, 'sentinel:\n  ollamaEndpoint: null\n');
+    const sentinel = configManagerAt(root).getConfig().sentinel as { ollamaEndpointSource?: string };
+    assert.notEqual(sentinel.ollamaEndpointSource, 'workspace-file');
   });
 });

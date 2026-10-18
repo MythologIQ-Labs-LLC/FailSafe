@@ -9,7 +9,7 @@ import { createBrainstormService } from '../../roadmap/services/ConsoleServerSup
 import type { BrainstormService } from '../../roadmap/services/BrainstormService';
 import type { IConfigProvider } from '../../core/interfaces/IConfigProvider';
 import {
-  configProvider, reachableHostNameEndpoint, startCountingServer, type CountingServer,
+  allowAll, configProvider, fakeAuthorizer, reachableHostNameEndpoint, startCountingServer, type CountingServer,
 } from '../sentinel/utils/llmEgressHarness';
 
 const TRANSCRIPT = 'We should ship the SECRET_TRANSCRIPT_MARKER feature next week.';
@@ -46,5 +46,19 @@ suite('#538 Brainstorm transcript egress (B273)', () => {
     assert.equal(generates.length, 1);
     assert.ok(generates[0].body.includes('SECRET_TRANSCRIPT_MARKER'));
     assert.ok(result.extraction, 'the loopback model answered');
+  });
+
+  test('S1-B1 workspace-file remote with an allow-all authorizer: the authorizer is never asked', async () => {
+    const auth = allowAll();
+    await brainstorm(configProvider({ endpoint: 'https://llm.example.test', source: 'workspace-file' }), auth).processTranscript(TRANSCRIPT);
+    assert.equal(auth.calls.length, 0, 'a workspace source is never offered for approval');
+  });
+
+  test('B4 the Brainstorm probe asks (a user action), for the brainstorm-transcript operation', async () => {
+    const auth = fakeAuthorizer(() => false);
+    await brainstorm(configProvider({ endpoint: 'https://llm.example.test', source: 'user-setting' }), auth).processTranscript(TRANSCRIPT);
+    assert.ok(auth.calls.length >= 1);
+    assert.deepEqual(auth.calls.map((c) => [c.request.origin, c.request.operation, c.options.ask]),
+      auth.calls.map(() => ['https://llm.example.test:443', 'brainstorm-transcript', true]));
   });
 });
