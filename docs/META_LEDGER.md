@@ -33575,3 +33575,21 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `fc2a81784808f2d224f3aa028d5362529cac7d4c14e22dd93a974b5b5f97be5f`
 
 **Decision**: IMPLEMENTATION of plan-538f-readme-gates.md iteration 2 (audit PASS, sha256 75a7df37), by the lead after the lane agent was lost with the previous session. Branch fix/538-readme-gates from main 21e7abab. Red on main: test:node 818 tests, 800 passed, 9 failed (FX1001 off-ramp, F1-F5, the FX1003 repository row, and the two FX946 baseline rows), and docs:validate failed DOCS-VERSION-ROOT-README. 01bf7ed8: integration-claims.test.cjs reads the facts from the marketplace README and holds the product page to them through assertProductPage (no overclaim, no stale phrase, a line naming OpenHands, the Agent Marketplace, Open Design, Continue's cn or a SHIELD check carries its fact phrase) and assertTableSplit (F0); F0b exercises the rule in memory for every integration. 0cbda996: the root README gains one off-ramp line in its header and its release sentence becomes the Current Release marker with the word published kept; marketplace.md and shield-receipts.md cite the marketplace README. b934ae89: github-checks.md cites the moved SHIELD phrase line. Evidence: claims, contracts and architecture-index 79/79; test:node 820 tests, 809 passed, 2 failed (FX946, #467), 9 skipped; docs:validate passes; release preflight 9 PASS; v5-coherence under vscode-test 37 passing; secret scan clean; mutations M1 to M9 (a removed fact phrase, a root overclaim, bare mentions of each integration, a root OpenHands row, a removed off-ramp, a removed marker) each failed its row or gate.
+
+---
+
+### Entry #805: SESSION SEAL - plan-538f-readme-gates
+
+**Timestamp**: 2026-10-18T20:20:43Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-18T2009-bab293`
+**Risk Grade**: L1
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-18T2009-bab293/substantiate.json`
+
+**Content Hash**: `2c25161c6c75f0f7ce5ac6da1db3fb859b5fefa4f40ba28473d93988d286f09f`
+**Previous Hash**: `fc2a81784808f2d224f3aa028d5362529cac7d4c14e22dd93a974b5b5f97be5f`
+**Chain Hash (Merkle seal)**: `867a9f3ca042e69bf357f0b84bc082b25b9ce4d8888fc4cc40ad629cdbaa1149`
+
+**Decision**: SESSION SEAL for plan-538f-readme-gates.md (implementation #804; content hash is the audited plan, sha256 75a7df37). Reality = Promise, with disclosures. The branch repairs the gates the owner's README rewrites broke on main while keeping the owner's wording: two README lines changed (the header off-ramp and the Current Release marker), the truth-claim rows moved to the marketplace README with the product page held to the same facts, three contract citations re-anchored. Disclosures: bounded damaged-ledger override for #538 lane cycles (owner ruling 2026-10-18; #467 unresolved, normal governance not restored); the owner merged #542 and #543 with their own CI red, and the owner chose this repair over a revert; the lane agent was lost when the previous session ended and the lead wrote the plan and implemented it, so the bounded independent review is the two plan audits and the lead's mutation run; docs/archive/README_LEGACY_REFERENCE.md, linked from the product page as a reference, still carries the old phrases and a frozen v6.0.8 marker and is not checked; FX946 is the known ledger-anchor baseline; documentation currency check not applicable (README changed; change_class hotfix); lane A's branch carries ledger entries numbered #802-#806 that will be re-appended after this seal; earlier seals are unedited. Next: push, open the PR, the PR checks, then a merge with --match-head-commit. Not tagged.
