@@ -13,6 +13,7 @@ import * as yaml from 'js-yaml';
 import type { IConfigProvider } from '../core/interfaces';
 import { FailSafeConfig, SentinelMode } from './types';
 import { ensureFailsafeGitignoreEntry } from './gitignore';
+import { resolveSentinelEndpoint } from '../sentinel/utils/llmDestinationPolicy';
 
 type SentinelYamlConfig = Partial<FailSafeConfig> & Record<string, unknown>;
 
@@ -46,6 +47,8 @@ export class ConfigManager implements IConfigProvider {
     getConfig(): FailSafeConfig {
         const config = vscode.workspace.getConfiguration('failsafe');
         const sentinelYaml = this.readSentinelYaml();
+        // #538: the endpoint and the layer it came from, read together (llmDestinationPolicy).
+        const endpoint = resolveSentinelEndpoint(sentinelYaml?.sentinel?.ollamaEndpoint, config.inspect<string>('sentinel.ollamaEndpoint'));
 
         return {
             genesis: {
@@ -57,7 +60,8 @@ export class ConfigManager implements IConfigProvider {
                 enabled: sentinelYaml?.sentinel?.enabled ?? config.get<boolean>('sentinel.enabled', true),
                 mode: sentinelYaml?.sentinel?.mode ?? config.get<SentinelMode>('sentinel.mode', 'heuristic'),
                 localModel: sentinelYaml?.sentinel?.localModel ?? config.get<string>('sentinel.localModel', 'phi3:mini'),
-                ollamaEndpoint: sentinelYaml?.sentinel?.ollamaEndpoint ?? config.get<string>('sentinel.ollamaEndpoint', 'http://localhost:11434')
+                ollamaEndpoint: endpoint.value,
+                ollamaEndpointSource: endpoint.source,
             },
             evaluation: sentinelYaml?.evaluation,
             qorelogic: {

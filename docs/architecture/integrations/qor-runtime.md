@@ -121,7 +121,7 @@ Blind spots: a renamed field, a dynamic lookup or a caller outside this reposito
 - 8 hits `FailSafe/extension/src/roadmap/ui/roadmap.js:18` (`qorRuntime: null,`).
 - 1 hit `FailSafe/extension/src/roadmap/ui/modules/tickers.js:20` (`const latVal = data.qorRuntime?.latencyMs;`).
 - 1 hit `FailSafe/extension/src/integrations/credentials/credentialRegistry.ts:38` (`ORPHANED_SECRET_SETTINGS`).
-- 9 hits `FailSafe/extension/package.json:697` (`"failsafe.qorelogic.externalRuntime.enabled": {`).
+- 9 hits `FailSafe/extension/package.json:702` (`"failsafe.qorelogic.externalRuntime.enabled": {`).
 - 28 hits `FailSafe/extension/src/test/extension/qor-route.test.ts:4` (`QorRuntimeService,`).
 - 14 hits `FailSafe/extension/src/test/extension/qor-runtime-service.test.ts:63` (`suite('QorRuntimeService'`).
 - 6 hits `FailSafe/extension/src/test/roadmap/HubSnapshotService.test.ts:67` (`const qorRuntimeService: any = {`).
@@ -153,7 +153,7 @@ Blind spots: a renamed field, a dynamic lookup or a caller outside this reposito
 
 ### What breaks on removal
 
-Settings users may have set change nothing today: the only construction passes no runtime options `FailSafe/extension/src/extension/bootstrapServers.ts:144` (`const consoleServer = new ConsoleServer(`), and no source reads them `FailSafe/extension/package.json:697` (`"failsafe.qorelogic.externalRuntime.enabled": {`).
+Settings users may have set change nothing today: the only construction passes no runtime options `FailSafe/extension/src/extension/bootstrapServers.ts:144` (`const consoleServer = new ConsoleServer(`), and no source reads them `FailSafe/extension/package.json:702` (`"failsafe.qorelogic.externalRuntime.enabled": {`).
 A loopback caller of the runtime routes gets 404 instead of 200 or 503 `FailSafe/extension/src/roadmap/routes/QorRoute.ts:45` (`app.get("/api/qor/health"`); no caller is in the repository and external callers are unverified beyond this search.
 The only browser call into this route family is the governance dashboard, which stays `FailSafe/extension/src/roadmap/ui/modules/shadow-genome.js:83` (`fetch('/api/qor/governance-dashboard')`).
 One hub `nodeStatus` entry, always paused, is lost `FailSafe/extension/src/roadmap/ConsoleServerHub.ts:213` (`id: "qor-runtime", label: "Qor Runtime",`); no Console or Monitor module reads `nodeStatus` (a search of roadmap/ui has no hit; external readers unverified beyond this search).
@@ -185,7 +185,7 @@ Found, not fixed: FX098, FX099 and FX100 name `/api/qore/runtime`, `/api/qore/he
 - Remove or re-source the latency ticker and its pinned row `FailSafe/extension/src/roadmap/ui/command-center.html:69` (`id="ticker-latency"`) `FailSafe/extension/src/test/ui/command-center-overview.spec.ts:32` (`#ticker-latency`).
 - Remove the Monitor state, argument, branch and dead method `FailSafe/extension/src/roadmap/ui/roadmap.js:173` (`this.hub.qorRuntime`) `FailSafe/extension/src/roadmap/ui/roadmap.js:187` (`this.renderQorRuntime(`).
 - Drop the fixture fields `FailSafe/extension/src/test/roadmap/HubSnapshotService.test.ts:236` (`qorRuntimeService: { fetchSnapshot: async () => ({}) } as any,`) `FailSafe/extension/src/test/roadmap/HubSnapshotService.test.ts:275` (`qorRuntimeService: { fetchSnapshot: async () => ({}) } as any,`) `FailSafe/extension/src/test/ui/helpers/ledgerFixtures.ts:111` (`qorRuntime: { enabled: false, connected: false },`) and the six route-fixture fields listed in the inventory `FailSafe/extension/src/test/extension/hook-route.test.ts:23` (`qorRuntimeService: {} as any,`).
-- Apply the settings strategy below `FailSafe/extension/package.json:718` (`"failsafe.qorelogic.externalRuntime.timeoutMs": {`).
+- Apply the settings strategy below `FailSafe/extension/package.json:723` (`"failsafe.qorelogic.externalRuntime.timeoutMs": {`).
 - Remove the README feature bullet and settings rows `FailSafe/extension/README.md` (`Enable external FailSafe-Qore runtime integration in monitor`).
 - Update the three wiki pages `docs/wiki/Configuration-Reference.md` (`Enable Qore runtime integration`) `docs/wiki/API-Reference.md` (`failsafe.qorelogic.externalRuntime.apiKey`) `docs/wiki/SRE-Dashboard-and-Monitoring.md` (`failsafe.qorelogic.externalRuntime.baseUrl`).
 - Mark FX048, FX049, FX098-FX100, FX153 and FX454 retired, keeping the rows, and correct the ghost test paths; FX050-FX052 stay OPERATOR-PENDING until the settings leave contributes `docs/FEATURE_INDEX.md` (`OPERATOR-PENDING: package.json Qore runtime API key`).
@@ -194,8 +194,8 @@ Found, not fixed: FX098, FX099 and FX100 name `/api/qore/runtime`, `/api/qore/he
 
 ### Settings strategy and migration
 
-Deprecate first: in the removal release, enabled, baseUrl, apiKeyEnvVar and timeoutMs gain a deprecationMessage ("No longer used: FailSafe has no external Qor runtime integration. Remove this setting.") and stay contributed, as apiKey already does `FailSafe/extension/package.json:709` (`"deprecationMessage": "Not used by FailSafe. Remove this plain-text value."`).
-They leave contributes one release later; nothing reads them, so no behaviour changes in either step `FailSafe/extension/package.json:697` (`"failsafe.qorelogic.externalRuntime.enabled": {`).
+Deprecate first: in the removal release, enabled, baseUrl, apiKeyEnvVar and timeoutMs gain a deprecationMessage ("No longer used: FailSafe has no external Qor runtime integration. Remove this setting.") and stay contributed, as apiKey already does `FailSafe/extension/package.json:714` (`"deprecationMessage": "Not used by FailSafe. Remove this plain-text value."`).
+They leave contributes one release later; nothing reads them, so no behaviour changes in either step `FailSafe/extension/package.json:702` (`"failsafe.qorelogic.externalRuntime.enabled": {`).
 apiKey stays contributed while it is listed for plain-text cleanup `FailSafe/extension/src/integrations/credentials/credentialRegistry.ts:38` (`ORPHANED_SECRET_SETTINGS`), because the cleanup reads and removes a stored value through the configuration API `FailSafe/extension/src/integrations/credentials/credentialMigration.ts:132` (`for (const settingKey of ORPHANED_SECRET_SETTINGS) {`); that VS Code refuses writes to an unregistered key is unverified here, and B289 proves it with a test before relying on it.
 Migration note for the CHANGELOG: "The Qor runtime settings never had an effect and are deprecated; remove them from your settings. A stored plain-text API key is still offered for removal." (unverified until B289 ships it).
 
@@ -203,4 +203,4 @@ Migration note for the CHANGELOG: "The Qor runtime settings never had an effect 
 
 Observed outside the LD3 list, filed as B277 (see Other findings in the portfolio): the `failsafe.qorelogic.externalRuntime.*` settings are contributed but never read, so enabling them does nothing `FailSafe/extension/package.json:697-723` (`"failsafe.qorelogic.externalRuntime.timeoutMs": {`).
 The only construction passes no runtime options `FailSafe/extension/src/extension/bootstrapServers.ts:144-150` (`const consoleServer = new ConsoleServer(`).
-The bounded removal is B289, which closes B277 (see the Retirement review above); until it lands the settings stay contributed and unread `FailSafe/extension/package.json:697` (`"failsafe.qorelogic.externalRuntime.enabled": {`).
+The bounded removal is B289, which closes B277 (see the Retirement review above); until it lands the settings stay contributed and unread `FailSafe/extension/package.json:702` (`"failsafe.qorelogic.externalRuntime.enabled": {`).

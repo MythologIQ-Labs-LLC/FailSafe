@@ -30,7 +30,7 @@ No network API is called: the file text is parsed in process `FailSafe/extension
 
 ## Privileges and scopes
 
-Credential: none; the setting describes the import as fully offline `FailSafe/extension/package.json:468-471` (`fully offline — no network`).
+Credential: none; the setting describes the import as fully offline `FailSafe/extension/package.json:472-475` (`fully offline — no network`).
 File access: the operator picks one `.sarif` or `.json` file in a VS Code open dialog `FailSafe/extension/src/extension/sarif-command.ts:27-31` (`filters: { 'SARIF / JSON': ['sarif', 'json'] },`).
 A local Semgrep runner or GitHub SARIF upload would need process or repository write access and is marked requires separate approval (unverified: neither is implemented).
 

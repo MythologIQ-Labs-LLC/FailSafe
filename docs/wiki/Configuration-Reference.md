@@ -20,7 +20,7 @@ Access via: File → Preferences → Settings → Search "failsafe"
 | `failsafe.sentinel.enabled` | `boolean` | `true` | Enable Sentinel monitoring daemon |
 | `failsafe.sentinel.mode` | `enum` | `"heuristic"` | Operating mode: `heuristic`, `llm-assisted`, `hybrid` |
 | `failsafe.sentinel.localModel` | `string` | `"llama3.2:1b"` | Ollama model for LLM-assisted mode |
-| `failsafe.sentinel.ollamaEndpoint` | `string` | `"http://localhost:11434"` | Ollama API endpoint |
+| `failsafe.sentinel.ollamaEndpoint` | `string` | `"http://localhost:11434"` | Ollama API endpoint, read from user settings only. Workspace settings and `.failsafe/config/sentinel.yaml` may name only an endpoint on this machine; any other host is used only after you allow it in VS Code (**FailSafe: Forget Sentinel LLM Approvals** clears those choices) |
 | `failsafe.sentinel.ragEnabled` | `boolean` | `true` | Persist Sentinel events to local RAG store |
 
 ### QoreLogic

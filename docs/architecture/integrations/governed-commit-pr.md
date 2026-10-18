@@ -1,6 +1,6 @@
 # Governed commit and pull request integration contract
 
-Contract id: `governed-commit-pr` (registry row `integration-contract-governed-commit-pr`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
+Contract id: `governed-commit-pr` (registry row `integration-contract-governed-commit-pr`). Recorded against main `c36b9ee2`; the PR step's endpoint pairing was added on main after v6.0.8 (#538) and is not released. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 No legacy review in `docs/research/integrations/` covers this flow; the GitHub review belongs to the github-checks contract.
 
@@ -8,7 +8,7 @@ No legacy review in `docs/research/integrations/` covers this flow; the GitHub r
 - `FailSafe/extension/src/extension/governedCommit.ts`
 - `FailSafe/extension/src/extension/governedCommitFlow.ts`
 
-Not owned here: the pull-request POST `createPullRequest` lives in `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts` (github-checks), the token gate `governedCommitToken` in `FailSafe/extension/src/integrations/credentials/credentialGates.ts` (shared credentials module), and the wiring `offerGovernedCommit` in `FailSafe/extension/src/extension/bootstrapServers.ts`.
+Not owned here: the pull-request POST `createPullRequest` lives in `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts` (github-checks), the token and endpoint gate `governedCommitConnection` in `FailSafe/extension/src/integrations/credentials/credentialGates.ts` (shared credentials module), and the wiring `offerGovernedCommit` in `FailSafe/extension/src/extension/bootstrapServers.ts`.
 
 ## Customer job
 
@@ -26,15 +26,16 @@ An agent can run git, but it would commit whatever is dirty. This flow commits o
 ## API documentation
 
 `docs/integrations/INTEGRATION_DOCS_INDEX.md:62` (`Checks: https://docs.github.com/en/rest/checks/runs`) lists the GitHub REST documentation; the index has no row for the pull-request endpoint this flow uses (unverified as to whether one is intended).
-The flow posts to `/repos/<owner>/<repo>/pulls` `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:133-134` (`const url = `).
+The flow posts to `/repos/<owner>/<repo>/pulls` `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:131` (`const url = `).
 
 ## Privileges and scopes
 
 Git: the operator's own git credentials, used by `git push -u origin <branch>` through the trusted git resolver `FailSafe/extension/src/extension/governedCommit.ts:109` (`const pushed = await git(['push', '-u', 'origin', req.branch], cwd);`).
-GitHub: the `github.token` credential from Secret Storage, sent as an Authorization header for the PR POST `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:141` (`Authorization: `).
-The token is read without checking `failsafe.integrations.github.enabled` `FailSafe/extension/src/integrations/credentials/credentialGates.ts:90-95` (`export function governedCommitToken(creds: IntegrationCredentials, ui: CredentialUi)`).
-The PR request always goes to api.github.com, because the wiring passes no API base URL `FailSafe/extension/src/extension/bootstrapServers.ts:73-74` (`post: defaultGitHubPost,`).
-Needed scopes: pull-request write on the repository `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:148` (`pull-request write permission`).
+GitHub: the `github.token` credential from Secret Storage, sent as an Authorization header for the PR POST, and on main only to the API base's own origin `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:132` (`githubAuthHeaders(api.base, url, opts.token`).
+The token is read without checking `failsafe.integrations.github.enabled` `FailSafe/extension/src/integrations/credentials/credentialGates.ts:90-91` (`export function governedCommitConnection(`).
+In v6.0.8 the PR request always went to api.github.com, because the wiring passed no API base URL. On main (unreleased, #538) the token and the endpoint come from the same credential gate, so the PR goes to the configured GitHub Enterprise base and a user token is never sent to a workspace-set endpoint `FailSafe/extension/src/extension/bootstrapServers.ts:74` (`governedCommitPrStep(governedCommitConnection(`).
+A refused base (an `http://` base for a host that is not this machine, or one with credentials, a query or a fragment) makes no request: `createPullRequest` returns an error, not a local-only skip, and the flow reports the branch as pushed with that error as its warning `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:129-130` (`if (!api.ok) return { ok: false, error: api.error };`).
+Needed scopes: pull-request write on the repository `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:142` (`pull-request write permission`).
 
 ## Feature state
 
@@ -42,7 +43,7 @@ Needed scopes: pull-request write on the repository `FailSafe/extension/src/inte
 |---|---|---|---|---|---|
 | operator-confirmed-commit-offer | verified-shipped | `runGovernedCommitFlow` `FailSafe/extension/src/extension/governedCommitFlow.ts:35` (`export async function runGovernedCommitFlow(`) | `FailSafe/extension/src/extension/bootstrapServers.ts:61` (`const result = await runGovernedCommitFlow(action, changed`) | `FailSafe/extension/src/test/extension/governedCommitFlow.test.ts` (unit) | Offered after `failsafe.bootstrap` and `failsafe.organize` `FailSafe/extension/src/extension/bootstrapServers.ts:410-415` (`await offerGovernedCommit("initialize"`) |
 | commit-and-push-branch | verified-shipped | `commitPushOpenPr` `FailSafe/extension/src/extension/governedCommit.ts:75` (`export async function commitPushOpenPr(`) | `FailSafe/extension/src/extension/bootstrapServers.ts:434-435` (`await offerGovernedCommit("organize"`) | `FailSafe/extension/src/test/extension/governedCommit.test.ts` (unit) | Git runner is injected in tests; the production runner is not spawned there `FailSafe/extension/src/extension/governedCommit.ts:13-14` (`PURE wiring over an INJECTED git runner`) |
-| open-pull-request | verified-shipped | `commitPushOpenPr` `FailSafe/extension/src/extension/governedCommit.ts:119-124` (`const pr = await createPullRequest(`) | `FailSafe/extension/src/extension/bootstrapServers.ts:73-75` (`post: defaultGitHubPost,`) | `FailSafe/extension/src/test/extension/governedCommit.test.ts` (unit) | Only with a stored token; otherwise the ladder stops at pushed `FailSafe/extension/src/extension/governedCommit.ts:115-116` (`no GitHub token`) |
+| open-pull-request | verified-shipped | `commitPushOpenPr` `FailSafe/extension/src/extension/governedCommit.ts:119-124` (`const pr = await createPullRequest(`) | `FailSafe/extension/src/extension/bootstrapServers.ts:74` (`defaultGitHubPost`) | `FailSafe/extension/src/test/extension/governedCommit.test.ts` (unit) | Only with a stored token; otherwise the ladder stops at pushed `FailSafe/extension/src/extension/governedCommit.ts:115-116` (`no GitHub token`) |
 | credential-redaction | verified-shipped | `redactUrlCredentials` `FailSafe/extension/src/extension/governedCommit.ts:68` (`export function redactUrlCredentials(text: string): string {`) | `FailSafe/extension/src/extension/bootstrapServers.ts:61` (`const result = await runGovernedCommitFlow(action, changed`) | `FailSafe/extension/src/test/extension/governedCommit.test.ts` (unit) | Applied to the remote URL and push errors it reports `FailSafe/extension/src/extension/governedCommit.ts:107` (`const safeRemoteUrl = redactUrlCredentials(remoteUrl);`) |
 
 ## Inbound fields
@@ -50,7 +51,7 @@ Needed scopes: pull-request write on the repository `FailSafe/extension/src/inte
 The changed paths: the difference between `git status --porcelain` before and after the command `FailSafe/extension/src/extension/bootstrapServers.ts:55-56` (`const changed = after.filter((p) => !before.includes(p));`).
 The executed action labels from the Organize report `FailSafe/extension/src/extension/bootstrapServers.ts:435` (`report?.executed ?? []`).
 The origin remote URL `FailSafe/extension/src/extension/governedCommit.ts:100` (`const remote = await git(['remote', 'get-url', 'origin'], cwd);`).
-From GitHub: the PR's `html_url` and `number` `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:159` (`j.html_url`).
+From GitHub: the PR's `html_url` and `number` `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:153` (`j.html_url`).
 
 ## Outbound fields and egress
 
@@ -58,7 +59,7 @@ Repository content: yes, the commit of the changed paths is pushed to origin, ga
 Metadata: yes, a PR with title `chore(<action>): workspace cleanup`, a body listing the changes, and the head and base branch, gated by the prompt and a stored token `FailSafe/extension/src/extension/governedCommitFlow.ts:52-57` (`prTitle: `).
 Graph relationships: no (unverified: no graph code exists).
 Governance evidence: the PR body says it was automated by FailSafe and operator-confirmed `FailSafe/extension/src/extension/governedCommitFlow.ts:52` (`(operator-confirmed)`).
-The enable setting of the GitHub integration does not gate any of this (see F18) `FailSafe/extension/src/extension/bootstrapServers.ts:58-60` (`const token = governedCommitToken(credentials.creds, credentials.ui);`).
+The enable setting of the GitHub integration does not gate any of this (see F18) `FailSafe/extension/src/extension/bootstrapServers.ts:74` (`governedCommitConnection(credentials.creds, credentials.endpoints, credentials.ui)`).
 
 ## Transformations
 
@@ -89,7 +90,7 @@ A decline is written to the FailSafe output channel `FailSafe/extension/src/exte
 Enforced: nothing is committed without a Yes `FailSafe/extension/src/extension/governedCommitFlow.ts:41-47` (`if (!approved) {`).
 Enforced: only the named paths are staged `FailSafe/extension/src/extension/governedCommit.ts:92` (`'add', '-A', '--', ...req.paths`).
 Observed: the prompt is a non-modal message; any answer other than Yes, including dismissing it, is taken as No and recorded as a decline `FailSafe/extension/src/extension/bootstrapServers.ts:63` (`=== "Yes",`).
-Advisory: the GitHub integration's enable setting is not consulted; a stored token is enough to open a PR (F18) `FailSafe/extension/src/integrations/credentials/credentialGates.ts:90-92` (`Without one the commit is still made; only the PR step is skipped.`).
+Advisory: the GitHub integration's enable setting is not consulted; a stored token is enough to open a PR (F18) `FailSafe/extension/src/integrations/credentials/credentialGates.ts:90` (`Without one the commit is still made; only the PR step is skipped.`).
 Advisory: if the commit fails after the branch was created, the workspace is left on the new branch `FailSafe/extension/src/extension/governedCommit.ts:93-95` (`commit failed: `).
 
 ## Failure, offline, stale and permission semantics
@@ -97,8 +98,8 @@ Advisory: if the commit fails after the branch was created, the workspace is lef
 Not a repository: no-op `FailSafe/extension/src/extension/governedCommit.ts:82-83` (`return { step: 'not-a-repo' };`).
 No origin: committed locally only `FailSafe/extension/src/extension/governedCommit.ts:101-102` (`committed locally only`).
 Push failed (offline or no permission): committed, with the redacted push error `FailSafe/extension/src/extension/governedCommit.ts:110-111` (`push failed: `).
-401 or 403 from GitHub: auth failure, branch stays pushed `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:147-148` (`GitHub auth failed`).
-422 (PR exists or branch missing): pushed, with a compare URL `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:150-152` (`GitHub rejected the PR (422)`).
+401 or 403 from GitHub: auth failure, branch stays pushed `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:141-142` (`GitHub auth failed`).
+422 (PR exists or branch missing): pushed, with a compare URL `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:144-146` (`GitHub rejected the PR (422)`).
 Any thrown error in the offer is logged and the command result is unchanged `FailSafe/extension/src/extension/bootstrapServers.ts:81-83` (`governed-commit offer failed`).
 
 ## End-to-end scenario and measurable acceptance
@@ -114,4 +115,4 @@ Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE**. Th
 
 ## Open defects
 
-F18, the PR step does not check `failsafe.integrations.github.enabled`: [B270] `FailSafe/extension/src/integrations/credentials/credentialGates.ts:90-95` (`export function governedCommitToken(`).
+F18, the PR step does not check `failsafe.integrations.github.enabled`: [B270] `FailSafe/extension/src/integrations/credentials/credentialGates.ts:90-91` (`export function governedCommitConnection(`).

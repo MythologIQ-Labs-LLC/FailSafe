@@ -1,85 +1,84 @@
 /**
  * LLMClient - Encapsulates all LLM communication logic for Sentinel
  *
- * Handles endpoint validation, availability checks, prompt construction,
- * and HTTP calls to the local LLM server (Ollama).
+ * Handles availability checks, prompt construction, and HTTP calls to the
+ * LLM server (Ollama). #538 (B273): every call re-reads the endpoint and
+ * applies the destination policy; a host that is not this machine needs a
+ * user-setting endpoint and the operator's approval for this operation, and
+ * the request goes only to the target the policy approved.
  */
 
 import type { IConfigProvider } from '../../core/interfaces/IConfigProvider';
 import { Logger } from '../../shared/Logger';
 import type { HeuristicResult } from '../../shared/types';
+import { ADDRESS_REFUSED, type AddressClass } from '../../shared/net/addressPolicy';
+import { decideLlmDestination, type LlmEgressOperation, type LlmTarget } from './llmDestinationPolicy';
+import type { LlmEgressAuthorizer } from './llmEgressAuthorizer';
+import { createLlmHttp, type LlmHttpFn } from './llmTransport';
 
-/** Blocked private network prefixes (SSRF prevention) */
-const BLOCKED_HOST_PREFIXES = [
-    '169.254.', '10.',
-    '172.16.', '172.17.', '172.18.', '172.19.',
-    '172.20.', '172.21.', '172.22.', '172.23.',
-    '172.24.', '172.25.', '172.26.', '172.27.',
-    '172.28.', '172.29.', '172.30.', '172.31.',
-    '192.168.'
-];
+export interface LlmClientOptions {
+    /** What this client sends; approvals are per operation. Default: Sentinel file analysis. */
+    operation?: LlmEgressOperation;
+    /** Absent (tests, headless, the ACP proxy): every non-loopback destination is refused. */
+    authorizer?: LlmEgressAuthorizer;
+    http?: LlmHttpFn;
+}
+
+interface Approved { target: LlmTarget; addresses: AddressClass }
 
 export class LLMClient {
     private readonly logger: Logger;
+    private readonly operation: LlmEgressOperation;
+    private readonly authorizer: LlmEgressAuthorizer | undefined;
+    private readonly http: LlmHttpFn;
 
     constructor(
         private readonly configProvider: IConfigProvider,
+        options: LlmClientOptions = {},
     ) {
         this.logger = new Logger('LLMClient');
+        this.operation = options.operation ?? 'sentinel-file-analysis';
+        this.authorizer = options.authorizer;
+        this.http = options.http ?? createLlmHttp();
     }
 
     /**
-     * Validate an LLM endpoint URL to prevent SSRF attacks.
-     * Allows localhost for local LLM servers, blocks private network ranges.
+     * Check if the LLM server is reachable at the configured endpoint.
+     * Returns true if the server responds with an OK status. Never prompts
+     * unless `ask` is set (a user action, not activation).
      */
-    isValidEndpoint(endpoint: string): boolean {
+    async checkAvailability(options: { ask?: boolean } = {}): Promise<boolean> {
+        const approved = await this.destination(options.ask === true);
+        if (!approved) {
+            return false;
+        }
         try {
-            const url = new URL(endpoint);
-            // Only allow http/https protocols
-            if (!['http:', 'https:'].includes(url.protocol)) {
-                return false;
+            const response = await this.send({ ...approved, path: '/api/tags', method: 'GET', timeoutMs: 2000 });
+            const available = response.status >= 200 && response.status < 300;
+            if (available) {
+                this.logger.info('LLM available at ' + approved.target.origin);
             }
-            const hostname = url.hostname.toLowerCase();
-            // Allow localhost explicitly for local LLM servers
-            if (hostname === 'localhost' || hostname === '127.0.0.1') {
-                return true;
-            }
-            // Block other private ranges
-            for (const prefix of BLOCKED_HOST_PREFIXES) {
-                if (hostname.startsWith(prefix)) {
-                    return false;
-                }
-            }
-            return true;
+            return available;
         } catch {
             return false;
         }
     }
 
     /**
-     * Check if the LLM server is reachable at the configured endpoint.
-     * Returns true if the server responds with an OK status.
+     * Ask the operator to approve the current endpoint when it needs it.
+     * Sends nothing; false for loopback, refused or already-declined endpoints.
      */
-    async checkAvailability(): Promise<boolean> {
-        const config = this.configProvider.getConfig();
-        const endpoint = config.sentinel.ollamaEndpoint;
-
-        // SECURITY: Validate endpoint before making requests
-        if (!this.isValidEndpoint(endpoint)) {
-            this.logger.warn('Invalid LLM endpoint URL', { endpoint });
-            return false;
-        }
-
+    async requestAuthorization(): Promise<boolean> {
         try {
-            const response = await fetch(`${endpoint}/api/tags`, {
-                method: 'GET',
-                signal: AbortSignal.timeout(2000)
-            });
-            const available = response.ok;
-            if (available) {
-                this.logger.info('LLM available at ' + endpoint);
+            const config = this.configProvider.getConfig();
+            const decision = decideLlmDestination(config.sentinel.ollamaEndpoint, config.sentinel.ollamaEndpointSource);
+            if (decision.kind !== 'needs-authorization' || !this.authorizer) {
+                return false;
             }
-            return available;
+            return await this.authorizer.authorize(
+                { origin: decision.target.origin, operation: this.operation, model: config.sentinel.localModel },
+                { ask: true },
+            );
         } catch {
             return false;
         }
@@ -116,29 +115,33 @@ Respond with:
 
     /**
      * Send a prompt to the LLM endpoint and return the raw response text.
-     * Throws on network or timeout errors.
+     * Throws on a refused destination, network or timeout errors. Never
+     * prompts: a destination that needs approval must already have one.
      */
     async callEndpoint(prompt: string, timeoutMs = 5000): Promise<{ response: string; totalDuration: number }> {
-        const config = this.configProvider.getConfig();
-        const endpoint = config.sentinel.ollamaEndpoint;
-        const model = config.sentinel.localModel;
+        const approved = await this.destination(false);
+        if (!approved) {
+            throw new Error('LLM destination refused');
+        }
+        const model = this.configProvider.getConfig().sentinel.localModel;
 
-        const httpResponse = await fetch(`${endpoint}/api/generate`, {
+        const httpResponse = await this.send({
+            ...approved,
+            path: '/api/generate',
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 model,
                 prompt,
                 stream: false
             }),
-            signal: AbortSignal.timeout(timeoutMs)
+            timeoutMs,
         });
 
-        if (!httpResponse.ok) {
+        if (httpResponse.status < 200 || httpResponse.status >= 300) {
             throw new Error(`LLM endpoint returned ${httpResponse.status}`);
         }
 
-        const result = await httpResponse.json() as {
+        const result = JSON.parse(httpResponse.body) as {
             response?: string;
             total_duration?: number;
         };
@@ -147,5 +150,50 @@ Respond with:
             response: result.response || '',
             totalDuration: result.total_duration || 0
         };
+    }
+
+    /**
+     * One request. An approved remote whose name resolved to an address it may
+     * not use (a LAN, VPN or loopback address) is reported to the authorizer,
+     * which tells the operator once; the content is never part of it.
+     */
+    private async send(request: Parameters<LlmHttpFn>[0]): ReturnType<LlmHttpFn> {
+        try {
+            return await this.http(request);
+        } catch (error) {
+            if (request.addresses === 'public' && (error as NodeJS.ErrnoException)?.code === ADDRESS_REFUSED) {
+                try { this.authorizer?.notifyRefusedAddress?.(request.target.origin); } catch { /* the warning is best-effort */ }
+            }
+            throw error;
+        }
+    }
+
+    /** The target this call may use, re-read from the configuration every time; null when refused. */
+    private async destination(ask: boolean): Promise<Approved | null> {
+        let origin: string | undefined;
+        try {
+            const config = this.configProvider.getConfig();
+            const decision = decideLlmDestination(config.sentinel.ollamaEndpoint, config.sentinel.ollamaEndpointSource);
+            if (decision.kind === 'refused') {
+                this.logger.warn('LLM destination refused', { operation: this.operation, reason: decision.reason });
+                return null;
+            }
+            origin = decision.target.origin;
+            if (decision.kind === 'loopback') {
+                return { target: decision.target, addresses: 'loopback' };
+            }
+            const allowed = !!this.authorizer && await this.authorizer.authorize(
+                { origin, operation: this.operation, model: config.sentinel.localModel },
+                { ask },
+            );
+            if (!allowed) {
+                this.logger.warn('LLM destination refused', { operation: this.operation, origin, reason: 'not approved for this operation' });
+                return null;
+            }
+            return { target: decision.target, addresses: 'public' };
+        } catch (error) {
+            this.logger.warn('LLM destination refused', { operation: this.operation, origin, reason: error instanceof Error ? error.message : String(error) });
+            return null;
+        }
     }
 }

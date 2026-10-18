@@ -80,7 +80,7 @@ export type {
 } from "./agentRun";
 
 // Configuration
-export type { FailSafeConfig } from "./config";
+export type { FailSafeConfig, LlmEndpointSource } from "./config";
 
 // Database
 export type { CheckpointDb } from "./database";

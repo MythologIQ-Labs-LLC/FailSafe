@@ -21,6 +21,7 @@ import { isVerifiedShieldReceipt } from '../shield-receipts/shield-receipt-verif
 import {
   INVALID_API_BASE_ERROR, INVALID_TARGET_REPO_ERROR, TARGET_HOST_MISMATCH_ERROR, UNCONFIRMED_RESPONSE_ERROR,
 } from './check-run-errors';
+import { apiBaseFor, githubAuthHeaders } from './github-host-affinity';
 
 /** A payload carrying the reserved SHIELD name; only the verified publisher builds one. */
 export interface ShieldCheckRunPayload {
@@ -161,19 +162,19 @@ export async function postCheckRun(
   if (!t) return { ok: false, error: 'check run refused: malformed target' };
   const refused = targetError(t) ?? nameRefusal(wire, t, authority);
   if (refused) return { ok: false, error: refused };
-  const url = `${t.baseUrl.replace(/\/$/, '')}/repos/${t.repo}/check-runs`;
+  // #538: the token rides only a request to the base's own origin (scheme, host and port).
+  const api = apiBaseFor(t.baseUrl);
+  if (!api.ok) return { ok: false, error: api.error };
+  const url = `${api.base.baseUrl}/repos/${t.repo}/check-runs`;
+  const headers = githubAuthHeaders(api.base, url, token, {
+    'Content-Type': 'application/json',
+    Accept: 'application/vnd.github+json',
+    'User-Agent': 'FailSafe',
+    'X-GitHub-Api-Version': '2022-11-28',
+  });
+  if (!headers) return { ok: false, error: TARGET_HOST_MISMATCH_ERROR };
   try {
-    const res = await post(
-      url,
-      {
-        'Content-Type': 'application/json',
-        Accept: 'application/vnd.github+json',
-        Authorization: `token ${token}`,
-        'User-Agent': 'FailSafe',
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
-      JSON.stringify(wire),
-    );
+    const res = await post(url, headers, JSON.stringify(wire));
     return interpret(res);
   } catch (e) {
     // A transport error may echo request headers; the token never leaves here.

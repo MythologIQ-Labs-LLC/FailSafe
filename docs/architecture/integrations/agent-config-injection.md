@@ -70,7 +70,7 @@ Proposed: agent to instruction file to governance evidence, specified in `docs/a
 
 ## Customer UI and actions
 
-Command palette: "FailSafe: Set Up Agent Governance" `FailSafe/extension/package.json:307-308` (`"title": "FailSafe: Set Up Agent Governance"`).
+Command palette: "FailSafe: Set Up Agent Governance" `FailSafe/extension/package.json:311-312` (`"title": "FailSafe: Set Up Agent Governance"`).
 A multi-select picker of detected, ungoverned agents, then a count message `FailSafe/extension/src/governance/GovernanceCeremony.ts:26-40` (`Governance applied to ${selected.length} system(s).`).
 `failsafe.syncFramework` is registered but has no command-palette contribution in `package.json` (unverified beyond a search of `package.json` for that id) `FailSafe/extension/src/extension/commands.ts:669` (`registerCommand("failsafe.syncFramework"`).
 

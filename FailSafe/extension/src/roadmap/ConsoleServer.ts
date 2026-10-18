@@ -57,6 +57,8 @@ type ConsoleServerOptions = {
   workspaceRoot?: string;
   featureGate?: IFeatureGate;
   configProvider?: IConfigProvider;
+  /** #538: approves a non-loopback Brainstorm model server (shared with Sentinel). */
+  llmEgressAuthorizer?: import("../sentinel/utils/llmEgressAuthorizer").LlmEgressAuthorizer;
   /** B192 remediation: shared workspace-mutation bus. Threaded down to
    *  HubSnapshotService (chain-validity refresh) and ConsoleLifecycleService
    *  (watchMetaLedger migration). Optional for back-compat with tests. */
@@ -152,7 +154,7 @@ export class ConsoleServer {
     this.uiDir = resolveUiDir(__dirname);
     this.audioVaultService = new AudioVaultService(this.workspaceRoot);
     this.audioVaultService.init().catch((err) => console.error("AudioVaultService init error:", err));
-    this.brainstormService = createBrainstormService(options.configProvider);
+    this.brainstormService = createBrainstormService(options.configProvider, options.llmEgressAuthorizer);
     this.marketplaceInstaller = new MarketplaceInstaller(eventBus);
     this.securityScanner = new SecurityScanner(eventBus);
     this.adapterService = new AdapterService(eventBus);

@@ -15,6 +15,7 @@ import type { IAgentProvenanceDetector } from "../sentinel/IAgentProvenanceDetec
 import { CoreSubstrate } from "./bootstrapCore";
 import { QorLogicSubstrate } from "./bootstrapQorLogic";
 import { Logger } from "../shared/Logger";
+import { llmEgressAuthorizerFor, registerForgetLlmApprovalsCommand } from "./llmEgressWiring";
 
 export interface SentinelSubstrate {
   sentinelDaemon: SentinelDaemon;
@@ -33,6 +34,9 @@ export async function bootstrapSentinel(
   const architectureEngine = new ArchitectureEngine();
 
   try {
+    // #538: first in the try, so a failure here falls back to the stub daemon instead of failing activation.
+    const llmAuthorizer = llmEgressAuthorizerFor(context);
+    registerForgetLlmApprovalsCommand(context, llmAuthorizer);
     const patternLoader = new PatternLoader(core.workspaceRoot);
     await patternLoader.loadCustomPatterns();
 
@@ -53,6 +57,7 @@ export async function bootstrapSentinel(
       heuristicEngine,
       verdictEngine,
       existenceEngine,
+      { authorizer: llmAuthorizer },
     );
 
     const verdictRouter = new VerdictRouter(

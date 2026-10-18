@@ -6,6 +6,9 @@
 
 import type { SentinelMode } from "./sentinel";
 
+/** #538: where the Sentinel LLM endpoint came from (see llmDestinationPolicy). */
+export type LlmEndpointSource = "workspace-file" | "workspace-setting" | "user-setting" | "default";
+
 export interface FailSafeConfig {
   genesis: {
     livingGraph: boolean;
@@ -17,6 +20,8 @@ export interface FailSafeConfig {
     mode: SentinelMode;
     localModel: string;
     ollamaEndpoint: string;
+    /** #538: where ollamaEndpoint came from. Absent (a provider that cannot tell) is treated as not user-chosen. */
+    ollamaEndpointSource?: LlmEndpointSource;
   };
   evaluation?: {
     enabled: boolean;

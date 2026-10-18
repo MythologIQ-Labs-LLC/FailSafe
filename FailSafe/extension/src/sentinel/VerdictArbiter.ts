@@ -7,6 +7,8 @@ import { VerdictEngine } from './engines/VerdictEngine';
 import { ExistenceEngine } from './engines/ExistenceEngine';
 import { readFileContentSafe } from './utils/FileReader';
 import { LLMClient } from './utils/LLMClient';
+import type { LlmEgressAuthorizer } from './utils/llmEgressAuthorizer';
+import type { LlmHttpFn } from './utils/llmTransport';
 
 /**
  * VerdictArbiter
@@ -26,19 +28,23 @@ export class VerdictArbiter {
 
     private llmAvailable: boolean = false;
     private currentMode: SentinelMode = 'heuristic';
+    private authorizing = false;
 
     constructor(
         configManager: ConfigManager,
         heuristicEngine: HeuristicEngine,
         verdictEngine: VerdictEngine,
-        existenceEngine: ExistenceEngine
+        existenceEngine: ExistenceEngine,
+        llm: { authorizer?: LlmEgressAuthorizer; http?: LlmHttpFn } = {},
     ) {
         this.configManager = configManager;
         this.heuristicEngine = heuristicEngine;
         this.verdictEngine = verdictEngine;
         this.existenceEngine = existenceEngine;
         this.logger = new Logger('VerdictArbiter');
-        this.llmClient = new LLMClient(configManager);
+        this.llmClient = new LLMClient(configManager, { operation: 'sentinel-file-analysis', ...llm });
+        // #538: after "Forget Sentinel LLM Approvals", availability that rested on an approval is re-checked, without asking.
+        llm.authorizer?.onDidForget?.(() => { void this.recheckAfterForget(); });
 
         // Initialize mode from config
         const config = this.configManager.getConfig();
@@ -57,15 +63,53 @@ export class VerdictArbiter {
      * Check if LLM is available and update internal state
      */
     public async checkLLMAvailability(): Promise<boolean> {
-        this.llmAvailable = await this.llmClient.checkAvailability();
+        // #538: activation awaits this probe, so it never waits for a dialog.
+        this.llmAvailable = await this.llmClient.checkAvailability({ ask: false });
 
         if (!this.llmAvailable) {
             this.logger.info('LLM not available, forcing heuristic fallback if needed');
             if (this.currentMode === 'llm-assisted') {
                 this.currentMode = 'heuristic';
             }
+            this.askForDestinationInBackground();
         }
         return this.llmAvailable;
+    }
+
+    private async recheckAfterForget(): Promise<void> {
+        try {
+            this.llmAvailable = await this.llmClient.checkAvailability({ ask: false });
+        } catch {
+            this.llmAvailable = false;
+        }
+        if (!this.llmAvailable && this.currentMode === 'llm-assisted') {
+            this.currentMode = 'heuristic';
+        }
+    }
+
+    /**
+     * #538: in an LLM mode, a user-setting endpoint that is not on this machine
+     * is offered for approval without blocking start-up; after Allow the probe
+     * runs again and the configured mode is restored.
+     */
+    private askForDestinationInBackground(): void {
+        const configured = this.configManager.getConfig().sentinel.mode;
+        if (configured === 'heuristic' || this.authorizing) {
+            return;
+        }
+        this.authorizing = true;
+        this.llmClient.requestAuthorization()
+            .then(async (approved) => {
+                if (!approved) {
+                    return;
+                }
+                this.llmAvailable = await this.llmClient.checkAvailability({ ask: false });
+                if (this.llmAvailable) {
+                    this.currentMode = configured;
+                }
+            })
+            .catch((error) => this.logger.warn('LLM destination approval failed', error))
+            .finally(() => { this.authorizing = false; });
     }
 
     /**
