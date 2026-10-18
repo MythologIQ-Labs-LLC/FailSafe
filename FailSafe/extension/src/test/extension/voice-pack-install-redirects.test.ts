@@ -214,4 +214,24 @@ suite("voice-pack controlled redirects (#538)", () => {
     await assert.rejects(result, /followed a redirect itself/);
     noPackDir();
   });
+
+  test("V13 the error phase follows the failure prefix, never hostname text", async () => {
+    const { events, result } = run([
+      { url: TARBALL_ON_GITHUB, status: 302, location: "https://sha256.evil.example/pack" },
+    ]);
+    await assert.rejects(result, /^Error: download failed: .*sha256\.evil\.example/);
+    assert.equal(events.find((e) => e.status === "error")?.phase, "download");
+  });
+
+  test("V14 a network error carries its code, never a URL", async () => {
+    const cause = Object.assign(new Error("getaddrinfo ENOTFOUND github.com"), { code: "ENOTFOUND" });
+    const { result } = run([
+      { url: TARBALL_ON_GITHUB, throws: new TypeError("fetch failed", { cause }) },
+    ]);
+    await assert.rejects(result, (err: Error) => {
+      assert.match(err.message, /^download failed: network error \(ENOTFOUND\) for https:\/\/github\.com\//);
+      assert.ok(!err.message.includes("getaddrinfo"));
+      return true;
+    });
+  });
 });

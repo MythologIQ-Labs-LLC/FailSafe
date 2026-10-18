@@ -60,6 +60,16 @@ for (const [channel, map] of MAPPERS) {
       assert.equal(detailOf('file:///home/u/x.ts'), 'Path: x.ts');
     });
 
+    test('a file URI without // and a drive-relative path show the file name only (#538 review)', () => {
+      assert.equal(detailOf('file:/home/u/secret/x.ts'), 'Path: x.ts');
+      assert.equal(detailOf('C:Users\\u\\x.ts'), 'Path: x.ts');
+    });
+
+    test('characters percent-decoded from a file URI are removed from the final label (#538 review)', () => {
+      assert.equal(detailOf('file:///tmp/a%0A%E2%80%AEb.ts'), 'Path: ab.ts');
+      assert.equal(detailOf('file:///C:/x/a%0A%E2%80%AEb.ts'), 'Path: ab.ts');
+    });
+
     test('control, bidi and invisible characters are removed', () => {
       const raw = 'src/\u0007a\u001b\u202e\u2066\u061c\u2028\u2029\u200b\u200d\ufeff\u0085.ts';
       assert.equal(detailOf(raw), 'Path: src/a.ts');
