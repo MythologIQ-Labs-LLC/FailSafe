@@ -22,6 +22,10 @@ export interface RouteRequestOptions {
   path: string;
   body?: unknown;
   remote?: boolean;
+  /** #538: extra request headers (a `host` entry replaces the dialled host). */
+  headers?: Record<string, string>;
+  /** #538: send this text as the body with only the headers given (no JSON content type). */
+  rawBody?: string;
 }
 
 export class RouteHarness {
@@ -47,12 +51,14 @@ export class RouteHarness {
 
   async request(opts: RouteRequestOptions): Promise<RouteResponse> {
     return new Promise((resolve, reject) => {
-      const payload = opts.body !== undefined ? JSON.stringify(opts.body) : undefined;
+      const raw = opts.rawBody !== undefined;
+      const payload = raw ? opts.rawBody : opts.body !== undefined ? JSON.stringify(opts.body) : undefined;
       const headers: Record<string, string> = {};
-      if (payload) {
-        headers['content-type'] = 'application/json';
+      if (payload !== undefined) {
+        if (!raw) headers['content-type'] = 'application/json';
         headers['content-length'] = String(Buffer.byteLength(payload));
       }
+      Object.assign(headers, opts.headers ?? {});
       // Force a non-loopback originating IP for "remote" tests by using
       // the X-Forwarded-For header is NOT honoured by the route guard
       // (which checks socket.remoteAddress). To simulate a remote client
@@ -80,7 +86,7 @@ export class RouteHarness {
         });
       });
       req.on('error', reject);
-      if (payload) req.write(payload);
+      if (payload !== undefined) req.write(payload);
       req.end();
     });
   }
@@ -105,21 +111,28 @@ export interface CapturedResponse {
   finished: boolean;
 }
 
-export function invokeRemote(app: Application, method: string, path: string): Promise<CapturedResponse> {
+export function invokeRemote(
+  app: Application,
+  method: string,
+  path: string,
+  opts: { headers?: Record<string, string>; body?: unknown } = {},
+): Promise<CapturedResponse> {
   return new Promise((resolve, reject) => {
     const captured: CapturedResponse = { statusCode: 200, body: undefined, finished: false };
     // Mock req: just enough surface for express + route handlers.
     const fakeReq: any = {
       method,
       url: path,
-      headers: { host: 'example.com' },
+      // #538: `opts.headers` can give a loopback Host, so a test reaches the
+      // remote-address check rather than the Host check.
+      headers: { host: 'example.com', ...(opts.headers ?? {}) },
       // Critical: socket.remoteAddress must be non-loopback so
       // rejectIfRemote returns true.
       socket: { remoteAddress: '203.0.113.7' },
       ip: '203.0.113.7',
       query: {},
       params: {},
-      body: {},
+      body: opts.body ?? {},
       app,
       get(name: string) { return this.headers[String(name).toLowerCase()]; },
     };

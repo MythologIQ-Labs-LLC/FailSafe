@@ -20,6 +20,9 @@ function confirmer(result: OperatorConfirmation = 'approved', onShow?: () => voi
   };
 }
 
+/** #538 (#514 residual): the authentication the decide-l3 route records. */
+const DECIDE_AUTH = { method: 'vscode-modal-confirmation', channel: 'console:/api/actions/decide-l3' };
+
 function queued(id: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     id, state: 'QUEUED', filePath: `src/${id}.ts`, riskGrade: 'L3', agentDid: 'did:agent:x',
@@ -297,13 +300,13 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
 
   test('POST /api/actions/approve-l3-batch — APPROVED decision processes each queued item + broadcasts results', async () => {
     const app = makeApp();
-    const processed: Array<{ id: string; decision: string; conds: unknown }> = [];
+    const processed: Array<{ id: string; decision: string; auth: unknown; conds: unknown }> = [];
     const c = confirmer('approved');
     const { deps, log } = makeDeps({
       qorelogicManager: {
         getL3Queue: () => [queued('q1'), queued('q2', { kind: 'open-design-create-artifact' })],
-        processL3Decision: async (id: string, decision: string, conds?: string[]) => {
-          processed.push({ id, decision, conds });
+        processL3Decision: async (id: string, decision: string, auth?: unknown, conds?: string[]) => {
+          processed.push({ id, decision, auth, conds });
         },
       } as never,
       confirmOperatorAction: c.confirm,
@@ -320,6 +323,10 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
     assert.equal(processed.length, 2);
     assert.ok(processed.every((p) => p.decision === 'APPROVED'));
     assert.ok(processed.every((p) => p.conds === undefined), 'no request conditions forwarded');
+    // #538 (#514 residual): each batch decision records how it was authenticated.
+    for (const p of processed) {
+      assert.deepEqual(p.auth, { method: 'vscode-modal-confirmation', channel: 'console:/api/actions/approve-l3-batch' });
+    }
     assert.ok(log.broadcasts.some((b) => b.type === 'l3.batch_processed'));
     // #514: the dialog showed the verb, count and each item's kind + filePath.
     assert.equal(c.shown.length, 1);
@@ -482,7 +489,7 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
     });
     assert.equal(res.status, 200);
     assert.equal(res.body.ok, true);
-    assert.deepEqual(calls, [['q42', 'APPROVED']], 'processL3Decision called once with (id, decision)');
+    assert.deepEqual(calls, [['q42', 'APPROVED', DECIDE_AUTH]], 'processL3Decision called once with (id, decision, authentication)');
     assert.ok(log.broadcasts.some((b) => b.type === 'l3.decided'));
     // #514: the dialog carries the verb and the queue entry's server-side fields.
     assert.equal(c.shown.length, 1);
@@ -510,7 +517,7 @@ suite('ActionsRoute (FX066, FX068, + resume/verify/approve-l3)', () => {
     assert.equal(res.status, 200);
     assert.equal(c.shown[0].title, 'Reject this L3 item?');
     assert.equal(c.shown[0].approveLabel, 'Reject');
-    assert.deepEqual(calls, [['q7', 'REJECTED']]);
+    assert.deepEqual(calls, [['q7', 'REJECTED', DECIDE_AUTH]]);
   });
 
   for (const [result, status] of [['declined', 409], ['busy', 429]] as const) {
