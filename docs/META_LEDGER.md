@@ -33239,3 +33239,56 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `fa7007e7b60c6274f7c1cfeab4d8bf85967f2e1db15654aac0d6856e6abd4248`
 
 **Decision**: SESSION SEAL for plan-532b-delivery-assessment.md (implementation #784). Reality = Promise, with disclosures. The branch carries #532 part B: an operator links an imported intent to a registered architecture document and to commits after confirming in VS Code, and Workspace > Delivery shows five steps with their records and named gaps; the pre-commit guard no longer refuses every commit in enforce mode (B283). Disclosures: bounded damaged-ledger override applied to this cycle (#467 unresolved, normal governance not restored); governance evidence is presence, not a pass: entries are matched by exact intent id or full commit SHA and shown with their event type; ledger chain status is reported as unknown because re-verifying every row per assessment is not cheap; commit evidence is normally empty because CheckpointManager.seal has no production caller (B285), and hub checkpoints read HEAD from the process directory (B284); the governed commit does not yet link under the active intent (B286); the receipt step is always unavailable until #467 and B216; the no-egress test counts a child_process, fetch, http or net call only when FailSafe compiled code is on its stack, because VS Code's built-in git extension spawns git in the same host; a falsifier probe shows FailSafe-originated calls are counted; the git allowlist also admits the architecture discovery's exact ls-files call, which the linking path reuses; missing git and a non-repository folder both read as unavailable; an added module deliveryService.ts holds the functions the routes, command and extension-host test share; the installed VSIX predates 5168e6a6, which only hardens archived-intent lookup; a local commit briefly force-added ignored test-workspace files including .claude; it was reset before any push and the branch contains none; found, not fixed: IntentStore.getArchivedIntent takes an unvalidated id (callers in this slice pass only uuids), IntentHistoryLog.loadAllEntries does not schema-check entries, check-e2e-coverage prepush mode checks nothing without an upstream, and extension-host tests need a bundle, not only a compile; documentation currency check run mechanically with two warnings, verbatim: Release-path change (change_class=feature) without updating README.md; Release-path change (change_class=feature) without updating CHANGELOG.md. Lead judgment, not the owner's: the CHANGELOG warning is a payload omission (CHANGELOG.md changed in e9fd7d4f but the implement payload did not list it); the README warning stands by design, because the What's New copy is authored as the CHANGELOG [Unreleased] entry and stamped into a versioned README section at release; earlier seals are unedited. Next: push, open the PR, the PR checks, then a merge with --match-head-commit. #532 stays open for the owner's dispositions and the receipt step. Not tagged.
+
+---
+
+### Entry #786: GATE TRIBUNAL - plan-538d-voice-notify (iteration 1) - VETO
+
+**Timestamp**: 2026-10-18T16:04:19Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-18T1601-8b7e2d`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for #538 lane cycles, owner ruling 2026-10-18, disclosed per cycle (#467)
+
+**Content Hash**: `9bebdcfad105b9b19bb35a8dafba6be8a4d1981b96f8298e747227855dc21aa3`
+**Previous Hash**: `fa7007e7b60c6274f7c1cfeab4d8bf85967f2e1db15654aac0d6856e6abd4248`
+**Chain Hash (Merkle seal)**: `d4dce79095f9d3c8eba8fc1b81d957eeca9970ad4c88189adcdcb979abca5ac5`
+
+**Decision**: VETO on plan-538d-voice-notify.md iteration 1 (sha256 828e7157), #538 lane D: B261 Voice Pack download (organization slug, per-hop redirect validation) and B263 Slack and Teams L3-decided path. Fresh Option B architect-reviewer; 70 citations checked, none failed. Blocking: the plan replaced the only final-response host check (assertGitHubHost on res.url) with checks made before each hop, so a fetch that follows redirects itself despite redirect manual (the extension-host fetch wrapper, Electron fetch) would hand back an off-allowlist body unchecked; the plan also deleted the test that guarded it. Should-fix: no signed query in error text, Slack entity escaping of the path label (the Open Design path is agent-supplied), platform-aware fixtures and a file URI row, the original fetch captured once, stale header comments, the checksum phase label, stated residuals. Next: revise and re-audit. Tribunal entry held by the lead and appended at integration in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #787: GATE TRIBUNAL - plan-538d-voice-notify (iteration 2) - PASS
+
+**Timestamp**: 2026-10-18T16:12:12Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-18T1601-8b7e2d`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for #538 lane cycles, owner ruling 2026-10-18, disclosed per cycle (#467)
+
+**Content Hash**: `191664b281d89f2c4c1ef0f475b8816550b686f7c533e3779899e7176a25eb02`
+**Previous Hash**: `d4dce79095f9d3c8eba8fc1b81d957eeca9970ad4c88189adcdcb979abca5ac5`
+**Chain Hash (Merkle seal)**: `07f8906edb33caf58fcc148465f90f43a017c77544cf1eec06cc7bf7c0d0bd36`
+
+**Decision**: PASS on plan-538d-voice-notify.md iteration 2 (sha256 d36c7c62). A fresh Option B architect-reviewer, not the iteration 1 judge; 76 citations checked, none failed. The iteration 1 blocker is resolved: every response is refused when it is redirected, names a URL other than the requested hop, or is an opaque redirect, and the green-on-main final-URL row is kept beside a red row whose fetch ignores manual mode. Should-fix folded into implementation: the portfolio scan count, the notify-event citation re-walk, V1 to V11 in the red commit, refusal of an empty response URL, prefixed fetch and URL-parse errors, wider control-character stripping and drive-letter paths treated as absolute on every platform, and the repository URL change listed in the changelog. Next: implement on fix/538-lane-D. Tribunal entry held by the lead and appended at integration in its recorded order with its gate artifact timestamp.
+
+---
+
+### Entry #788: IMPLEMENTATION - plan-538d-voice-notify
+
+**Timestamp**: 2026-10-18T17:22:36Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-18T1601-8b7e2d`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-18T1601-8b7e2d/implement.json`
+
+**Content Hash**: `ca8b33f357e2be7237c96dcb71f15151833c664c43e7d0a6fac67524b5af6e34`
+**Previous Hash**: `07f8906edb33caf58fcc148465f90f43a017c77544cf1eec06cc7bf7c0d0bd36`
+**Chain Hash (Merkle seal)**: `74fab9a400def13b5ef4a38593a371427a12cd5f7f9a56e410f432acb70b269c`
+
+**Decision**: IMPLEMENTATION of plan-538d-voice-notify.md iteration 2 (audit PASS, sha256 d36c7c62), #538 lane D. Branch fix/538-lane-D from main 243a34a1. 84f441e6 and a3c4d9a4: red rows first (36 failing on main's code, then 6 for the review rows). 99b9269d and 4673cdf4: the Voice Pack download names MythologIQ-Labs-LLC/FailSafe and goes through allowlisted-fetch.ts, which checks every hop before requesting it (https only, an exact allowlisted host now including release-assets.githubusercontent.com, no userinfo, default port, at most five redirects) and every response after it (refused when redirected, when its URL is empty or differs from the hop, or opaque); errors carry only the requested origin and path and a code-shaped cause; the phase is classified by failure prefix; provenance records the requested URL, the final URL without its signed query and the sha256. Slack and Teams notices read request.filePath with a flat fallback and show a sanitized label: control and bidi characters stripped before and after URI decoding, workspace-relative inside the workspace, the basename otherwise (absolute, drive-relative, UNC, file URI or a .. escape), capped at 200 characters, Slack entity-escaped; no other request field is read. d1b89305: the repository URL in package.json. 3832aed7 and 2496c205: contracts, portfolio scan counts, INTEGRATIONS.md, BACKLOG B261 and B263 done, B287 and B300 filed, CHANGELOG, FEATURE_INDEX notes. f91ebca6 (lead): the leak fixture builds its fake Slack token at runtime so the secret scanner passes. Evidence from logs: focused vscode-test 97 passing, 0 failing (re-run by the lead, 97/0); npm test default 5115 passing, 18 pending, 1 failing (the lock-queue R1 timing row, outside this lane, inconclusive under host load); architecture configuration 5/0; test:node 816 tests, 805 passed, 2 failed (FX946 ledger anchor, #467), 9 skipped; test:ui 213 passed, 4 skipped; integration contracts 39/39 with the tag check over 355 claims; tsc 0; lint 0 errors; release preflight pass; secret scan clean after f91ebca6; mutations M1 to M20 each killed by a named row.
