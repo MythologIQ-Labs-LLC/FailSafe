@@ -8,6 +8,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as yaml from "js-yaml";
 import type { ApiRouteDeps } from "./types";
+import { rateLimit } from "express-rate-limit";
 import { consoleRequestGuard } from "./consoleRequestGuard";
 import type { TrackerManifest } from "../tracker/tracker-model";
 import {
@@ -47,7 +48,9 @@ export function setupTrackerConfigRoutes(
   // POST — governed write: persist tracker-config.yaml + emit the directive record.
   // #538 (B293): loopback socket, loopback Host, same-origin Origin and a JSON body are
   // required; a body-less cross-site POST used to overwrite the taxonomy with an empty one.
-  app.post("/api/v1/tracker/config", consoleRequestGuard((req, res) => deps.rejectIfRemote(req, res)), (req: Request, res: Response) => {
+  // The limiter runs after the guard, so refused cross-site requests do not spend it.
+  const saveLimiter = rateLimit({ windowMs: 60_000, limit: 20, standardHeaders: false, legacyHeaders: false });
+  app.post("/api/v1/tracker/config", consoleRequestGuard((req, res) => deps.rejectIfRemote(req, res)), saveLimiter, (req: Request, res: Response) => {
     const body = (req.body || {}) as Partial<TrackerConfig>;
     const config: TrackerConfig = {
       programs: Array.isArray(body.programs) ? body.programs : [],

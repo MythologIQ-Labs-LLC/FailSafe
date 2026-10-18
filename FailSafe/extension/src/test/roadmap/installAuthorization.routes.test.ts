@@ -5,9 +5,9 @@
  * Table-driven over every gated install route. Each case records its side effect
  * (the `.mcp.json` write, the Bicameral runner, the scaffold callbacks, the adapter
  * service, the terminal pre-fill), so every row can count it. The deps are passed
- * through `as never` and the mcp/agt routes fall back to main's registrar wiring when
- * their setup function is absent, so this suite compiles and runs against the source
- * before the change.
+ * through `as never`. The mcp and agt routes are registered through their production
+ * setup functions (request guard, rate limiter, handler). The red run before the change
+ * (c8f7bc1e) used a fallback to main's wiring, removed once the setup functions existed.
  */
 import { strict as assert } from 'assert';
 import * as fs from 'fs';
@@ -19,8 +19,8 @@ import { RouteHarness, makeApp, invokeRemote, type RouteResponse } from '../exte
 import { setupActionsRoutes } from '../../roadmap/routes/ActionsRoute';
 import { setupAdapterRoutes } from '../../roadmap/routes/AdapterRoute';
 import { setupBicameralRoutes } from '../../roadmap/routes/BicameralRoute';
-import * as McpRouteModule from '../../roadmap/routes/McpRoute';
-import * as AgtRouteModule from '../../roadmap/routes/AgtRoute';
+import { setupMcpInstallRoute } from '../../roadmap/routes/McpRoute';
+import { setupAgtInstallRoute } from '../../roadmap/routes/AgtRoute';
 import { BICAMERAL_PIP_SPEC } from '../../integrations/bicameral/install-handler';
 import type { OperatorActionRequest, OperatorConfirmation } from '../../extension/operatorConfirmation';
 import type { LedgerManager } from '../../qorelogic/ledger/LedgerManager';
@@ -84,9 +84,8 @@ const MCP: RouteCase = {
       workspaceRoot: ws, rejectIfRemote, confirmOperatorAction: o.confirm,
       getLedgerManager: () => o.ledger ?? null, confirmationDeadlineMs: o.deadlineMs,
     };
-    const mod = McpRouteModule as unknown as Record<string, any>;
-    if (typeof mod.setupMcpInstallRoute === 'function') mod.setupMcpInstallRoute(app, deps);
-    else app.post(MCP.path, (req, res) => { if (rejectIfRemote(req, res)) return; mod.McpRoute.install(req, res, deps); });
+    // The production chain: request guard, rate limiter, gated handler.
+    setupMcpInstallRoute(app, deps);
     return { app, effects, broadcasts: [], cleanup: () => { restore(); rm(ws); } };
   },
 };
@@ -231,9 +230,7 @@ const AGT: RouteCase = {
       getLedgerManager: () => o.ledger ?? null, confirmationDeadlineMs: o.deadlineMs,
       runInTerminal: (name: string, command: string) => { effects.push({ name, command }); },
     };
-    const mod = AgtRouteModule as unknown as Record<string, any>;
-    if (typeof mod.setupAgtInstallRoute === 'function') mod.setupAgtInstallRoute(app, deps);
-    else app.post(AGT.path, (req, res) => { if (rejectIfRemote(req, res)) return; mod.AgtRoute.install(req, res, deps); });
+    setupAgtInstallRoute(app, deps);
     return { app, effects, broadcasts: [], cleanup: () => rm(ws) };
   },
 };

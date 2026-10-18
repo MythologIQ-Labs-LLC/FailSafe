@@ -60,6 +60,26 @@ suite('#538 B293 tracker config refuses cross-site writes', () => {
     });
   }
 
+  test('saves are limited to 20 a minute; the 21st rapid save is 429 and writes nothing', async () => {
+    const body = { programs: [{ key: 'burst', name: 'Burst', accent: '#0f0' }], verticals: [], agents: [] };
+    for (let i = 0; i < 20; i++) {
+      assert.equal((await harness!.request({ method: 'POST', path: PATH, body })).status, 200, `save ${i + 1}`);
+    }
+    const before = [bytes(CONFIG), bytes(DIRECTIVE)];
+    const res = await harness!.request({ method: 'POST', path: PATH, body: { programs: [{ key: 'over', name: 'Over' }], verticals: [], agents: [] } });
+    assert.equal(res.status, 429);
+    assert.ok(bytes(CONFIG).equals(before[0]) && bytes(DIRECTIVE).equals(before[1]), 'the limited save wrote nothing');
+  });
+
+  test('refused cross-site POSTs do not spend the save limit', async () => {
+    for (let i = 0; i < 25; i++) {
+      const r = await harness!.request({ method: 'POST', path: PATH, headers: { origin: 'http://evil.example', 'content-type': 'text/plain' }, rawBody: '' });
+      assert.equal(r.status, 403);
+    }
+    const body = { programs: [{ key: 'still', name: 'Still', accent: '#0f0' }], verticals: [], agents: [] };
+    assert.equal((await harness!.request({ method: 'POST', path: PATH, body })).status, 200);
+  });
+
   test('the Taxonomy editor\'s same-origin JSON save still writes both files', async () => {
     const port = (harness as unknown as { port: number }).port;
     const body = { programs: [{ key: 'edited', name: 'Edited', accent: '#0f0' }], verticals: [], agents: [] };
