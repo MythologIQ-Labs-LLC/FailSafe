@@ -94,7 +94,7 @@ Priority 1 is where a customer is exposed today (data leaves the machine without
 18. **voice-pack**: works with stubbed downloads; the download URL uses the old organization slug (F07, B261).
 19. **continue** and **aider**: built and unit-tested; no test runs the real CLIs, and Aider has no tool allowlist.
 20. **linear**, **sarif**, **openhands**, **acp-devin**, **agt**, **tracker-manifest**, **git-bootstrap**: built and tested with small gaps; maintain.
-21. **governance-webhook** and **qor-runtime**: no caller on main; the owner decided RETIRE (#538). Their retirement reviews ([governance-webhook](integrations/governance-webhook.md#retirement-review-538), [qor-runtime](integrations/qor-runtime.md#retirement-review-538)) bound the removals, B288 and B289, each a separate PR.
+21. **governance-webhook** and **qor-runtime**: governance-webhook has no caller on main, and qor-runtime cannot be enabled on main (its client is asked for a snapshot on every hub build and answers disabled; its three routes answer disabled); the owner decided RETIRE (#538). Their retirement reviews ([governance-webhook](integrations/governance-webhook.md#retirement-review-538), [qor-runtime](integrations/qor-runtime.md#retirement-review-538)) bound the removals, B288 and B289, each a separate PR.
 
 ## Scans
 

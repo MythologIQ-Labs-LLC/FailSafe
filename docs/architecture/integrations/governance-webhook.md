@@ -118,7 +118,7 @@ Blind spots: a dynamic lookup or a caller outside this repository would not be f
 - 37 hits `FailSafe/extension/src/test/governance/GovernanceWebhookIntegrity.test.ts:33` (`authenticated integrity (F-4)`).
 - 4 hits `FailSafe/extension/src/test/governance/GovernanceWebhook.test.ts:5` (`describe('GovernanceWebhook', () => {`).
 - 2 hits, the FX1003 constants `FailSafe/extension/src/test/docs/integration-contracts.test.cjs:60` (`'governance-webhook', 'dependency-admission-lint', 'git-bootstrap',`) and `FailSafe/extension/src/test/docs/integration-contracts.test.cjs:72` (`${SRC}/governance/GovernanceWebhook.ts`).
-- 38 hits, this contract `docs/architecture/integrations/governance-webhook.md` (`Governance webhook integration contract`).
+- 38 hits, this contract (unverified beyond this search).
 - 2 hits, the portfolio `docs/architecture/INTEGRATION_PORTFOLIO.md` (`[governance-webhook](integrations/governance-webhook.md)`).
 - 1 hit, the registry row `docs/ARCHITECTURE_INDEX.md` (`integration-contract-governance-webhook`).
 - 1 hit, the tier row `docs/GOVERNANCE_INDEX.md` (`docs/architecture/integrations/governance-webhook.md`).
@@ -137,7 +137,7 @@ The historic CHANGELOG line says the outbound contract is "provably wired"; that
 No setting, command, route, UI module or event subscription reaches the sender; the instance is built and returned only `FailSafe/extension/src/extension/bootstrapGovernance.ts:220` (`governanceWebhook,`).
 The substrate field is declared `FailSafe/extension/src/extension/bootstrapGovernance.ts:44` (`governanceWebhook: GovernanceWebhook;`), and its consumers never read it `FailSafe/extension/src/extension/bootstrapMCP.ts:13` (`gov: GovernanceSubstrate,`) `FailSafe/extension/src/extension/bootstrapQorLogic.ts:36` (`gov: GovernanceSubstrate,`) (a search for ".governanceWebhook" has no hit; unverified beyond this search).
 Two test files go with it `FailSafe/extension/src/test/governance/GovernanceWebhook.test.ts:5` (`describe('GovernanceWebhook', () => {`).
-FX1003 names the file as a scan hit `FailSafe/extension/src/test/docs/integration-contracts.test.cjs:72` (`${SRC}/governance/GovernanceWebhook.ts`), and requires every owned path of this contract to exist, so the removal must also teach FX1003 how a retired contract is held; this file stays as history `docs/architecture/integrations/governance-webhook.md` (`**Owned files:**`).
+FX1003 names the file as a scan hit `FailSafe/extension/src/test/docs/integration-contracts.test.cjs:72` (`${SRC}/governance/GovernanceWebhook.ts`), and requires every owned path of this contract to exist, so the removal must also teach FX1003 how a retired contract is held; this contract stays as history.
 FX300 and FX919 lose their implementation `docs/FEATURE_INDEX.md` (`governance/GovernanceWebhook.test.ts`).
 
 ### Bounded removal proposal (B288)

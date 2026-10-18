@@ -107,7 +107,7 @@ The owner decided RETIRE on 2026-10-18 (#538); this review lists what a removal 
 ### Inventory
 
 Scope: every file hit by the command below at main 243a34a1, with its hit count; it is a search, not a proof that nothing else refers to the runtime (unverified beyond this search).
-Command: `git grep -c -I -i -E "QorRuntime|qor-runtime|externalRuntime|/api/qore?/(runtime|health|evaluate)|x-qor-api-key|Qore? runtime|QoreRuntime" 243a34a1 --` reports 43 files (unverified beyond this search).
+Command: `git grep -c -I -i -E "QorRuntime|qor-runtime|externalRuntime|/api/qore?/(runtime|health|evaluate)|x-qor-api-key|Qore? runtime|QoreRuntime" 243a34a1 --` reports 41 files; piped to `wc -l` it prints 41 (unverified beyond this search).
 Blind spots: a renamed field, a dynamic lookup or a caller outside this repository would not be found (unverified beyond this search).
 - 10 hits, the owned client `FailSafe/extension/src/roadmap/services/QorRuntimeService.ts:51` (`export class QorRuntimeService {`).
 - 7 hits `FailSafe/extension/src/roadmap/ConsoleServer.ts:23` (`import { QorRuntimeService, type QorRuntimeOptions } from "./services/QorRuntimeService";`).
@@ -134,7 +134,7 @@ Blind spots: a renamed field, a dynamic lookup or a caller outside this reposito
 - 1 hit `FailSafe/extension/src/test/extension/skills-api-route.test.ts:13` (`qorRuntimeService: {} as any,`).
 - 1 hit `FailSafe/extension/src/test/qorlogic/consumer/consumer-diagnostics.test.ts:111` (`qorRuntimeService: { fetchSnapshot: async () => ({}) } as never,`).
 - 1 hit `FailSafe/extension/src/test/roadmap/ConsoleRouteRegistrar.test.ts:80` (`qorRuntimeService: { fetchSnapshot: async () => ({}) },`).
-- 35 hits, this contract `docs/architecture/integrations/qor-runtime.md` (`Qor runtime integration contract`).
+- 35 hits, this contract (unverified beyond this search).
 - 4 hits, the portfolio `docs/architecture/INTEGRATION_PORTFOLIO.md` (`[qor-runtime](integrations/qor-runtime.md)`).
 - 10 hits, FX048-FX052, FX098-FX100, FX153 and FX454 `docs/FEATURE_INDEX.md` (`failsafe.qorelogic.externalRuntime.enabled`).
 - 3 hits, B154 and B166 (historic) and B277 `docs/BACKLOG.md` (`[B166] Phase 3: Extract QoreRuntimeService`).
@@ -165,6 +165,8 @@ The hub ordering assertion keeps its transparency half `FailSafe/extension/src/t
 The portfolio's reconciliation row for the route file cites the runtime route and must be re-anchored `docs/architecture/INTEGRATION_PORTFOLIO.md` (`not an integration: the Console's Qor routes`).
 FX1003 names the client as a scan hit `FailSafe/extension/src/test/docs/integration-contracts.test.cjs:71` (`${SRC}/roadmap/services/QorRuntimeService.ts`) and requires the owned file to exist, so this contract needs the retired-contract rule B288 adds `docs/BACKLOG.md` (`[B288] Retire the governance webhook sender`).
 Found, not fixed: FX048, FX049, FX098, FX099, FX100, FX101, FX102, FX153 and FX454 cite `extension/qore-route.test.ts` or `extension/qore-runtime-service.test.ts`, which do not exist; the real files are `qor-route.test.ts` and `qor-runtime-service.test.ts` `docs/FEATURE_INDEX.md` (`extension/qore-route.test.ts`); B289 corrects them.
+Found, not fixed: the FX050 note names the same missing `qore-runtime-service.test.ts` `docs/FEATURE_INDEX.md` (`qore-runtime-service.test.ts) consumes it`); B289 corrects it.
+Found, not fixed: FX098, FX099 and FX100 name `/api/qore/runtime`, `/api/qore/health` and `/api/qore/evaluate`, but the routes are `/api/qor/*` `docs/FEATURE_INDEX.md` (`GET /api/qore/runtime`) `FailSafe/extension/src/roadmap/routes/QorRoute.ts:20` (`app.get("/api/qor/runtime"`); B289 corrects them.
 
 ### Bounded removal proposal (B289)
 
