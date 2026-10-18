@@ -395,6 +395,8 @@ export class ConsoleRouteRegistrar {
       getRunInTerminal: () => this.host.getAgtRunInTerminal?.() ?? null,
       // B-BIC-1: pass ledger handle so ratify appends USER_OVERRIDE entry.
       ledgerManager: this.host.qorelogicManager.getLedgerManager() as any,
+      // #538: the install route reads the ledger at request time.
+      getLedgerManager: () => this.host.qorelogicManager.getLedgerManager(),
       // B-BIC-16: pass mediator handle so drift route forwards results
       // for auto-enqueue to L3.
       driftToL3Mediator: this.host.getDriftToL3Mediator() ?? undefined,
@@ -495,14 +497,12 @@ export class ConsoleRouteRegistrar {
     // presses enter — no silent run). runInTerminal is resolved lazily because
     // routes register before bootstrapServers wires the vscode dep.
     app.get("/api/v1/agt/modules", (req, res) => AgtRoute.modules(req, res, { workspaceRoot: this.host.workspaceRoot }));
-    const agtDeps = {
-      ...mcpDeps,
-      runInTerminal: (name: string, command: string) => {
-        const fn = this.host.getAgtRunInTerminal?.();
-        if (!fn) throw new Error("runInTerminal not wired");
-        fn(name, command);
-      },
-    } as AgtRouteDeps & { rejectIfRemote: (req: Request, res: Response) => boolean };
+    const agtDeps = { ...mcpDeps } as AgtRouteDeps & { rejectIfRemote: (req: Request, res: Response) => boolean };
+    // #538: read at request time, so an unwired terminal answers 503 before any dialog.
+    Object.defineProperty(agtDeps, "runInTerminal", {
+      get: () => this.host.getAgtRunInTerminal?.() ?? undefined,
+      enumerable: true, configurable: true,
+    });
     defineLazyConfirmer(agtDeps, this.host);
     setupAgtInstallRoute(app, agtDeps, installLimiter);
     // GH #167: Integrations Catalog — surfaces the command/config integrations

@@ -63,7 +63,7 @@ export function registerBicameralLifecycleRoutes(
       return;
     }
     const approved = await authorizeOperatorAction(
-      { ...deps, getLedgerManager: () => deps.ledgerManager },
+      { ...deps, getLedgerManager: () => (deps.getLedgerManager ? deps.getLedgerManager() : deps.ledgerManager) },
       res,
       { kind: "bicameral-install", mode: requested, pipSpec: BICAMERAL_PIP_SPEC, setupCommand: `bicameral-mcp setup --mode ${requested}` },
       "/api/actions/bicameral-install",
