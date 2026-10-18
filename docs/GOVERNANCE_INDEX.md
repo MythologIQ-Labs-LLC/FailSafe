@@ -1,5 +1,6 @@
 # Governance Index
 
+**Last Reviewed**: 2026-10-18 (SUBSTANTIATE — **#538 lane D voice pack and notice path** (`plan-538d-voice-notify.md`): Tier 5 contracts `voice-pack`, `slack` and `teams` and the portfolio scan counts updated; no new governance artifact; seal #789. META_LEDGER DAMAGED carried under the owner's bounded #538 override; normal governance NOT restored (#467).)
 **Last Reviewed**: 2026-10-17 (SUBSTANTIATE — **#532 part B delivery assessment** (`plan-532b-delivery-assessment.md`): scenarios and contracts updated; seal #785.)
 **Last Reviewed**: 2026-10-17 (IMPLEMENT — **#532 part B delivery assessment** (`plan-532b-delivery-assessment.md`, Tier 4 plans glob): no new governance artifact; the Tier 2 `docs/architecture/INTEGRATION_SCENARIOS.md` and the Tier 5 contracts `jira`, `linear` and `governed-commit-pr` now state what the slice builds (main only), moved citations in the Tier 5 contracts and portfolio were re-anchored, and FEATURE_INDEX FX1004 and BACKLOG B283-B286 were added. META_LEDGER DAMAGED carried under the owner's bounded per-cycle override; normal governance NOT restored (#467).)
 **Last Reviewed**: 2026-10-17 (SUBSTANTIATE — **#532 part A integration contracts** (`plan-532a-integration-contracts.md`): 30 contracts and the portfolio in Tier 5, the scenarios in Tier 2; seal #782.)
