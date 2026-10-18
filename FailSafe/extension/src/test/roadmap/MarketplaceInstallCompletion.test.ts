@@ -408,6 +408,18 @@ suite('#538 install receipts', () => {
     expectUnrecorded(f, unhandled);
     assert.match(String(f.events.find((e) => e.type === 'marketplace.failed')?.payload.error), /bad item/);
   });
+  test('R14 startInstall run as the route runs it: a catalog that throws in the failure path leaves no unhandled rejection', async () => {
+    const f = live();
+    f.deps.ledgerManager = recording().ledger;
+    f.deps.marketplaceCatalog.updateItemStatus = () => { throw new Error('catalog write failed'); };
+    const unhandled = await unhandledDuring(async () => {
+      void startInstall(f.deps, f.item, NO_SCAN);
+      for (let i = 0; i < 5; i++) await settle();
+    });
+    assert.equal(unhandled, 0, 'no unhandled rejection');
+    assert.equal(f.count('marketplace.failed'), 1, 'the failure is still reported');
+    assert.match(String(f.events.find((e) => e.type === 'marketplace.failed')?.payload.error), /catalog write failed/);
+  });
   test('RS1 a ledger-unrecorded item cannot be re-scanned into installed', async () => {
     const f = live();
     f.deps.ledgerManager = rejecting().ledger;

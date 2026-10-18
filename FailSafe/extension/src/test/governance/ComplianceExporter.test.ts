@@ -292,6 +292,15 @@ suite('#538 ledger integrity in the export', function () {
     const okWithFailures = await exportWith({ getRecentEntries: async () => [], isAvailable: () => true, verifyLedger: async () => intactReport({ failures: [{ id: 3, code: 'prev-link', detail: 'x' }] }) });
     assert.equal(integrity(okWithFailures).status, 'failed');
   });
+  test('C7 an anchor status outside the known set exports unavailable, never intact', async () => {
+    const report = intactReport();
+    (report.anchor as Record<string, unknown>).status = 'trust-me';
+    const b = await exportWith({ getRecentEntries: async () => [], isAvailable: () => true, verifyLedger: async () => report });
+    assert.equal(integrity(b).status, 'unavailable');
+    assert.match(String(integrity(b).reason), /malformed/);
+    const known = await exportWith({ getRecentEntries: async () => [], isAvailable: () => true, verifyLedger: async () => intactReport() });
+    assert.equal(integrity(known).status, 'intact', 'a known status still reads intact (positive control)');
+  });
   test('C6 an unreadable ledger still writes a bundle with no entries and the read error', async () => {
     const b = await exportWith({ getRecentEntries: async () => { throw new Error('database is locked'); }, isAvailable: () => true, verifyLedger: async () => intactReport() });
     assert.deepEqual(b.ledger, []);
