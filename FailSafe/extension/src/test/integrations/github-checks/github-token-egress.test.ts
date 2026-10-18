@@ -224,6 +224,26 @@ suite('#538 GitHub token host affinity: new seams (B265, B279)', () => {
     }
   });
 
+  test('G13 the 8-second deadline covers the whole request: a server that keeps trickling bytes is cut off', async function () {
+    this.timeout(14000);
+    const timers: NodeJS.Timeout[] = [];
+    const server = await localServer((_q, res) => {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      const t = setInterval(() => { if (!res.writableEnded) res.write(' '); }, 100);
+      timers.push(t);
+      res.on('close', () => clearInterval(t));
+    });
+    const started = Date.now();
+    try {
+      await assert.rejects(defaultGitHubGet(`http://127.0.0.1:${server.port}/x`, {}), /timeout/);
+      const elapsed = Date.now() - started;
+      assert.ok(elapsed < 9500, `the call ran ${elapsed} ms against an 8000 ms deadline`);
+    } finally {
+      timers.forEach(clearInterval);
+      await server.close();
+    }
+  });
+
   test('G11 the transports never use a pooled agent', () => {
     assert.equal(githubRequestOptions('http://127.0.0.1:9443/x', 'GET', {})?.options.agent, false);
     assert.equal(githubRequestOptions('https://ghe.example/x', 'GET', {})?.options.agent, false);
