@@ -78,6 +78,9 @@ const STATES = ['verified-shipped', 'shipped-unverified', 'shipped-inert', 'main
 const SHIPPED = new Set(['verified-shipped', 'shipped-unverified', 'shipped-inert']);
 const DEPTHS = ['unit', 'route', 'jsdom', 'playwright-stubbed', 'installed-vscode', 'live-service'];
 const DISPOSITIONS = ['INVEST', 'COMPLETE', 'MAINTAIN', 'RETIRE'];
+/** #538: the owner's recorded decision on the dispositions, and the section a RETIRE contract carries. */
+const OWNER_DECISION = { date: '2026-10-18', ref: '#538' };
+const RETIREMENT_SECTION = 'Retirement review (#538)';
 const SECTIONS = [
   'Customer job', 'Measurable value', 'Why not simply ask an agent', 'API documentation',
   'Privileges and scopes', 'Feature state', 'Inbound fields', 'Outbound fields and egress', 'Transformations',
@@ -930,7 +933,7 @@ const CONTRACT_SECTIONS_TEXT = (over = {}) => SECTIONS.map((name) => {
     return `## Feature state\n\n| Capability | State | Symbol | Reached from | Test (depth) | Notes |\n|---|---|---|---|---|---|\n` +
       `| notify | verified-shipped | \`sendAlpha\` \`${FX_IMPL}:2\` (\`export function sendAlpha\`) | \`${FX_REG}:3\` (\`registerCommand('failsafe.alpha.send'\`) | \`${FX_TEST}\` (unit) | - |\n`;
   }
-  if (name === 'Recommended disposition') return '## Recommended disposition\n\nRecommendation for the owner: **MAINTAIN**. It works.\n';
+  if (name === 'Recommended disposition') return '## Recommended disposition\n\nOwner decision 2026-10-18 (#538), accepting the recommendation: **MAINTAIN**. It works.\n';
   if (NON_FACTUAL.has(name)) return `## ${name}\n\nPlain text.\n`;
   return `## ${name}\n\nSends one request \`${FX_IMPL}:3\` (\`https.request(url)\`).\n`;
 }).join('\n');
@@ -942,8 +945,21 @@ function fixtureContract(over = {}, owned = [P('integrations/alpha/')], extra = 
 const FX_COUNTS = { 'scan-1-files': 6, 'scan-1-call-sites': 8, 'scan-2-files': 0, 'browser-files': 5, 'browser-targets': 7,
   'loopback-targets': 1, 'catalog-ids': 1, 'integration-entries': 2, contracts: 1 };
 
+/** The Totals line a portfolio states for these matrix rows. */
+function totalsLine(rows) {
+  const cells = rows.map(cellsOf);
+  const d = (k) => cells.filter((c) => (c[5] || '').replace(/\*/g, '').trim() === k).length;
+  const p = (k) => cells.filter((c) => (c[6] || '').trim() === k).length;
+  return `Totals: ${rows.length} contracts; owner dispositions ${d('COMPLETE')} COMPLETE, ${d('MAINTAIN')} MAINTAIN, ${d('RETIRE')} RETIRE, ${d('INVEST')} INVEST; priorities ${p('1')} at 1, ${p('2')} at 2, ${p('3')} at 3.`;
+}
+
+const FX_DECISION = ['## Owner decision (#538)', '',
+  'Owner decision of 2026-10-18 (#538): the recommendations are accepted as work-queue dispositions; COMPLETE means finish the named gaps.'];
+
 function fixturePortfolio(over = {}) {
   const counts = { ...FX_COUNTS, ...(over.counts || {}) };
+  const matrix = over.matrix || ['| [alpha](integrations/alpha.md) | send | verified-shipped | yes | unit | MAINTAIN | 2 |'];
+  const totals = over.totals === undefined ? [totalsLine(matrix), ''] : over.totals === null ? [] : [over.totals, ''];
   const facts = FACT_IDS.map((id) => `| ${id} | fact | behaviour | confirmed | \`${FX_IMPL}:2\` (\`export function sendAlpha\`) | - |`);
   const recon = over.recon || [
     `| \`${INTEGRATIONS_DIR}catalog/\` | not an integration: registry | none | \`${CATALOG_FILE}:1\` (\`INTEGRATION_CATALOG\`) |`,
@@ -952,9 +968,9 @@ function fixturePortfolio(over = {}) {
     `| \`${SRC}/roadmap/ui/modules/connection.js\` | folded into alpha | none | \`${CATALOG_FILE}:1\` (\`INTEGRATION_CATALOG\`) |`,
   ];
   return [
-    '# Integration portfolio', '', 'Dispositions are recommendations; the owner decides.', '',
-    '## Portfolio matrix', '', '| Integration | Customer job | Feature state | Network egress | Test depth | Recommended disposition | Priority |',
-    '|---|---|---|---|---|---|---|', ...(over.matrix || ['| [alpha](integrations/alpha.md) | send | verified-shipped | yes | unit | MAINTAIN | 2 |']), '',
+    '# Integration portfolio', '', ...(over.decision || FX_DECISION), ...(over.links || []), '',
+    '## Portfolio matrix', '', '| Integration | Customer job | Feature state | Network egress | Test depth | Disposition (owner, #538) | Priority |',
+    '|---|---|---|---|---|---|---|', ...matrix, '', ...totals,
     '## Scan counts', '', '| Measure | Count |', '|---|---|', ...Object.entries(counts).map(([k, v]) => `| \`${k}\` | ${v} |`), '',
     '## Inventory reconciliation', '', '| Entry | Reconciliation | LD1 difference | Evidence |', '|---|---|---|---|', ...recon, '',
     '## Verified facts', '', '| Id | Fact | Kind | Status | Evidence | Backlog |', '|---|---|---|---|---|---|', ...(over.facts || facts), '',
@@ -1242,6 +1258,100 @@ describe('FX1003 integration contracts: portfolio, facts, legacy map, registrati
       `| \`${SRC}/webui/\` | ${SAME_ORIGIN} | none | \`${CATALOG_FILE}:1\` (\`INTEGRATION_CATALOG\`) |`,
       `| \`${SRC}/roadmap/ui/modules/connection.js\` | folded into alpha | none | \`${CATALOG_FILE}:1\` (\`INTEGRATION_CATALOG\`) |`];
     assertOnly(world({ portfolio: { recon } }), 'reconciliation', /omega/);
+  });
+});
+
+describe('FX1003 #538 owner dispositions', () => {
+  const legacy = `Legacy review: \`${REVIEW_DIR}ALPHA_CONTRACT_REVIEW.md\`.`;
+  const row = (disp, prio = '2') => `| [alpha](integrations/alpha.md) | send | verified-shipped | yes | unit | ${disp} | ${prio} |`;
+  const DECIDED = (d) => `Owner decision 2026-10-18 (#538), accepting the recommendation: **${d}**. It goes.`;
+  const LINK = '- [Retirement review](integrations/alpha.md#retirement-review-538)';
+  const GROW = 'docs/grow.md';
+  const growText = [...Array.from({ length: 49 }, (_, i) => `line ${i + 1}`), 'anchor far from the top', 'tail'].join('\n');
+  const REVIEW_OK = [`## ${RETIREMENT_SECTION}`, '',
+    `Removal is tracked as [B300] \`${FX_IMPL}:2\` (\`export function sendAlpha\`).`,
+    `The registering file changes \`${FX_REG}:3\` (\`registerCommand('failsafe.alpha.send'\`).`];
+  /** A world whose alpha contract has disposition `disp` and the given review lines (null: no review). */
+  const decided = ({ disp = 'RETIRE', review = REVIEW_OK, links = [LINK] } = {}) => world({
+    contractText: fixtureContract({ 'Recommended disposition': [DECIDED(disp), '', ...(review || [])].join('\n') }, undefined, legacy),
+    portfolio: { matrix: [row(disp)], links },
+    files: { [GROW]: growText },
+  });
+  const reviewWith = (...lines) => [...REVIEW_OK, ...lines];
+
+  it('T1 a disposition that does not record the owner decision is red', () => {
+    const text = fixtureContract({ 'Recommended disposition': 'Recommendation for the owner: **MAINTAIN**. It works.' }, undefined, legacy);
+    assertOnly(world({ contractText: text }), 'disposition', /owner decision/);
+  });
+
+  it('T2a a portfolio without the owner decision section is red', () => {
+    assertOnly(world({ portfolio: { decision: ['Dispositions are recommendations; the owner decides.'] } }), 'portfolio', /Owner decision \(#538\)/);
+  });
+  it('T2b a portfolio that keeps the stale "recorded later" framing is red', () => {
+    const decision = [...FX_DECISION, '', 'Every disposition here is a recommendation for the owner; the owner decides, and that decision is recorded later.'];
+    assertOnly(world({ portfolio: { decision } }), 'portfolio', /recorded later/);
+  });
+  it('T2c an owner decision section that does not say what COMPLETE means is red', () => {
+    const decision = ['## Owner decision (#538)', '', 'Owner decision of 2026-10-18 (#538): the recommendations are accepted.'];
+    assertOnly(world({ portfolio: { decision } }), 'portfolio', /finish the named gaps/);
+  });
+
+  it('T3a a Totals line with a wrong disposition count is red', () => {
+    assertOnly(world({ portfolio: { totals: 'Totals: 1 contracts; owner dispositions 0 COMPLETE, 2 MAINTAIN, 0 RETIRE, 0 INVEST; priorities 0 at 1, 1 at 2, 0 at 3.' } }), 'totals', /MAINTAIN/);
+  });
+  it('T3b a Totals line with a wrong priority count is red', () => {
+    assertOnly(world({ portfolio: { totals: 'Totals: 1 contracts; owner dispositions 0 COMPLETE, 1 MAINTAIN, 0 RETIRE, 0 INVEST; priorities 1 at 1, 0 at 2, 0 at 3.' } }), 'totals', /priority/);
+  });
+  it('T3c a portfolio with no Totals line is red', () => {
+    assertOnly(world({ portfolio: { totals: null } }), 'totals', /no Totals line/);
+  });
+
+  it('T4 positive control: a RETIRE contract with one cited review, a backlog item and the portfolio link is clean', () => {
+    const r = validate(decided());
+    assert.deepEqual(r.problems, [], report(r));
+  });
+  it('T4a a RETIRE contract with no review is red', () => {
+    assertOnly(decided({ review: null }), 'retirement', /exactly one/);
+  });
+  it('T4b a review that names no backlog item is red', () => {
+    assertOnly(decided({ review: [REVIEW_OK[0], '', REVIEW_OK[3]] }), 'retirement', /names no \[Bnnn\]/);
+  });
+  it('T4c a review naming a B-number absent from BACKLOG is red', () => {
+    assertOnly(decided({ review: [REVIEW_OK[0], '', REVIEW_OK[2].replace('[B300]', '[B999]')] }), 'retirement', /B999 is not a \[B999\] item/);
+  });
+  it('T4d a review line with no citation is red', () => {
+    assertOnly(decided({ review: reviewWith('Nothing else depends on it.') }), 'uncited-line', /Retirement review/);
+  });
+  it('T4e a portfolio that does not link the review is red', () => {
+    assertOnly(decided({ links: [] }), 'retirement', /does not link/);
+  });
+  it('T4f a review on a contract that is not RETIRE is red', () => {
+    assertOnly(decided({ disp: 'MAINTAIN' }), 'retirement', /only a RETIRE contract/);
+  });
+  it('T4g a fenced block in a review is red', () => {
+    assertOnly(decided({ review: reviewWith('```', `grep -c x \`${FX_IMPL}:2\` (\`export function sendAlpha\`)`, '```') }), 'retirement', /fenced/);
+  });
+  it('T4h two review sections are red (exactly one)', () => {
+    assertOnly(decided({ review: [...REVIEW_OK, '', ...REVIEW_OK] }), 'retirement', /exactly one/);
+  });
+
+  it('T5a a whole-file citation whose anchor is far from the top passes in a review', () => {
+    const r = validate(decided({ review: reviewWith(`The growing document is updated \`${GROW}\` (\`anchor far from the top\`).`) }));
+    assert.deepEqual(r.problems, [], report(r));
+  });
+  it('T5b a whole-file citation whose anchor is absent is red', () => {
+    assertOnly(decided({ review: reviewWith(`The growing document is updated \`${GROW}\` (\`an anchor that is not there\`).`) }), 'citation', /not in the file/);
+  });
+  it('T5c preservation: the whole-file form is not a citation outside a review', () => {
+    const text = fixtureContract({ Transformations: `It maps fields \`${GROW}\` (\`anchor far from the top\`).` }, undefined, legacy);
+    assertOnly(world({ contractText: text, files: { [GROW]: growText } }), 'uncited-line', /Transformations/);
+  });
+  it('T5d a source file is cited by line, never by the whole-file form', () => {
+    assertOnly(decided({ review: reviewWith(`The client changes \`${FX_IMPL}\` (\`export function sendAlpha\`).`) }), 'citation', /cited by line/);
+  });
+  it('T5e a whole-file anchor that is short or contains a pipe is red', () => {
+    assertOnly(decided({ review: reviewWith(`Short \`${GROW}\` (\`tail\`).`) }), 'citation', /shorter than 8/);
+    assertOnly(decided({ review: reviewWith(`Pipe \`${GROW}\` (\`line 1 | line 2\`).`) }), 'citation', /contains \|/);
   });
 });
 
