@@ -7,6 +7,8 @@ import {
   ConsoleRouteRegistrar, type ConsoleRouteHost,
 } from '../../roadmap/services/ConsoleRouteRegistrar';
 import { EventBus } from '../../shared/EventBus';
+import { setupBicameralRoutes } from '../../roadmap/routes/BicameralRoute';
+import { RouteHarness, makeApp } from '../extension/helpers/routeTestHarness';
 
 interface FakeRoute { method: string; path: string; }
 interface FakeUse { path: string | null; order: number; }
@@ -314,5 +316,54 @@ suite('ConsoleRouteRegistrar (Phase 60 §0)', () => {
     wired.fn = async () => { calls++; };
     await deps.rewireBicameral!();
     assert.equal(calls, 1);
+  });
+});
+
+// #538 lane B review items 1 and 2: the AGT terminal runner and the Bicameral install
+// ledger are read at request time, through the registrar's real wiring.
+suite('#538 ConsoleRouteRegistrar request-time install wiring', () => {
+  let harness: RouteHarness | null = null;
+  teardown(async () => { if (harness) await harness.stop(); harness = null; });
+
+  test('agt-install with no terminal runner wired answers 503 before any dialog or ledger write', async () => {
+    const app = makeApp();
+    const host = makeHost(app, makeFakeHub());
+    let confirms = 0;
+    let appends = 0;
+    (host as any).getOperatorConfirmer = () => async () => { confirms++; return 'approved'; };
+    (host as any).getAgtRunInTerminal = () => null;
+    (host as any).qorelogicManager = {
+      ...host.qorelogicManager,
+      getLedgerManager: () => ({ isAvailable: () => true, appendEntry: async () => { appends++; return { id: appends, entryHash: 'h' }; } }),
+    };
+    new ConsoleRouteRegistrar(host).setupAllRoutes();
+    harness = new RouteHarness(app);
+    await harness.start();
+    const res = await harness.request({ method: 'POST', path: '/api/actions/agt-install', body: { id: 'typescript' } });
+    assert.equal(res.status, 503, JSON.stringify(res.body));
+    assert.equal(confirms, 0, 'no dialog for a route that cannot act');
+    assert.equal(appends, 0, 'no ledger entry for a route that cannot act');
+  });
+
+  test('bicameral-install records with a ledger that was wired after the routes registered', async () => {
+    const { app: fakeApp } = makeFakeApp();
+    const host = makeHost(fakeApp, makeFakeHub());
+    const wired: { ledger: unknown } = { ledger: null };
+    (host as any).qorelogicManager = { ...host.qorelogicManager, getLedgerManager: () => wired.ledger };
+    const deps = new ConsoleRouteRegistrar(host).buildBicameralRouteDeps();
+    const appended: unknown[] = [];
+    wired.ledger = { isAvailable: () => true, appendEntry: async (e: unknown) => { appended.push(e); return { id: appended.length, entryHash: 'h' }; } };
+    const app = makeApp();
+    setupBicameralRoutes(app, {
+      ...deps,
+      confirmOperatorAction: async () => 'approved',
+      runInstall: async (_opts: unknown, mode: string) => ({ mode, steps: [], done: true, ok: true }),
+    } as never);
+    harness = new RouteHarness(app);
+    await harness.start();
+    const res = await harness.request({ method: 'POST', path: '/api/actions/bicameral-install', body: { mode: 'solo' } });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.equal(res.body.ledger, 'recorded');
+    assert.equal(appended.length, 1);
   });
 });

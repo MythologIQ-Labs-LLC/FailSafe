@@ -199,6 +199,28 @@ suite('#538 Console install callers show the VS Code confirmation outcome', () =
     });
   }
 
+  test('Qor-logic skills install: a non-JSON 429 shows the status, not a SyntaxError', async () => {
+    const ctx = setup('<div id="root"></div>', {}, '/none');
+    const g = global as unknown as Record<string, unknown>;
+    const prevFetch = g.fetch;
+    g.fetch = async () => ({ ok: false, status: 429, statusText: 'Too Many Requests', json: async () => { throw new SyntaxError('Unexpected token T in JSON'); } });
+    try {
+      const root = ctx.doc.getElementById('root')!;
+      root.innerHTML = renderInstallSkillsCard(
+        { running: false, invocations: [], lastReport: null },
+        { bootstrapState: { qorLogicInstall: { hosts: [{ host: 'claude', installed: false }] } } },
+      );
+      bindInstallSkillsCard(root, {});
+      (root.querySelector('[data-action="install-qorlogic-skills"]') as HTMLElement).click();
+      (root.querySelector('.cc-modal-confirm') as HTMLElement).click();
+      await tick(30);
+      const err = root.querySelector('.cc-modal-error');
+      assert.ok(err, 'the modal shows the outcome');
+      assert.ok(err!.textContent!.includes('Request failed (429)'), err!.textContent!);
+      assert.ok(!/SyntaxError|Unexpected token/.test(err!.textContent!), err!.textContent!);
+    } finally { g.fetch = prevFetch; ctx.cleanup(); }
+  });
+
   test('Bicameral card shows the pending text while the install awaits confirmation', () => {
     const ctx = setup('', {}, '/none');
     try {
