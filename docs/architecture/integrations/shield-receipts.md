@@ -1,6 +1,6 @@
 # SHIELD receipts integration contract
 
-Contract id: `shield-receipts` (registry row `integration-contract-shield-receipts`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `shield-receipts` (registry row `integration-contract-shield-receipts`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 No legacy review in `docs/research/integrations/` covers SHIELD receipts; the GitHub review belongs to the github-checks contract.
 
@@ -104,7 +104,7 @@ Installed-extension test: none, because no command reaches this code (unverified
 
 ## Recommended disposition
 
-Recommendation for the owner: **COMPLETE**. The verifier, issuer and hardened evidence source are built and unit-tested but unreachable: there is no native chain status, no key provider and no caller. Wiring them is blocked on the damaged ledger (#467) and tracked as B216; until then they are inert code that should not be described as a working check.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE**. The verifier, issuer and hardened evidence source are built and unit-tested but unreachable: there is no native chain status, no key provider and no caller. Wiring them is blocked on the damaged ledger (#467) and tracked as B216; until then they are inert code that should not be described as a working check.
 
 ## Open defects
 

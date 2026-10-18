@@ -1,6 +1,6 @@
 # OpenHands integration contract
 
-Contract id: `openhands` (registry row `integration-contract-openhands`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `openhands` (registry row `integration-contract-openhands`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 Legacy review (historical input, never edited): `docs/research/integrations/INTEGRATION_OPENHANDS_CONTRACT_REVIEW.md`. It proposed an event observer plus a start-of-run policy gate (confirmation policy and security analyzer); the shipped code imports an exported run after the fact and has no start-of-run gate. It honours the review's rule against mid-run policy mutation by never touching a run.
 
@@ -122,7 +122,7 @@ Installed-extension test: no test installs the packaged VSIX and runs this comma
 
 ## Recommended disposition
 
-Recommendation for the owner: **MAINTAIN**. The historical import is built, signed, deduplicated and tested in the extension host with honest "not live enforcement" wording. The value it can add is capped by the unconfirmed export layout (B230); the start-of-run policy gate the legacy review proposed is a separate, larger investment that should come only with a real OpenHands surface to test against.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **MAINTAIN**. The historical import is built, signed, deduplicated and tested in the extension host with honest "not live enforcement" wording. The value it can add is capped by the unconfirmed export layout (B230); the start-of-run policy gate the legacy review proposed is a separate, larger investment that should come only with a real OpenHands surface to test against.
 
 ## Open defects
 

@@ -1,6 +1,6 @@
 # GitHub Checks integration contract
 
-Contract id: `github-checks` (registry row `integration-contract-github-checks`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `github-checks` (registry row `integration-contract-github-checks`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 Legacy review (historical input, never edited): `docs/research/integrations/INTEGRATION_GITHUB_CONTRACT_REVIEW.md`. It recommended a GitHub App primary path with JWT-minted installation tokens, a commit-status fallback and a deterministic PASS/WARN/VETO mapping; the shipped code takes a pre-minted token, posts only a neutral manual advisory and a PR-linkage check, and keeps the verified SHIELD publisher unwired.
 
@@ -122,7 +122,7 @@ Live-service test: none (unverified).
 
 ## Recommended disposition
 
-Recommendation for the owner: **COMPLETE**. The advisory and linkage checks work and are tested, and the transport refuses an unverified SHIELD PASS by construction. The customer value the review named, a SHIELD verdict a required check can trust, exists in code but has no caller; finishing it depends on native receipt attestation (the shield-receipts contract). The F11 base-URL defect and the unset fork guard should be fixed first because they affect what is sent where.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE**. The advisory and linkage checks work and are tested, and the transport refuses an unverified SHIELD PASS by construction. The customer value the review named, a SHIELD verdict a required check can trust, exists in code but has no caller; finishing it depends on native receipt attestation (the shield-receipts contract). The F11 base-URL defect and the unset fork guard should be fixed first because they affect what is sent where.
 
 ## Open defects
 

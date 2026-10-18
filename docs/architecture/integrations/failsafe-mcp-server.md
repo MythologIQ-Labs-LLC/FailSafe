@@ -1,6 +1,6 @@
 # FailSafe MCP server integration contract
 
-Contract id: `failsafe-mcp-server` (registry row `integration-contract-failsafe-mcp-server`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `failsafe-mcp-server` (registry row `integration-contract-failsafe-mcp-server`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 Legacy review: none; no review in `docs/research/integrations/` covers FailSafe's own MCP server. The MCP Registry review belongs to the mcp-catalog contract.
 
@@ -98,7 +98,7 @@ Installed-extension test: none (unverified).
 
 ## Recommended disposition
 
-Recommendation for the owner: **COMPLETE**. The tools and their gates exist and are unit-tested, but the customer job is unmet until B209 gives agents a reachable transport. Until then the activation message should not say the server is listening.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE**. The tools and their gates exist and are unit-tested, but the customer job is unmet until B209 gives agents a reachable transport. Until then the activation message should not say the server is listening.
 
 ## Open defects
 

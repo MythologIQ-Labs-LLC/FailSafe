@@ -1,6 +1,6 @@
 # Git bootstrap integration contract
 
-Contract id: `git-bootstrap` (registry row `integration-contract-git-bootstrap`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `git-bootstrap` (registry row `integration-contract-git-bootstrap`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 No legacy contract review exists for this integration.
 
@@ -105,7 +105,7 @@ Installed-extension test: none runs a real package-manager install (unverified).
 
 ## Recommended disposition
 
-Recommendation for the owner: **MAINTAIN**. The install is opt-in from user settings only, resolved from trusted locations and argv-only, and repository initialization asks first; the remaining question is product policy, whether an opted-in user should still be asked before each system-wide install.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **MAINTAIN**. The install is opt-in from user settings only, resolved from trusted locations and argv-only, and repository initialization asks first; the remaining question is product policy, whether an opted-in user should still be asked before each system-wide install.
 
 ## Open defects
 

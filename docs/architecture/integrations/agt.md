@@ -1,6 +1,6 @@
 # Agent Governance Toolkit (AGT) installer integration contract
 
-Contract id: `agt` (registry row `integration-contract-agt`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `agt` (registry row `integration-contract-agt`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 Legacy review: none; `docs/research/integrations/` has no AGT review. The separate agent-failsafe Python bridge and the SRE panel are the `agt-adapter` contract.
 
@@ -96,7 +96,7 @@ Installed-extension test: none checks the real terminal pre-fill (unverified).
 
 ## Recommended disposition
 
-Recommendation for the owner: **MAINTAIN**. It is a small, honest installer that never runs a command; keep the catalog current and consider the same modal confirmation the gated routes use before opening a terminal.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **MAINTAIN**. It is a small, honest installer that never runs a command; keep the catalog current and consider the same modal confirmation the gated routes use before opening a terminal.
 
 ## Open defects
 

@@ -1,6 +1,6 @@
 # Voice Pack integration contract
 
-Contract id: `voice-pack` (registry row `integration-contract-voice-pack`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `voice-pack` (registry row `integration-contract-voice-pack`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 Legacy review: none; no review in `docs/research/integrations/` covers the Voice Pack.
 
@@ -107,7 +107,7 @@ Installed-extension test: none downloads a real pack (unverified).
 
 ## Recommended disposition
 
-Recommendation for the owner: **MAINTAIN**. Install, verify, swap and uninstall are built and tested with stubs; the one confirmed defect is the hard-coded old organization slug, a one-line fix plus the test that pins it.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **MAINTAIN**. Install, verify, swap and uninstall are built and tested with stubs; the one confirmed defect is the hard-coded old organization slug, a one-line fix plus the test that pins it.
 
 ## Open defects
 

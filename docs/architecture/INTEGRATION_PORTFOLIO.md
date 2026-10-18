@@ -2,9 +2,20 @@
 
 Status: canonical for the integration portfolio (registry row `integration-portfolio`, #532 part A). Recorded against main `c36b9ee2` and tag `v6.0.8`.
 
-This page lists every integration FailSafe has on main, what each does for the customer, what it sends off the machine and how far each capability is proven. Each row links its contract in `docs/architecture/integrations/`, which holds the cited detail. **Every disposition here is a recommendation for the owner; the owner decides, and that decision is recorded later.** Nothing here is pricing, tier or roadmap information, and no credential format appears in it.
+This page lists every integration FailSafe has on main, what each does for the customer, what it sends off the machine and how far each capability is proven. Each row links its contract in `docs/architecture/integrations/`, which holds the cited detail. **The dispositions are the owner's decision of 2026-10-18 ([#538](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/538)); see [Owner decision (#538)](#owner-decision-538).** Nothing here is pricing, tier or roadmap information, and no credential format appears in it.
 
 `FailSafe/extension/src/test/docs/integration-contracts.test.cjs` (FX1003) holds this page and the contracts to the code: coverage from the code, the citation grammar, the feature states, the tables below and the counts in [Scan counts](#scan-counts).
+
+## Owner decision (#538)
+
+On 2026-10-18 the owner accepted the dispositions in the matrix below as owner-approved work-queue dispositions ([#538](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/538), "Ownership decisions for #532"): 15 COMPLETE, 13 MAINTAIN, 2 RETIRE and 0 INVEST. They began as the #532 part A recommendations. A disposition says what to do next; it is not a claim that a requirement is implemented.
+
+- COMPLETE means finish the named gaps: the contract's Recommended disposition and Open defects name them. It does not mean the integration is complete.
+- MAINTAIN means keep it working and fix its recorded defects.
+- RETIRE means retire the inert or exposed claims and routes, only after a reference and compatibility review, in a separate small PR, without deleting historic contracts or evidence. The two reviews are [governance-webhook](integrations/governance-webhook.md#retirement-review-538) (removal B288) and [qor-runtime](integrations/qor-runtime.md#retirement-review-538) (removal B289).
+- INVEST: no integration has it.
+
+The decision covers the dispositions. The priorities and the [Prioritized order](#prioritized-order) remain a recommendation.
 
 ## Why new contract documents
 
@@ -24,7 +35,7 @@ Test depth labels: `unit` (a node or vscode-test file calling the code directly)
 
 Test depth lists the depth labels of the contract's proving tests; `none` means no capability is `verified-shipped`. Network egress is `yes` when a reachable capability, or a process FailSafe starts for it, sends data off the machine.
 
-| Integration | Customer job | Feature state | Network egress | Test depth | Recommended disposition | Priority |
+| Integration | Customer job | Feature state | Network egress | Test depth | Disposition (owner, #538) | Priority |
 |---|---|---|---|---|---|---|
 | [sentinel-llm](integrations/sentinel-llm.md) | Ask a local model for a second opinion on flagged files and structure Brainstorm transcripts | verified-shipped, shipped-unverified, shipped-inert, proposed | yes | unit | COMPLETE | 1 |
 | [governed-commit-pr](integrations/governed-commit-pr.md) | Turn FailSafe's own workspace edits into one confirmed commit, push and PR, or a recorded decline | verified-shipped | yes | unit | COMPLETE | 1 |
@@ -57,11 +68,11 @@ Test depth lists the depth labels of the contract's proving tests; `none` means 
 | [governance-webhook](integrations/governance-webhook.md) | Deliver signed governance events to the customer's own HTTPS endpoint | shipped-inert, proposed | no | unit | RETIRE | 3 |
 | [qor-runtime](integrations/qor-runtime.md) | Show an external Qor runtime's health in the Console | shipped-inert, proposed | no | unit, route | RETIRE | 3 |
 
-Totals: 30 contracts; recommended dispositions 15 COMPLETE, 13 MAINTAIN, 2 RETIRE, 0 INVEST; priorities 7 at 1, 14 at 2, 9 at 3.
+Totals: 30 contracts; owner dispositions 15 COMPLETE, 13 MAINTAIN, 2 RETIRE, 0 INVEST; priorities 7 at 1, 14 at 2, 9 at 3.
 
 ## Prioritized order
 
-Priority 1 is where a customer is exposed today (data leaves the machine without a clear consent, a token can reach the wrong host, or the product says something works that cannot), or where a scenario depends on the integration. Within a priority the order is the recommended order of work. All of it is a recommendation for the owner.
+Priority 1 is where a customer is exposed today (data leaves the machine without a clear consent, a token can reach the wrong host, or the product says something works that cannot), or where a scenario depends on the integration. Within a priority the order is the recommended order of work. The priorities and this order remain a recommendation; the owner decision (#538) covers the dispositions.
 
 1. **sentinel-llm**: file content and Brainstorm transcripts can go to an endpoint a workspace file sets, over plain http to a public host, with no consent step (see the contract and Other findings).
 2. **governed-commit-pr**: pushes repository content and opens pull requests; the PR step is gated only by a stored token, not by the GitHub enable setting (F18, B270), and its prompt is not modal.
@@ -83,7 +94,7 @@ Priority 1 is where a customer is exposed today (data leaves the machine without
 18. **voice-pack**: works with stubbed downloads; the download URL uses the old organization slug (F07, B261).
 19. **continue** and **aider**: built and unit-tested; no test runs the real CLIs, and Aider has no tool allowlist.
 20. **linear**, **sarif**, **openhands**, **acp-devin**, **agt**, **tracker-manifest**, **git-bootstrap**: built and tested with small gaps; maintain.
-21. **governance-webhook** and **qor-runtime**: no caller on main; the recommendation is to retire them unless the owner wants them wired.
+21. **governance-webhook** and **qor-runtime**: no caller on main; the owner decided RETIRE (#538). Their retirement reviews ([governance-webhook](integrations/governance-webhook.md#retirement-review-538), [qor-runtime](integrations/qor-runtime.md#retirement-review-538)) bound the removals, B288 and B289, each a separate PR.
 
 ## Scans
 
@@ -215,7 +226,7 @@ Found while writing the contracts, outside the LD3 list. They are recorded here 
 - qor-logic-consumer: the scaffold route installs the package with no server-side VS Code confirmation `FailSafe/extension/src/roadmap/routes/ActionsRoute.ts:94-103` (`const report = await runScaffold(`). Filed as B274.
 - dependency-admission-lint: the npm registry query runs on each new seal with no setting or notice (see the contract). Filed as B275.
 - agt-adapter: the adapter install route runs pip with no server-side confirmation `FailSafe/extension/src/roadmap/routes/AdapterRoute.ts:53-66` (`deps.adapterService.install(`). Filed as B276.
-- qor-runtime: the `failsafe.qorelogic.externalRuntime.*` settings are contributed but never read `FailSafe/extension/package.json:697-723` (`"failsafe.qorelogic.externalRuntime.timeoutMs": {`). Filed as B277.
+- qor-runtime: the `failsafe.qorelogic.externalRuntime.*` settings are contributed but never read `FailSafe/extension/package.json:697-723` (`"failsafe.qorelogic.externalRuntime.timeoutMs": {`). Filed as B277. Bounded removal: B289 (#538).
 - github-checks: `GitContext.isFork` is never set, so the fork guards never fire `FailSafe/extension/src/extension/github-checks-command.ts:39-43` (`function readGitContext(cwd: string): GitContext {`); the default GitHub transports drop a base URL's port `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:170-172` (`{ hostname: u.hostname, path: u.pathname + u.search, method: 'POST',`). Filed as B278 (fork) and B279 (port).
 - linear: a missing issue is reported as a contract failure, never not_found, so the earlier-import note cannot fire `FailSafe/extension/src/integrations/linear/linear-client.ts:85` (`Issue ${id} not found (or no access).`). Filed as B280.
 - open-design: the Console's create_artifact request queues an L3 approval that always fails on approval `FailSafe/extension/src/roadmap/routes/OpenDesignRoute.ts:75` (`const approvalId = await deps.queueL3Approval({`). Filed as B281.

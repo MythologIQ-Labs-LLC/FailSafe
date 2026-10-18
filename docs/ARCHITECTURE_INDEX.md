@@ -1,6 +1,6 @@
 # FailSafe Architecture Index
 
-**Last Updated:** 2026-10-17 (#532 part A: registered the integration portfolio, the integration scenarios and one canonical contract per integration, rows `integration-portfolio`, `integration-scenarios` and `integration-contract-<id>`; #531: registered the managed architecture index design, row `managed-architecture-index`; #530: registry, normative scope, legacy prefixes and the `check-architecture-index.cjs` validator)
+**Last Updated:** 2026-10-18 (#538: the integration portfolio and the 30 integration contracts record the owner's dispositions; the governance-webhook and qor-runtime contracts gain retirement reviews); 2026-10-17 (#532 part A: registered the integration portfolio, the integration scenarios and one canonical contract per integration, rows `integration-portfolio`, `integration-scenarios` and `integration-contract-<id>`; #531: registered the managed architecture index design, row `managed-architecture-index`; #530: registry, normative scope, legacy prefixes and the `check-architecture-index.cjs` validator)
 
 This is the developer entry point for **where design authority lives**: which document owns which design decision, what is related to it, and what is only history. The product-facing [README](../README.md) links here.
 

@@ -1,6 +1,6 @@
 # Sentinel LLM integration contract
 
-Contract id: `sentinel-llm` (registry row `integration-contract-sentinel-llm`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `sentinel-llm` (registry row `integration-contract-sentinel-llm`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 There is no legacy contract review for this integration. By the plan it also covers the Console's Ollama reachability probe in `FailSafe/extension/src/roadmap/ui/modules/connection.js`, which the portfolio reconciles as `folded into sentinel-llm`; that browser module is not owned here.
 
@@ -110,7 +110,7 @@ Installed-extension test: missing; no test drives Sentinel against a model endpo
 
 ## Recommended disposition
 
-Recommendation for the owner: **COMPLETE**. The local-model path is reasonable and off by default, but its boundary is not stated anywhere the user sees it: a workspace file can repoint the endpoint, public hosts and plain http are allowed, Brainstorm sends transcripts whenever the endpoint answers, and the Console says data stays local. Add a loopback-only default with an explicit consent for any other host, and a test that drives one request.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE**. The local-model path is reasonable and off by default, but its boundary is not stated anywhere the user sees it: a workspace file can repoint the endpoint, public hosts and plain http are allowed, Brainstorm sends transcripts whenever the endpoint answers, and the Console says data stays local. Add a loopback-only default with an explicit consent for any other host, and a test that drives one request.
 
 ## Open defects
 

@@ -648,7 +648,7 @@ Outside the Verified facts list, from the portfolio's Other findings (filed 2026
 - [ ] [B274] The Console scaffold route installs the qor-logic package with no server-side VS Code confirmation and no remote-request check (`ActionsRoute.ts:94-103`). Gate it with the #514 operator confirmer (contract `qor-logic-consumer`). | medium
 - [ ] [B275] The dependency admission lint queries registry.npmjs.org on every new seal with no setting or notice, and without a merge base it sends every direct dependency name (`substrate-command.ts:121-143`). Add a setting and say so in the seal output (contract `dependency-admission-lint`). | low
 - [ ] [B276] `POST` to the adapter install route runs pip with no server-side confirmation (`AdapterRoute.ts:53-66`). Gate it with the #514 operator confirmer (contract `agt-adapter`). | medium
-- [ ] [B277] The `failsafe.qorelogic.externalRuntime.*` settings are contributed (`package.json:692-718`) but no source file reads them, so enabling them does nothing. Wire them or remove them with the retire decision for qor-runtime (contract `qor-runtime`). | low
+- [ ] [B277] The `failsafe.qorelogic.externalRuntime.*` settings are contributed (`package.json:692-718`) but no source file reads them, so enabling them does nothing. Wire them or remove them with the retire decision for qor-runtime (contract `qor-runtime`). Bounded removal: B289 (#538). | low
 - [ ] [B278] `GitContext.isFork` is never set by the GitHub Checks command (`github-checks-command.ts:39-43`), so the fork guards never fire although the setting text says fork-PR contexts degrade to local-only (`package.json:447-450`). Set it or correct the text (contract `github-checks`). | low
 - [ ] [B279] The default GitHub Checks transports build the request from the base URL's hostname and path and drop its port (`github-checks-client.ts:170-172`, `:198-200`), so an Enterprise base URL with a port is called on 443. Pass the port (contract `github-checks`). | low
 - [ ] [B280] The Linear client reports a missing issue as a contract failure, never `not_found` (`linear-client.ts:85`), so the earlier-import note cannot fire for Linear. Map the not-found response (contract `linear`). | low
@@ -663,6 +663,13 @@ The first vertical slice of scenario 1 (FX1004, `plan-532b-delivery-assessment.m
 - [ ] [B284] Hub checkpoints record a `gitHash` read from the extension process's working folder, not the workspace (`CheckpointUtils.ts:30`, `process.cwd()`), so they can name another repository's HEAD. The delivery assessment therefore ignores hub checkpoints as evidence. Read HEAD from the workspace root through the trusted git runner. | medium
 - [ ] [B285] `CheckpointManager.seal()` has no production caller (`main.ts:345` constructs the manager and never calls it), so no `CHECKPOINT_CREATED` entry with a `git_head` is written and the delivery assessment's commit-SHA evidence is normally empty. Call it at a governed seal, or retire the SHA match. | low
 - [ ] [B286] The governed commit (`governedCommit.ts`) does not link the commit it makes to the active intent; the operator links it afterwards in Workspace › Delivery. Offer a `committed-under` link from the governed commit itself, after the same confirmation. | medium
+
+## #538 owner dispositions (filed 2026-10-18)
+
+The owner recorded the integration dispositions on #538 (15 COMPLETE, 13 MAINTAIN, 2 RETIRE, 0 INVEST) as a work queue, not as claims that requirements are implemented. Each RETIRE contract carries a Retirement review (#538) that bounds its removal; each removal is a separate small PR that keeps the historic contract and evidence.
+
+- [ ] [B288] Retire the governance webhook sender, which nothing configures or calls: the bounded removal in contract `governance-webhook`, Retirement review (#538) (delete `GovernanceWebhook.ts` and its two tests, the unread `bootstrapGovernance.ts` field, mark FX300/FX919 retired, and add the FX1003 retired-contract rule). Separate PR. | low
+- [ ] [B289] Retire the Qor runtime client, its three routes and hub entry, and deprecate then remove the `failsafe.qorelogic.externalRuntime.*` settings (keeping `apiKey` while the plain-text cleanup needs it): the bounded removal in contract `qor-runtime`, Retirement review (#538). Keeps `qor-route.test.ts` (the only sprint and plans route tests); corrects the FEATURE_INDEX rows that cite the missing `qore-*.test.ts` files; closes B277. Separate PR. | low
 
 ## Wishlist (Nice to Have)
 

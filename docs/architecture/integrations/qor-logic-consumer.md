@@ -1,6 +1,6 @@
 # Qor-logic consumer integration contract
 
-Contract id: `qor-logic-consumer` (registry row `integration-contract-qor-logic-consumer`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `qor-logic-consumer` (registry row `integration-contract-qor-logic-consumer`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 No legacy contract review exists for this integration.
 
@@ -110,7 +110,7 @@ Installed-extension test: none runs a real pip install against a package index (
 
 ## Recommended disposition
 
-Recommendation for the owner: **MAINTAIN**. The installer is hardened (trusted interpreter path, `-P`, argv-only, timeout) and the five-state adapter is tested; the open item is that the Console web path installs without the server-side confirmation the other install routes are moving to.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **MAINTAIN**. The installer is hardened (trusted interpreter path, `-P`, argv-only, timeout) and the five-state adapter is tested; the open item is that the Console web path installs without the server-side confirmation the other install routes are moving to.
 
 ## Open defects
 

@@ -1,6 +1,6 @@
 # SARIF import integration contract
 
-Contract id: `sarif` (registry row `integration-contract-sarif`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `sarif` (registry row `integration-contract-sarif`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 Legacy review (historical input, never edited): `docs/research/integrations/INTEGRATION_SEMGREP_SARIF_CONTRACT_REVIEW.md`. It scoped an offline SARIF 2.1.0 parser with strict schema validation, stable dedup keys and provenance, with a local Semgrep runner and GitHub upload later; the shipped code is the offline parser with dedup keys and provenance, accepts any version string starting with 2.1, and has no runner or upload.
 
@@ -111,7 +111,7 @@ Installed-extension test: none runs the command with a picked file in VS Code (u
 
 ## Recommended disposition
 
-Recommendation for the owner: **MAINTAIN**. The offline import is small, deterministic, keeps triage and is tested; it sends nothing anywhere. Closing findings that disappear from a later scan and a local Semgrep run are possible later additions, not repairs.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **MAINTAIN**. The offline import is small, deterministic, keeps triage and is tested; it sends nothing anywhere. Closing findings that disappear from a later scan and a local Semgrep run are possible later additions, not repairs.
 
 ## Open defects
 

@@ -1,6 +1,6 @@
 # ACP governed proxy for Devin Desktop integration contract
 
-Contract id: `acp-devin` (registry row `integration-contract-acp-devin`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `acp-devin` (registry row `integration-contract-acp-devin`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 Legacy review: none; no review in `docs/research/integrations/` covers ACP or Devin Desktop.
 
@@ -111,7 +111,7 @@ Installed-extension test: none (unverified).
 
 ## Recommended disposition
 
-Recommendation for the owner: **MAINTAIN**. The proxy, its install and its tamper warning are built and tested against the real enforcement engine; the honest limits (cooperative path, no payload policy) are stated in code and backlog. Payload policy (B-INT-15) is the next increment if Devin usage justifies it.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **MAINTAIN**. The proxy, its install and its tamper warning are built and tested against the real enforcement engine; the honest limits (cooperative path, no payload policy) are stated in code and backlog. Payload policy (B-INT-15) is the next increment if Devin usage justifies it.
 
 ## Open defects
 

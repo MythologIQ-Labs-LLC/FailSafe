@@ -1,6 +1,6 @@
 # Agent config injection integration contract
 
-Contract id: `agent-config-injection` (registry row `integration-contract-agent-config-injection`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `agent-config-injection` (registry row `integration-contract-agent-config-injection`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 No legacy review in `docs/research/integrations/` covers agent config injection.
 
@@ -96,7 +96,7 @@ Installed-extension test: no test runs the command in VS Code (unverified).
 
 ## Recommended disposition
 
-Recommendation for the owner: **COMPLETE**. The injector is small and tested, but its text overclaims enforcement (B256), its removal path has no command, and the bulk path is unreachable. Correct the text, wire or delete removal and the bulk path, then maintain.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE**. The injector is small and tested, but its text overclaims enforcement (B256), its removal path has no command, and the bulk path is unreachable. Correct the text, wire or delete removal and the bulk path, then maintain.
 
 ## Open defects
 

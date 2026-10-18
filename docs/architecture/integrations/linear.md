@@ -1,6 +1,6 @@
 # Linear integration contract
 
-Contract id: `linear` (registry row `integration-contract-linear`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `linear` (registry row `integration-contract-linear`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 Legacy review (historical input, never edited): `docs/research/integrations/INTEGRATION_LINEAR_CONTRACT_REVIEW.md`. It recommended OAuth or a team-scoped key, a webhook phase two and dynamic handling of rate-limit headers; the shipped code takes a personal API key, has no webhook, and reads the rate-limit headers without acting on them.
 
@@ -118,7 +118,7 @@ Installed-extension test: no test installs the packaged VSIX and runs this comma
 
 ## Recommended disposition
 
-Recommendation for the owner: **MAINTAIN**. The single-issue preview and the approval-gated draft with provenance are built and tested in the extension host and share one tested path with Jira. The open items are small (the unused rate-limit headers and the unreachable earlier-import note); sync and write-back stay out of scope until write scopes are separately approved.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **MAINTAIN**. The single-issue preview and the approval-gated draft with provenance are built and tested in the extension host and share one tested path with Jira. The open items are small (the unused rate-limit headers and the unreachable earlier-import note); sync and write-back stay out of scope until write scopes are separately approved.
 
 ## Open defects
 

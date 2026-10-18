@@ -1,6 +1,6 @@
 # agent-failsafe adapter and SRE panel integration contract
 
-Contract id: `agt-adapter` (registry row `integration-contract-agt-adapter`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is a recommendation for the owner, not a decision.
+Contract id: `agt-adapter` (registry row `integration-contract-agt-adapter`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 Legacy review: none; `docs/research/integrations/` has no review of the agent-failsafe bridge. The AGT module installer is the separate `agt` contract.
 
@@ -116,7 +116,7 @@ Installed-extension test: none installs the real adapter or talks to a real brid
 
 ## Recommended disposition
 
-Recommendation for the owner: **COMPLETE**. The read side (state, health, SRE panel) works and is tested, but the install path runs pip with no server-side confirmation, the bridge base URL is unvalidated and can point anywhere, the status check calls PyPI on every view, and the health check looks under the process working directory. Close those before widening the bridge.
+Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE**. The read side (state, health, SRE panel) works and is tested, but the install path runs pip with no server-side confirmation, the bridge base URL is unvalidated and can point anywhere, the status check calls PyPI on every view, and the health check looks under the process working directory. Close those before widening the bridge.
 
 ## Open defects
 
