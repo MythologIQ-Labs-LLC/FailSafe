@@ -36,13 +36,24 @@ export type SecurityFinding = {
   cwe?: string;
 };
 
+/**
+ * How a scan ended (#538). Only `completed` can pass: `timeout` (the scanner was
+ * killed at its bound), `scanner-error` (it could not run, threw or exited
+ * nonzero), `inconclusive` (it ran but gave no usable verdict) and
+ * `unavailable` (no scanner installed) are never a pass.
+ */
+export type ScanStatus = "completed" | "inconclusive" | "timeout" | "scanner-error" | "unavailable";
+
 export type SecurityScanResult = {
   passed: boolean;
   scanner: "garak" | "promptfoo" | "both" | "none";
+  scanStatus: ScanStatus;
   timestamp: string;
   findings: SecurityFinding[];
   riskGrade: RiskGrade;
   recommendedAction: "approve" | "review" | "reject";
+  /** First line of each tool's `--version`, for the tools that ran. */
+  scannerVersions?: { garak?: string; promptfoo?: string };
   garakOutput?: string;
   promptfooOutput?: string;
 };
@@ -117,6 +128,10 @@ export type CommandRunnerResult = {
   code: number;
   stdout: string;
   stderr: string;
+  /** The run hit its bound; the process tree was killed (#538). */
+  timedOut?: boolean;
+  /** The started child's pid, when a process was started. */
+  pid?: number;
 };
 
 export type CommandRunner = (
