@@ -81,6 +81,8 @@ suite('#514 operatorConfirmation (FX960)', () => {
     assert.equal(long.length, REASON_LIMIT);
     assert.equal(sanitizeDialogText(long, REASON_LIMIT), long, 'idempotent on its own output');
     assert.equal(sanitizeDialogText(undefined), '');
+    // #538: the Unicode line and paragraph separators cannot start a new dialog line.
+    assert.equal(sanitizeDialogText('a\u2028b\u2029c'), 'a b c');
   });
 
   test('L3 request: title and approve label carry the verb; detail lists queue fields, sanitized, with the footer', () => {

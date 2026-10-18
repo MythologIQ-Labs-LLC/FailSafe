@@ -14,12 +14,13 @@
  * private key is a documented runtime prerequisite, not a build dependency.
  */
 
+import * as http from 'http';
 import * as https from 'https';
 import { isPublishable, parseRepoSlug, type CheckRunPayload } from './github-checks-map';
 import { postCheckRun, toWirePayload } from './check-run-transport';
 import { INVALID_API_BASE_ERROR, NOT_PUBLISHABLE_ERROR } from './check-run-errors';
-
-const GITHUB_API = 'https://api.github.com';
+import { apiBaseFor, githubAuthHeaders } from './github-host-affinity';
+import { bareHost, guardedLookup, isLoopbackHostName } from '../../shared/net/addressPolicy';
 
 export interface GitHubPostFn {
   (url: string, headers: Record<string, string>, body: string):
@@ -51,16 +52,10 @@ export interface PublishOptions {
   apiBaseUrl?: string;
 }
 
-/** Resolve the API base URL and its hostname; undefined when malformed. */
-export function resolveApiBase(apiBaseUrl: string | undefined): { baseUrl: string; apiHost: string } | undefined {
-  const baseUrl = (apiBaseUrl || GITHUB_API).replace(/\/$/, '');
-  try {
-    const u = new URL(baseUrl);
-    if (u.protocol !== 'https:' && u.protocol !== 'http:') return undefined;
-    return { baseUrl, apiHost: u.hostname.toLowerCase() };
-  } catch {
-    return undefined;
-  }
+/** Resolve the API base URL, its hostname and origin; undefined when refused (#538: https, or http on this machine). */
+export function resolveApiBase(apiBaseUrl: string | undefined): { baseUrl: string; apiHost: string; origin: string } | undefined {
+  const api = apiBaseFor(apiBaseUrl);
+  return api.ok ? api.base : undefined;
 }
 
 /**
@@ -90,9 +85,9 @@ export async function publishCheckRunPayload(
   if (!slug) return { ok: true, localOnly: true, error: 'no GitHub remote resolved' };
   if (!ctx.headSha || !ctx.headSha.trim()) return { ok: true, localOnly: true, error: 'no HEAD sha resolved' };
 
-  const api = resolveApiBase(opts.apiBaseUrl);
-  if (!api) return { ok: false, error: INVALID_API_BASE_ERROR };
-  const res = await postCheckRun(wire, { repo: `${slug.owner}/${slug.repo}`, ...api }, opts.token, post);
+  const api = apiBaseFor(opts.apiBaseUrl);
+  if (!api.ok) return { ok: false, error: api.error };
+  const res = await postCheckRun(wire, { repo: `${slug.owner}/${slug.repo}`, baseUrl: api.base.baseUrl, apiHost: api.base.apiHost }, opts.token, post);
   return { ok: res.ok, status: res.status, checkRunId: res.checkRunId, error: res.error };
 }
 
@@ -130,20 +125,19 @@ export async function createPullRequest(
   const slug = opts.remoteUrl ? parseRepoSlug(opts.remoteUrl) : null;
   if (!slug) return { ok: true, localOnly: true, error: 'no GitHub remote resolved' };
 
-  const base = (opts.apiBaseUrl || GITHUB_API).replace(/\/$/, '');
-  const url = `${base}/repos/${slug.owner}/${slug.repo}/pulls`;
+  // #538: a refused base is an error (not a local-only skip); nothing is sent.
+  const api = apiBaseFor(opts.apiBaseUrl);
+  if (!api.ok) return { ok: false, error: api.error };
+  const url = `${api.base.baseUrl}/repos/${slug.owner}/${slug.repo}/pulls`;
+  const headers = githubAuthHeaders(api.base, url, opts.token, {
+    'Content-Type': 'application/json',
+    Accept: 'application/vnd.github+json',
+    'User-Agent': 'FailSafe',
+    'X-GitHub-Api-Version': '2022-11-28',
+  });
+  if (!headers) return { ok: false, error: INVALID_API_BASE_ERROR };
   try {
-    const res = await post(
-      url,
-      {
-        'Content-Type': 'application/json',
-        Accept: 'application/vnd.github+json',
-        Authorization: `token ${opts.token}`,
-        'User-Agent': 'FailSafe',
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
-      JSON.stringify({ title: opts.title, head: opts.head, base: opts.base, body: opts.body }),
-    );
+    const res = await post(url, headers, JSON.stringify({ title: opts.title, head: opts.head, base: opts.base, body: opts.body }));
     if (res.status === 401 || res.status === 403) {
       return { ok: false, status: res.status, error: 'GitHub auth failed — check the token / pull-request write permission.' };
     }
@@ -163,51 +157,91 @@ export async function createPullRequest(
   }
 }
 
-/** Default https transport (used in production; tests inject their own). */
-export const defaultGitHubPost: GitHubPostFn = (url, headers, body) =>
-  new Promise((resolve, reject) => {
+/**
+ * Request options for a GitHub API URL (#538, B279): the port is kept, IPv6
+ * brackets are stripped, https is used, and http only for a host on this
+ * machine (resolved through the loopback guard). Undefined for anything else.
+ */
+export function githubRequestOptions(
+  url: string, method: 'GET' | 'POST', headers: Record<string, string>,
+): { protocol: 'http:' | 'https:'; options: http.RequestOptions } | undefined {
+  let u: URL;
+  try { u = new URL(url); } catch { return undefined; }
+  const options: http.RequestOptions = {
+    hostname: bareHost(u.hostname),
+    port: u.port ? Number(u.port) : undefined,
+    path: u.pathname + u.search,
+    method,
+    headers,
+    timeout: 8000,
+    agent: false,
+  };
+  if (u.protocol === 'https:') return { protocol: 'https:', options };
+  if (u.protocol === 'http:' && isLoopbackHostName(u.hostname)) {
+    return { protocol: 'http:', options: { ...options, lookup: guardedLookup('loopback') } };
+  }
+  return undefined;
+}
+
+/** Cap on a GitHub response body (an issue page of 100 items is far smaller). */
+export const MAX_GITHUB_RESPONSE_BYTES = 16 * 1024 * 1024;
+/** One deadline for the whole request, whatever the socket activity. */
+const GITHUB_REQUEST_DEADLINE_MS = 8000;
+
+/** One GitHub request; a 3xx is returned to the caller and never followed. Settles exactly once. */
+function sendGitHubRequest(
+  url: string, method: 'GET' | 'POST', headers: Record<string, string>, body?: string,
+): Promise<{ status: number; body: string }> {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const deadline: { timer?: NodeJS.Timeout } = {};
+    const finish = (err: Error | undefined, value?: { status: number; body: string }) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(deadline.timer);
+      if (err) reject(err); else resolve(value as { status: number; body: string });
+    };
     try {
-      const u = new URL(url);
-      const req = https.request(
-        { hostname: u.hostname, path: u.pathname + u.search, method: 'POST',
-          headers: { ...headers, 'Content-Length': Buffer.byteLength(body) }, timeout: 8000 },
-        (res) => {
-          const chunks: Buffer[] = [];
-          res.on('data', (c) => chunks.push(c as Buffer));
-          res.on('end', () => resolve({ status: res.statusCode ?? 0, body: Buffer.concat(chunks).toString('utf8') }));
-        },
-      );
+      const built = githubRequestOptions(url, method, body === undefined ? headers : { ...headers, 'Content-Length': String(Buffer.byteLength(body)) });
+      if (!built) { finish(new Error('GitHub request refused: only https, or http on this machine')); return; }
+      const onResponse = (res: http.IncomingMessage) => {
+        const chunks: Buffer[] = [];
+        let size = 0;
+        res.on('data', (c: Buffer) => {
+          size += c.length;
+          if (size > MAX_GITHUB_RESPONSE_BYTES) {
+            req.destroy();
+            finish(new Error(`GitHub response too large (over ${MAX_GITHUB_RESPONSE_BYTES} bytes)`));
+            return;
+          }
+          chunks.push(c);
+        });
+        res.on('end', () => finish(undefined, { status: res.statusCode ?? 0, body: Buffer.concat(chunks).toString('utf8') }));
+        res.on('error', (e) => finish(e));
+        res.on('aborted', () => finish(new Error('GitHub response aborted')));
+        res.on('close', () => { if (!res.complete) finish(new Error('GitHub response closed before it was complete')); });
+      };
+      const req = built.protocol === 'http:' ? http.request(built.options, onResponse) : https.request(built.options, onResponse);
+      deadline.timer = setTimeout(() => {
+        finish(new Error('timeout'));
+        req.destroy();
+      }, GITHUB_REQUEST_DEADLINE_MS);
       req.on('timeout', () => req.destroy(new Error('timeout')));
-      req.on('error', reject);
-      req.write(body);
-      req.end();
+      req.on('error', (e) => finish(e));
+      req.end(body);
     } catch (e) {
-      reject(e instanceof Error ? e : new Error(String(e)));
+      finish(e instanceof Error ? e : new Error(String(e)));
     }
   });
+}
+
+/** Default POST transport (used in production; tests inject their own). */
+export const defaultGitHubPost: GitHubPostFn = (url, headers, body) => sendGitHubRequest(url, 'POST', headers, body);
 
 /** Injected GET transport (read-only; the #154 linkage audit fetches PR + issues). */
 export interface GitHubGetFn {
   (url: string, headers: Record<string, string>): Promise<{ status: number; body: string }>;
 }
 
-/** Default https GET transport (production; tests inject their own). */
-export const defaultGitHubGet: GitHubGetFn = (url, headers) =>
-  new Promise((resolve, reject) => {
-    try {
-      const u = new URL(url);
-      const req = https.request(
-        { hostname: u.hostname, path: u.pathname + u.search, method: 'GET', headers, timeout: 8000 },
-        (res) => {
-          const chunks: Buffer[] = [];
-          res.on('data', (c) => chunks.push(c as Buffer));
-          res.on('end', () => resolve({ status: res.statusCode ?? 0, body: Buffer.concat(chunks).toString('utf8') }));
-        },
-      );
-      req.on('timeout', () => req.destroy(new Error('timeout')));
-      req.on('error', reject);
-      req.end();
-    } catch (e) {
-      reject(e instanceof Error ? e : new Error(String(e)));
-    }
-  });
+/** Default GET transport (production; tests inject their own). */
+export const defaultGitHubGet: GitHubGetFn = (url, headers) => sendGitHubRequest(url, 'GET', headers);

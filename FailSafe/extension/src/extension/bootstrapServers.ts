@@ -28,13 +28,14 @@ import { setupVoicePackRoutes } from "../roadmap/routes/VoicePackRoute";
 import * as fs from "fs";
 import * as path from "path";
 import { defaultGitRunner, statusPaths } from "./governedCommit";
-import { runGovernedCommitFlow } from "./governedCommitFlow";
+import { governedCommitPrStep, runGovernedCommitFlow } from "./governedCommitFlow";
 import { createOperatorConfirmer } from "./operatorConfirmation";
 import { readArchitectureIndexPath, registerArchitectureIndexCommand } from "./architectureIndexCommand";
 import { registerDeliveryAssessmentCommand } from "./deliveryAssessmentCommand";
 import { defaultGitHubPost } from "../integrations/github-checks/github-checks-client";
 import type { CredentialsBootstrap } from "./credentials-command";
-import { buildCredentialSnapshot, governedCommitToken } from "../integrations/credentials/credentialGates";
+import { buildCredentialSnapshot, governedCommitConnection } from "../integrations/credentials/credentialGates";
+import { llmEgressAuthorizerFor } from "./llmEgressWiring";
 
 /**
  * After Organize/Initialize applies edits, offer to commit+push+open a PR for them
@@ -56,8 +57,8 @@ async function offerGovernedCommit(
     const changed = after.filter((p) => !before.includes(p));
     if (changed.length === 0) return;
     // #482: Secure Storage only; without a usable token the commit is still
-    // made and only the optional PR step is skipped.
-    const token = governedCommitToken(credentials.creds, credentials.ui);
+    // made and only the optional PR step is skipped. #538: the PR goes to the
+    // endpoint the credential gate paired with the token.
     const result = await runGovernedCommitFlow(action, changed, labels.length ? labels : changed, {
       workspaceRoot,
       git: defaultGitRunner,
@@ -70,8 +71,7 @@ async function offerGovernedCommit(
         } catch { /* best-effort audit */ }
       },
       now: () => new Date().toISOString(),
-      post: defaultGitHubPost,
-      token,
+      ...governedCommitPrStep(governedCommitConnection(credentials.creds, credentials.endpoints, credentials.ui), defaultGitHubPost),
     });
     const r = result as { step: string; prUrl?: string; branch?: string; compareUrl?: string; warning?: string };
     if (r.step === "pr") void vscode.window.showInformationMessage(`FailSafe ${action}: opened ${r.prUrl}`);
@@ -149,6 +149,7 @@ export async function bootstrapServers(
     {
       workspaceRoot: deps.workspaceRoot,
       configProvider: deps.configManager,
+      llmEgressAuthorizer: llmEgressAuthorizerFor(context),
       mutationBus: deps.mutationBus,
       modeTransitionHistory: deps.modeTransitionHistory,
       getGovernanceMode: deps.getGovernanceMode,

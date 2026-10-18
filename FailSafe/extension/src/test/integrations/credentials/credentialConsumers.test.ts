@@ -7,7 +7,7 @@ import { strict as assert } from 'assert';
 import * as path from 'path';
 import { IntegrationCredentials, secretKey } from '../../../integrations/credentials/IntegrationCredentials';
 import {
-  buildCredentialSnapshot, endpointRefusalMessage, governedCommitToken, moveMessage, MOVE_ACTION,
+  buildCredentialSnapshot, endpointRefusalMessage, governedCommitConnection, moveMessage, MOVE_ACTION,
   notifierConfig, notifyFailureText, optionalCredential, providerConnection, requireCredential,
   unavailableMessage, type EndpointReader, type EndpointScope,
 } from '../../../integrations/credentials/credentialGates';
@@ -16,7 +16,7 @@ import { runLinearImport } from '../../../extension/linear-command';
 import { runJiraImport } from '../../../extension/jira-command';
 import { runGitHubAdvisory, type GitHubAdvisoryOptions } from '../../../extension/github-checks-command';
 import { resolveSentryOptions } from '../../../integrations/sentry/sentry-settings';
-import { runGovernedCommitFlow } from '../../../extension/governedCommitFlow';
+import { governedCommitPrStep, runGovernedCommitFlow } from '../../../extension/governedCommitFlow';
 import type { GitRunner } from '../../../extension/governedCommit';
 import type { ImportUi } from '../../../integrations/credentials/importUi';
 import { FakeInspector, FakeSecretStore, RecordingLogger } from './fakes';
@@ -269,8 +269,10 @@ suite('integration consumers (FX965 #482)', () => {
       const r = await runGovernedCommitFlow('organize', ['.gitignore'], ['x'], {
         workspaceRoot: '/ws', confirm: async () => true, recordDeclined: async () => {}, now: () => '2026-10-15T00:00:00Z',
         git: async (a, cwd) => { if (a[0] === 'commit') commits.push(a); return git(a, cwd); },
-        post: async (_u, headers) => { auth.push(String(headers.Authorization)); return { status: 201, body: '{"html_url":"https://github.com/o/r/pull/1"}' }; },
-        token: governedCommitToken(x.creds, x.ui),
+        ...governedCommitPrStep(governedCommitConnection(x.creds, x.endpoints, x.ui), async (_u, headers) => {
+          auth.push(String(headers.Authorization));
+          return { status: 201, body: '{"html_url":"https://github.com/o/r/pull/1"}' };
+        }),
       });
       return { step: (r as { step: string }).step, auth, commits: commits.length };
     };

@@ -17,7 +17,7 @@ export const CONSUMERS: Readonly<Record<string, RegExp>> = Object.freeze({
   'extension/jira-command.ts': /\bproviderConnection\(/,
   'extension/linear-command.ts': /\brequireCredential\(/,
   'extension/agent-cli-command.ts': /\boptionalCredential\(/,
-  'extension/bootstrapServers.ts': /\bgovernedCommitToken\(/,
+  'extension/bootstrapServers.ts': /\bgovernedCommitPrStep\(\s*governedCommitConnection\(/,
   'integrations/sentry/sentry-settings.ts': /\bproviderConnection\(/,
 });
 
@@ -55,6 +55,11 @@ export function findCredentialReads(srcRoot: string): string[] {
     const loop = /for\s*\(\s*const\s+key\s+of\s+catalogConfigKeys\(\)\s*\)/.exec(text);
     if (loop) found.push(`extension/bootstrapServers.ts:${lineOf(text, loop.index)}: builds the catalog snapshot from raw settings`);
     if (!/\bbuildCredentialSnapshot\(/.test(text)) found.push('extension/bootstrapServers.ts: does not use buildCredentialSnapshot');
+    // #538: the governed-commit PR step takes its token and endpoint only from governedCommitPrStep.
+    const flow = /runGovernedCommitFlow\([\s\S]*?\n\s*\}\);/.exec(text);
+    if (flow && /^\s*(?:token|apiBaseUrl|post)\s*[:,]/m.test(flow[0])) {
+      found.push(`extension/bootstrapServers.ts:${lineOf(text, flow.index)}: passes the PR token, endpoint or transport outside governedCommitPrStep`);
+    }
   }
   for (const [rel, gate] of Object.entries(CONSUMERS)) {
     const file = path.join(srcRoot, ...rel.split('/'));

@@ -46,6 +46,8 @@ const vscodeStub = {
     showWarningMessage: () => {},
     showInformationMessage: () => {},
   },
+  // #538: bootstrapSentinel registers "FailSafe: Forget Sentinel LLM Approvals".
+  commands: { registerCommand: () => ({ dispose: () => {} }) },
 };
 const originalResolve = Module._resolveFilename;
 Module._resolveFilename = function (request, parent, ...rest) {

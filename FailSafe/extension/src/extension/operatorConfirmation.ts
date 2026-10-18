@@ -45,9 +45,9 @@ export const FIELD_LIMIT = 200;
 export const REASON_LIMIT = 500;
 export const BATCH_LIST_LIMIT = 20;
 
-// C0 + C1 controls, ALM, LRM/RLM, LRE..RLO embeddings/overrides, LRI..PDI isolates.
+// C0 + C1 controls, LS/PS line and paragraph separators, ALM, LRM/RLM, LRE..RLO embeddings/overrides, LRI..PDI isolates.
 // eslint-disable-next-line no-control-regex
-const UNSAFE_CHARS = /[\u0000-\u001f\u007f-\u009f؜‎‏‪-‮⁦-⁩]/g;
+const UNSAFE_CHARS = /[\u0000-\u001f\u007f-\u009f\u2028\u2029؜‎‏‪-‮⁦-⁩]/g;
 
 /** Replace control and bidi-override characters and cap length so request
  *  text cannot reshape the dialog. Idempotent for its own output. */

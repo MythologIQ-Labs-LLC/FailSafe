@@ -30,7 +30,7 @@ The code calls the REST v2 issue resource `FailSafe/extension/src/integrations/j
 
 ## Privileges and scopes
 
-Credential: an Atlassian account email in settings and an API token in VS Code Secret Storage, sent as Basic authentication `FailSafe/extension/src/integrations/jira/jira-client.ts:40-41` (`Buffer.from(`); the token setting is deprecated and plain-text values are not read `FailSafe/extension/package.json:446-448` (`Plain-text settings are no longer read`).
+Credential: an Atlassian account email in settings and an API token in VS Code Secret Storage, sent as Basic authentication `FailSafe/extension/src/integrations/jira/jira-client.ts:40-41` (`Buffer.from(`); the token setting is deprecated and plain-text values are not read `FailSafe/extension/package.json:450-452` (`Plain-text settings are no longer read`).
 Scope: the token carries the Atlassian account's own permissions; FailSafe only issues one GET `FailSafe/extension/src/integrations/jira/jira-client.ts:92` (`method: 'GET'`).
 A user-level token is never sent to a base URL that workspace settings chose `FailSafe/extension/src/integrations/credentials/credentialGates.ts:125` (`ep.scope === 'workspace' && e.scope === 'user'`).
 The base URL must be https or nothing is sent `FailSafe/extension/src/integrations/jira/jira-client.ts:57` (`The Jira base URL must use https; nothing was sent.`).

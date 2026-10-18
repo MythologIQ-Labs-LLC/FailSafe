@@ -12,6 +12,7 @@
 
 import { commitPushOpenPr, type GitRunner, type GovernedCommitResult } from './governedCommit';
 import type { GitHubPostFn } from '../integrations/github-checks/github-checks-client';
+import type { Connection } from '../integrations/credentials/credentialGates';
 
 export interface GovernedFlowDeps {
   workspaceRoot: string;
@@ -57,4 +58,14 @@ export async function runGovernedCommitFlow(
     { workspaceRoot: deps.workspaceRoot, paths: changedPaths, branch, message, base: deps.base || 'main', prTitle: `chore(${action}): workspace cleanup`, prBody },
     { git: deps.git, post: deps.post, token: deps.token, apiBaseUrl: deps.apiBaseUrl },
   );
+}
+
+/**
+ * #538 (B265): the PR step's options from the credential gate's connection, so the
+ * token is sent only to the endpoint it was paired with (the GitHub default when none).
+ */
+export function governedCommitPrStep(
+  connection: Connection | undefined, post: GitHubPostFn,
+): Pick<GovernedFlowDeps, 'post' | 'token' | 'apiBaseUrl'> {
+  return { post, token: connection?.credential, apiBaseUrl: connection?.endpoint };
 }
