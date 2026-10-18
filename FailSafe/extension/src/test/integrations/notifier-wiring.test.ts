@@ -31,13 +31,12 @@ interface Sent { url: string; body: string }
 
 /** #538: the notifiers take the bound workspace root as a sixth argument. */
 const ROOT = path.resolve(os.tmpdir(), 'ws538d');
-type NotifierCtor<T> = new (...args: unknown[]) => T;
 
 function slackHarness(status = 200) {
   const sent: Sent[] = [];
   const failures: SlackDeliveryFailure[] = [];
   const bus = new EventBus();
-  new (SlackNotifier as unknown as NotifierCtor<SlackNotifier>)(
+  new SlackNotifier(
     bus,
     () => ({ enabled: true, webhookUrl: SLACK_HOOK }),
     async (url: string, body: string) => { sent.push({ url, body }); return { status }; },
@@ -52,7 +51,7 @@ function teamsHarness(status = 200) {
   const sent: Sent[] = [];
   const failures: TeamsDeliveryFailure[] = [];
   const bus = new EventBus();
-  new (TeamsNotifier as unknown as NotifierCtor<TeamsNotifier>)(
+  new TeamsNotifier(
     bus,
     () => ({ enabled: true, webhookUrl: TEAMS_HOOK }),
     async (url: string, body: string) => { sent.push({ url, body }); return { status }; },

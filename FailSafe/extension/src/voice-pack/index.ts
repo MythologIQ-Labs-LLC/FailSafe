@@ -12,5 +12,6 @@ export type {
   InstallProgressEvent,
   InstallReport,
   InstallVoicePackOptions,
+  VoicePackDownloadProvenance,
 } from './types';
-export { ALLOWED_REDIRECT_HOSTS } from './types';
+export { ALLOWED_REDIRECT_HOSTS, MAX_VOICE_PACK_REDIRECTS } from './types';

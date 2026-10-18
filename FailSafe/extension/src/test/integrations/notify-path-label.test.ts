@@ -13,15 +13,15 @@ import * as path from 'path';
 import { mapGovernanceEvent as mapSlack } from '../../integrations/slack/slack-notify-map';
 import { mapGovernanceEvent as mapTeams } from '../../integrations/teams/teams-notify-map';
 
-type Mapped = { kind: string; title: string; detail?: string } | null;
-type Map4 = (eventType: string, payload: unknown, consoleUrl?: string, workspaceRoot?: string) => Mapped;
+type Map4 = (eventType: string, payload: unknown, consoleUrl?: string, workspaceRoot?: string) =>
+  { kind: string; title: string; detail?: string } | null;
 
 const ROOT = path.resolve(os.tmpdir(), 'ws538d');
 const OUTSIDE = path.resolve(path.parse(os.tmpdir()).root, 'home', 'u', 'secret-name.ts');
 
 const MAPPERS: Array<[string, Map4]> = [
-  ['Slack', mapSlack as unknown as Map4],
-  ['Teams', mapTeams as unknown as Map4],
+  ['Slack', mapSlack],
+  ['Teams', mapTeams],
 ];
 
 function decided(filePath: unknown, decision = 'APPROVED') {
@@ -95,7 +95,7 @@ for (const [channel, map] of MAPPERS) {
 }
 
 suite('Slack path label escaping (#538)', () => {
-  const map = mapSlack as unknown as Map4;
+  const map = mapSlack;
 
   test('mrkdwn control characters in a path are entity-escaped', () => {
     assert.equal(map('qorelogic.l3Decided', decided('<!channel>.ts'), undefined, ROOT)?.detail, 'Path: &lt;!channel&gt;.ts');
@@ -106,7 +106,7 @@ suite('Slack path label escaping (#538)', () => {
 
 suite('Teams path label (#538, residual B300)', () => {
   test('the label is passed through unescaped on the queued line (G)', () => {
-    const map = mapTeams as unknown as Map4;
+    const map = mapTeams;
     assert.equal(map('qorelogic.l3Queued', { filePath: '<!channel>.ts' }, undefined, ROOT)?.detail, 'Path: <!channel>.ts');
   });
 });

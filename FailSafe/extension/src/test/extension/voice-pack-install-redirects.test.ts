@@ -24,12 +24,6 @@ const ASSET_HOST = "https://release-assets.githubusercontent.com";
 const TARBALL_ASSET = `${ASSET_HOST}/github-production-release-asset/1?X-Amz-Signature=abc`;
 const CHECKSUM_ASSET = `${ASSET_HOST}/github-production-release-asset/2?X-Amz-Signature=abc`;
 
-interface ProvenanceShape {
-  tarball: { requestedUrl: string; finalUrl: string };
-  checksum: { requestedUrl: string; finalUrl: string };
-  sha256: string;
-}
-
 let fixture: InstallFixture;
 
 function bytes(): Uint8Array { return buildFixturePackTar(); }
@@ -81,7 +75,7 @@ suite("voice-pack controlled redirects (#538)", () => {
 
   test("V2 the observed GitHub chain is accepted, hop by hop, with provenance and no signed query", async () => {
     const { calls, lines, result } = run(observedChain());
-    const report = await result as InstallReport & { provenance?: ProvenanceShape };
+    const report: InstallReport = await result;
     assert.equal(report.ok, true);
     assert.ok(calls.length >= 4);
     for (const c of calls) assert.equal(c.init?.redirect, "manual", `${c.url} must be requested in manual mode`);

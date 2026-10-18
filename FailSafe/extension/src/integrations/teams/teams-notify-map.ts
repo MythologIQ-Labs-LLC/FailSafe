@@ -8,6 +8,7 @@
  */
 
 import type { TeamsNotifyEvent } from './teams-notify';
+import { notifyPathLabel } from '../notify-event';
 
 /** Verified EventBus event names FailSafe emits for enforcement governance. */
 export const TEAMS_NOTIFY_EVENTS = [
@@ -23,13 +24,29 @@ function str(v: unknown): string | undefined {
   return typeof v === 'string' && v.trim() ? v : undefined;
 }
 
+/** A path as a notice shows it. Teams markdown is not escaped (B300). */
+function pathLabel(raw: unknown, workspaceRoot?: string): string | undefined {
+  return notifyPathLabel(raw, workspaceRoot);
+}
+
+/** `qorelogic.l3Decided` carries `{ request, decision }`; fall back to a flat payload. */
+function decidedPath(p: Record<string, unknown>): unknown {
+  const request = p.request;
+  if (request && typeof request === 'object' && typeof (request as Record<string, unknown>).filePath === 'string') {
+    return (request as Record<string, unknown>).filePath;
+  }
+  return p.filePath;
+}
+
 export function mapGovernanceEvent(
   eventType: string,
   payload: unknown,
   consoleUrl: string = DEFAULT_CONSOLE_URL,
+  workspaceRoot?: string,
 ): TeamsNotifyEvent | null {
   const p = (payload && typeof payload === 'object') ? (payload as Record<string, unknown>) : {};
   const ts = str(p.timestamp) ?? str(p.ts);
+  const label = (raw: unknown) => pathLabel(raw, workspaceRoot);
 
   switch (eventType) {
     case 'sentinel.verdict': {
@@ -39,7 +56,7 @@ export function mapGovernanceEvent(
       return {
         kind: 'veto',
         title: `Action blocked (${decision})`,
-        detail: str(p.artifactPath) ? `Artifact: ${str(p.artifactPath)}` : undefined,
+        detail: label(p.artifactPath) ? `Artifact: ${label(p.artifactPath)}` : undefined,
         consoleUrl, ts,
       };
     }
@@ -47,14 +64,14 @@ export function mapGovernanceEvent(
       return {
         kind: 'l3-queued',
         title: 'Tier-3 action queued for L3 approval',
-        detail: str(p.filePath) ? `Path: ${str(p.filePath)}` : str(p.title),
+        detail: label(p.filePath) ? `Path: ${label(p.filePath)}` : str(p.title),
         consoleUrl, ts,
       };
     case 'qorelogic.l3Decided':
       return {
         kind: 'l3-decided',
         title: `L3 decision: ${str(p.decision) ?? str(p.status) ?? 'recorded'}`,
-        detail: str(p.filePath) ? `Path: ${str(p.filePath)}` : undefined,
+        detail: label(decidedPath(p)) ? `Path: ${label(decidedPath(p))}` : undefined,
         consoleUrl, ts,
       };
     case 'governance.driftDetected':
