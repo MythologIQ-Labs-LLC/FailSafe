@@ -33399,3 +33399,38 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `8c18db590caedb56a27d7c18755bd1443b5f8352b0b393a992ba40be59a9da4b`
 
 **Decision**: SESSION SEAL for plan-538c-evidence-integrity.md (implementation #793; content hash is the audited plan, sha256 1457ca9e). Reality = Promise, with disclosures. The branch carries #538 lane C: the #469 residual (install receipts awaited and durable with verdict and provenance, scanner timeout and failure fail closed, no receipt-less path to installed) and the #473 residual (the compliance export carries ledgerIntegrity, not a boolean). Independent bounded code review: fix first on documentation and disclosure plus two small hardenings, done with red rows in abb31578 and a34eaf2b; the reviewer found no path to installed without a recorded receipt and no consumer of chainVerification. Disclosures: bounded damaged-ledger override for #538 lane cycles (owner ruling 2026-10-18; #467 unresolved, normal governance not restored); marketplace installs stay switched off, so every install path here is tested below the gate and unreachable in the product; recorded means the SQLite row is committed and the head anchor follows asynchronously; on Windows the S7 timeout test probes the sleep leaf through CIM instead of removing the working folder as LD10 planned, because a live MSYS sleep does not hold its folder; the POSIX drop-detached mutation was not run locally (no WSL) and is left to the Linux CI run; the release gate still tests only report.ok; a throw on the installed status write after a recorded receipt leaves the item failed while the ledger says installed; re-scan verdicts are not ledgered, uninstall is not serialized against an in-flight scan, two confirm nonces can race, legacy installed items have no receipt and an exited parent's descendants escape the tree kill (all B299); a NULL trust value is still read back as 0 (B298, needs a contract change); one mutation survived as equivalent; the lock-queue R1 timing row failed in the full run under host load and is outside this lane; FX946 is the known ledger-anchor baseline; the BACKLOG conflict with lane D was resolved by keeping both sections; documentation currency check run mechanically with no warnings (change_class hotfix); earlier seals are unedited. Next: push, open the PR, the PR checks, then a merge with --match-head-commit. Not tagged.
+
+---
+
+### Entry #795: IMPLEMENTATION - plan-538c-evidence-integrity (B243 follow-up)
+
+**Timestamp**: 2026-10-18T17:52:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-18T1602-84548b`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-18T1602-84548b/implement.json`
+
+**Content Hash**: `7a5e37ea5bc52481caccca10b840aebd4483121431d3e6c846cc50f037e5296d`
+**Previous Hash**: `8c18db590caedb56a27d7c18755bd1443b5f8352b0b393a992ba40be59a9da4b`
+**Chain Hash (Merkle seal)**: `79601cb315f33c29635b8119fc8430dc9f27c3ce39ca78792ccfb38fcdf10a46`
+
+**Decision**: IMPLEMENTATION follow-up after seal #794, test-only, by the lead. Both Full Test Suite runs of PR #540 stopped on RiskStore T9 (b) (B243): the test replaced the global fs.renameSync with an always-EPERM stub, a TokenAggregatorService flush (EconomicsPersistence.save) in the shared extension host hit it, and the host exited with 392 and 393 of 519 files executed. Lane C does not touch RiskStore; the row is a known flake (B243) and not a security test, but a stopped host is not coverage, so the cause was fixed instead of re-running again. 845f47b8: the T9 stubs fail only renames into the store's own folder, and T9 (b) renames a file in a temporary folder while the stub is active and asserts it succeeds. Evidence: RiskStore suite 39 passing, 0 failing; with the global stub restored the T9 (b) row fails (1 failing), restored after; B243 marked done.
+
+---
+
+### Entry #796: SESSION SEAL - plan-538c-evidence-integrity (B243 follow-up)
+
+**Timestamp**: 2026-10-18T17:52:01Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-18T1602-84548b`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-18T1602-84548b/substantiate.json`
+
+**Content Hash**: `1457ca9ef1f30ce8b0afaaaaecb1496309f5f9fd4d943066aa3ed98c72c6fc4c`
+**Previous Hash**: `79601cb315f33c29635b8119fc8430dc9f27c3ce39ca78792ccfb38fcdf10a46`
+**Chain Hash (Merkle seal)**: `bb913fdce5ba0be114f56c9ba4bea9838f76008f289a69895f425666b2cdae1c`
+
+**Decision**: SESSION SEAL for the B243 follow-up (implementation #795) after seal #794. Reality = Promise, with disclosures. The follow-up is test-only and outside the audited plan's scope: it scopes the RiskStore T9 rename stubs to the store's folder so PR #540's Full Test Suite can run every file. Disclosures: bounded damaged-ledger override for #538 lane cycles (#467 unresolved); the scope addition is the lead's, made because the flake stopped two CI runs; the full suite result on the pushed head is read from PR #540's next run; seal #794 is unedited. Next: push, the PR checks, then a merge with --match-head-commit. Not tagged.
