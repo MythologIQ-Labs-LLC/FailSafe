@@ -396,7 +396,7 @@ Open Settings and search for `FailSafe`:
 | `failsafe.sentinel.enabled`                       | `true`                           | Enable Sentinel monitoring                                         |
 | `failsafe.sentinel.mode`                          | `heuristic`                      | Sentinel operating mode                                            |
 | `failsafe.sentinel.localModel`                    | `phi3:mini`                      | Ollama model for LLM-assisted mode                                 |
-| `failsafe.sentinel.ollamaEndpoint`                | `http://localhost:11434`         | Ollama API endpoint                                                |
+| `failsafe.sentinel.ollamaEndpoint`                | `http://localhost:11434`         | Ollama API endpoint, user settings only. A workspace may name only a local endpoint; another host is used after you allow it (**FailSafe: Forget Sentinel LLM Approvals** clears that) |
 | `failsafe.sentinel.ragEnabled`                    | `true`                           | Persist Sentinel observations to local RAG store                   |
 | `failsafe.qorelogic.ledgerPath`                   | `.failsafe/ledger/soa_ledger.db` | Ledger database path                                               |
 | `failsafe.qorelogic.strictMode`                   | `false`                          | Block on all warnings                                              |

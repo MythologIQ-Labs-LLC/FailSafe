@@ -53,7 +53,7 @@ No OpenHands API scope is used; a live connection to an OpenHands server would n
 From the export: a bare events array or a `{ version, events }` envelope `FailSafe/extension/src/extension/openhands-import-command.ts:112-116` (`A bare events array or a { version, events } envelope.`).
 Per event, only kind, verb (from `tool_name`), tool, a risk hint and a parsable time are kept `FailSafe/extension/src/integrations/agent-observe/openhands-observer.ts:136-147` (`riskHint: riskHintFor(riskBasis),`).
 Run identity: a conversation or session id when it is a UUID or a long token `FailSafe/extension/src/integrations/agent-observe/openhands-import.ts:66-76` (`export function runIdentityOf(envelope: unknown)`).
-From settings: an optional version used only when the export declares none `FailSafe/extension/package.json:566-569` (`used for the supported-version gate when the run export does not declare one`).
+From settings: an optional version used only when the export declares none `FailSafe/extension/package.json:570-573` (`used for the supported-version gate when the run export does not declare one`).
 
 ## Outbound fields and egress
 
