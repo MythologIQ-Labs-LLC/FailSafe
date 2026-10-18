@@ -1,6 +1,6 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-10-18 (#538 post-v6.0.8 security patch in progress on main, unreleased; lane D voice pack and notice path sealed on fix/538-lane-D; ledger #786-#789, seal #789; not yet merged)
+**Last Updated:** 2026-10-18 (#538 post-v6.0.8 security patch in progress on main, unreleased; lane D merged to main 3a72e235 (seal #789); lane C evidence integrity sealed on fix/538-lane-C; ledger #786-#796, seal #796; not yet merged)
 **Active local review:** `fix/system-state-currency-sprint2` — this cycle. Restores the Tier 1 freshness contract and adds `system-state-currency.test.cjs`, the first check that asserts it. Prior to this cycle no test anywhere read this file's content.
 **Prior local review:** `fix/qor169-sprint1-seal-unblock` — MERGED to `main` as `1e1215cc` (PR #448). qor-logic 0.163.1 → 0.169.0; `.qorlogic/config.json` created, which is what allows a seal to complete at all; five vacuously-passing governance controls identified; TTS timeout assertion made deterministic and falsifying. Seal Entry #602.
 **Open PRs:** #442 (Bicameral upstream row error state), #443 (plan-grep-lint regex recognition), #444 (#367 per-engine provenance), #445 (#242 Shadow Genome severity aria — supersedes #440, closed as duplicate), #446 + #447 (dependabot). #447's blocker — a wall-clock TTS assertion — was removed by Entry #602.
@@ -16,6 +16,7 @@
 
 ## 2026-10-18 — #538 post-v6.0.8 security patch (main, unreleased)
 
+- #538 lane C (plan-538c, audit PASS iteration 3, seal #794): a marketplace item reads installed only after an awaited durable receipt with the scan verdict, scanner and source; scanner timeout and failure fail closed and kill the process tree (#469 residual, B296); the compliance export reports ledger integrity as intact, partial-seal, failed or unavailable instead of a boolean (#473 residual, B297). Marketplace installs stay switched off.
 - #538 lane D (plan-538d, audit PASS iteration 2, seal #789): the Voice Pack download names MythologIQ-Labs-LLC and checks every redirect hop and every response against an https allowlist (B261); Slack and Teams L3-decided notices show a sanitized, workspace-relative path and nothing else from the request (B263). No voice-pack release is published yet (B287).
 - Governance: the owner approved a bounded damaged-ledger override for #538 lane cycles on 2026-10-18; the META_LEDGER stays DAMAGED (#467), not repaired.
 

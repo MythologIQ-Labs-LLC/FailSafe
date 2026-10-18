@@ -176,11 +176,18 @@ suite('RiskStore (#517 FX972)', () => {
   suite('T9 Windows rename failures', () => {
     const eperm = (): Error => Object.assign(new Error('EPERM: operation not permitted'), { code: 'EPERM' });
     const realRename = fs.renameSync;
+    // B243: the stubs fail only renames into the store's own folder. A global stub also
+    // failed unrelated renames in the shared extension host (an economics flush), which
+    // stopped the host with most files unrun.
+    const ownPath = (p: unknown): boolean => {
+      const r = path.resolve(String(p));
+      return r === path.resolve(risksDir()) || r.startsWith(path.resolve(risksDir()) + path.sep);
+    };
 
     test('(a) EPERM five times, then success: the outer retry persists the write', () => {
       seed(JSON.stringify({ risks: [] }));
       let fails = 5;
-      cleanups.push(patch('renameSync', (a: string, b: string) => { if (fails-- > 0) throw eperm(); realRename(a, b); }));
+      cleanups.push(patch('renameSync', (a: string, b: string) => { if (ownPath(b) && fails-- > 0) throw eperm(); realRename(a, b); }));
       store().mutate(add('ok'));
       assert.deepEqual(JSON.parse(fs.readFileSync(risksFile(), 'utf8')).risks, [{ id: 'ok' }]);
     });
@@ -188,7 +195,13 @@ suite('RiskStore (#517 FX972)', () => {
     test('(b) EPERM always, at the default staleMs: WRITE_FAILED, bytes unchanged, no temp left', () => {
       seed(JSON.stringify({ risks: [] }));
       const before = fs.readFileSync(risksFile(), 'utf8');
-      cleanups.push(patch('renameSync', () => { throw eperm(); }));
+      cleanups.push(patch('renameSync', (a: string, b: string) => { if (ownPath(b)) throw eperm(); realRename(a, b); }));
+      const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'b243-'));
+      try {
+        fs.writeFileSync(path.join(elsewhere, 'x'), 'x');
+        fs.renameSync(path.join(elsewhere, 'x'), path.join(elsewhere, 'y'));
+        assert.ok(fs.existsSync(path.join(elsewhere, 'y')), 'B243: a rename outside the store still works while the stub is active');
+      } finally { fs.rmSync(elsewhere, { recursive: true, force: true }); }
       assert.equal(codeOf(() => store().mutate(add('no'))), 'WRITE_FAILED');
       assert.equal(fs.readFileSync(risksFile(), 'utf8'), before);
       assert.deepEqual(entries().filter((f) => f.endsWith('.tmp')), []);
@@ -199,6 +212,7 @@ suite('RiskStore (#517 FX972)', () => {
       const external = JSON.stringify({ risks: [{ id: 'external' }] });
       let calls = 0;
       cleanups.push(patch('renameSync', (a: string, b: string) => {
+        if (!ownPath(b)) { realRename(a, b); return; }
         calls++;
         if (calls <= 3) {
           if (calls === 3) fs.writeFileSync(risksFile(), external);
