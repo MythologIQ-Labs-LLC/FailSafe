@@ -1,6 +1,6 @@
 # SYSTEM STATE
 
-**Last Updated:** 2026-10-18 (#538 post-v6.0.8 security patch: lanes A-F merged to main de71858e (seals #789, #796, #801, #805, #810, #814); v6.0.9 release candidate prepared on release/v6.0.9-rc; not tagged, not published)
+**Last Updated:** 2026-10-18 (#538 post-v6.0.8 security patch: lanes A-F merged to main de71858e; v6.0.9 release candidate sealed on release/v6.0.9-rc (seal #818), rehearsal qualification passed; ledger #786-#818; not tagged, not published)
 **Active local review:** `fix/system-state-currency-sprint2` — this cycle. Restores the Tier 1 freshness contract and adds `system-state-currency.test.cjs`, the first check that asserts it. Prior to this cycle no test anywhere read this file's content.
 **Prior local review:** `fix/qor169-sprint1-seal-unblock` — MERGED to `main` as `1e1215cc` (PR #448). qor-logic 0.163.1 → 0.169.0; `.qorlogic/config.json` created, which is what allows a seal to complete at all; five vacuously-passing governance controls identified; TTS timeout assertion made deterministic and falsifying. Seal Entry #602.
 **Open PRs:** #442 (Bicameral upstream row error state), #443 (plan-grep-lint regex recognition), #444 (#367 per-engine provenance), #445 (#242 Shadow Genome severity aria — supersedes #440, closed as duplicate), #446 + #447 (dependabot). #447's blocker — a wall-clock TTS assertion — was removed by Entry #602.
@@ -16,6 +16,7 @@
 
 ## 2026-10-18 — #538 post-v6.0.8 security patch (main, unreleased)
 
+- #538 lane G (plan-538g, audit PASS iteration 2, seal #818): v6.0.9 release candidate prepared; the eight rehearsal VSIXs pass verify-set and inventory, the packaged SQLite loads under node and Electron, the upgrade lifecycle from v6.0.8 passes 12 of 12 and the installed smoke passes with its controls; the release run's own VSIX set is authoritative. Not tagged, not published.
 - #538 lane E (plan-538e, audit PASS iteration 2, seal #814): the owner's 2026-10-18 integration dispositions (15 COMPLETE, 13 MAINTAIN, 2 RETIRE, 0 INVEST) are recorded as a work queue in the portfolio and all 30 contracts; governance-webhook and qor-runtime carry retirement reviews, with the bounded removals filed as B288 and B289; no code removed.
 - #538 lane A (plan-538a, audit PASS iteration 3, seal #810): a workspace-chosen Sentinel or Brainstorm model server must be on this machine; a remote server from user settings is used only after a modal approval bound to its exact origin and use, revocable with FailSafe: Forget Sentinel LLM Approvals; every request checks each resolved address at connect time, follows no redirect and fails closed (B273). The GitHub token is attached only to the configured API origin with its port, the PR-linkage audit uses the Enterprise base, and the governed-commit PR uses the paired endpoint (B265, B279).
 - #538 lane F (plan-538f, audit PASS iteration 2, seal #805): after the owner rewrote the root README as a product page (#543) and the marketplace README (#542), the integration-claim rows read their facts from the marketplace README and hold the product page to them; the root README regains its Architecture Index off-ramp and Current Release marker.
