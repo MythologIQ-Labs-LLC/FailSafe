@@ -43,6 +43,8 @@ export class VerdictArbiter {
         this.existenceEngine = existenceEngine;
         this.logger = new Logger('VerdictArbiter');
         this.llmClient = new LLMClient(configManager, { operation: 'sentinel-file-analysis', ...llm });
+        // #538: after "Forget Sentinel LLM Approvals", availability that rested on an approval is re-checked, without asking.
+        llm.authorizer?.onDidForget?.(() => { void this.recheckAfterForget(); });
 
         // Initialize mode from config
         const config = this.configManager.getConfig();
@@ -72,6 +74,17 @@ export class VerdictArbiter {
             this.askForDestinationInBackground();
         }
         return this.llmAvailable;
+    }
+
+    private async recheckAfterForget(): Promise<void> {
+        try {
+            this.llmAvailable = await this.llmClient.checkAvailability({ ask: false });
+        } catch {
+            this.llmAvailable = false;
+        }
+        if (!this.llmAvailable && this.currentMode === 'llm-assisted') {
+            this.currentMode = 'heuristic';
+        }
     }
 
     /**

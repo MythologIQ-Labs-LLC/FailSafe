@@ -11,7 +11,7 @@
 import type { IConfigProvider } from '../../core/interfaces/IConfigProvider';
 import { Logger } from '../../shared/Logger';
 import type { HeuristicResult } from '../../shared/types';
-import type { AddressClass } from '../../shared/net/addressPolicy';
+import { ADDRESS_REFUSED, type AddressClass } from '../../shared/net/addressPolicy';
 import { decideLlmDestination, type LlmEgressOperation, type LlmTarget } from './llmDestinationPolicy';
 import type { LlmEgressAuthorizer } from './llmEgressAuthorizer';
 import { createLlmHttp, type LlmHttpFn } from './llmTransport';
@@ -53,7 +53,7 @@ export class LLMClient {
             return false;
         }
         try {
-            const response = await this.http({ ...approved, path: '/api/tags', method: 'GET', timeoutMs: 2000 });
+            const response = await this.send({ ...approved, path: '/api/tags', method: 'GET', timeoutMs: 2000 });
             const available = response.status >= 200 && response.status < 300;
             if (available) {
                 this.logger.info('LLM available at ' + approved.target.origin);
@@ -125,7 +125,7 @@ Respond with:
         }
         const model = this.configProvider.getConfig().sentinel.localModel;
 
-        const httpResponse = await this.http({
+        const httpResponse = await this.send({
             ...approved,
             path: '/api/generate',
             method: 'POST',
@@ -150,6 +150,22 @@ Respond with:
             response: result.response || '',
             totalDuration: result.total_duration || 0
         };
+    }
+
+    /**
+     * One request. An approved remote whose name resolved to an address it may
+     * not use (a LAN, VPN or loopback address) is reported to the authorizer,
+     * which tells the operator once; the content is never part of it.
+     */
+    private async send(request: Parameters<LlmHttpFn>[0]): ReturnType<LlmHttpFn> {
+        try {
+            return await this.http(request);
+        } catch (error) {
+            if (request.addresses === 'public' && (error as NodeJS.ErrnoException)?.code === ADDRESS_REFUSED) {
+                try { this.authorizer?.notifyRefusedAddress?.(request.target.origin); } catch { /* the warning is best-effort */ }
+            }
+            throw error;
+        }
     }
 
     /** The target this call may use, re-read from the configuration every time; null when refused. */

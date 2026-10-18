@@ -32,11 +32,11 @@ export async function bootstrapSentinel(
 ): Promise<SentinelSubstrate> {
   logger.info("Initializing Sentinel daemon...");
   const architectureEngine = new ArchitectureEngine();
-  // #538: registered before the try, so the command exists even with the stub daemon.
-  const llmAuthorizer = llmEgressAuthorizerFor(context);
-  registerForgetLlmApprovalsCommand(context, llmAuthorizer);
 
   try {
+    // #538: first in the try, so a failure here falls back to the stub daemon instead of failing activation.
+    const llmAuthorizer = llmEgressAuthorizerFor(context);
+    registerForgetLlmApprovalsCommand(context, llmAuthorizer);
     const patternLoader = new PatternLoader(core.workspaceRoot);
     await patternLoader.loadCustomPatterns();
 

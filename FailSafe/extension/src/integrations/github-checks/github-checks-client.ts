@@ -174,6 +174,7 @@ export function githubRequestOptions(
     method,
     headers,
     timeout: 8000,
+    agent: false,
   };
   if (u.protocol === 'https:') return { protocol: 'https:', options };
   if (u.protocol === 'http:' && isLoopbackHostName(u.hostname)) {
@@ -182,25 +183,54 @@ export function githubRequestOptions(
   return undefined;
 }
 
-/** One GitHub request; a 3xx is returned to the caller and never followed. */
+/** Cap on a GitHub response body (an issue page of 100 items is far smaller). */
+export const MAX_GITHUB_RESPONSE_BYTES = 16 * 1024 * 1024;
+/** One deadline for the whole request, whatever the socket activity. */
+const GITHUB_REQUEST_DEADLINE_MS = 8000;
+
+/** One GitHub request; a 3xx is returned to the caller and never followed. Settles exactly once. */
 function sendGitHubRequest(
   url: string, method: 'GET' | 'POST', headers: Record<string, string>, body?: string,
 ): Promise<{ status: number; body: string }> {
   return new Promise((resolve, reject) => {
+    let settled = false;
+    const deadline: { timer?: NodeJS.Timeout } = {};
+    const finish = (err: Error | undefined, value?: { status: number; body: string }) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(deadline.timer);
+      if (err) reject(err); else resolve(value as { status: number; body: string });
+    };
     try {
       const built = githubRequestOptions(url, method, body === undefined ? headers : { ...headers, 'Content-Length': String(Buffer.byteLength(body)) });
-      if (!built) { reject(new Error('GitHub request refused: only https, or http on this machine')); return; }
+      if (!built) { finish(new Error('GitHub request refused: only https, or http on this machine')); return; }
       const onResponse = (res: http.IncomingMessage) => {
         const chunks: Buffer[] = [];
-        res.on('data', (c) => chunks.push(c as Buffer));
-        res.on('end', () => resolve({ status: res.statusCode ?? 0, body: Buffer.concat(chunks).toString('utf8') }));
+        let size = 0;
+        res.on('data', (c: Buffer) => {
+          size += c.length;
+          if (size > MAX_GITHUB_RESPONSE_BYTES) {
+            req.destroy();
+            finish(new Error(`GitHub response too large (over ${MAX_GITHUB_RESPONSE_BYTES} bytes)`));
+            return;
+          }
+          chunks.push(c);
+        });
+        res.on('end', () => finish(undefined, { status: res.statusCode ?? 0, body: Buffer.concat(chunks).toString('utf8') }));
+        res.on('error', (e) => finish(e));
+        res.on('aborted', () => finish(new Error('GitHub response aborted')));
+        res.on('close', () => { if (!res.complete) finish(new Error('GitHub response closed before it was complete')); });
       };
       const req = built.protocol === 'http:' ? http.request(built.options, onResponse) : https.request(built.options, onResponse);
+      deadline.timer = setTimeout(() => {
+        finish(new Error('timeout'));
+        req.destroy();
+      }, GITHUB_REQUEST_DEADLINE_MS);
       req.on('timeout', () => req.destroy(new Error('timeout')));
-      req.on('error', reject);
+      req.on('error', (e) => finish(e));
       req.end(body);
     } catch (e) {
-      reject(e instanceof Error ? e : new Error(String(e)));
+      finish(e instanceof Error ? e : new Error(String(e)));
     }
   });
 }

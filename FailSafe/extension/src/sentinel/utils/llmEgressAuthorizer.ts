@@ -22,6 +22,10 @@ export interface LlmEgressAuthorizer {
   authorize(request: LlmEgressRequest, options: { ask: boolean }): Promise<boolean>;
   /** Clear every stored approval and this session's declines; returns how many approvals were removed. */
   forget(): Promise<number>;
+  /** An approved destination resolved to an address it may not use: tell the operator once per origin per session. */
+  notifyRefusedAddress?(origin: string): void;
+  /** Called after forget(), so a client can drop availability it derived from an approval. */
+  onDidForget?(listener: () => void): () => void;
 }
 
 /** The slice of a vscode.Memento this module needs. */
@@ -71,9 +75,19 @@ function isRecord(v: unknown): v is ApprovalRecord {
   return typeof r.origin === 'string' && (r.operation === 'sentinel-file-analysis' || r.operation === 'brainstorm-transcript');
 }
 
+/** The one warning per origin per session when an approved name resolves to an address it may not use. No content. */
+export function refusedAddressMessage(origin: string): string {
+  return `FailSafe did not contact ${sanitizeDialogText(origin, Math.max(origin.length, 1))}: the model server's name resolves to a private, `
+    + 'loopback, link-local or otherwise non-public address, which an approved remote server may not use (a server on your local network is refused). Nothing was sent.';
+}
+
 export function createLlmEgressAuthorizer(state: ApprovalState, window: ConfirmationWindow): LlmEgressAuthorizer {
   const declined = new Set<string>();
   const pending = new Map<string, Promise<boolean>>();
+  const warned = new Set<string>();
+  const forgetListeners = new Set<() => void>();
+  // Bumped by forget(): an answer to a dialog opened before it is not used.
+  let generation = 0;
   const keyOf = (r: { origin: string; operation: string }) => `${r.operation} ${r.origin}`;
   const records = (): ApprovalRecord[] => {
     const v = state.get<unknown>(LLM_APPROVALS_KEY);
@@ -82,7 +96,9 @@ export function createLlmEgressAuthorizer(state: ApprovalState, window: Confirma
 
   const ask = async (request: LlmEgressRequest): Promise<boolean> => {
     const dialog = llmEgressRequest(request);
+    const asked = generation;
     const choice = await window.showWarningMessage(dialog.title, { modal: true, detail: dialog.detail }, dialog.approveLabel);
+    if (asked !== generation) return false;
     if (choice !== dialog.approveLabel) {
       declined.add(keyOf(request));
       return false;
@@ -109,10 +125,23 @@ export function createLlmEgressAuthorizer(state: ApprovalState, window: Confirma
       }
     },
     async forget() {
+      generation++;
       const count = records().length;
       declined.clear();
       await state.update(LLM_APPROVALS_KEY, undefined);
+      for (const listener of [...forgetListeners]) {
+        try { listener(); } catch { /* a listener failure never blocks forgetting */ }
+      }
       return count;
+    },
+    notifyRefusedAddress(origin) {
+      if (warned.has(origin)) return;
+      warned.add(origin);
+      void Promise.resolve(window.showWarningMessage(refusedAddressMessage(origin), { modal: false })).catch(() => undefined);
+    },
+    onDidForget(listener) {
+      forgetListeners.add(listener);
+      return () => { forgetListeners.delete(listener); };
     },
   };
 }
