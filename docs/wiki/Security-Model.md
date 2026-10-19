@@ -117,7 +117,6 @@ All components below are classified L3 and require mandatory `/qor-audit` before
 | `EnforcementEngine` | `src/governance/EnforcementEngine.ts` | Policy enforcement |
 | `PolicyEngine` | `src/qorelogic/policies/PolicyEngine.ts` | Policy evaluation |
 | `LedgerManager` | `src/qorelogic/ledger/LedgerManager.ts` | Ledger operations |
-| `GovernanceWebhook` | `src/governance/GovernanceWebhook.ts` | Webhook handling |
 | `CommitGuard` | `src/governance/CommitGuard.ts` | Pre-commit validation |
 
 ## Vulnerability Reporting

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- The governance webhook sender is removed. Nothing in FailSafe configured or called it (no setting, command or view reached it), so nothing you can configure changes.
+
 ## [6.0.9] - 2026-10-18
 
 ### Added
