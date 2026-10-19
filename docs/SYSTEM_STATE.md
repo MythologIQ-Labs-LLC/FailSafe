@@ -14,7 +14,7 @@
 
 ---
 
-## 2026-10-18 — #538 post-v6.0.8 security patch (main, unreleased)
+## 2026-10-18 — v6.0.9: #538 post-v6.0.8 security patch (release candidate, not published)
 
 - #538 lane G (plan-538g, audit PASS iteration 2, seal #818): v6.0.9 release candidate prepared; the eight rehearsal VSIXs pass verify-set and inventory, the packaged SQLite loads under node and Electron, the upgrade lifecycle from v6.0.8 passes 12 of 12 and the installed smoke passes with its controls; the release run's own VSIX set is authoritative. Not tagged, not published.
 - #538 lane E (plan-538e, audit PASS iteration 2, seal #814): the owner's 2026-10-18 integration dispositions (15 COMPLETE, 13 MAINTAIN, 2 RETIRE, 0 INVEST) are recorded as a work queue in the portfolio and all 30 contracts; governance-webhook and qor-runtime carry retirement reviews, with the bounded removals filed as B288 and B289; no code removed.

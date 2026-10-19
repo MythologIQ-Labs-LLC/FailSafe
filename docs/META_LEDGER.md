@@ -33824,3 +33824,38 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `fbfd22c16881d1ccb12bf0a41921af4ce13ee7037035280c931612b2128d100e`
 
 **Decision**: SESSION SEAL for plan-538g-release-prep.md (implementation #817; content hash is the audited plan, sha256 a64bda5b). Reality = Promise, with disclosures. The branch carries the v6.0.9 release candidate: version 6.0.9, release notes that separate shipped behaviour from known limitations, and every release marker the gates read; the candidate source passes the workflow's own gates and its Linux CI, and its rehearsal set passes packaging, inventory, the packaged-SQLite loads, the upgrade lifecycle from v6.0.8 and an installed smoke. Disclosures: bounded damaged-ledger override for #538 lane cycles (owner ruling 2026-10-18; #467 unresolved, normal governance not restored); the rehearsal VSIXs and their SHA256SUMS never ship, because the tag's release run re-packages on Linux and a second build produces different bytes, so the release run's vsix-targets set is the only authoritative one and should be inventoried, lifecycle-tested on its win32-x64 VSIX and SQLite-smoked before the production click; the local test:all was stopped by the host for low memory and, by the owner's choice, the Linux CI test:all on the same head is the full-suite evidence; this seal commit adds only governance documents after the qualified head c0ba9ebe, and the merge is checked for an identical FailSafe/extension subtree rather than an identical tree; the same-origin install check shows the request waiting and nothing written, not a captured dialog; the lifecycle and SQLite loads ran on win32-x64 only, and the RC-branch native run covered seven runners; version 6.0.9 follows the standing patch ruling and the owner may choose 6.1.0 before tagging; the changelog date stays 2026-10-18 unless the owner re-dates it at tag time, which would need the release gates re-run; scripts/validate.ps1 ignores -Version, as in the workflow; earlier seals are unedited. Next: push, the PR checks, a merge pinned to the head, the subtree check, the evidence posted to #538, and a stop at the tag and publication boundary. Not tagged.
+
+---
+
+### Entry #819: IMPLEMENTATION - plan-538g-release-prep (tag build follow-up)
+
+**Timestamp**: 2026-10-19T18:42:24Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-18T2050-c80815`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-18T2050-c80815/implement.json`
+
+**Content Hash**: `8f1610acec40b4469e1199bb57bf5415e9180d1cd8104fed83619b8610890be3`
+**Previous Hash**: `fbfd22c16881d1ccb12bf0a41921af4ce13ee7037035280c931612b2128d100e`
+**Chain Hash (Merkle seal)**: `28b74b8658c907e65e44b1da59beec693b68a7db627871a3fca7a619d01f942c`
+
+**Decision**: IMPLEMENTATION follow-up after seal #818. The owner authorized tagging exactly 3c34dee3 as v6.0.9; the tag was pushed and release run 39172236756 failed in Build & Test on one test:node row, FX938 'records a body section for every shipped 6.x release': once a v6.0.9 tag exists, docs/SYSTEM_STATE.md must carry a section heading naming 6.0.9, and the candidate's section was headed for #538 without the version. PR CI runs without tags, so neither it nor the two plan audits saw the row. Nothing was published: the VS Code Marketplace, Open VSX and GitHub Release jobs were skipped; the extension host passed 5471 tests and executed every file. The owner chose to retag v6.0.9 at a corrected, re-qualified main commit. c1e4b36a on release/v6.0.9-rc2 (from 3c34dee3) renames the heading to name v6.0.9. Evidence: the FX938 row failed locally with the tag present (1 of 4) and passes after the fix; test:node with the tag present 850 tests, 839 passed, 2 failed (FX946, #467), 9 skipped.
+
+---
+
+### Entry #820: SESSION SEAL - plan-538g-release-prep (tag build follow-up)
+
+**Timestamp**: 2026-10-19T18:42:25Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-18T2050-c80815`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-18T2050-c80815/substantiate.json`
+
+**Content Hash**: `a64bda5bfcebc23024d0838edb243562dd4ebc961d6ac2ab2210f294228ea739`
+**Previous Hash**: `28b74b8658c907e65e44b1da59beec693b68a7db627871a3fca7a619d01f942c`
+**Chain Hash (Merkle seal)**: `1ccd0ef4e237e3ca1e32761f5b257288bf6c8e7adb13f10e6d428d146f477227`
+
+**Decision**: SESSION SEAL for the tag build follow-up (implementation #819) after seal #818. Reality = Promise, with disclosures. The corrected candidate differs from 3c34dee3 only in one SYSTEM_STATE heading and these two ledger entries; the shipped FailSafe/extension subtree is unchanged. Disclosures: bounded damaged-ledger override for #538 lane cycles (#467 unresolved); the first v6.0.9 tag (at 3c34dee3) produced a failed, unpublished release run 39172236756; by the owner's decision the unpublished tag is moved to the corrected main commit after its PR CI and RC native run pass, and the production artifact gate runs on the new release run before the owner's production approval; the release plan missed that FX938's shipped-release row only runs when the tag exists; seal #818 is unedited. Next: push, PR CI, a pinned merge, the retag, the release run and the artifact gate. Not published.
