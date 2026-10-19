@@ -33859,3 +33859,95 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `1ccd0ef4e237e3ca1e32761f5b257288bf6c8e7adb13f10e6d428d146f477227`
 
 **Decision**: SESSION SEAL for the tag build follow-up (implementation #819) after seal #818. Reality = Promise, with disclosures. The corrected candidate differs from 3c34dee3 only in one SYSTEM_STATE heading and these two ledger entries; the shipped FailSafe/extension subtree is unchanged. Disclosures: bounded damaged-ledger override for #538 lane cycles (#467 unresolved); the first v6.0.9 tag (at 3c34dee3) produced a failed, unpublished release run 39172236756; by the owner's decision the unpublished tag is moved to the corrected main commit after its PR CI and RC native run pass, and the production artifact gate runs on the new release run before the owner's production approval; the release plan missed that FX938's shipped-release row only runs when the tag exists; seal #818 is unedited. Next: push, PR CI, a pinned merge, the retag, the release run and the artifact gate. Not published.
+
+---
+
+### Entry #821: GATE TRIBUNAL - plan-b288-retire-governance-webhook (iteration 1) - VETO
+
+**Timestamp**: 2026-10-19T20:18:35Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-19T2013-32d71e`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for post-v6.0.9 product cycles, owner ruling 2026-10-19, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-19T2013-32d71e/audit-iter1.json`
+
+**Content Hash**: `180a12e423c93e2e1a3dcc3a2000f513e46a524688def05a3893b80655c2f190`
+**Previous Hash**: `1ccd0ef4e237e3ca1e32761f5b257288bf6c8e7adb13f10e6d428d146f477227`
+**Chain Hash (Merkle seal)**: `8a9723886cf6bafdbe380d613e44000957a26a48b2f7451e15521b0f3a3e3fd0`
+
+**Decision**: VETO on plan-b288-retire-governance-webhook.md iteration 1 (sha256 7ea6f149), B288: retire the inert governance-webhook sender while keeping the 15/13/2 portfolio dispositions and historical records. Fresh Option B architect-reviewer. Blocking: the new retired-contract rule (R8) failed open in a full clone when the base sha was missing, unrelated or unreachable, and owned-path checks could pass vacuously; a retired contract could launder a live surface as a reconciliation target or catalog id; the plan re-recorded the #538 Retirement review inventory sealed at #814. Should-fix: checkbox phase order, the FEATURE_INDEX removed pattern and totals, case-insensitive R3 including package.json, vocabulary. Next: revise and re-audit.
+
+---
+
+### Entry #822: GATE TRIBUNAL - plan-b288-retire-governance-webhook (iteration 2) - VETO
+
+**Timestamp**: 2026-10-19T20:29:04Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-19T2013-32d71e`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for post-v6.0.9 product cycles, owner ruling 2026-10-19, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-19T2013-32d71e/audit-iter2.json`
+
+**Content Hash**: `f897e8f2ee477c54e2054a63e14b33b556565553ca55b4513299cdafa9494e75`
+**Previous Hash**: `8a9723886cf6bafdbe380d613e44000957a26a48b2f7451e15521b0f3a3e3fd0`
+**Chain Hash (Merkle seal)**: `6627316739fc93c03bc167f465547096130083bc56dda1a67ab50e05d110c27b`
+
+**Decision**: VETO on plan-b288-retire-governance-webhook.md iteration 2 (sha256 f9a6b815). Iteration 1 blockers closed in the validator and documents. Fresh Option B architect-reviewer. Blocking: the fail-closed git semantics lived in an untested spawnSync adapter, the shallow-skip mutation only converted the golden row to a skip, and both CI clones are shallow, so nothing could catch a fail-open regression; git show had no maxBuffer, so the whole-file META_LEDGER citation would read null. Should-fix: case and whole-word negatives, the sealed range 111-134, skip only when shallow and base absent, the no-git checkout risk, FX919 surface, FX416, GOVERNANCE_INDEX line. Next: revise and re-audit.
+
+---
+
+### Entry #823: GATE TRIBUNAL - plan-b288-retire-governance-webhook (iteration 3) - PASS
+
+**Timestamp**: 2026-10-19T20:37:00Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-19T2013-32d71e`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for post-v6.0.9 product cycles, owner ruling 2026-10-19, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-19T2013-32d71e/audit-iter3.json`
+
+**Content Hash**: `b2bcaa278a64f59d76a88c71b549c24a92c972038eb5cf15481c204acae3f689`
+**Previous Hash**: `6627316739fc93c03bc167f465547096130083bc56dda1a67ab50e05d110c27b`
+**Chain Hash (Merkle seal)**: `24f751f78531e80cc489c340aaab8ab3dec43b0dab2de4fddf3f270ee637381c`
+
+**Decision**: PASS on plan-b288-retire-governance-webhook.md iteration 3 (sha256 bb888d8c). Fresh Option B architect-reviewer. The git adapter is a pure gitHistory(run) with a table-driven falsifier and maxBuffer 1<<26; every iteration 2 should-fix landed. Should-fix folded into implementation: a status-0 ENOBUFS row so M9 falsifies, a substring-only RT17 row, RT3 split, adapter placed below line 75, full base sha, RT2 fixture, no whole-file self-cite. Next: implement.
+
+---
+
+### Entry #824: IMPLEMENTATION - plan-b288-retire-governance-webhook
+
+**Timestamp**: 2026-10-19T21:15:49Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-19T2013-32d71e`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-19T2013-32d71e/implement.json`
+
+**Content Hash**: `9de4e541f27e048a68166df8e298669c4233bd8abbb04217ae10f04681f7f159`
+**Previous Hash**: `24f751f78531e80cc489c340aaab8ab3dec43b0dab2de4fddf3f270ee637381c`
+**Chain Hash (Merkle seal)**: `e124d49c1a2ae05669e197b39515b7aae640cc8fbc8a7f287a7df19734ae9686`
+
+**Decision**: IMPLEMENTATION of plan-b288-retire-governance-webhook.md iteration 3 on fix/b288-retire-governance-webhook: 50469384 (red tests), 075cd591 (retirement), b4b9740c (docs and evidence). GovernanceWebhook.ts and its two tests are deleted and bootstrapGovernance.ts loses the import, field, construction and return entry; the governance-webhook contract is kept as history with a Retired line at full base sha b83d83a3beda9a20c043d3ec6c6baed3738c0a6c and a dated re-run block, its sealed inventory unchanged; the portfolio row reads retired, the architecture index historical, FX300 and FX919 removed (763+0+43+11=817). FX1003 gains the retired-contract rules R1-R9 over a pure gitHistory(run) adapter: a full clone checks every citation and owned path at the base, a shallow clone without the base or a missing git executable is a counted skip, every other git failure is red. Red first: 24 RT tests, 23 failing before the adapter; green: FX1003 91/91, tsc, lint 0 errors, runner coverage 669 files, featureIndexClassifier, architecture-index and docs:validate pass; mutations M1-M10 and the presentError fold each turn a named row red. test:node 875 tests, 2 failures are FX946 ledgerAnchor (B325, failing identically at v6.0.9); vscode-test default 5428 passing with 1 failure from shared-TEMP interference by concurrent lanes, passing 33/33 alone. Bounded review review288: APPROVE; N1 (cat-file spawn error red in a shallow clone) and N2 (shallow-CI caveat in every check claim) folded; N3 never-built capabilities read retired, N4, N7 no README line by plan scope and N8 stay residuals. Dispositions stay 15/13/2.
+
+---
+
+### Entry #825: SESSION SEAL - plan-b288-retire-governance-webhook
+
+**Timestamp**: 2026-10-19T21:16:03Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-19T2013-32d71e`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-19T2013-32d71e/substantiate.json`
+
+**Content Hash**: `bb888d8cfff3c27a8a5c412dc8e6824c24118f0e16251a8a9082160521e288dd`
+**Previous Hash**: `e124d49c1a2ae05669e197b39515b7aae640cc8fbc8a7f287a7df19734ae9686`
+**Chain Hash (Merkle seal)**: `61813352414f226178fed779a4b7b53c79a712b23f921cf14277fc42ec60ec8b`
+
+**Decision**: SESSION SEAL for plan-b288-retire-governance-webhook.md (implementation #824; content hash is the audited plan, sha256 bb888d8c). Reality = Promise, with disclosures. The inert governance-webhook sender is removed from the product, its contract stays as history with the #538 Retirement review's sealed inventory unchanged, and FX1003 now proves a retired contract's citations and owned paths at its retirement base and refuses any live surface folded into it. Disclosures: bounded damaged-ledger override for post-v6.0.9 product cycles (owner ruling 2026-10-19; #467 unresolved, normal governance not restored); the plan-gate override events of this cycle carry the post-6.0.9 reason; PR and release CI clones are shallow, so the base check runs only in full clones and CI reports a counted skip; FX946 ledgerAnchor fails two rows locally and at v6.0.9 (B325, pre-existing); one vscode-test row failed under shared-TEMP interference from concurrent lanes and passes alone; the never-built capabilities of the retired contract read retired (review N3); no README What's-New line, by plan scope; dispositions stay 15 COMPLETE / 13 MAINTAIN / 2 RETIRE; earlier seals are unedited. Next: push, PR checks, a merge pinned to the head. No release.
