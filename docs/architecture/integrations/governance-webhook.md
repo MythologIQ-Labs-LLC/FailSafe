@@ -1,11 +1,15 @@
 # Governance webhook integration contract
 
-Contract id: `governance-webhook` (registry row `integration-contract-governance-webhook`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
+Contract id: `governance-webhook` (registry row `integration-contract-governance-webhook`). Recorded against main `c36b9ee2`. Feature states use the six states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 There is no legacy contract review for this integration.
 
 **Owned files:**
 - `FailSafe/extension/src/governance/GovernanceWebhook.ts`
+
+**Retired:** 2026-10-19 by [B288]; its citations are held at the retirement base `b83d83a3beda9a20c043d3ec6c6baed3738c0a6c`.
+
+Retired 2026-10-19 (B288): the sender, its two tests and the bootstrap field are removed. This contract is kept as history; its citations describe main at the retirement base and are checked there (in a full clone; shallow CI clones skip with a count), and since the retirement its Feature state rows use the portfolio's `retired` state.
 
 ## Customer job
 
@@ -38,12 +42,12 @@ Any configuration surface that lets a workspace or user register an endpoint wou
 
 | Capability | State | Symbol | Reached from | Test (depth) | Notes |
 |---|---|---|---|---|---|
-| signed-dispatch | shipped-inert | `signWebhookBody` `FailSafe/extension/src/governance/GovernanceWebhook.ts:52-53` (`export function signWebhookBody(secret: string, body: string): string {`) | none | `FailSafe/extension/src/test/governance/GovernanceWebhookIntegrity.test.ts` (unit) | Absent call site: the instance is built at `FailSafe/extension/src/extension/bootstrapGovernance.ts:177` (`new GovernanceWebhook()`) and only returned `FailSafe/extension/src/extension/bootstrapGovernance.ts:220` (`governanceWebhook,`); no non-test file calls `register` or `dispatch` on it (unverified beyond a repository search) |
-| payload-allowlist | shipped-inert | `buildWebhookRequest` `FailSafe/extension/src/governance/GovernanceWebhook.ts:75-84` (`payload: applyPayloadAllowlist(allow, payload),`) | none | `FailSafe/extension/src/test/governance/GovernanceWebhookIntegrity.test.ts` (unit) | Absent call site: as for signed-dispatch `FailSafe/extension/src/extension/bootstrapGovernance.ts:177` (`new GovernanceWebhook()`) |
-| endpoint-guard | shipped-inert | `GovernanceWebhook` `FailSafe/extension/src/governance/GovernanceWebhook.ts:143-146` (`must be HTTPS and not a private IP`) | none | `FailSafe/extension/src/test/governance/GovernanceWebhook.test.ts` (unit) | Absent call site: `register` is never called outside tests `FailSafe/extension/src/extension/bootstrapGovernance.ts:177` (`new GovernanceWebhook()`) |
-| payload-byte-cap | shipped-inert | `DEFAULT_MAX_PAYLOAD_BYTES` `FailSafe/extension/src/governance/GovernanceWebhook.ts:47` (`export const DEFAULT_MAX_PAYLOAD_BYTES = 65536;`) | none | `FailSafe/extension/src/test/governance/GovernanceWebhookIntegrity.test.ts` (unit) | Absent call site: as for signed-dispatch `FailSafe/extension/src/extension/bootstrapGovernance.ts:177` (`new GovernanceWebhook()`) |
-| webhook-configuration | proposed | none | none | none | Not built: no setting, command or route registers a webhook (unverified beyond a search of `FailSafe/extension/package.json` and the routes) |
-| event-subscription | proposed | none | none | none | Not built: nothing forwards event bus events to `dispatch` (unverified beyond a repository search) |
+| signed-dispatch | retired | `signWebhookBody` `FailSafe/extension/src/governance/GovernanceWebhook.ts:52-53` (`export function signWebhookBody(secret: string, body: string): string {`) | none | `FailSafe/extension/src/test/governance/GovernanceWebhookIntegrity.test.ts` (unit) | No call site at the retirement base: the instance is built at `FailSafe/extension/src/extension/bootstrapGovernance.ts:177` (`new GovernanceWebhook()`) and only returned `FailSafe/extension/src/extension/bootstrapGovernance.ts:220` (`governanceWebhook,`); no non-test file calls `register` or `dispatch` on it (unverified beyond a repository search) |
+| payload-allowlist | retired | `buildWebhookRequest` `FailSafe/extension/src/governance/GovernanceWebhook.ts:75-84` (`payload: applyPayloadAllowlist(allow, payload),`) | none | `FailSafe/extension/src/test/governance/GovernanceWebhookIntegrity.test.ts` (unit) | No call site at the retirement base: as for signed-dispatch `FailSafe/extension/src/extension/bootstrapGovernance.ts:177` (`new GovernanceWebhook()`) |
+| endpoint-guard | retired | `GovernanceWebhook` `FailSafe/extension/src/governance/GovernanceWebhook.ts:143-146` (`must be HTTPS and not a private IP`) | none | `FailSafe/extension/src/test/governance/GovernanceWebhook.test.ts` (unit) | No call site at the retirement base: `register` is never called outside tests `FailSafe/extension/src/extension/bootstrapGovernance.ts:177` (`new GovernanceWebhook()`) |
+| payload-byte-cap | retired | `DEFAULT_MAX_PAYLOAD_BYTES` `FailSafe/extension/src/governance/GovernanceWebhook.ts:47` (`export const DEFAULT_MAX_PAYLOAD_BYTES = 65536;`) | none | `FailSafe/extension/src/test/governance/GovernanceWebhookIntegrity.test.ts` (unit) | No call site at the retirement base: as for signed-dispatch `FailSafe/extension/src/extension/bootstrapGovernance.ts:177` (`new GovernanceWebhook()`) |
+| webhook-configuration | retired | none | none | none | Not built: no setting, command or route registers a webhook (unverified beyond a search of `FailSafe/extension/package.json` and the routes) |
+| event-subscription | retired | none | none | none | Not built: nothing forwards event bus events to `dispatch` (unverified beyond a repository search) |
 
 ## Inbound fields
 
@@ -104,6 +108,8 @@ Installed-extension test: missing; no product path reaches the sender `FailSafe/
 
 Owner decision 2026-10-18 (#538), accepting the recommendation: **RETIRE**. The recommendation was to retire unless a customer asked for a generic signed webhook; the owner decided to retire. The sender is well built and tested, but nothing configures or calls it, so it delivers no value and keeps an SSRF residual and a DNS-name gap in shipped code. If kept, it needs a governed configuration surface, an event subscription and a separate egress approval before it can be marked anything but inert.
 
+Retired 2026-10-19 by B288.
+
 ## Retirement review (#538)
 
 The owner decided RETIRE on 2026-10-18 (#538); this review lists what a removal touches and removes nothing. The removal is backlog item [B288], a separate small PR `docs/BACKLOG.md` (`[B288] Retire the governance webhook sender`).
@@ -156,6 +162,20 @@ FX300 and FX919 lose their implementation `docs/FEATURE_INDEX.md` (`governance/G
 
 Settings: none is contributed for the sender (a search of package.json for "webhook" outside Slack and Teams; unverified beyond this search).
 Migration note: none is needed, because no user surface reaches the sender `FailSafe/extension/src/extension/bootstrapGovernance.ts:220` (`governanceWebhook,`).
+
+### Re-run at b83d83a3 (B288)
+
+Re-run 2026-10-19 for B288 with the Inventory's command at main b83d83a3; it reports 19 files, a search, not a proof (unverified beyond this search).
+The code and test counts are unchanged: 9 in the sender `FailSafe/extension/src/governance/GovernanceWebhook.ts:138` (`export class GovernanceWebhook {`), 4 in the importer `FailSafe/extension/src/extension/bootstrapGovernance.ts:18` (`import { GovernanceWebhook } from "../governance/GovernanceWebhook";`), 37 and 4 in the two tests `FailSafe/extension/src/test/governance/GovernanceWebhookIntegrity.test.ts:33` (`authenticated integrity (F-4)`) `FailSafe/extension/src/test/governance/GovernanceWebhook.test.ts:5` (`describe('GovernanceWebhook', () => {`), and 2 in the FX1003 constants `FailSafe/extension/src/test/docs/integration-contracts.test.cjs:60` (`'governance-webhook', 'dependency-admission-lint', 'git-bootstrap',`).
+- 69 hits, this contract as it stood at b83d83a3 (unverified beyond this search).
+- 3 hits, the portfolio `docs/architecture/INTEGRATION_PORTFOLIO.md` (`(removal B288)`).
+- 2 hits, the registry `docs/ARCHITECTURE_INDEX.md` (`the governance-webhook and qor-runtime contracts gain retirement reviews`).
+- 2 hits, the tier index `docs/GOVERNANCE_INDEX.md` (`governance-webhook and qor-runtime carry retirement reviews`).
+- 6 hits, historic `docs/SYSTEM_STATE.md` (`governance-webhook and qor-runtime carry retirement reviews`).
+- 16 hits, Merkle-chained, never edited `docs/META_LEDGER.md` (`GovernanceWebhook SSRF`).
+- 1 hit, new since the Inventory, the backlog row `docs/BACKLOG.md` (`[B288] Retire the governance webhook sender`).
+- 1 hit, new since the Inventory, the qor-runtime contract `docs/architecture/integrations/qor-runtime.md` (`needs the retired-contract rule B288 adds`).
+The other files keep their Inventory counts: FEATURE_INDEX 2, Security-Model 1, each CHANGELOG 2, the extension README 1, SHADOW_GENOME 1 (unverified beyond this search).
 
 ## Open defects
 

@@ -69,18 +69,21 @@ const NAMED_HITS = {
   ],
   'scan-1': [
     `${SRC}/roadmap/services/QorRuntimeService.ts`, `${SRC}/sentinel/utils/llmTransport.ts`,
-    `${SRC}/governance/GovernanceWebhook.ts`, `${SRC}/qorlogic/substrate/DependencyAdmissionLintModule.ts`,
+    `${SRC}/qorlogic/substrate/DependencyAdmissionLintModule.ts`,
     `${SRC}/roadmap/routes/SreApiRoute.ts`, `${SRC}/roadmap/routes/templates/SreTemplate.ts`,
   ],
 };
 
-const STATES = ['verified-shipped', 'shipped-unverified', 'shipped-inert', 'main-unreleased', 'proposed'];
+const STATES = ['verified-shipped', 'shipped-unverified', 'shipped-inert', 'main-unreleased', 'proposed', 'retired'];
 const SHIPPED = new Set(['verified-shipped', 'shipped-unverified', 'shipped-inert']);
 const DEPTHS = ['unit', 'route', 'jsdom', 'playwright-stubbed', 'installed-vscode', 'live-service'];
 const DISPOSITIONS = ['INVEST', 'COMPLETE', 'MAINTAIN', 'RETIRE'];
 /** #538: the owner's recorded decision on the dispositions, and the section a RETIRE contract carries. */
 const OWNER_DECISION = { date: '2026-10-18', ref: '#538' };
 const RETIREMENT_SECTION = 'Retirement review (#538)';
+/** B288: the preamble line of a retired contract, whose citations are checked at its retirement base. */
+const RETIRED_RE = /^\*\*Retired:\*\* (\d{4}-\d{2}-\d{2}) by \[(B\d+)\]; its citations are held at the retirement base `([0-9a-f]{7,40})`\.$/;
+const MANIFEST = 'FailSafe/extension/package.json';
 const SECTIONS = [
   'Customer job', 'Measurable value', 'Why not simply ask an agent', 'API documentation',
   'Privileges and scopes', 'Feature state', 'Inbound fields', 'Outbound fields and egress', 'Transformations',
@@ -624,7 +627,15 @@ function parseContract(c) {
     problems.push({ code: 'disposition', detail: `${c.path}: the disposition does not record the owner decision as "Owner decision ${OWNER_DECISION.date} (${OWNER_DECISION.ref})"` });
   }
   const reviews = sections.filter((s) => s.name === RETIREMENT_SECTION);
-  return { ...c, sections, owned, citations, fileCitations, reviews, rows, disposition: bold[0], problems };
+  // B288: a retired contract names its retirement item and the base its citations are held at.
+  const retiredAt = pre.findIndex((l, i) => (firstH2 < 0 || i < firstH2) && /^\*\*Retired:\*\*/.test(l));
+  let retired = null;
+  if (retiredAt >= 0) {
+    const m = RETIRED_RE.exec(pre[retiredAt].trim());
+    if (m) retired = { date: m[1], item: m[2], base: m[3] };
+    else problems.push({ code: 'retired', detail: `${where(retiredAt + 1)}: malformed **Retired:** line; expected "**Retired:** <YYYY-MM-DD> by [Bnnn]; its citations are held at the retirement base <sha>."` });
+  }
+  return { ...c, sections, owned, citations, fileCitations, reviews, rows, disposition: bold[0], retired, problems };
 }
 
 /** Feature-state rules (LD7) for one contract's rows. */
@@ -633,13 +644,15 @@ function featureStateProblems(ct, ctx) {
   for (const r of ct.rows) {
     const at = `${ct.path}:${r.no}`;
     if (!STATES.includes(r.state)) { out.push({ code: 'feature-state', detail: `${at}: state "${r.state}" is not one of ${STATES.join(', ')}` }); continue; }
+    if (r.state === 'retired' && !ct.retired) out.push({ code: 'feature-state', detail: `${at}: a retired row in a contract that is not retired (no **Retired:** line)` });
+    if (ct.retired && r.state !== 'retired') out.push({ code: 'feature-state', detail: `${at}: a retired contract holds only retired rows (this one is ${r.state})` });
     const symCites = citationsOn(r.symbolCell).cites;
     const symbol = backticked(stripCitations(r.symbolCell))[0];
     const hasSwitch = /\b(?:Switch:|Absent call site:)/.test(r.text);
     if (hasSwitch && r.state !== 'shipped-inert') out.push({ code: 'precedence', detail: `${at}: a row with Switch: or Absent call site: must be shipped-inert (it is ${r.state})` });
     if (r.state === 'shipped-inert' && !hasSwitch) out.push({ code: 'precedence', detail: `${at}: shipped-inert must cite its Switch: or Absent call site:` });
     if (r.state === 'shipped-inert' && /\bSwitch:/.test(r.text) && !citationsOn(r.text.slice(r.text.indexOf('Switch:'))).cites.length) out.push({ code: 'precedence', detail: `${at}: Switch: carries no citation` });
-    if (r.state !== 'proposed' && (!symbol || !symCites.length)) out.push({ code: 'feature-symbol', detail: `${at}: a ${r.state} capability needs a backticked symbol and its citation in the Symbol cell` });
+    if (r.state !== 'proposed' && r.state !== 'retired' && (!symbol || !symCites.length)) out.push({ code: 'feature-symbol', detail: `${at}: a ${r.state} capability needs a backticked symbol and its citation in the Symbol cell` });
     if (r.state === 'verified-shipped' || r.state === 'shipped-unverified') {
       const implPaths = new Set(symCites.map((s) => s.path));
       const reach = citationsOn(r.reached).cites;
@@ -746,6 +759,34 @@ function reconKind(kind) {
  *   exists(path) -> bool, integrationEntries: [names], reviews: [paths], contracts: [{id,path,text}],
  *   portfolioText, backlogText, archIndexText, govIndexText, requiredIds, runnerFor }
  */
+/**
+ * B288 R8: where a retired contract's citations are read. A counted skip happens only when git cannot be
+ * spawned, or when the clone is shallow and the base is absent; otherwise the base must be present, an
+ * ancestor of HEAD, and hold every owned path, or the contract is red.
+ */
+function retiredBase(c, history) {
+  const base = c.retired.base;
+  const n = c.citations.length + c.fileCitations.length + c.owned.length;
+  const out = { problems: [], check: false, read: () => null, record: { id: c.id, base } };
+  if (!history) { out.problems.push(`${c.path}: no git history input; the retirement base ${base} cannot be checked`); return out; }
+  if (!history.available) { out.record = { id: c.id, base, skipped: 'git-unavailable', unchecked: n }; return out; }
+  const at = history.atCommit(base);
+  if (!at.present) {
+    if (history.shallow && !at.presentError) { out.record = { id: c.id, base, skipped: 'shallow', unchecked: n }; return out; }
+    out.problems.push(`${c.path}: the retirement base ${base} is not in this clone (shallow probe: ${history.probeStatus}${at.presentError ? '; cat-file could not run' : ''})`);
+    return out;
+  }
+  if (!at.ancestor) { out.problems.push(`${c.path}: the retirement base ${base} is not an ancestor of HEAD`); return out; }
+  for (const o of c.owned) {
+    const there = o.path.endsWith('/') ? at.list(o.path).length > 0 : at.read(o.path) !== null;
+    if (!there) out.problems.push(`${c.path}:${o.no}: owned path ${o.path} does not exist at the base ${base.slice(0, 12)}`);
+  }
+  out.check = true;
+  out.read = at.read;
+  out.record = { id: c.id, base, checked: n };
+  return out;
+}
+
 function validate(inputs) {
   const problems = [];
   const add = (code, detail) => problems.push({ code, detail });
@@ -764,10 +805,15 @@ function validate(inputs) {
   // Contracts.
   const parsed = inputs.contracts.map((c) => parseContract(c));
   const byId = new Map(parsed.map((c) => [c.id, c]));
+  const retired = [];
   for (const c of parsed) {
     c.catalog = catalog.find((e) => e.id === c.id) || null;
     problems.push(...c.problems);
-    for (const ct of c.citations) for (const p of citationProblems(ct, read)) add('citation', `${c.path}:${ct.no}: ${p}`);
+    // B288: a retired contract is read at its retirement base, or not at all when the base cannot be read.
+    c.base = c.retired ? retiredBase(c, inputs.history) : null;
+    if (c.base) { retired.push(c.base.record); for (const p of c.base.problems) add('retired', p); }
+    const atBase = c.base ? ` (at the retirement base ${c.retired.base.slice(0, 12)})` : '';
+    if (!c.base || c.base.check) for (const ct of c.citations) for (const p of citationProblems(ct, c.base ? c.base.read : read)) add('citation', `${c.path}:${ct.no}: ${p}${atBase}`);
     problems.push(...featureStateProblems(c, { read, runnerFor: inputs.runnerFor }));
   }
   // Ownership: every owned path exists; no file is owned twice.
@@ -775,6 +821,7 @@ function validate(inputs) {
   for (const c of parsed) {
     for (const o of c.owned) {
       const files = o.path.endsWith('/') ? inputs.listDir(o.path) : (inputs.exists(o.path) ? [o.path] : []);
+      if (c.retired) { if (files.length) add('retired', `${c.path}:${o.no}: retired owned path ${o.path} still exists in the working tree`); continue; }
       if (!files.length) { add('owned-missing', `${c.path}:${o.no}: owned path ${o.path} does not exist`); continue; }
       for (const f of files) {
         if (owner.has(f) && owner.get(f) !== c.id) add('owned-twice', `${f} is owned by both ${owner.get(f)} and ${c.id}`);
@@ -782,7 +829,22 @@ function validate(inputs) {
       }
     }
   }
-  const ownedDirs = new Set(parsed.flatMap((c) => c.owned.map((o) => o.path)));
+  const ownedDirs = new Set(parsed.filter((c) => !c.retired).flatMap((c) => c.owned.map((o) => o.path)));
+
+  // B288: a retired contract is RETIRE, its item is done, and no product source or the manifest names its module.
+  for (const c of parsed.filter((x) => x.retired)) {
+    const { item } = c.retired;
+    const backlog = inputs.backlogText || '';
+    if (c.disposition !== 'RETIRE') add('retired', `${c.path}: a retired contract must have the disposition RETIRE (it is ${c.disposition || 'none'})`);
+    if (!backlog.includes(`[${item}]`)) add('retired', `${c.path}: ${item} is not a [${item}] item in docs/BACKLOG.md`);
+    else if (!new RegExp(`^- \\[[xX]\\] \\[${item}\\]`, 'm').test(backlog)) add('retired', `${c.path}: ${item} is not done in docs/BACKLOG.md`);
+    for (const o of c.owned.filter((x) => !x.path.endsWith('/'))) {
+      const stem = path.posix.basename(o.path).replace(/\.[^.]+$/, '').toLowerCase();
+      for (const f of [...inputs.sources, { path: MANIFEST, text: inputs.manifestText || '' }]) {
+        if ((f.text || '').toLowerCase().includes(stem)) add('retired', `${f.path} names the retired module ${stem} (contract ${c.id})`);
+      }
+    }
+  }
 
   // Portfolio.
   const pf = parsePortfolio(inputs.portfolioText);
@@ -798,7 +860,10 @@ function validate(inputs) {
   for (const r of pf.recon) {
     const k = reconKind(r.kind);
     if (!k) { add('reconciliation', `${PORTFOLIO}:${r.no}: "${r.kind}" is not folded into <id>, shared by <id>, <id> or not an integration: <reason>`); continue; }
-    for (const id of k.ids) if (!byId.has(id)) add('reconciliation', `${PORTFOLIO}:${r.no}: ${id} is not a contract id`);
+    for (const id of k.ids) {
+      if (!byId.has(id)) add('reconciliation', `${PORTFOLIO}:${r.no}: ${id} is not a contract id`);
+      else if (byId.get(id).retired) add('retired', `${PORTFOLIO}:${r.no}: ${r.entry} is ${r.kind}, but a retired contract cannot cover a live entry`);
+    }
     if (!citationsOn(r.evidence).cites.length && !/\bunverified\b/i.test(r.evidence)) add('reconciliation', `${PORTFOLIO}:${r.no}: the row carries no citation and does not say unverified`);
     if (recon.has(r.entry)) add('reconciliation', `${PORTFOLIO}:${r.no}: ${r.entry} has two rows`);
     recon.set(r.entry, { ...r, k });
@@ -806,7 +871,10 @@ function validate(inputs) {
   const covered = (entry) => byId.has(entry) || ownedDirs.has(entry) || owner.has(entry) || recon.has(entry);
 
   // Coverage: catalog ids (a contract each), integrations entries, LD1 ids, scan hits.
-  for (const e of catalog) if (!byId.has(e.id)) add('coverage', `catalog id ${e.id} has no contract ${CONTRACT_DIR}${e.id}.md`);
+  for (const e of catalog) {
+    if (!byId.has(e.id)) add('coverage', `catalog id ${e.id} has no contract ${CONTRACT_DIR}${e.id}.md`);
+    else if (byId.get(e.id).retired) add('retired', `catalog id ${e.id}: a retired contract cannot be a catalog entry`);
+  }
   for (const id of inputs.requiredIds) if (!byId.has(id) && !recon.has(id)) add('coverage', `LD1 integration ${id} has no contract and no reconciliation row`);
   for (const name of inputs.integrationEntries) {
     const entry = name.includes('.') ? `${INTEGRATIONS_DIR}${name}` : `${INTEGRATIONS_DIR}${name}/`;
@@ -846,7 +914,7 @@ function validate(inputs) {
     if (seen.has(m.id)) add('matrix', `${PORTFOLIO}:${m.no}: ${m.id} has two matrix rows`);
     seen.add(m.id);
     const states = m.states.split(',').map((s) => s.trim()).filter(Boolean);
-    if (!states.length || states.some((s) => !STATES.includes(s))) add('matrix', `${PORTFOLIO}:${m.no}: feature state "${m.states}" is not a list of the five states`);
+    if (!states.length || states.some((s) => !STATES.includes(s))) add('matrix', `${PORTFOLIO}:${m.no}: feature state "${m.states}" is not a list of the six states`);
     const rowStates = [...new Set(byId.get(m.id).rows.map((r) => r.state))].sort();
     if (JSON.stringify([...new Set(states)].sort()) !== JSON.stringify(rowStates)) add('matrix', `${PORTFOLIO}:${m.no}: ${m.id} lists states ${states.join(', ')}; its contract has ${rowStates.join(', ')}`);
     if (!/^(yes|no)$/.test(m.egress.trim())) add('matrix', `${PORTFOLIO}:${m.no}: network egress must be yes or no`);
@@ -876,7 +944,8 @@ function validate(inputs) {
   // Retirement reviews (#538): exactly one per RETIRE contract, none elsewhere; each names a backlog item,
   // is linked from the portfolio, and its whole-file citations resolve.
   for (const c of parsed) {
-    for (const fc of c.fileCitations) for (const p of fileCitationProblems(fc, read, c.path)) add('citation', `${c.path}:${fc.no}: ${p}`);
+    const atBase = c.base ? ` (at the retirement base ${c.retired.base.slice(0, 12)})` : '';
+    if (!c.base || c.base.check) for (const fc of c.fileCitations) for (const p of fileCitationProblems(fc, c.base ? c.base.read : read, c.path)) add('citation', `${c.path}:${fc.no}: ${p}${atBase}`);
     if (c.disposition !== 'RETIRE') {
       if (c.reviews.length) add('retirement', `${c.path}: only a RETIRE contract has a "## ${RETIREMENT_SECTION}" section`);
       continue;
@@ -904,18 +973,20 @@ function validate(inputs) {
   const rowsById = new Map(reg.rows.map((r) => [r.id, r]));
   const regIds = new Set(reg.rows.map((r) => r.id));
   const want = [
-    ...parsed.map((c) => ({ id: `integration-contract-${c.id}`, domain: `integration-contract-${c.id}`, doc: `architecture/integrations/${c.id}.md`, contract: true })),
+    ...parsed.map((c) => ({ id: `integration-contract-${c.id}`, domain: `integration-contract-${c.id}`, doc: `architecture/integrations/${c.id}.md`, contract: true, retired: c.retired })),
     { id: 'integration-portfolio', doc: 'architecture/INTEGRATION_PORTFOLIO.md' },
     { id: 'integration-scenarios', doc: 'architecture/INTEGRATION_SCENARIOS.md' },
   ];
   for (const w of want) {
     const r = rowsById.get(w.id);
     if (!r) { add('registry', `docs/ARCHITECTURE_INDEX.md has no registry row ${w.id}`); continue; }
-    if (r.status !== 'canonical') add('registry', `${w.id}: status must be canonical`);
+    if (w.retired) { if (r.status !== 'historical') add('registry', `${w.id}: status must be historical for a retired contract`); }
+    else if (r.status !== 'canonical') add('registry', `${w.id}: status must be canonical`);
+    if (w.retired && !(r.updated_by || '').includes(w.retired.item)) add('registry', `${w.id}: updated_by must name the retirement item ${w.retired.item}`);
     if (w.domain && r.domain.trim().toLowerCase() !== w.domain) add('registry', `${w.id}: domain must be ${w.domain}`);
     if (!new RegExp(`^\\[[^\\]]+\\]\\(${escapeRe(w.doc)}\\)$`).test(r.doc)) add('registry', `${w.id}: doc must link ${w.doc}`);
     if (!r.owner || r.owner === '-') add('registry', `${w.id}: owner is empty`);
-    if (w.contract && !/more than 3 lines/.test(r.updated_by || '')) add('registry', `${w.id}: updated_by must say that moving cited code by more than 3 lines requires updating the citation`);
+    if (w.contract && !w.retired && !/more than 3 lines/.test(r.updated_by || '')) add('registry', `${w.id}: updated_by must say that moving cited code by more than 3 lines requires updating the citation`);
     const related = (r.related || '-').split(',').map((s) => s.trim()).filter((s) => s && s !== '-');
     for (const x of related) if (!regIds.has(x)) add('registry', `${w.id}: related id ${x} is not registered`);
   }
@@ -943,10 +1014,52 @@ function validate(inputs) {
     if (!(k in pf.counts)) add('counts', `${PORTFOLIO}: Scan counts has no row \`${k}\``);
     else if (pf.counts[k] !== computed[k]) add('counts', `${PORTFOLIO}: \`${k}\` is reported as ${pf.counts[k]}; computed ${computed[k]}`);
   }
-  return { problems, computed, scan1Files, scan2Files, sites, targets, catalog, contracts: parsed, portfolio: pf };
+  return { problems, computed, scan1Files, scan2Files, sites, targets, catalog, contracts: parsed, portfolio: pf, retired };
 }
 
 const prefixRowFor = (f, rows) => rows.find((p) => f.startsWith(p));
+
+// ------------------------------------------------------------------ git history (B288)
+
+/** How the suite spawns git: argv only, no shell, a buffer large enough for docs/META_LEDGER.md. */
+const GIT_SPAWN_OPTIONS = Object.freeze({ cwd: REPO_ROOT, encoding: 'utf8', shell: false, windowsHide: true, maxBuffer: 1 << 26 });
+const gitRun = (args) => spawnSync('git', args, GIT_SPAWN_OPTIONS);
+
+/**
+ * What a retired contract's base check needs from git, read strictly from an injected
+ * `run(args) -> { status, stdout, error }`. Only a spawn error ENOENT makes git unavailable; only
+ * status 0 with stdout exactly `true` is shallow; every other answer (an error, a non-zero exit,
+ * an echoed flag, empty output, ENOBUFS with partial stdout) reads as absent, false, null or [].
+ */
+function gitHistory(run) {
+  const ok = (r) => !r.error && r.status === 0;
+  const probe = run(['rev-parse', '--is-shallow-repository']);
+  const commits = new Map();
+  const atCommit = (sha) => {
+    if (!commits.has(sha)) {
+      const cache = new Map();
+      const exists = run(['cat-file', '-e', `${sha}^{commit}`]);
+      commits.set(sha, {
+        present: ok(exists),
+        // A cat-file that could not run says nothing about the clone: never a shallow skip.
+        presentError: Boolean(exists.error),
+        ancestor: ok(run(['merge-base', '--is-ancestor', sha, 'HEAD'])),
+        read: (p) => {
+          if (!cache.has(p)) { const r = run(['show', `${sha}:${p}`]); cache.set(p, ok(r) ? r.stdout : null); }
+          return cache.get(p);
+        },
+        list: (d) => { const r = run(['ls-tree', '-r', '--name-only', sha, '--', d]); return ok(r) ? r.stdout.split(/\r?\n/).filter(Boolean) : []; },
+      });
+    }
+    return commits.get(sha);
+  };
+  return {
+    available: !(probe.error && probe.error.code === 'ENOENT'),
+    shallow: ok(probe) && /^true\r?\n$/.test(probe.stdout || ''),
+    probeStatus: probe.error ? probe.error.code : probe.status,
+    atCommit,
+  };
+}
 
 // ------------------------------------------------------------------ repository inputs
 
@@ -978,6 +1091,7 @@ function repoInputs() {
     integrationEntries: fs.readdirSync(path.join(REPO_ROOT, INTEGRATIONS_DIR), { withFileTypes: true })
       .filter((e) => e.isDirectory() || /\.ts$/.test(e.name)).map((e) => e.name).sort(),
     reviews: fs.readdirSync(path.join(REPO_ROOT, REVIEW_DIR)).filter((n) => /_CONTRACT_REVIEW\.md$/.test(n)).map((n) => `${REVIEW_DIR}${n}`).sort(),
+    history: gitHistory(gitRun), manifestText: read(MANIFEST) || '',
     portfolioText: read(PORTFOLIO) || '', scenariosText: read(SCENARIOS) || '', backlogText: read('docs/BACKLOG.md') || '',
     archIndexText: read('docs/ARCHITECTURE_INDEX.md') || '', govIndexText: read('docs/GOVERNANCE_INDEX.md') || '',
     requiredIds: LD1_OTHER_IDS,
@@ -1741,6 +1855,20 @@ describe('FX1003 integration contracts: this repository', () => {
     assert.ok(claims.length > 0, 'no shipped-state claim to check');
     assert.deepEqual(bad, []);
   });
+
+  it('retired contracts: citations and owned paths are checked at the retirement base (B288)', (t) => {
+    assert.ok(result.retired.length > 0, 'no retired contract');
+    for (const x of result.retired) {
+      const line = x.skipped
+        ? `retired: ${x.id} skipped (${x.skipped}) at ${x.base}: ${x.unchecked} citations and owned paths left unchecked`
+        : `retired: ${x.id} checked ${x.checked} citations and owned paths at ${x.base}`;
+      t.diagnostic(line);
+      console.log(`[integration-contracts] ${line}`);
+    }
+    const skipped = result.retired.filter((x) => x.skipped);
+    if (skipped.length) { t.skip(skipped.map((x) => `${x.id}: ${x.skipped}, ${x.unchecked} unchecked`).join('; ')); return; }
+    for (const x of result.retired) assert.ok(x.checked > 0, `${x.id} checked nothing`);
+  });
 });
 
-module.exports = { validate, scan1, scan2, classifyTarget, parseCatalog, citationsOn, citationProblems, repoInputs };
+module.exports = { validate, scan1, scan2, classifyTarget, parseCatalog, citationsOn, citationProblems, repoInputs, gitHistory, GIT_SPAWN_OPTIONS };

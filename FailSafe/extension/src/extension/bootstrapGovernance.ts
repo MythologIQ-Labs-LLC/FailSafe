@@ -15,7 +15,6 @@ import { SkillRegistryEnforcer } from "../governance/SkillRegistryEnforcer";
 import { ApproverPipeline } from "../governance/ApproverPipeline";
 import { WorkspaceIntegrity } from "../governance/WorkspaceIntegrity";
 import { ComplianceExporter } from "../governance/ComplianceExporter";
-import { GovernanceWebhook } from "../governance/GovernanceWebhook";
 import { PolicySandbox } from "../governance/PolicySandbox";
 import { RBACManager } from "../governance/RBACManager";
 import { ArtifactHasher } from "../governance/ArtifactHasher";
@@ -41,7 +40,6 @@ export interface GovernanceSubstrate {
   approverPipeline: ApproverPipeline;
   workspaceIntegrity: WorkspaceIntegrity;
   complianceExporter: ComplianceExporter;
-  governanceWebhook: GovernanceWebhook;
   policySandbox: PolicySandbox;
   rbacManager: RBACManager;
   artifactHasher: ArtifactHasher;
@@ -174,7 +172,6 @@ export async function bootstrapGovernance(
   const approverPipeline = new ApproverPipeline(null);
   const workspaceIntegrity = new WorkspaceIntegrity(core.workspaceRoot);
   const complianceExporter = new ComplianceExporter(null as unknown as import('../qorelogic/ledger/LedgerManager').LedgerManager, null as unknown as import('../qorelogic/shadow/ShadowGenomeManager').ShadowGenomeManager);
-  const governanceWebhook = new GovernanceWebhook();
   const policySandbox = new PolicySandbox();
   const rbacManager = new RBACManager();
   const artifactHasher = new ArtifactHasher();
@@ -217,7 +214,6 @@ export async function bootstrapGovernance(
     approverPipeline,
     workspaceIntegrity,
     complianceExporter,
-    governanceWebhook,
     policySandbox,
     rbacManager,
     artifactHasher,

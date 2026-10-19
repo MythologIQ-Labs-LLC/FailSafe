@@ -12,7 +12,7 @@ On 2026-10-18 the owner accepted the dispositions in the matrix below as owner-a
 
 - COMPLETE means finish the named gaps: the contract's Recommended disposition and Open defects name them. It does not mean the integration is complete.
 - MAINTAIN means keep it working and fix its recorded defects.
-- RETIRE means retire the inert or exposed claims and routes, only after a reference and compatibility review, in a separate small PR, without deleting historic contracts or evidence. The two reviews are [governance-webhook](integrations/governance-webhook.md#retirement-review-538) (removal B288) and [qor-runtime](integrations/qor-runtime.md#retirement-review-538) (removal B289).
+- RETIRE means retire the inert or exposed claims and routes, only after a reference and compatibility review, in a separate small PR, without deleting historic contracts or evidence. The two reviews are [governance-webhook](integrations/governance-webhook.md#retirement-review-538) (removal B288) and [qor-runtime](integrations/qor-runtime.md#retirement-review-538) (removal B289). B288 retired governance-webhook on 2026-10-19; its contract stays as history.
 - INVEST: no integration has it.
 
 The decision covers the dispositions. The priorities and the [Prioritized order](#prioritized-order) remain a recommendation.
@@ -28,6 +28,7 @@ The architecture index's decision path says to amend an existing canonical docum
 - `shipped-inert`: in tag v6.0.8 but switched off or unreachable; the switch or the missing call site is cited. It wins over any other shipped state.
 - `main-unreleased`: on main `c36b9ee2` and not in tag v6.0.8.
 - `proposed`: not implemented.
+- `retired`: the code was removed under a RETIRE disposition (B288 for governance-webhook). The five states above describe a live contract; a retired contract keeps its file as history, is registered `historical` in the architecture index, names its retirement base, and FX1003 checks its citations at that commit (in a full clone; shallow CI clones skip with a count). The Feature Index calls the same features `removed`.
 
 Test depth labels: `unit` (a node or vscode-test file calling the code directly), `route` (an HTTP route driven in-process), `jsdom` (browser code in jsdom), `playwright-stubbed` (a Playwright `ui/*.spec.ts` file against a stubbed Console), `installed-vscode` (a vscode-test file that drives the code inside a VS Code extension host, launched from the development folder, not an installed VSIX; whether the release-verification lane exercises any integration in an installed VSIX is unverified), `live-service` (against the real provider; none on main).
 
@@ -65,7 +66,7 @@ Test depth lists the depth labels of the contract's proving tests; `none` means 
 | [agt](integrations/agt.md) | Get the matching AGT module install command, pre-filled, never run | verified-shipped, main-unreleased | no | unit, route | MAINTAIN | 3 |
 | [tracker-manifest](integrations/tracker-manifest.md) | Draft docs/roadmap/programs.yaml from merged PRs and CHANGELOG with an operator-confirmed taxonomy | shipped-unverified, verified-shipped | yes | unit | MAINTAIN | 3 |
 | [git-bootstrap](integrations/git-bootstrap.md) | Make Git available and initialize a repository only on consent | verified-shipped, shipped-unverified, proposed | yes | unit | MAINTAIN | 3 |
-| [governance-webhook](integrations/governance-webhook.md) | Deliver signed governance events to the customer's own HTTPS endpoint | shipped-inert, proposed | no | unit | RETIRE | 3 |
+| [governance-webhook](integrations/governance-webhook.md) | Deliver signed governance events to the customer's own HTTPS endpoint | retired | no | none | RETIRE | 3 |
 | [qor-runtime](integrations/qor-runtime.md) | Show an external Qor runtime's health in the Console | shipped-inert, proposed | no | unit, route | RETIRE | 3 |
 
 Totals: 30 contracts; owner dispositions 15 COMPLETE, 13 MAINTAIN, 2 RETIRE, 0 INVEST; priorities 7 at 1, 14 at 2, 9 at 3.
@@ -94,7 +95,7 @@ Priority 1 is where a customer is exposed today (data leaves the machine without
 18. **voice-pack**: works with stubbed downloads; the old organization slug was fixed in #538 (F07, B261), and no voice-pack release is published yet (B287).
 19. **continue** and **aider**: built and unit-tested; no test runs the real CLIs, and Aider has no tool allowlist.
 20. **linear**, **sarif**, **openhands**, **acp-devin**, **agt**, **tracker-manifest**, **git-bootstrap**: built and tested with small gaps; maintain.
-21. **governance-webhook** and **qor-runtime**: governance-webhook has no caller on main, and qor-runtime cannot be enabled on main (its client is asked for a snapshot on every hub build and answers disabled; its three routes answer disabled); the owner decided RETIRE (#538). Their retirement reviews ([governance-webhook](integrations/governance-webhook.md#retirement-review-538), [qor-runtime](integrations/qor-runtime.md#retirement-review-538)) bound the removals, B288 and B289, each a separate PR.
+21. **governance-webhook** and **qor-runtime**: governance-webhook was retired by B288 on 2026-10-19 (its sender, tests and bootstrap field are removed; the contract is kept as history); before that it had no caller on main, and qor-runtime cannot be enabled on main (its client is asked for a snapshot on every hub build and answers disabled; its three routes answer disabled); the owner decided RETIRE (#538). Their retirement reviews ([governance-webhook](integrations/governance-webhook.md#retirement-review-538), [qor-runtime](integrations/qor-runtime.md#retirement-review-538)) bound the removals, B288 (done) and B289 (open), each a separate PR.
 
 ## Scans
 
@@ -133,8 +134,8 @@ Computed by the check on every run; it fails when a number here differs from the
 
 | Measure | Count |
 |---|---|
-| `scan-1-files` | 54 |
-| `scan-1-call-sites` | 104 |
+| `scan-1-files` | 53 |
+| `scan-1-call-sites` | 103 |
 | `scan-2-files` | 7 |
 | `browser-files` | 37 |
 | `browser-targets` | 85 |
