@@ -1101,6 +1101,8 @@ function world(over = {}) {
     govIndexText: over.govIndexText ?? FX_GOV,
     requiredIds: over.requiredIds || ['alpha'],
     runnerFor,
+    history: over.history,
+    manifestText: over.manifestText ?? '',
   };
   // The reported counts follow the world unless a fixture pins them (the counts rule has its own fixture).
   if (over.portfolioText === undefined && !(over.portfolio && over.portfolio.counts)) {
@@ -1461,6 +1463,233 @@ describe('FX1003 #538 owner dispositions', () => {
   it('T5e a whole-file anchor that is short or contains a pipe is red', () => {
     assertOnly(decided({ review: reviewWith(`Short \`${GROW}\` (\`tail\`).`) }), 'citation', /shorter than 8/);
     assertOnly(decided({ review: reviewWith(`Pipe \`${GROW}\` (\`line 1 | line 2\`).`) }), 'citation', /contains \|/);
+  });
+});
+
+describe('FX1003 B288 retired contracts', () => {
+  const BASE = '0123456789abcdef0123456789abcdef01234567';
+  const G_IMPL = P('integrations/gamma/gamma-client.ts');
+  const G_TEXT = 'export function sendGamma(url: string) {\n  return url;\n}\n';
+  const GAMMA = `${CONTRACT_DIR}gamma.md`;
+  const EXTRA = P('extension/extra.ts');
+  const GROW = 'docs/grow.md';
+  const RETIRED_LINE = (base = BASE) => `**Retired:** 2026-10-19 by [B300]; its citations are held at the retirement base \`${base}\`.`;
+  const G_ROW = `| notify | retired | \`sendGamma\` \`${G_IMPL}:1\` (\`export function sendGamma\`) | none | none | was shipped-inert; no call site |`;
+  const G_REVIEW = [`## ${RETIREMENT_SECTION}`, '', `Removal is tracked as [B300] \`${G_IMPL}:1\` (\`export function sendGamma\`).`];
+  const ALPHA_ROW = '| [alpha](integrations/alpha.md) | send | verified-shipped | yes | unit | MAINTAIN | 2 |';
+  const GAMMA_ROW = (state = 'retired', disp = 'RETIRE') => `| [gamma](integrations/gamma.md) | send | ${state} | no | none | ${disp} | 3 |`;
+  const G_LINK = '- [Retirement review](integrations/gamma.md#retirement-review-538)';
+  const ARCH_GAMMA = (status = 'historical') => `| integration-contract-gamma | integration-contract-gamma | [Gamma](architecture/integrations/gamma.md) | ${status} | \`/qor-plan\` | - | integration-portfolio | - | unknown | unknown | never updated: retired 2026-10-19 by B300 |`;
+  const RECON = (connectionKind = 'folded into alpha', catalogKind = 'not an integration: registry') => [
+    `| \`${INTEGRATIONS_DIR}catalog/\` | ${catalogKind} | none | \`${CATALOG_FILE}:1\` (\`INTEGRATION_CATALOG\`) |`,
+    `| \`${SRC}/roadmap/ui/\` | ${SAME_ORIGIN} | none | \`${CATALOG_FILE}:1\` (\`INTEGRATION_CATALOG\`) |`,
+    `| \`${SRC}/webui/\` | ${SAME_ORIGIN} | none | \`${CATALOG_FILE}:1\` (\`INTEGRATION_CATALOG\`) |`,
+    `| \`${SRC}/roadmap/ui/modules/connection.js\` | ${connectionKind} | none | \`${CATALOG_FILE}:1\` (\`INTEGRATION_CATALOG\`) |`,
+  ];
+  /** The fixture repository at the retirement base: today's files plus the retired client. */
+  const baseFiles = () => ({ ...fixtureFiles(), [G_IMPL]: G_TEXT, [EXTRA]: 'export const atBase = 1;\n', [GROW]: 'base anchor only\n' });
+
+  /** A fake `git` for gitHistory: answers each subcommand from a table; records argv in `calls`. */
+  function fakeRun({ probe = { status: 0, stdout: 'false\n' }, present = true, presentAnswer = null, ancestor = true, files = baseFiles(), calls = null, all = null } = {}) {
+    return (args) => {
+      if (calls) calls.push(args);
+      if (all) return all;
+      if (args[0] === 'rev-parse') return probe;
+      if (args[0] === 'cat-file') return presentAnswer || { status: present ? 0 : 1, stdout: '' };
+      if (args[0] === 'merge-base') return { status: ancestor ? 0 : 1, stdout: '' };
+      if (args[0] === 'show') {
+        const p = args[1].slice(args[1].indexOf(':') + 1);
+        return p in files ? { status: 0, stdout: files[p] } : { status: 128, stdout: '' };
+      }
+      if (args[0] === 'ls-tree') {
+        const d = args[args.length - 1];
+        return { status: 0, stdout: Object.keys(files).filter((p) => p.startsWith(d)).map((p) => `${p}\n`).join('') };
+      }
+      return { status: 128, stdout: '' };
+    };
+  }
+
+  function gammaText({ line = RETIRED_LINE(), rows = [G_ROW], disp = 'RETIRE', review = G_REVIEW, extra = {} } = {}) {
+    const over = {
+      'Feature state': `| Capability | State | Symbol | Reached from | Test (depth) | Notes |\n|---|---|---|---|---|---|\n${rows.join('\n')}`,
+      'Recommended disposition': [`Owner decision 2026-10-18 (#538), accepting the recommendation: **${disp}**. It goes.`, '', ...(review || [])].join('\n'),
+      ...extra,
+    };
+    return `# Gamma integration contract\n\n**Owned files:**\n- \`${G_IMPL}\`\n\n${line}\n\n${CONTRACT_SECTIONS_TEXT(over)}`;
+  }
+
+  /** The fixture world plus a retired contract `gamma`; `o` replaces parts of it. */
+  function retiredWorld(o = {}) {
+    return world({
+      moreContracts: [{ id: 'gamma', path: GAMMA, text: o.gamma ?? gammaText() }],
+      contractText: o.alpha,
+      files: { [EXTRA]: 'export const workingTreeOnly = 1;\n', [GROW]: 'working tree anchor\n', ...(o.files || {}) },
+      backlogText: o.backlog ?? '- [x] [B300] item',
+      archIndexText: FX_ARCH([...(o.alphaArch || FX_ARCH_ROWS), o.arch ?? ARCH_GAMMA()]),
+      govIndexText: FX_GOV.replace(`| \`${PORTFOLIO}\` | p |`, `| \`${PORTFOLIO}\` | p |\n| \`${GAMMA}\` | g |`),
+      portfolio: { matrix: o.matrix || [ALPHA_ROW, GAMMA_ROW()], links: [G_LINK], ...(o.recon ? { recon: o.recon } : {}) },
+      history: gitHistory(o.run || fakeRun()),
+      manifestText: o.manifest,
+    });
+  }
+  const gammaOf = (r) => r.contracts.find((c) => c.id === 'gamma');
+  const targets = (c) => c.citations.length + c.fileCitations.length + c.owned.length;
+
+  it('RT1 positive control: a retired contract checked at an ancestor base is clean and counted', () => {
+    const r = validate(retiredWorld());
+    assert.deepEqual(r.problems, [], report(r));
+    assert.deepEqual(r.retired, [{ id: 'gamma', base: BASE, checked: targets(gammaOf(r)) }]);
+    assert.ok(r.retired[0].checked > 0);
+  });
+  it('RT2 a retired owned file still in the working tree is red', () => {
+    assertOnly(retiredWorld({ files: { [G_IMPL]: G_TEXT } }), 'retired', /still exists/);
+  });
+  it('RT3a a product import of the retired module with a case-variant path is red', () => {
+    assertOnly(retiredWorld({ files: { [P('extension/useGamma.ts')]: "import { send } from '../integrations/gamma/Gamma-Client';\n" } }), 'retired', /names the retired module/);
+  });
+  it('RT3b a comment naming the retired module in capitals is red', () => {
+    assertOnly(retiredWorld({ files: { [P('extension/useGamma.ts')]: '// GAMMA-CLIENT was here\nexport const x = 1;\n' } }), 'retired', /names the retired module/);
+  });
+  it('RT3c a name that only resembles the stem is not a hit', () => {
+    const r = validate(retiredWorld({ files: { [P('extension/useGamma.ts')]: 'export const gamma_clientSender = 1;\n' } }));
+    assert.deepEqual(r.problems, [], report(r));
+  });
+  it('RT3d a longer name containing the stem is red (substring, not whole word)', () => {
+    assertOnly(retiredWorld({ files: { [P('extension/useGamma.ts')]: "import x from './gamma-clientele';\n" } }), 'retired', /names the retired module/);
+  });
+  it('RT4 the retirement item must exist and be done', () => {
+    assertOnly(retiredWorld({ backlog: '- [ ] [B300] item' }), 'retired', /not done/);
+    assertHas(retiredWorld({ backlog: '- [ ] [B301] item' }), 'retired', /not a \[B300\] item/);
+  });
+  it('RT5 a Retired line on a contract that is not RETIRE is red', () => {
+    assertHas(retiredWorld({ gamma: gammaText({ disp: 'MAINTAIN', review: null }), matrix: [ALPHA_ROW, GAMMA_ROW('retired', 'MAINTAIN')] }), 'retired', /RETIRE/);
+  });
+  it('RT6 a malformed Retired line is red', () => {
+    assertHas(retiredWorld({ gamma: gammaText({ line: '**Retired:** 2026-10-19 by [B300]' }) }), 'retired', /malformed/);
+  });
+  it('RT7 a retired contract holds only retired rows, and only a retired contract holds them', () => {
+    const inert = '| other | shipped-inert | `sendGamma` `' + G_IMPL + ':1` (`export function sendGamma`) | none | none | Absent call site: nothing (unverified) |';
+    assertHas(retiredWorld({ gamma: gammaText({ rows: [G_ROW, inert] }) }), 'feature-state', /retired contract/);
+    const alpha = fixtureContract({ 'Feature state': '| Capability | State | Symbol | Reached from | Test (depth) | Notes |\n|---|---|---|---|---|---|\n| notify | retired | none | none | none | - |' }, undefined, `Legacy review: \`${REVIEW_DIR}ALPHA_CONTRACT_REVIEW.md\`.`);
+    assertHas(world({ contractText: alpha, portfolio: { matrix: ['| [alpha](integrations/alpha.md) | send | retired | yes | none | MAINTAIN | 2 |'] } }), 'feature-state', /not retired/);
+  });
+  it('RT8 a retired contract is registered historical; a live one stays canonical', () => {
+    assertHas(retiredWorld({ arch: ARCH_GAMMA('canonical') }), 'registry', /historical/);
+    assertHas(retiredWorld({ alphaArch: [FX_ARCH_ROWS[0].replace('| canonical |', '| historical |'), ...FX_ARCH_ROWS.slice(1)] }), 'registry', /canonical/);
+  });
+  it('RT9 citations of a retired contract resolve at the base, not the working tree', () => {
+    const atWorkingTreeOnly = gammaText({ extra: { 'Inbound fields': `Reads \`${EXTRA}:1\` (\`export const workingTreeOnly\`).` } });
+    assertOnly(retiredWorld({ gamma: atWorkingTreeOnly }), 'citation', /retirement base/);
+    const wholeFile = gammaText({ review: [...G_REVIEW, `The growing document changes \`${GROW}\` (\`working tree anchor\`).`] });
+    assertOnly(retiredWorld({ gamma: wholeFile }), 'citation', /not in the file/);
+  });
+  it('RT10 a full clone without the base commit is red, also when every git call fails', () => {
+    const r = assertOnly(retiredWorld({ run: fakeRun({ present: false }) }), 'retired', /not in this clone/);
+    assert.equal(r.retired[0].checked, undefined);
+    assertOnly(retiredWorld({ run: fakeRun({ all: { status: 128, stdout: '' } }) }), 'retired', /not in this clone.*128/);
+  });
+  it('RT11 a base that is not an ancestor of HEAD is red', () => {
+    assertOnly(retiredWorld({ run: fakeRun({ ancestor: false }) }), 'retired', /not an ancestor of HEAD/);
+  });
+  it('RT12 an owned path absent at the base is red', () => {
+    const files = baseFiles(); delete files[G_IMPL];
+    assertHas(retiredWorld({ run: fakeRun({ files }) }), 'retired', /does not exist at the base/);
+  });
+  it('RT13 the shallow skip needs a shallow clone AND an absent base, and is counted', () => {
+    const r = validate(retiredWorld({ run: fakeRun({ probe: { status: 0, stdout: 'true\n' }, present: false }) }));
+    assert.deepEqual(r.problems, [], report(r));
+    assert.deepEqual(r.retired, [{ id: 'gamma', base: BASE, skipped: 'shallow', unchecked: targets(gammaOf(r)) }]);
+    assertOnly(retiredWorld({ run: fakeRun({ present: false }) }), 'retired', /not in this clone/);
+    const bad = gammaText({ extra: { 'Inbound fields': `Reads \`${EXTRA}:1\` (\`export const workingTreeOnly\`).` } });
+    assertOnly(retiredWorld({ gamma: bad, run: fakeRun({ probe: { status: 0, stdout: 'true\n' } }) }), 'citation', /retirement base/);
+    // N1: in a shallow clone a cat-file that errored (not a clean miss) is red, never the shallow skip.
+    const errored = fakeRun({ probe: { status: 0, stdout: 'true\n' }, presentAnswer: { error: { code: 'EACCES' }, status: null, stdout: '' } });
+    assertOnly(retiredWorld({ run: errored }), 'retired', /not in this clone.*cat-file could not run/);
+  });
+  it('RT14 a retired contract cannot absorb a reconciliation row (folded into)', () => {
+    assertOnly(retiredWorld({ recon: RECON('folded into gamma') }), 'retired', /a retired contract cannot/);
+  });
+  it('RT15 a retired contract cannot share a reconciliation row (shared by)', () => {
+    assertOnly(retiredWorld({ recon: RECON('folded into alpha', 'shared by alpha, gamma') }), 'retired', /a retired contract cannot/);
+  });
+  it('RT16 a retired contract cannot be a catalog id', () => {
+    const cat = fixtureFiles()[CATALOG_FILE].replace('];', "  {\n    id: 'gamma',\n    capabilities: ['notify'],\n  },\n];");
+    assertOnly(retiredWorld({ files: { [CATALOG_FILE]: cat } }), 'retired', /a retired contract cannot/);
+  });
+  it('RT17 the manifest is scanned for the stem, case-insensitively, as a substring', () => {
+    assertOnly(retiredWorld({ manifest: '{ "dependencies": { "gamma-client": "1.0.0" } }' }), 'retired', /package\.json names the retired module/);
+    assertOnly(retiredWorld({ manifest: '{ "title": "Gamma-Client Sender" }' }), 'retired', /package\.json names the retired module/);
+    assertOnly(retiredWorld({ manifest: '{ "command": "failsafe.gamma-clientSender" }' }), 'retired', /package\.json names the retired module/);
+    const r = validate(retiredWorld({ manifest: '{ "command": "failsafe.gammaClient.send" }' }));
+    assert.deepEqual(r.problems, [], report(r));
+  });
+  it('RT18 preservation: a live contract never reads the base', () => {
+    const alpha = fixtureContract({ 'Inbound fields': `Reads \`${EXTRA}:1\` (\`export const atBase\`).` }, undefined, `Legacy review: \`${REVIEW_DIR}ALPHA_CONTRACT_REVIEW.md\`.`);
+    assertOnly(world({ contractText: alpha, files: { [EXTRA]: 'export const workingTreeOnly = 1;\n' } }), 'citation', /not within 3 lines/);
+  });
+  it('RT19 the matrix must say retired for a retired contract', () => {
+    assertOnly(retiredWorld({ matrix: [ALPHA_ROW, GAMMA_ROW('shipped-inert')] }), 'matrix', /lists states/);
+  });
+  it('RT20 gitHistory reads every git answer strictly (table)', () => {
+    const one = (answers) => { const calls = []; const h = gitHistory((args) => { calls.push(args); return answers(args); }); return { h, calls }; };
+    const probeRows = [
+      [{ error: { code: 'ENOENT' } }, { available: false, shallow: false }],
+      [{ status: 128, stdout: '' }, { available: true, shallow: false }],
+      [{ status: 0, stdout: '--is-shallow-repository\n' }, { available: true, shallow: false }],
+      [{ status: 0, stdout: 'false\n' }, { available: true, shallow: false }],
+      [{ status: 0, stdout: '' }, { available: true, shallow: false }],
+      [{ status: 0, stdout: 'true\n' }, { available: true, shallow: true }],
+      [{ status: 0, stdout: 'true\r\n' }, { available: true, shallow: true }],
+      [{ status: 1, stdout: 'true\n' }, { available: true, shallow: false }],
+      [{ error: { code: 'EACCES' }, status: null, stdout: '' }, { available: true, shallow: false }],
+    ];
+    for (const [answer, want] of probeRows) {
+      const { h, calls } = one(() => answer);
+      assert.deepEqual({ available: h.available, shallow: h.shallow }, want, JSON.stringify(answer));
+      assert.deepEqual(calls[0], ['rev-parse', '--is-shallow-repository']);
+    }
+    const commitRows = [
+      [{ status: 0 }, true], [{ status: 1 }, false], [{ status: 128 }, false], [{ error: { code: 'EIO' }, status: null }, false],
+    ];
+    for (const [answer, want] of commitRows) {
+      const { h, calls } = one((args) => (args[0] === 'rev-parse' ? { status: 0, stdout: 'false\n' } : { stdout: '', ...answer }));
+      const at = h.atCommit(BASE);
+      assert.equal(at.present, want, `cat-file ${JSON.stringify(answer)}`);
+      assert.equal(at.presentError, Boolean(answer.error), `cat-file error ${JSON.stringify(answer)}`);
+      assert.equal(at.ancestor, want, `merge-base ${JSON.stringify(answer)}`);
+      assert.deepEqual(calls.slice(1, 3), [['cat-file', '-e', `${BASE}^{commit}`], ['merge-base', '--is-ancestor', BASE, 'HEAD']]);
+    }
+    const readRows = [
+      [{ status: 0, stdout: 'text\n' }, 'text\n'],
+      [{ status: 128, stdout: '' }, null],
+      [{ error: { code: 'ENOBUFS' }, status: null, stdout: 'partial' }, null],
+      [{ error: { code: 'ENOBUFS' }, status: 0, stdout: 'truncated' }, null],
+    ];
+    for (const [answer, want] of readRows) {
+      const { h, calls } = one((args) => (args[0] === 'show' ? answer : { status: 0, stdout: 'false\n' }));
+      const at = h.atCommit(BASE);
+      assert.equal(at.read('docs/x.md'), want, `show ${JSON.stringify(answer)}`);
+      assert.equal(at.read('docs/x.md'), want, 'cached');
+      const shows = calls.filter((c) => c[0] === 'show');
+      assert.deepEqual(shows, [['show', `${BASE}:docs/x.md`]], 'one show per path (cache)');
+    }
+    const listRows = [
+      [{ status: 0, stdout: 'a\nb\n' }, ['a', 'b']], [{ error: { code: 'EIO' }, status: null, stdout: 'a\n' }, []], [{ status: 128, stdout: 'a\n' }, []],
+    ];
+    for (const [answer, want] of listRows) {
+      const { h, calls } = one((args) => (args[0] === 'ls-tree' ? answer : { status: 0, stdout: 'false\n' }));
+      assert.deepEqual(h.atCommit(BASE).list('docs/'), want, `ls-tree ${JSON.stringify(answer)}`);
+      assert.deepEqual(calls.find((c) => c[0] === 'ls-tree'), ['ls-tree', '-r', '--name-only', BASE, '--', 'docs/']);
+    }
+    assert.equal(GIT_SPAWN_OPTIONS.maxBuffer, 1 << 26);
+    assert.equal(GIT_SPAWN_OPTIONS.shell, false);
+    assert.equal(GIT_SPAWN_OPTIONS.encoding, 'utf8');
+  });
+  it('RT21 a git that cannot be spawned is a counted skip; any other spawn error is red', () => {
+    const r = validate(retiredWorld({ run: fakeRun({ all: { error: { code: 'ENOENT' }, status: null, stdout: '' } }) }));
+    assert.deepEqual(r.problems, [], report(r));
+    assert.deepEqual(r.retired, [{ id: 'gamma', base: BASE, skipped: 'git-unavailable', unchecked: targets(gammaOf(r)) }]);
+    assertOnly(retiredWorld({ run: fakeRun({ all: { error: { code: 'EACCES' }, status: null, stdout: '' } }) }), 'retired', /not in this clone/);
   });
 });
 
