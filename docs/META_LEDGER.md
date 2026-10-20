@@ -34005,3 +34005,95 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `9a28e8dc50fc9c2f6a081f9501679aaef8893782bfae48d2ea19ad009f4b0a46`
 
 **Decision**: SESSION SEAL for plan-b289-retire-qor-runtime.md (content hash is the audited plan, sha256 95509474). Reality = Promise, with disclosures. The Qor runtime client, its three routes, the hub entry and the API ticker are gone from the product; the externalRuntime settings warn users that they have no effect; the qor-runtime contract is kept as history and FX1003 checks it at its retirement base alongside governance-webhook. Disclosures: bounded damaged-ledger override for post-v6.0.9 product cycles (owner ruling 2026-10-19; #467 unresolved, normal governance not restored); the settings are deprecated, not removed, and removing the four non-key settings is B326; FEATURE_INDEX keeps FX048-FX052 verified rather than following the sealed review's line, declared in the B289 evidence; planned test T3 was dropped as redundant with T2 and T5; FX946 (B325) is pre-existing and the trustedExecutable T7 row is flaky under full load (B327); shallow CI clones report a counted skip of the base check; dispositions stay 15 COMPLETE / 13 MAINTAIN / 2 RETIRE; earlier seals are unedited. Next: push, PR checks, a merge pinned to the head. No release.
+
+---
+
+### Entry #829: GATE TRIBUNAL - plan-532c-delivery-history (iteration 1) - VETO
+
+**Timestamp**: 2026-10-19T20:21:43Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-19T2016-21c6d2`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for post-v6.0.9 product cycles, owner ruling 2026-10-19, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-19T2016-21c6d2/audit-iter1.json`
+
+**Content Hash**: `7f9c21e9137ac844ca9a4597a023d8c364a7a67932d246991a4b9c171c4d6bfa`
+**Previous Hash**: `9a28e8dc50fc9c2f6a081f9501679aaef8893782bfae48d2ea19ad009f4b0a46`
+**Chain Hash (Merkle seal)**: `760ded26427e5b4c150ac27f6a5d154f4758451b973e602611ffb95febcb9b53`
+
+**Decision**: VETO on plan-532c-delivery-history.md iteration 1 (sha256 5c25c0b7), #532 Workspace Delivery history (B284, B285, B286). Fresh Option B architect-reviewer. Blocking: the review step mapped an intent's PASS, which means approved for implementation, to a passing review of the implementation; B284 turned rollback into a live git reset --hard behind a dirty-tree guard that failed open, with no ancestor check and a dialog that hid the commits leaving the branch; the governed-commit link re-read HEAD after the commit, so another process's commit could be linked as FailSafe's own. Should-fix: forgeability disclosure, per-checkpoint spawn cost, record-hash recheck, RevertPanel note, staged files, chdir restore, new call-site parameter. B285 reasoning confirmed. Next: revise and re-audit.
+
+---
+
+### Entry #830: GATE TRIBUNAL - plan-532c-delivery-history (iteration 2) - VETO
+
+**Timestamp**: 2026-10-19T20:32:43Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-19T2016-21c6d2`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for post-v6.0.9 product cycles, owner ruling 2026-10-19, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-19T2016-21c6d2/audit-iter2.json`
+
+**Content Hash**: `d79becf6c68c1396cfac7a5424a9e95f12af1e02f3de848d2b1a3d6fe528b6da`
+**Previous Hash**: `760ded26427e5b4c150ac27f6a5d154f4758451b973e602611ffb95febcb9b53`
+**Chain Hash (Merkle seal)**: `429160e7a5741a516955e209c78138bad2cebfb181249c12bb5c2e31eb3f69bb`
+
+**Decision**: VETO on plan-532c-delivery-history.md iteration 2 (sha256 3420ea31). Iteration 1 blockers closed by construction. Fresh Option B architect-reviewer. Blocking: a check-then-act window between the last clean-tree check and git reset --hard could destroy uncommitted work written by a concurrent agent, and the dialog and D3 claimed it could not happen. Should-fix: gitdir overclaim and work-tree display, UNC and device path refusal with ref-name validation, racy packed-refs cache, load-bearing burst assertions, annotated-tag and reftable rows, write-tree binding with verbatim cleanup, file counts, plan-less revert refusal, unkeyed-hash disclosure. Next: revise and re-audit.
+
+---
+
+### Entry #831: GATE TRIBUNAL - plan-532c-delivery-history (iteration 3) - PASS
+
+**Timestamp**: 2026-10-19T20:40:11Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-19T2016-21c6d2`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for post-v6.0.9 product cycles, owner ruling 2026-10-19, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-19T2016-21c6d2/audit-iter3.json`
+
+**Content Hash**: `0e7ccbbf4300e319b367fa69a42d37368b700ad2c98407a310637e7b00c5b618`
+**Previous Hash**: `429160e7a5741a516955e209c78138bad2cebfb181249c12bb5c2e31eb3f69bb`
+**Chain Hash (Merkle seal)**: `1e8b65f8f898fe3cebc266a198bcbb959a7d7c1957d98b96ac0c7792611c9413`
+
+**Decision**: PASS on plan-532c-delivery-history.md iteration 3 (sha256 d92faf66). Fresh Option B architect-reviewer. Rollback uses git reset --keep, so git itself refuses to overwrite a tracked file edited after the last check, proven by real-repository rows K1/K2 and a mutation back to --hard; every iteration 2 should-fix landed. Should-fix folded into implementation: index-preserving foreign-parent commit, branch in the plan equality, a post-reset HEAD@{1} and branch check, two further residuals, a size-changing K1 edit, and exact reset argv. Next: implement.
+
+---
+
+### Entry #832: IMPLEMENTATION - plan-532c-delivery-history
+
+**Timestamp**: 2026-10-20T18:19:26Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-19T2016-21c6d2`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-19T2016-21c6d2/implement.json`
+
+**Content Hash**: `5153f9ec2853765cc6cf29fe8a77f3d8f3f7812836ba66d149c9d215c0b4e6de`
+**Previous Hash**: `1e8b65f8f898fe3cebc266a198bcbb959a7d7c1957d98b96ac0c7792611c9413`
+**Chain Hash (Merkle seal)**: `8c41424a038d72991611b96c507af775e4ed3d4dbd6ca1072e8760c3bb34eb7d`
+
+**Decision**: IMPLEMENTATION of plan-532c-delivery-history.md iteration 3 on feat/532-delivery-history (rebased onto main 7ecd2c72): ec2e975a (red rows and stubs), 604788c6 (implementation and review folds), d0fdfe20 (docs). The Delivery view separates recorded from passing: an intent's PASS shows as the intent decision, approved for implementation and not a review, a VETO reads failing, and the review step stays missing because no command records a review verdict (B320) and no event names the commit it evaluated (B321), so Complete is stated as unreachable; the forgeability of the unkeyed intent chain is disclosed. B285 retires the CHECKPOINT_CREATED git_head match. B286 links a governed commit only after a modal confirmation and only when the commit's parent is the HEAD captured before it, its tree equals the pre-commit write-tree, its verbatim message matches and it is the branch tip. B284 reads workspace HEAD from disk (gitdir, commondir, packed refs, detached HEAD; UNC, device and linked paths refused; reftable falls back to the trusted runner), and rollback is a guarded git reset --keep: status fails closed, the target must be an ancestor and its record hashes must match, the modal shows work tree, branch, HEAD, target and commits leaving, the approved plan is re-checked before the reset and verified after it, and a failed verification records FAIL and skips the RAG purge. New rows B320-B322. Bounded review review532: APPROVE; N1-N5 folded with falsifiers.
+
+---
+
+### Entry #833: SESSION SEAL - plan-532c-delivery-history
+
+**Timestamp**: 2026-10-20T18:19:27Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-19T2016-21c6d2`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-19T2016-21c6d2/substantiate.json`
+
+**Content Hash**: `d92faf665e24bc89ebbfd25d8e815abf3b7acf914d5094fe40228a2921fba942`
+**Previous Hash**: `8c41424a038d72991611b96c507af775e4ed3d4dbd6ca1072e8760c3bb34eb7d`
+**Chain Hash (Merkle seal)**: `5bfc91a7d55b7b89121f9a95cfbafd3765f8e9dec8155f8a5de63df66ac1b286`
+
+**Decision**: SESSION SEAL for plan-532c-delivery-history.md (content hash is the audited plan, sha256 d92faf66). Reality = Promise, with disclosures. Workspace Delivery now shows what FailSafe actually recorded and nothing more: decisions are not reviews, Complete is honestly unreachable, governed commits are linked only to FailSafe's own commit by explicit confirmation, and rollback cannot overwrite a tracked file edited after its last check. Disclosures: bounded damaged-ledger override for post-v6.0.9 product cycles (owner ruling 2026-10-19; #467 unresolved, normal governance not restored); Complete stays unreachable until B320 and B321 and the receipt until #467; the intent history is an unkeyed hash chain, so a workspace writer can forge a decision; reset --keep leaves a HEAD-moved window recoverable through the reflog, may overwrite ignored files at tracked target paths, and does not cover assume-unchanged or skip-worktree files; the symlink-to-UNC refusal is proven with a simulated file layer because this host refuses such links; the linkCommit argument at the two governed-commit call sites is not reached by a test; RevertPanel stays unwired; FX946 (B325) is pre-existing; earlier seals are unedited. Next: push, PR checks, a merge pinned to the head. No release.
