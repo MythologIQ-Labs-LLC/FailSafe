@@ -89,8 +89,14 @@ export function bicameralToolRoute(
           deps,
           { name: spec.envelopeName ?? `bicameral.${spec.tool}`, arguments: spec.toArgs(body) },
           res,
+          client,
         );
         if (blocked) return;
+      }
+      // A rewire during an awaited verdict must never invoke the old MCP client.
+      if (deps.getBicameralClient() !== client) {
+        res.status(409).json({ ok: false, error: "Bicameral client changed during request" });
+        return;
       }
       const result = await spec.invoke(client, body);
       res.json({ ok: true, result });
