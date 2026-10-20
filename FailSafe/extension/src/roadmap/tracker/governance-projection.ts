@@ -31,9 +31,18 @@ const ACCENTS = ['#38d6c8', '#e7b04b', '#f0728f', '#7aa2f7', '#9ece6a', '#bb9af7
 //   src/roadmap/ui/command-center.js    (`renderers` map: each tab → its sub-views)
 // The projection is pure (no DOM), so these are pinned here as a constant and a
 // DRIFT-GUARD test (governance-projection.test.ts) parses command-center.js and fails
-// if this list diverges from the real Console. Summaries are from docs/COMPONENT_HELP.md.
+// if this list diverges from the real Console (tab keys, sub-view keys and labels).
+// docs/roadmap/programs.yaml must list each vertical's sub-view labels, in order, as
+// `**Label** description` lines (#548, taxonomy-drift.test.ts). Summaries are from
+// docs/COMPONENT_HELP.md.
 // (Supersedes the earlier FEATURE_INDEX path-grouping, which grouped IMPLEMENTATION
 //  directories — sentinel/genesis/qorelogic/… — and so misrepresented the product.)
+
+/** One Console sub-view: the TabGroup `key` (pill `data-key`) and its `label`. */
+export interface ConsoleSubview {
+  key: string;
+  label: string;
+}
 
 export interface ConsoleVerticalSpec {
   /** Vertical identity (product slug). */
@@ -43,8 +52,9 @@ export interface ConsoleVerticalSpec {
   /** Product label. */
   name: string;
   summary: string;
-  /** Sub-view labels (the TabGroup labels) — the real "functionality" of the surface. */
-  subviews: string[];
+  /** Sub-views (the TabGroup entries) — the real "functionality" of the surface. A
+   *  single-renderer tab has one sub-view whose key is the tab. */
+  subviews: ConsoleSubview[];
   /** Config is a dependency of every other surface, not a peer feature area. */
   secondary?: boolean;
 }
@@ -52,25 +62,39 @@ export interface ConsoleVerticalSpec {
 export const CONSOLE_VERTICALS: ConsoleVerticalSpec[] = [
   { key: 'monitor', tab: 'overview', name: 'Monitor',
     summary: 'Live status + trust posture at a glance — the sidebar Monitor and Console Overview (trust snapshot, operation stream, threat & chain status).',
-    subviews: ['Overview'] },
+    subviews: [{ key: 'overview', label: 'Overview' }] },
   { key: 'learn', tab: 'learn', name: 'Learn',
     summary: 'Onboarding & education — governance concepts, lessons, and glossary.',
-    subviews: ['Learn'] },
+    subviews: [{ key: 'learn', label: 'Learn' }] },
   { key: 'agents', tab: 'agents', name: 'Agents',
     summary: 'Agent observability — what agents did and how governance responded.',
-    subviews: ['Operations', 'Timeline', 'Genome', 'Replay'] },
+    subviews: [
+      { key: 'operations', label: 'Operations' }, { key: 'timeline', label: 'Timeline' },
+      { key: 'genome', label: 'Genome' }, { key: 'replay', label: 'Replay' },
+    ] },
   { key: 'governance', tab: 'governance', name: 'Governance',
     summary: 'Audit & compliance — the Merkle audit log, risk register, policies, the L3 approval queue, and the Shadow Genome causal dashboard.',
-    subviews: ['Audit Log', 'Risks', 'Compliance', 'Shadow Genome'] },
+    subviews: [
+      { key: 'audit', label: 'Audit Log' }, { key: 'risks', label: 'Risks' },
+      { key: 'compliance', label: 'Compliance' }, { key: 'shadow-genome', label: 'Shadow Genome' },
+    ] },
   { key: 'workspace', tab: 'workspace', name: 'Workspace',
     summary: 'Workspace tools — skills, the ideation mindmap, the development tracker, the taxonomy editor, the managed architecture index, and the delivery assessment.',
-    subviews: ['Skills', 'Mindmap', 'Tracker', 'Taxonomy', 'Architecture', 'Delivery'] },
+    subviews: [
+      { key: 'skills', label: 'Skills' }, { key: 'brainstorm', label: 'Mindmap' },
+      { key: 'tracker', label: 'Tracker' }, { key: 'taxonomy', label: 'Taxonomy' },
+      { key: 'architecture', label: 'Architecture' }, { key: 'delivery', label: 'Delivery' },
+    ] },
   { key: 'integrations', tab: 'integrations', name: 'Integrations',
     summary: 'Third-party integrations — the catalog plus governed connectors.',
-    subviews: ['Catalog', 'Bicameral', 'Open Design', 'MCP Catalog', 'Agent Governance'] },
+    subviews: [
+      { key: 'catalog', label: 'Catalog' }, { key: 'bicameral', label: 'Bicameral' },
+      { key: 'opendesign', label: 'Open Design' }, { key: 'mcp', label: 'MCP Catalog' },
+      { key: 'agt', label: 'Agent Governance' },
+    ] },
   { key: 'config', tab: 'settings', name: 'Config',
     summary: 'System config — theme and local console preferences; a dependency of every other surface.',
-    subviews: ['Settings'], secondary: true },
+    subviews: [{ key: 'settings', label: 'Settings' }], secondary: true },
 ];
 
 /** Project the 7 fixed Console verticals (with their real sub-views as functionality). */
@@ -80,7 +104,7 @@ function verticalsFromConsole(): TrackerVertical[] {
     name: v.name,
     accent: ACCENTS[i % ACCENTS.length],
     summary: v.summary,
-    functionality: v.subviews,
+    functionality: v.subviews.map((s) => s.label),
   }));
 }
 

@@ -11,13 +11,14 @@ Scope: shipped UI surfaces, governance components, and Voice + Mindmap Status in
 | FailSafe Monitor | Compact live status inside the VS Code sidebar | You need quick health and posture checks while coding |
 | FailSafe Console | Full control surface in browser or editor tab | You need actions, workflows, governance review, or history |
 | Console: Overview | Trust snapshot, operation stream, threat and chain status | You need fast situational awareness |
-| Console: Operations | Mission strip, phase progress, integrity and rollback actions | You are actively running execution workflows |
-| Console: Transparency | Real-time event stream | You are debugging why FailSafe did something |
-| Console: Risks | Risk register CRUD | You are tracking durable project risks |
-| Console: Skills | Skill discovery, relevance, and intent shell | You are selecting governance-aware execution skills |
-| Console: Governance | Sentinel status, policies, L3 queue, protocol audit log | You are reviewing control and approval state |
-| Console: Mindmap | Manual node-based ideation canvas with local session export | You are mapping ideas before implementation |
-| Console: Settings | Theme and local console preferences | You need presentation or workspace preference changes |
+| Console: Agents › Operations | Mission strip, phase progress, integrity and rollback actions | You are actively running execution workflows |
+| Console: Governance › Audit Log | Real-time event stream | You are debugging why FailSafe did something |
+| Console: Governance › Risks | Risk register CRUD | You are tracking durable project risks |
+| Console: Governance › Compliance | Sentinel status, policies, L3 queue | You are reviewing control and approval state |
+| Console: Workspace › Skills | Skill discovery, relevance, and intent shell | You are selecting governance-aware execution skills |
+| Console: Workspace › Mindmap | Manual node-based ideation canvas with local session export | You are mapping ideas before implementation |
+| Console: Workspace › Taxonomy | Tracker programs, verticals and agent mappings, with drift from the Console navigation | You are keeping the tracker's taxonomy current |
+| Console: Config | Theme and local console preferences | You need presentation or workspace preference changes |
 | Agent Health Status | Status bar health indicator | You need at-a-glance agent risk awareness |
 | Agent Execution Timeline | Categorized event timeline | You are debugging agent actions or governance decisions |
 | Shadow Genome Debugger | Failure pattern browser | You are investigating recurring agent failure modes |
@@ -45,38 +46,50 @@ Open paths:
 
 ## Console Tabs
 
+The Console has seven tabs. Agents, Governance, Workspace and Integrations each hold sub-views, which you pick from the pill bar at the top of the tab.
+
 ### Overview
 
 Shows a summary card layer (trust, events, threats, chain status) and a recent operations stream.
 
 Operator note: some secondary widgets are presentation-only and should not be treated as policy evidence.
 
-### Operations
+### Learn
 
-Shows phase and adherence metrics, then exposes key operational actions:
+Governance and engineering lessons, and the SHIELD glossary. Use it when you are new to FailSafe or want the meaning of a governance term.
+
+### Agents
+
+**Operations** shows phase and adherence metrics, then exposes key operational actions:
 
 - `Resume`
 - `Panic Stop`
 - `Verify Chain`
 - `Rollback`
 
-Use this tab as the day-to-day execution cockpit.
+Use this sub-view as the day-to-day execution cockpit.
 
-### Transparency
+**Timeline** lists agent-execution events by category. **Genome** browses recorded failure patterns. **Replay** replays a recorded verdict deterministically.
 
-Streams runtime events for governance and prompt lifecycle visibility.
+### Governance
 
-Use this first when behavior seems unexpected before escalating to deeper audits.
+**Audit Log** streams runtime events for governance and prompt lifecycle visibility. Use this first when behavior seems unexpected before escalating to deeper audits.
 
-### Risks
+**Risks** stores durable risk records with severity and lifecycle fields. Use this for multi-session risk ownership, not transient warnings.
 
-Stores durable risk records with severity and lifecycle fields.
+**Compliance** combines:
 
-Use this for multi-session risk ownership, not transient warnings.
+- Sentinel live status
+- active policy list
+- L3 verification queue
 
-### Skills
+Use this sub-view when decisions require human review, overrides, or chain verification.
 
-Supports:
+**Shadow Genome** summarizes recorded failure patterns, with genome map, incident, trust and federation views.
+
+### Workspace
+
+**Skills** supports:
 
 - auto/manual ingest
 - phase-filtered relevance
@@ -84,20 +97,7 @@ Supports:
 
 Use this to choose execution scaffolds that match current phase and governance context.
 
-### Governance
-
-Combines:
-
-- Sentinel live status
-- active policy list
-- L3 verification queue
-- protocol audit log
-
-Use this tab when decisions require human review, overrides, or chain verification.
-
-### Mindmap
-
-Current release behavior:
+**Mindmap** current release behavior:
 
 - add and categorize nodes
 - drag nodes on SVG/3D canvas
@@ -108,7 +108,19 @@ Current release behavior:
 
 Voice capture and spoken response require vendor runtime assets per `src/roadmap/ui/vendor/*/VENDOR.md`. When Piper assets are absent the TTS engine surfaces an `error:piper_not_vendored` state to the badge instead of failing silently.
 
-### Settings
+**Tracker** embeds the Development Tracker for this repository.
+
+**Taxonomy** edits the tracker's programs, verticals and agent mappings. It also shows where each vertical's listed functions differ from the Console's actual sub-views (missing, extra or out of order). It only reports the difference and never changes your file; Save keeps the fields the editor does not show.
+
+**Architecture** finds and validates the repository's architecture index and lists architecture documents that have no registry row.
+
+**Delivery** assesses, in five steps, what an intent delivered.
+
+### Integrations
+
+**Catalog** lists the detected integrations and their governed installs. **Bicameral** shows the Bicameral MCP decision graph. **Open Design** shows the Open Design MCP status. **MCP Catalog** lists risk-scored MCP servers to install. **Agent Governance** installs the Microsoft Agent Governance Toolkit modules.
+
+### Config
 
 Console-level preferences organized into cards:
 
@@ -192,7 +204,7 @@ Access: `FailSafe: Shadow Genome Debugger`.
 | Claim | Status | Source |
 | --- | --- | --- |
 | Monitor and Console are both shipped UI surfaces | implemented | `FailSafe/extension/package.json`, `FailSafe/extension/src/roadmap/FailSafeSidebarProvider.ts`, `FailSafe/extension/src/extension/commands.ts` |
-| Console includes 8 tabs including Mindmap and Governance | implemented | `FailSafe/extension/src/roadmap/ui/command-center.html`, `FailSafe/extension/src/roadmap/ui/command-center.js` |
+| Console includes 7 tabs including Workspace and Governance | implemented | `FailSafe/extension/src/roadmap/ui/command-center.html`, `FailSafe/extension/src/roadmap/ui/command-center.js` |
 | Mindmap in `v4.4.0` supports voice + manual flows | implemented | `FailSafe/extension/src/roadmap/ui/modules/brainstorm.js`, `FailSafe/extension/src/roadmap/ui/modules/stt-engine.js`, `FailSafe/extension/src/roadmap/ui/modules/tts-engine.js` |
 | Transcript-backed graph extraction endpoint is shipped | implemented | `FailSafe/extension/src/roadmap/ConsoleServer.ts` (`POST /api/v1/brainstorm/transcript`) |
 | Voice runtime needs vendored engine assets | implemented | `FailSafe/extension/src/roadmap/ui/vendor/whisper/VENDOR.md`, `FailSafe/extension/src/roadmap/ui/vendor/piper/VENDOR.md` |

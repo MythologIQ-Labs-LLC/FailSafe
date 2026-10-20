@@ -34097,3 +34097,76 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `5bfc91a7d55b7b89121f9a95cfbafd3765f8e9dec8155f8a5de63df66ac1b286`
 
 **Decision**: SESSION SEAL for plan-532c-delivery-history.md (content hash is the audited plan, sha256 d92faf66). Reality = Promise, with disclosures. Workspace Delivery now shows what FailSafe actually recorded and nothing more: decisions are not reviews, Complete is honestly unreachable, governed commits are linked only to FailSafe's own commit by explicit confirmation, and rollback cannot overwrite a tracked file edited after its last check. Disclosures: bounded damaged-ledger override for post-v6.0.9 product cycles (owner ruling 2026-10-19; #467 unresolved, normal governance not restored); Complete stays unreachable until B320 and B321 and the receipt until #467; the intent history is an unkeyed hash chain, so a workspace writer can forge a decision; reset --keep leaves a HEAD-moved window recoverable through the reflog, may overwrite ignored files at tracked target paths, and does not cover assume-unchanged or skip-worktree files; the symlink-to-UNC refusal is proven with a simulated file layer because this host refuses such links; the linkCommit argument at the two governed-commit call sites is not reached by a test; RevertPanel stays unwired; FX946 (B325) is pre-existing; earlier seals are unedited. Next: push, PR checks, a merge pinned to the head. No release.
+
+---
+
+### Entry #834: GATE TRIBUNAL - plan-548-taxonomy (iteration 1) - VETO
+
+**Timestamp**: 2026-10-19T20:10:54Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-19T2005-ec0fe5`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for post-v6.0.9 product cycles, owner ruling 2026-10-19, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-19T2005-ec0fe5/audit-iter1.json`
+
+**Content Hash**: `662a079dcc3ef436673414c56c3c8d57f28012eea57f41e99c9c3a33071f49da`
+**Previous Hash**: `5bfc91a7d55b7b89121f9a95cfbafd3765f8e9dec8155f8a5de63df66ac1b286`
+**Chain Hash (Merkle seal)**: `3f0a0b2d37500df761d872a92e483db20cdeb5b80aebc06aa9987eb2ba6939df`
+
+**Decision**: VETO on plan-548-taxonomy.md iteration 1 (sha256 075ed621), #548: make the code-level CONSOLE_VERTICALS the Console taxonomy authority, report drift in Workspace › Taxonomy, and close the editor's data-loss paths, with the v6.0.9 RELEASED markers and the COMPONENT_HELP tab list folded in. Fresh Option B architect-reviewer. Blocking: index-based row sources went stale after a Save, because the config was reassigned even on a failed POST and nothing repainted, so a second Save or a retry copied one row's fields onto another; drift ran inside the GET's first try, so a drift exception fell back silently to the derived taxonomy, whose Save overwrites the owner's file. Should-fix: T1 red with the real function, format falsifier, key-overlap rule, drift state, plain-object copies, T10 pid-first match, T8 cleanup, LD13 tag check, CLAUDE.md:8 authority wording surfaced to the owner. Next: revise and re-audit. The plan-gate override event of this cycle was logged with the #538 reason text; the applicable ruling is the post-v6.0.9 override.
+
+---
+
+### Entry #835: GATE TRIBUNAL - plan-548-taxonomy (iteration 2) - PASS
+
+**Timestamp**: 2026-10-19T20:18:35Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-19T2005-ec0fe5`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for post-v6.0.9 product cycles, owner ruling 2026-10-19, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-19T2005-ec0fe5/audit-iter2.json`
+
+**Content Hash**: `8c3aaf61d592fa3b18bddba76ee1ab5908604a9b54561eb4544e38bddccc2bbb`
+**Previous Hash**: `3f0a0b2d37500df761d872a92e483db20cdeb5b80aebc06aa9987eb2ba6939df`
+**Chain Hash (Merkle seal)**: `743587a8694e8febd1bf3e256d614beea75bf20e1720a09d8f56d2dbdb907adb`
+
+**Decision**: PASS on plan-548-taxonomy.md iteration 2 (sha256 981cb76f). Fresh Option B architect-reviewer. Both data-loss blockers closed by construction: state changes only on a successful Save, and the source is chosen before lint with a read failure answering 500, never derived. Should-fix folded into implementation as mandatory: a null-row T5e that really reaches the lint guard, every failed GET treated as failed, YAML parse errors answering 500 (closing B305), statSync with only ENOENT as missing, an unterminated-label rule, and the Save re-serialization residual named. Next: implement.
+
+---
+
+### Entry #836: IMPLEMENTATION - plan-548-taxonomy
+
+**Timestamp**: 2026-10-20T19:00:47Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-19T2005-ec0fe5`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-19T2005-ec0fe5/implement.json`
+
+**Content Hash**: `5355f0c6ae162e44e5d219a9845808db28db62a9dc4625cf5e27b900dd8c35b3`
+**Previous Hash**: `743587a8694e8febd1bf3e256d614beea75bf20e1720a09d8f56d2dbdb907adb`
+**Chain Hash (Merkle seal)**: `139dc62300ab1a42b97c39b3fcf19b91d8535115686edc9cdd9957b9993c1f89`
+
+**Decision**: IMPLEMENTATION of plan-548-taxonomy.md iteration 2 on fix/548-taxonomy (rebased onto main ad2df9fb): 3e084708, 2860982c, e652b940, e840a19d, 3f3a2637, 5161df18. Workspace › Taxonomy reports drift between the operator's docs/roadmap/tracker-config.yaml and the code-level CONSOLE_VERTICALS, which is the Console tab authority; the drift function is total and its text escaped. The editor cannot write wrong, empty or stale content over the owner's file: the GET chooses its source before lint and drift and answers 500 on any read or parse failure, including non-list sections, links and a non-directory ancestor; every failed load hides Save; state changes only on a successful Save; a sha256 fingerprint makes the POST refuse with 409 when the file changed on disk, and the first create is exclusive; untouched rows, values and odd keys pass through unchanged and quotes are escaped. B305 closes. The v6.0.9 RELEASED markers are written after the tag check printed b83d83a3, and COMPONENT_HELP lists the seven Console tabs. New rows B330 (realpath containment of the write path) and B331 (hub repaint wipes unsaved edits). Bounded review review548: CHANGES REQUIRED for the stale overwrite, fixed by the fingerprint; re-review review548b: APPROVE, with N-a..N-e folded as C6. The owner's tracker-config.yaml is byte-unchanged.
+
+---
+
+### Entry #837: SESSION SEAL - plan-548-taxonomy
+
+**Timestamp**: 2026-10-20T19:00:47Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-19T2005-ec0fe5`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-19T2005-ec0fe5/substantiate.json`
+
+**Content Hash**: `981cb76f8c4d1ac8254ec60be24b5015a133f1dea6675064870b680bbc9260b9`
+**Previous Hash**: `139dc62300ab1a42b97c39b3fcf19b91d8535115686edc9cdd9957b9993c1f89`
+**Chain Hash (Merkle seal)**: `bfd62583d433820154c69e340600f7c93e8b703fbf2aa64e381bcc70548a88e1`
+
+**Decision**: SESSION SEAL for plan-548-taxonomy.md (content hash is the audited plan, sha256 981cb76f). Reality = Promise, with disclosures. The Console's taxonomy authority is the code-level CONSOLE_VERTICALS, drift against the operator's tracker-config.yaml is reported rather than silently reconciled, and the taxonomy editor can no longer overwrite the owner's file with wrong, empty or stale content. Disclosures: bounded damaged-ledger override for post-v6.0.9 product cycles (owner ruling 2026-10-19; #467 unresolved, normal governance not restored); the iteration 1 plan-gate override event carries the #538 reason text; Save still drops YAML comments and unknown top-level keys and turns YAML dates into ISO strings (B306); a hub repaint wipes unsaved edits (B331) and the write path lacks realpath containment (B330); the ELOOP row runs only on POSIX and the full npm test was not re-run after C6; the owner's file will report 5 of 7 verticals drifted, and the CLAUDE.md:8 wording that names tracker-config.yaml as the source of truth is the owner's to change; FX946 (B325) is pre-existing; earlier seals are unedited. Next: push, PR checks, a merge pinned to the head. No release.

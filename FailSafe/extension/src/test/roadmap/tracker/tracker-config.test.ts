@@ -66,6 +66,14 @@ suite('FX891 tracker-config', () => {
     assert.ok(md.includes('**Active**: yes'), 'PUBLISH_BLOCK-shape metadata');
   });
 
+  test('#548 T6: the directive says the file is local, and that the Console owns vertical sub-views', () => {
+    const md = buildTaxonomyDirective(CFG, { at: '2026-10-19T00:00:00.000Z' });
+    assert.ok(!md.includes('(tracked)'), 'the file is not tracked');
+    assert.ok(md.includes('not in the repository'), 'says the file is local');
+    assert.ok(md.includes('CONSOLE_VERTICALS'), 'names the authority for vertical sub-views');
+    assert.ok(!serializeTrackerConfig(CFG).includes('OPERATOR source of truth'), 'the banner no longer claims sole authority');
+  });
+
   test('buildTaxonomyDirective on an empty config is honest-empty, still a valid directive', () => {
     const md = buildTaxonomyDirective({ programs: [], verticals: [], agents: [] }, { at: '2026-06-12T00:00:00.000Z' });
     assert.ok(md.includes('no programs declared'));
