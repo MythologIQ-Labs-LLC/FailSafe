@@ -10,7 +10,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
-import { wireBicameralIntegration, maybeAutoConnectBicameral } from '../../extension/bootstrapBicameral';
+import { wireBicameralIntegration, maybeAutoConnectBicameral, connectWiredBicameral } from '../../extension/bootstrapBicameral';
 import { BicameralMcpClient } from '../../integrations/bicameral';
 import { configureTrustedExecutables, repoRootsFor, workspaceDirsFor } from '../../shared/exec/trustedExecutable';
 
@@ -324,5 +324,66 @@ suite('bootstrapBicameral — wireBicameralIntegration', () => {
       restoreOnChange();
       restoreConfig();
     }
+  });
+});
+
+/** B233: startup must connect the exact client which was wired to governance. */
+suite('B233 Bicameral startup client binding', () => {
+  test('uses the existing client and signals only after successful connection', async () => {
+    let connected = false;
+    let calls = 0;
+    let broadcasts = 0;
+    let disconnected = 0;
+    const client = {
+      isConnected: () => connected,
+      connect: async () => { calls++; connected = true; },
+      disconnect: async () => { disconnected++; connected = false; },
+    } as unknown as BicameralMcpClient;
+    const current = () => true;
+    assert.equal(await connectWiredBicameral(client, current, () => { broadcasts++; }), true);
+    assert.deepEqual([calls, broadcasts, disconnected], [1, 1, 0]);
+    assert.equal(await connectWiredBicameral(client, current, () => { broadcasts++; }), false);
+    assert.deepEqual([calls, broadcasts, disconnected], [1, 1, 0]);
+  });
+
+  test('a client invalidated before connection is not started or announced', async () => {
+    let calls = 0;
+    let broadcasts = 0;
+    const client = {
+      isConnected: () => false,
+      connect: async () => { calls++; },
+      disconnect: async () => undefined,
+    } as unknown as BicameralMcpClient;
+    assert.equal(await connectWiredBicameral(client, () => false, () => { broadcasts++; }), false);
+    assert.deepEqual([calls, broadcasts], [0, 0]);
+  });
+
+  test('a rewire during the pending connect closes the stale client without announcing it', async () => {
+    let finish!: () => void;
+    let calls = 0;
+    let disconnected = 0;
+    let broadcasts = 0;
+    let current = true;
+    const client = {
+      isConnected: () => false,
+      connect: () => { calls++; return new Promise<void>((resolve) => { finish = resolve; }); },
+      disconnect: async () => { disconnected++; },
+    } as unknown as BicameralMcpClient;
+    const attempt = connectWiredBicameral(client, () => current, () => { broadcasts++; });
+    current = false; // config changed or extension deactivated while connect() is in-flight
+    finish();
+    assert.equal(await attempt, false);
+    assert.deepEqual([calls, disconnected, broadcasts], [1, 1, 0]);
+  });
+
+  test('connect failure propagates and cannot produce a connected broadcast', async () => {
+    let broadcasts = 0;
+    const client = {
+      isConnected: () => false,
+      connect: async () => { throw new Error('protocol rejected'); },
+      disconnect: async () => undefined,
+    } as unknown as BicameralMcpClient;
+    await assert.rejects(connectWiredBicameral(client, () => true, () => { broadcasts++; }), /protocol rejected/);
+    assert.equal(broadcasts, 0);
   });
 });
