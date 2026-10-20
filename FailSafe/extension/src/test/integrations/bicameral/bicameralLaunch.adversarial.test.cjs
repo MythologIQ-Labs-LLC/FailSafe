@@ -174,15 +174,15 @@ test('T14 (e) source: the client is built only from a resolved command, and fold
   // reuses this client, rather than constructing an ungoverned replacement.
   assert.equal(sites.length, 1, 'exactly one trusted MCP-client construction site');
   const site = sites[0][1];
-  assert.match(site, /^\\s*\\{/, 'an object literal, not a passed-through options object');
-  assert.match(site, /\\bcommand\\s*:\\s*resolved\\b/, 'client receives a trusted resolved path');
-  assert.match(src, /resolved\\s*=\\s*trustedCommandPath\\(/, 'resolved comes from the trusted command resolver');
+  assert.match(site, /^\s*\{/, 'an object literal, not a passed-through options object');
+  assert.match(site, /\bcommand\s*:\s*resolved\b/, 'client receives a trusted resolved path');
+  assert.match(src, /resolved\s*=\s*trustedCommandPath\(/, 'resolved comes from the trusted command resolver');
   const connectStart = src.indexOf('export function maybeAutoConnectBicameral(');
   assert.ok(connectStart >= 0, 'auto-connect is exported');
   const autoConnect = src.slice(connectStart);
-  assert.doesNotMatch(autoConnect, /new BicameralMcpClient\\s*\\(/, 'no second MCP client in auto-connect');
-  assert.doesNotMatch(autoConnect, /setBicameralClient\\s*\\(/, 'auto-connect cannot swap the interceptor-bound client');
-  assert.match(autoConnect, /await connectWiredBicameral\\(client, isCurrent/, 'connects the wired client');
+  assert.doesNotMatch(autoConnect, /new BicameralMcpClient\s*\(/, 'no second MCP client in auto-connect');
+  assert.doesNotMatch(autoConnect, /setBicameralClient\s*\(/, 'auto-connect cannot swap the interceptor-bound client');
+  assert.match(autoConnect, /await connectWiredBicameral\(client, isCurrent/, 'connects the wired client');
   assert.match(src, /onDidChangeWorkspaceFolders\(/);
 });
 
