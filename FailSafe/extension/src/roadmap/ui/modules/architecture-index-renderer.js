@@ -26,6 +26,7 @@ const STYLE = `
 .cc-arch h3 { margin:0 0 4px; font-size:1.05rem; }
 .cc-arch-sub { color:#9aa5b4; margin:0; font-size:.9rem; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
 .cc-arch-scope, .cc-arch-authority-scope { color:#7f8aa0; font-size:.82rem; margin:0; border-left:2px solid #273140; padding-left:8px; }
+.cc-arch-provenance { padding-left:10px; }
 .cc-arch-group { font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; color:#7f8aa0; margin:6px 0 2px; }
 .cc-arch-card { background:linear-gradient(180deg,#141a22,#10161e); border:1px solid #202938; border-radius:10px; padding:14px; }
 .cc-arch-card.cc-arch-warn { border-color:#6b4f2a; }
@@ -337,7 +338,9 @@ export class ArchitectureIndexRenderer {
     let reason = f.detail || '';
     if (f.kind === 'canonical-missing') reason = `The canonical document is ${DOC_STATE_TEXT[f.reason] || f.reason}.`;
     if (f.kind === 'dangling-supersession') reason = `${(f.rows[0] || {}).id || 'A row'} ${DANGLING_TEXT[f.reason] || f.reason}${f.ref ? ` (${f.ref})` : ''}.`;
-    if (Array.isArray(f.codePoints) && f.codePoints.length) reason = `${reason} Code points: ${f.codePoints.join(', ')}.`;
+    // Each code point once: add only those the detail does not already name.
+    const unnamed = Array.isArray(f.codePoints) ? f.codePoints.filter((cp) => !reason.includes(cp)) : [];
+    if (unnamed.length) reason = `${reason} Code points: ${unnamed.join(', ')}.`;
     card.appendChild(el('p', null, reason));
     for (const r of f.rows || []) {
       const row = el('div', 'cc-arch-row cc-arch-finding-row');

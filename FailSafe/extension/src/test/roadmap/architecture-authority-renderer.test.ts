@@ -101,6 +101,32 @@ suite('ArchitectureIndexRenderer authority (#531 slice 2, jsdom structural)', ()
     } finally { ctx.cleanup(); }
   });
 
+  test('a code point already in the detail is shown once; the provenance line is indented like the scope line', async () => {
+    const ctx = setupDom();
+    const g = global as unknown as G;
+    const base = g.fetch as (url: string, init?: { method?: string }) => Promise<{ json: () => Promise<Record<string, unknown>> }>;
+    g.fetch = async (url: string, init?: { method?: string }) => {
+      const res = await base(url, init);
+      if (init?.method === 'POST') return res;
+      const data = await res.json();
+      const findings = (data.authority as { findings: Array<Record<string, unknown>> }).findings;
+      findings[2].detail = 'cyr: the domain uses characters outside the intake set: U+0435.';
+      return { ok: true, status: 200, json: async () => data } as never;
+    };
+    try {
+      const r = new ArchitectureIndexRenderer('workspace');
+      r.ensureStyle();
+      await r.refresh();
+      const d = ctx.doc;
+      const card = d.querySelector('.cc-arch-finding[data-kind="domain-non-ascii"]')!;
+      // The heading renders the domain itself as runtim[U+0435]; the reason paragraph names the code point once.
+      const reason = card.querySelector('p')?.textContent ?? '';
+      assert.equal(reason.split('U+0435').length - 1, 1, `U+0435 appears exactly once in: ${reason}`);
+      const css = d.getElementById('cc-arch-style')?.textContent ?? '';
+      assert.match(css, /\.cc-arch-provenance\s*\{[^}]*padding-left:10px/, 'provenance aligned with the scope text (2px border + 8px padding)');
+    } finally { ctx.cleanup(); }
+  });
+
   test('markup in domains and paths stays text', async () => {
     const ctx = setupDom();
     try {
