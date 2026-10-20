@@ -288,7 +288,6 @@ FailSafe evaluates save operations against the active Intent and reports a polic
 - Compact `FailSafe Monitor` webpanel (`UI-02`) provides phase status, prioritized feature counters, Sentinel state, and workspace health at-a-glance.
 - `Open FailSafe Command Center` opens the extended popout console for deeper workflow views (Overview, Operations, Audit, Risks, Skills, Laws, Mindmap, Config).
 - Branding is consistent across shell surfaces, including FailSafe icon usage in header and favicon contexts.
-- Optional external Qore runtime integration can display live runtime state, policy version, endpoint, and latency in the compact monitor.
 
 ### UI Positioning Model
 
@@ -400,11 +399,11 @@ Open Settings and search for `FailSafe`:
 | `failsafe.qorelogic.ledgerPath`                   | `.failsafe/ledger/soa_ledger.db` | Ledger database path                                               |
 | `failsafe.qorelogic.strictMode`                   | `false`                          | Block on all warnings                                              |
 | `failsafe.qorelogic.l3SLA`                        | `120`                            | L3 response SLA (seconds)                                          |
-| `failsafe.qorelogic.externalRuntime.enabled`      | `false`                          | Enable external FailSafe-Qore runtime integration in monitor       |
-| `failsafe.qorelogic.externalRuntime.baseUrl`      | `http://127.0.0.1:7777`          | Base URL for external FailSafe-Qore runtime API                    |
+| `failsafe.qorelogic.externalRuntime.enabled`      | `false`                          | Deprecated: has no effect. Remove this setting.                    |
+| `failsafe.qorelogic.externalRuntime.baseUrl`      | `http://127.0.0.1:7777`          | Deprecated: has no effect. Remove this setting.                    |
 | `failsafe.qorelogic.externalRuntime.apiKey`       | ``                               | Deprecated: not used by FailSafe. Remove any plain-text value.     |
-| `failsafe.qorelogic.externalRuntime.apiKeyEnvVar` | `QORE_API_KEY`                   | Environment variable fallback for runtime API key                  |
-| `failsafe.qorelogic.externalRuntime.timeoutMs`    | `4000`                           | Timeout for runtime API calls in milliseconds                      |
+| `failsafe.qorelogic.externalRuntime.apiKeyEnvVar` | `QORE_API_KEY`                   | Deprecated: has no effect. Remove this setting.                    |
+| `failsafe.qorelogic.externalRuntime.timeoutMs`    | `4000`                           | Deprecated: has no effect. Remove this setting.                    |
 | `failsafe.bootstrap.autoInstallGit`               | `false`                          | Install Git system-wide if missing (asks before `git init`)         |
 | `failsafe.feedback.outputDir`                     | `.failsafe/feedback`             | Feedback output directory                                          |
 

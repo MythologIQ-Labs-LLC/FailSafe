@@ -52,16 +52,6 @@ Provides a FastAPI `/sre/snapshot` endpoint for external SRE tool integration.
 
 ## Monitoring Configuration
 
-### Adapter Base URL
-
-```json
-{
-  "failsafe.qorelogic.externalRuntime.baseUrl": "http://127.0.0.1:7777"
-}
-```
-
-Configurable adapter base URL for connecting to external monitoring systems.
-
 ### SRE Types
 
 SRE types are defined in `SreTypes.ts` with v2 schema, supporting:

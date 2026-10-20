@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Deprecated
+
+- The `failsafe.qorelogic.externalRuntime.*` settings never had an effect and are now marked deprecated: VS Code shows a warning where they are set. Remove them from your settings. A plain-text API key stored there is still offered for removal. The four settings other than `apiKey` will be removed in a later release.
+
 ### Removed
 
+- The Qor runtime client and its Console routes `/api/qor/runtime`, `/api/qor/health` and `/api/qor/evaluate` are removed, with the always-paused Qor Runtime status entry and the API ticker in the Console top bar, which always read N/A.
 - The governance webhook sender is removed. Nothing in FailSafe configured or called it (no setting, command or view reached it), so nothing you can configure changes.
 
 ## [6.0.9] - 2026-10-18

@@ -14,7 +14,6 @@ The port is auto-selected at startup and propagated to the extension.
 
 - **Local-only by default**: All endpoints reject non-local connections (`rejectIfRemote`)
 - **Remote access**: Possible when the adapter base URL is configured (see Configuration Reference)
-- **API key**: Optional via `failsafe.qorelogic.externalRuntime.apiKey` or `QORE_API_KEY` env var
 
 ## Endpoints
 
