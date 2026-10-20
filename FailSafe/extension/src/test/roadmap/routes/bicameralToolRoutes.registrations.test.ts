@@ -141,6 +141,7 @@ suite("FX587 bicameral-<tool> registrations (B-INT-1)", () => {
     const { client, calls } = recordingClient();
     let interceptedName = "";
     const interceptor = {
+      getClient: () => client, // B233: same active MCP client evaluated and invoked
       intercept: async (env: { name: string }) => {
         interceptedName = env.name;
         return allowInterceptor().intercept(env as never);
