@@ -1,11 +1,15 @@
 # Qor runtime integration contract
 
-Contract id: `qor-runtime` (registry row `integration-contract-qor-runtime`). Recorded against main `c36b9ee2`. Feature states use the five states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
+Contract id: `qor-runtime` (registry row `integration-contract-qor-runtime`). Recorded against main `c36b9ee2`. Feature states use the six states defined in [the integration portfolio](../INTEGRATION_PORTFOLIO.md); the disposition is the owner's work-queue decision of 2026-10-18 (#538); COMPLETE means finish the named gaps, not that the integration is complete.
 
 This contract was added during implementation: plan-532a LD1 asked for a contract or a reconciliation row for `QorRuntimeService.ts`; it is a contract because the module is an HTTP client with a configurable base URL and an API-key header, switched off on main. No legacy contract review exists for it.
 
 **Owned files:**
 - `FailSafe/extension/src/roadmap/services/QorRuntimeService.ts`
+
+**Retired:** 2026-10-19 by [B289]; its citations are held at the retirement base `b83d83a3beda9a20c043d3ec6c6baed3738c0a6c`.
+
+Retired 2026-10-19 (B289): the client, its three Console routes, the hub status entry and payload field, the Monitor dead code and the API ticker are removed, and the `failsafe.qorelogic.externalRuntime.*` settings are deprecated (B326 removes the four settings other than apiKey, which stays while the plain-text cleanup lists it). This contract is kept as history; its citations describe main at the retirement base and are checked there (in a full clone; shallow CI clones skip with a count), and since the retirement its Feature state rows use the portfolio's `retired` state.
 
 Shared modules it uses (not owned here): `FailSafe/extension/src/roadmap/routes/QorRoute.ts` (its runtime routes sit beside the Shadow Genome dashboard, sprint and plan routes), `FailSafe/extension/src/roadmap/services/ConsoleServerSupport.ts`, `FailSafe/extension/src/roadmap/ConsoleServerHub.ts`.
 
@@ -38,10 +42,10 @@ The Console routes refuse non-loopback callers `FailSafe/extension/src/roadmap/r
 
 | Capability | State | Symbol | Reached from | Test (depth) | Notes |
 |---|---|---|---|---|---|
-| runtime-status-snapshot | shipped-inert | `fetchSnapshot` `FailSafe/extension/src/roadmap/services/QorRuntimeService.ts:70-78` (`async fetchSnapshot(): Promise<QorRuntimeSnapshot>`) | `FailSafe/extension/src/roadmap/services/HubSnapshotService.ts:179` (`const qorRuntime = await d.qorRuntimeService.fetchSnapshot();`) | `FailSafe/extension/src/test/extension/qor-runtime-service.test.ts` (unit) | Switch: `FailSafe/extension/src/roadmap/services/ConsoleServerSupport.ts:15-18` (`enabled: Boolean(options?.enabled), baseUrl,`); constructed at `FailSafe/extension/src/roadmap/ConsoleServer.ts:149` (`this.qorRuntimeService = new QorRuntimeService(resolveQorRuntimeOptions(options.qorRuntime));`) |
-| runtime-health-proxy | shipped-inert | `proxy` `FailSafe/extension/src/roadmap/services/QorRuntimeService.ts:130-139` (`Qor runtime integration is disabled`) | `FailSafe/extension/src/roadmap/routes/QorRoute.ts:45-48` (`await deps.qorRuntimeService.proxy(req, res, "/health");`) | `FailSafe/extension/src/test/extension/qor-route.test.ts` (route) | Switch: `FailSafe/extension/src/roadmap/services/QorRuntimeService.ts:136-138` (`if (!this.options.enabled) {`) |
-| runtime-evaluate-proxy | shipped-inert | `proxy` `FailSafe/extension/src/roadmap/services/QorRuntimeService.ts:140-143` (`const response = await this.fetchJson(endpoint, opts);`) | `FailSafe/extension/src/roadmap/routes/QorRoute.ts:50-53` (`"/evaluate", "POST"`) | `FailSafe/extension/src/test/extension/qor-route.test.ts` (route) | Switch: `FailSafe/extension/src/roadmap/services/QorRuntimeService.ts:136-138` (`if (!this.options.enabled) {`) |
-| settings-driven-enable | proposed | none | none | none | Contributed settings exist but no code reads them `FailSafe/extension/package.json:697-700` (`"failsafe.qorelogic.externalRuntime.enabled": {`) |
+| runtime-status-snapshot | retired | `fetchSnapshot` `FailSafe/extension/src/roadmap/services/QorRuntimeService.ts:70-78` (`async fetchSnapshot(): Promise<QorRuntimeSnapshot>`) | `FailSafe/extension/src/roadmap/services/HubSnapshotService.ts:179` (`const qorRuntime = await d.qorRuntimeService.fetchSnapshot();`) | `FailSafe/extension/src/test/extension/qor-runtime-service.test.ts` (unit) | Switched off at the retirement base: `FailSafe/extension/src/roadmap/services/ConsoleServerSupport.ts:15-18` (`enabled: Boolean(options?.enabled), baseUrl,`); constructed at `FailSafe/extension/src/roadmap/ConsoleServer.ts:149` (`this.qorRuntimeService = new QorRuntimeService(resolveQorRuntimeOptions(options.qorRuntime));`) |
+| runtime-health-proxy | retired | `proxy` `FailSafe/extension/src/roadmap/services/QorRuntimeService.ts:130-139` (`Qor runtime integration is disabled`) | `FailSafe/extension/src/roadmap/routes/QorRoute.ts:45-48` (`await deps.qorRuntimeService.proxy(req, res, "/health");`) | `FailSafe/extension/src/test/extension/qor-route.test.ts` (route) | Switched off at the retirement base: `FailSafe/extension/src/roadmap/services/QorRuntimeService.ts:136-138` (`if (!this.options.enabled) {`) |
+| runtime-evaluate-proxy | retired | `proxy` `FailSafe/extension/src/roadmap/services/QorRuntimeService.ts:140-143` (`const response = await this.fetchJson(endpoint, opts);`) | `FailSafe/extension/src/roadmap/routes/QorRoute.ts:50-53` (`"/evaluate", "POST"`) | `FailSafe/extension/src/test/extension/qor-route.test.ts` (route) | Switched off at the retirement base: `FailSafe/extension/src/roadmap/services/QorRuntimeService.ts:136-138` (`if (!this.options.enabled) {`) |
+| settings-driven-enable | retired | none | none | none | Contributed settings exist but no code reads them `FailSafe/extension/package.json:697-700` (`"failsafe.qorelogic.externalRuntime.enabled": {`) |
 
 ## Inbound fields
 
@@ -99,6 +103,8 @@ Installed-extension test: none (unverified).
 ## Recommended disposition
 
 Owner decision 2026-10-18 (#538), accepting the recommendation: **RETIRE**. The client cannot be turned on: the only `ConsoleServer` is built without runtime options and nothing reads the contributed `externalRuntime` settings, so the Settings entries promise a feature that does nothing. Remove the dead settings and the client, or, if a runtime is planned, wire the settings with base-URL validation under a separate approval. The owner chose removal; the review below bounds it.
+
+Retired 2026-10-19 by B289 (settings deprecated; B326 removes the four settings other than apiKey, which stays while the plain-text cleanup lists it).
 
 ## Retirement review (#538)
 
@@ -198,6 +204,19 @@ Deprecate first: in the removal release, enabled, baseUrl, apiKeyEnvVar and time
 They leave contributes one release later; nothing reads them, so no behaviour changes in either step `FailSafe/extension/package.json:702` (`"failsafe.qorelogic.externalRuntime.enabled": {`).
 apiKey stays contributed while it is listed for plain-text cleanup `FailSafe/extension/src/integrations/credentials/credentialRegistry.ts:38` (`ORPHANED_SECRET_SETTINGS`), because the cleanup reads and removes a stored value through the configuration API `FailSafe/extension/src/integrations/credentials/credentialMigration.ts:132` (`for (const settingKey of ORPHANED_SECRET_SETTINGS) {`); that VS Code refuses writes to an unregistered key is unverified here, and B289 proves it with a test before relying on it.
 Migration note for the CHANGELOG: "The Qor runtime settings never had an effect and are deprecated; remove them from your settings. A stored plain-text API key is still offered for removal." (unverified until B289 ships it).
+
+### Re-run at b83d83a3 (B289)
+
+Re-run 2026-10-19 for B289 with the Inventory's command at main b83d83a3; it reports 41 files, a search, not a proof (unverified beyond this search).
+The code and test counts are unchanged: 10 in the client `FailSafe/extension/src/roadmap/services/QorRuntimeService.ts:51` (`export class QorRuntimeService {`), 7 in ConsoleServer `FailSafe/extension/src/roadmap/ConsoleServer.ts:23` (`import { QorRuntimeService, type QorRuntimeOptions } from "./services/QorRuntimeService";`), 6 in the routes `FailSafe/extension/src/roadmap/routes/QorRoute.ts:20` (`app.get("/api/qor/runtime"`), 9 in the manifest `FailSafe/extension/package.json:702` (`"failsafe.qorelogic.externalRuntime.enabled": {`), and 28 and 14 in the two test files `FailSafe/extension/src/test/extension/qor-route.test.ts:4` (`QorRuntimeService,`) `FailSafe/extension/src/test/extension/qor-runtime-service.test.ts:63` (`suite('QorRuntimeService'`).
+- 104 hits, this contract as it stood at b83d83a3 (unverified beyond this search).
+- 5 hits, the portfolio `docs/architecture/INTEGRATION_PORTFOLIO.md` (`[qor-runtime](integrations/qor-runtime.md)`).
+- 2 hits, the registry `docs/ARCHITECTURE_INDEX.md` (`integration-contract-qor-runtime`).
+- 2 hits, the tier index `docs/GOVERNANCE_INDEX.md` (`docs/architecture/integrations/qor-runtime.md`).
+- 4 hits, the backlog, now also the B289 row `docs/BACKLOG.md` (`[B289] Retire the Qor runtime client`).
+- 2 hits, historic `docs/SYSTEM_STATE.md` (`Remove dead code (-176 lines: Qore runtime`).
+- 11 hits, Merkle-chained, never edited `docs/META_LEDGER.md` (`Remove dead code (Qore runtime refs`).
+The other files keep their Inventory counts (unverified beyond this search).
 
 ## Open defects
 

@@ -1,28 +1,7 @@
 import { strict as assert } from 'assert';
 import { registerQorRoute } from '../../roadmap/routes/QorRoute';
-import {
-  QorRuntimeService,
-  type QorFetchFn,
-  type QorRuntimeOptions,
-} from '../../roadmap/services/QorRuntimeService';
 import type { ApiRouteDeps } from '../../roadmap/routes/types';
 import { RouteHarness, makeApp } from './helpers/routeTestHarness';
-
-function makeRuntimeOptions(overrides: Partial<QorRuntimeOptions> = {}): QorRuntimeOptions {
-  return { enabled: true, baseUrl: 'http://qor.test', timeoutMs: 1000, ...overrides };
-}
-
-function makeFetchStub(handler: (url: string) => unknown): QorFetchFn {
-  return async (url) => {
-    const body = handler(url);
-    return {
-      ok: true,
-      status: 200,
-      async text() { return JSON.stringify(body); },
-      async json() { return body; },
-    };
-  };
-}
 
 interface FakeSprint { id: string; planId: string; title: string }
 interface FakePlan { id: string; title: string }
@@ -31,7 +10,6 @@ function makeDeps(overrides: Partial<ApiRouteDeps>): ApiRouteDeps {
   const base = {
     rejectIfRemote: () => false,
     broadcast: () => undefined,
-    qorRuntimeService: undefined as unknown as QorRuntimeService,
     buildHubSnapshot: async () => ({}),
     workspaceRoot: '/tmp/ws',
     workspaceDirname: __dirname,
@@ -74,70 +52,6 @@ suite('registerQorRoute', () => {
     if (harness) await harness.stop();
   });
 
-  test('GET /api/qor/runtime returns 200 with snapshot from QorRuntimeService', async () => {
-    const fetchStub = makeFetchStub((url) => {
-      if (url.endsWith('/health')) return {};
-      if (url.endsWith('/policy/version')) return { policyVersion: 'v3' };
-      return {};
-    });
-    const service = new QorRuntimeService(makeRuntimeOptions(), fetchStub);
-    const app = makeApp();
-    registerQorRoute(app, makeDeps({ qorRuntimeService: service }));
-    harness = new RouteHarness(app);
-    await harness.start();
-
-    const res = await harness.request({ path: '/api/qor/runtime' });
-
-    assert.equal(res.status, 200);
-    assert.equal(res.body.enabled, true);
-    assert.equal(res.body.connected, true);
-    assert.equal(res.body.policyVersion, 'v3');
-  });
-
-  test('GET /api/qor/health with enabled=false returns 503 + disabled message', async () => {
-    const service = new QorRuntimeService(
-      makeRuntimeOptions({ enabled: false }),
-      makeFetchStub(() => ({})),
-    );
-    const app = makeApp();
-    registerQorRoute(app, makeDeps({ qorRuntimeService: service }));
-    harness = new RouteHarness(app);
-    await harness.start();
-
-    const res = await harness.request({ path: '/api/qor/health' });
-
-    assert.equal(res.status, 503);
-    assert.deepEqual(res.body, { error: 'Qor runtime integration is disabled' });
-  });
-
-  test('POST /api/qor/evaluate forwards body and returns upstream JSON', async () => {
-    let captured: unknown = null;
-    const fetchStub: QorFetchFn = async (url, init) => {
-      captured = init.body ? JSON.parse(init.body) : null;
-      return {
-        ok: true,
-        status: 200,
-        async text() { return ''; },
-        async json() { return { verdict: 'PASS' }; },
-      };
-    };
-    const service = new QorRuntimeService(makeRuntimeOptions(), fetchStub);
-    const app = makeApp();
-    registerQorRoute(app, makeDeps({ qorRuntimeService: service }));
-    harness = new RouteHarness(app);
-    await harness.start();
-
-    const res = await harness.request({
-      method: 'POST',
-      path: '/api/qor/evaluate',
-      body: { intent: 'audit' },
-    });
-
-    assert.equal(res.status, 200);
-    assert.deepEqual(res.body, { verdict: 'PASS' });
-    assert.deepEqual(captured, { intent: 'audit' });
-  });
-
   test('GET /api/sprint/:id returns {sprint, plan} from planManager', async () => {
     const sprint: FakeSprint = { id: 'abc', planId: 'p1', title: 'S' };
     const plan: FakePlan = { id: 'p1', title: 'Plan One' };
@@ -146,9 +60,8 @@ suite('registerQorRoute', () => {
       getPlan: (id: string) => (id === 'p1' ? plan : null),
       getAllPlans: () => [plan],
     };
-    const service = new QorRuntimeService(makeRuntimeOptions(), makeFetchStub(() => ({})));
     const app = makeApp();
-    registerQorRoute(app, makeDeps({ qorRuntimeService: service, planManager }));
+    registerQorRoute(app, makeDeps({ planManager }));
     harness = new RouteHarness(app);
     await harness.start();
 
@@ -169,9 +82,8 @@ suite('registerQorRoute', () => {
       getPlan: () => null,
       getAllPlans: () => plans,
     };
-    const service = new QorRuntimeService(makeRuntimeOptions(), makeFetchStub(() => ({})));
     const app = makeApp();
-    registerQorRoute(app, makeDeps({ qorRuntimeService: service, planManager }));
+    registerQorRoute(app, makeDeps({ planManager }));
     harness = new RouteHarness(app);
     await harness.start();
     const res = await harness.request({ path: '/api/plans' });
@@ -187,9 +99,8 @@ suite('registerQorRoute', () => {
       getPlan: () => null,
       getAllPlans: () => [],
     };
-    const service = new QorRuntimeService(makeRuntimeOptions(), makeFetchStub(() => ({})));
     const app = makeApp();
-    registerQorRoute(app, makeDeps({ qorRuntimeService: service, planManager }));
+    registerQorRoute(app, makeDeps({ planManager }));
     harness = new RouteHarness(app);
     await harness.start();
     const res = await harness.request({ path: '/api/plans' });
@@ -197,23 +108,27 @@ suite('registerQorRoute', () => {
     assert.deepEqual(res.body.plans, []);
   });
 
-  test('GET /api/qor/runtime rejects via deps.rejectIfRemote with 403', async () => {
-    const service = new QorRuntimeService(makeRuntimeOptions(), makeFetchStub(() => ({})));
-    const app = makeApp();
-    const deps = makeDeps({
-      qorRuntimeService: service,
-      rejectIfRemote: (_req, res) => {
-        res.status(403).json({ error: 'Forbidden: local access only' });
-        return true;
-      },
+  // B289: the Qor runtime routes are retired. A runtime stub reaches the router through an
+  // untyped override, so a tree that still registers the routes answers 200 and fails here.
+  for (const [method, path] of [['GET', '/api/qor/runtime'], ['GET', '/api/qor/health'], ['POST', '/api/qor/evaluate']] as const) {
+    test(`B289 ${method} ${path} is gone (404)`, async () => {
+      const runtimeStub: Record<string, unknown> = {
+        qorRuntimeService: {
+          fetchSnapshot: async () => ({ enabled: true, connected: true }),
+          proxy: async (_req: unknown, res: { status: (n: number) => { json: (b: unknown) => void } }) => {
+            res.status(200).json({ ok: true });
+          },
+        },
+      };
+      const app = makeApp();
+      registerQorRoute(app, makeDeps(runtimeStub as Partial<ApiRouteDeps>));
+      harness = new RouteHarness(app);
+      await harness.start();
+
+      const res = await harness.request(method === 'POST' ? { method, path, body: {} } : { path });
+
+      assert.strictEqual(res.status, 404);
     });
-    registerQorRoute(app, deps);
-    harness = new RouteHarness(app);
-    await harness.start();
+  }
 
-    const res = await harness.request({ path: '/api/qor/runtime' });
-
-    assert.equal(res.status, 403);
-    assert.deepEqual(res.body, { error: 'Forbidden: local access only' });
-  });
 });

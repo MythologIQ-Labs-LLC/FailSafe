@@ -16,7 +16,6 @@ import {
   inferPhaseKeyFromPlan as inferPhaseKeyFromPlanFn,
   CHECKPOINT_INIT_SQL,
 } from "./CheckpointStore";
-import { QorRuntimeService } from "./QorRuntimeService";
 import { buildGovernancePhase, buildTrustSummary, buildNodeStatus,
   inferActivePhaseTitle } from "../ConsoleServerHub";
 import type { CheckpointRef } from "../../governance/revert/types";
@@ -36,7 +35,7 @@ export type RecordCheckpointInput = { checkpointType: string; actor: string; pha
 export interface HubSnapshotServiceDeps {
   workspaceRoot: string; extensionVersion: string;
   planManager: PlanManager; qorelogicManager: QorLogicManager;
-  sentinelDaemon: SentinelDaemon; qorRuntimeService: QorRuntimeService;
+  sentinelDaemon: SentinelDaemon;
   gitResetService: GitResetService; transparencyLogger: TransparencyLogger;
   riskRegisterManager: RiskRegisterManager;
   mergePlanBlockers: (plan: unknown, a: WorkspaceArtifactSnapshot) => unknown;
@@ -176,7 +175,6 @@ export class HubSnapshotService {
     this.backfillSentinelEvents(sentinelStatus);
     const l3Queue = d.qorelogicManager.getL3Queue();
     const trust = buildTrustSummary(await d.qorelogicManager.getTrustEngine().getAllAgents());
-    const qorRuntime = await d.qorRuntimeService.fetchSnapshot();
     const checkpointSummary = this.getCheckpointSummary();
     const governancePhase = buildGovernancePhase(d.workspaceRoot);
     this.autoDerivationHook?.(governancePhase); // plan-qor-model-sourced-risks Phase 3
@@ -192,11 +190,11 @@ export class HubSnapshotService {
     const artifacts = new WorkspaceArtifactBuilder(d.workspaceRoot, qorLogicVersionStatus).build();
     const phaseTitle = inferActivePhaseTitle(activePlan as unknown as Record<string, unknown>, (l) => this.getRecentCheckpoints(l));
     const runState = d.getIdeTracker()?.getRunState(phaseTitle) ?? { currentPhase: "Plan", activeTasks: [], activeDebugSessions: [] };
-    const nodeStatusArr = buildNodeStatus(sentinelStatus as { running?: boolean; filesWatched?: number; queueDepth?: number; [k: string]: unknown }, l3Queue, trust, qorRuntime);
+    const nodeStatusArr = buildNodeStatus(sentinelStatus as { running?: boolean; filesWatched?: number; queueDepth?: number; [k: string]: unknown }, l3Queue, trust);
     const auditLog = await this.buildAuditResolutionLog();
     return {
       ...assembleServiceHubPayload(this.payloadSource(), {
-        activePlan, sentinelStatus, l3Queue, trust, qorRuntime, checkpointSummary,
+        activePlan, sentinelStatus, l3Queue, trust, checkpointSummary,
         governancePhase, artifacts, runState, nodeStatus: nodeStatusArr,
       }),
       auditLog,

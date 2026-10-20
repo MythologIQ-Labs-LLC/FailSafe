@@ -10,7 +10,6 @@ function makeDeps(workspaceRoot: string, dirname: string): ApiRouteDeps {
   return {
     rejectIfRemote: () => false,
     broadcast: () => undefined,
-    qorRuntimeService: {} as any,
     buildHubSnapshot: async () => ({}),
     workspaceRoot,
     workspaceDirname: dirname,

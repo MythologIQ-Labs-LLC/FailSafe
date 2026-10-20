@@ -90,7 +90,6 @@ export interface HubFixture {
   sentinelStatus?: Record<string, unknown>;
   l3Queue?: unknown[];
   recentVerdicts?: unknown[];
-  qorRuntime?: Record<string, unknown>;
   repoCompliance?: Record<string, unknown>;
   recentCompletions?: unknown[];
   runState?: { currentPhase?: string };
@@ -108,7 +107,6 @@ export function hubForPhase(phase: ShieldPhase, planTitle = 'Test Plan: Monitor 
     sentinelStatus: { running: true },
     l3Queue: [],
     recentVerdicts: [],
-    qorRuntime: { enabled: false, connected: false },
     repoCompliance: { grade: 'A', percentage: 95, errors: 0, warnings: 0 },
     recentCompletions: [],
   };

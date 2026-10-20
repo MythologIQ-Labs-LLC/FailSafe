@@ -32,15 +32,17 @@ Access via: File → Preferences → Settings → Search "failsafe"
 | `failsafe.qorlogic.l3SLA` | `number` | `120` | L3 first response SLA in seconds |
 | `failsafe.qorlogic.pythonPath` | `string` | `""` | Override Python interpreter for qor-logic |
 
-### External Runtime
+### External Runtime (deprecated)
+
+These settings never had an effect and are deprecated: FailSafe has no external Qor runtime integration. VS Code shows a deprecation warning where they are set; remove them from your settings. A plain-text API key stored in `apiKey` is still offered for removal. The four settings other than `apiKey` will be removed in a later release; `apiKey` stays while that cleanup lists it.
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `failsafe.qorelogic.externalRuntime.enabled` | `boolean` | `false` | Enable Qore runtime integration |
-| `failsafe.qorelogic.externalRuntime.baseUrl` | `string` | `"http://127.0.0.1:7777"` | Runtime API base URL |
-| `failsafe.qorelogic.externalRuntime.apiKey` | `string` | `""` | Optional API key |
-| `failsafe.qorelogic.externalRuntime.apiKeyEnvVar` | `string` | `"QORE_API_KEY"` | Fallback env var for API key |
-| `failsafe.qorelogic.externalRuntime.timeoutMs` | `number` | `4000` | API call timeout (500–30000ms) |
+| `failsafe.qorelogic.externalRuntime.enabled` | `boolean` | `false` | Deprecated: has no effect |
+| `failsafe.qorelogic.externalRuntime.baseUrl` | `string` | `"http://127.0.0.1:7777"` | Deprecated: has no effect |
+| `failsafe.qorelogic.externalRuntime.apiKey` | `string` | `""` | Deprecated: has no effect |
+| `failsafe.qorelogic.externalRuntime.apiKeyEnvVar` | `string` | `"QORE_API_KEY"` | Deprecated: has no effect |
+| `failsafe.qorelogic.externalRuntime.timeoutMs` | `number` | `4000` | Deprecated: has no effect |
 
 ### Genesis UI
 

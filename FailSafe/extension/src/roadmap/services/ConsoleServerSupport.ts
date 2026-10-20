@@ -11,16 +11,6 @@ import type { IConfigProvider } from "../../core/interfaces/IConfigProvider";
 import type { LedgerSummary } from "./MetaLedgerReader";
 import type { ParsedPlan } from "./PlanFileReader";
 import type { PlanBlockerProjection } from "./BacklogReader";
-import type { QorRuntimeOptions } from "./QorRuntimeService";
-
-export function resolveQorRuntimeOptions(options?: Partial<QorRuntimeOptions>): QorRuntimeOptions {
-  const baseUrl = String(options?.baseUrl || "http://127.0.0.1:7777").trim().replace(/\/+$/, "");
-  return {
-    enabled: Boolean(options?.enabled), baseUrl,
-    apiKey: options?.apiKey ? String(options.apiKey) : undefined,
-    timeoutMs: Math.max(500, Math.min(30000, Number(options?.timeoutMs || 4000))),
-  };
-}
 
 export function resolveUiDir(dirname: string): string {
   const candidates = [

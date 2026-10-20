@@ -29,7 +29,8 @@ test.describe('FX-BROWSER-VERIFY-OVERVIEW — overview tab data coherence', () =
     // spans hydrate from hub data once the WS init payload arrives.
     await expect(page.locator('#ticker-protocol')).toBeVisible();
     await expect(page.locator('#ticker-sentinel')).toBeVisible();
-    await expect(page.locator('#ticker-latency')).toBeVisible();
+    // B289: the API ticker read only the retired Qor runtime and always showed N/A.
+    await expect(page.locator('#ticker-latency')).toHaveCount(0);
     await expect(page.locator('#ticker-workspace')).toBeVisible();
   });
 

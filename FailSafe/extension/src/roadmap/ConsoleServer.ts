@@ -20,7 +20,6 @@ import type { EnforcementEngine } from "../governance/EnforcementEngine";
 import { BrainstormService } from "./services/BrainstormService";
 import { AudioVaultService } from "./services/AudioVaultService";
 import type { IConfigProvider } from "../core/interfaces/IConfigProvider";
-import { QorRuntimeService, type QorRuntimeOptions } from "./services/QorRuntimeService";
 import { type InstalledSkill } from "./services/SkillParser";
 import { discoverAllSkills } from "./services/SkillDiscovery";
 import { MarketplaceCatalog } from "./services/MarketplaceCatalog";
@@ -36,7 +35,7 @@ import { ConsoleLifecycleService } from "./services/ConsoleLifecycleService";
 import {
   buildPhasesFromLedger as buildPhasesFromLedgerImpl,
   mergePlanBlockers, createBrainstormService,
-  resolveQorRuntimeOptions, resolveUiDir,
+  resolveUiDir,
   CHECKPOINT_TYPE_REGISTRY,
   MAX_PHASE_RENDER as MAX_PHASE_RENDER_IMPL,
 } from "./services/ConsoleServerSupport";
@@ -53,7 +52,6 @@ const EXTENSION_VERSION: string = (() => {
 })();
 
 type ConsoleServerOptions = {
-  qorRuntime?: Partial<QorRuntimeOptions>;
   workspaceRoot?: string;
   featureGate?: IFeatureGate;
   configProvider?: IConfigProvider;
@@ -84,7 +82,6 @@ export class ConsoleServer {
   private app: express.Application = express();
   private wsManager = new WebSocketManager();
   private uiDir: string;
-  private qorRuntimeService: QorRuntimeService;
   private workspaceRoot: string;
   private featureGate: IFeatureGate | undefined;
   private sealedSubstantiateCompletions = new Set<string>();
@@ -148,7 +145,6 @@ export class ConsoleServer {
     private eventBus: EventBus,
     options: ConsoleServerOptions = {},
   ) {
-    this.qorRuntimeService = new QorRuntimeService(resolveQorRuntimeOptions(options.qorRuntime));
     this.workspaceRoot = options.workspaceRoot || process.cwd();
     this.featureGate = options.featureGate;
     this.uiDir = resolveUiDir(__dirname);
@@ -314,7 +310,7 @@ export class ConsoleServer {
     return new HubSnapshotService({
       workspaceRoot: this.workspaceRoot, extensionVersion: EXTENSION_VERSION,
       planManager: this.planManager, qorelogicManager: this.qorelogicManager,
-      sentinelDaemon: this.sentinelDaemon, qorRuntimeService: this.qorRuntimeService,
+      sentinelDaemon: this.sentinelDaemon,
       gitResetService: this.gitResetService,
       transparencyLogger: this.transparencyLogger,
       riskRegisterManager: this.riskRegisterManager,
@@ -355,7 +351,6 @@ export class ConsoleServer {
       getAgentTimelineService: () => this.agentTimelineService as any,
       getAgentHealthIndicator: () => this.agentHealthIndicator as any,
       getAgentRunRecorder: () => this.agentRunRecorder as any,
-      qorRuntimeService: this.qorRuntimeService,
       brainstormService: this.brainstormService,
       audioVaultService: this.audioVaultService,
       getBicameralClient: () => this.bicameralClient,
