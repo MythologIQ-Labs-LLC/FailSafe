@@ -15,7 +15,6 @@ export class WebPanelClient {
       sentinelStatus: null,
       l3Queue: [],
       recentVerdicts: [],
-      qorRuntime: null,
     };
     this.reconnectTimer = null;
     this.reconnectAttempts = 0;
@@ -170,7 +169,6 @@ export class WebPanelClient {
       blockers,
       this.hub.l3Queue || [],
       this.hub.sentinelStatus || {},
-      this.hub.qorRuntime || {},
     );
 
     renderPhase(phaseInfo, this.elements);
@@ -184,13 +182,12 @@ export class WebPanelClient {
 
     this.sentinelMonitor.renderSentinel(this.hub.sentinelStatus || {}, this.hub.recentVerdicts || []);
     this.sentinelMonitor.renderWorkspaceHealth(this.hub, plan, blockers, risks, this.hub.recentVerdicts || []);
-    this.renderQorRuntime(this.hub.qorRuntime || {});
     this.renderGovernanceAlerts(this.hub.governancePhase?.activeAlerts || []);
     this.renderRepoCompliance(this.hub.repoCompliance || {});
     fitMonitorToViewport();
   }
 
-  getNextStep(blockers, queue, sentinelStatus, qorRuntime) {
+  getNextStep(blockers, queue, sentinelStatus) {
     // Prefer governance next steps from ledger, BUT only when META_LEDGER actually
     // reflects an in-flight session. When gov.current is IDLE we must defer to the
     // active plan phase (same source the phase track uses) so the two tiles agree.
@@ -207,9 +204,6 @@ export class WebPanelClient {
       return gov.nextSteps[0];
     }
 
-    if (qorRuntime.enabled && !qorRuntime.connected) {
-      return `Qor runtime is unreachable at ${qorRuntime.baseUrl || 'configured endpoint'}. Restore runtime connectivity first.`;
-    }
     if (blockers.length > 0) {
       return `Resolve ${blockers.length} active blocker(s) before continuing.`;
     }
@@ -252,10 +246,6 @@ export class WebPanelClient {
   }
 
   // Sentinel and workspace health rendering delegated to SentinelMonitor module
-
-  renderQorRuntime() {
-    // Qor runtime data now rendered in Console overview; Monitor no longer owns it.
-  }
 
   renderRepoCompliance(compliance) {
     if (!this.elements.complianceGrade) return;

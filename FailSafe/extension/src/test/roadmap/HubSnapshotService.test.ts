@@ -64,15 +64,12 @@ function makeFakes(opts: { ledgerEntries?: any[] } = {}): {
     getLedgerManager: () => ledgerManager,
     refreshL3Queue: () => { stamp('qor.refreshL3Queue'); },
   };
-  const qorRuntimeService: any = {
-    fetchSnapshot: async () => { stamp('qor.fetchSnapshot'); return { enabled: false, connected: false, baseUrl: '', lastCheckedAt: '' }; },
-  };
   const gitResetService: any = {};
 
   const deps = {
     workspaceRoot: tmp,
     extensionVersion: 'test-9.9.9',
-    planManager, qorelogicManager, sentinelDaemon, qorRuntimeService,
+    planManager, qorelogicManager, sentinelDaemon,
     gitResetService, transparencyLogger, riskRegisterManager,
     mergePlanBlockers: (plan: unknown) => plan,
     getActualPort: () => 9376,
@@ -98,17 +95,15 @@ suite('HubSnapshotService (Phase 60 §0)', () => {
     assert.ok(refreshPlan >= 0 && refreshPlan < readPlan, `plan.refreshFromWorkspace must precede plan.getActivePlan; got refresh@${refreshPlan} read@${readPlan}`);
     assert.ok(refreshL3 >= 0 && refreshL3 < readL3, `qor.refreshL3Queue must precede qor.getL3Queue; got refresh@${refreshL3} read@${readL3}`);
     const idx = (n: string) => calls.findIndex((c) => c.name === n);
-    // Sentinel + trust + qorRuntime are pre-snapshot reads; they must
-    // happen before risk-register / transparency tail reads that supply
-    // downstream payload fields.
+    // Sentinel + trust are pre-snapshot reads; they must happen before
+    // risk-register / transparency tail reads that supply downstream payload
+    // fields. (B289 removed the Qor runtime fetch that used to sit here.)
     const sentinelAt = idx('sentinel.getStatus');
     const trustAt = idx('trust.getAllAgents');
-    const qorAt = idx('qor.fetchSnapshot');
     const transparencyAt = idx('transparency.getEvents');
-    assert.ok(sentinelAt >= 0 && trustAt >= 0 && qorAt >= 0, 'pre-snapshot hooks not all invoked');
+    assert.ok(sentinelAt >= 0 && trustAt >= 0, 'pre-snapshot hooks not all invoked');
     assert.ok(sentinelAt < transparencyAt, 'sentinel must read before transparency tail');
     assert.ok(trustAt < transparencyAt, 'trust must resolve before transparency tail');
-    assert.ok(qorAt < transparencyAt, 'qorRuntime fetch must resolve before transparency tail');
   });
 
   test('B289 buildHubSnapshot — no Qor runtime field and no Qor Runtime node', async () => {
@@ -245,7 +240,6 @@ suite('HubSnapshotService (Phase 60 §0)', () => {
       extensionVersion: 'test',
       planManager, qorelogicManager,
       sentinelDaemon: { getStatus: () => ({ running: false }), getRecentObservationIds: () => [] } as any,
-      qorRuntimeService: { fetchSnapshot: async () => ({}) } as any,
       gitResetService: {} as any,
       transparencyLogger, riskRegisterManager,
       mergePlanBlockers: (p: unknown) => p,
@@ -284,7 +278,6 @@ suite('HubSnapshotService (Phase 60 §0)', () => {
       planManager: { getActivePlan: () => null, getAllSprints: () => [], getCurrentSprint: () => null, refreshFromWorkspace: () => {} } as any,
       qorelogicManager,
       sentinelDaemon: { getStatus: () => ({ running: false }), getRecentObservationIds: () => [] } as any,
-      qorRuntimeService: { fetchSnapshot: async () => ({}) } as any,
       gitResetService: {} as any,
       transparencyLogger: { getRecentEvents: () => [], log: () => {} } as any,
       riskRegisterManager: { getCurrent: () => [], save: () => {} } as any,

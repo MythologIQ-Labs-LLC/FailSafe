@@ -9,7 +9,6 @@ function makeDeps(overrides: Partial<ApiRouteDeps>): ApiRouteDeps {
   const base = {
     rejectIfRemote: () => false,
     broadcast: () => undefined,
-    qorRuntimeService: undefined as any,
     buildHubSnapshot: async () => ({}),
     workspaceRoot: '/tmp/ws', workspaceDirname: __dirname,
     brainstormService: {} as any, audioVaultService: {} as any,

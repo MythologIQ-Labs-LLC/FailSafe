@@ -702,30 +702,34 @@
         "failsafe.qorelogic.externalRuntime.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable Qor runtime integration in Console monitor."
+          "deprecationMessage": "No longer used: FailSafe has no external Qor runtime integration. Remove this setting.",
+          "description": "Deprecated; has no effect. FailSafe has no external Qor runtime integration."
         },
         "failsafe.qorelogic.externalRuntime.baseUrl": {
           "type": "string",
           "default": "http://127.0.0.1:7777",
-          "description": "Base URL for FailSafe-Qor runtime API."
+          "deprecationMessage": "No longer used: FailSafe has no external Qor runtime integration. Remove this setting.",
+          "description": "Deprecated; has no effect. FailSafe has no external Qor runtime integration."
         },
         "failsafe.qorelogic.externalRuntime.apiKey": {
           "type": "string",
           "deprecationMessage": "Not used by FailSafe. Remove this plain-text value.",
           "default": "",
-          "description": "Optional API key for Qor runtime. Leave empty to use environment variable fallback."
+          "description": "Deprecated; has no effect. A plain-text value stored here is offered for removal."
         },
         "failsafe.qorelogic.externalRuntime.apiKeyEnvVar": {
           "type": "string",
           "default": "QOR_API_KEY",
-          "description": "Environment variable name used when runtime API key is not set in extension settings."
+          "deprecationMessage": "No longer used: FailSafe has no external Qor runtime integration. Remove this setting.",
+          "description": "Deprecated; has no effect. FailSafe has no external Qor runtime integration."
         },
         "failsafe.qorelogic.externalRuntime.timeoutMs": {
           "type": "number",
           "default": 4000,
           "minimum": 500,
           "maximum": 30000,
-          "description": "Timeout in milliseconds for Qor runtime API calls."
+          "deprecationMessage": "No longer used: FailSafe has no external Qor runtime integration. Remove this setting.",
+          "description": "Deprecated; has no effect. FailSafe has no external Qor runtime integration."
         },
         "failsafe.bootstrap.autoInstallGit": {
           "type": "boolean",

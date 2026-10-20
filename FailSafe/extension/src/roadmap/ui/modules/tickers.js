@@ -5,7 +5,6 @@ import { showInstallModal } from './install-skills-modal.js';
 export function updateTickers(data) {
   const proto = document.getElementById('ticker-protocol');
   const sent = document.getElementById('ticker-sentinel');
-  const lat = document.getElementById('ticker-latency');
   // B-EM-1: the value is sentinel.mode — label SENTINEL, not the ambiguous
   // PROTOCOL. The 'Unknown' fallback is kept intentionally: a live ticker
   // legitimately shows "Unknown" before the first hub payload arrives, so it
@@ -15,12 +14,6 @@ export function updateTickers(data) {
     const live = data.sentinelStatus?.running;
     const c = live ? 'var(--accent-green)' : 'var(--accent-red)';
     sent.innerHTML = `SENTINEL <span style="color:${c}">${live ? 'Active' : 'Halted'}</span>`;
-  }
-  if (lat) {
-    const latVal = data.qorRuntime?.latencyMs;
-    const latLabel = latVal != null ? `${Math.round(latVal)}ms` : 'N/A';
-    const latColor = latVal != null ? '' : 'color:var(--text-muted)';
-    lat.innerHTML = `API <span style="font-family:var(--font-mono);${latColor}">${latLabel}</span>`;
   }
   const ws = document.querySelector('#ticker-workspace span');
   const wsContainer = document.getElementById('ticker-workspace');

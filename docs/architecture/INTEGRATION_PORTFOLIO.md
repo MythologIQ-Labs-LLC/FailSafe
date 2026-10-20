@@ -12,7 +12,7 @@ On 2026-10-18 the owner accepted the dispositions in the matrix below as owner-a
 
 - COMPLETE means finish the named gaps: the contract's Recommended disposition and Open defects name them. It does not mean the integration is complete.
 - MAINTAIN means keep it working and fix its recorded defects.
-- RETIRE means retire the inert or exposed claims and routes, only after a reference and compatibility review, in a separate small PR, without deleting historic contracts or evidence. The two reviews are [governance-webhook](integrations/governance-webhook.md#retirement-review-538) (removal B288) and [qor-runtime](integrations/qor-runtime.md#retirement-review-538) (removal B289). B288 retired governance-webhook on 2026-10-19; its contract stays as history.
+- RETIRE means retire the inert or exposed claims and routes, only after a reference and compatibility review, in a separate small PR, without deleting historic contracts or evidence. The two reviews are [governance-webhook](integrations/governance-webhook.md#retirement-review-538) (removal B288) and [qor-runtime](integrations/qor-runtime.md#retirement-review-538) (removal B289). B288 retired governance-webhook and B289 retired qor-runtime on 2026-10-19; both contracts stay as history.
 - INVEST: no integration has it.
 
 The decision covers the dispositions. The priorities and the [Prioritized order](#prioritized-order) remain a recommendation.
@@ -28,7 +28,7 @@ The architecture index's decision path says to amend an existing canonical docum
 - `shipped-inert`: in tag v6.0.8 but switched off or unreachable; the switch or the missing call site is cited. It wins over any other shipped state.
 - `main-unreleased`: on main `c36b9ee2` and not in tag v6.0.8.
 - `proposed`: not implemented.
-- `retired`: the code was removed under a RETIRE disposition (B288 for governance-webhook). The five states above describe a live contract; a retired contract keeps its file as history, is registered `historical` in the architecture index, names its retirement base, and FX1003 checks its citations at that commit (in a full clone; shallow CI clones skip with a count). The Feature Index calls the same features `removed`.
+- `retired`: the code was removed under a RETIRE disposition (B288 for governance-webhook, B289 for qor-runtime). The five states above describe a live contract; a retired contract keeps its file as history, is registered `historical` in the architecture index, names its retirement base, and FX1003 checks its citations at that commit (in a full clone; shallow CI clones skip with a count). The Feature Index calls the same features `removed`.
 
 Test depth labels: `unit` (a node or vscode-test file calling the code directly), `route` (an HTTP route driven in-process), `jsdom` (browser code in jsdom), `playwright-stubbed` (a Playwright `ui/*.spec.ts` file against a stubbed Console), `installed-vscode` (a vscode-test file that drives the code inside a VS Code extension host, launched from the development folder, not an installed VSIX; whether the release-verification lane exercises any integration in an installed VSIX is unverified), `live-service` (against the real provider; none on main).
 
@@ -67,7 +67,7 @@ Test depth lists the depth labels of the contract's proving tests; `none` means 
 | [tracker-manifest](integrations/tracker-manifest.md) | Draft docs/roadmap/programs.yaml from merged PRs and CHANGELOG with an operator-confirmed taxonomy | shipped-unverified, verified-shipped | yes | unit | MAINTAIN | 3 |
 | [git-bootstrap](integrations/git-bootstrap.md) | Make Git available and initialize a repository only on consent | verified-shipped, shipped-unverified, proposed | yes | unit | MAINTAIN | 3 |
 | [governance-webhook](integrations/governance-webhook.md) | Deliver signed governance events to the customer's own HTTPS endpoint | retired | no | none | RETIRE | 3 |
-| [qor-runtime](integrations/qor-runtime.md) | Show an external Qor runtime's health in the Console | shipped-inert, proposed | no | unit, route | RETIRE | 3 |
+| [qor-runtime](integrations/qor-runtime.md) | Show an external Qor runtime's health in the Console | retired | no | none | RETIRE | 3 |
 
 Totals: 30 contracts; owner dispositions 15 COMPLETE, 13 MAINTAIN, 2 RETIRE, 0 INVEST; priorities 7 at 1, 14 at 2, 9 at 3.
 
@@ -95,7 +95,7 @@ Priority 1 is where a customer is exposed today (data leaves the machine without
 18. **voice-pack**: works with stubbed downloads; the old organization slug was fixed in #538 (F07, B261), and no voice-pack release is published yet (B287).
 19. **continue** and **aider**: built and unit-tested; no test runs the real CLIs, and Aider has no tool allowlist.
 20. **linear**, **sarif**, **openhands**, **acp-devin**, **agt**, **tracker-manifest**, **git-bootstrap**: built and tested with small gaps; maintain.
-21. **governance-webhook** and **qor-runtime**: governance-webhook was retired by B288 on 2026-10-19 (its sender, tests and bootstrap field are removed; the contract is kept as history); before that it had no caller on main, and qor-runtime cannot be enabled on main (its client is asked for a snapshot on every hub build and answers disabled; its three routes answer disabled); the owner decided RETIRE (#538). Their retirement reviews ([governance-webhook](integrations/governance-webhook.md#retirement-review-538), [qor-runtime](integrations/qor-runtime.md#retirement-review-538)) bound the removals, B288 (done) and B289 (open), each a separate PR.
+21. **governance-webhook** and **qor-runtime**: governance-webhook was retired by B288 on 2026-10-19 (its sender, tests and bootstrap field are removed; the contract is kept as history); before that it had no caller on main, and qor-runtime was retired by B289 on 2026-10-19 (its client, three routes, hub entry and API ticker are removed and its settings deprecated, with the four other than apiKey removed later by B326; before that it could not be enabled on main); the owner decided RETIRE (#538). Their retirement reviews ([governance-webhook](integrations/governance-webhook.md#retirement-review-538), [qor-runtime](integrations/qor-runtime.md#retirement-review-538)) bound the removals, B288 (done) and B289 (done), each a separate PR.
 
 ## Scans
 
@@ -134,8 +134,8 @@ Computed by the check on every run; it fails when a number here differs from the
 
 | Measure | Count |
 |---|---|
-| `scan-1-files` | 53 |
-| `scan-1-call-sites` | 103 |
+| `scan-1-files` | 52 |
+| `scan-1-call-sites` | 102 |
 | `scan-2-files` | 7 |
 | `browser-files` | 37 |
 | `browser-targets` | 85 |
@@ -166,7 +166,7 @@ Every entry of the expected set that no contract owns has a row here (`folded in
 | `FailSafe/extension/src/roadmap/ui/` | not an integration: same-origin Console API | none; every target in these modules passes rules (a) to (e), checked per call site | `FailSafe/extension/src/roadmap/ui/modules/connection.js:7` (`Empty string resolves to same-origin`) |
 | `FailSafe/extension/src/webui/` | not an integration: same-origin Console API | none; the bases default to the page origin, and the bridges have no callers outside the folder | `FailSafe/extension/src/webui/protocol.ts:133-135` (`window.location.origin`) |
 | `FailSafe/extension/src/shared/exec/trustedExecutable.ts` | not an integration: executable-path resolver; its only process call is a version probe of a candidate path, and 'pip' and 'pip3' are spec ids, not arguments | not named in LD1 (a scan 2 hit) | `FailSafe/extension/src/shared/exec/trustedExecutable.ts:176-178` (`function specProbe(spec: ExecutableSpec)`) `FailSafe/extension/src/shared/exec/trustedExecutable.ts:580-582` (`id: 'pip', fileName: both('pip')`) |
-| `FailSafe/extension/src/roadmap/routes/QorRoute.ts` | not an integration: the Console's Qor routes (governance dashboard, sprint, plans); its runtime, health and evaluate proxies belong to qor-runtime | LD1 allows a contract or a row for QorRuntimeService; it got a contract, `qor-runtime`, whose capabilities are all shipped-inert | `FailSafe/extension/src/roadmap/routes/QorRoute.ts:20` (`app.get("/api/qor/runtime"`) `FailSafe/extension/src/roadmap/routes/QorRoute.ts:62` (`app.get("/api/plans"`) |
+| `FailSafe/extension/src/roadmap/routes/QorRoute.ts` | not an integration: the Console's Qor routes (governance dashboard, sprint, plans); its runtime, health and evaluate proxies were removed with qor-runtime (B289) | LD1 allows a contract or a row for QorRuntimeService; it got a contract, `qor-runtime`, retired by B289 | `FailSafe/extension/src/roadmap/routes/QorRoute.ts:24` (`app.get("/api/qor/governance-dashboard"`) `FailSafe/extension/src/roadmap/routes/QorRoute.ts:47` (`app.get("/api/plans"`) |
 | `FailSafe/extension/src/extension/bootstrapCore.ts` | folded into git-bootstrap | LD1 expects git-bootstrap to cite an ask-first consent for the package-manager install. On main that install has no prompt; its consent is the user-level, machine-scoped opt-in `failsafe.bootstrap.autoInstallGit` (off by default); the ask-first prompt covers only `git init` | `FailSafe/extension/src/extension/bootstrapCore.ts:37-40` (`only a user-level value counts`) |
 | `FailSafe/extension/src/integrations/shield-receipts/workspace-evidence-source.ts` | folded into shield-receipts | LD1 names "the receipt verifier's GitHub read"; on main the evidence source reads only local git, and its only consumer has no caller | `FailSafe/extension/src/integrations/shield-receipts/workspace-evidence-source.ts:6` (`GIT_NO_LAZY_FETCH=1`) |
 | `FailSafe/extension/src/roadmap/tracker/manifest-sources.ts` | folded into tracker-manifest | not a hit of either scan (`gh pr list` has no network word in its arguments); covered only because tracker-manifest owns it | `FailSafe/extension/src/roadmap/tracker/manifest-sources.ts:31` (`Merged PRs via`) |
@@ -227,7 +227,7 @@ Found while writing the contracts, outside the LD3 list. They are recorded here 
 - qor-logic-consumer: the scaffold route installed the package with no server-side VS Code confirmation in v6.0.8; on main it asks first `FailSafe/extension/src/roadmap/routes/ActionsRoute.ts:106-109` (`const approved = await authorizeOperatorAction(`). Filed as B274, fixed by #538.
 - dependency-admission-lint: the npm registry query runs on each new seal with no setting or notice (see the contract). Filed as B275.
 - agt-adapter: the adapter install route ran pip with no server-side confirmation in v6.0.8; on main install and uninstall ask first `FailSafe/extension/src/roadmap/routes/AdapterRoute.ts:63` (`const approved = await authorizeOperatorAction(deps, res, {`). Filed as B276, fixed by #538.
-- qor-runtime: the `failsafe.qorelogic.externalRuntime.*` settings are contributed but never read `FailSafe/extension/package.json:697-723` (`"failsafe.qorelogic.externalRuntime.timeoutMs": {`). Filed as B277. Bounded removal: B289 (#538).
+- qor-runtime: the `failsafe.qorelogic.externalRuntime.*` settings were contributed but never read. Filed as B277; B289 (#538) deprecated them `FailSafe/extension/package.json:702-705` (`"deprecationMessage": "No longer used: FailSafe has no external Qor runtime integration. Remove this setting."`) and closed B277; B326 removes the four settings other than apiKey, which stays while the plain-text cleanup lists it.
 - github-checks: `GitContext.isFork` is never set, so the fork guards never fire `FailSafe/extension/src/extension/github-checks-command.ts:39-43` (`function readGitContext(cwd: string): GitContext {`); the v6.0.8 default GitHub transports drop a base URL's port, fixed on main, unreleased (#538) `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:172` (`port: u.port ? Number(u.port) : undefined,`). Filed as B278 (fork) and B279 (port).
 - linear: a missing issue is reported as a contract failure, never not_found, so the earlier-import note cannot fire `FailSafe/extension/src/integrations/linear/linear-client.ts:85` (`Issue ${id} not found (or no access).`). Filed as B280.
 - open-design: the Console's create_artifact request queues an L3 approval that always fails on approval `FailSafe/extension/src/roadmap/routes/OpenDesignRoute.ts:75` (`const approvalId = await deps.queueL3Approval({`). Filed as B281.

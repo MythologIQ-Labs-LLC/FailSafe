@@ -88,7 +88,7 @@ export interface ConsoleRouteHost {
     getRun: (id: string) => unknown; loadRun: (id: string) => unknown;
     getRunSteps: (id: string) => unknown[];
   } | null;
-  qorRuntimeService: unknown; brainstormService: unknown; audioVaultService: unknown;
+  brainstormService: unknown; audioVaultService: unknown;
   marketplaceCatalog: unknown; marketplaceInstaller: unknown; securityScanner: unknown;
   adapterService: { getConfig: () => { adapterBaseUrl?: string } | null };
   sentinelDaemon: unknown; planManager: unknown;
@@ -258,7 +258,6 @@ export class ConsoleRouteRegistrar {
         if (!service) throw new Error("intent service not wired");
         return service.getActiveIntent();
       },
-      qorRuntimeService: h.qorRuntimeService as any,
       buildHubSnapshot: () => hub.buildHubSnapshot(),
       featureGate: h.featureGate as any,
       workspaceRoot: h.workspaceRoot, workspaceDirname: h.workspaceDirname,

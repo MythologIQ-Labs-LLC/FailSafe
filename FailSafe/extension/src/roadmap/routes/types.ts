@@ -1,5 +1,4 @@
 import type { QorLogicInstallReport } from '../../extension/installSkillsReport';
-import type { QorRuntimeService } from '../services/QorRuntimeService';
 import type { IFeatureGate } from '../../core/interfaces/IFeatureGate';
 import type { QorLogicHost } from '../../qorlogic/hostLayouts';
 import type { ShadowGenomeResult } from '../../qorlogic/shadow-genome-client';
@@ -19,7 +18,6 @@ export interface ApiRouteDeps {
    *  IntentService at request time; throws when no service is wired. Absent -> the route blocks. */
   getActiveIntent?: () => Promise<unknown>;
   // Phase 2 (B166) deps for QorRoute / FeatureStatusRoute / SkillsApiRoute / HookRoute
-  qorRuntimeService: QorRuntimeService;
   buildHubSnapshot: () => Promise<Record<string, unknown>>;
   featureGate?: IFeatureGate;
   workspaceRoot: string;

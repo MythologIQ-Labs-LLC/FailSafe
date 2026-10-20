@@ -20,7 +20,6 @@ function makeDeps(workspaceRoot: string, overrides: Partial<ApiRouteDeps> = {}):
   return Object.assign({
     rejectIfRemote: () => false,
     broadcast: () => undefined,
-    qorRuntimeService: {} as any,
     buildHubSnapshot: async () => ({}),
     workspaceRoot,
     workspaceDirname: __dirname,

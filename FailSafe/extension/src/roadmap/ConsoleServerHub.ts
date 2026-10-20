@@ -30,16 +30,6 @@ type UnattributedFileChange = {
   decision?: string;
 };
 
-type QorRuntimeSnapshot = {
-  enabled: boolean;
-  connected: boolean;
-  baseUrl: string;
-  policyVersion?: string;
-  latencyMs?: number;
-  lastCheckedAt: string;
-  error?: string;
-};
-
 export interface HubSnapshotDeps {
   workspaceRoot: string;
   chainValidAt: string | null;
@@ -190,7 +180,6 @@ export function buildNodeStatus(
   sentinel: { running?: boolean; filesWatched?: number; queueDepth?: number; [k: string]: unknown },
   l3Queue: unknown[],
   trust: Record<string, unknown>,
-  qor: QorRuntimeSnapshot,
 ): Array<Record<string, unknown>> {
   return [
     {
@@ -208,15 +197,6 @@ export function buildNodeStatus(
       id: "trust-engine", label: "Trust Engine",
       state: (trust.quarantined as number) > 0 ? "degraded" : "nominal",
       signal: `${Math.round((trust.avgTrust as number) * 100)}% avg trust`,
-    },
-    {
-      id: "qor-runtime", label: "Qor Runtime",
-      state: !qor.enabled ? "paused" : qor.connected ? "nominal" : "degraded",
-      signal: !qor.enabled
-        ? "integration disabled"
-        : qor.connected
-          ? `connected (${qor.policyVersion || "unknown policy"})`
-          : `unreachable (${qor.baseUrl})`,
     },
   ];
 }

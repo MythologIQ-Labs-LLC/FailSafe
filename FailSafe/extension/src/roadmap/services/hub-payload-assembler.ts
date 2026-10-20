@@ -36,7 +36,7 @@ export interface HubPayloadSource {
 
 export interface HubPayloadState {
   activePlan: unknown; sentinelStatus: Record<string, unknown>; l3Queue: unknown;
-  trust: unknown; qorRuntime: unknown; checkpointSummary: Record<string, unknown>;
+  trust: unknown; checkpointSummary: Record<string, unknown>;
   governancePhase: Parameters<typeof buildMetricIntegrity>[0];
   artifacts: WorkspaceArtifactSnapshot;
   runState: { activeTasks?: unknown[]; activeDebugSessions?: unknown[] };
@@ -77,7 +77,7 @@ function buildServiceBase(source: HubPayloadSource, state: HubPayloadState): Rec
     trustSummary: state.trust, nodeStatus: state.nodeStatus,
     checkpointSummary: state.checkpointSummary,
     recentCheckpoints: source.getRecentCheckpoints(12),
-    qorRuntime: state.qorRuntime, runState: state.runState,
+    runState: state.runState,
     riskSummary: buildRiskSummary(source.getRecentVerdicts),
     transparencyEvents: source.getTransparencyEvents(),
     unattributedFileActivity: buildUnattributedFileActivity(

@@ -68,7 +68,7 @@ const NAMED_HITS = {
     `${SRC}/extension/governedCommit.ts`,
   ],
   'scan-1': [
-    `${SRC}/roadmap/services/QorRuntimeService.ts`, `${SRC}/sentinel/utils/llmTransport.ts`,
+    `${SRC}/sentinel/utils/llmTransport.ts`,
     `${SRC}/qorlogic/substrate/DependencyAdmissionLintModule.ts`,
     `${SRC}/roadmap/routes/SreApiRoute.ts`, `${SRC}/roadmap/routes/templates/SreTemplate.ts`,
   ],

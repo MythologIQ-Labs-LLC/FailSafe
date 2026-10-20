@@ -108,7 +108,6 @@ suite('qor consumer diagnostics (#233 FX893)', () => {
         getLedgerManager: () => ledgerManager,
       } as never,
       sentinelDaemon: { getStatus: () => ({ running: false }), getRecentObservationIds: () => [] } as never,
-      qorRuntimeService: { fetchSnapshot: async () => ({}) } as never,
       gitResetService: {} as never,
       transparencyLogger: { getEvents: () => [], log: () => {} } as never,
       riskRegisterManager: { getRisks: () => [], writeRisks: () => {} } as never,
