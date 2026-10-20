@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Workspace › Delivery now has a Review step, and every step reads recorded, passing, failing, stale, missing or unavailable, with a legend. Recorded means the evidence is present, not that it passed, so a delivery is no longer shown as complete just because ledger evidence exists: the view says complete is not reachable until FailSafe can record a review of the implementation. An intent marked PASS is shown as approved for implementation, not as a review, and a vetoed intent makes the delivery failing (#532).
+- After a governed commit from Organize or Initialize, FailSafe offers to link that commit to the active intent. It asks in VS Code and shows the commit, its tree and branch, and how many files it contains, including any that were already staged. The offer is made only for the commit FailSafe just made, and not when a commit hook or a configured trailer changed it (#532).
+
 ### Deprecated
 
 - The `failsafe.qorelogic.externalRuntime.*` settings never had an effect and are now marked deprecated: VS Code shows a warning where they are set. Remove them from your settings. A plain-text API key stored there is still offered for removal. The four settings other than `apiKey` will be removed in a later release.
@@ -15,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The Qor runtime client and its Console routes `/api/qor/runtime`, `/api/qor/health` and `/api/qor/evaluate` are removed, with the always-paused Qor Runtime status entry and the API ticker in the Console top bar, which always read N/A.
 - The governance webhook sender is removed. Nothing in FailSafe configured or called it (no setting, command or view reached it), so nothing you can configure changes.
+
+### Fixed
+
+- Hub checkpoints now record this workspace's commit. They used to read the folder the extension process started in, so they usually recorded "unknown" or another repository's commit (#532).
+- Rolling back to a checkpoint from the Console shows the work tree, the branch, the current HEAD, the checkpoint commit with its subject and date, and how many commits leave the branch. It is refused when the tree has uncommitted changes, when git cannot report status, when the checkpoint commit is not an ancestor of HEAD, or when the checkpoint record does not match its recorded hashes. It now uses `git reset --keep`, which stops instead of overwriting a file changed after the check. If the branch or HEAD changed in the moment before the reset, or the check after it cannot run, the result says so, names the previous HEAD to recover from the reflog when it is known, and the rollback is recorded as failed. In a repository without a reflog only HEAD and the branch are checked, and the result says so (#532).
+- The delivery assessment no longer counts a checkpoint whose recorded HEAD equals a linked commit as governance evidence: it showed which commit was checked out at the time, not that anything evaluated it (#532).
 
 ## [6.0.9] - 2026-10-18
 

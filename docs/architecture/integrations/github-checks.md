@@ -9,7 +9,7 @@ Legacy review (historical input, never edited): `docs/research/integrations/INTE
 - `FailSafe/extension/src/extension/github-checks-command.ts`
 
 Shared modules it uses (reconciled in the portfolio, not owned here): `FailSafe/extension/src/integrations/credentials/`, `FailSafe/extension/src/integrations/catalog/`, and the receipt verifier under `FailSafe/extension/src/integrations/shield-receipts/` (owned by the shield-receipts contract).
-`createPullRequest` lives in an owned file but is used only by the governed commit flow `FailSafe/extension/src/extension/governedCommit.ts:119` (`const pr = await createPullRequest(`); its contract is governed-commit-pr.
+`createPullRequest` lives in an owned file but is used only by the governed commit flow `FailSafe/extension/src/extension/governedCommit.ts:132` (`const pr = await createPullRequest(`); its contract is governed-commit-pr.
 
 ## Customer job
 

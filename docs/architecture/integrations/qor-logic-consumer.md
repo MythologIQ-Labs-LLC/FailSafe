@@ -58,7 +58,7 @@ Metadata: yes, pip itself contacts the configured Python package index for `qor-
 Graph relationships: no `FailSafe/extension/src/qorlogic/consumer/consumer-adapter.ts:7-8` (`envelopes are views`).
 Governance evidence: no; the adapter never writes the artifacts it classifies `FailSafe/extension/src/qorlogic/consumer/consumer-adapter.ts:7` (`the adapter never writes or repairs canonical`).
 Consent for the install: the bootstrap command asks before pip in interactive mode `FailSafe/extension/src/extension/bootstrapWorkspace.ts:95-103` (`Install now?`).
-Consent for the install: activation runs bootstrap in silent mode, which defers pip `FailSafe/extension/src/extension/bootstrapServers.ts:467` (`void runWorkspaceBootstrap(bootstrapDeps, "silent")`).
+Consent for the install: activation runs bootstrap in silent mode, which defers pip `FailSafe/extension/src/extension/bootstrapServers.ts:474` (`void runWorkspaceBootstrap(bootstrapDeps, "silent")`).
 Consent for the install: on main the Console scaffold route shows the validated hosts, scope and skills in a modal VS Code dialog and runs pip and `qor install` only after approval `FailSafe/extension/src/roadmap/routes/ActionsRoute.ts:99-113` (`const approved = await authorizeOperatorAction(`); as released in v6.0.8 it asked nothing (B274, fixed in #538).
 
 ## Transformations
