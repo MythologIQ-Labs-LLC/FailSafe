@@ -20,7 +20,7 @@ import * as fs from "fs";
 import type { L3ApprovalRequest } from "../../shared/types/l3-approval";
 import { sanitizeDialogText, ARCHITECTURE_PATH_LIMIT, type ArchitectureSupersessionFacts } from "../../extension/operatorConfirmation";
 import {
-  resolveInsideWorkspace, type ArchitectureGit, type ArchitectureIndexSnapshot, type SnapshotRow,
+  MAX_DOC_BYTES, resolveInsideWorkspace, type ArchitectureGit, type ArchitectureIndexSnapshot, type SnapshotRow,
 } from "./ArchitectureIndexDiscovery";
 import {
   appendArchitectureProposal, ARCHITECTURE_AGENT_DID, sha256, sourceShaOf, type ArchitectureLedger,
@@ -35,8 +35,6 @@ export const PATH_RECORD_LIMIT = ARCHITECTURE_PATH_LIMIT;
 const REGISTER_STATUSES: ReadonlySet<string> = new Set(["canonical", "proposed", "descriptive", "historical"]);
 const PROPOSABLE: ReadonlySet<string> = new Set(["present", "present-with-problems"]);
 const MAX_SUPERSEDES = 50;
-/** Documents larger than this are not hashed, so their freshness could never be checked (review N1). */
-const MAX_DOC_BYTES = 2 * 1024 * 1024;
 const CHARSET_TEXT = "A-Z, a-z, 0-9, space and . _ / & ( ) -";
 
 export interface ProposalOperation {
@@ -81,9 +79,10 @@ function duplicatedIds(snap: ArchitectureIndexSnapshot): Set<string> {
   return new Set(snap.problems.filter((p) => p.code === "duplicate-id").flatMap((p) => p.ids ?? []));
 }
 
-/** 409 for an index FailSafe cannot read authority from without guessing. */
 /** A domain FailSafe cannot compare safely: outside the intake charset, or with hidden characters (review B2). */
 const unsafeDomain = (domain: string): boolean => !INTAKE_CHARSET.test(domain) || hiddenCharacterProblem(domain) !== null;
+/** An empty domain cell ('' or '-') on a canonical row: authority for no named domain (review531b fold 6). */
+const emptyDomain = (domain: string): boolean => domain.trim() === "" || domain.trim() === "-";
 
 /** 409 while a registry row has the wrong cell count: it is not parsed, so it could hide a canonical row (review B1). */
 function badRowRefusal(snap: ArchitectureIndexSnapshot): ProposalPlan | null {
@@ -91,16 +90,25 @@ function badRowRefusal(snap: ArchitectureIndexSnapshot): ProposalPlan | null {
   if (!lines.length) return null;
   return refuse(409, {
     conflict: "ambiguous-authority", reason: "bad-row", lines, rows: [], exits: ["fix-row"],
-    error: `The registry rows at line(s) ${lines.join(", ")} do not have 11 cells, so FailSafe cannot read them and they could ` +
-      "hold a canonical document. Fix those rows in the index first; until then canonical registrations and supersessions are refused.",
+    error: `The registry rows at line(s) ${lines.join(", ")} cannot be read (the wrong number of cells, or no leading |), so they could ` +
+      "hold a canonical document. Fix those rows in the index first; until then canonical registrations and supersessions are refused " +
+      "(descriptive, proposed and historical registrations are still accepted).",
   });
 }
 
+/** 409 for an index FailSafe cannot read authority from without guessing. */
 function ambiguous(
-  root: string, reason: "non-ascii-domain" | "hidden-character-domain" | "bad-status" | "duplicate-id", rows: SnapshotRow[],
+  root: string, reason: "empty-domain" | "non-ascii-domain" | "hidden-character-domain" | "bad-status" | "duplicate-id", rows: SnapshotRow[],
 ): ProposalPlan {
   const refs = rows.map((r) => rowRef(root, r));
   const list = rows.map((r) => `${renderDomainForReview(r.id)} (line ${r.line}, "${renderDomainForReview(r.domain)}", ${r.status})`).join("; ");
+  if (reason === "empty-domain") {
+    return refuse(409, {
+      conflict: "ambiguous-authority", reason, rows: refs, exits: ["give-domain", "change-status-from-canonical"],
+      error: `These canonical rows have no domain: ${list}. FailSafe cannot tell which domain they hold authority for, so it refuses ` +
+        "canonical registrations and supersessions until you give each a domain in the index or change its status from canonical. FailSafe never edits the index.",
+    });
+  }
   if (reason === "hidden-character-domain") {
     return refuse(409, {
       conflict: "ambiguous-authority", reason, rows: refs, exits: ["rename-domain-to-ascii", "change-status-from-canonical"],
@@ -135,7 +143,14 @@ function hashOf(abs: string): string {
 
 /** 400 for a document FailSafe could not re-hash before recording (over 2 MiB), instead of a permanent stale 409 (review N1). */
 function tooLargeRefusal(abs: string, docPath: string, rows: AuthorityRowRef[]): ProposalPlan | null {
-  const large = [...(fs.statSync(abs).size > MAX_DOC_BYTES ? [docPath] : []),
+  let size: number;
+  try {
+    size = fs.statSync(abs).size;
+  } catch {
+    // The document vanished between discovery and now (review531b fold 5): stale, not a generic 500.
+    return refuse(409, { stale: "document", error: `${docPath} changed while FailSafe was reading it; nothing was recorded. Propose again.` });
+  }
+  const large = [...(size > MAX_DOC_BYTES ? [docPath] : []),
     ...rows.filter((r) => r.docState === "too-large").map((r) => r.docPath ?? r.id)];
   if (!large.length) return null;
   return bad(`${large.join(", ")}: document too large to hash for freshness (over 2 MiB); FailSafe cannot check it has not changed ` +
@@ -187,6 +202,8 @@ function planRegister(snap: ArchitectureIndexSnapshot, b: Record<string, unknown
     }
     const unreadable = badRowRefusal(snap);
     if (unreadable) return unreadable;
+    const blank = snap.rows.filter((r) => r.status === "canonical" && emptyDomain(r.domain));
+    if (blank.length) return ambiguous(root, "empty-domain", blank);
     const unsafe = snap.rows.filter((r) => r.status === "canonical" && unsafeDomain(r.domain));
     if (unsafe.length) return ambiguous(root, unsafe.some((r) => !INTAKE_CHARSET.test(r.domain)) ? "non-ascii-domain" : "hidden-character-domain", unsafe);
     const badStatus = domainRows.filter((r) => !REGISTRY_STATUSES.includes(r.status));
@@ -201,7 +218,7 @@ function planRegister(snap: ArchitectureIndexSnapshot, b: Record<string, unknown
       return refuse(409, {
         conflict: "canonical-exists", domain, existing: canonicalRows.map((r) => rowRef(root, r)), missing,
         alternatives: ["use-existing", "register-descriptive", "supersede"],
-        error: `"${key}" already has a canonical document (${canonicalRows.map((r) => `${r.id} at line ${r.line}`).join(", ")}). ` +
+        error: `"${renderDomainForReview(key)}" already has a canonical document (${canonicalRows.map((r) => `${renderDomainForReview(r.id)} at line ${r.line}`).join(", ")}). ` +
           "Use the existing document, register this one as descriptive, or propose superseding every canonical row.",
       });
     }
@@ -249,6 +266,8 @@ function planSupersede(snap: ArchitectureIndexSnapshot, b: Record<string, unknow
   }
   const unreadable = badRowRefusal(snap);
   if (unreadable) return unreadable;
+  const blank = snap.rows.filter((r) => r.status === "canonical" && emptyDomain(r.domain));
+  if (blank.length) return ambiguous(root, "empty-domain", blank);
   const unsafe = snap.rows.filter((r) => r.status === "canonical" && unsafeDomain(r.domain));
   if (unsafe.length) return ambiguous(root, unsafe.some((r) => !INTAKE_CHARSET.test(r.domain)) ? "non-ascii-domain" : "hidden-character-domain", unsafe);
   const keys = new Set([next, ...(row ? [row] : [])].map((r) => domainKey(r.domain)));
@@ -469,16 +488,17 @@ export function proposalPayload(op: ProposalOperation, confirmation: Confirmatio
 export function proposalSummary(op: ProposalOperation): string {
   const tail = "Approval records the decision only; it does not edit the index.";
   if (op.action === "register") {
-    const over = op.supersedes.length ? `, superseding ${op.supersedes.join(", ")}` : "";
+    const over = op.supersedes.length ? `, superseding ${op.supersedes.map(renderDomainForReview).join(", ")}` : "";
     return `Architecture authority: ${op.status} for "${renderDomainForReview(op.domain ?? "")}"${over}. Register ${op.path}. ${tail}`;
   }
   const domain = op.domain !== null ? ` ("${renderDomainForReview(op.domain)}")` : "";
-  return `Architecture authority: supersede ${op.supersededRowId ?? "an unregistered document"}${domain} with ${op.supersededBy}. Path ${op.path}. ${tail}`;
+  const from = op.supersededRowId !== null ? renderDomainForReview(op.supersededRowId) : "an unregistered document";
+  return `Architecture authority: supersede ${from}${domain} with ${renderDomainForReview(op.supersededBy ?? "")}. Path ${op.path}. ${tail}`;
 }
 
 /** The facts the supersession dialog shows. */
 export function supersessionFacts(op: ProposalOperation): ArchitectureSupersessionFacts {
-  const facts = (r: AuthorityRowRef) => ({ id: r.id, docPath: r.docPath, line: r.line, docSha256: r.docSha256 });
+  const facts = (r: AuthorityRowRef) => ({ id: renderDomainForReview(r.id), docPath: r.docPath, line: r.line, docSha256: r.docSha256 });
   return {
     action: op.action, domainShown: op.domain === null ? null : renderDomainForReview(op.domain), domainSource: op.domainSource,
     status: op.status, path: op.path, docSha256: op.docSha256, replaced: op.existingAuthority.map(facts),

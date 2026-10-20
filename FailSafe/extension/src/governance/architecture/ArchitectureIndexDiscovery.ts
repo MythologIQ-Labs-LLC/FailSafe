@@ -77,7 +77,8 @@ export type ArchitectureGit = (root: string, args: string[]) => GitOutcome;
 
 const GIT_TIMEOUT_MS = 10_000;
 const GIT_MAX_BUFFER = 64 * 1024 * 1024;
-const MAX_DOC_BYTES = 2 * 1024 * 1024;
+/** Documents up to this size are read and hashed; larger ones are never hashed (shared by discovery, assessment and proposals). */
+export const MAX_DOC_BYTES = 2 * 1024 * 1024;
 
 /** A git runner over a resolver (the trusted one by default; tests inject a failing one). */
 export function makeArchitectureGit(resolve: (cwd: string) => string = trustedGitPath): ArchitectureGit {

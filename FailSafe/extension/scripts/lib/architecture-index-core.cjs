@@ -31,6 +31,8 @@ const STATUSES = ['canonical', 'proposed', 'descriptive', 'superseded', 'histori
 const AUTHORITY = new Set(['canonical', 'proposed']);
 const PATH_FIELDS = ['governance_ref', 'contract', 'verification'];
 const STOP_TOKENS = new Set(['docs', 'md', 'the']);
+/** A markdown table delimiter row: | --- | :--: | ... (leading and trailing pipes required). */
+const DELIMITER = /^\|(\s*:?-{3,}:?\s*\|)+$/;
 const LINK_RE = /\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
 /** The FailSafe-only policy checks a profile turns on or off. */
 const POLICY_CHECKS = ['governanceRegistration', 'competingIndex', 'offRamp', 'legacyPrefixes', 'dualRegistration'];
@@ -198,10 +200,16 @@ function parseRegistry(indexText, profile) {
   const problems = [];
   const rows = [];
   const section = sectionLines(indexText, 'Registry');
-  // Each table line keeps its 1-based line number in the index text (#531 slice 2 provenance).
-  const table = section
-    ? section.lines.map((text, k) => ({ text, line: section.start + 2 + k })).filter((x) => x.text.trim().startsWith('|'))
-    : [];
+  // Each line keeps its 1-based line number in the index text (#531 slice 2 provenance). Lines inside
+  // fenced blocks are examples, not registry rows (review531b fold 7).
+  let fenced = false;
+  const lines = section ? section.lines.map((text, k) => {
+    const fence = /^\s*```/.test(text);
+    const entry = { text, line: section.start + 2 + k, fenced: fenced || fence };
+    if (fence) fenced = !fenced;
+    return entry;
+  }).filter((x) => !x.fenced) : [];
+  const table = lines.filter((x) => x.text.trim().startsWith('|'));
   if (!section || table.length < 3) {
     problems.push({ code: 'missing-section', detail: `${profile.indexPath} has no ## Registry table with rows` });
     return { rows, problems };
@@ -209,7 +217,21 @@ function parseRegistry(indexText, profile) {
   if (splitRow(table[0].text).join('|') !== COLUMNS.join('|')) {
     problems.push({ code: 'bad-row', detail: `registry header must be: ${COLUMNS.join(' | ')}` });
   }
-  table.slice(2).forEach(({ text: line, line: lineNo }, i) => {
+  // review531b R1: the delimiter must be the line right after the header, or the table cannot be read
+  // (a row would otherwise be skipped silently). The detail starts "registry header": the index is invalid.
+  if (!DELIMITER.test(table[1].text.trim()) || table[1].line !== table[0].line + 1) {
+    problems.push({ code: 'bad-row', detail: 'registry header must be followed directly by a | --- | delimiter row' });
+  }
+  // review531b R1: a line of the table block that holds a | but does not start with one is a row FailSafe
+  // cannot read (it could hold a canonical document); it is reported with its line.
+  const headerAt = lines.indexOf(table[0]);
+  for (let k = headerAt + 1; k < lines.length && lines[k].text.trim() !== ''; k += 1) {
+    const { text, line } = lines[k];
+    if (!text.trim().startsWith('|') && text.includes('|')) {
+      problems.push({ code: 'bad-row', detail: `registry line ${line} has a | but does not start with one`, line });
+    }
+  }
+  table.slice(1).filter((x) => !DELIMITER.test(x.text.trim())).forEach(({ text: line, line: lineNo }, i) => {
     const cells = splitRow(line);
     const label = `registry row ${i + 1}`;
     if (cells.length !== COLUMNS.length) {

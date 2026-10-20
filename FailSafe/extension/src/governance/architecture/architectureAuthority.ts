@@ -15,7 +15,7 @@
 
 import * as fs from "fs";
 import {
-  defaultArchitectureGit, resolveInsideWorkspace, type ArchitectureGit, type ArchitectureIndexSnapshot,
+  defaultArchitectureGit, MAX_DOC_BYTES, resolveInsideWorkspace, type ArchitectureGit, type ArchitectureIndexSnapshot,
   type ArchitectureIndexState, type SnapshotRow,
 } from "./ArchitectureIndexDiscovery";
 import { sha256, sourceShaOf } from "./ArchitectureIndexBootstrap";
@@ -83,7 +83,6 @@ export interface AuthorityContext {
   git?: ArchitectureGit;
 }
 
-const MAX_DOC_BYTES = 2 * 1024 * 1024;
 const KIND_ORDER: AuthorityFindingKind[] = [
   "conflicting-canonical", "canonical-missing", "dangling-supersession", "domain-hidden-characters", "domain-non-ascii",
   "unregistered-normative",

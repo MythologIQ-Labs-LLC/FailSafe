@@ -164,7 +164,7 @@ function bootstrapMessage(status, data) {
   return [data.error || `Bootstrap failed (${status}).`, true];
 }
 
-const rowText = (r) => `${r.id} (line ${r.line}${r.domain !== undefined ? `, "${reviewDomain(r.domain)}"` : ''})`;
+const rowText = (r) => `${reviewDomain(r.id)} (line ${r.line}${r.domain !== undefined ? `, "${reviewDomain(r.domain)}"` : ''})`;
 
 function proposeMessage(status, data) {
   if (status === 202) {
@@ -192,8 +192,12 @@ function proposeMessage(status, data) {
   if (data.conflict === 'ambiguous-authority') {
     const rows = (data.rows || []).map(rowText).join('; ');
     if (data.reason === 'bad-row') {
-      return [`Registry rows with the wrong number of cells at ${(data.lines || []).map((l) => `line ${l}`).join(', ')}: FailSafe cannot read them, so ` +
+      return [`Registry rows FailSafe cannot read (the wrong number of cells, or no leading |) at ${(data.lines || []).map((l) => `line ${l}`).join(', ')}, so ` +
         'canonical registrations and supersessions are refused until you fix those rows in the index. Nothing was recorded.', true];
+    }
+    if (data.reason === 'empty-domain') {
+      return [`Canonical rows with no domain: ${rows}. Give each a domain in the index, or change its status from canonical; until then ` +
+        'canonical registrations and supersessions are refused. Nothing was recorded.', true];
     }
     if (data.reason === 'hidden-character-domain') {
       return [`Canonical rows with hidden characters in their domain: ${rows}. Rename each domain in the index without them, or change its status ` +
@@ -339,14 +343,15 @@ export class ArchitectureIndexRenderer {
     if (f.kind === 'canonical-missing') reason = `The canonical document is ${DOC_STATE_TEXT[f.reason] || f.reason}.`;
     if (f.kind === 'dangling-supersession') reason = `${(f.rows[0] || {}).id || 'A row'} ${DANGLING_TEXT[f.reason] || f.reason}${f.ref ? ` (${f.ref})` : ''}.`;
     // Each code point once: add only those the detail does not already name.
-    const unnamed = Array.isArray(f.codePoints) ? f.codePoints.filter((cp) => !reason.includes(cp)) : [];
+    const named = new Set(reason.match(/U\+[0-9A-F]{4,6}/g) || []);
+    const unnamed = Array.isArray(f.codePoints) ? f.codePoints.filter((cp) => !named.has(cp)) : [];
     if (unnamed.length) reason = `${reason} Code points: ${unnamed.join(', ')}.`;
     card.appendChild(el('p', null, reason));
     for (const r of f.rows || []) {
       const row = el('div', 'cc-arch-row cc-arch-finding-row');
       row.dataset.line = String(r.line);
       row.dataset.sha256 = r.docSha256 || '';
-      row.appendChild(el('span', 'cc-arch-id', r.id));
+      row.appendChild(el('span', 'cc-arch-id', reviewDomain(r.id)));
       row.appendChild(el('span', 'cc-arch-path', r.docPath || '(no safe link)'));
       row.appendChild(el('span', null, `line ${r.line}`));
       row.appendChild(el('span', 'cc-arch-hash', `sha256 ${short(r.docSha256)}`));
