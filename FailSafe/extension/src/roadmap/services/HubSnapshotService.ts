@@ -12,6 +12,7 @@ import {
   verifyCheckpointChain as ckptVerifyChain,
   getCheckpointSummary as ckptGetSummary,
   buildCheckpointRecord as ckptBuildRecord,
+  verifyCheckpointRecord as ckptVerifyRecord,
   persistCheckpoint as ckptPersist,
   inferPhaseKeyFromPlan as inferPhaseKeyFromPlanFn,
   CHECKPOINT_INIT_SQL,
@@ -28,7 +29,7 @@ import type { AgentHealthIndicator } from "../../sentinel/AgentHealthIndicator";
 import type { IdeActivityTracker } from "./IdeActivityTracker";
 import type { WorkspaceMutationBus, MutationDisposable } from "../../shared/WorkspaceMutationBus";
 import { assembleServiceHubPayload, type HubPayloadSource } from "./hub-payload-assembler";
-import { createHubRevertDeps } from "./hub-revert-deps";
+import { createHubRevertDeps, revertCheckpointVerdict } from "./hub-revert-deps";
 import { projectResolution } from "../../qorelogic/ledger/AuditResolutionProjector";
 import { readWorkspaceHead } from "./workspaceHead";
 export type UnattributedFileChange = { eventId: string; timestamp: string; type: string; artifactPath?: string; decision?: string; };
@@ -69,11 +70,13 @@ export class HubSnapshotService {
       workspaceRoot: deps.workspaceRoot,
       gitService: deps.gitResetService,
       getCheckpoint: (id) => this.getCheckpointById(id),
-      recordCheckpoint: (request) => this.recordCheckpoint({
+      verifyCheckpoint: (id) => ckptVerifyRecord(this.checkpointDb, this.checkpointMemory, id),
+      recordCheckpoint: (request, steps) => this.recordCheckpoint({
         checkpointType: "governance.revert", actor: request.actor, phase: "revert",
-        status: "sealed", policyVerdict: "PASS", evidenceRefs: [],
+        status: "sealed", policyVerdict: revertCheckpointVerdict(steps), evidenceRefs: [],
         payload: { targetCheckpointId: request.targetCheckpoint.checkpointId,
-          targetGitHash: request.targetCheckpoint.gitHash, reason: request.reason },
+          targetGitHash: request.targetCheckpoint.gitHash, reason: request.reason,
+          steps: steps.map((s) => ({ name: s.name, status: s.status })) },
       }),
     }));
     this.subscribeToChainValidityMutations();

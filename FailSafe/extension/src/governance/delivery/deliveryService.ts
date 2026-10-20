@@ -11,6 +11,9 @@
  * - assessIntentDelivery: re-checks every edge, reads ledger evidence and applies assessDelivery.
  *
  * Read-only apart from writeDeliveryEdge; nothing here opens a network connection.
+ *
+ * plan-532c: every link records who made it (`via`: `workspace-delivery` or `governed-commit`,
+ * LD6); the view carries the accepted intent's CREATED entry and the intent decision (LD2/LD5).
  */
 
 import * as fs from 'fs';
@@ -204,6 +207,17 @@ function prepareCommit(ctx: DeliveryContext, target: string): ComputedEdge | Ref
   };
 }
 
+/** How an edge origin reads in a dialog and in the view. */
+export function originLabel(origin: { via?: unknown; action?: unknown }): string {
+  if (origin.via === 'governed-commit') return `FailSafe ${typeof origin.action === 'string' ? origin.action : 'governed'} (governed commit)`;
+  if (origin.via === 'workspace-delivery') return 'Workspace > Delivery (your pick)';
+  return 'not recorded';
+}
+
+const originOf = (p: Record<string, unknown>) => ({
+  via: typeof p.via === 'string' ? p.via : null, action: typeof p.action === 'string' ? p.action : null,
+});
+
 function edgeFacts(edge: IntentEdge): string[] {
   return edge.edge === 'implements'
     ? [`Document: ${String(edge.provenance.docPath ?? '')} (registry row ${edge.target})`, `Linked at: ${edge.linkedAt}`]
@@ -217,7 +231,6 @@ function edgeFacts(edge: IntentEdge): string[] {
 export async function prepareDeliveryEdge(
   ctx: DeliveryContext, action: EdgeAction, req: DeliveryRequest, origin: EdgeOrigin = { via: 'workspace-delivery' },
 ): Promise<PreparedEdge> {
-  void origin; // RED STUB
   const record = await writableRecord(ctx, req.intentId);
   if ('ok' in record) return record;
   const intent = { id: record.intent.id, purpose: record.intent.purpose };
@@ -229,7 +242,11 @@ export async function prepareDeliveryEdge(
   if (present) return refuse(409, 'That link is already recorded for this intent.');
   const computed = req.edge === 'implements' ? prepareImplements(ctx, req.target) : prepareCommit(ctx, req.target);
   if ('ok' in computed) return computed;
-  return { ok: true, action, intent, edge: req.edge, target: req.target, ...computed };
+  return {
+    ok: true, action, intent, edge: req.edge, target: req.target,
+    provenance: { ...computed.provenance, ...origin },
+    facts: [...computed.facts, `Made by: ${originLabel(origin)}`],
+  };
 }
 
 /** Append the LINKED / UNLINKED entry for a prepared request (after the operator confirmed). */
@@ -244,7 +261,7 @@ function checkArchitectureEdge(ctx: DeliveryContext, snap: ArchitectureIndexSnap
   const p = e.provenance;
   const base = {
     target: e.target, docPath: String(p.docPath ?? ''), docSha256: String(p.docSha256 ?? ''),
-    sourceSha: typeof p.sourceSha === 'string' ? p.sourceSha : null,
+    sourceSha: typeof p.sourceSha === 'string' ? p.sourceSha : null, ...originOf(p),
   };
   if (!snap.rows.some((r) => r.id === e.target && r.docPath === base.docPath)) {
     return { ...base, status: 'missing', reason: 'the row is no longer registered with that path' };
@@ -273,7 +290,10 @@ function checkCode(ctx: DeliveryContext, edges: IntentEdge[]): EdgeChecks<CodeEd
   }
   const checks: CodeEdgeCheck[] = [];
   for (const e of edges) {
-    const base = { sha: e.target, tree: String(e.provenance.tree ?? ''), branch: typeof e.provenance.branch === 'string' ? e.provenance.branch : null };
+    const base = {
+      sha: e.target, tree: String(e.provenance.tree ?? ''), branch: typeof e.provenance.branch === 'string' ? e.provenance.branch : null,
+      ...originOf(e.provenance),
+    };
     // resolveCommit re-validates the target as a full commit name before git sees it.
     const resolved = resolveCommit(ctx.workspaceRoot, e.target, ctx.git);
     if (resolved.state === 'unavailable') return { state: 'unavailable', reason: `Git cannot read this repository: ${resolved.detail}` };
@@ -297,21 +317,21 @@ export async function assessIntentDelivery(ctx: DeliveryContext, intentId: strin
   if (!record) return { integrity: 'valid', found: false };
   const implementsEdges = record.edges.filter((e) => e.edge === 'implements');
   const commitEdges = record.edges.filter((e) => e.edge === 'committed-under');
-  const linkedShas = commitEdges.map((e) => e.target).filter((t) => COMMIT_NAME_RE.test(t));
   const assessment = assessDelivery({
     intentId,
     issue: { provenance: createdProvenance(record), createdEntryHash: record.created?.entryHash ?? null },
     architecture: checkArchitecture(ctx, implementsEdges),
     code: checkCode(ctx, commitEdges),
-    governance: await findGovernanceEvidence(ctx.ledger, intentId, linkedShas),
-    decision: null, // RED STUB
+    governance: await findGovernanceEvidence(ctx.ledger, intentId),
+    decision: record.decision,
   });
   const i = record.intent;
   return {
     integrity: 'valid', found: true,
     intent: {
       id: i.id, purpose: i.purpose, status: i.status, active: record.active, sealed: record.sealed,
-      createdBy: null, createdAt: null, createdEntryHash: null, decision: null, // RED STUB
+      createdBy: record.created?.actor ?? null, createdAt: record.created?.timestamp ?? null,
+      createdEntryHash: record.created?.entryHash ?? null, decision: record.decision,
     },
     linkable: record.active && !record.sealed, edges: record.edges, assessment,
   };

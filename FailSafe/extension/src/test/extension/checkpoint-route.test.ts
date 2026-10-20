@@ -335,6 +335,7 @@ suite('CheckpointRoute (FX list/detail + /api/actions/rollback)', () => {
 suite('CheckpointRoute rollback on a real repository (#532 B284)', () => {
   let root = '';
   let harness: RouteHarness | null = null;
+  let A0 = '';
   let A = '';
   let B = '';
   let SIDE = '';
@@ -351,6 +352,10 @@ suite('CheckpointRoute rollback on a real repository (#532 B284)', () => {
     git('init', '-q', '-b', 'main');
     git('config', 'user.name', 'FailSafe-Test');
     git('config', 'user.email', 'test@failsafe.invalid');
+    write('root.txt', 'root\n');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'root');
+    A0 = git('rev-parse', 'HEAD');
     write('f.txt', 'one\n');
     write('h.txt', 'same in both\n');
     git('add', '-A');
@@ -392,7 +397,8 @@ suite('CheckpointRoute rollback on a real repository (#532 B284)', () => {
       checkpointType: 'monitoring.resumed', actor: 'system', phase: 'plan', status: 'validated', policyVerdict: 'PASS', evidenceRefs: [], payload: {},
     }, new Date().toISOString(), 'run-1', null, memory, opts.target ?? A);
     persistCheckpoint(rec, null, memory);
-    if (opts.tamper) memory[0] = { ...memory[0], gitHash: SIDE };
+    // review N2: tamper to an ANCESTOR of HEAD, so only the hash check can refuse it.
+    if (opts.tamper) memory[0] = { ...memory[0], gitHash: A0 };
     const resets: string[][] = [];
     const runner: CommandRunner = async (_cmd, args) => {
       if (args[0] === 'reset') { opts.beforeReset?.(); resets.push(args); }
@@ -421,6 +427,28 @@ suite('CheckpointRoute rollback on a real repository (#532 B284)', () => {
     const res = await harness.request({ method: 'POST', path: '/api/actions/rollback', body: { checkpointId: rec.checkpointId, reason: 'test' } });
     return { res, shown, resets };
   }
+
+  test('review N2: the tampered row names an ancestor of HEAD, so the refusal comes from the hash check alone', () => {
+    assert.equal(spawnSync('git', ['merge-base', '--is-ancestor', A0, B], { cwd: root }).status, 0, 'A0 is an ancestor of HEAD');
+  });
+
+  test('review N1: a tag with the same name as the branch does not make the post-reset check fail', async () => {
+    git('tag', 'main', A0);
+    const r = await rollback();
+    assert.equal(r.res.status, 200, JSON.stringify(r.res.body));
+    assert.equal(r.res.body.ok, true);
+    assert.equal(git('rev-parse', 'refs/heads/main'), A);
+  });
+
+  test('review N1: with core.logAllRefUpdates=false and no reflog, the rollback lands and says the reflog was unavailable', async () => {
+    git('config', 'core.logAllRefUpdates', 'false');
+    fs.rmSync(path.join(root, '.git', 'logs'), { recursive: true, force: true });
+    const r = await rollback();
+    assert.equal(r.res.status, 200, JSON.stringify(r.res.body));
+    assert.equal(r.res.body.ok, true);
+    assert.match(String(r.res.body.result.warning), /reflog has no entry/);
+    assert.equal(git('rev-parse', 'HEAD'), A);
+  });
 
   test('declined: 409, no reset, HEAD unchanged', async () => {
     const r = await rollback({ confirm: 'declined' });
@@ -501,6 +529,6 @@ suite('CheckpointRoute rollback on a real repository (#532 B284)', () => {
     assert.equal(r.res.body.ok, false, JSON.stringify(r.res.body));
     assert.equal(r.res.body.result.previousHead, B);
     assert.match(String(r.res.body.result.error), /reflog/);
-    assert.equal(git('rev-parse', 'main'), B, 'main was not moved');
+    assert.equal(git('rev-parse', 'refs/heads/main'), B, 'main was not moved');
   });
 });

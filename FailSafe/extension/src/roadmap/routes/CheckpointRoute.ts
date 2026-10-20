@@ -48,6 +48,10 @@ export function setupCheckpointRoutes(
   // API: Rollback to a checkpoint. #514: order is body validation (400),
   // checkpoint lookup (404), revert availability (503), then a modal VS Code
   // confirmation; the reason sealed is exactly the sanitized reason shown.
+  // #532 (plan-532c LD8a): before the dialog the revert service checks the
+  // checkpoint (a commit, an untampered row, a clean tree, an ancestor of HEAD)
+  // and computes what the dialog shows; the reset (`git reset --keep`) runs
+  // only while the workspace still matches it.
   app.post(
     "/api/actions/rollback",
     async (req: Request, res: Response) => {
@@ -73,8 +77,13 @@ export function setupCheckpointRoutes(
           .json({ ok: false, error: "revert service unavailable" });
         return;
       }
+      const prepared = await deps.revertService.prepare(checkpointId);
+      if (!prepared.ok) {
+        res.status(prepared.status).json({ ok: false, error: prepared.error });
+        return;
+      }
       if (!(await requireOperatorConfirmation(
-        deps.confirmOperatorAction, rollbackRequest(checkpointId, checkpoint, reason), res,
+        deps.confirmOperatorAction, rollbackRequest(checkpointId, checkpoint, reason, prepared.plan), res,
       ))) {
         return;
       }
@@ -84,9 +93,10 @@ export function setupCheckpointRoutes(
           reason,
           actor,
         };
-        const result = await deps.revertService.revert(request);
+        const result = await deps.revertService.revert(request, prepared.plan);
         deps.broadcast({ type: "hub.refresh" });
-        res.json({ ok: result.success, result });
+        res.status(!result.success && result.status ? result.status : 200)
+          .json({ ok: result.success, result, ...(result.success ? {} : { error: result.error }) });
       } catch (error) {
         res.status(500).json({ ok: false, error: String(error) });
       }

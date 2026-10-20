@@ -225,6 +225,13 @@ suite('commitPushOpenPr — commit binding (#532 B286)', () => {
     assert.match(parented.warning ?? '', /parent/);
   });
 
+  test('review N5: a runner that could not start git (exit 1 with an error) is not an unborn branch; the warning says it could not read HEAD', async () => {
+    const spawnError = { code: 1, stdout: '', stderr: 'Error: spawn git ENOENT' };
+    const r = await commitPushOpenPr(REQ, { git: bindGit({ pre: spawnError, log: `${TREE}\0\0${MSG}\n` }) });
+    assert.equal(r.commitSha, undefined, 'a root commit is not bound when HEAD could not be read');
+    assert.match(r.warning ?? '', /could not read HEAD before the commit/);
+  });
+
   test('a pre-HEAD git cannot read leaves commitSha unset', async () => {
     const r = await commitPushOpenPr(REQ, { git: bindGit({ pre: { code: 128, stdout: '', stderr: 'fatal' } }) });
     assert.equal(r.step, 'committed');

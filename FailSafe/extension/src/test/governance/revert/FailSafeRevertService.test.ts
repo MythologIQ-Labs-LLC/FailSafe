@@ -5,7 +5,8 @@ import * as path from "path";
 import { afterEach, describe, it } from "mocha";
 import { FailSafeRevertService, RevertDeps } from "../../../governance/revert/FailSafeRevertService";
 import { GitResetService, CommandRunner } from "../../../governance/revert/GitResetService";
-import { CheckpointRef, RevertRequest, RollbackPlan } from "../../../governance/revert/types";
+import { CheckpointRef, RevertRequest, RevertStep, RollbackPlan } from "../../../governance/revert/types";
+import { revertCheckpointVerdict } from "../../../roadmap/services/hub-revert-deps";
 
 const tempDirs: string[] = [];
 
@@ -68,7 +69,6 @@ function scriptedRunner(over: (args: string[], n: number) => Resp | undefined = 
     if (j === `reset --keep ${TARGET}`) return { code: 0, stdout: "", stderr: "" };
     if (j === "rev-parse --verify --quiet HEAD@{1}") return { code: 0, stdout: `${HEAD}\n`, stderr: "" };
     if (j === "rev-parse --verify --quiet HEAD") return { code: 0, stdout: `${TARGET}\n`, stderr: "" };
-    if (j === "symbolic-ref --quiet --short HEAD") return { code: 0, stdout: "main\n", stderr: "" };
     return { code: 0, stdout: "", stderr: "" };
   };
 }
@@ -101,13 +101,8 @@ describe("FailSafeRevertService", () => {
     const svc = new FailSafeRevertService(makeDeps(ws, { gitService: new GitResetService(scriptedRunner(undefined, calls)) }));
     const result = await svc.revert(request, await planFor(svc));
     assert.equal(result.success, true, JSON.stringify(result));
-    assert.equal(result.steps.length, 3);
-    assert.equal(result.steps[0]!.name, "git_reset");
-    assert.equal(result.steps[0]!.status, "success");
-    assert.equal(result.steps[1]!.name, "rag_purge");
-    assert.equal(result.steps[1]!.status, "success");
-    assert.equal(result.steps[2]!.name, "ledger_seal");
-    assert.equal(result.steps[2]!.status, "success");
+    assert.deepEqual(result.steps.map((s) => [s.name, s.status]),
+      [["git_reset", "success"], ["verify_reset", "success"], ["rag_purge", "success"], ["ledger_seal", "success"]]);
     assert.equal(result.revertCheckpointId, "ckpt-revert-1");
     // #532 B284: the reset is exactly `reset --keep <sha>`; --hard is never run.
     const resets = calls.filter((c) => c[0] === "reset");
@@ -163,8 +158,8 @@ describe("FailSafeRevertService", () => {
       },
     }));
     const result = await svc.revert(request, await planFor(svc));
-    assert.equal(result.steps[2]!.status, "failed");
-    assert.equal(result.steps[2]!.detail, "ledger_seal_failed_emergency_logged");
+    assert.equal(result.steps[3]!.status, "failed");
+    assert.equal(result.steps[3]!.detail, "ledger_seal_failed_emergency_logged");
 
     const logPath = path.join(ws, ".failsafe", "revert-emergency.log");
     assert.equal(fs.existsSync(logPath), true);
@@ -184,8 +179,9 @@ describe("FailSafeRevertService", () => {
     const result = await svc.revert(request, await planFor(svc));
     assert.equal(result.success, false);
     assert.equal(result.steps[0]!.status, "success");
-    assert.equal(result.steps[1]!.status, "failed");
-    assert.equal(result.steps[2]!.status, "success");
+    assert.equal(result.steps[1]!.status, "success", "verify_reset");
+    assert.equal(result.steps[2]!.status, "failed", "rag_purge");
+    assert.equal(result.steps[3]!.status, "success", "ledger_seal");
   });
 
   // #532 (plan-532c LD8a, B284): prepare refusals, the plan, and the guards around the reset.
@@ -254,15 +250,69 @@ describe("FailSafeRevertService", () => {
       const moved = "d".repeat(40);
       const cases: Array<[string, (a: string[]) => Resp | undefined, string]> = [
         ["HEAD moved", (a) => (a.join(" ") === "rev-parse --verify --quiet HEAD@{1}" ? { code: 0, stdout: `${moved}\n`, stderr: "" } : undefined), moved],
-        ["branch switched", (a) => (a.join(" ") === "symbolic-ref --quiet --short HEAD" ? { code: 0, stdout: "other\n", stderr: "" } : undefined), HEAD],
+        ["branch switched", (a) => (resetDone && a.join(" ") === "branch --show-current" ? { code: 0, stdout: "other\n", stderr: "" } : undefined), HEAD],
       ];
+      let resetDone = false;
       for (const [name, over, previous] of cases) {
-        const svc = new FailSafeRevertService(makeDeps(ws, { gitService: new GitResetService(scriptedRunner(over)) }));
+        resetDone = false;
+        const track = (a: string[]) => { if (a[0] === "reset") resetDone = true; return over(a); };
+        let purged = false;
+        const recorded: RevertStep[][] = [];
+        const svc = new FailSafeRevertService(makeDeps(ws, {
+          gitService: new GitResetService(scriptedRunner(track)),
+          purgeRagAfter: () => { purged = true; return 0; },
+          recordRevertCheckpoint: (_r, steps) => { recorded.push(steps.map((s) => ({ ...s }))); return "revert-x"; },
+        }));
         const result = await svc.revert(request, plan);
         assert.equal(result.success, false, name);
         assert.equal(result.previousHead, previous, name);
         assert.match(result.error ?? "", /reflog/, name);
+        // review N3: the RAG purge does not run as if it succeeded, and the revert checkpoint records the failed check.
+        assert.equal(purged, false, `${name}: no RAG purge`);
+        assert.deepEqual(recorded[0]!.map((s) => [s.name, s.status]), [["git_reset", "success"], ["verify_reset", "failed"], ["rag_purge", "skipped"]], name);
+        assert.equal(revertCheckpointVerdict(recorded[0]!), "FAIL");
       }
+    });
+
+    it("review N3: afterReset throwing after a successful reset is recorded as a reset that could not be verified", async () => {
+      const ws = makeTempWorkspace();
+      const plan = await planFor(new FailSafeRevertService(makeDeps(ws)));
+      let resetDone = false;
+      let purged = false;
+      const recorded: RevertStep[][] = [];
+      const svc = new FailSafeRevertService(makeDeps(ws, {
+        gitService: new GitResetService(scriptedRunner((a) => {
+          if (a[0] === "reset") resetDone = true;
+          return resetDone && a.join(" ") === "branch --show-current" ? { code: 128, stdout: "", stderr: "fatal: index locked" } : undefined;
+        })),
+        purgeRagAfter: () => { purged = true; return 0; },
+        recordRevertCheckpoint: (_r, steps) => { recorded.push(steps.map((s) => ({ ...s }))); return "revert-y"; },
+      }));
+      const result = await svc.revert(request, plan);
+      assert.equal(result.success, false);
+      assert.equal(result.status, 500);
+      assert.match(result.error ?? "", /reset ran, but FailSafe could not verify it/);
+      assert.equal(result.revertCheckpointId, "revert-y", "the reset is recorded");
+      assert.equal(purged, false);
+      assert.deepEqual(recorded[0]!.map((s) => [s.name, s.status]), [["git_reset", "success"], ["verify_reset", "failed"], ["rag_purge", "skipped"]]);
+      assert.match(recorded[0]![1]!.detail, /the reset ran but could not be verified: git branch failed/);
+    });
+
+    it("review N1: with no reflog entry only HEAD and the branch are compared, and the result says the reflog was unavailable", async () => {
+      const ws = makeTempWorkspace();
+      const plan = await planFor(new FailSafeRevertService(makeDeps(ws)));
+      const svc = new FailSafeRevertService(makeDeps(ws, {
+        gitService: new GitResetService(scriptedRunner((a) => (a.join(" ") === "rev-parse --verify --quiet HEAD@{1}" ? { code: 1, stdout: "", stderr: "" } : undefined))),
+      }));
+      const result = await svc.revert(request, plan);
+      assert.equal(result.success, true, JSON.stringify(result));
+      assert.match(result.warning ?? "", /reflog has no entry/);
+      assert.equal(revertCheckpointVerdict(result.steps), "PASS");
+    });
+
+    it("revertCheckpointVerdict passes only when every step succeeded or was skipped", () => {
+      assert.equal(revertCheckpointVerdict([{ name: "git_reset", status: "success", detail: "" }, { name: "rag_purge", status: "skipped", detail: "" }]), "PASS");
+      assert.equal(revertCheckpointVerdict([{ name: "git_reset", status: "success", detail: "" }, { name: "verify_reset", status: "failed", detail: "" }]), "FAIL");
     });
   });
 });

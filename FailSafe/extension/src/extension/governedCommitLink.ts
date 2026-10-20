@@ -12,8 +12,11 @@
  */
 
 import type { ArchitectureGit } from '../governance/architecture/ArchitectureIndexDiscovery';
-import type { DeliveryContext, DeliveryIntents } from '../governance/delivery/deliveryService';
-import type { ConfirmOperatorAction } from './operatorConfirmation';
+import { changedFiles, COMMIT_NAME_RE } from '../governance/delivery/deliveryGit';
+import {
+  prepareDeliveryEdge, writeDeliveryEdge, type DeliveryContext, type DeliveryIntents,
+} from '../governance/delivery/deliveryService';
+import { deliveryLinkRequest, type ConfirmOperatorAction } from './operatorConfirmation';
 import type { GovernedCommitLinkFn } from './governedCommitFlow';
 
 export type GovernedLinkOutcome =
@@ -33,11 +36,44 @@ export interface GovernedLinkResult {
   detail: string;
 }
 
+const norm = (p: string): string => p.replace(/\\/g, '/').replace(/^\.\//, '');
+
+/** Files of the commit that equal a requested path or lie under a requested directory. */
+function withinRequested(files: string[], requested: string[]): number {
+  const req = requested.map((r) => norm(r).replace(/\/+$/, '')).filter(Boolean);
+  return files.filter((f) => { const n = norm(f); return req.some((r) => n === r || n.startsWith(`${r}/`)); }).length;
+}
+
+/** "Files in this commit: N; within the paths FailSafe staged: M" (and the already-staged line). */
+function fileFacts(ctx: DeliveryContext, sha: string, requested: string[]): string[] {
+  const changed = changedFiles(ctx.workspaceRoot, sha, ctx.git);
+  if (!changed) return ['Files in this commit: unknown (git could not list them)'];
+  const n = changed.files.length;
+  const m = withinRequested(changed.files, requested);
+  const facts = [`Files in this commit: ${n}${changed.truncated ? '+' : ''}; within the paths FailSafe staged: ${m}`];
+  if (n > m) facts.push(`${n - m} file(s) outside those paths were already staged before FailSafe committed and are included.`);
+  return facts;
+}
+
 export async function offerCommittedUnderLink(
   ctx: DeliveryContext, confirm: ConfirmOperatorAction | undefined, req: GovernedLinkRequest,
 ): Promise<GovernedLinkResult> {
-  void ctx; void confirm; void req; // RED STUB
-  return { outcome: 'failed', detail: 'not implemented' };
+  if (!req.commitSha || !COMMIT_NAME_RE.test(req.commitSha)) {
+    return { outcome: 'no-commit', detail: 'the commit was not bound to this run, so it is not offered for linking' };
+  }
+  const active = await ctx.intents.getActiveIntent();
+  if (!active || active.status === 'SEALED') return { outcome: 'no-active-intent', detail: 'there is no active intent to link the commit to' };
+  const prepared = await prepareDeliveryEdge(ctx, 'link', { intentId: active.id, edge: 'committed-under', target: req.commitSha },
+    { via: 'governed-commit', action: req.action });
+  if (!prepared.ok) return { outcome: 'refused', detail: prepared.error };
+  if (!confirm) return { outcome: 'unwired', detail: 'operator confirmation is not available; nothing was recorded' };
+  const facts = [...prepared.facts, ...fileFacts(ctx, req.commitSha, req.requestedPaths)];
+  const answer = await confirm(deliveryLinkRequest('link', 'committed-under', prepared.intent, facts, 'command'));
+  if (answer !== 'approved') return { outcome: answer, detail: 'not confirmed in VS Code; nothing was recorded' };
+  const written = await writeDeliveryEdge(ctx, prepared, 'user');
+  return written.ok
+    ? { outcome: 'linked', detail: `${req.commitSha} linked to "${prepared.intent.purpose}"` }
+    : { outcome: 'refused', detail: `nothing was recorded (${written.reason})` };
 }
 
 export interface GovernedCommitLinkerDeps {
@@ -53,6 +89,18 @@ export interface GovernedCommitLinkerDeps {
 
 /** The `linkCommit` callback runGovernedCommitFlow calls after a bound commit. */
 export function governedCommitLinker(deps: GovernedCommitLinkerDeps): GovernedCommitLinkFn {
-  void deps; // RED STUB
-  return async () => undefined;
+  return async (result, run) => {
+    const intents = deps.getIntents();
+    if (!intents) {
+      deps.log(`[${run.action}] commit ${result.commitSha} not linked: the intent service is not available`);
+      return;
+    }
+    const ctx: DeliveryContext = {
+      workspaceRoot: deps.workspaceRoot, intents, ledger: deps.getLedger(), git: deps.git, indexPathSetting: deps.getIndexPathSetting?.(),
+    };
+    const out = await offerCommittedUnderLink(ctx, deps.confirm, { commitSha: result.commitSha, action: run.action, requestedPaths: run.paths });
+    deps.log(out.outcome === 'linked'
+      ? `[${run.action}] linked: ${out.detail}`
+      : `[${run.action}] commit ${result.commitSha} not linked (${out.outcome}): ${out.detail}`);
+  };
 }

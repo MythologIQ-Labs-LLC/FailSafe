@@ -35,6 +35,10 @@ export class GitResetService {
       this.run(["rev-parse", "HEAD"], cwd),
       this.run(["branch", "--show-current"], cwd),
     ]);
+    // #532 (plan-532c LD8a): fail closed; empty output from a failed git is not a clean tree.
+    for (const [name, out] of [["status", porcelain], ["rev-parse", head], ["branch", branch]] as const) {
+      if (out.code !== 0) throw new Error(`git ${name} failed: ${out.stderr.trim() || `exit ${out.code}`}`);
+    }
     const lines = porcelain.stdout.split("\n").filter((l) => l.length > 0);
     const uncommittedFiles = lines.map((line) => line.slice(3));
     return {
@@ -87,38 +91,64 @@ export class GitResetService {
 
   /** #532 (plan-532c LD8a): `git reset --keep <target>`; never overwrites a changed file the reset would touch. */
   async resetKeep(cwd: string, targetHash: string): Promise<{ success: boolean; stdout: string; stderr: string }> {
-    void cwd; void targetHash; // RED STUB
-    return { success: false, stdout: "", stderr: "not implemented" };
+    assertFullName(targetHash);
+    const result = await this.run(["reset", "--keep", targetHash], cwd);
+    return { success: result.code === 0, stdout: result.stdout, stderr: result.stderr };
   }
 
   /** `merge-base --is-ancestor <target> HEAD`: yes (0), no (1), or unavailable. */
   async isAncestor(cwd: string, targetHash: string): Promise<"yes" | "no" | "unavailable"> {
-    void cwd; void targetHash; // RED STUB
-    return "yes";
+    assertFullName(targetHash);
+    const result = await this.run(["merge-base", "--is-ancestor", targetHash, "HEAD"], cwd);
+    return result.code === 0 ? "yes" : result.code === 1 ? "no" : "unavailable";
   }
 
   /** `rev-list --count <target>..HEAD`, or null when git cannot answer. */
   async countLeaving(cwd: string, targetHash: string): Promise<number | null> {
-    void cwd; void targetHash; // RED STUB
-    return 0;
+    assertFullName(targetHash);
+    const result = await this.run(["rev-list", "--count", `${targetHash}..HEAD`], cwd);
+    const n = Number(result.stdout.trim());
+    return result.code === 0 && result.stdout.trim() !== "" && Number.isInteger(n) && n >= 0 ? n : null;
   }
 
   /** Subject and committer date of a commit (`log -1 --format=%s%x00%cI`), or null. */
   async describeCommit(cwd: string, targetHash: string): Promise<{ subject: string; date: string } | null> {
-    void cwd; void targetHash; // RED STUB
-    return { subject: "", date: "" };
+    assertFullName(targetHash);
+    const result = await this.run(["log", "-1", "--format=%s%x00%cI", targetHash], cwd);
+    if (result.code !== 0) return null;
+    const [subject = "", date = ""] = result.stdout.replace(/\r?\n$/, "").split("\u0000");
+    return { subject, date };
   }
 
   /** `rev-parse --show-toplevel`, or null. */
   async workTree(cwd: string): Promise<string | null> {
-    void cwd; // RED STUB
-    return cwd;
+    const result = await this.run(["rev-parse", "--show-toplevel"], cwd);
+    const top = result.stdout.trim();
+    return result.code === 0 && top ? top : null;
   }
 
-  /** After a reset: HEAD@{1}, the current branch (null when detached) and HEAD. Unreadable values are null. */
-  async afterReset(cwd: string): Promise<{ previousHead: string | null; branch: string | null; head: string | null }> {
-    void cwd; // RED STUB
-    return { previousHead: null, branch: null, head: null };
+  /**
+   * After a reset: HEAD@{1} (null when the reflog has no such entry, for example with
+   * core.logAllRefUpdates=false), the current branch read the same way the plan reads it
+   * (`branch --show-current`; null when detached) and HEAD. Throws when git cannot answer.
+   */
+  async afterReset(cwd: string): Promise<{ previousHead: string | null; branch: string | null; head: string }> {
+    const [previous, branch, head] = await Promise.all([
+      this.run(["rev-parse", "--verify", "--quiet", "HEAD@{1}"], cwd),
+      this.run(["branch", "--show-current"], cwd),
+      this.run(["rev-parse", "--verify", "--quiet", "HEAD"], cwd),
+    ]);
+    if (branch.code !== 0) throw new Error(`git branch failed: ${branch.stderr.trim() || `exit ${branch.code}`}`);
+    if (head.code !== 0 || !GIT_HASH_RE.test(head.stdout.trim())) throw new Error("git could not read HEAD after the reset");
+    const reflogMissing = previous.code === 1 && !previous.stderr.trim();
+    if (!reflogMissing && (previous.code !== 0 || !GIT_HASH_RE.test(previous.stdout.trim()))) {
+      throw new Error(`git could not read HEAD@{1}: ${previous.stderr.trim() || `exit ${previous.code}`}`);
+    }
+    return {
+      previousHead: reflogMissing ? null : previous.stdout.trim(),
+      branch: branch.stdout.trim() || null,
+      head: head.stdout.trim(),
+    };
   }
 
   private run(
@@ -126,6 +156,12 @@ export class GitResetService {
     cwd: string,
   ): Promise<{ code: number; stdout: string; stderr: string }> {
     return this.runner("git", args, cwd);
+  }
+}
+
+function assertFullName(hash: string): void {
+  if (!GIT_HASH_RE.test(hash)) {
+    throw new Error("Invalid git hash format: expected 40 or 64 hex chars");
   }
 }
 

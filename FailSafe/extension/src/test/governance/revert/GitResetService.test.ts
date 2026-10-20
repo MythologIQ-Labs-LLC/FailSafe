@@ -170,7 +170,7 @@ describe("GitResetService", () => {
         if (a[0] === "log") return ok("fix: thing\u00002026-01-01T00:00:00+00:00\n");
         if (j === "rev-parse --show-toplevel") return ok("C:/ws\n");
         if (j === "rev-parse --verify --quiet HEAD@{1}") return ok(`${"b".repeat(40)}\n`);
-        if (j === "symbolic-ref --quiet --short HEAD") return ok("main\n");
+        if (j === "branch --show-current") return ok("main\n");
         if (j === "rev-parse --verify --quiet HEAD") return ok(`${sha}\n`);
         return undefined;
       });
@@ -183,7 +183,25 @@ describe("GitResetService", () => {
       assert.equal(await failing.countLeaving("/tmp", sha), null);
       assert.equal(await failing.describeCommit("/tmp", sha), null);
       assert.equal(await failing.workTree("/tmp"), null);
-      assert.deepEqual(await failing.afterReset("/tmp"), { previousHead: null, branch: null, head: null });
+      await assert.rejects(() => failing.afterReset("/tmp"), /git branch failed/);
+    });
+
+    it("afterReset reads the branch with branch --show-current, reports a missing reflog entry as null, and throws when git cannot answer (review N1)", async () => {
+      const sha = "a".repeat(40);
+      const calls: string[][] = [];
+      const noReflog = new GitResetService(async (_c, a) => {
+        calls.push(a);
+        const j = a.join(" ");
+        if (j === "rev-parse --verify --quiet HEAD@{1}") return { code: 1, stdout: "", stderr: "" };
+        if (j === "branch --show-current") return ok("\n");
+        if (j === "rev-parse --verify --quiet HEAD") return ok(`${sha}\n`);
+        return ok();
+      });
+      assert.deepEqual(await noReflog.afterReset("/tmp"), { previousHead: null, branch: null, head: sha });
+      assert.ok(calls.some((c) => c.join(" ") === "branch --show-current"));
+      assert.ok(!calls.some((c) => c[0] === "symbolic-ref"), "the branch is read as the plan reads it");
+      const broken = new GitResetService(async (_c, a) => (a.join(" ").includes("HEAD@{1}") ? { code: 128, stdout: "", stderr: "fatal: bad" } : ok(a[0] === "branch" ? "main\n" : `${sha}\n`)));
+      await assert.rejects(() => broken.afterReset("/tmp"), /HEAD@\{1\}/);
     });
   });
 });

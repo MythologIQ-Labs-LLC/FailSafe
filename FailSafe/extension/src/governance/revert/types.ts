@@ -15,7 +15,7 @@ export interface RevertRequest {
 export type RevertStepStatus = "pending" | "success" | "failed" | "skipped";
 
 export interface RevertStep {
-  name: "git_reset" | "rag_purge" | "ledger_seal";
+  name: "git_reset" | "verify_reset" | "rag_purge" | "ledger_seal";
   status: RevertStepStatus;
   detail: string;
 }
@@ -29,6 +29,8 @@ export interface RevertResult {
   status?: number;
   /** #532 (plan-532c LD8a): HEAD before the reset, for recovery through the reflog when a post-reset check fails. */
   previousHead?: string;
+  /** #532 (review N1): a successful rollback whose check was narrower than usual (no reflog entry). */
+  warning?: string;
 }
 
 /**
@@ -50,6 +52,9 @@ export interface RollbackPlan {
   leaving: number;
 }
 
+export type RollbackRefusal =
+  | 'not-found' | 'no-commit' | 'unverifiable' | 'hash' | 'status-unavailable' | 'dirty' | 'not-ancestor' | 'unavailable';
+
 export type RollbackPrepareResult =
   | { ok: true; plan: RollbackPlan }
-  | { ok: false; status: number; error: string };
+  | { ok: false; status: number; error: string; code?: RollbackRefusal };

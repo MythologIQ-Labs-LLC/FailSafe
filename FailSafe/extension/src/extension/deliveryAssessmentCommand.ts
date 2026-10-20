@@ -26,9 +26,15 @@ function summarize(view: DeliveryView): string {
   if (!view.found) return "FailSafe found no such intent.";
   const a = view.assessment;
   const labels = a.steps.filter((s) => a.gaps.includes(s.key)).map((s) => `${s.label} ${s.status}`);
+  // plan-532c LD9: say why complete is not reachable (no review of the implementation is recorded yet).
+  const unreachable = a.completeReachable === false
+    ? ` Complete is not reachable until FailSafe records a review of the implementation (${a.completeBlockedBy.join(", ")}).` : "";
+  if (a.overall === "failing") {
+    return `Delivery of "${view.intent.purpose}" is failing: the intent was vetoed. Gaps: ${labels.join(", ")}.${unreachable} Receipt unavailable (#467).`;
+  }
   return a.overall === "evidence-complete-except-receipt"
     ? `Delivery of "${view.intent.purpose}": evidence complete except the receipt (unavailable until the ledger repair, #467).`
-    : `Delivery of "${view.intent.purpose}" is incomplete: ${labels.join(", ")}. Receipt unavailable (#467).`;
+    : `Delivery of "${view.intent.purpose}" is incomplete: ${labels.join(", ")}.${unreachable} Receipt unavailable (#467).`;
 }
 
 export function registerDeliveryAssessmentCommand(context: vscode.ExtensionContext, deps: DeliveryAssessmentCommandDeps): void {

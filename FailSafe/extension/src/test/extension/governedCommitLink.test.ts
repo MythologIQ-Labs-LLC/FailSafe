@@ -46,7 +46,7 @@ suite('#532 governed commit link (B286)', () => {
 
   const historyLines = (): string[] => {
     const f = path.join(ws.root, '.failsafe', 'manifest', 'intent_history.jsonl');
-    return fs.existsSync(f) ? fs.readFileSync(f, 'utf8').trim().split('\n') : [];
+    return fs.existsSync(f) ? fs.readFileSync(f, 'utf8').trim().split('\n').filter(Boolean) : [];
   };
   function confirmer(result: OperatorConfirmation) {
     const shown: OperatorActionRequest[] = [];

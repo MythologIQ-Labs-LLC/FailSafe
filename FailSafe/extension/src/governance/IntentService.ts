@@ -113,8 +113,16 @@ export function replayIntentEdges(entries: IntentHistoryEntry[], intentId: strin
  * sets the decision; any other later status (for example back to PULSE) clears it. Read-only.
  */
 export function replayIntentDecision(entries: IntentHistoryEntry[], intentId: string): IntentDecision | null {
-  void entries; void intentId; // RED STUB
-  return null;
+  let decision: IntentDecision | null = null;
+  for (const e of entries) {
+    if (e.intentId !== intentId) continue;
+    if (isSealEntry(e)) break;
+    if (e.event !== 'STATUS_CHANGED') continue;
+    decision = e.newStatus === 'PASS' || e.newStatus === 'VETO'
+      ? { status: e.newStatus, actor: e.actor, timestamp: e.timestamp, entryHash: e.entryHash ?? null }
+      : null;
+  }
+  return decision;
 }
 
 export class IntentService {

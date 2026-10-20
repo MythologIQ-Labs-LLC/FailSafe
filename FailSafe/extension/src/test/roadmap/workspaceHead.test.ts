@@ -166,4 +166,38 @@ suite('workspaceHead (#532 B284)', () => {
       assert.deepEqual(spy.seen.filter((p) => p.includes('outside')), [], `no read outside the common dir for ${ref}`);
     }
   });
+
+  test('W10 (review N4): a symbolic link or junction whose target is a UNC or device path is refused before the path is read', () => {
+    const B = '\\';
+    const unc = `${B}${B}server${B}share${B}repo`;
+    // Deterministic on every host: an io whose lstat reports `.git` (or the gitdir it names) as a
+    // link to a UNC target. The named path is never stat-ed or read through the inner io.
+    const d = tempDir('fs-head-link-');
+    const realGit = repo();
+    commit(realGit, 'one');
+    for (const linked of [path.join(d, '.git'), path.join(realGit, '.git')]) {
+      if (linked.startsWith(d)) fs.writeFileSync(path.join(d, '.git'), `gitdir: ${path.join(realGit, '.git')}\n`);
+      const spy = spyIo();
+      const io: HeadIo = {
+        ...spy.io,
+        lstat: (p) => (p === linked ? ({ isSymbolicLink: () => true } as unknown as fs.Stats) : (() => { try { return fs.lstatSync(p); } catch { return null; } })()),
+        readlink: (p) => (p === linked ? unc : null),
+      };
+      const root = linked.startsWith(d) ? d : realGit;
+      assert.equal(readWorkspaceHead(root, { io, fallback: noFallback }), UNKNOWN_HEAD, linked);
+      assert.ok(!spy.seen.some((p) => p === linked || p.startsWith(`${linked}${path.sep}`)), `${linked} is never stat-ed or read`);
+    }
+    // A real link when the host allows creating one (Windows needs Developer Mode or elevation).
+    const host = tempDir('fs-head-reallink-');
+    const target = process.platform === 'win32' ? unc : '//server/share/repo';
+    try {
+      fs.symlinkSync(target, path.join(host, '.git'), 'dir');
+    } catch (e) {
+      console.log(`  W10: a real symbolic link could not be created on this host (${(e as NodeJS.ErrnoException).code}); the injected-io rows above cover the check`);
+      return;
+    }
+    const spy = spyIo();
+    assert.equal(readWorkspaceHead(host, { io: spy.io, fallback: noFallback }), UNKNOWN_HEAD);
+    assert.ok(!spy.seen.some((p) => p.startsWith(path.join(host, '.git'))), 'the link is never followed');
+  });
 });

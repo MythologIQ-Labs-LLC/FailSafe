@@ -145,8 +145,12 @@ export interface CheckpointSummary {
   timestamp?: string;
 }
 
-export function rollbackRequest(checkpointId: string, checkpoint: CheckpointSummary, reason: string, plan?: RollbackPlan): OperatorActionRequest {
-  void plan; // RED STUB
+/**
+ * #532 (plan-532c LD8a): `plan` is computed on the server (the revert service's prepare): the work
+ * tree, branch, HEAD, the checkpoint commit with its subject and date, and the commits leaving the
+ * branch. The rollback runs `git reset --keep` only while the workspace still matches it.
+ */
+export function rollbackRequest(checkpointId: string, checkpoint: CheckpointSummary, reason: string, plan: RollbackPlan): OperatorActionRequest {
   const shownReason = sanitizeDialogText(reason, REASON_LIMIT);
   const type = checkpoint.checkpointType ?? [checkpoint.phase, checkpoint.status].filter(Boolean).join(" / ");
   return {
@@ -158,7 +162,16 @@ export function rollbackRequest(checkpointId: string, checkpoint: CheckpointSumm
       `Recorded: ${sanitizeDialogText(checkpoint.timestamp ?? "not recorded")}`,
       `Reason (as requested): ${shownReason || "(none)"}`,
       "",
-      "Files changed since the checkpoint are reverted.",
+      `Work tree: ${sanitizeDialogText(plan.workTree, 400)}`,
+      `Branch: ${plan.branch ? sanitizeDialogText(plan.branch) : "none (detached HEAD)"}`,
+      `Current HEAD: ${sanitizeDialogText(plan.head)}`,
+      `Checkpoint commit: ${sanitizeDialogText(plan.target)} ${sanitizeDialogText(plan.targetSubject, 120)} (${sanitizeDialogText(plan.targetDate, 40)})`,
+      `Commits leaving the branch: ${plan.leaving}`,
+      "",
+      "git reset --keep moves the branch to the checkpoint commit and updates the tracked files that differ between the two commits; " +
+        "it stops without changing anything if one of those files has local changes. " +
+        `The ${plan.leaving} commit(s) leaving the branch stay recoverable through git reflog for a limited time. ` +
+        "Ignored files at paths the checkpoint commit tracks can be overwritten. Rollback is refused while there are uncommitted changes.",
     ]),
   };
 }
