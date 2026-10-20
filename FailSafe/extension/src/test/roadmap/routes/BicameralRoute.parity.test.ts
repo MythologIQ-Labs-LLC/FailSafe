@@ -127,7 +127,7 @@ function makeDeps(client: BicameralMcpClient, withInterceptor: boolean): Bicamer
     setAutoConnect: async () => undefined,
     // #514: ratify is operator-confirmed; these suites run with an approving confirmer.
     confirmOperatorAction: async () => "approved",
-    getMcpInterceptor: () => (withInterceptor ? allowInterceptor() : null),
+    getMcpInterceptor: () => (withInterceptor ? Object.assign(allowInterceptor(), { getClient: () => client }) : null),
   };
 }
 
