@@ -33951,3 +33951,57 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `61813352414f226178fed779a4b7b53c79a712b23f921cf14277fc42ec60ec8b`
 
 **Decision**: SESSION SEAL for plan-b288-retire-governance-webhook.md (implementation #824; content hash is the audited plan, sha256 bb888d8c). Reality = Promise, with disclosures. The inert governance-webhook sender is removed from the product, its contract stays as history with the #538 Retirement review's sealed inventory unchanged, and FX1003 now proves a retired contract's citations and owned paths at its retirement base and refuses any live surface folded into it. Disclosures: bounded damaged-ledger override for post-v6.0.9 product cycles (owner ruling 2026-10-19; #467 unresolved, normal governance not restored); the plan-gate override events of this cycle carry the post-6.0.9 reason; PR and release CI clones are shallow, so the base check runs only in full clones and CI reports a counted skip; FX946 ledgerAnchor fails two rows locally and at v6.0.9 (B325, pre-existing); one vscode-test row failed under shared-TEMP interference from concurrent lanes and passes alone; the never-built capabilities of the retired contract read retired (review N3); no README What's-New line, by plan scope; dispositions stay 15 COMPLETE / 13 MAINTAIN / 2 RETIRE; earlier seals are unedited. Next: push, PR checks, a merge pinned to the head. No release.
+
+---
+
+### Entry #826: GATE TRIBUNAL - plan-b289-retire-qor-runtime (iteration 1) - PASS
+
+**Timestamp**: 2026-10-19T21:32:31Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-19T2124-86c771`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for post-v6.0.9 product cycles, owner ruling 2026-10-19, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-19T2124-86c771/audit-iter1.json`
+
+**Content Hash**: `571bb9757686b653f62993c611f955dfa7bcb8d78eb698201b3320ec5d064664`
+**Previous Hash**: `61813352414f226178fed779a4b7b53c79a712b23f921cf14277fc42ec60ec8b`
+**Chain Hash (Merkle seal)**: `e9972039d2668e198768af6f739b1832252a3fc91db1214921232435fa0b1672`
+
+**Decision**: PASS on plan-b289-retire-qor-runtime.md iteration 1 (sha256 95509474), B289: retire the Qor runtime client, its three /api/qor runtime routes, the hub entry and the Console API ticker, and deprecate the failsafe.qorelogic.externalRuntime settings, keeping history and the 15/13/2 dispositions. Fresh Option B architect-reviewer. Removal completeness confirmed (only the 11 named product files, fixtures and the overview spec consume the surface; governance-dashboard, sprint and plans routes independent). Should-fix folded into implementation: a truthful apiKey description, the expected search and golden red sets, no tsc-enforcement claim, an untyped T1 base fixture asserting 404, the declared departure from the sealed review's FX048-FX052 line, portfolio reconciliation text, and B326 reserved. Next: implement.
+
+---
+
+### Entry #827: IMPLEMENTATION - plan-b289-retire-qor-runtime
+
+**Timestamp**: 2026-10-20T17:53:04Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-19T2124-86c771`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-19T2124-86c771/implement.json`
+
+**Content Hash**: `9b3ede9a3411b9d26ea701843cc5ca4a342e64093505dab50c0a2a18eee607c8`
+**Previous Hash**: `e9972039d2668e198768af6f739b1832252a3fc91db1214921232435fa0b1672`
+**Chain Hash (Merkle seal)**: `bf0111f363a058409bbbe1d68e0f674da4f2f4795eafda484afe7e22905691e1`
+
+**Decision**: IMPLEMENTATION of plan-b289-retire-qor-runtime.md iteration 1 on fix/b289-retire-qor-runtime (rebased onto main 7cf65292): e549af57 (red tests), 534c67e8 (retirement and deprecation), deeff10e (docs and evidence). QorRuntimeService and its unit test are deleted; ConsoleServer, ConsoleServerSupport, HubSnapshotService, ConsoleServerHub, the hub payload assembler, types and the route registrar lose the runtime; the /api/qor/runtime, health and evaluate routes now answer 404 while governance-dashboard, sprint and plans stay; the always-N/A API ticker leaves the Console top bar. All five failsafe.qorelogic.externalRuntime settings carry a deprecation message and the apiKey description says it has no effect and a plain-text value is offered for removal; removal of the four non-key settings is B326, apiKey stays while the plain-text cleanup lists it. The qor-runtime contract is the second retired contract (base b83d83a3, sealed review unchanged, dated re-run block); the portfolio row reads retired, the architecture index historical; FEATURE_INDEX 761+0+40+16=817 with FX098-FX100, FX153 and FX454 removed and FX048-FX052 verified by the deprecation suite, a declared departure from the sealed review because the settings stay contributed. B277 closes. Evidence: npm test 5422 passing, 0 failing; Playwright 6/6; FX1003 91/91; mutations M1-M7 red. T3 dropped (T2 runs the real assembler; T2 and T5 catch M2). Bounded review review289: code clean; the two documentation blockers and the citation re-points folded.
+
+---
+
+### Entry #828: SESSION SEAL - plan-b289-retire-qor-runtime
+
+**Timestamp**: 2026-10-20T17:53:05Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-19T2124-86c771`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-19T2124-86c771/substantiate.json`
+
+**Content Hash**: `9550947464ba3745d983f485ca1c138f18006278513ef1c6ac4b15d05a4f3a2e`
+**Previous Hash**: `bf0111f363a058409bbbe1d68e0f674da4f2f4795eafda484afe7e22905691e1`
+**Chain Hash (Merkle seal)**: `9a28e8dc50fc9c2f6a081f9501679aaef8893782bfae48d2ea19ad009f4b0a46`
+
+**Decision**: SESSION SEAL for plan-b289-retire-qor-runtime.md (content hash is the audited plan, sha256 95509474). Reality = Promise, with disclosures. The Qor runtime client, its three routes, the hub entry and the API ticker are gone from the product; the externalRuntime settings warn users that they have no effect; the qor-runtime contract is kept as history and FX1003 checks it at its retirement base alongside governance-webhook. Disclosures: bounded damaged-ledger override for post-v6.0.9 product cycles (owner ruling 2026-10-19; #467 unresolved, normal governance not restored); the settings are deprecated, not removed, and removing the four non-key settings is B326; FEATURE_INDEX keeps FX048-FX052 verified rather than following the sealed review's line, declared in the B289 evidence; planned test T3 was dropped as redundant with T2 and T5; FX946 (B325) is pre-existing and the trustedExecutable T7 row is flaky under full load (B327); shallow CI clones report a counted skip of the base check; dispositions stay 15 COMPLETE / 13 MAINTAIN / 2 RETIRE; earlier seals are unedited. Next: push, PR checks, a merge pinned to the head. No release.
