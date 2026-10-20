@@ -147,21 +147,35 @@ export function setupTrackerConfigRoutes(
     };
     const written: string[] = [];
     const text = serializeTrackerConfig(config);
+    const fingerprint = sha256(Buffer.from(text, "utf-8"));
     try {
       const cfgP = configPath();
       fs.mkdirSync(path.dirname(cfgP), { recursive: true });
-      fs.writeFileSync(cfgP, text, "utf-8");
+      // N-d: expecting no file, create it exclusively — a file that appeared since the
+      // check (EEXIST) is a change on disk, never overwritten.
+      fs.writeFileSync(cfgP, text, { encoding: "utf-8", flag: expected === null ? "wx" : "w" });
       written.push(CONFIG_RELPATH);
-
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException)?.code === "EEXIST") {
+        res.status(409).json({ ok: false, error: "changed-on-disk" });
+        return;
+      }
+      res.status(500).json({ ok: false, error: err instanceof Error ? err.message : String(err) });
+      return;
+    }
+    try {
       const dirP = directivePath();
       fs.mkdirSync(path.dirname(dirP), { recursive: true });
       fs.writeFileSync(dirP, buildTaxonomyDirective(config, { at: new Date().toISOString() }), "utf-8");
       written.push(DIRECTIVE_RELPATH);
     } catch (err) {
-      res.status(500).json({ ok: false, error: err instanceof Error ? err.message : String(err) });
+      // N-e: the taxonomy WAS written; return its new fingerprint so the editor adopts
+      // it (otherwise its next Save would be a false 409).
+      deps.broadcast({ type: "tracker.config.updated", payload: { written } });
+      res.status(500).json({ ok: false, error: "directive-write-failed", detail: err instanceof Error ? err.message : String(err), written, fingerprint });
       return;
     }
     deps.broadcast({ type: "tracker.config.updated", payload: { written } });
-    res.json({ ok: true, written, fingerprint: sha256(Buffer.from(text, "utf-8")), ...guardedReport(config) });
+    res.json({ ok: true, written, fingerprint, ...guardedReport(config) });
   });
 }

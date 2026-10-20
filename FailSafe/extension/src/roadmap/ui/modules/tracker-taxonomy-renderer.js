@@ -53,6 +53,8 @@ const FIELDS = {
 const KINDS = ['programs', 'verticals', 'agents'];
 
 const emptyConfig = () => ({ programs: [], verticals: [], agents: [] });
+/** A JSON copy (the POST body is JSON anyway); undefined stays undefined. */
+const clone = (v) => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
 
 export class TrackerTaxonomyRenderer {
   constructor(containerId) {
@@ -64,6 +66,9 @@ export class TrackerTaxonomyRenderer {
     this.source = '';
     this.loadError = '';
     this._loaded = false;
+    /** What each input or checkbox showed when it was painted (N-a: an input strips
+     *  CR/LF from its value, so "untouched" is compared with what it showed, kept here). */
+    this._shown = new WeakMap();
   }
 
   ensureStyle() {
@@ -123,7 +128,13 @@ export class TrackerTaxonomyRenderer {
         <span class="cc-tax-status" id="cc-tax-status">${this.source ? `source: ${esc(this.source)}` : ''}</span>
       </div>
     </div>`;
+    this._remember(this.container);
     this._bind();
+  }
+
+  _remember(root) {
+    root.querySelectorAll('.cc-tax-in').forEach((inp) => this._shown.set(inp, inp.value));
+    root.querySelectorAll('[data-field="crossCutting"]').forEach((xc) => this._shown.set(xc, xc.checked));
   }
 
   _section(kind, label, items) {
@@ -162,31 +173,42 @@ export class TrackerTaxonomyRenderer {
     const tmp = document.createElement('div');
     tmp.innerHTML = this._rowHtml(kind, {});
     const row = tmp.firstElementChild;
+    this._remember(row);
     row.querySelector('[data-del]')?.addEventListener('click', () => row.remove());
     rowsEl.appendChild(row);
   }
 
-  /** Each row = a copy of its loaded entry (when that is a plain object) + only the
-   *  inputs the operator changed (value differs from the rendered default). */
+  /** Every loaded row the operator did not delete is saved. An untouched row passes
+   *  through exactly as loaded (even a scalar, null or keyless entry the editor cannot
+   *  show). A touched row = a copy of its loaded entry (when that is a plain object) +
+   *  only the inputs whose value differs from what they showed. A row is dropped only
+   *  when it was added and given no key, or the operator cleared its key. */
   _collect() {
-    const read = (kind) => [...this.container.querySelectorAll(`.cc-tax-section[data-kind="${kind}"] .cc-tax-row`)]
-      .map((r) => {
+    const read = (kind) => {
+      const out = [];
+      for (const r of this.container.querySelectorAll(`.cc-tax-section[data-kind="${kind}"] .cc-tax-row`)) {
         const idx = r.getAttribute('data-src');
-        const base = idx === null ? undefined : list(this.config[kind])[Number(idx)];
-        const o = isPlainObject(base) ? JSON.parse(JSON.stringify(base)) : {};
-        r.querySelectorAll('.cc-tax-in').forEach((inp) => {
-          if (inp.value === inp.defaultValue) return;
+        const loaded = idx !== null;
+        const base = loaded ? list(this.config[kind])[Number(idx)] : undefined;
+        const changed = [...r.querySelectorAll('.cc-tax-in')].filter((inp) => inp.value !== this._shown.get(inp));
+        const xc = r.querySelector('[data-field="crossCutting"]');
+        const xcChanged = !!xc && xc.checked !== this._shown.get(xc);
+        if (loaded && !changed.length && !xcChanged) { out.push(clone(base)); continue; }
+        const o = isPlainObject(base) ? clone(base) : {};
+        let keyCleared = false;
+        for (const inp of changed) {
           const f = inp.getAttribute('data-field');
           const v = inp.value.trim();
           if (f === 'patterns') o.patterns = v ? v.split(',').map((s) => s.trim()).filter(Boolean) : [];
           else if (v) o[f] = v;
-          else delete o[f];
-        });
-        const xc = r.querySelector('[data-field="crossCutting"]');
-        if (xc && xc.checked !== xc.defaultChecked) { if (xc.checked) o.crossCutting = true; else delete o.crossCutting; }
-        return o;
-      })
-      .filter((o) => o.key);
+          else { delete o[f]; if (f === 'key') keyCleared = true; }
+        }
+        if (xcChanged) { if (xc.checked) o.crossCutting = true; else delete o.crossCutting; }
+        if (keyCleared || (!loaded && !o.key)) continue;
+        out.push(o);
+      }
+      return out;
+    };
     return Object.fromEntries(KINDS.map((k) => [k, read(k)]));
   }
 
@@ -200,6 +222,7 @@ export class TrackerTaxonomyRenderer {
     };
     let data = null;
     let failure = '';
+    let partial = '';
     try {
       const res = await fetch('/api/v1/tracker/config', {
         method: 'POST',
@@ -207,7 +230,11 @@ export class TrackerTaxonomyRenderer {
         body: JSON.stringify({ ...config, fingerprint: this.fingerprint }),
       });
       try { data = await res.json(); } catch { data = null; }
-      if (res.status === 409 || (isPlainObject(data) && data.error === 'changed-on-disk')) {
+      if (isPlainObject(data) && data.error === 'directive-write-failed' && typeof data.fingerprint === 'string') {
+        // N-e: the taxonomy file WAS written; adopt it as the baseline so the next
+        // Save is not refused as changed-on-disk, and say what failed.
+        partial = 'Saved docs/roadmap/tracker-config.yaml, but the governed directive record could not be written.';
+      } else if (res.status === 409 || (isPlainObject(data) && data.error === 'changed-on-disk')) {
         failure = 'Not saved: the taxonomy file changed on disk since this view loaded it. Reload the Console to pick up the change, then edit again.';
       } else if (!res.ok || !isPlainObject(data) || data.ok !== true) {
         failure = `Error: ${(isPlainObject(data) && data.error) || `save failed (HTTP ${res.status})`}`;
@@ -216,6 +243,14 @@ export class TrackerTaxonomyRenderer {
       failure = 'Save failed (is the Console server running?)';
     }
     if (failure) { setStatus(failure); return; }
+    if (partial) {
+      this.config = config;
+      this.source = 'config';
+      this.fingerprint = data.fingerprint;
+      this.paint();
+      setStatus(partial);
+      return;
+    }
     this.config = config;
     this.source = 'config';
     this.drift = isPlainObject(data.drift) ? data.drift : null;

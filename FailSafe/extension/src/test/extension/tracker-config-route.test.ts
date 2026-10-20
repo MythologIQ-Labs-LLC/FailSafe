@@ -286,6 +286,68 @@ suite('#548 TrackerConfigRoute taxonomy drift', () => {
     }
   });
 
+  test('T5l (B1): a POST with no fingerprint field over a present file answers 409', async () => {
+    const cfg = writeRoadmap(ws, 'tracker-config.yaml', configMissingShadowGenome());
+    const before = fs.readFileSync(cfg);
+    await start();
+    const res = await harness!.request({ method: 'POST', path: '/api/v1/tracker/config', body: { programs: [], verticals: [], agents: [] } });
+    assert.equal(res.status, 409);
+    assert.equal(res.body.error, 'changed-on-disk');
+    assert.ok(fs.readFileSync(cfg).equals(before));
+  });
+
+  test('T5m (N4, POSIX only): a docs/roadmap that is a self-link (ELOOP) answers 500', async function () {
+    if (process.platform === 'win32') { this.skip(); return; } // a self-symlink needs admin rights on Windows; Linux CI runs this row
+    fs.mkdirSync(path.join(ws, 'docs'), { recursive: true });
+    fs.symlinkSync('roadmap', path.join(ws, 'docs', 'roadmap'));
+    try {
+      await start();
+      const res = await get();
+      assert.equal(res.status, 500);
+      const post = await harness!.request({ method: 'POST', path: '/api/v1/tracker/config', body: { programs: [], verticals: [], agents: [], fingerprint: null } });
+      assert.equal(post.status, 500);
+    } finally { fs.unlinkSync(path.join(ws, 'docs', 'roadmap')); }
+  });
+
+  test('T5n (N-d): a file that appears between the check and the write is not overwritten (exclusive create, 409)', async () => {
+    const cfg = path.join(ws, 'docs', 'roadmap', 'tracker-config.yaml');
+    writeRoadmap(ws, 'tracker-config.yaml', '# appeared during the save\n');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const realFs = require('fs') as typeof fs;
+    const original = realFs.lstatSync;
+    let hidden = false;
+    // The check sees no file once (as if it were created just after); the write must then fail.
+    (realFs as { lstatSync: unknown }).lstatSync = ((p: fs.PathLike, ...rest: unknown[]) => {
+      if (!hidden && path.resolve(String(p)) === path.resolve(cfg)) {
+        hidden = true;
+        throw Object.assign(new Error('ENOENT (test)'), { code: 'ENOENT' });
+      }
+      return (original as (...a: unknown[]) => fs.Stats)(p, ...rest);
+    }) as typeof fs.lstatSync;
+    try {
+      await start();
+      const res = await harness!.request({ method: 'POST', path: '/api/v1/tracker/config', body: { programs: [], verticals: [], agents: [], fingerprint: null } });
+      assert.equal(hidden, true, 'the check ran against the hidden file');
+      assert.equal(res.status, 409);
+      assert.equal(res.body.error, 'changed-on-disk');
+    } finally { (realFs as { lstatSync: unknown }).lstatSync = original; }
+    assert.equal(fs.readFileSync(cfg, 'utf-8'), '# appeared during the save\n');
+  });
+
+  test('T5o (N-e): a failed directive write still returns the new fingerprint, which the next Save uses', async () => {
+    const cfg = writeRoadmap(ws, 'tracker-config.yaml', configMissingShadowGenome());
+    fs.mkdirSync(path.join(ws, '.failsafe', 'governance', 'tracker-taxonomy.directive.md'), { recursive: true });
+    await start();
+    const loaded = await get();
+    const res = await harness!.request({ method: 'POST', path: '/api/v1/tracker/config', body: { ...loaded.body.config, fingerprint: loaded.body.fingerprint } });
+    assert.equal(res.status, 500);
+    assert.equal(res.body.error, 'directive-write-failed');
+    assert.equal(res.body.fingerprint, crypto.createHash('sha256').update(fs.readFileSync(cfg)).digest('hex'), 'the fingerprint names the file now on disk');
+    const next = await harness!.request({ method: 'POST', path: '/api/v1/tracker/config', body: { ...loaded.body.config, fingerprint: res.body.fingerprint } });
+    assert.notEqual(next.status, 409, 'no false changed-on-disk after a partial save');
+    assert.equal(next.body.error, 'directive-write-failed');
+  });
+
   test('T5h (regression pin, not a falsifier): a remote GET answers 403 with no config and no drift', async () => {
     writeRoadmap(ws, 'tracker-config.yaml', configMissingShadowGenome());
     await start(true);

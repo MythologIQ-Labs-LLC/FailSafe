@@ -153,17 +153,59 @@ suite('#548 TrackerTaxonomyRenderer (jsdom)', () => {
     } finally { ctx.cleanup(); }
   });
 
-  test('rows that are not objects render and save from their inputs only', async () => {
+  // #548 C6 (N-b, declared change): untouched rows the editor cannot show pass through
+  // unchanged — this row used to pin that a keyless null row is dropped.
+  test('rows that are not objects render; a touched one saves its inputs, untouched ones pass through', async () => {
     const cfg = config() as { verticals: unknown[] };
-    cfg.verticals.push('x', null);
+    cfg.verticals.push('x', null, 7);
     const { ctx, r } = await mount(serve({ config: cfg, source: 'config' }));
     try {
       const rows = ctx.rows('verticals');
-      assert.equal(rows.length, 5);
+      assert.equal(rows.length, 6);
       ctx.input(rows[3], 'key').value = 'x2';
       await r.save();
-      assert.deepEqual(ctx.posts[0].verticals[3], { key: 'x2' });
-      assert.equal(ctx.posts[0].verticals.length, 4, 'the keyless null row is dropped');
+      assert.deepEqual(ctx.posts[0].verticals.slice(3), [{ key: 'x2' }, null, 7]);
+    } finally { ctx.cleanup(); }
+  });
+
+  test('rows with a falsy or missing key are kept: untouched as loaded, touched with their edit', async () => {
+    const cfg = config() as { verticals: unknown[] };
+    cfg.verticals.push({ key: 0, name: 'Zero', summary: 'S0' }, { key: false, name: 'False' }, { name: 'No key', summary: 'S-none' });
+    const { ctx, r } = await mount(serve({ config: cfg, source: 'config' }));
+    try {
+      ctx.input(ctx.rows('verticals')[3], 'name').value = 'Zero 2';
+      await r.save();
+      assert.deepEqual(ctx.posts[0].verticals.slice(3), [
+        { key: 0, name: 'Zero 2', summary: 'S0' }, { key: false, name: 'False' }, { name: 'No key', summary: 'S-none' },
+      ]);
+    } finally { ctx.cleanup(); }
+  });
+
+  test('an untouched multi-line value is saved byte-identical (an input strips CR/LF from what it shows)', async () => {
+    const cfg = config();
+    cfg.programs[0].name = 'Line 1\nLine 2\r\n  indented ';
+    const { ctx, r } = await mount(serve({ config: cfg, source: 'config' }));
+    try {
+      ctx.input(ctx.rows('programs')[1], 'name').value = 'Runtime 2';
+      await r.save();
+      assert.equal(ctx.posts[0].programs[0].name, 'Line 1\nLine 2\r\n  indented ');
+      assert.equal(ctx.posts[0].programs[1].name, 'Runtime 2');
+    } finally { ctx.cleanup(); }
+  });
+
+  test('a save whose directive write failed adopts the new fingerprint and baseline (no false 409 next)', async () => {
+    const fp = 'a'.repeat(64);
+    const written = 'd'.repeat(64);
+    const queue = [async () => json({ ok: false, error: 'directive-write-failed', written: ['docs/roadmap/tracker-config.yaml'], fingerprint: written }, 500)];
+    const { ctx, r } = await mount(serve({ config: config(), source: 'config', fingerprint: fp }, queue));
+    try {
+      (ctx.rows('verticals')[0].querySelector('[data-del]') as HTMLButtonElement).click();
+      await r.save();
+      assert.equal(r.fingerprint, written);
+      assert.deepEqual(r.config.verticals, config().verticals.slice(1), 'the saved taxonomy is the new baseline');
+      assert.match(ctx.doc.querySelector('#cc-tax-status')!.textContent || '', /directive record could not be written/);
+      await r.save();
+      assert.deepEqual(ctx.posts.map((b) => b.fingerprint), [fp, written]);
     } finally { ctx.cleanup(); }
   });
 
