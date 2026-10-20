@@ -190,7 +190,7 @@ export async function governToolCall(
   const receipt: ReceiptContract = await interceptor.intercept(envelope);
   if (client !== deps.getBicameralClient()
     || deps.getMcpInterceptor?.()?.getClient() !== client
-    || !client.isConnected()) {
+    || client?.isConnected() !== true) {
     res.status(409).json({ ok: false, error: "Bicameral client changed during governance evaluation" });
     return true;
   }
