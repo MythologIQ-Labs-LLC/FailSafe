@@ -4,8 +4,13 @@
 // Remote callers are refused on every route; a declined, busy or unwired confirmation writes
 // nothing; request-supplied hashes are ignored; unknown targets, archived and non-active intents
 // are refused; an unavailable ledger makes governance `unavailable`; an intent id that appears only
-// in some other payload field is not evidence; a PROVENANCE_RECORDED entry naming the intent gives
-// `evidence-complete-except-receipt`.
+// in some other payload field is not evidence.
+//
+// plan-532c (R1-R8): a checkpoint git_head equal to a linked commit is not evidence (B285 retired);
+// a PROVENANCE_RECORDED entry naming the intent is presence, so the delivery stays incomplete with
+// the review gap; a policy decision is classified with its outcome; an intent PASS is approval for
+// implementation and leaves review missing; a later PULSE supersedes it; a VETO makes the delivery
+// failing; a Console link records `via: workspace-delivery`.
 
 import { strict as assert } from 'assert';
 import * as fs from 'fs';
@@ -178,7 +183,93 @@ suite('#532 DeliveryRoute', () => {
     assert.equal(view.assessment.steps.find((x: { key: string }) => x.key === 'governance').status, 'missing');
   });
 
-  test('links plus a PROVENANCE_RECORDED entry naming the intent give evidence-complete-except-receipt', async () => {
+  const stepOf = (a: { steps: Array<{ key: string; status: string; reason: string; records: Array<Record<string, unknown>> }> }, key: string) =>
+    a.steps.find((x) => x.key === key)!;
+  async function linkedIntent(s: Setup) {
+    const intent = await importedIntent(s.service);
+    assert.equal((await link(s, intent.id, 'implements', RUNTIME_ROW)).status, 200);
+    assert.equal((await link(s, intent.id, 'committed-under', ws.head)).status, 200);
+    return intent;
+  }
+  const assess = async (s: Setup, id: string) => (await s.harness.request({ path: `/api/v1/delivery/intents/${id}` })).body;
+
+  test('R1 (B285): a CHECKPOINT_CREATED whose git_head equals the linked HEAD is not evidence', async () => {
+    const s = await start();
+    const intent = await linkedIntent(s);
+    await ledger!.appendEntry({ eventType: 'CHECKPOINT_CREATED', agentDid: 'did:test', agentTrustAtAction: 0, payload: { git_head: ws.head } });
+    const gov = stepOf((await assess(s, intent.id)).assessment, 'governance');
+    assert.equal(gov.status, 'missing', JSON.stringify(gov));
+    assert.deepEqual(gov.records, []);
+  });
+
+  test('R3: GOVERNANCE_PAUSED naming the intent is a policy decision, denied; governance stays recorded', async () => {
+    const s = await start();
+    const intent = await linkedIntent(s);
+    await ledger!.appendEntry({ eventType: 'GOVERNANCE_PAUSED', agentDid: 'did:test', agentTrustAtAction: 0, payload: { intentId: intent.id, action: 'file.write' } });
+    await ledger!.appendEntry({ eventType: 'GOVERNANCE_RESUMED', agentDid: 'did:test', agentTrustAtAction: 0, payload: { intentId: intent.id, action: 'file.write' } });
+    const gov = stepOf((await assess(s, intent.id)).assessment, 'governance');
+    assert.equal(gov.status, 'recorded');
+    assert.deepEqual(gov.records.map((r) => [r.eventType, r.kind, r.outcome]),
+      [['GOVERNANCE_RESUMED', 'policy-decision', 'allowed'], ['GOVERNANCE_PAUSED', 'policy-decision', 'denied']]);
+  });
+
+  test('R4: an intent PASS after the links is approval for implementation; review stays missing, incomplete', async () => {
+    const s = await start();
+    const intent = await linkedIntent(s);
+    await s.service.updateStatus('PASS', 'judge');
+    const body = await assess(s, intent.id);
+    const review = stepOf(body.assessment, 'review');
+    assert.equal(review.status, 'missing');
+    assert.match(review.reason, /B320/);
+    assert.equal(review.records[0].decision, 'approved for implementation (not a review)');
+    assert.equal(body.assessment.overall, 'incomplete');
+    assert.equal(body.assessment.completeReachable, false);
+    assert.equal(body.intent.decision.status, 'PASS');
+    assert.equal(body.intent.decision.actor, 'judge');
+    assert.equal(body.intent.createdBy, 'user');
+    assert.match(String(body.intent.createdEntryHash), /^[0-9a-f]{64}$/);
+  });
+
+  test('R5: PASS then PULSE leaves no decision', async () => {
+    const s = await start();
+    const intent = await linkedIntent(s);
+    await s.service.updateStatus('PASS', 'judge');
+    await s.service.updateStatus('PULSE', 'user');
+    const body = await assess(s, intent.id);
+    assert.equal(body.intent.decision, null);
+    assert.deepEqual(stepOf(body.assessment, 'review').records, []);
+  });
+
+  test('R6: a VETO makes review failing ("Intent vetoed") and the delivery failing', async () => {
+    const s = await start();
+    const intent = await linkedIntent(s);
+    await s.service.updateStatus('VETO', 'judge');
+    const a = (await assess(s, intent.id)).assessment;
+    assert.equal(stepOf(a, 'review').status, 'failing');
+    assert.match(stepOf(a, 'review').reason, /^Intent vetoed/);
+    assert.equal(a.overall, 'failing');
+  });
+
+  test('R7: VETO then PULSE is missing again, incomplete', async () => {
+    const s = await start();
+    const intent = await linkedIntent(s);
+    await s.service.updateStatus('VETO', 'judge');
+    await s.service.updateStatus('PULSE', 'user');
+    const a = (await assess(s, intent.id)).assessment;
+    assert.equal(stepOf(a, 'review').status, 'missing');
+    assert.equal(a.overall, 'incomplete');
+  });
+
+  test('R8: a Console link records via workspace-delivery and the dialog says who made it', async () => {
+    const s = await start();
+    const intent = await linkedIntent(s);
+    const view = await assess(s, intent.id);
+    for (const e of view.edges) assert.equal(e.provenance.via, 'workspace-delivery', JSON.stringify(e));
+    assert.equal(stepOf(view.assessment, 'code').records[0].via, 'workspace-delivery');
+    assert.match(s.shown[0].detail, /Made by: Workspace > Delivery/);
+  });
+
+  test('R2: links plus a PROVENANCE_RECORDED entry naming the intent give incomplete with the review gap; recorded is not passed', async () => {
     const s = await start();
     const intent = await importedIntent(s.service);
     assert.equal((await link(s, intent.id, 'implements', RUNTIME_ROW)).status, 200);
@@ -187,7 +278,9 @@ suite('#532 DeliveryRoute', () => {
     const res = await s.harness.request({ path: `/api/v1/delivery/intents/${intent.id}` });
     assert.equal(res.status, 200);
     const a = res.body.assessment;
-    assert.equal(a.overall, 'evidence-complete-except-receipt', JSON.stringify(a.steps.map((x: { key: string; status: string }) => [x.key, x.status])));
+    assert.equal(a.overall, 'incomplete', JSON.stringify(a.steps.map((x: { key: string; status: string }) => [x.key, x.status])));
+    assert.deepEqual(a.gaps, ['review']);
+    assert.equal(a.steps.find((x: { key: string }) => x.key === 'governance').status, 'recorded');
     const gov = a.steps.find((x: { key: string }) => x.key === 'governance');
     assert.deepEqual(gov.records.map((r: { entryId: number; eventType: string; chain: string }) => [r.entryId, r.eventType, r.chain]),
       [[entry.id, 'PROVENANCE_RECORDED', 'unknown']]);

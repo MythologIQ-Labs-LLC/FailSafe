@@ -12,6 +12,7 @@ import {
   verifyCheckpointChain,
   verifyLatestCheckpoint,
   getCheckpointSummary,
+  verifyCheckpointRecord,
   CHECKPOINT_INIT_SQL,
   type CheckpointRecord,
 } from '../../roadmap/services/CheckpointStore';
@@ -37,6 +38,7 @@ function build(overrides: { type?: string; phase?: string; status?: any; policyV
     'run-1',
     db,
     memory,
+    'a'.repeat(40),
   );
 }
 
@@ -228,5 +230,36 @@ suite('CheckpointStore (FX319)', () => {
     persistCheckpoint(build({}, null, memory), null, memory);
     const s = getCheckpointSummary(null, memory, false, null);
     assert.equal(s.chainValid, false);
+  });
+
+  // #532 (plan-532c LD8/LD8a, B284): the record names the HEAD it is given, and a stored row can
+  // be checked against its recorded hashes (plain unkeyed SHA-256: an edit that does not recompute
+  // them is detected; a writer that recomputes them is not).
+  test('B284 buildCheckpointRecord records the given HEAD, not one read from the process directory', () => {
+    const head = 'f'.repeat(40);
+    const r = buildCheckpointRecord({
+      checkpointType: 'plan.created', actor: 'a', phase: 'plan', status: 'validated', policyVerdict: 'PASS', evidenceRefs: [], payload: {},
+    }, new Date().toISOString(), 'run-1', null, [], head);
+    assert.equal(r.gitHash, head);
+  });
+
+  test('B284 verifyCheckpointRecord: an intact row verifies; an edited git_hash, payload_json or entry_hash does not', () => {
+    for (const column of ['git_hash', 'payload_json', 'entry_hash'] as const) {
+      const db = makeDb();
+      const r = build({}, db, []);
+      persistCheckpoint(r, db as never, []);
+      assert.equal(verifyCheckpointRecord(db as never, [], r.checkpointId), true, 'intact');
+      const value = column === 'payload_json' ? '{"x":2}' : 'e'.repeat(64);
+      db.prepare(`UPDATE failsafe_checkpoints SET ${column} = ? WHERE checkpoint_id = ?`).run(value, r.checkpointId);
+      assert.equal(verifyCheckpointRecord(db as never, [], r.checkpointId), false, `edited ${column}`);
+      db.close();
+    }
+    const memory: CheckpointRecord[] = [];
+    const m = build({}, null, memory);
+    persistCheckpoint(m, null, memory);
+    assert.equal(verifyCheckpointRecord(null, memory, m.checkpointId), true);
+    memory[0] = { ...memory[0], gitHash: 'e'.repeat(40) };
+    assert.equal(verifyCheckpointRecord(null, memory, m.checkpointId), false, 'edited memory row');
+    assert.equal(verifyCheckpointRecord(null, memory, 'no-such-id'), false, 'an absent row does not verify');
   });
 });

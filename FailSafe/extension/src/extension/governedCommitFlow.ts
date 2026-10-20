@@ -26,8 +26,16 @@ export interface GovernedFlowDeps {
   token?: string;
   apiBaseUrl?: string;
   branchPrefix?: string; // default "fix"
+  /** #532 (plan-532c LD7): offered the bound commit after committed / pushed / pr; never changes the result. */
+  linkCommit?: GovernedCommitLinkFn;
   base?: string;         // default "main"
 }
+
+/** #532 (plan-532c LD7): what the link offer is given: the bound commit and the run that made it. */
+export type GovernedCommitLinkFn = (
+  result: GovernedCommitResult & { commitSha: string },
+  run: { action: string; paths: string[] },
+) => Promise<void>;
 
 export type GovernedFlowResult = GovernedCommitResult | { step: 'noop' } | { step: 'declined' };
 

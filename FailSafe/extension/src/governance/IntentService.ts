@@ -43,12 +43,25 @@ export interface IntentSummary {
   active: boolean;
 }
 
+/**
+ * #532 (plan-532c LD5): the intent decision, the latest STATUS_CHANGED to PASS (approved for
+ * implementation) or VETO (blocked) before the seal, unless a later status change superseded it.
+ * A decision about the intent, never a review of the implementation.
+ */
+export interface IntentDecision {
+  status: 'PASS' | 'VETO';
+  actor: string;
+  timestamp: string;
+  entryHash: string | null;
+}
+
 export interface IntentRecord {
   intent: Intent;
   active: boolean;
   sealed: boolean;
   created: IntentHistoryEntry | null;
   edges: IntentEdge[];
+  decision: IntentDecision | null;
 }
 
 export type IntentListing = { integrity: 'valid'; intents: IntentSummary[] } | { integrity: 'invalid' };
@@ -93,6 +106,15 @@ export function replayIntentEdges(entries: IntentHistoryEntry[], intentId: strin
     }
   }
   return [...edges.values()];
+}
+
+/**
+ * #532 (plan-532c LD5): replay one intent's STATUS_CHANGED entries up to its seal. PASS or VETO
+ * sets the decision; any other later status (for example back to PULSE) clears it. Read-only.
+ */
+export function replayIntentDecision(entries: IntentHistoryEntry[], intentId: string): IntentDecision | null {
+  void entries; void intentId; // RED STUB
+  return null;
 }
 
 export class IntentService {
@@ -234,7 +256,10 @@ export class IntentService {
     const created = entries.find((e) => e.intentId === intentId && e.event === 'CREATED') ?? null;
     return {
       integrity: 'valid',
-      record: { intent, active: isActive, sealed: intent.status === 'SEALED', created, edges: replayIntentEdges(entries, intentId) },
+      record: {
+        intent, active: isActive, sealed: intent.status === 'SEALED', created,
+        edges: replayIntentEdges(entries, intentId), decision: replayIntentDecision(entries, intentId),
+      },
     };
   }
 

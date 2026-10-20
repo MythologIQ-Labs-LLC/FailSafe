@@ -28,9 +28,14 @@ export interface EvidenceRecord {
   entryHash: string;
   matchedBy: 'intentId' | 'git_head';
   value: string;
+  /** plan-532c LD4: a policy decision (allowed / denied action under the intent) or mere presence. */
+  kind: EvidenceKind;
+  outcome: 'allowed' | 'denied' | null;
   /** Not re-verified here; see CHAIN_UNKNOWN_REASON. */
   chain: 'unknown';
 }
+
+export type EvidenceKind = 'presence' | 'policy-decision';
 
 export type GovernanceEvidence =
   | { state: 'ok'; records: EvidenceRecord[]; truncated: boolean; chain: 'unknown'; chainReason: string }
@@ -66,7 +71,7 @@ export async function findGovernanceEvidence(ledger: unknown, intentId: string, 
         if (!match || byId.has(entry.id)) continue;
         byId.set(entry.id, {
           entryId: entry.id, eventType: String(entry.eventType), timestamp: entry.timestamp, entryHash: entry.entryHash,
-          ...match, chain: 'unknown',
+          ...match, kind: 'presence', outcome: null, chain: 'unknown', // RED STUB
         });
       }
     }

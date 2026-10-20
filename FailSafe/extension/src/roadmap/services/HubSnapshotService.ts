@@ -30,6 +30,7 @@ import type { WorkspaceMutationBus, MutationDisposable } from "../../shared/Work
 import { assembleServiceHubPayload, type HubPayloadSource } from "./hub-payload-assembler";
 import { createHubRevertDeps } from "./hub-revert-deps";
 import { projectResolution } from "../../qorelogic/ledger/AuditResolutionProjector";
+import { readWorkspaceHead } from "./workspaceHead";
 export type UnattributedFileChange = { eventId: string; timestamp: string; type: string; artifactPath?: string; decision?: string; };
 export type RecordCheckpointInput = { checkpointType: string; actor: string; phase: string; status: CheckpointStatus; policyVerdict: string; evidenceRefs: string[]; payload: unknown; };
 export interface HubSnapshotServiceDeps {
@@ -48,6 +49,8 @@ export interface HubSnapshotServiceDeps {
   getGovernanceMode?: () => import("../../governance/types").GovernanceModeState;
   getQorLogicVerifier?: () => Promise<import("../../qorlogic/qorLogicInstallRecord").QorLogicVersionStatus>;
   getEducationConfig?: () => import("../../education/educationConfig").EducationConfig;
+  /** #532 (plan-532c LD8): reads the workspace HEAD for each checkpoint; tests inject one. */
+  readHead?: (workspaceRoot: string) => string;
 }
 const FILE_EVENT_TYPES = new Set(["FILE_CREATED", "FILE_MODIFIED", "FILE_DELETED"]);
 export interface CheckpointStoreRef { db: CheckpointDb; memory: CheckpointRecord[]; }
@@ -140,7 +143,8 @@ export class HubSnapshotService {
       input.evidenceRefs = this.deps.sentinelDaemon.getRecentObservationIds(since, 10);
     }
     const runId = this.deps.planManager.getActivePlan()?.id || this.deps.planManager.getCurrentSprint()?.id || "global";
-    const r = ckptBuildRecord(input, new Date().toISOString(), runId, this.checkpointDb, this.checkpointMemory);
+    const head = (this.deps.readHead ?? readWorkspaceHead)(this.deps.workspaceRoot);
+    const r = ckptBuildRecord(input, new Date().toISOString(), runId, this.checkpointDb, this.checkpointMemory, head);
     ckptPersist(r, this.checkpointDb, this.checkpointMemory);
   }
 

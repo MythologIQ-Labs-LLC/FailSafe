@@ -6,6 +6,8 @@ import {
   RevertRequest,
   RevertResult,
   RevertStep,
+  RollbackPlan,
+  RollbackPrepareResult,
 } from "./types";
 
 export interface RevertDeps {
@@ -17,6 +19,8 @@ export interface RevertDeps {
     steps: RevertStep[],
   ) => string;
   workspaceRoot: string;
+  /** #532 (plan-532c LD8a): whether the stored checkpoint row still matches its recorded hashes. */
+  verifyCheckpoint?: (id: string) => boolean;
 }
 
 export class FailSafeRevertService {
@@ -26,7 +30,14 @@ export class FailSafeRevertService {
     this.deps = deps;
   }
 
-  async revert(request: RevertRequest): Promise<RevertResult> {
+  /** #532 (plan-532c LD8a): the checks before the rollback dialog, and the values it shows. */
+  async prepare(checkpointId: string): Promise<RollbackPrepareResult> {
+    void checkpointId; // RED STUB
+    return { ok: false, status: 501, error: "not implemented" };
+  }
+
+  async revert(request: RevertRequest, plan?: RollbackPlan): Promise<RevertResult> {
+    void plan; // RED STUB
     const steps: RevertStep[] = [];
     const { gitService, workspaceRoot } = this.deps;
     const { targetCheckpoint } = request;

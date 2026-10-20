@@ -117,6 +117,12 @@ export function verifyCheckpointChain(
   return true;
 }
 
+/** #532 (plan-532c LD8a): whether one stored row still matches its recorded payload and entry hashes. */
+export function verifyCheckpointRecord(db: CheckpointDb, memory: CheckpointRecord[], checkpointId: string): boolean {
+  void db; void memory; void checkpointId; // RED STUB
+  return true;
+}
+
 export function verifyLatestCheckpoint(
   db: CheckpointDb, memory: CheckpointRecord[],
 ): boolean {
@@ -162,7 +168,9 @@ export function buildCheckpointRecord(
   runId: string,
   db: CheckpointDb,
   memory: CheckpointRecord[],
+  gitHead: string,
 ): CheckpointRecord {
+  void gitHead; // RED STUB
   const payloadJson = stableStringify(input.payload || {});
   const payloadHash = hash(payloadJson);
   const gitHash = tryGetGitHead();

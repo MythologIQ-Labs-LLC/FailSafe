@@ -45,6 +45,9 @@ export interface GovernedCommitResult {
   step: GovernedCommitStep;
   branch?: string;
   commit?: string;
+  /** #532 (plan-532c LD7): the full name of the commit FailSafe made, set only when its parent, tree,
+   *  message and branch tip bind it to this run; otherwise unset (and `warning` says why). */
+  commitSha?: string;
   /** Always credential-redacted (`https://***@host/...`) — never a fetchable URL. */
   remoteUrl?: string;
   prUrl?: string;

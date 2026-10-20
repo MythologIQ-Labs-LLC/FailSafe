@@ -6,11 +6,13 @@ import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { spawnSync } from 'child_process';
 import { HubSnapshotService } from '../../roadmap/services/HubSnapshotService';
+import { readWorkspaceHead } from '../../roadmap/services/workspaceHead';
 
 interface CallLog { name: string; t: number; }
 
-function makeFakes(opts: { ledgerEntries?: any[] } = {}): {
+function makeFakes(opts: { ledgerEntries?: any[]; workspaceRoot?: string; readHead?: (root: string) => string } = {}): {
   calls: CallLog[];
   deps: any;
   hub: HubSnapshotService;
@@ -67,8 +69,9 @@ function makeFakes(opts: { ledgerEntries?: any[] } = {}): {
   const gitResetService: any = {};
 
   const deps = {
-    workspaceRoot: tmp,
+    workspaceRoot: opts.workspaceRoot ?? tmp,
     extensionVersion: 'test-9.9.9',
+    ...(opts.readHead ? { readHead: opts.readHead } : {}),
     planManager, qorelogicManager, sentinelDaemon,
     gitResetService, transparencyLogger, riskRegisterManager,
     mergePlanBlockers: (plan: unknown) => plan,
@@ -351,6 +354,81 @@ suite('HubSnapshotService (Phase 60 §0)', () => {
       const first = await hub.buildHubSnapshot();
       const second = await hub.buildHubSnapshot();
       assert.deepEqual((first as any).auditLog, (second as any).auditLog);
+    });
+  });
+
+  // #532 (plan-532c LD8, B284): hub checkpoints record this workspace's HEAD, read from disk,
+  // whatever the extension process's working directory is.
+  suite('workspace HEAD (#532 B284)', () => {
+    const temps: string[] = [];
+    teardown(() => { for (const d of temps.splice(0)) fs.rmSync(d, { recursive: true, force: true, maxRetries: 3 }); });
+    function tempRepo(prefix: string): { root: string; head: string } {
+      const root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), prefix)));
+      temps.push(root);
+      const run = (...args: string[]) => {
+        const r = spawnSync('git', ['-c', 'core.hooksPath=', '-c', 'commit.gpgsign=false', '-c', 'user.name=t', '-c', 'user.email=t@t.invalid', ...args],
+          { cwd: root, encoding: 'utf8', windowsHide: true });
+        assert.equal(r.status, 0, r.stderr);
+        return String(r.stdout).trim();
+      };
+      run('init', '-q');
+      run('commit', '-q', '--allow-empty', '-m', prefix);
+      return { root, head: run('rev-parse', 'HEAD') };
+    }
+    const record = (hub: HubSnapshotService) => hub.recordCheckpoint({
+      checkpointType: 'snapshot.created', actor: 'test', phase: 'plan', status: 'validated', policyVerdict: 'PASS', evidenceRefs: ['e-1'], payload: {},
+    });
+
+    test('H1: a checkpoint over a temp repository records its HEAD', () => {
+      const ws = tempRepo('hub-head-');
+      const { hub } = makeFakes({ workspaceRoot: ws.root });
+      record(hub);
+      assert.equal(hub.getRecentCheckpoints(1)[0].gitHash, ws.head);
+    });
+
+    test('H2: with process.cwd() in another repository, the row still names the workspace HEAD', () => {
+      const ws = tempRepo('hub-head-ws-');
+      const other = tempRepo('hub-head-other-');
+      const { hub } = makeFakes({ workspaceRoot: ws.root });
+      const before = process.cwd();
+      try {
+        process.chdir(other.root);
+        record(hub);
+      } finally {
+        process.chdir(before);
+      }
+      assert.equal(process.cwd(), before, 'the working directory is restored');
+      assert.equal(hub.getRecentCheckpoints(1)[0].gitHash, ws.head);
+      assert.notEqual(hub.getRecentCheckpoints(1)[0].gitHash, other.head);
+    });
+
+    test('W8: 200 checkpoints on the memory store name HEAD with zero child processes and zero fallback calls', () => {
+      const ws = tempRepo('hub-head-burst-');
+      let fallbacks = 0;
+      const { hub } = makeFakes({
+        workspaceRoot: ws.root,
+        readHead: (root) => readWorkspaceHead(root, { fallback: () => { fallbacks += 1; return null; } }),
+      });
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const cp = require('child_process') as Record<string, unknown>;
+      const names = ['spawn', 'spawnSync', 'execFile', 'execFileSync', 'exec', 'execSync', 'fork'];
+      const originals = names.map((n) => cp[n]);
+      let children = 0;
+      names.forEach((n, i) => { cp[n] = function (this: unknown, ...a: unknown[]) { children += 1; return (originals[i] as (...x: unknown[]) => unknown).apply(this, a); }; });
+      const t0 = Date.now();
+      try {
+        for (let i = 0; i < 200; i += 1) record(hub);
+      } finally {
+        names.forEach((n, i) => { cp[n] = originals[i]; });
+      }
+      const ms = Date.now() - t0;
+      console.log(`  W8: 200 checkpoints in ${ms} ms (mean ${(ms / 200).toFixed(2)} ms); the spawn path measured 8.0 s on the plan host`);
+      const rows = hub.getRecentCheckpoints(200);
+      assert.equal(rows.length, 200);
+      assert.ok(rows.every((r) => r.gitHash === ws.head), 'every row names rev-parse HEAD');
+      assert.equal(children, 0, 'no child process');
+      assert.equal(fallbacks, 0, 'no fallback');
+      assert.ok(ms < 5000, `backstop only: ${ms} ms`);
     });
   });
 });

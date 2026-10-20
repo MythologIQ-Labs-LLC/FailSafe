@@ -68,6 +68,11 @@ export interface DeliveryRequest {
 
 export type EdgeAction = 'link' | 'unlink';
 
+/** plan-532c LD6: what created an edge, recorded in its provenance as `via` (and `action`). */
+export type EdgeOrigin =
+  | { via: 'workspace-delivery' }
+  | { via: 'governed-commit'; action: string };
+
 interface ComputedEdge {
   provenance: Record<string, unknown>;
   /** Server-side values shown in the confirmation dialog, exactly what is recorded. */
@@ -86,6 +91,12 @@ export interface DeliveryIntentView {
   status: IntentStatus;
   active: boolean;
   sealed: boolean;
+  /** The CREATED entry: who created the intent, when, and that entry's hash. */
+  createdBy: string | null;
+  createdAt: string | null;
+  createdEntryHash: string | null;
+  /** plan-532c LD5: the intent decision; approval for implementation is not a review. */
+  decision: { status: 'PASS' | 'VETO'; actor: string; timestamp: string; entryHash: string | null } | null;
 }
 
 export type DeliveryView =
@@ -203,7 +214,10 @@ function edgeFacts(edge: IntentEdge): string[] {
  * Check a link or unlink request against server state and compute what would be recorded. Every
  * value in `provenance` and `facts` comes from the server; the request names only the edge.
  */
-export async function prepareDeliveryEdge(ctx: DeliveryContext, action: EdgeAction, req: DeliveryRequest): Promise<PreparedEdge> {
+export async function prepareDeliveryEdge(
+  ctx: DeliveryContext, action: EdgeAction, req: DeliveryRequest, origin: EdgeOrigin = { via: 'workspace-delivery' },
+): Promise<PreparedEdge> {
+  void origin; // RED STUB
   const record = await writableRecord(ctx, req.intentId);
   if ('ok' in record) return record;
   const intent = { id: record.intent.id, purpose: record.intent.purpose };
@@ -290,11 +304,15 @@ export async function assessIntentDelivery(ctx: DeliveryContext, intentId: strin
     architecture: checkArchitecture(ctx, implementsEdges),
     code: checkCode(ctx, commitEdges),
     governance: await findGovernanceEvidence(ctx.ledger, intentId, linkedShas),
+    decision: null, // RED STUB
   });
   const i = record.intent;
   return {
     integrity: 'valid', found: true,
-    intent: { id: i.id, purpose: i.purpose, status: i.status, active: record.active, sealed: record.sealed },
+    intent: {
+      id: i.id, purpose: i.purpose, status: i.status, active: record.active, sealed: record.sealed,
+      createdBy: null, createdAt: null, createdEntryHash: null, decision: null, // RED STUB
+    },
     linkable: record.active && !record.sealed, edges: record.edges, assessment,
   };
 }

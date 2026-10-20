@@ -10,9 +10,10 @@
 
 import type { GovernanceEvidence } from './deliveryEvidence';
 
-export type StepStatus = 'recorded' | 'stale' | 'missing' | 'unavailable';
-export type StepKey = 'issue' | 'architecture' | 'code' | 'governance' | 'receipt';
-export type DeliveryOutcome = 'evidence-complete-except-receipt' | 'incomplete';
+/** `recorded` means present, not passed. `passing` is defined but nothing produces it until B320/B321. */
+export type StepStatus = 'recorded' | 'passing' | 'failing' | 'stale' | 'missing' | 'unavailable';
+export type StepKey = 'issue' | 'architecture' | 'code' | 'review' | 'governance' | 'receipt';
+export type DeliveryOutcome = 'evidence-complete-except-receipt' | 'incomplete' | 'failing';
 
 export interface DeliveryStep {
   key: StepKey;
@@ -25,14 +26,30 @@ export interface DeliveryStep {
 export interface DeliveryAssessment {
   intentId: string;
   overall: DeliveryOutcome;
-  /** The first four steps that are not `recorded`, in step order. The receipt is never a gap. */
+  /** The first five steps that are not at their complete status, in step order. The receipt is never a gap. */
   gaps: StepKey[];
   steps: DeliveryStep[];
+  /** plan-532c LD2: false until FailSafe records a review of the implementation (B320, B321). */
+  completeReachable: boolean;
+  completeBlockedBy: string[];
 }
 
 export const RECEIPT_REASON = 'Blocked on the damaged ledger (#467), B216.';
 
-export interface ArchitectureEdgeCheck {
+/** plan-532c LD5: why the review step is missing in this slice. */
+export const REVIEW_MISSING_REASON = 'FailSafe records no review of the implementation yet: no command records a review verdict (B320) ' +
+  'and no governance event names the commit it evaluated (B321).';
+export const COMPLETE_BLOCKED_BY: readonly string[] = Object.freeze(['B320', 'B321']);
+/** plan-532c LD5: the intent history chain is unkeyed and its actor is free text. */
+export const DECISION_PROVENANCE_NOTE = 'Recorded in the local intent history; the chain shows the entry is unchanged since it was chained, not who wrote it.';
+
+/** Who created an edge (plan-532c LD6); absent on edges recorded before it. */
+export interface EdgeOriginFields {
+  via?: string | null;
+  action?: string | null;
+}
+
+export interface ArchitectureEdgeCheck extends EdgeOriginFields {
   target: string;
   docPath: string;
   docSha256: string;
@@ -43,7 +60,7 @@ export interface ArchitectureEdgeCheck {
   currentSha256?: string;
 }
 
-export interface CodeEdgeCheck {
+export interface CodeEdgeCheck extends EdgeOriginFields {
   sha: string;
   tree: string;
   branch: string | null;
@@ -62,10 +79,12 @@ export interface DeliveryInputs {
   architecture: EdgeChecks<ArchitectureEdgeCheck>;
   code: EdgeChecks<CodeEdgeCheck>;
   governance: GovernanceEvidence;
+  /** plan-532c LD5: the intent decision (PASS approved for implementation, VETO blocked), or null. */
+  decision: { status: 'PASS' | 'VETO'; actor: string; timestamp: string; entryHash: string | null } | null;
 }
 
 const LABELS: Record<StepKey, string> = {
-  issue: 'Issue', architecture: 'Architecture', code: 'Code', governance: 'Governance evidence', receipt: 'Receipt',
+  issue: 'Issue', architecture: 'Architecture', code: 'Code', review: 'Review', governance: 'Governance evidence', receipt: 'Receipt',
 };
 
 const step = (key: StepKey, status: StepStatus, reason: string, records: Array<Record<string, unknown>> = []): DeliveryStep =>
@@ -134,5 +153,5 @@ export function assessDelivery(input: DeliveryInputs): DeliveryAssessment {
     step('receipt', 'unavailable', RECEIPT_REASON),
   ];
   const gaps = steps.slice(0, 4).filter((s) => s.status !== 'recorded').map((s) => s.key);
-  return { intentId: input.intentId, overall: gaps.length ? 'incomplete' : 'evidence-complete-except-receipt', gaps, steps };
+  return { intentId: input.intentId, overall: gaps.length ? 'incomplete' : 'evidence-complete-except-receipt', gaps, steps, completeReachable: true, completeBlockedBy: [] }; // RED STUB
 }

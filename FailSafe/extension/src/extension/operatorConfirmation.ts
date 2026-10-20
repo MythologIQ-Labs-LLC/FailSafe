@@ -16,6 +16,7 @@
 import { randomUUID } from "crypto";
 import type { Response } from "express";
 import type { L3ApprovalRequest } from "../shared/types/l3-approval";
+import type { RollbackPlan } from "../governance/revert/types";
 
 export interface OperatorActionRequest {
   title: string;
@@ -144,7 +145,8 @@ export interface CheckpointSummary {
   timestamp?: string;
 }
 
-export function rollbackRequest(checkpointId: string, checkpoint: CheckpointSummary, reason: string): OperatorActionRequest {
+export function rollbackRequest(checkpointId: string, checkpoint: CheckpointSummary, reason: string, plan?: RollbackPlan): OperatorActionRequest {
+  void plan; // RED STUB
   const shownReason = sanitizeDialogText(reason, REASON_LIMIT);
   const type = checkpoint.checkpointType ?? [checkpoint.phase, checkpoint.status].filter(Boolean).join(" / ");
   return {

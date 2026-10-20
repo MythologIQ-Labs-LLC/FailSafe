@@ -85,6 +85,42 @@ export class GitResetService {
     };
   }
 
+  /** #532 (plan-532c LD8a): `git reset --keep <target>`; never overwrites a changed file the reset would touch. */
+  async resetKeep(cwd: string, targetHash: string): Promise<{ success: boolean; stdout: string; stderr: string }> {
+    void cwd; void targetHash; // RED STUB
+    return { success: false, stdout: "", stderr: "not implemented" };
+  }
+
+  /** `merge-base --is-ancestor <target> HEAD`: yes (0), no (1), or unavailable. */
+  async isAncestor(cwd: string, targetHash: string): Promise<"yes" | "no" | "unavailable"> {
+    void cwd; void targetHash; // RED STUB
+    return "yes";
+  }
+
+  /** `rev-list --count <target>..HEAD`, or null when git cannot answer. */
+  async countLeaving(cwd: string, targetHash: string): Promise<number | null> {
+    void cwd; void targetHash; // RED STUB
+    return 0;
+  }
+
+  /** Subject and committer date of a commit (`log -1 --format=%s%x00%cI`), or null. */
+  async describeCommit(cwd: string, targetHash: string): Promise<{ subject: string; date: string } | null> {
+    void cwd; void targetHash; // RED STUB
+    return { subject: "", date: "" };
+  }
+
+  /** `rev-parse --show-toplevel`, or null. */
+  async workTree(cwd: string): Promise<string | null> {
+    void cwd; // RED STUB
+    return cwd;
+  }
+
+  /** After a reset: HEAD@{1}, the current branch (null when detached) and HEAD. Unreadable values are null. */
+  async afterReset(cwd: string): Promise<{ previousHead: string | null; branch: string | null; head: string | null }> {
+    void cwd; // RED STUB
+    return { previousHead: null, branch: null, head: null };
+  }
+
   private run(
     args: string[],
     cwd: string,
