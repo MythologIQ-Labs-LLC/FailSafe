@@ -13,6 +13,7 @@
  */
 
 import { spawnSync } from "child_process";
+import { createHash } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { trustedGitPath, TrustedGitUnavailable } from "../../shared/git/trustedGit";
@@ -44,6 +45,10 @@ export interface SnapshotRow {
   related: string;
   governanceRef: string;
   updatedBy: string;
+  /** #531 slice 2: the row's 1-based line in the index file. */
+  line: number;
+  /** #531 slice 2: the document path is in the `ls-files -co` list (exists and is not ignored). */
+  listed: boolean;
 }
 
 export interface ArchitectureIndexSnapshot {
@@ -59,6 +64,8 @@ export interface ArchitectureIndexSnapshot {
   normativeGlobs: string[];
   legacyGlobs: string[];
   checkedAt: string;
+  /** #531 slice 2: SHA-256 of the index file's bytes, or null when no index was read. */
+  indexSha256: string | null;
 }
 
 export type GitOutcome =
@@ -70,7 +77,8 @@ export type ArchitectureGit = (root: string, args: string[]) => GitOutcome;
 
 const GIT_TIMEOUT_MS = 10_000;
 const GIT_MAX_BUFFER = 64 * 1024 * 1024;
-const MAX_DOC_BYTES = 2 * 1024 * 1024;
+/** Documents up to this size are read and hashed; larger ones are never hashed (shared by discovery, assessment and proposals). */
+export const MAX_DOC_BYTES = 2 * 1024 * 1024;
 
 /** A git runner over a resolver (the trusted one by default; tests inject a failing one). */
 export function makeArchitectureGit(resolve: (cwd: string) => string = trustedGitPath): ArchitectureGit {
@@ -119,13 +127,15 @@ export function resolveInsideWorkspace(root: string, rel: string): { abs: string
   return { abs: real, inside: isInside(rootReal, real) };
 }
 
-function readInside(root: string, rel: string): string | null {
+/** The file's text and the SHA-256 of its bytes (one read, so the hash is of what was parsed). */
+function readInside(root: string, rel: string): { text: string; sha256: string } | null {
   const r = resolveInsideWorkspace(root, rel);
   if (!r || !r.inside) return null;
   try {
     const st = fs.statSync(r.abs);
     if (!st.isFile() || st.size > MAX_DOC_BYTES) return null;
-    return fs.readFileSync(r.abs, "utf8");
+    const bytes = fs.readFileSync(r.abs);
+    return { text: bytes.toString("utf8"), sha256: createHash("sha256").update(bytes).digest("hex") };
   } catch {
     return null;
   }
@@ -142,10 +152,11 @@ function listFiles(root: string, git: ArchitectureGit): { files: string[] } | { 
   return { files: files.sort() };
 }
 
-function toSnapshotRow(r: RegistryRow): SnapshotRow {
+function toSnapshotRow(r: RegistryRow, listed: ReadonlySet<string>): SnapshotRow {
   return {
     id: r.id, domain: r.domain, docPath: r.docPath, status: r.status, owner: r.owner, supersedes: r.supersedes,
-    related: r.related, governanceRef: r.governance_ref, updatedBy: r.updated_by,
+    related: r.related, governanceRef: r.governance_ref, updatedBy: r.updated_by, line: r.line,
+    listed: r.docPath !== null && listed.has(r.docPath),
   };
 }
 
@@ -170,7 +181,7 @@ export function discoverArchitectureIndex(opts: DiscoveryOptions): ArchitectureI
   const profile = userRepoProfile(indexPath ?? DEFAULT_INDEX_PATH);
   const base: ArchitectureIndexSnapshot = {
     state: "absent", indexPath: indexPath ?? String(opts.indexPathSetting ?? ""), rows: [], problems: [], candidates: [],
-    normativeGlobs: profile.normativeGlobs, legacyGlobs: profile.legacyGlobs, checkedAt,
+    normativeGlobs: profile.normativeGlobs, legacyGlobs: profile.legacyGlobs, checkedAt, indexSha256: null,
   };
   const root = opts.workspaceRoot;
   if (!root) return { ...base, state: "no-workspace" };
@@ -182,22 +193,23 @@ export function discoverArchitectureIndex(opts: DiscoveryOptions): ArchitectureI
 
   const located = resolveInsideWorkspace(root, indexPath);
   if (located && !located.inside) return { ...base, state: "bad-index-path", detail: "the index path resolves outside the workspace" };
-  const indexText = located ? readInside(root, indexPath) : null;
+  const index = located ? readInside(root, indexPath) : null;
 
-  if (indexText === null) return discoverAbsent(root, base, files, profile.normativeGlobs, profile.legacyGlobs);
+  if (index === null) return discoverAbsent(root, base, files, profile.normativeGlobs, profile.legacyGlobs);
 
-  const result = validateIndex({ indexText, readmeText: "", governanceText: "", tracked: files }, profile);
+  const result = validateIndex({ indexText: index.text, readmeText: "", governanceText: "", tracked: files }, profile);
   const state: ArchitectureIndexState = result.problems.some(isParseFailure) ? "invalid"
     : result.problems.length ? "present-with-problems" : "present";
   const globs = result.globs.length ? result.globs : profile.normativeGlobs;
   const legacy = result.legacy.length ? result.legacy : profile.legacyGlobs;
+  const listedFiles = new Set(files);
   const registered = new Set(result.rows.map((r) => r.docPath).filter(Boolean));
   const candidates = files
     .filter((p) => p !== indexPath && !registered.has(p) && isNormative(p, globs, legacy))
     .map((p) => ({ path: p, suggestions: suggestFor(p, result.rows) }));
   return {
-    ...base, state, rows: result.rows.map(toSnapshotRow), problems: result.problems, candidates,
-    normativeGlobs: globs, legacyGlobs: legacy,
+    ...base, state, rows: result.rows.map((r) => toSnapshotRow(r, listedFiles)), problems: result.problems, candidates,
+    normativeGlobs: globs, legacyGlobs: legacy, indexSha256: index.sha256,
   };
 }
 
@@ -210,8 +222,8 @@ function discoverAbsent(
   const candidates = matches.map((p) => ({ path: p, suggestions: suggestFor(p, peers.filter((x) => x.docPath !== p)) }));
   // Present-elsewhere looks only at default-glob matches (disclosed in the ADR).
   const elsewhere = matches.find((p) => {
-    const text = readInside(root, p);
-    return text !== null && looksLikeIndex(text);
+    const read = readInside(root, p);
+    return read !== null && looksLikeIndex(read.text);
   });
   if (elsewhere) return { ...base, state: "present-elsewhere", elsewherePath: elsewhere, candidates };
   return { ...base, state: "absent", candidates };
