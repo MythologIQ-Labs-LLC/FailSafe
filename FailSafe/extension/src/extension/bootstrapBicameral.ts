@@ -286,6 +286,7 @@ export async function connectWiredBicameral(
 ): Promise<boolean> {
   if (!isCurrent() || client.isConnected()) return false;
   await client.connect();
+  if (!client.isConnected()) throw new Error('Bicameral client connect completed without an active session');
   if (!isCurrent()) {
     await client.disconnect().catch(() => undefined);
     return false;
@@ -303,13 +304,15 @@ export function maybeAutoConnectBicameral(
   consoleServer: ConsoleServerSurface,
   workspaceRoot: string,
   output: { appendLine: (msg: string) => void },
+  /** Internal test seam: production always uses the trusted install-state probe. */
+  inspectInstall: typeof probeInstallState = probeInstallState,
 ): void {
   void (async () => {
     try {
       const cfg = vscode.workspace.getConfiguration("failsafe.integrations.bicameral");
       if (!readAutoConnect(cfg)) return;
       const command = readCommand(cfg);
-      const probe = await probeInstallState({
+      const probe = await inspectInstall({
         command,
         workspaceRoot,
         extraRoots: readBicameralExtraRoots(cfg),
