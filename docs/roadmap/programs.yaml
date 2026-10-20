@@ -124,15 +124,16 @@ phases:
 # surface — one product structure, two views. Every vertical key maps to a program
 # key (validateManifest warns on `vertical-unknown-program`); a genuinely
 # cross-cutting surface that maps to no single program sets `crossCutting: true`.
+# #548: each vertical's `functionality` lists exactly its Console sub-views
+# (CONSOLE_VERTICALS), in Console order, one `**Label** description` line each, with
+# no other bold text. taxonomy-drift.test.ts fails when this drifts from the Console.
 verticals:
   - key: monitor
     name: Monitor
     accent: "#38d6c8"
     summary: Live status + trust posture at a glance — the sidebar Monitor and the Console Overview.
     functionality:
-      - "**Trust snapshot** current posture + confidence"
-      - "**Operation stream** recent governed actions, live"
-      - "**Threat + chain status** Merkle-ledger integrity"
+      - "**Overview** trust snapshot, operation stream, threat and chain status"
     backend:
       - "`OverviewRenderer` (Console `overview` tab)"
       - "`FailSafeSidebarProvider` (VS Code sidebar Monitor)"
@@ -141,8 +142,7 @@ verticals:
     accent: "#e7b04b"
     summary: Onboarding & education — governance concepts, lessons, and the SHIELD glossary.
     functionality:
-      - "**SWE-craft lessons** governance + engineering practice"
-      - "**Glossary** the SHIELD vocabulary"
+      - "**Learn** governance and engineering lessons, and the SHIELD glossary"
     backend:
       - "`LearnRenderer` · `education/*`"
   - key: agents
@@ -159,22 +159,26 @@ verticals:
   - key: governance
     name: Governance
     accent: "#7aa2f7"
-    summary: Audit & compliance — the Merkle audit log, risk register, policies and the L3 approval queue.
+    summary: Audit & compliance — the Merkle audit log, risk register, policies, the L3 approval queue and the Shadow Genome dashboard.
     functionality:
       - "**Audit Log** real-time governed-event stream"
       - "**Risks** durable risk register CRUD"
       - "**Compliance** Sentinel status, policies, L3 queue — verdicts PASS/WARN/BLOCK/ESCALATE; risk classes L1/L2/L3"
+      - "**Shadow Genome** summary cards with genome map, incidents, trust and federation views"
     backend:
       - "`META_LEDGER.md` (Merkle chain) · `EnforcementEngine`"
       - "`RiskRegisterManager` · `TransparencyRenderer` · `GovernanceRenderer`"
   - key: workspace
     name: Workspace
     accent: "#9ece6a"
-    summary: Workspace tools — skills, the ideation mindmap, and the development tracker.
+    summary: Workspace tools — skills, the ideation mindmap, the development tracker, the taxonomy editor, the managed architecture index and the delivery assessment.
     functionality:
       - "**Skills** governance-aware skill discovery + intent shell"
       - "**Mindmap** node-based ideation + Whisper/Piper voice (voice pack)"
       - "**Tracker** this evidence-enforced development dashboard"
+      - "**Taxonomy** edit programs, verticals and agent mappings; shows drift from the Console"
+      - "**Architecture** the managed architecture index: validate, list unregistered documents, propose registration"
+      - "**Delivery** what an intent delivered, in five steps"
     backend:
       - "`SkillRegistry` · `brainstorm/*` · `TrackerRoute` (`/console/tracker`)"
   - key: integrations
@@ -182,10 +186,11 @@ verticals:
     accent: "#bb9af7"
     summary: Third-party integrations — the catalog plus governed, risk-scored connectors.
     functionality:
-      - "**Catalog** env-detected, governed installs"
-      - "**Bicameral · Open Design** decision-graph + L3 write path"
+      - "**Catalog** env-detected, governed installs, including SARIF import and Slack notices"
+      - "**Bicameral** decision-graph MCP: status, history, drift, ratify"
+      - "**Open Design** Open Design MCP status; create_artifact only through L3 approval"
       - "**MCP Catalog** risk-scored MCP installs (Context7, Mermaid)"
-      - "**Agent Governance** Microsoft AGT installer · **SARIF** ingest · **Slack** notify-only"
+      - "**Agent Governance** Microsoft AGT installer"
     backend:
       - "`src/integrations/*` (injectable transports)"
       - "`/api/v1/mcp/catalog` · `/api/v1/agt/modules`"
