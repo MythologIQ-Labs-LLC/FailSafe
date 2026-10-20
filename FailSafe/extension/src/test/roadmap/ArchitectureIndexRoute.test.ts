@@ -67,6 +67,9 @@ interface FakeLedger {
   entries: Array<Record<string, unknown> & { id: number }>;
   isAvailable(): boolean;
   appendEntry(r: Record<string, unknown>): Promise<{ id: number; entryHash: string }>;
+  // #531 slice 2: the pending-authority read (L3_APPROVED entries and their PROPOSAL by id).
+  getEntriesByType(t: string, limit: number): Promise<Array<Record<string, unknown> & { id: number }>>;
+  getEntryById(id: number): Promise<(Record<string, unknown> & { id: number }) | null>;
 }
 
 function fakeLedger(mode: 'available' | 'disabled' | 'stub' = 'available'): FakeLedger {
@@ -80,6 +83,11 @@ function fakeLedger(mode: 'available' | 'disabled' | 'stub' = 'available'): Fake
       entries.push(e);
       return { id: e.id, entryHash: `hash-${e.id}` };
     },
+    getEntriesByType: async (t, limit) => {
+      const m = entries.filter((e) => e.eventType === t).sort((a, b) => b.id - a.id);
+      return limit < 0 ? m : m.slice(0, limit);
+    },
+    getEntryById: async (id) => entries.find((e) => e.id === id) ?? null,
   };
 }
 
@@ -113,16 +121,18 @@ suite('#531 ArchitectureIndexRoute', () => {
     const queued: Array<Record<string, unknown>> = [];
     const opened: string[] = [];
     const c = confirmer(over.confirmResult ?? 'approved', over.onConfirm);
-    const deps: ArchitectureIndexRouteDeps = {
+    // A cast, not an annotation: the #531 slice 2 dep `getL3Queue` is extra on main.
+    const deps = {
       rejectIfRemote: () => false,
       workspaceRoot: root,
       getIndexPathSetting: () => undefined,
       getLedgerManager: () => ledger,
-      queueL3Approval: async (r) => { queued.push(r as unknown as Record<string, unknown>); return `l3-${queued.length}`; },
-      openFileInEditor: async (abs) => { opened.push(abs); },
+      queueL3Approval: async (r: unknown) => { queued.push(r as Record<string, unknown>); return `l3-${queued.length}`; },
+      getL3Queue: () => queued.map((q, i) => ({ ...q, id: `l3-${i + 1}`, state: 'QUEUED' })),
+      openFileInEditor: async (abs: string) => { opened.push(abs); },
       confirmOperatorAction: c.confirm,
       ...over,
-    };
+    } as ArchitectureIndexRouteDeps;
     setupArchitectureIndexRoutes(app, deps);
     harness = new RouteHarness(app);
     await harness.start();
@@ -266,8 +276,8 @@ suite('#531 ArchitectureIndexRoute', () => {
     const before = fs.readFileSync(path.join(root, 'docs', 'ARCHITECTURE_INDEX.md'), 'utf8');
     const s = await start(root);
     const res = await s.harness.request({ method: 'POST', path: '/api/actions/architecture-index/propose', body: {
-      path: 'docs/architecture/RUNTIME_COPY.md', action: 'register',
-      sourceSha: 'f'.repeat(40), docSha256: '0'.repeat(64), suggestions: ['evil.md'],
+      path: 'docs/architecture/RUNTIME_COPY.md', action: 'register', domain: 'runtime copy', status: 'proposed',
+      sourceSha: 'f'.repeat(40), docSha256: '0'.repeat(64), suggestions: ['evil.md'], indexSha256: '1'.repeat(64),
     } });
     assert.equal(res.status, 202, JSON.stringify(res.body));
     assert.equal(res.body.approvalId, 'l3-1');
@@ -277,6 +287,9 @@ suite('#531 ArchitectureIndexRoute', () => {
       kind: 'architecture-doc-proposal', path: 'docs/architecture/RUNTIME_COPY.md', action: 'register', supersededBy: null,
       sourceSha: head, docSha256: sha(fs.readFileSync(path.join(root, 'docs', 'architecture', 'RUNTIME_COPY.md'))),
       suggestions: ['docs/architecture/RUNTIME.md', 'docs/ARCHITECTURE_INDEX.md'],
+      // #531 slice 2: the registration intent and the authority evidence, all server-side except domain/status.
+      domain: 'runtime copy', status: 'proposed', supersedes: [], supersededRowId: null, existingAuthority: [],
+      indexSha256: sha(fs.readFileSync(path.join(root, 'docs', 'ARCHITECTURE_INDEX.md'))),
     };
     assert.deepEqual(entry.payload, payload, 'evidence is computed server-side; body values are ignored');
     assert.equal(entry.eventType, 'PROPOSAL');
@@ -306,8 +319,11 @@ suite('#531 ArchitectureIndexRoute', () => {
       body: { path: 'docs/architecture/RUNTIME.md', action: 'supersede', supersededBy: 'runtime' } });
     assert.equal(self.status, 400, 'a document cannot supersede itself');
     for (const p of ['docs/architecture/NOPE.md', '../outside.md', 'docs/architecture/RUNTIME.md']) {
-      const r = await s.harness.request({ method: 'POST', path: '/api/actions/architecture-index/propose', body: { path: p, action: 'register' } });
+      // A valid domain and status, so each 400 is about the path (#531 slice 2).
+      const r = await s.harness.request({ method: 'POST', path: '/api/actions/architecture-index/propose',
+        body: { path: p, action: 'register', domain: 'other', status: 'descriptive' } });
       assert.equal(r.status, 400, `${p} must not be proposable for registration`);
+      assert.match(r.body.error, /not an unregistered architecture document/, p);
     }
     assert.equal(s.queued.length, 1);
     assert.equal(s.ledger!.entries.length, 1);
@@ -319,10 +335,11 @@ suite('#531 ArchitectureIndexRoute', () => {
       write(root, 'docs/architecture/RUNTIME_COPY.md', '# copy\n');
       const s = await start(root, { ledger });
       const res = await s.harness.request({ method: 'POST', path: '/api/actions/architecture-index/propose',
-        body: { path: 'docs/architecture/RUNTIME_COPY.md', action: 'register' } });
+        body: { path: 'docs/architecture/RUNTIME_COPY.md', action: 'register', domain: 'runtime copy', status: 'proposed' } });
       assert.equal(res.status, 503);
       assert.equal(res.body.ledger, 'unavailable');
       assert.equal(s.queued.length, 0, 'an L3 item without a ledger could never be decided');
+      assert.equal(s.shown.length, 0, 'no dialog');
       await s.harness.stop();
       harness = null;
     }

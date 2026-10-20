@@ -50,6 +50,9 @@ function fakeLedger(entries: Array<Record<string, unknown>>): unknown {
   return {
     isAvailable: () => true,
     appendEntry: async (r: Record<string, unknown>) => { entries.push(r); return { id: 40 + entries.length, entryHash: 'h' }; },
+    // #531 slice 2: the pending-authority read (no approvals in these specs).
+    getEntriesByType: async () => [],
+    getEntryById: async () => null,
   };
 }
 
@@ -102,15 +105,84 @@ test.describe('#531 Workspace › Architecture sub-view', () => {
     await expect(view.locator('.cc-arch-rows b')).toHaveCount(0);
     await expect(view.locator('.cc-arch-sub')).toContainText('Ledger available');
 
+    await expect(card.locator('.cc-arch-propose')).toBeDisabled();
+    await card.locator('input.cc-arch-domain').fill('runtime copy');
     await card.locator('.cc-arch-propose').click();
     await expect(view.locator('.cc-arch-result')).toContainText('Queued for L3 review (approval l3-ui-1, ledger entry #41)');
     expect(proposals).toHaveLength(1);
-    expect(JSON.parse(proposals[0])).toEqual({ path: 'docs/architecture/RUNTIME_COPY.md', action: 'register' });
+    expect(JSON.parse(proposals[0])).toEqual({ path: 'docs/architecture/RUNTIME_COPY.md', action: 'register', domain: 'runtime copy', status: 'proposed' });
     expect(queued).toHaveLength(1);
     expect(queued[0].kind).toBe('architecture-doc-proposal');
     expect(queued[0].sourceLedgerEntryId).toBe(41);
     expect(entries).toHaveLength(1);
     expect(fs.readFileSync(path.join(root, 'docs', 'ARCHITECTURE_INDEX.md'), 'utf8')).toBe(INDEX);
+  });
+
+  test('#531 slice 2: authority cards, a refused competing canonical with alternatives, a declined supersession, descriptive posts once, an intake refusal', async ({ page }) => {
+    const index = ['# Architecture Index', '', '## Registry', '', HEADER, '|---|---|---|---|---|---|---|---|---|---|---|',
+      '| architecture-navigation | architecture navigation | [Architecture Index](ARCHITECTURE_INDEX.md) | canonical | manual | - | - | - | unknown | unknown | manual |',
+      '| runtime | runtime | [Runtime](architecture/RUNTIME.md) | canonical | manual | - | - | - | unknown | unknown | manual |',
+      '| runtime-b | Runtime | [Runtime B](architecture/RUNTIME_B.md) | canonical | manual | - | - | - | unknown | unknown | manual |',
+      '| cyr | runtim\u0435 | [Cyr](architecture/CYR.md) | descriptive | manual | - | - | - | unknown | unknown | manual |',
+      '', '```architecture-normative', 'docs/architecture/**/*.md', 'docs/ARCHITECTURE*.md', '```', '',
+      '```architecture-legacy', 'docs/archive/**', '```', ''].join('\n');
+    const root = workspace({ 'docs/ARCHITECTURE_INDEX.md': index, 'docs/architecture/RUNTIME.md': '# R\n',
+      'docs/architecture/RUNTIME_B.md': '# RB\n', 'docs/architecture/CYR.md': '# C\n' });
+    roots.push(root);
+    // Written after the commit, never added: an agent-created document.
+    fs.writeFileSync(path.join(root, 'docs', 'architecture', 'NOTES.md'), '# Notes an agent wrote\n');
+    const entries: Array<Record<string, unknown>> = [];
+    const queued: Array<Record<string, unknown>> = [];
+    const dialogs: string[] = [];
+    controller = await serveConsoleServerUI({
+      workspaceRoot: root,
+      ledgerManager: fakeLedger(entries),
+      queueL3Approval: async (r) => { queued.push(r); return `l3-ui-${queued.length}`; },
+      operatorConfirmer: async (r) => { dialogs.push(r.title); return 'declined'; },
+    });
+    const posts: string[] = [];
+    page.on('request', (req) => {
+      if (req.method() === 'POST' && req.url().endsWith('/api/actions/architecture-index/propose')) posts.push(req.postData() ?? '');
+    });
+    await openArchitecture(page, controller.url);
+    const view = page.locator('#workspace .cc-arch');
+    const conflict = view.locator('.cc-arch-finding[data-kind="conflicting-canonical"]');
+    await expect(conflict).toBeVisible();
+    await expect(conflict.locator('.cc-arch-finding-row')).toHaveCount(2);
+    await expect(conflict.locator('.cc-arch-finding-row').first()).toHaveAttribute('data-line', '8');
+    await expect(view.locator('.cc-arch-finding[data-kind="domain-non-ascii"]')).toContainText('U+0435');
+
+    const notes = () => view.locator('.cc-arch-candidate[data-path="docs/architecture/NOTES.md"]');
+    const proposeCanonical = async () => {
+      await notes().locator('input.cc-arch-domain').fill('runtime');
+      await notes().locator('select.cc-arch-status').selectOption('canonical');
+      await notes().locator('.cc-arch-propose').click();
+    };
+    await proposeCanonical();
+    const alternatives = notes().locator('.cc-arch-alternatives');
+    await expect(alternatives.locator('.cc-arch-alt-open').first()).toHaveText('Use existing: open docs/architecture/RUNTIME.md');
+    await expect(alternatives.locator('.cc-arch-alt-supersede')).toHaveText('Propose superseding runtime, runtime-b');
+    expect(entries).toHaveLength(0);
+    expect(queued).toHaveLength(0);
+
+    await alternatives.locator('.cc-arch-alt-supersede').click();
+    await expect(view.locator('.cc-arch-result')).toContainText('Not confirmed in VS Code');
+    expect(dialogs).toEqual(['Propose this architecture supersession?']);
+    expect(entries).toHaveLength(0);
+    expect(queued).toHaveLength(0);
+
+    await proposeCanonical();
+    await notes().locator('.cc-arch-alternatives .cc-arch-alt-descriptive').click();
+    await expect(view.locator('.cc-arch-result')).toContainText('Queued for L3 review');
+    expect(entries).toHaveLength(1);
+    expect(queued).toHaveLength(1);
+    expect(JSON.parse(posts[posts.length - 1])).toEqual({ path: 'docs/architecture/NOTES.md', action: 'register', domain: 'runtime', status: 'descriptive' });
+
+    await notes().locator('input.cc-arch-domain').fill('sched\u200Buler');
+    await notes().locator('.cc-arch-propose').click();
+    await expect(view.locator('.cc-arch-result')).toContainText('U+200B');
+    expect(entries).toHaveLength(1);
+    expect(fs.readFileSync(path.join(root, 'docs', 'ARCHITECTURE_INDEX.md'), 'utf8')).toBe(index);
   });
 
   test('absent index: Bootstrap index is shown, candidates are listed, and nothing can be proposed', async ({ page }) => {
