@@ -364,10 +364,11 @@ suite('B233 Bicameral startup client binding', () => {
     let disconnected = 0;
     let broadcasts = 0;
     let current = true;
+    let connected = false;
     const client = {
-      isConnected: () => false,
-      connect: () => { calls++; return new Promise<void>((resolve) => { finish = resolve; }); },
-      disconnect: async () => { disconnected++; },
+      isConnected: () => connected,
+      connect: () => { calls++; return new Promise<void>((resolve) => { finish = () => { connected = true; resolve(); }; }); },
+      disconnect: async () => { disconnected++; connected = false; },
     } as unknown as BicameralMcpClient;
     const attempt = connectWiredBicameral(client, () => current, () => { broadcasts++; });
     current = false; // config changed or extension deactivated while connect() is in-flight
@@ -385,5 +386,57 @@ suite('B233 Bicameral startup client binding', () => {
     } as unknown as BicameralMcpClient;
     await assert.rejects(connectWiredBicameral(client, () => true, () => { broadcasts++; }), /protocol rejected/);
     assert.equal(broadcasts, 0);
+  });
+});
+
+/** B233: exercise the production wiring plus the startup probe and broadcast. */
+suite('B233 integrated Bicameral auto-connect', () => {
+  test('auto-connect reuses the exact client bound to its governance interceptor', async () => {
+    const restoreConfig = patchConfig({ command: 'bicameral-mcp', autoConnect: true });
+    const restoreWatcher = patchOnDidChangeConfig();
+    const fx = bicameralFixture(true);
+    const proto = BicameralMcpClient.prototype as unknown as {
+      connect: () => Promise<void>; disconnect: () => Promise<void>; isConnected: () => boolean;
+    };
+    const originals = (['connect', 'disconnect', 'isConnected'] as const).map((name) => ({
+      name, own: Object.getOwnPropertyDescriptor(proto, name), value: proto[name],
+    }));
+    const connected = new WeakSet<object>();
+    let connectCalls = 0;
+    proto.connect = async function (this: object) { connected.add(this); connectCalls++; };
+    proto.disconnect = async function (this: object) { connected.delete(this); };
+    proto.isConnected = function (this: object) { return connected.has(this); };
+    const context = fakeContext();
+    try {
+      const { server, calls } = fakeServer();
+      let interceptor: import('../../governance/interceptor').McpInterceptor | null = null;
+      server.setMcpInterceptor = (value: typeof interceptor) => { interceptor = value; };
+      server.getMcpInterceptor = () => interceptor;
+      wireBicameralIntegration(context, server, fx.ws, {
+        enforcementEngine: { evaluate: async () => { throw new Error('not called'); } } as never,
+      });
+      await until(() => server.getBicameralClient() !== null);
+      const wiredClient = server.getBicameralClient();
+      assert.ok(wiredClient);
+      assert.ok(interceptor);
+      assert.strictEqual((interceptor as import('../../governance/interceptor').McpInterceptor).getClient(), wiredClient);
+      const log: string[] = [];
+      maybeAutoConnectBicameral(server, fx.ws, { appendLine: (message) => log.push(message) },
+        async () => ({ state: 'configured-not-running' } as never));
+      await until(() => calls.broadcasts.some((e) => e.type === 'bicameral.connected'));
+      assert.strictEqual(server.getBicameralClient(), wiredClient, 'startup must not replace the governed client');
+      assert.strictEqual(server.getMcpInterceptor()?.getClient(), wiredClient, 'interceptor still governs the connected client');
+      assert.equal(connectCalls, 1);
+      assert.deepEqual(log, []);
+    } finally {
+      for (const sub of context.subscriptions) sub.dispose();
+      for (const { name, own } of originals) {
+        if (own) Object.defineProperty(proto, name, own);
+        else delete (proto as unknown as Record<string, unknown>)[name];
+      }
+      fx.restore();
+      restoreWatcher();
+      restoreConfig();
+    }
   });
 });
