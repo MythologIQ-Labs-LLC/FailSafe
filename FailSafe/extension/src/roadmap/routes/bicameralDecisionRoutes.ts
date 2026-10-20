@@ -35,7 +35,7 @@ export function registerBicameralDecisionRoutes(
     }
     try {
       // B151: govern the tool call through the universal interceptor.
-      if (await governToolCall(deps, { name: "bicameral.history", arguments: {} }, res)) {
+      if (await governToolCall(deps, { name: "bicameral.history", arguments: {} }, res, client)) {
         return;
       }
       const features = await client.history();
@@ -68,6 +68,7 @@ export function registerBicameralDecisionRoutes(
         deps,
         { name: "bicameral.drift", arguments: { file_path: filePath } },
         res,
+        client,
       )) {
         return;
       }
@@ -134,6 +135,7 @@ export function registerBicameralDecisionRoutes(
         deps,
         { name: "bicameral.ratify", arguments: { decision_id: decisionId, verdict } },
         res,
+        client,
       )) {
         return;
       }
