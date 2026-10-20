@@ -88,7 +88,7 @@ Always-current. A stale Tier 1 doc IS a P0 governance bug.
 | `docs/FEATURE_INDEX.md` | Cross-reference of every feature → source / docs / test / verification status | `/qor-substantiate` (FEATURE_INDEX gate) | feature shipped without FX entry OR FX `unverified` for shipped feature |
 | `docs/GOVERNANCE_INDEX.md` (this file) | Authoritative map of every governance artifact in this repo | every cycle that touches governance | new governance doc created without index entry |
 | `package.json` (root + extension) | Authoritative version source — every other version marker derives from this | `/qor-repo-release` release-gate.cjs | other version markers ahead of or behind this |
-| `docs/roadmap/tracker-config.yaml` | Operator-declared tracker taxonomy (programs ∥ verticals + agent mappings) — the source of truth cycles consult per the CLAUDE.md directive (FX891) | Workspace › Taxonomy editor (`POST /api/v1/tracker/config`); manual edits ok | declared taxonomy diverges from `docs/roadmap/programs.yaml` / FEATURE_INDEX surfaces |
+| `docs/roadmap/tracker-config.yaml` | Operator-declared tracker taxonomy (programs ∥ verticals + agent mappings) that cycles consult per the CLAUDE.md directive (FX891). A local file, not in the repository (`docs/` is gitignored). Console navigation (`CONSOLE_VERTICALS`) is authoritative for each vertical's sub-views (#548, FX1007) | Workspace › Taxonomy editor (`POST /api/v1/tracker/config`); manual edits ok | declared vertical functionality differs from the Console sub-views (reported in Workspace › Taxonomy) |
 
 ---
 
