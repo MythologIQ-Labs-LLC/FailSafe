@@ -127,6 +127,30 @@ suite('ArchitectureIndexRenderer authority (#531 slice 2, jsdom structural)', ()
     } finally { ctx.cleanup(); }
   });
 
+  test('code points are compared as whole labels (U+E0041 does not hide U+E004); row ids render as [U+XXXX]', async () => {
+    const ctx = setupDom();
+    const g = global as unknown as G;
+    const base = g.fetch as (url: string, init?: { method?: string }) => Promise<{ json: () => Promise<Record<string, unknown>> }>;
+    g.fetch = async (url: string, init?: { method?: string }) => {
+      const res = await base(url, init);
+      if (init?.method === 'POST') return res;
+      const data = await res.json();
+      const findings = (data.authority as { findings: Array<Record<string, unknown>> }).findings;
+      findings[2].detail = 'tag: the domain uses U+E0041.';
+      findings[2].codePoints = ['U+E0041', 'U+E004'];
+      (findings[0].rows as Array<Record<string, unknown>>)[1].id = 'r\u0443ntime';
+      return { ok: true, status: 200, json: async () => data } as never;
+    };
+    try {
+      await new ArchitectureIndexRenderer('workspace').refresh();
+      const d = ctx.doc;
+      const reason = d.querySelector('.cc-arch-finding[data-kind="domain-non-ascii"] p')?.textContent ?? '';
+      assert.match(reason, /Code points: U\+E004\./, `U+E004 is named although U+E0041 is in the detail: ${reason}`);
+      const ids = [...d.querySelectorAll('.cc-arch-finding[data-kind="conflicting-canonical"] .cc-arch-finding-row .cc-arch-id')].map((e) => e.textContent);
+      assert.deepEqual(ids, ['runtime', 'r[U+0443]ntime']);
+    } finally { ctx.cleanup(); }
+  });
+
   test('markup in domains and paths stays text', async () => {
     const ctx = setupDom();
     try {

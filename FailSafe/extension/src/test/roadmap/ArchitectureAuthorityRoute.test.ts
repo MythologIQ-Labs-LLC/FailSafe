@@ -664,6 +664,87 @@ suite('#531 slice 2 architecture authority route', () => {
     nothing(s, 'hidden id');
   });
 
+  // review531b R1: rows the parser used to skip silently, so a canonical row vanished from authority checks.
+  const registry = (body: string[]): string => ['# Architecture Index', '', '## Registry', '', ...body, '',
+    '## Normative scope', '', '```architecture-normative', 'docs/architecture/**/*.md', 'docs/ARCHITECTURE*.md', '```', '',
+    '## Legacy', '', '```architecture-legacy', 'docs/archive/**', '```', ''].join('\n');
+  const withIndex = (text: string): string => {
+    const root = repo([SELF, RUNTIME, STORAGE]);
+    fs.writeFileSync(path.join(root, INDEX), text);
+    return root;
+  };
+
+  test('review R1: a broken delimiter makes the index invalid, so a second canonical registration is refused', async () => {
+    const variants: Array<[string, string[]]> = [
+      ['delimiter without a leading pipe', [HEADER, SEP.slice(1), SELF, RUNTIME, STORAGE]],
+      ['no delimiter row', [HEADER, SELF, RUNTIME, STORAGE]],
+      ['a data row between the header and the delimiter', [HEADER, RUNTIME, SEP, SELF, STORAGE]],
+      ['a blank line between the header and the delimiter', [HEADER, '', SEP, SELF, RUNTIME, STORAGE]],
+    ];
+    for (const [label, body] of variants) {
+      const s = await start(withIndex(registry(body)));
+      const res = await register(s, 'runtime', 'canonical');
+      assert.equal(res.status, 409, `${label}: ${JSON.stringify(res.body)}`);
+      assert.equal(res.body.state, 'invalid', `${label}: the index is invalid, not silently short a row`);
+      nothing(s, label);
+      await s.harness.stop();
+      harness = null;
+    }
+  });
+
+  test('review R1: a data row without a leading pipe is an unreadable row (409 bad-row with its line)', async () => {
+    const pipeless = RUNTIME.slice(1);
+    const text = registry([HEADER, SEP, SELF, pipeless, STORAGE]);
+    const s = await start(withIndex(text));
+    const res = await register(s, 'runtime', 'canonical');
+    assert.equal(res.status, 409, JSON.stringify(res.body));
+    assert.deepEqual([res.body.conflict, res.body.reason], ['ambiguous-authority', 'bad-row']);
+    assert.deepEqual(res.body.lines, [lineOf(text, pipeless)]);
+    nothing(s, 'pipe-less row');
+    const desc = await register(s, 'runtime', 'descriptive');
+    assert.equal(desc.status, 202, 'descriptive registrations stay allowed while a bad row exists');
+  });
+
+  test('review R1/7: a fenced example inside the Registry section is not a registry row', async () => {
+    const example = row('example', 'scheduler', '[Example](architecture/EXAMPLE.md)', 'canonical');
+    const text = registry([HEADER, SEP, SELF, RUNTIME, STORAGE, '', 'For example:', '', '```markdown', HEADER, SEP, example, '```']);
+    const s = await start(withIndex(text));
+    const get = await s.harness.request({ path: '/api/v1/architecture/index' });
+    assert.ok(!get.body.rows.some((r: { id: string }) => r.id === 'example'), 'the fenced row is not parsed');
+    const res = await register(s, 'scheduler', 'canonical');
+    assert.equal(res.status, 202, `the fenced example claims no authority: ${JSON.stringify(res.body)}`);
+  });
+
+  test('review fold 2: a supersession is refused while a third canonical row has a hidden-character domain', async () => {
+    const s = await start(repo([SELF, RUNTIME, STORAGE, row('ac', 'auth  core', '[AC](architecture/AC.md)', 'canonical')]));
+    const res = await post(s, { path: 'docs/architecture/RUNTIME.md', action: 'supersede', supersededBy: 'storage' });
+    assert.equal(res.status, 409, JSON.stringify(res.body));
+    assert.deepEqual([res.body.conflict, res.body.reason], ['ambiguous-authority', 'hidden-character-domain']);
+    nothing(s, 'third canonical row');
+  });
+
+  test('review fold 4: a Cyrillic row id reaches people as [U+XXXX] (refusal text, L3 summary, dialog)', async () => {
+    const cyr = 'r\u0443ntime';
+    const s = await start(repo([SELF, STORAGE, row(cyr, 'runtime', '[R](architecture/RUNTIME.md)', 'canonical')]));
+    const exists = await register(s, 'runtime', 'canonical');
+    assert.equal(exists.status, 409, JSON.stringify(exists.body));
+    assert.match(exists.body.error, /r\[U\+0443\]ntime at line/);
+    const sup = await register(s, 'runtime', 'canonical', { supersedes: [cyr] });
+    assert.equal(sup.status, 202, JSON.stringify(sup.body));
+    assert.match(s.shown[0].detail, /Replaces: r\[U\+0443\]ntime /);
+    assert.match(String(s.queue[0].sentinelSummary), /superseding r\[U\+0443\]ntime\./);
+  });
+
+  test('review fold 6: a canonical row with an empty domain has its own refusal', async () => {
+    const s = await start(repo([SELF, RUNTIME, row('blank', '-', '[B](architecture/BLANK.md)', 'canonical')]));
+    const res = await register(s, 'scheduler', 'canonical');
+    assert.equal(res.status, 409, JSON.stringify(res.body));
+    assert.deepEqual([res.body.conflict, res.body.reason], ['ambiguous-authority', 'empty-domain']);
+    assert.match(res.body.error, /no domain/);
+    assert.doesNotMatch(res.body.error, /characters outside/);
+    nothing(s, 'empty domain');
+  });
+
   test('real ledger: the PROPOSAL carries HEAD; an architecture L3_APPROVED blocks even behind 1200 later approvals', async function () {
     this.timeout(180000);
     env = makeEnv();
