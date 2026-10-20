@@ -15,13 +15,23 @@
 // The two suites of this configuration share one workspace and run in either order, so when this
 // suite created the index it puts the repository back as it found it (HEAD, the index file and the
 // document bytes); after a reuse it leaves the other suite's index alone.
+//
+// plan-532c (G1-G3): a governed commit through runGovernedCommitFlow with the production git runner
+// and governedCommitLinker over the real modal confirmer (the stubbed dialog answers only the
+// committed-under title) links the commit it made; a test-side PASS shows as the intent decision
+// with review still missing; a VETO makes review failing and the delivery failing. Teardown also
+// returns to the original branch, deletes the governed branch and its file, and unsets hooksPath.
 
 import { strict as assert } from 'assert';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import { spawnSync } from 'child_process';
 import * as vscode from 'vscode';
-import { ARCHITECTURE_BOOTSTRAP_TITLE } from '../../extension/operatorConfirmation';
+import { ARCHITECTURE_BOOTSTRAP_TITLE, DELIVERY_LINK_TITLES, createOperatorConfirmer } from '../../extension/operatorConfirmation';
+import { defaultGitRunner } from '../../extension/governedCommit';
+import { runGovernedCommitFlow } from '../../extension/governedCommitFlow';
+import { governedCommitLinker } from '../../extension/governedCommitLink';
 import { discoverArchitectureIndex } from '../../governance/architecture/ArchitectureIndexDiscovery';
 import { IntentService } from '../../governance/IntentService';
 import { SessionManager } from '../../governance/SessionManager';
@@ -52,6 +62,10 @@ suite('#532 delivery assessment (extension host, temp git workspace)', () => {
   let createdIndex = false;
   let headBefore = '';
   let docBefore: Buffer | null = null;
+  let branchBefore = '';
+  let answerLink = false;
+  const GOVERNED_BRANCH = 'fix/organize-20261019120000';
+  const GOVERNED_FILE = 'notes/governed.txt';
 
   suiteSetup(async function () {
     this.timeout(120000);
@@ -68,10 +82,11 @@ suite('#532 delivery assessment (extension host, temp git workspace)', () => {
       await new Promise((r) => setTimeout(r, 250));
     }
     (vscode.window as { showWarningMessage: unknown }).showWarningMessage = async (message: string, ...rest: unknown[]) => {
-      if (message !== ARCHITECTURE_BOOTSTRAP_TITLE) return undefined;
+      if (message !== ARCHITECTURE_BOOTSTRAP_TITLE && !(answerLink && message === DELIVERY_LINK_TITLES['committed-under'])) return undefined;
       return rest.filter((x): x is string => typeof x === 'string')[0];
     };
     headBefore = git(root, 'rev-parse', 'HEAD');
+    branchBefore = git(root, 'symbolic-ref', '--short', 'HEAD');
     docBefore = fs.readFileSync(path.join(root, ...DOC.split('/')));
     const boot = await vscode.commands.executeCommand(BOOTSTRAP) as { status?: string };
     assert.ok(boot.status === 'created' || boot.status === 'reuse', JSON.stringify(boot));
@@ -94,7 +109,11 @@ suite('#532 delivery assessment (extension host, temp git workspace)', () => {
     (vscode.window as { showWarningMessage: unknown }).showWarningMessage = original;
     if (!root) return;
     if (docBefore) fs.writeFileSync(path.join(root, ...DOC.split('/')), docBefore);
+    if (branchBefore && git(root, 'symbolic-ref', '--short', 'HEAD') !== branchBefore) git(root, 'checkout', '-q', branchBefore);
     if (headBefore) git(root, 'reset', '-q', '--mixed', headBefore);
+    spawnSync('git', ['branch', '-D', GOVERNED_BRANCH], { cwd: root, windowsHide: true });
+    spawnSync('git', ['config', '--unset', 'core.hooksPath'], { cwd: root, windowsHide: true });
+    fs.rmSync(path.join(root, ...GOVERNED_FILE.split('/')), { force: true });
     if (createdIndex) fs.rmSync(path.join(root, ...INDEX.split('/')), { force: true });
   });
 
@@ -112,7 +131,7 @@ suite('#532 delivery assessment (extension host, temp git workspace)', () => {
     return view as Found;
   }
 
-  test('linked document and commit: incomplete with one gap, governance missing (the ledger is wired)', async function () {
+  test('linked document and commit: incomplete with the review and governance gaps, governance missing (the ledger is wired)', async function () {
     this.timeout(60000);
     await edge('link', 'implements', rowId);
     git(root, 'add', '--', INDEX);
@@ -126,7 +145,8 @@ suite('#532 delivery assessment (extension host, temp git workspace)', () => {
     assert.equal(status(view, 'governance'), 'missing', 'missing, not unavailable: the live ledger is wired');
     assert.equal(status(view, 'receipt'), 'unavailable');
     assert.equal(view.assessment.overall, 'incomplete');
-    assert.deepEqual(view.assessment.gaps, ['governance']);
+    assert.equal(status(view, 'review'), 'missing', 'no review of the implementation is recorded (B320, B321)');
+    assert.deepEqual(view.assessment.gaps, ['review', 'governance']);
   });
 
   test('a byte change to the linked document makes architecture stale', async function () {
@@ -141,5 +161,60 @@ suite('#532 delivery assessment (extension host, temp git workspace)', () => {
     await edge('unlink', 'implements', rowId);
     const view = await assess();
     assert.equal(status(view, 'architecture'), 'missing');
+  });
+
+  test('G1: the governed commit links the commit it made after the modal confirmation', async function () {
+    this.timeout(60000);
+    const hooks = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-nohooks-'));
+    git(root, 'config', 'core.hooksPath', hooks);
+    git(root, 'config', 'user.name', 'FailSafe-Test');
+    git(root, 'config', 'user.email', 'test@failsafe.invalid');
+    git(root, 'config', 'commit.gpgsign', 'false');
+    fs.mkdirSync(path.join(root, 'notes'), { recursive: true });
+    fs.writeFileSync(path.join(root, ...GOVERNED_FILE.split('/')), 'governed\n');
+    const lines: string[] = [];
+    answerLink = true;
+    let commitSha: string | undefined;
+    try {
+      const r = await runGovernedCommitFlow('organize', [GOVERNED_FILE], ['Add notes'], {
+        workspaceRoot: root, git: defaultGitRunner, confirm: async () => true, recordDeclined: async () => undefined,
+        now: () => '2026-10-19T12:00:00.000Z',
+        linkCommit: governedCommitLinker({
+          workspaceRoot: root, getIntents: () => ctx.intents, getLedger: () => null,
+          confirm: createOperatorConfirmer(vscode.window), log: (l) => lines.push(l),
+        }),
+      }) as { step: string; commitSha?: string; warning?: string };
+      assert.equal(r.step, 'committed', JSON.stringify(r));
+      commitSha = r.commitSha;
+    } finally {
+      answerLink = false;
+      fs.rmSync(hooks, { recursive: true, force: true });
+    }
+    assert.ok(commitSha, 'the commit is bound to this run');
+    assert.equal(lines.length, 1, lines.join('\n'));
+    assert.match(lines[0], /linked/);
+    const view = await assess();
+    const rec = view.assessment.steps.find((s) => s.key === 'code')!.records.find((x) => x.sha === commitSha);
+    assert.ok(rec, 'the governed commit is a code record');
+    assert.equal(rec!.via, 'governed-commit');
+    assert.equal(rec!.action, 'organize');
+  });
+
+  test('G2: a test-side PASS is the intent decision, not a review: review stays missing, incomplete', async function () {
+    this.timeout(60000);
+    await (ctx.intents as IntentService).updateStatus('PASS', 'judge');
+    const view = await assess();
+    assert.equal(status(view, 'review'), 'missing');
+    assert.equal(view.intent.decision?.status, 'PASS');
+    assert.equal(view.assessment.overall, 'incomplete');
+    assert.equal(view.assessment.completeReachable, false);
+  });
+
+  test('G3: a test-side VETO makes review failing and the delivery failing', async function () {
+    this.timeout(60000);
+    await (ctx.intents as IntentService).updateStatus('VETO', 'judge');
+    const view = await assess();
+    assert.equal(status(view, 'review'), 'failing');
+    assert.equal(view.assessment.overall, 'failing');
   });
 });

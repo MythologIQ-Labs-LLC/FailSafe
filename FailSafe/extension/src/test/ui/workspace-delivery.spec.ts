@@ -3,7 +3,10 @@
 // Drives the REAL ConsoleServer (serveConsoleServerUI) against a temp `git init` workspace with a
 // managed architecture index, a real IntentService holding an imported intent, and a ledger stub:
 //   - Link architecture and Link commit each post exactly once; with a ledger entry naming the
-//     intent the outcome is "evidence complete except receipt";
+//     intent the delivery stays incomplete with the review gap (recorded is not passed), and the
+//     view says complete is not reachable until FailSafe records a review (B320, B321);
+//   - an intent PASS shows as "approved for implementation (not a review)" with review Missing; a
+//     VETO makes review Failing ("Intent vetoed") and the delivery Failing (plan-532c);
 //   - a declined confirmer changes nothing: no history entry, the step stays missing.
 // Design source: the Architecture sub-view (same card, chip and scope-line vocabulary).
 
@@ -87,7 +90,7 @@ test.describe('#532 Workspace › Delivery sub-view', () => {
     for (const r of roots.splice(0)) removeTempTree(r);
   });
 
-  test('each Link posts once; a ledger entry naming the intent gives evidence complete except receipt', async ({ page }) => {
+  test('each Link posts once; a ledger entry naming the intent is presence: incomplete with the review gap', async ({ page }) => {
     const root = workspace();
     roots.push(root);
     const { service, id } = await importedIntent(root);
@@ -112,7 +115,10 @@ test.describe('#532 Workspace › Delivery sub-view', () => {
     await expect(view.locator('.cc-dlv-step[data-key="architecture"]')).toHaveAttribute('data-status', 'recorded');
     await page.locator('#workspace .cc-dlv-link-commit').click();
     await expect(page.locator('#workspace .cc-dlv-step[data-key="code"]')).toHaveAttribute('data-status', 'recorded');
-    await expect(page.locator('#workspace .cc-dlv-overall')).toContainText('Evidence complete except receipt');
+    await expect(page.locator('#workspace .cc-dlv-step[data-key="review"]')).toHaveAttribute('data-status', 'missing');
+    await expect(page.locator('#workspace .cc-dlv-overall')).toContainText('Incomplete');
+    await expect(page.locator('#workspace .cc-dlv-overall')).toContainText('Complete is not reachable yet');
+    await expect(page.locator('#workspace .cc-dlv-overall')).not.toContainText('Evidence complete except receipt');
     expect(posts.map((p) => JSON.parse(p))).toEqual([
       { intentId: id, edge: 'implements', target: 'runtime' },
       { intentId: id, edge: 'committed-under', target: git(root, 'rev-parse', 'HEAD') },
@@ -137,5 +143,27 @@ test.describe('#532 Workspace › Delivery sub-view', () => {
     await expect(page.locator('#workspace .cc-dlv-step[data-key="architecture"]')).toHaveAttribute('data-status', 'missing');
     await expect(page.locator('#workspace .cc-dlv-step[data-key="governance"]')).toHaveAttribute('data-status', 'unavailable');
     expect(history(root)).toBe(before);
+  });
+
+  test('an intent PASS is approval for implementation, not a review; a VETO makes the delivery failing', async ({ page }) => {
+    const root = workspace();
+    roots.push(root);
+    const { service } = await importedIntent(root);
+    controller = await serveConsoleServerUI({
+      workspaceRoot: root, intentService: service, operatorConfirmer: async () => 'approved' as OperatorConfirmation,
+    });
+    await service.updateStatus('PASS', 'judge');
+    await openDelivery(page, controller.url);
+    const view = page.locator('#workspace .cc-dlv');
+    await expect(view.locator('.cc-dlv-intent')).toContainText('Intent decision: approved for implementation (not a review)');
+    await expect(view.locator('.cc-dlv-step[data-key="review"]')).toHaveAttribute('data-status', 'missing');
+    await expect(view.locator('.cc-dlv-step[data-key="review"] .cc-dlv-pill')).toHaveText('Missing');
+    await expect(view.locator('.cc-dlv-overall')).toContainText('Incomplete');
+
+    await service.updateStatus('VETO', 'judge');
+    await view.locator('.cc-dlv-refresh').click();
+    await expect(page.locator('#workspace .cc-dlv-step[data-key="review"]')).toHaveAttribute('data-status', 'failing');
+    await expect(page.locator('#workspace .cc-dlv-step[data-key="review"]')).toContainText('Intent vetoed');
+    await expect(page.locator('#workspace .cc-dlv-overall .cc-dlv-pill')).toHaveText('Failing');
   });
 });

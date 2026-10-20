@@ -7,6 +7,15 @@ import { setupCheckpointRoutes } from '../../roadmap/routes/CheckpointRoute';
 import type { ApiRouteDeps } from '../../roadmap/routes/types';
 import { RouteHarness, makeApp, invokeRemote } from './helpers/routeTestHarness';
 import type { OperatorActionRequest, OperatorConfirmation } from '../../extension/operatorConfirmation';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { spawnSync } from 'child_process';
+import { FailSafeRevertService } from '../../governance/revert/FailSafeRevertService';
+import { GitResetService, type CommandRunner } from '../../governance/revert/GitResetService';
+import {
+  buildCheckpointRecord, persistCheckpoint, verifyCheckpointRecord, type CheckpointRecord,
+} from '../../roadmap/services/CheckpointStore';
 
 /** #514: a fake confirmer recording each dialog request and answering `result`. */
 function confirmer(result: OperatorConfirmation): {
@@ -18,6 +27,13 @@ function confirmer(result: OperatorConfirmation): {
 }
 
 interface Checkpoint { id: string; createdAt: string; checkpointType: string; }
+
+/** #532 (plan-532c LD8a): fakes answer prepare with a fixed plan; the real-repo suite below uses the real service. */
+const PLAN = {
+  checkpointId: 'cp-1', target: 'a'.repeat(40), targetSubject: 'stable', targetDate: '2026-10-14T01:02:03Z',
+  workTree: '/ws', branch: 'main', head: 'b'.repeat(40), leaving: 1,
+};
+const preparedPlan = async () => ({ ok: true, plan: PLAN });
 
 function makeDeps(overrides: Partial<ApiRouteDeps> = {}): {
   deps: ApiRouteDeps;
@@ -140,7 +156,7 @@ suite('CheckpointRoute (FX list/detail + /api/actions/rollback)', () => {
   test('POST /api/actions/rollback — 400 when checkpointId missing', async () => {
     const app = makeApp();
     const { deps } = makeDeps({
-      revertService: { revert: async () => ({ success: true }) } as never,
+      revertService: { prepare: preparedPlan, revert: async () => ({ success: true }) } as never,
     });
     setupCheckpointRoutes(app, deps);
     harness = new RouteHarness(app);
@@ -154,7 +170,7 @@ suite('CheckpointRoute (FX list/detail + /api/actions/rollback)', () => {
     const app = makeApp();
     const c = confirmer('approved');
     const { deps } = makeDeps({
-      revertService: { revert: async () => ({ success: true }) } as never,
+      revertService: { prepare: preparedPlan, revert: async () => ({ success: true }) } as never,
       getCheckpointById: () => null,
       confirmOperatorAction: c.confirm,
     });
@@ -174,7 +190,7 @@ suite('CheckpointRoute (FX list/detail + /api/actions/rollback)', () => {
     const app = makeApp();
     const c = confirmer('declined');
     const { deps, broadcasts } = makeDeps({
-      revertService: { revert: async () => { revertCalls += 1; return { success: true }; } } as never,
+      revertService: { prepare: preparedPlan, revert: async () => { revertCalls += 1; return { success: true }; } } as never,
       getCheckpointById: (id: string) => ({ checkpointId: id, checkpointType: 'sprint.start', timestamp: '2026-10-14T01:02:03Z' }) as never,
       confirmOperatorAction: c.confirm,
     });
@@ -200,7 +216,7 @@ suite('CheckpointRoute (FX list/detail + /api/actions/rollback)', () => {
     for (const [confirm, status] of [[confirmer('busy').confirm, 429], [undefined, 503]] as const) {
       const app = makeApp();
       const { deps } = makeDeps({
-        revertService: { revert: async () => { revertCalls += 1; return { success: true }; } } as never,
+        revertService: { prepare: preparedPlan, revert: async () => { revertCalls += 1; return { success: true }; } } as never,
         getCheckpointById: (id: string) => ({ checkpointId: id, timestamp: 't' }) as never,
         confirmOperatorAction: confirm,
       });
@@ -223,6 +239,7 @@ suite('CheckpointRoute (FX list/detail + /api/actions/rollback)', () => {
     const app = makeApp();
     const { deps, broadcasts } = makeDeps({
       revertService: {
+        prepare: preparedPlan,
         revert: async (req: unknown) => {
           revertCalled = true;
           revertArgs = req;
@@ -254,6 +271,7 @@ suite('CheckpointRoute (FX list/detail + /api/actions/rollback)', () => {
     const c = confirmer('approved');
     const { deps } = makeDeps({
       revertService: {
+        prepare: preparedPlan,
         revert: async (req: unknown) => {
           captured = (req as { reason: string }).reason;
           return { success: true };
@@ -281,6 +299,7 @@ suite('CheckpointRoute (FX list/detail + /api/actions/rollback)', () => {
     const app = makeApp();
     const { deps } = makeDeps({
       revertService: {
+        prepare: preparedPlan,
         revert: async () => { throw new Error('git reset failed'); },
       } as never,
       getCheckpointById: () => ({ id: 'cp-1', checkpointType: 'x' }) as never,
@@ -303,5 +322,213 @@ suite('CheckpointRoute (FX list/detail + /api/actions/rollback)', () => {
     setupCheckpointRoutes(app, deps);
     const captured = await invokeRemote(app, 'POST', '/api/actions/rollback');
     assert.equal(captured.statusCode, 403);
+  });
+});
+
+// #532 (plan-532c LD8a/LD10, B284): the Console rollback over a real temp git repository, the real
+// GitResetService (through a recording runner that spawns git), the real FailSafeRevertService and
+// a real memory checkpoint store. Every refusal leaves HEAD unchanged with no `reset` run; an
+// approved rollback runs exactly one `git reset --keep` and lands HEAD on the checkpoint. K1: a
+// tracked file the reset would change, edited after the last check, survives and the reset fails.
+// K2: an edit to a tracked file the reset does not change survives. A branch switched in the final
+// window is reported as a failure with the previous HEAD for recovery from the reflog.
+suite('CheckpointRoute rollback on a real repository (#532 B284)', () => {
+  let root = '';
+  let harness: RouteHarness | null = null;
+  let A0 = '';
+  let A = '';
+  let B = '';
+  let SIDE = '';
+
+  function git(...args: string[]): string {
+    const r = spawnSync('git', ['-c', 'core.hooksPath=', '-c', 'commit.gpgsign=false', ...args], { cwd: root, encoding: 'utf8', windowsHide: true });
+    assert.equal(r.status, 0, `git ${args.join(' ')}: ${r.stderr}`);
+    return String(r.stdout).trim();
+  }
+  const write = (rel: string, text: string) => fs.writeFileSync(path.join(root, rel), text);
+
+  setup(() => {
+    root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-rollback-')));
+    git('init', '-q', '-b', 'main');
+    git('config', 'user.name', 'FailSafe-Test');
+    git('config', 'user.email', 'test@failsafe.invalid');
+    write('root.txt', 'root\n');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'root');
+    A0 = git('rev-parse', 'HEAD');
+    write('f.txt', 'one\n');
+    write('h.txt', 'same in both\n');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'stable state');
+    A = git('rev-parse', 'HEAD');
+    git('checkout', '-q', '-b', 'side');
+    write('side.txt', 'side\n');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'side work');
+    SIDE = git('rev-parse', 'HEAD');
+    git('checkout', '-q', 'main');
+    write('f.txt', 'two\n');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'later work');
+    B = git('rev-parse', 'HEAD');
+  });
+  teardown(async () => {
+    if (harness) await harness.stop();
+    harness = null;
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 3 });
+  });
+
+  interface Rig {
+    res: { status: number; body: any };
+    shown: OperatorActionRequest[];
+    resets: string[][];
+  }
+
+  /**
+   * Record a checkpoint naming `target` in a memory store, wire the real services and POST the
+   * rollback. `beforeReset` runs just before the reset spawn (after every prepare spawn).
+   */
+  async function rollback(opts: {
+    target?: string; confirm?: OperatorConfirmation; onConfirm?: () => void; beforeReset?: () => void;
+    failStatus?: boolean; tamper?: boolean;
+  } = {}): Promise<Rig> {
+    const memory: CheckpointRecord[] = [];
+    const rec = buildCheckpointRecord({
+      checkpointType: 'monitoring.resumed', actor: 'system', phase: 'plan', status: 'validated', policyVerdict: 'PASS', evidenceRefs: [], payload: {},
+    }, new Date().toISOString(), 'run-1', null, memory, opts.target ?? A);
+    persistCheckpoint(rec, null, memory);
+    // review N2: tamper to an ANCESTOR of HEAD, so only the hash check can refuse it.
+    if (opts.tamper) memory[0] = { ...memory[0], gitHash: A0 };
+    const resets: string[][] = [];
+    const runner: CommandRunner = async (_cmd, args) => {
+      if (args[0] === 'reset') { opts.beforeReset?.(); resets.push(args); }
+      if (opts.failStatus && args[0] === 'status') return { code: 128, stdout: '', stderr: 'fatal: index unreadable' };
+      const r = spawnSync('git', args, { cwd: root, encoding: 'utf8', windowsHide: true });
+      return { code: r.status ?? 1, stdout: String(r.stdout ?? ''), stderr: String(r.stderr ?? '') };
+    };
+    const getCheckpoint = (id: string) => {
+      const m = memory.find((r) => r.checkpointId === id);
+      return m ? { checkpointId: m.checkpointId, gitHash: m.gitHash, timestamp: m.timestamp, phase: m.phase, status: m.status } : null;
+    };
+    const revertService = new FailSafeRevertService({
+      getCheckpoint, gitService: new GitResetService(runner), purgeRagAfter: () => 0, recordRevertCheckpoint: () => 'revert-1',
+      workspaceRoot: root, verifyCheckpoint: (id) => verifyCheckpointRecord(null, memory, id),
+    });
+    const shown: OperatorActionRequest[] = [];
+    const app = makeApp();
+    const { deps } = makeDeps({
+      revertService: revertService as never,
+      getCheckpointById: ((id: string) => getCheckpoint(id)) as never,
+      confirmOperatorAction: async (r) => { shown.push(r); opts.onConfirm?.(); return opts.confirm ?? 'approved'; },
+    });
+    setupCheckpointRoutes(app, deps);
+    harness = new RouteHarness(app);
+    await harness.start();
+    const res = await harness.request({ method: 'POST', path: '/api/actions/rollback', body: { checkpointId: rec.checkpointId, reason: 'test' } });
+    return { res, shown, resets };
+  }
+
+  test('review N2: the tampered row names an ancestor of HEAD, so the refusal comes from the hash check alone', () => {
+    assert.equal(spawnSync('git', ['merge-base', '--is-ancestor', A0, B], { cwd: root }).status, 0, 'A0 is an ancestor of HEAD');
+  });
+
+  test('review N1: a tag with the same name as the branch does not make the post-reset check fail', async () => {
+    git('tag', 'main', A0);
+    const r = await rollback();
+    assert.equal(r.res.status, 200, JSON.stringify(r.res.body));
+    assert.equal(r.res.body.ok, true);
+    assert.equal(git('rev-parse', 'refs/heads/main'), A);
+  });
+
+  test('review N1: with core.logAllRefUpdates=false and no reflog, the rollback lands and says the reflog was unavailable', async () => {
+    git('config', 'core.logAllRefUpdates', 'false');
+    fs.rmSync(path.join(root, '.git', 'logs'), { recursive: true, force: true });
+    const r = await rollback();
+    assert.equal(r.res.status, 200, JSON.stringify(r.res.body));
+    assert.equal(r.res.body.ok, true);
+    assert.match(String(r.res.body.result.warning), /reflog has no entry/);
+    assert.equal(git('rev-parse', 'HEAD'), A);
+  });
+
+  test('declined: 409, no reset, HEAD unchanged', async () => {
+    const r = await rollback({ confirm: 'declined' });
+    assert.equal(r.res.status, 409);
+    assert.equal(r.shown.length, 1);
+    assert.deepEqual(r.resets, []);
+    assert.equal(git('rev-parse', 'HEAD'), B);
+  });
+
+  test('a dirty tree, a failing git status, a non-ancestor target, a tampered row and an unknown commit are refused before the dialog with no reset', async () => {
+    write('f.txt', 'dirty\n');
+    let r = await rollback();
+    assert.equal(r.res.status, 409, 'dirty');
+    assert.match(String(r.res.body.error), /uncommitted/);
+    git('checkout', '--', 'f.txt');
+    await harness!.stop(); harness = null;
+    const cases: Array<[string, Parameters<typeof rollback>[0], number, RegExp]> = [
+      ['failing status', { failStatus: true }, 503, /git status/],
+      ['non-ancestor', { target: SIDE }, 409, /not an ancestor/],
+      ['tampered row', { tamper: true }, 409, /does not match its recorded hashes/],
+      ['unknown commit', { target: 'unknown' }, 409, /did not record a commit/],
+    ];
+    for (const [name, opts, status, error] of cases) {
+      r = await rollback(opts);
+      assert.equal(r.res.status, status, `${name}: ${JSON.stringify(r.res.body)}`);
+      assert.match(String(r.res.body.error), error, name);
+      assert.equal(r.shown.length, 0, `${name}: no dialog`);
+      assert.deepEqual(r.resets, [], `${name}: no reset`);
+      assert.equal(git('rev-parse', 'HEAD'), B, `${name}: HEAD unchanged`);
+      await harness!.stop(); harness = null;
+    }
+  });
+
+  test('HEAD moved while the dialog was open: 409, no reset', async () => {
+    const r = await rollback({ onConfirm: () => { write('n.txt', 'new\n'); git('add', 'n.txt'); git('commit', '-q', '-m', 'during dialog'); } });
+    assert.equal(r.res.status, 409, JSON.stringify(r.res.body));
+    assert.match(String(r.res.body.error), /changed after you confirmed/);
+    assert.deepEqual(r.resets, []);
+    assert.notEqual(git('rev-parse', 'HEAD'), A);
+  });
+
+  test('approved: exactly one reset --keep lands HEAD on the checkpoint; the dialog showed work tree, branch, HEAD, target and the count', async () => {
+    const r = await rollback();
+    assert.equal(r.res.status, 200, JSON.stringify(r.res.body));
+    assert.equal(r.res.body.ok, true);
+    assert.deepEqual(r.resets, [['reset', '--keep', A]]);
+    assert.equal(git('rev-parse', 'HEAD'), A);
+    assert.equal(git('symbolic-ref', '--short', 'HEAD'), 'main');
+    const d = r.shown[0].detail;
+    for (const want of [`Work tree: ${git('rev-parse', '--show-toplevel')}`, 'Branch: main', `Current HEAD: ${B}`,
+      `Checkpoint commit: ${A} stable state`, 'Commits leaving the branch: 1', 'git reset --keep', 'reflog', 'Ignored files']) {
+      assert.ok(d.includes(want), `dialog shows "${want}":\n${d}`);
+    }
+    assert.doesNotMatch(d, /Files changed since the checkpoint are reverted/);
+  });
+
+  test('K1: a tracked file the reset would change, edited (size changed) after the last check, survives; the reset fails and the route reports it', async () => {
+    const edited = 'edited after the last check, longer than before\n';
+    const r = await rollback({ beforeReset: () => write('f.txt', edited) });
+    assert.equal(r.res.body.ok, false, JSON.stringify(r.res.body));
+    assert.equal(r.resets.length, 1, 'exactly one reset attempt');
+    assert.equal(fs.readFileSync(path.join(root, 'f.txt'), 'utf8'), edited, 'the edit survives byte for byte');
+    assert.notEqual(edited.length, 'two\n'.length, 'the edit changes the file size');
+    assert.equal(git('rev-parse', 'HEAD'), B, 'HEAD unchanged');
+  });
+
+  test('K2: an edit to a tracked file the reset does not change survives, and the reset lands', async () => {
+    const edited = 'edited, unchanged between the commits\n';
+    const r = await rollback({ beforeReset: () => write('h.txt', edited) });
+    assert.equal(r.res.body.ok, true, JSON.stringify(r.res.body));
+    assert.equal(fs.readFileSync(path.join(root, 'h.txt'), 'utf8'), edited);
+    assert.equal(git('rev-parse', 'HEAD'), A);
+  });
+
+  test('a branch switched in the final window: the route reports failure with the previous HEAD for the reflog', async () => {
+    git('branch', 'other', B);
+    const r = await rollback({ beforeReset: () => git('checkout', '-q', 'other') });
+    assert.equal(r.res.body.ok, false, JSON.stringify(r.res.body));
+    assert.equal(r.res.body.result.previousHead, B);
+    assert.match(String(r.res.body.result.error), /reflog/);
+    assert.equal(git('rev-parse', 'refs/heads/main'), B, 'main was not moved');
   });
 });

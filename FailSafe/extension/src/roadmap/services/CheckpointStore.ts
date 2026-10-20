@@ -4,7 +4,7 @@
  */
 import * as crypto from "crypto";
 import {
-  stableStringify, hash, tryGetGitHead,
+  stableStringify, hash,
   mapCheckpointRow, inferPhaseKeyFromPlan,
 } from "./CheckpointUtils";
 
@@ -92,6 +92,22 @@ export function getAllCheckpointsAsc(
   return memory.slice().reverse();
 }
 
+/** A record's payload hash and entry hash still match its fields (plain unkeyed SHA-256). */
+export function recordHashOk(record: CheckpointRecord): boolean {
+  if (hash(record.payloadJson) !== record.payloadHash) return false;
+  const recomputed = hash(stableStringify({
+    checkpointId: record.checkpointId, runId: record.runId,
+    checkpointType: record.checkpointType, phase: record.phase,
+    status: record.status, timestamp: record.timestamp,
+    parentId: record.parentId, gitHash: record.gitHash,
+    policyVerdict: record.policyVerdict,
+    evidenceRefs: record.evidenceRefs.slice().sort(),
+    actor: record.actor, payloadHash: record.payloadHash,
+    prevHash: record.prevHash,
+  }));
+  return recomputed === record.entryHash;
+}
+
 export function verifyCheckpointChain(
   db: CheckpointDb, memory: CheckpointRecord[],
 ): boolean {
@@ -99,22 +115,28 @@ export function verifyCheckpointChain(
   if (records.length === 0) return true;
   let prevHash = "GENESIS_CHECKPOINT";
   for (const record of records) {
-    if (hash(record.payloadJson) !== record.payloadHash) return false;
-    const recomputed = hash(stableStringify({
-      checkpointId: record.checkpointId, runId: record.runId,
-      checkpointType: record.checkpointType, phase: record.phase,
-      status: record.status, timestamp: record.timestamp,
-      parentId: record.parentId, gitHash: record.gitHash,
-      policyVerdict: record.policyVerdict,
-      evidenceRefs: record.evidenceRefs.slice().sort(),
-      actor: record.actor, payloadHash: record.payloadHash,
-      prevHash: record.prevHash,
-    }));
-    if (recomputed !== record.entryHash) return false;
+    if (!recordHashOk(record)) return false;
     if (record.prevHash !== prevHash) return false;
     prevHash = record.entryHash;
   }
   return true;
+}
+
+/**
+ * #532 (plan-532c LD8a): whether one stored row still matches its recorded payload and entry
+ * hashes. The hashes are unkeyed: this detects an edit that did not recompute them, not a writer
+ * that did. An absent row does not verify.
+ */
+export function verifyCheckpointRecord(db: CheckpointDb, memory: CheckpointRecord[], checkpointId: string): boolean {
+  if (db) {
+    try {
+      const row = db.prepare(`SELECT ${CKPT_COLUMNS} FROM failsafe_checkpoints WHERE checkpoint_id = ?`)
+        .get(checkpointId) as Record<string, unknown> | undefined;
+      if (row) return recordHashOk(mapCheckpointRow(row));
+    } catch { /* fall through to memory */ }
+  }
+  const m = memory.find((r) => r.checkpointId === checkpointId);
+  return !!m && recordHashOk(m);
 }
 
 export function verifyLatestCheckpoint(
@@ -162,10 +184,12 @@ export function buildCheckpointRecord(
   runId: string,
   db: CheckpointDb,
   memory: CheckpointRecord[],
+  /** #532 B284: the workspace HEAD (readWorkspaceHead), or "unknown". */
+  gitHead: string,
 ): CheckpointRecord {
   const payloadJson = stableStringify(input.payload || {});
   const payloadHash = hash(payloadJson);
-  const gitHash = tryGetGitHead();
+  const gitHash = gitHead;
   const previous = getRecentCheckpoints(db, memory, 1)[0];
   const prevHash = previous?.entryHash || "GENESIS_CHECKPOINT";
   const checkpointId = crypto.randomUUID();

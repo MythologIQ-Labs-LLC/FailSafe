@@ -154,3 +154,88 @@ suite('redactUrlCredentials', () => {
     assert.equal(redactUrlCredentials(once), once);
   });
 });
+
+// #532 (plan-532c LD7a, B286): the commit is bound to this run before it may be offered for
+// linking. commitSha is set only when the commit's parent is the HEAD read before the commit (none
+// when unborn), its tree is the index tree FailSafe staged (`write-tree`), its message is the one
+// FailSafe wrote (`--cleanup=verbatim` keeps it exact, plus the newline git appends), and it is the
+// tip of the branch. Otherwise commitSha stays unset and the warning names the failed check.
+suite('commitPushOpenPr — commit binding (#532 B286)', () => {
+  const PRE = 'a'.repeat(40);
+  const TREE = '7'.repeat(40);
+  const NEW = 'b'.repeat(40);
+  const MSG = REQ.message;
+  interface Script { pre?: GitResp; tree?: string; sha?: string; log?: string; tip?: string }
+  function bindGit(s: Script = {}, calls: string[][] = []): GitRunner {
+    return async (args) => {
+      calls.push(args);
+      const j = args.join(' ');
+      if (j === 'rev-parse --verify --quiet HEAD') return s.pre ?? { code: 0, stdout: `${PRE}\n`, stderr: '' };
+      if (j === 'write-tree') return { code: 0, stdout: `${s.tree ?? TREE}\n`, stderr: '' };
+      if (j === 'rev-parse --verify HEAD') return { code: 0, stdout: `${s.sha ?? NEW}\n`, stderr: '' };
+      if (args[0] === 'log') return { code: 0, stdout: s.log ?? `${TREE}\0${PRE}\0${MSG}\n`, stderr: '' };
+      if (j === `rev-parse --verify --quiet refs/heads/${REQ.branch}`) return { code: 0, stdout: `${s.tip ?? NEW}\n`, stderr: '' };
+      if (args[0] === 'remote') return { code: 1, stdout: '', stderr: '' };
+      return defaultFor(args);
+    };
+  }
+
+  test('bound: parent, tree, message and branch tip match -> commitSha is the full name', async () => {
+    const calls: string[][] = [];
+    const r = await commitPushOpenPr(REQ, { git: bindGit({}, calls) });
+    assert.equal(r.step, 'committed');
+    assert.equal(r.commitSha, NEW);
+    assert.doesNotMatch(r.warning ?? '', /not bound/);
+    assert.deepEqual(calls.find((c) => c[0] === 'commit'), ['commit', '--cleanup=verbatim', '-m', MSG], 'the message is stored verbatim');
+    const order = calls.map((c) => c.join(' '));
+    assert.ok(order.indexOf('rev-parse --verify --quiet HEAD') < order.findIndex((c) => c.startsWith('commit ')), 'pre-HEAD read before the commit');
+    assert.ok(order.indexOf('write-tree') < order.findIndex((c) => c.startsWith('commit ')), 'index tree read before the commit');
+  });
+
+  test('a foreign parent (another commit landed after the pre-HEAD read) leaves commitSha unset; the warning names the parent check', async () => {
+    const r = await commitPushOpenPr(REQ, { git: bindGit({ log: `${TREE}\0${'c'.repeat(40)}\0${MSG}\n` }) });
+    assert.equal(r.step, 'committed');
+    assert.equal(r.commitSha, undefined);
+    assert.match(r.warning ?? '', /not bound to this run \(its parent is not the HEAD recorded before the commit\)/);
+  });
+
+  test('a changed tree or message leaves commitSha unset and names hooks and trailers', async () => {
+    for (const log of [`${'8'.repeat(40)}\0${PRE}\0${MSG}\n`, `${TREE}\0${PRE}\0${MSG}\n\nSigned-off-by: x <x@example.invalid>\n`]) {
+      const r = await commitPushOpenPr(REQ, { git: bindGit({ log }) });
+      assert.equal(r.commitSha, undefined, JSON.stringify(log));
+      assert.match(r.warning ?? '', /a commit hook or a configured trailer changed the commit/);
+    }
+  });
+
+  test('a branch tip that is not the commit, and a non-full name, leave commitSha unset', async () => {
+    const tip = await commitPushOpenPr(REQ, { git: bindGit({ tip: 'd'.repeat(40) }) });
+    assert.equal(tip.commitSha, undefined);
+    assert.match(tip.warning ?? '', /not the tip of fix\/organize-123/);
+    const short = await commitPushOpenPr(REQ, { git: bindGit({ sha: 'abc1234' }) });
+    assert.equal(short.commitSha, undefined);
+    assert.match(short.warning ?? '', /not a full commit name/);
+  });
+
+  test('an unborn pre-HEAD binds a root commit (no parents) and refuses a commit that has a parent', async () => {
+    const unborn = { code: 1, stdout: '', stderr: '' };
+    const root = await commitPushOpenPr(REQ, { git: bindGit({ pre: unborn, log: `${TREE}\0\0${MSG}\n` }) });
+    assert.equal(root.commitSha, NEW);
+    const parented = await commitPushOpenPr(REQ, { git: bindGit({ pre: unborn }) });
+    assert.equal(parented.commitSha, undefined);
+    assert.match(parented.warning ?? '', /parent/);
+  });
+
+  test('review N5: a runner that could not start git (exit 1 with an error) is not an unborn branch; the warning says it could not read HEAD', async () => {
+    const spawnError = { code: 1, stdout: '', stderr: 'Error: spawn git ENOENT' };
+    const r = await commitPushOpenPr(REQ, { git: bindGit({ pre: spawnError, log: `${TREE}\0\0${MSG}\n` }) });
+    assert.equal(r.commitSha, undefined, 'a root commit is not bound when HEAD could not be read');
+    assert.match(r.warning ?? '', /could not read HEAD before the commit/);
+  });
+
+  test('a pre-HEAD git cannot read leaves commitSha unset', async () => {
+    const r = await commitPushOpenPr(REQ, { git: bindGit({ pre: { code: 128, stdout: '', stderr: 'fatal' } }) });
+    assert.equal(r.step, 'committed');
+    assert.equal(r.commitSha, undefined);
+    assert.match(r.warning ?? '', /not bound/);
+  });
+});

@@ -1,9 +1,12 @@
 // #532 part B (plan-532b LD8/LD10): structural (jsdom) tests for the Workspace "Delivery" sub-view.
 // jsdom checks structure only; the visual surface is checked in the installed VSIX (screenshots).
 //
-// Chips per status (recorded ok, stale warn, missing bad, unavailable muted), records with hashes,
-// ids, sha and tree, the fixed scope line, markup in repository strings stays text, and no link or
-// unlink buttons for a sealed (archived) intent.
+// Chips per status (recorded info, passing ok, failing fail, stale warn, missing bad, unavailable
+// muted), records with hashes, ids, sha and tree, the fixed scope line, markup in repository strings
+// stays text, and no link or unlink buttons for a sealed (archived) intent.
+// plan-532c LD9: six steps with the review step, the legend, the "complete is not reachable" line,
+// the intent decision labelled "not a review" with the forgeability note, governance kind and
+// outcome, "Linked by" from the edge origin, and the Failing pill.
 
 import { strict as assert } from 'assert';
 import { JSDOM } from 'jsdom';
@@ -20,22 +23,35 @@ const SHA = 'a'.repeat(40);
 const TREE = 'b'.repeat(40);
 const SHA2 = '9'.repeat(40);
 
+const DECISION_NOTE = 'Recorded in the local intent history; the chain shows the entry is unchanged since it was chained, not who wrote it.';
+let decision: { status: string; actor: string; timestamp: string; entryHash: string } | null = null;
+let overall = 'incomplete';
+
 function view(id: string, linkable: boolean, purpose: string) {
+  const vetoed = decision?.status === 'VETO';
   return {
     integrity: 'valid', found: true, linkable,
-    intent: { id, purpose, status: linkable ? 'PULSE' : 'SEALED', active: linkable, sealed: !linkable },
+    intent: {
+      id, purpose, status: linkable ? 'PULSE' : 'SEALED', active: linkable, sealed: !linkable,
+      createdBy: 'user', createdAt: '2026-10-17T00:00:00.000Z', createdEntryHash: 'e'.repeat(64), decision,
+    },
     edges: [
       { edge: 'implements', target: 'runtime', provenance: { docPath: '<b>docs/RUNTIME.md</b>' }, linkedAt: 't', actor: 'user', entryHash: 'h1' },
       { edge: 'committed-under', target: SHA, provenance: { sha: SHA, tree: TREE, branch: 'main' }, linkedAt: 't', actor: 'user', entryHash: 'h2' },
     ],
     assessment: {
-      intentId: id, overall: 'incomplete', gaps: ['architecture', 'governance'],
+      intentId: id, overall, gaps: ['architecture', 'review', 'governance'], completeReachable: false, completeBlockedBy: ['B320', 'B321'],
       steps: [
-        { key: 'issue', label: 'Issue', status: 'recorded', reason: 'r', records: [{ source: 'jira', key: 'PROJ-7', contentSha256: 'c'.repeat(64), createdEntryHash: 'e'.repeat(64) }] },
-        { key: 'architecture', label: 'Architecture', status: 'stale', reason: 'changed', records: [{ target: 'runtime', docPath: '<b>docs/RUNTIME.md</b>', docSha256: 'd'.repeat(64), sourceSha: SHA, status: 'stale', currentSha256: 'f'.repeat(64) }] },
-        { key: 'code', label: 'Code', status: 'recorded', reason: 'r', records: [{ sha: SHA, tree: TREE, branch: 'main', status: 'recorded', files: ['src/a.ts', '<i>x</i>'], filesTruncated: false }] },
-        { key: 'governance', label: 'Governance evidence', status: 'missing', reason: 'none', records: [] },
-        { key: 'receipt', label: 'Receipt', status: 'unavailable', reason: 'Blocked on the damaged ledger (#467), B216.', records: [] },
+        { key: 'issue', label: 'External issue', status: 'recorded', reason: 'r', records: [{ source: 'jira', key: 'PROJ-7', contentSha256: 'c'.repeat(64), createdEntryHash: 'e'.repeat(64) }] },
+        { key: 'architecture', label: 'Governing architecture', status: 'stale', reason: 'changed', records: [{ target: 'runtime', docPath: '<b>docs/RUNTIME.md</b>', docSha256: 'd'.repeat(64), sourceSha: SHA, status: 'stale', currentSha256: 'f'.repeat(64), via: 'workspace-delivery' }] },
+        { key: 'code', label: 'Implementation', status: 'recorded', reason: 'r', records: [{ sha: SHA, tree: TREE, branch: 'main', status: 'recorded', files: ['src/a.ts', '<i>x</i>'], filesTruncated: false, via: 'governed-commit', action: 'organize' }] },
+        { key: 'review', label: 'Review', status: vetoed ? 'failing' : 'missing',
+          reason: vetoed ? 'Intent vetoed by judge at t.' : 'FailSafe records no review of the implementation yet: no command records a review verdict (B320) and no governance event names the commit it evaluated (B321).',
+          records: decision ? [{ decision: vetoed ? 'vetoed' : 'approved for implementation (not a review)', status: decision.status, actor: decision.actor, timestamp: decision.timestamp, entryHash: decision.entryHash, provenance: DECISION_NOTE }] : [] },
+        { key: 'governance', label: 'Governance evidence', status: 'recorded', reason: 'r', records: [
+          { entryId: 7, eventType: 'GOVERNANCE_PAUSED', timestamp: 't', entryHash: 'g'.repeat(64), matchedBy: 'intentId', value: id, kind: 'policy-decision', outcome: 'denied', chain: 'unknown' },
+        ] },
+        { key: 'receipt', label: 'Delivery receipt', status: 'unavailable', reason: 'Blocked on the damaged ledger (#467), B216.', records: [] },
       ],
     },
   };
@@ -88,20 +104,86 @@ function setupDom(): { cleanup: () => void; doc: Document; posted: Posted[]; fet
 }
 
 suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
-  test('five steps with a chip per status, the overall outcome and its gaps', async () => {
+  setup(() => { decision = null; overall = 'incomplete'; });
+
+  test('six steps with a chip per status, the overall outcome, its gaps and why complete is not reachable', async () => {
     const ctx = setupDom();
     try {
       await new DeliveryAssessmentRenderer('workspace').refresh();
       const d = ctx.doc;
       const steps = [...d.querySelectorAll('.cc-dlv-step')].map((s) => [s.getAttribute('data-key'), s.getAttribute('data-status')]);
-      assert.deepEqual(steps, [['issue', 'recorded'], ['architecture', 'stale'], ['code', 'recorded'], ['governance', 'missing'], ['receipt', 'unavailable']]);
+      assert.deepEqual(steps, [['issue', 'recorded'], ['architecture', 'stale'], ['code', 'recorded'], ['review', 'missing'], ['governance', 'recorded'], ['receipt', 'unavailable']]);
       const chip = (key: string) => d.querySelector(`.cc-dlv-step[data-key="${key}"] .cc-dlv-pill`)!;
-      assert.match(chip('issue').className, /cc-dlv-pill-ok/);
+      assert.match(chip('issue').className, /cc-dlv-pill-info/, 'recorded is not shown as a pass');
+      assert.doesNotMatch(chip('issue').className, /cc-dlv-pill-ok/);
       assert.match(chip('architecture').className, /cc-dlv-pill-warn/);
-      assert.match(chip('governance').className, /cc-dlv-pill-bad/);
+      assert.match(chip('review').className, /cc-dlv-pill-bad/);
       assert.match(chip('receipt').className, /cc-dlv-pill-muted/);
-      assert.match(d.querySelector('.cc-dlv-overall')?.textContent ?? '', /Incomplete/);
-      assert.match(d.querySelector('.cc-dlv-overall')?.textContent ?? '', /Architecture, Governance evidence/);
+      const o = d.querySelector('.cc-dlv-overall')?.textContent ?? '';
+      assert.match(o, /Incomplete/);
+      assert.match(o, /Governing architecture, Review, Governance evidence/);
+      assert.match(o, /Complete is not reachable yet: FailSafe records no review of the implementation \(B320, B321\)\. The receipt also needs the ledger repair \(#467\)\./);
+    } finally { ctx.cleanup(); }
+  });
+
+  test('the legend names all six statuses with distinct chips', async () => {
+    const ctx = setupDom();
+    try {
+      await new DeliveryAssessmentRenderer('workspace').refresh();
+      const pills = [...ctx.doc.querySelectorAll('.cc-dlv-legend .cc-dlv-pill')];
+      assert.deepEqual(pills.map((p) => p.textContent), ['Recorded', 'Passing', 'Failing', 'Stale', 'Missing', 'Unavailable']);
+      assert.equal(new Set(pills.map((p) => p.className)).size, 6, 'each status has its own chip class');
+      assert.match(ctx.doc.querySelector('.cc-dlv-legend')?.textContent ?? '', /Recorded means present, not passed/);
+    } finally { ctx.cleanup(); }
+  });
+
+  test('the intent decision: approved for implementation (not a review), with the provenance note; review stays missing', async () => {
+    decision = { status: 'PASS', actor: 'judge', timestamp: '2026-10-19T00:00:00.000Z', entryHash: 'p'.repeat(64) };
+    const ctx = setupDom();
+    try {
+      await new DeliveryAssessmentRenderer('workspace').refresh();
+      const head = ctx.doc.querySelector('.cc-dlv-intent')?.textContent ?? '';
+      assert.match(head, /Intent decision: approved for implementation \(not a review\)/);
+      assert.match(head, /judge/);
+      assert.ok(head.includes(DECISION_NOTE));
+      assert.match(head, /Created by user/);
+      assert.ok(head.includes('e'.repeat(64)));
+      const review = ctx.doc.querySelector('.cc-dlv-step[data-key="review"]')!;
+      assert.equal(review.getAttribute('data-status'), 'missing');
+      assert.match(review.textContent ?? '', /B320/);
+      assert.ok((review.textContent ?? '').includes('p'.repeat(64)));
+    } finally { ctx.cleanup(); }
+  });
+
+  test('a vetoed intent: review Failing, the Failing pill, "vetoed" in the header', async () => {
+    decision = { status: 'VETO', actor: 'judge', timestamp: 't', entryHash: 'v'.repeat(64) };
+    overall = 'failing';
+    const ctx = setupDom();
+    try {
+      await new DeliveryAssessmentRenderer('workspace').refresh();
+      const d = ctx.doc;
+      const chip = d.querySelector('.cc-dlv-step[data-key="review"] .cc-dlv-pill')!;
+      assert.equal(chip.textContent, 'Failing');
+      assert.match(chip.className, /cc-dlv-pill-fail/);
+      assert.match(d.querySelector('.cc-dlv-step[data-key="review"]')?.textContent ?? '', /Intent vetoed/);
+      const pill = d.querySelector('.cc-dlv-overall .cc-dlv-pill')!;
+      assert.equal(pill.textContent, 'Failing');
+      assert.match(d.querySelector('.cc-dlv-intent')?.textContent ?? '', /Intent decision: vetoed/);
+    } finally { ctx.cleanup(); }
+  });
+
+  test('governance records show kind and outcome; edge records show who linked them', async () => {
+    const ctx = setupDom();
+    try {
+      await new DeliveryAssessmentRenderer('workspace').refresh();
+      const gov = ctx.doc.querySelector('.cc-dlv-step[data-key="governance"]')?.textContent ?? '';
+      assert.match(gov, /Kind.*policy decision/);
+      assert.match(gov, /Outcome.*denied/);
+      assert.doesNotMatch(gov, /Matched by/);
+      const code = ctx.doc.querySelector('.cc-dlv-step[data-key="code"]')?.textContent ?? '';
+      assert.match(code, /Linked by.*FailSafe organize \(governed commit\)/);
+      const arch = ctx.doc.querySelector('.cc-dlv-step[data-key="architecture"]')?.textContent ?? '';
+      assert.match(arch, /Linked by.*Workspace > Delivery/);
     } finally { ctx.cleanup(); }
   });
 

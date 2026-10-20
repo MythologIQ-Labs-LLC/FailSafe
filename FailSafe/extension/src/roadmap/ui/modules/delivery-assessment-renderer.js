@@ -1,11 +1,15 @@
 /**
  * DeliveryAssessmentRenderer — Workspace-tab "Delivery" sub-view (#532 part B, plan-532b LD8).
  *
- * For one intent (the active intent, or an archived sealed intent, read-only) it shows five steps
+ * For one intent (the active intent, or an archived sealed intent, read-only) it shows six steps
  * from GET /api/v1/delivery/intents/:id: the issue it came from, the architecture documents it
- * implements, the commits it was committed under, governance evidence already in the FailSafe
- * ledger, and the receipt (unavailable until the ledger repair, #467). Each step has a chip
- * (recorded ok, stale warn, missing bad, unavailable muted) and lists the records behind it.
+ * implements, the commits it was committed under, a review of the implementation, governance
+ * evidence already in the FailSafe ledger, and the receipt (unavailable until the ledger repair,
+ * #467). Each step has a chip and lists the records behind it. plan-532c: "recorded" means present,
+ * not passed, so its chip is neutral; passing is green, failing and missing red, stale amber,
+ * unavailable muted, with a legend. The header shows the accepted intent and the intent decision
+ * (approval for implementation is not a review), and the overall card says why complete is not
+ * reachable yet (B320, B321).
  * For the active, unsealed intent it offers Link architecture, Link commit and Unlink; each posts
  * once and acts only after the operator confirms in VS Code. A commit's changed files are shown
  * for display; they are never an edge.
@@ -33,6 +37,11 @@ const STYLE = `
 .cc-dlv-pill-warn { color:#f6ad55; border-color:#6b4f2a; }
 .cc-dlv-pill-bad { color:#fc8181; border-color:#6b2f2f; }
 .cc-dlv-pill-muted { color:#7f8aa0; border-color:#273140; }
+.cc-dlv-pill-info { color:#5fb0d8; border-color:#2b4a5c; }
+.cc-dlv-pill-fail { color:#fff; background:#7a2b2b; border-color:#a33d3d; }
+.cc-dlv-legend { display:flex; gap:6px; align-items:center; flex-wrap:wrap; color:#7f8aa0; font-size:.78rem; margin:0; }
+.cc-dlv-intent { color:#9aa5b4; font-size:.84rem; margin:0 0 6px; }
+.cc-dlv-intent .cc-dlv-note { color:#7f8aa0; font-size:.78rem; }
 .cc-dlv-card p, .cc-dlv-line { color:#9aa5b4; margin:0 0 8px; font-size:.88rem; }
 .cc-dlv-row { display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; padding:4px 0; border-top:1px solid #1a2230; font-size:.86rem; color:#c9d1dc; }
 .cc-dlv-row:first-of-type { border-top:none; }
@@ -49,17 +58,33 @@ const STYLE = `
 .cc-dlv-result.cc-dlv-result-bad { color:#fc8181; }
 `;
 
+const DECISION_NOTE = 'Recorded in the local intent history; the chain shows the entry is unchanged since it was chained, not who wrote it.';
+
 export const DELIVERY_SCOPE_LINE = 'This assessment uses only the links you recorded here and evidence already in the FailSafe ledger. ' +
   'Nothing is inferred and nothing leaves this machine. Receipts are unavailable until the ledger repair (#467). ' +
   'Recorded means the evidence is present, not that it passed.';
 
 const CHIP = {
-  recorded: ['Recorded', 'cc-dlv-pill-ok'],
+  recorded: ['Recorded', 'cc-dlv-pill-info'],
+  passing: ['Passing', 'cc-dlv-pill-ok'],
+  failing: ['Failing', 'cc-dlv-pill-fail'],
   stale: ['Stale', 'cc-dlv-pill-warn'],
   missing: ['Missing', 'cc-dlv-pill-bad'],
   unavailable: ['Unavailable', 'cc-dlv-pill-muted'],
 };
-const CARD = { recorded: '', stale: ' cc-dlv-warn', missing: ' cc-dlv-bad', unavailable: '' };
+const CARD = { recorded: '', passing: '', failing: ' cc-dlv-bad', stale: ' cc-dlv-warn', missing: ' cc-dlv-bad', unavailable: '' };
+const OUTCOME = {
+  'evidence-complete-except-receipt': ['Evidence complete except receipt', 'cc-dlv-pill-ok'],
+  incomplete: ['Incomplete', 'cc-dlv-pill-warn'],
+  failing: ['Failing', 'cc-dlv-pill-fail'],
+};
+
+/** Who linked an edge (plan-532c LD6), as the dialog said it. */
+function linkedBy(rec) {
+  if (rec.via === 'governed-commit') return `FailSafe ${rec.action || 'governed'} (governed commit)`;
+  if (rec.via === 'workspace-delivery') return 'Workspace > Delivery (your pick)';
+  return 'not recorded';
+}
 
 function el(tag, cls, text) {
   const node = document.createElement(tag);
@@ -111,15 +136,20 @@ function recordRows(step, rec) {
     case 'architecture': return [
       ['Document', `${rec.docPath} (row ${rec.target})`], ['Document SHA-256', rec.docSha256],
       ...(rec.currentSha256 ? [['Now', rec.currentSha256]] : []),
-      ['HEAD at link time', rec.sourceSha], ...(rec.reason ? [['Why', rec.reason]] : []),
+      ['HEAD at link time', rec.sourceSha], ['Linked by', linkedBy(rec)], ...(rec.reason ? [['Why', rec.reason]] : []),
     ];
     case 'code': return [
-      ['Commit', rec.sha], ['Tree', rec.tree], ['Branch', rec.branch || 'none (detached HEAD)'],
+      ['Commit', rec.sha], ['Tree', rec.tree], ['Branch', rec.branch || 'none (detached HEAD)'], ['Linked by', linkedBy(rec)],
       ...(rec.reason ? [['Why', rec.reason]] : []),
+    ];
+    case 'review': return [
+      ['Intent decision', rec.decision], ['By', rec.actor], ['At', rec.timestamp], ['Entry hash', rec.entryHash],
+      ['Provenance', rec.provenance],
     ];
     case 'governance': return [
       ['Ledger entry', `#${rec.entryId} ${rec.eventType}`], ['Recorded at', rec.timestamp], ['Entry hash', rec.entryHash],
-      ['Matched by', rec.matchedBy === 'git_head' ? `checkpoint git_head ${rec.value}` : 'intent id'],
+      ['Kind', rec.kind === 'policy-decision' ? 'policy decision (an action under the intent, not a review)' : 'presence'],
+      ...(rec.outcome ? [['Outcome', rec.outcome]] : []),
       ['Ledger chain', 'unknown (not re-verified for each assessment)'],
     ];
     default: return [];
@@ -179,6 +209,7 @@ export class DeliveryAssessmentRenderer {
     const sub = el('div', 'cc-dlv-sub');
     root.appendChild(sub);
     root.appendChild(el('p', 'cc-dlv-scope', DELIVERY_SCOPE_LINE));
+    root.appendChild(this.legend());
     if (state.intents && state.intents.length) sub.appendChild(this.picker(state.intents));
     sub.appendChild(button('Refresh', 'cc-dlv-refresh', () => this.refresh()));
     if (this.message) {
@@ -199,6 +230,16 @@ export class DeliveryAssessmentRenderer {
     target.replaceChildren(root);
   }
 
+  legend() {
+    const row = el('p', 'cc-dlv-legend');
+    for (const key of ['recorded', 'passing', 'failing', 'stale', 'missing', 'unavailable']) {
+      const [label, cls] = CHIP[key];
+      row.appendChild(pill(label, cls));
+    }
+    row.appendChild(el('span', null, 'Recorded means present, not passed.'));
+    return row;
+  }
+
   picker(intents) {
     const select = el('select', 'cc-dlv-select cc-dlv-picker');
     select.setAttribute('aria-label', 'Intent');
@@ -212,18 +253,37 @@ export class DeliveryAssessmentRenderer {
     return select;
   }
 
+  /** The accepted intent: who created it and when, and the intent decision (not a review). */
+  intentLine(intent) {
+    const box = el('div', 'cc-dlv-intent');
+    box.appendChild(el('div', null, `Accepted intent, status ${intent.status}. Created by ${intent.createdBy || 'not recorded'} at ${intent.createdAt || 'not recorded'}; CREATED entry ${intent.createdEntryHash || '(none)'}.`));
+    const d = intent.decision;
+    if (d) {
+      const what = d.status === 'VETO' ? 'vetoed' : 'approved for implementation (not a review)';
+      box.appendChild(el('div', null, `Intent decision: ${what}, by ${d.actor} at ${d.timestamp}.`));
+      box.appendChild(el('div', 'cc-dlv-note', DECISION_NOTE));
+    }
+    return box;
+  }
+
   paintView(root, view, candidates) {
     const a = view.assessment;
     const complete = a.overall === 'evidence-complete-except-receipt';
-    const overall = el('div', `cc-dlv-card cc-dlv-overall${complete ? '' : ' cc-dlv-warn'}`);
+    const failing = a.overall === 'failing';
+    const overall = el('div', `cc-dlv-card cc-dlv-overall${complete ? '' : failing ? ' cc-dlv-bad' : ' cc-dlv-warn'}`);
     const head = el('div', 'cc-dlv-head');
     head.appendChild(el('strong', null, view.intent.purpose));
-    head.appendChild(pill(complete ? 'Evidence complete except receipt' : 'Incomplete', complete ? 'cc-dlv-pill-ok' : 'cc-dlv-pill-warn'));
+    const [outcomeLabel, outcomeCls] = OUTCOME[a.overall] || OUTCOME.incomplete;
+    head.appendChild(pill(outcomeLabel, outcomeCls));
     overall.appendChild(head);
+    overall.appendChild(this.intentLine(view.intent));
     const labels = a.steps.filter((s) => a.gaps.includes(s.key)).map((s) => s.label);
     overall.appendChild(el('p', null, complete
       ? 'Every step except the receipt has a record.'
       : `Gaps: ${labels.join(', ')}.`));
+    if (a.completeReachable === false) {
+      overall.appendChild(el('p', 'cc-dlv-unreachable', `Complete is not reachable yet: FailSafe records no review of the implementation (${(a.completeBlockedBy || []).join(', ')}). The receipt also needs the ledger repair (#467).`));
+    }
     if (!view.linkable) overall.appendChild(el('p', null, 'This intent is sealed; its links are read-only.'));
     root.appendChild(overall);
     for (const step of a.steps) root.appendChild(this.stepCard(step, view, candidates));

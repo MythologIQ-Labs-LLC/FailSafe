@@ -127,4 +127,81 @@ describe("GitResetService", () => {
       assert.ok(result.stderr.includes("fatal"));
     });
   });
+
+  // #532 (plan-532c LD8a, B284): getStatus fails closed, and the rollback helpers.
+  describe("rollback guards (#532 B284)", () => {
+    const ok = (stdout = "") => ({ code: 0, stdout, stderr: "" });
+    function recording(answer: (args: string[]) => { code: number; stdout: string; stderr: string } | undefined): { runner: CommandRunner; calls: string[][] } {
+      const calls: string[][] = [];
+      return { calls, runner: async (_cmd, args) => { calls.push(args); return answer(args) ?? ok(); } };
+    }
+
+    it("getStatus throws when status, rev-parse or branch exits non-zero (never reads empty output as clean)", async () => {
+      for (const failing of ["status --porcelain", "rev-parse HEAD", "branch --show-current"]) {
+        const service = new GitResetService(mockRunner({ [failing]: { code: 128, stdout: "", stderr: "fatal: boom\n" } }));
+        await assert.rejects(() => service.getStatus("/tmp"), /git .* failed/, failing);
+      }
+    });
+
+    it("resetKeep runs exactly reset --keep <sha> and validates the target", async () => {
+      const { runner, calls } = recording(() => undefined);
+      const service = new GitResetService(runner);
+      const sha = "a".repeat(40);
+      assert.equal((await service.resetKeep("/tmp", sha)).success, true);
+      assert.deepEqual(calls, [["reset", "--keep", sha]]);
+      await assert.rejects(() => service.resetKeep("/tmp", "--hard"), /Invalid git hash format/);
+      assert.equal(calls.length, 1, "an invalid target never reaches git");
+    });
+
+    it("isAncestor maps 0 / 1 / other to yes / no / unavailable", async () => {
+      const sha = "a".repeat(40);
+      for (const [code, want] of [[0, "yes"], [1, "no"], [128, "unavailable"]] as const) {
+        const { runner, calls } = recording(() => ({ code, stdout: "", stderr: "" }));
+        assert.equal(await new GitResetService(runner).isAncestor("/tmp", sha), want);
+        assert.deepEqual(calls, [["merge-base", "--is-ancestor", sha, "HEAD"]]);
+      }
+    });
+
+    it("countLeaving, describeCommit, workTree and afterReset parse git output; failures are null", async () => {
+      const sha = "a".repeat(40);
+      const { runner } = recording((a) => {
+        const j = a.join(" ");
+        if (j === `rev-list --count ${sha}..HEAD`) return ok("3\n");
+        if (a[0] === "log") return ok("fix: thing\u00002026-01-01T00:00:00+00:00\n");
+        if (j === "rev-parse --show-toplevel") return ok("C:/ws\n");
+        if (j === "rev-parse --verify --quiet HEAD@{1}") return ok(`${"b".repeat(40)}\n`);
+        if (j === "branch --show-current") return ok("main\n");
+        if (j === "rev-parse --verify --quiet HEAD") return ok(`${sha}\n`);
+        return undefined;
+      });
+      const s = new GitResetService(runner);
+      assert.equal(await s.countLeaving("/tmp", sha), 3);
+      assert.deepEqual(await s.describeCommit("/tmp", sha), { subject: "fix: thing", date: "2026-01-01T00:00:00+00:00" });
+      assert.equal(await s.workTree("/tmp"), "C:/ws");
+      assert.deepEqual(await s.afterReset("/tmp"), { previousHead: "b".repeat(40), branch: "main", head: sha });
+      const failing = new GitResetService(async () => ({ code: 128, stdout: "", stderr: "fatal" }));
+      assert.equal(await failing.countLeaving("/tmp", sha), null);
+      assert.equal(await failing.describeCommit("/tmp", sha), null);
+      assert.equal(await failing.workTree("/tmp"), null);
+      await assert.rejects(() => failing.afterReset("/tmp"), /git branch failed/);
+    });
+
+    it("afterReset reads the branch with branch --show-current, reports a missing reflog entry as null, and throws when git cannot answer (review N1)", async () => {
+      const sha = "a".repeat(40);
+      const calls: string[][] = [];
+      const noReflog = new GitResetService(async (_c, a) => {
+        calls.push(a);
+        const j = a.join(" ");
+        if (j === "rev-parse --verify --quiet HEAD@{1}") return { code: 1, stdout: "", stderr: "" };
+        if (j === "branch --show-current") return ok("\n");
+        if (j === "rev-parse --verify --quiet HEAD") return ok(`${sha}\n`);
+        return ok();
+      });
+      assert.deepEqual(await noReflog.afterReset("/tmp"), { previousHead: null, branch: null, head: sha });
+      assert.ok(calls.some((c) => c.join(" ") === "branch --show-current"));
+      assert.ok(!calls.some((c) => c[0] === "symbolic-ref"), "the branch is read as the plan reads it");
+      const broken = new GitResetService(async (_c, a) => (a.join(" ").includes("HEAD@{1}") ? { code: 128, stdout: "", stderr: "fatal: bad" } : ok(a[0] === "branch" ? "main\n" : `${sha}\n`)));
+      await assert.rejects(() => broken.afterReset("/tmp"), /HEAD@\{1\}/);
+    });
+  });
 });

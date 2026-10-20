@@ -8,6 +8,9 @@
 // The one git read outside the LD4 list is the architecture discovery's file listing (LD3 reuses
 // discoverArchitectureIndex), accepted only with its exact argv.
 // A tampered LINKED entry (chain recomputed) whose target is `--output=x` never reaches git.
+// plan-532c: the sweep also covers the governed-commit link offer (B286) and the hub checkpoint
+// HEAD read (B284, which reads from disk and spawns nothing); the ledger is asked only for the
+// intent id (the checkpoint SHA match is retired, B285).
 
 import { strict as assert } from 'assert';
 import * as path from 'path';
@@ -18,6 +21,8 @@ import {
   assessIntentDelivery, deliveryCandidates, prepareDeliveryEdge, writeDeliveryEdge, type DeliveryContext,
 } from '../../../governance/delivery/deliveryService';
 import { deliveryWorkspace, importedIntent, intentService, RUNTIME_ROW, type DeliveryWorkspace } from './deliveryFixtures';
+import { offerCommittedUnderLink } from '../../../extension/governedCommitLink';
+import { readWorkspaceHead } from '../../../roadmap/services/workspaceHead';
 
 // Module objects (not `import * as` copies), so the stubs replace what the code calls.
 /* eslint-disable @typescript-eslint/no-var-requires */
@@ -103,11 +108,13 @@ suite('delivery: no egress (#532 LD1)', () => {
     try {
       const candidates = deliveryCandidates(ctx);
       assert.equal(candidates.commits.state, 'ok');
-      for (const [edge, target] of [['implements', RUNTIME_ROW], ['committed-under', ws.head]] as const) {
-        const prepared = await prepareDeliveryEdge(ctx, 'link', { intentId: intent.id, edge, target });
-        assert.equal(prepared.ok, true, JSON.stringify(prepared));
-        assert.deepEqual(await writeDeliveryEdge(ctx, prepared as Extract<typeof prepared, { ok: true }>, 'user'), { ok: true });
-      }
+      const prepared = await prepareDeliveryEdge(ctx, 'link', { intentId: intent.id, edge: 'implements', target: RUNTIME_ROW });
+      assert.equal(prepared.ok, true, JSON.stringify(prepared));
+      assert.deepEqual(await writeDeliveryEdge(ctx, prepared as Extract<typeof prepared, { ok: true }>, 'user'), { ok: true });
+      const offered = await offerCommittedUnderLink(ctx, async () => 'approved',
+        { commitSha: ws.head, action: 'organize', requestedPaths: ['docs'] });
+      assert.equal(offered.outcome, 'linked', offered.detail);
+      assert.equal(readWorkspaceHead(ws.root), ws.head, 'the hub checkpoint HEAD read');
       view = await assessIntentDelivery(ctx, intent.id);
       const unlink = await prepareDeliveryEdge(ctx, 'unlink', { intentId: intent.id, edge: 'implements', target: RUNTIME_ROW });
       assert.equal(unlink.ok, true, JSON.stringify(unlink));
@@ -136,7 +143,7 @@ suite('delivery: no egress (#532 LD1)', () => {
     assert.ok(subcommands.length > 0, 'git ran through the injected runner');
     for (const a of subcommands) assert.ok(allowed(a), `git ${a.join(' ')} is not in the LD4 allowlist`);
     assert.ok(subcommands.some((a) => a[0] === 'cat-file'), 'the commit edge was re-checked through the runner');
-    assert.deepEqual([...new Set(ledgerQueries)].sort(), [intent.id, ws.head].sort(), 'the ledger is asked only for the intent id and the linked sha');
+    assert.deepEqual([...new Set(ledgerQueries)], [intent.id], 'the ledger is asked only for the intent id (B285: no SHA match)');
   });
 
   test('a tampered LINKED entry (chain recomputed) whose target is --output=x is missing and never reaches git', async () => {

@@ -27,6 +27,12 @@ function fakeWindow(answer: (call: DialogCall) => Promise<string | undefined>): 
 
 const REQUEST: OperatorActionRequest = { title: 'Do it?', detail: 'line 1\nline 2', approveLabel: 'Do it' };
 
+/** #532 (plan-532c LD8a): the server-side rollback plan the dialog shows. */
+const PLAN = {
+  checkpointId: 'cp-1', target: 'a'.repeat(40), targetSubject: 'stable state', targetDate: '2026-10-14T00:00:00+00:00',
+  workTree: 'C:/work/repo', branch: 'main', head: 'b'.repeat(40), leaving: 3,
+};
+
 function l3Item(overrides: Partial<L3ApprovalRequest> = {}): L3ApprovalRequest {
   return {
     id: 'q1', state: 'QUEUED', filePath: 'src/a.ts', riskGrade: 'L3', agentDid: 'did:agent:1',
@@ -106,7 +112,7 @@ suite('#514 operatorConfirmation (FX960)', () => {
     const ratify = ratifyRequest('dec-1', 'ratify', 'because\nreasons');
     assert.ok(ratify.detail.includes('Decision id (as requested): dec-1'));
     assert.ok(ratify.detail.includes('Rationale (as requested): because reasons'));
-    const rollback = rollbackRequest('cp-1', { checkpointId: 'cp-1', checkpointType: 'sprint.start', timestamp: '2026-10-14T00:00:00Z' }, 'oops');
+    const rollback = rollbackRequest('cp-1', { checkpointId: 'cp-1', checkpointType: 'sprint.start', timestamp: '2026-10-14T00:00:00Z' }, 'oops', PLAN);
     assert.ok(rollback.detail.includes('sprint.start') && rollback.detail.includes('2026-10-14T00:00:00Z'));
     assert.ok(rollback.detail.includes('Reason (as requested): oops'));
     for (const r of [batch, ratify, rollback, hooksDisableRequest(), panicStopRequest()]) {
@@ -120,5 +126,22 @@ suite('#514 operatorConfirmation (FX960)', () => {
         .map((f) => [f.status, f.body.confirmation, f.body.ok]),
       [[503, 'unwired', false], [429, 'busy', false], [409, 'declined', false]],
     );
+  });
+
+  test('#532 B284 rollback dialog: work tree, branch, HEAD, target with subject and date, the count leaving, and what --keep does', () => {
+    const r = rollbackRequest('cp-1', { checkpointId: 'cp-1', checkpointType: 'sprint.start', timestamp: '2026-10-14T00:00:00Z' }, 'oops', PLAN);
+    for (const want of [
+      'Work tree: C:/work/repo', 'Branch: main', `Current HEAD: ${'b'.repeat(40)}`,
+      `Checkpoint commit: ${'a'.repeat(40)} stable state (2026-10-14T00:00:00+00:00)`, 'Commits leaving the branch: 3',
+      'git reset --keep moves the branch to the checkpoint commit and updates the tracked files that differ between the two commits',
+      'it stops without changing anything if one of those files has local changes',
+      'The 3 commit(s) leaving the branch stay recoverable through git reflog for a limited time.',
+      'Ignored files at paths the checkpoint commit tracks can be overwritten.',
+      'Rollback is refused while there are uncommitted changes.',
+    ]) assert.ok(r.detail.includes(want), `detail has "${want}":\n${r.detail}`);
+    assert.ok(!r.detail.includes('Files changed since the checkpoint are reverted.'), 'the old sentence is gone');
+    const detached = rollbackRequest('cp-1', {}, '', { ...PLAN, branch: null, targetSubject: 'x\u202Ey' });
+    assert.ok(detached.detail.includes('Branch: none (detached HEAD)'));
+    assert.ok(!detached.detail.includes('\u202E'), 'the subject is sanitized');
   });
 });

@@ -28,10 +28,11 @@ import { setupVoicePackRoutes } from "../roadmap/routes/VoicePackRoute";
 import * as fs from "fs";
 import * as path from "path";
 import { defaultGitRunner, statusPaths } from "./governedCommit";
-import { governedCommitPrStep, runGovernedCommitFlow } from "./governedCommitFlow";
+import { governedCommitPrStep, runGovernedCommitFlow, type GovernedCommitLinkFn } from "./governedCommitFlow";
 import { createOperatorConfirmer } from "./operatorConfirmation";
 import { readArchitectureIndexPath, registerArchitectureIndexCommand } from "./architectureIndexCommand";
 import { registerDeliveryAssessmentCommand } from "./deliveryAssessmentCommand";
+import { governedCommitLinker } from "./governedCommitLink";
 import { defaultGitHubPost } from "../integrations/github-checks/github-checks-client";
 import type { CredentialsBootstrap } from "./credentials-command";
 import { buildCredentialSnapshot, governedCommitConnection } from "../integrations/credentials/credentialGates";
@@ -51,6 +52,7 @@ async function offerGovernedCommit(
   workspaceRoot: string,
   outputChannel: vscode.OutputChannel,
   credentials: CredentialsBootstrap,
+  linkCommit?: GovernedCommitLinkFn, // #532 B286: offer the bound commit for linking to the active intent
 ): Promise<void> {
   try {
     const after = await statusPaths(defaultGitRunner, workspaceRoot);
@@ -70,7 +72,7 @@ async function offerGovernedCommit(
           await fs.promises.appendFile(path.join(dir, "workspace-actions.jsonl"), `${JSON.stringify({ ...info, committed: false })}\n`);
         } catch { /* best-effort audit */ }
       },
-      now: () => new Date().toISOString(),
+      now: () => new Date().toISOString(), linkCommit,
       ...governedCommitPrStep(governedCommitConnection(credentials.creds, credentials.endpoints, credentials.ui), defaultGitHubPost),
     });
     const r = result as { step: string; prUrl?: string; branch?: string; compareUrl?: string; warning?: string };
@@ -403,6 +405,10 @@ export async function bootstrapServers(
   // is the always-available workspace-readiness gate (idempotent: skips
   // already-present infrastructure). Without these registrations the sidebar
   // "Initialize" button falls through to a misleading "not enabled" message.
+  const linkCommit = deps.intentService ? governedCommitLinker({ // #532 B286 (shares the modal confirmer)
+    workspaceRoot: deps.workspaceRoot, getIntents: () => deps.intentService, getLedger: () => deps.qorelogicManager.getLedgerManager(),
+    confirm: confirmOperatorAction, getIndexPathSetting: readArchitectureIndexPath, log: (l) => outputChannel.appendLine(l),
+  }) : undefined;
   const bootstrapDeps = {
     context, workspaceRoot: deps.workspaceRoot,
     installer: packageInstaller, ingestor: skillIngestor, output: outputChannel,
@@ -413,7 +419,7 @@ export async function bootstrapServers(
       const before = await statusPaths(defaultGitRunner, bootstrapDeps.workspaceRoot);
       const report = await runWorkspaceBootstrap(bootstrapDeps, "interactive");
       reportBootstrapToUser(report, outputChannel);
-      await offerGovernedCommit("initialize", before, [], bootstrapDeps.workspaceRoot, outputChannel, deps.credentials);
+      await offerGovernedCommit("initialize", before, [], bootstrapDeps.workspaceRoot, outputChannel, deps.credentials, linkCommit);
     }),
   );
 
@@ -433,7 +439,7 @@ export async function bootstrapServers(
           }
         },
       });
-      await offerGovernedCommit("organize", before, report?.executed ?? [], deps.workspaceRoot, outputChannel, deps.credentials);
+      await offerGovernedCommit("organize", before, report?.executed ?? [], deps.workspaceRoot, outputChannel, deps.credentials, linkCommit);
     }),
   );
 
