@@ -111,6 +111,18 @@ suite('HubSnapshotService (Phase 60 §0)', () => {
     assert.ok(qorAt < transparencyAt, 'qorRuntime fetch must resolve before transparency tail');
   });
 
+  test('B289 buildHubSnapshot — no Qor runtime field and no Qor Runtime node', async () => {
+    const { hub, tmp } = makeFakes();
+    try {
+      const snap = await hub.buildHubSnapshot();
+      assert.equal(Object.prototype.hasOwnProperty.call(snap, 'qorRuntime'), false, 'payload must not carry qorRuntime');
+      const ids = (snap.nodeStatus as Array<{ id: string }>).map((n) => n.id);
+      assert.deepEqual(ids, ['workspace-core', 'verification-queue', 'trust-engine']);
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
   test('buildHubSnapshot — payload exposes injected version + workspacePath', async () => {
     const { hub, tmp } = makeFakes();
     const snap = await hub.buildHubSnapshot();

@@ -197,6 +197,29 @@ suite('registerQorRoute', () => {
     assert.deepEqual(res.body.plans, []);
   });
 
+  // B289: the Qor runtime routes are retired. A runtime stub reaches the router through an
+  // untyped override, so a tree that still registers the routes answers 200 and fails here.
+  for (const [method, path] of [['GET', '/api/qor/runtime'], ['GET', '/api/qor/health'], ['POST', '/api/qor/evaluate']] as const) {
+    test(`B289 ${method} ${path} is gone (404)`, async () => {
+      const runtimeStub: Record<string, unknown> = {
+        qorRuntimeService: {
+          fetchSnapshot: async () => ({ enabled: true, connected: true }),
+          proxy: async (_req: unknown, res: { status: (n: number) => { json: (b: unknown) => void } }) => {
+            res.status(200).json({ ok: true });
+          },
+        },
+      };
+      const app = makeApp();
+      registerQorRoute(app, makeDeps(runtimeStub as Partial<ApiRouteDeps>));
+      harness = new RouteHarness(app);
+      await harness.start();
+
+      const res = await harness.request(method === 'POST' ? { method, path, body: {} } : { path });
+
+      assert.strictEqual(res.status, 404);
+    });
+  }
+
   test('GET /api/qor/runtime rejects via deps.rejectIfRemote with 403', async () => {
     const service = new QorRuntimeService(makeRuntimeOptions(), makeFetchStub(() => ({})));
     const app = makeApp();
