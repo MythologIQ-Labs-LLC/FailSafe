@@ -4,10 +4,20 @@
 // the edited config to /api/v1/tracker/config.
 
 import { test, expect } from '@playwright/test';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { serveConsoleServerUI, type ConsoleServerController } from './helpers/serveConsoleServerUI';
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { removeTempTree } = require('../../../src/test/shared/removeTempTree.cjs') as { removeTempTree: (dir: string) => void };
+
 let controller: ConsoleServerController;
-test.afterEach(async () => { await controller?.close(); });
+const roots: string[] = [];
+test.afterEach(async () => {
+  await controller?.close();
+  for (const r of roots.splice(0)) removeTempTree(r);
+});
 
 const CONFIG = {
   config: {
@@ -60,4 +70,74 @@ test('FX891 — editing a program name + Save POSTs the updated config', async (
   await page.locator('#workspace .cc-tax-save').click();
   await expect.poll(() => posted).not.toBeNull();
   expect(posted!.programs!.find((p) => p.key === 'ci')!.name).toBe('CI/CD Renamed');
+});
+
+// #548 (T8) — Save keeps the fields the editor does not show, and the Console drift
+// block reports where the declared functionality differs from the real sub-views.
+const FULL = {
+  config: {
+    programs: [{ key: 'governance', name: 'Governance', accent: '#7aa2f7' }],
+    verticals: [{ key: 'governance', name: 'Governance', accent: '#7aa2f7', summary: 'Audit & compliance',
+      functionality: ['**Audit Log** stream', '**Risks** register'], backend: ['`EnforcementEngine`'] }],
+    agents: [{ key: 'gov', name: 'Gov', program: 'governance', vertical: 'governance', patterns: ['gov'], evidence: ['PR #1'] }],
+  },
+  source: 'config',
+  lint: [],
+  drift: {
+    applies: true, matched: 7, consoleVerticals: 7, drifted: 1, unmatched: [],
+    verticals: [{ key: 'governance', name: 'Governance', declared: true, missing: ['Shadow Genome'], extra: [], outOfOrder: false }],
+  },
+};
+
+test('#548 — Save keeps vertical functionality, summary and agent evidence', async ({ page }) => {
+  controller = await serveConsoleServerUI({});
+  let posted: typeof FULL.config | null = null;
+  await page.route('**/api/v1/tracker/config', (r) => {
+    if (r.request().method() === 'POST') {
+      posted = r.request().postDataJSON();
+      return r.fulfill({ json: { ok: true, written: ['docs/roadmap/tracker-config.yaml'] } });
+    }
+    return r.fulfill({ json: FULL });
+  });
+  await gotoTaxonomy(page, controller.url);
+  await page.locator('#workspace .cc-tax-section[data-kind="verticals"] .cc-tax-row').first().locator('[data-field="name"]').fill('Governance 2');
+  await page.locator('#workspace .cc-tax-save').click();
+  await expect.poll(() => posted).not.toBeNull();
+  expect(posted!.verticals[0]).toEqual({ ...FULL.config.verticals[0], name: 'Governance 2' });
+  expect(posted!.agents[0].evidence).toEqual(['PR #1']);
+});
+
+test('#548 — the drift block names a missing Console sub-view', async ({ page }) => {
+  controller = await serveConsoleServerUI({});
+  await page.route('**/api/v1/tracker/config', (r) => r.fulfill({ json: FULL }));
+  await gotoTaxonomy(page, controller.url);
+  const block = page.locator('#workspace .cc-tax-drift');
+  await expect(block).toHaveAttribute('data-state', 'drift');
+  await expect(block.locator('[data-drift-key="governance"]')).toContainText('missing: Shadow Genome');
+});
+
+test('#548 — unmocked: the real route reports drift and never rewrites the file', async ({ page }) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-548-taxonomy-'));
+  roots.push(root);
+  const cfg = path.join(root, 'docs', 'roadmap', 'tracker-config.yaml');
+  fs.mkdirSync(path.dirname(cfg), { recursive: true });
+  const text = [
+    '# operator file',
+    'verticals:',
+    ...['monitor', 'learn', 'agents', 'workspace'].flatMap((k) => [`  - key: ${k}`, '    functionality: []']),
+    '  - key: governance',
+    '    functionality:',
+    '      - "**Audit Log** stream"',
+    '      - "**Risks** register"',
+    '      - "**Compliance** status"',
+    '',
+  ].join('\n');
+  fs.writeFileSync(cfg, text, 'utf-8');
+  controller = await serveConsoleServerUI({ workspaceRoot: root });
+  await gotoTaxonomy(page, controller.url);
+  const block = page.locator('#workspace .cc-tax-drift');
+  await expect(block).toHaveAttribute('data-state', 'drift');
+  await expect(block.locator('[data-drift-key="governance"]')).toContainText('missing: Shadow Genome');
+  await expect(block).toContainText('docs/roadmap/tracker-config.yaml');
+  expect(fs.readFileSync(cfg, 'utf-8')).toBe(text);
 });

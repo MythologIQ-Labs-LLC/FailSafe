@@ -4,6 +4,7 @@
  * the Workspace › Taxonomy editor's same-origin JSON save must still work.
  */
 import { strict as assert } from 'assert';
+import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -26,6 +27,8 @@ suite('#538 B293 tracker config refuses cross-site writes', () => {
   let harness: RouteHarness | null = null;
   let ws = '';
   const bytes = (rel: string) => fs.readFileSync(path.join(ws, rel));
+  // #548: a save carries the fingerprint of the config it was based on (409 otherwise).
+  const fp = () => crypto.createHash('sha256').update(bytes(CONFIG)).digest('hex');
 
   setup(async () => {
     ws = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-538b-tracker-'));
@@ -63,10 +66,10 @@ suite('#538 B293 tracker config refuses cross-site writes', () => {
   test('saves are limited to 20 a minute; the 21st rapid save is 429 and writes nothing', async () => {
     const body = { programs: [{ key: 'burst', name: 'Burst', accent: '#0f0' }], verticals: [], agents: [] };
     for (let i = 0; i < 20; i++) {
-      assert.equal((await harness!.request({ method: 'POST', path: PATH, body })).status, 200, `save ${i + 1}`);
+      assert.equal((await harness!.request({ method: 'POST', path: PATH, body: { ...body, fingerprint: fp() } })).status, 200, `save ${i + 1}`);
     }
     const before = [bytes(CONFIG), bytes(DIRECTIVE)];
-    const res = await harness!.request({ method: 'POST', path: PATH, body: { programs: [{ key: 'over', name: 'Over' }], verticals: [], agents: [] } });
+    const res = await harness!.request({ method: 'POST', path: PATH, body: { programs: [{ key: 'over', name: 'Over' }], verticals: [], agents: [], fingerprint: fp() } });
     assert.equal(res.status, 429);
     assert.ok(bytes(CONFIG).equals(before[0]) && bytes(DIRECTIVE).equals(before[1]), 'the limited save wrote nothing');
   });
@@ -76,13 +79,13 @@ suite('#538 B293 tracker config refuses cross-site writes', () => {
       const r = await harness!.request({ method: 'POST', path: PATH, headers: { origin: 'http://evil.example', 'content-type': 'text/plain' }, rawBody: '' });
       assert.equal(r.status, 403);
     }
-    const body = { programs: [{ key: 'still', name: 'Still', accent: '#0f0' }], verticals: [], agents: [] };
+    const body = { programs: [{ key: 'still', name: 'Still', accent: '#0f0' }], verticals: [], agents: [], fingerprint: fp() };
     assert.equal((await harness!.request({ method: 'POST', path: PATH, body })).status, 200);
   });
 
   test('the Taxonomy editor\'s same-origin JSON save still writes both files', async () => {
     const port = (harness as unknown as { port: number }).port;
-    const body = { programs: [{ key: 'edited', name: 'Edited', accent: '#0f0' }], verticals: [], agents: [] };
+    const body = { programs: [{ key: 'edited', name: 'Edited', accent: '#0f0' }], verticals: [], agents: [], fingerprint: fp() };
     const res = await harness!.request({ method: 'POST', path: PATH, body, headers: { origin: `http://127.0.0.1:${port}` } });
     assert.equal(res.status, 200, JSON.stringify(res.body));
     assert.equal(res.body.ok, true);
