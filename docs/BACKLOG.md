@@ -727,6 +727,19 @@ The Console taxonomy work (FX1007, `plan-548-taxonomy.md`) holds the tracker's v
 - [ ] [B331] Workspace › Taxonomy keeps an operator's unsaved edits (after a failed Save, or before any Save) only until the next hub payload: `TabGroup` re-renders the active sub-view on each payload and `paint()` rebuilds the rows from the loaded config. Keep unsaved edits across repaints, or repaint only on load and Save. | medium
 - [x] [B307] `FailSafe/extension/docs/COMPONENT_HELP.md` said the Console has 8 tabs and listed the pre-vertical tabs (Operations, Transparency, Skills, Governance, Mindmap). Fixed in #548: the Console Tabs section describes the seven tabs and their sub-views, and `taxonomy-drift.test.ts` T11 checks it against the tab buttons and `CONSOLE_VERTICALS`. | low
 
+## #531 slice 2 architecture authority (filed 2026-10-19)
+
+The second slice of the managed architecture index (FX1009, `plan-531b-architecture-authority.md`, ADR LD7-LD10). Main only after merge, until the next release. B317 was allocated during planning and freed.
+
+- [x] [B309] #531 authority findings with provenance: Workspace > Architecture and `GET /api/v1/architecture/index` show two canonical documents for one domain, a canonical document missing, a dangling supersession, and hidden or non-ASCII characters in a domain, each with the row's index line, the document SHA-256, the index SHA-256 and HEAD. Done on `feat/531-architecture-authority`: `ArchitectureAuthority.test.cjs` (21/21, node), `architecture-authority.extensionHost.test.ts` (3/3), `architecture-authority-renderer.test.ts` (6/6), `workspace-architecture.spec.ts` (3/3). | medium
+- [x] [B310] #531 competing and pending canonical authority refusal, domain intake (ASCII authority domains, hidden-character refusal) and confirmed supersession in the propose route. Done on `feat/531-architecture-authority`: `ArchitectureAuthorityRoute.test.ts` (22/22, including the review rows for unreadable rows, hidden-character domains and ids, large documents and approved supersessions) and the extension-host and Playwright rows above. Prevention covers only FailSafe's own propose route. | medium
+- [ ] [B311] #531 affected decisions: when an agent's change reaches the L3 queue (`L3ApprovalService.ts`, `queueL3Approval`) or a governed commit, name the registered architecture documents whose `contract` or `verification` cell names a changed file, warn-only. The commit-check hook sends no file list today, and those cells name single files, so this needs its own L3-dialog and hook design. | medium
+- [ ] [B312] #531 decision links: show and check the registry relationship columns (`related`, `governance_ref`, `contract`, `verification`) as links between decisions, implementation, tests and Qor evidence (extends B253). | low
+- [ ] [B313] #531 promote a "superseded target is still canonical or proposed" check (a row names another in `supersedes` while that row still claims authority) into the validator core as a new code, with a fixture. | low
+- [ ] [B314] #531 an architecture L3 decision does not re-hash the proposal's documents or the index when it is approved; the decision can approve a proposal whose documents changed after it was queued. | low
+- [ ] [B315] #531 domain aliases: domains are compared as declared strings, so "auth" and "authentication" are different domains. Consider an explicit alias column rather than any similarity rule. | low
+- [ ] [B316] #531 run the Console request guard (`consoleRequestGuard`) on the architecture bootstrap and open routes and on the delivery link routes; only propose has it since slice 2. | low
+
 ## Wishlist (Nice to Have)
 
 - [ ] [B90] CLI Overseer Lite Feasibility Extraction: Explore creating a lightweight, CLI-compatible version of FailSafe for direct website integration | v5.4.x+ _(re-tagged 2026-06-02 from stale v5.0.0 — shipped without this exploratory item)_

@@ -1,6 +1,6 @@
 # Managed Architecture Index (ADR, #531)
 
-**Status:** accepted for the first vertical slice (plan `plan-531-architecture-governance.md`, audit PASS at iteration 2).
+**Status:** accepted for the first vertical slice (plan `plan-531-architecture-governance.md`, audit PASS at iteration 2); amended for the second slice, architecture authority (plan `plan-531b-architecture-authority.md`, audit PASS at iteration 3; LD7-LD10).
 **Registry row:** `managed-architecture-index` in the [Architecture Index](../ARCHITECTURE_INDEX.md).
 **Design source for the view:** the Integrations Catalog renderer (`FailSafe/extension/src/roadmap/ui/modules/integration-catalog-renderer.js`).
 
@@ -58,9 +58,9 @@ The snapshot carries the index path, parsed rows, problems (user-repo profile), 
 
 | Route | Guard | Effect |
 |---|---|---|
-| `GET /api/v1/architecture/index` | `rejectIfRemote`, rate limit (60 a minute) | the snapshot plus the ledger state; read-only |
+| `GET /api/v1/architecture/index` | `rejectIfRemote`, rate limit (60 a minute) | the snapshot plus the ledger state and, since slice 2, the authority findings (LD7); read-only |
 | `POST /api/actions/architecture-index/bootstrap` `{mode:'create'}` | `rejectIfRemote`, rate limit (5 a minute), modal confirmation | creates the index once, never overwriting |
-| `POST /api/actions/architecture-index/propose` `{path, action, supersededBy?}` | `rejectIfRemote`, rate limit (10 a minute) | a `PROPOSAL` ledger entry, then one L3 queue item; writes no file |
+| `POST /api/actions/architecture-index/propose` `{path, action:'register', domain, status, supersedes?}` or `{path, action:'supersede', supersededBy}` | Console request guard (since slice 2), rate limit (10 a minute); a modal confirmation for every supersession (LD10) | a `PROPOSAL` ledger entry, then one L3 queue item; writes no file; refused as in LD8 and LD9 |
 | `POST /api/actions/architecture-index/open` `{path}` | `rejectIfRemote`, rate limit (30 a minute), snapshot and containment check | opens the document in the editor ("Use existing"); writes nothing |
 
 Bootstrap runs only from state `absent`:
@@ -91,6 +91,58 @@ A Workspace sub-view **Architecture** renders from `GET /api/v1/architecture/ind
 
 > FailSafe records the writes it makes here after your confirmation and never overwrites a file. Documents written by editors, agents or other tools are found when this view refreshes; FailSafe cannot block them.
 
+### LD7: authority findings (slice 2)
+
+`FailSafe/extension/src/governance/architecture/architectureAuthority.ts` reads the discovery snapshot and reports, in a fixed order, where authority for a domain is contradicted or missing:
+
+| Kind | Meaning |
+|---|---|
+| `conflicting-canonical` | two or more `canonical` rows share a domain key (`domain` trimmed and lower-cased, as the validator compares it) |
+| `canonical-missing` | a `canonical` row's document is not on disk, exists but is not listed by git (ignored), resolves outside the workspace, is over 2 MiB, or has no safe link |
+| `dangling-supersession` | `supersedes` names an id that is not registered, a `superseded` row has no successor, or `supersedes` forms a cycle |
+| `domain-hidden-characters` | a domain cell holds control, format or separator characters, a run of spaces, or a form that is not NFC |
+| `domain-non-ascii` | a domain cell holds characters outside `A-Z a-z 0-9 space . _ / & ( ) -`; it may look like another domain |
+| `unregistered-normative` | a document matches a normative glob and has no row (with its glob, its hash and advisory string suggestions) |
+
+Findings are built from the validator's structured problem fields (the core now attaches `ids`, `domain`, `field`, `ref`, `path` and `glob` to its problems, and the 1-based `line` to each row; the CLI's output is unchanged) and from the rows, never from problem text. Every row reference carries its index line, its document state and the SHA-256 of its bytes. The report's provenance names the index path, the SHA-256 of the index file's bytes, HEAD and the time of the check. The same inputs give the same output apart from that time. `GET /api/v1/architecture/index` returns the report as `authority`; the view shows it with the fixed scope line:
+
+> FailSafe compares the registry's declared domains, statuses, links and supersedes lists as written. It does not judge whether two documents, or two domain names, mean the same thing. A canonical document's domain and every new domain must use plain ASCII letters, digits, spaces and . _ / & ( ) -; a non-ASCII domain already in the index can be reused only for proposed, descriptive or historical documents, typed exactly, and is shown with its code points. Edits made outside FailSafe are found when this view refreshes.
+
+The findings are advisory: an index edited by hand into conflict is shown, never repaired.
+
+### LD8: registration intent and competing authority (slice 2)
+
+A registration now states what it claims: `{path, action:'register', domain, status, supersedes?}` with `status` one of `canonical`, `proposed`, `descriptive` or `historical`. **Authority is `canonical` only.** A `proposed` row neither blocks a registration nor is blocked by one; `supersedes` is accepted only on a `canonical` registration.
+
+- **Domain intake.** Every requested domain is refused (400) when it holds control, format or separator characters other than U+0020, a run of spaces, a leading or trailing space, or a form that is not NFC. A `canonical` registration and every supersession must use the plain ASCII intake characters above, with no exception, even when the domain is already in the index byte for byte. A `proposed`, `descriptive` or `historical` registration may also reuse a registered domain cell exactly as written; its L3 summary then shows every other code point as `[U+XXXX]`, ahead of the path. The value is recorded exactly as received.
+- **Competing canonical.** A `canonical` registration for a domain key that already has canonical rows is refused (`409 {conflict:'canonical-exists'}`, with the existing rows and their lines, the rows it fails to name, and the alternatives "use the existing document", "register as descriptive" and "supersede") unless `supersedes` names every one of those rows.
+- **Ambiguous index** (`409 {conflict:'ambiguous-authority'}`): while any `canonical` row in the index has a domain outside the intake characters (`reason:'non-ascii-domain'`) or with hidden characters (`reason:'hidden-character-domain'`, for example a double space), every `canonical` registration and every supersession is refused, and the refusal lists the offending rows with their lines and both exits: rename the domain in the index to plain ASCII, or change the row's status from canonical. A row with a status the validator does not know (`bad-status`, for example `Canonical`) in the domain, or, for a supersession, a duplicated id (`duplicate-id`), is refused the same way. While any registry row has the wrong number of cells (`reason:'bad-row'`), the validator cannot read it and it could hold a canonical document, so the same refusal applies workspace-wide; it lists the lines and the exit, fix the row. A key comparison cannot see look-alikes, so FailSafe refuses rather than guesses.
+- **Supersede action.** `{path, action:'supersede', supersededBy}` keeps its meaning and is refused (400) when the superseded or the successor row's domain is outside the intake characters or has hidden characters.
+- **Row ids.** A supersession that names a row id with hidden characters (in `supersedes`, as the superseded row or as the successor) is refused (400), so every id that reaches the L3 summary or the supersession dialog is visible as written.
+- **Large documents.** A proposal whose document, or (for a supersession) any replaced or successor document, is over 2 MiB is refused (400, "document too large to hash for freshness"): FailSafe could not re-check it before recording.
+
+**Internationalisation consequence.** A repository whose canonical domains are written in a non-Latin script cannot register or supersede canonical documents through FailSafe until each such domain is renamed to plain ASCII or its row stops being canonical. Descriptive, proposed and historical documents can still be registered with those domains, discovery and the view keep working, and FailSafe never edits the index. This is the cost of refusing look-alike domains rather than guessing.
+
+### LD9: pending authority (slice 2)
+
+A `canonical` registration, or a supersession, is also refused (`409 {conflict:'pending-authority', pending:[approval ids], approvedNotInIndex:[{entryId, path}]}`) when an earlier architecture proposal holds the same authority:
+
+- it is in the L3 queue in any state other than REJECTED or EXPIRED, and claims `canonical` for the same domain key or supersedes the same row (by id or path); or
+- it was approved (an `L3_APPROVED` ledger entry whose `sourceLedgerEntryId` names its `PROPOSAL`) and the index does not reflect it yet. A registration is reflected when the index has a row for its path; a supersession when every row it supersedes is gone or no longer canonical.
+
+The queue is read through the existing read-only getter; the ledger through every `L3_APPROVED` entry (no limit), filtered to the architecture agent. With no queue reader, or a reader or ledger read that throws, the route answers `503 {pending:'unknown'}`: it refuses rather than guesses. The check runs before any dialog and again under a per-workspace lock that also covers the append and the queueing, released in `finally`, so two concurrent proposals cannot both be queued and a throw never wedges later ones.
+
+- An approved registration that is never applied keeps its domain blocked. The 409 says how to resolve it: add a row for its path to the index by hand (any status) to apply it or set it aside. FailSafe never edits the index.
+- An approved supersession whose superseded rows are still canonical blocks the same way. The 409 and the view name those ids: change them from canonical in the index by hand (for example to superseded).
+- An applied registration whose row is later removed or renamed by hand blocks again, for the same reason.
+- Slice 1 proposals and queue items carry no domain, so they can block only by the path they supersede.
+
+### LD10: supersession confirmation and freshness (slice 2)
+
+Every supersession proposal (a `canonical` registration with `supersedes`, or the supersede action) runs the bound confirmation of #538: a fresh operation id, a frozen server-built operation, one modal "Propose this architecture supersession?" and a 2-minute deadline. The dialog shows the operation id, the domain and status as requested, each replaced row with its path, line and hash, the successor, the proposed or superseded document in full (up to 1024 characters, the same limit the route records; longer paths are refused), HEAD and the index hash. Declined, busy, unwired, expired and cancelled confirmations record nothing.
+
+Before recording any proposal, the route re-reads the workspace under the lock and answers `409 {stale}`, recording nothing, when the index can no longer take proposals (`state`), the index bytes changed (`index`), a document in the operation changed (`document`) or HEAD moved (`head`). The `PROPOSAL` entry records the domain, status, `supersedes`, the existing authority rows with their lines and hashes, the index hash, HEAD and, for a confirmed supersession, the operation id and `authentication` (`vscode-modal-confirmation`, with what it proves). The L3 item's summary leads with the authority facts. Approving the L3 item is the second human gate; it records the decision and edits nothing.
+
 ## Enforceable and advisory
 
 | Seam | Kind | What holds |
@@ -99,6 +151,10 @@ A Workspace sub-view **Architecture** renders from `GET /api/v1/architecture/ind
 | Proposal of a document | enforceable (record only) | a `PROPOSAL` ledger entry and an L3 item; the decision is recorded; no file is written on approval |
 | Opening a suggested document | enforceable (read only) | the path must be in the server-side snapshot and inside the workspace |
 | Documents written by editors, agents, other extensions or the shell | advisory | found on the next refresh as unregistered candidates; FailSafe cannot block or undo them |
+| Competing canonical authority through the propose route (slice 2) | enforceable (record only) | a canonical registration is refused when the index already holds a canonical row for its domain key; when an earlier canonical proposal or supersession for it is in the L3 queue (not rejected or expired); when one was approved and is not yet in the index (every `L3_APPROVED` entry is read); when the requested domain fails intake; while any canonical row has a non-ASCII or hidden-character domain; or while any registry row has the wrong number of cells. With no readable queue it is refused as unknown. Nothing is recorded or queued |
+| Supersession through the propose route (slice 2) | enforceable (record only) | a modal confirmation of server-built facts, then a check of state, index, documents and HEAD under the lock; the ledger entry records the operation id, HEAD and the hashes |
+| Hand edits that create conflicting, missing, dangling, hidden-character or non-ASCII authority | advisory | shown as authority findings with lines and hashes; FailSafe never rewrites the index |
+| Domain naming | advisory | domains are compared as declared strings (trimmed, lower-cased); FailSafe does not decide that two names mean the same thing |
 | Documents in ignored folders | not covered | invisible to discovery |
 | Overlap between documents | advisory | string comparison and token suggestions only; never a claim of semantic equivalence |
 | Edits to the index itself | advisory | re-validated on refresh; FailSafe never rewrites the index |
@@ -113,6 +169,12 @@ Nothing in this slice sends repository content off the machine.
 - **Ignored directories are invisible** (LD2).
 - **Overlap is string-only** (LD2, LD3).
 - **Orphaned proposal entry.** If queueing the L3 item fails after the `PROPOSAL` entry is appended, the route answers 500 and that entry has no L3 item; the document stays unregistered and can be proposed again. Filed in BACKLOG.
+- **Reading the L3 queue (slice 2).** Pending authority reads the queue through the existing getter, which first expires items of any kind past their SLA, as every hub read already does: it persists the queue and emits `qorelogic.l3Decided` EXPIRED for each, which writes an `override.approved` PASS checkpoint (B257), refreshes the hub, appends a transparency event, reaches the Bicameral drift and Open Design handlers, and is announced to Slack or Teams when those are configured. That notice is the only off-machine effect this slice can trigger.
+- **Approved but not applied (slice 2).** An approved canonical registration that nobody adds to the index keeps its domain blocked until the index is edited by hand, and an applied one whose row is later removed or renamed blocks again (LD9).
+- **Non-ASCII canonical domains (slice 2).** While any canonical row has a domain outside the intake characters, canonical registrations and supersessions are refused workspace-wide until the domain is renamed or the row stops being canonical (LD8).
+- **The proposal lock has no timeout.** Appends and queueing for one workspace run under one in-process lock. A timeout could let two appends interleave, so there is none: an append or queue write that never settles holds the lock, and later proposals wait, until the extension host reloads.
+- **Shared ledger path.** Approvals are read from the FailSafe ledger by domain key. If `failsafe.qorelogic.ledgerPath` is an absolute path shared by several workspaces, another workspace's approved canonical proposal can block a domain of the same name here.
+- **Path truncation in the L3 decision dialog.** The L3 decision dialog (unchanged by this slice) shows at most 200 characters of the file path and of the summary; the supersession dialog and the ledger entry carry the full path.
 
 ## Scenario map (#531 acceptance)
 
@@ -121,13 +183,14 @@ Nothing in this slice sends repository content off the machine.
 | New repository bootstrap | bootstrap create; route test; extension-host test |
 | Existing index reuse | `409 {reuse}`; route test; extension-host second run |
 | Duplicate document proposal | candidate with suggestions; propose route test; Playwright |
-| Supersession | propose `supersede`; route test |
+| Supersession | propose `supersede`, or a canonical registration naming every canonical row; a modal confirmation and a freshness check (slice 2); route, extension-host and Playwright tests |
+| Conflicting authority (slice 2) | authority findings with lines and hashes; competing and pending canonical registrations refused; route, extension-host, jsdom and Playwright tests |
 | Agent-created architecture file | untracked candidate found on refresh; discovery test (advisory) |
 | Unavailable Qor | ledger-unavailable bootstrap and propose rows in the route test; discovery runs without the ledger |
 | Recovery with no silent rewrites | exclusive-create race row in the route test; extension-host second run byte-identical |
 | Tests and installed VS Code UI | extension-host configuration, Playwright, the installed-package check |
 
-Not in this slice (BACKLOG): `update-doc` events, architecture decision links beyond `governance_ref`, a stale-document display, opt-in migration from another index location, and the Qor-logic install state in the view.
+Not in these slices (BACKLOG): `update-doc` events, architecture decision links beyond `governance_ref` (B253, B312), a stale-document display, opt-in migration from another index location, the Qor-logic install state in the view, affected decisions at the L3 and commit seams (B311), and the remaining slice 2 residuals B313-B316.
 
 ## Consequences
 
