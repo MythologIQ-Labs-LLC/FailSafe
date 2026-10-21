@@ -94,7 +94,7 @@ Advisory: the risk level is shown, never enforced; a high-risk server installs l
 ## Failure, offline, stale and permission semantics
 
 Unknown id: 404 before any dialog, nothing written `FailSafe/extension/src/roadmap/routes/McpRoute.ts:42-44` (`unknown MCP catalog id`).
-Not confirmed: no confirmer 503, declined 409, another dialog open 429, approved after the 2-minute deadline 410, browser gone before approval: nothing written in each case `FailSafe/extension/src/extension/operatorConfirmation.ts:337` (`export async function confirmBoundOperation<T>(`).
+Not confirmed: no confirmer 503, declined 409, another dialog open 429, approved after the 2-minute deadline 410, browser gone before approval: nothing written in each case `FailSafe/extension/src/extension/operatorConfirmation.ts:338` (`export async function confirmBoundOperation<T>(`).
 Ledger available but the record cannot be written: 500 and nothing written `FailSafe/extension/src/roadmap/routes/installAuthorization.ts:189` (`if (record === "failed") {`).
 Unparseable `.mcp.json`: 409 after approval and nothing written `FailSafe/extension/src/roadmap/routes/McpRoute.ts:57` (`existing .mcp.json is unparseable — nothing was written`).
 Write failure: 500 with the error text `FailSafe/extension/src/roadmap/routes/McpRoute.ts:64` (`res.status(500).json({ error: e instanceof Error ? e.message : String(e)`).

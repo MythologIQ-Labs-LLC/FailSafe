@@ -85,7 +85,7 @@ Enforced on main (#538): the terminal opens only after the operator approves the
 Unknown id: 404 before any dialog `FailSafe/extension/src/roadmap/routes/AgtRoute.ts:63-65` (`res.status(404).json({ ok: false, error: `).
 Copy-only module: 400 with guidance `FailSafe/extension/src/roadmap/routes/AgtRoute.ts:67-69` (`installs via slash commands inside the agent`).
 No terminal runner: 503 `FailSafe/extension/src/roadmap/routes/AgtRoute.ts:71-73` (`runInTerminal not wired`).
-Not confirmed: no confirmer 503, declined 409, another dialog open 429, approved after the deadline 410, browser gone before approval: no terminal in each case `FailSafe/extension/src/extension/operatorConfirmation.ts:337` (`export async function confirmBoundOperation<T>(`).
+Not confirmed: no confirmer 503, declined 409, another dialog open 429, approved after the deadline 410, browser gone before approval: no terminal in each case `FailSafe/extension/src/extension/operatorConfirmation.ts:338` (`export async function confirmBoundOperation<T>(`).
 Unreadable workspace root: an empty detection list `FailSafe/extension/src/roadmap/routes/AgtRoute.ts:30-31` (`return [];`).
 Stale commands: the catalog is static, so an upstream rename is not noticed until the code changes `FailSafe/extension/src/integrations/agt/agt-catalog.ts:11-12` (`the repo README`).
 
