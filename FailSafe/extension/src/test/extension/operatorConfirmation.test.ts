@@ -286,8 +286,9 @@ suite('#532 B344 delivery review dialog: rework section', () => {
     const section = sectionOf(d);
     assert.deepEqual(rebuilt(section), forged.map(escapeDialogPath), 'each path rebuilds to its escaped text');
     // In escaped text every backslash is half of "\\" or starts "\u{", so "\>" after a space or at a
-    // line start is only ever the marker.
-    const markers = [...section.matchAll(/(?:^|[^\\])\\>/gm)].length;
+    // line start is only ever the marker. The section's first line is its fixed legend, which names
+    // the marker, so it is left out of the count.
+    const markers = [...section.split('\n').slice(1).join('\n').matchAll(/(?:^|[^\\])\\>/gm)].length;
     const continuations = section.split('\n').filter((l) => /^ {6}\\> /.test(l)).length;
     assert.equal(markers, continuations, 'every marker starts a continuation line the chunker wrote');
     assert.ok(continuations >= 2, 'the long paths do continue');

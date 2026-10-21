@@ -473,14 +473,56 @@ export function escapeDialogPath(path: string): string {
     ch === "\\" ? "\\\\" : `\\u{${ch.codePointAt(0)!.toString(16).toUpperCase().padStart(4, "0")}}`);
 }
 
+/** #532 B344 D4 fold: the longest run of a shown path on one dialog line. */
+export const REWORK_PATH_CHUNK = 64;
+/**
+ * Starts each continuation line of a shown path. In escaped text every backslash is half of "\\" or
+ * starts "\u{", so "\>" after a space or at a line start is only ever this marker.
+ */
+export const REWORK_CONTINUATION = "\\>";
+/** One escaped unit: "\\", a "\u{...}" escape or a single code point, never split across chunks. */
+const ESCAPED_UNIT = /\\\\|\\u\{[0-9A-F]+\}|[\s\S]/gu;
+
+/**
+ * #532 B344 D4 fold (owner ruling 2026-10-21): the native dialog wraps only at spaces and cuts a
+ * longer unbroken run with an ellipsis, so an escaped path is split into chunks of at most
+ * REWORK_PATH_CHUNK characters, after the last '/' that fits when the rest does not, otherwise at the
+ * limit, and never inside an escape.
+ */
+export function chunkDialogPath(escaped: string): string[] {
+  const units = escaped.match(ESCAPED_UNIT) ?? [];
+  const chunks: string[] = [];
+  let i = 0;
+  while (i < units.length) {
+    let j = i;
+    let length = 0;
+    let lastSlash = -1;
+    while (j < units.length && length + units[j].length <= REWORK_PATH_CHUNK) {
+      length += units[j].length;
+      if (units[j] === "/") lastSlash = j;
+      j++;
+    }
+    if (j < units.length && lastSlash >= i) j = lastSlash + 1;
+    chunks.push(units.slice(i, j).join(""));
+    i = j;
+  }
+  return chunks.length ? chunks : [""];
+}
+
+/** A path line ("    <status> <chunk>") and one continuation line per further chunk. */
+function pathLines(status: string, path: string): string[] {
+  const [first, ...rest] = chunkDialogPath(escapeDialogPath(path));
+  return [`    ${status} ${first}`, ...rest.map((c) => `      ${REWORK_CONTINUATION} ${c}`)];
+}
+
 /**
  * #532 B344 (plan-b344 LD5): the "Superseded by rework" section of a review dialog, shown before the
- * supersedes list and never truncated (buildReviewPlan refuses one over REWORK_DIALOG_LIMIT). Empty
- * when there is no declared rework.
+ * supersedes list and never truncated (buildReviewPlan refuses one over REWORK_DIALOG_LIMIT, counted
+ * with the chunked paths). Empty when there is no declared rework.
  */
 export function reworkSectionLines(reworks: ReworkEntry[]): string[] {
   if (!reworks.length) return [];
-  const lines = [`Superseded by rework (${reworks.length}); git shows each declared commit is the vetoed commit amended or rebased:`];
+  const lines = [`Superseded by rework (${reworks.length}); git shows each declared commit is the vetoed commit amended or rebased (a line starting ${REWORK_CONTINUATION} continues the path above it):`];
   for (const r of reworks) {
     const e = r.evidence;
     lines.push(
@@ -490,9 +532,9 @@ export function reworkSectionLines(reworks: ReworkEntry[]): string[] {
       `  Paths: the vetoed commit changes ${e.vetoPathCount}, the rework changes ${e.reworkPathCount}`,
     );
     if (r.relation === "amended") {
-      lines.push(`  Shared (${e.shared.length}), status in the vetoed commit/the rework:`, ...e.shared.map((p) => `    ${p.vetoStatus}/${p.reworkStatus} ${escapeDialogPath(p.path)}`));
-      lines.push(`  Only in the vetoed commit (${e.onlyInVeto.length}):`, ...e.onlyInVeto.map((p) => `    ${p.status} ${escapeDialogPath(p.path)}`));
-      lines.push(`  Only in the rework (${e.onlyInRework.length}):`, ...e.onlyInRework.map((p) => `    ${p.status} ${escapeDialogPath(p.path)}`));
+      lines.push(`  Shared (${e.shared.length}), status in the vetoed commit/the rework:`, ...e.shared.flatMap((p) => pathLines(`${p.vetoStatus}/${p.reworkStatus}`, p.path)));
+      lines.push(`  Only in the vetoed commit (${e.onlyInVeto.length}):`, ...e.onlyInVeto.flatMap((p) => pathLines(p.status, p.path)));
+      lines.push(`  Only in the rework (${e.onlyInRework.length}):`, ...e.onlyInRework.flatMap((p) => pathLines(p.status, p.path)));
     }
   }
   return lines;
