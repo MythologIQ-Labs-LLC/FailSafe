@@ -1,6 +1,6 @@
 # FailSafe application source
 
-**Product release:** v6.0.9 is the latest published release documented by the [repository README](../README.md) as of 2026-10-21. A new commit on `main` or an open PR is **not** automatically a published VSIX.
+**Published release:** use the [repository README](../README.md) and linked GitHub Releases page as the source for the current published version. A new commit on `main` or an open PR is **not** automatically a published VSIX.
 
 This directory contains the source for the **single FailSafe VS Code/Cursor extension** under [`extension/`](extension/). The old v4.x split-build diagrams formerly carried in this README (`Antigravity/`, `VSCode/`, `Claude/`, `PROD-Extension/` and separate marketplace build variants) are obsolete. Do not use them as build instructions or architectural authority; historical text remains in Git history.
 
