@@ -31,7 +31,7 @@ The code posts one GraphQL query to the fixed endpoint `FailSafe/extension/src/i
 ## Privileges and scopes
 
 Credential: a Linear API key in VS Code Secret Storage, sent as the Authorization header `FailSafe/extension/src/integrations/linear/linear-client.ts:72` (`{ 'Content-Type': 'application/json', Authorization: apiKey }`).
-The plain-text setting is deprecated and not read `FailSafe/extension/package.json:435-437` (`Plain-text settings are no longer read.`).
+The plain-text setting is deprecated and not read `FailSafe/extension/package.json:446-448` (`Plain-text settings are no longer read.`).
 Scope: the key carries its owner's Linear permissions; FailSafe sends only a read query `FailSafe/extension/src/integrations/linear/linear-import.ts:39-42` (`query FailSafeIssue($id: String!) { issue(id: $id) {`).
 The endpoint is not configurable from settings: the command never passes one `FailSafe/extension/src/extension/linear-command.ts:48` (`fetchLinearIssue(issue, apiKey, deps.post)`).
 Any webhook, sync or write-back capability would need write scopes and is marked requires separate approval (unverified: none is implemented).

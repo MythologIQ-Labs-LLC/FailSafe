@@ -37,7 +37,7 @@ An agent can call the Bicameral MCP server itself, but it does not route the cal
 
 Credential: none held by FailSafe; team-mode setup runs a Google Drive OAuth inside an integrated terminal and FailSafe never reads the token `FailSafe/extension/src/integrations/bicameral/install-handler.ts:122-127` (`FailSafe never touches the OAuth token`).
 Process: FailSafe starts the `bicameral-mcp` executable as a local stdio subprocess after a trusted-path check `FailSafe/extension/src/integrations/mcp/McpClientHost.ts:44-46` (`export function assertLaunchableCommand(command: string, errorPrefix: string): void {`).
-The command, extra roots and auto-connect settings are machine-scoped (user settings only) `FailSafe/extension/package.json:750-768` (`"scope": "machine",`).
+The command, extra roots and auto-connect settings are machine-scoped (user settings only) `FailSafe/extension/package.json:758-773` (`"scope": "machine",`).
 Install: `pip install` of a pinned range runs with the operator's own Python and PyPI access `FailSafe/extension/src/integrations/bicameral/install-handler.ts:23` (`export const BICAMERAL_PIP_SPEC = 'bicameral-mcp>=0.14,<0.16';`).
 Upstream poll: unauthenticated GitHub REST, no token `FailSafe/extension/src/integrations/bicameral/UpstreamMonitor.ts:6-8` (`Unauthenticated GitHub REST`).
 Any capability that writes to Bicameral beyond ratify/reject would need a separate decision and is marked requires separate approval (unverified: none is planned in code).

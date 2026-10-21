@@ -17,7 +17,7 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
   - Configuration properties consumed by tested code (FX037/042/043/046/047)
   - Documented but unimplemented HTTP routes (FX115/116/117/118)
   - FX026 failsafe.showAgentHealth (no command handler in source)
-- **Other statuses: 18 (2.2%)** — 15 `removed` (FX002 and FX235 added 2026-10-16, FailSafe Pro canceled; FX300 and FX919 added 2026-10-19, B288 governance webhook retired; FX098, FX099, FX100, FX153 and FX454 added 2026-10-19, B289 Qor runtime retired; FX316 and FX318 added 2026-10-20, B322 checkpoint protocol retired), 2 `partial`, 1 `superseded` (FX414). 763 + 0 + 40 + 18 = 821.
+- **Other statuses: 18 (2.2%)** — 15 `removed` (FX002 and FX235 added 2026-10-16, FailSafe Pro canceled; FX300 and FX919 added 2026-10-19, B288 governance webhook retired; FX098, FX099, FX100, FX153 and FX454 added 2026-10-19, B289 Qor runtime retired; FX316 and FX318 added 2026-10-20, B322 checkpoint protocol retired), 2 `partial`, 1 `superseded` (FX414). 764 + 0 + 40 + 18 = 822.
 
 **Mocha cases**: 2066 passing / 1 pending (was 958 at session start — +1108 cases this session via 80+ new test files).
 **Test surface**: baseline audit + E3 heuristic upgrade confirms 387 entries as functionally verified. The 46 unverified entries remain under the publish block until follow-on remediation plans add functional tests or operator-justified `n/a` classifications.
