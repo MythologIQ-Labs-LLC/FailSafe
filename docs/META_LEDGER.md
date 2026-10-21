@@ -34262,3 +34262,95 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `220eb6e904e3947af7f1e9e2ed835acac7cb15f96fd1ea4c01aa89061c2c9891`
 
 **Decision**: SESSION SEAL for plan-531b-architecture-authority.md (content hash is the audited plan, sha256 2c9f7cc3). Reality = Promise, with disclosures. The Architecture Index now detects conflicting authority with provenance, and FailSafe's own propose route prevents new conflicts, including look-alike, hidden-character and pending ones, with explicit, bound confirmation for every supersession. Disclosures: bounded damaged-ledger override for post-v6.0.9 product cycles (owner ruling 2026-10-19; #467 unresolved, normal governance not restored); only non-ASCII look-alikes are detected, not ASCII ones such as l, I and 1; while the registry holds an ambiguous canonical row, canonical registrations and supersessions are refused across the workspace until the index is edited by hand, so intentionally non-ASCII canonical domains are unsupported; an approved registration that is never applied keeps blocking its domain; the L3 decision dialog still truncates paths at 200 characters; reading the L3 queue can emit expiry notices, including Slack or Teams when configured; the proposal lock has no timeout and a shared absolute ledgerPath can block across workspaces; affected decisions at the L3 and commit seams (B311) and decision links (B312) are deferred; FX946 (B325) is pre-existing; earlier seals are unedited. Next: push, PR checks, a merge pinned to the head. No release.
+
+---
+
+### Entry #843: GATE TRIBUNAL - plan-b311-b312-architecture-residuals (iteration 1) - VETO
+
+**Timestamp**: 2026-10-20T22:27:11Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-20T2221-2ad787`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for the 2026-10-20 hardening lanes, owner ruling 2026-10-20, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-20T2221-2ad787/audit-iter1.json`
+
+**Content Hash**: `d6f1e85547f6d3a752e6a39b200271ded240a06ba03d84b2e694f75171f61916`
+**Previous Hash**: `220eb6e904e3947af7f1e9e2ed835acac7cb15f96fd1ea4c01aa89061c2c9891`
+**Chain Hash (Merkle seal)**: `5fd77c72a7ad74148100e1f99315af99e07a4eca4c54a1b1cb712f927caaa935`
+
+**Decision**: VETO on plan-b311-b312-architecture-residuals.md iteration 1 (sha256 810803e7), B311/B312 architecture residuals plus the owner's CLAUDE.md taxonomy wording. Fresh Option B architect-reviewer. Blocking: the decision-link ledger read was unbounded on every index GET; warn-only had no time budget, so synchronous discovery on the L3 and commit seams could stall the loopback server long enough for the 2 s pre-commit hook to fail open; repository text reached the commit prompt and webview without hidden-character or length handling; GitHub issue link labels in governance_ref were read as ledger headings. CLAUDE.md wording confirmed verbatim. Next: revise and re-audit.
+
+---
+
+### Entry #844: GATE TRIBUNAL - plan-b311-b312-architecture-residuals (iteration 2) - VETO
+
+**Timestamp**: 2026-10-20T22:36:46Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-20T2221-2ad787`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for the 2026-10-20 hardening lanes, owner ruling 2026-10-20, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-20T2221-2ad787/audit-iter2.json`
+
+**Content Hash**: `ba08c096ed483807fbb85b8eb1323f06f4f7bf119a0cd5347d2a561f517810f6`
+**Previous Hash**: `5fd77c72a7ad74148100e1f99315af99e07a4eca4c54a1b1cb712f927caaa935`
+**Chain Hash (Merkle seal)**: `70a2a7c55fbb250612335221b1b7b675c07aed179cc93849aaf55d3f04b09edf`
+
+**Decision**: VETO on plan-b311-b312-architecture-residuals.md iteration 2 (sha256 745c8fe4). Iteration 1 blockers 1, 3 and 4 closed with falsifiers. Fresh Option B architect-reviewer. Blocking: the async discovery still performed synchronous per-file statSync, document reads and an index readFileSync that a timer race cannot pre-empt, and the hanging-git falsifier could not detect it. Next: revise and re-audit (final iteration under the cap).
+
+---
+
+### Entry #845: GATE TRIBUNAL - plan-b311-b312-architecture-residuals (iteration 3) - PASS
+
+**Timestamp**: 2026-10-20T22:45:07Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-20T2221-2ad787`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the 2026-10-20 hardening lanes, owner ruling 2026-10-20, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-20T2221-2ad787/audit-iter3.json`
+
+**Content Hash**: `6c56a70c8eb16df434bb111d3915ce8cbb594dfd5d14994aeb67fde23fd400af`
+**Previous Hash**: `70a2a7c55fbb250612335221b1b7b675c07aed179cc93849aaf55d3f04b09edf`
+**Chain Hash (Merkle seal)**: `965d978f01b1af96e478b492c5799905a31990373742cc0c91c5336f5d7d19da`
+
+**Decision**: PASS on plan-b311-b312-architecture-residuals.md iteration 3 (sha256 53899f86), the final iteration under the native escalation cap. Fresh Option B architect-reviewer. The affected-decision path reads only the index asynchronously and parses it purely, with no git and no per-file stat; the sync-discovery mutation carries the falsifier; no safety property of discovery is lost; the CLAUDE.md wording is byte-identical. Should-fix folded into implementation: a 4 KiB cell cap against the quadratic link pattern, a complete sync spy set, a bounded read, Set matching, one describe per dialog or panel, highest-id decisions, porcelain and Hangul-filler disclosures, B316 kept open, one re-cite. Next: implement.
+
+---
+
+### Entry #846: IMPLEMENTATION - plan-b311-b312-architecture-residuals
+
+**Timestamp**: 2026-10-21T00:10:38Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-20T2221-2ad787`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-20T2221-2ad787/implement.json`
+
+**Content Hash**: `e91af1da7c98d0a9a74534776392a26f98dab798ac76349bf28e8704c0d7df21`
+**Previous Hash**: `965d978f01b1af96e478b492c5799905a31990373742cc0c91c5336f5d7d19da`
+**Chain Hash (Merkle seal)**: `b9bc38d3a08f7ce5efdc74ac13d4460d1910bc895bbf083d42795cc3b4b9de34`
+
+**Decision**: IMPLEMENTATION of plan-b311-b312-architecture-residuals.md iteration 3 on feat/b311-b312-architecture-residuals (from main 236b1751): 4ff03fe7 (red tests), f729b179 (implementation), a06fc9aa (docs). B311: the Console L3 decide and batch dialogs, the VS Code L3 panel and the governed-commit prompt name the canonical and proposed architecture rows whose document, contract or verification cell names a changed file; the check is warn-only, reads only the index asynchronously within a 1 s budget, does no git and no per-file I/O, skips cells over 4 KiB, renders hidden and bidi characters as code points with code-point-safe caps, and never blocks or alters a decision or commit. B312 and B253: Workspace > Architecture shows each row's related and superseded rows with status, contract and verification paths with stat-only state, bare ledger references with 'heading found; chain not checked (#467)', URLs unfetched, and proposal decisions read once with a cap and a truncated state; the open route gains the Console request guard and opens only contract and verification paths. CLAUDE.md line 8 carries the owner's taxonomy-authority wording verbatim, and the emitted taxonomy directive and its governance index rows are reworded to match; no operator taxonomy file is created or edited. B311, B312, B253 and B218 are done with evidence; B316 stays open; residuals B350-B355 filed. Bounded review review311 found three blockers, fixed.
+
+---
+
+### Entry #847: SESSION SEAL - plan-b311-b312-architecture-residuals
+
+**Timestamp**: 2026-10-21T00:10:39Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-20T2221-2ad787`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-20T2221-2ad787/substantiate.json`
+
+**Content Hash**: `53899f86e2a6612248a8bfeecd6254328e858659fe923d3424732e26ef8ea6bb`
+**Previous Hash**: `b9bc38d3a08f7ce5efdc74ac13d4460d1910bc895bbf083d42795cc3b4b9de34`
+**Chain Hash (Merkle seal)**: `43ea8792c941455aeca516e1ec720e8d784fac03b5959615e595e20770763ea4`
+
+**Decision**: SESSION SEAL for plan-b311-b312-architecture-residuals.md (content hash is the audited plan, sha256 53899f86). Reality = Promise, with disclosures. Agents and operators see which architecture decisions govern the files an L3 decision or governed commit touches, without any delay to or block on that decision; registry rows show their relationships as checked links with status; and the repository's agent instructions now state the owner's taxonomy-authority rule. Disclosures: bounded damaged-ledger override for the 2026-10-20 hardening lanes (owner ruling 2026-10-20; #467 unresolved, normal governance not restored); plain git commits get no warning (B350) and the commit prompt matches porcelain paths as given (B353); the core link pattern stays quadratic on the validator and CLI paths (B351) and the index parse is one synchronous call (B354); review text does not render combining marks or Hangul fillers (B352); the GET route reads synchronously per request (B355); only the first workspace folder is checked and the L3 panel drops not-checked lines; an emitted directive keeps its old wording until the next save; the CONFIG_BANNER wording and the CLAUDE.md:3 enforcement overstatement are surfaced, not changed; FX946 (B325) is pre-existing; earlier seals are unedited. Next: push, PR checks, a merge pinned to the head. No release.
