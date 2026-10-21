@@ -105,7 +105,7 @@ No Python or pip: the state reports the missing prerequisite and install stops `
 Toolkit packages that fail to install are warned and skipped `FailSafe/extension/src/roadmap/services/AdapterService.ts:355-358` (`Non-fatal for optional packages`).
 Install verifies the package after pip and fails if it is not found `FailSafe/extension/src/roadmap/services/AdapterService.ts:372-380` (`Adapter not found after installation`).
 Bridge offline: the panel renders disconnected and the API returns empty lists `FailSafe/extension/src/roadmap/routes/templates/SreTemplate.ts:8-12` (`throw new Error(`).
-Stale: a changed base URL reaches `/api/v1/sre` only after the Console server restarts `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:330-331` (`const adapterUrl = this.host.adapterService.getConfig()?.adapterBaseUrl;`).
+Stale: a changed base URL reaches `/api/v1/sre` only after the Console server restarts `FailSafe/extension/src/roadmap/services/ConsoleRouteRegistrar.ts:334-335` (`const adapterUrl = this.host.adapterService.getConfig()?.adapterBaseUrl;`).
 A corrupt config reads as missing `FailSafe/extension/src/roadmap/services/AdapterService.ts:507-515` (`// Config doesn't exist or is invalid`).
 
 ## End-to-end scenario and measurable acceptance
