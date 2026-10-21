@@ -59,7 +59,7 @@ Graph relationships: no `FailSafe/extension/src/qorlogic/consumer/consumer-adapt
 Governance evidence: no; the adapter never writes the artifacts it classifies `FailSafe/extension/src/qorlogic/consumer/consumer-adapter.ts:7` (`the adapter never writes or repairs canonical`).
 Consent for the install: the bootstrap command asks before pip in interactive mode `FailSafe/extension/src/extension/bootstrapWorkspace.ts:95-103` (`Install now?`).
 Consent for the install: activation runs bootstrap in silent mode, which defers pip `FailSafe/extension/src/extension/bootstrapServers.ts:486` (`void runWorkspaceBootstrap(bootstrapDeps, "silent")`).
-Consent for the install: on main the Console scaffold route shows the validated hosts, scope and skills in a modal VS Code dialog and runs pip and `qor install` only after approval `FailSafe/extension/src/roadmap/routes/ActionsRoute.ts:104-118` (`const approved = await authorizeOperatorAction(`); as released in v6.0.8 it asked nothing (B274, fixed in #538).
+Consent for the install: on main the Console scaffold route shows the validated hosts, scope and skills in a modal VS Code dialog and runs pip and `qor install` only after approval `FailSafe/extension/src/roadmap/routes/ActionsRoute.ts:113-117` (`const approved = await authorizeOperatorAction(`); as released in v6.0.8 it asked nothing (B274, fixed in #538).
 
 ## Transformations
 
