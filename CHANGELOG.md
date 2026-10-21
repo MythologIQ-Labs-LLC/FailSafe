@@ -35,6 +35,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - If `docs/roadmap/tracker-config.yaml` exists but cannot be read or parsed, Workspace › Taxonomy now shows an error and offers no Save, instead of showing an empty or substitute taxonomy that a Save would write over your file (#548).
 - Workspace › Taxonomy no longer saves over a taxonomy file that changed on disk after the view loaded it (edited, created or deleted elsewhere). The Save is refused, nothing is written, and the view asks you to reload the Console (#548).
 - The Component Help page now describes the Console's seven tabs and their sub-views (#548).
+- Unsaved edits in Workspace › Taxonomy now survive Console refreshes, switching tabs and failed Saves. If a Save finds the file changed on disk, or another Console window saves while you have unsaved edits, the editor shows a conflict and keeps your edits until you choose "Discard my edits and reload from disk". A Save that gets no answer within 30 seconds now says its outcome is unknown instead of leaving the editor stuck (B331).
+
+### Security
+
+- Saving in Workspace › Taxonomy no longer writes outside the workspace through a linked or junctioned `docs/`, `docs/roadmap/`, `.failsafe/` or `.failsafe/governance/` folder, a linked directive record or a hard-linked file. Such a save is refused before anything is written, and links that stay inside the workspace still work (B330).
 
 ## [6.0.9] - 2026-10-18
 
