@@ -73,7 +73,7 @@ Open the **Integrations** tab to configure an integration. Cards distinguish Dis
 
 ---
 
-**Current Release**: v6.0.9
+**Current Release**: v6.0.9 (2026-10-18)
 
 ![FailSafe Banner](https://raw.githubusercontent.com/MythologIQ/FailSafe/main/FailSafe/extension/FailSafe%20Banner.png)
 
