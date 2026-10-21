@@ -1,7 +1,6 @@
 import { IntentService } from './IntentService';
 import { LedgerManager } from '../qorelogic/ledger/LedgerManager';
-import type { LedgerVerification } from '../qorelogic/ledger/LedgerVerifier';
-import { weakerProperties } from '../qorelogic/ledger/LedgerIntegritySummary';
+import { summarizeLedgerIntegrity } from '../qorelogic/ledger/LedgerIntegritySummary';
 
 export interface ReleaseGateCheck {
   name: string;
@@ -53,37 +52,20 @@ export class ReleasePipelineGate {
   }
 
   /**
-   * #473 LD9: "intact" only for a fully v3-sealed, fully anchored,
-   * workspace-bound ledger; every weaker property is named as a warning.
+   * #473: share the compliance export's strict report normalization. A contradictory
+   * ok:true report with failures, malformed fields, or unavailable storage cannot pass.
+   * The existing PARTIAL SEAL policy remains a visible, warn-only release condition.
    */
   private async checkLedgerChainIntegrity(): Promise<{ check: ReleaseGateCheck; partial: boolean }> {
-    const name = 'ledger-chain';
-    if (!this.ledger || typeof this.ledger.verifyLedger !== 'function') {
-      return { check: { name, passed: false, reason: 'Ledger not wired.' }, partial: false };
-    }
-    let report: LedgerVerification;
-    try {
-      report = await this.ledger.verifyLedger();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return { check: { name, passed: false, reason: `Ledger verification error: ${message}` }, partial: false };
-    }
-    if (!report.ok) {
-      const first = report.failures[0];
-      const where = first ? `${first.code}${first.id !== null ? ` at id ${first.id}` : ''}` : 'unknown';
-      return {
-        check: { name, passed: false, reason: `Ledger verification failed: ${report.failures.length} failure(s); first ${where}.` },
-        partial: false,
-      };
-    }
-    const weaker = weakerProperties(report);
-    if (weaker.length === 0) {
-      return {
-        check: { name, passed: true, reason: `Ledger chain intact: all ${report.rows} rows sealed v3 (every column), anchored at id ${report.anchor.headId}.` },
-        partial: false,
-      };
-    }
-    return { check: { name, passed: true, reason: `PARTIAL SEAL: ${weaker.join('; ')}.` }, partial: true };
+    const integrity = await summarizeLedgerIntegrity(this.ledger);
+    return {
+      check: {
+        name: 'ledger-chain',
+        passed: integrity.status === 'intact' || integrity.status === 'partial-seal',
+        reason: integrity.reason,
+      },
+      partial: integrity.status === 'partial-seal',
+    };
   }
 
   private async checkVersionCoherence(version: string): Promise<ReleaseGateCheck> {
