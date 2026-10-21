@@ -245,6 +245,24 @@ describe('ReleasePipelineGate ledger scope (#473 LD9)', function () {
     }
   });
 
+  it('rejects contradictory green anchors and coverage instead of claiming intact (#473)', async () => {
+    const base = report();
+    const variants = [
+      report({ anchor: { ...base.anchor, status: 'head-missing' } }),
+      report({ anchor: { ...base.anchor, status: 'ledger-mismatch' } }),
+      report({ anchor: { ...base.anchor, status: 'unavailable' } }),
+      report({ coverage: { ...base.coverage, v3Rows: 2 } }),
+      report({ coverage: { ...base.coverage, frozenLegacyRows: 1 } }),
+      report({ sealScope: 'full', coverage: { ...base.coverage, v1Rows: 1, v3Rows: 2 } }),
+    ];
+    for (const candidate of variants) {
+      const ledger = { isAvailable: () => true, verifyLedger: async () => candidate };
+      const result = await gateFor(ledger).evaluate('v6.0.10');
+      assert.equal(result.allowed, false, JSON.stringify(candidate));
+      assert.match(result.failures[0].reason, /malformed report/);
+    }
+  });
+
   it('does not call a green but non-full seal intact (#473)', async () => {
     const ledger = {
       isAvailable: () => true,
