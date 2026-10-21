@@ -473,8 +473,11 @@ export function escapeDialogPath(path: string): string {
     ch === "\\" ? "\\\\" : `\\u{${ch.codePointAt(0)!.toString(16).toUpperCase().padStart(4, "0")}}`);
 }
 
-/** #532 B344 D4 fold: the longest run of a shown path on one dialog line. */
-export const REWORK_PATH_CHUNK = 64;
+/**
+ * #532 B344 D4 fold: the longest run of a shown path on one dialog line. The owner ruling allows at
+ * most 64; 40 because the native dialog cuts a run of 48 wide capitals (M, W) and shows 44.
+ */
+export const REWORK_PATH_CHUNK = 40;
 /**
  * Starts each continuation line of a shown path. In escaped text every backslash is half of "\\" or
  * starts "\u{", so "\>" after a space or at a line start is only ever this marker.

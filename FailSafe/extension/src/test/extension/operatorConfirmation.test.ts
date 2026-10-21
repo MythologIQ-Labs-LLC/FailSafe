@@ -7,7 +7,7 @@ import {
   createOperatorConfirmer, isConfirmationOpen, sanitizeDialogText, confirmationFailure,
   l3DecisionRequest, l3BatchRequest, ratifyRequest, rollbackRequest,
   hooksDisableRequest, panicStopRequest, LOOPBACK_FOOTER, REASON_LIMIT,
-  deliveryReviewRequest, escapeDialogPath, type DeliveryReviewFacts,
+  deliveryReviewRequest, escapeDialogPath, REWORK_PATH_CHUNK, type DeliveryReviewFacts,
   type ConfirmationWindow, type OperatorActionRequest,
 } from '../../extension/operatorConfirmation';
 import type { ReworkEntry } from '../../governance/types/IntentTypes';
@@ -293,6 +293,17 @@ suite('#532 B344 delivery review dialog: rework section', () => {
     assert.equal(markers, continuations, 'every marker starts a continuation line the chunker wrote');
     assert.ok(continuations >= 2, 'the long paths do continue');
     assert.doesNotMatch(section, /^ {6}\\> evil\.ts$/m, 'the newline in a path never starts a line');
+  });
+
+  test('D4 fold (written after the implementation, for the 40-character chunk): a path of M and W runs, the widest Latin capitals, is shown in chunks of at most 40', () => {
+    const paths = [`${'M'.repeat(100)}/${'W'.repeat(90)}.ts`, 'MW'.repeat(70)];
+    const d = deliveryReviewRequest(facts([item(10)], [rework(10, paths.map((path) => ({ path, vetoStatus: 'M' as const, reworkStatus: 'M' as const })))]), 'op_d4d', 'console').detail;
+    const section = sectionOf(d);
+    assert.equal(REWORK_PATH_CHUNK, 40);
+    assert.deepEqual(rebuilt(section), paths);
+    const chunks = section.split('\n').map((l) => /^ {4}M\/M (.*)$/.exec(l)?.[1] ?? /^ {6}\\> (.*)$/.exec(l)?.[1]).filter((c): c is string => c !== undefined);
+    assert.ok(chunks.length >= 9, `${chunks.length} chunks`);
+    for (const c of chunks) assert.ok(c.length <= 40, `a chunk of ${c.length}: ${c}`);
   });
 
   test('D4 fold (written after the implementation, for the escape-split mutation): a chunk never ends or starts inside an escape', () => {
