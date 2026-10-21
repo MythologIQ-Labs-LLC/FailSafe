@@ -100,4 +100,25 @@ suite("B233 Bicameral client/interceptor binding", () => {
     assert.equal(await governToolCall(depsFor(() => current, () => bound), ENVELOPE, r.res, previous), true);
     assert.equal(r.status(), 409);
   });
+  test("interceptor replaced mid-evaluation for the same client invalidates old ALLOW", async () => {
+    const active = client();
+    let finish!: (receipt: ReceiptContract) => void;
+    let started!: () => void;
+    const called = new Promise<void>((resolve) => { started = resolve; });
+    const original = interceptorFor(active, () => {
+      started();
+      return new Promise<ReceiptContract>((resolve) => { finish = resolve; });
+    });
+    const replacement = interceptorFor(active);
+    let wired = original;
+    const r = response();
+    const pending = governToolCall(depsFor(() => active, () => wired), ENVELOPE, r.res, active);
+    await called;
+    wired = replacement; // Same MCP client, but a different policy evaluator.
+    finish(ALLOW);
+    assert.equal(await pending, true, "superseded ALLOW must never authorize a call");
+    assert.equal(r.status(), 409);
+    assert.match(r.body().error, /changed during governance/);
+  });
+
 });

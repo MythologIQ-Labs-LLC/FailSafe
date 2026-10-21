@@ -189,6 +189,7 @@ export async function governToolCall(
   if (!interceptor) return false; // legacy, explicitly ungoverned fixture only
   const receipt: ReceiptContract = await interceptor.intercept(envelope);
   if (client !== deps.getBicameralClient()
+    || deps.getMcpInterceptor?.() !== interceptor
     || deps.getMcpInterceptor?.()?.getClient() !== client
     || client?.isConnected() !== true) {
     res.status(409).json({ ok: false, error: "Bicameral client changed during governance evaluation" });
