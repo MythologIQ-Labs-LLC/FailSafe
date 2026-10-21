@@ -1,6 +1,6 @@
 # Managed Architecture Index (ADR, #531)
 
-**Status:** accepted for the first vertical slice (plan `plan-531-architecture-governance.md`, audit PASS at iteration 2); amended for the second slice, architecture authority (plan `plan-531b-architecture-authority.md`, audit PASS at iteration 3; LD7-LD10).
+**Status:** accepted for the first vertical slice (plan `plan-531-architecture-governance.md`, audit PASS at iteration 2); amended for the second slice, architecture authority (plan `plan-531b-architecture-authority.md`, audit PASS at iteration 3; LD7-LD10), and for the B311/B312 residuals, affected decisions and registry links (plan `plan-b311-b312-architecture-residuals.md`, audit PASS at iteration 3; LD11).
 **Registry row:** `managed-architecture-index` in the [Architecture Index](../ARCHITECTURE_INDEX.md).
 **Design source for the view:** the Integrations Catalog renderer (`FailSafe/extension/src/roadmap/ui/modules/integration-catalog-renderer.js`).
 
@@ -58,10 +58,10 @@ The snapshot carries the index path, parsed rows, problems (user-repo profile), 
 
 | Route | Guard | Effect |
 |---|---|---|
-| `GET /api/v1/architecture/index` | `rejectIfRemote`, rate limit (60 a minute) | the snapshot plus the ledger state and, since slice 2, the authority findings (LD7); read-only |
+| `GET /api/v1/architecture/index` | `rejectIfRemote`, rate limit (60 a minute) | the snapshot plus the ledger state, since slice 2 the authority findings (LD7), and since B312 each row's registry links and decision links (LD11); read-only |
 | `POST /api/actions/architecture-index/bootstrap` `{mode:'create'}` | `rejectIfRemote`, rate limit (5 a minute), modal confirmation | creates the index once, never overwriting |
 | `POST /api/actions/architecture-index/propose` `{path, action:'register', domain, status, supersedes?}` or `{path, action:'supersede', supersededBy}` | Console request guard (since slice 2), rate limit (10 a minute); a modal confirmation for every supersession (LD10) | a `PROPOSAL` ledger entry, then one L3 queue item; writes no file; refused as in LD8 and LD9 |
-| `POST /api/actions/architecture-index/open` `{path}` | `rejectIfRemote`, rate limit (30 a minute), snapshot and containment check | opens the document in the editor ("Use existing"); writes nothing |
+| `POST /api/actions/architecture-index/open` `{path}` | Console request guard (since B312), rate limit (30 a minute), snapshot and containment check | opens the document, or a listed contract or verification path (LD11), in the editor; writes nothing |
 
 Bootstrap runs only from state `absent`:
 
@@ -77,7 +77,7 @@ After a successful create, a `PROPOSAL` ledger entry (agentDid `did:failsafe:age
 
 Propose answers `409 {state}` unless the index is `present` or `present-with-problems`. It validates `path` against the server-side snapshot (an unregistered candidate for `register`; a candidate or a registered row for `supersede`) and `supersededBy` as a registered row id. `sourceSha`, `docSha256` and `suggestions` are computed server-side, never taken from the body. When the ledger is unavailable, propose answers `503 {ledger:'unavailable'}` and **queues nothing**: an L3 item without a ledger could never be decided, because `processL3Decision` writes the decision to the ledger. Otherwise it appends the `PROPOSAL` entry and queues an L3 item of kind `architecture-doc-proposal` or `architecture-doc-supersede` with that entry's id as `sourceLedgerEntryId`, so the `L3_QUEUED` and later `L3_APPROVED`/`L3_REJECTED` entries link back by id. A `PROPOSAL`-sourced id is not projected as an audit resolution (`AuditResolutionProjector` projects `AUDIT_FAIL` sources only).
 
-Open accepts a path the snapshot names (a candidate, a registered document or a suggestion) that resolves inside the workspace, and passes the absolute path to the editor-open dependency bootstrapBicameral already wires (`vscode.open`); nothing is written.
+Open accepts a path the snapshot names (a candidate, a registered document, a suggestion, or since B312 a contract or verification path that git lists and that is not a pattern) that resolves inside the workspace, and passes the absolute path to the editor-open dependency bootstrapBicameral already wires (`vscode.open`); nothing is written.
 
 **"Unavailable Qor" in #531 is mapped to FailSafe's ledger being unavailable.** Discovery and the view work without it. Showing the Qor-logic package install state in this view is a BACKLOG residual.
 
@@ -143,6 +143,46 @@ Every supersession proposal (a `canonical` registration with `supersedes`, or th
 
 Before recording any proposal, the route re-reads the workspace under the lock and answers `409 {stale}`, recording nothing, when the index can no longer take proposals (`state`), the index bytes changed (`index`), a document in the operation changed (`document`) or HEAD moved (`head`). The `PROPOSAL` entry records the domain, status, `supersedes`, the existing authority rows with their lines and hashes, the index hash, HEAD and, for a confirmed supersession, the operation id and `authentication` (`vscode-modal-confirmation`, with what it proves). The L3 item's summary leads with the authority facts. Approving the L3 item is the second human gate; it records the decision and edits nothing.
 
+### LD11: affected decisions and registry links (residuals: B311, B312, B253)
+
+**Five kinds, one home each.** FailSafe keeps these apart and never infers one from another:
+
+| Kind | What it is | Its single home | How FailSafe treats it |
+|---|---|---|---|
+| 1. Canonical architecture authority | a registry row with status `canonical`; `proposed` sits under it as intended, not yet accepted, authority | the registry in `docs/ARCHITECTURE_INDEX.md` (or `failsafe.architecture.indexPath`) | competing canonical authority is refused at propose (LD8, LD9); affected decisions list `canonical` and `proposed` rows, each labelled with its status |
+| 2. Descriptive documentation | a `descriptive` row | the registry | shown and linked; never authority; never an affected decision |
+| 3. Historical or superseded documentation | a `historical` or `superseded` row | the registry | kept for history; never an affected decision |
+| 4. Operator taxonomy (intent) | the programs, verticals and agent mappings the operator intends | `docs/roadmap/tracker-config.yaml` when present (local; Workspace › Taxonomy) | records intent; disagreements with kinds 5 and `docs/roadmap/programs.yaml` are reported as drift, never reconciled |
+| 5. Console navigation (actual) | the product's actual tabs and sub-views | `CONSOLE_VERTICALS` (`FailSafe/extension/src/roadmap/tracker/governance-projection.ts`) | defines what the product has |
+
+The plain-ASCII intake rule applies to canonical domain identifiers only (LD8). Paths, link targets, URLs, ids of other kinds and documentation text are not ASCII-restricted. Where FailSafe shows repository text to a person it is review text: control, format, line and paragraph separator code points, and every space separator other than U+0020 (including characters a percent-encoded link decodes to, such as U+202E), are shown as `[U+XXXX]`; ids and domains in affected-decision lines also show every code point outside the intake characters as `[U+XXXX]`. In the links view a descriptive row's non-ASCII domain is shown as written (review text only).
+
+**Registry links (B312).** `registryLinks` in `architectureAuthority.ts` gives each row its links, in cell order:
+
+- `related` and `supersedes` ids, each with the target row's id and status, or "not in the registry";
+- `contract`, `verification` and `governance_ref` paths with a state from a stat only (present, not on disk, not listed by git, outside the workspace, unsafe), memoised per path for one report; a document is never read or hashed here;
+- a value with `*` or `?` is a pattern, shown "pattern (not matched)", and is never resolved or matched;
+- an http(s) or mailto link is shown with its label and "not checked"; nothing is fetched;
+- a bare `#NNN` in `governance_ref`, after markdown links are removed (a link label such as `[#530](...)` is never a ledger reference), is checked against the `### Entry #N` headings of `docs/META_LEDGER.md`, read once per report and only up to 8 MiB: "heading found; chain not checked (#467)", "heading not found", no ledger, or too large. The ledger's hash chain is not checked;
+- `-` and `unknown` give no link; a cell over 4 KiB is "not checked (cell too long)".
+
+The view shows "Open" only for a present path; open accepts a listed, non-pattern contract or verification path and refuses a missing one, a pattern, one outside the workspace, one git does not list, and one no row names.
+
+**Decision links (B253).** `decisionLinks` in `ArchitectureIndexProposal.ts` reads the FailSafe ledger once, by the architecture agent (`getEntriesByAgent`, newest first, limit 2001). More than 2000 entries gives "truncated" and no partial links; a ledger without that read, an unavailable one, or a read that throws gives "unavailable". Each entry's agent is checked again. For each row it lists the architecture proposals that register its document, supersede it or name it as the successor, with the L3 outcome (approved, rejected or undecided) and the deciding entry; when a proposal has several decisions the highest entry id wins.
+
+**Affected decisions (B311).** `describeAffectedArchitecture` in `affectedArchitecture.ts` answers, for a set of files, which `canonical` or `proposed` rows name them: by document path ("document") or by a safe, non-pattern path in the `contract` or `verification` cell ("contract", "verification"), as strings. A row still names a file that has been deleted. Paths are normalised (backslashes, `./`, absolute paths inside the workspace; anything escaping is dropped; Windows compares case-insensitively). The seams FailSafe controls:
+
+| Seam | Where the lines appear |
+|---|---|
+| Console L3 decision (`decide-l3`) | the modal dialog, under "Architecture decisions for these files (warn-only):", at most 5 lines then "and N more" |
+| Console L3 batch (`approve-l3-batch`) | the same block, at most 10 lines in total across the listed items |
+| VS Code L3 Approval Queue panel | each item, after its summary; the panel renders at once and once more when the lines arrive, and drops a result for a queue that changed |
+| Governed commit prompt (Organize and Initialize) | appended to the prompt, at most 3 lines, joined by "; " |
+
+The lines are **warn-only**: the decision, the batch or the commit proceeds in every case. A describe that throws or rejects adds nothing; a timeout or an index that cannot be read (below) adds one "not checked (<reason>)" line. The L3 panel shows only matched lines, so it drops a "not checked" line. Each line is review text capped at 240 code points; caps count code points and never split a `[U+XXXX]` token or a surrogate pair. The index is read with async I/O only (realpath of the root and the file, a stat, one read of at most 2 MiB + 1 byte); no git runs and no matched file is stat'ed. The only synchronous work is normalising the paths and parsing the one index; indexing the rows yields to the event loop between slices of 500. The call races a 1 s budget; past it the answer is one line, "Architecture authority not checked (timeout).". An index that is absent adds nothing; a bad index path, a directory, an index over 2 MiB, one outside the workspace or one that cannot be parsed gives one "not checked (<reason>)" line; a cell over 4 KiB is skipped and counted in one line.
+
+The commit-check hook is not a seam here (B350): the installed hook only sends its token and reads `allow`, so a warning there needs a new hook script, a new body, a reinstall in every governed repository, compatibility with older hooks and the 2 s fail-open budget, and `--no-verify` would still skip it.
+
 ## Enforceable and advisory
 
 | Seam | Kind | What holds |
@@ -158,6 +198,10 @@ Before recording any proposal, the route re-reads the workspace under the lock a
 | Documents in ignored folders | not covered | invisible to discovery |
 | Overlap between documents | advisory | string comparison and token suggestions only; never a claim of semantic equivalence |
 | Edits to the index itself | advisory | re-validated on refresh; FailSafe never rewrites the index |
+| Affected decisions at the L3 dialogs, the L3 panel and the governed commit prompt (B311) | advisory (warn-only) | canonical and proposed rows that name the files are listed; nothing is blocked; a throw or rejection adds nothing, and a timeout or an unreadable index adds one "not checked" line (the L3 panel drops it) |
+| Registry and decision links (B312, B253) | advisory (read only) | link states from a stat, a heading match and one bounded ledger read; nothing is fetched, hashed or repaired |
+| Opening a contract or verification path (B312) | enforceable (read only) | the Console request guard, then a listed, non-pattern path named by a row and inside the workspace |
+| The commit-check hook | not covered | no affected-decision warning there (B350) |
 
 Nothing in this slice sends repository content off the machine.
 
@@ -174,6 +218,12 @@ Nothing in this slice sends repository content off the machine.
 - **Non-ASCII canonical domains (slice 2).** While any canonical row has a domain outside the intake characters, canonical registrations and supersessions are refused workspace-wide until the domain is renamed or the row stops being canonical (LD8).
 - **The proposal lock has no timeout.** Appends and queueing for one workspace run under one in-process lock. A timeout could let two appends interleave, so there is none: an append or queue write that never settles holds the lock, and later proposals wait, until the extension host reloads.
 - **Shared ledger path.** Approvals are read from the FailSafe ledger by domain key. If `failsafe.qorelogic.ledgerPath` is an absolute path shared by several workspaces, another workspace's approved canonical proposal can block a domain of the same name here.
+- **Affected decisions are read when shown (B311).** They reflect the index when a dialog, the panel or the prompt is shown, not when the item was queued.
+- **Governed commit paths are porcelain paths (B311).** The prompt matches the paths `git status --porcelain` gives: repository-root relative, quotes stripped, C-escapes not decoded, and an untracked folder collapsed to `dir/`. A workspace that is a subfolder of its repository, a C-quoted name, or a file inside a new untracked folder is not matched. This is disclosed, not normalised.
+- **Link checks read synchronously (B312, B355).** Every `GET /api/v1/architecture/index` stats each linked path and, when a row names a bare `#NNN`, reads `docs/META_LEDGER.md` (up to 8 MiB) with synchronous calls on the request.
+- **The index parse is synchronous (B311).** Parsing one index of at most 2 MiB is a single synchronous call (about 50 ms for 5,000 rows on the development machine); reading, indexing and matching do not block.
+- **Review text residual.** Review text does not render `\p{Mn}` variation selectors or the Hangul fillers U+3164, U+115F and U+1160. This matches the slice 2 hidden-character check, so it is not a regression (B352).
+- **An emitted taxonomy directive keeps its wording.** `.failsafe/governance/tracker-taxonomy.directive.md` keeps the old "source of truth" wording until the operator next saves the taxonomy; FailSafe does not rewrite or create it.
 - **Path truncation in the L3 decision dialog.** The L3 decision dialog (unchanged by this slice) shows at most 200 characters of the file path and of the summary; the supersession dialog and the ledger entry carry the full path.
 
 ## Scenario map (#531 acceptance)
@@ -183,6 +233,8 @@ Nothing in this slice sends repository content off the machine.
 | New repository bootstrap | bootstrap create; route test; extension-host test |
 | Existing index reuse | `409 {reuse}`; route test; extension-host second run |
 | Duplicate document proposal | candidate with suggestions; propose route test; Playwright |
+| Architecture decision links (B253, B312) | registry and decision links per row; links, route, jsdom and Playwright tests |
+| Affected decisions, warn-only (B311) | the L3 dialogs, the L3 panel and the commit prompt; links, route, panel and flow tests |
 | Supersession | propose `supersede`, or a canonical registration naming every canonical row; a modal confirmation and a freshness check (slice 2); route, extension-host and Playwright tests |
 | Conflicting authority (slice 2) | authority findings with lines and hashes; competing and pending canonical registrations refused; route, extension-host, jsdom and Playwright tests |
 | Agent-created architecture file | untracked candidate found on refresh; discovery test (advisory) |
@@ -190,7 +242,7 @@ Nothing in this slice sends repository content off the machine.
 | Recovery with no silent rewrites | exclusive-create race row in the route test; extension-host second run byte-identical |
 | Tests and installed VS Code UI | extension-host configuration, Playwright, the installed-package check |
 
-Not in these slices (BACKLOG): `update-doc` events, architecture decision links beyond `governance_ref` (B253, B312), a stale-document display, opt-in migration from another index location, the Qor-logic install state in the view, affected decisions at the L3 and commit seams (B311), and the remaining slice 2 residuals B313-B316.
+Not in these slices (BACKLOG): `update-doc` events (B252), a stale-document display (B254), opt-in migration from another index location (B251), the Qor-logic install state in the view (B255), an affected-decision warning at the commit-check hook (B350), the remaining slice 2 residuals B313-B316 (the open-route part of B316 is done), and the residuals of LD11 (B351-B355).
 
 ## Consequences
 
