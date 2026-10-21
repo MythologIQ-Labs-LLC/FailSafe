@@ -215,6 +215,23 @@ test("F7 README integration claims do not turn implementation or last-call evide
   assert.ok(!renderer.includes("3 verified by their last call"), "last-call counts cannot be described as verified integrations");
 });
 
+test("F8 MCP reachability and third-party outcome claims track the source boundary", () => {
+  const server = read(path.join(SRC, "mcp", "FailSafeServer.ts"));
+  const app = read(CLAIM_README);
+  const product = read(ROOT_README);
+  const limited = server.includes("new StdioServerTransport()") && !server.includes("new StreamableHTTPServerTransport(");
+  const phrase = "not reachable by external MCP clients";
+  if (limited) {
+    assert.ok(app.includes(phrase), "extension README must disclose the in-process MCP limitation");
+    assert.ok(product.includes(phrase), "product README must disclose the in-process MCP limitation");
+  } else {
+    assert.ok(!app.includes(phrase) && !product.includes(phrase),
+      "the transport changed: requalify actual external reachability before retaining the old claim");
+  }
+  assert.ok(app.includes("does not ship an Omium outcome-verification adapter"),
+    "a proposed interoperability bridge must not be described as shipped");
+});
+
 test("F6 OpenHands: while the import holds a Secret Storage key, its README says so", () => {
   const signing = path.join(SRC, "integrations", "agent-observe", "openhands-signing.ts");
   assert.ok(fs.existsSync(signing), "anchor: openhands-signing.ts is gone");
