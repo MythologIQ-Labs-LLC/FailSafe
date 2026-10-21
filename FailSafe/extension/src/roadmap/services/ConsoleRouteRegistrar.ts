@@ -15,6 +15,7 @@ import { AgtRoute, setupAgtInstallRoute, type AgtRouteDeps } from "../routes/Agt
 import { IntegrationCatalogRoute } from "../routes/IntegrationCatalogRoute";
 import { setupArchitectureIndexRoutes } from "../routes/ArchitectureIndexRoute";
 import { setupDeliveryRoutes, type DeliveryRouteDeps } from "../routes/DeliveryRoute";
+import { describeAffectedArchitecture } from "../../governance/architecture/affectedArchitecture";
 import type { RouteDeps } from "../routes";
 import type { ApiRouteDeps } from "../routes/types";
 import { readMetaLedgerArtifact } from "../../qorlogic/consumer/consumer-adapter";
@@ -299,6 +300,8 @@ export class ConsoleRouteRegistrar {
       getRun: (id) => h.getAgentRunRecorder()?.getRun(id),
       loadRun: (id) => h.getAgentRunRecorder()?.loadRun(id) || null,
       getRunSteps: (id) => h.getAgentRunRecorder()?.getRunSteps(id) || [],
+      getArchitectureIndexPath: () => h.getArchitectureIndexPath?.(), // B311: affected architecture decisions in the L3 dialogs
+      describeArchitecture: (paths, options) => describeAffectedArchitecture({ workspaceRoot: h.workspaceRoot, indexPathSetting: h.getArchitectureIndexPath?.() }, paths, options),
     } as ApiRouteDeps;
     // Lazy properties — accessed at request time so post-construction
     // setScaffoldCallback / setScaffoldWebCallback / setOutputChannel calls

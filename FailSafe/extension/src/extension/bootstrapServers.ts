@@ -31,6 +31,7 @@ import { defaultGitRunner, statusPaths } from "./governedCommit";
 import { governedCommitPrStep, runGovernedCommitFlow, type GovernedCommitLinkFn } from "./governedCommitFlow";
 import { createOperatorConfirmer } from "./operatorConfirmation";
 import { readArchitectureIndexPath, registerArchitectureIndexCommand } from "./architectureIndexCommand";
+import { describeAffectedArchitecture } from "../governance/architecture/affectedArchitecture";
 import { registerDeliveryAssessmentCommand } from "./deliveryAssessmentCommand";
 import { governedCommitLinker } from "./governedCommitLink";
 import { defaultGitHubPost } from "../integrations/github-checks/github-checks-client";
@@ -73,6 +74,7 @@ async function offerGovernedCommit(
         } catch { /* best-effort audit */ }
       },
       now: () => new Date().toISOString(), linkCommit,
+      describeArchitecture: async (paths) => (await describeAffectedArchitecture({ workspaceRoot, indexPathSetting: readArchitectureIndexPath() }, paths, { maxLines: 3 })).lines, // B311 (porcelain paths)
       ...governedCommitPrStep(governedCommitConnection(credentials.creds, credentials.endpoints, credentials.ui), defaultGitHubPost),
     });
     const r = result as { step: string; prUrl?: string; branch?: string; compareUrl?: string; warning?: string };

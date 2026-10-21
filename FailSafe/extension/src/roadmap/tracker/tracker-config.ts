@@ -95,7 +95,7 @@ export function lintConfig(cfg: TrackerConfig): TrackerLintFinding[] {
 }
 
 /** The governed directive markdown (PUBLISH_BLOCK SHAPE — advisory, no validator).
- *  States the declared taxonomy + the MUST-CONSULT clause for the next cycle. */
+ *  Records the intended taxonomy, names the authorities, and carries the drift-reporting MUST-CONSULT clause. */
 export function buildTaxonomyDirective(cfg: TrackerConfig, opts: { at: string }): string {
   const list = (items: Array<{ key: string; name?: string }>, kind: string): string =>
     items.length
@@ -109,20 +109,17 @@ export function buildTaxonomyDirective(cfg: TrackerConfig, opts: { at: string })
 **Active**: yes
 **Set**: ${opts.at}
 **Set by**: operator (Workspace › Taxonomy editor)
-**Source of truth**: \`docs/roadmap/tracker-config.yaml\` (local file; \`docs/\` is gitignored, so it is not in the repository)
-**Enforcement**: advisory — the coding agent is bound via the CLAUDE.md directive
-(loaded every session) + this registered record. Console navigation
-(\`CONSOLE_VERTICALS\`) is authoritative for each vertical's sub-views: Workspace ›
-Taxonomy reports drift against it, and CI checks the tracked
-\`docs/roadmap/programs.yaml\`. This file is not checked in CI.
+**Records**: intended tracker taxonomy and mappings, in \`docs/roadmap/tracker-config.yaml\` (local file; \`docs/\` is gitignored, so it is not in the repository)
+**Authority**: the Console's implemented navigation (\`CONSOLE_VERTICALS\`) defines the actual
+tabs and sub-views; \`docs/roadmap/programs.yaml\` governs programs and phases. Workspace ›
+Taxonomy reports drift, and CI checks the tracked programs.yaml. This file is not checked in CI.
 
 ## MUST-CONSULT
 
 Any cycle that plans tracker or feature-scope work MUST consult
-\`docs/roadmap/tracker-config.yaml\` and align programs/verticals/agents to the
-operator-declared taxonomy below. A divergence between this declared taxonomy and
-the actual \`docs/roadmap/programs.yaml\` / \`docs/FEATURE_INDEX.md\` surfaces is a
-drift bug to surface, not silently reconcile.
+\`docs/roadmap/tracker-config.yaml\` and compare its intended programs, verticals and agents with the
+Console navigation and \`docs/roadmap/programs.yaml\`. Report disagreements as drift; do not silently
+reconcile them.
 
 ## Declared programs
 ${list(cfg.programs, "programs")}

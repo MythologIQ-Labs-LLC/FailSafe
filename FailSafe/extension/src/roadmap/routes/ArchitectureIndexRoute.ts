@@ -2,13 +2,15 @@
  * Managed architecture index routes (#531 LD4; slice 2: plan-531b LD5-LD8). Design:
  * docs/architecture/MANAGED_ARCHITECTURE_INDEX.md.
  *
- *   GET  /api/v1/architecture/index                 snapshot + ledger state + authority findings (read-only)
+ *   GET  /api/v1/architecture/index                 snapshot + ledger state + authority findings, registry links and
+ *                                                   decision links (read-only)
  *   POST /api/actions/architecture-index/bootstrap  {mode:'create'}: create the index once, never overwriting
  *   POST /api/actions/architecture-index/propose    {path, action:'register', domain, status, supersedes?} or
  *                                                   {path, action:'supersede', supersededBy}: PROPOSAL entry + one L3 item
- *   POST /api/actions/architecture-index/open       {path}: open a snapshot document in the editor ("Use existing")
+ *   POST /api/actions/architecture-index/open       {path}: open a snapshot document, or a listed contract or
+ *                                                   verification path, in the editor
  *
- * Every route is loopback-only and rate limited; propose also runs the Console request guard.
+ * Every route is loopback-only and rate limited; propose and open also run the Console request guard.
  * Only bootstrap writes a file, after a modal confirmation. Propose records a decision request and
  * writes nothing: it refuses competing canonical authority (in the index, or pending in the L3 queue
  * or approved and not yet in the index), needs a modal confirmation for every supersession, and
@@ -29,9 +31,9 @@ import {
 import {
   runArchitectureIndexBootstrap, usableLedger, type ArchitectureLedger, type BootstrapResult,
 } from "../../governance/architecture/ArchitectureIndexBootstrap";
-import { assessArchitectureAuthority } from "../../governance/architecture/architectureAuthority";
+import { assessArchitectureAuthority, registryLinks } from "../../governance/architecture/architectureAuthority";
 import {
-  freshnessProblem, ledgerReader, loadApprovedProposals, pendingAuthority, pendingRefusal, planArchitectureProposal,
+  decisionLinks, freshnessProblem, ledgerReader, loadApprovedProposals, pendingAuthority, pendingRefusal, planArchitectureProposal,
   recordArchitectureProposal, supersessionFacts, withProposalLock, type ArchitectureLedgerReader, type ConfirmationRecord,
   type ProposalOperation, type Refusal,
 } from "../../governance/architecture/ArchitectureIndexProposal";
@@ -83,11 +85,20 @@ export function bootstrapResponse(result: BootstrapResult): { status: number; bo
 
 const badRequest = (res: Response, error: string): void => { res.status(400).json({ ok: false, error }); };
 
-/** The workspace-relative paths a request may name: candidates, registered docs, their suggestions and the index. */
+/**
+ * The workspace-relative paths a request may name: candidates, registered docs, their suggestions,
+ * the index, and (B312) listed, non-pattern contract and verification paths.
+ */
 function knownPaths(snap: ArchitectureIndexSnapshot): Set<string> {
   const out = new Set<string>();
   for (const c of snap.candidates) { out.add(c.path); for (const s of c.suggestions) out.add(s); }
   for (const r of snap.rows) if (r.docPath) out.add(r.docPath);
+  for (const r of snap.rows) {
+    for (const cell of [r.cellPaths.contract, r.cellPaths.verification]) {
+      if (cell === "too-long") continue;
+      for (const v of cell) if (v.kind === "path" && v.listed) out.add(v.path);
+    }
+  }
   if (INDEX_PRESENT_STATES.has(snap.state) && snap.state !== "present-elsewhere") out.add(snap.indexPath);
   return out;
 }
@@ -184,13 +195,23 @@ export function setupArchitectureIndexRoutes(app: Application, deps: Architectur
   const limiter = (limit: number) => rateLimit({ windowMs: 60_000, limit, standardHeaders: false, legacyHeaders: false });
   const readLimiter = limiter(60);
 
-  app.get("/api/v1/architecture/index", readLimiter, (req, res) => {
+  app.get("/api/v1/architecture/index", readLimiter, async (req, res) => {
     if (deps.rejectIfRemote(req, res)) return;
-    const snap = snapshotOf(deps);
-    res.json({
-      ...snap, ledger: usableLedger(deps.getLedgerManager()) ? "available" : "unavailable",
-      authority: assessArchitectureAuthority(snap, { workspaceRoot: deps.workspaceRoot, git: deps.git }),
-    });
+    try {
+      const snap = snapshotOf(deps);
+      const manager = deps.getLedgerManager();
+      const ctx = { workspaceRoot: deps.workspaceRoot, git: deps.git };
+      // B312 / B253: the per-cell values stay server-side; the view gets their checked links.
+      const rows = snap.rows.map(({ cellPaths: _cellPaths, ...row }) => row);
+      res.json({
+        ...snap, rows, ledger: usableLedger(manager) ? "available" : "unavailable",
+        authority: {
+          ...assessArchitectureAuthority(snap, ctx), links: registryLinks(snap, ctx), decisions: await decisionLinks(snap.rows, manager),
+        },
+      });
+    } catch {
+      if (!res.headersSent) res.status(500).json({ ok: false, error: "The architecture index could not be read." });
+    }
   });
 
   app.post("/api/actions/architecture-index/bootstrap", limiter(5), async (req, res) => {
@@ -213,7 +234,9 @@ export function setupArchitectureIndexRoutes(app: Application, deps: Architectur
     }
   });
 
-  app.post("/api/actions/architecture-index/open", limiter(30), async (req, res) => {
+  // B312 (closes the open-route part of B316): open raises an editor, so the Console request guard
+  // runs before its limiter, as for propose.
+  app.post("/api/actions/architecture-index/open", consoleRequestGuard((req, res) => deps.rejectIfRemote(req, res)), limiter(30), async (req, res) => {
     if (deps.rejectIfRemote(req, res)) return;
     await open(req, res, deps);
   });

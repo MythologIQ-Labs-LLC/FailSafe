@@ -32,13 +32,28 @@ export function formatPreflightConflicts(
     return `<div class="item-preflight">${lines}</div>`;
 }
 
+/**
+ * B311: warn-only affected architecture decisions for one item. The lines are review text from
+ * describeAffectedArchitecture; each is escaped here. '' without lines.
+ */
+export function formatArchitectureLines(lines: string[] | undefined): string {
+    if (!Array.isArray(lines) || lines.length === 0) {
+        return '';
+    }
+    const rows = lines.map((l) => `<div class="architecture-line">${escapeHtml(l)}</div>`).join('');
+    return `<div class="item-architecture"><div class="architecture-title">Architecture decisions for this file (warn-only):</div>${rows}</div>`;
+}
+
 export interface L3ApprovalHtmlOptions {
     nonce: string;
     cspSource: string;
+    /** B311: affected-architecture lines by item id (absent: no block). */
+    architecture?: Record<string, string[]>;
 }
 
 export function buildL3ApprovalHtml(queue: L3ApprovalRequest[], opts: L3ApprovalHtmlOptions): string {
     const { nonce, cspSource } = opts;
+    const architecture = opts.architecture ?? {};
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -101,6 +116,15 @@ export function buildL3ApprovalHtml(queue: L3ApprovalRequest[], opts: L3Approval
             margin-bottom: 12px;
         }
         .item-preflight { margin-bottom: 12px; }
+        .item-architecture {
+            font-size: 11px;
+            color: var(--vscode-descriptionForeground);
+            border-left: 2px solid var(--vscode-editorWarning-foreground);
+            padding: 2px 0 2px 8px;
+            margin-bottom: 12px;
+            word-break: break-all;
+        }
+        .architecture-title { font-weight: 600; margin-bottom: 2px; }
         .preflight-conflict {
             font-size: 11px;
             color: #f85149;
@@ -153,6 +177,7 @@ export function buildL3ApprovalHtml(queue: L3ApprovalRequest[], opts: L3Approval
                 Queued: ${escapeHtml(new Date(item.queuedAt).toLocaleString())}
             </div>
             <div class="item-summary">${escapeHtml(item.sentinelSummary)}</div>
+            ${formatArchitectureLines(Object.prototype.hasOwnProperty.call(architecture, item.id) ? architecture[item.id] : undefined)}
             ${formatPreflightConflicts(item.meta)}
             ${item.flags.length > 0 ? `
                 <div class="item-flags">

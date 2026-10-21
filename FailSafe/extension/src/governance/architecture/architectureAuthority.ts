@@ -16,10 +16,10 @@
 import * as fs from "fs";
 import {
   defaultArchitectureGit, MAX_DOC_BYTES, resolveInsideWorkspace, type ArchitectureGit, type ArchitectureIndexSnapshot,
-  type ArchitectureIndexState, type SnapshotRow,
+  type ArchitectureIndexState, type CellPath, type CellPaths, type SnapshotRow,
 } from "./ArchitectureIndexDiscovery";
 import { sha256, sourceShaOf } from "./ArchitectureIndexBootstrap";
-import { domainKey, hiddenCharacterProblem, INTAKE_CHARSET, matchesGlob, nonAsciiCodePoints } from "./architectureIndexCore";
+import { blankLinks, domainKey, hiddenCharacterProblem, INTAKE_CHARSET, matchesGlob, nonAsciiCodePoints } from "./architectureIndexCore";
 
 export type AuthorityFindingKind =
   | "conflicting-canonical" | "canonical-missing" | "dangling-supersession"
@@ -240,4 +240,136 @@ export function assessArchitectureAuthority(snap: ArchitectureIndexSnapshot, ctx
     return 0;
   });
   return { state: snap.state, findings, provenance, domains: domainsOf(snap.rows) };
+}
+
+// ---------------------------------------------------------------- registry links (B312, B253)
+
+/** A related or supersedes id, with the target row's status (null when no row has the id). */
+export interface RowLink {
+  kind: "row";
+  id: string;
+  state: "registered" | "unregistered";
+  status: string | null;
+  docPath: string | null;
+  domain: string | null;
+}
+
+export type PathLinkState = "present" | "not-on-disk" | "not-listed" | "outside-workspace" | "unsafe";
+export type LedgerLinkState = "heading-found" | "heading-missing" | "no-ledger" | "too-large";
+
+export type ValueLink =
+  | { kind: "path"; path: string; state: PathLinkState; reason?: string }
+  | { kind: "pattern"; value: string; state: "not-matched" }
+  | { kind: "url"; label: string; url: string; state: "not-checked" }
+  | { kind: "qor-ledger"; entry: number; state: LedgerLinkState };
+
+export interface RegistryLinks {
+  id: string;
+  related: RowLink[];
+  supersedes: RowLink[];
+  /** "too-long": the cell is over 4 KiB and was not checked. */
+  contract: ValueLink[] | "too-long";
+  verification: ValueLink[] | "too-long";
+  governanceRef: ValueLink[] | "too-long";
+}
+
+/** The Qor ledger whose `### Entry #N` headings a bare `#N` in governance_ref is checked against. */
+export const QOR_LEDGER_PATH = "docs/META_LEDGER.md";
+/** The Qor ledger is read once per report, and only when it is at most this size. */
+export const QOR_LEDGER_LIMIT_BYTES = 8 * 1024 * 1024;
+const BARE_REF = /(?<![\w#&/])#(\d{1,7})(?!\w)/g;
+
+const ids = (cell: string): string[] =>
+  cell.split(",").map((x) => x.trim()).filter((x) => x !== "" && x !== "-" && !/^unknown$/i.test(x));
+
+/** Bare `#NNN` entries in a governance_ref cell, after markdown links are removed (a link label is never a ref). */
+export function ledgerRefs(cell: string): number[] {
+  return [...new Set([...blankLinks(cell).matchAll(BARE_REF)].map((m) => Number(m[1])))];
+}
+
+function bareRefsAt(cell: string): Array<{ at: number; entry: number }> {
+  return [...blankLinks(cell).matchAll(BARE_REF)].map((m) => ({ at: m.index ?? 0, entry: Number(m[1]) }));
+}
+
+/**
+ * Where a linked path is, from a stat only (never a read or a hash, unlike documentState) and the
+ * cell's own listed flag. Memoised per path for one report.
+ */
+export function linkPathState(root: string, p: string, listed: boolean, memo: Map<string, PathLinkState>): PathLinkState {
+  const key = `${listed ? "1" : "0"}:${p}`;
+  const hit = memo.get(key);
+  if (hit) return hit;
+  let state: PathLinkState;
+  const located = resolveInsideWorkspace(root, p);
+  if (!located) state = "not-on-disk";
+  else if (!located.inside) state = "outside-workspace";
+  else {
+    try { state = fs.statSync(located.abs).isFile() ? (listed ? "present" : "not-listed") : "not-on-disk"; } catch { state = "not-on-disk"; }
+  }
+  memo.set(key, state);
+  return state;
+}
+
+/** The entry numbers of the Qor ledger's `### Entry #N` headings, read once, or why they cannot be. */
+function qorHeadings(root: string): Set<number> | "no-ledger" | "too-large" {
+  const located = resolveInsideWorkspace(root, QOR_LEDGER_PATH);
+  if (!located || !located.inside) return "no-ledger";
+  try {
+    const st = fs.statSync(located.abs);
+    if (!st.isFile()) return "no-ledger";
+    if (st.size > QOR_LEDGER_LIMIT_BYTES) return "too-large";
+    const text = fs.readFileSync(located.abs, "utf8");
+    return new Set([...text.matchAll(/^### Entry #(\d+)(?!\d)/gm)].map((m) => Number(m[1])));
+  } catch {
+    return "no-ledger";
+  }
+}
+
+/**
+ * Each registry row's links: related and supersedes ids with the target's status; contract,
+ * verification and governance_ref values with their state, in cell order. Paths are stat-only,
+ * patterns are never resolved, URLs are never fetched, and a bare `#NNN` is checked against the Qor
+ * ledger's headings only (its hash chain is not checked: #467). Read-only.
+ */
+export function registryLinks(snap: ArchitectureIndexSnapshot, ctx: AuthorityContext): RegistryLinks[] {
+  const root = ctx.workspaceRoot;
+  if (!root || !WITH_INDEX.has(snap.state)) return [];
+  const byId = new Map<string, SnapshotRow>();
+  for (const r of snap.rows) if (!byId.has(r.id)) byId.set(r.id, r);
+  const memo = new Map<string, PathLinkState>();
+  let headings: ReturnType<typeof qorHeadings> | undefined;
+  const ledgerState = (entry: number): LedgerLinkState => {
+    headings ??= qorHeadings(root);
+    if (headings === "no-ledger" || headings === "too-large") return headings;
+    return headings.has(entry) ? "heading-found" : "heading-missing";
+  };
+  const rowLink = (id: string): RowLink => {
+    const r = byId.get(id);
+    return r ? { kind: "row", id, state: "registered", status: r.status, docPath: r.docPath, domain: r.domain }
+      : { kind: "row", id, state: "unregistered", status: null, docPath: null, domain: null };
+  };
+  const valueLink = (v: CellPath): ValueLink => {
+    switch (v.kind) {
+      case "path": return { kind: "path", path: v.path, state: linkPathState(root, v.path, v.listed, memo) };
+      case "pattern": return { kind: "pattern", value: v.value, state: "not-matched" };
+      case "unsafe": return { kind: "path", path: v.value, state: "unsafe", reason: v.reason };
+      default: return { kind: "url", label: v.label, url: v.url, state: "not-checked" };
+    }
+  };
+  const values = (cell: CellPaths, raw?: string): ValueLink[] | "too-long" => {
+    if (cell === "too-long") return "too-long";
+    const items: Array<{ at: number; link: () => ValueLink }> = cell.map((v) => ({ at: v.at, link: () => valueLink(v) }));
+    if (raw !== undefined) {
+      for (const ref of bareRefsAt(raw)) items.push({ at: ref.at, link: () => ({ kind: "qor-ledger", entry: ref.entry, state: ledgerState(ref.entry) }) });
+    }
+    return items.sort((a, b) => a.at - b.at).map((x) => x.link());
+  };
+  return snap.rows.map((r) => ({
+    id: r.id,
+    related: ids(r.related).map(rowLink),
+    supersedes: ids(r.supersedes).map(rowLink),
+    contract: values(r.cellPaths.contract),
+    verification: values(r.cellPaths.verification),
+    governanceRef: values(r.cellPaths.governanceRef, r.governanceRef),
+  }));
 }
