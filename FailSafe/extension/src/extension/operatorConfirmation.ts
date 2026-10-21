@@ -40,6 +40,9 @@ export interface ConfirmationWindow {
 
 export const LOOPBACK_FOOTER =
   "Requested from the FailSafe Console over loopback. If you did not just ask for this, choose Cancel.";
+/** #532 B320: a command called with arguments (any extension can call a VS Code command). */
+export const COMMAND_CALL_FOOTER =
+  "Requested by a command call. If you did not just ask for this, choose Cancel.";
 /** Default per-field cap for dialog text. */
 export const FIELD_LIMIT = 200;
 /** Cap for free-text values the operator records (rollback reason, ratify rationale). */
@@ -364,6 +367,38 @@ export async function confirmBoundOperation<T>(
 }
 
 /**
+ * #532 B320 (plan-b320 LD3): confirmBoundOperation for a VS Code command, which has no HTTP
+ * response to answer or watch. The same binding: the operation is copied and deep-frozen before the
+ * dialog is built, `confirm` is called exactly once (never skipped), and the frozen copy is
+ * returned only for an approval that arrives before the deadline. Every other outcome is returned
+ * as a failure and the caller writes nothing.
+ */
+export async function confirmBoundCommand<T>(
+  confirm: ConfirmOperatorAction | undefined,
+  operation: T,
+  describe: (operation: T, operationId: string) => OperatorActionRequest,
+  options: { deadlineMs?: number } = {},
+): Promise<{ ok: true; bound: BoundOperation<T> } | { ok: false; failure: Exclude<ConfirmationFailure, "cancelled">; operationId: string | null }> {
+  if (!confirm) return { ok: false, failure: "unwired", operationId: null };
+  const operationId = newOperationId();
+  const frozen = deepFreeze(structuredClone(operation));
+  const request = describe(frozen, operationId);
+  return new Promise((resolve) => {
+    let settled = false;
+    const timer = setTimeout(() => settle("expired"), options.deadlineMs ?? CONFIRMATION_DEADLINE_MS);
+    function settle(result: OperatorConfirmation | "expired"): void {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(result === "approved" ? { ok: true, bound: { operationId, operation: frozen } } : { ok: false, failure: result, operationId });
+    }
+    Promise.resolve()
+      .then(() => confirm(request))
+      .then((result) => settle(result), () => settle("declined"));
+  });
+}
+
+/**
  * Show the confirmation and answer the request when it is not approved.
  * Returns true only when the operator approved; the caller then acts.
  */
@@ -377,6 +412,96 @@ export async function requireOperatorConfirmation(
   const failure = confirmationFailure(result);
   res.status(failure.status).json(failure.body);
   return false;
+}
+
+/** #532 B320: dialog titles for a delivery review (the extension-host test answers only these). */
+export const DELIVERY_REVIEW_TITLES = {
+  PASS: "Record a review PASS for this commit?",
+  VETO: "Record a review VETO for this commit?",
+} as const;
+
+/** #532 B320: one item a review PASS supersedes, as its dialog shows it. */
+export interface DeliveryReviewSuperseded {
+  kind: string;
+  id: number;
+  hash: string;
+  label: string;
+  verdict: string | null;
+  commitSha: string | null;
+  commitTrusted: boolean;
+  timestamp: string | null;
+  note: string | null;
+}
+
+/** #532 B320: what a review records, as the dialog shows it (deliveryReview.buildReviewPlan). */
+export interface DeliveryReviewFacts {
+  intent: { id: string; purpose: string };
+  verdict: "PASS" | "VETO";
+  commit: { sha: string; subject: string | null; tree: string; branch: string | null };
+  linked: Array<{ commitSha: string }>;
+  binding: { evidenceDigest: string; evidenceCount: number };
+  superseded: DeliveryReviewSuperseded[];
+  note: string;
+  reviewerDid: string;
+}
+
+/**
+ * #532 B320 (plan-b320 LD3): record a delivery review. Every value is server-side except the
+ * verdict, the commit choice and the note, which are labelled by where they came from ("as
+ * requested" from the Console or a command call, "your pick" from the command palette) and
+ * recorded exactly as shown. Each item a PASS supersedes is listed with its commit; only a sealed
+ * VETO's commit is trusted, so it is shown with its relation to the reviewed commit, and every other
+ * item's commit is "recorded, unverified".
+ */
+export function deliveryReviewRequest(
+  facts: DeliveryReviewFacts,
+  operationId: string,
+  source: "console" | "command-arguments" | "command-palette",
+): OperatorActionRequest {
+  const how = source === "command-palette" ? "your pick" : "as requested";
+  const lines = [
+    `Operation: ${operationId}`,
+    `Intent: ${sanitizeDialogText(facts.intent.purpose)} (${sanitizeDialogText(facts.intent.id, 60)})`,
+    `Verdict (${how}): ${facts.verdict}`,
+    `Commit (${how}): ${facts.commit.sha}`,
+    `Subject: ${facts.commit.subject === null ? "unknown (git could not read it)" : sanitizeDialogText(facts.commit.subject, 160)}`,
+    `Tree: ${facts.commit.tree}`,
+    `Branch: ${facts.commit.branch ? sanitizeDialogText(facts.commit.branch) : "none recorded"}`,
+  ];
+  if (facts.verdict === "PASS") {
+    const covered = facts.linked.slice(0, BATCH_LIST_LIMIT).map((l) => `- ${l.commitSha}`);
+    if (facts.linked.length > BATCH_LIST_LIMIT) covered.push(`- and ${facts.linked.length - BATCH_LIST_LIMIT} more`);
+    lines.push(`Covers every linked commit (${facts.linked.length}):`, ...covered);
+  }
+  lines.push(`Governance evidence: ${facts.binding.evidenceCount} ledger entr${facts.binding.evidenceCount === 1 ? "y" : "ies"}, digest ${facts.binding.evidenceDigest}`);
+  if (facts.superseded.length) {
+    lines.push("", `Supersedes (${facts.superseded.length}); this PASS clears exactly these and nothing else:`);
+    for (const s of facts.superseded.slice(0, BATCH_LIST_LIMIT)) {
+      const commit = !s.commitSha ? "commit unknown"
+        : s.commitTrusted ? `on ${s.commitSha} (${s.commitSha === facts.commit.sha ? "the reviewed commit" : "an ancestor of the reviewed commit"})`
+          : `commit ${s.commitSha} (recorded, unverified)`;
+      const what = s.kind === "veto" ? "VETO" : "unverifiable record";
+      lines.push(`- ${what}, ${s.kind} #${s.id} ${sanitizeDialogText(s.hash, 70)}, ${commit}${s.timestamp ? `, at ${sanitizeDialogText(s.timestamp, 40)}` : ""}${s.note ? `, note: ${sanitizeDialogText(s.note, 120)}` : ""}`);
+    }
+    if (facts.superseded.length > BATCH_LIST_LIMIT) lines.push(`- and ${facts.superseded.length - BATCH_LIST_LIMIT} more (all of them are recorded as superseded)`);
+  }
+  lines.push(
+    "",
+    `Reviewer: ${facts.reviewerDid}`,
+    `Note (${how}): ${facts.note || "(none)"}`,
+    "",
+    "This proves a person approved a VS Code dialog; it does not identify who.",
+    facts.verdict === "PASS"
+      ? "A PASS is current only while the linked commits, their trees and the governance evidence stay as shown; new evidence will need a fresh review. The receipt stays unavailable (#467)."
+      : "A VETO blocks this delivery until a later PASS on this commit or a descendant of it names it.",
+    "FailSafe records this review in its ledger and the intent history. Nothing leaves this machine.",
+  );
+  const footer = source === "console" ? LOOPBACK_FOOTER : source === "command-arguments" ? COMMAND_CALL_FOOTER : null;
+  return {
+    title: DELIVERY_REVIEW_TITLES[facts.verdict],
+    approveLabel: facts.verdict === "PASS" ? "Record PASS" : "Record VETO",
+    detail: footer ? [...lines, "", footer].join("\n") : lines.join("\n"),
+  };
 }
 
 /** #531 slice 2: the dialog title for an architecture supersession proposal. */

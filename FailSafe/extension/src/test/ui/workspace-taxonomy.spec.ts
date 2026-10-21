@@ -141,3 +141,35 @@ test('#548 — unmocked: the real route reports drift and never rewrites the fil
   await expect(block).toContainText('docs/roadmap/tracker-config.yaml');
   expect(fs.readFileSync(cfg, 'utf-8')).toBe(text);
 });
+
+// B331 (P1) — an unsaved edit survives a hub refresh, a sub-view switch and a top-level
+// tab switch in real Chromium, and Save then posts it.
+test('B331 — an unsaved edit survives hub.refresh and navigation; Save posts it', async ({ page }) => {
+  controller = await serveConsoleServerUI({ initialHub: { version: 'test', bootstrapState: {} } as never });
+  let posted: typeof FULL.config | null = null;
+  await page.route('**/api/v1/tracker/config', (r) => {
+    if (r.request().method() === 'POST') {
+      posted = r.request().postDataJSON();
+      return r.fulfill({ json: { ok: true, written: ['docs/roadmap/tracker-config.yaml'], fingerprint: 'f'.repeat(64) } });
+    }
+    return r.fulfill({ json: { ...FULL, fingerprint: 'e'.repeat(64) } });
+  });
+  await gotoTaxonomy(page, controller.url);
+  const name = () => page.locator('#workspace .cc-tax-section[data-kind="verticals"] .cc-tax-row').first().locator('[data-field="name"]');
+  await name().fill('Governance (unsaved)');
+  const hub = page.waitForResponse((res) => res.url().includes('/api/hub'));
+  controller.broadcast({ type: 'hub.refresh' });
+  await hub;
+  await expect(name()).toHaveValue('Governance (unsaved)');
+  await page.locator('#workspace .cc-pill[data-key="tracker"]').click();
+  await page.locator('#workspace .cc-pill[data-key="taxonomy"]').click();
+  await expect(page.locator('#workspace .cc-tax')).toBeVisible({ timeout: 10000 });
+  await expect(name()).toHaveValue('Governance (unsaved)');
+  await page.locator('.tab-btn[data-target="governance"]').click();
+  await page.locator('.tab-btn[data-target="workspace"]').click();
+  await page.locator('#workspace .cc-pill[data-key="taxonomy"]').click();
+  await expect(name()).toHaveValue('Governance (unsaved)');
+  await page.locator('#workspace .cc-tax-save').click();
+  await expect.poll(() => posted).not.toBeNull();
+  expect(posted!.verticals[0].name).toBe('Governance (unsaved)');
+});

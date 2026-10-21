@@ -34354,3 +34354,168 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `43ea8792c941455aeca516e1ec720e8d784fac03b5959615e595e20770763ea4`
 
 **Decision**: SESSION SEAL for plan-b311-b312-architecture-residuals.md (content hash is the audited plan, sha256 53899f86). Reality = Promise, with disclosures. Agents and operators see which architecture decisions govern the files an L3 decision or governed commit touches, without any delay to or block on that decision; registry rows show their relationships as checked links with status; and the repository's agent instructions now state the owner's taxonomy-authority rule. Disclosures: bounded damaged-ledger override for the 2026-10-20 hardening lanes (owner ruling 2026-10-20; #467 unresolved, normal governance not restored); plain git commits get no warning (B350) and the commit prompt matches porcelain paths as given (B353); the core link pattern stays quadratic on the validator and CLI paths (B351) and the index parse is one synchronous call (B354); review text does not render combining marks or Hangul fillers (B352); the GET route reads synchronously per request (B355); only the first workspace folder is checked and the L3 panel drops not-checked lines; an emitted directive keeps its old wording until the next save; the CONFIG_BANNER wording and the CLAUDE.md:3 enforcement overstatement are surfaced, not changed; FX946 (B325) is pre-existing; earlier seals are unedited. Next: push, PR checks, a merge pinned to the head. No release.
+
+---
+
+### Entry #848: GATE TRIBUNAL - plan-b330-b331-taxonomy-integrity (iteration 1) - VETO
+
+**Timestamp**: 2026-10-20T22:24:49Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-20T2220-024d06`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for the 2026-10-20 hardening lanes, owner ruling 2026-10-20, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-20T2220-024d06/audit-iter1.json`
+
+**Content Hash**: `acf44885d70bbe41cf7de716aaa9b0af45633b35b3f5bd0b201c9ec76210b0e8`
+**Previous Hash**: `43ea8792c941455aeca516e1ec720e8d784fac03b5959615e595e20770763ea4`
+**Chain Hash (Merkle seal)**: `2b2c4da669e5dc8fbd2b09289ad59242611edc7783fdc5e995c701968d3d878a`
+
+**Decision**: VETO on plan-b330-b331-taxonomy-integrity.md iteration 1 (sha256 a2f5b0e4), B330 workspace containment for taxonomy save writes and B331 unsaved-edit preservation. Fresh Option B architect-reviewer. Containment design sound. Blocking: the directive not-a-regular-file pre-check would silently change the T5o partial-save falsifier; the race rows swapped before the re-verify, so the post-open identity checks and their mutations were never reached; the cleanup unlinked by path and could delete a pre-existing file after a second swap. Should-fix: single-flight load, stable row ids, DOM sync before save, draft rebuilds, check order, error codes, ino 0n, path.relative, Windows case, top-level navigation. Next: revise and re-audit.
+
+---
+
+### Entry #849: GATE TRIBUNAL - plan-b330-b331-taxonomy-integrity (iteration 2) - VETO
+
+**Timestamp**: 2026-10-20T22:33:06Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-20T2220-024d06`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for the 2026-10-20 hardening lanes, owner ruling 2026-10-20, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-20T2220-024d06/audit-iter2.json`
+
+**Content Hash**: `9f1ed22c1238ab49625646032ba1005e22e9868c1fd37d25346f65b3e5a03cd3`
+**Previous Hash**: `2b2c4da669e5dc8fbd2b09289ad59242611edc7783fdc5e995c701968d3d878a`
+**Chain Hash (Merkle seal)**: `807d845e60e6189c682dd1f47f82ce950a627aaae2cfdccdfe6e86843ef09a92`
+
+**Decision**: VETO on plan-b330-b331-taxonomy-integrity.md iteration 2 (sha256 c456102d). Iteration 1 blockers closed for the config. Fresh Option B architect-reviewer. Blocking: the directive overwrite path, taken by every Save after the first, had no falsifier, and its only row could pass vacuously. Should-fix: generation-unique ids against a silent revert, live DOM sync before dirty decisions, echo mutations and rules, nlink on open, disclosures, unresolved-path, directive-phase error mapping, inputs disabled during a Save. Next: revise and re-audit (final iteration under the cap).
+
+---
+
+### Entry #850: GATE TRIBUNAL - plan-b330-b331-taxonomy-integrity (iteration 3) - PASS
+
+**Timestamp**: 2026-10-20T22:40:24Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-20T2220-024d06`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the 2026-10-20 hardening lanes, owner ruling 2026-10-20, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-20T2220-024d06/audit-iter3.json`
+
+**Content Hash**: `cd0fee2d117cd141a6b48e4263654da970661a48afc97f972adeb5d9a7f2a07e`
+**Previous Hash**: `807d845e60e6189c682dd1f47f82ce950a627aaae2cfdccdfe6e86843ef09a92`
+**Chain Hash (Merkle seal)**: `f682fd588852d9342e3609227b4b4568a4471180ed992c8d83f22228e41a6bca`
+
+**Decision**: PASS on plan-b330-b331-taxonomy-integrity.md iteration 3 (sha256 08b84fd0), the final iteration under the native escalation cap. Fresh Option B architect-reviewer. C10 and C10d split the directive create and overwrite paths, and only the identity check refuses C10d. Should-fix folded into implementation: a hard-linked directive row, corrected mutation lists, a combined M12, a Save timeout that re-enables controls, error-code mapping, echo set consumption, refetch failure and conflict clearing, focus preserved across repaints. Next: implement.
+
+---
+
+### Entry #851: IMPLEMENTATION - plan-b330-b331-taxonomy-integrity
+
+**Timestamp**: 2026-10-21T06:54:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-20T2220-024d06`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-20T2220-024d06/implement.json`
+
+**Content Hash**: `51f409fbd5f5270b8c149e1c2779d65d0b70280a1ff6fe67caf05cc9bbb42188`
+**Previous Hash**: `f682fd588852d9342e3609227b4b4568a4471180ed992c8d83f22228e41a6bca`
+**Chain Hash (Merkle seal)**: `d0bce5d3a48e67de290c51acf0d09439f3ee9072fabeb2d815e8910933e6eb7b`
+
+**Decision**: IMPLEMENTATION of plan-b330-b331-taxonomy-integrity.md iteration 3 on fix/b330-b331-taxonomy-integrity (from main b14c313a): fa2fe203 (red rows), 748c99fb (B330), d544c19b (B331), 03040e6d (docs). B330: both write targets of a taxonomy Save, docs/roadmap/tracker-config.yaml and the .failsafe/governance directive, are checked against the realpath of the workspace root before any read-for-write, mkdir or open, using the exported containment helper shared with the architecture bootstrap; each folder is re-verified immediately before its open; a create opens exclusively and an overwrite opens without truncation, and both check the realpath, file identity (non-zero inode) and a single link before writing; cleanup unlinks only a file whose identity matches; links at the targets and hard-linked targets are refused; a refusal writes nothing anywhere. B331: the Workspace > Taxonomy editor keeps a generation-scoped draft so hub refreshes, repaints and navigation never discard unsaved edits, a reverted edit is not saved, loads are single-flight and never applied over a dirty draft except by Reload, another window's save or a Save that finds the file changed raises a visible conflict, a Save times out and re-enables controls, and focus is preserved. The #548 fingerprint, exclusive create, request guard and directive-write-failed contracts hold. B330 and B331 done; B332 (residual windows, ENOSPC partial write) and B333 (stale programs.yaml status copy) filed. Bounded review review330 found one blocker, fixed.
+
+---
+
+### Entry #852: SESSION SEAL - plan-b330-b331-taxonomy-integrity
+
+**Timestamp**: 2026-10-21T06:54:01Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-20T2220-024d06`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-20T2220-024d06/substantiate.json`
+
+**Content Hash**: `08b84fd0647b1e0defa8ebe6f7e09de53e71882fa16f6487e94a5da67abd989b`
+**Previous Hash**: `d0bce5d3a48e67de290c51acf0d09439f3ee9072fabeb2d815e8910933e6eb7b`
+**Chain Hash (Merkle seal)**: `99e17907920d6db76724cc6c08514da7448c9f03f70f08b3a258e7aadd9de41c`
+
+**Decision**: SESSION SEAL for plan-b330-b331-taxonomy-integrity.md (content hash is the audited plan, sha256 08b84fd0). Reality = Promise, with disclosures. A taxonomy Save can no longer be redirected outside the workspace through linked folders, links or hard links, and a refused Save writes nothing anywhere; unsaved taxonomy edits survive ordinary Console activity and conflicts are visible, never silent. Disclosures: bounded damaged-ledger override for the 2026-10-20 hardening lanes (owner ruling 2026-10-20; #467 unresolved, normal governance not restored); residual race windows, an empty file left outside after a swap-back and a truncated config on a mid-write ENOSPC are recorded as B332; a direct disk edit while the editor is dirty is detected only at Save; filesystems without file identity are refused; Save still drops YAML comments and unknown top-level keys (B306); the stale programs.yaml status copy is filed as B333; an installed-VSIX taxonomy smoke is deferred to release qualification; FX946 (B325) is pre-existing; earlier seals are unedited. Next: push, PR checks, a merge pinned to the head. No release.
+
+---
+
+### Entry #853: GATE TRIBUNAL - plan-b320-delivery-review (iteration 2) - VETO
+
+**Timestamp**: 2026-10-20T22:34:20Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-20T2224-0c6d64`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for the 2026-10-20 hardening lanes, owner ruling 2026-10-20, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-20T2224-0c6d64/audit-iter1.json`
+
+**Content Hash**: `cffee0097d737e2d735f6a183a921e4b4560695f2a673996a96a623ab422444e`
+**Previous Hash**: `99e17907920d6db76724cc6c08514da7448c9f03f70f08b3a258e7aadd9de41c`
+**Chain Hash (Merkle seal)**: `6af79d58737ffeba097c332cd1da69eb11755ef3ed6fe83da82005d348cbbaa5`
+
+**Decision**: VETO on plan-b320-delivery-review.md iteration 2 (sha256 445d5534), #532 B320-B322: an operator-confirmed, auditable delivery review that makes Workspace Delivery completable. Fresh Option B architect-reviewer; the first counted verdict, because the audit of iteration 1 (sha256 d43e3e4c) was cancelled when the plan was revised and its late verdict is kept as void evidence (AUDIT_320-iter1-superseded.md). Blocking, with the addendum: a tampered, lost, regenerated-secret or rotated VETO record stopped blocking; reviews were read through a 200-row page that ordinary provenance traffic overflows, hiding VETOs and making a PASS unrecordable; supersession and coverage were not bound to commit ancestry; the live extension-host path could not seal under the live secret; the B322 retirement missed two trustedGit test rows. Next: revise and re-audit (final iteration under the cap).
+
+---
+
+### Entry #854: GATE TRIBUNAL - plan-b320-delivery-review (iteration 3) - PASS
+
+**Timestamp**: 2026-10-20T22:46:21Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-20T2224-0c6d64`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the 2026-10-20 hardening lanes, owner ruling 2026-10-20, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-20T2224-0c6d64/audit-iter2.json`
+
+**Content Hash**: `4bd78d96d2cac0d40923f65696d5f4aa6628a9a9540e4645f56fe1982febea19`
+**Previous Hash**: `6af79d58737ffeba097c332cd1da69eb11755ef3ed6fe83da82005d348cbbaa5`
+**Chain Hash (Merkle seal)**: `f72b539bf5714b7953a6b68c236f1f4f3bdbe62ce604fd88b7cfe1f32cda8376`
+
+**Decision**: PASS on plan-b320-delivery-review.md iteration 3 (sha256 c49d6313), the final iteration under the native escalation cap. Fresh Option B architect-reviewer. A VETO and any unverifiable review evidence block until a later valid PASS names them; reviews are read uncapped by event type; the reviewed commit must descend from every linked and superseded commit; a registered command records under the live secret behind the same modal; one bad-seal review row blocking every intent accepted as fail-closed if disclosed. Should-fix folded into implementation: global-block disclosure, orphan-VETO definition, non-JSON tolerant reads, command dialog footer and activation, ancestry for trusted commits only, a bounded continuity walk, merge-base exit mapping, exact extension-host counts, an awaiting-review summary, intent-decision disclosure, a single-writer test. Next: implement.
+
+---
+
+### Entry #855: IMPLEMENTATION - plan-b320-delivery-review
+
+**Timestamp**: 2026-10-21T07:29:06Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-20T2224-0c6d64`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-20T2224-0c6d64/implement.json`
+
+**Content Hash**: `c732a3589d5d37b6d39bdd147a947017f71010b7557a0b78b8afc6e79c4effeb`
+**Previous Hash**: `f72b539bf5714b7953a6b68c236f1f4f3bdbe62ce604fd88b7cfe1f32cda8376`
+**Chain Hash (Merkle seal)**: `d267fccd7a3765b6b7deb0739cf87ab8f08d2f0b988d59bddbceb55432e7abc2`
+
+**Decision**: IMPLEMENTATION of plan-b320-delivery-review.md iteration 3 on feat/b320-delivery-review (rebased onto main 44717224): a727bdf8 (tests), 246c465d (implementation), 54ac703e (B322 retirement), 6d010e12 (docs), 338bc45c (B346). B320/B321: an operator records PASS or VETO on one linked commit of the active intent only through a bound VS Code modal, from the Console route or the registered failsafe.delivery.recordReview command; the binding (intent and CREATED hash, commit, tree, branch, LINKED hash, evidence digest over the complete set, local overseer, authentication and operation id, covered commits, superseded items) is rebuilt under a lock after approval; the record is a sealed DELIVERY_REVIEWED ledger row, which is the scenario's evaluated edge, mirrored in the intent history. A PASS counts only as a valid sealed pair and is current only for the same commits, tree, evidence and age; a VETO, any unverifiable row or mirror, a bad-seal review row and any unexplained ledger gap block until a later valid PASS names them; the code step compares trees; Complete becomes reachable as evidence-complete-except-receipt, with the receipt unavailable while #467 holds. B322: the unused Sovereign Checkpoint Protocol is retired and its feature rows corrected. Residuals B340-B346 filed. The review is tamper evidence against file edits, not authentication.
+
+---
+
+### Entry #856: SESSION SEAL - plan-b320-delivery-review
+
+**Timestamp**: 2026-10-21T07:29:07Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-20T2224-0c6d64`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-20T2224-0c6d64/substantiate.json`
+
+**Content Hash**: `c49d6313a778b8a1d8c9dd917c9acbfc1dc0f5560afd8867c5be6f8498d007fd`
+**Previous Hash**: `d267fccd7a3765b6b7deb0739cf87ab8f08d2f0b988d59bddbceb55432e7abc2`
+**Chain Hash (Merkle seal)**: `f8d99756261fda4656dea324ce6f5232bab1307a81627e702c96501f1b5a9159`
+
+**Decision**: SESSION SEAL for plan-b320-delivery-review.md (content hash is the audited plan, sha256 c49d6313). Reality = Promise, with disclosures. Workspace Delivery can now be completed legitimately: an operator-confirmed review bound to the exact commit, tree and evidence is sealed in the FailSafe ledger, a rejection or any unverifiable review record blocks until a later valid PASS names it, and an approved intent alone never counts as a review. Disclosures: bounded damaged-ledger override for the 2026-10-20 hardening lanes (owner ruling 2026-10-20; #467 unresolved, normal governance not restored); the tests were written after the implementation and red evidence comes from a stubbed module and 52 killed mutations; the receipt stays unavailable while #467 holds and Complete is transient because a later save stales the PASS; the record is tamper evidence, not authentication, since any same-user process can read the ledger secret; deleting the newest rows with their mirrors is undetectable; one bad-seal review row blocks every intent until a PASS names it; the intent-decision VETO is still cleared by a status change; the enforce-mode block and unreachable Seal Intent remain an owner policy decision (B340), as does rework that does not descend from a vetoed commit (B344); FX946 (B325) is pre-existing; earlier seals are unedited. Next: push, PR checks, a merge pinned to the head. No release.

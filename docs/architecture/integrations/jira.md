@@ -30,7 +30,7 @@ The code calls the REST v2 issue resource `FailSafe/extension/src/integrations/j
 
 ## Privileges and scopes
 
-Credential: an Atlassian account email in settings and an API token in VS Code Secret Storage, sent as Basic authentication `FailSafe/extension/src/integrations/jira/jira-client.ts:40-41` (`Buffer.from(`); the token setting is deprecated and plain-text values are not read `FailSafe/extension/package.json:450-452` (`Plain-text settings are no longer read`).
+Credential: an Atlassian account email in settings and an API token in VS Code Secret Storage, sent as Basic authentication `FailSafe/extension/src/integrations/jira/jira-client.ts:40-41` (`Buffer.from(`); the token setting is deprecated and plain-text values are not read `FailSafe/extension/package.json:457-459` (`Plain-text settings are no longer read`).
 Scope: the token carries the Atlassian account's own permissions; FailSafe only issues one GET `FailSafe/extension/src/integrations/jira/jira-client.ts:92` (`method: 'GET'`).
 A user-level token is never sent to a base URL that workspace settings chose `FailSafe/extension/src/integrations/credentials/credentialGates.ts:125` (`ep.scope === 'workspace' && e.scope === 'user'`).
 The base URL must be https or nothing is sent `FailSafe/extension/src/integrations/jira/jira-client.ts:57` (`The Jira base URL must use https; nothing was sent.`).
@@ -79,7 +79,7 @@ The preview is an unsaved, untitled document `FailSafe/extension/src/extension/t
 
 Implemented: the intent's `externalRef` is `jira:<KEY>`, which links a draft to its issue `FailSafe/extension/src/integrations/tracker-import/tracker-intent-import.ts:78-79` (`export function externalRefFor(issue: TrackerIssue)`).
 Implemented: a re-import of a key whose earlier intent is sealed records `reimportOf` `FailSafe/extension/src/integrations/tracker-import/tracker-intent-import.ts:290` (`reimportOf: last.intentId`).
-Delivery (main only, not in v6.0.8): in Workspace > Delivery the issue step of an imported Jira intent is `recorded` from the content hash in its CREATED entry, never re-fetched `FailSafe/extension/src/governance/delivery/deliveryAssessment.ts:115` (`function issueStep(issue: DeliveryInputs['issue']): DeliveryStep {`), and the operator links the architecture documents and commits it delivered, each after a VS Code confirmation `FailSafe/extension/src/roadmap/routes/DeliveryRoute.ts:110` (`for (const action of ["link", "unlink"] as const) {`).
+Delivery (main only, not in v6.0.8): in Workspace > Delivery the issue step of an imported Jira intent is `recorded` from the content hash in its CREATED entry, never re-fetched `FailSafe/extension/src/governance/delivery/deliveryAssessment.ts:126` (`function issueStep(issue: DeliveryInputs['issue']): DeliveryStep {`), and the operator links the architecture documents and commits it delivered, each after a VS Code confirmation `FailSafe/extension/src/roadmap/routes/DeliveryRoute.ts:146` (`for (const action of ["link", "unlink"] as const) {`).
 Proposed (not built): the issue-to-receipt edge, specified in `docs/architecture/INTEGRATION_SCENARIOS.md` (unverified: no code exists).
 
 ## Customer UI and actions

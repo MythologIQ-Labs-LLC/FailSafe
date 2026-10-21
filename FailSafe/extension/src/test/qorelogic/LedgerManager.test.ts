@@ -1088,3 +1088,72 @@ suite('v6.0.7 LD9 ledger secret failures degrade to stub mode', () => {
     } finally { env.cleanup(); }
   });
 });
+
+// #532 B320 (plan-b320 LD4): the uncapped, tolerant sealed reads behind the delivery review.
+suite('#532 B320 sealed reads', () => {
+  let env: Env;
+  setup(() => { env = makeEnv(); });
+  teardown(() => env.cleanup());
+
+  test('getSealedEntriesByType is uncapped (300 rows), oldest first, each with its own seal result', async () => {
+    const mgr = await openLedger(env);
+    for (let i = 0; i < 300; i++) await mgr.appendEntry({ eventType: 'DELIVERY_REVIEWED', agentDid: 'did:t:r', payload: { n: i } });
+    await mgr.appendEntry({ eventType: 'AUDIT_PASS', agentDid: 'did:t:a' });
+    const rows = await mgr.getSealedEntriesByType('DELIVERY_REVIEWED');
+    assert.equal(rows.length, 300);
+    assert.deepEqual(rows.map((r) => (r.payload as { n: number }).n), Array.from({ length: 300 }, (_, i) => i));
+    assert.ok(rows.every((r) => r.seal.ok && r.seal.version === 'v3'));
+    const range = await mgr.getSealedRange(rows[298].row.id);
+    assert.deepEqual(range.map((r) => r.row.event_type), ['DELIVERY_REVIEWED', 'DELIVERY_REVIEWED', 'AUDIT_PASS']);
+    mgr.close();
+  });
+
+  test('a byte flip is reported as a failed seal and a non-JSON payload as payload-json, never thrown', async () => {
+    const mgr = await openLedger(env);
+    const a = await mgr.appendEntry({ eventType: 'DELIVERY_REVIEWED', agentDid: 'did:t:r', payload: { intentId: 'x', note: 'a' } });
+    const b = await mgr.appendEntry({ eventType: 'DELIVERY_REVIEWED', agentDid: 'did:t:r', payload: { intentId: 'x', note: 'b' } });
+    const db = mgr.getDatabase();
+    db.prepare(`UPDATE soa_ledger SET payload = replace(payload, '"note":"a"', '"note":"z"') WHERE id = ?`).run(a.id);
+    db.prepare('UPDATE soa_ledger SET payload = substr(payload, 2) WHERE id = ?').run(b.id);
+    const rows = await mgr.getSealedEntriesByType('DELIVERY_REVIEWED');
+    assert.deepEqual(rows.map((r) => [r.seal.ok, r.seal.code]), [[false, 'hash-mismatch'], [false, 'payload-json']]);
+    assert.equal(rows[1].payload, null);
+    const found = await mgr.findSealedEntriesContaining('"intentId":"x"');
+    assert.equal(found.length, 2, 'the tolerant prefilter still returns the row it cannot parse');
+    await assert.rejects(mgr.findEntriesContaining('intentId'), 'findEntriesContaining throws on a non-JSON payload');
+    mgr.close();
+  });
+
+  test('legacy v1/v2 rows report their own version (the delivery review requires v3)', async () => {
+    const legacy = makeEnv({ secret: GOLDEN.ledgerSecret });
+    await writeGoldenLedger(legacy.ledgerPath);
+    const g = await openLedger(legacy);
+    const versions = new Set((await g.getSealedRange(1)).filter((r) => r.seal.ok).map((r) => r.seal.version));
+    assert.ok(versions.has('v1') && versions.has('v2'), [...versions].join(','));
+    g.close(); legacy.cleanup();
+  });
+
+  test('every sealed read and getRotationHead throw when the ledger is not initialized (read as unavailable, never empty)', async () => {
+    const mgr = new LedgerManager(env.secrets as any, configFor(env.ledgerPath, env.root));
+    await assert.rejects(mgr.getSealedEntriesByType('DELIVERY_REVIEWED'));
+    await assert.rejects(mgr.getSealedRange(1));
+    await assert.rejects(mgr.findSealedEntriesContaining('x'));
+    assert.throws(() => mgr.getRotationHead());
+  });
+
+  test('rotationEvidence returns the retired head; getRotationHead is null without a rotation and once the retired file is gone', async () => {
+    const mgr = await openLedger(env);
+    await appendN(mgr, 3);
+    await mgr.flushAnchor();
+    assert.equal(mgr.getRotationHead(), null, 'a first genesis is not a rotation');
+    const headBefore = rawRows(mgr).pop()!;
+    const { retiredFile, genesisId } = await mgr.startNewLedger('test');
+    const head = mgr.getRotationHead();
+    assert.deepEqual(head && { genesisId: head.genesisId, retiredFile: head.retiredFile, headId: head.headId, headHash: head.headHash },
+      { genesisId, retiredFile, headId: headBefore.id, headHash: headBefore.entry_hash });
+    assert.equal(genesisId, headBefore.id + 1);
+    fs.rmSync(path.join(path.dirname(env.ledgerPath), retiredFile));
+    assert.equal(mgr.getRotationHead(), null);
+    mgr.close();
+  });
+});

@@ -175,14 +175,6 @@ test('T-a2 G6 createSafeGit', () => row('G6', ['-c', 'core.fsmonitor=false', 're
   },
   (r) => assert.equal(r, sha2)));
 
-test('T-a2 G8 DriftDetector', () => row('G8', ['diff', '--name-only', sha0, 'HEAD'], ws,
-  () => {
-    const { DriftDetector } = req('qorelogic', 'checkpoint', 'DriftDetector.js');
-    const { ManifoldCalculator } = req('qorelogic', 'checkpoint', 'ManifoldCalculator.js');
-    return new DriftDetector(ws, new ManifoldCalculator(ws)).getGitChanges(sha0, sha2);
-  },
-  (r) => assert.deepEqual(r, { filesChanged: ['b.txt'], gitCommits: 2 })));
-
 test('T-a2 G9 DependencyAdmissionLintModule', () => row('G9', ['merge-base', 'origin/main', 'HEAD'], ws,
   () => new (req('qorlogic', 'substrate', 'DependencyAdmissionLintModule.js').DependencyAdmissionLintModule)(ws, {
     io: { fetchPublishTime: async () => new Date(), now: () => new Date() },

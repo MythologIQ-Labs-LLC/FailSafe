@@ -21,6 +21,16 @@
 // committed-under title) links the commit it made; a test-side PASS shows as the intent decision
 // with review still missing; a VETO makes review failing and the delivery failing. Teardown also
 // returns to the original branch, deletes the governed branch and its file, and unsets hooksPath.
+//
+// plan-b320 (G4, the live positive path): G3 left an intent VETO, which a status change clears, so
+// G4 first moves the intent back to PULSE and asserts the decision is null. It re-links the
+// document, opens a terminal named "claude" and saves a workspace file, so the live ProvenanceTracker
+// records a PROVENANCE_RECORDED entry naming the intent under the live ledger secret. Then
+// failsafe.delivery.recordReview, called with arguments and confirmed through the real modal
+// confirmer (the stubbed dialog answers only the review PASS title), records a PASS on the governed
+// commit (which contains the other linked commit). The assessment reads
+// evidence-complete-except-receipt, the live ledger holds exactly 1 new DELIVERY_REVIEWED row for
+// this intent and the history exactly 1 REVIEWED line; a second save makes the PASS stale.
 
 import { strict as assert } from 'assert';
 import * as fs from 'fs';
@@ -28,7 +38,10 @@ import * as os from 'os';
 import * as path from 'path';
 import { spawnSync } from 'child_process';
 import * as vscode from 'vscode';
-import { ARCHITECTURE_BOOTSTRAP_TITLE, DELIVERY_LINK_TITLES, createOperatorConfirmer } from '../../extension/operatorConfirmation';
+import Database from 'better-sqlite3';
+import {
+  ARCHITECTURE_BOOTSTRAP_TITLE, DELIVERY_LINK_TITLES, DELIVERY_REVIEW_TITLES, createOperatorConfirmer,
+} from '../../extension/operatorConfirmation';
 import { defaultGitRunner } from '../../extension/governedCommit';
 import { runGovernedCommitFlow } from '../../extension/governedCommitFlow';
 import { governedCommitLinker } from '../../extension/governedCommitLink';
@@ -41,6 +54,8 @@ import {
 
 const BOOTSTRAP = 'failsafe.architecture.bootstrapIndex';
 const ASSESS = 'failsafe.delivery.assessActiveIntent';
+const RECORD_REVIEW = 'failsafe.delivery.recordReview';
+const EVIDENCE_FILE = 'notes/evidence.txt';
 const DOC = 'docs/architecture/RUNTIME.md';
 const INDEX = 'docs/ARCHITECTURE_INDEX.md';
 
@@ -64,6 +79,9 @@ suite('#532 delivery assessment (extension host, temp git workspace)', () => {
   let docBefore: Buffer | null = null;
   let branchBefore = '';
   let answerLink = false;
+  let answerReview = false;
+  let governedSha = '';
+  let terminal: vscode.Terminal | undefined;
   const GOVERNED_BRANCH = 'fix/organize-20261019120000';
   const GOVERNED_FILE = 'notes/governed.txt';
 
@@ -77,12 +95,13 @@ suite('#532 delivery assessment (extension host, temp git workspace)', () => {
     const deadline = Date.now() + 60000;
     for (;;) {
       const commands = await vscode.commands.getCommands(true);
-      if (commands.includes(BOOTSTRAP) && commands.includes(ASSESS)) break;
+      if (commands.includes(BOOTSTRAP) && commands.includes(ASSESS) && commands.includes(RECORD_REVIEW)) break;
       if (Date.now() > deadline) throw new Error(`${ASSESS} was never registered`);
       await new Promise((r) => setTimeout(r, 250));
     }
     (vscode.window as { showWarningMessage: unknown }).showWarningMessage = async (message: string, ...rest: unknown[]) => {
-      if (message !== ARCHITECTURE_BOOTSTRAP_TITLE && !(answerLink && message === DELIVERY_LINK_TITLES['committed-under'])) return undefined;
+      if (message !== ARCHITECTURE_BOOTSTRAP_TITLE && !(answerLink && message === DELIVERY_LINK_TITLES['committed-under'])
+        && !(answerReview && message === DELIVERY_REVIEW_TITLES.PASS)) return undefined;
       return rest.filter((x): x is string => typeof x === 'string')[0];
     };
     headBefore = git(root, 'rev-parse', 'HEAD');
@@ -107,7 +126,9 @@ suite('#532 delivery assessment (extension host, temp git workspace)', () => {
 
   suiteTeardown(() => {
     (vscode.window as { showWarningMessage: unknown }).showWarningMessage = original;
+    terminal?.dispose();
     if (!root) return;
+    fs.rmSync(path.join(root, ...EVIDENCE_FILE.split('/')), { force: true });
     if (docBefore) fs.writeFileSync(path.join(root, ...DOC.split('/')), docBefore);
     if (branchBefore && git(root, 'symbolic-ref', '--short', 'HEAD') !== branchBefore) git(root, 'checkout', '-q', branchBefore);
     if (headBefore) git(root, 'reset', '-q', '--mixed', headBefore);
@@ -191,6 +212,7 @@ suite('#532 delivery assessment (extension host, temp git workspace)', () => {
       fs.rmSync(hooks, { recursive: true, force: true });
     }
     assert.ok(commitSha, 'the commit is bound to this run');
+    governedSha = commitSha!;
     assert.equal(lines.length, 1, lines.join('\n'));
     assert.match(lines[0], /linked/);
     const view = await assess();
@@ -207,7 +229,7 @@ suite('#532 delivery assessment (extension host, temp git workspace)', () => {
     assert.equal(status(view, 'review'), 'missing');
     assert.equal(view.intent.decision?.status, 'PASS');
     assert.equal(view.assessment.overall, 'incomplete');
-    assert.equal(view.assessment.completeReachable, false);
+    assert.equal(view.assessment.completeReachable, true, 'plan-b320: derived; the live ledger and git are readable');
   });
 
   test('G3: a test-side VETO makes review failing and the delivery failing', async function () {
@@ -216,5 +238,70 @@ suite('#532 delivery assessment (extension host, temp git workspace)', () => {
     const view = await assess();
     assert.equal(status(view, 'review'), 'failing');
     assert.equal(view.assessment.overall, 'failing');
+  });
+
+  const ledgerFile = (): string => path.join(root, '.failsafe', 'ledger', 'soa_ledger.db');
+  function reviewRowsFor(id: string): number {
+    const db = new Database(ledgerFile(), { readonly: true, fileMustExist: true });
+    try {
+      return (db.prepare("SELECT count(*) AS c FROM soa_ledger WHERE event_type = 'DELIVERY_REVIEWED' AND instr(payload, ?) > 0").get(id) as { c: number }).c;
+    } finally { db.close(); }
+  }
+  const reviewedLines = (id: string): number => fs.readFileSync(path.join(root, '.failsafe', 'manifest', 'intent_history.jsonl'), 'utf8')
+    .trim().split('\n').filter((l) => { const e = JSON.parse(l); return e.event === 'REVIEWED' && e.intentId === id; }).length;
+  async function saveEvidence(text: string): Promise<void> {
+    const uri = vscode.Uri.file(path.join(root, ...EVIDENCE_FILE.split('/')));
+    const doc = await vscode.workspace.openTextDocument(uri);
+    const edit = new vscode.WorkspaceEdit();
+    edit.insert(uri, new vscode.Position(doc.lineCount, 0), text);
+    assert.ok(await vscode.workspace.applyEdit(edit));
+    assert.ok(await doc.save(), 'the edited document saved');
+  }
+  async function untilGovernance(count: number): Promise<Found> {
+    const deadline = Date.now() + 15000;
+    for (;;) {
+      const view = await assess();
+      const gov = view.assessment.steps.find((s) => s.key === 'governance')!;
+      if (gov.status === 'recorded' && gov.records.length >= count) return view;
+      if (Date.now() > deadline) throw new Error(`no live provenance entry for the intent: ${JSON.stringify(gov)}`);
+      await new Promise((r) => setTimeout(r, 250));
+    }
+  }
+
+  test('B320 G4: the live positive path, through the registered command under the live ledger secret, to evidence complete except receipt', async function () {
+    this.timeout(120000);
+    const service = ctx.intents as IntentService;
+    // G3 left an intent VETO; an intent decision is cleared by a status change (a review VETO is not).
+    await service.updateStatus('PULSE', 'user');
+    const rec = await service.getIntentRecord(intentId);
+    assert.equal(rec.integrity === 'valid' && rec.record ? rec.record.decision : 'x', null, 'the intent decision is cleared');
+    await edge('link', 'implements', rowId);
+    fs.mkdirSync(path.join(root, 'notes'), { recursive: true });
+    fs.writeFileSync(path.join(root, ...EVIDENCE_FILE.split('/')), 'evidence\n');
+    terminal = vscode.window.createTerminal({ name: 'claude' });
+    await saveEvidence('first save\n');
+    let view = await untilGovernance(1);
+    assert.equal(view.assessment.overall, 'awaiting-review', JSON.stringify(view.assessment.steps.map((s) => [s.key, s.status])));
+    assert.ok(governedSha, 'G1 bound the governed commit');
+    const rowsBefore = reviewRowsFor(intentId);
+    const linesBefore = reviewedLines(intentId);
+    answerReview = true;
+    let result: { outcome: string; detail: string };
+    try {
+      result = await vscode.commands.executeCommand(RECORD_REVIEW, { verdict: 'PASS', commitSha: governedSha, note: 'extension host' }) as typeof result;
+    } finally { answerReview = false; }
+    assert.equal(result.outcome, 'recorded', result.detail);
+    assert.equal(reviewRowsFor(intentId) - rowsBefore, 1, 'exactly 1 new DELIVERY_REVIEWED row');
+    assert.equal(reviewedLines(intentId) - linesBefore, 1, 'exactly 1 new REVIEWED mirror');
+    view = await assess();
+    assert.equal(status(view, 'review'), 'passing', view.assessment.steps.find((s) => s.key === 'review')!.reason);
+    assert.equal(view.assessment.overall, 'evidence-complete-except-receipt');
+    assert.equal(status(view, 'receipt'), 'unavailable');
+    // Complete is transient: a later save is new evidence, so the PASS is no longer current.
+    const recorded = view.assessment.steps.find((s) => s.key === 'governance')!.records.length;
+    await saveEvidence('second save\n');
+    view = await untilGovernance(recorded + 1);
+    assert.equal(status(view, 'review'), 'stale');
+    assert.equal(view.assessment.overall, 'awaiting-review');
   });
 });

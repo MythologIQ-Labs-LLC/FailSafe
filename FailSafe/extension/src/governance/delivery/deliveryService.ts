@@ -14,6 +14,9 @@
  *
  * plan-532c: every link records who made it (`via`: `workspace-delivery` or `governed-commit`,
  * LD6); the view carries the accepted intent's CREATED entry and the intent decision (LD2/LD5).
+ *
+ * plan-b320: the review step reads the operator-confirmed delivery reviews (deliveryReview.ts), and
+ * the code step compares each linked commit's resolved tree with the tree recorded at link time.
  */
 
 import * as fs from 'fs';
@@ -26,12 +29,14 @@ import { sha256, sourceShaOf } from '../architecture/ArchitectureIndexBootstrap'
 import type {
   EdgeWriteResult, IntentEdge, IntentListing, IntentRecord, IntentRecordLookup, LinkEdgeParams,
 } from '../IntentService';
-import { IntentEdgeKindSchema, IntentIdSchema, type Intent, type IntentEdgeKind, type IntentStatus } from '../types/IntentTypes';
+import {
+  IntentEdgeKindSchema, IntentIdSchema, type Intent, type IntentEdgeKind, type IntentReviewDetails, type IntentStatus,
+} from '../types/IntentTypes';
 import {
   assessDelivery, type ArchitectureEdgeCheck, type CodeEdgeCheck, type DeliveryAssessment, type EdgeChecks,
 } from './deliveryAssessment';
-import { findGovernanceEvidence } from './deliveryEvidence';
 import { changedFiles, COMMIT_NAME_RE, listRecentCommits, resolveCommit, type RecentCommits } from './deliveryGit';
+import { readIntentReviews } from './deliveryReview';
 
 /** The slice of IntentService the delivery functions use. */
 export interface DeliveryIntents {
@@ -40,15 +45,19 @@ export interface DeliveryIntents {
   getIntentRecord(intentId: string): Promise<IntentRecordLookup>;
   linkEdge(params: LinkEdgeParams): Promise<EdgeWriteResult>;
   unlinkEdge(params: Omit<LinkEdgeParams, 'provenance'>): Promise<EdgeWriteResult>;
+  /** plan-b320 LD5: the REVIEWED mirror; called only by recordDeliveryReview. */
+  recordReview(params: { intentId: string; actor: string; details: IntentReviewDetails }): Promise<EdgeWriteResult>;
 }
 
 export interface DeliveryContext {
   workspaceRoot: string;
   intents: DeliveryIntents;
-  /** The FailSafe LedgerManager (or null); read only through findEntriesContaining. */
+  /** The FailSafe LedgerManager (or null); read through its sealed reads (deliveryEvidence, deliveryReview). */
   ledger: unknown;
   git?: ArchitectureGit;
   indexPathSetting?: string;
+  /** The clock a review's age is measured against (tests inject it). */
+  now?: () => number;
 }
 
 export interface CandidateRow {
@@ -298,7 +307,13 @@ function checkCode(ctx: DeliveryContext, edges: IntentEdge[]): EdgeChecks<CodeEd
     const resolved = resolveCommit(ctx.workspaceRoot, e.target, ctx.git);
     if (resolved.state === 'unavailable') return { state: 'unavailable', reason: `Git cannot read this repository: ${resolved.detail}` };
     if (resolved.state === 'missing') { checks.push({ ...base, status: 'missing', reason: resolved.reason }); continue; }
-    checks.push({ ...base, status: 'recorded', files: changedFiles(ctx.workspaceRoot, e.target, ctx.git) });
+    const files = changedFiles(ctx.workspaceRoot, e.target, ctx.git);
+    // plan-b320 LD8: a commit name that now resolves to another tree (git replace, a rewritten object store) is not the commit that was linked.
+    if (resolved.tree !== base.tree) {
+      checks.push({ ...base, status: 'stale', currentTree: resolved.tree, reason: 'the commit now resolves to a different tree', files });
+      continue;
+    }
+    checks.push({ ...base, status: 'recorded', files });
   }
   return { state: 'checked', edges: checks };
 }
@@ -317,13 +332,15 @@ export async function assessIntentDelivery(ctx: DeliveryContext, intentId: strin
   if (!record) return { integrity: 'valid', found: false };
   const implementsEdges = record.edges.filter((e) => e.edge === 'implements');
   const commitEdges = record.edges.filter((e) => e.edge === 'committed-under');
+  const reviews = await readIntentReviews(ctx, record, ctx.now ? ctx.now() : Date.now());
   const assessment = assessDelivery({
     intentId,
     issue: { provenance: createdProvenance(record), createdEntryHash: record.created?.entryHash ?? null },
     architecture: checkArchitecture(ctx, implementsEdges),
     code: checkCode(ctx, commitEdges),
-    governance: await findGovernanceEvidence(ctx.ledger, intentId),
+    governance: reviews.evidence,
     decision: record.decision,
+    review: reviews.assessment,
   });
   const i = record.intent;
   return {

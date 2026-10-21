@@ -168,18 +168,30 @@ export interface BootstrapDeps {
   now?: () => Date;
 }
 
-/** Create the target's folder only if its real path stays inside the real workspace root. */
-function preparedFolder(rootReal: string, target: string): string | null {
-  const folder = path.dirname(target);
+/** Where `folder`'s nearest existing ancestor really is: inside the real workspace root,
+ *  outside it, or unresolvable (nothing exists up to the volume root, or its realpath
+ *  fails: ELOOP, a dangling link). Read-only. Shared with the tracker config route (B330). */
+export function existingAncestorInside(rootReal: string, folder: string): "inside" | "outside" | "unresolved" {
   let probe = folder;
   for (;;) {
     try { fs.lstatSync(probe); break; } catch { /* keep climbing */ }
     const up = path.dirname(probe);
-    if (up === probe) return null;
+    if (up === probe) return "unresolved";
     probe = up;
   }
   try {
-    if (!isInside(rootReal, fs.realpathSync.native(probe))) return null;
+    return isInside(rootReal, fs.realpathSync.native(probe)) ? "inside" : "outside";
+  } catch {
+    return "unresolved";
+  }
+}
+
+/** Create the target's folder only if its real path stays inside the real workspace root;
+ *  answers the folder's real path, or null. Shared with the tracker config route (B330). */
+export function preparedFolder(rootReal: string, target: string): string | null {
+  const folder = path.dirname(target);
+  if (existingAncestorInside(rootReal, folder) !== "inside") return null;
+  try {
     fs.mkdirSync(folder, { recursive: true });
     const real = fs.realpathSync.native(folder);
     return isInside(rootReal, real) ? real : null;

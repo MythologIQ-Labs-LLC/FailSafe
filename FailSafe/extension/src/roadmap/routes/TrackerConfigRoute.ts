@@ -5,6 +5,9 @@
 // #548: both answers carry `drift` — where each declared vertical's functionality
 // differs from the Console navigation (CONSOLE_VERTICALS). It is a report only: GET
 // never writes, normalizes or re-serializes the operator's file.
+// B330: both targets are built from the real workspace root and pre-checked before any
+// read, mkdir or write (trackerConfigWrite.ts); nothing is ever written, created or
+// truncated outside the workspace through a linked folder, a linked or hard-linked target.
 
 import express, { Request, Response } from "express";
 import * as crypto from "crypto";
@@ -20,44 +23,32 @@ import {
   buildTaxonomyDirective, lintConfig, type TrackerConfig,
 } from "../tracker/tracker-config";
 import { computeTaxonomyDrift, type TaxonomyDrift } from "../tracker/taxonomy-drift";
+import { checkWriteTarget, prepareTargetFolder, writeContained, type TargetCheck, type TargetCode } from "./trackerConfigWrite";
 
 const CONFIG_RELPATH = "docs/roadmap/tracker-config.yaml";
 const DIRECTIVE_RELPATH = ".failsafe/governance/tracker-taxonomy.directive.md";
 
 type ConfigFile =
-  | { state: "absent" }
-  | { state: "present"; bytes: Buffer }
-  | { state: "refused"; error: string };
+  | { state: "absent"; check: Extract<TargetCheck, { ok: true }> }
+  | { state: "present"; bytes: Buffer; check: Extract<TargetCheck, { ok: true }> }
+  | { state: "refused"; code: TargetCode | "unreadable"; error: string };
 
-/** #548: what is at the config path, without following a link. Absent only when lstat
- *  says ENOENT/ENOTDIR AND the nearest existing ancestor is a folder (Windows reports
- *  ENOENT under a regular file, so the ancestor is checked on every OS). A link at the
- *  path, a non-folder ancestor or a read failure is refused, never absent, so neither
- *  GET nor POST falls back to programs.yaml or writes through it. */
-function readConfigFile(file: string, root: string): ConfigFile {
-  let st: fs.Stats;
-  try { st = fs.lstatSync(file); } catch (err) {
-    const code = (err as NodeJS.ErrnoException)?.code;
-    if (code !== "ENOENT" && code !== "ENOTDIR") return { state: "refused", error: `${CONFIG_RELPATH} exists but could not be read` };
-    return ancestorBlocks(file, root) ?? { state: "absent" };
-  }
-  if (st.isSymbolicLink()) return { state: "refused", error: `${CONFIG_RELPATH} is a symbolic link; FailSafe does not follow it` };
-  try { return { state: "present", bytes: fs.readFileSync(file) }; } catch {
-    return { state: "refused", error: `${CONFIG_RELPATH} exists but could not be read` };
+/** #548 + B330: what is at the config path. The pre-check (checkWriteTarget) refuses a
+ *  folder that resolves outside the real root, a non-folder ancestor, a link at the path,
+ *  a non-file, a hard-linked file and a file with no identity; neither GET nor POST then
+ *  falls back to programs.yaml or reads or writes through it. */
+function readConfigFile(file: string, rootReal: string): ConfigFile {
+  const check = checkWriteTarget(rootReal, file, "config");
+  if (!check.ok) return { state: "refused", code: check.code, error: check.message };
+  if (!check.present) return { state: "absent", check };
+  try { return { state: "present", bytes: fs.readFileSync(file), check }; } catch {
+    return { state: "refused", code: "unreadable", error: `${CONFIG_RELPATH} exists but could not be read` };
   }
 }
 
-/** The nearest existing ancestor of an absent file must be a folder (or a link, B330). */
-function ancestorBlocks(file: string, root: string): ConfigFile | undefined {
-  for (let dir = path.dirname(file); ; dir = path.dirname(dir)) {
-    let st: fs.Stats | undefined;
-    try { st = fs.lstatSync(dir); } catch { /* keep walking up */ }
-    if (st) {
-      if (st.isDirectory() || st.isSymbolicLink()) return undefined;
-      return { state: "refused", error: `${path.relative(root, dir).split(path.sep).join("/")} is not a folder` };
-    }
-    if (dir === root || path.dirname(dir) === dir) return undefined;
-  }
+/** The real workspace root, or null when it cannot be resolved. */
+function realRoot(root: string): string | null {
+  try { return fs.realpathSync.native(root); } catch { return null; }
 }
 
 /** Optimistic-concurrency fingerprint: sha256 of the file's bytes, or null when absent. */
@@ -76,9 +67,10 @@ export function setupTrackerConfigRoutes(
   app: express.Application,
   deps: ApiRouteDeps,
 ): void {
-  const configPath = () => path.join(deps.workspaceRoot, "docs", "roadmap", "tracker-config.yaml");
-  const manifestPath = () => path.join(deps.workspaceRoot, "docs", "roadmap", "programs.yaml");
-  const directivePath = () => path.join(deps.workspaceRoot, ".failsafe", "governance", "tracker-taxonomy.directive.md");
+  // B330: targets are built from the REAL workspace root.
+  const configPath = (rootReal: string) => path.join(rootReal, "docs", "roadmap", "tracker-config.yaml");
+  const manifestPath = (rootReal: string) => path.join(rootReal, "docs", "roadmap", "programs.yaml");
+  const directivePath = (rootReal: string) => path.join(rootReal, ".failsafe", "governance", "tracker-taxonomy.directive.md");
 
   // GET — current operator taxonomy. tracker-config.yaml wins when it exists; absent,
   // derive from programs.yaml (+ FX887-proposed agents); absent, honest-empty.
@@ -91,7 +83,7 @@ export function setupTrackerConfigRoutes(
     if (deps.rejectIfRemote(req, res)) return;
     const chosen = readConfigSource();
     if ("error" in chosen) {
-      res.status(500).json({ error: chosen.error });
+      res.status(500).json({ error: chosen.error, code: chosen.code });
       return;
     }
     res.json({ config: chosen.config, source: chosen.source, fingerprint: chosen.fingerprint, ...guardedReport(chosen.config) });
@@ -99,18 +91,20 @@ export function setupTrackerConfigRoutes(
 
   function readConfigSource():
     | { config: TrackerConfig; source: "config" | "derived" | "empty"; fingerprint: string | null }
-    | { error: string } {
-    const file = readConfigFile(configPath(), deps.workspaceRoot);
-    if (file.state === "refused") return { error: file.error };
+    | { error: string; code: string } {
+    const rootReal = realRoot(deps.workspaceRoot);
+    if (!rootReal) return { error: "the workspace folder could not be resolved", code: "unresolved-path" };
+    const file = readConfigFile(configPath(rootReal), rootReal);
+    if (file.state === "refused") return { error: file.error, code: file.code };
     if (file.state === "present") {
       try {
         return { config: parseTrackerConfigStrict(file.bytes.toString("utf-8")), source: "config", fingerprint: fingerprintOf(file) };
       } catch {
-        return { error: `${CONFIG_RELPATH} exists but could not be parsed; fix the file, then reload the Console` };
+        return { error: `${CONFIG_RELPATH} exists but could not be parsed; fix the file, then reload the Console`, code: "unparseable" };
       }
     }
     try {
-      const manifest = (yaml.load(fs.readFileSync(manifestPath(), "utf-8")) || {}) as TrackerManifest;
+      const manifest = (yaml.load(fs.readFileSync(manifestPath(rootReal), "utf-8")) || {}) as TrackerManifest;
       return { config: deriveConfigFromManifest(manifest), source: "derived", fingerprint: null };
     } catch { /* no usable manifest either */ }
     return { config: { programs: [], verticals: [], agents: [] }, source: "empty", fingerprint: null };
@@ -131,9 +125,22 @@ export function setupTrackerConfigRoutes(
       res.status(400).json({ ok: false, error: "invalid-fingerprint" });
       return;
     }
-    const current = readConfigFile(configPath(), deps.workspaceRoot);
+    const rootReal = realRoot(deps.workspaceRoot);
+    if (!rootReal) {
+      res.status(500).json({ ok: false, error: "unresolved-path", detail: "the workspace folder could not be resolved" });
+      return;
+    }
+    const cfgP = configPath(rootReal);
+    const dirP = directivePath(rootReal);
+    // B330 (LD2): both targets are checked before anything is read, created or written.
+    const dirCheck = checkWriteTarget(rootReal, dirP, "directive");
+    const current = readConfigFile(cfgP, rootReal);
     if (current.state === "refused") {
-      res.status(500).json({ ok: false, error: current.error });
+      res.status(500).json({ ok: false, error: current.code, detail: current.error });
+      return;
+    }
+    if (!dirCheck.ok) {
+      res.status(500).json({ ok: false, error: dirCheck.code, detail: dirCheck.message });
       return;
     }
     if (fingerprintOf(current) !== expected) {
@@ -148,34 +155,35 @@ export function setupTrackerConfigRoutes(
     const written: string[] = [];
     const text = serializeTrackerConfig(config);
     const fingerprint = sha256(Buffer.from(text, "utf-8"));
-    try {
-      const cfgP = configPath();
-      fs.mkdirSync(path.dirname(cfgP), { recursive: true });
-      // N-d: expecting no file, create it exclusively — a file that appeared since the
-      // check (EEXIST) is a change on disk, never overwritten.
-      fs.writeFileSync(cfgP, text, { encoding: "utf-8", flag: expected === null ? "wx" : "w" });
-      written.push(CONFIG_RELPATH);
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException)?.code === "EEXIST") {
-        res.status(409).json({ ok: false, error: "changed-on-disk" });
-        return;
-      }
-      res.status(500).json({ ok: false, error: err instanceof Error ? err.message : String(err) });
+    // LD3 (a): both folders are prepared (realpath checked before and after mkdir) before
+    // the config is opened; a folder that does not stay inside writes nothing.
+    const cfgFolder = prepareTargetFolder(rootReal, cfgP);
+    const dirFolder = cfgFolder ? prepareTargetFolder(rootReal, dirP) : null;
+    if (!cfgFolder || !dirFolder) {
+    const folderName = !cfgFolder ? "docs/roadmap" : ".failsafe/governance";
+      res.status(500).json({ ok: false, error: "outside-workspace", detail: `${folderName} does not stay inside the workspace` });
       return;
     }
-    try {
-      const dirP = directivePath();
-      fs.mkdirSync(path.dirname(dirP), { recursive: true });
-      fs.writeFileSync(dirP, buildTaxonomyDirective(config, { at: new Date().toISOString() }), "utf-8");
-      written.push(DIRECTIVE_RELPATH);
-    } catch (err) {
-      // N-e: the taxonomy WAS written; return its new fingerprint so the editor adopts
-      // it (otherwise its next Save would be a false 409).
-      deps.broadcast({ type: "tracker.config.updated", payload: { written } });
-      res.status(500).json({ ok: false, error: "directive-write-failed", detail: err instanceof Error ? err.message : String(err), written, fingerprint });
+    // LD3 (b)-(d), config phase: a race (EEXIST, a folder or file changed, an identity or
+    // link-count mismatch) is 409 changed-on-disk; any other I/O error is 500.
+    const cfgWrite = writeContained(rootReal, cfgP, Buffer.from(text, "utf-8"), current.check, cfgFolder);
+    if (!cfgWrite.ok) {
+      if (cfgWrite.race) res.status(409).json({ ok: false, error: "changed-on-disk", detail: cfgWrite.detail });
+      else res.status(500).json({ ok: false, error: "write-failed", detail: cfgWrite.detail });
       return;
     }
-    deps.broadcast({ type: "tracker.config.updated", payload: { written } });
+    written.push(CONFIG_RELPATH);
+    // Directive phase: the taxonomy WAS written, so any failure is N-e directive-write-failed
+    // with the new fingerprint (the editor adopts it; otherwise its next Save is a false 409).
+    const directive = Buffer.from(buildTaxonomyDirective(config, { at: new Date().toISOString() }), "utf-8");
+    const dirWrite = writeContained(rootReal, dirP, directive, dirCheck, dirFolder);
+    if (!dirWrite.ok) {
+      deps.broadcast({ type: "tracker.config.updated", payload: { written, fingerprint } });
+      res.status(500).json({ ok: false, error: "directive-write-failed", detail: dirWrite.detail, written, fingerprint });
+      return;
+    }
+    written.push(DIRECTIVE_RELPATH);
+    deps.broadcast({ type: "tracker.config.updated", payload: { written, fingerprint } });
     res.json({ ok: true, written, fingerprint, ...guardedReport(config) });
   });
 }

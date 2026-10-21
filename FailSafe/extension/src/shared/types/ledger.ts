@@ -40,7 +40,9 @@ export type LedgerEventType =
   | "PROVENANCE_RECORDED" // AI authorship attribution recorded
   // Marketplace (v4.7.0)
   | "MARKETPLACE_INSTALL"   // Agent installed from marketplace
-  | "MARKETPLACE_UNINSTALL"; // Agent uninstalled from marketplace
+  | "MARKETPLACE_UNINSTALL" // Agent uninstalled from marketplace
+  // Workspace Delivery (#532 B320/B321)
+  | "DELIVERY_REVIEWED"; // Operator-confirmed review verdict on one linked commit of the active intent
 
 export interface LedgerEntry {
   id: number;

@@ -14,7 +14,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import {
-  changedFiles, currentBranch, DELIVERY_GIT_SUBCOMMANDS, listRecentCommits, resolveCommit,
+  changedFiles, commitSubject, currentBranch, DELIVERY_GIT_SUBCOMMANDS, isAncestor, listRecentCommits, resolveCommit,
 } from '../../../governance/delivery/deliveryGit';
 import { makeArchitectureGit, type ArchitectureGit, type GitOutcome } from '../../../governance/architecture/ArchitectureIndexDiscovery';
 import { TrustedGitUnavailable } from '../../../shared/git/trustedGit';
@@ -181,5 +181,37 @@ suite('deliveryGit (#532 LD4)', () => {
       assert.ok(Number(s.opts.timeout) > 0);
       assert.ok(Number(s.opts.maxBuffer) > 0);
     }
+  });
+});
+
+// #532 B320 (plan-b320 LD2/LD6, audit should-fix 7): merge-base --is-ancestor and the commit subject.
+suite('deliveryGit ancestry (#532 B320)', () => {
+  teardown(() => { for (const d of made.splice(0)) removeTempTree(d); });
+
+  test('exit 0 is an ancestor, exit 1 is not, any other exit is unavailable; equal names need no git call', () => {
+    const root = repo();
+    commit(root, 'a');
+    const a = git(root, 'rev-parse', 'HEAD');
+    commit(root, 'b <subject>');
+    const b = git(root, 'rev-parse', 'HEAD');
+    const real = makeArchitectureGit();
+    const calls: string[][] = [];
+    const rec: ArchitectureGit = (r, args) => { calls.push([...args]); return real(r, args); };
+    assert.equal(isAncestor(root, a, b, rec), 'ancestor');
+    assert.equal(isAncestor(root, b, a, rec), 'not-ancestor');
+    assert.deepEqual(calls[0], ['merge-base', '--is-ancestor', '--end-of-options', a, b]);
+    calls.length = 0;
+    assert.equal(isAncestor(root, a, a, rec), 'ancestor');
+    assert.equal(calls.length, 0, 'equal names: no git call');
+    assert.equal(isAncestor(root, 'HEAD', b, rec), 'unavailable');
+    assert.equal(isAncestor(root, '--output=x', b, rec), 'unavailable');
+    assert.equal(calls.length, 0, 'a name that is not a full object name never reaches git');
+    assert.equal(isAncestor(root, 'e'.repeat(40), b, rec), 'unavailable', 'a bad object exits 128: unavailable, never "not an ancestor"');
+    const exit = (status: number): ArchitectureGit => () => ({ kind: 'exit', status, stderr: '' } as GitOutcome);
+    assert.equal(isAncestor(root, a, b, exit(1)), 'not-ancestor');
+    assert.equal(isAncestor(root, a, b, exit(2)), 'unavailable');
+    assert.equal(isAncestor(root, a, b, () => ({ kind: 'unavailable', detail: 'x' })), 'unavailable');
+    assert.equal(commitSubject(root, b, real), 'b <subject>');
+    assert.equal(commitSubject(root, 'HEAD', real), null);
   });
 });

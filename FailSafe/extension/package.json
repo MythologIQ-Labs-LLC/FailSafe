@@ -77,7 +77,8 @@
     "onCommand:failsafe.agentAudit.run",
     "onCommand:failsafe.openhands.observe",
     "onCommand:failsafe.architecture.bootstrapIndex",
-    "onCommand:failsafe.delivery.assessActiveIntent"
+    "onCommand:failsafe.delivery.assessActiveIntent",
+    "onCommand:failsafe.delivery.recordReview"
   ],
   "main": "./dist/extension/main.js",
   "contributes": {
@@ -222,6 +223,10 @@
       {
         "command": "failsafe.delivery.assessActiveIntent",
         "title": "FailSafe: Assess Delivery of the Active Intent"
+      },
+      {
+        "command": "failsafe.delivery.recordReview",
+        "title": "FailSafe: Record a Delivery Review"
       },
       {
         "command": "failsafe.sentinel.forgetLlmApprovals",
