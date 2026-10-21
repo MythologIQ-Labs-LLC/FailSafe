@@ -47,6 +47,7 @@ import type { IntentReviewMirror, IntentRecord } from '../IntentService';
 import {
   IntentIdSchema, IntentReviewDetailsSchema, ReviewCommitRefSchema, ReviewEvaluatesSchema, ReviewSupersededSchema,
   ReviewVerdictSchema, type IntentReviewDetails, type ReviewBlockingKind, type ReviewSuperseded, type ReviewVerdict,
+  type ReworkEntry,
 } from '../types/IntentTypes';
 import type { RotationHead, SealedLedgerRow } from '../../qorelogic/ledger/LedgerManager';
 import { describeOperatorAuthentication } from '../../shared/types/operatorAuthentication';
@@ -64,6 +65,12 @@ export const REVIEW_MODAL_METHOD = 'vscode-modal-confirmation';
 /** 30 days: the scenarios' proposed staleness age (INTEGRATION_SCENARIOS.md), inclusive. */
 export const REVIEW_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 export const REVIEW_NOTE_LIMIT = 500;
+/** #532 B344 (plan-b344 LD2/LD5): an amended rework over this many paths on either side cannot be shown in full. */
+export const REWORK_PATH_LIMIT = 50;
+/** A path longer than this is not shown, so it is refused. */
+export const REWORK_PATH_CHARS = 4096;
+/** The rework section of a confirmation dialog above this many characters is refused. */
+export const REWORK_DIALOG_LIMIT = 8000;
 export const REVIEW_CHANNELS = {
   console: 'console:/api/actions/delivery/review',
   command: 'command:failsafe.delivery.recordReview',
@@ -222,6 +229,8 @@ export interface ReviewRecordView {
   operationId: string;
   mirrorEntryHash: string | null;
   historyPosition: number;
+  /** #532 B344: the VETOs this PASS supersedes by a declared rework (absent when none). */
+  reworks?: ReworkEntry[];
 }
 
 export interface PassCurrency {
@@ -258,7 +267,7 @@ export type ReviewAssessment =
   | {
     state: 'checked';
     blocking: BlockingItem[];
-    cleared: Array<BlockingItem & { clearedBy: string }>;
+    cleared: Array<BlockingItem & { clearedBy: string; clearedNote?: string }>;
     reviews: ReviewRecordView[];
     latestPass: PassCurrency | null;
   };
@@ -552,11 +561,19 @@ export async function readIntentReviews(ctx: DeliveryContext, record: IntentReco
 
 // ---------------------------------------------------------------- building and recording a review
 
+/** #532 B344: the operator's declaration that a linked commit is the rework of a VETO. */
+export interface ReworkDeclaration {
+  vetoEntryId: number;
+  reworkCommit: string;
+}
+
 export interface ReviewRequest {
   intentId: string;
   verdict: ReviewVerdict;
   commitSha: string;
   note: string;
+  /** #532 B344: declared reworks; without them the ancestry rule applies unchanged. */
+  reworks?: ReworkDeclaration[];
 }
 
 const RequestSchema = z.object({
@@ -586,9 +603,20 @@ export interface ReviewPlan {
   /** The note as the dialog shows it and the row records it. */
   note: string;
   reviewerDid: string;
+  /** #532 B344: each VETO superseded by a declared, verified rework (shown first in the dialog). */
+  reworks: ReworkEntry[];
 }
 
-export type ReviewRefusal = { ok: false; status: number; error: string };
+/** #532 B344 (plan-b344 terms): the specific reason a review was refused. */
+export type RefusalCode =
+  | 'veto-not-ancestor'
+  | 'rework-unknown-veto' | 'rework-unnecessary' | 'rework-duplicate'
+  | 'rework-not-linked' | 'rework-not-in-history'
+  | 'rework-veto-missing' | 'rework-merge'
+  | 'rework-unrelated'
+  | 'rework-too-many-paths' | 'rework-path-unshowable' | 'rework-dialog-too-large';
+
+export type ReviewRefusal = { ok: false; status: number; error: string; code?: RefusalCode; veto?: { entryId: number; commitSha: string } };
 const refuse = (status: number, error: string): ReviewRefusal => ({ ok: false, status, error });
 
 /**
@@ -656,6 +684,7 @@ export async function buildReviewPlan(
       intent: { id: record.intent.id, purpose: record.intent.purpose }, verdict: req.verdict,
       commit: { sha: req.commitSha, subject: commitSubject(ctx.workspaceRoot, req.commitSha, ctx.git), tree: resolved.tree, branch: binding.evaluates.branch },
       linked: covers, binding, supersedes, superseded: blocking, note, reviewerDid: LOCAL_OVERSEER_DID,
+      reworks: [],
     },
   };
 }

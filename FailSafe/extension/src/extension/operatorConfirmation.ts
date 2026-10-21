@@ -17,6 +17,7 @@ import { randomUUID } from "crypto";
 import type { Response } from "express";
 import type { L3ApprovalRequest } from "../shared/types/l3-approval";
 import type { RollbackPlan } from "../governance/revert/types";
+import type { ReworkEntry } from "../governance/types/IntentTypes";
 
 export interface OperatorActionRequest {
   title: string;
@@ -453,6 +454,18 @@ export interface DeliveryReviewFacts {
   superseded: DeliveryReviewSuperseded[];
   note: string;
   reviewerDid: string;
+  /** #532 B344: VETOs superseded by a declared, verified rework. */
+  reworks?: ReworkEntry[];
+}
+
+/** RED STAGE STUB (plan-b344 LD5): no escaping yet. */
+export function escapeDialogPath(path: string): string {
+  return path;
+}
+
+/** RED STAGE STUB (plan-b344 LD5): no rework section yet. */
+export function reworkSectionLines(_reworks: ReworkEntry[]): string[] {
+  return [];
 }
 
 /**

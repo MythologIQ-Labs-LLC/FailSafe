@@ -7,8 +7,10 @@ import {
   createOperatorConfirmer, isConfirmationOpen, sanitizeDialogText, confirmationFailure,
   l3DecisionRequest, l3BatchRequest, ratifyRequest, rollbackRequest,
   hooksDisableRequest, panicStopRequest, LOOPBACK_FOOTER, REASON_LIMIT,
+  deliveryReviewRequest, escapeDialogPath, type DeliveryReviewFacts,
   type ConfirmationWindow, type OperatorActionRequest,
 } from '../../extension/operatorConfirmation';
+import type { ReworkEntry } from '../../governance/types/IntentTypes';
 import type { L3ApprovalRequest } from '../../shared/types/l3-approval';
 
 interface DialogCall { message: string; options: { modal: boolean; detail?: string }; items: string[]; }
@@ -163,5 +165,67 @@ suite('#514 operatorConfirmation (FX960)', () => {
     const detached = rollbackRequest('cp-1', {}, '', { ...PLAN, branch: null, targetSubject: 'x\u202Ey' });
     assert.ok(detached.detail.includes('Branch: none (detached HEAD)'));
     assert.ok(!detached.detail.includes('\u202E'), 'the subject is sanitized');
+  });
+});
+
+// #532 B344 (plan-b344 LD5, red-first): the rework section of the delivery-review dialog.
+suite('#532 B344 delivery review dialog: rework section', () => {
+  const V = 'b'.repeat(40);
+  const R = 'c'.repeat(40);
+  const P = 'a'.repeat(40);
+  const rework = (vetoEntryId: number, shared: Array<{ path: string; vetoStatus: 'A' | 'M' | 'D' | 'T'; reworkStatus: 'A' | 'M' | 'D' | 'T' }>,
+    onlyInVeto: Array<{ path: string; status: 'A' | 'M' | 'D' | 'T' }> = [], onlyInRework: Array<{ path: string; status: 'A' | 'M' | 'D' | 'T' }> = []): ReworkEntry => ({
+    vetoEntryId, vetoEntryHash: 'h'.repeat(64), vetoCommit: V, reworkCommit: R, relation: 'amended',
+    evidence: { vetoParent: P, reworkParent: P, vetoDiffId: '1'.repeat(64), reworkDiffId: '2'.repeat(64),
+      vetoPathCount: shared.length + onlyInVeto.length, reworkPathCount: shared.length + onlyInRework.length, shared, onlyInVeto, onlyInRework },
+  });
+  const item = (id: number, kind = 'veto') => ({
+    kind, id, hash: `h${id}`, label: `item ${id}`, verdict: kind === 'veto' ? 'VETO' : null, commitSha: kind === 'veto' ? V : null,
+    commitTrusted: kind === 'veto', timestamp: 't', note: null,
+  });
+  const facts = (superseded: ReturnType<typeof item>[], reworks: ReworkEntry[]): DeliveryReviewFacts => ({
+    intent: { id: '11111111-1111-4111-8111-111111111111', purpose: 'Deliver' }, verdict: 'PASS',
+    commit: { sha: R, subject: 'rework', tree: 'd'.repeat(40), branch: 'main' }, linked: [{ commitSha: R }],
+    binding: { evidenceDigest: 'e'.repeat(64), evidenceCount: 1 }, superseded, note: '', reviewerDid: 'did:myth:overseer:local', reworks,
+  });
+
+  test('D1: the rework section comes first, lists every path with its status, and escapes unsafe characters exactly', () => {
+    const r = rework(7,
+      [{ path: 'a\nb.ts', vetoStatus: 'M', reworkStatus: 'M' }, { path: '\u202Eevil.ts', vetoStatus: 'A', reworkStatus: 'M' }],
+      [{ path: 'x\\y.ts', status: 'D' }],
+      [{ path: 'z\u2028\u200D\u2029\u{E0041}.ts', status: 'A' }, { path: 'kind.ts', status: 'T' }]);
+    const d = deliveryReviewRequest(facts([item(7)], [r]), 'op_1', 'console').detail;
+    const rw = d.indexOf('Superseded by rework');
+    assert.ok(rw >= 0 && rw < d.indexOf('Supersedes ('), 'the rework section comes before the supersedes list');
+    for (const shown of ['M/M a\\u{000A}b.ts', 'A/M \\u{202E}evil.ts', 'D x\\\\y.ts', 'A z\\u{2028}\\u{200D}\\u{2029}\\u{E0041}.ts', 'T kind.ts']) {
+      assert.ok(d.includes(shown), `${JSON.stringify(shown)} in ${d}`);
+    }
+    assert.ok(!/[\u2028\u2029\u200D\u202E]|\u{E0041}/u.test(d), 'no raw unsafe character reaches the dialog');
+    assert.equal(escapeDialogPath('a\u{E0041}\\'), 'a\\u{E0041}\\\\');
+    assert.equal(escapeDialogPath('plain/path.ts'), 'plain/path.ts');
+    assert.ok(d.includes(`superseded by rework ${R}`) && d.includes('amended'));
+  });
+
+  test('D2: with 25 superseded items and the rework last, the rework section is complete; only the rest is under "and N more"', () => {
+    const items = [...Array.from({ length: 24 }, (_, i) => item(i + 1, 'unverifiable-row')), item(25)];
+    const d = deliveryReviewRequest(facts(items, [rework(25, [{ path: 'only.ts', vetoStatus: 'M', reworkStatus: 'M' }])]), 'op_2', 'console').detail;
+    const section = d.slice(d.indexOf('Superseded by rework'), d.indexOf('Supersedes ('));
+    assert.match(section, /VETO #25/);
+    assert.ok(section.includes('M/M only.ts'));
+    assert.match(d, /and 5 more/);
+  });
+
+  test('D2b: a reworked VETO in the legacy list says "superseded by rework", never "an ancestor"', () => {
+    const items = [item(1, 'unverifiable-row'), item(2, 'unverifiable-row'), item(3)];
+    const d = deliveryReviewRequest(facts(items, [rework(3, [{ path: 'a.ts', vetoStatus: 'M', reworkStatus: 'M' }])]), 'op_3', 'console').detail;
+    const legacy = d.slice(d.indexOf('Supersedes ('));
+    const line = legacy.split('\n').find((l) => l.includes('veto #3'))!;
+    assert.match(line, /superseded by rework/);
+    assert.doesNotMatch(line, /an ancestor of the reviewed commit/);
+  });
+
+  test('the VETO wording names declared rework', () => {
+    const d = deliveryReviewRequest({ ...facts([], []), verdict: 'VETO' }, 'op_4', 'console').detail;
+    assert.match(d, /a PASS on a declared rework that git shows is this commit amended or rebased/);
   });
 });

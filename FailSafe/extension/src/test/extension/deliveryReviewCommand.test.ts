@@ -21,7 +21,7 @@ import { assessIntentDelivery, prepareDeliveryEdge, writeDeliveryEdge, type Deli
 import type { IntentService } from '../../governance/IntentService';
 import type { LedgerManager } from '../../qorelogic/ledger/LedgerManager';
 import { makeEnv, openLedger, rawRows, type Env } from '../qorelogic/ledgerTestKit';
-import { deliveryWorkspace, importedIntent, intentService, RUNTIME_ROW, type DeliveryWorkspace } from '../governance/delivery/deliveryFixtures';
+import { commitAll, deliveryWorkspace, git, importedIntent, intentService, RUNTIME_ROW, type DeliveryWorkspace } from '../governance/delivery/deliveryFixtures';
 
 suite('#532 B320 failsafe.delivery.recordReview', () => {
   let ws: DeliveryWorkspace;
@@ -146,5 +146,82 @@ suite('#532 B320 failsafe.delivery.recordReview', () => {
     await service.updateStatus('VETO', 'judge');
     view = await assessIntentDelivery(ctx, intentId);
     assert.match(summarizeDelivery(view), /is failing: Rejected by review/, 'the review VETO is named first');
+  });
+});
+
+// #532 B344 (plan-b344 LD5, red-first): the command with declared reworks.
+suite('#532 B344 failsafe.delivery.recordReview with rework', () => {
+  let ws: DeliveryWorkspace;
+  let env: Env;
+  let ledger: LedgerManager;
+  let service: IntentService;
+  let intentId = '';
+  let vetoId = 0;
+  let b = '';
+  let b2 = '';
+  const G = ['-c', 'user.name=FailSafe-Test', '-c', 'user.email=test@failsafe.invalid', '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath='];
+
+  setup(async () => {
+    ws = deliveryWorkspace('failsafe-review-rework-command-');
+    env = makeEnv();
+    ledger = await openLedger(env);
+    service = intentService(ws.root);
+    intentId = (await importedIntent(service)).id;
+    const ctx: DeliveryContext = { workspaceRoot: ws.root, intents: service, ledger };
+    const link = async (edge: 'implements' | 'committed-under', target: string, action: 'link' | 'unlink' = 'link') => {
+      const prepared = await prepareDeliveryEdge(ctx, action, { intentId, edge, target });
+      assert.equal(prepared.ok, true, JSON.stringify(prepared));
+      await writeDeliveryEdge(ctx, prepared as Extract<typeof prepared, { ok: true }>, 'user');
+    };
+    await link('implements', RUNTIME_ROW);
+    await link('committed-under', ws.head);
+    await ledger.appendEntry({ eventType: 'PROVENANCE_RECORDED', agentDid: 'did:myth:agent:claude', payload: { intentId } });
+    fs.writeFileSync(path.join(ws.root, 'w.ts'), 'one\n');
+    b = commitAll(ws.root, 'b');
+    await link('committed-under', b);
+    const veto = await runDeliveryReviewCommand(deps(async () => 'approved'), { verdict: 'VETO', commitSha: b });
+    assert.equal(veto.outcome, 'recorded', veto.detail);
+    vetoId = veto.ledgerEntryId!;
+    fs.writeFileSync(path.join(ws.root, 'w.ts'), 'two\n');
+    git(ws.root, ...G, 'commit', '-q', '-a', '--amend', '-m', 'b amended');
+    b2 = git(ws.root, 'rev-parse', 'HEAD');
+    await link('committed-under', b, 'unlink');
+    await link('committed-under', b2);
+  });
+  teardown(() => { try { ledger.close(); } catch { /* closed */ } env.cleanup(); ws.cleanup(); });
+
+  const rows = () => rawRows(ledger).filter((r) => r.event_type === 'DELIVERY_REVIEWED').length;
+  function deps(confirm: DeliveryReviewCommandDeps['confirm'], ui?: Partial<ReviewCommandUi>): DeliveryReviewCommandDeps {
+    return {
+      workspaceRoot: ws.root, intents: service, getLedger: () => ledger, confirm,
+      ui: { pickVerdict: async () => 'PASS', pickCommit: async () => b2, inputNote: async () => '', info: () => undefined, ...ui },
+    };
+  }
+
+  test('arguments that carry only reworks still count as arguments, are shown "as requested", and confirm is called once', async () => {
+    const shown: OperatorActionRequest[] = [];
+    const out = await runDeliveryReviewCommand(deps(async (r) => { shown.push(r); return 'approved'; }, { pickVerdict: async () => { throw new Error('the palette must not be used'); } }),
+      { reworks: [{ vetoEntryId: vetoId, reworkCommit: b2 }], verdict: 'PASS', commitSha: b2 });
+    assert.equal(out.outcome, 'recorded', out.detail);
+    assert.equal(shown.length, 1);
+    assert.match(shown[0].detail, /Superseded by rework/);
+    assert.ok(shown[0].detail.endsWith(COMMAND_CALL_FOOTER));
+    const onlyReworks = await runDeliveryReviewCommand(deps(async () => 'approved'), { reworks: [] });
+    assert.equal(onlyReworks.outcome, 'invalid', 'an argument object with only reworks is read as arguments (and is invalid), not as a palette run');
+  });
+
+  test('from the palette, a non-ancestor VETO asks once for its rework, then confirm is called once; dismissing writes nothing', async () => {
+    const asked: Array<{ entryId: number; commitSha: string }> = [];
+    let confirms = 0;
+    const out = await runDeliveryReviewCommand(deps(async () => { confirms += 1; return 'approved'; }, {
+      pickRework: async (veto) => { asked.push(veto); return b2; },
+    }));
+    assert.equal(out.outcome, 'recorded', out.detail);
+    assert.deepEqual(asked, [{ entryId: vetoId, commitSha: b }]);
+    assert.equal(confirms, 1);
+    const before = rows();
+    const dismissed = await runDeliveryReviewCommand(deps(async () => 'approved', { pickRework: async () => undefined }));
+    assert.notEqual(dismissed.outcome, 'recorded');
+    assert.equal(rows(), before, 'nothing written');
   });
 });

@@ -29,6 +29,8 @@ export interface ReviewCommandUi {
   pickCommit(commits: Array<{ sha: string; label: string }>): Promise<string | undefined>;
   inputNote(): Promise<string | undefined>;
   info(message: string): void;
+  /** #532 B344: asked once per VETO that is not in the reviewed commit's history; a linked commit, or undefined to stop. */
+  pickRework?(veto: { entryId: number; commitSha: string }, commits: Array<{ sha: string; label: string }>): Promise<string | undefined>;
 }
 
 export interface DeliveryReviewCommandDeps {

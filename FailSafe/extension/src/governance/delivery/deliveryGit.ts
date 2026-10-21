@@ -98,6 +98,46 @@ export function commitSubject(root: string, sha: string, git: ArchitectureGit = 
   return out.kind === 'ok' ? out.stdout.trim() : null;
 }
 
+/** #532 B344 (plan-b344 LD6): every flag that can change the diff text, pinned in argv. */
+export const DIFF_IDENTITY_ARGS: readonly string[] = Object.freeze([
+  '-p', '--binary', '-r', '--no-commit-id', '--root', '--no-color', '--no-ext-diff', '--no-textconv', '--no-renames',
+  '--diff-algorithm=myers', '--no-indent-heuristic', '--unified=3',
+]);
+
+export type DiffIdentity =
+  | { state: 'ok'; id: string }
+  | { state: 'none'; reason: 'empty' | 'undecodable' }
+  | { state: 'unavailable'; detail: string };
+
+/** RED STAGE STUB (plan-b344): no behaviour yet. */
+export function diffIdentity(_root: string, _sha: string, _git: ArchitectureGit = defaultArchitectureGit): DiffIdentity {
+  return { state: 'unavailable', detail: 'not implemented' };
+}
+
+export type CommitParents = { state: 'ok'; parents: string[] } | { state: 'unavailable'; detail: string };
+
+/** RED STAGE STUB (plan-b344): no behaviour yet. */
+export function commitParents(_root: string, _sha: string, _git: ArchitectureGit = defaultArchitectureGit): CommitParents {
+  return { state: 'unavailable', detail: 'not implemented' };
+}
+
+export interface ChangedPath {
+  status: 'A' | 'M' | 'D' | 'T';
+  path: string;
+  /** False when the path decoded with U+FFFD (its bytes are not UTF-8), so it cannot be shown exactly. */
+  showable: boolean;
+}
+
+export type ChangedPaths =
+  | { state: 'ok'; paths: ChangedPath[] }
+  | { state: 'missing' }
+  | { state: 'unavailable'; detail: string };
+
+/** RED STAGE STUB (plan-b344): no behaviour yet. */
+export function changedPaths(_root: string, _sha: string, _git: ArchitectureGit = defaultArchitectureGit): ChangedPaths {
+  return { state: 'unavailable', detail: 'not implemented' };
+}
+
 export type Ancestry = 'ancestor' | 'not-ancestor' | 'unavailable';
 
 /**

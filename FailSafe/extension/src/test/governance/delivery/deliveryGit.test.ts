@@ -14,7 +14,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import {
-  changedFiles, commitSubject, currentBranch, DELIVERY_GIT_SUBCOMMANDS, isAncestor, listRecentCommits, resolveCommit,
+  changedFiles, changedPaths, commitParents, commitSubject, currentBranch, DELIVERY_GIT_SUBCOMMANDS, DIFF_IDENTITY_ARGS, diffIdentity, isAncestor,
+  listRecentCommits, resolveCommit,
 } from '../../../governance/delivery/deliveryGit';
 import { makeArchitectureGit, type ArchitectureGit, type GitOutcome } from '../../../governance/architecture/ArchitectureIndexDiscovery';
 import { TrustedGitUnavailable } from '../../../shared/git/trustedGit';
@@ -215,3 +216,148 @@ suite('deliveryGit ancestry (#532 B320)', () => {
     assert.equal(commitSubject(root, 'HEAD', real), null);
   });
 });
+
+// #532 B344 (plan-b344 LD6/LD7): the diff identity, the parents and the changed paths behind the
+// rework relation. Red-first unless marked; "non-object name never reaches git" is a regression
+// guard (resolveCommit already refused such names on main).
+suite('deliveryGit rework reads (#532 B344)', () => {
+  teardown(() => { for (const d of made.splice(0)) removeTempTree(d); });
+  const write = (root: string, f: string, c: string | Buffer) => { fs.mkdirSync(path.dirname(path.join(root, f)), { recursive: true }); fs.writeFileSync(path.join(root, f), c); };
+  const real = makeArchitectureGit();
+  function setup(): string {
+    const root = repo();
+    git(root, 'config', 'core.autocrlf', 'false');
+    write(root, 'base.txt', 'base\n');
+    git(root, 'add', '-A');
+    commit(root, 'base', false);
+    return root;
+  }
+  const head = (root: string) => git(root, 'rev-parse', 'HEAD');
+
+  test('diffIdentity: equal for a cherry-pick, different for an edit, none for a merge, an empty commit and a non-UTF-8 file', () => {
+    const root = setup();
+    const base = head(root);
+    write(root, 'a.ts', 'one\ntwo\n');
+    git(root, 'add', '-A'); commit(root, 'b', false);
+    const b = head(root);
+    git(root, 'checkout', '-q', '--detach', base);
+    write(root, 'c.ts', 'c\n');
+    git(root, 'add', '-A'); commit(root, 'c', false);
+    git(root, '-c', 'user.name=T', '-c', 'user.email=t@failsafe.invalid', '-c', 'commit.gpgsign=false', 'cherry-pick', b);
+    const picked = head(root);
+    const ib = diffIdentity(root, b, real);
+    const ip = diffIdentity(root, picked, real);
+    assert.equal(ib.state, 'ok');
+    assert.match((ib as { id: string }).id, /^[0-9a-f]{64}$/);
+    assert.deepEqual(ip, ib, 'a cherry-pick has the same diff identity');
+    write(root, 'a.ts', 'one\nTWO\n');
+    git(root, 'add', '-A'); commit(root, 'edit', false);
+    assert.notDeepEqual(diffIdentity(root, head(root), real), ib, 'an edit differs');
+    commit(root, 'empty', true);
+    assert.deepEqual(diffIdentity(root, head(root), real), { state: 'none', reason: 'empty' });
+    git(root, 'checkout', '-q', '--detach', b);
+    git(root, '-c', 'user.name=T', '-c', 'user.email=t@failsafe.invalid', '-c', 'commit.gpgsign=false', 'merge', '-q', '--no-ff', '-m', 'm', picked);
+    assert.equal(diffIdentity(root, head(root), real).state, 'none', 'a merge has no diff identity');
+    write(root, 'bin.txt', Buffer.from([0x61, 0xff, 0xfe, 0x0a]));
+    git(root, 'add', '-A'); commit(root, 'bytes', false);
+    assert.deepEqual(diffIdentity(root, head(root), real), { state: 'none', reason: 'undecodable' });
+  });
+
+  test('diffIdentity: the strip regexes are line-anchored (a "+index ..." content line is kept)', () => {
+    const root = setup();
+    const base = head(root);
+    write(root, 'n.txt', 'index 1234567..89abcde\n');
+    git(root, 'add', '-A'); commit(root, 'one', false);
+    const one = diffIdentity(root, head(root), real);
+    git(root, 'checkout', '-q', '--detach', base);
+    write(root, 'n.txt', 'index 7654321..89abcde\n');
+    git(root, 'add', '-A'); commit(root, 'two', false);
+    const two = diffIdentity(root, head(root), real);
+    assert.equal(one.state, 'ok');
+    assert.notDeepEqual(one, two, 'content lines that look like index headers are part of the identity');
+  });
+
+  test('diffIdentity: the exact argv pins every diff flag; a diff driver configured for histogram cannot change the identity (needs git >= 2.40; fails, never skips)', () => {
+    const root = setup();
+    const before = ['{', 'c', 'b', '}', '}', '}', 'b', 'a', '', 'a'];
+    const after = ['}', 'b', '{', 'c', 'a', '', '{', '}', '{', 'b'];
+    write(root, 't.txt', before.join('\n') + '\n');
+    git(root, 'add', '-A'); commit(root, 'before', false);
+    write(root, 't.txt', after.join('\n') + '\n');
+    git(root, 'add', '-A'); commit(root, 'after', false);
+    const sha = head(root);
+    const calls: string[][] = [];
+    const baseline = diffIdentity(root, sha, (r, a) => { calls.push([...a]); return real(r, a); });
+    assert.equal(baseline.state, 'ok');
+    assert.match((baseline as { id: string }).id, /^[0-9a-f]{64}$/);
+    assert.deepEqual(calls[calls.length - 1], ['diff-tree', ...DIFF_IDENTITY_ARGS, '--end-of-options', sha]);
+    for (const flag of ['--diff-algorithm=myers', '--no-indent-heuristic', '--no-renames', '--unified=3', '--no-ext-diff', '--no-textconv', '--binary']) {
+      assert.ok(DIFF_IDENTITY_ARGS.includes(flag), flag);
+    }
+    write(root, '.gitattributes', '* diff=x\n');
+    git(root, 'config', 'diff.x.algorithm', 'histogram');
+    git(root, 'config', 'diff.indentHeuristic', 'false');
+    const pinned = git(root, 'diff-tree', ...DIFF_IDENTITY_ARGS, '--end-of-options', sha);
+    const unpinned = git(root, 'diff-tree', '-p', '--no-commit-id', sha);
+    assert.notEqual(unpinned, pinned, 'self-check: the configured driver must change the unpinned diff (git >= 2.40), or this row proves nothing');
+    assert.deepEqual(diffIdentity(root, sha, real), baseline, 'the pinned identity ignores the configuration');
+  });
+
+  test('commitParents lists the parents (none for a root commit, two for a merge)', () => {
+    const root = setup();
+    const base = head(root);
+    assert.deepEqual(commitParents(root, base, real), { state: 'ok', parents: [] });
+    commit(root, 'next', true);
+    const next = head(root);
+    assert.deepEqual(commitParents(root, next, real), { state: 'ok', parents: [base] });
+    git(root, 'checkout', '-q', '--detach', base);
+    commit(root, 'side', true);
+    const side = head(root);
+    git(root, '-c', 'user.name=T', '-c', 'user.email=t@failsafe.invalid', '-c', 'commit.gpgsign=false', 'merge', '-q', '--no-ff', '-m', 'm', next);
+    assert.deepEqual(commitParents(root, head(root), real), { state: 'ok', parents: [side, next] });
+    assert.equal(commitParents(root, base, () => ({ kind: 'unavailable', detail: 'x' })).state, 'unavailable');
+  });
+
+  test('changedPaths: A, M, D and T statuses with no cap; missing and unavailable are told apart', () => {
+    const root = setup();
+    write(root, 'm.txt', '1\n'); write(root, 'd.txt', '1\n'); write(root, 't.txt', '1\n');
+    git(root, 'add', '-A'); commit(root, 'files', false);
+    write(root, 'm.txt', '2\n'); fs.rmSync(path.join(root, 'd.txt')); write(root, 'a.txt', '1\n');
+    git(root, 'add', '-A');
+    // A type change: t.txt becomes a symlink in the index (no filesystem symlink needed).
+    const blob = spawnSyncGit(root, ['hash-object', '-w', '--stdin'], 'base.txt');
+    git(root, 'update-index', '--cacheinfo', `120000,${blob},t.txt`);
+    commit(root, 'changes', false);
+    const out = changedPaths(root, head(root), real);
+    assert.equal(out.state, 'ok');
+    assert.deepEqual((out as { paths: Array<{ status: string; path: string; showable: boolean }> }).paths.map((p) => `${p.status} ${p.path} ${p.showable}`).sort(),
+      ['A a.txt true', 'D d.txt true', 'M m.txt true', 'T t.txt true']);
+    assert.deepEqual(changedPaths(root, 'e'.repeat(40), real), { state: 'missing' });
+    assert.equal(changedPaths(root, head(root), () => ({ kind: 'unavailable', detail: 'x' })).state, 'unavailable');
+  });
+
+  test('changedPaths fails closed on output it cannot parse: an unknown status, an unpaired field, a trailing record with no path', () => {
+    const root = setup();
+    const sha = head(root);
+    for (const stdout of ['X\0a.txt\0', 'M\0', 'M\0a.txt\0D', 'R100\0a\0b\0']) {
+      assert.equal(changedPaths(root, sha, () => ({ kind: 'ok', stdout })).state, 'unavailable', JSON.stringify(stdout));
+    }
+    assert.deepEqual(changedPaths(root, sha, () => ({ kind: 'ok', stdout: 'M\0f\uFFFD.ts\0' })),
+      { state: 'ok', paths: [{ status: 'M', path: 'f\uFFFD.ts', showable: false }] }, 'a path that decoded with U+FFFD is unshowable');
+  });
+
+  test('regression guard: a name that is not a full object name never reaches git', () => {
+    const calls: string[][] = [];
+    const rec: ArchitectureGit = (r, a) => { calls.push([...a]); return real(r, a); };
+    for (const bad of ['HEAD', '--output=x', 'e'.repeat(39)]) {
+      diffIdentity('.', bad, rec); commitParents('.', bad, rec); changedPaths('.', bad, rec);
+    }
+    assert.equal(calls.length, 0);
+  });
+});
+
+function spawnSyncGit(root: string, args: string[], stdinFile: string): string {
+  const r = childProcess.spawnSync('git', args, { cwd: root, input: fs.readFileSync(path.join(root, stdinFile)), encoding: 'utf8', windowsHide: true });
+  assert.equal(r.status, 0, String(r.stderr));
+  return String(r.stdout).trim();
+}
