@@ -78,7 +78,9 @@
     "onCommand:failsafe.openhands.observe",
     "onCommand:failsafe.architecture.bootstrapIndex",
     "onCommand:failsafe.delivery.assessActiveIntent",
-    "onCommand:failsafe.delivery.recordReview"
+    "onCommand:failsafe.delivery.recordReview",
+    "onCommand:failsafe.intent.decide",
+    "onCommand:failsafe.intent.seal"
   ],
   "main": "./dist/extension/main.js",
   "contributes": {
@@ -227,6 +229,14 @@
       {
         "command": "failsafe.delivery.recordReview",
         "title": "FailSafe: Record a Delivery Review"
+      },
+      {
+        "command": "failsafe.intent.decide",
+        "title": "FailSafe: Approve or Veto the Active Intent"
+      },
+      {
+        "command": "failsafe.intent.seal",
+        "title": "FailSafe: Seal the Active Intent"
       },
       {
         "command": "failsafe.sentinel.forgetLlmApprovals",

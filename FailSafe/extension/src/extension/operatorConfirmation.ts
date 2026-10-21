@@ -651,6 +651,133 @@ export function deliveryReviewRequest(
   };
 }
 
+/** B340: dialog titles for an intent decision and its seal. */
+export const INTENT_DECISION_TITLES = {
+  PASS: "Approve this intent for implementation?",
+  VETO: "Veto this intent?",
+  SEAL: "Seal this intent?",
+  FINISH: "Finish sealing this intent?",
+} as const;
+
+/** B340: the scope an approval grants, as the dialog states it (intentDecision.scopeFacts). */
+export interface IntentScopeFacts {
+  count: number;
+  /** The first BATCH_LIST_LIMIT entries, sanitized. */
+  shown: string[];
+  more: number;
+  /** Computed over every entry, shown or not; `position` is 1-based. */
+  warnings: Array<{ position: number; entry: string; kind: "root" | "outside" }>;
+}
+
+/** B340: the intent a decision binds, from server state. */
+export interface IntentFacts {
+  id: string;
+  purpose: string;
+  type: string;
+  planId: string | null;
+  riskGrade: string;
+  createdEntryHash: string;
+}
+
+/** B340 (plan-b340 LD1): what a decision records, as the dialog shows it (intentDecision.buildDecisionPlan). */
+export interface IntentDecisionFacts {
+  verdict: "PASS" | "VETO";
+  note: string;
+  intent: IntentFacts;
+  scope: IntentScopeFacts;
+  effective: { status: string; reason: string };
+  digest: { version: number; value: string };
+}
+
+/** B340 (plan-b340 LD6): what a seal records (intentDecision.buildSealPlan). */
+export interface IntentSealFacts {
+  kind: "seal" | "finish";
+  intent: IntentFacts;
+  decisionRowId: number | null;
+  digest: { version: number; value: string };
+  review: string;
+}
+
+function intentLines(intent: IntentFacts): string[] {
+  return [
+    `Intent: ${sanitizeDialogText(intent.purpose)} (${sanitizeDialogText(intent.id, 60)})`,
+    `Type: ${sanitizeDialogText(intent.type, 40)}; plan: ${intent.planId ? sanitizeDialogText(intent.planId, 120) : "none"}; risk grade: ${sanitizeDialogText(intent.riskGrade, 10)}`,
+    `Created history entry: ${sanitizeDialogText(intent.createdEntryHash, 70)}`,
+  ];
+}
+
+/** B340: the scope lines; warnings name every entry that covers the whole workspace or lies outside it. */
+export function intentScopeLines(scope: IntentScopeFacts): string[] {
+  const lines = [`Scope (${scope.count} entr${scope.count === 1 ? "y" : "ies"}):`, ...scope.shown.map((e) => `- ${e}`)];
+  if (scope.more > 0) lines.push(`- and ${scope.more} more`);
+  if (!scope.count) lines.push("- (none: no governed write is in scope)");
+  for (const w of scope.warnings.slice(0, BATCH_LIST_LIMIT)) {
+    lines.push(`Warning: entry ${w.position} "${w.entry}" ${w.kind === "root" ? "covers the whole workspace" : "is outside the workspace; it covers nothing"}`);
+  }
+  if (scope.warnings.length > BATCH_LIST_LIMIT) {
+    lines.push(`Warning: and ${scope.warnings.length - BATCH_LIST_LIMIT} more entries that cover the whole workspace or lie outside it`);
+  }
+  return lines;
+}
+
+/**
+ * B340 (plan-b340 LD1): approve (PASS) or veto the active intent. Every value is server-side except
+ * the verdict and the note, which are labelled by where they came from and recorded exactly as shown.
+ */
+export function intentDecisionRequest(
+  facts: IntentDecisionFacts,
+  operationId: string,
+  source: "command-arguments" | "command-palette",
+): OperatorActionRequest {
+  const how = source === "command-palette" ? "your pick" : "as requested";
+  const lines = [
+    `Operation: ${operationId}`,
+    ...intentLines(facts.intent),
+    `Current status: ${sanitizeDialogText(facts.effective.status, 20)} (${sanitizeDialogText(facts.effective.reason, 300)})`,
+    `Verdict (${how}): ${facts.verdict}`,
+    ...intentScopeLines(facts.scope),
+    `Approved content: intent-content/v${facts.digest.version} ${facts.digest.value}`,
+    "",
+    facts.verdict === "PASS"
+      ? "Approved for implementation: governed writes inside this scope are allowed until the intent changes or is sealed."
+      : "A VETO blocks governed writes under this intent until a later approval.",
+    "No audit evidence is bound to this intent; your confirmation is the approval.",
+    "This proves a person approved a VS Code dialog; it does not identify who.",
+    `Note (${how}): ${facts.note ? sanitizeDialogText(facts.note, REASON_LIMIT) : "(none)"}`,
+    "FailSafe records this decision in its ledger and the intent history. Nothing leaves this machine.",
+  ];
+  return {
+    title: INTENT_DECISION_TITLES[facts.verdict],
+    approveLabel: facts.verdict === "PASS" ? "Approve" : "Veto",
+    detail: source === "command-arguments" ? [...lines, "", COMMAND_CALL_FOOTER].join("\n") : lines.join("\n"),
+  };
+}
+
+/** B340 (plan-b340 LD6): seal the active intent, or finish an interrupted seal. */
+export function intentSealRequest(
+  facts: IntentSealFacts,
+  operationId: string,
+  source: "command-arguments" | "command-palette",
+): OperatorActionRequest {
+  const lines = [
+    `Operation: ${operationId}`,
+    ...intentLines(facts.intent),
+    facts.kind === "finish"
+      ? `Decision row #${facts.decisionRowId ?? "unknown"} is already recorded; this finishes archiving the intent and writes no new decision.`
+      : `Approval: ledger entry #${facts.decisionRowId ?? "unknown"}`,
+    `Approved content: intent-content/v${facts.digest.version} ${facts.digest.value}`,
+    `Delivery review: ${sanitizeDialogText(facts.review, 300)} (shown for information; Seal does not require it)`,
+    "",
+    "Sealing archives the intent; nothing more can be recorded for it.",
+    "This proves a person approved a VS Code dialog; it does not identify who.",
+  ];
+  return {
+    title: facts.kind === "finish" ? INTENT_DECISION_TITLES.FINISH : INTENT_DECISION_TITLES.SEAL,
+    approveLabel: facts.kind === "finish" ? "Finish Sealing" : "Seal Intent",
+    detail: source === "command-arguments" ? [...lines, "", COMMAND_CALL_FOOTER].join("\n") : lines.join("\n"),
+  };
+}
+
 /** #531 slice 2: the dialog title for an architecture supersession proposal. */
 export const ARCHITECTURE_SUPERSEDE_TITLE = "Propose this architecture supersession?";
 

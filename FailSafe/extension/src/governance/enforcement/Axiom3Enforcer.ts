@@ -29,6 +29,9 @@ export class Axiom3Enforcer implements AxiomEnforcer {
       return { status: "ALLOW", reason: "", intentId: "" } as AllowVerdict;
 
     const { status, id } = activeIntent;
+    // B340: in enforce mode the status is the effective status (IntentService.getEnforcedActiveIntent)
+    // and carries why; the file status is never what reaches here.
+    const statusReason = (activeIntent as { statusReason?: string }).statusReason;
 
     switch (status) {
       case "PULSE":
@@ -41,10 +44,11 @@ export class Axiom3Enforcer implements AxiomEnforcer {
           status: "BLOCK",
           violation: `Intent "${id}" is in PULSE status.`,
           axiomViolated: 3,
-          remediation: "Wait for PASS verdict. Run: failsafe.checkGateStatus",
+          remediation:
+            "Approve the intent with FailSafe: Approve or Veto the Active Intent (failsafe.intent.decide), or switch governance mode (failsafe.setGovernanceMode).",
           diagnostics: {
             intentId: id,
-            message: `Intent is still being reviewed (PULSE status). No modifications allowed until audit completes.`,
+            message: statusReason ?? `Intent is not approved (PULSE status). No modifications allowed until it is approved.`,
           },
         } as BlockVerdict;
 
@@ -58,10 +62,11 @@ export class Axiom3Enforcer implements AxiomEnforcer {
           status: "BLOCK",
           violation: `Intent "${id}" received VETO.`,
           axiomViolated: 3,
-          remediation: "Review audit report: .agent/staging/AUDIT_REPORT.md",
+          remediation:
+            "Record a new decision with FailSafe: Approve or Veto the Active Intent (failsafe.intent.decide) once the intent is revised.",
           diagnostics: {
             intentId: id,
-            message: `Intent has been rejected (VETO status). Check the audit report for remediation steps.`,
+            message: statusReason ?? `Intent has been rejected (VETO status).`,
           },
         } as BlockVerdict;
 

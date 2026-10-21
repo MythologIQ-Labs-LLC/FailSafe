@@ -160,6 +160,22 @@ export type ReviewBlockingKind = z.infer<typeof ReviewBlockingKindSchema>;
 export type ReviewSuperseded = z.infer<typeof ReviewSupersededSchema>;
 export type IntentReviewDetails = z.infer<typeof IntentReviewDetailsSchema>;
 
+/**
+ * B340 (plan-b340 LD2): the details of an intent-decision mirror, a STATUS_CHANGED entry whose
+ * `newStatus` is the verdict. It names one sealed intent-decision ledger row by id and entry hash and
+ * repeats what the row bound. A mirror alone proves nothing (the history chain is unkeyed): a PASS
+ * counts only with its sealed row, and each row binds through at most one mirror (intentDecision).
+ */
+export const IntentDecisionDetailsSchema = z.object({
+  decisionId: z.string().uuid(),
+  ledgerEntryId: z.number().int().positive(),
+  ledgerEntryHash: z.string().regex(HASH64),
+  operationId: z.string().min(1).max(80),
+  digestVersion: z.number().int().positive(),
+  contentDigest: z.string().regex(HASH64),
+}).strict();
+export type IntentDecisionDetails = z.infer<typeof IntentDecisionDetailsSchema>;
+
 export const IntentHistoryEntrySchema = z.object({
   intentId: IntentIdSchema,
   timestamp: z.string(),

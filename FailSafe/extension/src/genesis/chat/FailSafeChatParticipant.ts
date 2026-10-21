@@ -75,7 +75,7 @@ export class FailSafeChatParticipant {
     request: vscode.ChatRequest,
     stream: vscode.ChatResponseStream
   ): Promise<vscode.ChatResult> {
-    const active = await this.intentService.getActiveIntent();
+    const active = await this.intentService.getEnforcedActiveIntent();
 
     if (!active) {
       stream.markdown('**No Active Intent**\n\n');
@@ -168,7 +168,7 @@ export class FailSafeChatParticipant {
     stream: vscode.ChatResponseStream
   ): Promise<vscode.ChatResult> {
     const sentinelStatus = this.sentinel.getStatus();
-    const active = await this.intentService.getActiveIntent();
+    const active = await this.intentService.getEnforcedActiveIntent();
 
     stream.markdown(`## FailSafe Status\n\n`);
 
@@ -192,28 +192,22 @@ export class FailSafeChatParticipant {
     return { metadata: { command: 'status' } };
   }
 
+  /**
+   * B340 (plan-b340 LD6): sealing needs a confirmed modal, so /seal never seals. It offers the seal
+   * command (failsafe.intent.seal), which checks the effective status and asks for confirmation.
+   */
   private async handleSeal(
     stream: vscode.ChatResponseStream
   ): Promise<vscode.ChatResult> {
-    const active = await this.intentService.getActiveIntent();
+    const active = await this.intentService.getEnforcedActiveIntent();
 
     if (!active) {
       stream.markdown('**No active intent to seal.**');
       return { metadata: { command: 'seal' } };
     }
 
-    if (active.status !== 'PASS') {
-      stream.markdown(`**Cannot seal**: Intent status is \`${active.status}\`. Only \`PASS\` intents can be sealed.`);
-      return { metadata: { command: 'seal' } };
-    }
-
-    try {
-      await this.intentService.sealIntent('chat-participant');
-      stream.markdown(new vscode.MarkdownString('✅ **Intent Sealed**: "').appendText(active.purpose).appendMarkdown('" has been sealed and archived.'));
-    } catch (error) {
-      stream.markdown(`**Failed to seal**: ${error instanceof Error ? error.message : String(error)}`);
-    }
-
+    stream.markdown(new vscode.MarkdownString('Sealing "').appendText(active.purpose).appendMarkdown(`" needs your confirmation in VS Code. Current status: \`${active.status}\`; only an approved (\`PASS\`) intent can be sealed.\n\n`));
+    stream.button({ command: 'failsafe.intent.seal', title: 'Seal the Active Intent' });
     return { metadata: { command: 'seal' } };
   }
 
