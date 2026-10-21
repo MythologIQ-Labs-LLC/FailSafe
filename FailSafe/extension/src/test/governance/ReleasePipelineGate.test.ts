@@ -194,6 +194,41 @@ describe('ReleasePipelineGate ledger scope (#473 LD9)', function () {
     assert.match(result.failures[0].reason, /disk I\/O error/);
   });
 
+  it('rejects a contradictory green report with recorded verification failures (#473)', async () => {
+    const ledger = {
+      isAvailable: () => true,
+      verifyLedger: async () => report({
+        ok: true,
+        failures: [{ id: 2, code: 'hash-mismatch', detail: 'tampered verdict column' }],
+      }),
+    };
+    const result = await gateFor(ledger).evaluate('v6.0.10');
+    assert.equal(result.allowed, false);
+    assert.equal(result.warnings.length, 0);
+    assert.match(result.failures[0].reason, /hash-mismatch at id 2/);
+  });
+
+  it('rejects a malformed supposedly green report instead of throwing (#473)', async () => {
+    const ledger = {
+      isAvailable: () => true,
+      verifyLedger: async () => ({ ok: true, failures: [] }),
+    };
+    const result = await gateFor(ledger).evaluate('v6.0.10');
+    assert.equal(result.allowed, false);
+    assert.match(result.failures[0].reason, /malformed report/);
+  });
+
+  it('rejects an unavailable ledger even if its verifier could return green (#473)', async () => {
+    const ledger = {
+      isAvailable: () => false,
+      getDisabledReason: () => 'ledger database unavailable',
+      verifyLedger: async () => report(),
+    };
+    const result = await gateFor(ledger).evaluate('v6.0.10');
+    assert.equal(result.allowed, false);
+    assert.match(result.failures[0].reason, /ledger database unavailable/);
+  });
+
   it('blocks when no ledger is wired', async () => {
     const result = await gateFor(null).evaluate('v6.0.7');
     assert.equal(result.allowed, false);
