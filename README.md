@@ -35,6 +35,8 @@ FailSafe has implemented integration paths, not a list of independently certifie
 
 **A recent call is not end-to-end qualification or proof of customer value.** A parsed response or successful connection does not prove that every listed capability completed, that governance intercepted all writes, or that an integration produced measurable business outcomes. The canonical [integration portfolio](docs/architecture/INTEGRATION_PORTFOLIO.md) distinguishes implemented and unit-tested paths from live-service validation; its current inventory records **no live-service integration tests**. Integrations require independent real-provider and outcome-based acceptance before we describe them as operational or value-proven.
 
+**MCP and enforcement boundaries.** The shared MCP-over-stdio client substrate supports specific integrations; it is not a generic proxy that governs every MCP server. FailSafe's own governance MCP tools exist in source, but their in-process transport is not reachable by external MCP clients today ([B209 contract](docs/architecture/integrations/failsafe-mcp-server.md)). Supported action and commit gates can refuse an authorized path, but editor-save denials are observational and disposable agent worktrees are not operating-system sandboxes. The GitHub command posts a neutral manual advisory, **not** a verified SHIELD PASS receipt. FailSafe does not currently prove arbitrary production database effects or ship an Omium outcome-verification adapter.
+
 ## See it in action
 
 ![FailSafe Console overview](FailSafe/extension/media/FailSafe-Overview.PNG)
