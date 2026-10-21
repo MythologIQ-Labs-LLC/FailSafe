@@ -230,6 +230,33 @@ describe('ReleasePipelineGate ledger scope (#473 LD9)', function () {
     assert.match(result.failures[0].reason, /ledger database unavailable/);
   });
 
+  it('rejects green ledger reports with missing row counts or anchor head IDs (#473)', async () => {
+    const variants = [
+      { ...report(), rows: undefined },
+      { ...report(), anchor: { ...report().anchor, headId: undefined } },
+      { ...report(), coverage: { ...report().coverage, v3Rows: -1 } },
+      { ...report(), rotation: { retiredFile: null, retiredVerificationOk: true } },
+    ];
+    for (const candidate of variants) {
+      const ledger = { isAvailable: () => true, verifyLedger: async () => candidate };
+      const result = await gateFor(ledger).evaluate('v6.0.10');
+      assert.equal(result.allowed, false, JSON.stringify(candidate));
+      assert.match(result.failures[0].reason, /malformed report/, JSON.stringify(candidate));
+    }
+  });
+
+  it('does not call a green but non-full seal intact (#473)', async () => {
+    const ledger = {
+      isAvailable: () => true,
+      verifyLedger: async () => report({ sealScope: 'partial' }),
+    };
+    const result = await gateFor(ledger).evaluate('v6.0.10');
+    assert.equal(result.allowed, true, 'existing warning-only release policy preserved');
+    assert.equal(result.warnings.length, 1);
+    assert.match(result.warnings[0].reason, /PARTIAL SEAL.*scope partial/);
+    assert.doesNotMatch(result.warnings[0].reason, /chain intact/);
+  });
+
   it('blocks when no ledger is wired', async () => {
     const result = await gateFor(null).evaluate('v6.0.7');
     assert.equal(result.allowed, false);
