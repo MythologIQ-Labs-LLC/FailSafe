@@ -41,7 +41,8 @@ function openSocket(
 ): Promise<WebSocket> {
   const wsUrl = url.replace(/^http/, "ws");
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(wsUrl);
+    // #564: the Console accepts a handshake only from its own page, so send the page's Origin.
+    const ws = new WebSocket(wsUrl, { origin: url.replace(/\/$/, '') });
     if (onMessage) {
       ws.on("message", (raw) => {
         const text = typeof raw === "string" ? raw : raw.toString("utf8");

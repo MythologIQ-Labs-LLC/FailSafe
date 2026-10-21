@@ -34701,3 +34701,80 @@ Should-fix (closed by the lead):
 **Chain Hash (Merkle seal)**: `6e67be7e4e98a1f717a24a8bfedd6e1a0bbbc755d8908e37f83eec0c9ba4df0f`
 
 **Decision**: SESSION SEAL for plan-dep-562.md. Reality = Promise, with disclosures. Dependabot #562 moves vsce's markdown-it to 14.3.3, clearing GHSA-gfr2-rv44-r23c (HIGH) and GHSA-vfgh-jcmw-g37q (LOW). The full npm audit drops from 19 to 18; production is unchanged at 3 (braces/chokidar via C2, hono via #552). The packaged VSIX is unchanged: 186 files, 0 hash mismatches. Disclosure: bounded damaged-ledger override (#467 unresolved, native acceptance unavailable). Next: push the seal to the Dependabot branch, run the full required CI, then merge pinned to the head. No release.
+
+---
+
+### Entry #866: GATE TRIBUNAL - plan-564-websocket-origin (iteration 1) - VETO
+
+**Timestamp**: 2026-10-21T14:32:28Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1426-1926a7`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1426-1926a7/audit-iter1.json`
+
+**Content Hash**: `d96cb9959f21561eccd79156a5e014ad2c32d88b9afc9fe1b8b6c40577a3700d`
+**Previous Hash**: `6e67be7e4e98a1f717a24a8bfedd6e1a0bbbc755d8908e37f83eec0c9ba4df0f`
+**Chain Hash (Merkle seal)**: `abd1edf66bd4c96b0dfb68e6f67bab6307e17c409ebe0eed83537aaf67523ea0`
+
+**Decision**: VETO on plan-564-websocket-origin.md iteration 1 (sha256 445a7140), audit564, Option B. Blocking: the DNS-rebinding residual was undisclosed. GET routes have no Host check, and GET /api/hub (ConsoleRouteRegistrar.ts:218) returns the same snapshot. Owner ruling R1 2026-10-21: add an app-wide loopback-Host middleware. Owner ruling R2: Origin must equal http:// + Host, Host must be the loopback name for the bound family, and the port is unpinned. Should-fix: non-string Host/remoteAddress, try/catch to 403, raw-socket no-Host, exact Host spellings, v8 and duplicate-Origin rows, upgrade listener count, wording, and the backlog range.
+
+---
+
+### Entry #867: GATE TRIBUNAL - plan-564-websocket-origin (iteration 2) - PASS
+
+**Timestamp**: 2026-10-21T14:47:04Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1426-1926a7`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1426-1926a7/audit-iter2.json`
+
+**Content Hash**: `4889a8e1298f233c8878f36487e543334627cff95932a9976faf66178f974ce2`
+**Previous Hash**: `abd1edf66bd4c96b0dfb68e6f67bab6307e17c409ebe0eed83537aaf67523ea0`
+**Chain Hash (Merkle seal)**: `6f71bb5fe63564ebff1448e0be7283266253f4d88c72c4e51e830d189b1cf1ba`
+
+**Decision**: PASS on plan-564-websocket-origin.md iteration 2 (sha256 ccc56128), audit564b, Option B. The iteration-1 blocker is closed: the app-wide Host middleware is first in setupAllRoutes, ahead of express.json, static, late routes and the SPA fallback. No other HTTP listener exists. HOST is the constant 127.0.0.1. verifyClient runs before completeUpgrade. Six mandated folds: per-connection localAddress wording; named hostnameOf/v8/try-catch killers; a Playwright run without initialHub plus a late route; the registrar suite; disclosure that browser-based remotes now get 403 on GET/WS; and exact re-cites.
+
+---
+
+### Entry #868: IMPLEMENTATION - plan-564-websocket-origin
+
+**Timestamp**: 2026-10-21T17:05:52Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-21T1426-1926a7`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-21T1426-1926a7/implement.json`
+
+**Content Hash**: `44758b3d27015728e269009529344bdeb95c85ad0d58e2e610793b1ede42725e`
+**Previous Hash**: `6f71bb5fe63564ebff1448e0be7283266253f4d88c72c4e51e830d189b1cf1ba`
+**Chain Hash (Merkle seal)**: `4440b3dfcc0e5b78d31563c776bead5cc12752ea4c453563384400f67f7d82f3`
+
+**Decision**: IMPLEMENTATION of plan-564-websocket-origin.md on fix/564-websocket-origin (rebased on main d89f2ea6):
+- 34a6d001: red tests
+- 1ddc49a1: consoleHostRefusal and consoleHostGuard, first in setupAllRoutes. The WebSocket verifyClient policy checks version 13, then a loopback peer, then the Host rule, then that Origin equals http:// + Host. A refusal or a throw answers 403.
+- ada77205 and 9c5fc25e: B360-B364, the CHANGELOG security line, FX458/FX524, and exact integration-contract re-cites.
+The review folds are disclosed.
+
+---
+
+### Entry #869: SESSION SEAL - plan-564-websocket-origin
+
+**Timestamp**: 2026-10-21T17:05:53Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-21T1426-1926a7`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-21T1426-1926a7/substantiate.json`
+
+**Content Hash**: `ccc5612867fcec223e5d20d2168a06bbc81f5124198f1ca39895f373bb91c9b6`
+**Previous Hash**: `4440b3dfcc0e5b78d31563c776bead5cc12752ea4c453563384400f67f7d82f3`
+**Chain Hash (Merkle seal)**: `fffb68c699352b0af51ce2563eb772c20892a0cc7ef89cb1df7c7f8886cba9ac`
+
+**Decision**: SESSION SEAL for plan-564-websocket-origin.md (content hash = the audited plan, iteration 2). Reality = Promise, with disclosures. #564 is fixed: the Console WebSocket accepts only a protocol-13 handshake from a loopback peer whose Host is the loopback name and whose Origin equals http:// + Host, refusing everything else with 403 before the connection callback. Every Console HTTP request whose Host is not a loopback name is refused with 403 before any route, which closes DNS rebinding of /api/hub. Disclosures: bounded damaged-ledger override (#467 unresolved); browser-remote Consoles are now refused on GET/WS; no authentication (B364); harness-only reproduction, no installed exploit claimed; the architecture-index 8/1 failure is local to this host. Next: push, open the PR, run the full required CI including Linux test:all, and merge pinned to the head. No release.

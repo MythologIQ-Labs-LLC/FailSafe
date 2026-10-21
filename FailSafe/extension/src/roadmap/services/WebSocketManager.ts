@@ -1,5 +1,6 @@
-import { WebSocketServer, WebSocket } from "ws";
+import { WebSocketServer, WebSocket, type VerifyClientCallbackAsync } from "ws";
 import type { Server } from "http";
+import { consoleWebSocketRefusal } from "../routes/consoleRequestGuard";
 
 /**
  * Manages WebSocket connections and broadcasts for the ConsoleServer.
@@ -8,9 +9,25 @@ import type { Server } from "http";
 export class WebSocketManager {
   private wss: WebSocketServer | null = null;
 
+  /**
+   * #564: every handshake passes consoleWebSocketRefusal before the upgrade completes; a refusal,
+   * or anything that throws while checking, answers 403, so `onConnect` never runs for it and the
+   * socket never joins the broadcast set.
+   */
   setup(server: Server, onConnect: (ws: WebSocket) => void): void {
-    this.wss = new WebSocketServer({ server });
+    const verifyClient: VerifyClientCallbackAsync = (info, cb) => {
+      let refused = true;
+      try { refused = consoleWebSocketRefusal(info.req) !== null; } catch { refused = true; }
+      if (refused) cb(false, 403, "Forbidden");
+      else cb(true);
+    };
+    this.wss = new WebSocketServer({ server, verifyClient });
     this.wss.on("connection", onConnect);
+  }
+
+  /** Connected clients (0 before setup). */
+  clientCount(): number {
+    return this.wss ? this.wss.clients.size : 0;
   }
 
   broadcast(data: Record<string, unknown>): void {
