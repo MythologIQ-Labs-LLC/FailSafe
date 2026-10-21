@@ -204,6 +204,17 @@ test("F0b the product page may name an integration only with its fact phrase", (
   assert.throws(() => assertProductPage({ holds: true, phrase: "x", overclaim: "one-shot token", mention: /Open Design/i }, "Open Design uses a one-shot token."), /overclaims/);
 });
 
+test("F7 README integration claims do not turn implementation or last-call evidence into live/value proof", () => {
+  const phrase = "A recent call is not end-to-end qualification or proof of customer value.";
+  for (const readme of READMES) {
+    assert.ok(read(readme).includes(phrase), `${rel(readme)} must disclose evidence limits`);
+  }
+  const renderer = read(path.join(SRC, "roadmap", "ui", "modules", "integration-catalog-renderer.js"));
+  assert.ok(renderer.includes("Value impact: not measured"), "the UI must disclose missing measured customer value");
+  assert.ok(renderer.includes("Implemented path (not live-qualified):"), "capability listing cannot imply live qualification");
+  assert.ok(!renderer.includes("3 verified by their last call"), "last-call counts cannot be described as verified integrations");
+});
+
 test("F6 OpenHands: while the import holds a Secret Storage key, its README says so", () => {
   const signing = path.join(SRC, "integrations", "agent-observe", "openhands-signing.ts");
   assert.ok(fs.existsSync(signing), "anchor: openhands-signing.ts is gone");
