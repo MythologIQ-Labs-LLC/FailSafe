@@ -460,14 +460,15 @@ suite('B340 intent decision: enforce-mode approval path (plan-b340)', () => {
     const report = await h.ledger.verifyLedger();
     assert.equal(report.ok, true, JSON.stringify(report.failures));
     assert.equal((await evaluate(h)).status, 'BLOCK', '1a: latched');
-    // 1b: a fresh manager appends a row (a new id) and its anchor store succeeds; the latched row is gone, so the latch holds.
+    // 1b: a fresh manager appends a row (the writer reuses the deleted id with a new hash) and its anchor store
+    // succeeds; the latched row (that id and hash) is gone, so the latch holds.
     h.ledger.close();
     h.ledger = await openLedger(h.env);
     wireLedger(h.svc, h.ledger);
     await h.ledger.appendEntry({ eventType: 'AUDIT_FAIL', agentDid: 'did:t:a', verificationResult: 'FAIL', riskGrade: 'L3', agentTrustAtAction: 0.4 });
     await h.ledger.flushAnchor();
     const after = await h.ledger.verifyLedger();
-    assert.ok(after.ok && (after.anchor.headId ?? 0) > veto.ledgerEntryId, JSON.stringify(after.anchor));
+    assert.ok(after.ok && (after.anchor.headId ?? 0) >= veto.ledgerEntryId, JSON.stringify(after.anchor));
     assert.equal((await evaluate(h)).status, 'BLOCK', '1b: the latch is cleared only by the same row');
     close(h);
     // 2: with the VETO row in place, an anchored append covers it; the VETO still blocks, and a later approval is not held by the latch.
