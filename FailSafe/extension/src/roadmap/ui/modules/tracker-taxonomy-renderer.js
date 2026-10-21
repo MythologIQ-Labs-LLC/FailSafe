@@ -9,52 +9,26 @@
  * must consult. Follows the TabGroup sub-view contract (render/destroy).
  *
  * #548: each vertical's functionality is checked against the Console navigation
- * (the server's `drift` report) and shown here; it is never edited here. Save
- * starts every row from the loaded entry and applies only the inputs the operator
- * changed, so fields the editor does not show (summary, functionality, backend,
- * agent evidence, …) are kept. Save sends the file fingerprint its load returned;
- * a file changed on disk since then answers 409 and nothing is written. Only a
- * successful Save moves the baseline (then the rows are re-stamped). A failed Save
- * keeps the operator's edits on screen only until the next hub payload repaints
- * this view (B331). A failed load shows the error and offers no Save, so an
- * unreadable file is never overwritten with an empty taxonomy.
+ * (the server's `drift` report) and is never edited here; Save applies only the
+ * inputs the operator changed, carries the loaded file's fingerprint and is refused
+ * (409) when the file changed on disk.
+ *
+ * B331: what the operator sees and edits is a draft (tracker-taxonomy-model.js) kept
+ * across hub repaints, failed Saves and navigation. Only a load, a successful or
+ * directive-failed Save, a Reload click or an applied foreign change starts a new
+ * draft generation. A change on disk or in another Console window while the draft is
+ * dirty is a visible conflict; nothing ever reloads over unsaved edits except Reload.
  */
 
-import { esc, text, isPlainObject, list, driftHtml, DRIFT_STYLE } from './tracker-taxonomy-drift.js';
+import { isPlainObject } from './tracker-taxonomy-drift.js';
+import { postTaxonomy, saveVerdict } from './tracker-taxonomy-save.js';
+import { draftFromConfig, addRow, deleteRow, syncDraftFromDom, isDirty, collectFromDraft, rowsById } from './tracker-taxonomy-model.js';
+import { STYLE_ID, STYLE, editorHtml, errorHtml, focusState, restoreFocus } from './tracker-taxonomy-view.js';
 
-const STYLE_ID = 'cc-tax-style';
-const STYLE = DRIFT_STYLE + `
-.cc-tax { display:flex; flex-direction:column; gap:14px; height:100%; overflow:auto; padding:4px 2px; }
-.cc-tax-head h3 { margin:0; font-size:1.02rem; }
-.cc-tax-head .cc-tax-sub { color:#9aa5b4; font-size:.82rem; }
-.cc-tax-section { border:1px solid var(--border-rim,#202938); border-radius:10px; padding:10px 12px; }
-.cc-tax-sec-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; font-weight:600; font-size:.9rem; }
-.cc-tax-add { background:#141a22; color:#cfe; border:1px solid #3a4658; border-radius:7px; padding:3px 10px; cursor:pointer; font:inherit; font-size:.8rem; }
-.cc-tax-add:hover { border-color:#68d391; }
-.cc-tax-rows { display:flex; flex-direction:column; gap:6px; }
-.cc-tax-row { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
-.cc-tax-in { background:#0c0f14; color:#f1efe7; border:1px solid #2a3340; border-radius:6px; padding:4px 8px; font:inherit; font-size:.82rem; min-width:90px; flex:1; }
-.cc-tax-xc { display:inline-flex; align-items:center; gap:4px; color:#9aa5b4; font-size:.78rem; white-space:nowrap; }
-.cc-tax-del { background:none; color:#e06c75; border:1px solid #3a4658; border-radius:6px; padding:2px 9px; cursor:pointer; font:inherit; }
-.cc-tax-del:hover { border-color:#e06c75; }
-.cc-tax-bar { display:flex; align-items:center; gap:12px; padding-top:4px; }
-.cc-tax-save { background:#173a2a; color:#9ff0c0; border:1px solid #2f6b4d; border-radius:8px; padding:6px 16px; cursor:pointer; font:inherit; font-weight:600; }
-.cc-tax-save:hover { border-color:#68d391; }
-.cc-tax-status { color:#9aa5b4; font-size:.82rem; }
-.cc-tax-error { border:1px solid #6b2f2f; border-radius:10px; padding:8px 12px; color:#fc8181; font-size:.86rem; }
-`;
-
-const FIELDS = {
-  programs: ['key', 'name', 'accent'],
-  verticals: ['key', 'name'],
-  agents: ['key', 'name', 'program', 'vertical', 'patterns'],
-};
-
-const KINDS = ['programs', 'verticals', 'agents'];
+/** A Save that has not answered after this long is reported as "outcome unknown". */
+const SAVE_TIMEOUT_MS = 30000;
 
 const emptyConfig = () => ({ programs: [], verticals: [], agents: [] });
-/** A JSON copy (the POST body is JSON anyway); undefined stays undefined. */
-const clone = (v) => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
 
 export class TrackerTaxonomyRenderer {
   constructor(containerId) {
@@ -65,10 +39,26 @@ export class TrackerTaxonomyRenderer {
     this.fingerprint = null;
     this.source = '';
     this.loadError = '';
+    this.status = '';
+    /** null | 'disk' | 'elsewhere' — kept across repaints until Reload or a successful Save. */
+    this.conflict = null;
+    this.draft = null;
+    this.saveTimeoutMs = SAVE_TIMEOUT_MS;
     this._loaded = false;
-    /** What each input or checkbox showed when it was painted (N-a: an input strips
-     *  CR/LF from its value, so "untouched" is compared with what it showed, kept here). */
-    this._shown = new WeakMap();
+    this._gen = 0;
+    this._root = null;
+    this._rootGen = -1;
+    /** Per input/checkbox: { shown, value } — what it displayed when painted (an input strips
+     *  CR/LF) and the row value it was painted from, so a reverted edit reverts. */
+    this._painted = new WeakMap();
+    this._loading = null;
+    this._loadSeq = 0;
+    this._loadingSeq = 0;
+    this._saving = false;
+    this._held = [];
+    /** Fingerprints this editor wrote; each is removed when its broadcast echo arrives. */
+    this._written = new Set();
+    this._inflight = new Set();
   }
 
   ensureStyle() {
@@ -79,189 +69,225 @@ export class TrackerTaxonomyRenderer {
     document.head.appendChild(el);
   }
 
+  /** Resolves when every load, Save and event this editor started has settled. */
+  async idle() {
+    while (this._inflight.size) await Promise.allSettled([...this._inflight]);
+  }
+
+  _track(p) {
+    this._inflight.add(p);
+    const done = () => this._inflight.delete(p);
+    p.then(done, done);
+    return p;
+  }
+
   async render() {
     if (!this.container) return;
     this.ensureStyle();
-    if (!this._loaded) await this.fetchConfig();
+    if (!this._loaded) {
+      const result = await this._load();
+      if (!this._loaded) { this._loaded = true; this._applyFirstLoad(result); }
+    }
+    // A hub payload never replaces the mounted view (edits, focus and caret stay).
+    if (this._mounted()) return;
     this.paint();
   }
 
+  _mounted() {
+    return !!this._root && this._rootGen === this._gen && this.container.contains(this._root);
+  }
+
+  /** Single-flight: a load already in flight is joined. */
+  _load() {
+    if (this._loading) return this._loading;
+    const seq = ++this._loadSeq;
+    this._loadingSeq = seq;
+    const p = this._fetchConfig().finally(() => { if (this._loading === p) this._loading = null; });
+    this._loading = p;
+    return this._track(p);
+  }
+
+  /** A load that started after `arrival`: join one in flight only if it is newer. */
+  _loadAfter(arrival) {
+    if (this._loading && this._loadingSeq > arrival) return this._loading;
+    if (this._loading) return this._loading.then(() => this._load());
+    return this._load();
+  }
+
   /** A load counts only with an ok status, a JSON body and a `config` object. */
-  async fetchConfig() {
-    this.loadError = '';
+  async _fetchConfig() {
     try {
       const res = await fetch('/api/v1/tracker/config');
       let data = null;
       try { data = await res.json(); } catch { data = null; }
       if (!res.ok || !isPlainObject(data) || !isPlainObject(data.config)) {
-        const why = isPlainObject(data) && data.error ? String(data.error) : `HTTP ${res.status}`;
-        this.loadError = `The taxonomy could not be loaded (${why}). Reload the Console to try again.`;
-      } else {
-        this.config = data.config;
-        this.source = data.source || '';
-        this.drift = isPlainObject(data.drift) ? data.drift : null;
-        this.fingerprint = typeof data.fingerprint === 'string' ? data.fingerprint : null;
+        return { ok: false, error: isPlainObject(data) && data.error ? String(data.error) : `HTTP ${res.status}` };
       }
+      return { ok: true, data };
     } catch {
-      this.loadError = 'The taxonomy could not be loaded (is the Console server running?). Reload the Console to try again.';
+      return { ok: false, error: 'is the Console server running?' };
     }
-    this._loaded = true;
+  }
+
+  _applyFirstLoad(result) {
+    if (result.ok) { this.loadError = ''; this._applyData(result.data); return; }
+    this.loadError = `The taxonomy could not be loaded (${result.error}). Reload the Console to try again.`;
+  }
+
+  _applyData(data) {
+    this.config = data.config;
+    this.source = data.source || '';
+    this.drift = isPlainObject(data.drift) ? data.drift : null;
+    this.fingerprint = typeof data.fingerprint === 'string' ? data.fingerprint : null;
+    this._rebuild();
+  }
+
+  /** A new draft generation: the previous root is dropped so it is never read back. */
+  _rebuild() {
+    this.draft = draftFromConfig(this.config);
+    this._gen += 1;
+    this._root = null;
+  }
+
+  _sync() {
+    if (this.draft && this._root && this._rootGen === this._gen) {
+      syncDraftFromDom(this.draft, this._root, (el) => this._painted.get(el));
+    }
   }
 
   paint() {
-    const head = `<div class="cc-tax-head">
-        <h3>Tracker Taxonomy</h3>
-        <span class="cc-tax-sub">operator-declared programs · verticals · agents — Save writes docs/roadmap/tracker-config.yaml + a governed directive the next cycle must consult. Each vertical's functionality is checked against the Console navigation and is not edited here.</span>
-      </div>`;
-    if (this.loadError) {
-      this.container.innerHTML = `<div class="cc-tax">${head}<div class="cc-tax-error" role="alert">${esc(this.loadError)}</div></div>`;
+    if (!this.container) return;
+    this._sync();
+    const focus = focusState(this._root);
+    if (this.loadError || !this.draft) {
+      this.container.innerHTML = errorHtml(this.loadError || 'The taxonomy has not loaded yet.');
+      this._root = null;
       return;
     }
-    this.container.innerHTML = `<div class="cc-tax">
-      ${head}
-      ${driftHtml(this.drift, this.source)}
-      ${this._section('programs', 'Programs', list(this.config.programs))}
-      ${this._section('verticals', 'Verticals', list(this.config.verticals))}
-      ${this._section('agents', 'Agent mappings', list(this.config.agents))}
-      <div class="cc-tax-bar">
-        <button class="cc-tax-save" data-act="save" type="button">Save taxonomy</button>
-        <span class="cc-tax-status" id="cc-tax-status">${this.source ? `source: ${esc(this.source)}` : ''}</span>
-      </div>
-    </div>`;
-    this._remember(this.container);
-    this._bind();
+    this.container.innerHTML = editorHtml({
+      draft: this.draft, dirty: isDirty(this.draft), saving: this._saving, conflict: this.conflict,
+      drift: this.drift, source: this.source, status: this.status,
+    });
+    this._root = this.container.querySelector('.cc-tax');
+    this._rootGen = this._gen;
+    const byId = rowsById(this.draft);
+    for (const rowEl of this._root.querySelectorAll('.cc-tax-row[data-row-id]')) {
+      const row = byId.get(rowEl.getAttribute('data-row-id'));
+      if (!row) continue;
+      for (const el of rowEl.querySelectorAll('.cc-tax-in')) this._painted.set(el, { shown: el.value, value: row.values[el.getAttribute('data-field')] });
+      const xc = rowEl.querySelector('[data-field="crossCutting"]');
+      if (xc) this._painted.set(xc, { shown: xc.checked, value: row.xc });
+    }
+    this._bind(this._root);
+    restoreFocus(this._root, focus);
   }
 
-  _remember(root) {
-    root.querySelectorAll('.cc-tax-in').forEach((inp) => this._shown.set(inp, inp.value));
-    root.querySelectorAll('[data-field="crossCutting"]').forEach((xc) => this._shown.set(xc, xc.checked));
-  }
-
-  _section(kind, label, items) {
-    const rows = items.map((it, i) => this._rowHtml(kind, it, i)).join('');
-    return `<div class="cc-tax-section" data-kind="${kind}">
-      <div class="cc-tax-sec-head"><span>${esc(label)}</span><button class="cc-tax-add" data-add="${kind}" type="button">+ add</button></div>
-      <div class="cc-tax-rows">${rows}</div>
-    </div>`;
-  }
-
-  /** `index` stamps the row with its loaded entry (data-src); added rows have none. */
-  _rowHtml(kind, item, index) {
-    const it = isPlainObject(item) ? item : {};
-    const inputs = FIELDS[kind].map((f) => {
-      const raw = f === 'patterns' && Array.isArray(it[f]) ? it[f].map(text).join(', ') : text(it[f]);
-      return `<input class="cc-tax-in" data-field="${f}" value="${esc(raw)}" placeholder="${f}">`;
-    }).join('');
-    const xc = kind === 'verticals'
-      ? `<label class="cc-tax-xc"><input type="checkbox" data-field="crossCutting"${it.crossCutting ? ' checked' : ''}>cross-cutting</label>`
-      : '';
-    const src = index === undefined ? '' : ` data-src="${index}"`;
-    return `<div class="cc-tax-row" data-kind="${kind}"${src}>${inputs}${xc}<button class="cc-tax-del" data-del type="button">×</button></div>`;
-  }
-
-  _bind() {
-    this.container.querySelectorAll('[data-add]').forEach((b) =>
-      b.addEventListener('click', () => this._addRow(b.getAttribute('data-add'))));
-    this.container.querySelectorAll('[data-del]').forEach((b) =>
-      b.addEventListener('click', () => b.closest('.cc-tax-row')?.remove()));
-    this.container.querySelector('[data-act="save"]')?.addEventListener('click', () => this.save());
-  }
-
-  _addRow(kind) {
-    const rowsEl = this.container.querySelector(`.cc-tax-section[data-kind="${kind}"] .cc-tax-rows`);
-    if (!rowsEl) return;
-    const tmp = document.createElement('div');
-    tmp.innerHTML = this._rowHtml(kind, {});
-    const row = tmp.firstElementChild;
-    this._remember(row);
-    row.querySelector('[data-del]')?.addEventListener('click', () => row.remove());
-    rowsEl.appendChild(row);
-  }
-
-  /** Every loaded row the operator did not delete is saved. An untouched row passes
-   *  through exactly as loaded (even a scalar, null or keyless entry the editor cannot
-   *  show). A touched row = a copy of its loaded entry (when that is a plain object) +
-   *  only the inputs whose value differs from what they showed. A row is dropped only
-   *  when it was added and given no key, or the operator cleared its key. */
-  _collect() {
-    const read = (kind) => {
-      const out = [];
-      for (const r of this.container.querySelectorAll(`.cc-tax-section[data-kind="${kind}"] .cc-tax-row`)) {
-        const idx = r.getAttribute('data-src');
-        const loaded = idx !== null;
-        const base = loaded ? list(this.config[kind])[Number(idx)] : undefined;
-        const changed = [...r.querySelectorAll('.cc-tax-in')].filter((inp) => inp.value !== this._shown.get(inp));
-        const xc = r.querySelector('[data-field="crossCutting"]');
-        const xcChanged = !!xc && xc.checked !== this._shown.get(xc);
-        if (loaded && !changed.length && !xcChanged) { out.push(clone(base)); continue; }
-        const o = isPlainObject(base) ? clone(base) : {};
-        let keyCleared = false;
-        for (const inp of changed) {
-          const f = inp.getAttribute('data-field');
-          const v = inp.value.trim();
-          if (f === 'patterns') o.patterns = v ? v.split(',').map((s) => s.trim()).filter(Boolean) : [];
-          else if (v) o[f] = v;
-          else { delete o[f]; if (f === 'key') keyCleared = true; }
-        }
-        if (xcChanged) { if (xc.checked) o.crossCutting = true; else delete o.crossCutting; }
-        if (keyCleared || (!loaded && !o.key)) continue;
-        out.push(o);
+  /** Listeners live on this paint's root only (never on the shared container). */
+  _bind(root) {
+    root.addEventListener('input', () => {
+      this._sync();
+      const dirty = isDirty(this.draft);
+      root.toggleAttribute('data-dirty', dirty);
+      if (dirty) root.setAttribute('data-dirty', 'true');
+      root.querySelector('.cc-tax-dirty')?.toggleAttribute('hidden', !dirty);
+    });
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!t || typeof t.closest !== 'function' || this._saving) return;
+      const add = t.closest('[data-add]');
+      if (add) { this._sync(); addRow(this.draft, add.getAttribute('data-add')); this.paint(); return; }
+      if (t.closest('[data-del]')) {
+        const row = t.closest('.cc-tax-row');
+        this._sync();
+        deleteRow(this.draft, row.getAttribute('data-kind'), row.getAttribute('data-row-id'));
+        this.paint();
+        return;
       }
-      return out;
-    };
-    return Object.fromEntries(KINDS.map((k) => [k, read(k)]));
+      const act = t.closest('[data-act]')?.getAttribute('data-act');
+      if (act === 'save') this._track(this.save());
+      else if (act === 'reload') this._track(this._reload());
+    });
   }
 
-  /** Only a successful Save moves the baseline; a failure (409 changed-on-disk included)
-   *  leaves config, drift, fingerprint and DOM as they were. */
+  /** Only a successful (or directive-failed) Save moves the baseline; any other outcome
+   *  keeps config, fingerprint and draft. Controls are disabled while it is in flight. */
   async save() {
-    const config = this._collect();
-    const setStatus = (text) => {
-      const el = this.container.querySelector('#cc-tax-status');
-      if (el) el.textContent = text;
-    };
-    let data = null;
-    let failure = '';
-    let partial = '';
-    try {
-      const res = await fetch('/api/v1/tracker/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...config, fingerprint: this.fingerprint }),
-      });
-      try { data = await res.json(); } catch { data = null; }
-      if (isPlainObject(data) && data.error === 'directive-write-failed' && typeof data.fingerprint === 'string') {
-        // N-e: the taxonomy file WAS written; adopt it as the baseline so the next
-        // Save is not refused as changed-on-disk, and say what failed.
-        partial = 'Saved docs/roadmap/tracker-config.yaml, but the governed directive record could not be written.';
-      } else if (res.status === 409 || (isPlainObject(data) && data.error === 'changed-on-disk')) {
-        failure = 'Not saved: the taxonomy file changed on disk since this view loaded it. Reload the Console to pick up the change, then edit again.';
-      } else if (!res.ok || !isPlainObject(data) || data.ok !== true) {
-        failure = `Error: ${(isPlainObject(data) && data.error) || `save failed (HTTP ${res.status})`}`;
-      }
-    } catch {
-      failure = 'Save failed (is the Console server running?)';
-    }
-    if (failure) { setStatus(failure); return; }
-    if (partial) {
-      this.config = config;
-      this.source = 'config';
-      this.fingerprint = data.fingerprint;
-      this.paint();
-      setStatus(partial);
-      return;
-    }
+    if (this._saving || !this.draft) return;
+    this._sync();
+    const config = collectFromDraft(this.config, this.draft);
+    this._saving = true;
+    this.status = 'Saving…';
+    this.paint();
+    let outcome;
+    try { outcome = await postTaxonomy(config, this.fingerprint, this.saveTimeoutMs); } finally { this._saving = false; }
+    const verdict = saveVerdict(outcome, this.drift);
+    if (verdict.adopt) this._adopt(config, verdict.fingerprint, verdict.drift);
+    if (verdict.conflict) this.conflict = verdict.conflict;
+    this.status = verdict.status;
+    this.paint();
+    const held = this._held;
+    this._held = [];
+    for (const h of held) this._track(this._consider(h.fp, h.arrival));
+  }
+
+  _adopt(config, fingerprint, drift) {
     this.config = config;
     this.source = 'config';
-    this.drift = isPlainObject(data.drift) ? data.drift : null;
-    this.fingerprint = typeof data.fingerprint === 'string' ? data.fingerprint : null;
-    this.paint();
-    setStatus(`Saved → ${list(data.written).join(', ')}`);
+    this.drift = drift;
+    this.fingerprint = fingerprint;
+    if (fingerprint) this._written.add(fingerprint);
+    this.conflict = null;
+    this._rebuild();
   }
 
+  /** Reload applies unconditionally: it is the operator's explicit "discard my edits". */
+  async _reload() {
+    const result = await this._loadAfter(this._loadSeq);
+    if (result.ok) {
+      this._applyData(result.data);
+      this._written.clear();
+      this.conflict = null;
+      this.status = '';
+    } else {
+      this.status = `Could not reload the taxonomy (${result.error}). Your edits are kept.`;
+    }
+    this.paint();
+  }
+
+  onEvent(evt) {
+    if (!evt || evt.type !== 'tracker.config.updated') return;
+    const fp = evt.payload && evt.payload.fingerprint;
+    if (typeof fp !== 'string') return;
+    const arrival = this._loadSeq;
+    if (this._saving) { this._held.push({ fp, arrival }); return; }
+    this._track(this._consider(fp, arrival));
+  }
+
+  /** A broadcast fingerprint: an own echo is consumed; a foreign change reloads a clean
+   *  draft (if still clean when the load resolves) or is a conflict. */
+  async _consider(fp, arrival) {
+    if (this._written.has(fp)) { this._written.delete(fp); return; }
+    if (fp === this.fingerprint || !this.draft) return;
+    this._sync();
+    if (isDirty(this.draft)) { this.conflict = 'elsewhere'; this.paint(); return; }
+    const result = await this._loadAfter(arrival);
+    this._sync();
+    if (!result.ok) {
+      this.status = `Could not load the change made elsewhere (${result.error}). Your view is unchanged.`;
+      this.paint();
+      return;
+    }
+    if (result.data.fingerprint === this.fingerprint) return;
+    if (isDirty(this.draft)) { this.conflict = 'elsewhere'; this.paint(); return; }
+    this._applyData(result.data);
+    this._written.clear();
+    this.conflict = null;
+    this.paint();
+  }
+
+  /** The DOM is cleared; the draft is kept (it is synced first). */
   destroy() {
+    this._sync();
     if (this.container) this.container.innerHTML = '';
   }
-
-  onEvent() {}
 }
