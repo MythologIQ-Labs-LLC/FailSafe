@@ -4,14 +4,19 @@
 // Chips per status (recorded info, passing ok, failing fail, stale warn, missing bad, unavailable
 // muted), records with hashes, ids, sha and tree, the fixed scope line, markup in repository strings
 // stays text, and no link or unlink buttons for a sealed (archived) intent.
-// plan-532c LD9: six steps with the review step, the legend, the "complete is not reachable" line,
-// the intent decision labelled "not a review" with the forgeability note, governance kind and
-// outcome, "Linked by" from the edge origin, and the Failing pill.
+// plan-532c LD9: six steps with the review step, the legend, the intent decision labelled "not a
+// review" with the forgeability note, governance kind and outcome, "Linked by" from the edge
+// origin, and the Failing pill.
+// plan-b320 LD9: the four outcome pills (Evidence complete except receipt, Awaiting review,
+// Incomplete, Failing) with the complete line that never claims a receipt; "complete cannot be
+// assessed" only while the ledger or git cannot be read; blocking items with their commit state;
+// reviews with reviewer, what the confirmation proves and the ledger entry; Record PASS / Record
+// VETO on a linked commit with a note, each posting once; none of it for a sealed intent.
 
 import { strict as assert } from 'assert';
 import { JSDOM } from 'jsdom';
 // @ts-expect-error untyped JS module
-import { DeliveryAssessmentRenderer, DELIVERY_SCOPE_LINE } from '../../../src/roadmap/ui/modules/delivery-assessment-renderer.js';
+import { DeliveryAssessmentRenderer, DELIVERY_SCOPE_LINE, COMPLETE_LINE } from '../../../src/roadmap/ui/modules/delivery-assessment-renderer.js';
 
 const SCOPE = 'This assessment uses only the links you recorded here and evidence already in the FailSafe ledger. ' +
   'Nothing is inferred and nothing leaves this machine. Receipts are unavailable until the ledger repair (#467). ' +
@@ -26,6 +31,9 @@ const SHA2 = '9'.repeat(40);
 const DECISION_NOTE = 'Recorded in the local intent history; the chain shows the entry is unchanged since it was chained, not who wrote it.';
 let decision: { status: string; actor: string; timestamp: string; entryHash: string } | null = null;
 let overall = 'incomplete';
+let reachable: string[] = [];
+let reviewOverride: { status: string; reason: string; records: Array<Record<string, unknown>> } | null = null;
+const AWAITING = 'Awaiting review: no PASS is recorded on a linked commit. Record a PASS or VETO on the newest linked commit (Workspace > Delivery, or the command FailSafe: Record a Delivery Review).';
 
 function view(id: string, linkable: boolean, purpose: string) {
   const vetoed = decision?.status === 'VETO';
@@ -40,14 +48,15 @@ function view(id: string, linkable: boolean, purpose: string) {
       { edge: 'committed-under', target: SHA, provenance: { sha: SHA, tree: TREE, branch: 'main' }, linkedAt: 't', actor: 'user', entryHash: 'h2' },
     ],
     assessment: {
-      intentId: id, overall, gaps: ['architecture', 'review', 'governance'], completeReachable: false, completeBlockedBy: ['B320', 'B321'],
+      intentId: id, overall, gaps: overall === 'evidence-complete-except-receipt' ? [] : ['architecture', 'review', 'governance'],
+      completeReachable: reachable.length === 0, completeBlockedBy: reachable,
       steps: [
         { key: 'issue', label: 'External issue', status: 'recorded', reason: 'r', records: [{ source: 'jira', key: 'PROJ-7', contentSha256: 'c'.repeat(64), createdEntryHash: 'e'.repeat(64) }] },
         { key: 'architecture', label: 'Governing architecture', status: 'stale', reason: 'changed', records: [{ target: 'runtime', docPath: '<b>docs/RUNTIME.md</b>', docSha256: 'd'.repeat(64), sourceSha: SHA, status: 'stale', currentSha256: 'f'.repeat(64), via: 'workspace-delivery' }] },
         { key: 'code', label: 'Implementation', status: 'recorded', reason: 'r', records: [{ sha: SHA, tree: TREE, branch: 'main', status: 'recorded', files: ['src/a.ts', '<i>x</i>'], filesTruncated: false, via: 'governed-commit', action: 'organize' }] },
-        { key: 'review', label: 'Review', status: vetoed ? 'failing' : 'missing',
-          reason: vetoed ? 'Intent vetoed by judge at t.' : 'FailSafe records no review of the implementation yet: no command records a review verdict (B320) and no governance event names the commit it evaluated (B321).',
-          records: decision ? [{ decision: vetoed ? 'vetoed' : 'approved for implementation (not a review)', status: decision.status, actor: decision.actor, timestamp: decision.timestamp, entryHash: decision.entryHash, provenance: DECISION_NOTE }] : [] },
+        reviewOverride ? { key: 'review', label: 'Review', ...reviewOverride } : { key: 'review', label: 'Review', status: vetoed ? 'failing' : 'missing',
+          reason: vetoed ? 'Intent vetoed by judge at t.' : AWAITING,
+          records: decision ? [{ record: 'intent-decision', decision: vetoed ? 'vetoed' : 'approved for implementation (not a review)', status: decision.status, actor: decision.actor, timestamp: decision.timestamp, entryHash: decision.entryHash, provenance: DECISION_NOTE }] : [] },
         { key: 'governance', label: 'Governance evidence', status: 'recorded', reason: 'r', records: [
           { entryId: 7, eventType: 'GOVERNANCE_PAUSED', timestamp: 't', entryHash: 'g'.repeat(64), matchedBy: 'intentId', value: id, kind: 'policy-decision', outcome: 'denied', chain: 'unknown' },
         ] },
@@ -104,9 +113,9 @@ function setupDom(): { cleanup: () => void; doc: Document; posted: Posted[]; fet
 }
 
 suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
-  setup(() => { decision = null; overall = 'incomplete'; });
+  setup(() => { decision = null; overall = 'incomplete'; reachable = []; reviewOverride = null; });
 
-  test('six steps with a chip per status, the overall outcome, its gaps and why complete is not reachable', async () => {
+  test('six steps with a chip per status, the overall outcome and its gaps; no "cannot be assessed" line while the ledger and git are readable', async () => {
     const ctx = setupDom();
     try {
       await new DeliveryAssessmentRenderer('workspace').refresh();
@@ -122,7 +131,88 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
       const o = d.querySelector('.cc-dlv-overall')?.textContent ?? '';
       assert.match(o, /Incomplete/);
       assert.match(o, /Governing architecture, Review, Governance evidence/);
-      assert.match(o, /Complete is not reachable yet: FailSafe records no review of the implementation \(B320, B321\)\. The receipt also needs the ledger repair \(#467\)\./);
+      assert.equal(d.querySelector('.cc-dlv-unreachable'), null);
+      assert.doesNotMatch(o, /B320|B321/);
+    } finally { ctx.cleanup(); }
+  });
+
+  test('the four outcome pills; Complete reads "Evidence complete except receipt" and never claims a receipt', async () => {
+    const seen: Array<[string, string]> = [];
+    for (const o of ['evidence-complete-except-receipt', 'awaiting-review', 'incomplete', 'failing']) {
+      overall = o;
+      const ctx = setupDom();
+      try {
+        await new DeliveryAssessmentRenderer('workspace').refresh();
+        const pill = ctx.doc.querySelector('.cc-dlv-overall .cc-dlv-pill')!;
+        seen.push([pill.textContent ?? '', pill.className.replace('cc-dlv-pill ', '')]);
+        if (o === 'evidence-complete-except-receipt') {
+          assert.equal(ctx.doc.querySelector('.cc-dlv-complete')?.textContent, COMPLETE_LINE);
+          assert.match(COMPLETE_LINE, /except receipt \(the receipt needs the ledger repair, #467\)\. New evidence will need a fresh review\./);
+          assert.doesNotMatch(ctx.doc.querySelector('.cc-dlv-overall')?.textContent ?? '', /receipt issued|receipt recorded/i);
+        }
+      } finally { ctx.cleanup(); }
+    }
+    assert.deepEqual(seen, [
+      ['Evidence complete except receipt', 'cc-dlv-pill-ok'], ['Awaiting review', 'cc-dlv-pill-warn'],
+      ['Incomplete', 'cc-dlv-pill-warn'], ['Failing', 'cc-dlv-pill-fail'],
+    ]);
+  });
+
+  test('complete cannot be assessed only while the ledger or git cannot be read', async () => {
+    reachable = ['ledger-unavailable', 'git-unavailable'];
+    const ctx = setupDom();
+    try {
+      await new DeliveryAssessmentRenderer('workspace').refresh();
+      assert.equal(ctx.doc.querySelector('.cc-dlv-unreachable')?.textContent, 'Complete cannot be assessed while the ledger is unavailable and git is unavailable.');
+    } finally { ctx.cleanup(); }
+  });
+
+  test('the review step lists blocking items with their commit state and reviews with reviewer, proof and ledger entry', async () => {
+    overall = 'failing';
+    reviewOverride = {
+      status: 'failing', reason: 'Rejected by review: VETO on a (ledger entry #8). (and 1 more blocking item)',
+      records: [
+        { record: 'blocking', kind: 'veto', id: 8, hash: 'h'.repeat(64), label: 'Rejected by review: VETO on a.', verdict: 'VETO', commitSha: SHA, commitState: 'sealed', note: 'missing tests' },
+        { record: 'blocking', kind: 'bad-seal', id: 9, hash: 'k'.repeat(64), label: 'Review record unverifiable: ledger entry #9 fails its seal.', commitSha: SHA2, commitState: 'recorded, unverified' },
+        { record: 'review', reviewId: 'rid-1', verdict: 'VETO', commitSha: SHA, tree: TREE, covers: [SHA], evidenceCount: 3, evidenceDigest: 'z'.repeat(64),
+          supersedes: [], note: 'missing tests', reviewerDid: 'did:myth:overseer:local', proves: 'A person approved a modal VS Code dialog. This does not identify which local process sent the request.',
+          entryId: 8, entryHash: 'h'.repeat(64), timestamp: 't' },
+      ],
+    };
+    const ctx = setupDom();
+    try {
+      await new DeliveryAssessmentRenderer('workspace').refresh();
+      const text = ctx.doc.querySelector('.cc-dlv-step[data-key="review"]')?.textContent ?? '';
+      assert.match(text, new RegExp(`Commit${SHA} \\(sealed\\)`));
+      assert.match(text, new RegExp(`Commit${SHA2} \\(recorded, unverified\\)`));
+      assert.match(text, /Reviewerdid:myth:overseer:local/);
+      assert.match(text, /ProvesA person approved a modal VS Code dialog\. This does not identify/);
+      assert.match(text, /Ledger entry#8 h{64} \(seal verified\)/);
+      assert.match(text, /Notemissing tests/);
+    } finally { ctx.cleanup(); }
+  });
+
+  test('Record PASS and Record VETO on a linked commit, with a note, each post once; a sealed intent has no review controls', async () => {
+    const ctx = setupDom();
+    try {
+      await new DeliveryAssessmentRenderer('workspace').refresh();
+      const d = ctx.doc;
+      const options = [...d.querySelectorAll('.cc-dlv-review-pick option')].map((o) => (o as HTMLOptionElement).value);
+      assert.deepEqual(options, [SHA], 'only linked commits can be reviewed');
+      (d.querySelector('.cc-dlv-review-note') as HTMLInputElement).value = 'ship it';
+      (d.querySelector('.cc-dlv-review-pass') as HTMLButtonElement).click();
+      await new Promise((res) => setTimeout(res, 20));
+      (d.querySelector('.cc-dlv-review-veto') as HTMLButtonElement).click();
+      await new Promise((res) => setTimeout(res, 20));
+      assert.deepEqual(ctx.posted, [
+        { url: '/api/actions/delivery/review', body: { intentId: ACTIVE, verdict: 'PASS', commitSha: SHA, note: 'ship it' } },
+        { url: '/api/actions/delivery/review', body: { intentId: ACTIVE, verdict: 'VETO', commitSha: SHA, note: '' } },
+      ]);
+      const picker = d.querySelector('.cc-dlv-picker') as HTMLSelectElement;
+      picker.value = SEALED;
+      picker.dispatchEvent(new (d.defaultView as unknown as { Event: typeof Event }).Event('change'));
+      await new Promise((res) => setTimeout(res, 50));
+      assert.equal(d.querySelectorAll('.cc-dlv-review-pass, .cc-dlv-review-veto, .cc-dlv-review-pick').length, 0);
     } finally { ctx.cleanup(); }
   });
 
@@ -150,7 +240,7 @@ suite('DeliveryAssessmentRenderer (#532 LD8, jsdom structural)', () => {
       assert.ok(head.includes('e'.repeat(64)));
       const review = ctx.doc.querySelector('.cc-dlv-step[data-key="review"]')!;
       assert.equal(review.getAttribute('data-status'), 'missing');
-      assert.match(review.textContent ?? '', /B320/);
+      assert.match(review.textContent ?? '', /Awaiting review/);
       assert.ok((review.textContent ?? '').includes('p'.repeat(64)));
     } finally { ctx.cleanup(); }
   });

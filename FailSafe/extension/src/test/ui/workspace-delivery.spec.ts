@@ -3,11 +3,15 @@
 // Drives the REAL ConsoleServer (serveConsoleServerUI) against a temp `git init` workspace with a
 // managed architecture index, a real IntentService holding an imported intent, and a ledger stub:
 //   - Link architecture and Link commit each post exactly once; with a ledger entry naming the
-//     intent the delivery stays incomplete with the review gap (recorded is not passed), and the
-//     view says complete is not reachable until FailSafe records a review (B320, B321);
+//     intent the delivery is Awaiting review (recorded is not passed); Record PASS posts once and
+//     the view reads "Evidence complete except receipt" with the receipt unavailable (plan-b320);
+//   - a Record VETO makes the delivery Failing ("Rejected by review");
 //   - an intent PASS shows as "approved for implementation (not a review)" with review Missing; a
 //     VETO makes review Failing ("Intent vetoed") and the delivery Failing (plan-532c);
 //   - a declined confirmer changes nothing: no history entry, the step stays missing.
+// VISUAL AND STRUCTURE ONLY (plan-b320 LD9): the ledger here is an in-memory stub whose rows all
+// report a valid seal, so this suite proves no seal, continuity or tamper behaviour; those are
+// proven against a real ledger in deliveryReview.test.ts and the extension-host suite.
 // Design source: the Architecture sub-view (same card, chip and scope-line vocabulary).
 
 import { test, expect } from '@playwright/test';
@@ -15,9 +19,10 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { spawnSync } from 'child_process';
+import { createHash } from 'crypto';
 import { serveConsoleServerUI, ConsoleServerController } from './helpers/serveConsoleServerUI';
 import { IntentService } from '../../governance/IntentService';
-import type { OperatorConfirmation } from '../../extension/operatorConfirmation';
+import { DELIVERY_REVIEW_TITLES, type OperatorConfirmation } from '../../extension/operatorConfirmation';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { removeTempTree } = require('../../../src/test/shared/removeTempTree.cjs') as { removeTempTree: (dir: string) => void };
@@ -62,12 +67,31 @@ async function importedIntent(root: string): Promise<{ service: IntentService; i
   return { service, id: intent.id };
 }
 
+/** An in-memory stand-in for the sealed reads (every row reports a valid v3 seal; no seal is computed). */
 function ledgerNaming(intentId: string): unknown {
-  const entry = {
-    id: 7, timestamp: '2026-10-17T00:00:00.000Z', eventType: 'PROVENANCE_RECORDED', agentDid: 'did:t', agentTrustAtAction: 0,
-    gdprTrigger: false, payload: { intentId, agentType: 'test' }, entryHash: 'h'.repeat(64), prevHash: 'p', signature: 's',
+  type Row = { row: Record<string, unknown> & { id: number; entry_hash: string; event_type: string; payload: string }; payload: Record<string, unknown>; seal: { version: 'v3'; ok: true; code: null } };
+  const rows: Row[] = [];
+  let prev = '0'.repeat(64);
+  const push = (fields: Record<string, unknown>, payload: Record<string, unknown>) => {
+    const id = rows.length + 1;
+    const entry_hash = createHash('sha256').update(`${id}:${JSON.stringify(payload)}`).digest('hex');
+    const row = { id, timestamp: new Date().toISOString(), prev_hash: prev, entry_hash, signature: `v3:${'0'.repeat(64)}`, ...fields, payload: JSON.stringify(payload) } as unknown as Row['row'];
+    prev = entry_hash;
+    rows.push({ row, payload, seal: { version: 'v3', ok: true, code: null } });
+    return { id, entryHash: entry_hash, timestamp: String(row.timestamp) };
   };
-  return { isAvailable: () => true, findEntriesContaining: async (v: string) => (v === intentId ? [entry] : []) };
+  push({ event_type: 'PROVENANCE_RECORDED', agent_did: 'did:t' }, { intentId, agentType: 'test' });
+  return {
+    isAvailable: () => true,
+    appendEntry: async (r: Record<string, unknown>) => push({
+      event_type: r.eventType, agent_did: r.agentDid, overseer_did: r.overseerDid ?? null, overseer_decision: r.overseerDecision ?? null,
+      verification_method: r.verificationMethod ?? null, verification_result: r.verificationResult ?? null, artifact_hash: r.artifactHash ?? null,
+    }, r.payload as Record<string, unknown>),
+    findSealedEntriesContaining: async (v: string) => rows.filter((x) => x.row.payload.includes(v)),
+    getSealedEntriesByType: async (t: string) => rows.filter((x) => x.row.event_type === t),
+    getSealedRange: async (from: number) => rows.filter((x) => x.row.id >= from),
+    getRotationHead: () => null,
+  };
 }
 
 async function openDelivery(page: import('@playwright/test').Page, url: string): Promise<void> {
@@ -90,7 +114,7 @@ test.describe('#532 Workspace › Delivery sub-view', () => {
     for (const r of roots.splice(0)) removeTempTree(r);
   });
 
-  test('each Link posts once; a ledger entry naming the intent is presence: incomplete with the review gap', async ({ page }) => {
+  test('each Link posts once; a ledger entry naming the intent is presence: awaiting review; Record PASS completes it except the receipt', async ({ page }) => {
     const root = workspace();
     roots.push(root);
     const { service, id } = await importedIntent(root);
@@ -116,17 +140,43 @@ test.describe('#532 Workspace › Delivery sub-view', () => {
     await page.locator('#workspace .cc-dlv-link-commit').click();
     await expect(page.locator('#workspace .cc-dlv-step[data-key="code"]')).toHaveAttribute('data-status', 'recorded');
     await expect(page.locator('#workspace .cc-dlv-step[data-key="review"]')).toHaveAttribute('data-status', 'missing');
-    await expect(page.locator('#workspace .cc-dlv-overall')).toContainText('Incomplete');
-    await expect(page.locator('#workspace .cc-dlv-overall')).toContainText('Complete is not reachable yet');
+    await expect(page.locator('#workspace .cc-dlv-overall .cc-dlv-pill')).toHaveText('Awaiting review');
     await expect(page.locator('#workspace .cc-dlv-overall')).not.toContainText('Evidence complete except receipt');
-    expect(posts.map((p) => JSON.parse(p))).toEqual([
-      { intentId: id, edge: 'implements', target: 'runtime' },
-      { intentId: id, edge: 'committed-under', target: git(root, 'rev-parse', 'HEAD') },
-    ]);
-    expect(confirmed).toHaveLength(2);
-    expect(history(root).match(/"event":"LINKED"/g)).toHaveLength(2);
     // The commit's changed files are listed for display (the root commit adds the index).
     await expect(page.locator('#workspace .cc-dlv-step[data-key="code"]')).toContainText('docs/ARCHITECTURE_INDEX.md');
+
+    await page.locator('#workspace .cc-dlv-review-note').fill('looks right');
+    await page.locator('#workspace .cc-dlv-review-pass').click();
+    await expect(page.locator('#workspace .cc-dlv-step[data-key="review"]')).toHaveAttribute('data-status', 'passing');
+    await expect(page.locator('#workspace .cc-dlv-overall .cc-dlv-pill')).toHaveText('Evidence complete except receipt');
+    await expect(page.locator('#workspace .cc-dlv-complete')).toContainText('the receipt needs the ledger repair, #467');
+    await expect(page.locator('#workspace .cc-dlv-step[data-key="receipt"]')).toHaveAttribute('data-status', 'unavailable');
+    const head = git(root, 'rev-parse', 'HEAD');
+    expect(posts.map((p) => JSON.parse(p))).toEqual([
+      { intentId: id, edge: 'implements', target: 'runtime' },
+      { intentId: id, edge: 'committed-under', target: head },
+      { intentId: id, verdict: 'PASS', commitSha: head, note: 'looks right' },
+    ]);
+    expect(confirmed).toEqual([expect.any(String), expect.any(String), DELIVERY_REVIEW_TITLES.PASS]);
+    expect(history(root).match(/"event":"LINKED"/g)).toHaveLength(2);
+    expect(history(root).match(/"event":"REVIEWED"/g)).toHaveLength(1);
+  });
+
+  test('Record VETO makes the delivery failing ("Rejected by review")', async ({ page }) => {
+    const root = workspace();
+    roots.push(root);
+    const { service, id } = await importedIntent(root);
+    controller = await serveConsoleServerUI({
+      workspaceRoot: root, intentService: service, ledgerManager: ledgerNaming(id),
+      operatorConfirmer: async () => 'approved' as OperatorConfirmation,
+    });
+    await openDelivery(page, controller.url);
+    await page.locator('#workspace .cc-dlv-link-commit').click();
+    await expect(page.locator('#workspace .cc-dlv-step[data-key="code"]')).toHaveAttribute('data-status', 'recorded');
+    await page.locator('#workspace .cc-dlv-review-veto').click();
+    await expect(page.locator('#workspace .cc-dlv-step[data-key="review"]')).toHaveAttribute('data-status', 'failing');
+    await expect(page.locator('#workspace .cc-dlv-step[data-key="review"]')).toContainText('Rejected by review');
+    await expect(page.locator('#workspace .cc-dlv-overall .cc-dlv-pill')).toHaveText('Failing');
   });
 
   test('a declined confirmer changes nothing', async ({ page }) => {
@@ -148,9 +198,9 @@ test.describe('#532 Workspace › Delivery sub-view', () => {
   test('an intent PASS is approval for implementation, not a review; a VETO makes the delivery failing', async ({ page }) => {
     const root = workspace();
     roots.push(root);
-    const { service } = await importedIntent(root);
+    const { service, id } = await importedIntent(root);
     controller = await serveConsoleServerUI({
-      workspaceRoot: root, intentService: service, operatorConfirmer: async () => 'approved' as OperatorConfirmation,
+      workspaceRoot: root, intentService: service, ledgerManager: ledgerNaming(id), operatorConfirmer: async () => 'approved' as OperatorConfirmation,
     });
     await service.updateStatus('PASS', 'judge');
     await openDelivery(page, controller.url);

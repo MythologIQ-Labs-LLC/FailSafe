@@ -165,3 +165,35 @@ suite('#538 confirmBoundOperation', () => {
     assert.equal(api.CONFIRMATION_DEADLINE_MS, 120_000);
   });
 });
+
+// #532 B320 (plan-b320 LD3): the same binding for a VS Code command (no HTTP response).
+suite('#532 B320 confirmBoundCommand', () => {
+  const op = () => ({ kind: 'review', list: ['a'] });
+
+  test('approved: confirm is called exactly once and a deep-frozen copy is returned with its operation id', async () => {
+    const shown: OperatorActionRequest[] = [];
+    const source = op();
+    const r = await confirmation.confirmBoundCommand(async (q) => { shown.push(q); return 'approved'; }, source, describe);
+    source.list.push('changed after the dialog');
+    assert.equal(shown.length, 1);
+    assert.equal(r.ok, true);
+    const b = (r as Extract<typeof r, { ok: true }>).bound;
+    assert.deepEqual(b.operation, { kind: 'review', list: ['a'] });
+    assert.ok(Object.isFrozen(b.operation) && Object.isFrozen(b.operation.list));
+    assert.ok(shown[0].detail.includes(b.operationId));
+    assert.match(b.operationId, /^op_/);
+  });
+
+  test('declined, busy, a throwing confirmer, unwired and an approval after the deadline are failures', async () => {
+    for (const answer of ['declined', 'busy'] as const) {
+      let calls = 0;
+      const r = await confirmation.confirmBoundCommand(async () => { calls += 1; return answer; }, op(), describe);
+      assert.deepEqual([r.ok, (r as { failure?: string }).failure, calls], [false, answer, 1]);
+    }
+    const threw = await confirmation.confirmBoundCommand(async () => { throw new Error('x'); }, op(), describe);
+    assert.equal((threw as { failure?: string }).failure, 'declined');
+    assert.deepEqual(await confirmation.confirmBoundCommand(undefined, op(), describe), { ok: false, failure: 'unwired', operationId: null });
+    const late = await confirmation.confirmBoundCommand(async () => { await delay(60); return 'approved'; }, op(), describe, { deadlineMs: 20 });
+    assert.equal((late as { failure?: string }).failure, 'expired');
+  });
+});
