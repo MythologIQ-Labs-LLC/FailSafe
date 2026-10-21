@@ -110,22 +110,6 @@ export const ReviewSupersededSchema = z.object({
   id: z.number().int().nonnegative(),
   hash: z.string().min(1).max(128),
 }).strict();
-export const IntentReviewDetailsSchema = z.object({
-  reviewId: z.string().uuid(),
-  verdict: ReviewVerdictSchema,
-  evaluates: ReviewEvaluatesSchema,
-  covers: z.array(ReviewCommitRefSchema).max(1000),
-  evidenceDigest: z.string().regex(HASH64),
-  supersedes: z.array(ReviewSupersededSchema).max(10000),
-  ledgerEntryId: z.number().int().positive(),
-  ledgerEntryHash: z.string().regex(HASH64),
-  operationId: z.string().min(1).max(80),
-}).strict();
-export type ReviewVerdict = z.infer<typeof ReviewVerdictSchema>;
-export type ReviewBlockingKind = z.infer<typeof ReviewBlockingKindSchema>;
-export type ReviewSuperseded = z.infer<typeof ReviewSupersededSchema>;
-export type IntentReviewDetails = z.infer<typeof IntentReviewDetailsSchema>;
-
 /**
  * #532 B344 (plan-b344 LD3): one VETO superseded by a declared, git-verified rework, as the PASS
  * row and its mirror record it. Path lists are complete (at most 50 per side) for `amended` and
@@ -158,6 +142,23 @@ export const REWORK_ENTRY_LIMIT = 20;
 export const ReworksSchema = z.array(ReworkEntrySchema).min(1).max(REWORK_ENTRY_LIMIT);
 export type ReworkEntry = z.infer<typeof ReworkEntrySchema>;
 export type ReworkPathStatus = z.infer<typeof ReworkPathStatusSchema>;
+export const IntentReviewDetailsSchema = z.object({
+  reviewId: z.string().uuid(),
+  verdict: ReviewVerdictSchema,
+  evaluates: ReviewEvaluatesSchema,
+  covers: z.array(ReviewCommitRefSchema).max(1000),
+  evidenceDigest: z.string().regex(HASH64),
+  supersedes: z.array(ReviewSupersededSchema).max(10000),
+  ledgerEntryId: z.number().int().positive(),
+  ledgerEntryHash: z.string().regex(HASH64),
+  operationId: z.string().min(1).max(80),
+  /** #532 B344: absent when the PASS declares no rework. */
+  reworks: ReworksSchema.optional(),
+}).strict();
+export type ReviewVerdict = z.infer<typeof ReviewVerdictSchema>;
+export type ReviewBlockingKind = z.infer<typeof ReviewBlockingKindSchema>;
+export type ReviewSuperseded = z.infer<typeof ReviewSupersededSchema>;
+export type IntentReviewDetails = z.infer<typeof IntentReviewDetailsSchema>;
 
 export const IntentHistoryEntrySchema = z.object({
   intentId: IntentIdSchema,

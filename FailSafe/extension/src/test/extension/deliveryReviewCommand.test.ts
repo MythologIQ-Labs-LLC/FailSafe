@@ -211,6 +211,13 @@ suite('#532 B344 failsafe.delivery.recordReview with rework', () => {
   });
 
   test('from the palette, a non-ancestor VETO asks once for its rework, then confirm is called once; dismissing writes nothing', async () => {
+    // Corrected after the red run: the dismissal ran after the clearing PASS, when no VETO was left to ask about.
+    const before = rows();
+    let dismissAsked = 0;
+    const dismissed = await runDeliveryReviewCommand(deps(async () => 'approved', { pickRework: async () => { dismissAsked += 1; return undefined; } }));
+    assert.equal(dismissAsked, 1, 'the dismissal row reaches the rework prompt');
+    assert.equal(dismissed.outcome, 'dismissed');
+    assert.equal(rows(), before, 'nothing written');
     const asked: Array<{ entryId: number; commitSha: string }> = [];
     let confirms = 0;
     const out = await runDeliveryReviewCommand(deps(async () => { confirms += 1; return 'approved'; }, {
@@ -219,9 +226,5 @@ suite('#532 B344 failsafe.delivery.recordReview with rework', () => {
     assert.equal(out.outcome, 'recorded', out.detail);
     assert.deepEqual(asked, [{ entryId: vetoId, commitSha: b }]);
     assert.equal(confirms, 1);
-    const before = rows();
-    const dismissed = await runDeliveryReviewCommand(deps(async () => 'approved', { pickRework: async () => undefined }));
-    assert.notEqual(dismissed.outcome, 'recorded');
-    assert.equal(rows(), before, 'nothing written');
   });
 });

@@ -458,14 +458,44 @@ export interface DeliveryReviewFacts {
   reworks?: ReworkEntry[];
 }
 
-/** RED STAGE STUB (plan-b344 LD5): no escaping yet. */
+/** U+FFFD, what a byte sequence that is not UTF-8 decodes to. */
+const REPLACEMENT_CHAR = String.fromCodePoint(0xfffd);
+/** Every control, format, unassigned or private-use code point (\p{C}), line and paragraph separator, U+FFFD and backslash. */
+const PATH_ESCAPES = new RegExp(`[\\p{C}\\p{Zl}\\p{Zp}\\\\${REPLACEMENT_CHAR}]`, "gu");
+
+/**
+ * #532 B344 (plan-b344 LD5): a path exactly as git names it, with nothing cut or collapsed: each
+ * code point that could reshape or hide part of the dialog is written as \u{XXXX}, and a backslash
+ * as \\, so two different paths never show the same. sanitizeDialogText is never used for paths.
+ */
 export function escapeDialogPath(path: string): string {
-  return path;
+  return path.replace(PATH_ESCAPES, (ch) =>
+    ch === "\\" ? "\\\\" : `\\u{${ch.codePointAt(0)!.toString(16).toUpperCase().padStart(4, "0")}}`);
 }
 
-/** RED STAGE STUB (plan-b344 LD5): no rework section yet. */
-export function reworkSectionLines(_reworks: ReworkEntry[]): string[] {
-  return [];
+/**
+ * #532 B344 (plan-b344 LD5): the "Superseded by rework" section of a review dialog, shown before the
+ * supersedes list and never truncated (buildReviewPlan refuses one over REWORK_DIALOG_LIMIT). Empty
+ * when there is no declared rework.
+ */
+export function reworkSectionLines(reworks: ReworkEntry[]): string[] {
+  if (!reworks.length) return [];
+  const lines = [`Superseded by rework (${reworks.length}); git shows each declared commit is the vetoed commit amended or rebased:`];
+  for (const r of reworks) {
+    const e = r.evidence;
+    lines.push(
+      `- VETO #${r.vetoEntryId} ${sanitizeDialogText(r.vetoEntryHash, 70)} on ${r.vetoCommit}, superseded by rework ${r.reworkCommit} (${r.relation})`,
+      `  Parents: vetoed ${e.vetoParent}, rework ${e.reworkParent}`,
+      `  Diff ids: vetoed ${e.vetoDiffId ?? "none"}, rework ${e.reworkDiffId ?? "none"}`,
+      `  Paths: the vetoed commit changes ${e.vetoPathCount}, the rework changes ${e.reworkPathCount}`,
+    );
+    if (r.relation === "amended") {
+      lines.push(`  Shared (${e.shared.length}), status in the vetoed commit/the rework:`, ...e.shared.map((p) => `    ${p.vetoStatus}/${p.reworkStatus} ${escapeDialogPath(p.path)}`));
+      lines.push(`  Only in the vetoed commit (${e.onlyInVeto.length}):`, ...e.onlyInVeto.map((p) => `    ${p.status} ${escapeDialogPath(p.path)}`));
+      lines.push(`  Only in the rework (${e.onlyInRework.length}):`, ...e.onlyInRework.map((p) => `    ${p.status} ${escapeDialogPath(p.path)}`));
+    }
+  }
+  return lines;
 }
 
 /**
@@ -497,12 +527,16 @@ export function deliveryReviewRequest(
     lines.push(`Covers every linked commit (${facts.linked.length}):`, ...covered);
   }
   lines.push(`Governance evidence: ${facts.binding.evidenceCount} ledger entr${facts.binding.evidenceCount === 1 ? "y" : "ies"}, digest ${facts.binding.evidenceDigest}`);
+  const reworks = facts.reworks ?? [];
+  if (reworks.length) lines.push("", ...reworkSectionLines(reworks));
   if (facts.superseded.length) {
     lines.push("", `Supersedes (${facts.superseded.length}); this PASS clears exactly these and nothing else:`);
     for (const s of facts.superseded.slice(0, BATCH_LIST_LIMIT)) {
+      const rework = s.kind === "veto" ? reworks.find((r) => r.vetoEntryId === s.id) : undefined;
       const commit = !s.commitSha ? "commit unknown"
-        : s.commitTrusted ? `on ${s.commitSha} (${s.commitSha === facts.commit.sha ? "the reviewed commit" : "an ancestor of the reviewed commit"})`
-          : `commit ${s.commitSha} (recorded, unverified)`;
+        : rework ? `on ${s.commitSha}, superseded by rework ${rework.reworkCommit} (see above)`
+          : s.commitTrusted ? `on ${s.commitSha} (${s.commitSha === facts.commit.sha ? "the reviewed commit" : "an ancestor of the reviewed commit"})`
+            : `commit ${s.commitSha} (recorded, unverified)`;
       const what = s.kind === "veto" ? "VETO" : "unverifiable record";
       lines.push(`- ${what}, ${s.kind} #${s.id} ${sanitizeDialogText(s.hash, 70)}, ${commit}${s.timestamp ? `, at ${sanitizeDialogText(s.timestamp, 40)}` : ""}${s.note ? `, note: ${sanitizeDialogText(s.note, 120)}` : ""}`);
     }
@@ -516,7 +550,7 @@ export function deliveryReviewRequest(
     "This proves a person approved a VS Code dialog; it does not identify who.",
     facts.verdict === "PASS"
       ? "A PASS is current only while the linked commits, their trees and the governance evidence stay as shown; new evidence will need a fresh review. The receipt stays unavailable (#467)."
-      : "A VETO blocks this delivery until a later PASS on this commit or a descendant of it names it.",
+      : "A VETO blocks this delivery until a later PASS names it: a PASS on this commit or a descendant of it, or a PASS on a declared rework that git shows is this commit amended or rebased.",
     "FailSafe records this review in its ledger and the intent history. Nothing leaves this machine.",
   );
   const footer = source === "console" ? LOOPBACK_FOOTER : source === "command-arguments" ? COMMAND_CALL_FOOTER : null;

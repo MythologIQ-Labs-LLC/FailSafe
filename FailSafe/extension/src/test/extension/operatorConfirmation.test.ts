@@ -200,10 +200,23 @@ suite('#532 B344 delivery review dialog: rework section', () => {
     for (const shown of ['M/M a\\u{000A}b.ts', 'A/M \\u{202E}evil.ts', 'D x\\\\y.ts', 'A z\\u{2028}\\u{200D}\\u{2029}\\u{E0041}.ts', 'T kind.ts']) {
       assert.ok(d.includes(shown), `${JSON.stringify(shown)} in ${d}`);
     }
-    assert.ok(!/[\u2028\u2029\u200D\u202E]|\u{E0041}/u.test(d), 'no raw unsafe character reaches the dialog');
+    assert.ok(!/\u2028|\u2029|\u200D|\u202E|\u{E0041}/u.test(d), 'no raw unsafe character reaches the dialog');
     assert.equal(escapeDialogPath('a\u{E0041}\\'), 'a\\u{E0041}\\\\');
     assert.equal(escapeDialogPath('plain/path.ts'), 'plain/path.ts');
     assert.ok(d.includes(`superseded by rework ${R}`) && d.includes('amended'));
+  });
+
+  test('D1b (written after the implementation, for the "path list sliced" mutation): every list of an amended rework is shown in full', () => {
+    const names = (prefix: string, n: number) => Array.from({ length: n }, (_, i) => `${prefix}${i}.ts`);
+    const r = rework(9,
+      names('s', 5).map((p) => ({ path: p, vetoStatus: 'M' as const, reworkStatus: 'M' as const })),
+      names('v', 4).map((p) => ({ path: p, status: 'D' as const })),
+      names('r', 4).map((p) => ({ path: p, status: 'A' as const })));
+    const d = deliveryReviewRequest(facts([item(9)], [r]), 'op_1b', 'console').detail;
+    const section = d.slice(d.indexOf('Superseded by rework'), d.indexOf('Supersedes ('));
+    for (const shown of [...names('s', 5).map((p) => `M/M ${p}`), ...names('v', 4).map((p) => `D ${p}`), ...names('r', 4).map((p) => `A ${p}`)]) {
+      assert.ok(section.includes(shown), `${shown} in ${section}`);
+    }
   });
 
   test('D2: with 25 superseded items and the rework last, the rework section is complete; only the rest is under "and N more"', () => {

@@ -80,7 +80,11 @@ async function writeReview(req: Request, res: Response, deps: DeliveryRouteDeps)
   const ctx = contextOf(deps, res);
   if (!ctx) return;
   const built = await buildReviewPlan(ctx, parsed, ctx.now ? ctx.now() : Date.now());
-  if (!built.ok) { res.status(built.status).json({ ok: false, error: built.error }); return; }
+  if (!built.ok) {
+    // #532 B344: the refusal code, and the VETO a non-ancestor refusal names, so the Console can offer a rework.
+    res.status(built.status).json({ ok: false, error: built.error, ...(built.code ? { code: built.code } : {}), ...(built.veto ? { veto: built.veto } : {}) });
+    return;
+  }
   const bound = await confirmBoundOperation(
     deps.confirmOperatorAction, built.plan, (plan, id) => deliveryReviewRequest(plan, id, "console"), res,
     { deadlineMs: deps.confirmationDeadlineMs },
