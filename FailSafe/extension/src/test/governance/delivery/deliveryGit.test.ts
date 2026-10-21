@@ -336,10 +336,12 @@ suite('deliveryGit rework reads (#532 B344)', () => {
     assert.equal(changedPaths(root, head(root), () => ({ kind: 'unavailable', detail: 'x' })).state, 'unavailable');
   });
 
-  test('changedPaths fails closed on output it cannot parse: an unknown status, an unpaired field, a trailing record with no path', () => {
+  test('changedPaths fails closed on output it cannot parse: an unknown status, an unpaired field, a trailing record with no path, an empty path', () => {
     const root = setup();
     const sha = head(root);
-    for (const stdout of ['X\0a.txt\0', 'M\0', 'M\0a.txt\0D', 'R100\0a\0b\0']) {
+    // 'M\0\0' (an even-count record with an empty path) was added after the implementation, for the
+    // "empty-path check off" mutation (K35b); it is not red-first evidence.
+    for (const stdout of ['X\0a.txt\0', 'M\0', 'M\0a.txt\0D', 'R100\0a\0b\0', 'M\0\0']) {
       assert.equal(changedPaths(root, sha, () => ({ kind: 'ok', stdout })).state, 'unavailable', JSON.stringify(stdout));
     }
     assert.deepEqual(changedPaths(root, sha, () => ({ kind: 'ok', stdout: 'M\0f\uFFFD.ts\0' })),
