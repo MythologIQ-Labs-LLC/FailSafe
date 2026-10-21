@@ -103,6 +103,15 @@ function wellShaped(report: Record<string, unknown>): boolean {
     if (rotation !== undefined && rotation !== null) {
         if (!isObject(rotation) || typeof rotation.retiredFile !== 'string' || typeof rotation.retiredVerificationOk !== 'boolean') return false;
     }
+    // A successful verification cannot report a known failed anchor. Source
+    // verification reports these statuses with failures; reject contradictions.
+    if (report.ok === true && ['head-missing', 'ledger-mismatch', 'unavailable'].includes(String(anchor.status))) return false;
+    // Every verified row must contribute exactly one seal version. Frozen and
+    // unfrozen counts partition only legacy rows, not new v3 entries.
+    const legacy = (coverage.v1Rows as number) + (coverage.v2Rows as number);
+    if (legacy + (coverage.v3Rows as number) !== report.rows) return false;
+    if ((coverage.frozenLegacyRows as number) + (coverage.unfrozenLegacyRows as number) !== legacy) return false;
+    if (report.ok === true && scope === 'full' && legacy !== 0) return false;
     return true;
 }
 
