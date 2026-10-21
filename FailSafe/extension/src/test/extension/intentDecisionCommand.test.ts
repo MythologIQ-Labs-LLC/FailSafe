@@ -5,6 +5,8 @@
 // scope the approval grants: the entry count, the first 20 entries, "and N more", and a warning for
 // every entry (shown or not) that resolves to the workspace root or outside it. The chat
 // participant shows the effective status and routes /seal to the seal command instead of sealing.
+// The note is recorded exactly as the dialog shows it (review fold; those two rows were written
+// after the implementation).
 
 import { strict as assert } from 'assert';
 import * as vscode from 'vscode';
@@ -69,6 +71,37 @@ suite('B340 failsafe.intent.decide / failsafe.intent.seal commands', () => {
     assert.doesNotMatch(detail, /src\/f30\.ts/, 'entries after the first 20 are not listed');
     assert.match(detail, /entry 25 "\." covers the whole workspace/);
     assert.match(detail, /entry 3 "\.\.\/outside\.ts" is outside the workspace/);
+  });
+
+  // Review fold (reviewB340 item 3), written after the implementation: not red-first evidence.
+  test('note at the 500-character limit: shown whole in the dialog and recorded exactly as shown; surrounding spaces are trimmed in both', async () => {
+    h = await harness();
+    const note = `${'a'.repeat(499)}z`;
+    const r = await decide(h, 'PASS', { note: `  ${note}  ` });
+    assert.equal(r.outcome, 'recorded', r.detail);
+    const shown = /^Note \(your pick\): (.*)$/m.exec(h.confirm.requests[0].detail)?.[1];
+    assert.equal(shown, note, 'the dialog shows the whole note');
+    const row = rawRows(h.ledger).filter((x) => x.event_type === 'INTENT_DECIDED').pop();
+    assert.ok(row, 'a decision row was written');
+    assert.equal(JSON.parse(String(row.payload)).note, shown, 'the recorded note is the note the dialog showed');
+  });
+
+  // Review fold (reviewB340 item 3), written after the implementation: not red-first evidence.
+  test('a note with a control, format (bidi) or line-separator character is refused with note-unshowable before any dialog; nothing is written', async () => {
+    h = await harness();
+    const m = requireCommands();
+    const before = rawRows(h.ledger).length;
+    const chars = ['\n', '\t', '\u0007', '\u0085', '\u061c', '\u200b', '\u200e', '\u202e', '\u2066', '\u2028', '\u2029', '\ud800', '\ue000'];
+    for (const c of chars) {
+      const r: any = await m.runIntentDecisionCommand(deps(h), { verdict: 'PASS', note: `ok${c}ok` });
+      assert.equal(r.outcome, 'invalid', `U+${c.charCodeAt(0).toString(16)}: ${r.detail}`);
+      assert.match(r.detail, /\(note-unshowable\)/);
+    }
+    const palette = await decide(h, 'VETO', { note: 'looks \u202eright' });
+    assert.equal(palette.outcome, 'invalid', palette.detail);
+    assert.match(palette.detail, /\(note-unshowable\)/);
+    assert.equal(h.confirm.requests.length, 0, 'no dialog was shown');
+    assert.equal(rawRows(h.ledger).length, before, 'nothing was written');
   });
 
   test('chat: /intent and /status show the effective status; /seal renders the seal command button and never seals', async () => {

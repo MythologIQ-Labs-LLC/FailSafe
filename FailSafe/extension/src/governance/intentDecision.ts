@@ -52,6 +52,9 @@ export const INTENT_CONTENT_VERSION = 1;
 export const INTENT_MUTABLE_FIELDS = ['status', 'updatedAt', 'sealedAt', 'evidence'] as const;
 export const INTENT_NOTE_LIMIT = 500;
 export const SCOPE_LIST_LIMIT = 20;
+/** Control, format (bidi included), surrogate, private-use and unassigned characters, and the line and paragraph separators. */
+const NOTE_UNSHOWABLE = /[\p{C}\p{Zl}\p{Zp}]/u;
+export const NOTE_UNSHOWABLE_REFUSAL = 'the note contains a control, format or line-separator character, which the dialog cannot show as recorded (note-unshowable)';
 
 const HASH64 = /^[0-9a-f]{64}$/;
 
@@ -365,8 +368,11 @@ export const LEDGER_UNAVAILABLE_DECISION = 'The FailSafe ledger is unavailable, 
 export function parseDecisionRequest(input: { verdict: unknown; note: unknown }): DecisionRequest | string {
   if (input.verdict !== 'PASS' && input.verdict !== 'VETO') return 'the verdict must be PASS or VETO';
   if (input.note !== undefined && input.note !== null && typeof input.note !== 'string') return 'the note must be text';
-  const note = typeof input.note === 'string' ? input.note : '';
+  // The dialog trims the note and replaces the characters below, so the note is trimmed here and a note holding one
+  // of them is refused: what is recorded is exactly what the dialog shows.
+  const note = typeof input.note === 'string' ? input.note.trim() : '';
   if (note.length > INTENT_NOTE_LIMIT) return `the note is longer than ${INTENT_NOTE_LIMIT} characters`;
+  if (NOTE_UNSHOWABLE.test(note)) return NOTE_UNSHOWABLE_REFUSAL;
   return { verdict: input.verdict, note };
 }
 
