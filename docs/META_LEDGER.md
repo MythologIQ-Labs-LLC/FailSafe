@@ -34778,3 +34778,57 @@ The review folds are disclosed.
 **Chain Hash (Merkle seal)**: `fffb68c699352b0af51ce2563eb772c20892a0cc7ef89cb1df7c7f8886cba9ac`
 
 **Decision**: SESSION SEAL for plan-564-websocket-origin.md (content hash = the audited plan, iteration 2). Reality = Promise, with disclosures. #564 is fixed: the Console WebSocket accepts only a protocol-13 handshake from a loopback peer whose Host is the loopback name and whose Origin equals http:// + Host, refusing everything else with 403 before the connection callback. Every Console HTTP request whose Host is not a loopback name is refused with 403 before any route, which closes DNS rebinding of /api/hub. Disclosures: bounded damaged-ledger override (#467 unresolved); browser-remote Consoles are now refused on GET/WS; no authentication (B364); harness-only reproduction, no installed exploit claimed; the architecture-index 8/1 failure is local to this host. Next: push, open the PR, run the full required CI including Linux test:all, and merge pinned to the head. No release.
+
+---
+
+### Entry #870: GATE TRIBUNAL - plan-l3-routes-guard (iteration 1) - PASS
+
+**Timestamp**: 2026-10-21T14:41:48Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1435-82a4cb`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21 (Lane D added the same day), disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1435-82a4cb/audit-iter1.json`
+
+**Content Hash**: `67e68443f0143e63ceabad80500d500854fe42ff136d1d6b6c06084798205e97`
+**Previous Hash**: `fffb68c699352b0af51ce2563eb772c20892a0cc7ef89cb1df7c7f8886cba9ac`
+**Chain Hash (Merkle seal)**: `26c6313a701fd9f9d2aff870baffeecbbe49c98650cf24bf70eb44f2f83688fd`
+
+**Decision**: PASS on plan-l3-routes-guard.md iteration 1 (sha256 de73f617), auditl3, Option B. Citations: 82 checked, 0 failed. The guard is sound: Origin is checked at consoleRequestGuard.ts:53, a non-JSON body gets 415 at :54, and a JSON request needs a preflight that is never granted. The limiter is mounted after the guard, and panic-stop is deliberately left without a limiter. Empty body = APPROVED is kept (OQ3 later). No app-wide guard now. Residuals B383/B384 are not release-blocking. Mandated folds: (1) honest red-first labels, with R6 a regression guard, C1 split with only 503 red, and L2 refusals asserted per request with N > budget; (2) a B1 server arrival counter; (3) a WeakMap accessor; (4) B384 names ArchitectureIndexRoute.ts:217 and DeliveryRoute.ts:147.
+
+---
+
+### Entry #871: IMPLEMENTATION - plan-l3-routes-guard
+
+**Timestamp**: 2026-10-21T18:12:14Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-21T1435-82a4cb`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-21T1435-82a4cb/implement.json`
+
+**Content Hash**: `b3349f6728b137588519df6cda27fb8bfeea5f57e7d5de78fda0b80eb9adf4ea`
+**Previous Hash**: `26c6313a701fd9f9d2aff870baffeecbbe49c98650cf24bf70eb44f2f83688fd`
+**Chain Hash (Merkle seal)**: `72c791fc31cc8aa324e6f89f4d995986b436da492b8b088fe70228e756e147d0`
+
+**Decision**: IMPLEMENTATION of plan-l3-routes-guard.md on fix/l3-routes-guard (rebased on main 85c9d357). Commits: a5d9f54b red tests; 53a2a28d consoleRequestGuard plus the limiter on approve-l3-batch and decide-l3 and the guard on panic-stop, in the order guard -> limiter -> cheap refusals -> lookup -> modal, with isConfirmationOpen read through a live accessor; 4ddf0222, fd6bdef4 and 851c4223 for B380-B384, the CHANGELOG security line, FX960 and exact contract re-cites. Disclosed: the red operatorConfirmation row's runtime export lookup became a static import in 53a2a28d, so the 'is exported' assertion is now compile-time and the behaviour assertions are unchanged; M6/M6b kill the row. The lead folded review should-fix 2 and 3 (B384 line references; durable backlog ids in comments) as 851c4223.
+
+---
+
+### Entry #872: SESSION SEAL - plan-l3-routes-guard
+
+**Timestamp**: 2026-10-21T18:12:14Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-21T1435-82a4cb`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-21T1435-82a4cb/substantiate.json`
+
+**Content Hash**: `de73f6170189b0c48405006cbab3c3387abde82389dab7f0a37972696f3ab76c`
+**Previous Hash**: `72c791fc31cc8aa324e6f89f4d995986b436da492b8b088fe70228e756e147d0`
+**Chain Hash (Merkle seal)**: `d29eb1e3bd245a7a234f1cb9c806c722dc0efb8dd66f94bb2d13328d9f0fd6ed`
+
+**Decision**: SESSION SEAL for plan-l3-routes-guard.md (content hash = the audited plan, sha256 de73f617). Reality = Promise, with disclosures. A cross-site page can no longer open the operator's L3 'Approve all' or decide dialog, or the Stop Sentinel dialog. approve-l3-batch, decide-l3 and panic-stop run the Console request guard first (Origin, JSON content type, loopback), so every no-preflight browser request shape is refused before any dialog or index read. The L3 routes carry a limiter that refused requests cannot spend. Disclosures: bounded damaged-ledger override (#467 unresolved); harness-only reproduction; a red-row access edit; mutation evidence from before the rebase on identical source; residuals B383/B384/OQ3. Next: push, open a PR, run the full required CI including Linux test:all, and merge pinned to the head. No release.

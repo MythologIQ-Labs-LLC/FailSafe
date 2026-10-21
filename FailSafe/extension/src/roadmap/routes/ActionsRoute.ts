@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { rateLimit } from "express-rate-limit";
 import type { L3ApprovalRequest } from "../../shared/types/l3-approval";
 import type { ApiRouteDeps } from "./types";
 import { consoleRequestGuard } from "./consoleRequestGuard";
@@ -8,6 +9,9 @@ import {
 } from "./installAuthorization";
 import {
   requireOperatorConfirmation,
+  confirmationFailure,
+  isConfirmationOpen,
+  type ConfirmOperatorAction,
   l3DecisionRequest,
   l3BatchRequest,
   panicStopRequest,
@@ -22,6 +26,9 @@ export function setupActionsRoutes(
   app: import("express").Application,
   deps: ApiRouteDeps,
 ): void {
+  const guard = consoleRequestGuard((req, res) => deps.rejectIfRemote(req, res));
+  // B380: L3 decision budgets per minute, after the guard so refused cross-site requests spend none.
+  const limiter = (limit: number) => rateLimit({ windowMs: 60_000, limit, standardHeaders: false, legacyHeaders: false });
   app.post(
     "/api/actions/resume-monitoring",
     async (req: Request, res: Response) => {
@@ -49,11 +56,9 @@ export function setupActionsRoutes(
     },
   );
 
-  // #514: stopping the Sentinel needs a modal VS Code confirmation.
-  app.post("/api/actions/panic-stop", async (req: Request, res: Response) => {
-    if (deps.rejectIfRemote(req, res)) {
-      return;
-    }
+  // #514: stopping the Sentinel needs a modal VS Code confirmation. B382: behind the Console
+  // request guard; no limiter, so the emergency stop cannot be starved.
+  app.post("/api/actions/panic-stop", guard, async (_req: Request, res: Response) => {
     if (!(await requireOperatorConfirmation(deps.confirmOperatorAction, panicStopRequest(), res))) {
       return;
     }
@@ -132,11 +137,13 @@ export function setupActionsRoutes(
 
   // Process all pending L3 approvals in batch. #514: the operator confirms a
   // snapshot of the queue; only the ids in that snapshot are decided, with the
-  // confirmed verb. Items queued while the dialog is open stay queued.
+  // confirmed verb. Items queued while the dialog is open stay queued. B380: behind the Console
+  // request guard and a limiter; the architecture lookup runs after every cheap refusal.
   app.post(
     "/api/actions/approve-l3-batch",
+    guard,
+    limiter(10),
     async (req: Request, res: Response) => {
-      if (deps.rejectIfRemote(req, res)) return;
       if (rejectBodyConditions(req, res)) return;
       const decision: "APPROVED" | "REJECTED" =
         req.body?.decision === "REJECTED" ? "REJECTED" : "APPROVED";
@@ -145,10 +152,12 @@ export function setupActionsRoutes(
         res.json({ ok: true, processed: 0 });
         return;
       }
+      const confirm = deps.confirmOperatorAction;
+      if (refuseBeforeDialog(confirm, res)) return;
       // B311: warn-only affected architecture decisions, 10 lines in total; never blocks the decision.
       const architecture = await architectureLines(deps, snapshot.map((i) => i.filePath), BATCH_ARCHITECTURE_LINES);
       if (!(await requireOperatorConfirmation(
-        deps.confirmOperatorAction, l3BatchRequest(snapshot, decision, architecture), res,
+        confirm, l3BatchRequest(snapshot, decision, architecture), res,
       ))) {
         return;
       }
@@ -164,8 +173,9 @@ export function setupActionsRoutes(
   // without acting on every other queued item.
   app.post(
     "/api/actions/decide-l3",
+    guard,
+    limiter(30),
     async (req: Request, res: Response) => {
-      if (deps.rejectIfRemote(req, res)) return;
       const id: unknown = req.body?.id;
       if (typeof id !== "string" || id.length === 0) {
         res.status(400).json({ ok: false, error: "id (string) required" });
@@ -182,9 +192,11 @@ export function setupActionsRoutes(
         res.status(404).json({ ok: false, error: `L3 request not found: ${id}` });
         return;
       }
+      const confirm = deps.confirmOperatorAction;
+      if (refuseBeforeDialog(confirm, res)) return;
       const architecture = await architectureLines(deps, [item.filePath]);
       if (!(await requireOperatorConfirmation(
-        deps.confirmOperatorAction, l3DecisionRequest(item, decision, architecture), res,
+        confirm, l3DecisionRequest(item, decision, architecture), res,
       ))) {
         return;
       }
@@ -216,6 +228,18 @@ function rejectBodyConditions(req: Request, res: Response): boolean {
     ok: false,
     error: "conditions are not accepted on this route; decide conditional approvals in the VS Code L3 panel",
   });
+  return true;
+}
+
+/**
+ * B381: answer no confirmer (503) and a dialog already open (429) before the architecture
+ * lookup. requireOperatorConfirmation still decides; a dialog opened meanwhile still gives busy.
+ */
+function refuseBeforeDialog(confirm: ConfirmOperatorAction | undefined, res: Response): boolean {
+  const result = !confirm ? "unwired" : isConfirmationOpen(confirm) ? "busy" : null;
+  if (!result) return false;
+  const failure = confirmationFailure(result);
+  res.status(failure.status).json(failure.body);
   return true;
 }
 

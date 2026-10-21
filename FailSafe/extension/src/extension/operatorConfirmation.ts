@@ -60,9 +60,17 @@ export function sanitizeDialogText(value: unknown, limit = FIELD_LIMIT): string 
   return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
 }
 
+/** B381: the live open state of each confirmer built here, read through an accessor. */
+const OPEN_STATE = new WeakMap<ConfirmOperatorAction, () => boolean>();
+
+/** True while a confirmer built by createOperatorConfirmer has its dialog open; false for any other. */
+export function isConfirmationOpen(confirm: ConfirmOperatorAction | undefined): boolean {
+  return confirm ? OPEN_STATE.get(confirm)?.() === true : false;
+}
+
 export function createOperatorConfirmer(window: ConfirmationWindow): ConfirmOperatorAction {
   let open = false;
-  return async (request) => {
+  const confirm: ConfirmOperatorAction = async (request) => {
     if (open) return "busy";
     open = true;
     try {
@@ -78,6 +86,8 @@ export function createOperatorConfirmer(window: ConfirmationWindow): ConfirmOper
       open = false;
     }
   };
+  OPEN_STATE.set(confirm, () => open);
+  return confirm;
 }
 
 export function withFooter(lines: string[]): string {

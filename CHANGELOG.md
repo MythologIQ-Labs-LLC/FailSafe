@@ -43,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 
 - The Console's live-update connection now accepts only its own page, and the Console answers only requests addressed to this machine by a loopback name (`localhost`, `127.0.0.1` or `[::1]`). Other web pages open in a browser on this machine, including ones that rebind a DNS name to this machine, can no longer read workspace and governance events through it (#564). A Console opened through a browser-based remote (GitHub Codespaces, vscode.dev or code-server behind a proxy name) is now refused on every page and live update, not only on actions; use the Console from a local browser or the VS Code commands.
-
+- Another web page can no longer open FailSafe's L3 approval or Panic Stop dialogs in VS Code. The Console's approve-all and per-item L3 routes and Panic Stop now refuse requests from other pages and requests that are not JSON, and the L3 routes are rate-limited. Decisions still need your click in VS Code.
 - Saving in Workspace › Taxonomy no longer writes outside the workspace through a linked or junctioned `docs/`, `docs/roadmap/`, `.failsafe/` or `.failsafe/governance/` folder, a linked directive record or a hard-linked file. Such a save is refused before anything is written, and links that stay inside the workspace still work (B330).
 
 ## [6.0.9] - 2026-10-18
