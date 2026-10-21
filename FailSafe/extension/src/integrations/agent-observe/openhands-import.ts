@@ -3,7 +3,7 @@
  * OpenHands run as historical evidence (#477, building on draft PR #507).
  *
  * Store: `.failsafe/logs/openhands-imports.jsonl`, whose only writer is this
- * importer, under its own lock. Each line is one event record, signed for this
+ * importer, under the shared cross-process lock. Each line is one event record, signed for this
  * install and folder (openhands-signing.ts). The shared transparency log gets
  * one summary line per import, so a large import does not push live verdicts
  * out of the recent-transparency views, and a torn line written by another
@@ -33,11 +33,47 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { createHash } from 'crypto';
 import { StringDecoder } from 'string_decoder';
+import { acquireFileLock, type LockErrors } from '../../shared/fileLock/crossProcessLock';
 import type { AgentObservationEvent } from './openhands-observer';
 import { normalizeFolder, signRecord, verifyRecord, type EvidenceKeyHolder } from './openhands-signing';
 
 export const EVIDENCE_FILE = 'openhands-imports.jsonl';
 export const RECORD_TYPE = 'agent.observation.imported';
+
+/** Current processes use a mkdir lock; old releases left an empty regular file. */
+const LOCK_TIMEOUT_MS = 2000;
+const LOCK_STALE_MS = 30_000;
+const LEGACY_STALE_MS = 120_000;
+const locked = () => new Error('OPENHANDS_IMPORT_LOCKED: import lock is held or cannot be safely recovered');
+const LOCK_ERRORS: LockErrors = {
+  timeout: () => locked(),
+  blocked: (code) => new Error('OPENHANDS_IMPORT_LOCKED: cannot acquire evidence lock (' + code + ')'),
+  lost: () => new Error('OPENHANDS_IMPORT_LOCK_LOST: lock ownership expired; import not acknowledged'),
+  reentrant: () => locked(),
+};
+
+/**
+ * Migrate old regular .lock files only after a conservative inactivity window.
+ * Old files contain no owner PID, so a recent lock is never presumed stale.
+ * Proper-lockfile handles new directory locks independently.
+ */
+function recoverLegacyLockFile(lockPath: string): void {
+  let first: fs.Stats;
+  try { first = fs.lstatSync(lockPath); } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+    throw error;
+  }
+  if (first.isSymbolicLink()) throw new Error('OPENHANDS_IMPORT_SYMLINK: redirected lock');
+  if (first.isDirectory()) return;
+  if (!first.isFile() || first.nlink !== 1 || Date.now() - first.mtimeMs < LEGACY_STALE_MS) throw locked();
+  const current = fs.lstatSync(lockPath);
+  if (!current.isFile() || current.nlink !== 1 ||
+      current.dev !== first.dev || current.ino !== first.ino ||
+      current.mtimeMs !== first.mtimeMs || current.ctimeMs !== first.ctimeMs ||
+      current.size !== first.size) throw locked();
+  fs.unlinkSync(lockPath);
+}
+
 
 export interface OpenHandsImportResult {
   imported: number;
@@ -182,12 +218,17 @@ function endsMidLine(fd: number): boolean {
   return last[0] !== 0x0a;
 }
 
-function writeLines(target: string, lines: string[]): void {
+function writeLines(target: string, lines: string[], assertHeld: () => void): void {
+  assertHeld();
   const fd = openAppendTarget(target, 'evidence file');
   try {
     if (endsMidLine(fd)) writeAll(fd, '\n');
-    for (const line of lines) writeAll(fd, line + '\n');
+    for (const line of lines) {
+      assertHeld();
+      writeAll(fd, line + '\n');
+    }
     fs.fsyncSync(fd);
+    assertHeld();
   } finally {
     fs.closeSync(fd);
   }
@@ -235,17 +276,22 @@ export async function persistOpenHandsObservations(
   refuseLinkedFolders(workspaceRoot);
   fs.mkdirSync(path.dirname(target), { recursive: true });
   refuseLinks(workspaceRoot, target, lockPath);
-  let lockFd: number;
-  try { lockFd = fs.openSync(lockPath, 'wx', 0o600); } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
-      throw new Error('OPENHANDS_IMPORT_LOCKED: another import holds the lock; inspect it before removing the lock file');
-    }
-    throw error;
-  }
+  recoverLegacyLockFile(lockPath);
+  const lock = acquireFileLock(target, {
+    timeoutMs: LOCK_TIMEOUT_MS, staleMs: LOCK_STALE_MS,
+    label: 'OpenHands historical import', errors: LOCK_ERRORS,
+    ensureParent: () => {
+      refuseLinkedFolders(workspaceRoot);
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      refuseLinks(workspaceRoot, target, lockPath);
+    },
+  });
   let result: Omit<OpenHandsImportResult, 'summaryWritten'>;
   try {
     const key = await deps.keys.readUnderLock();
+    lock.assertHeld();
     const { keys, unverified } = existingKeys(target, key, folder);
+    lock.assertHeld();
     const importedAt = (deps.now?.() ?? new Date()).toISOString();
     let duplicates = 0;
     const lines: string[] = [];
@@ -262,11 +308,11 @@ export async function persistOpenHandsObservations(
       record.sig = signRecord(key, folder, record);
       lines.push(JSON.stringify(record));
     }
-    if (lines.length) writeLines(target, lines);
+    if (lines.length) writeLines(target, lines, () => lock.assertHeld());
+    lock.assertHeld();
     result = { imported: lines.length, duplicates, unverified };
   } finally {
-    fs.closeSync(lockFd);
-    fs.unlinkSync(lockPath);
+    lock.release();
   }
 
   let summaryWritten = true;
