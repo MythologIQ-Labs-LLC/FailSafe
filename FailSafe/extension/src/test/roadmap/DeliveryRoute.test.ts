@@ -11,9 +11,16 @@
 // the review gap; a policy decision is classified with its outcome; an intent PASS is approval for
 // implementation and leaves review missing; a later PULSE supersedes it; a VETO makes the delivery
 // failing; a Console link records `via: workspace-delivery`.
+//
+// plan-b320 (LD3/LD12), on the same real ledger: POST /api/actions/delivery/review passes the Console
+// request guard; declined, busy, unwired, expired and cancelled confirmations leave 0 review rows
+// and 0 mirrors; a change while the dialog is open answers 409 with nothing written; the positive
+// path goes from awaiting-review to evidence-complete-except-receipt with the receipt unavailable;
+// a VETO makes it failing and a PASS on a descendant commit that names the VETO completes it.
 
 import { strict as assert } from 'assert';
 import * as fs from 'fs';
+import * as http from 'http';
 import * as path from 'path';
 import { createHash } from 'crypto';
 import { setupDeliveryRoutes, type DeliveryRouteDeps } from '../../roadmap/routes/DeliveryRoute';
@@ -23,13 +30,16 @@ import type { LedgerManager } from '../../qorelogic/ledger/LedgerManager';
 import { RouteHarness, makeApp, invokeRemote } from '../extension/helpers/routeTestHarness';
 import { makeEnv, openLedger, type Env } from '../qorelogic/ledgerTestKit';
 import {
-  deliveryWorkspace, importedIntent, intentService, RUNTIME_DOC, RUNTIME_ROW, type DeliveryWorkspace,
+  commitAll, deliveryWorkspace, importedIntent, intentService, RUNTIME_DOC, RUNTIME_ROW, type DeliveryWorkspace,
 } from '../governance/delivery/deliveryFixtures';
+import { DELIVERY_REVIEW_TITLES, LOOPBACK_FOOTER } from '../../extension/operatorConfirmation';
+import { rawRows } from '../qorelogic/ledgerTestKit';
 
 const sha = (buf: Buffer | string): string => createHash('sha256').update(buf).digest('hex');
 const ROUTES: Array<[string, string]> = [
   ['GET', '/api/v1/delivery/intents'], ['GET', '/api/v1/delivery/intents/00000000-0000-4000-8000-000000000000'],
   ['GET', '/api/v1/delivery/candidates'], ['POST', '/api/actions/delivery/link'], ['POST', '/api/actions/delivery/unlink'],
+  ['POST', '/api/actions/delivery/review'],
 ];
 
 interface Setup {
@@ -220,10 +230,10 @@ suite('#532 DeliveryRoute', () => {
     const body = await assess(s, intent.id);
     const review = stepOf(body.assessment, 'review');
     assert.equal(review.status, 'missing');
-    assert.match(review.reason, /B320/);
+    assert.match(review.reason, /^Awaiting review/);
     assert.equal(review.records[0].decision, 'approved for implementation (not a review)');
-    assert.equal(body.assessment.overall, 'incomplete');
-    assert.equal(body.assessment.completeReachable, false);
+    assert.equal(body.assessment.overall, 'incomplete', 'governance evidence is still missing');
+    assert.equal(body.assessment.completeReachable, true, 'plan-b320: derived, and the ledger and git are readable');
     assert.equal(body.intent.decision.status, 'PASS');
     assert.equal(body.intent.decision.actor, 'judge');
     assert.equal(body.intent.createdBy, 'user');
@@ -269,7 +279,7 @@ suite('#532 DeliveryRoute', () => {
     assert.match(s.shown[0].detail, /Made by: Workspace > Delivery/);
   });
 
-  test('R2: links plus a PROVENANCE_RECORDED entry naming the intent give incomplete with the review gap; recorded is not passed', async () => {
+  test('R2: links plus a PROVENANCE_RECORDED entry naming the intent give awaiting review with the review gap; recorded is not passed', async () => {
     const s = await start();
     const intent = await importedIntent(s.service);
     assert.equal((await link(s, intent.id, 'implements', RUNTIME_ROW)).status, 200);
@@ -278,7 +288,7 @@ suite('#532 DeliveryRoute', () => {
     const res = await s.harness.request({ path: `/api/v1/delivery/intents/${intent.id}` });
     assert.equal(res.status, 200);
     const a = res.body.assessment;
-    assert.equal(a.overall, 'incomplete', JSON.stringify(a.steps.map((x: { key: string; status: string }) => [x.key, x.status])));
+    assert.equal(a.overall, 'awaiting-review', JSON.stringify(a.steps.map((x: { key: string; status: string }) => [x.key, x.status])));
     assert.deepEqual(a.gaps, ['review']);
     assert.equal(a.steps.find((x: { key: string }) => x.key === 'governance').status, 'recorded');
     const gov = a.steps.find((x: { key: string }) => x.key === 'governance');
@@ -290,5 +300,146 @@ suite('#532 DeliveryRoute', () => {
     assert.equal(un.status, 200);
     const after = (await s.harness.request({ path: `/api/v1/delivery/intents/${intent.id}` })).body;
     assert.equal(after.assessment.steps.find((x: { key: string }) => x.key === 'architecture').status, 'missing');
+  });
+
+  // ---------------------------------------------------------------- plan-b320: the review route
+
+  const reviewRowCount = (): number => rawRows(ledger!).filter((r) => r.event_type === 'DELIVERY_REVIEWED').length;
+  const mirrorCount = (): number => historyLines().filter((l) => JSON.parse(l).event === 'REVIEWED').length;
+  const review = (s: Setup, intentId: string, verdict: 'PASS' | 'VETO', commitSha: string, extra: Record<string, unknown> = {}) =>
+    s.harness.request({ method: 'POST', path: '/api/actions/delivery/review', body: { intentId, verdict, commitSha, note: 'checked', ...extra } });
+  async function readyIntent(s: Setup) {
+    const intent = await linkedIntent(s);
+    await ledger!.appendEntry({ eventType: 'PROVENANCE_RECORDED', agentDid: 'did:myth:agent:claude', agentTrustAtAction: 0, payload: { intentId: intent.id } });
+    return intent;
+  }
+
+  test('B320 R1: the review route passes the Console request guard (Origin, content type) before any dialog', async () => {
+    const s = await start();
+    const intent = await readyIntent(s);
+    const before = s.shown.length;
+    const foreign = await s.harness.request({ method: 'POST', path: '/api/actions/delivery/review', headers: { origin: 'http://evil.example' },
+      body: { intentId: intent.id, verdict: 'PASS', commitSha: ws.head } });
+    assert.equal(foreign.status, 403);
+    assert.equal(foreign.body.guard, 'origin');
+    const plain = await s.harness.request({ method: 'POST', path: '/api/actions/delivery/review', headers: { 'content-type': 'text/plain' },
+      rawBody: JSON.stringify({ intentId: intent.id, verdict: 'PASS', commitSha: ws.head }) });
+    assert.equal(plain.status, 415);
+    assert.equal(s.shown.length, before, 'no dialog');
+    assert.equal(reviewRowCount(), 0);
+  });
+
+  test('B320 R2: declined, busy and unwired confirmations write 0 rows and 0 mirrors', async () => {
+    const intent = await readyIntent(await start());
+    await harness!.stop();
+    harness = null;
+    for (const confirmResult of ['declined', 'busy', 'unwired'] as const) {
+      const s = await start({ confirmResult });
+      const res = await review(s, intent.id, 'PASS', ws.head);
+      assert.equal(res.status, { declined: 409, busy: 429, unwired: 503 }[confirmResult], confirmResult);
+      assert.equal(res.body.confirmation, confirmResult);
+      assert.equal(reviewRowCount(), 0, `${confirmResult}: no row`);
+      assert.equal(mirrorCount(), 0, `${confirmResult}: no mirror`);
+      await harness!.stop();
+      harness = null;
+    }
+  });
+
+  test('B320 R3: an approval after the deadline is expired (410) and a closed client is cancelled; neither writes anything', async () => {
+    let release: () => void = () => undefined;
+    const late = new Promise<void>((r) => { release = r; });
+    const isReview = (r: OperatorActionRequest): boolean => r.title === DELIVERY_REVIEW_TITLES.PASS || r.title === DELIVERY_REVIEW_TITLES.VETO;
+    const s = await start({ confirmationDeadlineMs: 50, confirmOperatorAction: async (r) => { if (isReview(r)) await late; return 'approved'; } });
+    const intent = await readyIntent(s);
+    const expired = await review(s, intent.id, 'PASS', ws.head);
+    assert.equal(expired.status, 410);
+    assert.equal(expired.body.confirmation, 'expired');
+    release();
+    await new Promise((r) => setTimeout(r, 50));
+    assert.equal(reviewRowCount(), 0);
+    await harness!.stop();
+    harness = null;
+    // Cancelled: the client goes away while the dialog is open, then the operator approves.
+    let approve: () => void = () => undefined;
+    let opened: () => void = () => undefined;
+    const shownDialog = new Promise<void>((r) => { opened = r; });
+    const s2 = await start({ confirmOperatorAction: async () => { opened(); await new Promise<void>((r) => { approve = r; }); return 'approved'; } });
+    const port = (s2.harness as unknown as { port: number }).port;
+    const body = JSON.stringify({ intentId: intent.id, verdict: 'PASS', commitSha: ws.head });
+    const req = http.request({ host: '127.0.0.1', port, path: '/api/actions/delivery/review', method: 'POST',
+      headers: { 'content-type': 'application/json', 'content-length': String(Buffer.byteLength(body)) } });
+    req.on('error', () => undefined);
+    const answered = new Promise<string>((r) => req.on('response', (res) => { let t = ''; res.on('data', (c) => { t += c; }); res.on('end', () => r(`${res.statusCode} ${t}`)); }));
+    req.end(body);
+    const first = await Promise.race([shownDialog.then(() => 'dialog'), answered]);
+    assert.equal(first, 'dialog', 'the request reached the dialog');
+    req.destroy();
+    await new Promise((r) => setTimeout(r, 100));
+    approve();
+    await new Promise((r) => setTimeout(r, 200));
+    assert.equal(reviewRowCount(), 0, 'cancelled: no row');
+    assert.equal(mirrorCount(), 0, 'cancelled: no mirror');
+  });
+
+  test('B320 R4: new evidence while the dialog is open answers 409 and writes nothing', async () => {
+    let intentId = '';
+    const s = await start({
+      confirmOperatorAction: async () => {
+        await ledger!.appendEntry({ eventType: 'PROVENANCE_RECORDED', agentDid: 'did:t', agentTrustAtAction: 0, payload: { intentId } });
+        return 'approved';
+      },
+    });
+    intentId = (await readyIntent(s)).id;
+    const res = await review(s, intentId, 'PASS', ws.head);
+    assert.equal(res.status, 409, JSON.stringify(res.body));
+    assert.equal(res.body.stale, true);
+    assert.equal(reviewRowCount(), 0);
+    assert.equal(mirrorCount(), 0);
+  });
+
+  test('B320 R5 positive path: awaiting review, then a PASS from the Console gives evidence-complete-except-receipt; the receipt stays unavailable', async () => {
+    const s = await start();
+    const intent = await readyIntent(s);
+    let a = (await assess(s, intent.id)).assessment;
+    assert.equal(a.overall, 'awaiting-review');
+    const res = await review(s, intent.id, 'PASS', ws.head, { tree: 'f'.repeat(40), evidenceDigest: 'e'.repeat(64) });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.match(res.body.operationId, /^op_/);
+    const dialog = s.shown[s.shown.length - 1];
+    assert.equal(dialog.title, DELIVERY_REVIEW_TITLES.PASS);
+    assert.match(dialog.detail, new RegExp(`Operation: ${res.body.operationId}`));
+    assert.match(dialog.detail, /Verdict \(as requested\): PASS/);
+    assert.match(dialog.detail, /Note \(as requested\): checked/);
+    assert.match(dialog.detail, /does not identify who/);
+    assert.ok(dialog.detail.endsWith(LOOPBACK_FOOTER));
+    assert.doesNotMatch(dialog.detail, /f{40}|e{64}/, 'request-supplied hashes are never shown or recorded');
+    assert.equal(reviewRowCount(), 1);
+    assert.equal(mirrorCount(), 1);
+    a = (await assess(s, intent.id)).assessment;
+    assert.equal(stepOf(a, 'review').status, 'passing', stepOf(a, 'review').reason);
+    assert.equal(a.overall, 'evidence-complete-except-receipt');
+    assert.equal(stepOf(a, 'receipt').status, 'unavailable');
+    assert.equal(a.completeReachable, true);
+  });
+
+  test('B320 R6: a VETO makes the delivery failing; a PASS on a descendant commit that names the VETO completes it', async () => {
+    const s = await start();
+    const intent = await readyIntent(s);
+    assert.equal((await review(s, intent.id, 'VETO', ws.head)).status, 200);
+    assert.equal(s.shown[s.shown.length - 1].title, DELIVERY_REVIEW_TITLES.VETO);
+    let a = (await assess(s, intent.id)).assessment;
+    assert.equal(a.overall, 'failing');
+    assert.match(stepOf(a, 'review').reason, /^Rejected by review: VETO/);
+    fs.writeFileSync(path.join(ws.root, 'fix.txt'), 'fixed\n');
+    const next = commitAll(ws.root, 'fix');
+    assert.equal((await link(s, intent.id, 'committed-under', next)).status, 200);
+    const older = await review(s, intent.id, 'PASS', ws.head);
+    assert.equal(older.status, 409, 'a PASS on the older commit does not contain the newer linked commit');
+    const res = await review(s, intent.id, 'PASS', next);
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.equal(res.body.supersedes.length, 1);
+    assert.match(s.shown[s.shown.length - 1].detail, new RegExp(`on ${ws.head} \\(an ancestor of the reviewed commit\\)`));
+    a = (await assess(s, intent.id)).assessment;
+    assert.equal(a.overall, 'evidence-complete-except-receipt', JSON.stringify(stepOf(a, 'review')));
   });
 });

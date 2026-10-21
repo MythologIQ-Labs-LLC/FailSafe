@@ -31,7 +31,7 @@ The code posts one GraphQL query to the fixed endpoint `FailSafe/extension/src/i
 ## Privileges and scopes
 
 Credential: a Linear API key in VS Code Secret Storage, sent as the Authorization header `FailSafe/extension/src/integrations/linear/linear-client.ts:72` (`{ 'Content-Type': 'application/json', Authorization: apiKey }`).
-The plain-text setting is deprecated and not read `FailSafe/extension/package.json:429-431` (`Plain-text settings are no longer read.`).
+The plain-text setting is deprecated and not read `FailSafe/extension/package.json:425-427` (`Plain-text settings are no longer read.`).
 Scope: the key carries its owner's Linear permissions; FailSafe sends only a read query `FailSafe/extension/src/integrations/linear/linear-import.ts:39-42` (`query FailSafeIssue($id: String!) { issue(id: $id) {`).
 The endpoint is not configurable from settings: the command never passes one `FailSafe/extension/src/extension/linear-command.ts:48` (`fetchLinearIssue(issue, apiKey, deps.post)`).
 Any webhook, sync or write-back capability would need write scopes and is marked requires separate approval (unverified: none is implemented).
@@ -81,7 +81,7 @@ The preview is an unsaved, untitled document `FailSafe/extension/src/extension/t
 
 Implemented: the intent's externalRef is `linear:<IDENTIFIER>`, which links a draft to its issue `FailSafe/extension/src/integrations/tracker-import/tracker-intent-import.ts:78-79` (`export function externalRefFor(issue: TrackerIssue)`).
 Implemented: a re-import of an identifier whose earlier intent is sealed records `reimportOf` `FailSafe/extension/src/integrations/tracker-import/tracker-intent-import.ts:290` (`reimportOf: last.intentId`).
-Delivery (main only, not in v6.0.8): in Workspace > Delivery the issue step of an imported Linear intent is `recorded` from the content hash in its CREATED entry, never re-fetched `FailSafe/extension/src/governance/delivery/deliveryAssessment.ts:115` (`function issueStep(issue: DeliveryInputs['issue']): DeliveryStep {`), and the operator links the architecture documents and commits it delivered, each after a VS Code confirmation `FailSafe/extension/src/roadmap/routes/DeliveryRoute.ts:110` (`for (const action of ["link", "unlink"] as const) {`).
+Delivery (main only, not in v6.0.8): in Workspace > Delivery the issue step of an imported Linear intent is `recorded` from the content hash in its CREATED entry, never re-fetched `FailSafe/extension/src/governance/delivery/deliveryAssessment.ts:126` (`function issueStep(issue: DeliveryInputs['issue']): DeliveryStep {`), and the operator links the architecture documents and commits it delivered, each after a VS Code confirmation `FailSafe/extension/src/roadmap/routes/DeliveryRoute.ts:146` (`for (const action of ["link", "unlink"] as const) {`).
 Proposed (not built): the issue-to-receipt edge, specified in `docs/architecture/INTEGRATION_SCENARIOS.md` (unverified: no code exists).
 
 ## Customer UI and actions

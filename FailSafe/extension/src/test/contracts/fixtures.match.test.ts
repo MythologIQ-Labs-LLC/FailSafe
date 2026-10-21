@@ -46,6 +46,28 @@ suite('Governance contract schemas — fixture validation (FX546)', () => {
     assert.equal(validate(fixture), true, JSON.stringify((validate as unknown as { errors?: unknown }).errors));
   });
 
+  test('#532 B320: a DELIVERY_REVIEWED entry validates; the schema declares $schema-version 1.1 and the README lists the migration', () => {
+    const validate = compileSchema('ledger_entry');
+    const fixture: LedgerEntryContract = {
+      id: 7,
+      timestamp: '2026-10-20T12:00:00.000Z',
+      eventType: 'DELIVERY_REVIEWED',
+      agentDid: 'did:myth:failsafe:delivery-review',
+      agentTrustAtAction: 0,
+      gdprTrigger: false,
+      payload: { reviewId: '22222222-2222-4222-8222-222222222222', verdict: 'PASS' },
+      entryHash: 'a'.repeat(64),
+      prevHash: 'b'.repeat(64),
+      signature: `v3:${'c'.repeat(64)}`,
+    };
+    assert.equal(validate(fixture), true, JSON.stringify((validate as unknown as { errors?: unknown }).errors));
+    const schema = JSON.parse(fs.readFileSync(path.join(CONTRACTS_DIR, 'ledger_entry.json'), 'utf8'));
+    assert.equal(schema['$schema-version'], '1.1');
+    const readme = fs.readFileSync(path.resolve(__dirname, '..', '..', '..', 'src', 'contracts', 'README.md'), 'utf8');
+    assert.match(readme, /\| `ledger_entry\.json` \| 1\.0 \| 1\.1 \| `eventType` adds `DELIVERY_REVIEWED`/);
+    assert.equal(validate({ ...fixture, eventType: 'DELIVERY_REVIEWED_TYPO' }), false, 'the enum is still closed');
+  });
+
   test('LedgerEntry missing required field is rejected', () => {
     const validate = compileSchema('ledger_entry');
     const malformed = {

@@ -72,7 +72,7 @@ A receipt is built from argv, status, risk, exit code and diff summary, never th
 ## Persisted artifacts
 
 A QUARANTINE_START and a QUARANTINE_END entry in the FailSafe ledger, carrying the receipt, risk grade and patch hash `FailSafe/extension/src/extension/agent-cli-command.ts:84-86` (`artifactHash: cs.patchSha256`).
-The ledger is the `soa_ledger` table `FailSafe/extension/src/qorelogic/ledger/LedgerManager.ts:127` (`CREATE TABLE IF NOT EXISTS soa_ledger`).
+The ledger is the `soa_ledger` table `FailSafe/extension/src/qorelogic/ledger/LedgerManager.ts:162` (`CREATE TABLE IF NOT EXISTS soa_ledger`).
 A write-only audit copy under the extension's global storage `agent-runs` folder, newest 20 kept `FailSafe/extension/src/integrations/agent-cli/agent-run-promotion.ts:95-99` (`fs.writeFileSync(path.join(dir, 'change-set.patch'), cs.patch);`).
 Health evidence of the last run in VS Code workspace state `FailSafe/extension/src/integrations/catalog/integration-health.ts:51` (`export const HEALTH_STATE_KEY = 'failsafe.integrationHealth.v1';`).
 On Apply, the working tree receives exactly the reviewed bytes; nothing is committed `FailSafe/extension/src/integrations/agent-cli/agent-run-promotion.ts:80` (`git.tryRun(cs.root, ['apply', '-'], { input: cs.patch })`).

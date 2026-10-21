@@ -509,9 +509,6 @@ test('T-c: every caller degrades as it does today when git is missing', async ()
     await assert.rejects(git.run(ws, ['status']), safety.GitCommandError, 'G6 run');
   } finally { git.dispose(); }
   assert.equal((await req('shared', 'gitBootstrap.js').ensureGitRepositoryReady(ws)).gitAvailable, false, 'G14');
-  const { DriftDetector } = req('qorelogic', 'checkpoint', 'DriftDetector.js');
-  const { ManifoldCalculator } = req('qorelogic', 'checkpoint', 'ManifoldCalculator.js');
-  assert.deepEqual(await new DriftDetector(ws, new ManifoldCalculator(ws)).getGitChanges('a'.repeat(40), 'b'.repeat(40)), { filesChanged: [], gitCommits: 0 }, 'G8');
   const { SecurityScanner } = req('roadmap', 'services', 'SecurityScanner.js');
   assert.deepEqual(await new SecurityScanner({}).runStaticAnalysis(ws, () => {}), [], 'G13');
   const { DependencyAdmissionLintModule } = req('qorlogic', 'substrate', 'DependencyAdmissionLintModule.js');

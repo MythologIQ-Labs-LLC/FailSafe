@@ -315,22 +315,33 @@ suite('#548 TrackerConfigRoute taxonomy drift', () => {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const realFs = require('fs') as typeof fs;
     const original = realFs.lstatSync;
+    const originalOpen = realFs.openSync;
     let hidden = false;
-    // The check sees no file once (as if it were created just after); the write must then fail.
+    const openFlags: unknown[] = [];
+    // B330 re-pin (declared): every check before the open sees no file (as if it were
+    // created just after them); the exclusive open must then fail and answer 409.
     (realFs as { lstatSync: unknown }).lstatSync = ((p: fs.PathLike, ...rest: unknown[]) => {
-      if (!hidden && path.resolve(String(p)) === path.resolve(cfg)) {
+      if (openFlags.length === 0 && path.basename(String(p)) === 'tracker-config.yaml') {
         hidden = true;
         throw Object.assign(new Error('ENOENT (test)'), { code: 'ENOENT' });
       }
       return (original as (...a: unknown[]) => fs.Stats)(p, ...rest);
     }) as typeof fs.lstatSync;
+    (realFs as { openSync: unknown }).openSync = ((p: fs.PathLike, flags: unknown, ...rest: unknown[]) => {
+      if (path.basename(String(p)) === 'tracker-config.yaml') openFlags.push(flags);
+      return (originalOpen as (...a: unknown[]) => number)(p, flags, ...rest);
+    }) as typeof fs.openSync;
     try {
       await start();
       const res = await harness!.request({ method: 'POST', path: '/api/v1/tracker/config', body: { programs: [], verticals: [], agents: [], fingerprint: null } });
       assert.equal(hidden, true, 'the check ran against the hidden file');
+      assert.deepEqual(openFlags, ['wx'], 'the config was opened exclusively');
       assert.equal(res.status, 409);
       assert.equal(res.body.error, 'changed-on-disk');
-    } finally { (realFs as { lstatSync: unknown }).lstatSync = original; }
+    } finally {
+      (realFs as { lstatSync: unknown }).lstatSync = original;
+      (realFs as { openSync: unknown }).openSync = originalOpen;
+    }
     assert.equal(fs.readFileSync(cfg, 'utf-8'), '# appeared during the save\n');
   });
 
@@ -355,5 +366,368 @@ suite('#548 TrackerConfigRoute taxonomy drift', () => {
     assert.equal(res.status, 403);
     assert.equal(res.body.config, undefined);
     assert.equal(res.body.drift, undefined);
+  });
+});
+
+// B330 — every write target stays inside the real workspace root. A linked or junctioned
+// docs/, docs/roadmap/, .failsafe/ or .failsafe/governance/, a link at either target, a
+// hard-linked target or a parent swapped mid-save never writes, creates or truncates
+// anything outside; each refusal leaves the outside tree byte- and listing-identical.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { removeTempTree } = require('../../../src/test/shared/removeTempTree.cjs') as { removeTempTree: (dir: string) => void };
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const realFs = require('fs') as typeof fs;
+const IS_WIN = process.platform === 'win32';
+const CFG_REL = ['docs', 'roadmap', 'tracker-config.yaml'];
+const DIR_REL = ['.failsafe', 'governance', 'tracker-taxonomy.directive.md'];
+const sha = (b: Buffer | string) => crypto.createHash('sha256').update(b).digest('hex');
+
+/** A folder link: a junction on Windows (no admin rights needed), a symlink elsewhere. */
+function linkDir(target: string, at: string): void {
+  fs.mkdirSync(path.dirname(at), { recursive: true });
+  fs.symlinkSync(target, at, IS_WIN ? 'junction' : 'dir');
+}
+
+/** Every path under `dir` (links not followed) with its kind and, for files, its sha256. */
+function snapshot(dir: string): string {
+  const out: string[] = [];
+  const walk = (d: string) => {
+    for (const name of fs.readdirSync(d).sort()) {
+      const p = path.join(d, name);
+      const st = fs.lstatSync(p);
+      const rel = path.relative(dir, p).split(path.sep).join('/');
+      if (st.isSymbolicLink()) out.push(`L ${rel}`);
+      else if (st.isDirectory()) { out.push(`D ${rel}`); walk(p); }
+      else out.push(`F ${rel} ${sha(fs.readFileSync(p))}`);
+    }
+  };
+  walk(dir);
+  return out.join('\n');
+}
+
+/** Swap a workspace folder for a link to `outside`, keeping the original beside it. */
+function swapForLink(folder: string, outside: string): void {
+  fs.renameSync(folder, `${folder}.orig`);
+  linkDir(outside, folder);
+}
+
+type FsName = 'openSync' | 'mkdirSync' | 'lstatSync';
+/** Replace realFs[name] while fn runs; the stub receives the original first. */
+async function withStub(name: FsName, stub: (original: (...a: unknown[]) => unknown, ...args: unknown[]) => unknown, fn: () => Promise<void>): Promise<void> {
+  const holder = realFs as unknown as Record<string, (...a: unknown[]) => unknown>;
+  const original = holder[name];
+  holder[name] = (...args: unknown[]) => stub(original, ...args);
+  try { await fn(); } finally { holder[name] = original; }
+}
+
+suite('B330 tracker config write containment', () => {
+  let harness: RouteHarness | undefined;
+  let ws: string;
+  let outside: string;
+  let broadcasts: Array<{ type: string; payload?: { fingerprint?: string } }>;
+  const cfg = () => path.join(ws, ...CFG_REL);
+  const dir = () => path.join(ws, ...DIR_REL);
+  async function start(): Promise<void> {
+    const app = makeApp();
+    const deps = makeDeps(ws) as unknown as { broadcast: (m: unknown) => void };
+    deps.broadcast = (m: unknown) => { broadcasts.push(m as { type: string }); };
+    setupTrackerConfigRoutes(app, deps as unknown as ApiRouteDeps);
+    harness = new RouteHarness(app);
+    await harness.start();
+  }
+  const get = () => harness!.request({ method: 'GET', path: '/api/v1/tracker/config' });
+  const post = (fingerprint: string | null) => harness!.request({
+    method: 'POST', path: '/api/v1/tracker/config',
+    body: { programs: [{ key: 'core', name: 'Core' }], verticals: [], agents: [], fingerprint },
+  });
+  setup(() => {
+    ws = fs.mkdtempSync(path.join(os.tmpdir(), 'b330-ws-'));
+    outside = fs.mkdtempSync(path.join(os.tmpdir(), 'b330-out-'));
+    broadcasts = [];
+  });
+  teardown(async () => {
+    if (harness) await harness.stop();
+    harness = undefined;
+    removeTempTree(ws);
+    removeTempTree(outside);
+  });
+
+  test('C1: a docs/ that links outside is refused on GET and POST; nothing outside changes', async () => {
+    fs.mkdirSync(path.join(outside, 'roadmap'));
+    fs.writeFileSync(path.join(outside, 'roadmap', 'tracker-config.yaml'), 'programs: []\n');
+    linkDir(outside, path.join(ws, 'docs'));
+    const before = snapshot(outside);
+    await start();
+    const g = await get();
+    assert.equal(g.status, 500);
+    assert.equal(g.body.code, 'outside-workspace');
+    const p = await post(sha('programs: []\n'));
+    assert.equal(p.status, 500);
+    assert.equal(p.body.error, 'outside-workspace');
+    assert.equal(snapshot(outside), before);
+    assert.equal(fs.existsSync(path.join(ws, '.failsafe')), false, 'no directive folder created');
+  });
+
+  test('C2: a docs/roadmap/ that links outside is refused on GET and POST; nothing outside changes', async () => {
+    fs.writeFileSync(path.join(outside, 'tracker-config.yaml'), 'programs: []\n');
+    linkDir(outside, path.join(ws, 'docs', 'roadmap'));
+    const before = snapshot(outside);
+    await start();
+    const g = await get();
+    assert.equal(g.status, 500);
+    assert.equal(g.body.code, 'outside-workspace');
+    const p = await post(sha('programs: []\n'));
+    assert.equal(p.status, 500);
+    assert.equal(p.body.error, 'outside-workspace');
+    assert.equal(snapshot(outside), before);
+    assert.equal(fs.existsSync(path.join(ws, '.failsafe')), false);
+  });
+
+  for (const [label, rel] of [['C3: a .failsafe/governance/', ['.failsafe', 'governance']], ['C4: a .failsafe/', ['.failsafe']]] as const) {
+    test(`${label} that links outside is refused before anything is written; docs/ stays absent`, async () => {
+      linkDir(outside, path.join(ws, ...rel));
+      const before = snapshot(outside);
+      await start();
+      const p = await post(null);
+      assert.equal(p.status, 500);
+      assert.equal(p.body.error, 'outside-workspace');
+      assert.equal(snapshot(outside), before);
+      assert.equal(fs.existsSync(path.join(ws, 'docs')), false, 'the config folder was not even created');
+    });
+  }
+
+  test('C5 (pin): missing folders are created inside and both files written', async () => {
+    await start();
+    const p = await post(null);
+    assert.equal(p.status, 200, JSON.stringify(p.body));
+    const rootReal = fs.realpathSync.native(ws);
+    for (const f of [cfg(), dir()]) {
+      assert.ok(fs.existsSync(f));
+      assert.equal(path.relative(rootReal, fs.realpathSync.native(path.dirname(f))).startsWith('..'), false);
+    }
+  });
+
+  test('C6: a missing docs/roadmap under a docs/ that links outside is never created outside', async () => {
+    linkDir(outside, path.join(ws, 'docs'));
+    await start();
+    const p = await post(null);
+    assert.equal(p.status, 500);
+    assert.equal(p.body.error, 'outside-workspace');
+    assert.deepEqual(fs.readdirSync(outside), [], 'no roadmap folder created outside');
+  });
+
+  test('C7 (pin): a docs/ link that stays inside the workspace is allowed', async () => {
+    fs.mkdirSync(path.join(ws, 'real-docs'));
+    linkDir(path.join(ws, 'real-docs'), path.join(ws, 'docs'));
+    await start();
+    const p = await post(null);
+    assert.equal(p.status, 200, JSON.stringify(p.body));
+    assert.ok(fs.existsSync(path.join(ws, 'real-docs', 'roadmap', 'tracker-config.yaml')));
+  });
+
+  test('C8 (config create, LD3 c): a parent swapped just before the exclusive open leaves nothing outside', async () => {
+    let fired = false;
+    fs.mkdirSync(path.join(ws, 'docs', 'roadmap'), { recursive: true });
+    await start();
+    await withStub('openSync', (original, ...args) => {
+      if (!fired && path.basename(String(args[0])) === 'tracker-config.yaml' && args[1] === 'wx') {
+        fired = true;
+        swapForLink(path.join(ws, 'docs', 'roadmap'), outside);
+      }
+      return original(...args);
+    }, async () => {
+      const p = await post(null);
+      assert.equal(fired, true, 'the swap happened at the config open');
+      assert.equal(p.status, 409);
+      assert.equal(p.body.error, 'changed-on-disk');
+    });
+    assert.deepEqual(fs.readdirSync(outside), [], 'the file created through the swap was removed');
+  });
+
+  test('C8b (config, LD3 b): a parent swapped after it was prepared is caught before any open', async () => {
+    let swapped = false;
+    const opened: string[] = [];
+    await start();
+    await withStub('mkdirSync', (original, ...args) => {
+      const r = original(...args);
+      if (!swapped && path.basename(String(args[0])) === 'governance') {
+        swapped = true;
+        swapForLink(path.join(ws, 'docs', 'roadmap'), outside);
+      }
+      return r;
+    }, () => withStub('openSync', (original, ...args) => {
+      opened.push(path.basename(String(args[0])));
+      return original(...args);
+    }, async () => {
+      const p = await post(null);
+      assert.equal(swapped, true, 'the swap happened during the directive-folder mkdir');
+      assert.equal(p.status, 409);
+      assert.equal(opened.includes('tracker-config.yaml'), false, 'the config was never opened');
+    }));
+    assert.deepEqual(fs.readdirSync(outside), []);
+  });
+
+  test('C9 (config overwrite, LD3 d): a parent swapped before the r+ open never truncates the other file', async () => {
+    writeRoadmap(ws, 'tracker-config.yaml', 'programs: []\n');
+    fs.writeFileSync(path.join(outside, 'tracker-config.yaml'), 'OUTSIDE\n');
+    const before = snapshot(outside);
+    let fired = false;
+    await start();
+    await withStub('openSync', (original, ...args) => {
+      if (!fired && path.basename(String(args[0])) === 'tracker-config.yaml' && args[1] === 'r+') {
+        fired = true;
+        swapForLink(path.join(ws, 'docs', 'roadmap'), outside);
+      }
+      return original(...args);
+    }, async () => {
+      const p = await post(sha('programs: []\n'));
+      assert.equal(fired, true);
+      assert.equal(p.status, 409);
+      assert.equal(p.body.error, 'changed-on-disk');
+    });
+    assert.equal(snapshot(outside), before);
+    assert.equal(fs.readFileSync(path.join(ws, 'docs', 'roadmap.orig', 'tracker-config.yaml'), 'utf-8'), 'programs: []\n');
+  });
+
+  test('C9b (unlink safety): a created file replaced before the check is left alone, and reported', async () => {
+    fs.writeFileSync(path.join(outside, 'decoy'), 'DECOY\n');
+    fs.mkdirSync(path.join(ws, 'docs', 'roadmap'), { recursive: true });
+    let fired = false;
+    await start();
+    await withStub('openSync', (original, ...args) => {
+      if (!fired && path.basename(String(args[0])) === 'tracker-config.yaml' && args[1] === 'wx') {
+        fired = true;
+        swapForLink(path.join(ws, 'docs', 'roadmap'), outside);
+        const fd = original(...args);
+        fs.renameSync(path.join(outside, 'tracker-config.yaml'), path.join(outside, 'created.moved'));
+        fs.renameSync(path.join(outside, 'decoy'), path.join(outside, 'tracker-config.yaml'));
+        return fd;
+      }
+      return original(...args);
+    }, async () => {
+      const p = await post(null);
+      assert.equal(fired, true);
+      assert.equal(p.status, 409);
+      assert.match(String(p.body.detail), /left/);
+    });
+    assert.equal(fs.readFileSync(path.join(outside, 'tracker-config.yaml'), 'utf-8'), 'DECOY\n', 'the other file was not unlinked');
+  });
+
+  test('C10 (directive ABSENT, LD3 c): a governance folder swapped before its open leaves nothing outside', async () => {
+    let fired = false;
+    fs.mkdirSync(path.join(ws, '.failsafe', 'governance'), { recursive: true });
+    await start();
+    await withStub('openSync', (original, ...args) => {
+      if (!fired && path.basename(String(args[0])) === 'tracker-taxonomy.directive.md' && args[1] === 'wx') {
+        fired = true;
+        swapForLink(path.join(ws, '.failsafe', 'governance'), outside);
+      }
+      return original(...args);
+    }, async () => {
+      const p = await post(null);
+      assert.equal(fired, true);
+      assert.equal(p.status, 500);
+      assert.equal(p.body.error, 'directive-write-failed');
+      assert.equal(p.body.fingerprint, sha(fs.readFileSync(cfg())), 'the config was written inside');
+    });
+    assert.deepEqual(fs.readdirSync(outside), []);
+  });
+
+  test('C10d (directive PRESENT, LD3 d): a governance folder swapped before the r+ open never touches the other file', async () => {
+    fs.mkdirSync(path.dirname(dir()), { recursive: true });
+    fs.writeFileSync(dir(), '# inside directive\n');
+    fs.writeFileSync(path.join(outside, 'tracker-taxonomy.directive.md'), 'OUTSIDE DIRECTIVE\n');
+    const before = snapshot(outside);
+    let fired = false;
+    await start();
+    await withStub('openSync', (original, ...args) => {
+      if (!fired && path.basename(String(args[0])) === 'tracker-taxonomy.directive.md' && args[1] === 'r+') {
+        fired = true;
+        swapForLink(path.join(ws, '.failsafe', 'governance'), outside);
+      }
+      return original(...args);
+    }, async () => {
+      const p = await post(null);
+      assert.equal(fired, true);
+      assert.equal(p.status, 500);
+      assert.equal(p.body.error, 'directive-write-failed');
+      assert.match(String(p.body.fingerprint), /^[0-9a-f]{64}$/);
+    });
+    assert.equal(snapshot(outside), before);
+  });
+
+  test('C11: a hard-linked config is refused on GET and POST; the other name is unchanged', async () => {
+    fs.writeFileSync(path.join(outside, 'real.yaml'), 'programs: []\n');
+    fs.mkdirSync(path.dirname(cfg()), { recursive: true });
+    fs.linkSync(path.join(outside, 'real.yaml'), cfg());
+    const before = snapshot(outside);
+    await start();
+    const g = await get();
+    assert.equal(g.status, 500);
+    assert.equal(g.body.code, 'hard-linked');
+    const p = await post(sha('programs: []\n'));
+    assert.equal(p.status, 500);
+    assert.equal(p.body.error, 'hard-linked');
+    assert.equal(snapshot(outside), before);
+  });
+
+  test('C11d: a hard-linked directive is refused before anything is written', async () => {
+    fs.writeFileSync(path.join(outside, 'real.md'), 'OUTSIDE\n');
+    fs.mkdirSync(path.dirname(dir()), { recursive: true });
+    fs.linkSync(path.join(outside, 'real.md'), dir());
+    const before = snapshot(outside);
+    await start();
+    const p = await post(null);
+    assert.equal(p.status, 500);
+    assert.equal(p.body.error, 'hard-linked');
+    assert.equal(snapshot(outside), before);
+    assert.equal(fs.existsSync(path.join(ws, 'docs')), false, 'no config written');
+  });
+
+  test('C12: a link at the directive path is refused before anything is written', async () => {
+    fs.mkdirSync(path.dirname(dir()), { recursive: true });
+    if (IS_WIN) fs.symlinkSync(outside, dir(), 'junction');
+    else { fs.writeFileSync(path.join(outside, 'target.md'), 'OUTSIDE\n'); fs.symlinkSync(path.join(outside, 'target.md'), dir(), 'file'); }
+    const before = snapshot(outside);
+    await start();
+    const p = await post(null);
+    assert.equal(p.status, 500);
+    assert.equal(p.body.error, 'link-refused');
+    assert.equal(snapshot(outside), before);
+    assert.equal(fs.existsSync(path.join(ws, 'docs')), false, 'no config written');
+  });
+
+  test('C13: a config with no stable file identity (ino 0) is refused; nothing written', async () => {
+    writeRoadmap(ws, 'tracker-config.yaml', 'programs: []\n');
+    const before = fs.readFileSync(cfg());
+    await start();
+    await withStub('lstatSync', (original, ...args) => {
+      const st = original(...args) as fs.BigIntStats;
+      const opts = args[1] as { bigint?: boolean } | undefined;
+      if (opts?.bigint && path.basename(String(args[0])) === 'tracker-config.yaml') {
+        return Object.assign(Object.create(Object.getPrototypeOf(st)), st, { ino: 0n });
+      }
+      return st;
+    }, async () => {
+      const g = await get();
+      assert.equal(g.status, 500);
+      assert.equal(g.body.code, 'no-file-identity');
+      const p = await post(sha(before));
+      assert.equal(p.status, 500);
+      assert.equal(p.body.error, 'no-file-identity');
+    });
+    assert.ok(fs.readFileSync(cfg()).equals(before));
+  });
+
+  test('C14: both save broadcasts carry the new fingerprint', async () => {
+    await start();
+    const ok = await post(null);
+    assert.equal(ok.status, 200);
+    assert.equal(broadcasts[broadcasts.length - 1]?.payload?.fingerprint, ok.body.fingerprint);
+    fs.rmSync(dir());
+    fs.mkdirSync(dir());
+    const partial = await post(ok.body.fingerprint);
+    assert.equal(partial.body.error, 'directive-write-failed');
+    assert.equal(broadcasts[broadcasts.length - 1]?.payload?.fingerprint, partial.body.fingerprint);
   });
 });
