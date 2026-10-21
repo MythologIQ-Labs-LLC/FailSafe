@@ -237,6 +237,63 @@ suite('#532 B344 delivery review dialog: rework section', () => {
     assert.doesNotMatch(line, /an ancestor of the reviewed commit/);
   });
 
+  // #532 B344 D4 fold (owner ruling 2026-10-21, red-first): the native dialog wraps only at spaces and
+  // cuts a longer unbroken run with an ellipsis, so every shown path is split into chunks of at most
+  // REWORK_PATH_CHUNK characters, after a '/' where possible, each continuation on its own line after
+  // the marker.
+  const sectionOf = (d: string) => d.slice(d.indexOf('Superseded by rework'), d.indexOf('Supersedes ('));
+  const longPath = (n: number) => {
+    let p = '';
+    for (let i = 0; p.length < n; i++) p += `dir${String(i).padStart(2, '0')}abcdefghij/`;
+    return p.slice(0, n - 3) + '.ts';
+  };
+  /** The shown text of each path, rebuilt from its line and the continuation lines after it. */
+  const rebuilt = (section: string): string[] => {
+    const out: string[] = [];
+    for (const line of section.split('\n')) {
+      const path = /^ {4}(?:[AMDT]\/[AMDT]|[AMDT]) (.*)$/.exec(line);
+      const cont = /^ {6}\\> (.*)$/.exec(line);
+      if (path) out.push(path[1]);
+      else if (cont) out[out.length - 1] += cont[1];
+    }
+    return out;
+  };
+
+  test('D4 fold (red-first): a 90- and a 300-character path are shown in chunks of at most 64, after a "/" where possible, with no unbroken run over 64', () => {
+    for (const n of [90, 300]) {
+      const p = longPath(n);
+      assert.equal(p.length, n);
+      const d = deliveryReviewRequest(facts([item(5)], [rework(5, [{ path: p, vetoStatus: 'M', reworkStatus: 'M' }], [], [{ path: `x/${p}`, status: 'A' }])]), 'op_d4', 'console').detail;
+      const lines = sectionOf(d).split('\n');
+      // The path lines and their continuations; the other section lines hold fixed-width server values.
+      const pathLines = lines.filter((l) => /^ {4}(M\/M|A) /.test(l));
+      const continuations = lines.filter((l) => /^ {6}\\> /.test(l));
+      assert.equal(pathLines.length, 2);
+      for (const line of [...pathLines, ...continuations]) {
+        const shown = line.replace(/^ {4}(M\/M|A) | {6}\\> /, '');
+        assert.ok(shown.length <= 64, `a chunk of ${shown.length} in ${JSON.stringify(line)}`);
+        for (const run of line.split(' ')) assert.ok(run.length <= 64, `a run of ${run.length} in ${JSON.stringify(line)}`);
+      }
+      assert.ok(continuations.length >= 2 * (Math.ceil(n / 64) - 1), `${n}: ${continuations.length} continuation lines`);
+      for (const line of pathLines) assert.ok(line.endsWith('/'), `the first chunk breaks after a "/": ${JSON.stringify(line)}`);
+      assert.deepEqual(rebuilt(sectionOf(d)), [p, `x/${p}`], 'each path is shown exactly, nothing cut or collapsed');
+    }
+  });
+
+  test('D4 fold (red-first): a path holding the marker, a newline or spaces cannot forge a continuation line', () => {
+    const forged = ['a\\> b.ts', `long/${'n'.repeat(70)}\n      \\> evil.ts`, `${' '.repeat(6)}\\> c.ts`, `q/${'\\'.repeat(40)}>${'\\'.repeat(40)}.ts`];
+    const d = deliveryReviewRequest(facts([item(6)], [rework(6, forged.map((path) => ({ path, vetoStatus: 'M' as const, reworkStatus: 'M' as const })))]), 'op_d4b', 'console').detail;
+    const section = sectionOf(d);
+    assert.deepEqual(rebuilt(section), forged.map(escapeDialogPath), 'each path rebuilds to its escaped text');
+    // In escaped text every backslash is half of "\\" or starts "\u{", so "\>" after a space or at a
+    // line start is only ever the marker.
+    const markers = [...section.matchAll(/(?:^|[^\\])\\>/gm)].length;
+    const continuations = section.split('\n').filter((l) => /^ {6}\\> /.test(l)).length;
+    assert.equal(markers, continuations, 'every marker starts a continuation line the chunker wrote');
+    assert.ok(continuations >= 2, 'the long paths do continue');
+    assert.doesNotMatch(section, /^ {6}\\> evil\.ts$/m, 'the newline in a path never starts a line');
+  });
+
   test('the VETO wording names declared rework', () => {
     const d = deliveryReviewRequest({ ...facts([], []), verdict: 'VETO' }, 'op_4', 'console').detail;
     assert.match(d, /a PASS on a declared rework that git shows is this commit amended or rebased/);
