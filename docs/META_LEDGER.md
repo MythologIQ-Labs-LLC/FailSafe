@@ -34519,3 +34519,57 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `f8d99756261fda4656dea324ce6f5232bab1307a81627e702c96501f1b5a9159`
 
 **Decision**: SESSION SEAL for plan-b320-delivery-review.md (content hash is the audited plan, sha256 c49d6313). Reality = Promise, with disclosures. Workspace Delivery can now be completed legitimately: an operator-confirmed review bound to the exact commit, tree and evidence is sealed in the FailSafe ledger, a rejection or any unverifiable review record blocks until a later valid PASS names it, and an approved intent alone never counts as a review. Disclosures: bounded damaged-ledger override for the 2026-10-20 hardening lanes (owner ruling 2026-10-20; #467 unresolved, normal governance not restored); the tests were written after the implementation and red evidence comes from a stubbed module and 52 killed mutations; the receipt stays unavailable while #467 holds and Complete is transient because a later save stales the PASS; the record is tamper evidence, not authentication, since any same-user process can read the ledger secret; deleting the newest rows with their mirrors is undetectable; one bad-seal review row blocks every intent until a PASS names it; the intent-decision VETO is still cleared by a status change; the enforce-mode block and unreachable Seal Intent remain an owner policy decision (B340), as does rework that does not descend from a vetoed commit (B344); FX946 (B325) is pre-existing; earlier seals are unedited. Next: push, PR checks, a merge pinned to the head. No release.
+
+---
+
+### Entry #857: GATE TRIBUNAL - plan-b347-g4-provenance-race (iteration 1) - PASS
+
+**Timestamp**: 2026-10-21T14:33:05Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1428-f4aac6`
+**Risk Grade**: L1
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1428-f4aac6/audit-iter1.json`
+
+**Content Hash**: `66eb20c19083b8db462f14e3accc6ed4ecaa2afa996155c9ca61a7a88b457591`
+**Previous Hash**: `f8d99756261fda4656dea324ce6f5232bab1307a81627e702c96501f1b5a9159`
+**Chain Hash (Merkle seal)**: `0c4124062eb2b9f6fa7fe48cfc267970182e50f9c2ec341a0d469d29dc5985ad`
+
+**Decision**: PASS on plan-b347-g4-provenance-race.md iteration 1 (sha256 dd62d8e6), B347: the B320 G4 extension-host test raced a debounced provenance row on Linux CI (run 39563947170, failing dependabot #561). Combined audit and bounded review (code-reviewer, Option B fresh context); the fix was written before this audit as an urgent CI unblocker and the verdict certifies the diff as written. The wait is condition-based (the save's own PROVENANCE_RECORDED row, then a 1 s quiet window); no assertion is loosened; the read-only ledger reader is WAL-safe; the injected-delay proof reproduces the CI message on the old test and passes on the fixed one. Non-blocking folded: count by payload intentId, assert the stale reason, soften the retained-evidence claim. Next: implement and seal.
+
+---
+
+### Entry #858: IMPLEMENTATION - plan-b347-g4-provenance-race
+
+**Timestamp**: 2026-10-21T14:36:27Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-21T1428-f4aac6`
+**Risk Grade**: L1
+**Gate**: `.qor/gates/2026-10-21T1428-f4aac6/implement.json`
+
+**Content Hash**: `0ce625dbefcad837cede41ee3ff12b1bf7a402047efae9b215f930136cdb7c2a`
+**Previous Hash**: `0c4124062eb2b9f6fa7fe48cfc267970182e50f9c2ec341a0d469d29dc5985ad`
+**Chain Hash (Merkle seal)**: `a45139f7b4ffdd2b62d4216c493d4185e402c3af15eec4a2e9d771e163655b44`
+
+**Decision**: IMPLEMENTATION of plan-b347-g4-provenance-race.md on fix/b320-g4-provenance-race (from main 72717c7b): c5f74241 (test), 46ea2d89 (B347 row). Test only. G4 now waits until the save's own PROVENANCE_RECORDED row is in the ledger and the intent's evidence count, matched by payload intentId as the product matches it, has been stable for 1 s before recording the review, and asserts that the second save makes the PASS stale for new governance evidence. No product change and no assertion loosened. Disclosed: the implementation preceded its audit as an urgent CI unblocker.
+
+---
+
+### Entry #859: SESSION SEAL - plan-b347-g4-provenance-race
+
+**Timestamp**: 2026-10-21T14:36:27Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-21T1428-f4aac6`
+**Risk Grade**: L1
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-21T1428-f4aac6/substantiate.json`
+
+**Content Hash**: `dd62d8e6ba8d7bb80925938b60b71bdabed67b0b77dba7e56496bedd4d79f808`
+**Previous Hash**: `a45139f7b4ffdd2b62d4216c493d4185e402c3af15eec4a2e9d771e163655b44`
+**Chain Hash (Merkle seal)**: `55bdc4a0be18ac4282543fed0b1792a8f58fcd51f635884ea38f2739e1f3263a`
+
+**Decision**: SESSION SEAL for plan-b347-g4-provenance-race.md (content hash is the audited plan, sha256 dd62d8e6). Reality = Promise, with disclosures. The B320 G4 positive-path test no longer races the debounced provenance row, so the Linux full suite stops failing unrelated PRs; the product behaviour that a later save stales a PASS is unchanged and still asserted. Disclosures: bounded damaged-ledger override for the v6.0.10 lanes (owner ruling 2026-10-21; #467 unresolved, native governance acceptance unavailable); the fix preceded its audit as an urgent CI unblocker and the audit and review were combined; the 1 s quiet window is supported by the writer inventory rather than a falsifying run; the old run's row dump was not retained. Next: push, PR checks including Linux test:all, a merge pinned to the head. No release.
