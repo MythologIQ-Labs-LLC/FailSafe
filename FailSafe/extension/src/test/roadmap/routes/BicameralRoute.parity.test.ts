@@ -117,6 +117,10 @@ function findHandler(handlers: CapturedHandler[], p: string): CapturedHandler {
 }
 
 function makeDeps(client: BicameralMcpClient, withInterceptor: boolean): BicameralRouteDeps {
+  // A live server does not reconstruct its evaluator on each accessor read.
+  const wiredInterceptor = withInterceptor
+    ? Object.assign(allowInterceptor(), { getClient: () => client })
+    : null;
   return {
     rejectIfRemote: () => false,
     broadcast: () => undefined,
@@ -127,7 +131,7 @@ function makeDeps(client: BicameralMcpClient, withInterceptor: boolean): Bicamer
     setAutoConnect: async () => undefined,
     // #514: ratify is operator-confirmed; these suites run with an approving confirmer.
     confirmOperatorAction: async () => "approved",
-    getMcpInterceptor: () => (withInterceptor ? Object.assign(allowInterceptor(), { getClient: () => client }) : null),
+    getMcpInterceptor: () => wiredInterceptor,
   };
 }
 

@@ -78,6 +78,8 @@ function makeDeps(
   client: BicameralToolClient,
   overrides: Partial<BicameralRouteDeps> = {},
 ): BicameralRouteDeps {
+  // One interceptor instance for the lifetime of this route fixture.
+  const wiredInterceptor = Object.assign(allowInterceptor(), { getClient: () => client });
   return {
     rejectIfRemote: () => false,
     broadcast: () => undefined,
@@ -86,7 +88,7 @@ function makeDeps(
     getBicameralClient: () => client as never,
     getAutoConnect: () => false,
     setAutoConnect: async () => undefined,
-    getMcpInterceptor: () => Object.assign(allowInterceptor(), { getClient: () => client }),
+    getMcpInterceptor: () => wiredInterceptor,
     ...overrides,
   };
 }
