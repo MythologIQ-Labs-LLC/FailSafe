@@ -94,7 +94,7 @@ The server is stopped on deactivation `FailSafe/extension/src/extension/teardown
 
 Scenario (after B209): an agent session connects to a FailSafe MCP bridge, calls `qorelogic_status`, then `ledger_log_decision` with the active intent id, and the ledger holds the entry (unverified: not possible on main).
 Metric: an external MCP client completes one tool call against a running extension (threshold: one success); on main the count is zero `docs/BACKLOG.md:554` (`FailSafeServer is in-process-only today`).
-Existing test: `FailSafe/extension/src/test/mcp/FailSafeMCPServer.test.ts:6-8` (`exercise the`) (unit) exercises the intent and path gates and the tool registrations with mock services, not a transport.
+Existing test: `FailSafe/extension/src/test/mcp/FailSafeMCPServer.test.ts:6-8` (`exercise the`) (unit) exercises the intent and path gates and the tool registrations with mock services; one row drives the real server over the SDK's in-memory transport `FailSafe/extension/src/test/mcp/FailSafeMCPServer.test.ts:205` (`tools/call input element cap`).
 Installed-extension test: none (unverified).
 
 ## Recommended disposition

@@ -63,9 +63,12 @@ function locked(name) {
 const sharpSet = () => Object.keys(PACKAGES).filter((k) => k === 'node_modules/sharp' || k.startsWith('node_modules/@img/'));
 
 describe('v6.0.10 Lane C dependency floors', () => {
-  it('@modelcontextprotocol/sdk >= 1.32.0, declared as ^1.32.0', () => {
+  it('@modelcontextprotocol/sdk >= 1.32.0, declared with a caret floor >= 1.32.0', () => {
     assert.ok(compare(locked('@modelcontextprotocol/sdk'), '1.32.0') >= 0, `locked ${locked('@modelcontextprotocol/sdk')}`);
-    assert.equal(PKG.dependencies['@modelcontextprotocol/sdk'], '^1.32.0');
+    const declared = PKG.dependencies['@modelcontextprotocol/sdk'];
+    const floor = /^\^(.+)$/.exec(declared);
+    assert.ok(floor, `declared range ${declared} is not a caret range`);
+    assert.ok(compare(floor[1], '1.32.0') >= 0, `declared floor ${declared}`);
   });
 
   it('markdown-it >= 14.3.3', () => {
