@@ -34354,3 +34354,95 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `43ea8792c941455aeca516e1ec720e8d784fac03b5959615e595e20770763ea4`
 
 **Decision**: SESSION SEAL for plan-b311-b312-architecture-residuals.md (content hash is the audited plan, sha256 53899f86). Reality = Promise, with disclosures. Agents and operators see which architecture decisions govern the files an L3 decision or governed commit touches, without any delay to or block on that decision; registry rows show their relationships as checked links with status; and the repository's agent instructions now state the owner's taxonomy-authority rule. Disclosures: bounded damaged-ledger override for the 2026-10-20 hardening lanes (owner ruling 2026-10-20; #467 unresolved, normal governance not restored); plain git commits get no warning (B350) and the commit prompt matches porcelain paths as given (B353); the core link pattern stays quadratic on the validator and CLI paths (B351) and the index parse is one synchronous call (B354); review text does not render combining marks or Hangul fillers (B352); the GET route reads synchronously per request (B355); only the first workspace folder is checked and the L3 panel drops not-checked lines; an emitted directive keeps its old wording until the next save; the CONFIG_BANNER wording and the CLAUDE.md:3 enforcement overstatement are surfaced, not changed; FX946 (B325) is pre-existing; earlier seals are unedited. Next: push, PR checks, a merge pinned to the head. No release.
+
+---
+
+### Entry #848: GATE TRIBUNAL - plan-b330-b331-taxonomy-integrity (iteration 1) - VETO
+
+**Timestamp**: 2026-10-20T22:24:49Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-20T2220-024d06`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for the 2026-10-20 hardening lanes, owner ruling 2026-10-20, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-20T2220-024d06/audit-iter1.json`
+
+**Content Hash**: `acf44885d70bbe41cf7de716aaa9b0af45633b35b3f5bd0b201c9ec76210b0e8`
+**Previous Hash**: `43ea8792c941455aeca516e1ec720e8d784fac03b5959615e595e20770763ea4`
+**Chain Hash (Merkle seal)**: `2b2c4da669e5dc8fbd2b09289ad59242611edc7783fdc5e995c701968d3d878a`
+
+**Decision**: VETO on plan-b330-b331-taxonomy-integrity.md iteration 1 (sha256 a2f5b0e4), B330 workspace containment for taxonomy save writes and B331 unsaved-edit preservation. Fresh Option B architect-reviewer. Containment design sound. Blocking: the directive not-a-regular-file pre-check would silently change the T5o partial-save falsifier; the race rows swapped before the re-verify, so the post-open identity checks and their mutations were never reached; the cleanup unlinked by path and could delete a pre-existing file after a second swap. Should-fix: single-flight load, stable row ids, DOM sync before save, draft rebuilds, check order, error codes, ino 0n, path.relative, Windows case, top-level navigation. Next: revise and re-audit.
+
+---
+
+### Entry #849: GATE TRIBUNAL - plan-b330-b331-taxonomy-integrity (iteration 2) - VETO
+
+**Timestamp**: 2026-10-20T22:33:06Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-20T2220-024d06`
+**Risk Grade**: L3
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for the 2026-10-20 hardening lanes, owner ruling 2026-10-20, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-20T2220-024d06/audit-iter2.json`
+
+**Content Hash**: `9f1ed22c1238ab49625646032ba1005e22e9868c1fd37d25346f65b3e5a03cd3`
+**Previous Hash**: `2b2c4da669e5dc8fbd2b09289ad59242611edc7783fdc5e995c701968d3d878a`
+**Chain Hash (Merkle seal)**: `807d845e60e6189c682dd1f47f82ce950a627aaae2cfdccdfe6e86843ef09a92`
+
+**Decision**: VETO on plan-b330-b331-taxonomy-integrity.md iteration 2 (sha256 c456102d). Iteration 1 blockers closed for the config. Fresh Option B architect-reviewer. Blocking: the directive overwrite path, taken by every Save after the first, had no falsifier, and its only row could pass vacuously. Should-fix: generation-unique ids against a silent revert, live DOM sync before dirty decisions, echo mutations and rules, nlink on open, disclosures, unresolved-path, directive-phase error mapping, inputs disabled during a Save. Next: revise and re-audit (final iteration under the cap).
+
+---
+
+### Entry #850: GATE TRIBUNAL - plan-b330-b331-taxonomy-integrity (iteration 3) - PASS
+
+**Timestamp**: 2026-10-20T22:40:24Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-20T2220-024d06`
+**Risk Grade**: L3
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the 2026-10-20 hardening lanes, owner ruling 2026-10-20, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-20T2220-024d06/audit-iter3.json`
+
+**Content Hash**: `cd0fee2d117cd141a6b48e4263654da970661a48afc97f972adeb5d9a7f2a07e`
+**Previous Hash**: `807d845e60e6189c682dd1f47f82ce950a627aaae2cfdccdfe6e86843ef09a92`
+**Chain Hash (Merkle seal)**: `f682fd588852d9342e3609227b4b4568a4471180ed992c8d83f22228e41a6bca`
+
+**Decision**: PASS on plan-b330-b331-taxonomy-integrity.md iteration 3 (sha256 08b84fd0), the final iteration under the native escalation cap. Fresh Option B architect-reviewer. C10 and C10d split the directive create and overwrite paths, and only the identity check refuses C10d. Should-fix folded into implementation: a hard-linked directive row, corrected mutation lists, a combined M12, a Save timeout that re-enables controls, error-code mapping, echo set consumption, refetch failure and conflict clearing, focus preserved across repaints. Next: implement.
+
+---
+
+### Entry #851: IMPLEMENTATION - plan-b330-b331-taxonomy-integrity
+
+**Timestamp**: 2026-10-21T06:54:00Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-20T2220-024d06`
+**Risk Grade**: L3
+**Gate**: `.qor/gates/2026-10-20T2220-024d06/implement.json`
+
+**Content Hash**: `51f409fbd5f5270b8c149e1c2779d65d0b70280a1ff6fe67caf05cc9bbb42188`
+**Previous Hash**: `f682fd588852d9342e3609227b4b4568a4471180ed992c8d83f22228e41a6bca`
+**Chain Hash (Merkle seal)**: `d0bce5d3a48e67de290c51acf0d09439f3ee9072fabeb2d815e8910933e6eb7b`
+
+**Decision**: IMPLEMENTATION of plan-b330-b331-taxonomy-integrity.md iteration 3 on fix/b330-b331-taxonomy-integrity (from main b14c313a): fa2fe203 (red rows), 748c99fb (B330), d544c19b (B331), 03040e6d (docs). B330: both write targets of a taxonomy Save, docs/roadmap/tracker-config.yaml and the .failsafe/governance directive, are checked against the realpath of the workspace root before any read-for-write, mkdir or open, using the exported containment helper shared with the architecture bootstrap; each folder is re-verified immediately before its open; a create opens exclusively and an overwrite opens without truncation, and both check the realpath, file identity (non-zero inode) and a single link before writing; cleanup unlinks only a file whose identity matches; links at the targets and hard-linked targets are refused; a refusal writes nothing anywhere. B331: the Workspace > Taxonomy editor keeps a generation-scoped draft so hub refreshes, repaints and navigation never discard unsaved edits, a reverted edit is not saved, loads are single-flight and never applied over a dirty draft except by Reload, another window's save or a Save that finds the file changed raises a visible conflict, a Save times out and re-enables controls, and focus is preserved. The #548 fingerprint, exclusive create, request guard and directive-write-failed contracts hold. B330 and B331 done; B332 (residual windows, ENOSPC partial write) and B333 (stale programs.yaml status copy) filed. Bounded review review330 found one blocker, fixed.
+
+---
+
+### Entry #852: SESSION SEAL - plan-b330-b331-taxonomy-integrity
+
+**Timestamp**: 2026-10-21T06:54:01Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-20T2220-024d06`
+**Risk Grade**: L3
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-20T2220-024d06/substantiate.json`
+
+**Content Hash**: `08b84fd0647b1e0defa8ebe6f7e09de53e71882fa16f6487e94a5da67abd989b`
+**Previous Hash**: `d0bce5d3a48e67de290c51acf0d09439f3ee9072fabeb2d815e8910933e6eb7b`
+**Chain Hash (Merkle seal)**: `99e17907920d6db76724cc6c08514da7448c9f03f70f08b3a258e7aadd9de41c`
+
+**Decision**: SESSION SEAL for plan-b330-b331-taxonomy-integrity.md (content hash is the audited plan, sha256 08b84fd0). Reality = Promise, with disclosures. A taxonomy Save can no longer be redirected outside the workspace through linked folders, links or hard links, and a refused Save writes nothing anywhere; unsaved taxonomy edits survive ordinary Console activity and conflicts are visible, never silent. Disclosures: bounded damaged-ledger override for the 2026-10-20 hardening lanes (owner ruling 2026-10-20; #467 unresolved, normal governance not restored); residual race windows, an empty file left outside after a swap-back and a truncated config on a mid-write ENOSPC are recorded as B332; a direct disk edit while the editor is dirty is detected only at Save; filesystems without file identity are refused; Save still drops YAML comments and unknown top-level keys (B306); the stale programs.yaml status copy is filed as B333; an installed-VSIX taxonomy smoke is deferred to release qualification; FX946 (B325) is pre-existing; earlier seals are unedited. Next: push, PR checks, a merge pinned to the head. No release.
