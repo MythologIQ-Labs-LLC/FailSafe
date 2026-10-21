@@ -4,9 +4,9 @@
  * (Continue, Aider, OpenHands, Cline/Roo/Kilo, Linear, Jira, GitHub Checks,
  * Sentry, Teams, Slack) a single home: one card each, grouped by category, with
  * a status pill + a "Configure" affordance that jumps to the matching Settings
- * section. #479: the pill says what the last real call showed (Verified,
- * Connected, Failing, Stale), and never more than "Configured · unverified"
- * from configuration alone. Data comes from /api/v1/integrations/catalog,
+ * section. #479: the pill describes the last observed call (format match,
+ * connection, failure, or stale evidence), never production readiness;
+ * configuration alone remains "Configured · unverified". Data comes from /api/v1/integrations/catalog,
  * which is secret-safe (booleans only — no token/key/webhook value crosses the
  * wire).
  *
@@ -30,8 +30,7 @@ const STYLE = `
 .cc-intcat-pill-configured { color:#a5b4c7; border-color:#425168; }
 .cc-intcat-pill-needs { color:#f6ad55; border-color:#6b4f2a; }
 .cc-intcat-pill-disabled { color:#7f8aa0; border-color:#273140; }
-.cc-intcat-pill-verified { color:#68d391; border-color:#2f5e44; }
-.cc-intcat-pill-connected { color:#5fb0d8; border-color:#2b4a5c; }
+.cc-intcat-pill-observed { color:#a5b4c7; border-color:#425168; }
 .cc-intcat-pill-failing { color:#fc8181; border-color:#6b2f2f; }
 .cc-intcat-pill-stale { color:#f6ad55; border-color:#6b4f2a; }
 .cc-intcat-card.cc-intcat-failing { border-color:#6b2f2f; }
@@ -52,8 +51,8 @@ const PILL = {
   'configured-unverified': { cls: 'cc-intcat-pill-configured', label: 'Configured · unverified' },
   'needs-config': { cls: 'cc-intcat-pill-needs', label: 'Needs config' },
   disabled: { cls: 'cc-intcat-pill-disabled', label: 'Disabled' },
-  'contract-verified': { cls: 'cc-intcat-pill-verified', label: 'Verified' },
-  connected: { cls: 'cc-intcat-pill-connected', label: 'Connected' },
+  'contract-verified': { cls: 'cc-intcat-pill-observed', label: 'Last response matched expected format' },
+  connected: { cls: 'cc-intcat-pill-observed', label: 'Last connection observed' },
   failing: { cls: 'cc-intcat-pill-failing', label: 'Failing' },
   stale: { cls: 'cc-intcat-pill-stale', label: 'Stale' },
 };
@@ -61,9 +60,9 @@ const PILL = {
 // Evidence labels depend on what the adapter talks to: a file import "parsed"
 // rather than "verified"; a CLI "started" rather than "connected".
 const RESULT_LABEL = {
-  service: { 'contract-verified': 'Verified', connected: 'Connected' },
-  file: { 'contract-verified': 'Last import parsed', connected: 'Last import read (format version not declared)' },
-  process: { 'contract-verified': 'Verified', connected: 'Started' },
+  service: { 'contract-verified': 'Last response matched expected format', connected: 'Last service reached' },
+  file: { 'contract-verified': 'Last import parsed', connected: 'Last import read (format not confirmed)' },
+  process: { 'contract-verified': 'Last process result matched expected format', connected: 'Last process started' },
 };
 
 const CATEGORY_TEXT = {
@@ -139,12 +138,12 @@ function lastLine(s) {
   const time = Number.isNaN(when.getTime()) ? '' : when.toLocaleString();
   const failing = s.lastResult.result === 'failing' ? ' cc-intcat-last-failing' : '';
   const stale = s.state === 'stale' ? ' (stale: older than 7 days)' : '';
-  return `<div class="cc-intcat-last${failing}">Last result: ${esc(resultLabel(s))} · ${esc(time)}${stale}</div>`;
+  return `<div class="cc-intcat-last${failing}">Observed: ${esc(resultLabel(s))} · ${esc(time)}${stale}</div>`;
 }
 
 function capsLine(s) {
   const caps = (s.capabilities || []).map((c) => CAPABILITY_TEXT[c]).filter(Boolean);
-  return caps.length ? `<div class="cc-intcat-caps">Can: ${esc(caps.join(', '))}</div>` : '';
+  return caps.length ? `<div class="cc-intcat-caps">Implemented path (not live-qualified): ${esc(caps.join(', '))}</div>` : '';
 }
 
 function card(s) {
@@ -165,6 +164,7 @@ function card(s) {
       <p>${esc(s.summary)}</p>
       ${lastLine(s)}
       ${capsLine(s)}
+      <div class="cc-intcat-caps">Value impact: not measured</div>
       <div class="cc-intcat-hint">${esc(s.configHint)}</div>
       ${missing}
       <div class="cc-intcat-actions">
@@ -208,11 +208,11 @@ export class IntegrationCatalogRenderer {
       byCat.get(s.category).push(s);
     }
     const count = (states) => integrations.filter((s) => states.includes(s.state)).length;
-    const verified = count(['contract-verified', 'connected']);
+    const observed = count(['contract-verified', 'connected']);
     const failing = count(['failing']);
     const unverified = count(['configured-unverified', 'stale']);
     const sub = integrations.length
-      ? `${integrations.length} integrations — ${verified} verified by their last call, ${failing} failing, ${unverified} configured but unverified or stale. Status comes from each integration's last real call; this catalog does not probe.`
+      ? `${integrations.length} integrations — ${observed} observed connection or format results, ${failing} failing, ${unverified} configured but unverified or stale. A recent call is not end-to-end qualification or proof of customer value. Status comes from a stored last call; this catalog does not probe.`
       : 'No catalog integrations available.';
     const sections = groups
       .map((cat) => `<div class="cc-intcat-group">${esc(cat)}</div>` + byCat.get(cat).map(card).join(''))
