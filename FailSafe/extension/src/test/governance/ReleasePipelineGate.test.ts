@@ -23,6 +23,7 @@ function report(overrides: Partial<LedgerVerification> = {}): LedgerVerification
 
 function createMockLedger(chainValid: boolean) {
   return {
+    isAvailable: () => true,
     verifyLedger: async () => chainValid
       ? report()
       : report({ ok: false, sealScope: 'none', failures: [{ id: 2, code: 'hash-mismatch', detail: 'x' }] }),
@@ -181,14 +182,14 @@ describe('ReleasePipelineGate ledger scope (#473 LD9)', function () {
   });
 
   it('blocks on an unknown seal version and names it', async () => {
-    const ledger = { verifyLedger: async () => report({ ok: false, sealScope: 'none', failures: [{ id: 4, code: 'unknown-version', detail: 'x' }] }) };
+    const ledger = { isAvailable: () => true, verifyLedger: async () => report({ ok: false, sealScope: 'none', failures: [{ id: 4, code: 'unknown-version', detail: 'x' }] }) };
     const result = await gateFor(ledger).evaluate('v6.0.7');
     assert.equal(result.allowed, false);
     assert.match(result.failures[0].reason, /unknown-version at id 4/);
   });
 
   it('fails closed when verifyLedger throws (review N2)', async () => {
-    const ledger = { verifyLedger: async () => { throw new Error('disk I/O error'); } };
+    const ledger = { isAvailable: () => true, verifyLedger: async () => { throw new Error('disk I/O error'); } };
     const result = await gateFor(ledger).evaluate('v6.0.7');
     assert.equal(result.allowed, false);
     assert.match(result.failures[0].reason, /disk I\/O error/);
