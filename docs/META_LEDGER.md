@@ -34832,3 +34832,57 @@ The review folds are disclosed.
 **Chain Hash (Merkle seal)**: `d29eb1e3bd245a7a234f1cb9c806c722dc0efb8dd66f94bb2d13328d9f0fd6ed`
 
 **Decision**: SESSION SEAL for plan-l3-routes-guard.md (content hash = the audited plan, sha256 de73f617). Reality = Promise, with disclosures. A cross-site page can no longer open the operator's L3 'Approve all' or decide dialog, or the Stop Sentinel dialog. approve-l3-batch, decide-l3 and panic-stop run the Console request guard first (Origin, JSON content type, loopback), so every no-preflight browser request shape is refused before any dialog or index read. The L3 routes carry a limiter that refused requests cannot spend. Disclosures: bounded damaged-ledger override (#467 unresolved); harness-only reproduction; a red-row access edit; mutation evidence from before the rebase on identical source; residuals B383/B384/OQ3. Next: push, open a PR, run the full required CI including Linux test:all, and merge pinned to the head. No release.
+
+---
+
+### Entry #873: GATE TRIBUNAL - plan-dep-552 (iteration 1) - PASS
+
+**Timestamp**: 2026-10-21T18:16:13Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1459-8cf0eb`
+**Risk Grade**: L1
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21, widened the same day to Dependabot #561/#562/#552; disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1459-8cf0eb/audit-iter1.json`
+
+**Content Hash**: `e897ce3326aa3a35248e635cb6ead3ca5acb755d589c1eb5036968e02300ae59`
+**Previous Hash**: `d29eb1e3bd245a7a234f1cb9c806c722dc0efb8dd66f94bb2d13328d9f0fd6ed`
+**Chain Hash (Merkle seal)**: `6aba84b016747e53852453afc6ba302b269904608f0a5160e91023ea2db3720f`
+
+**Decision**: PASS on plan-dep-552.md iteration 1. Dependabot #552 (hono 4.13.7 -> 4.13.13, transitive via the MCP SDK), rebased by Dependabot to head 2e98829b. Independent verifier dep552b and fresh reviewer revdep552 (Option B). Findings: one lockfile hunk (version, resolved, integrity) against main 85c9d357; signatures 698/698 verified; GHSA-5r4p-p66f-jhc7 (>=4.12.4 <4.13.11) exited; production audit 3 -> 2, full 18 -> 17, with only hono removed. hono is not reachable at runtime: src imports only the SDK stdio/mcp/client/types modules, streamableHttp.js is not bundled, dist has 0 hono markers, and the VSIX ships only better-sqlite3. vscode-test 150/0 over 21 MCP, interceptor and bicameral files. Should-fix, recorded as seal wording: the diff base is 85c9d357; FX946 reproduced on main earlier this round; the #555 overlap match is a word in a comment.
+
+---
+
+### Entry #874: IMPLEMENTATION - plan-dep-552
+
+**Timestamp**: 2026-10-21T18:25:44Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-21T1459-8cf0eb`
+**Risk Grade**: L1
+**Gate**: `.qor/gates/2026-10-21T1459-8cf0eb/implement.json`
+
+**Content Hash**: `110deaa53f641c7cba32d4e59b0488da0047fd393c51c592539aa1a4d427d860`
+**Previous Hash**: `6aba84b016747e53852453afc6ba302b269904608f0a5160e91023ea2db3720f`
+**Chain Hash (Merkle seal)**: `1023888a5ab6fe0ef2de67cc8b470096e21e2cd7f4ef9896d4990c5f20b1813c`
+
+**Decision**: IMPLEMENTATION of plan-dep-552.md: Dependabot change taken verbatim. 2e98829b changes the node_modules/hono version, resolved and integrity, and was merged locally with main for the seal. Nothing else edited. One Dependabot PR per cycle (owner ruling 2026-10-21).
+
+---
+
+### Entry #875: SESSION SEAL - plan-dep-552
+
+**Timestamp**: 2026-10-21T18:25:45Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-21T1459-8cf0eb`
+**Risk Grade**: L1
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-21T1459-8cf0eb/substantiate.json`
+
+**Content Hash**: `f928faaa0073146b5c0d0347b678bec3dc0591e16091b0b9d3a8ba675a1056c4`
+**Previous Hash**: `1023888a5ab6fe0ef2de67cc8b470096e21e2cd7f4ef9896d4990c5f20b1813c`
+**Chain Hash (Merkle seal)**: `706cfab28475355d3d05f5eca9d1bcc033236e8837f32d3ac2e2ffc03cb22501`
+
+**Decision**: SESSION SEAL for plan-dep-552.md. Reality = Promise, with disclosures. Dependabot #552 moves the SDK's transitive hono to 4.13.13, clearing GHSA-5r4p-p66f-jhc7. Production npm audit drops from 3 to 2 (braces and chokidar remain, lane C2); full audit 18 -> 17. hono is neither bundled nor shipped. Disclosure: bounded damaged-ledger override (#467 unresolved, no native acceptance available). Next: push the seal to the Dependabot branch, run the full required CI, and merge pinned to the head. No release.
