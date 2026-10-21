@@ -12,7 +12,10 @@
  * its alternatives on the card: "Use existing: open <path>", "Register as descriptive" and
  * "Propose superseding <ids>" (a supersession needs a VS Code confirmation). A conflict offers
  * "Propose: <a> superseded by <b>" for each pair. "Bootstrap index" appears only when no index
- * exists. Design source: the Integrations Catalog renderer (integration-catalog-renderer.js), same
+ * exists. Each registry row shows its links (B312, B253): related and supersedes ids with the
+ * target's status, contract and verification paths with their state ("Open" only for a present
+ * path), governance values (a bare #NNN is checked against the Qor ledger's headings only), and the
+ * architecture proposals that name the row with their L3 outcome. Design source: the Integrations Catalog renderer (integration-catalog-renderer.js), same
  * card, pill and button vocabulary.
  *
  * Every string that comes from the repository (paths, ids, domains, problem details) is set with
@@ -55,6 +58,9 @@ const STYLE = `
 .cc-arch-btn[disabled] { opacity:.5; cursor:not-allowed; }
 .cc-arch-btn-link { border-color:#2b4a5c; }
 .cc-arch-result { font-size:.82rem; color:#5fb0d8; margin:6px 0 0; }
+.cc-arch-links { display:flex; flex-direction:column; gap:2px; padding:0 0 6px 12px; font-size:.8rem; color:#9aa5b4; word-break:break-all; }
+.cc-arch-link { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.cc-arch-link .cc-arch-btn { padding:1px 8px; font-size:.75rem; }
 .cc-arch-result.cc-arch-result-bad { color:#fc8181; }
 `;
 
@@ -149,6 +155,42 @@ function reviewDomain(s) {
 }
 
 const short = (hex) => (typeof hex === 'string' && hex ? hex.slice(0, 12) : 'none');
+
+const HIDDEN_CHAR = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
+const SPACE_SEPARATOR = /\p{Zs}/u;
+
+/** Repository text as a reviewer sees it: hidden and format code points, and spaces other than U+0020, as [U+XXXX]. */
+function reviewText(s) {
+  return [...String(s ?? '')].map((ch) => (HIDDEN_CHAR.test(ch) || (ch !== ' ' && SPACE_SEPARATOR.test(ch))
+    ? `[U+${ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}]` : ch)).join('');
+}
+
+/** The link fields whose present paths the open route accepts. */
+const OPENABLE_FIELDS = new Set(['contract', 'verification']);
+const LINK_LABEL = { related: 'Related', supersedes: 'Supersedes', contract: 'Contract', verification: 'Verification', governanceRef: 'Governance ref' };
+const PATH_STATE_TEXT = {
+  'not-on-disk': 'not on disk', 'not-listed': 'not listed by git', 'outside-workspace': 'outside the workspace', unsafe: 'unsafe path',
+};
+const LEDGER_STATE_TEXT = {
+  'heading-found': 'heading found; chain not checked (#467)', 'heading-missing': 'heading not found',
+  'no-ledger': 'no docs/META_LEDGER.md to check', 'too-large': 'the ledger is over 8 MiB; not checked',
+};
+
+/** One line of a row's links block; `parts` are strings (set as text) or nodes. */
+function linkLine(field, state, parts) {
+  const line = el('div', 'cc-arch-link');
+  line.dataset.field = field;
+  if (state) line.dataset.state = state;
+  for (const p of parts) line.append(typeof p === 'string' ? document.createTextNode(p) : p);
+  return line;
+}
+
+/** "truncated" or "unavailable" decision links, as one line; null when they are shown per row. */
+function decisionsStateText(decisions) {
+  if (!decisions || decisions.state === 'ok') return null;
+  if (decisions.state === 'truncated') return `Decision links not shown: more than ${decisions.cap} architecture ledger entries.`;
+  return 'Decision links unavailable: the FailSafe ledger could not be read.';
+}
 
 function bootstrapMessage(status, data) {
   if (status === 200) {
@@ -291,7 +333,7 @@ export class ArchitectureIndexRenderer {
       root.appendChild(el('div', 'cc-arch-group', `Unregistered documents (${data.candidates.length})`));
       for (const c of data.candidates) root.appendChild(this.candidateCard(c, data));
     }
-    if (Array.isArray(data.rows) && data.rows.length) this.appendRows(root, data.rows);
+    if (Array.isArray(data.rows) && data.rows.length) this.appendRows(root, data.rows, data.authority);
     target.replaceChildren(root);
   }
 
@@ -471,7 +513,13 @@ export class ArchitectureIndexRenderer {
     return box;
   }
 
-  appendRows(root, rows) {
+  appendRows(root, rows, authority) {
+    const links = new Map();
+    for (const l of (authority && Array.isArray(authority.links) ? authority.links : [])) if (!links.has(l.id)) links.set(l.id, l);
+    const decisions = authority ? authority.decisions : null;
+    const byRow = decisions && decisions.state === 'ok' && decisions.byRow ? decisions.byRow : {};
+    const stateText = decisionsStateText(decisions);
+    if (stateText) root.appendChild(el('p', 'cc-arch-line cc-arch-decisions-state', stateText));
     const groups = new Map();
     for (const r of rows) {
       const key = STATUS_ORDER.includes(r.status) ? r.status : 'other';
@@ -491,9 +539,58 @@ export class ArchitectureIndexRenderer {
         row.appendChild(el('span', 'cc-arch-path', r.docPath || '(no safe link)'));
         if (r.docPath) row.appendChild(button('Open', 'cc-arch-btn-link cc-arch-open', () => this.open(r.docPath)));
         card.appendChild(row);
+        const block = this.linksBlock(r.id, links.get(r.id), Object.prototype.hasOwnProperty.call(byRow, r.id) ? byRow[r.id] : []);
+        if (block) card.appendChild(block);
       }
       root.appendChild(card);
     }
+  }
+
+  /** B312 / B253: a row's links and decisions, as text; null when it has none. */
+  linksBlock(id, l, decided) {
+    const lines = [];
+    if (l) {
+      for (const field of ['related', 'supersedes']) {
+        for (const x of Array.isArray(l[field]) ? l[field] : []) {
+          const target = reviewDomain(x.id);
+          const domain = x.domain !== null && x.domain !== undefined ? `, "${reviewText(x.domain)}"` : '';
+          lines.push(linkLine(field, x.state, [x.state === 'registered'
+            ? `${LINK_LABEL[field]}: ${target} (${reviewText(x.status)}${domain})`
+            : `${LINK_LABEL[field]}: ${target} (not in the registry)`]));
+        }
+      }
+      for (const field of ['contract', 'verification', 'governanceRef']) {
+        const values = l[field];
+        if (values === 'too-long') { lines.push(linkLine(field, 'too-long', [`${LINK_LABEL[field]}: not checked (cell too long)`])); continue; }
+        for (const v of Array.isArray(values) ? values : []) lines.push(this.valueLine(field, v));
+      }
+    }
+    for (const d of Array.isArray(decided) ? decided : []) {
+      const by = d.decisionEntryId !== null && d.decisionEntryId !== undefined ? ` (#${d.decisionEntryId})` : '';
+      lines.push(linkLine('decisions', d.outcome, [`Proposal #${d.proposalEntryId} (${d.role}): ${d.outcome}${by}`]));
+    }
+    if (!lines.length) return null;
+    const block = el('div', 'cc-arch-links');
+    block.dataset.rowId = id;
+    block.append(...lines);
+    return block;
+  }
+
+  /**
+   * One contract, verification or governance value with its state. "Open" only for a present
+   * contract or verification path: the open route accepts no governance path.
+   */
+  valueLine(field, v) {
+    const label = LINK_LABEL[field];
+    if (v.kind === 'qor-ledger') return linkLine(field, v.state, [`Qor ledger #${v.entry}: ${LEDGER_STATE_TEXT[v.state] || v.state}`]);
+    if (v.kind === 'url') return linkLine(field, v.state, [`Link ${reviewText(v.label)}: ${reviewText(v.url)} (not checked)`]);
+    if (v.kind === 'pattern') return linkLine(field, v.state, [`${label}: ${reviewText(v.value)} pattern (not matched)`]);
+    if (v.state === 'present' && OPENABLE_FIELDS.has(field)) {
+      return linkLine(field, v.state, [`${label}: ${reviewText(v.path)}`, ' ',
+        button('Open', 'cc-arch-btn-link cc-arch-link-open', () => this.open(v.path))]);
+    }
+    if (v.state === 'present') return linkLine(field, v.state, [`${label}: ${reviewText(v.path)}`]);
+    return linkLine(field, v.state, [`${label}: ${reviewText(v.path)}`, ' ', pill(PATH_STATE_TEXT[v.state] || v.state, 'cc-arch-pill-warn')]);
   }
 
   async bootstrap() {

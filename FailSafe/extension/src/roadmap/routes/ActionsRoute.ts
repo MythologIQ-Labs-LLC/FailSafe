@@ -145,8 +145,10 @@ export function setupActionsRoutes(
         res.json({ ok: true, processed: 0 });
         return;
       }
+      // B311: warn-only affected architecture decisions, 10 lines in total; never blocks the decision.
+      const architecture = await architectureLines(deps, snapshot.map((i) => i.filePath), BATCH_ARCHITECTURE_LINES);
       if (!(await requireOperatorConfirmation(
-        deps.confirmOperatorAction, l3BatchRequest(snapshot, decision), res,
+        deps.confirmOperatorAction, l3BatchRequest(snapshot, decision, architecture), res,
       ))) {
         return;
       }
@@ -180,8 +182,9 @@ export function setupActionsRoutes(
         res.status(404).json({ ok: false, error: `L3 request not found: ${id}` });
         return;
       }
+      const architecture = await architectureLines(deps, [item.filePath]);
       if (!(await requireOperatorConfirmation(
-        deps.confirmOperatorAction, l3DecisionRequest(item, decision), res,
+        deps.confirmOperatorAction, l3DecisionRequest(item, decision, architecture), res,
       ))) {
         return;
       }
@@ -252,4 +255,21 @@ async function processL3Queue(
     }
   }
   return results;
+}
+
+/** B311: the batch dialog's affected-architecture lines are capped at this many in total. */
+const BATCH_ARCHITECTURE_LINES = 10;
+
+/**
+ * B311: warn-only affected-architecture lines for the files of a decision. No describe, or one that
+ * throws or rejects, gives none, so the dialog is unchanged and the decision proceeds.
+ */
+async function architectureLines(deps: ApiRouteDeps, paths: string[], maxLines?: number): Promise<string[]> {
+  if (!deps.describeArchitecture) return [];
+  try {
+    const d = await deps.describeArchitecture(paths, maxLines === undefined ? undefined : { maxLines });
+    return Array.isArray(d?.lines) ? d.lines : [];
+  } catch {
+    return [];
+  }
 }

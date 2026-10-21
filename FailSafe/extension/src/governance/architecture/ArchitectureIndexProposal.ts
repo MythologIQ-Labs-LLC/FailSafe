@@ -429,6 +429,79 @@ export async function loadApprovedProposals(reader: ArchitectureLedgerReader): P
   return out;
 }
 
+// ---------------------------------------------------------------- decision links (B253, B312)
+
+/** Decision links read at most this many architecture ledger entries (one read of cap + 1). */
+export const DECISION_LINK_CAP = 2000;
+
+export interface DecisionLink {
+  proposalEntryId: number;
+  /** registers: the proposal registers the row's document; supersedes: it supersedes the row; successor: the row supersedes. */
+  role: "registers" | "supersedes" | "successor";
+  outcome: "approved" | "rejected" | "undecided";
+  decisionEntryId: number | null;
+}
+
+export type DecisionLinks =
+  | { state: "ok"; byRow: Record<string, DecisionLink[]> }
+  | { state: "truncated"; cap: number }
+  | { state: "unavailable" };
+
+interface AgentEntry { id: number; eventType: string; agentDid: string; payload: Record<string, unknown> }
+
+/**
+ * The architecture proposals that name each row, with their L3 outcome, from one bounded read of
+ * the FailSafe ledger by the architecture agent. More than `cap` entries gives "truncated" (no
+ * partial links); a ledger without getEntriesByAgent, an unavailable one or a failed read gives
+ * "unavailable". When a proposal has several decisions, the highest entry id wins.
+ */
+export async function decisionLinks(
+  rows: Array<Pick<SnapshotRow, "id" | "docPath">>, ledger: unknown, { cap = DECISION_LINK_CAP }: { cap?: number } = {},
+): Promise<DecisionLinks> {
+  const l = ledger as { isAvailable?: () => boolean; getEntriesByAgent?: (did: string, limit: number) => Promise<AgentEntry[]> } | null | undefined;
+  if (!l || typeof l.getEntriesByAgent !== "function") return { state: "unavailable" };
+  let entries: AgentEntry[];
+  try {
+    if (typeof l.isAvailable === "function" && !l.isAvailable()) return { state: "unavailable" };
+    entries = await l.getEntriesByAgent(ARCHITECTURE_AGENT_DID, cap + 1);
+  } catch {
+    return { state: "unavailable" };
+  }
+  if (!Array.isArray(entries)) return { state: "unavailable" };
+  if (entries.length > cap) return { state: "truncated", cap };
+  const mine = entries.filter((e) => e && e.agentDid === ARCHITECTURE_AGENT_DID);
+  const decided = new Map<number, { id: number; outcome: "approved" | "rejected" }>();
+  for (const e of mine) {
+    if (e.eventType !== "L3_APPROVED" && e.eventType !== "L3_REJECTED") continue;
+    const source = e.payload?.sourceLedgerEntryId;
+    if (typeof source !== "number") continue;
+    const prev = decided.get(source);
+    if (!prev || e.id > prev.id) decided.set(source, { id: e.id, outcome: e.eventType === "L3_APPROVED" ? "approved" : "rejected" });
+  }
+  const proposals = mine
+    .filter((e) => e.eventType === "PROPOSAL" && ARCHITECTURE_KINDS.has(String(e.payload?.kind)))
+    .sort((a, b) => a.id - b.id);
+  // A null prototype: a row id such as __proto__ is an ordinary key.
+  const byRow = Object.create(null) as Record<string, DecisionLink[]>;
+  for (const row of rows) {
+    if (Object.prototype.hasOwnProperty.call(byRow, row.id)) continue;
+    const links: DecisionLink[] = [];
+    for (const p of proposals) {
+      const payload = p.payload ?? {};
+      const supersedes = Array.isArray(payload.supersedes) ? payload.supersedes : [];
+      const role: DecisionLink["role"] | null =
+        payload.action === "register" && row.docPath !== null && payload.path === row.docPath ? "registers"
+          : supersedes.includes(row.id) || payload.supersededRowId === row.id ? "supersedes"
+            : payload.supersededBy === row.id ? "successor" : null;
+      if (!role) continue;
+      const d = decided.get(p.id);
+      links.push({ proposalEntryId: p.id, role, outcome: d ? d.outcome : "undecided", decisionEntryId: d ? d.id : null });
+    }
+    byRow[row.id] = links;
+  }
+  return { state: "ok", byRow };
+}
+
 const locks = new Map<string, Promise<void>>();
 
 /**

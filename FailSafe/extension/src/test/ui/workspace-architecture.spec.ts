@@ -200,4 +200,35 @@ test.describe('#531 Workspace › Architecture sub-view', () => {
     await expect(view.locator('.cc-arch-scope')).toHaveText(SCOPE_LINE);
     expect(fs.existsSync(path.join(root, 'docs', 'ARCHITECTURE_INDEX.md'))).toBe(false);
   });
+
+  test('B312: a row contract "Open" posts once, and a missing verification shows its warning', async ({ page }) => {
+    const index = ['# Architecture Index', '', '## Registry', '', HEADER, '|---|---|---|---|---|---|---|---|---|---|---|',
+      '| architecture-navigation | architecture navigation | [Architecture Index](ARCHITECTURE_INDEX.md) | canonical | manual | - | - | - | unknown | unknown | manual |',
+      '| runtime | runtime | [Runtime](architecture/RUNTIME.md) | canonical | manual | - | - | #769 | `src/runtime/engine.ts` | `src/test/missing.test.ts` | manual |',
+      '', '```architecture-normative', 'docs/architecture/**/*.md', 'docs/ARCHITECTURE*.md', '```', '',
+      '```architecture-legacy', 'docs/archive/**', '```', ''].join('\n');
+    const root = workspace({ 'docs/ARCHITECTURE_INDEX.md': index, 'docs/architecture/RUNTIME.md': '# R\n', 'src/runtime/engine.ts': 'export {};\n',
+      'docs/META_LEDGER.md': '# Ledger\n\n### Entry #769: SEAL\n' });
+    roots.push(root);
+    const opened: string[] = [];
+    controller = await serveConsoleServerUI({
+      workspaceRoot: root, ledgerManager: fakeLedger([]), openFileInEditor: async (p) => { opened.push(p); },
+    });
+    const opens: string[] = [];
+    page.on('request', (req) => {
+      if (req.method() === 'POST' && req.url().endsWith('/api/actions/architecture-index/open')) opens.push(req.postData() ?? '');
+    });
+    await openArchitecture(page, controller.url);
+    const links = page.locator('#workspace .cc-arch .cc-arch-links[data-row-id="runtime"]');
+    await expect(links).toBeVisible();
+    await expect(links.locator('.cc-arch-link[data-field="verification"]')).toHaveText('Verification: src/test/missing.test.ts not on disk');
+    await expect(links.locator('.cc-arch-link[data-field="verification"] .cc-arch-link-open')).toHaveCount(0);
+    await expect(links.locator('.cc-arch-link[data-field="governanceRef"]')).toHaveText('Qor ledger #769: heading found; chain not checked (#467)');
+    const answer = page.waitForResponse((r) => r.url().endsWith('/api/actions/architecture-index/open'));
+    await links.locator('.cc-arch-link[data-field="contract"] .cc-arch-link-open').click();
+    expect((await answer).status()).toBe(200);
+    expect(opens).toHaveLength(1);
+    expect(JSON.parse(opens[0])).toEqual({ path: 'src/runtime/engine.ts' });
+    expect(opened).toEqual([path.join(root, 'src', 'runtime', 'engine.ts')]);
+  });
 });

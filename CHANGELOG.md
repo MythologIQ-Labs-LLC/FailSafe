@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Workspace › Architecture now shows each registry row's links: related and superseded rows with their status, contract and verification files with whether they exist (with Open for those that do), and the architecture proposals that name the row with their approval outcome. The L3 decision dialogs, the L3 Approval Queue panel and the Organize or Initialize commit prompt now list the canonical and proposed architecture documents that name the files involved; this is a warning only and never blocks the decision or the commit.
+
 - Workspace › Delivery now has a Review step, and every step reads recorded, passing, failing, stale, missing or unavailable, with a legend. Recorded means the evidence is present, not that it passed, so a delivery is no longer shown as complete just because ledger evidence exists: the view says complete is not reachable until FailSafe can record a review of the implementation. An intent marked PASS is shown as approved for implementation, not as a review, and a vetoed intent makes the delivery failing (#532).
 - After a governed commit from Organize or Initialize, FailSafe offers to link that commit to the active intent. It asks in VS Code and shows the commit, its tree and branch, and how many files it contains, including any that were already staged. The offer is made only for the commit FailSafe just made, and not when a commit hook or a configured trailer changed it (#532).
 - Workspace › Taxonomy now compares each vertical's listed functions with the Console's actual sub-views and shows what is missing, extra or out of order. It reports the difference and never changes your file; edit the file to match (#548).

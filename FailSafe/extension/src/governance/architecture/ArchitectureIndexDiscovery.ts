@@ -18,7 +18,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { trustedGitPath, TrustedGitUnavailable } from "../../shared/git/trustedGit";
 import {
-  DEFAULT_INDEX_PATH, hasRegistryHeader, matchesGlob, suggestFor, userRepoProfile, validateIndex,
+  cellValues, DEFAULT_INDEX_PATH, hasRegistryHeader, matchesGlob, suggestFor, userRepoProfile, validateIndex,
   type IndexProblem, type RegistryRow,
 } from "./architectureIndexCore";
 
@@ -49,7 +49,26 @@ export interface SnapshotRow {
   line: number;
   /** #531 slice 2: the document path is in the `ls-files -co` list (exists and is not ignored). */
   listed: boolean;
+  /** B312: the values of the contract, verification and governance_ref cells, each with its own listed flag. */
+  cellPaths: { contract: CellPaths; verification: CellPaths; governanceRef: CellPaths };
 }
+
+/**
+ * B312: one value of a path cell, in cell order. `path` values carry their listed flag; a value
+ * with `*` or `?` is a pattern and is never resolved or matched; `unsafe` is absolute, has a
+ * backslash or escapes the repository; `external` is an http(s) or mailto link (never fetched).
+ */
+export type CellPath =
+  | { at: number; kind: "path"; path: string; listed: boolean }
+  | { at: number; kind: "pattern"; value: string }
+  | { at: number; kind: "unsafe"; value: string; reason: string }
+  | { at: number; kind: "external"; label: string; url: string };
+
+/** A cell's values, or "too-long" for a cell over CELL_LIMIT_BYTES (not checked). */
+export type CellPaths = CellPath[] | "too-long";
+
+/** B312 / B311: cells over 4 KiB are not checked (the core's link pattern is quadratic on long `[` runs). */
+export const CELL_LIMIT_BYTES = 4096;
 
 export interface ArchitectureIndexSnapshot {
   state: ArchitectureIndexState;
@@ -152,18 +171,35 @@ function listFiles(root: string, git: ArchitectureGit): { files: string[] } | { 
   return { files: files.sort() };
 }
 
-function toSnapshotRow(r: RegistryRow, listed: ReadonlySet<string>): SnapshotRow {
+/** B312: a cell's values in cell order, or "too-long" (see CELL_LIMIT_BYTES). */
+export function cellPathsOf(cell: string, linkBase: string, listed: ReadonlySet<string>): CellPaths {
+  if (Buffer.byteLength(cell, "utf8") > CELL_LIMIT_BYTES) return "too-long";
+  return cellValues(cell, linkBase).map((v): CellPath => {
+    if (v.kind === "external") return { at: v.at, kind: "external", label: v.label, url: v.target };
+    if (v.kind === "unsafe") return { at: v.at, kind: "unsafe", value: v.target, reason: v.reason };
+    if (/[*?]/.test(v.path)) return { at: v.at, kind: "pattern", value: v.path };
+    return { at: v.at, kind: "path", path: v.path, listed: listed.has(v.path) };
+  });
+}
+
+function toSnapshotRow(r: RegistryRow, listed: ReadonlySet<string>, linkBase: string): SnapshotRow {
   return {
     id: r.id, domain: r.domain, docPath: r.docPath, status: r.status, owner: r.owner, supersedes: r.supersedes,
     related: r.related, governanceRef: r.governance_ref, updatedBy: r.updated_by, line: r.line,
     listed: r.docPath !== null && listed.has(r.docPath),
+    cellPaths: {
+      contract: cellPathsOf(r.contract, linkBase, listed),
+      verification: cellPathsOf(r.verification, linkBase, listed),
+      governanceRef: cellPathsOf(r.governance_ref, linkBase, listed),
+    },
   };
 }
 
 const isNormative = (p: string, globs: string[], legacy: string[]): boolean =>
   globs.some((g) => matchesGlob(g, p)) && !legacy.some((g) => matchesGlob(g, p));
 
-const isParseFailure = (p: IndexProblem): boolean =>
+/** The problems that make an index unreadable (state "invalid"); shared with the affected-decision path. */
+export const isParseFailure = (p: IndexProblem): boolean =>
   p.code === "missing-section" || (p.code === "bad-row" && p.detail.startsWith("registry header"));
 
 const looksLikeIndex = (text: string): boolean => hasRegistryHeader(text) || /^```architecture-normative/m.test(text);
@@ -208,7 +244,7 @@ export function discoverArchitectureIndex(opts: DiscoveryOptions): ArchitectureI
     .filter((p) => p !== indexPath && !registered.has(p) && isNormative(p, globs, legacy))
     .map((p) => ({ path: p, suggestions: suggestFor(p, result.rows) }));
   return {
-    ...base, state, rows: result.rows.map((r) => toSnapshotRow(r, listedFiles)), problems: result.problems, candidates,
+    ...base, state, rows: result.rows.map((r) => toSnapshotRow(r, listedFiles, profile.linkBase)), problems: result.problems, candidates,
     normativeGlobs: globs, legacyGlobs: legacy, indexSha256: index.sha256,
   };
 }

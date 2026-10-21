@@ -85,7 +85,7 @@ function decisionVerb(decision: "APPROVED" | "REJECTED"): "Approve" | "Reject" {
   return decision === "REJECTED" ? "Reject" : "Approve";
 }
 
-export function l3DecisionRequest(item: L3ApprovalRequest, decision: "APPROVED" | "REJECTED"): OperatorActionRequest {
+export function l3DecisionRequest(item: L3ApprovalRequest, decision: "APPROVED" | "REJECTED", architecture?: string[]): OperatorActionRequest {
   const verb = decisionVerb(decision);
   return {
     title: `${verb} this L3 item?`,
@@ -98,11 +98,12 @@ export function l3DecisionRequest(item: L3ApprovalRequest, decision: "APPROVED" 
       `Agent: ${sanitizeDialogText(item.agentDid)}`,
       `Sentinel summary: ${sanitizeDialogText(item.sentinelSummary)}`,
       `Flags: ${item.flags?.length ? sanitizeDialogText(item.flags.join(", ")) : "none"}`,
+      ...architectureBlock(architecture),
     ]),
   };
 }
 
-export function l3BatchRequest(items: L3ApprovalRequest[], decision: "APPROVED" | "REJECTED"): OperatorActionRequest {
+export function l3BatchRequest(items: L3ApprovalRequest[], decision: "APPROVED" | "REJECTED", architecture?: string[]): OperatorActionRequest {
   const verb = decisionVerb(decision);
   const lines = items
     .slice(0, BATCH_LIST_LIMIT)
@@ -117,6 +118,7 @@ export function l3BatchRequest(items: L3ApprovalRequest[], decision: "APPROVED" 
       ...lines,
       "",
       "Only the items listed here are decided; items queued after you confirm stay queued.",
+      ...architectureBlock(architecture),
     ]),
   };
 }
@@ -439,4 +441,16 @@ export function architectureSupersessionRequest(facts: ArchitectureSupersessionF
     "FailSafe records this proposal in its ledger and queues it for an L3 decision. Approving the L3 item records the decision; FailSafe never edits the index.",
   );
   return { title: ARCHITECTURE_SUPERSEDE_TITLE, approveLabel: "Propose", detail: withFooter(lines) };
+}
+
+/** B311: the heading of the warn-only affected-architecture lines in the L3 dialogs. */
+export const L3_ARCHITECTURE_HEADING = "Architecture decisions for these files (warn-only):";
+
+/**
+ * B311: the affected-architecture block of l3DecisionRequest and l3BatchRequest (`architecture`:
+ * lines from describeAffectedArchitecture, already review text and capped; the batch caller caps
+ * them at 10 in total). Without lines the dialogs are unchanged.
+ */
+function architectureBlock(architecture: string[] | undefined): string[] {
+  return architecture && architecture.length ? ["", L3_ARCHITECTURE_HEADING, ...architecture] : [];
 }

@@ -274,3 +274,100 @@ suite('ArchitectureIndexRenderer authority (#531 slice 2, jsdom structural)', ()
     } finally { ctx.cleanup(); }
   });
 });
+
+// B312 / B253 (plan-b311-b312 LD9): each registry row's links and decisions, as text. Row chips carry
+// the target's rendered id and status (a descriptive row's non-ASCII domain is shown unchanged: this
+// links view is that seam); a present path has Open; patterns, missing paths and ledger refs show
+// their state; decision links show their outcome, or one truncated / unavailable line.
+const RLO_PATH = 'src/\u202Eevil.ts';
+function withLinks(decisions: Record<string, unknown>) {
+  return (data: Record<string, unknown>) => {
+    const authority = data.authority as Record<string, unknown>;
+    authority.links = [
+      { id: 'runtime',
+        related: [{ kind: 'row', id: 'cyr', state: 'registered', status: 'descriptive', docPath: 'docs/architecture/CYR.md', domain: 'caf\u00E9 <b>notes</b>' },
+          { kind: 'row', id: 'ghost', state: 'unregistered', status: null, docPath: null, domain: null }],
+        supersedes: [{ kind: 'row', id: 'r\u0443ntime', state: 'registered', status: 'superseded', docPath: 'docs/architecture/OLD.md', domain: 'old' }],
+        contract: [{ kind: 'path', path: 'src/runtime/engine.ts', state: 'present' }, { kind: 'pattern', value: 'src/**/*.ts', state: 'not-matched' },
+          { kind: 'path', path: RLO_PATH, state: 'present' }],
+        verification: [{ kind: 'path', path: 'src/test/missing.test.ts', state: 'not-on-disk' }],
+        governanceRef: [{ kind: 'qor-ledger', entry: 769, state: 'heading-found' }, { kind: 'qor-ledger', entry: 999, state: 'heading-missing' },
+          { kind: 'url', label: '#530', url: 'https://github.com/o/r/issues/530', state: 'not-checked' }, { kind: 'path', path: 'plan-x.md', state: 'not-listed' },
+          { kind: 'path', path: 'docs/plans/plan-y.md', state: 'present' }] },
+      { id: 'runtime-b', related: [], supersedes: [], contract: 'too-long', verification: [], governanceRef: [] },
+    ];
+    authority.decisions = decisions;
+    return data;
+  };
+}
+
+function patchSnapshot(ctx: ReturnType<typeof setupDom>, change: (d: Record<string, unknown>) => Record<string, unknown>) {
+  const g = global as unknown as G;
+  const base = g.fetch as (url: string, init?: { method?: string }) => Promise<{ json: () => Promise<Record<string, unknown>> }>;
+  g.fetch = async (url: string, init?: { method?: string; body?: string }) => {
+    const res = await base(url, init);
+    if (init?.method === 'POST') return res;
+    const data = change(await res.json());
+    return { ok: true, status: 200, json: async () => data } as never;
+  };
+  void ctx;
+}
+
+const linkTexts = (block: Element | null) => [...(block?.querySelectorAll('.cc-arch-link') ?? [])].map((e) => e.textContent ?? '');
+
+suite('ArchitectureIndexRenderer links (B312, jsdom structural)', () => {
+  test('the links block: row chips with id and status, paths with states, Open only for present paths, patterns and ledger wording', async () => {
+    const ctx = setupDom();
+    patchSnapshot(ctx, withLinks({ state: 'ok', byRow: { runtime: [
+      { proposalEntryId: 10, role: 'registers', outcome: 'approved', decisionEntryId: 11 },
+      { proposalEntryId: 13, role: 'successor', outcome: 'rejected', decisionEntryId: 14 },
+      { proposalEntryId: 15, role: 'supersedes', outcome: 'undecided', decisionEntryId: null }] } }));
+    try {
+      await new ArchitectureIndexRenderer('workspace').refresh();
+      const d = ctx.doc;
+      const block = d.querySelector('.cc-arch-links[data-row-id="runtime"]');
+      assert.ok(block, 'the runtime row has a links block');
+      const texts = linkTexts(block);
+      assert.ok(texts.includes('Related: cyr (descriptive, "caf\u00E9 <b>notes</b>")'), texts.join(' | '));
+      assert.ok(texts.includes('Related: ghost (not in the registry)'), texts.join(' | '));
+      assert.ok(texts.includes('Supersedes: r[U+0443]ntime (superseded, "old")'), texts.join(' | '));
+      assert.ok(texts.some((t) => t.startsWith('Contract: src/runtime/engine.ts')));
+      assert.ok(texts.includes('Contract: src/**/*.ts pattern (not matched)'), texts.join(' | '));
+      assert.ok(texts.some((t) => t.startsWith('Contract: src/[U+202E]evil.ts')), 'an RLO in a path is rendered');
+      assert.ok(!texts.join('').includes('\u202E'));
+      assert.ok(texts.includes('Verification: src/test/missing.test.ts not on disk'), texts.join(' | '));
+      assert.ok(texts.includes('Qor ledger #769: heading found; chain not checked (#467)'), texts.join(' | '));
+      assert.ok(texts.includes('Qor ledger #999: heading not found'), texts.join(' | '));
+      assert.ok(texts.includes('Link #530: https://github.com/o/r/issues/530 (not checked)'), texts.join(' | '));
+      assert.ok(texts.includes('Governance ref: plan-x.md not listed by git'), texts.join(' | '));
+      // Open exists only for contract and verification paths (the open route accepts no governance path).
+      assert.ok(texts.includes('Governance ref: docs/plans/plan-y.md'), texts.join(' | '));
+      assert.equal(block!.querySelectorAll('.cc-arch-link[data-field="governanceRef"] .cc-arch-link-open').length, 0);
+      assert.ok(texts.includes('Proposal #10 (registers): approved (#11)'), texts.join(' | '));
+      assert.ok(texts.includes('Proposal #13 (successor): rejected (#14)'), texts.join(' | '));
+      assert.ok(texts.includes('Proposal #15 (supersedes): undecided'), texts.join(' | '));
+      const opens = [...block!.querySelectorAll('.cc-arch-link-open')];
+      assert.equal(opens.length, 2, 'Open only for the two present paths');
+      assert.equal(block!.querySelectorAll('b, i, script, img').length, 0, 'markup stays text');
+      assert.deepEqual(linkTexts(d.querySelector('.cc-arch-links[data-row-id="runtime-b"]')), ['Contract: not checked (cell too long)']);
+      await click(opens[0]);
+      assert.deepEqual(ctx.posted.map((p) => [p.url, p.body]), [['/api/actions/architecture-index/open', { path: 'src/runtime/engine.ts' }]]);
+    } finally { ctx.cleanup(); }
+  });
+
+  test('truncated and unavailable decision links show one line each, and no per-row decisions', async () => {
+    for (const [decisions, line] of [
+      [{ state: 'truncated', cap: 2000 }, 'Decision links not shown: more than 2000 architecture ledger entries.'],
+      [{ state: 'unavailable' }, 'Decision links unavailable: the FailSafe ledger could not be read.'],
+    ] as const) {
+      const ctx = setupDom();
+      patchSnapshot(ctx, withLinks(decisions as unknown as Record<string, unknown>));
+      try {
+        await new ArchitectureIndexRenderer('workspace').refresh();
+        const d = ctx.doc;
+        assert.deepEqual([...d.querySelectorAll('.cc-arch-decisions-state')].map((e) => e.textContent), [line]);
+        assert.ok(!linkTexts(d.querySelector('.cc-arch-links[data-row-id="runtime"]')).some((t) => t.startsWith('Proposal #')));
+      } finally { ctx.cleanup(); }
+    }
+  });
+});

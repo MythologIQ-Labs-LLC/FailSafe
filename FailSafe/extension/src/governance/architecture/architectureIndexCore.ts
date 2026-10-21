@@ -87,7 +87,19 @@ interface CoreModule {
   hiddenCharacterProblem(s: string): string | null;
   domainIntakeProblem(domain: unknown, registeredDomains: string[], options?: { authority?: boolean }): string | null;
   renderDomainForReview(s: string): string;
+  reviewText(s: unknown, cap?: number): string;
+  capReview(s: string, cap: number): string;
+  parseRegistry(indexText: string, profile: IndexProfile): { rows: RegistryRow[]; problems: IndexProblem[] };
+  resolveTarget(target: string, baseDir: string, options?: { decode?: boolean }): ResolvedTarget;
+  isPathShapedToken(t: string): boolean;
 }
+
+/** A link target or backticked path, resolved by the core's rule. */
+export type ResolvedTarget =
+  | { kind: "external" }
+  | { kind: "anchor" }
+  | { kind: "unsafe"; target: string; reason: string }
+  | { kind: "path"; target: string; path: string };
 
 interface ProfilesModule {
   DEFAULT_INDEX_PATH: string;
@@ -117,3 +129,43 @@ export const hiddenCharacterProblem = (s: string): string | null => core.hiddenC
 export const domainIntakeProblem = (domain: unknown, registeredDomains: string[], options: { authority?: boolean } = {}): string | null =>
   core.domainIntakeProblem(domain, registeredDomains, options);
 export const renderDomainForReview = (s: string): string => core.renderDomainForReview(s);
+// B311/B312: review text (hidden code points as [U+XXXX], code-point-safe caps), the registry rows
+// of an index text without discovery, and a cell's values in cell order.
+export const reviewText = (s: unknown, cap?: number): string => core.reviewText(s, cap);
+export const capReview = (s: string, cap: number): string => core.capReview(s, cap);
+
+/** The registry rows and parse problems of an index text (no listing, validation or hashing). */
+export const parseRegistryText = (text: string, indexPath: string): { rows: RegistryRow[]; problems: IndexProblem[] } =>
+  core.parseRegistry(text, profiles.userRepoProfile(indexPath));
+
+/** One value of a registry cell, with its offset in the cell. */
+export type CellValue =
+  | { at: number; kind: "path"; target: string; path: string; label?: string }
+  | { at: number; kind: "unsafe"; target: string; reason: string; label?: string }
+  | { at: number; kind: "external"; target: string; label: string };
+
+const CELL_LINK = /\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
+
+/** The markdown links in a cell blanked to spaces (offsets are kept). */
+export const blankLinks = (cell: string): string => cell.replace(CELL_LINK, (m) => " ".repeat(m.length));
+
+/**
+ * A cell's link targets (from `linkBase`) and backticked paths (from the root), in cell order. The
+ * same values as the core's pathValues, plus external links with their labels.
+ */
+export function cellValues(cell: string, linkBase: string): CellValue[] {
+  const out: CellValue[] = [];
+  for (const m of cell.matchAll(CELL_LINK)) {
+    const r = core.resolveTarget(m[2], linkBase);
+    const at = m.index ?? 0;
+    if (r.kind === "external") out.push({ at, kind: "external", target: m[2], label: m[1] });
+    else if (r.kind === "path" || r.kind === "unsafe") out.push({ at, ...r, label: m[1] });
+  }
+  for (const m of blankLinks(cell).matchAll(/`([^`]+)`/g)) {
+    const t = m[1].trim();
+    if (!core.isPathShapedToken(t)) continue;
+    const r = core.resolveTarget(t, "", { decode: false });
+    if (r.kind === "path" || r.kind === "unsafe") out.push({ at: m.index ?? 0, ...r });
+  }
+  return out.sort((a, b) => a.at - b.at);
+}

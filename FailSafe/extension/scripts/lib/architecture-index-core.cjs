@@ -96,6 +96,46 @@ function renderDomainForReview(s) {
   return [...String(s)].map((ch) => (INTAKE_CHAR.test(ch) ? ch : `[${codePointLabel(ch)}]`)).join('');
 }
 
+// ---------------------------------------------------------------- review text (B311/B312)
+
+const REVIEW_TOKEN = /^\[U\+[0-9A-F]{4,6}\]/;
+
+/**
+ * Cap text at `cap` code points, ending in `...` when cut. A `[U+XXXX]` token or a surrogate pair
+ * is never split: the cut falls before it.
+ */
+function capReview(s, cap) {
+  const cps = Array.from(String(s ?? ''));
+  if (cps.length <= cap) return cps.join('');
+  const room = Math.max(0, cap - 3);
+  let out = '';
+  let n = 0;
+  for (let i = 0; i < cps.length;) {
+    let unit = cps[i];
+    if (unit === '[') {
+      const m = REVIEW_TOKEN.exec(cps.slice(i, i + 10).join(''));
+      if (m) unit = m[0];
+    }
+    const len = unit === cps[i] ? 1 : unit.length;
+    if (n + len > room) break;
+    out += unit;
+    n += len;
+    i += len;
+  }
+  return `${out}...`;
+}
+
+/**
+ * Repository text as a reviewer sees it: control, format, line and paragraph separator code points,
+ * and every space separator other than U+0020, as [U+XXXX]; everything else unchanged (documentation
+ * text is not ASCII-restricted). With `cap`, the rendered text is capped by capReview.
+ */
+function reviewText(s, cap) {
+  const out = [...String(s ?? '')]
+    .map((ch) => (HIDDEN_CHAR.test(ch) || (ch !== ' ' && SPACE_SEPARATOR.test(ch)) ? `[${codePointLabel(ch)}]` : ch)).join('');
+  return cap === undefined ? out : capReview(out, cap);
+}
+
 // ---------------------------------------------------------------- globs
 
 function globToRegExp(glob) {
@@ -499,4 +539,5 @@ module.exports = {
   COLUMNS, STATUSES, POLICY_CHECKS, globToRegExp, matchesGlob, tokens, resolveTarget, isPathShapedToken, pathValues,
   governanceRegistered, hasRegistryHeader, parseRegistry, suggestFor, suggestionText, validate,
   domainKey, INTAKE_CHARSET, nonAsciiCodePoints, hiddenCharacterProblem, domainIntakeProblem, renderDomainForReview,
+  reviewText, capReview,
 };
