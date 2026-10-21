@@ -141,7 +141,7 @@ export class SentinelDaemon {
             return;
         }
         this.watcher = chokidar.watch(workspaceRoot, {
-            ignored: this.watchPolicy.getIgnorePatterns(),
+            ignored: this.watchPolicy.getIgnoreMatcher(),
             persistent: true,
             ignoreInitial: true,
             awaitWriteFinish: { stabilityThreshold: 100, pollInterval: 50 }

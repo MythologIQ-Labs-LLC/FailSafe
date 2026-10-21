@@ -258,6 +258,7 @@ export function registerCommands(
         `Sentinel: ${status.running ? "Active" : "Stopped"} (${status.mode}) | ` +
           `Files: ${status.filesWatched} | Queue: ${status.queueDepth}`,
       );
+      return status;
     }),
   );
 

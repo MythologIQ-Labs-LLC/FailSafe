@@ -4,7 +4,8 @@
  * Owns:
  * - Watched file-extension catalog (code + governance doc formats).
  * - chokidar ignore patterns (node_modules, build output, transient
- *   `.failsafe/` subtrees, ...).
+ *   `.failsafe/` subtrees, ...) and the matcher that applies them
+ *   (chokidar 4 has no glob support, so the policy matches the paths).
  * - Governance-path whitelist for operator-meaningful `.failsafe/**`
  *   artifacts (META_LEDGER, AUDIT_REPORT, plan-*.md, scope docs,
  *   plans.yaml, risk register, workspace-config).
@@ -69,12 +70,72 @@ const IGNORE_PATTERNS: ReadonlyArray<string> = [
 
 const GOVERNANCE_PATH_FRAGMENT = '.failsafe';
 
+type CompiledIgnore =
+    | { kind: 'segments'; segments: ReadonlyArray<string> }
+    | { kind: 'suffix'; suffix: string };
+
+// A literal path segment: no glob syntax and no separator.
+const LITERAL_SEGMENT = /^[^*?{}[\]!\\/]+$/;
+
+/**
+ * Compile one ignore glob. Exactly three shapes are supported, the ones
+ * IGNORE_PATTERNS uses: `**\/<seg>/**`, `**\/<seg>/<seg>/**` and `**\/*.<ext>`,
+ * each with literal segments. Anything else throws, so a pattern the matcher
+ * cannot honour fails at module load instead of silently ignoring nothing.
+ */
+export function compileIgnorePattern(glob: string): CompiledIgnore {
+    let m = /^\*\*\/([^/]+)\/\*\*$/.exec(glob);
+    if (m && LITERAL_SEGMENT.test(m[1])) {
+        return { kind: 'segments', segments: [m[1]] };
+    }
+    m = /^\*\*\/([^/]+)\/([^/]+)\/\*\*$/.exec(glob);
+    if (m && LITERAL_SEGMENT.test(m[1]) && LITERAL_SEGMENT.test(m[2])) {
+        return { kind: 'segments', segments: [m[1], m[2]] };
+    }
+    m = /^\*\*\/\*\.([^/]+)$/.exec(glob);
+    if (m && LITERAL_SEGMENT.test(m[1])) {
+        return { kind: 'suffix', suffix: `.${m[1]}` };
+    }
+    throw new Error(`unsupported ignore pattern: ${glob}`);
+}
+
+const COMPILED_IGNORES: ReadonlyArray<CompiledIgnore> = IGNORE_PATTERNS.map(compileIgnorePattern);
+
 export class SentinelWatchPolicy {
     /**
      * Globs handed to chokidar's `ignored` option.
      */
     getIgnorePatterns(): string[] {
         return [...IGNORE_PATTERNS];
+    }
+
+    /**
+     * True when a path falls under an ignore pattern, answering as chokidar
+     * 3's glob matching did: a segment rule matches its segment (or run of
+     * two) anywhere in the path, the last part included; a suffix rule matches
+     * the last part. Case-sensitive; dot segments count like any other.
+     */
+    isIgnored(filePath: string): boolean {
+        const parts = String(filePath).split(/[\\/]+/).filter(Boolean);
+        const last = parts[parts.length - 1] ?? '';
+        return COMPILED_IGNORES.some((rule) => {
+            if (rule.kind === 'suffix') {
+                return last.endsWith(rule.suffix);
+            }
+            for (let i = 0; i + rule.segments.length <= parts.length; i++) {
+                if (rule.segments.every((segment, j) => parts[i + j] === segment)) {
+                    return true;
+                }
+            }
+            return false;
+        });
+    }
+
+    /**
+     * The matcher handed to chokidar's `ignored` option.
+     */
+    getIgnoreMatcher(): (filePath: string) => boolean {
+        return (filePath) => this.isIgnored(filePath);
     }
 
     /**
