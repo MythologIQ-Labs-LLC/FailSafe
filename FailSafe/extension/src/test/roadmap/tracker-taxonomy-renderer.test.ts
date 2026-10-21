@@ -341,3 +341,401 @@ suite('#548 TrackerTaxonomyRenderer (jsdom)', () => {
     }
   });
 });
+
+// B331 — the editor keeps a draft of the operator's rows across hub repaints, failed
+// Saves and navigation; only a load, a successful (or directive-failed) Save, a Reload
+// click or an applied foreign change starts a new draft generation. A change made on
+// disk or in another Console window while edits are pending is a visible conflict.
+const F0 = '0'.repeat(64);
+const F1 = '1'.repeat(64);
+const F2 = '2'.repeat(64);
+
+function deferred<T>() {
+  let resolve!: (v: T) => void;
+  const promise = new Promise<T>((r) => { resolve = r; });
+  return { promise, resolve };
+}
+
+function disk2() {
+  const c = config();
+  c.programs[0].name = 'Core (disk 2)';
+  c.verticals[1].name = 'Runtime (disk 2)';
+  return c;
+}
+
+/** GETs answer `gets` in order (the last repeats); POSTs answer `posts` in order. */
+function scripted(gets: Array<() => Promise<FakeResponse>>, posts: Array<() => Promise<FakeResponse>> = []) {
+  const counts = { get: 0, post: 0 };
+  const responder: Responder = async (_url, init) => {
+    if (init?.method === 'POST') {
+      counts.post += 1;
+      const next = posts.shift();
+      return next ? next() : json({ ok: true, written: [], drift: CLEAN, fingerprint: F1 });
+    }
+    counts.get += 1;
+    const next = gets.length > 1 ? gets.shift()! : gets[0];
+    return next();
+  };
+  return { responder, counts };
+}
+
+const load = (cfg: unknown, fingerprint: string) => async () => json({ config: cfg, source: 'config', fingerprint, drift: CLEAN });
+
+function typeInto(input: HTMLInputElement, value: string): void {
+  input.value = value;
+  input.dispatchEvent(new (input.ownerDocument.defaultView as unknown as typeof globalThis).Event('input', { bubbles: true }));
+}
+
+const updated = (fingerprint: string) => ({ type: 'tracker.config.updated', payload: { written: [], fingerprint } });
+const rowIds = (doc: Document) => [...doc.querySelectorAll('.cc-tax-row')].map((r) => r.getAttribute('data-row-id'));
+
+suite('B331 TrackerTaxonomyRenderer draft (jsdom)', () => {
+  test('J1: edits, a delete above them and an added row survive hub repaints; Save posts exactly them', async () => {
+    const s = scripted([load(config(), F0)]);
+    const { ctx, r } = await mount(s.responder);
+    try {
+      const ops = ctx.rows('verticals')[2];
+      typeInto(ctx.input(ops, 'name'), 'Ops 2');
+      typeInto(ctx.input(ops, 'key'), 'ops2');
+      (ctx.rows('verticals')[0].querySelector('[data-del]') as HTMLButtonElement).click();
+      (ctx.doc.querySelector('[data-add="verticals"]') as HTMLButtonElement).click();
+      typeInto(ctx.input(ctx.rows('verticals')[2], 'key'), 'new');
+      await r.render({ version: 'hub' });
+      r.paint();
+      r.onEvent({ type: 'risk.updated', payload: {} });
+      await r.render({ version: 'hub-2' });
+      const rows = ctx.rows('verticals');
+      assert.deepEqual(rows.map((x) => ctx.input(x, 'key').value), ['rt', 'ops2', 'new']);
+      assert.equal(ctx.input(rows[1], 'name').value, 'Ops 2');
+      await r.save();
+      assert.deepEqual(ctx.posts[0].verticals, [config().verticals[1], { ...config().verticals[2], key: 'ops2', name: 'Ops 2' }, { key: 'new' }]);
+    } finally { ctx.cleanup(); }
+  });
+
+  test('J2: after a failed Save a hub repaint keeps the edits and the failure status', async () => {
+    const s = scripted([load(config(), F0)], [async () => json({ ok: false, error: 'boom' }, 500)]);
+    const { ctx, r } = await mount(s.responder);
+    try {
+      typeInto(ctx.input(ctx.rows('programs')[0], 'name'), 'Core 2');
+      await r.save();
+      await r.render({ version: 'hub' });
+      r.paint();
+      assert.equal(ctx.input(ctx.rows('programs')[0], 'name').value, 'Core 2');
+      assert.match(ctx.doc.querySelector('#cc-tax-status')!.textContent || '', /boom/);
+    } finally { ctx.cleanup(); }
+  });
+
+  test('J3: navigating away and back (destroy, container swap, render) keeps the edits', async () => {
+    const s = scripted([load(config(), F0)]);
+    const { ctx, r } = await mount(s.responder);
+    try {
+      typeInto(ctx.input(ctx.rows('programs')[1], 'name'), 'Runtime 2');
+      r.destroy();
+      const fresh = ctx.doc.createElement('div');
+      ctx.doc.body.appendChild(fresh);
+      r.container = fresh;
+      await r.render({ version: 'hub' });
+      const row = [...fresh.querySelectorAll('.cc-tax-section[data-kind="programs"] .cc-tax-row')][1];
+      assert.equal((row.querySelector('[data-field="name"]') as HTMLInputElement).value, 'Runtime 2');
+      assert.equal(s.counts.get, 1, 'no refetch on return');
+    } finally { ctx.cleanup(); }
+  });
+
+  test('J4: a successful Save clears dirty and starts a new generation; an untouched next Save posts the saved config', async () => {
+    const s = scripted([load(config(), F0)]);
+    const { ctx, r } = await mount(s.responder);
+    try {
+      typeInto(ctx.input(ctx.rows('programs')[0], 'name'), 'Core 2');
+      assert.equal(ctx.doc.querySelector('.cc-tax')!.getAttribute('data-dirty'), 'true');
+      const before = rowIds(ctx.doc);
+      await r.save();
+      assert.equal(ctx.doc.querySelector('.cc-tax')!.getAttribute('data-dirty'), null);
+      const after = rowIds(ctx.doc);
+      assert.equal(after.some((id) => before.includes(id)), false, 'no row id survives a rebuild');
+      await r.save();
+      assert.deepEqual(ctx.posts[1], { ...ctx.posts[0], fingerprint: F1 });
+    } finally { ctx.cleanup(); }
+  });
+
+  test('J4b: directive-write-failed starts a new generation from the saved config and adopts its fingerprint', async () => {
+    const s = scripted([load(config(), F0)], [async () => json({ ok: false, error: 'directive-write-failed', written: [], fingerprint: F2 }, 500)]);
+    const { ctx, r } = await mount(s.responder);
+    try {
+      typeInto(ctx.input(ctx.rows('programs')[0], 'name'), 'Core 2');
+      const before = rowIds(ctx.doc);
+      await r.save();
+      assert.equal(r.fingerprint, F2);
+      assert.equal(ctx.doc.querySelector('.cc-tax')!.getAttribute('data-dirty'), null);
+      assert.equal(rowIds(ctx.doc).some((id) => before.includes(id)), false);
+      assert.equal(ctx.input(ctx.rows('programs')[0], 'name').value, 'Core 2');
+    } finally { ctx.cleanup(); }
+  });
+
+  test('J5: a 409 is a persistent conflict; nothing reloads until Reload is clicked', async () => {
+    const s = scripted([load(config(), F0), load(disk2(), F2)], [
+      async () => json({ ok: false, error: 'changed-on-disk' }, 409),
+      async () => json({ ok: false, error: 'changed-on-disk' }, 409),
+    ]);
+    const { ctx, r } = await mount(s.responder);
+    try {
+      typeInto(ctx.input(ctx.rows('programs')[0], 'name'), 'Mine');
+      await r.save();
+      assert.ok(ctx.doc.querySelector('.cc-tax-conflict'));
+      await r.render({ version: 'hub' });
+      r.paint();
+      assert.ok(ctx.doc.querySelector('.cc-tax-conflict'), 'the conflict survives a repaint');
+      assert.equal(ctx.input(ctx.rows('programs')[0], 'name').value, 'Mine');
+      await r.save();
+      assert.equal(s.counts.post, 2);
+      assert.deepEqual(ctx.posts.map((p) => p.fingerprint), [F0, F0]);
+      assert.equal(s.counts.get, 1, 'no silent reload');
+      (ctx.doc.querySelector('[data-act="reload"]') as HTMLButtonElement).click();
+      await r.idle();
+      assert.equal(s.counts.get, 2);
+      assert.equal(ctx.doc.querySelector('.cc-tax-conflict'), null);
+      assert.equal(ctx.input(ctx.rows('programs')[0], 'name').value, 'Core (disk 2)');
+      assert.equal(ctx.doc.querySelector('.cc-tax')!.getAttribute('data-dirty'), null);
+    } finally { ctx.cleanup(); }
+  });
+
+  test('J6: a hub payload carrying manifest-like data never changes the draft or fetches', async () => {
+    const s = scripted([load(config(), F0)]);
+    const { ctx, r } = await mount(s.responder);
+    try {
+      typeInto(ctx.input(ctx.rows('programs')[0], 'name'), 'Mine');
+      await r.render({ tracker: { programs: [{ key: 'x', name: 'From the manifest' }] }, config: disk2() });
+      assert.equal(ctx.input(ctx.rows('programs')[0], 'name').value, 'Mine');
+      assert.equal(s.counts.get, 1);
+    } finally { ctx.cleanup(); }
+  });
+
+  test('J7 (pin): repaints never duplicate handlers or touch the shared container', async () => {
+    const s = scripted([load(config(), F0)]);
+    const { ctx, r } = await mount(s.responder);
+    try {
+      let added = 0;
+      const container = r.container as HTMLElement;
+      const orig = container.addEventListener.bind(container);
+      container.addEventListener = ((...a: Parameters<HTMLElement['addEventListener']>) => { added += 1; return orig(...a); }) as HTMLElement['addEventListener'];
+      for (let i = 0; i < 5; i += 1) r.paint();
+      (ctx.doc.querySelector('[data-add="programs"]') as HTMLButtonElement).click();
+      assert.equal(ctx.rows('programs').length, 3);
+      (ctx.doc.querySelector('[data-act="save"]') as HTMLButtonElement).click();
+      await r.idle();
+      assert.equal(s.counts.post, 1);
+      assert.equal(added, 0);
+    } finally { ctx.cleanup(); }
+  });
+
+  test('J8: a foreign change applies while clean, is a conflict while dirty, and own echoes are ignored', async () => {
+    // Foreign while clean: refetch once and apply as a new generation.
+    let s = scripted([load(config(), F0), load(disk2(), F2)], [async () => json({ ok: true, written: [], drift: CLEAN, fingerprint: F1 })]);
+    let m = await mount(s.responder);
+    try {
+      const before = rowIds(m.ctx.doc);
+      m.r.onEvent(updated(F2));
+      await m.r.idle();
+      assert.equal(s.counts.get, 2);
+      assert.equal(m.ctx.input(m.ctx.rows('programs')[0], 'name').value, 'Core (disk 2)');
+      assert.equal(m.ctx.input(m.ctx.rows('verticals')[1], 'name').value, 'Runtime (disk 2)');
+      assert.equal(rowIds(m.ctx.doc).some((id) => before.includes(id)), false, 'no old-generation row id');
+      await m.r.save();
+      assert.deepEqual({ ...m.ctx.posts[0], fingerprint: undefined }, { ...disk2(), fingerprint: undefined });
+      assert.equal(m.ctx.posts[0].fingerprint, F2);
+    } finally { m.ctx.cleanup(); }
+
+    // Foreign while dirty: a conflict, no fetch, the draft unchanged.
+    s = scripted([load(config(), F0)]);
+    m = await mount(s.responder);
+    try {
+      typeInto(m.ctx.input(m.ctx.rows('programs')[0], 'name'), 'Mine');
+      m.r.onEvent(updated(F2));
+      await m.r.idle();
+      assert.equal(s.counts.get, 1);
+      assert.ok(m.ctx.doc.querySelector('.cc-tax-conflict'));
+      assert.equal(m.ctx.input(m.ctx.rows('programs')[0], 'name').value, 'Mine');
+    } finally { m.ctx.cleanup(); }
+
+    // Pin: the own echo after the Save answer is ignored.
+    s = scripted([load(config(), F0)], [async () => json({ ok: true, written: [], drift: CLEAN, fingerprint: F1 })]);
+    m = await mount(s.responder);
+    try {
+      typeInto(m.ctx.input(m.ctx.rows('programs')[0], 'name'), 'Mine');
+      await m.r.save();
+      m.r.onEvent(updated(F1));
+      await m.r.idle();
+      assert.equal(s.counts.get, 1);
+      assert.equal(m.ctx.doc.querySelector('.cc-tax-conflict'), null);
+    } finally { m.ctx.cleanup(); }
+
+    // Pin: the own echo that arrives while the Save is in flight is held, then ignored.
+    const pending = deferred<FakeResponse>();
+    s = scripted([load(config(), F0)], [() => pending.promise]);
+    m = await mount(s.responder);
+    try {
+      typeInto(m.ctx.input(m.ctx.rows('programs')[0], 'name'), 'Mine');
+      const saving = m.r.save();
+      m.r.onEvent(updated(F1));
+      pending.resolve(json({ ok: true, written: [], drift: CLEAN, fingerprint: F1 }));
+      await saving;
+      await m.r.idle();
+      assert.equal(s.counts.get, 1);
+      assert.equal(m.ctx.doc.querySelector('.cc-tax-conflict'), null);
+    } finally { m.ctx.cleanup(); }
+
+    // The same echo during an untouched (clean) Save: compared on arrival it would look
+    // foreign and trigger a reload; held, it is recognised once the Save answers.
+    const pendingClean = deferred<FakeResponse>();
+    s = scripted([load(config(), F0)], [() => pendingClean.promise]);
+    m = await mount(s.responder);
+    try {
+      const saving = m.r.save();
+      m.r.onEvent(updated(F1));
+      await Promise.resolve();
+      pendingClean.resolve(json({ ok: true, written: [], drift: CLEAN, fingerprint: F1 }));
+      await saving;
+      await m.r.idle();
+      assert.equal(s.counts.get, 1, 'the in-flight echo did not trigger a reload');
+      assert.equal(m.r.fingerprint, F1);
+    } finally { m.ctx.cleanup(); }
+
+    // After a failed Save, a foreign event held during it is a conflict.
+    const failing = deferred<FakeResponse>();
+    s = scripted([load(config(), F0)], [() => failing.promise]);
+    m = await mount(s.responder);
+    try {
+      typeInto(m.ctx.input(m.ctx.rows('programs')[0], 'name'), 'Mine');
+      const saving = m.r.save();
+      m.r.onEvent(updated(F2));
+      failing.resolve(json({ ok: false, error: 'boom' }, 500));
+      await saving;
+      await m.r.idle();
+      assert.ok(m.ctx.doc.querySelector('.cc-tax-conflict'));
+      assert.equal(m.ctx.input(m.ctx.rows('programs')[0], 'name').value, 'Mine');
+    } finally { m.ctx.cleanup(); }
+  });
+
+  test('J9: one first load; a refetch that resolves after typing is not applied; own fingerprint is no conflict', async () => {
+    const first = deferred<FakeResponse>();
+    let s = scripted([() => first.promise]);
+    const ctx = setupDom(s.responder);
+    try {
+      const r = new TrackerTaxonomyRenderer('workspace');
+      const a = r.render();
+      const b = r.render();
+      first.resolve(json({ config: config(), source: 'config', fingerprint: F0, drift: CLEAN }));
+      await Promise.all([a, b]);
+      assert.equal(s.counts.get, 1, 'single-flight first load');
+    } finally { ctx.cleanup(); }
+
+    const refetch = deferred<FakeResponse>();
+    s = scripted([load(config(), F0), () => refetch.promise, load(disk2(), F2)]);
+    let m = await mount(s.responder);
+    try {
+      m.r.onEvent(updated(F2));
+      typeInto(m.ctx.input(m.ctx.rows('programs')[0], 'name'), 'Typed meanwhile');
+      refetch.resolve(json({ config: disk2(), source: 'config', fingerprint: F2, drift: CLEAN }));
+      await m.r.idle();
+      assert.equal(m.ctx.input(m.ctx.rows('programs')[0], 'name').value, 'Typed meanwhile', 'not applied over the edit');
+      assert.ok(m.ctx.doc.querySelector('.cc-tax-conflict'));
+      (m.ctx.doc.querySelector('[data-act="reload"]') as HTMLButtonElement).click();
+      await m.r.idle();
+      assert.equal(m.ctx.input(m.ctx.rows('programs')[0], 'name').value, 'Core (disk 2)');
+    } finally { m.ctx.cleanup(); }
+
+    s = scripted([load(config(), F0)]);
+    m = await mount(s.responder);
+    try {
+      m.r.onEvent(updated(F2));
+      await m.r.idle();
+      assert.equal(s.counts.get, 2, 'refetched');
+      assert.equal(m.ctx.doc.querySelector('.cc-tax-conflict'), null, 'the disk still has this editor\'s fingerprint');
+    } finally { m.ctx.cleanup(); }
+  });
+
+  test('J10: inputs are disabled while a Save is in flight; a hung Save times out to "outcome unknown"', async () => {
+    const pending = deferred<FakeResponse>();
+    let s = scripted([load(config(), F0)], [() => pending.promise]);
+    let m = await mount(s.responder);
+    try {
+      typeInto(m.ctx.input(m.ctx.rows('programs')[0], 'name'), 'Mine');
+      const saving = m.r.save();
+      await m.r.render({ version: 'hub' });
+      const controls = [...m.ctx.doc.querySelectorAll('.cc-tax input, .cc-tax button')] as Array<HTMLInputElement | HTMLButtonElement>;
+      assert.ok(controls.length > 0 && controls.every((c) => c.disabled), 'every control is disabled during the Save');
+      pending.resolve(json({ ok: true, written: [], drift: CLEAN, fingerprint: F1 }));
+      await saving;
+      const after = [...m.ctx.doc.querySelectorAll('.cc-tax input, .cc-tax button')] as Array<HTMLInputElement | HTMLButtonElement>;
+      assert.ok(after.every((c) => !c.disabled));
+    } finally { m.ctx.cleanup(); }
+
+    s = scripted([load(config(), F0)], [() => new Promise<FakeResponse>(() => { /* never answers */ })]);
+    m = await mount(s.responder);
+    try {
+      m.r.saveTimeoutMs = 30;
+      typeInto(m.ctx.input(m.ctx.rows('programs')[0], 'name'), 'Mine');
+      await m.r.save();
+      assert.match(m.ctx.doc.querySelector('#cc-tax-status')!.textContent || '', /outcome unknown/i);
+      assert.equal(m.r.fingerprint, F0, 'the old fingerprint is kept');
+      assert.equal(m.ctx.input(m.ctx.rows('programs')[0], 'name').value, 'Mine');
+      assert.equal(m.ctx.input(m.ctx.rows('programs')[0], 'name').disabled, false, 're-enabled');
+    } finally { m.ctx.cleanup(); }
+  });
+
+  test('J13: an edit the operator reverts (text and cross-cutting) is not dirty and is not posted', async () => {
+    const s = scripted([load(config(), F0)]);
+    const { ctx, r } = await mount(s.responder);
+    try {
+      const name = ctx.input(ctx.rows('programs')[0], 'name');
+      typeInto(name, 'Corex');
+      typeInto(name, 'Core');
+      const xc = ctx.rows('verticals')[1].querySelector('[data-field="crossCutting"]') as HTMLInputElement;
+      xc.checked = true;
+      xc.dispatchEvent(new (xc.ownerDocument.defaultView as unknown as typeof globalThis).Event('input', { bubbles: true }));
+      xc.checked = false;
+      xc.dispatchEvent(new (xc.ownerDocument.defaultView as unknown as typeof globalThis).Event('input', { bubbles: true }));
+      r.paint();
+      assert.equal(ctx.doc.querySelector('.cc-tax')!.getAttribute('data-dirty'), null, 'reverted edits are not dirty');
+      await r.save();
+      const { fingerprint, ...posted } = ctx.posts[0];
+      assert.equal(fingerprint, F0);
+      assert.deepEqual(posted, config(), 'the loaded rows are posted unchanged');
+    } finally { ctx.cleanup(); }
+  });
+
+  test('J12: Reload discards edits typed after the conflict appeared; no older generation is read back', async () => {
+    const s = scripted([load(config(), F0), load(disk2(), F2)], [async () => json({ ok: false, error: 'changed-on-disk' }, 409)]);
+    const { ctx, r } = await mount(s.responder);
+    try {
+      typeInto(ctx.input(ctx.rows('programs')[0], 'name'), 'Mine');
+      await r.save();
+      typeInto(ctx.input(ctx.rows('programs')[0], 'name'), 'Typed after the conflict');
+      typeInto(ctx.input(ctx.rows('verticals')[0], 'name'), 'Also typed');
+      (ctx.doc.querySelector('[data-act="reload"]') as HTMLButtonElement).click();
+      await r.idle();
+      assert.equal(ctx.input(ctx.rows('programs')[0], 'name').value, 'Core (disk 2)');
+      assert.equal(ctx.input(ctx.rows('verticals')[0], 'name').value, 'Core');
+      await r.save();
+      assert.deepEqual({ ...ctx.posts[1], fingerprint: undefined }, { ...disk2(), fingerprint: undefined });
+    } finally { ctx.cleanup(); }
+  });
+
+  test('J11: typing survives a hub payload with focus and caret kept; a forced repaint restores them', async () => {
+    const s = scripted([load(config(), F0)]);
+    const { ctx, r } = await mount(s.responder);
+    try {
+      const input = ctx.input(ctx.rows('programs')[0], 'name');
+      input.focus();
+      typeInto(input, 'Corx');
+      input.setSelectionRange(2, 2);
+      await r.render({ version: 'hub' });
+      assert.equal(ctx.doc.activeElement, input, 'a hub payload does not replace the focused field');
+      assert.equal(input.selectionStart, 2);
+      r.paint();
+      const now = ctx.doc.activeElement as HTMLInputElement;
+      assert.equal(now.getAttribute('data-field'), 'name');
+      assert.equal(now.value, 'Corx');
+      assert.equal(now.selectionStart, 2, 'caret restored after a forced repaint');
+    } finally { ctx.cleanup(); }
+  });
+});
