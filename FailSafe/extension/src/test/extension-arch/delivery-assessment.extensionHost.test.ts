@@ -31,6 +31,12 @@
 // commit (which contains the other linked commit). The assessment reads
 // evidence-complete-except-receipt, the live ledger holds exactly 1 new DELIVERY_REVIEWED row for
 // this intent and the history exactly 1 REVIEWED line; a second save makes the PASS stale.
+//
+// B347: a save writes two evidence rows at different times: the editor-save governance decision at
+// once, and the ProvenanceTracker row after its 200 ms debounce. G4 used to record the review as soon
+// as the first row was visible, so the debounced row could land after the PASS and make it stale
+// (Linux CI run 39563947170). G4 now waits for the save's PROVENANCE_RECORDED row and then for the
+// intent's evidence count to stay still for SETTLE_MS before it records or asserts.
 
 import { strict as assert } from 'assert';
 import * as fs from 'fs';
@@ -257,15 +263,39 @@ suite('#532 delivery assessment (extension host, temp git workspace)', () => {
     assert.ok(await vscode.workspace.applyEdit(edit));
     assert.ok(await doc.save(), 'the edited document saved');
   }
-  async function untilGovernance(count: number): Promise<Found> {
-    const deadline = Date.now() + 15000;
+  /** B347: every evidence row whose payload intentId is the intent (reviews excluded), read from the live ledger file, as the assessment matches it. */
+  function evidenceRowsFor(id: string): Array<{ id: number; event_type: string }> {
+    const db = new Database(ledgerFile(), { readonly: true, fileMustExist: true });
+    try {
+      return db.prepare("SELECT id, event_type FROM soa_ledger WHERE event_type <> 'DELIVERY_REVIEWED' AND json_extract(payload, '$.intentId') = ? ORDER BY id")
+        .all(id) as Array<{ id: number; event_type: string }>;
+    } finally { db.close(); }
+  }
+  const provenanceRowsFor = (id: string): number => evidenceRowsFor(id).filter((r) => r.event_type === 'PROVENANCE_RECORDED').length;
+  /** Five times the ProvenanceTracker's 200 ms debounce. */
+  const SETTLE_MS = 1000;
+  /**
+   * B347: wait until a save is fully recorded: its debounced PROVENANCE_RECORDED row is in the ledger
+   * (more than `provenanceBefore`) and the intent's evidence count has not changed for SETTLE_MS.
+   * Then the assessment's governance step must list exactly those rows.
+   */
+  async function untilSaveRecorded(provenanceBefore: number): Promise<Found> {
+    const deadline = Date.now() + 20000;
+    let count = -1;
+    let since = Date.now();
     for (;;) {
-      const view = await assess();
-      const gov = view.assessment.steps.find((s) => s.key === 'governance')!;
-      if (gov.status === 'recorded' && gov.records.length >= count) return view;
-      if (Date.now() > deadline) throw new Error(`no live provenance entry for the intent: ${JSON.stringify(gov)}`);
+      const rows = evidenceRowsFor(intentId);
+      if (rows.length !== count) { count = rows.length; since = Date.now(); }
+      const provenance = rows.filter((r) => r.event_type === 'PROVENANCE_RECORDED').length;
+      if (provenance > provenanceBefore && Date.now() - since >= SETTLE_MS) break;
+      if (Date.now() > deadline) throw new Error(`the save was not recorded: ${JSON.stringify(rows)}`);
       await new Promise((r) => setTimeout(r, 250));
     }
+    const view = await assess();
+    const gov = view.assessment.steps.find((s) => s.key === 'governance')!;
+    assert.equal(gov.status, 'recorded');
+    assert.equal(gov.records.length, count, 'the assessment lists every evidence row the ledger holds for the intent');
+    return view;
   }
 
   test('B320 G4: the live positive path, through the registered command under the live ledger secret, to evidence complete except receipt', async function () {
@@ -279,8 +309,9 @@ suite('#532 delivery assessment (extension host, temp git workspace)', () => {
     fs.mkdirSync(path.join(root, 'notes'), { recursive: true });
     fs.writeFileSync(path.join(root, ...EVIDENCE_FILE.split('/')), 'evidence\n');
     terminal = vscode.window.createTerminal({ name: 'claude' });
+    const provenanceBefore = provenanceRowsFor(intentId);
     await saveEvidence('first save\n');
-    let view = await untilGovernance(1);
+    let view = await untilSaveRecorded(provenanceBefore);
     assert.equal(view.assessment.overall, 'awaiting-review', JSON.stringify(view.assessment.steps.map((s) => [s.key, s.status])));
     assert.ok(governedSha, 'G1 bound the governed commit');
     const rowsBefore = reviewRowsFor(intentId);
@@ -298,10 +329,11 @@ suite('#532 delivery assessment (extension host, temp git workspace)', () => {
     assert.equal(view.assessment.overall, 'evidence-complete-except-receipt');
     assert.equal(status(view, 'receipt'), 'unavailable');
     // Complete is transient: a later save is new evidence, so the PASS is no longer current.
-    const recorded = view.assessment.steps.find((s) => s.key === 'governance')!.records.length;
+    const provenanceAfterReview = provenanceRowsFor(intentId);
     await saveEvidence('second save\n');
-    view = await untilGovernance(recorded + 1);
+    view = await untilSaveRecorded(provenanceAfterReview);
     assert.equal(status(view, 'review'), 'stale');
+    assert.match(view.assessment.steps.find((s) => s.key === 'review')!.reason, /new governance evidence/);
     assert.equal(view.assessment.overall, 'awaiting-review');
   });
 });
