@@ -108,6 +108,8 @@ export interface ConsoleServerFixtures {
   queueL3Approval?: (request: Record<string, unknown>) => Promise<string>;
   /** #532 part B: the IntentService behind the delivery routes (default: none, so they answer 503). */
   intentService?: unknown;
+  /** B312: the editor-open dependency (default: none, so architecture open answers 503). */
+  openFileInEditor?: (filePath: string, startLine?: number) => Promise<void>;
 }
 
 export interface ConsoleServerController {
@@ -312,6 +314,7 @@ export async function serveConsoleServerUI(
   server.setBicameralCommand(fixtures.bicameralCommand ?? "node");
   server.setOperatorConfirmer(fixtures.operatorConfirmer ?? (async () => "approved"));
   if (fixtures.intentService) server.setIntentService(fixtures.intentService as never);
+  if (fixtures.openFileInEditor) server.setBicameralOpenFileInEditor(fixtures.openFileInEditor);
   if (fixtures.integrationConfig) {
     const snapshot = fixtures.integrationConfig;
     server.setIntegrationConfigSnapshotProvider(() => snapshot);
