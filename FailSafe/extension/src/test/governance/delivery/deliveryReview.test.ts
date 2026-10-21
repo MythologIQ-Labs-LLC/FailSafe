@@ -935,10 +935,10 @@ suite('#532 B320 delivery review (plan-b320 LD12)', () => {
     assert.equal(reviewOf(v).status, 'passing', reviewOf(v).reason);
     return { ...s, ...r };
   }
-  /** R3 setup: VETO on B3 = {a.ts, b.ts, CHANGELOG.md} from A, then B3 unlinked (coverage needs it gone). */
+  /** R3 setup: VETO on B3 = {a.ts, b.ts, k.ts} from A, then B3 unlinked (coverage needs it gone). k.ts was CHANGELOG.md until CHANGELOG.md became a bookkeeping file (B344 review fold); every R3 row keeps its counts. */
   async function b3Setup() {
     await readyDelivery();
-    const b3 = commitOn(ws.head, { 'a.ts': '1\n', 'b.ts': '1\n', 'CHANGELOG.md': '1\n' }, 'b3: the vetoed change');
+    const b3 = commitOn(ws.head, { 'a.ts': '1\n', 'b.ts': '1\n', 'k.ts': '1\n' }, 'b3: the vetoed change');
     await linkEdge('committed-under', b3);
     const veto = await recorded('VETO', b3);
     await linkEdge('committed-under', b3, 'unlink');
@@ -973,15 +973,15 @@ suite('#532 B320 delivery review (plan-b320 LD12)', () => {
     assert.equal(reviewOf(await view()).status, 'passing');
   });
 
-  test('B344 R3a: same parent, V half fails only (D = {CHANGELOG.md, x.ts}): rework-unrelated "V half"', async () => {
+  test('B344 R3a (regression guard for the refusal, red-first for the code and message): same parent, V half fails only (D = {k.ts, x.ts}): rework-unrelated "V half"', async () => {
     const { veto } = await b3Setup();
-    const d = commitOn(ws.head, { 'CHANGELOG.md': '2\n', 'x.ts': 'x\n' });
+    const d = commitOn(ws.head, { 'k.ts': '2\n', 'x.ts': 'x\n' });
     await linkEdge('committed-under', d);
     await refusedWith(reworkReq(d, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: d }]), 409, 'rework-unrelated', /V half/);
     assert.equal(reviewOf(await view()).status, 'failing', 'the VETO stands');
   });
 
-  test('B344 R3b: same parent, R half fails only (F = {a.ts, b.ts, x.ts, y.ts, z.ts}): rework-unrelated "R half"', async () => {
+  test('B344 R3b (regression guard for the refusal, red-first for the code and message): same parent, R half fails only (F = {a.ts, b.ts, x.ts, y.ts, z.ts}): rework-unrelated "R half"', async () => {
     const { veto } = await b3Setup();
     const f = commitOn(ws.head, { 'a.ts': '2\n', 'b.ts': '2\n', 'x.ts': 'x\n', 'y.ts': 'y\n', 'z.ts': 'z\n' });
     await linkEdge('committed-under', f);
@@ -990,47 +990,73 @@ suite('#532 B320 delivery review (plan-b320 LD12)', () => {
 
   test('B344 R3c (red-first): the R-half boundary (G = B3 plus x, y, z; 6 >= 6) is accepted as amended', async () => {
     const { veto } = await b3Setup();
-    const g = commitOn(ws.head, { 'a.ts': '2\n', 'b.ts': '2\n', 'CHANGELOG.md': '2\n', 'x.ts': 'x\n', 'y.ts': 'y\n', 'z.ts': 'z\n' });
+    const g = commitOn(ws.head, { 'a.ts': '2\n', 'b.ts': '2\n', 'k.ts': '2\n', 'x.ts': 'x\n', 'y.ts': 'y\n', 'z.ts': 'z\n' });
     await linkEdge('committed-under', g);
     const r = await recordRework(reworkReq(g, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: g }]));
     assert.equal(r.plan.reworks[0].relation, 'amended');
     assert.equal(reviewOf(await view()).status, 'passing');
   });
 
-  test('B344 R3d: E shares every path with B3 but sits on another parent C: rework-unrelated naming the parent', async () => {
+  test('B344 R3d (regression guard for the refusal, red-first for the code and message): E shares every path with B3 but sits on another parent C: rework-unrelated naming the parent', async () => {
     const { veto } = await b3Setup();
     const c = commitOn(ws.head, { 'c.ts': 'c\n' });
-    const e = commitOn(c, { 'a.ts': '9\n', 'b.ts': '9\n', 'CHANGELOG.md': '9\n' });
+    const e = commitOn(c, { 'a.ts': '9\n', 'b.ts': '9\n', 'k.ts': '9\n' });
     await linkEdge('committed-under', e);
     await refusedWith(reworkReq(e, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: e }]), 409, 'rework-unrelated', /parent/);
   });
 
-  test('B344 R3e: a copied commit message does not relate unrelated work', async () => {
+  test('B344 R3e (regression guard for the refusal, red-first for the code and message): a copied commit message does not relate unrelated work', async () => {
     const { veto } = await b3Setup();
-    const d = commitOn(ws.head, { 'CHANGELOG.md': '2\n', 'x.ts': 'x\n' }, 'b3: the vetoed change');
+    const d = commitOn(ws.head, { 'k.ts': '2\n', 'x.ts': 'x\n' }, 'b3: the vetoed change');
     await linkEdge('committed-under', d);
     await refusedWith(reworkReq(d, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: d }]), 409, 'rework-unrelated');
   });
 
   test('B344 R3f (red-first for the veto field): a related rework that is linked but not declared is refused, and the refusal names the VETO', async () => {
     const { b3, veto } = await b3Setup();
-    const related = commitOn(ws.head, { 'a.ts': '2\n', 'b.ts': '2\n', 'CHANGELOG.md': '2\n' });
+    const related = commitOn(ws.head, { 'a.ts': '2\n', 'b.ts': '2\n', 'k.ts': '2\n' });
     await linkEdge('committed-under', related);
     const r = await refusedWith(reworkReq(related, undefined), 409, 'veto-not-ancestor');
     assert.deepEqual(r.veto, { entryId: veto.ledgerEntryId, commitSha: b3 });
     assert.equal(reviewOf(await view()).status, 'failing');
   });
 
-  test('B344 R3g (red-first): the strict V-half boundary (V = {a.ts, CHANGELOG.md}, R = {CHANGELOG.md, x.ts}; 2 > 2 fails) is refused, naming the VETO', async () => {
+  test('B344 R3g (red-first): the strict V-half boundary (V = {a.ts, k.ts}, R = {k.ts, x.ts}; 2 > 2 fails) is refused, naming the VETO', async () => {
     await readyDelivery();
-    const v = commitOn(ws.head, { 'a.ts': '1\n', 'CHANGELOG.md': '1\n' });
+    const v = commitOn(ws.head, { 'a.ts': '1\n', 'k.ts': '1\n' });
     await linkEdge('committed-under', v);
     const veto = await recorded('VETO', v);
     await linkEdge('committed-under', v, 'unlink');
-    const r = commitOn(ws.head, { 'CHANGELOG.md': '2\n', 'x.ts': 'x\n' });
+    const r = commitOn(ws.head, { 'k.ts': '2\n', 'x.ts': 'x\n' });
     await linkEdge('committed-under', r);
     const out = await refusedWith(reworkReq(r, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: r }]), 409, 'rework-unrelated', /V half/);
     assert.match(out.error, new RegExp(`#${veto.ledgerEntryId}\\b`));
+  });
+
+  // #532 B344 review fold (owner ruling 2026-10-21, red-first): files this repository edits in nearly
+  // every change are not counted toward the amended majority.
+  const BOOKKEEPING = { 'CHANGELOG.md': '1\n', 'docs/BACKLOG.md': '1\n', 'docs/FEATURE_INDEX.md': '1\n' };
+  test('B344 R3h (red-first): bookkeeping files do not count: V = {CHANGELOG.md, docs/BACKLOG.md, docs/FEATURE_INDEX.md, a.ts} and an unrelated R = {the same three, b.ts} on the same parent are refused', async () => {
+    await readyDelivery();
+    const v = commitOn(ws.head, { ...BOOKKEEPING, 'a.ts': '1\n' });
+    await linkEdge('committed-under', v);
+    const veto = await recorded('VETO', v);
+    await linkEdge('committed-under', v, 'unlink');
+    const r = commitOn(ws.head, { 'CHANGELOG.md': '2\n', 'docs/BACKLOG.md': '2\n', 'docs/FEATURE_INDEX.md': '2\n', 'b.ts': '1\n' });
+    await linkEdge('committed-under', r);
+    await refusedWith(reworkReq(r, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: r }]), 409, 'rework-unrelated', /0 of the 1 non-bookkeeping path/);
+    assert.equal(reviewOf(await view()).status, 'failing', 'the VETO stands');
+  });
+
+  test('B344 R3i (red-first): a VETO on a commit that changed only bookkeeping files is not reworked by an amend that keeps them', async () => {
+    await readyDelivery();
+    const v = commitOn(ws.head, { 'CHANGELOG.md': '1\n', 'docs/BACKLOG.md': '1\n', 'FailSafe/extension/package-lock.json': '1\n' });
+    await linkEdge('committed-under', v);
+    const veto = await recorded('VETO', v);
+    await linkEdge('committed-under', v, 'unlink');
+    const r = commitOn(ws.head, { 'CHANGELOG.md': '2\n', 'docs/BACKLOG.md': '2\n', 'FailSafe/extension/package-lock.json': '2\n', 'x.ts': 'x\n' });
+    await linkEdge('committed-under', r);
+    await refusedWith(reworkReq(r, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: r }]), 409, 'rework-unrelated', /changed only bookkeeping files/);
   });
 
   test('B344 R4 (red-first): declarations are checked: unknown, cleared and non-veto items, an ancestor VETO, a duplicate', async () => {
@@ -1056,7 +1082,7 @@ suite('#532 B320 delivery review (plan-b320 LD12)', () => {
 
   test('B344 R4: the rework must be linked and in the reviewed commit\'s history', async () => {
     const { veto } = await b3Setup();
-    const related = commitOn(ws.head, { 'a.ts': '2\n', 'b.ts': '2\n', 'CHANGELOG.md': '2\n' });
+    const related = commitOn(ws.head, { 'a.ts': '2\n', 'b.ts': '2\n', 'k.ts': '2\n' });
     const other = commitOn(ws.head, { 'h.ts': 'h\n' });
     await linkEdge('committed-under', other);
     await refusedWith(reworkReq(other, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: related }]), 409, 'rework-not-linked');
@@ -1106,7 +1132,7 @@ suite('#532 B320 delivery review (plan-b320 LD12)', () => {
 
   test('B344 R4: a path that is not UTF-8 is refused (rework-path-unshowable)', async () => {
     const { veto } = await b3Setup();
-    const r = importCommit(ws.head, [[Buffer.from('a.ts'), '2'], [Buffer.from('b.ts'), '2'], [Buffer.from('CHANGELOG.md'), '2'], [Buffer.from([0x66, 0xff, 0x2e, 0x74, 0x73]), 'x']]);
+    const r = importCommit(ws.head, [[Buffer.from('a.ts'), '2'], [Buffer.from('b.ts'), '2'], [Buffer.from('k.ts'), '2'], [Buffer.from([0x66, 0xff, 0x2e, 0x74, 0x73]), 'x']]);
     await linkDirect(r);
     await refusedWith(reworkReq(r, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: r }]), 409, 'rework-path-unshowable');
   });
@@ -1115,7 +1141,7 @@ suite('#532 B320 delivery review (plan-b320 LD12)', () => {
     const long = Buffer.from(Array.from({ length: 25 }, (_, i) => `d${String(i).padStart(3, '0')}${'x'.repeat(160)}`).join('/') + '.ts');
     assert.ok(long.length > 4096);
     const { veto } = await b3Setup();
-    const r = importCommit(ws.head, [[Buffer.from('a.ts'), '2'], [Buffer.from('b.ts'), '2'], [Buffer.from('CHANGELOG.md'), '2'], [long, 'x']]);
+    const r = importCommit(ws.head, [[Buffer.from('a.ts'), '2'], [Buffer.from('b.ts'), '2'], [Buffer.from('k.ts'), '2'], [long, 'x']]);
     await linkDirect(r);
     await refusedWith(reworkReq(r, [{ vetoEntryId: veto.ledgerEntryId, reworkCommit: r }]), 409, 'rework-path-unshowable');
   });

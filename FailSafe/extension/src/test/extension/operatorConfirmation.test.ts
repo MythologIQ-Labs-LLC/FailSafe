@@ -251,7 +251,7 @@ suite('#532 B344 delivery review dialog: rework section', () => {
   const rebuilt = (section: string): string[] => {
     const out: string[] = [];
     for (const line of section.split('\n')) {
-      const path = /^ {4}(?:[AMDT]\/[AMDT]|[AMDT]) (.*)$/.exec(line);
+      const path = /^ {4}(?:[AMDT-]\/[AMDT-]|[AMDT]) (.*)$/.exec(line);
       const cont = /^ {6}\\> (.*)$/.exec(line);
       if (path) out.push(path[1]);
       else if (cont) out[out.length - 1] += cont[1];
@@ -259,7 +259,7 @@ suite('#532 B344 delivery review dialog: rework section', () => {
     return out;
   };
 
-  test('D4 fold (red-first): a 90- and a 300-character path are shown in chunks of at most 64, after a "/" where possible, with no unbroken run over 64', () => {
+  test(`D4 fold (red-first): a 90- and a 300-character path are shown in chunks of at most REWORK_PATH_CHUNK (${REWORK_PATH_CHUNK}), after a "/" where possible, with no unbroken run over it`, () => {
     for (const n of [90, 300]) {
       const p = longPath(n);
       assert.equal(p.length, n);
@@ -271,10 +271,10 @@ suite('#532 B344 delivery review dialog: rework section', () => {
       assert.equal(pathLines.length, 2);
       for (const line of [...pathLines, ...continuations]) {
         const shown = line.replace(/^ {4}(M\/M|A) | {6}\\> /, '');
-        assert.ok(shown.length <= 64, `a chunk of ${shown.length} in ${JSON.stringify(line)}`);
-        for (const run of line.split(' ')) assert.ok(run.length <= 64, `a run of ${run.length} in ${JSON.stringify(line)}`);
+        assert.ok(shown.length <= REWORK_PATH_CHUNK, `a chunk of ${shown.length} in ${JSON.stringify(line)}`);
+        for (const run of line.split(' ')) assert.ok(run.length <= REWORK_PATH_CHUNK, `a run of ${run.length} in ${JSON.stringify(line)}`);
       }
-      assert.ok(continuations.length >= 2 * (Math.ceil(n / 64) - 1), `${n}: ${continuations.length} continuation lines`);
+      assert.ok(continuations.length >= 2 * (Math.ceil(n / REWORK_PATH_CHUNK) - 1), `${n}: ${continuations.length} continuation lines`);
       for (const line of pathLines) assert.ok(line.endsWith('/'), `the first chunk breaks after a "/": ${JSON.stringify(line)}`);
       assert.deepEqual(rebuilt(sectionOf(d)), [p, `x/${p}`], 'each path is shown exactly, nothing cut or collapsed');
     }
@@ -307,7 +307,7 @@ suite('#532 B344 delivery review dialog: rework section', () => {
   });
 
   test('D4 fold (written after the implementation, for the escape-split mutation): a chunk never ends or starts inside an escape', () => {
-    // 'xy' puts the escapes off the 64-character grid, so a split by character would cut one.
+    // 'xy' puts the escapes off the REWORK_PATH_CHUNK grid, so a split by character would cut one.
     const paths = [`xy${'\u{E0041}'.repeat(20)}.ts`, `z${'\\'.repeat(70)}.ts`];
     const d = deliveryReviewRequest(facts([item(8)], [rework(8, paths.map((path) => ({ path, vetoStatus: 'M' as const, reworkStatus: 'M' as const })))]), 'op_d4c', 'console').detail;
     const section = sectionOf(d);
@@ -316,12 +316,52 @@ suite('#532 B344 delivery review dialog: rework section', () => {
     assert.ok(chunks.length >= 6, `${chunks.length} chunks`);
     for (const c of chunks) {
       assert.equal(c.replace(/\\\\|\\u\{[0-9A-F]+\}/g, '').includes('\\'), false, `a whole number of escapes in ${JSON.stringify(c)}`);
-      assert.ok(c.length <= 64);
+      assert.ok(c.length <= REWORK_PATH_CHUNK);
     }
   });
 
-  test('the VETO wording names declared rework', () => {
+  test('the VETO wording names declared rework (review fold, red-first for the wording: it never says git "shows" an amendment)', () => {
     const d = deliveryReviewRequest({ ...facts([], []), verdict: 'VETO' }, 'op_4', 'console').detail;
-    assert.match(d, /a PASS on a declared rework that git shows is this commit amended or rebased/);
+    assert.match(d, /a PASS on a declared rework with this commit's diff \(rebased\), or with its parent and more than half of its non-bookkeeping paths \(amended\)/);
+    assert.doesNotMatch(d, /git shows/);
+  });
+
+  // #532 B344 review fold (owner ruling 2026-10-21, red-first): bookkeeping files are listed in the
+  // dialog as such, apart from the counted lists, and the legend states the rule without claiming git
+  // "shows" an amendment.
+  test('D5 (red-first): an amended rework lists bookkeeping files apart, as not counted, and the legend states the rule', () => {
+    const r = rework(11,
+      [{ path: 'CHANGELOG.md', vetoStatus: 'M', reworkStatus: 'M' }, { path: 'a.ts', vetoStatus: 'M', reworkStatus: 'M' }],
+      [{ path: 'docs/BACKLOG.md', status: 'M' }],
+      [{ path: 'FailSafe/extension/package-lock.json', status: 'M' }, { path: 'b.ts', status: 'A' }]);
+    const section = sectionOf(deliveryReviewRequest(facts([item(11)], [r]), 'op_d5', 'console').detail);
+    const lines = section.split('\n');
+    const at = (text: string) => lines.indexOf(text);
+    const book = at('  Bookkeeping files, not counted (3), status in the vetoed commit/the rework (- where unchanged):');
+    assert.ok(book > 0, section);
+    for (const counted of ['  Shared (1), status in the vetoed commit/the rework:', '    M/M a.ts', '  Only in the vetoed commit (0):', '  Only in the rework (1):', '    A b.ts']) {
+      assert.ok(at(counted) > 0 && at(counted) < book, `${JSON.stringify(counted)} before the bookkeeping list:\n${section}`);
+    }
+    for (const listed of ['    M/M CHANGELOG.md', '    M/- docs/BACKLOG.md', '    -/M FailSafe/extension/package-lock.json']) {
+      assert.ok(at(listed) > book, `${JSON.stringify(listed)} in the bookkeeping list:\n${section}`);
+    }
+    assert.doesNotMatch(lines[0], /git shows/);
+    assert.match(lines[0], /identical diff \(rebased\)/);
+    assert.match(lines[0], /more than half of the vetoed commit's non-bookkeeping paths/);
+    assert.match(lines[0], /bookkeeping files are listed but not counted/);
+  });
+
+  test('D6 (red-first): a space other than U+0020, and a U+0020 at either end of a path or of a chunk, is shown escaped', () => {
+    assert.equal(escapeDialogPath('a b.ts'), 'a\\u{00A0}b.ts');
+    assert.equal(escapeDialogPath('a　b c'), 'a\\u{3000}b\\u{2007}c');
+    assert.equal(escapeDialogPath('x.ts '), 'x.ts\\u{0020}');
+    assert.equal(escapeDialogPath(' x.ts'), '\\u{0020}x.ts');
+    assert.equal(escapeDialogPath('my dir/a b.ts'), 'my dir/a b.ts', 'an inner U+0020 stays a space');
+    const p = `${'a'.repeat(REWORK_PATH_CHUNK - 1)} ${'b'.repeat(10)}`;
+    const section = sectionOf(deliveryReviewRequest(facts([item(12)], [rework(12, [{ path: p, vetoStatus: 'M', reworkStatus: 'M' }])]), 'op_d6', 'console').detail);
+    assert.deepEqual(rebuilt(section), [escapeDialogPath(p)]);
+    const chunks = section.split('\n').map((l) => /^ {4}M\/M (.*)$/.exec(l)?.[1] ?? /^ {6}\\> (.*)$/.exec(l)?.[1]).filter((c): c is string => c !== undefined);
+    assert.ok(chunks.length >= 2);
+    for (const c of chunks) assert.ok(!c.startsWith(' ') && !c.endsWith(' '), `a chunk with an edge space: ${JSON.stringify(c)}`);
   });
 });

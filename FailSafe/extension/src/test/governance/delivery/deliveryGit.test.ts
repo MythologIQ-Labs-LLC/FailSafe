@@ -318,7 +318,7 @@ suite('deliveryGit rework reads (#532 B344)', () => {
     assert.equal(commitParents(root, base, () => ({ kind: 'unavailable', detail: 'x' })).state, 'unavailable');
   });
 
-  test('changedPaths: A, M, D and T statuses with no cap; missing and unavailable are told apart', () => {
+  test('changedPaths: A, M, D and T statuses with no cap; a git exit is unavailable (review fold: it was "missing")', () => {
     const root = setup();
     write(root, 'm.txt', '1\n'); write(root, 'd.txt', '1\n'); write(root, 't.txt', '1\n');
     git(root, 'add', '-A'); commit(root, 'files', false);
@@ -332,8 +332,17 @@ suite('deliveryGit rework reads (#532 B344)', () => {
     assert.equal(out.state, 'ok');
     assert.deepEqual((out as { paths: Array<{ status: string; path: string; showable: boolean }> }).paths.map((p) => `${p.status} ${p.path} ${p.showable}`).sort(),
       ['A a.txt true', 'D d.txt true', 'M m.txt true', 'T t.txt true']);
-    assert.deepEqual(changedPaths(root, 'e'.repeat(40), real), { state: 'missing' });
+    assert.equal(changedPaths(root, 'e'.repeat(40), real).state, 'unavailable', 'a bad object exits 128: unavailable');
     assert.equal(changedPaths(root, head(root), () => ({ kind: 'unavailable', detail: 'x' })).state, 'unavailable');
+  });
+
+  test('B344 review fold (red-first): a git exit and a name that is not a full object name are unavailable for changedPaths, as for diffIdentity and commitParents', () => {
+    const root = setup();
+    const exit: ArchitectureGit = () => ({ kind: 'exit', status: 128, stderr: 'fatal: bad object' } as GitOutcome);
+    for (const read of [changedPaths, diffIdentity, commitParents] as const) {
+      assert.equal(read(root, head(root), exit).state, 'unavailable', `${read.name}: an exit`);
+      assert.equal(read(root, 'HEAD', real).state, 'unavailable', `${read.name}: not a full object name`);
+    }
   });
 
   test('changedPaths fails closed on output it cannot parse: an unknown status, an unpaired field, a trailing record with no path, an empty path', () => {
