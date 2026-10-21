@@ -59,7 +59,11 @@ async function occupyRange(): Promise<{ base: number; held: net.Server[] }> {
   throw new Error('could not occupy eleven consecutive ports');
 }
 
-function fixture(port = 0, host = '127.0.0.1') {
+function fixture(port = 0, host = '127.0.0.1', options: {
+  workspaceRoot?: string;
+  mutationBus?: { registerWatcher: (file: string, callback: () => void, debounceMs: number) => { dispose: () => void } };
+  broadcast?: (event: Record<string, unknown>) => void;
+} = {}) {
   const observations: string[] = [];
   const checkpoints: Array<{ status: string; policyVerdict: string; payload: any }> = [];
   const app = {
@@ -77,9 +81,10 @@ function fixture(port = 0, host = '127.0.0.1') {
     recordCheckpoint: (cp: { status: string; policyVerdict: string; payload: any }) => { checkpoints.push(cp); },
   };
   const deps = {
-    app, port, host, workspaceRoot: path.join(os.tmpdir(), 'failsafe-no-ledger'),
+    app, port, host, workspaceRoot: options.workspaceRoot ?? path.join(os.tmpdir(), 'failsafe-no-ledger'),
     wsManager, hub, planManager: { getActivePlan: () => null },
-    broadcast: () => {},
+    mutationBus: options.mutationBus,
+    broadcast: options.broadcast ?? (() => {}),
   };
   const service = new ConsoleLifecycleService(deps as any);
   return { service, checkpoints, observations };
@@ -145,6 +150,78 @@ suite('ConsoleLifecycleService listener evidence (FailSafe #471)', () => {
         await service.start();
         assert.equal(checkpoints.length, 2);
       } finally { service.stop(); }
+    });
+  });
+
+  test('C3 a real META_LEDGER watcher is released across a workspace switch and never opened on failed binding (#471)', async () => {
+    await withTempHome(async () => {
+      const firstRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-ledger-watcher-one-'));
+      const secondRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-ledger-watcher-two-'));
+      const roots = [firstRoot, secondRoot];
+      for (const root of roots) {
+        fs.mkdirSync(path.join(root, 'docs'), { recursive: true });
+        fs.writeFileSync(path.join(root, 'docs', 'META_LEDGER.md'), '### Entry #1\n');
+      }
+      const tracker = (root: string) => {
+        let callback: (() => void) | null = null;
+        let active = false;
+        let registrations = 0;
+        let disposals = 0;
+        return {
+          bus: {
+            registerWatcher: (file: string, fn: () => void, delay: number) => {
+              assert.equal(file, path.join(root, 'docs', 'META_LEDGER.md'));
+              assert.equal(fs.existsSync(file), true, 'non-vacuous watcher precondition');
+              assert.equal(delay, 1500);
+              registrations++;
+              callback = fn;
+              active = true;
+              return { dispose: () => { assert.equal(active, true); active = false; disposals++; } };
+            },
+          },
+          fire: () => { if (active && callback) (callback as () => void)(); },
+          counts: () => ({ registrations, disposals, active }),
+        };
+      };
+      const one = tracker(firstRoot);
+      const two = tracker(secondRoot);
+      const outOne: string[] = [];
+      const outTwo: string[] = [];
+      const first = fixture(0, '127.0.0.1', {
+        workspaceRoot: firstRoot, mutationBus: one.bus,
+        broadcast: (event) => outOne.push(String(event.type)),
+      });
+      const second = fixture(0, '127.0.0.1', {
+        workspaceRoot: secondRoot, mutationBus: two.bus,
+        broadcast: (event) => outTwo.push(String(event.type)),
+      });
+      const occupier = (await listen(0))!;
+      const busyPort = (occupier.address() as net.AddressInfo).port;
+      const refused = fixture(busyPort, '127.0.0.1', { workspaceRoot: firstRoot, mutationBus: one.bus });
+      (refused.service as any).findAvailablePort = async () => busyPort;
+      try {
+        await assert.rejects(refused.service.start(), (error: any) => error?.code === 'EADDRINUSE');
+        assert.deepEqual(one.counts(), { registrations: 0, disposals: 0, active: false }, 'bind failure cannot open watcher');
+        await first.service.start();
+        assert.deepEqual(one.counts(), { registrations: 1, disposals: 0, active: true });
+        one.fire();
+        assert.deepEqual(outOne, ['hub.refresh', 'tracker.refresh']);
+        first.service.stop();
+        assert.deepEqual(one.counts(), { registrations: 1, disposals: 1, active: false });
+        await second.service.start();
+        assert.deepEqual(two.counts(), { registrations: 1, disposals: 0, active: true });
+        one.fire();
+        assert.equal(outOne.length, 2, 'retired workspace does not broadcast');
+        two.fire();
+        assert.deepEqual(outTwo, ['hub.refresh', 'tracker.refresh']);
+      } finally {
+        refused.service.stop();
+        first.service.stop();
+        second.service.stop();
+        await closeAll([occupier]);
+        assert.deepEqual(two.counts(), { registrations: 1, disposals: 1, active: false });
+        for (const root of roots) fs.rmSync(root, { recursive: true, force: true });
+      }
     });
   });
 
