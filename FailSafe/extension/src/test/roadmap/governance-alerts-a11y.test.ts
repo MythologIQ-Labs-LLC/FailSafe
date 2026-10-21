@@ -129,6 +129,30 @@ suite('governance-alert rows a11y (FX920)', () => {
     } finally { restore(); }
   });
 
+  test('hostile governance type and ledger entry remain inert DOM text', () => {
+    const { dom, host, render, restore } = setup();
+    try {
+      const injected = [{
+        id: 'unsafe', type: 'VETO" onmouseover="window.hacked=true',
+        message: 'Visible message', entry: '<img src=x onerror="window.hacked=true">',
+      }];
+      render(injected);
+      const row = host.querySelector('.governance-alert') as HTMLElement;
+      assert.ok(row);
+      assert.equal(row.getAttribute('onmouseover'), null);
+      assert.equal(row.classList.contains('warning'), true);
+      assert.equal(host.querySelector('img'), null);
+      assert.ok(row.textContent?.includes('<img src=x'));
+      row.click();
+      const modal = dom.window.document.querySelector('.alert-modal-type') as HTMLElement;
+      assert.ok(modal);
+      assert.equal(modal.getAttribute('onmouseover'), null);
+      assert.equal(modal.classList.contains('warning'), true);
+      assert.equal(dom.window.document.querySelector('.alert-modal-entry img'), null);
+      assert.ok(dom.window.document.querySelector('.alert-modal-entry')?.textContent?.includes('<img src=x'));
+    } finally { restore(); }
+  });
+
   test('resolved-while-open residual — selector miss leaves focus as-is (no throw)', () => {
     const { dom, host, render, restore } = setup();
     try {
