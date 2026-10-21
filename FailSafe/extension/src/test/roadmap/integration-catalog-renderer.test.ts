@@ -131,10 +131,10 @@ suite('IntegrationCatalogRenderer evidence states (#479 H5, jsdom structural)', 
     try {
       await new IntegrationCatalogRenderer('integrations').render();
       const d = ctx.doc;
-      assert.match(card(d, 'sentry').querySelector('.cc-intcat-last')?.textContent ?? '', /Last result: Failing: authentication was refused/);
+      assert.match(card(d, 'sentry').querySelector('.cc-intcat-last')?.textContent ?? '', /Observed: Failing: authentication was refused/);
       assert.match(card(d, 'linear').querySelector('.cc-intcat-last')?.textContent ?? '', /stale: older than 7 days/);
       assert.equal(card(d, 'slack').querySelector('.cc-intcat-last'), null, 'no evidence, no last-result line');
-      assert.equal(card(d, 'jira').querySelector('.cc-intcat-caps')?.textContent, 'Can: preview issues, create intent drafts');
+      assert.equal(card(d, 'jira').querySelector('.cc-intcat-caps')?.textContent, 'Implemented path (not live-qualified): preview issues, create intent drafts');
       assert.match(card(d, 'sarif').querySelector('.cc-intcat-docs')?.getAttribute('href') ?? '', /sarif\/README\.md$/);
     } finally { ctx.cleanup(); }
   });
