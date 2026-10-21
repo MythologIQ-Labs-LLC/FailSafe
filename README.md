@@ -51,6 +51,17 @@ The extension's [full getting-started and command reference](FailSafe/extension/
 
 FailSafe's core monitoring and governance run locally. External integrations are opt-in and may send data to their configured providers when you invoke them. Review each integration's privacy and permission contract before enabling it. Local-first is not a claim that every optional integration is offline.
 
+## Integration reality and boundaries
+
+FailSafe has **opt-in, capability-specific integrations**, not a universal agent or MCP enforcement proxy. Some integrations fetch evidence, some produce notifications, and a smaller set can gate supported actions. Configured is not proof of connected or operational; see the [canonical integration portfolio](docs/architecture/INTEGRATION_PORTFOLIO.md) and its per-integration contracts for actual feature states, network egress, tests, and unresolved gaps.
+
+- **MCP clients:** A shared stdio client substrate currently serves the Bicameral and Open Design integrations. It does not automatically govern or connect to arbitrary third-party MCP servers. The optional MCP catalog configures selected servers, subject to its documented checks.
+- **FailSafe MCP server:** Governance tools exist in extension source, but the in-process stdio transport is **not reachable by external MCP clients** today ([B209 and contract](docs/architecture/integrations/failsafe-mcp-server.md)). Do not treat an extension startup notice as evidence of a functioning external server.
+- **Evidence and verification:** The ledger records governance and supported delivery reviews, with limitations documented in the [ledger-integrity issues](https://github.com/MythologIQ-Labs-LLC/FailSafe/issues/473). A verified, production-connected SHIELD PASS publisher is not wired; the user-facing GitHub command produces a **neutral manual advisory**. FailSafe does **not** currently verify arbitrary production database outcomes or integrate natively with third-party outcome-verification platforms.
+- **Enforcement scope:** Supported tool/commit boundaries can refuse actions, but editor-save policy is observational, a disposable Git worktree is not a process sandbox, and external write prevention is not universal. The Agent Marketplace installer remains disabled pending isolation and scanner qualification.
+
+A proposed integration, a tested module, a reachable service, and a released capability are different states. These READMEs describe what is usable; the canonical [Architecture Index](docs/ARCHITECTURE_INDEX.md) remains the authority for design decisions.
+
 ## Current release and what's coming
 
 **Current Release**: v6.0.9, the latest published release ([release notes](https://github.com/MythologIQ-Labs-LLC/FailSafe/releases/tag/v6.0.9)). See the [release history](CHANGELOG.md) for fixes, security corrections, and packaged platform support.
