@@ -108,6 +108,11 @@ export interface ConsoleServerFixtures {
   ledgerManager?: unknown;
   /** #531: the fake qorelogicManager's L3 queue (default: a stub that records nothing). */
   queueL3Approval?: (request: Record<string, unknown>) => Promise<string>;
+  /** Lane D: the queue the L3 decision routes read (default: empty), and a recorder for their decisions. */
+  l3Queue?: unknown[];
+  onL3Decision?: (id: string, decision: string) => void;
+  /** Lane D: every request that reaches the server is appended here (method and path). */
+  requestLog?: Array<{ method: string; path: string }>;
   /** #532 part B: the IntentService behind the delivery routes (default: none, so they answer 503). */
   intentService?: unknown;
   /** B312: the editor-open dependency (default: none, so architecture open answers 503). */
@@ -162,7 +167,8 @@ function buildFakeManagers(initialHub: HubFixture | null, fixtures: ConsoleServe
   };
   const qorelogicManager = {
     getLedgerManager: () => fixtures.ledgerManager ?? null,
-    getL3Queue: () => [],
+    getL3Queue: () => fixtures.l3Queue ?? [],
+    processL3Decision: async (id: string, decision: string) => { fixtures.onL3Decision?.(id, decision); },
     // #531: the architecture propose route queues through this.
     queueL3Approval: fixtures.queueL3Approval ?? (async () => "stub-l3"),
     getTrustEngine: () => ({ getAllAgents: async () => [] }),
@@ -364,6 +370,7 @@ export async function serveConsoleServerUI(
   // position 0 so it runs FIRST on every request. Per-request read of
   // hubRef.current means controller.setHub() updates surface on next fetch.
   app.use((req, res, next) => {
+    fixtures.requestLog?.push({ method: req.method, path: req.path });
     if (req.method === 'GET' && (req.originalUrl === '/api/hub' || req.path === '/api/hub') && fakes.hubRef.current) {
       res.json(fakes.hubRef.current);
       return;

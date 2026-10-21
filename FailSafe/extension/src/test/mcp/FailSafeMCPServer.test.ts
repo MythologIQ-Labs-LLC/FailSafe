@@ -15,6 +15,8 @@
 import { strict as assert } from 'assert';
 import * as vscode from 'vscode';
 import { FailSafeMCPServer } from '../../mcp/FailSafeServer';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 
 interface ToolRegistration {
   name: string;
@@ -195,5 +197,35 @@ suite('FailSafeMCPServer (FX144, FX392-FX395)', () => {
     const isPathSafe = (server as unknown as { isPathSafe: (p: string) => boolean }).isPathSafe.bind(server);
     // Outside any open workspace folder
     assert.equal(isPathSafe('/totally/not/in/workspace.ts'), false);
+  });
+
+  // v6.0.10 Lane C (GHSA-46jr defence in depth): a tools/call whose arguments hold more than
+  // 10,000 elements is refused before the tool runs. SDK 1.32.0 reports it as a resolved tool
+  // result with isError, not a rejection; on 1.31.0 there is no cap and the handler runs.
+  test('tools/call input element cap — 10,001 elements refused before the handler; 100 pass', async () => {
+    const { fakeContext, sentinel, ledger, sessionManager } = makeMocks();
+    let intentCalls = 0;
+    const intentService: any = { getActiveIntent: async () => { intentCalls += 1; return null; } };
+    const server = new FailSafeMCPServer(fakeContext, sentinel, ledger, intentService, sessionManager);
+    const mcp = (server as unknown as { server: { connect: (t: unknown) => Promise<void>; close: () => Promise<void> } }).server;
+    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'cap-test', version: '1.0.0' });
+    await mcp.connect(serverSide);
+    await client.connect(clientSide);
+    try {
+      const textOf = (r: Record<string, unknown>) => ((r.content as Array<{ text?: string }>) || []).map((c) => c.text || '').join('\n');
+      const oversized = await client.callTool({ name: 'qorelogic_status', arguments: { pad: Array(10001).fill(0) } });
+      assert.strictEqual(oversized.isError, true, 'oversized call must be refused as a tool error');
+      assert.match(textOf(oversized), /more than the maximum of 10000 elements/);
+      assert.strictEqual(intentCalls, 0, 'the handler must not run for an oversized call');
+
+      const small = await client.callTool({ name: 'qorelogic_status', arguments: { pad: Array(100).fill(0) } });
+      assert.notStrictEqual(small.isError, true, 'a 100-element call is not refused');
+      assert.doesNotMatch(textOf(small), /more than the maximum/);
+      assert.strictEqual(intentCalls, 1, 'the handler runs once for the 100-element call');
+    } finally {
+      await client.close();
+      await mcp.close();
+    }
   });
 });

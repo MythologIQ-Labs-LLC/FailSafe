@@ -35,7 +35,7 @@ export class FailSafeMCPServer {
     this.server = new McpServer({
       name: "FailSafe Governance",
       version: "1.0.0",
-    });
+    }, { maxToolInputElements: 10_000 }); // GHSA-46jr: bound the validation walk of one tools/call
     this.toolRegistrar = this.server.tool.bind(this.server) as unknown as (
       name: string,
       description: string,
