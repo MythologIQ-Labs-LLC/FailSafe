@@ -59,7 +59,7 @@ Graph relationships: no `FailSafe/extension/src/qorlogic/consumer/consumer-adapt
 Governance evidence: no; the adapter never writes the artifacts it classifies `FailSafe/extension/src/qorlogic/consumer/consumer-adapter.ts:7` (`the adapter never writes or repairs canonical`).
 Consent for the install: the bootstrap command asks before pip in interactive mode `FailSafe/extension/src/extension/bootstrapWorkspace.ts:95-103` (`Install now?`).
 Consent for the install: activation runs bootstrap in silent mode, which defers pip `FailSafe/extension/src/extension/bootstrapServers.ts:486` (`void runWorkspaceBootstrap(bootstrapDeps, "silent")`).
-Consent for the install: on main the Console scaffold route shows the validated hosts, scope and skills in a modal VS Code dialog and runs pip and `qor install` only after approval `FailSafe/extension/src/roadmap/routes/ActionsRoute.ts:99-113` (`const approved = await authorizeOperatorAction(`); as released in v6.0.8 it asked nothing (B274, fixed in #538).
+Consent for the install: on main the Console scaffold route shows the validated hosts, scope and skills in a modal VS Code dialog and runs pip and `qor install` only after approval `FailSafe/extension/src/roadmap/routes/ActionsRoute.ts:113-117` (`const approved = await authorizeOperatorAction(`); as released in v6.0.8 it asked nothing (B274, fixed in #538).
 
 ## Transformations
 
@@ -114,5 +114,5 @@ Owner decision 2026-10-18 (#538), accepting the recommendation: **MAINTAIN**. Th
 
 ## Open defects
 
-Fixed in #538: [B274] the scaffold route installed the package without a server-side VS Code confirmation and without a remote-request check (observed outside the LD3 list); it now runs the Console request guard, a rate limit and the dialog `FailSafe/extension/src/roadmap/routes/ActionsRoute.ts:99` (`app.post("/api/actions/scaffold-skills", consoleRequestGuard(`).
+Fixed in #538: [B274] the scaffold route installed the package without a server-side VS Code confirmation and without a remote-request check (observed outside the LD3 list); it now runs the Console request guard, a rate limit and the dialog `FailSafe/extension/src/roadmap/routes/ActionsRoute.ts:104` (`app.post("/api/actions/scaffold-skills", consoleRequestGuard(`).
 The web path reaches pip through `ensurePackageInstalled` `FailSafe/extension/src/extension/installSkillsHandler.ts:131-132` (`const pip = await runPipStep(ingestor, callbacks.onProgress);`).
