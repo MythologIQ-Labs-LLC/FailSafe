@@ -81,6 +81,7 @@ No command, setting or Console view configures or shows the server (unverified: 
 
 Enforced (if reachable): audit and decision tools refuse an intent id that is not the active intent `FailSafe/extension/src/mcp/FailSafeServer.ts:152-156` (`active.id !== intentId`).
 Enforced (if reachable): audit refuses a path outside the open workspace folders `FailSafe/extension/src/mcp/FailSafeServer.ts:65-69` (`is outside valid workspace scope.`).
+Enforced (if reachable), defence in depth for GHSA-46jr: a tools/call whose arguments hold more than 10,000 elements is refused before the tool runs; the SDK (1.32.0 since Dependabot #561) defaults to no limit, so the cap applies because FailSafe opts in `FailSafe/extension/src/mcp/FailSafeServer.ts:38` (`maxToolInputElements: 10_000`), tested over an in-memory transport `FailSafe/extension/src/test/mcp/FailSafeMCPServer.test.ts:205` (`tools/call input element cap`).
 Limit: none of this applies on main, because no caller exists `docs/BACKLOG.md:554` (`FailSafeServer is in-process-only today`).
 
 ## Failure, offline, stale and permission semantics
