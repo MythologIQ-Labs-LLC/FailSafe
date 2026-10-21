@@ -14,9 +14,11 @@ import Database from 'better-sqlite3';
 import { ISecretStore, IConfigProvider } from '../../core/interfaces';
 import { LedgerEntry, LedgerEventType, RiskGrade } from '../../shared/types';
 import { LedgerSchemaManager } from './LedgerSchemaManager';
-import { SoaLedgerRow } from './LedgerSeal';
-import { EntryVerification, LedgerVerification, UNANCHORED_CONTEXT, entryVerification, verifyRows } from './LedgerVerifier';
-import { RESERVED_DIDS, appendV3, readAllRows, rotateTable } from './LedgerWriter';
+import { SealVersion, SoaLedgerRow } from './LedgerSeal';
+import {
+    EntryVerification, FailureCode, LedgerVerification, UNANCHORED_CONTEXT, checkGenesis, checkRowSeal, entryVerification, verifyRows,
+} from './LedgerVerifier';
+import { RESERVED_DIDS, appendV3, readAllRows, readFirst, rotateTable, rotationEvidence } from './LedgerWriter';
 import { LedgerAnchor, STORE_TIMEOUT_MS, withTimeout } from './LedgerAnchor';
 
 interface LedgerAppendRequest {
@@ -34,6 +36,39 @@ interface LedgerAppendRequest {
     overseerDecision?: string;
     gdprTrigger?: boolean;
     payload?: Record<string, unknown>;
+}
+
+/**
+ * #532 B320 (plan-b320 LD4): one stored row with its own seal result. `payload` is the parsed
+ * payload when it is a JSON object, else null; a payload that is not JSON is reported here
+ * (seal code `payload-json`), never thrown, so one damaged row cannot hide every other row.
+ */
+export interface SealedLedgerRow {
+    row: SoaLedgerRow;
+    payload: Record<string, unknown> | null;
+    seal: { version: SealVersion | null; ok: boolean; code: FailureCode | null };
+}
+
+/** #532 B320: the table's first row is a verified rotation genesis (LedgerWriter.rotationEvidence). */
+export interface RotationHead {
+    genesisId: number;
+    genesisHash: string;
+    retiredFile: string;
+    /** The last row the rotation retired; rows up to this id now live in `retiredFile`. */
+    headId: number;
+    headHash: string;
+}
+
+function sealedRow(row: SoaLedgerRow, secret: string): SealedLedgerRow {
+    const { version, failure } = checkRowSeal(row, secret);
+    let payload: Record<string, unknown> | null = null;
+    if (row.payload) {
+        try {
+            const value = JSON.parse(row.payload) as unknown;
+            payload = value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
+        } catch { payload = null; }
+    }
+    return { row, payload, seal: { version, ok: failure === null, code: failure ? failure.code : null } };
 }
 
 export class LedgerManager {
@@ -283,11 +318,55 @@ export class LedgerManager {
     /**
      * #532 part B: newest-first entries whose JSON payload text contains `value`. A prefilter
      * only: callers match the parsed payload exactly. A full page (`limit` rows) may hide more.
+     * A matched row whose payload is not JSON makes this throw (mapRowToEntry); the delivery
+     * assessment reads through findSealedEntriesContaining instead, which reports such a row.
      */
     async findEntriesContaining(value: string, limit: number = 200): Promise<LedgerEntry[]> {
         if (!this.db || !value) { return []; }
         const rows = this.db.prepare('SELECT * FROM soa_ledger WHERE instr(payload, ?) > 0 ORDER BY id DESC LIMIT ?').all(value, limit) as SoaLedgerRow[];
         return rows.map(this.mapRowToEntry);
+    }
+
+    /**
+     * #532 B320 (plan-b320 LD4): every row of one event type, oldest first, with no row cap, each
+     * with its own seal result. Throws when the ledger is not initialized (callers read that as
+     * unavailable, never as empty).
+     */
+    async getSealedEntriesByType(eventType: LedgerEventType): Promise<SealedLedgerRow[]> {
+        return this.sealedRows('SELECT * FROM soa_ledger WHERE event_type = ? ORDER BY id ASC', [eventType]);
+    }
+
+    /** #532 B320: every row with `id >= fromId`, oldest first, uncapped (the delivery continuity walk). */
+    async getSealedRange(fromId: number): Promise<SealedLedgerRow[]> {
+        return this.sealedRows('SELECT * FROM soa_ledger WHERE id >= ? ORDER BY id ASC', [fromId]);
+    }
+
+    /** #532 B320: every row whose payload text contains `value` (a prefilter; callers match exactly), oldest first, uncapped. */
+    async findSealedEntriesContaining(value: string): Promise<SealedLedgerRow[]> {
+        if (!value) { return []; }
+        return this.sealedRows('SELECT * FROM soa_ledger WHERE instr(payload, ?) > 0 ORDER BY id ASC', [value]);
+    }
+
+    /**
+     * #532 B320: the table's first row when it is a v3 genesis whose own seal verifies and whose
+     * retired file still matches the head it binds (a rotation); null otherwise.
+     */
+    getRotationHead(): RotationHead | null {
+        if (!this.db || this.isDisabled) { throw new Error('Ledger DB not initialized'); }
+        const first = readFirst(this.db);
+        if (!first || checkGenesis(first)) { return null; }
+        const sealed = sealedRow(first, this.requireSecret());
+        if (!sealed.seal.ok || sealed.seal.version !== 'v3') { return null; }
+        const evidence = rotationEvidence(first, this.ledgerPath);
+        if (!evidence) { return null; }
+        return { genesisId: first.id, genesisHash: first.entry_hash, retiredFile: evidence.retiredFile, headId: evidence.headId, headHash: evidence.headHash };
+    }
+
+    private sealedRows(sql: string, params: unknown[]): SealedLedgerRow[] {
+        if (!this.db || this.isDisabled) { throw new Error('Ledger DB not initialized'); }
+        const secret = this.requireSecret();
+        const rows = this.db.prepare(sql).all(...params) as SoaLedgerRow[];
+        return rows.map((row) => sealedRow(row, secret));
     }
 
     private mapRowToEntry(row: SoaLedgerRow): LedgerEntry {

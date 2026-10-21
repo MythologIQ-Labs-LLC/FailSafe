@@ -33,6 +33,7 @@ import { createOperatorConfirmer } from "./operatorConfirmation";
 import { readArchitectureIndexPath, registerArchitectureIndexCommand } from "./architectureIndexCommand";
 import { describeAffectedArchitecture } from "../governance/architecture/affectedArchitecture";
 import { registerDeliveryAssessmentCommand } from "./deliveryAssessmentCommand";
+import { registerDeliveryReviewCommand } from "./deliveryReviewCommand";
 import { governedCommitLinker } from "./governedCommitLink";
 import { defaultGitHubPost } from "../integrations/github-checks/github-checks-client";
 import type { CredentialsBootstrap } from "./credentials-command";
@@ -274,6 +275,15 @@ export async function bootstrapServers(
       intents: deps.intentService,
       getLedger: () => deps.qorelogicManager.getLedgerManager(),
       getIndexPathSetting: readArchitectureIndexPath,
+    });
+    // plan-b320 LD3: record a delivery review through the shared confirmer (one busy guard with the Console routes).
+    registerDeliveryReviewCommand(context, {
+      workspaceRoot: deps.workspaceRoot,
+      intents: deps.intentService,
+      getLedger: () => deps.qorelogicManager.getLedgerManager(),
+      confirm: confirmOperatorAction,
+      getIndexPathSetting: readArchitectureIndexPath,
+      broadcast: (data) => consoleServer.broadcastEvent(data),
     });
   }
 

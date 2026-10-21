@@ -8,11 +8,14 @@
  * #467). Each step has a chip and lists the records behind it. plan-532c: "recorded" means present,
  * not passed, so its chip is neutral; passing is green, failing and missing red, stale amber,
  * unavailable muted, with a legend. The header shows the accepted intent and the intent decision
- * (approval for implementation is not a review), and the overall card says why complete is not
- * reachable yet (B320, B321).
- * For the active, unsealed intent it offers Link architecture, Link commit and Unlink; each posts
- * once and acts only after the operator confirms in VS Code. A commit's changed files are shown
- * for display; they are never an edge.
+ * (approval for implementation is not a review).
+ * For the active, unsealed intent it offers Link architecture, Link commit and Unlink, and (plan-b320
+ * LD9) Record PASS / Record VETO on a linked commit with a note; each posts once and acts only after
+ * the operator confirms in VS Code. The review step lists what blocks the delivery (a review VETO,
+ * an unverifiable record, a ledger continuity break), each review with its commit, tree, covered
+ * commits, reviewer, what the confirmation proves and its ledger entry, and whether the latest PASS
+ * is still current. Complete reads "Evidence complete except receipt" and never claims a receipt.
+ * A commit's changed files are shown for display; they are never an edge.
  *
  * Design source: the Architecture sub-view (architecture-index-renderer.js): the same card, type,
  * chip and scope-line vocabulary. Every string from the repository, the ledger or the intent is
@@ -75,9 +78,11 @@ const CHIP = {
 const CARD = { recorded: '', passing: '', failing: ' cc-dlv-bad', stale: ' cc-dlv-warn', missing: ' cc-dlv-bad', unavailable: '' };
 const OUTCOME = {
   'evidence-complete-except-receipt': ['Evidence complete except receipt', 'cc-dlv-pill-ok'],
+  'awaiting-review': ['Awaiting review', 'cc-dlv-pill-warn'],
   incomplete: ['Incomplete', 'cc-dlv-pill-warn'],
   failing: ['Failing', 'cc-dlv-pill-fail'],
 };
+export const COMPLETE_LINE = 'Evidence complete except receipt (the receipt needs the ledger repair, #467). New evidence will need a fresh review.';
 
 /** Who linked an edge (plan-532c LD6), as the dialog said it. */
 function linkedBy(rec) {
@@ -139,13 +144,11 @@ function recordRows(step, rec) {
       ['HEAD at link time', rec.sourceSha], ['Linked by', linkedBy(rec)], ...(rec.reason ? [['Why', rec.reason]] : []),
     ];
     case 'code': return [
-      ['Commit', rec.sha], ['Tree', rec.tree], ['Branch', rec.branch || 'none (detached HEAD)'], ['Linked by', linkedBy(rec)],
+      ['Commit', rec.sha], ['Tree', rec.tree], ...(rec.currentTree ? [['Now resolves to', rec.currentTree]] : []),
+      ['Branch', rec.branch || 'none (detached HEAD)'], ['Linked by', linkedBy(rec)],
       ...(rec.reason ? [['Why', rec.reason]] : []),
     ];
-    case 'review': return [
-      ['Intent decision', rec.decision], ['By', rec.actor], ['At', rec.timestamp], ['Entry hash', rec.entryHash],
-      ['Provenance', rec.provenance],
-    ];
+    case 'review': return reviewRows(rec);
     case 'governance': return [
       ['Ledger entry', `#${rec.entryId} ${rec.eventType}`], ['Recorded at', rec.timestamp], ['Entry hash', rec.entryHash],
       ['Kind', rec.kind === 'policy-decision' ? 'policy decision (an action under the intent, not a review)' : 'presence'],
@@ -154,6 +157,29 @@ function recordRows(step, rec) {
     ];
     default: return [];
   }
+}
+
+/** plan-b320 LD9: the lines of one review-step record (blocking item, review, cleared item, intent decision). */
+function reviewRows(rec) {
+  if (rec.record === 'blocking') return [
+    ['Blocking', rec.label],
+    ...(rec.commitSha ? [['Commit', `${rec.commitSha} (${rec.commitState})`]] : []),
+    ['Record', `${rec.kind} #${rec.id} ${rec.hash}`], ...(rec.note ? [['Note', rec.note]] : []),
+  ];
+  if (rec.record === 'review') return [
+    ['Review', `${rec.verdict}${rec.current === true ? ' (current)' : rec.current === false ? ` (no longer current: ${(rec.staleReasons || []).join('; ')})` : ''}`],
+    ['Commit', rec.commitSha], ['Tree', rec.tree], ['Covers', (rec.covers || []).join(', ')],
+    ['Evidence', `${rec.evidenceCount} entries, digest ${rec.evidenceDigest}`],
+    ['Reviewer', rec.reviewerDid], ['Proves', rec.proves], ['Ledger entry', `#${rec.entryId} ${rec.entryHash} (seal verified)`],
+    ['Recorded at', rec.timestamp], ['Review id', rec.reviewId],
+    ...((rec.supersedes || []).length ? [['Supersedes', rec.supersedes.map((s) => `${s.kind} #${s.id}`).join(', ')]] : []),
+    ...(rec.note ? [['Note', rec.note]] : []),
+  ];
+  if (rec.record === 'cleared') return [['Cleared', rec.label], ['By review', rec.clearedBy]];
+  return [
+    ['Intent decision', rec.decision], ['By', rec.actor], ['At', rec.timestamp], ['Entry hash', rec.entryHash],
+    ['Provenance', rec.provenance], ...(rec.note ? [['Note', rec.note]] : []),
+  ];
 }
 
 const STEP_EDGE = { architecture: 'implements', code: 'committed-under' };
@@ -278,11 +304,10 @@ export class DeliveryAssessmentRenderer {
     overall.appendChild(head);
     overall.appendChild(this.intentLine(view.intent));
     const labels = a.steps.filter((s) => a.gaps.includes(s.key)).map((s) => s.label);
-    overall.appendChild(el('p', null, complete
-      ? 'Every step except the receipt has a record.'
-      : `Gaps: ${labels.join(', ')}.`));
+    overall.appendChild(el('p', complete ? 'cc-dlv-complete' : null, complete ? COMPLETE_LINE : `Gaps: ${labels.join(', ')}.`));
     if (a.completeReachable === false) {
-      overall.appendChild(el('p', 'cc-dlv-unreachable', `Complete is not reachable yet: FailSafe records no review of the implementation (${(a.completeBlockedBy || []).join(', ')}). The receipt also needs the ledger repair (#467).`));
+      const why = (a.completeBlockedBy || []).map((b) => (b === 'git-unavailable' ? 'git is unavailable' : 'the ledger is unavailable')).join(' and ');
+      overall.appendChild(el('p', 'cc-dlv-unreachable', `Complete cannot be assessed while ${why}.`));
     }
     if (!view.linkable) overall.appendChild(el('p', null, 'This intent is sealed; its links are read-only.'));
     root.appendChild(overall);
@@ -319,7 +344,47 @@ export class DeliveryAssessmentRenderer {
     }
     if (view.linkable && candidates && step.key === 'architecture') card.appendChild(this.linkArchitecture(view, candidates));
     if (view.linkable && candidates && step.key === 'code') card.appendChild(this.linkCommit(view, candidates));
+    if (view.linkable && step.key === 'review') card.appendChild(this.reviewControls(view));
     return card;
+  }
+
+  /** plan-b320 LD9: Record PASS / Record VETO on one linked commit, with a note; each posts once. */
+  reviewControls(view) {
+    const actions = el('div', 'cc-dlv-actions cc-dlv-review-actions');
+    const linked = view.edges.filter((e) => e.edge === 'committed-under');
+    if (!linked.length) {
+      actions.appendChild(el('span', 'cc-dlv-line', 'Link a commit first; a review is recorded on one linked commit.'));
+      return actions;
+    }
+    const select = el('select', 'cc-dlv-select cc-dlv-review-pick');
+    select.setAttribute('aria-label', 'Commit to review');
+    for (const e of linked) {
+      const opt = el('option', null, `${e.target.slice(0, 12)} linked ${e.linkedAt}`);
+      opt.value = e.target;
+      select.appendChild(opt);
+    }
+    select.selectedIndex = linked.length - 1;
+    const note = el('input', 'cc-dlv-select cc-dlv-review-note');
+    note.type = 'text';
+    note.maxLength = 500;
+    note.placeholder = 'Note (optional)';
+    note.setAttribute('aria-label', 'Review note');
+    actions.appendChild(select);
+    actions.appendChild(note);
+    const record = (verdict, btn) => { btn.disabled = true; void this.review(view.intent.id, verdict, select.value, note.value); };
+    const pass = button('Record PASS', 'cc-dlv-review-pass', () => record('PASS', pass));
+    const veto = button('Record VETO', 'cc-dlv-btn-link cc-dlv-review-veto', () => record('VETO', veto));
+    actions.appendChild(pass);
+    actions.appendChild(veto);
+    return actions;
+  }
+
+  async review(intentId, verdict, commitSha, note) {
+    const { status, data } = await postJson('/api/actions/delivery/review', { intentId, verdict, commitSha, note });
+    this.message = status === 200
+      ? [`Review ${verdict} recorded as ledger entry #${data.ledgerEntryId} and in the intent history.`, false]
+      : [data.error || `Recording the review failed (${status}).`, true];
+    await this.refresh();
   }
 
   linkArchitecture(view, candidates) {

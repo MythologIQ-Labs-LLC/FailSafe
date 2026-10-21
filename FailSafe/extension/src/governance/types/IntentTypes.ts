@@ -65,7 +65,7 @@ export const IntentSchema = z.object({
 });
 
 export const IntentHistoryEventSchema = z.enum([
-  'CREATED', 'STATUS_CHANGED', 'EVIDENCE_UPDATED', 'SEALED', 'LINKED', 'UNLINKED'
+  'CREATED', 'STATUS_CHANGED', 'EVIDENCE_UPDATED', 'SEALED', 'LINKED', 'UNLINKED', 'REVIEWED'
 ]);
 
 /**
@@ -83,6 +83,48 @@ export const IntentEdgeDetailsSchema = z.object({
 }).strict();
 export type IntentEdgeKind = z.infer<typeof IntentEdgeKindSchema>;
 export type IntentEdgeDetails = z.infer<typeof IntentEdgeDetailsSchema>;
+
+/**
+ * #532 B320 (plan-b320 LD5): the details of a REVIEWED intent-history entry, the mirror of one
+ * sealed delivery-review ledger row. It names that row by id and entry hash and repeats what the
+ * row bound, so the pair can be joined and compared field by field. A mirror alone proves nothing:
+ * the history chain is unkeyed, so a PASS mirror counts only with its sealed row (deliveryReview).
+ */
+const HASH64 = /^[0-9a-f]{64}$/;
+const OBJECT_NAME = /^[0-9a-f]{40}([0-9a-f]{24})?$/;
+export const ReviewVerdictSchema = z.enum(['PASS', 'VETO']);
+export const ReviewCommitRefSchema = z.object({
+  commitSha: z.string().regex(OBJECT_NAME),
+  edgeEntryHash: z.string().regex(HASH64),
+}).strict();
+export const ReviewEvaluatesSchema = z.object({
+  commitSha: z.string().regex(OBJECT_NAME),
+  tree: z.string().regex(OBJECT_NAME),
+  branch: z.string().max(256).nullable(),
+  edgeEntryHash: z.string().regex(HASH64),
+}).strict();
+/** The kinds of review evidence that block a delivery until a later valid PASS names them (deliveryReview LD6). */
+export const ReviewBlockingKindSchema = z.enum(['veto', 'unverifiable-mirror', 'unverifiable-row', 'unverifiable-evidence', 'bad-seal', 'continuity']);
+export const ReviewSupersededSchema = z.object({
+  kind: ReviewBlockingKindSchema,
+  id: z.number().int().nonnegative(),
+  hash: z.string().min(1).max(128),
+}).strict();
+export const IntentReviewDetailsSchema = z.object({
+  reviewId: z.string().uuid(),
+  verdict: ReviewVerdictSchema,
+  evaluates: ReviewEvaluatesSchema,
+  covers: z.array(ReviewCommitRefSchema).max(1000),
+  evidenceDigest: z.string().regex(HASH64),
+  supersedes: z.array(ReviewSupersededSchema).max(10000),
+  ledgerEntryId: z.number().int().positive(),
+  ledgerEntryHash: z.string().regex(HASH64),
+  operationId: z.string().min(1).max(80),
+}).strict();
+export type ReviewVerdict = z.infer<typeof ReviewVerdictSchema>;
+export type ReviewBlockingKind = z.infer<typeof ReviewBlockingKindSchema>;
+export type ReviewSuperseded = z.infer<typeof ReviewSupersededSchema>;
+export type IntentReviewDetails = z.infer<typeof IntentReviewDetailsSchema>;
 
 export const IntentHistoryEntrySchema = z.object({
   intentId: IntentIdSchema,
@@ -378,7 +420,7 @@ export interface EscalateVerdict {
 export interface IntentHistoryEntry {
   intentId: IntentId;
   timestamp: string; // ISO 8601
-  event: "CREATED" | "STATUS_CHANGED" | "EVIDENCE_UPDATED" | "SEALED" | "LINKED" | "UNLINKED";
+  event: "CREATED" | "STATUS_CHANGED" | "EVIDENCE_UPDATED" | "SEALED" | "LINKED" | "UNLINKED" | "REVIEWED";
   previousStatus?: IntentStatus;
   newStatus?: IntentStatus;
   actor: string; // Agent or user who triggered the event

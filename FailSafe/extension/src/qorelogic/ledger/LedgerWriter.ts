@@ -114,6 +114,14 @@ export function writeGenesis(db: Database.Database, secret: string): SoaLedgerRo
     }).immediate();
 }
 
+/** What a verified rotation genesis binds (rotationEvidence). */
+export interface RotationEvidence {
+    supersededBinding: string | null;
+    retiredFile: string;
+    headId: number;
+    headHash: string;
+}
+
 export type ActivationResult =
     | { status: 'activated'; receipt: SoaLedgerRow }
     | { status: 'skipped' }
@@ -217,8 +225,12 @@ export function rotateTable(db: Database.Database, secret: string, input: Rotati
     return { genesis, retiredFile };
 }
 
-/** LD12 row 5: is this first row a rotation genesis whose retired file is still beside the ledger? */
-export function rotationEvidence(first: SoaLedgerRow, ledgerPath: string): { supersededBinding: string | null } | null {
+/**
+ * LD12 row 5: is this first row a rotation genesis whose retired file is still beside the ledger?
+ * #532 B320: also returns the retired file and the head it binds, so a reader can tell rows retired
+ * by this rotation (ids up to headId) from rows that are missing.
+ */
+export function rotationEvidence(first: SoaLedgerRow, ledgerPath: string): RotationEvidence | null {
     if (first.agent_did !== GENESIS_DID || parseSignature(first.signature)?.version !== 'v3' || !first.payload) { return null; }
     let payload: { retired?: { file?: unknown; headId?: unknown; headHash?: unknown }; supersededBinding?: unknown };
     try { payload = JSON.parse(first.payload); } catch { return null; }
@@ -234,5 +246,8 @@ export function rotationEvidence(first: SoaLedgerRow, ledgerPath: string): { sup
         retiredDb.close();
     }
     if (!head || head.id !== retired.headId || head.entry_hash !== retired.headHash) { return null; }
-    return { supersededBinding: typeof payload.supersededBinding === 'string' ? payload.supersededBinding : null };
+    return {
+        supersededBinding: typeof payload.supersededBinding === 'string' ? payload.supersededBinding : null,
+        retiredFile: retired.file, headId: head.id, headHash: head.entry_hash,
+    };
 }
