@@ -500,8 +500,8 @@ if (typeof window !== 'undefined') {
   /** @type {any} */ (window).__failsafeRefitMonitor = fitMonitorToViewport;
 }
 
-// Keep the type out of attributes unless it is a single bounded CSS token.
+// Only known governance severity classes may enter HTML attributes (#563).
 function alertTypeClass(value) {
   const token = String(value ?? '').toLowerCase();
-  return /^[a-z][a-z0-9_-]{0,31}$/.test(token) ? token : 'warning';
+  return token === 'veto' || token === 'block' ? token : 'warning';
 }
