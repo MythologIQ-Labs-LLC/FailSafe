@@ -54,6 +54,63 @@ describe('SecurityReplayGuard storage path handling', () => {
 });
 
 
+describe('SecurityReplayGuard remaining v6.0.8 acceptance (#472)', () => {
+  it('accepts a valid issued nonce through its TTL boundary and rejects it after expiry, including after reopen', () => {
+    const root = mkTempDir('failsafe-replay-ttl-');
+    let now = 1_700_000_000_000;
+    const options = { ttlMs: 50, cleanupIntervalMs: 3_600_000, seams: { clock: () => now } };
+    let guard: SecurityReplayGuard | undefined;
+    try {
+      guard = new SecurityReplayGuard(root, options);
+      const nonce = guard.generateNonce();
+      assert.strictEqual(guard.validateNonce(nonce).valid, true);
+      now += 50;
+      assert.strictEqual(guard.validateNonce(nonce).valid, true, 'TTL is inclusive at expiresAt');
+      now += 1;
+      assert.strictEqual(guard.validateNonce(nonce).reason, 'expired');
+      assert.strictEqual(guard.consumeNonce(nonce).reason, 'expired');
+      guard.dispose();
+      guard = new SecurityReplayGuard(root, options);
+      assert.strictEqual(guard.validateNonce(nonce).reason, 'expired', 'expiry persists across restart');
+      assert.strictEqual(guard.consumeNonce(nonce).reason, 'expired', 'restart cannot authorize an expired nonce');
+      assert.strictEqual(guard.cleanup(), 1, 'expired record is removed by cleanup');
+      assert.strictEqual(guard.validateNonce(nonce).reason, 'not_found');
+    } finally {
+      guard?.dispose();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('never writes the full issued nonce into normal, rejected or replay diagnostic output', () => {
+    const root = mkTempDir('failsafe-replay-private-');
+    const original = { debug: console.debug, info: console.info, warn: console.warn, error: console.error };
+    const output: string[] = [];
+    const capture = (...args: unknown[]) => { output.push(args.map(String).join(' ')); };
+    let guard: SecurityReplayGuard | undefined;
+    try {
+      console.debug = capture;
+      console.info = capture;
+      console.warn = capture;
+      console.error = capture;
+      guard = new SecurityReplayGuard(root, { cleanupIntervalMs: 3_600_000 });
+      const nonce = guard.generateNonce();
+      assert.match(nonce, /^[0-9a-f]{64}$/, 'real randomly issued nonce is the canary');
+      assert.strictEqual(guard.consumeNonce(nonce, 'privacy-test').valid, true);
+      assert.strictEqual(guard.consumeNonce(nonce).reason, 'already_used');
+      assert.strictEqual(guard.consumeNonce('x'.repeat(64)).reason, 'invalid_format');
+      assert.ok(output.some((line) => line.includes('Nonce validation failed')), 'diagnostic sink was exercised');
+      assert.ok(output.every((line) => !line.includes(nonce)), 'full nonce must not occur in any logger output');
+    } finally {
+      guard?.dispose();
+      console.debug = original.debug;
+      console.info = original.info;
+      console.warn = original.warn;
+      console.error = original.error;
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
 describe('SecurityReplayGuard persistence failure semantics (#472)', () => {
   it('consumed nonce remains rejected after process restart', () => {
     const root = mkTempDir('failsafe-replay-restart-');
