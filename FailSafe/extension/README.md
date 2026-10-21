@@ -35,6 +35,15 @@ A security and reliability patch: what leaves your machine, what runs from the C
 
 See the [changelog](https://github.com/MythologIQ-Labs-LLC/FailSafe/blob/main/CHANGELOG.md) for compatibility changes and known limitations.
 
+## Interoperability boundaries
+
+The integration list below describes **individual capabilities**, not a universal compatibility guarantee. The [integration portfolio](../../docs/architecture/INTEGRATION_PORTFOLIO.md) is the canonical source for each capability's state (`verified-shipped`, `shipped-unverified`, `shipped-inert`, `main-unreleased`, or `proposed`) and acceptance gaps. A configured connection is not automatically a successful real-provider test.
+
+- **MCP is scoped:** the shared client host is used by Bicameral and Open Design; catalog installation only configures selected third-party MCP servers. The separate in-process FailSafe MCP server is **not externally reachable** yet ([B209](../../docs/architecture/integrations/failsafe-mcp-server.md)). No arbitrary MCP client/server bridge is shipped.
+- **Release evidence is not production ground truth:** Ledger and Delivery records establish bounded development/governance evidence; they do not themselves prove downstream database writes or business outcomes. Publishing an authoritative SHIELD PASS from the GitHub command is **not implemented**; that command posts a neutral advisory.
+- **Security claims stay bounded:** editor-save denials do not prevent disk writes; agent worktrees are not OS sandboxes; Marketplace installation is disabled until isolation and scanning are qualified. See the relevant integration contract before enabling tools or transferring data.
+- **External outcome-verification partnerships:** such interoperability would require a specific adapter, consented credential storage, an agreed immutable correlation schema, verified provider APIs, and end-to-end negative tests. No such native integration is shipped.
+
 ## Optional Integrations
 
 FailSafe connects to the tools your AI agents use. Every integration is opt-in. Integrations that call an outside service stay off until you enable them in settings and store a credential with **FailSafe: Set Integration Credential**; the installers and the risk scorer do nothing until you run them.
