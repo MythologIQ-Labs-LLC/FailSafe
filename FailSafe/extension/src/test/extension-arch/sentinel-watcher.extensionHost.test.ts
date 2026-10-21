@@ -60,6 +60,7 @@ suite('C2 Sentinel watcher (extension host, temp git workspace)', () => {
     const ignored = path.join(root, 'node_modules', 'n.ts');
     const watched = path.join(root, 'src', 'w.ts');
     const hadSrc = fs.existsSync(path.dirname(watched));
+    const hadNodeModules = fs.existsSync(path.dirname(ignored));
     try {
       assert.equal(typeof (await status()), 'object', 'failsafe.sentinelStatus returns no status');
       fs.mkdirSync(path.dirname(ignored), { recursive: true });
@@ -86,7 +87,7 @@ suite('C2 Sentinel watcher (extension host, temp git workspace)', () => {
       console.log(`[sentinel-watcher] ${samples} samples over ${WINDOW_MS} ms, 0 on n.ts; src/w.ts verdict seen`);
     } finally {
       fs.rmSync(hadSrc ? watched : path.dirname(watched), { recursive: true, force: true });
-      fs.rmSync(path.join(root, 'node_modules'), { recursive: true, force: true });
+      fs.rmSync(hadNodeModules ? ignored : path.dirname(ignored), { recursive: true, force: true });
     }
   });
 });

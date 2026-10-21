@@ -139,17 +139,15 @@ suite('SentinelDaemon file watcher (C2 T3, characterization)', function () {
     }
   });
 
-  test('stop() closes the watcher: closed, nothing watched, no later events', async () => {
-    const { root, daemon, watcher, raw } = await startDaemon('sentinel-watch-');
+  // No "no events after stop" check: close() removes every listener (chokidar index.js:400), so such a
+  // check could never fail. closed and the empty getWatched() are the falsifiers.
+  test('stop() closes the watcher: closed, nothing watched, daemon stopped', async () => {
+    const { root, daemon, watcher } = await startDaemon('sentinel-watch-');
     try {
       daemon.stop();
       await watcher.close(); // the close stop() started
       assert.equal(watcher.closed, true);
       assert.deepEqual(watcher.getWatched(), {});
-      const before = raw.length;
-      fs.writeFileSync(path.join(root, 'src', 'after-stop.ts'), 'export {};\n');
-      await sleep(STABILITY_MS + SCAN_MARGIN_MS);
-      assert.equal(raw.length, before, 'events after stop');
       assert.equal(daemon.isRunning(), false);
     } finally {
       cleanup(root);
