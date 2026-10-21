@@ -31,7 +31,7 @@ The wrapper uses `cn -p <prompt>` and repeated `--allow <tool>` `FailSafe/extens
 
 Credential: an optional Continue API key from VS Code Secret Storage; with none, Continue's own login is used `FailSafe/extension/src/extension/agent-cli-command.ts:149-152` (`No key at all is fine (Continue may use its own login)`).
 The key is placed only in the child environment as `CONTINUE_API_KEY`, never in argv or the receipt `FailSafe/extension/src/integrations/agent-cli/continue-wrapper.ts:86-87` (`API key in the child ENV only (never argv/receipt).`).
-The plain-text key setting is deprecated and not read `FailSafe/extension/package.json:525-527` (`Plain-text settings are no longer read`).
+The plain-text key setting is deprecated and not read `FailSafe/extension/package.json:532-534` (`Plain-text settings are no longer read`).
 Process privileges: the child inherits the extension host's environment and user account `FailSafe/extension/src/extension/agent-cli-command.ts:157` (`baseEnv: process.env`).
 Tool scope: whatever `failsafe.integrations.continue.allow` grants, except shell or exec tools, which are refused `FailSafe/extension/src/integrations/agent-cli/continue-wrapper.ts:82-83` (`the allowlist grants shell/exec tools`).
 Executable: only an absolute PATH entry outside the workspace; on Windows only `.exe` or `.com` `FailSafe/extension/src/integrations/agent-cli/agent-cli-core.ts:84-86` (`for (const file of win ? [`).
@@ -74,7 +74,7 @@ A receipt is built from argv, status, risk, exit code and diff summary, never th
 ## Persisted artifacts
 
 A QUARANTINE_START and a QUARANTINE_END entry in the FailSafe ledger, carrying the receipt, risk grade and patch hash `FailSafe/extension/src/extension/agent-cli-command.ts:84-86` (`artifactHash: cs.patchSha256`).
-The ledger is the `soa_ledger` table `FailSafe/extension/src/qorelogic/ledger/LedgerManager.ts:127` (`CREATE TABLE IF NOT EXISTS soa_ledger`).
+The ledger is the `soa_ledger` table `FailSafe/extension/src/qorelogic/ledger/LedgerManager.ts:162` (`CREATE TABLE IF NOT EXISTS soa_ledger`).
 A write-only audit copy (`change-set.patch` and `record.json`) under the extension's global storage `agent-runs` folder `FailSafe/extension/src/extension/main.ts:278` (`auditDir: path.join(context.globalStorageUri.fsPath, "agent-runs")`).
 Only the newest 20 audit copies are kept `FailSafe/extension/src/integrations/agent-cli/agent-run-promotion.ts:41` (`export const AUDIT_RETENTION = 20;`).
 The audit copy is never read back for review or apply `FailSafe/extension/src/integrations/agent-cli/agent-run-promotion.ts:13` (`The audit copy on disk is write-only`).
