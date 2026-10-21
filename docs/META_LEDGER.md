@@ -34886,3 +34886,76 @@ The review folds are disclosed.
 **Chain Hash (Merkle seal)**: `706cfab28475355d3d05f5eca9d1bcc033236e8837f32d3ac2e2ffc03cb22501`
 
 **Decision**: SESSION SEAL for plan-dep-552.md. Reality = Promise, with disclosures. Dependabot #552 moves the SDK's transitive hono to 4.13.13, clearing GHSA-5r4p-p66f-jhc7. Production npm audit drops from 3 to 2 (braces and chokidar remain, lane C2); full audit 18 -> 17. hono is neither bundled nor shipped. Disclosure: bounded damaged-ledger override (#467 unresolved, no native acceptance available). Next: push the seal to the Dependabot branch, run the full required CI, and merge pinned to the head. No release.
+
+---
+
+### Entry #876: GATE TRIBUNAL - plan-c1-dependency-refresh (iteration 1) - VETO
+
+**Timestamp**: 2026-10-21T14:33:06Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1426-ccda73`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1426-ccda73/audit-iter1.json`
+
+**Content Hash**: `ecade5ceccfba64c71a6aee7c1244d7503d297ab6276b82e63242f77a12b52c8`
+**Previous Hash**: `706cfab28475355d3d05f5eca9d1bcc033236e8837f32d3ac2e2ffc03cb22501`
+**Chain Hash (Merkle seal)**: `c29e5f4abfda7a798525abccfc136d18298c08033d5b34d9aae185b69bc37f6f`
+
+**Decision**: VETO on plan-c1-dependency-refresh.md iteration 1 (sha256 c0862dab), auditc1, Option B. Blocking: (1) T2 expected a rejection, but SDK 1.32.0 returns isError and the tool was unspecified; fix: qorelogic_status with an oversized pad gives isError, the size text and handler counter 0, red on 1.31.0. (2) The sharp hand-edit fallback left exact @img pins inconsistent; fix: no hand edit, and T1 asserts libvips >= 1.3.4 and pin consistency. Should-fix: citations, the default no-limit note, the FX144 count, B365 measured, audit signatures, naming. Citations checked 26, failed 0.
+
+---
+
+### Entry #877: GATE TRIBUNAL - plan-c1-dependency-refresh (iteration 2) - PASS
+
+**Timestamp**: 2026-10-21T14:43:01Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1426-ccda73`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1426-ccda73/audit-iter2.json`
+
+**Content Hash**: `da2ae512c3ff699e44dd81864c8def7b2b14b490aa2ef659b6d1d599560d8cc5`
+**Previous Hash**: `c29e5f4abfda7a798525abccfc136d18298c08033d5b34d9aae185b69bc37f6f`
+**Chain Hash (Merkle seal)**: `4f2725d116e8f67ec2c41cefb10a3aa9edcc5f120ee82c85222987b38435441b`
+
+**Decision**: PASS on plan-c1-dependency-refresh.md iteration 2 (sha256 0eae7d86), auditc1b, Option B. Both blockers closed with working falsifiers: T2 drives the real server over InMemoryTransport and is red on 1.31.0 with no source change; sharp fails closed and the libvips floor matches the published 0.35.5 pins. Mandatory S1: exact pins compared by equality, range pins by satisfies, with dependencies in scope. S2: @emnapi/runtime unchanged. S3: T2 call order and close. Citations checked 35, failed 0.
+
+---
+
+### Entry #878: IMPLEMENTATION - plan-c1-dependency-refresh
+
+**Timestamp**: 2026-10-21T18:47:24Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-21T1426-ccda73`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-21T1426-ccda73/implement.json`
+
+**Content Hash**: `6685da0c202127c26f47d95f495c9af230825b714dc8beb6181eae1a9ab93d42`
+**Previous Hash**: `4f2725d116e8f67ec2c41cefb10a3aa9edcc5f120ee82c85222987b38435441b`
+**Chain Hash (Merkle seal)**: `a84a6550ce7b6aed92950ed191de177eac92d6f5217edabefa399d162546d73c`
+
+**Decision**: IMPLEMENTATION of plan-c1-dependency-refresh.md on fix/v6010-deps (rebased on main 99e7de6b). Owner-narrowed scope (2026-10-21): the SDK 1.32.0 and markdown-it 14.3.3 bumps went through Dependabot #561 and #562; C1 delivers the maxToolInputElements 10,000 cap (FailSafeServer.ts:38), the sharp 0.35.5 lockfile refresh and dependency-floor tests. Commits: 04b90bd3 red; ab5025a0 fix; f7cefb6b docs (CHANGELOG security line, B365 audit, B369 load flake, FX144, contract line); 75c6ac51 review fold (caret floor instead of an exact pin; failsafe-mcp-server.md:97 wording).
+
+---
+
+### Entry #879: SESSION SEAL - plan-c1-dependency-refresh
+
+**Timestamp**: 2026-10-21T18:47:24Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-21T1426-ccda73`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-21T1426-ccda73/substantiate.json`
+
+**Content Hash**: `0eae7d86723558cefa6c0a9c4e550ee0a92ec6d35062cd3ee8ca05282d9ff95f`
+**Previous Hash**: `a84a6550ce7b6aed92950ed191de177eac92d6f5217edabefa399d162546d73c`
+**Chain Hash (Merkle seal)**: `54f9c35efbe98dcd793f89753cfc96769b1efe860252e80bd1c4ca02820e6ecc`
+
+**Decision**: SESSION SEAL for plan-c1-dependency-refresh.md (content hash = the audited plan, sha256 0eae7d86). Reality = Promise, with disclosures. The FailSafe MCP server refuses a tool call with more than 10,000 argument elements before the tool runs, as defence in depth for GHSA-46jr-4wx8-v453 on the SDK 1.32.0 from Dependabot #561. sharp moves to 0.35.5 with libvips 1.3.4, and dependency-floor tests catch a later revert of any of these. npm audit: all 17 -> 13; production is unchanged at 2 (braces and chokidar, lane C2). Disclosures: bounded damaged-ledger override; owner-narrowed scope; red-commit message history; the extension CHANGELOG sync deferred to release prep; the B369 load flake. Next: push, open a PR, run the full required CI including Linux test:all, and merge pinned to the head. No release.
