@@ -18,7 +18,7 @@ test("nested application README uses the real single-extension source and packag
   assert.match(s, /canonical.*architecture/i);
   assert.match(s, /package-target\.cjs/);
   assert.match(s, /validate-vsix\.cjs/);
-  assert.match(s.replace(/\\*\\*/g, ''), /not automatically a published VSIX/);
+  assert.match(s.replaceAll('**', ''), /not automatically a published VSIX/);
   assert.doesNotMatch(s, /\*\*Current Release\*\*: v4\.9\.0|Two Variants, Two Marketplaces|PROD-Extension\/VSCode/);
   for (const p of [
     "FailSafe/extension/package.json",
@@ -34,7 +34,7 @@ test("MCP README distinguishes the shared client substrate from an exposed gover
   const host = read(path.join(REPO, "FailSafe", "extension", "src", "integrations", "mcp", "McpClientHost.ts"));
   assert.match(host, /export (?:abstract )?class McpClientHost/);
   assert.match(s, /reusable MCP-over-stdio \*\*client\*\* lifecycle/);
-  assert.match(s.replace(/\\*\\*/g, ''), /does not prove every consumer attaches/);
+  assert.match(s.replaceAll('**', ''), /does not prove every consumer attaches/);
   assert.match(s, /unreachable extension-host stdio transport/);
   assert.match(s, /No Omium adapter/);
   assert.doesNotMatch(s, /FailSafe governs every external MCP server it talks to/);
