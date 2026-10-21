@@ -295,6 +295,20 @@ suite('#532 B344 delivery review dialog: rework section', () => {
     assert.doesNotMatch(section, /^ {6}\\> evil\.ts$/m, 'the newline in a path never starts a line');
   });
 
+  test('D4 fold (written after the implementation, for the escape-split mutation): a chunk never ends or starts inside an escape', () => {
+    // 'xy' puts the escapes off the 64-character grid, so a split by character would cut one.
+    const paths = [`xy${'\u{E0041}'.repeat(20)}.ts`, `z${'\\'.repeat(70)}.ts`];
+    const d = deliveryReviewRequest(facts([item(8)], [rework(8, paths.map((path) => ({ path, vetoStatus: 'M' as const, reworkStatus: 'M' as const })))]), 'op_d4c', 'console').detail;
+    const section = sectionOf(d);
+    assert.deepEqual(rebuilt(section), paths.map(escapeDialogPath));
+    const chunks = section.split('\n').map((l) => /^ {4}M\/M (.*)$/.exec(l)?.[1] ?? /^ {6}\\> (.*)$/.exec(l)?.[1]).filter((c): c is string => c !== undefined);
+    assert.ok(chunks.length >= 6, `${chunks.length} chunks`);
+    for (const c of chunks) {
+      assert.equal(c.replace(/\\\\|\\u\{[0-9A-F]+\}/g, '').includes('\\'), false, `a whole number of escapes in ${JSON.stringify(c)}`);
+      assert.ok(c.length <= 64);
+    }
+  });
+
   test('the VETO wording names declared rework', () => {
     const d = deliveryReviewRequest({ ...facts([], []), verdict: 'VETO' }, 'op_4', 'console').detail;
     assert.match(d, /a PASS on a declared rework that git shows is this commit amended or rebased/);
