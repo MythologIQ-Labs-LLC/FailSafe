@@ -34959,3 +34959,83 @@ The review folds are disclosed.
 **Chain Hash (Merkle seal)**: `54f9c35efbe98dcd793f89753cfc96769b1efe860252e80bd1c4ca02820e6ecc`
 
 **Decision**: SESSION SEAL for plan-c1-dependency-refresh.md (content hash = the audited plan, sha256 0eae7d86). Reality = Promise, with disclosures. The FailSafe MCP server refuses a tool call with more than 10,000 argument elements before the tool runs, as defence in depth for GHSA-46jr-4wx8-v453 on the SDK 1.32.0 from Dependabot #561. sharp moves to 0.35.5 with libvips 1.3.4, and dependency-floor tests catch a later revert of any of these. npm audit: all 17 -> 13; production is unchanged at 2 (braces and chokidar, lane C2). Disclosures: bounded damaged-ledger override; owner-narrowed scope; red-commit message history; the extension CHANGELOG sync deferred to release prep; the B369 load flake. Next: push, open a PR, run the full required CI including Linux test:all, and merge pinned to the head. No release.
+
+---
+
+### Entry #880: GATE TRIBUNAL - plan-c2-chokidar (iteration 1) - VETO
+
+**Timestamp**: 2026-10-21T14:39:27Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1428-d52199`
+**Risk Grade**: L2
+**Verdict**: VETO
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1428-d52199/audit-iter1.json`
+
+**Content Hash**: `af56d4840279e532dfc6920ffe9b1e405e4e32c45b0a6cf75b8d91f881bb5670`
+**Previous Hash**: `54f9c35efbe98dcd793f89753cfc96769b1efe860252e80bd1c4ca02820e6ecc`
+**Chain Hash (Merkle seal)**: `4e66bf5a37f5d4070c9d878f347f7f301bd1e975a343b1511ccdba3b5b9d114b`
+
+**Decision**: VETO on plan-c2-chokidar.md iteration 1 (sha256 f462cd1c), auditc2, Option B. Blocking: (1) LD2 was wrong on shipped macOS, where chokidar 3 polls with atomic off and chokidar 4 defaults to fs.watch with atomic on; also v3 globs a root containing bracket or brace groups while v5 is literal. (2) LD1 missed the .nvmrc 20.18.1 pin, below chokidar 5's floor. Should-fix: T1 atomic:true, T2 pattern iteration, the T3 settle, T6 lastVerdict, the LD3 expected diff, the LD7 invocation, the docs snippet. B367 ruling: not release-blocking. Citations 27/0.
+
+---
+
+### Entry #881: GATE TRIBUNAL - plan-c2-chokidar (iteration 2) - PASS
+
+**Timestamp**: 2026-10-21T14:52:20Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1428-d52199`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21, disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1428-d52199/audit-iter2.json`
+
+**Content Hash**: `33181a4e3f78d128435051e6284700542bf92413449df1ce28ee7f25cceeb6d2`
+**Previous Hash**: `4e66bf5a37f5d4070c9d878f347f7f301bd1e975a343b1511ccdba3b5b9d114b`
+**Chain Hash (Merkle seal)**: `0e45873b647cab2e0f02c3335be42531d5b1ef1e72a54b206ff07806df09086b`
+
+**Decision**: PASS on plan-c2-chokidar.md iteration 2 (sha256 b1b2c56d), auditc2b, Option B. chokidar 4.0.3 (dual CJS/ESM, node >=14.16, no toolchain change). Both deltas named and accepted, with the macOS residual stated. Mandated folds: T5 ESM markers; the LD3 expected diff with a two-way stop rule; T3 per-path raw events; T6 polled lastVerdict; T1/T2 red via runtime access. Disclosure folds: the macOS per-file kqueue EMFILE risk (B368); the [x]-root wording rule; the explicit chokidar 3 cross-check path; a UNC root; commands.ts:670. Citations 30/0.
+
+---
+
+### Entry #882: IMPLEMENTATION - plan-c2-chokidar
+
+**Timestamp**: 2026-10-21T20:41:38Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-21T1428-d52199`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-21T1428-d52199/implement.json`
+
+**Content Hash**: `6a66c02fbb7356b53e874aeb77317a44d211f1323999691b176268e7334f4cfb`
+**Previous Hash**: `0e45873b647cab2e0f02c3335be42531d5b1ef1e72a54b206ff07806df09086b`
+**Chain Hash (Merkle seal)**: `5fe429f1f71a755c67ee746a4a5644de0581c6b9fa3269ca934cffcc4c1f009a`
+
+**Decision**: IMPLEMENTATION of plan-c2-chokidar.md on fix/v6010-chokidar (on main 0368a8b6). Commits:
+- 1d74ce5b: red tests.
+- 97daad0c: Sentinel ignore matcher (compiled at load, fails closed) in place of the chokidar glob strings, and sentinelStatus returns the status.
+- fb3c61ca: chokidar 4.0.3, so braces, picomatch, anymatch and micromatch leave the production graph.
+- 49c43831: T4 floors.
+- 53a481fa: docs B366-B368, the CHANGELOG security line and known limitation, FX340/FX510, the governance-cache snippet.
+- 2cac7010: review folds.
+The plan's single migration commit is split into matcher plus bump, for the clean-tree rebase.
+
+---
+
+### Entry #883: SESSION SEAL - plan-c2-chokidar
+
+**Timestamp**: 2026-10-21T20:41:39Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-21T1428-d52199`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-21T1428-d52199/substantiate.json`
+
+**Content Hash**: `b1b2c56dcebd3488e0de566f92986ceb938cfd288ca4012d4515e18dd584d877`
+**Previous Hash**: `5fe429f1f71a755c67ee746a4a5644de0581c6b9fa3269ca934cffcc4c1f009a`
+**Chain Hash (Merkle seal)**: `b4045f264e6eea7fb0673d110a630c1f7f807d1e6d0ceac645139ef44226e131`
+
+**Decision**: SESSION SEAL for plan-c2-chokidar.md (content hash = the audited plan, sha256 b1b2c56d). Reality = Promise, with disclosures. chokidar moves from 3.6.0 to 4.0.3 and Sentinel's ignore rules become a compiled function matcher, proven equivalent to the old globs by a 315-row live cross-check against chokidar 3. braces (GHSA-vfj7-8cjw-p6xm, no patched version) and the rest of the glob stack leave the production graph and the bundle, taking production npm audit findings from 2 to 0. Disclosures: bounded damaged-ledger override (#467 unresolved); the macOS watcher delta is unobserved; the literal-root change; the B367 known limitation; post-implementation T4; the T6 base gating; the extension CHANGELOG sync deferred. Next: push, open a PR, run the full required CI including Linux test:all and macOS compile, and merge pinned to the head. No release.
