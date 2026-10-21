@@ -29,6 +29,12 @@ FailSafe is a VS Code extension with a Monitor and a broader Console. It **does 
 - **Trace decisions and evidence.** Use checkpoints, audit history, and governance records to understand what happened and what remains unverified.
 - **Bring external work into governance.** Opt-in Jira and Linear issue previews can become reviewed local intent drafts. Other integrations offer risk ingestion, agent observations, or notifications, depending on their capabilities.
 
+## Integration readiness and evidence
+
+FailSafe has implemented integration paths, not a list of independently certified live connections. **Enabled** means a setting is on; **configured** means required settings are present. Neither establishes provider reachability, authorization, end-to-end capability, or measured benefit. The Console records limited evidence from the last call, including format matches, starts, failures, and stale results; it does not run provider probes when displaying cards.
+
+**A recent call is not end-to-end qualification or proof of customer value.** A parsed response or successful connection does not prove that every listed capability completed, that governance intercepted all writes, or that an integration produced measurable business outcomes. The canonical [integration portfolio](docs/architecture/INTEGRATION_PORTFOLIO.md) distinguishes implemented and unit-tested paths from live-service validation; its current inventory records **no live-service integration tests**. Integrations require independent real-provider and outcome-based acceptance before we describe them as operational or value-proven.
+
 ## See it in action
 
 ![FailSafe Console overview](FailSafe/extension/media/FailSafe-Overview.PNG)
