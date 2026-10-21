@@ -10,7 +10,10 @@
  *     1.3.2 libvips);
  *   - the sharp set is internally consistent: every @img/* pin inside node_modules/sharp and the
  *     node_modules/@img/* entries is satisfied by the locked version of its target (exact pins
- *     must be equal; range pins such as "@img/colour": "^1.1.0" must be satisfied).
+ *     must be equal; range pins such as "@img/colour": "^1.1.0" must be satisfied);
+ *   - chokidar >= 4.0.3 with a declared caret floor >= 4.0.3, and every lockfile entry named
+ *     braces, at any depth, is dev-only (plan-c2-chokidar T4: braces reached production only
+ *     through chokidar 3).
  *
  * Plain version arithmetic, no dependency. Runs standalone: node --test src/test/scripts/dependencyFloor.test.cjs
  */
@@ -107,5 +110,20 @@ describe('v6.0.10 Lane C dependency floors', () => {
     }
     assert.ok(pins > 0, 'no @img/* pins found in the sharp set');
     assert.deepEqual(problems, [], `${problems.length} of ${pins} pins inconsistent`);
+  });
+
+  it('chokidar >= 4.0.3, declared with a caret floor >= 4.0.3', () => {
+    assert.ok(compare(locked('chokidar'), '4.0.3') >= 0, `locked ${locked('chokidar')}`);
+    const declared = PKG.dependencies.chokidar;
+    const floor = /^\^(.+)$/.exec(declared);
+    assert.ok(floor, `declared range ${declared} is not a caret range`);
+    assert.ok(compare(floor[1], '4.0.3') >= 0, `declared floor ${declared}`);
+  });
+
+  it('every lockfile entry named braces, at any depth, is dev-only', () => {
+    const braces = Object.keys(PACKAGES).filter((k) => /(^|\/)node_modules\/braces$/.test(k));
+    assert.ok(braces.length > 0, 'no braces entry in the lockfile');
+    const prod = braces.filter((k) => PACKAGES[k].dev !== true).map((k) => `${k}@${PACKAGES[k].version}`);
+    assert.deepEqual(prod, [], `${prod.length} of ${braces.length} braces entries are not dev-only`);
   });
 });

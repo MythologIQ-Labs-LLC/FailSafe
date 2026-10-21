@@ -44,7 +44,7 @@ FailSafe's governance services hold cached state in memory (plans, L3 queue, tru
 
 ## Why targeted-path watching (vs workspace-root recursive)
 
-SentinelDaemon's `chokidar.watch(workspaceRoot, { recursive: true })` already watches the full tree at code-extension granularity. Adding another recursive watcher would double fs-pressure for no benefit; this bus exists to deliver mutation signals to a small known set of governance services (currently 4 subscriptions + 1 migration; bounded). Each service registers exactly the path it cares about; fs.watch handles are negligible at that count.
+SentinelDaemon's `chokidar.watch(workspaceRoot, { ignored, persistent, ignoreInitial, awaitWriteFinish })` already watches the full tree, minus the paths its ignore matcher excludes, at code-extension granularity. Adding another recursive watcher would double fs-pressure for no benefit; this bus exists to deliver mutation signals to a small known set of governance services (currently 4 subscriptions + 1 migration; bounded). Each service registers exactly the path it cares about; fs.watch handles are negligible at that count.
 
 ## Subscriber catalog (v1)
 
