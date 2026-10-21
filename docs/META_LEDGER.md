@@ -34573,3 +34573,65 @@ Two research findings are surfaced but **not fixed**, both out of this plan's au
 **Chain Hash (Merkle seal)**: `55bdc4a0be18ac4282543fed0b1792a8f58fcd51f635884ea38f2739e1f3263a`
 
 **Decision**: SESSION SEAL for plan-b347-g4-provenance-race.md (content hash is the audited plan, sha256 dd62d8e6). Reality = Promise, with disclosures. The B320 G4 positive-path test no longer races the debounced provenance row, so the Linux full suite stops failing unrelated PRs; the product behaviour that a later save stales a PASS is unchanged and still asserted. Disclosures: bounded damaged-ledger override for the v6.0.10 lanes (owner ruling 2026-10-21; #467 unresolved, native governance acceptance unavailable); the fix preceded its audit as an urgent CI unblocker and the audit and review were combined; the 1 s quiet window is supported by the writer inventory rather than a falsifying run; the old run's row dump was not retained. Next: push, PR checks including Linux test:all, a merge pinned to the head. No release.
+
+---
+
+### Entry #860: GATE TRIBUNAL - plan-dep-561 (iteration 1) - PASS
+
+**Timestamp**: 2026-10-21T15:46:32Z
+**Phase**: GATE
+**Author**: Judge
+**Session**: `2026-10-21T1459-37fbf3`
+**Risk Grade**: L2
+**Verdict**: PASS
+**Preflight**: bounded damaged-ledger override for the v6.0.10 lanes, owner ruling 2026-10-21, widened the same day to Dependabot #561/#562/#552; disclosed per cycle (#467)
+**Gate**: `.qor/gates/2026-10-21T1459-37fbf3/audit-iter1.json`
+
+**Content Hash**: `b3ac55765d16c811b1b71ece7e6234ba248794689bddf8a3ac0356f9b7dd7762`
+**Previous Hash**: `55bdc4a0be18ac4282543fed0b1792a8f58fcd51f635884ea38f2739e1f3263a`
+**Chain Hash (Merkle seal)**: `2e89a5e1a61a09563c39eda673a8b053fb453f4fabf670d0d8ff5a6b3169d6ef`
+
+**Decision**: PASS on plan-dep-561.md iteration 1. Dependabot #561 (@modelcontextprotocol/sdk 1.31.0 -> 1.32.0), merged onto main 624c486e. Independent verifier (dep561) and fresh reviewer (revdep561, Option B).
+
+Verified:
+- Diff: two files, three hunks; the integrity equals the registry's; 698 signatures verified; dependencies byte-equal, so hono does not move.
+- Audit: production 4 -> 3 and full 20 -> 19; all four GHSA ranges exited at 1.32.0.
+- Behaviour: the only change is that qorelogic_status (schema {}, read-only) accepts a call with no arguments. The session-scoped task lookup is inert (no taskStore), and no HTTP transport is bundled.
+- Owner checks: (a) redirect restrictions pass (no SDK HTTP transport; egress suites including G4b green); (b) MCP client identity is unchanged by a stdio probe, but no repo test asserts it; (c) governance interceptor continuity passes.
+
+Should-fix, recorded as seal wording: GHSA-46jr mitigation waits on C1 (maxToolInputElements is opt-in); the bundle is not compared with main's module set; the probe uses the cjs build while the bundle uses esm, which carries the same hunks.
+
+---
+
+### Entry #861: IMPLEMENTATION - plan-dep-561
+
+**Timestamp**: 2026-10-21T15:47:07Z
+**Phase**: IMPLEMENT
+**Author**: Specialist
+**Session**: `2026-10-21T1459-37fbf3`
+**Risk Grade**: L2
+**Gate**: `.qor/gates/2026-10-21T1459-37fbf3/implement.json`
+
+**Content Hash**: `26ae08c296dc5300535bff920f444d440e1496a0d36c99c2fcc94faad9d7b13b`
+**Previous Hash**: `2e89a5e1a61a09563c39eda673a8b053fb453f4fabf670d0d8ff5a6b3169d6ef`
+**Chain Hash (Merkle seal)**: `9eaca058b04ebc763e68b0fde51c58df85b3f093b0c7c9953f26430744540c24`
+
+**Decision**: IMPLEMENTATION of plan-dep-561.md. The Dependabot change is taken verbatim: c5790cfd (package.json range ^1.32.0, plus the lockfile root range and the sdk version/resolved/integrity), merged with main 624c486e as b46a5eda. Nothing else is edited. One Dependabot PR per cycle, never combined (owner ruling 2026-10-21).
+
+---
+
+### Entry #862: SESSION SEAL - plan-dep-561
+
+**Timestamp**: 2026-10-21T15:47:08Z
+**Phase**: SUBSTANTIATE
+**Author**: Judge
+**Session**: `2026-10-21T1459-37fbf3`
+**Risk Grade**: L2
+**Verdict**: PASS (Reality = Promise, with disclosures)
+**Gate**: `.qor/gates/2026-10-21T1459-37fbf3/substantiate.json`
+
+**Content Hash**: `feab91aa7aedecb48c3eb4b43e767344ab5c7a037b64ef05c8f5e82d023b49a9`
+**Previous Hash**: `9eaca058b04ebc763e68b0fde51c58df85b3f093b0c7c9953f26430744540c24`
+**Chain Hash (Merkle seal)**: `9b6e48e31706fe0cf8cab1754a433753cb15e7ca00a6e49575b39bac26b183cc`
+
+**Decision**: SESSION SEAL for plan-dep-561.md. Reality = Promise, with disclosures. Dependabot #561 moves the bundled MCP SDK to 1.32.0, so the SDK advisories GHSA-22jm-h49p-29qw, GHSA-6prh-2h8m-c8cw, GHSA-rvq5-wwqv-78pq and GHSA-46jr-4wx8-v453 leave the advisory range. Production npm audit findings drop from 4 to 3 (braces/chokidar via C2, hono via #552). Stdio client identity, redirect restrictions and governance-interceptor routing are unchanged. GHSA-46jr's hardening (maxToolInputElements) is C1, which lands next. Disclosures: bounded damaged-ledger override (#467 unresolved, native acceptance unavailable); identity is verified by probe, not by a repo test; the read-only qorelogic_status now accepts empty arguments; the local ledgerAnchor failures come from the host. Next: push the seal to the Dependabot branch, run the full required CI including Linux test:all, and merge pinned to the head. No release.
