@@ -18,6 +18,7 @@ import type { Response } from "express";
 import type { L3ApprovalRequest } from "../shared/types/l3-approval";
 import type { RollbackPlan } from "../governance/revert/types";
 import type { ReworkEntry } from "../governance/types/IntentTypes";
+import { isBookkeepingPath } from "../governance/delivery/reworkBookkeeping";
 
 export interface OperatorActionRequest {
   title: string;
@@ -460,17 +461,25 @@ export interface DeliveryReviewFacts {
 
 /** U+FFFD, what a byte sequence that is not UTF-8 decodes to. */
 const REPLACEMENT_CHAR = String.fromCodePoint(0xfffd);
-/** Every control, format, unassigned or private-use code point (\p{C}), line and paragraph separator, U+FFFD and backslash. */
-const PATH_ESCAPES = new RegExp(`[\\p{C}\\p{Zl}\\p{Zp}\\\\${REPLACEMENT_CHAR}]`, "gu");
+/**
+ * Every control, format, unassigned or private-use code point (\p{C}), every space separator
+ * (\p{Zs}; U+0020 is kept inside a path), line and paragraph separator, U+FFFD and backslash.
+ */
+const PATH_ESCAPES = new RegExp(`[\\p{C}\\p{Zs}\\p{Zl}\\p{Zp}\\\\${REPLACEMENT_CHAR}]`, "gu");
 
 /**
- * #532 B344 (plan-b344 LD5): a path exactly as git names it, with nothing cut or collapsed: each
- * code point that could reshape or hide part of the dialog is written as \u{XXXX}, and a backslash
- * as \\, so two different paths never show the same. sanitizeDialogText is never used for paths.
+ * #532 B344 (plan-b344 LD5, review fold): a path exactly as git names it, with nothing cut or
+ * collapsed. Each code point that could reshape, hide or pass for another part of the dialog is
+ * written as \u{XXXX}: controls, format characters, separators, U+FFFD, every space other than
+ * U+0020 (U+00A0 looks like U+0020) and a U+0020 at either end of the path (it would not be seen).
+ * A backslash is written as \\, so every backslash shown is half of "\\" or starts "\u{", and two
+ * different paths never show the same text. sanitizeDialogText is never used for paths.
  */
 export function escapeDialogPath(path: string): string {
-  return path.replace(PATH_ESCAPES, (ch) =>
-    ch === "\\" ? "\\\\" : `\\u{${ch.codePointAt(0)!.toString(16).toUpperCase().padStart(4, "0")}}`);
+  return path.replace(PATH_ESCAPES, (ch: string, at: number) =>
+    ch === "\\" ? "\\\\"
+      : ch === " " && at > 0 && at < path.length - 1 ? " "
+        : `\\u{${ch.codePointAt(0)!.toString(16).toUpperCase().padStart(4, "0")}}`);
 }
 
 /**
@@ -490,7 +499,8 @@ const ESCAPED_UNIT = /\\\\|\\u\{[0-9A-F]+\}|[\s\S]/gu;
  * #532 B344 D4 fold (owner ruling 2026-10-21): the native dialog wraps only at spaces and cuts a
  * longer unbroken run with an ellipsis, so an escaped path is split into chunks of at most
  * REWORK_PATH_CHUNK characters, after the last '/' that fits when the rest does not, otherwise at the
- * limit, and never inside an escape.
+ * limit, and never inside an escape. A break is moved back so no chunk starts or ends with a U+0020,
+ * which the dialog would not show at a line's edge (unless the chunk is all spaces).
  */
 export function chunkDialogPath(escaped: string): string[] {
   const units = escaped.match(ESCAPED_UNIT) ?? [];
@@ -506,6 +516,10 @@ export function chunkDialogPath(escaped: string): string[] {
       j++;
     }
     if (j < units.length && lastSlash >= i) j = lastSlash + 1;
+    let k = j;
+    while (k < units.length && k > i + 1 && (units[k - 1] === " " || units[k] === " ")) k--;
+    if (k < units.length && (units[k - 1] === " " || units[k] === " ")) k = j;
+    j = k;
     chunks.push(units.slice(i, j).join(""));
     i = j;
   }
@@ -525,7 +539,7 @@ function pathLines(status: string, path: string): string[] {
  */
 export function reworkSectionLines(reworks: ReworkEntry[]): string[] {
   if (!reworks.length) return [];
-  const lines = [`Superseded by rework (${reworks.length}); git shows each declared commit is the vetoed commit amended or rebased (a line starting ${REWORK_CONTINUATION} continues the path above it):`];
+  const lines = [`Superseded by rework (${reworks.length}): each declared rework has an identical diff (rebased), or the same parent and more than half of the vetoed commit's non-bookkeeping paths, with at least half of its own among them (amended); bookkeeping files are listed but not counted (a line starting ${REWORK_CONTINUATION} continues the path above it):`];
   for (const r of reworks) {
     const e = r.evidence;
     lines.push(
@@ -535,9 +549,21 @@ export function reworkSectionLines(reworks: ReworkEntry[]): string[] {
       `  Paths: the vetoed commit changes ${e.vetoPathCount}, the rework changes ${e.reworkPathCount}`,
     );
     if (r.relation === "amended") {
-      lines.push(`  Shared (${e.shared.length}), status in the vetoed commit/the rework:`, ...e.shared.flatMap((p) => pathLines(`${p.vetoStatus}/${p.reworkStatus}`, p.path)));
-      lines.push(`  Only in the vetoed commit (${e.onlyInVeto.length}):`, ...e.onlyInVeto.flatMap((p) => pathLines(p.status, p.path)));
-      lines.push(`  Only in the rework (${e.onlyInRework.length}):`, ...e.onlyInRework.flatMap((p) => pathLines(p.status, p.path)));
+      const counted = (p: { path: string }): boolean => !isBookkeepingPath(p.path);
+      const shared = e.shared.filter(counted);
+      const onlyInVeto = e.onlyInVeto.filter(counted);
+      const onlyInRework = e.onlyInRework.filter(counted);
+      const bookkeeping = [
+        ...e.shared.filter((p) => !counted(p)).map((p) => ({ status: `${p.vetoStatus}/${p.reworkStatus}`, path: p.path })),
+        ...e.onlyInVeto.filter((p) => !counted(p)).map((p) => ({ status: `${p.status}/-`, path: p.path })),
+        ...e.onlyInRework.filter((p) => !counted(p)).map((p) => ({ status: `-/${p.status}`, path: p.path })),
+      ].sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+      lines.push(`  Shared (${shared.length}), status in the vetoed commit/the rework:`, ...shared.flatMap((p) => pathLines(`${p.vetoStatus}/${p.reworkStatus}`, p.path)));
+      lines.push(`  Only in the vetoed commit (${onlyInVeto.length}):`, ...onlyInVeto.flatMap((p) => pathLines(p.status, p.path)));
+      lines.push(`  Only in the rework (${onlyInRework.length}):`, ...onlyInRework.flatMap((p) => pathLines(p.status, p.path)));
+      if (bookkeeping.length) {
+        lines.push(`  Bookkeeping files, not counted (${bookkeeping.length}), status in the vetoed commit/the rework (- where unchanged):`, ...bookkeeping.flatMap((p) => pathLines(p.status, p.path)));
+      }
     }
   }
   return lines;
@@ -595,7 +621,7 @@ export function deliveryReviewRequest(
     "This proves a person approved a VS Code dialog; it does not identify who.",
     facts.verdict === "PASS"
       ? "A PASS is current only while the linked commits, their trees and the governance evidence stay as shown; new evidence will need a fresh review. The receipt stays unavailable (#467)."
-      : "A VETO blocks this delivery until a later PASS names it: a PASS on this commit or a descendant of it, or a PASS on a declared rework that git shows is this commit amended or rebased.",
+      : "A VETO blocks this delivery until a later PASS names it: a PASS on this commit or a descendant of it, or a PASS on a declared rework with this commit's diff (rebased), or with its parent and more than half of its non-bookkeeping paths (amended).",
     "FailSafe records this review in its ledger and the intent history. Nothing leaves this machine.",
   );
   const footer = source === "console" ? LOOPBACK_FOOTER : source === "command-arguments" ? COMMAND_CALL_FOOTER : null;

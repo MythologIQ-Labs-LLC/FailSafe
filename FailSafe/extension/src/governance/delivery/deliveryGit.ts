@@ -160,7 +160,6 @@ export interface ChangedPath {
 
 export type ChangedPaths =
   | { state: 'ok'; paths: ChangedPath[] }
-  | { state: 'missing' }
   | { state: 'unavailable'; detail: string };
 
 const PATH_STATUSES: ReadonlySet<string> = new Set(['A', 'M', 'D', 'T']);
@@ -169,13 +168,14 @@ const PATH_STATUSES: ReadonlySet<string> = new Set(['A', 'M', 'D', 'T']);
  * #532 B344 (plan-b344 LD6): every path the commit changed, with its status, uncapped. The `-z`
  * output is status NUL path NUL, repeated. It fails closed: an unknown status (renames and copies
  * are off, so R and C never belong here), an unpaired field, an empty path or a trailing record
- * with no terminator is `unavailable`, never a shorter list. An exit is `missing`.
+ * with no terminator is `unavailable`, never a shorter list. As for diffIdentity and commitParents,
+ * any exit, or a name that is not a full object name, is `unavailable` (the caller has resolved it).
  */
 export function changedPaths(root: string, sha: string, git: ArchitectureGit = defaultArchitectureGit): ChangedPaths {
-  if (!COMMIT_NAME_RE.test(sha)) return { state: 'missing' };
+  if (!COMMIT_NAME_RE.test(sha)) return { state: 'unavailable', detail: 'not a full commit name' };
   const out = git(root, ['diff-tree', '--no-commit-id', '--name-status', '-r', '-z', '--root', '--no-renames', '--end-of-options', sha]);
   if (out.kind === 'unavailable') return { state: 'unavailable', detail: out.detail };
-  if (out.kind === 'exit') return { state: 'missing' };
+  if (out.kind === 'exit') return { state: 'unavailable', detail: firstLine(out.stderr) };
   if (out.stdout === '') return { state: 'ok', paths: [] };
   const bad = (detail: string): ChangedPaths => ({ state: 'unavailable', detail: `git printed a change list FailSafe cannot read: ${detail}` });
   const fields = out.stdout.split('\0');

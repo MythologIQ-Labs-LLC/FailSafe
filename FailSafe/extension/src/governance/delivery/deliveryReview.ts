@@ -20,7 +20,8 @@
  * - a blocking item clears only when a later valid PASS lists exactly its {kind, id, hash} in
  *   `supersedes`, which only the server computes and only the dialog shows. A trusted VETO (kind
  *   `veto`) also needs its commit to be the reviewed commit or an ancestor of it, or (#532 B344) a
- *   declared rework that git shows is that commit amended or rebased; both are re-checked here on
+ *   declared rework with that commit's diff (rebased) or its parent and a two-way majority of its
+ *   non-bookkeeping paths (amended); both are re-checked here on
  *   every read.
  *
  * Completion needs a current covering PASS: the latest valid PASS, on a commit that equals or
@@ -57,6 +58,7 @@ import type { Ancestry, ChangedPath, ChangedPaths, CommitParents, CommitResoluti
 import { changedPaths, commitParents, commitSubject, diffIdentity, isAncestor, resolveCommit } from './deliveryGit';
 import { findGovernanceEvidence, REVIEW_EVENT_TYPE, type EvidenceLedger, type GovernanceEvidence } from './deliveryEvidence';
 import type { DeliveryContext } from './deliveryService';
+import { isBookkeepingPath } from './reworkBookkeeping';
 
 export const DELIVERY_REVIEW_DID = 'did:myth:failsafe:delivery-review';
 export const DELIVERY_REVIEW_METHOD = 'operator-delivery-review';
@@ -282,6 +284,15 @@ export type ReviewAssessment =
 class GitUnavailable extends Error {}
 
 const canon = (v: unknown): string => JSON.stringify(v);
+/**
+ * #532 B344 review fold: JSON with every object's keys sorted (arrays keep their order), so two
+ * values compare equal whatever order their keys were built or parsed in.
+ */
+export function sortedJson(v: unknown): string {
+  return JSON.stringify(v, (_key, value: unknown) => (value && typeof value === 'object' && !Array.isArray(value)
+    ? Object.fromEntries(Object.entries(value as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+    : value));
+}
 const sameRefs = (a: Array<{ commitSha: string; edgeEntryHash: string }>, b: Array<{ commitSha: string; edgeEntryHash: string }>): boolean =>
   canon([...a].sort((x, y) => x.commitSha.localeCompare(y.commitSha))) === canon([...b].sort((x, y) => x.commitSha.localeCompare(y.commitSha)));
 
@@ -379,8 +390,10 @@ const byPath = (a: { path: string }, b: { path: string }): number => (a.path < b
 /**
  * #532 B344 (plan-b344 LD2 rules 4-6): whether R is V rebased (equal diff identities) or V amended
  * (the same single parent and a two-way path majority: R changes more than half of V's paths, and
- * at least half of R's paths are V's), with the evidence the row records. The caller has resolved
- * both commits. A git read that cannot answer throws GitUnavailable; it is never read as "unrelated".
+ * at least half of R's paths are V's, neither side counting bookkeeping files; a V that changed only
+ * bookkeeping files has no amended rework), with the evidence the row records. The caller has
+ * resolved both commits. A git read that cannot answer throws GitUnavailable; it is never read as
+ * "unrelated".
  */
 function reworkRelation(git: ReviewGit, v: string, r: string): RelationResult {
   const no = (status: number, code: RefusalCode, detail: string): RelationResult => ({ ok: false, status, code, detail });
@@ -405,14 +418,13 @@ function reworkRelation(git: ReviewGit, v: string, r: string): RelationResult {
   };
   const dv = idOf(v);
   const dr = idOf(r);
-  const pathsOf = (sha: string): ChangedPath[] | null => {
+  const pathsOf = (sha: string): ChangedPath[] => {
     const out = git.paths(sha);
     if (out.state === 'unavailable') throw new GitUnavailable();
-    return out.state === 'ok' ? out.paths : null;
+    return out.paths;
   };
   const cv = pathsOf(v);
   const cr = pathsOf(r);
-  if (!cv || !cr) return no(409, 'rework-unrelated', 'git cannot list the paths one of them changed');
   const base = { vetoParent: pv[0], reworkParent: pr[0], vetoDiffId: dv, reworkDiffId: dr, vetoPathCount: cv.length, reworkPathCount: cr.length };
   if (dv !== null && dv === dr) return { ok: true, relation: 'rebased', evidence: { ...base, shared: [], onlyInVeto: [], onlyInRework: [] } };
   if (pv[0] !== pr[0]) {
@@ -434,13 +446,22 @@ function reworkRelation(git: ReviewGit, v: string, r: string): RelationResult {
   const shared = cv.filter((p) => inR.has(p.path)).map((p) => ({ path: p.path, vetoStatus: p.status, reworkStatus: inR.get(p.path)! })).sort(byPath);
   const onlyInVeto = cv.filter((p) => !inR.has(p.path)).map((p) => ({ path: p.path, status: p.status })).sort(byPath);
   const onlyInRework = cr.filter((p) => !inV.has(p.path)).map((p) => ({ path: p.path, status: p.status })).sort(byPath);
-  if (!(2 * shared.length > cv.length)) {
+  // Review fold (owner ruling 2026-10-21): bookkeeping files are left out of both halves of the majority.
+  const counted = (p: { path: string }): boolean => !isBookkeepingPath(p.path);
+  const nv = cv.filter(counted).length;
+  const nr = cr.filter(counted).length;
+  const ns = shared.filter(counted).length;
+  if (nv === 0) {
     return no(409, 'rework-unrelated',
-      `they share ${shared.length} of the ${cv.length} paths ${v} changed, and an amended rework must change more than half of them (the V half fails)`);
+      `the vetoed commit ${v} changed only bookkeeping files (${cv.map((p) => p.path).join(', ')}), which an amended rework does not count, so nothing ties ${r} to it`);
   }
-  if (!(2 * shared.length >= cr.length)) {
+  if (!(2 * ns > nv)) {
     return no(409, 'rework-unrelated',
-      `they share ${shared.length} of the ${cr.length} paths ${r} changed, and at least half of an amended rework must be the vetoed commit's paths (the R half fails)`);
+      `they share ${ns} of the ${nv} non-bookkeeping paths ${v} changed (bookkeeping files are not counted), and an amended rework must change more than half of them (the V half fails)`);
+  }
+  if (!(2 * ns >= nr)) {
+    return no(409, 'rework-unrelated',
+      `they share ${ns} of the ${nr} non-bookkeeping paths ${r} changed (bookkeeping files are not counted), and at least half of an amended rework must be the vetoed commit's paths (the R half fails)`);
   }
   return { ok: true, relation: 'amended', evidence: { ...base, shared, onlyInVeto, onlyInRework } };
 }
@@ -467,7 +488,7 @@ function reworkClears(git: ReviewGit, b: BlockingItem, pass: ReviewRecordView): 
   if (r.state === 'missing') return null;
   if (v.state === 'found') {
     const again = reworkRelation(git, entry.vetoCommit, entry.reworkCommit);
-    return again.ok && again.relation === entry.relation && canon(again.evidence) === canon(entry.evidence) ? {} : null;
+    return again.ok && again.relation === entry.relation && sortedJson(again.evidence) === sortedJson(entry.evidence) ? {} : null;
   }
   const parents = git.parents(entry.reworkCommit);
   if (parents.state === 'unavailable') throw new GitUnavailable();
@@ -479,10 +500,9 @@ function reworkClears(git: ReviewGit, b: BlockingItem, pass: ReviewRecordView): 
   } else {
     const paths = git.paths(entry.reworkCommit);
     if (paths.state === 'unavailable') throw new GitUnavailable();
-    if (paths.state !== 'ok') return null;
     const now = paths.paths.map((p) => ({ path: p.path, status: p.status })).sort(byPath);
     const recorded = [...entry.evidence.shared.map((s) => ({ path: s.path, status: s.reworkStatus })), ...entry.evidence.onlyInRework].sort(byPath);
-    if (canon(now) !== canon(recorded)) return null;
+    if (sortedJson(now) !== sortedJson(recorded)) return null;
   }
   return { note: REWORK_PRUNED_NOTE };
 }
