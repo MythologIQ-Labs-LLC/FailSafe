@@ -451,7 +451,7 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 | ID | Feature | Doc | Code | Test | Status | Notes | Surface |
 |---|---|---|---|---|---|---|---|
-| FX340 | SentinelDaemon | F200 | C287 | sentinel/VerdictArbiter.test.ts | verified | | governance |
+| FX340 | SentinelDaemon | F200 | C287 | sentinel/VerdictArbiter.test.ts | verified | v6.0.10 Lane C C2: the file watcher runs on chokidar 4.0.3 with SentinelWatchPolicy's function matcher (SentinelDaemon.ts:144); watch semantics on the real watcher in sentinel/SentinelDaemon.watcher.test.ts (T3, 7 cases) and in the extension host in extension-arch/sentinel-watcher.extensionHost.test.ts (T6, 2 cases); B366. | governance |
 | FX341 | VerdictArbiter | F201 | C288 | sentinel/VerdictArbiter.test.ts | verified | | governance |
 | FX342 | VerdictRouter | — | C289 | sentinel/Engines.test.ts | verified | route emits sentinel.verdict; ESCALATE → queueL3Approval with filePath/riskGrade/flags; non-ESCALATE skips L3; queueL3Approval throw → emits sentinel.escalation_failed; missing artifactPath → "unknown" fallback. 5 cases. | governance |
 | FX343 | HeuristicEngine | F300 | C290 | sentinel/Engines.test.ts | verified | analyze (no content → []; >1MB skipped; runs default patterns; high complexity → CMP001 medium/high; low complexity skips CMP001). 5 cases. | governance |
@@ -867,7 +867,7 @@ Single canonical cross-reference of every user-touchable feature in FailSafe v5.
 
 | ID | Feature | Doc | Code | Test | Status | Notes | Surface |
 |---|---|---|---|---|---|---|---|
-| FX510 | SentinelWatchPolicy canonical-path whitelist + docs/ priority boost | docs/plan-qor-sentinel-governance-extensions.md | src/sentinel/SentinelWatchPolicy.ts (GOVERNANCE_WHITELIST_FILES, GOVERNANCE_WHITELIST_PREFIXES, isWatchedGovernancePath, isGovernanceSurface) | src/test/sentinel/SentinelWatchPolicy.test.ts (extended; FX510 block) | verified | 10 new mocha cases (SG-035 invoke + assert): canonical risks.json + manifest/active_intent.json + manifest/intents/ glob + docs/META_LEDGER + docs/BACKLOG + docs/plan-* on whitelist; broader .failsafe/governance/ prefix covers variant-suffix files (AUDIT_REPORT_*, SESSION_STATE_*, RESEARCH_BRIEF_*); docs/ governance paths priority-boosted to 'high'. Closes residual gaps after Phase 60 §2 Track C pre-shipped most of B193. | governance |
+| FX510 | SentinelWatchPolicy canonical-path whitelist + docs/ priority boost | docs/plan-qor-sentinel-governance-extensions.md | src/sentinel/SentinelWatchPolicy.ts (GOVERNANCE_WHITELIST_FILES, GOVERNANCE_WHITELIST_PREFIXES, isWatchedGovernancePath, isGovernanceSurface) | src/test/sentinel/SentinelWatchPolicy.test.ts (extended; FX510 block) | verified | 10 new mocha cases (SG-035 invoke + assert): canonical risks.json + manifest/active_intent.json + manifest/intents/ glob + docs/META_LEDGER + docs/BACKLOG + docs/plan-* on whitelist; broader .failsafe/governance/ prefix covers variant-suffix files (AUDIT_REPORT_*, SESSION_STATE_*, RESEARCH_BRIEF_*); docs/ governance paths priority-boosted to 'high'. Closes residual gaps after Phase 60 §2 Track C pre-shipped most of B193. v6.0.10 Lane C C2: the ignore patterns compile to a function matcher (compileIgnorePattern, isIgnored, getIgnoreMatcher) that equals chokidar 3.6.0 on a 315-row oracle, sentinel/SentinelWatchPolicy.ignore-equivalence.test.ts (T1, T2, 14 cases); B366, B367. | governance |
 
 ---
 
