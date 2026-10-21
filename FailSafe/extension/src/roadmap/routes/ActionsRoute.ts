@@ -27,7 +27,7 @@ export function setupActionsRoutes(
   deps: ApiRouteDeps,
 ): void {
   const guard = consoleRequestGuard((req, res) => deps.rejectIfRemote(req, res));
-  // Lane D: L3 decision budgets per minute, after the guard so refused cross-site requests spend none.
+  // B380: L3 decision budgets per minute, after the guard so refused cross-site requests spend none.
   const limiter = (limit: number) => rateLimit({ windowMs: 60_000, limit, standardHeaders: false, legacyHeaders: false });
   app.post(
     "/api/actions/resume-monitoring",
@@ -56,7 +56,7 @@ export function setupActionsRoutes(
     },
   );
 
-  // #514: stopping the Sentinel needs a modal VS Code confirmation. Lane D: behind the Console
+  // #514: stopping the Sentinel needs a modal VS Code confirmation. B382: behind the Console
   // request guard; no limiter, so the emergency stop cannot be starved.
   app.post("/api/actions/panic-stop", guard, async (_req: Request, res: Response) => {
     if (!(await requireOperatorConfirmation(deps.confirmOperatorAction, panicStopRequest(), res))) {
@@ -137,7 +137,7 @@ export function setupActionsRoutes(
 
   // Process all pending L3 approvals in batch. #514: the operator confirms a
   // snapshot of the queue; only the ids in that snapshot are decided, with the
-  // confirmed verb. Items queued while the dialog is open stay queued. Lane D: behind the Console
+  // confirmed verb. Items queued while the dialog is open stay queued. B380: behind the Console
   // request guard and a limiter; the architecture lookup runs after every cheap refusal.
   app.post(
     "/api/actions/approve-l3-batch",
@@ -232,7 +232,7 @@ function rejectBodyConditions(req: Request, res: Response): boolean {
 }
 
 /**
- * Lane D: answer no confirmer (503) and a dialog already open (429) before the architecture
+ * B381: answer no confirmer (503) and a dialog already open (429) before the architecture
  * lookup. requireOperatorConfirmation still decides; a dialog opened meanwhile still gives busy.
  */
 function refuseBeforeDialog(confirm: ConfirmOperatorAction | undefined, res: Response): boolean {

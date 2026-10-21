@@ -60,7 +60,7 @@ export function sanitizeDialogText(value: unknown, limit = FIELD_LIMIT): string 
   return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
 }
 
-/** Lane D: the live open state of each confirmer built here, read through an accessor. */
+/** B381: the live open state of each confirmer built here, read through an accessor. */
 const OPEN_STATE = new WeakMap<ConfirmOperatorAction, () => boolean>();
 
 /** True while a confirmer built by createOperatorConfirmer has its dialog open; false for any other. */
