@@ -4,12 +4,11 @@
 
 import { strict as assert } from 'assert';
 import {
-  createOperatorConfirmer, sanitizeDialogText, confirmationFailure,
+  createOperatorConfirmer, isConfirmationOpen, sanitizeDialogText, confirmationFailure,
   l3DecisionRequest, l3BatchRequest, ratifyRequest, rollbackRequest,
   hooksDisableRequest, panicStopRequest, LOOPBACK_FOOTER, REASON_LIMIT,
   type ConfirmationWindow, type OperatorActionRequest,
 } from '../../extension/operatorConfirmation';
-import * as confirmation from '../../extension/operatorConfirmation';
 import type { L3ApprovalRequest } from '../../shared/types/l3-approval';
 
 interface DialogCall { message: string; options: { modal: boolean; detail?: string }; items: string[]; }
@@ -83,24 +82,22 @@ suite('#514 operatorConfirmation (FX960)', () => {
 
   // Lane D (plan-l3-routes-guard LD3): routes refuse busy before the architecture lookup.
   test('isConfirmationOpen reads the live open state: false before, true while open, false after it settles or throws', async () => {
-    const isOpen = (confirmation as unknown as Record<string, unknown>).isConfirmationOpen as
-      ((c: unknown) => boolean) | undefined;
-    assert.equal(typeof isOpen, 'function', 'isConfirmationOpen is exported');
+    const isOpen = isConfirmationOpen;
     let release: (v: string | undefined) => void = () => undefined;
     const { window } = fakeWindow(() => new Promise((r) => { release = r; }));
     const confirm = createOperatorConfirmer(window);
-    assert.equal(isOpen!(confirm), false, 'before');
+    assert.equal(isOpen(confirm), false, 'before');
     const first = confirm(REQUEST);
     await Promise.resolve();
-    assert.equal(isOpen!(confirm), true, 'while open');
+    assert.equal(isOpen(confirm), true, 'while open');
     release('Do it');
     await first;
-    assert.equal(isOpen!(confirm), false, 'after it settles');
+    assert.equal(isOpen(confirm), false, 'after it settles');
     const throwing = createOperatorConfirmer(fakeWindow(async () => { throw new Error('no window'); }).window);
     await throwing(REQUEST);
-    assert.equal(isOpen!(throwing), false, 'after it throws');
-    assert.equal(isOpen!(async () => 'approved' as const), false, 'a plain function is never open');
-    assert.equal(isOpen!(undefined), false, 'no confirmer is never open');
+    assert.equal(isOpen(throwing), false, 'after it throws');
+    assert.equal(isOpen(async () => 'approved' as const), false, 'a plain function is never open');
+    assert.equal(isOpen(undefined), false, 'no confirmer is never open');
   });
 
   test('sanitizeDialogText replaces control and bidi-override characters and caps length', () => {
