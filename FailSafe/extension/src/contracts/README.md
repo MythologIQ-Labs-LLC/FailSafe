@@ -19,7 +19,7 @@ FailSafe internals use TypeScript types (under `src/shared/types/`). Those types
 | `intent.json` | Operator/agent declared intent envelope. |
 | `failure_mode.json` | Shadow Genome failure pattern record. |
 | `approval.json` | L3 approval request + resolution state. |
-| `checkpoint.json` | Sovereign Checkpoint Protocol snapshot. |
+| `checkpoint.json` | Sovereign Checkpoint Protocol snapshot. No producer since B322 (2026-10-20, the protocol was retired); kept for historical `CHECKPOINT_CREATED` rows. |
 | `receipt.json` | Governance decision receipt (verdict + evidence + signature). |
 | `governance_config.json` | Operator-controlled governance settings. |
 
@@ -32,6 +32,10 @@ FailSafe internals use TypeScript types (under `src/shared/types/`). Those types
 ## Versioning
 
 v1.0 of each schema ships in this cycle. Future schema changes get a `$schema-version` field, with a migration matrix in this README.
+
+| Schema | From | To | Change | Effect on an older validator |
+|---|---|---|---|---|
+| `ledger_entry.json` | 1.0 | 1.1 | `eventType` adds `DELIVERY_REVIEWED` (#532 B320/B321: an operator-confirmed delivery review) | a 1.0 validator rejects `DELIVERY_REVIEWED` rows; every other row validates unchanged |
 
 ## Origin
 

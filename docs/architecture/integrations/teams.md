@@ -29,8 +29,8 @@ The payload is a message with one Adaptive Card 1.5 attachment `FailSafe/extensi
 
 ## Privileges and scopes
 
-Credential: one Teams Workflows webhook URL in VS Code Secret Storage; the plain-text setting is deprecated and not read `FailSafe/extension/package.json:418-420` (`Plain-text settings are no longer read`).
-The webhook URL grants posting to its target channel `FailSafe/extension/package.json:421` (`it grants posting to the target channel`).
+Credential: one Teams Workflows webhook URL in VS Code Secret Storage; the plain-text setting is deprecated and not read `FailSafe/extension/package.json:414-416` (`Plain-text settings are no longer read`).
+The webhook URL grants posting to its target channel `FailSafe/extension/package.json:416` (`it grants posting to the target channel`).
 A disabled channel never consults the credential store `FailSafe/extension/src/integrations/credentials/credentialGates.ts:186-190` (`if (!enabled) return { enabled: false };`).
 The URL is redacted from failure diagnostics `FailSafe/extension/src/integrations/notify-event.ts:39-41` (`return text.split(webhookUrl).join('[webhook]');`).
 The workflow belongs to a person, not a channel, and the code does not check for a co-owner (unverified beyond reading the owned files).

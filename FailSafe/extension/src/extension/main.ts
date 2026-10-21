@@ -21,9 +21,7 @@ import { GovernanceStatusBar } from "../governance/GovernanceStatusBar";
 import { LedgerManager } from "../qorelogic/ledger/LedgerManager";
 import { ShadowGenomeManager } from "../qorelogic/shadow/ShadowGenomeManager";
 import { ConsoleServer } from "../roadmap";
-import { CheckpointManager } from "../qorelogic/checkpoint/CheckpointManager";
 import { AgentHealthIndicator } from "../sentinel/AgentHealthIndicator";
-import type { ICheckpointMetrics } from "../core/interfaces";
 
 // Bootstrap Modules
 import { bootstrapCore } from "./bootstrapCore";
@@ -335,18 +333,6 @@ export async function activate(
     } catch (err) {
       logger.error("Integration evidence wiring failed", err);
     }
-
-    // 4.5. Checkpoint (bridges qor + sentinel substrates)
-    const checkpointMetrics: ICheckpointMetrics = {
-      getLedgerEntryCount: () => qor.ledgerManager.getEntryCount(),
-      getSentinelEventsProcessed: () =>
-        sentinel.sentinelDaemon.getStatus().eventsProcessed,
-    };
-    const _checkpointManager = new CheckpointManager(
-      core.configManager,
-      qor.ledgerManager,
-      checkpointMetrics,
-    );
 
     // 6. Genesis
     genesisManager = await bootstrapGenesis(

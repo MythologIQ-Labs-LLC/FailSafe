@@ -32,7 +32,7 @@ The linkage audit reads `GET /repos/{owner}/{repo}/pulls/{n}` and `GET /repos/{o
 
 ## Privileges and scopes
 
-Credential: a GitHub token (App installation token or a PAT that the org permits with checks:write) in VS Code Secret Storage `FailSafe/extension/package.json:461-465` (`GitHub token used to create Check Runs`).
+Credential: a GitHub token (App installation token or a PAT that the org permits with checks:write) in VS Code Secret Storage `FailSafe/extension/package.json:470-474` (`GitHub token used to create Check Runs`).
 The token rides only the Authorization header, built in one place and only for a request to the API base's own origin (scheme, host and port); main only, not in v6.0.8 `FailSafe/extension/src/integrations/github-checks/github-host-affinity.ts:39-46` (`if (origin !== api.origin) return undefined;`).
 The linkage audit additionally needs read access to the repository's pull requests and issues with the same token `FailSafe/extension/src/integrations/github-checks/pr-linkage-audit.ts:202-204` (`githubAuthHeaders(api.base, url, token`).
 A user-level token is never sent to an API base URL that workspace settings chose `FailSafe/extension/src/integrations/credentials/credentialGates.ts:126` (`ep.scope === 'workspace' && e.scope === 'user'`).
@@ -136,7 +136,7 @@ Owner decision 2026-10-18 (#538), accepting the recommendation: **COMPLETE**. Th
 ## Open defects
 
 [B265] Fixed on main, unreleased (#538): the PR-linkage audit sent the GitHub token to api.github.com even when a GitHub Enterprise API base URL was configured (F11); it now takes the base `FailSafe/extension/src/integrations/github-checks/pr-linkage-audit.ts:165-176` (`export interface LinkageRunOptions {`).
-Observed outside the LD3 list, filed as B278 (see Other findings in the portfolio): The fork guard `isFork` is never set by the command, although the setting text says fork-PR contexts degrade to local-only `FailSafe/extension/package.json:456-459` (`fork-PR contexts degrade to local-only`).
+Observed outside the LD3 list, filed as B278 (see Other findings in the portfolio): The fork guard `isFork` is never set by the command, although the setting text says fork-PR contexts degrade to local-only `FailSafe/extension/package.json:464-467` (`fork-PR contexts degrade to local-only`).
 Fixed on main, unreleased (#538): B279, the default GitHub transports dropped the base URL's port `FailSafe/extension/src/integrations/github-checks/github-checks-client.ts:172` (`port: u.port ? Number(u.port) : undefined,`).
 Filed as B290 (#538): a Dev Container or remote-machine `failsafe.integrations.github.apiBaseUrl` reads as user scope and is paired with the user token `FailSafe/extension/src/integrations/credentials/vscodeCredentialAdapters.ts:59` (`const user = text(i?.globalValue);`).
 Not covered: with VS Code's proxy support a resolved proxy may replace the transport's agent, so the loopback address check for an http base may not run (unverified).

@@ -11,8 +11,12 @@
 // plan-532c: the sweep also covers the governed-commit link offer (B286) and the hub checkpoint
 // HEAD read (B284, which reads from disk and spawns nothing); the ledger is asked only for the
 // intent id (the checkpoint SHA match is retired, B285).
+// plan-b320: the sweep also covers building and recording a delivery review (a real ledger) and the
+// failsafe.delivery.recordReview command body; the coverage check runs `merge-base` through the
+// runner, and `merge-base` is in the allowlist.
 
 import { strict as assert } from 'assert';
+import * as fs from 'fs';
 import * as path from 'path';
 import { makeArchitectureGit, type ArchitectureGit } from '../../../governance/architecture/ArchitectureIndexDiscovery';
 import { IntentHistoryLog } from '../../../governance/IntentHistoryLog';
@@ -23,6 +27,11 @@ import {
 import { deliveryWorkspace, importedIntent, intentService, RUNTIME_ROW, type DeliveryWorkspace } from './deliveryFixtures';
 import { offerCommittedUnderLink } from '../../../extension/governedCommitLink';
 import { readWorkspaceHead } from '../../../roadmap/services/workspaceHead';
+import { buildReviewPlan, recordDeliveryReview } from '../../../governance/delivery/deliveryReview';
+import { runDeliveryReviewCommand } from '../../../extension/deliveryReviewCommand';
+import { commitAll } from './deliveryFixtures';
+import { makeEnv, openLedger, type Env } from '../../qorelogic/ledgerTestKit';
+import type { LedgerManager } from '../../../qorelogic/ledger/LedgerManager';
 
 // Module objects (not `import * as` copies), so the stubs replace what the code calls.
 /* eslint-disable @typescript-eslint/no-var-requires */
@@ -83,8 +92,10 @@ function installStubs(): Stubs {
 
 suite('delivery: no egress (#532 LD1)', () => {
   let ws: DeliveryWorkspace;
-  setup(() => { ws = deliveryWorkspace('failsafe-delivery-egress-'); });
-  teardown(() => ws.cleanup());
+  let env: Env;
+  let ledgerMgr: LedgerManager | null = null;
+  setup(() => { ws = deliveryWorkspace('failsafe-delivery-egress-'); env = makeEnv(); });
+  teardown(() => { ledgerMgr?.close(); ledgerMgr = null; env.cleanup(); ws.cleanup(); });
 
   test('candidates, link, unlink and assess make no network call and run git only through the runner', async function () {
     this.timeout(30000);
@@ -99,10 +110,19 @@ suite('delivery: no egress (#532 LD1)', () => {
       try { return real(root, args); } finally { if (stubs) stubs.inRunner.value = false; }
     };
     const ledgerQueries: string[] = [];
-    const ctx: DeliveryContext = {
-      workspaceRoot: ws.root, intents: service, git: runner,
-      ledger: { isAvailable: () => true, findEntriesContaining: async (v: string) => { ledgerQueries.push(v); return []; } },
-    };
+    ledgerMgr = await openLedger(env);
+    await ledgerMgr.appendEntry({ eventType: 'PROVENANCE_RECORDED', agentDid: 'did:myth:agent:claude', payload: { intentId: intent.id } });
+    const live = ledgerMgr;
+    const ledger = new Proxy(live, {
+      get: (target, prop) => {
+        if (prop === 'findSealedEntriesContaining') return async (v: string) => { ledgerQueries.push(v); return target.findSealedEntriesContaining(v); };
+        const value = (target as unknown as Record<string | symbol, unknown>)[prop];
+        return typeof value === 'function' ? (value as (...a: unknown[]) => unknown).bind(target) : value;
+      },
+    });
+    fs.writeFileSync(path.join(ws.root, 'b.txt'), 'b\n');
+    const second = commitAll(ws.root, 'second');
+    const ctx: DeliveryContext = { workspaceRoot: ws.root, intents: service, git: runner, ledger };
     stubs = installStubs();
     let view;
     try {
@@ -114,7 +134,20 @@ suite('delivery: no egress (#532 LD1)', () => {
       const offered = await offerCommittedUnderLink(ctx, async () => 'approved',
         { commitSha: ws.head, action: 'organize', requestedPaths: ['docs'] });
       assert.equal(offered.outcome, 'linked', offered.detail);
-      assert.equal(readWorkspaceHead(ws.root), ws.head, 'the hub checkpoint HEAD read');
+      assert.equal(readWorkspaceHead(ws.root), second, 'the hub checkpoint HEAD read');
+      const linkSecond = await prepareDeliveryEdge(ctx, 'link', { intentId: intent.id, edge: 'committed-under', target: second });
+      assert.equal(linkSecond.ok, true, JSON.stringify(linkSecond));
+      await writeDeliveryEdge(ctx, linkSecond as Extract<typeof linkSecond, { ok: true }>, 'user');
+      const req = { intentId: intent.id, verdict: 'PASS' as const, commitSha: second, note: '' };
+      const built = await buildReviewPlan(ctx, req);
+      assert.equal(built.ok, true, JSON.stringify(built));
+      const recorded = await recordDeliveryReview(ctx, req, (built as Extract<typeof built, { ok: true }>).plan, { operationId: 'op_egress', channel: 'console' });
+      assert.equal(recorded.status, 200, JSON.stringify(recorded.body));
+      const command = await runDeliveryReviewCommand({
+        workspaceRoot: ws.root, intents: service, getLedger: () => ledger, git: runner, confirm: async () => 'approved',
+        ui: { pickVerdict: async () => undefined, pickCommit: async () => undefined, inputNote: async () => undefined, info: () => undefined },
+      }, { verdict: 'VETO', commitSha: second });
+      assert.equal(command.outcome, 'recorded', command.detail);
       view = await assessIntentDelivery(ctx, intent.id);
       const unlink = await prepareDeliveryEdge(ctx, 'unlink', { intentId: intent.id, edge: 'implements', target: RUNTIME_ROW });
       assert.equal(unlink.ok, true, JSON.stringify(unlink));
@@ -143,6 +176,8 @@ suite('delivery: no egress (#532 LD1)', () => {
     assert.ok(subcommands.length > 0, 'git ran through the injected runner');
     for (const a of subcommands) assert.ok(allowed(a), `git ${a.join(' ')} is not in the LD4 allowlist`);
     assert.ok(subcommands.some((a) => a[0] === 'cat-file'), 'the commit edge was re-checked through the runner');
+    assert.ok(subcommands.some((a) => a[0] === 'merge-base'), 'the coverage check ran merge-base through the runner');
+    assert.ok(DELIVERY_GIT_SUBCOMMANDS.has('merge-base'));
     assert.deepEqual([...new Set(ledgerQueries)], [intent.id], 'the ledger is asked only for the intent id (B285: no SHA match)');
   });
 

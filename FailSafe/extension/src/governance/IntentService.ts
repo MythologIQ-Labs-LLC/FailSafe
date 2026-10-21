@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import {
   Intent, IntentType, IntentScope, IntentMetadata, IntentStatus, IntentEvidence, IntentSchema,
   IntentEdgeKind, IntentHistoryEntry, IntentEdgeDetailsSchema, IntentIdSchema,
+  IntentReviewDetailsSchema, type IntentReviewDetails,
 } from './types/IntentTypes';
 import { IntentStore } from './IntentStore';
 import { IntentHistoryLog } from './IntentHistoryLog';
@@ -55,6 +56,20 @@ export interface IntentDecision {
   entryHash: string | null;
 }
 
+/**
+ * #532 B320 (plan-b320 LD5): one REVIEWED entry of an intent, the mirror of a sealed
+ * delivery-review ledger row, from a history whose chain verified. The details are not parsed
+ * here: deliveryReview parses them strictly and joins them to their row.
+ */
+export interface IntentReviewMirror {
+  details: unknown;
+  actor: string;
+  timestamp: string;
+  entryHash: string | null;
+  /** Index in the whole history, so one mirror can be later than another. */
+  position: number;
+}
+
 export interface IntentRecord {
   intent: Intent;
   active: boolean;
@@ -62,6 +77,8 @@ export interface IntentRecord {
   created: IntentHistoryEntry | null;
   edges: IntentEdge[];
   decision: IntentDecision | null;
+  /** #532 B320: the REVIEWED mirrors, in history order, up to the seal. */
+  reviews: IntentReviewMirror[];
 }
 
 export type IntentListing = { integrity: 'valid'; intents: IntentSummary[] } | { integrity: 'invalid' };
@@ -123,6 +140,19 @@ export function replayIntentDecision(entries: IntentHistoryEntry[], intentId: st
       : null;
   }
   return decision;
+}
+
+/** #532 B320: replay one intent's REVIEWED entries up to its seal, in history order. Read-only. */
+export function replayIntentReviews(entries: IntentHistoryEntry[], intentId: string): IntentReviewMirror[] {
+  const reviews: IntentReviewMirror[] = [];
+  for (let i = 0; i < entries.length; i++) {
+    const e = entries[i];
+    if (e.intentId !== intentId) continue;
+    if (isSealEntry(e)) break;
+    if (e.event !== 'REVIEWED') continue;
+    reviews.push({ details: e.details ?? null, actor: e.actor, timestamp: e.timestamp, entryHash: e.entryHash ?? null, position: i });
+  }
+  return reviews;
 }
 
 export class IntentService {
@@ -267,6 +297,7 @@ export class IntentService {
       record: {
         intent, active: isActive, sealed: intent.status === 'SEALED', created,
         edges: replayIntentEdges(entries, intentId), decision: replayIntentDecision(entries, intentId),
+        reviews: replayIntentReviews(entries, intentId),
       },
     };
   }
@@ -322,6 +353,23 @@ export class IntentService {
     if (!details.success) return { ok: false, reason: 'invalid' };
     await this.history.appendEntry({
       intentId: params.intentId, timestamp: new Date().toISOString(), event: 'UNLINKED', actor: params.actor, details: details.data,
+    });
+    return { ok: true };
+  }
+
+  /**
+   * #532 B320 (plan-b320 LD5): append the REVIEWED mirror of a sealed delivery-review ledger row
+   * for the active, unsealed intent. Called only by recordDeliveryReview, after the operator
+   * confirmed and the row was appended. Refused while the chain is broken, for an intent that is not
+   * the active unsealed one, and for details the strict schema rejects.
+   */
+  async recordReview(params: { intentId: string; actor: string; details: IntentReviewDetails }): Promise<EdgeWriteResult> {
+    const ctx = await this.edgeWriteContext(params.intentId);
+    if (!ctx.ok) return ctx;
+    const details = IntentReviewDetailsSchema.safeParse(params.details);
+    if (!details.success) return { ok: false, reason: 'invalid' };
+    await this.history.appendEntry({
+      intentId: params.intentId, timestamp: new Date().toISOString(), event: 'REVIEWED', actor: params.actor, details: details.data,
     });
     return { ok: true };
   }

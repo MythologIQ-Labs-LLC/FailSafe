@@ -6,17 +6,24 @@
  *   GET  /api/v1/delivery/candidates       registered architecture rows and HEAD's 50 recent commits
  *   POST /api/actions/delivery/link        {intentId, edge, target}: record an edge after the modal
  *   POST /api/actions/delivery/unlink      {intentId, edge, target}: remove an edge after the modal
+ *   POST /api/actions/delivery/review      {intentId, verdict, commitSha, note}: record a delivery
+ *                                          review after a bound modal (plan-b320 LD3)
  *
  * Every route is loopback-only and rate limited. Writes act only after the operator approves a
  * modal VS Code dialog built from server-side values; a declined, busy or unwired confirmation
- * records nothing. Nothing leaves the machine.
+ * records nothing. The review route also passes the Console request guard (Host, Origin, JSON) and
+ * binds the approval to the operation it showed (confirmBoundOperation). Nothing leaves the machine.
  */
 
 import type { Application, Request, Response } from "express";
 import { rateLimit } from "express-rate-limit";
 import {
-  deliveryLinkRequest, requireOperatorConfirmation, type ConfirmOperatorAction,
+  confirmBoundOperation, deliveryLinkRequest, deliveryReviewRequest, requireOperatorConfirmation, type ConfirmOperatorAction,
 } from "../../extension/operatorConfirmation";
+import { consoleRequestGuard } from "./consoleRequestGuard";
+import {
+  buildReviewPlan, parseReviewRequest, recordDeliveryReview, type RecordHooks,
+} from "../../governance/delivery/deliveryReview";
 import type { ArchitectureGit } from "../../governance/architecture/ArchitectureIndexDiscovery";
 import type { EdgeWriteRefusal } from "../../governance/IntentService";
 import { IntentIdSchema } from "../../governance/types/IntentTypes";
@@ -38,6 +45,10 @@ export interface DeliveryRouteDeps {
   confirmOperatorAction?: ConfirmOperatorAction;
   broadcast?: (data: Record<string, unknown>) => void;
   git?: ArchitectureGit;
+  /** Tests shorten the bound confirmation's deadline. */
+  confirmationDeadlineMs?: number;
+  /** Test seams for the review write (a clock, a hook between the rebuild and the append). */
+  reviewHooks?: RecordHooks;
 }
 
 const NO_SERVICE = { ok: false, error: "The FailSafe intent service is not available." };
@@ -58,8 +69,27 @@ function contextOf(deps: DeliveryRouteDeps, res: Response): DeliveryContext | nu
   if (!intents) { res.status(503).json(NO_SERVICE); return null; }
   return {
     workspaceRoot: deps.workspaceRoot, intents, ledger: deps.getLedgerManager(), git: deps.git,
-    indexPathSetting: deps.getIndexPathSetting?.(),
+    indexPathSetting: deps.getIndexPathSetting?.(), now: deps.reviewHooks?.now,
   };
+}
+
+/** plan-b320 LD3: build the review from server state, confirm the bound operation, then record it. */
+async function writeReview(req: Request, res: Response, deps: DeliveryRouteDeps): Promise<void> {
+  const parsed = parseReviewRequest(req.body);
+  if (typeof parsed === "string") { res.status(400).json({ ok: false, error: parsed }); return; }
+  const ctx = contextOf(deps, res);
+  if (!ctx) return;
+  const built = await buildReviewPlan(ctx, parsed, ctx.now ? ctx.now() : Date.now());
+  if (!built.ok) { res.status(built.status).json({ ok: false, error: built.error }); return; }
+  const bound = await confirmBoundOperation(
+    deps.confirmOperatorAction, built.plan, (plan, id) => deliveryReviewRequest(plan, id, "console"), res,
+    { deadlineMs: deps.confirmationDeadlineMs },
+  );
+  if (!bound) return;
+  const recorded = await recordDeliveryReview(ctx, parsed, bound.operation, { operationId: bound.operationId, channel: "console" }, deps.reviewHooks);
+  if (res.writableEnded) return;
+  res.status(recorded.status).json({ ...recorded.body, operationId: bound.operationId });
+  if (recorded.status === 200) deps.broadcast?.({ type: "delivery.changed", intentId: parsed.intentId });
 }
 
 async function writeEdge(req: Request, res: Response, deps: DeliveryRouteDeps, action: EdgeAction): Promise<void> {
@@ -105,6 +135,12 @@ export function setupDeliveryRoutes(app: Application, deps: DeliveryRouteDeps): 
     const ctx = contextOf(deps, res);
     if (!ctx) return;
     res.json(deliveryCandidates(ctx));
+  });
+
+  app.post("/api/actions/delivery/review", consoleRequestGuard((req, res) => deps.rejectIfRemote(req, res)), limiter(10), async (req, res) => {
+    try { await writeReview(req, res, deps); } catch {
+      if (!res.headersSent) res.status(500).json({ ok: false, error: "The review could not be recorded." });
+    }
   });
 
   for (const action of ["link", "unlink"] as const) {

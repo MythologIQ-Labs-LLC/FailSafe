@@ -195,7 +195,7 @@ The Shadow Genome includes a retention policy managed by `RetentionPolicy` (`src
 | `LedgerSchemaManager` | `src/qorelogic/ledger/LedgerSchemaManager.ts` | Schema migrations and versioning |
 | `LedgerRetentionPolicy` | `src/qorelogic/ledger/LedgerRetentionPolicy.ts` | Data retention management |
 | `CheckpointReconciler` | `src/governance/CheckpointReconciler.ts` | Checkpoint reconciliation |
-| `CheckpointManager` | `src/roadmap/services/CheckpointManager.ts` | Bridges QoreLogic ledger and Sentinel |
+| `CheckpointStore` | `src/roadmap/services/CheckpointStore.ts` | Hub checkpoint records and their hash chain (the Sovereign Checkpoint Protocol `CheckpointManager` was never wired and was removed in B322, 2026-10-20) |
 | `RoadmapServer` | `src/roadmap/RoadmapServer.ts` | Checkpoint API and chain verification |
 | `SentinelRagStore` | `src/sentinel/SentinelRagStore.ts` | Sentinel observation persistence |
 | `ShadowGenomeManager` | `src/qorelogic/shadow/ShadowGenomeManager.ts` | Failure pattern management |
