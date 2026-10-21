@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { SecurityReplayGuard } from '../governance/SecurityReplayGuard';
+import { Logger } from '../shared/Logger';
 
 function mkTempDir(prefix: string): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -83,29 +84,35 @@ describe('SecurityReplayGuard remaining v6.0.8 acceptance (#472)', () => {
 
   it('never writes the full issued nonce into normal, rejected or replay diagnostic output', () => {
     const root = mkTempDir('failsafe-replay-private-');
-    const original = { debug: console.debug, info: console.info, warn: console.warn, error: console.error };
+    // VS Code's extension host can redirect console.* before this test runs.
+    // Capture at the Logger boundary to prove actual structured diagnostics were emitted,
+    // not a vacuous PASS from an empty console sink.
+    const original = { debug: Logger.prototype.debug, info: Logger.prototype.info, warn: Logger.prototype.warn, error: Logger.prototype.error };
     const output: string[] = [];
-    const capture = (...args: unknown[]) => { output.push(args.map(String).join(' ')); };
+    const capture = (level: string) => (message: string, data?: unknown) => {
+      output.push(JSON.stringify({ level, message, data }));
+    };
     let guard: SecurityReplayGuard | undefined;
     try {
-      console.debug = capture;
-      console.info = capture;
-      console.warn = capture;
-      console.error = capture;
+      Logger.prototype.debug = capture('debug');
+      Logger.prototype.info = capture('info');
+      Logger.prototype.warn = capture('warn');
+      Logger.prototype.error = capture('error');
       guard = new SecurityReplayGuard(root, { cleanupIntervalMs: 3_600_000 });
       const nonce = guard.generateNonce();
       assert.match(nonce, /^[0-9a-f]{64}$/, 'real randomly issued nonce is the canary');
       assert.strictEqual(guard.consumeNonce(nonce, 'privacy-test').valid, true);
       assert.strictEqual(guard.consumeNonce(nonce).reason, 'already_used');
       assert.strictEqual(guard.consumeNonce('x'.repeat(64)).reason, 'invalid_format');
-      assert.ok(output.some((line) => line.includes('Nonce validation failed')), 'diagnostic sink was exercised');
-      assert.ok(output.every((line) => !line.includes(nonce)), 'full nonce must not occur in any logger output');
+      assert.ok(output.some((line) => line.includes('Nonce validation failed')), 'the guard emitted a rejected-nonce diagnostic');
+      assert.ok(output.some((line) => line.includes('already_used')), 'a replay warning was captured');
+      assert.ok(output.every((line) => !line.includes(nonce)), 'full nonce must not cross the Logger boundary');
     } finally {
       guard?.dispose();
-      console.debug = original.debug;
-      console.info = original.info;
-      console.warn = original.warn;
-      console.error = original.error;
+      Logger.prototype.debug = original.debug;
+      Logger.prototype.info = original.info;
+      Logger.prototype.warn = original.warn;
+      Logger.prototype.error = original.error;
       fs.rmSync(root, { recursive: true, force: true });
     }
   });
