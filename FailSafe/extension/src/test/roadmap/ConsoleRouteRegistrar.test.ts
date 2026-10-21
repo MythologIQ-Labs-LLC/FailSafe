@@ -3,6 +3,9 @@
 // expected route paths are registered without orphan handlers.
 
 import { strict as assert } from 'assert';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import {
   ConsoleRouteRegistrar, type ConsoleRouteHost,
 } from '../../roadmap/services/ConsoleRouteRegistrar';
@@ -129,6 +132,59 @@ suite('ConsoleRouteRegistrar (Phase 60 §0)', () => {
     assert.ok(gets.includes('/api/roadmap'), 'missing /api/roadmap');
     assert.ok(gets.includes('/api/hub'), 'missing /api/hub');
     assert.ok(gets.includes('/api/v1/workspaces'), 'missing /api/v1/workspaces');
+  });
+
+  test('health reports actual served UI entry availability, not unrelated index.html (#471)', () => {
+    const uiDir = fs.mkdtempSync(path.join(os.tmpdir(), 'failsafe-health-assets-'));
+    const handlers: Record<string, (req: unknown, res: unknown) => void> = {};
+    const { app } = makeFakeApp();
+    app.get = (name: string, handler: (req: unknown, res: unknown) => void) => { handlers[name] = handler; };
+    const host = makeHost(app, makeFakeHub());
+    host.uiDir = uiDir;
+    let requested: 'index.html' | 'command-center.html' = 'command-center.html';
+    host.getUiEntryFile = () => requested;
+    new ConsoleRouteRegistrar(host).setupAllRoutes();
+
+    const health = (): { status: number; body: any } => {
+      const response = {
+        statusCode: 200,
+        body: undefined as unknown,
+        status(value: number) { this.statusCode = value; return this; },
+        json(value: unknown) { this.body = value; return this; },
+      };
+      handlers['/health']({}, response);
+      return { status: response.statusCode, body: response.body };
+    };
+    try {
+      // index.html existing does NOT make the chosen command-center entry available.
+      fs.writeFileSync(path.join(uiDir, 'index.html'), '<html>index</html>');
+      assert.equal(health().status, 503);
+      assert.equal(health().body.ready, false);
+      assert.equal(health().body.uiAssetsPresent, false);
+
+      // command-center.html alone is sufficient, even when index.html is absent.
+      fs.unlinkSync(path.join(uiDir, 'index.html'));
+      fs.writeFileSync(path.join(uiDir, 'command-center.html'), '<html>console</html>');
+      const available = health();
+      assert.equal(available.status, 200);
+      assert.equal(available.body.ready, true);
+      assert.equal(available.body.uiAssetsPresent, true);
+      assert.equal(available.body.governanceStatus, 'unverified', 'HTTP is not policy evidence');
+
+      // Selected index.html can use the explicit command-center fallback.
+      requested = 'index.html';
+      assert.equal(health().status, 200);
+      fs.unlinkSync(path.join(uiDir, 'command-center.html'));
+      assert.equal(health().status, 503);
+      // A directory named like an entry is not an HTML file.
+      fs.mkdirSync(path.join(uiDir, 'index.html'));
+      assert.equal(health().status, 503);
+      fs.rmdirSync(path.join(uiDir, 'index.html'));
+      fs.writeFileSync(path.join(uiDir, 'index.html'), '<html>index</html>');
+      assert.equal(health().status, 200);
+    } finally {
+      fs.rmSync(uiDir, { recursive: true, force: true });
+    }
   });
 
   test('setupAllRoutes — verdicts + trust v1 routes registered', () => {
